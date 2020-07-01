@@ -7,7 +7,7 @@ This is the block-lattice super fast cryptotoken system based on the original na
     cd SuperGenius
     git checkout develop
     ```
-    
+
 # Download thirdparty project
 
     ```console
