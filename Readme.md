@@ -2,12 +2,12 @@ This is the block-lattice super fast cryptotoken system based on the original na
 
 # Download SuperGenius project
    
-   ```console
+    ```console
     git clone ssh://git@gitlab.geniusventures.io:8487/GeniusVentures/SuperGenius.git --recursive 
     cd SuperGenius
     git checkout develop
     ```
-
+    
 # Download thirdparty project
 
     ```console
