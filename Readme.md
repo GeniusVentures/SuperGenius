@@ -2,16 +2,20 @@ This is the block-lattice super fast cryptotoken system based on the original na
 
 # Download SuperGenius project
    
+   ```console
     git clone ssh://git@gitlab.geniusventures.io:8487/GeniusVentures/SuperGenius.git --recursive 
     cd SuperGenius
     git checkout develop
+    ```
 
 # Download thirdparty project
 
+    ```console
     cd ..
     git clone ssh://git@gitlab.geniusventures.io:8487/GeniusVentures/thirdparty.git --recursive 
     cd thirdparty
     git checkout develop
+    ```
 
 Then folder structure as follows:
 
@@ -50,6 +54,7 @@ I used visual studio 2017 to compile SuperGenius project.
 
 if you are going to build and test , then use following commands
 
+    ```console
     cmake ../build/Windows -G "Visual Studio 15 2017 Win64" \
         -DTESTING=ON \
         -DBOOST_ROOT="C:/local/boost_1_70_0" \
@@ -59,13 +64,18 @@ if you are going to build and test , then use following commands
     cmake --build . --config Release
     cd SuperGenius
     ctest -C Release
+    ```
 
 To run sepecifi test with detailed log, you can use following commands.
 
+    ```console
     ctest -C Release -R <test_name> --verbose
+    ```
 
 To run all tests and display log for failed tests, you can use following commands.
 
+    ```console
     ctest -C Release --output-on-failure
+    ```
 
 You can use Debug configuration to debug in Visual Studio.
