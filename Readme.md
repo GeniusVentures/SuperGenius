@@ -2,7 +2,7 @@ This is the block-lattice super fast cryptotoken system based on the original na
 
 # Download SuperGenius project
    
-    ```console
+    ```
     git clone ssh://git@gitlab.geniusventures.io:8487/GeniusVentures/SuperGenius.git --recursive 
     cd SuperGenius
     git checkout develop
@@ -10,7 +10,7 @@ This is the block-lattice super fast cryptotoken system based on the original na
 
 # Download thirdparty project
 
-    ```console
+    ```
     cd ..
     git clone ssh://git@gitlab.geniusventures.io:8487/GeniusVentures/thirdparty.git --recursive 
     cd thirdparty
@@ -39,7 +39,7 @@ I used visual studio 2017 to compile SuperGenius project.
 2. download OpenSSL and install
 3. build SuperGenius using following commands in Release configuration:
     
-    ```console
+    ```
     cd SuperGenius 
     md .build 
     cd .build 
@@ -54,7 +54,7 @@ I used visual studio 2017 to compile SuperGenius project.
 
 if you are going to build and test , then use following commands
 
-    ```console
+    ```
     cmake ../build/Windows -G "Visual Studio 15 2017 Win64" \
         -DTESTING=ON \
         -DBOOST_ROOT="C:/local/boost_1_70_0" \
@@ -68,13 +68,13 @@ if you are going to build and test , then use following commands
 
 To run sepecifi test with detailed log, you can use following commands.
 
-    ```console
+    ```
     ctest -C Release -R <test_name> --verbose
     ```
 
 To run all tests and display log for failed tests, you can use following commands.
 
-    ```console
+    ```
     ctest -C Release --output-on-failure
     ```
 
