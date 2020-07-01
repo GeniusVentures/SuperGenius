@@ -35,9 +35,9 @@ I used visual studio 2017 to compile SuperGenius project.
 2. download OpenSSL and install
 3. build SuperGenius using following commands in Release configuration:
 
-    cd SuperGenius
-    md .build
-    cd .build
+    cd SuperGenius 
+    md .build 
+    cd .build 
     cmake ../build/Windows -G "Visual Studio 15 2017 Win64" \
         -DBUILD_TESTING=OFF \
         -DBOOST_ROOT="C:/local/boost_1_70_0" \
