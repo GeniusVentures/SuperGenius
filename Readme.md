@@ -34,8 +34,8 @@ I used visual studio 2017 to compile SuperGenius project.
 1. download Prebuilt-Boost libraries for windows
 2. download OpenSSL and install
 3. build SuperGenius using following commands in Release configuration:
-
-
+    
+    ```console
     cd SuperGenius 
     md .build 
     cd .build 
@@ -46,7 +46,7 @@ I used visual studio 2017 to compile SuperGenius project.
         -DBOOST_LIBRARY_DIR="C:/local/boost_1_70_0/lib64-msvc-14.1" \
         -DOPENSSL_ROOT_DIR="C:/Program Files/OpenSSL-Win64" -DCMAKE_BUILD_TYPE=Release
     cmake --build . --config Release
-
+    ```
 
 if you are going to build and test , then use following commands
 
