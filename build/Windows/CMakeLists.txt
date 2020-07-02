@@ -233,11 +233,11 @@ ExternalProject_Add(ipfs-lite-cpp
 
 # Build block-lattice
 
-ExternalProject_Add(block-lattice
-  PREFIX block-lattice
+ExternalProject_Add(blocklattice
+  PREFIX blocklattice
   SOURCE_DIR "${CMAKE_SOURCE_DIR}/../../block-lattice-node"  
   CMAKE_CACHE_ARGS                
-        -DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_CURRENT_BINARY_DIR}/block-lattice        
+        -DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_CURRENT_BINARY_DIR}/blocklattice        
         -DBOOST_ROOT:PATH="${BOOST_ROOT}"
         -DBOOST_INCLUDE_DIR:PATH="${BOOST_INCLUDE_DIR}"
         -DBOOST_LIBRARY_DIR:PATH="${BOOST_LIBRARY_DIR}"
@@ -249,4 +249,28 @@ ExternalProject_Add(block-lattice
         -DCMAKE_CXX_FLAGS_DEBUG:STRING=${CMAKE_CXX_FLAGS_DEBUG}
         -DCMAKE_C_FLAGS_DEBUG:STRING=${CMAKE_C_FLAGS_DEBUG}
         -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
+)
+set(_FINDPACKAGE_blocklattice_INCLUDE_DIR "${CMAKE_CURRENT_BINARY_DIR}/blocklattice/include")
+set(_FINDPACKAGE_blocklattice_LIB_DIR "${CMAKE_CURRENT_BINARY_DIR}/blocklattice/lib")
+# Build SuperGenius
+
+ExternalProject_Add(SuperGenius
+  PREFIX SuperGenius
+  SOURCE_DIR "${CMAKE_SOURCE_DIR}/../../../SuperGenius"  
+  CMAKE_CACHE_ARGS                
+        -DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_CURRENT_BINARY_DIR}/SuperGenius       
+        -DBOOST_ROOT:PATH="${BOOST_ROOT}"
+        -DBOOST_INCLUDE_DIR:PATH="${BOOST_INCLUDE_DIR}"
+        -DBOOST_LIBRARY_DIR:PATH="${BOOST_LIBRARY_DIR}"
+        -Dblocklattice_INCLUDE_DIR:PATH="${_FINDPACKAGE_blocklattice_INCLUDE_DIR}"
+        -Dblocklattice_LIBRARY_DIR:PATH="${_FINDPACKAGE_blocklattice_LIB_DIR}"
+        -DTESTING:BOOL=${TESTING}
+        -DCMAKE_CXX_FLAGS:STRING=${CMAKE_CXX_FLAGS}
+        -DCMAKE_C_FLAGS:STRING=${CMAKE_C_FLAGS}
+        -DCMAKE_CXX_FLAGS_RELEASE:STRING=${CMAKE_CXX_FLAGS_RELEASE}
+        -DCMAKE_C_FLAGS_RELEASE:STRING=${CMAKE_C_FLAGS_RELEASE}
+        -DCMAKE_CXX_FLAGS_DEBUG:STRING=${CMAKE_CXX_FLAGS_DEBUG}
+        -DCMAKE_C_FLAGS_DEBUG:STRING=${CMAKE_C_FLAGS_DEBUG}
+        -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
+  DEPENDS GTest blocklattice ipfs-lite-cpp
 )
