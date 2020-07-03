@@ -207,7 +207,6 @@ ExternalProject_Add(ipfs-lite-cpp
   BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/ipfs-lite-cpp"
   INSTALL_COMMAND ""
   CMAKE_CACHE_ARGS
-        -DProtobuf_DIR:PATH=${_FINDPACKAGE_PROTOBUF_CONFIG_DIR}
         ${_CMAKE_ARGS_OPENSSL_ROOT_DIR}
         -DGTest_DIR:PATH=${_FINDPACKAGE_GTEST_CONFIG_DIR}
         -DBOOST_ROOT:PATH="${BOOST_ROOT}"
@@ -250,8 +249,9 @@ ExternalProject_Add(blocklattice
         -DCMAKE_C_FLAGS_DEBUG:STRING=${CMAKE_C_FLAGS_DEBUG}
         -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
 )
-set(_FINDPACKAGE_blocklattice_INCLUDE_DIR "${CMAKE_CURRENT_BINARY_DIR}/blocklattice/include")
-set(_FINDPACKAGE_blocklattice_LIB_DIR "${CMAKE_CURRENT_BINARY_DIR}/blocklattice/lib")
+set(_FINDPACKAGE_BLOCKLATTICE_INCLUDE_DIR "${CMAKE_CURRENT_BINARY_DIR}/blocklattice/include")
+set(_FINDPACKAGE_BLOCKLATTICE_LIB_DIR "${CMAKE_CURRENT_BINARY_DIR}/blocklattice/lib")
+set(_FINDPACKAGE_BLOCKLATTICE_CONFIG_DIR "${CMAKE_CURRENT_BINARY_DIR}/blocklattice/cmake/blocklattice")
 # Build SuperGenius
 
 ExternalProject_Add(SuperGenius
@@ -262,8 +262,9 @@ ExternalProject_Add(SuperGenius
         -DBOOST_ROOT:PATH="${BOOST_ROOT}"
         -DBOOST_INCLUDE_DIR:PATH="${BOOST_INCLUDE_DIR}"
         -DBOOST_LIBRARY_DIR:PATH="${BOOST_LIBRARY_DIR}"
-        -Dblocklattice_INCLUDE_DIR:PATH="${_FINDPACKAGE_blocklattice_INCLUDE_DIR}"
-        -Dblocklattice_LIBRARY_DIR:PATH="${_FINDPACKAGE_blocklattice_LIB_DIR}"
+        # -Dblocklattice_INCLUDE_DIR:PATH="${_FINDPACKAGE_BLOCKLATTICE_INCLUDE_DIR}"
+        # -Dblocklattice_LIBRARIES:PATH="${_FINDPACKAGE_BLOCKLATTICE_LIB_DIR}"
+        -Dblocklattice_DIR:PATH="${_FINDPACKAGE_BLOCKLATTICE_CONFIG_DIR}"
         -DTESTING:BOOL=${TESTING}
         -DCMAKE_CXX_FLAGS:STRING=${CMAKE_CXX_FLAGS}
         -DCMAKE_C_FLAGS:STRING=${CMAKE_C_FLAGS}
