@@ -1,10 +1,11 @@
-print("${blocklattice_DIR}")
-find_package(blocklattice CONFIG REQUIRED PATHS ${blocklattice_DIR} NO_DEFAULT_PATH)
+print("${blocklattice_INCLUDE_DIR}")
 
 add_executable (sgns_node
     entry.cpp
     app_delegate.cpp
+    node.cpp
     )
+
 target_link_libraries(sgns_node
     blocklattice::secure
     Boost::system
