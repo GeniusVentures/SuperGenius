@@ -29,16 +29,15 @@ print("CXX Release flags: ${CMAKE_CXX_FLAGS_RELEASE}")
 set(Boost_USE_STATIC_LIBS ON) 
 set(Boost_USE_MULTITHREADED ON)  
 set(Boost_USE_STATIC_RUNTIME ON) 
-find_package(Boost REQUIRED COMPONENTS date_time filesystem random regex system) # header only libraries must not be added here
+find_package(Boost REQUIRED COMPONENTS date_time filesystem random regex system thread log log_setup program_options) # header only libraries must not be added here
 
-print("${blocklattice_INCLUDE_DIR}")
 
 include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}
 )
 find_package(blocklattice CONFIG REQUIRED PATHS ${blocklattice_DIR})
 option(TESTING "Build tests" ON)
-
+link_directories(${BOOST_LIBRARY_DIR})
 add_subdirectory(node)
 
 
