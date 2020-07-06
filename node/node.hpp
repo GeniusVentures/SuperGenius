@@ -31,7 +31,8 @@ public:
     sgns::node_config config;
     sgns::node_flags flags;
     sgns::alarm & alarm;
-
+private:
+    void check_genesis();
 };
 }
 #endif 

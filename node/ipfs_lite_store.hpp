@@ -13,6 +13,8 @@ class ipfs_lite_store : public block_store_partial<IPFS_val, ipfs_lite_store>
 {
 public:
     ipfs_lite_store();
+    ~ipfs_lite_store();
+    
 };
 }
 #endif
