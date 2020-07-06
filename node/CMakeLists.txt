@@ -6,6 +6,7 @@ add_executable (sgns_node
     node.cpp
     ipfs_lite_store.cpp
     node_config.cpp
+    network.cpp
     )
 
 target_link_libraries(sgns_node
