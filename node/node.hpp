@@ -10,7 +10,7 @@ namespace sgns
 class node final : public std::enable_shared_from_this<sgns::node>
 {
 public:
-    node(sgns::alarm & alarm_a, sgns::node_config const & config_a);
+    node(sgns::alarm & alarm_a, sgns::node_config const & config_a, sgns::node_flags flags_a);
     ~node ();
     void keepalive (std::string const &, uint16_t);
     void start ();

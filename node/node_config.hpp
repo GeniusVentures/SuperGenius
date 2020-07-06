@@ -1,6 +1,7 @@
 #ifndef SUPERGENIUS_NODE_CONFIG_HPP
 #define SUPERGENIUS_NODE_CONFIG_HPP
 #include <lib/config.hpp>
+#include <secure/common.hpp>
 namespace sgns
 {
 class node_config
@@ -12,8 +13,9 @@ class node_config
 class node_flags final
 {
 public:
-	bool read_only{ false };
+
     sgns::generate_cache generate_cache;
+    bool read_only { false };
 };
 }
 #endif
