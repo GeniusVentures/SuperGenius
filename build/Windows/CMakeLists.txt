@@ -16,11 +16,17 @@ set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /MTd")
 if (CMAKE_BUILD_TYPE EQUAL Debug)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MTd")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MTd")
+  if(MSVC)
+    set(MSVC_RUNTIME_LIBRARY_OPTION "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+  endif()
 endif (CMAKE_BUILD_TYPE EQUAL Debug) 
 
 if (CMAKE_BUILD_TYPE EQUAL Release)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MT")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MT")
+  if(MSVC)
+    set(MSVC_RUNTIME_LIBRARY_OPTION "MultiThreaded$<$<CONFIG:Realease>:Release>")
+  endif()
 endif (CMAKE_BUILD_TYPE EQUAL Release) 
 
 print("CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
@@ -232,7 +238,7 @@ ExternalProject_Add(ipfs-lite-cpp
   DEPENDS GTest Microsoft.GSL spdlog tsl_hat_trie libp2p protobuf leveldb Boost.DI
 )
 
-# Build block-lattice
+
 
 ExternalProject_Add(blocklattice
   PREFIX blocklattice
@@ -250,6 +256,7 @@ ExternalProject_Add(blocklattice
         -DCMAKE_CXX_FLAGS_DEBUG:STRING=${CMAKE_CXX_FLAGS_DEBUG}
         -DCMAKE_C_FLAGS_DEBUG:STRING=${CMAKE_C_FLAGS_DEBUG}
         -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
+        -DCMAKE_MSVC_RUNTIME_LIBRARY:STRING=${MSVC_RUNTIME_LIBRARY_OPTION}
 )
 set(_FINDPACKAGE_BLOCKLATTICE_INCLUDE_DIR "${CMAKE_CURRENT_BINARY_DIR}/blocklattice/include")
 set(_FINDPACKAGE_BLOCKLATTICE_LIB_DIR "${CMAKE_CURRENT_BINARY_DIR}/blocklattice/lib")
