@@ -167,6 +167,40 @@ void sgns::node::receive_confirmed (sgns::transaction const & transaction_a, std
 	// block_a->visit (visitor);
 }
 
+void sgns::node::process_confirmed_data (sgns::transaction const & transaction_a, std::shared_ptr<sgns::block> block_a, sgns::block_hash const & hash_a, sgns::account & account_a, sgns::uint128_t & amount_a, bool & is_state_send_a, sgns::account & pending_account_a)
+{
+	// Faster account calculation
+	account_a = block_a->account ();
+	if (account_a.is_zero ())
+	{
+		account_a = block_a->sideband ().account;
+	}
+	// Faster amount calculation
+	auto previous (block_a->previous ());
+	auto previous_balance (ledger.balance (transaction_a, previous));
+	auto block_balance (store.block_balance_calculated (block_a));
+	if (hash_a != ledger.network_params.ledger.genesis_account)
+	{
+		amount_a = block_balance > previous_balance ? block_balance - previous_balance : previous_balance - block_balance;
+	}
+	else
+	{
+		amount_a = ledger.network_params.ledger.genesis_amount;
+	}
+	if (auto state = dynamic_cast<sgns::state_block *> (block_a.get ()))
+	{
+		if (state->hashables.balance < previous_balance)
+		{
+			is_state_send_a = true;
+		}
+		pending_account_a = state->hashables.link;
+	}
+	if (auto send = dynamic_cast<sgns::send_block *> (block_a.get ()))
+	{
+		pending_account_a = send->hashables.destination;
+	}
+}
+
 std::unique_ptr<sgns::block_store> sgns::make_store ()
 {
 	return std::make_unique<sgns::ipfs_lite_store> ();
