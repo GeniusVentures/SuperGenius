@@ -5,6 +5,7 @@
 #include <secure/ledger.hpp>
 #include <secure/utility.hpp>
 #include "node_config.hpp"
+#include "wallet.hpp"
 namespace sgns
 {
 class node final : public std::enable_shared_from_this<sgns::node>
@@ -17,6 +18,10 @@ public:
 	void stop ();
     std::shared_ptr<sgns::node> shared ();
     int store_version ();
+    void receive_confirmed (sgns::transaction const &, std::shared_ptr<sgns::block>, sgns::block_hash const &);
+    void process_confirmed_data (sgns::transaction const &, std::shared_ptr<sgns::block>, sgns::block_hash const &, sgns::account &, sgns::uint128_t &, bool &, sgns::account &);
+    void process_active (std::shared_ptr<sgns::block>);
+    sgns::process_return process_local (std::shared_ptr<sgns::block>, bool const = false);
     sgns::block_hash latest (sgns::account const &);
 	sgns::uint128_t balance (sgns::account const &);
     sgns::process_return process (sgns::block &);
@@ -31,6 +36,9 @@ public:
     sgns::node_config config;
     sgns::node_flags flags;
     sgns::alarm & alarm;
+    // std::unique_ptr<sgns::wallets_store> wallets_store_impl;
+    // sgns::wallets_store & wallets_store;
+    // sgns::wallets wallets;
 private:
     void check_genesis();
 };
