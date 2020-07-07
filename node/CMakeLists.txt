@@ -11,5 +11,9 @@ add_executable (sgns_node
 
 target_link_libraries(sgns_node
     blocklattice::secure
+    blocklattice::common_lib
+    blocklattice::cryptopp
     Boost::system
+    Boost::thread
+    Boost::filesystem
     )
