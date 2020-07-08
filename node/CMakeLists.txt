@@ -4,6 +4,7 @@ add_executable (sgns_node
     entry.cpp
     app_delegate.cpp
     node.cpp
+    ipfs_lite_store.hpp
     ipfs_lite_store.cpp
     node_config.cpp
     network.cpp

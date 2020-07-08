@@ -134,3 +134,5 @@ size_t sgns::ipfs_lite_store::count (sgns::transaction const & transaction_a, ta
 {
 	return 0;
 }
+
+//template class sgns::block_store_partial<IPFS_val, ifps_lite_store>;   
