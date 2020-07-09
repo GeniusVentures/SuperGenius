@@ -14,6 +14,15 @@ void		*mv_data;	/**< address of the data item */
 } IPFS_val;
 namespace sgns
 {
+    namespace filesystem
+    {
+        class path;
+    }
+}
+
+
+namespace sgns
+{
 
     /** @brief A handle for an individual database in the DB environment. */
     typedef unsigned int	ipfs_dbi;
@@ -37,9 +46,7 @@ namespace sgns
 	    std::string vendor_get () const override;
 
 	    bool block_info_get (sgns::transaction const &, sgns::block_hash const &, sgns::block_info &) const override;
-
 	    void version_put (sgns::write_transaction const &, int) override;
-
     	void serialize_mdb_tracker (boost::property_tree::ptree &, std::chrono::milliseconds, std::chrono::milliseconds) override;
 
         // These are only use in the upgrade process.
@@ -52,9 +59,6 @@ namespace sgns
         bool not_found (int status) const override;
 	    bool success (int status) const override;
 	    int status_code_not_found () const override;
-
-	    //static void create_backup_file (sgns::mdb_env &, boost::filesystem::path const &, sgns::logger_mt &);
-
 
     };
     template <>
