@@ -36,8 +36,18 @@ namespace sgns
             ("daemon", "Start node daemon")
             ("debug_block_count", "Display the number of block");
         // clang-format on
-        // sgns::add_node_options (description);
-        // sgns::add_node_flag_options (description);
+        sgns::add_node_options (description);
+        sgns::add_node_flag_options (description);
+        boost::program_options::variables_map vm;
+        try
+        {
+            boost::program_options::store (boost::program_options::parse_command_line (argc, argv, description), vm);
+        }
+        catch (boost::program_options::error const & err)
+        {
+            std::cerr << err.what () << std::endl;
+            return;
+        }
     }
 
     void AppDelegate::run(boost::filesystem::path const & data_path/*, sgns::node_flags const & flags*/){

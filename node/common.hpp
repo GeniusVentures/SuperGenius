@@ -491,4 +491,4 @@ public:
 // private:
 // 	sgns::cleanup_guard cleanup_guard;
 // };
-// }
+}

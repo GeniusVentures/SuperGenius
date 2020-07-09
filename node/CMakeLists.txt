@@ -7,7 +7,7 @@ add_executable (sgns_node
     ipfs_lite_store.cpp
     # node_config.cpp
     # network.cpp
-    # cli.cpp
+    cli.cpp
     # common.cpp
     # logging.cpp
     # node_rpc_config.cpp

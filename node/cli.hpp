@@ -1,7 +1,7 @@
 #ifndef SUPERGENIUS_NODE_CLI_HPP
 #define SUPERGENIUS_NODE_CLI_HPP
 #include <lib/errors.hpp>
-#include "node_config.hpp"
+// #include "node_config.hpp"
 
 #include <boost/program_options.hpp>
 
@@ -22,8 +22,8 @@ enum class error_cli
 
 void add_node_options (boost::program_options::options_description &);
 void add_node_flag_options (boost::program_options::options_description &);
-std::error_code update_flags (sgns::node_flags &, boost::program_options::variables_map const &);
-std::error_code handle_node_options (boost::program_options::variables_map const &);
+// std::error_code update_flags (sgns::node_flags &, boost::program_options::variables_map const &);
+// std::error_code handle_node_options (boost::program_options::variables_map const &);
 }
 
 REGISTER_ERROR_CODES (sgns, error_cli)
