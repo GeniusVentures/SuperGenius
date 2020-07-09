@@ -25,6 +25,31 @@ print("C Debug flags: ${CMAKE_C_FLAGS_DEBUG}")
 print("CXX Debug flags: ${CMAKE_CXX_FLAGS_DEBUG}")
 print("C Release flags: ${CMAKE_C_FLAGS_RELEASE}")
 print("CXX Release flags: ${CMAKE_CXX_FLAGS_RELEASE}")
+
+# Package config ######################################################################################
+set (CPACK_PACKAGE_VERSION_MAJOR "21")
+set (CPACK_PACKAGE_VERSION_MINOR "0")
+set (CPACK_PACKAGE_VERSION_PATCH "0")
+set (CPACK_PACKAGE_VERSION_PRE_RELEASE "12")
+set (CPACK_PACKAGE_VENDOR "Genius Ventures")
+
+# Export flag    ######################################################################################
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+include(CheckCXXCompilerFlag)
+
+# Boost definition ######################################################################################
+if (CMAKE_VERSION VERSION_LESS 3.11)
+	# compatibility for boost import targets use bundled 3.11 FindBoost.cmake
+	list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/legacyModules")
+endif ()
+option (SGNS_STACKTRACE_BACKTRACE "Use BOOST_STACKTRACE_USE_BACKTRACE in stacktraces, for POSIX" OFF)
+if (SGNS_STACKTRACE_BACKTRACE)
+	add_definitions(-DSGNS_STACKTRACE_BACKTRACE=1)
+	if (BACKTRACE_INCLUDE)
+		add_definitions(-DBOOST_STACKTRACE_BACKTRACE_INCLUDE_FILE=${BACKTRACE_INCLUDE})
+	endif()
+endif ()
+
 # BOOST library 
 set(Boost_USE_STATIC_LIBS ON) 
 set(Boost_USE_MULTITHREADED ON)  

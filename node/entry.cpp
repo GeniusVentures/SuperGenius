@@ -1,5 +1,9 @@
 #include "app_delegate.hpp"
 #include <boost/program_options.hpp>
+#include <lib/utility.hpp>
+#include "secure/utility.hpp"
+#include <sstream>
+#include <iostream> 
 sgns::AppDelegate g_app_delegate;
 int main (int argc, char * const * argv)
 {
@@ -10,7 +14,7 @@ int main (int argc, char * const * argv)
 	if (data_path_it == vm.end ())
 	{
 		std::string error_string;
-		if (!nano::migrate_working_path (error_string))
+		if (!sgns::migrate_working_path (error_string))
 		{
 			std::cerr << error_string << std::endl;
 

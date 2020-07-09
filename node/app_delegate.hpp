@@ -1,5 +1,6 @@
 #ifndef SUPERGENIUS_NODE_APP_DELEGATE_HPP
 #define SUPERGENIUS_NODE_APP_DELEGATE_HPP
+#include <boost/program_options.hpp>
 namespace boost
 {
 namespace filesystem
@@ -35,7 +36,7 @@ public:
      * @param 
      * @return no return
      */
-    void run(boost::filesystem::path const &, sgns::node_flags const & flags);
+    void run(boost::filesystem::path const &/*, sgns::node_flags const & flags*/);
     /**
      * @brief  exit from main loop of SuperGenius daemon node
      * @param 
@@ -43,7 +44,7 @@ public:
      */
     void exit();
 public:
-    boost::program_options::variables_map vm;
+    // boost::program_options::variables_map vm;
 };
 }
 #endif

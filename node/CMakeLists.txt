@@ -5,8 +5,12 @@ add_executable (sgns_node
     app_delegate.cpp
     node.cpp
     ipfs_lite_store.cpp
-    node_config.cpp
-    network.cpp
+    # node_config.cpp
+    # network.cpp
+    # cli.cpp
+    # common.cpp
+    # logging.cpp
+    # node_rpc_config.cpp
     )
 
 target_link_libraries(sgns_node
