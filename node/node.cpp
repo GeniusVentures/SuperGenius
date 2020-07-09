@@ -26,35 +26,37 @@ int sgns::node::store_version ()
 }
 
 void sgns::node::check_genesis() {
-        // First do a pass with a read to see if any writing needs doing, this saves needing to open a write lock (and potentially blocking)
-		auto is_initialized (false);
-		{
-			auto transaction (store.tx_begin_read ());
-			is_initialized = (store.latest_begin (transaction) != store.latest_end ());
-		}
-        sgns::genesis genesis;
-		if (!is_initialized)
-		{
-			release_assert (!flags.read_only);
-			auto transaction (store.tx_begin_write ({ tables::accounts, tables::cached_counts, tables::confirmation_height, tables::frontiers, tables::open_blocks }));
-			// Store was empty meaning we just created it, add the genesis block
-			store.initialize (transaction, genesis, ledger.cache);
-		}
+    
+    // First do a pass with a read to see if any writing needs doing, this saves needing to open a write lock (and potentially blocking)
+    auto is_initialized (false);
+    {
+        auto transaction (store.tx_begin_read ());
+        is_initialized = (store.latest_begin (transaction) != store.latest_end ());
+    }
+    
+    sgns::genesis genesis;
+    if (!is_initialized)
+    {
+        release_assert (!flags.read_only);
+        auto transaction (store.tx_begin_write ({ tables::accounts, tables::cached_counts, tables::confirmation_height, tables::frontiers, tables::open_blocks }));
+        // Store was empty meaning we just created it, add the genesis block
+        store.initialize (transaction, genesis, ledger.cache);
+    }
 
-		if (!ledger.block_exists (genesis.hash ()))
-		{
-			std::stringstream ss;
-			ss << "Genesis block not found. Make sure the node network ID is correct.";
-			if (network_params.network.is_beta_network ())
-			{
-				ss << " Beta network may have reset, try clearing database files";
-			}
-			auto str = ss.str ();
+    if (!ledger.block_exists (genesis.hash ()))
+    {
+        std::stringstream ss;
+        ss << "Genesis block not found. Make sure the node network ID is correct.";
+        if (network_params.network.is_beta_network ())
+        {
+            ss << " Beta network may have reset, try clearing database files";
+        }
+        auto str = ss.str ();
 
-			// logger.always_log (str);
-			std::cerr << str << std::endl;
-			std::exit (1);
-		}
+        // logger.always_log (str);
+        std::cerr << str << std::endl;
+        std::exit (1);
+    }
 }
 
 sgns::block_hash sgns::node::latest (sgns::account const & account_a)
@@ -201,6 +203,36 @@ void sgns::node::process_confirmed_data (sgns::transaction const & transaction_a
 	}
 }
 
+// void sgns::node::process_confirmed (sgns::election_status const & status_a, std::shared_ptr<sgns::election> const & election_a, uint8_t iteration_a)
+// {
+// 	if (status_a.type == sgns::election_status_type::active_confirmed_quorum)
+// 	{
+// 		auto block_a (status_a.winner);
+// 		auto hash (block_a->hash ());
+// 		if (ledger.block_exists (block_a->type (), hash))
+// 		{
+// 			// Pausing to prevent this block being processed before adding to election winner details.
+// 			confirmation_height_processor.pause ();
+// 			confirmation_height_processor.add (hash);
+// 			{
+// 				active.add_election_winner_details (hash, election_a);
+// 			}
+// 			confirmation_height_processor.unpause ();
+// 		}
+// 		// Limit to 0.5 * 20 = 10 seconds (more than max block_processor::process_batch finish time)
+// 		else if (iteration_a < 20)
+// 		{
+// 			iteration_a++;
+// 			std::weak_ptr<sgns::node> node_w (shared ());
+// 			alarm.add (std::chrono::steady_clock::now () + network_params.node.process_confirmed_interval, [node_w, status_a, iteration_a, election_a]() {
+// 				if (auto node_l = node_w.lock ())
+// 				{
+// 					node_l->process_confirmed (status_a, election_a, iteration_a);
+// 				}
+// 			});
+// 		}
+// 	}
+// }
 std::unique_ptr<sgns::block_store> sgns::make_store ()
 {
 	return std::make_unique<sgns::ipfs_lite_store> ();

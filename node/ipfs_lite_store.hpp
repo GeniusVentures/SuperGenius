@@ -8,10 +8,11 @@
 #ifndef SUPERGENIUS_IPFS_LITE_STORE_HPP
 #define SUPERGENIUS_IPFS_LITE_STORE_HPP
 #include <secure/blockstore_partial.hpp>
-#include <secure/common.hpp>
-#include "ipfs_lite_store.h"
-
-namespace boost
+typedef struct IPFS_val {
+size_t		 mv_size;	/**< size of the data item */
+void		*mv_data;	/**< address of the data item */
+} IPFS_val;
+namespace sgns
 {
     namespace filesystem
     {
@@ -28,7 +29,7 @@ namespace sgns
     
     using ipfs_val = db_val<IPFS_val>;
 
-    class ipfs_lite_store : public block_store_partial <IPFS_val, ipfs_lite_store>
+    class ipfs_lite_store : public block_store_partial<IPFS_val, ipfs_lite_store>
     {
     public:
         ipfs_lite_store();
@@ -68,7 +69,6 @@ namespace sgns
     ipfs_val::db_val (size_t size_a, void * data_a);
     template <>
     void ipfs_val::convert_buffer_to_value ();
-
-   // extern template class block_store_partial<IPFS_val, ifps_lite_store>;   
+    extern template class block_store_partial<IPFS_val, ipfs_lite_store>;
 }
 #endif

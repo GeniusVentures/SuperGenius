@@ -60,7 +60,7 @@ thread ([this]() {
 		const char * store_path;
 		mdb_env_get_path (env, &store_path);
 		const boost::filesystem::path path (store_path);
-		sgns::mdb_store::create_backup_file (env, path, node_a.logger);
+		sgns::ipfs_lite_store::create_backup_file (env, path, node_a.logger);
 	}
 	for (auto & item : items)
 	{

@@ -20,6 +20,7 @@ public:
     int store_version ();
     void receive_confirmed (sgns::transaction const &, std::shared_ptr<sgns::block>, sgns::block_hash const &);
     void process_confirmed_data (sgns::transaction const &, std::shared_ptr<sgns::block>, sgns::block_hash const &, sgns::account &, sgns::uint128_t &, bool &, sgns::account &);
+    // void process_confirmed (sgns::election_status const & status_a, std::shared_ptr<sgns::election> const & election_a, uint8_t iteration_a);
     void process_active (std::shared_ptr<sgns::block>);
     sgns::process_return process_local (std::shared_ptr<sgns::block>, bool const = false);
     sgns::block_hash latest (sgns::account const &);
