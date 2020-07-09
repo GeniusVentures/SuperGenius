@@ -59,7 +59,14 @@ namespace sgns
 
 
     };
-    
-
+    template <>
+    void * ipfs_val::data () const;
+    template <>
+    size_t ipfs_val::size () const;
+    template <>
+    ipfs_val::db_val (size_t size_a, void * data_a);
+    template <>
+    void ipfs_val::convert_buffer_to_value ();
+    extern template class block_store_partial<IPFS_val, ipfs_lite_store>;
 }
 #endif
