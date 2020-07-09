@@ -1,6 +1,7 @@
 #include "app_delegate.hpp"
 #include <boost/process/child.hpp>
 #include <lib/utility.hpp>
+#include "secure/utility.hpp"
 #include <csignal>
 #include <iostream>
 #include "cli.hpp"
@@ -24,7 +25,7 @@ namespace sgns
 
     }
 
-    void AppDelegate::init(int argc, char * const * argv){
+    int AppDelegate::init(int argc, char * const * argv){
         std::cout << "--------------AppDelegate::init()---------------" << std::endl;
         sgns::set_umask ();
         boost::program_options::options_description description ("Command line options");
@@ -46,8 +47,34 @@ namespace sgns
         catch (boost::program_options::error const & err)
         {
             std::cerr << err.what () << std::endl;
-            return;
+            return 1;
         }
+        boost::program_options::notify (vm);
+
+        auto network (vm.find ("network"));
+        if (network != vm.end ())
+        {
+            auto err (sgns::network_constants::set_active_network (network->second.as<std::string> ()));
+            if (err)
+            {
+                std::cerr << sgns::network_constants::active_network_err_msg << std::endl;
+                std::exit (1);
+            }
+        }
+
+        auto data_path_it = vm.find ("data_path");
+        if (data_path_it == vm.end ())
+        {
+            std::string error_string;
+            if (!sgns::migrate_working_path (error_string))
+            {
+                std::cerr << error_string << std::endl;
+
+                return 1;
+            }
+        }
+        boost::filesystem::path data_path ((data_path_it != vm.end ()) ? data_path_it->second.as<std::string> () : sgns::working_path ());
+	    // auto ec = sgns::handle_node_options (vm);
     }
 
     void AppDelegate::run(boost::filesystem::path const & data_path/*, sgns::node_flags const & flags*/){

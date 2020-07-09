@@ -28,9 +28,9 @@ public:
     /**
      * @brief Initialize  of SuperGenius daemon node.
      * @param 
-     * @return no return
+     * @return int error code
      */
-    void init(int argc, char * const * argv);
+    int init(int argc, char * const * argv);
     /**
      * @brief main loop of SuperGenius daemon node
      * @param 
