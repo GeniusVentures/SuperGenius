@@ -22,3 +22,5 @@ target_link_libraries(sgns_node
     Boost::thread
     Boost::filesystem
     )
+
+install(TARGETS sgns_node)
