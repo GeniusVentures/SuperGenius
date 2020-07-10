@@ -257,7 +257,7 @@ std::error_code sgns::handle_node_options (boost::program_options::variables_map
 				{
 					password = vm["password"].as<std::string> ();
 				}
-				// auto inactive_node = sgns::default_inactive_node (data_path, vm);
+				auto inactive_node = sgns::default_inactive_node (data_path, vm);
 				// auto wallet (inactive_node->node->wallets.open (wallet_id));
 // 				if (wallet != nullptr)
 // 				{
@@ -285,26 +285,26 @@ std::error_code sgns::handle_node_options (boost::program_options::variables_map
 				ec = sgns::error_cli::invalid_arguments;
 			}
 		}
-// 		else
-// 		{
-// 			std::cerr << "wallet_add command requires one <wallet> option and one <key> option and optionally one <password> option\n";
-// 			ec = sgns::error_cli::invalid_arguments;
-// 		}
+		else
+		{
+			std::cerr << "wallet_add command requires one <wallet> option and one <key> option and optionally one <password> option\n";
+			ec = sgns::error_cli::invalid_arguments;
+		}
 	}
-// 	else if (vm.count ("account_get") > 0)
-// 	{
-// 		if (vm.count ("key") == 1)
-// 		{
-// 			sgns::account pub;
-// 			pub.decode_hex (vm["key"].as<std::string> ());
-// 			std::cout << "Account: " << pub.to_account () << std::endl;
-// 		}
-// 		else
-// 		{
-// 			std::cerr << "account comand requires one <key> option\n";
-// 			ec = sgns::error_cli::invalid_arguments;
-// 		}
-// 	}
+	else if (vm.count ("account_get") > 0)
+	{
+		if (vm.count ("key") == 1)
+		{
+			sgns::account pub;
+			pub.decode_hex (vm["key"].as<std::string> ());
+			std::cout << "Account: " << pub.to_account () << std::endl;
+		}
+		else
+		{
+			std::cerr << "account comand requires one <key> option\n";
+			ec = sgns::error_cli::invalid_arguments;
+		}
+	}
 // 	else if (vm.count ("account_key") > 0)
 // 	{
 // 		if (vm.count ("account") == 1)

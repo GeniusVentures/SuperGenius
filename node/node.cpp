@@ -289,34 +289,34 @@ sgns::inactive_node::inactive_node (boost::filesystem::path const & path_a, sgns
 // alarm (*io_context),
 // work (1)
 {
-// 	boost::system::error_code error_chmod;
+	boost::system::error_code error_chmod;
 
 // 	/*
 // 	 * @warning May throw a filesystem exception
 // 	 */
-// 	boost::filesystem::create_directories (path_a);
-// 	sgns::set_secure_perm_directory (path_a, error_chmod);
-// 	sgns::daemon_config daemon_config (path_a);
-// 	auto error = sgns::read_node_config_toml (path_a, daemon_config, node_flags_a.config_overrides);
-// 	if (error)
-// 	{
-// 		std::cerr << "Error deserializing config file";
-// 		if (!node_flags_a.config_overrides.empty ())
-// 		{
-// 			std::cerr << " or --config option";
-// 		}
-// 		std::cerr << "\n"
-// 		          << error.get_message () << std::endl;
-// 		std::exit (1);
-// 	}
+	boost::filesystem::create_directories (path_a);
+	sgns::set_secure_perm_directory (path_a, error_chmod);
+	// sgns::daemon_config daemon_config (path_a);
+	// auto error = sgns::read_node_config_toml (path_a, daemon_config, node_flags_a.config_overrides);
+	// if (error)
+	// {
+	// 	std::cerr << "Error deserializing config file";
+	// 	if (!node_flags_a.config_overrides.empty ())
+	// 	{
+	// 		std::cerr << " or --config option";
+	// 	}
+	// 	std::cerr << "\n"
+	// 	          << error.get_message () << std::endl;
+	// 	std::exit (1);
+	// }
 
-// 	auto & node_config = daemon_config.node;
-// 	node_config.peering_port = sgns::get_available_port ();
-// 	node_config.logging.max_size = std::numeric_limits<std::uintmax_t>::max ();
-// 	node_config.logging.init (path_a);
+	// auto & node_config = daemon_config.node;
+	// node_config.peering_port = sgns::get_available_port ();
+	// node_config.logging.max_size = std::numeric_limits<std::uintmax_t>::max ();
+	// node_config.logging.init (path_a);
 
-// 	node = std::make_shared<sgns::node> (*io_context, path_a, alarm, node_config, work, node_flags_a);
-// 	node->active.stop ();
+	// node = std::make_shared<sgns::node> (alarm, node_config, work, node_flags_a);
+	// node->active.stop ();
 }
 
 sgns::inactive_node::~inactive_node ()
