@@ -233,6 +233,97 @@ void sgns::node::process_confirmed_data (sgns::transaction const & transaction_a
 // 		}
 // 	}
 // }
+void sgns::node::stop ()
+{
+	if (!stopped.exchange (true))
+	{
+		// logger.always_log ("Node stopping");
+		// write_database_queue.stop ();
+		// Cancels ongoing work generation tasks, which may be blocking other threads
+		// No tasks may wait for work generation in I/O threads, or termination signal capturing will be unable to call node::stop()
+		// distributed_work.stop ();
+		// block_processor.stop ();
+		// if (block_processor_thread.joinable ())
+		// {
+		// 	block_processor_thread.join ();
+		// }
+		// aggregator.stop ();
+		// vote_processor.stop ();
+		// active.stop ();
+		// confirmation_height_processor.stop ();
+		// network.stop ();
+		// if (telemetry)
+		// {
+		// 	telemetry->stop ();
+		// 	telemetry = nullptr;
+		// }
+		// if (websocket_server)
+		// {
+		// 	websocket_server->stop ();
+		// }
+		// bootstrap_initiator.stop ();
+		// bootstrap.stop ();
+		// port_mapping.stop ();
+		// checker.stop ();
+		// wallets.stop ();
+		// stats.stop ();
+		// worker.stop ();
+		// work pool is not stopped on purpose due to testing setup
+	}
+}
+sgns::node_flags const & sgns::inactive_node_flag_defaults ()
+{
+	static sgns::node_flags node_flags;
+	node_flags.inactive_node = true;
+	node_flags.read_only = true;
+	node_flags.generate_cache.reps = false;
+	node_flags.generate_cache.cemented_count = false;
+	node_flags.generate_cache.unchecked_count = false;
+	node_flags.disable_bootstrap_listener = true;
+	node_flags.disable_tcp_realtime = true;
+	return node_flags;
+}
+
+sgns::inactive_node::inactive_node (boost::filesystem::path const & path_a, sgns::node_flags const & node_flags_a) /*:*/
+// io_context (std::make_shared<boost::asio::io_context> ()),
+// alarm (*io_context),
+// work (1)
+{
+// 	boost::system::error_code error_chmod;
+
+// 	/*
+// 	 * @warning May throw a filesystem exception
+// 	 */
+// 	boost::filesystem::create_directories (path_a);
+// 	sgns::set_secure_perm_directory (path_a, error_chmod);
+// 	sgns::daemon_config daemon_config (path_a);
+// 	auto error = sgns::read_node_config_toml (path_a, daemon_config, node_flags_a.config_overrides);
+// 	if (error)
+// 	{
+// 		std::cerr << "Error deserializing config file";
+// 		if (!node_flags_a.config_overrides.empty ())
+// 		{
+// 			std::cerr << " or --config option";
+// 		}
+// 		std::cerr << "\n"
+// 		          << error.get_message () << std::endl;
+// 		std::exit (1);
+// 	}
+
+// 	auto & node_config = daemon_config.node;
+// 	node_config.peering_port = sgns::get_available_port ();
+// 	node_config.logging.max_size = std::numeric_limits<std::uintmax_t>::max ();
+// 	node_config.logging.init (path_a);
+
+// 	node = std::make_shared<sgns::node> (*io_context, path_a, alarm, node_config, work, node_flags_a);
+// 	node->active.stop ();
+}
+
+sgns::inactive_node::~inactive_node ()
+{
+	node->stop ();
+}
+
 std::unique_ptr<sgns::block_store> sgns::make_store ()
 {
 	return std::make_unique<sgns::ipfs_lite_store> ();

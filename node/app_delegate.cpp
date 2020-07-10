@@ -74,7 +74,7 @@ namespace sgns
             }
         }
         boost::filesystem::path data_path ((data_path_it != vm.end ()) ? data_path_it->second.as<std::string> () : sgns::working_path ());
-	    // auto ec = sgns::handle_node_options (vm);
+	    auto ec = sgns::handle_node_options (vm);
     }
 
     void AppDelegate::run(boost::filesystem::path const & data_path/*, sgns::node_flags const & flags*/){

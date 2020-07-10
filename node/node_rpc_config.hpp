@@ -26,10 +26,7 @@ class tomlconfig;
 class node_rpc_config final
 {
 public:
-	sgns::error_ serialize_json (sgns::jsonconfig &) const;
-	sgns::error_ deserialize_json (bool & upgraded_a, sgns::jsonconfig &, boost::filesystem::path const & data_path);
-	sgns::error_ serialize_toml (sgns::tomlconfig & toml) const;
-	sgns::error_ deserialize_toml (sgns::tomlconfig & toml);
+
 
 	bool enable_sign_hash{ false };
 	// sgns::rpc_child_process_config child_process;

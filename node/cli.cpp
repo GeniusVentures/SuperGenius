@@ -1,8 +1,9 @@
 // #include <lib/tomlconfig.hpp>
 #include "cli.hpp"
-// #include "common.hpp"
+#include "secure/utility.hpp"
+#include "secure/common.hpp"
 // #include "daemonconfig.hpp"
-// #include "node.hpp"
+#include "node.hpp"
 
 // #include <boost/format.hpp>
 
@@ -107,78 +108,78 @@ void sgns::add_node_flag_options (boost::program_options::options_description & 
 	// clang-format on
 }
 
-// std::error_code sgns::update_flags (sgns::node_flags & flags_a, boost::program_options::variables_map const & vm)
-// {
-// 	std::error_code ec;
-// 	auto batch_size_it = vm.find ("batch_size");
-// 	if (batch_size_it != vm.end ())
-// 	{
-// 		flags_a.sideband_batch_size = batch_size_it->second.as<size_t> ();
-// 	}
-// 	flags_a.disable_backup = (vm.count ("disable_backup") > 0);
-// 	flags_a.disable_lazy_bootstrap = (vm.count ("disable_lazy_bootstrap") > 0);
-// 	flags_a.disable_legacy_bootstrap = (vm.count ("disable_legacy_bootstrap") > 0);
-// 	flags_a.disable_wallet_bootstrap = (vm.count ("disable_wallet_bootstrap") > 0);
-// 	if (!flags_a.inactive_node)
-// 	{
-// 		flags_a.disable_bootstrap_listener = (vm.count ("disable_bootstrap_listener") > 0);
-// 		flags_a.disable_tcp_realtime = (vm.count ("disable_tcp_realtime") > 0);
-// 	}
-// 	flags_a.disable_providing_telemetry_metrics = (vm.count ("disable_providing_telemetry_metrics") > 0);
-// 	if ((vm.count ("disable_udp") > 0) && (vm.count ("enable_udp") > 0))
-// 	{
-// 		ec = sgns::error_cli::ambiguous_udp_options;
-// 	}
-// 	flags_a.disable_udp = (vm.count ("enable_udp") == 0);
-// 	if (flags_a.disable_tcp_realtime && flags_a.disable_udp)
-// 	{
-// 		ec = sgns::error_cli::disable_all_network;
-// 	}
-// 	flags_a.disable_unchecked_cleanup = (vm.count ("disable_unchecked_cleanup") > 0);
-// 	flags_a.disable_unchecked_drop = (vm.count ("disable_unchecked_drop") > 0);
-// 	flags_a.disable_block_processor_unchecked_deletion = (vm.count ("disable_block_processor_unchecked_deletion") > 0);
-// 	flags_a.allow_bootstrap_peers_duplicates = (vm.count ("allow_bootstrap_peers_duplicates") > 0);
-// 	flags_a.fast_bootstrap = (vm.count ("fast_bootstrap") > 0);
-// 	if (flags_a.fast_bootstrap)
-// 	{
-// 		flags_a.disable_block_processor_unchecked_deletion = true;
-// 		flags_a.block_processor_batch_size = 256 * 1024;
-// 		flags_a.block_processor_full_size = 1024 * 1024;
-// 		flags_a.block_processor_verification_size = std::numeric_limits<size_t>::max ();
-// 	}
-// 	auto block_processor_batch_size_it = vm.find ("block_processor_batch_size");
-// 	if (block_processor_batch_size_it != vm.end ())
-// 	{
-// 		flags_a.block_processor_batch_size = block_processor_batch_size_it->second.as<size_t> ();
-// 	}
-// 	auto block_processor_full_size_it = vm.find ("block_processor_full_size");
-// 	if (block_processor_full_size_it != vm.end ())
-// 	{
-// 		flags_a.block_processor_full_size = block_processor_full_size_it->second.as<size_t> ();
-// 	}
-// 	auto block_processor_verification_size_it = vm.find ("block_processor_verification_size");
-// 	if (block_processor_verification_size_it != vm.end ())
-// 	{
-// 		flags_a.block_processor_verification_size = block_processor_verification_size_it->second.as<size_t> ();
-// 	}
-// 	auto inactive_votes_cache_size_it = vm.find ("inactive_votes_cache_size");
-// 	if (inactive_votes_cache_size_it != vm.end ())
-// 	{
-// 		flags_a.inactive_votes_cache_size = inactive_votes_cache_size_it->second.as<size_t> ();
-// 	}
-// 	auto vote_processor_capacity_it = vm.find ("vote_processor_capacity");
-// 	if (vote_processor_capacity_it != vm.end ())
-// 	{
-// 		flags_a.vote_processor_capacity = vote_processor_capacity_it->second.as<size_t> ();
-// 	}
-// 	// Config overriding
-// 	auto config (vm.find ("config"));
-// 	if (config != vm.end ())
-// 	{
-// 		flags_a.config_overrides = config->second.as<std::vector<std::string>> ();
-// 	}
-// 	return ec;
-// }
+std::error_code sgns::update_flags (sgns::node_flags & flags_a, boost::program_options::variables_map const & vm)
+{
+	std::error_code ec;
+	auto batch_size_it = vm.find ("batch_size");
+	if (batch_size_it != vm.end ())
+	{
+		flags_a.sideband_batch_size = batch_size_it->second.as<size_t> ();
+	}
+	flags_a.disable_backup = (vm.count ("disable_backup") > 0);
+	flags_a.disable_lazy_bootstrap = (vm.count ("disable_lazy_bootstrap") > 0);
+	flags_a.disable_legacy_bootstrap = (vm.count ("disable_legacy_bootstrap") > 0);
+	flags_a.disable_wallet_bootstrap = (vm.count ("disable_wallet_bootstrap") > 0);
+	if (!flags_a.inactive_node)
+	{
+		flags_a.disable_bootstrap_listener = (vm.count ("disable_bootstrap_listener") > 0);
+		flags_a.disable_tcp_realtime = (vm.count ("disable_tcp_realtime") > 0);
+	}
+	flags_a.disable_providing_telemetry_metrics = (vm.count ("disable_providing_telemetry_metrics") > 0);
+	if ((vm.count ("disable_udp") > 0) && (vm.count ("enable_udp") > 0))
+	{
+		ec = sgns::error_cli::ambiguous_udp_options;
+	}
+	flags_a.disable_udp = (vm.count ("enable_udp") == 0);
+	if (flags_a.disable_tcp_realtime && flags_a.disable_udp)
+	{
+		ec = sgns::error_cli::disable_all_network;
+	}
+	flags_a.disable_unchecked_cleanup = (vm.count ("disable_unchecked_cleanup") > 0);
+	flags_a.disable_unchecked_drop = (vm.count ("disable_unchecked_drop") > 0);
+	flags_a.disable_block_processor_unchecked_deletion = (vm.count ("disable_block_processor_unchecked_deletion") > 0);
+	flags_a.allow_bootstrap_peers_duplicates = (vm.count ("allow_bootstrap_peers_duplicates") > 0);
+	flags_a.fast_bootstrap = (vm.count ("fast_bootstrap") > 0);
+	if (flags_a.fast_bootstrap)
+	{
+		flags_a.disable_block_processor_unchecked_deletion = true;
+		flags_a.block_processor_batch_size = 256 * 1024;
+		flags_a.block_processor_full_size = 1024 * 1024;
+		flags_a.block_processor_verification_size = std::numeric_limits<size_t>::max ();
+	}
+	auto block_processor_batch_size_it = vm.find ("block_processor_batch_size");
+	if (block_processor_batch_size_it != vm.end ())
+	{
+		flags_a.block_processor_batch_size = block_processor_batch_size_it->second.as<size_t> ();
+	}
+	auto block_processor_full_size_it = vm.find ("block_processor_full_size");
+	if (block_processor_full_size_it != vm.end ())
+	{
+		flags_a.block_processor_full_size = block_processor_full_size_it->second.as<size_t> ();
+	}
+	auto block_processor_verification_size_it = vm.find ("block_processor_verification_size");
+	if (block_processor_verification_size_it != vm.end ())
+	{
+		flags_a.block_processor_verification_size = block_processor_verification_size_it->second.as<size_t> ();
+	}
+	auto inactive_votes_cache_size_it = vm.find ("inactive_votes_cache_size");
+	if (inactive_votes_cache_size_it != vm.end ())
+	{
+		flags_a.inactive_votes_cache_size = inactive_votes_cache_size_it->second.as<size_t> ();
+	}
+	auto vote_processor_capacity_it = vm.find ("vote_processor_capacity");
+	if (vote_processor_capacity_it != vm.end ())
+	{
+		flags_a.vote_processor_capacity = vote_processor_capacity_it->second.as<size_t> ();
+	}
+	// Config overriding
+	auto config (vm.find ("config"));
+	if (config != vm.end ())
+	{
+		flags_a.config_overrides = config->second.as<std::vector<std::string>> ();
+	}
+	return ec;
+}
 
 // namespace
 // {
@@ -239,25 +240,25 @@ void sgns::add_node_flag_options (boost::program_options::options_description & 
 // }
 // }
 
-// std::error_code sgns::handle_node_options (boost::program_options::variables_map const & vm)
-// {
-// 	std::error_code ec;
-// 	boost::filesystem::path data_path = vm.count ("data_path") ? boost::filesystem::path (vm["data_path"].as<std::string> ()) : sgns::working_path ();
+std::error_code sgns::handle_node_options (boost::program_options::variables_map const & vm)
+{
+	std::error_code ec;
+	boost::filesystem::path data_path = vm.count ("data_path") ? boost::filesystem::path (vm["data_path"].as<std::string> ()) : sgns::working_path ();
 
-// 	if (vm.count ("account_create"))
-// 	{
-// 		if (vm.count ("wallet") == 1)
-// 		{
-// 			sgns::wallet_id wallet_id;
-// 			if (!wallet_id.decode_hex (vm["wallet"].as<std::string> ()))
-// 			{
-// 				std::string password;
-// 				if (vm.count ("password") > 0)
-// 				{
-// 					password = vm["password"].as<std::string> ();
-// 				}
-// 				auto inactive_node = sgns::default_inactive_node (data_path, vm);
-// 				auto wallet (inactive_node->node->wallets.open (wallet_id));
+	if (vm.count ("account_create"))
+	{
+		if (vm.count ("wallet") == 1)
+		{
+			sgns::wallet_id wallet_id;
+			if (!wallet_id.decode_hex (vm["wallet"].as<std::string> ()))
+			{
+				std::string password;
+				if (vm.count ("password") > 0)
+				{
+					password = vm["password"].as<std::string> ();
+				}
+				// auto inactive_node = sgns::default_inactive_node (data_path, vm);
+				// auto wallet (inactive_node->node->wallets.open (wallet_id));
 // 				if (wallet != nullptr)
 // 				{
 // 					auto transaction (wallet->wallets.tx_begin_write ());
@@ -277,19 +278,19 @@ void sgns::add_node_flag_options (boost::program_options::options_description & 
 // 					std::cerr << "Wallet doesn't exist\n";
 // 					ec = sgns::error_cli::invalid_arguments;
 // 				}
-// 			}
-// 			else
-// 			{
-// 				std::cerr << "Invalid wallet id\n";
-// 				ec = sgns::error_cli::invalid_arguments;
-// 			}
-// 		}
+			}
+			else
+			{
+				std::cerr << "Invalid wallet id\n";
+				ec = sgns::error_cli::invalid_arguments;
+			}
+		}
 // 		else
 // 		{
 // 			std::cerr << "wallet_add command requires one <wallet> option and one <key> option and optionally one <password> option\n";
 // 			ec = sgns::error_cli::invalid_arguments;
 // 		}
-// 	}
+	}
 // 	else if (vm.count ("account_get") > 0)
 // 	{
 // 		if (vm.count ("key") == 1)
@@ -1086,15 +1087,15 @@ void sgns::add_node_flag_options (boost::program_options::options_description & 
 // 		ec = sgns::error_cli::unknown_command;
 // 	}
 
-// 	return ec;
-// }
+	return ec;
+}
 
-// std::unique_ptr<sgns::inactive_node> sgns::default_inactive_node (boost::filesystem::path const & path_a, boost::program_options::variables_map const & vm_a)
-// {
-// 	auto node_flags = sgns::inactive_node_flag_defaults ();
-// 	sgns::update_flags (node_flags, vm_a);
-// 	return std::make_unique<sgns::inactive_node> (path_a, node_flags);
-// }
+std::unique_ptr<sgns::inactive_node> sgns::default_inactive_node (boost::filesystem::path const & path_a, boost::program_options::variables_map const & vm_a)
+{
+	auto node_flags = sgns::inactive_node_flag_defaults ();
+	sgns::update_flags (node_flags, vm_a);
+	return std::make_unique<sgns::inactive_node> (path_a, node_flags);
+}
 
 // namespace
 // {
