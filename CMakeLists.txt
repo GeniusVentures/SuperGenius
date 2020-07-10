@@ -60,8 +60,9 @@ find_package(Boost REQUIRED COMPONENTS date_time filesystem random regex system 
 include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}
   ${CBOR_INCLUDE_DIR}  
-  ${leveldb_DIR}/include
+  ${leveldb_INCLUDE_DIR}
 )
+
 find_package(blocklattice CONFIG REQUIRED PATHS ${blocklattice_DIR})
 find_package(ipfs-lite-cpp CONFIG REQUIRED)
 
