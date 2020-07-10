@@ -8,10 +8,17 @@
 #ifndef SUPERGENIUS_IPFS_LITE_STORE_HPP
 #define SUPERGENIUS_IPFS_LITE_STORE_HPP
 #include <secure/blockstore_partial.hpp>
+
+#include <boost/filesystem.hpp>
+#include <ipfs_lite/ipfs/impl/datastore_leveldb.hpp>
+
+
+
 typedef struct IPFS_val {
 size_t		 mv_size;	/**< size of the data item */
 void		*mv_data;	/**< address of the data item */
 } IPFS_val;
+
 namespace sgns
 {
     namespace filesystem
@@ -28,9 +35,12 @@ namespace sgns
     typedef unsigned int	ipfs_dbi;
     
     using ipfs_val = db_val<IPFS_val>;
-
+    using sgns::ipfs_lite::ipfs::IpfsDatastore;
+    using sgns::ipfs_lite::ipfs::LeveldbDatastore;
     class ipfs_lite_store : public block_store_partial<IPFS_val, ipfs_lite_store>
     {
+        private:
+         std::shared_ptr<LeveldbDatastore> datastore;
     public:
         ipfs_lite_store();
 //        ipfs_lite_store (sgns::logger_mt &, boost::filesystem::path const &, sgns::txn_tracking_config const & txn_tracking_config_a = sgns::txn_tracking_config{}, std::chrono::milliseconds block_processor_batch_max_time_a = std::chrono::milliseconds (5000), sgns::lmdb_config const & lmdb_config_a = sgns::lmdb_config{}, size_t batch_size = 512, bool backup_before_upgrade = false);
