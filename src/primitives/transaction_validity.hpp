@@ -60,9 +60,9 @@ namespace sgns::primitives {
     bool propagate{};
 
     bool operator==(const ValidTransaction &rhs) const {
-      return priority == rhs.priority and requires == rhs.requires
-             and provides == rhs.provides and longevity == rhs.longevity
-             and propagate == rhs.propagate;
+      return priority == rhs.priority && requires == rhs.requires
+             && provides == rhs.provides && longevity == rhs.longevity
+             && propagate == rhs.propagate;
     }
 
     bool operator!=(const ValidTransaction &rhs) const {
@@ -199,7 +199,7 @@ namespace sgns::primitives {
   }
 }  // namespace sgns::primitives
 
-OUTCOME_HPP_DECLARE_ERROR(sgns::primitives, InvalidTransaction)
-OUTCOME_HPP_DECLARE_ERROR(sgns::primitives, UnknownTransaction)
+OUTCOME_HPP_DECLARE_ERROR_2(sgns::primitives, InvalidTransaction)
+OUTCOME_HPP_DECLARE_ERROR_2(sgns::primitives, UnknownTransaction)
 
 #endif  // SUPERGENIUS_CORE_PRIMITIVES_TRANSACTION_VALIDITY_HPP

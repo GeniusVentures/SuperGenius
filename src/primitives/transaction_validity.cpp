@@ -2,7 +2,7 @@
 
 #include "primitives/transaction_validity.hpp"
 
-OUTCOME_CPP_DEFINE_CATEGORY(sgns::primitives, InvalidTransaction, e) {
+OUTCOME_CPP_DEFINE_CATEGORY_3(sgns::primitives, InvalidTransaction, e) {
   using E = sgns::primitives::InvalidTransaction;
   switch (e) {
     case E::Call:
@@ -30,7 +30,7 @@ OUTCOME_CPP_DEFINE_CATEGORY(sgns::primitives, InvalidTransaction, e) {
   }
 }
 
-OUTCOME_CPP_DEFINE_CATEGORY(sgns::primitives, UnknownTransaction, e) {
+OUTCOME_CPP_DEFINE_CATEGORY_3(sgns::primitives, UnknownTransaction, e) {
   using E = sgns::primitives::UnknownTransaction;
   switch (e) {
     case E::CannotLookup:
