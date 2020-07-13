@@ -72,6 +72,7 @@ link_directories(
   ${ipfs-lite-cpp_LIB_DIR}
 )
 add_subdirectory(node)
+add_subdirectory(src)
 
 
 if (TESTING)

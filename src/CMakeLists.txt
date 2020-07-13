@@ -1,0 +1,5 @@
+add_subdirectory(primitives)
+add_subdirectory(common)
+add_subdirectory(ledger)
+add_subdirectory(transaction)
+add_subdirectory(store)
