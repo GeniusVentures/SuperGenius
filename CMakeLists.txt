@@ -81,7 +81,6 @@ link_directories(
 
 add_subdirectory(src)
 add_subdirectory(node)
-add_subdirectory(src)
 
 
 if (TESTING)
