@@ -25,7 +25,7 @@ print("C Debug flags: ${CMAKE_C_FLAGS_DEBUG}")
 print("CXX Debug flags: ${CMAKE_CXX_FLAGS_DEBUG}")
 print("C Release flags: ${CMAKE_C_FLAGS_RELEASE}")
 print("CXX Release flags: ${CMAKE_CXX_FLAGS_RELEASE}")
-
+include(cmake/install.cmake)
 # Package config ######################################################################################
 set (CPACK_PACKAGE_VERSION_MAJOR "21")
 set (CPACK_PACKAGE_VERSION_MINOR "0")
@@ -64,13 +64,21 @@ include_directories(
 )
 
 find_package(blocklattice CONFIG REQUIRED PATHS ${blocklattice_DIR})
+find_package(OpenSSL REQUIRED)
+find_package(spdlog CONFIG REQUIRED)
+find_package(tsl_hat_trie CONFIG REQUIRED)
 find_package(ipfs-lite-cpp CONFIG REQUIRED)
+find_package(libp2p CONFIG REQUIRED)
+find_package(Protobuf CONFIG REQUIRED)
+find_package(leveldb CONFIG REQUIRED)
 
 option(TESTING "Build tests" ON)
 link_directories(
   ${BOOST_LIBRARY_DIR}
   ${ipfs-lite-cpp_LIB_DIR}
 )
+
+add_subdirectory(src)
 add_subdirectory(node)
 add_subdirectory(src)
 
