@@ -28,7 +28,7 @@ namespace sgns::primitives {
 
       bool operator==(const DigestItemCommon &rhs) const {
         return consensus_engine_id == rhs.consensus_engine_id
-               and data == rhs.data;
+               && data == rhs.data;
       }
 
       bool operator!=(const DigestItemCommon &rhs) const {

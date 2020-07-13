@@ -84,6 +84,7 @@ add_subdirectory(node)
 
 
 if (TESTING)
+  find_package(GTest CONFIG REQUIRED)
   enable_testing()
   add_subdirectory(test)
 endif ()

@@ -73,10 +73,10 @@ namespace sgns::primitives {
     ApisVec apis;
 
     bool operator==(const Version &rhs) const {
-      return spec_name == rhs.spec_name and impl_name == rhs.impl_name
-             and authoring_version == rhs.authoring_version
-             and impl_version == rhs.impl_version and apis == rhs.apis
-             and spec_version == rhs.spec_version;
+      return spec_name == rhs.spec_name && impl_name == rhs.impl_name
+             && authoring_version == rhs.authoring_version
+             && impl_version == rhs.impl_version && apis == rhs.apis
+             && spec_version == rhs.spec_version;
     }
 
     bool operator!=(const Version &rhs) const {

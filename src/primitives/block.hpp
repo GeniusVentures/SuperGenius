@@ -17,7 +17,7 @@ namespace sgns::primitives {
     BlockBody body{};    ///< extrinsics collection
 
     inline bool operator==(const Block &rhs) const {
-      return header == rhs.header and body == rhs.body;
+      return header == rhs.header && body == rhs.body;
     }
 
     inline bool operator!=(const Block &rhs) const {
