@@ -58,7 +58,8 @@ find_package(Boost REQUIRED COMPONENTS date_time filesystem random regex system 
 
 
 include_directories(
-  ${CMAKE_CURRENT_SOURCE_DIR}
+  # ${CMAKE_CURRENT_SOURCE_DIR}
+  ${PROJECT_SOURCE_DIR}/src
   ${CBOR_INCLUDE_DIR}  
   ${leveldb_INCLUDE_DIR}
 )
