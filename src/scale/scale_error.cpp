@@ -2,7 +2,7 @@
 
 #include "scale/scale_error.hpp"
 
-OUTCOME_CPP_DEFINE_CATEGORY(sgns::scale, EncodeError, e) {
+OUTCOME_CPP_DEFINE_CATEGORY_3(sgns::scale, EncodeError, e) {
   using sgns::scale::EncodeError;
   switch (e) {
     case EncodeError::NEGATIVE_COMPACT_INTEGER:
@@ -17,7 +17,7 @@ OUTCOME_CPP_DEFINE_CATEGORY(sgns::scale, EncodeError, e) {
   return "unknown EncodeError";
 }
 
-OUTCOME_CPP_DEFINE_CATEGORY(sgns::scale, DecodeError, e) {
+OUTCOME_CPP_DEFINE_CATEGORY_3(sgns::scale, DecodeError, e) {
   using sgns::scale::DecodeError;
   switch (e) {
     case DecodeError::NOT_ENOUGH_DATA:
@@ -36,7 +36,7 @@ OUTCOME_CPP_DEFINE_CATEGORY(sgns::scale, DecodeError, e) {
   return "unknown DecodeError";
 }
 
-OUTCOME_CPP_DEFINE_CATEGORY(sgns::scale, CommonError, e) {
+OUTCOME_CPP_DEFINE_CATEGORY_3(sgns::scale, CommonError, e) {
   using sgns::scale::CommonError;
   switch (e) {
     case CommonError::UNKNOWN_ERROR:

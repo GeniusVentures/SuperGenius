@@ -3,7 +3,8 @@
 #ifndef SUPERGENIUS_SCALE_ERROR_HPP
 #define SUPERGENIUS_SCALE_ERROR_HPP
 
-#include <outcome/outcome.hpp>
+// #include <outcome/outcome.hpp>
+#include <common/outcome.hpp>
 #include "scale/types.hpp"
 
 namespace sgns::scale {
@@ -37,8 +38,8 @@ namespace sgns::scale {
   };
 }  // namespace sgns::scale
 
-OUTCOME_HPP_DECLARE_ERROR(sgns::scale, EncodeError)
-OUTCOME_HPP_DECLARE_ERROR(sgns::scale, DecodeError)
-OUTCOME_HPP_DECLARE_ERROR(sgns::scale, CommonError)
+OUTCOME_HPP_DECLARE_ERROR_2(sgns::scale, EncodeError)
+OUTCOME_HPP_DECLARE_ERROR_2(sgns::scale, DecodeError)
+OUTCOME_HPP_DECLARE_ERROR_2(sgns::scale, CommonError)
 
 #endif  // SUPERGENIUS_SCALE_ERROR_HPP
