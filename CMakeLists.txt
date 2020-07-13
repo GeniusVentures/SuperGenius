@@ -25,7 +25,7 @@ print("C Debug flags: ${CMAKE_C_FLAGS_DEBUG}")
 print("CXX Debug flags: ${CMAKE_CXX_FLAGS_DEBUG}")
 print("C Release flags: ${CMAKE_C_FLAGS_RELEASE}")
 print("CXX Release flags: ${CMAKE_CXX_FLAGS_RELEASE}")
-
+include(cmake/install.cmake)
 # Package config ######################################################################################
 set (CPACK_PACKAGE_VERSION_MAJOR "21")
 set (CPACK_PACKAGE_VERSION_MINOR "0")
