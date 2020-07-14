@@ -357,5 +357,7 @@ ExternalProject_Add(SuperGenius
         -DCMAKE_CXX_FLAGS_DEBUG:STRING=${CMAKE_CXX_FLAGS_DEBUG}
         -DCMAKE_C_FLAGS_DEBUG:STRING=${CMAKE_C_FLAGS_DEBUG}
         -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
+        -Ded25519_DIR:PATH=${_FINDPACKAGE_ed25519_CONFIG_DIR}
+        -Dsr25519_DIR:PATH=${_FINDPACKAGE_sr25519_CONFIG_DIR}
   DEPENDS GTest blocklattice ipfs-lite-cpp spdlog tsl_hat_trie libp2p protobuf leveldb
 )
