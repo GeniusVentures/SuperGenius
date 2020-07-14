@@ -3,7 +3,7 @@
 #ifndef SUPERGENIUS_SCALE_ERROR_HPP
 #define SUPERGENIUS_SCALE_ERROR_HPP
 
-// #include <outcome/outcome.hpp>
+// #include <common/outcome.hpp>
 #include <common/outcome.hpp>
 #include "scale/types.hpp"
 
