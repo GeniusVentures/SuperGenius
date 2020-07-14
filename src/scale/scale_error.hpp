@@ -3,8 +3,13 @@
 #ifndef SUPERGENIUS_SCALE_ERROR_HPP
 #define SUPERGENIUS_SCALE_ERROR_HPP
 
+<<<<<<< HEAD
 // #include <common/outcome.hpp>
 #include <common/outcome.hpp>
+=======
+// #include <outcome/outcome.hpp>
+#include <outcome/outcome.hpp>
+>>>>>>> develop
 #include "scale/types.hpp"
 
 namespace sgns::scale {
