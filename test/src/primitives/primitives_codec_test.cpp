@@ -3,10 +3,10 @@
 #include <gtest/gtest.h>
 
 #include <boost/variant.hpp>
-#include "common/outcome.hpp"
-#include "common/blob.hpp"
-#include "common/buffer.hpp"
-#include "common/visitor.hpp"
+#include "outcome/outcome.hpp"
+#include "base/blob.hpp"
+#include "base/buffer.hpp"
+#include "base/visitor.hpp"
 #include "primitives/block.hpp"
 #include "primitives/block_id.hpp"
 #include "primitives/common.hpp"

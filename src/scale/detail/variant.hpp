@@ -5,8 +5,8 @@
 
 #include <boost/variant.hpp>
 #include <outcome/outcome.hpp>
-#include "common/outcome_throw.hpp"
-#include "common/visitor.hpp"
+#include "base/outcome_throw.hpp"
+#include "base/visitor.hpp"
 #include "scale/scale_error.hpp"
 
 namespace sgns::scale::detail {
@@ -104,7 +104,7 @@ namespace sgns::scale::detail {
     static constexpr uint8_t types_count = sizeof...(T);
     // ensure that index is in [0, types_count)
     if (type_index >= types_count) {
-      common::raise(DecodeError::WRONG_TYPE_INDEX);
+      base::raise(DecodeError::WRONG_TYPE_INDEX);
     }
 
     auto &&decoder = variant_impl::VariantDecoder(type_index, result, stream);

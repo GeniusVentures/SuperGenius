@@ -8,7 +8,7 @@
 #include <boost/multiprecision/cpp_int.hpp>
 #include <boost/optional.hpp>
 #include <gsl/span>
-#include "common/outcome_throw.hpp"
+#include "base/outcome_throw.hpp"
 #include "scale/detail/fixed_witdh_integer.hpp"
 #include "scale/detail/tuple.hpp"
 #include "scale/detail/variant.hpp"
@@ -132,7 +132,7 @@ namespace sgns::scale {
       using size_type = typename std::vector<T>::size_type;
 
       if (size > std::numeric_limits<size_type>::max()) {
-        common::raise(DecodeError::TOO_MANY_ITEMS);
+        base::raise(DecodeError::TOO_MANY_ITEMS);
       }
       auto item_count = size.convert_to<size_type>();
       v.reserve(item_count);

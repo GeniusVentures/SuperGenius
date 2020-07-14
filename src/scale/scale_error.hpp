@@ -31,7 +31,7 @@ namespace sgns::scale {
   };
 
   /**
-   * @brief common errors
+   * @brief base errors
    */
   enum class CommonError {
     UNKNOWN_ERROR = 1  ///< unknown error

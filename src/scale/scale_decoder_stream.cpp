@@ -2,7 +2,7 @@
 
 #include "scale/scale_decoder_stream.hpp"
 
-#include "common/outcome_throw.hpp"
+#include "base/outcome_throw.hpp"
 #include "macro/unreachable.hpp"
 #include "scale/scale_error.hpp"
 #include "scale/types.hpp"
@@ -36,7 +36,7 @@ namespace sgns::scale {
           size_t multiplier = 256u;
           if (!stream.hasMore(3u)) {
             // not enough data to decode integer
-            common::raise(DecodeError::NOT_ENOUGH_DATA);
+            base::raise(DecodeError::NOT_ENOUGH_DATA);
           }
 
           for (auto i = 0u; i < 3u; ++i) {
@@ -53,7 +53,7 @@ namespace sgns::scale {
           auto bytes_count = ((first_byte) >> 2u) + 4u;
           if (!stream.hasMore(bytes_count)) {
             // not enough data to decode integer
-            common::raise(DecodeError::NOT_ENOUGH_DATA);
+            base::raise(DecodeError::NOT_ENOUGH_DATA);
           }
 
           CompactInteger multiplier{1u};
@@ -90,7 +90,7 @@ namespace sgns::scale {
       case static_cast<uint8_t>(OptionalBool::TRUE):
         return true;
       default:
-        common::raise(DecodeError::UNEXPECTED_VALUE);
+        base::raise(DecodeError::UNEXPECTED_VALUE);
     }
     UNREACHABLE
   }
@@ -103,7 +103,7 @@ namespace sgns::scale {
       case 1u:
         return true;
       default:
-        common::raise(DecodeError::UNEXPECTED_VALUE);
+        base::raise(DecodeError::UNEXPECTED_VALUE);
     }
     UNREACHABLE
   }
@@ -128,7 +128,7 @@ namespace sgns::scale {
   uint8_t ScaleDecoderStream::nextByte() {
     // if (not hasMore(1)) {
     if (! hasMore(1)) {
-      common::raise(DecodeError::NOT_ENOUGH_DATA);
+      base::raise(DecodeError::NOT_ENOUGH_DATA);
     }
     ++current_index_;
     return *current_iterator_++;

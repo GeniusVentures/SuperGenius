@@ -5,8 +5,8 @@ addtest(primitives_codec_test
     )
 
 target_link_libraries(primitives_codec_test
-    ipfs-lite-cpp::buffer
-    ipfs-lite-cpp::outcome
+    buffer
+    outcome
     primitives
     scale
     testutil_primitives_generator

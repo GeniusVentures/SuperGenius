@@ -9,7 +9,7 @@
 #include <vector>
 
 #include <boost/endian/arithmetic.hpp>
-#include "common/outcome_throw.hpp"
+#include "base/outcome_throw.hpp"
 #include "macro/unreachable.hpp"
 #include "scale/scale_error.hpp"
 
@@ -76,7 +76,7 @@ namespace sgns::scale::detail {
     // clang-format on
 
     if (!stream.hasMore(size)) {
-      common::raise(DecodeError::NOT_ENOUGH_DATA);
+      base::raise(DecodeError::NOT_ENOUGH_DATA);
       UNREACHABLE
     }
 

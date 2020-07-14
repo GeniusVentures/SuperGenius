@@ -7,7 +7,7 @@
 #include <memory>
 
 #include <outcome/outcome.hpp>
-#include "common/buffer.hpp"
+#include "base/buffer.hpp"
 #include "libp2p/basic/readwriter.hpp"
 #include "libp2p/host/host.hpp"
 #include "libp2p/peer/peer_info.hpp"

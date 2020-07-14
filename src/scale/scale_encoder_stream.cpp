@@ -2,7 +2,7 @@
 
 #include "scale/scale_encoder_stream.hpp"
 
-#include "common/outcome_throw.hpp"
+#include "base/outcome_throw.hpp"
 #include "scale/scale_error.hpp"
 #include "scale/types.hpp"
 
@@ -55,7 +55,7 @@ namespace sgns::scale {
       // cannot encode negative numbers
       // there is no description how to encode compact negative numbers
       if (value < 0) {
-        common::raise(EncodeError::NEGATIVE_COMPACT_INTEGER);
+        base::raise(EncodeError::NEGATIVE_COMPACT_INTEGER);
       }
 
       if (value < compact::EncodingCategoryLimits::kMinUint16) {
@@ -81,7 +81,7 @@ namespace sgns::scale {
       size_t requiredLength = 1 + bigIntLength;
 
       if (bigIntLength > 67) {
-        common::raise(EncodeError::COMPACT_INTEGER_TOO_BIG);
+        base::raise(EncodeError::COMPACT_INTEGER_TOO_BIG);
       }
 
       ByteArray result;

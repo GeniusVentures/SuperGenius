@@ -4,8 +4,8 @@
 #define SUPERGENIUS_CORE_NETWORK_EXTRINSIC_OBSERVER_HPP
 
 #include "api/service/author/author_api.hpp"
-#include "common/blob.hpp"
-#include "common/outcome.hpp"
+#include "base/blob.hpp"
+#include "base/outcome.hpp"
 #include "primitives/extrinsic.hpp"
 
 namespace sgns::network {
@@ -14,7 +14,7 @@ namespace sgns::network {
    public:
     virtual ~ExtrinsicObserver() = default;
 
-    virtual outcome::result<common::Hash256> onTxMessage(
+    virtual outcome::result<base::Hash256> onTxMessage(
         const primitives::Extrinsic &extrinsic) = 0;
   };
 

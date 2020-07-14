@@ -3,7 +3,7 @@
 #ifndef SUPERGENIUS_TEST_TESTUTIL_PRIMITIVES_MP_UTILS_HPP
 #define SUPERGENIUS_TEST_TESTUTIL_PRIMITIVES_MP_UTILS_HPP
 
-#include "common/blob.hpp"
+#include "base/blob.hpp"
 
 namespace testutil {
   /**
