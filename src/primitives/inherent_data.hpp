@@ -8,10 +8,10 @@
 
 #include <boost/iterator_adaptors.hpp>
 #include <boost/optional.hpp>
-#include <common/outcome.hpp>
-#include "common/blob.hpp"
-#include "common/buffer.hpp"
-#include "common/outcome_throw.hpp"
+#include <outcome/outcome.hpp>
+#include "base/blob.hpp"
+#include "base/buffer.hpp"
+#include "base/outcome_throw.hpp"
 #include "scale/scale.hpp"
 #include "scale/scale_error.hpp"
 
@@ -28,7 +28,7 @@ namespace sgns::primitives {
 OUTCOME_HPP_DECLARE_ERROR_2(sgns::primitives, InherentDataError);
 
 namespace sgns::primitives {
-  using InherentIdentifier = common::Blob<8u>;
+  using InherentIdentifier = base::Blob<8u>;
 
   /**
    * Inherent data to include in a block
@@ -45,7 +45,7 @@ namespace sgns::primitives {
     template <typename T>
     outcome::result<void> putData(InherentIdentifier identifier, T inherent) {
       if (data.find(identifier) == data.end()) {
-        data[identifier] = common::Buffer(scale::encode(inherent).value());
+        data[identifier] = base::Buffer(scale::encode(inherent).value());
         return outcome::success();
       }
       return InherentDataError::IDENTIFIER_ALREADY_EXISTS;
@@ -57,7 +57,7 @@ namespace sgns::primitives {
      */
     template <typename T>
     void replaceData(InherentIdentifier identifier, T inherent) {
-      data[identifier] = common::Buffer(scale::encode(inherent).value());
+      data[identifier] = base::Buffer(scale::encode(inherent).value());
     }
 
     /**
@@ -77,7 +77,7 @@ namespace sgns::primitives {
 
     bool operator!=(const InherentData &rhs) const;
 
-    std::map<InherentIdentifier, common::Buffer> data;
+    std::map<InherentIdentifier, base::Buffer> data;
   };
 
   /**
@@ -91,7 +91,7 @@ namespace sgns::primitives {
             typename = std::enable_if_t<Stream::is_encoder_stream>>
   Stream &operator<<(Stream &s, const InherentData &v) {
     const auto &data = v.data;
-    std::vector<std::pair<InherentIdentifier, common::Buffer>> vec;
+    std::vector<std::pair<InherentIdentifier, base::Buffer>> vec;
     vec.reserve(data.size());
     for (auto &pair : data) {
       vec.emplace_back(pair);
@@ -110,13 +110,13 @@ namespace sgns::primitives {
   template <class Stream,
             typename = std::enable_if_t<Stream::is_decoder_stream>>
   Stream &operator>>(Stream &s, InherentData &v) {
-    std::vector<std::pair<InherentIdentifier, common::Buffer>> vec;
+    std::vector<std::pair<InherentIdentifier, base::Buffer>> vec;
     s >> vec;
 
     for (const auto &item : vec) {
       // throw if identifier already exists
       if (v.data.find(item.first) != v.data.end()) {
-        common::raise(InherentDataError::IDENTIFIER_ALREADY_EXISTS);
+        base::raise(InherentDataError::IDENTIFIER_ALREADY_EXISTS);
       }
       v.data.insert(item);
     }

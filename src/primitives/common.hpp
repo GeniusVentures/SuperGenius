@@ -12,7 +12,7 @@ namespace sgns::primitives {
   using BlocksRequestId = uint64_t;
 
   using BlockNumber = uint64_t;
-  using BlockHash = common::Hash256;
+  using BlockHash = base::Hash256;
 
   namespace detail {
     // base data structure for the types describing block information

@@ -8,14 +8,14 @@
 
 #include <boost/optional.hpp>
 #include <boost/variant.hpp>
-#include "common/blob.hpp"
-#include "common/buffer.hpp"
+#include "base/blob.hpp"
+#include "base/buffer.hpp"
 
 namespace sgns::primitives::parachain {
   /**
    * @brief ValidatorId primitive is an ed25519 or sr25519 public key
    */
-  using ValidatorId = common::Blob<32>;
+  using ValidatorId = base::Blob<32>;
 
   /**
    * @brief ParachainId primitive is an uint32_t

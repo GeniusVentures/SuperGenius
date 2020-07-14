@@ -13,7 +13,7 @@ add_library(scale
 
 target_link_libraries(scale
     Boost::boost
-    ipfs-lite-cpp::buffer
+    buffer
     )
 
 

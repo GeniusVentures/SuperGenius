@@ -4,7 +4,7 @@
 #define SUPERGENIUS_SCALE_ERROR_HPP
 
 // #include <outcome/outcome.hpp>
-#include <common/outcome.hpp>
+#include <outcome/outcome.hpp>
 #include "scale/types.hpp"
 
 namespace sgns::scale {

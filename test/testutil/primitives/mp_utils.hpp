@@ -11,7 +11,7 @@ namespace testutil {
    * @param bytes initializers
    * @return newly created hash
    */
-  sgns::common::Hash256 createHash256(std::initializer_list<uint8_t> bytes);
+  sgns::base::Hash256 createHash256(std::initializer_list<uint8_t> bytes);
 
 }  // namespace testutil
 

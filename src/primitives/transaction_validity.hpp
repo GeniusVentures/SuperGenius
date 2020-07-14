@@ -7,7 +7,7 @@
 #include <vector>
 
 #include <boost/variant.hpp>
-#include <common/outcome.hpp>
+#include <outcome/outcome.hpp>
 #include "primitives/transaction.hpp"
 
 namespace sgns::primitives {

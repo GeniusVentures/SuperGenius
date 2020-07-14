@@ -17,7 +17,7 @@ namespace sgns::primitives {
    * @brief The identity of a particular API interface that the runtime might
    * provide.
    */
-  using ApiId = common::Blob<8u>;
+  using ApiId = base::Blob<8u>;
 
   /**
    * @brief single Api item

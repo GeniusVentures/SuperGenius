@@ -18,7 +18,7 @@ add_library(primitives
     version.hpp
     )
 target_link_libraries(primitives
-    ipfs-lite-cpp::buffer
+    buffer
     scale
-    ipfs-lite-cpp::blob
+    blob
     )

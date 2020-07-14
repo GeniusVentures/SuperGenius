@@ -24,9 +24,9 @@
 #include "testutil/outcome.hpp"
 #include "testutil/primitives/mp_utils.hpp"
 
-using sgns::common::Blob;
-using sgns::common::Buffer;
-using sgns::common::Hash256;
+using sgns::base::Blob;
+using sgns::base::Buffer;
+using sgns::base::Hash256;
 using sgns::primitives::ApiId;
 using sgns::primitives::AuthorityId;
 using sgns::primitives::Block;

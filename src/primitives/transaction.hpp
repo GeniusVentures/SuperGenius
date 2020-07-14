@@ -3,14 +3,14 @@
 #ifndef SUPERGENIUS_TRANSACTION_HPP
 #define SUPERGENIUS_TRANSACTION_HPP
 
-#include "common/blob.hpp"
+#include "base/blob.hpp"
 #include "primitives/extrinsic.hpp"
 
 namespace sgns::primitives {
 
   struct Transaction {
     /// Hash of tx
-    using Hash = common::Hash256;
+    using Hash = base::Hash256;
 
     /// Priority for a transaction. Additive. Higher is better.
     using Priority = uint64_t;

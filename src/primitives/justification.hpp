@@ -3,14 +3,14 @@
 #ifndef SUPERGENIUS_JUSTIFICATION_HPP
 #define SUPERGENIUS_JUSTIFICATION_HPP
 
-#include "common/buffer.hpp"
+#include "base/buffer.hpp"
 
 namespace sgns::primitives {
   /**
    * Justification of the finalized block
    */
   struct Justification {
-    common::Buffer data;
+    base::Buffer data;
   };
 
   /**

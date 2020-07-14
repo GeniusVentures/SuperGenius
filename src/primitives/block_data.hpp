@@ -18,8 +18,8 @@ namespace sgns::primitives {
     primitives::BlockHash hash;
     boost::optional<primitives::BlockHeader> header{};
     boost::optional<primitives::BlockBody> body{};
-    boost::optional<common::Buffer> receipt{};
-    boost::optional<common::Buffer> message_queue{};
+    boost::optional<base::Buffer> receipt{};
+    boost::optional<base::Buffer> message_queue{};
     boost::optional<primitives::Justification> justification{};
 
     /**

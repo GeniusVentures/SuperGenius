@@ -4,14 +4,14 @@
 #define SUPERGENIUS_CORE_PRIMITIVES_DIGEST_HPP
 
 #include <boost/variant.hpp>
-#include "common/buffer.hpp"
+#include "base/buffer.hpp"
 
 namespace sgns::primitives {
   // from
   // https://github.com/paritytech/substrate/blob/39094c764a0bc12134d2a2ed8ab494a9ebfeba88/core/sr-primitives/src/generic/digest.rs#L77-L102
 
   /// Consensus engine unique ID.
-  using ConsensusEngineId = common::Blob<4>;
+  using ConsensusEngineId = base::Blob<4>;
 
   inline const auto kBabeEngineId =
       ConsensusEngineId::fromString("BABE").value();
@@ -19,12 +19,12 @@ namespace sgns::primitives {
   /// System digest item that contains the root of changes trie at given
   /// block. It is created for every block iff runtime supports changes
   /// trie creation.
-  using ChangesTrieRoot = common::Hash256;
+  using ChangesTrieRoot = base::Hash256;
 
   namespace detail {
     struct DigestItemCommon {
       ConsensusEngineId consensus_engine_id;
-      common::Buffer data;
+      base::Buffer data;
 
       bool operator==(const DigestItemCommon &rhs) const {
         return consensus_engine_id == rhs.consensus_engine_id
@@ -67,7 +67,7 @@ namespace sgns::primitives {
   }
 
   /// Some other thing. Unsupported and experimental.
-  using Other = common::Buffer;
+  using Other = base::Buffer;
   /// Digest item that is able to encode/decode 'system' digest items and
   /// provide opaque access to other items.
   /// Note: order of types in variant matters. Should match type ids from here:

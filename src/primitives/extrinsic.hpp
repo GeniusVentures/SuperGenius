@@ -3,7 +3,7 @@
 #ifndef SUPERGENIUS_PRIMITIVES_EXTRINSIC_HPP
 #define SUPERGENIUS_PRIMITIVES_EXTRINSIC_HPP
 
-#include "common/buffer.hpp"
+#include "base/buffer.hpp"
 
 namespace sgns::primitives {
 
@@ -16,7 +16,7 @@ namespace sgns::primitives {
    * @brief Extrinsic class represents extrinsic
    */
   struct Extrinsic {
-    common::Buffer data;  ///< extrinsic content as byte array
+    base::Buffer data;  ///< extrinsic content as byte array
 
     inline bool operator==(const Extrinsic &rhs) const {
       return data == rhs.data;

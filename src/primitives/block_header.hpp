@@ -7,7 +7,7 @@
 #include <vector>
 
 #include <boost/multiprecision/cpp_int.hpp>
-#include "common/blob.hpp"
+#include "base/blob.hpp"
 #include "primitives/common.hpp"
 #include "primitives/compact_integer.hpp"
 #include "primitives/digest.hpp"
@@ -19,8 +19,8 @@ namespace sgns::primitives {
   struct BlockHeader {
     BlockHash parent_hash{};       ///< 32-byte Blake2s hash of parent header
     BlockNumber number = 0u;       ///< index of current block in the chain
-    common::Hash256 state_root{};  ///< root of the Merkle tree
-    common::Hash256 extrinsics_root{};  ///< field for validation integrity
+    base::Hash256 state_root{};  ///< root of the Merkle tree
+    base::Hash256 extrinsics_root{};  ///< field for validation integrity
     Digest digest{};                    ///< chain-specific auxiliary data
 
     bool operator==(const BlockHeader &rhs) const {
