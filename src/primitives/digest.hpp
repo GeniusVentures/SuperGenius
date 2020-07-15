@@ -13,8 +13,8 @@ namespace sgns::primitives {
   /// Consensus engine unique ID.
   using ConsensusEngineId = base::Blob<4>;
 
-  inline const auto kBabeEngineId =
-      ConsensusEngineId::fromString("BABE").value();
+  inline const auto kProdcutionEngineId =
+      ConsensusEngineId::fromString("PRODUCTION").value();
 
   /// System digest item that contains the root of changes trie at given
   /// block. It is created for every block iff runtime supports changes

@@ -3,7 +3,7 @@
 #ifndef SUPERGENIUS_CORE_NETWORK_GOSSIPER_HPP
 #define SUPERGENIUS_CORE_NETWORK_GOSSIPER_HPP
 
-#include "consensus/babe/babe_gossiper.hpp"
+#include "consensus/production/CONSENSUS_PRODUCTION_gossiper.hpp"
 #include "consensus/grandpa/gossiper.hpp"
 #include "network/extrinsic_gossiper.hpp"
 

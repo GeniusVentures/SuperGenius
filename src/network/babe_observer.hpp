@@ -1,7 +1,7 @@
 
 
-#ifndef SUPERGENIUS_BABE_OBSERVER_HPP
-#define SUPERGENIUS_BABE_OBSERVER_HPP
+#ifndef SUPERGENIUS_CONSENSUS_PRODUCTION_OBSERVER_HPP
+#define SUPERGENIUS_CONSENSUS_PRODUCTION_OBSERVER_HPP
 
 #include "network/types/block_announce.hpp"
 
@@ -20,4 +20,4 @@ namespace sgns::network {
   };
 }  // namespace sgns::network
 
-#endif  // SUPERGENIUS_BABE_OBSERVER_HPP
+#endif  // SUPERGENIUS_CONSENSUS_PRODUCTION_OBSERVER_HPP
