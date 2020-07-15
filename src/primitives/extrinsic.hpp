@@ -21,6 +21,11 @@ namespace sgns::primitives {
     inline bool operator==(const Extrinsic &rhs) const {
       return data == rhs.data;
     }
+    friend std::ostream &operator<<(std::ostream &out, const Extrinsic &v)
+    {
+      return out <<  v.data;
+    }
+
   };
 
   /**

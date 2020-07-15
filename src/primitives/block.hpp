@@ -23,6 +23,17 @@ namespace sgns::primitives {
     inline bool operator!=(const Block &rhs) const {
       return !operator==(rhs);
     }
+    //added by Jin to fix link error in test mode
+    friend std::ostream &operator<<(std::ostream &out, const Block &b)
+    {
+      out  << b.header;
+      out << b.body.size();
+      for (auto &it = b.body.begin(); it != b.body.end(); ++it) {
+        out << *it;
+      }
+      return out ;
+    }
+    //end
   };
 
   /**

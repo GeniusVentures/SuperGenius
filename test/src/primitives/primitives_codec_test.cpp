@@ -60,6 +60,7 @@ class Primitives : public testing::Test {
                          "000102030405060708090A0B0C0D0E0F"
                          "101112131415161718191A1B1C1D1E1F")
                          .value();
+    block_id_number_ = 1 ;
   }
 
  protected:
@@ -85,7 +86,8 @@ class Primitives : public testing::Test {
        {Blob{array{'8', '7', '6', '5', '4', '3', '2', '1'}}, 2}}  // ApiId_2
   };
   /// block id variant number alternative and corresponding scale representation
-  BlockId block_id_number_{1ull};
+  // BlockId block_id_number_{1ull};
+   BlockId block_id_number_;
   /// block id variant hash alternative and corresponding scale representation
   BlockId block_id_hash_;
 

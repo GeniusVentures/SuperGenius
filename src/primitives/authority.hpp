@@ -25,6 +25,12 @@ namespace sgns::primitives {
     bool operator!=(const AuthorityId &other) const {
       return !(*this == other);
     }
+    //added by Jin to fix link error in test
+    friend std::ostream &operator<<(std::ostream &out, const AuthorityId &a)
+    {
+      return out << a.id; 
+    }
+    //end
   };
 
   inline bool operator<(const AuthorityId &lhs, const AuthorityId &rhs) {

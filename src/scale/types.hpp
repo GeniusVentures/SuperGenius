@@ -5,7 +5,6 @@
 #include <vector>
 
 #include <boost/multiprecision/cpp_int.hpp>
-// #include <outcome/outcome.hpp>
 #include <outcome/outcome.hpp>
 
 namespace sgns::scale {

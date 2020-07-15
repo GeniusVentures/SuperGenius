@@ -1,2 +1,3 @@
 add_subdirectory(base)
-# add_subdirectory(primitives)
+add_subdirectory(scale)
+add_subdirectory(primitives)

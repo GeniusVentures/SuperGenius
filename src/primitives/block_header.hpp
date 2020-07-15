@@ -35,6 +35,19 @@ namespace sgns::primitives {
     bool operator!=(const BlockHeader &rhs) const {
       return !operator==(rhs);
     }
+    //added to fix link error in test mode
+    friend std::ostream &operator<<(std::ostream &out, const BlockHeader &bh)
+    {
+      out << bh.parent_hash << CompactInteger(bh.number) << bh.state_root
+             << bh.extrinsics_root ;
+
+      out << bh.digest.size();
+      for (auto &it = bh.digest.begin(); it != bh.digest.end(); ++it) {
+        out << *it;
+      }
+      return out ;
+    }
+    //end
   };
 
   /**
