@@ -1,0 +1,10 @@
+
+
+add_library(in_memory_storage
+    in_memory_storage.cpp
+    )
+target_link_libraries(in_memory_storage
+    buffer
+    database_error
+    )
+supergenius_install(in_memory_storage)
