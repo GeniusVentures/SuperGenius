@@ -68,10 +68,12 @@ find_package(blocklattice CONFIG REQUIRED PATHS ${blocklattice_DIR})
 find_package(OpenSSL REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
 find_package(tsl_hat_trie CONFIG REQUIRED)
-find_package(ipfs-lite-cpp CONFIG REQUIRED)
 find_package(libp2p CONFIG REQUIRED)
 find_package(Protobuf CONFIG REQUIRED)
 find_package(leveldb CONFIG REQUIRED)
+find_package(ipfs-lite-cpp CONFIG REQUIRED)
+find_package(ed25519 CONFIG REQUIRED)
+find_package(sr25519 CONFIG REQUIRED)
 
 option(TESTING "Build tests" ON)
 link_directories(
