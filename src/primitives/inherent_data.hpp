@@ -78,6 +78,23 @@ namespace sgns::primitives {
     bool operator!=(const InherentData &rhs) const;
 
     std::map<InherentIdentifier, base::Buffer> data;
+    friend std::ostream &operator<<(std::ostream &out, const InherentData &v)
+    {
+      const auto &data = v.data;
+      std::vector<std::pair<InherentIdentifier, base::Buffer>> vec;
+      vec.reserve(data.size());
+      for (auto &pair : data) {
+        vec.emplace_back(pair);
+      }
+
+      out << vec.size();
+      for(auto &it = vec.begin();it != vec.end() ; it++)
+      {
+        // out << *it ;
+      }
+      return out ;
+    }
+
   };
 
   /**

@@ -68,6 +68,25 @@ namespace sgns::primitives {
     bool operator!=(const ValidTransaction &rhs) const {
       return !operator==(rhs);
     }
+    //added to fix link error
+    friend std::ostream &operator<<(std::ostream &out, const ValidTransaction &v)
+    {
+      out << v.priority;
+      out << v.requires.size() ;
+      for(auto &it = v.requires.begin() ; it != v.requires.end() ; it++)
+      {
+        // out << *it;
+      }
+      out << v.provides.size();
+      for(auto &it = v.provides.begin() ; it != v.provides.end() ; it++)
+      {
+        // out << *it;
+      }
+      out << v.longevity
+             << v.propagate;
+      return out;
+    }
+    //end
   };
 
   /// Transaction is invalid. Details are described by the error code.

@@ -43,7 +43,7 @@ namespace sgns::primitives {
 
       out << bh.digest.size();
       for (auto &it = bh.digest.begin(); it != bh.digest.end(); ++it) {
-        out << *it;
+        out << (*it).which();
       }
       return out ;
     }

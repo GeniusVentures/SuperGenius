@@ -217,6 +217,7 @@ namespace sgns::base {
 
     template <typename T>
     Buffer &putRange(const T &begin, const T &end);
+
   };
 
   /**

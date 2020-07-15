@@ -82,6 +82,13 @@ namespace sgns::primitives {
     bool operator!=(const Version &rhs) const {
       return !operator==(rhs);
     }
+    //added to fix link error in test mode
+    friend std::ostream &operator<<(std::ostream &out, const Version &v)
+    {
+      return out << v.spec_name << v.impl_name << v.authoring_version
+          << v.spec_version << v.impl_version << v.apis.size(); 
+    }
+    //end
   };
 
   /**
