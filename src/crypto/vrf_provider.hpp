@@ -1,0 +1,46 @@
+
+
+#ifndef SUPERGENIUS_CORE_CRYPTO_VRF_VRF_PROVIDER_HPP
+#define SUPERGENIUS_CORE_CRYPTO_VRF_VRF_PROVIDER_HPP
+
+#include <boost/optional.hpp>
+
+#include "common/buffer.hpp"
+#include "crypto/sr25519_types.hpp"
+
+namespace sgns::crypto {
+
+  /**
+   * SR25519 based verifiable random function implementation
+   */
+  class VRFProvider {
+   public:
+    virtual ~VRFProvider() = default;
+
+    /**
+     * Generates random keypair for signing the message
+     */
+    virtual SR25519Keypair generateKeypair() const = 0;
+
+    /**
+     * Sign message \param msg using \param keypair. If computed value is less
+     * than \param threshold then return optional containing this value and
+     * proof. Otherwise none returned
+     */
+    virtual boost::optional<VRFOutput> sign(
+        const common::Buffer &msg,
+        const SR25519Keypair &keypair,
+        const VRFThreshold &threshold) const = 0;
+
+    /**
+     * Verifies that \param output was derived using \param public_key on \param
+     * msg
+     */
+    virtual VRFVerifyOutput verify(const common::Buffer &msg,
+                        const VRFOutput &output,
+                        const SR25519PublicKey &public_key,
+                        const VRFThreshold &threshold) const = 0;
+  };
+}  // namespace sgns::crypto
+
+#endif  // SUPERGENIUS_CORE_CRYPTO_VRF_VRF_PROVIDER_HPP
