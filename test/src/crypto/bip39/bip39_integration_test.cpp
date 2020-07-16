@@ -15,6 +15,12 @@ struct TestItem {
   std::string mnemonic;
   std::string entropy;
   std::string seed;
+
+  friend std::ostream &operator<<(std::ostream &out, const TestItem &test_struct)
+  {
+    return out << test_struct.mnemonic << test_struct.entropy << test_struct.seed; 
+  }
+
 };
 
 struct Bip39IntegrationTest : public ::testing::TestWithParam<TestItem> {

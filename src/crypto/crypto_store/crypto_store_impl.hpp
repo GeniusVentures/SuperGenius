@@ -40,6 +40,11 @@ namespace sgns::crypto {
     FAILED_CREATE_KEYS_DIRECTORY
   };
 
+    std::ostream &operator<<(std::ostream &out, const CryptoStoreError &test_struct)
+  {
+    return out << (int)test_struct; 
+  }
+
   class CryptoStoreImpl : public CryptoStore {
    public:
     // currently std::filesystem::path is missing required methods in macos SDK

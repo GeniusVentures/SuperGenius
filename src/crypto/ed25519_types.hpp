@@ -29,6 +29,11 @@ namespace sgns::crypto {
 
     bool operator==(const ED25519Keypair &other) const;
     bool operator!=(const ED25519Keypair &other) const;
+    friend std::ostream &operator<<(std::ostream &out, const ED25519Keypair &test_struct)
+    {
+        return out << test_struct.private_key << test_struct.public_key; 
+    }
+
   };
 
   using ED25519Signature = base::Blob<constants::ed25519::SIGNATURE_SIZE>;
