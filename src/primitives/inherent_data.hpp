@@ -88,10 +88,10 @@ namespace sgns::primitives {
       }
 
       out << vec.size();
-      for(auto &it = vec.begin();it != vec.end() ; it++)
-      {
-        // out << *it ;
-      }
+      // for(auto &it = vec.begin();it != vec.end() ; it++)
+      // {
+      //   // out << *it ;
+      // }
       return out ;
     }
 

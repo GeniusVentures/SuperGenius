@@ -73,15 +73,15 @@ namespace sgns::primitives {
     {
       out << v.priority;
       out << v.requires.size() ;
-      for(auto &it = v.requires.begin() ; it != v.requires.end() ; it++)
-      {
-        // out << *it;
-      }
+      // for(auto &it = v.requires.begin() ; it != v.requires.end() ; it++)
+      // {
+      //   // out << *it;
+      // }
       out << v.provides.size();
-      for(auto &it = v.provides.begin() ; it != v.provides.end() ; it++)
-      {
-        // out << *it;
-      }
+      // for(auto &it = v.provides.begin() ; it != v.provides.end() ; it++)
+      // {
+      //   // out << *it;
+      // }
       out << v.longevity
              << v.propagate;
       return out;
