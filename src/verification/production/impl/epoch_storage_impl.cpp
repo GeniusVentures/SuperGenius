@@ -4,7 +4,7 @@
 
 #include "scale/scale.hpp"
 
-OUTCOME_CPP_DEFINE_CATEGORY(sgns::verification, EpochStorageError, e) {
+OUTCOME_CPP_DEFINE_CATEGORY_3(sgns::verification, EpochStorageError, e) {
   using E = sgns::verification::EpochStorageError;
 
   switch (e) {

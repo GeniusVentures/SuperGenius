@@ -34,6 +34,6 @@ namespace sgns::verification {
   };
 }  // namespace sgns::verification
 
-OUTCOME_HPP_DECLARE_ERROR(sgns::verification, EpochStorageError);
+OUTCOME_HPP_DECLARE_ERROR_2(sgns::verification, EpochStorageError);
 
 #endif  // SUPERGENIUS_EPOCH_STORAGE_DUMB_HPP

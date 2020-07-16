@@ -5,7 +5,7 @@
 #include <random>
 
 #include <boost/assert.hpp>
-#include "blockchain/block_tree_error.hpp"
+// #include "blockchain/block_tree_error.hpp"
 #include "base/visitor.hpp"
 #include "primitives/block.hpp"
 

@@ -23,7 +23,7 @@ namespace sgns::crypto {
      * Types are 32bit integers, which represent encoded 4-char strings
      * Big-endian byte order is used
      */
-    static constexpr KeyTypeId kProduction = 1650549349u;  // "babe"
+    static constexpr KeyTypeId kProduction = 1650549349u;  // "prod"
     static constexpr KeyTypeId kGran = 1735549294u;  // "gran"
     static constexpr KeyTypeId kAcco = 1633903471u;  // "acco"
     static constexpr KeyTypeId kImon = 1768779630u;  // "imon"
