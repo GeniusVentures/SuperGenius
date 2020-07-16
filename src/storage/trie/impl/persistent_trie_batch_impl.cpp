@@ -83,9 +83,9 @@ namespace sgns::storage::trie {
 
   outcome::result<void> PersistentTrieBatchImpl::put(const Buffer &key,
                                                      Buffer &&value) {
-    bool is_new_entry = not trie_->contains(key);
+    bool is_new_entry = !trie_->contains(key);
     auto res = trie_->put(key, std::move(value));
-    if (res and changes_.has_value()) {
+    if (res && changes_.has_value()) {
       OUTCOME_TRY(changes_.value()->onPut(key, is_new_entry));
     }
     return res;
@@ -93,7 +93,7 @@ namespace sgns::storage::trie {
 
   outcome::result<void> PersistentTrieBatchImpl::remove(const Buffer &key) {
     auto res = trie_->remove(key);
-    if (res and changes_.has_value()) {
+    if (res /*and*/ &&  changes_.has_value()) {
       OUTCOME_TRY(changes_.value()->onRemove(key));
     }
     return res;

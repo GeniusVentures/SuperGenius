@@ -8,6 +8,7 @@
 #include "storage/trie/supergenius_trie/supergenius_trie_cursor.hpp"
 #include "storage/trie/supergenius_trie/trie_error.hpp"
 
+
 using sgns::base::Buffer;
 
 OUTCOME_CPP_DEFINE_CATEGORY_3(sgns::storage::trie, SuperGeniusTrieImpl::Error, e) {
