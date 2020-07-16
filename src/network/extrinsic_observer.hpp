@@ -5,7 +5,7 @@
 
 #include "api/service/author/author_api.hpp"
 #include "base/blob.hpp"
-#include "base/outcome.hpp"
+#include "outcome/outcome.hpp"
 #include "primitives/extrinsic.hpp"
 
 namespace sgns::network {

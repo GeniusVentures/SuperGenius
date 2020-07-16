@@ -5,7 +5,7 @@
 
 #include <boost/optional.hpp>
 
-#include "common/buffer.hpp"
+#include "base/buffer.hpp"
 #include "crypto/sr25519_types.hpp"
 
 namespace sgns::crypto {
@@ -28,7 +28,7 @@ namespace sgns::crypto {
      * proof. Otherwise none returned
      */
     virtual boost::optional<VRFOutput> sign(
-        const common::Buffer &msg,
+        const base::Buffer &msg,
         const SR25519Keypair &keypair,
         const VRFThreshold &threshold) const = 0;
 
@@ -36,7 +36,7 @@ namespace sgns::crypto {
      * Verifies that \param output was derived using \param public_key on \param
      * msg
      */
-    virtual VRFVerifyOutput verify(const common::Buffer &msg,
+    virtual VRFVerifyOutput verify(const base::Buffer &msg,
                         const VRFOutput &output,
                         const SR25519PublicKey &public_key,
                         const VRFThreshold &threshold) const = 0;

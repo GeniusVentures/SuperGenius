@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-#include "common/outcome.hpp"
+#include "outcome/outcome.hpp"
 
 namespace sgns::crypto::bip39 {
   enum class MnemonicError {

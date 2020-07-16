@@ -4,7 +4,7 @@
 #define SUPERGENIUS_CRYPTO_BIP39_ENTROPY_HPP
 
 #include <boost/assert.hpp>
-#include "common/outcome.hpp"
+#include "outcome/outcome.hpp"
 
 #include <bitset>
 #include <vector>

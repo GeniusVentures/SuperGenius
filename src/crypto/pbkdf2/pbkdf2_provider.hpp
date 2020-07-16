@@ -4,8 +4,8 @@
 #define SUPERGENIUS_CRYPTO_PBKDF2_PROVIDER_HPP
 
 #include <gsl/span>
-#include "common/buffer.hpp"
-#include "common/outcome.hpp"
+#include "base/buffer.hpp"
+#include "outcome/outcome.hpp"
 
 namespace sgns::crypto {
 
@@ -26,7 +26,7 @@ namespace sgns::crypto {
      * @param key_length length of generated key
      * @return derived key
      */
-    virtual outcome::result<common::Buffer> deriveKey(
+    virtual outcome::result<base::Buffer> deriveKey(
         gsl::span<const uint8_t> data,
         gsl::span<const uint8_t> salt,
         size_t iterations,

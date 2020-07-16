@@ -3,7 +3,7 @@
 #ifndef SUPERGENIUS_CRYPTO_SECP256K1_TYPES_HPP
 #define SUPERGENIUS_CRYPTO_SECP256K1_TYPES_HPP
 
-#include "common/blob.hpp"
+#include "base/blob.hpp"
 
 namespace sgns::crypto::secp256k1 {
   namespace constants {
@@ -22,21 +22,21 @@ namespace sgns::crypto::secp256k1 {
   /**
    * compressed form of public key
    */
-  using CompressedPublicKey = common::Blob<constants::kCompressedPublicKeySize>;
+  using CompressedPublicKey = base::Blob<constants::kCompressedPublicKeySize>;
   /**
    * uncompressed form of public key
    */
-  using ExpandedPublicKey = common::Blob<constants::kUncompressedPublicKeySize>;
+  using ExpandedPublicKey = base::Blob<constants::kUncompressedPublicKeySize>;
 
   /**
    * secp256k1 RSV-signature
    */
-  using RSVSignature = common::Blob<constants::kCompactSignatureSize>;
+  using RSVSignature = base::Blob<constants::kCompactSignatureSize>;
 
   /**
    * 32-byte sequence of bytes (presumably blake2s hash)
    */
-  using MessageHash = common::Hash256;
+  using MessageHash = base::Hash256;
 }  // namespace sgns::crypto::secp256k1
 
 #endif  // SUPERGENIUS_CRYPTO_SECP256K1_TYPES_HPP

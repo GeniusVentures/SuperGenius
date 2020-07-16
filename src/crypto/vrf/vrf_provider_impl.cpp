@@ -4,7 +4,7 @@
 
 #include <gsl/span>
 
-#include "common/mp_utils.hpp"
+#include "base/mp_utils.hpp"
 
 namespace sgns::crypto {
   namespace vrf_constants = constants::sr25519::vrf;
@@ -30,15 +30,15 @@ namespace sgns::crypto {
   }
 
   boost::optional<VRFOutput> VRFProviderImpl::sign(
-      const common::Buffer &msg,
+      const base::Buffer &msg,
       const SR25519Keypair &keypair,
       const VRFThreshold &threshold) const {
-    common::Buffer keypair_buf{};
+    base::Buffer keypair_buf{};
     keypair_buf.put(keypair.secret_key).put(keypair.public_key);
 
     std::array<uint8_t, vrf_constants::OUTPUT_SIZE + vrf_constants::PROOF_SIZE>
         out_proof{};
-    auto threshold_bytes = common::uint128_t_to_bytes(threshold);
+    auto threshold_bytes = base::uint128_t_to_bytes(threshold);
     auto sign_res =
         sr25519_vrf_sign_if_less(out_proof.data(),
                                  keypair_buf.data(),
@@ -59,7 +59,7 @@ namespace sgns::crypto {
     return res;
   }
 
-  VRFVerifyOutput VRFProviderImpl::verify(const common::Buffer &msg,
+  VRFVerifyOutput VRFProviderImpl::verify(const base::Buffer &msg,
                                           const VRFOutput &output,
                                           const SR25519PublicKey &public_key,
                                           const VRFThreshold &threshold) const {
@@ -68,7 +68,7 @@ namespace sgns::crypto {
                                   msg.size(),
                                   output.output.data(),
                                   output.proof.data(),
-                                  common::uint128_t_to_bytes(threshold).data());
+                                  base::uint128_t_to_bytes(threshold).data());
     return VRFVerifyOutput{/*.is_valid = */res.result == Sr25519SignatureResult::Ok,
                            /*.is_less = */res.is_less};
   }

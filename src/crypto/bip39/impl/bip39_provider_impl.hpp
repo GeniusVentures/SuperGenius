@@ -6,7 +6,7 @@
 #include "crypto/bip39/bip39_provider.hpp"
 #include "crypto/bip39/dictionary.hpp"
 
-#include "common/logger.hpp"
+#include "base/logger.hpp"
 #include "crypto/pbkdf2/pbkdf2_provider.hpp"
 
 namespace sgns::crypto {
@@ -25,7 +25,7 @@ namespace sgns::crypto {
    private:
     std::shared_ptr<Pbkdf2Provider> pbkdf2_provider_;
     bip39::Dictionary dictionary_;
-    common::Logger logger_;
+    base::Logger logger_;
   };
 }  // namespace sgns::crypto
 

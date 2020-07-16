@@ -4,7 +4,7 @@
 #define SUPERGENIUS_CORE_CRYPTO_SR25519_PROVIDER_HPP
 
 #include <gsl/span>
-#include <common/outcome.hpp>
+#include <outcome/outcome.hpp>
 #include "crypto/sr25519_types.hpp"
 
 namespace sgns::crypto {

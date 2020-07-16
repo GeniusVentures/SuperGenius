@@ -3,7 +3,7 @@
 #ifndef SUPERGENIUS_BIP39_PROVIDER_HPP
 #define SUPERGENIUS_BIP39_PROVIDER_HPP
 
-#include "common/buffer.hpp"
+#include "base/buffer.hpp"
 #include "crypto/bip39/bip39_types.hpp"
 
 namespace sgns::crypto {

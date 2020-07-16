@@ -3,8 +3,8 @@
 #ifndef SUPERGENIUS_CRYPTO_KEY_TYPE_HPP
 #define SUPERGENIUS_CRYPTO_KEY_TYPE_HPP
 
-#include "common/blob.hpp"
-#include "common/outcome.hpp"
+#include "base/blob.hpp"
+#include "outcome/outcome.hpp"
 
 namespace sgns::crypto {
 

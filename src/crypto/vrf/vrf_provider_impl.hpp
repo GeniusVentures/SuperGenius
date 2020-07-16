@@ -6,7 +6,7 @@
 #include "crypto/vrf_provider.hpp"
 
 #include <boost/optional.hpp>
-#include "common/buffer.hpp"
+#include "base/buffer.hpp"
 #include "crypto/random_generator.hpp"
 
 namespace sgns::crypto {
@@ -19,11 +19,11 @@ namespace sgns::crypto {
 
     SR25519Keypair generateKeypair() const override;
 
-    boost::optional<VRFOutput> sign(const common::Buffer &msg,
+    boost::optional<VRFOutput> sign(const base::Buffer &msg,
                                     const SR25519Keypair &keypair,
                                     const VRFThreshold &threshold) const override;
 
-    VRFVerifyOutput verify(const common::Buffer &msg,
+    VRFVerifyOutput verify(const base::Buffer &msg,
                 const VRFOutput &output,
                 const SR25519PublicKey &public_key,
                 const VRFThreshold &threshold) const override;

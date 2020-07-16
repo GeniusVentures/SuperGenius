@@ -10,7 +10,7 @@ namespace sgns::crypto {
   Bip39ProviderImpl::Bip39ProviderImpl(
       std::shared_ptr<Pbkdf2Provider> pbkdf2_provider)
       : pbkdf2_provider_(std::move(pbkdf2_provider)),
-        logger_{common::createLogger("Bip39Provider")} {
+        logger_{base::createLogger("Bip39Provider")} {
     dictionary_.initialize();
   }
 
@@ -42,7 +42,7 @@ namespace sgns::crypto {
     constexpr size_t iterations_count = 2048u;
     constexpr auto default_salt = "mnemonic";
 
-    common::Buffer salt{};
+    base::Buffer salt{};
     salt.put(default_salt);
     salt.put(password);
 

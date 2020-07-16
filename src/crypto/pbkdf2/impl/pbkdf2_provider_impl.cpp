@@ -6,12 +6,12 @@
 
 namespace sgns::crypto {
 
-  outcome::result<common::Buffer> Pbkdf2ProviderImpl::deriveKey(
+  outcome::result<base::Buffer> Pbkdf2ProviderImpl::deriveKey(
       gsl::span<const uint8_t> data,
       gsl::span<const uint8_t> salt,
       size_t iterations,
       size_t key_length) const {
-    common::Buffer out(key_length, 0);
+    base::Buffer out(key_length, 0);
     const auto *digest = EVP_sha512();
 
     std::string pass(data.begin(), data.end());

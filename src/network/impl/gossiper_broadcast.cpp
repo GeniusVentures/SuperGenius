@@ -9,7 +9,7 @@
 namespace sgns::network {
 
   GossiperBroadcast::GossiperBroadcast(libp2p::Host &host)
-      : host_{host}, logger_{common::createLogger("GossiperBroadcast")} {}
+      : host_{host}, logger_{base::createLogger("GossiperBroadcast")} {}
 
   void GossiperBroadcast::reserveStream(
       const libp2p::peer::PeerInfo &peer_info,
