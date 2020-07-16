@@ -82,6 +82,12 @@ namespace sgns::crypto {
 
     bool operator==(const SR25519Keypair &other) const;
     bool operator!=(const SR25519Keypair &other) const;
+
+    friend std::ostream &operator<<(std::ostream &out, const SR25519Keypair &test_struct)
+    {
+      return out << test_struct.secret_key << test_struct.public_key; 
+    }
+
   };
 
   using SR25519Signature = base::Blob<constants::sr25519::SIGNATURE_SIZE>;

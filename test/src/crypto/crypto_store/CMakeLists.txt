@@ -14,7 +14,7 @@ addtest(crypto_store_test
 set_target_properties(crypto_store_test PROPERTIES LINK_FLAGS "/FORCE:MULTIPLE")
 if(WIN32)    
     target_link_libraries(crypto_store_test
-    wsock32 ws2_32
+    wsock32 ws2_32 userenv
     crypto_store
     base_fs_test
     )
