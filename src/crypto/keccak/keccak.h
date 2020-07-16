@@ -1,7 +1,7 @@
 
 
-#ifndef CORE_KECCAK_H
-#define CORE_KECCAK_H
+#ifndef SRC_KECCAK_H
+#define SRC_KECCAK_H
 
 #if defined(__cplusplus)
 extern "C" {

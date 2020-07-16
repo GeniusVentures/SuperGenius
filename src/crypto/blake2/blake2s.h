@@ -1,7 +1,7 @@
 
 
-#ifndef CORE_BLAKE2S_HASH
-#define CORE_BLAKE2S_HASH
+#ifndef SRC_BLAKE2S_HASH
+#define SRC_BLAKE2S_HASH
 
 #include <stdlib.h>
 
@@ -74,4 +74,4 @@ int blake2s(void *out, size_t outlen, const void *key, size_t keylen,
 }
 #endif
 
-#endif  // CORE_BLAKE2S_HASH
+#endif  // SRC_BLAKE2S_HASH

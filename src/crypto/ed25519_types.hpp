@@ -1,7 +1,7 @@
 
 
-#ifndef SUPERGENIUS_CORE_CRYPTO_ED25519_TYPES_HPP
-#define SUPERGENIUS_CORE_CRYPTO_ED25519_TYPES_HPP
+#ifndef SUPERGENIUS_SRC_CRYPTO_ED25519_TYPES_HPP
+#define SUPERGENIUS_SRC_CRYPTO_ED25519_TYPES_HPP
 
 #include <ed25519/ed25519.h>
 #include "base/blob.hpp"
@@ -36,4 +36,4 @@ namespace sgns::crypto {
   using ED25519Seed = base::Blob<constants::ed25519::SEED_SIZE>;
 }  // namespace sgns::crypto
 
-#endif  // SUPERGENIUS_CORE_CRYPTO_ED25519_TYPES_HPP
+#endif  // SUPERGENIUS_SRC_CRYPTO_ED25519_TYPES_HPP

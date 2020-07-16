@@ -1,7 +1,7 @@
 
 
-#ifndef SUPERGENIUS_CORE_CONSENSUS_VRF_VRF_HPP
-#define SUPERGENIUS_CORE_CONSENSUS_VRF_VRF_HPP
+#ifndef SUPERGENIUS_SRC_VERIFICATION_VRF_VRF_HPP
+#define SUPERGENIUS_SRC_VERIFICATION_VRF_VRF_HPP
 
 #include "crypto/vrf_provider.hpp"
 
@@ -33,4 +33,4 @@ namespace sgns::crypto {
   };
 }  // namespace sgns::crypto
 
-#endif  // SUPERGENIUS_CORE_CONSENSUS_VRF_VRF_HPP
+#endif  // SUPERGENIUS_SRC_VERIFICATION_VRF_VRF_HPP

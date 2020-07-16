@@ -1,7 +1,7 @@
 
 
-#ifndef SUPERGENIUS_CORE_CRYPTO_VRF_TYPES
-#define SUPERGENIUS_CORE_CRYPTO_VRF_TYPES
+#ifndef SUPERGENIUS_SRC_CRYPTO_VRF_TYPES
+#define SUPERGENIUS_SRC_CRYPTO_VRF_TYPES
 
 extern "C" {
 #include <sr25519/sr25519.h>
@@ -114,4 +114,4 @@ namespace sgns::crypto {
 
 }  // namespace sgns::crypto
 
-#endif  // SUPERGENIUS_CORE_CRYPTO_VRF_TYPES
+#endif  // SUPERGENIUS_SRC_CRYPTO_VRF_TYPES

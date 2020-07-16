@@ -1,7 +1,7 @@
 
 
-#ifndef SUPERGENIUS_CORE_CRYPTO_MP_UTILS_HPP
-#define SUPERGENIUS_CORE_CRYPTO_MP_UTILS_HPP
+#ifndef SUPERGENIUS_SRC_CRYPTO_MP_UTILS_HPP
+#define SUPERGENIUS_SRC_CRYPTO_MP_UTILS_HPP
 
 #include <boost/multiprecision/cpp_int.hpp>
 #include <gsl/span>
@@ -34,4 +34,4 @@ namespace sgns::base {
 
 }  // namespace sgns::base
 
-#endif  // SUPERGENIUS_CORE_CRYPTO_MP_UTILS_HPP
+#endif  // SUPERGENIUS_SRC_CRYPTO_MP_UTILS_HPP

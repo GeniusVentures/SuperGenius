@@ -1,7 +1,7 @@
 
 
-#ifndef SUPERGENIUS_CORE_STORAGE_TRIE_IMPL_SUPERGENIUS_TRIE_FACTORY_IMPL
-#define SUPERGENIUS_CORE_STORAGE_TRIE_IMPL_SUPERGENIUS_TRIE_FACTORY_IMPL
+#ifndef SUPERGENIUS_SRC_STORAGE_TRIE_IMPL_SUPERGENIUS_TRIE_FACTORY_IMPL
+#define SUPERGENIUS_SRC_STORAGE_TRIE_IMPL_SUPERGENIUS_TRIE_FACTORY_IMPL
 
 #include "storage/trie/supergenius_trie/supergenius_trie_factory.hpp"
 #include "storage/trie/supergenius_trie/supergenius_trie_impl.hpp"
@@ -23,4 +23,4 @@ namespace sgns::storage::trie {
 
 }  // namespace sgns::storage::trie
 
-#endif  // SUPERGENIUS_CORE_STORAGE_TRIE_IMPL_SUPERGENIUS_TRIE_FACTORY_IMPL
+#endif  // SUPERGENIUS_SRC_STORAGE_TRIE_IMPL_SUPERGENIUS_TRIE_FACTORY_IMPL

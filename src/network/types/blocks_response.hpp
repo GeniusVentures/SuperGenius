@@ -1,0 +1,61 @@
+
+
+#ifndef SUPERGENIUS_BLOCKS_RESPONSE_HPP
+#define SUPERGENIUS_BLOCKS_RESPONSE_HPP
+
+#include <vector>
+
+#include <boost/optional.hpp>
+#include "base/buffer.hpp"
+#include "primitives/block.hpp"
+#include "primitives/block_data.hpp"
+#include "primitives/common.hpp"
+#include "primitives/justification.hpp"
+
+namespace sgns::network {
+  /**
+   * Response to the BlockRequest
+   */
+  struct BlocksResponse {
+    primitives::BlocksRequestId id;
+    std::vector<primitives::BlockData> blocks{};
+  };
+
+  /**
+   * @brief compares two BlockResponse instances
+   * @param lhs first instance
+   * @param rhs second instance
+   * @return true if equal false otherwise
+   */
+  inline bool operator==(const BlocksResponse &lhs, const BlocksResponse &rhs) {
+    return lhs.id == rhs.id && lhs.blocks == rhs.blocks;
+  }
+
+  /**
+   * @brief outputs object of type BlockResponse to stream
+   * @tparam Stream output stream type
+   * @param s stream reference
+   * @param v value to output
+   * @return reference to stream
+   */
+  template <class Stream,
+            typename = std::enable_if_t<Stream::is_encoder_stream>>
+  Stream &operator<<(Stream &s, const BlocksResponse &v) {
+    return s << v.id << v.blocks;
+  }
+
+  /**
+   * @brief decodes object of type BlockResponse from stream
+   * @tparam Stream input stream type
+   * @param s stream reference
+   * @param v value to decode
+   * @return reference to stream
+   */
+  template <class Stream,
+            typename = std::enable_if_t<Stream::is_decoder_stream>>
+  Stream &operator>>(Stream &s, BlocksResponse &v) {
+    return s >> v.id >> v.blocks;
+  }
+}  // namespace sgns::network
+
+#endif  // SUPERGENIUS_BLOCKS_RESPONSE_HPP

@@ -1,7 +1,7 @@
 
 
-#ifndef SUPERGENIUS_CORE_HASHER_HASHER_HPP_
-#define SUPERGENIUS_CORE_HASHER_HASHER_HPP_
+#ifndef SUPERGENIUS_SRC_HASHER_HASHER_HPP_
+#define SUPERGENIUS_SRC_HASHER_HASHER_HPP_
 
 #include "base/blob.hpp"
 #include "base/buffer.hpp"
@@ -77,4 +77,4 @@ namespace sgns::crypto {
   };
 }  // namespace sgns::crypto
 
-#endif  // SUPERGENIUS_CORE_HASHER_HASHER_HPP_
+#endif  // SUPERGENIUS_SRC_HASHER_HASHER_HPP_

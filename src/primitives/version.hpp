@@ -1,7 +1,7 @@
 
 
-#ifndef SUPERGENIUS_CORE_PRIMITIVES_VERSION_HPP
-#define SUPERGENIUS_CORE_PRIMITIVES_VERSION_HPP
+#ifndef SUPERGENIUS_SRC_PRIMITIVES_VERSION_HPP
+#define SUPERGENIUS_SRC_PRIMITIVES_VERSION_HPP
 
 #include <array>
 #include <string>
@@ -120,4 +120,4 @@ namespace sgns::primitives {
   }
 }  // namespace sgns::primitives
 
-#endif  // SUPERGENIUS_CORE_PRIMITIVES_VERSION_HPP
+#endif  // SUPERGENIUS_SRC_PRIMITIVES_VERSION_HPP
