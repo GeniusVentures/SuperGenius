@@ -5,7 +5,7 @@
 namespace sgns::verification {
 
   SyncingProductionObserver::SyncingProductionObserver(
-      std::shared_ptr<consensus::BlockExecutor> block_executor)
+      std::shared_ptr<verification::BlockExecutor> block_executor)
       : block_executor_{std::move(block_executor)} {}
 
   void SyncingProductionObserver::onBlockAnnounce(

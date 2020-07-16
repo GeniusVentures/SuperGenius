@@ -11,11 +11,11 @@
 namespace sgns::verification {
 
   /**
-   * A consensus log item for PRODUCTION.
+   * A verification log item for PRODUCTION.
    * The usage of AuthorityIndex option is yet unclear.
    * Name and implementation are taken from substrate.
    */
-  using ConsensusLog =
+  using VerificationLog =
       boost::variant<uint32_t,  // = 0 fake type, should never be used
 
                      /// The epoch has changed. This provides

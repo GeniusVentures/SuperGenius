@@ -11,10 +11,10 @@ namespace sgns::primitives {
   // https://github.com/paritytech/substrate/blob/39094c764a0bc12134d2a2ed8ab494a9ebfeba88/core/sr-primitives/src/generic/digest.rs#L77-L102
 
   /// Consensus engine unique ID.
-  using ConsensusEngineId = base::Blob<4>;
+  using VerificationEngineId = base::Blob<4>;
 
-  inline const auto kProdcutionEngineId =
-      ConsensusEngineId::fromString("PRODUCTION").value();
+  inline const auto kProductionEngineId =
+      VerificationEngineId::fromString("PRODUCTION").value();
 
   /// System digest item that contains the root of changes trie at given
   /// block. It is created for every block iff runtime supports changes
@@ -23,7 +23,7 @@ namespace sgns::primitives {
 
   namespace detail {
     struct DigestItemCommon {
-      ConsensusEngineId verification_engine_id;
+      VerificationEngineId verification_engine_id;
       base::Buffer data;
 
       bool operator==(const DigestItemCommon &rhs) const {

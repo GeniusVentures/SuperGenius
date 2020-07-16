@@ -170,7 +170,7 @@ namespace sgns::verification {
         break;
       case ProductionState::NEED_SLOT_TIME:
         // if block is new add it to the storage and sync missing blocks. Then
-        // calculate slot time and execute babe
+        // calculate slot time and execute production
         block_executor_->processNextBlock(
             announce.header,
             [this](const auto &header) { synchronizeSlots(header); });
