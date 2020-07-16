@@ -7,10 +7,10 @@
 
 namespace sgns::network {
   /**
-   * Reacts to messages, related to BABE
+   * Reacts to messages, related to Production
    */
-  struct BabeObserver {
-    virtual ~BabeObserver() = default;
+  struct ProductionObserver {
+    virtual ~ProductionObserver() = default;
 
     /**
      * Triggered when a BlockAnnounce message arrives

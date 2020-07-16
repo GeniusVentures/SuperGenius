@@ -15,7 +15,7 @@ namespace sgns::primitives {
    * Authority id
    */
   struct AuthorityId {
-    // TODO(kamilsa): id types should be different for Babe and Grandpa
+    // TODO(kamilsa): id types should be different for Production and Grandpa
     // Authority Ids
     SessionKey id;
 
