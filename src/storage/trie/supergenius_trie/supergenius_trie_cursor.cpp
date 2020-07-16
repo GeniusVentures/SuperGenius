@@ -1,7 +1,6 @@
 
 
 #include "storage/trie/supergenius_trie/supergenius_trie_cursor.hpp"
-
 #include "base/buffer_back_insert_iterator.hpp"
 #include "storage/trie/serialization/supergenius_codec.hpp"
 
@@ -172,6 +171,8 @@ namespace sgns::storage::trie {
 
   base::Buffer SuperGeniusTrieCursor::collectKey() const {
     KeyNibbles key_nibbles;
+    // std::back_insert_iterator<Buffer> temp(key_nibbles);
+
     for (auto &node_idx : last_visited_child_) {
       auto &node = node_idx.parent;
       auto idx = node_idx.child_idx;

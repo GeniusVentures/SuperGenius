@@ -7,7 +7,7 @@
 #include "primitives/block.hpp"
 #include "primitives/block_id.hpp"
 
-namespace sgns::consensus {
+namespace sgns::verification {
 
   /**
    * @brief Iterates over the list of accessible peers and tries to fetch
@@ -32,6 +32,6 @@ namespace sgns::consensus {
                          const BlocksHandler &block_list_handler) = 0;
   };
 
-}  // namespace sgns::consensus
+}  // namespace sgns::verification
 
 #endif  // SUPERGENIUS_CONSENSUS_PRODUCTION_SYNCHRONIZER_HPP

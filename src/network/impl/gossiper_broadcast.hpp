@@ -21,9 +21,9 @@ namespace sgns::network {
   class GossiperBroadcast
       : public Gossiper,
         public std::enable_shared_from_this<GossiperBroadcast> {
-    using Precommit = consensus::grandpa::Precommit;
-    using Prevote = consensus::grandpa::Prevote;
-    using PrimaryPropose = consensus::grandpa::PrimaryPropose;
+    using Precommit = verification::grandpa::Precommit;
+    using Prevote = verification::grandpa::Prevote;
+    using PrimaryPropose = verification::grandpa::PrimaryPropose;
 
    public:
     GossiperBroadcast(libp2p::Host &host);
@@ -38,9 +38,9 @@ namespace sgns::network {
 
     void blockAnnounce(const BlockAnnounce &announce) override;
 
-    void vote(const consensus::grandpa::VoteMessage &msg) override;
+    void vote(const verification::grandpa::VoteMessage &msg) override;
 
-    void finalize(const consensus::grandpa::Fin &fin) override;
+    void finalize(const verification::grandpa::Fin &fin) override;
 
     void addStream(std::shared_ptr<libp2p::connection::Stream> stream) override;
 

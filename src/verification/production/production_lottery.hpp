@@ -5,10 +5,10 @@
 
 #include <boost/optional.hpp>
 
-#include "consensus/production/types/epoch.hpp"
+#include "verification/production/types/epoch.hpp"
 #include "crypto/sr25519_types.hpp"
 
-namespace sgns::consensus {
+namespace sgns::verification {
   /**
    * Interface for acquiring leadership information for the current Production epoch.
    * It is expected to be used as follows:
@@ -61,6 +61,6 @@ namespace sgns::consensus {
      */
     virtual void submitVRFValue(const crypto::VRFPreOutput &value) = 0;
   };
-}  // namespace sgns::consensus
+}  // namespace sgns::verification
 
 #endif  // SUPERGENIUS_CONSENSUS_PRODUCTION_LOTTERY_HPP
