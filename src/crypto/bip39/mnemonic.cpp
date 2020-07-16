@@ -6,7 +6,7 @@
 #include <locale>
 
 #include <boost/algorithm/string.hpp>
-#include "common/logger.hpp"
+#include "base/logger.hpp"
 #include "crypto/bip39/bip39_types.hpp"
 
 namespace sgns::crypto::bip39 {
@@ -46,7 +46,7 @@ namespace sgns::crypto::bip39 {
     }
 
     if (mnemonic_list.find("/") != std::string_view::npos) {
-      common::createLogger(kMnemonicLoggerString)
+      base::createLogger(kMnemonicLoggerString)
           ->error("junctions are not supported yet");
       return bip39::MnemonicError::INVALID_MNEMONIC;
     }

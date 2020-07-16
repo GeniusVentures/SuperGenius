@@ -1,7 +1,7 @@
 
 
-#ifndef SUPERGENIUS_CORE_PRIMITIVES_DIGEST_HPP
-#define SUPERGENIUS_CORE_PRIMITIVES_DIGEST_HPP
+#ifndef SUPERGENIUS_SRC_PRIMITIVES_DIGEST_HPP
+#define SUPERGENIUS_SRC_PRIMITIVES_DIGEST_HPP
 
 #include <boost/variant.hpp>
 #include "base/buffer.hpp"
@@ -88,4 +88,4 @@ namespace sgns::primitives {
   using Digest = std::vector<DigestItem>;
 }  // namespace sgns::primitives
 
-#endif  // SUPERGENIUS_CORE_PRIMITIVES_DIGEST_HPP
+#endif  // SUPERGENIUS_SRC_PRIMITIVES_DIGEST_HPP

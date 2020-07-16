@@ -1,9 +1,9 @@
 
 
-#ifndef SUPERGENIUS_CORE_NETWORK_GOSSIPER_HPP
-#define SUPERGENIUS_CORE_NETWORK_GOSSIPER_HPP
+#ifndef SUPERGENIUS_SRC_NETWORK_GOSSIPER_HPP
+#define SUPERGENIUS_SRC_NETWORK_GOSSIPER_HPP
 
-#include "verification/production/CONSENSUS_PRODUCTION_gossiper.hpp"
+#include "verification/production/VERIFICATION_PRODUCTION_gossiper.hpp"
 #include "verification/grandpa/gossiper.hpp"
 #include "network/extrinsic_gossiper.hpp"
 
@@ -15,7 +15,7 @@ namespace sgns::network {
    * Joins all available gossipers
    */
   struct Gossiper : public ExtrinsicGossiper,
-                    public verification::BabeGossiper,
+                    public verification::ProductionGossiper,
                     public verification::grandpa::Gossiper {
     virtual void reserveStream(
         const libp2p::peer::PeerInfo &info,
@@ -27,4 +27,4 @@ namespace sgns::network {
   };
 }  // namespace sgns::network
 
-#endif  // SUPERGENIUS_CORE_NETWORK_GOSSIPER_HPP
+#endif  // SUPERGENIUS_SRC_NETWORK_GOSSIPER_HPP

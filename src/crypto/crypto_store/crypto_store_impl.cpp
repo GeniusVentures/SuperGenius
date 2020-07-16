@@ -5,7 +5,7 @@
 #include <fstream>
 
 #include <gsl/span>
-#include "common/visitor.hpp"
+#include "base/visitor.hpp"
 #include "crypto/bip39/mnemonic.hpp"
 #include <set>
 
@@ -108,7 +108,7 @@ namespace sgns::crypto {
         secp256k1_provider_(std::move(secp256k1_provider)),
         bip39_provider_(std::move(bip39_provider)),
         random_generator_(std::move(random_generator)),
-        logger_(common::createLogger("CryptoStore")) {
+        logger_(base::createLogger("CryptoStore")) {
     BOOST_ASSERT(ed25519_provider_ != nullptr);
     BOOST_ASSERT(sr25519_provider_ != nullptr);
     BOOST_ASSERT(secp256k1_provider_ != nullptr);

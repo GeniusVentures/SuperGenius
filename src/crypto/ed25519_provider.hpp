@@ -1,10 +1,10 @@
 
 
-#ifndef SUPERGENIUS_CORE_CRYPTO_ED25519_PROVIDER_HPP
-#define SUPERGENIUS_CORE_CRYPTO_ED25519_PROVIDER_HPP
+#ifndef SUPERGENIUS_SRC_CRYPTO_ED25519_PROVIDER_HPP
+#define SUPERGENIUS_SRC_CRYPTO_ED25519_PROVIDER_HPP
 
 #include <gsl/span>
-#include <common/outcome.hpp>
+#include <outcome/outcome.hpp>
 #include "crypto/ed25519_types.hpp"
 
 namespace sgns::crypto {
@@ -58,4 +58,4 @@ namespace sgns::crypto {
 
 OUTCOME_HPP_DECLARE_ERROR_2(sgns::crypto, ED25519ProviderError)
 
-#endif  // SUPERGENIUS_CORE_CRYPTO_ED25519_PROVIDER_HPP
+#endif  // SUPERGENIUS_SRC_CRYPTO_ED25519_PROVIDER_HPP

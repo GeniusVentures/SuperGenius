@@ -1,17 +1,17 @@
 
 
-#ifndef SUPERGENIUS_CORE_HASHER_HASHER_HPP_
-#define SUPERGENIUS_CORE_HASHER_HASHER_HPP_
+#ifndef SUPERGENIUS_SRC_HASHER_HASHER_HPP_
+#define SUPERGENIUS_SRC_HASHER_HASHER_HPP_
 
-#include "common/blob.hpp"
-#include "common/buffer.hpp"
+#include "base/blob.hpp"
+#include "base/buffer.hpp"
 
 namespace sgns::crypto {
   class Hasher {
    protected:
-    using Hash64 = common::Hash64;
-    using Hash128 = common::Hash128;
-    using Hash256 = common::Hash256;
+    using Hash64 = base::Hash64;
+    using Hash128 = base::Hash128;
+    using Hash256 = base::Hash256;
 
    public:
     virtual ~Hasher() = default;
@@ -74,4 +74,4 @@ namespace sgns::crypto {
   };
 }  // namespace sgns::crypto
 
-#endif  // SUPERGENIUS_CORE_HASHER_HASHER_HPP_
+#endif  // SUPERGENIUS_SRC_HASHER_HASHER_HPP_

@@ -1,7 +1,7 @@
 
 
-#ifndef SUPERGENIUS_CORE_CRYPTO_VRF_TYPES
-#define SUPERGENIUS_CORE_CRYPTO_VRF_TYPES
+#ifndef SUPERGENIUS_SRC_CRYPTO_VRF_TYPES
+#define SUPERGENIUS_SRC_CRYPTO_VRF_TYPES
 
 extern "C" {
 #include <sr25519/sr25519.h>
@@ -9,8 +9,8 @@ extern "C" {
 #include <boost/multiprecision/cpp_int.hpp>
 #include <gsl/span>
 
-#include "common/blob.hpp"
-#include "common/mp_utils.hpp"
+#include "base/blob.hpp"
+#include "base/mp_utils.hpp"
 
 namespace sgns::crypto {
   namespace constants::sr25519 {
@@ -68,11 +68,11 @@ namespace sgns::crypto {
     bool is_less;
   };
 
-  using SR25519SecretKey = common::Blob<constants::sr25519::SECRET_SIZE>;
+  using SR25519SecretKey = base::Blob<constants::sr25519::SECRET_SIZE>;
 
-  using SR25519PublicKey = common::Blob<constants::sr25519::PUBLIC_SIZE>;
+  using SR25519PublicKey = base::Blob<constants::sr25519::PUBLIC_SIZE>;
 
-  using SR25519Seed = common::Blob<constants::sr25519::SEED_SIZE>;
+  using SR25519Seed = base::Blob<constants::sr25519::SEED_SIZE>;
 
   struct SR25519Keypair {
     SR25519SecretKey secret_key;
@@ -84,7 +84,7 @@ namespace sgns::crypto {
     bool operator!=(const SR25519Keypair &other) const;
   };
 
-  using SR25519Signature = common::Blob<constants::sr25519::SIGNATURE_SIZE>;
+  using SR25519Signature = base::Blob<constants::sr25519::SIGNATURE_SIZE>;
 
   /**
    * @brief outputs object of type VRFOutput to stream
@@ -114,4 +114,4 @@ namespace sgns::crypto {
 
 }  // namespace sgns::crypto
 
-#endif  // SUPERGENIUS_CORE_CRYPTO_VRF_TYPES
+#endif  // SUPERGENIUS_SRC_CRYPTO_VRF_TYPES

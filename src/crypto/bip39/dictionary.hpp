@@ -4,7 +4,7 @@
 #define SUPERGENIUS_CRYPTO_BIP39_DICTIONARIES_HPP
 
 #include "crypto/bip39/entropy_accumulator.hpp"
-#include "common/outcome.hpp"
+#include "base/outcome.hpp"
 
 #include <unordered_map>
 

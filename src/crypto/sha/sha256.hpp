@@ -6,7 +6,7 @@
 #include <string_view>
 
 #include <gsl/span>
-#include "common/blob.hpp"
+#include "base/blob.hpp"
 
 namespace sgns::crypto {
   /**
@@ -14,14 +14,14 @@ namespace sgns::crypto {
    * @param input to be hashed
    * @return hashed bytes
    */
-  common::Hash256 sha256(std::string_view input);
+  base::Hash256 sha256(std::string_view input);
 
   /**
    * Take a SHA-256 hash from bytes
    * @param input to be hashed
    * @return hashed bytes
    */
-  common::Hash256 sha256(gsl::span<const uint8_t> input);
+  base::Hash256 sha256(gsl::span<const uint8_t> input);
 }  // namespace sgns::crypto
 
 #endif  // SUPERGENIUS_SHA256_HPP

@@ -11,9 +11,9 @@
 #include "crypto/twox/twox.hpp"
 
 namespace sgns::crypto {
-  using common::Hash128;
-  using common::Hash256;
-  using common::Hash64;
+  using base::Hash128;
+  using base::Hash256;
+  using base::Hash64;
 
   Hash64 HasherImpl::twox_64(gsl::span<const uint8_t> buffer) const {
     return make_twox64(buffer);

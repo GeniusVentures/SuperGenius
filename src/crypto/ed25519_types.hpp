@@ -1,10 +1,10 @@
 
 
-#ifndef SUPERGENIUS_CORE_CRYPTO_ED25519_TYPES_HPP
-#define SUPERGENIUS_CORE_CRYPTO_ED25519_TYPES_HPP
+#ifndef SUPERGENIUS_SRC_CRYPTO_ED25519_TYPES_HPP
+#define SUPERGENIUS_SRC_CRYPTO_ED25519_TYPES_HPP
 
 #include <ed25519/ed25519.h>
-#include "common/blob.hpp"
+#include "base/blob.hpp"
 
 namespace sgns::crypto {
 
@@ -20,8 +20,8 @@ namespace sgns::crypto {
     };
   }  // namespace constants::ed25519
 
-  using ED25519PrivateKey = common::Blob<constants::ed25519::PRIVKEY_SIZE>;
-  using ED25519PublicKey = common::Blob<constants::ed25519::PUBKEY_SIZE>;
+  using ED25519PrivateKey = base::Blob<constants::ed25519::PRIVKEY_SIZE>;
+  using ED25519PublicKey = base::Blob<constants::ed25519::PUBKEY_SIZE>;
 
   struct ED25519Keypair {
     ED25519PrivateKey private_key;
@@ -31,9 +31,9 @@ namespace sgns::crypto {
     bool operator!=(const ED25519Keypair &other) const;
   };
 
-  using ED25519Signature = common::Blob<constants::ed25519::SIGNATURE_SIZE>;
+  using ED25519Signature = base::Blob<constants::ed25519::SIGNATURE_SIZE>;
 
-  using ED25519Seed = common::Blob<constants::ed25519::SEED_SIZE>;
+  using ED25519Seed = base::Blob<constants::ed25519::SEED_SIZE>;
 }  // namespace sgns::crypto
 
-#endif  // SUPERGENIUS_CORE_CRYPTO_ED25519_TYPES_HPP
+#endif  // SUPERGENIUS_SRC_CRYPTO_ED25519_TYPES_HPP

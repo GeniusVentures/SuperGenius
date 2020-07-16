@@ -1,7 +1,7 @@
 
 
-#ifndef SUPERGENIUS_CORE_PRIMITIVES_SESSION_KEY_HPP
-#define SUPERGENIUS_CORE_PRIMITIVES_SESSION_KEY_HPP
+#ifndef SUPERGENIUS_SRC_PRIMITIVES_SESSION_KEY_HPP
+#define SUPERGENIUS_SRC_PRIMITIVES_SESSION_KEY_HPP
 
 #include "base/blob.hpp"
 
@@ -10,4 +10,4 @@ namespace sgns::primitives {
   using SessionKey = base::Blob<32>;
 }  // namespace sgns::primitives
 
-#endif  // SUPERGENIUS_CORE_PRIMITIVES_SESSION_KEY_HPP
+#endif  // SUPERGENIUS_SRC_PRIMITIVES_SESSION_KEY_HPP

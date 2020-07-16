@@ -1,7 +1,7 @@
 
 
-#ifndef SUPERGENIUS_CORE_PRIMITIVES_BLOCK_ID_HPP
-#define SUPERGENIUS_CORE_PRIMITIVES_BLOCK_ID_HPP
+#ifndef SUPERGENIUS_SRC_PRIMITIVES_BLOCK_ID_HPP
+#define SUPERGENIUS_SRC_PRIMITIVES_BLOCK_ID_HPP
 
 #include <boost/variant.hpp>
 #include "base/blob.hpp"
@@ -14,4 +14,4 @@ namespace sgns::primitives {
   using BlockId = boost::variant<BlockHash, BlockNumber>;
 }  // namespace sgns::primitives
 
-#endif  // SUPERGENIUS_CORE_PRIMITIVES_BLOCK_ID_HPP
+#endif  // SUPERGENIUS_SRC_PRIMITIVES_BLOCK_ID_HPP

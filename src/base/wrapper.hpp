@@ -1,7 +1,7 @@
 
 
-#ifndef SUPERGENIUS_CORE_COMMON_WRAPPER_HPP
-#define SUPERGENIUS_CORE_COMMON_WRAPPER_HPP
+#ifndef SUPERGENIUS_SRC_COMMON_WRAPPER_HPP
+#define SUPERGENIUS_SRC_COMMON_WRAPPER_HPP
 
 #include <memory>
 #include <type_traits>
@@ -57,4 +57,4 @@ struct std::hash<sgns::base::Wrapper<T, Tag>> {
   }
 };
 
-#endif  // SUPERGENIUS_CORE_COMMON_WRAPPER_HPP
+#endif  // SUPERGENIUS_SRC_COMMON_WRAPPER_HPP

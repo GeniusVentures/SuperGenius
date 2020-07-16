@@ -5,8 +5,8 @@
 
 #include <boost/filesystem.hpp>
 #include <boost/variant.hpp>
-#include "common/blob.hpp"
-#include "common/logger.hpp"
+#include "base/blob.hpp"
+#include "base/logger.hpp"
 #include "crypto/bip39/bip39_provider.hpp"
 #include "crypto/crypto_store.hpp"
 #include "crypto/ed25519_provider.hpp"
@@ -18,8 +18,8 @@ namespace sgns::crypto {
 
   namespace store {
     using KeyPair = boost::variant<ED25519Keypair, SR25519Keypair>;
-    using PublicKey = common::Blob<32>;
-    using Seed = common::Hash256;
+    using PublicKey = base::Blob<32>;
+    using Seed = base::Hash256;
 
     enum class CryptoId { ED25519, SR25519, SECP256k1 };
   }  // namespace store
@@ -106,7 +106,7 @@ namespace sgns::crypto {
 
     std::map<KeyTypeId, std::map<ED25519PublicKey, ED25519PrivateKey>> ed_keys_;
     std::map<KeyTypeId, std::map<SR25519PublicKey, SR25519SecretKey>> sr_keys_;
-    common::Logger logger_;
+    base::Logger logger_;
   };
 }  // namespace sgns::crypto
 

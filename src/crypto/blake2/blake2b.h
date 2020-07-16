@@ -1,7 +1,7 @@
 
 
-#ifndef CORE_BLAKE2B_H
-#define CORE_BLAKE2B_H
+#ifndef SRC_BLAKE2B_H
+#define SRC_BLAKE2B_H
 
 #include <stddef.h>
 #include <stdint.h>

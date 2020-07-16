@@ -13,8 +13,8 @@ namespace sgns::crypto {
     ptr[0] = XXH64(in, len, 0);
   }
 
-  common::Hash64 make_twox64(gsl::span<const uint8_t> buf) {
-    common::Hash64 hash{};
+  base::Hash64 make_twox64(gsl::span<const uint8_t> buf) {
+    base::Hash64 hash{};
     make_twox64(buf.data(), buf.size(), hash.data());
     return hash;
   }
@@ -28,8 +28,8 @@ namespace sgns::crypto {
     ptr[1] = XXH64(in, len, 1);
   }
 
-  common::Hash128 make_twox128(gsl::span<const uint8_t> buf) {
-    common::Hash128 hash{};
+  base::Hash128 make_twox128(gsl::span<const uint8_t> buf) {
+    base::Hash128 hash{};
     make_twox128(buf.data(), buf.size(), hash.data());
     return hash;
   }
@@ -47,8 +47,8 @@ namespace sgns::crypto {
     ptr[3] = XXH64(in, len, 3);
   }
 
-  common::Hash256 make_twox256(gsl::span<const uint8_t> buf) {
-    common::Hash256 hash{};
+  base::Hash256 make_twox256(gsl::span<const uint8_t> buf) {
+    base::Hash256 hash{};
     make_twox256(buf.data(), buf.size(), hash.data());
     return hash;
   }

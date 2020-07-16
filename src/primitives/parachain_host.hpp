@@ -1,7 +1,7 @@
 
 
-#ifndef SUPERGENIUS_CORE_PRIMITIVES_PARACHAIN_HOST_HPP
-#define SUPERGENIUS_CORE_PRIMITIVES_PARACHAIN_HOST_HPP
+#ifndef SUPERGENIUS_SRC_PRIMITIVES_PARACHAIN_HOST_HPP
+#define SUPERGENIUS_SRC_PRIMITIVES_PARACHAIN_HOST_HPP
 
 #include <cstdint>
 #include <vector>
@@ -69,4 +69,4 @@ namespace sgns::primitives::parachain {
     return s;
   }
 }  // namespace sgns::primitives::parachain
-#endif  // SUPERGENIUS_CORE_PRIMITIVES_PARACHAIN_HOST_HPP
+#endif  // SUPERGENIUS_SRC_PRIMITIVES_PARACHAIN_HOST_HPP

@@ -1,7 +1,7 @@
 
 
-#ifndef SUPERGENIUS_CORE_COMMON_OUTCOME_THROW_HPP
-#define SUPERGENIUS_CORE_COMMON_OUTCOME_THROW_HPP
+#ifndef SUPERGENIUS_SRC_COMMON_OUTCOME_THROW_HPP
+#define SUPERGENIUS_SRC_COMMON_OUTCOME_THROW_HPP
 
 #include <boost/system/system_error.hpp>
 #include <boost/throw_exception.hpp>
@@ -29,4 +29,4 @@ namespace sgns::base {
   }
 }  // namespace sgns::base
 
-#endif  // SUPERGENIUS_CORE_COMMON_OUTCOME_THROW_HPP
+#endif  // SUPERGENIUS_SRC_COMMON_OUTCOME_THROW_HPP

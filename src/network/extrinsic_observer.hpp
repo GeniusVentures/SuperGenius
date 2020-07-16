@@ -1,7 +1,7 @@
 
 
-#ifndef SUPERGENIUS_CORE_NETWORK_EXTRINSIC_OBSERVER_HPP
-#define SUPERGENIUS_CORE_NETWORK_EXTRINSIC_OBSERVER_HPP
+#ifndef SUPERGENIUS_SRC_NETWORK_EXTRINSIC_OBSERVER_HPP
+#define SUPERGENIUS_SRC_NETWORK_EXTRINSIC_OBSERVER_HPP
 
 #include "api/service/author/author_api.hpp"
 #include "base/blob.hpp"
@@ -20,4 +20,4 @@ namespace sgns::network {
 
 }  // namespace sgns::network
 
-#endif  // SUPERGENIUS_CORE_NETWORK_EXTRINSIC_OBSERVER_HPP
+#endif  // SUPERGENIUS_SRC_NETWORK_EXTRINSIC_OBSERVER_HPP
