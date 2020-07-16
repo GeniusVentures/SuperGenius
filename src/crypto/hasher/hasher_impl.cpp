@@ -8,20 +8,22 @@
 #include "crypto/blake2/blake2s.h"
 #include "crypto/keccak/keccak.h"
 #include "crypto/sha/sha256.hpp"
-#include "crypto/twox/twox.hpp"
+//-------------------
+///#include "crypto/twox/twox.hpp"
 
 namespace sgns::crypto {
   using base::Hash128;
   using base::Hash256;
   using base::Hash64;
 
-  Hash64 HasherImpl::twox_64(gsl::span<const uint8_t> buffer) const {
-    return make_twox64(buffer);
-  }
+//-----------------------------
+  // Hash64 HasherImpl::twox_64(gsl::span<const uint8_t> buffer) const {
+  //   return make_twox64(buffer);
+  // }
 
-  Hash128 HasherImpl::twox_128(gsl::span<const uint8_t> buffer) const {
-    return make_twox128(buffer);
-  }
+  // Hash128 HasherImpl::twox_128(gsl::span<const uint8_t> buffer) const {
+  //   return make_twox128(buffer);
+  // }
 
   Hash128 HasherImpl::blake2b_128(gsl::span<const uint8_t> buffer) const {
     Hash128 out;
@@ -29,9 +31,10 @@ namespace sgns::crypto {
     return out;
   }
 
-  Hash256 HasherImpl::twox_256(gsl::span<const uint8_t> buffer) const {
-    return make_twox256(buffer);
-  }
+//----------------------------
+  // Hash256 HasherImpl::twox_256(gsl::span<const uint8_t> buffer) const {
+  //   return make_twox256(buffer);
+  // }
 
   Hash256 HasherImpl::blake2b_256(gsl::span<const uint8_t> buffer) const {
     Hash256 out;

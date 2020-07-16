@@ -4,7 +4,7 @@ add_library(hasher
     )
 target_link_libraries(hasher
     blake2
-    twox
+##    twox
     buffer
     sha
     keccak

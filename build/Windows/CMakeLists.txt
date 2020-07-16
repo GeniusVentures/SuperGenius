@@ -276,9 +276,10 @@ ExternalProject_Add(ed25519
   CMAKE_CACHE_ARGS
         -DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_CURRENT_BINARY_DIR}/ed25519
         -DHUNTER_ENABLED:BOOL=OFF
-        -DEDIMPL:STRING=amd64-64-24k-pic
+        #-DEDIMPL:STRING=amd64-64-24k-pic    ##------ not support in win64
+        -DEDIMPL:STRING=ref10
         -DHASH:STRING=sha3_brainhub
-        -DRANDOM:STRING=dev_urandom
+        -DRANDOM:STRING=bcryptgen          ##--------only windows
         -DBUILD:STRING=STATIC
         -DTESTING:BOOL=OFF
         -DCMAKE_CXX_FLAGS:STRING=${CMAKE_CXX_FLAGS}
@@ -308,6 +309,7 @@ endif()
 ##### apply patch for building on windows ######
 configure_file(${THIRDPARTY_DIR}/build-patch/config/sr25519/sr25519Config-noconfig.cmake  ${THIRDPARTY_DIR}/sr25519/sr25519Config-noconfig.cmake COPYONLY)
 
+
 # Builds sr25519
 ExternalProject_Add(sr25519
   PREFIX sr25519
@@ -327,6 +329,7 @@ ExternalProject_Add(sr25519
         -DGTest_DIR:PATH=${_FINDPACKAGE_GTEST_CONFIG_DIR}
 )
 set(_FINDPACKAGE_sr25519_CONFIG_DIR "${CMAKE_CURRENT_BINARY_DIR}/sr25519/lib/cmake/sr25519")
+set(_sr25519_INCLUDE_DIR "${CMAKE_CURRENT_BINARY_DIR}/sr25519/include")
 
 ExternalProject_Add(SuperGenius
   PREFIX SuperGenius
@@ -357,7 +360,8 @@ ExternalProject_Add(SuperGenius
         -DCMAKE_CXX_FLAGS_DEBUG:STRING=${CMAKE_CXX_FLAGS_DEBUG}
         -DCMAKE_C_FLAGS_DEBUG:STRING=${CMAKE_C_FLAGS_DEBUG}
         -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
-        -Ded25519_DIR:PATH=${_FINDPACKAGE_ed25519_CONFIG_DIR}
+        -Ded25519_DIR:PATH=${_FINDPACKAGE_ed25519_CONFIG_DIR}        
         -Dsr25519_DIR:PATH=${_FINDPACKAGE_sr25519_CONFIG_DIR}
-  DEPENDS GTest blocklattice ipfs-lite-cpp spdlog tsl_hat_trie libp2p protobuf leveldb
+        -Dsr25519_INCLUDE_DIR:PATH=${_sr25519_INCLUDE_DIR}
+  DEPENDS GTest blocklattice ipfs-lite-cpp spdlog tsl_hat_trie libp2p protobuf leveldb ed25519 
 )

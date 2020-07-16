@@ -21,14 +21,16 @@ namespace sgns::crypto {
      * @param buffer source buffer
      * @return 128-bit hash value
      */
-    virtual Hash64 twox_64(gsl::span<const uint8_t> buffer) const = 0;
+    //------------ by ruymaster ----//
+    //virtual Hash64 twox_64(gsl::span<const uint8_t> buffer) const = 0;
 
     /**
      * @brief twox_128 calculates 16-byte twox hash
      * @param buffer source buffer
      * @return 128-bit hash value
      */
-    virtual Hash128 twox_128(gsl::span<const uint8_t> buffer) const = 0;
+    //------------ by ruymaster ----//
+    //virtual Hash128 twox_128(gsl::span<const uint8_t> buffer) const = 0;
 
     /**
      * @brief blake2b_128 function calculates 16-byte blake2b hash
@@ -42,7 +44,8 @@ namespace sgns::crypto {
      * @param buffer source buffer
      * @return 256-bit hash value
      */
-    virtual Hash256 twox_256(gsl::span<const uint8_t> buffer) const = 0;
+    //---------------------
+    //virtual Hash256 twox_256(gsl::span<const uint8_t> buffer) const = 0;
 
     /**
      * @brief blake2b_256 function calculates 32-byte blake2b hash
