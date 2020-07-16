@@ -8,7 +8,7 @@
 #include <outcome/outcome.hpp>
 #include "network/types/block_announce.hpp"
 
-namespace sgns::consensus {
+namespace sgns::verification {
   /**
    * Sends messages, related to Production, over the Gossip protocol
    */
@@ -21,6 +21,6 @@ namespace sgns::consensus {
      */
     virtual void blockAnnounce(const network::BlockAnnounce &announce) = 0;
   };
-}  // namespace sgns::consensus
+}  // namespace sgns::verification
 
 #endif  // SUPERGENIUS_CONSENSUS_CONSENSUS_PRODUCTION_GOSSIPER_HPP

@@ -58,7 +58,7 @@ namespace sgns::primitives {
      * ignore this; it serves only as an indication that the code is different;
      * as long as the other two versions are the same then while the actual
      * code may be different, it is nonetheless required to do the same thing.
-     * Non-consensus-breaking optimizations are about the only changes that
+     * Non-verification-breaking optimizations are about the only changes that
      * could be made which would result in only the impl_version changing.
      */
 

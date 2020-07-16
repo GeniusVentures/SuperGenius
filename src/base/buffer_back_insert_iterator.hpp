@@ -1,5 +1,4 @@
 
-
 #include "base/buffer.hpp"
 
 using sgns::base::Buffer;
@@ -22,6 +21,13 @@ public:
   constexpr explicit back_insert_iterator(Buffer &c):
       buf_ {c} {
   }
+  back_insert_iterator<Buffer>(const back_insert_iterator<Buffer>& a):buf_{a.buf_} {
+    
+  }
+  back_insert_iterator<Buffer>& operator=(const back_insert_iterator<Buffer>& a) {
+    buf_ = a.buf_ ;
+    return *this;
+  }
 
   back_insert_iterator<Buffer>&
   operator=(uint8_t value) {
@@ -32,12 +38,6 @@ public:
   back_insert_iterator<Buffer>&
   operator=(uint32_t value) {
     buf_.putUint32(value);
-    return *this;
-  }
-
-  back_insert_iterator<Buffer>&
-  operator=(uint64_t value) {
-    buf_.putUint64(value);
     return *this;
   }
 

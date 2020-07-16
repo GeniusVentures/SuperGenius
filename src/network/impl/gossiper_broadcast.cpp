@@ -37,21 +37,21 @@ namespace sgns::network {
   }
 
   void GossiperBroadcast::vote(
-      const consensus::grandpa::VoteMessage &vote_message) {
+      const verification::grandpa::VoteMessage &vote_message) {
     logger_->debug("Gossip vote message: grandpa round number {}",
                    vote_message.round_number);
     GossipMessage message;
-    message.type = GossipMessage::Type::CONSENSUS;
+    message.type = GossipMessage::Type::verification;
     message.data.put(scale::encode(vote_message).value());
 
     broadcast(std::move(message));
   }
 
-  void GossiperBroadcast::finalize(const consensus::grandpa::Fin &fin) {
+  void GossiperBroadcast::finalize(const verification::grandpa::Fin &fin) {
     logger_->debug("Gossip fin message: grandpa round number {}",
                    fin.round_number);
     GossipMessage message;
-    message.type = GossipMessage::Type::CONSENSUS;
+    message.type = GossipMessage::Type::verification;
     message.data.put(scale::encode(fin).value());
 
     broadcast(std::move(message));

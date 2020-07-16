@@ -5,10 +5,10 @@
 
 #include <boost/optional.hpp>
 
-#include "consensus/production/common.hpp"
-#include "consensus/production/types/next_epoch_descriptor.hpp"
+#include "verification/production/common.hpp"
+#include "verification/production/types/next_epoch_descriptor.hpp"
 
-namespace sgns::consensus {
+namespace sgns::verification {
   /**
    * Allows to store epochs
    */
@@ -33,6 +33,6 @@ namespace sgns::consensus {
     virtual outcome::result<NextEpochDescriptor> getEpochDescriptor(
         EpochIndex epoch_number) const = 0;
   };
-}  // namespace sgns::consensus
+}  // namespace sgns::verification
 
 #endif  // SUPERGENIUS_EPOCH_STORAGE_HPP
