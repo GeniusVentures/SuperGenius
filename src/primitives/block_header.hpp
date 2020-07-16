@@ -42,7 +42,7 @@ namespace sgns::primitives {
              << bh.extrinsics_root ;
 
       out << bh.digest.size();
-      for (auto &it = bh.digest.begin(); it != bh.digest.end(); ++it) {
+      for (auto it = bh.digest.begin(); it != bh.digest.end(); ++it) {
         out << (*it).which();
       }
       return out ;
