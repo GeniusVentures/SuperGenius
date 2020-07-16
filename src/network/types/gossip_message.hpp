@@ -18,7 +18,7 @@ namespace sgns::network {
       BLOCK_REQUEST,
       BLOCK_ANNOUNCE,
       TRANSACTIONS,
-      CONSENSUS,
+      VERIFICATION,
       UNKNOWN = 99
     };
 

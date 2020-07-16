@@ -82,12 +82,12 @@ namespace sgns::scale {
   boost::optional<bool> ScaleDecoderStream::decodeOptionalBool() {
     auto byte = nextByte();
     switch (byte) {
-      case static_cast<uint8_t>(OptionalBool::NONE):
+      case static_cast<uint8_t>(OptionalBool::NONE_):
         return boost::none;
         break;
-      case static_cast<uint8_t>(OptionalBool::FALSE):
+      case static_cast<uint8_t>(OptionalBool::FALSE_):
         return false;
-      case static_cast<uint8_t>(OptionalBool::TRUE):
+      case static_cast<uint8_t>(OptionalBool::TRUE_):
         return true;
       default:
         base::raise(DecodeError::UNEXPECTED_VALUE);
