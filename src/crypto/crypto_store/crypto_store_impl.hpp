@@ -11,7 +11,7 @@
 #include "crypto/crypto_store.hpp"
 #include "crypto/ed25519_provider.hpp"
 #include "crypto/random_generator.hpp"
-#include "crypto/secp256k1_provider.hpp"
+//#include "crypto/secp256k1_provider.hpp"
 #include "crypto/sr25519_provider.hpp"
 
 namespace sgns::crypto {
@@ -21,7 +21,8 @@ namespace sgns::crypto {
     using PublicKey = base::Blob<32>;
     using Seed = base::Hash256;
 
-    enum class CryptoId { ED25519, SR25519, SECP256k1 };
+    //enum class CryptoId { ED25519, SR25519, SECP256k1 };
+    enum class CryptoId { ED25519, SR25519 };
   }  // namespace store
 
   enum class CryptoStoreError {
@@ -47,7 +48,7 @@ namespace sgns::crypto {
 
     CryptoStoreImpl(std::shared_ptr<ED25519Provider> ed25519_provider,
                     std::shared_ptr<SR25519Provider> sr25519_provider,
-                    std::shared_ptr<Secp256k1Provider> secp256k1_provider,
+//                    std::shared_ptr<Secp256k1Provider> secp256k1_provider,
                     std::shared_ptr<Bip39Provider> bip39_provider,
                     std::shared_ptr<CSPRNG> random_generator);
 
@@ -100,7 +101,7 @@ namespace sgns::crypto {
     Path keys_directory_;
     std::shared_ptr<ED25519Provider> ed25519_provider_;
     std::shared_ptr<SR25519Provider> sr25519_provider_;
-    std::shared_ptr<Secp256k1Provider> secp256k1_provider_;
+//    std::shared_ptr<Secp256k1Provider> secp256k1_provider_;
     std::shared_ptr<Bip39Provider> bip39_provider_;
     std::shared_ptr<CSPRNG> random_generator_;
 

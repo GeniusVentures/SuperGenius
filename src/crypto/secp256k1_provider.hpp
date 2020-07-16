@@ -4,7 +4,7 @@
 #define SUPERGENIUS_CRYPTO_SECP256K1_PROVIDER_HPP
 
 #include "crypto/secp256k1_types.hpp"
-#include "base/outcome.hpp"
+#include "outcome/outcome.hpp"
 
 namespace sgns::crypto {
 
