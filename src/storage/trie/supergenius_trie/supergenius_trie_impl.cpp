@@ -58,7 +58,7 @@ namespace sgns::storage::trie {
 
   outcome::result<void> SuperGeniusTrieImpl::clearPrefix(
       const base::Buffer &prefix) {
-    if (not root_) {
+    if (! root_) {
       return outcome::success();
     }
     auto key_nibbles = SuperGeniusCodec::keyToNibbles(prefix);
@@ -174,7 +174,7 @@ namespace sgns::storage::trie {
 
   outcome::result<base::Buffer> SuperGeniusTrieImpl::get(
       const base::Buffer &key) const {
-    if (not root_) {
+    if (! root_) {
       return TrieError::NO_VALUE;
     }
     auto nibbles = SuperGeniusCodec::keyToNibbles(key);

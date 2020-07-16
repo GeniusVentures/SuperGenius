@@ -29,13 +29,13 @@ namespace sgns::storage::trie {
     BOOST_ASSERT(codec_ != nullptr);
     BOOST_ASSERT(serializer_ != nullptr);
     BOOST_ASSERT((changes_.has_value() && changes_.value() != nullptr)
-                 or not changes_.has_value());
+                 || !changes_.has_value());
     BOOST_ASSERT(trie_ != nullptr);
     if (changes_) {
       changes_.value()->setExtrinsicIdxGetter(
           [this]() -> outcome::result<Buffer> {
             auto res = trie_->get(EXTRINSIC_INDEX_KEY);
-            if (res.has_error() and res.error() == TrieError::NO_VALUE) {
+            if (res.has_error() && res.error() == TrieError::NO_VALUE) {
               return NO_EXTRINSIC_INDEX_VALUE;
             }
             return res;
