@@ -21,6 +21,13 @@ namespace sgns::verification {
     bool operator!=(const NextEpochDescriptor &rhs) const {
       return not operator==(rhs);
     }
+    //added to fix link error
+    friend std::ostream &operator<<(std::ostream &out, const NextEpochDescriptor &test_struct)
+    {
+      return out;
+    }
+
+    //end
   };
 
   template <class Stream,

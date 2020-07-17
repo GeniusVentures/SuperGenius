@@ -73,6 +73,12 @@ namespace sgns::transaction_pool {
   struct TransactionPool::Status {
     size_t ready_num;
     size_t waiting_num;
+    //added to fix link error
+    friend std::ostream &operator<<(std::ostream &out, const TransactionPool::Status &test_struct)
+    {
+      return out << test_struct.ready_num << test_struct.waiting_num; 
+    }
+    //end
   };
 
   struct TransactionPool::Limits {
@@ -81,6 +87,12 @@ namespace sgns::transaction_pool {
 
     size_t max_ready_num = kDefaultMaxReadyNum;
     size_t capacity = kDefaultCapacity;
+    //added to fix link error
+    friend std::ostream &operator<<(std::ostream &out, const TransactionPool::Limits &test_struct)
+    {
+      return out << test_struct.max_ready_num << test_struct.capacity; 
+    }
+    //end
   };
 
 }  // namespace sgns::transaction_pool

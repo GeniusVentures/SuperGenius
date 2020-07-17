@@ -56,6 +56,39 @@ namespace sgns::primitives {
                            const detail::DigestItemCommon &dic) {
     return s;
   }
+  //Added to fix link error in test mode
+  std::ostream &operator<<(std::ostream &out, const outcome::result<BlockBody> &test_struct)
+  {
+    return out ;
+  }
+  std::ostream &operator<<(std::ostream &out, const std::chrono::time_point<struct std::chrono::system_clock,class std::chrono::duration<__int64,struct std::ratio<1,10000000> > > &test_struct)
+  {
+    return out ;
+  }
+  std::ostream &operator<<(std::ostream &out, const outcome::result<Block> &test_struct)
+  {
+    return out ;
+  }
+  std::ostream &operator<<(std::ostream &out, const detail::BlockInfoT<BlockInfoTag> &test_struct)
+  {
+    return out ;
+  }
+  std::ostream &operator<<(std::ostream &out, const outcome::result<std::vector<Hash256>> &test_struct)
+  {
+    return out ;
+  }
+  std::ostream &operator<<(std::ostream &out, const outcome::result<std::unique_ptr<sgns::storage::trie::EphemeralTrieBatch>>  &test_struct)
+  {
+    return out ;
+  }
+  std::ostream &operator<<(std::ostream &out, const outcome::result<std::vector<Transaction>> &test_struct)
+  {
+    return out ;
+  }
+  std::ostream &operator<<(std::ostream &out, const outcome::result<std::vector<Version>> &test_struct)
+  {
+    return out ;
+  }
 }  // namespace sgns::primitives
 
 class ProductionTest : public testing::Test {
@@ -177,6 +210,7 @@ ACTION_P(CheckBlockHeader, expected_block_header) {
   header_to_check.digest.pop_back();
   ASSERT_EQ(header_to_check, expected_block_header);
 }
+
 
 /**
  * @given BABE production
