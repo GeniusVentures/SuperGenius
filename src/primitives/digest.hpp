@@ -7,9 +7,7 @@
 #include "base/buffer.hpp"
 
 namespace sgns::primitives {
-  // from
-  // https://github.com/paritytech/substrate/blob/39094c764a0bc12134d2a2ed8ab494a9ebfeba88/core/sr-primitives/src/generic/digest.rs#L77-L102
-
+  
   /// Consensus engine unique ID.
   using VerificationEngineId = base::Blob<4>;
 
@@ -71,7 +69,6 @@ namespace sgns::primitives {
   /// Digest item that is able to encode/decode 'system' digest items and
   /// provide opaque access to other items.
   /// Note: order of types in variant matters. Should match type ids from here:
-  /// https://github.com/paritytech/substrate/blob/39094c764a0bc12134d2a2ed8ab494a9ebfeba88/core/sr-primitives/src/generic/digest.rs#L155-L161
   using DigestItem = boost::variant<
       Other,            // = 0
       uint32_t,         // = 1 (fake type, should never be used in digest)

@@ -25,8 +25,6 @@ namespace sgns::primitives {
     return s;
   }
 
-  // https://github.com/paritytech/substrate/blob/25eb50fea5cb5644e5bbc2cf709f6c0c8e53406a/core/sr-primitives/src/lib.rs#L662
-
   enum class ApplyError : uint8_t {
     /// Bad signature.
     BAD_SIGNATURE = 0,

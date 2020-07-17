@@ -53,7 +53,6 @@ namespace sgns::verification {
 
   outcome::result<NextEpochDescriptor> getNextEpochDigest(
       const primitives::BlockHeader &header) {
-    // https://github.com/paritytech/substrate/blob/d8df977d024ebeb5330bacac64cf7193a7c242ed/core/verification/production/src/lib.rs#L497
     outcome::result<NextEpochDescriptor> epoch_digest =
         DigestError::NEXT_EPOCH_DIGEST_DOES_NOT_EXIST;
 
