@@ -8,6 +8,12 @@
 #include "crypto/vrf_provider.hpp"
 
 namespace sgns::crypto {
+  //added to fix link error
+  std::ostream &operator<<(std::ostream &out, const boost::optional<VRFOutput> &test_struct)
+  {
+    return out << test_struct.get();
+  }
+  //end
   struct VRFProviderMock : public VRFProvider {
     MOCK_CONST_METHOD0(generateKeypair, SR25519Keypair());
 
