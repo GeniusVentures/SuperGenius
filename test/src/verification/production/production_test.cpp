@@ -89,6 +89,63 @@ namespace sgns::primitives {
   {
     return out ;
   }
+  std::ostream &operator<<(std::ostream &out, const outcome::result<Version> &test_struct)
+  {
+    return out ;
+  }
+  std::ostream &operator<<(std::ostream &out, const outcome::result<std::unique_ptr<sgns::storage::trie::PersistentTrieBatch>> &test_struct)
+  {
+    return out ;
+  }
+  std::ostream &operator<<(std::ostream &out, const outcome::result<detail::BlockInfoT<BlockInfoTag>> &test_struct)
+  {
+    return out ;
+  }
+  std::ostream &operator<<(std::ostream &out, const outcome::result<std::vector<AuthorityId>> &test_struct)
+  {
+    return out ;
+  }
+  std::ostream &operator<<(std::ostream &out, const std::vector<boost::optional<sgns::crypto::VRFOutput>> &test_struct)
+  {
+    return out ;
+  }
+  std::ostream &operator<<(std::ostream &out, const boost::optional<sgns::crypto::VRFOutput> &test_struct)
+  {
+    return out ;
+  }
+
+  std::ostream &operator<<(std::ostream &out, const outcome::result<void> &test_struct)
+  {
+    return out ;
+  }
+  std::ostream &operator<<(std::ostream &out, const outcome::result<Justification> &test_struct)
+  {
+    return out ;
+  }
+  std::ostream &operator<<(std::ostream &out, const outcome::result<BlockHeader> &test_struct)
+  {
+    return out ;
+  }
+  std::ostream &operator<<(std::ostream &out, const outcome::result<sgns::verification::NextEpochDescriptor> &test_struct)
+  {
+    return out ;
+  }
+  std::ostream &operator<<(std::ostream &out, const std::function<void(std::vector<Block> const &)> &test_struct)
+  {
+    return out ;
+  }
+  std::ostream &operator<<(std::ostream &out, const std::function<void(std::error_code const &)> &test_struct)
+  {
+    return out ;
+  }
+  std::ostream &operator<<(std::ostream &out, const  boost::optional<class sgns::base::Blob<32> > &test_struct)
+  {
+    return out ;
+  }
+  std::ostream &operator<<(std::ostream &out, const  boost::optional<uint64_t> &test_struct)
+  {
+    return out ;
+  }
 }  // namespace sgns::primitives
 
 class ProductionTest : public testing::Test {

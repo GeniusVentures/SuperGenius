@@ -11,6 +11,12 @@ namespace sgns::primitives {
    */
   struct Justification {
     base::Buffer data;
+    //added to fix link error
+    friend std::ostream &operator<<(std::ostream &out, const Justification &test_struct)
+    {
+      return out << test_struct.data ;
+    }
+    //end
   };
 
   /**

@@ -55,6 +55,12 @@ namespace sgns::primitives {
     bool operator!=(const Authority &other) const {
       return !(*this == other);
     }
+    //added to fix link errors
+    friend std::ostream &operator<<(std::ostream &out, const Authority &test_struct)
+    {
+        return out << test_struct.id;
+    }
+    //end
   };
 
   /**
