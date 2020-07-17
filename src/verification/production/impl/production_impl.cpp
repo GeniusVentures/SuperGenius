@@ -251,7 +251,7 @@ namespace sgns::verification {
     runSlot();
   }
 
-  outcome::result<primitives::PreRuntime> ProductionImpl::babePreDigest(
+  outcome::result<primitives::PreRuntime> ProductionImpl::productionPreDigest(
       const crypto::VRFOutput &output,
       primitives::AuthorityIndex authority_index) const {
     ProductionBlockHeader production_header{current_slot_, output, authority_index};
@@ -312,7 +312,7 @@ namespace sgns::verification {
     BOOST_ASSERT_MSG(authority_index_res.has_value(), "Authority is not known");
     // calculate production_pre_digest
     auto production_pre_digest_res =
-        babePreDigest(output, authority_index_res.value());
+        productionPreDigest(output, authority_index_res.value());
     if (not production_pre_digest_res) {
       return log_->error("cannot propose a block: {}",
                          production_pre_digest_res.error().message());

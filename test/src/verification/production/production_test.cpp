@@ -7,19 +7,19 @@
 #include <memory>
 
 #include "clock/impl/clock_impl.hpp"
-#include "verification/production/babe_error.hpp"
-#include "verification/production/impl/babe_impl.hpp"
+#include "verification/production/production_error.hpp"
+#include "verification/production/impl/production_impl.hpp"
 #include "mock/src/authorship/proposer_mock.hpp"
 #include "mock/src/blockchain/block_tree_mock.hpp"
 #include "mock/src/clock/clock_mock.hpp"
 #include "mock/src/clock/timer_mock.hpp"
-#include "mock/src/verification/production/babe_gossiper_mock.hpp"
-#include "mock/src/verification/production/babe_synchronizer_mock.hpp"
+#include "mock/src/verification/production/production_gossiper_mock.hpp"
+#include "mock/src/verification/production/production_synchronizer_mock.hpp"
 #include "mock/src/verification/production/epoch_storage_mock.hpp"
-#include "mock/src/verification/babe_lottery_mock.hpp"
+#include "mock/src/verification/production_lottery_mock.hpp"
 #include "mock/src/verification/validation/block_validator_mock.hpp"
 #include "mock/src/crypto/hasher_mock.hpp"
-#include "mock/src/runtime/babe_api_mock.hpp"
+#include "mock/src/runtime/production_api_mock.hpp"
 #include "mock/src/runtime/core_mock.hpp"
 #include "mock/src/storage/trie/trie_storage_mock.hpp"
 #include "mock/src/transaction_pool/transaction_pool_mock.hpp"
@@ -58,26 +58,26 @@ namespace sgns::primitives {
   }
 }  // namespace sgns::primitives
 
-class BabeTest : public testing::Test {
+class ProductionTest : public testing::Test {
  public:
   void SetUp() override {
-    lottery_ = std::make_shared<BabeLotteryMock>();
-    babe_synchronizer_ = std::make_shared<BabeSynchronizerMock>();
+    lottery_ = std::make_shared<ProductionLotteryMock>();
+    production_synchronizer_ = std::make_shared<ProductionSynchronizerMock>();
     trie_db_ = std::make_shared<storage::trie::TrieStorageMock>();
-    babe_block_validator_ = std::make_shared<BlockValidatorMock>();
+    production_block_validator_ = std::make_shared<BlockValidatorMock>();
     epoch_storage_ = std::make_shared<EpochStorageMock>();
     tx_pool_ = std::make_shared<transaction_pool::TransactionPoolMock>();
     core_ = std::make_shared<runtime::CoreMock>();
     proposer_ = std::make_shared<ProposerMock>();
     block_tree_ = std::make_shared<BlockTreeMock>();
-    gossiper_ = std::make_shared<BabeGossiperMock>();
+    gossiper_ = std::make_shared<ProductionGossiperMock>();
     clock_ = std::make_shared<SystemClockMock>();
     hasher_ = std::make_shared<HasherMock>();
     timer_mock_ = std::make_unique<testutil::TimerMock>();
     timer_ = timer_mock_.get();
 
     // add initialization logic
-    auto expected_config = std::make_shared<primitives::BabeConfiguration>();
+    auto expected_config = std::make_shared<primitives::ProductionConfiguration>();
     expected_config->slot_duration = slot_duration_;
     expected_config->randomness.fill(0);
     expected_config->genesis_authorities = {
@@ -98,13 +98,13 @@ class BabeTest : public testing::Test {
     auto block_executor = std::make_shared<BlockExecutor>(block_tree_,
                                                           core_,
                                                           expected_config,
-                                                          babe_synchronizer_,
-                                                          babe_block_validator_,
+                                                          production_synchronizer_,
+                                                          production_block_validator_,
                                                           epoch_storage_,
                                                           tx_pool_,
                                                           hasher_);
 
-    babe_ = std::make_shared<BabeImpl>(lottery_,
+    production_ = std::make_shared<ProductionImpl>(lottery_,
                                        block_executor,
                                        trie_db_,
                                        epoch_storage_,
@@ -124,26 +124,26 @@ class BabeTest : public testing::Test {
     epoch_.epoch_index = 0;
   }
 
-  std::shared_ptr<BabeLotteryMock> lottery_;
-  std::shared_ptr<BabeSynchronizer> babe_synchronizer_;
+  std::shared_ptr<ProductionLotteryMock> lottery_;
+  std::shared_ptr<ProductionSynchronizer> production_synchronizer_;
   std::shared_ptr<storage::trie::TrieStorageMock> trie_db_;
-  std::shared_ptr<BlockValidator> babe_block_validator_;
+  std::shared_ptr<BlockValidator> production_block_validator_;
   std::shared_ptr<EpochStorageMock> epoch_storage_;
   std::shared_ptr<runtime::CoreMock> core_;
   std::shared_ptr<ProposerMock> proposer_;
   std::shared_ptr<BlockTreeMock> block_tree_;
   std::shared_ptr<transaction_pool::TransactionPoolMock> tx_pool_;
-  std::shared_ptr<BabeGossiperMock> gossiper_;
+  std::shared_ptr<ProductionGossiperMock> gossiper_;
   SR25519Keypair keypair_{generateSR25519Keypair()};
   std::shared_ptr<SystemClockMock> clock_;
   std::shared_ptr<HasherMock> hasher_;
   std::unique_ptr<testutil::TimerMock> timer_mock_;
   testutil::TimerMock *timer_;
 
-  std::shared_ptr<BabeImpl> babe_;
+  std::shared_ptr<ProductionImpl> production_;
 
   Epoch epoch_;
-  BabeDuration slot_duration_{60ms};
+  ProductionDuration slot_duration_{60ms};
   EpochLength epoch_length_{2};
 
   VRFOutput leader_vrf_output_{
@@ -151,7 +151,7 @@ class BabeTest : public testing::Test {
       {0x11, 0x22, 0x33, 0x44, 0x11, 0x22, 0x33, 0x44, 0x11, 0x22, 0x33,
        0x44, 0x11, 0x22, 0x33, 0x44, 0x11, 0x22, 0x33, 0x44, 0x11, 0x22,
        0x33, 0x44, 0x11, 0x22, 0x33, 0x44, 0x11, 0x22, 0x33, 0x44}};
-  BabeLottery::SlotsLeadership leadership_{boost::none, leader_vrf_output_};
+  ProductionLottery::SlotsLeadership leadership_{boost::none, leader_vrf_output_};
 
   BlockHash best_block_hash_{{0x41, 0x22, 0x33, 0x44, 0x11, 0x22, 0x33, 0x44,
                               0x11, 0x22, 0x33, 0x44, 0x11, 0x22, 0x33, 0x54,
@@ -185,7 +185,7 @@ ACTION_P(CheckBlockHeader, expected_block_header) {
  * @then block is emitted in the leader slot @and after two slots BABE moves to
  * the next epoch
  */
-TEST_F(BabeTest, Success) {
+TEST_F(ProductionTest, Success) {
   auto test_begin = real_clock_.now();
 
   // runEpoch
@@ -231,5 +231,5 @@ TEST_F(BabeTest, Success) {
   EXPECT_CALL(*gossiper_, blockAnnounce(_))
       .WillOnce(CheckBlockHeader(created_block_.header));
 
-  babe_->runEpoch(epoch_, test_begin + slot_duration_);
+  production_->runEpoch(epoch_, test_begin + slot_duration_);
 }

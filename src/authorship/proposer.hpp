@@ -12,7 +12,7 @@
 namespace sgns::authorship {
 
   /**
-   * Create block to further proposal for consensus
+   * Create block to further proposal for verification
    */
   class Proposer {
    public:
