@@ -11,7 +11,7 @@
 namespace sgns::verification {
 
   /**
-   * Implementation of babe synchronizer that requests blocks from provided
+   * Implementation of production synchronizer that requests blocks from provided
    * peers
    */
   class ProductionSynchronizerImpl

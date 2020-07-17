@@ -18,7 +18,7 @@ namespace sgns::scale {
   using CompactInteger = boost::multiprecision::cpp_int;
 
   /// @brief OptionalBool is internal extended bool type
-  enum class OptionalBool : uint8_t { NONE = 0u, FALSE = 1u, TRUE = 2u };
+  enum class OptionalBool : uint8_t { NONE_ = 0u, FALSE_ = 1u, TRUE_ = 2u };
 }  // namespace sgns::scale
 
 namespace sgns::scale::compact {

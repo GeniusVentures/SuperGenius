@@ -16,8 +16,7 @@ namespace sgns::primitives {
    * @brief Information concerning a valid transaction.
    *
    * This is the same structure as in
-   * https://github.com/paritytech/substrate/blob/a31c01b398d958ccf0a24d8c1c11fb073df66212/core/sr-primitives/src/transaction_validity.rs#L178
-   */
+  */
   struct ValidTransaction {
     /**
      * @brief Priority of the transaction.

@@ -2,10 +2,10 @@
 
 #include "verification/production/impl/production_digests_util.hpp"
 
-#include "verification/production/types/consensus_log.hpp"
+#include "verification/production/types/verification_log.hpp"
 #include "scale/scale.hpp"
 
-OUTCOME_CPP_DEFINE_CATEGORY(sgns::verification, DigestError, e) {
+OUTCOME_CPP_DEFINE_CATEGORY_3(sgns::verification, DigestError, e) {
   using E = sgns::verification::DigestError;
   switch (e) {
     case E::INVALID_DIGESTS:
@@ -38,9 +38,9 @@ namespace sgns::verification {
 
     for (const auto &digest :
          gsl::make_span(digests).subspan(0, digests.size() - 1)) {
-      if (auto consensus_dig = getFromVariant<primitives::PreRuntime>(digest);
-          consensus_dig) {
-        if (auto header = scale::decode<ProductionBlockHeader>(consensus_dig->data);
+      if (auto verification_dig = getFromVariant<primitives::PreRuntime>(digest);
+          verification_dig) {
+        if (auto header = scale::decode<ProductionBlockHeader>(verification_dig->data);
             header) {
           // found the ProductionBlockHeader digest; return
           return {production_seal_res, header.value()};
@@ -53,23 +53,22 @@ namespace sgns::verification {
 
   outcome::result<NextEpochDescriptor> getNextEpochDigest(
       const primitives::BlockHeader &header) {
-    // https://github.com/paritytech/substrate/blob/d8df977d024ebeb5330bacac64cf7193a7c242ed/core/verification/production/src/lib.rs#L497
     outcome::result<NextEpochDescriptor> epoch_digest =
         DigestError::NEXT_EPOCH_DIGEST_DOES_NOT_EXIST;
 
     for (const auto &log : header.digest) {
       visit_in_place(
           log,
-          [&epoch_digest](const primitives::Consensus &consensus) {
-            if (consensus.consensus_engine_id == primitives::kProductionEngineId) {
-              auto consensus_log_res =
-                  scale::decode<ConsensusLog>(consensus.data);
-              if (not consensus_log_res) {
+          [&epoch_digest](const primitives::Consensus &verification) {
+            if (verification.verification_engine_id == primitives::kProductionEngineId) {
+              auto verification_log_res =
+                  scale::decode<VerificationLog>(verification.data);
+              if (not verification_log_res) {
                 return;
               }
 
               visit_in_place(
-                  consensus_log_res.value(),
+                  verification_log_res.value(),
                   [&epoch_digest](const NextEpochDescriptor &next_epoch) {
                     if (not epoch_digest) {
                       epoch_digest = next_epoch;

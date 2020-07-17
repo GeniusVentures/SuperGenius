@@ -14,9 +14,9 @@ namespace sgns::verification {
       std::shared_ptr<blockchain::BlockTree> block_tree,
       std::shared_ptr<runtime::Core> core,
       std::shared_ptr<primitives::ProductionConfiguration> configuration,
-      std::shared_ptr<consensus::ProductionSynchronizer> production_synchronizer,
-      std::shared_ptr<consensus::BlockValidator> block_validator,
-      std::shared_ptr<consensus::EpochStorage> epoch_storage,
+      std::shared_ptr<verification::ProductionSynchronizer> production_synchronizer,
+      std::shared_ptr<verification::BlockValidator> block_validator,
+      std::shared_ptr<verification::EpochStorage> epoch_storage,
       std::shared_ptr<transaction_pool::TransactionPool> tx_pool,
       std::shared_ptr<crypto::Hasher> hasher)
       : block_tree_{std::move(block_tree)},
@@ -155,8 +155,8 @@ namespace sgns::verification {
                                                 // randomness
                                                 // from config
       this_block_epoch_descriptor_res = NextEpochDescriptor{
-          .authorities = genesis_configuration_->genesis_authorities,
-          .randomness = genesis_configuration_->randomness};
+          /*.authorities =*/ genesis_configuration_->genesis_authorities,
+          /*.randomness =*/ genesis_configuration_->randomness};
     }
     auto this_block_epoch_descriptor = this_block_epoch_descriptor_res.value();
 

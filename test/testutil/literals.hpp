@@ -1,7 +1,5 @@
-
-
-#ifndef SUPERGENIUS_TEST_TESTUTIL_LITERALS_HPP_
-#define SUPERGENIUS_TEST_TESTUTIL_LITERALS_HPP_
+#ifndef SUPERGENIUS_TEST_TESTUTIL_LITERALS_HPP
+#define SUPERGENIUS_TEST_TESTUTIL_LITERALS_HPP
 
 #include <libp2p/multi/multiaddress.hpp>
 #include <libp2p/multi/multihash.hpp>
@@ -57,4 +55,4 @@ inline libp2p::peer::PeerId operator""_peerid(const char *c, size_t s) {
   return PeerId::fromPublicKey(pb_key).value();
 }
 
-#endif  // SUPERGENIUS_TEST_TESTUTIL_LITERALS_HPP_
+#endif  // SUPERGENIUS_TEST_TESTUTIL_LITERALS_HPP

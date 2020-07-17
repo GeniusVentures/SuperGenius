@@ -38,6 +38,6 @@ namespace sgns::verification {
 
 }  // namespace sgns::verification
 
-OUTCOME_HPP_DECLARE_ERROR(sgns::verification, DigestError)
+OUTCOME_HPP_DECLARE_ERROR_2(sgns::verification, DigestError)
 
 #endif  // SUPERGENIUS_SRC_VERIFICATION_PRODUCTION_IMPL_PRODUCTION_DIGESTS_UTIL_HPP

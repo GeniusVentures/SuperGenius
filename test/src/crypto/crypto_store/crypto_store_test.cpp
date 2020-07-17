@@ -252,13 +252,13 @@ TEST_F(CryptoStoreTest, getEd25519PublicKeysSuccess) {
   EXPECT_OUTCOME_SUCCESS(pair4, crypto_store->generateSr25519Keypair(kProduction));
   EXPECT_OUTCOME_SUCCESS(pair5, crypto_store->generateSr25519Keypair(kAcco));
 
-  std::set<ED25519PublicKey> ed_babe_keys_set = {pair1.public_key,
+  std::set<ED25519PublicKey> ed_production_keys_set = {pair1.public_key,
                                                  pair2.public_key};
-  std::vector<ED25519PublicKey> ed_babe_keys(ed_babe_keys_set.begin(),
-                                             ed_babe_keys_set.end());
+  std::vector<ED25519PublicKey> ed_production_keys(ed_production_keys_set.begin(),
+                                             ed_production_keys_set.end());
 
   auto &&keys = crypto_store->getEd25519PublicKeys(kProduction);
-  ASSERT_EQ(ed_babe_keys, keys);
+  ASSERT_EQ(ed_production_keys, keys);
 }
 
 /**
@@ -273,11 +273,11 @@ TEST_F(CryptoStoreTest, getSr25519PublicKeysSuccess) {
   EXPECT_OUTCOME_SUCCESS(pair4, crypto_store->generateEd25519Keypair(kProduction));
   EXPECT_OUTCOME_SUCCESS(pair5, crypto_store->generateEd25519Keypair(kAcco));
 
-  std::set<SR25519PublicKey> sr_babe_keys_set = {pair1.public_key,
+  std::set<SR25519PublicKey> sr_production_keys_set = {pair1.public_key,
                                                  pair2.public_key};
-  std::vector<SR25519PublicKey> sr_babe_keys(sr_babe_keys_set.begin(),
-                                             sr_babe_keys_set.end());
+  std::vector<SR25519PublicKey> sr_production_keys(sr_production_keys_set.begin(),
+                                             sr_production_keys_set.end());
 
   auto &&keys = crypto_store->getSr25519PublicKeys(kProduction);
-  ASSERT_EQ(sr_babe_keys, keys);
+  ASSERT_EQ(sr_production_keys, keys);
 }

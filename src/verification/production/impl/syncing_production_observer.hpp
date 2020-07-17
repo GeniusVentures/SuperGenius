@@ -15,12 +15,12 @@ namespace sgns::verification {
     ~SyncingProductionObserver() override = default;
 
     SyncingProductionObserver(
-        std::shared_ptr<consensus::BlockExecutor> block_executor);
+        std::shared_ptr<verification::BlockExecutor> block_executor);
 
     void onBlockAnnounce(const network::BlockAnnounce &announce) override;
 
    private:
-    std::shared_ptr<consensus::BlockExecutor> block_executor_;
+    std::shared_ptr<verification::BlockExecutor> block_executor_;
   };
 
 }  // namespace sgns::verification

@@ -3,7 +3,7 @@
 #ifndef SUPERGENIUS_PRODUCTION_IMPL_HPP
 #define SUPERGENIUS_PRODUCTION_IMPL_HPP
 
-#include "verification/babe.hpp"
+#include "verification/production.hpp"
 
 #include <memory>
 
@@ -39,7 +39,7 @@ namespace sgns::verification {
   inline const auto kTimestampId =
       primitives::InherentIdentifier::fromString("timstap0").value();
   inline const auto kProductionSlotId =
-      primitives::InherentIdentifier::fromString("babeslot").value();
+      primitives::InherentIdentifier::fromString("productionslot").value();
 
   class ProductionImpl : public Production, public std::enable_shared_from_this<ProductionImpl> {
    public:
@@ -48,7 +48,7 @@ namespace sgns::verification {
      * @param lottery - implementation of Production Lottery
      * @param proposer - block proposer
      * @param block_tree - tree of the blocks
-     * @param gossiper of this consensus
+     * @param gossiper of this verification
      * @param keypair - SR25519 keypair of this node
      * @param authority_index of this node
      * @param clock to measure time
@@ -105,7 +105,7 @@ namespace sgns::verification {
 
     ProductionLottery::SlotsLeadership getEpochLeadership(const Epoch &epoch) const;
 
-    outcome::result<primitives::PreRuntime> babePreDigest(
+    outcome::result<primitives::PreRuntime> productionPreDigest(
         const crypto::VRFOutput &output,
         primitives::AuthorityIndex authority_index) const;
 

@@ -137,12 +137,12 @@ namespace sgns::scale {
 
   ScaleEncoderStream &ScaleEncoderStream::encodeOptionalBool(
       const boost::optional<bool> &v) {
-    auto result = OptionalBool::TRUE;
+    auto result = OptionalBool::TRUE_;
 
     if (!v.has_value()) {
-      result = OptionalBool::NONE;
+      result = OptionalBool::NONE_;
     } else if (!*v) {
-      result = OptionalBool::FALSE;
+      result = OptionalBool::FALSE_;
     }
 
     return putByte(static_cast<uint8_t>(result));

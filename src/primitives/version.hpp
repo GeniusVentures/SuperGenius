@@ -10,8 +10,7 @@
 namespace sgns::primitives {
   /**
    * This is the same structure as RuntimeVersion from substrate
-   * https://github.com/paritytech/substrate/blob/master/core/sr-version/src/lib.rs
-   */
+  */
 
   /**
    * @brief The identity of a particular API interface that the runtime might
