@@ -56,6 +56,23 @@ namespace sgns::crypto {
 
     bool operator==(const VRFOutput &other) const;
     bool operator!=(const VRFOutput &other) const;
+    //added to fix gtest link error
+    friend std::ostream &operator<<(std::ostream &out, const VRFOutput &test_struct)
+    {
+      out << test_struct.output.size();
+      // for(auto it = test_struct.output.begin(); it != test_struct.output.end() ; it++)
+      // {
+      //   out << *it ;
+      // }
+      
+      out << test_struct.proof.size(); 
+      // for(auto it = test_struct.proof.begin(); it != test_struct.proof.end() ; it++)
+      // {
+      //   out << *it ;
+      // }  
+      return out;
+    }
+    //end
   };
 
   /**
@@ -66,6 +83,12 @@ namespace sgns::crypto {
     bool is_valid;
     // indicates if the value is less than the provided threshold
     bool is_less;
+    //added to fix gtest link error
+    friend std::ostream &operator<<(std::ostream &out, const VRFVerifyOutput &test_struct)
+    {
+      return out << test_struct.is_valid << test_struct.is_less; 
+    }
+    //end
   };
 
   using SR25519SecretKey = base::Blob<constants::sr25519::SECRET_SIZE>;

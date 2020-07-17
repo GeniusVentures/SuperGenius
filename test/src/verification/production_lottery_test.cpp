@@ -5,8 +5,8 @@
 #include "base/buffer.hpp"
 #include "base/mp_utils.hpp"
 #include "verification/production/impl/production_lottery_impl.hpp"
-#include "mock/core/crypto/hasher_mock.hpp"
-#include "mock/core/crypto/vrf_provider_mock.hpp"
+#include "mock/src/crypto/hasher_mock.hpp"
+#include "mock/src/crypto/vrf_provider_mock.hpp"
 
 using namespace sgns;
 using namespace crypto;

@@ -12,11 +12,11 @@ namespace sgns::crypto {
     MOCK_CONST_METHOD0(generateKeypair, SR25519Keypair());
 
     MOCK_CONST_METHOD3(sign,
-                       boost::optional<VRFOutput>(const common::Buffer &,
+                       boost::optional<VRFOutput>(const base::Buffer &,
                                                   const SR25519Keypair &,
                                                   const VRFThreshold &));
     MOCK_CONST_METHOD4(verify,
-                       VRFVerifyOutput(const common::Buffer &,
+                       VRFVerifyOutput(const base::Buffer &,
                             const VRFOutput &,
                             const SR25519PublicKey &,
                             const VRFThreshold &));
