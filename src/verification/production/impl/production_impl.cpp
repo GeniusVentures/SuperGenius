@@ -401,8 +401,8 @@ namespace sgns::verification {
       //
       // return.
       next_epoch_digest_res =
-          NextEpochDescriptor{.authorities = current_epoch_.authorities,
-                              .randomness = current_epoch_.randomness};
+          NextEpochDescriptor{/*.authorities =*/ current_epoch_.authorities,
+                              /*.randomness =*/ current_epoch_.randomness};
     }
 
     current_epoch_.start_slot = current_slot_;
