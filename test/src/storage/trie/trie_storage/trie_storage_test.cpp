@@ -14,7 +14,7 @@
 #include "testutil/outcome.hpp"
 #include "testutil/literals.hpp"
 
-using sgns::common::Buffer;
+using sgns::base::Buffer;
 using sgns::storage::trie::SuperGeniusTrieFactoryImpl;
 using sgns::storage::trie::SuperGeniusCodec;
 using sgns::storage::trie::TrieSerializerImpl;

@@ -11,7 +11,7 @@
 #include "testutil/outcome.hpp"
 #include "testutil/storage/supergenius_trie_printer.hpp"
 
-using sgns::common::Buffer;
+using sgns::base::Buffer;
 using sgns::storage::trie::SuperGeniusTrie;
 using sgns::storage::trie::SuperGeniusTrieCursor;
 using sgns::storage::trie::SuperGeniusTrieImpl;
@@ -40,7 +40,7 @@ std::tuple<std::unique_ptr<SuperGeniusTrie>, std::set<Buffer>> generateRandomTri
 
   auto &keys = std::get<1>(res);
   for (size_t i = 0; i < keys_num; i++) {
-    sgns::common::Buffer key(key_length_gen(), 0);
+    sgns::base::Buffer key(key_length_gen(), 0);
     std::generate(key.begin(), key.end(), std::ref(key_gen));
     EXPECT_OUTCOME_TRUE_1(trie->put(key, key));
     keys.emplace(std::move(key));

@@ -7,7 +7,7 @@
 #include "storage/trie/serialization/supergenius_codec.hpp"
 
 using namespace sgns;
-using namespace common;
+using namespace base;
 using namespace storage;
 using namespace trie;
 using namespace testing;

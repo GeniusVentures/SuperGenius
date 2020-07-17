@@ -10,7 +10,7 @@
 #include "testutil/outcome.hpp"
 
 using namespace sgns;
-using namespace common;
+using namespace base;
 using namespace storage;
 using namespace trie;
 using namespace testing;
@@ -31,8 +31,8 @@ TEST_P(NodeDecodingTest, GetHeader) {
 }
 
 template <typename T>
-std::shared_ptr<SuperGeniusNode> make(const common::Buffer &key_nibbles,
-                                   const common::Buffer &value) {
+std::shared_ptr<SuperGeniusNode> make(const base::Buffer &key_nibbles,
+                                   const base::Buffer &value) {
   auto node = std::make_shared<T>();
   node->key_nibbles = key_nibbles;
   node->value = value;

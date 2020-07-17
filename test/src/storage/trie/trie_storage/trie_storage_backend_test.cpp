@@ -10,7 +10,7 @@
 #include "testutil/literals.hpp"
 #include "testutil/outcome.hpp"
 
-using sgns::common::Buffer;
+using sgns::base::Buffer;
 using sgns::storage::face::GenericStorageMock;
 using sgns::storage::face::WriteBatchMock;
 using sgns::storage::trie::TrieStorageBackendImpl;

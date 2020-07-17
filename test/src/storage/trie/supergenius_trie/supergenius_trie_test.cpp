@@ -8,8 +8,8 @@
 #include "testutil/literals.hpp"
 #include "testutil/outcome.hpp"
 
-using sgns::common::Buffer;
-using sgns::common::Hash256;
+using sgns::base::Buffer;
+using sgns::base::Hash256;
 using sgns::storage::trie::KeyNibbles;
 using sgns::storage::trie::SuperGeniusCodec;
 using sgns::storage::trie::SuperGeniusTrie;
