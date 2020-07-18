@@ -18,6 +18,16 @@ using namespace testing;
 struct NodeDecodingTest
     : public ::testing::TestWithParam<std::shared_ptr<SuperGeniusNode>> {
   std::unique_ptr<SuperGeniusCodec> codec = std::make_unique<SuperGeniusCodec>();
+   
+    friend std::ostream &operator<<(std::ostream &out, const NodeDecodingTest &test_struct)
+  {
+    return out; 
+  };
+  //    friend std::ostream &operator<<(std::ostream &out, const NodeEncodingTest &test_struct)
+  // {
+  //   return out; 
+  // }
+
 };
 
 TEST_P(NodeDecodingTest, GetHeader) {

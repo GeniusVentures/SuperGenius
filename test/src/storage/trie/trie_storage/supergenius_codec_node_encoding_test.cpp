@@ -16,11 +16,25 @@ using namespace testing;
 struct Case {
   std::shared_ptr<SuperGeniusNode> node;
   Buffer encoded;
+   
+
 };
 
 struct NodeEncodingTest : public ::testing::TestWithParam<Case> {
   std::unique_ptr<SuperGeniusCodec> codec = std::make_unique<SuperGeniusCodec>();
+
+  //  friend std::ostream &operator<<(std::ostream &out, const NodeEncodingTest &test_struct)
+  // {
+  //   return out; 
+  // };
+
 };
+
+
+  std::ostream &operator<<(std::ostream &out,  NodeEncodingTest &test_struct)
+  {
+    return out; 
+  };
 
 TEST_P(NodeEncodingTest, GetHeader) {
   auto [node, expected] = GetParam();

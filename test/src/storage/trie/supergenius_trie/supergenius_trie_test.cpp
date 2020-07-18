@@ -24,6 +24,11 @@ struct TrieCommand {
   Buffer key;
   boost::optional<Buffer> value;
   Command command;
+   friend std::ostream &operator<<(std::ostream &out, const TrieCommand &test_struct)
+  {
+    return out; 
+  }
+
 };
 
 class TrieTest
@@ -39,7 +44,15 @@ class TrieTest
   static const std::vector<std::pair<Buffer, Buffer>> data;
 
   std::unique_ptr<SuperGeniusTrieImpl> trie;
+   friend std::ostream &operator<<(std::ostream &out, const TrieTest &test_struct)
+  {
+    return out; 
+  }
+
 };
+
+ 
+
 
 const std::vector<std::pair<Buffer, Buffer>> TrieTest::data = {
     {"123456"_hex2buf, "42"_hex2buf},

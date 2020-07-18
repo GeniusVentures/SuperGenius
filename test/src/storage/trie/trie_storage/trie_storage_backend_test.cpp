@@ -4,8 +4,8 @@
 
 #include <memory>
 
-#include "mock/core/storage/persistent_map_mock.hpp"
-#include "mock/core/storage/write_batch_mock.hpp"
+#include "mock/src/storage/persistent_map_mock.hpp"
+#include "mock/src/storage/write_batch_mock.hpp"
 #include "storage/trie/impl/trie_storage_backend_impl.hpp"
 #include "testutil/literals.hpp"
 #include "testutil/outcome.hpp"
@@ -24,8 +24,25 @@ class TrieDbBackendTest : public testing::Test {
   std::shared_ptr<GenericStorageMock<Buffer, Buffer>> storage =
       std::make_shared<GenericStorageMock<Buffer, Buffer>>();
   TrieStorageBackendImpl backend{storage, kNodePrefix};
+
+  // friend std::ostream &operator<<(std::ostream &out,  boost::outcome_v2::basic_result<void,class std::error_code,struct boost::outcome_v2::policy::error_code_throw_as_system_error<void,class std::error_code,void>>  &test_struct)                                                    
+  // {
+  //   return out ;
+  // }
+
+  // friend std::ostream &operator<<(std::ostream &out,  boost::outcome_v2::basic_result<class sgns::base::Buffer,class std::error_code,struct boost::outcome_v2::policy::error_code_throw_as_system_error<class sgns::base::Buffer,class std::error_code,void>> &test_struct)
+  // {
+  //   return out ;
+  // }
+  // friend std::ostream &operator<<(std::ostream &out,  boost::outcome_v2::policy::error_code_throw_as_system_error<class sgns::base::Buffer,class std::error_code,void> &test_struct)
+  // {
+  //   return out ;
+  // }
 };
 
+
+
+  
 /**
  * @given trie backend
  * @when put a value to it

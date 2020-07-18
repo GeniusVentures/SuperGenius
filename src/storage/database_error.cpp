@@ -1,5 +1,8 @@
 
 
+#ifndef SUPERGENIUS_DATABASE_ERROR_UTIL_HPP
+#define SUPERGENIUS_DATABASE_ERROR_UTIL_HPP
+
 #include "storage/database_error.hpp"
 
 OUTCOME_CPP_DEFINE_CATEGORY_3(sgns::storage, DatabaseError, e) {
@@ -22,4 +25,12 @@ OUTCOME_CPP_DEFINE_CATEGORY_3(sgns::storage, DatabaseError, e) {
   }
 
   return "unknown error";
-}
+ }
+// namespace sgns::storage{
+//   std::ostream &operator<<(std::ostream &out, enum sgns::storage::DatabaseError const  &test_struct)
+//   {
+//     return out << (int)test_struct; 
+//   }
+// }
+
+#endif
