@@ -29,6 +29,10 @@ struct NodeDecodingTest
   // }
 
 };
+ std::ostream &operator<<(std::ostream &out, const boost::optional<class sgns::base::Buffer> &test_struct)
+  {
+    return out; 
+  };
 
 TEST_P(NodeDecodingTest, GetHeader) {
   auto node = GetParam();

@@ -4,7 +4,7 @@ addtest(supergenius_trie_storage_test
     supergenius_codec_nibbles_test.cpp
     supergenius_codec_hash256_test.cpp
     supergenius_codec_node_encoding_test.cpp
-    #supergenius_codec_node_decoding_test.cpp
+    supergenius_codec_node_decoding_test.cpp
     trie_storage_test.cpp
     trie_batch_test.cpp
     ordered_trie_hash_test.cpp

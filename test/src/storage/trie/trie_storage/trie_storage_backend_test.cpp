@@ -25,7 +25,7 @@ class TrieDbBackendTest : public testing::Test {
       std::make_shared<GenericStorageMock<Buffer, Buffer>>();
   TrieStorageBackendImpl backend{storage, kNodePrefix};
 
-  // friend std::ostream &operator<<(std::ostream &out,  boost::outcome_v2::basic_result<void,class std::error_code,struct boost::outcome_v2::policy::error_code_throw_as_system_error<void,class std::error_code,void>>  &test_struct)                                                    
+  // friend std::ostream &operator<<(std::ostream &out, const TrieDbBackendTest  &test_struct)                                                    
   // {
   //   return out ;
   // }
@@ -40,9 +40,20 @@ class TrieDbBackendTest : public testing::Test {
   // }
 };
 
+  //  std::ostream &operator<<(std::ostream &out,   boost::outcome_v2::basic_result<class sgns::base::Buffer,class std::error_code,struct boost::outcome_v2::policy::error_code_throw_as_system_error<class sgns::base::Buffer,class std::error_code,void>> &test_struct)
+  // {
+  //   return out ;
+  // }
 
-
+  //  std::ostream &operator<<(std::ostream &out,   boost::outcome_v2::policy::error_code_throw_as_system_error<class sgns::base::Buffer,class std::error_code,void> &test_struct)
+  // {
+  //   return out ;
+  // }
   
+  //  std::ostream &operator<<(std::ostream &out,   const sgns::base::Buffer &test_struct)
+  // {
+  //   return out ;
+  // }
 /**
  * @given trie backend
  * @when put a value to it
