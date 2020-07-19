@@ -37,12 +37,11 @@ class TrieDbBackendTest : public testing::Test {
   // {
   //   return out ;
   // }
+
 };
+
   // template<class A, class B, class C>
-  //  std::ostream &operator<<(std::ostream &out,   boost::outcome_v2::basic_result<A,B,C> &test_struct)
-  // {
-  //   return out ;
-  // }
+  
 
   // template<class D, class E>
   //  std::ostream &operator<<(std::ostream &out,   boost::outcome_v2::policy::error_code_throw_as_system_error<D,E,void> &test_struct)
