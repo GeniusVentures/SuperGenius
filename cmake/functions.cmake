@@ -51,7 +51,7 @@ function(compile_proto_to_cpp PB_H PB_CC PROTO)
 
   get_filename_component(PROTO_ABS "${PROTO}" REALPATH)
   # get relative (to CMAKE_BINARY_DIR) path of current proto file
-  file(RELATIVE_PATH SCHEMA_REL "${CMAKE_BINARY_DIR}" "${CMAKE_CURRENT_BINARY_DIR}")
+  file(RELATIVE_PATH SCHEMA_REL "${CMAKE_BINARY_DIR}/src" "${CMAKE_CURRENT_BINARY_DIR}")
   set(SCHEMA_OUT_DIR ${CMAKE_BINARY_DIR}/generated)
   file(MAKE_DIRECTORY ${SCHEMA_OUT_DIR})
 
@@ -64,7 +64,7 @@ function(compile_proto_to_cpp PB_H PB_CC PROTO)
   add_custom_command(
       OUTPUT ${SCHEMA_OUT_DIR}/${SCHEMA_REL}/${GEN_PB_HEADER} ${SCHEMA_OUT_DIR}/${SCHEMA_REL}/${GEN_PB}
       COMMAND ${GEN_COMMAND}
-      ARGS -I${PROJECT_SOURCE_DIR} -I${GEN_ARGS} --cpp_out=${SCHEMA_OUT_DIR} ${PROTO_ABS}
+      ARGS -I${PROJECT_SOURCE_DIR}/src -I${GEN_ARGS} --cpp_out=${SCHEMA_OUT_DIR} ${PROTO_ABS}
       WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
       DEPENDS protobuf::protoc
       VERBATIM

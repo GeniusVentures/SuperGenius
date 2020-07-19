@@ -50,6 +50,11 @@ namespace sgns::primitives {
 
     /// Should that transaction be propagated.
     bool should_propagate{false};
+    friend std::ostream &operator<<(std::ostream &out, const Transaction &test_struct)
+    {
+      return out; 
+    }
+
   };
 
   inline bool operator==(const Transaction &v1, const Transaction &v2) {

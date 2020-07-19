@@ -363,5 +363,6 @@ ExternalProject_Add(SuperGenius
         -Ded25519_DIR:PATH=${_FINDPACKAGE_ed25519_CONFIG_DIR}        
         -Dsr25519_DIR:PATH=${_FINDPACKAGE_sr25519_CONFIG_DIR}
         -Dsr25519_INCLUDE_DIR:PATH=${_sr25519_INCLUDE_DIR}
+        -DUSER_ENV_LIBRARY:STRING=userenv
   DEPENDS GTest blocklattice ipfs-lite-cpp spdlog tsl_hat_trie libp2p protobuf leveldb ed25519 
 )

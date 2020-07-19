@@ -57,7 +57,7 @@ if you are going to build and test , then use following commands
         -DBOOST_LIBRARY_DIR="C:/local/boost_1_70_0/lib64-msvc-14.1" \
         -DOPENSSL_ROOT_DIR="C:/Program Files/OpenSSL-Win64" -DCMAKE_BUILD_TYPE=Release
     cmake --build . --config Release
-    cd SuperGenius
+    cd SuperGenius/src/SuperGenius-build
     ctest -C Release
     
 To run sepecifi test with detailed log, you can use following commands.

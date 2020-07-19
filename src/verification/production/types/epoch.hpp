@@ -39,6 +39,20 @@ namespace sgns::verification {
     bool operator!=(const Epoch &other) const {
       return !(*this == other);
     }
+    //added to fix link error
+    friend std::ostream &operator<<(std::ostream &out, const Epoch &test_struct)
+    {
+      out << test_struct.epoch_index << test_struct.start_slot << test_struct.epoch_duration ;
+      out << test_struct.authorities.size();
+      for(auto it = test_struct.authorities.begin(); it != test_struct.authorities.end() ; it++)
+      {
+        out << *it;
+      }
+      out << test_struct.randomness ;
+      return out;
+
+    }
+    //end
   };
 }  // namespace sgns::verification
 
