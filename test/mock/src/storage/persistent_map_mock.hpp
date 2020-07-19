@@ -29,6 +29,13 @@ namespace sgns::storage::face {
     MOCK_METHOD2_T(put_rv, outcome::result<void>(const K &, V));
 
     MOCK_METHOD1_T(remove, outcome::result<void>(const K &));
+    //--------------------
+    // friend std::ostream &operator<<(std::ostream &out, const GenericStorageMock &test_struct)                                                    
+    // {
+    //   return out ;
+    // }
+    //--------------
+
   };
 }  // namespace sgns::storage::face
 

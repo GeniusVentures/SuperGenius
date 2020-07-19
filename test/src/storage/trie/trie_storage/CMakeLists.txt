@@ -30,11 +30,12 @@ target_link_libraries(supergenius_trie_storage_test
 addtest(trie_storage_backend_test
     trie_storage_backend_test.cpp
     )
+
 target_link_libraries(trie_storage_backend_test
     trie_storage_backend
     blob
     buffer
-    in_memory_storage
+    in_memory_storage     
     )
 
 

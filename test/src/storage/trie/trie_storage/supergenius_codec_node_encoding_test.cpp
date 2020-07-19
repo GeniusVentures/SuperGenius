@@ -26,10 +26,6 @@ struct Case {
 struct NodeEncodingTest : public ::testing::TestWithParam<Case> {
   std::unique_ptr<SuperGeniusCodec> codec = std::make_unique<SuperGeniusCodec>();
 
-  // bool operator==(const NodeEncodingTest &rhs) const;
-
-  // bool operator!=(const NodeEncodingTest &rhs) const;
-
    friend std::ostream &operator<<(std::ostream &out, const NodeEncodingTest &test_struct)
   {
     return out; 
