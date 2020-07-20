@@ -32,6 +32,8 @@ namespace sgns::storage::trie {
 
     std::shared_ptr<BufferStorage> storage_;
     base::Buffer node_prefix_;
+  
+
   };
 
 }  // namespace sgns::storage::trie

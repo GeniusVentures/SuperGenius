@@ -7,6 +7,8 @@ target_link_libraries(trie_serializer
     supergenius_node
     )
 
+set_target_properties(trie_serializer PROPERTIES LINK_FLAGS "/FORCE:MULTIPLE")
+
 add_library(supergenius_codec
     supergenius_codec.cpp
     )

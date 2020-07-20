@@ -20,6 +20,10 @@ namespace sgns::storage {
 
     UNKNOWN = 1000
   };
+   std::ostream &operator<<(std::ostream &out, const DatabaseError &test_struct)
+  {
+    return out << (int)test_struct; 
+  }
 }  // namespace sgns::storage
 
 OUTCOME_HPP_DECLARE_ERROR_2(sgns::storage, DatabaseError);

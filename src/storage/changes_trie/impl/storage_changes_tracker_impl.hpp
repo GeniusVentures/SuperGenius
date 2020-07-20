@@ -3,7 +3,9 @@
 
 #include "storage/changes_trie/changes_tracker.hpp"
 
+//-------------//
 #include <set>
+#include <map>
 
 namespace sgns::storage::trie {
   class Codec;

@@ -12,14 +12,14 @@ namespace sgns::blockchain {
   class BlockHeaderRepositoryMock : public BlockHeaderRepository {
    public:
     MOCK_CONST_METHOD1(getNumberByHash, outcome::result<primitives::BlockNumber> (
-        const common::Hash256 &hash));
-    MOCK_CONST_METHOD1(getHashByNumber, outcome::result<common::Hash256> (
+        const base::Hash256 &hash));
+    MOCK_CONST_METHOD1(getHashByNumber, outcome::result<base::Hash256> (
         const primitives::BlockNumber &number));
     MOCK_CONST_METHOD1(getBlockHeader, outcome::result<primitives::BlockHeader> (
         const primitives::BlockId &id));
     MOCK_CONST_METHOD1(getBlockStatus, outcome::result<sgns::blockchain::BlockStatus> (
         const primitives::BlockId &id));
-    MOCK_CONST_METHOD1(getHashById, outcome::result<common::Hash256> (
+    MOCK_CONST_METHOD1(getHashById, outcome::result<base::Hash256> (
         const primitives::BlockId &id));
     MOCK_CONST_METHOD1(getNumberById, outcome::result<primitives::BlockNumber> (
         const primitives::BlockId &id));

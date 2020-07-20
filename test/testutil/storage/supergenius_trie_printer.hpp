@@ -5,9 +5,9 @@
 
 #include "storage/trie/supergenius_trie/supergenius_trie.hpp"
 
-/**
- * IMPORTANT: This module is meant only for test usage and is not exception-safe
- */
+///
+/// \@notice: This module is meant only for test usage and is not exception-safe
+///
 
 namespace sgns::storage::trie {
 
