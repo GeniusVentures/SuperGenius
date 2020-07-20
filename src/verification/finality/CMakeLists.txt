@@ -4,3 +4,9 @@ add_library(voter_set
 target_link_libraries(voter_set
     ed25519_types
     )
+add_library(vote_weight
+    vote_weight.cpp
+    )
+target_link_libraries(vote_weight
+    voter_set
+    )
