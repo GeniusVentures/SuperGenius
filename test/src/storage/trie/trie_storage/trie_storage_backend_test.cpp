@@ -17,6 +17,24 @@ using sgns::storage::trie::TrieStorageBackendImpl;
 using testing::Invoke;
 using testing::Return;
 
+namespace testing {  
+
+  std::ostream &operator<<(std::ostream &out, const outcome::result<void> &test_struct)
+  {
+    return out ;
+  } 
+} 
+namespace sgns::storage::face {
+  
+}
+std::ostream &operator<<(std::ostream &out, const outcome::result<Buffer> &test_struct)
+  {
+    return out ;
+  } 
+std::ostream &operator<<(std::ostream &out, const outcome::result<void> &test_struct)
+  {
+    return out ;
+  } 
 static const Buffer kNodePrefix{1};
 
 class TrieDbBackendTest : public testing::Test {
@@ -39,6 +57,8 @@ class TrieDbBackendTest : public testing::Test {
   // }
 
 };
+
+
 
   // template<class A, class B, class C>
   

@@ -15,7 +15,7 @@ namespace sgns::storage::face {
    */
   template <typename K, typename V>
   struct GenericStorage : public ReadOnlyMap<K, V>,
-                          public BatchWriteMap<K, V> {};
+                          public BatchWriteMap<K, V> {};  
 
 }  // namespace sgns::storage::face
 
