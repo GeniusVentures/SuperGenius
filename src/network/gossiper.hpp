@@ -4,7 +4,7 @@
 #define SUPERGENIUS_SRC_NETWORK_GOSSIPER_HPP
 
 #include "verification/production/VERIFICATION_PRODUCTION_gossiper.hpp"
-#include "verification/grandpa/gossiper.hpp"
+#include "verification/finality/gossiper.hpp"
 #include "network/extrinsic_gossiper.hpp"
 
 #include <libp2p/connection/stream.hpp>
@@ -16,7 +16,7 @@ namespace sgns::network {
    */
   struct Gossiper : public ExtrinsicGossiper,
                     public verification::ProductionGossiper,
-                    public verification::grandpa::Gossiper {
+                    public verification::finality::Gossiper {
     virtual void reserveStream(
         const libp2p::peer::PeerInfo &info,
         std::shared_ptr<libp2p::connection::Stream> stream) = 0;

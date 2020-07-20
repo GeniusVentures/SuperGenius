@@ -8,9 +8,9 @@
 namespace sgns::storage {
 
   inline const base::Buffer kAuthoritySetKey =
-      base::Buffer().put("grandpa_voters");
+      base::Buffer().put("finality_voters");
   inline const base::Buffer kSetStateKey =
-      base::Buffer().put("grandpa_completed_round");
+      base::Buffer().put("finality_completed_round");
   ;
 
 }  // namespace sgns::storage

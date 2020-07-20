@@ -37,8 +37,8 @@ namespace sgns::network {
   }
 
   void GossiperBroadcast::vote(
-      const verification::grandpa::VoteMessage &vote_message) {
-    logger_->debug("Gossip vote message: grandpa round number {}",
+      const verification::finality::VoteMessage &vote_message) {
+    logger_->debug("Gossip vote message: finality round number {}",
                    vote_message.round_number);
     GossipMessage message;
     message.type = GossipMessage::Type::verification;
@@ -47,8 +47,8 @@ namespace sgns::network {
     broadcast(std::move(message));
   }
 
-  void GossiperBroadcast::finalize(const verification::grandpa::Fin &fin) {
-    logger_->debug("Gossip fin message: grandpa round number {}",
+  void GossiperBroadcast::finalize(const verification::finality::Fin &fin) {
+    logger_->debug("Gossip fin message: finality round number {}",
                    fin.round_number);
     GossipMessage message;
     message.type = GossipMessage::Type::verification;

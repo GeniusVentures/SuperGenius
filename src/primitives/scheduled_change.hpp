@@ -18,7 +18,7 @@ namespace sgns::primitives {
   /// @brief api function returns optional value
   using ScheduledChangeOptional = boost::optional<ScheduledChange>;
 
-  /// @brief result type for grandpa forced_change function
+  /// @brief result type for finality forced_change function
   using ForcedChange = std::pair<BlockNumber, ScheduledChange>;
 
   /**
