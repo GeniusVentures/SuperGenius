@@ -63,6 +63,7 @@ include_directories(
   ${CBOR_INCLUDE_DIR}  
   ${leveldb_INCLUDE_DIR}
   ${sr25519_INCLUDE_DIR}
+  ${ed25519_INCLUDE_DIR}
 )
 
 find_package(blocklattice CONFIG REQUIRED PATHS ${blocklattice_DIR})
