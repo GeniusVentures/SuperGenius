@@ -11,3 +11,13 @@ add_library(vote_weight
 target_link_libraries(vote_weight
     voter_set
     )
+
+add_library(environment
+    impl/environment_impl.cpp
+    )
+
+target_link_libraries(environment
+    scale
+    logger
+    blob
+    )
