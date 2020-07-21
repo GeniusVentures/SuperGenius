@@ -12,27 +12,27 @@ namespace sgns::storage::trie {
   class PersistentTrieBatchMock : public PersistentTrieBatch {
    public:
     MOCK_CONST_METHOD1(get,
-                       outcome::result<common::Buffer>(const common::Buffer &));
+                       outcome::result<base::Buffer>(const base::Buffer &));
 
     MOCK_METHOD0(cursor, std::unique_ptr<BufferMapCursor>());
 
-    MOCK_CONST_METHOD1(contains, bool(const common::Buffer &));
+    MOCK_CONST_METHOD1(contains, bool(const base::Buffer &));
 
     MOCK_METHOD2(put,
-                 outcome::result<void>(const common::Buffer &,
-                                       const common::Buffer &));
+                 outcome::result<void>(const base::Buffer &,
+                                       const base::Buffer &));
 
-    outcome::result<void> put(const common::Buffer &k, common::Buffer &&v) {
+    outcome::result<void> put(const base::Buffer &k, base::Buffer &&v) {
       return put_rvalueHack(k, std::move(v));
     }
     MOCK_METHOD2(put_rvalueHack,
-                 outcome::result<void>(const common::Buffer &, common::Buffer));
+                 outcome::result<void>(const base::Buffer &, base::Buffer));
 
-    MOCK_METHOD1(remove, outcome::result<void>(const common::Buffer &));
+    MOCK_METHOD1(remove, outcome::result<void>(const base::Buffer &));
 
-    MOCK_CONST_METHOD0(calculateRoot, outcome::result<common::Buffer>());
+    MOCK_CONST_METHOD0(calculateRoot, outcome::result<base::Buffer>());
 
-    MOCK_METHOD1(clearPrefix, outcome::result<void>(const common::Buffer &buf));
+    MOCK_METHOD1(clearPrefix, outcome::result<void>(const base::Buffer &buf));
 
     MOCK_CONST_METHOD0(empty, bool());
 
@@ -44,25 +44,25 @@ namespace sgns::storage::trie {
   class EphemeralTrieBatchMock : public EphemeralTrieBatch {
    public:
     MOCK_CONST_METHOD1(get,
-                       outcome::result<common::Buffer>(const common::Buffer &));
+                       outcome::result<base::Buffer>(const base::Buffer &));
 
     MOCK_METHOD0(cursor, std::unique_ptr<BufferMapCursor>());
 
-    MOCK_CONST_METHOD1(contains, bool(const common::Buffer &));
+    MOCK_CONST_METHOD1(contains, bool(const base::Buffer &));
 
     MOCK_METHOD2(put,
-                 outcome::result<void>(const common::Buffer &,
-                                       const common::Buffer &));
+                 outcome::result<void>(const base::Buffer &,
+                                       const base::Buffer &));
 
-    outcome::result<void> put(const common::Buffer &k, common::Buffer &&v) {
+    outcome::result<void> put(const base::Buffer &k, base::Buffer &&v) {
       return put_rvalueHack(k, std::move(v));
     }
     MOCK_METHOD2(put_rvalueHack,
-                 outcome::result<void>(const common::Buffer &, common::Buffer));
+                 outcome::result<void>(const base::Buffer &, base::Buffer));
 
-    MOCK_METHOD1(remove, outcome::result<void>(const common::Buffer &));
+    MOCK_METHOD1(remove, outcome::result<void>(const base::Buffer &));
 
-    MOCK_METHOD1(clearPrefix, outcome::result<void>(const common::Buffer &buf));
+    MOCK_METHOD1(clearPrefix, outcome::result<void>(const base::Buffer &buf));
 
     MOCK_CONST_METHOD0(empty, bool());
   };

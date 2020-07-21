@@ -23,13 +23,13 @@ namespace sgns::storage::changes_trie {
                               primitives::BlockNumber new_parent_number));
 
     MOCK_METHOD2(onPut,
-                 outcome::result<void>(const common::Buffer &key,
+                 outcome::result<void>(const base::Buffer &key,
                                        bool is_new_entry));
-    MOCK_METHOD1(onRemove, outcome::result<void>(const common::Buffer &key));
+    MOCK_METHOD1(onRemove, outcome::result<void>(const base::Buffer &key));
 
     MOCK_METHOD2(
         constructChangesTrie,
-        outcome::result<common::Hash256>(const primitives::BlockHash &parent,
+        outcome::result<base::Hash256>(const primitives::BlockHash &parent,
                                          const ChangesTrieConfig &conf));
   };
 

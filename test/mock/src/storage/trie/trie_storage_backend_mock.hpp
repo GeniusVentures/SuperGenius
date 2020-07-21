@@ -16,11 +16,11 @@ namespace sgns::storage::trie {
     MOCK_CONST_METHOD1(get, outcome::result<Buffer>(const Buffer &key));
     MOCK_CONST_METHOD1(contains, bool (const Buffer &key));
     MOCK_METHOD2(put, outcome::result<void> (const Buffer &key, const Buffer &value));
-    outcome::result<void> put(const common::Buffer &k, common::Buffer &&v) {
+    outcome::result<void> put(const base::Buffer &k, base::Buffer &&v) {
       return put_rvalueHack(k, std::move(v));
     }
     MOCK_METHOD2(put_rvalueHack,
-                 outcome::result<void>(const common::Buffer &, common::Buffer));
+                 outcome::result<void>(const base::Buffer &, base::Buffer));
     MOCK_METHOD1(remove, outcome::result<void> (const Buffer &key));
   };
 

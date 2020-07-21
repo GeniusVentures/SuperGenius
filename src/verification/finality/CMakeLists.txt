@@ -1,3 +1,4 @@
+add_subdirectory(vote_graph)
 add_library(voter_set
     voter_set.cpp
     )
