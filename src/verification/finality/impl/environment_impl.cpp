@@ -1,4 +1,5 @@
 
+
 #include "verification/finality/impl/environment_impl.hpp"
 
 #include <utility>
@@ -68,7 +69,7 @@ namespace sgns::verification::finality {
       const SignedMessage &propose) {
     BOOST_ASSERT(propose.is<PrimaryPropose>());
     VoteMessage message{
-        .round_number = round, .counter = set_id, .vote = propose};
+        /*.round_number =*/ round, /*.counter =*/ set_id, /*.vote =*/ propose};
     gossiper_->vote(message);
     logger_->debug("Primary proposed block with hash {} in finality round {}",
                    propose.block_hash().toHex(),
@@ -82,7 +83,7 @@ namespace sgns::verification::finality {
       const SignedMessage &prevote) {
     BOOST_ASSERT(prevote.is<Prevote>());
     VoteMessage message{
-        .round_number = round, .counter = set_id, .vote = prevote};
+        /*.round_number =*/ round, /*.counter =*/ set_id, /*.vote =*/ prevote};
     gossiper_->vote(message);
     logger_->debug("Prevoted block with hash {} in finality round {}",
                    prevote.block_hash().toHex(),
@@ -96,7 +97,7 @@ namespace sgns::verification::finality {
       const SignedMessage &precommit) {
     BOOST_ASSERT(precommit.is<Precommit>());
     VoteMessage message{
-        .round_number = round, .counter = set_id, .vote = precommit};
+        /*.round_number =*/ round, /*.counter =*/ set_id, /*.vote =*/ precommit};
     gossiper_->vote(message);
     logger_->debug("Precommitted block with hash {} in finality round {}",
                    precommit.block_hash().toHex(),
@@ -112,7 +113,7 @@ namespace sgns::verification::finality {
                    vote.block_hash,
                    vote.block_number);
     gossiper_->finalize(Fin{
-        .round_number = round, .vote = vote, .justification = justification});
+        /*.round_number =*/ round, /*.vote =*/ vote, /*.justification =*/ justification});
     return outcome::success();
   }
 

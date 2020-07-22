@@ -13,7 +13,7 @@ namespace sgns::verification::finality {
     RoundState state;
 
     bool operator==(const CompletedRound &rhs) const {
-      return round_number == rhs.round_number and state == rhs.state;
+      return round_number == rhs.round_number && state == rhs.state;
     }
     bool operator!=(const CompletedRound &rhs) const {
       return !operator==(rhs);
