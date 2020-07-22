@@ -21,3 +21,10 @@ target_link_libraries(environment
     logger
     blob
     )
+
+add_library(vote_tracker
+    impl/vote_tracker_impl.cpp
+    )
+target_link_libraries(vote_tracker
+    blob
+    )
