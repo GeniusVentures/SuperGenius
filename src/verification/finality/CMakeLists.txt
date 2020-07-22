@@ -62,3 +62,10 @@ target_link_libraries(launcher
     vote_graph
     vote_tracker
     )
+
+add_library(syncing_round_observer
+    impl/syncing_round_observer.cpp
+    )
+target_link_libraries(syncing_round_observer
+    logger
+    )

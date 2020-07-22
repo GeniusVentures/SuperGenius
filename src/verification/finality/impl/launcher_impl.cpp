@@ -43,7 +43,7 @@ namespace sgns::verification::finality {
         [this](outcome::result<CompletedRound> completed_round_res) {
           round_id++;
 
-          if (not completed_round_res) {
+          if (! completed_round_res) {
             current_round_.reset();
             logger_->debug("Finality round was not finalized: {}",
                            completed_round_res.error().message());
@@ -52,7 +52,7 @@ namespace sgns::verification::finality {
             // update last completed round if it is greater than previous last
             // completed round
             const auto &last_completed_round_res = getLastCompletedRound();
-            if (not last_completed_round_res) {
+            if (! last_completed_round_res) {
               logger_->warn(last_completed_round_res.error().message());
               return;
             }
@@ -62,7 +62,7 @@ namespace sgns::verification::finality {
               if (auto put_res = storage_->put(
                       storage::kSetStateKey,
                       base::Buffer(scale::encode(completed_round).value()));
-                  not put_res) {
+                  ! put_res) {
                 logger_->error("New round state was not added to the storage");
                 return;
               }

@@ -51,7 +51,7 @@ namespace sgns::runtime {
 
     /**
      * @brief calls Finality_authorities runtime api function
-     * @return collection of current grandpa authorities with their weights
+     * @return collection of current finality authorities with their weights
      */
     virtual outcome::result<std::vector<WeightedAuthority>> authorities(
         const primitives::BlockId &block_id) = 0;
