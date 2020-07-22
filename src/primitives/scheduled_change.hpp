@@ -9,7 +9,7 @@
 #include "primitives/session_key.hpp"
 
 namespace sgns::primitives {
-  /// @struct ScheduledChange is used by Grandpa api runtime
+  /// @struct ScheduledChange is used by Finality api runtime
   struct ScheduledChange {
     std::vector<std::pair<AuthorityId, uint64_t>> next_authorities;
     BlockNumber delay = 0;

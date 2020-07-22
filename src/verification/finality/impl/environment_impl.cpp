@@ -19,7 +19,7 @@ namespace sgns::verification::finality {
       : block_tree_{std::move(block_tree)},
         header_repository_{std::move(header_repository)},
         gossiper_{std::move(gossiper)},
-        logger_{base::createLogger("Grandpa environment:")} {
+        logger_{base::createLogger("Finality environment:")} {
     BOOST_ASSERT(block_tree_ != nullptr);
     BOOST_ASSERT(header_repository_ != nullptr);
     BOOST_ASSERT(gossiper_ != nullptr);
@@ -108,7 +108,7 @@ namespace sgns::verification::finality {
   outcome::result<void> EnvironmentImpl::onCommitted(
       RoundNumber round,
       const BlockInfo &vote,
-      const GrandpaJustification &justification) {
+      const FinalityJustification &justification) {
     logger_->debug("Committed block with hash: {} with number: {}",
                    vote.block_hash,
                    vote.block_number);
@@ -132,7 +132,7 @@ namespace sgns::verification::finality {
 
   outcome::result<void> EnvironmentImpl::finalize(
       const primitives::BlockHash &block_hash,
-      const GrandpaJustification &finality_jusitification) {
+      const FinalityJustification &finality_jusitification) {
     primitives::Justification justification;
     justification.data.put(scale::encode(finality_jusitification).value());
     return block_tree_->finalize(block_hash, justification);

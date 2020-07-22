@@ -111,26 +111,26 @@ namespace sgns::verification::finality {
 
   // justification that contains a list of signed precommits justifying the
   // validity of the block
-  struct GrandpaJustification {
+  struct FinalityJustification {
     std::vector<SignedMessage> items;
   };
 
   template <class Stream,
             typename = std::enable_if_t<Stream::is_encoder_stream>>
-  Stream &operator<<(Stream &s, const GrandpaJustification &v) {
+  Stream &operator<<(Stream &s, const FinalityJustification &v) {
     return s << v.items;
   }
 
   template <class Stream,
             typename = std::enable_if_t<Stream::is_decoder_stream>>
-  Stream &operator>>(Stream &s, GrandpaJustification &v) {
+  Stream &operator>>(Stream &s, FinalityJustification &v) {
     return s >> v.items;
   }
 
   /// A commit message which is an aggregate of precommits.
   struct Commit {
     BlockInfo vote;
-    GrandpaJustification justification;
+    FinalityJustification justification;
   };
 
   // either prevote, precommit or primary propose
@@ -160,7 +160,7 @@ namespace sgns::verification::finality {
   struct Fin {
     RoundNumber round_number{0};
     BlockInfo vote;
-    GrandpaJustification justification;
+    FinalityJustification justification;
   };
 
   template <class Stream,

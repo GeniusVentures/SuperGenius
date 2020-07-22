@@ -50,7 +50,7 @@ namespace sgns::verification::finality {
         io_context_{std::move(io_context)},
         prevote_timer_{*io_context_},
         precommit_timer_{*io_context_},
-        logger_{base::createLogger("Grandpa")},
+        logger_{base::createLogger("Finality")},
         prevote_equivocators_(voter_set_->size(), false),
         precommit_equivocators_(voter_set_->size(), false) {
     BOOST_ASSERT(voter_set_ != nullptr);
@@ -105,7 +105,7 @@ namespace sgns::verification::finality {
   }
 
   bool VotingRoundImpl::validate(
-      const BlockInfo &vote, const GrandpaJustification &justification) const {
+      const BlockInfo &vote, const FinalityJustification &justification) const {
     size_t total_weight = 0;
 
     std::unordered_map<Id, BlockHash> validators;
@@ -721,14 +721,14 @@ namespace sgns::verification::finality {
             .value_or(false);
   }
 
-  boost::optional<GrandpaJustification> VotingRoundImpl::finalizingPrecommits(
+  boost::optional<FinalityJustification> VotingRoundImpl::finalizingPrecommits(
       const BlockInfo &estimate) const {
     const auto &precommits = precommits_->getMessages();
-    GrandpaJustification justification = std::accumulate(
+    FinalityJustification justification = std::accumulate(
         precommits.begin(),
         precommits.end(),
-        GrandpaJustification{},
-        [this](GrandpaJustification &j, const auto &precommit_variant) {
+        FinalityJustification{},
+        [this](FinalityJustification &j, const auto &precommit_variant) {
           visit_in_place(
               precommit_variant,
               [&j, this](const SignedMessage &voting_message) {

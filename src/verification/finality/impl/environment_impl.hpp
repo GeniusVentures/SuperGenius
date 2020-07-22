@@ -53,7 +53,7 @@ namespace sgns::verification::finality {
     outcome::result<void> onCommitted(
         RoundNumber round,
         const BlockInfo &vote,
-        const GrandpaJustification &justification) override;
+        const FinalityJustification &justification) override;
 
     void doOnCompleted(const CompleteHandler &) override;
 
@@ -61,7 +61,7 @@ namespace sgns::verification::finality {
 
     outcome::result<void> finalize(
         const primitives::BlockHash &block_hash,
-        const GrandpaJustification &justification) override;
+        const FinalityJustification &justification) override;
 
    private:
     std::shared_ptr<blockchain::BlockTree> block_tree_;

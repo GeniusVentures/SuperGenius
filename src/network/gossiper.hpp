@@ -3,7 +3,7 @@
 #ifndef SUPERGENIUS_SRC_NETWORK_GOSSIPER_HPP
 #define SUPERGENIUS_SRC_NETWORK_GOSSIPER_HPP
 
-#include "verification/production/VERIFICATION_PRODUCTION_gossiper.hpp"
+#include "verification/production/production_gossiper.hpp"
 #include "verification/finality/gossiper.hpp"
 #include "network/extrinsic_gossiper.hpp"
 

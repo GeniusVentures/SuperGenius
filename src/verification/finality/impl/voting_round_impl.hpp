@@ -139,7 +139,7 @@ namespace sgns::verification::finality {
     outcome::result<void> notify(const RoundState &last_round_state);
 
     /// prepare justification for the provided \param estimate
-    boost::optional<GrandpaJustification> finalizingPrecommits(
+    boost::optional<FinalityJustification> finalizingPrecommits(
         const BlockInfo &estimate) const;
 
     /**
@@ -163,7 +163,7 @@ namespace sgns::verification::finality {
     /// Check if received \param vote has valid \param justification. If so
     /// \return true, false otherwise
     bool validate(const BlockInfo &vote,
-                  const GrandpaJustification &justification) const;
+                  const FinalityJustification &justification) const;
 
    private:
     std::shared_ptr<VoterSet> voter_set_;

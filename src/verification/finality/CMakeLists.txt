@@ -52,3 +52,13 @@ target_link_libraries(voting_round
     voter_set
     voting_round_error
     )
+
+add_library(launcher
+    impl/launcher_impl.cpp
+    )
+target_link_libraries(launcher
+    voting_round
+    vote_crypto_provider
+    vote_graph
+    vote_tracker
+    )

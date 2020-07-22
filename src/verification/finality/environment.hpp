@@ -59,7 +59,7 @@ namespace sgns::verification::finality {
     virtual outcome::result<void> onCommitted(
         RoundNumber round,
         const BlockInfo &vote,
-        const GrandpaJustification &justification) = 0;
+        const FinalityJustification &justification) = 0;
 
     /**
      * Provides a handler for completed round
@@ -77,7 +77,7 @@ namespace sgns::verification::finality {
      */
     virtual outcome::result<void> finalize(
         const primitives::BlockHash &block,
-        const GrandpaJustification &justification) = 0;
+        const FinalityJustification &justification) = 0;
   };
 
 }  // namespace sgns::verification::finality
