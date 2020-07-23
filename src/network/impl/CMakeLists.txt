@@ -36,3 +36,13 @@ target_link_libraries(sync_protocol_observer
     logger
     p2p::p2p_peer_id
     )
+add_library(sgns_router
+    router_libp2p.cpp
+    router_libp2p.hpp
+    )
+target_link_libraries(sgns_router
+    logger
+    outcome
+    scale
+    loopback_stream
+    )
