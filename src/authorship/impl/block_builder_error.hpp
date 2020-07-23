@@ -1,0 +1,15 @@
+
+#ifndef SUPERGENIUS_SRC_AUTHORSHIP_IMPL_BLOCK_BUILDER_ERROR_HPP
+#define SUPERGENIUS_SRC_AUTHORSHIP_IMPL_BLOCK_BUILDER_ERROR_HPP
+
+#include "outcome/outcome.hpp"
+
+namespace sgns::authorship {
+
+  enum class BlockBuilderError { EXTRINSIC_APPLICATION_FAILED = 1 };
+
+}
+
+OUTCOME_HPP_DECLARE_ERROR_2(sgns::authorship, BlockBuilderError)
+
+#endif  // SUPERGENIUS_SRC_AUTHORSHIP_IMPL_BLOCK_BUILDER_ERROR_HPP
