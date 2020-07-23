@@ -44,7 +44,8 @@ I used visual studio 2017 to compile SuperGenius project.
         -DBOOST_ROOT="C:/local/boost_1_70_0" \
         -DBOOST_INCLUDE_DIR="C:/local/boost_1_70_0" \
         -DBOOST_LIBRARY_DIR="C:/local/boost_1_70_0/lib64-msvc-14.1" \
-        -DOPENSSL_ROOT_DIR="C:/Program Files/OpenSSL-Win64" -DCMAKE_BUILD_TYPE=Release -DINSTALL_RUSTC=OFF
+        -DOPENSSL_ROOT_DIR="C:/Program Files/OpenSSL-Win64" -DCMAKE_BUILD_TYPE=Release -DINSTALL_RUSTC=OFF \
+        -DTHIRDPARTY_DIR="/path_to_prebuilt_thirdparty"
     cmake --build . --config Release
     ```
 
