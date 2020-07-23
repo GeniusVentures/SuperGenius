@@ -166,5 +166,5 @@ ExternalProject_Add(SuperGenius
         -Dsr25519_INCLUDE_DIR:PATH=${_sr25519_INCLUDE_DIR}
         -Ded25519_INCLUDE_DIR:PATH=${_ed25519_INCLUDE_DIR}
         -DUSER_ENV_LIBRARY:STRING=userenv
-  DEPENDS
+  DEPENDS blocklattice
 )

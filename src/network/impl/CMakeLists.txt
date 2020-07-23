@@ -20,3 +20,10 @@ add_library(dummy_sync_protocol_client
 target_link_libraries(dummy_sync_protocol_client
     logger
     )
+add_library(remote_sync_protocol_client
+    remote_sync_protocol_client.cpp
+    remote_sync_protocol_client.hpp
+    )
+target_link_libraries(remote_sync_protocol_client
+    logger
+    )
