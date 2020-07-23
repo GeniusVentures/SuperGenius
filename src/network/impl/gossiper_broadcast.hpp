@@ -6,14 +6,14 @@
 #include <gsl/span>
 #include <unordered_map>
 
-#include "base/logger.hpp"
+
 #include "libp2p/connection/stream.hpp"
 #include "libp2p/host/host.hpp"
 #include "libp2p/peer/peer_info.hpp"
 #include "network/gossiper.hpp"
 #include "network/types/gossip_message.hpp"
 #include "network/types/peer_list.hpp"
-
+#include "base/logger.hpp"
 namespace sgns::network {
   /**
    * Sends gossip messages using broadcast strategy

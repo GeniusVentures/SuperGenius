@@ -19,4 +19,13 @@ target_link_libraries(blockchain_common
     primitives
     )
 
-
+add_library(block_tree
+    block_tree_impl.cpp
+    block_tree_impl.hpp
+    )
+target_link_libraries(block_tree
+    block_tree_error
+    blockchain_common
+    leveldb
+    hasher
+    )

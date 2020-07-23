@@ -99,6 +99,6 @@ namespace sgns::blockchain {
   };
 }  // namespace sgns::blockchain
 
-OUTCOME_HPP_DECLARE_ERROR(sgns::blockchain, KeyValueBlockStorage::Error);
+OUTCOME_HPP_DECLARE_ERROR_2(sgns::blockchain, KeyValueBlockStorage::Error);
 
 #endif  // SUPERGENIUS_KEY_VALUE_BLOCK_STORAGE_HPP

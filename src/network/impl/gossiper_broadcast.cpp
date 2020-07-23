@@ -41,7 +41,7 @@ namespace sgns::network {
     logger_->debug("Gossip vote message: finality round number {}",
                    vote_message.round_number);
     GossipMessage message;
-    message.type = GossipMessage::Type::verification;
+    message.type = GossipMessage::Type::VERIFICATION;
     message.data.put(scale::encode(vote_message).value());
 
     broadcast(std::move(message));
@@ -51,7 +51,7 @@ namespace sgns::network {
     logger_->debug("Gossip fin message: finality round number {}",
                    fin.round_number);
     GossipMessage message;
-    message.type = GossipMessage::Type::verification;
+    message.type = GossipMessage::Type::VERIFICATION;
     message.data.put(scale::encode(fin).value());
 
     broadcast(std::move(message));

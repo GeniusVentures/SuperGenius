@@ -1,8 +1,22 @@
-# add_library(gossiper_broadcast
-#     gossiper_broadcast.cpp
-#     gossiper_broadcast.hpp
-#     )
-# target_link_libraries(gossiper_broadcast
-#     scale_message_read_writer
-#     logger
-#     )
+add_library(loopback_stream
+    loopback_stream.cpp
+    loopback_stream.hpp
+    )
+target_link_libraries(loopback_stream
+    logger
+    )
+add_library(gossiper_broadcast
+    gossiper_broadcast.cpp
+    gossiper_broadcast.hpp
+    )
+target_link_libraries(gossiper_broadcast
+    scale_message_read_writer
+    logger
+    )
+add_library(dummy_sync_protocol_client
+    dummy_sync_protocol_client.cpp
+    dummy_sync_protocol_client.hpp
+    )
+target_link_libraries(dummy_sync_protocol_client
+    logger
+    )
