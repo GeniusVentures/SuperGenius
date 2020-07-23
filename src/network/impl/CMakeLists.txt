@@ -27,3 +27,12 @@ add_library(remote_sync_protocol_client
 target_link_libraries(remote_sync_protocol_client
     logger
     )
+add_library(sync_protocol_observer
+    sync_protocol_observer_impl.hpp
+    sync_protocol_observer_impl.cpp
+    )
+target_link_libraries(sync_protocol_observer
+    block_header_repository
+    logger
+    p2p::p2p_peer_id
+    )
