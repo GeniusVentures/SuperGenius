@@ -1,30 +1,25 @@
 
 #ifndef SUPERGENIUS_SRC_INJECTOR_APPLICATION_INJECTOR_HPP
 #define SUPERGENIUS_SRC_INJECTOR_APPLICATION_INJECTOR_HPP
+// added to fix "fatal error C1189: #error:  WinSock.h has already been included " in windows build
+// this error is generated in libp2p/injector/host_injector.hpp
+#include <boost/asio.hpp>
+#include <libp2p/host/host.hpp>
+//end
 
 #include <boost/di.hpp>
 #include <boost/di/extension/scopes/shared.hpp>
+
+
 #include <crypto/bip39/impl/bip39_provider_impl.hpp>
 #include <crypto/crypto_store/crypto_store_impl.hpp>
 #include <crypto/pbkdf2/impl/pbkdf2_provider_impl.hpp>
-/// #include <crypto/secp256k1/secp256k1_provider_impl.hpp>
+// #include <crypto/secp256k1/secp256k1_provider_impl.hpp>
 #include <libp2p/injector/host_injector.hpp>
 #include <libp2p/peer/peer_info.hpp>
 #include <outcome/outcome.hpp>
 
-#include "api/service/api_service.hpp"
-#include "api/service/author/author_jrpc_processor.hpp"
-#include "api/service/author/impl/author_api_impl.hpp"
-#include "api/service/chain/chain_jrpc_processor.hpp"
-#include "api/service/chain/impl/chain_api_impl.hpp"
-#include "api/service/state/impl/readonly_trie_builder_impl.hpp"
-#include "api/service/state/impl/state_api_impl.hpp"
-#include "api/service/state/state_jrpc_processor.hpp"
-#include "api/transport/impl/http/http_listener_impl.hpp"
-#include "api/transport/impl/http/http_session.hpp"
-#include "api/transport/impl/ws/ws_listener_impl.hpp"
-#include "api/transport/impl/ws/ws_session.hpp"
-#include "api/transport/rpc_thread_pool.hpp"
+
 #include "application/impl/app_state_manager_impl.hpp"
 #include "application/impl/configuration_storage_impl.hpp"
 #include "authorship/impl/block_builder_factory_impl.hpp"
@@ -518,8 +513,8 @@ namespace sgns::injector {
         injector.template create<sptr<crypto::ED25519Provider>>();
     auto sr25519_provider =
         injector.template create<sptr<crypto::SR25519Provider>>();
-    // auto secp256k1_provider =
-    //     injector.template create<sptr<crypto::Secp256k1Provider>>();
+    auto secp256k1_provider =
+        injector.template create<sptr<crypto::Secp256k1Provider>>();
     auto bip39_provider =
         injector.template create<sptr<crypto::Bip39Provider>>();
     auto random_generator = injector.template create<sptr<crypto::CSPRNG>>();
@@ -527,7 +522,7 @@ namespace sgns::injector {
     auto crypto_store =
         std::make_shared<crypto::CryptoStoreImpl>(std::move(ed25519_provider),
                                                   std::move(sr25519_provider),
-                                                 // std::move(secp256k1_provider),
+                                                  std::move(secp256k1_provider),
                                                   std::move(bip39_provider),
                                                   std::move(random_generator));
 
@@ -622,22 +617,9 @@ namespace sgns::injector {
         di::bind<crypto::VRFProvider>.template to<crypto::VRFProviderImpl>(),
         di::bind<crypto::Bip39Provider>.template to<crypto::Bip39ProviderImpl>(),
         di::bind<crypto::Pbkdf2Provider>.template to<crypto::Pbkdf2ProviderImpl>(),
-        /// di::bind<crypto::Secp256k1Provider>.template to<crypto::Secp256k1ProviderImpl>(),
-        di::bind<crypto::CryptoStore>.template to<crypto::CryptoStoreImpl>(),
-        di::bind<extensions::ExtensionFactory>.template to<extensions::ExtensionFactoryImpl>(),
-        di::bind<network::Router>.template to<network::RouterLibp2p>(),
-        di::bind<verification::BabeGossiper>.template to<network::GossiperBroadcast>(),
-        di::bind<verification::finality::Gossiper>.template to<network::GossiperBroadcast>(),
-        di::bind<network::Gossiper>.template to<network::GossiperBroadcast>(),
-        di::bind<network::SyncClientsSet>.to([](auto const &injector) {
-          return get_sync_clients_set(injector);
-        }),
-        di::bind<network::SyncProtocolObserver>.template to<network::SyncProtocolObserverImpl>(),
-        di::bind<runtime::binaryen::WasmModule>.template to<runtime::binaryen::WasmModuleImpl>(),
-        di::bind<runtime::binaryen::WasmModuleFactory>.template to<runtime::binaryen::WasmModuleFactoryImpl>(),
-        di::bind<runtime::TaggedTransactionQueue>.template to<runtime::binaryen::TaggedTransactionQueueImpl>(),
-        di::bind<runtime::ParachainHost>.template to<runtime::binaryen::ParachainHostImpl>(),
-        di::bind<runtime::OffchainWorker>.template to<runtime::binaryen::OffchainWorkerImpl>(),
+        di::bind<crypto::Secp256k1Provider>.template to<crypto::Secp256k1ProviderImpl>(),
+mpl>(),
+mpl>(),
         di::bind<runtime::Metadata>.template to<runtime::binaryen::MetadataImpl>(),
         di::bind<runtime::Grandpa>.template to<runtime::binaryen::GrandpaImpl>(),
         di::bind<runtime::Core>.template to<runtime::binaryen::CoreImpl>(),
