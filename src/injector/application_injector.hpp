@@ -7,7 +7,7 @@
 #include <crypto/bip39/impl/bip39_provider_impl.hpp>
 #include <crypto/crypto_store/crypto_store_impl.hpp>
 #include <crypto/pbkdf2/impl/pbkdf2_provider_impl.hpp>
-#include <crypto/secp256k1/secp256k1_provider_impl.hpp>
+/// #include <crypto/secp256k1/secp256k1_provider_impl.hpp>
 #include <libp2p/injector/host_injector.hpp>
 #include <libp2p/peer/peer_info.hpp>
 #include <outcome/outcome.hpp>
@@ -518,8 +518,8 @@ namespace sgns::injector {
         injector.template create<sptr<crypto::ED25519Provider>>();
     auto sr25519_provider =
         injector.template create<sptr<crypto::SR25519Provider>>();
-    auto secp256k1_provider =
-        injector.template create<sptr<crypto::Secp256k1Provider>>();
+    // auto secp256k1_provider =
+    //     injector.template create<sptr<crypto::Secp256k1Provider>>();
     auto bip39_provider =
         injector.template create<sptr<crypto::Bip39Provider>>();
     auto random_generator = injector.template create<sptr<crypto::CSPRNG>>();
@@ -527,7 +527,7 @@ namespace sgns::injector {
     auto crypto_store =
         std::make_shared<crypto::CryptoStoreImpl>(std::move(ed25519_provider),
                                                   std::move(sr25519_provider),
-                                                  std::move(secp256k1_provider),
+                                                 // std::move(secp256k1_provider),
                                                   std::move(bip39_provider),
                                                   std::move(random_generator));
 
@@ -622,7 +622,7 @@ namespace sgns::injector {
         di::bind<crypto::VRFProvider>.template to<crypto::VRFProviderImpl>(),
         di::bind<crypto::Bip39Provider>.template to<crypto::Bip39ProviderImpl>(),
         di::bind<crypto::Pbkdf2Provider>.template to<crypto::Pbkdf2ProviderImpl>(),
-        di::bind<crypto::Secp256k1Provider>.template to<crypto::Secp256k1ProviderImpl>(),
+        /// di::bind<crypto::Secp256k1Provider>.template to<crypto::Secp256k1ProviderImpl>(),
         di::bind<crypto::CryptoStore>.template to<crypto::CryptoStoreImpl>(),
         di::bind<extensions::ExtensionFactory>.template to<extensions::ExtensionFactoryImpl>(),
         di::bind<network::Router>.template to<network::RouterLibp2p>(),
