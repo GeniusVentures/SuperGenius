@@ -10,3 +10,4 @@ target_link_libraries(api_service
     )
 
 add_subdirectory(author)
+add_subdirectory(chain)
