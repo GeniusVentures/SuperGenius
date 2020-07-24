@@ -44,6 +44,7 @@
 #include "verification/finality/vote_graph.hpp"
 #include "verification/finality/vote_tracker.hpp"
 #include "verification/validation/production_block_validator.hpp"
+#include "primitives/production_configuration.hpp"
 #include "crypto/ed25519/ed25519_provider_impl.hpp"
 #include "crypto/hasher/hasher_impl.hpp"
 #include "crypto/random_generator/boost_generator.hpp"
@@ -58,26 +59,15 @@
 #include "network/sync_protocol_client.hpp"
 #include "network/sync_protocol_observer.hpp"
 #include "network/types/sync_clients_set.hpp"
-#include "runtime/binaryen/module/wasm_module_impl.hpp"
-#include "runtime/binaryen/module/wasm_module_factory_impl.hpp"
-#include "runtime/binaryen/runtime_api/production_api_impl.hpp"
-#include "runtime/binaryen/runtime_api/block_builder_impl.hpp"
-#include "runtime/binaryen/runtime_api/core_impl.hpp"
-#include "runtime/binaryen/runtime_api/finality_impl.hpp"
-#include "runtime/binaryen/runtime_api/metadata_impl.hpp"
-#include "runtime/binaryen/runtime_api/offchain_worker_impl.hpp"
-#include "runtime/binaryen/runtime_api/parachain_host_impl.hpp"
-#include "runtime/binaryen/runtime_api/tagged_transaction_queue_impl.hpp"
-#include "runtime/base/storage_wasm_provider.hpp"
-#include "runtime/base/trie_storage_provider_impl.hpp"
+
 #include "storage/changes_trie/impl/storage_changes_tracker_impl.hpp"
 #include "storage/leveldb/leveldb.hpp"
 #include "storage/predefined_keys.hpp"
 #include "storage/trie/impl/trie_storage_backend_impl.hpp"
 #include "storage/trie/impl/trie_storage_impl.hpp"
-#include "storage/trie/polkadot_trie/polkadot_node.hpp"
-#include "storage/trie/polkadot_trie/polkadot_trie_factory_impl.hpp"
-#include "storage/trie/serialization/polkadot_codec.hpp"
+#include "storage/trie/supergenius_trie/supergenius_node.hpp"
+#include "storage/trie/supergenius_trie/supergenius_trie_factory_impl.hpp"
+#include "storage/trie/serialization/supergenius_codec.hpp"
 #include "storage/trie/serialization/trie_serializer_impl.hpp"
 #include "transaction_pool/impl/pool_moderator_impl.hpp"
 #include "transaction_pool/impl/transaction_pool_impl.hpp"
@@ -117,94 +107,7 @@ namespace sgns::injector {
     initialized = std::make_shared<network::PeerList>(cfg.getBootNodes());
     return initialized.value();
   }
-
-  template <typename Injector>
-  sptr<api::ApiService> get_jrpc_api_service(const Injector &injector) {
-    static auto initialized =
-        boost::optional<sptr<api::ApiService>>(boost::none);
-    if (initialized) {
-      return initialized.value();
-    }
-    auto app_state_manager =
-        injector
-            .template create<std::shared_ptr<application::AppStateManager>>();
-    auto rpc_thread_pool =
-        injector.template create<std::shared_ptr<api::RpcThreadPool>>();
-    std::vector<std::shared_ptr<api::Listener>> listeners{
-        injector.template create<std::shared_ptr<api::HttpListenerImpl>>(),
-        injector.template create<std::shared_ptr<api::WsListenerImpl>>(),
-    };
-    auto server = injector.template create<std::shared_ptr<api::JRpcServer>>();
-    std::vector<std::shared_ptr<api::JRpcProcessor>> processors{
-        injector
-            .template create<std::shared_ptr<api::state::StateJrpcProcessor>>(),
-        injector.template create<
-            std::shared_ptr<api::author::AuthorJRpcProcessor>>(),
-        injector.template create<
-            std::shared_ptr<api::chain::ChainJrpcProcessor>>()};
-    initialized =
-        std::make_shared<api::ApiService>(std::move(app_state_manager),
-                                          std::move(rpc_thread_pool),
-                                          std::move(listeners),
-                                          std::move(server),
-                                          processors);
-    return initialized.value();
-  }
-
-  // jrpc api listener (over HTTP) getter
-  template <typename Injector>
-  sptr<api::HttpListenerImpl> get_jrpc_api_http_listener(
-      const Injector &injector,
-      const boost::asio::ip::tcp::endpoint &endpoint) {
-    static auto initialized =
-        boost::optional<sptr<api::HttpListenerImpl>>(boost::none);
-    if (initialized) {
-      return initialized.value();
-    }
-
-    auto app_state_manager =
-        injector.template create<sptr<application::AppStateManager>>();
-
-    auto context = injector.template create<sptr<api::RpcContext>>();
-
-    api::HttpListenerImpl::Configuration listener_config;
-    listener_config.endpoint = endpoint;
-
-    auto &&http_session_config =
-        injector.template create<api::HttpSession::Configuration>();
-
-    initialized = std::make_shared<api::HttpListenerImpl>(
-        app_state_manager, context, listener_config, http_session_config);
-    return initialized.value();
-  }
-
-  // jrpc api listener (over Websockets) getter
-  template <typename Injector>
-  sptr<api::WsListenerImpl> get_jrpc_api_ws_listener(
-      const Injector &injector,
-      const boost::asio::ip::tcp::endpoint &endpoint) {
-    static auto initialized =
-        boost::optional<sptr<api::WsListenerImpl>>(boost::none);
-    if (initialized) {
-      return initialized.value();
-    }
-
-    auto app_state_manager =
-        injector.template create<sptr<application::AppStateManager>>();
-
-    auto context = injector.template create<sptr<api::RpcContext>>();
-
-    api::WsListenerImpl::Configuration listener_config;
-    listener_config.endpoint = endpoint;
-
-    auto &&ws_session_config =
-        injector.template create<api::WsSession::Configuration>();
-
-    initialized = std::make_shared<api::WsListenerImpl>(
-        app_state_manager, context, listener_config, ws_session_config);
-    return initialized.value();
-  }
-
+  
   // block storage getter
   template <typename Injector>
   sptr<blockchain::BlockStorage> get_block_storage(const Injector &injector) {
@@ -231,7 +134,7 @@ namespace sgns::injector {
           if (not db->get(storage::kAuthoritySetKey)) {
             // insert authorities
             auto finality_api =
-                injector.template create<sptr<runtime::Grandpa>>();
+                injector.template create<sptr<runtime::Finality>>();
             const auto &weighted_authorities_res = finality_api->authorities(
                 primitives::BlockId(primitives::BlockNumber{0}));
             BOOST_ASSERT_MSG(weighted_authorities_res,
@@ -239,7 +142,7 @@ namespace sgns::injector {
             const auto &weighted_authorities = weighted_authorities_res.value();
 
             for (const auto authority : weighted_authorities) {
-              spdlog::info("Grandpa authority: {}", authority.id.id.toHex());
+              spdlog::info("Finality authority: {}", authority.id.id.toHex());
             }
 
             verification::finality::VoterSet voters{0};
@@ -250,7 +153,7 @@ namespace sgns::injector {
                             weighted_authority.id.id.toHex(),
                             weighted_authority.weight);
             }
-            BOOST_ASSERT_MSG(voters.size() != 0, "Grandpa voters are empty");
+            BOOST_ASSERT_MSG(voters.size() != 0, "Finality voters are empty");
             auto authorities_put_res =
                 db->put(storage::kAuthoritySetKey,
                         base::Buffer(scale::encode(voters).value()));
@@ -477,25 +380,25 @@ namespace sgns::injector {
   }
 
   template <typename Injector>
-  sptr<primitives::BabeConfiguration> get_production_configuration(
+  sptr<primitives::ProductionConfiguration> get_production_configuration(
       const Injector &injector) {
     static auto initialized =
-        boost::optional<sptr<primitives::BabeConfiguration>>(boost::none);
+        boost::optional<sptr<primitives::ProductionConfiguration>>(boost::none);
     if (initialized) {
       return *initialized;
     }
 
-    auto production_api = injector.template create<sptr<runtime::BabeApi>>();
+    auto production_api = injector.template create<sptr<runtime::ProductionApi>>();
     auto configuration_res = production_api->configuration();
     if (not configuration_res) {
       base::raise(configuration_res.error());
     }
     auto config = configuration_res.value();
     for (const auto &authority : config.genesis_authorities) {
-      spdlog::debug("Babe authority: {}", authority.id.id.toHex());
+      spdlog::debug("Production authority: {}", authority.id.id.toHex());
     }
     config.leadership_rate.first *= 3;
-    initialized = std::make_shared<primitives::BabeConfiguration>(config);
+    initialized = std::make_shared<primitives::ProductionConfiguration>(config);
     return *initialized;
   };
 
@@ -544,16 +447,16 @@ namespace sgns::injector {
     using namespace boost;  // NOLINT;
 
     // default values for configurations
-    api::RpcThreadPool::Configuration rpc_thread_pool_config{};
-    api::HttpSession::Configuration http_config{};
-    api::WsSession::Configuration ws_config{};
+    // api::RpcThreadPool::Configuration rpc_thread_pool_config{};
+    // api::HttpSession::Configuration http_config{};
+    // api::WsSession::Configuration ws_config{};
     transaction_pool::PoolModeratorImpl::Params pool_moderator_config{};
     transaction_pool::TransactionPool::Limits tp_pool_limits{};
     return di::make_injector(
         // bind configs
-        injector::useConfig(rpc_thread_pool_config),
-        injector::useConfig(http_config),
-        injector::useConfig(ws_config),
+        // injector::useConfig(rpc_thread_pool_config),
+        // injector::useConfig(http_config),
+        // injector::useConfig(ws_config),
         injector::useConfig(pool_moderator_config),
         injector::useConfig(tp_pool_limits),
 
@@ -602,14 +505,14 @@ namespace sgns::injector {
         di::bind<clock::SystemClock>.template to<clock::SystemClockImpl>(),
         di::bind<clock::SteadyClock>.template to<clock::SteadyClockImpl>(),
         di::bind<clock::Timer>.template to<clock::BasicWaitableTimer>(),
-        di::bind<primitives::BabeConfiguration>.to([](auto const &injector) {
+        di::bind<primitives::ProductionConfiguration>.to([](auto const &injector) {
           return get_production_configuration(injector);
         }),
-        di::bind<verification::BabeSynchronizer>.template to<verification::BabeSynchronizerImpl>(),
+        di::bind<verification::ProductionSynchronizer>.template to<verification::ProductionSynchronizerImpl>(),
         di::bind<verification::finality::Environment>.template to<verification::finality::EnvironmentImpl>(),
         di::bind<verification::finality::VoteCryptoProvider>.template to<verification::finality::VoteCryptoProviderImpl>(),
         di::bind<verification::EpochStorage>.template to<verification::EpochStorageImpl>(),
-        di::bind<verification::BlockValidator>.template to<verification::BabeBlockValidator>(),
+        di::bind<verification::BlockValidator>.template to<verification::ProductionBlockValidator>(),
         di::bind<crypto::ED25519Provider>.template to<crypto::ED25519ProviderImpl>(),
         di::bind<crypto::Hasher>.template to<crypto::HasherImpl>(),
         di::bind<crypto::SR25519Provider>.template to<crypto::SR25519ProviderImpl>(),
@@ -617,12 +520,11 @@ namespace sgns::injector {
         di::bind<crypto::Bip39Provider>.template to<crypto::Bip39ProviderImpl>(),
         di::bind<crypto::Pbkdf2Provider>.template to<crypto::Pbkdf2ProviderImpl>(),
         di::bind<crypto::Secp256k1Provider>.template to<crypto::Secp256k1ProviderImpl>(),
-mpl>(),
-mpl>(),
+
         di::bind<runtime::Metadata>.template to<runtime::binaryen::MetadataImpl>(),
-        di::bind<runtime::Grandpa>.template to<runtime::binaryen::GrandpaImpl>(),
+        di::bind<runtime::Finality>.template to<runtime::binaryen::FinalityImpl>(),
         di::bind<runtime::Core>.template to<runtime::binaryen::CoreImpl>(),
-        di::bind<runtime::BabeApi>.template to<runtime::binaryen::BabeApiImpl>(),
+        di::bind<runtime::ProductionApi>.template to<runtime::binaryen::ProductionApiImpl>(),
         di::bind<runtime::BlockBuilder>.template to<runtime::binaryen::BlockBuilderImpl>(),
         di::bind<runtime::TrieStorageProvider>.template to<runtime::TrieStorageProviderImpl>(),
         di::bind<transaction_pool::TransactionPool>.template to<transaction_pool::TransactionPoolImpl>(),

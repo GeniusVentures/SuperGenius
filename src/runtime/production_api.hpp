@@ -18,7 +18,7 @@ namespace sgns::runtime {
     virtual ~ProductionApi() = default;
 
     /**
-     * Get configuration for the babe
+     * Get configuration for the production
      * @return Production configuration
      */
     virtual outcome::result<primitives::ProductionConfiguration> configuration() = 0;

@@ -115,19 +115,19 @@ namespace sgns::injector {
   }
 
   template <typename Injector>
-  sptr<verification::Babe> get_production(const Injector &injector) {
+  sptr<verification::Production> get_production(const Injector &injector) {
     static auto initialized =
-        boost::optional<sptr<verification::BabeImpl>>(boost::none);
+        boost::optional<sptr<verification::ProductionImpl>>(boost::none);
     if (initialized) {
       return *initialized;
     }
 
-    initialized = std::make_shared<verification::BabeImpl>(
-        injector.template create<sptr<verification::BabeLottery>>(),
+    initialized = std::make_shared<verification::ProductionImpl>(
+        injector.template create<sptr<verification::ProductionLottery>>(),
         injector.template create<sptr<verification::BlockExecutor>>(),
         injector.template create<sptr<storage::trie::TrieStorage>>(),
         injector.template create<sptr<verification::EpochStorage>>(),
-        injector.template create<sptr<primitives::BabeConfiguration>>(),
+        injector.template create<sptr<primitives::ProductionConfiguration>>(),
         injector.template create<sptr<authorship::Proposer>>(),
         injector.template create<sptr<blockchain::BlockTree>>(),
         injector.template create<sptr<network::Gossiper>>(),
@@ -163,10 +163,10 @@ namespace sgns::injector {
             [p2p_port{app_config->p2p_port()}](const auto &injector) {
               return get_peer_info(injector, p2p_port);
             }),
-        di::bind<verification::Babe>.to(
+        di::bind<verification::Production>.to(
             [](auto const &inj) { return get_production(inj); }),
-        di::bind<verification::BabeLottery>.template to<verification::BabeLotteryImpl>(),
-        di::bind<network::BabeObserver>.to(
+        di::bind<verification::ProductionLottery>.template to<verification::ProductionLotteryImpl>(),
+        di::bind<network::ProductionObserver>.to(
             [](auto const &inj) { return get_production(inj); }),
         di::bind<verification::finality::RoundObserver>.template to<verification::finality::LauncherImpl>(),
         di::bind<verification::finality::Launcher>.template to<verification::finality::LauncherImpl>(),

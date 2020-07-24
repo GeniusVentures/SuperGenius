@@ -63,7 +63,7 @@ namespace sgns::injector {
               return get_peer_info(injector, p2p_port);
             }),
 
-        di::bind<network::BabeObserver>.template to<verification::SyncingBabeObserver>(),
+        di::bind<network::ProductionObserver>.template to<verification::SyncingProductionObserver>(),
         di::bind<verification::finality::RoundObserver>.template to<verification::finality::SyncingRoundObserver>(),
         // user-defined overrides...
         std::forward<decltype(args)>(args)...);

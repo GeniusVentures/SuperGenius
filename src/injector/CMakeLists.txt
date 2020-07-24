@@ -12,10 +12,10 @@ target_link_libraries(application_injector
     api_jrpc_server
     state_api_service
     trie_storage
-    polkadot_trie
-    polkadot_trie_factory
+    supergenius_trie
+    supergenius_trie_factory
     trie_serializer
-    polkadot_codec
+    supergenius_codec
     changes_tracker
     chain_api_service
     production

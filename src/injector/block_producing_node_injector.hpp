@@ -44,10 +44,10 @@ namespace sgns::injector {
               return get_peer_info(injector, p2p_port);
             }),
 
-        di::bind<verification::Babe>.to(
+        di::bind<verification::Production>.to(
             [](auto const &inj) { return get_production(inj); }),
-        di::bind<verification::BabeLottery>.template to<verification::BabeLotteryImpl>(),
-        di::bind<network::BabeObserver>.to(
+        di::bind<verification::ProductionLottery>.template to<verification::ProductionLotteryImpl>(),
+        di::bind<network::ProductionObserver>.to(
             [](auto const &inj) { return get_production(inj); }),
 
         di::bind<verification::finality::RoundObserver>.template to<verification::finality::SyncingRoundObserver>(),
