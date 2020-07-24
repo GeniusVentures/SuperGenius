@@ -8,3 +8,5 @@ target_link_libraries(api_service
     app_state_manager
     rpc_thread_pool
     )
+
+add_subdirectory(author)
