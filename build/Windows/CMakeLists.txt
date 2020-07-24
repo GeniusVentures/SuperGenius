@@ -131,6 +131,9 @@ set(_ed25519_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/ed25519/include")
 
 set(_FINDPACKAGE_BOOST_DI_DIR "${_THIRDPARTY_BUILD_DIR}/Boost.DI/lib/cmake/Boost.DI")
 
+# Set RapidJSON config path
+set(_FINDPACKAGE_RapidJSON_CONFIG_DIR "${_THIRDPARTY_BUILD_DIR}/rapidjson/lib/cmake/RapidJSON")
+
 ExternalProject_Add(SuperGenius
   PREFIX SuperGenius
   SOURCE_DIR "${CMAKE_SOURCE_DIR}/../../../SuperGenius"      
@@ -165,6 +168,7 @@ ExternalProject_Add(SuperGenius
         -Dsr25519_DIR:PATH=${_FINDPACKAGE_sr25519_CONFIG_DIR}
         -Dsr25519_INCLUDE_DIR:PATH=${_sr25519_INCLUDE_DIR}
         -Ded25519_INCLUDE_DIR:PATH=${_ed25519_INCLUDE_DIR}
+        -DRapidJSON_DIR:PATH=${_FINDPACKAGE_RapidJSON_CONFIG_DIR}
         -DUSER_ENV_LIBRARY:STRING=userenv
   DEPENDS blocklattice
 )

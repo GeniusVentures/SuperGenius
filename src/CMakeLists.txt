@@ -1,3 +1,4 @@
+add_subdirectory(api)
 add_subdirectory(base)
 add_subdirectory(blockchain)
 add_subdirectory(clock)
