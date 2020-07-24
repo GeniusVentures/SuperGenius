@@ -16,7 +16,7 @@ namespace sgns::api {
         server_(std::move(server)),
         logger_{base::createLogger("Api service")} {
     BOOST_ASSERT(thread_pool_);
-    for ([[maybe_unused]] const auto &listener : listeners_) {
+    for (/*[[maybe_unused]]*/ const auto &listener : listeners_) {
       BOOST_ASSERT(listener != nullptr);
     }
     for (auto &processor : processors) {
