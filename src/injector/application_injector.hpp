@@ -458,16 +458,16 @@ namespace sgns::injector {
     using namespace boost;  // NOLINT;
 
     // default values for configurations
-    // api::RpcThreadPool::Configuration rpc_thread_pool_config{};
-    // api::HttpSession::Configuration http_config{};
-    // api::WsSession::Configuration ws_config{};
+    api::RpcThreadPool::Configuration rpc_thread_pool_config{};
+    api::HttpSession::Configuration http_config{};
+    api::WsSession::Configuration ws_config{};
     transaction_pool::PoolModeratorImpl::Params pool_moderator_config{};
     transaction_pool::TransactionPool::Limits tp_pool_limits{};
     return di::make_injector(
         // bind configs
-        // injector::useConfig(rpc_thread_pool_config),
-        // injector::useConfig(http_config),
-        // injector::useConfig(ws_config),
+        injector::useConfig(rpc_thread_pool_config),
+        injector::useConfig(http_config),
+        injector::useConfig(ws_config),
         injector::useConfig(pool_moderator_config),
         injector::useConfig(tp_pool_limits),
 
