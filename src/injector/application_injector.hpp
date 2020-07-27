@@ -18,7 +18,18 @@
 #include <libp2p/injector/host_injector.hpp>
 #include <libp2p/peer/peer_info.hpp>
 #include <outcome/outcome.hpp>
-
+#include "api/service/api_service.hpp"
+#include "api/service/author/author_jrpc_processor.hpp"
+#include "api/service/author/impl/author_api_impl.hpp"
+#include "api/service/chain/chain_jrpc_processor.hpp"
+#include "api/service/chain/impl/chain_api_impl.hpp"
+#include "api/service/state/impl/state_api_impl.hpp"
+#include "api/service/state/state_jrpc_processor.hpp"
+#include "api/transport/impl/http/http_listener_impl.hpp"
+#include "api/transport/impl/http/http_session.hpp"
+#include "api/transport/impl/ws/ws_listener_impl.hpp"
+#include "api/transport/impl/ws/ws_session.hpp"
+#include "api/transport/rpc_thread_pool.hpp"
 
 #include "application/impl/app_state_manager_impl.hpp"
 #include "application/impl/configuration_storage_impl.hpp"
