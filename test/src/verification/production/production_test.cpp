@@ -138,7 +138,7 @@ namespace sgns::primitives {
   {
     return out ;
   }
-  std::ostream &operator<<(std::ostream &out, const  boost::optional<class sgns::base::Blob<32> > &test_struct)
+  std::ostream &operator<<(std::ostream &out, const  boost::optional<Hash256> &test_struct)
   {
     return out ;
   }

@@ -36,6 +36,10 @@ namespace sgns::primitives {
                            const detail::DigestItemCommon &dic) {
     return s;
   }
+  std::ostream &operator<<(std::ostream &s,
+                           const outcome::result<BlockHash> &test_struct) {
+    return s;
+  }
 }  // namespace sgns::primitives
 
 class ProposerTest : public ::testing::Test {

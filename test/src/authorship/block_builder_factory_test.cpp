@@ -23,6 +23,10 @@ namespace sgns::primitives {
                            const outcome::result<void> &test_struct) {
     return s;
   }
+  std::ostream &operator<<(std::ostream &s,
+                           const outcome::result<CheckInherentsResult> &test_struct) {
+    return s;
+  }
 }  // namespace sgns::primitives
 
 class BlockBuilderFactoryTest : public ::testing::Test {
