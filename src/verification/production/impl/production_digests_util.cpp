@@ -59,7 +59,7 @@ namespace sgns::verification {
     for (const auto &log : header.digest) {
       visit_in_place(
           log,
-          [&epoch_digest](const primitives::Consensus &verification) {
+          [&epoch_digest](const primitives::Verification &verification) {
             if (verification.verification_engine_id == primitives::kProductionEngineId) {
               auto verification_log_res =
                   scale::decode<VerificationLog>(verification.data);

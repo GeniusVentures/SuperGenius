@@ -41,9 +41,6 @@ namespace sgns::primitives {
   std::ostream &operator<<(std::ostream &s, const outcome::result<sgns::base::Blob<32>> &test_struct) {
     return s ;
   }
-  std::ostream &operator<<(std::ostream &s, const outcome::result<void> &test_struct) {
-    return s ;
-  }
   
 }  // namespace sgns::primitives
 

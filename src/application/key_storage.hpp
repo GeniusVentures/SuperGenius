@@ -21,7 +21,7 @@ namespace sgns::application {
     virtual crypto::SR25519Keypair getLocalSr25519Keypair() const = 0;
 
     /**
-     * Get the node ed25519 keypair used in GRANDPA consensus
+     * Get the node ed25519 keypair used in finality of verificaiton
      */
     virtual crypto::ED25519Keypair getLocalEd25519Keypair() const = 0;
 
