@@ -31,16 +31,12 @@ using sgns::runtime::BlockBuilderApiMock;
 using sgns::transaction_pool::TransactionPoolMock;
 
 // TODO (kamilsa): workaround unless we bump gtest version to 1.8.1+
-namespace sgns::primitives {
-  std::ostream &operator<<(std::ostream &s,
-                           const detail::DigestItemCommon &dic) {
-    return s;
-  }
-  std::ostream &operator<<(std::ostream &s,
-                           const outcome::result<BlockHash> &test_struct) {
-    return s;
-  }
-}  // namespace sgns::primitives
+
+std::ostream &operator<<(std::ostream &s,
+                        const outcome::result<sgns::primitives::BlockHash> &test_struct) {
+return s;
+}
+
 
 class ProposerTest : public ::testing::Test {
  public:
