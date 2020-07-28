@@ -18,31 +18,31 @@ using sgns::primitives::Extrinsic;
 using sgns::primitives::InherentData;
 using sgns::runtime::BlockBuilderApiMock;
 
-namespace sgns::primitives {
-  std::ostream &operator<<(std::ostream &s,
-                           const outcome::result<void> &test_struct) {
-    return s;
-  }
-  std::ostream &operator<<(std::ostream &s,
-                           const outcome::result<CheckInherentsResult> &test_struct) {
-    return s;
-  }
-  std::ostream &operator<<(std::ostream &s,
-                           const outcome::result<std::vector<Extrinsic>> &test_struct) {
-    return s;
-  }
-  std::ostream &operator<<(std::ostream &s,
-                           const outcome::result<BlockHeader> &test_struct) {
-    return s;
-  }
-  std::ostream &operator<<(std::ostream &s, const outcome::result<boost::variant<ApplyOutcome, ApplyError>> &test_struct) {
-    return s ;
-  }
-  std::ostream &operator<<(std::ostream &s, const outcome::result<sgns::base::Blob<32>> &test_struct) {
-    return s ;
-  }
+
+std::ostream &operator<<(std::ostream &s,
+                          const outcome::result<void> &test_struct) {
+  return s;
+}
+std::ostream &operator<<(std::ostream &s,
+                          const outcome::result<sgns::primitives::CheckInherentsResult> &test_struct) {
+  return s;
+}
+std::ostream &operator<<(std::ostream &s,
+                          const outcome::result<std::vector<sgns::primitives::Extrinsic>> &test_struct) {
+  return s;
+}
+std::ostream &operator<<(std::ostream &s,
+                          const outcome::result<sgns::primitives::BlockHeader> &test_struct) {
+  return s;
+}
+std::ostream &operator<<(std::ostream &s, const outcome::result<boost::variant<sgns::primitives::ApplyOutcome, sgns::primitives::ApplyError>> &test_struct) {
+  return s ;
+}
+std::ostream &operator<<(std::ostream &s, const outcome::result<sgns::base::Blob<32>> &test_struct) {
+  return s ;
+}
   
-}  // namespace sgns::primitives
+
 
 class BlockBuilderTest : public ::testing::Test {
  public:

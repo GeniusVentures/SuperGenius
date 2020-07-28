@@ -1,14 +1,14 @@
 
-# addtest(block_builder_test
-#     block_builder_test.cpp
-#     )
+addtest(block_builder_test
+    block_builder_test.cpp
+    )
 
-# target_link_libraries(block_builder_test
-#     block_builder
-#     blob
-#     )
+target_link_libraries(block_builder_test
+    block_builder
+    blob
+    )
 
-# set_target_properties(block_builder_test PROPERTIES LINK_FLAGS "/FORCE:MULTIPLE")
+set_target_properties(block_builder_test PROPERTIES LINK_FLAGS "/FORCE:MULTIPLE")
 
 addtest(block_builder_factory_test
     block_builder_factory_test.cpp
