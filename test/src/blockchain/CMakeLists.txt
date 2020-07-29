@@ -17,7 +17,7 @@ target_link_libraries(block_tree_test
     block_header_repository
     extrinsic_observer
     )
-
+set_target_properties(block_tree_test PROPERTIES LINK_FLAGS "/FORCE:MULTIPLE")
 # addtest(block_storage_test
 #     block_storage_test.cpp
 #     )
