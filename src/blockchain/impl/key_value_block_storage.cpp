@@ -243,7 +243,11 @@ namespace sgns::blockchain {
       const primitives::BlockHash &hash,
       const primitives::BlockNumber &block_number) {
     // insert justification into the database as a part of BlockData
-    primitives::BlockData block_data{.hash = hash, .justification = j};
+    // primitives::BlockData block_data{.hash = hash, .justification = j};
+     primitives::BlockData block_data;
+     block_data.hash = hash;
+     block_data.justification = j;
+     
     OUTCOME_TRY(putBlockData(block_number, block_data));
     return outcome::success();
   }
