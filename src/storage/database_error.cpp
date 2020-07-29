@@ -26,11 +26,11 @@ OUTCOME_CPP_DEFINE_CATEGORY_3(sgns::storage, DatabaseError, e) {
 
   return "unknown error";
  }
-// namespace sgns::storage{
-//   std::ostream &operator<<(std::ostream &out, enum sgns::storage::DatabaseError const  &test_struct)
-//   {
-//     return out << (int)test_struct; 
-//   }
-// }
+namespace sgns::storage{
+    std::ostream &operator<<(std::ostream &out, const DatabaseError &test_struct)
+    {
+      return out << (int)test_struct; 
+    }
+}
 
 #endif
