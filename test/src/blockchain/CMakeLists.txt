@@ -9,14 +9,14 @@ target_link_libraries(block_header_repository_test
     blockchain_common
     )
 
-# addtest(block_tree_test
-#     block_tree_test.cpp
-#     )
-# target_link_libraries(block_tree_test
-#     block_tree
-#     block_header_repository
-#     extrinsic_observer
-#     )
+addtest(block_tree_test
+    block_tree_test.cpp
+    )
+target_link_libraries(block_tree_test
+    block_tree
+    block_header_repository
+    extrinsic_observer
+    )
 
 # addtest(block_storage_test
 #     block_storage_test.cpp

@@ -20,6 +20,14 @@ add_library(dummy_sync_protocol_client
 target_link_libraries(dummy_sync_protocol_client
     logger
     )
+add_library(extrinsic_observer
+    extrinsic_observer_impl.hpp
+    extrinsic_observer_impl.cpp
+    )
+target_link_libraries(extrinsic_observer
+    logger
+    )
+
 add_library(remote_sync_protocol_client
     remote_sync_protocol_client.cpp
     remote_sync_protocol_client.hpp

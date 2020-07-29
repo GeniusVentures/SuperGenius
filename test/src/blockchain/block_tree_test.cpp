@@ -19,7 +19,7 @@
 
 using namespace sgns;
 using namespace storage;
-using namespace common;
+using namespace base;
 using namespace primitives;
 using namespace blockchain;
 
