@@ -11,7 +11,7 @@
 #define PP_CAT_I(a, b) PP_CAT_II(~, a##b)
 #define PP_CAT_II(p, res) res
 
-#define UNIQUE_NAME(base) PP_CAT(base, __LINE__)
+#define UNIQUE_NAME_(base) PP_CAT(base, __LINE__)
 
 #define EXPECT_OUTCOME_TRUE_void(var, expr) \
   auto &&var = expr;                        \
@@ -35,19 +35,19 @@
   EXPECT_OUTCOME_TRUE_name(var, val, expr)
 
 #define EXPECT_OUTCOME_TRUE_2(val, expr) \
-  EXPECT_OUTCOME_TRUE_3(UNIQUE_NAME(_r), val, expr)
+  EXPECT_OUTCOME_TRUE_3(UNIQUE_NAME_(_r), val, expr)
 
 #define EXPECT_OUTCOME_TRUE_1(expr) \
-  EXPECT_OUTCOME_TRUE_void(UNIQUE_NAME(_v), expr)
+  EXPECT_OUTCOME_TRUE_void(UNIQUE_NAME_(_v), expr)
 
 #define EXPECT_OUTCOME_FALSE_3(var, val, expr) \
   EXPECT_OUTCOME_FALSE_name(var, val, expr)
 
 #define EXPECT_OUTCOME_FALSE_2(val, expr) \
-  EXPECT_OUTCOME_FALSE_3(UNIQUE_NAME(_r), val, expr)
+  EXPECT_OUTCOME_FALSE_3(UNIQUE_NAME_(_r), val, expr)
 
 #define EXPECT_OUTCOME_FALSE_1(expr) \
-  EXPECT_OUTCOME_FALSE_void(UNIQUE_NAME(_v), expr)
+  EXPECT_OUTCOME_FALSE_void(UNIQUE_NAME_(_v), expr)
 
 /**
  * Use this macro in GTEST with 2 arguments to assert that getResult()
@@ -55,10 +55,10 @@
  * EXPECT_OUTCOME_TRUE(val, getResult());
  */
 #define EXPECT_OUTCOME_TRUE(val, expr) \
-  EXPECT_OUTCOME_TRUE_name(UNIQUE_NAME(_r), val, expr)
+  EXPECT_OUTCOME_TRUE_name(UNIQUE_NAME_(_r), val, expr)
 
 #define EXPECT_OUTCOME_FALSE(val, expr) \
-  EXPECT_OUTCOME_FALSE_name(UNIQUE_NAME(_f), val, expr)
+  EXPECT_OUTCOME_FALSE_name(UNIQUE_NAME_(_f), val, expr)
 
 #define EXPECT_OUTCOME_TRUE_MSG_void(var, expr, msg)                       \
   auto &&var = expr;                                                       \
@@ -79,7 +79,7 @@
  * and appends custom error message specified in msg.
  */
 #define EXPECT_OUTCOME_TRUE_MSG_1(expr, msg) \
-  EXPECT_OUTCOME_TRUE_MSG_void(UNIQUE_NAME(_v), expr, msg)
+  EXPECT_OUTCOME_TRUE_MSG_void(UNIQUE_NAME_(_v), expr, msg)
 
 /**
  * Use this macro in GTEST with 3 arguments to assert that
@@ -89,7 +89,7 @@
  * and appends custom error message specified in msg.
  */
 #define EXPECT_OUTCOME_TRUE_MSG(val, expr, msg) \
-  EXPECT_OUTCOME_TRUE_MSG_name(UNIQUE_NAME(_r), val, expr, msg)
+  EXPECT_OUTCOME_TRUE_MSG_name(UNIQUE_NAME_(_r), val, expr, msg)
 
 #define EXPECT_OUTCOME_RAISE_3(var, ecode, statement)                 \
   try {                                                               \
@@ -100,7 +100,7 @@
   }
 
 #define EXPECT_OUTCOME_RAISE(ecode, statement) \
-  EXPECT_OUTCOME_RAISE_3(UNIQUE_NAME(_e), ecode, statement)
+  EXPECT_OUTCOME_RAISE_3(UNIQUE_NAME_(_e), ecode, statement)
 
 #define EXPECT_OUTCOME_ERROR_3(var, ecode, expr) \
   {                                              \
@@ -115,7 +115,7 @@
   }
 
 #define EXPECT_OUTCOME_EQ(expr, value) \
-  EXPECT_OUTCOME_EQ_3(UNIQUE_NAME(_v), expr, value)
+  EXPECT_OUTCOME_EQ_3(UNIQUE_NAME_(_v), expr, value)
 
 #define _OUTCOME_UNIQUE_NAME_GLUE2(x, y) x##y
 #define _OUTCOME_UNIQUE_NAME_GLUE(x, y) _OUTCOME_UNIQUE_NAME_GLUE2(x, y)
