@@ -27,7 +27,51 @@ using prefix::Prefix;
 using testing::_;
 using testing::Return;
 std::ostream &operator<<(std::ostream &s,
-                        const outcome::result<std::vector<class sgns::base::Blob<32>>> &test_struct) {
+                        const outcome::result<std::vector<sgns::base::Blob<32>>> &test_struct) {
+  return s;
+}
+std::ostream &operator<<(std::ostream &s,
+                        const outcome::result<sgns::primitives::Justification> &test_struct) {
+  return s;
+}
+std::ostream &operator<<(std::ostream &s,
+                        const outcome::result<sgns::primitives::BlockData> &test_struct) {
+  return s;
+}
+std::ostream &operator<<(std::ostream &s,
+                        const outcome::result<std::vector<sgns::primitives::Extrinsic>> &test_struct) {
+  return s;
+}
+std::ostream &operator<<(std::ostream &s,
+                        const outcome::result<void> &test_struct) {
+  return s;
+}
+std::ostream &operator<<(std::ostream &s,
+                        const outcome::result<unsigned __int64> &test_struct) {
+  return s;
+}
+std::ostream &operator<<(std::ostream &s,
+                        const outcome::result<sgns::base::Blob<32>> &test_struct) {
+  return s;
+}
+std::ostream &operator<<(std::ostream &s,
+                        const outcome::result<sgns::blockchain::BlockStatus> &test_struct) {
+  return s;
+}
+std::ostream &operator<<(std::ostream &s,
+                        const outcome::result<sgns::primitives::BlockHeader> &test_struct) {
+  return s;
+}
+std::ostream &operator<<(std::ostream &s,
+                        const sgns::primitives::BlockData &test_struct) {
+  return s;
+}
+std::ostream &operator<<(std::ostream &s,
+                        const sgns::blockchain::BlockTreeError &test_struct) {
+  return s;
+}
+std::ostream &operator<<(std::ostream &s,
+                        const sgns::blockchain::BlockTreeImpl::Error &test_struct) {
   return s;
 }
 struct BlockTreeTest : public testing::Test {
