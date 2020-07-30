@@ -1,15 +1,14 @@
 
 #ifndef SUPERGENIUS_SRC_INJECTOR_APPLICATION_INJECTOR_HPP
 #define SUPERGENIUS_SRC_INJECTOR_APPLICATION_INJECTOR_HPP
+#include <boost/di.hpp>
+#include <boost/di/extension/scopes/shared.hpp>
+
 // added to fix "fatal error C1189: #error:  WinSock.h has already been included " in windows build
 // this error is generated in libp2p/injector/host_injector.hpp
 #include <boost/asio.hpp>
 #include <libp2p/host/host.hpp>
 //end
-
-#include <boost/di.hpp>
-#include <boost/di/extension/scopes/shared.hpp>
-
 
 #include <crypto/bip39/impl/bip39_provider_impl.hpp>
 #include <crypto/crypto_store/crypto_store_impl.hpp>
@@ -62,7 +61,7 @@
 #include "crypto/sr25519/sr25519_provider_impl.hpp"
 #include "crypto/vrf/vrf_provider_impl.hpp"
 #include "network/impl/dummy_sync_protocol_client.hpp"
-// #include "network/impl/extrinsic_observer_impl.hpp"
+#include "network/impl/extrinsic_observer_impl.hpp"
 #include "network/impl/gossiper_broadcast.hpp"
 #include "network/impl/remote_sync_protocol_client.hpp"
 #include "network/impl/router_libp2p.hpp"
@@ -96,7 +95,7 @@ namespace sgns::injector {
 
   template <typename C>
   auto useConfig(C c) {
-    return boost::di::bind<std::decay_t<C>>().template to(
+    return boost::di::bind<std::decay_t<C>>()./*template */to(
         std::move(c))[boost::di::override];
   }
 
@@ -267,7 +266,7 @@ namespace sgns::injector {
       return initialized.value();
     }
     auto factory =
-        injector.template create<sptr<storage::trie::PolkadotTrieFactory>>();
+        injector.template create<sptr<storage::trie::SuperGeniusTrieFactory>>();
     auto codec = injector.template create<sptr<storage::trie::Codec>>();
     auto serializer =
         injector.template create<sptr<storage::trie::TrieSerializer>>();
@@ -426,8 +425,8 @@ namespace sgns::injector {
         injector.template create<sptr<crypto::ED25519Provider>>();
     auto sr25519_provider =
         injector.template create<sptr<crypto::SR25519Provider>>();
-    auto secp256k1_provider =
-        injector.template create<sptr<crypto::Secp256k1Provider>>();
+    // auto secp256k1_provider =
+    //     injector.template create<sptr<crypto::Secp256k1Provider>>();
     auto bip39_provider =
         injector.template create<sptr<crypto::Bip39Provider>>();
     auto random_generator = injector.template create<sptr<crypto::CSPRNG>>();
@@ -435,7 +434,7 @@ namespace sgns::injector {
     auto crypto_store =
         std::make_shared<crypto::CryptoStoreImpl>(std::move(ed25519_provider),
                                                   std::move(sr25519_provider),
-                                                  std::move(secp256k1_provider),
+                                                  // std::move(secp256k1_provider),
                                                   std::move(bip39_provider),
                                                   std::move(random_generator));
 
@@ -465,14 +464,14 @@ namespace sgns::injector {
     transaction_pool::TransactionPool::Limits tp_pool_limits{};
     return di::make_injector(
         // bind configs
-        injector::useConfig(rpc_thread_pool_config),
-        injector::useConfig(http_config),
+        injector::useConfig<api::RpcThreadPool::Configuration>(rpc_thread_pool_config),
+        injector::useConfig<api::HttpSession::Configuration>(http_config),
         injector::useConfig(ws_config),
         injector::useConfig(pool_moderator_config),
         injector::useConfig(tp_pool_limits),
 
         // inherit host injector
-        libp2p::injector::makeHostInjector(
+        libp2p::injector::makeHostInjector<BOOST_DI_CFG>(
             libp2p::injector::useSecurityAdaptors<
                 libp2p::security::Secio>()[di::override]),
 
@@ -530,14 +529,14 @@ namespace sgns::injector {
         di::bind<crypto::VRFProvider>.template to<crypto::VRFProviderImpl>(),
         di::bind<crypto::Bip39Provider>.template to<crypto::Bip39ProviderImpl>(),
         di::bind<crypto::Pbkdf2Provider>.template to<crypto::Pbkdf2ProviderImpl>(),
-        di::bind<crypto::Secp256k1Provider>.template to<crypto::Secp256k1ProviderImpl>(),
+        // di::bind<crypto::Secp256k1Provider>.template to<crypto::Secp256k1ProviderImpl>(),
 
-        di::bind<runtime::Metadata>.template to<runtime::binaryen::MetadataImpl>(),
-        di::bind<runtime::Finality>.template to<runtime::binaryen::FinalityImpl>(),
-        di::bind<runtime::Core>.template to<runtime::binaryen::CoreImpl>(),
-        di::bind<runtime::ProductionApi>.template to<runtime::binaryen::ProductionApiImpl>(),
-        di::bind<runtime::BlockBuilder>.template to<runtime::binaryen::BlockBuilderImpl>(),
-        di::bind<runtime::TrieStorageProvider>.template to<runtime::TrieStorageProviderImpl>(),
+        // di::bind<runtime::Metadata>.template to<runtime::binaryen::MetadataImpl>(),
+        // di::bind<runtime::Finality>.template to<runtime::binaryen::FinalityImpl>(),
+        // di::bind<runtime::Core>.template to<runtime::binaryen::CoreImpl>(),
+        // di::bind<runtime::ProductionApi>.template to<runtime::binaryen::ProductionApiImpl>(),
+        // di::bind<runtime::BlockBuilder>.template to<runtime::binaryen::BlockBuilderImpl>(),
+        // di::bind<runtime::TrieStorageProvider>.template to<runtime::TrieStorageProviderImpl>(),
         di::bind<transaction_pool::TransactionPool>.template to<transaction_pool::TransactionPoolImpl>(),
         di::bind<transaction_pool::PoolModerator>.template to<transaction_pool::PoolModeratorImpl>(),
         di::bind<storage::changes_trie::ChangesTracker>.template to<storage::changes_trie::StorageChangesTrackerImpl>(),
@@ -547,10 +546,10 @@ namespace sgns::injector {
             [](auto const &inj) { return get_trie_storage_impl(inj); }),
         di::bind<storage::trie::TrieStorage>.to(
             [](auto const &inj) { return get_trie_storage(inj); }),
-        di::bind<storage::trie::PolkadotTrieFactory>.template to<storage::trie::PolkadotTrieFactoryImpl>(),
-        di::bind<storage::trie::Codec>.template to<storage::trie::PolkadotCodec>(),
+        di::bind<storage::trie::SuperGeniusTrieFactory>.template to<storage::trie::SuperGeniusTrieFactoryImpl>(),
+        di::bind<storage::trie::Codec>.template to<storage::trie::SuperGeniusCodec>(),
         di::bind<storage::trie::TrieSerializer>.template to<storage::trie::TrieSerializerImpl>(),
-        di::bind<runtime::WasmProvider>.template to<runtime::StorageWasmProvider>(),
+        // di::bind<runtime::WasmProvider>.template to<runtime::StorageWasmProvider>(),
         di::bind<application::ConfigurationStorage>.to(
             [genesis_path](const auto &injector) {
               return get_configuration_storage(genesis_path, injector);

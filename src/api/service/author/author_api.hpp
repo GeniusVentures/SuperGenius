@@ -12,7 +12,7 @@ namespace sgns::api {
     using Hash256 = base::Hash256;
     using Buffer = base::Buffer;
     using Extrinsic = primitives::Extrinsic;
-    using Metadata = primitives::Metadata;
+    // using Metadata = primitives::Metadata;
     using Subscriber = primitives::Subscriber;
     using SubscriptionId = primitives::SubscriptionId;
     using ExtrinsicKey = primitives::ExtrinsicKey;

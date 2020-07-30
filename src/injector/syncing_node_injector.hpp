@@ -49,7 +49,7 @@ namespace sgns::injector {
                                Ts &&... args) {
     using namespace boost;  // NOLINT;
 
-    return di::make_injector(
+    return di::make_injector<BOOST_DI_CFG>(
 
         // inherit application injector
         makeApplicationInjector(app_config->genesis_path(),

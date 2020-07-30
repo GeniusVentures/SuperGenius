@@ -143,7 +143,7 @@ namespace sgns::injector {
                             Ts &&... args) {
     using namespace boost;  // NOLINT;
 
-    return di::make_injector(
+    return di::make_injector<BOOST_DI_CFG>(
         makeApplicationInjector(app_config->genesis_path(),
                                 app_config->leveldb_path(),
                                 app_config->rpc_http_endpoint(),

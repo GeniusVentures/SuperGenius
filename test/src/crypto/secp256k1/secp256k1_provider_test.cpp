@@ -37,8 +37,8 @@ class Secp256k1ProviderTest : public ::testing::Test {
   ExpandedPublicKey secp_public_key{};
   CompressedPublicKey secp_public_key_compressed{};
 
-  std::shared_ptr<Secp256k1Provider> secp256K1_provider =
-      std::make_shared<Secp256k1ProviderImpl>();
+  // std::shared_ptr<Secp256k1Provider> secp256K1_provider =
+  //     std::make_shared<Secp256k1ProviderImpl>();
 
   void SetUp() override {
     std::copy_n(secp_message_vector.begin(),

@@ -26,10 +26,10 @@ namespace sgns::primitives {
   };
   // TODO(yuraz): PRE-221 investigate and implement Session primitive
 
-  /**
-   * @brief Metadata primitive
-   */
-  using Metadata = boost::optional<std::shared_ptr<Session>>;
+  // /**
+  //  * @brief Metadata primitive
+  //  */
+  // using Metadata = boost::optional<std::shared_ptr<Session>>;
 
   /**
    * @brief Subscriber primitive

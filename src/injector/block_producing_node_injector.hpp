@@ -21,7 +21,7 @@ namespace sgns::injector {
     using namespace boost;  // NOLINT;
     assert(app_config);
 
-    return di::make_injector(
+    return di::make_injector<BOOST_DI_CFG>(
 
         // inherit application injector
         makeApplicationInjector(app_config->genesis_path(),
