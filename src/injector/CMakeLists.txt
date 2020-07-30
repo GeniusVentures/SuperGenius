@@ -68,13 +68,13 @@ target_link_libraries(syncing_node_injector
     syncing_production_observer
     )
 
-# add_library(validating_node_injector
-#     validating_node_injector.cpp
-#     )
-# target_link_libraries(validating_node_injector
-#     application_injector
-#     finality_dummy
-#     )
+add_library(validating_node_injector
+    validating_node_injector.cpp
+    )
+target_link_libraries(validating_node_injector
+    application_injector
+    finality_dummy
+    )
 
 # add_library(block_producing_node_injector
 #     block_producing_node_injector.cpp
