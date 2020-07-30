@@ -76,11 +76,11 @@ target_link_libraries(validating_node_injector
     finality_dummy
     )
 
-# add_library(block_producing_node_injector
-#     block_producing_node_injector.cpp
-#     )
-# target_link_libraries(block_producing_node_injector
-#     application_injector
-#     syncing_round_observer
-#     finality_dummy
-#     )
+add_library(block_producing_node_injector
+    block_producing_node_injector.cpp
+    )
+target_link_libraries(block_producing_node_injector
+    application_injector
+    syncing_round_observer
+    finality_dummy
+    )
