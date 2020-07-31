@@ -1,6 +1,6 @@
 
-#ifndef KAGOME_API_JRPC_SERVER_IMPL_HPP
-#define KAGOME_API_JRPC_SERVER_IMPL_HPP
+#ifndef SUPERGENIUS_API_JRPC_SERVER_IMPL_HPP
+#define SUPERGENIUS_API_JRPC_SERVER_IMPL_HPP
 
 #include <jsonrpc-lean/server.h>
 
@@ -37,4 +37,4 @@ namespace sgns::api {
 
 }  // namespace sgns::api
 
-#endif  // KAGOME_API_JRPC_SERVER_IMPL_HPP
+#endif  // SUPERGENIUS_API_JRPC_SERVER_IMPL_HPP

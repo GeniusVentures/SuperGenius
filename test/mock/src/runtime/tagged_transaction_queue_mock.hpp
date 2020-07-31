@@ -1,6 +1,6 @@
 
-#ifndef KAGOME_TAGGED_TRANSACTION_QUEUE_MOCK_HPP
-#define KAGOME_TAGGED_TRANSACTION_QUEUE_MOCK_HPP
+#ifndef SUPERGENIUS_TAGGED_TRANSACTION_QUEUE_MOCK_HPP
+#define SUPERGENIUS_TAGGED_TRANSACTION_QUEUE_MOCK_HPP
 
 #include "runtime/tagged_transaction_queue.hpp"
 
@@ -14,4 +14,4 @@ namespace sgns::runtime {
   };
 }  // namespace sgns::runtime
 
-#endif  // KAGOME_TAGGED_TRANSACTION_QUEUE_MOCK_HPP
+#endif  // SUPERGENIUS_TAGGED_TRANSACTION_QUEUE_MOCK_HPP

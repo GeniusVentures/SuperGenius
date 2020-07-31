@@ -1,9 +1,9 @@
-add_library(app_state_manager
-    impl/app_state_manager_impl.cpp
-    )
-target_link_libraries(app_state_manager
-    logger
-    )
+# add_library(app_state_manager
+#     impl/app_state_manager_impl.cpp
+#     )
+# target_link_libraries(app_state_manager
+#     logger
+#     )
 add_library(local_key_storage
     impl/local_key_storage.cpp
     )
