@@ -4,6 +4,19 @@
 # target_link_libraries(app_state_manager
 #     logger
 #     )
+add_library(config_reader_error
+    impl/config_reader/error.cpp
+    impl/config_reader/error.hpp
+    )
+target_link_libraries(config_reader_error
+    outcome
+    )
+add_library(app_config_impl
+    impl/app_config_impl.cpp
+    )
+target_link_libraries(app_config_impl
+    Boost::program_options
+    )
 add_library(local_key_storage
     impl/local_key_storage.cpp
     )
