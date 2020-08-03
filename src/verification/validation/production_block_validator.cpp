@@ -18,7 +18,7 @@ OUTCOME_CPP_DEFINE_CATEGORY_3(sgns::verification,
     case E::NO_AUTHORITIES:
       return "no authorities are provided for the validation";
     case E::INVALID_SIGNATURE:
-      return "SR25519 signature, which is in BABE header, is invalid";
+      return "SR25519 signature, which is in PRODUCTION header, is invalid";
     case E::INVALID_VRF:
       return "VRF value and output are invalid";
     case E::TWO_BLOCKS_IN_SLOT:
@@ -77,7 +77,7 @@ namespace sgns::verification {
     log_->debug("Validates block signed by authority: {}",
                 authority_id.id.toHex());
 
-    // get BABE-specific digests, which must be inside of this block
+    // get PRODUCTION-specific digests, which must be inside of this block
     OUTCOME_TRY(production_digests, getProductionDigests(header));
     auto [seal, production_header] = production_digests;
 

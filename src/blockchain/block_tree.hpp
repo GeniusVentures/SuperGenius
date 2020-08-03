@@ -18,7 +18,7 @@ namespace sgns::blockchain {
    * Storage for blocks, which has a form of tree; it serves two functions:
    *    - keep tracking of all finalized blocks (they are kept in the
    *      non-volatile storage)
-   *    - work with blocks, which participate in the current round of BABE block
+   *    - work with blocks, which participate in the current round of PRODUCTION block
    *      production (handling forks, pruning the blocks, resolving child-parent
    *      relations, etc)
    */

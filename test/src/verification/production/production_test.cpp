@@ -270,10 +270,10 @@ ACTION_P(CheckBlockHeader, expected_block_header) {
 
 
 /**
- * @given BABE production
+ * @given PRODUCTION production
  * @when running it in epoch with two slots @and out node is a leader in one of
  * them
- * @then block is emitted in the leader slot @and after two slots BABE moves to
+ * @then block is emitted in the leader slot @and after two slots PRODUCTION moves to
  * the next epoch
  */
 TEST_F(ProductionTest, Success) {

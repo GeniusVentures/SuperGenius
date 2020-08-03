@@ -121,7 +121,7 @@ namespace sgns::api {
      */
     void reportError(boost::system::error_code ec, std::string_view message);
 
-    static constexpr std::string_view kServerName = "Kagome";
+    static constexpr std::string_view kServerName = "SuperGenius";
 
     /// Strand to ensure the connection's handlers are not called concurrently.
     boost::asio::strand<boost::asio::io_context::executor_type> strand_;

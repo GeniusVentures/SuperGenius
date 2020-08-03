@@ -24,7 +24,7 @@ namespace sgns::crypto {
 
 namespace sgns::verification {
   /**
-   * Validation of blocks in BABE system. Based on the algorithm described here:
+   * Validation of blocks in PRODUCTION system. Based on the algorithm described here:
   */
   class ProductionBlockValidator : public BlockValidator {
    public:

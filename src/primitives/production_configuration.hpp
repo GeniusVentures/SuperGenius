@@ -15,9 +15,9 @@ namespace sgns::primitives {
   using ProductionDuration = ProductionClock::Duration;
   using Randomness = base::Blob<crypto::constants::sr25519::vrf::OUTPUT_SIZE>;
 
-  /// Configuration data used by the BABE verification engine.
+  /// Configuration data used by the PRODUCTION verification engine.
   struct ProductionConfiguration {
-    /// The slot duration in milliseconds for BABE. Currently, only
+    /// The slot duration in milliseconds for PRODUCTION. Currently, only
     /// the value provided by this type at genesis will be used.
     ///
     /// Dynamic slot duration may be supported in the future.

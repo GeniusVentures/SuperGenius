@@ -39,3 +39,10 @@ target_link_libraries(configuration_storage
     sr25519_types
     config_reader_error
     )
+add_library(block_producing_node_application
+    impl/block_producing_node_application.cpp
+    )
+target_link_libraries(block_producing_node_application
+    block_producing_node_injector
+    blob
+    )

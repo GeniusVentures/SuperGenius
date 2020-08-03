@@ -16,7 +16,7 @@ namespace sgns::application {
     virtual ~KeyStorage() = default;
 
     /**
-     * Get the node sr25519 keypair, which is used, for example, in BABE
+     * Get the node sr25519 keypair, which is used, for example, in PRODUCTION
      */
     virtual crypto::SR25519Keypair getLocalSr25519Keypair() const = 0;
 
