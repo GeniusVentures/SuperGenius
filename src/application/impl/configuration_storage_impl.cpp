@@ -78,8 +78,8 @@ namespace sgns::application {
       OUTCOME_TRY(peer_id_base58, ensure(multiaddr.getPeerId()));
 
       OUTCOME_TRY(peer_id, libp2p::peer::PeerId::fromBase58(peer_id_base58));
-      libp2p::peer::PeerInfo info{.id = std::move(peer_id),
-                                  .addresses = {std::move(multiaddr)}};
+      libp2p::peer::PeerInfo info{/*.id =*/ std::move(peer_id),
+                                  /*.addresses =*/ {std::move(multiaddr)}};
       boot_nodes_.peers.push_back(info);
     }
     return outcome::success();

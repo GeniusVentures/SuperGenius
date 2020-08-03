@@ -28,3 +28,14 @@ target_link_libraries(local_key_storage
     ed25519_types
     p2p::p2p_crypto_key
     )
+add_library(configuration_storage
+    impl/configuration_storage_impl.cpp
+    )
+target_link_libraries(configuration_storage
+    Boost::filesystem
+    p2p::p2p_multiaddress
+    p2p::p2p_peer_id
+    buffer
+    sr25519_types
+    config_reader_error
+    )
