@@ -1,9 +1,9 @@
-# add_library(app_state_manager
-#     impl/app_state_manager_impl.cpp
-#     )
-# target_link_libraries(app_state_manager
-#     logger
-#     )
+add_library(app_state_manager
+    impl/app_state_manager_impl.cpp
+    )
+target_link_libraries(app_state_manager
+    logger
+    )
 add_library(config_reader_error
     impl/config_reader/error.cpp
     impl/config_reader/error.hpp
@@ -39,10 +39,10 @@ target_link_libraries(configuration_storage
     sr25519_types
     config_reader_error
     )
-add_library(block_producing_node_application
-    impl/block_producing_node_application.cpp
-    )
-target_link_libraries(block_producing_node_application
-    block_producing_node_injector
-    blob
-    )
+# add_library(block_producing_node_application
+#     impl/block_producing_node_application.cpp
+#     )
+# target_link_libraries(block_producing_node_application
+#     block_producing_node_injector
+#     blob
+#     )

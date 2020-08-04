@@ -16,6 +16,7 @@ namespace sgns::application {
 
   AppStateManagerImpl::AppStateManagerImpl()
       : logger_(base::createLogger("Application")) {
+        /*
     struct sigaction act {};
     memset(&act, 0, sizeof(act));
     act.sa_handler = shuttingDownSignalsHandler;  // NOLINT
@@ -29,9 +30,11 @@ namespace sgns::application {
     sigaction(SIGTERM, &act, nullptr);
     sigaction(SIGQUIT, &act, nullptr);
     sigprocmask(SIG_UNBLOCK, &act.sa_mask, nullptr);
+    */
   }
 
   AppStateManagerImpl::~AppStateManagerImpl() {
+    /*
     struct sigaction act {};
     memset(&act, 0, sizeof(act));
     act.sa_handler = SIG_DFL;  // NOLINT
@@ -44,6 +47,7 @@ namespace sgns::application {
     sigaction(SIGINT, &act, nullptr);
     sigaction(SIGTERM, &act, nullptr);
     sigaction(SIGQUIT, &act, nullptr);
+    */
   }
 
   void AppStateManagerImpl::reset() {
