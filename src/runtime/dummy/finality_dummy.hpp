@@ -1,5 +1,5 @@
-#ifndef SUPERGENIUS_SRC_RUNTIME_FAKE_GRANDPA_DUMMY_HPP
-#define SUPERGENIUS_SRC_RUNTIME_FAKE_GRANDPA_DUMMY_HPP
+#ifndef SUPERGENIUS_SRC_RUNTIME_FAKE_FINALITY_DUMMY_HPP
+#define SUPERGENIUS_SRC_RUNTIME_FAKE_FINALITY_DUMMY_HPP
 
 #include "application/key_storage.hpp"
 #include "runtime/finality.hpp"
@@ -30,4 +30,4 @@ namespace sgns::runtime::dummy {
   };
 }  // namespace sgns::runtime::dummy
 
-#endif  // SUPERGENIUS_SRC_RUNTIME_FAKE_GRANDPA_DUMMY_HPP
+#endif  // SUPERGENIUS_SRC_RUNTIME_FAKE_FINALITY_DUMMY_HPP

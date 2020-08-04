@@ -475,7 +475,7 @@ namespace sgns::injector {
     initialized = res;
     return res;
   }
-
+/*
   template <typename Injector>
   sptr<primitives::ProductionConfiguration> get_production_configuration(
       const Injector &injector) {
@@ -498,7 +498,7 @@ namespace sgns::injector {
     initialized = std::make_shared<primitives::ProductionConfiguration>(config);
     return *initialized;
   };
-
+*/
   template <class Injector>
   sptr<crypto::CryptoStore> get_crypto_store(std::string_view keystore_path,
                                              const Injector &injector) {
@@ -602,9 +602,9 @@ namespace sgns::injector {
         di::bind<clock::SystemClock>.template to<clock::SystemClockImpl>(),
         di::bind<clock::SteadyClock>.template to<clock::SteadyClockImpl>(),
         di::bind<clock::Timer>.template to<clock::BasicWaitableTimer>(),
-        di::bind<primitives::ProductionConfiguration>.to([](auto const &injector) {
-          return get_production_configuration(injector);
-        }),
+        // di::bind<primitives::ProductionConfiguration>.to([](auto const &injector) {
+        //   return get_production_configuration(injector);
+        // }),
         di::bind<verification::ProductionSynchronizer>.template to<verification::ProductionSynchronizerImpl>(),
         di::bind<verification::finality::Environment>.template to<verification::finality::EnvironmentImpl>(),
         di::bind<verification::finality::VoteCryptoProvider>.template to<verification::finality::VoteCryptoProviderImpl>(),
