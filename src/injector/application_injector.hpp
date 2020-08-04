@@ -117,7 +117,94 @@ namespace sgns::injector {
     initialized = std::make_shared<network::PeerList>(cfg.getBootNodes());
     return initialized.value();
   }
-  
+    
+  template <typename Injector>
+  sptr<api::ApiService> get_jrpc_api_service(const Injector &injector) {
+    static auto initialized =
+        boost::optional<sptr<api::ApiService>>(boost::none);
+    if (initialized) {
+      return initialized.value();
+    }
+    auto app_state_manager =
+        injector
+            .template create<std::shared_ptr<application::AppStateManager>>();
+    auto rpc_thread_pool =
+        injector.template create<std::shared_ptr<api::RpcThreadPool>>();
+    std::vector<std::shared_ptr<api::Listener>> listeners{
+        injector.template create<std::shared_ptr<api::HttpListenerImpl>>(),
+        injector.template create<std::shared_ptr<api::WsListenerImpl>>(),
+    };
+    auto server = injector.template create<std::shared_ptr<api::JRpcServer>>();
+    std::vector<std::shared_ptr<api::JRpcProcessor>> processors{
+        injector
+            .template create<std::shared_ptr<api::state::StateJrpcProcessor>>(),
+        injector.template create<
+            std::shared_ptr<api::author::AuthorJRpcProcessor>>(),
+        injector.template create<
+            std::shared_ptr<api::chain::ChainJrpcProcessor>>()};
+    initialized =
+        std::make_shared<api::ApiService>(std::move(app_state_manager),
+                                          std::move(rpc_thread_pool),
+                                          std::move(listeners),
+                                          std::move(server),
+                                          processors);
+    return initialized.value();
+  }
+
+    // jrpc api listener (over HTTP) getter
+  template <typename Injector>
+  sptr<api::HttpListenerImpl> get_jrpc_api_http_listener(
+      const Injector &injector,
+      const boost::asio::ip::tcp::endpoint &endpoint) {
+    static auto initialized =
+        boost::optional<sptr<api::HttpListenerImpl>>(boost::none);
+    if (initialized) {
+      return initialized.value();
+    }
+
+    auto app_state_manager =
+        injector.template create<sptr<application::AppStateManager>>();
+
+    auto context = injector.template create<sptr<api::RpcContext>>();
+
+    api::HttpListenerImpl::Configuration listener_config;
+    listener_config.endpoint = endpoint;
+
+    auto &&http_session_config =
+        injector.template create<api::HttpSession::Configuration>();
+
+    initialized = std::make_shared<api::HttpListenerImpl>(
+        app_state_manager, context, listener_config, http_session_config);
+    return initialized.value();
+  }
+
+  // jrpc api listener (over Websockets) getter
+  template <typename Injector>
+  sptr<api::WsListenerImpl> get_jrpc_api_ws_listener(
+      const Injector &injector,
+      const boost::asio::ip::tcp::endpoint &endpoint) {
+    static auto initialized =
+        boost::optional<sptr<api::WsListenerImpl>>(boost::none);
+    if (initialized) {
+      return initialized.value();
+    }
+
+    auto app_state_manager =
+        injector.template create<sptr<application::AppStateManager>>();
+
+    auto context = injector.template create<sptr<api::RpcContext>>();
+
+    api::WsListenerImpl::Configuration listener_config;
+    listener_config.endpoint = endpoint;
+
+    auto &&ws_session_config =
+        injector.template create<api::WsSession::Configuration>();
+
+    initialized = std::make_shared<api::WsListenerImpl>(
+        app_state_manager, context, listener_config, ws_session_config);
+    return initialized.value();
+  }
+
   // block storage getter
   template <typename Injector>
   sptr<blockchain::BlockStorage> get_block_storage(const Injector &injector) {
@@ -215,7 +302,7 @@ namespace sgns::injector {
 
     auto last_finalized_block_res = storage->getLastFinalizedBlockHash();
 
-    const auto block_id =
+    /*const*/ auto block_id =
         last_finalized_block_res.has_value()
             ? primitives::BlockId{last_finalized_block_res.value()}
             : primitives::BlockId{0};

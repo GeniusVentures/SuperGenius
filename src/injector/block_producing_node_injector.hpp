@@ -55,9 +55,9 @@ namespace sgns::injector {
             [app_config](const auto &injector) {
               return get_key_storage(app_config->keystore_path(), injector);
             }),
-        di::bind<runtime::Finality>.template to<runtime::dummy::FinalityDummy>()
+        di::bind<runtime::Finality>./*template */to<runtime::dummy::FinalityDummy>()
             [boost::di::override],
-        di::bind<crypto::CryptoStore>.template to(
+        di::bind<crypto::CryptoStore>./*template */to(
             [app_config](const auto &injector) {
               return get_crypto_store(app_config->keystore_path(), injector);
             })[boost::di::override],
