@@ -53,3 +53,10 @@ target_link_libraries(validating_node_application
     validating_node_injector
     blob
     )
+# add_library(syncing_node_application
+#     impl/syncing_node_application.cpp
+#     )
+# target_link_libraries(syncing_node_application
+#     syncing_node_injector
+#     blob
+#     )
