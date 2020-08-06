@@ -1,0 +1,9 @@
+add_library(binaryen_wasm_memory
+    wasm_memory_impl.hpp
+    wasm_memory_impl.cpp
+    )
+target_link_libraries(binaryen_wasm_memory
+    buffer
+    binaryen::binaryen
+    )
+sgns_install(binaryen_wasm_memory)
