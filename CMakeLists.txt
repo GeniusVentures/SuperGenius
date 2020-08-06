@@ -77,6 +77,7 @@ find_package(ipfs-lite-cpp CONFIG REQUIRED)
 find_package(ed25519 CONFIG REQUIRED)
 find_package(sr25519 CONFIG REQUIRED)
 find_package(RapidJSON CONFIG REQUIRED)
+find_package(binaryen CONFIG REQUIRED)
 
 option(TESTING "Build tests" ON)
 link_directories(

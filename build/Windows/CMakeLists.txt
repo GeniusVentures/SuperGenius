@@ -96,6 +96,8 @@ set(_FINDPACKAGE_IPFS_LITE_CPP_DIR "${_THIRDPARTY_BUILD_DIR}/ipfs-lite-cpp/cmake
 
 set(_FINDPACKAGE_BOOST_DI_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/Boost.DI/include")
 
+
+
 ExternalProject_Add(blocklattice
   PREFIX blocklattice
   SOURCE_DIR "${CMAKE_SOURCE_DIR}/../../block-lattice-node"  
@@ -132,11 +134,19 @@ set(_ed25519_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/ed25519/include")
 set(_FINDPACKAGE_BOOST_DI_DIR "${_THIRDPARTY_BUILD_DIR}/Boost.DI/lib/cmake/Boost.DI")
 
 # Set RapidJSON config path
+
 set(_FINDPACKAGE_RapidJSON_CONFIG_DIR "${_THIRDPARTY_BUILD_DIR}/rapidjson/lib/cmake/RapidJSON")
 set(_FINDPACKAGE_RapidJSON_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/rapidjson/include")
+
 #set jsonrpc-lean include path
 
 set(_FINDPACKAGE_jsonrpc_lean_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/../../../thirdparty/jsonrpc-lean/include")
+
+# Set config of binaryen
+
+set(_FINDPACKAGE_BINARYEN_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/binaryen/include")
+set(_FINDPACKAGE_BINARYEN_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/binaryen/lib")
+set(_FINDPACKAGE_BINARYEN_DIR "${_THIRDPARTY_BUILD_DIR}/binaryen/lib/cmake/binaryen")
 
 
 ExternalProject_Add(SuperGenius
@@ -174,6 +184,9 @@ ExternalProject_Add(SuperGenius
         -Dsr25519_INCLUDE_DIR:PATH=${_sr25519_INCLUDE_DIR}
         -Ded25519_INCLUDE_DIR:PATH=${_ed25519_INCLUDE_DIR}
         -DRapidJSON_DIR:PATH=${_FINDPACKAGE_RapidJSON_CONFIG_DIR}
+        -Dbinaryen_INCLUDE_DIR:PATH=${_FINDPACKAGE_BINARYEN_INCLUDE_DIR}
+        -Dbinaryen_LIBRARIES:PATH=${_FINDPACKAGE_BINARYEN_LIBRARY_DIR}
+        -Dbinaryen_DIR:PATH=${_FINDPACKAGE_BINARYEN_DIR}
         -DUSER_ENV_LIBRARY:STRING=userenv
   DEPENDS blocklattice
 )
