@@ -25,9 +25,9 @@ namespace sgns::verification::finality {
         },
         [&vote](const EquivocatoryVotingMessage &equivocatory_vote) {
           return equivocatory_vote.first.block_hash() == vote.block_hash()
-                 or equivocatory_vote.second.block_hash() == vote.block_hash();
+                 || equivocatory_vote.second.block_hash() == vote.block_hash();
         });
-    if (not isDuplicate) {
+    if (! isDuplicate) {
       return visit_in_place(
           equivotes,
           // if there is only single vote for that id, make it equivocatory vote

@@ -15,11 +15,11 @@ namespace sgns::verification::finality {
     std::vector<size_t> precommits_weight_with_equivocators(precommits);
 
     for (size_t i = 0; i < voter_set->size(); i++) {
-      if (prevotes[i] == 0 and prevotes_equivocators[i]) {
+      if (prevotes[i] == 0 && prevotes_equivocators[i]) {
         prevotes_weight_with_equivocators[i] +=
             voter_set->voterWeight(i).value();
       }
-      if (precommits[i] == 0 and precommits_equivocators[i]) {
+      if (precommits[i] == 0 && precommits_equivocators[i]) {
         precommits_weight_with_equivocators[i] +=
             voter_set->voterWeight(i).value();
       }
@@ -37,7 +37,7 @@ namespace sgns::verification::finality {
   }
 
   VoteWeight &VoteWeight::operator+=(const VoteWeight &vote) {
-    for (size_t i = 0; i < prevotes.size() and i < vote.prevotes.size(); i++) {
+    for (size_t i = 0; i < prevotes.size() && i < vote.prevotes.size(); i++) {
       prevotes[i] += vote.prevotes[i];
       precommits[i] += vote.precommits[i];
     }

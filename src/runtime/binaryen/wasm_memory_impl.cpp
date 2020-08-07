@@ -79,7 +79,7 @@ namespace sgns::runtime::binaryen {
       if (min_value < 0) {
         return 0;
       }
-      if (value < static_cast<uint32_t>(min_value) and value >= size) {
+      if (value < static_cast<uint32_t>(min_value) && value >= size) {
         min_value = value;
         min_key = key;
       }

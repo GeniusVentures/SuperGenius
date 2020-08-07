@@ -74,7 +74,7 @@ namespace sgns::storage::trie {
         for (size_t i = 0; i < branch->children.size(); i++) {
           auto child = branch->children.at(i);
           if (child) {
-            if (not child->isDummy()) {
+            if (! child->isDummy()) {
               printNode(child, trie, nest_level + 1);
             } else {
               auto fetched_child = trie.retrieveChild(branch, i).value();
@@ -108,7 +108,7 @@ namespace sgns::storage::trie {
 
   template <typename Stream>
   Stream &operator<<(Stream &s, const SuperGeniusTrie &trie) {
-    if (not trie.empty()) {
+    if (! trie.empty()) {
       auto root = trie.getRoot();
       printer_internal::NodePrinter p(s);
       p.printNode(root, trie);

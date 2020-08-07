@@ -72,7 +72,7 @@ namespace sgns::verification {
     switch (strategy) {
       case ExecutionStrategy::GENESIS: {
         auto epoch_digest_res = epoch_storage_->getEpochDescriptor(0);
-        if (not epoch_digest_res) {
+        if (! epoch_digest_res) {
           log_->error("Last epoch digest does not exist for initial epoch");
         }
         auto &&epoch_digest = epoch_digest_res.value();
@@ -193,7 +193,7 @@ namespace sgns::verification {
     bool rewind_slots;
     do {
       if (current_slot_ != 0
-          and current_slot_ % genesis_configuration_->epoch_length == 0) {
+          && current_slot_ % genesis_configuration_->epoch_length == 0) {
         // end of the epoch
         finishEpoch();
       }
@@ -207,7 +207,7 @@ namespace sgns::verification {
       auto now = clock_->now();
 
       rewind_slots = now > next_slot_finish_time_
-                     and (now - next_slot_finish_time_)
+                     && (now - next_slot_finish_time_)
                              > genesis_configuration_->slot_duration;
 
       if (rewind_slots) {
@@ -313,7 +313,7 @@ namespace sgns::verification {
     // calculate production_pre_digest
     auto production_pre_digest_res =
         productionPreDigest(output, authority_index_res.value());
-    if (not production_pre_digest_res) {
+    if (! production_pre_digest_res) {
       return log_->error("cannot propose a block: {}",
                          production_pre_digest_res.error().message());
     }
@@ -332,7 +332,7 @@ namespace sgns::verification {
     if (auto next_epoch_digest_res = getNextEpochDigest(block.header);
         next_epoch_digest_res) {
       log_->info("Obtained next epoch digest");
-      if (not epoch_storage_->addEpochDescriptor(
+      if (! epoch_storage_->addEpochDescriptor(
               current_epoch_.epoch_index + 2, next_epoch_digest_res.value())) {
         log_->error("Could not add nex epoch digest to epoch storage");
       }
@@ -353,7 +353,7 @@ namespace sgns::verification {
       return;
     }
     // add block to the block tree
-    if (auto add_res = block_tree_->addBlock(block); not add_res) {
+    if (auto add_res = block_tree_->addBlock(block); ! add_res) {
       log_->error("Could not add block: {}", add_res.error().message());
       return;
     }
@@ -364,7 +364,7 @@ namespace sgns::verification {
                  current_epoch_.epoch_index + 2);
       if (auto add_epoch_res = epoch_storage_->addEpochDescriptor(
               current_epoch_.epoch_index + 2, next_epoch_digest_res.value());
-          not add_epoch_res) {
+          ! add_epoch_res) {
         log_->error("Could not add next epoch digest. Reason: {}",
                     add_epoch_res.error().message());
       }
@@ -393,7 +393,7 @@ namespace sgns::verification {
     // compute new randomness
     auto next_epoch_digest_res =
         epoch_storage_->getEpochDescriptor(++current_epoch_.epoch_index);
-    if (not next_epoch_digest_res) {
+    if (! next_epoch_digest_res) {
       log_->error("Next epoch digest does not exist for epoch {}",
                   current_epoch_.epoch_index);
       // TODO (kamilsa): uncomment `return;` and remove next line when
@@ -417,7 +417,7 @@ namespace sgns::verification {
     static boost::optional<ProductionSlotNumber> first_production_slot = boost::none;
 
     auto production_digests_res = getProductionDigests(new_header);
-    if (not production_digests_res) {
+    if (! production_digests_res) {
       log_->error("Could not get digests: {}",
                   production_digests_res.error().message());
     }
@@ -425,7 +425,7 @@ namespace sgns::verification {
     auto [_, production_header] = production_digests_res.value();
     auto observed_slot = production_header.slot_number;
 
-    if (not first_production_slot) {
+    if (! first_production_slot) {
       first_production_slot = observed_slot + kSlotTail;
       log_->info("Peer will start produce blocks at slot number: {}",
                  *first_production_slot);
@@ -456,7 +456,7 @@ namespace sgns::verification {
       epoch.epoch_duration = genesis_configuration_->epoch_length;
       auto next_epoch_digest_res =
           epoch_storage_->getEpochDescriptor(epoch.epoch_index);
-      if (not next_epoch_digest_res) {
+      if (! next_epoch_digest_res) {
         log_->error("Could not fetch epoch descriptor for epoch {}. Reason: {}",
                     epoch.epoch_index,
                     next_epoch_digest_res.error().message());

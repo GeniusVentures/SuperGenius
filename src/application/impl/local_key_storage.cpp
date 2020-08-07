@@ -70,7 +70,7 @@ namespace sgns::application {
   outcome::result<void> LocalKeyStorage::loadED25519Keys(
       const boost::property_tree::ptree &tree) {
     auto ed_tree_opt = tree.get_child_optional("ed25519keypair");
-    if (not ed_tree_opt) return ConfigReaderError::MISSING_ENTRY;
+    if (! ed_tree_opt) return ConfigReaderError::MISSING_ENTRY;
     const auto &ed_tree = ed_tree_opt.value();
 
     OUTCOME_TRY(ed_pubkey_str,
@@ -95,7 +95,7 @@ namespace sgns::application {
   outcome::result<void> LocalKeyStorage::loadP2PKeys(
       const boost::property_tree::ptree &tree) {
     auto p2p_tree_opt = tree.get_child_optional("p2p_keypair");
-    if (not p2p_tree_opt) return ConfigReaderError::MISSING_ENTRY;
+    if (! p2p_tree_opt) return ConfigReaderError::MISSING_ENTRY;
     const auto &p2p_tree = p2p_tree_opt.value();
 
     OUTCOME_TRY(p2p_type,
@@ -120,7 +120,7 @@ namespace sgns::application {
     }
 
     auto p2p_keypair_tree_opt = p2p_tree.get_child_optional("keypair");
-    if (not p2p_keypair_tree_opt) return ConfigReaderError::MISSING_ENTRY;
+    if (! p2p_keypair_tree_opt) return ConfigReaderError::MISSING_ENTRY;
     const auto &p2p_keypair_tree = p2p_keypair_tree_opt.value();
 
     OUTCOME_TRY(p2p_public_key_str,

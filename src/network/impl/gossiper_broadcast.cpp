@@ -67,7 +67,7 @@ namespace sgns::network {
       auto read_writer =
           std::make_shared<ScaleMessageReadWriter>(std::move(stream));
       read_writer->write(msg, [this](auto &&res) {
-        if (not res) {
+        if (! res) {
           logger_->error("Could not broadcast, reason: {}",
                          res.error().message());
         }

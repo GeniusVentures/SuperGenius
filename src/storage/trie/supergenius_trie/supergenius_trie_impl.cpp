@@ -259,7 +259,7 @@ namespace sgns::storage::trie {
   }
 
   bool SuperGeniusTrieImpl::contains(const base::Buffer &key) const {
-    if (not root_) {
+    if (! root_) {
       return false;
     }
 

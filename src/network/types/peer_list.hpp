@@ -14,7 +14,7 @@ namespace sgns::network {
       return peers == rhs.peers;
     }
     bool operator!=(const PeerList &rhs) const {
-      return not operator==(rhs);
+      return ! operator==(rhs);
     }
   };
 

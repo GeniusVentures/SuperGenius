@@ -129,13 +129,13 @@ namespace sgns::verification {
             .put(base::uint64_t_to_bytes(production_header.slot_number));
     auto verify_res = vrf_provider_->verify(
         randomness_with_slot, production_header.vrf_output, public_key, threshold);
-    if (not verify_res.is_valid) {
+    if (! verify_res.is_valid) {
       log_->error("VRF proof in block is not valid");
       return false;
     }
 
     // verify threshold
-    if (not verify_res.is_less) {
+    if (! verify_res.is_less) {
       log_->error("VRF value is not less than the threshold");
       return false;
     }

@@ -32,14 +32,14 @@ namespace sgns::api {
     for (const auto &listener : listeners_) {
       auto on_new_session =
           [wp = weak_from_this()](const sptr<Session> &session) mutable {
-            if (auto self = wp.lock(); not self) {
+            if (auto self = wp.lock(); ! self) {
               return;
             }
             session->connectOnRequest(
                 [wp](std::string_view request,
                      std::shared_ptr<Session> session) mutable {
                   auto self = wp.lock();
-                  if (not self) {
+                  if (! self) {
                     return;
                   }
                   // process new request

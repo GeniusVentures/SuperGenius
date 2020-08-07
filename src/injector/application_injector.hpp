@@ -228,7 +228,7 @@ namespace sgns::injector {
         [&db, &injector](const primitives::Block &genesis_block) {
           // handle genesis initialization, which happens when there is not
           // authorities and last completed round in the storage
-          if (not db->get(storage::kAuthoritySetKey)) {
+          if (! db->get(storage::kAuthoritySetKey)) {
             // insert authorities
             auto finality_api =
                 injector.template create<sptr<runtime::Finality>>();
@@ -254,7 +254,7 @@ namespace sgns::injector {
             auto authorities_put_res =
                 db->put(storage::kAuthoritySetKey,
                         base::Buffer(scale::encode(voters).value()));
-            if (not authorities_put_res) {
+            if (! authorities_put_res) {
               BOOST_ASSERT_MSG(false, "Could not insert authorities");
               std::exit(1);
             }
@@ -273,7 +273,7 @@ namespace sgns::injector {
             auto completed_round_put_res =
                 db->put(storage::kSetStateKey,
                         base::Buffer(scale::encode(zero_round).value()));
-            if (not completed_round_put_res) {
+            if (! completed_round_put_res) {
               BOOST_ASSERT_MSG(false, "Could not insert completed round");
               std::exit(1);
             }
@@ -385,17 +385,17 @@ namespace sgns::injector {
     auto trie_storage =
         injector.template create<sptr<storage::trie::TrieStorageImpl>>();
     auto batch = trie_storage->getPersistentBatch();
-    if (not batch) {
+    if (! batch) {
       base::raise(batch.error());
     }
     for (const auto &[key, val] : genesis_raw_configs) {
       spdlog::debug(
           "Key: {}, Val: {}", key.toHex(), val.toHex().substr(0, 200));
-      if (auto res = batch.value()->put(key, val); not res) {
+      if (auto res = batch.value()->put(key, val); ! res) {
         base::raise(res.error());
       }
     }
-    if (auto res = batch.value()->commit(); not res) {
+    if (auto res = batch.value()->commit(); ! res) {
       base::raise(res.error());
     }
 
@@ -487,7 +487,7 @@ namespace sgns::injector {
 
     auto production_api = injector.template create<sptr<runtime::ProductionApi>>();
     auto configuration_res = production_api->configuration();
-    if (not configuration_res) {
+    if (! configuration_res) {
       base::raise(configuration_res.error());
     }
     auto config = configuration_res.value();

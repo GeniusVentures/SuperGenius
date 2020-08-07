@@ -178,7 +178,7 @@ namespace sgns::blockchain {
     // and merge with the new one. During the merge new block data fields have
     // higher priority over the old ones (old ones should be rewritten)
     auto existing_block_data_res = getBlockData(block_data.hash);
-    if (not existing_block_data_res) {
+    if (! existing_block_data_res) {
       to_insert = block_data;
     } else {
       auto existing_data = existing_block_data_res.value();

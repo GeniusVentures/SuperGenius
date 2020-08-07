@@ -46,7 +46,7 @@ namespace sgns::verification {
     auto block_hash = hasher_->blake2b_256(scale::encode(header).value());
 
     // insert block_header if it is missing
-    if (not block_tree_->getBlockHeader(block_hash)) {
+    if (! block_tree_->getBlockHeader(block_hash)) {
       new_block_handler(header);
       logger_->info("Received block header. Number: {}, Hash: {}",
                     header.number,
@@ -54,7 +54,7 @@ namespace sgns::verification {
 
       auto [_, production_header] = getProductionDigests(header).value();
 
-      if (not block_tree_->getBlockHeader(header.parent_hash)) {
+      if (! block_tree_->getBlockHeader(header.parent_hash)) {
         const auto &[last_number, last_hash] = block_tree_->getLastFinalized();
         // we should request blocks between last finalized one and received
         // block
@@ -91,7 +91,7 @@ namespace sgns::verification {
         [self_wp{weak_from_this()},
          next(std::move(next))](const std::vector<primitives::Block> &blocks) {
           auto self = self_wp.lock();
-          if (not self) return;
+          if (! self) return;
 
           if (blocks.empty()) {
             self->logger_->warn("Received empty list of blocks");
@@ -109,7 +109,7 @@ namespace sgns::verification {
                                 back_block_hex);
           }
           for (const auto &block : blocks) {
-            if (auto apply_res = self->applyBlock(block); not apply_res) {
+            if (auto apply_res = self->applyBlock(block); ! apply_res) {
               if (apply_res
                   == outcome::failure(
                       blockchain::BlockTreeError::BLOCK_EXISTS)) {
@@ -151,7 +151,7 @@ namespace sgns::verification {
     //                epoch_storage_->getEpochDescriptor(epoch_index));
     auto this_block_epoch_descriptor_res =
         epoch_storage_->getEpochDescriptor(epoch_index);
-    if (not this_block_epoch_descriptor_res) {  // take authorities and
+    if (! this_block_epoch_descriptor_res) {  // take authorities and
                                                 // randomness
                                                 // from config
       this_block_epoch_descriptor_res = NextEpochDescriptor{

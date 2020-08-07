@@ -9,7 +9,7 @@ namespace sgns::application {
 
   template <typename T>
   outcome::result<std::decay_t<T>> ensure(boost::optional<T> opt_entry) {
-    if (not opt_entry) {
+    if (! opt_entry) {
       return ConfigReaderError::MISSING_ENTRY;
     }
     return opt_entry.value();

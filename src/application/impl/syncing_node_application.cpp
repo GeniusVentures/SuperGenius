@@ -31,7 +31,7 @@ namespace sgns::application {
         auto &host = injector_.template create<libp2p::Host &>();
         for (const auto &ma : current_peer_info.addresses) {
           auto listen = host.listen(ma);
-          if (not listen) {
+          if (! listen) {
             logger_->error("Cannot listen address {}. Error: {}",
                            ma.getStringAddress(),
                            listen.error().message());
@@ -43,7 +43,7 @@ namespace sgns::application {
               boot_node,
               network::kGossipProtocol,
               [this, boot_node](const auto &stream_res) {
-                if (not stream_res) {
+                if (! stream_res) {
                   this->logger_->error(
                       "Could not establish connection with {}. Error: {}",
                       boot_node.id.toBase58(),

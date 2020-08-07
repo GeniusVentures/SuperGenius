@@ -8,7 +8,7 @@ set(
 )
 # Project
 project(SuperGenius C CXX)
-
+ADD_DEFINITIONS(-D_HAS_AUTO_PTR_ETC=1)
 if (NOT EXISTS "${CMAKE_TOOLCHAIN_FILE}")
   # https://cgold.readthedocs.io/en/latest/tutorials/toolchain/globals/cxx-standard.html#summary
   set(CMAKE_CXX_STANDARD 17)
@@ -19,6 +19,7 @@ endif ()
 
 include(cmake/functions.cmake)
 include(cmake/print.cmake)
+
 print("C flags: ${CMAKE_C_FLAGS}")
 print("CXX flags: ${CMAKE_CXX_FLAGS}")
 print("C Debug flags: ${CMAKE_C_FLAGS_DEBUG}")
@@ -49,6 +50,8 @@ if (SGNS_STACKTRACE_BACKTRACE)
 		add_definitions(-DBOOST_STACKTRACE_BACKTRACE_INCLUDE_FILE=${BACKTRACE_INCLUDE})
 	endif()
 endif ()
+
+include(cmake/definition.cmake)
 
 # BOOST library 
 set(Boost_USE_STATIC_LIBS ON) 

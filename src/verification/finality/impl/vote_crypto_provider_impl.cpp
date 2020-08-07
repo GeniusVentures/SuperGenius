@@ -26,7 +26,7 @@ namespace sgns::verification::finality {
             .value();
     auto verified = ed_provider_->verify(
         primary_propose.signature, payload, primary_propose.id);
-    return verified.has_value() and verified.value();
+    return verified.has_value() && verified.value();
   }
 
   bool VoteCryptoProviderImpl::verifyPrevote(
@@ -38,7 +38,7 @@ namespace sgns::verification::finality {
         scale::encode(prevote.message, round_number_, voter_set_->id()).value();
     auto verified =
         ed_provider_->verify(prevote.signature, payload, prevote.id);
-    return verified.has_value() and verified.value();
+    return verified.has_value() && verified.value();
   }
 
   bool VoteCryptoProviderImpl::verifyPrecommit(
@@ -51,7 +51,7 @@ namespace sgns::verification::finality {
             .value();
     auto verified =
         ed_provider_->verify(precommit.signature, payload, precommit.id);
-    return verified.has_value() and verified.value();
+    return verified.has_value() && verified.value();
   }
 
   crypto::ED25519Signature VoteCryptoProviderImpl::voteSignature(

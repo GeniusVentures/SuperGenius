@@ -47,7 +47,7 @@ namespace sgns::application {
         auto &host = injector_.template create<libp2p::Host &>();
         for (const auto &ma : current_peer_info.addresses) {
           auto listen = host.listen(ma);
-          if (not listen) {
+          if (! listen) {
             logger_->error("Cannot listen address {}. Error: {}",
                            ma.getStringAddress(),
                            listen.error().message());

@@ -65,7 +65,7 @@ namespace sgns::api {
 
     auto on_accept = [wp = weak_from_this()](boost::system::error_code ec) {
       if (auto self = wp.lock()) {
-        if (not ec) {
+        if (! ec) {
           if (self->on_new_session_) {
             (*self->on_new_session_)(self->new_session_);
           }

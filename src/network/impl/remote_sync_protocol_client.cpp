@@ -22,7 +22,7 @@ namespace sgns::network {
           log_->debug("Requesting blocks: from {}", from);
         },
         [this, &request](const primitives::BlockHash &from) {
-          if (not request.to) {
+          if (! request.to) {
             log_->debug("Requesting blocks: from {}", from.toHex());
           } else {
             log_->debug("Requesting blocks: from {}, to {}",

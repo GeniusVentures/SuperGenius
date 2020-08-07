@@ -60,7 +60,7 @@ namespace sgns::network {
     }
     host_.start();
     const auto &host_addresses = host_.getAddresses();
-    BOOST_ASSERT_MSG(not host_addresses.empty(), "Host addresses empty");
+    BOOST_ASSERT_MSG(! host_addresses.empty(), "Host addresses empty");
     log_->info("Started listening with peer id: {} on address: {}",
                host_.getId().toBase58(),
                host_addresses.front().getStringAddress());
@@ -158,7 +158,7 @@ namespace sgns::network {
         auto txs_msg_res =
             scale::decode<std::vector<primitives::Extrinsic>>(msg.data);
 
-        if (not txs_msg_res) {
+        if (! txs_msg_res) {
           log_->error("error while decoding a transactions message");
           return false;
         }

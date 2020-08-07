@@ -16,7 +16,7 @@ namespace sgns::authorship {
   outcome::result<void> BlockBuilderImpl::pushExtrinsic(
       const primitives::Extrinsic &extrinsic) {
     auto apply_res = r_block_builder_->apply_extrinsic(extrinsic);
-    if (not apply_res) {
+    if (! apply_res) {
       logger_->warn(
           "Extrinsic {} was not pushed to block. Error during xt application: "
           "{}",

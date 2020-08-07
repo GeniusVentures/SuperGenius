@@ -88,7 +88,7 @@ namespace sgns::verification::finality {
     if (validate(f.vote, f.justification)) {
       // finalize to state
       auto finalized = env_->finalize(f.vote.block_hash, f.justification);
-      if (not finalized) {
+      if (! finalized) {
         logger_->error(
             "Could not finalize block {} from round {} with error: {}",
             f.vote.block_hash.toHex(),
@@ -121,7 +121,7 @@ namespace sgns::verification::finality {
       }
 
       // Verify signatures
-      if (not vote_crypto_provider_->verifyPrecommit(signed_precommit)) {
+      if (! vote_crypto_provider_->verifyPrecommit(signed_precommit)) {
         logger_->error(
             "Received invalid signed precommit during the round {} from the "
             "peer {}",
@@ -163,15 +163,15 @@ namespace sgns::verification::finality {
   }
 
   bool VotingRoundImpl::tryFinalize() {
-    if (not completable()) {
+    if (! completable()) {
       return false;
     }
-    if (not last_round_state_) {
+    if (! last_round_state_) {
       logger_->error("Last round state is empty during finalization");
       return false;
     }
     // check if new state differs with the old one and broadcast new state
-    if (auto notify_res = notify(*last_round_state_); not notify_res) {
+    if (auto notify_res = notify(*last_round_state_); ! notify_res) {
       logger_->debug("Did not notify. Reason: {}",
                      notify_res.error().message());
       // Round is completable but we cannot notify others. Finish the round
@@ -186,7 +186,7 @@ namespace sgns::verification::finality {
     if (completable_) {
       auto finalized = cur_round_state_.finalized.value();
       const auto &opt_justification = finalizingPrecommits(finalized);
-      if (not opt_justification) {
+      if (! opt_justification) {
         logger_->warn("No justification for block  <{}, {}>",
                       finalized.block_number,
                       finalized.block_hash.toHex());
@@ -206,7 +206,7 @@ namespace sgns::verification::finality {
 
   void VotingRoundImpl::onPrimaryPropose(const SignedMessage &primary_propose) {
     bool isValid = vote_crypto_provider_->verifyPrimaryPropose(primary_propose);
-    if (not isValid) {
+    if (! isValid) {
       logger_->warn("Primary propose of {} has invalid signature",
                     primary_propose.id.toHex());
       return;
@@ -219,7 +219,7 @@ namespace sgns::verification::finality {
 
   void VotingRoundImpl::onPrevote(const SignedMessage &prevote) {
     bool isValid = vote_crypto_provider_->verifyPrevote(prevote);
-    if (not isValid) {
+    if (! isValid) {
       logger_->warn("Prevote of {} has invalid signature", prevote.id.toHex());
       return;
     }
@@ -228,7 +228,7 @@ namespace sgns::verification::finality {
     update();
 
     // stop prevote timer if round is completable
-    if (completable() and clock_->now() < prevote_timer_.expires_at()) {
+    if (completable() && clock_->now() < prevote_timer_.expires_at()) {
       prevote_timer_.cancel();
     }
     tryFinalize();
@@ -236,19 +236,19 @@ namespace sgns::verification::finality {
 
   void VotingRoundImpl::onPrecommit(const SignedMessage &precommit) {
     bool isValid = vote_crypto_provider_->verifyPrecommit(precommit);
-    if (not isValid) {
+    if (! isValid) {
       logger_->warn("Precommit of {} has invalid signature",
                     precommit.id.toHex());
       return;
     }
-    if (not onSignedPrecommit(precommit)) {
+    if (! onSignedPrecommit(precommit)) {
       env_->onCompleted(VotingRoundError::LAST_ESTIMATE_BETTER_THAN_PREVOTE);
       return;
     }
     update();
 
     // stop precommit timer if round is completable
-    if (completable() and clock_->now() < precommit_timer_.expires_at()) {
+    if (completable() && clock_->now() < precommit_timer_.expires_at()) {
       precommit_timer_.cancel();
     }
     tryFinalize();
@@ -257,7 +257,7 @@ namespace sgns::verification::finality {
   void VotingRoundImpl::onSignedPrevote(const SignedMessage &vote) {
     BOOST_ASSERT(vote.is<Prevote>());
     auto weight = voter_set_->voterWeight(vote.id);
-    if (not weight) {
+    if (! weight) {
       return;
     }
     switch (prevotes_->push(vote, weight.value())) {
@@ -268,14 +268,14 @@ namespace sgns::verification::finality {
         // kind of vote it was
         VoteWeight v{voters.size()};
         auto index = voter_set_->voterIndex(vote.id);
-        if (not index) {
+        if (! index) {
           logger_->warn("Voter {} is not known: {}", vote.id.toHex());
           return;
         }
 
         v.prevotes[index.value()] = voter_set_->voterWeight(vote.id).value();
 
-        if (auto inserted = graph_->insert(vote.message, v); not inserted) {
+        if (auto inserted = graph_->insert(vote.message, v); ! inserted) {
           logger_->warn("Vote {} was not inserted with error: {}",
                         vote.block_hash().toHex(),
                         inserted.error().message());
@@ -287,7 +287,7 @@ namespace sgns::verification::finality {
       }
       case VoteTracker::PushResult::EQUIVOCATED: {
         auto index = voter_set_->voterIndex(vote.id);
-        if (not index) {
+        if (! index) {
           logger_->warn("Voter {} is not known: {}", vote.id.toHex());
           return;
         }
@@ -300,7 +300,7 @@ namespace sgns::verification::finality {
   bool VotingRoundImpl::onSignedPrecommit(const SignedMessage &vote) {
     BOOST_ASSERT(vote.is<Precommit>());
     auto weight = voter_set_->voterWeight(vote.id);
-    if (not weight) {
+    if (! weight) {
       return false;
     }
     switch (precommits_->push(vote, weight.value())) {
@@ -311,14 +311,14 @@ namespace sgns::verification::finality {
         // kind of vote it was
         VoteWeight v{voters.size()};
         auto index = voter_set_->voterIndex(vote.id);
-        if (not index) {
+        if (! index) {
           logger_->warn("Voter {} is not known: {}", vote.id.toHex());
           return false;
         }
 
         v.precommits[index.value()] = voter_set_->voterWeight(vote.id).value();
 
-        if (auto inserted = graph_->insert(vote.message, v); not inserted) {
+        if (auto inserted = graph_->insert(vote.message, v); ! inserted) {
           logger_->warn("Vote {} was not inserted with error: {}",
                         vote.block_hash().toHex(),
                         inserted.error().message());
@@ -331,7 +331,7 @@ namespace sgns::verification::finality {
       }
       case VoteTracker::PushResult::EQUIVOCATED: {
         auto index = voter_set_->voterIndex(vote.id);
-        if (not index) {
+        if (! index) {
           logger_->warn("Voter {} is not known: {}", vote.id.toHex());
           return false;
         }
@@ -370,13 +370,13 @@ namespace sgns::verification::finality {
     last_round_state_ = last_round_state;
     switch (state_) {
       case State::START: {
-        if (not isPrimary()) {
+        if (! isPrimary()) {
           break;
         }
 
         const auto &maybe_estimate = last_round_state.estimate;
 
-        if (not maybe_estimate) {
+        if (! maybe_estimate) {
           logger_->debug(
               "Last round estimate does not exist, not sending primary block "
               "hint during round {}",
@@ -392,14 +392,14 @@ namespace sgns::verification::finality {
         // We should send primary if last round estimate was not finalized in
         // last round
         if (maybe_last_finalized
-            and maybe_estimate->block_number
+            && maybe_estimate->block_number
                     > maybe_last_finalized->block_number) {
           should_send_primary = true;
         }
         // Or if last round estimate was not finalized in current round
         else {
           should_send_primary = maybe_curr_finalized
-                                and maybe_estimate->block_number
+                                && maybe_estimate->block_number
                                         > maybe_curr_finalized->block_number;
         }
 
@@ -412,7 +412,7 @@ namespace sgns::verification::finality {
               round_number_,
               voter_set_->id(),
               vote_crypto_provider_->signPrimaryPropose(primary_vote_.value()));
-          if (not proposed) {
+          if (! proposed) {
             logger_->error("Primary propose was not sent: {}",
                            proposed.error().message());
             break;
@@ -433,7 +433,7 @@ namespace sgns::verification::finality {
 
     auto handle_prevote = [this, last_round_state](auto &&ec) {
       // Return if error is not caused by timer cancellation
-      if (ec and ec != boost::asio::error::operation_aborted) {
+      if (ec && ec != boost::asio::error::operation_aborted) {
         logger_->error("Error happened during prevote timer: {}", ec.message());
         return;
       }
@@ -444,7 +444,7 @@ namespace sgns::verification::finality {
           if (prevote) {
             auto prevoted = env_->onPrevoted(
                 round_number_, voter_set_->id(), prevote.value());
-            if (not prevoted) {
+            if (! prevoted) {
               logger_->error("Prevote was not sent: {}",
                              prevoted.error().message());
             }
@@ -469,7 +469,7 @@ namespace sgns::verification::finality {
     auto handle_precommit = [this, last_round_state](
                                 const boost::system::error_code &ec) {
       // Return if error is not caused by timer cancellation
-      if (ec and ec != boost::asio::error::operation_aborted) {
+      if (ec && ec != boost::asio::error::operation_aborted) {
         logger_->error("Error happened during precommit timer: {}",
                        ec.message());
         return;
@@ -478,7 +478,7 @@ namespace sgns::verification::finality {
       switch (state_) {
         case State::PREVOTED: {
           state_ = State::PRECOMMITTED;
-          if (not last_round_state.estimate) {
+          if (! last_round_state.estimate) {
             logger_->warn("Rounds only started when prior round completable");
             return;
           }
@@ -490,7 +490,7 @@ namespace sgns::verification::finality {
               cur_round_state_.prevote_ghost
                   .map([&](const Prevote &p_g) {
                     return p_g.block_hash == last_round_estimate.block_hash
-                           or env_->isEqualOrDescendOf(
+                           || env_->isEqualOrDescendOf(
                                last_round_estimate.block_hash, p_g.block_hash);
                   })
                   .value_or(false);
@@ -503,7 +503,7 @@ namespace sgns::verification::finality {
             if (precommit) {
               auto precommitted = env_->onPrecommitted(
                   round_number_, voter_set_->id(), precommit.value());
-              if (not precommitted) {
+              if (! precommitted) {
                 logger_->error("Precommit was not sent: {}",
                                precommitted.error().message());
                 break;
@@ -530,7 +530,7 @@ namespace sgns::verification::finality {
 
   outcome::result<SignedMessage> VotingRoundImpl::constructPrevote(
       const RoundState &last_round_state) const {
-    if (not last_round_state.estimate) {
+    if (! last_round_state.estimate) {
       logger_->warn("Rounds only started when prior round completable");
       return outcome::failure(boost::system::error_code());
     }
@@ -581,7 +581,7 @@ namespace sgns::verification::finality {
 
     auto rbest_chain = env_->bestChainContaining(find_descendent_of.block_hash);
 
-    if (not rbest_chain) {
+    if (! rbest_chain) {
       logger_->error(
           "Could not cast prevote: previously known block {} has disappeared",
           find_descendent_of.block_hash.toHex());
@@ -610,7 +610,7 @@ namespace sgns::verification::finality {
       return;
     }
 
-    if (not cur_round_state_.prevote_ghost) {
+    if (! cur_round_state_.prevote_ghost) {
       return;
     }
 
@@ -733,7 +733,7 @@ namespace sgns::verification::finality {
               precommit_variant,
               [&j, this](const SignedMessage &voting_message) {
                 if (voting_message.is<Precommit>()
-                    and env_->isEqualOrDescendOf(
+                    && env_->isEqualOrDescendOf(
                         cur_round_state_.finalized->block_hash,
                         voting_message.block_hash())) {
                   j.items.push_back(voting_message);

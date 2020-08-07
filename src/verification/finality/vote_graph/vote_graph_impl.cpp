@@ -239,7 +239,7 @@ namespace sgns::verification::finality {
     auto start_node = active_node;
     observing_entries.emplace_back(start_node);
 
-    while (not observing_entries.empty()) {
+    while (! observing_entries.empty()) {
       auto &entry = observing_entries.front().get();
       observing_entries.pop_front();
 
@@ -247,19 +247,19 @@ namespace sgns::verification::finality {
         auto &descendent = entries_.at(descendent_hash);
 
         if (force_constrain && current_best) {
-          if (not inDirectAncestry(descendent,
+          if (! inDirectAncestry(descendent,
                                    current_best->block_hash,
                                    current_best->block_number)) {
             continue;
           }
         }
-        if (not condition(descendent.cumulative_vote)) {
+        if (! condition(descendent.cumulative_vote)) {
           continue;
         }
 
         if (descendent.number > active_node.number
-            or (descendent.number == active_node.number
-                and descendent.cumulative_vote > active_node.cumulative_vote)) {
+            || (descendent.number == active_node.number
+                && descendent.cumulative_vote > active_node.cumulative_vote)) {
           node_key = descendent_hash;
           active_node = descendent;
 
@@ -329,8 +329,8 @@ namespace sgns::verification::finality {
           descendent_blocks[d_block] += entry.cumulative_vote;
           // check if block fullfills condition
           if (condition(descendent_blocks[d_block])) {
-            if (not new_best_vote_weight
-                or new_best_vote_weight < descendent_blocks[d_block]) {
+            if (! new_best_vote_weight
+                || new_best_vote_weight < descendent_blocks[d_block]) {
               // we found our best block
               new_best = d_block;
               new_best_vote_weight = descendent_blocks[d_block];

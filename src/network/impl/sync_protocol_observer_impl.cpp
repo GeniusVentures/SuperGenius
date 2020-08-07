@@ -57,7 +57,7 @@ namespace sgns::network {
 
     // thirdly, fill the resulting response with data, which we were asked for
     fillBlocksResponse(request, response, chain_hash_res.value());
-    if (not response.blocks.empty()) {
+    if (! response.blocks.empty()) {
       log_->debug("Return response: {}", response.blocks[0].hash.toHex());
     }
 

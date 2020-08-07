@@ -6,4 +6,13 @@ target_link_libraries(binaryen_wasm_memory
     buffer
     binaryen::binaryen
     )
-sgns_install(binaryen_wasm_memory)
+supergenius_install(binaryen_wasm_memory)
+
+add_library(binaryen_wasm_module
+    module/wasm_module_impl.cpp
+    module/wasm_module_factory_impl.cpp
+    )
+target_link_libraries(binaryen_wasm_module
+    binaryen::binaryen
+    logger
+    )

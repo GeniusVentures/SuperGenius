@@ -25,7 +25,7 @@ namespace sgns::authorship {
 
     auto inherent_xts_res =
         r_block_builder_->inherent_extrinsics(inherent_data);
-    if (not inherent_xts_res) {
+    if (! inherent_xts_res) {
       logger_->error("BlockBuilder->inherent_extrinsics failed with error: {}",
                      inherent_xts_res.error().message());
       return inherent_xts_res.error();
@@ -42,7 +42,7 @@ namespace sgns::authorship {
     for (const auto &xt : inherent_xts) {
       logger_->debug("Adding inherent extrinsic: {}", xt.data.toHex());
       auto inserted_res = block_builder->pushExtrinsic(xt);
-      if (not inserted_res) {
+      if (! inserted_res) {
         log_push_error(xt, inserted_res.error().message());
         return inserted_res.error();
       }
@@ -53,7 +53,7 @@ namespace sgns::authorship {
     for (const auto &[hash, tx] : ready_txs) {
       logger_->debug("Adding extrinsic: {}", tx->ext.data.toHex());
       auto inserted_res = block_builder->pushExtrinsic(tx->ext);
-      if (not inserted_res) {
+      if (! inserted_res) {
         log_push_error(tx->ext, inserted_res.error().message());
         return inserted_res.error();
       }
@@ -63,7 +63,7 @@ namespace sgns::authorship {
 
     for (const auto &[hash, tx] : ready_txs) {
       auto removed_res = transaction_pool_->removeOne(hash);
-      if (not removed_res) {
+      if (! removed_res) {
         logger_->error(
             "Can't remove extrinsic (hash={}) after adding to the block. "
             "Reason: {}",

@@ -16,10 +16,10 @@ namespace sgns::verification {
     Randomness randomness;
 
     bool operator==(const NextEpochDescriptor &rhs) const {
-      return authorities == rhs.authorities and randomness == rhs.randomness;
+      return authorities == rhs.authorities && randomness == rhs.randomness;
     }
     bool operator!=(const NextEpochDescriptor &rhs) const {
-      return not operator==(rhs);
+      return ! operator==(rhs);
     }
     //added to fix link error
     friend std::ostream &operator<<(std::ostream &out, const NextEpochDescriptor &test_struct)

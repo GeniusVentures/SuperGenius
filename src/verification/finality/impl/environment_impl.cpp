@@ -125,7 +125,7 @@ namespace sgns::verification::finality {
 
   void EnvironmentImpl::onCompleted(outcome::result<CompletedRound> round) {
     BOOST_ASSERT_MSG(
-        not on_completed_.empty(),
+        ! on_completed_.empty(),
         "Completed signal in environment cannot be empty when it is invoked");
     on_completed_(round);
   }

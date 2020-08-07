@@ -63,14 +63,14 @@ namespace sgns::verification {
             if (verification.verification_engine_id == primitives::kProductionEngineId) {
               auto verification_log_res =
                   scale::decode<VerificationLog>(verification.data);
-              if (not verification_log_res) {
+              if (! verification_log_res) {
                 return;
               }
 
               visit_in_place(
                   verification_log_res.value(),
                   [&epoch_digest](const NextEpochDescriptor &next_epoch) {
-                    if (not epoch_digest) {
+                    if (! epoch_digest) {
                       epoch_digest = next_epoch;
                     } else {
                       epoch_digest = DigestError::MULTIPLE_EPOCH_CHANGE_DIGESTS;

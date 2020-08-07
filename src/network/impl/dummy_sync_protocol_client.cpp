@@ -17,7 +17,7 @@ namespace sgns::network {
           log_->debug("Skipped self-requesting blocks: from {}", from);
         },
         [this, &request](const primitives::BlockHash &from) {
-          if (not request.to) {
+          if (! request.to) {
             log_->debug("Skipped self-requesting blocks: from {}",
                         from.toHex());
           } else {

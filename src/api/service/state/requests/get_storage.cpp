@@ -5,11 +5,11 @@ namespace sgns::api::state::request {
 
   outcome::result<void> GetStorage::init(
       const jsonrpc::Request::Parameters &params) {
-    if (params.size() > 2 or params.empty()) {
+    if (params.size() > 2 || params.empty()) {
       throw jsonrpc::InvalidParametersFault("Incorrect number of params");
     }
     auto &param0 = params[0];
-    if (not param0.IsString()) {
+    if (! param0.IsString()) {
       throw jsonrpc::InvalidParametersFault(
           "Parameter 'key' must be a hex string");
     }
@@ -20,7 +20,7 @@ namespace sgns::api::state::request {
 
     if (params.size() > 1) {
       auto &param1 = params[1];
-      if (not param1.IsString()) {
+      if (! param1.IsString()) {
         throw jsonrpc::InvalidParametersFault(
             "Parameter 'at' must be a hex string");
       }

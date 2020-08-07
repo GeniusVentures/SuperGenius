@@ -40,7 +40,7 @@ namespace sgns::verification::finality {
     VoteWeight &operator+=(const VoteWeight &vote);
 
     bool operator==(const VoteWeight &other) const {
-      return prevotes == other.prevotes and precommits == other.precommits;
+      return prevotes == other.prevotes && precommits == other.precommits;
     }
     bool operator<(const VoteWeight &other) const {
       return weight < other.weight;

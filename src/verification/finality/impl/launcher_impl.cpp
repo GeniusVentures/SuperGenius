@@ -159,7 +159,7 @@ namespace sgns::verification::finality {
     liveness_checker_.expires_after(20000ms);
 
     liveness_checker_.async_wait([this, current_round_id](const auto &ec) {
-      if (ec and ec != boost::asio::error::operation_aborted) {
+      if (ec && ec != boost::asio::error::operation_aborted) {
         this->logger_->error("Error happened during liveness timer: {}",
                              ec.message());
         return;

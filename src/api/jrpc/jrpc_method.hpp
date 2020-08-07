@@ -24,11 +24,11 @@ namespace sgns::api {
       if (auto api = api_.lock()) {
         RequestType request(api);
 
-        if (auto &&resust = request.init(params); not resust) {
+        if (auto &&resust = request.init(params); ! resust) {
           throw jsonrpc::Fault(resust.error().message());
         }
 
-        if (auto &&result = request.execute(); not result) {
+        if (auto &&result = request.execute(); ! result) {
           throw jsonrpc::Fault(result.error().message());
           // NOLINTNEXTLINE
         } else if constexpr (std::is_same_v<decltype(result.value()), void>) {
