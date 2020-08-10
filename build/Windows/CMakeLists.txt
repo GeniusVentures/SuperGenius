@@ -154,6 +154,11 @@ set(_FINDPACKAGE_SECP256K1_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/libsecp256k1/in
 set(_FINDPACKAGE_SECP256K1_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/libsecp256k1/lib")
 set(_FINDPACKAGE_SECP256K1_DIR "${_THIRDPARTY_BUILD_DIR}/libsecp256k1/lib/cmake/libsecp256k1")
 
+# Set config of secp256k1
+set(_FINDPACKAGE_XXHASH_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/xxhash/include")
+set(_FINDPACKAGE_XXHASH_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/xxhash/lib")
+set(_FINDPACKAGE_XXHASH_DIR "${_THIRDPARTY_BUILD_DIR}/xxhash/lib/cmake/xxhash")
+
 ExternalProject_Add(SuperGenius
   PREFIX SuperGenius
   SOURCE_DIR "${CMAKE_SOURCE_DIR}/../../../SuperGenius"      
@@ -193,7 +198,7 @@ ExternalProject_Add(SuperGenius
         -Dbinaryen_LIBRARIES:PATH=${_FINDPACKAGE_BINARYEN_LIBRARY_DIR}
         -Dbinaryen_DIR:PATH=${_FINDPACKAGE_BINARYEN_DIR}
         -Dlibsecp256k1_DIR:PATH=${_FINDPACKAGE_SECP256K1_DIR}
-        -Dxxhah_DIR:PATH=${_FINDPACKAGE_SECP256K1_DIR}
+        -Dxxhash_DIR:PATH=${_FINDPACKAGE_XXHASH_DIR}
         -DUSER_ENV_LIBRARY:STRING=userenv
   DEPENDS blocklattice
 )
