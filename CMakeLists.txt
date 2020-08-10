@@ -67,6 +67,9 @@ include_directories(
   ${leveldb_INCLUDE_DIR}
   ${sr25519_INCLUDE_DIR}
   ${ed25519_INCLUDE_DIR}
+  ${libsecp256k1_INCLUDE_DIR}
+  ${binaryen_INCLUDE_DIR}
+  ${binaryen_INCLUDE_DIR}/binaryen
 )
 find_package(Boost.DI CONFIG REQUIRED)
 find_package(blocklattice CONFIG REQUIRED PATHS ${blocklattice_DIR})

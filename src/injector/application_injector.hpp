@@ -13,7 +13,7 @@
 #include <crypto/bip39/impl/bip39_provider_impl.hpp>
 #include <crypto/crypto_store/crypto_store_impl.hpp>
 #include <crypto/pbkdf2/impl/pbkdf2_provider_impl.hpp>
-// #include <crypto/secp256k1/secp256k1_provider_impl.hpp>
+#include <crypto/secp256k1/secp256k1_provider_impl.hpp>
 #include <libp2p/injector/host_injector.hpp>
 #include <libp2p/peer/peer_info.hpp>
 #include <outcome/outcome.hpp>
@@ -69,6 +69,19 @@
 #include "network/sync_protocol_client.hpp"
 #include "network/sync_protocol_observer.hpp"
 #include "network/types/sync_clients_set.hpp"
+#include "runtime/binaryen/module/wasm_module_impl.hpp"
+#include "runtime/binaryen/module/wasm_module_factory_impl.hpp"
+
+#include "runtime/binaryen/runtime_api/production_api_impl.hpp"
+#include "runtime/binaryen/runtime_api/block_builder_impl.hpp"
+#include "runtime/binaryen/runtime_api/core_impl.hpp"
+#include "runtime/binaryen/runtime_api/finality_impl.hpp"
+#include "runtime/binaryen/runtime_api/metadata_impl.hpp"
+#include "runtime/binaryen/runtime_api/offchain_worker_impl.hpp"
+#include "runtime/binaryen/runtime_api/parachain_host_impl.hpp"
+#include "runtime/binaryen/runtime_api/tagged_transaction_queue_impl.hpp"
+#include "runtime/common/storage_wasm_provider.hpp"
+#include "runtime/common/trie_storage_provider_impl.hpp"
 
 #include "storage/changes_trie/impl/storage_changes_tracker_impl.hpp"
 #include "storage/leveldb/leveldb.hpp"
