@@ -4,7 +4,7 @@ add_library(hasher
     )
 target_link_libraries(hasher
     blake2
-##    twox
+    twox
     buffer
     sha
     keccak
@@ -60,20 +60,20 @@ target_link_libraries(ed25519_provider
     )
 supergenius_install(ed25519_provider)
 
-# add_library(secp256k1_provider
-#     secp256k1/secp256k1_provider_impl.cpp
-#     )
-# target_link_libraries(secp256k1_provider PUBLIC
-#     OpenSSL::Crypto
-#     PUBLIC OpenSSL::SSL
-#     blob
-#     buffer
-#     secp256k1::secp256k1
-#     scale
-#     )
-# supergenius_install(
-#     secp256k1_provider
-# )
+add_library(secp256k1_provider
+    secp256k1/secp256k1_provider_impl.cpp
+    )
+target_link_libraries(secp256k1_provider PUBLIC
+    OpenSSL::Crypto
+    PUBLIC OpenSSL::SSL
+    blob
+    buffer
+    secp256k1::secp256k1
+    scale
+    )
+supergenius_install(
+    secp256k1_provider
+)
 
 add_library(pbkdf2_provider
     pbkdf2/impl/pbkdf2_provider_impl.cpp
@@ -91,4 +91,4 @@ add_subdirectory(blake2)
 add_subdirectory(crypto_store)
 add_subdirectory(keccak)
 add_subdirectory(sha)
-#add_subdirectory(twox)
+add_subdirectory(twox)

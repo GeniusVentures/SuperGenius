@@ -44,50 +44,50 @@ class HasherFixture : public testing::Test {
  * @when Hasher::twox_64 method is applied
  * @then expected result obtained
  */
-// TEST_F(HasherFixture, twox_64) {
-//   auto hash = hasher->twox_64(Buffer().put("foo"));
+TEST_F(HasherFixture, twox_64) {
+  auto hash = hasher->twox_64(Buffer().put("foo"));
 
-//   // match is output obtained from substrate
-//   sgns::base::Blob<8> match;
-//   match[0] = '?';
-//   match[1] = '\xba';
-//   match[2] = '\xc4';
-//   match[3] = 'Y';
-//   match[4] = '\xa8';
-//   match[5] = '\0';
-//   match[6] = '\xbf';
-//   match[7] = '3';
+  // match is output obtained from substrate
+  sgns::base::Blob<8> match;
+  match[0] = '?';
+  match[1] = '\xba';
+  match[2] = '\xc4';
+  match[3] = 'Y';
+  match[4] = '\xa8';
+  match[5] = '\0';
+  match[6] = '\xbf';
+  match[7] = '3';
 
-//   ASSERT_EQ(hash, match);
-// }
+  ASSERT_EQ(hash, match);
+}
 
 // /**
 //  * @given some common source value
 //  * @when Hasher::twox_128 method is applied
 //  * @then expected result obtained
 //  */
-// TEST_F(HasherFixture, twox_128) {
-//   auto hash = hasher->twox_128(Buffer{"414243444546"_unhex});
-//   std::vector<uint8_t> match = {
-//       184, 65, 176, 250, 243, 129, 181, 3, 77, 82, 63, 150, 129, 221, 191, 251};
-//   ASSERT_EQ(blob2buffer<16>(hash).toVector(), match);
-// }
+TEST_F(HasherFixture, twox_128) {
+  auto hash = hasher->twox_128(Buffer{"414243444546"_unhex});
+  std::vector<uint8_t> match = {
+      184, 65, 176, 250, 243, 129, 181, 3, 77, 82, 63, 150, 129, 221, 191, 251};
+  ASSERT_EQ(blob2buffer<16>(hash).toVector(), match);
+}
 
 // /**
 //  * @given some common source value
 //  * @when Hasher::twox_256 method is applied
 //  * @then expected result obtained
 //  */
-// TEST_F(HasherFixture, twox_256) {
-//   // some value
-//   auto v = Buffer{0x41, 0x42, 0x43, 0x44, 0x45, 0x46};
-//   auto hash = hasher->twox_256(v);
-//   std::vector<uint8_t> match = {184, 65,  176, 250, 243, 129, 181, 3,
-//                                 77,  82,  63,  150, 129, 221, 191, 251,
-//                                 33,  226, 149, 136, 6,   232, 81,  118,
-//                                 200, 28,  69,  219, 120, 179, 208, 237};
-//   ASSERT_EQ(blob2buffer<32>(hash).toVector(), match);
-// }
+TEST_F(HasherFixture, twox_256) {
+  // some value
+  auto v = Buffer{0x41, 0x42, 0x43, 0x44, 0x45, 0x46};
+  auto hash = hasher->twox_256(v);
+  std::vector<uint8_t> match = {184, 65,  176, 250, 243, 129, 181, 3,
+                                77,  82,  63,  150, 129, 221, 191, 251,
+                                33,  226, 149, 136, 6,   232, 81,  118,
+                                200, 28,  69,  219, 120, 179, 208, 237};
+  ASSERT_EQ(blob2buffer<32>(hash).toVector(), match);
+}
 
 /**
  * @given some common source value

@@ -16,3 +16,20 @@ target_link_libraries(binaryen_wasm_module
     binaryen::binaryen
     logger
     )
+add_library(binaryen_runtime_external_interface
+    runtime_external_interface.hpp
+    runtime_external_interface.cpp
+    )
+target_link_libraries(binaryen_runtime_external_interface
+    binaryen::binaryen
+    binaryen_wasm_memory
+    logger
+    )
+add_library(binaryen_runtime_manager
+    runtime_manager.hpp
+    runtime_manager.cpp
+    )
+target_link_libraries(binaryen_runtime_manager
+    binaryen_runtime_external_interface
+    binaryen_wasm_module
+    )

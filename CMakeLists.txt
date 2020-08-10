@@ -81,6 +81,8 @@ find_package(ed25519 CONFIG REQUIRED)
 find_package(sr25519 CONFIG REQUIRED)
 find_package(RapidJSON CONFIG REQUIRED)
 find_package(binaryen CONFIG REQUIRED)
+find_package(libsecp256k1 CONFIG REQUIRED)
+find_package(xxhash CONFIG REQUIRED)
 
 option(TESTING "Build tests" ON)
 link_directories(
