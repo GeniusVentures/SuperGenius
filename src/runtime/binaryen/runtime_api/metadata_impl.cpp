@@ -1,3 +1,4 @@
+
 #include "runtime/binaryen/runtime_api/metadata_impl.hpp"
 
 namespace sgns::runtime::binaryen {
