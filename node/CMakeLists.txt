@@ -22,6 +22,8 @@ target_link_libraries(sgns_node
     Boost::thread
     Boost::filesystem
     ipfs_blockservice
+    block_producing_node_application
+    app_config_impl
     )
 
 install(TARGETS sgns_node)

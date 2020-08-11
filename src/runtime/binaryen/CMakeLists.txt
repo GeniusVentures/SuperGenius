@@ -35,6 +35,15 @@ target_link_libraries(binaryen_runtime_manager
     binaryen_runtime_external_interface
     binaryen_wasm_module
     )
+add_library(binaryen_wasm_executor
+    wasm_executor.hpp
+    wasm_executor.cpp
+    )
+target_link_libraries(binaryen_wasm_executor
+    binaryen::binaryen
+    binaryen_runtime_manager
+    logger
+    )
 add_library(binaryen_runtime_api INTERFACE)
 target_link_libraries(binaryen_runtime_api INTERFACE
     binaryen_runtime_external_interface
@@ -99,3 +108,10 @@ target_link_libraries(binaryen_offchain_worker_api
     binaryen_runtime_api
     )
 
+add_library(binaryen_production_api
+    runtime_api/production_api_impl.cpp
+    )
+target_link_libraries(binaryen_production_api
+    binaryen_wasm_executor
+    binaryen_runtime_api
+    )

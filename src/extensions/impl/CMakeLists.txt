@@ -1,3 +1,18 @@
+add_library(crypto_extension
+    crypto_extension.cpp
+    )
+target_link_libraries(crypto_extension
+    bip39_provider
+    hasher
+    logger
+    p2p::p2p_random_generator
+    sr25519_provider
+    secp256k1_provider
+    ed25519_provider
+    scale
+    crypto_store
+    )
+supergenius_install(crypto_extension)
 
 add_library(io_extension
     io_extension.cpp

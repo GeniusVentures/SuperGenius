@@ -488,7 +488,7 @@ namespace sgns::injector {
     initialized = res;
     return res;
   }
-/*
+
   template <typename Injector>
   sptr<primitives::ProductionConfiguration> get_production_configuration(
       const Injector &injector) {
@@ -511,7 +511,7 @@ namespace sgns::injector {
     initialized = std::make_shared<primitives::ProductionConfiguration>(config);
     return *initialized;
   };
-*/
+
   template <class Injector>
   sptr<crypto::CryptoStore> get_crypto_store(std::string_view keystore_path,
                                              const Injector &injector) {
@@ -525,8 +525,8 @@ namespace sgns::injector {
         injector.template create<sptr<crypto::ED25519Provider>>();
     auto sr25519_provider =
         injector.template create<sptr<crypto::SR25519Provider>>();
-    // auto secp256k1_provider =
-    //     injector.template create<sptr<crypto::Secp256k1Provider>>();
+    auto secp256k1_provider =
+        injector.template create<sptr<crypto::Secp256k1Provider>>();
     auto bip39_provider =
         injector.template create<sptr<crypto::Bip39Provider>>();
     auto random_generator = injector.template create<sptr<crypto::CSPRNG>>();
@@ -615,9 +615,9 @@ namespace sgns::injector {
         di::bind<clock::SystemClock>.template to<clock::SystemClockImpl>(),
         di::bind<clock::SteadyClock>.template to<clock::SteadyClockImpl>(),
         di::bind<clock::Timer>.template to<clock::BasicWaitableTimer>(),
-        // di::bind<primitives::ProductionConfiguration>.to([](auto const &injector) {
-        //   return get_production_configuration(injector);
-        // }),
+        di::bind<primitives::ProductionConfiguration>.to([](auto const &injector) {
+          return get_production_configuration(injector);
+        }),
         di::bind<verification::ProductionSynchronizer>.template to<verification::ProductionSynchronizerImpl>(),
         di::bind<verification::finality::Environment>.template to<verification::finality::EnvironmentImpl>(),
         di::bind<verification::finality::VoteCryptoProvider>.template to<verification::finality::VoteCryptoProviderImpl>(),
@@ -629,14 +629,14 @@ namespace sgns::injector {
         di::bind<crypto::VRFProvider>.template to<crypto::VRFProviderImpl>(),
         di::bind<crypto::Bip39Provider>.template to<crypto::Bip39ProviderImpl>(),
         di::bind<crypto::Pbkdf2Provider>.template to<crypto::Pbkdf2ProviderImpl>(),
-        // di::bind<crypto::Secp256k1Provider>.template to<crypto::Secp256k1ProviderImpl>(),
+        di::bind<crypto::Secp256k1Provider>.template to<crypto::Secp256k1ProviderImpl>(),
 
-        // di::bind<runtime::Metadata>.template to<runtime::binaryen::MetadataImpl>(),
-        // di::bind<runtime::Finality>.template to<runtime::binaryen::FinalityImpl>(),
-        // di::bind<runtime::Core>.template to<runtime::binaryen::CoreImpl>(),
-        // di::bind<runtime::ProductionApi>.template to<runtime::binaryen::ProductionApiImpl>(),
-        // di::bind<runtime::BlockBuilder>.template to<runtime::binaryen::BlockBuilderImpl>(),
-        // di::bind<runtime::TrieStorageProvider>.template to<runtime::TrieStorageProviderImpl>(),
+        di::bind<runtime::Metadata>.template to<runtime::binaryen::MetadataImpl>(),
+        di::bind<runtime::Finality>.template to<runtime::binaryen::FinalityImpl>(),
+        di::bind<runtime::Core>.template to<runtime::binaryen::CoreImpl>(),
+        di::bind<runtime::ProductionApi>.template to<runtime::binaryen::ProductionApiImpl>(),
+        di::bind<runtime::BlockBuilder>.template to<runtime::binaryen::BlockBuilderImpl>(),
+        di::bind<runtime::TrieStorageProvider>.template to<runtime::TrieStorageProviderImpl>(),
         di::bind<transaction_pool::TransactionPool>.template to<transaction_pool::TransactionPoolImpl>(),
         di::bind<transaction_pool::PoolModerator>.template to<transaction_pool::PoolModeratorImpl>(),
         di::bind<storage::changes_trie::ChangesTracker>.template to<storage::changes_trie::StorageChangesTrackerImpl>(),
@@ -649,7 +649,7 @@ namespace sgns::injector {
         di::bind<storage::trie::SuperGeniusTrieFactory>.template to<storage::trie::SuperGeniusTrieFactoryImpl>(),
         di::bind<storage::trie::Codec>.template to<storage::trie::SuperGeniusCodec>(),
         di::bind<storage::trie::TrieSerializer>.template to<storage::trie::TrieSerializerImpl>(),
-        // di::bind<runtime::WasmProvider>.template to<runtime::StorageWasmProvider>(),
+        di::bind<runtime::WasmProvider>.template to<runtime::StorageWasmProvider>(),
         di::bind<application::ConfigurationStorage>.to(
             [genesis_path](const auto &injector) {
               return get_configuration_storage(genesis_path, injector);

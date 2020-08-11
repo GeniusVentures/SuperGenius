@@ -258,7 +258,7 @@ namespace sgns::extensions {
 
   void StorageExtension::ext_storage_root(runtime::WasmPointer result) const {
     if (auto opt_batch = storage_provider_->tryGetPersistentBatch();
-        opt_batch.has_value() and opt_batch.value() != nullptr) {
+        opt_batch.has_value() && opt_batch.value() != nullptr) {
       auto res = opt_batch.value()->commit();
       if (res.has_error()) {
         logger_->error("ext_storage_root resulted with an error: {}",

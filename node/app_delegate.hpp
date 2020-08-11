@@ -1,6 +1,9 @@
 #ifndef SUPERGENIUS_NODE_APP_DELEGATE_HPP
 #define SUPERGENIUS_NODE_APP_DELEGATE_HPP
 #include <boost/program_options.hpp>
+#include <iostream>
+
+#include "base/logger.hpp"
 namespace boost
 {
 namespace filesystem
@@ -16,11 +19,18 @@ class node_flags;
 
 namespace sgns
 {
+    namespace application
+    {
+        class BlockProducingNodeApplication;
+        class AppConfigurationImpl;
+    } // namespace application
+    
     /**
      * @class SuperGenius AppDelegate class
      *        daemon node instance
      *        used in all platforms including android and iOS
      */
+
 class AppDelegate {
 public:
 	explicit AppDelegate ();
@@ -45,6 +55,10 @@ public:
     void exit();
 public:
     // boost::program_options::variables_map vm;
+private:
+    void init_production_node(int argc, char * const * argv);
+    std::shared_ptr<application::BlockProducingNodeApplication> app_production;
+    std::shared_ptr<application::AppConfigurationImpl> configuration;
 };
 }
 #endif

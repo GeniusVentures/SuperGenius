@@ -1,7 +1,6 @@
 
-
-#ifndef SUPERGENIUS_CRYPTO_SECP256K1_PROVIDER_HPP
-#define SUPERGENIUS_CRYPTO_SECP256K1_PROVIDER_HPP
+#ifndef SUPERGENIUS_SRC_CRYPTO_SECP256K1_PROVIDER_HPP
+#define SUPERGENIUS_SRC_CRYPTO_SECP256K1_PROVIDER_HPP
 
 #include "crypto/secp256k1_types.hpp"
 #include "outcome/outcome.hpp"
@@ -21,7 +20,7 @@ namespace sgns::crypto {
      * @param message_hash blake2s message hash
      * @return uncompressed public key or error
      */
-    virtual outcome::result<secp256k1::ExpandedPublicKey>
+    virtual outcome::result<secp256k1::UncompressedPublicKey>
     recoverPublickeyUncompressed(
         const secp256k1::RSVSignature &signature,
         const secp256k1::MessageHash &message_hash) const = 0;
@@ -40,4 +39,4 @@ namespace sgns::crypto {
 
 }  // namespace sgns::crypto
 
-#endif  // SUPERGENIUS_CRYPTO_SECP256K1_PROVIDER_HPP
+#endif  // SUPERGENIUS_SRC_CRYPTO_SECP256K1_PROVIDER_HPP
