@@ -24,6 +24,7 @@ target_link_libraries(sgns_node
     ipfs_blockservice
     block_producing_node_application
     app_config_impl
+    ${USER_ENV_LIBRARY}  # On windows platform , sr25519 library needs extra library userenv, so folllowing code is added
     )
-
+set_target_properties(sgns_node PROPERTIES LINK_FLAGS "/FORCE:MULTIPLE")
 install(TARGETS sgns_node)

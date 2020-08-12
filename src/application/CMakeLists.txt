@@ -46,6 +46,8 @@ target_link_libraries(block_producing_node_application
     block_producing_node_injector
     blob
     )
+set_target_properties(block_producing_node_application PROPERTIES LINK_FLAGS "/FORCE:MULTIPLE")
+
 add_library(validating_node_application
     impl/validating_node_application.cpp
     )
@@ -53,6 +55,8 @@ target_link_libraries(validating_node_application
     validating_node_injector
     blob
     )
+set_target_properties(validating_node_application PROPERTIES LINK_FLAGS "/FORCE:MULTIPLE")
+
 add_library(syncing_node_application
     impl/syncing_node_application.cpp
     )
@@ -60,3 +64,4 @@ target_link_libraries(syncing_node_application
     syncing_node_injector
     blob
     )
+set_target_properties(syncing_node_application PROPERTIES LINK_FLAGS "/FORCE:MULTIPLE")

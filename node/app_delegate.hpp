@@ -3,7 +3,7 @@
 #include <boost/program_options.hpp>
 #include <iostream>
 
-#include "base/logger.hpp"
+
 namespace boost
 {
 namespace filesystem

@@ -60,6 +60,7 @@
 #include "crypto/random_generator/boost_generator.hpp"
 #include "crypto/sr25519/sr25519_provider_impl.hpp"
 #include "crypto/vrf/vrf_provider_impl.hpp"
+#include "extensions/impl/extension_factory_impl.hpp"
 #include "network/impl/dummy_sync_protocol_client.hpp"
 #include "network/impl/extrinsic_observer_impl.hpp"
 #include "network/impl/gossiper_broadcast.hpp"
@@ -630,6 +631,22 @@ namespace sgns::injector {
         di::bind<crypto::Bip39Provider>.template to<crypto::Bip39ProviderImpl>(),
         di::bind<crypto::Pbkdf2Provider>.template to<crypto::Pbkdf2ProviderImpl>(),
         di::bind<crypto::Secp256k1Provider>.template to<crypto::Secp256k1ProviderImpl>(),
+
+        di::bind<crypto::CryptoStore>.template to<crypto::CryptoStoreImpl>(),
+        di::bind<extensions::ExtensionFactory>.template to<extensions::ExtensionFactoryImpl>(),
+        di::bind<network::Router>.template to<network::RouterLibp2p>(),
+        di::bind<verification::ProductionGossiper>.template to<network::GossiperBroadcast>(),
+        di::bind<verification::finality::Gossiper>.template to<network::GossiperBroadcast>(),
+        di::bind<network::Gossiper>.template to<network::GossiperBroadcast>(),
+        di::bind<network::SyncClientsSet>.to([](auto const &injector) {
+          return get_sync_clients_set(injector);
+        }),
+        di::bind<network::SyncProtocolObserver>.template to<network::SyncProtocolObserverImpl>(),
+        di::bind<runtime::binaryen::WasmModule>.template to<runtime::binaryen::WasmModuleImpl>(),
+        di::bind<runtime::binaryen::WasmModuleFactory>.template to<runtime::binaryen::WasmModuleFactoryImpl>(),       
+        di::bind<runtime::TaggedTransactionQueue>.template to<runtime::binaryen::TaggedTransactionQueueImpl>(),
+        di::bind<runtime::ParachainHost>.template to<runtime::binaryen::ParachainHostImpl>(),
+        di::bind<runtime::OffchainWorker>.template to<runtime::binaryen::OffchainWorkerImpl>(),
 
         di::bind<runtime::Metadata>.template to<runtime::binaryen::MetadataImpl>(),
         di::bind<runtime::Finality>.template to<runtime::binaryen::FinalityImpl>(),
