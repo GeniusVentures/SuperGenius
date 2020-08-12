@@ -24,11 +24,11 @@ namespace sgns
     using sgns::application::AppConfiguration;
     using sgns::application::AppConfigurationImpl;
     AppDelegate::AppDelegate (){
-
+        std::cout << "--------------AppDelegate::AppDelegate()---------------" << std::endl;
     }
 
     AppDelegate::~AppDelegate (){
-
+        std::cout << "--------------AppDelegate::~AppDelegate()---------------" << std::endl;
     }
 
     int AppDelegate::init(int argc, char * const * argv){

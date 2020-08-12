@@ -7,6 +7,7 @@
 sgns::AppDelegate g_app_delegate;
 int main (int argc, char * const * argv)
 {
+	std::cout << "--------------main()---------------" << std::endl;
     int result (0);
     g_app_delegate.init(argc, argv);
     boost::program_options::variables_map vm;
