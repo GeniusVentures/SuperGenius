@@ -9,7 +9,7 @@
 namespace sgns::primitives {
   
   /// Verification engine unique ID.
-  using VerificationEngineId = base::Blob<4>;
+  using VerificationEngineId = base::Blob<10>;
 
   inline const auto kProductionEngineId =
       VerificationEngineId::fromString("PRODUCTION").value();
