@@ -1,6 +1,8 @@
 #include "app_delegate.hpp"
 #include "application/impl/app_config_impl.hpp"
 #include "application/impl/block_producing_node_application.hpp"
+#include "application/impl/block_validating_node_application.hpp"
+
 #include "base/logger.hpp"
 #include <boost/process/child.hpp>
 #include <lib/utility.hpp>
@@ -99,6 +101,8 @@ namespace sgns
 
         // sgns::daemon_config config (data_path);
         app_production->run();
+
+        app_validating->run();
     }
 
     void AppDelegate::exit(){
@@ -106,12 +110,15 @@ namespace sgns
 
     }
 
-    void AppDelegate::init_production_node(int argc, char * const * argv){
+    void AppDelegate::init_node(int argc, char * const * argv){
 
         configuration->initialize_from_args(
             AppConfiguration::LoadScheme::kBlockProducing, argc,(char**) argv);
         app_production =
             std::make_shared<application::BlockProducingNodeApplication>(
+                std::move(configuration));
+        app_validating =
+            std::make_shared<application::BlockValidatingNodeApplication>(
                 std::move(configuration));
     }
 

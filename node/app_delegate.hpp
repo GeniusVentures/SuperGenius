@@ -22,6 +22,7 @@ namespace sgns
     namespace application
     {
         class BlockProducingNodeApplication;
+        class BlockValidatingNodeApplication;
         class AppConfigurationImpl;
     } // namespace application
     
@@ -56,8 +57,9 @@ public:
 public:
     // boost::program_options::variables_map vm;
 private:
-    void init_production_node(int argc, char * const * argv);
+    void init_node(int argc, char * const * argv);
     std::shared_ptr<application::BlockProducingNodeApplication> app_production;
+    std::shared_ptr<application::BlockValidatingNodeApplication> app_production;
     std::shared_ptr<application::AppConfigurationImpl> configuration;
 };
 }
