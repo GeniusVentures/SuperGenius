@@ -1,0 +1,10 @@
+
+add_library(block_validator
+production_block_validator.cpp
+)
+target_link_libraries(block_validator
+outcome
+production_digests_util
+mp_utils
+logger
+)
