@@ -43,7 +43,7 @@ namespace sgns::verification {
 
   class ProductionImpl : public Production, public std::enable_shared_from_this<ProductionImpl> {
    public:
-    /**
+    /**Node configuration must contain 'genesis' option
      * Create an instance of Production implementation
      * @param lottery - implementation of Production Lottery
      * @param proposer - block proposer

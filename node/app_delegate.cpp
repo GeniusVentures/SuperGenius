@@ -1,7 +1,7 @@
 #include "app_delegate.hpp"
 #include "application/impl/app_config_impl.hpp"
 #include "application/impl/block_producing_node_application.hpp"
-#include "application/impl/block_validating_node_application.hpp"
+#include "application/impl/validating_node_application.hpp"
 
 #include "base/logger.hpp"
 #include <boost/process/child.hpp>
@@ -35,7 +35,7 @@ namespace sgns
 
     int AppDelegate::init(int argc, char * const * argv){
         std::cout << "--------------AppDelegate::init()---------------" << std::endl;
-        sgns::set_umask ();
+        /*sgns::set_umask ();
         boost::program_options::options_description description ("Command line options");
         // clang-format off
         description.add_options ()
@@ -58,7 +58,7 @@ namespace sgns
             return 1;
         }
         boost::program_options::notify (vm);
-
+		*/
         // auto network (vm.find ("network"));
         // if (network != vm.end ())
         // {
@@ -86,7 +86,8 @@ namespace sgns
 
         auto logger = base::createLogger("SuperGenius block node: ");
         configuration = std::make_shared<AppConfigurationImpl>(logger);
-        init_production_node(argc, argv);
+        init_node(argc, argv);
+        return 1;
     }
 
     void AppDelegate::run(boost::filesystem::path const & data_path/*, sgns::node_flags const & flags*/){
@@ -118,7 +119,7 @@ namespace sgns
             std::make_shared<application::BlockProducingNodeApplication>(
                 std::move(configuration));
         app_validating =
-            std::make_shared<application::BlockValidatingNodeApplication>(
+            std::make_shared<application::ValidatingNodeApplication>(
                 std::move(configuration));
     }
 

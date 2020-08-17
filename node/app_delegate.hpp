@@ -22,7 +22,7 @@ namespace sgns
     namespace application
     {
         class BlockProducingNodeApplication;
-        class BlockValidatingNodeApplication;
+        class ValidatingNodeApplication;
         class AppConfigurationImpl;
     } // namespace application
     
@@ -59,7 +59,7 @@ public:
 private:
     void init_node(int argc, char * const * argv);
     std::shared_ptr<application::BlockProducingNodeApplication> app_production;
-    std::shared_ptr<application::BlockValidatingNodeApplication> app_production;
+    std::shared_ptr<application::ValidatingNodeApplication> app_validating;
     std::shared_ptr<application::AppConfigurationImpl> configuration;
 };
 }
