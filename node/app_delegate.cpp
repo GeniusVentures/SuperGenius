@@ -103,7 +103,7 @@ namespace sgns
         // sgns::daemon_config config (data_path);
         app_production->run();
 
-        app_validating->run();
+        // app_validating->run();
     }
 
     void AppDelegate::exit(){

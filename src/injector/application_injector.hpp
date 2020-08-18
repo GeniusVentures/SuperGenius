@@ -403,7 +403,7 @@ namespace sgns::injector {
       base::raise(batch.error());
     }
     for (const auto &[key, val] : genesis_raw_configs) {
-      spdlog::debug(
+      spdlog::info(
           "Key: {}, Val: {}", key.toHex(), val.toHex().substr(0, 200));
       if (auto res = batch.value()->put(key, val); ! res) {
         base::raise(res.error());
