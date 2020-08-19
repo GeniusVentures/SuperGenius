@@ -33,6 +33,7 @@ namespace sgns::base {
     if (logger == nullptr) {
       logger = ::createLogger(tag);
     }
+	logger->set_level(spdlog::level::trace);
     return logger;
   }
 }  // namespace sgns::base

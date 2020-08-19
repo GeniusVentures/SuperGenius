@@ -118,9 +118,9 @@ namespace sgns
         app_production =
             std::make_shared<application::BlockProducingNodeApplication>(
                 std::move(configuration));
-        app_validating =
-            std::make_shared<application::ValidatingNodeApplication>(
-                std::move(configuration));
+        // app_validating =
+        //     std::make_shared<application::ValidatingNodeApplication>(
+        //         std::move(configuration));
     }
 
 } // namespace sgns
