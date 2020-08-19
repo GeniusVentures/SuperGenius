@@ -70,3 +70,11 @@ To run all tests and display log for failed tests, you can use following command
     ctest -C Release --output-on-failure
    
 You can use Debug configuration to debug in Visual Studio.
+ 
+ example build commands
+
+    cmake ../build/Windows -G "Visual Studio 15 2017 Win64" -DTESTING=ON -DBOOST_ROOT="C:/local/boost_1_70_0" -DBOOST_INCLUDE_DIR="C:/local/boost_1_70_0"  -DBOOST_LIBRARY_DIR="C:/local/boost_1_70_0/lib64-msvc-14.1" -DOPENSSL_ROOT_DIR="C:/Program Files/OpenSSL-Win64" -DCMAKE_BUILD_TYPE=Debug -DINSTALL_RUSTC=OFF -DTHIRDPARTY_DIR="D:/03_TASK/01_blockchain/03-GNUS/work/geniustokens/thirdparty/build/Debug"
+
+    cmake --build . --config Debug
+    cd SuperGenius/src/SuperGenius-build
+    ctest -C Debug

@@ -101,9 +101,9 @@ namespace sgns
         // sgns::set_secure_perm_directory (data_path, error_chmod);
 
         // sgns::daemon_config config (data_path);
-        app_production->run();
+        // app_production->run();
 
-        // app_validating->run();
+        app_validating->run();
     }
 
     void AppDelegate::exit(){
@@ -115,12 +115,12 @@ namespace sgns
 
         configuration->initialize_from_args(
             AppConfiguration::LoadScheme::kBlockProducing, argc,(char**) argv);
-        app_production =
-            std::make_shared<application::BlockProducingNodeApplication>(
-                std::move(configuration));
-        // app_validating =
-        //     std::make_shared<application::ValidatingNodeApplication>(
+        // app_production =
+        //     std::make_shared<application::BlockProducingNodeApplication>(
         //         std::move(configuration));
+        app_validating =
+            std::make_shared<application::ValidatingNodeApplication>(
+                std::move(configuration));
     }
 
 } // namespace sgns
