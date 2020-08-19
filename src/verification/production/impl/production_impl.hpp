@@ -38,7 +38,7 @@ namespace sgns::verification {
 
   inline const auto kTimestampId =
       primitives::InherentIdentifier::fromString("timstap0").value();
-  inline const auto kProductionSlotId =
+  inline const auto kProdSlotId =
       primitives::InherentIdentifier::fromString("prodslot").value();
 
   class ProductionImpl : public Production, public std::enable_shared_from_this<ProductionImpl> {

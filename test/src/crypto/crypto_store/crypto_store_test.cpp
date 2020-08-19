@@ -69,7 +69,7 @@ struct CryptoStoreTest : public test::BaseFS_Test {
                         Blob<32>::fromHex("a4681403ba5b6a3f3bd0b0604ce439a78244"
                                           "c7d43b127ec35cd8325602dd47fd"));
     seed = s;
-    key_type = kProduction;
+    key_type = kProd;
 
     EXPECT_OUTCOME_TRUE(
         ed_publ,
@@ -246,10 +246,10 @@ TEST_F(CryptoStoreTest, generateSr25519KeypairStoreSuccess) {
  * @then collection of all ed25519 public keys of provided type is returned
  */
 TEST_F(CryptoStoreTest, getEd25519PublicKeysSuccess) {
-  EXPECT_OUTCOME_TRUE(pair1, crypto_store->generateEd25519Keypair(kProduction));
-  EXPECT_OUTCOME_TRUE(pair2, crypto_store->generateEd25519Keypair(kProduction));
+  EXPECT_OUTCOME_TRUE(pair1, crypto_store->generateEd25519Keypair(kProd));
+  EXPECT_OUTCOME_TRUE(pair2, crypto_store->generateEd25519Keypair(kProd));
   EXPECT_OUTCOME_SUCCESS(pair3, crypto_store->generateEd25519Keypair(kLp2p));
-  EXPECT_OUTCOME_SUCCESS(pair4, crypto_store->generateSr25519Keypair(kProduction));
+  EXPECT_OUTCOME_SUCCESS(pair4, crypto_store->generateSr25519Keypair(kProd));
   EXPECT_OUTCOME_SUCCESS(pair5, crypto_store->generateSr25519Keypair(kAcco));
 
   std::set<ED25519PublicKey> ed_production_keys_set = {pair1.public_key,
@@ -257,7 +257,7 @@ TEST_F(CryptoStoreTest, getEd25519PublicKeysSuccess) {
   std::vector<ED25519PublicKey> ed_production_keys(ed_production_keys_set.begin(),
                                              ed_production_keys_set.end());
 
-  auto &&keys = crypto_store->getEd25519PublicKeys(kProduction);
+  auto &&keys = crypto_store->getEd25519PublicKeys(kProd);
   ASSERT_EQ(ed_production_keys, keys);
 }
 
@@ -267,10 +267,10 @@ TEST_F(CryptoStoreTest, getEd25519PublicKeysSuccess) {
  * @then collection of all sr25519 public keys of provided type is returned
  */
 TEST_F(CryptoStoreTest, getSr25519PublicKeysSuccess) {
-  EXPECT_OUTCOME_TRUE(pair1, crypto_store->generateSr25519Keypair(kProduction));
-  EXPECT_OUTCOME_TRUE(pair2, crypto_store->generateSr25519Keypair(kProduction));
+  EXPECT_OUTCOME_TRUE(pair1, crypto_store->generateSr25519Keypair(kProd));
+  EXPECT_OUTCOME_TRUE(pair2, crypto_store->generateSr25519Keypair(kProd));
   EXPECT_OUTCOME_SUCCESS(pair3, crypto_store->generateSr25519Keypair(kLp2p));
-  EXPECT_OUTCOME_SUCCESS(pair4, crypto_store->generateEd25519Keypair(kProduction));
+  EXPECT_OUTCOME_SUCCESS(pair4, crypto_store->generateEd25519Keypair(kProd));
   EXPECT_OUTCOME_SUCCESS(pair5, crypto_store->generateEd25519Keypair(kAcco));
 
   std::set<SR25519PublicKey> sr_production_keys_set = {pair1.public_key,
@@ -278,6 +278,6 @@ TEST_F(CryptoStoreTest, getSr25519PublicKeysSuccess) {
   std::vector<SR25519PublicKey> sr_production_keys(sr_production_keys_set.begin(),
                                              sr_production_keys_set.end());
 
-  auto &&keys = crypto_store->getSr25519PublicKeys(kProduction);
+  auto &&keys = crypto_store->getSr25519PublicKeys(kProd);
   ASSERT_EQ(sr_production_keys, keys);
 }

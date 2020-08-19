@@ -263,7 +263,7 @@ namespace sgns::verification {
     }
     base::Buffer encoded_header{encoded_header_res.value()};
 
-    return primitives::PreRuntime{{primitives::kProductionEngineId, encoded_header}};
+    return primitives::PreRuntime{{primitives::kProdEngineId, encoded_header}};
   }
 
   primitives::Seal ProductionImpl::sealBlock(const primitives::Block &block) const {
@@ -279,7 +279,7 @@ namespace sgns::verification {
                  pre_seal_hash.data(),
                  decltype(pre_seal_hash)::size());
     auto encoded_seal = base::Buffer(scale::encode(seal).value());
-    return primitives::Seal{{primitives::kProductionEngineId, encoded_seal}};
+    return primitives::Seal{{primitives::kProdEngineId, encoded_seal}};
   }
 
   void ProductionImpl::processSlotLeadership(const crypto::VRFOutput &output) {
@@ -296,7 +296,7 @@ namespace sgns::verification {
       return log_->error("cannot put an inherent data: {}",
                          put_res.error().message());
     }
-    put_res = inherent_data.putData(kProductionSlotId, current_slot_);
+    put_res = inherent_data.putData(kProdSlotId, current_slot_);
     if (!put_res) {
       return log_->error("cannot put an inherent data: {}",
                          put_res.error().message());

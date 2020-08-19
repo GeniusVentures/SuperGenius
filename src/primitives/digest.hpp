@@ -11,7 +11,7 @@ namespace sgns::primitives {
   /// Verification engine unique ID.
   using VerificationEngineId = base::Blob<10>;
 
-  inline const auto kProductionEngineId =
+  inline const auto kProdEngineId =
       VerificationEngineId::fromString("PRODUCTION").value();
 
   /// System digest item that contains the root of changes trie at given
