@@ -15,7 +15,7 @@ target_link_libraries(crypto_store
     Boost::filesystem
     ed25519_provider
     sr25519_provider
-##    secp256k1_provider
+    secp256k1_provider
     p2p::p2p_random_generator # generator from libp2p
     bip39_provider
     crypto_store_key_type

@@ -100,18 +100,18 @@ namespace sgns::crypto {
   CryptoStoreImpl::CryptoStoreImpl(
       std::shared_ptr<ED25519Provider> ed25519_provider,
       std::shared_ptr<SR25519Provider> sr25519_provider,
-//      std::shared_ptr<Secp256k1Provider> secp256k1_provider,
+      std::shared_ptr<Secp256k1Provider> secp256k1_provider,
       std::shared_ptr<Bip39Provider> bip39_provider,
       std::shared_ptr<CSPRNG> random_generator)
       : ed25519_provider_(std::move(ed25519_provider)),
         sr25519_provider_(std::move(sr25519_provider)),
-//        secp256k1_provider_(std::move(secp256k1_provider)),
+        secp256k1_provider_(std::move(secp256k1_provider)),
         bip39_provider_(std::move(bip39_provider)),
         random_generator_(std::move(random_generator)),
         logger_(base::createLogger("CryptoStore")) {
     BOOST_ASSERT(ed25519_provider_ != nullptr);
     BOOST_ASSERT(sr25519_provider_ != nullptr);
-//    BOOST_ASSERT(secp256k1_provider_ != nullptr);
+    BOOST_ASSERT(secp256k1_provider_ != nullptr);
     BOOST_ASSERT(bip39_provider_ != nullptr);
     BOOST_ASSERT(random_generator_ != nullptr);
   }
