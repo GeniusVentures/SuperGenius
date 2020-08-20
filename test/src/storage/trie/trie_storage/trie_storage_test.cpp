@@ -39,7 +39,7 @@ TEST(TriePersistencyTest, CreateDestroyCreate) {
     options.create_if_missing = true;  // intentionally
     EXPECT_OUTCOME_TRUE(
         level_db,
-        LevelDB::create("/tmp/supergenius_leveldb_persistency_test", options));
+        LevelDB::create("supergenius_leveldb_persistency_test", options));
     auto serializer = std::make_shared<TrieSerializerImpl>(
         factory,
         codec,
@@ -57,7 +57,7 @@ TEST(TriePersistencyTest, CreateDestroyCreate) {
     root = root_;
   }
   EXPECT_OUTCOME_TRUE(new_level_db,
-                      LevelDB::create("/tmp/supergenius_leveldb_persistency_test"));
+                      LevelDB::create("supergenius_leveldb_persistency_test"));
   auto serializer = std::make_shared<TrieSerializerImpl>(
       factory,
       codec,
@@ -74,5 +74,5 @@ TEST(TriePersistencyTest, CreateDestroyCreate) {
   EXPECT_OUTCOME_TRUE(v3, batch->get("678"_buf));
   ASSERT_EQ(v3, "xyz"_buf);
 
-  boost::filesystem::remove_all("/tmp/supergenius_leveldb_persistency_test");
+  //boost::filesystem::remove_all("supergenius_leveldb_persistency_test");
 }
