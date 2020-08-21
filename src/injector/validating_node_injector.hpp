@@ -170,26 +170,26 @@ namespace sgns::injector {
             [](auto const &inj) { return get_production(inj); }),
         di::bind<verification::finality::RoundObserver>.template to<verification::finality::LauncherImpl>(),
         di::bind<verification::finality::Launcher>.template to<verification::finality::LauncherImpl>(),
-        // di::bind<runtime::Finality>.template to(
-        //     [is_only_finalizing{app_config->is_only_finalizing()}](
-        //         const auto &injector) -> sptr<runtime::Finality> {
-        //       static boost::optional<sptr<runtime::Finality>> initialized =
-        //           boost::none;
-        //       if (initialized) {
-        //         return *initialized;
-        //       }
-        //       if (is_only_finalizing) {
-        //         auto finality_dummy =
-        //             injector
-        //                 .template create<sptr<runtime::dummy::FinalityDummy>>();
-        //         initialized = finality_dummy;
-        //       } else {
-        //         auto finality = injector.template create<
-        //             sptr<runtime::binaryen::FinalityImpl>>();
-        //         initialized = finality;
-        //       }
-        //       return *initialized;
-        //     })[di::override],
+        di::bind<runtime::Finality>./*template */to(
+            [is_only_finalizing{app_config->is_only_finalizing()}](
+                const auto &injector) -> sptr<runtime::Finality> {
+              static boost::optional<sptr<runtime::Finality>> initialized =
+                  boost::none;
+              if (initialized) {
+                return *initialized;
+              }
+              if (is_only_finalizing) {
+                auto finality_dummy =
+                    injector
+                        .template create<sptr<runtime::dummy::FinalityDummy>>();
+                initialized = finality_dummy;
+              } else {
+                auto finality = injector.template create<
+                    sptr<runtime::binaryen::FinalityImpl>>();
+                initialized = finality;
+              }
+              return *initialized;
+            })[di::override],
         di::bind<application::KeyStorage>.to(
             [app_config](const auto &injector) {
               return get_key_storage(app_config->keystore_path(), injector);

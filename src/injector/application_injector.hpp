@@ -535,7 +535,7 @@ namespace sgns::injector {
     auto crypto_store =
         std::make_shared<crypto::CryptoStoreImpl>(std::move(ed25519_provider),
                                                   std::move(sr25519_provider),
-                                                  // std::move(secp256k1_provider),
+                                                  std::move(secp256k1_provider),
                                                   std::move(bip39_provider),
                                                   std::move(random_generator));
 
