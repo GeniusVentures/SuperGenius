@@ -1,2 +1,3 @@
 add_subdirectory(primitives)
 add_subdirectory(storage)
+add_subdirectory(runtime)
