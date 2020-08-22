@@ -13,7 +13,9 @@ namespace sgns::runtime::binaryen {
 
   FinalityImpl::FinalityImpl(
       const std::shared_ptr<RuntimeManager> &runtime_manager)
-      : RuntimeApi(runtime_manager) {}
+      : RuntimeApi(runtime_manager) {
+	  BOOST_ASSERT(runtime_manager);
+  }
 
   outcome::result<boost::optional<ScheduledChange>> FinalityImpl::pending_change(
       const Digest &digest) {

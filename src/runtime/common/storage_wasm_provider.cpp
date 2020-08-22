@@ -14,9 +14,9 @@ namespace sgns::runtime {
                      "Error getting a batch of the storage");
     auto state_code_res = batch.value()->get(kRuntimeKey);
     // for debug
-// 	BOOST_ASSERT_MSG(state_code_res.has_value(),
-//                      "Runtime code does not exist in the storage");
-//  state_code_ = state_code_res.value();
+	BOOST_ASSERT_MSG(state_code_res.has_value(),
+                     "Runtime code does not exist in the storage");
+	state_code_ = state_code_res.value();
   }
 
   const base::Buffer &StorageWasmProvider::getStateCode() const {
