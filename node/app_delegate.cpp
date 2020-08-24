@@ -9,17 +9,17 @@
 #include "secure/utility.hpp"
 #include <csignal>
 #include <iostream>
-#include "cli.hpp"
-#include "daemonconfig.hpp"
+// #include "cli.hpp"
+// #include "daemonconfig.hpp"
 
 namespace
 {
-void my_abort_signal_handler (int signum)
-{
-	std::signal (signum, SIG_DFL);
-	sgns::dump_crash_stacktrace ();
-	// sgns::create_load_memory_address_files ();
-}
+// void my_abort_signal_handler (int signum)
+// {
+// 	std::signal (signum, SIG_DFL);
+// 	sgns::dump_crash_stacktrace ();
+// 	// sgns::create_load_memory_address_files ();
+// }
 }
 namespace sgns
 {
@@ -90,14 +90,14 @@ namespace sgns
         return 1;
     }
 
-    void AppDelegate::run(boost::filesystem::path const & data_path/*, sgns::node_flags const & flags*/){
+    void AppDelegate::run(/*boost::filesystem::path const & data_path, sgns::node_flags const & flags*/){
         std::cout << "--------------AppDelegate::run()---------------" << std::endl;
         	// Override segmentation fault and aborting.
-	    std::signal (SIGSEGV, &my_abort_signal_handler);
-	    std::signal (SIGABRT, &my_abort_signal_handler);
+	    // std::signal (SIGSEGV, &my_abort_signal_handler);
+	    // std::signal (SIGABRT, &my_abort_signal_handler);
         
-        boost::filesystem::create_directories (data_path);
-	    boost::system::error_code error_chmod;
+        // boost::filesystem::create_directories (data_path);
+	    // boost::system::error_code error_chmod;
         // sgns::set_secure_perm_directory (data_path, error_chmod);
 
         // sgns::daemon_config config (data_path);

@@ -409,9 +409,9 @@ namespace sgns::injector {
         base::raise(res.error());
       }
     }
-//     if (auto res = batch.value()->commit(); ! res) {
-//       base::raise(res.error());
-//     }
+    if (auto res = batch.value()->commit(); ! res) {
+      base::raise(res.error());
+    }
 
     initialized = trie_storage;
     return trie_storage;

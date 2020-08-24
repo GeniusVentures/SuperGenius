@@ -47,7 +47,7 @@ public:
      * @param 
      * @return no return
      */
-    void run(boost::filesystem::path const &/*, sgns::node_flags const & flags*/);
+    void run(/*boost::filesystem::path const &, sgns::node_flags const & flags*/);
     /**
      * @brief  exit from main loop of SuperGenius daemon node
      * @param 
