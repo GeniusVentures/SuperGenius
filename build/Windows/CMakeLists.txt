@@ -96,14 +96,32 @@ set(_FINDPACKAGE_IPFS_LITE_CPP_DIR "${_THIRDPARTY_BUILD_DIR}/ipfs-lite-cpp/cmake
 
 set(_FINDPACKAGE_BOOST_DI_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/Boost.DI/include")
 
-set(THIRDPARTY_DIR "${_THIRDPARTY_BUILD_DIR}/../..")
-set(_BOOST_ROOT "${THIRDPARTY_DIR}/boost")
+set(_THIRDPARTY_DIR "${_THIRDPARTY_BUILD_DIR}/../..")
+set(_BOOST_ROOT "${_THIRDPARTY_DIR}/boost")
 set(_Boost_INCLUDE_DIR "${_BOOST_ROOT}/include/boost-1_72")
+set(boost_headers_DIR "${_BOOST_ROOT}/lib/cmake/boost_headers-1.72.0")
+set(boost_random_DIR "${BOOST_ROOT}/lib/cmake/boost_random-1.72.0")
+set(boost_system_DIR "${BOOST_ROOT}/lib/cmake/boost_system-1.72.0")
+set(boost_filesystem_DIR "${BOOST_ROOT}/lib/cmake/boost_filesystem-1.72.0")
+set(boost_program_options_DIR "${BOOST_ROOT}/lib/cmake/boost_program_options-1.72.0")
+set(boost_log_DIR "${BOOST_ROOT}/lib/cmake/boost_log-1.72.0")
+set(boost_log_setup_DIR "${BOOST_ROOT}/lib/cmake/boost_log_setup-1.72.0")
+
+set(boost_DIR "${_BOOST_ROOT}/lib/cmake/Boost-1.72.0")
 
 set(_BOOST_CACHE_ARGS    
-      -DBOOST_ROOT:PATH="${_BOOST_ROOT}"
-      -DBOOST_INCLUDE_DIR:PATH="${_Boost_INCLUDE_DIR}"
-      -DBOOST_LIBRARY_DIR:PATH="${_BOOST_ROOT}/lib"     
+      # -DBOOST_ROOT:PATH="${_BOOST_ROOT}"
+      # -DBOOST_INCLUDE_DIR:PATH="${_Boost_INCLUDE_DIR}"
+      # -DBOOST_LIBRARY_DIR:PATH="${_BOOST_ROOT}/lib"   
+      -Dboost_headers_DIR:PATH=${boost_headers_DIR}
+      -Dboost_random_DIR:PATH=${boost_random_DIR}
+      -Dboost_system_DIR:PATH=${boost_system_DIR}
+      -Dboost_filesystem_DIR:PATH=${boost_filesystem_DIR}
+      -Dboost_program_options_DIR:PATH=${boost_program_options_DIR}
+      -Dboost_log_DIR:PATH=${boost_log_DIR}
+      -Dboost_log_setup_DIR:PATH=${boost_log_setup_DIR}
+      -DBoost_DIR:PATH=${boost_DIR}
+      -DBoost_INCLUDE_DIR:PATH=${_Boost_INCLUDE_DIR}  
       -DBoost_USE_MULTITHREADED:BOOL=ON
       -DBoost_USE_STATIC_RUNTIME:BOOL=ON
       -DBoost_USE_STATIC_LIBS:BOOL=ON
@@ -198,7 +216,7 @@ ExternalProject_Add(SuperGenius
         -Dipfs-lite-cpp_LIB_DIR:STRING=${_THIRDPARTY_BUILD_DIR}/ipfs-lite-cpp/lib
         -DTESTING:BOOL=${TESTING}
         -DCBOR_INCLUDE_DIR:STRING=${_THIRDPARTY_BUILD_DIR}/ipfs-lite-cpp/include/deps/tinycbor/src
-        -DCMAKE_CXX_FLAGS:STRING=${CMAKE_CXX_FLAGS}\ -I\ ${BOOST_INCLUDE_DIR}\ -I\ ${_FINDPACKAGE_GSL_INCLUDE_DIR}\ -I\ ${_FINDPACKAGE_SPDLOG_INCLUDE_DIR}\ -I\ \\\"${OPENSSL_ROOT_DIR}/include\\\"\ -I\ ${_FINDPACKAGE_PROTOBUF_INCLUDE_DIR}\ -I\ ${_FINDPACKAGE_BOOST_DI_INCLUDE_DIR}\ -I\ ${_FINDPACKAGE_BLOCKLATTICE_INCLUDE_DIR}\ -I\ ${_FINDPACKAGE_IPFS_LITE_CPP_INCLUDE_DIR}\ -I\ ${_FINDPACKAGE_LIBP2P_INCLUDE_DIR}\ -I\ ${_FINDPACKAGE_BOOST_DI_INCLUDE_DIR}\ -I\ ${_FINDPACKAGE_LEVELDB_INCLUDE_DIR}\ -I\ ${_FINDPACKAGE_jsonrpc_lean_INCLUDE_DIR}\ -I\ ${_FINDPACKAGE_RapidJSON_INCLUDE_DIR}#\ -std=c99
+        -DCMAKE_CXX_FLAGS:STRING=${CMAKE_CXX_FLAGS}\ -I\ ${_Boost_INCLUDE_DIR}\ -I\ ${_FINDPACKAGE_GSL_INCLUDE_DIR}\ -I\ ${_FINDPACKAGE_SPDLOG_INCLUDE_DIR}\ -I\ \\\"${OPENSSL_ROOT_DIR}/include\\\"\ -I\ ${_FINDPACKAGE_PROTOBUF_INCLUDE_DIR}\ -I\ ${_FINDPACKAGE_BOOST_DI_INCLUDE_DIR}\ -I\ ${_FINDPACKAGE_BLOCKLATTICE_INCLUDE_DIR}\ -I\ ${_FINDPACKAGE_IPFS_LITE_CPP_INCLUDE_DIR}\ -I\ ${_FINDPACKAGE_LIBP2P_INCLUDE_DIR}\ -I\ ${_FINDPACKAGE_BOOST_DI_INCLUDE_DIR}\ -I\ ${_FINDPACKAGE_LEVELDB_INCLUDE_DIR}\ -I\ ${_FINDPACKAGE_jsonrpc_lean_INCLUDE_DIR}\ -I\ ${_FINDPACKAGE_RapidJSON_INCLUDE_DIR}#\ -std=c99
         -DCMAKE_C_FLAGS:STRING=${CMAKE_C_FLAGS}
         -DCMAKE_CXX_FLAGS_RELEASE:STRING=${CMAKE_CXX_FLAGS_RELEASE}
         -DCMAKE_C_FLAGS_RELEASE:STRING=${CMAKE_C_FLAGS_RELEASE}
