@@ -92,7 +92,7 @@ find_package(xxhash CONFIG REQUIRED)
 
 option(TESTING "Build tests" ON)
 link_directories(
-  ${BOOST_LIBRARY_DIR}
+  ${BOOST_LIB_DIR}
   ${ipfs-lite-cpp_LIB_DIR}
 )
 

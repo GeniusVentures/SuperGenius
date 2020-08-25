@@ -112,7 +112,7 @@ set(boost_DIR "${_BOOST_ROOT}/lib/cmake/Boost-1.72.0")
 set(_BOOST_CACHE_ARGS    
       # -DBOOST_ROOT:PATH="${_BOOST_ROOT}"
       # -DBOOST_INCLUDE_DIR:PATH="${_Boost_INCLUDE_DIR}"
-      # -DBOOST_LIBRARY_DIR:PATH="${_BOOST_ROOT}/lib"   
+      -DBOOST_LIB_DIR:PATH="${_BOOST_ROOT}/lib"   
       -Dboost_headers_DIR:PATH=${boost_headers_DIR}
       -Dboost_random_DIR:PATH=${boost_random_DIR}
       -Dboost_system_DIR:PATH=${boost_system_DIR}
