@@ -16,13 +16,15 @@ namespace sgns::runtime::binaryen {
       std::shared_ptr<blockchain::BlockHeaderRepository> header_repo)
       : RuntimeApi(runtime_manager),
         changes_tracker_{std::move(changes_tracker)},
-        header_repo_{std::move(header_repo)} {
+        header_repo_{std::move(header_repo)}, 
+	    logger_{base::createLogger("CoreImpl") } {
     BOOST_ASSERT(changes_tracker_ != nullptr);
     BOOST_ASSERT(header_repo_ != nullptr);
   }
 
   outcome::result<Version> CoreImpl::version(
       const boost::optional<primitives::BlockHash> &block_hash) {
+	  logger_->debug("Core_version");
     if (block_hash) {
       return executeAt<Version>(
           "Core_version", *block_hash, CallPersistency::EPHEMERAL);
@@ -36,6 +38,7 @@ namespace sgns::runtime::binaryen {
     OUTCOME_TRY(changes_tracker_->onBlockChange(
         block.header.parent_hash,
         block.header.number - 1));  // parent's number
+	logger_->debug("Core_execute_block ");
     return executeAt<void>("Core_execute_block",
                            parent.state_root,
                            CallPersistency::PERSISTENT,
@@ -47,6 +50,7 @@ namespace sgns::runtime::binaryen {
     OUTCOME_TRY(
         changes_tracker_->onBlockChange(header.parent_hash,
                                         header.number - 1));  // parent's number
+	logger_->debug("Core_initialize_block ");
     return executeAt<void>("Core_initialize_block",
                            parent.state_root,
                            CallPersistency::PERSISTENT,
@@ -55,6 +59,7 @@ namespace sgns::runtime::binaryen {
 
   outcome::result<std::vector<AuthorityId>> CoreImpl::authorities(
       const primitives::BlockId &block_id) {
+	logger_->debug("Core_authorities ");
     return execute<std::vector<AuthorityId>>(
         "Core_authorities", CallPersistency::EPHEMERAL, block_id);
   }

@@ -6,6 +6,7 @@
 
 #include "blockchain/block_header_repository.hpp"
 #include "storage/changes_trie/changes_tracker.hpp"
+#include "base/logger.hpp"
 
 namespace sgns::runtime::binaryen {
 
@@ -33,6 +34,7 @@ namespace sgns::runtime::binaryen {
    private:
     std::shared_ptr<storage::changes_trie::ChangesTracker> changes_tracker_;
     std::shared_ptr<blockchain::BlockHeaderRepository> header_repo_;
+	base::Logger logger_;
   };
 }  // namespace sgns::runtime::binaryen
 

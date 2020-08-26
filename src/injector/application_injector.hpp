@@ -192,7 +192,7 @@ namespace sgns::injector {
     return initialized.value();
   }
 
-  // jrpc api listener (over Websockets) getter
+  // jrpc api listener (over WebSockets) getter
   template <typename Injector>
   sptr<api::WsListenerImpl> get_jrpc_api_ws_listener(
       const Injector &injector,

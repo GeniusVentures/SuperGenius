@@ -4,6 +4,7 @@
 
 #include "runtime/binaryen/runtime_api/runtime_api.hpp"
 #include "runtime/finality.hpp"
+#include "base/logger.hpp"
 
 namespace sgns::runtime::binaryen {
 
@@ -22,6 +23,7 @@ namespace sgns::runtime::binaryen {
 
     outcome::result<std::vector<WeightedAuthority>> authorities(
         const primitives::BlockId &block_id) override;
+	base::Logger logger_;
   };
 }  // namespace sgns::runtime::binaryen
 
