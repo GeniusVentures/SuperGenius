@@ -23,7 +23,7 @@ namespace sgns::application {
     config_storage_ = injector_.create<sptr<ConfigurationStorage>>();
     key_storage_ = injector_.create<sptr<KeyStorage>>();
     clock_ = injector_.create<sptr<clock::SystemClock>>();
-    production_ = injector_.create<sptr<Production>>();
+     production_ = injector_.create<sptr<Production>>();
     finality_launcher_ = injector_.create<sptr<FinalityLauncher>>();
     router_ = injector_.create<sptr<network::Router>>();
 

@@ -40,11 +40,12 @@ namespace sgns::runtime::binaryen {
 	  logger_->debug("FinalityApi_finality_authorities ");
       std::vector<Authority> result ;
       Authority authority_;
-      authority_.id = 
-
+	  authority_.id.id.fill(1u);
+	  authority_.weight = 100u;
+	  result.push_back(authority_);
       return result;
-    return execute<std::vector<Authority>>(
-        //"FinalityApi_finality_authorities", CallPersistency::EPHEMERAL, block_id);
-		"GrandpaApi_grandpa_authorities", CallPersistency::EPHEMERAL, block_id);
+//     return execute<std::vector<Authority>>(
+//         //"FinalityApi_finality_authorities", CallPersistency::EPHEMERAL, block_id);
+// 		"GrandpaApi_grandpa_authorities", CallPersistency::EPHEMERAL, block_id);
   }
 }  // namespace sgns::runtime::binaryen
