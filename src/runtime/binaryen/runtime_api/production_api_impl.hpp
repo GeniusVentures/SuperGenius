@@ -4,6 +4,7 @@
 
 #include "runtime/production_api.hpp"
 #include "runtime/binaryen/runtime_api/runtime_api.hpp"
+#include "base/logger.hpp"
 
 namespace sgns::runtime::binaryen {
 
@@ -15,6 +16,7 @@ namespace sgns::runtime::binaryen {
         const std::shared_ptr<RuntimeManager> &runtime_manager);
 
     outcome::result<primitives::ProductionConfiguration> configuration() override;
+	base::Logger logger_;
   };
 
 }  // namespace sgns::runtime::binaryen
