@@ -3,7 +3,7 @@
 
 #include "runtime/binaryen/runtime_api/runtime_api.hpp"
 #include "runtime/block_builder.hpp"
-
+#include "base/logger.hpp"
 namespace sgns::runtime::binaryen {
 
   class BlockBuilderImpl : public RuntimeApi, public BlockBuilder {
@@ -26,6 +26,7 @@ namespace sgns::runtime::binaryen {
         const primitives::InherentData &data) override;
 
     outcome::result<base::Hash256> random_seed() override;
+    base::Logger logger_;
   };
 }  // namespace sgns::runtime::binaryen
 
