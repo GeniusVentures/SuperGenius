@@ -53,7 +53,7 @@ namespace sgns::blockchain {
         block_storage->getLastFinalizedBlockHash();
 
     if (last_finalized_block_hash_res.has_value()) {
-      return loadExisting(storage, hasher, on_finalized_block_found);
+      return loadExisting(storage, hasher, on_finalized_block_found, *last_finalized_block_hash_res);
     }
 
     if (last_finalized_block_hash_res
@@ -69,12 +69,12 @@ namespace sgns::blockchain {
   KeyValueBlockStorage::loadExisting(
       const std::shared_ptr<storage::BufferStorage> &storage,
       std::shared_ptr<crypto::Hasher> hasher,
-      const BlockHandler &on_finalized_block_found) {
+      const BlockHandler &on_finalized_block_found, const crypto::Hasher &last_finalized_block_hash) {
     auto block_storage = std::make_shared<KeyValueBlockStorage>(
         KeyValueBlockStorage(storage, std::move(hasher)));
 
-    OUTCOME_TRY(last_finalized_block_hash,
-                block_storage->getLastFinalizedBlockHash());
+    // OUTCOME_TRY(last_finalized_block_hash,
+    //             block_storage->getLastFinalizedBlockHash());
 
     OUTCOME_TRY(block_header,
                 block_storage->getBlockHeader(last_finalized_block_hash));

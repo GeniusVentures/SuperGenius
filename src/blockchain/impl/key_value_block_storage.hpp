@@ -42,7 +42,7 @@ namespace sgns::blockchain {
     static outcome::result<std::shared_ptr<KeyValueBlockStorage>> loadExisting(
         const std::shared_ptr<storage::BufferStorage> &storage,
         std::shared_ptr<crypto::Hasher> hasher,
-        const BlockHandler &on_finalized_block_found);
+        const BlockHandler &on_finalized_block_found, const crypto::Hasher &last_finalized_block_hash);
 
     /**
      * Initialise block storage with a genesis block which is created inside
