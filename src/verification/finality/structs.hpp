@@ -26,18 +26,9 @@ namespace sgns::verification::finality {
   using PrimaryPropose =
       primitives::detail::BlockInfoT<struct PrimaryProposeTag>;
 
-  // Identifiers for the vote type. Needed for serialization and signing
-  const static uint8_t kPrevoteStage = 0;
-  const static uint8_t kPrecommitStage = 1;
-  const static uint8_t kPrimaryProposeStage = 2;
-
-  using Vote =
-      boost::variant<Prevote,
-                     Precommit,
-                     PrimaryPropose>;  // order is important and should
-                                       // correspond stage constants
-                                       // (kPrevoteStage, kPrecommitStage,
-                                       // kPrimaryPropose)
+  using Vote = boost::variant<Prevote,
+                              Precommit,
+                              PrimaryPropose>;  // order is important
 
   struct SignedMessage {
     Vote message;

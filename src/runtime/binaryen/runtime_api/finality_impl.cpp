@@ -48,6 +48,6 @@ namespace sgns::runtime::binaryen {
 
 //     return execute<std::vector<Authority>>(
 // //         //"FinalityApi_finality_authorities", CallPersistency::EPHEMERAL, block_id);
-// 		"GrandpaApi_grandpa_authorities", CallPersistency::EPHEMERAL, block_id);
+// 		"FinalityApi_finality_authorities", CallPersistency::EPHEMERAL, block_id);
   }
 }  // namespace sgns::runtime::binaryen

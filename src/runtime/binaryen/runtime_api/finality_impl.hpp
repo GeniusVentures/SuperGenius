@@ -1,6 +1,6 @@
 
-#ifndef SUPERGENIUS_SRC_RUNTIME_BINARYEN_GRANDPA_IMPL_HPP
-#define SUPERGENIUS_SRC_RUNTIME_BINARYEN_GRANDPA_IMPL_HPP
+#ifndef SUPERGENIUS_SRC_RUNTIME_BINARYEN_FINALITY_IMPL_HPP
+#define SUPERGENIUS_SRC_RUNTIME_BINARYEN_FINALITY_IMPL_HPP
 
 #include "runtime/binaryen/runtime_api/runtime_api.hpp"
 #include "runtime/finality.hpp"
@@ -27,4 +27,4 @@ namespace sgns::runtime::binaryen {
   };
 }  // namespace sgns::runtime::binaryen
 
-#endif  // SUPERGENIUS_SRC_RUNTIME_BINARYEN_GRANDPA_IMPL_HPP
+#endif  // SUPERGENIUS_SRC_RUNTIME_BINARYEN_FINALITY_IMPL_HPP

@@ -41,7 +41,8 @@ namespace sgns::verification::finality {
       prevotes[i] += vote.prevotes[i];
       precommits[i] += vote.precommits[i];
     }
-    weight += vote.weight;
+    prevotes_sum += vote.prevotes_sum;
+    precommits_sum += vote.precommits_sum;
     return *this;
   }
 }  // namespace sgns::verification::finality

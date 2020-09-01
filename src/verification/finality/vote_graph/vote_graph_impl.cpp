@@ -78,7 +78,7 @@ namespace sgns::verification::finality {
   }
 
   outcome::result<void> VoteGraphImpl::insert(const BlockInfo &block,
-                                              const VoteWeight &vote) {
+                                              const VoteWeight &voteWeight) {
     if (auto containingOpt = findContainingNodes(block); containingOpt) {
       if (containingOpt->empty()) {
         OUTCOME_TRY(append(block));
@@ -95,7 +95,7 @@ namespace sgns::verification::finality {
     BlockHash inspectingHash = block.block_hash;
     while (true) {
       Entry &activeEntry = entries_.at(inspectingHash);
-      activeEntry.cumulative_vote += vote;
+      activeEntry.cumulative_vote += voteWeight;
       auto parentIt = activeEntry.ancestors.rbegin();
       if (parentIt != activeEntry.ancestors.rend()) {
         inspectingHash = *parentIt;
@@ -204,7 +204,8 @@ namespace sgns::verification::finality {
 
   boost::optional<BlockInfo> VoteGraphImpl::findGhost(
       const boost::optional<BlockInfo> &current_best,
-      const VoteGraph::Condition &condition) const {
+      const VoteGraph::Condition &condition,
+      const Comparator &comparator) const {
     bool force_constrain = false;
     BlockHash node_key = base_.block_hash;
 
@@ -274,7 +275,7 @@ namespace sgns::verification::finality {
         force_constrain ? current_best : boost::none;
 
     Subchain subchain =
-        ghostFindMergePoint(node_key, active_node, info, condition);
+        ghostFindMergePoint(node_key, active_node, info, condition, comparator);
     auto &h = subchain.hashes;
 
     if (h.empty()) {
@@ -289,7 +290,8 @@ namespace sgns::verification::finality {
       const BlockHash &active_node_hash,
       const VoteGraph::Entry &active_node,
       const boost::optional<BlockInfo> &force_constrain,
-      const VoteGraph::Condition &condition) const {
+      const VoteGraph::Condition &condition,
+      const Comparator &comparator) const {
     auto descendents = active_node.descendents;
     filter_if(descendents, [&](const BlockHash &hash) {
       if (!force_constrain) {
@@ -330,7 +332,8 @@ namespace sgns::verification::finality {
           // check if block fullfills condition
           if (condition(descendent_blocks[d_block])) {
             if (! new_best_vote_weight
-                || new_best_vote_weight < descendent_blocks[d_block]) {
+                || comparator(*new_best_vote_weight,
+                              descendent_blocks[d_block])) {
               // we found our best block
               new_best = d_block;
               new_best_vote_weight = descendent_blocks[d_block];
@@ -384,7 +387,9 @@ namespace sgns::verification::finality {
   }
 
   boost::optional<BlockInfo> VoteGraphImpl::findAncestor(
-      const BlockInfo &block, const VoteGraph::Condition &condition) const {
+      const BlockInfo &block,
+      const VoteGraph::Condition &condition,
+      const Comparator &comparator) const {
     // we store two nodes with an edge between them that is the canonical
     // chain.
     // the `node_key` always points to the ancestor node, and the
@@ -440,8 +445,8 @@ namespace sgns::verification::finality {
 
     // find the GHOST merge-point after the active_node.
     // constrain it to be within the canonical chain.
-    auto good_subchain =
-        ghostFindMergePoint(node_key, active_node, boost::none, condition);
+    auto good_subchain = ghostFindMergePoint(
+        node_key, active_node, boost::none, condition, comparator);
 
     BOOST_ASSERT(canonical_node);
     // search in reverse order

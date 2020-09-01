@@ -70,9 +70,9 @@ namespace sgns::verification {
     app_state_manager_->atLaunch([this] { return start(); });
   }
 
-  bool BabeImpl::start() {
+  bool ProductionImpl::start() {
     if (not execution_strategy_.has_value()) {
-      log_->critical("Internal error: undefined execution strategy of babe");
+      log_->critical("Internal error: undefined execution strategy of production");
       return false;
     }
 
