@@ -49,7 +49,7 @@ namespace sgns::verification::finality {
         clock_{std::move(clock)},
         io_context_{std::move(io_context)},
         timer_{*io_context_},
-        logger_{common::createLogger("Finality")},
+        logger_{base::createLogger("Finality")},
         prevote_equivocators_(voter_set_->size(), false),
         precommit_equivocators_(voter_set_->size(), false) {
     BOOST_ASSERT(! finality_.expired());
@@ -366,7 +366,7 @@ namespace sgns::verification::finality {
     auto proposed = env_->onProposed(
         round_number_, voter_set_->id(), signed_primary_proposal);
 
-    if (not proposed) {
+    if (! proposed) {
       logger_->error("Primary proposal was not sent in round #{}",
                      proposed.error().message());
       // TODO(xDimon): Do need to handle?
@@ -411,7 +411,7 @@ namespace sgns::verification::finality {
     bool should_precommit =
         current_round_state_->best_prevote_candidate.block_hash
             == last_round_estimate.block_hash
-        or env_->isEqualOrDescendOf(
+        || env_->isEqualOrDescendOf(
             last_round_estimate.block_hash,
             current_round_state_->best_prevote_candidate.block_hash);
 
@@ -425,7 +425,7 @@ namespace sgns::verification::finality {
                        round_number_);
         auto precommitted = env_->onPrecommitted(
             round_number_, voter_set_->id(), precommit.value());
-        if (not precommitted) {
+        if (! precommitted) {
           logger_->error("Precommit was not sent: {}",
                          precommitted.error().message());
         }

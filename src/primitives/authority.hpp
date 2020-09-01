@@ -114,6 +114,13 @@ namespace sgns::primitives {
   Stream &operator>>(Stream &s, Authority &a) {
     return s >> a.id >> a.weight;
   }
+
+  /// Special type for vector of authorities
+  struct AuthorityList : public std::vector<Authority> {
+    // Attention: When adding a member, we need to ensure correct
+    // destruction to avoid memory leaks or any other problem
+    using std::vector<Authority>::vector;
+  };
 }  // namespace sgns::primitives
 
 #endif  // SUPERGENIUS_AUTHORITY_HPP

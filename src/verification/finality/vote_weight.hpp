@@ -41,8 +41,8 @@ namespace sgns::verification::finality {
 
     bool operator==(const VoteWeight &other) const {
       return prevotes_sum == other.prevotes_sum
-             and precommits_sum == other.precommits_sum
-             and prevotes == other.prevotes and precommits == other.precommits;
+             && precommits_sum == other.precommits_sum
+             && prevotes == other.prevotes && precommits == other.precommits;
     }
 
     size_t prevotes_sum = 0;
