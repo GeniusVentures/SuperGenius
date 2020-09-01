@@ -67,6 +67,10 @@ namespace sgns::verification::finality {
 
   bool VotingRoundImpl::isPrimary(const Id &id) const {
     auto index = round_number_ % voter_set_->size();
+	for (auto voter : voter_set_->voters())
+	{
+		logger_->debug("voter_id {}  ,  id {}", voter.toHex(), id);
+	}
     return voter_set_->voters().at(index) == id;
   }
 
@@ -76,7 +80,7 @@ namespace sgns::verification::finality {
 
   size_t VotingRoundImpl::getThreshold(
       const std::shared_ptr<VoterSet> &voters) {
-    // calculate supermajority
+    // calculate super majority
     auto faulty = (voters->totalWeight() - 1) / 3;
     return voters->totalWeight() - faulty;
   }

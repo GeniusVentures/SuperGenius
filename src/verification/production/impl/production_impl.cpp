@@ -29,8 +29,11 @@ namespace sgns::verification {
       crypto::SR25519Keypair keypair,
       std::shared_ptr<clock::SystemClock> clock,
       std::shared_ptr<crypto::Hasher> hasher,
-      std::unique_ptr<clock::Timer> timer)
-      : lottery_{std::move(lottery)},
+      std::unique_ptr<clock::Timer> timer,
+      std::shared_ptr<authority::AuthorityUpdateObserver>
+          authority_update_observer)
+      : app_state_manager_(std::move(app_state_manager)),
+        lottery_{std::move(lottery)},
         block_executor_{std::move(block_executor)},
         trie_storage_{std::move(trie_storage)},
         epoch_storage_{std::move(epoch_storage)},
@@ -42,6 +45,7 @@ namespace sgns::verification {
         clock_{std::move(clock)},
         hasher_{std::move(hasher)},
         timer_{std::move(timer)},
+        authority_update_observer_(std::move(authority_update_observer)),
         log_{base::createLogger("PRODUCTION")} {
     BOOST_ASSERT(lottery_);
     BOOST_ASSERT(epoch_storage_);
@@ -52,6 +56,7 @@ namespace sgns::verification {
     BOOST_ASSERT(clock_);
     BOOST_ASSERT(hasher_);
     BOOST_ASSERT(log_);
+    BOOST_ASSERT(authority_update_observer_);
 
     NextEpochDescriptor init_epoch_desc;
     init_epoch_desc.randomness = genesis_configuration_->randomness;
@@ -61,19 +66,28 @@ namespace sgns::verification {
         && epoch_storage_->addEpochDescriptor(1, init_epoch_desc).has_value();
 
     BOOST_ASSERT(init_epoch_desc_ok);
+
+    app_state_manager_->atLaunch([this] { return start(); });
   }
 
-  void ProductionImpl::start(ExecutionStrategy strategy) {
-    auto &&[best_block_number, best_block_hash] = block_tree_->deepestLeaf();
-    log_->debug("Production run on block with number {} and hash {}",
-                best_block_number,
-                best_block_hash);
+  bool BabeImpl::start() {
+    if (not execution_strategy_.has_value()) {
+      log_->critical("Internal error: undefined execution strategy of babe");
+      return false;
+    }
 
-    switch (strategy) {
+    auto &&[best_block_number, best_block_hash] = block_tree_->deepestLeaf();
+
+    switch (execution_strategy_.get()) {
       case ExecutionStrategy::GENESIS: {
+        log_->debug("Production is starting with genesis block #{}, hash={}",
+                    best_block_number,
+                    best_block_hash);
+
         auto epoch_digest_res = epoch_storage_->getEpochDescriptor(0);
         if (! epoch_digest_res) {
           log_->error("Last epoch digest does not exist for initial epoch");
+          return false;
         }
         auto &&epoch_digest = epoch_digest_res.value();
 
@@ -104,10 +118,14 @@ namespace sgns::verification {
         break;
       }
       case ExecutionStrategy::SYNC_FIRST: {
+        log_->debug("Production is starting with syncing from block #{}, hash={}",
+                    best_block_number,
+                    best_block_hash);
         current_state_ = ProductionState::WAIT_BLOCK;
         break;
       }
     }
+    return true;
   }
 
   /**
@@ -118,7 +136,7 @@ namespace sgns::verification {
    * @return index of authority in list of authorities
    */
   boost::optional<uint64_t> getAuthorityIndex(
-      const std::vector<primitives::Authority> &authorities,
+      const primitives::AuthorityList &authorities,
       const primitives::SessionKey &authority_key) {
     auto it = std::find_if(authorities.begin(),
                            authorities.end(),
@@ -352,6 +370,20 @@ namespace sgns::verification {
           "executing in debug mode, consider to rebuild in release");
       return;
     }
+
+    // observe possible changes of authorities
+    for (auto &digest_item : block.header.digest) {
+      visit_in_place(
+          digest_item,
+          [&](const primitives::Verification &verification_message) {
+            [[maybe_unused]] auto res = authority_update_observer_->onConsensus(
+                verification_message.verification_engine_id,
+                best_block_info,
+                verification_message);
+          },
+          [](const auto &) {});
+    }
+
     // add block to the block tree
     if (auto add_res = block_tree_->addBlock(block); ! add_res) {
       log_->error("Could not add block: {}", add_res.error().message());

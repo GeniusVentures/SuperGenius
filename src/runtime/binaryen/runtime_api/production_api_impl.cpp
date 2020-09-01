@@ -13,7 +13,7 @@ namespace sgns::runtime::binaryen {
     primitives::ProductionConfiguration result;
 	primitives::ProductionDuration duration{30000000};  //0x0000000001c9c380
 	result.slot_duration = duration;
-	result.epoch_length = 0x00000000000000c8;
+	result.epoch_length = 0x00000000000000c8; //200
 	result.leadership_rate = { 0x0000000000000001,0x0000000000000004 };
 	result.genesis_authorities = { primitives::Authority{{}, 1} , primitives::Authority{{}, 0x00000137ddc9a180} , primitives::Authority{{}, 0x00000137ddc9a180} };
 	//return result;

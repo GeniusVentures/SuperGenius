@@ -19,12 +19,16 @@ namespace sgns::verification {
    public:
     ~Production() override = default;
 
-    enum class ExecutionStrategy { GENESIS, SYNC_FIRST };
+    enum class ExecutionStrategy {
+      /// Genesis epoch is executed on the current node
+      GENESIS,
+      /// Node needs to syncronize first
+      SYNC_FIRST
+    };
 
     /**
-     * Start production execution
-     * @param is_genesis is true when genesis epoch is executed on the current
-     * node
+     * Set execution grategy
+     * @param strategy of execution
      */
     virtual void start(ExecutionStrategy strategy) = 0;
 

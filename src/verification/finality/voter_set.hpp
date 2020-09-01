@@ -56,6 +56,10 @@ namespace sgns::verification::finality {
       return voters_.size();
     }
 
+    inline bool empty() const {
+      return voters_.empty();
+    }
+
     /**
      * \return total weight of all voters
      */

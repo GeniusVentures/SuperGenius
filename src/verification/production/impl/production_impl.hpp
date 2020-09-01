@@ -69,10 +69,16 @@ namespace sgns::verification {
              std::shared_ptr<clock::SystemClock> clock,
              std::shared_ptr<crypto::Hasher> hasher,
              std::unique_ptr<clock::Timer> timer);
+             std::shared_ptr<authority::AuthorityUpdateObserver>
+                 authority_update_observer);
 
     ~ProductionImpl() override = default;
 
-    void start(ExecutionStrategy strategy) override;
+    bool start();
+
+    void setExecutionStrategy(ExecutionStrategy strategy) override {
+      execution_strategy_ = strategy;
+    }
 
     void runEpoch(Epoch epoch,
                   ProductionTimePoint starting_slot_finish_time) override;

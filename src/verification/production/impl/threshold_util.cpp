@@ -9,7 +9,7 @@ namespace sgns::verification {
 
   Threshold calculateThreshold(
       const std::pair<uint64_t, uint64_t> &c_pair,
-      const std::vector<primitives::Authority> &authorities,
+      const primitives::AuthorityList &authorities,
       primitives::AuthorityIndex authority_index) {
     double c = double(c_pair.first) / c_pair.second;
 
