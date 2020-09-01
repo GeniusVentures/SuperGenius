@@ -19,7 +19,7 @@ namespace sgns::storage::trie {
         std::shared_ptr<TrieSerializer> serializer,
         boost::optional<std::shared_ptr<changes_trie::ChangesTracker>> changes,
         std::unique_ptr<SuperGeniusTrie> trie,
-        RootChangedEventHandler handler);
+        RootChangedEventHandler &&handler);
     ~PersistentTrieBatchImpl() override = default;
 
     outcome::result<Buffer> commit() override;

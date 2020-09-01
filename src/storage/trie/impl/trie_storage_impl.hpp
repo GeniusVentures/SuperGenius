@@ -10,7 +10,11 @@
 #include "storage/trie/codec.hpp"
 #include "storage/trie/supergenius_trie/supergenius_trie_factory.hpp"
 #include "storage/trie/serialization/trie_serializer.hpp"
+#include "subscription/subscription_engine.hpp"
 
+namespace kagome::api {
+  class Session;
+}
 namespace sgns::storage::trie {
 
   class TrieStorageImpl : public TrieStorage {

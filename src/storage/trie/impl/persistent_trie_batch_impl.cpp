@@ -20,7 +20,7 @@ namespace sgns::storage::trie {
       std::shared_ptr<TrieSerializer> serializer,
       boost::optional<std::shared_ptr<changes_trie::ChangesTracker>> changes,
       std::unique_ptr<SuperGeniusTrie> trie,
-      RootChangedEventHandler handler)
+      RootChangedEventHandler &&handler)
       : codec_{std::move(codec)},
         serializer_{std::move(serializer)},
         changes_{std::move(changes)},
@@ -84,7 +84,7 @@ namespace sgns::storage::trie {
   outcome::result<void> PersistentTrieBatchImpl::put(const Buffer &key,
                                                      Buffer &&value) {
     bool is_new_entry = !trie_->contains(key);
-    auto res = trie_->put(key, std::move(value));
+    auto res = trie_->put(key, value);
     if (res && changes_.has_value()) {
       OUTCOME_TRY(changes_.value()->onPut(key, is_new_entry));
     }
