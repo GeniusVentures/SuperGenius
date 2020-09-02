@@ -12,7 +12,7 @@
 #include "storage/trie/serialization/trie_serializer.hpp"
 // #include "subscription/subscription_engine.hpp"
 
-namespace kagome::api {
+namespace sgns::api {
   class Session;
 }
 namespace sgns::storage::trie {
