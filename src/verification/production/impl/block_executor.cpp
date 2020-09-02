@@ -18,7 +18,7 @@ namespace sgns::verification {
       std::shared_ptr<verification::BlockValidator> block_validator,
       std::shared_ptr<verification::EpochStorage> epoch_storage,
       std::shared_ptr<transaction_pool::TransactionPool> tx_pool,
-      std::shared_ptr<crypto::Hasher> hasher)
+      std::shared_ptr<crypto::Hasher> hasher,
       std::shared_ptr<authority::AuthorityUpdateObserver>
           authority_update_observer)
       : block_tree_{std::move(block_tree)},

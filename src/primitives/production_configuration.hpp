@@ -35,7 +35,7 @@ namespace sgns::primitives {
     std::pair<uint64_t, uint64_t> leadership_rate;
 
     /// The authorities for the genesis epoch.
-    std::vector<Authority> genesis_authorities;
+    primitives::AuthorityList genesis_authorities;
 
     /// The randomness for the genesis epoch.
     Randomness randomness;

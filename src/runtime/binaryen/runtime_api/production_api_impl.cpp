@@ -21,7 +21,7 @@ namespace sgns::runtime::binaryen {
 
 //     return execute<primitives::ProductionConfiguration>("ProductionApi_configuration",
 //                                                   CallPersistency::EPHEMERAL);
-	return execute<primitives::ProductionConfiguration>("BabeApi_configuration",
+	return execute<primitives::ProductionConfiguration>("ProductionApi_configuration",
 		CallPersistency::EPHEMERAL);
   }
 

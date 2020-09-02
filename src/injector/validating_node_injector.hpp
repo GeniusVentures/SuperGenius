@@ -6,7 +6,6 @@
 #include "application/impl/local_key_storage.hpp"
 #include "verification/production/impl/production_impl.hpp"
 #include "verification/finality/chain.hpp"
-#include "verification/finality/impl/launcher_impl.hpp"
 #include "injector/application_injector.hpp"
 #include "network/types/own_peer_info.hpp"
 #include "runtime/dummy/finality_dummy.hpp"
@@ -123,6 +122,7 @@ namespace sgns::injector {
     }
 
     initialized = std::make_shared<verification::ProductionImpl>(
+        injector.template create<sptr<application::AppStateManager>>(),
         injector.template create<sptr<verification::ProductionLottery>>(),
         injector.template create<sptr<verification::BlockExecutor>>(),
         injector.template create<sptr<storage::trie::TrieStorage>>(),
@@ -134,7 +134,8 @@ namespace sgns::injector {
         injector.template create<crypto::SR25519Keypair>(),
         injector.template create<sptr<clock::SystemClock>>(),
         injector.template create<sptr<crypto::Hasher>>(),
-        injector.template create<uptr<clock::Timer>>());
+        injector.template create<uptr<clock::Timer>>(),
+        injector.template create<sptr<authority::AuthorityUpdateObserver>>());
     return *initialized;
   }
 
@@ -168,25 +169,24 @@ namespace sgns::injector {
         di::bind<verification::ProductionLottery>.template to<verification::ProductionLotteryImpl>(),
         di::bind<network::ProductionObserver>.to(
             [](auto const &inj) { return get_production(inj); }),
-        di::bind<verification::finality::RoundObserver>.template to<verification::finality::LauncherImpl>(),
-        di::bind<verification::finality::Launcher>.template to<verification::finality::LauncherImpl>(),
+        di::bind<verification::finality::RoundObserver>.template to<verification::finality::FinalityImpl>(),
+        di::bind<verification::finality::Finality>.template to<verification::finality::FinalityImpl>(),
         di::bind<runtime::Finality>./*template */to(
             [is_only_finalizing{app_config->is_only_finalizing()}](
-                const auto &injector) -> sptr<runtime::Finality> {
-              static boost::optional<sptr<runtime::Finality>> initialized =
+                const auto &injector) -> sptr<runtime::FinalityApi> {
+              static boost::optional<sptr<runtime::FinalityApi>> initialized =
                   boost::none;
               if (initialized) {
                 return *initialized;
               }
               if (is_only_finalizing) {
-                auto finality_dummy =
-                    injector
-                        .template create<sptr<runtime::dummy::FinalityDummy>>();
-                initialized = finality_dummy;
+                auto finality_api = injector.template create<
+                    sptr<runtime::dummy::FinalityApiDummy>>();
+                initialized = finality_api;
               } else {
-                auto finality = injector.template create<
-                    sptr<runtime::binaryen::FinalityImpl>>();
-                initialized = finality;
+                auto finality_api = injector.template create<
+                    sptr<runtime::binaryen::FinalityApiImpl>>();
+                initialized = finality_api;
               }
               return *initialized;
             })[di::override],

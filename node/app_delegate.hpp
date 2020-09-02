@@ -57,6 +57,12 @@ public:
 public:
     // boost::program_options::variables_map vm;
 private:
+/**
+ * @brief initialization of node
+ * 
+ * @param argc  count of argument. 
+ * @param argv  vector of argment.
+ */
     void init_node(int argc, char * const * argv);
     std::shared_ptr<application::BlockProducingNodeApplication> app_production;
     std::shared_ptr<application::ValidatingNodeApplication> app_validating;

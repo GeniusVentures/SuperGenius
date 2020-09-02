@@ -9,10 +9,14 @@
 namespace sgns::primitives {
   
   /// Verification engine unique ID.
-  using VerificationEngineId = base::Blob<10>;
+  using VerificationEngineId = base::Blob<4>;
 
-  inline const auto kProdEngineId =
-      VerificationEngineId::fromString("PRODUCTION").value();
+
+  inline const auto kProductionEngineId =
+      VerificationEngineId::fromString("BABE").value();
+
+  inline const auto kFinalityEngineId =
+      VerificationEngineId::fromString("FRNK").value();
 
   /// System digest item that contains the root of changes trie at given
   /// block. It is created for every block iff runtime supports changes

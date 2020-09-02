@@ -30,7 +30,7 @@ namespace sgns::verification {
      * Set execution grategy
      * @param strategy of execution
      */
-    virtual void start(ExecutionStrategy strategy) = 0;
+    virtual void setExecutionStrategy(ExecutionStrategy strategy) = 0;
 
     /**
      * Start a production

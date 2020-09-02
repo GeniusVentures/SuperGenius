@@ -7,6 +7,7 @@
 #include <unordered_set>
 
 #include "base/visitor.hpp"
+#include "verification/finality/finality.hpp"
 #include "verification/finality/impl/voting_round_error.hpp"
 #include "primitives/justification.hpp"
 
@@ -478,7 +479,7 @@ namespace sgns::verification::finality {
         return;
       }
       env_->onCompleted(CompletedRound{/*.round_number =*/ round_number_,
-                                       /*.state =*/ cur_round_state_});
+                                       /*.state =*/ current_round_state_});
     } else {
       logger_->error("Validation of vote {} failed", f.vote.block_hash.toHex());
       env_->onCompleted(VotingRoundError::FIN_VALIDATION_FAILED);
@@ -694,7 +695,7 @@ namespace sgns::verification::finality {
 
         // prepare VoteWeight which contains index of who has voted and what
         // kind of vote it was
-        VoteWeight v{voters.size()};
+        VoteWeight voteWeight{voters.size()};
         auto index = voter_set_->voterIndex(vote.id);
         if (! index) {
           logger_->warn("Voter {} is not known: {}", vote.id.toHex());

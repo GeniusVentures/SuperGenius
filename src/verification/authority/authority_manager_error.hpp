@@ -1,0 +1,16 @@
+#ifndef SUPERGENIUS_VERIFICATION_AUTHORITIES_MANAGER_ERROR
+#define SUPERGENIUS_VERIFICATION_AUTHORITIES_MANAGER_ERROR
+
+#include <outcome/outcome.hpp>
+
+namespace sgns::authority {
+  enum class AuthorityManagerError {
+    UNKNOWN_ENGINE_ID = 1,
+    WRONG_FINALISATION_ORDER,
+    ORPHAN_BLOCK_OR_ALREADY_FINALISED
+  };
+}
+
+OUTCOME_HPP_DECLARE_ERROR_2(sgns::authority, AuthorityManagerError)
+
+#endif  // SUPERGENIUS_VERIFICATION_AUTHORITIES_MANAGER_ERROR

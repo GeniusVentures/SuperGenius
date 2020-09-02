@@ -43,12 +43,17 @@
 #include "clock/impl/basic_waitable_timer.hpp"
 #include "clock/impl/clock_impl.hpp"
 #include "base/outcome_throw.hpp"
+#include "verification/authority/authority_manager.hpp"
+#include "verification/authority/authority_update_observer.hpp"
+#include "verification/authority/impl/authority_manager_impl.hpp"
 #include "verification/production/production_lottery.hpp"
 #include "verification/production/common.hpp"
 #include "verification/production/impl/production_lottery_impl.hpp"
 #include "verification/production/impl/production_synchronizer_impl.hpp"
 #include "verification/production/impl/epoch_storage_impl.hpp"
+#include "verification/finality/finalization_observer.hpp"
 #include "verification/finality/impl/environment_impl.hpp"
+#include "verification/finality/impl/finalization_composite.hpp"
 #include "verification/finality/impl/vote_crypto_provider_impl.hpp"
 #include "verification/finality/structs.hpp"
 #include "verification/finality/vote_graph.hpp"
@@ -139,6 +144,13 @@ namespace sgns::injector {
     if (initialized) {
       return initialized.value();
     }
+    using SubscriptionEnginePtr = std::shared_ptr<
+        subscription::SubscriptionEngine<base::Buffer,
+                                         std::shared_ptr<api::Session>,
+                                         base::Buffer,
+                                         primitives::BlockHash>>;
+    auto subscription_engine =
+        injector.template create<SubscriptionEnginePtr>();
     auto app_state_manager =
         injector
             .template create<std::shared_ptr<application::AppStateManager>>();
@@ -154,14 +166,21 @@ namespace sgns::injector {
             .template create<std::shared_ptr<api::state::StateJrpcProcessor>>(),
         injector.template create<
             std::shared_ptr<api::author::AuthorJRpcProcessor>>(),
+        injector
+            .template create<std::shared_ptr<api::chain::ChainJrpcProcessor>>(),
         injector.template create<
-            std::shared_ptr<api::chain::ChainJrpcProcessor>>()};
+            std::shared_ptr<api::system::SystemJrpcProcessor>>()};
+
     initialized =
         std::make_shared<api::ApiService>(std::move(app_state_manager),
                                           std::move(rpc_thread_pool),
                                           std::move(listeners),
                                           std::move(server),
-                                          processors);
+                                          processors,
+                                          std::move(subscription_engine));
+
+    auto state_api = injector.template create<std::shared_ptr<api::StateApi>>();
+    state_api->setApiService(initialized.value());
     return initialized.value();
   }
 
@@ -272,25 +291,6 @@ namespace sgns::injector {
               BOOST_ASSERT_MSG(false, "Could not insert authorities");
               std::exit(1);
             }
-
-            // insert last completed round
-            verification::finality::CompletedRound zero_round;
-            zero_round.round_number = 0;
-            const auto &hasher = injector.template create<crypto::Hasher &>();
-            auto genesis_hash =
-                hasher.blake2b_256(scale::encode(genesis_block.header).value());
-            spdlog::debug("Genesis hash in injector: {}", genesis_hash.toHex());
-            zero_round.state.prevote_ghost =
-                verification::finality::Prevote(0, genesis_hash);
-            zero_round.state.estimate = primitives::BlockInfo(0, genesis_hash);
-            zero_round.state.finalized = primitives::BlockInfo(0, genesis_hash);
-            auto completed_round_put_res =
-                db->put(storage::kSetStateKey,
-                        base::Buffer(scale::encode(zero_round).value()));
-            if (! completed_round_put_res) {
-              BOOST_ASSERT_MSG(false, "Could not insert completed round");
-              std::exit(1);
-            }
           }
         });
     if (storage.has_error()) {
@@ -336,6 +336,45 @@ namespace sgns::injector {
       base::raise(tree.error());
     }
     initialized = tree.value();
+    return initialized.value();
+  }
+
+  template <typename Injector>
+  sptr<extensions::ExtensionFactoryImpl> get_extension_factory(
+      const Injector &injector) {
+    static auto initialized =
+        boost::optional<sptr<extensions::ExtensionFactoryImpl>>(boost::none);
+    if (initialized) {
+      return initialized.value();
+    }
+    auto tracker =
+        injector.template create<sptr<storage::changes_trie::ChangesTracker>>();
+    auto sr25519_provider =
+        injector.template create<sptr<crypto::SR25519Provider>>();
+    auto ed25519_provider =
+        injector.template create<sptr<crypto::ED25519Provider>>();
+    auto secp256k1_provider =
+        injector.template create<sptr<crypto::Secp256k1Provider>>();
+    auto hasher = injector.template create<sptr<crypto::Hasher>>();
+    auto crypto_store = injector.template create<sptr<crypto::CryptoStore>>();
+    auto bip39_provider =
+        injector.template create<sptr<crypto::Bip39Provider>>();
+    auto core_factory_method =
+        [&injector](sptr<runtime::WasmProvider> wasm_provider) {
+          auto core_factory =
+              injector.template create<sptr<runtime::CoreFactory>>();
+          return core_factory->createWithCode(wasm_provider);
+        };
+
+    initialized =
+        std::make_shared<extensions::ExtensionFactoryImpl>(tracker,
+                                                           sr25519_provider,
+                                                           ed25519_provider,
+                                                           secp256k1_provider,
+                                                           hasher,
+                                                           crypto_store,
+                                                           bip39_provider,
+                                                           core_factory_method);
     return initialized.value();
   }
 
@@ -548,6 +587,22 @@ namespace sgns::injector {
     return *initialized;
   }
 
+  template <class Injector>
+  sptr<verification::finality::FinalizationObserver> get_finalization_observer(
+      const Injector &injector) {
+    static auto instance = boost::optional<
+        std::shared_ptr<verification::finality::FinalizationObserver>>(boost::none);
+    if (instance) {
+      return *instance;
+    }
+
+    instance = std::make_shared<verification::finality::FinalizationComposite>(
+        injector.template create<
+            std::shared_ptr<authority::AuthorityManagerImpl>>());
+
+    return *instance;
+  }
+
   template <typename... Ts>
   auto makeApplicationInjector(
       const std::string &genesis_path,
@@ -597,6 +652,7 @@ namespace sgns::injector {
         di::bind<api::AuthorApi>.template to<api::AuthorApiImpl>(),
         di::bind<api::ChainApi>.template to<api::ChainApiImpl>(),
         di::bind<api::StateApi>.template to<api::StateApiImpl>(),
+        di::bind<api::SystemApi>.template to<api::SystemApiImpl>(),
         di::bind<api::ApiService>.to([](const auto &injector) {
           return get_jrpc_api_service(injector);
         }),
@@ -633,7 +689,10 @@ namespace sgns::injector {
         di::bind<crypto::Secp256k1Provider>.template to<crypto::Secp256k1ProviderImpl>(),
 
         di::bind<crypto::CryptoStore>.template to<crypto::CryptoStoreImpl>(),
-        di::bind<extensions::ExtensionFactory>.template to<extensions::ExtensionFactoryImpl>(),
+        di::bind<extensions::ExtensionFactory>.template to(
+            [](auto const &injector) {
+              return get_extension_factory(injector);
+            }),
         di::bind<network::Router>.template to<network::RouterLibp2p>(),
         di::bind<verification::ProductionGossiper>.template to<network::GossiperBroadcast>(),
         di::bind<verification::finality::Gossiper>.template to<network::GossiperBroadcast>(),
@@ -673,6 +732,10 @@ namespace sgns::injector {
             }),
         di::bind<network::ExtrinsicObserver>.template to<network::ExtrinsicObserverImpl>(),
         di::bind<network::ExtrinsicGossiper>.template to<network::GossiperBroadcast>(),
+        di::bind<authority::AuthorityUpdateObserver>.template to<authority::AuthorityManagerImpl>(),
+        di::bind<authority::AuthorityManager>.template to<authority::AuthorityManagerImpl>(),
+        di::bind<verification::finality::FinalizationObserver>.to(
+            [](auto const &inj) { return get_finalization_observer(inj); }),
 
         // user-defined overrides...
         std::forward<decltype(args)>(args)...);

@@ -18,6 +18,7 @@
 
 namespace sgns::verification {
   ProductionImpl::ProductionImpl(
+      std::shared_ptr<application::AppStateManager> app_state_manager,
       std::shared_ptr<ProductionLottery> lottery,
       std::shared_ptr<BlockExecutor> block_executor,
       std::shared_ptr<storage::trie::TrieStorage> trie_storage,
@@ -47,6 +48,7 @@ namespace sgns::verification {
         timer_{std::move(timer)},
         authority_update_observer_(std::move(authority_update_observer)),
         log_{base::createLogger("PRODUCTION")} {
+    BOOST_ASSERT(app_state_manager_);
     BOOST_ASSERT(lottery_);
     BOOST_ASSERT(epoch_storage_);
     BOOST_ASSERT(trie_storage_);
@@ -71,7 +73,7 @@ namespace sgns::verification {
   }
 
   bool ProductionImpl::start() {
-    if (not execution_strategy_.has_value()) {
+    if (! execution_strategy_.has_value()) {
       log_->critical("Internal error: undefined execution strategy of production");
       return false;
     }
@@ -281,7 +283,7 @@ namespace sgns::verification {
     }
     base::Buffer encoded_header{encoded_header_res.value()};
 
-    return primitives::PreRuntime{{primitives::kProdEngineId, encoded_header}};
+    return primitives::PreRuntime{{primitives::kProductionEngineId, encoded_header}};
   }
 
   primitives::Seal ProductionImpl::sealBlock(const primitives::Block &block) const {
@@ -297,7 +299,7 @@ namespace sgns::verification {
                  pre_seal_hash.data(),
                  decltype(pre_seal_hash)::size());
     auto encoded_seal = base::Buffer(scale::encode(seal).value());
-    return primitives::Seal{{primitives::kProdEngineId, encoded_seal}};
+    return primitives::Seal{{primitives::kProductionEngineId, encoded_seal}};
   }
 
   void ProductionImpl::processSlotLeadership(const crypto::VRFOutput &output) {
@@ -320,7 +322,8 @@ namespace sgns::verification {
                          put_res.error().message());
     }
 
-    auto &&[best_block_number, best_block_hash] = block_tree_->deepestLeaf();
+    auto best_block_info = block_tree_->deepestLeaf();
+    auto &[best_block_number, best_block_hash] = best_block_info;
     log_->info("Production builds block on top of block with number {} and hash {}",
                best_block_number,
                best_block_hash);
@@ -376,7 +379,7 @@ namespace sgns::verification {
       visit_in_place(
           digest_item,
           [&](const primitives::Verification &verification_message) {
-            [[maybe_unused]] auto res = authority_update_observer_->onConsensus(
+            [[maybe_unused]] auto res = authority_update_observer_->onVerification(
                 verification_message.verification_engine_id,
                 best_block_info,
                 verification_message);
