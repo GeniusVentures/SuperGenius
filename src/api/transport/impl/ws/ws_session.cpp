@@ -13,7 +13,8 @@ namespace sgns::api {
       : strand_(boost::asio::make_strand(context)),
         socket_(strand_),
         config_{config},
-        stream_(socket_) {}
+        stream_(socket_),
+        id_(id) {}
 
   void WsSession::start() {
     boost::asio::dispatch(stream_.get_executor(),
@@ -25,6 +26,7 @@ namespace sgns::api {
     boost::system::error_code ec;
     stream_.close(boost::beast::websocket::close_reason(), ec);
     boost::ignore_unused(ec);
+    notifyOnClose(id_, type());
   }
 
   void WsSession::handleRequest(std::string_view data) {
@@ -41,6 +43,10 @@ namespace sgns::api {
     stream_.async_write(wbuffer_.data(),
                         boost::beast::bind_front_handler(&WsSession::onWrite,
                                                          shared_from_this()));
+  }
+
+  sgns::api::Session::SessionId WsSession::id() const {
+    return id_;
   }
 
   void WsSession::respond(std::string_view response) {
