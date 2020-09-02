@@ -55,11 +55,13 @@ namespace sgns::application {
         }
         this->router_->init();
       });
+      return true;
     });
 
     app_state_manager_->atLaunch([ctx{io_context_}] {
       std::thread asio_runner([ctx{ctx}] { ctx->run(); });
       asio_runner.detach();
+      return true;
     });
 
     app_state_manager_->atShutdown([ctx{io_context_}] { ctx->stop(); });

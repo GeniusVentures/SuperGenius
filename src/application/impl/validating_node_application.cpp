@@ -33,11 +33,7 @@ namespace sgns::application {
   void ValidatingNodeApplication::run() {
     logger_->info("Start as {} with PID {}", typeid(*this).name(), getpid());
 
-    // starts block production
-    app_state_manager_->atLaunch([this] { production_->start(is_genesis_); });
-
-    // starts finalization event loop
-    app_state_manager_->atLaunch([this] { finality_launcher_->start(); });
+    production_->setExecutionStrategy(production_execution_strategy_);
 
     app_state_manager_->atLaunch([this] {
       // execute listeners
@@ -56,11 +52,13 @@ namespace sgns::application {
         }
         this->router_->init();
       });
+      return true;
     });
 
     app_state_manager_->atLaunch([ctx{io_context_}] {
       std::thread asio_runner([ctx{ctx}] { ctx->run(); });
       asio_runner.detach();
+      return true;
     });
 
     app_state_manager_->atShutdown([ctx{io_context_}] { ctx->stop(); });

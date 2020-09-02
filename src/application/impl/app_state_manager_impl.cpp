@@ -93,7 +93,10 @@ namespace sgns::application {
     while (!prepare_.empty()) {
       auto &cb = prepare_.front();
       if (state_ == State::Prepare) {
-        cb();
+        auto success = cb();
+        if (! success) {
+          state_ = State::ShuttingDown;
+        }
       }
       prepare_.pop();
     }
@@ -115,7 +118,10 @@ namespace sgns::application {
     while (!launch_.empty()) {
       auto &cb = launch_.front();
       if (state_ == State::Starting) {
-        cb();
+        auto success = cb();
+        if (! success) {
+          state_ = State::ShuttingDown;
+        }
       }
       launch_.pop();
     }
