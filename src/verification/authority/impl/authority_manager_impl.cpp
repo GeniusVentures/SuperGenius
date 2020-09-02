@@ -1,7 +1,7 @@
 
 #include "verification/authority/impl/authority_manager_impl.hpp"
 
-#include "common/visitor.hpp"
+#include "base/visitor.hpp"
 #include "verification/authority/authority_manager_error.hpp"
 #include "verification/authority/authority_update_observer_error.hpp"
 #include "scale/scale.hpp"
@@ -70,7 +70,7 @@ namespace sgns::authority {
   AuthorityManagerImpl::authorities(const primitives::BlockInfo &block) {
     auto node = getAppropriateAncestor(block);
 
-    if (not node) {
+    if (! node) {
       return AuthorityManagerError::ORPHAN_BLOCK_OR_ALREADY_FINALISED;
     }
 
