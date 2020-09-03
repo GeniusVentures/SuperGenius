@@ -51,7 +51,9 @@ if (SGNS_STACKTRACE_BACKTRACE)
 	endif()
 endif ()
 include(CheckCXXCompilerFlag)
+# add compilation flag for unix platform
 include(build/compilation_flag_unix.cmake)
+
 include(cmake/definition.cmake)
 
 # BOOST library 
