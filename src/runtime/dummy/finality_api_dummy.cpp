@@ -12,18 +12,18 @@ namespace sgns::runtime::dummy {
   }
 
   outcome::result<boost::optional<primitives::ScheduledChange>>
-  FinalityApiDummy::pending_change(const Finality::Digest &digest) {
+  FinalityApiDummy::pending_change(const FinalityApi::Digest &digest) {
     BOOST_ASSERT_MSG(false, "not implemented");  // NOLINT
     return outcome::failure(boost::system::error_code{});
   }
   outcome::result<boost::optional<primitives::ForcedChange>>
-  FinalityApiDummy::forced_change(const Finality::Digest &digest) {
+  FinalityApiDummy::forced_change(const FinalityApi::Digest &digest) {
     BOOST_ASSERT_MSG(false, "not implemented");  // NOLINT
     return outcome::failure(boost::system::error_code{});
   }
-  outcome::result<std::vector<primitives::Authority>> FinalityApiDummy::authorities(
+  outcome::result<primitives::AuthorityList> FinalityApiDummy::authorities(
       const primitives::BlockId &block_id) {
-    return std::vector<primitives::Authority>{
+    return primitives::AuthorityList{
         {{key_storage_->getLocalEd25519Keypair().public_key}, 1}};
   }
 }  // namespace sgns::runtime::dummy

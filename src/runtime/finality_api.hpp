@@ -1,6 +1,6 @@
 
-#ifndef SUPERGENIUS_SRC_RUNTIME_FINALITY_HPP
-#define SUPERGENIUS_SRC_RUNTIME_FINALITY_HPP
+#ifndef SUPERGENIUS_SRC_RUNTIME_FINALITY_API_HPP
+#define SUPERGENIUS_SRC_RUNTIME_FINALITY_API_HPP
 
 #include <boost/optional.hpp>
 #include <outcome/outcome.hpp>
@@ -16,7 +16,7 @@ namespace sgns::runtime {
   /**
    * @brief interface for Finality runtime functions
    */
-  class Finality {
+  class FinalityApi {
    protected:
     using Digest = primitives::Digest;
     using ScheduledChange = primitives::ScheduledChange;
@@ -27,7 +27,7 @@ namespace sgns::runtime {
     using BlockId = primitives::BlockId;
 
    public:
-    virtual ~Finality() = default;
+    virtual ~FinalityApi() = default;
     /**
      * @brief calls Finality_pending_change runtime api function,
      * which checks a digest for pending changes.
@@ -53,10 +53,10 @@ namespace sgns::runtime {
      * @brief calls Finality_authorities runtime api function
      * @return collection of current finality authorities with their weights
      */
-    virtual outcome::result<std::vector<WeightedAuthority>> authorities(
+    virtual outcome::result<primitives::AuthorityList> authorities(
         const primitives::BlockId &block_id) = 0;
   };
 
 }  // namespace sgns::runtime
 
-#endif  // SUPERGENIUS_SRC_RUNTIME_FINALITY_HPP
+#endif  // SUPERGENIUS_SRC_RUNTIME_FINALITY_API_HPP

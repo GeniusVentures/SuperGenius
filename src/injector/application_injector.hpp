@@ -83,7 +83,7 @@
 #include "runtime/binaryen/runtime_api/production_api_impl.hpp"
 #include "runtime/binaryen/runtime_api/block_builder_impl.hpp"
 #include "runtime/binaryen/runtime_api/core_impl.hpp"
-#include "runtime/binaryen/runtime_api/finality_impl.hpp"
+#include "runtime/binaryen/runtime_api/finality_api_impl.hpp"
 #include "runtime/binaryen/runtime_api/metadata_impl.hpp"
 #include "runtime/binaryen/runtime_api/offchain_worker_impl.hpp"
 #include "runtime/binaryen/runtime_api/parachain_host_impl.hpp"
@@ -266,7 +266,7 @@ namespace sgns::injector {
           if (! db->get(storage::kAuthoritySetKey)) {
             // insert authorities
             auto finality_api =
-                injector.template create<sptr<runtime::Finality>>();
+                injector.template create<sptr<runtime::FinalityApi>>();
             const auto &weighted_authorities_res = finality_api->authorities(
                 primitives::BlockId(primitives::BlockNumber{0}));
             BOOST_ASSERT_MSG(weighted_authorities_res,
@@ -710,7 +710,7 @@ namespace sgns::injector {
         di::bind<runtime::OffchainWorker>.template to<runtime::binaryen::OffchainWorkerImpl>(),
 
         di::bind<runtime::Metadata>.template to<runtime::binaryen::MetadataImpl>(),
-        di::bind<runtime::Finality>.template to<runtime::binaryen::FinalityImpl>(),
+        di::bind<runtime::FinalityApi>.template to<runtime::binaryen::FinalityApiImpl>(),
         di::bind<runtime::Core>.template to<runtime::binaryen::CoreImpl>(),
         di::bind<runtime::ProductionApi>.template to<runtime::binaryen::ProductionApiImpl>(),
         di::bind<runtime::BlockBuilder>.template to<runtime::binaryen::BlockBuilderImpl>(),

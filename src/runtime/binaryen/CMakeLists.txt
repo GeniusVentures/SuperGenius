@@ -85,7 +85,7 @@ target_link_libraries(binaryen_parachain_host_api
     )
 
 add_library(binaryen_finality_api
-    runtime_api/finality_impl.cpp
+    runtime_api/finality_api_impl.cpp
     )
 target_link_libraries(binaryen_finality_api
     binaryen_wasm_executor

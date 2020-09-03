@@ -8,6 +8,9 @@ namespace sgns::blockchain {
 
   class BlockStorageMock : public BlockStorage {
    public:
+    MOCK_CONST_METHOD0(getGenesisBlockHash,
+                       outcome::result<primitives::BlockHash>());
+
     MOCK_CONST_METHOD0(getLastFinalizedBlockHash,
                        outcome::result<primitives::BlockHash>());
 

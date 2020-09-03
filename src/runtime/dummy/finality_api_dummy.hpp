@@ -2,7 +2,7 @@
 #define SUPERGENIUS_SRC_RUNTIME_FAKE_FINALITY_DUMMY_HPP
 
 #include "application/key_storage.hpp"
-#include "runtime/finality.hpp"
+#include "runtime/finality_api.hpp"
 
 namespace sgns::runtime::dummy {
 
@@ -10,7 +10,7 @@ namespace sgns::runtime::dummy {
    * Dummy implementation of the finality api. Should not be used in production.
    * Instead of using runtime to get authorities, just returns current authority
    */
-  class FinalityApiDummy : public Finality {
+  class FinalityApiDummy : public FinalityApi {
    public:
     ~FinalityApiDummy() override = default;
 
@@ -22,7 +22,7 @@ namespace sgns::runtime::dummy {
     outcome::result<boost::optional<ForcedChange>> forced_change(
         const Digest &digest) override;
 
-    outcome::result<std::vector<WeightedAuthority>> authorities(
+    outcome::result<primitives::AuthorityList> authorities(
         const primitives::BlockId &block_id) override;
 
    private:

@@ -3,17 +3,17 @@
 #define SUPERGENIUS_SRC_RUNTIME_BINARYEN_FINALITY_IMPL_HPP
 
 #include "runtime/binaryen/runtime_api/runtime_api.hpp"
-#include "runtime/finality.hpp"
+#include "runtime/finality_api.hpp"
 #include "base/logger.hpp"
 
 namespace sgns::runtime::binaryen {
 
-  class FinalityImpl : public RuntimeApi, public Finality {
+  class FinalityApiImpl : public RuntimeApi, public FinalityApi {
    public:
-    explicit FinalityImpl(
+    explicit FinalityApiImpl(
         const std::shared_ptr<RuntimeManager> &runtime_manager);
 
-    ~FinalityImpl() override = default;
+    ~FinalityApiImpl() override = default;
 
     outcome::result<boost::optional<ScheduledChange>> pending_change(
         const Digest &digest) override;
@@ -21,7 +21,7 @@ namespace sgns::runtime::binaryen {
     outcome::result<boost::optional<ForcedChange>> forced_change(
         const Digest &digest) override;
 
-    outcome::result<std::vector<WeightedAuthority>> authorities(
+    outcome::result<primitives::AuthorityList> authorities(
         const primitives::BlockId &block_id) override;
 	base::Logger logger_;
   };
