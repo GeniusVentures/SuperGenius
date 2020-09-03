@@ -132,6 +132,9 @@ namespace sgns::blockchain {
         const primitives::BlockHash &top_block,
         const primitives::BlockHash &bottom_block) override;
 
+    bool hasDirectChain(const primitives::BlockHash &ancestor,
+                        const primitives::BlockHash &descendant) override;
+
     BlockHashVecRes longestPath() override;
 
     primitives::BlockInfo deepestLeaf() const override;

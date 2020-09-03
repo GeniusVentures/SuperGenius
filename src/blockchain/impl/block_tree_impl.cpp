@@ -342,6 +342,36 @@ namespace sgns::blockchain {
     return result;
   }
 
+  bool BlockTreeImpl::hasDirectChain(const primitives::BlockHash &ancestor,
+                                     const primitives::BlockHash &descendant) {
+    auto ancestor_node_ptr = tree_->getByHash(ancestor);
+    auto descendant_node_ptr = tree_->getByHash(descendant);
+
+    // if both nodes are in our light tree, we can use this representation only
+    if (ancestor_node_ptr && descendant_node_ptr) {
+      auto current_node = descendant_node_ptr;
+      while (current_node != ancestor_node_ptr) {
+        if (auto parent = current_node->parent; !parent.expired()) {
+          current_node = parent.lock();
+        } else {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    // else, we need to use a database
+    auto current_hash = descendant;
+    while (current_hash != ancestor) {
+      auto current_header_res = header_repo_->getBlockHeader(current_hash);
+      if (!current_header_res) {
+        return false;
+      }
+      current_hash = current_header_res.value().parent_hash;
+    }
+    return true;
+  }
+
   BlockTreeImpl::BlockHashVecRes BlockTreeImpl::longestPath() {
     auto &&[_, block_hash] = deepestLeaf();
     return getChainByBlock(block_hash);

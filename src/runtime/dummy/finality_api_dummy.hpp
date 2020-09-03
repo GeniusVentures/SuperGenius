@@ -10,11 +10,11 @@ namespace sgns::runtime::dummy {
    * Dummy implementation of the finality api. Should not be used in production.
    * Instead of using runtime to get authorities, just returns current authority
    */
-  class FinalityDummy : public Finality {
+  class FinalityApiDummy : public Finality {
    public:
-    ~FinalityDummy() override = default;
+    ~FinalityApiDummy() override = default;
 
-    explicit FinalityDummy(std::shared_ptr<application::KeyStorage> key_storage);
+    explicit FinalityApiDummy(std::shared_ptr<application::KeyStorage> key_storage);
 
     outcome::result<boost::optional<ScheduledChange>> pending_change(
         const Digest &digest) override;

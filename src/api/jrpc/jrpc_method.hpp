@@ -37,7 +37,7 @@ namespace sgns::api {
       auto &&result = request.execute();
 
       // Handle of failure
-      if (not result) {
+      if (! result) {
         throw jsonrpc::Fault(result.error().message());
       }
 

@@ -8,15 +8,18 @@
 
 #include "clock/impl/clock_impl.hpp"
 #include "verification/production/production_error.hpp"
+#include "mock/src/application/app_state_manager_mock.hpp"
 #include "verification/production/impl/production_impl.hpp"
 #include "mock/src/authorship/proposer_mock.hpp"
 #include "mock/src/blockchain/block_tree_mock.hpp"
 #include "mock/src/clock/clock_mock.hpp"
 #include "mock/src/clock/timer_mock.hpp"
+#include "mock/src/verification/authority/authority_update_observer_mock.hpp"
 #include "mock/src/verification/production/production_gossiper_mock.hpp"
 #include "mock/src/verification/production/production_synchronizer_mock.hpp"
 #include "mock/src/verification/production/epoch_storage_mock.hpp"
 #include "mock/src/verification/production_lottery_mock.hpp"
+#include "mock/src/verification/finality/finality_mock.hpp"
 #include "mock/src/verification/validation/block_validator_mock.hpp"
 #include "mock/src/crypto/hasher_mock.hpp"
 #include "mock/src/runtime/production_api_mock.hpp"
@@ -28,7 +31,9 @@
 #include "testutil/sr25519_utils.hpp"
 
 using namespace sgns;
+using namespace authority;
 using namespace verification;
+using namespace application;
 using namespace blockchain;
 using namespace authorship;
 using namespace crypto;
@@ -151,6 +156,7 @@ namespace sgns::primitives {
 class ProductionTest : public testing::Test {
  public:
   void SetUp() override {
+    app_state_manager_ = std::make_shared<AppStateManagerMock>();
     lottery_ = std::make_shared<ProductionLotteryMock>();
     production_synchronizer_ = std::make_shared<ProductionSynchronizerMock>();
     trie_db_ = std::make_shared<storage::trie::TrieStorageMock>();
@@ -165,6 +171,8 @@ class ProductionTest : public testing::Test {
     hasher_ = std::make_shared<HasherMock>();
     timer_mock_ = std::make_unique<testutil::TimerMock>();
     timer_ = timer_mock_.get();
+    finality_authority_update_observer_ =
+        std::make_shared<AuthorityUpdateObserverMock>();
 
     // add initialization logic
     auto expected_config = std::make_shared<primitives::ProductionConfiguration>();
@@ -192,9 +200,11 @@ class ProductionTest : public testing::Test {
                                                           production_block_validator_,
                                                           epoch_storage_,
                                                           tx_pool_,
-                                                          hasher_);
+                                        hasher_,
+                                        finality_authority_update_observer_);
 
-    production_ = std::make_shared<ProductionImpl>(lottery_,
+    production_ = std::make_shared<ProductionImpl>(app_state_manager_,
+                                       lottery_,
                                        block_executor,
                                        trie_db_,
                                        epoch_storage_,
@@ -205,7 +215,8 @@ class ProductionTest : public testing::Test {
                                        keypair_,
                                        clock_,
                                        hasher_,
-                                       std::move(timer_mock_));
+                                       std::move(timer_mock_),
+                                       finality_authority_update_observer_);
 
     epoch_.randomness = expected_config->randomness;
     epoch_.epoch_duration = expected_config->epoch_length;
@@ -213,7 +224,7 @@ class ProductionTest : public testing::Test {
     epoch_.start_slot = 0;
     epoch_.epoch_index = 0;
   }
-
+  std::shared_ptr<AppStateManagerMock> app_state_manager_;
   std::shared_ptr<ProductionLotteryMock> lottery_;
   std::shared_ptr<ProductionSynchronizer> production_synchronizer_;
   std::shared_ptr<storage::trie::TrieStorageMock> trie_db_;
@@ -229,6 +240,8 @@ class ProductionTest : public testing::Test {
   std::shared_ptr<HasherMock> hasher_;
   std::unique_ptr<testutil::TimerMock> timer_mock_;
   testutil::TimerMock *timer_;
+  std::shared_ptr<AuthorityUpdateObserverMock>
+      finality_authority_update_observer_;
 
   std::shared_ptr<ProductionImpl> production_;
 

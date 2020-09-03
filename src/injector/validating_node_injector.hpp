@@ -8,7 +8,7 @@
 #include "verification/finality/chain.hpp"
 #include "injector/application_injector.hpp"
 #include "network/types/own_peer_info.hpp"
-#include "runtime/dummy/finality_dummy.hpp"
+#include "runtime/dummy/finality_api_dummy.hpp"
 
 namespace sgns::injector {
 

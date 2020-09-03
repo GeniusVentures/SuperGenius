@@ -327,7 +327,7 @@ namespace sgns::authority {
     // Target block is not descendant of the current root
     if (root_->block.block_number > block.block_number
         || (root_->block != block
-            && not directChainExists(root_->block, block))) {
+            && ! directChainExists(root_->block, block))) {
       return ancestor;
     }
     ancestor = root_;
@@ -340,7 +340,7 @@ namespace sgns::authority {
           break;
         }
       }
-      if (not goto_next_generation) {
+      if (! goto_next_generation) {
         break;
       }
     }

@@ -24,6 +24,8 @@
 #include "api/service/chain/impl/chain_api_impl.hpp"
 #include "api/service/state/impl/state_api_impl.hpp"
 #include "api/service/state/state_jrpc_processor.hpp"
+#include "api/service/system/impl/system_api_impl.hpp"
+#include "api/service/system/system_jrpc_processor.hpp"
 #include "api/transport/impl/http/http_listener_impl.hpp"
 #include "api/transport/impl/http/http_session.hpp"
 #include "api/transport/impl/ws/ws_listener_impl.hpp"
