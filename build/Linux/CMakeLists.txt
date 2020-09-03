@@ -60,7 +60,7 @@ set(_FINDPACKAGE_GTEST_CONFIG_DIR "${_THIRDPARTY_BUILD_DIR}/GTest/lib/cmake/GTes
 print(${_FINDPACKAGE_GTEST_CONFIG_DIR})
 
 # Set config of protobuf project 
-set(_FINDPACKAGE_PROTOBUF_CONFIG_DIR "${_THIRDPARTY_BUILD_DIR}/protobuf/cmake")
+set(_FINDPACKAGE_PROTOBUF_CONFIG_DIR "${_THIRDPARTY_BUILD_DIR}/protobuf/lib/cmake/protobuf")
 set(_FINDPACKAGE_PROTOBUF_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/protobuf/include")
 set(_FINDPACKAGE_PROTOBUF_LIB_DIR "${_THIRDPARTY_BUILD_DIR}/protobuf/lib")
 
@@ -100,12 +100,13 @@ set(_THIRDPARTY_DIR "${_THIRDPARTY_BUILD_DIR}/../..")
 set(_BOOST_ROOT "${_THIRDPARTY_DIR}/boost/build/Linux")
 set(_Boost_INCLUDE_DIR "${_BOOST_ROOT}/include")
 set(boost_headers_DIR "${_BOOST_ROOT}/lib/cmake/boost_headers-1.72.0")
-set(boost_random_DIR "${BOOST_ROOT}/lib/cmake/boost_random-1.72.0")
-set(boost_system_DIR "${BOOST_ROOT}/lib/cmake/boost_system-1.72.0")
-set(boost_filesystem_DIR "${BOOST_ROOT}/lib/cmake/boost_filesystem-1.72.0")
-set(boost_program_options_DIR "${BOOST_ROOT}/lib/cmake/boost_program_options-1.72.0")
-set(boost_log_DIR "${BOOST_ROOT}/lib/cmake/boost_log-1.72.0")
-set(boost_log_setup_DIR "${BOOST_ROOT}/lib/cmake/boost_log_setup-1.72.0")
+set(boost_random_DIR "${_BOOST_ROOT}/lib/cmake/boost_random-1.72.0")
+set(boost_system_DIR "${_BOOST_ROOT}/lib/cmake/boost_system-1.72.0")
+set(boost_filesystem_DIR "${_BOOST_ROOT}/lib/cmake/boost_filesystem-1.72.0")
+set(boost_program_options_DIR "${_BOOST_ROOT}/lib/cmake/boost_program_options-1.72.0")
+set(boost_log_DIR "${_BOOST_ROOT}/lib/cmake/boost_log-1.72.0")
+set(boost_log_setup_DIR "${_BOOST_ROOT}/lib/cmake/boost_log_setup-1.72.0")
+set(boost_thread_DIR "${_BOOST_ROOT}/lib/cmake/boost_thread-1.72.0")
 
 set(boost_DIR "${_BOOST_ROOT}/lib/cmake/Boost-1.72.0")
 
@@ -118,16 +119,22 @@ set(_BOOST_CACHE_ARGS
       -Dboost_program_options_DIR:PATH=${boost_program_options_DIR}
       -Dboost_log_DIR:PATH=${boost_log_DIR}
       -Dboost_log_setup_DIR:PATH=${boost_log_setup_DIR}
+      -Dboost_thread_DIR:PATH=${boost_thread_DIR}
       -DBoost_DIR:PATH=${boost_DIR}
       -DBoost_INCLUDE_DIR:PATH=${_Boost_INCLUDE_DIR}  
       -DBoost_USE_MULTITHREADED:BOOL=ON
       -DBoost_USE_STATIC_RUNTIME:BOOL=ON
       -DBoost_USE_STATIC_LIBS:BOOL=ON
       -DBoost_NO_SYSTEM_PATHS:BOOL=ON      
+      -DCMAKE_THREAD_LIBS_INIT:STRING="-lpthread"
+      -DCMAKE_HAVE_THREADS_LIBRARY:BOOL=ON
+      -DCMAKE_USE_WIN32_THREADS_INIT:BOOL=OFF
+      -DCMAKE_USE_PTHREADS_INIT:BOOL=ON
+      -DTHREADS_PREFER_PTHREAD_FLAG:BOOL=ON
 )
 
 # build openssl
-set(_openssl_BUILD_ROOT "${THIRDPARTY_DIR}/openssl/build/Linux")
+set(_openssl_BUILD_ROOT "${_THIRDPARTY_DIR}/openssl/build/Linux")
 set(_OPENSSL_CACHE_ARGS 
     -DOPENSSL_USE_STATIC_LIBS:BOOL=ON
     -DOPENSSL_ROOT_DIR:STRING=${_openssl_BUILD_ROOT}  
