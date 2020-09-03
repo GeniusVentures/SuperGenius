@@ -53,8 +53,13 @@ endif ()
 include(CheckCXXCompilerFlag)
 # add compilation flag for unix platform
 include(build/compilation_flag_unix.cmake)
-
+message("${CMAKE_CURRENT_SOURCE_DIR}/cmake/compile_option_by_platform/${CMAKE_SYSTEM_NAME}.cmake")
 include(cmake/definition.cmake)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/cmake/compile_option_by_platform/${CMAKE_SYSTEM_NAME}.cmake")
+  message("add compile option")
+  include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/compile_option_by_platform/${CMAKE_SYSTEM_NAME}.cmake")
+endif()
+
 
 # BOOST library 
 set(Boost_USE_STATIC_LIBS ON) 
