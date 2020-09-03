@@ -1,4 +1,3 @@
-
 #include "verification/finality/vote_graph/vote_graph_impl.hpp"
 
 namespace sgns::verification::finality {

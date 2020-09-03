@@ -342,10 +342,10 @@ namespace sgns::injector {
   }
 
   template <typename Injector>
-  sptr<extensions::ExtensionFactoryImpl> get_extension_factory(
+  sptr<extensions::ExtensionFactory> get_extension_factory(
       const Injector &injector) {
     static auto initialized =
-        boost::optional<sptr<extensions::ExtensionFactoryImpl>>(boost::none);
+        boost::optional<sptr<extensions::ExtensionFactory>>(boost::none);
     if (initialized) {
       return initialized.value();
     }
@@ -691,10 +691,10 @@ namespace sgns::injector {
         di::bind<crypto::Secp256k1Provider>.template to<crypto::Secp256k1ProviderImpl>(),
 
         di::bind<crypto::CryptoStore>.template to<crypto::CryptoStoreImpl>(),
-        di::bind<extensions::ExtensionFactory>.template to(
-            [](auto const &injector) {
-              return get_extension_factory(injector);
-            }),
+        // di::bind<extensions::ExtensionFactory>.template to(
+        //     [](auto const &injector) {
+        //       return get_extension_factory(injector);
+        //     }),
         di::bind<network::Router>.template to<network::RouterLibp2p>(),
         di::bind<verification::ProductionGossiper>.template to<network::GossiperBroadcast>(),
         di::bind<verification::finality::Gossiper>.template to<network::GossiperBroadcast>(),

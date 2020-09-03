@@ -11,7 +11,7 @@ namespace sgns::application {
     spdlog::set_level(app_config->verbosity());
 
     // genesis launch if database does not exist
-    is_genesis_ = boost::filesystem::exists(app_config->leveldb_path())
+    production_execution_strategy_ = boost::filesystem::exists(app_config->leveldb_path())
                       ? Production::ExecutionStrategy::SYNC_FIRST
                       : Production::ExecutionStrategy::GENESIS;
 
@@ -23,7 +23,7 @@ namespace sgns::application {
     config_storage_ = injector_.create<sptr<ConfigurationStorage>>();
     key_storage_ = injector_.create<sptr<KeyStorage>>();
     clock_ = injector_.create<sptr<clock::SystemClock>>();
-     production_ = injector_.create<sptr<Production>>();
+    production_ = injector_.create<sptr<Production>>();
     finality_launcher_ = injector_.create<sptr<FinalityLauncher>>();
     router_ = injector_.create<sptr<network::Router>>();
 

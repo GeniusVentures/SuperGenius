@@ -7,11 +7,12 @@
 #include "verification/finality/impl/syncing_round_observer.hpp"
 #include "injector/application_injector.hpp"
 #include "storage/in_memory/in_memory_storage.hpp"
-
+#include "network/types/own_peer_info.hpp"
 namespace sgns::injector {
   namespace di = boost::di;
 
-  auto get_peer_info = [](const auto &injector,
+  template<typename Injector>
+  auto get_peer_info(const Injector &injector,
                           uint16_t p2p_port) -> sptr<network::OwnPeerInfo> {
     static boost::optional<sptr<network::OwnPeerInfo>> initialized{boost::none};
     if (initialized) {

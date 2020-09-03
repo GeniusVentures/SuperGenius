@@ -60,7 +60,7 @@ namespace sgns::application {
 
     sptr<api::ApiService> jrpc_api_service_;
 
-    Production::ExecutionStrategy prodcution_execution_strategy_;
+    Production::ExecutionStrategy production_execution_strategy_;
 
     base::Logger logger_;
   };

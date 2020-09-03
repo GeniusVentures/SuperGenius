@@ -66,13 +66,13 @@ namespace sgns::verification::finality {
 
     static inline const struct {
       bool operator()(const VoteWeight &lhs, const VoteWeight &rhs) {
-        return lhs.prevotes_sum < rhs.prevotes_sum;
+        return (lhs.prevotes_sum < rhs.prevotes_sum);
       }
     } prevoteComparator;
 
     static inline const struct {
       bool operator()(const VoteWeight &lhs, const VoteWeight &rhs) {
-        return lhs.precommits_sum < rhs.precommits_sum;
+        return (lhs.precommits_sum < rhs.precommits_sum);
       }
     } precommitComparator;
   };
