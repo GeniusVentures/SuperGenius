@@ -50,7 +50,8 @@ if (SGNS_STACKTRACE_BACKTRACE)
 		add_definitions(-DBOOST_STACKTRACE_BACKTRACE_INCLUDE_FILE=${BACKTRACE_INCLUDE})
 	endif()
 endif ()
-
+include(CheckCXXCompilerFlag)
+include(build/compilation_flag_unix.cmake)
 include(cmake/definition.cmake)
 
 # BOOST library 
