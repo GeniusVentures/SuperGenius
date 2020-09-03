@@ -60,7 +60,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/cmake/compile_option_by_platform/${CMAKE_
   include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/compile_option_by_platform/${CMAKE_SYSTEM_NAME}.cmake")
 endif()
 
-
+# add_compile_options(-zmuldefs)
 # BOOST library 
 set(Boost_USE_STATIC_LIBS ON) 
 set(Boost_USE_MULTITHREADED ON)  

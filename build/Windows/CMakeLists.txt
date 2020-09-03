@@ -236,5 +236,7 @@ ExternalProject_Add(SuperGenius
         -Dxxhash_DIR:PATH=${_FINDPACKAGE_XXHASH_DIR}
         -DUSER_ENV_LIBRARY:STRING=userenv
         -DWIN_SOCK_LIBRARY:STRING=wsock32 ws2_32
+        -DFORCE_MULTILE:BOOL=TRUE
+        -DMULTIPLE_OPTION:STRING="/FORCE:MULTIPLE"
   DEPENDS blocklattice
 )

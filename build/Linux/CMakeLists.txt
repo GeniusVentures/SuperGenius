@@ -220,7 +220,10 @@ ExternalProject_Add(SuperGenius
         -Dlibsecp256k1_DIR:PATH=${_FINDPACKAGE_SECP256K1_DIR}
         -Dlibsecp256k1_INCLUDE_DIR:PATH=${_FINDPACKAGE_SECP256K1_INCLUDE_DIR}
         -Dxxhash_DIR:PATH=${_FINDPACKAGE_XXHASH_DIR}
-        -DUSER_ENV_LIBRARY:STRING=userenv
-        -DWIN_SOCK_LIBRARY:STRING=wsock32 ws2_32
+        -DFORCE_MULTILE:BOOL=TRUE
+        -DMULTIPLE_OPTION:STRING="-zmuldefs"
+        # -DUSER_ENV_LIBRARY:STRING=userenv
+        # -DWIN_SOCK_LIBRARY:STRING=wsock32 ws2_32
+        
   DEPENDS blocklattice
 )

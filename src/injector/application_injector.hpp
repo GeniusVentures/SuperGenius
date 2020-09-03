@@ -7,15 +7,16 @@
 // added to fix "fatal error C1189: #error:  WinSock.h has already been included " in windows build
 // this error is generated in libp2p/injector/host_injector.hpp
 #include <boost/asio.hpp>
-#include <libp2p/host/host.hpp>
+//#include <libp2p/host/host.hpp>
+#include <libp2p/injector/host_injector.hpp>
+#include <libp2p/peer/peer_info.hpp>
 //end
 
 #include <crypto/bip39/impl/bip39_provider_impl.hpp>
 #include <crypto/crypto_store/crypto_store_impl.hpp>
 #include <crypto/pbkdf2/impl/pbkdf2_provider_impl.hpp>
 #include <crypto/secp256k1/secp256k1_provider_impl.hpp>
-#include <libp2p/injector/host_injector.hpp>
-#include <libp2p/peer/peer_info.hpp>
+
 #include <outcome/outcome.hpp>
 #include "api/service/api_service.hpp"
 #include "api/service/author/author_jrpc_processor.hpp"
