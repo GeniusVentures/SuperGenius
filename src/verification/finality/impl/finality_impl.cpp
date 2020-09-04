@@ -62,7 +62,7 @@ namespace sgns::verification::finality {
   bool FinalityImpl::start() {
     // Obtain last completed round
     auto last_round_res = getLastCompletedRound();
-    if (not last_round_res.has_value()) {
+    if (! last_round_res.has_value()) {
       // No saved data
       if (last_round_res
           != outcome::failure(storage::DatabaseError::NOT_FOUND)) {
@@ -107,7 +107,7 @@ namespace sgns::verification::finality {
 
     // Obtain finality voters
     auto voters_res = getVoters();
-    if (not voters_res.has_value()) {
+    if (! voters_res.has_value()) {
       logger_->critical("Can't retrieve voters: {}. Stopping finality execution",
                         voters_res.error().message());
       return {};
@@ -126,12 +126,12 @@ namespace sgns::verification::finality {
         environment_);
 
     FinalityConfig config{
-        .voters = voters,
-        .round_number = new_round_number,
-        .duration = std::chrono::milliseconds(
+        /*.voters = */voters,
+        /*.round_number =*/ new_round_number,
+        /*.duration = */std::chrono::milliseconds(
             333),  // Note: Duration value was gotten from substrate:
                    // https://github.com/paritytech/substrate/blob/efbac7be80c6e8988a25339061078d3e300f132d/bin/node-template/node/src/service.rs#L166
-        .peer_id = keypair_.public_key};
+        /*.peer_id = */keypair_.public_key};
 
     auto vote_crypto_provider = std::make_shared<VoteCryptoProviderImpl>(
         keypair_, crypto_provider_, new_round_number, voters);
@@ -157,7 +157,7 @@ namespace sgns::verification::finality {
 
     // Obtain finality voters
     auto voters_res = getVoters();
-    if (not voters_res.has_value()) {
+    if (! voters_res.has_value()) {
       logger_->critical("Can't retrieve voters: {}. Stopping finality execution",
                         voters_res.error().message());
       return {};
@@ -176,12 +176,12 @@ namespace sgns::verification::finality {
     auto vote_graph = std::make_shared<VoteGraphImpl>(best_block, environment_);
 
     FinalityConfig config{
-        .voters = voters,
-        .round_number = new_round_number,
-        .duration = std::chrono::milliseconds(
+        /*.voters =*/ voters,
+        /*.round_number =*/ new_round_number,
+        /*.duration = */std::chrono::milliseconds(
             333),  // Note: Duration value was gotten from substrate:
                    // https://github.com/paritytech/substrate/blob/efbac7be80c6e8988a25339061078d3e300f132d/bin/node-template/node/src/service.rs#L166
-        .peer_id = keypair_.public_key};
+        /*.peer_id =*/ keypair_.public_key};
 
     auto vote_crypto_provider = std::make_shared<VoteCryptoProviderImpl>(
         keypair_, crypto_provider_, new_round_number, voters);
@@ -245,7 +245,7 @@ namespace sgns::verification::finality {
 
     // No saved data - make from genesis
     auto genesis_hash_res = storage_->get(storage::kGenesisBlockHashLookupKey);
-    if (not genesis_hash_res.has_value()) {
+    if (! genesis_hash_res.has_value()) {
       logger_->critical(
           "Can't retrieve genesis block hash: {}. Stopping finality execution",
           genesis_hash_res.error().message());
@@ -263,7 +263,7 @@ namespace sgns::verification::finality {
         /*.best_final_candidate =*/ primitives::BlockInfo(1, genesis_hash),
         /*.finalized =*/ primitives::BlockInfo(1, genesis_hash)});
 
-    CompletedRound zero_round{.round_number = 0, .state = round_state};
+    CompletedRound zero_round{/*.round_number = */0, /*.state = */round_state};
 
     return std::move(zero_round);
   }
@@ -280,7 +280,7 @@ namespace sgns::verification::finality {
 
   void FinalityImpl::onVoteMessage(const VoteMessage &msg) {
     std::shared_ptr<VotingRound> target_round = selectRound(msg.round_number);
-    if (not target_round) return;
+    if (! target_round) return;
 
     // get block info
     auto blockInfo = visit_in_place(msg.vote.message, [](const auto &vote) {
@@ -326,7 +326,7 @@ namespace sgns::verification::finality {
     logger_->debug("Received fin message for round: {}", f.round_number);
 
     std::shared_ptr<VotingRound> target_round = selectRound(f.round_number);
-    if (not target_round) return;
+    if (! target_round) return;
 
     target_round->onFinalize(f);
   }
@@ -335,7 +335,7 @@ namespace sgns::verification::finality {
       outcome::result<CompletedRound> completed_round_res) {
     round_id++;
 
-    if (not completed_round_res) {
+    if (! completed_round_res) {
       logger_->debug("Finality round was not finalized: {}",
                      completed_round_res.error().message());
     } else {
@@ -347,7 +347,7 @@ namespace sgns::verification::finality {
       if (auto put_res = storage_->put(
               storage::kSetStateKey,
               base::Buffer(scale::encode(completed_round).value()));
-          not put_res) {
+          ! put_res) {
         logger_->error("New round state was not added to the storage");
         return;
       }

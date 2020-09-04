@@ -46,7 +46,7 @@ target_link_libraries(application_injector
     leveldb
     local_key_storage
     outcome
-    launcher
+    finality
     environment
     proposer
     storage_wasm_provider
@@ -57,6 +57,8 @@ target_link_libraries(application_injector
     vrf_provider
     waitable_timer
     binaryen_wasm_executor
+    authority_manager
+    system_api_service
     )
 
 add_library(syncing_node_injector
@@ -73,7 +75,7 @@ add_library(validating_node_injector
     )
 target_link_libraries(validating_node_injector
     application_injector
-    finality_dummy
+    finality_api_dummy
     )
 
 add_library(block_producing_node_injector
@@ -82,5 +84,5 @@ add_library(block_producing_node_injector
 target_link_libraries(block_producing_node_injector
     application_injector
     syncing_round_observer
-    finality_dummy
+    finality_api_dummy
     )

@@ -12,7 +12,7 @@
 #include "primitives/common.hpp"
 #include "primitives/transaction_validity.hpp"
 #include "primitives/version.hpp"
-
+#include <boost/optional.hpp>
 namespace sgns::runtime {
   /**
    * Core represents mandatory part of runtime api

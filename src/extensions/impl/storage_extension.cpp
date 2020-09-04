@@ -145,14 +145,14 @@ namespace sgns::extensions {
     if (value.toHex().size() < 500) {
       logger_->trace(
           "Set storage. Key: {}, Key hex: {} Value: {}, Value hex {}",
-          key.data(),
+          key.toString(),
           key.toHex(),
-          value.data(),
+          value.toString(),
           value.toHex());
     } else {
       logger_->trace(
           "Set storage. Key: {}, Key hex: {} Value is too big to display",
-          key.data(),
+          key.toString(),
           key.toHex());
     }
 
@@ -201,29 +201,6 @@ namespace sgns::extensions {
           "ext_storage_changes_root failed: called in ephemeral environment");
       return 0;
     }
-    auto batch = storage_provider_->tryGetPersistentBatch().value();
-
-    boost::optional<storage::changes_trie::ChangesTrieConfig> trie_config;
-    auto config_bytes_res = batch->get(CHANGES_CONFIG_KEY);
-    if (config_bytes_res.has_error()) {
-      if (config_bytes_res.error() != storage::trie::TrieError::NO_VALUE) {
-        logger_->error("ext_storage_changes_root resulted with an error: {}",
-                       config_bytes_res.error().message());
-        return 0;
-      }
-      logger_->debug("ext_storage_changes_root: no changes trie config found");
-      trie_config = boost::none;
-    } else {
-      auto config_res = scale::decode<storage::changes_trie::ChangesTrieConfig>(
-          config_bytes_res.value());
-      if (config_res.has_error()) {
-        logger_->error("ext_storage_changes_root resulted with an error: {}",
-                       config_res.error().message());
-        return 0;
-      }
-      trie_config = config_res.value();
-    }
-
     auto parent_hash_bytes =
         memory_->loadN(parent_hash_data, base::Hash256::size());
     base::Hash256 parent_hash;
@@ -231,51 +208,140 @@ namespace sgns::extensions {
                 base::Hash256::size(),
                 parent_hash.begin());
 
-    // if no config found in the storage, then disable tracking blocks changes
-    if (! trie_config.has_value()) {
-      trie_config = storage::changes_trie::ChangesTrieConfig{
-          /*.digest_interval =*/ 0, /*.digest_levels =*/ 0};
+    if(auto result_buf = calcStorageChangesRoot(parent_hash); result_buf.has_value()) {
+      memory_->storeBuffer(result, result_buf.value());
+      return result_buf.value().size();
     }
-
-    logger_->debug(
-        "ext_storage_changes_root constructing changes trie with parent_hash: "
-        "{}",
-        parent_hash.toHex());
-    auto trie_hash_res = changes_tracker_->constructChangesTrie(
-        parent_hash, trie_config.value());
-    if (trie_hash_res.has_error()) {
-      logger_->error("ext_storage_changes_root resulted with an error: {}",
-                     trie_hash_res.error().message());
-      return 0;
-    }
-    base::Buffer result_buf(trie_hash_res.value());
-    logger_->debug("ext_storage_changes_root with parent_hash {} result is: {}",
-                   parent_hash.toHex(),
-                   result_buf.toHex());
-    memory_->storeBuffer(result, result_buf);
-    return result_buf.size();
+    return 0;
   }
 
   void StorageExtension::ext_storage_root(runtime::WasmPointer result) const {
+    outcome::result<Buffer> res{{}};
     if (auto opt_batch = storage_provider_->tryGetPersistentBatch();
         opt_batch.has_value() && opt_batch.value() != nullptr) {
-      auto res = opt_batch.value()->commit();
-      if (res.has_error()) {
-        logger_->error("ext_storage_root resulted with an error: {}",
-                       res.error().message());
-      }
-      const auto &root = res.value();
-      memory_->storeBuffer(result, root);
+      res = opt_batch.value()->commit();
     } else {
       logger_->warn("ext_storage_root called in an ephemeral extension");
-      auto res = storage_provider_->forceCommit();
-      if (res.has_error()) {
-        logger_->error("ext_storage_root resulted with an error: {}",
-                       res.error().message());
-      }
-      const auto &root = res.value();
-      memory_->storeBuffer(result, root);
+      res = storage_provider_->forceCommit();
     }
+    if (res.has_error()) {
+      logger_->error("ext_storage_root resulted with an error: {}",
+                     res.error().message());
+    }
+    const auto &root = res.value();
+    memory_->storeBuffer(result, root);
+  }
+
+  outcome::result<base::Buffer> StorageExtension::get(
+      const base::Buffer &key,
+      runtime::WasmSize offset,
+      runtime::WasmSize max_length) const {
+    auto batch = storage_provider_->getCurrentBatch();
+    OUTCOME_TRY(data, batch->get(key));
+
+    const auto data_length =
+        std::min<runtime::WasmSize>(max_length, data.size() - offset);
+
+    return base::Buffer(std::vector<uint8_t>(
+        data.begin() + offset, data.begin() + offset + data_length));
+  }
+
+  outcome::result<base::Buffer> StorageExtension::get(
+      const base::Buffer &key) const {
+    auto batch = storage_provider_->getCurrentBatch();
+    return batch->get(key);
+  }
+
+  outcome::result<boost::optional<Buffer>> StorageExtension::getStorageNextKey(
+      const base::Buffer &key) const {
+    auto batch = storage_provider_->getCurrentBatch();
+    auto cursor = batch->cursor();
+    OUTCOME_TRY(cursor->seek(key));
+    OUTCOME_TRY(cursor->next());
+    if (cursor->isValid()) {
+      OUTCOME_TRY(next_key, cursor->key());
+      return boost::make_optional(next_key);
+    }
+    return boost::none;
+  }
+
+  void StorageExtension::ext_storage_set_version_1(runtime::WasmSpan key,
+                                                   runtime::WasmSpan value) {
+    auto [key_ptr, key_size] = runtime::WasmResult(key);
+    auto [value_ptr, value_size] = runtime::WasmResult(value);
+    ext_set_storage(key_ptr, key_size, value_ptr, value_size);
+  }
+
+  runtime::WasmSpan StorageExtension::ext_storage_get_version_1(
+      runtime::WasmSpan key) {
+    auto [key_ptr, key_size] = runtime::WasmResult(key);
+    auto key_buffer = memory_->loadN(key_ptr, key_size);
+    auto data = get(key_buffer);
+    if (not data) {
+      logger_->trace("ext_get_storage_into. Val by key {} not found",
+                     key_buffer.toHex());
+      return runtime::WasmMemory::kMaxMemorySize;
+    }
+    if (not data.value().empty()) {
+      logger_->trace("ext_get_storage_into. Key hex: {} , Value hex {}",
+                     key_buffer.toHex(),
+                     data.value().toHex());
+    } else {
+      logger_->trace("ext_get_storage_into. Key hex: {} Value: empty",
+                     key_buffer.toHex());
+    }
+    return memory_->storeBuffer(data.value());
+  }
+
+  void StorageExtension::ext_storage_clear_version_1(
+      runtime::WasmSpan key_data) {
+    auto [key_ptr, key_size] = runtime::WasmResult(key_data);
+    ext_clear_storage(key_ptr, key_size);
+  }
+
+  runtime::WasmSize StorageExtension::ext_storage_exists_version_1(
+      runtime::WasmSpan key_data) const {
+    auto [key_ptr, key_size] = runtime::WasmResult(key_data);
+    return ext_exists_storage(key_ptr, key_size);
+  }
+
+  void StorageExtension::ext_storage_clear_prefix_version_1(
+      runtime::WasmSpan prefix) {
+    auto [prefix_ptr, prefix_size] = runtime::WasmResult(prefix);
+    return ext_clear_prefix(prefix_ptr, prefix_size);
+  }
+
+  runtime::WasmSpan StorageExtension::ext_storage_root_version_1() const {
+    outcome::result<Buffer> res{{}};
+    if (auto opt_batch = storage_provider_->tryGetPersistentBatch();
+        opt_batch.has_value() and opt_batch.value() != nullptr) {
+      res = opt_batch.value()->commit();
+    } else {
+      logger_->warn("ext_storage_root called in an ephemeral extension");
+      res = storage_provider_->forceCommit();
+    }
+    if (res.has_error()) {
+      logger_->error("ext_storage_root resulted with an error: {}",
+                     res.error().message());
+    }
+    const auto &root = res.value();
+    return memory_->storeBuffer(root);
+  }
+
+  runtime::WasmSpan StorageExtension::ext_storage_changes_root_version_1(
+      runtime::WasmSpan parent_hash_data) {
+    auto hash_size = base::Hash256::size();
+    auto parent_hash_span = runtime::WasmResult(parent_hash_data);
+    auto parent_hash_bytes =
+        memory_->loadN(parent_hash_span.address, parent_hash_span.length);
+    base::Hash256 parent_hash;
+    std::copy_n(parent_hash_bytes.begin(),
+                base::Hash256::size(),
+                parent_hash.begin());
+    if(auto result = calcStorageChangesRoot(parent_hash); result.has_value()) {
+      return memory_->storeBuffer(result.value());
+    }
+    return 0;
   }
 
   runtime::WasmSpan StorageExtension::ext_storage_next_key_version_1(
@@ -301,30 +367,126 @@ namespace sgns::extensions {
     return kErrorSpan;
   }
 
-  outcome::result<base::Buffer> StorageExtension::get(
-      const base::Buffer &key,
-      runtime::WasmSize offset,
-      runtime::WasmSize max_length) const {
-    auto batch = storage_provider_->getCurrentBatch();
-    OUTCOME_TRY(data, batch->get(key));
+  namespace {
+    /**
+     * @brief type of serialized data for ext_trie_blake2_256_root_version_1
+     */
+    using KeyValueCollection =
+        std::vector<std::pair<base::Buffer, base::Buffer>>;
+    /**
+     * @brief type of serialized data for
+     * ext_trie_blake2_256_ordered_root_version_1
+     */
+    using ValuesCollection = std::vector<base::Buffer>;
+  }  // namespace
 
-    const auto data_length =
-        std::min<runtime::WasmSize>(max_length, data.size() - offset);
+  runtime::WasmPointer StorageExtension::ext_trie_blake2_256_root_version_1(
+      runtime::WasmSpan values_data) {
+    auto [ptr, size] = runtime::WasmResult(values_data);
+    const auto &buffer = memory_->loadN(ptr, size);
+    const auto &pairs = scale::decode<KeyValueCollection>(buffer);
+    if (!pairs) {
+      logger_->error("failed to decode pairs: {}", pairs.error().message());
+      std::terminate();
+    }
 
-    return base::Buffer(std::vector<uint8_t>(
-        data.begin() + offset, data.begin() + offset + data_length));
+    auto &&pv = pairs.value();
+    storage::trie::PolkadotCodec codec;
+    if (pv.empty()) {
+      static const auto empty_root = base::Buffer{}.put(codec.hash256({0}));
+      auto res = memory_->storeBuffer(empty_root);
+      return runtime::WasmResult(res).address;
+    }
+    storage::trie::PolkadotTrieImpl trie;
+    for (auto &&p : pv) {
+      auto &&key = p.first;
+      auto &&value = p.second;
+      // already scale-encoded
+      trie.put(key, value);
+    }
+    const auto &enc = codec.encodeNode(*trie.getRoot());
+    if (!enc) {
+      logger_->error("failed to encode trie root: {}", enc.error().message());
+      std::terminate();
+    }
+    const auto &hash = codec.hash256(enc.value());
+
+    std::cout << "res hash = " << hash.toHex() << std::endl;
+
+    auto res = memory_->storeBuffer(hash);
+    return runtime::WasmResult(res).address;
   }
 
-  outcome::result<boost::optional<Buffer>> StorageExtension::getStorageNextKey(
-      const base::Buffer &key) const {
-    auto batch = storage_provider_->getCurrentBatch();
-    auto cursor = batch->cursor();
-    OUTCOME_TRY(cursor->seek(key));
-    OUTCOME_TRY(cursor->next());
-    if (cursor->isValid()) {
-      OUTCOME_TRY(next_key, cursor->key());
-      return boost::make_optional(next_key);
+  runtime::WasmPointer
+  StorageExtension::ext_trie_blake2_256_ordered_root_version_1(
+      runtime::WasmSpan values_data) {
+    auto [ptr, size] = runtime::WasmResult(values_data);
+    const auto &buffer = memory_->loadN(ptr, size);
+    const auto &values = scale::decode<ValuesCollection>(buffer);
+    if (!values) {
+      logger_->error("failed to decode values: {}", values.error().message());
+      std::terminate();
     }
-    return boost::none;
+
+    const auto &collection = values.value();
+    auto ordered_hash = storage::trie::calculateOrderedTrieHash(
+        collection.begin(), collection.end());
+    if (!ordered_hash.has_value()) {
+      logger_->error(
+          "ext_blake2_256_enumerated_trie_root resulted with an error: {}",
+          ordered_hash.error().message());
+      std::terminate();
+    }
+
+    auto res = memory_->storeBuffer(ordered_hash.value());
+    return runtime::WasmResult(res).address;
+  }
+
+  boost::optional<base::Buffer> StorageExtension::calcStorageChangesRoot(
+      base::Hash256 parent_hash) const {
+    auto batch = storage_provider_->tryGetPersistentBatch().value();
+    boost::optional<storage::changes_trie::ChangesTrieConfig> trie_config;
+    auto config_bytes_res = batch->get(CHANGES_CONFIG_KEY);
+    if (config_bytes_res.has_error()) {
+      if (config_bytes_res.error() != storage::trie::TrieError::NO_VALUE) {
+        logger_->error("ext_storage_changes_root resulted with an error: {}",
+                       config_bytes_res.error().message());
+        return boost::none;
+      }
+      logger_->debug("ext_storage_changes_root: no changes trie config found");
+      trie_config = boost::none;
+    } else {
+      auto config_res = scale::decode<storage::changes_trie::ChangesTrieConfig>(
+          config_bytes_res.value());
+      if (config_res.has_error()) {
+        logger_->error("ext_storage_changes_root resulted with an error: {}",
+                       config_res.error().message());
+        return boost::none;
+      }
+      trie_config = config_res.value();
+    }
+
+    // if no config found in the storage, then disable tracking blocks changes
+    if (! trie_config.has_value()) {
+      trie_config = storage::changes_trie::ChangesTrieConfig{
+          /*.digest_interval = */0, /*.digest_levels = */0};
+    }
+
+    logger_->debug(
+        "ext_storage_changes_root constructing changes trie with parent_hash: "
+        "{}",
+        parent_hash.toHex());
+    auto trie_hash_res = changes_tracker_->constructChangesTrie(
+        parent_hash, trie_config.value());
+    if (trie_hash_res.has_error()) {
+      logger_->error("ext_storage_changes_root resulted with an error: {}",
+                     trie_hash_res.error().message());
+      return boost::none;
+    }
+    base::Buffer result_buf(trie_hash_res.value());
+    logger_->debug("ext_storage_changes_root with parent_hash {} result is: {}",
+                   parent_hash.toHex(),
+                   result_buf.toHex());
+    return result_buf;
   }
 }  // namespace sgns::extensions

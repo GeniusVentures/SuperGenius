@@ -26,4 +26,13 @@ namespace sgns::extensions {
           ptr);
     }
   }
+
+  runtime::WasmPointer MemoryExtension::ext_allocator_malloc_version_1(
+      runtime::WasmSize size) {
+    return ext_malloc(size);
+  }
+
+  void MemoryExtension::ext_allocator_free_version_1(runtime::WasmPointer ptr) {
+    return ext_free(ptr);
+  }
 }  // namespace sgns::extensions

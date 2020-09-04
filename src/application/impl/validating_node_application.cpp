@@ -24,7 +24,7 @@ namespace sgns::application {
     key_storage_ = injector_.create<sptr<KeyStorage>>();
     clock_ = injector_.create<sptr<clock::SystemClock>>();
     production_ = injector_.create<sptr<Production>>();
-    finality_launcher_ = injector_.create<sptr<FinalityLauncher>>();
+    finality_ = injector_.create<sptr<Finality>>();
     router_ = injector_.create<sptr<network::Router>>();
 
     jrpc_api_service_ = injector_.create<sptr<api::ApiService>>();
