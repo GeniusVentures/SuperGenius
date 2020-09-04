@@ -277,12 +277,12 @@ namespace sgns::extensions {
     auto [key_ptr, key_size] = runtime::WasmResult(key);
     auto key_buffer = memory_->loadN(key_ptr, key_size);
     auto data = get(key_buffer);
-    if (not data) {
+    if (! data) {
       logger_->trace("ext_get_storage_into. Val by key {} not found",
                      key_buffer.toHex());
       return runtime::WasmMemory::kMaxMemorySize;
     }
-    if (not data.value().empty()) {
+    if (! data.value().empty()) {
       logger_->trace("ext_get_storage_into. Key hex: {} , Value hex {}",
                      key_buffer.toHex(),
                      data.value().toHex());
@@ -314,7 +314,7 @@ namespace sgns::extensions {
   runtime::WasmSpan StorageExtension::ext_storage_root_version_1() const {
     outcome::result<Buffer> res{{}};
     if (auto opt_batch = storage_provider_->tryGetPersistentBatch();
-        opt_batch.has_value() and opt_batch.value() != nullptr) {
+        opt_batch.has_value() && opt_batch.value() != nullptr) {
       res = opt_batch.value()->commit();
     } else {
       logger_->warn("ext_storage_root called in an ephemeral extension");
@@ -391,13 +391,13 @@ namespace sgns::extensions {
     }
 
     auto &&pv = pairs.value();
-    storage::trie::PolkadotCodec codec;
+    storage::trie::SuperGeniusCodec codec;
     if (pv.empty()) {
       static const auto empty_root = base::Buffer{}.put(codec.hash256({0}));
       auto res = memory_->storeBuffer(empty_root);
       return runtime::WasmResult(res).address;
     }
-    storage::trie::PolkadotTrieImpl trie;
+    storage::trie::SuperGeniusTrieImpl trie;
     for (auto &&p : pv) {
       auto &&key = p.first;
       auto &&value = p.second;

@@ -14,6 +14,7 @@
 #include "primitives/version.hpp"
 #include <boost/optional.hpp>
 namespace sgns::runtime {
+  class WasmProvider;
   /**
    * Core represents mandatory part of runtime api
    */

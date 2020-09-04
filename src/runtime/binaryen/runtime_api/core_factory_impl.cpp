@@ -20,7 +20,8 @@ namespace sgns::runtime::binaryen {
 
   std::unique_ptr<Core> CoreFactoryImpl::createWithCode(
       std::shared_ptr<WasmProvider> wasm_provider) {
-    return std::make_unique<CoreImpl>(runtime_manager_,
+    return std::make_unique<CoreImpl>(std::move(wasm_provider),
+                                      runtime_manager_,
                                       changes_tracker_,
                                       header_repo_);
   }

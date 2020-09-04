@@ -9,6 +9,7 @@ namespace sgns::runtime::binaryen {
   class BlockBuilderImpl : public RuntimeApi, public BlockBuilder {
    public:
     explicit BlockBuilderImpl(
+        const std::shared_ptr<WasmProvider> &wasm_provider,
         const std::shared_ptr<RuntimeManager> &runtime_manager);
 
     ~BlockBuilderImpl() override = default;

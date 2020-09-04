@@ -11,6 +11,7 @@ namespace sgns::runtime::binaryen {
   class FinalityApiImpl : public RuntimeApi, public FinalityApi {
    public:
     explicit FinalityApiImpl(
+        const std::shared_ptr<WasmProvider> &wasm_provider,
         const std::shared_ptr<RuntimeManager> &runtime_manager);
 
     ~FinalityApiImpl() override = default;

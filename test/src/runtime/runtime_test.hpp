@@ -92,8 +92,16 @@ class RuntimeTest : public ::testing::Test {
             secp256k1_provider,
             hasher,
             crypto_store,
-            bip39_provider
-            );
+            bip39_provider,
+            [this](
+                std::shared_ptr<sgns::runtime::WasmProvider> wasm_provider) {
+              sgns::runtime::binaryen::CoreFactoryImpl factory(
+                  runtime_manager_,
+                  changes_tracker_,
+                  std::make_shared<
+                      sgns::blockchain::BlockHeaderRepositoryMock>());
+              return factory.createWithCode(std::move(wasm_provider));
+            });
 
     auto module_factory =
         std::make_shared<sgns::runtime::binaryen::WasmModuleFactoryImpl>();
@@ -105,7 +113,6 @@ class RuntimeTest : public ::testing::Test {
 
     runtime_manager_ =
         std::make_shared<sgns::runtime::binaryen::RuntimeManager>(
-            std::move(wasm_provider_),
             std::move(extension_factory),
             std::move(module_factory),
             std::move(storage_provider),

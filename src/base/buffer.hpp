@@ -212,12 +212,18 @@ namespace sgns::base {
      */
     static outcome::result<Buffer> fromHex(std::string_view hex);
 
+    /**
+     * @brief return content of bytearray as string
+     * @note Does not ensure correct encoding
+     * @return string
+     */
+     const std::string_view toString() const;
+
    private:
     std::vector<uint8_t> data_;
 
     template <typename T>
     Buffer &putRange(const T &begin, const T &end);
-  
   };
 
   /**

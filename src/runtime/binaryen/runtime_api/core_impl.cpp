@@ -11,10 +11,11 @@ namespace sgns::runtime::binaryen {
   using primitives::Version;
 
   CoreImpl::CoreImpl(
+      const std::shared_ptr<WasmProvider> &wasm_provider,
       const std::shared_ptr<RuntimeManager> &runtime_manager,
       std::shared_ptr<storage::changes_trie::ChangesTracker> changes_tracker,
       std::shared_ptr<blockchain::BlockHeaderRepository> header_repo)
-      : RuntimeApi(runtime_manager),
+      : RuntimeApi(wasm_provider, runtime_manager),
         changes_tracker_{std::move(changes_tracker)},
         header_repo_{std::move(header_repo)}, 
 	    logger_{base::createLogger("CoreImpl") } {

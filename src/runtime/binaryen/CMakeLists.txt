@@ -8,15 +8,6 @@ target_link_libraries(binaryen_wasm_memory
     )
 supergenius_install(binaryen_wasm_memory)
 
-add_library(binaryen_wasm_module
-    module/wasm_module_impl.cpp
-    module/wasm_module_factory_impl.cpp
-    )
-target_link_libraries(binaryen_wasm_module
-    binaryen::binaryen
-    logger
-    )
-
 add_library(binaryen_runtime_external_interface
     runtime_external_interface.hpp
     runtime_external_interface.cpp
@@ -26,15 +17,38 @@ target_link_libraries(binaryen_runtime_external_interface
     binaryen_wasm_memory
     logger
     )
+supergenius_install(binaryen_runtime_external_interface)
+
+add_library(binaryen_wasm_module
+    module/wasm_module_impl.cpp
+    module/wasm_module_factory_impl.cpp
+    module/wasm_module_instance_impl.cpp
+    )
+target_link_libraries(binaryen_wasm_module
+    binaryen::binaryen
+    logger
+    )
+supergenius_install(binaryen_wasm_module)
+
+add_library(binaryen_runtime_environment
+    runtime_environment.cpp
+    )
+target_link_libraries(binaryen_runtime_environment
+    binaryen_wasm_module
+    )
+supergenius_install(binaryen_runtime_environment)
 
 add_library(binaryen_runtime_manager
     runtime_manager.hpp
     runtime_manager.cpp
     )
 target_link_libraries(binaryen_runtime_manager
-    binaryen_runtime_external_interface
+    binaryen_runtime_environment
     binaryen_wasm_module
+    binaryen_runtime_external_interface
     )
+supergenius_install(binaryen_runtime_manager)
+
 add_library(binaryen_wasm_executor
     wasm_executor.hpp
     wasm_executor.cpp
@@ -44,11 +58,14 @@ target_link_libraries(binaryen_wasm_executor
     binaryen_runtime_manager
     logger
     )
+supergenius_install(binaryen_wasm_executor)
+
 add_library(binaryen_runtime_api INTERFACE)
 target_link_libraries(binaryen_runtime_api INTERFACE
     binaryen_runtime_external_interface
     binaryen_wasm_module
     )
+supergenius_install(binaryen_runtime_api)
 
 add_library(binaryen_core_api
     runtime_api/core_impl.cpp
@@ -58,6 +75,7 @@ target_link_libraries(binaryen_core_api
     binaryen_wasm_executor
     binaryen_runtime_api
     )
+supergenius_install(binaryen_core_api)
 
 add_library(binaryen_tagged_transaction_queue_api
     runtime_api/tagged_transaction_queue_impl.cpp
