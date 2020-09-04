@@ -22,8 +22,9 @@ namespace sgns::storage::changes_trie {
         outcome::result<void>(primitives::BlockHash new_parent_hash,
                               primitives::BlockNumber new_parent_number));
 
-    MOCK_METHOD2(onPut,
+    MOCK_METHOD3(onPut,
                  outcome::result<void>(const base::Buffer &key,
+                                       const base::Buffer &value,
                                        bool is_new_entry));
     MOCK_METHOD1(onRemove, outcome::result<void>(const base::Buffer &key));
 
