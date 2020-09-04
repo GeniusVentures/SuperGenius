@@ -8,35 +8,6 @@ endfunction()
 # Project
 project(SuperGenius C CXX)
 
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
-set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /MT")
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /MTd")
-
-if (CMAKE_BUILD_TYPE EQUAL Debug)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MTd")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MTd")
-  set(MSVC_RUNTIME_LIBRARY_OPTION "MultiThreaded$<$<CONFIG:Debug>:Debug>")  
-endif (CMAKE_BUILD_TYPE EQUAL Debug) 
-
-if (CMAKE_BUILD_TYPE EQUAL Release)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MT")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MT")
-  set(MSVC_RUNTIME_LIBRARY_OPTION "MultiThreaded$<$<CONFIG:Realease>:Release>") 
-endif (CMAKE_BUILD_TYPE EQUAL Release) 
-
-print("CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
-set(CompilerFlags
-        CMAKE_CXX_FLAGS
-        CMAKE_CXX_FLAGS_DEBUG
-        CMAKE_CXX_FLAGS_RELEASE
-        CMAKE_C_FLAGS
-        CMAKE_C_FLAGS_DEBUG
-        CMAKE_C_FLAGS_RELEASE
-        )
-foreach(CompilerFlag ${CompilerFlags})
-  string(REPLACE "/MD" "/MT" ${CompilerFlag} "${${CompilerFlag}}")
-endforeach()
 
 print("C flags: ${CMAKE_C_FLAGS}")
 print("CXX flags: ${CMAKE_CXX_FLAGS}")
@@ -60,7 +31,7 @@ set(_FINDPACKAGE_GTEST_CONFIG_DIR "${_THIRDPARTY_BUILD_DIR}/GTest/lib/cmake/GTes
 print(${_FINDPACKAGE_GTEST_CONFIG_DIR})
 
 # Set config of protobuf project 
-set(_FINDPACKAGE_PROTOBUF_CONFIG_DIR "${_THIRDPARTY_BUILD_DIR}/protobuf/cmake")
+set(_FINDPACKAGE_PROTOBUF_CONFIG_DIR "${_THIRDPARTY_BUILD_DIR}/protobuf/lib/cmake/protobuf")
 set(_FINDPACKAGE_PROTOBUF_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/protobuf/include")
 set(_FINDPACKAGE_PROTOBUF_LIB_DIR "${_THIRDPARTY_BUILD_DIR}/protobuf/lib")
 
@@ -97,21 +68,20 @@ set(_FINDPACKAGE_IPFS_LITE_CPP_DIR "${_THIRDPARTY_BUILD_DIR}/ipfs-lite-cpp/cmake
 set(_FINDPACKAGE_BOOST_DI_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/Boost.DI/include")
 
 set(_THIRDPARTY_DIR "${_THIRDPARTY_BUILD_DIR}/../..")
-set(_BOOST_ROOT "${_THIRDPARTY_DIR}/boost")
-set(_Boost_INCLUDE_DIR "${_BOOST_ROOT}/include/boost-1_72")
+set(_BOOST_ROOT "${_THIRDPARTY_DIR}/boost/build/Linux")
+set(_Boost_INCLUDE_DIR "${_BOOST_ROOT}/include")
 set(boost_headers_DIR "${_BOOST_ROOT}/lib/cmake/boost_headers-1.72.0")
-set(boost_random_DIR "${BOOST_ROOT}/lib/cmake/boost_random-1.72.0")
-set(boost_system_DIR "${BOOST_ROOT}/lib/cmake/boost_system-1.72.0")
-set(boost_filesystem_DIR "${BOOST_ROOT}/lib/cmake/boost_filesystem-1.72.0")
-set(boost_program_options_DIR "${BOOST_ROOT}/lib/cmake/boost_program_options-1.72.0")
-set(boost_log_DIR "${BOOST_ROOT}/lib/cmake/boost_log-1.72.0")
-set(boost_log_setup_DIR "${BOOST_ROOT}/lib/cmake/boost_log_setup-1.72.0")
+set(boost_random_DIR "${_BOOST_ROOT}/lib/cmake/boost_random-1.72.0")
+set(boost_system_DIR "${_BOOST_ROOT}/lib/cmake/boost_system-1.72.0")
+set(boost_filesystem_DIR "${_BOOST_ROOT}/lib/cmake/boost_filesystem-1.72.0")
+set(boost_program_options_DIR "${_BOOST_ROOT}/lib/cmake/boost_program_options-1.72.0")
+set(boost_log_DIR "${_BOOST_ROOT}/lib/cmake/boost_log-1.72.0")
+set(boost_log_setup_DIR "${_BOOST_ROOT}/lib/cmake/boost_log_setup-1.72.0")
+set(boost_thread_DIR "${_BOOST_ROOT}/lib/cmake/boost_thread-1.72.0")
 
 set(boost_DIR "${_BOOST_ROOT}/lib/cmake/Boost-1.72.0")
 
-set(_BOOST_CACHE_ARGS    
-      # -DBOOST_ROOT:PATH="${_BOOST_ROOT}"
-      # -DBOOST_INCLUDE_DIR:PATH="${_Boost_INCLUDE_DIR}"
+set(_BOOST_CACHE_ARGS          
       -DBOOST_LIB_DIR:PATH="${_BOOST_ROOT}/lib"   
       -Dboost_headers_DIR:PATH=${boost_headers_DIR}
       -Dboost_random_DIR:PATH=${boost_random_DIR}
@@ -120,14 +90,30 @@ set(_BOOST_CACHE_ARGS
       -Dboost_program_options_DIR:PATH=${boost_program_options_DIR}
       -Dboost_log_DIR:PATH=${boost_log_DIR}
       -Dboost_log_setup_DIR:PATH=${boost_log_setup_DIR}
+      -Dboost_thread_DIR:PATH=${boost_thread_DIR}
       -DBoost_DIR:PATH=${boost_DIR}
       -DBoost_INCLUDE_DIR:PATH=${_Boost_INCLUDE_DIR}  
       -DBoost_USE_MULTITHREADED:BOOL=ON
       -DBoost_USE_STATIC_RUNTIME:BOOL=ON
       -DBoost_USE_STATIC_LIBS:BOOL=ON
       -DBoost_NO_SYSTEM_PATHS:BOOL=ON      
+      -DCMAKE_THREAD_LIBS_INIT:STRING="-lpthread"
+      -DCMAKE_HAVE_THREADS_LIBRARY:BOOL=ON
+      -DCMAKE_USE_WIN32_THREADS_INIT:BOOL=OFF
+      -DCMAKE_USE_PTHREADS_INIT:BOOL=ON
+      -DTHREADS_PREFER_PTHREAD_FLAG:BOOL=ON
 )
 
+# build openssl
+set(_openssl_BUILD_ROOT "${_THIRDPARTY_DIR}/openssl/build/Linux")
+set(_OPENSSL_CACHE_ARGS 
+    -DOPENSSL_USE_STATIC_LIBS:BOOL=ON
+    -DOPENSSL_ROOT_DIR:STRING=${_openssl_BUILD_ROOT}  
+    -DOPENSSL_INCLUDE_DIR:PATH=${_openssl_BUILD_ROOT}/include
+    -DOPENSSL_LIBRARIES:PATH=${_openssl_BUILD_ROOT}/lib    
+  )
+set(_OPENSSL_INCLUDE_DIR ${_openssl_BUILD_ROOT}/include)
+set(_OPENSSL_target openssl)
 
 ExternalProject_Add(blocklattice
   PREFIX blocklattice
@@ -139,14 +125,14 @@ ExternalProject_Add(blocklattice
         # -DBOOST_LIBRARY_DIR:PATH="${BOOST_LIBRARY_DIR}"
         ${_BOOST_CACHE_ARGS}
         -DTESTING:BOOL=${TESTING}
-        -DCMAKE_CXX_FLAGS:STRING=${CMAKE_CXX_FLAGS}
-        -DCMAKE_C_FLAGS:STRING=${CMAKE_C_FLAGS}
-        -DCMAKE_CXX_FLAGS_RELEASE:STRING=${CMAKE_CXX_FLAGS_RELEASE}
-        -DCMAKE_C_FLAGS_RELEASE:STRING=${CMAKE_C_FLAGS_RELEASE}
-        -DCMAKE_CXX_FLAGS_DEBUG:STRING=${CMAKE_CXX_FLAGS_DEBUG}
-        -DCMAKE_C_FLAGS_DEBUG:STRING=${CMAKE_C_FLAGS_DEBUG}
+        # -DCMAKE_CXX_FLAGS:STRING=${CMAKE_CXX_FLAGS}
+        # -DCMAKE_C_FLAGS:STRING=${CMAKE_C_FLAGS}
+        # -DCMAKE_CXX_FLAGS_RELEASE:STRING=${CMAKE_CXX_FLAGS_RELEASE}
+        # -DCMAKE_C_FLAGS_RELEASE:STRING=${CMAKE_C_FLAGS_RELEASE}
+        # -DCMAKE_CXX_FLAGS_DEBUG:STRING=${CMAKE_CXX_FLAGS_DEBUG}
+        # -DCMAKE_C_FLAGS_DEBUG:STRING=${CMAKE_C_FLAGS_DEBUG}
         -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
-        -DCMAKE_MSVC_RUNTIME_LIBRARY:STRING=${MSVC_RUNTIME_LIBRARY_OPTION}
+        # -DCMAKE_MSVC_RUNTIME_LIBRARY:STRING=${MSVC_RUNTIME_LIBRARY_OPTION}
 )
 set(_FINDPACKAGE_BLOCKLATTICE_INCLUDE_DIR "${CMAKE_CURRENT_BINARY_DIR}/blocklattice/include")
 set(_FINDPACKAGE_BLOCKLATTICE_LIB_DIR "${CMAKE_CURRENT_BINARY_DIR}/blocklattice/lib")
@@ -193,10 +179,10 @@ set(_FINDPACKAGE_XXHASH_DIR "${_THIRDPARTY_BUILD_DIR}/xxhash/lib/cmake/xxhash")
 
 ExternalProject_Add(SuperGenius
   PREFIX SuperGenius
-  SOURCE_DIR "${CMAKE_SOURCE_DIR}/../../../SuperGenius"      
+  SOURCE_DIR "${CMAKE_SOURCE_DIR}/../../../supergenius"
   CMAKE_CACHE_ARGS                
         -DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_CURRENT_BINARY_DIR}/SuperGenius 
-        ${_CMAKE_ARGS_OPENSSL_ROOT_DIR} 
+        ${_OPENSSL_CACHE_ARGS} 
         -DGTest_DIR:PATH=${_FINDPACKAGE_GTEST_CONFIG_DIR}
         -DBoost.DI_DIR:PATH=${_FINDPACKAGE_BOOST_DI_DIR}        
         # -DBOOST_ROOT:STRING="${BOOST_ROOT}"        
@@ -216,12 +202,12 @@ ExternalProject_Add(SuperGenius
         -Dipfs-lite-cpp_LIB_DIR:STRING=${_THIRDPARTY_BUILD_DIR}/ipfs-lite-cpp/lib
         -DTESTING:BOOL=${TESTING}
         -DCBOR_INCLUDE_DIR:STRING=${_THIRDPARTY_BUILD_DIR}/ipfs-lite-cpp/include/deps/tinycbor/src
-        -DCMAKE_CXX_FLAGS:STRING=${CMAKE_CXX_FLAGS}\ -I\ ${_Boost_INCLUDE_DIR}\ -I\ ${_FINDPACKAGE_GSL_INCLUDE_DIR}\ -I\ ${_FINDPACKAGE_SPDLOG_INCLUDE_DIR}\ -I\ \\\"${OPENSSL_ROOT_DIR}/include\\\"\ -I\ ${_FINDPACKAGE_PROTOBUF_INCLUDE_DIR}\ -I\ ${_FINDPACKAGE_BOOST_DI_INCLUDE_DIR}\ -I\ ${_FINDPACKAGE_BLOCKLATTICE_INCLUDE_DIR}\ -I\ ${_FINDPACKAGE_IPFS_LITE_CPP_INCLUDE_DIR}\ -I\ ${_FINDPACKAGE_LIBP2P_INCLUDE_DIR}\ -I\ ${_FINDPACKAGE_BOOST_DI_INCLUDE_DIR}\ -I\ ${_FINDPACKAGE_LEVELDB_INCLUDE_DIR}\ -I\ ${_FINDPACKAGE_jsonrpc_lean_INCLUDE_DIR}\ -I\ ${_FINDPACKAGE_RapidJSON_INCLUDE_DIR}#\ -std=c99
-        -DCMAKE_C_FLAGS:STRING=${CMAKE_C_FLAGS}
-        -DCMAKE_CXX_FLAGS_RELEASE:STRING=${CMAKE_CXX_FLAGS_RELEASE}
-        -DCMAKE_C_FLAGS_RELEASE:STRING=${CMAKE_C_FLAGS_RELEASE}
-        -DCMAKE_CXX_FLAGS_DEBUG:STRING=${CMAKE_CXX_FLAGS_DEBUG}
-        -DCMAKE_C_FLAGS_DEBUG:STRING=${CMAKE_C_FLAGS_DEBUG}
+        -DCMAKE_CXX_FLAGS:STRING=-I\ ${_Boost_INCLUDE_DIR}\ -I\ ${_FINDPACKAGE_GSL_INCLUDE_DIR}\ -I\ ${_FINDPACKAGE_SPDLOG_INCLUDE_DIR}\ -I\ \\\"${OPENSSL_ROOT_DIR}/include\\\"\ -I\ ${_FINDPACKAGE_PROTOBUF_INCLUDE_DIR}\ -I\ ${_FINDPACKAGE_BOOST_DI_INCLUDE_DIR}\ -I\ ${_FINDPACKAGE_BLOCKLATTICE_INCLUDE_DIR}\ -I\ ${_FINDPACKAGE_IPFS_LITE_CPP_INCLUDE_DIR}\ -I\ ${_FINDPACKAGE_LIBP2P_INCLUDE_DIR}\ -I\ ${_FINDPACKAGE_BOOST_DI_INCLUDE_DIR}\ -I\ ${_FINDPACKAGE_LEVELDB_INCLUDE_DIR}\ -I\ ${_FINDPACKAGE_jsonrpc_lean_INCLUDE_DIR}\ -I\ ${_FINDPACKAGE_RapidJSON_INCLUDE_DIR}#\ -std=c99
+        # -DCMAKE_C_FLAGS:STRING=${CMAKE_C_FLAGS}
+        # -DCMAKE_CXX_FLAGS_RELEASE:STRING=${CMAKE_CXX_FLAGS_RELEASE}
+        # -DCMAKE_C_FLAGS_RELEASE:STRING=${CMAKE_C_FLAGS_RELEASE}
+        # -DCMAKE_CXX_FLAGS_DEBUG:STRING=${CMAKE_CXX_FLAGS_DEBUG}
+        # -DCMAKE_C_FLAGS_DEBUG:STRING=${CMAKE_C_FLAGS_DEBUG}
         -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
         -Ded25519_DIR:PATH=${_FINDPACKAGE_ed25519_CONFIG_DIR}        
         -Dsr25519_DIR:PATH=${_FINDPACKAGE_sr25519_CONFIG_DIR}
@@ -234,9 +220,10 @@ ExternalProject_Add(SuperGenius
         -Dlibsecp256k1_DIR:PATH=${_FINDPACKAGE_SECP256K1_DIR}
         -Dlibsecp256k1_INCLUDE_DIR:PATH=${_FINDPACKAGE_SECP256K1_INCLUDE_DIR}
         -Dxxhash_DIR:PATH=${_FINDPACKAGE_XXHASH_DIR}
-        -DUSER_ENV_LIBRARY:STRING=userenv
-        -DWIN_SOCK_LIBRARY:STRING=wsock32 ws2_32
         -DFORCE_MULTILE:BOOL=TRUE
-        -DMULTIPLE_OPTION:STRING="/FORCE:MULTIPLE"
+        -DMULTIPLE_OPTION:STRING="-zmuldefs"
+        # -DUSER_ENV_LIBRARY:STRING=userenv
+        # -DWIN_SOCK_LIBRARY:STRING=wsock32 ws2_32
+        
   DEPENDS blocklattice
 )

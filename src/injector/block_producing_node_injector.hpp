@@ -12,6 +12,7 @@
 #include "runtime/dummy/finality_api_dummy.hpp"
 #include "storage/in_memory/in_memory_storage.hpp"
 
+#include "platform/platform.hpp"
 namespace sgns::injector {
   namespace di = boost::di;
 
@@ -55,9 +56,9 @@ namespace sgns::injector {
             [app_config](const auto &injector) {
               return get_key_storage(app_config->keystore_path(), injector);
             }),
-        di::bind<runtime::FinalityApi>./*template */to<runtime::dummy::FinalityApiDummy>()
+        di::bind<runtime::FinalityApi>.TEMPLATE_TO/*template to*/<runtime::dummy::FinalityApiDummy>()
             [boost::di::override],
-        di::bind<crypto::CryptoStore>./*template */to(
+        di::bind<crypto::CryptoStore>.TEMPLATE_TO/*template to*/(
             [app_config](const auto &injector) {
               return get_crypto_store(app_config->keystore_path(), injector);
             })[boost::di::override],
