@@ -13,7 +13,8 @@ namespace sgns::storage::trie {
       base::Buffer{}.put(":extrinsic_index");
 
   // sometimes there is no extrinsic index for a runtime call
-  const base::Buffer NO_EXTRINSIC_INDEX_VALUE{scale::encode(0xffffffff).value()};
+  const base::Buffer NO_EXTRINSIC_INDEX_VALUE{
+      scale::encode(0xffffffff).value()};
 
   PersistentTrieBatchImpl::PersistentTrieBatchImpl(
       std::shared_ptr<Codec> codec,
@@ -86,7 +87,7 @@ namespace sgns::storage::trie {
     bool is_new_entry = !trie_->contains(key);
     auto res = trie_->put(key, value);
     if (res && changes_.has_value()) {
-      OUTCOME_TRY(changes_.value()->onPut(key, is_new_entry));
+      OUTCOME_TRY(changes_.value()->onPut(key, value, is_new_entry));
     }
     return res;
   }
