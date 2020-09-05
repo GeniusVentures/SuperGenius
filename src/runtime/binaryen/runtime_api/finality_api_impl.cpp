@@ -39,16 +39,17 @@ namespace sgns::runtime::binaryen {
   outcome::result<primitives::AuthorityList> FinalityApiImpl::authorities(
       const primitives::BlockId &block_id) {
 	  logger_->debug("FinalityApi_finality_authorities ");
-      primitives::AuthorityList result ;
+      /*
+	  primitives::AuthorityList result ;
       Authority authority_;
 	  authority_.id.id = SessionKey::fromHex("88dc3417d5058ec4b4503e0c12ea1a0a89be200fe98922423d4334014fa6b0ee").value();
 	  authority_.weight = 100u;
 	  result.push_back(authority_);
     
 	  return result;
-
-//     return execute<std::vector<Authority>>(
-// //         //"FinalityApi_finality_authorities", CallPersistency::EPHEMERAL, block_id);
-// 		"FinalityApi_finality_authorities", CallPersistency::EPHEMERAL, block_id);
+	  */
+      return execute<primitives::AuthorityList>(
+      //"FinalityApi_finality_authorities", CallPersistency::EPHEMERAL, block_id);
+		"GrandpaApi_grandpa_authorities", CallPersistency::EPHEMERAL, block_id);
   }
 }  // namespace sgns::runtime::binaryen
