@@ -366,7 +366,9 @@ namespace sgns::verification {
     block.header.digest.emplace_back(seal);
 
     // check that we are still in the middle of the
-    if (clock_->now()
+	auto current_time = clock_->now();
+	auto time_diff = current_time - next_slot_finish_time_;
+    if (current_time
         > next_slot_finish_time_ + genesis_configuration_->slot_duration) {
       log_->warn(
           "Block was not built in time. Slot has finished. If you are "
