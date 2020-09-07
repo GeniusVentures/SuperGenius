@@ -549,7 +549,7 @@ namespace sgns::injector {
     }
     auto config = configuration_res.value();
 	//added code for debug mode
-	primitives::ProductionDuration duration{ 40000000 };  // changed from 30000000 to 40000000
+	primitives::ProductionDuration duration{ 60000000 };  // changed from 30000000 to 40000000
 	config.slot_duration = duration;
 	//end
     for (const auto &authority : config.genesis_authorities) {
