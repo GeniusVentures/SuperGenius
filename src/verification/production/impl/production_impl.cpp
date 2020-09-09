@@ -377,7 +377,7 @@ namespace sgns::verification {
           "Block was not built in time. Slot has finished. If you are "
           "executing in debug mode, consider to rebuild in release. time diff {} , genesis_configuration {}", 
 		  time_diff.count(), genesis_configuration_->slot_duration.count());
-      return;
+      // return;
     }
 
     // observe possible changes of authorities
