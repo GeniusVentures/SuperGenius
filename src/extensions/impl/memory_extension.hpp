@@ -23,6 +23,17 @@ namespace sgns::extensions {
      */
     void ext_free(runtime::WasmPointer ptr);
 
+    // ----------------- memory api v1 -----------------
+    /**
+     * @see Extension::ext_allocator_malloc_version_1
+     */
+    runtime::WasmPointer ext_allocator_malloc_version_1(runtime::WasmSize size);
+
+    /**
+     * @see Extension::ext_allocator_free_version_1
+     */
+    void ext_allocator_free_version_1(runtime::WasmPointer ptr);
+
    private:
     constexpr static auto kDefaultLoggerTag = "WASM Runtime [MemoryExtension]";
     std::shared_ptr<runtime::WasmMemory> memory_;

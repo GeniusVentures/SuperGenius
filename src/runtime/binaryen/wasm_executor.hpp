@@ -17,7 +17,7 @@ namespace sgns::runtime::binaryen {
    public:
     enum class Error { EXECUTION_ERROR = 1 };
 
-    outcome::result<wasm::Literal> call(WasmModule &module_instance,
+    outcome::result<wasm::Literal> call(WasmModuleInstance &module_instance,
                                         wasm::Name method_name,
                                         const std::vector<wasm::Literal> &args);
   };

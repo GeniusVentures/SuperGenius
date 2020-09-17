@@ -4,8 +4,9 @@
 namespace sgns::runtime::binaryen {
 
   ProductionApiImpl::ProductionApiImpl(
+      const std::shared_ptr<WasmProvider> &wasm_provider,
       const std::shared_ptr<RuntimeManager> &runtime_manager)
-      : RuntimeApi(runtime_manager),
+      : RuntimeApi(wasm_provider, runtime_manager),
 	  logger_{ base::createLogger("ProductionApiImpl")} {}
 
   outcome::result<primitives::ProductionConfiguration> ProductionApiImpl::configuration() {
@@ -21,7 +22,7 @@ namespace sgns::runtime::binaryen {
 
 //     return execute<primitives::ProductionConfiguration>("ProductionApi_configuration",
 //                                                   CallPersistency::EPHEMERAL);
-	return execute<primitives::ProductionConfiguration>("ProductionApi_configuration",
+	return execute<primitives::ProductionConfiguration>("BabeApi_configuration",
 		CallPersistency::EPHEMERAL);
   }
 

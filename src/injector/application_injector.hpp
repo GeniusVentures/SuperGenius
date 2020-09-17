@@ -7,15 +7,16 @@
 // added to fix "fatal error C1189: #error:  WinSock.h has already been included " in windows build
 // this error is generated in libp2p/injector/host_injector.hpp
 #include <boost/asio.hpp>
-#include <libp2p/host/host.hpp>
+//#include <libp2p/host/host.hpp>
+#include <libp2p/injector/host_injector.hpp>
+#include <libp2p/peer/peer_info.hpp>
 //end
 
 #include <crypto/bip39/impl/bip39_provider_impl.hpp>
 #include <crypto/crypto_store/crypto_store_impl.hpp>
 #include <crypto/pbkdf2/impl/pbkdf2_provider_impl.hpp>
 #include <crypto/secp256k1/secp256k1_provider_impl.hpp>
-#include <libp2p/injector/host_injector.hpp>
-#include <libp2p/peer/peer_info.hpp>
+
 #include <outcome/outcome.hpp>
 #include "api/service/api_service.hpp"
 #include "api/service/author/author_jrpc_processor.hpp"
@@ -24,6 +25,8 @@
 #include "api/service/chain/impl/chain_api_impl.hpp"
 #include "api/service/state/impl/state_api_impl.hpp"
 #include "api/service/state/state_jrpc_processor.hpp"
+#include "api/service/system/impl/system_api_impl.hpp"
+#include "api/service/system/system_jrpc_processor.hpp"
 #include "api/transport/impl/http/http_listener_impl.hpp"
 #include "api/transport/impl/http/http_session.hpp"
 #include "api/transport/impl/ws/ws_listener_impl.hpp"
@@ -80,8 +83,9 @@
 
 #include "runtime/binaryen/runtime_api/production_api_impl.hpp"
 #include "runtime/binaryen/runtime_api/block_builder_impl.hpp"
+#include "runtime/binaryen/runtime_api/core_factory_impl.hpp"
 #include "runtime/binaryen/runtime_api/core_impl.hpp"
-#include "runtime/binaryen/runtime_api/finality_impl.hpp"
+#include "runtime/binaryen/runtime_api/finality_api_impl.hpp"
 #include "runtime/binaryen/runtime_api/metadata_impl.hpp"
 #include "runtime/binaryen/runtime_api/offchain_worker_impl.hpp"
 #include "runtime/binaryen/runtime_api/parachain_host_impl.hpp"
@@ -264,7 +268,7 @@ namespace sgns::injector {
           if (! db->get(storage::kAuthoritySetKey)) {
             // insert authorities
             auto finality_api =
-                injector.template create<sptr<runtime::Finality>>();
+                injector.template create<sptr<runtime::FinalityApi>>();
             const auto &weighted_authorities_res = finality_api->authorities(
                 primitives::BlockId(primitives::BlockNumber{0}));
             BOOST_ASSERT_MSG(weighted_authorities_res,
@@ -544,6 +548,10 @@ namespace sgns::injector {
       base::raise(configuration_res.error());
     }
     auto config = configuration_res.value();
+	//added code for debug mode
+	primitives::ProductionDuration duration{ 60000000 };  // changed from 30000000 to 40000000
+	config.slot_duration = duration;
+	//end
     for (const auto &authority : config.genesis_authorities) {
       spdlog::debug("Production authority: {}", authority.id.id.toHex());
     }
@@ -689,7 +697,7 @@ namespace sgns::injector {
         di::bind<crypto::Secp256k1Provider>.template to<crypto::Secp256k1ProviderImpl>(),
 
         di::bind<crypto::CryptoStore>.template to<crypto::CryptoStoreImpl>(),
-        di::bind<extensions::ExtensionFactory>.template to(
+        di::bind<extensions::ExtensionFactory>./*template */to(
             [](auto const &injector) {
               return get_extension_factory(injector);
             }),
@@ -702,13 +710,14 @@ namespace sgns::injector {
         }),
         di::bind<network::SyncProtocolObserver>.template to<network::SyncProtocolObserverImpl>(),
         di::bind<runtime::binaryen::WasmModule>.template to<runtime::binaryen::WasmModuleImpl>(),
-        di::bind<runtime::binaryen::WasmModuleFactory>.template to<runtime::binaryen::WasmModuleFactoryImpl>(),       
+        di::bind<runtime::binaryen::WasmModuleFactory>.template to<runtime::binaryen::WasmModuleFactoryImpl>(),
+        di::bind<runtime::CoreFactory>.template to<runtime::binaryen::CoreFactoryImpl>(),       
         di::bind<runtime::TaggedTransactionQueue>.template to<runtime::binaryen::TaggedTransactionQueueImpl>(),
         di::bind<runtime::ParachainHost>.template to<runtime::binaryen::ParachainHostImpl>(),
         di::bind<runtime::OffchainWorker>.template to<runtime::binaryen::OffchainWorkerImpl>(),
 
         di::bind<runtime::Metadata>.template to<runtime::binaryen::MetadataImpl>(),
-        di::bind<runtime::Finality>.template to<runtime::binaryen::FinalityImpl>(),
+        di::bind<runtime::FinalityApi>.template to<runtime::binaryen::FinalityApiImpl>(),
         di::bind<runtime::Core>.template to<runtime::binaryen::CoreImpl>(),
         di::bind<runtime::ProductionApi>.template to<runtime::binaryen::ProductionApiImpl>(),
         di::bind<runtime::BlockBuilder>.template to<runtime::binaryen::BlockBuilderImpl>(),

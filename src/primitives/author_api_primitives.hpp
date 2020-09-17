@@ -26,10 +26,10 @@ namespace sgns::primitives {
   };
   // TODO(yuraz): PRE-221 investigate and implement Session primitive
 
-  // /**
-  //  * @brief Metadata primitive
-  //  */
-  // using Metadata = boost::optional<std::shared_ptr<Session>>;
+  /**
+   * @brief Metadata primitive
+   */
+  using Metadata = boost::optional<std::shared_ptr<Session>>;
 
   /**
    * @brief Subscriber primitive
@@ -42,7 +42,7 @@ namespace sgns::primitives {
    * @brief ExtrinsicKey is used as a key to search extrinsic
    */
   using ExtrinsicKey = std::vector<uint8_t>;
-  // TODO(yuraz): PRE-221 investigate and implement Subscriber primitive
+  // TODO: PRE-221 investigate and implement Subscriber primitive
 
 }  // namespace sgns::primitives
 

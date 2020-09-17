@@ -1,4 +1,3 @@
-
 #include "verification/finality/vote_graph/vote_graph_impl.hpp"
 
 namespace sgns::verification::finality {
@@ -259,8 +258,8 @@ namespace sgns::verification::finality {
         }
 
         if (descendent.number > active_node.number
-            || (descendent.number == active_node.number
-                && descendent.cumulative_vote > active_node.cumulative_vote)) {
+            || ((descendent.number == active_node.number)
+                /*&& (descendent.cumulative_vote > active_node.cumulative_vote)*/)) {
           node_key = descendent_hash;
           active_node = descendent;
 

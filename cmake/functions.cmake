@@ -98,3 +98,11 @@ function(add_proto_library NAME)
 
   add_dependencies(generated ${NAME})
 endfunction()
+
+# conditionally applies flag.
+function(add_flag flag)
+  check_cxx_compiler_flag(${flag} FLAG_${flag})
+  if (FLAG_${flag} EQUAL 1)
+    add_compile_options(${flag})
+  endif ()
+endfunction()

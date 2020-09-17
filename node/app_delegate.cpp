@@ -114,7 +114,7 @@ namespace sgns
     void AppDelegate::init_node(int argc, char * const * argv){
 
         configuration->initialize_from_args(
-            AppConfiguration::LoadScheme::kBlockProducing, argc,(char**) argv);
+            AppConfiguration::LoadScheme::kValidating, argc,(char**) argv);
         // app_production =
         //     std::make_shared<application::BlockProducingNodeApplication>(
         //         std::move(configuration));

@@ -7,8 +7,8 @@
 #include "crypto/hasher.hpp"
 #include "extensions/extension_factory.hpp"
 #include "outcome/outcome.hpp"
-#include "runtime/binaryen/module/wasm_module.hpp"
 #include "runtime/binaryen/module/wasm_module_factory.hpp"
+#include "runtime/binaryen/runtime_environment.hpp"
 #include "runtime/binaryen/runtime_external_interface.hpp"
 #include "runtime/trie_storage_provider.hpp"
 #include "runtime/wasm_provider.hpp"
@@ -27,47 +27,37 @@ namespace sgns::runtime::binaryen {
     enum class Error { EMPTY_STATE_CODE = 1 };
 
     RuntimeManager(
-        std::shared_ptr<WasmProvider> wasm_provider,
         std::shared_ptr<extensions::ExtensionFactory> extension_factory,
         std::shared_ptr<WasmModuleFactory> module_factory,
         std::shared_ptr<TrieStorageProvider> storage_provider,
         std::shared_ptr<crypto::Hasher> hasher);
 
-    struct RuntimeEnvironment {
-      std::shared_ptr<WasmModule> module;
-      std::shared_ptr<WasmMemory> memory;
-      boost::optional<std::shared_ptr<storage::trie::TopperTrieBatch>>
-          batch;  // in persistent environments all changes of a call must be
-                  // either applied together or discarded in case of failure
-    };
+    outcome::result<RuntimeEnvironment> createPersistentRuntimeEnvironment(
+        const base::Buffer &state_code);
 
-    outcome::result<RuntimeEnvironment> createPersistentRuntimeEnvironment();
-
-    outcome::result<RuntimeEnvironment> createEphemeralRuntimeEnvironment();
+    outcome::result<RuntimeEnvironment> createEphemeralRuntimeEnvironment(
+        const base::Buffer &state_code);
 
     /**
      * @warning calling this with an \arg state_root older than the current root
      * will reset the storage to an older state once changes are committed
      */
     outcome::result<RuntimeEnvironment> createPersistentRuntimeEnvironmentAt(
-        const base::Hash256 &state_root);
+        const base::Buffer &state_code, const base::Hash256 &state_root);
 
     outcome::result<RuntimeEnvironment> createEphemeralRuntimeEnvironmentAt(
-        const base::Hash256 &state_root);
+        const base::Buffer &state_code, const base::Hash256 &state_root);
 
    private:
-    outcome::result<RuntimeEnvironment> createRuntimeEnvironment();
+    outcome::result<RuntimeEnvironment> createRuntimeEnvironment(
+        const base::Buffer &state_code);
 
     base::Logger logger_ = base::createLogger("Runtime manager");
 
-    std::shared_ptr<runtime::WasmProvider> wasm_provider_;
     std::shared_ptr<TrieStorageProvider> storage_provider_;
     std::shared_ptr<extensions::ExtensionFactory> extension_factory_;
     std::shared_ptr<WasmModuleFactory> module_factory_;
     std::shared_ptr<crypto::Hasher> hasher_;
-
-    // hash of WASM state code
-    base::Hash256 state_code_hash_{};
 
     std::mutex modules_mutex_;
     std::map<base::Hash256, std::shared_ptr<WasmModule>> modules_;

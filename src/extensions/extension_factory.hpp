@@ -5,7 +5,9 @@
 #include "extensions/extension.hpp"
 
 #include "runtime/trie_storage_provider.hpp"
-
+namespace sgns::runtime {
+  class CoreFactory;
+}
 namespace sgns::extensions {
 
   /**

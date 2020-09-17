@@ -22,3 +22,4 @@ target_link_libraries(primitives
     scale
     blob
     )
+supergenius_install(primitives)

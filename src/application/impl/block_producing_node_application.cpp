@@ -24,7 +24,7 @@ namespace sgns::application {
   }
 
   void BlockProducingNodeApplication::run() {
-    logger_->info("Start as {} with PID {}", __PRETTY_FUNCTION__, getpid());
+    logger_->info("Start as {} with PID {}", "sgns_node.exe", getpid());
 
     production_->setExecutionStrategy(Production::ExecutionStrategy::SYNC_FIRST);
 

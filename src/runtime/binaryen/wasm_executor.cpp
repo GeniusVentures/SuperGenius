@@ -16,7 +16,7 @@ OUTCOME_CPP_DEFINE_CATEGORY_3(sgns::runtime::binaryen, WasmExecutor::Error, e) {
 namespace sgns::runtime::binaryen {
 
   outcome::result<wasm::Literal> WasmExecutor::call(
-      WasmModule &module_instance,
+      WasmModuleInstance &module_instance,
       wasm::Name method_name,
       const std::vector<wasm::Literal> &args) {
     try {

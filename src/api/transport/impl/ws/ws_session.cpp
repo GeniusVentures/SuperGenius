@@ -9,7 +9,7 @@
 
 namespace sgns::api {
 
-  WsSession::WsSession(Context &context, Configuration config)
+  WsSession::WsSession(Context &context, Configuration config, SessionId id)
       : strand_(boost::asio::make_strand(context)),
         socket_(strand_),
         config_{config},

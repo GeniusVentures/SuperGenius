@@ -50,9 +50,17 @@ if (SGNS_STACKTRACE_BACKTRACE)
 		add_definitions(-DBOOST_STACKTRACE_BACKTRACE_INCLUDE_FILE=${BACKTRACE_INCLUDE})
 	endif()
 endif ()
-
+include(CheckCXXCompilerFlag)
+# add compilation flag for unix platform
+include(build/compilation_flag_unix.cmake)
+message("${CMAKE_CURRENT_SOURCE_DIR}/cmake/compile_option_by_platform/${CMAKE_SYSTEM_NAME}.cmake")
 include(cmake/definition.cmake)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/cmake/compile_option_by_platform/${CMAKE_SYSTEM_NAME}.cmake")
+  message("add compile option")
+  include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/compile_option_by_platform/${CMAKE_SYSTEM_NAME}.cmake")
+endif()
 
+# add_compile_options(-zmuldefs)
 # BOOST library 
 set(Boost_USE_STATIC_LIBS ON) 
 set(Boost_USE_MULTITHREADED ON)  
@@ -92,7 +100,7 @@ find_package(xxhash CONFIG REQUIRED)
 
 option(TESTING "Build tests" ON)
 link_directories(
-  ${BOOST_LIBRARY_DIR}
+  ${BOOST_LIB_DIR}
   ${ipfs-lite-cpp_LIB_DIR}
 )
 

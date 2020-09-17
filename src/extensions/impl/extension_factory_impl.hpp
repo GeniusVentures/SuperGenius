@@ -4,6 +4,7 @@
 
 #include "extensions/extension_factory.hpp"
 
+#include "extensions/impl/misc_extension.hpp"
 #include "crypto/bip39/bip39_provider.hpp"
 #include "crypto/crypto_store.hpp"
 #include "crypto/ed25519_provider.hpp"
@@ -25,7 +26,8 @@ namespace sgns::extensions {
         std::shared_ptr<crypto::Secp256k1Provider> secp256k1_provider,
         std::shared_ptr<crypto::Hasher> hasher,
         std::shared_ptr<crypto::CryptoStore> crypto_store,
-        std::shared_ptr<crypto::Bip39Provider> bip39_provider);
+        std::shared_ptr<crypto::Bip39Provider> bip39_provider,
+        MiscExtension::CoreFactoryMethod core_factory_method);
 
     std::unique_ptr<Extension> createExtension(
         std::shared_ptr<runtime::WasmMemory> memory,
@@ -40,6 +42,7 @@ namespace sgns::extensions {
     std::shared_ptr<crypto::Hasher> hasher_;
     std::shared_ptr<crypto::CryptoStore> crypto_store_;
     std::shared_ptr<crypto::Bip39Provider> bip39_provider_;
+    MiscExtension::CoreFactoryMethod core_factory_method_;
   };
 
 }  // namespace sgns::extensions

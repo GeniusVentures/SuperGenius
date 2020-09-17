@@ -13,6 +13,7 @@ namespace sgns::runtime::binaryen {
     ~ProductionApiImpl() override = default;
 
     explicit ProductionApiImpl(
+        const std::shared_ptr<WasmProvider> &wasm_provider,
         const std::shared_ptr<RuntimeManager> &runtime_manager);
 
     outcome::result<primitives::ProductionConfiguration> configuration() override;
