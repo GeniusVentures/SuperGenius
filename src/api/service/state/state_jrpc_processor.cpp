@@ -4,6 +4,8 @@
 #include "api/jrpc/jrpc_method.hpp"
 #include "api/service/state/requests/get_runtime_version.hpp"
 #include "api/service/state/requests/get_storage.hpp"
+#include "api/service/state/requests/subscribe_storage.hpp"
+#include "api/service/state/requests/unsubscribe_storage.hpp"
 
 namespace sgns::api::state {
 
@@ -23,6 +25,12 @@ namespace sgns::api::state {
 
     server_->registerHandler("state_getRuntimeVersion",
                              Handler<request::GetRuntimeVersion>(api_));
+
+    server_->registerHandler("state_subscribeStorage",
+                             Handler<request::SubscribeStorage>(api_));
+
+    server_->registerHandler("state_unsubscribeStorage",
+                             Handler<request::UnsubscribeStorage>(api_));
   }
 
 }  // namespace sgns::api::state

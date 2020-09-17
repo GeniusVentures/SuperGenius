@@ -88,10 +88,6 @@ namespace sgns::runtime::binaryen {
   }
 
   WasmPointer WasmMemoryImpl::growAlloc(WasmSize size) {
-    if (offset_ < 0) {
-      return 0;
-    }
-
     // check that we do not exceed max memory size
     if (static_cast<uint32_t>(offset_) > kMaxMemorySize - size) {
       return 0;

@@ -3,12 +3,13 @@
 
 #include "runtime/binaryen/runtime_api/runtime_api.hpp"
 #include "runtime/block_builder.hpp"
-
+#include "base/logger.hpp"
 namespace sgns::runtime::binaryen {
 
   class BlockBuilderImpl : public RuntimeApi, public BlockBuilder {
    public:
     explicit BlockBuilderImpl(
+        const std::shared_ptr<WasmProvider> &wasm_provider,
         const std::shared_ptr<RuntimeManager> &runtime_manager);
 
     ~BlockBuilderImpl() override = default;
@@ -26,6 +27,7 @@ namespace sgns::runtime::binaryen {
         const primitives::InherentData &data) override;
 
     outcome::result<base::Hash256> random_seed() override;
+    base::Logger logger_;
   };
 }  // namespace sgns::runtime::binaryen
 

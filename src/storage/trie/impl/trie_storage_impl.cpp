@@ -7,6 +7,7 @@
 #include "outcome/outcome.hpp"
 #include "storage/trie/impl/ephemeral_trie_batch_impl.hpp"
 #include "storage/trie/impl/persistent_trie_batch_impl.hpp"
+#include "subscription/subscriber.hpp"
 
 namespace sgns::storage::trie {
 
@@ -81,7 +82,7 @@ namespace sgns::storage::trie {
 
   outcome::result<std::unique_ptr<EphemeralTrieBatch>>
   TrieStorageImpl::getEphemeralBatch() const {
-    logger_->debug("Initialize ephemeral trie batch with root: {}",
+    logger_->info("Initialize ephemeral trie batch with root: {}",
                    root_hash_.toHex());
     OUTCOME_TRY(trie, serializer_->retrieveTrie(Buffer{root_hash_}));
     return std::make_unique<EphemeralTrieBatchImpl>(codec_, std::move(trie));
@@ -89,7 +90,7 @@ namespace sgns::storage::trie {
 
   outcome::result<std::unique_ptr<PersistentTrieBatch>>
   TrieStorageImpl::getPersistentBatchAt(const base::Hash256 &root) {
-    logger_->debug("Initialize persistent trie batch with root: {}",
+    logger_->info("Initialize persistent trie batch with root: {}",
                    root.toHex());
     auto trie_res = serializer_->retrieveTrie(Buffer{root});
     if (trie_res.has_error()) {

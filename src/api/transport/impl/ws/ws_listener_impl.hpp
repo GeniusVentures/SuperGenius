@@ -26,8 +26,13 @@ namespace sgns::api {
 
     ~WsListenerImpl() override = default;
 
-    void prepare() override;
-    void start() override;
+    /** @see AppStateManager::takeControl */
+    bool prepare() override;
+
+    /** @see AppStateManager::takeControl */
+    bool start() override;
+
+    /** @see AppStateManager::takeControl */
     void stop() override;
 
     void setHandlerForNewSession(NewSessionHandler &&on_new_session) override;
@@ -42,6 +47,7 @@ namespace sgns::api {
     std::unique_ptr<Acceptor> acceptor_;
     std::unique_ptr<NewSessionHandler> on_new_session_;
 
+    std::atomic<Session::SessionId> next_session_id_;
     std::shared_ptr<SessionImpl> new_session_;
 
     base::Logger logger_ = base::createLogger("RPC_Websocket_Listener");

@@ -10,14 +10,14 @@
 
 namespace sgns::application {
 
-  GenesisRawConfig ConfigurationStorageImpl::getGenesis() const {
+  /* GenesisRawConfig ConfigurationStorageImpl::getGenesis() const {
     return genesis_;
   }
 
   network::PeerList ConfigurationStorageImpl::getBootNodes() const {
     return boot_nodes_;
   }
-
+  */
   outcome::result<std::shared_ptr<ConfigurationStorageImpl>>
   ConfigurationStorageImpl::create(const std::string &path) {
     auto config_storage =

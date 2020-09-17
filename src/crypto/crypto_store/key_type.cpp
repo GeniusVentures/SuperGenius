@@ -10,7 +10,7 @@ namespace sgns::crypto {
 
   bool isSupportedKeyType(KeyTypeId k) {
     static const std::unordered_set<KeyTypeId> supported_types = {
-        key_types::kProduction,
+        key_types::kProd,
         key_types::kGran,
         key_types::kAcco,
         key_types::kImon,

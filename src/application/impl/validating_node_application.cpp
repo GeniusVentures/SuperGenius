@@ -11,7 +11,7 @@ namespace sgns::application {
     spdlog::set_level(app_config->verbosity());
 
     // genesis launch if database does not exist
-    is_genesis_ = boost::filesystem::exists(app_config->leveldb_path())
+    production_execution_strategy_ = boost::filesystem::exists(app_config->leveldb_path())
                       ? Production::ExecutionStrategy::SYNC_FIRST
                       : Production::ExecutionStrategy::GENESIS;
 
@@ -24,7 +24,7 @@ namespace sgns::application {
     key_storage_ = injector_.create<sptr<KeyStorage>>();
     clock_ = injector_.create<sptr<clock::SystemClock>>();
     production_ = injector_.create<sptr<Production>>();
-    finality_launcher_ = injector_.create<sptr<FinalityLauncher>>();
+    finality_ = injector_.create<sptr<Finality>>();
     router_ = injector_.create<sptr<network::Router>>();
 
     jrpc_api_service_ = injector_.create<sptr<api::ApiService>>();
@@ -33,11 +33,7 @@ namespace sgns::application {
   void ValidatingNodeApplication::run() {
     logger_->info("Start as {} with PID {}", typeid(*this).name(), getpid());
 
-    // starts block production
-    app_state_manager_->atLaunch([this] { production_->start(is_genesis_); });
-
-    // starts finalization event loop
-    app_state_manager_->atLaunch([this] { finality_launcher_->start(); });
+    production_->setExecutionStrategy(production_execution_strategy_);
 
     app_state_manager_->atLaunch([this] {
       // execute listeners
@@ -56,11 +52,13 @@ namespace sgns::application {
         }
         this->router_->init();
       });
+      return true;
     });
 
     app_state_manager_->atLaunch([ctx{io_context_}] {
       std::thread asio_runner([ctx{ctx}] { ctx->run(); });
       asio_runner.detach();
+      return true;
     });
 
     app_state_manager_->atShutdown([ctx{io_context_}] { ctx->stop(); });

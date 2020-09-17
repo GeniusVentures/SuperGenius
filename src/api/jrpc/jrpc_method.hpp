@@ -21,25 +21,30 @@ namespace sgns::api {
     explicit Method(const std::shared_ptr<Api> &api) : api_(api) {}
 
     jsonrpc::Value operator()(const jsonrpc::Request::Parameters &params) {
-      if (auto api = api_.lock()) {
-        RequestType request(api);
-
-        if (auto &&resust = request.init(params); ! resust) {
-          throw jsonrpc::Fault(resust.error().message());
-        }
-
-        if (auto &&result = request.execute(); ! result) {
-          throw jsonrpc::Fault(result.error().message());
-          // NOLINTNEXTLINE
-        } else if constexpr (std::is_same_v<decltype(result.value()), void>) {
-          return {};
-          // NOLINTNEXTLINE
-        } else {
-          return makeValue(result.value());
-        }
-
-      } else {
+      auto api = api_.lock();
+      if (! api) {
         throw jsonrpc::Fault("API not available");
+      }
+
+      RequestType request(api);
+
+      // Init request
+      if (auto &&init_result = request.init(params); ! init_result) {
+        throw jsonrpc::Fault(init_result.error().message());
+      }
+
+      // Execute request
+      auto &&result = request.execute();
+
+      // Handle of failure
+      if (! result) {
+        throw jsonrpc::Fault(result.error().message());
+      }
+
+      if constexpr (std::is_same_v<decltype(result.value()), void>) {
+        return {};
+      } else {
+        return makeValue(result.value());
       }
     }
   };

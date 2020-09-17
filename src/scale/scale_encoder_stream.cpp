@@ -119,7 +119,8 @@ namespace sgns::scale {
   ByteArray ScaleEncoderStream::data() const {
     ByteArray buffer(stream_.size(), 0u);
     for (auto &&[it, dest] = std::pair(stream_.begin(), buffer.begin());
-         it != stream_.end(); ++it, ++dest) {
+         it != stream_.end();
+         ++it, ++dest) {
       *dest = *it;
     }
     return buffer;

@@ -5,7 +5,9 @@
 #include "extensions/extension.hpp"
 
 #include "runtime/trie_storage_provider.hpp"
-
+namespace sgns::runtime {
+  class CoreFactory;
+}
 namespace sgns::extensions {
 
   /**
@@ -18,7 +20,7 @@ namespace sgns::extensions {
     /**
      * Takes \param memory and creates \return extension using this memory
      */
-    virtual std::shared_ptr<Extension> createExtension(
+    virtual std::unique_ptr<Extension> createExtension(
         std::shared_ptr<runtime::WasmMemory> memory,
         std::shared_ptr<runtime::TrieStorageProvider> storage_provider) const = 0;
   };

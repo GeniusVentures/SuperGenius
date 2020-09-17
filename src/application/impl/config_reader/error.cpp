@@ -10,6 +10,8 @@ OUTCOME_CPP_DEFINE_CATEGORY_3(sgns::application,
       return "A required entry is missing in the provided config file";
     case E::PARSER_ERROR:
       return "Internal parser error";
+    case E::NOT_YET_IMPLEMENTED:
+      return "Known entry name, but parsing not implemented";
   }
   return "Unknown error";
 }

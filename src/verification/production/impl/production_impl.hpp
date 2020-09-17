@@ -9,6 +9,7 @@
 
 #include <boost/asio/basic_waitable_timer.hpp>
 #include <outcome/outcome.hpp>
+#include "application/app_state_manager.hpp"
 #include "authorship/proposer.hpp"
 #include "blockchain/block_tree.hpp"
 #include "clock/timer.hpp"
@@ -38,12 +39,12 @@ namespace sgns::verification {
 
   inline const auto kTimestampId =
       primitives::InherentIdentifier::fromString("timstap0").value();
-  inline const auto kProductionSlotId =
+  inline const auto kProdSlotId =
       primitives::InherentIdentifier::fromString("prodslot").value();
 
   class ProductionImpl : public Production, public std::enable_shared_from_this<ProductionImpl> {
    public:
-    /**
+    /**Node configuration must contain 'genesis' option
      * Create an instance of Production implementation
      * @param lottery - implementation of Production Lottery
      * @param proposer - block proposer
@@ -57,7 +58,8 @@ namespace sgns::verification {
      * sgns::clock::BasicWaitableTimer
      * @param event_bus to deliver events over
      */
-    ProductionImpl(std::shared_ptr<ProductionLottery> lottery,
+    ProductionImpl(std::shared_ptr<application::AppStateManager> app_state_manager,
+             std::shared_ptr<ProductionLottery> lottery,
              std::shared_ptr<BlockExecutor> block_executor,
              std::shared_ptr<storage::trie::TrieStorage> trie_db,
              std::shared_ptr<EpochStorage> epoch_storage,
@@ -68,11 +70,17 @@ namespace sgns::verification {
              crypto::SR25519Keypair keypair,
              std::shared_ptr<clock::SystemClock> clock,
              std::shared_ptr<crypto::Hasher> hasher,
-             std::unique_ptr<clock::Timer> timer);
+             std::unique_ptr<clock::Timer> timer,
+             std::shared_ptr<authority::AuthorityUpdateObserver>
+                 authority_update_observer);
 
     ~ProductionImpl() override = default;
 
-    void start(ExecutionStrategy strategy) override;
+    bool start();
+
+    void setExecutionStrategy(ExecutionStrategy strategy) override {
+      execution_strategy_ = strategy;
+    }
 
     void runEpoch(Epoch epoch,
                   ProductionTimePoint starting_slot_finish_time) override;
@@ -118,6 +126,7 @@ namespace sgns::verification {
     void synchronizeSlots(const primitives::BlockHeader &new_header);
 
    private:
+    std::shared_ptr<application::AppStateManager> app_state_manager_;
     std::shared_ptr<ProductionLottery> lottery_;
     std::shared_ptr<BlockExecutor> block_executor_;
     std::shared_ptr<storage::trie::TrieStorage> trie_storage_;
@@ -130,6 +139,8 @@ namespace sgns::verification {
     std::shared_ptr<clock::SystemClock> clock_;
     std::shared_ptr<crypto::Hasher> hasher_;
     std::unique_ptr<clock::Timer> timer_;
+    std::shared_ptr<authority::AuthorityUpdateObserver>
+        authority_update_observer_;
 
     ProductionState current_state_{ProductionState::WAIT_BLOCK};
 
@@ -145,6 +156,8 @@ namespace sgns::verification {
     ProductionSlotNumber current_slot_{};
     ProductionLottery::SlotsLeadership slots_leadership_;
     ProductionTimePoint next_slot_finish_time_;
+
+    boost::optional<ExecutionStrategy> execution_strategy_;
 
     base::Logger log_;
   };

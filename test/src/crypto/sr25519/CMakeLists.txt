@@ -3,10 +3,11 @@
 addtest(sr25519_provider_test
     sr25519_provider_test.cpp
     )
-if(WIN32)
-    target_link_libraries(sr25519_provider_test wsock32 ws2_32 sr25519_provider userenv)
-else()
-    target_link_libraries(sr25519_provider_test    sr25519_provider  )
-endif()
+target_link_libraries(
+    sr25519_provider_test 
+    ${WIN_SOCK_LIBRARY}
+    sr25519_provider
+    ${USER_ENV_LIBRARY}
+    )
 
 

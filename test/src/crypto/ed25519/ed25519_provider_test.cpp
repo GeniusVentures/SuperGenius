@@ -22,7 +22,8 @@ struct ED25519ProviderTest : public ::testing::Test {
     hex_seed =
         "ccb4ec79974db3dae0d4dff7e0963db6b798684356dc517ff5c2e61f3b641569";
     hex_public_key =
-        "767a2f677a8c704d66e2abbb181d8984adae7ac8ecac9e30709ad496244ab497";
+//        "767a2f677a8c704d66e2abbb181d8984adae7ac8ecac9e30709ad496244ab497";
+	    "939AA4B6169CF1914643ED56609794F2949C0318C84514D766F8136D83F946FD";
   }
 
   std::string_view hex_seed;

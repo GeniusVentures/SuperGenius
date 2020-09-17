@@ -26,7 +26,7 @@ using testing::Return;
 
 class TrieBatchTest : public test::BaseLevelDB_Test {
  public:
-  TrieBatchTest() : BaseLevelDB_Test("/tmp/leveldbtest") {}
+  TrieBatchTest() : BaseLevelDB_Test("leveldbtest") {}
 
   void SetUp() override {
     open();

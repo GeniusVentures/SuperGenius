@@ -2,13 +2,11 @@
 #define SUPERGENIUS_SRC_RUNTIME_BINARYEN_WASM_MODULE_IMPL
 
 #include "base/buffer.hpp"
-#include "runtime/binaryen/runtime_external_interface.hpp"
 #include "runtime/binaryen/module/wasm_module.hpp"
 
 namespace wasm {
   using namespace ::wasm;  // NOLINT(google-build-using-namespace)
   class Module;
-  class ModuleInstance;
 }  // namespace wasm
 
 namespace sgns::runtime::binaryen {
@@ -27,22 +25,20 @@ namespace sgns::runtime::binaryen {
     WasmModuleImpl(const WasmModuleImpl&) = delete;
     WasmModuleImpl& operator=(const WasmModuleImpl&) = delete;
 
-    ~WasmModuleImpl() override;
+    ~WasmModuleImpl() override = default;
 
     static outcome::result<std::unique_ptr<WasmModuleImpl>> createFromCode(
         const base::Buffer &code,
         const std::shared_ptr<RuntimeExternalInterface> &rei);
 
-    wasm::Literal callExport(
-        wasm::Name name, const std::vector<wasm::Literal> &arguments) override;
+    std::unique_ptr<WasmModuleInstance> instantiate(
+        const std::shared_ptr<RuntimeExternalInterface> &externalInterface)
+        const override;
 
    private:
-    explicit WasmModuleImpl(
-        std::unique_ptr<wasm::Module>&& module,
-        std::unique_ptr<wasm::ModuleInstance>&& module_instance);
+    explicit WasmModuleImpl(std::unique_ptr<wasm::Module> &&module);
 
     std::unique_ptr<wasm::Module> module_;
-    std::unique_ptr<wasm::ModuleInstance> module_instance_;
   };
 
 }  // namespace sgns::runtime::binaryen

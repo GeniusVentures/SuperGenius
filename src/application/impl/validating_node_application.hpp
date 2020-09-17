@@ -9,13 +9,13 @@
 #include "application/configuration_storage.hpp"
 #include "application/impl/local_key_storage.hpp"
 #include "injector/validating_node_injector.hpp"
-#include "runtime/dummy/finality_dummy.hpp"
-
+#include "runtime/dummy/finality_api_dummy.hpp"
+#include "verification/finality/finality.hpp"
 namespace sgns::application {
 
   class ValidatingNodeApplication : public SgnsApplication {
     using Production = verification::Production;
-    using FinalityLauncher = verification::finality::Launcher;
+    using Finality = verification::finality::Finality;
     using InjectorType =
         decltype(injector::makeFullNodeInjector(AppConfigPtr{}));
 
@@ -55,12 +55,12 @@ namespace sgns::application {
     sptr<KeyStorage> key_storage_;
     sptr<clock::SystemClock> clock_;
     sptr<Production> production_;
-    sptr<FinalityLauncher> finality_launcher_;
+    sptr<Finality> finality_;
     sptr<network::Router> router_;
 
     sptr<api::ApiService> jrpc_api_service_;
 
-    Production::ExecutionStrategy is_genesis_;
+    Production::ExecutionStrategy production_execution_strategy_;
 
     base::Logger logger_;
   };

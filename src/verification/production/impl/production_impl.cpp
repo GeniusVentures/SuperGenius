@@ -18,6 +18,7 @@
 
 namespace sgns::verification {
   ProductionImpl::ProductionImpl(
+      std::shared_ptr<application::AppStateManager> app_state_manager,
       std::shared_ptr<ProductionLottery> lottery,
       std::shared_ptr<BlockExecutor> block_executor,
       std::shared_ptr<storage::trie::TrieStorage> trie_storage,
@@ -29,8 +30,11 @@ namespace sgns::verification {
       crypto::SR25519Keypair keypair,
       std::shared_ptr<clock::SystemClock> clock,
       std::shared_ptr<crypto::Hasher> hasher,
-      std::unique_ptr<clock::Timer> timer)
-      : lottery_{std::move(lottery)},
+      std::unique_ptr<clock::Timer> timer,
+      std::shared_ptr<authority::AuthorityUpdateObserver>
+          authority_update_observer)
+      : app_state_manager_(std::move(app_state_manager)),
+        lottery_{std::move(lottery)},
         block_executor_{std::move(block_executor)},
         trie_storage_{std::move(trie_storage)},
         epoch_storage_{std::move(epoch_storage)},
@@ -42,7 +46,9 @@ namespace sgns::verification {
         clock_{std::move(clock)},
         hasher_{std::move(hasher)},
         timer_{std::move(timer)},
+        authority_update_observer_(std::move(authority_update_observer)),
         log_{base::createLogger("PRODUCTION")} {
+    BOOST_ASSERT(app_state_manager_);
     BOOST_ASSERT(lottery_);
     BOOST_ASSERT(epoch_storage_);
     BOOST_ASSERT(trie_storage_);
@@ -52,6 +58,7 @@ namespace sgns::verification {
     BOOST_ASSERT(clock_);
     BOOST_ASSERT(hasher_);
     BOOST_ASSERT(log_);
+    BOOST_ASSERT(authority_update_observer_);
 
     NextEpochDescriptor init_epoch_desc;
     init_epoch_desc.randomness = genesis_configuration_->randomness;
@@ -61,19 +68,28 @@ namespace sgns::verification {
         && epoch_storage_->addEpochDescriptor(1, init_epoch_desc).has_value();
 
     BOOST_ASSERT(init_epoch_desc_ok);
+
+    app_state_manager_->atLaunch([this] { return start(); });
   }
 
-  void ProductionImpl::start(ExecutionStrategy strategy) {
-    auto &&[best_block_number, best_block_hash] = block_tree_->deepestLeaf();
-    log_->debug("Production run on block with number {} and hash {}",
-                best_block_number,
-                best_block_hash);
+  bool ProductionImpl::start() {
+    if (! execution_strategy_.has_value()) {
+      log_->critical("Internal error: undefined execution strategy of production");
+      return false;
+    }
 
-    switch (strategy) {
+    auto &&[best_block_number, best_block_hash] = block_tree_->deepestLeaf();
+
+    switch (execution_strategy_.get()) {
       case ExecutionStrategy::GENESIS: {
+        log_->debug("Production is starting with genesis block #{}, hash={}",
+                    best_block_number,
+                    best_block_hash);
+
         auto epoch_digest_res = epoch_storage_->getEpochDescriptor(0);
         if (! epoch_digest_res) {
           log_->error("Last epoch digest does not exist for initial epoch");
+          return false;
         }
         auto &&epoch_digest = epoch_digest_res.value();
 
@@ -104,10 +120,14 @@ namespace sgns::verification {
         break;
       }
       case ExecutionStrategy::SYNC_FIRST: {
+        log_->debug("Production is starting with syncing from block #{}, hash={}",
+                    best_block_number,
+                    best_block_hash);
         current_state_ = ProductionState::WAIT_BLOCK;
         break;
       }
     }
+    return true;
   }
 
   /**
@@ -118,7 +138,7 @@ namespace sgns::verification {
    * @return index of authority in list of authorities
    */
   boost::optional<uint64_t> getAuthorityIndex(
-      const std::vector<primitives::Authority> &authorities,
+      const primitives::AuthorityList &authorities,
       const primitives::SessionKey &authority_key) {
     auto it = std::find_if(authorities.begin(),
                            authorities.end(),
@@ -296,13 +316,14 @@ namespace sgns::verification {
       return log_->error("cannot put an inherent data: {}",
                          put_res.error().message());
     }
-    put_res = inherent_data.putData(kProductionSlotId, current_slot_);
+    put_res = inherent_data.putData(kProdSlotId, current_slot_);
     if (!put_res) {
       return log_->error("cannot put an inherent data: {}",
                          put_res.error().message());
     }
 
-    auto &&[best_block_number, best_block_hash] = block_tree_->deepestLeaf();
+    auto best_block_info = block_tree_->deepestLeaf();
+    auto &[best_block_number, best_block_hash] = best_block_info;
     log_->info("Production builds block on top of block with number {} and hash {}",
                best_block_number,
                best_block_hash);
@@ -345,13 +366,33 @@ namespace sgns::verification {
     block.header.digest.emplace_back(seal);
 
     // check that we are still in the middle of the
-    if (clock_->now()
+	  auto current_time = clock_->now();
+	  auto time_diff = current_time - next_slot_finish_time_;
+	  log_->warn(
+		  "=============================================. time diff {} , genesis_configuration {}",
+		time_diff.count(), genesis_configuration_->slot_duration.count());
+    if (current_time
         > next_slot_finish_time_ + genesis_configuration_->slot_duration) {
       log_->warn(
           "Block was not built in time. Slot has finished. If you are "
-          "executing in debug mode, consider to rebuild in release");
-      return;
+          "executing in debug mode, consider to rebuild in release. time diff {} , genesis_configuration {}", 
+		  time_diff.count(), genesis_configuration_->slot_duration.count());
+      // return;
     }
+
+    // observe possible changes of authorities
+    for (auto &digest_item : block.header.digest) {
+      visit_in_place(
+          digest_item,
+          [&](const primitives::Verification &verification_message) {
+            [[maybe_unused]] auto res = authority_update_observer_->onVerification(
+                verification_message.verification_engine_id,
+                best_block_info,
+                verification_message);
+          },
+          [](const auto &) {});
+    }
+
     // add block to the block tree
     if (auto add_res = block_tree_->addBlock(block); ! add_res) {
       log_->error("Could not add block: {}", add_res.error().message());

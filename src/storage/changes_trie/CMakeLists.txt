@@ -10,3 +10,4 @@ target_link_libraries(changes_tracker
     logger
     scale
     )
+supergenius_install(changes_tracker)

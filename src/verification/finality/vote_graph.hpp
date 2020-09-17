@@ -53,6 +53,8 @@ namespace sgns::verification::finality {
     virtual ~VoteGraph() = default;
 
     using Condition = std::function<bool(const VoteWeight &)>;
+    using Comparator =
+        std::function<bool(const VoteWeight &, const VoteWeight &)>;
 
     virtual const BlockInfo &getBase() const = 0;
 
@@ -91,7 +93,9 @@ namespace sgns::verification::finality {
     /// Find the highest block which is either an ancestor of or equal to the
     /// given, which fulfills a condition.
     virtual boost::optional<BlockInfo> findAncestor(
-        const BlockInfo &block, const Condition &condition) const = 0;
+        const BlockInfo &block,
+        const Condition &condition,
+        const Comparator &comparator) const = 0;
 
     /// Find the best GHOST descendent of the given block.
     /// Pass a closure used to evaluate the cumulative vote value.
@@ -108,7 +112,8 @@ namespace sgns::verification::finality {
     /// condition.
     virtual boost::optional<BlockInfo> findGhost(
         const boost::optional<BlockInfo> &current_best,
-        const Condition &condition) const = 0;
+        const Condition &condition,
+        const Comparator &comparator) const = 0;
   };
 
 }  // namespace sgns::verification::finality

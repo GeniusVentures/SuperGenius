@@ -24,10 +24,9 @@ namespace sgns::application {
   }
 
   void BlockProducingNodeApplication::run() {
-    logger_->info("Start as {} with PID {}", typeid(*this).name(), getpid());
+    logger_->info("Start as {} with PID {}", "sgns_node.exe", getpid());
 
-    app_state_manager_->atLaunch(
-        [this] { production_->start(Production::ExecutionStrategy::SYNC_FIRST); });
+    production_->setExecutionStrategy(Production::ExecutionStrategy::SYNC_FIRST);
 
     app_state_manager_->atLaunch([this] {
       // execute listeners
@@ -46,11 +45,13 @@ namespace sgns::application {
         }
         this->router_->init();
       });
+      return true;
     });
 
     app_state_manager_->atLaunch([ctx{io_context_}] {
       std::thread asio_runner([ctx{ctx}] { ctx->run(); });
       asio_runner.detach();
+      return true;
     });
 
     app_state_manager_->atShutdown([ctx{io_context_}] { ctx->stop(); });

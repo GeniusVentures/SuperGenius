@@ -8,7 +8,7 @@
 
 using sgns::crypto::key_types::kAcco;
 using sgns::crypto::key_types::kAudi;
-using sgns::crypto::key_types::kProduction;
+using sgns::crypto::key_types::kProd;
 using sgns::crypto::key_types::kGran;
 using sgns::crypto::key_types::kImon;
 using sgns::crypto::key_types::kLp2p;
@@ -45,11 +45,11 @@ TEST_P(KeyTypeTest, DecodeSuccess) {
 
 INSTANTIATE_TEST_CASE_P(KeyTypeTestCases,
                         KeyTypeTest,
-                        ::testing::Values(good(kProduction, "prod"),
+                        ::testing::Values(good(kProd, "prod"),
                                           good(kGran, "gran"),
                                           good(kAcco, "acco"),
                                           good(kImon, "imon"),
                                           good(kAudi, "audi"),
                                           good(kLp2p, "lp2p"),
-                                          bad(kProduction - 5, "prod"),
-                                          bad(kProduction + 1000, "prod")));
+                                          bad(kProd - 5, "prod"),
+                                          bad(kProd + 1000, "prod")));

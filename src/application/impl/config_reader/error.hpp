@@ -9,7 +9,11 @@ namespace sgns::application {
   /**
    * Codes for errors that originate in configuration readers
    */
-  enum class ConfigReaderError { MISSING_ENTRY = 1, PARSER_ERROR };
+  enum class ConfigReaderError {
+    MISSING_ENTRY = 1,
+    PARSER_ERROR,
+    NOT_YET_IMPLEMENTED
+  };
 
 }
 

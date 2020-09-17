@@ -26,11 +26,20 @@ namespace sgns::api {
      * @param request json request string
      * @param cb callback
      */
-    void processData(std::string_view request, const ResponseHandler &cb) override;
+    void processData(std::string_view request,
+                     const ResponseHandler &cb) override;
+
+    /**
+     * @brief creates a valid jsonrpc response and passes it to \arg cb
+     * @param from is a data source
+     * @param cb callback
+     */
+    void processJsonData(const jsonrpc::Value &from,
+                         const ResponseHandler &cb) override;
 
    private:
     /// json rpc server instance
-    jsonrpc::Server jsonrpc_handler_ {};
+    jsonrpc::Server jsonrpc_handler_{};
     /// format handler instance
     jsonrpc::JsonFormatHandler format_handler_{};
   };

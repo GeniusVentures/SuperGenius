@@ -22,6 +22,7 @@ namespace sgns
     namespace application
     {
         class BlockProducingNodeApplication;
+        class ValidatingNodeApplication;
         class AppConfigurationImpl;
     } // namespace application
     
@@ -46,7 +47,7 @@ public:
      * @param 
      * @return no return
      */
-    void run(boost::filesystem::path const &/*, sgns::node_flags const & flags*/);
+    void run(/*boost::filesystem::path const &, sgns::node_flags const & flags*/);
     /**
      * @brief  exit from main loop of SuperGenius daemon node
      * @param 
@@ -56,8 +57,15 @@ public:
 public:
     // boost::program_options::variables_map vm;
 private:
-    void init_production_node(int argc, char * const * argv);
+/**
+ * @brief initialization of node
+ * 
+ * @param argc  count of argument. 
+ * @param argv  vector of argment.
+ */
+    void init_node(int argc, char * const * argv);
     std::shared_ptr<application::BlockProducingNodeApplication> app_production;
+    std::shared_ptr<application::ValidatingNodeApplication> app_validating;
     std::shared_ptr<application::AppConfigurationImpl> configuration;
 };
 }

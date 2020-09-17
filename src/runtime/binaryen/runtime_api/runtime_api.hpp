@@ -11,6 +11,7 @@
 #include "base/buffer.hpp"
 #include "base/logger.hpp"
 #include "extensions/extension_factory.hpp"
+#include "runtime/binaryen/runtime_environment.hpp"
 #include "runtime/binaryen/runtime_external_interface.hpp"
 #include "runtime/binaryen/runtime_manager.hpp"
 #include "runtime/binaryen/wasm_executor.hpp"
@@ -33,9 +34,12 @@ namespace sgns::runtime::binaryen {
                    // completed
     };
 
-    explicit RuntimeApi(std::shared_ptr<RuntimeManager> runtime_manager)
-        : runtime_manager_(std::move(runtime_manager)) {
+    RuntimeApi(std::shared_ptr<WasmProvider> wasm_provider,
+               std::shared_ptr<RuntimeManager> runtime_manager)
+        : runtime_manager_(std::move(runtime_manager)),
+          wasm_provider_(std::move(wasm_provider)) {
       BOOST_ASSERT(runtime_manager_);
+      BOOST_ASSERT(wasm_provider_);
     }
 
    private:
@@ -47,20 +51,26 @@ namespace sgns::runtime::binaryen {
         switch (persistency) {
           case CallPersistency::PERSISTENT:
             return runtime_manager_
-                ->createPersistentRuntimeEnvironmentAt(state_root_opt.value())
+                ->createPersistentRuntimeEnvironmentAt(
+                    wasm_provider_->getStateCode(), state_root_opt.value())
                 .value();
           case CallPersistency::EPHEMERAL:
             return runtime_manager_
-                ->createEphemeralRuntimeEnvironmentAt(state_root_opt.value())
+                ->createEphemeralRuntimeEnvironmentAt(
+                    wasm_provider_->getStateCode(), state_root_opt.value())
                 .value();
         }
       } else {
         switch (persistency) {
           case CallPersistency::PERSISTENT:
-            return runtime_manager_->createPersistentRuntimeEnvironment()
+            return runtime_manager_
+                ->createPersistentRuntimeEnvironment(
+                    wasm_provider_->getStateCode())
                 .value();
           case CallPersistency::EPHEMERAL:
-            return runtime_manager_->createEphemeralRuntimeEnvironment()
+            return runtime_manager_
+                ->createEphemeralRuntimeEnvironment(
+                    wasm_provider_->getStateCode())
                 .value();
         }
       }
@@ -157,6 +167,7 @@ namespace sgns::runtime::binaryen {
       return outcome::success();
     }
     std::shared_ptr<RuntimeManager> runtime_manager_;
+    std::shared_ptr<WasmProvider> wasm_provider_;
     WasmExecutor executor_;
     base::Logger logger_ = base::createLogger("Runtime API");
   };

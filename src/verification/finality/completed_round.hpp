@@ -10,10 +10,10 @@ namespace sgns::verification::finality {
   // round
   struct CompletedRound {
     RoundNumber round_number{};
-    RoundState state;
+    std::shared_ptr<const RoundState> state;
 
     bool operator==(const CompletedRound &rhs) const {
-      return round_number == rhs.round_number && state == rhs.state;
+      return round_number == rhs.round_number && *state == *rhs.state;
     }
     bool operator!=(const CompletedRound &rhs) const {
       return !operator==(rhs);

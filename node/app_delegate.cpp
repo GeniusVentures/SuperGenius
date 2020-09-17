@@ -1,23 +1,25 @@
 #include "app_delegate.hpp"
 #include "application/impl/app_config_impl.hpp"
 #include "application/impl/block_producing_node_application.hpp"
+#include "application/impl/validating_node_application.hpp"
+
 #include "base/logger.hpp"
 #include <boost/process/child.hpp>
 #include <lib/utility.hpp>
 #include "secure/utility.hpp"
 #include <csignal>
 #include <iostream>
-#include "cli.hpp"
-#include "daemonconfig.hpp"
+// #include "cli.hpp"
+// #include "daemonconfig.hpp"
 
 namespace
 {
-void my_abort_signal_handler (int signum)
-{
-	std::signal (signum, SIG_DFL);
-	sgns::dump_crash_stacktrace ();
-	// sgns::create_load_memory_address_files ();
-}
+// void my_abort_signal_handler (int signum)
+// {
+// 	std::signal (signum, SIG_DFL);
+// 	sgns::dump_crash_stacktrace ();
+// 	// sgns::create_load_memory_address_files ();
+// }
 }
 namespace sgns
 {
@@ -33,7 +35,7 @@ namespace sgns
 
     int AppDelegate::init(int argc, char * const * argv){
         std::cout << "--------------AppDelegate::init()---------------" << std::endl;
-        sgns::set_umask ();
+        /*sgns::set_umask ();
         boost::program_options::options_description description ("Command line options");
         // clang-format off
         description.add_options ()
@@ -56,7 +58,7 @@ namespace sgns
             return 1;
         }
         boost::program_options::notify (vm);
-
+		*/
         // auto network (vm.find ("network"));
         // if (network != vm.end ())
         // {
@@ -84,21 +86,24 @@ namespace sgns
 
         auto logger = base::createLogger("SuperGenius block node: ");
         configuration = std::make_shared<AppConfigurationImpl>(logger);
-        init_production_node(argc, argv);
+        init_node(argc, argv);
+        return 1;
     }
 
-    void AppDelegate::run(boost::filesystem::path const & data_path/*, sgns::node_flags const & flags*/){
+    void AppDelegate::run(/*boost::filesystem::path const & data_path, sgns::node_flags const & flags*/){
         std::cout << "--------------AppDelegate::run()---------------" << std::endl;
         	// Override segmentation fault and aborting.
-	    std::signal (SIGSEGV, &my_abort_signal_handler);
-	    std::signal (SIGABRT, &my_abort_signal_handler);
+	    // std::signal (SIGSEGV, &my_abort_signal_handler);
+	    // std::signal (SIGABRT, &my_abort_signal_handler);
         
-        boost::filesystem::create_directories (data_path);
-	    boost::system::error_code error_chmod;
+        // boost::filesystem::create_directories (data_path);
+	    // boost::system::error_code error_chmod;
         // sgns::set_secure_perm_directory (data_path, error_chmod);
 
         // sgns::daemon_config config (data_path);
-        app_production->run();
+        // app_production->run();
+
+        app_validating->run();
     }
 
     void AppDelegate::exit(){
@@ -106,12 +111,15 @@ namespace sgns
 
     }
 
-    void AppDelegate::init_production_node(int argc, char * const * argv){
+    void AppDelegate::init_node(int argc, char * const * argv){
 
         configuration->initialize_from_args(
-            AppConfiguration::LoadScheme::kBlockProducing, argc,(char**) argv);
-        app_production =
-            std::make_shared<application::BlockProducingNodeApplication>(
+            AppConfiguration::LoadScheme::kValidating, argc,(char**) argv);
+        // app_production =
+        //     std::make_shared<application::BlockProducingNodeApplication>(
+        //         std::move(configuration));
+        app_validating =
+            std::make_shared<application::ValidatingNodeApplication>(
                 std::move(configuration));
     }
 

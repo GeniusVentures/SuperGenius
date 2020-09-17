@@ -33,7 +33,7 @@ namespace sgns::runtime::binaryen {
                         size_t expected,
                         size_t actual);
 
-    std::shared_ptr<extensions::Extension> extension_;
+    std::unique_ptr<extensions::Extension> extension_;
     base::Logger logger_ = base::createLogger(kDefaultLoggerTag);
 
     constexpr static auto kDefaultLoggerTag = "Runtime external interface";

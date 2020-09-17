@@ -1,5 +1,4 @@
 
-
 addtest(key_type_test
     key_type_test.cpp
     )
@@ -12,19 +11,10 @@ addtest(crypto_store_test
     )
 
 set_target_properties(crypto_store_test PROPERTIES LINK_FLAGS "/FORCE:MULTIPLE")
-if(WIN32)    
-    target_link_libraries(crypto_store_test
-    wsock32 ws2_32 userenv
-    crypto_store
-    base_fs_test
-    )
-else()
-    target_link_libraries(crypto_store_test
-    crypto_store
-    base_fs_test
-    )    
-endif()
 target_link_libraries(crypto_store_test
+    ${USER_ENV_LIBRARY}
+    ${WIN_SOCK_LIBRARY}
     crypto_store
     base_fs_test
     )
+

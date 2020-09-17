@@ -39,6 +39,7 @@ namespace sgns::storage::changes_trie {
      * present value
      */
     virtual outcome::result<void> onPut(const base::Buffer &key,
+                                        const base::Buffer &value,
                                         bool new_entry) = 0;
     /**
      * Supposed to be called when an entry is removed from the tracked storage

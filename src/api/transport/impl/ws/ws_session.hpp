@@ -33,8 +33,10 @@ namespace sgns::api {
      * @brief constructor
      * @param socket socket instance
      * @param config session configuration
+     * @param id session id
+     * @param type of this session
      */
-    WsSession(Context &context, Configuration config);
+    WsSession(Context &context, Configuration config, SessionId id);
 
     Socket &socket() override {
       return socket_;
@@ -44,6 +46,20 @@ namespace sgns::api {
      * @brief starts session
      */
     void start() override;
+
+    /**
+     * @brief method to get id of the session
+     * @return id of the session
+     */
+    Session::SessionId id() const override;
+
+    /**
+     * @brief method to get type of the session
+     * @return type of the session
+     */
+    SessionType type() const override {
+      return SessionType::kWs;
+    }
 
     /**
      * @brief sends response wrapped by websocket frame
@@ -113,6 +129,7 @@ namespace sgns::api {
     boost::beast::flat_buffer rbuffer_;  ///< read buffer
     boost::beast::flat_buffer wbuffer_;  ///< write buffer
 
+    SessionId const id_;
     base::Logger logger_ =
         base::createLogger("websocket session");  ///< logger instance
   };

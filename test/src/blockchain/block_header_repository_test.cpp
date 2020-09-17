@@ -30,11 +30,10 @@ using sgns::primitives::BlockNumber;
 class BlockHeaderRepository_Test : public test::BaseLevelDB_Test {
  public:
   BlockHeaderRepository_Test()
-      : BaseLevelDB_Test(fs::path("/tmp/blockheaderrepotest.lvldb")) {}
+      : BaseLevelDB_Test(fs::path("blockheaderrepotest.lvldb")) {}
 
   void SetUp() override {
     open();
-
     hasher_ = std::make_shared<sgns::crypto::HasherImpl>();
     header_repo_ =
         std::make_shared<KeyValueBlockHeaderRepository>(db_, hasher_);

@@ -53,10 +53,10 @@ target_link_libraries(voting_round
     voting_round_error
     )
 
-add_library(launcher
-    impl/launcher_impl.cpp
+add_library(finality
+    impl/finality_impl.cpp
     )
-target_link_libraries(launcher
+target_link_libraries(finality
     voting_round
     vote_crypto_provider
     vote_graph
@@ -67,5 +67,12 @@ add_library(syncing_round_observer
     impl/syncing_round_observer.cpp
     )
 target_link_libraries(syncing_round_observer
+    logger
+    )
+
+add_library(finalization_composite
+    impl/finalization_composite.cpp
+    )
+target_link_libraries(finalization_composite
     logger
     )
