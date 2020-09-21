@@ -32,5 +32,21 @@ using sgns::Count;
 using sgns::AccountHashPairs;
 // Logic and data behind the server's behavior.
 class SuperGenius_OpenAPIImpl final : public sgns::SuperGenius_OpenAPI {
+  Status GETAccountBalance (ServerContext* context, GETAccountBalanceParameters * request, BalanceInfo * response) {
+    
+  }
+  Status GETAccountBlockCount(ServerContext* context, GETAccountBlockCountParameters *request, BlockCountInfo* response){
 
+  }
+  Status GETAccountCreate (ServerContext* context, GETAccountCreateParameters* request, Account* response ) {
+  }
+
+  Status GETTotalSupply (ServerContext* context, AvailableSupply *response) {
+  }
+  Status GETBlock (ServerContext* context, GETBlockParameters *reuest, Block *response) {
+  }
+  Status GETBlockCount (ServerContext* context, BlockCountInfo *response) {
+  }
+  Status GETPeers (ServerContext* context,  PeerPortPairs *response ) {
+  }
 };
