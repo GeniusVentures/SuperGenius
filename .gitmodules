@@ -2,3 +2,7 @@
 [submodule "gRPCForSuperGenius"]
 	path = gRPCForSuperGenius
 	url = ssh://git@gitlab.geniusventures.io:8487/GeniusVentures/gRPCForSuperGenius.git
+[submodule "block-lattice-node"]
+	path = block-lattice-node
+	url = ssh://git@gitlab.geniusventures.io:8487/GeniusVentures/block-lattice-node.git
+        branch = fork-nano-node
