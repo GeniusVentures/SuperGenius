@@ -50,6 +50,10 @@ print("CXX Release flags: ${CMAKE_CXX_FLAGS_RELEASE}")
 set(_THIRDPARTY_BUILD_DIR "${THIRDPARTY_DIR}")
 #set(_THIRDPARTY_SOURCE_DIR "${THIRDPARTY_DIR}/build/Windows")
 
+if (NOT _THIRDPARTY_BUILD_DIR)
+  message(FATAL_ERROR "_THIRDPARTY_BUILD_DIR not found")
+endif()
+
 print("${_THIRDPARTY_BUILD_DIR}")
 include(ExternalProject)
 
@@ -60,9 +64,9 @@ set(_FINDPACKAGE_GTEST_CONFIG_DIR "${_THIRDPARTY_BUILD_DIR}/GTest/lib/cmake/GTes
 print(${_FINDPACKAGE_GTEST_CONFIG_DIR})
 
 # Set config of protobuf project 
-set(_FINDPACKAGE_PROTOBUF_CONFIG_DIR "${_THIRDPARTY_BUILD_DIR}/protobuf/cmake")
-set(_FINDPACKAGE_PROTOBUF_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/protobuf/include")
-set(_FINDPACKAGE_PROTOBUF_LIB_DIR "${_THIRDPARTY_BUILD_DIR}/protobuf/lib")
+set(_FINDPACKAGE_PROTOBUF_CONFIG_DIR  "${_THIRDPARTY_BUILD_DIR}/grpc/build/third_party/protobuf/cmake")
+set(_FINDPACKAGE_PROTOBUF_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/grpc/build/third_party/protobuf/include/google/protobuf")
+set(_FINDPACKAGE_PROTOBUF_LIB_DIR "${_THIRDPARTY_BUILD_DIR}/grpc/build/third_party/protobuf/Release")
 
 # if OPENSSL_ROOT_DIR is set, propagate that hint path to the external projects with OpenSSL dependency.
 set(_CMAKE_ARGS_OPENSSL_ROOT_DIR "")
@@ -112,7 +116,7 @@ set(boost_DIR "${_BOOST_ROOT}/lib/cmake/Boost-1.72.0")
 set(_BOOST_CACHE_ARGS    
       # -DBOOST_ROOT:PATH="${_BOOST_ROOT}"
       # -DBOOST_INCLUDE_DIR:PATH="${_Boost_INCLUDE_DIR}"
-      -DBOOST_LIB_DIR:PATH="${_BOOST_ROOT}/lib"   
+      -DBOOST_LIB_DIR:PATH=${_BOOST_ROOT}/lib   
       -Dboost_headers_DIR:PATH=${boost_headers_DIR}
       -Dboost_random_DIR:PATH=${boost_random_DIR}
       -Dboost_system_DIR:PATH=${boost_system_DIR}
@@ -237,6 +241,6 @@ ExternalProject_Add(SuperGenius
         -DUSER_ENV_LIBRARY:STRING=userenv
         -DWIN_SOCK_LIBRARY:STRING=wsock32 ws2_32
         -DFORCE_MULTILE:BOOL=TRUE
-        -DMULTIPLE_OPTION:STRING="/FORCE:MULTIPLE"
+        -DMULTIPLE_OPTION:STRING=/FORCE:MULTIPLE
   DEPENDS blocklattice
 )

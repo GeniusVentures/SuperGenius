@@ -7,6 +7,7 @@
 
 #include <boost/functional/hash.hpp>
 #include "base/hexutil.hpp"
+#include <iostream>
 
 namespace sgns::base {
 

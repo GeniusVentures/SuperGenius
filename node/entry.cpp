@@ -1,7 +1,5 @@
 #include "app_delegate.hpp"
 #include <boost/program_options.hpp>
-#include <lib/utility.hpp>
-#include "secure/utility.hpp"
 #include <sstream>
 #include <iostream> 
 sgns::AppDelegate g_app_delegate;
