@@ -67,6 +67,8 @@ set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_RUNTIME ON) 
 find_package(Boost REQUIRED COMPONENTS date_time filesystem random regex system thread log log_setup program_options) # header only libraries must not be added here
 
+set(Protobuf_USE_STATIC_LIBS ON)
+find_package(Protobuf CONFIG REQUIRED PATHS ${Protobuf_DIR})
 
 include_directories(
   # ${CMAKE_CURRENT_SOURCE_DIR}
@@ -79,9 +81,10 @@ include_directories(
   ${binaryen_INCLUDE_DIR}
   ${binaryen_INCLUDE_DIR}/binaryen
   ${tsl_hat_trie_INCLUDE_DIR}
+  ${ipfs-lite-cpp_INCLUDE_DIR}
 )
+
 find_package(Boost.DI CONFIG REQUIRED)
-find_package(blocklattice CONFIG REQUIRED PATHS ${blocklattice_DIR})
 find_package(OpenSSL REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
 find_package(tsl_hat_trie CONFIG REQUIRED)
@@ -95,8 +98,6 @@ find_package(RapidJSON CONFIG REQUIRED)
 find_package(binaryen CONFIG REQUIRED)
 find_package(libsecp256k1 CONFIG REQUIRED)
 find_package(xxhash CONFIG REQUIRED)
-
-
 
 option(TESTING "Build tests" ON)
 link_directories(
