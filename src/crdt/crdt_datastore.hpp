@@ -12,7 +12,8 @@
 #include <storage/leveldb/leveldb.hpp>
 #include <primitives/cid/cid.hpp>
 #include <ipfs_lite/ipld/ipld_node.hpp>
-
+#include <shared_mutex>
+#include <chrono>
 
 namespace sgns::crdt
 {
@@ -31,8 +32,6 @@ namespace sgns::crdt
   class CrdtDatastore
   {
   public: 
-    using Timer = boost::asio::steady_timer;
-    using Duration = Timer::duration;
     using Buffer = base::Buffer;
     using Logger = base::Logger;
     using DataStore = storage::LevelDB;
@@ -47,7 +46,7 @@ namespace sgns::crdt
       const std::shared_ptr<DAGSyncer>& aDagSyncer, const std::shared_ptr<Broadcaster>& aBroadcaster,
       const std::shared_ptr<CrdtOptions>& aOptions);
 
-    virtual ~CrdtDatastore() = default;
+    virtual ~CrdtDatastore();
 
     static std::shared_ptr<Delta> DeltaMerge(const std::shared_ptr<Delta>& aDelta1, const std::shared_ptr<Delta>& aDelta2);
 
@@ -74,10 +73,6 @@ namespace sgns::crdt
     */
     outcome::result<void> Sync(const HierarchicalKey& aKey);
 
-    /** Close shuts down the CRDT datastore. It should not be used afterwards.
-    */
-    outcome::result<void> Close();
-
     /** returns delta size and error
     */
     outcome::result<int> AddToDelta(const HierarchicalKey& aKey, const Buffer& aValue);
@@ -99,11 +94,7 @@ namespace sgns::crdt
 
     outcome::result<CID> AddDAGNode(const std::shared_ptr<Delta>& aDelta);
 
-    void HandleNext();
-
     outcome::result<void> Broadcast(const std::vector<CID>& cids);
-
-    void Rebroadcast();
 
     outcome::result<std::vector<CID>> DecodeBroadcast(const Buffer& buff);
 
@@ -117,11 +108,7 @@ namespace sgns::crdt
     /** handleBlock takes care of vetting, retrieving and applying
     * CRDT blocks to the Datastore.
     */
-    outcome::result<void> HandleBlock(const CID& cid);
-
-    void DagWorkerThread();
-
-    void SendJobWorker();
+    outcome::result<void> HandleBlock(const CID& aCid);
 
     outcome::result<std::unique_ptr<storage::BufferBatch>> Batch();
 
@@ -136,18 +123,36 @@ namespace sgns::crdt
     */
     outcome::result<void> PrintDAG();
 
-    outcome::result<void> PrintDAGRec(const CID& aCID, const uint64_t& aDepth, const std::vector<CID>& aSet);
+    outcome::result<void> PrintDAGRec(const CID& aCID, const uint64_t& aDepth, std::vector<CID>& aSet);
 
     outcome::result<std::shared_ptr<Node>> PutBlock(const std::vector<CID>& aHeads, const uint64_t& aHeight, const std::shared_ptr<Delta>& aDelta);
 
     outcome::result<std::vector<CID>> ProcessNode(const CID& aRoot, const uint64_t & aRootPrio, const std::shared_ptr<Delta>&aDelta, const std::shared_ptr <Node>& aNode);
     
-    // TODO:
-    //func (store *Datastore) sendNewJobs(session *sync.WaitGroup, ng *crdtNodeGetter, root cid.Cid, rootPrio uint64, children []cid.Cid) 
-    //func (store *Datastore) Query(q query.Query) (query.Results, error) {
+    void SendNewJobs(const CID& aRootCID, const uint64_t& aRootPriority, const std::vector<CID>& aChildren);
+
+  protected:
  
+    static void HandleNext(CrdtDatastore* aCrdtDatastore);
+
+    static void Rebroadcast(CrdtDatastore* aCrdtDatastore);
+
+    /** Close shuts down the CRDT datastore. It should not be used afterwards.
+    */
+    void Close();
+
+    outcome::result<void> GetNodeAndDeltaFromDAGSyncer(const CID& aCID, std::shared_ptr<Node>& aNode, std::shared_ptr<Delta>& aDelta);
+
   private:
     CrdtDatastore() = default; 
+
+    /** Helper function to log Error messages from threads 
+    */
+    void LogError(std::string message);
+
+    /** Helper function to log Info messages from threads
+    */
+    void LogInfo(std::string message);
 
     std::shared_ptr<DataStore> dataStore_ = nullptr;
     std::shared_ptr<CrdtOptions> options_ = nullptr;
@@ -160,25 +165,25 @@ namespace sgns::crdt
     std::mutex currentDeltaMutex_;
     std::shared_ptr <Delta> currentDelta_ = nullptr;
 
-    std::mutex seenHeadsMutex_;
+    std::shared_mutex seenHeadsMutex_;
     std::vector<CID> seenHeads_;
 
     std::shared_ptr<Broadcaster> broadcaster_ = nullptr;
     std::shared_ptr<DAGSyncer> dagSyncer_ = nullptr;
     Logger logger_;
 
-    //Timer rebroadcastTimer_;
-
+    static const std::chrono::milliseconds threadSleepTimeInMilliseconds_;
     static const std::string headsNamespace_; // "h" 
     static const std::string setsNamespace_; // "s" 
 
     PutHookPtr putHookFunc_ = nullptr;
     DeleteHookPtr deleteHookFunc_ = nullptr;
 
-    // TODO: Need to implement these
-    //jobQueue chan* dagJob
-    //sendJobs chan* dagJob
-    // wg sync.WaitGroup
+    std::thread handleNextThread_;
+    std::atomic<bool> handleNextThreadRunning_ = false;
+
+    std::thread rebroadcastThread_;
+    std::atomic<bool> rebroadcastThreadRunning_ = false;
   };
 
 } // namespace sgns::crdt 

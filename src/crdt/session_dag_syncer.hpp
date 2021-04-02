@@ -18,7 +18,7 @@ namespace sgns::crdt
 
     /**
        * Check if the block with {@param cid} is locally available (therefore, it
-     * is considered processed).
+       * is considered processed).
        * @param cid Content identifier of the node
        * @return true if the block is locally available
        */

@@ -25,6 +25,7 @@ namespace sgns::crdt
 
   using CRDTBroadcast = pb::CRDTBroadcast;
 
+  const std::chrono::milliseconds CrdtDatastore::threadSleepTimeInMilliseconds_ = std::chrono::milliseconds(100); // ms
   const std::string CrdtDatastore::headsNamespace_ = "h";
   const std::string CrdtDatastore::setsNamespace_ = "s";
 
@@ -68,30 +69,18 @@ namespace sgns::crdt
 
     LOG_INFO("crdt Datastore created. Number of heads: " << numberOfHeads << " Current max-height: " << maxHeight);
 
-    /*
-  // sendJobWorker + NumWorkers
-  dstore.wg.Add(1 + dstore.opts.NumWorkers)
-  go func() {
-    defer dstore.wg.Done()
-    dstore.sendJobWorker()
-  }()
-  for i := 0; i < dstore.opts.NumWorkers; i++ {
-    go func() {
-      defer dstore.wg.Done()
-      dstore.dagWorker()
-    }()
-  }
-  dstore.wg.Add(2)
-  go func() {
-    defer dstore.wg.Done()
-    dstore.handleNext()
-  }()
-  go func() {
-    defer dstore.wg.Done()
-    dstore.rebroadcast()
-  }()
-  */
+    // Starting HandleNext worker thread
+    this->handleNextThread_ = std::thread(&CrdtDatastore::HandleNext, this);
+    this->handleNextThread_.detach();
 
+    // Starting Rebroadcast worker thread
+    this->rebroadcastThread_ = std::thread(&CrdtDatastore::Rebroadcast, this);
+    this->rebroadcastThread_.detach();
+  }
+
+  CrdtDatastore::~CrdtDatastore()
+  {
+    this->Close();
   }
 
   //static 
@@ -133,59 +122,125 @@ namespace sgns::crdt
     return result;
   }
 
-  void CrdtDatastore::HandleNext()
+  void CrdtDatastore::Close()
   {
-    if (this->broadcaster_ == nullptr)
+    this->handleNextThreadRunning_ = false;
+    if (this->handleNextThread_.joinable())
+    {
+      this->handleNextThread_.join();
+    }
+
+    this->rebroadcastThreadRunning_ = false;
+    if (this->rebroadcastThread_.joinable())
+    {
+      this->rebroadcastThread_.join();
+    }
+  }
+
+  // static
+  void CrdtDatastore::HandleNext(CrdtDatastore* aCrdtDatastore)
+  {
+    if (aCrdtDatastore == nullptr)
+    {
+      return;
+    }
+
+    if (aCrdtDatastore->broadcaster_ == nullptr)
     {
       // offline
       return;
     }
 
-    //TODO: revisit this 
-    // until store.ctx.Done():
-    while (1)
+    aCrdtDatastore->handleNextThreadRunning_ = true;
+
+    aCrdtDatastore->LogInfo("HandleNext thread started");
+    while (aCrdtDatastore->handleNextThreadRunning_)
     {
-      auto broadcasterNextResult = this->broadcaster_->Next();
+      auto broadcasterNextResult = aCrdtDatastore->broadcaster_->Next();
       if (broadcasterNextResult.has_failure())
       {
         if (broadcasterNextResult.error().value() == (int)Broadcaster::ErrorCode::ErrNoMoreBroadcast)
         {
-          LOG_ERROR("Broadcaster: No more data to broadcast");
+          aCrdtDatastore->LogError("Broadcaster: No more data to broadcast");
           return;
         }
         else
         {
-          LOG_ERROR("Failed to get next broadcaster (error code " << broadcasterNextResult.error().value() << ")");
+          aCrdtDatastore->LogError("Failed to get next broadcaster (error code " + 
+            std::to_string(broadcasterNextResult.error().value()) + ")");
         }
         continue;
       }
 
-      auto decodeResult = this->DecodeBroadcast(broadcasterNextResult.value());
+      auto decodeResult = aCrdtDatastore->DecodeBroadcast(broadcasterNextResult.value());
       if (decodeResult.has_failure())
       {
-        LOG_ERROR("Broadcaster: Unable to decode broadcast (error code " << broadcasterNextResult.error().value() << ")");
+        aCrdtDatastore->LogError("Broadcaster: Unable to decode broadcast (error code " + 
+          std::to_string(broadcasterNextResult.error().value()) + ")");
         continue;
       }
 
       // For each head, we process it.
       for (const auto& bCastHeadCID : decodeResult.value())
       {
-        auto handleBlockResult = this->HandleBlock(bCastHeadCID);
+        auto handleBlockResult = aCrdtDatastore->HandleBlock(bCastHeadCID);
         if (handleBlockResult.has_failure())
         {
-          LOG_ERROR("Broadcaster: Unable to handle block (error code " << handleBlockResult.error().value() << ")");
+          aCrdtDatastore->LogError("Broadcaster: Unable to handle block (error code " + 
+            std::to_string(handleBlockResult.error().value()) + ")");
           continue;
         }
-        std::lock_guard lg(this->seenHeadsMutex_);
-        this->seenHeads_.push_back(bCastHeadCID);
+        std::unique_lock lock(aCrdtDatastore->seenHeadsMutex_);
+        aCrdtDatastore->seenHeads_.push_back(bCastHeadCID);
       }
 
-      // TODO: We should store trusted-peer signatures associated to
+      // We should store trusted-peer signatures associated to
       // each head in a timecache. When we broadcast, attach the
       // signatures (along with our own) to the broadcast.
       // Other peers can use the signatures to verify that the
       // received CIDs have been issued by a trusted peer.
+
+
+      std::this_thread::sleep_for(threadSleepTimeInMilliseconds_);
     }
+
+    aCrdtDatastore->LogInfo("HandleNext thread finished");
+  }
+
+  // static
+  void CrdtDatastore::Rebroadcast(CrdtDatastore* aCrdtDatastore)
+  {
+    if (aCrdtDatastore == nullptr)
+    {
+      return;
+    }
+
+    aCrdtDatastore->LogInfo("Rebroadcast thread started");
+    std::chrono::milliseconds rebroadcastIntervalMilliseconds = std::chrono::milliseconds(threadSleepTimeInMilliseconds_);
+    if (aCrdtDatastore->options_ != nullptr)
+    {
+      rebroadcastIntervalMilliseconds = std::chrono::milliseconds (aCrdtDatastore->options_->rebroadcastIntervalMilliseconds);
+    }
+    aCrdtDatastore->rebroadcastThreadRunning_ = true;
+    while (aCrdtDatastore->rebroadcastThreadRunning_)
+    {
+      aCrdtDatastore->RebroadcastHeads();
+
+      std::this_thread::sleep_for(rebroadcastIntervalMilliseconds);
+    }
+    aCrdtDatastore->LogInfo("Rebroadcast thread finished");
+  }
+
+
+
+  void CrdtDatastore::LogError(std::string message)
+  {
+    LOG_ERROR(message);
+  }
+
+  void CrdtDatastore::LogInfo(std::string message)
+  {
+    LOG_INFO(message);
   }
 
   outcome::result<std::vector<CID>> CrdtDatastore::DecodeBroadcast(const Buffer& buff)
@@ -236,16 +291,6 @@ namespace sgns::crdt
     return outputBuffer;
   }
 
-  void CrdtDatastore::Rebroadcast()
-  {
-    // TODO: use timer
-    //rebroadcastTimer_
-    while (1)
-    {
-      this->RebroadcastHeads();
-    }
-  }
-
   void CrdtDatastore::RebroadcastHeads()
   {
     uint64_t maxHeight = 0;
@@ -260,38 +305,163 @@ namespace sgns::crdt
       }
     }
 
-    std::vector<CID> headsToBradcast;
+    std::vector<CID> headsToBroadcast;
     {
-      std::lock_guard lg(this->seenHeadsMutex_);
+      std::shared_lock lock(this->seenHeadsMutex_);
       for (const auto& head : heads)
       {
         if (std::find(seenHeads_.begin(), seenHeads_.end(), head) == seenHeads_.end())
         {
-          headsToBradcast.push_back(head);
+          headsToBroadcast.push_back(head);
         }
       }
     }
 
-    auto broadcastResult = this->Broadcast(headsToBradcast);
+    auto broadcastResult = this->Broadcast(headsToBroadcast);
     if (broadcastResult.has_failure())
     {
       LOG_ERROR("Broadcast failed");
     }
 
     // Reset the map
-    std::lock_guard lg(this->seenHeadsMutex_);
+    std::unique_lock lock(this->seenHeadsMutex_);
     this->seenHeads_.clear();
   }
 
-  outcome::result<void> CrdtDatastore::HandleBlock(const CID& cid)
+  outcome::result<void> CrdtDatastore::HandleBlock(const CID& aCid)
   {
     // Ignore already known blocks.
     // This includes the case when the block is a current
     // head.
 
-    //TODO: need to implement it  
+    if (this->dagSyncer_ == nullptr)
+    {
+      return outcome::failure(boost::system::error_code{});
+    }
+    auto dagSyncerResult = this->dagSyncer_->HasBlock(aCid);
+    if (dagSyncerResult.has_failure())
+    {
+      LOG_ERROR("HandleBlock: error checking for known block");
+      return outcome::failure(dagSyncerResult.error());
+    }
 
-    return outcome::failure(boost::system::error_code{});
+    if (dagSyncerResult.value())
+    {
+      // cid is known. Skip walking tree
+      return outcome::success();
+    }
+
+    std::vector<CID> children;
+    children.push_back(aCid);
+    this->SendNewJobs(aCid, 0, children);
+
+    return outcome::success();
+  }
+
+  outcome::result<void> CrdtDatastore::GetNodeAndDeltaFromDAGSyncer(const CID& aCID, std::shared_ptr<Node>& aNode, std::shared_ptr<Delta>& aDelta)
+  {
+    if (this->dagSyncer_ == nullptr)
+    {
+      return outcome::failure(boost::system::error_code{});
+    }
+
+    auto getNodeResult = this->dagSyncer_->getNode(aCID);
+    if (getNodeResult.has_failure())
+    {
+      return outcome::failure(getNodeResult.error());
+    }
+    aNode = getNodeResult.value();
+    auto nodeBuffer = aNode->serialize();
+
+    if (aDelta == nullptr)
+    {
+      aDelta = std::make_shared<Delta>();
+    }
+
+    if (!aDelta->ParseFromArray(nodeBuffer.data(), nodeBuffer.size()))
+    {
+      return outcome::failure(boost::system::error_code{});
+    }
+
+    return outcome::success();
+  }
+
+
+  void CrdtDatastore::SendNewJobs(const CID& aRootCID, const uint64_t& aRootPriority, const std::vector<CID>& aChildren)
+  {
+    // sendNewJobs calls getDeltas with the given
+    // children and sends each response to the workers. 
+
+    if (this->dagSyncer_ == nullptr || aChildren.empty())
+    {
+      return;
+    }
+
+    std::chrono::seconds dagSyncerTimeoutSec = std::chrono::seconds(5 * 60); // 5 mins by default
+    if (this->options_ != nullptr)
+    {
+      dagSyncerTimeoutSec = std::chrono::seconds(this->options_->dagSyncerTimeoutSec);
+    }
+
+    uint64_t rootPriority = aRootPriority;
+    if (rootPriority == 0)
+    {
+      auto getNodeResult = this->dagSyncer_->getNode(aChildren[0]);
+      if (getNodeResult.has_failure())
+      {
+        return;
+      }
+      auto node = getNodeResult.value();
+      auto nodeBuffer = node->serialize();
+
+      auto delta = std::make_shared<Delta>();
+
+      if (!delta->ParseFromArray(nodeBuffer.data(), nodeBuffer.size()))
+      {
+        return;
+      }
+
+      if (rootPriority == 0)
+      {
+        rootPriority = delta->priority();
+      }
+    }
+
+    for (const auto& cid : aChildren)
+    {
+      //Fetch only root node with all children, but without children of their children
+      auto graphResult = this->dagSyncer_->fetchGraphOnDepth(cid, 1); 
+      if (graphResult.has_failure())
+      {
+        LOG_ERROR("SendNewJobs: error fetching graph for CID:" << cid.toString().value());
+        continue;
+      }
+
+      auto leaf = graphResult.value();
+      auto nodeBuffer = leaf->content();
+
+      auto nodeResult = ipfs_lite::ipld::IPLDNodeImpl::createFromRawBytes(nodeBuffer);
+      if (nodeResult.has_failure())
+      {
+        continue;
+      }
+      auto node = nodeResult.value();
+
+      auto delta = std::make_shared<Delta>();
+      if (!delta->ParseFromArray(nodeBuffer.data(), nodeBuffer.size()))
+      {
+        continue;
+      }
+
+      //TODO: Send dag job as a worker thread
+      auto childrenResult = this->ProcessNode(aRootCID, rootPriority, delta, node);
+      if (childrenResult.has_failure())
+      {
+        LOG_ERROR("SendNewJobs: failed to process node:" << aRootCID.toString().value());
+        return;
+      }
+      this->SendNewJobs(aRootCID, rootPriority, childrenResult.value());
+    }
   }
 
   outcome::result<CrdtDatastore::Buffer> CrdtDatastore::GetKey(const HierarchicalKey& aKey)
@@ -583,9 +753,6 @@ namespace sgns::crdt
       node->addLink(link);
     }
 
-    // TODO: DAGSyncerTimeout?
-    //ctx, cancel := context.WithTimeout(store.ctx, store.opts.DAGSyncerTimeout)
-    //DAGSyncerTimeout specifies how long to wait for a DAGSyncer
     if (this->dagSyncer_ != nullptr)
     {
       auto dagSyncerResult = this->dagSyncer_->addNode(node);
@@ -769,19 +936,79 @@ namespace sgns::crdt
     return outcome::success();
   }
 
-  outcome::result<void> CrdtDatastore::PrintDAGRec(const CID& aCID, const uint64_t& aDepth, const std::vector<CID>& aSet)
+  outcome::result<void> CrdtDatastore::PrintDAGRec(const CID& aCID, const uint64_t& aDepth, std::vector<CID>& aSet)
   {
-    std::string line; 
+    std::ostringstream line; 
     for (uint64_t i = 0; i < aDepth; ++i)
     {
-      line += " ";
+      line << " ";
     }
 
-    // TODO: finish it
+    // add a Cid to the set only if it is
+    // not in it already.
+    if (std::find(aSet.begin(), aSet.end(), aCID) != aSet.end())
+    {
+      line << "...";
+      std::cout << line.str() << std::endl;
+      return outcome::success();
+    }
+    aSet.push_back(aCID);
+
+    if (this->dagSyncer_ == nullptr)
+    {
+      return outcome::failure(boost::system::error_code{});
+    }
+
+    auto getNodeResult = this->dagSyncer_->getNode(aCID); ;
+    if (getNodeResult.has_failure())
+    {
+      return outcome::failure(getNodeResult.error());
+    }
+    auto node = getNodeResult.value();
+
+    auto delta = std::make_shared<Delta>();
+    auto nodeBuffer = node->serialize();
+    if (!delta->ParseFromArray(nodeBuffer.data(), nodeBuffer.size()))
+    {
+      LOG_ERROR("PrintDAGRec: failed to parse delta from node");
+      return outcome::failure(boost::system::error_code{});
+    }
+
+    std::string strCID = node->getCID().toString().value();
+    strCID = strCID.substr(strCID.size() - 4);
+    line << " - " << delta->priority() << " | " << strCID << ": ";
+    line << "Add: {";
+    for (const auto& elem : delta->elements())
+    {
+      line << elem.key() << ":" << elem.value() << ",";
+    }
+    line << "}. Rmv: {";
+    for (const auto& tomb : delta->tombstones())
+    {
+      line << tomb.key() << ",";
+    }
+    line << "}. Links: {";
+    for (const auto& link : node->getLinks())
+    {
+      auto strCid = link.get().getCID().toString().value();
+      strCid = strCid.substr(strCid.size() - 4);
+      line << strCid << ",";
+    }
+    line << "}:";
+    std::cout << line.str() << std::endl;
+
+    for (const auto& link : node->getLinks())
+    {
+      this->PrintDAGRec(link.get().getCID(), aDepth + 1, aSet);
+    }
 
     return outcome::success();
   }
 
+  outcome::result<void> CrdtDatastore::Sync(const HierarchicalKey& aKey)
+  {
+
+  }
 
 
 }

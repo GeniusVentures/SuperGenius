@@ -21,12 +21,12 @@ namespace sgns::crdt
     Logger logger = nullptr;
 
     /** RebroadcastInterval specifies interval to rebroadcast data */
-    long long rebroadcastInterval = 0;
+    long long rebroadcastIntervalMilliseconds = 0;
 
     /** DAGSyncerTimeout specifies how long to wait for a DAGSyncer.
     * Set to 0 to disable.
     */
-    long long dagSyncerTimeout = 0;
+    long long dagSyncerTimeoutSec = 0;
 
     /** NumWorkers specifies the number of workers ready to walk DAGs */
     int numWorkers = 0;
@@ -67,7 +67,7 @@ namespace sgns::crdt
     /** Verifies CrdtOptions */
     outcome::result<VerifyErrorCode> Verify()
     {
-      if (rebroadcastInterval <= 0)
+      if (rebroadcastIntervalMilliseconds <= 0)
       {
         return VerifyErrorCode::InvalidRebroadcastInterval;
       }
@@ -79,7 +79,7 @@ namespace sgns::crdt
       {
         return VerifyErrorCode::BadNumberOfNumWorkers;
       }
-      if (dagSyncerTimeout < 0)
+      if (dagSyncerTimeoutSec < 0)
       {
         return VerifyErrorCode::InvalidDAGSyncerTimeout;
       }
@@ -92,7 +92,7 @@ namespace sgns::crdt
 
     inline bool operator==( const CrdtOptions& rhs ) const 
     {
-      return logger == rhs.logger && rebroadcastInterval == rhs.rebroadcastInterval;
+      return logger == rhs.logger && rebroadcastIntervalMilliseconds == rhs.rebroadcastIntervalMilliseconds;
     }
 
     inline bool operator!=( const CrdtOptions& rhs ) const 
