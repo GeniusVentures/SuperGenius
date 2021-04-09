@@ -18,14 +18,14 @@ namespace sgns::crdt
     enum class ErrorCode
     {
       Success = 0, /*> 0 should not represent an error */
-      ErrNoMoreBroadcast, /*> no more data to broadcast */
+      ErrNoMoreBroadcast = 1, /*> no more data to broadcast */
     };
 
     /**
     * Send {@param buff} payload to other replicas.
     * @return outcome::success on success or outcome::failure on error 
     */
-    virtual outcome::result<void> Broadcast(const base::Buffer& buff) const = 0;
+    virtual outcome::result<void> Broadcast(const base::Buffer& buff) = 0;
 
     /**
     * Obtain the next {@return} payload received from the network.

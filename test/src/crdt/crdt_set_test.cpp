@@ -1,6 +1,6 @@
 #include <crdt/crdt_set.hpp>
 #include <gtest/gtest.h>
-#include <storage/leveldb/leveldb.hpp>
+#include <storage/rocksdb/rocksdb.hpp>
 #include <outcome/outcome.hpp>
 #include <testutil/outcome.hpp>
 #include <boost/filesystem.hpp>
@@ -8,7 +8,7 @@
 
 namespace sgns::crdt
 {
-  using sgns::storage::LevelDB;
+  using sgns::storage::rocksdb;
   using sgns::base::Buffer;
   namespace fs = boost::filesystem;
 
@@ -30,9 +30,9 @@ namespace sgns::crdt
     std::string databasePath = "supergenius_crdt_set_invalid_database";
     fs::remove_all(databasePath);
 
-    leveldb::Options options;
+    rocksdb::Options options;
     options.create_if_missing = true;  // intentionally
-    auto dataStoreResult = LevelDB::create(databasePath, options);
+    auto dataStoreResult = rocksdb::create(databasePath, options);
     auto dataStore = dataStoreResult.value();
 
     CrdtSet crdtSetInvalid = CrdtSet(nullptr, HierarchicalKey("/namespace"));
@@ -61,9 +61,9 @@ namespace sgns::crdt
     fs::remove_all(databasePath);
 
     // Create new database
-    leveldb::Options options;
+    rocksdb::Options options;
     options.create_if_missing = true;  // intentionally
-    auto dataStoreResult = LevelDB::create(databasePath, options);
+    auto dataStoreResult = rocksdb::create(databasePath, options);
     auto dataStore = dataStoreResult.value();
 
     // Create CrdtSet
@@ -128,9 +128,9 @@ namespace sgns::crdt
     fs::remove_all(databasePath);
 
     // Create new database
-    leveldb::Options options;
+    rocksdb::Options options;
     options.create_if_missing = true;  // intentionally
-    auto dataStoreResult = LevelDB::create(databasePath, options);
+    auto dataStoreResult = rocksdb::create(databasePath, options);
     auto dataStore = dataStoreResult.value();
 
     // Create CrdtSet 
@@ -184,9 +184,9 @@ namespace sgns::crdt
     fs::remove_all(databasePath);
 
     // Create new database
-    leveldb::Options options;
+    rocksdb::Options options;
     options.create_if_missing = true;  // intentionally
-    auto dataStoreResult = LevelDB::create(databasePath, options);
+    auto dataStoreResult = rocksdb::create(databasePath, options);
     auto dataStore = dataStoreResult.value();
 
     // Create CrdtSet 
@@ -226,9 +226,9 @@ namespace sgns::crdt
     fs::remove_all(databasePath);
 
     // Create new database
-    leveldb::Options options;
+    rocksdb::Options options;
     options.create_if_missing = true;  // intentionally
-    auto dataStoreResult = LevelDB::create(databasePath, options);
+    auto dataStoreResult = rocksdb::create(databasePath, options);
     auto dataStore = dataStoreResult.value();
 
     // Create CrdtSet 

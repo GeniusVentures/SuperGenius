@@ -23,7 +23,7 @@ target_include_directories(crdt_set PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 target_link_libraries(crdt_set
     Boost::boost
 	buffer
-	leveldb::leveldb
+	rocksdb
 	hierarchical_key
 	protobuf::libprotobuf
     )
@@ -42,7 +42,7 @@ target_link_libraries(crdt_heads
     Boost::boost
 	buffer
 	hierarchical_key
-	leveldb::leveldb
+	rocksdb
     )
 
 
@@ -55,7 +55,8 @@ target_include_directories(crdt_set PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 target_link_libraries(crdt_datastore
     Boost::boost
 	buffer
-	leveldb::leveldb
+    ipfs-lite-cpp::buffer
+    ipfs-lite-cpp::ipld_node
 	ipfs_merkledag_service
 	crdt_set
 	crdt_heads

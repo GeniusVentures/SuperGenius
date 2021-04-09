@@ -4,7 +4,7 @@
 
 #include <boost/outcome.hpp>
 #include <primitives/cid/cid.hpp>
-#include <ipfs_lite/ipfs/merkledag/merkledag_service.hpp>
+#include <ipfs_lite/ipfs/merkledag/impl/merkledag_service_impl.hpp>
 
 namespace sgns::crdt
 {
@@ -13,9 +13,13 @@ namespace sgns::crdt
    * A DAGSyncer is a DAGService with the ability to publish new ipld nodes
    * to the network, and retrieving others from it.
    */
-  class DAGSyncer : public ipfs_lite::ipfs::merkledag::MerkleDagService
+  class DAGSyncer : public ipfs_lite::ipfs::merkledag::MerkleDagServiceImpl
   {
   public:
+    using IpfsDatastore = ipfs_lite::ipfs::IpfsDatastore;
+
+    DAGSyncer(std::shared_ptr<IpfsDatastore> service) : MerkleDagServiceImpl(service) {};
+    
     virtual ~DAGSyncer() = default;
 
     /**
@@ -24,7 +28,7 @@ namespace sgns::crdt
     * @param cid Content identifier of the node
     * @return true if the block is locally available or outcome::failure on error 
     */
-    virtual outcome::result<bool> HasBlock(CID cid) const = 0;
+    virtual outcome::result<bool> HasBlock(const CID& cid) const = 0;
   };
 }  // namespace sgns::crdt 
 

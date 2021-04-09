@@ -1,22 +1,22 @@
 
 
-#include "testutil/storage/base_leveldb_test.hpp"
+#include "testutil/storage/base_rocksdb_test.hpp"
 
 #include <array>
 #include <exception>
 
 #include <gtest/gtest.h>
 #include <boost/filesystem.hpp>
-#include "storage/leveldb/leveldb.hpp"
+#include "storage/rocksdb/rocksdb.hpp"
 #include "storage/database_error.hpp"
 #include "testutil/outcome.hpp"
 
 using namespace sgns::storage;
 namespace fs = boost::filesystem;
 
-struct LevelDB_Integration_Test : public test::BaseLevelDB_Test {
-  LevelDB_Integration_Test()
-      : test::BaseLevelDB_Test("supergenius_leveldb_integration_test") {}
+struct RocksDB_Integration_Test : public test::BaseRocksDB_Test {
+  RocksDB_Integration_Test()
+      : test::BaseRocksDB_Test("supergenius_rocksdb_integration_test") {}
 
   Buffer key_{1, 3, 3, 7};
   Buffer value_{1, 2, 3};
@@ -27,7 +27,7 @@ struct LevelDB_Integration_Test : public test::BaseLevelDB_Test {
  * @when read {key}
  * @then {value} is correct
  */
-TEST_F(LevelDB_Integration_Test, Put_Get) {
+TEST_F(RocksDB_Integration_Test, Put_Get) {
   EXPECT_OUTCOME_TRUE_1(db_->put(key_, value_));
   EXPECT_TRUE(db_->contains(key_));
   EXPECT_OUTCOME_TRUE_2(val, db_->get(key_));
@@ -39,7 +39,7 @@ TEST_F(LevelDB_Integration_Test, Put_Get) {
  * @when read {key}
  * @then get "not found"
  */
-TEST_F(LevelDB_Integration_Test, Get_NonExistent) {
+TEST_F(RocksDB_Integration_Test, Get_NonExistent) {
   EXPECT_FALSE(db_->contains(key_));
   EXPECT_OUTCOME_TRUE_1(db_->remove(key_));
   auto r = db_->get(key_);
@@ -52,7 +52,7 @@ TEST_F(LevelDB_Integration_Test, Get_NonExistent) {
  * @when create batch and write KVs
  * @then data is written only after commit
  */
-TEST_F(LevelDB_Integration_Test, WriteBatch) {
+TEST_F(RocksDB_Integration_Test, WriteBatch) {
   std::list<Buffer> keys{{0}, {1}, {2}, {3}, {4}, {5}};
   Buffer toBeRemoved = {3};
   std::list<Buffer> expected{{0}, {1}, {2}, {4}, {5}};
@@ -81,7 +81,7 @@ TEST_F(LevelDB_Integration_Test, WriteBatch) {
  * @when iterate over kv pairs forward and backward
  * @then we iterate over all items
  */
-TEST_F(LevelDB_Integration_Test, Iterator) {
+TEST_F(RocksDB_Integration_Test, Iterator) {
   const size_t size = 100;
   // 100 buffers of size 1 each; 0..99
   std::list<Buffer> keys;

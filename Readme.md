@@ -38,13 +38,13 @@ I used visual studio 2019 to compile SuperGenius project.
     cd SuperGenius 
     md .build 
     cd .build 
-    cmake ../build/Windows -G "Visual Studio 16 2019" -A x64 -DCMAKE_BUILD_TYPE=Release -DTHIRDPARTY_DIR=../../thirdparty/build/Release -DTESTING=OFF
+    cmake ../build/Windows -G "Visual Studio 16 2019" -A x64 -DCMAKE_BUILD_TYPE=Release -DTHIRDPARTY_DIR=[ABSOLUTE_PATH_TO_THIRDPARTY_BUILD_RELEASE] -DTESTING=OFF
     cmake --build . --config Release
     ```
 
 if you are going to build and test , then use following commands
 
-    cmake ../build/Windows -G "Visual Studio 16 2019" -A x64 -DTESTING=ON -DCMAKE_BUILD_TYPE=Release -DTHIRDPARTY_DIR=../../thirdparty/build/Release
+    cmake ../build/Windows -G "Visual Studio 16 2019" -A x64 -DTESTING=ON -DCMAKE_BUILD_TYPE=Release -DTHIRDPARTY_DIR=[ABSOLUTE_PATH_TO_THIRDPARTY_BUILD_RELEASE]
     cmake --build . --config Release
     cd SuperGenius/src/SuperGenius-build
     ctest -C Release
@@ -61,7 +61,7 @@ You can use Debug configuration to debug in Visual Studio.
  
  example build commands
 
-    cmake ../build/Windows -G "Visual Studio 16 2019" -A x64 -DTESTING=ON  -DCMAKE_BUILD_TYPE=Debug  -DTHIRDPARTY_DIR=../../thirdparty/build/Debug
+    cmake ../build/Windows -G "Visual Studio 16 2019" -A x64 -DTESTING=ON  -DCMAKE_BUILD_TYPE=Debug  -DTHIRDPARTY_DIR=[ABSOLUTE_PATH_TO_THIRDPARTY_BUILD_DEBUG]
 
     cmake --build . --config Debug
     cd SuperGenius/src/SuperGenius-build

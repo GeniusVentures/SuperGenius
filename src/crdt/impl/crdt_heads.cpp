@@ -44,6 +44,12 @@ namespace sgns::crdt
     return !(*this == aHeads);
   }
 
+  HierarchicalKey CrdtHeads::GetNamespaceKey() const
+  {
+    return this->namespaceKey_;
+  }
+
+
   outcome::result<HierarchicalKey> CrdtHeads::GetKey(const CID& aCid)
   {
     // /<namespace>/<cid>
@@ -213,8 +219,5 @@ namespace sgns::crdt
 
     return outcome::failure(boost::system::error_code{});
   }
-
-
-
 
 }

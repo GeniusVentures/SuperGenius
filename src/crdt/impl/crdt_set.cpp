@@ -237,16 +237,22 @@ namespace sgns::crdt
     return this->KeyPrefix(tombsNamespace_).ChildString(aKey);
   }
 
+  HierarchicalKey CrdtSet::KeysKey(const std::string& aKey)
+  {
+    // /namespace/k/<key>
+    return this->KeyPrefix(keysNamespace_).ChildString(aKey);
+  }
+
   HierarchicalKey CrdtSet::ValueKey(const std::string& aKey)
   {
     // /namespace/k/<key>/v
-    return this->KeyPrefix(keysNamespace_).ChildString(aKey).ChildString(valueSuffix_);
+    return this->KeysKey(aKey).ChildString(valueSuffix_);
   }
 
   HierarchicalKey CrdtSet::PriorityKey(const std::string& aKey)
   {
     // /namespace/k/<key>/p
-    return this->KeyPrefix(keysNamespace_).ChildString(aKey).ChildString(prioritySuffix_);
+    return this->KeysKey(aKey).ChildString(prioritySuffix_);
   }
 
   outcome::result<uint64_t> CrdtSet::GetPriority(const std::string& aKey)

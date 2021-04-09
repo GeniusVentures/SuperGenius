@@ -54,7 +54,7 @@ namespace sgns::injector {
 
         // inherit application injector
         makeApplicationInjector(app_config->genesis_path(),
-                                app_config->leveldb_path(),
+                                app_config->rocksdb_path(),
                                 app_config->rpc_http_endpoint(),
                                 app_config->rpc_ws_endpoint()),
 

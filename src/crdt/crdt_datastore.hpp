@@ -9,10 +9,11 @@
 #include <crdt/broadcaster.hpp>
 #include <crdt/dagsyncer.hpp>
 #include <crdt/crdt_options.hpp>
-#include <storage/leveldb/leveldb.hpp>
+#include <storage/rocksdb/rocksdb.hpp>
 #include <primitives/cid/cid.hpp>
 #include <ipfs_lite/ipld/ipld_node.hpp>
 #include <shared_mutex>
+#include <future>
 #include <chrono>
 
 namespace sgns::crdt
@@ -34,7 +35,7 @@ namespace sgns::crdt
   public: 
     using Buffer = base::Buffer;
     using Logger = base::Logger;
-    using DataStore = storage::LevelDB;
+    using DataStore = storage::rocksdb;
     using Delta = pb::Delta;
     using Element = pb::Element;
     using Node = ipfs_lite::ipld::IPLDNode;
@@ -56,17 +57,13 @@ namespace sgns::crdt
     */
     outcome::result<void> PutKey(const HierarchicalKey& aKey, const Buffer& aValue);
 
-    /** Delete removes the value for given `key`.
-    */
-    outcome::result<void> DeleteKey(const HierarchicalKey& aKey);
-
     /** Has returns whether the `key` is mapped to a `value`.
     */
     outcome::result<bool> HasKey(const HierarchicalKey& aKey);
 
-    /** Returns the size of the `value` named by `key`.
+    /** Delete removes the value for given `key`.
     */
-    outcome::result<int> GetValueSize(const HierarchicalKey& aKey);
+    outcome::result<void> DeleteKey(const HierarchicalKey& aKey);
 
     /** Sync ensures that all the data under the given prefix is flushed to disk in
     * the underlying datastore
@@ -81,36 +78,11 @@ namespace sgns::crdt
     */
     outcome::result<int> RemoveFromDelta(const HierarchicalKey& aKey);
 
-    /** to satisfy datastore semantics, we need to remove elements from the current
-    * batch if they were added.
-    */
-    int UpdateDeltaWithRemove(const HierarchicalKey& aKey, const std::shared_ptr<Delta>& aDelta);
-
-    int UpdateDelta(const std::shared_ptr<Delta>& aDelta);
-
     outcome::result<void> PublishDelta();
 
     outcome::result<void> Publish(const std::shared_ptr<Delta>& aDelta);
 
-    outcome::result<CID> AddDAGNode(const std::shared_ptr<Delta>& aDelta);
-
-    outcome::result<void> Broadcast(const std::vector<CID>& cids);
-
-    outcome::result<std::vector<CID>> DecodeBroadcast(const Buffer& buff);
-
-    outcome::result<Buffer> EncodeBroadcast(const std::vector<CID>& heads);
-
-    /** Regularly send out a list of heads that we have not recently seen
-    * 
-    */
-    void RebroadcastHeads();
-
-    /** handleBlock takes care of vetting, retrieving and applying
-    * CRDT blocks to the Datastore.
-    */
-    outcome::result<void> HandleBlock(const CID& aCid);
-
-    outcome::result<std::unique_ptr<storage::BufferBatch>> Batch();
+    outcome::result<std::unique_ptr<storage::BufferBatch>> GetBatch();
 
     outcome::result<void> PutBatch(const std::unique_ptr<storage::BufferBatch>& aBatchDataStore, const HierarchicalKey& aKey, 
       const Buffer& aValueBuffer);
@@ -125,10 +97,6 @@ namespace sgns::crdt
 
     outcome::result<void> PrintDAGRec(const CID& aCID, const uint64_t& aDepth, std::vector<CID>& aSet);
 
-    outcome::result<std::shared_ptr<Node>> PutBlock(const std::vector<CID>& aHeads, const uint64_t& aHeight, const std::shared_ptr<Delta>& aDelta);
-
-    outcome::result<std::vector<CID>> ProcessNode(const CID& aRoot, const uint64_t & aRootPrio, const std::shared_ptr<Delta>&aDelta, const std::shared_ptr <Node>& aNode);
-    
     void SendNewJobs(const CID& aRootCID, const uint64_t& aRootPriority, const std::vector<CID>& aChildren);
 
   protected:
@@ -137,11 +105,42 @@ namespace sgns::crdt
 
     static void Rebroadcast(CrdtDatastore* aCrdtDatastore);
 
+    /** Regularly send out a list of heads that we have not recently seen
+    *
+    */
+    void RebroadcastHeads();
+
+    outcome::result<void> Broadcast(const std::vector<CID>& cids);
+
+    outcome::result<std::vector<CID>> DecodeBroadcast(const Buffer& buff);
+
+    outcome::result<Buffer> EncodeBroadcast(const std::vector<CID>& heads);
+
+    /** handleBlock takes care of vetting, retrieving and applying
+    * CRDT blocks to the Datastore.
+    */
+    outcome::result<void> HandleBlock(const CID& aCid);
+
+    outcome::result<std::vector<CID>> ProcessNode(const CID& aRoot, const uint64_t& aRootPrio, const std::shared_ptr<Delta>& aDelta, const std::shared_ptr <Node>& aNode);
+
+    outcome::result<std::shared_ptr<Node>> PutBlock(const std::vector<CID>& aHeads, const uint64_t& aHeight, const std::shared_ptr<Delta>& aDelta);
+
+    outcome::result<CID> AddDAGNode(const std::shared_ptr<Delta>& aDelta);
+
+    /** to satisfy datastore semantics, we need to remove elements from the current
+    * batch if they were added.
+    */
+    int UpdateDeltaWithRemove(const HierarchicalKey& aKey, const std::shared_ptr<Delta>& aDelta);
+
+    int UpdateDelta(const std::shared_ptr<Delta>& aDelta);
+
     /** Close shuts down the CRDT datastore. It should not be used afterwards.
     */
     void Close();
 
     outcome::result<void> GetNodeAndDeltaFromDAGSyncer(const CID& aCID, std::shared_ptr<Node>& aNode, std::shared_ptr<Delta>& aDelta);
+
+    outcome::result<void> SyncDatastore(const std::vector<HierarchicalKey>& aKeyList);
 
   private:
     CrdtDatastore() = default; 
@@ -153,6 +152,10 @@ namespace sgns::crdt
     /** Helper function to log Info messages from threads
     */
     void LogInfo(std::string message);
+
+    /** Helper function to log Debug messages from threads
+    */
+    void LogDebug(std::string message);
 
     std::shared_ptr<DataStore> dataStore_ = nullptr;
     std::shared_ptr<CrdtOptions> options_ = nullptr;
@@ -179,10 +182,10 @@ namespace sgns::crdt
     PutHookPtr putHookFunc_ = nullptr;
     DeleteHookPtr deleteHookFunc_ = nullptr;
 
-    std::thread handleNextThread_;
+    std::future<void> handleNextFuture_;
     std::atomic<bool> handleNextThreadRunning_ = false;
 
-    std::thread rebroadcastThread_;
+    std::future<void> rebroadcastFuture_;
     std::atomic<bool> rebroadcastThreadRunning_ = false;
   };
 

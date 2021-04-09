@@ -1,5 +1,5 @@
 #include <crdt/crdt_datastore.hpp>
-#include <storage/leveldb/leveldb.hpp>
+#include <storage/rocksdb/rocksdb.hpp>
 #include <iostream>
 #include <proto/bcast.pb.h>
 #include <google/protobuf/unknown_field_set.h>
@@ -22,6 +22,13 @@ namespace sgns::crdt
     msgStream << msg << std::ends; \
     this->logger_->error(msgStream.str()); \
   } 
+#define LOG_DEBUG(msg) \
+  if (this->logger_ != nullptr) \
+  { \
+    std::ostringstream msgStream; \
+    msgStream << msg << std::ends; \
+    this->logger_->debug(msgStream.str()); \
+  } 
 
   using CRDTBroadcast = pb::CRDTBroadcast;
 
@@ -33,6 +40,8 @@ namespace sgns::crdt
     const std::shared_ptr<DAGSyncer>& aDagSyncer, const std::shared_ptr<Broadcaster>& aBroadcaster,
     const std::shared_ptr<CrdtOptions>& aOptions)
   {
+    this->namespaceKey_ = aKey;
+
     // <namespace>/s
     auto fullSetNs = aKey.ChildString(setsNamespace_);
     // <namespace>/h
@@ -70,12 +79,10 @@ namespace sgns::crdt
     LOG_INFO("crdt Datastore created. Number of heads: " << numberOfHeads << " Current max-height: " << maxHeight);
 
     // Starting HandleNext worker thread
-    this->handleNextThread_ = std::thread(&CrdtDatastore::HandleNext, this);
-    this->handleNextThread_.detach();
+    this->handleNextFuture_ = std::async(&CrdtDatastore::HandleNext, this);
 
     // Starting Rebroadcast worker thread
-    this->rebroadcastThread_ = std::thread(&CrdtDatastore::Rebroadcast, this);
-    this->rebroadcastThread_.detach();
+    this->rebroadcastFuture_ = std::async(&CrdtDatastore::Rebroadcast, this);
   }
 
   CrdtDatastore::~CrdtDatastore()
@@ -124,16 +131,16 @@ namespace sgns::crdt
 
   void CrdtDatastore::Close()
   {
-    this->handleNextThreadRunning_ = false;
-    if (this->handleNextThread_.joinable())
+    if (handleNextThreadRunning_)
     {
-      this->handleNextThread_.join();
+      this->handleNextThreadRunning_ = false;
+      this->handleNextFuture_.wait();
     }
 
-    this->rebroadcastThreadRunning_ = false;
-    if (this->rebroadcastThread_.joinable())
+    if (this->rebroadcastThreadRunning_)
     {
-      this->rebroadcastThread_.join();
+      this->rebroadcastThreadRunning_ = false;
+      this->rebroadcastFuture_.wait();
     }
   }
 
@@ -153,20 +160,17 @@ namespace sgns::crdt
 
     aCrdtDatastore->handleNextThreadRunning_ = true;
 
-    aCrdtDatastore->LogInfo("HandleNext thread started");
+    aCrdtDatastore->LogDebug("HandleNext thread started");
     while (aCrdtDatastore->handleNextThreadRunning_)
     {
+      std::this_thread::sleep_for(threadSleepTimeInMilliseconds_);
+
       auto broadcasterNextResult = aCrdtDatastore->broadcaster_->Next();
       if (broadcasterNextResult.has_failure())
       {
-        if (broadcasterNextResult.error().value() == (int)Broadcaster::ErrorCode::ErrNoMoreBroadcast)
+        if (broadcasterNextResult.error().value() != (int)Broadcaster::ErrorCode::ErrNoMoreBroadcast)
         {
-          aCrdtDatastore->LogError("Broadcaster: No more data to broadcast");
-          return;
-        }
-        else
-        {
-          aCrdtDatastore->LogError("Failed to get next broadcaster (error code " + 
+          aCrdtDatastore->LogDebug("Failed to get next broadcaster (error code " + 
             std::to_string(broadcasterNextResult.error().value()) + ")");
         }
         continue;
@@ -199,12 +203,9 @@ namespace sgns::crdt
       // signatures (along with our own) to the broadcast.
       // Other peers can use the signatures to verify that the
       // received CIDs have been issued by a trusted peer.
-
-
-      std::this_thread::sleep_for(threadSleepTimeInMilliseconds_);
     }
 
-    aCrdtDatastore->LogInfo("HandleNext thread finished");
+    aCrdtDatastore->LogDebug("HandleNext thread finished");
   }
 
   // static
@@ -215,23 +216,27 @@ namespace sgns::crdt
       return;
     }
 
-    aCrdtDatastore->LogInfo("Rebroadcast thread started");
+    aCrdtDatastore->LogDebug("Rebroadcast thread started");
     std::chrono::milliseconds rebroadcastIntervalMilliseconds = std::chrono::milliseconds(threadSleepTimeInMilliseconds_);
     if (aCrdtDatastore->options_ != nullptr)
     {
       rebroadcastIntervalMilliseconds = std::chrono::milliseconds (aCrdtDatastore->options_->rebroadcastIntervalMilliseconds);
     }
+
+    std::chrono::milliseconds elapsedTimeMilliseconds = std::chrono::milliseconds(0);
     aCrdtDatastore->rebroadcastThreadRunning_ = true;
     while (aCrdtDatastore->rebroadcastThreadRunning_)
     {
-      aCrdtDatastore->RebroadcastHeads();
-
-      std::this_thread::sleep_for(rebroadcastIntervalMilliseconds);
+      if (rebroadcastIntervalMilliseconds >= elapsedTimeMilliseconds)
+      {
+        aCrdtDatastore->RebroadcastHeads();
+        elapsedTimeMilliseconds = std::chrono::milliseconds(0);
+      }
+      std::this_thread::sleep_for(threadSleepTimeInMilliseconds_);
+      elapsedTimeMilliseconds += threadSleepTimeInMilliseconds_;
     }
-    aCrdtDatastore->LogInfo("Rebroadcast thread finished");
+    aCrdtDatastore->LogDebug("Rebroadcast thread finished");
   }
-
-
 
   void CrdtDatastore::LogError(std::string message)
   {
@@ -243,11 +248,16 @@ namespace sgns::crdt
     LOG_INFO(message);
   }
 
+  void CrdtDatastore::LogDebug(std::string message)
+  {
+    LOG_DEBUG(message);
+  }
+
   outcome::result<std::vector<CID>> CrdtDatastore::DecodeBroadcast(const Buffer& buff)
   {
     // Make a list of heads we received
     CRDTBroadcast bcastData;
-    bcastData.MergeFromString(buff.toString().data());
+    bcastData.MergeFromString(std::string(buff.toString()));
 
     // Compatibility: before we were publishing CIDs directly
     auto msgReflect = bcastData.GetReflection();
@@ -482,24 +492,6 @@ namespace sgns::crdt
     return this->set_->IsValueInSet(aKey.GetKey());
   }
 
-  outcome::result<int> CrdtDatastore::GetValueSize(const HierarchicalKey& aKey)
-  {
-    if (this->dataStore_ == nullptr)
-    {
-      return outcome::failure(boost::system::error_code{});
-    }
-
-    Buffer keyBuffer;
-    keyBuffer.put(aKey.GetKey());
-    auto valueResult = this->dataStore_->get(keyBuffer);
-    if (valueResult.has_failure())
-    {
-      return outcome::failure(valueResult.error());
-    }
-
-    return static_cast<int>(valueResult.value().size());
-  }
-
   outcome::result<void> CrdtDatastore::PutKey(const HierarchicalKey& aKey, const Buffer& aValue)
   {
     if (this->set_ == nullptr)
@@ -507,7 +499,7 @@ namespace sgns::crdt
       return outcome::failure(boost::system::error_code{});
     }
 
-    auto deltaResult = this->set_->CreateDeltaToAdd(aKey.GetKey(), aValue.toString().data());
+    auto deltaResult = this->set_->CreateDeltaToAdd(aKey.GetKey(), std::string(aValue.toString()));
     if (deltaResult.has_failure())
     {
       return outcome::failure(deltaResult.error());
@@ -592,7 +584,7 @@ namespace sgns::crdt
       return outcome::failure(boost::system::error_code{});
     }
 
-    auto deltaResult = this->set_->CreateDeltaToAdd(aKey.GetKey(), aValue.toString().data());
+    auto deltaResult = this->set_->CreateDeltaToAdd(aKey.GetKey(), std::string(aValue.toString()));
     if (deltaResult.has_failure())
     {
       return outcome::failure(deltaResult.error());
@@ -618,37 +610,34 @@ namespace sgns::crdt
 
   int CrdtDatastore::UpdateDeltaWithRemove(const HierarchicalKey& aKey, const std::shared_ptr<Delta>& aDelta)
   {
-    if (this->currentDelta_ == nullptr)
-    {
-      return 0;
-    }
-
     int deltaSize = 0;
     std::vector<Element> elems;
     std::lock_guard lg(this->currentDeltaMutex_);
-    for (const auto& elem : this->currentDelta_->elements())
-    {
-      if (elem.key() != aKey.GetKey())
-      {
-        elems.push_back(elem);
-      }
-    }
-
-    auto tombs = this->currentDelta_->tombstones();
-    auto priority = this->currentDelta_->priority();
-
     std::shared_ptr<Delta> deltaToMerge = std::make_shared<Delta>();
-    for (const auto& elem : elems)
+    if (this->currentDelta_ != nullptr)
     {
-      auto newElem = deltaToMerge->add_elements();
-      newElem->CopyFrom(elem);
+      for (const auto& elem : this->currentDelta_->elements())
+      {
+        if (elem.key() != aKey.GetKey())
+        {
+          elems.push_back(elem);
+        }
+      }
+
+      auto tombs = this->currentDelta_->tombstones();
+      auto priority = this->currentDelta_->priority();
+      for (const auto& elem : elems)
+      {
+        auto newElem = deltaToMerge->add_elements();
+        newElem->CopyFrom(elem);
+      }
+      for (const auto& tomb : tombs)
+      {
+        auto newTomb = deltaToMerge->add_tombstones();
+        newTomb->CopyFrom(tomb);
+      }
+      deltaToMerge->set_priority(priority);
     }
-    for (const auto& tomb : tombs)
-    {
-      auto newTomb = deltaToMerge->add_tombstones();
-      newTomb->CopyFrom(tomb);
-    }
-    deltaToMerge->set_priority(priority);
 
     this->currentDelta_ = DeltaMerge(deltaToMerge, aDelta);
     deltaSize = this->currentDelta_->ByteSizeLong();
@@ -657,11 +646,6 @@ namespace sgns::crdt
 
   int CrdtDatastore::UpdateDelta(const std::shared_ptr<Delta>& aDelta)
   {
-    if (this->currentDelta_ == nullptr)
-    {
-      return 0;
-    }
-
     int deltaSize = 0;
     std::lock_guard lg(this->currentDeltaMutex_);
     this->currentDelta_ = DeltaMerge(this->currentDelta_, aDelta);
@@ -699,23 +683,25 @@ namespace sgns::crdt
     {
       return outcome::failure(boost::system::error_code{});
     }
-
-    auto encodedBufferResult = this->EncodeBroadcast(cids);
-    if (encodedBufferResult.has_failure())
+    
+    if (!cids.empty())
     {
-      return outcome::failure(encodedBufferResult.error());
-    }
+      auto encodedBufferResult = this->EncodeBroadcast(cids);
+      if (encodedBufferResult.has_failure())
+      {
+        return outcome::failure(encodedBufferResult.error());
+      }
 
-    auto bcastResult = this->broadcaster_->Broadcast(encodedBufferResult.value());
-    if (bcastResult.has_failure())
-    {
-      return outcome::failure(bcastResult.error());
+      auto bcastResult = this->broadcaster_->Broadcast(encodedBufferResult.value());
+      if (bcastResult.has_failure())
+      {
+        return outcome::failure(bcastResult.error());
+      }
     }
-
     return outcome::success();
   }
 
-  outcome::result<std::unique_ptr<storage::BufferBatch>> CrdtDatastore::Batch()
+  outcome::result<std::unique_ptr<storage::BufferBatch>> CrdtDatastore::GetBatch()
   {
     if (this->dataStore_ == nullptr)
     {
@@ -1007,8 +993,62 @@ namespace sgns::crdt
 
   outcome::result<void> CrdtDatastore::Sync(const HierarchicalKey& aKey)
   {
+    // This is a quick write up of the internals from the time when
+    // I was thinking many underlying datastore entries are affected when
+    // an add operation happens:
+    //
+    // When a key is added:
+    // - a new delta is made
+    // - Delta is marshalled and a DAG-node is created with the bytes,
+    //   pointing to previous heads. DAG-node is added to DAGService.
+    // - Heads are replaced with new CID.
+    // - New CID is broadcasted to everyone
+    // - The new CID is processed (up until now the delta had not
+    //   taken effect). Implementation detail: it is processed before
+    //   broadcast actually.
+    // - processNode() starts processing that branch from that CID
+    // - it calls set.Merge()
+    // - that calls putElems() and putTombs()
+    // - that may make a batch for all the elems which is later committed
+    // - each element has a datastore entry /setNamespace/elemsNamespace/<key>/<block_id>
+    // - each tomb has a datastore entry /setNamespace/tombsNamespace/<key>/<block_id>
+    // - each value has a datastore entry /setNamespace/keysNamespace/<key>/valueSuffix
+    // - each value has an additional priority entry /setNamespace/keysNamespace/<key>/prioritySuffix
+    // - the last two are only written if the added entry has more priority than any the existing
+    // - For a value to not be lost, those entries should be fully synced.
+    // - In order to check if a value is in the set:
+    //   - List all elements on /setNamespace/elemsNamespace/<key> (will return several block_ids)
+    //   - If we find an element which is not tombstoned, then value is in the set
+    // - In order to retrieve an element's value:
+    //   - Check that it is in the set
+    //   - Read the value entry from the /setNamespace/keysNamespace/<key>/valueSuffix path
 
+    // Be safe and just sync everything in our namespace
+    if (aKey.GetKey() == "/") 
+    {
+      return this->Sync(this->namespaceKey_);
+    }
+
+    // attempt to be intelligent and sync only all heads and the
+    // set entries related to the given prefix.
+    std::vector<HierarchicalKey> keysToSync;
+    keysToSync.push_back(this->set_->ElemsPrefix(aKey.GetKey()));
+    keysToSync.push_back(this->set_->TombsPrefix(aKey.GetKey()));
+    keysToSync.push_back(this->set_->KeysKey(aKey.GetKey())); // covers values and priorities
+
+    keysToSync.push_back(this->heads_->GetNamespaceKey());
+    return this->SyncDatastore(keysToSync);
   }
 
+  outcome::result<void> CrdtDatastore::SyncDatastore(const std::vector<HierarchicalKey>& aKeyList)
+  {
+    if (this->dataStore_ == nullptr)
+    {
+      return outcome::failure(boost::system::error_code{});
+    }
+
+    // TODO: Need to implement it 
+    return outcome::failure(boost::system::error_code{});
+  }
 
 }

@@ -14,7 +14,7 @@
 #include "storage/trie/impl/persistent_trie_batch_impl.hpp"
 #include "testutil/literals.hpp"
 #include "testutil/outcome.hpp"
-#include "testutil/storage/base_leveldb_test.hpp"
+#include "testutil/storage/base_rocksdb_test.hpp"
 
 using namespace sgns::storage::trie;
 using sgns::base::Buffer;
@@ -24,9 +24,9 @@ using testing::_;
 using testing::Invoke;
 using testing::Return;
 
-class TrieBatchTest : public test::BaseLevelDB_Test {
+class TrieBatchTest : public test::BaseRocksDB_Test {
  public:
-  TrieBatchTest() : BaseLevelDB_Test("leveldbtest") {}
+  TrieBatchTest() : BaseRocksDB_Test("rocksdbtest") {}
 
   void SetUp() override {
     open();

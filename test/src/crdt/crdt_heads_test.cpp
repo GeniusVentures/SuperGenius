@@ -1,6 +1,6 @@
 #include <crdt/crdt_heads.hpp>
 #include <gtest/gtest.h>
-#include <storage/leveldb/leveldb.hpp>
+#include <storage/rocksdb/rocksdb.hpp>
 #include <outcome/outcome.hpp>
 #include <testutil/outcome.hpp>
 #include <testutil/literals.hpp>
@@ -10,7 +10,7 @@
 
 namespace sgns::crdt
 {
-  using sgns::storage::LevelDB;
+  using sgns::storage::rocksdb;
   using sgns::base::Buffer;
   using libp2p::multi::HashType;
   using libp2p::multi::Multihash;
@@ -35,9 +35,9 @@ namespace sgns::crdt
     fs::remove_all(databasePath);
 
     // Create new database
-    leveldb::Options options;
+    rocksdb::Options options;
     options.create_if_missing = true;  // intentionally
-    auto dataStoreResult = LevelDB::create(databasePath, options);
+    auto dataStoreResult = rocksdb::create(databasePath, options);
     auto dataStore = dataStoreResult.value();
 
     // Create CrdtHead
@@ -102,9 +102,9 @@ namespace sgns::crdt
     fs::remove_all(databasePath);
 
     // Create new database
-    leveldb::Options options;
+    rocksdb::Options options;
     options.create_if_missing = true;  // intentionally
-    auto dataStoreResult = LevelDB::create(databasePath, options);
+    auto dataStoreResult = rocksdb::create(databasePath, options);
     auto dataStore = dataStoreResult.value();
 
     // Create CrdtHead

@@ -41,9 +41,9 @@ if (OPENSSL_ROOT_DIR)
   set(_CMAKE_ARGS_OPENSSL_ROOT_DIR "-DOPENSSL_ROOT_DIR:PATH=${OPENSSL_ROOT_DIR}")
 endif()
 
-# Set config of leveldb
-set(_FINDPACKAGE_LEVELDB_DIR "${_THIRDPARTY_BUILD_DIR}/leveldb/lib/cmake/leveldb")
-set(_FINDPACKAGE_LEVELDB_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/leveldb/include")
+# Set config of rocksdb
+set(_FINDPACKAGE_ROCKSDB_DIR "${_THIRDPARTY_BUILD_DIR}/rocksdb/lib/cmake/rocksdb")
+set(_FINDPACKAGE_ROCKSDB_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/rocksdb/include")
 
 # Set config of Microsoft.GSL
 set(_FINDPACKAGE_GSL_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/GSL/include")

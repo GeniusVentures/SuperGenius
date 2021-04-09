@@ -64,16 +64,23 @@ namespace sgns::crdt
       InvalidMaxBatchDeltaSize, // invalid MaxBatchDeltaSize
     };
 
+    static std::shared_ptr<CrdtOptions> DefaultOptions()
+    {
+      auto options = std::make_shared<CrdtOptions>();
+      options->logger = nullptr; //base::createLogger("CrdtDatastore");
+      options->rebroadcastIntervalMilliseconds = 10000; // 10s
+      options->dagSyncerTimeoutSec = 300; // 5 mins
+      options->numWorkers = 5;
+      options->maxBatchDeltaSize = 1 * 1024 * 1024; // 1MB
+      return options;
+    }
+
     /** Verifies CrdtOptions */
     outcome::result<VerifyErrorCode> Verify()
     {
       if (rebroadcastIntervalMilliseconds <= 0)
       {
         return VerifyErrorCode::InvalidRebroadcastInterval;
-      }
-      if (logger == nullptr)
-      {
-        return VerifyErrorCode::LoggerUndefinied;
       }
       if (numWorkers <= 0)
       {

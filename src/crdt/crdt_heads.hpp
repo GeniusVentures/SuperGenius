@@ -2,7 +2,7 @@
 #define SUPERGENIUS_CRDT_HEADS_HPP
 
 #include <mutex>
-#include <storage/leveldb/leveldb.hpp>
+#include <storage/rocksdb/rocksdb.hpp>
 #include <crdt/hierarchical_key.hpp>
 #include <primitives/cid/cid.hpp>
 
@@ -13,7 +13,7 @@ namespace sgns::crdt
   class CrdtHeads
   {
   public:
-    using DataStore = storage::LevelDB;
+    using DataStore = storage::rocksdb;
     using Buffer = base::Buffer;
 
     /** Constructor
@@ -43,6 +43,10 @@ namespace sgns::crdt
     /** Assignment operator
     */
     CrdtHeads& operator=(const CrdtHeads&);
+
+    /** Get namespace hierarchical key
+    */
+    HierarchicalKey GetNamespaceKey() const;
 
     /** Get full path to CID key 
     *   /<namespace>/<cid>

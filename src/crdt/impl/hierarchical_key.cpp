@@ -38,7 +38,13 @@ namespace sgns::crdt
 
   HierarchicalKey HierarchicalKey::ChildString(const std::string& aString) const
   {
-    return HierarchicalKey(this->key_ + "/" + aString);
+    std::string childString = aString;
+    if (childString.size() > 0 && childString[0] != '/')
+    {
+      childString = "/" + childString;
+    }
+
+    return HierarchicalKey(this->key_ + childString);
   }
 
   bool HierarchicalKey::IsTopLevel() const

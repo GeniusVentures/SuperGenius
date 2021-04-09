@@ -2,9 +2,9 @@
 #define SUPERGENIUS_CRDT_SET_HPP
 
 #include <mutex>
-#include <storage/leveldb/leveldb.hpp>
-#include <crdt/hierarchical_key.hpp>
 #include <proto/delta.pb.h>
+#include <storage/rocksdb/rocksdb.hpp>
+#include <crdt/hierarchical_key.hpp>
 
 namespace sgns::crdt
 {
@@ -21,7 +21,7 @@ namespace sgns::crdt
     using Delta = pb::Delta;
     using Element = pb::Element;
     using Buffer = base::Buffer;
-    using DataStore = storage::LevelDB;
+    using DataStore = storage::rocksdb;
 
     /** Function pointer to notify caller if key added to datastore
     * @param k key name 
@@ -117,28 +117,35 @@ namespace sgns::crdt
     /** Get elems full path prefix in namespace for a key
     * /namespace/s/<key>
     * @param aKey key string
-    * @return HierarchicalKey with key prefix
+    * @return HierarchicalKey with elems prefix
     */
     HierarchicalKey ElemsPrefix(const std::string& aKey);
 
     /** Get tombs full path prefix in namespace for a key
     * /namespace/t/<key>
     * @param aKey key string
-    * @return HierarchicalKey with key prefix
+    * @return HierarchicalKey with tombs prefix
     */
     HierarchicalKey TombsPrefix(const std::string& aKey);
+
+    /** Get keys full path prefix in namespace for a key
+    * /namespace/k/<key>
+    * @param aKey key string
+    * @return HierarchicalKey with key prefix
+    */
+    HierarchicalKey KeysKey(const std::string & aKey);
 
     /** Get value full path prefix in namespace for a key
     * /namespace/k/<key>/v
     * @param aKey key string
-    * @return HierarchicalKey with key prefix
+    * @return HierarchicalKey with value prefix
     */
     HierarchicalKey ValueKey(const std::string& aKey);
 
     /** Get priority full path prefix in namespace for a key
     * /namespace/k/<key>/p
     * @param aKey key string
-    * @return HierarchicalKey with key prefix
+    * @return HierarchicalKey with priority prefix
     */
     HierarchicalKey PriorityKey(const std::string& aKey);
 
@@ -232,11 +239,6 @@ namespace sgns::crdt
     */
     void SetDeleteHook(const DeleteHookPtr& deleteHookPtr);
 
-    // TODO: Implement it! Do we need this?
-    /** perform a sync against all the paths associated with a key prefix
-    */
-    //outcome::result<void> DatastoreSync(const HierarchicalKey& aPrefix);
-    //func (s *set) datastoreSync(prefix ds.Key) error {
   private: 
     CrdtSet() = default;
 

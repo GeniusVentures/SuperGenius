@@ -12,7 +12,7 @@
 #include "scale/scale.hpp"
 #include "testutil/literals.hpp"
 #include "testutil/outcome.hpp"
-#include "testutil/storage/base_leveldb_test.hpp"
+#include "testutil/storage/base_rocksdb_test.hpp"
 
 using sgns::blockchain::BlockHeaderRepository;
 using sgns::blockchain::KeyValueBlockHeaderRepository;
@@ -27,10 +27,10 @@ using sgns::primitives::BlockHeader;
 using sgns::primitives::BlockId;
 using sgns::primitives::BlockNumber;
 
-class BlockHeaderRepository_Test : public test::BaseLevelDB_Test {
+class BlockHeaderRepository_Test : public test::BaseRocksDB_Test {
  public:
   BlockHeaderRepository_Test()
-      : BaseLevelDB_Test(fs::path("blockheaderrepotest.lvldb")) {}
+      : BaseRocksDB_Test(fs::path("blockheaderrepotest.lvldb")) {}
 
   void SetUp() override {
     open();
