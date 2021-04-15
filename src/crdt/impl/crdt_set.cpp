@@ -6,7 +6,6 @@
 
 namespace sgns::crdt
 {
-
   const std::string CrdtSet::elemsNamespace_ = "s";
   const std::string CrdtSet::tombsNamespace_ = "t";
   const std::string CrdtSet::keysNamespace_ = "k";
@@ -88,33 +87,40 @@ namespace sgns::crdt
     auto delta = std::make_shared<CrdtSet::Delta>();
     // /namespace/s/<key>
     auto prefix = this->ElemsPrefix(aKey);
+    auto strElemsPrefix = prefix.GetKey();
 
-    // TODO: Get range of database elements
-    auto valueResult = this->GetValueFromDatastore(prefix);
-
-    if (valueResult.has_failure())
+    Buffer keyPrefixBuffer;
+    keyPrefixBuffer.put(strElemsPrefix);
+    auto queryResult = this->dataStore_->query(keyPrefixBuffer);
+    if (queryResult.has_failure())
     {
-      return outcome::failure(valueResult.error());
+      return outcome::failure(queryResult.error());
     }
 
-    std::string strValue = valueResult.value();
-    std::string id = boost::algorithm::erase_first_copy(strValue, prefix.GetKey());
-
-    if (HierarchicalKey(id).IsTopLevel())
+    for (const auto& bufferKeyAndValue : queryResult.value())
     {
+      std::string keyWithPrefix = std::string(bufferKeyAndValue.first.toString());
+      std::string id = keyWithPrefix.erase(0, strElemsPrefix.size());
+
+      auto hId = HierarchicalKey(id);
+
+      if (!hId.IsTopLevel())
+      {
+        continue;
+      }
+
       // check if its already tombed, which case don't add it to the
       // Remove delta set.
-      auto isDeletedResult = this->InTombsKeyID(aKey, id);
+      auto isDeletedResult = this->InTombsKeyID(aKey, hId.GetKey());
       if (isDeletedResult.has_value() && !isDeletedResult.value())
       {
         auto tombstone = delta->add_tombstones();
         tombstone->set_key(aKey);
-        tombstone->set_id(id);
-        return delta;
+        tombstone->set_id(hId.GetKey());
       }
     }
 
-    return outcome::failure(boost::system::error_code{});
+    return delta;
   }
 
   outcome::result<CrdtSet::Buffer> CrdtSet::GetElement(const std::string& aKey)
@@ -180,36 +186,50 @@ namespace sgns::crdt
     }
 
     // Otherwise, do the long check.
-    return this->InElemsNotTombstoned(aKey);
+    auto inElemsNotTombstonedResult = this->InElemsNotTombstoned(aKey);
+    if (inElemsNotTombstonedResult.has_error())
+    {
+      return outcome::failure(inElemsNotTombstonedResult.error());
+    }
+
+    return inElemsNotTombstonedResult.value();
   }
 
   outcome::result<bool> CrdtSet::InElemsNotTombstoned(const std::string& aKey)
   {
     // /namespace/elems/<key>
     auto prefix = this->ElemsPrefix(aKey);
+    auto strElemsPrefix = prefix.GetKey();
 
-    // TODO: Get range of database elements
-    auto valueResult = this->GetValueFromDatastore(prefix);
-    if (valueResult.has_failure())
+    Buffer keyPrefixBuffer;
+    keyPrefixBuffer.put(strElemsPrefix);
+    auto queryResult = this->dataStore_->query(keyPrefixBuffer);
+    if (queryResult.has_failure())
     {
-      if (valueResult.error() != storage::DatabaseError::NOT_FOUND)
-      {
-        return outcome::failure(valueResult.error());
-      }
-      else
-      {
-        return true;
-      }
+      return outcome::failure(queryResult.error());
     }
 
-    // range all the /namespace/elems/<key>/<block_cid>.
-    std::string strValue = valueResult.value();
-    std::string id = boost::algorithm::erase_first_copy(strValue, prefix.GetKey());
-
-    if (HierarchicalKey(id).IsTopLevel())
+    if (queryResult.value().empty())
     {
+      return true;
+    }
+
+    for (const auto& bufferKeyAndValue : queryResult.value())
+    {
+      std::string keyWithPrefix = std::string(bufferKeyAndValue.first.toString());
+      std::string id = keyWithPrefix.erase(0, strElemsPrefix.size());
+      auto hId = HierarchicalKey(id);
+      if (!hId.IsTopLevel())
+      {
+        // our prefix matches blocks from other keys i.e. our
+        // prefix is "hello" and we have a different key like
+        // "hello/bye" so we have a block id like
+        // "bye/<block>". If we got the right key, then the id
+        // should be the block id only.
+        continue;
+      }
       // if not tombstoned, we have it
-      auto inTombResult = this->InTombsKeyID(aKey, id);
+      auto inTombResult = this->InTombsKeyID(aKey, hId.GetKey());
       if (inTombResult.has_value() && !inTombResult.value())
       {
         return true;

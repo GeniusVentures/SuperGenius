@@ -10,6 +10,7 @@
 #include <string>
 #include <boost/asio/error.hpp>
 #include <thread>
+#include <proto/bcast.pb.h>
 
 namespace sgns::crdt
 {
@@ -72,6 +73,7 @@ namespace sgns::crdt
 
       std::string strBuffer = listOfBroadcasts_.front();
       listOfBroadcasts_.pop();
+
       base::Buffer buffer;
       buffer.put(strBuffer);
       return buffer;
@@ -129,9 +131,8 @@ namespace sgns::crdt
     EXPECT_OUTCOME_EQ(crdtDatastore_->HasKey(newKey), true);
     EXPECT_OUTCOME_TRUE(valueBuffer, crdtDatastore_->GetKey(newKey));
     EXPECT_TRUE(buffer.toString() == valueBuffer.toString());
-    
-    // TODO: Check this
-    //EXPECT_OUTCOME_TRUE_1(crdtDatastore_->DeleteKey(newKey));
+    EXPECT_OUTCOME_TRUE_1(crdtDatastore_->DeleteKey(newKey));
+    EXPECT_OUTCOME_EQ(crdtDatastore_->HasKey(newKey), false);
 
   }
 
@@ -152,17 +153,26 @@ namespace sgns::crdt
     EXPECT_OUTCOME_TRUE_1(crdtDatastore_->AddToDelta(newKey1, buffer1));
     EXPECT_OUTCOME_TRUE_1(crdtDatastore_->AddToDelta(newKey2, buffer2));
     EXPECT_OUTCOME_TRUE_1(crdtDatastore_->AddToDelta(newKey3, buffer3));
-    // TODO: Check this
-    //EXPECT_OUTCOME_TRUE(deltaSize, crdtDatastore_->RemoveFromDelta(newKey2));
+    EXPECT_OUTCOME_TRUE(deltaSize, crdtDatastore_->RemoveFromDelta(newKey2));
     EXPECT_OUTCOME_TRUE_1(crdtDatastore_->PublishDelta());
+    EXPECT_OUTCOME_EQ(crdtDatastore_->HasKey(newKey1), true);
+    EXPECT_OUTCOME_EQ(crdtDatastore_->HasKey(newKey2), false);
+
+    auto newKey4 = HierarchicalKey("NewKey4");
+    CrdtBuffer buffer4;
+    buffer4.put("Data4");
+
+    auto newKey5 = HierarchicalKey("NewKey5");
+    CrdtBuffer buffer5;
+    buffer5.put("Data5");
 
     auto delta1 = std::make_shared<Delta>();
     auto newElement1 = delta1->add_elements();
-    newElement1->set_key(newKey1.GetKey());
-    newElement1->set_value(std::string(buffer1.toString()));
+    newElement1->set_key(newKey4.GetKey());
+    newElement1->set_value(std::string(buffer4.toString()));
     auto newElement2 = delta1->add_tombstones();
-    newElement2->set_key(newKey2.GetKey());
-    newElement2->set_value(std::string(buffer2.toString()));
+    newElement2->set_key(newKey5.GetKey());
+    newElement2->set_value(std::string(buffer5.toString()));
     delta1->set_priority(1);
 
     auto delta2 = std::make_shared<Delta>();
@@ -177,14 +187,16 @@ namespace sgns::crdt
 
     auto t = mergedDelta->tombstones();
     ASSERT_TRUE(t.size() == 1);
-    EXPECT_TRUE(t[0].key() == newKey2.GetKey());
-    EXPECT_TRUE(t[0].value() == std::string(buffer2.toString()));
+    EXPECT_TRUE(t[0].key() == newKey5.GetKey());
+    EXPECT_TRUE(t[0].value() == std::string(buffer5.toString()));
 
     auto e = mergedDelta->elements();
     ASSERT_TRUE(e.size() == 2);
 
-    // TODO: check this
-    //EXPECT_OUTCOME_TRUE_1(crdtDatastore_->Publish(mergedDelta));
+    EXPECT_OUTCOME_TRUE_1(crdtDatastore_->Publish(mergedDelta));
+    EXPECT_OUTCOME_EQ(crdtDatastore_->HasKey(newKey3), true);
+    EXPECT_OUTCOME_EQ(crdtDatastore_->HasKey(newKey4), true);
+    EXPECT_OUTCOME_EQ(crdtDatastore_->HasKey(newKey5), false);
   }
 
   TEST_F(CrdtDatastoreTest, TestBatchFunctions)
@@ -205,8 +217,17 @@ namespace sgns::crdt
     EXPECT_OUTCOME_TRUE_1(crdtDatastore_->PutBatch(batch, newKey1, buffer1));
     EXPECT_OUTCOME_TRUE_1(crdtDatastore_->PutBatch(batch, newKey2, buffer2));
     EXPECT_OUTCOME_TRUE_1(crdtDatastore_->PutBatch(batch, newKey3, buffer3));
-    // TODO: Check this
-    //EXPECT_OUTCOME_TRUE_1(crdtDatastore_->DeleteBatch(batch, newKey2));
     EXPECT_OUTCOME_TRUE_1(crdtDatastore_->CommitBatch(batch));
+    EXPECT_OUTCOME_EQ(crdtDatastore_->HasKey(newKey1), true);
+    EXPECT_OUTCOME_EQ(crdtDatastore_->HasKey(newKey2), true);
+    EXPECT_OUTCOME_EQ(crdtDatastore_->HasKey(newKey3), true);
+
+    EXPECT_OUTCOME_TRUE_1(crdtDatastore_->DeleteBatch(batch, newKey2));
+    EXPECT_OUTCOME_TRUE_1(crdtDatastore_->DeleteBatch(batch, newKey3));
+    EXPECT_OUTCOME_TRUE_1(crdtDatastore_->CommitBatch(batch));
+    EXPECT_OUTCOME_EQ(crdtDatastore_->HasKey(newKey1), true);
+    EXPECT_OUTCOME_EQ(crdtDatastore_->HasKey(newKey2), false);
+    EXPECT_OUTCOME_EQ(crdtDatastore_->HasKey(newKey3), false);
+
   }
 }

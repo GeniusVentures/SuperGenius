@@ -45,6 +45,12 @@ namespace sgns::storage
         std::string_view path, Options options = Options());
 
     /**
+    * @brief Factory method to create an instance of rocksdb class.
+    * @param db pointer to rocksdb database instance
+    */
+    static outcome::result<std::shared_ptr<rocksdb>> create(const std::shared_ptr<DB>& db);
+
+    /**
      * @brief Set read options, which are used in @see rocksdb#get
      * @param ro options
      */
@@ -75,8 +81,10 @@ namespace sgns::storage
 
     outcome::result<void> remove(const Buffer &key) override;
 
+    inline std::shared_ptr<DB> getDB() const { return db_; }
+
    private:
-    std::unique_ptr<DB> db_;
+    std::shared_ptr<DB> db_;
     ReadOptions ro_;
     WriteOptions wo_;
     base::Logger logger_;

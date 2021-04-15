@@ -2,9 +2,9 @@
 #define SUPERGENIUS_CRDT_SET_HPP
 
 #include <mutex>
-#include <proto/delta.pb.h>
 #include <storage/rocksdb/rocksdb.hpp>
 #include <crdt/hierarchical_key.hpp>
+#include <proto/delta.pb.h>
 
 namespace sgns::crdt
 {

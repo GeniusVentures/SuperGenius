@@ -111,6 +111,7 @@ add_subdirectory(node)
 
 if (TESTING)
   find_package(GTest CONFIG REQUIRED)
+  include_directories(${GTest_INCLUDE_DIR})
   enable_testing()
   add_subdirectory(test)
 endif ()

@@ -20,3 +20,15 @@ target_link_libraries(crdt_test
     )
 set_target_properties(crdt_test PROPERTIES LINK_FLAGS "/FORCE:MULTIPLE")
 
+
+add_executable(globaldb globaldb.cpp)
+target_link_libraries(globaldb 
+    crdt_datastore
+    ipfs-lite-cpp::ipfs_datastore_rocksdb
+    p2p::p2p_peer_address
+    p2p::p2p_multiaddress
+    Boost::boost
+    Boost::filesystem
+    Boost::program_options
+    )
+set_target_properties(globaldb PROPERTIES LINK_FLAGS "/FORCE:MULTIPLE")

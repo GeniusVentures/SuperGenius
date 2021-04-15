@@ -51,7 +51,7 @@ add_library(crdt_datastore
     crdt_datastore.hpp
 	impl/crdt_datastore.cpp
     )
-target_include_directories(crdt_set PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
+target_include_directories(crdt_datastore PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 target_link_libraries(crdt_datastore
     Boost::boost
 	buffer
@@ -63,6 +63,6 @@ target_link_libraries(crdt_datastore
     )
 protobuf_generate(
 	LANGUAGE cpp
-	TARGET crdt_set
+	TARGET crdt_datastore
 	PROTOS proto/bcast.proto)
 supergenius_install(crdt_datastore)

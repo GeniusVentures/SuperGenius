@@ -47,6 +47,7 @@ namespace sgns::crdt
     // <namespace>/h
     auto fullHeadsNs = aKey.ChildString(headsNamespace_);
 
+    int numberOfDagWorkers = 5;
     if (aOptions != nullptr && !aOptions->Verify().has_failure() &&
       aOptions->Verify().value() == CrdtOptions::VerifyErrorCode::Success)
     {
@@ -54,6 +55,7 @@ namespace sgns::crdt
       this->putHookFunc_ = options_->putHookFunc;
       this->deleteHookFunc_ = options_->deleteHookFunc;
       this->logger_ = options_->logger;
+      numberOfDagWorkers = options_->numWorkers;
     }
 
     this->dataStore_ = aDatastore;
@@ -83,6 +85,14 @@ namespace sgns::crdt
 
     // Starting Rebroadcast worker thread
     this->rebroadcastFuture_ = std::async(&CrdtDatastore::Rebroadcast, this);
+
+    // Starting DAG worker threads 
+    for (int i = 0; i < numberOfDagWorkers; ++i)
+    {
+      auto dagWorker = std::make_shared<DagWorker>();
+      dagWorker->dagWorkerFuture_ = std::async(&CrdtDatastore::SendJobWorker, this, dagWorker);
+      this->dagWorkers_.push_back(dagWorker);
+    }
   }
 
   CrdtDatastore::~CrdtDatastore()
@@ -142,6 +152,13 @@ namespace sgns::crdt
       this->rebroadcastThreadRunning_ = false;
       this->rebroadcastFuture_.wait();
     }
+
+    for (const auto& dagWorker : this->dagWorkers_)
+    {
+      dagWorker->dagWorkerThreadRunning_ = false;
+      dagWorker->dagWorkerFuture_.wait();
+    }
+
   }
 
   // static
@@ -238,6 +255,46 @@ namespace sgns::crdt
     aCrdtDatastore->LogDebug("Rebroadcast thread finished");
   }
 
+  //static
+  void CrdtDatastore::SendJobWorker(CrdtDatastore* aCrdtDatastore, std::shared_ptr<DagWorker> dagWorker)
+  {
+    if (aCrdtDatastore == nullptr || dagWorker == nullptr)
+    {
+      return;
+    }
+
+    aCrdtDatastore->LogDebug("SendJobWorker thread started");
+    DagJob dagJob;
+    dagWorker->dagWorkerThreadRunning_ = true;
+    while (dagWorker->dagWorkerThreadRunning_)
+    {
+      std::this_thread::sleep_for(threadSleepTimeInMilliseconds_);
+
+      {
+        std::unique_lock lock(aCrdtDatastore->dagWorkerMutex_);
+        if (aCrdtDatastore->dagWorkerJobList.empty())
+        {
+          continue;
+        }
+        dagJob = aCrdtDatastore->dagWorkerJobList.front();
+        aCrdtDatastore->dagWorkerJobList.pop();
+      }
+      aCrdtDatastore->LogInfo("SendJobWorker CID=" + dagJob.rootCid_.toString().value() + " priority=" + std::to_string(dagJob.rootPriority_));
+
+      auto childrenResult = aCrdtDatastore->ProcessNode(dagJob.rootCid_, dagJob.rootPriority_, dagJob.delta_, dagJob.node_);
+      if (childrenResult.has_failure())
+      {
+        aCrdtDatastore->LogError("SendNewJobs: failed to process node:" + dagJob.rootCid_.toString().value());
+      }
+      else
+      {
+        aCrdtDatastore->SendNewJobs(dagJob.rootCid_, dagJob.rootPriority_, childrenResult.value());
+      }
+
+    }
+    aCrdtDatastore->LogDebug("SendJobWorker thread finished");
+  }
+
   void CrdtDatastore::LogError(std::string message)
   {
     LOG_ERROR(message);
@@ -262,7 +319,7 @@ namespace sgns::crdt
     // Compatibility: before we were publishing CIDs directly
     auto msgReflect = bcastData.GetReflection();
 
-    if (msgReflect->GetUnknownFields(bcastData).empty())
+    if (!msgReflect->GetUnknownFields(bcastData).empty())
     {
       // Backwards compatibility
       //c, err := cid.Cast(msgReflect.GetUnknown())
@@ -290,7 +347,7 @@ namespace sgns::crdt
     {
       auto encodedHead = bcastData.add_heads();
       auto strHeadResult = head.toString();
-      if (strHeadResult.has_failure())
+      if (!strHeadResult.has_failure())
       {
         encodedHead->set_cid(strHeadResult.value());
       }
@@ -416,6 +473,7 @@ namespace sgns::crdt
     uint64_t rootPriority = aRootPriority;
     if (rootPriority == 0)
     {
+      std::shared_lock lock(this->dagWorkerMutex_);
       auto getNodeResult = this->dagSyncer_->getNode(aChildren[0]);
       if (getNodeResult.has_failure())
       {
@@ -440,7 +498,9 @@ namespace sgns::crdt
     for (const auto& cid : aChildren)
     {
       //Fetch only root node with all children, but without children of their children
+      this->dagWorkerMutex_.lock_shared();
       auto graphResult = this->dagSyncer_->fetchGraphOnDepth(cid, 1); 
+      this->dagWorkerMutex_.unlock_shared();
       if (graphResult.has_failure())
       {
         LOG_ERROR("SendNewJobs: error fetching graph for CID:" << cid.toString().value());
@@ -463,14 +523,15 @@ namespace sgns::crdt
         continue;
       }
 
-      //TODO: Send dag job as a worker thread
-      auto childrenResult = this->ProcessNode(aRootCID, rootPriority, delta, node);
-      if (childrenResult.has_failure())
+      DagJob dagJob;
+      dagJob.rootCid_ = aRootCID;
+      dagJob.rootPriority_ = rootPriority;
+      dagJob.delta_ = delta;
+      dagJob.node_ = node;
       {
-        LOG_ERROR("SendNewJobs: failed to process node:" << aRootCID.toString().value());
-        return;
+        std::unique_lock lock(this->dagWorkerMutex_);
+        this->dagWorkerJobList.push(dagJob);
       }
-      this->SendNewJobs(aRootCID, rootPriority, childrenResult.value());
     }
   }
 
@@ -718,16 +779,13 @@ namespace sgns::crdt
     }
 
     aDelta->set_priority(aHeight);
-    Buffer deltaBuffer;
-    deltaBuffer.put(aDelta->SerializeAsString());
 
-    auto nodeResult = ipfs_lite::ipld::IPLDNodeImpl::createFromRawBytes(deltaBuffer);
-    if (nodeResult.has_failure())
+    auto node = ipfs_lite::ipld::IPLDNodeImpl::createFromString(aDelta->SerializeAsString());
+    if (node == nullptr)
     {
-      return outcome::failure(nodeResult.error());
+      return outcome::failure(boost::system::error_code{});
     }
 
-    auto node = nodeResult.value();
     for (const auto& head : aHeads)
     {
       auto cidByte = head.toBytes();
@@ -769,11 +827,15 @@ namespace sgns::crdt
       return outcome::failure(strCidResult.error());
     }
     HierarchicalKey hKey(strCidResult.value());
-    auto mergeResult = this->set_->Merge(aDelta, hKey.GetKey());
-    if (mergeResult.has_failure())
+
     {
-      LOG_ERROR("ProcessNode: error merging delta from " << hKey.GetKey());
-      return outcome::failure(mergeResult.error());
+      std::shared_lock lock(this->dagWorkerMutex_);
+      auto mergeResult = this->set_->Merge(aDelta, hKey.GetKey());
+      if (mergeResult.has_failure())
+      {
+        LOG_ERROR("ProcessNode: error merging delta from " << hKey.GetKey());
+        return outcome::failure(mergeResult.error());
+      }
     }
 
     auto priority = aDelta->priority();
@@ -821,6 +883,7 @@ namespace sgns::crdt
         continue;
       }
 
+      std::shared_lock lock(this->dagWorkerMutex_);
       auto knowBlockResult = this->dagSyncer_->HasBlock(child);
       if (knowBlockResult.has_failure())
       {

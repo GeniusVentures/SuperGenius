@@ -212,12 +212,36 @@ namespace sgns::crdt
   outcome::result<void> CrdtHeads::PrimeCache()
   {
     // builds the heads cache based on what's in storage
+    const auto strNamespace = this->namespaceKey_.GetKey();
+    Buffer keyPrefixBuffer;
+    keyPrefixBuffer.put(strNamespace);
+    auto queryResult = this->dataStore_->query(keyPrefixBuffer);
+    if (queryResult.has_failure())
+    {
+      return outcome::failure(queryResult.error());
+    }
     
-    // TODO: Need to implement query by prefix
-    // see heads.go:
-    //func (hh *heads) primeCache() (ret error) {
+    for (const auto& bufferKeyAndValue : queryResult.value())
+    {
+      std::string keyWithNamespace = std::string(bufferKeyAndValue.first.toString());
+      std::string strCid = keyWithNamespace.erase(0, strNamespace.size());
 
-    return outcome::failure(boost::system::error_code{});
+      CID cid;
+      cid.fromString(strCid);
+
+      uint64_t height = 0;
+      try
+      {
+        height = boost::lexical_cast<uint64_t>(bufferKeyAndValue.second.toString());
+      }
+      catch (boost::bad_lexical_cast&)
+      {
+        return outcome::failure(boost::system::error_code{});
+      }
+
+      this->cache_[cid] = height;
+    }
+    return outcome::success();
   }
 
 }

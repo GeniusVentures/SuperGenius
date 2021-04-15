@@ -167,8 +167,7 @@ namespace sgns::crdt
       EXPECT_OUTCOME_EQ(crdtSet.GetPriority(key), lowerPriority);
     }
 
-    // TODO: Need to implement query by prefix
-    //EXPECT_OUTCOME_TRUE(deltaToRemove, crdtSet.CreateDeltaToRemove(deltaKey1));
+    EXPECT_OUTCOME_TRUE(deltaToRemove, crdtSet.CreateDeltaToRemove(deltaKey1));
   }
 
   TEST(CrdtSetTest, TestTombstone)
@@ -205,8 +204,7 @@ namespace sgns::crdt
 
     for (auto& elem : elements)
     {
-      // TODO: Need to implement query by prefix
-      //EXPECT_OUTCOME_EQ(crdtSet.IsValueInSet(elem.key()), false);
+      EXPECT_OUTCOME_EQ(crdtSet.IsValueInSet(elem.key()), false);
       EXPECT_OUTCOME_EQ(crdtSet.InTombsKeyID(elem.key(), elem.id()), true);
     }
 
@@ -263,8 +261,7 @@ namespace sgns::crdt
     std::vector<CrdtSet::Element> tombstones(deltaTombstones.begin(), deltaTombstones.end());
     for (auto& tomb : tombstones)
     {
-      // TODO: Need to implement query by prefix
-      //EXPECT_OUTCOME_EQ(crdtSet.IsValueInSet(tomb.key()), false);
+      EXPECT_OUTCOME_EQ(crdtSet.IsValueInSet(tomb.key()), false);
       EXPECT_OUTCOME_EQ(crdtSet.InTombsKeyID(tomb.key(), tomb.id()), true);
     }
 

@@ -60,6 +60,7 @@ include(ExternalProject)
 # Note: All thirdparty projects should be prebuilt. 
 # Set config of GTest
 set(_FINDPACKAGE_GTEST_CONFIG_DIR "${_THIRDPARTY_BUILD_DIR}/GTest/lib/cmake/GTest")
+set(_FINDPACKAGE_GTEST_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/GTest/include")
 
 print(${_FINDPACKAGE_GTEST_CONFIG_DIR})
 
@@ -177,6 +178,7 @@ ExternalProject_Add(SuperGenius
         -DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_CURRENT_BINARY_DIR}/SuperGenius 
         ${_CMAKE_ARGS_OPENSSL_ROOT_DIR} 
         -DGTest_DIR:PATH=${_FINDPACKAGE_GTEST_CONFIG_DIR}
+        -DGTest_INCLUDE_DIR:PATH=${_FINDPACKAGE_GTEST_INCLUDE_DIR}
         -DBoost.DI_DIR:PATH=${_FINDPACKAGE_BOOST_DI_DIR}        
         # -DBOOST_ROOT:STRING="${BOOST_ROOT}"        
         # -DBOOST_INCLUDE_DIR:STRING="${BOOST_INCLUDE_DIR}"
