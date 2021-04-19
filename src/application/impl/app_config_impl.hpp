@@ -115,7 +115,7 @@ namespace sgns::application {
 
     DECLARE_PROPERTY(std::string, genesis_path);
     DECLARE_PROPERTY(std::string, keystore_path);
-    DECLARE_PROPERTY(std::string, leveldb_path);
+    DECLARE_PROPERTY(std::string, rocksdb_path);
     DECLARE_PROPERTY(uint16_t, p2p_port);
     DECLARE_PROPERTY(boost::asio::ip::tcp::endpoint, rpc_http_endpoint);
     DECLARE_PROPERTY(boost::asio::ip::tcp::endpoint, rpc_ws_endpoint);

@@ -16,11 +16,11 @@ set_target_properties(supergenius_trie_storage_test  PROPERTIES LINK_FLAGS "/FOR
 
 target_link_libraries(supergenius_trie_storage_test
     trie_storage
-    leveldb
+    rocksdb
     ordered_trie_hash
     supergenius_trie_factory
     Boost::boost
-    base_leveldb_test
+    base_rocksdb_test
     trie_storage_backend
     trie_serializer
     in_memory_storage

@@ -34,9 +34,9 @@ namespace sgns::application {
     virtual const std::string &keystore_path() const = 0;
 
     /**
-     * @return leveldb directory path.
+     * @return rocksdb directory path.
      */
-    virtual const std::string &leveldb_path() const = 0;
+    virtual const std::string & rocksdb_path() const = 0;
 
     /**
      * @return port for peer to peer interactions.

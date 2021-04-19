@@ -11,7 +11,7 @@ namespace sgns::application {
     spdlog::set_level(app_config->verbosity());
 
     // genesis launch if database does not exist
-    production_execution_strategy_ = boost::filesystem::exists(app_config->leveldb_path())
+    production_execution_strategy_ = boost::filesystem::exists(app_config->rocksdb_path())
                       ? Production::ExecutionStrategy::SYNC_FIRST
                       : Production::ExecutionStrategy::GENESIS;
 

@@ -1,0 +1,10 @@
+syntax = "proto3";
+package sgns.crdt.pb;
+
+message CRDTBroadcast {
+  repeated Head heads = 1; // A list of heads
+}
+
+message Head {
+  bytes cid = 1;
+}

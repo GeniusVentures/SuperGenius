@@ -1,22 +1,23 @@
 
 
-#ifndef SUPERGENIUS_LEVELDB_CURSOR_HPP
-#define SUPERGENIUS_LEVELDB_CURSOR_HPP
+#ifndef SUPERGENIUS_rocksdb_CURSOR_HPP
+#define SUPERGENIUS_rocksdb_CURSOR_HPP
 
-#include <leveldb/iterator.h>
-#include "storage/leveldb/leveldb.hpp"
+#include <rocksdb/iterator.h>
+#include "storage/rocksdb/rocksdb.hpp"
 
-namespace sgns::storage {
+namespace sgns::storage 
+{
 
   /**
    * @brief Instance of cursor can be used as bidirectional iterator over
    * key-value bindings of the Map.
    */
-  class LevelDB::Cursor : public BufferMapCursor {
+  class rocksdb::Cursor : public BufferMapCursor {
    public:
     ~Cursor() override = default;
 
-    explicit Cursor(std::shared_ptr<leveldb::Iterator> it);
+    explicit Cursor(std::shared_ptr<Iterator> it);
 
     outcome::result<void> seekToFirst() override;
 
@@ -35,9 +36,9 @@ namespace sgns::storage {
     outcome::result<Buffer> value() const override;
 
    private:
-    std::shared_ptr<leveldb::Iterator> i_;
+    std::shared_ptr<Iterator> i_;
   };
 
 }  // namespace sgns::storage
 
-#endif  // SUPERGENIUS_LEVELDB_CURSOR_HPP
+#endif  // SUPERGENIUS_rocksdb_CURSOR_HPP

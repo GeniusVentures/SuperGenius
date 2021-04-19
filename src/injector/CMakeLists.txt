@@ -43,7 +43,7 @@ target_link_libraries(application_injector
     epoch_storage
     gossiper_broadcast
     sgns_router
-    leveldb
+    rocksdb
     local_key_storage
     outcome
     finality

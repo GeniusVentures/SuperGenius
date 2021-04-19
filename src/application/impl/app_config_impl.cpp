@@ -94,7 +94,7 @@ namespace sgns::application {
   }
 
   void AppConfigurationImpl::parse_storage_segment(rapidjson::Value &val) {
-    load_str(val, "leveldb", leveldb_path_);
+    load_str(val, "rocksdb", rocksdb_path_);
   }
 
   void AppConfigurationImpl::parse_authority_segment(rapidjson::Value &val) {
@@ -120,8 +120,8 @@ namespace sgns::application {
       exit(EXIT_FAILURE);
     }
 
-    if (leveldb_path_.empty()) {
-      logger_->error("Node configuration must contain 'leveldb_path' option.");
+    if (rocksdb_path_.empty()) {
+      logger_->error("Node configuration must contain 'rocksdb_path' option.");
       exit(EXIT_FAILURE);
     }
 
@@ -218,7 +218,7 @@ namespace sgns::application {
 
     po::options_description storage_desc("Storage options");
     storage_desc.add_options()
-        ("leveldb,l", po::value<std::string>(), "required, leveldb directory path")
+        ("rocksdb,l", po::value<std::string>(), "required, rocksdb directory path")
         ;
 
     po::options_description authority_desc("Authority options");
@@ -284,7 +284,7 @@ namespace sgns::application {
         vm, "genesis", [&](std::string const &val) { genesis_path_ = val; });
 
     find_argument<std::string>(
-        vm, "leveldb", [&](std::string const &val) { leveldb_path_ = val; });
+        vm, "rocksdb", [&](std::string const &val) { rocksdb_path_ = val; });
 
     find_argument<std::string>(
         vm, "keystore", [&](std::string const &val) { keystore_path_ = val; });

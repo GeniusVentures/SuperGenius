@@ -147,7 +147,7 @@ namespace sgns::injector {
 
     return di::make_injector<BOOST_DI_CFG>(
         makeApplicationInjector(app_config->genesis_path(),
-                                app_config->leveldb_path(),
+                                app_config->rocksdb_path(),
                                 app_config->rpc_http_endpoint(),
                                 app_config->rpc_ws_endpoint()),
         // bind sr25519 keypair

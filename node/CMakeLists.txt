@@ -15,9 +15,6 @@ add_executable (sgns_node
     )
 
 target_link_libraries(sgns_node
-    # blocklattice::secure
-    # blocklattice::common_lib
-    # blocklattice::cryptopp
     Boost::system
     Boost::thread
     Boost::filesystem
@@ -25,6 +22,7 @@ target_link_libraries(sgns_node
     block_producing_node_application
     validating_node_application
     app_config_impl
+    protobuf::libprotobuf
     ${USER_ENV_LIBRARY}  # On windows platform , sr25519 library needs extra library userenv, so folllowing code is added
     )
 if(FORCE_MULTILE)

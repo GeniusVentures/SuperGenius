@@ -94,7 +94,7 @@
 #include "runtime/common/trie_storage_provider_impl.hpp"
 
 #include "storage/changes_trie/impl/storage_changes_tracker_impl.hpp"
-#include "storage/leveldb/leveldb.hpp"
+#include "storage/rocksdb/rocksdb.hpp"
 #include "storage/predefined_keys.hpp"
 #include "storage/trie/impl/trie_storage_backend_impl.hpp"
 #include "storage/trie/impl/trie_storage_impl.hpp"
@@ -460,18 +460,18 @@ namespace sgns::injector {
     return trie_storage;
   }
 
-  // level db getter
+  // rocks db getter
   template <typename Injector>
-  sptr<storage::BufferStorage> get_level_db(std::string_view leveldb_path,
+  sptr<storage::BufferStorage> get_rocks_db(std::string_view rocksdb_path,
                                             const Injector &injector) {
     static auto initialized =
         boost::optional<sptr<storage::BufferStorage>>(boost::none);
     if (initialized) {
       return initialized.value();
     }
-    auto options = leveldb::Options{};
+    auto options = rocksdb::Options{};
     options.create_if_missing = true;
-    auto db = storage::LevelDB::create(leveldb_path, options);
+    auto db = storage::rocksdb::create(rocksdb_path, options);
     if (!db) {
       base::raise(db.error());
     }
@@ -614,7 +614,7 @@ namespace sgns::injector {
   template <typename... Ts>
   auto makeApplicationInjector(
       const std::string &genesis_path,
-      const std::string &leveldb_path,
+      const std::string &rocksdb_path,
       const boost::asio::ip::tcp::endpoint &rpc_http_endpoint,
       const boost::asio::ip::tcp::endpoint &rpc_ws_endpoint,
       Ts &&... args) {
@@ -669,8 +669,8 @@ namespace sgns::injector {
         di::bind<authorship::BlockBuilder>.template to<authorship::BlockBuilderImpl>(),
         di::bind<authorship::BlockBuilderFactory>.template to<authorship::BlockBuilderFactoryImpl>(),
         di::bind<storage::BufferStorage>.to(
-            [leveldb_path](const auto &injector) {
-              return get_level_db(leveldb_path, injector);
+            [rocksdb_path](const auto &injector) {
+              return get_rocks_db(rocksdb_path, injector);
             }),
         di::bind<blockchain::BlockStorage>.to(
             [](const auto &injector) { return get_block_storage(injector); }),

@@ -76,7 +76,7 @@ std::ostream &operator<<(std::ostream &s,
 }
 struct BlockTreeTest : public testing::Test {
   void SetUp() override {
-    // for LevelDbBlockTree::create(..)
+    // for RocksDbBlockTree::create(..)
     EXPECT_CALL(*storage_, getBlockHeader(kLastFinalizedBlockId))
         .WillOnce(Return(finalized_block_header_));
 

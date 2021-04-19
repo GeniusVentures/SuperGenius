@@ -23,5 +23,5 @@ target_link_libraries(block_storage
     blockchain_common
     hasher
     scale
-    leveldb
+    rocksdb
     )
