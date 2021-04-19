@@ -66,3 +66,17 @@ protobuf_generate(
 	TARGET crdt_datastore
 	PROTOS proto/bcast.proto)
 supergenius_install(crdt_datastore)
+
+
+add_executable(globaldb globaldb.cpp)
+target_link_libraries(globaldb 
+    crdt_datastore
+    ipfs-lite-cpp::ipfs_datastore_rocksdb
+    p2p::p2p_peer_address
+    p2p::p2p_multiaddress
+    Boost::boost
+    Boost::filesystem
+    Boost::program_options
+    )
+set_target_properties(globaldb PROPERTIES LINK_FLAGS "/FORCE:MULTIPLE")
+

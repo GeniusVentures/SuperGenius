@@ -224,10 +224,14 @@ namespace sgns::crdt
     for (const auto& bufferKeyAndValue : queryResult.value())
     {
       std::string keyWithNamespace = std::string(bufferKeyAndValue.first.toString());
-      std::string strCid = keyWithNamespace.erase(0, strNamespace.size());
+      std::string strCid = keyWithNamespace.erase(0, strNamespace.size() + 1);
 
-      CID cid;
-      cid.fromString(strCid);
+      auto cidResult = CID::fromString(strCid);
+      if (cidResult.has_failure())
+      {
+        continue;
+      }
+      CID cid(cidResult.value());
 
       uint64_t height = 0;
       try

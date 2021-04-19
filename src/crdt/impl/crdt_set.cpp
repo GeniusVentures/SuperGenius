@@ -166,6 +166,70 @@ namespace sgns::crdt
     return bufferValue;
   }
 
+  outcome::result<CrdtSet::QueryResult> CrdtSet::QueryElements(const std::string& aPrefix, const QuerySuffix& aSuffix /*=QuerySuffix::QUERY_ALL*/)
+  {
+    if (this->dataStore_ == nullptr)
+    {
+      return outcome::failure(boost::system::error_code{});
+    }
+
+    // We can only GET an element if it's part of the Set (in
+    // "elements" and not in "tombstones").
+
+    // As an optimization:
+    // * If the key has a value in the store it means:
+    //   -> It occurs at least once in "elems"
+    //   -> It may or not be tombstoned
+    // * If the key does not have a value in the store:
+    //   -> It was either never added
+
+    // /namespace/k/<prefix>
+    auto prefixKeysKey = this->KeysKey(aPrefix);
+
+    Buffer keyPrefixBuffer;
+    keyPrefixBuffer.put(prefixKeysKey.GetKey());
+    auto queryResult = this->dataStore_->query(keyPrefixBuffer);
+    if (queryResult.has_failure())
+    {
+      return outcome::failure(queryResult.error());
+    }
+
+    QueryResult elements;
+    // Check if elements tombstoned.
+    for (const auto& element : queryResult.value())
+    {
+      auto inSetResult = this->InElemsNotTombstoned(std::string(element.first.toString()));
+      if (inSetResult.has_failure() || !inSetResult.value())
+      {
+        continue;
+      }
+
+      std::string key = std::string(element.first.toString());
+      switch (aSuffix)
+      {
+      case QuerySuffix::QUERY_ALL:
+        elements.insert(element);
+        break;
+      case QuerySuffix::QUERY_PRIORITYSUFFIX:
+        if (boost::algorithm::ends_with(key, "/" + this->prioritySuffix_))
+        {
+          elements.insert(element);
+        }
+        break;
+      case QuerySuffix::QUERY_VALUESUFFIX:
+        if (boost::algorithm::ends_with(key, "/" + this->valueSuffix_))
+        {
+          elements.insert(element);
+        }
+        break;
+      default: 
+        return outcome::failure(queryResult.error());
+      }
+    }
+
+    return elements;
+  }
+
   outcome::result<bool> CrdtSet::IsValueInSet(const std::string& aKey)
   {
     if (this->dataStore_ == nullptr)

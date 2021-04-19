@@ -39,6 +39,7 @@ namespace sgns::crdt
     using Buffer = base::Buffer;
     using Logger = base::Logger;
     using DataStore = storage::rocksdb;
+    using QueryResult = DataStore::QueryResult;
     using Delta = pb::Delta;
     using Element = pb::Element;
     using Node = ipfs_lite::ipld::IPLDNode;
@@ -70,11 +71,27 @@ namespace sgns::crdt
     */
     static std::shared_ptr<Delta> DeltaMerge(const std::shared_ptr<Delta>& aDelta1, const std::shared_ptr<Delta>& aDelta2);
 
-    /** Get the value of an element from the CRDT set by key 
+    /** Get the value of an element not tombstoned from the CRDT set by key 
     * @param aKey Hierarchical key to get
     * @return value as a Buffer 
     */
     outcome::result<Buffer> GetKey(const HierarchicalKey& aKey);
+
+    /** Query CRDT set key-value pairs by prefix, if prefix empty return all elements are not tombstoned 
+    * @param aPrefix prefix to search, if empty string, return all 
+    * @return list of key-value pairs matches prefix 
+    */
+    outcome::result<QueryResult> QueryKeyValues(const std::string& aPrefix);
+
+    /** Get key prefix used in set, e.g. /namespace/s/k/
+    * @return key prefix 
+    */
+    outcome::result<std::string> GetKeysPrefix();
+
+    /** Get value suffix used in set, e.g. /v
+    * @return value suffix
+    */
+    outcome::result<std::string> GetValueSuffix();
 
     /** Put stores the object `value` named by `key` as delta and broadcast it 
     * @param aKey Hierarchical key to put

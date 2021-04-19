@@ -22,6 +22,14 @@ namespace sgns::crdt
     using Element = pb::Element;
     using Buffer = base::Buffer;
     using DataStore = storage::rocksdb;
+    using QueryResult = DataStore::QueryResult;
+
+    enum class QuerySuffix
+    {
+      QUERY_ALL,
+      QUERY_VALUESUFFIX,
+      QUERY_PRIORITYSUFFIX,
+    };
 
     /** Function pointer to notify caller if key added to datastore
     * @param k key name 
@@ -65,6 +73,14 @@ namespace sgns::crdt
     */
     CrdtSet& operator=(const CrdtSet&);
 
+    /** Get priority suffix
+    */
+    std::string GetPrioritySuffix() { return prioritySuffix_; }
+
+    /** Get value suffix
+    */
+    std::string GetValueSuffix() { return valueSuffix_; }
+
     /** Get value from datasore for HierarchicalKey defined 
     * @param aKey HierarchicalKey to get value from datastore 
     * @return buffer value as string or outcome::failure on error 
@@ -89,6 +105,14 @@ namespace sgns::crdt
     * @return buffer value or outcome::failure on error
     */
     outcome::result<Buffer> GetElement(const std::string& aKey);
+
+    /** Query datastore key-value pairs by prefix, if prefix empty return all elements /namespace/k/<prefix>
+    * @param aPrefix prefix to search, if empty string, return all
+    * @param aSuffix suffix to search 
+    * @return list of key-value pairs matches prefix and suffix
+    * \sa QuerySuffix
+    */
+    outcome::result<QueryResult> QueryElements(const std::string& aPrefix, const QuerySuffix& aSuffix = QuerySuffix::QUERY_ALL);
 
     // TODO: Need to implement query with prefix from datastore 
     //func (s *set) Elements(q query.Query) (query.Results, error) {

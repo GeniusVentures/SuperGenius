@@ -244,7 +244,7 @@ namespace sgns::crdt
     aCrdtDatastore->rebroadcastThreadRunning_ = true;
     while (aCrdtDatastore->rebroadcastThreadRunning_)
     {
-      if (rebroadcastIntervalMilliseconds >= elapsedTimeMilliseconds)
+      if (elapsedTimeMilliseconds >= rebroadcastIntervalMilliseconds)
       {
         aCrdtDatastore->RebroadcastHeads();
         elapsedTimeMilliseconds = std::chrono::milliseconds(0);
@@ -542,6 +542,33 @@ namespace sgns::crdt
       return outcome::failure(boost::system::error_code{});
     }
     return this->set_->GetElement(aKey.GetKey());
+  }
+
+  outcome::result<std::string> CrdtDatastore::GetKeysPrefix()
+  {
+    if (this->set_ == nullptr)
+    {
+      return outcome::failure(boost::system::error_code{});
+    }
+    return this->set_->KeysKey("").GetKey() + "/";
+  }
+
+  outcome::result<std::string> CrdtDatastore::GetValueSuffix()
+  {
+    if (this->set_ == nullptr)
+    {
+      return outcome::failure(boost::system::error_code{});
+    }
+    return ("/" + this->set_->GetValueSuffix());
+  }
+
+  outcome::result<CrdtDatastore::QueryResult> CrdtDatastore::QueryKeyValues(const std::string& aPrefix)
+  {
+    if (this->set_ == nullptr)
+    {
+      return outcome::failure(boost::system::error_code{});
+    }
+    return this->set_->QueryElements(aPrefix, CrdtSet::QuerySuffix::QUERY_VALUESUFFIX);
   }
 
   outcome::result<bool> CrdtDatastore::HasKey(const HierarchicalKey& aKey)
