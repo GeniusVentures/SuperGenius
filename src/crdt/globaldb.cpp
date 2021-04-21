@@ -4,6 +4,7 @@
 #include <crdt/crdt_datastore.hpp>
 #include <boost/program_options.hpp>
 #include <boost/algorithm/string/erase.hpp>
+#include <boost/asio/io_context.hpp>
 #include <storage/rocksdb/rocksdb.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/random.hpp>
@@ -12,8 +13,10 @@
 #include <libp2p/crypto/key_marshaller/key_marshaller_impl.hpp>
 #include <libp2p/crypto/key_validator/key_validator_impl.hpp>
 #include <libp2p/multi/multiaddress.hpp>
+#include <libp2p/peer/impl/identity_manager_impl.hpp>
 #include <libp2p/peer/peer_id.hpp>
 #include <libp2p/peer/peer_address.hpp>
+#include <libp2p/host/host.hpp>
 #include <crypto/ed25519/ed25519_provider_impl.hpp>
 #include <libp2p/crypto/random_generator/boost_generator.hpp>
 #include <libp2p/crypto/crypto_provider/crypto_provider_impl.hpp>
@@ -22,6 +25,7 @@
 #include <libp2p/crypto/secp256k1_provider/secp256k1_provider_impl.hpp>
 #include <libp2p/crypto/ecdsa_provider/ecdsa_provider_impl.hpp>
 #include <libp2p/crypto/hmac_provider/hmac_provider_impl.hpp>
+#include <libp2p/injector/host_injector.hpp>
 
 namespace sgns::crdt
 {
@@ -99,6 +103,7 @@ namespace sgns::crdt
 using RocksDB = sgns::storage::rocksdb;
 using Buffer = sgns::base::Buffer;
 using CryptoProvider = libp2p::crypto::CryptoProviderImpl;
+using IdentityManager = libp2p::peer::IdentityManagerImpl;
 using KeyPair = libp2p::crypto::KeyPair;
 using PrivateKey = libp2p::crypto::PrivateKey;
 using PublicKey = libp2p::crypto::PublicKey;
@@ -113,6 +118,7 @@ using PubSubBroadcaster = sgns::crdt::PubSubBroadcaster;
 using CustomDagSyncer = sgns::crdt::CustomDagSyncer;
 using RocksdbDatastore = sgns::ipfs_lite::ipfs::RocksdbDatastore;
 using IpfsRocksDb = sgns::ipfs_lite::rocksdb;
+//using Host = sgns::crdt::Host;
 
 namespace po = boost::program_options;
 
@@ -129,11 +135,13 @@ void DeleteHook(const std::string& k, const sgns::base::Logger& logger);
 outcome::result<KeyPair> GetKeypair(const boost::filesystem::path& pathToKey,
   std::shared_ptr<KeyMarshaller>& keyMarshaller, const sgns::base::Logger& logger);
 
+std::string getLocalIP(boost::asio::io_context& io);
 
 int main(int argc, char** argv)
 {
 
   std::string strDatabasePath;
+  int portNumber = 0;
   bool daemonMode = false;
   po::options_description desc("Input arguments:");
   try
@@ -141,8 +149,9 @@ int main(int argc, char** argv)
     desc.add_options()
       ("help,h", "print help")
       ("daemon,d", "Running in daemon mode")
-      ("databasePath,p", po::value<std::string>(&strDatabasePath)->default_value("CRDT.Datastore"),
+      ("databasePath,db", po::value<std::string>(&strDatabasePath)->default_value("CRDT.Datastore"),
         "Path to CRDT datastore")
+      ("port, p", po::value<int>(&portNumber)->default_value(33123), "Port number")
       ;
 
     po::variables_map vm;
@@ -215,6 +224,25 @@ int main(int argc, char** argv)
   auto peerID = peerIDResult.value();
   logger->info("Peer ID from public key: " + peerID.toBase58());
 
+  // injector creates and ties dependent objects
+  auto injector = libp2p::injector::makeHostInjector<BOOST_DI_CFG>();
+
+  // create asio context
+  auto io = injector.create<std::shared_ptr<boost::asio::io_context>>();
+
+  // host is our local libp2p node
+  auto host = injector.create<std::shared_ptr<libp2p::Host>>();
+
+  // make peer uri of local node
+  auto local_address_str = "/ip4/" + getLocalIP(*io) + "/tcp/" + std::to_string(portNumber) 
+    + "/p2p/" + host->getId().toBase58();
+
+  auto listenResult = libp2p::multi::Multiaddress::create(local_address_str);
+  if (listenResult.has_failure())
+  {
+    logger->error("Unable to create local multi address" + listenResult.error().message());
+    return 1;
+  }
   // TODO: Create pubsub gossip node
 
   // TODO: Implement pubsub broadcaster 
@@ -250,24 +278,36 @@ int main(int argc, char** argv)
 
   logger->info("Bootstrapping...");
 
-  auto listenResult = libp2p::multi::Multiaddress::create("/ip4/0.0.0.0/tcp/33123");
   std::string topicName = "globaldb-example";
   std::string netTopic = "globaldb-example-net";
   std::string config = "globaldb-example";
 
-  auto multiAddressResult = libp2p::multi::Multiaddress::create("/ip4/127.0.0.1/tcp/33123/ipfs/12D3KooWFta2AE7oiK1ioqjVAKajUJauZWfeM7R413K7ARtHRDAu");
-  if (multiAddressResult.has_failure())
-  {
-    logger->error("Unable to create multi address" + multiAddressResult.error().message());
-    return 1;
-  }
-
-  auto peerAddressResult = PeerAddress::create(peerID, multiAddressResult.value());
+  auto peerAddressResult = PeerAddress::create(peerID, listenResult.value());
   if (peerAddressResult.has_failure())
   {
     logger->error("Unable to create peer address: " + peerAddressResult.error().message());
     return 1;
   }
+
+  // start the node as soon as async engine starts
+  io->post([&] 
+    {
+    auto listen_res = host->listen(listenResult.value());
+    if (!listen_res) 
+    {
+      std::cout << "Cannot listen to multiaddress "
+        << listenResult.value().getStringAddress() << ", "
+        << listen_res.error().message() << "\n";
+      io->stop();
+      return 1;
+    }
+    host->start();
+    //TODO:
+    //gossip->start();
+    std::cout << "Node started\n";
+    }
+  );
+
 
   std::ostringstream streamDisplayDetails;
   streamDisplayDetails << "\n\n\nPeer ID: " << peerID.toBase58() << std::endl;
@@ -289,7 +329,12 @@ int main(int argc, char** argv)
   if (daemonMode)
   {
     std::cout << "Running in daemon mode\n" << std::endl;
-    // TODO: loop
+    boost::asio::signal_set signals(*io, SIGINT, SIGTERM);
+    signals.async_wait(
+      [&io](const boost::system::error_code&, int) { io->stop(); });
+
+    // run event loop
+    io->run();
   }
   else
   {
@@ -404,6 +449,25 @@ int main(int argc, char** argv)
   }
 
   return 0;
+}
+
+std::string getLocalIP(boost::asio::io_context& io)
+{
+  boost::asio::ip::tcp::resolver resolver(io);
+  boost::asio::ip::tcp::resolver::query query(boost::asio::ip::host_name(), "");
+  boost::asio::ip::tcp::resolver::iterator it = resolver.resolve(query);
+  boost::asio::ip::tcp::resolver::iterator end;
+  std::string addr("127.0.0.1");
+  while (it != end) 
+  {
+    auto ep = it->endpoint();
+    if (ep.address().is_v4()) {
+      addr = ep.address().to_string();
+      break;
+    }
+    ++it;
+  }
+  return addr;
 }
 
 outcome::result<KeyPair> GetKeypair(const boost::filesystem::path& pathToKey, std::shared_ptr<KeyMarshaller>& keyMarshaller, const sgns::base::Logger& logger)

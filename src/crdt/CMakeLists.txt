@@ -74,6 +74,7 @@ target_link_libraries(globaldb
     ipfs-lite-cpp::ipfs_datastore_rocksdb
     p2p::p2p_peer_address
     p2p::p2p_multiaddress
+    p2p::p2p_default_host
     Boost::boost
     Boost::filesystem
     Boost::program_options
