@@ -139,7 +139,6 @@ std::string getLocalIP(boost::asio::io_context& io);
 
 int main(int argc, char** argv)
 {
-
   std::string strDatabasePath;
   int portNumber = 0;
   bool daemonMode = false;
@@ -166,14 +165,14 @@ int main(int argc, char** argv)
     if (vm.count("help")) 
     {
       std::cout << desc << "\n";
-      return 1;
+      return EXIT_FAILURE;
     }
   }
   catch (std::exception& e)
   {
     std::cerr << "Error parsing arguments: " << e.what() << "\n";
     std::cout << desc << "\n";
-    return 1;
+    return EXIT_FAILURE;
   }
   auto logger = sgns::base::createLogger("globaldb");
 
@@ -181,12 +180,22 @@ int main(int argc, char** argv)
 
   auto strDatabasePathAbsolute = boost::filesystem::absolute(databasePath).string();
 
+  std::shared_ptr<RocksDB> dataStore = nullptr;
+
   // Create new database
   logger->info("Opening database " + strDatabasePathAbsolute);
   RocksDB::Options options;
   options.create_if_missing = true;  // intentionally
-  auto dataStoreResult = RocksDB::create(boost::filesystem::absolute(databasePath).string(), options);
-  auto dataStore = dataStoreResult.value();
+  try
+  {
+    auto dataStoreResult = RocksDB::create(boost::filesystem::absolute(databasePath).string(), options);
+    dataStore = dataStoreResult.value();
+  }
+  catch (std::exception& e)
+  {
+    logger->error("Unable to open database: " + std::string(e.what()));
+    return EXIT_FAILURE;
+  }
 
   boost::filesystem::path keyPath = strDatabasePathAbsolute + "/key";
   logger->info("Path to keypairs " + keyPath.string());
@@ -195,7 +204,7 @@ int main(int argc, char** argv)
   if (keyPairResult.has_failure())
   {
     logger->error("Unable to get key pair");
-    return 1;
+    return EXIT_FAILURE;
   }
 
   PrivateKey privateKey = keyPairResult.value().privateKey;
@@ -204,21 +213,21 @@ int main(int argc, char** argv)
   if (keyMarshaller == nullptr)
   {
     logger->error("Unable to marshal keys, keyMarshaller is NULL");
-    return 1;
+    return EXIT_FAILURE;
   }
 
   auto protobufKeyResult = keyMarshaller->marshal(publicKey);
   if (protobufKeyResult.has_failure())
   {
     logger->error("Unable to marshal public key");
-    return 1;
+    return EXIT_FAILURE;
   }
 
   auto peerIDResult = PeerId::fromPublicKey(protobufKeyResult.value());
   if (peerIDResult.has_failure())
   {
     logger->error("Unable to get peer ID from public key");
-    return 1;
+    return EXIT_FAILURE;
   }
 
   auto peerID = peerIDResult.value();
@@ -234,14 +243,14 @@ int main(int argc, char** argv)
   auto host = injector.create<std::shared_ptr<libp2p::Host>>();
 
   // make peer uri of local node
-  auto local_address_str = "/ip4/" + getLocalIP(*io) + "/tcp/" + std::to_string(portNumber) 
+  auto local_address_str = "/ip4/" + getLocalIP(*io) + "/tcp/" + std::to_string(portNumber)
     + "/p2p/" + host->getId().toBase58();
 
   auto listenResult = libp2p::multi::Multiaddress::create(local_address_str);
   if (listenResult.has_failure())
   {
     logger->error("Unable to create local multi address" + listenResult.error().message());
-    return 1;
+    return EXIT_FAILURE;
   }
   // TODO: Create pubsub gossip node
 
@@ -256,7 +265,7 @@ int main(int argc, char** argv)
   if (ipfsDBResult.has_error())
   {
     logger->error("Unable to create database for IPFS datastore");
-    return 1;
+    return EXIT_FAILURE;
   }
 
   auto ipfsDataStore = std::make_shared<RocksdbDatastore>(ipfsDBResult.value());
@@ -273,7 +282,7 @@ int main(int argc, char** argv)
   if (crdtDatastore == nullptr)
   {
     logger->error("Unable to create CRDT datastore");
-    return 1;
+    return EXIT_FAILURE;
   }
 
   logger->info("Bootstrapping...");
@@ -286,20 +295,23 @@ int main(int argc, char** argv)
   if (peerAddressResult.has_failure())
   {
     logger->error("Unable to create peer address: " + peerAddressResult.error().message());
-    return 1;
+    return EXIT_FAILURE;
   }
+
+  auto peerAddress = peerAddressResult.value();
+  auto listenAddress = listenResult.value();
 
   // start the node as soon as async engine starts
   io->post([&] 
     {
-    auto listen_res = host->listen(listenResult.value());
+    auto listen_res = host->listen(listenAddress);
     if (!listen_res) 
     {
       std::cout << "Cannot listen to multiaddress "
-        << listenResult.value().getStringAddress() << ", "
+        << listenAddress.getStringAddress() << ", "
         << listen_res.error().message() << "\n";
       io->stop();
-      return 1;
+      return EXIT_FAILURE;
     }
     host->start();
     //TODO:
@@ -311,7 +323,7 @@ int main(int argc, char** argv)
 
   std::ostringstream streamDisplayDetails;
   streamDisplayDetails << "\n\n\nPeer ID: " << peerID.toBase58() << std::endl;
-  streamDisplayDetails << "Listen address: " << listenResult.value().getStringAddress()  << std::endl;
+  streamDisplayDetails << "Listen address: " << listenAddress.getStringAddress() << std::endl;
   streamDisplayDetails << "Topic: " << topicName << std::endl;
   streamDisplayDetails << "Data folder: " << strDatabasePathAbsolute << std::endl;
   streamDisplayDetails << std::endl;
@@ -363,13 +375,13 @@ int main(int argc, char** argv)
           if (keysPrefixResult.has_failure())
           {
             std::cout << "Unable to get key prefix from CRDT datastore" << std::endl;
-            return 1;
+            return EXIT_FAILURE;
           }
           auto valueSuffixResult = crdtDatastore->GetValueSuffix();
           if (valueSuffixResult.has_failure())
           {
             std::cout << "Unable to get value suffix from CRDT datastore" << std::endl;
-            return 1;
+            return EXIT_FAILURE;
           }
 
           auto keysPrefix = keysPrefixResult.value();
@@ -448,7 +460,7 @@ int main(int argc, char** argv)
     }
   }
 
-  return 0;
+  return EXIT_SUCCESS;
 }
 
 std::string getLocalIP(boost::asio::io_context& io)
