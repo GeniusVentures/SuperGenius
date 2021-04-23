@@ -79,7 +79,6 @@ target_link_libraries(globaldb
     Boost::filesystem
     Boost::program_options
     )
-set_target_properties(globaldb PROPERTIES LINK_FLAGS "/FORCE:MULTIPLE")
 
 add_executable(echoClient echo_client.cpp)
 target_link_libraries(echoClient 
@@ -94,6 +93,5 @@ target_link_libraries(echoClient
     p2p::p2p_inmem_protocol_repository
     p2p::p2p_protocol_echo
     )
-set_target_properties(echoClient PROPERTIES LINK_FLAGS "/FORCE:MULTIPLE")
 
 
