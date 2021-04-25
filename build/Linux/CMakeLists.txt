@@ -49,7 +49,7 @@ set(_FINDPACKAGE_ROCKSDB_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/rocksdb/include")
 set(_FINDPACKAGE_GSL_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/GSL/include")
 
 # Set config of spdlog v1.4.2
-set(_FINDPACKAGE_SPDLOG_CONFIG_DIR "${_THIRDPARTY_BUILD_DIR}/spdlog/lib/spdlog/cmake")
+set(_FINDPACKAGE_SPDLOG_CONFIG_DIR "${_THIRDPARTY_BUILD_DIR}/spdlog/lib/cmake/spdlog")
 set(_FINDPACKAGE_SPDLOG_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/spdlog/include")
 
 # Set config of  tsl_hat_trie

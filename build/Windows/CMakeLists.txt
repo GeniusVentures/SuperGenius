@@ -16,14 +16,14 @@ set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /MTd")
 if (CMAKE_BUILD_TYPE EQUAL Debug)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MTd")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MTd")
-  set(MSVC_RUNTIME_LIBRARY_OPTION "MultiThreaded$<$<CONFIG:Debug>:Debug>")  
-endif (CMAKE_BUILD_TYPE EQUAL Debug) 
+  set(MSVC_RUNTIME_LIBRARY_OPTION "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif (CMAKE_BUILD_TYPE EQUAL Debug)
 
 if (CMAKE_BUILD_TYPE EQUAL Release)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MT")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MT")
-  set(MSVC_RUNTIME_LIBRARY_OPTION "MultiThreaded$<$<CONFIG:Realease>:Release>") 
-endif (CMAKE_BUILD_TYPE EQUAL Release) 
+  set(MSVC_RUNTIME_LIBRARY_OPTION "MultiThreaded$<$<CONFIG:Realease>:Release>")
+endif (CMAKE_BUILD_TYPE EQUAL Release)
 
 print("CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
 set(CompilerFlags
@@ -57,14 +57,14 @@ endif()
 print("${_THIRDPARTY_BUILD_DIR}")
 include(ExternalProject)
 
-# Note: All thirdparty projects should be prebuilt. 
+# Note: All thirdparty projects should be prebuilt.
 # Set config of GTest
 set(_FINDPACKAGE_GTEST_CONFIG_DIR "${_THIRDPARTY_BUILD_DIR}/GTest/lib/cmake/GTest")
 set(_FINDPACKAGE_GTEST_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/GTest/include")
 
 print(${_FINDPACKAGE_GTEST_CONFIG_DIR})
 
-# Set config of protobuf project 
+# Set config of protobuf project
 set(_FINDPACKAGE_PROTOBUF_CONFIG_DIR  "${_THIRDPARTY_BUILD_DIR}/grpc/build/third_party/protobuf/cmake")
 set(_FINDPACKAGE_PROTOBUF_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/grpc/build/third_party/protobuf/include/google/protobuf")
 set(_FINDPACKAGE_PROTOBUF_LIB_DIR "${_THIRDPARTY_BUILD_DIR}/grpc/build/third_party/protobuf/Release")
@@ -83,10 +83,10 @@ set(_FINDPACKAGE_ROCKSDB_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/rocksdb/include")
 set(_FINDPACKAGE_GSL_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/GSL/include")
 
 # Set config of spdlog v1.4.2
-set(_FINDPACKAGE_SPDLOG_CONFIG_DIR "${_THIRDPARTY_BUILD_DIR}/spdlog/lib/spdlog/cmake")
+set(_FINDPACKAGE_SPDLOG_CONFIG_DIR "${_THIRDPARTY_BUILD_DIR}/spdlog/lib/cmake/spdlog")
 set(_FINDPACKAGE_SPDLOG_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/spdlog/include")
 
-# Set config of  tsl_hat_trie 
+# Set config of  tsl_hat_trie
 set(_FINDPACKAGE_TSL_HAT_TRIE_CONFIG_DIR "${_THIRDPARTY_BUILD_DIR}/hat-trie/lib/cmake/tsl_hat_trie")
 set(_FINDPACKAGE_TSL_HAT_TRIE_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/hat-trie/include")
 
@@ -114,10 +114,10 @@ set(boost_log_setup_DIR "${BOOST_ROOT}/lib/cmake/boost_log_setup-1.72.0")
 
 set(boost_DIR "${_BOOST_ROOT}/lib/cmake/Boost-1.72.0")
 
-set(_BOOST_CACHE_ARGS    
+set(_BOOST_CACHE_ARGS
       # -DBOOST_ROOT:PATH="${_BOOST_ROOT}"
       # -DBOOST_INCLUDE_DIR:PATH="${_Boost_INCLUDE_DIR}"
-      -DBOOST_LIB_DIR:PATH=${_BOOST_ROOT}/lib   
+      -DBOOST_LIB_DIR:PATH=${_BOOST_ROOT}/lib
       -Dboost_headers_DIR:PATH=${boost_headers_DIR}
       -Dboost_random_DIR:PATH=${boost_random_DIR}
       -Dboost_system_DIR:PATH=${boost_system_DIR}
@@ -126,11 +126,11 @@ set(_BOOST_CACHE_ARGS
       -Dboost_log_DIR:PATH=${boost_log_DIR}
       -Dboost_log_setup_DIR:PATH=${boost_log_setup_DIR}
       -DBoost_DIR:PATH=${boost_DIR}
-      -DBoost_INCLUDE_DIR:PATH=${_Boost_INCLUDE_DIR}  
+      -DBoost_INCLUDE_DIR:PATH=${_Boost_INCLUDE_DIR}
       -DBoost_USE_MULTITHREADED:BOOL=ON
       -DBoost_USE_STATIC_RUNTIME:BOOL=ON
       -DBoost_USE_STATIC_LIBS:BOOL=ON
-      -DBoost_NO_SYSTEM_PATHS:BOOL=ON      
+      -DBoost_NO_SYSTEM_PATHS:BOOL=ON
 )
 
 # Build SuperGenius
@@ -173,14 +173,14 @@ set(_FINDPACKAGE_XXHASH_DIR "${_THIRDPARTY_BUILD_DIR}/xxhash/lib/cmake/xxhash")
 
 ExternalProject_Add(SuperGenius
   PREFIX SuperGenius
-  SOURCE_DIR "${CMAKE_SOURCE_DIR}/../../../SuperGenius"      
-  CMAKE_CACHE_ARGS                
-        -DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_CURRENT_BINARY_DIR}/SuperGenius 
-        ${_CMAKE_ARGS_OPENSSL_ROOT_DIR} 
+  SOURCE_DIR "${CMAKE_SOURCE_DIR}/../../../SuperGenius"
+  CMAKE_CACHE_ARGS
+        -DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_CURRENT_BINARY_DIR}/SuperGenius
+        ${_CMAKE_ARGS_OPENSSL_ROOT_DIR}
         -DGTest_DIR:PATH=${_FINDPACKAGE_GTEST_CONFIG_DIR}
         -DGTest_INCLUDE_DIR:PATH=${_FINDPACKAGE_GTEST_INCLUDE_DIR}
-        -DBoost.DI_DIR:PATH=${_FINDPACKAGE_BOOST_DI_DIR}        
-        # -DBOOST_ROOT:STRING="${BOOST_ROOT}"        
+        -DBoost.DI_DIR:PATH=${_FINDPACKAGE_BOOST_DI_DIR}
+        # -DBOOST_ROOT:STRING="${BOOST_ROOT}"
         # -DBOOST_INCLUDE_DIR:STRING="${BOOST_INCLUDE_DIR}"
         # -DBOOST_LIBRARY_DIR:STRING="${BOOST_LIBRARY_DIR}"
         ${_BOOST_CACHE_ARGS}
@@ -204,7 +204,7 @@ ExternalProject_Add(SuperGenius
         -DCMAKE_CXX_FLAGS_DEBUG:STRING=${CMAKE_CXX_FLAGS_DEBUG}
         -DCMAKE_C_FLAGS_DEBUG:STRING=${CMAKE_C_FLAGS_DEBUG}
         -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
-        -Ded25519_DIR:PATH=${_FINDPACKAGE_ed25519_CONFIG_DIR}        
+        -Ded25519_DIR:PATH=${_FINDPACKAGE_ed25519_CONFIG_DIR}
         -Dsr25519_DIR:PATH=${_FINDPACKAGE_sr25519_CONFIG_DIR}
         -Dsr25519_INCLUDE_DIR:PATH=${_sr25519_INCLUDE_DIR}
         -Ded25519_INCLUDE_DIR:PATH=${_ed25519_INCLUDE_DIR}
