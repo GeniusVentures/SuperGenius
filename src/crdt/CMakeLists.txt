@@ -78,6 +78,7 @@ target_link_libraries(globaldb
     Boost::boost
     Boost::filesystem
     Boost::program_options
+    p2p::p2p_protocol_echo
     )
 
 add_executable(echoClient echo_client.cpp)

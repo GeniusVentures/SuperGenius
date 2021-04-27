@@ -26,6 +26,8 @@
 #include <libp2p/crypto/ecdsa_provider/ecdsa_provider_impl.hpp>
 #include <libp2p/crypto/hmac_provider/hmac_provider_impl.hpp>
 #include <libp2p/injector/host_injector.hpp>
+#include <libp2p/protocol/echo.hpp>
+#include <libp2p/common/literals.hpp>
 
 namespace sgns::crdt
 {
@@ -142,12 +144,14 @@ int main(int argc, char** argv)
   std::string strDatabasePath;
   int portNumber = 0;
   bool daemonMode = false;
+  bool echoProtocol = false;
   po::options_description desc("Input arguments:");
   try
   {
     desc.add_options()
       ("help,h", "print help")
       ("daemon,d", "Running in daemon mode")
+      ("echo,e", "Using echo protocol in daemon mode")
       ("databasePath,db", po::value<std::string>(&strDatabasePath)->default_value("CRDT.Datastore"),
         "Path to CRDT datastore")
       ("port, p", po::value<int>(&portNumber)->default_value(33123), "Port number")
@@ -160,6 +164,11 @@ int main(int argc, char** argv)
     if (vm.count("daemon"))
     {
       daemonMode = true;
+    }
+
+    if (vm.count("echo"))
+    {
+      echoProtocol = true;
     }
 
     if (vm.count("help")) 
@@ -301,6 +310,17 @@ int main(int argc, char** argv)
   auto peerAddress = peerAddressResult.value();
   auto listenAddress = listenResult.value();
 
+  if (daemonMode && echoProtocol)
+  {
+    // set a handler for Echo protocol
+    libp2p::protocol::Echo echo{ libp2p::protocol::EchoConfig{} };
+    host->setProtocolHandler(
+      echo.getProtocolId(),
+      [&echo](std::shared_ptr<libp2p::connection::Stream> received_stream) {
+        echo.handle(std::move(received_stream));
+      });
+  }
+
   // start the node as soon as async engine starts
   io->post([&] 
     {
@@ -340,7 +360,7 @@ int main(int argc, char** argv)
 
   if (daemonMode)
   {
-    std::cout << "Running in daemon mode\n" << std::endl;
+    std::cout << "Running in daemon mode" << (echoProtocol ? " with echo protocol\n" : "\n") << std::endl;
     boost::asio::signal_set signals(*io, SIGINT, SIGTERM);
     signals.async_wait(
       [&io](const boost::system::error_code&, int) { io->stop(); });
