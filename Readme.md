@@ -66,3 +66,19 @@ You can use Debug configuration to debug in Visual Studio.
     cmake --build . --config Debug
     cd SuperGenius/src/SuperGenius-build
     ctest -C Debug
+
+# Build on Linux
+
+    cd SuperGenius 
+    mkdir .build 
+    cd .build 
+    cmake ../build/Linux -DCMAKE_BUILD_TYPE=Release -DTHIRDPARTY_DIR=[ABSOLUTE_PATH_TO_THIRDPARTY_BUILD_RELEASE] 
+    cmake --build . --config Release
+
+# Build on OSX 
+
+    cd SuperGenius 
+    mkdir .build 
+    cd .build 
+    cmake ../build/OSX -DCMAKE_BUILD_TYPE=Release -DTHIRDPARTY_DIR=[ABSOLUTE_PATH_TO_THIRDPARTY_BUILD_RELEASE] 
+    cmake --build . --config Release
