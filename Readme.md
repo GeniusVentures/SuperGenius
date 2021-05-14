@@ -19,7 +19,6 @@ Then folder structure as follows:
     .
     ├── thirdparty                          # geniustokens thirdparty
     │   ├── grpc                             # grpc latest version (current v1.28.1)
-    │   ├── leveldb                          # leveldb latest version
     │   ├── libp2p                           # libp2p cross-compile branch
     │   └── ipfs-lite-cpp                    # current repo
     │        ├── ipfs-lite                   # sub folder
