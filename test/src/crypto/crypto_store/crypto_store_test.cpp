@@ -85,13 +85,12 @@ struct CryptoStoreTest : public test::BaseFS_Test {
 
     EXPECT_OUTCOME_TRUE(
         sr_publ,
-        SR25519PublicKey::fromHex("56a03c8afc0e7a3a8b1d53bcc875ba5b6364754f9045"
-                                  "16009b57ef3adf96f61f"));
+        SR25519PublicKey::fromHex("7e68abebffcfe3409af87fbb0b5254b7add6ec3efc1f5b882f3621df45afec15"));
     EXPECT_OUTCOME_TRUE(
         sr_secr,
         SR25519SecretKey::fromHex(
-            "ec96cb0816b67b045baae21841952a61ecb0612a109293e10c5453b950659c0a8b"
-            "35b6d6196f33169334e36a05d624d9996d07243f9f71e638e3bc29a5330ec9"));
+            "d0c92c34038c17ea76208b04623203cbd9ce0901e82486da0053c0c2c4488b69"
+            "19f52f334750e98500ba84fd528a6ff810b91b43d11e3d3eb1c2176c9dda0b57"));
     sr_pair = {sr_secr, sr_publ};
 
     EXPECT_OUTCOME_TRUE_MSG_1(

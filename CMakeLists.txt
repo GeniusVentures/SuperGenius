@@ -75,7 +75,7 @@ include_directories(
   ${PROJECT_SOURCE_DIR}/src
   ${CBOR_INCLUDE_DIR}
   ${RocksDB_INCLUDE_DIR}
-  ${sr25519_INCLUDE_DIR}
+  ${sr25519-donna_INCLUDE_DIR}
   ${ed25519_INCLUDE_DIR}
   ${libsecp256k1_INCLUDE_DIR}
   ${binaryen_INCLUDE_DIR}
@@ -92,8 +92,9 @@ find_package(libp2p CONFIG REQUIRED)
 find_package(Protobuf CONFIG REQUIRED)
 find_package(RocksDB CONFIG REQUIRED)
 find_package(ipfs-lite-cpp CONFIG REQUIRED)
+find_package(ipfs-pubsub CONFIG REQUIRED)
 find_package(ed25519 CONFIG REQUIRED)
-find_package(sr25519 CONFIG REQUIRED)
+find_package(sr25519-donna CONFIG REQUIRED)
 find_package(RapidJSON CONFIG REQUIRED)
 find_package(binaryen CONFIG REQUIRED)
 find_package(libsecp256k1 CONFIG REQUIRED)

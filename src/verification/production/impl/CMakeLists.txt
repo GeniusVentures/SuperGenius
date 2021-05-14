@@ -44,7 +44,7 @@ add_library(production
 target_link_libraries(production
     production_error
     Boost::boost
-    sr25519::sr25519
+    sr25519-donna
     buffer
     logger
     scale

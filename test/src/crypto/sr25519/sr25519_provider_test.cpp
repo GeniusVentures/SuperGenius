@@ -30,9 +30,9 @@ struct SR25519ProviderTest : public ::testing::Test {
     hex_seed =
         "31102468cbd502d177793fa523685b248f6bd083d67f76671e0b86d7fa20c030";
     hex_sk =
-        "e5aff1a7d9694f2c0505f41ca68d51093d4f9f897aaa3ec4116b80393690010bbb5ee"
-        "1ea15ca731e60cd92b0765cf00675bb7eeabc04e531629988cd90e53ad6";
-    hex_vk = "6221d74b4c2168d0f73f97589900d2c6bdcdf3a8d54c3c92adc9e7650fbff251";
+      "384d3926ba54b4c5be06c5d5bd266d45f2f898597151c44eb9d1c65641325948"
+      "c3f4225bdb3e9267fdd664f29a77e0727a082679b0a90d137e2654d633b16a16";
+    hex_vk = "0a163b0699970d9af89f5356e199e2dd0b9092f2305e53a3c697ac38d792b979";
   }
 
   std::string_view hex_seed;
@@ -142,6 +142,6 @@ TEST_F(SR25519ProviderTest, GenerateBySeedSuccess) {
 
   auto &&kp = sr25519_provider->generateKeypair(seed);
 
-  ASSERT_EQ(kp.secret_key, secret_key);
-  ASSERT_EQ(kp.public_key, public_key);
+  ASSERT_EQ(kp.secret_key.toHex(), secret_key.toHex());
+  ASSERT_EQ(kp.public_key.toHex(), public_key.toHex());
 }

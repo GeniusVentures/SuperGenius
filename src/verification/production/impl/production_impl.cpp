@@ -2,7 +2,7 @@
 
 #include "verification/production/impl/production_impl.hpp"
 
-#include <sr25519/sr25519.h>
+#include <sr25519.h>
 #include <boost/assert.hpp>
 
 #include "blockchain/block_tree_error.hpp"
