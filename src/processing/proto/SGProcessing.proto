@@ -1,0 +1,130 @@
+syntax = "proto3";
+
+package SGProcessing;
+
+//import "google/protobuf/empty.proto";
+
+// Work distribution
+// Task messages are published/received in data feed (lobby) channel
+message Task 
+{
+    string ipfs_block_id = 1;// source block data to be processed
+    uint32 block_len = 2; // and ipfs block's length in bytes
+    uint32 block_stride = 3; // Stride to use for access pattern
+    uint32 block_line_stride = 4; // Line stride in bytes to get to next block start
+    float random_seed = 5; // used to randomly choose verifier block
+    string results_channel = 6; // which channel to publish results to.
+}
+
+// Subtask is pubished by host into ipfs_block_id channel
+message SubTask 
+{
+    string ipfsblock = 1; // source block data to be processed
+    repeated ProcessingChunk chunksToProcess = 2; // array of chunks to process
+    uint32 datalen = 3; // length of ipfsBlock?
+    string results_channel = 4; // channel to publish results to
+}
+
+message ProcessingChunk 
+{
+    string chunkid = 1; // unique process chunk ID
+    uint32 offset = 2; // offset into data
+    uint32 subchunk_width = 3; // width of subchunk/subblock
+    uint32 subchunk_height = 4; // height of chunk/block
+    uint32 stride = 5; // stride to use for overall data chunk
+    uint32 line_stride = 6; // stride of one line of data
+    uint32 n_subchunks = 7; // number of chunks to process  
+}
+
+message ProcessingQueueItem
+{
+    int64 lock_timestamp = 1;
+    string lock_node_id = 2;
+}
+
+
+message ProcessingQueue
+{
+    repeated ProcessingQueueItem items = 1;
+    int64 last_update_timestamp = 2;
+    string owner_node_id = 3;
+}
+
+message SubTaskQueue
+{
+    ProcessingQueue processing_queue = 1;
+    repeated SubTask subtasks = 2;
+}
+
+message SubTaskQueueRequest
+{
+    string node_id = 1;
+}
+
+// SubTask results are published to result_channel
+message SubTaskResult
+{
+    uint32 result_hash = 1; // hash of results
+    repeated uint32 chunk_hashes = 2; // the hashes for each chunk
+    string ipfs_results_data_id = 3; // UUID of the results data on ipfs
+}
+
+// Processing service handling
+// Request for available processing channels
+message ProcessingChannelRequest
+{
+    string environment = 1; // environment description required for a task processing
+}
+
+message ProcessingChannelResponse
+{
+    string channel_id = 1; // Processing channel Id
+    uint32 channel_capacity = 2; // A number of nodes that can be joined to the channel
+    uint32 channel_nodes_joined = 3; // A number of nodes joined the processing channel
+}
+
+message GridChannelMessage
+{
+    oneof data 
+    {
+        ProcessingChannelRequest processing_channel_request = 1;
+        ProcessingChannelResponse processing_channel_response = 2;
+    }
+}
+
+message ProcessingNode
+{
+    string node_id = 1;
+    uint64 timestamp = 2;
+}
+
+message ProcessingRoom
+{
+    repeated ProcessingNode nodes = 1;
+    uint32 room_capacity =2;
+    int64 create_timestamp = 3;
+    int64 last_update_timestamp = 4;
+    string room_host_node_id = 5;
+}
+
+message ProcessingRoomRequest
+{
+    enum Type
+    {
+        JOIN = 0;
+        LEAVE = 1;
+    }
+    Type request_type = 1;
+    string node_id = 2;
+}
+
+message ProcessingChannelMessage
+{
+    oneof data
+    {
+        ProcessingRoomRequest processing_room_request = 1;
+        ProcessingRoom processing_room = 2;
+        SubTaskQueue subtask_queue = 3;
+        SubTaskQueueRequest subtask_queue_request = 4;
+    }
+}

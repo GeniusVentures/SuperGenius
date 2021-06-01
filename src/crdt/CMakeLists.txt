@@ -85,6 +85,7 @@ target_link_libraries(echoClient
     Boost::Boost.DI
     ipfs-pubsub
     p2p::p2p_peer_address
+    p2p::p2p_protocol_echo
     Boost::program_options
     ${WIN_CRYPT_LIBRARY}
     )
