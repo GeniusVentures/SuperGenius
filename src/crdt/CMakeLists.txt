@@ -57,7 +57,7 @@ target_link_libraries(crdt_datastore
 	buffer
     ipfs-lite-cpp::buffer
     ipfs-lite-cpp::ipld_node
-	ipfs_merkledag_service
+	ipfs-lite-cpp::ipfs_merkledag_service
 	crdt_set
 	crdt_heads
     )
@@ -68,9 +68,23 @@ protobuf_generate(
 supergenius_install(crdt_datastore)
 
 
+add_library(graphsync_dagsyncer 
+    dagsyncer.hpp 
+	graphsync_dagsyncer.hpp 
+	impl/graphsync_dagsyncer.cpp
+    )
+target_link_libraries(graphsync_dagsyncer
+    Boost::boost
+    ipfs-lite-cpp::graphsync
+    ipfs-lite-cpp::buffer
+    ipfs-lite-cpp::ipld_node
+	ipfs-lite-cpp::ipfs_merkledag_service
+    )
+
 add_executable(globaldb globaldb.cpp)
 target_link_libraries(globaldb 
     crdt_datastore
+    graphsync_dagsyncer
     ipfs-pubsub
     ipfs-lite-cpp::ipfs_datastore_rocksdb
     p2p::p2p_peer_address
@@ -84,6 +98,7 @@ add_executable(echoClient echo_client.cpp)
 target_link_libraries(echoClient 
     Boost::Boost.DI
     ipfs-pubsub
+    graphsync_dagsyncer
     p2p::p2p_peer_address
     Boost::program_options
     ${WIN_CRYPT_LIBRARY}

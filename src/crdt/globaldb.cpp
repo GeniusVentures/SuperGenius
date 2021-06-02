@@ -2,6 +2,7 @@
 #include <iostream>
 #include <algorithm>
 #include <crdt/crdt_datastore.hpp>
+#include <crdt/graphsync_dagsyncer.hpp>
 #include <boost/program_options.hpp>
 #include <boost/algorithm/string/erase.hpp>
 #include <boost/asio/io_context.hpp>
@@ -10,6 +11,7 @@
 #include <boost/random.hpp>
 #include <ipfs_lite/ipfs/merkledag/impl/merkledag_service_impl.hpp>
 #include <ipfs_lite/ipfs/impl/datastore_rocksdb.hpp>
+#include <ipfs_pubsub/gossip_pubsub_topic.hpp>
 #include <libp2p/crypto/key_marshaller/key_marshaller_impl.hpp>
 #include <libp2p/crypto/key_validator/key_validator_impl.hpp>
 #include <libp2p/multi/multiaddress.hpp>
@@ -27,16 +29,33 @@
 #include <libp2p/crypto/hmac_provider/hmac_provider_impl.hpp>
 #include <libp2p/injector/host_injector.hpp>
 #include <libp2p/protocol/echo.hpp>
+#include <libp2p/protocol/common/asio/asio_scheduler.hpp>
+#include <ipfs_lite/ipfs/graphsync/impl/graphsync_impl.hpp>
 #include <libp2p/common/literals.hpp>
 
 namespace sgns::crdt
 {
-  // TODO: Need to implement it based on new pubsub 
   class PubSubBroadcaster : public Broadcaster
   {
   public:
+    using GossipPubSub = sgns::ipfs_pubsub::GossipPubSub;
+    using GossipPubSubTopic = sgns::ipfs_pubsub::GossipPubSubTopic;
 
-    PubSubBroadcaster() = default;
+    PubSubBroadcaster(const std::shared_ptr<GossipPubSubTopic>& pubSubTopic)
+      : gossipPubSubTopic_(pubSubTopic)
+    {
+      if (gossipPubSubTopic_ != nullptr)
+      {
+        gossipPubSubTopic_->Subscribe([&](boost::optional<const GossipPubSub::Message&> message)
+          {
+            if (message)
+            {
+              std::string message(reinterpret_cast<const char*>(message->data.data()), message->data.size());
+              this->listOfMessages_.push(std::move(message));
+            }
+          });
+      }
+    }
 
     void SetLogger(const sgns::base::Logger& logger) { this->logger_ = logger; }
 
@@ -46,15 +65,12 @@ namespace sgns::crdt
     */
     virtual outcome::result<void> Broadcast(const base::Buffer& buff) override
     {
-      if (!buff.empty())
+      if (this->gossipPubSubTopic_ == nullptr)
       {
-        const std::string bCastData(buff.toString());
-        //if (logger_ != nullptr)
-        //{
-        //  logger_->info("Broadcasting : " + bCastData);
-        //}
-        listOfBroadcasts_.push(bCastData);
+        return outcome::failure(boost::system::error_code{});
       }
+      const std::string bCastData(buff.toString());
+      gossipPubSubTopic_->Publish(bCastData);
       return outcome::success();
     }
 
@@ -64,40 +80,23 @@ namespace sgns::crdt
     */
     virtual outcome::result<base::Buffer> Next() override
     {
-      if (listOfBroadcasts_.empty())
+      if (this->listOfMessages_.empty())
       {
         //Broadcaster::ErrorCode::ErrNoMoreBroadcast
         return outcome::failure(boost::system::error_code{});
       }
 
-      std::string strBuffer = listOfBroadcasts_.front();
-      listOfBroadcasts_.pop();
+      std::string strBuffer = this->listOfMessages_.front();
+      this->listOfMessages_.pop();
 
       base::Buffer buffer;
       buffer.put(strBuffer);
       return buffer;
     }
 
-    std::queue<std::string> listOfBroadcasts_;
+    std::shared_ptr<GossipPubSubTopic> gossipPubSubTopic_;
+    std::queue<std::string> listOfMessages_;
     sgns::base::Logger logger_ = nullptr;
-  };
-
-  class CustomDagSyncer : public DAGSyncer
-  {
-  public:
-    using IpfsDatastore = ipfs_lite::ipfs::IpfsDatastore;
-    using MerkleDagServiceImpl = ipfs_lite::ipfs::merkledag::MerkleDagServiceImpl;
-
-    CustomDagSyncer(std::shared_ptr<IpfsDatastore> service)
-      : DAGSyncer(service)
-    {
-    }
-
-    virtual outcome::result<bool> HasBlock(const CID& cid) const override
-    {
-      auto getNodeResult = this->getNode(cid);
-      return getNodeResult.has_value();
-    }
   };
 }
 
@@ -117,10 +116,14 @@ using CrdtOptions = sgns::crdt::CrdtOptions;
 using CrdtDatastore = sgns::crdt::CrdtDatastore;
 using HierarchicalKey = sgns::crdt::HierarchicalKey;
 using PubSubBroadcaster = sgns::crdt::PubSubBroadcaster;
-using CustomDagSyncer = sgns::crdt::CustomDagSyncer;
+using GraphsyncDAGSyncer = sgns::crdt::GraphsyncDAGSyncer;
 using RocksdbDatastore = sgns::ipfs_lite::ipfs::RocksdbDatastore;
 using IpfsRocksDb = sgns::ipfs_lite::rocksdb;
-//using Host = sgns::crdt::Host;
+using GossipPubSub = sgns::ipfs_pubsub::GossipPubSub;
+using GraphsyncImpl = sgns::ipfs_lite::ipfs::graphsync::GraphsyncImpl;
+using GossipPubSubTopic = sgns::ipfs_pubsub::GossipPubSubTopic;
+using SubscriptionCallback = libp2p::protocol::gossip::Gossip::SubscriptionCallback;
+using SubscriptionData = libp2p::protocol::gossip::Gossip::SubscriptionData;
 
 namespace po = boost::program_options;
 
@@ -132,12 +135,12 @@ void PutHook(const std::string& k, const Buffer& v, const sgns::base::Logger& lo
 */
 void DeleteHook(const std::string& k, const sgns::base::Logger& logger);
 
+void OnSubscriptionCallback(SubscriptionData subscriptionData, std::shared_ptr<GraphsyncDAGSyncer>& graphsyncDAGSyncer);
+
 /** Generate key pair or load it from file if available
 */
 outcome::result<KeyPair> GetKeypair(const boost::filesystem::path& pathToKey,
   std::shared_ptr<KeyMarshaller>& keyMarshaller, const sgns::base::Logger& logger);
-
-std::string getLocalIP(boost::asio::io_context& io);
 
 int main(int argc, char** argv)
 {
@@ -145,6 +148,7 @@ int main(int argc, char** argv)
   int portNumber = 0;
   bool daemonMode = false;
   bool echoProtocol = false;
+  std::string multiAddress;
   po::options_description desc("Input arguments:");
   try
   {
@@ -155,6 +159,7 @@ int main(int argc, char** argv)
       ("databasePath,db", po::value<std::string>(&strDatabasePath)->default_value("CRDT.Datastore"),
         "Path to CRDT datastore")
       ("port, p", po::value<int>(&portNumber)->default_value(33123), "Port number")
+      ("pubsub-address", po::value<std::string>(&multiAddress), "Pubsub server address")
       ;
 
     po::variables_map vm;
@@ -171,7 +176,7 @@ int main(int argc, char** argv)
       echoProtocol = true;
     }
 
-    if (vm.count("help")) 
+    if (vm.count("help"))
     {
       std::cout << desc << "\n";
       return EXIT_FAILURE;
@@ -248,25 +253,6 @@ int main(int argc, char** argv)
   // create asio context
   auto io = injector.create<std::shared_ptr<boost::asio::io_context>>();
 
-  // host is our local libp2p node
-  auto host = injector.create<std::shared_ptr<libp2p::Host>>();
-
-  // make peer uri of local node
-  auto local_address_str = "/ip4/" + getLocalIP(*io) + "/tcp/" + std::to_string(portNumber)
-    + "/p2p/" + host->getId().toBase58();
-
-  auto listenResult = libp2p::multi::Multiaddress::create(local_address_str);
-  if (listenResult.has_failure())
-  {
-    logger->error("Unable to create local multi address" + listenResult.error().message());
-    return EXIT_FAILURE;
-  }
-  // TODO: Create pubsub gossip node
-
-  // TODO: Implement pubsub broadcaster 
-  auto broadcaster = std::make_shared<PubSubBroadcaster>();
-  broadcaster->SetLogger(logger);
-
   // Create new DAGSyncer
   IpfsRocksDb::Options rdbOptions;
   rdbOptions.create_if_missing = true;  // intentionally
@@ -278,7 +264,49 @@ int main(int argc, char** argv)
   }
 
   auto ipfsDataStore = std::make_shared<RocksdbDatastore>(ipfsDBResult.value());
-  auto dagSyncer = std::make_shared<CustomDagSyncer>(ipfsDataStore);
+
+  auto listen_to = libp2p::multi::Multiaddress::create("/ip4/127.0.0.1/tcp/40000").value();
+  auto dagSyncerHost = injector.create<std::shared_ptr<libp2p::Host>>();
+  auto scheduler = std::make_shared<libp2p::protocol::AsioScheduler>(*io, libp2p::protocol::SchedulerConfig{});
+  auto graphsync = std::make_shared<GraphsyncImpl>(dagSyncerHost, std::move(scheduler));
+  auto dagSyncer = std::make_shared<GraphsyncDAGSyncer>(ipfsDataStore, graphsync, dagSyncerHost);
+
+  // Start DagSyner listener 
+  auto listenResult = dagSyncer->Listen(listen_to);
+  if (listenResult.has_failure())
+  {
+    logger->warn("DAG syncer failed to listen " + std::string(listen_to.getStringAddress()));
+  }
+
+  std::string topicName = "globaldb-example";
+  std::string netTopic = "globaldb-example-net";
+  std::string config = "globaldb-example";
+
+  // Create pubsub gossip node
+  auto pubsub = std::make_shared<GossipPubSub>(keyPairResult.value());
+  std::future<GossipPubSub::Subscription> pubsTopic;
+  if (!multiAddress.empty())
+  {
+    pubsub->Start(portNumber, { multiAddress });
+    SubscriptionCallback subscriptionCallback = std::bind(&OnSubscriptionCallback, std::placeholders::_1, dagSyncer);
+    pubsTopic = pubsub->Subscribe(topicName, subscriptionCallback);
+  }
+  else
+  {
+    pubsub->Start(portNumber, {});
+  }
+
+  //// start the node as soon as async engine starts
+  //io->post([&]
+  //  {
+  //    pubsub->Start(portNumber, {});
+  //    std::cout << "Node started\n";
+  //  }
+  //);
+
+  auto gossipPubSubTopic = std::make_shared <GossipPubSubTopic>(pubsub, topicName);
+  auto broadcaster = std::make_shared<PubSubBroadcaster>(gossipPubSubTopic);
+  broadcaster->SetLogger(logger);
 
   auto crdtOptions = CrdtOptions::DefaultOptions();
   crdtOptions->logger = logger;
@@ -295,55 +323,28 @@ int main(int argc, char** argv)
   }
 
   logger->info("Bootstrapping...");
+  // TODO: bootstrapping
+  //bstr, _ : = multiaddr.NewMultiaddr("/ip4/94.130.135.167/tcp/33123/ipfs/12D3KooWFta2AE7oiK1ioqjVAKajUJauZWfeM7R413K7ARtHRDAu");
+  //inf, _ : = peer.AddrInfoFromP2pAddr(bstr);
+  //list: = append(ipfslite.DefaultBootstrapPeers(), *inf);
+  //ipfs.Bootstrap(list);
+  //h.ConnManager().TagPeer(inf.ID, "keep", 100);
 
-  std::string topicName = "globaldb-example";
-  std::string netTopic = "globaldb-example-net";
-  std::string config = "globaldb-example";
-
-  auto peerAddressResult = PeerAddress::create(peerID, listenResult.value());
-  if (peerAddressResult.has_failure())
-  {
-    logger->error("Unable to create peer address: " + peerAddressResult.error().message());
-    return EXIT_FAILURE;
-  }
-
-  auto peerAddress = peerAddressResult.value();
-  auto listenAddress = listenResult.value();
-
-  if (daemonMode && echoProtocol)
-  {
-    // set a handler for Echo protocol
-    libp2p::protocol::Echo echo{ libp2p::protocol::EchoConfig{} };
-    host->setProtocolHandler(
-      echo.getProtocolId(),
-      [&echo](std::shared_ptr<libp2p::connection::Stream> received_stream) {
-        echo.handle(std::move(received_stream));
-      });
-  }
-
-  // start the node as soon as async engine starts
-  io->post([&] 
-    {
-    auto listen_res = host->listen(listenAddress);
-    if (!listen_res) 
-    {
-      std::cout << "Cannot listen to multiaddress "
-        << listenAddress.getStringAddress() << ", "
-        << listen_res.error().message() << "\n";
-      io->stop();
-      return EXIT_FAILURE;
-    }
-    host->start();
-    //TODO:
-    //gossip->start();
-    std::cout << "Node started\n";
-    }
-  );
-
+  //if (daemonMode && echoProtocol)
+  //{
+  //  // set a handler for Echo protocol
+  //  libp2p::protocol::Echo echo{ libp2p::protocol::EchoConfig{} };
+  //  host->setProtocolHandler(
+  //    echo.getProtocolId(),
+  //    [&echo](std::shared_ptr<libp2p::connection::Stream> received_stream) {
+  //      echo.handle(std::move(received_stream));
+  //    });
+  //}
 
   std::ostringstream streamDisplayDetails;
   streamDisplayDetails << "\n\n\nPeer ID: " << peerID.toBase58() << std::endl;
-  streamDisplayDetails << "Listen address: " << listenAddress.getStringAddress() << std::endl;
+  streamDisplayDetails << "Listen address: " << pubsub->GetLocalAddress() << std::endl;
+  streamDisplayDetails << "DAG syncer address: " << listen_to.getStringAddress() << std::endl;
   streamDisplayDetails << "Topic: " << topicName << std::endl;
   streamDisplayDetails << "Data folder: " << strDatabasePathAbsolute << std::endl;
   streamDisplayDetails << std::endl;
@@ -483,25 +484,6 @@ int main(int argc, char** argv)
   return EXIT_SUCCESS;
 }
 
-std::string getLocalIP(boost::asio::io_context& io)
-{
-  boost::asio::ip::tcp::resolver resolver(io);
-  boost::asio::ip::tcp::resolver::query query(boost::asio::ip::host_name(), "");
-  boost::asio::ip::tcp::resolver::iterator it = resolver.resolve(query);
-  boost::asio::ip::tcp::resolver::iterator end;
-  std::string addr("127.0.0.1");
-  while (it != end) 
-  {
-    auto ep = it->endpoint();
-    if (ep.address().is_v4()) {
-      addr = ep.address().to_string();
-      break;
-    }
-    ++it;
-  }
-  return addr;
-}
-
 outcome::result<KeyPair> GetKeypair(const boost::filesystem::path& pathToKey, std::shared_ptr<KeyMarshaller>& keyMarshaller, const sgns::base::Logger& logger)
 {
   KeyPair keyPair;
@@ -612,6 +594,15 @@ void DeleteHook(const std::string& k, const sgns::base::Logger& logger)
       key.erase(0, 1);
     }
     logger->info("CRDT datastore: Removed [" + key + "]");
+  }
+}
+
+void OnSubscriptionCallback(SubscriptionData subscriptionData, std::shared_ptr<GraphsyncDAGSyncer>& graphsyncDAGSyncer)
+{
+  if (subscriptionData)
+  {
+    std::string message(reinterpret_cast<const char*>(subscriptionData->data.data()), subscriptionData->data.size());
+    std::cout << message << std::endl;
   }
 }
 
