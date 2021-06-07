@@ -4,7 +4,7 @@
 #include <mutex>
 #include <storage/rocksdb/rocksdb.hpp>
 #include <crdt/hierarchical_key.hpp>
-#include <proto/delta.pb.h>
+#include <crdt/proto/delta.pb.h>
 
 namespace sgns::crdt
 {
@@ -32,21 +32,21 @@ namespace sgns::crdt
     };
 
     /** Function pointer to notify caller if key added to datastore
-    * @param k key name 
-    * @param v buffer value 
+    * @param k key name
+    * @param v buffer value
     */
     using PutHookPtr = std::function<void(const std::string& k, const Buffer& v)>;
-    
+
     /** Function pointer to notify caller when key deleted from datastore
-    * @param k key name 
+    * @param k key name
     */
     using DeleteHookPtr = std::function<void(const std::string& k)>;
 
     /** Constructor
     * @param aDatastore Pointer to datastore
     * @param aNamespace Namespce key (e.g "/namespace")
-    * @param aPutHookPtr Function pointer to nofify when key added to datastore, default nullptr 
-    * @param aDeleteHookPtr Function pointer to nofify when key deleted from datastore, default nullptr 
+    * @param aPutHookPtr Function pointer to nofify when key added to datastore, default nullptr
+    * @param aDeleteHookPtr Function pointer to nofify when key deleted from datastore, default nullptr
     */
     CrdtSet(const std::shared_ptr<DataStore>& aDatastore, const HierarchicalKey& aNamespace,
       const PutHookPtr aPutHookPtr = nullptr, const DeleteHookPtr aDeleteHookPtr = nullptr);
@@ -81,45 +81,45 @@ namespace sgns::crdt
     */
     std::string GetValueSuffix() { return valueSuffix_; }
 
-    /** Get value from datasore for HierarchicalKey defined 
-    * @param aKey HierarchicalKey to get value from datastore 
-    * @return buffer value as string or outcome::failure on error 
+    /** Get value from datasore for HierarchicalKey defined
+    * @param aKey HierarchicalKey to get value from datastore
+    * @return buffer value as string or outcome::failure on error
     */
     outcome::result<std::string> GetValueFromDatastore(const HierarchicalKey& aKey);
 
     /** Returns a new delta-set adding the given key/value.
-    * @param aKey delta key to add to datastore 
-    * @param aValue delta value to add to datastore 
+    * @param aKey delta key to add to datastore
+    * @param aValue delta value to add to datastore
     * @return pointer to new delta or outcome::failure on error
     */
     outcome::result<std::shared_ptr<Delta>> CreateDeltaToAdd(const std::string& aKey, const std::string& aValue);
 
     /** Returns a new delta-set removing the given keys with prefix /namespace/s/<key>
-    * @param aKey delta key to remove from datastore 
+    * @param aKey delta key to remove from datastore
     * @return pointer to delta or outcome::failure on error
     */
     outcome::result<std::shared_ptr<Delta>> CreateDeltaToRemove(const std::string& aKey);
 
     /** Get the value of an element from the CRDT set /namespace/k/<key>/v
-    * @param aKey Key name 
+    * @param aKey Key name
     * @return buffer value or outcome::failure on error
     */
     outcome::result<Buffer> GetElement(const std::string& aKey);
 
     /** Query datastore key-value pairs by prefix, if prefix empty return all elements /namespace/k/<prefix>
     * @param aPrefix prefix to search, if empty string, return all
-    * @param aSuffix suffix to search 
+    * @param aSuffix suffix to search
     * @return list of key-value pairs matches prefix and suffix
     * \sa QuerySuffix
     */
     outcome::result<QueryResult> QueryElements(const std::string& aPrefix, const QuerySuffix& aSuffix = QuerySuffix::QUERY_ALL);
 
-    // TODO: Need to implement query with prefix from datastore 
+    // TODO: Need to implement query with prefix from datastore
     //func (s *set) Elements(q query.Query) (query.Results, error) {
 
-    /** Returns true if the key belongs to one of the elements in the 
+    /** Returns true if the key belongs to one of the elements in the
     * /namespace/k/<key>/v set, and this element is not tombstoned.
-    * @param aKey key name 
+    * @param aKey key name
     * @return true if the key belongs to one of the elements and is not tombstoned or outcome::failure on error
     */
     outcome::result<bool> IsValueInSet(const std::string& aKey);
@@ -127,14 +127,14 @@ namespace sgns::crdt
     /** Returns in we have a key/block combinations in the
     * elements set that has not been tombstoned.
     * @param aKey key name
-    * @return true if the key has not been tombstoned, false otherwise or outcome::failure on error 
+    * @return true if the key has not been tombstoned, false otherwise or outcome::failure on error
     */
     outcome::result<bool> InElemsNotTombstoned(const std::string& aKey);
 
     /** Get full path prefix in namespace for a key
     * /namespace/<key>
-    * @param aKey key string 
-    * @return HierarchicalKey with key prefix 
+    * @param aKey key string
+    * @return HierarchicalKey with key prefix
     */
     HierarchicalKey KeyPrefix(const std::string& aKey);
 
@@ -173,15 +173,15 @@ namespace sgns::crdt
     */
     HierarchicalKey PriorityKey(const std::string& aKey);
 
-    /** Get priority for a key from datastore 
+    /** Get priority for a key from datastore
     * @param aKey key string
-    * @return priority of the key or outcome::failure on error 
+    * @return priority of the key or outcome::failure on error
     */
     outcome::result<uint64_t> GetPriority(const std::string& aKey);
 
     /** Set priority for a key and put into datastore
     * @param aKey key string
-    * @param aPriority priority to save 
+    * @param aPriority priority to save
     * @return priority of the key or outcome::failure on error
     */
     outcome::result<void> SetPriority(const std::string& aKey, const uint64_t& aPriority);
@@ -191,14 +191,14 @@ namespace sgns::crdt
     * @param aKey key string
     * @param aID tomb key ID
     * @param aValue buffer value to set
-    * @param aPriority priority to save 
+    * @param aPriority priority to save
     * @return priority of the key or outcome::failure on error
     */
     outcome::result<void> SetValue(const std::string& aKey, const std::string& aID, const Buffer& aValue, const uint64_t& aPriority);
 
     /** Sets a value to datastore in batch mode if priority is higher. When equal, it sets if the
     * value is lexicographically higher than the current value.
-    * @param aDataStore datastore batch 
+    * @param aDataStore datastore batch
     * @param aKey key string
     * @param aID tomb key ID
     * @param aValue buffer value to set
@@ -216,8 +216,8 @@ namespace sgns::crdt
     * Technically the lock should only affect the keys that are being written,
     * but with the batching optimization the locks would need to be hold until
     * the batch is written), and one lock per key might be way worse than a single
-    * global lock in the end. 
-    * @param aElems list of elems to to into datastore 
+    * global lock in the end.
+    * @param aElems list of elems to to into datastore
     * @param aID tomb key ID
     * @param aPriority priority to save
     * @return outcome::success on success or outcome::failure otherwise
@@ -231,13 +231,13 @@ namespace sgns::crdt
     outcome::result<void> PutTombs(const std::vector<Element>& aTombs);
 
     /** Merge elems and tombs from delta into datastore
-    * @param aDelta delta with elems and tombs to save into datastore 
+    * @param aDelta delta with elems and tombs to save into datastore
     * @param aID tomb key ID
     * @return outcome::success on success or outcome::failure otherwise
     */
     outcome::result<void> Merge(const std::shared_ptr<CrdtSet::Delta>& aDelta, const std::string& aID);
 
-    /** Check if key is tombstoned with tomb ID and found in datastore 
+    /** Check if key is tombstoned with tomb ID and found in datastore
     * @param aKey key string
     * @param aID tomb key ID
     * @return true if key with ID is tombstoned, false otherwise or outcome::failure on error
@@ -248,7 +248,7 @@ namespace sgns::crdt
     * is successfully added to the datastore (either by a local
     * or remote update), and only when that addition is considered the
     * prevalent value.
-    * @param putHookPtr Function pointer to callback function 
+    * @param putHookPtr Function pointer to callback function
     */
     void SetPutHook(const PutHookPtr& putHookPtr);
 
@@ -259,11 +259,11 @@ namespace sgns::crdt
     * still present in the datastore because it was re-added. If that is
     * relevant, use Has() to check if the removed element is still part
     * of the datastore.
-    * @param deleteHookPtr Function pointer to callback function 
+    * @param deleteHookPtr Function pointer to callback function
     */
     void SetDeleteHook(const DeleteHookPtr& deleteHookPtr);
 
-  private: 
+  private:
     CrdtSet() = default;
 
     std::shared_ptr<DataStore> dataStore_ = nullptr;
@@ -281,4 +281,4 @@ namespace sgns::crdt
 
 } // namespace sgns::crdt
 
-#endif SUPERGENIUS_CRDT_SET_HPP
+#endif //SUPERGENIUS_CRDT_SET_HPP

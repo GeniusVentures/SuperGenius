@@ -8,7 +8,7 @@
 
 namespace sgns::crdt
 {
-  /** @brief Options holds configurable values for CrdtDatastore 
+  /** @brief Options holds configurable values for CrdtDatastore
   */
   struct CrdtOptions
   {
@@ -43,7 +43,7 @@ namespace sgns::crdt
     * prevalent value.
     */
     PutHookPtr putHookFunc = nullptr;
-   
+
     /** The DeleteHook function is triggered whenever a version of an
     * element is successfully removed from the datastore (either by a
     * local or remote update). Unordered and concurrent updates may
@@ -97,17 +97,17 @@ namespace sgns::crdt
       return VerifyErrorCode::Success;
     }
 
-    inline bool operator==( const CrdtOptions& rhs ) const 
+    inline bool operator==( const CrdtOptions& rhs ) const
     {
       return logger == rhs.logger && rebroadcastIntervalMilliseconds == rhs.rebroadcastIntervalMilliseconds;
     }
 
-    inline bool operator!=( const CrdtOptions& rhs ) const 
+    inline bool operator!=( const CrdtOptions& rhs ) const
     {
       return !operator==( rhs );
     }
 
   };
-} // namespace sgns::crdt 
+} // namespace sgns::crdt
 
-#endif SUPERGENIUS_CRDT_OPTIONS_HPP
+#endif //SUPERGENIUS_CRDT_OPTIONS_HPP

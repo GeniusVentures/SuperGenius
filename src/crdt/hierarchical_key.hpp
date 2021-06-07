@@ -6,7 +6,7 @@
 
 namespace sgns::crdt
 {
-  /** @brief A Key represents the unique identifier of an object, 
+  /** @brief A Key represents the unique identifier of an object,
   * inspired by file systems and Google App Engine key model.
   *  Keys are meant to be unique across a system. Keys are hierarchical,
   * incorporating more and more specific namespaces. Thus keys can be deemed
@@ -22,7 +22,7 @@ namespace sgns::crdt
   */
   class HierarchicalKey
   {
-  public: 
+  public:
 
     HierarchicalKey() = default;
 
@@ -30,7 +30,7 @@ namespace sgns::crdt
     */
     HierarchicalKey(const std::string& s);
 
-    /** Copy constructor 
+    /** Copy constructor
     */
     HierarchicalKey(const HierarchicalKey&);
 
@@ -70,10 +70,10 @@ namespace sgns::crdt
       return !operator==(rhs);
     }
 
-  private: 
+  private:
 
     std::string key_;
   };
-} // namespace sgns::crdt 
+} // namespace sgns::crdt
 
-#endif SUPERGENIUS_HIERARCHICAL_KEY_HPP
+#endif //SUPERGENIUS_HIERARCHICAL_KEY_HPP

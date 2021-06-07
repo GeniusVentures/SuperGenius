@@ -1,11 +1,13 @@
 cmake_minimum_required(VERSION 3.12)
-set(
-    CMAKE_TOOLCHAIN_FILE
-    "${CMAKE_SOURCE_DIR}/cmake/toolchain/cxx17.cmake"
-    CACHE
-    FILEPATH
-    "Default toolchain"
-)
+if (NOT ${CMAKE_SYSTEM_NAME} STREQUAL "Android")
+  set(
+      CMAKE_TOOLCHAIN_FILE
+      "${CMAKE_SOURCE_DIR}/cmake/toolchain/cxx17.cmake"
+      CACHE
+      FILEPATH
+      "Default toolchain"
+  )
+endif()
 # Project
 project(SuperGenius C CXX)
 ADD_DEFINITIONS(-D_HAS_AUTO_PTR_ETC=1)
@@ -17,7 +19,11 @@ if (NOT EXISTS "${CMAKE_TOOLCHAIN_FILE}")
   set(CMAKE_POSITION_INDEPENDENT_CODE TRUE)
 endif ()
 
-include(cmake/functions.cmake)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+
 include(cmake/print.cmake)
 
 print("C flags: ${CMAKE_C_FLAGS}")
@@ -37,6 +43,24 @@ set (CPACK_PACKAGE_VENDOR "Genius Ventures")
 # Export flag    ######################################################################################
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 include(CheckCXXCompilerFlag)
+
+find_package(Protobuf CONFIG REQUIRED )
+set(Protobuf_PROTOC_EXECUTABLE ${Protobuf_PROTOC_EXECUTABLE} CACHE PATH "Initial cache" FORCE)
+set_target_properties(protobuf::protoc PROPERTIES
+              IMPORTED_LOCATION ${Protobuf_PROTOC_EXECUTABLE})
+
+# protoc definition #####################################################################################
+get_target_property(PROTOC_LOCATION protobuf::protoc IMPORTED_LOCATION)
+MESSAGE("PROTOC_LOCATION: ${PROTOC_LOCATION}")
+if ( Protobuf_FOUND )
+    message( STATUS "Protobuf version : ${Protobuf_VERSION}" )
+    message( STATUS "Protobuf include path : ${Protobuf_INCLUDE_DIRS}" )
+    message( STATUS "Protobuf libraries : ${Protobuf_LIBRARIES}" )
+    message( STATUS "Protobuf compiler : ${Protobuf_PROTOC_EXECUTABLE}")
+    message( STATUS "Protobuf compiler libraries : ${Protobuf_PROTOC_LIBRARY}")
+    message( STATUS "Protobuf lite libraries : ${Protobuf_LITE_LIBRARIES}")
+endif()
+include(cmake/functions.cmake)
 
 # Boost definition ######################################################################################
 if (CMAKE_VERSION VERSION_LESS 3.11)
@@ -66,9 +90,6 @@ set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_RUNTIME ON)
 find_package(Boost REQUIRED COMPONENTS date_time filesystem random regex system thread log log_setup program_options) # header only libraries must not be added here
-
-set(Protobuf_USE_STATIC_LIBS ON)
-find_package(Protobuf CONFIG REQUIRED PATHS ${Protobuf_DIR})
 
 include_directories(
   # ${CMAKE_CURRENT_SOURCE_DIR}

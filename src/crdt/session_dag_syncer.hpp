@@ -24,6 +24,6 @@ namespace sgns::crdt
        */
     outcome::result<bool> HasBlock(CID cid) const = 0;
   };
-}  // namespace sgns::crdt 
+}  // namespace sgns::crdt
 
 #endif  // SUPERGENIUS_SESSIONDAGSYNCER_HPP

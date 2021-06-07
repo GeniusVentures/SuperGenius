@@ -18,7 +18,7 @@ namespace sgns::verification {
     /// output of VRF function
     crypto::VRFOutput vrf_output;
     /// authority index of the producer
-    size_t authority_index{};
+    uint64_t authority_index{};
   };
 
   /**

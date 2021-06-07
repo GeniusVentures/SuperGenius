@@ -1,11 +1,5 @@
-#add_subdirectory(proto)
 
-set(PROTO_SRC_DIR ${CMAKE_CURRENT_BINARY_DIR}/proto)
-file(MAKE_DIRECTORY ${PROTO_SRC_DIR})
-
-set(protobuf_generate_PROTOC_OUT_DIR ${PROTO_SRC_DIR})
-
-add_library(hierarchical_key 
+add_library(hierarchical_key
 	hierarchical_key.hpp
 	impl/hierarchical_key.cpp
 	)
@@ -14,62 +8,54 @@ target_link_libraries(hierarchical_key
     )
 supergenius_install(hierarchical_key)
 
+add_proto_library(crdt_delta proto/delta.proto)
+add_proto_library(crdt_bcast proto/bcast.proto)
 
-add_library(crdt_set 
+add_library(crdt_set
 	crdt_set.hpp
 	impl/crdt_set.cpp
     )
 target_include_directories(crdt_set PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 target_link_libraries(crdt_set
-    Boost::boost
+  Boost::boost
 	buffer
 	rocksdb
 	hierarchical_key
-	protobuf::libprotobuf
-    )
-protobuf_generate(
-	LANGUAGE cpp
-	TARGET crdt_set
-	PROTOS proto/delta.proto)
+	crdt_delta
+  )
 supergenius_install(crdt_set)
 
-
-add_library(crdt_heads 
+add_library(crdt_heads
 	crdt_heads.hpp
 	impl/crdt_heads.cpp
     )
 target_link_libraries(crdt_heads
-    Boost::boost
+  Boost::boost
 	buffer
 	hierarchical_key
 	rocksdb
-    )
+  )
 
-
-add_library(crdt_datastore 
-	crdt_options.hpp 
-    crdt_datastore.hpp
+add_library(crdt_datastore
+	crdt_options.hpp
+  crdt_datastore.hpp
 	impl/crdt_datastore.cpp
-    )
+  )
 target_include_directories(crdt_datastore PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 target_link_libraries(crdt_datastore
-    Boost::boost
+  Boost::boost
 	buffer
-    ipfs-lite-cpp::buffer
-    ipfs-lite-cpp::ipld_node
+  ipfs-lite-cpp::buffer
+  ipfs-lite-cpp::ipld_node
 	ipfs_merkledag_service
 	crdt_set
 	crdt_heads
-    )
-protobuf_generate(
-	LANGUAGE cpp
-	TARGET crdt_datastore
-	PROTOS proto/bcast.proto)
+	crdt_bcast
+  )
 supergenius_install(crdt_datastore)
 
-
 add_executable(globaldb globaldb.cpp)
-target_link_libraries(globaldb 
+target_link_libraries(globaldb
     crdt_datastore
     ipfs-lite-cpp::ipfs_datastore_rocksdb
     p2p::p2p_peer_address
@@ -82,7 +68,7 @@ target_link_libraries(globaldb
     )
 
 add_executable(echoClient echo_client.cpp)
-target_link_libraries(echoClient 
+target_link_libraries(echoClient
     Boost::Boost.DI
     p2p::p2p_basic_host
     p2p::p2p_peer_address
@@ -94,5 +80,3 @@ target_link_libraries(echoClient
     p2p::p2p_inmem_protocol_repository
     p2p::p2p_protocol_echo
     )
-
-

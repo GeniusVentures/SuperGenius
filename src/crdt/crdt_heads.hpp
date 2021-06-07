@@ -17,7 +17,7 @@ namespace sgns::crdt
     using Buffer = base::Buffer;
 
     /** Constructor
-    * @param aDatastore Pointer to datastore 
+    * @param aDatastore Pointer to datastore
     * @param aNamespace Namespce key (e.g "/namespace")
     */
     CrdtHeads(const std::shared_ptr<DataStore>& aDatastore, const HierarchicalKey& aNamespace);
@@ -26,7 +26,7 @@ namespace sgns::crdt
     */
     CrdtHeads(const CrdtHeads&);
 
-    /** Destructor 
+    /** Destructor
     */
     virtual ~CrdtHeads() = default;
 
@@ -48,42 +48,42 @@ namespace sgns::crdt
     */
     HierarchicalKey GetNamespaceKey() const;
 
-    /** Get full path to CID key 
+    /** Get full path to CID key
     *   /<namespace>/<cid>
     * @param aCid Content identifier
-    * @return full path to CID key as HierarchicalKey or outcome::failure on error 
+    * @return full path to CID key as HierarchicalKey or outcome::failure on error
     */
     outcome::result<HierarchicalKey> GetKey(const CID& aCid);
 
     /** Check if CID is among the current heads.
-    * @param aCid Content identifier 
-    * @return true is CID is head, false otherwise or outcome::failure on error 
+    * @param aCid Content identifier
+    * @return true is CID is head, false otherwise or outcome::failure on error
     */
     outcome::result<bool> IsHead(const CID& aCid);
 
     /** Check if CID is head and return it height if it is
-    * @param aCid Content identifier 
-    * @return Height of head or outcome::failure on error 
+    * @param aCid Content identifier
+    * @return Height of head or outcome::failure on error
     */
     outcome::result<uint64_t> GetHeadHeight(const CID& aCid);
 
     /** Get current number of heads
-    * @return lenght, current number of heads or outcome::failure on error 
+    * @return lenght, current number of heads or outcome::failure on error
     */
     outcome::result<int> GetLenght();
 
-    /** Add head CID to datastore with full namespace 
-    * @param aCid Content identifier 
-    * @param aHeight height of head 
-    * @return outcome::failure on error 
+    /** Add head CID to datastore with full namespace
+    * @param aCid Content identifier
+    * @param aHeight height of head
+    * @return outcome::failure on error
     */
     outcome::result<void> Add(const CID& aCid, const uint64_t& aHeight);
 
     /** Replace a head with a new cid.
-    * @param aCidHead Content identifier of head to replace 
-    * @param aNewHeadCid Content identifier of new head 
-    * @param aHeight height of head 
-    * @return outcome::failure on error 
+    * @param aCidHead Content identifier of head to replace
+    * @param aNewHeadCid Content identifier of new head
+    * @param aHeight height of head
+    * @return outcome::failure on error
     */
     outcome::result<void> Replace(const CID& aCidHead, const CID& aNewHeadCid, const uint64_t& aHeight);
 
@@ -96,11 +96,11 @@ namespace sgns::crdt
 
   protected:
 
-    /** Write data to datastore in batch mode 
-    * @param aDataStore Pointer to datastore batch 
-    * @param aCid Content identifier to add 
-    * @param aHeight height of CID head 
-    * @return outcome::failure on error 
+    /** Write data to datastore in batch mode
+    * @param aDataStore Pointer to datastore batch
+    * @param aCid Content identifier to add
+    * @param aHeight height of CID head
+    * @return outcome::failure on error
     */
     outcome::result<void> Write(const std::unique_ptr<storage::BufferBatch>& aDataStore, const CID& aCid, const uint64_t& aHeight);
 
@@ -112,11 +112,11 @@ namespace sgns::crdt
 
     /** primeCache builds the heads cache based on what's in storage; since
     * it is called from the constructor only we don't bother locking.
-    * @return outcome::failure on error 
+    * @return outcome::failure on error
     */
     outcome::result<void> PrimeCache();
 
-  private: 
+  private:
 
     CrdtHeads() = default;
 
@@ -129,4 +129,4 @@ namespace sgns::crdt
 
 } // namespace sgns::crdt
 
-#endif SUPERGENIUS_CRDT_HEADS_HPP
+#endif //SUPERGENIUS_CRDT_HEADS_HPP

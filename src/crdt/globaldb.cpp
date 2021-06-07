@@ -31,7 +31,7 @@
 
 namespace sgns::crdt
 {
-  // TODO: Need to implement it based on new pubsub 
+  // TODO: Need to implement it based on new pubsub
   class PubSubBroadcaster : public Broadcaster
   {
   public:
@@ -171,7 +171,7 @@ int main(int argc, char** argv)
       echoProtocol = true;
     }
 
-    if (vm.count("help")) 
+    if (vm.count("help"))
     {
       std::cout << desc << "\n";
       return EXIT_FAILURE;
@@ -263,7 +263,7 @@ int main(int argc, char** argv)
   }
   // TODO: Create pubsub gossip node
 
-  // TODO: Implement pubsub broadcaster 
+  // TODO: Implement pubsub broadcaster
   auto broadcaster = std::make_shared<PubSubBroadcaster>();
   broadcaster->SetLogger(logger);
 
@@ -322,10 +322,10 @@ int main(int argc, char** argv)
   }
 
   // start the node as soon as async engine starts
-  io->post([&] 
+  io->post([&]
     {
     auto listen_res = host->listen(listenAddress);
-    if (!listen_res) 
+    if (!listen_res)
     {
       std::cout << "Cannot listen to multiaddress "
         << listenAddress.getStringAddress() << ", "
@@ -462,7 +462,7 @@ int main(int argc, char** argv)
           std::string value = commandList[2];
           if (commandList.size() > 3)
           {
-            for (int i = 3; i < commandList.size(); ++i)
+            for (size_t i = 3; i < commandList.size(); ++i)
             {
               value += " " + commandList[i];
             }
@@ -490,7 +490,7 @@ std::string getLocalIP(boost::asio::io_context& io)
   boost::asio::ip::tcp::resolver::iterator it = resolver.resolve(query);
   boost::asio::ip::tcp::resolver::iterator end;
   std::string addr("127.0.0.1");
-  while (it != end) 
+  while (it != end)
   {
     auto ep = it->endpoint();
     if (ep.address().is_v4()) {
@@ -614,4 +614,3 @@ void DeleteHook(const std::string& k, const sgns::base::Logger& logger)
     logger->info("CRDT datastore: Removed [" + key + "]");
   }
 }
-

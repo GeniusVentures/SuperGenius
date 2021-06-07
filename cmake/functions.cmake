@@ -40,7 +40,7 @@ endfunction()
 
 function(compile_proto_to_cpp PB_H PB_CC PROTO)
   get_target_property(Protobuf_INCLUDE_DIR protobuf::libprotobuf INTERFACE_INCLUDE_DIRECTORIES)
-  get_target_property(Protobuf_PROTOC_EXECUTABLE protobuf::protoc IMPORTED_LOCATION_RELEASE)
+  get_target_property(Protobuf_PROTOC_EXECUTABLE protobuf::protoc IMPORTED_LOCATION)
 
   if (NOT Protobuf_PROTOC_EXECUTABLE)
     message(FATAL_ERROR "Protobuf_PROTOC_EXECUTABLE is empty")
