@@ -47,36 +47,47 @@ target_link_libraries(crdt_datastore
 	buffer
   ipfs-lite-cpp::buffer
   ipfs-lite-cpp::ipld_node
-	ipfs_merkledag_service
+	ipfs-lite-cpp::ipfs_merkledag_service
 	crdt_set
 	crdt_heads
 	crdt_bcast
   )
 supergenius_install(crdt_datastore)
 
+
+add_library(graphsync_dagsyncer
+    dagsyncer.hpp
+	graphsync_dagsyncer.hpp
+	impl/graphsync_dagsyncer.cpp
+    )
+target_link_libraries(graphsync_dagsyncer
+    Boost::boost
+    ipfs-lite-cpp::graphsync
+    ipfs-lite-cpp::buffer
+    ipfs-lite-cpp::ipld_node
+	ipfs-lite-cpp::ipfs_merkledag_service
+    )
+
 add_executable(globaldb globaldb.cpp)
 target_link_libraries(globaldb
     crdt_datastore
+    graphsync_dagsyncer
+    ipfs-pubsub
     ipfs-lite-cpp::ipfs_datastore_rocksdb
     p2p::p2p_peer_address
-    p2p::p2p_multiaddress
-    p2p::p2p_default_host
-    Boost::boost
     Boost::filesystem
     Boost::program_options
     p2p::p2p_protocol_echo
+    ${WIN_CRYPT_LIBRARY}
     )
 
 add_executable(echoClient echo_client.cpp)
 target_link_libraries(echoClient
     Boost::Boost.DI
-    p2p::p2p_basic_host
+    ipfs-pubsub
+    graphsync_dagsyncer
     p2p::p2p_peer_address
-    p2p::p2p_multiaddress
-    p2p::p2p_default_network
-    p2p::p2p_peer_repository
-    p2p::p2p_inmem_address_repository
-    p2p::p2p_inmem_key_repository
-    p2p::p2p_inmem_protocol_repository
     p2p::p2p_protocol_echo
+    Boost::program_options
+    ${WIN_CRYPT_LIBRARY}
     )

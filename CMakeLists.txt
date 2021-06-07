@@ -122,6 +122,7 @@ find_package(libsecp256k1 CONFIG REQUIRED)
 find_package(xxhash CONFIG REQUIRED)
 
 option(TESTING "Build tests" ON)
+option(BUILD_EXAMPLES "Build examples" ON)
 link_directories(
   ${BOOST_LIB_DIR}
   ${ipfs-lite-cpp_LIB_DIR}
@@ -136,4 +137,8 @@ if (TESTING)
   include_directories(${GTest_INCLUDE_DIR})
   enable_testing()
   add_subdirectory(test)
+endif ()
+
+if (BUILD_EXAMPLES)
+    add_subdirectory(example)
 endif ()

@@ -20,12 +20,12 @@ target_link_libraries(block_builder_factory_test
 
 set_target_properties(block_builder_factory_test PROPERTIES LINK_FLAGS "/FORCE:MULTIPLE")
 
-addtest(proposer_test
-    proposer_test.cpp
-    )
+#addtest(proposer_test
+#    proposer_test.cpp
+#    )
 
-target_link_libraries(proposer_test
-    proposer
-    )
+#target_link_libraries(proposer_test
+#    proposer
+#    )
 
-set_target_properties(proposer_test PROPERTIES LINK_FLAGS "/FORCE:MULTIPLE")
+#set_target_properties(proposer_test PROPERTIES LINK_FLAGS "/FORCE:MULTIPLE")

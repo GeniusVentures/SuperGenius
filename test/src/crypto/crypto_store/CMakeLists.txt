@@ -14,6 +14,7 @@ set_target_properties(crypto_store_test PROPERTIES LINK_FLAGS "/FORCE:MULTIPLE")
 target_link_libraries(crypto_store_test
     ${USER_ENV_LIBRARY}
     ${WIN_SOCK_LIBRARY}
+    ${WIN_CRYPT_LIBRARY}
     crypto_store
     base_fs_test
     )

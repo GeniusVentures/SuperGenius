@@ -6,11 +6,11 @@
 
 namespace {
   void setGlobalPattern(spdlog::logger &logger) {
-    logger.set_pattern("[%Y-%m-%d %H:%M:%S][%l] %v");
+    logger.set_pattern("[%Y-%m-%d %H:%M:%S][%l][%n] %v");
   }
 
   void setDebugPattern(spdlog::logger &logger) {
-    logger.set_pattern("[%Y-%m-%d %H:%M:%S.%F][th:%t][%l] %n %v");
+    logger.set_pattern("[%Y-%m-%d %H:%M:%S.%F][th:%t][%l][%n] %v");
   }
 
   std::shared_ptr<spdlog::logger> createLogger(const std::string &tag,

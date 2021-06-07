@@ -21,5 +21,6 @@ target_link_libraries(core_integration_test
     extension_factory
     ${WIN_SOCK_LIBRARY}
     ${USER_ENV_LIBRARY}
+    ${WIN_CRYPT_LIBRARY}
     )
 set_target_properties(core_integration_test PROPERTIES LINK_FLAGS "/FORCE:MULTIPLE")

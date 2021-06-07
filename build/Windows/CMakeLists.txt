@@ -47,7 +47,7 @@ print("CXX Release flags: ${CMAKE_CXX_FLAGS_RELEASE}")
 
 # define third party directory
 #set(THIRDPARTY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/${THIRDPARTY_DIR}")
-set(_THIRDPARTY_BUILD_DIR "${THIRDPARTY_DIR}")
+set(_THIRDPARTY_BUILD_DIR "${THIRDPARTY_DIR}/build/${CMAKE_BUILD_TYPE}")
 #set(_THIRDPARTY_SOURCE_DIR "${THIRDPARTY_DIR}/build/Windows")
 
 if (NOT _THIRDPARTY_BUILD_DIR)
@@ -69,11 +69,16 @@ set(_FINDPACKAGE_PROTOBUF_CONFIG_DIR  "${_THIRDPARTY_BUILD_DIR}/grpc/build/third
 set(_FINDPACKAGE_PROTOBUF_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/grpc/build/third_party/protobuf/include/google/protobuf")
 set(_FINDPACKAGE_PROTOBUF_LIB_DIR "${_THIRDPARTY_BUILD_DIR}/grpc/build/third_party/protobuf/Release")
 
-# if OPENSSL_ROOT_DIR is set, propagate that hint path to the external projects with OpenSSL dependency.
-set(_CMAKE_ARGS_OPENSSL_ROOT_DIR "")
-if (OPENSSL_ROOT_DIR)
-  set(_CMAKE_ARGS_OPENSSL_ROOT_DIR "-DOPENSSL_ROOT_DIR:PATH=${OPENSSL_ROOT_DIR}")
-endif()
+set(_openssl_BUILD_ROOT "${_THIRDPARTY_BUILD_DIR}/openssl/")
+set(_OPENSSL_CACHE_ARGS
+    -DOPENSSL_USE_STATIC_LIBS:BOOL=ON
+    -DOPENSSL_MSVC_STATIC_RT:BOOL=ON
+    -DOPENSSL_ROOT_DIR:STRING=${_openssl_BUILD_ROOT}
+    -DOPENSSL_INCLUDE_DIR:PATH=${_openssl_BUILD_ROOT}/include
+    -DOPENSSL_LIBRARIES:PATH=${_openssl_BUILD_ROOT}/lib
+  )
+set(_OPENSSL_INCLUDE_DIR ${_openssl_BUILD_ROOT}/include)
+set(_OPENSSL_target openssl)
 
 # Set config of rocksdb
 set(_FINDPACKAGE_ROCKSDB_DIR "${_THIRDPARTY_BUILD_DIR}/rocksdb/lib/cmake/rocksdb")
@@ -180,7 +185,7 @@ ExternalProject_Add(SuperGenius
   SOURCE_DIR "${CMAKE_SOURCE_DIR}/../../../SuperGenius"
   CMAKE_CACHE_ARGS
         -DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_CURRENT_BINARY_DIR}/SuperGenius
-        ${_CMAKE_ARGS_OPENSSL_ROOT_DIR}
+        ${_OPENSSL_CACHE_ARGS}
         -DGTest_DIR:PATH=${_FINDPACKAGE_GTEST_CONFIG_DIR}
         -DGTest_INCLUDE_DIR:PATH=${_FINDPACKAGE_GTEST_INCLUDE_DIR}
         -DBoost.DI_DIR:PATH=${_FINDPACKAGE_BOOST_DI_DIR}
@@ -222,6 +227,7 @@ ExternalProject_Add(SuperGenius
         -Dxxhash_DIR:PATH=${_FINDPACKAGE_XXHASH_DIR}
         -DUSER_ENV_LIBRARY:STRING=userenv
         -DWIN_SOCK_LIBRARY:STRING=wsock32 ws2_32
+        -DWIN_CRYPT_LIBRARY:STRING=crypt32
         -DFORCE_MULTILE:BOOL=TRUE
         -DMULTIPLE_OPTION:STRING=/FORCE:MULTIPLE
 )
