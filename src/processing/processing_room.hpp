@@ -6,7 +6,7 @@
 #ifndef GRPC_FOR_SUPERGENIUS_PROCESSING_ROOM
 #define GRPC_FOR_SUPERGENIUS_PROCESSING_ROOM
 
-#include "SGProcessing.pb.h"
+#include <processing/proto/SGProcessing.pb.h>
 
 #include <ipfs_pubsub/gossip_pubsub_topic.hpp>
 

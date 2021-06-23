@@ -1,6 +1,7 @@
 #include "processing_shared_queue.hpp"
 
 #include <numeric>
+#include <sstream>
 
 namespace sgns::processing
 {
@@ -95,7 +96,7 @@ bool SharedQueue::RollbackOwnership()
     // Find the current queue owner
     auto ownerNodeId = m_queue->owner_node_id();
     int ownerNodeIdx = -1;
-    for (int itemIdx = 0; itemIdx < m_queue->items_size(); ++itemIdx)
+    for (int itemIdx = 0; itemIdx < (int)m_queue->items_size(); ++itemIdx)
     {
         if (m_queue->items(itemIdx).lock_node_id() == ownerNodeId)
         {
@@ -177,7 +178,7 @@ bool SharedQueue::UnlockExpiredItems(std::chrono::system_clock::duration expirat
             // @todo replace the result channel with subtask id to identify a subtask that should be unlocked
             if (!m_queue->items(itemIdx).lock_node_id().empty())
             {
-                auto expirationTime = 
+                auto expirationTime =
                     std::chrono::system_clock::time_point(
                         std::chrono::system_clock::duration(m_queue->items(itemIdx).lock_timestamp())) + expirationTimeout;
                 if (timestamp > expirationTime)
@@ -208,7 +209,7 @@ std::chrono::system_clock::time_point SharedQueue::GetLastLockTimestamp() const
         // Check if an item is locked and no result was obtained for it
         if (!m_queue->items(itemIdx).lock_node_id().empty())
         {
-            lastLockTimestamp = std::max(lastLockTimestamp, 
+            lastLockTimestamp = std::max(lastLockTimestamp,
                 std::chrono::system_clock::time_point(
                     std::chrono::system_clock::duration(m_queue->items(itemIdx).lock_timestamp())));
         }

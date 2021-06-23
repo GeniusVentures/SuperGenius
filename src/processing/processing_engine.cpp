@@ -23,7 +23,7 @@ void ProcessingEngine::StartQueueProcessing(std::shared_ptr<ProcessingSubTaskQue
     auto queue = m_subTaskQueue->GetQueueSnapshot();
     if (queue->subtasks_size() > 0)
     {
-        for (size_t subTaskIdx = 0; subTaskIdx < queue->subtasks_size(); ++subTaskIdx)
+        for (size_t subTaskIdx = 0; subTaskIdx < (size_t)queue->subtasks_size(); ++subTaskIdx)
         {
             const auto& subTask = queue->subtasks(subTaskIdx);
             AddResultChannel(subTask.results_channel());
@@ -85,7 +85,7 @@ void ProcessingEngine::OnResultChannelMessage(
     {
         SGProcessing::SubTaskResult result;
         if (result.ParseFromArray(message->data.data(), static_cast<int>(message->data.size())))
-        {           
+        {
             m_logger->debug("[RESULT_RECEIVED]. ({}).", result.ipfs_results_data_id());
             // Results accumulation
             if (m_subTaskQueue)

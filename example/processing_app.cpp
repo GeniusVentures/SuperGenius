@@ -31,14 +31,14 @@ namespace
 
         void  ProcessSubTask(
             const SGProcessing::SubTask& subTask, SGProcessing::SubTaskResult& result,
-            uint32_t initialHashCode) override 
+            uint32_t initialHashCode) override
         {
             std::cout << "SubTask processing started. " << subTask.results_channel() << std::endl;
             std::this_thread::sleep_for(std::chrono::milliseconds(m_subTaskProcessingTime));
             std::cout << "SubTask processed. " << subTask.results_channel() << std::endl;
             result.set_ipfs_results_data_id((boost::format("%s_%s") % "RESULT_IPFS" % subTask.results_channel()).str());
         }
-        
+
     private:
         size_t m_nSubtasks;
         size_t m_subTaskProcessingTime;
@@ -72,7 +72,7 @@ namespace
     };
 
     // cmd line options
-    struct Options 
+    struct Options
     {
         size_t serviceIndex = 0;
         size_t subTaskProcessingTime = 0; // ms
@@ -86,7 +86,7 @@ namespace
 
     boost::optional<Options> parseCommandLine(int argc, char** argv) {
         namespace po = boost::program_options;
-        try 
+        try
         {
             Options o;
             std::string remote;
@@ -105,13 +105,13 @@ namespace
             po::store(parse_command_line(argc, argv, desc), vm);
             po::notify(vm);
 
-            if (vm.count("help") != 0 || argc == 1) 
+            if (vm.count("help") != 0 || argc == 1)
             {
                 std::cerr << desc << "\n";
                 return boost::none;
             }
 
-            if (o.serviceIndex == 0) 
+            if (o.serviceIndex == 0)
             {
                 std::cerr << "Service index should be > 0\n";
                 return boost::none;
@@ -136,7 +136,7 @@ namespace
 
             return o;
         }
-        catch (const std::exception& e) 
+        catch (const std::exception& e)
         {
             std::cerr << e.what() << std::endl;
         }
@@ -164,7 +164,7 @@ int main(int argc, char* argv[])
 
     auto loggerProcessingQueue = libp2p::common::createLogger("ProcessingSubTaskQueue");
     loggerProcessingQueue->set_level(spdlog::level::debug);
-    
+
 
     const std::string processingGridChannel = "GRID_CHANNEL_ID";
 
@@ -241,4 +241,3 @@ int main(int argc, char* argv[])
 
     return 0;
 }
-

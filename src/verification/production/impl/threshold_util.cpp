@@ -24,7 +24,8 @@ namespace sgns::verification {
     using namespace boost::multiprecision;  // NOLINT
     cpp_rational p_rat(1. - pow(1. - c, theta));
     static const auto a = (uint256_t{1} << 128);
-    return Threshold{a * numerator(p_rat) / denominator(p_rat)};
+    cpp_int t = a * numerator(p_rat) / denominator(p_rat);
+    return Threshold{t};
   }
 
 }  // namespace sgns::verification

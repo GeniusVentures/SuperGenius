@@ -26,6 +26,8 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 include(cmake/print.cmake)
 
+print("CMAKE_HOST_SYSTEM_NAME: ${CMAKE_HOST_SYSTEM_NAME}")
+print("CMAKE_SYSTEM_NAME: ${CMAKE_SYSTEM_NAME}")
 print("C flags: ${CMAKE_C_FLAGS}")
 print("CXX flags: ${CMAKE_CXX_FLAGS}")
 print("C Debug flags: ${CMAKE_C_FLAGS_DEBUG}")
@@ -46,8 +48,13 @@ include(CheckCXXCompilerFlag)
 
 find_package(Protobuf CONFIG REQUIRED )
 set(Protobuf_PROTOC_EXECUTABLE ${Protobuf_PROTOC_EXECUTABLE} CACHE PATH "Initial cache" FORCE)
-set_target_properties(protobuf::protoc PROPERTIES
+if(NOT TARGET protobuf::protoc)
+  add_executable(protobuf::protoc IMPORTED)
+endif()
+if(EXISTS "${Protobuf_PROTOC_EXECUTABLE}")
+  set_target_properties(protobuf::protoc PROPERTIES
               IMPORTED_LOCATION ${Protobuf_PROTOC_EXECUTABLE})
+endif()
 
 # protoc definition #####################################################################################
 get_target_property(PROTOC_LOCATION protobuf::protoc IMPORTED_LOCATION)
@@ -86,9 +93,6 @@ endif()
 
 # add_compile_options(-zmuldefs)
 # BOOST library
-set(Boost_USE_STATIC_LIBS ON)
-set(Boost_USE_MULTITHREADED ON)
-set(Boost_USE_STATIC_RUNTIME ON)
 find_package(Boost REQUIRED COMPONENTS date_time filesystem random regex system thread log log_setup program_options) # header only libraries must not be added here
 
 include_directories(

@@ -6,7 +6,7 @@
 #ifndef SUPERGENIUS_PROCESSING_SHARED_QUEUE_HPP
 #define SUPERGENIUS_PROCESSING_SHARED_QUEUE_HPP
 
-#include "SGProcessing.pb.h"
+#include <processing/proto/SGProcessing.pb.h>
 #include <libp2p/common/logger.hpp>
 
 namespace sgns::processing
@@ -50,7 +50,7 @@ public:
     * @param queue - the queue snapshot
     */
     bool UpdateQueue(SGProcessing::ProcessingQueue* queue);
-    
+
     /** Unlocks expired queue items
     * @param expirationTimeout - timeout applied to detect expired items
     * @return true if at least one item was unlocked

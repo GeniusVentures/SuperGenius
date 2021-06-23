@@ -96,7 +96,7 @@ void ProcessingSubTaskQueue::ProcessPendingSubTaskGrabbing()
 
     if (!m_onSubTaskGrabbedCallbacks.empty())
     {
-        if (m_results.size() < m_queue->processing_queue().items_size())
+        if (m_results.size() <(size_t)m_queue->processing_queue().items_size())
         {
             // Wait for subtasks are processed
             auto timestamp = std::chrono::system_clock::now();
@@ -104,7 +104,7 @@ void ProcessingSubTaskQueue::ProcessPendingSubTaskGrabbing()
             auto lastExpirationTime = lastLockTimestamp + m_processingTimeout;
 
             std::chrono::milliseconds grabSubTaskTimeout =
-                (lastExpirationTime > timestamp) 
+                (lastExpirationTime > timestamp)
                 ? std::chrono::duration_cast<std::chrono::milliseconds>(lastExpirationTime - timestamp)
                 : std::chrono::milliseconds(1);
 
@@ -137,7 +137,7 @@ void ProcessingSubTaskQueue::HandleGrabSubTaskTimeout(const boost::system::error
         m_dltGrabSubTaskTimeout.expires_at(boost::posix_time::pos_infin);
         m_logger->debug("HANDLE_GRAB_TIMEOUT");
         if (!m_onSubTaskGrabbedCallbacks.empty()
-            && (m_results.size() < m_queue->processing_queue().items_size()))
+            && (m_results.size() < (size_t)m_queue->processing_queue().items_size()))
         {
             GrabSubTasks();
         }

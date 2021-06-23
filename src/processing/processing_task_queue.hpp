@@ -6,7 +6,7 @@
 #ifndef GRPC_FOR_SUPERGENIUS_PROCESSING_TASK_QUEUE_HPP
 #define GRPC_FOR_SUPERGENIUS_PROCESSING_TASK_QUEUE_HPP
 
-#include "SGProcessing.pb.h"
+#include <processing/proto/SGProcessing.pb.h>
 
 class ProcessingTaksQueue
 {

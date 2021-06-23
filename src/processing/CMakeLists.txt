@@ -8,31 +8,18 @@ add_library(processing_service
     )
 
 
-message("${CMAKE_CURRENT_SOURCE_DIR}/proto/SGProcessing.proto")
-
-set(PROTO_SRC_DIR ${CMAKE_CURRENT_BINARY_DIR}/proto)
-file(MAKE_DIRECTORY ${PROTO_SRC_DIR})
-
-# Generating of C++ code from .proto
-protobuf_generate(
-    LANGUAGE cpp
-    TARGET processing_service
-    PROTOS "${CMAKE_CURRENT_SOURCE_DIR}/proto/SGProcessing.proto"
-    IMPORT_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/proto"
-    PROTOC_OUT_DIR "${PROTO_SRC_DIR}"
-    OUT_VAR _PROTOC_RESULT
-    )
-
+add_proto_library(SGProcessingProto proto/SGProcessing.proto)
 
 target_include_directories(processing_service PRIVATE ${GSL_INCLUDE_DIR})
 
-target_include_directories(processing_service 
+target_include_directories(processing_service
     PUBLIC $<BUILD_INTERFACE:${PROTO_SRC_DIR}>
    "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
 )
 
 target_link_libraries(processing_service
     ipfs-pubsub
+    SGProcessingProto
     OpenSSL::Crypto
     OpenSSL::SSL
     Boost::Boost.DI

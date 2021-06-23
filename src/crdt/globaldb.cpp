@@ -50,8 +50,8 @@ namespace sgns::crdt
           {
             if (message)
             {
-              std::string message(reinterpret_cast<const char*>(message->data.data()), message->data.size());
-              this->listOfMessages_.push(std::move(message));
+              std::string strMessage(reinterpret_cast<const char*>(message->data.data()), message->data.size());
+              this->listOfMessages_.push(std::move(strMessage));
             }
           });
       }

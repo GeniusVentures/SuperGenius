@@ -5,8 +5,8 @@
 #ifndef GRPC_FOR_SUPERGENIUS_PROCESSING_CORE_HPP
 #define GRPC_FOR_SUPERGENIUS_PROCESSING_CORE_HPP
 
-#include "SGProcessing.pb.h"
-
+#include <processing/proto/SGProcessing.pb.h>
+#include <list>
 /**
 * Processing core interface.
 * An implementatin of the interface depends on specific processing algorithm
