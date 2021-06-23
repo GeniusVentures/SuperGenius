@@ -120,6 +120,9 @@ You can use Debug configuration to debug in Visual Studio.
 ○ make -j4
 ```
 # Build on OSX for iOS cross compile 
+* Note: Temporarily turned off compiling executables due to architecture error:   
+building for iOS Simulator, but linking in .tbd built for iOS, file '/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS14.2.sdk/usr/lib/libc++.tbd' for architecture arm64
+
 ```
 ○ cd SuperGenius 
 ○ mkdir .build/iOS 
