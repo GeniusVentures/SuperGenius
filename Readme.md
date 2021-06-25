@@ -120,13 +120,11 @@ You can use Debug configuration to debug in Visual Studio.
 ○ make -j4
 ```
 # Build on OSX for iOS cross compile 
-* Note: Temporarily turned off compiling executables due to architecture error:   
-building for iOS Simulator, but linking in .tbd built for iOS, file '/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS14.2.sdk/usr/lib/libc++.tbd' for architecture arm64
 
 ```
 ○ cd SuperGenius 
 ○ mkdir .build/iOS 
 ○ cd .build/iOS
-○ cmake ../../build/iOS -DCMAKE_BUILD_TYPE=Release -DTHIRDPARTY_DIR=[ABSOLUTE_PATH_TO_THIRDPARTY_BUILD_RELEASE] -DCMAKE_TOOLCHAIN_FILE=[/ABSOLUTE/PATH/TO/GeniusTokens/SuperGenius/build/iOS/iOS.cmake] -DiOS_ABI=arm64-v8a -DIOS_PLATFORM=OS64 -DIOS_ARCH="arm64" -DENABLE_ARC=0 -DENABLE_BITCODE=0 -DENABLE_VISIBILITY=1  -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_SYSTEM_PROCESSOR=arm64
+○ cmake ../../build/iOS -DCMAKE_BUILD_TYPE=Release -DTHIRDPARTY_DIR=[ABSOLUTE_PATH_TO_THIRDPARTY_BUILD_RELEASE] -DCMAKE_TOOLCHAIN_FILE=[/ABSOLUTE/PATH/TO/GeniusTokens/SuperGenius/build/iOS/iOS.cmake] -DiOS_ABI=arm64-v8a -DIOS_ARCH="arm64" -DENABLE_ARC=0 -DENABLE_BITCODE=0 -DENABLE_VISIBILITY=1  -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_SYSTEM_PROCESSOR=arm64
 ○ make -j4
 ```
