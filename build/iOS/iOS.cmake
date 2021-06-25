@@ -244,6 +244,7 @@ if (NOT EXISTS ${CMAKE_IOS_DEVELOPER_ROOT})
   message(FATAL_ERROR "Invalid CMAKE_IOS_DEVELOPER_ROOT: "
     "${CMAKE_IOS_DEVELOPER_ROOT} does not exist.")
 endif()
+message(STATUS "Using SDK: ${CMAKE_OSX_SYSROOT} for platform: ${IOS_PLATFORM}")
 # Find the C & C++ compilers for the specified SDK.
 if (NOT CMAKE_C_COMPILER)
   execute_process(COMMAND xcrun -sdk ${CMAKE_OSX_SYSROOT} -find clang

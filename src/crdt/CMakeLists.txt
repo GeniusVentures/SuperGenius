@@ -68,8 +68,6 @@ target_link_libraries(graphsync_dagsyncer
 	ipfs-lite-cpp::ipfs_merkledag_service
     )
 
-# TODO: Unable to link it for iOS
-if (NOT ${CMAKE_SYSTEM_NAME} MATCHES "iOS")
 add_executable(globaldb globaldb.cpp)
 target_link_libraries(globaldb
     crdt_datastore
@@ -93,4 +91,3 @@ target_link_libraries(echoClient
     Boost::program_options
     ${WIN_CRYPT_LIBRARY}
     )
-endif()

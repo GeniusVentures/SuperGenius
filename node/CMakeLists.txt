@@ -1,6 +1,4 @@
 
-# TODO: Unable to link it for iOS
-if (NOT ${CMAKE_SYSTEM_NAME} MATCHES "iOS")
 add_executable (sgns_node
     entry.cpp
     app_delegate.cpp
@@ -31,5 +29,4 @@ add_executable (sgns_node
   set_target_properties(sgns_node PROPERTIES LINK_FLAGS ${MULTIPLE_OPTION})
   endif()
 
-  install(TARGETS sgns_node)
-endif()
+  supergenius_install(sgns_node)
