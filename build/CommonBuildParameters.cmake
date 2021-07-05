@@ -16,7 +16,7 @@ if (${CMAKE_SYSTEM_NAME} STREQUAL "iOS")
     set(Protobuf_LIBRARIES "${iOS_Protobuf_LIBRARIES}")
 endif()
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
-    # TODO: Check grpc install on Windows 
+    # TODO: Check grpc install on Windows
     set(Protobuf_DIR  "${_THIRDPARTY_BUILD_DIR}/grpc/build/third_party/protobuf/cmake")
     set(Protobuf_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/grpc/build/third_party/protobuf/include/google/protobuf")
 endif()
@@ -48,7 +48,7 @@ include(${PROJECT_ROOT}/cmake/functions.cmake)
 
 
 # --------------------------------------------------------
-# Set config of openssl project 
+# Set config of openssl project
 set(OPENSSL_DIR "${_THIRDPARTY_BUILD_DIR}/openssl/build/${CMAKE_SYSTEM_NAME}${ABI_SUBFOLDER_NAME}")
 set(OPENSSL_USE_STATIC_LIBS ON)
 set(OPENSSL_MSVC_STATIC_RT ON)
@@ -124,7 +124,6 @@ include_directories(${Boost.DI_INCLUDE_DIR})
 # Set config of Boost project
 set(_BOOST_ROOT "${_THIRDPARTY_BUILD_DIR}/boost/build/${CMAKE_SYSTEM_NAME}${ABI_SUBFOLDER_NAME}")
 set(Boost_LIB_DIR "${_BOOST_ROOT}/lib")
-set(Boost_INCLUDE_DIR "${_BOOST_ROOT}/include/boost-1_72")
 set(Boost_DIR "${Boost_LIB_DIR}/cmake/Boost-1.72.0")
 set(boost_headers_DIR "${Boost_LIB_DIR}/cmake/boost_headers-1.72.0")
 set(boost_random_DIR "${Boost_LIB_DIR}/cmake/boost_random-1.72.0")
@@ -145,7 +144,7 @@ set(Boost_USE_STATIC_RUNTIME ON)
 if (${CMAKE_SYSTEM_NAME} STREQUAL "iOS")
     set(Boost_USE_STATIC_RUNTIME OFF)
 endif()
-      
+
 option (SGNS_STACKTRACE_BACKTRACE "Use BOOST_STACKTRACE_USE_BACKTRACE in stacktraces, for POSIX" OFF)
 if (SGNS_STACKTRACE_BACKTRACE)
 	add_definitions(-DSGNS_STACKTRACE_BACKTRACE=1)
@@ -155,18 +154,18 @@ if (SGNS_STACKTRACE_BACKTRACE)
 endif ()
 
 # header only libraries must not be added here
-find_package(Boost REQUIRED COMPONENTS date_time filesystem random regex system thread log log_setup program_options) 
+find_package(Boost REQUIRED COMPONENTS date_time filesystem random regex system thread log log_setup program_options)
 include_directories(${Boost_INCLUDE_DIR})
 
 # --------------------------------------------------------
-# Set config of ed25519 
+# Set config of ed25519
 set(ed25519_DIR "${_THIRDPARTY_BUILD_DIR}/ed25519/lib/cmake/ed25519")
 set(ed25519_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/ed25519/include")
 find_package(ed25519 CONFIG REQUIRED)
 include_directories(${ed25519_INCLUDE_DIR})
 
 # --------------------------------------------------------
-# Set config of sr25519-donna 
+# Set config of sr25519-donna
 set(sr25519-donna_DIR "${_THIRDPARTY_BUILD_DIR}/sr25519-donna/lib/cmake/sr25519-donna")
 set(sr25519-donna_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/sr25519-donna/include")
 find_package(sr25519-donna CONFIG REQUIRED)
@@ -250,8 +249,3 @@ endif ()
 if (BUILD_EXAMPLES)
     add_subdirectory(${PROJECT_ROOT}/example ${CMAKE_BINARY_DIR}/example)
 endif ()
-
-
-
-
-

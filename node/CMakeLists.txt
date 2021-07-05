@@ -26,7 +26,7 @@ add_executable (sgns_node
       ${WIN_CRYPT_LIBRARY}
       )
   if(FORCE_MULTILE)
-  set_target_properties(sgns_node PROPERTIES LINK_FLAGS ${MULTIPLE_OPTION})
+    set_target_properties(sgns_node PROPERTIES LINK_FLAGS ${MULTIPLE_OPTION})
   endif()
 
   supergenius_install(sgns_node)

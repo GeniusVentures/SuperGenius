@@ -2,8 +2,8 @@
 addtest(crdt_test
     crdt_hierarchical_key_test.cpp
 	crdt_set_test.cpp
-	crdt_heads_test.cpp 
-    crdt_datastore_test.cpp 
+	crdt_heads_test.cpp
+    crdt_datastore_test.cpp
     )
 target_link_libraries(crdt_test
     crdt_datastore
@@ -18,4 +18,6 @@ target_link_libraries(crdt_test
 	Boost::boost
 	Boost::filesystem
     )
-set_target_properties(crdt_test PROPERTIES LINK_FLAGS "/FORCE:MULTIPLE")
+if(FORCE_MULTILE)
+  set_target_properties(crdt_test PROPERTIES LINK_FLAGS "${MULTIPLE_OPTION}")
+endif()

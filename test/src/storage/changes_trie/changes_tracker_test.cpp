@@ -46,7 +46,7 @@ using testing::Return;
     return s;
   }
   std::ostream &operator<<(std::ostream &s,
-                           const outcome::result<unsigned __int64> &data) {
+                           const outcome::result<uint64_t> &data) {
     return s;
   }
 /**

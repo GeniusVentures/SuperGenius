@@ -66,7 +66,7 @@ namespace sgns::primitives {
   {
     return out ;
   }
-  std::ostream &operator<<(std::ostream &out, const std::chrono::time_point<struct std::chrono::system_clock,class std::chrono::duration<__int64,struct std::ratio<1,10000000> > > &test_struct)
+  std::ostream &operator<<(std::ostream &out, const std::chrono::time_point<struct std::chrono::system_clock,class std::chrono::duration<int64_t,struct std::ratio<1,10000000> > > &test_struct)
   {
     return out ;
   }
@@ -167,7 +167,7 @@ namespace sgns::primitives {
   {
     return out ;
   }
-  
+
 }  // namespace sgns::primitives
 
 class ProductionTest : public testing::Test {

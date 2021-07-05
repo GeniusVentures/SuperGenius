@@ -47,7 +47,7 @@ std::ostream &operator<<(std::ostream &s,
   return s;
 }
 std::ostream &operator<<(std::ostream &s,
-                        const outcome::result<unsigned __int64> &test_struct) {
+                        const outcome::result<uint64_t> &test_struct) {
   return s;
 }
 std::ostream &operator<<(std::ostream &s,

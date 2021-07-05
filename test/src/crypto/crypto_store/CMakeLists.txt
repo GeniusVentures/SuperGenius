@@ -10,7 +10,10 @@ addtest(crypto_store_test
     crypto_store_test.cpp
     )
 
-set_target_properties(crypto_store_test PROPERTIES LINK_FLAGS "/FORCE:MULTIPLE")
+if(FORCE_MULTILE)
+  set_target_properties(crypto_store_test PROPERTIES LINK_FLAGS "${MULTIPLE_OPTION}")
+endif()
+  
 target_link_libraries(crypto_store_test
     ${USER_ENV_LIBRARY}
     ${WIN_SOCK_LIBRARY}
@@ -18,4 +21,3 @@ target_link_libraries(crypto_store_test
     crypto_store
     base_fs_test
     )
-

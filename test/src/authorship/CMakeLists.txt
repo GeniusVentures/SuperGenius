@@ -8,7 +8,9 @@ target_link_libraries(block_builder_test
     blob
     )
 
-set_target_properties(block_builder_test PROPERTIES LINK_FLAGS "/FORCE:MULTIPLE")
+if(FORCE_MULTILE)
+  set_target_properties(block_builder_test PROPERTIES LINK_FLAGS "${MULTIPLE_OPTION}")
+endif()
 
 addtest(block_builder_factory_test
     block_builder_factory_test.cpp
@@ -17,15 +19,16 @@ addtest(block_builder_factory_test
 target_link_libraries(block_builder_factory_test
     block_builder_factory
     )
-
-set_target_properties(block_builder_factory_test PROPERTIES LINK_FLAGS "/FORCE:MULTIPLE")
+if(FORCE_MULTILE)
+  set_target_properties(block_builder_factory_test PROPERTIES LINK_FLAGS "${MULTIPLE_OPTION}")
+endif()
 
 #addtest(proposer_test
 #    proposer_test.cpp
 #    )
-
 #target_link_libraries(proposer_test
 #    proposer
 #    )
-
-#set_target_properties(proposer_test PROPERTIES LINK_FLAGS "/FORCE:MULTIPLE")
+#if(FORCE_MULTILE)
+#  set_target_properties(proposer_test PROPERTIES LINK_FLAGS "${MULTIPLE_OPTION}")
+#endif()

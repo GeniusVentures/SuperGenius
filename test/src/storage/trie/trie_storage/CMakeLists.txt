@@ -12,7 +12,9 @@ addtest(supergenius_trie_storage_test
 
 #target_compile_options (supergenius_trie_storage_test PRIVATE /wd4251 /wd4101)
 
-set_target_properties(supergenius_trie_storage_test  PROPERTIES LINK_FLAGS "/FORCE:MULTIPLE")
+if(FORCE_MULTILE)
+  set_target_properties(supergenius_trie_storage_test  PROPERTIES LINK_FLAGS "${MULTIPLE_OPTION}")
+endif()
 
 target_link_libraries(supergenius_trie_storage_test
     trie_storage
@@ -35,9 +37,5 @@ target_link_libraries(trie_storage_backend_test
     trie_storage_backend
     blob
     buffer
-    in_memory_storage     
+    in_memory_storage
     )
-
-
-
-

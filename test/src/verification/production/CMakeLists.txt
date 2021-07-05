@@ -10,7 +10,9 @@ target_link_libraries(production_test
     sr25519_provider
     ${USER_ENV_LIBRARY}
     )
-set_target_properties(production_test PROPERTIES LINK_FLAGS "/FORCE:MULTIPLE")
+if(FORCE_MULTILE)
+  set_target_properties(production_test PROPERTIES LINK_FLAGS "${MULTIPLE_OPTION}")
+endif()
 
 addtest(threshold_util_test
     threshold_util_test.cpp
