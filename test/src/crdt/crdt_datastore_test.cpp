@@ -10,7 +10,7 @@
 #include <string>
 #include <boost/asio/error.hpp>
 #include <thread>
-#include <proto/bcast.pb.h>
+#include <crdt/proto/bcast.pb.h>
 
 namespace sgns::crdt
 {

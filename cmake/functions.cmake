@@ -50,6 +50,7 @@ function(compile_proto_to_cpp PB_H PB_CC PROTO)
   endif ()
 
   get_filename_component(PROTO_ABS "${PROTO}" REALPATH)
+  
   # get relative (to CMAKE_BINARY_DIR) path of current proto file
   file(RELATIVE_PATH SCHEMA_REL "${CMAKE_BINARY_DIR}/src" "${CMAKE_CURRENT_BINARY_DIR}")
   set(SCHEMA_OUT_DIR ${CMAKE_BINARY_DIR}/generated)
@@ -60,11 +61,11 @@ function(compile_proto_to_cpp PB_H PB_CC PROTO)
 
   set(GEN_COMMAND ${Protobuf_PROTOC_EXECUTABLE})
   set(GEN_ARGS ${Protobuf_INCLUDE_DIR})
-
+  
   add_custom_command(
       OUTPUT ${SCHEMA_OUT_DIR}/${SCHEMA_REL}/${GEN_PB_HEADER} ${SCHEMA_OUT_DIR}/${SCHEMA_REL}/${GEN_PB}
       COMMAND ${GEN_COMMAND}
-      ARGS -I${PROJECT_SOURCE_DIR}/src -I${GEN_ARGS} --cpp_out=${SCHEMA_OUT_DIR} ${PROTO_ABS}
+      ARGS -I${PROJECT_ROOT}/src -I${GEN_ARGS} --cpp_out=${SCHEMA_OUT_DIR} ${PROTO_ABS}
       WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
       DEPENDS protobuf::protoc
       VERBATIM
@@ -74,9 +75,11 @@ function(compile_proto_to_cpp PB_H PB_CC PROTO)
   set(${PB_CC} ${SCHEMA_OUT_DIR}/${SCHEMA_REL}/${GEN_PB} PARENT_SCOPE)
 endfunction()
 
+if(NOT TARGET generated)
 add_custom_target(generated
     COMMENT "Building generated files..."
     )
+endif()
 
 function(add_proto_library NAME)
   set(SOURCES "")
@@ -105,4 +108,8 @@ function(add_flag flag)
   if (FLAG_${flag} EQUAL 1)
     add_compile_options(${flag})
   endif ()
+endfunction()
+
+function(print)
+  message(STATUS "[${CMAKE_PROJECT_NAME}] ${ARGV}")
 endfunction()
