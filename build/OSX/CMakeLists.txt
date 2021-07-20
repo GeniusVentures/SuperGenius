@@ -11,7 +11,7 @@ endif()
 project(SuperGenius C CXX)
 
 # --------------------------------------------------------
-# include common compiler options 
+# include common compiler options
 include(../CommonCompilerOptions.CMake)
 
 # --------------------------------------------------------
@@ -19,7 +19,7 @@ include(../CommonCompilerOptions.CMake)
 set(CMAKE_TOOLCHAIN_FILE "${PROJECT_ROOT}/cmake/toolchain/cxx17.cmake")
 
 # --------------------------------------------------------
-# Set OS threading settings 
+# Set OS threading settings
 set(CMAKE_THREAD_LIBS_INIT "-lpthread")
 set(CMAKE_HAVE_THREADS_LIBRARY ON)
 set(CMAKE_USE_WIN32_THREADS_INIT OFF)
@@ -35,11 +35,12 @@ set(MULTIPLE_OPTION "-Xlink=-force:multiple")
 # Set extra compiler flags
 set(EXTRA_CXX_FLAGS)
 
+set(TESTING OFF)
+
 # --------------------------------------------------------
 # Set custom subfolder for ABI
-set(ABI_SUBFOLDER_NAME "") 
+set(ABI_SUBFOLDER_NAME "")
 
 # --------------------------------------------------------
 # Include common build parameters
 include(../CommonBuildParameters.cmake)
-
