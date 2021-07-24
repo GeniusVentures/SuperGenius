@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.15)
 
 # --------------------------------------------------------
 # if on OSX Darwin system, build the iOS executables
@@ -15,18 +15,18 @@ if(POLICY CMP0042)
   cmake_policy(SET CMP0042 NEW)
 endif()
 
-set(IOS_DEPLOYMENT_TARGET 10.12)
+set(IOS_DEPLOYMENT_TARGET 12.0)
 
 # --------------------------------------------------------
 # Project
 project(SuperGenius C CXX)
 
 # --------------------------------------------------------
-# include common compiler options 
+# include common compiler options
 include(../CommonCompilerOptions.CMake)
 
 # --------------------------------------------------------
-# Set cross compiling settings 
+# Set cross compiling settings
 set(CMAKE_SYSTEM_NAME "iOS")
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM "BOTH")
 set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
@@ -36,7 +36,7 @@ set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 set(CMAKE_TOOLCHAIN_FILE "${CMAKE_CURRENT_SOURCE_DIR}/iOS.cmake")
 
 # --------------------------------------------------------
-# Check required input args 
+# Check required input args
 if(NOT CMAKE_TOOLCHAIN_FILE)
 	message(FATAL_ERROR "Cannot find CMAKE_TOOLCHAIN_FILE, make sure you pass -DCMAKE_TOOLCHAIN_FILE=[arm64]")
 endif()
@@ -74,7 +74,7 @@ set(iOS_Protobuf_INCLUDE_DIR "${THIRDPARTY_DIR}/protobuf/include/google/protobuf
 set(iOS_Protobuf_LIBRARIES "${THIRDPARTY_DIR}/protobuf/lib")
 
 # --------------------------------------------------------
-# Set OS threading settings 
+# Set OS threading settings
 set(CMAKE_THREAD_LIBS_INIT "-lpthread")
 set(CMAKE_HAVE_THREADS_LIBRARY ON)
 set(CMAKE_USE_WIN32_THREADS_INIT OFF)
@@ -92,7 +92,9 @@ set(EXTRA_CXX_FLAGS -std=c++17)
 
 # --------------------------------------------------------
 # Set custom subfolder for ABI
-set(ABI_SUBFOLDER_NAME "/${iOS_ABI}") 
+set(ABI_SUBFOLDER_NAME "/${iOS_ABI}")
+
+set(TESTING OFF)
 
 # --------------------------------------------------------
 # Include common build paramaeters
