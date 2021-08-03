@@ -3,6 +3,7 @@
 add_library(crypto_store_key_type
     key_type.cpp
     )
+set_target_properties(crypto_store_key_type PROPERTIES PUBLIC_HEADER "key_type.hpp")
 target_link_libraries(crypto_store_key_type
     Boost::boost
     )
@@ -11,6 +12,7 @@ supergenius_install(crypto_store_key_type)
 add_library(crypto_store
     crypto_store_impl.cpp
     )
+set_target_properties(crypto_store PROPERTIES PUBLIC_HEADER "crypto_store_impl.hpp")
 target_link_libraries(crypto_store
     Boost::filesystem
     ed25519_provider

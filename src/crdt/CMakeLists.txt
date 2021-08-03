@@ -6,16 +6,16 @@ add_library(hierarchical_key
 target_link_libraries(hierarchical_key
     Boost::boost
     )
+set_target_properties(hierarchical_key PROPERTIES PUBLIC_HEADER "hierarchical_key.hpp")
 supergenius_install(hierarchical_key)
 
 add_proto_library(crdt_delta proto/delta.proto)
 add_proto_library(crdt_bcast proto/bcast.proto)
-
 add_library(crdt_set
 	crdt_set.hpp
 	impl/crdt_set.cpp
     )
-target_include_directories(crdt_set PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
+set_target_properties(crdt_set PROPERTIES PUBLIC_HEADER "crdt_set.hpp")
 target_link_libraries(crdt_set
   Boost::boost
 	buffer
@@ -29,19 +29,21 @@ add_library(crdt_heads
 	crdt_heads.hpp
 	impl/crdt_heads.cpp
     )
+set_target_properties(crdt_heads PROPERTIES PUBLIC_HEADER "crdt_heads.hpp")
 target_link_libraries(crdt_heads
   Boost::boost
 	buffer
 	hierarchical_key
 	rocksdb
   )
+supergenius_install(crdt_heads)
 
 add_library(crdt_datastore
 	crdt_options.hpp
   crdt_datastore.hpp
 	impl/crdt_datastore.cpp
   )
-target_include_directories(crdt_datastore PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
+set_target_properties(crdt_datastore PROPERTIES PUBLIC_HEADER "crdt_options.hpp;crdt_datastore.hpp")
 target_link_libraries(crdt_datastore
   Boost::boost
 	buffer
@@ -60,6 +62,7 @@ add_library(graphsync_dagsyncer
 	graphsync_dagsyncer.hpp
 	impl/graphsync_dagsyncer.cpp
     )
+set_target_properties(graphsync_dagsyncer PROPERTIES PUBLIC_HEADER "dagsyncer.hpp;graphsync_dagsyncer.hpp")
 target_link_libraries(graphsync_dagsyncer
     Boost::boost
     ipfs-lite-cpp::graphsync
@@ -67,6 +70,7 @@ target_link_libraries(graphsync_dagsyncer
     ipfs-lite-cpp::ipld_node
 	ipfs-lite-cpp::ipfs_merkledag_service
     )
+supergenius_install(graphsync_dagsyncer)
 
 add_executable(globaldb globaldb.cpp)
 target_link_libraries(globaldb
@@ -80,6 +84,7 @@ target_link_libraries(globaldb
     p2p::p2p_protocol_echo
     ${WIN_CRYPT_LIBRARY}
     )
+supergenius_install(globaldb)
 
 add_executable(echoClient echo_client.cpp)
 target_link_libraries(echoClient

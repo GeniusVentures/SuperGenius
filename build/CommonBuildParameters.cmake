@@ -248,3 +248,36 @@ endif ()
 if (BUILD_EXAMPLES)
     add_subdirectory(${PROJECT_ROOT}/example ${CMAKE_BINARY_DIR}/example)
 endif ()
+
+install(
+  EXPORT supergeniusTargets
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/SuperGenius
+  NAMESPACE sgns::
+)
+
+# generate the config file that is includes the exports
+configure_package_config_file(${PROJECT_ROOT}/cmake/config.cmake.in
+  "${CMAKE_CURRENT_BINARY_DIR}/SuperGeniusConfig.cmake"
+  INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/SuperGenius
+  NO_SET_AND_CHECK_MACRO
+  NO_CHECK_REQUIRED_COMPONENTS_MACRO
+)
+
+# generate the version file for the config file
+write_basic_package_version_file(
+  "${CMAKE_CURRENT_BINARY_DIR}/SuperGeniusConfigVersion.cmake"
+  VERSION "${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}"
+  COMPATIBILITY AnyNewerVersion
+)
+
+# install the configuration file
+# install the configuration file
+install(FILES
+  ${CMAKE_CURRENT_BINARY_DIR}/SuperGeniusConfig.cmake
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/SuperGenius
+)
+
+install(FILES
+  ${CMAKE_CURRENT_BINARY_DIR}/SuperGeniusConfigVersion.cmake
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/SuperGenius
+)
