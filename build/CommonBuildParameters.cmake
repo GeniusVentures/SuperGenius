@@ -122,7 +122,7 @@ include_directories(${Boost.DI_INCLUDE_DIR})
 # Set config of Boost project
 set(_BOOST_ROOT "${_THIRDPARTY_BUILD_DIR}/boost/build/${CMAKE_SYSTEM_NAME}${ABI_SUBFOLDER_NAME}")
 set(Boost_LIB_DIR "${_BOOST_ROOT}/lib")
-set(Boost_INCLUDE_DIR "${_BOOST_ROOT}/include")
+set(Boost_INCLUDE_DIR "${_BOOST_ROOT}/include/boost-1_72")
 set(Boost_DIR "${Boost_LIB_DIR}/cmake/Boost-1.72.0")
 set(boost_headers_DIR "${Boost_LIB_DIR}/cmake/boost_headers-1.72.0")
 set(boost_random_DIR "${Boost_LIB_DIR}/cmake/boost_random-1.72.0")
