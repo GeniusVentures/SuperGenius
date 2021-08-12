@@ -81,16 +81,16 @@ namespace sgns::crdt
     LOG_INFO("crdt Datastore created. Number of heads: " << numberOfHeads << " Current max-height: " << maxHeight);
 
     // Starting HandleNext worker thread
-    this->handleNextFuture_ = std::async(&CrdtDatastore::HandleNext, this);
+    this->handleNextFuture_ = std::async(std::bind(&CrdtDatastore::HandleNext, this));
 
     // Starting Rebroadcast worker thread
-    this->rebroadcastFuture_ = std::async(&CrdtDatastore::Rebroadcast, this);
+    this->rebroadcastFuture_ = std::async(std::bind(&CrdtDatastore::Rebroadcast, this));
 
     // Starting DAG worker threads 
     for (int i = 0; i < numberOfDagWorkers; ++i)
     {
       auto dagWorker = std::make_shared<DagWorker>();
-      dagWorker->dagWorkerFuture_ = std::async(&CrdtDatastore::SendJobWorker, this, dagWorker);
+      dagWorker->dagWorkerFuture_ = std::async(std::bind(&CrdtDatastore::SendJobWorker, this, dagWorker));
       this->dagWorkers_.push_back(dagWorker);
     }
   }
@@ -161,42 +161,37 @@ namespace sgns::crdt
 
   }
 
-  // static
-  void CrdtDatastore::HandleNext(CrdtDatastore* aCrdtDatastore)
+  void CrdtDatastore::HandleNext()
   {
-    if (aCrdtDatastore == nullptr)
-    {
-      return;
-    }
-
-    if (aCrdtDatastore->broadcaster_ == nullptr)
+  
+    if (broadcaster_ == nullptr)
     {
       // offline
       return;
     }
 
-    aCrdtDatastore->handleNextThreadRunning_ = true;
+    handleNextThreadRunning_ = true;
 
-    aCrdtDatastore->LogDebug("HandleNext thread started");
-    while (aCrdtDatastore->handleNextThreadRunning_)
+    LogDebug("HandleNext thread started");
+    while (handleNextThreadRunning_)
     {
       std::this_thread::sleep_for(threadSleepTimeInMilliseconds_);
 
-      auto broadcasterNextResult = aCrdtDatastore->broadcaster_->Next();
+      auto broadcasterNextResult = broadcaster_->Next();
       if (broadcasterNextResult.has_failure())
       {
         if (broadcasterNextResult.error().value() != (int)Broadcaster::ErrorCode::ErrNoMoreBroadcast)
         {
-          aCrdtDatastore->LogDebug("Failed to get next broadcaster (error code " + 
+          LogDebug("Failed to get next broadcaster (error code " + 
             std::to_string(broadcasterNextResult.error().value()) + ")");
         }
         continue;
       }
 
-      auto decodeResult = aCrdtDatastore->DecodeBroadcast(broadcasterNextResult.value());
+      auto decodeResult = DecodeBroadcast(broadcasterNextResult.value());
       if (decodeResult.has_failure())
       {
-        aCrdtDatastore->LogError("Broadcaster: Unable to decode broadcast (error code " + 
+        LogError("Broadcaster: Unable to decode broadcast (error code " + 
           std::to_string(broadcasterNextResult.error().value()) + ")");
         continue;
       }
@@ -204,15 +199,15 @@ namespace sgns::crdt
       // For each head, we process it.
       for (const auto& bCastHeadCID : decodeResult.value())
       {
-        auto handleBlockResult = aCrdtDatastore->HandleBlock(bCastHeadCID);
+        auto handleBlockResult = HandleBlock(bCastHeadCID);
         if (handleBlockResult.has_failure())
         {
-          aCrdtDatastore->LogError("Broadcaster: Unable to handle block (error code " + 
+          LogError("Broadcaster: Unable to handle block (error code " + 
             std::to_string(handleBlockResult.error().value()) + ")");
           continue;
         }
-        std::unique_lock lock(aCrdtDatastore->seenHeadsMutex_);
-        aCrdtDatastore->seenHeads_.push_back(bCastHeadCID);
+        std::unique_lock lock(seenHeadsMutex_);
+        seenHeads_.push_back(bCastHeadCID);
       }
 
       // We should store trusted-peer signatures associated to
@@ -222,48 +217,41 @@ namespace sgns::crdt
       // received CIDs have been issued by a trusted peer.
     }
 
-    aCrdtDatastore->LogDebug("HandleNext thread finished");
+    LogDebug("HandleNext thread finished");
   }
 
-  // static
-  void CrdtDatastore::Rebroadcast(CrdtDatastore* aCrdtDatastore)
+  void CrdtDatastore::Rebroadcast()
   {
-    if (aCrdtDatastore == nullptr)
-    {
-      return;
-    }
-
-    aCrdtDatastore->LogDebug("Rebroadcast thread started");
+    LogDebug("Rebroadcast thread started");
     std::chrono::milliseconds rebroadcastIntervalMilliseconds = std::chrono::milliseconds(threadSleepTimeInMilliseconds_);
-    if (aCrdtDatastore->options_ != nullptr)
+    if (options_ != nullptr)
     {
-      rebroadcastIntervalMilliseconds = std::chrono::milliseconds (aCrdtDatastore->options_->rebroadcastIntervalMilliseconds);
+      rebroadcastIntervalMilliseconds = std::chrono::milliseconds(options_->rebroadcastIntervalMilliseconds);
     }
 
     std::chrono::milliseconds elapsedTimeMilliseconds = std::chrono::milliseconds(0);
-    aCrdtDatastore->rebroadcastThreadRunning_ = true;
-    while (aCrdtDatastore->rebroadcastThreadRunning_)
+    rebroadcastThreadRunning_ = true;
+    while (rebroadcastThreadRunning_)
     {
       if (elapsedTimeMilliseconds >= rebroadcastIntervalMilliseconds)
       {
-        aCrdtDatastore->RebroadcastHeads();
+        RebroadcastHeads();
         elapsedTimeMilliseconds = std::chrono::milliseconds(0);
       }
       std::this_thread::sleep_for(threadSleepTimeInMilliseconds_);
       elapsedTimeMilliseconds += threadSleepTimeInMilliseconds_;
     }
-    aCrdtDatastore->LogDebug("Rebroadcast thread finished");
+    LogDebug("Rebroadcast thread finished");
   }
 
-  //static
-  void CrdtDatastore::SendJobWorker(CrdtDatastore* aCrdtDatastore, std::shared_ptr<DagWorker> dagWorker)
+  void CrdtDatastore::SendJobWorker(std::shared_ptr<DagWorker> dagWorker)
   {
-    if (aCrdtDatastore == nullptr || dagWorker == nullptr)
+    if (dagWorker == nullptr)
     {
       return;
     }
 
-    aCrdtDatastore->LogDebug("SendJobWorker thread started");
+    LogDebug("SendJobWorker thread started");
     DagJob dagJob;
     dagWorker->dagWorkerThreadRunning_ = true;
     while (dagWorker->dagWorkerThreadRunning_)
@@ -271,28 +259,28 @@ namespace sgns::crdt
       std::this_thread::sleep_for(threadSleepTimeInMilliseconds_);
 
       {
-        std::unique_lock lock(aCrdtDatastore->dagWorkerMutex_);
-        if (aCrdtDatastore->dagWorkerJobList.empty())
+        std::unique_lock lock(dagWorkerMutex_);
+        if (dagWorkerJobList.empty())
         {
           continue;
         }
-        dagJob = aCrdtDatastore->dagWorkerJobList.front();
-        aCrdtDatastore->dagWorkerJobList.pop();
+        dagJob = dagWorkerJobList.front();
+        dagWorkerJobList.pop();
       }
-      aCrdtDatastore->LogInfo("SendJobWorker CID=" + dagJob.rootCid_.toString().value() + " priority=" + std::to_string(dagJob.rootPriority_));
+      LogInfo("SendJobWorker CID=" + dagJob.rootCid_.toString().value() + " priority=" + std::to_string(dagJob.rootPriority_));
 
-      auto childrenResult = aCrdtDatastore->ProcessNode(dagJob.rootCid_, dagJob.rootPriority_, dagJob.delta_, dagJob.node_);
+      auto childrenResult = ProcessNode(dagJob.rootCid_, dagJob.rootPriority_, dagJob.delta_, dagJob.node_);
       if (childrenResult.has_failure())
       {
-        aCrdtDatastore->LogError("SendNewJobs: failed to process node:" + dagJob.rootCid_.toString().value());
+        LogError("SendNewJobs: failed to process node:" + dagJob.rootCid_.toString().value());
       }
       else
       {
-        aCrdtDatastore->SendNewJobs(dagJob.rootCid_, dagJob.rootPriority_, childrenResult.value());
+        SendNewJobs(dagJob.rootCid_, dagJob.rootPriority_, childrenResult.value());
       }
 
     }
-    aCrdtDatastore->LogDebug("SendJobWorker thread finished");
+    LogDebug("SendJobWorker thread finished");
   }
 
   void CrdtDatastore::LogError(std::string message)
@@ -420,41 +408,12 @@ namespace sgns::crdt
 
     std::vector<CID> children;
     children.push_back(aCid);
-    this->SendNewJobs(aCid, 0, children);
+    SendNewJobs(aCid, 0, children);
 
     return outcome::success();
   }
 
-  outcome::result<void> CrdtDatastore::GetNodeAndDeltaFromDAGSyncer(const CID& aCID, std::shared_ptr<Node>& aNode, std::shared_ptr<Delta>& aDelta)
-  {
-    if (this->dagSyncer_ == nullptr)
-    {
-      return outcome::failure(boost::system::error_code{});
-    }
-
-    auto getNodeResult = this->dagSyncer_->getNode(aCID);
-    if (getNodeResult.has_failure())
-    {
-      return outcome::failure(getNodeResult.error());
-    }
-    aNode = getNodeResult.value();
-    auto nodeBuffer = aNode->serialize();
-
-    if (aDelta == nullptr)
-    {
-      aDelta = std::make_shared<Delta>();
-    }
-
-    if (!aDelta->ParseFromArray(nodeBuffer.data(), nodeBuffer.size()))
-    {
-      return outcome::failure(boost::system::error_code{});
-    }
-
-    return outcome::success();
-  }
-
-
-  void CrdtDatastore::SendNewJobs(const CID& aRootCID, const uint64_t& aRootPriority, const std::vector<CID>& aChildren)
+    void CrdtDatastore::SendNewJobs(const CID& aRootCID, const uint64_t& aRootPriority, const std::vector<CID>& aChildren)
   {
     // sendNewJobs calls getDeltas with the given
     // children and sends each response to the workers. 
@@ -464,23 +423,24 @@ namespace sgns::crdt
       return;
     }
 
+    // @todo figure out how should dagSyncerTimeoutSec be used
     std::chrono::seconds dagSyncerTimeoutSec = std::chrono::seconds(5 * 60); // 5 mins by default
     if (this->options_ != nullptr)
     {
-      dagSyncerTimeoutSec = std::chrono::seconds(this->options_->dagSyncerTimeoutSec);
+      dagSyncerTimeoutSec = std::chrono::seconds(options_->dagSyncerTimeoutSec);
     }
 
     uint64_t rootPriority = aRootPriority;
     if (rootPriority == 0)
     {
-      std::shared_lock lock(this->dagWorkerMutex_);
-      auto getNodeResult = this->dagSyncer_->getNode(aChildren[0]);
+      std::shared_lock lock(dagWorkerMutex_);
+      auto getNodeResult = dagSyncer_->getNode(aChildren[0]);
       if (getNodeResult.has_failure())
       {
         return;
       }
       auto node = getNodeResult.value();
-      auto nodeBuffer = node->serialize();
+      auto nodeBuffer = node->content();
 
       auto delta = std::make_shared<Delta>();
 
@@ -498,9 +458,9 @@ namespace sgns::crdt
     for (const auto& cid : aChildren)
     {
       //Fetch only root node with all children, but without children of their children
-      this->dagWorkerMutex_.lock_shared();
-      auto graphResult = this->dagSyncer_->fetchGraphOnDepth(cid, 1); 
-      this->dagWorkerMutex_.unlock_shared();
+      dagWorkerMutex_.lock_shared();
+      auto graphResult = dagSyncer_->fetchGraphOnDepth(cid, 1); 
+      dagWorkerMutex_.unlock_shared();
       if (graphResult.has_failure())
       {
         LOG_ERROR("SendNewJobs: error fetching graph for CID:" << cid.toString().value());
@@ -510,6 +470,7 @@ namespace sgns::crdt
       auto leaf = graphResult.value();
       auto nodeBuffer = leaf->content();
 
+      // @todo Check if it is OK that the node has only content and doesn't have links
       auto nodeResult = ipfs_lite::ipld::IPLDNodeImpl::createFromRawBytes(nodeBuffer);
       if (nodeResult.has_failure())
       {
@@ -529,8 +490,8 @@ namespace sgns::crdt
       dagJob.delta_ = delta;
       dagJob.node_ = node;
       {
-        std::unique_lock lock(this->dagWorkerMutex_);
-        this->dagWorkerJobList.push(dagJob);
+        std::unique_lock lock(dagWorkerMutex_);
+        dagWorkerJobList.push(dagJob);
       }
     }
   }
@@ -595,28 +556,6 @@ namespace sgns::crdt
     return this->Publish(deltaResult.value());
   }
 
-  outcome::result<void> CrdtDatastore::PutBatch(const std::unique_ptr<storage::BufferBatch>& aBatchDataStore, const HierarchicalKey& aKey,
-    const Buffer& aValueBuffer)
-  {
-    if (this->options_ == nullptr)
-    {
-      return outcome::failure(boost::system::error_code{});
-    }
-
-    auto addToDeltaResult = this->AddToDelta(aKey, aValueBuffer);
-    if (addToDeltaResult.has_failure())
-    {
-      return outcome::failure(addToDeltaResult.error());
-    }
-    if (addToDeltaResult.value() > this->options_->maxBatchDeltaSize)
-    {
-      LOG_INFO("Delta size over MaxBatchDeltaSize. Commiting.");
-      return this->CommitBatch(aBatchDataStore);
-    }
-
-    return outcome::success();
-  }
-
   outcome::result<void> CrdtDatastore::DeleteKey(const HierarchicalKey& aKey)
   {
     if (this->set_ == nullptr)
@@ -638,65 +577,33 @@ namespace sgns::crdt
     return this->Publish(deltaResult.value());
   }
 
-  outcome::result<void> CrdtDatastore::DeleteBatch(const std::unique_ptr<storage::BufferBatch>& aBatchDataStore, const HierarchicalKey& aKey)
+  CrdtDataStoreTransaction::CrdtDataStoreTransaction(std::shared_ptr<CrdtDatastore> datastore)
+      : datastore_(std::move(datastore))
   {
-    if (this->options_ == nullptr)
-    {
-      return outcome::failure(boost::system::error_code{});
-    }
-
-    auto removeResult = this->RemoveFromDelta(aKey);
-    if (removeResult.has_failure())
-    {
-      return outcome::failure(removeResult.error());
-    }
-
-    if (removeResult.value() > this->options_->maxBatchDeltaSize)
-    {
-      LOG_INFO("Delta size over MaxBatchDeltaSize. Commiting.");
-      return this->CommitBatch(aBatchDataStore);
-    }
-
-    return outcome::success();
   }
 
-  outcome::result<void> CrdtDatastore::CommitBatch(const std::unique_ptr<storage::BufferBatch>& aBatchDataStore)
+  outcome::result<int> CrdtDataStoreTransaction::AddToDelta(const HierarchicalKey& aKey, const Buffer& aValue)
   {
-    return this->PublishDelta();
+      auto deltaResult = datastore_->CreateDeltaToAdd(aKey.GetKey(), std::string(aValue.toString()));
+      if (deltaResult.has_failure())
+      {
+          return outcome::failure(deltaResult.error());
+      }
+
+      return UpdateDelta(deltaResult.value());
   }
 
-  outcome::result<int> CrdtDatastore::AddToDelta(const HierarchicalKey& aKey, const Buffer& aValue)
+  outcome::result<int> CrdtDataStoreTransaction::RemoveFromDelta(const HierarchicalKey& aKey)
   {
-    if (this->set_ == nullptr)
-    {
-      return outcome::failure(boost::system::error_code{});
-    }
-
-    auto deltaResult = this->set_->CreateDeltaToAdd(aKey.GetKey(), std::string(aValue.toString()));
-    if (deltaResult.has_failure())
-    {
-      return outcome::failure(deltaResult.error());
-    }
-
-    return this->UpdateDelta(deltaResult.value());
+      auto deltaResult = datastore_->CreateDeltaToRemove(aKey.GetKey());
+      if (deltaResult.has_failure())
+      {
+          return outcome::failure(deltaResult.error());
+      }
+      return this->UpdateDeltaWithRemove(aKey, deltaResult.value());
   }
 
-  outcome::result<int> CrdtDatastore::RemoveFromDelta(const HierarchicalKey& aKey)
-  {
-    if (this->set_ == nullptr)
-    {
-      return outcome::failure(boost::system::error_code{});
-    }
-
-    auto deltaResult = this->set_->CreateDeltaToRemove(aKey.GetKey());
-    if (deltaResult.has_failure())
-    {
-      return outcome::failure(deltaResult.error());
-    }
-    return this->UpdateDeltaWithRemove(aKey, deltaResult.value());
-  }
-
-  int CrdtDatastore::UpdateDeltaWithRemove(const HierarchicalKey& aKey, const std::shared_ptr<Delta>& aDelta)
+  int CrdtDataStoreTransaction::UpdateDeltaWithRemove(const HierarchicalKey& aKey, const std::shared_ptr<Delta>& aDelta)
   {
     int deltaSize = 0;
     std::vector<Element> elems;
@@ -727,24 +634,24 @@ namespace sgns::crdt
       deltaToMerge->set_priority(priority);
     }
 
-    this->currentDelta_ = DeltaMerge(deltaToMerge, aDelta);
+    currentDelta_ = CrdtDatastore::DeltaMerge(deltaToMerge, aDelta);
     deltaSize = this->currentDelta_->ByteSizeLong();
     return deltaSize;
   }
 
-  int CrdtDatastore::UpdateDelta(const std::shared_ptr<Delta>& aDelta)
+  int CrdtDataStoreTransaction::UpdateDelta(const std::shared_ptr<Delta>& aDelta)
   {
     int deltaSize = 0;
     std::lock_guard lg(this->currentDeltaMutex_);
-    this->currentDelta_ = DeltaMerge(this->currentDelta_, aDelta);
+    currentDelta_ = CrdtDatastore::DeltaMerge(this->currentDelta_, aDelta);
     deltaSize = this->currentDelta_->ByteSizeLong();
     return deltaSize;
   }
 
-  outcome::result<void> CrdtDatastore::PublishDelta()
+  outcome::result<void> CrdtDataStoreTransaction::PublishDelta()
   {
     std::lock_guard lg(this->currentDeltaMutex_);
-    auto publishResult = this->Publish(this->currentDelta_);
+    auto publishResult = datastore_->Publish(currentDelta_);
     if (publishResult.has_failure())
     {
       return outcome::failure(publishResult.error());
@@ -789,16 +696,8 @@ namespace sgns::crdt
     return outcome::success();
   }
 
-  outcome::result<std::unique_ptr<storage::BufferBatch>> CrdtDatastore::GetBatch()
-  {
-    if (this->dataStore_ == nullptr)
-    {
-      return outcome::failure(boost::system::error_code{});
-    }
-    return this->dataStore_->batch();
-  }
-
-  outcome::result<std::shared_ptr<CrdtDatastore::Node>> CrdtDatastore::PutBlock(const std::vector<CID>& aHeads, const uint64_t& aHeight, const std::shared_ptr<Delta>& aDelta)
+  outcome::result<std::shared_ptr<CrdtDatastore::Node>> CrdtDatastore::PutBlock(
+      const std::vector<CID>& aHeads, const uint64_t& aHeight, const std::shared_ptr<Delta>& aDelta)
   {
     if (aDelta == nullptr)
     {
@@ -826,10 +725,11 @@ namespace sgns::crdt
 
     if (this->dagSyncer_ != nullptr)
     {
+      // @todo Check if dagSyncer should add the node hash to DHT
       auto dagSyncerResult = this->dagSyncer_->addNode(node);
       if (dagSyncerResult.has_failure())
       {
-        LOG_ERROR("DAGSyncer: error writing new block " << node->getCID().toString())
+        LOG_ERROR("DAGSyncer: error writing new block " << node->getCID().toString().value())
           return outcome::failure(dagSyncerResult.error());
       }
     }
@@ -1043,7 +943,7 @@ namespace sgns::crdt
     auto node = getNodeResult.value();
 
     auto delta = std::make_shared<Delta>();
-    auto nodeBuffer = node->serialize();
+    auto nodeBuffer = node->content();
     if (!delta->ParseFromArray(nodeBuffer.data(), nodeBuffer.size()))
     {
       LOG_ERROR("PrintDAGRec: failed to parse delta from node");
@@ -1139,6 +1039,23 @@ namespace sgns::crdt
 
     // TODO: Need to implement it 
     return outcome::failure(boost::system::error_code{});
+  }
+
+  std::shared_ptr<CrdtDataStoreTransaction> CrdtDatastore::BeginTransaction()
+  {
+      auto transaction = std::make_shared<CrdtDataStoreTransaction>(shared_from_this());
+      return transaction;
+  }
+
+  outcome::result<std::shared_ptr<CrdtDatastore::Delta>> CrdtDatastore::CreateDeltaToAdd(
+      const std::string& key, const std::string& value)
+  {
+      return set_->CreateDeltaToAdd(key, value);
+  }
+
+  outcome::result<std::shared_ptr<CrdtDatastore::Delta>> CrdtDatastore::CreateDeltaToRemove(const std::string& key)
+  {
+      return set_->CreateDeltaToRemove(key);
   }
 
 }

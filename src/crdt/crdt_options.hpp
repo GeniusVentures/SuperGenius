@@ -31,12 +31,6 @@ namespace sgns::crdt
     /** NumWorkers specifies the number of workers ready to walk DAGs */
     int numWorkers = 0;
 
-    /** MaxBatchDeltaSize will automatically commit any batches whose
-    * delta size gets too big. This helps keep DAG nodes small
-    * enough that they will be transferred by the network.
-    */
-    int maxBatchDeltaSize = 0;
-
     /** The PutHook function is triggered whenever an element
     * is successfully added to the datastore (either by a local
     * or remote update), and only when that addition is considered the
@@ -61,7 +55,6 @@ namespace sgns::crdt
       LoggerUndefinied, // the Logger is undefined
       BadNumberOfNumWorkers, // bad number of NumWorkers
       InvalidDAGSyncerTimeout, // invalid DAGSyncerTimeout
-      InvalidMaxBatchDeltaSize, // invalid MaxBatchDeltaSize
     };
 
     static std::shared_ptr<CrdtOptions> DefaultOptions()
@@ -71,7 +64,6 @@ namespace sgns::crdt
       options->rebroadcastIntervalMilliseconds = 10000; // 10s
       options->dagSyncerTimeoutSec = 300; // 5 mins
       options->numWorkers = 5;
-      options->maxBatchDeltaSize = 1 * 1024 * 1024; // 1MB
       return options;
     }
 
@@ -89,10 +81,6 @@ namespace sgns::crdt
       if (dagSyncerTimeoutSec < 0)
       {
         return VerifyErrorCode::InvalidDAGSyncerTimeout;
-      }
-      if (maxBatchDeltaSize <= 0)
-      {
-        return VerifyErrorCode::InvalidMaxBatchDeltaSize;
       }
       return VerifyErrorCode::Success;
     }

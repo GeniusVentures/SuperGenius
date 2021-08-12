@@ -187,6 +187,7 @@ bool SharedQueue::UnlockExpiredItems(std::chrono::system_clock::duration expirat
                     m_queue->mutable_items(itemIdx)->set_lock_node_id("");
                     m_queue->mutable_items(itemIdx)->set_lock_timestamp(0);
                     unlocked = true;
+                    m_logger->debug("EXPIRED_SUBTASK_UNLOCKED {}", itemIdx);
                 }
             }
         }

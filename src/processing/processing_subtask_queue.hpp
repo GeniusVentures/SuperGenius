@@ -24,6 +24,7 @@ public:
 
     /** Construct an empty queue
     * @param queueChannel - task processing channel
+    * @param context - io context to handle timers
     * @param localNodeId local processing node ID
     * @param proceessingCore - custom task processing algorithm
     */
@@ -35,8 +36,10 @@ public:
 
     /** Create a subtask queue by splitting the task to subtasks using the processing code
     * @param task - task that should be split into subtasks
+    * in subrasks to allow a validation
+    * @return false if not queue was created due to errors
     */
-    void CreateQueue(const SGProcessing::Task& task);
+    bool CreateQueue(const SGProcessing::Task& task);
 
     /** Asynchronous getting of a subtask from the queue
     * @param onSubTaskGrabbedCallback a callback that is called when a grapped iosubtask is locked by the local node
@@ -73,10 +76,22 @@ public:
     /** Add a results for a processed subtask into the queue
     * @param resultChannel - subtask identifier
     * @param subTaskResult - subtask result
+    * @return true if the result was added
     */
-    void AddSubTaskResult(
+    bool AddSubTaskResult(
         const std::string& resultChannel, const SGProcessing::SubTaskResult& subTaskResult);
 
+    /** Checks if all subtask in the queue are processed
+    * @return true if the queue is processed
+    */
+    bool IsProcessed() const;
+        
+    /** Checks if chenk result hashes are valid.
+    * If invalid chunk hashes found corresponding subtasks are invalidated and returned to processing queue
+    * @return true if all chunk results are valid
+    */
+    bool ValidateResults();
+        
 private:
     /** Updates the local queue with a snapshot that have the most recent timestamp
     * @param queue - the queue snapshot
@@ -89,11 +104,15 @@ private:
     void GrabSubTasks();
     void HandleGrabSubTaskTimeout(const boost::system::error_code& ec);
     void LogQueue() const;
+    bool CheckSubTaskResultHashes(
+        const SGProcessing::SubTask& subTask, 
+        const std::map<std::string, std::vector<uint32_t>>& chunks) const;
 
     std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> m_queueChannel;
     std::shared_ptr<boost::asio::io_context> m_context;
     std::string m_localNodeId;
     std::shared_ptr<ProcessingCore> m_processingCore;
+
     std::shared_ptr<SGProcessing::SubTaskQueue> m_queue;
     mutable std::mutex m_queueMutex;
     std::list<SubTaskGrabbedCallback> m_onSubTaskGrabbedCallbacks;
