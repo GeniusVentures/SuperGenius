@@ -20,7 +20,7 @@ public:
         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> gossipPubSub, 
         size_t maximalNodesCount,
         size_t processingChannelCapacity,
-        std::shared_ptr<ProcessingTaksQueue> taskQueue,
+        std::shared_ptr<ProcessingTaskQueue> taskQueue,
         std::shared_ptr<ProcessingCore> processingCore);
 
     /** Listen to data feed channel.
@@ -55,7 +55,7 @@ private:
     size_t m_maximalNodesCount;
     size_t m_processingChannelCapacity;
 
-    std::shared_ptr<ProcessingTaksQueue> m_taskQueue;
+    std::shared_ptr<ProcessingTaskQueue> m_taskQueue;
     std::shared_ptr<ProcessingCore> m_processingCore;
 
     std::unique_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> m_gridChannel;

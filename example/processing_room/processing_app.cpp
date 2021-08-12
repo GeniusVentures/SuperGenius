@@ -45,15 +45,15 @@ namespace
     };
 
 
-    class ProcessingTaksQueueImpl : public ProcessingTaksQueue
+    class ProcessingTaskQueueImpl : public ProcessingTaskQueue
     {
     public:
-        ProcessingTaksQueueImpl(const std::list<SGProcessing::Task>& tasks)
+        ProcessingTaskQueueImpl(const std::list<SGProcessing::Task>& tasks)
             : m_tasks(tasks)
         {
         }
 
-        bool PopTask(SGProcessing::Task& task) override
+        bool GrabTask(std::string& taskKey, SGProcessing::Task& task) override
         {
             if (m_tasks.empty())
             {
@@ -63,9 +63,15 @@ namespace
 
             task = std::move(m_tasks.back());
             m_tasks.pop_back();
+            taskKey = (boost::format("TASK_%d") %  m_tasks.size()).str();
 
             return true;
         };
+
+        bool CompleteTask(const std::string& taskKey, const SGProcessing::TaskResult& task) override
+        {
+            return false;
+        }
 
     private:
         std::list<SGProcessing::Task> m_tasks;
@@ -220,7 +226,7 @@ int main(int argc, char* argv[])
         });
     }
 
-    auto taskQueue = std::make_shared<ProcessingTaksQueueImpl>(tasks);
+    auto taskQueue = std::make_shared<ProcessingTaskQueueImpl>(tasks);
     auto processingCore = std::make_shared<ProcessingCoreImpl>(options->nSubTasks, options->subTaskProcessingTime);
     ProcessingServiceImpl processingService(pubs, maximalNodesCount, options->roomSize, taskQueue, processingCore);
 

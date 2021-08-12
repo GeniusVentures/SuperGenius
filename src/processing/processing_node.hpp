@@ -26,7 +26,8 @@ public:
     ProcessingNode(
         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> gossipPubSub,
         size_t processingChannelCapacity,
-        std::shared_ptr<ProcessingCore> processingCore);
+        std::shared_ptr<ProcessingCore> processingCore,
+        std::function<void(const SGProcessing::TaskResult&)> taskResultProcessingSink);
 
     ~ProcessingNode();
     /** Attaches the node to the processing channel
@@ -34,7 +35,9 @@ public:
     * @return flag indicating if the room is joined for block data processing
     */
     void AttachTo(const std::string& processingChannelId, size_t msSubscriptionWaitingDuration = 0);
-    void CreateProcessingHost(const SGProcessing::Task& task, size_t msSubscriptionWaitingDuration = 0);
+    void CreateProcessingHost(
+        const SGProcessing::Task& task, 
+        size_t msSubscriptionWaitingDuration = 0);
 
     /** Returns true if a peer is joined a room
     * @return true if if the current peer in a room
@@ -65,6 +68,7 @@ private:
     std::unique_ptr<ProcessingRoom> m_room;
     std::unique_ptr<ProcessingEngine> m_processingEngine;
     std::shared_ptr<ProcessingSubTaskQueue> m_subtaskQueue;
+    std::function<void(const SGProcessing::TaskResult&)> m_taskResultProcessingSink;
 };
 }
 

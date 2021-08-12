@@ -29,17 +29,53 @@ namespace sgns::crdt
   public:
     using IpfsDatastore = ipfs_lite::ipfs::IpfsDatastore;
     using MerkleDagServiceImpl = ipfs_lite::ipfs::merkledag::MerkleDagServiceImpl;
+    using Leaf = ipfs_lite::ipfs::merkledag::Leaf;
 
     CustomDagSyncer(std::shared_ptr<IpfsDatastore> service)
-      : DAGSyncer(service)
+      : dagService_(service)
     {
     }
 
-    virtual outcome::result<bool> HasBlock(const CID& cid) const override
+    outcome::result<bool> HasBlock(const CID& cid) const override
     {
-      auto getNodeResult = this->getNode(cid);
+      auto getNodeResult = dagService_.getNode(cid);
       return getNodeResult.has_value();
     }
+
+    outcome::result<void> addNode(std::shared_ptr<const IPLDNode> node) override
+    {
+        return dagService_.addNode(node);
+    }
+
+    outcome::result<std::shared_ptr<IPLDNode>> getNode(const CID& cid) const override
+    {
+        return dagService_.getNode(cid);
+    }
+
+    outcome::result<void> removeNode(const CID& cid) override
+    {
+        return dagService_.removeNode(cid);
+    }
+
+    outcome::result<size_t> select(
+        gsl::span<const uint8_t> root_cid,
+        gsl::span<const uint8_t> selector,
+        std::function<bool(std::shared_ptr<const IPLDNode> node)> handler) const override
+    {
+        return dagService_.select(root_cid, selector, handler);
+    }
+
+    outcome::result<std::shared_ptr<Leaf>> fetchGraph(const CID& cid) const override
+    {
+        return dagService_.fetchGraph(cid);
+    }
+
+    outcome::result<std::shared_ptr<Leaf>> fetchGraphOnDepth(const CID& cid, uint64_t depth) const override
+    {
+        return dagService_.fetchGraphOnDepth(cid, depth);
+    }
+
+    MerkleDagServiceImpl dagService_;
   };
 
   class CustomBroadcaster : public Broadcaster
@@ -150,11 +186,12 @@ namespace sgns::crdt
     CrdtBuffer buffer3;
     buffer3.put("Data3");
 
-    EXPECT_OUTCOME_TRUE_1(crdtDatastore_->AddToDelta(newKey1, buffer1));
-    EXPECT_OUTCOME_TRUE_1(crdtDatastore_->AddToDelta(newKey2, buffer2));
-    EXPECT_OUTCOME_TRUE_1(crdtDatastore_->AddToDelta(newKey3, buffer3));
-    EXPECT_OUTCOME_TRUE(deltaSize, crdtDatastore_->RemoveFromDelta(newKey2));
-    EXPECT_OUTCOME_TRUE_1(crdtDatastore_->PublishDelta());
+    auto transaction = crdtDatastore_->BeginTransaction();
+    EXPECT_OUTCOME_TRUE_1(transaction->AddToDelta(newKey1, buffer1));
+    EXPECT_OUTCOME_TRUE_1(transaction->AddToDelta(newKey2, buffer2));
+    EXPECT_OUTCOME_TRUE_1(transaction->AddToDelta(newKey3, buffer3));
+    EXPECT_OUTCOME_TRUE(deltaSize, transaction->RemoveFromDelta(newKey2));
+    EXPECT_OUTCOME_TRUE_1(transaction->PublishDelta());
     EXPECT_OUTCOME_EQ(crdtDatastore_->HasKey(newKey1), true);
     EXPECT_OUTCOME_EQ(crdtDatastore_->HasKey(newKey2), false);
 
@@ -198,36 +235,5 @@ namespace sgns::crdt
     EXPECT_OUTCOME_EQ(crdtDatastore_->HasKey(newKey4), true);
     EXPECT_OUTCOME_EQ(crdtDatastore_->HasKey(newKey5), false);
   }
-
-  TEST_F(CrdtDatastoreTest, TestBatchFunctions)
-  {
-    auto newKey1 = HierarchicalKey("NewKey1");
-    CrdtBuffer buffer1;
-    buffer1.put("Data1");
-
-    auto newKey2 = HierarchicalKey("NewKey2");
-    CrdtBuffer buffer2;
-    buffer2.put("Data2");
-
-    auto newKey3 = HierarchicalKey("NewKey3");
-    CrdtBuffer buffer3;
-    buffer3.put("Data3");
-
-    EXPECT_OUTCOME_TRUE(batch, crdtDatastore_->GetBatch());
-    EXPECT_OUTCOME_TRUE_1(crdtDatastore_->PutBatch(batch, newKey1, buffer1));
-    EXPECT_OUTCOME_TRUE_1(crdtDatastore_->PutBatch(batch, newKey2, buffer2));
-    EXPECT_OUTCOME_TRUE_1(crdtDatastore_->PutBatch(batch, newKey3, buffer3));
-    EXPECT_OUTCOME_TRUE_1(crdtDatastore_->CommitBatch(batch));
-    EXPECT_OUTCOME_EQ(crdtDatastore_->HasKey(newKey1), true);
-    EXPECT_OUTCOME_EQ(crdtDatastore_->HasKey(newKey2), true);
-    EXPECT_OUTCOME_EQ(crdtDatastore_->HasKey(newKey3), true);
-
-    EXPECT_OUTCOME_TRUE_1(crdtDatastore_->DeleteBatch(batch, newKey2));
-    EXPECT_OUTCOME_TRUE_1(crdtDatastore_->DeleteBatch(batch, newKey3));
-    EXPECT_OUTCOME_TRUE_1(crdtDatastore_->CommitBatch(batch));
-    EXPECT_OUTCOME_EQ(crdtDatastore_->HasKey(newKey1), true);
-    EXPECT_OUTCOME_EQ(crdtDatastore_->HasKey(newKey2), false);
-    EXPECT_OUTCOME_EQ(crdtDatastore_->HasKey(newKey3), false);
-
-  }
+  
 }
