@@ -1,5 +1,5 @@
 #include "pubsub_broadcaster_ext.hpp"
-#include <globaldb/proto/broadcast.pb.h>
+#include <crdt/globaldb/proto/broadcast.pb.h>
 
 #include <crdt/crdt_datastore.hpp>
 #include <ipfs_lite/ipld/ipld_node.hpp>
