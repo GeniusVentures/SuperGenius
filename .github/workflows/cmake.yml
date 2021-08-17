@@ -28,15 +28,26 @@ jobs:
           path: 'thirdparty'
           submodules: 'recursive' 
           
-      - name: Create Build Directory
+      - name: Thirdparty Create Build Directory
         run: cmake -E make_directory ${{github.workspace}}/thirdparty/.build          
 
-      - name: Configure CMake
+      - name: Thirdparty Configure CMake
         working-directory: ${{github.workspace}}/thirdparty/.build
         run: cmake -S ../build/Windows/ -G "Visual Studio 16 2019" -A x64 -DCMAKE_BUILD_TYPE=Release
 
-      - name: Compile
+      - name: Thirdparty Compile
         working-directory: ${{github.workspace}}/thirdparty/.build
+        run: cmake --build . --config Release
+        
+      - name: Create Build Directory
+        run: cmake -E make_directory ${{github.workspace}}/SuperGenius/.build          
+
+      - name: Configure CMake
+        working-directory: ${{github.workspace}}/SuperGenius/.build
+        run: cmake -S ../build/Windows/ -G "Visual Studio 16 2019" -A x64 -DCMAKE_BUILD_TYPE=Release -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty/.build 
+
+      - name: Compile
+        working-directory: ${{github.workspace}}/SuperGenius/.build
         run: cmake --build . --config Release
 
   Linux:
@@ -45,17 +56,36 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
         with:
-          submodules: 'recursive'    
+          path: 'SuperGenius'    
       
-      - name: Create Build Directory
-        run: cmake -E make_directory ${{github.workspace}}/.build          
+      - name: Check out thirdparty repository
+        uses: actions/checkout@v2
+        with:
+          repository: 'GeniusVentures/thirdparty'
+          token: ${{ secrets.GITHUB_TOKEN }}
+          path: 'thirdparty'
+          submodules: 'recursive' 
+          
+      - name: Thirdparty Create Build Directory
+        run: cmake -E make_directory ${{github.workspace}}/thirdparty/.build          
 
-      - name: Configure CMake
-        working-directory: ${{github.workspace}}/.build
+      - name: Thirdparty Configure CMake
+        working-directory: ${{github.workspace}}/thirdparty/.build
         run: cmake -S ../build/Linux/ -DCMAKE_BUILD_TYPE=Release
 
+      - name: Thirdparty Compile
+        working-directory: ${{github.workspace}}/thirdparty/.build
+        run: make -j8
+      
+      - name: Create Build Directory
+        run: cmake -E make_directory ${{github.workspace}}/SuperGenius/.build          
+
+      - name: Configure CMake
+        working-directory: ${{github.workspace}}/SuperGenius/.build
+        run: cmake -S ../build/Linux/ -DCMAKE_BUILD_TYPE=Release -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty/.build 
+
       - name: Compile
-        working-directory: ${{github.workspace}}/.build
+        working-directory: ${{github.workspace}}/SuperGenius/.build
         run: make -j8
         
   Android:
@@ -64,20 +94,28 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
         with:
-          submodules: 'recursive'
+          path: 'SuperGenius'
           
       - uses: nttld/setup-ndk@v1
         id: setup-ndk
         with:
           ndk-version: r21e 
       
-      - name: Create Build Directory
-        run: cmake -E make_directory ${{github.workspace}}/.build          
+      - name: Check out thirdparty repository
+        uses: actions/checkout@v2
+        with:
+          repository: 'GeniusVentures/thirdparty'
+          token: ${{ secrets.GITHUB_TOKEN }}
+          path: 'thirdparty'
+          submodules: 'recursive' 
+          
+      - name: Thirdparty Create Build Directory
+        run: cmake -E make_directory ${{github.workspace}}/thirdparty/.build          
 
-      - name: Configure CMake
+      - name: Thirdparty Configure CMake
         env:
           ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
-        working-directory: ${{github.workspace}}/.build
+        working-directory: ${{github.workspace}}/thirdparty/.build
         run: |
           export CC=clang
           export ANDROID_NDK=${{ env.ANDROID_NDK_HOME }}
@@ -90,10 +128,33 @@ jobs:
           echo "Check clang path:"
           which clang
           cmake -S ../build/Android/ -DANDROID_ABI="arm64-v8a" -DCMAKE_ANDROID_NDK=$ANDROID_NDK -DANDROID_TOOLCHAIN=clang
-      - name: Compile
-        working-directory: ${{github.workspace}}/.build
+      
+      - name: Thirdparty Compile
+        working-directory: ${{github.workspace}}/thirdparty/.build
         run: make 
         #-j8
+      
+      - name: Create Build Directory
+        run: cmake -E make_directory ${{github.workspace}}/SuperGenius/.build          
+
+      - name: Configure CMake
+        working-directory: ${{github.workspace}}/SuperGenius/.build
+        run: |
+          export CC=clang
+          export ANDROID_NDK=${{ env.ANDROID_NDK_HOME }}
+          export ANDROID_NDK_HOME=${{ env.ANDROID_NDK_HOME }}
+          export ANDROID_TOOLCHAIN="$ANDROID_NDK/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          export PATH=$ANDROID_TOOLCHAIN:$PATH
+          echo $PATH
+          echo $CC
+          ls -la $ANDROID_TOOLCHAIN
+          echo "Check clang path:"
+          which clang 
+          cmake -S ../build/Windows/ -G "Visual Studio 16 2019" -A x64 -DCMAKE_BUILD_TYPE=Release -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty/.build 
+
+      - name: Compile
+        working-directory: ${{github.workspace}}/SuperGenius/.build
+        run: make -j8
 
   MacOS:
     runs-on: macos-latest        
@@ -101,17 +162,36 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
         with:
-          submodules: 'recursive'    
+          path: 'SuperGenius'
       
-      - name: Create Build Directory
-        run: cmake -E make_directory ${{github.workspace}}/.build          
+      - name: Check out thirdparty repository
+        uses: actions/checkout@v2
+        with:
+          repository: 'GeniusVentures/thirdparty'
+          token: ${{ secrets.GITHUB_TOKEN }}
+          path: 'thirdparty'
+          submodules: 'recursive' 
+          
+      - name: Thirdparty Create Build Directory
+        run: cmake -E make_directory ${{github.workspace}}/thirdparty/.build          
 
-      - name: Configure CMake
-        working-directory: ${{github.workspace}}/.build
+      - name: Thirdparty Configure CMake
+        working-directory: ${{github.workspace}}/thirdparty/.build
         run: cmake -S ../build/OSX/ -DCMAKE_BUILD_TYPE=Release
 
+      - name: Thirdparty Compile
+        working-directory: ${{github.workspace}}/thirdparty/.build
+        run: make -j8
+        
+      - name: Create Build Directory
+        run: cmake -E make_directory ${{github.workspace}}/SuperGenius/.build          
+
+      - name: Configure CMake
+        working-directory: ${{github.workspace}}/SuperGenius/.build
+        run: cmake -S ../build/OSX/ -DCMAKE_BUILD_TYPE=Release -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty/.build 
+
       - name: Compile
-        working-directory: ${{github.workspace}}/.build
+        working-directory: ${{github.workspace}}/SuperGenius/.build
         run: make -j8
   
   iOS:
@@ -120,15 +200,35 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
         with:
-          submodules: 'recursive'    
-      
-      - name: Create Build Directory
-        run: cmake -E make_directory ${{github.workspace}}/.build          
+          path: 'SuperGenius'    
+       
+      - name: Check out thirdparty repository
+        uses: actions/checkout@v2
+        with:
+          repository: 'GeniusVentures/thirdparty'
+          token: ${{ secrets.GITHUB_TOKEN }}
+          path: 'thirdparty'
+          submodules: 'recursive' 
+          
+      - name: Thirdparty Create Build Directory
+        run: cmake -E make_directory ${{github.workspace}}/thirdparty/.build          
 
-      - name: Configure CMake
-        working-directory: ${{github.workspace}}/.build
+      - name: Thirdparty Configure CMake
+        working-directory: ${{github.workspace}}/thirdparty/.build
         run: cmake -S ../build/iOS/ -DCMAKE_BUILD_TYPE=Release -DiOS_ABI=arm64-v8a -DIOS_ARCH="arm64" -DENABLE_ARC=0 -DENABLE_BITCODE=0 -DENABLE_VISIBILITY=1  -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_SYSTEM_PROCESSOR=arm64 -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/build/iOS/iOS.cmake 
 
-      - name: Compile
-        working-directory: ${{github.workspace}}/.build
+      - name: Thirdparty Compile
+        working-directory: ${{github.workspace}}/thirdparty/.build
         run: make -j8
+        
+      - name: Create Build Directory
+        run: cmake -E make_directory ${{github.workspace}}/SuperGenius/.build          
+
+      - name: Configure CMake
+        working-directory: ${{github.workspace}}/SuperGenius/.build
+        run: cmake -S ../build/iOS/ -DCMAKE_BUILD_TYPE=Release -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty/.build -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/SuperGenius/build/iOS/iOS.cmake -DiOS_ABI=arm64-v8a -DIOS_ARCH="arm64" -DENABLE_ARC=0 -DENABLE_BITCODE=0 -DENABLE_VISIBILITY=1  -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_SYSTEM_PROCESSOR=arm64
+
+      - name: Compile
+        working-directory: ${{github.workspace}}/SuperGenius/.build
+        run: make -j8
+        
