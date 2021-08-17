@@ -215,7 +215,7 @@ jobs:
 
       - name: Thirdparty Configure CMake
         working-directory: ${{github.workspace}}/thirdparty/.build
-        run: cmake -S ../build/iOS/ -DCMAKE_BUILD_TYPE=Release -DiOS_ABI=arm64-v8a -DIOS_ARCH="arm64" -DENABLE_ARC=0 -DENABLE_BITCODE=0 -DENABLE_VISIBILITY=1  -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_SYSTEM_PROCESSOR=arm64 -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/build/iOS/iOS.cmake 
+        run: cmake -S ../build/iOS/ -DCMAKE_BUILD_TYPE=Release -DiOS_ABI=arm64-v8a -DIOS_ARCH="arm64" -DENABLE_ARC=0 -DENABLE_BITCODE=0 -DENABLE_VISIBILITY=1  -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_SYSTEM_PROCESSOR=arm64 -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/thirdparty/build/iOS/iOS.cmake 
 
       - name: Thirdparty Compile
         working-directory: ${{github.workspace}}/thirdparty/.build
