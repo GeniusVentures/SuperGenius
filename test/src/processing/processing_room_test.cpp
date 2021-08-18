@@ -33,8 +33,8 @@ TEST(ProcessingRoomTest, AttachToProcessingRoom)
 
     auto processingCore = std::make_shared<ProcessingCoreImpl>();
 
-    ProcessingNode node1(pubs1, 2, processingCore);
-    ProcessingNode node2(pubs2, 2, processingCore);
+    ProcessingNode node1(pubs1, 2, processingCore, [](const SGProcessing::TaskResult&) {});
+    ProcessingNode node2(pubs2, 2, processingCore, [](const SGProcessing::TaskResult&) {});
 
     SGProcessing::Task task;
     task.set_ipfs_block_id("DATABLOCKID");
@@ -71,9 +71,9 @@ TEST(ProcessingRoomTest, RoomSizeLimitExceeded)
     //auto logger = spdlog::get("GossipPubSub");
     //logger->set_level(spdlog::level::debug);
         
-    ProcessingNode node1(pubs1, 2, processingCore);
-    ProcessingNode node2(pubs2, 2, processingCore);
-    ProcessingNode node3(pubs3, 2, processingCore);
+    ProcessingNode node1(pubs1, 2, processingCore, [](const SGProcessing::TaskResult&) {});
+    ProcessingNode node2(pubs2, 2, processingCore, [](const SGProcessing::TaskResult&) {});
+    ProcessingNode node3(pubs3, 2, processingCore, [](const SGProcessing::TaskResult&) {});
 
     SGProcessing::Task task;
     task.set_ipfs_block_id("DATABLOCKID");

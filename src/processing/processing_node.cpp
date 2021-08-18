@@ -8,11 +8,13 @@ namespace sgns::processing
 ProcessingNode::ProcessingNode(
     std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> gossipPubSub,
     size_t processingChannelCapacity,
-    std::shared_ptr<ProcessingCore> processingCore)
+    std::shared_ptr<ProcessingCore> processingCore,
+    std::function<void(const SGProcessing::TaskResult&)> taskResultProcessingSink)
     : m_gossipPubSub(std::move(gossipPubSub))
     , m_nodeId(m_gossipPubSub->GetLocalAddress())
     , m_processingChannelCapacity(processingChannelCapacity)
     , m_processingCore(processingCore)
+    , m_taskResultProcessingSink(taskResultProcessingSink)
 {    
 }
 
@@ -32,7 +34,8 @@ void ProcessingNode::Initialize(const std::string& processingChannelId, size_t m
 
     m_subtaskQueue = std::make_shared<ProcessingSubTaskQueue>(
         m_processingChannel, m_gossipPubSub->GetAsioContext(), m_nodeId, m_processingCore);
-    m_processingEngine = std::make_unique<ProcessingEngine>(m_gossipPubSub, m_nodeId, m_processingCore);
+    m_processingEngine = std::make_unique<ProcessingEngine>(
+        m_gossipPubSub, m_nodeId, m_processingCore, m_taskResultProcessingSink);
 
     // Run messages processing once all dependent object are created
     m_processingChannel->Subscribe(std::bind(&ProcessingNode::OnProcessingChannelMessage, this, std::placeholders::_1));
@@ -48,12 +51,15 @@ void ProcessingNode::AttachTo(const std::string& processingChannelId, size_t msS
     m_room->AttachLocalNodeToRemoteRoom();
 }
 
-void ProcessingNode::CreateProcessingHost(const SGProcessing::Task& task, size_t msSubscriptionWaitingDuration)
+void ProcessingNode::CreateProcessingHost(
+    const SGProcessing::Task& task, 
+    size_t msSubscriptionWaitingDuration)
 {
     Initialize(task.ipfs_block_id(), msSubscriptionWaitingDuration);
 
     m_room->Create();
     m_subtaskQueue->CreateQueue(task);
+
     m_processingEngine->StartQueueProcessing(m_subtaskQueue);
 }
 

@@ -6,7 +6,7 @@ ProcessingServiceImpl::ProcessingServiceImpl(
     std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> gossipPubSub,
     size_t maximalNodesCount,
     size_t processingChannelCapacity,
-    std::shared_ptr<ProcessingTaksQueue> taskQueue,
+    std::shared_ptr<ProcessingTaskQueue> taskQueue,
     std::shared_ptr<ProcessingCore> processingCore)
     : m_gossipPubSub(gossipPubSub)
     , m_context(gossipPubSub->GetAsioContext())
@@ -80,7 +80,8 @@ void ProcessingServiceImpl::AcceptProcessingChannel(
         if (itNode == processingNodes.end())
         {
             auto node = std::make_shared<ProcessingNode>(
-                m_gossipPubSub, processingChannelCapacity, m_processingCore);
+                m_gossipPubSub, processingChannelCapacity, m_processingCore,
+                std::bind(&ProcessingTaskQueue::CompleteTask, m_taskQueue.get(), channelId, std::placeholders::_1));
             node->AttachTo(channelId);
             processingNodes[channelId] = node;
         }
@@ -146,13 +147,16 @@ void ProcessingServiceImpl::HandleRequestTimeout()
     while (processingNodes.size() < m_maximalNodesCount)
     {
         SGProcessing::Task task;
-        if (m_taskQueue->PopTask(task))
+        std::string taskKey;
+        if (m_taskQueue->GrabTask(taskKey, task))
         {
             auto node = std::make_shared<ProcessingNode>(
-                m_gossipPubSub, m_processingChannelCapacity, m_processingCore);
+                m_gossipPubSub, m_processingChannelCapacity, m_processingCore,
+                std::bind(&ProcessingTaskQueue::CompleteTask, m_taskQueue.get(), taskKey, std::placeholders::_1));
 
             // @todo Figure out if the task is still available for other peers
             node->CreateProcessingHost(task);
+
             processingNodes[task.ipfs_block_id()] = node;
             m_logger->debug("New processing channel created. {}", task.ipfs_block_id());
         }

@@ -4,6 +4,7 @@ add_subdirectory(impl)
 add_library(extensions
     impl/extension_impl.cpp
     )
+set_target_properties(extensions PROPERTIES PUBLIC_HEADER "extension.hpp;extension_factory.hpp")
 target_link_libraries(extensions
     crypto_extension
     io_extension

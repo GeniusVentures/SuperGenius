@@ -26,9 +26,12 @@ public:
     ProcessingEngine(
         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> gossipPubSub,
         std::string nodeId,
-        std::shared_ptr<ProcessingCore> processingCore);
+        std::shared_ptr<ProcessingCore> processingCore,
+        std::function<void(const SGProcessing::TaskResult&)> taskResultProcessingSink);
 
-    void StartQueueProcessing(std::shared_ptr<ProcessingSubTaskQueue> subTaskQueue);
+    void StartQueueProcessing(
+        std::shared_ptr<ProcessingSubTaskQueue> subTaskQueue);
+
     void StopQueueProcessing();
     bool IsQueueProcessingStarted() const;
 
@@ -50,10 +53,12 @@ private:
     std::shared_ptr<ProcessingCore> m_processingCore;
 
     std::shared_ptr<ProcessingSubTaskQueue> m_subTaskQueue;
-    std::vector<std::tuple<std::string, SGProcessing::SubTaskResult>> m_results;
+    std::function<void(const SGProcessing::TaskResult&)> m_taskResultProcessingSink;
+    std::map<std::string, SGProcessing::SubTaskResult> m_results;
     std::map<std::string, std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic>> m_resultChannels;
 
     mutable std::mutex m_mutexResults;
+    mutable std::mutex m_mutexSubTaskQueue;
     
     libp2p::common::Logger m_logger = libp2p::common::createLogger("ProcessingEngine");
 };

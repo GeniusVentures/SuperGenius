@@ -1,17 +1,5 @@
-add_executable(processing_app
-    processing_app.cpp
-    )
-
-
-# Copy the required headers to install directory
-include_directories(
-    ${PROJECT_SOURCE_DIR}/src
-    )
-
-target_include_directories(processing_app PRIVATE ${GSL_INCLUDE_DIR})
-
-
-target_link_libraries(processing_app
-    processing_service
-    Boost::program_options
-    )
+add_subdirectory(processing_room)
+add_subdirectory(processing_dapp)
+add_subdirectory(graphsync_app)
+add_subdirectory(echo_client)
+add_subdirectory(crdt_globaldb)

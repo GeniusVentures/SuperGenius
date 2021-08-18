@@ -2,9 +2,8 @@
 #ifndef SUPERGENIUS_DAGSYNCER_HPP
 #define SUPERGENIUS_DAGSYNCER_HPP
 
-#include <boost/outcome.hpp>
 #include <primitives/cid/cid.hpp>
-#include <ipfs_lite/ipfs/merkledag/impl/merkledag_service_impl.hpp>
+#include <ipfs_lite/ipfs/merkledag/merkledag_service.hpp>
 
 namespace sgns::crdt
 {
@@ -13,15 +12,9 @@ namespace sgns::crdt
    * A DAGSyncer is a DAGService with the ability to publish new ipld nodes
    * to the network, and retrieving others from it.
    */
-  class DAGSyncer : public ipfs_lite::ipfs::merkledag::MerkleDagServiceImpl
+  class DAGSyncer : public ipfs_lite::ipfs::merkledag::MerkleDagService
   {
   public:
-    using IpfsDatastore = ipfs_lite::ipfs::IpfsDatastore;
-
-    DAGSyncer(std::shared_ptr<IpfsDatastore> service) : MerkleDagServiceImpl(service) {};
-    
-    virtual ~DAGSyncer() = default;
-
     /**
     * Check if the block with {@param cid} is locally available (therefore, it
      * is considered processed).

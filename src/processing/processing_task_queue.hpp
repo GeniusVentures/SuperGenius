@@ -8,12 +8,13 @@
 
 #include <processing/proto/SGProcessing.pb.h>
 
-class ProcessingTaksQueue
+class ProcessingTaskQueue
 {
 public:
-    virtual ~ProcessingTaksQueue() = default;
+    virtual ~ProcessingTaskQueue() = default;
 
-    virtual bool PopTask(SGProcessing::Task& task) = 0;
+    virtual bool GrabTask(std::string& taskKey, SGProcessing::Task& task) = 0;
+    virtual bool CompleteTask(const std::string& taskKey, const SGProcessing::TaskResult& task) = 0;
 };
 
 #endif // GRPC_FOR_SUPERGENIUS_PROCESSING_TASK_QUEUE_HPP

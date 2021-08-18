@@ -3,11 +3,15 @@
 
 #include "crdt/dagsyncer.hpp"
 #include <base/logger.hpp>
+#include <base/buffer.hpp>
+
 #include <ipfs_lite/ipfs/graphsync/graphsync.hpp>
 #include <ipfs_lite/ipfs/graphsync/extension.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/merkledag_bridge_impl.hpp>
+#include <ipfs_lite/ipfs/merkledag/impl/merkledag_service_impl.hpp>
+
 #include <libp2p/host/host.hpp>
-#include <base/buffer.hpp>
+
 #include <memory>
 
 namespace sgns::crdt
@@ -31,7 +35,6 @@ namespace sgns::crdt
     using PeerId = libp2p::peer::PeerId;
     using Subscription = libp2p::protocol::Subscription;
     using Logger = base::Logger;
-    using RequestProgressCallback = Graphsync::RequestProgressCallback;
     using BlockCallback = Graphsync::BlockCallback;
 
     GraphsyncDAGSyncer(const std::shared_ptr<IpfsDatastore>& service, 
@@ -40,19 +43,36 @@ namespace sgns::crdt
 
     outcome::result<void> Listen(const Multiaddress& listen_to);
 
-    outcome::result<void> RequestNode(const PeerId& peer,
-      boost::optional<Multiaddress> address,
-      const CID& root_cid);
+    void AddRoute(const CID& cid, const PeerId& peer, Multiaddress& address);
 
-    virtual outcome::result<bool> HasBlock(const CID& cid) const override;
+    // DAGService interface implementation
+    outcome::result<void> addNode(std::shared_ptr<const ipfs_lite::ipld::IPLDNode> node) override;
+
+    outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> getNode(const CID &cid) const override;
+
+    outcome::result<void> removeNode(const CID &cid) override;
+
+    outcome::result<size_t> select(
+        gsl::span<const uint8_t> root_cid,
+        gsl::span<const uint8_t> selector,
+        std::function<bool(std::shared_ptr<const ipfs_lite::ipld::IPLDNode> node)> handler) const override;
+
+    outcome::result<std::shared_ptr<ipfs_lite::ipfs::merkledag::Leaf>> fetchGraph(const CID &cid) const override;
+
+    outcome::result<std::shared_ptr<ipfs_lite::ipfs::merkledag::Leaf>> fetchGraphOnDepth(
+        const CID &cid, uint64_t depth) const override;
+
+    outcome::result<bool> HasBlock(const CID& cid) const override;
 
     /* Returns peer ID */
     outcome::result<PeerId> GetId() const;
 
   protected:
-    RequestProgressCallback RequestNodeCallback();
+    outcome::result<std::future<std::shared_ptr<ipfs_lite::ipld::IPLDNode>>> RequestNode(
+        const PeerId& peer, boost::optional<Multiaddress> address, const CID& root_cid) const;
 
-    static void BlockReceivedCallback(CID cid, sgns::common::Buffer buffer, GraphsyncDAGSyncer* dagSyncer);
+    void RequestProgressCallback(ResponseStatusCode code, const std::vector<Extension>& extensions) const;
+    void BlockReceivedCallback(CID cid, sgns::common::Buffer buffer);
 
     bool started_ = false;
 
@@ -62,16 +82,19 @@ namespace sgns::crdt
     /** Stops instance */
     void StopSync();
 
-    std::shared_ptr<Graphsync> graphsync_ = nullptr;
+    ipfs_lite::ipfs::merkledag::MerkleDagServiceImpl dagService_;
+    std::shared_ptr<Graphsync> graphsync_;
 
-    std::shared_ptr<libp2p::Host> host_ = nullptr;
+    std::shared_ptr<libp2p::Host> host_;
 
-    Logger logger_;
+    Logger logger_ = libp2p::common::createLogger("GraphsyncDAGSyncer");
 
     // keeping subscriptions alive, otherwise they cancel themselves
     // class Subscription have non-copyable constructor and operator, so it can not be used in std::vector
     // std::vector<Subscription> requests_;
-    std::vector<std::shared_ptr<Subscription>> requests_;
+    mutable std::map<CID, std::tuple<std::shared_ptr<Subscription>, 
+        std::shared_ptr<std::promise<std::shared_ptr<ipfs_lite::ipld::IPLDNode>>>>> requests_;
+    std::map<CID, std::tuple<PeerId, Multiaddress>> routing_;
 
   };
 }

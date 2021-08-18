@@ -10,7 +10,7 @@ add_library(scale
     detail/fixed_witdh_integer.hpp
     detail/variant.hpp
     )
-
+set_target_properties(scale PROPERTIES PUBLIC_HEADER "scale.hpp;scale_decoder_stream.hpp;scale_encoder_stream.hpp;scale_error.hpp;types.hpp;detail/fixed_witdh_integer.hpp;detail/variant.hpp")
 target_link_libraries(scale
     Boost::boost
     buffer
