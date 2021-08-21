@@ -308,13 +308,13 @@ bool ProcessingSubTaskQueue::IsProcessed() const
 {
     std::lock_guard<std::mutex> guard(m_queueMutex);
     // The queue can contain only valid results
-    return (m_results.size() == m_queue->subtasks_size());
+    return (m_results.size() == (size_t)m_queue->subtasks_size());
 }
 
 bool ProcessingSubTaskQueue::ValidateResults()
 {
     std::lock_guard<std::mutex> guard(m_queueMutex);
-    if ((m_results.size() != m_queue->subtasks_size()))
+    if ((m_results.size() != (size_t)m_queue->subtasks_size()))
     {
         return false;
     }
