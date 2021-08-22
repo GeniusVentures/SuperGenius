@@ -207,7 +207,7 @@ int main(int argc, char** argv)
           std::string value = commandList[2];
           if (commandList.size() > 3)
           {
-            for (int i = 3; i < commandList.size(); ++i)
+            for (size_t i = 3; i < commandList.size(); ++i)
             {
               value += " " + commandList[i];
             }
