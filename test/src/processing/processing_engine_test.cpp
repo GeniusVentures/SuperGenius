@@ -3,6 +3,7 @@
 #include <gtest/gtest.h>
 
 #include <iostream>
+#include <boost/functional/hash.hpp>
 
 using namespace sgns::processing;
 
