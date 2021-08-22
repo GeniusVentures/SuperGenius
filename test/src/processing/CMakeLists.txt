@@ -10,7 +10,7 @@ target_include_directories(processing_service_test PRIVATE ${GSL_INCLUDE_DIR})
 
 target_link_libraries(processing_service_test
     processing_service
-    Boost::regex
+    Boost::boost
     )
 #if(FORCE_MULTILE)
 # set_target_properties(processing_service_test PROPERTIES LINK_FLAGS "${MULTIPLE_OPTION}")
