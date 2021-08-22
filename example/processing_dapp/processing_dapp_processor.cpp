@@ -97,12 +97,12 @@ namespace
                 size_t chunkHash = 0;
                 if (isValidationSubTask)
                 {
-                    chunkHash = (chunkIdx < m_validationChunkHashes.size()) ?
+                    chunkHash = ((size_t)chunkIdx < m_validationChunkHashes.size()) ?
                         m_validationChunkHashes[chunkIdx] : std::hash<std::string>{}(chunk.SerializeAsString());
                 }
                 else
                 {
-                    chunkHash = (chunkIdx < m_chunkResulHashes.size()) ?
+                    chunkHash = ((size_t)chunkIdx < m_chunkResulHashes.size()) ?
                         m_chunkResulHashes[chunkIdx] : std::hash<std::string>{}(chunk.SerializeAsString());
                 }
 
