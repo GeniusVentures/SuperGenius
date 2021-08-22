@@ -155,14 +155,6 @@ namespace sgns::primitives {
   {
     return out ;
   }
-  std::ostream &operator<<(std::ostream &out, const  std::function<void __cdecl(void)> &test_struct)
-  {
-    return out ;
-  }
-  std::ostream &operator<<(std::ostream &out, const  std::function<bool __cdecl(void)> &test_struct)
-  {
-    return out ;
-  }
   std::ostream &operator<<(std::ostream &out, const sgns::application::AppStateManager::State &test_struct)
   {
     return out ;
