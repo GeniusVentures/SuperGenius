@@ -89,18 +89,26 @@ jobs:
         run: make -j8
         
   Android:
-    runs-on: ubuntu-latest        
+    runs-on: ubuntu-latest
+    env:
+      ANDROID_NDK_HOME: ${{github.workspace}}/android-ndk/android-ndk-r21e
+      ANDROID_TOOLCHAIN: ${{github.workspace}}/android-ndk/android-ndk-r21e/toolchains/llvm/prebuilt/linux-x86_64/bin
+      NDK_URL: "https://dl.google.com/android/repository/android-ndk-r21e-linux-x86_64.zip"
+
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
         with:
           path: 'SuperGenius'
           
-      - uses: nttld/setup-ndk@v1
-        id: setup-ndk
-        with:
-          ndk-version: r21e 
-      
+      - name: Download Android NDK
+        run: |
+          mkdir "${{github.workspace}}/android-ndk" 
+          cd "${{github.workspace}}/android-ndk" 
+          curl -o ndk.zip ${{ env.NDK_URL }} 
+          unzip ndk.zip 
+          rm ndk.zip
+          
       - name: Check out thirdparty repository
         uses: actions/checkout@v2
         with:
@@ -114,42 +122,43 @@ jobs:
 
       - name: Thirdparty Configure CMake
         env:
-          ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+          CC: clang
         working-directory: ${{github.workspace}}/thirdparty/.build
         run: |
-          export CC=clang
-          export ANDROID_NDK=${{ env.ANDROID_NDK_HOME }}
-          export ANDROID_NDK_HOME=${{ env.ANDROID_NDK_HOME }}
-          export ANDROID_TOOLCHAIN="$ANDROID_NDK/toolchains/llvm/prebuilt/linux-x86_64/bin"
-          export PATH=$ANDROID_TOOLCHAIN:$PATH
+          export ANDROID_NDK=${{env.ANDROID_NDK_HOME}}
+          export ANDROID_NDK_HOME=${{env.ANDROID_NDK_HOME}}
+          export ANDROID_TOOLCHAIN=${{env.ANDROID_TOOLCHAIN}}
+          export PATH=${{env.ANDROID_TOOLCHAIN}}:$PATH 
           echo $PATH
           echo $CC
           ls -la $ANDROID_TOOLCHAIN
           echo "Check clang path:"
           which clang
+          env
           cmake -S ../build/Android/ -DANDROID_ABI="arm64-v8a" -DCMAKE_ANDROID_NDK=$ANDROID_NDK -DANDROID_TOOLCHAIN=clang
       
       - name: Thirdparty Compile
         working-directory: ${{github.workspace}}/thirdparty/.build
-        run: make 
-        #-j8
+        run: make -j8
       
       - name: Create Build Directory
         run: cmake -E make_directory ${{github.workspace}}/SuperGenius/.build          
 
       - name: Configure CMake
         working-directory: ${{github.workspace}}/SuperGenius/.build
+        env:
+          CC: clang
         run: |
-          export CC=clang
-          export ANDROID_NDK=${{ env.ANDROID_NDK_HOME }}
-          export ANDROID_NDK_HOME=${{ env.ANDROID_NDK_HOME }}
-          export ANDROID_TOOLCHAIN="$ANDROID_NDK/toolchains/llvm/prebuilt/linux-x86_64/bin"
-          export PATH=$ANDROID_TOOLCHAIN:$PATH
+          export ANDROID_NDK=${{env.ANDROID_NDK_HOME}}
+          export ANDROID_NDK_HOME=${{env.ANDROID_NDK_HOME}}
+          export ANDROID_TOOLCHAIN=${{env.ANDROID_TOOLCHAIN}}
+          export PATH=${{env.ANDROID_TOOLCHAIN}}:$PATH 
           echo $PATH
           echo $CC
           ls -la $ANDROID_TOOLCHAIN
           echo "Check clang path:"
-          which clang 
+          which clang
+          env
           cmake -S ../build/Windows/ -G "Visual Studio 16 2019" -A x64 -DCMAKE_BUILD_TYPE=Release -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty/.build 
 
       - name: Compile
