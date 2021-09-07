@@ -165,12 +165,10 @@ jobs:
         working-directory: ${{github.workspace}}/SuperGenius/.build
         run: make -j8
       
-      - name: Setup tmate session
+      - name: On error
+        working-directory: ${{github.workspace}}/SuperGenius/.build
         if: ${{ failure() }}
-        uses: mxschmitt/action-tmate@v3
-        timeout-minutes: 30
-        with:
-          sudo: false
+        run: cat example/graphsync_app/CMakeFiles/graphsync_app.dir/build.make
 
 
   MacOS:
