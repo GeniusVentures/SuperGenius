@@ -246,6 +246,7 @@ if (TESTING)
 endif ()
 
 if (BUILD_EXAMPLES)
+    message("Boost_LIBRARIES: ${Boost_LIBRARIES}")
     add_subdirectory(${PROJECT_ROOT}/example ${CMAKE_BINARY_DIR}/example)
 endif ()
 
