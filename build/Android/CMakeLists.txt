@@ -80,3 +80,5 @@ set(TESTING OFF)
 # --------------------------------------------------------
 # Include common build parameters
 include(../CommonBuildParameters.cmake)
+
+message("Boost_LIBRARIES: ${Boost_LIBRARIES}")
