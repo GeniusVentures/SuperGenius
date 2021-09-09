@@ -6,6 +6,11 @@ if (NOT ${CMAKE_HOST_SYSTEM_NAME} MATCHES "Linux")
     message(FATAL_ERROR "${CMAKE_HOST_SYSTEM_NAME} host system name does not match Linux for Android cross compiling - Please select the correct folder for configuring project")
 endif()
 
+if(POLICY CMP0111)
+	#NEW: Imported Targets for library files and executables require that their location on disk is specified in a target property
+  cmake_policy(SET CMP0111 NEW)
+endif()
+
 # --------------------------------------------------------
 # Set cross compiling settings
 set(CMAKE_SYSTEM_NAME Android)
