@@ -1,3 +1,4 @@
+message("graphsync_app Boost_LIBRARIES: ${Boost_LIBRARIES}")
 add_executable(graphsync_app
     graphsync_app.cpp
     graphsync_acceptance_common.cpp
