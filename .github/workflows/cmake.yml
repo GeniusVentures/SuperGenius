@@ -94,7 +94,8 @@ jobs:
       ANDROID_NDK_HOME: ${{github.workspace}}/android-ndk/android-ndk-r21e
       ANDROID_TOOLCHAIN: ${{github.workspace}}/android-ndk/android-ndk-r21e/toolchains/llvm/prebuilt/linux-x86_64/bin
       NDK_URL: "https://dl.google.com/android/repository/android-ndk-r21e-linux-x86_64.zip"
-
+      CC: clang
+      
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
@@ -121,8 +122,6 @@ jobs:
         run: cmake -E make_directory ${{github.workspace}}/thirdparty/.build          
 
       - name: Thirdparty Configure CMake
-        env:
-          CC: clang
         working-directory: ${{github.workspace}}/thirdparty/.build
         run: |
           export ANDROID_NDK=${{env.ANDROID_NDK_HOME}}
@@ -146,8 +145,6 @@ jobs:
 
       - name: Configure CMake
         working-directory: ${{github.workspace}}/SuperGenius/.build
-        env:
-          CC: clang
         run: |
           export ANDROID_NDK=${{env.ANDROID_NDK_HOME}}
           export ANDROID_NDK_HOME=${{env.ANDROID_NDK_HOME}}
