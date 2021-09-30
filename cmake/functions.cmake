@@ -100,7 +100,7 @@ function(add_proto_library NAME)
       )
   target_include_directories(${NAME} PUBLIC
       $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/generated/>
-      $<INSTALL_INTERFACE:include> 
+      $<INSTALL_INTERFACE:include>
   )
   #target_include_directories(${NAME} PUBLIC
   #    ${CMAKE_BINARY_DIR}/generated/
@@ -128,4 +128,13 @@ endfunction()
 
 function(print)
   message(STATUS "[${CMAKE_PROJECT_NAME}] ${ARGV}")
+endfunction()
+
+function(install_hfile dir_name)
+    install(
+        DIRECTORY ${dir_name}
+        DESTINATION ${CMAKE_INSTALL_PREFIX}/include
+        FILES_MATCHING # install only matched files
+        PATTERN "*.h*" # select header files hpp or h file
+    )
 endfunction()

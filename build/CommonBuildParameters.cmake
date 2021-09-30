@@ -105,7 +105,7 @@ find_package(ipfs-lite-cpp CONFIG REQUIRED)
 include_directories(${ipfs-lite-cpp_INCLUDE_DIR} ${CBOR_INCLUDE_DIR})
 
 # --------------------------------------------------------
-# Set config of ipfs-lite-cpp
+# Set config of ipfs-pubsub
 set(ipfs-pubsub_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/ipfs-pubsub/include")
 set(ipfs-pubsub_DIR "${_THIRDPARTY_BUILD_DIR}/ipfs-pubsub/lib/cmake/ipfs-pubsub")
 find_package(ipfs-pubsub CONFIG REQUIRED)
@@ -271,7 +271,34 @@ write_basic_package_version_file(
   COMPATIBILITY AnyNewerVersion
 )
 
-# install the configuration file
+### install header files ###
+install_hfile(${PROJECT_ROOT}/src/api)
+install_hfile(${PROJECT_ROOT}/src/authorship)
+install_hfile(${PROJECT_ROOT}/src/application)
+install_hfile(${PROJECT_ROOT}/src/base)
+install_hfile(${PROJECT_ROOT}/src/blockchain)
+install_hfile(${PROJECT_ROOT}/src/clock)
+install_hfile(${PROJECT_ROOT}/src/crdt)
+install_hfile(${PROJECT_ROOT}/src/crypto)
+install_hfile(${PROJECT_ROOT}/src/extensions)
+install_hfile(${PROJECT_ROOT}/src/injector)
+install_hfile(${PROJECT_ROOT}/src/macro)
+install_hfile(${PROJECT_ROOT}/src/network)
+install_hfile(${PROJECT_ROOT}/src/outcome)
+install_hfile(${PROJECT_ROOT}/src/platform)
+install_hfile(${PROJECT_ROOT}/src/processing)
+install_hfile(${PROJECT_ROOT}/src/primitives)
+install_hfile(${PROJECT_ROOT}/src/runtime)
+install_hfile(${PROJECT_ROOT}/src/scale)
+install_hfile(${PROJECT_ROOT}/src/storage)
+install_hfile(${PROJECT_ROOT}/src/subscription)
+install_hfile(${PROJECT_ROOT}/src/transaction_pool)
+install_hfile(${PROJECT_ROOT}/src/verification)
+
+### install proto header files ###
+install_hfile(${CMAKE_CURRENT_BINARY_DIR}/generated/crdt)
+install_hfile(${CMAKE_CURRENT_BINARY_DIR}/generated/processing)
+
 # install the configuration file
 install(FILES
   ${CMAKE_CURRENT_BINARY_DIR}/SuperGeniusConfig.cmake

@@ -13,6 +13,8 @@ set (CPACK_PACKAGE_VENDOR "Genius Ventures")
 
 set(CMAKE_INSTALL_PREFIX ${CMAKE_CURRENT_BINARY_DIR}/SuperGenius)
 
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 include(GNUInstallDirs)
 include (GenerateExportHeader)
 include(CMakePackageConfigHelpers)
