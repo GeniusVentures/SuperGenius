@@ -157,13 +157,13 @@ namespace sgns::crypto {
     OUTCOME_TRY(mnemonic, bip39::Mnemonic::parse(mnemonic_phrase));
     OUTCOME_TRY(entropy, bip39_provider_->calculateEntropy(mnemonic.words));
     OUTCOME_TRY(seed, bip39_provider_->makeSeed(entropy, mnemonic.password));
-    if (seed.size() < SR25519Seed ::size()) {
+    if (seed.size() < SR25519Seed::size()) {
       return CryptoStoreError::WRONG_SEED_SIZE;
     }
 
     OUTCOME_TRY(sr_seed,
-                ED25519Seed::fromSpan(
-                    gsl::make_span(seed).subspan(0, ED25519Seed::size())));
+                SR25519Seed::fromSpan(
+                    gsl::make_span(seed).subspan(0, SR25519Seed::size())));
     auto &&pair = sr25519_provider_->generateKeypair(sr_seed);
 
     sr_keys_[key_type].emplace(pair.public_key, pair.secret_key);
