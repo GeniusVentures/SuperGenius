@@ -22,12 +22,13 @@ set(IOS_DEPLOYMENT_TARGET 12.0)
 project(SuperGenius C CXX)
 
 # --------------------------------------------------------
+# Set cross compiling settings
+set(CMAKE_SYSTEM_NAME "iOS")
+
+# --------------------------------------------------------
 # include common compiler options
 include(../CommonCompilerOptions.CMake)
 
-# --------------------------------------------------------
-# Set cross compiling settings
-set(CMAKE_SYSTEM_NAME "iOS")
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM "BOTH")
 set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 

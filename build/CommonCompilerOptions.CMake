@@ -73,17 +73,24 @@ endif ()
 
 # --------------------------------------------------------
 # define third party directory
-set(_THIRDPARTY_BUILD_DIR "${THIRDPARTY_DIR}")
-if (NOT _THIRDPARTY_BUILD_DIR)
-  message(FATAL_ERROR "_THIRDPARTY_BUILD_DIR not found")
+if (NOT DEFINED THIRDPARTY_DIR)
+  print("Setting default third party directory")
+  set(THIRDPARTY_DIR "${CMAKE_CURRENT_LIST_DIR}/../../thirdparty")
+  ## get absolute path
+  cmake_path(SET THIRDPARTY_DIR NORMALIZE "${THIRDPARTY_DIR}")
 endif()
+
+if (NOT DEFINED CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE  "Release")
+endif()
+
+if (NOT DEFINED THIRDPARTY_BUILD_DIR)
+  print("Setting third party build directory default")
+  set(THIRDPARTY_BUILD_DIR "${THIRDPARTY_DIR}/build/${CMAKE_SYSTEM_NAME}/${CMAKE_BUILD_TYPE}")
+endif()
+
+set(_THIRDPARTY_BUILD_DIR "${THIRDPARTY_BUILD_DIR}")
 print("THIRDPARTY BUILD DIR: ${_THIRDPARTY_BUILD_DIR}")
 
-get_filename_component(_THIRDPARTY_DIR "${_THIRDPARTY_BUILD_DIR}" DIRECTORY ABSOLUTE)
-if(NOT EXISTS "${_THIRDPARTY_DIR}/build")
-  get_filename_component(_THIRDPARTY_DIR "${_THIRDPARTY_DIR}" DIRECTORY ABSOLUTE)
-endif()
-if(NOT EXISTS "${_THIRDPARTY_DIR}/build")
-  message(FATAL_ERROR "Unable to find thirdparty source folder relative to build folder ${_THIRDPARTY_BUILD_DIR}")
-endif()
+set(_THIRDPARTY_DIR "${THIRDPARTY_DIR}")
 print("THIRDPARTY SRC DIR: ${_THIRDPARTY_DIR}")
