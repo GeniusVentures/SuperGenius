@@ -65,7 +65,7 @@ set(ABI_SUBFOLDER_NAME "/${ANDROID_ABI}")
 
 # --------------------------------------------------------
 # Set host system protoc executable path
-set(PROTOC_EXECUTABLE "${THIRDPARTY_DIR}/protobuf/bin/protoc")
+set(PROTOC_EXECUTABLE "${THIRDPARTY_BUILD_DIR}/protobuf/bin/protoc")
 
 # --------------------------------------------------------
 # Allow multiple definitions

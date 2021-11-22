@@ -66,13 +66,13 @@ set(CMAKE_XCODE_ATTRIBUTE_ONLY_ACTIVE_ARCH YES)
 
 # --------------------------------------------------------
 # Set host system protoc executable path
-set(PROTOC_EXECUTABLE "${THIRDPARTY_DIR}/protobuf-host/bin/protoc")
+set(PROTOC_EXECUTABLE "${THIRDPARTY_BUILD_DIR}/protobuf-host/bin/protoc")
 
 # --------------------------------------------------------
 # Set custom protobuf path for iOS
-set(iOS_Protobuf_DIR "${THIRDPARTY_DIR}/protobuf/lib/cmake/protobuf")
-set(iOS_Protobuf_INCLUDE_DIR "${THIRDPARTY_DIR}/protobuf/include/google/protobuf")
-set(iOS_Protobuf_LIBRARIES "${THIRDPARTY_DIR}/protobuf/lib")
+set(iOS_Protobuf_DIR "${THIRDPARTY_BUILD_DIR}/protobuf/lib/cmake/protobuf")
+set(iOS_Protobuf_INCLUDE_DIR "${THIRDPARTY_BUILD_DIR}/protobuf/include/google/protobuf")
+set(iOS_Protobuf_LIBRARIES "${THIRDPARTY_BUILD_DIR}/protobuf/lib")
 
 # --------------------------------------------------------
 # Set OS threading settings
