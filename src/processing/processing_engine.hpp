@@ -60,7 +60,7 @@ private:
     mutable std::mutex m_mutexResults;
     mutable std::mutex m_mutexSubTaskQueue;
     
-    libp2p::common::Logger m_logger = libp2p::common::createLogger("ProcessingEngine");
+    base::Logger m_logger = base::createLogger("ProcessingEngine");
 };
 }
 

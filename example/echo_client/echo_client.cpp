@@ -3,6 +3,9 @@
 #include <boost/asio/io_context.hpp>
 #include <boost/program_options.hpp>
 #include <libp2p/injector/host_injector.hpp>
+#include <libp2p/log/configurator.hpp>
+#include <libp2p/log/logger.hpp>
+
 #include <ipfs_pubsub/gossip_pubsub_topic.hpp>
 
 int main(int argc, char *argv[])
@@ -57,6 +60,33 @@ int main(int argc, char *argv[])
   }
 
   auto run_duration = std::chrono::seconds(runDurationSec);
+
+  const std::string logger_config(R"(
+    # ----------------
+    sinks:
+      - name: console
+        type: console
+        color: true
+    groups:
+      - name: echo_client
+        sink: console
+        level: info
+        children:
+          - name: libp2p
+          - name: Gossip
+    # ----------------
+    )");
+
+  // prepare log system
+  auto logging_system = std::make_shared<soralog::LoggingSystem>(
+      std::make_shared<soralog::ConfiguratorFromYAML>(
+          // Original LibP2P logging config
+          std::make_shared<libp2p::log::Configurator>(),
+          // Additional logging config for application
+          logger_config));
+  logging_system->configure();
+
+  libp2p::log::setLoggingSystem(logging_system);
 
   // Create pubsub gossip node
   auto pubsub = std::make_shared<GossipPubSub>();

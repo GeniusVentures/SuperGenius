@@ -1,5 +1,8 @@
 #include "processing/processing_subtask_queue.hpp"
 
+#include <libp2p/log/configurator.hpp>
+#include <libp2p/log/logger.hpp>
+
 #include <gtest/gtest.h>
 
 using namespace sgns::processing;
@@ -25,8 +28,42 @@ namespace
 
         SubTaskList m_subTasks;
     };
-
 }
+
+const std::string logger_config(R"(
+# ----------------
+sinks:
+  - name: console
+    type: console
+    color: true
+groups:
+  - name: processing_subtask_queue_test
+    sink: console
+    level: info
+    children:
+      - name: libp2p
+      - name: Gossip
+# ----------------
+  )");
+
+class ProcessingSubTaskQueueTest : public ::testing::Test
+{
+public:
+    virtual void SetUp() override
+    {
+        // prepare log system
+        auto logging_system = std::make_shared<soralog::LoggingSystem>(
+            std::make_shared<soralog::ConfiguratorFromYAML>(
+                // Original LibP2P logging config
+                std::make_shared<libp2p::log::Configurator>(),
+                // Additional logging config for application
+                logger_config));
+        logging_system->configure();
+
+        libp2p::log::setLoggingSystem(logging_system);
+        libp2p::log::setLevelOfGroup("processing_subtask_queue_test", soralog::Level::DEBUG);
+    }
+};
 
 /**
  * @given Processing task
@@ -34,7 +71,7 @@ namespace
  * @then The created queue is published to processing channel.
  * The queue has specified owner, no subtasks are locked by default.
  */
-TEST(ProcessingSubTaskQueueTest, QueueCreating)
+TEST_F(ProcessingSubTaskQueueTest, QueueCreating)
 {
     std::vector<SGProcessing::SubTaskQueue> queueSnapshotSet;
 
@@ -103,7 +140,7 @@ TEST(ProcessingSubTaskQueueTest, QueueCreating)
  * @when Queue owner is changed
  * @then The queue with updated owner is published.
  */
-TEST(ProcessingSubTaskQueueTest, QueueOwnershipTransfer)
+TEST_F(ProcessingSubTaskQueueTest, QueueOwnershipTransfer)
 {
     std::vector<SGProcessing::SubTaskQueue> queueSnapshotSet;
 
@@ -177,7 +214,7 @@ TEST(ProcessingSubTaskQueueTest, QueueOwnershipTransfer)
  * @when New subtask is being grabbed
  * @then Queue snapshot is published that contains a lock on the grabbed subtask.
  */
-TEST(ProcessingSubTaskQueueTest, GrabSubTaskWithoutOwnershipTransferring)
+TEST_F(ProcessingSubTaskQueueTest, GrabSubTaskWithoutOwnershipTransferring)
 {
     std::vector<SGProcessing::SubTaskQueue> queueSnapshotSet;
 
@@ -257,7 +294,7 @@ TEST(ProcessingSubTaskQueueTest, GrabSubTaskWithoutOwnershipTransferring)
  * @then Queue snapshot is published that contains a lock on the grabbed subtask.
  * Ownership is moved to the local node.
  */
-TEST(ProcessingSubTaskQueueTest, GrabSubTaskWithOwnershipTransferring)
+TEST_F(ProcessingSubTaskQueueTest, GrabSubTaskWithOwnershipTransferring)
 {
     std::vector<SGProcessing::SubTaskQueue> queueSnapshotSet1;
     std::vector<SGProcessing::SubTaskQueue> queueSnapshotSet2;
@@ -367,7 +404,7 @@ TEST(ProcessingSubTaskQueueTest, GrabSubTaskWithOwnershipTransferring)
  * @when New results added
  * @then Queue ignores results that are not relevant to subtasks located in the queue.
  */
-TEST(ProcessingSubTaskQueueTest, AddUnexpectedResult)
+TEST_F(ProcessingSubTaskQueueTest, AddUnexpectedResult)
 {
     std::vector<SGProcessing::SubTaskQueue> queueSnapshotSet1;
 
@@ -409,7 +446,7 @@ TEST(ProcessingSubTaskQueueTest, AddUnexpectedResult)
  * @when Results for all subtasks added
  * @then Queue is marked as processed.
  */
-TEST(ProcessingSubTaskQueueTest, CheckProcessedQueue)
+TEST_F(ProcessingSubTaskQueueTest, CheckProcessedQueue)
 {
     std::vector<SGProcessing::SubTaskQueue> queueSnapshotSet1;
 
@@ -455,7 +492,7 @@ TEST(ProcessingSubTaskQueueTest, CheckProcessedQueue)
  * @when Results for all subtasks added
  * @then Queue result hashes are valid by default.
  */
-TEST(ProcessingSubTaskQueueTest, ValidateResults)
+TEST_F(ProcessingSubTaskQueueTest, ValidateResults)
 {
     // @todo extend the test to get determite invalid result hashes
     std::vector<SGProcessing::SubTaskQueue> queueSnapshotSet1;
@@ -519,14 +556,13 @@ TEST(ProcessingSubTaskQueueTest, ValidateResults)
  * @when A task split does not create duplicated chunks
  * @then Queue creation failed.
  */
-TEST(ProcessingSubTaskQueueTest, TaskSplitFailed)
+TEST_F(ProcessingSubTaskQueueTest, TaskSplitFailed)
 {
     // @todo extend the test to get determite invalid result hashes
     std::vector<SGProcessing::SubTaskQueue> queueSnapshotSet1;
 
     auto pubs1 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();;
     pubs1->Start(40001, {});
-
 
     auto processingCore = std::make_shared<ProcessingCoreImpl>();
     {
@@ -558,7 +594,7 @@ TEST(ProcessingSubTaskQueueTest, TaskSplitFailed)
  * @when A task split does not create duplicated chunks
  * @then Queue creation failed.
  */
-TEST(ProcessingSubTaskQueueTest, TaskSplitSucceeded)
+TEST_F(ProcessingSubTaskQueueTest, TaskSplitSucceeded)
 {
     // @todo extend the test to get determite invalid result hashes
     std::vector<SGProcessing::SubTaskQueue> queueSnapshotSet1;

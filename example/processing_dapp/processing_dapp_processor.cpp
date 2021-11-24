@@ -3,6 +3,8 @@
 #include <crdt/globaldb/globaldb.hpp>
 
 #include <libp2p/multi/multibase_codec/multibase_codec_impl.hpp>
+#include <libp2p/log/configurator.hpp>
+#include <libp2p/log/logger.hpp>
 
 #include <boost/program_options.hpp>
 #include <boost/format.hpp>
@@ -408,31 +410,58 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    auto loggerPubSub = libp2p::common::createLogger("GossipPubSub");
+    const std::string logger_config(R"(
+    # ----------------
+    sinks:
+      - name: console
+        type: console
+        color: true
+    groups:
+      - name: processing_dapp_processor
+        sink: console
+        level: info
+        children:
+          - name: libp2p
+          - name: Gossip
+    # ----------------
+    )");
+
+    // prepare log system
+    auto logging_system = std::make_shared<soralog::LoggingSystem>(
+        std::make_shared<soralog::ConfiguratorFromYAML>(
+            // Original LibP2P logging config
+            std::make_shared<libp2p::log::Configurator>(),
+            // Additional logging config for application
+            logger_config));
+    logging_system->configure();
+
+    libp2p::log::setLoggingSystem(logging_system);
+
+    auto loggerPubSub = libp2p::log::createLogger("GossipPubSub");
     //loggerPubSub->set_level(spdlog::level::trace);
 
-    auto loggerProcessingEngine = libp2p::common::createLogger("ProcessingEngine");
+    auto loggerProcessingEngine = sgns::base::createLogger("ProcessingEngine");
     loggerProcessingEngine->set_level(spdlog::level::trace);
 
-    auto loggerProcessingService = libp2p::common::createLogger("ProcessingService");
+    auto loggerProcessingService = sgns::base::createLogger("ProcessingService");
     loggerProcessingService->set_level(spdlog::level::trace);
 
-    auto loggerProcessingTaskQueue = libp2p::common::createLogger("ProcessingTaskQueueImpl");
+    auto loggerProcessingTaskQueue = sgns::base::createLogger("ProcessingTaskQueueImpl");
     loggerProcessingTaskQueue->set_level(spdlog::level::debug);
 
-    auto loggerProcessingSubTaskQueue = libp2p::common::createLogger("ProcessingSubTaskQueue");
+    auto loggerProcessingSubTaskQueue = sgns::base::createLogger("ProcessingSubTaskQueue");
     loggerProcessingSubTaskQueue->set_level(spdlog::level::debug);
     
-    auto loggerProcessingSharedQueue = libp2p::common::createLogger("ProcessingSharedQueue");
+    auto loggerProcessingSharedQueue = sgns::base::createLogger("ProcessingSharedQueue");
     loggerProcessingSharedQueue->set_level(spdlog::level::debug);
 
-    auto loggerGlobalDB = libp2p::common::createLogger("GlobalDB");
+    auto loggerGlobalDB = sgns::base::createLogger("GlobalDB");
     loggerGlobalDB->set_level(spdlog::level::debug);
 
-    auto loggerDAGSyncer = libp2p::common::createLogger("GraphsyncDAGSyncer");
+    auto loggerDAGSyncer = sgns::base::createLogger("GraphsyncDAGSyncer");
     loggerDAGSyncer->set_level(spdlog::level::trace);
 
-    auto loggerBroadcaster = libp2p::common::createLogger("PubSubBroadcasterExt");
+    auto loggerBroadcaster = sgns::base::createLogger("PubSubBroadcasterExt");
     loggerBroadcaster->set_level(spdlog::level::debug);
     
     const std::string processingGridChannel = "GRID_CHANNEL_ID";

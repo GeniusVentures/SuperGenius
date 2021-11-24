@@ -2,6 +2,9 @@
 
 #include <gtest/gtest.h>
 
+#include <libp2p/log/configurator.hpp>
+#include <libp2p/log/logger.hpp>
+
 #include <iostream>
 #include <boost/functional/hash.hpp>
 
@@ -68,12 +71,46 @@ namespace
         size_t m_processingMillisec;
     };
 }
+
+const std::string logger_config(R"(
+# ----------------
+sinks:
+  - name: console
+    type: console
+    color: true
+groups:
+  - name: processing_engine_test
+    sink: console
+    level: info
+    children:
+      - name: libp2p
+      - name: Gossip
+# ----------------
+  )");
+class ProcessingEngineTest : public ::testing::Test
+{
+public:
+    virtual void SetUp() override
+    {
+        // prepare log system
+        auto logging_system = std::make_shared<soralog::LoggingSystem>(
+            std::make_shared<soralog::ConfiguratorFromYAML>(
+                // Original LibP2P logging config
+                std::make_shared<libp2p::log::Configurator>(),
+                // Additional logging config for application
+                logger_config));
+        logging_system->configure();
+
+        libp2p::log::setLoggingSystem(logging_system);
+        libp2p::log::setLevelOfGroup("processing_engine_test", soralog::Level::DEBUG);
+    }
+};
 /**
  * @given A node is subscribed to result channed 
  * @when A result is published to the channel
  * @then The node receives the result
  */
-TEST(ProcessingEngineTest, SubscribtionToResultChannel)
+TEST_F(ProcessingEngineTest, SubscribtionToResultChannel)
 {
     auto pubs1 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();;
     pubs1->Start(40001, {});
@@ -130,7 +167,7 @@ TEST(ProcessingEngineTest, SubscribtionToResultChannel)
  * @when Processing is started
  * @then ProcessingCore::ProcessSubTask is called for each subtask.
  */
-TEST(ProcessingEngineTest, SubTaskProcessing)
+TEST_F(ProcessingEngineTest, SubTaskProcessing)
 {
     auto pubs1 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();;
     pubs1->Start(40001, {});
@@ -180,7 +217,7 @@ TEST(ProcessingEngineTest, SubTaskProcessing)
  * @when 2 engined sequentually start the queue processing
  * @then Each of them processes only 1 subtask from the queue.
  */
-TEST(ProcessingEngineTest, SharedSubTaskProcessing)
+TEST_F(ProcessingEngineTest, SharedSubTaskProcessing)
 {
     auto pubs1 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();;
     pubs1->Start(40001, {});
@@ -248,7 +285,7 @@ TEST(ProcessingEngineTest, SharedSubTaskProcessing)
  * @when Subtasks are finished and chunk hashes are valid
  * @then Task finalization sink is called.
  */
-TEST(ProcessingEngineTest, TaskFinalization)
+TEST_F(ProcessingEngineTest, TaskFinalization)
 {
     auto pubs1 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();;
     pubs1->Start(40001, {});
@@ -312,7 +349,7 @@ TEST(ProcessingEngineTest, TaskFinalization)
  * @when Subtasks contains invalid chunk hashes
  * @then The subtasks processing is restarted.
  */
-TEST(ProcessingEngineTest, InvalidSubTasksRestart)
+TEST_F(ProcessingEngineTest, InvalidSubTasksRestart)
 {
     auto pubs1 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();;
     pubs1->Start(40001, {});

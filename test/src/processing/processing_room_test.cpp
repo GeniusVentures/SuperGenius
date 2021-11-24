@@ -1,10 +1,28 @@
 #include "processing/processing_node.hpp"
 
+#include <libp2p/log/configurator.hpp>
+#include <libp2p/log/logger.hpp>
+
 #include <gtest/gtest.h>
 
 #include <iostream>
 
 using namespace sgns::processing;
+const std::string logger_config(R"(
+# ----------------
+sinks:
+  - name: console
+    type: console
+    color: true
+groups:
+  - name: processing_room_test
+    sink: console
+    level: info
+    children:
+      - name: libp2p
+      - name: Gossip
+# ----------------
+  )");
 
 namespace
 {
@@ -18,12 +36,31 @@ namespace
             uint32_t initialHashCode) override {};
     };
 }
+
+class ProcessingRoomTest : public ::testing::Test
+{
+public:
+    virtual void SetUp() override
+    {
+        // prepare log system
+        auto logging_system = std::make_shared<soralog::LoggingSystem>(
+            std::make_shared<soralog::ConfiguratorFromYAML>(
+                // Original LibP2P logging config
+                std::make_shared<libp2p::log::Configurator>(),
+                // Additional logging config for application
+                logger_config));
+        logging_system->configure();
+
+        libp2p::log::setLoggingSystem(logging_system);
+        libp2p::log::setLevelOfGroup("processing_room_test", soralog::Level::DEBUG);
+    }
+};
 /**
  * @given Slots in a processing room are available
  * @when A worker requests a joining the room.
  * @then The worker is successsfully joined the room.
  */
-TEST(ProcessingRoomTest, AttachToProcessingRoom)
+TEST_F(ProcessingRoomTest, AttachToProcessingRoom)
 {
     auto pubs1 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();;
     pubs1->Start(40001, {});
@@ -55,7 +92,7 @@ TEST(ProcessingRoomTest, AttachToProcessingRoom)
  * @when A worker requests a joining the room that exceeds room size limit
  * @then The worker is unsubscribed from processing channel
  */
-TEST(ProcessingRoomTest, RoomSizeLimitExceeded)
+TEST_F(ProcessingRoomTest, RoomSizeLimitExceeded)
 {
     auto pubs1 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();;
     pubs1->Start(40001, {});

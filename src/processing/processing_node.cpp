@@ -1,7 +1,5 @@
 #include "processing_node.hpp"
 
-#include <libp2p/protocol/gossip/impl/peer_set.hpp>
-
 namespace sgns::processing
 {
 ////////////////////////////////////////////////////////////////////////////////

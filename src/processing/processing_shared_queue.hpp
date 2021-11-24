@@ -7,7 +7,7 @@
 #define SUPERGENIUS_PROCESSING_SHARED_QUEUE_HPP
 
 #include <processing/proto/SGProcessing.pb.h>
-#include <libp2p/common/logger.hpp>
+#include <base/logger.hpp>
 
 namespace sgns::processing
 {
@@ -78,7 +78,7 @@ private:
 
     std::vector<int> m_validItemIndices;
 
-    libp2p::common::Logger m_logger = libp2p::common::createLogger("ProcessingSharedQueue");
+    base::Logger m_logger = base::createLogger("ProcessingSharedQueue");
 };
 }
 

@@ -1,6 +1,9 @@
 
 #include "processing/processing_service.hpp"
 
+#include <libp2p/log/configurator.hpp>
+#include <libp2p/log/logger.hpp>
+
 #include <gtest/gtest.h>
 
 using namespace sgns::processing;
@@ -32,12 +35,46 @@ public:
     }
 };
 
+const std::string logger_config(R"(
+# ----------------
+sinks:
+  - name: console
+    type: console
+    color: true
+groups:
+  - name: processing_service_test
+    sink: console
+    level: info
+    children:
+      - name: libp2p
+      - name: Gossip
+# ----------------
+  )");
+
+class ProcessingServiceTest : public ::testing::Test
+{
+public:
+    virtual void SetUp() override
+    {
+        // prepare log system
+        auto logging_system = std::make_shared<soralog::LoggingSystem>(
+            std::make_shared<soralog::ConfiguratorFromYAML>(
+                // Original LibP2P logging config
+                std::make_shared<libp2p::log::Configurator>(),
+                // Additional logging config for application
+                logger_config));
+        logging_system->configure();
+
+        libp2p::log::setLoggingSystem(logging_system);
+        libp2p::log::setLevelOfGroup("processing_service_test", soralog::Level::DEBUG);
+    }
+};
 /**
  * @given Empty room list
  * @when A room with available slots received
  * @then A processing node is created
  */
-TEST(ProcessingServiceTest, ProcessingSlotsAreAvailable)
+TEST_F(ProcessingServiceTest, ProcessingSlotsAreAvailable)
 {
     auto pubs = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();
     pubs->Start(40001, {});
@@ -72,7 +109,7 @@ TEST(ProcessingServiceTest, ProcessingSlotsAreAvailable)
  * @when A room without available slots is received
  * @then No new processing node is created
  */
-TEST(ProcessingServiceTest, NoProcessingSlotsAvailable)
+TEST_F(ProcessingServiceTest, NoProcessingSlotsAvailable)
 {
     auto pubs = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();
     pubs->Start(40001, {});

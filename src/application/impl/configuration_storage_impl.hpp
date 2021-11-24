@@ -6,6 +6,8 @@
 
 #include <boost/property_tree/ptree.hpp>
 
+#include <base/logger.hpp>
+
 namespace sgns::application {
 
   class ConfigurationStorageImpl : public ConfigurationStorage {
@@ -91,6 +93,8 @@ namespace sgns::application {
     std::set<primitives::BlockHash> bad_blocks_;
     boost::optional<std::string> verification_engine_;
     GenesisRawConfig genesis_;
+
+    base::Logger logger_ = base::createLogger("ConfigurationStorageImpl");
   };
 
 }  // namespace sgns::application

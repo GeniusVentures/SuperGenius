@@ -11,6 +11,9 @@
 #include <crdt/globaldb/globaldb.hpp>
 #include <crdt/globaldb/keypair_file_storage.hpp>
 
+#include <libp2p/log/configurator.hpp>
+#include <libp2p/log/logger.hpp>
+
 using Buffer = sgns::base::Buffer;
 using HierarchicalKey = sgns::crdt::HierarchicalKey;
 using SubscriptionData = libp2p::protocol::gossip::Gossip::SubscriptionData;
@@ -71,6 +74,33 @@ int main(int argc, char** argv)
     std::cout << desc << "\n";
     return EXIT_FAILURE;
   }
+
+  const std::string logger_config(R"(
+    # ----------------
+    sinks:
+      - name: console
+        type: console
+        color: true
+    groups:
+      - name: globaldb_app
+        sink: console
+        level: info
+        children:
+          - name: libp2p
+          - name: Gossip
+    # ----------------
+    )");
+
+  // prepare log system
+  auto logging_system = std::make_shared<soralog::LoggingSystem>(
+      std::make_shared<soralog::ConfiguratorFromYAML>(
+          // Original LibP2P logging config
+          std::make_shared<libp2p::log::Configurator>(),
+          // Additional logging config for application
+          logger_config));
+  logging_system->configure();
+
+  libp2p::log::setLoggingSystem(logging_system);
 
   auto io = std::make_shared<boost::asio::io_context>();
   auto logger = sgns::base::createLogger("globaldb");
