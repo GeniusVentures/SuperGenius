@@ -127,7 +127,7 @@ private:
     SharedQueue m_sharedQueue;
     std::chrono::system_clock::duration m_processingTimeout;
 
-    libp2p::common::Logger m_logger = libp2p::common::createLogger("ProcessingSubTaskQueue");
+    base::Logger m_logger = base::createLogger("ProcessingSubTaskQueue");
 };
 }
 

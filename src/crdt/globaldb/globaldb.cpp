@@ -93,7 +93,7 @@ outcome::result<void> GlobalDB::Init(std::shared_ptr<CrdtOptions> crdtOptions)
         (boost::format("/ip4/127.0.0.1/tcp/%d/ipfs/%s") % m_dagSyncPort % dagSyncerHost->getId().toBase58()).str()).value();
     m_logger->debug(listen_to.getStringAddress());
 
-    auto scheduler = std::make_shared<libp2p::protocol::AsioScheduler>(*io, libp2p::protocol::SchedulerConfig{});
+    auto scheduler = std::make_shared<libp2p::protocol::AsioScheduler>(io, libp2p::protocol::SchedulerConfig{});
     auto graphsync = std::make_shared<GraphsyncImpl>(dagSyncerHost, std::move(scheduler));
     auto dagSyncer = std::make_shared<GraphsyncDAGSyncer>(ipfsDataStore, graphsync, dagSyncerHost);
 
