@@ -60,6 +60,10 @@ project(SuperGenius C CXX)
 include(../CommonCompilerOptions.CMake)
 
 # --------------------------------------------------------
+# Turn off examples
+set(BUILD_EXAMPLES OFF)
+
+# --------------------------------------------------------
 # Set custom subfolder for ABI
 set(ABI_SUBFOLDER_NAME "/${ANDROID_ABI}")
 

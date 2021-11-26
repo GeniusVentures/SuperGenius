@@ -33,6 +33,10 @@ set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM "BOTH")
 set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 
 # --------------------------------------------------------
+# Turn off examples
+set(BUILD_EXAMPLES OFF)
+
+# --------------------------------------------------------
 # Set toolchain file
 set(CMAKE_TOOLCHAIN_FILE "${CMAKE_CURRENT_SOURCE_DIR}/iOS.cmake")
 

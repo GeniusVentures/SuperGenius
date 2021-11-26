@@ -96,3 +96,6 @@ set(_THIRDPARTY_DIR "${THIRDPARTY_DIR}")
 print("THIRDPARTY SRC DIR: ${_THIRDPARTY_DIR}")
 
 add_compile_definitions(SPDLOG_FMT_EXTERNAL)
+
+option(TESTING "Build tests" ON)
+option(BUILD_EXAMPLES "Build examples" ON)

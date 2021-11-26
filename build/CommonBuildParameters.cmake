@@ -264,8 +264,6 @@ print("C Release flags: ${CMAKE_C_FLAGS_RELEASE}")
 print("CXX Release flags: ${CMAKE_CXX_FLAGS_RELEASE}")
 
 # --------------------------------------------------------
-option(TESTING "Build tests" ON)
-option(BUILD_EXAMPLES "Build examples" ON)
 link_directories(
   ${Boost_LIB_DIR}
   ${ipfs-lite-cpp_LIB_DIR}
@@ -281,7 +279,6 @@ if (TESTING)
 endif ()
 
 if (BUILD_EXAMPLES)
-    message("Boost_LIBRARIES: ${Boost_LIBRARIES}")
     add_subdirectory(${PROJECT_ROOT}/example ${CMAKE_BINARY_DIR}/example)
 endif ()
 
