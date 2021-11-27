@@ -49,5 +49,6 @@ set_target_properties(trie_storage PROPERTIES PUBLIC_HEADER "trie_storage_impl.h
 target_link_libraries(trie_storage
     ephemeral_trie_batch
     persistent_trie_batch
+    logger
     )
 supergenius_install(trie_storage)

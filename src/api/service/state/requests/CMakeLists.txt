@@ -7,5 +7,6 @@ add_library(api_state_requests
 
 target_link_libraries(api_state_requests
     Boost::boost
+    logger
     blob
     )
