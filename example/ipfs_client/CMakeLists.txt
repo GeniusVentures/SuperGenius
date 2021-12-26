@@ -33,6 +33,7 @@ target_link_libraries(ipfs_client
     p2p::p2p_identify
     p2p::p2p_ping
     Boost::Boost.DI
-    Boost::program_options    
+    Boost::program_options
+    ipfs-bitswap-cpp
     ${WIN_CRYPT_LIBRARY}
     )

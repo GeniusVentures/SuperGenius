@@ -19,11 +19,13 @@ namespace
     {
     public:
         ProcessingCoreImpl(
+            std::shared_ptr<sgns::crdt::GlobalDB> db,
             size_t nSubtasks,
             size_t subTaskProcessingTime,
             size_t nChunks,
             bool addValidationSubtask)
-            : m_nSubtasks(nSubtasks)
+            : m_db(db)
+            , m_nSubtasks(nSubtasks)
             , m_subTaskProcessingTime(subTaskProcessingTime)
             , m_nChunks(nChunks)
             , m_addValidationSubtask(addValidationSubtask)
@@ -113,12 +115,20 @@ namespace
             }
 
             result.set_result_hash(subTaskResultHash);
+            sgns::crdt::GlobalDB::Buffer data;
+            data.put(result.SerializeAsString());
+
+            auto taskId = 
+            m_db->Put(
+                sgns::crdt::HierarchicalKey((boost::format("results/%s") % subTask.results_channel()).str().c_str()),
+                data);
         }
 
         std::vector<size_t> m_chunkResulHashes;
         std::vector<size_t> m_validationChunkHashes;
 
     private:
+        std::shared_ptr<sgns::crdt::GlobalDB> m_db;
         size_t m_nSubtasks;
         size_t m_subTaskProcessingTime;
         size_t m_nChunks;
@@ -505,6 +515,7 @@ int main(int argc, char* argv[])
     auto taskQueue = std::make_shared<ProcessingTaskQueueImpl>(globalDB);
 
     auto processingCore = std::make_shared<ProcessingCoreImpl>(
+        globalDB,
         options->nSubTasks, 
         options->subTaskProcessingTime,
         options->nChunks,
