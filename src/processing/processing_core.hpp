@@ -7,6 +7,9 @@
 
 #include <processing/proto/SGProcessing.pb.h>
 #include <list>
+
+namespace sgns::processing
+{
 /**
 * Processing core interface.
 * An implementatin of the interface depends on specific processing algorithm
@@ -32,5 +35,7 @@ public:
         const SGProcessing::SubTask& subTask, SGProcessing::SubTaskResult& result,
         uint32_t initialHashCode) = 0;
 };
+
+} // namespace sgns::processing
 
 #endif // GRPC_FOR_SUPERGENIUS_PROCESSING_CORE_HPP

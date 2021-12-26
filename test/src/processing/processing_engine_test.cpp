@@ -142,7 +142,7 @@ TEST_F(ProcessingEngineTest, SubscribtionToResultChannel)
     subTask->set_results_channel("RESULT_CHANNEL_ID");
 
     auto processingQueue = std::make_shared<ProcessingSubTaskQueue>(
-        queueChannel, pubs1->GetAsioContext(), nodeId, processingCore);
+        queueChannel, pubs1->GetAsioContext(), nodeId);
     // The local queue wrapper doesn't own the queue
     processingQueue->ProcessSubTaskQueueMessage(queue.release());
 
@@ -198,7 +198,7 @@ TEST_F(ProcessingEngineTest, SubTaskProcessing)
     }
 
     auto processingQueue = std::make_shared<ProcessingSubTaskQueue>(
-        queueChannel, pubs1->GetAsioContext(), nodeId, processingCore);
+        queueChannel, pubs1->GetAsioContext(), nodeId);
     processingQueue->ProcessSubTaskQueueMessage(queue.release());
 
     engine.StartQueueProcessing(processingQueue);
@@ -251,14 +251,14 @@ TEST_F(ProcessingEngineTest, SharedSubTaskProcessing)
     }
 
     auto processingQueue1 = std::make_shared<ProcessingSubTaskQueue>(
-        queueChannel, pubs1->GetAsioContext(), nodeId1, processingCore);
+        queueChannel, pubs1->GetAsioContext(), nodeId1);
     processingQueue1->ProcessSubTaskQueueMessage(queue.release());
 
     engine1.StartQueueProcessing(processingQueue1);
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     auto processingQueue2 = std::make_shared<ProcessingSubTaskQueue>(
-        queueChannel, pubs1->GetAsioContext(), nodeId2, processingCore);
+        queueChannel, pubs1->GetAsioContext(), nodeId2);
 
     // Change queue owner
     SGProcessing::SubTaskQueueRequest queueRequest;
@@ -333,7 +333,7 @@ TEST_F(ProcessingEngineTest, TaskFinalization)
     }
 
     auto processingQueue1 = std::make_shared<ProcessingSubTaskQueue>(
-        queueChannel, pubs1->GetAsioContext(), nodeId1, processingCore);
+        queueChannel, pubs1->GetAsioContext(), nodeId1);
     processingQueue1->ProcessSubTaskQueueMessage(queue.release());
 
     engine1.StartQueueProcessing(processingQueue1);
@@ -401,7 +401,7 @@ TEST_F(ProcessingEngineTest, InvalidSubTasksRestart)
     }
 
     auto processingQueue1 = std::make_shared<ProcessingSubTaskQueue>(
-        queueChannel, pubs1->GetAsioContext(), nodeId1, processingCore1);
+        queueChannel, pubs1->GetAsioContext(), nodeId1);
     processingQueue1->ProcessSubTaskQueueMessage(queue.release());
 
     bool isTaskFinalized1 = false;
@@ -421,7 +421,7 @@ TEST_F(ProcessingEngineTest, InvalidSubTasksRestart)
     ASSERT_FALSE(isTaskFinalized1);
 
     auto processingQueue2 = std::make_shared<ProcessingSubTaskQueue>(
-        queueChannel, pubs1->GetAsioContext(), nodeId2, processingCore2);
+        queueChannel, pubs1->GetAsioContext(), nodeId2);
 
     // Change queue owner
     SGProcessing::SubTaskQueueRequest queueRequest;
