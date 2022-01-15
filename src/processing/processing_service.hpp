@@ -63,7 +63,7 @@ private:
 
     boost::asio::deadline_timer m_timerChannelListRequestTimeout;
     boost::posix_time::time_duration m_channelListRequestTimeout;
-    libp2p::common::Logger m_logger = libp2p::common::createLogger("ProcessingService");
+    base::Logger m_logger = base::createLogger("ProcessingService");
 };
 }
 

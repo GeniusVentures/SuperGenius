@@ -15,30 +15,30 @@ using namespace std::string_literals;
  */
 TEST(Common, BufferPut) {
   Buffer b;
-  ASSERT_EQ(b.size(), 0);
+  ASSERT_EQ(b.size(), 0u);
 
   auto hex = b.toHex();
   ASSERT_EQ(hex, ""s);
 
   auto s = "hello"s;
   b.put(s);
-  ASSERT_EQ(b.size(), 5);
+  ASSERT_EQ(b.size(), 5u);
 
   b.putUint8(1);
-  ASSERT_EQ(b.size(), 6);
+  ASSERT_EQ(b.size(), 6u);
 
   b.putUint32(1);
-  ASSERT_EQ(b.size(), 10);
+  ASSERT_EQ(b.size(), 10u);
 
   b.putUint64(1);
-  ASSERT_EQ(b.size(), 18);
+  ASSERT_EQ(b.size(), 18u);
 
   std::vector<uint8_t> e{1, 2, 3, 4, 5};
   b.put(e);
-  ASSERT_EQ(b.size(), 23);
+  ASSERT_EQ(b.size(), 23u);
 
   // test iterators
-  int i = 0;
+  unsigned int i = 0;
   for (const auto &byte : b) {
     i++;
     (void)byte;
@@ -68,7 +68,7 @@ TEST(Common, putBuffer) {
  */
 TEST(Common, BufferInit) {
   Buffer b{1, 2, 3, 4, 5};
-  ASSERT_EQ(b.size(), 5);
+  ASSERT_EQ(b.size(), 5u);
   ASSERT_EQ(b.toHex(), "0102030405"s);
 
   Buffer a(b);

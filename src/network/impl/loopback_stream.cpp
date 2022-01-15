@@ -164,4 +164,14 @@ namespace sgns::network {
     data_notifyee_ = std::move(read_lambda);
   };
 
+  void LoopbackStream::deferReadCallback(outcome::result<size_t> res, ReadCallbackFunc cb)
+  {
+      // TODO: Add implementation
+  }
+
+  void LoopbackStream::deferWriteCallback(std::error_code ec, WriteCallbackFunc cb)
+  {
+      // TODO: Add implementation
+  }
+
 }  // namespace sgns::network

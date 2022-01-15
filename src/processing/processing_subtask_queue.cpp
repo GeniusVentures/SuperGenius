@@ -6,12 +6,10 @@ namespace sgns::processing
 ProcessingSubTaskQueue::ProcessingSubTaskQueue(
     std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> queueChannel,
     std::shared_ptr<boost::asio::io_context> context,
-    const std::string& localNodeId,
-    std::shared_ptr<ProcessingCore> processingCore)
+    const std::string& localNodeId)
     : m_queueChannel(queueChannel)
     , m_context(std::move(context))
     , m_localNodeId(localNodeId)
-    , m_processingCore(processingCore)
     , m_dltQueueResponseTimeout(*m_context.get())
     , m_queueResponseTimeout(boost::posix_time::seconds(5))
     , m_dltGrabSubTaskTimeout(*m_context.get())
@@ -20,17 +18,11 @@ ProcessingSubTaskQueue::ProcessingSubTaskQueue(
 {
 }
 
-bool ProcessingSubTaskQueue::CreateQueue(const SGProcessing::Task& task)
+bool ProcessingSubTaskQueue::CreateQueue(ProcessingCore::SubTaskList& subTasks)
 {
-    using SubTaskList = ProcessingCore::SubTaskList;
-
     auto timestamp = std::chrono::system_clock::now();
 
     bool hasChunksDuplicates = false;
-    SubTaskList subTasks;
-    // @todo add possible errors processing of a task splitting
-    m_processingCore->SplitTask(task, subTasks);
-    // @todo if (splitFailed) return false;
 
     auto queue = std::make_shared<SGProcessing::SubTaskQueue>();
     auto queueSubTasks = queue->mutable_subtasks();

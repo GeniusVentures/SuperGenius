@@ -6,8 +6,8 @@
 #ifndef SUPERGENIUS_PROCESSING_SUBTASK_QUEUE_HPP
 #define SUPERGENIUS_PROCESSING_SUBTASK_QUEUE_HPP
 
-#include "processing_shared_queue.hpp"
-#include "processing_core.hpp"
+#include <processing/processing_shared_queue.hpp>
+#include <processing/processing_core.hpp>
 
 #include <processing/proto/SGProcessing.pb.h>
 
@@ -26,20 +26,18 @@ public:
     * @param queueChannel - task processing channel
     * @param context - io context to handle timers
     * @param localNodeId local processing node ID
-    * @param proceessingCore - custom task processing algorithm
     */
     ProcessingSubTaskQueue(
         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> queueChannel,
         std::shared_ptr<boost::asio::io_context> context,
-        const std::string& localNodeId,
-        std::shared_ptr<ProcessingCore> processingCore);
+        const std::string& localNodeId);
 
     /** Create a subtask queue by splitting the task to subtasks using the processing code
-    * @param task - task that should be split into subtasks
-    * in subrasks to allow a validation
+    * @param subTasks - a list of subtasks that should be added to the queue
+    * in subtasks to allow a validation
     * @return false if not queue was created due to errors
     */
-    bool CreateQueue(const SGProcessing::Task& task);
+    bool CreateQueue(ProcessingCore::SubTaskList& subTasks);
 
     /** Asynchronous getting of a subtask from the queue
     * @param onSubTaskGrabbedCallback a callback that is called when a grapped iosubtask is locked by the local node
@@ -111,7 +109,6 @@ private:
     std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> m_queueChannel;
     std::shared_ptr<boost::asio::io_context> m_context;
     std::string m_localNodeId;
-    std::shared_ptr<ProcessingCore> m_processingCore;
 
     std::shared_ptr<SGProcessing::SubTaskQueue> m_queue;
     mutable std::mutex m_queueMutex;
@@ -127,7 +124,7 @@ private:
     SharedQueue m_sharedQueue;
     std::chrono::system_clock::duration m_processingTimeout;
 
-    libp2p::common::Logger m_logger = libp2p::common::createLogger("ProcessingSubTaskQueue");
+    base::Logger m_logger = base::createLogger("ProcessingSubTaskQueue");
 };
 }
 

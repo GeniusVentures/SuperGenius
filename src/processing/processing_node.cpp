@@ -1,7 +1,5 @@
 #include "processing_node.hpp"
 
-#include <libp2p/protocol/gossip/impl/peer_set.hpp>
-
 namespace sgns::processing
 {
 ////////////////////////////////////////////////////////////////////////////////
@@ -33,7 +31,7 @@ void ProcessingNode::Initialize(const std::string& processingChannelId, size_t m
         m_processingChannel, m_gossipPubSub->GetAsioContext(), m_nodeId, m_processingChannelCapacity);
 
     m_subtaskQueue = std::make_shared<ProcessingSubTaskQueue>(
-        m_processingChannel, m_gossipPubSub->GetAsioContext(), m_nodeId, m_processingCore);
+        m_processingChannel, m_gossipPubSub->GetAsioContext(), m_nodeId);
     m_processingEngine = std::make_unique<ProcessingEngine>(
         m_gossipPubSub, m_nodeId, m_processingCore, m_taskResultProcessingSink);
 
@@ -58,7 +56,12 @@ void ProcessingNode::CreateProcessingHost(
     Initialize(task.ipfs_block_id(), msSubscriptionWaitingDuration);
 
     m_room->Create();
-    m_subtaskQueue->CreateQueue(task);
+
+    ProcessingCore::SubTaskList subTasks;
+    m_processingCore->SplitTask(task, subTasks);
+    // @todo Handle splitting errors
+
+    m_subtaskQueue->CreateQueue(subTasks);
 
     m_processingEngine->StartQueueProcessing(m_subtaskQueue);
 }

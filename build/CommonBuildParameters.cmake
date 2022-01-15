@@ -74,11 +74,39 @@ set(GSL_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/GSL/include")
 include_directories(${GSL_INCLUDE_DIR})
 
 # --------------------------------------------------------
+# Set config of fmt
+set(fmt_DIR "${_THIRDPARTY_BUILD_DIR}/fmt/lib/cmake/fmt")
+set(fmt_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/fmt/include")
+find_package(fmt CONFIG REQUIRED)
+include_directories(${fmt_INCLUDE_DIR})
+
+# --------------------------------------------------------
 # Set config of spdlog v1.4.2
 set(spdlog_DIR "${_THIRDPARTY_BUILD_DIR}/spdlog/lib/cmake/spdlog")
 set(spdlog_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/spdlog/include")
 find_package(spdlog CONFIG REQUIRED)
 include_directories(${spdlog_INCLUDE_DIR})
+
+# --------------------------------------------------------
+# Set config of soralog
+set(soralog_DIR "${_THIRDPARTY_BUILD_DIR}/soralog/lib/cmake/soralog")
+set(soralog_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/soralog/include")
+find_package(soralog CONFIG REQUIRED)
+include_directories(${soralog_INCLUDE_DIR})
+
+# --------------------------------------------------------
+# Set config of cares
+set(c-ares_DIR "${_THIRDPARTY_BUILD_DIR}/cares/lib/cmake/c-ares")
+set(c-ares_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/cares/include")
+find_package(c-ares CONFIG REQUIRED)
+include_directories(${c-ares_INCLUDE_DIR})
+
+# --------------------------------------------------------
+# Set config of yaml-cpp
+set(yaml-cpp_DIR "${_THIRDPARTY_BUILD_DIR}/yaml-cpp/share/cmake/yaml-cpp")
+set(yaml-cpp_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/yaml-cpp/include")
+find_package(yaml-cpp CONFIG REQUIRED)
+include_directories(${yaml-cpp_INCLUDE_DIR})
 
 # --------------------------------------------------------
 # Set config of  tsl_hat_trie
@@ -110,6 +138,13 @@ set(ipfs-pubsub_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/ipfs-pubsub/include")
 set(ipfs-pubsub_DIR "${_THIRDPARTY_BUILD_DIR}/ipfs-pubsub/lib/cmake/ipfs-pubsub")
 find_package(ipfs-pubsub CONFIG REQUIRED)
 include_directories(${ipfs-pubsub_INCLUDE_DIR})
+
+# --------------------------------------------------------
+# Set config of ipfs-bitswap-cpp
+set(ipfs-bitswap-cpp_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/ipfs-bitswap-cpp/include")
+set(ipfs-bitswap-cpp_DIR "${_THIRDPARTY_BUILD_DIR}/ipfs-bitswap-cpp/lib/cmake/ipfs-bitswap-cpp")
+find_package(ipfs-bitswap-cpp CONFIG REQUIRED)
+include_directories(${ipfs-bitswap-cpp_INCLUDE_DIR})
 
 # --------------------------------------------------------
 # Set config of Boost.DI
@@ -184,11 +219,11 @@ include_directories(${jsonrpc_lean_INCLUDE_DIR})
 
 # --------------------------------------------------------
 # Set config of binaryen
-set(binaryen_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/binaryen/include")
-set(binaryen_LIBRARIES "${_THIRDPARTY_BUILD_DIR}/binaryen/lib")
-set(binaryen_DIR "${_THIRDPARTY_BUILD_DIR}/binaryen/lib/cmake/binaryen")
-find_package(binaryen CONFIG REQUIRED)
-include_directories(${binaryen_INCLUDE_DIR} ${binaryen_INCLUDE_DIR}/binaryen)
+#set(binaryen_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/binaryen/include")
+#set(binaryen_LIBRARIES "${_THIRDPARTY_BUILD_DIR}/binaryen/lib")
+#set(binaryen_DIR "${_THIRDPARTY_BUILD_DIR}/binaryen/lib/cmake/binaryen")
+#find_package(binaryen CONFIG REQUIRED)
+#include_directories(${binaryen_INCLUDE_DIR} ${binaryen_INCLUDE_DIR}/binaryen)
 
 # --------------------------------------------------------
 # Set config of secp256k1
@@ -229,15 +264,13 @@ print("C Release flags: ${CMAKE_C_FLAGS_RELEASE}")
 print("CXX Release flags: ${CMAKE_CXX_FLAGS_RELEASE}")
 
 # --------------------------------------------------------
-option(TESTING "Build tests" ON)
-option(BUILD_EXAMPLES "Build examples" ON)
 link_directories(
   ${Boost_LIB_DIR}
   ${ipfs-lite-cpp_LIB_DIR}
 )
 
 add_subdirectory(${PROJECT_ROOT}/src ${CMAKE_BINARY_DIR}/src)
-add_subdirectory(${PROJECT_ROOT}/node ${CMAKE_BINARY_DIR}/node)
+#add_subdirectory(${PROJECT_ROOT}/node ${CMAKE_BINARY_DIR}/node)
 
 
 if (TESTING)
@@ -246,7 +279,6 @@ if (TESTING)
 endif ()
 
 if (BUILD_EXAMPLES)
-    message("Boost_LIBRARIES: ${Boost_LIBRARIES}")
     add_subdirectory(${PROJECT_ROOT}/example ${CMAKE_BINARY_DIR}/example)
 endif ()
 

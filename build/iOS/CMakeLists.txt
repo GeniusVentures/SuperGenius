@@ -22,14 +22,19 @@ set(IOS_DEPLOYMENT_TARGET 12.0)
 project(SuperGenius C CXX)
 
 # --------------------------------------------------------
+# Set cross compiling settings
+set(CMAKE_SYSTEM_NAME "iOS")
+
+# --------------------------------------------------------
 # include common compiler options
 include(../CommonCompilerOptions.CMake)
 
-# --------------------------------------------------------
-# Set cross compiling settings
-set(CMAKE_SYSTEM_NAME "iOS")
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM "BOTH")
 set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
+
+# --------------------------------------------------------
+# Turn off examples
+set(BUILD_EXAMPLES OFF)
 
 # --------------------------------------------------------
 # Set toolchain file
@@ -65,13 +70,13 @@ set(CMAKE_XCODE_ATTRIBUTE_ONLY_ACTIVE_ARCH YES)
 
 # --------------------------------------------------------
 # Set host system protoc executable path
-set(PROTOC_EXECUTABLE "${THIRDPARTY_DIR}/protobuf-host/bin/protoc")
+set(PROTOC_EXECUTABLE "${THIRDPARTY_BUILD_DIR}/protobuf-host/bin/protoc")
 
 # --------------------------------------------------------
 # Set custom protobuf path for iOS
-set(iOS_Protobuf_DIR "${THIRDPARTY_DIR}/protobuf/lib/cmake/protobuf")
-set(iOS_Protobuf_INCLUDE_DIR "${THIRDPARTY_DIR}/protobuf/include/google/protobuf")
-set(iOS_Protobuf_LIBRARIES "${THIRDPARTY_DIR}/protobuf/lib")
+set(iOS_Protobuf_DIR "${THIRDPARTY_BUILD_DIR}/protobuf/lib/cmake/protobuf")
+set(iOS_Protobuf_INCLUDE_DIR "${THIRDPARTY_BUILD_DIR}/protobuf/include/google/protobuf")
+set(iOS_Protobuf_LIBRARIES "${THIRDPARTY_BUILD_DIR}/protobuf/lib")
 
 # --------------------------------------------------------
 # Set OS threading settings

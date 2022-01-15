@@ -38,7 +38,7 @@ createNodeObjects(std::shared_ptr<boost::asio::io_context> io)
         objects;
     objects.second = injector.template create<std::shared_ptr<libp2p::Host>>();
     auto scheduler = std::make_shared<libp2p::protocol::AsioScheduler>(
-        *io, libp2p::protocol::SchedulerConfig{});
+        io, libp2p::protocol::SchedulerConfig{});
     objects.first =
         std::make_shared<sgns::ipfs_lite::ipfs::graphsync::GraphsyncImpl>(objects.second, std::move(scheduler));
     return objects;
@@ -59,7 +59,7 @@ createNodeObjects(std::shared_ptr<boost::asio::io_context> io, libp2p::crypto::K
         objects;
     objects.second = injector.template create<std::shared_ptr<libp2p::Host>>();
     auto scheduler = std::make_shared<libp2p::protocol::AsioScheduler>(
-        *io, libp2p::protocol::SchedulerConfig{});
+        io, libp2p::protocol::SchedulerConfig{});
     objects.first =
         std::make_shared<sgns::ipfs_lite::ipfs::graphsync::GraphsyncImpl>(objects.second, std::move(scheduler));
     return objects;

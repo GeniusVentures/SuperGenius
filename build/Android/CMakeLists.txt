@@ -60,12 +60,16 @@ project(SuperGenius C CXX)
 include(../CommonCompilerOptions.CMake)
 
 # --------------------------------------------------------
+# Turn off examples
+set(BUILD_EXAMPLES OFF)
+
+# --------------------------------------------------------
 # Set custom subfolder for ABI
 set(ABI_SUBFOLDER_NAME "/${ANDROID_ABI}")
 
 # --------------------------------------------------------
 # Set host system protoc executable path
-set(PROTOC_EXECUTABLE "${THIRDPARTY_DIR}/protobuf/bin/protoc")
+set(PROTOC_EXECUTABLE "${THIRDPARTY_BUILD_DIR}/protobuf/bin/protoc")
 
 # --------------------------------------------------------
 # Allow multiple definitions

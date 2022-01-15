@@ -87,7 +87,7 @@ namespace sgns::crdt
 
     std::shared_ptr<libp2p::Host> host_;
 
-    Logger logger_ = libp2p::common::createLogger("GraphsyncDAGSyncer");
+    Logger logger_ = base::createLogger("GraphsyncDAGSyncer");
 
     // keeping subscriptions alive, otherwise they cancel themselves
     // class Subscription have non-copyable constructor and operator, so it can not be used in std::vector
