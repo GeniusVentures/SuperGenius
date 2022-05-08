@@ -1,4 +1,5 @@
-#include "processing/processing_service.hpp"
+#include <processing/processing_service.hpp>
+#include <processing/processing_subtask_enqueuer_impl.hpp>
 
 #include <iostream>
 #include <boost/program_options.hpp>
@@ -11,38 +12,69 @@ using namespace sgns::processing;
 
 namespace
 {
-    class ProcessingCoreImpl : public ProcessingCore
+    class SubTaskStateStorageImpl : public SubTaskStateStorage
     {
     public:
-        ProcessingCoreImpl(size_t nSubtasks, size_t subTaskProcessingTime)
+        void ChangeSubTaskState(const std::string& subTaskId, SGProcessing::SubTaskState::Type state) override {}
+        std::optional<SGProcessing::SubTaskState> GetSubTaskState(const std::string& subTaskId) override
+        {
+            return std::nullopt;
+        }
+    };
+
+    class SubTaskResultStorageImpl : public SubTaskResultStorage
+    {
+    public:
+        void AddSubTaskResult(const SGProcessing::SubTaskResult& subTaskResult) override {}
+        void RemoveSubTaskResult(const std::string& subTaskId) override {}
+        void GetSubTaskResults(
+            const std::set<std::string>& subTaskIds,
+            std::vector<SGProcessing::SubTaskResult>& results) override {}
+    };
+
+    class TaskSplitter
+    {
+    public:
+        TaskSplitter(size_t nSubtasks)
             : m_nSubtasks(nSubtasks)
-            , m_subTaskProcessingTime(subTaskProcessingTime)
         {
         }
 
-        void SplitTask(const SGProcessing::Task& task, SubTaskList& subTasks) override
+        void SplitTask(const SGProcessing::Task& task, std::list<SGProcessing::SubTask>& subTasks)
         {
             for (size_t i = 0; i < m_nSubtasks; ++i)
             {
-                auto subtask = std::make_unique<SGProcessing::SubTask>();
-                subtask->set_ipfsblock(task.ipfs_block_id());
-                subtask->set_results_channel((boost::format("%s_subtask_%d") % task.results_channel() % i).str());
+                SGProcessing::SubTask subtask;
+                subtask.set_ipfsblock(task.ipfs_block_id());
+                subtask.set_subtaskid((boost::format("%s_subtask_%d") % task.results_channel() % i).str());
                 subTasks.push_back(std::move(subtask));
             }
+        }
+
+    private:
+        size_t m_nSubtasks;
+
+    };
+
+    class ProcessingCoreImpl : public ProcessingCore
+    {
+    public:
+        ProcessingCoreImpl(size_t subTaskProcessingTime)
+            : m_subTaskProcessingTime(subTaskProcessingTime)
+        {
         }
 
         void  ProcessSubTask(
             const SGProcessing::SubTask& subTask, SGProcessing::SubTaskResult& result,
             uint32_t initialHashCode) override
         {
-            std::cout << "SubTask processing started. " << subTask.results_channel() << std::endl;
+            std::cout << "SubTask processing started. " << subTask.subtaskid() << std::endl;
             std::this_thread::sleep_for(std::chrono::milliseconds(m_subTaskProcessingTime));
-            std::cout << "SubTask processed. " << subTask.results_channel() << std::endl;
-            result.set_ipfs_results_data_id((boost::format("%s_%s") % "RESULT_IPFS" % subTask.results_channel()).str());
+            std::cout << "SubTask processed. " << subTask.subtaskid() << std::endl;
+            result.set_ipfs_results_data_id((boost::format("%s_%s") % "RESULT_IPFS" % subTask.subtaskid()).str());
         }
 
     private:
-        size_t m_nSubtasks;
         size_t m_subTaskProcessingTime;
     };
 
@@ -50,9 +82,30 @@ namespace
     class ProcessingTaskQueueImpl : public ProcessingTaskQueue
     {
     public:
-        ProcessingTaskQueueImpl(const std::list<SGProcessing::Task>& tasks)
-            : m_tasks(tasks)
+        ProcessingTaskQueueImpl()
         {
+        }
+
+        void EnqueueTask(
+            const SGProcessing::Task& task,
+            const std::list<SGProcessing::SubTask>& subTasks)
+        {
+            m_tasks.push_back(task);
+            m_subTasks.emplace(task.ipfs_block_id(), subTasks);
+        }
+
+        bool GetSubTasks(
+            const std::string& taskId,
+            std::list<SGProcessing::SubTask>& subTasks)
+        {
+            auto it = m_subTasks.find(taskId);
+            if (it != m_subTasks.end())
+            {
+                subTasks = it->second;
+                return true;
+            }
+
+            return false;
         }
 
         bool GrabTask(std::string& taskKey, SGProcessing::Task& task) override
@@ -77,6 +130,7 @@ namespace
 
     private:
         std::list<SGProcessing::Task> m_tasks;
+        std::map<std::string, std::list<SGProcessing::SubTask>> m_subTasks;
     };
 
     // cmd line options
@@ -84,7 +138,6 @@ namespace
     {
         size_t serviceIndex = 0;
         size_t subTaskProcessingTime = 0; // ms
-        size_t roomSize = 0;
         size_t disconnect = 0;
         size_t nSubTasks = 5;
         size_t channelListRequestTimeout = 5000;
@@ -103,7 +156,6 @@ namespace
             desc.add_options()("help,h", "print usage message")
                 ("remote,r", po::value(&remote), "remote service multiaddress to connect to")
                 ("processingtime,p", po::value(&o.subTaskProcessingTime), "subtask processing time (ms)")
-                ("roomsize,s", po::value(&o.roomSize), "subtask processing time (ms)")
                 ("disconnect,d", po::value(&o.disconnect), "disconnect after (ms)")
                 ("nsubtasks,n", po::value(&o.nSubTasks), "number of subtasks that task is split to")
                 ("channellisttimeout,t", po::value(&o.channelListRequestTimeout), "chnnel list request timeout (ms)")
@@ -131,11 +183,6 @@ namespace
                 return boost::none;
             }
 
-            if (o.roomSize == 0)
-            {
-                std::cerr << "Processing room size should be > 0\n";
-                return boost::none;
-            }
 
             if (!remote.empty())
             {
@@ -170,8 +217,8 @@ int main(int argc, char* argv[])
     auto loggerProcessingService = sgns::base::createLogger("ProcessingService");
     loggerProcessingService->set_level(spdlog::level::trace);
 
-    auto loggerProcessingQueue = sgns::base::createLogger("ProcessingSubTaskQueue");
-    loggerProcessingQueue->set_level(spdlog::level::debug);
+    auto loggerProcessingQueueManager = sgns::base::createLogger("ProcessingSubTaskQueueManager");
+    loggerProcessingQueueManager->set_level(spdlog::level::debug);
 
     const std::string processingGridChannel = "GRID_CHANNEL_ID";
 
@@ -254,14 +301,27 @@ int main(int argc, char* argv[])
         });
     }
 
-    auto taskQueue = std::make_shared<ProcessingTaskQueueImpl>(tasks);
-    auto processingCore = std::make_shared<ProcessingCoreImpl>(options->nSubTasks, options->subTaskProcessingTime);
-    ProcessingServiceImpl processingService(pubs, maximalNodesCount, options->roomSize, taskQueue, processingCore);
+    auto taskQueue = std::make_shared<ProcessingTaskQueueImpl>();
+    auto taskSplitter = std::make_shared<TaskSplitter>(options->nSubTasks);
+    for (auto& task : tasks)
+    {
+        std::list<SGProcessing::SubTask> subTasks;
+        taskSplitter->SplitTask(task, subTasks);
+        taskQueue->EnqueueTask(task, subTasks);
+    }
 
-    processingService.Listen(processingGridChannel);
+    auto processingCore = std::make_shared<ProcessingCoreImpl>(options->subTaskProcessingTime);
+    auto enqueuer = std::make_shared<SubTaskEnqueuerImpl>(taskQueue);
+    ProcessingServiceImpl processingService(pubs,
+        maximalNodesCount,
+        enqueuer,
+        std::make_shared<SubTaskStateStorageImpl>(),
+        std::make_shared<SubTaskResultStorageImpl>(),
+        processingCore);
+
     processingService.SetChannelListRequestTimeout(boost::posix_time::milliseconds(options->channelListRequestTimeout));
 
-    processingService.SendChannelListRequest();
+    processingService.StartProcessing(processingGridChannel);
 
     // Gracefully shutdown on signal
     boost::asio::signal_set signals(*pubs->GetAsioContext(), SIGINT, SIGTERM);

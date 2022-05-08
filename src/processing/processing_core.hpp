@@ -17,14 +17,7 @@ namespace sgns::processing
 class ProcessingCore
 {
 public:
-    typedef std::list<std::unique_ptr<SGProcessing::SubTask>> SubTaskList;
     virtual ~ProcessingCore() = default;
-
-    /** Splits a task to subtasks to allow distribute a processing over computation nodes
-    * @param task - task that needs to be split
-    * @param subTasks - a reference of list of subtasks that the original task was split to.
-    */
-    virtual void SplitTask(const SGProcessing::Task& task, SubTaskList& subTasks) = 0;
 
     /** Process a single subtask
     * @param subTask - subtask that needs to be processed

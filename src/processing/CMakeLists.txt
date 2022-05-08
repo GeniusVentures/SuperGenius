@@ -1,10 +1,29 @@
 add_library(processing_service
-    processing_room.cpp
-    processing_node.cpp
-    processing_service.cpp
+    processing_core.hpp
+    processing_engine.hpp
     processing_engine.cpp
-    processing_shared_queue.cpp
+    processing_node.hpp
+    processing_node.cpp
+    processing_service.hpp
+    processing_service.cpp
+    processing_subtask_enqueuer.hpp
+    processing_subtask_enqueuer_impl.hpp
+    processing_subtask_enqueuer_impl.cpp
+    processing_subtask_queue.hpp
     processing_subtask_queue.cpp
+    processing_subtask_queue_accessor.hpp
+    processing_subtask_queue_accessor_impl.hpp
+    processing_subtask_queue_accessor_impl.cpp
+    processing_subtask_queue_channel.hpp
+    processing_subtask_queue_channel_pubsub.hpp
+    processing_subtask_queue_channel_pubsub.cpp
+    processing_subtask_queue_manager.hpp
+    processing_subtask_queue_manager.cpp
+    processing_subtask_result_storage.hpp
+    processing_subtask_state_storage.hpp
+    processing_task_queue.hpp
+    processing_validation_core.cpp
+    processing_validation_core.hpp
     )
 
 

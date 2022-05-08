@@ -1,8 +1,8 @@
 #ifndef GRPC_FOR_SUPERGENIUS_PROCESSING_SERVICE
 #define GRPC_FOR_SUPERGENIUS_PROCESSING_SERVICE
 
-#include "processing_node.hpp"
-#include "processing_task_queue.hpp"
+#include <processing/processing_node.hpp>
+#include <processing/processing_subtask_enqueuer.hpp>
 
 #include <map>
 
@@ -14,37 +14,38 @@ public:
     /** Constructs a processing service.
     * @param gossipPubSub - pubsub service
     * @param maximalNodesCount - maximal number of processing nodes allowed to be handled by the service
-    * @param processingChannelCapacity - maximal number of nodes that can be joined to a processing channel
     */
     ProcessingServiceImpl(
         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> gossipPubSub, 
         size_t maximalNodesCount,
-        size_t processingChannelCapacity,
-        std::shared_ptr<ProcessingTaskQueue> taskQueue,
+        std::shared_ptr<SubTaskEnqueuer> subTaskEnqueuer,
+        std::shared_ptr<SubTaskStateStorage> subTaskStateStorage,
+        std::shared_ptr<SubTaskResultStorage> subTaskResultStorage,
         std::shared_ptr<ProcessingCore> processingCore);
 
-    /** Listen to data feed channel.
-    * @param dataChannelId - identifier of a data feed channel
-    */
-    void Listen(const std::string& processingGridChannelId);
-
-    void SendChannelListRequest();
+    void StartProcessing(const std::string& processingGridChannelId);
+    void StopProcessing();
 
     size_t GetProcessingNodesCount() const;
 
     void SetChannelListRequestTimeout(
         boost::posix_time::time_duration channelListRequestTimeout);
-
 private:
-    std::map<std::string, std::shared_ptr<ProcessingNode>>& GetProcessingNodes();
+    /** Listen to data feed channel.
+    * @param dataChannelId - identifier of a data feed channel
+    */
+    void Listen(const std::string& processingGridChannelId);
+    void SendChannelListRequest();
 
     /** Asynschonous callback to process received messages other processing services.
     * @param message - a message structure containing the messsage data and its sender peer information.
     * @return None
     */
     void OnMessage(boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message&> message);
+    void OnQueueProcessingCompleted(const std::string& subTaskQueueId, const SGProcessing::TaskResult& taskResult);
+    void OnProcessingError(const std::string& subTaskQueueId, const std::string& errorMessage);
 
-    void AcceptProcessingChannel(const std::string& channelId, size_t channelCapacity);
+    void AcceptProcessingChannel(const std::string& channelId);
 
     void PublishLocalChannelList();
 
@@ -53,9 +54,10 @@ private:
     std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> m_gossipPubSub;
     std::shared_ptr<boost::asio::io_context> m_context;
     size_t m_maximalNodesCount;
-    size_t m_processingChannelCapacity;
 
-    std::shared_ptr<ProcessingTaskQueue> m_taskQueue;
+    std::shared_ptr<SubTaskEnqueuer> m_subTaskEnqueuer;
+    std::shared_ptr<SubTaskStateStorage> m_subTaskStateStorage;
+    std::shared_ptr<SubTaskResultStorage> m_subTaskResultStorage;
     std::shared_ptr<ProcessingCore> m_processingCore;
 
     std::unique_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> m_gridChannel;
@@ -63,6 +65,10 @@ private:
 
     boost::asio::deadline_timer m_timerChannelListRequestTimeout;
     boost::posix_time::time_duration m_channelListRequestTimeout;
+
+    std::atomic<bool> m_isStopped;
+    mutable std::mutex m_mutexNodes;
+
     base::Logger m_logger = base::createLogger("ProcessingService");
 };
 }
