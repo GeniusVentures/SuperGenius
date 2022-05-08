@@ -28,7 +28,7 @@ message SubTask
     string ipfsblock = 1; // source block data to be processed
     repeated ProcessingChunk chunksToProcess = 2; // array of chunks to process
     uint32 datalen = 3; // length of ipfsBlock?
-    string results_channel = 4; // channel to publish results to
+    string subtaskid = 4; // unique subtask ID
 }
 
 message ProcessingChunk 
@@ -56,10 +56,15 @@ message ProcessingQueue
     string owner_node_id = 3;
 }
 
+message SubTaskCollection
+{
+    repeated SubTask items = 1;
+}
+
 message SubTaskQueue
 {
     ProcessingQueue processing_queue = 1;
-    repeated SubTask subtasks = 2;
+    SubTaskCollection subtasks = 2;
 }
 
 message SubTaskQueueRequest
@@ -73,6 +78,21 @@ message SubTaskResult
     uint32 result_hash = 1; // hash of results
     repeated uint32 chunk_hashes = 2; // the hashes for each chunk
     string ipfs_results_data_id = 3; // UUID of the results data on ipfs
+    string subtaskid = 4; // linked subtask id
+}
+
+message SubTaskState
+{
+    enum Type
+    {
+        NONE = 0;
+        ENQUEUED = 1;
+        PROCESSING = 2;
+        PROCESSED = 3;
+        COMPLETE = 4;
+    }
+    Type state = 1;
+    int64 timestamp = 2;
 }
 
 message TaskResult
@@ -90,8 +110,6 @@ message ProcessingChannelRequest
 message ProcessingChannelResponse
 {
     string channel_id = 1; // Processing channel Id
-    uint32 channel_capacity = 2; // A number of nodes that can be joined to the channel
-    uint32 channel_nodes_joined = 3; // A number of nodes joined the processing channel
 }
 
 message GridChannelMessage
@@ -109,33 +127,11 @@ message ProcessingNode
     uint64 timestamp = 2;
 }
 
-message ProcessingRoom
-{
-    repeated ProcessingNode nodes = 1;
-    uint32 room_capacity =2;
-    int64 create_timestamp = 3;
-    int64 last_update_timestamp = 4;
-    string room_host_node_id = 5;
-}
-
-message ProcessingRoomRequest
-{
-    enum Type
-    {
-        JOIN = 0;
-        LEAVE = 1;
-    }
-    Type request_type = 1;
-    string node_id = 2;
-}
-
 message ProcessingChannelMessage
 {
     oneof data
     {
-        ProcessingRoomRequest processing_room_request = 1;
-        ProcessingRoom processing_room = 2;
-        SubTaskQueue subtask_queue = 3;
-        SubTaskQueueRequest subtask_queue_request = 4;
+        SubTaskQueue subtask_queue = 1;
+        SubTaskQueueRequest subtask_queue_request = 2;
     }
 }

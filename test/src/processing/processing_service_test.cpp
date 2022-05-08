@@ -1,5 +1,6 @@
 
-#include "processing/processing_service.hpp"
+#include <processing/processing_service.hpp>
+#include <processing/processing_subtask_enqueuer_impl.hpp>
 
 #include <libp2p/log/configurator.hpp>
 #include <libp2p/log/logger.hpp>
@@ -10,20 +11,48 @@ using namespace sgns::processing;
 
 namespace
 {
-    class ProcessingCoreImpl : public ProcessingCore
+class SubTaskStateStorageMock: public SubTaskStateStorage
+{
+public:
+    void ChangeSubTaskState(const std::string& subTaskId, SGProcessing::SubTaskState::Type state) override {}
+    std::optional<SGProcessing::SubTaskState> GetSubTaskState(const std::string& subTaskId) override
     {
-    public:
-        void SplitTask(const SGProcessing::Task& task, SubTaskList& subTasks) override {}
+        return std::nullopt;
+    }
+};
 
-        void  ProcessSubTask(
-            const SGProcessing::SubTask& subTask, SGProcessing::SubTaskResult& result,
-            uint32_t initialHashCode) override {};
-    };
-}
+class SubTaskResultStorageMock : public SubTaskResultStorage
+{
+public:
+    void AddSubTaskResult(const SGProcessing::SubTaskResult& subTaskResult) override {}
+    void RemoveSubTaskResult(const std::string& subTaskId) override {}
+    void GetSubTaskResults(
+        const std::set<std::string>& subTaskIds,
+        std::vector<SGProcessing::SubTaskResult>& results) override {}
+};
+
+class ProcessingCoreImpl : public ProcessingCore
+{
+public:
+    void  ProcessSubTask(
+        const SGProcessing::SubTask& subTask, SGProcessing::SubTaskResult& result,
+        uint32_t initialHashCode) override {};
+};
 
 class ProcessingTaskQueueImpl : public ProcessingTaskQueue
 {
 public:
+    void EnqueueTask(
+        const SGProcessing::Task& task,
+        const std::list<SGProcessing::SubTask>& subTasks) override {}
+
+    bool GetSubTasks(
+        const std::string& taskId,
+        std::list<SGProcessing::SubTask>& subTasks) override 
+    {
+        return false;
+    }
+
     bool GrabTask(std::string& taskKey, SGProcessing::Task& task) override
     {
         return false;
@@ -34,6 +63,7 @@ public:
         return false;
     }
 };
+}
 
 const std::string logger_config(R"(
 # ----------------
@@ -70,8 +100,8 @@ public:
     }
 };
 /**
- * @given Empty room list
- * @when A room with available slots received
+ * @given Empty queue list
+ * @when A queue channel received
  * @then A processing node is created
  */
 TEST_F(ProcessingServiceTest, ProcessingSlotsAreAvailable)
@@ -81,21 +111,27 @@ TEST_F(ProcessingServiceTest, ProcessingSlotsAreAvailable)
 
     auto processingCore = std::make_shared<ProcessingCoreImpl>();
     auto taskQueue = std::make_shared<ProcessingTaskQueueImpl>();
-    ProcessingServiceImpl processingService(pubs, 1, 1, taskQueue, processingCore);
+    auto enqueuer = std::make_shared<SubTaskEnqueuerImpl>(taskQueue);
+
+    ProcessingServiceImpl processingService(
+        pubs,
+        1,
+        enqueuer,
+        std::make_shared<SubTaskStateStorageMock>(),
+        std::make_shared<SubTaskResultStorageMock>(),
+        processingCore);
 
 
     sgns::ipfs_pubsub::GossipPubSubTopic gridChannel(pubs, "GRID_CHANNEL_ID");
     gridChannel.Subscribe([](boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message&> message) {});
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
-    processingService.Listen("GRID_CHANNEL_ID");
+    processingService.StartProcessing("GRID_CHANNEL_ID");
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
     SGProcessing::GridChannelMessage gridMessage;
     auto channelResponse = gridMessage.mutable_processing_channel_response();
-    channelResponse->set_channel_id("PROCESSING_CHANNEL_ID");
-    channelResponse->set_channel_capacity(1);
-    channelResponse->set_channel_nodes_joined(0);
+    channelResponse->set_channel_id("PROCESSING_QUEUE_ID");
     gridChannel.Publish(gridMessage.SerializeAsString());
 
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
@@ -105,33 +141,38 @@ TEST_F(ProcessingServiceTest, ProcessingSlotsAreAvailable)
 }
 
 /**
- * @given Empty room list
- * @when A room without available slots is received
+ * @given Empty queue list
+ * @when No queue channel received
  * @then No new processing node is created
  */
-TEST_F(ProcessingServiceTest, NoProcessingSlotsAvailable)
+// The test disabled due to processing room handling removed
+// No room capacity is checked
+TEST_F(ProcessingServiceTest, DISABLED_NoProcessingSlotsAvailable)
 {
     auto pubs = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();
     pubs->Start(40001, {});
 
-    auto processingManager = std::make_shared<ProcessingCoreImpl>();
+    auto processingCore = std::make_shared<ProcessingCoreImpl>();
     auto taskQueue = std::make_shared<ProcessingTaskQueueImpl>();
-    ProcessingServiceImpl processingService(pubs, 1, 1, taskQueue, processingManager);
+    auto enqueuer = std::make_shared<SubTaskEnqueuerImpl>(taskQueue);
+
+    ProcessingServiceImpl processingService(
+        pubs,
+        1,
+        enqueuer,
+        std::make_shared<SubTaskStateStorageMock>(),
+        std::make_shared<SubTaskResultStorageMock>(),
+        processingCore);
 
 
     sgns::ipfs_pubsub::GossipPubSubTopic gridChannel(pubs, "GRID_CHANNEL_ID");
     gridChannel.Subscribe([](boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message&> message) {});
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
-    processingService.Listen("GRID_CHANNEL_ID");
+    processingService.StartProcessing("GRID_CHANNEL_ID");
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
-    SGProcessing::GridChannelMessage gridMessage;
-    auto channelResponse = gridMessage.mutable_processing_channel_response();
-    channelResponse->set_channel_id("PROCESSING_CHANNEL_ID");
-    channelResponse->set_channel_capacity(1);
-    channelResponse->set_channel_nodes_joined(1);
-    gridChannel.Publish(gridMessage.SerializeAsString());
+    // No queue channel message sent
 
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     pubs->Stop();

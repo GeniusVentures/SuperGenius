@@ -5,18 +5,55 @@ namespace sgns::processing
 ProcessingServiceImpl::ProcessingServiceImpl(
     std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> gossipPubSub,
     size_t maximalNodesCount,
-    size_t processingChannelCapacity,
-    std::shared_ptr<ProcessingTaskQueue> taskQueue,
+    std::shared_ptr<SubTaskEnqueuer> subTaskEnqueuer,
+    std::shared_ptr<SubTaskStateStorage> subTaskStateStorage,
+    std::shared_ptr<SubTaskResultStorage> subTaskResultStorage,
     std::shared_ptr<ProcessingCore> processingCore)
     : m_gossipPubSub(gossipPubSub)
     , m_context(gossipPubSub->GetAsioContext())
     , m_maximalNodesCount(maximalNodesCount)
-    , m_processingChannelCapacity(processingChannelCapacity)
-    , m_taskQueue(taskQueue)
+    , m_subTaskEnqueuer(subTaskEnqueuer)
+    , m_subTaskStateStorage(subTaskStateStorage)
+    , m_subTaskResultStorage(subTaskResultStorage)
     , m_processingCore(processingCore)
     , m_timerChannelListRequestTimeout(*m_context.get())
     , m_channelListRequestTimeout(boost::posix_time::seconds(5))
+    , m_isStopped(true)
 {
+}
+
+void ProcessingServiceImpl::StartProcessing(const std::string& processingGridChannelId)
+{
+    if (!m_isStopped)
+    {
+        m_logger->debug("[SERVICE_WAS_PREVIOUSLY_STARTED]");
+        return;
+    }
+
+    m_isStopped = false;
+
+    Listen(processingGridChannelId);
+    SendChannelListRequest();
+    m_logger->debug("[SERVICE_STARTED]");
+}
+
+void ProcessingServiceImpl::StopProcessing()
+{
+    if (m_isStopped)
+    {
+        return;
+    }
+
+    m_isStopped = true;
+
+    m_gridChannel->Unsubscribe();
+
+    {
+        std::scoped_lock lock(m_mutexNodes);
+        m_processingNodes = {};
+    }
+
+    m_logger->debug("[SERVICE_STOPPED]");
 }
 
 void ProcessingServiceImpl::Listen(const std::string& processingGridChannelId)
@@ -49,16 +86,10 @@ void ProcessingServiceImpl::OnMessage(boost::optional<const sgns::ipfs_pubsub::G
             if (gridMessage.has_processing_channel_response())
             {
                 auto response = gridMessage.processing_channel_response();
-                auto channelCapacity = response.channel_capacity();
-                auto channelNodesJoined = response.channel_nodes_joined();
 
-                m_logger->debug("Processing channel received. id:{}, capacity:{}, size:{}", 
-                    response.channel_id(), channelCapacity, channelNodesJoined);
+                m_logger->debug("Processing channel received. id:{}", response.channel_id());
 
-                if (channelCapacity > channelNodesJoined)
-                {
-                    AcceptProcessingChannel(response.channel_id(), channelCapacity);
-                }
+                AcceptProcessingChannel(response.channel_id());
             }
             else if (gridMessage.has_processing_channel_request())
             {
@@ -69,25 +100,68 @@ void ProcessingServiceImpl::OnMessage(boost::optional<const sgns::ipfs_pubsub::G
     }
 }
 
-void ProcessingServiceImpl::AcceptProcessingChannel(
-    const std::string& channelId, size_t processingChannelCapacity)
+void ProcessingServiceImpl::OnQueueProcessingCompleted(
+    const std::string& subTaskQueueId, const SGProcessing::TaskResult& taskResult)
 {
-    auto& processingNodes = GetProcessingNodes();
-    if (processingNodes.size() < m_maximalNodesCount)
+    m_logger->debug("SUBTASK_QUEUE_PROCESSING_COMPLETED: {}", subTaskQueueId);
+
     {
-        auto itNode = processingNodes.find(channelId);
-        // No multiple processing nodes allowed for a single channel on a host
-        if (itNode == processingNodes.end())
-        {
-            auto node = std::make_shared<ProcessingNode>(
-                m_gossipPubSub, processingChannelCapacity, m_processingCore,
-                std::bind(&ProcessingTaskQueue::CompleteTask, m_taskQueue.get(), channelId, std::placeholders::_1));
-            node->AttachTo(channelId);
-            processingNodes[channelId] = node;
-        }
+        std::scoped_lock lock(m_mutexNodes);
+        m_processingNodes.erase(subTaskQueueId);
+    }
+    
+    if (!m_isStopped)
+    {
+        SendChannelListRequest();
+    }
+    // @todo finalize task
+    // @todo Add notification of finished task
+}
+
+void ProcessingServiceImpl::OnProcessingError(
+    const std::string& subTaskQueueId, const std::string& errorMessage)
+{
+    m_logger->error("PROCESSING_ERROR reason: {}", errorMessage);
+
+    {
+        std::scoped_lock lock(m_mutexNodes);
+        m_processingNodes.erase(subTaskQueueId);
     }
 
-    if (processingNodes.size() == m_maximalNodesCount)
+    // @todo Stop processing?
+
+    if (!m_isStopped)
+    {
+        SendChannelListRequest();
+    }
+}
+
+void ProcessingServiceImpl::AcceptProcessingChannel(
+    const std::string& processingQueuelId)
+{
+    if (m_isStopped)
+    {
+        return;
+    }
+
+    std::scoped_lock lock(m_mutexNodes);
+    if (m_processingNodes.size() < m_maximalNodesCount)
+    {
+        auto node = std::make_shared<ProcessingNode>(
+            m_gossipPubSub,
+            m_subTaskStateStorage,
+            m_subTaskResultStorage,
+            m_processingCore,
+            std::bind(&ProcessingServiceImpl::OnQueueProcessingCompleted, 
+                this, processingQueuelId, std::placeholders::_1),
+            std::bind(&ProcessingServiceImpl::OnProcessingError,
+                this, processingQueuelId, std::placeholders::_1));
+
+        node->AttachTo(processingQueuelId);
+        m_processingNodes[processingQueuelId] = node;
+    }
+
+    if (m_processingNodes.size() == m_maximalNodesCount)
     {
         m_timerChannelListRequestTimeout.expires_at(boost::posix_time::pos_infin);
     }
@@ -95,17 +169,15 @@ void ProcessingServiceImpl::AcceptProcessingChannel(
 
 void ProcessingServiceImpl::PublishLocalChannelList()
 {
-    const auto& processingNodes = GetProcessingNodes();
-    for (auto itNode = processingNodes.begin(); itNode != processingNodes.end(); ++itNode)
+    std::scoped_lock lock(m_mutexNodes);
+    for (auto itNode = m_processingNodes.begin(); itNode != m_processingNodes.end(); ++itNode)
     {
         // Only channel host answers to reduce a number of published messages
-        if (itNode->second->IsRoomHost())
+        if (itNode->second->HasQueueOwnership())
         {
             SGProcessing::GridChannelMessage gridMessage;
             auto channelResponse = gridMessage.mutable_processing_channel_response();
             channelResponse->set_channel_id(itNode->first);
-            channelResponse->set_channel_capacity(static_cast<uint32_t>(itNode->second->GetRoom()->GetCapacity()));
-            channelResponse->set_channel_nodes_joined(static_cast<uint32_t>(itNode->second->GetRoom()->GetNodesCount()));
 
             m_gridChannel->Publish(gridMessage.SerializeAsString());
             m_logger->debug("Channel published. {}", channelResponse->channel_id());
@@ -113,24 +185,9 @@ void ProcessingServiceImpl::PublishLocalChannelList()
     }
 }
 
-std::map<std::string, std::shared_ptr<ProcessingNode>>& ProcessingServiceImpl::GetProcessingNodes()
-{
-    for (auto itNode = m_processingNodes.begin(); itNode != m_processingNodes.end(); )
-    {
-        if (!itNode->second->IsAttachingToProcessingRoom() && !itNode->second->IsRoommate())
-        {
-            itNode = m_processingNodes.erase(itNode);
-        }
-        else
-        {
-            ++itNode;
-        }
-    }
-    return m_processingNodes;
-}
-
 size_t ProcessingServiceImpl::GetProcessingNodesCount() const
 {
+    std::scoped_lock lock(m_mutexNodes);
     return m_processingNodes.size();
 }
 
@@ -142,27 +199,43 @@ void ProcessingServiceImpl::SetChannelListRequestTimeout(
 
 void ProcessingServiceImpl::HandleRequestTimeout()
 {
+    m_logger->debug("QUEUE_REQUEST_TIMEOUT");
     m_timerChannelListRequestTimeout.expires_at(boost::posix_time::pos_infin);
-    auto& processingNodes = GetProcessingNodes();
-    while (processingNodes.size() < m_maximalNodesCount)
+
+    if (m_isStopped)
     {
-        SGProcessing::Task task;
-        std::string taskKey;
-        if (m_taskQueue->GrabTask(taskKey, task))
+        return;
+    }
+
+    std::scoped_lock lock(m_mutexNodes);
+    while (m_processingNodes.size() < m_maximalNodesCount)
+    {
+        std::string subTaskQueueId;
+        std::list<SGProcessing::SubTask> subTasks;
+        if (m_subTaskEnqueuer->EnqueueSubTasks(subTaskQueueId, subTasks))
         {
             auto node = std::make_shared<ProcessingNode>(
-                m_gossipPubSub, m_processingChannelCapacity, m_processingCore,
-                std::bind(&ProcessingTaskQueue::CompleteTask, m_taskQueue.get(), taskKey, std::placeholders::_1));
+                m_gossipPubSub,
+                m_subTaskStateStorage,
+                m_subTaskResultStorage,
+                m_processingCore,
+                std::bind(&ProcessingServiceImpl::OnQueueProcessingCompleted, 
+                    this, subTaskQueueId, std::placeholders::_1),
+                std::bind(&ProcessingServiceImpl::OnProcessingError,
+                    this, subTaskQueueId, std::placeholders::_1)
+                );
 
             // @todo Figure out if the task is still available for other peers
-            node->CreateProcessingHost(task);
+            // @todo Check if it is better to call EnqueueSubTasks within host 
+            // and return subTaskQueueId from processing host?
+            node->CreateProcessingHost(subTaskQueueId, subTasks);
 
-            processingNodes[task.ipfs_block_id()] = node;
-            m_logger->debug("New processing channel created. {}", task.ipfs_block_id());
+            m_processingNodes[subTaskQueueId] = node;
+            m_logger->debug("New processing channel created. {}", subTaskQueueId);
         }
         else
         {
-            // If no tasks available in queue, try to get available slots in existent rooms
+            // If no tasks enquued, try to get available slots in existent queues
             SendChannelListRequest();
             break;
         }

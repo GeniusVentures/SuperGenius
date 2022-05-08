@@ -1,177 +1,121 @@
 #include "processing_node.hpp"
+#include "processing_subtask_queue_channel_pubsub.hpp"
+#include <processing/processing_subtask_queue_accessor_impl.hpp>
 
 namespace sgns::processing
 {
 ////////////////////////////////////////////////////////////////////////////////
 ProcessingNode::ProcessingNode(
     std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> gossipPubSub,
-    size_t processingChannelCapacity,
+    std::shared_ptr<SubTaskStateStorage> subTaskStateStorage,
+    std::shared_ptr<SubTaskResultStorage> subTaskResultStorage,
     std::shared_ptr<ProcessingCore> processingCore,
-    std::function<void(const SGProcessing::TaskResult&)> taskResultProcessingSink)
+    std::function<void(const SGProcessing::TaskResult&)> taskResultProcessingSink,
+    std::function<void(const std::string&)> processingErrorSink)
     : m_gossipPubSub(std::move(gossipPubSub))
     , m_nodeId(m_gossipPubSub->GetLocalAddress())
-    , m_processingChannelCapacity(processingChannelCapacity)
     , m_processingCore(processingCore)
+    , m_subTaskStateStorage(subTaskStateStorage)
+    , m_subTaskResultStorage(subTaskResultStorage)
     , m_taskResultProcessingSink(taskResultProcessingSink)
-{    
+    , m_processingErrorSink(processingErrorSink)
+{
 }
 
 ProcessingNode::~ProcessingNode()
 {
 }
 
-void ProcessingNode::Initialize(const std::string& processingChannelId, size_t msSubscriptionWaitingDuration)
+void ProcessingNode::Initialize(const std::string& processingQueueChannelId, size_t msSubscriptionWaitingDuration)
 {
-    using GossipPubSubTopic = sgns::ipfs_pubsub::GossipPubSubTopic;
+    // Subscribe to subtask queue channel
+    auto processingQueueChannel = std::make_shared<ProcessingSubTaskQueueChannelPubSub>(m_gossipPubSub, processingQueueChannelId);
 
-    // Subscribe to the dataBlock channel
-    m_processingChannel = std::make_shared<GossipPubSubTopic>(m_gossipPubSub, processingChannelId);
+    m_subtaskQueueManager = std::make_shared<ProcessingSubTaskQueueManager>(
+        processingQueueChannel, m_gossipPubSub->GetAsioContext(), m_nodeId);
 
-    m_room = std::make_unique<ProcessingRoom>(
-        m_processingChannel, m_gossipPubSub->GetAsioContext(), m_nodeId, m_processingChannelCapacity);
+    m_subTaskQueueAccessor = std::make_shared<SubTaskQueueAccessorImpl>(
+        m_gossipPubSub,
+        m_subtaskQueueManager,
+        m_subTaskStateStorage,
+        m_subTaskResultStorage,
+        m_taskResultProcessingSink);
 
-    m_subtaskQueue = std::make_shared<ProcessingSubTaskQueue>(
-        m_processingChannel, m_gossipPubSub->GetAsioContext(), m_nodeId);
-    m_processingEngine = std::make_unique<ProcessingEngine>(
-        m_gossipPubSub, m_nodeId, m_processingCore, m_taskResultProcessingSink);
+    processingQueueChannel->SetQueueRequestSink(
+        [qmWeak(std::weak_ptr<ProcessingSubTaskQueueManager>(m_subtaskQueueManager))] (
+            const SGProcessing::SubTaskQueueRequest& request) {
+            auto qm = qmWeak.lock();
+            if (qm)
+            {
+                return qm->ProcessSubTaskQueueRequestMessage(request);
+            }
+            return false;
+        });
+
+    processingQueueChannel->SetQueueUpdateSink(
+        [qmWeak(std::weak_ptr<ProcessingSubTaskQueueManager>(m_subtaskQueueManager))](
+            SGProcessing::SubTaskQueue* queue) {
+            auto qm = qmWeak.lock();
+            if (qm)
+            {
+                return qm->ProcessSubTaskQueueMessage(queue);
+            }
+            return false;
+        });
+      
+    m_processingEngine = std::make_shared<ProcessingEngine>(m_nodeId, m_processingCore);
+
+    m_processingEngine->SetProcessingErrorSink(m_processingErrorSink);
 
     // Run messages processing once all dependent object are created
-    m_processingChannel->Subscribe(std::bind(&ProcessingNode::OnProcessingChannelMessage, this, std::placeholders::_1));
-    if (msSubscriptionWaitingDuration > 0)
-    {
-        std::this_thread::sleep_for(std::chrono::milliseconds(msSubscriptionWaitingDuration));
-    }
+    processingQueueChannel->Listen(msSubscriptionWaitingDuration);
+
+    // Keep the channel
+    m_queueChannel = processingQueueChannel;
 }
 
-void ProcessingNode::AttachTo(const std::string& processingChannelId, size_t msSubscriptionWaitingDuration)
+void ProcessingNode::AttachTo(const std::string& processingQueueChannelId, size_t msSubscriptionWaitingDuration)
 {
-    Initialize(processingChannelId, msSubscriptionWaitingDuration);
-    m_room->AttachLocalNodeToRemoteRoom();
+    Initialize(processingQueueChannelId, msSubscriptionWaitingDuration);
+
+    m_subTaskQueueAccessor->ConnectToSubTaskQueue([
+        engineWeak(std::weak_ptr<ProcessingEngine>(m_processingEngine)), 
+        accessorWeak(std::weak_ptr<SubTaskQueueAccessor>(m_subTaskQueueAccessor))]() {
+            auto engine = engineWeak.lock();
+            auto accessor = accessorWeak.lock();
+            if (engine && accessor)
+            {
+                engine->StartQueueProcessing(accessor);
+            }
+        });
+
+    // @todo Set timer to handle queue request timeout
 }
 
 void ProcessingNode::CreateProcessingHost(
-    const SGProcessing::Task& task, 
+    const std::string& processingQueueChannelId,
+    std::list<SGProcessing::SubTask>& subTasks,
     size_t msSubscriptionWaitingDuration)
 {
-    Initialize(task.ipfs_block_id(), msSubscriptionWaitingDuration);
+    Initialize(processingQueueChannelId, msSubscriptionWaitingDuration);
 
-    m_room->Create();
-
-    ProcessingCore::SubTaskList subTasks;
-    m_processingCore->SplitTask(task, subTasks);
-    // @todo Handle splitting errors
-
-    m_subtaskQueue->CreateQueue(subTasks);
-
-    m_processingEngine->StartQueueProcessing(m_subtaskQueue);
-}
-
-void ProcessingNode::OnProcessingChannelMessage(boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message&> message)
-{
-    if (message)
-    {
-        SGProcessing::ProcessingChannelMessage channelMesssage;
-        if (channelMesssage.ParseFromArray(message->data.data(), static_cast<int>(message->data.size())))
-        {
-            if (channelMesssage.has_processing_room_request())
+    m_subTaskQueueAccessor->ConnectToSubTaskQueue([
+        engineWeak(std::weak_ptr<ProcessingEngine>(m_processingEngine)),
+        accessorWeak(std::weak_ptr<SubTaskQueueAccessor>(m_subTaskQueueAccessor))]() {
+            auto engine = engineWeak.lock();
+            auto accessor = accessorWeak.lock();
+            if (engine && accessor)
             {
-                HandleProcessingRoomRequest(channelMesssage);
+                engine->StartQueueProcessing(accessor);
             }
-            else if (channelMesssage.has_processing_room())
-            {
-                HandleProcessingRoom(channelMesssage);
-            }
-            else if (channelMesssage.has_subtask_queue_request())
-            {
-                HandleSubTaskQueueRequest(channelMesssage);
-            }
-            else if (channelMesssage.has_subtask_queue())
-            {
-                HandleSubTaskQueue(channelMesssage);
-            }
-        }
-    }
+        });
+
+    m_subTaskQueueAccessor->AssignSubTasks(subTasks);
 }
 
-void ProcessingNode::HandleProcessingRoomRequest(SGProcessing::ProcessingChannelMessage& channelMesssage)
+bool ProcessingNode::HasQueueOwnership() const
 {
-    if (m_room)
-    {
-        auto request = channelMesssage.processing_room_request();
-        m_room->AttachNode(request.node_id());
-    }
-}
-
-void ProcessingNode::HandleProcessingRoom(SGProcessing::ProcessingChannelMessage& channelMesssage)
-{
-    if (m_room)
-    {
-        if (m_room->UpdateRoom(channelMesssage.release_processing_room()))
-        {
-            if (!m_room->IsRoommate(m_nodeId))
-            {
-                if (m_room->GetNodesCount() < m_room->GetCapacity())
-                {
-                    // Room has available slots, try to attach again
-                    m_room->AttachLocalNodeToRemoteRoom();
-                }
-                else
-                {
-                    m_processingChannel->Unsubscribe();
-                }
-                if (m_processingEngine && m_processingEngine->IsQueueProcessingStarted())
-                {
-                    m_processingEngine->StopQueueProcessing();
-                }
-            }
-            else
-            {
-                if (m_processingEngine && !m_processingEngine->IsQueueProcessingStarted())
-                {
-                    m_processingEngine->StartQueueProcessing(m_subtaskQueue);
-                }
-            }
-        }
-    }
-}
-
-void ProcessingNode::HandleSubTaskQueueRequest(SGProcessing::ProcessingChannelMessage& channelMesssage)
-{
-    if (m_subtaskQueue)
-    {
-        m_subtaskQueue->ProcessSubTaskQueueRequestMessage(
-            channelMesssage.subtask_queue_request());
-    }
-}
-
-void ProcessingNode::HandleSubTaskQueue(SGProcessing::ProcessingChannelMessage& channelMesssage)
-{
-    if (m_subtaskQueue)
-    {
-        m_subtaskQueue->ProcessSubTaskQueueMessage(
-            channelMesssage.release_subtask_queue());
-    }
-}
-
-
-bool ProcessingNode::IsRoommate() const
-{
-    return (m_room && m_room->IsRoommate(m_nodeId));
-}
-
-bool ProcessingNode::IsAttachingToProcessingRoom() const
-{
-    return (m_room && m_room->IsLocalNodeAttachingToRemoteRoom());
-}
-
-bool ProcessingNode::IsRoomHost() const
-{
-    return (m_room && m_room->IsHost(m_nodeId));
-}
-
-const ProcessingRoom* ProcessingNode::GetRoom() const
-{
-    return m_room.get();
+    return (m_subtaskQueueManager && m_subtaskQueueManager->HasOwnership());
 }
 
 ////////////////////////////////////////////////////////////////////////////////

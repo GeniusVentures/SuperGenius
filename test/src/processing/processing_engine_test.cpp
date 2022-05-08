@@ -1,4 +1,5 @@
-#include "processing/processing_engine.hpp"
+#include <processing/processing_engine.hpp>
+#include <processing/processing_subtask_queue_accessor.hpp>
 
 #include <gtest/gtest.h>
 
@@ -7,23 +8,79 @@
 
 #include <iostream>
 #include <boost/functional/hash.hpp>
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/deadline_timer.hpp>
+
+#include <functional>
 
 using namespace sgns::processing;
 
 namespace
 {
+    class SubTaskQueueAccessorMock : public SubTaskQueueAccessor
+    {
+    public:
+        SubTaskQueueAccessorMock(boost::asio::io_context& context)
+            : m_context(context)
+            , m_timerToKeepContext(m_context)
+        {
+            m_timerToKeepContext.expires_from_now(boost::posix_time::seconds(5));
+            m_timerToKeepContext.async_wait(
+                std::bind(&SubTaskQueueAccessorMock::OnTimerEvent, this, std::placeholders::_1));
+        }
+
+        void ConnectToSubTaskQueue(std::function<void()> onSubTaskQueueConnectedEventSink)
+        {
+            m_onSubTaskQueueConnectedEventSink = onSubTaskQueueConnectedEventSink;
+        }
+
+        void AssignSubTasks(std::list<SGProcessing::SubTask>& subTasks)
+        {
+            m_subTasks.swap(subTasks);
+            if (m_onSubTaskQueueConnectedEventSink)
+            {
+                m_onSubTaskQueueConnectedEventSink();
+            }
+        }
+
+        void GrabSubTask(SubTaskGrabbedCallback onSubTaskGrabbedCallback) override
+        {
+            if (!m_subTasks.empty())
+            {
+                m_context.post([this, onSubTaskGrabbedCallback]() {
+                    onSubTaskGrabbedCallback(m_subTasks.front());
+                    m_subTasks.pop_front();
+                });
+            }
+        }
+
+        void CompleteSubTask(const std::string& subTaskId, const SGProcessing::SubTaskResult& subTaskResult) override
+        {
+            // Do nothing
+        }
+
+    private:
+        std::list<SGProcessing::SubTask> m_subTasks;
+
+        void OnTimerEvent(const boost::system::error_code& error)
+        {
+            m_timerToKeepContext.expires_from_now(boost::posix_time::seconds(5));
+            m_timerToKeepContext.async_wait(
+                std::bind(&SubTaskQueueAccessorMock::OnTimerEvent, this, std::placeholders::_1));
+        }
+
+        boost::asio::io_context& m_context;
+        boost::asio::deadline_timer m_timerToKeepContext;
+
+        std::function<void()> m_onSubTaskQueueConnectedEventSink;
+    };
+
     class ProcessingCoreImpl : public ProcessingCore
     {
     public:
         ProcessingCoreImpl(size_t processingMillisec)
             : m_processingMillisec(processingMillisec)
         {
-        }
-
-        void SplitTask(const SGProcessing::Task& task, SubTaskList& subTasks) override
-        {
-            auto subtask = std::make_unique<SGProcessing::SubTask>();
-            subTasks.push_back(std::move(subtask));
         }
 
         void ProcessSubTask(
@@ -35,7 +92,7 @@ namespace
                 std::this_thread::sleep_for(std::chrono::milliseconds(m_processingMillisec));
             }
 
-            auto itResultHashes = m_chunkResultHashes.find(subTask.results_channel());
+            auto itResultHashes = m_chunkResultHashes.find(subTask.subtaskid());
 
             size_t subTaskResultHash = initialHashCode;
             for (int chunkIdx = 0; chunkIdx < subTask.chunkstoprocess_size(); ++chunkIdx)
@@ -87,6 +144,7 @@ groups:
       - name: Gossip
 # ----------------
   )");
+
 class ProcessingEngineTest : public ::testing::Test
 {
 public:
@@ -106,345 +164,94 @@ public:
     }
 };
 /**
- * @given A node is subscribed to result channed 
- * @when A result is published to the channel
- * @then The node receives the result
- */
-TEST_F(ProcessingEngineTest, SubscribtionToResultChannel)
-{
-    auto pubs1 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();;
-    pubs1->Start(40001, {});
-
-    auto pubs2 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();;
-    pubs2->Start(40001, {pubs1->GetLocalAddress()});
-
-    sgns::ipfs_pubsub::GossipPubSubTopic resultChannel(pubs1, "RESULT_CHANNEL_ID");
-    resultChannel.Subscribe([](boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message&> message)
-    {     
-    });
-
-    auto queueChannel = std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>(pubs1, "QUEUE_CHANNEL_ID");
-    queueChannel->Subscribe([](boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message&> message) {});
-
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-
-    auto processingCore = std::make_shared<ProcessingCoreImpl>(0);
-
-    auto nodeId = "NODE_1";
-    ProcessingEngine engine(pubs1, nodeId, processingCore, [](const SGProcessing::TaskResult&) {});
-
-    auto queue = std::make_unique<SGProcessing::SubTaskQueue>();
-    queue->mutable_processing_queue()->set_owner_node_id("DIFFERENT_NODE_ID");
-
-    auto item = queue->mutable_processing_queue()->add_items();
-    auto subTask = queue->add_subtasks();
-    subTask->set_results_channel("RESULT_CHANNEL_ID");
-
-    auto processingQueue = std::make_shared<ProcessingSubTaskQueue>(
-        queueChannel, pubs1->GetAsioContext(), nodeId);
-    // The local queue wrapper doesn't own the queue
-    processingQueue->ProcessSubTaskQueueMessage(queue.release());
-
-    engine.StartQueueProcessing(processingQueue);
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
-
-    SGProcessing::SubTaskResult result;    
-    resultChannel.Publish(result.SerializeAsString());
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-
-    pubs1->Stop();
-    pubs2->Stop();
-
-    ASSERT_EQ(1, engine.GetResults().size());
-    EXPECT_EQ("RESULT_CHANNEL_ID", std::get<0>(engine.GetResults()[0]));
-}
-
-/**
  * @given A queue containing subtasks
  * @when Processing is started
  * @then ProcessingCore::ProcessSubTask is called for each subtask.
  */
 TEST_F(ProcessingEngineTest, SubTaskProcessing)
 {
-    auto pubs1 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();;
-    pubs1->Start(40001, {});
-
-    auto queueChannel = std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>(pubs1, "QUEUE_CHANNEL_ID");
-    queueChannel->Subscribe([](boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message&> message) {});
-
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    boost::asio::io_context context;
 
     auto processingCore = std::make_shared<ProcessingCoreImpl>(0);
 
     auto nodeId = "NODE_1";
-    ProcessingEngine engine(pubs1, nodeId, processingCore, [](const SGProcessing::TaskResult&) {});
+    auto engine = std::make_shared<ProcessingEngine>(nodeId, processingCore);
 
-    auto queue = std::make_unique<SGProcessing::SubTaskQueue>();
-    // Local queue wrapped owns the queue
-    queue->mutable_processing_queue()->set_owner_node_id(nodeId);
+    std::list<SGProcessing::SubTask> subTasks;
+    auto subTaskQueueAccessor = std::make_shared<SubTaskQueueAccessorMock>(context);
     {
-        auto item = queue->mutable_processing_queue()->add_items();
-        auto subTask = queue->add_subtasks();
-        subTask->set_results_channel("RESULT_CHANNEL_ID1");
+        SGProcessing::SubTask subTask;
+        subTask.set_subtaskid("SUBTASK_ID1");
+        subTasks.push_back(std::move(subTask));
     }
     {
-        auto item = queue->mutable_processing_queue()->add_items();
-        auto subTask = queue->add_subtasks();
-        subTask->set_results_channel("RESULT_CHANNEL_ID2");
+        SGProcessing::SubTask subTask;
+        subTask.set_subtaskid("SUBTASK_ID2");
+        subTasks.push_back(std::move(subTask));
     }
+    subTaskQueueAccessor->AssignSubTasks(subTasks);
 
-    auto processingQueue = std::make_shared<ProcessingSubTaskQueue>(
-        queueChannel, pubs1->GetAsioContext(), nodeId);
-    processingQueue->ProcessSubTaskQueueMessage(queue.release());
-
-    engine.StartQueueProcessing(processingQueue);
+    std::thread contextThread([&context]() { context.run(); });
+    engine->StartQueueProcessing(subTaskQueueAccessor);
 
     std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 
-    pubs1->Stop();
+    context.stop();
+    contextThread.join();
+
 
     ASSERT_EQ(2, processingCore->m_processedSubTasks.size());
-    EXPECT_EQ("RESULT_CHANNEL_ID1", processingCore->m_processedSubTasks[0].results_channel());
-    EXPECT_EQ("RESULT_CHANNEL_ID2", processingCore->m_processedSubTasks[1].results_channel());
+    EXPECT_EQ("SUBTASK_ID1", processingCore->m_processedSubTasks[0].subtaskid());
+    EXPECT_EQ("SUBTASK_ID2", processingCore->m_processedSubTasks[1].subtaskid());
 }
 
 /**
  * @given A queue containing 2 subtasks
- * @when 2 engined sequentually start the queue processing
+ * @when 2 engines sequentually start the queue processing
  * @then Each of them processes only 1 subtask from the queue.
  */
 TEST_F(ProcessingEngineTest, SharedSubTaskProcessing)
 {
-    auto pubs1 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();;
-    pubs1->Start(40001, {});
-
-    auto queueChannel = std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>(pubs1, "QUEUE_CHANNEL_ID");
-    queueChannel->Subscribe([](boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message&> message) {});
-
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    boost::asio::io_context context;
 
     auto processingCore = std::make_shared<ProcessingCoreImpl>(500);
 
     auto nodeId1 = "NODE_1";
     auto nodeId2 = "NODE_2";
 
-    ProcessingEngine engine1(pubs1, nodeId1, processingCore, [](const SGProcessing::TaskResult&) {});
-    ProcessingEngine engine2(pubs1, nodeId2, processingCore, [](const SGProcessing::TaskResult&) {});
+    auto engine1 = std::make_shared<ProcessingEngine>(nodeId1, processingCore);
+    auto engine2 = std::make_shared<ProcessingEngine>(nodeId2, processingCore);
 
-    auto queue = std::make_unique<SGProcessing::SubTaskQueue>();
-    // Local queue wrapped owns the queue
-    queue->mutable_processing_queue()->set_owner_node_id(nodeId1);
+    auto subTaskQueueAccessor1 = std::make_shared<SubTaskQueueAccessorMock>(context);
     {
-        auto item = queue->mutable_processing_queue()->add_items();
-        auto subTask = queue->add_subtasks();
-        subTask->set_results_channel("RESULT_CHANNEL_ID1");
-    }
-    {
-        auto item = queue->mutable_processing_queue()->add_items();
-        auto subTask = queue->add_subtasks();
-        subTask->set_results_channel("RESULT_CHANNEL_ID2");
+        std::list<SGProcessing::SubTask> subTasks;
+        SGProcessing::SubTask subTask;
+        subTask.set_subtaskid("SUBTASK_ID1");
+        subTasks.push_back(std::move(subTask));
+        subTaskQueueAccessor1->AssignSubTasks(subTasks);
     }
 
-    auto processingQueue1 = std::make_shared<ProcessingSubTaskQueue>(
-        queueChannel, pubs1->GetAsioContext(), nodeId1);
-    processingQueue1->ProcessSubTaskQueueMessage(queue.release());
+    auto subTaskQueueAccessor2 = std::make_shared<SubTaskQueueAccessorMock>(context);
+    {
+        std::list<SGProcessing::SubTask> subTasks;
+        SGProcessing::SubTask subTask;
+        subTask.set_subtaskid("SUBTASK_ID2");
+        subTasks.push_back(std::move(subTask));
+        subTaskQueueAccessor2->AssignSubTasks(subTasks);
+    }
 
-    engine1.StartQueueProcessing(processingQueue1);
+    std::thread contextThread([&context]() { context.run(); });
+
+    engine1->StartQueueProcessing(subTaskQueueAccessor1);
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-    auto processingQueue2 = std::make_shared<ProcessingSubTaskQueue>(
-        queueChannel, pubs1->GetAsioContext(), nodeId2);
-
-    // Change queue owner
-    SGProcessing::SubTaskQueueRequest queueRequest;
-    queueRequest.set_node_id(nodeId2);
-    auto updatedQueue = processingQueue1->ProcessSubTaskQueueRequestMessage(queueRequest);
-
-    // Synchronize the queues
-    processingQueue2->ProcessSubTaskQueueMessage(processingQueue1->GetQueueSnapshot().release());
-    processingQueue1->ProcessSubTaskQueueMessage(processingQueue2->GetQueueSnapshot().release());
-
-    engine2.StartQueueProcessing(processingQueue2);
-
+    engine2->StartQueueProcessing(subTaskQueueAccessor2);
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
-    pubs1->Stop();
+    context.stop();
+    contextThread.join();
 
     ASSERT_EQ(2, processingCore->m_initialHashes.size());
     EXPECT_EQ(static_cast<uint32_t>(std::hash<std::string>{}(nodeId1)), processingCore->m_initialHashes[0]);
     EXPECT_EQ(static_cast<uint32_t>(std::hash<std::string>{}(nodeId2)), processingCore->m_initialHashes[1]);
 }
-
-/**
- * @given A queue containing 2 subtasks
- * @when Subtasks are finished and chunk hashes are valid
- * @then Task finalization sink is called.
- */
-TEST_F(ProcessingEngineTest, TaskFinalization)
-{
-    auto pubs1 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();;
-    pubs1->Start(40001, {});
-
-    auto queueChannel = std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>(pubs1, "QUEUE_CHANNEL_ID");
-    queueChannel->Subscribe([](boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message&> message) {});
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-
-    auto processingCore = std::make_shared<ProcessingCoreImpl>(100);
-
-    auto nodeId1 = "NODE_1";
-
-    bool isTaskFinalized = false;
-    ProcessingEngine engine1(pubs1, nodeId1, processingCore,
-        [&isTaskFinalized](const SGProcessing::TaskResult&) { isTaskFinalized = true; });
-    processingCore->m_chunkResultHashes["RESULT_CHANNEL_ID1"] = { 0 };
-    processingCore->m_chunkResultHashes["RESULT_CHANNEL_ID2"] = { 0 };
-
-    SGProcessing::ProcessingChunk chunk1;
-    chunk1.set_chunkid("CHUNK_1");
-    chunk1.set_n_subchunks(1);
-    chunk1.set_line_stride(1);
-    chunk1.set_offset(0);
-    chunk1.set_stride(1);
-    chunk1.set_subchunk_height(10);
-    chunk1.set_subchunk_width(10);
-
-    auto queue = std::make_unique<SGProcessing::SubTaskQueue>();
-    // Local queue wrapped owns the queue
-    queue->mutable_processing_queue()->set_owner_node_id(nodeId1);
-    {
-        auto item = queue->mutable_processing_queue()->add_items();
-        auto subTask = queue->add_subtasks();
-        subTask->set_results_channel("RESULT_CHANNEL_ID1");
-        auto chunk = subTask->add_chunkstoprocess();
-        chunk->CopyFrom(chunk1);
-    }
-    {
-        auto item = queue->mutable_processing_queue()->add_items();
-        auto subTask = queue->add_subtasks();
-        subTask->set_results_channel("RESULT_CHANNEL_ID2");
-        auto chunk = subTask->add_chunkstoprocess();
-        chunk->CopyFrom(chunk1);
-    }
-
-    auto processingQueue1 = std::make_shared<ProcessingSubTaskQueue>(
-        queueChannel, pubs1->GetAsioContext(), nodeId1);
-    processingQueue1->ProcessSubTaskQueueMessage(queue.release());
-
-    engine1.StartQueueProcessing(processingQueue1);
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-
-    pubs1->Stop();
-
-    ASSERT_TRUE(isTaskFinalized);
-}
-
-/**
- * @given A queue containing 2 subtasks
- * @when Subtasks contains invalid chunk hashes
- * @then The subtasks processing is restarted.
- */
-TEST_F(ProcessingEngineTest, InvalidSubTasksRestart)
-{
-    auto pubs1 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();;
-    pubs1->Start(40001, {});
-
-    auto queueChannel = std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>(pubs1, "QUEUE_CHANNEL_ID");
-    queueChannel->Subscribe([](boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message&> message) {});
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-
-    // The processing core 1 has invalid chunk result hashes
-    auto processingCore1 = std::make_shared<ProcessingCoreImpl>(500);
-    processingCore1->m_chunkResultHashes["RESULT_CHANNEL_ID1"] = { 0 };
-    processingCore1->m_chunkResultHashes["RESULT_CHANNEL_ID2"] = { 1 };
-
-
-    // The processing core 2 has invalid chunk result hashes
-    auto processingCore2 = std::make_shared<ProcessingCoreImpl>(100);
-    processingCore2->m_chunkResultHashes["RESULT_CHANNEL_ID1"] = { 0 };
-    processingCore2->m_chunkResultHashes["RESULT_CHANNEL_ID2"] = { 0 };
-
-    auto nodeId1 = "NODE_1";
-    auto nodeId2 = "NODE_2";
-
-    SGProcessing::ProcessingChunk chunk1;
-    chunk1.set_chunkid("CHUNK_1");
-    chunk1.set_n_subchunks(1);
-    chunk1.set_line_stride(1);
-    chunk1.set_offset(0);
-    chunk1.set_stride(1);
-    chunk1.set_subchunk_height(10);
-    chunk1.set_subchunk_width(10);
-
-    auto queue = std::make_unique<SGProcessing::SubTaskQueue>();
-    // Local queue wrapped owns the queue
-    queue->mutable_processing_queue()->set_owner_node_id(nodeId1);
-    {
-        auto item = queue->mutable_processing_queue()->add_items();
-        auto subTask = queue->add_subtasks();
-        subTask->set_results_channel("RESULT_CHANNEL_ID1");
-        auto chunk = subTask->add_chunkstoprocess();
-        chunk->CopyFrom(chunk1);
-    }
-    {
-        auto item = queue->mutable_processing_queue()->add_items();
-        auto subTask = queue->add_subtasks();
-        subTask->set_results_channel("RESULT_CHANNEL_ID2");
-        auto chunk = subTask->add_chunkstoprocess();
-        chunk->CopyFrom(chunk1);
-    }
-
-    auto processingQueue1 = std::make_shared<ProcessingSubTaskQueue>(
-        queueChannel, pubs1->GetAsioContext(), nodeId1);
-    processingQueue1->ProcessSubTaskQueueMessage(queue.release());
-
-    bool isTaskFinalized1 = false;
-    ProcessingEngine engine1(pubs1, nodeId1, processingCore1,
-        [&isTaskFinalized1](const SGProcessing::TaskResult&) { isTaskFinalized1 = true; });
-
-    bool isTaskFinalized2 = false;
-    ProcessingEngine engine2(pubs1, nodeId2, processingCore2,
-        [&isTaskFinalized2](const SGProcessing::TaskResult&) { isTaskFinalized2 = true; });
-
-    engine1.StartQueueProcessing(processingQueue1);
-
-    // Wait for queue processing by node1
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-
-    // No task finalization should be called when there are invalid chunk results
-    ASSERT_FALSE(isTaskFinalized1);
-
-    auto processingQueue2 = std::make_shared<ProcessingSubTaskQueue>(
-        queueChannel, pubs1->GetAsioContext(), nodeId2);
-
-    // Change queue owner
-    SGProcessing::SubTaskQueueRequest queueRequest;
-    queueRequest.set_node_id(nodeId2);
-    auto updatedQueue = processingQueue1->ProcessSubTaskQueueRequestMessage(queueRequest);
-
-    // Synchronize the queues
-    processingQueue2->ProcessSubTaskQueueMessage(processingQueue1->GetQueueSnapshot().release());
-    processingQueue1->ProcessSubTaskQueueMessage(processingQueue2->GetQueueSnapshot().release());
-    engine1.StopQueueProcessing();
-
-    // Wait for failed tasks expiration
-    // @todo Automatically mark failed tasks as exired
-    std::this_thread::sleep_for(std::chrono::milliseconds(10000));
-
-    engine2.StartQueueProcessing(processingQueue2);
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-
-    pubs1->Stop();
-
-    // Task should be finalized because chunks have valid hashes
-    ASSERT_TRUE(isTaskFinalized2);
-}
-
-

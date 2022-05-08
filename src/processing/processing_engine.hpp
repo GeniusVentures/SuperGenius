@@ -6,36 +6,33 @@
 #ifndef GRPC_FOR_SUPERGENIUS_PROCESSING_ENGINE_HPP
 #define GRPC_FOR_SUPERGENIUS_PROCESSING_ENGINE_HPP
 
-#include "processing_core.hpp"
-#include "processing_subtask_queue.hpp"
-
-#include <ipfs_pubsub/gossip_pubsub_topic.hpp>
+#include <processing/processing_core.hpp>
+#include <processing/processing_subtask_queue_accessor.hpp>
+#include <base/logger.hpp>
 
 namespace sgns::processing
 {
 /** Handles subtask processing and processing results accumulation
 */
-class ProcessingEngine
+class ProcessingEngine : public std::enable_shared_from_this<ProcessingEngine>
 {
 public:
     /** Create a processing engine object
-    * @param processingCore specific processing core that process a subtask using specific algorithm
-    * @param gossipPubSub pubsub host which is used to create subscriptions to result channels
     * @param nodeId - current processing node ID
+    * @param processingCore specific processing core that process a subtask using specific algorithm
     */
     ProcessingEngine(
-        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> gossipPubSub,
         std::string nodeId,
-        std::shared_ptr<ProcessingCore> processingCore,
-        std::function<void(const SGProcessing::TaskResult&)> taskResultProcessingSink);
+        std::shared_ptr<ProcessingCore> processingCore);
+    ~ProcessingEngine();
 
-    void StartQueueProcessing(
-        std::shared_ptr<ProcessingSubTaskQueue> subTaskQueue);
+    // @todo rename to StartProcessing
+    void StartQueueProcessing(std::shared_ptr<SubTaskQueueAccessor> subTaskQueueAccessor);
 
     void StopQueueProcessing();
     bool IsQueueProcessingStarted() const;
 
-    std::vector<std::tuple<std::string, SGProcessing::SubTaskResult>> GetResults() const;
+    void SetProcessingErrorSink(std::function<void(const std::string&)> processingErrorSink);
 
 private:
     void OnSubTaskGrabbed(boost::optional<const SGProcessing::SubTask&> subTask);
@@ -45,19 +42,12 @@ private:
     */
     void ProcessSubTask(SGProcessing::SubTask subTask);
 
-    void OnResultChannelMessage(boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message&> message);
-    std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> AddResultChannel(const std::string& resultChannelId);
-
-    std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> m_gossipPubSub;
     std::string m_nodeId;
     std::shared_ptr<ProcessingCore> m_processingCore;
+    std::function<void(const std::string&)> m_processingErrorSink;
 
-    std::shared_ptr<ProcessingSubTaskQueue> m_subTaskQueue;
-    std::function<void(const SGProcessing::TaskResult&)> m_taskResultProcessingSink;
-    std::map<std::string, SGProcessing::SubTaskResult> m_results;
-    std::map<std::string, std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic>> m_resultChannels;
+    std::shared_ptr<SubTaskQueueAccessor> m_subTaskQueueAccessor;
 
-    mutable std::mutex m_mutexResults;
     mutable std::mutex m_mutexSubTaskQueue;
     
     base::Logger m_logger = base::createLogger("ProcessingEngine");

@@ -6,123 +6,74 @@
 #ifndef SUPERGENIUS_PROCESSING_SUBTASK_QUEUE_HPP
 #define SUPERGENIUS_PROCESSING_SUBTASK_QUEUE_HPP
 
-#include <processing/processing_shared_queue.hpp>
-#include <processing/processing_core.hpp>
-
 #include <processing/proto/SGProcessing.pb.h>
-
-#include <ipfs_pubsub/gossip_pubsub_topic.hpp>
+#include <base/logger.hpp>
 
 namespace sgns::processing
 {
-/** Distributed subtask queue implementation
+/** Distributed queue implementation
 */
 class ProcessingSubTaskQueue
 {
 public:
-    typedef std::function<void(boost::optional<const SGProcessing::SubTask&>)> SubTaskGrabbedCallback;
-
     /** Construct an empty queue
-    * @param queueChannel - task processing channel
-    * @param context - io context to handle timers
     * @param localNodeId local processing node ID
     */
-    ProcessingSubTaskQueue(
-        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> queueChannel,
-        std::shared_ptr<boost::asio::io_context> context,
-        const std::string& localNodeId);
+    ProcessingSubTaskQueue(const std::string& localNodeId);
 
     /** Create a subtask queue by splitting the task to subtasks using the processing code
-    * @param subTasks - a list of subtasks that should be added to the queue
-    * in subtasks to allow a validation
-    * @return false if not queue was created due to errors
+    * @param task - task that should be split into subtasks
+    * @param enabledItemIndices - indexes of enabled items. Disabled items are considered as deleted.
     */
-    bool CreateQueue(ProcessingCore::SubTaskList& subTasks);
+    void CreateQueue(SGProcessing::ProcessingQueue* queue, const std::vector<int>& enabledItemIndices);
 
     /** Asynchronous getting of a subtask from the queue
     * @param onSubTaskGrabbedCallback a callback that is called when a grapped iosubtask is locked by the local node
     */
-    void GrabSubTask(SubTaskGrabbedCallback onSubTaskGrabbedCallback);
+    bool GrabItem(size_t& grabbedItemIndex);
 
     /** Transfer the queue ownership to another processing node
     * @param nodeId - processing node ID that the ownership should be transferred
     */
     bool MoveOwnershipTo(const std::string& nodeId);
 
+    /** Rollbacks the queue ownership to the previous state
+    * @return true if the ownership is successfully rolled back
+    */
+    bool RollbackOwnership();
+
     /** Checks id the local processing node owns the queue
     * @return true is the lolca node owns the queue
     */
     bool HasOwnership() const;
 
-    /** Changes the local queue state with respect to passed queue snapshot
-    * The method should be called from a processing channel message handler
-    * @param queue received queue snapshot
-    */
-    bool ProcessSubTaskQueueMessage(SGProcessing::SubTaskQueue* queue);
-
-    /** Changes the local queue state with respect to passed queue request
-    * The method should be called from a processing channel message handler
-    * @param request is a request for the queue ownership transferring
-    */
-    bool ProcessSubTaskQueueRequestMessage(const SGProcessing::SubTaskQueueRequest& request);
-
-    /** Returns the current local queue snapshot
-    * @return the queue snapshot
-    */
-    std::unique_ptr<SGProcessing::SubTaskQueue> GetQueueSnapshot() const;
-
-    /** Add a results for a processed subtask into the queue
-    * @param resultChannel - subtask identifier
-    * @param subTaskResult - subtask result
-    * @return true if the result was added
-    */
-    bool AddSubTaskResult(
-        const std::string& resultChannel, const SGProcessing::SubTaskResult& subTaskResult);
-
-    /** Checks if all subtask in the queue are processed
-    * @return true if the queue is processed
-    */
-    bool IsProcessed() const;
-        
-    /** Checks if chenk result hashes are valid.
-    * If invalid chunk hashes found corresponding subtasks are invalidated and returned to processing queue
-    * @return true if all chunk results are valid
-    */
-    bool ValidateResults();
-        
-private:
     /** Updates the local queue with a snapshot that have the most recent timestamp
     * @param queue - the queue snapshot
+    * @param enabledItemIndices - indexes of enabled items. Disabled items are considered as deleted.
     */
-    bool UpdateQueue(SGProcessing::SubTaskQueue* queue);
+    bool UpdateQueue(SGProcessing::ProcessingQueue* queue, const std::vector<int>& enabledItemIndices);
 
-    void HandleQueueRequestTimeout(const boost::system::error_code& ec);
-    void PublishSubTaskQueue() const;
-    void ProcessPendingSubTaskGrabbing();
-    void GrabSubTasks();
-    void HandleGrabSubTaskTimeout(const boost::system::error_code& ec);
+    /** Unlocks expired queue items
+    * @param expirationTimeout - timeout applied to detect expired items
+    * @return true if at least one item was unlocked
+    */
+    bool UnlockExpiredItems(std::chrono::system_clock::duration expirationTimeout);
+
+    /** Returns the most recent item lock timestamp
+    */
+    std::chrono::system_clock::time_point GetLastLockTimestamp() const;
+
+private:
+    void ChangeOwnershipTo(const std::string& nodeId);
+
+    bool LockItem(size_t& lockedItemIndex);
+
     void LogQueue() const;
-    bool CheckSubTaskResultHashes(
-        const SGProcessing::SubTask& subTask, 
-        const std::map<std::string, std::vector<uint32_t>>& chunks) const;
 
-    std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> m_queueChannel;
-    std::shared_ptr<boost::asio::io_context> m_context;
     std::string m_localNodeId;
+    SGProcessing::ProcessingQueue* m_queue;
 
-    std::shared_ptr<SGProcessing::SubTaskQueue> m_queue;
-    mutable std::mutex m_queueMutex;
-    std::list<SubTaskGrabbedCallback> m_onSubTaskGrabbedCallbacks;
-
-    std::map<std::string, SGProcessing::SubTaskResult> m_results;
-
-    boost::asio::deadline_timer m_dltQueueResponseTimeout;
-    boost::posix_time::time_duration m_queueResponseTimeout;
-
-    boost::asio::deadline_timer m_dltGrabSubTaskTimeout;
-
-    SharedQueue m_sharedQueue;
-    std::chrono::system_clock::duration m_processingTimeout;
+    std::vector<int> m_enabledItemIndices;
 
     base::Logger m_logger = base::createLogger("ProcessingSubTaskQueue");
 };

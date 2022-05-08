@@ -6,8 +6,11 @@
 #ifndef GRPC_FOR_SUPERGENIUS_PROCESSING_NODE
 #define GRPC_FOR_SUPERGENIUS_PROCESSING_NODE
 
-#include "processing_engine.hpp"
-#include "processing_room.hpp"
+#include <processing/processing_engine.hpp>
+#include <processing/processing_subtask_queue_manager.hpp>
+#include <processing/processing_subtask_queue_accessor.hpp>
+#include <processing/processing_subtask_state_storage.hpp>
+#include <processing/processing_subtask_result_storage.hpp>
 
 #include <ipfs_pubsub/gossip_pubsub_topic.hpp>
 
@@ -25,50 +28,42 @@ public:
     */
     ProcessingNode(
         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> gossipPubSub,
-        size_t processingChannelCapacity,
+        std::shared_ptr<SubTaskStateStorage> subTaskStateStorage,
+        std::shared_ptr<SubTaskResultStorage> subTaskResultStorage,
         std::shared_ptr<ProcessingCore> processingCore,
-        std::function<void(const SGProcessing::TaskResult&)> taskResultProcessingSink);
+        std::function<void(const SGProcessing::TaskResult&)> taskResultProcessingSink,
+        std::function<void(const std::string&)> processingErrorSink);
 
     ~ProcessingNode();
+
     /** Attaches the node to the processing channel
-    * @param processingChannelId - identifier of a processing room channel
+    * @param processingQueueChannelId - identifier of a processing queue channel
     * @return flag indicating if the room is joined for block data processing
     */
-    void AttachTo(const std::string& processingChannelId, size_t msSubscriptionWaitingDuration = 0);
+    void AttachTo(const std::string& processingQueueChannelId, size_t msSubscriptionWaitingDuration = 0);
     void CreateProcessingHost(
-        const SGProcessing::Task& task, 
+        const std::string& processingQueueChannelId,
+        std::list<SGProcessing::SubTask>& subTasks,
         size_t msSubscriptionWaitingDuration = 0);
 
-    /** Returns true if a peer is joined a room
-    * @return true if if the current peer in a room
-    */
-    bool IsRoommate() const;
-    bool IsRoomHost() const;
-
-    bool IsAttachingToProcessingRoom() const;
-
-    const ProcessingRoom* GetRoom() const;
+    bool HasQueueOwnership() const;
 
 private:
-    void Initialize(const std::string& processingChannelId, size_t msSubscriptionWaitingDuration);    
-    void OnProcessingChannelMessage(boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message&> message);
-
-    void HandleProcessingRoomRequest(SGProcessing::ProcessingChannelMessage& channelMesssage);
-    void HandleProcessingRoom(SGProcessing::ProcessingChannelMessage& channelMesssage);
-    void HandleSubTaskQueueRequest(SGProcessing::ProcessingChannelMessage& channelMesssage);
-    void HandleSubTaskQueue(SGProcessing::ProcessingChannelMessage& channelMesssage);
+    void Initialize(const std::string& processingQueueChannelId, size_t msSubscriptionWaitingDuration);
 
     std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> m_gossipPubSub;
-    std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> m_processingChannel;
 
     std::string m_nodeId;
-    size_t m_processingChannelCapacity;
     std::shared_ptr<ProcessingCore> m_processingCore;
+    std::shared_ptr<SubTaskStateStorage> m_subTaskStateStorage;
+    std::shared_ptr<SubTaskResultStorage> m_subTaskResultStorage;
 
-    std::unique_ptr<ProcessingRoom> m_room;
-    std::unique_ptr<ProcessingEngine> m_processingEngine;
-    std::shared_ptr<ProcessingSubTaskQueue> m_subtaskQueue;
+    std::shared_ptr<ProcessingEngine> m_processingEngine;
+    std::shared_ptr<ProcessingSubTaskQueueChannel> m_queueChannel;
+    std::shared_ptr<ProcessingSubTaskQueueManager> m_subtaskQueueManager;
+    std::shared_ptr<SubTaskQueueAccessor> m_subTaskQueueAccessor;
     std::function<void(const SGProcessing::TaskResult&)> m_taskResultProcessingSink;
+    std::function<void(const std::string&)> m_processingErrorSink;
 };
 }
 
