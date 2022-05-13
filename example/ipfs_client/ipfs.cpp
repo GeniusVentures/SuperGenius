@@ -207,22 +207,13 @@ int main(int argc, char* argv[])
         // Hello world
         auto cid = libp2p::multi::ContentIdentifierCodec::fromString("QmWATWQ7fVPP2EFGu71UkfnqhYXDYH566qy47CnJDgvs8u").value();
 
-        // The peer id is received in findProviders response.
+        // Peer id specified manually only for a single bitswap block request call
+        // The peer id can be found in findProviders response.
         //auto peer_id = libp2p::peer::PeerId::fromBase58("QmRXP6S7qwSH4vjSrZeJUGT68ww8rQVhoFWU5Kp7UkVkPN").value();
         auto peer_id = libp2p::peer::PeerId::fromBase58("QmSrq3jnqGAja4z96Jq9SMQFJ8TzbRAgrMLi1sTR6Ane6W").value();
 
-        // Peers addresses: 
-        // /ip4/127.0.0.1/udp/4001/quic;
-        // /ip4/54.89.142.24/udp/4001/quic;
-        // /ip4/54.89.142.24/tcp/1031;
-        // /ip4/54.89.142.24/tcp/4001;
-        // /ip6/::1/tcp/4001;
-        // /ip4/10.0.65.121/udp/4001/quic;
-        // /ip4/100.118.94.0/tcp/4001;
-        // /ip6/::1/udp/4001/quic;
-        // /ip4/10.0.65.121/tcp/4001;
-        // /ip4/127.0.0.1/tcp/4001;
-        // /ip4/54.89.142.24/tcp/1024;
+        // Peers addresses:
+        // The adressed are specified manually only for a single bitswap block request call
         auto peer_address = 
             libp2p::multi::Multiaddress::create(
                 //"/ip4/10.0.65.121/tcp/4001/p2p/QmRXP6S7qwSH4vjSrZeJUGT68ww8rQVhoFWU5Kp7UkVkPN"
