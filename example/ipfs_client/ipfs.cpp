@@ -73,11 +73,12 @@ namespace
             const sgns::ipfs_bitswap::CID& cid,
             const std::vector<libp2p::peer::PeerInfo>& providers);
 
-        bool RequestBlock();
+        void RequestBlock(std::function<void(std::optional<std::string>)> cb);
     private:
-        bool RequestBlock(
+        void RequestBlock(
             std::vector<libp2p::peer::PeerInfo>::iterator addressBeginIt,
-            std::vector<libp2p::peer::PeerInfo>::iterator addressEndIt);
+            std::vector<libp2p::peer::PeerInfo>::iterator addressEndIt,
+            std::function<void(std::optional<std::string>)> cd);
 
         std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap_;
         sgns::ipfs_bitswap::CID cid_;
@@ -94,33 +95,35 @@ namespace
     {
     }
 
-    bool BlockRequestor::RequestBlock()
+    void BlockRequestor::RequestBlock(std::function<void(std::optional<std::string>)> cb)
     {
-        return RequestBlock(providers_.begin(), providers_.end());
+        RequestBlock(providers_.begin(), providers_.end(), std::move(cb));
     }
 
-    bool BlockRequestor::RequestBlock(
+    void BlockRequestor::RequestBlock(
         std::vector<libp2p::peer::PeerInfo>::iterator addressBeginIt,
-        std::vector<libp2p::peer::PeerInfo>::iterator addressEndIt)
+        std::vector<libp2p::peer::PeerInfo>::iterator addressEndIt,
+        std::function<void(std::optional<std::string>)> cb)
     {
         if (addressBeginIt != addressEndIt)
         {
             bitswap_->RequestBlock(*addressBeginIt, cid_,
-                [this, addressBeginIt, addressEndIt](libp2p::outcome::result<std::string> data)
+                [this, addressBeginIt, addressEndIt, cb(std::move(cb))](libp2p::outcome::result<std::string> data)
                 {
                     if (data)
                     {
-                        std::cout << "Bitswap data received: " << data.value() << std::endl;
-                        return true;
+                        cb(data.value());
                     }
                     else
                     {
-                        return RequestBlock(addressBeginIt + 1, addressEndIt);
+                        RequestBlock(addressBeginIt + 1, addressEndIt, std::move(cb));
                     }
                 });
         }
-
-        return false;
+        else
+        {
+            cb(std::nullopt);
+        }
     }
 }
 
@@ -285,25 +288,28 @@ int main(int argc, char* argv[])
                 if (!providers.empty())
                 {
                     for (auto& provider : providers) {
-                        std::cout << provider.id.toBase58() << std::endl;
-                    }
+                        std::cout << provider.id.toBase58();
+                        std::cout << ", addresses: [";
+                        std::string sep = "";
+                        for (auto& address : provider.addresses)
+                        {
+                            std::cout << sep << address.getStringAddress();
+                            sep = ",";
+                        }
+                        std::cout << "]";
+                        std::cout << std::endl;
 
-                    const auto& pi = providers.front();
-                    std::cout << "Trying to request a block from peer: " << pi.id.toBase58() << std::endl;
-                    std::cout << "Addresses: [";
-                    std::string sep = "";
-                    for (auto& address : pi.addresses)
-                    {
-                        std::cout << sep << address.getStringAddress();
-                        sep = ",";
                     }
-                    std::cout << std::endl;
 
                     blockRequestor = std::make_shared<BlockRequestor>(bitswap, cid, providers);
-                    if (!blockRequestor->RequestBlock())
-                    {
-                        std::cout << "CANNOT GET REQUESTED DATA: " << std::endl;
-                    }
+                    blockRequestor->RequestBlock([](std::optional<std::string> data) {
+                        if (data)
+                            std::cout << "Bitswap data received: " << data.value() << std::endl;
+                        else
+                            std::cout << "Cannot get requested data" << std::endl;
+                        
+
+                    });
                 }
                 else
                 {
