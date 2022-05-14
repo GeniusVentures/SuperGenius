@@ -253,7 +253,7 @@ int main(int argc, char* argv[])
             host->start();
 
             /*
-            bitswap->RequestBlock(peer_id, peer_address, cid,
+            bitswap->RequestBlock({ peer_id, {peer_address} }, cid,
                 [](libp2p::outcome::result<std::string> data)
                 {
                     if (data)
