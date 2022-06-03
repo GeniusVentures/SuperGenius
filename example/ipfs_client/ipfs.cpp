@@ -125,6 +125,98 @@ namespace
             cb(std::nullopt);
         }
     }
+
+    class BlockAccessor
+    {
+    public:
+        BlockAccessor(std::shared_ptr<sgns::IpfsDHT> dht, std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap);
+        void RequestBlock(const sgns::ipfs_bitswap::CID& cid, std::function<void(std::optional<std::string>)> cb);
+
+    private:
+        void OnProvidersFound(
+            sgns::ipfs_bitswap::CID cid,
+            std::function<void(std::optional<std::string>)> cb,
+            libp2p::outcome::result<std::vector<libp2p::peer::PeerInfo>> providersRes);
+
+        void LogProviders(const std::vector<libp2p::peer::PeerInfo>& providers);
+
+        std::shared_ptr<sgns::IpfsDHT> m_dht;
+        std::shared_ptr<sgns::ipfs_bitswap::Bitswap> m_bitswap;
+
+        sgns::base::Logger m_logger = sgns::base::createLogger("BlockAccessor");
+    };
+
+    BlockAccessor::BlockAccessor(std::shared_ptr<sgns::IpfsDHT> dht, std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap)
+        : m_dht(dht)
+        , m_bitswap(bitswap)
+    {
+    }
+
+    void BlockAccessor::RequestBlock(const sgns::ipfs_bitswap::CID& cid, std::function<void(std::optional<std::string>)> cb)
+    {
+        m_dht->FindProviders(cid, std::bind(&BlockAccessor::OnProvidersFound, this, cid, cb, std::placeholders::_1));
+    }
+
+    void BlockAccessor::OnProvidersFound(
+        sgns::ipfs_bitswap::CID cid,
+        std::function<void(std::optional<std::string>)> cb,
+        libp2p::outcome::result<std::vector<libp2p::peer::PeerInfo>> providersRes)
+    {
+        if (!providersRes)
+        {
+            m_logger->error("CANNOT_FIND_PROVIDERS: {}", providersRes.error().message());
+        }
+
+        auto& providers = providersRes.value();
+        if (m_logger->should_log(spdlog::level::debug))
+        {
+            LogProviders(providers);
+        }
+
+        if (!providers.empty())
+        {
+            auto blockRequestor = std::make_shared<BlockRequestor>(m_bitswap, cid, providers);
+            blockRequestor->RequestBlock([this, cid, cb, blockRequestor](std::optional<std::string> data) {
+                if (data)
+                {
+                    this->m_logger->debug("BITSWAP_DATA_RECEIVED: {} bytes", data.value().size());
+                    cb(data);
+                }
+                else
+                {
+                    this->m_logger->debug("CANNOT_GET_REQUESTED_DATA");
+                    this->m_dht->FindProviders(
+                        cid, std::bind(&BlockAccessor::OnProvidersFound, this, cid, cb, std::placeholders::_1));
+                }
+                });
+        }
+        else
+        {
+            // Empty providers list received
+            this->m_dht->FindProviders(
+                cid, std::bind(&BlockAccessor::OnProvidersFound, this, cid, cb, std::placeholders::_1));
+        }
+    };
+
+    void BlockAccessor::LogProviders(const std::vector<libp2p::peer::PeerInfo>& providers)
+    {
+        std::stringstream ss;
+        for (const auto& provider : providers)
+        {
+            ss << provider.id.toBase58();
+            ss << ", addresses: [";
+            std::string sep = "";
+            for (auto& address : provider.addresses)
+            {
+                ss << sep << address.getStringAddress();
+                sep = ",";
+            }
+            ss << "]";
+            ss << std::endl;
+        }
+
+        m_logger->debug("PROVIDERS_LIST: [{}]", ss.str());
+    }
 }
 
 int main(int argc, char* argv[])
@@ -168,6 +260,9 @@ int main(int argc, char* argv[])
     auto loggerBitswap = sgns::ipfs_bitswap::createLogger("Bitswap");
     loggerBitswap->set_level(spdlog::level::debug);
 
+    auto loggerBlockAccessor = sgns::base::createLogger("BlockAccessor");
+    loggerBlockAccessor->set_level(spdlog::level::debug);
+
     const std::string processingGridChannel = "GRID_CHANNEL_ID";
 
     libp2p::protocol::kademlia::Config kademlia_config;
@@ -205,7 +300,8 @@ int main(int argc, char* argv[])
         };
 
         // Hello world
-        auto cid = libp2p::multi::ContentIdentifierCodec::fromString("QmWATWQ7fVPP2EFGu71UkfnqhYXDYH566qy47CnJDgvs8u").value();
+        //auto cid = libp2p::multi::ContentIdentifierCodec::fromString("QmWATWQ7fVPP2EFGu71UkfnqhYXDYH566qy47CnJDgvs8u").value();
+        auto cid = libp2p::multi::ContentIdentifierCodec::fromString("QmYCvbfNbCwFR45HiNP45rwJgvatpiW38D961L5qAhUM5Y").value();
 
         // Peer id specified manually only for a single bitswap block request call
         // The peer id can be found in findProviders response.
@@ -236,6 +332,8 @@ int main(int argc, char* argv[])
 
         // Bitswap setup
         auto bitswap = std::make_shared<sgns::ipfs_bitswap::Bitswap>(*host, host->getBus(), io);
+
+        auto blockAccessor = std::make_shared<BlockAccessor>(dht, bitswap);
 
         std::shared_ptr<BlockRequestor> blockRequestor;
 
@@ -268,46 +366,17 @@ int main(int argc, char* argv[])
             /*/
             dht->Start();
 
-            dht->FindProviders(cid, [bitswap, &cid, &blockRequestor](libp2p::outcome::result<std::vector<libp2p::peer::PeerInfo>> res) {
-                if (!res) {
-                    std::cerr << "Cannot find providers: " << res.error().message() << std::endl;
-                    return;
-                }
-
-                std::cout << "Providers: " << std::endl;
-                auto& providers = res.value();
-                if (!providers.empty())
+            blockAccessor->RequestBlock(cid, [](std::optional<std::string> data){
+                if (data)
                 {
-                    for (auto& provider : providers) {
-                        std::cout << provider.id.toBase58();
-                        std::cout << ", addresses: [";
-                        std::string sep = "";
-                        for (auto& address : provider.addresses)
-                        {
-                            std::cout << sep << address.getStringAddress();
-                            sep = ",";
-                        }
-                        std::cout << "]";
-                        std::cout << std::endl;
-
-                    }
-
-                    blockRequestor = std::make_shared<BlockRequestor>(bitswap, cid, providers);
-                    blockRequestor->RequestBlock([](std::optional<std::string> data) {
-                        if (data)
-                            std::cout << "Bitswap data received: " << data.value() << std::endl;
-                        else
-                            std::cout << "Cannot get requested data" << std::endl;
-                        
-
-                    });
+                    std::cout << "Bitswap data received :" << data.value() << std::endl;
                 }
                 else
                 {
-                    std::cout << "Empty providers list received" << std::endl;
-                    std::exit(EXIT_FAILURE);
+                    std::cout << "Cannot get requested data" << std::endl;
                 }
-            });
+                });
+
             //*/
 
         }); // io->post()
