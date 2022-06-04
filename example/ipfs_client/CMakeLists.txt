@@ -2,8 +2,6 @@ add_executable(ipfs_client
     ipfs.cpp
     ping_session.cpp
     ping_session.hpp
-    ipfs_dht.cpp
-    ipfs_dht.hpp
     )
 
 
@@ -22,6 +20,7 @@ target_link_libraries(ipfs_client
 #    ipfs-lite-cpp::ipfs_merkledag_service
 #    ipfs-lite-cpp::graphsync
     logger
+    ipfs
     p2p::p2p_basic_host
     p2p::p2p_default_network
     p2p::p2p_peer_repository
@@ -34,6 +33,5 @@ target_link_libraries(ipfs_client
     p2p::p2p_ping
     Boost::Boost.DI
     Boost::program_options
-    ipfs-bitswap-cpp
     ${WIN_CRYPT_LIBRARY}
     )

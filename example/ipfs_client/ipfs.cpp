@@ -1,5 +1,5 @@
 #include "ping_session.hpp"
-#include "ipfs_dht.hpp"
+#include <ipfs/ipfs_dht.hpp>
 #include <bitswap.hpp>
 
 #include <libp2p/multi/multibase_codec/multibase_codec_impl.hpp>
