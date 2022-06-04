@@ -2,7 +2,7 @@
 
 #include <libp2p/multi/content_identifier_codec.hpp>
 
-namespace sgns
+namespace sgns::ipfs
 {
 IpfsDHT::IpfsDHT(
     std::shared_ptr<libp2p::protocol::kademlia::Kademlia> kademlia,

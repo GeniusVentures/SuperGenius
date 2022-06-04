@@ -6,7 +6,7 @@
 #include <libp2p/protocol/kademlia/kademlia.hpp>
 #include <libp2p/multi/content_identifier.hpp>
 
-namespace sgns
+namespace sgns::ipfs
 {
 class IpfsDHT
 {

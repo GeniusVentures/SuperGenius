@@ -129,7 +129,7 @@ namespace
     class BlockAccessor
     {
     public:
-        BlockAccessor(std::shared_ptr<sgns::IpfsDHT> dht, std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap);
+        BlockAccessor(std::shared_ptr<sgns::ipfs::IpfsDHT> dht, std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap);
         void RequestBlock(const sgns::ipfs_bitswap::CID& cid, std::function<void(std::optional<std::string>)> cb);
 
     private:
@@ -140,13 +140,13 @@ namespace
 
         void LogProviders(const std::vector<libp2p::peer::PeerInfo>& providers);
 
-        std::shared_ptr<sgns::IpfsDHT> m_dht;
+        std::shared_ptr<sgns::ipfs::IpfsDHT> m_dht;
         std::shared_ptr<sgns::ipfs_bitswap::Bitswap> m_bitswap;
 
         sgns::base::Logger m_logger = sgns::base::createLogger("BlockAccessor");
     };
 
-    BlockAccessor::BlockAccessor(std::shared_ptr<sgns::IpfsDHT> dht, std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap)
+    BlockAccessor::BlockAccessor(std::shared_ptr<sgns::ipfs::IpfsDHT> dht, std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap)
         : m_dht(dht)
         , m_bitswap(bitswap)
     {
@@ -328,7 +328,7 @@ int main(int argc, char* argv[])
         auto pingSession = std::make_shared<PingSession>(io, host);
         pingSession->Init();
 
-        auto dht = std::make_shared<sgns::IpfsDHT>(kademlia, bootstrapAddresses);
+        auto dht = std::make_shared<sgns::ipfs::IpfsDHT>(kademlia, bootstrapAddresses);
 
         // Bitswap setup
         auto bitswap = std::make_shared<sgns::ipfs_bitswap::Bitswap>(*host, host->getBus(), io);
