@@ -1,4 +1,6 @@
 add_library(ipfs
+    ipfs_block_accessor.cpp
+    ipfs_block_accessor.hpp
     ipfs_dht.cpp
     ipfs_dht.hpp
     )
