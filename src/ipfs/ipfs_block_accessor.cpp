@@ -72,18 +72,26 @@ namespace sgns::ipfs
 BlockAccessor::BlockAccessor(std::shared_ptr<sgns::ipfs::IpfsDHT> dht, std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap)
     : m_dht(dht)
     , m_bitswap(bitswap)
+    , m_blockRequestTimeout(std::chrono::seconds(10))
 {
+}
+
+void BlockAccessor::SetBlockRequestTimeout(std::chrono::system_clock::duration blockRequestTimeout)
+{
+    m_blockRequestTimeout = blockRequestTimeout;
 }
 
 void BlockAccessor::RequestBlock(const sgns::ipfs_bitswap::CID& cid, std::function<void(std::optional<std::string>)> cb)
 {
+    auto t = std::chrono::system_clock::now();
     m_dht->FindProviders(
         cid, 
-        std::bind(&BlockAccessor::OnProvidersFound, this, cid, std::move(cb), std::placeholders::_1));
+        std::bind(&BlockAccessor::OnProvidersFound, this, cid, t, std::move(cb), std::placeholders::_1));
 }
 
 void BlockAccessor::OnProvidersFound(
     sgns::ipfs_bitswap::CID cid,
+    std::chrono::time_point<std::chrono::system_clock> requestTime,
     std::function<void(std::optional<std::string>)> cb,
     libp2p::outcome::result<std::vector<libp2p::peer::PeerInfo>> providersRes)
 {
@@ -101,7 +109,8 @@ void BlockAccessor::OnProvidersFound(
     if (!providers.empty())
     {
         auto blockRequestor = std::make_shared<BlockRequestor>(m_bitswap, cid, providers);
-        blockRequestor->RequestBlock([this, cid, cb(std::move(cb)), blockRequestor](std::optional<std::string> data) {
+        blockRequestor->RequestBlock(
+            [this, cid, requestTime, cb(std::move(cb)), blockRequestor](std::optional<std::string> data) {
             if (data)
             {
                 this->m_logger->debug("BITSWAP_DATA_RECEIVED: {} bytes", data.value().size());
@@ -110,20 +119,35 @@ void BlockAccessor::OnProvidersFound(
             else
             {
                 this->m_logger->debug("CANNOT_GET_REQUESTED_DATA");
-                this->m_dht->FindProviders(
-                    cid, 
-                    std::bind(&BlockAccessor::OnProvidersFound, this, cid, std::move(cb), std::placeholders::_1));
+                this->SubmitRequest(cid, requestTime, std::move(cb));
             }
             });
     }
     else
     {
         // Empty providers list received
-        this->m_dht->FindProviders(
-            cid, 
-            std::bind(&BlockAccessor::OnProvidersFound, this, cid, std::move(cb), std::placeholders::_1));
+        this->SubmitRequest(cid, requestTime, std::move(cb));
     }
-};
+}
+
+void BlockAccessor::SubmitRequest(
+    sgns::ipfs_bitswap::CID cid,
+    std::chrono::time_point<std::chrono::system_clock> requestTime,
+    std::function<void(std::optional<std::string>)> cb)
+{
+    auto t = std::chrono::system_clock::now();
+    if (t - requestTime > m_blockRequestTimeout)
+    {
+        m_logger->debug("BLOCK_REQUEST_TIMEOUT");
+        cb(std::nullopt);
+    }
+    else
+    {
+        m_dht->FindProviders(
+            cid,
+            std::bind(&BlockAccessor::OnProvidersFound, this, cid, requestTime, std::move(cb), std::placeholders::_1));
+    }
+}
 
 void BlockAccessor::LogProviders(const std::vector<libp2p::peer::PeerInfo>& providers)
 {
