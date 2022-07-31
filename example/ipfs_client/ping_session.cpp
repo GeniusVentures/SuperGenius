@@ -13,7 +13,7 @@ PingSession::PingSession(std::shared_ptr<boost::asio::io_context> io, std::share
 
 void PingSession::Init()
 {
-    subsOnNewConnection_ = host_->getBus().getChannel<libp2p::network::event::OnNewConnectionChannel>().subscribe(
+    subsOnNewConnection_ = host_->getBus().getChannel<libp2p::event::network::OnNewConnectionChannel>().subscribe(
         [ctx = shared_from_this()](auto&& conn) mutable {
         return ctx->OnNewConnection(conn, ctx->ping_);
     });
