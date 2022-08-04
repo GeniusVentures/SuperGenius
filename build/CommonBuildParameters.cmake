@@ -48,18 +48,18 @@ include(${PROJECT_ROOT}/cmake/functions.cmake)
 
 # --------------------------------------------------------
 # Set config of openssl project
-# libp2p 0.1.2 loading failed when openssl is loaded here
-#set(OPENSSL_DIR "${_THIRDPARTY_BUILD_DIR}/openssl/build/${CMAKE_SYSTEM_NAME}${ABI_SUBFOLDER_NAME}")
-#set(OPENSSL_USE_STATIC_LIBS ON)
-#set(OPENSSL_MSVC_STATIC_RT ON)
-#set(OPENSSL_ROOT_DIR "${OPENSSL_DIR}")
-#set(OPENSSL_INCLUDE_DIR "${OPENSSL_DIR}/include")
-#set(OPENSSL_LIBRARIES "${OPENSSL_DIR}/lib")
-#set(OPENSSL_CRYPTO_LIBRARY ${OPENSSL_LIBRARIES}/libcrypto${CMAKE_STATIC_LIBRARY_SUFFIX})
-#set(OPENSSL_SSL_LIBRARY ${OPENSSL_LIBRARIES}/libssl${CMAKE_STATIC_LIBRARY_SUFFIX})
+set(OPENSSL_DIR "${_THIRDPARTY_BUILD_DIR}/openssl/build/${CMAKE_SYSTEM_NAME}${ABI_SUBFOLDER_NAME}")
+set(OPENSSL_USE_STATIC_LIBS ON)
+set(OPENSSL_MSVC_STATIC_RT ON)
+set(OPENSSL_ROOT_DIR "${OPENSSL_DIR}")
+set(OPENSSL_INCLUDE_DIR "${OPENSSL_DIR}/include")
+set(OPENSSL_LIBRARIES "${OPENSSL_DIR}/lib")
+set(OPENSSL_CRYPTO_LIBRARY ${OPENSSL_LIBRARIES}/libcrypto${CMAKE_STATIC_LIBRARY_SUFFIX})
+set(OPENSSL_SSL_LIBRARY ${OPENSSL_LIBRARIES}/libssl${CMAKE_STATIC_LIBRARY_SUFFIX})
 
+# libp2p 0.1.2 loading failed when openssl is loaded here
 #find_package(OpenSSL REQUIRED)
-#include_directories(${OPENSSL_INCLUDE_DIR})
+include_directories(${OPENSSL_INCLUDE_DIR})
 
 # --------------------------------------------------------
 # Set config of rocksdb
@@ -98,9 +98,9 @@ include_directories(${soralog_INCLUDE_DIR})
 # Set config of cares
 set(c-ares_DIR "${_THIRDPARTY_BUILD_DIR}/cares/lib/cmake/c-ares")
 set(c-ares_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/cares/include")
-# libp2p 0.1.2 loading failed when openssl is loaded here
+# libp2p 0.1.2 loading failed when c-ares is loaded here
 #find_package(c-ares CONFIG REQUIRED)
-#include_directories(${c-ares_INCLUDE_DIR})
+include_directories(${c-ares_INCLUDE_DIR})
 
 # --------------------------------------------------------
 # Set config of yaml-cpp
