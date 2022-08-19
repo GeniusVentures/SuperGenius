@@ -72,7 +72,7 @@ namespace sgns::ipfs
 BlockAccessor::BlockAccessor(std::shared_ptr<sgns::ipfs::IpfsDHT> dht, std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap)
     : m_dht(dht)
     , m_bitswap(bitswap)
-    , m_blockRequestTimeout(std::chrono::seconds(10))
+    , m_blockRequestTimeout(std::chrono::seconds(60))
 {
 }
 
@@ -98,6 +98,7 @@ void BlockAccessor::OnProvidersFound(
     if (!providersRes)
     {
         m_logger->error("CANNOT_FIND_PROVIDERS: {}", providersRes.error().message());
+        return;
     }
 
     auto& providers = providersRes.value();
