@@ -250,6 +250,28 @@ find_package(libsecp256k1 CONFIG REQUIRED)
 include_directories(${libsecp256k1_INCLUDE_DIR})
 
 # --------------------------------------------------------
+# Set config of kompute
+set(kompute_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/kompute/include")
+set(kompute_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/kompute/lib")
+set(kompute_DIR "${_THIRDPARTY_BUILD_DIR}/kompute/lib/cmake/kompute")
+find_package(kompute CONFIG REQUIRED)
+include_directories(${kompute_INCLUDE_DIR})
+
+# --------------------------------------------------------
+# Set config of Vulkan-Header
+set(vulkan-headers_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/Vulkan-Headers/include")
+include_directories(${vulkan-headers_INCLUDE_DIR})
+
+# --------------------------------------------------------
+# Set config of Vulkan-Loader
+set(vulkan-loaderINCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/Vulkan-Loader/include")
+set(vulkan-loader_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/Vulkan-Loader/lib")
+set(vulkan-loader_DIR "${_THIRDPARTY_BUILD_DIR}/Vulkan-Loader/lib/cmake/vulkan")
+find_package(vulkan-loader CONFIG REQUIRED)
+include_directories(${vulkan-loader_INCLUDE_DIR})
+
+
+# --------------------------------------------------------
 # Set config of xxhash
 set(xxhash_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/xxhash/include")
 set(xxhash_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/xxhash/lib")
