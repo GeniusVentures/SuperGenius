@@ -1,8 +1,8 @@
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DKOMPUTE_DISABLE_VK_DEBUG_LAYERS=1")
 
 add_executable(kompute_manager
-    #kompute_manager.cpp
-    #kompute_manager.hpp
+    kompute_manager.cpp
+    kompute_manager.hpp
     infura_ipfs.hpp
     infura_ipfs.cpp
     main.cpp
