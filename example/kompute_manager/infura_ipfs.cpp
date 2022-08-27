@@ -26,7 +26,7 @@ void InfuraIPFS::GetIPFSFile(const std::string& cid, std::string& data)
 {
     std::string host = "ipfs.infura.io";
     std::string port = "5001";
-    std::string target = "/api/v0/block/get?arg=" + cid;
+    std::string target = "/api/v0/cat?arg=" + cid;
     int version = 11;
 
     // The io_context is required for all I/O
