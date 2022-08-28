@@ -1,11 +1,11 @@
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DKOMPUTE_DISABLE_VK_DEBUG_LAYERS=1")
 
-add_executable(kompute_manager
+add_executable(kompute_dapp_processor
     kompute_manager.cpp
     kompute_manager.hpp
     infura_ipfs.hpp
     infura_ipfs.cpp
-    main.cpp
+    kompute_dapp_processor.cpp
     )
 
 
@@ -14,10 +14,10 @@ include_directories(
     ${PROJECT_SOURCE_DIR}/src
     )
 
-target_include_directories(kompute_manager PRIVATE ${GSL_INCLUDE_DIR})
+target_include_directories(kompute_dapp_processor PRIVATE ${GSL_INCLUDE_DIR})
 
 
-target_link_libraries(kompute_manager
+target_link_libraries(kompute_dapp_processor
     kompute::kompute
     vulkan::vulkan
     logger
@@ -43,10 +43,10 @@ target_link_libraries(kompute_manager
 #install(FILES authorizationKey.txt DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/authorizationKey.txt")
-    add_custom_command(TARGET kompute_manager POST_BUILD
+    add_custom_command(TARGET kompute_dapp_processor POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${CMAKE_CURRENT_SOURCE_DIR}/authorizationKey.txt"
-        $<TARGET_FILE_DIR:kompute_manager>
+        $<TARGET_FILE_DIR:kompute_dapp_processor>
     )
-    set_property(TARGET kompute_manager PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:kompute_manager>")
+    set_property(TARGET kompute_dapp_processor PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:kompute_dapp_processor>")
 endif()
