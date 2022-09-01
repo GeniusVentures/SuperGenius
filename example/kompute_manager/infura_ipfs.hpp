@@ -9,6 +9,7 @@ public:
     InfuraIPFS(const std::string& authorizationKey);
 
     void GetIPFSFile(const std::string& cid, std::string& data);
+    std::string AddIPFSFile(const std::string& name, const std::string& content);
 private:
     std::string m_authorizationKey;
 };
