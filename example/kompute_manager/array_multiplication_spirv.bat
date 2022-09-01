@@ -1,0 +1,1 @@
+glslangValidator -V array_multiplication.comp -o array_multiplication.comp.spv

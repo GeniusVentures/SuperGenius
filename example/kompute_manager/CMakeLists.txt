@@ -1,3 +1,11 @@
+# Copy the required headers to install directory
+include_directories(
+    ${PROJECT_SOURCE_DIR}/src
+    )
+
+
+#kompute_dapp_processor
+
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DKOMPUTE_DISABLE_VK_DEBUG_LAYERS=1")
 
 add_executable(kompute_dapp_processor
@@ -8,11 +16,6 @@ add_executable(kompute_dapp_processor
     kompute_dapp_processor.cpp
     )
 
-
-# Copy the required headers to install directory
-include_directories(
-    ${PROJECT_SOURCE_DIR}/src
-    )
 
 target_include_directories(kompute_dapp_processor PRIVATE ${GSL_INCLUDE_DIR})
 
@@ -40,8 +43,6 @@ target_link_libraries(kompute_dapp_processor
     ${WIN_CRYPT_LIBRARY}
     )
 
-#install(FILES authorizationKey.txt DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
-
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/authorizationKey.txt")
     add_custom_command(TARGET kompute_dapp_processor POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
@@ -50,3 +51,39 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/authorizationKey.txt")
     )
     set_property(TARGET kompute_dapp_processor PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:kompute_dapp_processor>")
 endif()
+
+
+# kompute_dapp
+add_executable(kompute_dapp
+    infura_ipfs.hpp
+    infura_ipfs.cpp
+    kompute_dapp.cpp
+    )
+
+target_link_libraries(kompute_dapp
+    OpenSSL::Crypto
+    OpenSSL::SSL
+    p2p::p2p_crypto_error
+    p2p::p2p_aes_provider
+    ${WIN_CRYPT_LIBRARY}
+    )
+
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/authorizationKey.txt")
+    add_custom_command(TARGET kompute_dapp POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_CURRENT_SOURCE_DIR}/authorizationKey.txt"
+        $<TARGET_FILE_DIR:kompute_dapp>
+    )
+endif()
+
+
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/array_multiplication.comp.spv")
+    add_custom_command(TARGET kompute_dapp POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_CURRENT_SOURCE_DIR}/array_multiplication.comp.spv"
+        $<TARGET_FILE_DIR:kompute_dapp>
+    )
+endif()
+
+set_property(TARGET kompute_dapp PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:kompute_dapp>")
+
