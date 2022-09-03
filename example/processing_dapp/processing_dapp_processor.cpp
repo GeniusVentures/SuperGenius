@@ -1,6 +1,6 @@
-#include "processing_task_queue_impl.hpp"
 #include "processing_subtask_result_storage_impl.hpp"
 
+#include <processing/processing_task_queue_impl.hpp>
 #include <processing/processing_service.hpp>
 #include <processing/processing_subtask_enqueuer_impl.hpp>
 
