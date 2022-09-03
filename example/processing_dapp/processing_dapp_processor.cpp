@@ -12,6 +12,7 @@
 #include <libp2p/log/logger.hpp>
 
 #include <boost/program_options.hpp>
+#include <boost/format.hpp>
 
 #include <iostream>
 
