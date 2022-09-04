@@ -65,6 +65,9 @@ target_link_libraries(kompute_dapp
     OpenSSL::SSL
     p2p::p2p_crypto_error
     p2p::p2p_aes_provider
+    crdt_globaldb
+    logger
+    processing_service
     ${WIN_CRYPT_LIBRARY}
     )
 
