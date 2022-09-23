@@ -169,7 +169,7 @@ int main(int argc, const char* argv)
 
     taskQueue->EnqueueTask(task, subTasks);
 
-    std::cout << "TASK equeued" << std::endl;
+    std::cout << "TASK enqueued" << std::endl;
 
     // Gracefully shutdown on signal
     boost::asio::signal_set signals(*pubs->GetAsioContext(), SIGINT, SIGTERM);
