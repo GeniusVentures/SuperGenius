@@ -65,9 +65,6 @@ add_executable(kompute_dapp
     )
 
 target_link_libraries(kompute_dapp
-    kompute::kompute
-    #vulkan::vulkan-headers
-    #vulkan::vulkan # @note When it is on top of the list SGProcessing.pb.h cannot be found.
     OpenSSL::Crypto
     OpenSSL::SSL
     p2p::p2p_crypto_error
