@@ -7,15 +7,69 @@
 #include <libp2p/log/configurator.hpp>
 #include <libp2p/log/logger.hpp>
 
+#include <boost/program_options.hpp>
 #include <boost/format.hpp>
+
 #include <string>
 #include <iostream>
 #include <fstream>
 #include <sstream>
 #include <vector>
 
-int main(int argc, const char* argv)
+namespace
 {
+// cmd line options
+struct Options
+{
+    // optional remote peer to connect to
+    std::optional<std::string> remote;
+};
+
+boost::optional<Options> parseCommandLine(int argc, char** argv)
+{
+    namespace po = boost::program_options;
+    try
+    {
+        Options o;
+        std::string remote;
+
+        po::options_description desc("processing service options");
+        desc.add_options()("help,h", "print usage message")
+            ("remote,r", po::value(&remote), "remote service multiaddress to connect to")
+            ;
+
+        po::variables_map vm;
+        po::store(parse_command_line(argc, argv, desc), vm);
+        po::notify(vm);
+
+        if (vm.count("help") != 0 || argc == 1)
+        {
+            std::cerr << desc << "\n";
+            return boost::none;
+        }
+
+        if (!remote.empty())
+        {
+            o.remote = remote;
+        }
+
+        return o;
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << e.what() << std::endl;
+    }
+    return boost::none;
+}
+} // namespace
+
+int main(int argc, char** argv)
+{
+    auto options = parseCommandLine(argc, argv);
+    if (!options)
+    {
+        return 1;
+    }
 
     const std::string logger_config(R"(
     # ----------------
@@ -64,6 +118,7 @@ int main(int argc, const char* argv)
     taskData.write(spvData.data(), spvSize);
 
     // Add data to process
+    // 3x3 matrix
     std::vector<float> data(
         { 1.0, 3.0, 5.0, 7.0, 2.0, 4.0, 6.0, 8.0, 9.0 }
     );
@@ -97,6 +152,10 @@ int main(int argc, const char* argv)
 
     // @todo Init bootstrap peers
     std::vector<std::string> pubsubBootstrapPeers;
+    if (options->remote)
+    {
+        pubsubBootstrapPeers = std::move(std::vector({ *options->remote }));
+    }
     pubs->Start(40001, pubsubBootstrapPeers);
 
     auto io = std::make_shared<boost::asio::io_context>();
@@ -112,6 +171,7 @@ int main(int argc, const char* argv)
 
     auto taskQueue = std::make_shared<sgns::processing::ProcessingTaskQueueImpl>(globalDB);
 
+    // Create a task
     SGProcessing::Task task;
     task.set_ipfs_block_id(cid);
     task.set_block_len(data.size());
@@ -122,6 +182,7 @@ int main(int argc, const char* argv)
 
     std::list<SGProcessing::SubTask> subTasks;
 
+    // Split task to subtasks
     const size_t nSubTasks = 3;
     const size_t nChunks = 9;
     std::vector<SGProcessing::ProcessingChunk> chunks;
@@ -140,7 +201,8 @@ int main(int argc, const char* argv)
         chunks.push_back(std::move(chunk));
     }
 
-
+    // Input data is 3x3 matrix
+    // Each subtask includes 3 chunks where each chunk includes a processing of 1 value from the matrix
     for (size_t subTaskIdx = 0; subTaskIdx < nSubTasks; ++subTaskIdx)
     {
         auto subtaskId = (boost::format("subtask_%s_%d") % cid % subTaskIdx).str();
@@ -155,7 +217,7 @@ int main(int argc, const char* argv)
         subTasks.push_back(std::move(subtask));
     }
 
-    // Validation subtask
+    // Validation subtask includes 1st chunk from each of main subtasks
     auto subtaskId = (boost::format("subtask_%s_%d") % cid % 1000).str();
     SGProcessing::SubTask subtask;
     subtask.set_ipfsblock(task.ipfs_block_id());
@@ -167,6 +229,7 @@ int main(int argc, const char* argv)
 
     subTasks.push_back(std::move(subtask));
 
+    // Place task into queue
     taskQueue->EnqueueTask(task, subTasks);
 
     std::cout << "TASK enqueued" << std::endl;

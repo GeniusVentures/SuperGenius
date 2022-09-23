@@ -75,6 +75,7 @@ target_link_libraries(kompute_dapp
     crdt_globaldb
     logger
     processing_service
+    Boost::program_options    
     ${WIN_CRYPT_LIBRARY}
     )
 
