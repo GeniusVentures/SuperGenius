@@ -42,7 +42,7 @@ boost::optional<Options> parseCommandLine(int argc, char** argv)
         po::store(parse_command_line(argc, argv, desc), vm);
         po::notify(vm);
 
-        if (vm.count("help") != 0 || argc == 1)
+        if (vm.count("help") != 0)
         {
             std::cerr << desc << "\n";
             return boost::none;
@@ -233,6 +233,22 @@ int main(int argc, char** argv)
     taskQueue->EnqueueTask(task, subTasks);
 
     std::cout << "TASK enqueued" << std::endl;
+
+    auto taskCompleteChannel = std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>(pubs, 
+        (boost::format("TASK_STATUS_%s") % task.ipfs_block_id()).str());
+
+    taskCompleteChannel->Subscribe([channelId(taskCompleteChannel->GetTopic())](
+        boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message&> message) {
+        if (message)
+        {
+            if (message->topic == channelId)
+            {
+                std::string status(reinterpret_cast<const char*>(message->data.data()), message->data.size());
+                std::cout << "TASK_STATUS: " << status << std::endl;
+            }
+        }
+    });
+
 
     // Gracefully shutdown on signal
     boost::asio::signal_set signals(*pubs->GetAsioContext(), SIGINT, SIGTERM);
