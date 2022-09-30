@@ -166,6 +166,28 @@ namespace sgns::crdt
     return bufferValue;
   }
 
+  std::string_view CrdtSet::StripKey(const std::string_view& key) const 
+  {
+      auto keysPrefix = KeysKey("").GetKey();
+
+      if (boost::algorithm::starts_with(key, keysPrefix))
+      {
+          // Go to the end of prefix
+          size_t keyPos = keysPrefix.size();
+          if (boost::algorithm::ends_with(key, "/" + prioritySuffix_))
+          {
+              return key.substr(keyPos, key.size() - keyPos - prioritySuffix_.size() - 1);
+          }
+          else if (boost::algorithm::ends_with(key, "/" + valueSuffix_))
+          {
+              return key.substr(keyPos, key.size() - keyPos - valueSuffix_.size() - 1);
+          }
+
+      }
+
+      return key;
+  }
+
   outcome::result<CrdtSet::QueryResult> CrdtSet::QueryElements(const std::string& aPrefix, const QuerySuffix& aSuffix /*=QuerySuffix::QUERY_ALL*/)
   {
     if (this->dataStore_ == nullptr)
@@ -198,26 +220,27 @@ namespace sgns::crdt
     // Check if elements tombstoned.
     for (const auto& element : queryResult.value())
     {
-      auto inSetResult = this->InElemsNotTombstoned(std::string(element.first.toString()));
+      auto elementKey = element.first.toString();
+      auto key = StripKey(elementKey);
+      auto inSetResult = InElemsNotTombstoned(std::string(key));
       if (inSetResult.has_failure() || !inSetResult.value())
       {
         continue;
       }
 
-      std::string key = std::string(element.first.toString());
       switch (aSuffix)
       {
       case QuerySuffix::QUERY_ALL:
         elements.insert(element);
         break;
       case QuerySuffix::QUERY_PRIORITYSUFFIX:
-        if (boost::algorithm::ends_with(key, "/" + this->prioritySuffix_))
+        if (boost::algorithm::ends_with(elementKey, "/" + prioritySuffix_))
         {
           elements.insert(element);
         }
         break;
       case QuerySuffix::QUERY_VALUESUFFIX:
-        if (boost::algorithm::ends_with(key, "/" + this->valueSuffix_))
+        if (boost::algorithm::ends_with(elementKey, "/" + valueSuffix_))
         {
           elements.insert(element);
         }
@@ -303,37 +326,37 @@ namespace sgns::crdt
     return false;
   }
 
-  HierarchicalKey CrdtSet::KeyPrefix(const std::string& aKey)
+  HierarchicalKey CrdtSet::KeyPrefix(const std::string& aKey) const
   {
     // /namespace/<key>
     return this->namespaceKey_.ChildString(aKey);
   }
 
-  HierarchicalKey CrdtSet::ElemsPrefix(const std::string& aKey)
+  HierarchicalKey CrdtSet::ElemsPrefix(const std::string& aKey) const
   {
     // /namespace/s/<key>
     return this->KeyPrefix(elemsNamespace_).ChildString(aKey);
   }
 
-  HierarchicalKey CrdtSet::TombsPrefix(const std::string& aKey)
+  HierarchicalKey CrdtSet::TombsPrefix(const std::string& aKey) const
   {
     // /namespace/t/<key>
     return this->KeyPrefix(tombsNamespace_).ChildString(aKey);
   }
 
-  HierarchicalKey CrdtSet::KeysKey(const std::string& aKey)
+  HierarchicalKey CrdtSet::KeysKey(const std::string& aKey) const
   {
     // /namespace/k/<key>
     return this->KeyPrefix(keysNamespace_).ChildString(aKey);
   }
 
-  HierarchicalKey CrdtSet::ValueKey(const std::string& aKey)
+  HierarchicalKey CrdtSet::ValueKey(const std::string& aKey) const
   {
     // /namespace/k/<key>/v
     return this->KeysKey(aKey).ChildString(valueSuffix_);
   }
 
-  HierarchicalKey CrdtSet::PriorityKey(const std::string& aKey)
+  HierarchicalKey CrdtSet::PriorityKey(const std::string& aKey) const
   {
     // /namespace/k/<key>/p
     return this->KeysKey(aKey).ChildString(prioritySuffix_);

@@ -144,15 +144,11 @@ namespace sgns::crdt
     */
     outcome::result<QueryResult> QueryKeyValues(const std::string& aPrefix);
 
-    /** Get key prefix used in set, e.g. /namespace/s/k/
-    * @return key prefix
+    /** Extracts a unique key part
+    * @param key - data item key
+    * @return string represenation of a unique key part
     */
-    outcome::result<std::string> GetKeysPrefix();
-
-    /** Get value suffix used in set, e.g. /v
-    * @return value suffix
-    */
-    outcome::result<std::string> GetValueSuffix();
+    outcome::result<std::string> StripKey(const std::string_view& key) const;
 
     /** Put stores the object `value` named by `key` as delta and broadcast it
     * @param aKey Hierarchical key to put

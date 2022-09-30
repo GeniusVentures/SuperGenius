@@ -136,42 +136,42 @@ namespace sgns::crdt
     * @param aKey key string
     * @return HierarchicalKey with key prefix
     */
-    HierarchicalKey KeyPrefix(const std::string& aKey);
+    HierarchicalKey KeyPrefix(const std::string& aKey) const;
 
     /** Get elems full path prefix in namespace for a key
     * /namespace/s/<key>
     * @param aKey key string
     * @return HierarchicalKey with elems prefix
     */
-    HierarchicalKey ElemsPrefix(const std::string& aKey);
+    HierarchicalKey ElemsPrefix(const std::string& aKey) const;
 
     /** Get tombs full path prefix in namespace for a key
     * /namespace/t/<key>
     * @param aKey key string
     * @return HierarchicalKey with tombs prefix
     */
-    HierarchicalKey TombsPrefix(const std::string& aKey);
+    HierarchicalKey TombsPrefix(const std::string& aKey) const;
 
     /** Get keys full path prefix in namespace for a key
     * /namespace/k/<key>
     * @param aKey key string
     * @return HierarchicalKey with key prefix
     */
-    HierarchicalKey KeysKey(const std::string & aKey);
+    HierarchicalKey KeysKey(const std::string & aKey) const;
 
     /** Get value full path prefix in namespace for a key
     * /namespace/k/<key>/v
     * @param aKey key string
     * @return HierarchicalKey with value prefix
     */
-    HierarchicalKey ValueKey(const std::string& aKey);
+    HierarchicalKey ValueKey(const std::string& aKey) const;
 
     /** Get priority full path prefix in namespace for a key
     * /namespace/k/<key>/p
     * @param aKey key string
     * @return HierarchicalKey with priority prefix
     */
-    HierarchicalKey PriorityKey(const std::string& aKey);
+    HierarchicalKey PriorityKey(const std::string& aKey) const;
 
     /** Get priority for a key from datastore
     * @param aKey key string
@@ -263,6 +263,11 @@ namespace sgns::crdt
     */
     void SetDeleteHook(const DeleteHookPtr& deleteHookPtr);
 
+    /** Extracts a unique key part
+    * @param key - data item key
+    * @return string represenation of a unique key part
+    */
+    std::string_view StripKey(const std::string_view& key) const;
   private:
     CrdtSet() = default;
 

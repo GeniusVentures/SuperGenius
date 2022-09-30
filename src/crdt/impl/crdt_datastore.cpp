@@ -505,24 +505,15 @@ namespace sgns::crdt
     return this->set_->GetElement(aKey.GetKey());
   }
 
-  outcome::result<std::string> CrdtDatastore::GetKeysPrefix()
+  outcome::result<std::string> CrdtDatastore::StripKey(const std::string_view& key) const
   {
     if (this->set_ == nullptr)
     {
       return outcome::failure(boost::system::error_code{});
     }
-    return this->set_->KeysKey("").GetKey() + "/";
+    return std::string(this->set_->StripKey(key));
   }
-
-  outcome::result<std::string> CrdtDatastore::GetValueSuffix()
-  {
-    if (this->set_ == nullptr)
-    {
-      return outcome::failure(boost::system::error_code{});
-    }
-    return ("/" + this->set_->GetValueSuffix());
-  }
-
+  
   outcome::result<CrdtDatastore::QueryResult> CrdtDatastore::QueryKeyValues(const std::string& aPrefix)
   {
     if (this->set_ == nullptr)

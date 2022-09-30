@@ -185,34 +185,15 @@ outcome::result<GlobalDB::QueryResult> GlobalDB::QueryKeyValues(const std::strin
 
 outcome::result<std::string> GlobalDB::KeyToString(const Buffer& key) const
 {
-    // @todo cache the prefix and suffix
-    auto keysPrefix = m_crdtDatastore->GetKeysPrefix();
-    if (!keysPrefix.has_value())
-    {
-        return outcome::failure(boost::system::error_code{});
-    }
-    auto valueSuffix = m_crdtDatastore->GetValueSuffix();
-    if (!valueSuffix.has_value())
-    {
-        return outcome::failure(boost::system::error_code{});
-    }
-
     auto sKey = std::string(key.toString());
 
-    size_t prefixPos = (keysPrefix.value().size() != 0) ? sKey.find(keysPrefix.value(), 0) : 0;
-    if (prefixPos != 0)
+    if (!m_crdtDatastore)
     {
+        m_logger->error("CRDT datastore is not initialized yet");
         return outcome::failure(boost::system::error_code{});
     }
 
-    size_t keyPos = keysPrefix.value().size();
-    auto suffixPos = (valueSuffix.value().size() != 0) ? sKey.rfind(valueSuffix.value(), std::string::npos) : sKey.size();
-    if ((suffixPos == std::string::npos) || (suffixPos < keyPos))
-    {
-        return outcome::failure(boost::system::error_code{});
-    }
-
-    return sKey.substr(keyPos, suffixPos - keyPos);
+    return m_crdtDatastore->StripKey(sKey);
 }
 
 std::shared_ptr<CrdtDataStoreTransaction> GlobalDB::BeginTransaction()
