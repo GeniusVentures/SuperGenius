@@ -114,8 +114,11 @@ void ProcessingServiceImpl::OnQueueProcessingCompleted(
     {
         SendChannelListRequest();
     }
-    // @todo finalize task
-    // @todo Add notification of finished task
+    
+    if (m_taskProcessingFinalizationSink)
+    {
+        m_taskProcessingFinalizationSink(subTaskQueueId, taskResult);
+    }
 }
 
 void ProcessingServiceImpl::OnProcessingError(
@@ -195,6 +198,11 @@ void ProcessingServiceImpl::SetChannelListRequestTimeout(
     boost::posix_time::time_duration channelListRequestTimeout)
 {
     m_channelListRequestTimeout = channelListRequestTimeout;
+}
+
+void ProcessingServiceImpl::SetTaskProcessingFinalizationSink(TaskProcessingFinalizationSink taskProcessingFinalizationSink)
+{
+    m_taskProcessingFinalizationSink = taskProcessingFinalizationSink;
 }
 
 void ProcessingServiceImpl::HandleRequestTimeout()

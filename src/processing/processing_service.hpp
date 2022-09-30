@@ -11,6 +11,8 @@ namespace sgns::processing
 class ProcessingServiceImpl
 {
 public:
+    typedef std::function<void(const std::string&, const SGProcessing::TaskResult&)> 
+        TaskProcessingFinalizationSink;
     /** Constructs a processing service.
     * @param gossipPubSub - pubsub service
     * @param maximalNodesCount - maximal number of processing nodes allowed to be handled by the service
@@ -30,6 +32,8 @@ public:
 
     void SetChannelListRequestTimeout(
         boost::posix_time::time_duration channelListRequestTimeout);
+
+    void SetTaskProcessingFinalizationSink(TaskProcessingFinalizationSink taskProcessingFinalizationSink);
 private:
     /** Listen to data feed channel.
     * @param dataChannelId - identifier of a data feed channel
@@ -68,6 +72,8 @@ private:
 
     std::atomic<bool> m_isStopped;
     mutable std::mutex m_mutexNodes;
+
+    TaskProcessingFinalizationSink m_taskProcessingFinalizationSink;
 
     base::Logger m_logger = base::createLogger("ProcessingService");
 };

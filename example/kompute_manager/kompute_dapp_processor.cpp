@@ -163,6 +163,7 @@ boost::optional<Options> parseCommandLine(int argc, char** argv)
     return boost::none;
 }
 } // namespace
+
 int main(int argc, char** argv)
 {
     auto options = parseCommandLine(argc, argv);
@@ -287,6 +288,17 @@ int main(int argc, char** argv)
         processingCore);
 
     processingService.SetChannelListRequestTimeout(boost::posix_time::seconds(5));
+    processingService.SetTaskProcessingFinalizationSink(
+        [taskQueue, pubs](const std::string& subTaskQueueId, const SGProcessing::TaskResult& taskResult)
+        {
+            taskQueue->CompleteTask(subTaskQueueId, taskResult);
+
+            std::string taskStatusChannel = (boost::format("TASK_STATUS_%s") % subTaskQueueId).str();
+            auto taskCompleteChannel =
+                std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>(pubs, taskStatusChannel);
+            taskCompleteChannel->Publish("COMPLETE");
+            std::cout << "TASK_STATUS_CHANNEL_ID: " << taskStatusChannel << std::endl;
+        });
 
     processingService.StartProcessing(processingGridChannel);
 
