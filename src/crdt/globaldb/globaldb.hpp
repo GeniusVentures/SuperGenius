@@ -51,11 +51,11 @@ public:
     */
     outcome::result<QueryResult> QueryKeyValues(const std::string& keyPrefix);
 
-    /** Converts a unique key part to a string representation
-    * @param key - binary key to convert
+    /** Extracts a unique key part
+    * @param key - data item key
     * @return string represenation of a unique key part
     */
-    outcome::result<std::string> KeyToString(const Buffer& key) const;
+    outcome::result<std::string> StripElementKey(const std::string_view& elementKey) const;
 
     /** Create a transaction object
     * @return new transaction

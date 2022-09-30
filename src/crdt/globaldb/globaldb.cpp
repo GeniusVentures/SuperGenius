@@ -183,17 +183,15 @@ outcome::result<GlobalDB::QueryResult> GlobalDB::QueryKeyValues(const std::strin
     return m_crdtDatastore->QueryKeyValues(keyPrefix);
 }
 
-outcome::result<std::string> GlobalDB::KeyToString(const Buffer& key) const
+outcome::result<std::string> GlobalDB::StripElementKey(const std::string_view& elementKey) const
 {
-    auto sKey = std::string(key.toString());
-
     if (!m_crdtDatastore)
     {
         m_logger->error("CRDT datastore is not initialized yet");
         return outcome::failure(boost::system::error_code{});
     }
 
-    return m_crdtDatastore->StripKey(sKey);
+    return m_crdtDatastore->StripKey(elementKey);
 }
 
 std::shared_ptr<CrdtDataStoreTransaction> GlobalDB::BeginTransaction()

@@ -117,7 +117,7 @@ bool ProcessingTaskQueueImpl::GrabTask(std::string& grabbedTaskKey, SGProcessing
         bool isTaskGrabbed = false;
         for (auto element : queryTasks.value())
         {
-            auto taskKey = m_db->KeyToString(element.first);
+            auto taskKey = m_db->StripElementKey(element.first.toString());
             if (taskKey.has_value())
             {
                 bool isTaskLocked = IsTaskLocked(taskKey.value());
