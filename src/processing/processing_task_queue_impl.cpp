@@ -161,13 +161,15 @@ bool ProcessingTaskQueueImpl::GrabTask(std::string& grabbedTaskKey, SGProcessing
     return false;
 }
 
-bool ProcessingTaskQueueImpl::CompleteTask(const std::string& taskKey, const SGProcessing::TaskResult& taskResult)
+bool ProcessingTaskQueueImpl::CompleteTask(const std::string& taskId, const SGProcessing::TaskResult& taskResult)
 {
     sgns::base::Buffer data;
     data.put(taskResult.SerializeAsString());
 
     auto transaction = m_db->BeginTransaction();
-    transaction->AddToDelta(sgns::crdt::HierarchicalKey("task_results/" + taskKey), data);
+    transaction->AddToDelta(sgns::crdt::HierarchicalKey("task_results/" + taskId), data);
+
+    std::string taskKey = "tasks/TASK_" + taskId;
     transaction->RemoveFromDelta(sgns::crdt::HierarchicalKey("lock_" + taskKey));
     transaction->RemoveFromDelta(sgns::crdt::HierarchicalKey(taskKey));
 
