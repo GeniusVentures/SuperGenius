@@ -51,14 +51,28 @@ public:
 
         size_t subTaskResultHash = initialHashCode;
 
-        // @todo The cid should be received from task info
-        std::string dataCID = "QmQsYvj8JBa9A4wmXvxci63iz6wtLYdBE5XsRrKKxCgY9e";
+        std::string dataCID = subTask.ipfsblock();
 
         std::string data;
         _ipfs->GetIPFSFile(dataCID, data);
 
         // Desirialize data
         std::stringstream ss(data);
+
+        if (data.size() < 4)
+        {
+            // log an error
+            return;
+        }
+        char signature[5] = { 0 };
+        ss.read(reinterpret_cast<char*>(&signature), 4);
+        if (std::string(signature) != "sg01")
+        {
+            // log an error
+            return;
+        }
+
+
         uint64_t spirvModuleSize;
         ss.read(reinterpret_cast<char*>(&spirvModuleSize), sizeof(uint64_t));
 

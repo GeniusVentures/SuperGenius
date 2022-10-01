@@ -109,8 +109,8 @@ int main(int argc, char** argv)
     std::stringstream taskData;
 
     // Add signature
-    char signature[] = {'t', 's', 'k', '1'};
-    taskData.write(signature, sizeof(signature) / sizeof(char));
+    std::string signature = "sg01";
+    taskData.write(signature.c_str(), signature.size());
 
     // Add spirv module
     uint64_t spvSize = spvData.size();
