@@ -186,6 +186,8 @@ int main(int argc, char** argv)
         return 1;
     }
 
+    spdlog::set_level(spdlog::level::info);
+
     const std::string logger_config(R"(
     # ----------------
     sinks:
