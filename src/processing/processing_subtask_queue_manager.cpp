@@ -345,7 +345,7 @@ bool ProcessingSubTaskQueueManager::IsProcessed() const
     std::lock_guard<std::mutex> guard(m_queueMutex);
     // The queue can contain only valid results
     m_logger->debug("IS_PROCESSED: {} {} {}", m_processedSubTaskIds.size(), m_queue->subtasks().items_size(), (size_t)this);
-    return (m_processedSubTaskIds.size() == (size_t)m_queue->subtasks().items_size());
+    return (m_processedSubTaskIds.size() >= (size_t)m_queue->subtasks().items_size());
 }
 
 void ProcessingSubTaskQueueManager::SetSubTaskQueueAssignmentEventSink(
