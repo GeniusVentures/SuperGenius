@@ -61,6 +61,80 @@ boost::optional<Options> parseCommandLine(int argc, char** argv)
     }
     return boost::none;
 }
+
+std::string AddTask(
+    const std::string& cid, 
+    std::shared_ptr<sgns::processing::ProcessingTaskQueue> taskQueue,
+    std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubs)
+{
+    auto timestamp = std::chrono::system_clock::now();
+    std::string taskId = (boost::format("%s_%d") % cid % timestamp.time_since_epoch().count()).str();
+
+    // Create a task
+    SGProcessing::Task task;
+    task.set_ipfs_block_id(cid);
+    task.set_block_len(9);
+    task.set_block_line_stride(4);
+    task.set_block_stride(1);
+    task.set_random_seed(0);
+    task.set_results_channel((boost::format("RESULT_CHANNEL_ID_%1%") % taskId).str());
+
+    std::list<SGProcessing::SubTask> subTasks;
+
+    // Split task to subtasks
+    const size_t nSubTasks = 3;
+    const size_t nChunks = 9;
+    std::vector<SGProcessing::ProcessingChunk> chunks;
+
+    for (size_t chunkIdx = 0; chunkIdx < nChunks; ++chunkIdx)
+    {
+        SGProcessing::ProcessingChunk chunk;
+        chunk.set_chunkid((boost::format("chunk_%s_%d") % taskId % chunkIdx).str());
+        chunk.set_n_subchunks(1);
+        chunk.set_line_stride(task.block_line_stride());
+        chunk.set_offset(chunkIdx * 2);
+        chunk.set_stride(2);
+        chunk.set_subchunk_height(1);
+        chunk.set_subchunk_width(2);
+
+        chunks.push_back(std::move(chunk));
+    }
+
+    // Input data is 3x3 matrix
+    // Each subtask includes 3 chunks where each chunk includes a processing of 1 value from the matrix
+    for (size_t subTaskIdx = 0; subTaskIdx < nSubTasks; ++subTaskIdx)
+    {
+        auto subtaskId = (boost::format("subtask_%s_%d") % taskId % subTaskIdx).str();
+        SGProcessing::SubTask subtask;
+        subtask.set_ipfsblock(task.ipfs_block_id());
+        subtask.set_subtaskid(subtaskId);
+
+        subtask.add_chunkstoprocess()->CopyFrom(chunks[subTaskIdx * 3 + 0]);
+        subtask.add_chunkstoprocess()->CopyFrom(chunks[subTaskIdx * 3 + 1]);
+        subtask.add_chunkstoprocess()->CopyFrom(chunks[subTaskIdx * 3 + 2]);
+
+        subTasks.push_back(std::move(subtask));
+    }
+
+    // Validation subtask includes 1st chunk from each of main subtasks
+    auto subtaskId = (boost::format("subtask_%s_%d") % taskId % 1000).str();
+    SGProcessing::SubTask subtask;
+    subtask.set_ipfsblock(task.ipfs_block_id());
+    subtask.set_subtaskid(subtaskId);
+
+    subtask.add_chunkstoprocess()->CopyFrom(chunks[0]);
+    subtask.add_chunkstoprocess()->CopyFrom(chunks[3]);
+    subtask.add_chunkstoprocess()->CopyFrom(chunks[6]);
+
+    subTasks.push_back(std::move(subtask));
+
+    // Place task into queue
+    taskQueue->EnqueueTask(taskId, task, subTasks);
+    std::cout << "TASK enqueued " << taskId << std::endl;
+
+    return taskId;
+}
+
 } // namespace
 
 int main(int argc, char** argv)
@@ -170,77 +244,11 @@ int main(int argc, char** argv)
     std::thread iothread([io]() { io->run(); });
 
     auto taskQueue = std::make_shared<sgns::processing::ProcessingTaskQueueImpl>(globalDB);
+    auto taskId1 = AddTask(cid, taskQueue, pubs);
 
-    auto timestamp = std::chrono::system_clock::now();
-    std::string taskId = (boost::format("%s_%d") % cid % timestamp.time_since_epoch().count()).str();
-
-    // Create a task
-    SGProcessing::Task task;
-    task.set_ipfs_block_id(cid);
-    task.set_block_len(data.size());
-    task.set_block_line_stride(4);
-    task.set_block_stride(1);
-    task.set_random_seed(0);
-    task.set_results_channel((boost::format("RESULT_CHANNEL_ID_%1%") % taskId).str());
-
-    std::list<SGProcessing::SubTask> subTasks;
-
-    // Split task to subtasks
-    const size_t nSubTasks = 3;
-    const size_t nChunks = 9;
-    std::vector<SGProcessing::ProcessingChunk> chunks;
-
-    for (size_t chunkIdx = 0; chunkIdx < nChunks; ++chunkIdx)
-    {
-        SGProcessing::ProcessingChunk chunk;
-        chunk.set_chunkid((boost::format("chunk_%s_%d") % taskId % chunkIdx).str());
-        chunk.set_n_subchunks(1);
-        chunk.set_line_stride(task.block_line_stride());
-        chunk.set_offset(chunkIdx * 2);
-        chunk.set_stride(2);
-        chunk.set_subchunk_height(1);
-        chunk.set_subchunk_width(2);
-
-        chunks.push_back(std::move(chunk));
-    }
-
-    // Input data is 3x3 matrix
-    // Each subtask includes 3 chunks where each chunk includes a processing of 1 value from the matrix
-    for (size_t subTaskIdx = 0; subTaskIdx < nSubTasks; ++subTaskIdx)
-    {
-        auto subtaskId = (boost::format("subtask_%s_%d") % taskId % subTaskIdx).str();
-        SGProcessing::SubTask subtask;
-        subtask.set_ipfsblock(task.ipfs_block_id());
-        subtask.set_subtaskid(subtaskId);
-
-        subtask.add_chunkstoprocess()->CopyFrom(chunks[subTaskIdx * 3 + 0]);
-        subtask.add_chunkstoprocess()->CopyFrom(chunks[subTaskIdx * 3 + 1]);
-        subtask.add_chunkstoprocess()->CopyFrom(chunks[subTaskIdx * 3 + 2]);
-
-        subTasks.push_back(std::move(subtask));
-    }
-
-    // Validation subtask includes 1st chunk from each of main subtasks
-    auto subtaskId = (boost::format("subtask_%s_%d") % taskId % 1000).str();
-    SGProcessing::SubTask subtask;
-    subtask.set_ipfsblock(task.ipfs_block_id());
-    subtask.set_subtaskid(subtaskId);
-
-    subtask.add_chunkstoprocess()->CopyFrom(chunks[0]);
-    subtask.add_chunkstoprocess()->CopyFrom(chunks[3]);
-    subtask.add_chunkstoprocess()->CopyFrom(chunks[6]);
-
-    subTasks.push_back(std::move(subtask));
-
-    // Place task into queue
-    taskQueue->EnqueueTask(taskId, task, subTasks);
-
-    std::cout << "TASK enqueued" << std::endl;
-
-    auto taskCompleteChannel = std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>(pubs, 
-        (boost::format("TASK_STATUS_%s") % taskId).str());
-
-    taskCompleteChannel->Subscribe([channelId(taskCompleteChannel->GetTopic())](
+    auto taskCompleteChannel1 = std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>(pubs,
+        (boost::format("TASK_STATUS_%s") % taskId1).str());
+    taskCompleteChannel1->Subscribe([channelId(taskCompleteChannel1->GetTopic())](
         boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message&> message) {
         if (message)
         {
@@ -252,6 +260,20 @@ int main(int argc, char** argv)
         }
     });
 
+    auto taskId2 = AddTask(cid, taskQueue, pubs);
+    auto taskCompleteChannel2 = std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>(pubs,
+        (boost::format("TASK_STATUS_%s") % taskId2).str());
+    taskCompleteChannel2->Subscribe([channelId(taskCompleteChannel2->GetTopic())](
+        boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message&> message) {
+        if (message)
+        {
+            if (message->topic == channelId)
+            {
+                std::string status(reinterpret_cast<const char*>(message->data.data()), message->data.size());
+                std::cout << "TASK_STATUS: " << status << std::endl;
+            }
+        }
+    });
 
     // Gracefully shutdown on signal
     boost::asio::signal_set signals(*pubs->GetAsioContext(), SIGINT, SIGTERM);
