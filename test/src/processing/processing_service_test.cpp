@@ -43,6 +43,7 @@ class ProcessingTaskQueueImpl : public ProcessingTaskQueue
 {
 public:
     void EnqueueTask(
+        const std::string& taskId,
         const SGProcessing::Task& task,
         const std::list<SGProcessing::SubTask>& subTasks) override {}
 

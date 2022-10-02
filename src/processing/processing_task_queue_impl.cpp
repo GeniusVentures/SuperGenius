@@ -12,10 +12,11 @@ ProcessingTaskQueueImpl::ProcessingTaskQueueImpl(std::shared_ptr<sgns::crdt::Glo
 }
 
 void ProcessingTaskQueueImpl::EnqueueTask(
+    const std::string& taskId,
     const SGProcessing::Task& task,
     const std::list<SGProcessing::SubTask>& subTasks)
 {
-    auto taskKey = (boost::format("tasks/TASK_%d") % task.ipfs_block_id()).str();
+    auto taskKey = (boost::format("tasks/%s") % taskId).str();
     sgns::base::Buffer valueBuffer;
     valueBuffer.put(task.SerializeAsString());
     auto setKeyResult = m_db->Put(sgns::crdt::HierarchicalKey(taskKey), valueBuffer);
@@ -37,7 +38,7 @@ void ProcessingTaskQueueImpl::EnqueueTask(
     }
     for (auto& subTask: subTasks)
     {
-        auto subTaskKey = (boost::format("subtasks/TASK_%s/%s") % task.ipfs_block_id() % subTask.subtaskid()).str();
+        auto subTaskKey = (boost::format("subtasks/%s/%s") % taskId % subTask.subtaskid()).str();
         valueBuffer.put(subTask.SerializeAsString());
         auto setKeyResult = m_db->Put(sgns::crdt::HierarchicalKey(subTaskKey), valueBuffer);
         if (setKeyResult.has_failure())
@@ -64,7 +65,7 @@ bool ProcessingTaskQueueImpl::GetSubTasks(
     std::list<SGProcessing::SubTask>& subTasks)
 {
     m_logger->debug("SUBTASKS_REQUESTED. TaskId: {}", taskId);
-    auto key = (boost::format("subtasks/TASK_%s") % taskId).str();
+    auto key = (boost::format("subtasks/%s") % taskId).str();
     auto querySubTasks = m_db->QueryKeyValues(key);
 
     if (querySubTasks.has_failure())
@@ -99,11 +100,12 @@ bool ProcessingTaskQueueImpl::GetSubTasks(
     }
 }
 
-bool ProcessingTaskQueueImpl::GrabTask(std::string& grabbedTaskKey, SGProcessing::Task& task)
+bool ProcessingTaskQueueImpl::GrabTask(std::string& grabbedTaskId, SGProcessing::Task& task)
 {
     m_logger->info("GRAB_TASK");
 
-    auto queryTasks = m_db->QueryKeyValues("tasks");
+    const char* taskKeyPrefix = "/tasks/";
+    auto queryTasks = m_db->QueryKeyValues(taskKeyPrefix);
     if (queryTasks.has_failure())
     {
         m_logger->info("Unable list tasks from CRDT datastore");
@@ -130,7 +132,9 @@ bool ProcessingTaskQueueImpl::GrabTask(std::string& grabbedTaskKey, SGProcessing
                         if (LockTask(taskKey.value()))
                         {
                             m_logger->debug("TASK_LOCKED {}", taskKey.value());
-                            grabbedTaskKey = task.ipfs_block_id();
+                            
+                            grabbedTaskId = std::string(
+                                taskKey.value().begin() + std::strlen(taskKeyPrefix), taskKey.value().end());
                             return true;
                         }
                     }
@@ -152,7 +156,8 @@ bool ProcessingTaskQueueImpl::GrabTask(std::string& grabbedTaskKey, SGProcessing
         {
             if (MoveExpiredTaskLock(lockedTask, task))
             {
-                grabbedTaskKey = task.ipfs_block_id();
+                grabbedTaskId = std::string(
+                    lockedTask.begin() + std::strlen(taskKeyPrefix), lockedTask.end());
                 return true;
             }
         }
@@ -169,7 +174,7 @@ bool ProcessingTaskQueueImpl::CompleteTask(const std::string& taskId, const SGPr
     auto transaction = m_db->BeginTransaction();
     transaction->AddToDelta(sgns::crdt::HierarchicalKey("task_results/" + taskId), data);
 
-    std::string taskKey = "tasks/TASK_" + taskId;
+    std::string taskKey = "tasks/" + taskId;
     transaction->RemoveFromDelta(sgns::crdt::HierarchicalKey("lock_" + taskKey));
     transaction->RemoveFromDelta(sgns::crdt::HierarchicalKey(taskKey));
 

@@ -12,6 +12,7 @@ namespace sgns::processing
         ProcessingTaskQueueImpl(std::shared_ptr<sgns::crdt::GlobalDB> db);
 
         void EnqueueTask(
+            const std::string& taskId,
             const SGProcessing::Task& task,
             const std::list<SGProcessing::SubTask>& subTasks) override;
 
@@ -19,7 +20,7 @@ namespace sgns::processing
             const std::string& taskId,
             std::list<SGProcessing::SubTask>& subTasks) override;
 
-        bool GrabTask(std::string& grabbedTaskKey, SGProcessing::Task& task) override;
+        bool GrabTask(std::string& grabbedTaskId, SGProcessing::Task& task) override;
 
         bool CompleteTask(const std::string& taskKey, const SGProcessing::TaskResult& taskResult) override;
 

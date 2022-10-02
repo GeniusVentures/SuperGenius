@@ -171,6 +171,9 @@ int main(int argc, char** argv)
 
     auto taskQueue = std::make_shared<sgns::processing::ProcessingTaskQueueImpl>(globalDB);
 
+    auto timestamp = std::chrono::system_clock::now();
+    std::string taskId = (boost::format("%s_%d") % cid % timestamp.time_since_epoch().count()).str();
+
     // Create a task
     SGProcessing::Task task;
     task.set_ipfs_block_id(cid);
@@ -178,7 +181,7 @@ int main(int argc, char** argv)
     task.set_block_line_stride(4);
     task.set_block_stride(1);
     task.set_random_seed(0);
-    task.set_results_channel((boost::format("RESULT_CHANNEL_ID_%1%") % cid).str());
+    task.set_results_channel((boost::format("RESULT_CHANNEL_ID_%1%") % taskId).str());
 
     std::list<SGProcessing::SubTask> subTasks;
 
@@ -190,7 +193,7 @@ int main(int argc, char** argv)
     for (size_t chunkIdx = 0; chunkIdx < nChunks; ++chunkIdx)
     {
         SGProcessing::ProcessingChunk chunk;
-        chunk.set_chunkid((boost::format("chunk_%s_%d") % cid % chunkIdx).str());
+        chunk.set_chunkid((boost::format("chunk_%s_%d") % taskId % chunkIdx).str());
         chunk.set_n_subchunks(1);
         chunk.set_line_stride(task.block_line_stride());
         chunk.set_offset(chunkIdx * 2);
@@ -205,7 +208,7 @@ int main(int argc, char** argv)
     // Each subtask includes 3 chunks where each chunk includes a processing of 1 value from the matrix
     for (size_t subTaskIdx = 0; subTaskIdx < nSubTasks; ++subTaskIdx)
     {
-        auto subtaskId = (boost::format("subtask_%s_%d") % cid % subTaskIdx).str();
+        auto subtaskId = (boost::format("subtask_%s_%d") % taskId % subTaskIdx).str();
         SGProcessing::SubTask subtask;
         subtask.set_ipfsblock(task.ipfs_block_id());
         subtask.set_subtaskid(subtaskId);
@@ -218,7 +221,7 @@ int main(int argc, char** argv)
     }
 
     // Validation subtask includes 1st chunk from each of main subtasks
-    auto subtaskId = (boost::format("subtask_%s_%d") % cid % 1000).str();
+    auto subtaskId = (boost::format("subtask_%s_%d") % taskId % 1000).str();
     SGProcessing::SubTask subtask;
     subtask.set_ipfsblock(task.ipfs_block_id());
     subtask.set_subtaskid(subtaskId);
@@ -230,12 +233,12 @@ int main(int argc, char** argv)
     subTasks.push_back(std::move(subtask));
 
     // Place task into queue
-    taskQueue->EnqueueTask(task, subTasks);
+    taskQueue->EnqueueTask(taskId, task, subTasks);
 
     std::cout << "TASK enqueued" << std::endl;
 
     auto taskCompleteChannel = std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>(pubs, 
-        (boost::format("TASK_STATUS_%s") % task.ipfs_block_id()).str());
+        (boost::format("TASK_STATUS_%s") % taskId).str());
 
     taskCompleteChannel->Subscribe([channelId(taskCompleteChannel->GetTopic())](
         boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message&> message) {

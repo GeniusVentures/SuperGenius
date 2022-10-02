@@ -217,7 +217,7 @@ int main(int argc, char* argv[])
     // Put tasks to Global DB
     for (size_t taskIdx = 0; taskIdx < options->nTasks; ++taskIdx)
     {
-    // And wait for its processing
+        // And wait for its processing
         SGProcessing::Task task;
         task.set_ipfs_block_id((boost::format("IPFS_BLOCK_ID_%1%") % (taskIdx + 1)).str());
         task.set_block_len(1000);
@@ -250,7 +250,8 @@ int main(int argc, char* argv[])
     {
         std::list<SGProcessing::SubTask> subTasks;
         taskSplitter.SplitTask(task, subTasks);
-        taskQueue->EnqueueTask(task, subTasks);
+        std::string taskId = task.ipfs_block_id();
+        taskQueue->EnqueueTask(taskId, task, subTasks);
     }
 
     // Gracefully shutdown on signal

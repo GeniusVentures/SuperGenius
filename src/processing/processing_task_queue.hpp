@@ -18,10 +18,12 @@ public:
     virtual ~ProcessingTaskQueue() = default;
 
     /** Enqueues a task with subtasks that the task has been split to
+    * @param taskId - unique taskId
     * @param task - task to enqueue
     * @param subTasks - list of subtasks that the task has been split to
     */
     virtual void EnqueueTask(
+        const std::string& taskId,
         const SGProcessing::Task& task,
         const std::list<SGProcessing::SubTask>& subTasks) = 0;
 

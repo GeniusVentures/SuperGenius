@@ -87,11 +87,12 @@ namespace
         }
 
         void EnqueueTask(
+            const std::string& taskId,
             const SGProcessing::Task& task,
             const std::list<SGProcessing::SubTask>& subTasks)
         {
             m_tasks.push_back(task);
-            m_subTasks.emplace(task.ipfs_block_id(), subTasks);
+            m_subTasks.emplace(taskId, subTasks);
         }
 
         bool GetSubTasks(
@@ -307,7 +308,8 @@ int main(int argc, char* argv[])
     {
         std::list<SGProcessing::SubTask> subTasks;
         taskSplitter->SplitTask(task, subTasks);
-        taskQueue->EnqueueTask(task, subTasks);
+        std::string taskId = task.ipfs_block_id();
+        taskQueue->EnqueueTask(taskId, task, subTasks);
     }
 
     auto processingCore = std::make_shared<ProcessingCoreImpl>(options->subTaskProcessingTime);
