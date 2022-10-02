@@ -10,6 +10,8 @@
 
 #include <optional>
 
+namespace sgns::processing
+{
 class ProcessingTaskQueue
 {
 /** Distributed task queue interface
@@ -48,5 +50,6 @@ public:
     */
     virtual bool CompleteTask(const std::string& taskId, const SGProcessing::TaskResult& result) = 0;
 };
+}
 
 #endif // GRPC_FOR_SUPERGENIUS_PROCESSING_TASK_QUEUE_HPP
