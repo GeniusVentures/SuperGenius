@@ -6,6 +6,7 @@ SubTaskQueueAccessorImpl::SubTaskQueueAccessorImpl(
     std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> gossipPubSub,
     std::shared_ptr<ProcessingSubTaskQueueManager> subTaskQueueManager,
     std::shared_ptr<SubTaskStateStorage> subTaskStateStorage,
+    const std::string& resultChannelId,
     std::shared_ptr<SubTaskResultStorage> subTaskResultStorage,
     std::function<void(const SGProcessing::TaskResult&)> taskResultProcessingSink)
     : m_gossipPubSub(gossipPubSub)
@@ -15,7 +16,7 @@ SubTaskQueueAccessorImpl::SubTaskQueueAccessorImpl(
     , m_taskResultProcessingSink(taskResultProcessingSink)
 {
     // @todo replace hardcoded channel identified with an input value
-    m_resultChannel = std::make_shared<ipfs_pubsub::GossipPubSubTopic>(m_gossipPubSub, "RESULT_CHANNEL_ID");
+    m_resultChannel = std::make_shared<ipfs_pubsub::GossipPubSubTopic>(m_gossipPubSub, resultChannelId);
     m_logger->debug("[CREATED] this: {}, thread_id {}", reinterpret_cast<size_t>(this), std::this_thread::get_id());
 }
 

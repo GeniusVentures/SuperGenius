@@ -26,6 +26,7 @@ public:
     * @param gossipPubSub pubsub host which is used to create subscriptions to result channel
     * @param subTaskQueueManager - in-memory queue manager
     * @param subTaskStateStorage - storage of subtask states
+    * @param resultChannelId - unique result transferring channel ID
     * @param subTaskResultStorage - processing results storage
     * @param taskResultProcessingSink - a callback which is called when a task processing is completed
     */
@@ -33,6 +34,7 @@ public:
         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> gossipPubSub,
         std::shared_ptr<ProcessingSubTaskQueueManager> subTaskQueueManager,
         std::shared_ptr<SubTaskStateStorage> subTaskStateStorage,
+        const std::string& resultChannelId,
         std::shared_ptr<SubTaskResultStorage> subTaskResultStorage,
         std::function<void(const SGProcessing::TaskResult&)> taskResultProcessingSink);
     virtual ~SubTaskQueueAccessorImpl();

@@ -169,6 +169,7 @@ TEST_F(SubTaskQueueAccessorImplTest, SubscribtionToResultChannel)
         pubs1, 
         processingQueueManager,
         std::make_shared<SubTaskStateStorageMock>(),
+        "RESULT_CHANNEL_ID",
         std::make_shared<SubTaskResultStorageMock>(),
         [](const SGProcessing::TaskResult&) {});
 
@@ -251,6 +252,7 @@ TEST_F(SubTaskQueueAccessorImplTest, TaskFinalization)
         pubs1,
         processingQueueManager1,
         std::make_shared<SubTaskStateStorageMock>(),
+        "RESULT_CHANNEL_ID",
         std::make_shared<SubTaskResultStorageMock>(),
         [&isTaskFinalized](const SGProcessing::TaskResult&) { isTaskFinalized = true; });
 
@@ -334,6 +336,7 @@ TEST_F(SubTaskQueueAccessorImplTest, InvalidSubTasksRestart)
         pubs1,
         processingQueueManager1,
         std::make_shared<SubTaskStateStorageMock>(),
+        "RESULT_CHANNEL_ID",
         std::make_shared<SubTaskResultStorageMock>(),
         [&isTaskFinalized1](const SGProcessing::TaskResult&) { isTaskFinalized1 = true; });
 
@@ -369,6 +372,7 @@ TEST_F(SubTaskQueueAccessorImplTest, InvalidSubTasksRestart)
         pubs1,
         processingQueueManager2,
         std::make_shared<SubTaskStateStorageMock>(),
+        "RESULT_CHANNEL_ID",
         std::make_shared<SubTaskResultStorageMock>(),
         [&isTaskFinalized2](const SGProcessing::TaskResult&) { isTaskFinalized2 = true; });
 

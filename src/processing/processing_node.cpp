@@ -38,6 +38,7 @@ void ProcessingNode::Initialize(const std::string& processingQueueChannelId, siz
         m_gossipPubSub,
         m_subtaskQueueManager,
         m_subTaskStateStorage,
+        "RESULT_CHANNEL_" + processingQueueChannelId,
         m_subTaskResultStorage,
         m_taskResultProcessingSink);
 
