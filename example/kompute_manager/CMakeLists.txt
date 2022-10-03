@@ -20,6 +20,7 @@ add_executable(kompute_dapp_processor
 
 
 target_include_directories(kompute_dapp_processor PRIVATE ${GSL_INCLUDE_DIR})
+target_compile_definitions(kompute_dapp_processor PRIVATE KOMPUTE_ENABLE_SPDLOG=1)
 
 
 target_link_libraries(kompute_dapp_processor
