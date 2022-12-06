@@ -1,4 +1,4 @@
 
 [submodule "gRPCForSuperGenius"]
 	path = gRPCForSuperGenius
-	url = ssh://git@gitlab.geniusventures.io:8487/GeniusVentures/gRPCForSuperGenius.git
+	url = git@github.com:GeniusVentures/gRPCForSuperGenius.git
