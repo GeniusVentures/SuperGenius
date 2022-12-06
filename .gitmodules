@@ -1,4 +1,4 @@
 
 [submodule "gRPCForSuperGenius"]
 	path = gRPCForSuperGenius
-	url = git@github.com:GeniusVentures/gRPCForSuperGenius.git
+	url = ../gRPCForSuperGenius.git
