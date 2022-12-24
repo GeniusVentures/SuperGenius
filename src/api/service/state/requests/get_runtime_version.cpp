@@ -22,8 +22,8 @@ namespace sgns::api::state::request {
       at_ = boost::none;
     } else if (have_str_arg) {
       auto &&at_str = params[0].AsString();
-      OUTCOME_TRY(at_span, base::unhexWith0x(at_str));
-      OUTCOME_TRY(at, primitives::BlockHash::fromSpan(at_span));
+      OUTCOME_TRY((auto &&, at_span), base::unhexWith0x(at_str));
+      OUTCOME_TRY((auto &&, at), primitives::BlockHash::fromSpan(at_span));
       at_ = at;
     } else {
       throw jsonrpc::InvalidParametersFault(

@@ -141,7 +141,7 @@ namespace sgns::runtime::binaryen {
       runtime::WasmSize len = 0u;
 
       if constexpr (sizeof...(args) > 0) {
-        OUTCOME_TRY(buffer, scale::encode(std::forward<Args>(args)...));
+        OUTCOME_TRY((auto &&, buffer), scale::encode(std::forward<Args>(args)...));
         len = buffer.size();
         ptr = memory->allocate(len);
         memory->storeBuffer(ptr, base::Buffer(std::move(buffer)));
@@ -151,7 +151,7 @@ namespace sgns::runtime::binaryen {
 
       wasm::Name wasm_name = std::string(name);
 
-      OUTCOME_TRY(res, executor_.call(*module, wasm_name, ll));
+      OUTCOME_TRY((auto &&, res), executor_.call(*module, wasm_name, ll));
       memory->reset();
       if constexpr (!std::is_same_v<void, R>) {
         WasmResult r(res.geti64());
@@ -162,7 +162,7 @@ namespace sgns::runtime::binaryen {
       }
 
       if(opt_batch) {
-        OUTCOME_TRY(opt_batch.value()->writeBack());
+        BOOST_OUTCOME_TRYV2(auto &&, opt_batch.value()->writeBack());
       }
       return outcome::success();
     }

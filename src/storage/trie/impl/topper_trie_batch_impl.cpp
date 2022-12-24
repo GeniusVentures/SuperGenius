@@ -105,13 +105,13 @@ namespace sgns::storage::trie {
     if (auto p = parent_.lock(); p != nullptr) {
       auto it = cache_.begin();
       for (auto &prefix : cleared_prefixes_) {
-        OUTCOME_TRY(p->clearPrefix(prefix));
+        BOOST_OUTCOME_TRYV2(auto &&, p->clearPrefix(prefix));
       }
       for (; it != cache_.end(); it++) {
         if (it->second.has_value()) {
-          OUTCOME_TRY(p->put(it->first, it->second.value()));
+          BOOST_OUTCOME_TRYV2(auto &&, p->put(it->first, it->second.value()));
         } else {
-          OUTCOME_TRY(p->remove(it->first));
+          BOOST_OUTCOME_TRYV2(auto &&, p->remove(it->first));
         }
       }
       return outcome::success();

@@ -61,20 +61,20 @@ namespace sgns::api::chain::request {
         param_,
         [this](const NoParameters &v) -> outcome::result<ResultType> {
           // return last finalized
-          OUTCOME_TRY(bh, api_->getBlockHash());
+          OUTCOME_TRY((auto &&, bh), api_->getBlockHash());
           return formatBlockHash(bh);
         },
         [this](BlockNumber v) -> outcome::result<ResultType> {
-          OUTCOME_TRY(bh, api_->getBlockHash(v));
+          OUTCOME_TRY((auto &&, bh), api_->getBlockHash(v));
           return formatBlockHash(bh);
         },
         [this](std::string_view v) -> outcome::result<ResultType> {
-          OUTCOME_TRY(bh, api_->getBlockHash(v));
+          OUTCOME_TRY((auto &&, bh), api_->getBlockHash(v));
           return formatBlockHash(bh);
         },
         [this](
             const std::vector<VectorParam> &v) -> outcome::result<ResultType> {
-          OUTCOME_TRY(rr, api_->getBlockHash(gsl::make_span(v)));
+          OUTCOME_TRY((auto &&, rr), api_->getBlockHash(gsl::make_span(v)));
           std::vector<std::string> results{};
           results.reserve(v.size());
           for (const auto &it : rr) {

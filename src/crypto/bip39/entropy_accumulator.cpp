@@ -77,7 +77,7 @@ namespace sgns::crypto::bip39 {
   }
 
   outcome::result<uint8_t> EntropyAccumulator::calculateChecksum() const {
-    OUTCOME_TRY(entropy, getEntropy());
+    OUTCOME_TRY((auto &&, entropy), getEntropy());
     auto hash = sha256(entropy);
     return hash[0] >> static_cast<uint8_t>(8 - checksum_bits_count_);
   }

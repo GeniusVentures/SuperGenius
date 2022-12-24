@@ -22,7 +22,7 @@ namespace sgns::application {
   ConfigurationStorageImpl::create(const std::string &path) {
     auto config_storage =
         std::make_shared<ConfigurationStorageImpl>(ConfigurationStorageImpl());
-    OUTCOME_TRY(config_storage->loadFromJson(path));
+    BOOST_OUTCOME_TRYV2(auto &&, config_storage->loadFromJson(path));
 
     return config_storage;
   }
@@ -39,15 +39,15 @@ namespace sgns::application {
       return ConfigReaderError::PARSER_ERROR;
     }
 
-    OUTCOME_TRY(loadGenesis(tree));
-    OUTCOME_TRY(loadBootNodes(tree));
+    BOOST_OUTCOME_TRYV2(auto &&, loadGenesis(tree));
+    BOOST_OUTCOME_TRYV2(auto &&, loadBootNodes(tree));
     return outcome::success();
   }
 
   outcome::result<void> ConfigurationStorageImpl::loadGenesis(
       const boost::property_tree::ptree &tree) {
-    OUTCOME_TRY(genesis_tree, ensure(tree.get_child_optional("genesis")));
-    OUTCOME_TRY(genesis_raw_tree,
+    OUTCOME_TRY((auto &&, genesis_tree), ensure(tree.get_child_optional("genesis")));
+    OUTCOME_TRY((auto &&, genesis_raw_tree),
                 ensure(genesis_tree.get_child_optional("raw")));
     boost::property_tree::ptree top_tree;
     // v0.7 format
@@ -60,8 +60,8 @@ namespace sgns::application {
 
     for (const auto &[key, value] : top_tree) {
       // get rid of leading 0x for key and value and unhex
-      OUTCOME_TRY(key_processed, base::unhexWith0x(key));
-      OUTCOME_TRY(value_processed, base::unhexWith0x(value.data()));
+      OUTCOME_TRY((auto &&, key_processed), base::unhexWith0x(key));
+      OUTCOME_TRY((auto &&, value_processed), base::unhexWith0x(value.data()));
       genesis_.emplace_back(key_processed, value_processed);
     }
     // ignore child storages as they are not yet implemented
@@ -71,13 +71,13 @@ namespace sgns::application {
 
   outcome::result<void> ConfigurationStorageImpl::loadBootNodes(
       const boost::property_tree::ptree &tree) {
-    OUTCOME_TRY(boot_nodes, ensure(tree.get_child_optional("bootNodes")));
+    OUTCOME_TRY((auto &&, boot_nodes), ensure(tree.get_child_optional("bootNodes")));
     for (auto &v : boot_nodes) {
-      OUTCOME_TRY(multiaddr,
+      OUTCOME_TRY((auto &&, multiaddr),
                   libp2p::multi::Multiaddress::create(v.second.data()));
-      OUTCOME_TRY(peer_id_base58, ensure(multiaddr.getPeerId()));
+      OUTCOME_TRY((auto &&, peer_id_base58), ensure(multiaddr.getPeerId()));
 
-      OUTCOME_TRY(peer_id, libp2p::peer::PeerId::fromBase58(peer_id_base58));
+      OUTCOME_TRY((auto &&, peer_id), libp2p::peer::PeerId::fromBase58(peer_id_base58));
       libp2p::peer::PeerInfo info{/*.id =*/ std::move(peer_id),
                                   /*.addresses =*/ {std::move(multiaddr)}};
       boot_nodes_.peers.push_back(info);

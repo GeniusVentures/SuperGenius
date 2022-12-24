@@ -55,7 +55,7 @@ namespace sgns::verification {
       const primitives::AuthorityId &authority_id,
       const Threshold &threshold,
       const Randomness &randomness) const {
-    OUTCOME_TRY(
+    BOOST_OUTCOME_TRYV2(auto &&,
         validateHeader(block.header, authority_id, threshold, randomness));
 
     // all transactions in the block must be valid
@@ -78,7 +78,7 @@ namespace sgns::verification {
                 authority_id.id.toHex());
 
     // get PRODUCTION-specific digests, which must be inside of this block
-    OUTCOME_TRY(production_digests, getProductionDigests(header));
+    OUTCOME_TRY((auto &&, production_digests), getProductionDigests(header));
     auto [seal, production_header] = production_digests;
 
     // signature in seal of the header must be valid

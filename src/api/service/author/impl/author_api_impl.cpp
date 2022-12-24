@@ -30,7 +30,7 @@ namespace sgns::api {
 
   outcome::result<base::Hash256> AuthorApiImpl::submitExtrinsic(
       const primitives::Extrinsic &extrinsic) {
-    OUTCOME_TRY(res, api_->validate_transaction(extrinsic));
+    OUTCOME_TRY((auto &&, res), api_->validate_transaction(extrinsic));
 
     return visit_in_place(
         res,
@@ -59,7 +59,7 @@ namespace sgns::api {
                                               v.propagate};
 
           // send to pool
-          OUTCOME_TRY(pool_->submitOne(std::move(transaction)));
+          BOOST_OUTCOME_TRYV2(auto &&, pool_->submitOne(std::move(transaction)));
 
           if (v.propagate) {
             network::TransactionAnnounce announce;

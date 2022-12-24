@@ -45,7 +45,7 @@ namespace sgns::storage::trie {
   }
 
   outcome::result<Buffer> PersistentTrieBatchImpl::commit() {
-    OUTCOME_TRY(root, serializer_->storeTrie(*trie_));
+    OUTCOME_TRY((auto &&, root), serializer_->storeTrie(*trie_));
     root_changed_handler_(root);
     return std::move(root);
   }
@@ -87,7 +87,7 @@ namespace sgns::storage::trie {
     bool is_new_entry = !trie_->contains(key);
     auto res = trie_->put(key, value);
     if (res && changes_.has_value()) {
-      OUTCOME_TRY(changes_.value()->onPut(key, value, is_new_entry));
+      BOOST_OUTCOME_TRYV2(auto &&, changes_.value()->onPut(key, value, is_new_entry));
     }
     return res;
   }
@@ -95,7 +95,7 @@ namespace sgns::storage::trie {
   outcome::result<void> PersistentTrieBatchImpl::remove(const Buffer &key) {
     auto res = trie_->remove(key);
     if (res /*and*/ &&  changes_.has_value()) {
-      OUTCOME_TRY(changes_.value()->onRemove(key));
+      BOOST_OUTCOME_TRYV2(auto &&, changes_.value()->onRemove(key));
     }
     return res;
   }

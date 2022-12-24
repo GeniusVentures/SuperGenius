@@ -142,7 +142,7 @@ namespace sgns::verification {
         block.header.number,
         hasher_->blake2b_256(scale::encode(block.header).value()).toHex());
 
-    OUTCOME_TRY(production_digests, getProductionDigests(block.header));
+    OUTCOME_TRY((auto &&, production_digests), getProductionDigests(block.header));
 
     auto [seal, production_header] = production_digests;
 
@@ -151,7 +151,7 @@ namespace sgns::verification {
 
     // TODO (kamilsa): PRE-364 uncomment outcome try and remove dirty workaround
     // below
-    //    OUTCOME_TRY(this_block_epoch_descriptor,
+    //    OUTCOME_TRY((auto &&, this_block_epoch_descriptor),
     //                epoch_storage_->getEpochDescriptor(epoch_index));
     auto this_block_epoch_descriptor_res =
         epoch_storage_->getEpochDescriptor(epoch_index);
@@ -177,7 +177,7 @@ namespace sgns::verification {
           .value();
     }
 
-    OUTCOME_TRY(block_validator_->validateHeader(
+    BOOST_OUTCOME_TRYV2(auto &&, block_validator_->validateHeader(
         block.header,
         this_block_epoch_descriptor.authorities[production_header.authority_index].id,
         threshold,
@@ -188,14 +188,14 @@ namespace sgns::verification {
     // block should be applied without last digest which contains the seal
     block_without_seal_digest.header.digest.pop_back();
     // apply block
-    OUTCOME_TRY(core_->execute_block(block_without_seal_digest));
+    BOOST_OUTCOME_TRYV2(auto &&, core_->execute_block(block_without_seal_digest));
 
     // add block header if it does not exist
-    OUTCOME_TRY(block_tree_->addBlock(block));
+    BOOST_OUTCOME_TRYV2(auto &&, block_tree_->addBlock(block));
 
     // observe possible changes of authorities
     for (auto &digest_item : block_without_seal_digest.header.digest) {
-      OUTCOME_TRY(visit_in_place(
+      BOOST_OUTCOME_TRYV2(auto &&, visit_in_place(
           digest_item,
           [&](const primitives::Verification &verification_message)
               -> outcome::result<void> {

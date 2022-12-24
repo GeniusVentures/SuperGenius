@@ -26,7 +26,7 @@ namespace sgns::blockchain {
 
   outcome::result<BlockNumber> KeyValueBlockHeaderRepository::getNumberByHash(
       const Hash256 &hash) const {
-    OUTCOME_TRY(key, idToLookupKey(*map_, hash));
+    OUTCOME_TRY((auto &&, key), idToLookupKey(*map_, hash));
 
     auto maybe_number = lookupKeyToNumber(key);
 
@@ -36,8 +36,8 @@ namespace sgns::blockchain {
   outcome::result<base::Hash256>
   KeyValueBlockHeaderRepository::getHashByNumber(
       const primitives::BlockNumber &number) const {
-    OUTCOME_TRY(header, getBlockHeader(number));
-    OUTCOME_TRY(enc_header, scale::encode(header));
+    OUTCOME_TRY((auto &&, header), getBlockHeader(number));
+    OUTCOME_TRY((auto &&, enc_header), scale::encode(header));
     return hasher_->blake2b_256(enc_header);
   }
 

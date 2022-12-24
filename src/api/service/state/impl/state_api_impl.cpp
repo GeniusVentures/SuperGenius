@@ -28,8 +28,8 @@ namespace sgns::api {
 
   outcome::result<base::Buffer> StateApiImpl::getStorage(
       const base::Buffer &key, const primitives::BlockHash &at) const {
-    OUTCOME_TRY(header, block_repo_->getBlockHeader(at));
-    OUTCOME_TRY(trie_reader, storage_->getEphemeralBatchAt(header.state_root));
+    OUTCOME_TRY((auto &&, header), block_repo_->getBlockHeader(at));
+    OUTCOME_TRY((auto &&, trie_reader), storage_->getEphemeralBatchAt(header.state_root));
     return trie_reader->get(key);
   }
 

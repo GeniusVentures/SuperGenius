@@ -65,7 +65,7 @@ namespace sgns::crypto {
     }
     auto public_key_hex = file_name.substr(4);
 
-    OUTCOME_TRY(public_key, store::PublicKey::fromHex(public_key_hex));
+    OUTCOME_TRY((auto &&, public_key), store::PublicKey::fromHex(public_key_hex));
 
     return {key_type, public_key};
   }
@@ -135,14 +135,14 @@ namespace sgns::crypto {
 
   outcome::result<ED25519Keypair> CryptoStoreImpl::generateEd25519Keypair(
       KeyTypeId key_type, std::string_view mnemonic_phrase) {
-    OUTCOME_TRY(mnemonic, bip39::Mnemonic::parse(mnemonic_phrase));
-    OUTCOME_TRY(entropy, bip39_provider_->calculateEntropy(mnemonic.words));
-    OUTCOME_TRY(seed, bip39_provider_->makeSeed(entropy, mnemonic.password));
+    OUTCOME_TRY((auto &&, mnemonic), bip39::Mnemonic::parse(mnemonic_phrase));
+    OUTCOME_TRY((auto &&, entropy), bip39_provider_->calculateEntropy(mnemonic.words));
+    OUTCOME_TRY((auto &&, seed), bip39_provider_->makeSeed(entropy, mnemonic.password));
     if (seed.size() < ED25519Seed::size()) {
       return CryptoStoreError::WRONG_SEED_SIZE;
     }
 
-    OUTCOME_TRY(ed_seed,
+    OUTCOME_TRY((auto &&, ed_seed),
                 ED25519Seed::fromSpan(
                     gsl::make_span(seed).subspan(0, ED25519Seed::size())));
     auto &&pair = ed25519_provider_->generateKeypair(ed_seed);
@@ -154,14 +154,14 @@ namespace sgns::crypto {
 
   outcome::result<SR25519Keypair> CryptoStoreImpl::generateSr25519Keypair(
       KeyTypeId key_type, std::string_view mnemonic_phrase) {
-    OUTCOME_TRY(mnemonic, bip39::Mnemonic::parse(mnemonic_phrase));
-    OUTCOME_TRY(entropy, bip39_provider_->calculateEntropy(mnemonic.words));
-    OUTCOME_TRY(seed, bip39_provider_->makeSeed(entropy, mnemonic.password));
+    OUTCOME_TRY((auto &&, mnemonic), bip39::Mnemonic::parse(mnemonic_phrase));
+    OUTCOME_TRY((auto &&, entropy), bip39_provider_->calculateEntropy(mnemonic.words));
+    OUTCOME_TRY((auto &&, seed), bip39_provider_->makeSeed(entropy, mnemonic.password));
     if (seed.size() < SR25519Seed::size()) {
       return CryptoStoreError::WRONG_SEED_SIZE;
     }
 
-    OUTCOME_TRY(sr_seed,
+    OUTCOME_TRY((auto &&, sr_seed),
                 SR25519Seed::fromSpan(
                     gsl::make_span(seed).subspan(0, SR25519Seed::size())));
     auto &&pair = sr25519_provider_->generateKeypair(sr_seed);
@@ -192,7 +192,7 @@ namespace sgns::crypto {
     std::copy_n(bytes.begin(), ED25519Seed::size(), seed.begin());
 
     auto &&pair = ed25519_provider_->generateKeypair(seed);
-    OUTCOME_TRY(storeKeyfile(key_type, pair.public_key, seed));
+    BOOST_OUTCOME_TRYV2(auto &&, storeKeyfile(key_type, pair.public_key, seed));
 
     return pair;
   }
@@ -204,7 +204,7 @@ namespace sgns::crypto {
     std::copy_n(bytes.begin(), SR25519Seed::size(), seed.begin());
 
     auto &&pair = sr25519_provider_->generateKeypair(seed);
-    OUTCOME_TRY(storeKeyfile(key_type, pair.public_key, seed));
+    BOOST_OUTCOME_TRYV2(auto &&, storeKeyfile(key_type, pair.public_key, seed));
 
     return pair;
   }
@@ -223,8 +223,8 @@ namespace sgns::crypto {
     if (!boost::filesystem::exists(path)) {
       return CryptoStoreError::KEY_NOT_FOUND;
     }
-    OUTCOME_TRY(content, loadFileContent(path));
-    OUTCOME_TRY(seed, ED25519Seed::fromHex(content));
+    OUTCOME_TRY((auto &&, content), loadFileContent(path));
+    OUTCOME_TRY((auto &&, seed), ED25519Seed::fromHex(content));
 
     return ed25519_provider_->generateKeypair(seed);
   }
@@ -243,8 +243,8 @@ namespace sgns::crypto {
     if (!boost::filesystem::exists(path)) {
       return CryptoStoreError::KEY_NOT_FOUND;
     }
-    OUTCOME_TRY(content, loadFileContent(path));
-    OUTCOME_TRY(seed, ED25519Seed::fromHex(content));
+    OUTCOME_TRY((auto &&, content), loadFileContent(path));
+    OUTCOME_TRY((auto &&, seed), ED25519Seed::fromHex(content));
 
     return sr25519_provider_->generateKeypair(seed);
   }

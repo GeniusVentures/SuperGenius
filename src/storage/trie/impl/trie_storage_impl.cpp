@@ -21,7 +21,7 @@ namespace sgns::storage::trie {
     auto empty_trie = trie_factory->createEmpty(
         [](const auto &branch, auto idx) { return nullptr; });
     // ensure retrieval of empty trie succeeds
-    OUTCOME_TRY(empty_root, serializer->storeTrie(*empty_trie));
+    OUTCOME_TRY((auto &&, empty_root), serializer->storeTrie(*empty_trie));
     return std::unique_ptr<TrieStorageImpl>(
         new TrieStorageImpl(std::move(empty_root),
                             std::move(codec),
@@ -84,7 +84,7 @@ namespace sgns::storage::trie {
   TrieStorageImpl::getEphemeralBatch() const {
     logger_->info("Initialize ephemeral trie batch with root: {}",
                    root_hash_.toHex());
-    OUTCOME_TRY(trie, serializer_->retrieveTrie(Buffer{root_hash_}));
+    OUTCOME_TRY((auto &&, trie), serializer_->retrieveTrie(Buffer{root_hash_}));
     return std::make_unique<EphemeralTrieBatchImpl>(codec_, std::move(trie));
   }
 
@@ -113,7 +113,7 @@ namespace sgns::storage::trie {
   TrieStorageImpl::getEphemeralBatchAt(const base::Hash256 &root) const {
     logger_->debug("Initialize ephemeral trie batch with root: {}",
                    root_hash_.toHex());
-    OUTCOME_TRY(trie, serializer_->retrieveTrie(Buffer{root}));
+    OUTCOME_TRY((auto &&, trie), serializer_->retrieveTrie(Buffer{root}));
     return std::make_unique<EphemeralTrieBatchImpl>(codec_, std::move(trie));
   }
 

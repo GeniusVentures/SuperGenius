@@ -23,7 +23,7 @@ namespace sgns::api::state::request {
         throw jsonrpc::InvalidParametersFault(
             "Parameter 'params' must be a string array of the storage keys");
 
-      OUTCOME_TRY(key, base::unhexWith0x(key_str.AsString()));
+      OUTCOME_TRY((auto &&, key), base::unhexWith0x(key_str.AsString()));
       key_buffers_.emplace_back(std::move(key));
     }
     return outcome::success();

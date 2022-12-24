@@ -73,7 +73,7 @@ namespace sgns::base {
   template <class T, typename = std::enable_if<std::is_unsigned_v<T>>>
   outcome::result<T> unhexNumber(std::string_view value) {
     std::vector<uint8_t> bytes;
-    OUTCOME_TRY(bts, base::unhexWith0x(value));
+    OUTCOME_TRY((auto &&, bts), base::unhexWith0x(value));
     bytes = std::move(bts);
 
     if (bytes.size() > sizeof(T)) {

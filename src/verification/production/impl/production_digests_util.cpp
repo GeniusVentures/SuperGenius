@@ -34,7 +34,7 @@ namespace sgns::verification {
       return DigestError::INVALID_DIGESTS;
     }
 
-    OUTCOME_TRY(production_seal_res, scale::decode<Seal>(seal_res.value().data));
+    OUTCOME_TRY((auto &&, production_seal_res), scale::decode<Seal>(seal_res.value().data));
 
     for (const auto &digest :
          gsl::make_span(digests).subspan(0, digests.size() - 1)) {

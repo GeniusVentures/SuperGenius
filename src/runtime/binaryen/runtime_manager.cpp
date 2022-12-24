@@ -39,7 +39,7 @@ namespace sgns::runtime::binaryen {
   outcome::result<RuntimeEnvironment>
   RuntimeManager::createPersistentRuntimeEnvironmentAt(
       const base::Buffer &state_code, const base::Hash256 &state_root) {
-    OUTCOME_TRY(storage_provider_->setToPersistentAt(state_root));
+    BOOST_OUTCOME_TRYV2(auto &&, storage_provider_->setToPersistentAt(state_root));
     auto env = createRuntimeEnvironment(state_code);
     if (env.has_value()) {
       env.value().batch =
@@ -51,14 +51,14 @@ namespace sgns::runtime::binaryen {
   outcome::result<RuntimeEnvironment>
   RuntimeManager::createEphemeralRuntimeEnvironmentAt(
       const base::Buffer &state_code, const base::Hash256 &state_root) {
-    OUTCOME_TRY(storage_provider_->setToEphemeralAt(state_root));
+    BOOST_OUTCOME_TRYV2(auto &&, storage_provider_->setToEphemeralAt(state_root));
     return createRuntimeEnvironment(state_code);
   }
 
   outcome::result<RuntimeEnvironment>
   RuntimeManager::createPersistentRuntimeEnvironment(
       const base::Buffer &state_code) {
-    OUTCOME_TRY(storage_provider_->setToPersistent());
+    BOOST_OUTCOME_TRYV2(auto &&, storage_provider_->setToPersistent());
     auto env = createRuntimeEnvironment(state_code);
     if (env.has_value()) {
       env.value().batch =
@@ -70,7 +70,7 @@ namespace sgns::runtime::binaryen {
   outcome::result<RuntimeEnvironment>
   RuntimeManager::createEphemeralRuntimeEnvironment(
       const base::Buffer &state_code) {
-    OUTCOME_TRY(storage_provider_->setToEphemeral());
+    BOOST_OUTCOME_TRYV2(auto &&, storage_provider_->setToEphemeral());
     return createRuntimeEnvironment(state_code);
   }
 
@@ -100,8 +100,8 @@ namespace sgns::runtime::binaryen {
 
     if (!module) {
       // Prepare new module
-      OUTCOME_TRY(
-          new_module,
+      OUTCOME_TRY((auto &&,
+          new_module),
           module_factory_->createModule(state_code, external_interface_));
 
       // Trying to safe emplace new module, and use existed one

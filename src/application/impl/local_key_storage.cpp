@@ -11,7 +11,7 @@ namespace sgns::application {
   outcome::result<std::shared_ptr<LocalKeyStorage>> LocalKeyStorage::create(
       const std::string &keystore_path) {
     auto storage = LocalKeyStorage();
-    OUTCOME_TRY(storage.loadFromJson(keystore_path));
+    BOOST_OUTCOME_TRYV2(auto &&, storage.loadFromJson(keystore_path));
     return std::make_shared<LocalKeyStorage>(std::move(storage));
   }
 
@@ -37,29 +37,29 @@ namespace sgns::application {
     } catch (pt::json_parser_error &e) {
       return ConfigReaderError::PARSER_ERROR;
     }
-    OUTCOME_TRY(loadSR25519Keys(tree));
-    OUTCOME_TRY(loadED25519Keys(tree));
-    OUTCOME_TRY(loadP2PKeys(tree));
+    BOOST_OUTCOME_TRYV2(auto &&, loadSR25519Keys(tree));
+    BOOST_OUTCOME_TRYV2(auto &&, loadED25519Keys(tree));
+    BOOST_OUTCOME_TRYV2(auto &&, loadP2PKeys(tree));
 
     return outcome::success();
   }
 
   outcome::result<void> LocalKeyStorage::loadSR25519Keys(
       const boost::property_tree::ptree &tree) {
-    OUTCOME_TRY(sr_tree, ensure(tree.get_child_optional("sr25519keypair")));
+    OUTCOME_TRY((auto &&, sr_tree), ensure(tree.get_child_optional("sr25519keypair")));
 
-    OUTCOME_TRY(sr_pubkey_str,
+    OUTCOME_TRY((auto &&, sr_pubkey_str),
                 ensure(sr_tree.get_optional<std::string>("public")));
-    OUTCOME_TRY(sr_privkey_str,
+    OUTCOME_TRY((auto &&, sr_privkey_str),
                 ensure(sr_tree.get_optional<std::string>("private")));
 
     // get rid of 0x from beginning
-    OUTCOME_TRY(sr_pubkey_buffer, base::unhexWith0x(sr_pubkey_str));
-    OUTCOME_TRY(sr_privkey_buffer, base::unhexWith0x(sr_privkey_str));
+    OUTCOME_TRY((auto &&, sr_pubkey_buffer), base::unhexWith0x(sr_pubkey_str));
+    OUTCOME_TRY((auto &&, sr_privkey_buffer), base::unhexWith0x(sr_privkey_str));
 
-    OUTCOME_TRY(sr_pubkey,
+    OUTCOME_TRY((auto &&, sr_pubkey),
                 crypto::SR25519PublicKey::fromSpan(sr_pubkey_buffer));
-    OUTCOME_TRY(sr_privkey,
+    OUTCOME_TRY((auto &&, sr_privkey),
                 crypto::SR25519SecretKey::fromSpan(sr_privkey_buffer));
 
     sr_25519_keypair_.public_key = sr_pubkey;
@@ -73,18 +73,18 @@ namespace sgns::application {
     if (! ed_tree_opt) return ConfigReaderError::MISSING_ENTRY;
     const auto &ed_tree = ed_tree_opt.value();
 
-    OUTCOME_TRY(ed_pubkey_str,
+    OUTCOME_TRY((auto &&, ed_pubkey_str),
                 ensure(ed_tree.get_optional<std::string>("public")));
-    OUTCOME_TRY(ed_privkey_str,
+    OUTCOME_TRY((auto &&, ed_privkey_str),
                 ensure(ed_tree.get_optional<std::string>("private")));
 
     // get rid of 0x from beginning
-    OUTCOME_TRY(ed_pubkey_buffer, base::unhexWith0x(ed_pubkey_str));
-    OUTCOME_TRY(ed_privkey_buffer, base::unhexWith0x(ed_privkey_str));
+    OUTCOME_TRY((auto &&, ed_pubkey_buffer), base::unhexWith0x(ed_pubkey_str));
+    OUTCOME_TRY((auto &&, ed_privkey_buffer), base::unhexWith0x(ed_privkey_str));
 
-    OUTCOME_TRY(ed_pubkey,
+    OUTCOME_TRY((auto &&, ed_pubkey),
                 crypto::ED25519PublicKey::fromSpan(ed_pubkey_buffer));
-    OUTCOME_TRY(ed_privkey,
+    OUTCOME_TRY((auto &&, ed_privkey),
                 crypto::ED25519PrivateKey::fromSpan(ed_privkey_buffer));
 
     ed_25519_keypair_.public_key = ed_pubkey;
@@ -98,7 +98,7 @@ namespace sgns::application {
     if (! p2p_tree_opt) return ConfigReaderError::MISSING_ENTRY;
     const auto &p2p_tree = p2p_tree_opt.value();
 
-    OUTCOME_TRY(p2p_type,
+    OUTCOME_TRY((auto &&, p2p_type),
                 ensure(p2p_tree.get_optional<std::string>("p2p_type")));
 
     using KeyType = libp2p::crypto::Key::Type;
@@ -123,14 +123,14 @@ namespace sgns::application {
     if (! p2p_keypair_tree_opt) return ConfigReaderError::MISSING_ENTRY;
     const auto &p2p_keypair_tree = p2p_keypair_tree_opt.value();
 
-    OUTCOME_TRY(p2p_public_key_str,
+    OUTCOME_TRY((auto &&, p2p_public_key_str),
                 ensure(p2p_keypair_tree.get_optional<std::string>("public")));
-    OUTCOME_TRY(p2p_private_key_str,
+    OUTCOME_TRY((auto &&, p2p_private_key_str),
                 ensure(p2p_keypair_tree.get_optional<std::string>("private")));
 
     // get rid of 0x from beginning
-    OUTCOME_TRY(p2p_public_key, base::unhexWith0x(p2p_public_key_str));
-    OUTCOME_TRY(p2p_private_key, base::unhexWith0x(p2p_private_key_str));
+    OUTCOME_TRY((auto &&, p2p_public_key), base::unhexWith0x(p2p_public_key_str));
+    OUTCOME_TRY((auto &&, p2p_private_key), base::unhexWith0x(p2p_private_key_str));
 
     p2p_keypair_.publicKey.data = p2p_public_key;
     p2p_keypair_.privateKey.data = p2p_private_key;
