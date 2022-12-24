@@ -80,7 +80,7 @@ namespace sgns::verification::finality {
                                               const VoteWeight &voteWeight) {
     if (auto containingOpt = findContainingNodes(block); containingOpt) {
       if (containingOpt->empty()) {
-        OUTCOME_TRY(append(block));
+        BOOST_OUTCOME_TRYV2(auto &&, append(block));
       } else {
         introduceBranch(*containingOpt, block);
       }
@@ -107,7 +107,7 @@ namespace sgns::verification::finality {
   }
 
   outcome::result<void> VoteGraphImpl::append(const BlockInfo &block) {
-    OUTCOME_TRY(ancestry,
+    OUTCOME_TRY((auto &&, ancestry),
                 chain_->getAncestry(base_.block_hash, block.block_hash));
     ancestry.push_back(base_.block_hash);
 

@@ -19,8 +19,8 @@ namespace sgns::api::author::request {
     }
 
     auto &&hexified_extrinsic = arg0.AsString();
-    OUTCOME_TRY(buffer, base::unhexWith0x(hexified_extrinsic));
-    OUTCOME_TRY(extrinsic, scale::decode<primitives::Extrinsic>(buffer));
+    OUTCOME_TRY((auto &&, buffer), base::unhexWith0x(hexified_extrinsic));
+    OUTCOME_TRY((auto &&, extrinsic), scale::decode<primitives::Extrinsic>(buffer));
 
     extrinsic_ = std::move(extrinsic);
 

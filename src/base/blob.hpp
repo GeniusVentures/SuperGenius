@@ -89,7 +89,7 @@ namespace sgns::base {
      * is in hex format
      */
     static outcome::result<Blob<size_>> fromHex(std::string_view hex) {
-      OUTCOME_TRY(res, unhex(hex));
+      OUTCOME_TRY((auto &&, res), unhex(hex));
       return fromSpan(res);
     }
 
@@ -101,7 +101,7 @@ namespace sgns::base {
      */
     static outcome::result<Blob<size_>> fromHexWithPrefix(
         std::string_view hex) {
-      OUTCOME_TRY(res, unhexWith0x(hex));
+      OUTCOME_TRY((auto &&, res), unhexWith0x(hex));
       return fromSpan(res);
     }
 

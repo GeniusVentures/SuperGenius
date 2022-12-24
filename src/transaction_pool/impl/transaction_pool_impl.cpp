@@ -27,7 +27,7 @@ namespace sgns::transaction_pool {
   outcome::result<void> TransactionPoolImpl::submit(
       std::vector<Transaction> txs) {
     for (auto &tx : txs) {
-      OUTCOME_TRY(submitOne(std::make_shared<Transaction>(std::move(tx))));
+      BOOST_OUTCOME_TRYV2(auto &&, submitOne(std::make_shared<Transaction>(std::move(tx))));
     }
 
     return outcome::success();
@@ -54,11 +54,11 @@ namespace sgns::transaction_pool {
 
   outcome::result<void> TransactionPoolImpl::processTransaction(
       const std::shared_ptr<Transaction> &tx) {
-    OUTCOME_TRY(ensureSpace());
+    BOOST_OUTCOME_TRYV2(auto &&, ensureSpace());
     if (checkForReady(tx)) {
-      OUTCOME_TRY(processTransactionAsReady(tx));
+      BOOST_OUTCOME_TRYV2(auto &&, processTransactionAsReady(tx));
     } else {
-      OUTCOME_TRY(processTransactionAsWaiting(tx));
+      BOOST_OUTCOME_TRYV2(auto &&, processTransactionAsWaiting(tx));
     }
     return outcome::success();
   }
@@ -85,7 +85,7 @@ namespace sgns::transaction_pool {
 
   outcome::result<void> TransactionPoolImpl::processTransactionAsWaiting(
       const std::shared_ptr<Transaction> &tx) {
-    OUTCOME_TRY(ensureSpace());
+    BOOST_OUTCOME_TRYV2(auto &&, ensureSpace());
 
     addTransactionAsWaiting(tx);
 
@@ -182,7 +182,7 @@ namespace sgns::transaction_pool {
 
   outcome::result<std::vector<Transaction>> TransactionPoolImpl::removeStale(
       const primitives::BlockId &at) {
-    OUTCOME_TRY(number, header_repo_->getNumberById(at));
+    OUTCOME_TRY((auto &&, number), header_repo_->getNumberById(at));
 
     std::vector<Transaction::Hash> remove_to;
 
@@ -193,7 +193,7 @@ namespace sgns::transaction_pool {
     }
 
     for (auto &tx_hash : remove_to) {
-      OUTCOME_TRY(removeOne(tx_hash));
+      BOOST_OUTCOME_TRYV2(auto &&, removeOne(tx_hash));
     }
 
     moderator_->updateBan();

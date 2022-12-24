@@ -1,4 +1,13 @@
 
+# BOOST VERSION TO USE
+set(BOOST_MAJOR_VERSION "1" CACHE STRING "Boost Major Version")
+set(BOOST_MINOR_VERSION "80" CACHE STRING "Boost Minor Version")
+set(BOOST_PATCH_VERSION "0" CACHE STRING "Boost Patch Version")
+# convenience settings
+set(BOOST_VERSION "${BOOST_MAJOR_VERSION}.${BOOST_MINOR_VERSION}.${BOOST_PATCH_VERSION}")
+set(BOOST_VERSION_3U "${BOOST_MAJOR_VERSION}_${BOOST_MINOR_VERSION}_${BOOST_PATCH_VERSION}")
+set(BOOST_VERSION_2U "${BOOST_MAJOR_VERSION}_${BOOST_MINOR_VERSION}")
+
 # --------------------------------------------------------
 # Set config of GTest
 set(GTest_DIR "${_THIRDPARTY_BUILD_DIR}/GTest/lib/cmake/GTest")
@@ -104,7 +113,7 @@ include_directories(${c-ares_INCLUDE_DIR})
 
 # --------------------------------------------------------
 # Set config of yaml-cpp
-set(yaml-cpp_DIR "${_THIRDPARTY_BUILD_DIR}/yaml-cpp/share/cmake/yaml-cpp")
+set(yaml-cpp_DIR "${_THIRDPARTY_BUILD_DIR}/yaml-cpp/lib/cmake/yaml-cpp")
 set(yaml-cpp_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/yaml-cpp/include")
 find_package(yaml-cpp CONFIG REQUIRED)
 include_directories(${yaml-cpp_INCLUDE_DIR})
@@ -128,20 +137,20 @@ include_directories(${Boost.DI_INCLUDE_DIR})
 # Set config of Boost project
 set(_BOOST_ROOT "${_THIRDPARTY_BUILD_DIR}/boost/build/${CMAKE_SYSTEM_NAME}${ABI_SUBFOLDER_NAME}")
 set(Boost_LIB_DIR "${_BOOST_ROOT}/lib")
-set(Boost_INCLUDE_DIR "${_BOOST_ROOT}/include/boost-1_72")
-set(Boost_DIR "${Boost_LIB_DIR}/cmake/Boost-1.72.0")
-set(boost_headers_DIR "${Boost_LIB_DIR}/cmake/boost_headers-1.72.0")
-set(boost_random_DIR "${Boost_LIB_DIR}/cmake/boost_random-1.72.0")
-set(boost_system_DIR "${Boost_LIB_DIR}/cmake/boost_system-1.72.0")
-set(boost_filesystem_DIR "${Boost_LIB_DIR}/cmake/boost_filesystem-1.72.0")
-set(boost_program_options_DIR "${Boost_LIB_DIR}/cmake/boost_program_options-1.72.0")
-set(boost_date_time_DIR "${Boost_LIB_DIR}/cmake/boost_date_time-1.72.0")
-set(boost_regex_DIR "${Boost_LIB_DIR}/cmake/boost_regex-1.72.0")
-set(boost_atomic_DIR "${Boost_LIB_DIR}/cmake/boost_atomic-1.72.0")
-set(boost_chrono_DIR "${Boost_LIB_DIR}/cmake/boost_chrono-1.72.0")
-set(boost_log_DIR "${Boost_LIB_DIR}/cmake/boost_log-1.72.0")
-set(boost_log_setup_DIR "${Boost_LIB_DIR}/cmake/boost_log_setup-1.72.0")
-set(boost_thread_DIR "${Boost_LIB_DIR}/cmake/boost_thread-1.72.0")
+set(Boost_INCLUDE_DIR "${_BOOST_ROOT}/include/boost-${BOOST_VERSION_2U}")
+set(Boost_DIR "${Boost_LIB_DIR}/cmake/Boost-${BOOST_VERSION}")
+set(boost_headers_DIR "${Boost_LIB_DIR}/cmake/boost_headers-${BOOST_VERSION}")
+set(boost_random_DIR "${Boost_LIB_DIR}/cmake/boost_random-${BOOST_VERSION}")
+set(boost_system_DIR "${Boost_LIB_DIR}/cmake/boost_system-${BOOST_VERSION}")
+set(boost_filesystem_DIR "${Boost_LIB_DIR}/cmake/boost_filesystem-${BOOST_VERSION}")
+set(boost_program_options_DIR "${Boost_LIB_DIR}/cmake/boost_program_options-${BOOST_VERSION}")
+set(boost_date_time_DIR "${Boost_LIB_DIR}/cmake/boost_date_time-${BOOST_VERSION}")
+set(boost_regex_DIR "${Boost_LIB_DIR}/cmake/boost_regex-${BOOST_VERSION}")
+set(boost_atomic_DIR "${Boost_LIB_DIR}/cmake/boost_atomic-${BOOST_VERSION}")
+set(boost_chrono_DIR "${Boost_LIB_DIR}/cmake/boost_chrono-${BOOST_VERSION}")
+set(boost_log_DIR "${Boost_LIB_DIR}/cmake/boost_log-${BOOST_VERSION}")
+set(boost_log_setup_DIR "${Boost_LIB_DIR}/cmake/boost_log_setup-${BOOST_VERSION}")
+set(boost_thread_DIR "${Boost_LIB_DIR}/cmake/boost_thread-${BOOST_VERSION}")
 set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_NO_SYSTEM_PATHS ON)

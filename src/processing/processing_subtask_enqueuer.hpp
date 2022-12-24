@@ -2,6 +2,8 @@
 #define SUPERGENIUS_PROCESSING_SUBTASK_ENQUEUER_HPP
 
 #include <processing/proto/SGProcessing.pb.h>
+#include <list>
+#include <string>
 
 namespace sgns::processing
 {

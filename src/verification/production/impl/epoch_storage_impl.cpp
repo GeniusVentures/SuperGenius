@@ -34,7 +34,7 @@ namespace sgns::verification {
   outcome::result<NextEpochDescriptor> EpochStorageImpl::getEpochDescriptor(
       EpochIndex epoch_number) const {
     auto key = base::Buffer{EPOCH_PREFIX}.putUint64(epoch_number);
-    OUTCOME_TRY(encoded_ed, storage_->get(key));
+    OUTCOME_TRY((auto &&, encoded_ed), storage_->get(key));
     return scale::decode<NextEpochDescriptor>(encoded_ed);
   }
 }  // namespace sgns::verification

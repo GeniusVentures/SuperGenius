@@ -13,6 +13,7 @@
 
 #include <boost/asio.hpp>
 #include <boost/optional.hpp>
+#include <list>
 
 namespace sgns::processing
 {

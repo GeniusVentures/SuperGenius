@@ -9,21 +9,21 @@ namespace sgns::runtime {
   }
 
   outcome::result<void> TrieStorageProviderImpl::setToEphemeral() {
-    OUTCOME_TRY(batch, trie_storage_->getEphemeralBatch());
+    OUTCOME_TRY((auto &&, batch), trie_storage_->getEphemeralBatch());
     current_batch_ = std::move(batch);
     return outcome::success();
   }
 
   outcome::result<void> TrieStorageProviderImpl::setToEphemeralAt(
       const base::Hash256 &state_root) {
-    OUTCOME_TRY(batch, trie_storage_->getEphemeralBatchAt(state_root));
+    OUTCOME_TRY((auto &&, batch), trie_storage_->getEphemeralBatchAt(state_root));
     current_batch_ = std::move(batch);
     return outcome::success();
   }
 
   outcome::result<void> TrieStorageProviderImpl::setToPersistent() {
     if (persistent_batch_ == nullptr) {
-      OUTCOME_TRY(batch, trie_storage_->getPersistentBatch());
+      OUTCOME_TRY((auto &&, batch), trie_storage_->getPersistentBatch());
       persistent_batch_ = std::move(batch);
     }
     current_batch_ = persistent_batch_;
@@ -32,7 +32,7 @@ namespace sgns::runtime {
 
   outcome::result<void> TrieStorageProviderImpl::setToPersistentAt(
       const base::Hash256 &state_root) {
-    OUTCOME_TRY(batch, trie_storage_->getPersistentBatchAt(state_root));
+    OUTCOME_TRY((auto &&, batch), trie_storage_->getPersistentBatchAt(state_root));
     persistent_batch_ = std::move(batch);
     current_batch_ = persistent_batch_;
     return outcome::success();

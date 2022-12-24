@@ -35,8 +35,8 @@ namespace sgns::runtime::binaryen {
 
   outcome::result<void> CoreImpl::execute_block(
       const primitives::Block &block) {
-    OUTCOME_TRY(parent, header_repo_->getBlockHeader(block.header.parent_hash));
-    OUTCOME_TRY(changes_tracker_->onBlockChange(
+    OUTCOME_TRY((auto &&, parent), header_repo_->getBlockHeader(block.header.parent_hash));
+    BOOST_OUTCOME_TRYV2(auto &&, changes_tracker_->onBlockChange(
         block.header.parent_hash,
         block.header.number - 1));  // parent's number
 	logger_->debug("Core_execute_block ");
@@ -48,7 +48,7 @@ namespace sgns::runtime::binaryen {
 
   outcome::result<void> CoreImpl::initialise_block(const BlockHeader &header) {
     auto parent = header_repo_->getBlockHeader(header.parent_hash).value();
-    OUTCOME_TRY(
+    BOOST_OUTCOME_TRYV2(auto &&,
         changes_tracker_->onBlockChange(header.parent_hash,
                                         header.number - 1));  // parent's number
 	logger_->debug("Core_initialize_block ");

@@ -42,9 +42,9 @@ class BlockHeaderRepository_Test : public test::BaseRocksDB_Test {
   outcome::result<Hash256> storeHeader(BlockNumber num, BlockHeader h) {
     BlockHeader header = std::move(h);
     header.number = num;
-    OUTCOME_TRY(enc_header, sgns::scale::encode(header));
+    OUTCOME_TRY((auto &&, enc_header), sgns::scale::encode(header));
     auto hash = hasher_->blake2b_256(enc_header);
-    OUTCOME_TRY(putWithPrefix(*db_, Prefix::HEADER, header.number, hash,
+    BOOST_OUTCOME_TRYV2(auto &&, putWithPrefix(*db_, Prefix::HEADER, header.number, hash,
                               Buffer{enc_header}));
     return hash;
   }

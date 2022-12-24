@@ -60,7 +60,7 @@ namespace sgns::network {
       if (from == src.end())
         return outcome::failure(boost::system::error_code{});
 
-      OUTCOME_TRY(it, AdapterType::read(out, src, from));
+      OUTCOME_TRY((auto &&, it), AdapterType::read(out, src, from));
       return AncestorType::read(out, src, it);
     }
   };

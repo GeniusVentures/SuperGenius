@@ -99,7 +99,7 @@ namespace sgns::authority {
 
     auto new_node = node->makeDescendant(block);
 
-    OUTCOME_TRY(new_node->ensureReadyToSchedule());
+    BOOST_OUTCOME_TRYV2(auto &&, new_node->ensureReadyToSchedule());
 
     // Schedule change
     new_node->scheduled_authorities =
@@ -132,7 +132,7 @@ namespace sgns::authority {
 
     auto new_node = node->makeDescendant(block);
 
-    OUTCOME_TRY(new_node->ensureReadyToSchedule());
+    BOOST_OUTCOME_TRYV2(auto &&, new_node->ensureReadyToSchedule());
 
     // Force changes
     if (new_node->block.block_number >= activate_at) {
@@ -207,7 +207,7 @@ namespace sgns::authority {
 
     auto new_node = node->makeDescendant(block);
 
-    OUTCOME_TRY(new_node->ensureReadyToSchedule());
+    BOOST_OUTCOME_TRYV2(auto &&, new_node->ensureReadyToSchedule());
 
     new_node->pause_after = activate_at;
 
@@ -228,7 +228,7 @@ namespace sgns::authority {
 
     auto new_node = node->makeDescendant(block);
 
-    OUTCOME_TRY(new_node->ensureReadyToSchedule());
+    BOOST_OUTCOME_TRYV2(auto &&, new_node->ensureReadyToSchedule());
 
     new_node->resume_for = activate_at;
 
@@ -313,8 +313,8 @@ namespace sgns::authority {
 
     root_ = std::move(new_node);
 
-    OUTCOME_TRY(encoded_state, scale::encode(root_));
-    OUTCOME_TRY(storage_->put(SCHEDULER_TREE,
+    OUTCOME_TRY((auto &&, encoded_state), scale::encode(root_));
+    BOOST_OUTCOME_TRYV2(auto &&, storage_->put(SCHEDULER_TREE,
                               base::Buffer(std::move(encoded_state))));
 
     return outcome::success();

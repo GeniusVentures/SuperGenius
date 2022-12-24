@@ -5,6 +5,7 @@
 #include <libp2p/protocol/ping/ping.hpp>
 
 #include <boost/asio/io_context.hpp>
+#include <memory>
 
 class PingSession: public std::enable_shared_from_this<PingSession>
 {

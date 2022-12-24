@@ -13,6 +13,7 @@
 #include <processing/processing_validation_core.hpp>
 
 #include <ipfs_pubsub/gossip_pubsub_topic.hpp>
+#include <list>
 
 namespace sgns::processing
 {

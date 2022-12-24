@@ -31,7 +31,7 @@ namespace sgns::api {
     // unsigned integer, we are free to decode more capacious number,
     // since BlockNumber, which is really being requested
     // is defined as uint64_t
-    OUTCOME_TRY(number, base::unhexNumber<BlockNumber>(value));
+    OUTCOME_TRY((auto &&, number), base::unhexNumber<BlockNumber>(value));
     return getBlockHash(number);
   }
 
@@ -47,7 +47,7 @@ namespace sgns::api {
           [this](std::string_view hex_string) {
             return getBlockHash(hex_string);
           });
-      OUTCOME_TRY(r, res);
+      OUTCOME_TRY((auto &&, r), res);
       results.emplace_back(r);
     }
 

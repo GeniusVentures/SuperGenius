@@ -31,7 +31,7 @@ namespace sgns::verification::finality {
     if (base == block) {
       return std::vector<BlockHash>{};
     }
-    OUTCOME_TRY(chain, block_tree_->getChainByBlocks(base, block));
+    OUTCOME_TRY((auto &&, chain), block_tree_->getChainByBlocks(base, block));
     std::vector<BlockHash> result_chain(chain.size() - 2);
     std::move(chain.rbegin() + 1, chain.rend() - 1, result_chain.begin());
     return result_chain;
@@ -40,12 +40,12 @@ namespace sgns::verification::finality {
   outcome::result<BlockInfo> EnvironmentImpl::bestChainContaining(
       const BlockHash &base) const {
     logger_->debug("Finding best chain containing block {}", base.toHex());
-    OUTCOME_TRY(best_info, block_tree_->getBestContaining(base, boost::none));
+    OUTCOME_TRY((auto &&, best_info), block_tree_->getBestContaining(base, boost::none));
     auto best_hash = best_info.block_hash;
 
     auto target = best_info.block_number;
 
-    OUTCOME_TRY(best_header, header_repository_->getBlockHeader(best_hash));
+    OUTCOME_TRY((auto &&, best_header), header_repository_->getBlockHeader(best_hash));
 
     // walk backwards until we find the target block
     while (true) {
@@ -57,7 +57,7 @@ namespace sgns::verification::finality {
                          best_hash};
       }
       best_hash = best_header.parent_hash;
-      OUTCOME_TRY(new_best_header,
+      OUTCOME_TRY((auto &&, new_best_header),
                   header_repository_->getBlockHeader(best_hash));
       best_header = new_best_header;
     }

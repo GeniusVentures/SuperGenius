@@ -221,8 +221,8 @@ namespace sgns::verification::finality {
      * incremented voter set and consisting of new voters. Also round number
      * should be reset to 0
      */
-    OUTCOME_TRY(voters_encoded, storage_->get(storage::kAuthoritySetKey));
-    OUTCOME_TRY(voter_set, scale::decode<VoterSet>(voters_encoded));
+    OUTCOME_TRY((auto &&, voters_encoded), storage_->get(storage::kAuthoritySetKey));
+    OUTCOME_TRY((auto &&, voter_set), scale::decode<VoterSet>(voters_encoded));
     return std::make_shared<VoterSet>(voter_set);
   }
 

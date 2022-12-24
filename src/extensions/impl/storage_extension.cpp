@@ -237,7 +237,7 @@ namespace sgns::extensions {
       runtime::WasmSize offset,
       runtime::WasmSize max_length) const {
     auto batch = storage_provider_->getCurrentBatch();
-    OUTCOME_TRY(data, batch->get(key));
+    OUTCOME_TRY((auto &&, data), batch->get(key));
 
     const auto data_length =
         std::min<runtime::WasmSize>(max_length, data.size() - offset);
@@ -256,10 +256,10 @@ namespace sgns::extensions {
       const base::Buffer &key) const {
     auto batch = storage_provider_->getCurrentBatch();
     auto cursor = batch->cursor();
-    OUTCOME_TRY(cursor->seek(key));
-    OUTCOME_TRY(cursor->next());
+    BOOST_OUTCOME_TRYV2(auto &&, cursor->seek(key));
+    BOOST_OUTCOME_TRYV2(auto &&, cursor->next());
     if (cursor->isValid()) {
-      OUTCOME_TRY(next_key, cursor->key());
+      OUTCOME_TRY((auto &&, next_key), cursor->key());
       return boost::make_optional(next_key);
     }
     return boost::none;

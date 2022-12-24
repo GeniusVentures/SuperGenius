@@ -576,7 +576,7 @@ namespace sgns::verification::finality {
 
       auto justification = opt_justification.value();
 
-      OUTCOME_TRY(env_->onCommitted(round_number_, finalized, justification));
+      BOOST_OUTCOME_TRYV2(auto &&, env_->onCommitted(round_number_, finalized, justification));
       return outcome::success();
     }
     return VotingRoundError::NEW_STATE_EQUAL_TO_OLD;

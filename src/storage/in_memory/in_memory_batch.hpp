@@ -34,7 +34,7 @@ namespace sgns::storage {
 
     outcome::result<void> commit() override {
       for (auto &entry : entries) {
-        OUTCOME_TRY(
+        BOOST_OUTCOME_TRYV2(auto &&,
             db.put(Buffer::fromHex(entry.first).value(), entry.second));
       }
       return outcome::success();

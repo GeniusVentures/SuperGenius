@@ -33,8 +33,8 @@ namespace sgns::blockchain {
         prependPrefix(numberToIndexKey(num), Prefix::ID_TO_LOOKUP_KEY);
     auto hash_to_idx_key =
         prependPrefix(Buffer{block_hash}, Prefix::ID_TO_LOOKUP_KEY);
-    OUTCOME_TRY(map.put(num_to_idx_key, block_lookup_key));
-    OUTCOME_TRY(map.put(hash_to_idx_key, block_lookup_key));
+    BOOST_OUTCOME_TRYV2(auto &&, map.put(num_to_idx_key, block_lookup_key));
+    BOOST_OUTCOME_TRYV2(auto &&, map.put(hash_to_idx_key, block_lookup_key));
     return map.put(value_lookup_key, value);
   }
 
@@ -42,7 +42,7 @@ namespace sgns::blockchain {
       const storage::BufferStorage &map,
       prefix::Prefix prefix,
       const primitives::BlockId &block_id) {
-    OUTCOME_TRY(key, idToLookupKey(map, block_id));
+    OUTCOME_TRY((auto &&, key), idToLookupKey(map, block_id));
     return map.get(prependPrefix(key, prefix));
   }
 

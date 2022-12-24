@@ -4,6 +4,9 @@
 #include <base/logger.hpp>
 #include <processing/processing_subtask_enqueuer.hpp>
 #include <processing/processing_task_queue.hpp>
+#include <list>
+#include <string>
+#include <shared_ptr>
 
 namespace sgns::processing
 {

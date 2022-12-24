@@ -14,7 +14,7 @@ namespace sgns::api::state::request {
           "Parameter 'key' must be a hex string");
     }
     auto &&key_str = param0.AsString();
-    OUTCOME_TRY(key, base::unhexWith0x(key_str));
+    OUTCOME_TRY((auto &&, key), base::unhexWith0x(key_str));
 
     key_ = base::Buffer(std::move(key));
 
@@ -25,8 +25,8 @@ namespace sgns::api::state::request {
             "Parameter 'at' must be a hex string");
       }
       auto &&at_str = param1.AsString();
-      OUTCOME_TRY(at_span, base::unhexWith0x(at_str));
-      OUTCOME_TRY(at, primitives::BlockHash::fromSpan(at_span));
+      OUTCOME_TRY((auto &&, at_span), base::unhexWith0x(at_str));
+      OUTCOME_TRY((auto &&, at), primitives::BlockHash::fromSpan(at_span));
       at_.reset(at);
     } else {
       at_.reset();

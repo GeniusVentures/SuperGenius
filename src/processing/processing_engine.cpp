@@ -1,5 +1,7 @@
 #include "processing_engine.hpp"
 
+#include <thread>
+#include <memory>
 namespace sgns::processing
 {
 ProcessingEngine::ProcessingEngine(

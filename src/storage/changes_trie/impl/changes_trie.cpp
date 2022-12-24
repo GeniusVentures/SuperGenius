@@ -20,10 +20,10 @@ namespace sgns::storage::changes_trie {
       auto &changers = change.second;
       auto current_number = parent_number + 1;
       KeyIndexVariant keyIndex{ExtrinsicsChangesKey{{current_number, key}}};
-      OUTCOME_TRY(key_enc, scale::encode(keyIndex));
-      OUTCOME_TRY(value, scale::encode(changers));
+      OUTCOME_TRY((auto &&, key_enc), scale::encode(keyIndex));
+      OUTCOME_TRY((auto &&, value), scale::encode(changers));
       base::Buffer value_buf {std::move(value)};
-      OUTCOME_TRY(changes_storage->put(base::Buffer{std::move(key_enc)},
+      BOOST_OUTCOME_TRYV2(auto &&, changes_storage->put(base::Buffer{std::move(key_enc)},
                                        std::move(value_buf)));
     }
 

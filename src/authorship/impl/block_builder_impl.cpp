@@ -48,7 +48,7 @@ namespace sgns::authorship {
   }
 
   outcome::result<primitives::Block> BlockBuilderImpl::bake() const {
-    OUTCOME_TRY(finalised_header, r_block_builder_->finalise_block());
+    OUTCOME_TRY((auto &&, finalised_header), r_block_builder_->finalise_block());
     return primitives::Block{finalised_header, extrinsics_};
   }
 

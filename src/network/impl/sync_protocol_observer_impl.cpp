@@ -78,7 +78,7 @@ namespace sgns::network {
           from_hash, ascending_direction, maxRequestBlocks);
     } else {
       // else, both blocks are specified
-      OUTCOME_TRY(chain_hash,
+      OUTCOME_TRY((auto &&, chain_hash),
                   block_tree_->getChainByBlocks(from_hash, *request.to));
       if (ascending_direction) {
         std::reverse(chain_hash.begin(), chain_hash.end());

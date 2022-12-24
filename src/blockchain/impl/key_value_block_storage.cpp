@@ -75,10 +75,10 @@ namespace sgns::blockchain {
     auto block_storage = std::make_shared<KeyValueBlockStorage>(
         KeyValueBlockStorage(storage, std::move(hasher)));
 
-    OUTCOME_TRY(last_finalized_block_hash,
+    OUTCOME_TRY((auto &&, last_finalized_block_hash),
                 block_storage->getLastFinalizedBlockHash());
 
-    OUTCOME_TRY(block_header,
+    OUTCOME_TRY((auto &&, block_header),
                 block_storage->getBlockHeader(last_finalized_block_hash));
 
     primitives::Block finalized_block;
@@ -98,16 +98,16 @@ namespace sgns::blockchain {
     auto block_storage = std::make_shared<KeyValueBlockStorage>(
         KeyValueBlockStorage(storage, std::move(hasher)));
 
-    OUTCOME_TRY(block_storage->ensureGenesisNotExists());
+    BOOST_OUTCOME_TRYV2(auto &&, block_storage->ensureGenesisNotExists());
 
     // state root type is Hash256, however for consistency with spec root hash
     // returns buffer. So we need this conversion
-    OUTCOME_TRY(state_root_blob,
+    OUTCOME_TRY((auto &&, state_root_blob),
                 base::Hash256::fromSpan(state_root.toVector()));
 
     auto extrinsics_root_buf = trieRoot({});
     // same reason for conversion as few lines above
-    OUTCOME_TRY(extrinsics_root,
+    OUTCOME_TRY((auto &&, extrinsics_root),
                 base::Hash256::fromSpan(extrinsics_root_buf.toVector()));
 
     // genesis block initialization
@@ -117,10 +117,10 @@ namespace sgns::blockchain {
     genesis_block.header.state_root = state_root_blob;
     // the rest of the fields have default value
 
-    OUTCOME_TRY(genesis_block_hash, block_storage->putBlock(genesis_block));
-    OUTCOME_TRY(storage->put(storage::kGenesisBlockHashLookupKey,
+    OUTCOME_TRY((auto &&, genesis_block_hash), block_storage->putBlock(genesis_block));
+    BOOST_OUTCOME_TRYV2(auto &&, storage->put(storage::kGenesisBlockHashLookupKey,
                              Buffer{genesis_block_hash}));
-    OUTCOME_TRY(block_storage->setLastFinalizedBlockHash(genesis_block_hash));
+    BOOST_OUTCOME_TRYV2(auto &&, block_storage->setLastFinalizedBlockHash(genesis_block_hash));
 
     on_genesis_created(genesis_block);
     return std::move(block_storage);
@@ -128,14 +128,14 @@ namespace sgns::blockchain {
 
   outcome::result<primitives::BlockHeader> KeyValueBlockStorage::getBlockHeader(
       const primitives::BlockId &id) const {
-    OUTCOME_TRY(encoded_header, getWithPrefix(*storage_, Prefix::HEADER, id));
-    OUTCOME_TRY(header, scale::decode<primitives::BlockHeader>(encoded_header));
+    OUTCOME_TRY((auto &&, encoded_header), getWithPrefix(*storage_, Prefix::HEADER, id));
+    OUTCOME_TRY((auto &&, header), scale::decode<primitives::BlockHeader>(encoded_header));
     return std::move(header);
   }
 
   outcome::result<primitives::BlockBody> KeyValueBlockStorage::getBlockBody(
       const primitives::BlockId &id) const {
-    OUTCOME_TRY(block_data, getBlockData(id));
+    OUTCOME_TRY((auto &&, block_data), getBlockData(id));
     if (block_data.body) {
       return block_data.body.value();
     }
@@ -144,9 +144,9 @@ namespace sgns::blockchain {
 
   outcome::result<primitives::BlockData> KeyValueBlockStorage::getBlockData(
       const primitives::BlockId &id) const {
-    OUTCOME_TRY(encoded_block_data,
+    OUTCOME_TRY((auto &&, encoded_block_data),
                 getWithPrefix(*storage_, Prefix::BLOCK_DATA, id));
-    OUTCOME_TRY(block_data,
+    OUTCOME_TRY((auto &&, block_data),
                 scale::decode<primitives::BlockData>(encoded_block_data));
     return std::move(block_data);
   }
@@ -154,7 +154,7 @@ namespace sgns::blockchain {
   outcome::result<primitives::Justification>
   KeyValueBlockStorage::getJustification(
       const primitives::BlockId &block) const {
-    OUTCOME_TRY(block_data, getBlockData(block));
+    OUTCOME_TRY((auto &&, block_data), getBlockData(block));
     if (block_data.justification) {
       return block_data.justification.value();
     }
@@ -163,9 +163,9 @@ namespace sgns::blockchain {
 
   outcome::result<primitives::BlockHash> KeyValueBlockStorage::putBlockHeader(
       const primitives::BlockHeader &header) {
-    OUTCOME_TRY(encoded_header, scale::encode(header));
+    OUTCOME_TRY((auto &&, encoded_header), scale::encode(header));
     auto block_hash = hasher_->blake2b_256(encoded_header);
-    OUTCOME_TRY(putWithPrefix(*storage_,
+    BOOST_OUTCOME_TRYV2(auto &&, putWithPrefix(*storage_,
                               Prefix::HEADER,
                               header.number,
                               block_hash,
@@ -201,8 +201,8 @@ namespace sgns::blockchain {
           block_data.receipt ? block_data.receipt : existing_data.receipt;
     }
 
-    OUTCOME_TRY(encoded_block_data, scale::encode(to_insert));
-    OUTCOME_TRY(putWithPrefix(*storage_,
+    OUTCOME_TRY((auto &&, encoded_block_data), scale::encode(to_insert));
+    BOOST_OUTCOME_TRYV2(auto &&, putWithPrefix(*storage_,
                               Prefix::BLOCK_DATA,
                               block_number,
                               block_data.hash,
@@ -227,14 +227,14 @@ namespace sgns::blockchain {
     }
 
     // insert our block's parts into the database-
-    OUTCOME_TRY(putBlockHeader(block.header));
+    BOOST_OUTCOME_TRYV2(auto &&, putBlockHeader(block.header));
 
     primitives::BlockData block_data;
     block_data.hash = block_hash;
     block_data.header = block.header;
     block_data.body = block.body;
 
-    OUTCOME_TRY(putBlockData(block.header.number, block_data));
+    BOOST_OUTCOME_TRYV2(auto &&, putBlockData(block.header.number, block_data));
     logger_->info("Added block. Number: {}. Hash: {}. State root: {}",
                   block.header.number,
                   block_hash.toHex(),
@@ -252,7 +252,7 @@ namespace sgns::blockchain {
      block_data.hash = hash;
      block_data.justification = j;
      
-    OUTCOME_TRY(putBlockData(block_number, block_data));
+    BOOST_OUTCOME_TRYV2(auto &&, putBlockData(block_number, block_data));
     return outcome::success();
   }
 
@@ -310,7 +310,7 @@ namespace sgns::blockchain {
 
   outcome::result<void> KeyValueBlockStorage::setLastFinalizedBlockHash(
       const primitives::BlockHash &hash) {
-    OUTCOME_TRY(
+    BOOST_OUTCOME_TRYV2(auto &&,
         storage_->put(storage::kLastFinalizedBlockHashLookupKey, Buffer{hash}));
 
     return outcome::success();
