@@ -9,7 +9,7 @@
 #include <processing/proto/SGProcessing.pb.h>
 
 #include <optional>
-
+#include <list>
 class ProcessingTaskQueue
 {
 /** Distributed task queue interface

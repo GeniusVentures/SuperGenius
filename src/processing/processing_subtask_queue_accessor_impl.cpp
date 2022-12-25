@@ -90,7 +90,7 @@ void SubTaskQueueAccessorImpl::GrabSubTask(SubTaskGrabbedCallback onSubTaskGrabb
     auto queue = m_subTaskQueueManager->GetQueueSnapshot();
 
     std::set<std::string> subTaskIds;
-    for (size_t itemIdx = 0; itemIdx < queue->subtasks().items_size(); ++itemIdx)
+    for (size_t itemIdx = 0; itemIdx < (size_t)queue->subtasks().items_size(); ++itemIdx)
     {
         subTaskIds.insert(queue->subtasks().items(itemIdx).subtaskid());
     }

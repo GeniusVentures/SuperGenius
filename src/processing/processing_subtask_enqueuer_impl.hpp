@@ -6,7 +6,6 @@
 #include <processing/processing_task_queue.hpp>
 #include <list>
 #include <string>
-#include <shared_ptr>
 
 namespace sgns::processing
 {
