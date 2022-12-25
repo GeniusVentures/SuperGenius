@@ -8,6 +8,7 @@
 
 #include <processing/proto/SGProcessing.pb.h>
 #include <boost/optional.hpp>
+#include <list>
 
 namespace sgns::processing
 {

@@ -2,6 +2,8 @@
 
 #include <thread>
 #include <memory>
+#include "processing_subtask_queue_manager.hpp"
+
 namespace sgns::processing
 {
 ProcessingEngine::ProcessingEngine(
@@ -83,7 +85,7 @@ void ProcessingEngine::ProcessSubTask(SGProcessing::SubTask subTask)
                 _this->m_subTaskQueueAccessor->CompleteSubTask(subTask.subtaskid(), result);
                 // @todo Should a new subtask be grabbed once the perivious one is processed?
                 _this->m_subTaskQueueAccessor->GrabSubTask(
-                    [weakThis(std::weak_ptr(_this))](boost::optional<const SGProcessing::SubTask&> subTask) {
+                    [weakThis(std::weak_ptr<sgns::processing::ProcessingEngine>(_this))](boost::optional<const SGProcessing::SubTask&> subTask) {
                     auto _this = weakThis.lock();
                     if (!_this)
                     {
