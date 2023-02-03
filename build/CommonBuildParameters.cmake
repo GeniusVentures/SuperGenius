@@ -95,6 +95,7 @@ set(spdlog_DIR "${_THIRDPARTY_BUILD_DIR}/spdlog/lib/cmake/spdlog")
 set(spdlog_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/spdlog/include")
 find_package(spdlog CONFIG REQUIRED)
 include_directories(${spdlog_INCLUDE_DIR})
+add_compile_definitions("SPDLOG_FMT_EXTERNAL")
 
 # --------------------------------------------------------
 # Set config of soralog
