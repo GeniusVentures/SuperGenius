@@ -2,14 +2,14 @@ This is the block-lattice super fast cryptotoken system based on the original na
 
 # Download SuperGenius project
    
-    git clone ssh://git@gitlab.geniusventures.io:8487/GeniusVentures/SuperGenius.git --recursive 
+    git clone git@github.com:GeniusVentures/SuperGenius.git --recursive 
     cd SuperGenius
     git checkout develop
     
 # Download thirdparty project
 
     cd ..
-    git clone ssh://git@gitlab.geniusventures.io:8487/GeniusVentures/thirdparty.git --recursive 
+    git clone git@github.com:GeniusVentures/SuperGenius.git--recursive 
     cd thirdparty
     git checkout develop
 # [Build thirdparty project](../thirdparty/README.md)
