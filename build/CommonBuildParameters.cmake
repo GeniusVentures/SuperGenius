@@ -57,18 +57,17 @@ include(${PROJECT_ROOT}/cmake/functions.cmake)
 
 # --------------------------------------------------------
 # Set config of openssl project
-# libp2p 0.1.2 loading failed when openssl is loaded here
-#set(OPENSSL_DIR "${_THIRDPARTY_BUILD_DIR}/openssl/build/${CMAKE_SYSTEM_NAME}${ABI_SUBFOLDER_NAME}")
-#set(OPENSSL_USE_STATIC_LIBS ON)
-#set(OPENSSL_MSVC_STATIC_RT ON)
-#set(OPENSSL_ROOT_DIR "${OPENSSL_DIR}")
-#set(OPENSSL_INCLUDE_DIR "${OPENSSL_DIR}/include")
-#set(OPENSSL_LIBRARIES "${OPENSSL_DIR}/lib")
-#set(OPENSSL_CRYPTO_LIBRARY ${OPENSSL_LIBRARIES}/libcrypto${CMAKE_STATIC_LIBRARY_SUFFIX})
-#set(OPENSSL_SSL_LIBRARY ${OPENSSL_LIBRARIES}/libssl${CMAKE_STATIC_LIBRARY_SUFFIX})
+set(OPENSSL_DIR "${_THIRDPARTY_BUILD_DIR}/openssl/build/${CMAKE_SYSTEM_NAME}${ABI_SUBFOLDER_NAME}")
+set(OPENSSL_USE_STATIC_LIBS ON)
+set(OPENSSL_MSVC_STATIC_RT ON)
+set(OPENSSL_ROOT_DIR "${OPENSSL_DIR}")
+set(OPENSSL_INCLUDE_DIR "${OPENSSL_DIR}/include")
+set(OPENSSL_LIBRARIES "${OPENSSL_DIR}/lib")
+set(OPENSSL_CRYPTO_LIBRARY ${OPENSSL_LIBRARIES}/libcrypto${CMAKE_STATIC_LIBRARY_SUFFIX})
+set(OPENSSL_SSL_LIBRARY ${OPENSSL_LIBRARIES}/libssl${CMAKE_STATIC_LIBRARY_SUFFIX})
 
-#find_package(OpenSSL REQUIRED)
-#include_directories(${OPENSSL_INCLUDE_DIR})
+find_package(OpenSSL REQUIRED)
+include_directories(${OPENSSL_INCLUDE_DIR})
 
 # --------------------------------------------------------
 # Set config of rocksdb
@@ -274,11 +273,12 @@ include_directories(${vulkan-headers_INCLUDE_DIR})
 
 # --------------------------------------------------------
 # Set config of Vulkan-Loader
-set(vulkan-loaderINCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/Vulkan-Loader/include")
-set(vulkan-loader_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/Vulkan-Loader/lib")
-set(vulkan-loader_DIR "${_THIRDPARTY_BUILD_DIR}/Vulkan-Loader/lib/cmake/vulkan")
-find_package(vulkan-loader CONFIG REQUIRED)
-include_directories(${vulkan-loader_INCLUDE_DIR})
+# TODO: do we really need this? maybe for testing?
+#set(vulkan-loaderINCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/Vulkan-Loader/include")
+#set(vulkan-loader_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/Vulkan-Loader/lib")
+#set(vulkan-loader_DIR "${_THIRDPARTY_BUILD_DIR}/Vulkan-Loader/lib/cmake/vulkan")
+#find_package(vulkan-loader CONFIG REQUIRED)
+#include_directories(${vulkan-loader_INCLUDE_DIR})
 
 
 # --------------------------------------------------------

@@ -14,8 +14,8 @@ add_executable(kompute_dapp_processor
     infura_ipfs.hpp
     infura_ipfs.cpp
     kompute_dapp_processor.cpp
-    processing_subtask_result_storage_impl.cpp
-    processing_subtask_result_storage_impl.hpp
+    ../processing_dapp/processing_subtask_result_storage.cpp
+    ../processing_dapp/processing_subtask_result_storage_impl.hpp
     )
 
 
