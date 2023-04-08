@@ -9,6 +9,8 @@
 #include "testutil/literals.hpp"
 #include "testutil/outcome.hpp"
 
+#include <boost/optional/optional_io.hpp>
+
 using namespace sgns;
 using namespace base;
 using namespace storage;

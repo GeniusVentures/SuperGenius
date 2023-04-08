@@ -6,6 +6,7 @@
 #include "runtime/core.hpp"
 
 #include <gmock/gmock.h>
+#include <boost/optional/optional_io.hpp>
 
 namespace sgns::runtime {
   class CoreMock : public Core {
