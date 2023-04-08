@@ -66,7 +66,9 @@ set(OPENSSL_LIBRARIES "${OPENSSL_DIR}/lib")
 set(OPENSSL_CRYPTO_LIBRARY ${OPENSSL_LIBRARIES}/libcrypto${CMAKE_STATIC_LIBRARY_SUFFIX})
 set(OPENSSL_SSL_LIBRARY ${OPENSSL_LIBRARIES}/libssl${CMAKE_STATIC_LIBRARY_SUFFIX})
 
-find_package(OpenSSL REQUIRED)
+# libp2p 0.1.2 loading failed when openssl is loaded here
+# TODO: Figure out how to fix it
+#find_package(OpenSSL REQUIRED)
 include_directories(${OPENSSL_INCLUDE_DIR})
 
 # --------------------------------------------------------
@@ -94,7 +96,6 @@ set(spdlog_DIR "${_THIRDPARTY_BUILD_DIR}/spdlog/lib/cmake/spdlog")
 set(spdlog_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/spdlog/include")
 find_package(spdlog CONFIG REQUIRED)
 include_directories(${spdlog_INCLUDE_DIR})
-add_compile_definitions("SPDLOG_FMT_EXTERNAL")
 
 # --------------------------------------------------------
 # Set config of soralog
@@ -107,9 +108,9 @@ include_directories(${soralog_INCLUDE_DIR})
 # Set config of cares
 set(c-ares_DIR "${_THIRDPARTY_BUILD_DIR}/cares/lib/cmake/c-ares")
 set(c-ares_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/cares/include")
-# libp2p 0.1.2 loading failed when openssl is loaded here
+# libp2p 0.1.2 loading failed when c-ares is loaded here
 #find_package(c-ares CONFIG REQUIRED)
-#include_directories(${c-ares_INCLUDE_DIR})
+include_directories(${c-ares_INCLUDE_DIR})
 
 # --------------------------------------------------------
 # Set config of yaml-cpp
@@ -273,12 +274,13 @@ include_directories(${vulkan-headers_INCLUDE_DIR})
 
 # --------------------------------------------------------
 # Set config of Vulkan-Loader
-# TODO: do we really need this? maybe for testing?
-#set(vulkan-loaderINCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/Vulkan-Loader/include")
-#set(vulkan-loader_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/Vulkan-Loader/lib")
-#set(vulkan-loader_DIR "${_THIRDPARTY_BUILD_DIR}/Vulkan-Loader/lib/cmake/vulkan")
-#find_package(vulkan-loader CONFIG REQUIRED)
-#include_directories(${vulkan-loader_INCLUDE_DIR})
+# At least on Windows vulkan is a system DLL which needs to be loaded into a process.
+# TODO: Check if it is not required on other system and add a conditional build.
+set(vulkan-loaderINCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/Vulkan-Loader/include")
+set(vulkan-loader_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/Vulkan-Loader/lib")
+set(vulkan-loader_DIR "${_THIRDPARTY_BUILD_DIR}/Vulkan-Loader/lib/cmake/vulkan")
+find_package(vulkan-loader CONFIG REQUIRED)
+include_directories(${vulkan-loader_INCLUDE_DIR})
 
 
 # --------------------------------------------------------
