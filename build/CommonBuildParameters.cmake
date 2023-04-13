@@ -18,7 +18,8 @@ include_directories(${GTest_INCLUDE_DIR})
 # --------------------------------------------------------
 # Set config of protobuf project
 set(Protobuf_DIR "${_THIRDPARTY_BUILD_DIR}/grpc/lib/cmake/protobuf")
-set(Protobuf_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/grpc/include/google/protobuf")
+set(grpc_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/grpc/include")
+set(Protobuf_INCLUDE_DIR "${grpc_INCLUDE_DIR}/google/protobuf")
 if (${CMAKE_SYSTEM_NAME} STREQUAL "iOS")
     set(Protobuf_DIR  "${iOS_Protobuf_DIR}")
     set(Protobuf_INCLUDE_DIR "${iOS_Protobuf_INCLUDE_DIR}")
@@ -32,6 +33,7 @@ endif()
 
 find_package(Protobuf CONFIG REQUIRED )
 include_directories(${Protobuf_INCLUDE_DIR})
+include_directories(${grpc_INCLUDE_DIR})
 
 if (NOT DEFINED PROTOC_EXECUTABLE)
     set(PROTOC_EXECUTABLE "${_THIRDPARTY_BUILD_DIR}/grpc/bin/protoc${CMAKE_EXECUTABLE_SUFFIX}")
@@ -66,8 +68,7 @@ set(OPENSSL_LIBRARIES "${OPENSSL_DIR}/lib")
 set(OPENSSL_CRYPTO_LIBRARY ${OPENSSL_LIBRARIES}/libcrypto${CMAKE_STATIC_LIBRARY_SUFFIX})
 set(OPENSSL_SSL_LIBRARY ${OPENSSL_LIBRARIES}/libssl${CMAKE_STATIC_LIBRARY_SUFFIX})
 
-# libp2p 0.1.2 loading failed when openssl is loaded here
-#find_package(OpenSSL REQUIRED)
+find_package(OpenSSL REQUIRED)
 include_directories(${OPENSSL_INCLUDE_DIR})
 
 # --------------------------------------------------------
