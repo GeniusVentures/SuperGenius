@@ -9,7 +9,7 @@ This is the block-lattice super fast cryptotoken system based on the original na
 # Download thirdparty project
 
     cd ..
-    git clone git@github.com:GeniusVentures/SuperGenius.git--recursive 
+    git clone git@github.com:GeniusVentures/thirdparty.git --recursive 
     cd thirdparty
     git checkout develop
 # [Build thirdparty project](../thirdparty/README.md)
