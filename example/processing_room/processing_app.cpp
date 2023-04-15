@@ -2,6 +2,7 @@
 #include <processing/processing_subtask_enqueuer_impl.hpp>
 
 #include <iostream>
+#include <thread>
 #include <boost/program_options.hpp>
 #include <boost/format.hpp>
 #include <libp2p/multi/multibase_codec/multibase_codec_impl.hpp>

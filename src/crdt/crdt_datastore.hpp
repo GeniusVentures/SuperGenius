@@ -16,6 +16,7 @@
 #include <future>
 #include <chrono>
 #include <queue>
+#include <thread>
 
 namespace sgns::crdt
 {

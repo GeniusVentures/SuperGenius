@@ -10,6 +10,7 @@
 #include "scale/detail/fixed_witdh_integer.hpp"
 #include "scale/detail/tuple.hpp"
 #include "scale/detail/variant.hpp"
+#include <list>
 
 namespace sgns::scale {
   /**
