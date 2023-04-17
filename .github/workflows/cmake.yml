@@ -4,22 +4,28 @@ name: Release Build CI
 # Triggers the workflow on push or pull request events and manually from the Actions tab
 on: [push, pull_request, workflow_dispatch]
 
-jobs:
+jobs:        
   Windows:
     runs-on: windows-2019        
     steps:
+      - name: Get branch name
+        id: branch-name
+        uses: tj-actions/branch-names@v6
+
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      - name: Checkout SuperGenius repository 
+        uses: actions/checkout@v3
         with:
           path: 'SuperGenius'
       
       - name: Check out thirdparty repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: 'GeniusVentures/thirdparty'
           token: ${{ secrets.GITHUB_TOKEN }}
           path: 'thirdparty'
           submodules: 'recursive' 
+          ref: ${{ steps.branch-name.outputs.current_branch }}
           
       - name: Thirdparty Create Build Directory
         run: cmake -E make_directory ${{github.workspace}}/thirdparty/.build          
@@ -46,18 +52,23 @@ jobs:
   Linux:
     runs-on: ubuntu-latest        
     steps:
+      - name: Get branch name
+        id: branch-name
+        uses: tj-actions/branch-names@v6
+    
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           path: 'SuperGenius'    
       
       - name: Check out thirdparty repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: 'GeniusVentures/thirdparty'
           token: ${{ secrets.GITHUB_TOKEN }}
           path: 'thirdparty'
           submodules: 'recursive' 
+          ref: ${{ steps.branch-name.outputs.current_branch }}
           
       - name: Thirdparty Create Build Directory
         run: cmake -E make_directory ${{github.workspace}}/thirdparty/.build          
@@ -90,8 +101,12 @@ jobs:
       CC: clang
       
     steps:
+      - name: Get branch name
+        id: branch-name
+        uses: tj-actions/branch-names@v6
+    
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           path: 'SuperGenius'
           
@@ -104,12 +119,13 @@ jobs:
           rm ndk.zip
           
       - name: Check out thirdparty repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: 'GeniusVentures/thirdparty'
           token: ${{ secrets.GITHUB_TOKEN }}
           path: 'thirdparty'
           submodules: 'recursive' 
+          ref: ${{ steps.branch-name.outputs.current_branch }}
           
       - name: Thirdparty Create Build Directory
         run: cmake -E make_directory ${{github.workspace}}/thirdparty/.build          
@@ -164,8 +180,12 @@ jobs:
   MacOS:
     runs-on: macos-latest        
     steps:
+      - name: Get branch name
+        id: branch-name
+        uses: tj-actions/branch-names@v6
+        
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           path: 'SuperGenius'
       
@@ -176,12 +196,13 @@ jobs:
           sudo rm -Rf /Library/Developer/CommandLineTools/SDKs/*
           
       - name: Check out thirdparty repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: 'GeniusVentures/thirdparty'
           token: ${{ secrets.GITHUB_TOKEN }}
           path: 'thirdparty'
           submodules: 'recursive' 
+          ref: ${{ steps.branch-name.outputs.current_branch }}
           
       - name: Thirdparty Create Build Directory
         run: cmake -E make_directory ${{github.workspace}}/thirdparty/.build          
@@ -208,8 +229,12 @@ jobs:
   iOS:
     runs-on: macos-latest        
     steps:
+      - name: Get branch name
+        id: branch-name
+        uses: tj-actions/branch-names@v6
+        
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           path: 'SuperGenius'    
       
@@ -218,12 +243,13 @@ jobs:
           python-version: '3.5' # Version range or exact version of a Python version to use, using SemVer's version range syntax
           
       - name: Check out thirdparty repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: 'GeniusVentures/thirdparty'
           token: ${{ secrets.GITHUB_TOKEN }}
           path: 'thirdparty'
           submodules: 'recursive' 
+          ref: ${{ steps.branch-name.outputs.current_branch }}
           
       - name: Thirdparty Create Build Directory
         run: cmake -E make_directory ${{github.workspace}}/thirdparty/.build          
