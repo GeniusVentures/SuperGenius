@@ -18,7 +18,8 @@ include_directories(${GTest_INCLUDE_DIR})
 # --------------------------------------------------------
 # Set config of protobuf project
 set(Protobuf_DIR "${_THIRDPARTY_BUILD_DIR}/grpc/lib/cmake/protobuf")
-set(Protobuf_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/grpc/include/google/protobuf")
+set(grpc_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/grpc/include")
+set(Protobuf_INCLUDE_DIR "${grpc_INCLUDE_DIR}/google/protobuf")
 if (${CMAKE_SYSTEM_NAME} STREQUAL "iOS")
     set(Protobuf_DIR  "${iOS_Protobuf_DIR}")
     set(Protobuf_INCLUDE_DIR "${iOS_Protobuf_INCLUDE_DIR}")
@@ -32,6 +33,7 @@ endif()
 
 find_package(Protobuf CONFIG REQUIRED )
 include_directories(${Protobuf_INCLUDE_DIR})
+include_directories(${grpc_INCLUDE_DIR})
 
 if (NOT DEFINED PROTOC_EXECUTABLE)
     set(PROTOC_EXECUTABLE "${_THIRDPARTY_BUILD_DIR}/grpc/bin/protoc${CMAKE_EXECUTABLE_SUFFIX}")
@@ -57,17 +59,15 @@ include(${PROJECT_ROOT}/cmake/functions.cmake)
 
 # --------------------------------------------------------
 # Set config of openssl project
-set(OPENSSL_DIR "${_THIRDPARTY_BUILD_DIR}/openssl/build/${CMAKE_SYSTEM_NAME}${ABI_SUBFOLDER_NAME}")
-set(OPENSSL_USE_STATIC_LIBS ON)
-set(OPENSSL_MSVC_STATIC_RT ON)
-set(OPENSSL_ROOT_DIR "${OPENSSL_DIR}")
-set(OPENSSL_INCLUDE_DIR "${OPENSSL_DIR}/include")
-set(OPENSSL_LIBRARIES "${OPENSSL_DIR}/lib")
-set(OPENSSL_CRYPTO_LIBRARY ${OPENSSL_LIBRARIES}/libcrypto${CMAKE_STATIC_LIBRARY_SUFFIX})
-set(OPENSSL_SSL_LIBRARY ${OPENSSL_LIBRARIES}/libssl${CMAKE_STATIC_LIBRARY_SUFFIX})
-
-# libp2p 0.1.2 loading failed when openssl is loaded here
-#find_package(OpenSSL REQUIRED)
+set(OPENSSL_DIR "${_THIRDPARTY_BUILD_DIR}/openssl/build/${CMAKE_SYSTEM_NAME}${ABI_SUBFOLDER_NAME}" CACHE PATH "Path to OpenSSL install folder")
+set(OPENSSL_USE_STATIC_LIBS ON CACHE BOOL "OpenSSL use static libs")
+set(OPENSSL_MSVC_STATIC_RT ON CACHE BOOL "OpenSSL use static RT")
+set(OPENSSL_ROOT_DIR "${OPENSSL_DIR}" CACHE PATH "Path to OpenSSL install root folder")
+set(OPENSSL_INCLUDE_DIR "${OPENSSL_DIR}/include" CACHE PATH "Path to OpenSSL include folder")
+set(OPENSSL_LIBRARIES "${OPENSSL_DIR}/lib" CACHE PATH "Path to OpenSSL lib folder")
+set(OPENSSL_CRYPTO_LIBRARY ${OPENSSL_LIBRARIES}/libcrypto${CMAKE_STATIC_LIBRARY_SUFFIX} CACHE PATH "Path to OpenSSL crypto lib")
+set(OPENSSL_SSL_LIBRARY ${OPENSSL_LIBRARIES}/libssl${CMAKE_STATIC_LIBRARY_SUFFIX} CACHE PATH "Path to OpenSSL ssl lib")
+find_package(OpenSSL REQUIRED)
 include_directories(${OPENSSL_INCLUDE_DIR})
 
 # --------------------------------------------------------
@@ -103,14 +103,6 @@ set(soralog_DIR "${_THIRDPARTY_BUILD_DIR}/soralog/lib/cmake/soralog")
 set(soralog_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/soralog/include")
 find_package(soralog CONFIG REQUIRED)
 include_directories(${soralog_INCLUDE_DIR})
-
-# --------------------------------------------------------
-# Set config of cares
-set(c-ares_DIR "${_THIRDPARTY_BUILD_DIR}/cares/lib/cmake/c-ares")
-set(c-ares_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/cares/include")
-# libp2p 0.1.2 loading failed when c-ares is loaded here
-#find_package(c-ares CONFIG REQUIRED)
-include_directories(${c-ares_INCLUDE_DIR})
 
 # --------------------------------------------------------
 # Set config of yaml-cpp
@@ -187,12 +179,24 @@ set(sqlite3_LIB_DIR "${sqlite3_ROOT_DIR}/lib")
 set(sqlite3_INCLUDE_DIR "${sqlite3_ROOT_DIR}/include")
 
 # --------------------------------------------------------
+# Set config of cares
+set(c-ares_DIR "${_THIRDPARTY_BUILD_DIR}/cares/lib/cmake/c-ares" CACHE PATH "Path to c-ares install folder")
+set(c-ares_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/cares/include" CACHE PATH "Path to c-ares include folder")
+
+# --------------------------------------------------------
 # Set config of libp2p
 set(libp2p_DIR "${_THIRDPARTY_BUILD_DIR}/libp2p/lib/cmake/libp2p")
 set(libp2p_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/libp2p/lib")
 set(libp2p_INCLUDE_DIR    "${_THIRDPARTY_BUILD_DIR}/libp2p/include")
 find_package(libp2p CONFIG REQUIRED)
 include_directories(${libp2p_INCLUDE_DIR})
+
+# --------------------------------------------------------
+# Find and include cares if libp2p have not included it
+if (NOT TARGET c-ares::cares_static)
+  find_package(c-ares CONFIG REQUIRED)
+endif()
+include_directories(${c-ares_INCLUDE_DIR})
 
 # --------------------------------------------------------
 # Set config of ipfs-lite-cpp
