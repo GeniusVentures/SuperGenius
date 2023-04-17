@@ -1,4 +1,5 @@
 #include "processing_subtask_queue_accessor_impl.hpp"
+#include <thread>
 
 namespace sgns::processing
 {

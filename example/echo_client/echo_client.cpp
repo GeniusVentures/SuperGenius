@@ -1,5 +1,6 @@
 #include <chrono>
 #include <iostream>
+#include <thread>
 #include <boost/asio/io_context.hpp>
 #include <boost/program_options.hpp>
 #include <libp2p/injector/host_injector.hpp>
