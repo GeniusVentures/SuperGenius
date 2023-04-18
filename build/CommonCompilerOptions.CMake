@@ -4,6 +4,11 @@
 get_filename_component(CURRENT_SOURCE_PARENT "${CMAKE_CURRENT_SOURCE_DIR}" DIRECTORY ABSOLUTE)
 get_filename_component(PROJECT_ROOT "${CURRENT_SOURCE_PARENT}" DIRECTORY ABSOLUTE)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
 # Package config ######################################################################################
 set (CPACK_PACKAGE_VERSION_MAJOR "21")
 set (CPACK_PACKAGE_VERSION_MINOR "0")
@@ -23,6 +28,9 @@ include(${PROJECT_ROOT}/cmake/functions.cmake)
 include(${PROJECT_ROOT}/cmake/install.cmake)
 include(${PROJECT_ROOT}/cmake/definition.cmake)
 include(${PROJECT_ROOT}/build/CompilationFlags.cmake)
+
+check_cxx_compiler_flag(-std=c++14 CXX14_SUPPORT)
+check_cxx_compiler_flag(-std=c++17 CXX17_SUPPORT)
 
 if(EXISTS "${PROJECT_ROOT}/cmake/compile_option_by_platform/${CMAKE_SYSTEM_NAME}.cmake")
   print("add compile option: ${PROJECT_ROOT}/cmake/compile_option_by_platform/${CMAKE_SYSTEM_NAME}.cmake")
@@ -68,7 +76,10 @@ endif()
 
 if (NOT EXISTS "${CMAKE_TOOLCHAIN_FILE}")
   # https://cgold.readthedocs.io/en/latest/tutorials/toolchain/globals/cxx-standard.html#summary
+  print("CMAKE_TOOLCHAIN_FILE not found, setting CMAKE_POSITION_INDEPENDENT_CODE ON")
   set(CMAKE_POSITION_INDEPENDENT_CODE TRUE)
+else()
+  print("Using toolchain file: ${CMAKE_TOOLCHAIN_FILE}")
 endif ()
 
 # --------------------------------------------------------

@@ -12,6 +12,7 @@
 #include <boost/asio/deadline_timer.hpp>
 
 #include <functional>
+#include <thread>
 
 using namespace sgns::processing;
 
