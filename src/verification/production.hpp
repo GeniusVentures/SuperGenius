@@ -4,6 +4,8 @@
 #define SUPERGENIUS_PRODUCTION_HPP
 
 #include <boost/optional.hpp>
+#include <boost/optional/optional_io.hpp>
+
 
 #include "verification/production/common.hpp"
 #include "verification/production/types/production_meta.hpp"

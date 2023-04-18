@@ -3,6 +3,7 @@
 #include <memory>
 
 #include <gtest/gtest.h>
+#include <boost/optional/optional_io.hpp>
 #include "storage/trie/supergenius_trie/supergenius_node.hpp"
 #include "storage/trie/serialization/buffer_stream.hpp"
 #include "storage/trie/serialization/supergenius_codec.hpp"

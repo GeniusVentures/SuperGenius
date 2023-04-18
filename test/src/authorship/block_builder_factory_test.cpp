@@ -1,6 +1,6 @@
 
 #include <gtest/gtest.h>
-
+#include <boost/optional/optional_io.hpp>
 #include "authorship/impl/block_builder_factory_impl.hpp"
 #include "mock/src/blockchain/block_header_repository_mock.hpp"
 #include "mock/src/runtime/block_builder_api_mock.hpp"

@@ -7,16 +7,18 @@ if (NOT ${CMAKE_HOST_SYSTEM_NAME} MATCHES "Linux")
 endif()
 
 # --------------------------------------------------------
+# Set toolchain file before the project call
+get_filename_component(_LINUX_FOLDER "${CMAKE_CURRENT_SOURCE_DIR}" DIRECTORY ABSOLUTE)
+get_filename_component(_BUILD_FOLDER "${_LINUX_FOLDER}" DIRECTORY ABSOLUTE)
+set(CMAKE_TOOLCHAIN_FILE "${_BUILD_FOLDER}/cmake/toolchain/cxx17.cmake" CACHE INTERNAL "CMake toolchain file used" FORCE)
+
+# --------------------------------------------------------
 # Project
 project(SuperGenius C CXX)
 
 # --------------------------------------------------------
 # include common compiler options
 include(../CommonCompilerOptions.CMake)
-
-# --------------------------------------------------------
-# Set toolchain file
-set(CMAKE_TOOLCHAIN_FILE "${PROJECT_ROOT}/cmake/toolchain/cxx17.cmake")
 
 # --------------------------------------------------------
 # Set OS threading settings
