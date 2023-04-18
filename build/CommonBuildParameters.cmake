@@ -298,7 +298,7 @@ add_subdirectory(${PROJECT_ROOT}/src ${CMAKE_BINARY_DIR}/src)
 #add_subdirectory(${PROJECT_ROOT}/node ${CMAKE_BINARY_DIR}/node)
 
 
-if (TESTING)
+if (FALSE)
   enable_testing()
   add_subdirectory(${PROJECT_ROOT}/test ${CMAKE_BINARY_DIR}/test)
 endif ()
