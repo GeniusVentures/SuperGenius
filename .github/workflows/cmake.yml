@@ -25,7 +25,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           path: 'thirdparty'
           submodules: 'recursive' 
-          ref: ${{ steps.branch-name.outputs.current_branch }}
+          ref: develop
           
       - name: Thirdparty Create Build Directory
         run: cmake -E make_directory ${{github.workspace}}/thirdparty/.build          
@@ -68,7 +68,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           path: 'thirdparty'
           submodules: 'recursive' 
-          ref: ${{ steps.branch-name.outputs.current_branch }}
+          ref: develop
           
       - name: Thirdparty Create Build Directory
         run: cmake -E make_directory ${{github.workspace}}/thirdparty/.build          
@@ -125,7 +125,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           path: 'thirdparty'
           submodules: 'recursive' 
-          ref: ${{ steps.branch-name.outputs.current_branch }}
+          ref: develop
           
       - name: Thirdparty Create Build Directory
         run: cmake -E make_directory ${{github.workspace}}/thirdparty/.build          
@@ -202,7 +202,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           path: 'thirdparty'
           submodules: 'recursive' 
-          ref: ${{ steps.branch-name.outputs.current_branch }}
+          ref: develop
           
       - name: Thirdparty Create Build Directory
         run: cmake -E make_directory ${{github.workspace}}/thirdparty/.build          
@@ -249,7 +249,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           path: 'thirdparty'
           submodules: 'recursive' 
-          ref: ${{ steps.branch-name.outputs.current_branch }}
+          ref: develop
           
       - name: Thirdparty Create Build Directory
         run: cmake -E make_directory ${{github.workspace}}/thirdparty/.build          
