@@ -11,6 +11,7 @@
 
 #include <iostream>
 #include <boost/functional/hash.hpp>
+#include <thread>
 
 using namespace sgns::processing;
 

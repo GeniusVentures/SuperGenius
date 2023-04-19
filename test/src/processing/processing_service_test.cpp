@@ -6,6 +6,7 @@
 #include <libp2p/log/logger.hpp>
 
 #include <gtest/gtest.h>
+#include <thread>
 
 using namespace sgns::processing;
 
