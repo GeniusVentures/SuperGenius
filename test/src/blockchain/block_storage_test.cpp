@@ -22,18 +22,7 @@ using sgns::scale::encode;
 using sgns::storage::face::GenericStorageMock;
 using testing::_;
 using testing::Return;
-std::ostream &operator<<(std::ostream &s,
-                        const outcome::result<sgns::base::Buffer> &test_struct) {
-  return s;
-}
-std::ostream &operator<<(std::ostream &s,
-                        const outcome::result<void> &test_struct) {
-  return s;
-}
-std::ostream &operator<<(std::ostream &s,
-                        const sgns::blockchain::KeyValueBlockStorage::Error &test_struct) {
-  return s;
-}
+
 class BlockStorageTest : public testing::Test {
  public:
   void SetUp() override {

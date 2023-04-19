@@ -48,11 +48,7 @@ class TrieBatchTest : public test::BaseRocksDB_Test {
   static const Buffer kNodePrefix;
  
 };
-std::ostream &operator<<(std::ostream &out, const  boost::outcome_v2::basic_result<void,class std::error_code,struct boost::outcome_v2::policy::error_code_throw_as_system_error<void,class std::error_code,void>> &test_struct)
-  {
-    return out ;
-  }
-  
+
 const Buffer TrieBatchTest::kNodePrefix{1};
 
 const std::vector<std::pair<Buffer, Buffer>> TrieBatchTest::data = {

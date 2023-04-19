@@ -33,22 +33,7 @@ namespace scale = sgns::scale;
 using testing::_;
 using testing::AnyOf;
 using testing::Return;
-  std::ostream &operator<<(std::ostream &s,
-                           const outcome::result<sgns::primitives::BlockHeader> &data) {
-    return s;
-  }
-  std::ostream &operator<<(std::ostream &s,
-                           const outcome::result<sgns::base::Blob<32>> &data) {
-    return s;
-  }
-  std::ostream &operator<<(std::ostream &s,
-                           const outcome::result<sgns::blockchain::BlockStatus> &data) {
-    return s;
-  }
-  std::ostream &operator<<(std::ostream &s,
-                           const outcome::result<uint64_t> &data) {
-    return s;
-  }
+
 /**
  * @given storage batch with pending changes
  * @when initialize a changes trie with the changes

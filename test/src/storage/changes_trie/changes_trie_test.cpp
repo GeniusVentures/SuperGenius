@@ -15,14 +15,6 @@ using sgns::storage::trie::SuperGeniusTrieFactoryImpl;
 using sgns::storage::trie::TrieStorageMock;
 using testing::_;
 using testing::Return;
-  std::ostream &operator<<(std::ostream &s,
-                           const outcome::result<std::unique_ptr<sgns::storage::trie::EphemeralTrieBatch>> &data) {
-    return s;
-  }
-  std::ostream &operator<<(std::ostream &s,
-                           const outcome::result<std::unique_ptr<sgns::storage::trie::PersistentTrieBatch>> &data) {
-    return s;
-  }
 
 /**
  * @given a changes trie with congifuration identical to a one in a substrate

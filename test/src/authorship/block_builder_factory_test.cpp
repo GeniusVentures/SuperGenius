@@ -19,54 +19,6 @@ using sgns::primitives::PreRuntime;
 using sgns::runtime::BlockBuilderApiMock;
 using sgns::runtime::CoreMock;
 
-  std::ostream &operator<<(std::ostream &s,
-                           const outcome::result<void> &test_struct) {
-    return s;
-  }
-  std::ostream &operator<<(std::ostream &s,
-                           const outcome::result<sgns::primitives::CheckInherentsResult> &test_struct) {
-    return s;
-  }
-  std::ostream &operator<<(std::ostream &s,
-                           const outcome::result<boost::variant<sgns::primitives::ApplyOutcome, sgns::primitives::ApplyError>> &test_struct) {
-    return s;
-  }
-  std::ostream &operator<<(std::ostream &s,
-                           const outcome::result<sgns::primitives::BlockId> &test_struct) {
-    return s;
-  }
-  std::ostream &operator<<(std::ostream &s,
-                           const outcome::result<sgns::primitives::BlockNumber> &test_struct) {
-    return s;
-  }
-  std::ostream &operator<<(std::ostream &s,
-                           const outcome::result<sgns::base::Hash256> &test_struct) {
-    return s;
-  }
-  std::ostream &operator<<(std::ostream &s,
-                           const outcome::result<sgns::blockchain::BlockStatus> &test_struct) {
-    return s;
-  }
-  std::ostream &operator<<(std::ostream &s,
-                           const outcome::result<sgns::primitives::Version> &test_struct) {
-    return s;
-  }
-  std::ostream &operator<<(std::ostream &s,
-                           const outcome::result<std::vector<sgns::primitives::AuthorityId>> &test_struct) {
-    return s;
-  }
-  std::ostream &operator<<(std::ostream &s,
-                           const outcome::result<std::vector<sgns::primitives::Extrinsic>> &test_struct) {
-    return s;
-  }
-  std::ostream &operator<<(std::ostream &s,
-                           const outcome::result<sgns::primitives::BlockHeader> &test_struct) {
-    return s;
-  }
-  std::ostream &operator<<(std::ostream &s,
-                           const boost::optional<sgns::base::Blob<32>> &test_struct) {
-    return s;
-  }
 class BlockBuilderFactoryTest : public ::testing::Test {
  public:
   void SetUp() override {
