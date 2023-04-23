@@ -4,4 +4,4 @@
 	url = ../gRPCForSuperGenius.git
 [submodule "zkPOC"]
 	path = zkPOC
-	url = git@github.com:GeniusVentures/zkPOC.git
+	url = ../zkPOC.git
