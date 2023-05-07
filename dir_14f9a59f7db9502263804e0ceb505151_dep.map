@@ -1,0 +1,18 @@
+<map id="src/verification/authority/impl" name="src/verification/authority/impl">
+<area shape="rect" id="node1" href="dir_14f9a59f7db9502263804e0ceb505151.html" title="impl" alt="" coords="281,52,328,77"/>
+<area shape="rect" id="node2" href="dir_028cfb450258cb26cf2de4f75f6778d5.html" title="blockchain" alt="" coords="5,125,89,151"/>
+<area shape="rect" id="edge1-headlabel" href="dir_000047_000010.html" title="1" alt="" coords="105,121,113,136"/>
+<area shape="rect" id="node3" href="dir_0af1587c8378955de40f48b4bd1869f0.html" title="base" alt="" coords="114,125,165,151"/>
+<area shape="rect" id="edge2-headlabel" href="dir_000047_000006.html" title="1" alt="" coords="181,119,189,134"/>
+<area shape="rect" id="node4" href="dir_1821253fa6cbfd615ad68c85af377eb7.html" title="finality" alt="" coords="189,125,247,151"/>
+<area shape="rect" id="edge3-headlabel" href="dir_000047_000024.html" title="1" alt="" coords="248,113,256,127"/>
+<area shape="rect" id="node5" href="dir_452baf35e1d7639c9f2a5ece4ec85855.html" title="storage" alt="" coords="272,125,337,151"/>
+<area shape="rect" id="edge4-headlabel" href="dir_000047_000080.html" title="1" alt="" coords="309,99,317,114"/>
+<area shape="rect" id="node6" href="dir_844f6ab5c2ae79211596f3dcdd81adb7.html" title="application" alt="" coords="361,125,445,151"/>
+<area shape="rect" id="edge5-headlabel" href="dir_000047_000002.html" title="1" alt="" coords="373,100,381,115"/>
+<area shape="rect" id="node7" href="dir_bbf56bce9985720f86fc476f3812db24.html" title="primitives" alt="" coords="469,125,548,151"/>
+<area shape="rect" id="edge6-headlabel" href="dir_000047_000061.html" title="2" alt="" coords="456,103,464,118"/>
+<area shape="rect" id="node8" href="dir_e3ad572831d545eb552494b95f9c029d.html" title="scale" alt="" coords="573,125,626,151"/>
+<area shape="rect" id="edge7-headlabel" href="dir_000047_000072.html" title="1" alt="" coords="553,108,561,123"/>
+<area shape="rect" id="clust1" href="dir_56f8bb20013cd868aedfcd850a309f20.html" title="authority" alt="" coords="270,16,341,88"/>
+</map>

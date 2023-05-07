@@ -1,0 +1,11 @@
+<map id="sgns::api::chain::ChainJrpcProcessor" name="sgns::api::chain::ChainJrpcProcessor">
+<area shape="rect" id="node1" title="extrinsic submission service implementation" alt="" coords="207,416,386,500"/>
+<area shape="rect" id="node2" href="$classsgns_1_1api_1_1_j_rpc_processor.html" title=" " alt="" coords="5,284,177,353"/>
+<area shape="rect" id="node3" title=" " alt="" coords="13,145,149,185"/>
+<area shape="rect" id="node4" title=" " alt="" coords="412,284,563,353"/>
+<area shape="rect" id="node5" href="$classsgns_1_1api_1_1_chain_api.html" title=" " alt="" coords="585,108,720,221"/>
+<area shape="rect" id="node6" title=" " alt="" coords="383,137,525,192"/>
+<area shape="rect" id="node8" title=" " alt="" coords="221,284,372,353"/>
+<area shape="rect" id="node7" title=" " alt="" coords="435,5,473,45"/>
+<area shape="rect" id="node9" href="$classsgns_1_1api_1_1_j_rpc_server.html" title=" " alt="" coords="173,115,324,214"/>
+</map>

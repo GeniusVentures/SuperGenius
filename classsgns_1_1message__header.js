@@ -1,0 +1,28 @@
+var classsgns_1_1message__header =
+[
+    [ "message_header", "classsgns_1_1message__header.html#a4f2d13af594b47d620459385416cce8f", null ],
+    [ "message_header", "classsgns_1_1message__header.html#ac534a318c46c5f8b64aa406c8a9d930f", null ],
+    [ "block_type", "classsgns_1_1message__header.html#ac4be374cdb9c95faea2e07c9ed1ecef5", null ],
+    [ "block_type_set", "classsgns_1_1message__header.html#af1ea4ea792f30f94cd4ad002a418ff14", null ],
+    [ "bulk_pull_is_count_present", "classsgns_1_1message__header.html#a6c34d28ecf2f38d6d49527f1f37604e6", null ],
+    [ "count_get", "classsgns_1_1message__header.html#afded0ad1865d7874a979ee84c22d1d5c", null ],
+    [ "count_set", "classsgns_1_1message__header.html#a3506f3eb58be2cdd9f2d23f1811ee34d", null ],
+    [ "deserialize", "classsgns_1_1message__header.html#a40d17343545852230be9e972ed46d07b", null ],
+    [ "flag_set", "classsgns_1_1message__header.html#a2a362b5874a3462a760c13c479b4cbcd", null ],
+    [ "node_id_handshake_is_query", "classsgns_1_1message__header.html#af5e7725dc89db07b33c7cdd460d42f51", null ],
+    [ "node_id_handshake_is_response", "classsgns_1_1message__header.html#af15cf92b7e507c38d2056dd40c0f4866", null ],
+    [ "payload_length_bytes", "classsgns_1_1message__header.html#a9a9400f824e7c33dc4c64420e2a11f9b", null ],
+    [ "serialize", "classsgns_1_1message__header.html#af5d423a1fea7876108227d5ab27cfc07", null ],
+    [ "version_min", "classsgns_1_1message__header.html#af01db98ce4fbc93007bdb7958df6657d", null ],
+    [ "block_type_mask", "classsgns_1_1message__header.html#a58431229668faec1268c82f060653f66", null ],
+    [ "bulk_pull_count_present_flag", "classsgns_1_1message__header.html#a92df48ba54180dfee900415ad23f42bd", null ],
+    [ "count_mask", "classsgns_1_1message__header.html#aea4ac4ba6529950348a7ca543f70c1ef", null ],
+    [ "extensions", "classsgns_1_1message__header.html#a81c8696bd6f74bf798254c67c0999c0b", null ],
+    [ "node_id_handshake_query_flag", "classsgns_1_1message__header.html#a2f769cdeb68ad171bbaa43452f96b0c8", null ],
+    [ "node_id_handshake_response_flag", "classsgns_1_1message__header.html#ad3b7ed763aafb56a10d066238d5c5a97", null ],
+    [ "size", "classsgns_1_1message__header.html#a5aff9128173e1552edcf9c09bc9822ff", null ],
+    [ "type", "classsgns_1_1message__header.html#aa581547fa2e7f31f8583cb2c5a59d366", null ],
+    [ "version_max", "classsgns_1_1message__header.html#a624f79b0e770eb98156142f44bb5507c", null ],
+    [ "version_min_m", "classsgns_1_1message__header.html#a4032abaf1303ab6233f56717d7a8ba9c", null ],
+    [ "version_using", "classsgns_1_1message__header.html#a93ea441112c1df48de6d9d272087d6c1", null ]
+];

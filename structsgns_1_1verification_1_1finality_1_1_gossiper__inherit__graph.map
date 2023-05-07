@@ -1,0 +1,5 @@
+<map id="sgns::verification::finality::Gossiper" name="sgns::verification::finality::Gossiper">
+<area shape="rect" id="node1" title="Gossip messages to the network via this class." alt="" coords="55,5,178,104"/>
+<area shape="rect" id="node2" href="$structsgns_1_1network_1_1_gossiper.html" title=" " alt="" coords="35,152,199,221"/>
+<area shape="rect" id="node3" href="$classsgns_1_1network_1_1_gossiper_broadcast.html" title=" " alt="" coords="5,269,228,500"/>
+</map>

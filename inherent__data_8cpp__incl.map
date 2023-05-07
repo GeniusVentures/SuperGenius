@@ -1,0 +1,44 @@
+<map id="src/primitives/inherent_data.cpp" name="src/primitives/inherent_data.cpp">
+<area shape="rect" id="node1" title=" " alt="" coords="869,5,1020,45"/>
+<area shape="rect" id="node2" href="$inherent__data_8hpp.html" title=" " alt="" coords="881,93,1009,133"/>
+<area shape="rect" id="node3" title=" " alt="" coords="5,181,52,207"/>
+<area shape="rect" id="node4" title=" " alt="" coords="681,599,739,625"/>
+<area shape="rect" id="node5" title=" " alt="" coords="553,181,731,207"/>
+<area shape="rect" id="node6" title=" " alt="" coords="1949,350,2076,375"/>
+<area shape="rect" id="node7" href="$outcome_8hpp.html" title=" " alt="" coords="1124,599,1275,625"/>
+<area shape="rect" id="node9" href="$blob_8hpp.html" title=" " alt="" coords="807,181,909,207"/>
+<area shape="rect" id="node16" href="$buffer_8hpp.html" title=" " alt="" coords="311,262,421,287"/>
+<area shape="rect" id="node19" href="$outcome__throw_8hpp.html" title=" " alt="" coords="1879,431,2045,456"/>
+<area shape="rect" id="node22" href="$scale_8hpp.html" title=" " alt="" coords="1506,181,1618,207"/>
+<area shape="rect" id="node30" href="$scale__error_8hpp.html" title=" " alt="" coords="1085,431,1231,456"/>
+<area shape="rect" id="node8" title=" " alt="" coords="1105,680,1293,705"/>
+<area shape="rect" id="node10" title=" " alt="" coords="823,431,874,456"/>
+<area shape="rect" id="node11" title=" " alt="" coords="446,262,617,287"/>
+<area shape="rect" id="node12" href="$hexutil_8hpp.html" title=" " alt="" coords="641,262,755,287"/>
+<area shape="rect" id="node15" title=" " alt="" coords="779,262,851,287"/>
+<area shape="rect" id="node13" title=" " alt="" coords="559,350,647,375"/>
+<area shape="rect" id="node14" title=" " alt="" coords="1028,350,1099,375"/>
+<area shape="rect" id="node17" title=" " alt="" coords="127,343,274,383"/>
+<area shape="rect" id="node18" title=" " alt="" coords="298,350,434,375"/>
+<area shape="rect" id="node20" title=" " alt="" coords="1854,504,2001,544"/>
+<area shape="rect" id="node21" title=" " alt="" coords="2025,511,2201,537"/>
+<area shape="rect" id="node23" href="$scale__decoder__stream_8hpp.html" title=" " alt="" coords="1407,255,1549,295"/>
+<area shape="rect" id="node41" href="$scale__encoder__stream_8hpp.html" title=" " alt="" coords="1634,255,1775,295"/>
+<area shape="rect" id="node24" title=" " alt="" coords="889,592,1027,632"/>
+<area shape="rect" id="node25" href="$fixed__witdh__integer_8hpp.html" title=" " alt="" coords="1253,343,1383,383"/>
+<area shape="rect" id="node32" href="$tuple_8hpp.html" title=" " alt="" coords="1637,350,1781,375"/>
+<area shape="rect" id="node34" href="$variant_8hpp.html" title=" " alt="" coords="1458,350,1613,375"/>
+<area shape="rect" id="node40" title=" " alt="" coords="1805,350,1844,375"/>
+<area shape="rect" id="node26" title=" " alt="" coords="1642,431,1717,456"/>
+<area shape="rect" id="node27" title=" " alt="" coords="999,431,1061,456"/>
+<area shape="rect" id="node28" title=" " alt="" coords="1255,431,1437,456"/>
+<area shape="rect" id="node29" href="$unreachable_8hpp.html" title=" " alt="" coords="1461,431,1617,456"/>
+<area shape="rect" id="node31" href="$scale_2types_8hpp.html" title=" " alt="" coords="949,511,1061,537"/>
+<area shape="rect" id="node33" title=" " alt="" coords="2266,431,2317,456"/>
+<area shape="rect" id="node35" title=" " alt="" coords="2069,431,2191,456"/>
+<area shape="rect" id="node36" href="$visitor_8hpp.html" title=" " alt="" coords="1741,431,1855,456"/>
+<area shape="rect" id="node37" title=" " alt="" coords="1747,511,1830,537"/>
+<area shape="rect" id="node38" title=" " alt="" coords="1516,511,1568,537"/>
+<area shape="rect" id="node39" title=" " alt="" coords="1593,504,1723,544"/>
+<area shape="rect" id="node42" title=" " alt="" coords="1868,350,1925,375"/>
+</map>

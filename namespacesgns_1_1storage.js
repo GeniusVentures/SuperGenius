@@ -1,0 +1,36 @@
+var namespacesgns_1_1storage =
+[
+    [ "changes_trie", "namespacesgns_1_1storage_1_1changes__trie.html", "namespacesgns_1_1storage_1_1changes__trie" ],
+    [ "face", "namespacesgns_1_1storage_1_1face.html", "namespacesgns_1_1storage_1_1face" ],
+    [ "trie", "namespacesgns_1_1storage_1_1trie.html", "namespacesgns_1_1storage_1_1trie" ],
+    [ "InMemoryBatch", "classsgns_1_1storage_1_1_in_memory_batch.html", "classsgns_1_1storage_1_1_in_memory_batch" ],
+    [ "InMemoryStorage", "classsgns_1_1storage_1_1_in_memory_storage.html", "classsgns_1_1storage_1_1_in_memory_storage" ],
+    [ "rocksdb", "classsgns_1_1storage_1_1rocksdb.html", "classsgns_1_1storage_1_1rocksdb" ],
+    [ "BatchWriteBufferMap", "namespacesgns_1_1storage.html#a49f7eaa7fa0f3bd81b60cedd816366c6", null ],
+    [ "BlockBasedTableOptions", "namespacesgns_1_1storage.html#a717d74c19c27594cd6c265d311782f31", null ],
+    [ "Buffer", "namespacesgns_1_1storage.html#a5dd4e993d537aa6f1889543e455028aa", null ],
+    [ "BufferBatch", "namespacesgns_1_1storage.html#a92d61db43fb1f3688e67b79418993565", null ],
+    [ "BufferMap", "namespacesgns_1_1storage.html#aa57d929ee9744027af45bccc17060dce", null ],
+    [ "BufferMapCursor", "namespacesgns_1_1storage.html#a157ea98a856ba8e516a8079d4aa02594", null ],
+    [ "BufferStorage", "namespacesgns_1_1storage.html#a63d8be8d1a3b7755b9ac5240c6c172d0", null ],
+    [ "ReadOnlyBufferMap", "namespacesgns_1_1storage.html#aad8d600d416aeb3458d5563e81fee36e", null ],
+    [ "DatabaseError", "namespacesgns_1_1storage.html#ad1ca7f2b8a54e311dc6a22d7e2c72131", [
+      [ "OK", "namespacesgns_1_1storage.html#ad1ca7f2b8a54e311dc6a22d7e2c72131ae0aa021e21dddbd6d8cecec71e9cf564", null ],
+      [ "NOT_FOUND", "namespacesgns_1_1storage.html#ad1ca7f2b8a54e311dc6a22d7e2c72131a8c02547a8a3b02382bac3557bcb2280d", null ],
+      [ "CORRUPTION", "namespacesgns_1_1storage.html#ad1ca7f2b8a54e311dc6a22d7e2c72131ab0660e678637dd6e26c0f99dccb171e7", null ],
+      [ "NOT_SUPPORTED", "namespacesgns_1_1storage.html#ad1ca7f2b8a54e311dc6a22d7e2c72131a5343bcd21aad65124478a61831f6949e", null ],
+      [ "INVALID_ARGUMENT", "namespacesgns_1_1storage.html#ad1ca7f2b8a54e311dc6a22d7e2c72131af295a0c3e37c94f078e1c5476479132d", null ],
+      [ "IO_ERROR", "namespacesgns_1_1storage.html#ad1ca7f2b8a54e311dc6a22d7e2c72131a198489bd72edc2407c15917c5323cd93", null ],
+      [ "UNKNOWN", "namespacesgns_1_1storage.html#ad1ca7f2b8a54e311dc6a22d7e2c72131a696b031073e74bf2cb98e5ef201d4aa3", null ]
+    ] ],
+    [ "error_as_result", "namespacesgns_1_1storage.html#adb3c69ab61f897c1f78049608e047f84", null ],
+    [ "error_as_result", "namespacesgns_1_1storage.html#affc5602333e529a0fe799fa1fed36335", null ],
+    [ "make_buffer", "namespacesgns_1_1storage.html#a2c08f2bb7966fe114c222eb1d38979b0", null ],
+    [ "make_slice", "namespacesgns_1_1storage.html#aa6fcc1a5312204766c0bbd691f1124ee", null ],
+    [ "make_span", "namespacesgns_1_1storage.html#a56df5a22e09697b14f4c597b13a90693", null ],
+    [ "operator<<", "namespacesgns_1_1storage.html#a426c85954a12289d96f3beb98ec5643e", null ],
+    [ "kAuthoritySetKey", "namespacesgns_1_1storage.html#a1c19a65ea53640acaaead533e0892622", null ],
+    [ "kGenesisBlockHashLookupKey", "namespacesgns_1_1storage.html#aafcdee38ab8cb32292d8c183e2987818", null ],
+    [ "kLastFinalizedBlockHashLookupKey", "namespacesgns_1_1storage.html#aa068e6a9c1d684fe73fd1f28f91d40e7", null ],
+    [ "kSetStateKey", "namespacesgns_1_1storage.html#a28fc00befd506a1a4964d40f98c3bd20", null ]
+];

@@ -1,0 +1,6 @@
+<map id="sgns::storage::face::MapCursor&lt; K, V &gt;" name="sgns::storage::face::MapCursor&lt; K, V &gt;">
+<area shape="rect" id="node1" title="An abstraction over generic map cursor." alt="" coords="39,5,177,192"/>
+<area shape="rect" id="node2" href="$classsgns_1_1storage_1_1rocksdb_1_1_cursor.html" title="Instance of cursor can be used as bidirectional iterator over key&#45;value bindings of the Map." alt="" coords="5,269,168,485"/>
+<area shape="rect" id="node3" href="$structsgns_1_1storage_1_1face_1_1_map_cursor.html" title=" " alt="" coords="193,277,367,478"/>
+<area shape="rect" id="node4" href="$classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor.html" title=" " alt="" coords="189,535,371,941"/>
+</map>

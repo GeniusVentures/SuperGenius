@@ -1,0 +1,5 @@
+<map id="sgns::primitives::DelayInChain" name="sgns::primitives::DelayInChain">
+<area shape="rect" id="node1" title=" " alt="" coords="97,5,262,119"/>
+<area shape="rect" id="node2" href="$structsgns_1_1primitives_1_1_pause.html" title=" " alt="" coords="5,167,164,236"/>
+<area shape="rect" id="node3" href="$structsgns_1_1primitives_1_1_resume.html" title=" " alt="" coords="189,167,359,236"/>
+</map>

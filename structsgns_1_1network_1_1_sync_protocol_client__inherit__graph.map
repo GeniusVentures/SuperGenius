@@ -1,0 +1,5 @@
+<map id="sgns::network::SyncProtocolClient" name="sgns::network::SyncProtocolClient">
+<area shape="rect" id="node1" title=" " alt="" coords="121,5,310,89"/>
+<area shape="rect" id="node2" href="$classsgns_1_1network_1_1_dummy_sync_protocol_client.html" title=" " alt="" coords="5,152,204,251"/>
+<area shape="rect" id="node3" href="$classsgns_1_1network_1_1_remote_sync_protocol_client.html" title=" " alt="" coords="228,137,427,265"/>
+</map>

@@ -1,0 +1,26 @@
+<map id="src/blockchain/impl/common.hpp" name="src/blockchain/impl/common.hpp">
+<area shape="rect" id="node1" title=" " alt="" coords="472,5,607,45"/>
+<area shape="rect" id="node2" href="$block__tree__impl_8cpp.html" title=" " alt="" coords="79,203,221,243"/>
+<area shape="rect" id="node3" href="$block__tree__impl_8hpp.html" title=" " alt="" coords="187,101,329,141"/>
+<area shape="rect" id="node19" href="$key__value__block__header__repository_8hpp.html" title=" " alt="" coords="353,93,521,148"/>
+<area shape="rect" id="node21" href="$key__value__block__storage_8hpp.html" title=" " alt="" coords="545,101,741,141"/>
+<area shape="rect" id="node23" href="$storage__util_8cpp.html" title=" " alt="" coords="765,101,900,141"/>
+<area shape="rect" id="node24" href="$types_8cpp.html" title=" " alt="" coords="924,101,1059,141"/>
+<area shape="rect" id="node4" href="$application__injector_8hpp.html" title=" " alt="" coords="245,203,397,243"/>
+<area shape="rect" id="node5" href="$application__injector_8cpp.html" title=" " alt="" coords="77,299,229,339"/>
+<area shape="rect" id="node6" href="$block__producing__node__injector_8hpp.html" title=" " alt="" coords="87,387,280,427"/>
+<area shape="rect" id="node11" href="$syncing__node__injector_8hpp.html" title=" " alt="" coords="707,299,841,339"/>
+<area shape="rect" id="node15" href="$validating__node__injector_8hpp.html" title=" " alt="" coords="304,299,449,339"/>
+<area shape="rect" id="node7" href="$block__producing__node__application_8hpp.html" title=" " alt="" coords="223,475,378,529"/>
+<area shape="rect" id="node10" href="$block__producing__node__injector_8cpp.html" title=" " alt="" coords="5,482,199,522"/>
+<area shape="rect" id="node8" href="$app__delegate_8cpp.html" title=" " alt="" coords="487,592,642,617"/>
+<area shape="rect" id="node9" href="$block__producing__node__application_8cpp.html" title=" " alt="" coords="223,577,378,632"/>
+<area shape="rect" id="node12" href="$syncing__node__application_8hpp.html" title=" " alt="" coords="865,387,1064,427"/>
+<area shape="rect" id="node14" href="$syncing__node__injector_8cpp.html" title=" " alt="" coords="707,387,841,427"/>
+<area shape="rect" id="node13" href="$syncing__node__application_8cpp.html" title=" " alt="" coords="865,482,1064,522"/>
+<area shape="rect" id="node16" href="$validating__node__application_8hpp.html" title=" " alt="" coords="473,387,683,427"/>
+<area shape="rect" id="node18" href="$validating__node__injector_8cpp.html" title=" " alt="" coords="304,387,449,427"/>
+<area shape="rect" id="node17" href="$validating__node__application_8cpp.html" title=" " alt="" coords="403,482,612,522"/>
+<area shape="rect" id="node20" href="$key__value__block__header__repository_8cpp.html" title=" " alt="" coords="421,196,589,251"/>
+<area shape="rect" id="node22" href="$key__value__block__storage_8cpp.html" title=" " alt="" coords="613,203,809,243"/>
+</map>

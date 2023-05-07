@@ -1,0 +1,26 @@
+var classsgns_1_1api_1_1_api_service =
+[
+    [ "SessionPtr", "classsgns_1_1api_1_1_api_service.html#aba6a9de3d7fa3b875492c88c2b081d47", null ],
+    [ "sptr", "classsgns_1_1api_1_1_api_service.html#a996cd506c77f0bd88503a6fbd1d9e34b", null ],
+    [ "SubscribedSessionPtr", "classsgns_1_1api_1_1_api_service.html#ae172a99b0d82cff5dfce46d7d7c934aa", null ],
+    [ "SubscribedSessionType", "classsgns_1_1api_1_1_api_service.html#ae32ea5d1dc4c0233488e8147ac92c3e6", null ],
+    [ "SubscriptionEnginePtr", "classsgns_1_1api_1_1_api_service.html#ad06951229c04550edacfe7bf62e9be38", null ],
+    [ "SubscriptionEngineType", "classsgns_1_1api_1_1_api_service.html#abb1691d4048603b52ec60dc7858a86fa", null ],
+    [ "ApiService", "classsgns_1_1api_1_1_api_service.html#a839ffc40d9ba9e727efa4174c993fff6", null ],
+    [ "~ApiService", "classsgns_1_1api_1_1_api_service.html#ad7eeda3a627cb3dd737e689a3ddef5e5", null ],
+    [ "findSessionById", "classsgns_1_1api_1_1_api_service.html#a064063f4e0c8e1a5e87e3c44b0f44814", null ],
+    [ "prepare", "classsgns_1_1api_1_1_api_service.html#a657e78560140f12055e5cbbc36a0ed86", null ],
+    [ "removeSessionById", "classsgns_1_1api_1_1_api_service.html#a66c83157bc51e312ed3b483d7901a83e", null ],
+    [ "start", "classsgns_1_1api_1_1_api_service.html#a4f6eba5e84b19474bedd6be36bfa542b", null ],
+    [ "stop", "classsgns_1_1api_1_1_api_service.html#a53403d1f8a2d55deb79238881161c339", null ],
+    [ "storeSessionWithId", "classsgns_1_1api_1_1_api_service.html#a32bcd7dc3c76ed62b664088688266f48", null ],
+    [ "subscribeSessionToKeys", "classsgns_1_1api_1_1_api_service.html#af6f74bfd9da327bcd8454f990c9d3ac1", null ],
+    [ "unsubscribeSessionFromIds", "classsgns_1_1api_1_1_api_service.html#aaa612d497d16bddd8418f726d4a31e94", null ],
+    [ "listeners_", "classsgns_1_1api_1_1_api_service.html#aa73b1d3d5df75c00f3652514265282ff", null ],
+    [ "logger_", "classsgns_1_1api_1_1_api_service.html#a39192ec18b29d908658b14f1023f92d7", null ],
+    [ "server_", "classsgns_1_1api_1_1_api_service.html#a74ed2b6b490d5010c48779330f1b903d", null ],
+    [ "subscribed_sessions_", "classsgns_1_1api_1_1_api_service.html#ab9af4ed382de522cb6f78f955318a4da", null ],
+    [ "subscribed_sessions_cs_", "classsgns_1_1api_1_1_api_service.html#a90306d17bea9e4325d125920070673b3", null ],
+    [ "subscription_engine_", "classsgns_1_1api_1_1_api_service.html#a5257111b6dd84f6ee0a073ed70552a20", null ],
+    [ "thread_pool_", "classsgns_1_1api_1_1_api_service.html#a8387fef57f4240f36e437433b6daf332", null ]
+];

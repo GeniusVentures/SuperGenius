@@ -1,0 +1,27 @@
+<map id="src/network/extrinsic_gossiper.hpp" name="src/network/extrinsic_gossiper.hpp">
+<area shape="rect" id="node1" title=" " alt="" coords="435,5,577,45"/>
+<area shape="rect" id="node2" href="$author__api__impl_8hpp.html" title=" " alt="" coords="325,93,495,133"/>
+<area shape="rect" id="node19" href="$network_2gossiper_8hpp.html" title=" " alt="" coords="581,101,748,126"/>
+<area shape="rect" id="node3" href="$author__api__impl_8cpp.html" title=" " alt="" coords="203,181,372,221"/>
+<area shape="rect" id="node4" href="$application__injector_8hpp.html" title=" " alt="" coords="303,269,455,309"/>
+<area shape="rect" id="node5" href="$application__injector_8cpp.html" title=" " alt="" coords="417,357,569,397"/>
+<area shape="rect" id="node6" href="$block__producing__node__injector_8hpp.html" title=" " alt="" coords="387,445,580,485"/>
+<area shape="rect" id="node11" href="$syncing__node__injector_8hpp.html" title=" " alt="" coords="196,357,331,397"/>
+<area shape="rect" id="node15" href="$validating__node__injector_8hpp.html" title=" " alt="" coords="604,357,749,397"/>
+<area shape="rect" id="node7" href="$block__producing__node__application_8hpp.html" title=" " alt="" coords="397,533,551,588"/>
+<area shape="rect" id="node10" href="$block__producing__node__injector_8cpp.html" title=" " alt="" coords="576,541,769,581"/>
+<area shape="rect" id="node8" href="$app__delegate_8cpp.html" title=" " alt="" coords="653,651,807,676"/>
+<area shape="rect" id="node9" href="$block__producing__node__application_8cpp.html" title=" " alt="" coords="397,636,551,691"/>
+<area shape="rect" id="node12" href="$syncing__node__application_8hpp.html" title=" " alt="" coords="164,445,363,485"/>
+<area shape="rect" id="node14" href="$syncing__node__injector_8cpp.html" title=" " alt="" coords="5,445,140,485"/>
+<area shape="rect" id="node13" href="$syncing__node__application_8cpp.html" title=" " alt="" coords="164,541,363,581"/>
+<area shape="rect" id="node16" href="$validating__node__application_8hpp.html" title=" " alt="" coords="773,445,983,485"/>
+<area shape="rect" id="node18" href="$validating__node__injector_8cpp.html" title=" " alt="" coords="604,445,749,485"/>
+<area shape="rect" id="node17" href="$validating__node__application_8cpp.html" title=" " alt="" coords="845,541,1055,581"/>
+<area shape="rect" id="node20" href="$gossiper__broadcast_8hpp.html" title=" " alt="" coords="642,181,813,221"/>
+<area shape="rect" id="node22" href="$router__libp2p_8hpp.html" title=" " alt="" coords="463,181,618,221"/>
+<area shape="rect" id="node24" href="$finality__impl_8hpp.html" title=" " alt="" coords="853,181,999,221"/>
+<area shape="rect" id="node21" href="$gossiper__broadcast_8cpp.html" title=" " alt="" coords="658,269,829,309"/>
+<area shape="rect" id="node23" href="$router__libp2p_8cpp.html" title=" " alt="" coords="479,269,634,309"/>
+<area shape="rect" id="node25" href="$finality__impl_8cpp.html" title=" " alt="" coords="853,269,999,309"/>
+</map>

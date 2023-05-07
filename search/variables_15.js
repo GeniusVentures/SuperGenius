@@ -1,0 +1,27 @@
+var searchData=
+[
+  ['v_5f_0',['v_',['../classsgns_1_1scale_1_1detail_1_1tuple__impl_1_1_tuple_decoder.html#a1f34321b4cbaa89648f260317b77f107',1,'sgns::scale::detail::tuple_impl::TupleDecoder::v_()'],['../classsgns_1_1scale_1_1detail_1_1variant__impl_1_1_variant_encoder.html#a265b741c4889e1b03e5097444db0114f',1,'sgns::scale::detail::variant_impl::VariantEncoder::v_()'],['../classsgns_1_1scale_1_1detail_1_1tuple__impl_1_1_tuple_encoder.html#a41a1c8d3466380994666ea996cf81636',1,'sgns::scale::detail::tuple_impl::TupleEncoder::v_()']]],
+  ['valid_5ftill_1',['valid_till',['../structsgns_1_1primitives_1_1_transaction.html#adf57d12720a8b10dadb99c2bc3a38dcc',1,'sgns::primitives::Transaction']]],
+  ['value_2',['value',['../structsgns_1_1storage_1_1trie_1_1_super_genius_node.html#a41bf4761c1484cc298908486001d1de6',1,'sgns::storage::trie::SuperGeniusNode']]],
+  ['valuesuffix_5f_3',['valueSuffix_',['../classsgns_1_1crdt_1_1_crdt_set.html#acc029d78bc9218fa8fb95c827ce6f377',1,'sgns::crdt::CrdtSet']]],
+  ['verification_5fengine_5f_4',['verification_engine_',['../classsgns_1_1application_1_1_configuration_storage_impl.html#a6c1922161655f7824edb5392d6ba75ad',1,'sgns::application::ConfigurationStorageImpl']]],
+  ['verification_5fengine_5fid_5',['verification_engine_id',['../structsgns_1_1primitives_1_1detail_1_1_digest_item_common.html#ae0e8d3d45f7c31c0a38d75d5a9bb5f2a',1,'sgns::primitives::detail::DigestItemCommon']]],
+  ['version_5fmax_6',['version_max',['../classsgns_1_1message__header.html#a624f79b0e770eb98156142f44bb5507c',1,'sgns::message_header']]],
+  ['version_5fmin_5fm_7',['version_min_m',['../classsgns_1_1message__header.html#a4032abaf1303ab6233f56717d7a8ba9c',1,'sgns::message_header']]],
+  ['version_5fusing_8',['version_using',['../classsgns_1_1message__header.html#a93ea441112c1df48de6d9d272087d6c1',1,'sgns::message_header']]],
+  ['visited_5froot_5f_9',['visited_root_',['../classsgns_1_1storage_1_1trie_1_1_super_genius_trie_cursor.html#adc7f5f77a551900591542b34f77c665c',1,'sgns::storage::trie::SuperGeniusTrieCursor']]],
+  ['visitor_10',['visitor',['../classsgns_1_1message__parser.html#ae40d45da12de01c123f313a3ff0fd628',1,'sgns::message_parser']]],
+  ['vote_11',['vote',['../classsgns_1_1confirm__ack.html#aff49bd7cce97ffd249a91823571894e5',1,'sgns::confirm_ack::vote()'],['../classsgns_1_1ipfs__lite__store.html#a640fb63d5adec33bafc63ea3cf37746f',1,'sgns::ipfs_lite_store::vote()'],['../structsgns_1_1verification_1_1finality_1_1_vote_message.html#a4e7970aac5b054ef21206524425623fe',1,'sgns::verification::finality::VoteMessage::vote()'],['../namespacesgns_1_1verification_1_1finality.html#a4d769bcf1d1f2cace836de8bb372e3b7',1,'sgns::verification::finality::Commit::vote()'],['../namespacesgns_1_1verification_1_1finality.html#a51d9085cfb2701926dab737af0193942',1,'sgns::verification::finality::Fin::vote()']]],
+  ['vote_5fcrypto_5fprovider_5f_12',['vote_crypto_provider_',['../classsgns_1_1verification_1_1finality_1_1_voting_round_impl.html#a0fafa72fea46084686b77d65620ec440',1,'sgns::verification::finality::VotingRoundImpl']]],
+  ['vote_5fgenerator_5fdelay_13',['vote_generator_delay',['../classsgns_1_1node__config.html#aadad636057b05a2c2a7c5cdb1fea3aca',1,'sgns::node_config']]],
+  ['vote_5fgenerator_5fthreshold_14',['vote_generator_threshold',['../classsgns_1_1node__config.html#a1ad7d50aed58ae6018520bfd709397cc',1,'sgns::node_config']]],
+  ['vote_5flogging_5fvalue_15',['vote_logging_value',['../classsgns_1_1logging.html#a2dafc22ccfc043bb5662a85261ef1a02',1,'sgns::logging']]],
+  ['vote_5fminimum_16',['vote_minimum',['../classsgns_1_1node__config.html#ac7e90191f46003feb2afd611511ec183',1,'sgns::node_config']]],
+  ['vote_5fprocessor_5fcapacity_17',['vote_processor_capacity',['../namespacesgns.html#a28d6bf1ccf225af90f8f19d0cba36ee1',1,'sgns::node_flags']]],
+  ['vote_5funiquer_18',['vote_uniquer',['../classsgns_1_1message__parser.html#a47ecff76d03f3b7b34a8df74eae37de8',1,'sgns::message_parser']]],
+  ['voter_5fset_5f_19',['voter_set_',['../classsgns_1_1verification_1_1finality_1_1_vote_crypto_provider_impl.html#abb215cd65f946c18ff0b4b3206234603',1,'sgns::verification::finality::VoteCryptoProviderImpl::voter_set_()'],['../classsgns_1_1verification_1_1finality_1_1_voting_round_impl.html#a5caf3220aa45a9eea490500e1f6bd2e6',1,'sgns::verification::finality::VotingRoundImpl::voter_set_()']]],
+  ['voters_20',['voters',['../namespacesgns_1_1verification_1_1finality.html#a3624d310b7e72d889a31ab569dfba446',1,'sgns::verification::finality::FinalityConfig']]],
+  ['voters_5f_21',['voters_',['../structsgns_1_1verification_1_1finality_1_1_voter_set.html#ae068e34eba2c02b68aefca68cbde03c8',1,'sgns::verification::finality::VoterSet']]],
+  ['vrf_5foutput_22',['vrf_output',['../namespacesgns_1_1verification.html#a88ac5302602435a9fb161504b862b7ec',1,'sgns::verification::ProductionBlockHeader']]],
+  ['vrf_5fprovider_5f_23',['vrf_provider_',['../classsgns_1_1verification_1_1_production_lottery_impl.html#a159769d5f18c8deda26d7923e2d77819',1,'sgns::verification::ProductionLotteryImpl::vrf_provider_()'],['../classsgns_1_1verification_1_1_production_block_validator.html#ae0e45e41ee4574320e03e74d291267d8',1,'sgns::verification::ProductionBlockValidator::vrf_provider_()']]]
+];

@@ -1,0 +1,12 @@
+<map id="sgns::extensions::StorageExtension" name="sgns::extensions::StorageExtension">
+<area shape="rect" id="node1" title=" " alt="" coords="528,548,731,867"/>
+<area shape="rect" id="node2" title=" " alt="" coords="237,409,440,478"/>
+<area shape="rect" id="node3" href="$classsgns_1_1runtime_1_1_trie_storage_provider.html" title=" " alt="" coords="5,123,181,309"/>
+<area shape="rect" id="node4" title=" " alt="" coords="561,189,703,243"/>
+<area shape="rect" id="node6" title=" " alt="" coords="824,409,995,478"/>
+<area shape="rect" id="node8" title=" " alt="" coords="465,401,615,485"/>
+<area shape="rect" id="node10" title=" " alt="" coords="640,401,800,485"/>
+<area shape="rect" id="node5" title=" " alt="" coords="613,5,651,45"/>
+<area shape="rect" id="node7" href="$classsgns_1_1runtime_1_1_wasm_memory.html" title=" " alt="" coords="983,108,1175,324"/>
+<area shape="rect" id="node9" href="$classsgns_1_1storage_1_1changes__trie_1_1_changes_tracker.html" title=" " alt="" coords="205,145,373,287"/>
+</map>

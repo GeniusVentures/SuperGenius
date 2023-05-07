@@ -1,0 +1,3 @@
+<map id="sgns::verification::finality::RoundObserver" name="sgns::verification::finality::RoundObserver">
+<area shape="rect" id="node1" title="observes incoming messages. Abstraction of a network." alt="" coords="5,5,165,104"/>
+</map>

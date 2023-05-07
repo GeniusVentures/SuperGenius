@@ -1,0 +1,20 @@
+var searchData=
+[
+  ['apiservice_0',['ApiService',['../classsgns_1_1api_1_1_api_service.html',1,'sgns::api']]],
+  ['appconfiguration_1',['AppConfiguration',['../classsgns_1_1application_1_1_app_configuration.html',1,'sgns::application']]],
+  ['appconfigurationimpl_2',['AppConfigurationImpl',['../classsgns_1_1application_1_1_app_configuration_impl.html',1,'sgns::application']]],
+  ['appdelegate_3',['AppDelegate',['../classsgns_1_1_app_delegate.html',1,'sgns']]],
+  ['appstateexception_4',['AppStateException',['../structsgns_1_1application_1_1_app_state_exception.html',1,'sgns::application']]],
+  ['appstatemanager_5',['AppStateManager',['../classsgns_1_1application_1_1_app_state_manager.html',1,'sgns::application']]],
+  ['appstatemanagerimpl_6',['AppStateManagerImpl',['../classsgns_1_1application_1_1_app_state_manager_impl.html',1,'sgns::application']]],
+  ['authorapi_7',['AuthorApi',['../classsgns_1_1api_1_1_author_api.html',1,'sgns::api']]],
+  ['authorapiimpl_8',['AuthorApiImpl',['../classsgns_1_1api_1_1_author_api_impl.html',1,'sgns::api']]],
+  ['authority_9',['Authority',['../structsgns_1_1primitives_1_1_authority.html',1,'sgns::primitives']]],
+  ['authorityid_10',['AuthorityId',['../structsgns_1_1primitives_1_1_authority_id.html',1,'sgns::primitives']]],
+  ['authoritylist_11',['AuthorityList',['../structsgns_1_1primitives_1_1_authority_list.html',1,'sgns::primitives']]],
+  ['authoritylistchange_12',['AuthorityListChange',['../structsgns_1_1primitives_1_1_authority_list_change.html',1,'sgns::primitives']]],
+  ['authoritymanager_13',['AuthorityManager',['../classsgns_1_1authority_1_1_authority_manager.html',1,'sgns::authority']]],
+  ['authoritymanagerimpl_14',['AuthorityManagerImpl',['../classsgns_1_1authority_1_1_authority_manager_impl.html',1,'sgns::authority']]],
+  ['authorityupdateobserver_15',['AuthorityUpdateObserver',['../classsgns_1_1authority_1_1_authority_update_observer.html',1,'sgns::authority']]],
+  ['authorjrpcprocessor_16',['AuthorJRpcProcessor',['../classsgns_1_1api_1_1author_1_1_author_j_rpc_processor.html',1,'sgns::api::author']]]
+];

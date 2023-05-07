@@ -1,0 +1,4 @@
+<map id="sgns::crdt::DAGSyncer" name="sgns::crdt::DAGSyncer">
+<area shape="rect" id="node1" title="A DAGSyncer is an abstraction to an IPLD&#45;based p2p storage layer. A DAGSyncer is a DAGService with th..." alt="" coords="9,108,165,163"/>
+<area shape="rect" id="node2" title=" " alt="" coords="5,5,169,60"/>
+</map>

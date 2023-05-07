@@ -1,0 +1,5 @@
+<map id="sgns::verification::finality::Finality" name="sgns::verification::finality::Finality">
+<area shape="rect" id="node1" title=" " alt="" coords="20,152,171,236"/>
+<area shape="rect" id="node3" href="$classsgns_1_1verification_1_1finality_1_1_finality_impl.html" title=" " alt="" coords="5,284,185,720"/>
+<area shape="rect" id="node2" href="$structsgns_1_1verification_1_1finality_1_1_round_observer.html" title="observes incoming messages. Abstraction of a network." alt="" coords="15,5,175,104"/>
+</map>

@@ -1,0 +1,4 @@
+<map id="sgns::verification::finality::FinalizationComposite" name="sgns::verification::finality::FinalizationComposite">
+<area shape="rect" id="node1" title="Special wrapper for aggregate anyone finalisation observers. Needed in order to have single endpoint ..." alt="" coords="5,137,203,251"/>
+<area shape="rect" id="node2" href="$classsgns_1_1verification_1_1finality_1_1_finalization_observer.html" title=" " alt="" coords="10,5,198,89"/>
+</map>

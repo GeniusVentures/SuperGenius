@@ -1,0 +1,5 @@
+<map id="sgns::runtime::binaryen::FinalityApiImpl" name="sgns::runtime::binaryen::FinalityApiImpl">
+<area shape="rect" id="node1" title=" " alt="" coords="126,240,283,383"/>
+<area shape="rect" id="node2" href="$classsgns_1_1runtime_1_1binaryen_1_1_runtime_api.html" title="base class for all runtime apis" alt="" coords="5,5,199,192"/>
+<area shape="rect" id="node3" href="$classsgns_1_1runtime_1_1_finality_api.html" title="interface for Finality runtime functions" alt="" coords="223,49,392,148"/>
+</map>

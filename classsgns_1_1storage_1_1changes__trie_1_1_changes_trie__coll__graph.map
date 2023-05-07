@@ -1,0 +1,19 @@
+<map id="sgns::storage::changes_trie::ChangesTrie" name="sgns::storage::changes_trie::ChangesTrie">
+<area shape="rect" id="node1" title=" " alt="" coords="576,1005,735,1104"/>
+<area shape="rect" id="node2" title=" " alt="" coords="379,859,555,943"/>
+<area shape="rect" id="node3" href="$classsgns_1_1storage_1_1trie_1_1_super_genius_trie.html" title=" " alt="" coords="253,653,380,781"/>
+<area shape="rect" id="node4" href="$structsgns_1_1storage_1_1face_1_1_generic_map.html" title=" " alt="" coords="245,521,388,591"/>
+<area shape="rect" id="node5" href="$structsgns_1_1storage_1_1face_1_1_read_only_map.html" title="An abstraction over a readable and iterable key&#45;value map." alt="" coords="344,197,500,252"/>
+<area shape="rect" id="node6" href="$structsgns_1_1storage_1_1face_1_1_iterable.html" title="A mixin for an iterable map." alt="" coords="151,20,285,104"/>
+<area shape="rect" id="node10" href="$structsgns_1_1storage_1_1face_1_1_read_only_map.html" title="An abstraction over a readable and iterable key&#45;value map." alt="" coords="5,197,161,252"/>
+<area shape="rect" id="node7" href="$structsgns_1_1storage_1_1face_1_1_readable.html" title="A mixin for read&#45;only map." alt="" coords="332,5,467,119"/>
+<area shape="rect" id="node8" href="$structsgns_1_1storage_1_1face_1_1_writeable.html" title="An mixin for modifiable map." alt="" coords="249,331,384,444"/>
+<area shape="rect" id="node9" href="$structsgns_1_1storage_1_1face_1_1_generic_map.html" title="An abstraction over a readable, writeable, iterable key&#45;value map." alt="" coords="80,360,225,415"/>
+<area shape="rect" id="node11" href="$structsgns_1_1storage_1_1face_1_1_writeable.html" title="An mixin for modifiable map." alt="" coords="185,168,320,281"/>
+<area shape="rect" id="node12" title=" " alt="" coords="404,690,544,745"/>
+<area shape="rect" id="node13" title=" " alt="" coords="612,536,651,576"/>
+<area shape="rect" id="node16" title=" " alt="" coords="719,690,861,745"/>
+<area shape="rect" id="node14" title=" " alt="" coords="580,866,731,935"/>
+<area shape="rect" id="node15" href="$classsgns_1_1storage_1_1trie_1_1_codec.html" title="Internal codec for nodes in the Trie. Eth and substrate have different codecs, but rest of the code s..." alt="" coords="568,653,695,781"/>
+<area shape="rect" id="node17" title=" " alt="" coords="755,859,915,943"/>
+</map>

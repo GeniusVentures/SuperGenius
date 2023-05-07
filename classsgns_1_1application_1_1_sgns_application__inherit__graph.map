@@ -1,0 +1,6 @@
+<map id="sgns::application::SgnsApplication" name="sgns::application::SgnsApplication">
+<area shape="rect" id="node1" title=" " alt="" coords="289,5,437,89"/>
+<area shape="rect" id="node2" href="$classsgns_1_1application_1_1_block_producing_node_application.html" title=" " alt="" coords="5,159,243,405"/>
+<area shape="rect" id="node3" href="$classsgns_1_1application_1_1_syncing_node_application.html" title=" " alt="" coords="267,181,459,383"/>
+<area shape="rect" id="node4" href="$classsgns_1_1application_1_1_validating_node_application.html" title=" " alt="" coords="483,137,685,427"/>
+</map>

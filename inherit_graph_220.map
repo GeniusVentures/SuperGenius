@@ -1,0 +1,68 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node1" title=" " alt="" coords="262,910,393,950"/>
+<area shape="rect" id="node2" href="$classsgns_1_1api_1_1_api_service.html" title=" " alt="" coords="517,431,659,456"/>
+<area shape="rect" id="node3" href="$classsgns_1_1api_1_1_http_listener_impl.html" title="server which listens for incoming connection, accepts connections making session from socket" alt="" coords="500,153,676,179"/>
+<area shape="rect" id="node4" href="$classsgns_1_1api_1_1_http_session.html" title="HTTP session for api service." alt="" coords="513,252,663,277"/>
+<area shape="rect" id="node5" href="$classsgns_1_1api_1_1_rpc_thread_pool.html" title="thread pool for serve RPC calls" alt="" coords="504,480,672,505"/>
+<area shape="rect" id="node6" href="$classsgns_1_1api_1_1_ws_listener_impl.html" title="server which listens for incoming connection, accepts connections making session from socket" alt="" coords="503,104,673,129"/>
+<area shape="rect" id="node7" href="$classsgns_1_1api_1_1_ws_session.html" title=" " alt="" coords="515,203,661,228"/>
+<area shape="rect" id="node8" href="$classsgns_1_1application_1_1_app_state_manager.html" title=" " alt="" coords="525,530,651,570"/>
+<area shape="rect" id="node10" href="$classsgns_1_1authority_1_1_schedule_node.html" title="Node of scheduler tree. Contains actual authorities for the accorded block and all its descendant blo..." alt="" coords="490,595,686,620"/>
+<area shape="rect" id="node11" href="$structsgns_1_1blockchain_1_1_block_tree_impl_1_1_tree_node.html" title=" " alt="" coords="497,645,679,685"/>
+<area shape="rect" id="node12" href="$classsgns_1_1crdt_1_1_crdt_datastore.html" title="CrdtDatastore provides a replicated go&#45;datastore (key&#45;value store) implementation using Merkle&#45;CRDTs ..." alt="" coords="506,709,670,735"/>
+<area shape="rect" id="node13" href="$classsgns_1_1crdt_1_1_graphsync_d_a_g_syncer.html" title="A DAGSyncer is an abstraction to an IPLD&#45;based p2p storage layer. A DAGSyncer is a DAGService with th..." alt="" coords="481,55,695,80"/>
+<area shape="rect" id="node14" href="$classsgns_1_1network_1_1_dummy_sync_protocol_client.html" title=" " alt="" coords="497,302,679,342"/>
+<area shape="rect" id="node15" href="$classsgns_1_1network_1_1_gossiper_broadcast.html" title=" " alt="" coords="479,1339,697,1364"/>
+<area shape="rect" id="node16" href="$classsgns_1_1network_1_1_loopback_stream.html" title=" " alt="" coords="485,1388,691,1413"/>
+<area shape="rect" id="node17" href="$classsgns_1_1network_1_1_protobuf_message_read_writer.html" title=" " alt="" coords="483,759,693,799"/>
+<area shape="rect" id="node18" href="$classsgns_1_1network_1_1_remote_sync_protocol_client.html" title=" " alt="" coords="497,366,679,406"/>
+<area shape="rect" id="node19" href="$classsgns_1_1network_1_1_router_libp2p.html" title=" " alt="" coords="495,1437,681,1463"/>
+<area shape="rect" id="node20" href="$classsgns_1_1network_1_1_scale_message_read_writer.html" title=" " alt="" coords="491,823,685,863"/>
+<area shape="rect" id="node21" href="$classsgns_1_1network_1_1_sync_protocol_observer_impl.html" title=" " alt="" coords="495,1487,681,1527"/>
+<area shape="rect" id="node22" href="$classsgns_1_1node.html" title=" " alt="" coords="546,888,630,913"/>
+<area shape="rect" id="node23" href="$classsgns_1_1processing_1_1_processing_engine.html" title=" " alt="" coords="493,938,683,978"/>
+<area shape="rect" id="node24" href="$classsgns_1_1processing_1_1_processing_sub_task_queue_channel_pub_sub.html" title=" " alt="" coords="485,1551,691,1591"/>
+<area shape="rect" id="node25" href="$classsgns_1_1processing_1_1_sub_task_queue_accessor_impl.html" title=" " alt="" coords="499,1615,677,1655"/>
+<area shape="rect" id="node26" href="$classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch.html" title=" " alt="" coords="517,1899,659,1939"/>
+<area shape="rect" id="node28" href="$classsgns_1_1subscription_1_1_subscriber.html" title=" " alt="" coords="507,1003,669,1057"/>
+<area shape="rect" id="node29" href="$classsgns_1_1subscription_1_1_subscription_engine.html" title=" " alt="" coords="503,1081,673,1136"/>
+<area shape="rect" id="node30" href="$classsgns_1_1verification_1_1_block_executor.html" title=" " alt="" coords="529,1161,647,1201"/>
+<area shape="rect" id="node31" href="$classsgns_1_1verification_1_1_production_impl.html" title=" " alt="" coords="529,1679,647,1719"/>
+<area shape="rect" id="node32" href="$classsgns_1_1verification_1_1_production_synchronizer_impl.html" title=" " alt="" coords="493,1747,683,1787"/>
+<area shape="rect" id="node33" href="$classsgns_1_1verification_1_1finality_1_1_finality_impl.html" title=" " alt="" coords="520,1819,656,1859"/>
+<area shape="rect" id="node34" href="$structsgns_1_1verification_1_1finality_1_1_voting_round.html" title=" " alt="" coords="516,1225,660,1265"/>
+<area shape="rect" id="node36" href="$classsgns_1_1wallet.html" title=" " alt="" coords="543,1289,633,1315"/>
+<area shape="rect" id="node9" href="$classsgns_1_1application_1_1_app_state_manager_impl.html" title=" " alt="" coords="755,530,906,570"/>
+<area shape="rect" id="node27" href="$classsgns_1_1storage_1_1trie_1_1_persistent_trie_batch_impl.html" title=" " alt="" coords="747,1899,915,1939"/>
+<area shape="rect" id="node35" href="$classsgns_1_1verification_1_1finality_1_1_voting_round_impl.html" title=" " alt="" coords="746,1225,915,1265"/>
+<area shape="rect" id="node37" href="$structsgns_1_1network_1_1_extrinsic_gossiper.html" title=" " alt="" coords="12,1251,169,1291"/>
+<area shape="rect" id="node38" href="$structsgns_1_1network_1_1_gossiper.html" title=" " alt="" coords="247,1323,407,1348"/>
+<area shape="rect" id="node39" href="$structsgns_1_1verification_1_1finality_1_1_gossiper.html" title="Gossip messages to the network via this class." alt="" coords="29,1315,152,1355"/>
+<area shape="rect" id="node40" href="$structsgns_1_1storage_1_1face_1_1_iterable.html" title=" " alt="" coords="25,2015,156,2069"/>
+<area shape="rect" id="node41" href="$classsgns_1_1storage_1_1trie_1_1_trie_batch.html" title=" " alt="" coords="266,2010,389,2050"/>
+<area shape="rect" id="node42" href="$classsgns_1_1storage_1_1trie_1_1_ephemeral_trie_batch.html" title=" " alt="" coords="515,1995,661,2035"/>
+<area shape="rect" id="node44" href="$classsgns_1_1storage_1_1trie_1_1_topper_trie_batch.html" title=" " alt="" coords="526,2059,650,2099"/>
+<area shape="rect" id="node43" href="$classsgns_1_1storage_1_1trie_1_1_ephemeral_trie_batch_impl.html" title=" " alt="" coords="745,1995,916,2035"/>
+<area shape="rect" id="node45" href="$classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl.html" title=" " alt="" coords="756,2059,905,2099"/>
+<area shape="rect" id="node46" href="$classsgns_1_1api_1_1_listener.html" title="server which listens for incoming connection, accepts connections making session from socket" alt="" coords="264,129,391,155"/>
+<area shape="rect" id="node47" title=" " alt="" coords="11,23,171,63"/>
+<area shape="rect" id="node48" href="$classsgns_1_1crdt_1_1_d_a_g_syncer.html" title="A DAGSyncer is an abstraction to an IPLD&#45;based p2p storage layer. A DAGSyncer is a DAGService with th..." alt="" coords="251,31,403,56"/>
+<area shape="rect" id="node49" href="$classsgns_1_1crdt_1_1_session_d_a_g_syncer.html" title="A SessionDAGSyncer is an abstraction to an IPLD&#45;based p2p storage layer. A SessionDAGSyncer is a DAGS..." alt="" coords="489,5,687,31"/>
+<area shape="rect" id="node50" href="$classsgns_1_1processing_1_1_processing_sub_task_queue_channel.html" title=" " alt="" coords="232,1551,423,1591"/>
+<area shape="rect" id="node51" href="$structsgns_1_1verification_1_1_production_gossiper.html" title=" " alt="" coords="19,1379,162,1419"/>
+<area shape="rect" id="node52" href="$structsgns_1_1network_1_1_production_observer.html" title=" " alt="" coords="5,1711,176,1751"/>
+<area shape="rect" id="node53" href="$classsgns_1_1verification_1_1_production.html" title=" " alt="" coords="268,1679,387,1719"/>
+<area shape="rect" id="node54" href="$classsgns_1_1verification_1_1_syncing_production_observer.html" title=" " alt="" coords="233,1743,422,1783"/>
+<area shape="rect" id="node55" href="$classsgns_1_1verification_1_1_production_synchronizer.html" title="Iterates over the list of accessible peers and tries to fetch missing blocks from them." alt="" coords="245,1807,409,1847"/>
+<area shape="rect" id="node56" href="$structsgns_1_1storage_1_1face_1_1_readable.html" title=" " alt="" coords="25,2093,156,2148"/>
+<area shape="rect" id="node57" href="$structsgns_1_1verification_1_1finality_1_1_round_observer.html" title="observes incoming messages. Abstraction of a network." alt="" coords="11,1871,171,1911"/>
+<area shape="rect" id="node58" href="$classsgns_1_1verification_1_1finality_1_1_finality.html" title=" " alt="" coords="268,1871,387,1911"/>
+<area shape="rect" id="node59" href="$classsgns_1_1verification_1_1finality_1_1_syncing_round_observer.html" title=" " alt="" coords="224,1935,431,1975"/>
+<area shape="rect" id="node60" href="$classsgns_1_1network_1_1_router.html" title=" " alt="" coords="254,1437,401,1463"/>
+<area shape="rect" id="node61" href="$classsgns_1_1api_1_1_session.html" title="rpc session" alt="" coords="264,228,391,253"/>
+<area shape="rect" id="node62" title=" " alt="" coords="265,1373,390,1413"/>
+<area shape="rect" id="node63" href="$classsgns_1_1processing_1_1_sub_task_queue_accessor.html" title=" " alt="" coords="239,1615,416,1655"/>
+<area shape="rect" id="node64" href="$structsgns_1_1network_1_1_sync_protocol_client.html" title=" " alt="" coords="235,334,420,374"/>
+<area shape="rect" id="node65" href="$structsgns_1_1network_1_1_sync_protocol_observer.html" title=" " alt="" coords="235,1487,420,1527"/>
+<area shape="rect" id="node66" href="$structsgns_1_1storage_1_1face_1_1_writeable.html" title=" " alt="" coords="25,1936,156,1991"/>
+</map>

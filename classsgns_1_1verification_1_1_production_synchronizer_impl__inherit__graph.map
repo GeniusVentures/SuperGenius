@@ -1,0 +1,5 @@
+<map id="sgns::verification::ProductionSynchronizerImpl" name="sgns::verification::ProductionSynchronizerImpl">
+<area shape="rect" id="node1" title=" " alt="" coords="112,137,324,295"/>
+<area shape="rect" id="node2" href="$classsgns_1_1verification_1_1_production_synchronizer.html" title="Iterates over the list of accessible peers and tries to fetch missing blocks from them." alt="" coords="5,5,196,89"/>
+<area shape="rect" id="node3" title=" " alt="" coords="220,13,451,82"/>
+</map>

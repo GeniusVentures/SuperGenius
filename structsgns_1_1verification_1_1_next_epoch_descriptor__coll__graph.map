@@ -1,0 +1,9 @@
+<map id="sgns::verification::NextEpochDescriptor" name="sgns::verification::NextEpochDescriptor">
+<area shape="rect" id="node1" title="Information about the epoch after next epoch." alt="" coords="49,725,199,809"/>
+<area shape="rect" id="node2" href="$structsgns_1_1primitives_1_1_authority_list.html" title="Special type for vector of authorities." alt="" coords="5,395,200,435"/>
+<area shape="rect" id="node3" title=" " alt="" coords="45,108,161,148"/>
+<area shape="rect" id="node4" title=" " alt="" coords="151,5,190,45"/>
+<area shape="rect" id="node6" title=" " alt="" coords="185,108,293,148"/>
+<area shape="rect" id="node5" href="$classsgns_1_1base_1_1_blob.html" title=" " alt="" coords="199,461,366,663"/>
+<area shape="rect" id="node7" href="$classsgns_1_1base_1_1_blob.html" title=" " alt="" coords="271,197,443,369"/>
+</map>

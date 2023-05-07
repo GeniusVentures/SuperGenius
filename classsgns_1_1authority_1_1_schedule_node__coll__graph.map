@@ -1,0 +1,18 @@
+<map id="sgns::authority::ScheduleNode" name="sgns::authority::ScheduleNode">
+<area shape="rect" id="node1" title="Node of scheduler tree. Contains actual authorities for the accorded block and all its descendant blo..." alt="" coords="445,716,645,917"/>
+<area shape="rect" id="node8" title=" " alt="" coords="655,980,833,1049"/>
+<area shape="rect" id="node11" title=" " alt="" coords="319,980,497,1049"/>
+<area shape="rect" id="node2" title=" " alt="" coords="386,540,577,595"/>
+<area shape="rect" id="node3" href="$structsgns_1_1primitives_1_1detail_1_1_block_info_t.html" title=" " alt="" coords="601,511,754,624"/>
+<area shape="rect" id="node4" title=" " alt="" coords="586,309,769,364"/>
+<area shape="rect" id="node5" href="$classsgns_1_1base_1_1_blob.html" title=" " alt="" coords="390,251,562,423"/>
+<area shape="rect" id="node6" title=" " alt="" coords="422,108,530,148"/>
+<area shape="rect" id="node7" title=" " alt="" coords="457,5,495,45"/>
+<area shape="rect" id="node9" title=" " alt="" coords="620,172,753,227"/>
+<area shape="rect" id="node12" title=" " alt="" coords="5,309,147,364"/>
+<area shape="rect" id="node13" title=" " alt="" coords="858,447,974,487"/>
+<area shape="rect" id="node16" title=" " alt="" coords="246,108,362,148"/>
+<area shape="rect" id="node10" title=" " alt="" coords="465,1112,625,1181"/>
+<area shape="rect" id="node14" title=" " alt="" coords="190,525,362,609"/>
+<area shape="rect" id="node15" href="$structsgns_1_1primitives_1_1_authority_list.html" title="Special type for vector of authorities." alt="" coords="171,317,365,357"/>
+</map>

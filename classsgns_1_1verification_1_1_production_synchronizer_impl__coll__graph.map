@@ -1,0 +1,14 @@
+<map id="sgns::verification::ProductionSynchronizerImpl" name="sgns::verification::ProductionSynchronizerImpl">
+<area shape="rect" id="node1" title=" " alt="" coords="304,863,519,991"/>
+<area shape="rect" id="node2" href="$classsgns_1_1verification_1_1_production_synchronizer.html" title="Iterates over the list of accessible peers and tries to fetch missing blocks from them." alt="" coords="5,716,196,800"/>
+<area shape="rect" id="node3" title=" " alt="" coords="220,723,451,793"/>
+<area shape="rect" id="node4" title=" " alt="" coords="527,723,707,793"/>
+<area shape="rect" id="node5" href="$namespacesgns_1_1network.html#structsgns_1_1network_1_1_sync_clients_set" title=" " alt="" coords="733,613,935,653"/>
+<area shape="rect" id="node6" title=" " alt="" coords="807,481,1026,551"/>
+<area shape="rect" id="node7" title=" " alt="" coords="748,280,949,349"/>
+<area shape="rect" id="node8" href="$structsgns_1_1network_1_1_sync_protocol_client.html" title=" " alt="" coords="771,108,961,192"/>
+<area shape="rect" id="node9" title=" " alt="" coords="566,123,707,177"/>
+<area shape="rect" id="node12" title=" " alt="" coords="409,373,569,457"/>
+<area shape="rect" id="node10" title=" " alt="" coords="797,5,836,45"/>
+<area shape="rect" id="node11" title=" " alt="" coords="940,216,1056,256"/>
+</map>

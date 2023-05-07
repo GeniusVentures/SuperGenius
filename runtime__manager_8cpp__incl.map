@@ -1,0 +1,52 @@
+<map id="src/runtime/binaryen/runtime_manager.cpp" name="src/runtime/binaryen/runtime_manager.cpp">
+<area shape="rect" id="node1" title=" " alt="" coords="537,5,687,45"/>
+<area shape="rect" id="node2" href="$runtime__manager_8hpp.html" title=" " alt="" coords="722,93,886,133"/>
+<area shape="rect" id="node44" href="$runtime__external__interface_8hpp.html" title=" " alt="" coords="683,357,847,397"/>
+<area shape="rect" id="node49" title=" " alt="" coords="910,101,970,126"/>
+<area shape="rect" id="node50" href="$hasher__impl_8hpp.html" title=" " alt="" coords="330,93,473,133"/>
+<area shape="rect" id="node3" href="$blob_8hpp.html" title=" " alt="" coords="746,629,849,654"/>
+<area shape="rect" id="node10" href="$outcome_8hpp.html" title=" " alt="" coords="1143,907,1294,933"/>
+<area shape="rect" id="node13" href="$logger_8hpp.html" title=" " alt="" coords="1239,453,1353,478"/>
+<area shape="rect" id="node16" href="$hasher_8hpp.html" title=" " alt="" coords="339,189,463,214"/>
+<area shape="rect" id="node20" href="$extension__factory_8hpp.html" title=" " alt="" coords="541,445,683,485"/>
+<area shape="rect" id="node29" href="$trie__storage__provider_8hpp.html" title=" " alt="" coords="998,533,1135,573"/>
+<area shape="rect" id="node30" href="$trie__batches_8hpp.html" title=" " alt="" coords="1568,629,1755,654"/>
+<area shape="rect" id="node40" href="$wasm__module__factory_8hpp.html" title=" " alt="" coords="778,181,958,221"/>
+<area shape="rect" id="node46" href="$runtime__environment_8hpp.html" title=" " alt="" coords="1257,621,1421,661"/>
+<area shape="rect" id="node47" href="$wasm__provider_8hpp.html" title=" " alt="" coords="113,277,295,302"/>
+<area shape="rect" id="node48" href="$trie__storage_8hpp.html" title=" " alt="" coords="1570,541,1753,566"/>
+<area shape="rect" id="node4" title=" " alt="" coords="587,724,637,749"/>
+<area shape="rect" id="node5" title=" " alt="" coords="712,724,883,749"/>
+<area shape="rect" id="node6" href="$hexutil_8hpp.html" title=" " alt="" coords="553,819,668,845"/>
+<area shape="rect" id="node12" title=" " alt="" coords="907,724,979,749"/>
+<area shape="rect" id="node7" title=" " alt="" coords="563,907,651,933"/>
+<area shape="rect" id="node8" title=" " alt="" coords="480,907,539,933"/>
+<area shape="rect" id="node9" title=" " alt="" coords="675,907,746,933"/>
+<area shape="rect" id="node11" title=" " alt="" coords="1125,988,1313,1013"/>
+<area shape="rect" id="node14" title=" " alt="" coords="1375,541,1494,566"/>
+<area shape="rect" id="node15" title=" " alt="" coords="1239,541,1351,566"/>
+<area shape="rect" id="node17" href="$buffer_8hpp.html" title=" " alt="" coords="418,819,529,845"/>
+<area shape="rect" id="node18" title=" " alt="" coords="309,900,456,940"/>
+<area shape="rect" id="node19" title=" " alt="" coords="149,907,285,933"/>
+<area shape="rect" id="node21" href="$extension_8hpp.html" title=" " alt="" coords="197,541,363,566"/>
+<area shape="rect" id="node22" title=" " alt="" coords="35,819,96,845"/>
+<area shape="rect" id="node23" title=" " alt="" coords="386,629,465,654"/>
+<area shape="rect" id="node24" href="$runtime_2types_8hpp.html" title=" " alt="" coords="181,724,305,749"/>
+<area shape="rect" id="node26" href="$wasm__result_8hpp.html" title=" " alt="" coords="195,629,362,654"/>
+<area shape="rect" id="node27" href="$wasm__memory_8hpp.html" title=" " alt="" coords="540,629,721,654"/>
+<area shape="rect" id="node25" title=" " alt="" coords="217,819,269,845"/>
+<area shape="rect" id="node28" title=" " alt="" coords="1003,724,1130,749"/>
+<area shape="rect" id="node31" href="$buffer__map__types_8hpp.html" title=" " alt="" coords="1956,717,2089,757"/>
+<area shape="rect" id="node36" href="$supergenius__trie__cursor_8hpp.html" title=" " alt="" coords="1567,709,1729,764"/>
+<area shape="rect" id="node32" href="$batchable_8hpp.html" title=" " alt="" coords="2221,819,2400,845"/>
+<area shape="rect" id="node34" href="$write__batch_8hpp.html" title=" " alt="" coords="2310,900,2437,940"/>
+<area shape="rect" id="node35" href="$generic__storage_8hpp.html" title=" " alt="" coords="2006,812,2146,852"/>
+<area shape="rect" id="node33" title=" " alt="" coords="1815,907,1883,933"/>
+<area shape="rect" id="node37" href="$map__cursor_8hpp.html" title=" " alt="" coords="1553,819,1743,845"/>
+<area shape="rect" id="node38" href="$supergenius__trie_8hpp.html" title=" " alt="" coords="1357,812,1528,852"/>
+<area shape="rect" id="node39" href="$supergenius__codec_8hpp.html" title=" " alt="" coords="1768,812,1931,852"/>
+<area shape="rect" id="node41" href="$wasm__module_8hpp.html" title=" " alt="" coords="828,269,991,309"/>
+<area shape="rect" id="node42" href="$wasm__module__instance_8hpp.html" title=" " alt="" coords="871,357,1062,397"/>
+<area shape="rect" id="node43" title=" " alt="" coords="999,453,1113,478"/>
+<area shape="rect" id="node45" title=" " alt="" coords="759,453,924,478"/>
+</map>

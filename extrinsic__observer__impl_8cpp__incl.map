@@ -1,0 +1,27 @@
+<map id="src/network/impl/extrinsic_observer_impl.cpp" name="src/network/impl/extrinsic_observer_impl.cpp">
+<area shape="rect" id="node1" title=" " alt="" coords="427,5,597,45"/>
+<area shape="rect" id="node2" href="$extrinsic__observer__impl_8hpp.html" title=" " alt="" coords="438,93,586,133"/>
+<area shape="rect" id="node3" href="$extrinsic__observer_8hpp.html" title=" " alt="" coords="195,189,397,214"/>
+<area shape="rect" id="node18" href="$author__api_8hpp.html" title=" " alt="" coords="449,181,575,221"/>
+<area shape="rect" id="node23" href="$logger_8hpp.html" title=" " alt="" coords="797,189,910,214"/>
+<area shape="rect" id="node4" href="$blob_8hpp.html" title=" " alt="" coords="237,277,339,302"/>
+<area shape="rect" id="node11" href="$outcome_8hpp.html" title=" " alt="" coords="179,438,330,463"/>
+<area shape="rect" id="node14" href="$extrinsic_8hpp.html" title=" " alt="" coords="435,277,589,302"/>
+<area shape="rect" id="node5" title=" " alt="" coords="121,357,172,383"/>
+<area shape="rect" id="node6" title=" " alt="" coords="196,357,367,383"/>
+<area shape="rect" id="node7" href="$hexutil_8hpp.html" title=" " alt="" coords="391,357,505,383"/>
+<area shape="rect" id="node13" title=" " alt="" coords="25,357,97,383"/>
+<area shape="rect" id="node8" title=" " alt="" coords="355,438,443,463"/>
+<area shape="rect" id="node9" title=" " alt="" coords="467,438,525,463"/>
+<area shape="rect" id="node10" title=" " alt="" coords="550,438,621,463"/>
+<area shape="rect" id="node12" title=" " alt="" coords="161,519,349,544"/>
+<area shape="rect" id="node15" href="$buffer_8hpp.html" title=" " alt="" coords="530,357,641,383"/>
+<area shape="rect" id="node16" title=" " alt="" coords="645,431,792,471"/>
+<area shape="rect" id="node17" title=" " alt="" coords="816,438,952,463"/>
+<area shape="rect" id="node19" href="$author__api__primitives_8hpp.html" title=" " alt="" coords="627,269,770,309"/>
+<area shape="rect" id="node20" title=" " alt="" coords="665,357,733,383"/>
+<area shape="rect" id="node21" title=" " alt="" coords="757,357,883,383"/>
+<area shape="rect" id="node22" title=" " alt="" coords="907,357,1029,383"/>
+<area shape="rect" id="node24" title=" " alt="" coords="794,277,913,302"/>
+<area shape="rect" id="node25" title=" " alt="" coords="937,277,1049,302"/>
+</map>

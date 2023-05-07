@@ -1,0 +1,13 @@
+<map id="sgns::verification::finality::CompletedRound" name="sgns::verification::finality::CompletedRound">
+<area shape="rect" id="node1" title=" " alt="" coords="417,1160,587,1259"/>
+<area shape="rect" id="node2" title=" " alt="" coords="421,1013,583,1097"/>
+<area shape="rect" id="node3" href="$structsgns_1_1verification_1_1finality_1_1_round_state.html" title="Stores the current state of the round." alt="" coords="281,852,419,951"/>
+<area shape="rect" id="node4" href="$structsgns_1_1primitives_1_1detail_1_1_block_info_t.html" title=" " alt="" coords="35,485,188,599"/>
+<area shape="rect" id="node9" href="$structsgns_1_1primitives_1_1detail_1_1_block_info_t.html" title=" " alt="" coords="242,676,458,789"/>
+<area shape="rect" id="node5" title=" " alt="" coords="5,309,188,364"/>
+<area shape="rect" id="node6" href="$classsgns_1_1base_1_1_blob.html" title=" " alt="" coords="212,251,384,423"/>
+<area shape="rect" id="node7" title=" " alt="" coords="341,108,449,148"/>
+<area shape="rect" id="node8" title=" " alt="" coords="555,5,593,45"/>
+<area shape="rect" id="node11" title=" " alt="" coords="575,172,717,227"/>
+<area shape="rect" id="node10" title=" " alt="" coords="383,515,618,569"/>
+</map>

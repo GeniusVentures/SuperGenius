@@ -1,0 +1,31 @@
+<map id="src/network/production_observer.hpp" name="src/network/production_observer.hpp">
+<area shape="rect" id="node1" title=" " alt="" coords="256,5,411,45"/>
+<area shape="rect" id="node2" href="$block__announce_8hpp.html" title=" " alt="" coords="264,93,403,133"/>
+<area shape="rect" id="node3" href="$block__header_8hpp.html" title=" " alt="" coords="242,181,425,207"/>
+<area shape="rect" id="node4" title=" " alt="" coords="5,262,88,287"/>
+<area shape="rect" id="node5" title=" " alt="" coords="184,834,243,859"/>
+<area shape="rect" id="node6" title=" " alt="" coords="264,431,403,471"/>
+<area shape="rect" id="node7" href="$blob_8hpp.html" title=" " alt="" coords="470,680,573,705"/>
+<area shape="rect" id="node16" href="$src_2primitives_2common_8hpp.html" title=" " alt="" coords="689,519,845,544"/>
+<area shape="rect" id="node20" href="$compact__integer_8hpp.html" title=" " alt="" coords="163,255,295,295"/>
+<area shape="rect" id="node22" href="$digest_8hpp.html" title=" " alt="" coords="672,262,813,287"/>
+<area shape="rect" id="node8" title=" " alt="" coords="693,753,744,779"/>
+<area shape="rect" id="node9" title=" " alt="" coords="264,753,435,779"/>
+<area shape="rect" id="node10" href="$hexutil_8hpp.html" title=" " alt="" coords="459,753,573,779"/>
+<area shape="rect" id="node15" title=" " alt="" coords="597,753,669,779"/>
+<area shape="rect" id="node11" title=" " alt="" coords="607,834,695,859"/>
+<area shape="rect" id="node12" title=" " alt="" coords="511,834,582,859"/>
+<area shape="rect" id="node13" href="$outcome_8hpp.html" title=" " alt="" coords="337,834,487,859"/>
+<area shape="rect" id="node14" title=" " alt="" coords="318,915,506,940"/>
+<area shape="rect" id="node17" title=" " alt="" coords="955,599,1016,625"/>
+<area shape="rect" id="node18" title=" " alt="" coords="889,834,1025,859"/>
+<area shape="rect" id="node19" href="$session__key_8hpp.html" title=" " alt="" coords="694,592,821,632"/>
+<area shape="rect" id="node21" href="$scale_2types_8hpp.html" title=" " alt="" coords="172,350,284,375"/>
+<area shape="rect" id="node23" title=" " alt="" coords="993,350,1114,375"/>
+<area shape="rect" id="node24" href="$buffer_8hpp.html" title=" " alt="" coords="769,753,879,779"/>
+<area shape="rect" id="node26" href="$unused_8hpp.html" title=" " alt="" coords="683,350,803,375"/>
+<area shape="rect" id="node27" href="$scheduled__change_8hpp.html" title=" " alt="" coords="827,343,968,383"/>
+<area shape="rect" id="node25" title=" " alt="" coords="719,827,865,867"/>
+<area shape="rect" id="node28" href="$authority_8hpp.html" title=" " alt="" coords="825,438,980,463"/>
+<area shape="rect" id="node29" title=" " alt="" coords="869,519,947,544"/>
+</map>

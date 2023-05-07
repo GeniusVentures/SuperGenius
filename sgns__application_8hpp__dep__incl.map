@@ -1,0 +1,10 @@
+<map id="src/application/sgns_application.hpp" name="src/application/sgns_application.hpp">
+<area shape="rect" id="node1" title=" " alt="" coords="399,5,537,45"/>
+<area shape="rect" id="node2" href="$block__producing__node__application_8hpp.html" title=" " alt="" coords="184,93,339,148"/>
+<area shape="rect" id="node5" href="$syncing__node__application_8hpp.html" title=" " alt="" coords="597,101,795,141"/>
+<area shape="rect" id="node7" href="$validating__node__application_8hpp.html" title=" " alt="" coords="363,101,573,141"/>
+<area shape="rect" id="node3" href="$app__delegate_8cpp.html" title=" " alt="" coords="184,211,339,236"/>
+<area shape="rect" id="node4" href="$block__producing__node__application_8cpp.html" title=" " alt="" coords="5,196,160,251"/>
+<area shape="rect" id="node6" href="$syncing__node__application_8cpp.html" title=" " alt="" coords="597,203,795,243"/>
+<area shape="rect" id="node8" href="$validating__node__application_8cpp.html" title=" " alt="" coords="363,203,573,243"/>
+</map>

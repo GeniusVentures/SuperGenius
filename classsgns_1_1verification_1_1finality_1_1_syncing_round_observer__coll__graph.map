@@ -1,0 +1,10 @@
+<map id="sgns::verification::finality::SyncingRoundObserver" name="sgns::verification::finality::SyncingRoundObserver">
+<area shape="rect" id="node1" title=" " alt="" coords="162,592,369,705"/>
+<area shape="rect" id="node2" href="$structsgns_1_1verification_1_1finality_1_1_round_observer.html" title="observes incoming messages. Abstraction of a network." alt="" coords="5,431,165,529"/>
+<area shape="rect" id="node3" title=" " alt="" coords="190,438,341,522"/>
+<area shape="rect" id="node4" href="$structsgns_1_1verification_1_1finality_1_1_environment.html" title=" " alt="" coords="154,181,297,353"/>
+<area shape="rect" id="node5" href="$structsgns_1_1verification_1_1finality_1_1_chain.html" title=" " alt="" coords="144,5,307,119"/>
+<area shape="rect" id="node6" title=" " alt="" coords="348,240,489,295"/>
+<area shape="rect" id="node8" title=" " alt="" coords="365,438,525,522"/>
+<area shape="rect" id="node7" title=" " alt="" coords="399,42,438,82"/>
+</map>

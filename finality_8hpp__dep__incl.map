@@ -1,0 +1,15 @@
+<map id="src/verification/finality/finality.hpp" name="src/verification/finality/finality.hpp">
+<area shape="rect" id="node1" title=" " alt="" coords="253,5,400,45"/>
+<area shape="rect" id="node2" href="$validating__node__application_8hpp.html" title=" " alt="" coords="26,269,235,309"/>
+<area shape="rect" id="node5" href="$finality__impl_8hpp.html" title=" " alt="" coords="253,93,400,133"/>
+<area shape="rect" id="node13" href="$voting__round__impl_8cpp.html" title=" " alt="" coords="425,93,607,133"/>
+<area shape="rect" id="node3" href="$app__delegate_8cpp.html" title=" " alt="" coords="5,475,160,500"/>
+<area shape="rect" id="node4" href="$validating__node__application_8cpp.html" title=" " alt="" coords="35,365,245,405"/>
+<area shape="rect" id="node6" href="$validating__node__injector_8hpp.html" title=" " alt="" coords="254,181,399,221"/>
+<area shape="rect" id="node12" href="$finality__impl_8cpp.html" title=" " alt="" coords="424,181,571,221"/>
+<area shape="rect" id="node7" href="$block__producing__node__injector_8hpp.html" title=" " alt="" coords="259,269,453,309"/>
+<area shape="rect" id="node11" href="$validating__node__injector_8cpp.html" title=" " alt="" coords="477,269,622,309"/>
+<area shape="rect" id="node8" href="$block__producing__node__application_8hpp.html" title=" " alt="" coords="269,357,424,412"/>
+<area shape="rect" id="node10" href="$block__producing__node__injector_8cpp.html" title=" " alt="" coords="449,365,642,405"/>
+<area shape="rect" id="node9" href="$block__producing__node__application_8cpp.html" title=" " alt="" coords="269,460,424,515"/>
+</map>

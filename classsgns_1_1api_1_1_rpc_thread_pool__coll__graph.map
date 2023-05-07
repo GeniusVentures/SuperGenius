@@ -1,0 +1,15 @@
+<map id="sgns::api::RpcThreadPool" name="sgns::api::RpcThreadPool">
+<area shape="rect" id="node1" title="thread pool for serve RPC calls" alt="" coords="409,599,581,697"/>
+<area shape="rect" id="node2" title=" " alt="" coords="5,467,200,521"/>
+<area shape="rect" id="node3" title=" " alt="" coords="675,251,826,320"/>
+<area shape="rect" id="node4" href="$classsgns_1_1api_1_1_rpc_context.html" title=" " alt="" coords="855,115,1006,155"/>
+<area shape="rect" id="node5" title=" " alt="" coords="854,5,1007,45"/>
+<area shape="rect" id="node6" title=" " alt="" coords="527,108,668,163"/>
+<area shape="rect" id="node10" title=" " alt="" coords="429,251,569,320"/>
+<area shape="rect" id="node13" title=" " alt="" coords="541,344,701,428"/>
+<area shape="rect" id="node7" title=" " alt="" coords="411,5,450,45"/>
+<area shape="rect" id="node12" title=" " alt="" coords="266,187,382,227"/>
+<area shape="rect" id="node8" href="$classsgns_1_1api_1_1_rpc_thread_pool.html#structsgns_1_1api_1_1_rpc_thread_pool_1_1_configuration" title=" " alt="" coords="409,452,581,536"/>
+<area shape="rect" id="node9" title=" " alt="" coords="224,467,384,521"/>
+<area shape="rect" id="node11" title=" " alt="" coords="398,115,485,155"/>
+</map>

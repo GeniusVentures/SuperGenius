@@ -1,0 +1,5 @@
+<map id="sgns::runtime::WasmProvider" name="sgns::runtime::WasmProvider">
+<area shape="rect" id="node1" title=" " alt="" coords="102,5,297,75"/>
+<area shape="rect" id="node2" href="$classsgns_1_1runtime_1_1_const_wasm_provider.html" title=" " alt="" coords="5,145,185,243"/>
+<area shape="rect" id="node3" href="$classsgns_1_1runtime_1_1_storage_wasm_provider.html" title=" " alt="" coords="209,123,400,265"/>
+</map>

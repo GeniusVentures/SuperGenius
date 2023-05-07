@@ -1,0 +1,24 @@
+var searchData=
+[
+  ['parent_5fexpired_0',['PARENT_EXPIRED',['../classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl.html#aaf8c3e1f54b6f0c205d02365e3713172a8a82367f02b31213005708c2ff1929c2',1,'sgns::storage::trie::TopperTrieBatchImpl']]],
+  ['parse_5ferror_1',['parse_error',['../namespacesgns.html#a1a77b18d6cc82050735081cd0924e619a456e19aeafa334241c7ff3f589547f9d',1,'sgns']]],
+  ['parse_5ffailed_2',['PARSE_FAILED',['../classsgns_1_1network.html#a49a4d5c2df72e4c3e0e83ee04ecb548fa1319392c37b19e66bfd1b5036110d8a4',1,'sgns::network']]],
+  ['parser_5ferror_3',['PARSER_ERROR',['../namespacesgns_1_1application.html#aeec9e912f01414eb0080fcea28d0608ea993e14b6038e4569a690b5711a2faf7b',1,'sgns::application']]],
+  ['payment_4',['Payment',['../namespacesgns_1_1primitives.html#aec2a143154e31796fa584017229720c8ac453a4b8e8d98e82f35b67f433e3b4da',1,'sgns::primitives']]],
+  ['pending_5faddress_5fonly_5',['pending_address_only',['../namespacesgns.html#acce50fcc3a4088da216a7ae3eb5bbbf0ab3f8c1b9189ea180b1dd8019b95a720d',1,'sgns']]],
+  ['pending_5fhash_5famount_5fand_5faddress_6',['pending_hash_amount_and_address',['../namespacesgns.html#acce50fcc3a4088da216a7ae3eb5bbbf0a9361195a1f853ac9ab61ceb3c0502efc',1,'sgns']]],
+  ['pending_5fhash_5fand_5famount_7',['pending_hash_and_amount',['../namespacesgns.html#acce50fcc3a4088da216a7ae3eb5bbbf0a804b5d1ee14ed834b45d55ddda5aa47f',1,'sgns']]],
+  ['persistent_8',['PERSISTENT',['../classsgns_1_1runtime_1_1binaryen_1_1_runtime_api.html#a6a085102349cc88fbd0099b70bf7e094a1c437477ca08e5e7ece3934c90543971',1,'sgns::runtime::binaryen::RuntimeApi']]],
+  ['pool_5fis_5ffull_9',['POOL_IS_FULL',['../namespacesgns_1_1transaction__pool.html#af4ebf6c16a956392333a1f98d98b374fa54b8ec21d5ce4cbeb55921b7fe81db7d',1,'sgns::transaction_pool']]],
+  ['precommit_5fruns_10',['PRECOMMIT_RUNS',['../classsgns_1_1verification_1_1finality_1_1_voting_round_impl.html#a8ae74ce5139ff9e5910dd3f49a614efda7329cf952e5941882f6f616cceb628e7',1,'sgns::verification::finality::VotingRoundImpl']]],
+  ['precommitted_11',['PRECOMMITTED',['../namespacesgns_1_1verification_1_1finality.html#aa6108f3c82a8725c9df51e855326afcdade9bc61e8eb601346b91c684ca96d16f',1,'sgns::verification::finality']]],
+  ['prepare_12',['Prepare',['../classsgns_1_1application_1_1_app_state_manager.html#a92bffe78275c219ab93baf0d35eb6027af8199556cf6a62ca9268aa50c99b34a1',1,'sgns::application::AppStateManager']]],
+  ['prevote_5fruns_13',['PREVOTE_RUNS',['../classsgns_1_1verification_1_1finality_1_1_voting_round_impl.html#a8ae74ce5139ff9e5910dd3f49a614efda8aa9dda96cc1b50bebfc3dff6a1e4f32',1,'sgns::verification::finality::VotingRoundImpl']]],
+  ['prevoted_14',['PREVOTED',['../namespacesgns_1_1verification_1_1finality.html#aa6108f3c82a8725c9df51e855326afcdada0592c5174832a90abe4f837bc868af',1,'sgns::verification::finality']]],
+  ['privkey_5fsize_15',['PRIVKEY_SIZE',['../namespacesgns_1_1crypto_1_1constants_1_1ed25519.html#a646ece03ce80075cb393b3496361354fae6872b1afeb949f2bbfa3d970e428637',1,'sgns::crypto::constants::ed25519']]],
+  ['proof_5fsize_16',['PROOF_SIZE',['../namespacesgns_1_1crypto_1_1constants_1_1sr25519_1_1vrf.html#ac6e95bf0297842c840995016ad2ccc14ab1e2fb3dd62cdecd9f187f910aa0e35e',1,'sgns::crypto::constants::sr25519::vrf']]],
+  ['proposed_17',['PROPOSED',['../namespacesgns_1_1verification_1_1finality.html#aa6108f3c82a8725c9df51e855326afcda5ab32e6ce0b16229fdc25a631220b22c',1,'sgns::verification::finality']]],
+  ['pubkey_5fsize_18',['PUBKEY_SIZE',['../namespacesgns_1_1crypto_1_1constants_1_1ed25519.html#a646ece03ce80075cb393b3496361354fa896cc6da5f6479dc9ae56ac71d2af285',1,'sgns::crypto::constants::ed25519']]],
+  ['public_5fsize_19',['PUBLIC_SIZE',['../namespacesgns_1_1crypto_1_1constants_1_1sr25519.html#a928f84f20ace070e25bc3f5f8bb2d618a20a32a93173ee39a8a0113e5df0eaae4',1,'sgns::crypto::constants::sr25519']]],
+  ['publish_20',['publish',['../namespacesgns.html#a28d1086e9c7886336bab065d17b7541fa9b6d0bb3102b87fae57bc4a39149518e',1,'sgns']]]
+];

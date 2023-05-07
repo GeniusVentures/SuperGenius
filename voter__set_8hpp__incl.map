@@ -1,0 +1,29 @@
+<map id="src/verification/finality/voter_set.hpp" name="src/verification/finality/voter_set.hpp">
+<area shape="rect" id="node1" title=" " alt="" coords="241,5,387,45"/>
+<area shape="rect" id="node2" title=" " alt="" coords="176,101,303,126"/>
+<area shape="rect" id="node3" href="$src_2verification_2finality_2common_8hpp.html" title=" " alt="" coords="327,93,451,133"/>
+<area shape="rect" id="node4" title=" " alt="" coords="5,181,116,207"/>
+<area shape="rect" id="node5" href="$clock_8hpp.html" title=" " alt="" coords="141,181,253,207"/>
+<area shape="rect" id="node7" href="$wrapper_8hpp.html" title=" " alt="" coords="277,181,401,207"/>
+<area shape="rect" id="node11" href="$ed25519__types_8hpp.html" title=" " alt="" coords="656,181,828,207"/>
+<area shape="rect" id="node23" href="$authority_8hpp.html" title=" " alt="" coords="477,181,631,207"/>
+<area shape="rect" id="node26" href="$src_2primitives_2common_8hpp.html" title=" " alt="" coords="385,255,541,280"/>
+<area shape="rect" id="node6" title=" " alt="" coords="49,255,110,280"/>
+<area shape="rect" id="node8" title=" " alt="" coords="135,255,203,280"/>
+<area shape="rect" id="node9" title=" " alt="" coords="227,255,310,280"/>
+<area shape="rect" id="node10" title=" " alt="" coords="259,335,395,361"/>
+<area shape="rect" id="node12" title=" " alt="" coords="772,255,907,280"/>
+<area shape="rect" id="node13" href="$blob_8hpp.html" title=" " alt="" coords="547,416,649,441"/>
+<area shape="rect" id="node14" title=" " alt="" coords="355,489,406,515"/>
+<area shape="rect" id="node15" title=" " alt="" coords="430,489,601,515"/>
+<area shape="rect" id="node16" href="$hexutil_8hpp.html" title=" " alt="" coords="625,489,739,515"/>
+<area shape="rect" id="node22" title=" " alt="" coords="763,489,835,515"/>
+<area shape="rect" id="node17" title=" " alt="" coords="495,563,583,588"/>
+<area shape="rect" id="node18" title=" " alt="" coords="607,563,666,588"/>
+<area shape="rect" id="node19" title=" " alt="" coords="691,563,761,588"/>
+<area shape="rect" id="node20" href="$outcome_8hpp.html" title=" " alt="" coords="785,563,936,588"/>
+<area shape="rect" id="node21" title=" " alt="" coords="767,636,955,661"/>
+<area shape="rect" id="node24" title=" " alt="" coords="571,335,633,361"/>
+<area shape="rect" id="node25" title=" " alt="" coords="617,255,696,280"/>
+<area shape="rect" id="node27" href="$session__key_8hpp.html" title=" " alt="" coords="420,328,547,368"/>
+</map>

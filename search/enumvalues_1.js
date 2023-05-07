@@ -1,0 +1,19 @@
+var searchData=
+[
+  ['bad_5fsignature_0',['BAD_SIGNATURE',['../namespacesgns_1_1primitives.html#a460aa4ba1c4c226a9999a737a5fdd06ea1445c3747a23b5fe26b9a373a5c6018a',1,'sgns::primitives']]],
+  ['badnumberofnumworkers_1',['BadNumberOfNumWorkers',['../structsgns_1_1crdt_1_1_crdt_options.html#ade72accd89471abe0a471aac9ad7010baa1f6317e1efcbf2403865c27a8c3c18e',1,'sgns::crdt::CrdtOptions']]],
+  ['badproof_2',['BadProof',['../namespacesgns_1_1primitives.html#aec2a143154e31796fa584017229720c8a4223de3061d2d322401a62e6290b84af',1,'sgns::primitives']]],
+  ['block_5fannounce_3',['BLOCK_ANNOUNCE',['../structsgns_1_1network_1_1_gossip_message.html#a415072454060dbbe0a96462e6c56480eaf5a80d09b563a962ad7215b085e29fbe',1,'sgns::network::GossipMessage']]],
+  ['block_5fdata_4',['BLOCK_DATA',['../namespacesgns_1_1blockchain_1_1prefix.html#affebeb618ce26afa1fa4b7deb2d78f8aa83fe80a75b72ad42f999b304960cb1bf',1,'sgns::blockchain::prefix']]],
+  ['block_5fexists_5',['BLOCK_EXISTS',['../classsgns_1_1blockchain_1_1_key_value_block_storage.html#a9bdbe4c227d33a8184f08da02f8d6d2da85cf70e6f7ed394b5cbf2623d6303ce1',1,'sgns::blockchain::KeyValueBlockStorage::BLOCK_EXISTS()'],['../namespacesgns_1_1blockchain.html#a61c1a0b749a99e37658dbab4f90c3027a85cf70e6f7ed394b5cbf2623d6303ce1',1,'sgns::blockchain::BLOCK_EXISTS()']]],
+  ['block_5fnot_5ffound_6',['BLOCK_NOT_FOUND',['../classsgns_1_1blockchain_1_1_block_tree_impl.html#a8ba1c02537df0d489c703d99b591540da138f3bbfa4e3fae296375dd0c1e837c2',1,'sgns::blockchain::BlockTreeImpl::BLOCK_NOT_FOUND()'],['../namespacesgns_1_1blockchain.html#a2be80d78670f65f34025631edcc0daaaa138f3bbfa4e3fae296375dd0c1e837c2',1,'sgns::blockchain::BLOCK_NOT_FOUND()']]],
+  ['block_5fon_5fdead_5fend_7',['BLOCK_ON_DEAD_END',['../classsgns_1_1blockchain_1_1_block_tree_impl.html#a8ba1c02537df0d489c703d99b591540dad2a3108c04ca166ca6dc4e34b35bbafc',1,'sgns::blockchain::BlockTreeImpl']]],
+  ['block_5frequest_8',['BLOCK_REQUEST',['../structsgns_1_1network_1_1_gossip_message.html#a415072454060dbbe0a96462e6c56480ea624a62b506ad6dd0539198575ff3c2ea',1,'sgns::network::GossipMessage']]],
+  ['body_9',['BODY',['../classsgns_1_1network.html#ab979843921492716e2caa49951a47287a786329b34bbe53ab40a54a19cd597f2d',1,'sgns::network']]],
+  ['body_5fdoes_5fnot_5fexist_10',['BODY_DOES_NOT_EXIST',['../classsgns_1_1blockchain_1_1_key_value_block_storage.html#a9bdbe4c227d33a8184f08da02f8d6d2da258e8018984a5f9573148bff33637bf3',1,'sgns::blockchain::KeyValueBlockStorage']]],
+  ['branchemptyvalue_11',['BranchEmptyValue',['../structsgns_1_1storage_1_1trie_1_1_super_genius_node.html#a8e6ad7aafff6f51af4b80b396d6c8c2aa17b97eba46425b4035ae241d78e22b83',1,'sgns::storage::trie::SuperGeniusNode']]],
+  ['branchwithvalue_12',['BranchWithValue',['../structsgns_1_1storage_1_1trie_1_1_super_genius_node.html#a8e6ad7aafff6f51af4b80b396d6c8c2aa7240f2da41849c88186568eb187da69a',1,'sgns::storage::trie::SuperGeniusNode']]],
+  ['bulk_5fpull_13',['bulk_pull',['../namespacesgns.html#a28d1086e9c7886336bab065d17b7541fa1cf6857f60ea96bd58510dea6d9378b1',1,'sgns']]],
+  ['bulk_5fpull_5faccount_14',['bulk_pull_account',['../namespacesgns.html#a28d1086e9c7886336bab065d17b7541fabade804fdd1eb0a0d84d03e66c90caab',1,'sgns']]],
+  ['bulk_5fpush_15',['bulk_push',['../namespacesgns.html#a28d1086e9c7886336bab065d17b7541faa3278642e24de6e05d06e5d0dda1ba1b',1,'sgns']]]
+];

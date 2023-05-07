@@ -1,0 +1,49 @@
+<map id="sgns::crdt::CrdtDatastore" name="sgns::crdt::CrdtDatastore">
+<area shape="rect" id="node1" title="CrdtDatastore provides a replicated go&#45;datastore (key&#45;value store) implementation using Merkle&#45;CRDTs ..." alt="" coords="1071,1885,1288,2512"/>
+<area shape="rect" id="node2" title=" " alt="" coords="5,1746,191,1801"/>
+<area shape="rect" id="node3" title=" " alt="" coords="1597,1083,1748,1152"/>
+<area shape="rect" id="node22" href="$classsgns_1_1crdt_1_1_crdt_set.html" title="CrdtSet implements an Add&#45;Wins Observed&#45;Remove Set using delta&#45;CRDTs (https://arxiv...." alt="" coords="1275,1361,1457,1607"/>
+<area shape="rect" id="node25" href="$classsgns_1_1crdt_1_1_crdt_heads.html" title="CrdtHeads manages the current Merkle&#45;CRDT heads." alt="" coords="1914,1332,2069,1636"/>
+<area shape="rect" id="node4" href="$classsgns_1_1storage_1_1rocksdb.html" title="An implementation of PersistentBufferMap interface, which uses rocksdb as underlying storage." alt="" coords="1595,643,1750,932"/>
+<area shape="rect" id="node5" href="$structsgns_1_1storage_1_1face_1_1_generic_storage.html" title="An abstraction over readable, writeable, iterable key&#45;value storage that supports write batches." alt="" coords="2448,419,2553,459"/>
+<area shape="rect" id="node6" href="$structsgns_1_1storage_1_1face_1_1_read_only_map.html" title="An abstraction over a readable and iterable key&#45;value map." alt="" coords="2676,196,2832,251"/>
+<area shape="rect" id="node7" href="$structsgns_1_1storage_1_1face_1_1_iterable.html" title="A mixin for an iterable map." alt="" coords="2779,20,2913,104"/>
+<area shape="rect" id="node8" href="$structsgns_1_1storage_1_1face_1_1_readable.html" title="A mixin for read&#45;only map." alt="" coords="2620,5,2755,119"/>
+<area shape="rect" id="node9" href="$structsgns_1_1storage_1_1face_1_1_batch_write_map.html" title="An abstraction over a writeable key&#45;value map with batching support." alt="" coords="2343,196,2507,251"/>
+<area shape="rect" id="node10" href="$structsgns_1_1storage_1_1face_1_1_writeable.html" title="An mixin for modifiable map." alt="" coords="2371,5,2505,119"/>
+<area shape="rect" id="node11" href="$structsgns_1_1storage_1_1face_1_1_batchable.html" title="A mixin for a map that supports batching for efficiency of modifications." alt="" coords="2212,20,2347,104"/>
+<area shape="rect" id="node12" title=" " alt="" coords="1597,405,1748,474"/>
+<area shape="rect" id="node13" title=" " alt="" coords="1345,196,1486,251"/>
+<area shape="rect" id="node15" title=" " alt="" coords="1413,397,1573,481"/>
+<area shape="rect" id="node16" title=" " alt="" coords="2009,753,2160,822"/>
+<area shape="rect" id="node17" href="$structsgns_1_1crdt_1_1_crdt_options.html" title="Options holds configurable values for CrdtDatastore." alt="" coords="2205,353,2423,525"/>
+<area shape="rect" id="node21" title=" " alt="" coords="1291,1739,1441,1808"/>
+<area shape="rect" id="node24" title=" " alt="" coords="1801,1739,1952,1808"/>
+<area shape="rect" id="node33" title=" " alt="" coords="2029,405,2180,474"/>
+<area shape="rect" id="node35" title=" " alt="" coords="2629,405,2780,474"/>
+<area shape="rect" id="node41" title=" " alt="" coords="396,1075,547,1159"/>
+<area shape="rect" id="node45" title=" " alt="" coords="733,405,895,474"/>
+<area shape="rect" id="node46" title=" " alt="" coords="920,405,1084,474"/>
+<area shape="rect" id="node14" title=" " alt="" coords="684,42,723,82"/>
+<area shape="rect" id="node27" title=" " alt="" coords="2531,203,2652,243"/>
+<area shape="rect" id="node32" title=" " alt="" coords="577,1097,693,1137"/>
+<area shape="rect" id="node39" title=" " alt="" coords="380,203,499,243"/>
+<area shape="rect" id="node47" title=" " alt="" coords="646,289,761,329"/>
+<area shape="rect" id="node18" href="$classsgns_1_1crdt_1_1_hierarchical_key.html" title="A Key represents the unique identifier of an object, inspired by file systems and Google App Engine k..." alt="" coords="1227,995,1406,1240"/>
+<area shape="rect" id="node19" title=" " alt="" coords="1046,767,1129,807"/>
+<area shape="rect" id="node20" title=" " alt="" coords="1159,412,1287,467"/>
+<area shape="rect" id="node23" title=" " alt="" coords="1430,1097,1515,1137"/>
+<area shape="rect" id="node26" title=" " alt="" coords="2119,549,2291,619"/>
+<area shape="rect" id="node28" title=" " alt="" coords="2557,42,2596,82"/>
+<area shape="rect" id="node29" title=" " alt="" coords="1919,1097,2064,1137"/>
+<area shape="rect" id="node30" title=" " alt="" coords="2349,1753,2479,1793"/>
+<area shape="rect" id="node31" title=" " alt="" coords="419,1660,550,1715"/>
+<area shape="rect" id="node40" title=" " alt="" coords="538,1449,735,1519"/>
+<area shape="rect" id="node34" href="$classsgns_1_1crdt_1_1_broadcaster.html" title="A Broadcaster provides a way to send (notify) an opaque payload to all replicas and to retrieve paylo..." alt="" coords="2160,181,2319,265"/>
+<area shape="rect" id="node36" href="$classsgns_1_1crdt_1_1_d_a_g_syncer.html" title="A DAGSyncer is an abstraction to an IPLD&#45;based p2p storage layer. A DAGSyncer is a DAGService with th..." alt="" coords="2892,196,3048,251"/>
+<area shape="rect" id="node37" title=" " alt="" coords="2937,35,3101,89"/>
+<area shape="rect" id="node38" title=" " alt="" coords="205,412,340,467"/>
+<area shape="rect" id="node42" href="$classsgns_1_1crdt_1_1_crdt_datastore.html#structsgns_1_1crdt_1_1_crdt_datastore_1_1_dag_worker" title=" " alt="" coords="266,753,434,822"/>
+<area shape="rect" id="node43" title=" " alt="" coords="717,1090,887,1145"/>
+<area shape="rect" id="node44" href="$classsgns_1_1crdt_1_1_crdt_datastore.html#structsgns_1_1crdt_1_1_crdt_datastore_1_1_dag_job" title=" " alt="" coords="799,745,967,829"/>
+</map>

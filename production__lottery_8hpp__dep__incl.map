@@ -1,0 +1,24 @@
+<map id="src/verification/production/production_lottery.hpp" name="src/verification/production/production_lottery.hpp">
+<area shape="rect" id="node1" title=" " alt="" coords="213,5,384,45"/>
+<area shape="rect" id="node2" href="$application__injector_8hpp.html" title=" " alt="" coords="469,203,621,243"/>
+<area shape="rect" id="node17" href="$production__impl_8hpp.html" title=" " alt="" coords="123,299,293,339"/>
+<area shape="rect" id="node19" href="$production__lottery__impl_8hpp.html" title=" " alt="" coords="275,93,445,148"/>
+<area shape="rect" id="node21" href="$production__meta_8hpp.html" title=" " alt="" coords="16,101,197,141"/>
+<area shape="rect" id="node3" href="$application__injector_8cpp.html" title=" " alt="" coords="317,299,469,339"/>
+<area shape="rect" id="node4" href="$block__producing__node__injector_8hpp.html" title=" " alt="" coords="291,475,485,515"/>
+<area shape="rect" id="node9" href="$syncing__node__injector_8hpp.html" title=" " alt="" coords="725,299,859,339"/>
+<area shape="rect" id="node13" href="$validating__node__injector_8hpp.html" title=" " alt="" coords="518,387,663,427"/>
+<area shape="rect" id="node5" href="$block__producing__node__application_8hpp.html" title=" " alt="" coords="271,563,425,617"/>
+<area shape="rect" id="node8" href="$block__producing__node__injector_8cpp.html" title=" " alt="" coords="450,570,643,610"/>
+<area shape="rect" id="node6" href="$app__delegate_8cpp.html" title=" " alt="" coords="527,680,681,705"/>
+<area shape="rect" id="node7" href="$block__producing__node__application_8cpp.html" title=" " alt="" coords="271,665,425,720"/>
+<area shape="rect" id="node10" href="$syncing__node__application_8hpp.html" title=" " alt="" coords="902,387,1101,427"/>
+<area shape="rect" id="node12" href="$syncing__node__injector_8cpp.html" title=" " alt="" coords="725,387,859,427"/>
+<area shape="rect" id="node11" href="$syncing__node__application_8cpp.html" title=" " alt="" coords="911,475,1110,515"/>
+<area shape="rect" id="node14" href="$validating__node__application_8hpp.html" title=" " alt="" coords="678,475,887,515"/>
+<area shape="rect" id="node16" href="$validating__node__injector_8cpp.html" title=" " alt="" coords="509,475,654,515"/>
+<area shape="rect" id="node15" href="$validating__node__application_8cpp.html" title=" " alt="" coords="719,570,929,610"/>
+<area shape="rect" id="node18" href="$production__impl_8cpp.html" title=" " alt="" coords="245,387,416,427"/>
+<area shape="rect" id="node20" href="$production__lottery__impl_8cpp.html" title=" " alt="" coords="275,196,445,251"/>
+<area shape="rect" id="node22" href="$production_8hpp.html" title=" " alt="" coords="5,211,200,236"/>
+</map>

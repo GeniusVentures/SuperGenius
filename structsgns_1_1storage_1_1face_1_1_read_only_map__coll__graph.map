@@ -1,0 +1,5 @@
+<map id="sgns::storage::face::ReadOnlyMap&lt; K, V &gt;" name="sgns::storage::face::ReadOnlyMap&lt; K, V &gt;">
+<area shape="rect" id="node1" title="An abstraction over a readable and iterable key&#45;value map." alt="" coords="73,167,229,221"/>
+<area shape="rect" id="node2" href="$structsgns_1_1storage_1_1face_1_1_iterable.html" title="A mixin for an iterable map." alt="" coords="5,20,140,104"/>
+<area shape="rect" id="node3" href="$structsgns_1_1storage_1_1face_1_1_readable.html" title="A mixin for read&#45;only map." alt="" coords="164,5,299,119"/>
+</map>

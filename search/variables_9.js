@@ -1,0 +1,6 @@
+var searchData=
+[
+  ['jrpc_5fapi_5fservice_5f_0',['jrpc_api_service_',['../classsgns_1_1application_1_1_block_producing_node_application.html#af9bc3c08f3d278cbf3a38fc22636f537',1,'sgns::application::BlockProducingNodeApplication::jrpc_api_service_()'],['../classsgns_1_1application_1_1_syncing_node_application.html#a0a85ef3101d982bca6a8db510a65970f',1,'sgns::application::SyncingNodeApplication::jrpc_api_service_()'],['../classsgns_1_1application_1_1_validating_node_application.html#aacfa31d7084bdab05341c4e1b6d0c01c',1,'sgns::application::ValidatingNodeApplication::jrpc_api_service_()']]],
+  ['jsonrpc_5fhandler_5f_1',['jsonrpc_handler_',['../classsgns_1_1api_1_1_j_rpc_server_impl.html#a4b2808fc590a06e6a48a63e93675bef3',1,'sgns::api::JRpcServerImpl']]],
+  ['justification_2',['justification',['../structsgns_1_1primitives_1_1_block_data.html#a39897db730af572bf18f9e00ddb677b7',1,'sgns::primitives::BlockData::justification()'],['../namespacesgns_1_1verification_1_1finality.html#aea66fdd1bb64d3be60294da02359ccfc',1,'sgns::verification::finality::Commit::justification()'],['../namespacesgns_1_1verification_1_1finality.html#af4f1b546ba6cbca660713ac90601ff45',1,'sgns::verification::finality::Fin::justification()']]]
+];

@@ -1,0 +1,6 @@
+<map id="sgns::verification::finality::RoundObserver" name="sgns::verification::finality::RoundObserver">
+<area shape="rect" id="node1" title="observes incoming messages. Abstraction of a network." alt="" coords="117,5,277,104"/>
+<area shape="rect" id="node2" href="$classsgns_1_1verification_1_1finality_1_1_finality.html" title=" " alt="" coords="20,181,171,265"/>
+<area shape="rect" id="node4" href="$classsgns_1_1verification_1_1finality_1_1_syncing_round_observer.html" title=" " alt="" coords="195,152,401,295"/>
+<area shape="rect" id="node3" href="$classsgns_1_1verification_1_1finality_1_1_finality_impl.html" title=" " alt="" coords="5,343,185,779"/>
+</map>

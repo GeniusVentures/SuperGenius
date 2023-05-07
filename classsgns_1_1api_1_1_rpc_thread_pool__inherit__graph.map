@@ -1,0 +1,4 @@
+<map id="sgns::api::RpcThreadPool" name="sgns::api::RpcThreadPool">
+<area shape="rect" id="node1" title="thread pool for serve RPC calls" alt="" coords="17,108,189,265"/>
+<area shape="rect" id="node2" title=" " alt="" coords="5,5,200,60"/>
+</map>

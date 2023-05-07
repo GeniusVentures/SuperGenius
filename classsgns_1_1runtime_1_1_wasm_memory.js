@@ -1,0 +1,28 @@
+var classsgns_1_1runtime_1_1_wasm_memory =
+[
+    [ "~WasmMemory", "classsgns_1_1runtime_1_1_wasm_memory.html#a47db432747c6784186d2abcab66697cf", null ],
+    [ "allocate", "classsgns_1_1runtime_1_1_wasm_memory.html#a74be0200443862022aec35762887f741", null ],
+    [ "deallocate", "classsgns_1_1runtime_1_1_wasm_memory.html#a4b1fd09b6f0e4c52316b2bff536252cc", null ],
+    [ "load128", "classsgns_1_1runtime_1_1_wasm_memory.html#a006aa910b6d968dfab03d73aafd2aa0b", null ],
+    [ "load16s", "classsgns_1_1runtime_1_1_wasm_memory.html#a198f75b41494184d0297626e80b509db", null ],
+    [ "load16u", "classsgns_1_1runtime_1_1_wasm_memory.html#a1f59c67cefe05e25193ab78d24656209", null ],
+    [ "load32s", "classsgns_1_1runtime_1_1_wasm_memory.html#a8fba34f8511d811238d7e010bbc8656f", null ],
+    [ "load32u", "classsgns_1_1runtime_1_1_wasm_memory.html#a4f8641d673611f47f174319c2fdd0c6b", null ],
+    [ "load64s", "classsgns_1_1runtime_1_1_wasm_memory.html#a0e60416f11e0b9797a8045389a3b1da4", null ],
+    [ "load64u", "classsgns_1_1runtime_1_1_wasm_memory.html#af9e1c7b41ba9873e634d5d1126ce809e", null ],
+    [ "load8s", "classsgns_1_1runtime_1_1_wasm_memory.html#ab8ab4956a244c3d654df8eba148250f7", null ],
+    [ "load8u", "classsgns_1_1runtime_1_1_wasm_memory.html#a26f644cab0442b0f3b2c6dc4be9173e1", null ],
+    [ "loadN", "classsgns_1_1runtime_1_1_wasm_memory.html#a3b805776f41eddfc4f522ef7a4d63d69", null ],
+    [ "loadStr", "classsgns_1_1runtime_1_1_wasm_memory.html#ab585b59e6bddc47847ce63eabb730e21", null ],
+    [ "reset", "classsgns_1_1runtime_1_1_wasm_memory.html#a2b8c3b3ad820cf12fd48877f66461928", null ],
+    [ "resize", "classsgns_1_1runtime_1_1_wasm_memory.html#a7b011d642de899fa0a3efd43de7aca08", null ],
+    [ "size", "classsgns_1_1runtime_1_1_wasm_memory.html#a0c7d9068c9b0dab14c4cabe3f8f3ed1b", null ],
+    [ "store128", "classsgns_1_1runtime_1_1_wasm_memory.html#a8eaacfa044bf55e75b9b3512ed919f0b", null ],
+    [ "store16", "classsgns_1_1runtime_1_1_wasm_memory.html#ab7be9d593b8d6528474c813ef6db446f", null ],
+    [ "store32", "classsgns_1_1runtime_1_1_wasm_memory.html#a75adf68d71f330eb34b371d60cd53214", null ],
+    [ "store64", "classsgns_1_1runtime_1_1_wasm_memory.html#a777b58ff92eb90fbe54e69ee77ad4b51", null ],
+    [ "store8", "classsgns_1_1runtime_1_1_wasm_memory.html#afe823d7f2993b69b6f4ada3d87c52230", null ],
+    [ "storeBuffer", "classsgns_1_1runtime_1_1_wasm_memory.html#a5b695f381130ff9b08ea1b0c53999369", null ],
+    [ "storeBuffer", "classsgns_1_1runtime_1_1_wasm_memory.html#affdde4a11c342fcbd58dcb5e0e16ea1e", null ],
+    [ "kMaxMemorySize", "classsgns_1_1runtime_1_1_wasm_memory.html#af8fbdd9664c28d1c805cf55e0c8cf9f0", null ]
+];

@@ -1,0 +1,4 @@
+<map id="sgns::authority::ScheduleNode" name="sgns::authority::ScheduleNode">
+<area shape="rect" id="node1" title="Node of scheduler tree. Contains actual authorities for the accorded block and all its descendant blo..." alt="" coords="5,108,205,397"/>
+<area shape="rect" id="node2" title=" " alt="" coords="10,5,201,60"/>
+</map>

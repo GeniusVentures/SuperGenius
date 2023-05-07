@@ -1,0 +1,11 @@
+<map id="sgns::api::system::SystemJrpcProcessor" name="sgns::api::system::SystemJrpcProcessor">
+<area shape="rect" id="node1" title=" " alt="" coords="209,401,385,500"/>
+<area shape="rect" id="node2" href="$classsgns_1_1api_1_1_j_rpc_processor.html" title=" " alt="" coords="5,269,177,339"/>
+<area shape="rect" id="node3" title=" " alt="" coords="13,137,149,177"/>
+<area shape="rect" id="node4" title=" " alt="" coords="412,269,563,339"/>
+<area shape="rect" id="node5" href="$classsgns_1_1api_1_1_system_api.html" title="Auxiliary class that providing access for some app&#39;s parts over RPC." alt="" coords="590,123,737,192"/>
+<area shape="rect" id="node6" title=" " alt="" coords="383,130,525,185"/>
+<area shape="rect" id="node8" title=" " alt="" coords="221,269,372,339"/>
+<area shape="rect" id="node7" title=" " alt="" coords="435,5,473,45"/>
+<area shape="rect" id="node9" href="$classsgns_1_1api_1_1_j_rpc_server.html" title=" " alt="" coords="173,108,324,207"/>
+</map>

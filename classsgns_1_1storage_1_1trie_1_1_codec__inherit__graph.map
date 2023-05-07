@@ -1,0 +1,4 @@
+<map id="sgns::storage::trie::Codec" name="sgns::storage::trie::Codec">
+<area shape="rect" id="node1" title="Internal codec for nodes in the Trie. Eth and substrate have different codecs, but rest of the code s..." alt="" coords="25,5,152,133"/>
+<area shape="rect" id="node2" href="$classsgns_1_1storage_1_1trie_1_1_super_genius_codec.html" title=" " alt="" coords="5,181,172,427"/>
+</map>

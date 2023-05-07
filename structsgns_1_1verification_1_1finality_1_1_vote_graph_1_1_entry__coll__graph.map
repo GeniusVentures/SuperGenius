@@ -1,0 +1,14 @@
+<map id="sgns::verification::finality::VoteGraph::Entry" name="sgns::verification::finality::VoteGraph::Entry">
+<area shape="rect" id="node1" title=" " alt="" coords="241,739,400,837"/>
+<area shape="rect" id="node2" title=" " alt="" coords="5,533,188,588"/>
+<area shape="rect" id="node3" title=" " alt="" coords="212,541,317,581"/>
+<area shape="rect" id="node4" title=" " alt="" coords="342,533,473,588"/>
+<area shape="rect" id="node5" href="$classsgns_1_1base_1_1_blob.html" title=" " alt="" coords="187,211,359,383"/>
+<area shape="rect" id="node6" title=" " alt="" coords="219,108,327,148"/>
+<area shape="rect" id="node7" title=" " alt="" coords="321,5,360,45"/>
+<area shape="rect" id="node8" title=" " alt="" coords="351,108,467,148"/>
+<area shape="rect" id="node12" title=" " alt="" coords="552,269,695,324"/>
+<area shape="rect" id="node9" href="$classsgns_1_1verification_1_1finality_1_1_vote_weight.html" title=" " alt="" coords="657,460,819,661"/>
+<area shape="rect" id="node10" title=" " alt="" coords="719,269,901,324"/>
+<area shape="rect" id="node11" title=" " alt="" coords="926,269,1121,324"/>
+</map>

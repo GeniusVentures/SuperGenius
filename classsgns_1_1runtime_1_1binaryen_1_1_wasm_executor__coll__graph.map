@@ -1,0 +1,3 @@
+<map id="sgns::runtime::binaryen::WasmExecutor" name="sgns::runtime::binaryen::WasmExecutor">
+<area shape="rect" id="node1" title="WasmExecutor is the helper to execute export functions from wasm runtime." alt="" coords="5,5,163,75"/>
+</map>

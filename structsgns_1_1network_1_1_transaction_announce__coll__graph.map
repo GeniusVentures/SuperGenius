@@ -1,0 +1,12 @@
+<map id="sgns::network::TransactionAnnounce" name="sgns::network::TransactionAnnounce">
+<area shape="rect" id="node1" title=" " alt="" coords="637,856,817,911"/>
+<area shape="rect" id="node2" title=" " alt="" coords="655,739,799,793"/>
+<area shape="rect" id="node3" href="$structsgns_1_1primitives_1_1_extrinsic.html" title="Extrinsic class represents extrinsic." alt="" coords="558,621,729,676"/>
+<area shape="rect" id="node4" href="$classsgns_1_1base_1_1_buffer.html" title="Class represents arbitrary (including empty) byte buffer." alt="" coords="446,328,574,559"/>
+<area shape="rect" id="node5" title=" " alt="" coords="419,211,601,265"/>
+<area shape="rect" id="node6" title=" " alt="" coords="5,211,188,265"/>
+<area shape="rect" id="node7" title=" " alt="" coords="212,211,395,265"/>
+<area shape="rect" id="node8" title=" " alt="" coords="626,211,773,265"/>
+<area shape="rect" id="node9" title=" " alt="" coords="697,108,813,148"/>
+<area shape="rect" id="node10" title=" " alt="" coords="736,5,775,45"/>
+</map>

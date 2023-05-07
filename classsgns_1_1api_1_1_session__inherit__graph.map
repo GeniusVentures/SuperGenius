@@ -1,0 +1,5 @@
+<map id="sgns::api::Session" name="sgns::api::Session">
+<area shape="rect" id="node1" title="rpc session" alt="" coords="79,5,262,221"/>
+<area shape="rect" id="node2" href="$classsgns_1_1api_1_1_http_session.html" title="HTTP session for api service." alt="" coords="5,277,160,654"/>
+<area shape="rect" id="node3" href="$classsgns_1_1api_1_1_ws_session.html" title=" " alt="" coords="184,269,333,661"/>
+</map>

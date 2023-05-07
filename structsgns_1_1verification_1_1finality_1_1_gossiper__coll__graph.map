@@ -1,0 +1,3 @@
+<map id="sgns::verification::finality::Gossiper" name="sgns::verification::finality::Gossiper">
+<area shape="rect" id="node1" title="Gossip messages to the network via this class." alt="" coords="5,5,128,104"/>
+</map>

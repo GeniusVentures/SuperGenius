@@ -1,0 +1,10 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node1" title=" " alt="" coords="11,127,190,153"/>
+<area shape="rect" id="node2" href="$structsgns_1_1primitives_1_1detail_1_1_block_info_t.html" title=" " alt="" coords="244,5,460,45"/>
+<area shape="rect" id="node3" href="$classsgns_1_1base_1_1_buffer.html" title="Class represents arbitrary (including empty) byte buffer." alt="" coords="290,70,414,95"/>
+<area shape="rect" id="node5" href="$structsgns_1_1primitives_1_1detail_1_1_block_info_t.html" title=" " alt="" coords="277,120,427,160"/>
+<area shape="rect" id="node6" href="$structsgns_1_1verification_1_1finality_1_1_vote_graph_1_1_entry.html" title=" " alt="" coords="286,185,418,239"/>
+<area shape="rect" id="node7" href="$classsgns_1_1verification_1_1finality_1_1_vote_weight.html" title=" " alt="" coords="283,264,421,304"/>
+<area shape="rect" id="node4" href="$structsgns_1_1storage_1_1trie_1_1_key_nibbles.html" title=" " alt="" coords="508,63,631,103"/>
+<area shape="rect" id="node8" title=" " alt="" coords="5,271,196,297"/>
+</map>

@@ -1,0 +1,20 @@
+<map id="src/runtime/production_api.hpp" name="src/runtime/production_api.hpp">
+<area shape="rect" id="node1" title=" " alt="" coords="332,5,483,45"/>
+<area shape="rect" id="node2" href="$production__api__impl_8hpp.html" title=" " alt="" coords="329,93,486,148"/>
+<area shape="rect" id="node3" href="$application__injector_8hpp.html" title=" " alt="" coords="242,203,394,243"/>
+<area shape="rect" id="node18" href="$production__api__impl_8cpp.html" title=" " alt="" coords="418,196,575,251"/>
+<area shape="rect" id="node4" href="$application__injector_8cpp.html" title=" " alt="" coords="21,299,173,339"/>
+<area shape="rect" id="node5" href="$block__producing__node__injector_8hpp.html" title=" " alt="" coords="387,387,580,427"/>
+<area shape="rect" id="node10" href="$syncing__node__injector_8hpp.html" title=" " alt="" coords="197,299,332,339"/>
+<area shape="rect" id="node14" href="$validating__node__injector_8hpp.html" title=" " alt="" coords="467,299,612,339"/>
+<area shape="rect" id="node6" href="$block__producing__node__application_8hpp.html" title=" " alt="" coords="599,475,754,529"/>
+<area shape="rect" id="node9" href="$block__producing__node__injector_8cpp.html" title=" " alt="" coords="381,482,575,522"/>
+<area shape="rect" id="node7" href="$app__delegate_8cpp.html" title=" " alt="" coords="863,592,1018,617"/>
+<area shape="rect" id="node8" href="$block__producing__node__application_8cpp.html" title=" " alt="" coords="599,577,754,632"/>
+<area shape="rect" id="node11" href="$syncing__node__application_8hpp.html" title=" " alt="" coords="164,387,363,427"/>
+<area shape="rect" id="node13" href="$syncing__node__injector_8cpp.html" title=" " alt="" coords="5,387,140,427"/>
+<area shape="rect" id="node12" href="$syncing__node__application_8cpp.html" title=" " alt="" coords="159,482,357,522"/>
+<area shape="rect" id="node15" href="$validating__node__application_8hpp.html" title=" " alt="" coords="779,387,988,427"/>
+<area shape="rect" id="node17" href="$validating__node__injector_8cpp.html" title=" " alt="" coords="604,387,749,427"/>
+<area shape="rect" id="node16" href="$validating__node__application_8cpp.html" title=" " alt="" coords="779,482,988,522"/>
+</map>

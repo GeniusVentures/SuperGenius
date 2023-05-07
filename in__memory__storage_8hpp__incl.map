@@ -1,0 +1,22 @@
+<map id="src/storage/in_memory/in_memory_storage.hpp" name="src/storage/in_memory/in_memory_storage.hpp">
+<area shape="rect" id="node1" title=" " alt="" coords="156,5,319,45"/>
+<area shape="rect" id="node2" title=" " alt="" coords="201,438,269,463"/>
+<area shape="rect" id="node3" href="$outcome_8hpp.html" title=" " alt="" coords="441,592,591,617"/>
+<area shape="rect" id="node5" href="$buffer_8hpp.html" title=" " alt="" coords="555,189,666,214"/>
+<area shape="rect" id="node11" href="$buffer__map__types_8hpp.html" title=" " alt="" coords="171,93,304,133"/>
+<area shape="rect" id="node20" title=" " alt="" coords="379,101,426,126"/>
+<area shape="rect" id="node4" title=" " alt="" coords="422,665,610,691"/>
+<area shape="rect" id="node6" title=" " alt="" coords="836,277,924,302"/>
+<area shape="rect" id="node7" title=" " alt="" coords="948,277,1007,302"/>
+<area shape="rect" id="node8" title=" " alt="" coords="455,269,601,309"/>
+<area shape="rect" id="node9" title=" " alt="" coords="625,277,761,302"/>
+<area shape="rect" id="node10" title=" " alt="" coords="359,277,430,302"/>
+<area shape="rect" id="node12" href="$batchable_8hpp.html" title=" " alt="" coords="144,357,323,383"/>
+<area shape="rect" id="node13" href="$write__batch_8hpp.html" title=" " alt="" coords="50,431,177,471"/>
+<area shape="rect" id="node15" href="$generic__storage_8hpp.html" title=" " alt="" coords="195,181,335,221"/>
+<area shape="rect" id="node14" href="$writeable_8hpp.html" title=" " alt="" coords="247,519,422,544"/>
+<area shape="rect" id="node16" href="$generic__maps_8hpp.html" title=" " alt="" coords="195,269,335,309"/>
+<area shape="rect" id="node17" href="$iterable_8hpp.html" title=" " alt="" coords="398,357,562,383"/>
+<area shape="rect" id="node19" href="$readable_8hpp.html" title=" " alt="" coords="587,357,757,383"/>
+<area shape="rect" id="node18" href="$map__cursor_8hpp.html" title=" " alt="" coords="421,438,611,463"/>
+</map>

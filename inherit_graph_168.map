@@ -1,0 +1,4 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node1" href="$structsgns_1_1storage_1_1face_1_1_map_cursor.html" title="An abstraction over generic map cursor." alt="" coords="5,5,144,45"/>
+<area shape="rect" id="node2" href="$classsgns_1_1storage_1_1rocksdb_1_1_cursor.html" title="Instance of cursor can be used as bidirectional iterator over key&#45;value bindings of the Map." alt="" coords="192,5,343,45"/>
+</map>

@@ -1,0 +1,41 @@
+<map id="src/blockchain/impl/storage_util.hpp" name="src/blockchain/impl/storage_util.hpp">
+<area shape="rect" id="node1" title=" " alt="" coords="1086,5,1221,45"/>
+<area shape="rect" id="node2" href="$buffer_8hpp.html" title=" " alt="" coords="969,438,1079,463"/>
+<area shape="rect" id="node10" href="$block__header_8hpp.html" title=" " alt="" coords="1230,93,1413,119"/>
+<area shape="rect" id="node29" href="$block__id_8hpp.html" title=" " alt="" coords="1871,174,2025,199"/>
+<area shape="rect" id="node30" href="$buffer__map__types_8hpp.html" title=" " alt="" coords="485,255,619,295"/>
+<area shape="rect" id="node3" title=" " alt="" coords="1088,768,1176,793"/>
+<area shape="rect" id="node4" title=" " alt="" coords="1219,768,1277,793"/>
+<area shape="rect" id="node5" title=" " alt="" coords="813,519,960,559"/>
+<area shape="rect" id="node6" title=" " alt="" coords="1477,526,1613,551"/>
+<area shape="rect" id="node7" title=" " alt="" coords="962,768,1033,793"/>
+<area shape="rect" id="node8" href="$outcome_8hpp.html" title=" " alt="" coords="599,768,750,793"/>
+<area shape="rect" id="node9" title=" " alt="" coords="581,841,769,867"/>
+<area shape="rect" id="node11" title=" " alt="" coords="1320,174,1403,199"/>
+<area shape="rect" id="node12" title=" " alt="" coords="1163,343,1301,383"/>
+<area shape="rect" id="node13" href="$blob_8hpp.html" title=" " alt="" coords="1547,614,1650,639"/>
+<area shape="rect" id="node18" href="$src_2primitives_2common_8hpp.html" title=" " alt="" coords="1623,438,1779,463"/>
+<area shape="rect" id="node21" href="$compact__integer_8hpp.html" title=" " alt="" coords="1062,167,1194,207"/>
+<area shape="rect" id="node23" href="$digest_8hpp.html" title=" " alt="" coords="1528,174,1669,199"/>
+<area shape="rect" id="node14" title=" " alt="" coords="1573,695,1624,720"/>
+<area shape="rect" id="node15" title=" " alt="" coords="1648,695,1819,720"/>
+<area shape="rect" id="node16" href="$hexutil_8hpp.html" title=" " alt="" coords="1085,695,1200,720"/>
+<area shape="rect" id="node17" title=" " alt="" coords="1477,695,1549,720"/>
+<area shape="rect" id="node19" title=" " alt="" coords="1843,526,1904,551"/>
+<area shape="rect" id="node20" href="$session__key_8hpp.html" title=" " alt="" coords="1638,519,1765,559"/>
+<area shape="rect" id="node22" href="$scale_2types_8hpp.html" title=" " alt="" coords="1071,262,1183,287"/>
+<area shape="rect" id="node24" title=" " alt="" coords="1838,262,1959,287"/>
+<area shape="rect" id="node25" href="$unused_8hpp.html" title=" " alt="" coords="1693,262,1813,287"/>
+<area shape="rect" id="node26" href="$scheduled__change_8hpp.html" title=" " alt="" coords="1528,255,1669,295"/>
+<area shape="rect" id="node27" href="$authority_8hpp.html" title=" " alt="" coords="1849,350,2004,375"/>
+<area shape="rect" id="node28" title=" " alt="" coords="1810,438,1889,463"/>
+<area shape="rect" id="node31" href="$batchable_8hpp.html" title=" " alt="" coords="24,526,203,551"/>
+<area shape="rect" id="node33" href="$write__batch_8hpp.html" title=" " alt="" coords="49,607,175,647"/>
+<area shape="rect" id="node35" href="$generic__storage_8hpp.html" title=" " alt="" coords="421,343,561,383"/>
+<area shape="rect" id="node32" title=" " alt="" coords="251,614,319,639"/>
+<area shape="rect" id="node34" href="$writeable_8hpp.html" title=" " alt="" coords="198,695,373,720"/>
+<area shape="rect" id="node36" href="$generic__maps_8hpp.html" title=" " alt="" coords="359,431,499,471"/>
+<area shape="rect" id="node37" href="$iterable_8hpp.html" title=" " alt="" coords="227,526,391,551"/>
+<area shape="rect" id="node39" href="$readable_8hpp.html" title=" " alt="" coords="467,526,637,551"/>
+<area shape="rect" id="node38" href="$map__cursor_8hpp.html" title=" " alt="" coords="395,614,586,639"/>
+</map>

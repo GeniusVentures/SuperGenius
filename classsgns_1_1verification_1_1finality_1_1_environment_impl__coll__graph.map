@@ -1,0 +1,14 @@
+<map id="sgns::verification::finality::EnvironmentImpl" name="sgns::verification::finality::EnvironmentImpl">
+<area shape="rect" id="node1" title=" " alt="" coords="505,621,671,852"/>
+<area shape="rect" id="node2" href="$structsgns_1_1verification_1_1finality_1_1_environment.html" title=" " alt="" coords="62,387,205,559"/>
+<area shape="rect" id="node3" href="$structsgns_1_1verification_1_1finality_1_1_chain.html" title=" " alt="" coords="5,152,168,265"/>
+<area shape="rect" id="node4" title=" " alt="" coords="275,438,442,507"/>
+<area shape="rect" id="node5" href="$structsgns_1_1blockchain_1_1_block_tree.html" title=" " alt="" coords="192,108,379,309"/>
+<area shape="rect" id="node6" title=" " alt="" coords="708,181,849,236"/>
+<area shape="rect" id="node8" title=" " alt="" coords="467,438,709,507"/>
+<area shape="rect" id="node10" title=" " alt="" coords="918,431,1069,515"/>
+<area shape="rect" id="node12" title=" " alt="" coords="733,431,893,515"/>
+<area shape="rect" id="node7" title=" " alt="" coords="759,5,798,45"/>
+<area shape="rect" id="node9" href="$classsgns_1_1blockchain_1_1_block_header_repository.html" title=" " alt="" coords="403,130,605,287"/>
+<area shape="rect" id="node11" href="$structsgns_1_1verification_1_1finality_1_1_gossiper.html" title="Gossip messages to the network via this class." alt="" coords="1052,159,1175,258"/>
+</map>

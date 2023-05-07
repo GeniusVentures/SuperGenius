@@ -1,0 +1,9 @@
+<map id="sgns::storage::face::Batchable&lt; K, V &gt;" name="sgns::storage::face::Batchable&lt; K, V &gt;">
+<area shape="rect" id="node1" title="A mixin for a map that supports batching for efficiency of modifications." alt="" coords="250,5,385,89"/>
+<area shape="rect" id="node2" href="$structsgns_1_1storage_1_1face_1_1_batch_write_map.html" title="An abstraction over a writeable key&#45;value map with batching support." alt="" coords="235,137,399,192"/>
+<area shape="rect" id="node3" href="$structsgns_1_1storage_1_1face_1_1_generic_storage.html" title="An abstraction over readable, writeable, iterable key&#45;value storage that supports write batches." alt="" coords="235,240,400,295"/>
+<area shape="rect" id="node4" href="$classsgns_1_1storage_1_1_in_memory_storage.html" title=" " alt="" coords="5,409,216,610"/>
+<area shape="rect" id="node5" href="$classsgns_1_1storage_1_1rocksdb.html" title="An implementation of PersistentBufferMap interface, which uses rocksdb as underlying storage." alt="" coords="240,343,395,676"/>
+<area shape="rect" id="node6" href="$classsgns_1_1storage_1_1trie_1_1_trie_storage_backend.html" title=" " alt="" coords="419,467,591,551"/>
+<area shape="rect" id="node7" href="$classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl.html" title=" " alt="" coords="410,724,601,969"/>
+</map>

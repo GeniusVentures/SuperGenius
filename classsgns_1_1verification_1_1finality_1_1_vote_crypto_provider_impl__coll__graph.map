@@ -1,0 +1,20 @@
+<map id="sgns::verification::finality::VoteCryptoProviderImpl" name="sgns::verification::finality::VoteCryptoProviderImpl">
+<area shape="rect" id="node1" title=" " alt="" coords="317,1307,524,1508"/>
+<area shape="rect" id="node2" href="$classsgns_1_1verification_1_1finality_1_1_vote_crypto_provider.html" title=" " alt="" coords="5,1087,188,1244"/>
+<area shape="rect" id="node3" href="$structsgns_1_1crypto_1_1_e_d25519_keypair.html" title=" " alt="" coords="751,845,947,914"/>
+<area shape="rect" id="node4" href="$classsgns_1_1base_1_1_blob.html" title=" " alt="" coords="755,500,943,687"/>
+<area shape="rect" id="node5" title=" " alt="" coords="877,115,985,155"/>
+<area shape="rect" id="node7" href="$classsgns_1_1base_1_1_blob.html" title=" " alt="" coords="783,251,955,423"/>
+<area shape="rect" id="node8" href="$classsgns_1_1base_1_1_blob.html" title=" " alt="" coords="967,500,1155,687"/>
+<area shape="rect" id="node6" title=" " alt="" coords="571,5,609,45"/>
+<area shape="rect" id="node11" title=" " alt="" coords="339,852,481,907"/>
+<area shape="rect" id="node15" title=" " alt="" coords="580,187,696,227"/>
+<area shape="rect" id="node17" title=" " alt="" coords="437,108,575,163"/>
+<area shape="rect" id="node14" title=" " alt="" coords="599,566,730,621"/>
+<area shape="rect" id="node16" title=" " alt="" coords="437,551,575,635"/>
+<area shape="rect" id="node9" title=" " alt="" coords="212,1131,392,1200"/>
+<area shape="rect" id="node10" href="$classsgns_1_1crypto_1_1_e_d25519_provider.html" title=" " alt="" coords="113,823,315,936"/>
+<area shape="rect" id="node12" title=" " alt="" coords="437,1123,588,1207"/>
+<area shape="rect" id="node13" href="$structsgns_1_1verification_1_1finality_1_1_voter_set.html" title=" " alt="" coords="593,749,715,1009"/>
+<area shape="rect" id="node18" title=" " alt="" coords="453,5,492,45"/>
+</map>

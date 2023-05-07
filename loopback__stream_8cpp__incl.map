@@ -1,0 +1,18 @@
+<map id="src/network/impl/loopback_stream.cpp" name="src/network/impl/loopback_stream.cpp">
+<area shape="rect" id="node1" title=" " alt="" coords="302,5,477,45"/>
+<area shape="rect" id="node2" title=" " alt="" coords="214,101,381,126"/>
+<area shape="rect" id="node3" href="$loopback__stream_8hpp.html" title=" " alt="" coords="405,93,557,133"/>
+<area shape="rect" id="node4" title=" " alt="" coords="19,181,187,207"/>
+<area shape="rect" id="node5" title=" " alt="" coords="211,181,402,207"/>
+<area shape="rect" id="node6" href="$buffer_8hpp.html" title=" " alt="" coords="426,181,537,207"/>
+<area shape="rect" id="node12" href="$outcome_8hpp.html" title=" " alt="" coords="626,262,777,287"/>
+<area shape="rect" id="node14" href="$logger_8hpp.html" title=" " alt="" coords="803,181,917,207"/>
+<area shape="rect" id="node7" title=" " alt="" coords="5,262,93,287"/>
+<area shape="rect" id="node8" title=" " alt="" coords="117,262,176,287"/>
+<area shape="rect" id="node9" title=" " alt="" coords="200,255,347,295"/>
+<area shape="rect" id="node10" title=" " alt="" coords="371,262,507,287"/>
+<area shape="rect" id="node11" title=" " alt="" coords="531,262,602,287"/>
+<area shape="rect" id="node13" title=" " alt="" coords="607,343,795,368"/>
+<area shape="rect" id="node15" title=" " alt="" coords="801,262,919,287"/>
+<area shape="rect" id="node16" title=" " alt="" coords="944,262,1056,287"/>
+</map>

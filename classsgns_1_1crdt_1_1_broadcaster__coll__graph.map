@@ -1,0 +1,3 @@
+<map id="sgns::crdt::Broadcaster" name="sgns::crdt::Broadcaster">
+<area shape="rect" id="node1" title="A Broadcaster provides a way to send (notify) an opaque payload to all replicas and to retrieve paylo..." alt="" coords="5,5,164,89"/>
+</map>

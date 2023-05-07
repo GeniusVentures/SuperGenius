@@ -1,0 +1,27 @@
+var classsgns_1_1crdt_1_1_crdt_heads =
+[
+    [ "Buffer", "classsgns_1_1crdt_1_1_crdt_heads.html#aaeefaed9af06bcea59214f6d5dd0abf4", null ],
+    [ "DataStore", "classsgns_1_1crdt_1_1_crdt_heads.html#a9f4342a407c5b9ebd251f2405354cdbd", null ],
+    [ "CrdtHeads", "classsgns_1_1crdt_1_1_crdt_heads.html#a1596d4662d5d6dabc4407bb0b95c8afa", null ],
+    [ "CrdtHeads", "classsgns_1_1crdt_1_1_crdt_heads.html#aef0d3aaecf9ce149ce34c2d7004a3e62", null ],
+    [ "~CrdtHeads", "classsgns_1_1crdt_1_1_crdt_heads.html#abf7dbd79c1ba9b9142203ce083d2f6fc", null ],
+    [ "CrdtHeads", "classsgns_1_1crdt_1_1_crdt_heads.html#a8116b0546888837ecd6aa3bc8ee0ab2d", null ],
+    [ "Add", "classsgns_1_1crdt_1_1_crdt_heads.html#a6ad2ac8ddf333c455f4a8a83ac0cacf2", null ],
+    [ "Delete", "classsgns_1_1crdt_1_1_crdt_heads.html#a5f9ce0669cf3cad260baddb0b07f5e7a", null ],
+    [ "GetHeadHeight", "classsgns_1_1crdt_1_1_crdt_heads.html#a86c5f03ff76ba1ba9d0560f5a6214822", null ],
+    [ "GetKey", "classsgns_1_1crdt_1_1_crdt_heads.html#a21f9f6f20faabe17ad90e75adae0fb30", null ],
+    [ "GetLenght", "classsgns_1_1crdt_1_1_crdt_heads.html#a6222abc9093f6b53c5f317a0c661bc47", null ],
+    [ "GetList", "classsgns_1_1crdt_1_1_crdt_heads.html#a97c1745d92aa7037e39900ef5a5bb03c", null ],
+    [ "GetNamespaceKey", "classsgns_1_1crdt_1_1_crdt_heads.html#aeb855fb264476047c10b8f186ec0412b", null ],
+    [ "IsHead", "classsgns_1_1crdt_1_1_crdt_heads.html#a4d09007615b1541a0b8918c636e875c8", null ],
+    [ "operator!=", "classsgns_1_1crdt_1_1_crdt_heads.html#adcb33b9f1bdc4707d558e8433366942f", null ],
+    [ "operator=", "classsgns_1_1crdt_1_1_crdt_heads.html#abc67937522b80a027d469d3de7819380", null ],
+    [ "operator==", "classsgns_1_1crdt_1_1_crdt_heads.html#ae5e68b690ee21008ea976f171bce8291", null ],
+    [ "PrimeCache", "classsgns_1_1crdt_1_1_crdt_heads.html#abbe1e17bc57e375af2f58c81414fc1a1", null ],
+    [ "Replace", "classsgns_1_1crdt_1_1_crdt_heads.html#a002c9f47ef408a04c2b9879d463857f8", null ],
+    [ "Write", "classsgns_1_1crdt_1_1_crdt_heads.html#aa0e85776b9071bf4067440b709369a44", null ],
+    [ "cache_", "classsgns_1_1crdt_1_1_crdt_heads.html#a5787e44f6601ec29c778238b0867d55f", null ],
+    [ "dataStore_", "classsgns_1_1crdt_1_1_crdt_heads.html#a8f923e6a1dee95c32ed849a09894bbe8", null ],
+    [ "mutex_", "classsgns_1_1crdt_1_1_crdt_heads.html#a6bacec7d57070f9b9840d76fa8b1ed21", null ],
+    [ "namespaceKey_", "classsgns_1_1crdt_1_1_crdt_heads.html#a75d26cf52ead6d8dc3766f399cdae499", null ]
+];

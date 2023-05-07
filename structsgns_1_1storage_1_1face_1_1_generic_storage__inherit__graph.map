@@ -1,0 +1,13 @@
+<map id="sgns::storage::face::GenericStorage&lt; K, V &gt;" name="sgns::storage::face::GenericStorage&lt; K, V &gt;">
+<area shape="rect" id="node1" title="An abstraction over readable, writeable, iterable key&#45;value storage that supports write batches." alt="" coords="235,269,400,324"/>
+<area shape="rect" id="node8" href="$classsgns_1_1storage_1_1_in_memory_storage.html" title=" " alt="" coords="5,438,216,639"/>
+<area shape="rect" id="node9" href="$classsgns_1_1storage_1_1rocksdb.html" title="An implementation of PersistentBufferMap interface, which uses rocksdb as underlying storage." alt="" coords="240,372,395,705"/>
+<area shape="rect" id="node10" href="$classsgns_1_1storage_1_1trie_1_1_trie_storage_backend.html" title=" " alt="" coords="419,497,591,581"/>
+<area shape="rect" id="node2" href="$structsgns_1_1storage_1_1face_1_1_read_only_map.html" title="An abstraction over a readable and iterable key&#45;value map." alt="" coords="147,167,303,221"/>
+<area shape="rect" id="node3" href="$structsgns_1_1storage_1_1face_1_1_iterable.html" title="A mixin for an iterable map." alt="" coords="6,20,141,104"/>
+<area shape="rect" id="node4" href="$structsgns_1_1storage_1_1face_1_1_readable.html" title="A mixin for read&#45;only map." alt="" coords="165,5,299,119"/>
+<area shape="rect" id="node5" href="$structsgns_1_1storage_1_1face_1_1_batch_write_map.html" title="An abstraction over a writeable key&#45;value map with batching support." alt="" coords="327,167,491,221"/>
+<area shape="rect" id="node6" href="$structsgns_1_1storage_1_1face_1_1_writeable.html" title="An mixin for modifiable map." alt="" coords="335,5,470,119"/>
+<area shape="rect" id="node7" href="$structsgns_1_1storage_1_1face_1_1_batchable.html" title="A mixin for a map that supports batching for efficiency of modifications." alt="" coords="494,20,629,104"/>
+<area shape="rect" id="node11" href="$classsgns_1_1storage_1_1trie_1_1_trie_storage_backend_impl.html" title=" " alt="" coords="410,753,601,999"/>
+</map>

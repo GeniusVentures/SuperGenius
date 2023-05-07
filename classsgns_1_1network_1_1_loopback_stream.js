@@ -1,0 +1,36 @@
+var classsgns_1_1network_1_1_loopback_stream =
+[
+    [ "Error", "classsgns_1_1network_1_1_loopback_stream.html#ab6ef8ded43c3bdf3623966cf08fdc91a", [
+      [ "INVALID_ARGUMENT", "classsgns_1_1network_1_1_loopback_stream.html#ab6ef8ded43c3bdf3623966cf08fdc91aaf295a0c3e37c94f078e1c5476479132d", null ],
+      [ "IS_CLOSED_FOR_READS", "classsgns_1_1network_1_1_loopback_stream.html#ab6ef8ded43c3bdf3623966cf08fdc91aa9bb1e4a3c291c9b7d3c4ab22be59af56", null ],
+      [ "IS_CLOSED_FOR_WRITES", "classsgns_1_1network_1_1_loopback_stream.html#ab6ef8ded43c3bdf3623966cf08fdc91aac9a4090fb8f1b8a8f58a464935d8fc78", null ],
+      [ "IS_RESET", "classsgns_1_1network_1_1_loopback_stream.html#ab6ef8ded43c3bdf3623966cf08fdc91aa12260fb457834bdda46c7884c7016c7c", null ],
+      [ "INTERNAL_ERROR", "classsgns_1_1network_1_1_loopback_stream.html#ab6ef8ded43c3bdf3623966cf08fdc91aae8c0c70879b5895c615677261d64a1ee", null ]
+    ] ],
+    [ "LoopbackStream", "classsgns_1_1network_1_1_loopback_stream.html#a63cd6457bac1073dae16e652e9e69d3d", null ],
+    [ "adjustWindowSize", "classsgns_1_1network_1_1_loopback_stream.html#a91177d0b5a489b6f323dce819798200e", null ],
+    [ "close", "classsgns_1_1network_1_1_loopback_stream.html#a26d0dc2544c755737ce3f548511c8b55", null ],
+    [ "deferReadCallback", "classsgns_1_1network_1_1_loopback_stream.html#ad53f8145d6d5741b8f77531a89f83690", null ],
+    [ "deferWriteCallback", "classsgns_1_1network_1_1_loopback_stream.html#a71b940584acd785ee92282e936a99af1", null ],
+    [ "isClosed", "classsgns_1_1network_1_1_loopback_stream.html#ae97be5ebdfe01db488f40af9d3d34e2e", null ],
+    [ "isClosedForRead", "classsgns_1_1network_1_1_loopback_stream.html#a765cc315c1528974d32645f58fcb8a39", null ],
+    [ "isClosedForWrite", "classsgns_1_1network_1_1_loopback_stream.html#a3e3070365518d3702b21a026c7e81130", null ],
+    [ "isInitiator", "classsgns_1_1network_1_1_loopback_stream.html#ae2b244f6bb24018dd8c58b26bbebc3ab", null ],
+    [ "localMultiaddr", "classsgns_1_1network_1_1_loopback_stream.html#acd1bbe50b01b4338f9482ea996929f95", null ],
+    [ "read", "classsgns_1_1network_1_1_loopback_stream.html#a5045eef854d48d8efd534dae9d63c06c", null ],
+    [ "read", "classsgns_1_1network_1_1_loopback_stream.html#ab899ae774b55360180867906389bef6b", null ],
+    [ "readSome", "classsgns_1_1network_1_1_loopback_stream.html#af16df1ffdd8281f753841eb264ac7ecb", null ],
+    [ "remoteMultiaddr", "classsgns_1_1network_1_1_loopback_stream.html#ae16e38610d4ed6e294d3a7274cf923b3", null ],
+    [ "remotePeerId", "classsgns_1_1network_1_1_loopback_stream.html#a54f42a8ca841a023f504fb9efc46238b", null ],
+    [ "reset", "classsgns_1_1network_1_1_loopback_stream.html#a9db47b999e85f546eb7540510a0862ea", null ],
+    [ "write", "classsgns_1_1network_1_1_loopback_stream.html#a3139387610e52ab078d45ce1bff9fe8d", null ],
+    [ "writeSome", "classsgns_1_1network_1_1_loopback_stream.html#a2776ef665098c7a998c04c6f6070da92", null ],
+    [ "buffer_", "classsgns_1_1network_1_1_loopback_stream.html#aaabc02e4b198bfe28368c90d4505ffec", null ],
+    [ "data_notified_", "classsgns_1_1network_1_1_loopback_stream.html#a921bacbd30f2eb8ed465c084729a1d81", null ],
+    [ "data_notifyee_", "classsgns_1_1network_1_1_loopback_stream.html#af5369f03ad5e53fa6317e8c46fa9cb15", null ],
+    [ "is_readable_", "classsgns_1_1network_1_1_loopback_stream.html#a96ec2ff7985bebfdf0f8d7d906158bc8", null ],
+    [ "is_reset_", "classsgns_1_1network_1_1_loopback_stream.html#a651c4bf075513433593df3353349f567", null ],
+    [ "is_writable_", "classsgns_1_1network_1_1_loopback_stream.html#a93041af276960dede5e889252004b1c5", null ],
+    [ "log_", "classsgns_1_1network_1_1_loopback_stream.html#a019acbb95627631a080886be4380c91a", null ],
+    [ "own_peer_info_", "classsgns_1_1network_1_1_loopback_stream.html#ab54bbfa326a714be4bf795910503789a", null ]
+];

@@ -1,0 +1,11 @@
+<map id="sgns::crdt::PubSubBroadcaster" name="sgns::crdt::PubSubBroadcaster">
+<area shape="rect" id="node1" title=" " alt="" coords="377,401,581,500"/>
+<area shape="rect" id="node2" href="$classsgns_1_1crdt_1_1_broadcaster.html" title="A Broadcaster provides a way to send (notify) an opaque payload to all replicas and to retrieve paylo..." alt="" coords="5,255,164,339"/>
+<area shape="rect" id="node3" title=" " alt="" coords="189,255,375,339"/>
+<area shape="rect" id="node4" title=" " alt="" coords="409,108,550,163"/>
+<area shape="rect" id="node8" title=" " alt="" coords="399,255,559,339"/>
+<area shape="rect" id="node5" title=" " alt="" coords="535,5,573,45"/>
+<area shape="rect" id="node7" title=" " alt="" coords="581,115,695,155"/>
+<area shape="rect" id="node6" title=" " alt="" coords="584,255,732,339"/>
+<area shape="rect" id="node9" title=" " alt="" coords="757,277,842,317"/>
+</map>

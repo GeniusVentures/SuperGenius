@@ -1,0 +1,11 @@
+<map id="sgns::storage::trie::TopperTrieBatch" name="sgns::storage::trie::TopperTrieBatch">
+<area shape="rect" id="node1" title=" " alt="" coords="168,492,295,561"/>
+<area shape="rect" id="node9" href="$classsgns_1_1storage_1_1trie_1_1_topper_trie_batch_impl.html" title=" " alt="" coords="149,611,314,871"/>
+<area shape="rect" id="node2" href="$classsgns_1_1storage_1_1trie_1_1_trie_batch.html" title=" " alt="" coords="168,359,295,443"/>
+<area shape="rect" id="node3" href="$structsgns_1_1storage_1_1face_1_1_readable.html" title=" " alt="" coords="5,181,140,309"/>
+<area shape="rect" id="node4" href="$structsgns_1_1storage_1_1face_1_1_readable.html" title="A mixin for read&#45;only map." alt="" coords="5,5,140,119"/>
+<area shape="rect" id="node5" href="$structsgns_1_1storage_1_1face_1_1_writeable.html" title=" " alt="" coords="164,181,299,309"/>
+<area shape="rect" id="node6" href="$structsgns_1_1storage_1_1face_1_1_writeable.html" title="An mixin for modifiable map." alt="" coords="164,5,299,119"/>
+<area shape="rect" id="node7" href="$structsgns_1_1storage_1_1face_1_1_iterable.html" title=" " alt="" coords="323,196,457,295"/>
+<area shape="rect" id="node8" href="$structsgns_1_1storage_1_1face_1_1_iterable.html" title="A mixin for an iterable map." alt="" coords="323,20,457,104"/>
+</map>

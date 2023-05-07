@@ -1,0 +1,19 @@
+var searchData=
+[
+  ['wait_5fblock_0',['WAIT_BLOCK',['../namespacesgns_1_1verification.html#a5dc5f18fb5e67c75bf2f6c42659b7890a12b61ea8ec02a4743bca36ec1862f014',1,'sgns::verification']]],
+  ['waiting_5fruns_1',['WAITING_RUNS',['../classsgns_1_1verification_1_1finality_1_1_voting_round_impl.html#a8ae74ce5139ff9e5910dd3f49a614efda2482400e018b6916666903da7adab453',1,'sgns::verification::finality::VotingRoundImpl']]],
+  ['wasmll_5fdebug_2',['WasmLL_Debug',['../namespacesgns_1_1runtime.html#afdf9c2873567c79dad5ce362c5074968a0c9bf7a941a3a87f7216db8aa96d0885',1,'sgns::runtime']]],
+  ['wasmll_5ferror_3',['WasmLL_Error',['../namespacesgns_1_1runtime.html#afdf9c2873567c79dad5ce362c5074968ac2970cc0375a499178e180e70b819654',1,'sgns::runtime']]],
+  ['wasmll_5finfo_4',['WasmLL_Info',['../namespacesgns_1_1runtime.html#afdf9c2873567c79dad5ce362c5074968ac9c446b016298ad2fe3cf38412e2c0f0',1,'sgns::runtime']]],
+  ['wasmll_5ftrace_5',['WasmLL_Trace',['../namespacesgns_1_1runtime.html#afdf9c2873567c79dad5ce362c5074968a3c30f56999f6766f82e2dd4513d5a828',1,'sgns::runtime']]],
+  ['wasmll_5fwarn_6',['WasmLL_Warn',['../namespacesgns_1_1runtime.html#afdf9c2873567c79dad5ce362c5074968abb2236af57c10bc2cc62724a649ebb0e',1,'sgns::runtime']]],
+  ['works_7',['Works',['../classsgns_1_1application_1_1_app_state_manager.html#a92bffe78275c219ab93baf0d35eb6027a7b8af977b90a67e053ff2667a26828fe',1,'sgns::application::AppStateManager']]],
+  ['wrong_5falternative_8',['WRONG_ALTERNATIVE',['../namespacesgns_1_1scale.html#a3394ed761bbfb57cf4f53ebff0b555e1ae7b5de6dc7f6d37c4367101636896f78',1,'sgns::scale']]],
+  ['wrong_5fauthority_5findex_9',['WRONG_AUTHORITY_INDEX',['../namespacesgns_1_1authority.html#a61103144ed0100238e851be8d18afcdcadcc12fbb53591e6a4a6c142e48a20244',1,'sgns::authority']]],
+  ['wrong_5fcategory_10',['WRONG_CATEGORY',['../namespacesgns_1_1scale.html#a3394ed761bbfb57cf4f53ebff0b555e1acec62d715959b8a8be053b4b64f17a16',1,'sgns::scale']]],
+  ['wrong_5ffinalisation_5forder_11',['WRONG_FINALISATION_ORDER',['../namespacesgns_1_1authority.html#a0bcfbec198259540a2c546b2f79dc065a33b40ce36cf4614a7173b72d865cdba7',1,'sgns::authority']]],
+  ['wrong_5fkeyfile_5fname_12',['WRONG_KEYFILE_NAME',['../namespacesgns_1_1crypto.html#a4d550f469256ec94e9df388bb42b90d5a484b3b734bc7bc1e4d1ed198c819c764',1,'sgns::crypto']]],
+  ['wrong_5fseed_5fsize_13',['WRONG_SEED_SIZE',['../namespacesgns_1_1crypto.html#a4d550f469256ec94e9df388bb42b90d5a8428033b5172e625d38a4e0ba4a5ebaf',1,'sgns::crypto']]],
+  ['wrong_5ftype_5findex_14',['WRONG_TYPE_INDEX',['../namespacesgns_1_1scale.html#a0d667fc03d973094b2b7a257ecf074aface270dd59be11475cfa5dbc6d2412cca',1,'sgns::scale']]],
+  ['wrong_5fwords_5fcount_15',['WRONG_WORDS_COUNT',['../namespacesgns_1_1crypto_1_1bip39.html#ab468043ad272fcbcecb59dd7f98861d1a6c0a529b20d222e6ec152233ea3cce4c',1,'sgns::crypto::bip39']]]
+];

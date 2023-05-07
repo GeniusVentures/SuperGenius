@@ -1,0 +1,12 @@
+<map id="sgns::verification::finality::Fin" name="sgns::verification::finality::Fin">
+<area shape="rect" id="node1" title=" " alt="" coords="86,955,209,1024"/>
+<area shape="rect" id="node2" href="$structsgns_1_1primitives_1_1detail_1_1_block_info_t.html" title=" " alt="" coords="41,507,195,621"/>
+<area shape="rect" id="node3" title=" " alt="" coords="5,295,188,349"/>
+<area shape="rect" id="node4" href="$classsgns_1_1base_1_1_blob.html" title=" " alt="" coords="212,236,384,408"/>
+<area shape="rect" id="node9" href="$structsgns_1_1verification_1_1finality_1_1_signed_message.html" title=" " alt="" coords="219,485,382,643"/>
+<area shape="rect" id="node5" title=" " alt="" coords="264,108,372,148"/>
+<area shape="rect" id="node6" title=" " alt="" coords="351,5,389,45"/>
+<area shape="rect" id="node10" title=" " alt="" coords="363,172,479,212"/>
+<area shape="rect" id="node7" href="$namespacesgns_1_1verification_1_1finality.html#structsgns_1_1verification_1_1finality_1_1_finality_justification" title=" " alt="" coords="177,837,357,892"/>
+<area shape="rect" id="node8" title=" " alt="" coords="235,705,367,775"/>
+</map>

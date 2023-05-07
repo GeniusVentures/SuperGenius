@@ -1,0 +1,22 @@
+<map id="src/verification/authority" name="src/verification/authority">
+<area shape="rect" id="node1" href="dir_1821253fa6cbfd615ad68c85af377eb7.html" title="finality" alt="" coords="127,136,185,161"/>
+<area shape="rect" id="node4" href="dir_7be59ee8c4293a2ed5de3468b8a07cd9.html" title="outcome" alt="" coords="212,136,284,161"/>
+<area shape="rect" id="edge1-headlabel" href="dir_000004_000058.html" title="3" alt="" coords="196,114,204,129"/>
+<area shape="rect" id="node5" href="dir_bbf56bce9985720f86fc476f3812db24.html" title="primitives" alt="" coords="309,136,387,161"/>
+<area shape="rect" id="edge2-headlabel" href="dir_000004_000061.html" title="4" alt="" coords="288,119,296,134"/>
+<area shape="rect" id="node3" href="dir_14f9a59f7db9502263804e0ceb505151.html" title="impl" alt="" coords="133,63,179,88"/>
+<area shape="rect" id="edge5-headlabel" href="dir_000047_000024.html" title="1" alt="" coords="160,110,168,125"/>
+<area shape="rect" id="edge8-headlabel" href="dir_000047_000061.html" title="2" alt="" coords="297,114,305,128"/>
+<area shape="rect" id="node6" href="dir_0af1587c8378955de40f48b4bd1869f0.html" title="base" alt="" coords="796,136,847,161"/>
+<area shape="rect" id="edge4-headlabel" href="dir_000047_000006.html" title="1" alt="" coords="775,120,783,134"/>
+<area shape="rect" id="node7" href="dir_e3ad572831d545eb552494b95f9c029d.html" title="scale" alt="" coords="412,136,465,161"/>
+<area shape="rect" id="edge9-headlabel" href="dir_000047_000072.html" title="1" alt="" coords="392,119,400,134"/>
+<area shape="rect" id="node8" href="dir_844f6ab5c2ae79211596f3dcdd81adb7.html" title="application" alt="" coords="490,136,574,161"/>
+<area shape="rect" id="edge7-headlabel" href="dir_000047_000002.html" title="1" alt="" coords="469,119,477,134"/>
+<area shape="rect" id="node9" href="dir_028cfb450258cb26cf2de4f75f6778d5.html" title="blockchain" alt="" coords="598,136,682,161"/>
+<area shape="rect" id="edge3-headlabel" href="dir_000047_000010.html" title="1" alt="" coords="577,119,585,134"/>
+<area shape="rect" id="node10" href="dir_452baf35e1d7639c9f2a5ece4ec85855.html" title="storage" alt="" coords="706,136,771,161"/>
+<area shape="rect" id="edge6-headlabel" href="dir_000047_000080.html" title="1" alt="" coords="685,119,693,134"/>
+<area shape="rect" id="clust2" href="dir_56f8bb20013cd868aedfcd850a309f20.html" alt="" coords="27,52,191,99"/>
+<area shape="rect" id="clust1" href="dir_54b1e6c540d67b59af2f275fe685da39.html" title="verification" alt="" coords="16,16,201,172"/>
+</map>

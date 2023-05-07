@@ -1,0 +1,22 @@
+<map id="src/verification/authority/authority_manager.hpp" name="src/verification/authority/authority_manager.hpp">
+<area shape="rect" id="node1" title=" " alt="" coords="440,5,599,45"/>
+<area shape="rect" id="node2" href="$application__injector_8hpp.html" title=" " alt="" coords="323,203,475,243"/>
+<area shape="rect" id="node17" href="$authority__manager__impl_8hpp.html" title=" " alt="" coords="439,93,599,148"/>
+<area shape="rect" id="node19" href="$finality__impl_8hpp.html" title=" " alt="" coords="623,101,770,141"/>
+<area shape="rect" id="node3" href="$application__injector_8cpp.html" title=" " alt="" coords="437,299,589,339"/>
+<area shape="rect" id="node4" href="$block__producing__node__injector_8hpp.html" title=" " alt="" coords="392,387,585,427"/>
+<area shape="rect" id="node9" href="$syncing__node__injector_8hpp.html" title=" " alt="" coords="227,299,361,339"/>
+<area shape="rect" id="node13" href="$validating__node__injector_8hpp.html" title=" " alt="" coords="613,299,759,339"/>
+<area shape="rect" id="node5" href="$block__producing__node__application_8hpp.html" title=" " alt="" coords="530,475,685,529"/>
+<area shape="rect" id="node8" href="$block__producing__node__injector_8cpp.html" title=" " alt="" coords="312,482,505,522"/>
+<area shape="rect" id="node6" href="$app__delegate_8cpp.html" title=" " alt="" coords="794,592,949,617"/>
+<area shape="rect" id="node7" href="$block__producing__node__application_8cpp.html" title=" " alt="" coords="530,577,685,632"/>
+<area shape="rect" id="node10" href="$syncing__node__application_8hpp.html" title=" " alt="" coords="5,387,204,427"/>
+<area shape="rect" id="node12" href="$syncing__node__injector_8cpp.html" title=" " alt="" coords="228,387,363,427"/>
+<area shape="rect" id="node11" href="$syncing__node__application_8cpp.html" title=" " alt="" coords="5,482,204,522"/>
+<area shape="rect" id="node14" href="$validating__node__application_8hpp.html" title=" " alt="" coords="781,387,991,427"/>
+<area shape="rect" id="node16" href="$validating__node__injector_8cpp.html" title=" " alt="" coords="612,387,757,427"/>
+<area shape="rect" id="node15" href="$validating__node__application_8cpp.html" title=" " alt="" coords="709,482,919,522"/>
+<area shape="rect" id="node18" href="$authority__manager__impl_8cpp.html" title=" " alt="" coords="499,196,659,251"/>
+<area shape="rect" id="node20" href="$finality__impl_8cpp.html" title=" " alt="" coords="734,203,881,243"/>
+</map>

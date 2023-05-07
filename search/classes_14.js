@@ -1,0 +1,24 @@
+var searchData=
+[
+  ['validatingnodeapplication_0',['ValidatingNodeApplication',['../classsgns_1_1application_1_1_validating_node_application.html',1,'sgns::application']]],
+  ['validtransaction_1',['ValidTransaction',['../structsgns_1_1primitives_1_1_valid_transaction.html',1,'sgns::primitives']]],
+  ['variantdecoder_2',['VariantDecoder',['../classsgns_1_1scale_1_1detail_1_1variant__impl_1_1_variant_decoder.html',1,'sgns::scale::detail::variant_impl']]],
+  ['variantencoder_3',['VariantEncoder',['../classsgns_1_1scale_1_1detail_1_1variant__impl_1_1_variant_encoder.html',1,'sgns::scale::detail::variant_impl']]],
+  ['verification_4',['Verification',['../structsgns_1_1primitives_1_1_verification.html',1,'sgns::primitives']]],
+  ['version_5',['Version',['../classsgns_1_1api_1_1system_1_1request_1_1_version.html',1,'sgns::api::system::request::Version'],['../structsgns_1_1primitives_1_1_version.html',1,'sgns::primitives::Version']]],
+  ['votecryptoprovider_6',['VoteCryptoProvider',['../classsgns_1_1verification_1_1finality_1_1_vote_crypto_provider.html',1,'sgns::verification::finality']]],
+  ['votecryptoproviderimpl_7',['VoteCryptoProviderImpl',['../classsgns_1_1verification_1_1finality_1_1_vote_crypto_provider_impl.html',1,'sgns::verification::finality']]],
+  ['votegraph_8',['VoteGraph',['../structsgns_1_1verification_1_1finality_1_1_vote_graph.html',1,'sgns::verification::finality']]],
+  ['votegraphimpl_9',['VoteGraphImpl',['../classsgns_1_1verification_1_1finality_1_1_vote_graph_impl.html',1,'sgns::verification::finality']]],
+  ['votemessage_10',['VoteMessage',['../structsgns_1_1verification_1_1finality_1_1_vote_message.html',1,'sgns::verification::finality']]],
+  ['voterset_11',['VoterSet',['../structsgns_1_1verification_1_1finality_1_1_voter_set.html',1,'sgns::verification::finality']]],
+  ['votetracker_12',['VoteTracker',['../classsgns_1_1verification_1_1finality_1_1_vote_tracker.html',1,'sgns::verification::finality']]],
+  ['votetrackerimpl_13',['VoteTrackerImpl',['../classsgns_1_1verification_1_1finality_1_1_vote_tracker_impl.html',1,'sgns::verification::finality']]],
+  ['voteweight_14',['VoteWeight',['../classsgns_1_1verification_1_1finality_1_1_vote_weight.html',1,'sgns::verification::finality']]],
+  ['votinground_15',['VotingRound',['../structsgns_1_1verification_1_1finality_1_1_voting_round.html',1,'sgns::verification::finality']]],
+  ['votingroundimpl_16',['VotingRoundImpl',['../classsgns_1_1verification_1_1finality_1_1_voting_round_impl.html',1,'sgns::verification::finality']]],
+  ['vrfoutput_17',['VRFOutput',['../structsgns_1_1crypto_1_1_v_r_f_output.html',1,'sgns::crypto']]],
+  ['vrfprovider_18',['VRFProvider',['../classsgns_1_1crypto_1_1_v_r_f_provider.html',1,'sgns::crypto']]],
+  ['vrfproviderimpl_19',['VRFProviderImpl',['../classsgns_1_1crypto_1_1_v_r_f_provider_impl.html',1,'sgns::crypto']]],
+  ['vrfverifyoutput_20',['VRFVerifyOutput',['../structsgns_1_1crypto_1_1_v_r_f_verify_output.html',1,'sgns::crypto']]]
+];

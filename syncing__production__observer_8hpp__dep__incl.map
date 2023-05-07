@@ -1,0 +1,13 @@
+<map id="src/verification/production/impl/syncing_production_observer.hpp" name="src/verification/production/impl/syncing_production_observer.hpp">
+<area shape="rect" id="node1" title=" " alt="" coords="505,5,676,60"/>
+<area shape="rect" id="node2" href="$block__producing__node__injector_8hpp.html" title=" " alt="" coords="274,115,467,155"/>
+<area shape="rect" id="node7" href="$syncing__node__injector_8hpp.html" title=" " alt="" coords="523,115,658,155"/>
+<area shape="rect" id="node11" href="$syncing__production__observer_8cpp.html" title=" " alt="" coords="683,108,853,163"/>
+<area shape="rect" id="node3" href="$block__producing__node__application_8hpp.html" title=" " alt="" coords="95,211,249,265"/>
+<area shape="rect" id="node6" href="$block__producing__node__injector_8cpp.html" title=" " alt="" coords="274,218,467,258"/>
+<area shape="rect" id="node4" href="$app__delegate_8cpp.html" title=" " alt="" coords="5,328,160,353"/>
+<area shape="rect" id="node5" href="$block__producing__node__application_8cpp.html" title=" " alt="" coords="184,313,339,368"/>
+<area shape="rect" id="node8" href="$syncing__node__application_8hpp.html" title=" " alt="" coords="491,218,690,258"/>
+<area shape="rect" id="node10" href="$syncing__node__injector_8cpp.html" title=" " alt="" coords="714,218,849,258"/>
+<area shape="rect" id="node9" href="$syncing__node__application_8cpp.html" title=" " alt="" coords="491,321,690,361"/>
+</map>

@@ -1,0 +1,10 @@
+<map id="sgns::verification::finality::RoundState" name="sgns::verification::finality::RoundState">
+<area shape="rect" id="node1" title="Stores the current state of the round." alt="" coords="27,784,166,883"/>
+<area shape="rect" id="node2" href="$structsgns_1_1primitives_1_1detail_1_1_block_info_t.html" title=" " alt="" coords="20,432,173,545"/>
+<area shape="rect" id="node7" href="$structsgns_1_1primitives_1_1detail_1_1_block_info_t.html" title=" " alt="" coords="229,608,445,721"/>
+<area shape="rect" id="node3" title=" " alt="" coords="5,256,188,311"/>
+<area shape="rect" id="node4" href="$classsgns_1_1base_1_1_blob.html" title=" " alt="" coords="304,197,476,369"/>
+<area shape="rect" id="node5" title=" " alt="" coords="336,108,444,148"/>
+<area shape="rect" id="node6" title=" " alt="" coords="371,5,409,45"/>
+<area shape="rect" id="node8" title=" " alt="" coords="198,461,433,516"/>
+</map>
