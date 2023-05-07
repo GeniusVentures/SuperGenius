@@ -31,9 +31,9 @@ jobs:
     - name: Deploy
       uses: peaceiris/actions-gh-pages@v3
       with:
-	deploy_key: ${{ secrets.ACTIONS_DEPLOY_KEY }}
-	external_repository: GeniusVentures/geniusventures.github.io
-	publish_branch: master
+        deploy_key: ${{ secrets.ACTIONS_DEPLOY_KEY }}
+        external_repository: GeniusVentures/geniusventures.github.io
+        publish_branch: master
         # Default Doxyfile build documentation to html directory. 
         # Change the directory if changes in Doxyfile
         publish_dir: ./SuperGenius
