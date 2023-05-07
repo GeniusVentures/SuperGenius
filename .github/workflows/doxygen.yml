@@ -36,4 +36,5 @@ jobs:
         publish_branch: master
         # Default Doxyfile build documentation to html directory. 
         # Change the directory if changes in Doxyfile
-        publish_dir: ./SuperGenius
+        publish_dir: ./doc/html
+        destination_dir: SuperGenius
