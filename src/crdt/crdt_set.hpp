@@ -81,7 +81,7 @@ namespace sgns::crdt
     */
     std::string GetValueSuffix() { return valueSuffix_; }
 
-    /** Get value from datasore for HierarchicalKey defined
+    /** Get value from datastore for HierarchicalKey defined
     * @param aKey HierarchicalKey to get value from datastore
     * @return buffer value as string or outcome::failure on error
     */
@@ -268,6 +268,13 @@ namespace sgns::crdt
     * @return string represenation of a unique key part
     */
     std::string_view StripKey(const std::string_view& key) const;
+
+    /**
+     * Perform a Sync against all the paths associated with a key prefix
+     * @param
+     * @return outcome::success on success or outcome::failure otherwise
+     */
+    outcome::result<void> DataStoreSync(const std::vector<HierarchicalKey>& aKeyList);
   private:
     CrdtSet() = default;
 

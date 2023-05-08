@@ -657,4 +657,24 @@ namespace sgns::crdt
   {
     this->deleteHookFunc_ = deleteHookPtr;
   }
+
+  outcome::result<void> CrdtSet::DataStoreSync(const std::vector<HierarchicalKey> &aKeyList)
+  {
+    if (this->dataStore_ == nullptr)
+    {
+      return outcome::failure(boost::system::error_code { });
+    }
+    // Put all Hierarchical key to database.
+    if (aKeyList.size() != 4)
+    {
+      // Vector hierarchicalkey need enough element. TODO: Is that's a good way for check?  Need another way todo.
+      return outcome::failure(boost::system::error_code { });
+    }
+    std::string aKey = aKeyList.at(0).GetKey();
+    std::string aID = aKeyList.at(1).GetKey();
+    Buffer aValue;
+    aValue.put(aKeyList.at(2).GetKey());
+    uint64_t aPriority = GetPriority(aKeyList.at(3).GetKey());
+    return SetValue(aKey, aID, aValue, aPriority);
+  }
 }
