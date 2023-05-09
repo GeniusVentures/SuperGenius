@@ -254,7 +254,6 @@ namespace sgns::crdt
 
     /** Sync ensures that all the data under the given prefix is flushed to disk in
     * the underlying datastore
-    * TODO: Need to see if needed
     * @return returns outcome::success on success or outcome::failure otherwise
     */
     outcome::result<void> Sync(const HierarchicalKey& aKey);
@@ -319,7 +318,7 @@ namespace sgns::crdt
     void Close();
 
     /** SyncDatastore sync heads and set datastore
-    * TODO: Need to see if needed, not fully implemented
+    * @param: aKeyList all heads and the set entries related to the given prefix
     * @return returns outcome::success on success or outcome::failure otherwise
     */
     outcome::result<void> SyncDatastore(const std::vector<HierarchicalKey>& aKeyList);

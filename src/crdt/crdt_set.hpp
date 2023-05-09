@@ -81,7 +81,7 @@ namespace sgns::crdt
     */
     std::string GetValueSuffix() { return valueSuffix_; }
 
-    /** Get value from datasore for HierarchicalKey defined
+    /** Get value from datastore for HierarchicalKey defined
     * @param aKey HierarchicalKey to get value from datastore
     * @return buffer value as string or outcome::failure on error
     */
@@ -263,6 +263,12 @@ namespace sgns::crdt
     */
     void SetDeleteHook(const DeleteHookPtr& deleteHookPtr);
 
+    /**
+    * Perform a Sync against all the paths associated with a key prefix
+    * @param aKeyList all heads and the set entries related to the given prefix
+    * @return outcome::success on success or outcome::failure otherwise
+    */
+   outcome::result<void> DataStoreSync(const std::vector<HierarchicalKey>& aKeyList);
   private:
     CrdtSet() = default;
 
