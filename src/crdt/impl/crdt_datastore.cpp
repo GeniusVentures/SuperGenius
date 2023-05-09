@@ -1016,7 +1016,6 @@ namespace sgns::crdt
     keysToSync.push_back(this->set_->ElemsPrefix(aKey.GetKey()));
     keysToSync.push_back(this->set_->TombsPrefix(aKey.GetKey()));
     keysToSync.push_back(this->set_->KeysKey(aKey.GetKey())); // covers values and priorities
-
     keysToSync.push_back(this->heads_->GetNamespaceKey());
     return this->SyncDatastore(keysToSync);
   }
@@ -1028,8 +1027,10 @@ namespace sgns::crdt
       return outcome::failure(boost::system::error_code{});
     }
 
-    // TODO: Need to implement it 
-    return outcome::failure(boost::system::error_code{});
+    // Call the crdt set sync. We don't need to call Store Sync.
+    // Because a store is shared with SET. Only sync SET is enough
+    return this->set_->DataStoreSync(aKeyList);
+
   }
 
   std::shared_ptr<CrdtDataStoreTransaction> CrdtDatastore::BeginTransaction()
