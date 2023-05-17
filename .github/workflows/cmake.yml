@@ -143,7 +143,7 @@ jobs:
           echo "Check clang path:"
           which clang
           env
-          cmake -S ../build/Android/ -DANDROID_ABI="armeabi-v8a" -DCMAKE_ANDROID_NDK=$ANDROID_NDK -DANDROID_TOOLCHAIN=clang
+          cmake -S ../build/Android/ -DANDROID_ABI="arm64-v8a" -DCMAKE_ANDROID_NDK=$ANDROID_NDK -DANDROID_TOOLCHAIN=clang
       
       - name: Thirdparty Compile
         working-directory: ${{github.workspace}}/thirdparty/.build
@@ -165,7 +165,7 @@ jobs:
           echo "Check clang path:"
           which clang
           env
-          cmake -S ../build/Android/ -DANDROID_ABI="armeabi-v8a" -DCMAKE_ANDROID_NDK=$ANDROID_NDK -DANDROID_TOOLCHAIN=clang -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty/ -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty/.build
+          cmake -S ../build/Android/ -DANDROID_ABI="arm64-v8a" -DCMAKE_ANDROID_NDK=$ANDROID_NDK -DANDROID_TOOLCHAIN=clang -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty/ -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty/.build
       
       - name: Compile
         working-directory: ${{github.workspace}}/SuperGenius/.build
