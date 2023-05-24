@@ -66,7 +66,6 @@ namespace sgns::verification::finality {
     virtual void adjustBase(const std::vector<BlockHash> &ancestry_proof) = 0;
 
     inline virtual outcome::result<void> insert(const Vote &vote,
-
                                                 const VoteWeight &weigth) {
       return visit_in_place(
           vote, [this, &weigth](const auto &vote) -> outcome::result<void> {

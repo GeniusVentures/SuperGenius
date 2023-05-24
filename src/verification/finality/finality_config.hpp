@@ -10,8 +10,7 @@ namespace sgns::verification::finality {
   struct FinalityConfig {
     std::shared_ptr<VoterSet> voters;  // current round's authorities
     RoundNumber round_number;
-    Duration
-        duration;  // time bound which is enough to gossip messages to everyone
+    Duration duration;  // time bound which is enough to gossip messages to everyone
     Id peer_id;    //  key of the peer, do not confuse with libp2p peerid
   };
 
