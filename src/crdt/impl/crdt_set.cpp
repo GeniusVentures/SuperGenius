@@ -651,7 +651,7 @@ namespace sgns::crdt
     std::string aID = aKeyList.at(1).GetKey();
     Buffer aValue;
     aValue.put(aKeyList.at(2).GetKey());
-    uint64_t aPriority = GetPriority(aKeyList.at(3).GetKey());
-    return SetValue(aKey, aID, aValue, aPriority);
+    auto aPriority = GetPriority(aKeyList.at(3).GetKey());
+    return SetValue(aKey, aID, aValue, aPriority.value());
   }
 }
