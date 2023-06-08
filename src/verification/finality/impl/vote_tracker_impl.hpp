@@ -22,8 +22,17 @@ namespace sgns::verification::finality {
 
     size_t getTotalWeight() const override;
 
+    VotingMessage& getMedianMessage(const Vote& vote) const; 
+
+    // order the voting messages by timestamp 
+    static bool voteOrder(const VotingMessage& v1, const VotingMessage& v2) {
+        return v1.ts < v2.ts; 
+    } 
+
    private:
     std::map<Id, VoteVariant> messages_;
+    // ordered votes
+    std::map<Id, VotingMessage, decltype(&VoteTrackerImpl::voteOrder)> ordered_votes_(&VoteTrackerImpl::voteOrder);
     size_t total_weight_ = 0;
   };
 
