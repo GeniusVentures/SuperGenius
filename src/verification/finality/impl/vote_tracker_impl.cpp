@@ -17,7 +17,7 @@ namespace sgns::verification::finality {
       total_weight_ += weight;
 
       // ordered votes
-      ordered_votes_[vote.id] = {vote};
+      ordered_votes_[vote.ts] = {vote};
       return PushResult::SUCCESS;
     }
     auto &equivotes = vote_it->second;
@@ -41,9 +41,6 @@ namespace sgns::verification::finality {
 
             messages_[vote.id] = v;
             total_weight_ += weight;
-	    // not duplicate add to the ordered list
-	    // do we need it ? duplicate
-	    ordered_votes_[vote.id] = v;
             return PushResult::EQUIVOCATED;
           },
           // otherwise return duplicated
@@ -65,17 +62,18 @@ namespace sgns::verification::finality {
     return prevotes;
   }
 
-  VotingMessage& VoteTracker::getMedianMessage(const Vote& vote) const {
-     std::map<Id, VotingMessage, decltype(&VoteTrackerImpl::voteOrder)> tmp_votes(&VoteTrackerImpl::voteOrder);
-     for (const auto& item : ordered_votes_) {  
-       if(vote.block_hash() == item.block_hash()) {
+  VotingMessage& VoteTrackerImpl::getMedianMessage(const BlockHash& block_hash) 
+       const {
+     std::map<Timestamp, VotingMessage, VoteOrderComparator> tmp_votes;
+     for (const auto &item : ordered_votes_) {  
+       if(block_hash == item.second.block_hash()) {
          tmp_votes.insert(item);
        }
      }	     
      size_t size = tmp_votes.size();
      size_t median_index = size % 2 == 0 ? (size/2) - 1 : size/2;
      auto median_it = std::next(tmp_votes.begin(), median_index);
-     return median_it.first;     
+     return median_it->second;     
   }	  
 
   size_t VoteTrackerImpl::getTotalWeight() const {
