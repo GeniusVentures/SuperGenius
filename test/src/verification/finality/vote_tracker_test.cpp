@@ -10,6 +10,9 @@ using namespace crypto;
 using namespace verification;
 using namespace finality;
 
+using sgns::primitives::BlockNumber;
+using sgns::primitives::BlockHash;
+
 using testing::Return;
 
 // unit testing vote tracker 
@@ -206,5 +209,54 @@ TEST_F(VoteTrackerTest, TestVoteOrdering) {
         EXPECT_LE(prev_ts, obj.ts);
         prev_ts = obj.ts;
     }
+}    
+
+TEST_F(VoteTrackerTest, TestMedianMessage) {
+    std::mt19937 rng(std::time(nullptr));
+    std::uniform_int_distribution<int> dist(10000000, 99999999);
+
+    BlockHash t_block_hash_{{0x41, 0x22, 0x33, 0x44, 0x11, 0x22, 0x33, 0x44,
+                              0x11, 0x22, 0x33, 0x44, 0x11, 0x22, 0x33, 0x54,
+                              0x11, 0x22, 0x33, 0x44, 0x11, 0x22, 0x33, 0x44,
+                              0x11, 0x22, 0x33, 0x44, 0x11, 0x24, 0x33, 0x44}};	
+    BlockNumber t_block_number_ = 1u;
+
+    // two differant blocks
+    BlockHash t_block_hash1_ = t_block_hash_;
+    BlockNumber t_block_number1_ = t_block_number_; 
+    t_block_hash1_[0] = 0x42;
+    t_block_number1_  += 1 
+
+    std::random_device rd;
+    std::mt19937 rng(rd());
+    std::uniform_int_distribution<uint8_t> dist(0, 255);
+
+    crypto::ED25519Signature signature;
+    for (auto& byte : signature.bytes) {
+        byte = dist(rng);
+    }
+
+    // weight range 
+    std::uniform_int_distribution<int> wt_dist(1, 6);
+    // random timestamp
+    Timestamp timestamp = dist(rng);
+
+    uint32_t index_ = 1;
+    // votes for first block
+    for(index = 1; index < 5; ++index) {
+      // Voting messages
+      VotingMessage vm; 
+      vm.message = {t_block_hash_, t_block_number_};
+      vm.signature = signature;
+      vm.id = index;
+      vm.ts = timestamp + index;
+      
+      uint32_t wt = wt_dist(rng);
+      vote_tracker_.push(vm, wt);   
+    }	    
+
+    Vote vote{t_block_hash_, t_block_number_};
+    auto message = getMedianMessage(vote);
+    EXPECT_EQ(vote.id, 3);
 }    
 
