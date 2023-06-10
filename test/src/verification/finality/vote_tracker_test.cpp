@@ -52,7 +52,7 @@ TEST_F(VoteTrackerTest, TestVotePush) {
 
     uint32_t index = 1;
     // votes for first block
-    for(index = 1; index < 10; ++index) {
+    for(index = 0; index < 10; ++index) {
       // random timestamp
       Timestamp timestamp = dist(rng);
       Prevote vote( t_block_number_, t_block_hash_);
@@ -71,7 +71,7 @@ TEST_F(VoteTrackerTest, TestVotePush) {
     }	    
 
     // vote for second block
-    for(index = 1; index < 10; ++index) {
+    for(; index < 20; ++index) {
       // random timestamp 
       Timestamp timestamp = dist(rng);
       Prevote vote( t_block_number1_, t_block_hash1_);
@@ -216,9 +216,9 @@ TEST_F(VoteTrackerTest, TestMedianMessage) {
     // random timestamp
     Timestamp timestamp = dist(rng);
 
-    uint32_t index = 1;
+    uint32_t index = 0;
     // votes for first block
-    for(index = 1; index < 5; ++index) {
+    for(; index < 5; ++index) {
       Prevote vote( t_block_number_, t_block_hash_);
       Id id{};
       id[0] = static_cast<byte_t>(123456 + index);	    
@@ -235,6 +235,6 @@ TEST_F(VoteTrackerTest, TestMedianMessage) {
     Prevote vote( t_block_number_, t_block_hash_);
 
     auto message = vote_tracker_.getMedianMessage(t_block_hash_);
-    EXPECT_EQ(message.ts, timestamp + 3);
+    EXPECT_EQ(message.ts, timestamp + 2);
 }    
 
