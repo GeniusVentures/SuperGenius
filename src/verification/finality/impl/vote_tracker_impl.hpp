@@ -15,6 +15,7 @@ namespace sgns::verification::finality {
     }
   };
 
+
   class VoteTrackerImpl : public VoteTracker {
    public:
     using PushResult = typename VoteTracker::PushResult;
@@ -33,6 +34,10 @@ namespace sgns::verification::finality {
     size_t getTotalWeight() const override;
 
     VotingMessage& getMedianMessage(const BlockHash& block_hash) const; 
+    // Test 
+    std::map<Timestamp, VotingMessage, VoteOrderComparator> getOrderedVotes() const {
+      return ordered_votes_;
+    }	    
 
    private:
     std::map<Id, VoteVariant> messages_;

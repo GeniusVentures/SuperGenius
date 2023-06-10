@@ -1,6 +1,7 @@
 
 
 add_subdirectory(production)
+add_subdirectory(finality)
 
 addtest(production_lottery_test
     production_lottery_test.cpp

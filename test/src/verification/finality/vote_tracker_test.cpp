@@ -12,13 +12,15 @@ using namespace finality;
 
 using sgns::primitives::BlockNumber;
 using sgns::primitives::BlockHash;
-
-using testing::Return;
+using sgns::verification::finality::Prevote;
+using Id = crypto::ED25519PublicKey;
+using Id = sgns::verification::finality::Id;
+using sgns::base::byte_t;
 
 // unit testing vote tracker 
 class VoteTrackerTest : public testing::Test {
 protected:
-    VoteTracker vote_tracker_;
+    VoteTrackerImpl vote_tracker_;
 };
 
 TEST_F(VoteTrackerTest, TestVotePush) {
@@ -35,32 +37,33 @@ TEST_F(VoteTrackerTest, TestVotePush) {
     BlockHash t_block_hash1_ = t_block_hash_;
     BlockNumber t_block_number1_ = t_block_number_; 
     t_block_hash1_[0] = 0x42;
-    t_block_number1_  += 1 
+    t_block_number1_  += 1; 
 
     std::random_device rd;
-    std::mt19937 rng(rd());
-    std::uniform_int_distribution<uint8_t> dist(0, 255);
+    std::uniform_int_distribution<uint8_t> dist1(0, 255);
 
-    crypto::ED25519Signature signature;
-    for (auto& byte : signature.bytes) {
-        byte = dist(rng);
-    }
+    //crypto::ED25519Signature signature;
+    //for (auto& byte : signature.bytes) {
+    //    byte = dist1(rng);
+    //}
 
     // weight range 
     std::uniform_int_distribution<int> wt_dist(1, 6);
 
-    uint32_t index_ = 1;
+    uint32_t index = 1;
     // votes for first block
     for(index = 1; index < 10; ++index) {
       // random timestamp
       Timestamp timestamp = dist(rng);
-      Vote vote{block_hash, block_number};
+      Prevote vote( t_block_number_, t_block_hash_);
+      Id id{};
+      id[0] = static_cast<byte_t>(123456 + index);
 
       // Voting messages
-      VotingMessage vm; 
-      vm.message = {t_block_hash_, t_block_number_};
-      vm.signature = signature;
-      vm.id = index;
+      VoteTrackerImpl::VotingMessage vm; 
+      vm.message = vote;
+      //vm.signature = signature;
+      vm.id = id;
       vm.ts = timestamp;
       
       uint32_t wt = wt_dist(rng);
@@ -71,20 +74,22 @@ TEST_F(VoteTrackerTest, TestVotePush) {
     for(index = 1; index < 10; ++index) {
       // random timestamp 
       Timestamp timestamp = dist(rng);
-      Vote vote{block_hash, block_number};
+      Prevote vote( t_block_number1_, t_block_hash1_);
+      Id id{};
+      id[0] = static_cast<byte_t>(123456 + index);
       
       // Voting messages
-      VotingMessage vm; 
-      vm.message = {block_hash1_, block_number2_};
-      vm.signature = signature;
-      vm.id = index;
+      VoteTrackerImpl::VotingMessage vm; 
+      vm.message = vote;
+      //vm.signature = signature;
+      vm.id = id;
       vm.ts = timestamp;
       
       uint32_t wt = wt_dist(rng);
       vote_tracker_.push(vm, wt);
     } 
 
-    auto messges = vote_tracker_.getMessages();
+    auto messages = vote_tracker_.getMessages();
     EXPECT_EQ(messages.size(), 20);
 }
 
@@ -98,35 +103,25 @@ TEST_F(VoteTrackerTest, TestVoteEquivocatory) {
                               0x11, 0x22, 0x33, 0x44, 0x11, 0x24, 0x33, 0x44}};	
     BlockNumber t_block_number_ = 1u;
 
-    // two differant blocks
-    BlockHash t_block_hash1_ = t_block_hash_;
-    BlockNumber t_block_number1_ = t_block_number_; 
-    t_block_hash1_[0] = 0x42;
-    t_block_number1_  += 1 
-
     std::random_device rd;
-    std::mt19937 rng(rd());
-    std::uniform_int_distribution<uint8_t> dist(0, 255);
-
-    crypto::ED25519Signature signature;
-    for (auto& byte : signature.bytes) {
-        byte = dist(rng);
-    }
+    std::uniform_int_distribution<uint8_t> dist1(0, 255);
 
     // weight range 
     std::uniform_int_distribution<int> wt_dist(1, 6);
 
-    uint32_t index_ = 1;
+    uint32_t index = 1;
     // votes for first block
     for(index = 1; index < 10; ++index) {
       // random timestamp
       Timestamp timestamp = dist(rng);
+      Prevote vote( t_block_number_, t_block_hash_);
+      Id id{};
+      id[0] = static_cast<byte_t>(123456 + index);
 
       // Voting messages
-      VotingMessage vm; 
-      vm.message = {t_block_hash_, t_block_number_};
-      vm.signature = signature;
-      vm.id = index;
+      VoteTrackerImpl::VotingMessage vm; 
+      vm.message = vote;
+      vm.id = id;
       vm.ts = timestamp;
       
       uint32_t wt = wt_dist(rng);
@@ -135,22 +130,24 @@ TEST_F(VoteTrackerTest, TestVoteEquivocatory) {
 
     // test for equivocatory votes
     Timestamp timestamp = dist(rng); 
-    VotingMessage vm; 
-    vm.message = {t_block_hash_, t_block_number_};
-    vm.signature = signature;
+    Prevote vote( t_block_number_, t_block_hash_);
+    Id id{};
+    id[0] = static_cast<byte_t>(123456 + 2);
+
+    VoteTrackerImpl::VotingMessage vm; 
+    vm.message = vote;
     // vote with same id for the same block
-    vm.id = 2;
+    vm.id = id;
     vm.ts = timestamp;
 
-    Vote vote{block_hash, block_number};
     uint32_t wt = wt_dist(rng);
     vote_tracker_.push(vm, wt);   
 
-    auto messges = vote_tracker_.getMessages();
+    auto messages = vote_tracker_.getMessages();
 
     size_t e_size = 0;
     for (const auto& message : messages) {
-        if (std::get_if<EquivocatoryVotingMessage>(&message) != nullptr) {
+        if (boost::get<VoteTrackerImpl::EquivocatoryVotingMessage>(&message) != nullptr) {
             e_size++;
         }
     }
@@ -168,43 +165,33 @@ TEST_F(VoteTrackerTest, TestVoteOrdering) {
                               0x11, 0x22, 0x33, 0x44, 0x11, 0x24, 0x33, 0x44}};	
     BlockNumber t_block_number_ = 1u;
 
-    // two differant blocks
-    BlockHash t_block_hash1_ = t_block_hash_;
-    BlockNumber t_block_number1_ = t_block_number_; 
-    t_block_hash1_[0] = 0x42;
-    t_block_number1_  += 1 
-
     std::random_device rd;
-    std::mt19937 rng(rd());
-    std::uniform_int_distribution<uint8_t> dist(0, 255);
-
-    crypto::ED25519Signature signature;
-    for (auto& byte : signature.bytes) {
-        byte = dist(rng);
-    }
+    std::uniform_int_distribution<uint8_t> dist1(0, 255);
 
     // weight range 
     std::uniform_int_distribution<int> wt_dist(1, 6);
 
-    uint32_t index_ = 1;
+    uint32_t index = 1;
     // votes for first block
     for(index = 1; index < 10; ++index) {
       // random timestamp
       Timestamp timestamp = dist(rng);
+      Prevote vote( t_block_number_, t_block_hash_);
+      Id id{};
+      id[0] = static_cast<byte_t>(123456 + index);
 
       // Voting messages
-      VotingMessage vm; 
-      vm.message = {t_block_hash_, t_block_number_};
-      vm.signature = signature;
-      vm.id = index;
+      VoteTrackerImpl::VotingMessage vm; 
+      vm.message = vote;
+      vm.id = id;
       vm.ts = timestamp;
       
       uint32_t wt = wt_dist(rng);
       vote_tracker_.push(vm, wt);   
     }	    
 
-    auto ordered_votes = vote_tracker.get_ordered_votes();
-    auto prev_ts = ordered_votes.begin()->second.ts;
+    auto ordered_votes = vote_tracker_.getOrderedVotes();
+    auto prev_ts = ordered_votes.begin()->first;
     for (const auto& [key, obj] : ordered_votes) {
         EXPECT_LE(prev_ts, obj.ts);
         prev_ts = obj.ts;
@@ -221,42 +208,33 @@ TEST_F(VoteTrackerTest, TestMedianMessage) {
                               0x11, 0x22, 0x33, 0x44, 0x11, 0x24, 0x33, 0x44}};	
     BlockNumber t_block_number_ = 1u;
 
-    // two differant blocks
-    BlockHash t_block_hash1_ = t_block_hash_;
-    BlockNumber t_block_number1_ = t_block_number_; 
-    t_block_hash1_[0] = 0x42;
-    t_block_number1_  += 1 
-
     std::random_device rd;
-    std::mt19937 rng(rd());
-    std::uniform_int_distribution<uint8_t> dist(0, 255);
-
-    crypto::ED25519Signature signature;
-    for (auto& byte : signature.bytes) {
-        byte = dist(rng);
-    }
+    std::uniform_int_distribution<uint8_t> dist1(0, 255);
 
     // weight range 
     std::uniform_int_distribution<int> wt_dist(1, 6);
     // random timestamp
     Timestamp timestamp = dist(rng);
 
-    uint32_t index_ = 1;
+    uint32_t index = 1;
     // votes for first block
     for(index = 1; index < 5; ++index) {
+      Prevote vote( t_block_number_, t_block_hash_);
+      Id id{};
+      id[0] = static_cast<byte_t>(123456 + index);	    
+
       // Voting messages
-      VotingMessage vm; 
-      vm.message = {t_block_hash_, t_block_number_};
-      vm.signature = signature;
-      vm.id = index;
+      VoteTrackerImpl::VotingMessage vm; 
+      vm.message = vote;
+      vm.id = id; 
       vm.ts = timestamp + index;
       
       uint32_t wt = wt_dist(rng);
       vote_tracker_.push(vm, wt);   
     }	    
+    Prevote vote( t_block_number_, t_block_hash_);
 
-    Vote vote{t_block_hash_, t_block_number_};
-    auto message = getMedianMessage(vote);
-    EXPECT_EQ(vote.id, 3);
+    auto message = vote_tracker_.getMedianMessage(t_block_hash_);
+    EXPECT_EQ(message.ts, timestamp + 3);
 }    
 
