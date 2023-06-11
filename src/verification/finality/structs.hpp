@@ -29,11 +29,13 @@ namespace sgns::verification::finality {
   using Vote = boost::variant<Prevote,
                               Precommit,
                               PrimaryPropose>;  // order is important
+  using Timestamp = uint64_t;				
 
   struct SignedMessage {
     Vote message;
     Signature signature;
     Id id;
+    Timestamp ts;
 
     BlockNumber block_number() const {
       return visit_in_place(message,
@@ -51,13 +53,20 @@ namespace sgns::verification::finality {
       });
     }
 
+    Timestamp timestamp() const {
+      return ts;
+    }
+
     template <typename T>
     bool is() const {
       return message.type() == typeid(T);
     }
 
     bool operator==(const SignedMessage &rhs) const {
-      return message == rhs.message && signature == rhs.signature && id == id;
+      return message == rhs.message &&
+             signature == rhs.signature &&
+             id == rhs.id &&
+             ts == rhs.ts;
     }
 
     bool operator!=(const SignedMessage &rhs) const {
@@ -69,7 +78,7 @@ namespace sgns::verification::finality {
             typename = std::enable_if_t<Stream::is_encoder_stream>>
   Stream &operator<<(Stream &s, const SignedMessage &signed_msg) {
     return s << (scale::encode(signed_msg.message).value())
-             << signed_msg.signature << signed_msg.id;
+             << signed_msg.signature << signed_msg.id << signed_msg.ts;
   }
 
   template <class Stream,
@@ -79,7 +88,7 @@ namespace sgns::verification::finality {
     s >> encoded_vote;
     auto decoded_vote = scale::template decode<Vote>(encoded_vote).value();
     signed_msg.message = decoded_vote;
-    return s >> signed_msg.signature >> signed_msg.id;
+    return s >> signed_msg.signature >> signed_msg.id >> signed_msg.ts;
   }
 
   template <typename Message>

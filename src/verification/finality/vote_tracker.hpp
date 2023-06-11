@@ -19,6 +19,7 @@ namespace sgns::verification::finality {
     using EquivocatoryVotingMessage = std::pair<VotingMessage, VotingMessage>;
     using VoteVariant =
         boost::variant<VotingMessage, EquivocatoryVotingMessage>;
+    using BlockHash = base::Hash256;
 
     virtual ~VoteTracker() = default;
     /**
@@ -41,6 +42,10 @@ namespace sgns::verification::finality {
      * @returns total weight of all accepted (non-duplicate) messages
      */
     virtual size_t getTotalWeight() const = 0;
+    /**
+     * @return the median voting message 
+     */
+    virtual VotingMessage& getMedianMessage(const BlockHash& block_hash) const = 0;
   };
 
 }  // namespace sgns::verification::finality

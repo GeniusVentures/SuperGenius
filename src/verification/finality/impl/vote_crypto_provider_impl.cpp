@@ -3,6 +3,7 @@
 #include "verification/finality/impl/vote_crypto_provider_impl.hpp"
 
 #include "scale/scale.hpp"
+#include <chrono>
 
 namespace sgns::verification::finality {
 
@@ -56,7 +57,10 @@ namespace sgns::verification::finality {
 
   crypto::ED25519Signature VoteCryptoProviderImpl::voteSignature(
       const Vote &vote) const {
-    auto payload = scale::encode(vote, round_number_, voter_set_->id()).value();
+    // set the timestamp during vote signature process
+    auto timestamp = std::chrono::system_clock::now();
+    Timestamp msg_ts = timestamp.time_since_epoch().count();
+    auto payload = scale::encode(vote, round_number_, voter_set_->id(), msg_ts).value();
     return ed_provider_->sign(keypair_, payload).value();
   }
 

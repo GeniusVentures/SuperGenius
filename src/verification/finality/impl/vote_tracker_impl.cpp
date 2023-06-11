@@ -15,6 +15,9 @@ namespace sgns::verification::finality {
     if (vote_it == messages_.end()) {
       messages_[vote.id] = {vote};
       total_weight_ += weight;
+
+      // ordered votes
+      ordered_votes_[vote.ts] = {vote};
       return PushResult::SUCCESS;
     }
     auto &equivotes = vote_it->second;
@@ -58,6 +61,20 @@ namespace sgns::verification::finality {
     }
     return prevotes;
   }
+
+  VotingMessage& VoteTrackerImpl::getMedianMessage(const BlockHash& block_hash) 
+       const {
+     std::map<Timestamp, VotingMessage, VoteOrderComparator> tmp_votes;
+     for (const auto &item : ordered_votes_) {  
+       if(block_hash == item.second.block_hash()) {
+         tmp_votes.insert(item);
+       }
+     }	     
+     size_t size = tmp_votes.size();
+     size_t median_index = size % 2 == 0 ? (size/2) - 1 : size/2;
+     auto median_it = std::next(tmp_votes.begin(), median_index);
+     return median_it->second;     
+  }	  
 
   size_t VoteTrackerImpl::getTotalWeight() const {
     return total_weight_;
