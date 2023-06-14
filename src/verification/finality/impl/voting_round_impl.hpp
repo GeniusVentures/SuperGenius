@@ -112,19 +112,19 @@ namespace sgns::verification::finality {
      * 4. After all steps above are done we broadcast propose
      * 5. We store what we have broadcasted in primary_vote_ field
      */
-    void doProposal() override;
+    bool doProposal() override;
 
     /**
      * 1. Waits until start_time_ + duration * 2 or round is completable
      * 2. Constructs prevote (\see constructPrevote) and broadcasts it
      */
-    void doPrevote() override;
+    bool doPrevote() override;
 
     /**
      * 1. Waits until start_time_ + duration * 4 or round is completable
      * 2. Constructs precommit (\see constructPrecommit) and broadcasts it
      */
-    void doPrecommit() override;
+    bool doPrecommit() override;
 
     // Handlers of incoming messages
 
@@ -173,6 +173,10 @@ namespace sgns::verification::finality {
      * prevotes and precommits
      */
     bool completable() const;
+
+    inline Stage getStage() const {
+      return stage_;	    
+    };
 
    private:
     void constructCurrentState();
@@ -236,6 +240,9 @@ namespace sgns::verification::finality {
     bool validate(const BlockInfo &vote,
                   const FinalityJustification &justification) const;
 
+   protected:
+    boost::optional<PrimaryPropose> primary_vote_;
+
    private:
     std::weak_ptr<Finality> finality_;
 
@@ -275,7 +282,6 @@ namespace sgns::verification::finality {
     std::vector<bool> prevote_equivocators_;
     std::vector<bool> precommit_equivocators_;
 
-    boost::optional<PrimaryPropose> primary_vote_;
     bool completable_{false};
   };
 }  // namespace sgns::verification::finality

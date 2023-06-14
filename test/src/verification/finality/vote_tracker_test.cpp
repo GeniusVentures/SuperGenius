@@ -57,7 +57,7 @@ TEST_F(VoteTrackerTest, TestVotePush) {
       Timestamp timestamp = dist(rng);
       Prevote vote( t_block_number_, t_block_hash_);
       Id id{};
-      id[0] = static_cast<byte_t>(123456 + index);
+      id[0] = static_cast<byte_t>(128 + index);
 
       // Voting messages
       VoteTrackerImpl::VotingMessage vm; 
@@ -76,7 +76,7 @@ TEST_F(VoteTrackerTest, TestVotePush) {
       Timestamp timestamp = dist(rng);
       Prevote vote( t_block_number1_, t_block_hash1_);
       Id id{};
-      id[0] = static_cast<byte_t>(123456 + index);
+      id[0] = static_cast<byte_t>(128 + index);
       
       // Voting messages
       VoteTrackerImpl::VotingMessage vm; 
@@ -116,7 +116,7 @@ TEST_F(VoteTrackerTest, TestVoteEquivocatory) {
       Timestamp timestamp = dist(rng);
       Prevote vote( t_block_number_, t_block_hash_);
       Id id{};
-      id[0] = static_cast<byte_t>(123456 + index);
+      id[0] = static_cast<byte_t>(128 + index);
 
       // Voting messages
       VoteTrackerImpl::VotingMessage vm; 
@@ -132,7 +132,7 @@ TEST_F(VoteTrackerTest, TestVoteEquivocatory) {
     Timestamp timestamp = dist(rng); 
     Prevote vote( t_block_number_, t_block_hash_);
     Id id{};
-    id[0] = static_cast<byte_t>(123456 + 2);
+    id[0] = static_cast<byte_t>(128 + 2);
 
     VoteTrackerImpl::VotingMessage vm; 
     vm.message = vote;
@@ -178,7 +178,7 @@ TEST_F(VoteTrackerTest, TestVoteOrdering) {
       Timestamp timestamp = dist(rng);
       Prevote vote( t_block_number_, t_block_hash_);
       Id id{};
-      id[0] = static_cast<byte_t>(123456 + index);
+      id[0] = static_cast<byte_t>(128 + index);
 
       // Voting messages
       VoteTrackerImpl::VotingMessage vm; 
@@ -221,7 +221,7 @@ TEST_F(VoteTrackerTest, TestMedianMessage) {
     for(; index < 5; ++index) {
       Prevote vote( t_block_number_, t_block_hash_);
       Id id{};
-      id[0] = static_cast<byte_t>(123456 + index);	    
+      id[0] = static_cast<byte_t>(128 + index);	    
 
       // Voting messages
       VoteTrackerImpl::VotingMessage vm; 

@@ -348,7 +348,7 @@ namespace sgns::verification::finality {
     timer_.cancel();
   }
 
-  void VotingRoundImpl::doProposal() {
+  bool VotingRoundImpl::doProposal() {
     // Send primary propose
     // @spec Broadcast(M vr �1;Prim (Best-Final-Candidate(r-1)))
 
@@ -371,10 +371,12 @@ namespace sgns::verification::finality {
       logger_->error("Primary proposal was not sent in round #{}",
                      proposed.error().message());
       // TODO(xDimon): Do need to handle?
+      return false;
     }
+    return true;
   }
 
-  void VotingRoundImpl::doPrevote() {
+  bool VotingRoundImpl::doPrevote() {
     // TODO(xDimon): check if it's according to spec
 
 //    // spec: L Best-Final-Candidate(r-1)
@@ -398,13 +400,16 @@ namespace sgns::verification::finality {
           env_->onPrevoted(round_number_, voter_set_->id(), prevote.value());
       if (! prevoted) {
         logger_->error("Prevote was not sent: {}", prevoted.error().message());
+	return false;
       }
+      return true;
     } else {
       logger_->debug("No prevote in round #{}", round_number_);
     }
+    return false;
   }
 
-  void VotingRoundImpl::doPrecommit() {
+  bool VotingRoundImpl::doPrecommit() {
     auto last_round_estimate = previous_round_state_->best_final_candidate;
 
     // We should precommit if current state contains prevote and it is
@@ -429,8 +434,9 @@ namespace sgns::verification::finality {
         if (! precommitted) {
           logger_->error("Precommit was not sent: {}",
                          precommitted.error().message());
+	  return false;
         }
-        return;
+        return true;
       }
       logger_->debug("No precommit in round #{}", round_number_);
 
@@ -441,6 +447,7 @@ namespace sgns::verification::finality {
     }
 
     env_->onCompleted(VotingRoundError::LAST_ESTIMATE_BETTER_THAN_PREVOTE);
+    return false;
   }
   bool VotingRoundImpl::isPrimary(const Id &id) const {
     auto index = round_number_ % voter_set_->size();
