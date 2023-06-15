@@ -6,10 +6,14 @@
 #include "verification/finality/structs.hpp"
 #include "verification/finality/impl/voting_round_impl.hpp"
 #include "verification/finality/impl/vote_tracker_impl.hpp"
+#include "verification/finality/vote_graph/vote_graph_impl.hpp"
+#include "verification/finality/round_state.hpp"
 #include "mock/src/verification/finality/vote_crypto_provider_mock.hpp"
 #include "mock/src/verification/finality/environment_mock.hpp"
 #include "mock/src/verification/finality/finality_mock.hpp"
-#include "mock/src/verification/finality/vote_graph_mock.hpp"
+#include "mock/src/verification/finality/chain_mock.hpp"
+#include "mock/src/clock/clock_mock.hpp"
+#include "clock/impl/clock_impl.hpp"
 
 using namespace sgns;
 using namespace verification;
@@ -18,13 +22,15 @@ using namespace finality;
 using sgns::base::byte_t;
 using sgns::primitives::BlockNumber;
 using sgns::primitives::BlockHash;
+using sgns::clock::ClockImpl;
 
 // unit testing vote tracker
 class VotingRoundTest : public testing::Test {
 public:
-  std::shared_ptr<VotingRoundImpl> voting_round_;
 
 protected:
+  std::shared_ptr<VotingRoundImpl> voting_round_;
+
   void SetUp() override {
     auto round_number = 1;	  
     Id id{};
@@ -35,6 +41,12 @@ protected:
 	    std::chrono::milliseconds(333),
 	    id};
 
+    BlockHash block_hash{{0x41, 0x22, 0x33, 0x44, 0x11, 0x22, 0x33, 0x44,
+                           0x11, 0x22, 0x33, 0x44, 0x11, 0x22, 0x33, 0x54,
+                           0x11, 0x22, 0x33, 0x44, 0x11, 0x22, 0x33, 0x44,
+                           0x11, 0x22, 0x33, 0x44, 0x11, 0x24, 0x33, 0x44}};
+    BlockNumber block_number = 1u;
+
     // initialize
     std::shared_ptr<FinalityMock> finality = std::make_shared<FinalityMock>();
     // todo: finality config
@@ -43,9 +55,11 @@ protected:
     // mock not required
     std::shared_ptr<VoteTrackerImpl> prevote_tracker = std::make_shared<VoteTrackerImpl>();
     std::shared_ptr<VoteTrackerImpl> precommit_tracker = std::make_shared<VoteTrackerImpl>();
-    std::shared_ptr<VoteGraphMock> vote_graph = std::make_shared<VoteGraphMock>(); 
-    std::shared_ptr<Clock> clock = std::make_shared<Clock>();
+    std::shared_ptr<ChainMock> chain = std::make_shared<ChainMock>();
+    std::shared_ptr<VoteGraphImpl> vote_graph = std::make_shared<VoteGraphImpl>(BlockInfo(block_number, block_hash), chain); 
+    std::shared_ptr<ClockImpl<std::chrono::steady_clock>> clock = std::make_shared<ClockImpl<std::chrono::steady_clock>>();
     std::shared_ptr<boost::asio::io_context> io_context = std::make_shared<boost::asio::io_context>();
+    std::shared_ptr<RoundState> round_state = std::make_shared<RoundState>();
 
     voting_round_ = std::make_shared<VotingRoundImpl>(finality,
 	  	    config,
@@ -55,8 +69,8 @@ protected:
 		    precommit_tracker,
 		    vote_graph,
 		    clock,
-		    io_context);
-
+		    io_context,
+		    round_state);
   }	    
 
   void TearDown() override {
@@ -71,19 +85,19 @@ protected:
 // voting round start test
 TEST_F(VotingRoundTest, PlayTest) {
   // test for the initial state
-  auto curr_stage = voting_round_.getStage();
+  auto curr_stage = voting_round_->getStage();
   EXPECT_EQ(curr_stage, VotingRoundImpl::Stage::INIT); 
   // call the play function 
   voting_round_->play(); 
   // test 
-  curr_stage = voting_round_.getStage();
+  curr_stage = voting_round_->getStage();
   EXPECT_EQ(curr_stage, VotingRoundImpl::Stage::PREVOTE_RUNS);
 }
 
 // voting end
 TEST_F(VotingRoundTest, EndTest) {
-  voting_round_.end();
-  auto curr_stage = voting_round_.getStage();
+  voting_round_->end();
+  auto curr_stage = voting_round_->getStage();
   EXPECT_EQ(curr_stage, VotingRoundImpl::Stage::COMPLETED); 
 }
 
@@ -125,7 +139,7 @@ TEST_F(VotingRoundTest, OnPrimaryPropose) {
   sm.id = id;
   sm.ts = ts;
 
-  voting_round_.onPrimaryPropose(sm);
+  voting_round_->onPrimaryPropose(sm);
 }
 
 TEST_F(VotingRoundTest, OnPrevote) {
@@ -134,7 +148,7 @@ TEST_F(VotingRoundTest, OnPrevote) {
                            0x11, 0x22, 0x33, 0x44, 0x11, 0x22, 0x33, 0x44,
                            0x11, 0x22, 0x33, 0x44, 0x11, 0x24, 0x33, 0x44}};
   BlockNumber t_block_number_ = 1u;
-  PrimaryPropose vote( t_block_number_, t_block_hash_);
+  Prevote vote( t_block_number_, t_block_hash_);
   Id id{};
   id[0] = static_cast<byte_t>(128);
 
@@ -146,7 +160,7 @@ TEST_F(VotingRoundTest, OnPrevote) {
   sm.id = id;
   sm.ts = ts;
 
-  voting_round_.onPrevote(sm);	
+  voting_round_->onPrevote(sm);	
   
 }
 
@@ -156,7 +170,7 @@ TEST_F(VotingRoundTest, OnPrecommit) {
                            0x11, 0x22, 0x33, 0x44, 0x11, 0x22, 0x33, 0x44,
                            0x11, 0x22, 0x33, 0x44, 0x11, 0x24, 0x33, 0x44}};
   BlockNumber t_block_number_ = 1u;
-  PrimaryPropose vote( t_block_number_, t_block_hash_);
+  Precommit vote( t_block_number_, t_block_hash_);
   Id id{};
   id[0] = static_cast<byte_t>(128);
 
@@ -168,7 +182,7 @@ TEST_F(VotingRoundTest, OnPrecommit) {
   sm.id = id;
   sm.ts = ts;
 
-  voting_round_.onPrecommit(sm); 	
+  voting_round_->onPrecommit(sm); 	
   
 }
 
