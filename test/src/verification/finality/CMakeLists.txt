@@ -22,5 +22,12 @@ addtest(vote_crypto_provider_test
     )
 target_link_libraries(vote_crypto_provider_test
     vote_crypto_provider	
+    ed25519_provider
     )
 
+addtest(vote_graph_test
+    vote_graph_test.cpp	
+    )
+target_link_libraries(vote_graph_test
+    vote_graph	
+    )

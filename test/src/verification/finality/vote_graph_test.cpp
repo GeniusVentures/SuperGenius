@@ -5,6 +5,8 @@
 
 #include "verification/finality/structs.hpp"
 #include "verification/finality/vote_graph/vote_graph_impl.hpp"
+#include "mock/src/verification/finality/chain_mock.hpp"
+#include "verification/finality/vote_weight.hpp"
 
 
 using namespace sgns;
@@ -65,7 +67,7 @@ TEST_F(VoteGraphTest, AdjustBaseTest) {
   vote_graph_->insert(bi1, v);
   
   // test for adjust base
-  vote_graphi_->adjustBase(ancestry_proof);
+  vote_graph_->adjustBase(ancestry_proof);
 }
 
 TEST_F(VoteGraphTest, InsertTest) {
@@ -73,7 +75,7 @@ TEST_F(VoteGraphTest, InsertTest) {
                         0x11, 0x22, 0x33, 0x44, 0x11, 0x22, 0x33, 0x54,
                         0x11, 0x22, 0x33, 0x44, 0x11, 0x22, 0x33, 0x44,
                         0x11, 0x22, 0x33, 0x44, 0x11, 0x24, 0x33, 0x44}};
-  BlockInfo bi{1u, block_hash};
+  BlockInfo block_info{1u, block_hash};
   VoteWeight weight(0x8);
   outcome::result<void> result = vote_graph_->insert(block_info, weight);
 
@@ -88,70 +90,97 @@ TEST_F(VoteGraphTest, FindAncestorTest) {
                         0x11, 0x22, 0x33, 0x44, 0x11, 0x22, 0x33, 0x54,
                         0x11, 0x22, 0x33, 0x44, 0x11, 0x22, 0x33, 0x44,
                         0x11, 0x22, 0x33, 0x44, 0x11, 0x24, 0x33, 0x44}};
-  for(init i=0; i<8; ++i) {
+  for(int i=0; i<8; ++i) {
     BlockHash block_hash = base_hash;
     block_hash[0] = block_hash[0] + i;
-    Prevote block_info{i, block_hash};
+    BlockNumber block_num = i;
+    BlockInfo block_info{block_num, block_hash};
     VoteWeight weight(0x8);
     vote_graph_->insert(block_info, weight);
   }
 
   BlockHash block_hash = base_hash;
-  Prevote block_info{1u, block_hash};
+  BlockInfo block_info{1u, block_hash};
 
   VoteGraph::Condition condition = [](const VoteWeight& voteWeight) {
     return true;
   };
 
-  boost::optional<BlockInfo> result = vote_graph_->findAncestor(block, condition, prevoteComparator);
+  boost::optional<BlockInfo> result = vote_graph_->findAncestor(block_info, condition, VoteWeight::prevoteComparator);
 
   EXPECT_TRUE(result);  
 }
 
 TEST_F(VoteGraphTest, FindGhostTest) {
 
-  boost::optional<BlockInfo> current_best = { /* Provide the current best block data */ };
+  boost::optional<BlockInfo> current_best = { };
+  BlockHash base_hash{{0x12, 0x22, 0x33, 0x44, 0x11, 0x22, 0x33, 0x44,
+                        0x11, 0x22, 0x33, 0x44, 0x11, 0x22, 0x33, 0x54,
+                        0x11, 0x22, 0x33, 0x44, 0x11, 0x22, 0x33, 0x44,
+                        0x11, 0x22, 0x33, 0x44, 0x11, 0x24, 0x33, 0x44}};
+  for(int i=0; i<8; ++i) {
+    BlockHash block_hash = base_hash;
+    block_hash[0] = block_hash[0] + i;
+    BlockNumber block_num = i;
+    BlockInfo block_info{block_num, block_hash};
+    VoteWeight weight(0x8);
+    vote_graph_->insert(block_info, weight);
+  }
   VoteGraph::Condition condition = [](const VoteWeight& voteWeight) {
+    return true;
   };
 
-  boost::optional<BlockInfo> result = vote_graph_->findGhost(current_best, condition, comparator);
+  boost::optional<BlockInfo> result = vote_graph_->findGhost(current_best, condition, VoteWeight::prevoteComparator);
 
   EXPECT_TRUE(result);  
 }
 
 TEST_F(VoteGraphTest, IntroduceBranchTest) {
-  std::vector<primitives::BlockHash> descendents = { /* Provide the descendents block hashes */ };
-  BlockInfo ancestor = { /* Provide the ancestor block data */ };
+  BlockHash base_hash{{0x12, 0x22, 0x33, 0x44, 0x11, 0x22, 0x33, 0x44,
+                        0x11, 0x22, 0x33, 0x44, 0x11, 0x22, 0x33, 0x54,
+                        0x11, 0x22, 0x33, 0x44, 0x11, 0x22, 0x33, 0x44,
+                        0x11, 0x22, 0x33, 0x44, 0x11, 0x24, 0x33, 0x44}};
+  for(int i=0; i<8; ++i) {
+    BlockHash block_hash = base_hash;
+    block_hash[0] = block_hash[0] + i;
+    BlockNumber block_num = i;
+    BlockInfo block_info{block_num, block_hash};
+    VoteWeight weight(0x8);
+    vote_graph_->insert(block_info, weight);
+  }
+
+  BlockNumber block_number = 2u;
+  BlockHash block_hash = base_hash;
+  BlockInfo ancestor{block_number, block_hash};
+  block_hash[0] = 0x13;
+  std::vector<primitives::BlockHash> descendents = { block_hash };
 
   vote_graph_->introduceBranch(descendents, ancestor);
 
 }
 
 TEST_F(VoteGraphTest, AppendTest) {
-  BlockInfo block = {  };
+  BlockHash base_hash{{0x12, 0x22, 0x33, 0x44, 0x11, 0x22, 0x33, 0x44,
+                        0x11, 0x22, 0x33, 0x44, 0x11, 0x22, 0x33, 0x54,
+                        0x11, 0x22, 0x33, 0x44, 0x11, 0x22, 0x33, 0x44,
+                        0x11, 0x22, 0x33, 0x44, 0x11, 0x24, 0x33, 0x44}};
+  for(int i=0; i<8; ++i) {
+    BlockHash block_hash = base_hash;
+    block_hash[0] = block_hash[0] + i;
+    BlockNumber block_num = i;
+    BlockInfo block_info{block_num, block_hash};
+    VoteWeight weight(0x8);
+    vote_graph_->insert(block_info, weight);
+  }
 
-  auto result = voteGraph.append(block);
+  BlockNumber block_number = 2u;
+  BlockHash block_hash = base_hash;
+  block_hash[0] = 0x42;
+  BlockInfo block{block_number, block_hash};
+
+  auto result = vote_graph_->append(block);
 
   ASSERT_TRUE(result); 
-
-}
-
-TEST_F(VoteGraphTest, GhostFindMergePointTest) {
-  BlockHash activeNodeHash = "active_node_hash";  
-  VoteGraph::Entry activeNode = {  };
-  boost::optional<BlockInfo> forceConstrain = {  };
-  VoteGraph::Condition condition = [](const VoteWeight& weight) { };
-  Comparator comparator = [](const VoteWeight& weight1, const VoteWeight& weight2) {  };
-
-  VoteGraph::Subchain subchain = voteGraph.ghostFindMergePoint(activeNodeHash, activeNode, forceConstrain, condition, comparator);
-
-}
-
-TEST_F(VoteGraphTest, FindContainingNodesTest) {
-  BlockInfo block = { /* Provide the block information */ };
-
-  // Call the findContainingNodes function
-  boost::optional<std::vector<BlockHash>> containingNodes = vote_graph_->findContainingNodes(block);
 
 }
 
