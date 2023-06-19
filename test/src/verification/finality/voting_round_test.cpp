@@ -35,8 +35,15 @@ protected:
     auto round_number = 1;	  
     Id id{};
     id[0] = static_cast<byte_t>(128);
+    std::shared_ptr<VoterSet> voter_set = std::make_shared<VoterSet>(128);
+    for(int i=0; i<8; ++i) {
+      Id voter_id{};
+      voter_id[0] = static_cast<byte_t>(128+1);
+      voter_set->insert(voter_id, i);
+    }
+
     FinalityConfig config{
-	    std::make_shared<VoterSet>(128),
+	    voter_set,
 	    round_number,
 	    std::chrono::milliseconds(333),
 	    id};
@@ -47,35 +54,51 @@ protected:
                            0x11, 0x22, 0x33, 0x44, 0x11, 0x24, 0x33, 0x44}};
     BlockNumber block_number = 1u;
 
-    // initialize
-    std::shared_ptr<FinalityMock> finality = std::make_shared<FinalityMock>();
-    // todo: finality config
-    std::shared_ptr<EnvironmentMock> environment = std::make_shared<EnvironmentMock>();  
-    std::shared_ptr<VoteCryptoProviderMock> vote_crypto_provider = std::make_shared<VoteCryptoProviderMock>();
-    // mock not required
-    std::shared_ptr<VoteTrackerImpl> prevote_tracker = std::make_shared<VoteTrackerImpl>();
-    std::shared_ptr<VoteTrackerImpl> precommit_tracker = std::make_shared<VoteTrackerImpl>();
-    std::shared_ptr<ChainMock> chain = std::make_shared<ChainMock>();
-    std::shared_ptr<VoteGraphImpl> vote_graph = std::make_shared<VoteGraphImpl>(BlockInfo(block_number, block_hash), chain); 
-    std::shared_ptr<ClockImpl<std::chrono::steady_clock>> clock = std::make_shared<ClockImpl<std::chrono::steady_clock>>();
-    std::shared_ptr<boost::asio::io_context> io_context = std::make_shared<boost::asio::io_context>();
-    std::shared_ptr<RoundState> round_state = std::make_shared<RoundState>();
+    BlockHash final_hash = block_hash;
+    final_hash[0] = 0x10;
+    BlockInfo block_info( block_number, final_hash);
 
-    voting_round_ = std::make_shared<VotingRoundImpl>(finality,
+    // initialize
+    finality_ = std::make_shared<FinalityMock>();
+    // todo: finality config
+    environment_ = std::make_shared<EnvironmentMock>();  
+    vote_crypto_provider_ = std::make_shared<VoteCryptoProviderMock>();
+    // mock not required
+    prevote_tracker_ = std::make_shared<VoteTrackerImpl>();
+    precommit_tracker_ = std::make_shared<VoteTrackerImpl>();
+    chain_ = std::make_shared<ChainMock>();
+    vote_graph_ = std::make_shared<VoteGraphImpl>(BlockInfo(block_number, block_hash), chain_); 
+    clock_ = std::make_shared<ClockImpl<std::chrono::steady_clock>>();
+    io_context_ = std::make_shared<boost::asio::io_context>();
+    round_state_ = std::make_shared<RoundState>();
+    round_state_->best_final_candidate = block_info;
+
+    voting_round_ = std::make_shared<VotingRoundImpl>(finality_,
 	  	    config,
-		    environment,
-		    vote_crypto_provider,
-		    prevote_tracker,
-		    precommit_tracker,
-		    vote_graph,
-		    clock,
-		    io_context,
-		    round_state);
+		    environment_,
+		    vote_crypto_provider_,
+		    prevote_tracker_,
+		    precommit_tracker_,
+		    vote_graph_,
+		    clock_,
+		    io_context_,
+		    round_state_);
   }	    
 
   void TearDown() override {
     // clean up	    
   }
+
+  std::shared_ptr<FinalityMock> finality_;
+  std::shared_ptr<EnvironmentMock> environment_;
+  std::shared_ptr<VoteCryptoProviderMock> vote_crypto_provider_;
+  std::shared_ptr<VoteTrackerImpl> prevote_tracker_;
+  std::shared_ptr<VoteTrackerImpl> precommit_tracker_;
+  std::shared_ptr<ChainMock> chain_;
+  std::shared_ptr<VoteGraphImpl> vote_graph_;
+  std::shared_ptr<ClockImpl<std::chrono::steady_clock>> clock_;
+  std::shared_ptr<boost::asio::io_context> io_context_;
+  std::shared_ptr<RoundState> round_state_;
 
  private:
 
@@ -104,6 +127,7 @@ TEST_F(VotingRoundTest, EndTest) {
 
 TEST_F(VotingRoundTest, DoProposalTest) {
   // call proposal
+
   auto success = voting_round_->doProposal(); 
   EXPECT_EQ(success, true);
 }

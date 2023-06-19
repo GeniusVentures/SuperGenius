@@ -129,8 +129,11 @@ TEST_F(VoteTrackerTest, TestVoteEquivocatory) {
     }	    
 
     // test for equivocatory votes
+
     Timestamp timestamp = dist(rng); 
-    Prevote vote( t_block_number_, t_block_hash_);
+    BlockHash eq_hash = t_block_hash_;
+    eq_hash[0] = 0x10;
+    Prevote vote( t_block_number_, eq_hash);
     Id id{};
     id[0] = static_cast<byte_t>(128 + 2);
 
