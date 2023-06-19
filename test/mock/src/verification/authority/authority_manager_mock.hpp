@@ -2,7 +2,6 @@
 #define SUPERGENIUS_AUTHORITY_MANAGER_MOCK
 
 #include "verification/authority/authority_manager.hpp"
-#include "mock/core/verification/authority/authority_update_observer_mock.hpp"
 
 #include <gmock/gmock.h>
 

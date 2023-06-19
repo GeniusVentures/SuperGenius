@@ -31,3 +31,10 @@ addtest(vote_graph_test
 target_link_libraries(vote_graph_test
     vote_graph	
     )
+
+addtest(environment_test
+    environment_test.cpp	
+    )
+target_link_libraries(environment_test
+    environment 	
+    )
