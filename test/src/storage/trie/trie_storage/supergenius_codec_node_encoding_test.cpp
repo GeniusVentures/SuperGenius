@@ -64,7 +64,7 @@ std::shared_ptr<SuperGeniusNode> make(const base::Buffer& key_nibbles,
 //TODO - Improve this cases and check if this is even relevant
 static const std::vector<Case> CASES = {
     {make<LeafNode>("010203"_hex2buf, "abcdef"_hex2buf), "43"_hex2buf},
-    {make<LeafNode>(base::Buffer(64, 0xffu), base::Buffer(64, 0xfeuF)),
+    {make<LeafNode>(base::Buffer(64, 0xffu), base::Buffer(64, 0xfeu)),
      "7f01"_hex2buf}};
 
 INSTANTIATE_TEST_CASE_P(SuperGeniusCodec, NodeEncodingTest, ValuesIn(CASES));
