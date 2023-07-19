@@ -5,6 +5,7 @@
 #include <gtest/gtest.h>
 #include "storage/trie/supergenius_trie/supergenius_node.hpp"
 #include "storage/trie/serialization/supergenius_codec.hpp"
+#include "testutil/literals.hpp"
 #include "testutil/outcome.hpp"
 
 using namespace sgns;
@@ -15,7 +16,7 @@ using namespace testing;
 
 struct Case {
   std::shared_ptr<SuperGeniusNode> node;
-  Buffer encoded;   
+  Buffer encoded_header;   
 
   friend std::ostream &operator<<(std::ostream &out, const Case &test_struct)
   {
@@ -40,10 +41,10 @@ struct NodeEncodingTest : public ::testing::TestWithParam<Case> {
   // };
 
 TEST_P(NodeEncodingTest, GetHeader) {
-  auto [node, expected] = GetParam();
+  auto testCase = GetParam();
 
-  EXPECT_OUTCOME_TRUE_2(actual, codec->encodeHeader(*node));
-  EXPECT_EQ(actual.toHex(), expected.toHex());
+  EXPECT_OUTCOME_TRUE_2(actual, codec->encodeHeader(*(testCase.node)));
+  EXPECT_EQ(actual.toHex(), testCase.encoded_header.toHex());
 }
 
 // template <typename T>
@@ -99,4 +100,18 @@ TEST_P(NodeEncodingTest, GetHeader) {
 //      {BRANCH_VAL | 63u, 255, 255, 0}},  // 22
 // };
 
-//INSTANTIATE_TEST_CASE_P(SuperGeniusCodec, NodeEncodingTest, ValuesIn(CASES));
+template <typename T>
+std::shared_ptr<SuperGeniusNode> make(const base::Buffer &key_nibbles,
+                                   const base::Buffer &value) {
+    auto node = std::make_shared<T>();
+    node->key_nibbles = key_nibbles;
+    node->value = value;
+    return node;
+}
+
+static const std::vector<Case> CASES = {
+    {make<LeafNode>("010203"_hex2buf, "abcdef"_hex2buf),"43"_hex2buf},
+    {make<LeafNode>(base::Buffer(64,0xffu), base::Buffer(64,0xfeu)),"7f01"_hex2buf}
+};
+
+INSTANTIATE_TEST_CASE_P(SuperGeniusCodec, NodeEncodingTest, ValuesIn(CASES));
