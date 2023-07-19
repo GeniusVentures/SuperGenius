@@ -14,6 +14,8 @@
 #include "mock/src/verification/finality/chain_mock.hpp"
 #include "mock/src/clock/clock_mock.hpp"
 #include "clock/impl/clock_impl.hpp"
+#include <boost/optional/optional_io.hpp>
+#include "mock/src/verification/finality/voting_round_mock.hpp"
 
 using namespace sgns;
 using namespace verification;
@@ -23,6 +25,12 @@ using sgns::base::byte_t;
 using sgns::primitives::BlockNumber;
 using sgns::primitives::BlockHash;
 using sgns::clock::ClockImpl;
+
+using testing::_;
+using testing::A;
+using testing::Ref;
+using testing::Return;
+using testing::ReturnRef;
 
 // unit testing vote tracker
 class VotingRoundTest : public testing::Test {
@@ -72,7 +80,9 @@ protected:
     io_context_ = std::make_shared<boost::asio::io_context>();
     round_state_ = std::make_shared<RoundState>();
     round_state_->best_final_candidate = block_info;
-
+    Prevote prevote_cand{block_number, final_hash};
+    round_state_->best_prevote_candidate = prevote_cand;
+    round_state_->last_finalized_block = block_info;
     voting_round_ = std::make_shared<VotingRoundImpl>(finality_,
 	  	    config,
 		    environment_,
@@ -127,19 +137,67 @@ TEST_F(VotingRoundTest, EndTest) {
 
 TEST_F(VotingRoundTest, DoProposalTest) {
   // call proposal
+  BlockNumber block_number = 1u;  
+  BlockHash block_hash{{0x10, 0x22, 0x33, 0x44, 0x11, 0x22, 0x33, 0x44,
+                           0x11, 0x22, 0x33, 0x44, 0x11, 0x22, 0x33, 0x54,
+                           0x11, 0x22, 0x33, 0x44, 0x11, 0x22, 0x33, 0x44,
+                           0x11, 0x22, 0x33, 0x44, 0x11, 0x24, 0x33, 0x44}};
+  PrimaryPropose pp{block_number, block_hash};
+  Id id{};
+  id[0] = static_cast<byte_t>(128);
+  SignedMessage sm{};
+  sm.id = id; 
+  EXPECT_CALL(*vote_crypto_provider_, signPrimaryPropose(pp))
+	  .WillOnce(Return(sm)); 
 
+  outcome::result<void> result = outcome::success();
+  EXPECT_CALL(*environment_, onProposed(1, 128, sm)).WillOnce(Return(result));
   auto success = voting_round_->doProposal(); 
   EXPECT_EQ(success, true);
 }
 
 // do prevote 
 TEST_F(VotingRoundTest, DoPrevoteTest) {
+  BlockNumber block_number = 1u;
+  BlockHash block_hash{{0x10, 0x22, 0x33, 0x44, 0x11, 0x22, 0x33, 0x44,
+                        0x11, 0x22, 0x33, 0x44, 0x11, 0x22, 0x33, 0x54,
+                        0x11, 0x22, 0x33, 0x44, 0x11, 0x22, 0x33, 0x44,
+                        0x11, 0x22, 0x33, 0x44, 0x11, 0x24, 0x33, 0x44}};
+  BlockInfo bi{block_number, block_hash};
+  outcome::result<BlockInfo> result(bi); 
+
+  EXPECT_CALL(*environment_, bestChainContaining(block_hash))
+	  .WillOnce(Return(result));
+  Prevote pv{block_number, block_hash};
+  Id id{};
+  id[0] = static_cast<byte_t>(128);
+  SignedMessage sm{};
+  sm.id = id;
+  EXPECT_CALL(*vote_crypto_provider_, signPrevote(pv))
+          .WillOnce(Return(sm)); 
+  outcome::result<void> res = outcome::success();
+  EXPECT_CALL(*environment_, onPrevoted(1, 128, sm)).WillOnce(Return(res));
   auto success = voting_round_->doPrevote();  
   EXPECT_EQ(success, true);
 }
 
 // do precommit
 TEST_F(VotingRoundTest, DoPrecommitTest) {
+  BlockNumber block_number = 1u;
+  BlockHash block_hash{{0x10, 0x22, 0x33, 0x44, 0x11, 0x22, 0x33, 0x44,
+                        0x11, 0x22, 0x33, 0x44, 0x11, 0x22, 0x33, 0x54,
+                        0x11, 0x22, 0x33, 0x44, 0x11, 0x22, 0x33, 0x44,
+                        0x11, 0x22, 0x33, 0x44, 0x11, 0x24, 0x33, 0x44}};
+  Precommit pc{block_number, block_hash};
+  Id id{};
+  id[0] = static_cast<byte_t>(128);
+  SignedMessage sm{};
+  sm.id = id;
+  
+  EXPECT_CALL(*vote_crypto_provider_, signPrecommit(pc))
+          .WillOnce(Return(sm));
+  outcome::result<void> res = outcome::success();
+  EXPECT_CALL(*environment_, onPrecommitted(1, 128, sm)).WillOnce(Return(res));
   auto success = voting_round_->doPrecommit(); 
   EXPECT_EQ(success, true);
 }
