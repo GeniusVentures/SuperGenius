@@ -16,7 +16,7 @@ git clone git@github.com:GeniusVentures/thirdparty.git --recursive
 cd thirdparty
 git checkout develop
 ```
-# [Build thirdparty project](../thirdparty/README.md)
+# [Build thirdparty project](../../../thirdparty/blob/master/README.md)
 
 Then folder structure as follows:
 
