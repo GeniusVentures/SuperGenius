@@ -2,7 +2,7 @@
 #ifndef SUPERGENIUS_SRC_RUNTIME_BINARYEN_RUNTIME_EXTERNAL_INTERFACE_HPP
 #define SUPERGENIUS_SRC_RUNTIME_BINARYEN_RUNTIME_EXTERNAL_INTERFACE_HPP
 
-#include <binaryen/shell-interface.h>
+#include <shell-interface.h>
 
 #include "base/logger.hpp"
 #include "extensions/extension_factory.hpp"
@@ -17,7 +17,7 @@ namespace sgns::runtime::binaryen {
         const std::shared_ptr<extensions::ExtensionFactory>& extension_factory,
         std::shared_ptr<TrieStorageProvider> storage_provider);
 
-    wasm::Literal callImport(wasm::Function *import,
+    wasm::Literals callImport(wasm::Function *import,
                              wasm::LiteralList &arguments) override;
 
     inline std::shared_ptr<WasmMemory> memory() const {
