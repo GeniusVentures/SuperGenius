@@ -77,7 +77,7 @@ include_directories(${RocksDB_INCLUDE_DIR})
 
 # --------------------------------------------------------
 # Set config of Microsoft.GSL
-set(GSL_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/GSL/include")
+set(GSL_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/Microsoft.GSL/include")
 include_directories(${GSL_INCLUDE_DIR})
 
 # --------------------------------------------------------
@@ -111,8 +111,8 @@ include_directories(${yaml-cpp_INCLUDE_DIR})
 
 # --------------------------------------------------------
 # Set config of  tsl_hat_trie
-set(tsl_hat_trie_DIR "${_THIRDPARTY_BUILD_DIR}/hat-trie/lib/cmake/tsl_hat_trie")
-set(tsl_hat_trie_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/hat-trie/include")
+set(tsl_hat_trie_DIR "${_THIRDPARTY_BUILD_DIR}/tsl_hat_trie/lib/cmake/tsl_hat_trie")
+set(tsl_hat_trie_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/tsl_hat_trie/include")
 find_package(tsl_hat_trie CONFIG REQUIRED)
 include_directories(${tsl_hat_trie_INCLUDE_DIR})
 
