@@ -19,7 +19,7 @@ include(../CommonCompilerOptions.CMake)
 # ------------------------------------------
 # Set OSX specific runtime options
 
-set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64")
+set(CMAKE_OSX_ARCHITECTURES "x86_64")
 set(CMAKE_MACOSX_RPATH 1)
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM "BOTH")
 set(CMAKE_XCODE_ATTRIBUTE_ONLY_ACTIVE_ARCH TRUE)
