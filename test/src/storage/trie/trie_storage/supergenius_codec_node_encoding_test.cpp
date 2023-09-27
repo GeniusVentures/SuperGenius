@@ -67,4 +67,4 @@ static const std::vector<Case> CASES = {
     {make<LeafNode>(base::Buffer(64, 0xffu), base::Buffer(64, 0xfeu)),
      "7f01"_hex2buf}};
 
-INSTANTIATE_TEST_CASE_P(SuperGeniusCodec, NodeEncodingTest, ValuesIn(CASES));
+INSTANTIATE_TEST_SUITE_P(SuperGeniusCodec, NodeEncodingTest, ValuesIn(CASES));
