@@ -72,7 +72,7 @@ TEST_P(UnhexNumber32Test, Unhex32Success) {
   EXPECT_EQ(decimal, val);
 }
 
-INSTANTIATE_TEST_CASE_P(UnhexNumberTestCases,
+INSTANTIATE_TEST_SUITE_P(UnhexNumberTestCases,
                         UnhexNumber32Test,
                         ::testing::Values(makePair("0x64", 100),
                                           makePair("0x01", 1),

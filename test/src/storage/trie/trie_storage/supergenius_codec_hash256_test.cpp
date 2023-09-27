@@ -37,4 +37,4 @@ const std::vector<std::pair<Buffer, Buffer>> cases = {
     // buffer of size 32, consists of ones
     {Buffer(32, 1), getBlake2b(Buffer(32, 1))}};
 
-INSTANTIATE_TEST_CASE_P(SuperGeniusCodec, Hash256Test, ValuesIn(cases));
+INSTANTIATE_TEST_SUITE_P(SuperGeniusCodec, Hash256Test, ValuesIn(cases));

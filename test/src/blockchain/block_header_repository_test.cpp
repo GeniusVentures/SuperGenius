@@ -142,5 +142,5 @@ TEST_P(BlockHeaderRepository_NumberParametrized_Test, GetHeader) {
   ASSERT_EQ(header_by_num, header_should_be);
 }
 
-INSTANTIATE_TEST_CASE_P(Numbers, BlockHeaderRepository_NumberParametrized_Test,
+INSTANTIATE_TEST_SUITE_P(Numbers, BlockHeaderRepository_NumberParametrized_Test,
                         testing::ValuesIn(ParamValues));

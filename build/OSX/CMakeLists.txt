@@ -53,7 +53,7 @@ set(MULTIPLE_OPTION "-Xlink=-force:multiple")
 # Set extra compiler flags
 set(EXTRA_CXX_FLAGS)
 
-set(TESTING OFF)
+set(TESTING ON)
 
 # --------------------------------------------------------
 # Set custom subfolder for ABI

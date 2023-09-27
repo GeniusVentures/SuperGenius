@@ -49,5 +49,5 @@ const std::vector<std::pair<KeyNibbles, Buffer>> NIBBLES_TO_KEY_LE = {
     {{0xa, 0xa, 0xf, 0xf, 0x0, 0x1, 0xc}, {0xa, 0xaf, 0xf0, 0x1c}}
 };
 
-INSTANTIATE_TEST_CASE_P(KeyToNibbles, KeyToNibbles, ::testing::ValuesIn(KEY_TO_NIBBLES));
-INSTANTIATE_TEST_CASE_P(NibblesToKeyLE, NibblesToKey, ::testing::ValuesIn(NIBBLES_TO_KEY_LE));
+INSTANTIATE_TEST_SUITE_P(KeyToNibbles, KeyToNibbles, ::testing::ValuesIn(KEY_TO_NIBBLES));
+INSTANTIATE_TEST_SUITE_P(NibblesToKeyLE, NibblesToKey, ::testing::ValuesIn(NIBBLES_TO_KEY_LE));

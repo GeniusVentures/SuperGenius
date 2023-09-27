@@ -239,7 +239,7 @@ std::vector<TrieCommand> DeleteOddKeyLengths = {
     {"4f4d"_hex2buf, "stuff"_buf, Command::GET},
     {"43c1"_hex2buf, "noot"_buf, Command::GET}};
 
-INSTANTIATE_TEST_CASE_P(GolkadotSuite,
+INSTANTIATE_TEST_SUITE_P(GolkadotSuite,
                         TrieTest,
                         testing::ValuesIn({PutAndGetBranch,
                                            PutAndGetOddKeyLengths,

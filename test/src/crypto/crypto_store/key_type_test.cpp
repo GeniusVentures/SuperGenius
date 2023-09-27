@@ -43,7 +43,7 @@ TEST_P(KeyTypeTest, DecodeSuccess) {
   }
 }
 
-INSTANTIATE_TEST_CASE_P(KeyTypeTestCases,
+INSTANTIATE_TEST_SUITE_P(KeyTypeTestCases,
                         KeyTypeTest,
                         ::testing::Values(good(kProd, "prod"),
                                           good(kGran, "gran"),
