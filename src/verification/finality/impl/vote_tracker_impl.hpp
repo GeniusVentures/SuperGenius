@@ -33,7 +33,7 @@ namespace sgns::verification::finality {
 
     size_t getTotalWeight() const override;
 
-    VotingMessage& getMedianMessage(const BlockHash& block_hash) const; 
+    VotingMessage getMedianMessage(const BlockHash& block_hash) const override;
     // Test 
     std::map<Timestamp, VotingMessage, VoteOrderComparator> getOrderedVotes() const {
       return ordered_votes_;

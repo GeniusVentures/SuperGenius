@@ -45,7 +45,7 @@ namespace sgns::verification::finality {
     /**
      * @return the median voting message 
      */
-    virtual VotingMessage& getMedianMessage(const BlockHash& block_hash) const = 0;
+    virtual VotingMessage getMedianMessage(const BlockHash& block_hash) const = 0;
   };
 
 }  // namespace sgns::verification::finality

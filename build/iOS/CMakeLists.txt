@@ -25,6 +25,11 @@ project(SuperGenius C CXX)
 # Set cross compiling settings
 set(CMAKE_SYSTEM_NAME "iOS")
 
+set(Protobuf_DIR  "${iOS_Protobuf_DIR}")
+set(Protobuf_INCLUDE_DIR "${iOS_Protobuf_INCLUDE_DIR}")
+set(Protobuf_LIBRARIES "${iOS_Protobuf_LIBRARIES}")
+#set(Boost_USE_STATIC_RUNTIME OFF)
+
 # --------------------------------------------------------
 # include common compiler options
 include(../CommonCompilerOptions.CMake)
