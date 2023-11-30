@@ -39,13 +39,13 @@ foreach(CompilerFlag ${CompilerFlags})
     string(REPLACE "/MD" "/MT" ${CompilerFlag} "${${CompilerFlag}}")
 endforeach()
 
-# TODO: Check grpc install on Windows
-set(Protobuf_DIR  "${THIRDPARTY_DIR}/build/Windows/${CMAKE_BUILD_TYPE}/grpc/cmake")
-set(Protobuf_INCLUDE_DIR "${THIRDPARTY_DIR}/build/Windows/${CMAKE_BUILD_TYPE}/grpc/include/google/protobuf")
-
 # --------------------------------------------------------
 # build common libraries by platforms
 include(../CommonCompilerOptions.CMake)
+
+# TODO: Check grpc install on Windows
+set(Protobuf_DIR  "${_THIRDPARTY_BUILD_DIR}/grpc/cmake")
+set(Protobuf_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/grpc/include/google/protobuf")
 
 # --------------------------------------------------------
 # Set toolchain file
