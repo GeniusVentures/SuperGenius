@@ -27,7 +27,6 @@ if (CMAKE_BUILD_TYPE EQUAL Release)
     set(MSVC_RUNTIME_LIBRARY_OPTION "MultiThreaded$<$<CONFIG:Realease>:Release>")
 endif (CMAKE_BUILD_TYPE EQUAL Release)
 
-print("CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
 set(CompilerFlags
         CMAKE_CXX_FLAGS
         CMAKE_CXX_FLAGS_DEBUG
@@ -41,8 +40,8 @@ foreach(CompilerFlag ${CompilerFlags})
 endforeach()
 
 # TODO: Check grpc install on Windows
-set(Protobuf_DIR  "${_THIRDPARTY_BUILD_DIR}/grpc/build/third_party/protobuf/cmake")
-set(Protobuf_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/grpc/build/third_party/protobuf/include/google/protobuf")
+set(Protobuf_DIR  "${THIRDPARTY_DIR}/build/Windows/${CMAKE_BUILD_TYPE}/grpc/cmake")
+set(Protobuf_INCLUDE_DIR "${THIRDPARTY_DIR}/build/Windows/${CMAKE_BUILD_TYPE}/grpc/include/google/protobuf")
 
 # --------------------------------------------------------
 # build common libraries by platforms
