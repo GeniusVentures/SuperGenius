@@ -40,7 +40,7 @@ TEST_F(VoteTrackerTest, TestVotePush) {
     t_block_number1_  += 1; 
 
     std::random_device rd;
-    std::uniform_int_distribution<uint8_t> dist1(0, 255);
+    std::uniform_int_distribution<uint32_t> dist1(0, 255);
 
     //crypto::ED25519Signature signature;
     //for (auto& byte : signature.bytes) {
@@ -104,7 +104,7 @@ TEST_F(VoteTrackerTest, TestVoteEquivocatory) {
     BlockNumber t_block_number_ = 1u;
 
     std::random_device rd;
-    std::uniform_int_distribution<uint8_t> dist1(0, 255);
+    std::uniform_int_distribution<uint32_t> dist1(0, 255);
 
     // weight range 
     std::uniform_int_distribution<int> wt_dist(1, 6);
@@ -167,7 +167,7 @@ TEST_F(VoteTrackerTest, TestVoteOrdering) {
     BlockNumber t_block_number_ = 1u;
 
     std::random_device rd;
-    std::uniform_int_distribution<uint8_t> dist1(0, 255);
+    std::uniform_int_distribution<uint32_t> dist1(0, 255);
 
     // weight range 
     std::uniform_int_distribution<int> wt_dist(1, 6);
@@ -210,7 +210,7 @@ TEST_F(VoteTrackerTest, TestMedianMessage) {
     BlockNumber t_block_number_ = 1u;
 
     std::random_device rd;
-    std::uniform_int_distribution<uint8_t> dist1(0, 255);
+    std::uniform_int_distribution<uint32_t> dist1(0, 255);
 
     // weight range 
     std::uniform_int_distribution<int> wt_dist(1, 6);
