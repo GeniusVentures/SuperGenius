@@ -1,0 +1,5 @@
+#add_subdirectory(application)
+FILE(GLOB MNN_LIBS "${MNN_LIBRARY_DIR}/*")
+add_executable(MNNExample MNNExample.cpp)
+target_link_libraries(MNNExample PRIVATE AsyncIOManager)
+include_directories(../include)

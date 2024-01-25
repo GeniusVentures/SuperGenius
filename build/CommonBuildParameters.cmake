@@ -262,6 +262,13 @@ set(xxhash_DIR "${_THIRDPARTY_BUILD_DIR}/xxhash/lib/cmake/xxhash")
 find_package(xxhash CONFIG REQUIRED)
 include_directories(${xxhash_INCLUDE_DIR})
 
+# --------------------------------------------------------
+# Set config of AsyncIOManager
+set(AsyncIOManager_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/AsyncIOManager/include")
+set(AsyncIOManager_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/AsyncIOManager/lib")
+set(AsyncIOManager_DIR "${_THIRDPARTY_BUILD_DIR}/AsyncIOManager/lib/cmake/AsyncIOManager")
+find_package(AsyncIOManager CONFIG REQUIRED)
+include_directories(${AsyncIOManager_INCLUDE_DIR})
 
 # --------------------------------------------------------
 include_directories(
@@ -299,6 +306,7 @@ endif ()
 if (BUILD_EXAMPLES)
     add_subdirectory(${PROJECT_ROOT}/example ${CMAKE_BINARY_DIR}/example)
 endif ()
+add_subdirectory(${PROJECT_ROOT}/example/AsyncFile ${CMAKE_BINARY_DIR}/example/AsyncFile)
 
 install(
   EXPORT supergeniusTargets
