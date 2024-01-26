@@ -6,13 +6,13 @@
 #include "Singleton.hpp"
 #include "FileManager.hpp"
 //#include "MNNLoader.hpp"
+//#include "MNNParser.hpp"
 //#include "IPFSLoader.hpp"
 //#include "HTTPLoader.hpp"
 //#include "SFTPLoader.hpp"
 //#include "WSLoader.hpp"
 #include "URLStringUtil.h"
 #include <libp2p/injector/host_injector.hpp>
-
 
 /**
  * This program is example to loading MNN model file
@@ -106,6 +106,7 @@ int main(int argc, char **argv)
     auto dummyCallback = [](std::shared_ptr<boost::asio::io_context>, std::shared_ptr<std::vector<char>>, bool parse, bool save) {
         // Do nothing
     };
+    FileManager::GetInstance().InitializeSingletons();
     for (int i = 0; i < file_names.size(); i++)
     {
         std::cout << "LoadASync: " << file_names[i] << std::endl;
