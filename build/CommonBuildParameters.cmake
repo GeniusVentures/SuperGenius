@@ -263,6 +263,14 @@ find_package(xxhash CONFIG REQUIRED)
 include_directories(${xxhash_INCLUDE_DIR})
 
 # --------------------------------------------------------
+# Set config of libssh2
+set(Libssh2_DIR "${_THIRDPARTY_BUILD_DIR}/libssh2/lib/cmake/libssh2")
+set(Libssh2_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/libssh2/lib")
+set(Libssh2_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/libssh2/include")
+find_package(Libssh2 CONFIG REQUIRED)
+include_directories(${LIBSSH2_INCLUDE_DIR})
+
+# --------------------------------------------------------
 # Set config of AsyncIOManager
 set(AsyncIOManager_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/AsyncIOManager/include")
 set(AsyncIOManager_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/AsyncIOManager/lib")
