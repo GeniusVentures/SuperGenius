@@ -320,7 +320,7 @@ int main(int argc, char* argv[]) {
         MNN_ERROR("Invalid path: %s\n", inputImageFileName);
         return 0;
     }
-
+    
     const int targetWidth = static_cast<int>((float)originalWidth / (float)OUTPUT_STRIDE) * OUTPUT_STRIDE + 1;
     const int targetHeight = static_cast<int>((float)originalHeight / (float)OUTPUT_STRIDE) * OUTPUT_STRIDE + 1;
 
@@ -367,30 +367,28 @@ int main(int argc, char* argv[]) {
     }
 
     // Set the chunk size
-    const int chunkWidth = 512;
-    const int chunkHeight = 128;
+    const int chunkWidth = 64;
+    const int chunkHeight = 64;
     
     // Run inference for each chunk
     for (int y = 0; y < originalHeight; y += chunkHeight) {
         for (int x = 0; x < originalWidth; x += chunkWidth) {
             int mul = 5;
+            
             // Extract a chunk from the input image
             auto chunkWidthActual = std::min(chunkWidth, originalWidth - x);
             auto chunkHeightActual = std::min(chunkHeight, originalHeight - y);
-            auto chunkOffset = y * originalWidth * 4 + x * 4;
-            auto chunkData = inputImage + chunkOffset;
-            std::cout << "actuallywidth:" << chunkWidthActual << std::endl;
-            std::cout << "actuallyheight:" << chunkHeightActual << std::endl;
-            std::cout << "chunkoffset:" << chunkOffset << std::endl;
-            std::cout << "originalwidth:" << originalWidth << std::endl;
-            std::cout << "x:" << x << std::endl;
-            std::cout << "y:" << y << std::endl;
-            // Create a new buffer for the chunk
             uint8_t* chunkBuffer = new uint8_t[4 * chunkWidthActual * chunkHeightActual];
-            std::memcpy(chunkBuffer, chunkData, 4 * chunkWidthActual * chunkHeightActual);
-
+            //Image data is line by line, if we want just a chunk of the image we have to create a buffer line by line, this probably won't be an issue in final version
+            //If the chunks get too small there isn't really any way for posenet to see anything pose related. 
+            for (int i = 0; i < chunkHeightActual; i++)
+            {
+                auto chunkOffset = (y+i) * originalWidth * 4 + x * 4;
+                auto chunkData = inputImage + chunkOffset;
+                std::memcpy(chunkBuffer + (i * 4 * chunkWidthActual), chunkData, 4 * chunkWidthActual);
+            }
+            
             // Create a new tensor for the chunk
-            //MNN::Tensor chunkTensor(input, MNN::Tensor::CAFFE);
             auto chunkTensor = mnnNet->getSessionInput(session, nullptr);
             chunkTensor->copyFromHostTensor(input);
             chunkTensor->buffer().dimensions = 4; // Set the number of dimensions
@@ -443,7 +441,7 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    // Save the final output image
+    // Save the final output image, this is processed as a single chunk just to see what the output should be.
     stbi_write_png(outputImageFileName, originalWidth, originalHeight, 4, inputImage, 4 * originalWidth);
     stbi_image_free(inputImage);
 
