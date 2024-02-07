@@ -103,17 +103,17 @@ int main(int argc, char **argv)
     boost::asio::io_context::executor_type executor = ioc->get_executor();
     boost::asio::executor_work_guard<boost::asio::io_context::executor_type> workGuard(executor);
 
-    auto dummyCallback = [](std::shared_ptr<boost::asio::io_context>, std::shared_ptr<std::vector<char>>, bool parse, bool save) {
-        // Do nothing
-    };
+    //auto dummyCallback = [](std::shared_ptr<boost::asio::io_context>, std::shared_ptr<std::vector<char>>, bool parse, bool save) {
+    //    // Do nothing
+    //};
     FileManager::GetInstance().InitializeSingletons();
     for (int i = 0; i < file_names.size(); i++)
     {
         std::cout << "LoadASync: " << file_names[i] << std::endl;
-        auto data = FileManager::GetInstance().LoadASync(file_names[i], true, true, ioc, dummyCallback, [](const int& status)
+        auto data = FileManager::GetInstance().LoadASync(file_names[i], false, true, ioc, [](const int& status)
         {
                 std::cout << "status: " << status << std::endl;
-        });
+        },"file");
         //FileManager::GetInstance().IncrementOutstandingOperations();
 
         //std::cout << "LoadFile: " << file_names[i] << std::endl;
