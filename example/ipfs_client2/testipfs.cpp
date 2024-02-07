@@ -9,13 +9,33 @@
 #include <vector>
 
 #include <boost/beast.hpp>
+#include <bitswap.hpp>
+
+#include <libp2p/multi/multibase_codec/multibase_codec_impl.hpp>
+#include <libp2p/injector/host_injector.hpp>
+#include <libp2p/injector/kademlia_injector.hpp>
+#include <libp2p/host/host.hpp>
+#include <libp2p/protocol/common/asio/asio_scheduler.hpp>
+#include <libp2p/multi/content_identifier_codec.hpp>
+#include <libp2p/protocol/identify/identify.hpp>
+#include <libp2p/log/configurator.hpp>
+#include <libp2p/log/logger.hpp>
 
 #include <libp2p/common/hexutil.hpp>
 #include <libp2p/injector/kademlia_injector.hpp>
 #include <libp2p/log/configurator.hpp>
 #include <libp2p/log/sublogger.hpp>
 #include <libp2p/multi/content_identifier_codec.hpp>
+#include <base/logger.hpp>
 
+
+#include <ipfs_lite/ipld/impl/ipld_node_impl.hpp>
+#include <libp2p/protocol/kademlia/kademlia.hpp>
+#include <libp2p/multi/content_identifier.hpp>
+#include <boost/program_options.hpp>
+#include <boost/format.hpp>
+#include <boost/di/extension/scopes/shared.hpp>
+#include <libp2p/basic/scheduler.hpp>
 class Session;
 
 struct Cmp {
@@ -169,14 +189,30 @@ sinks:
 groups:
   - name: main
     sink: console
-    level: info
+    level: debug
     children:
       - name: libp2p
+      - name: kademlia
 # ----------------
   )");
 }  // namespace
 
 int main(int argc, char *argv[]) {
+    const std::string logger_config(R"(
+    # ----------------
+    sinks:
+      - name: console
+        type: console
+        color: false
+    groups:
+      - name: main
+        sink: console
+        level: debug
+        children:
+          - name: libp2p
+          - name: kademlia
+    # ----------------
+    )");
   // prepare log system
   auto logging_system = std::make_shared<soralog::LoggingSystem>(
       std::make_shared<soralog::ConfiguratorFromYAML>(
@@ -193,11 +229,11 @@ int main(int argc, char *argv[]) {
   }
 
   libp2p::log::setLoggingSystem(logging_system);
-  if (std::getenv("TRACE_DEBUG") != nullptr) {
-    libp2p::log::setLevelOfGroup("main", soralog::Level::TRACE);
-  } else {
-    libp2p::log::setLevelOfGroup("main", soralog::Level::ERROR_);
-  }
+  //if (std::getenv("TRACE_DEBUG") != nullptr) {
+  //  libp2p::log::setLevelOfGroup("main", soralog::Level::TRACE);
+  //} else {
+  //  libp2p::log::setLevelOfGroup("main", soralog::Level::ERROR_);
+  //}
 
   // resulting PeerId should be
   // 12D3KooWEgUjBV5FJAuBSoNMRYFRHjV7PjZwRQ7b43EKX9g7D6xV
@@ -225,10 +261,10 @@ int main(int argc, char *argv[]) {
           libp2p::injector::useKademliaConfig(kademlia_config)));
 
   try {
-    if (argc < 2) {
-      std::cerr << "Needs one argument - address" << std::endl;
-      exit(EXIT_FAILURE);
-    }
+    //if (argc < 2) {
+    //  std::cerr << "Needs one argument - address" << std::endl;
+    //  exit(EXIT_FAILURE);
+    //}
 
     auto bootstrap_nodes = [] {
       std::vector<std::string> addresses = {
@@ -246,13 +282,14 @@ int main(int argc, char *argv[]) {
           "/ip6/2400:6180:0:d0::151:6001/tcp/4001/ipfs/QmSoLSafTMBsPKadTEgaXctDQVcqN88CNLHXMkTNwMKPnu",  // saturn.i.ipfs.io
           "/ip6/2604:a880:800:10::4a:5001/tcp/4001/ipfs/QmSoLV4Bbm51jM9C4gDYZQ9Cy3U6aXMJDAbzgu2fzaDs64", // venus.i.ipfs.io
           "/ip6/2a03:b0c0:0:1010::23:1001/tcp/4001/ipfs/QmSoLer265NRgSp2LA3dPaeykiS1J6DifTC88f5uVQKNAd", // earth.i.ipfs.io
+          //"/ip4/127.0.0.1/tcp/4001/p2p/12D3KooWFMdNiBFk5ojGNzWjqSTL1HGLu8rXns5kwqUPTrbFNtEN",
           // clang-format on
       };
 
       std::unordered_map<libp2p::peer::PeerId,
                          std::vector<libp2p::multi::Multiaddress>>
           addresses_by_peer_id;
-
+      std::cout << "what" << std::endl;
       for (auto &address : addresses) {
         auto ma = libp2p::multi::Multiaddress::create(address).value();
         auto peer_id_base58 = ma.getPeerId().value();
@@ -260,7 +297,7 @@ int main(int argc, char *argv[]) {
 
         addresses_by_peer_id[std::move(peer_id)].emplace_back(std::move(ma));
       }
-
+      std::cout << "what2" << std::endl;
       std::vector<libp2p::peer::PeerInfo> v;
       v.reserve(addresses_by_peer_id.size());
       for (auto &i : addresses_by_peer_id) {
@@ -271,8 +308,8 @@ int main(int argc, char *argv[]) {
       return v;
     }();
 
-    auto ma = libp2p::multi::Multiaddress::create(argv[1]).value();  // NOLINT
-
+    //auto ma = libp2p::multi::Multiaddress::create(argv[1]).value();  // NOLINT
+    auto ma = libp2p::multi::Multiaddress::create("/ip4/127.0.0.1/tcp/40000").value();
     auto io = injector.create<std::shared_ptr<boost::asio::io_context>>();
 
     auto host = injector.create<std::shared_ptr<libp2p::Host>>();
@@ -285,18 +322,26 @@ int main(int argc, char *argv[]) {
         injector
             .create<std::shared_ptr<libp2p::protocol::kademlia::Kademlia>>();
 
+    auto identityManager = injector.create<std::shared_ptr<libp2p::peer::IdentityManager>>();
+    auto keyMarshaller = injector.create<std::shared_ptr<libp2p::crypto::marshaller::KeyMarshaller>>();
+
+    auto identifyMessageProcessor = std::make_shared<libp2p::protocol::IdentifyMessageProcessor>(
+        *host, host->getNetwork().getConnectionManager(), *identityManager, keyMarshaller);
+    //auto identify = std::make_shared<libp2p::protocol::Identify>(*host, identifyMessageProcessor, host->getBus());
     // Handle streams for observed protocol
-    host->setProtocolHandler("/chat/1.0.0", handleIncomingStream);
-    host->setProtocolHandler("/chat/1.1.0", handleIncomingStream);
+    //host->setProtocolHandler("/chat/1.0.0", handleIncomingStream);
+    //host->setProtocolHandler("/chat/1.1.0", handleIncomingStream);
 
     // Key for group of chat
-    libp2p::protocol::kademlia::ContentId content_id("meet me here");
-
+    //libp2p::protocol::kademlia::ContentId content_id("QmSnuWmxptJZdLJpKRarxBMS2Ju2oANVrgbr2xWbie9b2D");
+    auto cid = libp2p::multi::ContentIdentifierCodec::fromString("QmSnuWmxptJZdLJpKRarxBMS2Ju2oANVrgbr2xWbie9b2D").value();
+    auto content_id = libp2p::protocol::kademlia::ContentId::fromWire(
+        libp2p::multi::ContentIdentifierCodec::encode(cid).value());
     auto &scheduler = injector.create<libp2p::protocol::Scheduler &>();
 
     std::function<void()> find_providers = [&] {
       [[maybe_unused]] auto res1 = kademlia->findProviders(
-          content_id, 0,
+          content_id.value(), 100,
           [&](libp2p::outcome::result<std::vector<libp2p::peer::PeerInfo>>
                   res) {
             scheduler
@@ -310,17 +355,18 @@ int main(int argc, char *argv[]) {
                         << std::endl;
               return;
             }
-
+            std::cout << "In Providers" << std::endl;
             auto &providers = res.value();
             for (auto &provider : providers) {
-              host->newStream(provider, "/chat/1.1.0", handleOutgoingStream);
+            //  host->newStream(provider, "/chat/1.1.0", handleOutgoingStream);
+                std::cout << "provider" << std::endl;
             }
           });
     };
 
     std::function<void()> provide = [&, content_id] {
       [[maybe_unused]] auto res =
-          kademlia->provide(content_id, !kademlia_config.passiveMode);
+          kademlia->provide(content_id.value(), !kademlia_config.passiveMode);
 
       scheduler
           .schedule(libp2p::protocol::scheduler::toTicks(
@@ -340,23 +386,23 @@ int main(int argc, char *argv[]) {
       for (auto &bootstrap_node : bootstrap_nodes) {
         kademlia->addPeer(bootstrap_node, true);
       }
-
+      //identify->start();
       host->start();
 
-      auto cid = libp2p::multi::ContentIdentifierCodec::decode(content_id.data)
-                     .value();
-      auto peer_id =
-          libp2p::peer::PeerId::fromHash(cid.content_address).value();
+      //auto cid = libp2p::multi::ContentIdentifierCodec::decode(content_id.data)
+      //               .value();
+      //auto peer_id =
+       //   libp2p::peer::PeerId::fromHash(cid.content_address).value();
 
-      [[maybe_unused]] auto res = kademlia->findPeer(peer_id, [&](auto) {
+      //[[maybe_unused]] auto res = kademlia->findPeer(peer_id, [&](auto) {
         // Say to world about his providing
-        provide();
+        //provide();
 
         // Ask provider from world
         find_providers();
 
         kademlia->start();
-      });
+      //});
     });
 
     //boost::asio::posix::stream_descriptor in(*io, ::dup(STDIN_FILENO));
