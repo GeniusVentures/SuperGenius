@@ -7,65 +7,70 @@
 #include <memory>
 #include <string>
 
-namespace sgns::application {
+namespace sgns::application
+{
 
-  /**
+    /**
    * Parse and store application config.
    */
-  class AppConfiguration {
-   public:
-    enum struct LoadScheme {
-      kBlockProducing,
-      kValidating,
-      kFullSyncing,
-    };
+    class AppConfiguration
+    {
+    public:
+        enum struct LoadScheme
+        {
+            kBlockProducing,
+            kValidating,
+            kFullSyncing,
+        };
 
-   public:
-    virtual ~AppConfiguration() = default;
+    public:
+        virtual ~AppConfiguration() = default;
 
-    /**
+        /**
      * @return file path with genesis configuration.
      */
-    virtual const std::string &genesis_path() const = 0;
+        virtual const std::string &genesis_path() const = 0;
 
-    /**
+        /**
      * @return keystore directory path.
      */
-    virtual const std::string &keystore_path() const = 0;
+        virtual const std::string &keystore_path() const = 0;
 
-    /**
+        /**
      * @return rocksdb directory path.
      */
-    virtual const std::string & rocksdb_path() const = 0;
+        virtual const std::string &rocksdb_path() const = 0;
 
-    /**
+        /**
      * @return port for peer to peer interactions.
      */
-    virtual uint16_t p2p_port() const = 0;
+        virtual uint16_t p2p_port() const = 0;
 
-    /**
+        /**
      * @return endpoint for RPC over HTTP.
      */
-    virtual const boost::asio::ip::tcp::endpoint &rpc_http_endpoint() const = 0;
+        virtual const boost::asio::ip::tcp::endpoint &rpc_http_endpoint() const = 0;
 
-    /**
+        /**
      * @return endpoint for RPC over Websocket protocol.
      */
-    virtual const boost::asio::ip::tcp::endpoint &rpc_ws_endpoint() const = 0;
+        virtual const boost::asio::ip::tcp::endpoint &rpc_ws_endpoint() const = 0;
 
-    /**
+        /**
      * @return log level (0-trace, 5-only critical, 6-no logs).
      */
-    virtual spdlog::level::level_enum verbosity() const = 0;
+        virtual spdlog::level::level_enum verbosity() const = 0;
 
-    /**
+        /**
      * @return true if node in only finalizing mode, otherwise false.
      */
-    virtual bool is_only_finalizing() const = 0;
-  };
+        virtual bool is_only_finalizing() const = 0;
 
-  using AppConfigPtr = std::shared_ptr<AppConfiguration>;
+        virtual bool initialize_from_args( LoadScheme scheme, int argc, char **argv ) = 0;
+    };
 
-}  // namespace sgns::application
+    using AppConfigPtr = std::shared_ptr<AppConfiguration>;
 
-#endif  // SUPERGENIUS_APP_CONFIG_HPP
+} // namespace sgns::application
+
+#endif // SUPERGENIUS_APP_CONFIG_HPP

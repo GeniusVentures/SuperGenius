@@ -39,35 +39,34 @@ target_link_libraries(configuration_storage
     sr25519_types
     config_reader_error
     )
-add_library(block_producing_node_application
-    impl/block_producing_node_application.cpp
-    )
-target_link_libraries(block_producing_node_application
-    block_producing_node_injector
-    blob
-    )
-if(FORCE_MULTILE)
-  set_target_properties(block_producing_node_application PROPERTIES LINK_FLAGS "${MULTIPLE_OPTION}")
-endif()
+#add_library(block_producing_node_application
+#    impl/block_producing_node_application.cpp
+#    )
+#target_link_libraries(block_producing_node_application
+#    block_producing_node_injector
+#    blob
+#    )
+#if(FORCE_MULTILE)
+#  set_target_properties(block_producing_node_application PROPERTIES LINK_FLAGS "${MULTIPLE_OPTION}")
+#endif()
 
 add_library(validating_node_application
     impl/validating_node_application.cpp
     )
 target_link_libraries(validating_node_application
-    validating_node_injector
     blob
     )
 if(FORCE_MULTILE)
   set_target_properties(validating_node_application PROPERTIES LINK_FLAGS "${MULTIPLE_OPTION}")
 endif()
 
-add_library(syncing_node_application
-    impl/syncing_node_application.cpp
-    )
-target_link_libraries(syncing_node_application
-    syncing_node_injector
-    blob
-    )
-if(FORCE_MULTILE)
-  set_target_properties(syncing_node_application PROPERTIES LINK_FLAGS "${MULTIPLE_OPTION}")
-endif()
+#add_library(syncing_node_application
+#    impl/syncing_node_application.cpp
+#    )
+#target_link_libraries(syncing_node_application
+#    syncing_node_injector
+#    blob
+#    )
+#if(FORCE_MULTILE)
+#  set_target_properties(syncing_node_application PROPERTIES LINK_FLAGS "${MULTIPLE_OPTION}")
+#endif()

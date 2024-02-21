@@ -267,6 +267,9 @@ include_directories(${xxhash_INCLUDE_DIR})
 include_directories(
   ${PROJECT_ROOT}/src
 )
+include_directories(
+  ${PROJECT_ROOT}/app
+)
 
 ADD_DEFINITIONS(-D_HAS_AUTO_PTR_ETC=1)
 
@@ -288,7 +291,7 @@ link_directories(
 )
 
 add_subdirectory(${PROJECT_ROOT}/src ${CMAKE_BINARY_DIR}/src)
-#add_subdirectory(${PROJECT_ROOT}/node ${CMAKE_BINARY_DIR}/node)
+add_subdirectory(${PROJECT_ROOT}/app ${CMAKE_BINARY_DIR}/app)
 
 
 if (TESTING)
