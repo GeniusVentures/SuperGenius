@@ -1,6 +1,9 @@
 #include "ipfs_pubsub/gossip_pubsub.hpp"
 #include "processing_task_queue_impl.hpp"
 
+#include <math.h>
+#include <fstream>
+#include <memory>
 #include <crdt/globaldb/globaldb.hpp>
 #include <crdt/globaldb/keypair_file_storage.hpp>
 #include <iostream>
@@ -10,8 +13,10 @@
 
 #include <boost/program_options.hpp>
 #include <boost/format.hpp>
-#include "stb_image.h"
-#include "stb_image_write.h"
+#define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "imageHelper/stb_image.h"
+#include "imageHelper/stb_image_write.h"
 #include <libp2p/multi/multibase_codec/multibase_codec_impl.hpp>
 
 namespace
@@ -137,6 +142,13 @@ int main(int argc, char* argv[])
     auto loggerBroadcaster = sgns::base::createLogger("PubSubBroadcasterExt");
     loggerBroadcaster->set_level(spdlog::level::debug);
 
+    //Load Image
+    const auto poseModel = argv[1];
+    const auto inputImageFileName = argv[2];
+    int originalWidth;
+    int originalHeight;
+    int originChannel;
+    auto inputImage = stbi_load(inputImageFileName, &originalWidth, &originalHeight, &originChannel, 4);
 
     const std::string processingGridChannel = "GRID_CHANNEL_ID";
 

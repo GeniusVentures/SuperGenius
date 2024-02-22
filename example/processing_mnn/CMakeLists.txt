@@ -7,6 +7,7 @@ FILE(GLOB MNN_LIBS "${MNN_LIBRARY_DIR}/*")
 
 add_executable(processing_mnn
     processing_mnn.cpp
+	processing_task_queue_impl.hpp
     )
 
 
@@ -15,10 +16,10 @@ include_directories(
     ${PROJECT_SOURCE_DIR}/src
     )
 
-target_include_directories(processing_mnn PRIVATE ${GSL_INCLUDE_DIR})
+target_include_directories(processing_mnn PRIVATE ${GSL_INCLUDE_DIR}) 
 
 
-target_link_libraries(processing_mnn
+target_link_libraries(processing_mnn PRIVATE
 #    ipfs-lite-cpp::ipfs_datastore_rocksdb
 #    ipfs-lite-cpp::buffer
 #    ipfs-lite-cpp::ipld_node
@@ -44,4 +45,5 @@ target_link_libraries(processing_mnn
     ${WIN_CRYPT_LIBRARY}
 	${MNN_LIBS}
     )
+include_directories(../include)
 include_directories(./imageHelper)
