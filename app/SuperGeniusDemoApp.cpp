@@ -23,7 +23,7 @@ void SuperGeniusDemoApp::init( int argc, char **argv )
 
     auto logger = sgns::base::createLogger( "SuperGenius block node: " );
     //cfg         = std::shared_ptr<sgns::application::AppConfiguration>( std::move( AppConfigurationFactory::create( logger ) ) );
-    cfg = std::shared_ptr<sgns::application::AppConfigurationImpl>( AppConfigurationFactory::create( logger ) );
+    cfg = AppConfigurationFactory::create( logger );
 
     cfg->initialize_from_args( sgns::application::AppConfiguration::LoadScheme::kValidating, argc, argv );
 

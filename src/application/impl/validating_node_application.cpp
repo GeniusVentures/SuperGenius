@@ -1,6 +1,8 @@
 #include "application/impl/validating_node_application.hpp"
-#include "application/impl/app_state_manager_impl.hpp"
-#include "application/impl/configuration_storage_impl.hpp"
+#include "integration/AppStateManagerFactory.hpp"
+#include "integration/ConfigurationStorageFactory.hpp"
+#include "integration/KeyStorageFactory.hpp"
+
 #include "verification/production/impl/production_impl.hpp"
 #include "verification/finality/impl/finality_impl.hpp"
 #include "network/impl/router_libp2p.hpp"
@@ -22,16 +24,16 @@ namespace sgns::application
 
         // keep important instances, the must exist when injector destroyed
         // some of them are requested by reference and hence not copied
-        app_state_manager_ = std::make_shared<AppStateManagerImpl>();
-        io_context_        = std::make_shared<boost::asio::io_context>();
-        config_storage_    = ( ConfigurationStorageImpl::create( app_config->genesis_path() ) ).value();
-        key_storage_       = ( LocalKeyStorage::create( app_config->keystore_path() ) ).value();
-        clock_             = std::make_shared<clock::SystemClockImpl>();
+        app_state_manager_ = AppStateManagerFactory::create();
+        config_storage_    = ConfigurationStorageFactory::create( app_config->genesis_path() );
+        key_storage_       = KeyStorageFactory::create( app_config->keystore_path() );
+        clock_             = SystemClockFactory::create();
         production_        = std::make_shared<verification::ProductionImpl>();
         finality_          = std::make_shared<verification::finality::FinalityImpl>();
         router_            = std::make_shared<network::RouterLibp2p>();
 
         jrpc_api_service_ = std::make_shared<api::ApiService>();
+        io_context_       = std::make_shared<boost::asio::io_context>();
     }
 
     void ValidatingNodeApplication::run()
