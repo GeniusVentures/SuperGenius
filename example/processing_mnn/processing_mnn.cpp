@@ -18,6 +18,8 @@
 #include "imageHelper/stb_image.h"
 #include "imageHelper/stb_image_write.h"
 #include <libp2p/multi/multibase_codec/multibase_codec_impl.hpp>
+#include <libp2p/multi/content_identifier_codec.hpp>
+
 
 namespace
 {
@@ -106,6 +108,7 @@ namespace
             int originalHeight;
             int originChannel;
             inputImage = stbi_load(filename, &originalWidth, &originalHeight, &originChannel, 4);
+            imageSize = originalWidth * originalHeight * 4;
             for (int y = 0; y < originalHeight; y += partheight_) {
                 for (int x = 0; x < originalWidth; x += partwidth_) {
                     //Extract actual size
@@ -113,20 +116,20 @@ namespace
                     auto chunkHeightActual = std::min(partheight_, originalHeight - y);
 
                     //Create Buffer
-                    uint8_t* chunkBuffer = new uint8_t[4 * chunkWidthActual * chunkHeightActual];
+                    //uint8_t* chunkBuffer = new uint8_t[4 * chunkWidthActual * chunkHeightActual];
+                    std::vector<uint8_t> chunkBuffer(4 * chunkWidthActual * chunkHeightActual);
                     for (int i = 0; i < chunkHeightActual; i++)
                     {
                         auto chunkOffset = (y + i) * originalWidth * 4 + x * 4;
                         auto chunkData = inputImage + chunkOffset;
-                        std::memcpy(chunkBuffer + (i * 4 * chunkWidthActual), chunkData, 4 * chunkWidthActual);
+                        std::memcpy(chunkBuffer.data() + (i * 4 * chunkWidthActual), chunkData, 4 * chunkWidthActual);
                     }
-                    splitparts_.push_back(*chunkBuffer);
-                    delete[] chunkBuffer;
+                    splitparts_.push_back(chunkBuffer);
                 }
             }
         }
 
-        uint8_t GetPart(int part)
+        std::vector<uint8_t> GetPart(int part)
         {
             return splitparts_.at(part);
         }
@@ -138,12 +141,17 @@ namespace
 
         size_t GetImageSize()
         {
-            return *inputImage;
+            return imageSize;
         }
 
+        sgns::CID GetPartCID(int part)
+        {
+            gsl::span<const uint8_t> byte_span(splitparts_.at(part));
+            return sgns::CID::fromBytes(byte_span).value();
+        }
 
     private:
-        std::vector<uint8_t> splitparts_;
+        std::vector<std::vector<uint8_t>> splitparts_;
         int partwidth_ = 32;
         int partheight_ = 32;
         stbi_uc *inputImage;
@@ -205,7 +213,7 @@ int main(int argc, char* argv[])
 
     ImageSplitter imagesplit(inputImageFileName, 128, 128);
     std::cout << "Image Split Size: " << imagesplit.GetPartCount() << std::endl;
-    return 1;
+    //return 1;
     const std::string processingGridChannel = "GRID_CHANNEL_ID";
 
     //Make Pubsubs
