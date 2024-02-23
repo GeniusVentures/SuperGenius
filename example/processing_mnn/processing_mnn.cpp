@@ -10,6 +10,7 @@
 #include <spdlog/sinks/basic_file_sink.h>
 #include <libp2p/log/configurator.hpp>
 #include <libp2p/log/logger.hpp>
+#include <openssl/sha.h>
 
 #include <boost/program_options.hpp>
 #include <boost/format.hpp>
@@ -23,6 +24,79 @@
 
 namespace
 {
+    class ImageSplitter
+    {
+    public:
+        ImageSplitter(
+            const char* filename,
+            int width,
+            int height
+        ) : partwidth_(width), partheight_(height) {
+            int originalWidth;
+            int originalHeight;
+            int originChannel;
+            inputImage = stbi_load(filename, &originalWidth, &originalHeight, &originChannel, 4);
+            imageSize = originalWidth * originalHeight * 4;
+            for (int y = 0; y < originalHeight; y += partheight_) {
+                for (int x = 0; x < originalWidth; x += partwidth_) {
+                    //Extract actual size
+                    auto chunkWidthActual = std::min(partwidth_, originalWidth - x);
+                    auto chunkHeightActual = std::min(partheight_, originalHeight - y);
+
+                    //Create Buffer
+                    //uint8_t* chunkBuffer = new uint8_t[4 * chunkWidthActual * chunkHeightActual];
+                    std::vector<uint8_t> chunkBuffer(4 * chunkWidthActual * chunkHeightActual);
+                    for (int i = 0; i < chunkHeightActual; i++)
+                    {
+                        auto chunkOffset = (y + i) * originalWidth * 4 + x * 4;
+                        auto chunkData = inputImage + chunkOffset;
+                        std::memcpy(chunkBuffer.data() + (i * 4 * chunkWidthActual), chunkData, 4 * chunkWidthActual);
+                    }
+                    splitparts_.push_back(chunkBuffer);
+                }
+            }
+        }
+
+        std::vector<uint8_t> GetPart(int part)
+        {
+            return splitparts_.at(part);
+        }
+
+        size_t GetPartCount()
+        {
+            return splitparts_.size();
+        }
+
+        size_t GetImageSize()
+        {
+            return imageSize;
+        }
+
+        libp2p::multi::ContentIdentifier GetPartCID(int part)
+        {
+            gsl::span<const uint8_t> byte_span(splitparts_.at(part));
+            std::vector<uint8_t> shahash(SHA256_DIGEST_LENGTH);
+            SHA256_CTX sha256;
+            SHA256_Init(&sha256);
+            SHA256_Update(&sha256, splitparts_.at(part).data(), splitparts_.at(part).size());
+            SHA256_Final(shahash.data(), &sha256);
+
+            auto hash = libp2p::multi::Multihash::create(libp2p::multi::HashType::sha256, shahash);
+            return libp2p::multi::ContentIdentifier(
+                libp2p::multi::ContentIdentifier::Version::V0,
+                libp2p::multi::MulticodecType::Code::SHA2_256,
+                hash.value()
+            );
+        }
+
+    private:
+        std::vector<std::vector<uint8_t>> splitparts_;
+        int partwidth_ = 32;
+        int partheight_ = 32;
+        stbi_uc* inputImage;
+        size_t imageSize;
+    };
+
     class TaskSplitter
     {
     public:
@@ -36,7 +110,7 @@ namespace
         {
         }
 
-        void SplitTask(const SGProcessing::Task& task, std::list<SGProcessing::SubTask>& subTasks)
+        void SplitTask(const SGProcessing::Task& task, std::list<SGProcessing::SubTask>& subTasks, ImageSplitter& SplitImage)
         {
             std::optional<SGProcessing::SubTask> validationSubtask;
             if (m_addValidationSubtask)
@@ -47,6 +121,10 @@ namespace
             size_t chunkId = 0;
             for (size_t i = 0; i < m_nSubTasks; ++i)
             {
+                std::cout << "split check: " << i << std::endl;
+                auto cidcheck = SplitImage.GetPartCID(i);
+                
+                std::cout << "Split CID: " << cidcheck.toPrettyString("") << std::endl;;
                 auto subtaskId = (boost::format("subtask_%d") % i).str();
                 SGProcessing::SubTask subtask;
                 subtask.set_ipfsblock(task.ipfs_block_id());
@@ -96,67 +174,7 @@ namespace
         bool m_addValidationSubtask;
     };
 
-    class ImageSplitter
-    {
-    public:
-        ImageSplitter(
-            const char *filename,
-            int width,
-            int height
-        ) : partwidth_(width), partheight_(height) {
-            int originalWidth;
-            int originalHeight;
-            int originChannel;
-            inputImage = stbi_load(filename, &originalWidth, &originalHeight, &originChannel, 4);
-            imageSize = originalWidth * originalHeight * 4;
-            for (int y = 0; y < originalHeight; y += partheight_) {
-                for (int x = 0; x < originalWidth; x += partwidth_) {
-                    //Extract actual size
-                    auto chunkWidthActual = std::min(partwidth_, originalWidth - x);
-                    auto chunkHeightActual = std::min(partheight_, originalHeight - y);
 
-                    //Create Buffer
-                    //uint8_t* chunkBuffer = new uint8_t[4 * chunkWidthActual * chunkHeightActual];
-                    std::vector<uint8_t> chunkBuffer(4 * chunkWidthActual * chunkHeightActual);
-                    for (int i = 0; i < chunkHeightActual; i++)
-                    {
-                        auto chunkOffset = (y + i) * originalWidth * 4 + x * 4;
-                        auto chunkData = inputImage + chunkOffset;
-                        std::memcpy(chunkBuffer.data() + (i * 4 * chunkWidthActual), chunkData, 4 * chunkWidthActual);
-                    }
-                    splitparts_.push_back(chunkBuffer);
-                }
-            }
-        }
-
-        std::vector<uint8_t> GetPart(int part)
-        {
-            return splitparts_.at(part);
-        }
-
-        size_t GetPartCount()
-        {
-            return splitparts_.size();
-        }
-
-        size_t GetImageSize()
-        {
-            return imageSize;
-        }
-
-        sgns::CID GetPartCID(int part)
-        {
-            gsl::span<const uint8_t> byte_span(splitparts_.at(part));
-            return sgns::CID::fromBytes(byte_span).value();
-        }
-
-    private:
-        std::vector<std::vector<uint8_t>> splitparts_;
-        int partwidth_ = 32;
-        int partheight_ = 32;
-        stbi_uc *inputImage;
-        size_t imageSize;
-    };
 }
 
 using GossipPubSub = sgns::ipfs_pubsub::GossipPubSub;
@@ -277,7 +295,7 @@ int main(int argc, char* argv[])
     std::thread iothread([io]() { io->run(); });
 
     auto taskQueue = std::make_shared<sgns::processing::ProcessingTaskQueueImpl>(globalDB);
-    size_t nSubTasks = 32;
+    size_t nSubTasks = 16;
     size_t nChunks = 1;
     TaskSplitter taskSplitter(
         nSubTasks,
@@ -287,10 +305,10 @@ int main(int argc, char* argv[])
     for (auto& task : tasks)
     {
         std::list<SGProcessing::SubTask> subTasks;
-        taskSplitter.SplitTask(task, subTasks);
+        taskSplitter.SplitTask(task, subTasks, imagesplit);
         taskQueue->EnqueueTask(task, subTasks);
     }
-
+    return 1;
     // Gracefully shutdown on signal
     boost::asio::signal_set signals(*pubs->GetAsioContext(), SIGINT, SIGTERM);
     signals.async_wait(
