@@ -48,6 +48,7 @@ namespace
                 auto subtaskId = (boost::format("subtask_%d") % i).str();
                 SGProcessing::SubTask subtask;
                 subtask.set_ipfsblock(task.ipfs_block_id());
+                std::cout << "BLOCK ID CHECK: " << task.ipfs_block_id() << std::endl;
                 subtask.set_subtaskid(subtaskId);
 
                 for (size_t chunkIdx = 0; chunkIdx < m_nChunks; ++chunkIdx)
@@ -91,6 +92,62 @@ namespace
         size_t m_nSubTasks;
         size_t m_nChunks;
         bool m_addValidationSubtask;
+    };
+
+    class ImageSplitter
+    {
+    public:
+        ImageSplitter(
+            const char *filename,
+            int width,
+            int height
+        ) : partwidth_(width), partheight_(height) {
+            int originalWidth;
+            int originalHeight;
+            int originChannel;
+            inputImage = stbi_load(filename, &originalWidth, &originalHeight, &originChannel, 4);
+            for (int y = 0; y < originalHeight; y += partheight_) {
+                for (int x = 0; x < originalWidth; x += partwidth_) {
+                    //Extract actual size
+                    auto chunkWidthActual = std::min(partwidth_, originalWidth - x);
+                    auto chunkHeightActual = std::min(partheight_, originalHeight - y);
+
+                    //Create Buffer
+                    uint8_t* chunkBuffer = new uint8_t[4 * chunkWidthActual * chunkHeightActual];
+                    for (int i = 0; i < chunkHeightActual; i++)
+                    {
+                        auto chunkOffset = (y + i) * originalWidth * 4 + x * 4;
+                        auto chunkData = inputImage + chunkOffset;
+                        std::memcpy(chunkBuffer + (i * 4 * chunkWidthActual), chunkData, 4 * chunkWidthActual);
+                    }
+                    splitparts_.push_back(*chunkBuffer);
+                    delete[] chunkBuffer;
+                }
+            }
+        }
+
+        uint8_t GetPart(int part)
+        {
+            return splitparts_.at(part);
+        }
+
+        size_t GetPartCount()
+        {
+            return splitparts_.size();
+        }
+
+        size_t GetImageSize()
+        {
+            return *inputImage;
+        }
+
+
+    private:
+        std::vector<uint8_t> splitparts_;
+        int partwidth_ = 32;
+        int partheight_ = 32;
+        stbi_uc *inputImage;
+        size_t imageSize;
     };
 }
 
@@ -145,11 +202,10 @@ int main(int argc, char* argv[])
     //Load Image
     const auto poseModel = argv[1];
     const auto inputImageFileName = argv[2];
-    int originalWidth;
-    int originalHeight;
-    int originChannel;
-    auto inputImage = stbi_load(inputImageFileName, &originalWidth, &originalHeight, &originChannel, 4);
 
+    ImageSplitter imagesplit(inputImageFileName, 128, 128);
+    std::cout << "Image Split Size: " << imagesplit.GetPartCount() << std::endl;
+    return 1;
     const std::string processingGridChannel = "GRID_CHANNEL_ID";
 
     //Make Pubsubs
@@ -157,7 +213,7 @@ int main(int argc, char* argv[])
     auto pubs = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>(
         sgns::crdt::KeyPairFileStorage("CRDT.Datastore.TEST/pubs_dapp").GetKeyPair().value());
     auto pubs2 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>(
-        sgns::crdt::KeyPairFileStorage("CRDT.Datastore.TEST/pubs_dapp").GetKeyPair().value());
+        );
     //Start Pubsubs, add peers of other addresses.
     pubs->Start(40001, { pubs2->GetLocalAddress() });
 
@@ -166,7 +222,7 @@ int main(int argc, char* argv[])
     const size_t maximalNodesCount = 1;
 
     std::list<SGProcessing::Task> tasks;
-    size_t nTasks = 10;
+    size_t nTasks = 1;
     // Put tasks to Global DB
     for (size_t taskIdx = 0; taskIdx < nTasks; ++taskIdx)
     {
@@ -180,18 +236,41 @@ int main(int argc, char* argv[])
         task.set_results_channel((boost::format("RESULT_CHANNEL_ID_%1%") % (taskIdx + 1)).str());
         tasks.push_back(std::move(task));
     }
+    //Asio Context
     auto io = std::make_shared<boost::asio::io_context>();
+    //Create Pubsub Topic
+    //auto topic = std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>(pubs, "CRDT.Datastore.TEST.Channel");
+    //topic->Subscribe([&](boost::optional<const GossipPubSub::Message&> message)
+    //    {
+    //        if (message)
+    //        {
+    //            std::string message(reinterpret_cast<const char*>(message->data.data()), message->data.size());
+    //            std::cout << "Pubs 1 Got message: " << message << std::endl;;
+    //        }
+    //    });
+
+    //Add to GlobalDB
     auto globalDB = std::make_shared<sgns::crdt::GlobalDB>(
         io, "CRDT.Datastore.TEST", 40000,
         std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>(pubs, "CRDT.Datastore.TEST.Channel"));
+
+    auto pubsTopic2 = pubs2->Subscribe("CRDT.Datastore.TEST.Channel", [&](boost::optional<const GossipPubSub::Message&> message)
+        {
+            if (message)
+            {
+                std::string message(reinterpret_cast<const char*>(message->data.data()), message->data.size());
+                std::cout << "Pubs 2 Got message: " << message << std::endl;
+                //receivedMessages.push_back(std::move(message));
+            }
+        });
 
     auto crdtOptions = sgns::crdt::CrdtOptions::DefaultOptions();
     globalDB->Init(crdtOptions);
     std::thread iothread([io]() { io->run(); });
 
     auto taskQueue = std::make_shared<sgns::processing::ProcessingTaskQueueImpl>(globalDB);
-    size_t nSubTasks = 5;
-    size_t nChunks = 5;
+    size_t nSubTasks = 32;
+    size_t nChunks = 1;
     TaskSplitter taskSplitter(
         nSubTasks,
         nChunks,
