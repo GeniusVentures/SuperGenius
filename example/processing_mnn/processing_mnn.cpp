@@ -84,7 +84,7 @@ namespace
             auto hash = libp2p::multi::Multihash::create(libp2p::multi::HashType::sha256, shahash);
             return libp2p::multi::ContentIdentifier(
                 libp2p::multi::ContentIdentifier::Version::V0,
-                libp2p::multi::MulticodecType::Code::SHA2_256,
+                libp2p::multi::MulticodecType::Code::DAG_PB,
                 hash.value()
             );
         }
@@ -121,10 +121,8 @@ namespace
             size_t chunkId = 0;
             for (size_t i = 0; i < m_nSubTasks; ++i)
             {
-                std::cout << "split check: " << i << std::endl;
                 auto cidcheck = SplitImage.GetPartCID(i);
-                
-                std::cout << "Split CID: " << cidcheck.toPrettyString("") << std::endl;;
+                auto base58 = libp2p::multi::ContentIdentifierCodec::toString(cidcheck);
                 auto subtaskId = (boost::format("subtask_%d") % i).str();
                 SGProcessing::SubTask subtask;
                 subtask.set_ipfsblock(task.ipfs_block_id());
