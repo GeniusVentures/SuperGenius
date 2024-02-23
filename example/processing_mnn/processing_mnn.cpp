@@ -126,7 +126,7 @@ namespace
                 auto subtaskId = (boost::format("subtask_%d") % i).str();
                 SGProcessing::SubTask subtask;
                 subtask.set_ipfsblock(task.ipfs_block_id());
-                std::cout << "BLOCK ID CHECK: " << task.ipfs_block_id() << std::endl;
+                //std::cout << "BLOCK ID CHECK: " << task.ipfs_block_id() << std::endl;
                 subtask.set_subtaskid(subtaskId);
 
                 for (size_t chunkIdx = 0; chunkIdx < m_nChunks; ++chunkIdx)
