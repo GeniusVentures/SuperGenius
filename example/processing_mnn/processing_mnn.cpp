@@ -53,6 +53,8 @@ namespace
                         std::memcpy(chunkBuffer.data() + (i * 4 * chunkWidthActual), chunkData, 4 * chunkWidthActual);
                     }
                     splitparts_.push_back(chunkBuffer);
+                    chunkWidthActual_.push_back(chunkWidthActual);
+                    chunkHeightActual_.push_back(chunkHeightActual);
                 }
             }
         }
@@ -61,6 +63,17 @@ namespace
         {
             return splitparts_.at(part);
         }
+
+        uint32_t GetPartSize(int part)
+        {
+            return splitparts_.at(part).size();
+        }
+
+        uint32_t GetPartStride(int part)
+        {
+            return chunkWidthActual_.at(part);
+        }
+
 
         size_t GetPartCount()
         {
@@ -95,6 +108,8 @@ namespace
         int partheight_ = 32;
         stbi_uc* inputImage;
         size_t imageSize;
+        std::vector<int> chunkWidthActual_;
+        std::vector<int> chunkHeightActual_;
     };
 
     class TaskSplitter
@@ -246,16 +261,17 @@ int main(int argc, char* argv[])
     const size_t maximalNodesCount = 1;
 
     std::list<SGProcessing::Task> tasks;
-    size_t nTasks = 1;
+    size_t nTasks = 16;
     // Put tasks to Global DB
     for (size_t taskIdx = 0; taskIdx < nTasks; ++taskIdx)
     {
         // And wait for its processing
+        std::cout << "INdex " << taskIdx << std::endl;
         SGProcessing::Task task;
-        task.set_ipfs_block_id((boost::format("IPFS_BLOCK_ID_%1%") % (taskIdx + 1)).str());
-        task.set_block_len(1000);
-        task.set_block_line_stride(2);
-        task.set_block_stride(4);
+        task.set_ipfs_block_id(libp2p::multi::ContentIdentifierCodec::toString(imagesplit.GetPartCID(taskIdx)).value());
+        task.set_block_len(imagesplit.GetPartSize(taskIdx));
+        task.set_block_line_stride(imagesplit.GetPartStride(taskIdx));
+        task.set_block_stride(imagesplit.GetPartSize(taskIdx));
         task.set_random_seed(0);
         task.set_results_channel((boost::format("RESULT_CHANNEL_ID_%1%") % (taskIdx + 1)).str());
         tasks.push_back(std::move(task));
@@ -293,7 +309,7 @@ int main(int argc, char* argv[])
     std::thread iothread([io]() { io->run(); });
 
     auto taskQueue = std::make_shared<sgns::processing::ProcessingTaskQueueImpl>(globalDB);
-    size_t nSubTasks = 16;
+    size_t nSubTasks = 1;
     size_t nChunks = 1;
     TaskSplitter taskSplitter(
         nSubTasks,
@@ -306,7 +322,6 @@ int main(int argc, char* argv[])
         taskSplitter.SplitTask(task, subTasks, imagesplit);
         taskQueue->EnqueueTask(task, subTasks);
     }
-    return 1;
     // Gracefully shutdown on signal
     boost::asio::signal_set signals(*pubs->GetAsioContext(), SIGINT, SIGTERM);
     signals.async_wait(
