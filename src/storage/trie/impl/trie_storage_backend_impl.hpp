@@ -27,6 +27,11 @@ namespace sgns::storage::trie {
     outcome::result<void> put(const Buffer &key, Buffer &&value) override;
     outcome::result<void> remove(const Buffer &key) override;
 
+    std::string GetName() override
+    {
+      return "TrieStorageBackendImpl";
+    }
+
    private:
     base::Buffer prefixKey(const base::Buffer &key) const;
 
