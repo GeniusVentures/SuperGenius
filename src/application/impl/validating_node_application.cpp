@@ -3,6 +3,10 @@
 #include "integration/ConfigurationStorageFactory.hpp"
 #include "integration/KeyStorageFactory.hpp"
 #include "integration/SystemClockFactory.hpp"
+#include "integration/BufferStorageFactory.hpp"
+#include "integration/HasherFactory.hpp"
+#include "integration/BlockHeaderRepositoryFactory.hpp"
+
 
 #include "verification/production/impl/production_impl.hpp"
 #include "verification/finality/impl/finality_impl.hpp"
@@ -29,7 +33,10 @@ namespace sgns::application
         component_factory->Register( ConfigurationStorageFactory::create( app_config->genesis_path() ), "ConfigurationStorage", boost::none );
         component_factory->Register( KeyStorageFactory::create( app_config->keystore_path() ), "KeyStorage", boost::none );
         component_factory->Register( SystemClockFactory::create(), "SystemClock", boost::none );
-        
+
+        component_factory->Register( BufferStorageFactory::create( "rocksdb", app_config->rocksdb_path() ), "BufferStorage", boost::make_optional(std::string("rocksdb")) );
+        component_factory->Register( HasherFactory::create(), "Hasher", boost::none );
+        component_factory->Register( BlockHeaderRepositoryFactory::create( "rocksdb" ), "BlockHeaderRepository", boost::none );
 
         auto result = component_factory->GetComponent( "AppStateManager", boost::none );
         if ( result )

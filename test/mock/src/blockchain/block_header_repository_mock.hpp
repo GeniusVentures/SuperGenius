@@ -21,6 +21,8 @@ namespace sgns::blockchain {
         const primitives::BlockId &id));
     MOCK_CONST_METHOD1(getNumberById, outcome::result<primitives::BlockNumber> (
         const primitives::BlockId &id));
+
+    MOCK_METHOD0(GetName, std::string());
   };
 }  // namespace sgns::blockchain
 

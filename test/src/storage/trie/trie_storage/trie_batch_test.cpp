@@ -75,6 +75,8 @@ class MockDb : public sgns::storage::InMemoryStorage {
  public:
   MOCK_METHOD2(put, outcome::result<void>(const Buffer &, const Buffer &));
 
+  MOCK_METHOD0(GetName, std::string());
+
   // to retain the ability to call the actual implementation of put from the
   // superclass
   outcome::result<void> true_put(const Buffer &key, const Buffer &value) {
