@@ -27,6 +27,11 @@ namespace sgns::crypto {
     Hash256 blake2s_256(gsl::span<const uint8_t> buffer) const override;
 
     Hash256 sha2_256(gsl::span<const uint8_t> buffer) const override;
+
+    std::string GetName() override
+    {
+      return "HasherImpl";
+    }
   };
 
 }  // namespace sgns::hash
