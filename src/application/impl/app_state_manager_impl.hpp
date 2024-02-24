@@ -10,12 +10,11 @@
 #include <queue>
 
 #include "base/logger.hpp"
-#include "integration/IComponent.hpp"
 
 namespace sgns::application
 {
 
-    class AppStateManagerImpl : public AppStateManager, public IComponent
+    class AppStateManagerImpl : public AppStateManager
     {
     public:
         AppStateManagerImpl();

@@ -9,6 +9,7 @@
 #include <boost/filesystem.hpp>
 #include <libp2p/injector/host_injector.hpp>
 #include "clock/impl/clock_impl.hpp"
+#include "integration/CComponentFactory.hpp"
 
 namespace sgns::application
 {
@@ -24,16 +25,18 @@ namespace sgns::application
 
         // keep important instances, the must exist when injector destroyed
         // some of them are requested by reference and hence not copied
-        app_state_manager_ = AppStateManagerFactory::create();
+        SINGLETONINSTANCE( CComponentFactory )
+            ->Register( std::make_shared<sgns::application::AppStateManagerImpl>(), "AppStateManager", boost::none );
+        app_state_manager_ = std::dynamic_pointer_cast<sgns::application::AppStateManager>((SINGLETONINSTANCE( CComponentFactory )->GetComponent( "AppStateManager", boost::none )).value());
         config_storage_    = ConfigurationStorageFactory::create( app_config->genesis_path() );
         key_storage_       = KeyStorageFactory::create( app_config->keystore_path() );
-        clock_             = SystemClockFactory::create();
-        production_        = std::make_shared<verification::ProductionImpl>();
-        finality_          = std::make_shared<verification::finality::FinalityImpl>();
-        router_            = std::make_shared<network::RouterLibp2p>();
+        //clock_             = SystemClockFactory::create();
+        //production_        = std::make_shared<verification::ProductionImpl>();
+        //finality_          = std::make_shared<verification::finality::FinalityImpl>();
+        //router_            = std::make_shared<network::RouterLibp2p>();
 
-        jrpc_api_service_ = std::make_shared<api::ApiService>();
-        io_context_       = std::make_shared<boost::asio::io_context>();
+        //jrpc_api_service_ = std::make_shared<api::ApiService>();
+        //io_context_       = std::make_shared<boost::asio::io_context>();
     }
 
     void ValidatingNodeApplication::run()
