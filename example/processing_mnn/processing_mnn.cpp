@@ -267,6 +267,7 @@ int main(int argc, char* argv[])
     {
         // And wait for its processing
         std::cout << "INdex " << taskIdx << std::endl;
+        std::cout << "CIDString: " << libp2p::multi::ContentIdentifierCodec::toString(imagesplit.GetPartCID(taskIdx)).value() << std::endl;
         SGProcessing::Task task;
         task.set_ipfs_block_id(libp2p::multi::ContentIdentifierCodec::toString(imagesplit.GetPartCID(taskIdx)).value());
         task.set_block_len(imagesplit.GetPartSize(taskIdx));
@@ -322,6 +323,13 @@ int main(int argc, char* argv[])
         taskSplitter.SplitTask(task, subTasks, imagesplit);
         taskQueue->EnqueueTask(task, subTasks);
     }
+
+    //ProcessingServiceImpl processingService(pubs,
+    //    maximalNodesCount,
+    //    enqueuer,
+    //    std::make_shared<SubTaskStateStorageImpl>(),
+    //    std::make_shared<SubTaskResultStorageImpl>(),
+    //    processingCore);
     // Gracefully shutdown on signal
     boost::asio::signal_set signals(*pubs->GetAsioContext(), SIGINT, SIGTERM);
     signals.async_wait(
