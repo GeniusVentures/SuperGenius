@@ -12,6 +12,11 @@ namespace sgns::clock {
    public:
     typename Clock<ClockType>::TimePoint now() const override;
     uint64_t nowUint64() const override;
+
+    std::string GetName() override
+    {
+      return "ClockImpl";
+    }
   };
 
   // aliases for implementations

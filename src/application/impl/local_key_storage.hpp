@@ -22,6 +22,11 @@ namespace sgns::application {
     crypto::ED25519Keypair getLocalEd25519Keypair() const override;
     libp2p::crypto::KeyPair getP2PKeypair() const override;
 
+    std::string GetName() override
+    {
+      return "LocalKeyStorage";
+    }
+
    private:
     LocalKeyStorage() = default;
 

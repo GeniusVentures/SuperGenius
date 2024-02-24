@@ -36,5 +36,12 @@ boost::optional<std::shared_ptr<IComponent>> CComponentFactory::GetComponent( co
         key.append( variant.value() );
     }
 
-    return ComponentTable[key];
+    if ( ComponentTable.count( key ) == 0 )
+    {
+        return boost::none;
+    }
+    else
+    {
+        return ComponentTable[key];
+    }
 }

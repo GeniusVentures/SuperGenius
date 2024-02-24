@@ -8,7 +8,7 @@
 #ifndef _SYSTEM_CLOCK_FACTORY_HPP_
 #define _SYSTEM_CLOCK_FACTORY_HPP_
 
-#include "application/impl/local_key_storage.hpp"
+#include "clock/impl/clock_impl.hpp"
 
 class SystemClockFactory
 {

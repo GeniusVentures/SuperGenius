@@ -2,6 +2,7 @@
 #include "integration/AppStateManagerFactory.hpp"
 #include "integration/ConfigurationStorageFactory.hpp"
 #include "integration/KeyStorageFactory.hpp"
+#include "integration/SystemClockFactory.hpp"
 
 #include "verification/production/impl/production_impl.hpp"
 #include "verification/finality/impl/finality_impl.hpp"
@@ -22,21 +23,40 @@ namespace sgns::application
         // genesis launch if database does not exist
         production_execution_strategy_ = boost::filesystem::exists( app_config->rocksdb_path() ) ? Production::ExecutionStrategy::SYNC_FIRST :
                                                                                                    Production::ExecutionStrategy::GENESIS;
+        auto component_factory         = SINGLETONINSTANCE( CComponentFactory );
 
-        // keep important instances, the must exist when injector destroyed
-        // some of them are requested by reference and hence not copied
-        SINGLETONINSTANCE( CComponentFactory )
-            ->Register( std::make_shared<sgns::application::AppStateManagerImpl>(), "AppStateManager", boost::none );
-        app_state_manager_ = std::dynamic_pointer_cast<sgns::application::AppStateManager>((SINGLETONINSTANCE( CComponentFactory )->GetComponent( "AppStateManager", boost::none )).value());
-        config_storage_    = ConfigurationStorageFactory::create( app_config->genesis_path() );
-        key_storage_       = KeyStorageFactory::create( app_config->keystore_path() );
-        //clock_             = SystemClockFactory::create();
+        component_factory->Register( std::make_shared<sgns::application::AppStateManagerImpl>(), "AppStateManager", boost::none );
+        component_factory->Register( ConfigurationStorageFactory::create( app_config->genesis_path() ), "ConfigurationStorage", boost::none );
+        component_factory->Register( KeyStorageFactory::create( app_config->keystore_path() ), "KeyStorage", boost::none );
+        component_factory->Register( SystemClockFactory::create(), "SystemClock", boost::none );
+        
+
+        auto result = component_factory->GetComponent( "AppStateManager", boost::none );
+        if ( result )
+        {
+            app_state_manager_ = std::dynamic_pointer_cast<sgns::application::AppStateManager>( result.value() );
+        }
+        result = component_factory->GetComponent( "ConfigurationStorage", boost::none );
+        if ( result )
+        {
+            config_storage_ = std::dynamic_pointer_cast<sgns::application::ConfigurationStorage>( result.value() );
+        }
+        result = component_factory->GetComponent( "KeyStorage", boost::none );
+        if ( result )
+        {
+            key_storage_ = std::dynamic_pointer_cast<sgns::application::KeyStorage>( result.value() );
+        }
+        result = component_factory->GetComponent( "SystemClock", boost::none );
+        if ( result )
+        {
+            clock_ = std::dynamic_pointer_cast<sgns::clock::SystemClock>( result.value() );
+        }
         //production_        = std::make_shared<verification::ProductionImpl>();
         //finality_          = std::make_shared<verification::finality::FinalityImpl>();
         //router_            = std::make_shared<network::RouterLibp2p>();
 
         //jrpc_api_service_ = std::make_shared<api::ApiService>();
-        io_context_       = std::make_shared<boost::asio::io_context>();
+        io_context_ = std::make_shared<boost::asio::io_context>();
     }
 
     void ValidatingNodeApplication::run()
@@ -49,18 +69,18 @@ namespace sgns::application
             [this]
             {
                 // execute listeners
-                
+
                 io_context_->post(
                     [this]
                     {
                         //di::bind<network::OwnPeerInfo>.to( [p2p_port{ app_config->p2p_port() }]( const auto &injector )
                         //                                   { return get_peer_info( injector, p2p_port ); } ),
-                        auto p2p_injector = libp2p::injector::makeHostInjector<BOOST_DI_CFG>();
+                        //auto p2p_injector = libp2p::injector::makeHostInjector<BOOST_DI_CFG>();
                         //auto                &key_marshaller = p2p_injector.template create<libp2p::crypto::marshaller::KeyMarshaller &>();
                         //libp2p::peer::PeerId peer_id  = libp2p::peer::PeerId::fromPublicKey( key_marshaller.marshal( public_key ).value() ).value();
                         //auto                 p2p_info = std::shared_ptr<network::OwnPeerInfo>();
                         //const network::OwnPeerInfo &current_peer_info();
-                        libp2p::Host &host = p2p_injector.template create<libp2p::Host &>();
+                        //libp2p::Host &host = p2p_injector.template create<libp2p::Host &>();
                         //for ( const auto &ma : current_peer_info.addresses )
                         //{
                         //    auto listen = host.listen( ma );
@@ -84,7 +104,6 @@ namespace sgns::application
             } );
 
         app_state_manager_->atShutdown( [ctx{ io_context_ }] { ctx->stop(); } );
-        
 
         app_state_manager_->run();
     }
