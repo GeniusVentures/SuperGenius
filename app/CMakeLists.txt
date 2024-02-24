@@ -15,7 +15,10 @@ add_executable (sgns_demo
       app_config_impl
       local_key_storage
       configuration_storage
+      block_header_repository
       clock
+      rocksdb
+      hasher
       p2p::p2p_basic_host
       p2p::p2p_default_network
       p2p::p2p_peer_repository

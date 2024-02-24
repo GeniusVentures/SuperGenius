@@ -7,7 +7,7 @@
 #ifndef _HASHER_FACTORY_HPP_
 #define _HASHER_FACTORY_HPP_
 
-#include "crrpto/hasher/hasher_impl.hpp"
+#include "crypto/hasher/hasher_impl.hpp"
 
 class HasherFactory
 {
@@ -16,5 +16,5 @@ public:
     {
         return std::make_shared<sgns::crypto::HasherImpl>();
     }
-}
+};
 #endif

@@ -8,6 +8,9 @@
 #ifndef _BLOCK_HEADER_REPOSITORY_FACTORY_HPP_
 #define _BLOCK_HEADER_REPOSITORY_FACTORY_HPP_
 
+#include "blockchain/impl/key_value_block_header_repository.hpp"
+#include "integration/CComponentFactory.hpp"
+
 class BlockHeaderRepositoryFactory
 {
 public:
@@ -15,27 +18,22 @@ public:
     {
         auto component_factory = SINGLETONINSTANCE( CComponentFactory );
 
-        auto buf_storage = component_factory->GetComponent( "BufferStorage", type );
+        auto retval = component_factory->GetComponent( "BufferStorage", type );
 
-        if ( !buf_storage )
+        if ( !retval )
         {
             throw std::runtime_error( "Initialize BufferStorage first" );
         }
-        auto hasher = component_factory->GetComponent( "Hasher", boost::none );
-        if ( !hasher )
+        auto buf_storage = std::dynamic_pointer_cast<sgns::storage::BufferStorage>( retval.value() );
+        retval = component_factory->GetComponent( "Hasher", boost::none );
+        if ( !retval )
         {
             throw std::runtime_error( "Initialize Hasher first" );
         }
-        auto result = std::make_shared<sgns::blockchain::KeyValueBlockHeaderRepository>( buf_storage.value(), hasher.value() );
-        if ( result )
-        {
-            return result.value();
-        }
-        else
-        {
-            throw std::runtime_error( "BlockHeaderRepository not created" );
-        }
+        auto hasher = std::dynamic_pointer_cast<sgns::crypto::Hasher>( retval.value() );
+
+        return std::make_shared<sgns::blockchain::KeyValueBlockHeaderRepository>( buf_storage, hasher );
     }
-}
+};
 
 #endif

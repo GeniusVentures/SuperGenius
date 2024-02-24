@@ -7,6 +7,8 @@
 #ifndef _BUFFER_STORAGE_HPP_
 #define _BUFFER_STORAGE_HPP_
 
+#include "storage/rocksdb/rocksdb.hpp"
+
 class BufferStorageFactory
 {
 public:
@@ -14,7 +16,9 @@ public:
     {
         if ( type == "rocksdb" )
         {
-            auto result = sgns::storage::rocksdb::create( path );
+            auto options              = sgns::storage::rocksdb::Options{};
+            options.create_if_missing = true;
+            auto result               = sgns::storage::rocksdb::create( path, options );
             if ( result )
             {
                 return result.value();
@@ -28,7 +32,8 @@ public:
         {
             //TrieStorageBackend
         }
+        throw std::runtime_error( "Invalid BufferStorage type" );
     }
-}
+};
 
 #endif
