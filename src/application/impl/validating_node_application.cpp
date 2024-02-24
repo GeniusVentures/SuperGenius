@@ -36,19 +36,20 @@ namespace sgns::application
         //router_            = std::make_shared<network::RouterLibp2p>();
 
         //jrpc_api_service_ = std::make_shared<api::ApiService>();
-        //io_context_       = std::make_shared<boost::asio::io_context>();
+        io_context_       = std::make_shared<boost::asio::io_context>();
     }
 
     void ValidatingNodeApplication::run()
     {
         logger_->info( "Start as {} with PID {}", typeid( *this ).name(), getpid() );
 
-        production_->setExecutionStrategy( production_execution_strategy_ );
+        //production_->setExecutionStrategy( production_execution_strategy_ );
 
         app_state_manager_->atLaunch(
             [this]
             {
                 // execute listeners
+                
                 io_context_->post(
                     [this]
                     {
@@ -69,7 +70,7 @@ namespace sgns::application
                         //        std::exit( 1 );
                         //    }
                         //}
-                        this->router_->init();
+                        //this->router_->init();
                     } );
                 return true;
             } );
@@ -83,6 +84,7 @@ namespace sgns::application
             } );
 
         app_state_manager_->atShutdown( [ctx{ io_context_ }] { ctx->stop(); } );
+        
 
         app_state_manager_->run();
     }
