@@ -6,7 +6,7 @@
  */
 #include "SuperGeniusDemoApp.hpp"
 #include "base/logger.hpp"
-//#include "impl/app_config_factory.hpp"
+#include "integration/AppConfigurationFactory.hpp"
 
 SuperGeniusDemoApp::SuperGeniusDemoApp()
 {
