@@ -26,6 +26,11 @@ namespace sgns::storage::trie {
     outcome::result<std::unique_ptr<SuperGeniusTrie>> retrieveTrie(
         const base::Buffer &db_key) const override;
 
+    std::string GetName() override
+    {
+      return "TrieSerializerImpl";
+    }
+
    private:
     /**
      * Writes a node to a persistent storage, recursively storing its

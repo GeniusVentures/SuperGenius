@@ -6,6 +6,7 @@
 #include "primitives/block_data.hpp"
 #include "primitives/block_id.hpp"
 #include "primitives/justification.hpp"
+#include "integration/IComponent.hpp"
 
 namespace sgns::blockchain {
 
@@ -13,7 +14,7 @@ namespace sgns::blockchain {
    * A wrapper for a storage of blocks
    * Provides a convenient interface to work with it
    */
-  class BlockStorage {
+  class BlockStorage : public IComponent {
    public:
     virtual ~BlockStorage() = default;
 

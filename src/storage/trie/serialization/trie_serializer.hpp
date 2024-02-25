@@ -5,13 +5,14 @@
 
 #include "outcome/outcome.hpp"
 #include "storage/trie/supergenius_trie/supergenius_trie.hpp"
+#include "integration/IComponent.hpp"
 
 namespace sgns::storage::trie {
 
   /**
    * Serializes SuperGeniusTrie and stores it in an external storage
    */
-  class TrieSerializer {
+  class TrieSerializer : public IComponent{
    public:
     virtual ~TrieSerializer() = default;
 
