@@ -17,6 +17,8 @@ namespace sgns::verification {
     MOCK_METHOD2(computeRandomness, Randomness(const Randomness &, EpochIndex));
 
     MOCK_METHOD1(submitVRFValue, void(const crypto::VRFPreOutput &));
+    
+    MOCK_METHOD0(GetName, std::string());
   };
 }  // namespace sgns::verification
 

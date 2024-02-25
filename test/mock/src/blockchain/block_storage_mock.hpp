@@ -54,6 +54,7 @@ namespace sgns::blockchain {
     MOCK_METHOD2(removeBlock,
                  outcome::result<void>(const primitives::BlockHash &,
                                        const primitives::BlockNumber &));
+    MOCK_METHOD0(GetName,std::string());
   };
 
 }  // namespace sgns::blockchain

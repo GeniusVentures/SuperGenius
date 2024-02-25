@@ -26,6 +26,8 @@ namespace sgns::crypto {
                             const VRFOutput &,
                             const SR25519PublicKey &,
                             const VRFThreshold &));
+
+    MOCK_METHOD0(GetName, std::string());
   };
 }  // namespace sgns::crypto
 
