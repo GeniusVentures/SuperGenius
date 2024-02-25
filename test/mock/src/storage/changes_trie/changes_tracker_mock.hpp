@@ -32,6 +32,7 @@ namespace sgns::storage::changes_trie {
         constructChangesTrie,
         outcome::result<base::Hash256>(const primitives::BlockHash &parent,
                                          const ChangesTrieConfig &conf));
+    MOCK_METHOD0(GetName, std::string());
   };
 
 }  // namespace sgns::storage::changes_trie

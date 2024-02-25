@@ -5,6 +5,7 @@
 
 #include "base/blob.hpp"
 #include "storage/trie/trie_batches.hpp"
+#include "integration/IComponent.hpp"
 
 namespace sgns::storage::trie {
 
@@ -15,7 +16,7 @@ namespace sgns::storage::trie {
    *  - ephemeral batch, all changes to which are
    *    left in memory and thus the main storage is never changed by it
    */
-  class TrieStorage {
+  class TrieStorage : public IComponent {
    public:
     virtual ~TrieStorage() = default;
 

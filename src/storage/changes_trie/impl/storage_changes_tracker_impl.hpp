@@ -60,6 +60,11 @@ namespace sgns::storage::changes_trie {
         const primitives::BlockHash &parent,
         const ChangesTrieConfig &conf) override;
 
+    std::string GetName() override
+    {
+      return "StorageChangesTrackerImpl";
+    }
+
    private:
     std::shared_ptr<storage::trie::SuperGeniusTrieFactory> trie_factory_;
     std::shared_ptr<storage::trie::Codec> codec_;
