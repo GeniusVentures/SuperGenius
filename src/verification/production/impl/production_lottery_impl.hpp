@@ -27,6 +27,11 @@ namespace sgns::verification {
 
     void submitVRFValue(const crypto::VRFPreOutput &value) override;
 
+    std::string GetName() override
+    {
+      return "ProductionLotteryImpl";
+    }
+
    private:
     std::shared_ptr<crypto::VRFProvider> vrf_provider_;
     std::shared_ptr<crypto::Hasher> hasher_;
