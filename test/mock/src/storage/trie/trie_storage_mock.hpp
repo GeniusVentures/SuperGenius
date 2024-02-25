@@ -24,6 +24,8 @@ namespace sgns::storage::trie {
                            const base::Hash256 &root));
 
     MOCK_CONST_METHOD0(getRootHash, base::Buffer());
+
+    MOCK_METHOD0(GetName, std::string());
   };
 
 }  // namespace sgns::storage::trie
