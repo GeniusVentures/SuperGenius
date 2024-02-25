@@ -5,9 +5,10 @@
 
 #include "base/blob.hpp"
 #include "base/buffer.hpp"
+#include "integration/IComponent.hpp"
 
 namespace sgns::crypto {
-  class Hasher {
+  class Hasher : public IComponent {
    protected:
     using Hash64 = base::Hash64;
     using Hash128 = base::Hash128;

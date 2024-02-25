@@ -12,7 +12,6 @@
 #include "crypto/hasher.hpp"
 #include "primitives/production_configuration.hpp"
 #include "primitives/block_header.hpp"
-#include "runtime/core.hpp"
 #include "transaction_pool/transaction_pool.hpp"
 
 namespace sgns::verification {
@@ -20,7 +19,6 @@ namespace sgns::verification {
   class BlockExecutor : public std::enable_shared_from_this<BlockExecutor> {
    public:
     BlockExecutor(std::shared_ptr<blockchain::BlockTree> block_tree,
-                  std::shared_ptr<runtime::Core> core,
                   std::shared_ptr<primitives::ProductionConfiguration> configuration,
                   std::shared_ptr<ProductionSynchronizer> production_synchronizer,
                   std::shared_ptr<BlockValidator> block_validator,
@@ -67,7 +65,7 @@ namespace sgns::verification {
     outcome::result<void> applyBlock(const primitives::Block &block);
 
     std::shared_ptr<blockchain::BlockTree> block_tree_;
-    std::shared_ptr<runtime::Core> core_;
+    //std::shared_ptr<runtime::Core> core_;
     std::shared_ptr<primitives::ProductionConfiguration> genesis_configuration_;
     std::shared_ptr<ProductionSynchronizer> production_synchronizer_;
     std::shared_ptr<BlockValidator> block_validator_;

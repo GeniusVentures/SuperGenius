@@ -3,10 +3,11 @@
 #define SUPERGENIUS_APPLICATION_DISPATCHER
 
 #include "base/logger.hpp"
+#include "integration/IComponent.hpp"
 
 namespace sgns::application {
 
-  class AppStateManager : public std::enable_shared_from_this<AppStateManager> {
+  class AppStateManager : public std::enable_shared_from_this<AppStateManager>, public IComponent {
    public:
     using OnPrepare = std::function<bool()>;
     using OnLaunch = std::function<bool()>;

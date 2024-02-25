@@ -45,6 +45,11 @@ namespace sgns::storage {
         sgns::storage::face::MapCursor<base::Buffer, base::Buffer>>
     cursor() override;
 
+    std::string GetName() override
+    {
+      return "InMemoryStorage";
+    }
+
    private:
     std::map<std::string, base::Buffer> storage;
   };

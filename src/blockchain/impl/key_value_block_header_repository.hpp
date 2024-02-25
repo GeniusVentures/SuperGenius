@@ -28,7 +28,11 @@ namespace sgns::blockchain {
 
     auto getBlockStatus(const primitives::BlockId &id) const
         -> outcome::result<blockchain::BlockStatus> override;
-
+        
+    std::string GetName() override
+    {
+        return "KeyValueBlockHeaderRepository";
+    }
    private:
     std::shared_ptr<storage::BufferStorage> map_;
     std::shared_ptr<crypto::Hasher> hasher_;

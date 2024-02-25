@@ -4,6 +4,7 @@
 #define SUPERGENIUS_CLOCK_HPP
 
 #include <chrono>
+#include "integration/IComponent.hpp"
 
 namespace sgns::clock {
 
@@ -12,7 +13,7 @@ namespace sgns::clock {
    * @tparam clock type is an underlying clock type, such as std::steady_clock
    */
   template <typename ClockType>
-  class Clock {
+  class Clock: public IComponent {
    public:
     /**
      * Difference between two time points

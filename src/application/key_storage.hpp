@@ -5,13 +5,14 @@
 #include <libp2p/crypto/key.hpp>
 #include "crypto/ed25519_types.hpp"
 #include "crypto/sr25519_types.hpp"
+#include "integration/IComponent.hpp"
 
 namespace sgns::application {
 
   /**
    * Stores crypto keys of the current node
    */
-  class KeyStorage {
+  class KeyStorage : public IComponent {
    public:
     virtual ~KeyStorage() = default;
 

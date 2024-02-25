@@ -9,6 +9,7 @@
 #include "base/blob.hpp"
 #include "primitives/block_header.hpp"
 #include "primitives/block_id.hpp"
+#include "integration/IComponent.hpp"
 
 namespace sgns::blockchain {
 
@@ -22,7 +23,7 @@ namespace sgns::blockchain {
    * convenience methods, such as getting bloch number by its hash and vice
    * versa or getting a block status
    */
-  class BlockHeaderRepository {
+  class BlockHeaderRepository : public IComponent {
    public:
     virtual ~BlockHeaderRepository() = default;
 

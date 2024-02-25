@@ -81,6 +81,11 @@ namespace sgns::storage
 
     outcome::result<void> remove(const Buffer &key) override;
 
+    std::string GetName() override
+    {
+      return "rocksdb";
+    }
+
     inline std::shared_ptr<DB> getDB() const { return db_; }
 
    private:

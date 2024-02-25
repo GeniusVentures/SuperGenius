@@ -8,13 +8,14 @@
 #include "network/types/peer_list.hpp"
 #include "primitives/block.hpp"
 #include <set>
+#include "integration/IComponent.hpp"
 namespace sgns::application {
 
   /**
    * Stores configuration of a sgns application and provides convenience
    * methods for accessing config parameters
    */
-  class ConfigurationStorage {
+  class ConfigurationStorage : public IComponent {
    public:
     virtual ~ConfigurationStorage() = default;
 

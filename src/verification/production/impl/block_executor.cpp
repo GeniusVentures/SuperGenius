@@ -12,7 +12,6 @@ namespace sgns::verification {
 
   BlockExecutor::BlockExecutor(
       std::shared_ptr<blockchain::BlockTree> block_tree,
-      std::shared_ptr<runtime::Core> core,
       std::shared_ptr<primitives::ProductionConfiguration> configuration,
       std::shared_ptr<verification::ProductionSynchronizer> production_synchronizer,
       std::shared_ptr<verification::BlockValidator> block_validator,
@@ -22,7 +21,6 @@ namespace sgns::verification {
       std::shared_ptr<authority::AuthorityUpdateObserver>
           authority_update_observer)
       : block_tree_{std::move(block_tree)},
-        core_{std::move(core)},
         genesis_configuration_{std::move(configuration)},
         production_synchronizer_{std::move(production_synchronizer)},
         block_validator_{std::move(block_validator)},
@@ -32,7 +30,6 @@ namespace sgns::verification {
         authority_update_observer_{std::move(authority_update_observer)},
         logger_{base::createLogger("BlockExecutor")} {
     BOOST_ASSERT(block_tree_ != nullptr);
-    BOOST_ASSERT(core_ != nullptr);
     BOOST_ASSERT(genesis_configuration_ != nullptr);
     BOOST_ASSERT(production_synchronizer_ != nullptr);
     BOOST_ASSERT(block_validator_ != nullptr);
@@ -188,7 +185,8 @@ namespace sgns::verification {
     // block should be applied without last digest which contains the seal
     block_without_seal_digest.header.digest.pop_back();
     // apply block
-    BOOST_OUTCOME_TRYV2(auto &&, core_->execute_block(block_without_seal_digest));
+    // TODO - Add something instead of binaryen block executor stuff
+    //BOOST_OUTCOME_TRYV2(auto &&, core_->execute_block(block_without_seal_digest));
 
     // add block header if it does not exist
     BOOST_OUTCOME_TRYV2(auto &&, block_tree_->addBlock(block));

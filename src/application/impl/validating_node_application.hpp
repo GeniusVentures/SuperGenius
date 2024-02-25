@@ -8,27 +8,21 @@
 #include "application/app_config.hpp"
 #include "application/configuration_storage.hpp"
 #include "application/impl/local_key_storage.hpp"
-#include "injector/validating_node_injector.hpp"
-#include "runtime/dummy/finality_api_dummy.hpp"
 #include "verification/finality/finality.hpp"
-namespace sgns::application {
+#include "verification/production.hpp"
+#include "network/router.hpp"
+namespace sgns::application
+{
 
-  class ValidatingNodeApplication : public SgnsApplication {
-    using Production = verification::Production;
-    using Finality = verification::finality::Finality;
-    using InjectorType =
-        decltype(injector::makeFullNodeInjector(AppConfigPtr{}));
+    class ValidatingNodeApplication : public SgnsApplication
+    {
+        using Production = verification::Production;
+        using Finality   = verification::finality::Finality;
 
-    template <class T>
-    using sptr = std::shared_ptr<T>;
+    public:
+        ~ValidatingNodeApplication() override = default;
 
-    template <class T>
-    using uptr = std::unique_ptr<T>;
-
-   public:
-    ~ValidatingNodeApplication() override = default;
-
-    /**
+        /**
      * @param config_path genesis configs path
      * @param keystore_path local peer's keys
      * @param rocksdb_path storage path
@@ -39,32 +33,31 @@ namespace sgns::application {
      * node
      * @param verbosity level of logging
      */
-    ValidatingNodeApplication(const AppConfigPtr &config);
+        ValidatingNodeApplication( const std::shared_ptr<AppConfiguration> &config );
 
-    void run() override;
+        void run() override;
 
-   private:
-    // need to keep all of these instances, since injector itself is destroyed
-    InjectorType injector_;
+    private:
+        // need to keep all of these instances, since injector itself is destroyed
 
-    std::shared_ptr<AppStateManager> app_state_manager_;
+        std::shared_ptr<AppStateManager> app_state_manager_;
 
-    std::shared_ptr<boost::asio::io_context> io_context_;
+        std::shared_ptr<boost::asio::io_context> io_context_;
 
-    sptr<ConfigurationStorage> config_storage_;
-    sptr<KeyStorage> key_storage_;
-    sptr<clock::SystemClock> clock_;
-    sptr<Production> production_;
-    sptr<Finality> finality_;
-    sptr<network::Router> router_;
+        std::shared_ptr<ConfigurationStorage> config_storage_;
+        std::shared_ptr<KeyStorage>           key_storage_;
+        std::shared_ptr<clock::SystemClock>   clock_;
+        std::shared_ptr<Production>           production_;
+        std::shared_ptr<Finality>             finality_;
+        std::shared_ptr<network::Router>      router_;
 
-    sptr<api::ApiService> jrpc_api_service_;
+        std::shared_ptr<api::ApiService> jrpc_api_service_;
 
-    Production::ExecutionStrategy production_execution_strategy_;
+        Production::ExecutionStrategy production_execution_strategy_;
 
-    base::Logger logger_;
-  };
+        base::Logger logger_;
+    };
 
-}  // namespace sgns::application
+} // namespace sgns::application
 
-#endif  // SUPERGENIUS_SRC_APPLICATION_IMPL_VALIDATING_NODE_APPLICATION_HPP
+#endif // SUPERGENIUS_SRC_APPLICATION_IMPL_VALIDATING_NODE_APPLICATION_HPP

@@ -4,6 +4,7 @@
 #define SUPERGENIUS_GENERIC_STORAGE_HPP
 
 #include "storage/face/generic_maps.hpp"
+#include "integration/IComponent.hpp"
 
 namespace sgns::storage::face {
 
@@ -15,7 +16,8 @@ namespace sgns::storage::face {
    */
   template <typename K, typename V>
   struct GenericStorage : public ReadOnlyMap<K, V>,
-                          public BatchWriteMap<K, V> {};  
+                          public BatchWriteMap<K, V>,
+                          public IComponent {};  
 
 }  // namespace sgns::storage::face
 

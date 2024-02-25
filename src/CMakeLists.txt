@@ -1,4 +1,4 @@
-#add_subdirectory(application)
+add_subdirectory(application)
 add_subdirectory(api)
 add_subdirectory(base)
 add_subdirectory(blockchain)
