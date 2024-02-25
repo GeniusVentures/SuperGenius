@@ -19,6 +19,12 @@ add_executable (sgns_demo
       clock
       rocksdb
       hasher
+      vrf_provider
+      block_storage
+      production_lottery
+      changes_tracker
+      trie_serializer
+      supergenius_trie_factory
       p2p::p2p_basic_host
       p2p::p2p_default_network
       p2p::p2p_peer_repository
