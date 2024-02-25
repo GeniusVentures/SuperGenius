@@ -50,6 +50,11 @@ namespace sgns::storage::trie {
 
     base::Buffer getRootHash() const override;
 
+    std::string GetName() override
+    {
+        return "TrieStorageImpl";
+    }
+
    protected:
     TrieStorageImpl(
         base::Buffer root_hash,
