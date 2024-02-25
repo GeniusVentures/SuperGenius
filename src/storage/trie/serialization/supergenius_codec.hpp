@@ -36,6 +36,11 @@ namespace sgns::storage::trie {
 
     base::Hash256 hash256(const Buffer &buf) const override;
 
+    std::string GetName() override
+    {
+      return "SuperGeniusCodec";
+    }
+
     /**
      * Def. 14 KeyEncode
      * Splits a key to an array of nibbles (a nibble is a half of a byte)
