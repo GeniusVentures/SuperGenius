@@ -7,6 +7,7 @@
 
 #include "verification/production/types/epoch.hpp"
 #include "crypto/sr25519_types.hpp"
+#include "integration/IComponent.hpp"
 
 namespace sgns::verification {
   /**
@@ -23,7 +24,7 @@ namespace sgns::verification {
    *    - that value is then is used in slotsLeadership(..)
    *
    */
-  struct ProductionLottery {
+  struct ProductionLottery : public IComponent {
     virtual ~ProductionLottery() = default;
 
     using SlotsLeadership = std::vector<boost::optional<crypto::VRFOutput>>;
