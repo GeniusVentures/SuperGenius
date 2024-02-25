@@ -88,6 +88,11 @@ namespace sgns::blockchain {
         const primitives::BlockHash &hash,
         const primitives::BlockNumber &number) override;
 
+    std::string GetName() override
+    {
+        return "KeyValueBlockStorage";
+    }
+
    private:
     KeyValueBlockStorage(std::shared_ptr<storage::BufferStorage> storage,
                          std::shared_ptr<crypto::Hasher> hasher);
