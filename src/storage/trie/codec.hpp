@@ -6,6 +6,7 @@
 #include "base/blob.hpp"  // for Hash256
 #include "base/buffer.hpp"
 #include "storage/trie/node.hpp"
+#include "integration/IComponent.hpp"
 
 namespace sgns::storage::trie {
 
@@ -13,7 +14,7 @@ namespace sgns::storage::trie {
    * @brief Internal codec for nodes in the Trie. Eth and substrate have
    * different codecs, but rest of the code should be same.
    */
-  class Codec {
+  class Codec : public IComponent{
    public:
     virtual ~Codec() = default;
 

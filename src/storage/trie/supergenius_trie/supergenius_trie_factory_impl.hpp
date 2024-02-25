@@ -17,6 +17,11 @@ namespace sgns::storage::trie {
         SuperGeniusTrie::NodePtr root,
         ChildRetrieveFunctor f) const override;
 
+    std::string GetName() override
+    {
+      return "SuperGeniusTrieFactoryImpl";
+    }
+
    private:
     SuperGeniusTrieImpl::ChildRetrieveFunctor default_child_retrieve_f_;
   };
