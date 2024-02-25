@@ -7,13 +7,14 @@
 
 #include "base/buffer.hpp"
 #include "crypto/sr25519_types.hpp"
+#include "integration/IComponent.hpp"
 
 namespace sgns::crypto {
 
   /**
    * SR25519 based verifiable random function implementation
    */
-  class VRFProvider {
+  class VRFProvider : public IComponent {
    public:
     virtual ~VRFProvider() = default;
 

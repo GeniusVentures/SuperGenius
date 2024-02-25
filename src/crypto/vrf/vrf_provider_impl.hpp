@@ -28,6 +28,11 @@ namespace sgns::crypto {
                 const SR25519PublicKey &public_key,
                 const VRFThreshold &threshold) const override;
 
+    std::string GetName() override
+    {
+      return "VRFProviderImpl";
+    }
+
    private:
     std::shared_ptr<CSPRNG> generator_;
   };
