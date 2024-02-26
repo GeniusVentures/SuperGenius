@@ -16,6 +16,11 @@ namespace sgns::network {
 
     outcome::result<base::Hash256> onTxMessage(
         const primitives::Extrinsic &extrinsic) override;
+    
+    std::string GetName() override
+    {
+      return "ExtrinsicObserverImpl";
+    }
 
    private:
     std::shared_ptr<api::AuthorApi> api_;

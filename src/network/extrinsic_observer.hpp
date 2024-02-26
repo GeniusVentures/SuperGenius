@@ -7,10 +7,11 @@
 #include "base/blob.hpp"
 #include "outcome/outcome.hpp"
 #include "primitives/extrinsic.hpp"
+#include "integration/IComponent.hpp"
 
 namespace sgns::network {
 
-  class ExtrinsicObserver {
+  class ExtrinsicObserver : public IComponent {
    public:
     virtual ~ExtrinsicObserver() = default;
 

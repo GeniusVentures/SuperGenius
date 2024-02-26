@@ -26,6 +26,7 @@ add_executable (sgns_demo
       trie_serializer
       supergenius_trie_factory
       block_tree
+      extrinsic_observer
       p2p::p2p_basic_host
       p2p::p2p_default_network
       p2p::p2p_peer_repository
