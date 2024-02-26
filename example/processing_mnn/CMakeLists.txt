@@ -8,6 +8,7 @@ FILE(GLOB MNN_LIBS "${MNN_LIBRARY_DIR}/*")
 add_executable(processing_mnn
     processing_mnn.cpp
 	processing_task_queue_impl.hpp
+	processing_mnn.hpp
     )
 
 
