@@ -48,14 +48,6 @@ int main(int argc, char* argv[])
     auto loggerBroadcaster = sgns::base::createLogger("PubSubBroadcasterExt");
     loggerBroadcaster->set_level(spdlog::level::debug);
 
-    auto loggerProcessingEngine = sgns::base::createLogger("ProcessingEngine");
-    loggerProcessingEngine->set_level(spdlog::level::trace);
-
-    auto loggerProcessingService = sgns::base::createLogger("ProcessingService");
-    loggerProcessingService->set_level(spdlog::level::trace);
-
-    auto loggerProcessingQueueManager = sgns::base::createLogger("ProcessingSubTaskQueueManager");
-    loggerProcessingQueueManager->set_level(spdlog::level::debug);
     //Load Image
     const auto poseModel = argv[1];
     const auto inputImageFileName = argv[2];
@@ -113,15 +105,15 @@ int main(int argc, char* argv[])
         io, "CRDT.Datastore.TEST", 40000,
         std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>(pubs, "CRDT.Datastore.TEST.Channel"));
 
-    auto pubsTopic2 = pubs2->Subscribe("CRDT.Datastore.TEST.Channel", [&](boost::optional<const GossipPubSub::Message&> message)
-        {
-            if (message)
-            {
-                std::string message(reinterpret_cast<const char*>(message->data.data()), message->data.size());
-                std::cout << "Pubs 2 Got message: " << message << std::endl;
-                //receivedMessages.push_back(std::move(message));
-            }
-        });
+    //auto pubsTopic2 = pubs2->Subscribe("CRDT.Datastore.TEST.Channel", [&](boost::optional<const GossipPubSub::Message&> message)
+    //    {
+    //        if (message)
+    //        {
+    //            std::string message(reinterpret_cast<const char*>(message->data.data()), message->data.size());
+    //            std::cout << "Pubs 2 Got message: " << message << std::endl;
+    //            //receivedMessages.push_back(std::move(message));
+    //        }
+    //    });
 
     auto crdtOptions = sgns::crdt::CrdtOptions::DefaultOptions();
     globalDB->Init(crdtOptions);
@@ -151,9 +143,19 @@ int main(int argc, char* argv[])
         std::make_shared<SubTaskStateStorageImpl>(),
         std::make_shared<SubTaskResultStorageImpl>(),
         processingCore);
-    processingService.SetChannelListRequestTimeout(boost::posix_time::milliseconds(100000));
+
+    ProcessingServiceImpl processingService2(pubs2,
+        maximalNodesCount,
+        enqueuer,
+        std::make_shared<SubTaskStateStorageImpl>(),
+        std::make_shared<SubTaskResultStorageImpl>(),
+        processingCore);
+    processingService.SetChannelListRequestTimeout(boost::posix_time::milliseconds(1000));
 
     processingService.StartProcessing(processingGridChannel);
+
+    processingService2.SetChannelListRequestTimeout(boost::posix_time::milliseconds(1000));
+    processingService2.StartProcessing(processingGridChannel);
 
     // Gracefully shutdown on signal
     boost::asio::signal_set signals(*pubs->GetAsioContext(), SIGINT, SIGTERM);
