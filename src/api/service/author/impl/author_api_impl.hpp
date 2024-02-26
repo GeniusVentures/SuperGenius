@@ -33,8 +33,7 @@ namespace sgns::api {
      * @param hasher hasher instance shared ptr
      * @param block_tree block tree instance shared ptr
      */
-    AuthorApiImpl(std::shared_ptr<runtime::TaggedTransactionQueue> api,
-                  std::shared_ptr<transaction_pool::TransactionPool> pool,
+    AuthorApiImpl(std::shared_ptr<transaction_pool::TransactionPool> pool,
                   std::shared_ptr<crypto::Hasher> hasher,
                   std::shared_ptr<network::ExtrinsicGossiper> gossiper);
 
@@ -50,8 +49,13 @@ namespace sgns::api {
     outcome::result<std::vector<base::Hash256>> removeExtrinsic(
         const std::vector<primitives::ExtrinsicKey> &keys) override;
 
+    std::string GetName() override
+    {
+      return "AuthorApiImpl";
+    }
+
    private:
-    sptr<runtime::TaggedTransactionQueue> api_;
+    //sptr<runtime::TaggedTransactionQueue> api_;
     sptr<transaction_pool::TransactionPool> pool_;
     sptr<crypto::Hasher> hasher_;
     sptr<blockchain::BlockTree> block_tree_;

@@ -12,16 +12,13 @@
 
 namespace sgns::api {
   AuthorApiImpl::AuthorApiImpl(
-      sptr<runtime::TaggedTransactionQueue> api,
       sptr<transaction_pool::TransactionPool> pool,
       sptr<crypto::Hasher> hasher,
       std::shared_ptr<network::ExtrinsicGossiper> gossiper)
-      : api_{std::move(api)},
-        pool_{std::move(pool)},
+      : pool_{std::move(pool)},
         hasher_{std::move(hasher)},
         gossiper_{std::move(gossiper)},
         logger_{base::createLogger("AuthorApi")} {
-    BOOST_ASSERT_MSG(api_ != nullptr, "author api is nullptr");
     BOOST_ASSERT_MSG(pool_ != nullptr, "transaction pool is nullptr");
     BOOST_ASSERT_MSG(hasher_ != nullptr, "hasher is nullptr");
     BOOST_ASSERT_MSG(gossiper_ != nullptr, "gossiper is nullptr");
@@ -30,8 +27,9 @@ namespace sgns::api {
 
   outcome::result<base::Hash256> AuthorApiImpl::submitExtrinsic(
       const primitives::Extrinsic &extrinsic) {
-    OUTCOME_TRY((auto &&, res), api_->validate_transaction(extrinsic));
-
+    //OUTCOME_TRY((auto &&, res), api_->validate_transaction(extrinsic)); 
+    //TODO - This is wrong. Need to fix after making it compile
+    boost::variant<primitives::ValidTransaction, primitives::TransactionValidityError> res = primitives::ValidTransaction();
     return visit_in_place(
         res,
         [&](const primitives::TransactionValidityError &e) {
