@@ -150,6 +150,11 @@ namespace sgns::blockchain {
 
     primitives::BlockInfo getLastFinalized() const override;
 
+    std::string GetName() override
+    {
+        return "BlockTreeImpl";
+    }
+
    private:
     /**
      * Private constructor, so that instances are created only through the

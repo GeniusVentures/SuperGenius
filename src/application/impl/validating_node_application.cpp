@@ -13,6 +13,7 @@
 #include "integration/TrieSerializerFactory.hpp"
 #include "integration/BlockStorageFactory.hpp"
 #include "integration/TrieStorageFactory.hpp"
+#include "integration/BlockTreeFactory.hpp"
 
 #include "storage/trie/supergenius_trie/supergenius_trie_factory_impl.hpp"
 #include "storage/trie/serialization/supergenius_codec.hpp"
@@ -55,6 +56,7 @@ namespace sgns::application
         component_factory->Register( TrieSerializerFactory::create(), "TrieSerializer", boost::none );
         component_factory->Register( TrieStorageFactory::create(), "TrieStorage", boost::none );
         component_factory->Register( BlockStorageFactory::create(), "BlockStorage", boost::none );
+        component_factory->Register( BlockTreeFactory::create(), "BlockTree", boost::none );
 
         auto result = component_factory->GetComponent( "AppStateManager", boost::none );
         if ( result )

@@ -66,6 +66,8 @@ namespace sgns::blockchain {
     MOCK_CONST_METHOD0(getLastFinalized, primitives::BlockInfo());
 
     MOCK_METHOD0(prune, outcome::result<void>());
+
+    MOCK_METHOD0(GetName, std::string());
   };
 }  // namespace sgns::blockchain
 

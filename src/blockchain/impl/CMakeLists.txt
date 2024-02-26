@@ -26,6 +26,7 @@ add_library(block_tree
 target_link_libraries(block_tree
     block_tree_error
     blockchain_common
+    block_header_repository
     rocksdb
     hasher
     )

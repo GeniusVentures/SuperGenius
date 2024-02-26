@@ -44,6 +44,7 @@ public:
         auto trie_storage  = std::dynamic_pointer_cast<sgns::storage::trie::TrieStorage>(maybe_trie_storage.value());
         
 
+        //TODO - Fix finalityAPI dependence here!
         auto maybe_storage = sgns::blockchain::KeyValueBlockStorage::create( //
             trie_storage->getRootHash(),                                          //
             buff_storage, 

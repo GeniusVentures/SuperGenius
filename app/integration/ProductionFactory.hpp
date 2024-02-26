@@ -40,21 +40,13 @@ public:
         auto block_executor = std::dynamic_pointer_cast<sgns::verification::BlockExecutor>( maybe_block_executor.value() );
 
         );
-        return std::make_shared<verification::ProductionImpl>( //
+        return std::make_shared<sgns::verification::ProductionImpl>( //
             app_st_manager,                                    //
             prod_lottery,                                      //
             block_executor,                                    //
         );
 
-        //    BlockExecutor(std::shared_ptr<blockchain::BlockTree> block_tree,
-        //                  std::shared_ptr<primitives::ProductionConfiguration> configuration,
-        //                  std::shared_ptr<ProductionSynchronizer> production_synchronizer,
-        //                  std::shared_ptr<BlockValidator> block_validator,
-        //                  std::shared_ptr<EpochStorage> epoch_storage,
-        //                  std::shared_ptr<transaction_pool::TransactionPool> tx_pool,
-        //                  std::shared_ptr<crypto::Hasher> hasher,
-        //                  std::shared_ptr<authority::AuthorityUpdateObserver>
-        //                      authority_update_observer);
+
 
         /**
     ProductionImpl(std::shared_ptr<application::AppStateManager> app_state_manager,

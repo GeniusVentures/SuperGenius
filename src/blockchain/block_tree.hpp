@@ -12,6 +12,7 @@
 #include "primitives/block_id.hpp"
 #include "primitives/common.hpp"
 #include "primitives/justification.hpp"
+#include "integration/IComponent.hpp"
 
 namespace sgns::blockchain {
   /**
@@ -22,7 +23,7 @@ namespace sgns::blockchain {
    *      production (handling forks, pruning the blocks, resolving child-parent
    *      relations, etc)
    */
-  struct BlockTree {
+  struct BlockTree : public IComponent {
     using BlockHashVecRes = outcome::result<std::vector<primitives::BlockHash>>;
 
     virtual ~BlockTree() = default;
