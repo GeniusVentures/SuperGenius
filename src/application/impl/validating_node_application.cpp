@@ -16,6 +16,9 @@
 #include "integration/BlockTreeFactory.hpp"
 #include "integration/ExtrinsicObserverFactory.hpp"
 #include "integration/AuthorApiFactory.hpp"
+#include "integration/TranscationPoolFactory.hpp"
+#include "integration/PoolModeratorFactory.hpp"
+#include "integration/ExtrinsicGossiperFactory.hpp"
 
 #include "storage/trie/supergenius_trie/supergenius_trie_factory_impl.hpp"
 #include "storage/trie/serialization/supergenius_codec.hpp"
@@ -58,6 +61,9 @@ namespace sgns::application
         component_factory->Register( TrieSerializerFactory::create(), "TrieSerializer", boost::none );
         component_factory->Register( TrieStorageFactory::create(), "TrieStorage", boost::none );
         component_factory->Register( BlockStorageFactory::create(), "BlockStorage", boost::none );
+        component_factory->Register( ExtrinsicGossiperFactory::create(), "ExtrinsicGossiper", boost::none );
+        component_factory->Register( PoolModeratorFactory::create(), "PoolModerator", boost::none );
+        component_factory->Register( TranscationPoolFactory::create(), "TransactionPool", boost::none );
         component_factory->Register( AuthorApiFactory::create(), "AuthorApi", boost::none );
         component_factory->Register( ExtrinsicObserverFactory::create(), "ExtrinsicObserver", boost::none );
         component_factory->Register( BlockTreeFactory::create(), "BlockTree", boost::none );

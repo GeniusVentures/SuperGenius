@@ -44,6 +44,11 @@ namespace sgns::network {
 
     void addStream(std::shared_ptr<libp2p::connection::Stream> stream) override;
 
+    std::string GetName() override
+    {
+      return "GossiperBroadcast";
+    }
+
    private:
     void broadcast(GossipMessage &&msg);
 

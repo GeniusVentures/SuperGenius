@@ -28,6 +28,8 @@ add_executable (sgns_demo
       block_tree
       extrinsic_observer
       author_api_service
+      transaction_pool
+      gossiper_broadcast
       p2p::p2p_basic_host
       p2p::p2p_default_network
       p2p::p2p_peer_repository
