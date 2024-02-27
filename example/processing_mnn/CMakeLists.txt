@@ -9,6 +9,8 @@ add_executable(processing_mnn
     processing_mnn.cpp
 	processing_task_queue_impl.hpp
 	processing_mnn.hpp
+	processing_subtask_result_storage.cpp
+	processing_subtask_result_storage_impl.hpp
     )
 
 

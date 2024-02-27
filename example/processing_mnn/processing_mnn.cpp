@@ -62,14 +62,16 @@ int main(int argc, char* argv[])
     std::vector<std::string> receivedMessages;
     auto pubs = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>(
         sgns::crdt::KeyPairFileStorage("CRDT.Datastore.TEST/pubs_dapp").GetKeyPair().value());
+    auto pubsubKeyPath = (boost::format("CRDT.Datastore.TEST.%d/pubs_processor") % 1).str();
     auto pubs2 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>(
-        );
+        sgns::crdt::KeyPairFileStorage(pubsubKeyPath).GetKeyPair().value());
+
     //Start Pubsubs, add peers of other addresses.
     pubs->Start(40001, { pubs2->GetLocalAddress() });
 
     
 
-    const size_t maximalNodesCount = 1;
+    const size_t maximalNodesCount = 10;
 
     std::list<SGProcessing::Task> tasks;
     size_t nTasks = 16;
@@ -95,7 +97,7 @@ int main(int argc, char* argv[])
     auto globalDB = std::make_shared<sgns::crdt::GlobalDB>(
         io, "CRDT.Datastore.TEST", 40000,
         std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>(pubs, "CRDT.Datastore.TEST.Channel"));
-
+    
     auto crdtOptions = sgns::crdt::CrdtOptions::DefaultOptions();
     globalDB->Init(crdtOptions);
     
@@ -130,21 +132,28 @@ int main(int argc, char* argv[])
     //Processing Service Values
     auto taskQueue2 = std::make_shared<sgns::processing::ProcessingTaskQueueImpl>(globalDB2);
     //auto processingCore = std::make_shared<ProcessingCoreImpl>(100000);
-    auto enqueuer = std::make_shared<SubTaskEnqueuerImpl>(taskQueue);
+    auto enqueuer2 = std::make_shared<SubTaskEnqueuerImpl>(taskQueue2);
     //Processing Core
     auto processingCore = std::make_shared<ProcessingCoreImpl>(
         globalDB2,
         1000000,
         2);
 
-    ProcessingServiceImpl processingService(pubs2,
+    //ProcessingServiceImpl processingService(pubs2,
+    //    maximalNodesCount,
+    //    enqueuer2,
+    //    std::make_shared<SubTaskStateStorageImpl>(),
+    //    std::make_shared<SubTaskResultStorageImpl>(globalDB2),
+    //    processingCore);
+    ProcessingServiceImpl processingService(
+        pubs2,
         maximalNodesCount,
-        enqueuer,
+        enqueuer2,
         std::make_shared<SubTaskStateStorageImpl>(),
-        std::make_shared<SubTaskResultStorageImpl>(),
+        std::make_shared<SubTaskResultStorageImpl>(globalDB2),
         processingCore);
 
-    processingService.SetChannelListRequestTimeout(boost::posix_time::milliseconds(1000));
+    processingService.SetChannelListRequestTimeout(boost::posix_time::milliseconds(10000));
 
     processingService.StartProcessing(processingGridChannel);
 

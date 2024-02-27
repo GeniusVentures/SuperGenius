@@ -8,6 +8,7 @@
 #include "imageHelper/stb_image_write.h"
 #include "ipfs_pubsub/gossip_pubsub.hpp"
 #include "processing_task_queue_impl.hpp"
+#include "processing_subtask_result_storage_impl.hpp"
 #include <processing/processing_service.hpp>
 #include <processing/processing_subtask_enqueuer_impl.hpp>
 #include <crdt/globaldb/globaldb.hpp>
@@ -198,16 +199,6 @@ namespace
         }
     };
 
-    class SubTaskResultStorageImpl : public SubTaskResultStorage
-    {
-    public:
-        void AddSubTaskResult(const SGProcessing::SubTaskResult& subTaskResult) override {}
-        void RemoveSubTaskResult(const std::string& subTaskId) override {}
-        void GetSubTaskResults(
-            const std::set<std::string>& subTaskIds,
-            std::vector<SGProcessing::SubTaskResult>& results) override {}
-    };
-
     class ProcessingCoreImpl : public ProcessingCore
     {
     public:
@@ -281,58 +272,58 @@ namespace
     };
 
 
-    class ProcessingTaskQueueImpl : public ProcessingTaskQueue
-    {
-    public:
-        ProcessingTaskQueueImpl()
-        {
-        }
+    //class ProcessingTaskQueueImpl : public ProcessingTaskQueue
+    //{
+    //public:
+    //    ProcessingTaskQueueImpl()
+    //    {
+    //    }
 
-        void EnqueueTask(
-            const SGProcessing::Task& task,
-            const std::list<SGProcessing::SubTask>& subTasks)
-        {
-            m_tasks.push_back(task);
-            m_subTasks.emplace(task.ipfs_block_id(), subTasks);
-        }
+    //    void EnqueueTask(
+    //        const SGProcessing::Task& task,
+    //        const std::list<SGProcessing::SubTask>& subTasks)
+    //    {
+    //        m_tasks.push_back(task);
+    //        m_subTasks.emplace(task.ipfs_block_id(), subTasks);
+    //    }
 
-        bool GetSubTasks(
-            const std::string& taskId,
-            std::list<SGProcessing::SubTask>& subTasks)
-        {
-            auto it = m_subTasks.find(taskId);
-            if (it != m_subTasks.end())
-            {
-                subTasks = it->second;
-                return true;
-            }
+    //    bool GetSubTasks(
+    //        const std::string& taskId,
+    //        std::list<SGProcessing::SubTask>& subTasks)
+    //    {
+    //        auto it = m_subTasks.find(taskId);
+    //        if (it != m_subTasks.end())
+    //        {
+    //            subTasks = it->second;
+    //            return true;
+    //        }
 
-            return false;
-        }
+    //        return false;
+    //    }
 
-        bool GrabTask(std::string& taskKey, SGProcessing::Task& task) override
-        {
-            if (m_tasks.empty())
-            {
-                return false;
-            }
+    //    bool GrabTask(std::string& taskKey, SGProcessing::Task& task) override
+    //    {
+    //        if (m_tasks.empty())
+    //        {
+    //            return false;
+    //        }
 
 
-            task = std::move(m_tasks.back());
-            m_tasks.pop_back();
-            taskKey = (boost::format("TASK_%d") % m_tasks.size()).str();
+    //        task = std::move(m_tasks.back());
+    //        m_tasks.pop_back();
+    //        taskKey = (boost::format("TASK_%d") % m_tasks.size()).str();
 
-            return true;
-        };
+    //        return true;
+    //    };
 
-        bool CompleteTask(const std::string& taskKey, const SGProcessing::TaskResult& task) override
-        {
-            return false;
-        }
+    //    bool CompleteTask(const std::string& taskKey, const SGProcessing::TaskResult& task) override
+    //    {
+    //        return false;
+    //    }
 
-    private:
-        std::list<SGProcessing::Task> m_tasks;
-        std::map<std::string, std::list<SGProcessing::SubTask>> m_subTasks;
-    };
+    //private:
+    //    std::list<SGProcessing::Task> m_tasks;
+    //    std::map<std::string, std::list<SGProcessing::SubTask>> m_subTasks;
+    //};
 
 }
