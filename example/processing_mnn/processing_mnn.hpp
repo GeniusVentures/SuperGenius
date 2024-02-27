@@ -139,10 +139,16 @@ namespace
             {
                 auto cidcheck = SplitImage.GetPartCID(i);
                 auto base58 = libp2p::multi::ContentIdentifierCodec::toString(cidcheck);
+                std::cout << "Base56:    " << base58.value() << std::endl;
+                std::cout << "Task BlockID  : " << task.ipfs_block_id() << std::endl;
+
                 auto subtaskId = (boost::format("subtask_%d") % i).str();
+
+                //auto subtaskId = base58.value();
                 SGProcessing::SubTask subtask;
                 subtask.set_ipfsblock(task.ipfs_block_id());
                 //std::cout << "BLOCK ID CHECK: " << task.ipfs_block_id() << std::endl;
+                std::cout << "Subtask ID :: " << subtaskId << std::endl;
                 subtask.set_subtaskid(subtaskId);
 
                 for (size_t chunkIdx = 0; chunkIdx < m_nChunks; ++chunkIdx)

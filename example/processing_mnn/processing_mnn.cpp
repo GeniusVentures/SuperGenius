@@ -11,7 +11,7 @@ sinks:
 groups:
   - name: gossip_pubsub_test
     sink: console
-    level: error
+    level: debug
     children:
       - name: libp2p
       - name: Gossip
@@ -41,13 +41,13 @@ int main(int argc, char* argv[])
     loggerProcessingQueueManager->set_level(spdlog::level::debug);
 
     auto loggerGlobalDB = sgns::base::createLogger("GlobalDB");
-    loggerGlobalDB->set_level(spdlog::level::debug);
+    loggerGlobalDB->set_level(spdlog::level::trace);
 
     auto loggerDAGSyncer = sgns::base::createLogger("GraphsyncDAGSyncer");
     loggerDAGSyncer->set_level(spdlog::level::trace);
 
     auto loggerBroadcaster = sgns::base::createLogger("PubSubBroadcasterExt");
-    loggerBroadcaster->set_level(spdlog::level::debug);
+    loggerBroadcaster->set_level(spdlog::level::trace);
 
     //Load Image
     const auto poseModel = argv[1];
@@ -62,6 +62,8 @@ int main(int argc, char* argv[])
     std::vector<std::string> receivedMessages;
     auto pubs = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>(
         sgns::crdt::KeyPairFileStorage("CRDT.Datastore.TEST/pubs_dapp").GetKeyPair().value());
+
+
     auto pubsubKeyPath = (boost::format("CRDT.Datastore.TEST.%d/pubs_processor") % 1).str();
     auto pubs2 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>(
         sgns::crdt::KeyPairFileStorage(pubsubKeyPath).GetKeyPair().value());
@@ -71,7 +73,7 @@ int main(int argc, char* argv[])
 
     
 
-    const size_t maximalNodesCount = 10;
+    const size_t maximalNodesCount = 1;
 
     std::list<SGProcessing::Task> tasks;
     size_t nTasks = 16;
@@ -79,10 +81,11 @@ int main(int argc, char* argv[])
     for (size_t taskIdx = 0; taskIdx < nTasks; ++taskIdx)
     {
         // And wait for its processing
-        std::cout << "INdex " << taskIdx << std::endl;
+        //std::cout << "INdex " << taskIdx << std::endl;
         std::cout << "CIDString: " << libp2p::multi::ContentIdentifierCodec::toString(imagesplit.GetPartCID(taskIdx)).value() << std::endl;
         SGProcessing::Task task;
         task.set_ipfs_block_id(libp2p::multi::ContentIdentifierCodec::toString(imagesplit.GetPartCID(taskIdx)).value());
+        //task.set_ipfs_block_id((boost::format("IPFS_BLOCK_ID_%1%") % (taskIdx + 1)).str());
         task.set_block_len(imagesplit.GetPartSize(taskIdx));
         task.set_block_line_stride(imagesplit.GetPartStride(taskIdx));
         task.set_block_stride(imagesplit.GetPartSize(taskIdx));
@@ -116,11 +119,11 @@ int main(int argc, char* argv[])
         taskSplitter.SplitTask(task, subTasks, imagesplit);
         taskQueue->EnqueueTask(task, subTasks);
     }
-
+    
     //Client
     pubs2->Start(40002, { pubs->GetLocalAddress() });
 
-    //GlobalDB?
+    //GlobalDB
     size_t serviceindex = 1;
     auto globalDB2 = std::make_shared<sgns::crdt::GlobalDB>(
         io,
@@ -134,32 +137,22 @@ int main(int argc, char* argv[])
     //auto processingCore = std::make_shared<ProcessingCoreImpl>(100000);
     auto enqueuer2 = std::make_shared<SubTaskEnqueuerImpl>(taskQueue2);
     //Processing Core
-    auto processingCore = std::make_shared<ProcessingCoreImpl>(
+    auto processingCore2 = std::make_shared<ProcessingCoreImpl>(
         globalDB2,
         1000000,
         2);
 
-    //ProcessingServiceImpl processingService(pubs2,
-    //    maximalNodesCount,
-    //    enqueuer2,
-    //    std::make_shared<SubTaskStateStorageImpl>(),
-    //    std::make_shared<SubTaskResultStorageImpl>(globalDB2),
-    //    processingCore);
     ProcessingServiceImpl processingService(
         pubs2,
         maximalNodesCount,
         enqueuer2,
         std::make_shared<SubTaskStateStorageImpl>(),
         std::make_shared<SubTaskResultStorageImpl>(globalDB2),
-        processingCore);
+        processingCore2);
 
     processingService.SetChannelListRequestTimeout(boost::posix_time::milliseconds(10000));
 
     processingService.StartProcessing(processingGridChannel);
-
-    //processingService2.SetChannelListRequestTimeout(boost::posix_time::milliseconds(1000));
-    //processingService2.StartProcessing(processingGridChannel);
-
 
     //Run ASIO
     std::thread iothread([io]() { io->run(); });
