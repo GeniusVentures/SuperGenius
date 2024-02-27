@@ -1,5 +1,5 @@
 #include "processing_mnn.hpp"
-#include <base/buffer.hpp>
+
 
 using GossipPubSub = sgns::ipfs_pubsub::GossipPubSub;
 const std::string logger_config(R"(
@@ -58,7 +58,7 @@ int main(int argc, char* argv[])
     //return 1;
     const std::string processingGridChannel = "GRID_CHANNEL_ID";
 
-    //Make Pubsubs
+    //Make Host Pubsubs
     std::vector<std::string> receivedMessages;
     auto pubs = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>(
         sgns::crdt::KeyPairFileStorage("CRDT.Datastore.TEST/pubs_dapp").GetKeyPair().value());
@@ -67,7 +67,7 @@ int main(int argc, char* argv[])
     //Start Pubsubs, add peers of other addresses.
     pubs->Start(40001, { pubs2->GetLocalAddress() });
 
-    pubs2->Start(40002, { pubs->GetLocalAddress() });
+    
 
     const size_t maximalNodesCount = 1;
 
@@ -90,41 +90,15 @@ int main(int argc, char* argv[])
     }
     //Asio Context
     auto io = std::make_shared<boost::asio::io_context>();
-    //Create Pubsub Topic
-    //auto topic = std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>(pubs, "CRDT.Datastore.TEST.Channel");
-    //topic->Subscribe([&](boost::optional<const GossipPubSub::Message&> message)
-    //    {
-    //        if (message)
-    //        {
-    //            std::string message(reinterpret_cast<const char*>(message->data.data()), message->data.size());
-    //            std::cout << "Pubs 1 Got message: " << message << std::endl;;
-    //        }
-    //    });
 
     //Add to GlobalDB
     auto globalDB = std::make_shared<sgns::crdt::GlobalDB>(
         io, "CRDT.Datastore.TEST", 40000,
         std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>(pubs, "CRDT.Datastore.TEST.Channel"));
 
-    auto pubsTopic2 = pubs2->Subscribe("CRDT.Datastore.TEST.Channel", [&](boost::optional<const GossipPubSub::Message&> message)
-        {
-            sgns::crdt::broadcasting::BroadcastMessage bmsg;
-            if (bmsg.ParseFromArray(message->data.data(), message->data.size()))
-            {
-                auto peerId = libp2p::peer::PeerId::fromBytes(message->from);
-                if (peerId.has_value())
-                {
-                    //base::Buffer buf;
-                    //buf.put(bmsg.data());
-                    //auto cids = dataStore_->DecodeBroadcast(buf);
-
-                }
-            }
-        }); 
-
     auto crdtOptions = sgns::crdt::CrdtOptions::DefaultOptions();
     globalDB->Init(crdtOptions);
-    std::thread iothread([io]() { io->run(); });
+    
 
     auto taskQueue = std::make_shared<sgns::processing::ProcessingTaskQueueImpl>(globalDB);
     size_t nSubTasks = 1;
@@ -141,29 +115,45 @@ int main(int argc, char* argv[])
         taskQueue->EnqueueTask(task, subTasks);
     }
 
-    //Processing Service
-    auto processingCore = std::make_shared<ProcessingCoreImpl>(100000);
+    //Client
+    pubs2->Start(40002, { pubs->GetLocalAddress() });
+
+    //GlobalDB?
+    size_t serviceindex = 1;
+    auto globalDB2 = std::make_shared<sgns::crdt::GlobalDB>(
+        io,
+        (boost::format("CRDT.Datastore.TEST.%d") % serviceindex).str(),
+        40010 + serviceindex,
+        std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>(pubs2, "CRDT.Datastore.TEST.Channel"));
+    auto crdtOptions2 = sgns::crdt::CrdtOptions::DefaultOptions();
+    auto initRes = globalDB2->Init(crdtOptions2);
+    //Processing Service Values
+    auto taskQueue2 = std::make_shared<sgns::processing::ProcessingTaskQueueImpl>(globalDB2);
+    //auto processingCore = std::make_shared<ProcessingCoreImpl>(100000);
     auto enqueuer = std::make_shared<SubTaskEnqueuerImpl>(taskQueue);
-    ProcessingServiceImpl processingService(pubs,
+    //Processing Core
+    auto processingCore = std::make_shared<ProcessingCoreImpl>(
+        globalDB2,
+        1000000,
+        2);
+
+    ProcessingServiceImpl processingService(pubs2,
         maximalNodesCount,
         enqueuer,
         std::make_shared<SubTaskStateStorageImpl>(),
         std::make_shared<SubTaskResultStorageImpl>(),
         processingCore);
 
-    ProcessingServiceImpl processingService2(pubs2,
-        maximalNodesCount,
-        enqueuer,
-        std::make_shared<SubTaskStateStorageImpl>(),
-        std::make_shared<SubTaskResultStorageImpl>(),
-        processingCore);
     processingService.SetChannelListRequestTimeout(boost::posix_time::milliseconds(1000));
 
     processingService.StartProcessing(processingGridChannel);
 
-    processingService2.SetChannelListRequestTimeout(boost::posix_time::milliseconds(1000));
-    processingService2.StartProcessing(processingGridChannel);
+    //processingService2.SetChannelListRequestTimeout(boost::posix_time::milliseconds(1000));
+    //processingService2.StartProcessing(processingGridChannel);
 
+
+    //Run ASIO
+    std::thread iothread([io]() { io->run(); });
     // Gracefully shutdown on signal
     boost::asio::signal_set signals(*pubs->GetAsioContext(), SIGINT, SIGTERM);
     signals.async_wait(

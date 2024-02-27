@@ -211,8 +211,14 @@ namespace
     class ProcessingCoreImpl : public ProcessingCore
     {
     public:
-        ProcessingCoreImpl(size_t subTaskProcessingTime)
-            : m_subTaskProcessingTime(subTaskProcessingTime)
+        ProcessingCoreImpl(
+            std::shared_ptr<sgns::crdt::GlobalDB> db,
+            size_t subTaskProcessingTime,
+            size_t maximalProcessingSubTaskCount)
+            : m_db(db)
+            , m_subTaskProcessingTime(subTaskProcessingTime)
+            , m_maximalProcessingSubTaskCount(maximalProcessingSubTaskCount)
+            , m_processingSubTaskCount(0)
         {
         }
 
@@ -220,14 +226,58 @@ namespace
             const SGProcessing::SubTask& subTask, SGProcessing::SubTaskResult& result,
             uint32_t initialHashCode) override
         {
-            std::cout << "SubTask processing started. " << subTask.subtaskid() << std::endl;
+            {
+                std::scoped_lock<std::mutex> subTaskCountLock(m_subTaskCountMutex);
+                ++m_processingSubTaskCount;
+                if ((m_maximalProcessingSubTaskCount > 0)
+                    && (m_processingSubTaskCount > m_maximalProcessingSubTaskCount))
+                {
+                    // Reset the counter to allow processing restart
+                    m_processingSubTaskCount = 0;
+                    throw std::runtime_error("Maximal number of processed subtasks exceeded");
+                }
+            }
+
             std::this_thread::sleep_for(std::chrono::milliseconds(m_subTaskProcessingTime));
-            std::cout << "SubTask processed. " << subTask.subtaskid() << std::endl;
             result.set_ipfs_results_data_id((boost::format("%s_%s") % "RESULT_IPFS" % subTask.subtaskid()).str());
+
+            bool isValidationSubTask = (subTask.subtaskid() == "subtask_validation");
+            size_t subTaskResultHash = initialHashCode;
+            for (int chunkIdx = 0; chunkIdx < subTask.chunkstoprocess_size(); ++chunkIdx)
+            {
+                const auto& chunk = subTask.chunkstoprocess(chunkIdx);
+
+                // Chunk result hash should be calculated
+                // Chunk data hash is calculated just as a stub
+                size_t chunkHash = 0;
+                if (isValidationSubTask)
+                {
+                    chunkHash = ((size_t)chunkIdx < m_validationChunkHashes.size()) ?
+                        m_validationChunkHashes[chunkIdx] : std::hash<std::string>{}(chunk.SerializeAsString());
+                }
+                else
+                {
+                    chunkHash = ((size_t)chunkIdx < m_chunkResulHashes.size()) ?
+                        m_chunkResulHashes[chunkIdx] : std::hash<std::string>{}(chunk.SerializeAsString());
+                }
+
+                result.add_chunk_hashes(chunkHash);
+                boost::hash_combine(subTaskResultHash, chunkHash);
+            }
+
+            result.set_result_hash(subTaskResultHash);
         }
 
+        std::vector<size_t> m_chunkResulHashes;
+        std::vector<size_t> m_validationChunkHashes;
+
     private:
+        std::shared_ptr<sgns::crdt::GlobalDB> m_db;
         size_t m_subTaskProcessingTime;
+        size_t m_maximalProcessingSubTaskCount;
+
+        std::mutex m_subTaskCountMutex;
+        size_t m_processingSubTaskCount;
     };
 
 
