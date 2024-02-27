@@ -19,6 +19,7 @@
 #include "integration/TranscationPoolFactory.hpp"
 #include "integration/PoolModeratorFactory.hpp"
 #include "integration/ExtrinsicGossiperFactory.hpp"
+#include "integration/ProductionFactory.hpp"
 
 #include "storage/trie/supergenius_trie/supergenius_trie_factory_impl.hpp"
 #include "storage/trie/serialization/supergenius_codec.hpp"
@@ -42,17 +43,20 @@ namespace sgns::application
         // genesis launch if database does not exist
         production_execution_strategy_ = boost::filesystem::exists( app_config->rocksdb_path() ) ? Production::ExecutionStrategy::SYNC_FIRST :
                                                                                                    Production::ExecutionStrategy::GENESIS;
-        auto component_factory         = SINGLETONINSTANCE( CComponentFactory );
+
+        io_context_            = std::make_shared<boost::asio::io_context>();
+        auto component_factory = SINGLETONINSTANCE( CComponentFactory );
 
         component_factory->Register( std::make_shared<sgns::application::AppStateManagerImpl>(), "AppStateManager", boost::none );
         component_factory->Register( ConfigurationStorageFactory::create( app_config->genesis_path() ), "ConfigurationStorage", boost::none );
         component_factory->Register( KeyStorageFactory::create( app_config->keystore_path() ), "KeyStorage", boost::none );
         component_factory->Register( SystemClockFactory::create(), "SystemClock", boost::none );
 
-        component_factory->Register( BufferStorageFactory::create( "rocksdb", app_config->rocksdb_path() ), "BufferStorage", boost::make_optional(std::string("rocksdb")) );
+        component_factory->Register( BufferStorageFactory::create( "rocksdb", app_config->rocksdb_path() ), "BufferStorage",
+                                     boost::make_optional( std::string( "rocksdb" ) ) );
         component_factory->Register( HasherFactory::create(), "Hasher", boost::none );
-        component_factory->Register( VRFProviderFactory::create(), "VRFProvider", boost::none ); 
-        component_factory->Register( ProductionLotteryFactory::create(), "ProductionLottery", boost::none ); 
+        component_factory->Register( VRFProviderFactory::create(), "VRFProvider", boost::none );
+        component_factory->Register( ProductionLotteryFactory::create(), "ProductionLottery", boost::none );
         component_factory->Register( BlockHeaderRepositoryFactory::create( "rocksdb" ), "BlockHeaderRepository", boost::none );
         component_factory->Register( std::make_shared<sgns::storage::trie::SuperGeniusTrieFactoryImpl>(), "SuperGeniusTrieFactory", boost::none );
         component_factory->Register( std::make_shared<sgns::storage::trie::SuperGeniusCodec>(), "Codec", boost::none );
@@ -67,33 +71,47 @@ namespace sgns::application
         component_factory->Register( AuthorApiFactory::create(), "AuthorApi", boost::none );
         component_factory->Register( ExtrinsicObserverFactory::create(), "ExtrinsicObserver", boost::none );
         component_factory->Register( BlockTreeFactory::create(), "BlockTree", boost::none );
+        component_factory->Register( ProductionFactory::create(*io_context_), "Production", boost::none );
 
         auto result = component_factory->GetComponent( "AppStateManager", boost::none );
-        if ( result )
+        if ( !result )
         {
-            app_state_manager_ = std::dynamic_pointer_cast<sgns::application::AppStateManager>( result.value() );
+            throw std::runtime_error( "AppStateManager not registered " );
         }
+        app_state_manager_ = std::dynamic_pointer_cast<sgns::application::AppStateManager>( result.value() );
+
         result = component_factory->GetComponent( "ConfigurationStorage", boost::none );
-        if ( result )
+        if ( !result )
         {
-            config_storage_ = std::dynamic_pointer_cast<sgns::application::ConfigurationStorage>( result.value() );
+            throw std::runtime_error( "ConfigurationStorage not registered " );
         }
+        config_storage_ = std::dynamic_pointer_cast<sgns::application::ConfigurationStorage>( result.value() );
+
         result = component_factory->GetComponent( "KeyStorage", boost::none );
-        if ( result )
+        if ( !result )
         {
-            key_storage_ = std::dynamic_pointer_cast<sgns::application::KeyStorage>( result.value() );
+            throw std::runtime_error( "KeyStorage not registered " );
         }
+        key_storage_ = std::dynamic_pointer_cast<sgns::application::KeyStorage>( result.value() );
+
         result = component_factory->GetComponent( "SystemClock", boost::none );
-        if ( result )
+        if ( !result )
         {
-            clock_ = std::dynamic_pointer_cast<sgns::clock::SystemClock>( result.value() );
+            throw std::runtime_error( "SystemClock not registered " );
         }
+        clock_ = std::dynamic_pointer_cast<sgns::clock::SystemClock>( result.value() );
+
+        result = component_factory->GetComponent( "Production", boost::none );
+        if ( !result )
+        {
+            throw std::runtime_error( "Production not registered " );
+        }
+        production_ = std::dynamic_pointer_cast<sgns::verification::Production>( result.value() );
         //production_        = std::make_shared<verification::ProductionImpl>();
         //finality_          = std::make_shared<verification::finality::FinalityImpl>();
         //router_            = std::make_shared<network::RouterLibp2p>();
 
         //jrpc_api_service_ = std::make_shared<api::ApiService>();
-        io_context_ = std::make_shared<boost::asio::io_context>();
     }
 
     void ValidatingNodeApplication::run()

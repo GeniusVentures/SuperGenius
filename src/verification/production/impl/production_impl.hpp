@@ -87,6 +87,11 @@ namespace sgns::verification {
 
     void onBlockAnnounce(const network::BlockAnnounce &announce) override;
 
+    std::string GetName() override
+    {
+      return "ProductionImpl";
+    }
+
     ProductionMeta getProductionMeta() const;
 
    private:

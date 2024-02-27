@@ -30,6 +30,8 @@ add_executable (sgns_demo
       author_api_service
       transaction_pool
       gossiper_broadcast
+      waitable_timer
+      production
       p2p::p2p_basic_host
       p2p::p2p_default_network
       p2p::p2p_peer_repository
