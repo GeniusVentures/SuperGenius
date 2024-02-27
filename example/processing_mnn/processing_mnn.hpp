@@ -1,27 +1,26 @@
-#include "ipfs_pubsub/gossip_pubsub.hpp"
-#include "processing_task_queue_impl.hpp"
-#include <processing/processing_service.hpp>
-#include <processing/processing_subtask_enqueuer_impl.hpp>
-
 #include <math.h>
 #include <fstream>
 #include <memory>
-#include <crdt/globaldb/globaldb.hpp>
-#include <crdt/globaldb/keypair_file_storage.hpp>
 #include <iostream>
-#include <spdlog/sinks/basic_file_sink.h>
-#include <libp2p/log/configurator.hpp>
-#include <libp2p/log/logger.hpp>
-#include <openssl/sha.h>
-
-#include <boost/program_options.hpp>
-#include <boost/format.hpp>
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "imageHelper/stb_image.h"
 #include "imageHelper/stb_image_write.h"
+#include "ipfs_pubsub/gossip_pubsub.hpp"
+#include "processing_task_queue_impl.hpp"
+#include <processing/processing_service.hpp>
+#include <processing/processing_subtask_enqueuer_impl.hpp>
+#include <crdt/globaldb/globaldb.hpp>
+#include <crdt/globaldb/keypair_file_storage.hpp>
+#include <crdt/globaldb/proto/broadcast.pb.h>
+#include <spdlog/sinks/basic_file_sink.h>
+#include <libp2p/log/configurator.hpp>
+#include <libp2p/log/logger.hpp>
 #include <libp2p/multi/multibase_codec/multibase_codec_impl.hpp>
 #include <libp2p/multi/content_identifier_codec.hpp>
+#include <openssl/sha.h>
+#include <boost/program_options.hpp>
+#include <boost/format.hpp>
 
 namespace
 {

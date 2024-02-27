@@ -1,4 +1,5 @@
 #include "processing_mnn.hpp"
+#include <base/buffer.hpp>
 
 using GossipPubSub = sgns::ipfs_pubsub::GossipPubSub;
 const std::string logger_config(R"(
@@ -105,15 +106,21 @@ int main(int argc, char* argv[])
         io, "CRDT.Datastore.TEST", 40000,
         std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>(pubs, "CRDT.Datastore.TEST.Channel"));
 
-    //auto pubsTopic2 = pubs2->Subscribe("CRDT.Datastore.TEST.Channel", [&](boost::optional<const GossipPubSub::Message&> message)
-    //    {
-    //        if (message)
-    //        {
-    //            std::string message(reinterpret_cast<const char*>(message->data.data()), message->data.size());
-    //            std::cout << "Pubs 2 Got message: " << message << std::endl;
-    //            //receivedMessages.push_back(std::move(message));
-    //        }
-    //    });
+    auto pubsTopic2 = pubs2->Subscribe("CRDT.Datastore.TEST.Channel", [&](boost::optional<const GossipPubSub::Message&> message)
+        {
+            sgns::crdt::broadcasting::BroadcastMessage bmsg;
+            if (bmsg.ParseFromArray(message->data.data(), message->data.size()))
+            {
+                auto peerId = libp2p::peer::PeerId::fromBytes(message->from);
+                if (peerId.has_value())
+                {
+                    //base::Buffer buf;
+                    //buf.put(bmsg.data());
+                    //auto cids = dataStore_->DecodeBroadcast(buf);
+
+                }
+            }
+        }); 
 
     auto crdtOptions = sgns::crdt::CrdtOptions::DefaultOptions();
     globalDB->Init(crdtOptions);
