@@ -6,6 +6,7 @@
 #include <gsl/span>
 #include <outcome/outcome.hpp>
 #include "crypto/sr25519_types.hpp"
+#include "integration/IComponent.hpp"
 
 namespace sgns::crypto {
 
@@ -19,7 +20,7 @@ namespace sgns::crypto {
                              // method of bound function
   };
 
-  class SR25519Provider {
+  class SR25519Provider : public IComponent {
    public:
     virtual ~SR25519Provider() = default;
 
