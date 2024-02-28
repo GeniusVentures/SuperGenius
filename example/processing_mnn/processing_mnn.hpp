@@ -56,6 +56,18 @@ namespace
                     splitparts_.push_back(chunkBuffer);
                     chunkWidthActual_.push_back(chunkWidthActual);
                     chunkHeightActual_.push_back(chunkHeightActual);
+                    gsl::span<const uint8_t> byte_span(chunkBuffer);
+                    std::vector<uint8_t> shahash(SHA256_DIGEST_LENGTH);
+                    SHA256_CTX sha256;
+                    SHA256_Init(&sha256);
+                    SHA256_Update(&sha256, chunkBuffer.data(), chunkBuffer.size());
+                    SHA256_Final(shahash.data(), &sha256);
+                    auto hash = libp2p::multi::Multihash::create(libp2p::multi::HashType::sha256, shahash);
+                    cids_.push_back(libp2p::multi::ContentIdentifier(
+                        libp2p::multi::ContentIdentifier::Version::V0,
+                        libp2p::multi::MulticodecType::Code::DAG_PB,
+                        hash.value()
+                    ));
                 }
             }
         }
@@ -63,6 +75,28 @@ namespace
         std::vector<uint8_t> GetPart(int part)
         {
             return splitparts_.at(part);
+        }
+
+        std::vector<uint8_t> GetPartByCid(libp2p::multi::ContentIdentifier cid)
+        {
+            //Find the index of cid in cids_
+            auto it = std::find(cids_.begin(), cids_.end(), cid);
+            if (it == cids_.end()) {
+                //CID not found
+                return {};
+            }
+
+            //Find index in splitparts_ corresponding to cid
+            size_t index = std::distance(cids_.begin(), it);
+
+            //Return the data
+            if (index < splitparts_.size()) {
+                return splitparts_[index];
+            }
+            else {
+                //Index out of range
+                return {}; 
+            }
         }
 
         uint32_t GetPartSize(int part)
@@ -74,7 +108,6 @@ namespace
         {
             return chunkWidthActual_.at(part);
         }
-
 
         size_t GetPartCount()
         {
@@ -88,19 +121,7 @@ namespace
 
         libp2p::multi::ContentIdentifier GetPartCID(int part)
         {
-            gsl::span<const uint8_t> byte_span(splitparts_.at(part));
-            std::vector<uint8_t> shahash(SHA256_DIGEST_LENGTH);
-            SHA256_CTX sha256;
-            SHA256_Init(&sha256);
-            SHA256_Update(&sha256, splitparts_.at(part).data(), splitparts_.at(part).size());
-            SHA256_Final(shahash.data(), &sha256);
-
-            auto hash = libp2p::multi::Multihash::create(libp2p::multi::HashType::sha256, shahash);
-            return libp2p::multi::ContentIdentifier(
-                libp2p::multi::ContentIdentifier::Version::V0,
-                libp2p::multi::MulticodecType::Code::DAG_PB,
-                hash.value()
-            );
+            return cids_.at(part);
         }
 
     private:
@@ -111,6 +132,7 @@ namespace
         size_t imageSize;
         std::vector<int> chunkWidthActual_;
         std::vector<int> chunkHeightActual_;
+        std::vector<libp2p::multi::ContentIdentifier> cids_;
     };
 
     class TaskSplitter
@@ -234,7 +256,7 @@ namespace
                     throw std::runtime_error("Maximal number of processed subtasks exceeded");
                 }
             }
-            std::cout << "Process subtask" << std::endl;
+            std::cout << "Process subtask " << subTask.subtaskid() << std::endl;
             std::this_thread::sleep_for(std::chrono::milliseconds(m_subTaskProcessingTime));
             result.set_ipfs_results_data_id((boost::format("%s_%s") % "RESULT_IPFS" % subTask.subtaskid()).str());
 

@@ -1,5 +1,6 @@
 #include "processing_mnn.hpp"
-
+#include "bitswap.hpp"
+#include <libp2p/injector/host_injector.hpp>
 
 using GossipPubSub = sgns::ipfs_pubsub::GossipPubSub;
 const std::string logger_config(R"(
@@ -63,11 +64,6 @@ int main(int argc, char* argv[])
     auto pubs = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>(
         sgns::crdt::KeyPairFileStorage("CRDT.Datastore.TEST/pubs_dapp").GetKeyPair().value());
 
-
-    //auto pubsubKeyPath = (boost::format("CRDT.Datastore.TEST.%d/pubs_processor") % 1).str();
-    //auto pubs2 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>(
-    //    sgns::crdt::KeyPairFileStorage(pubsubKeyPath).GetKeyPair().value());
-
     //Start Pubsubs, add peers of other addresses.
     pubs->Start(40001, { "/ip4/192.168.46.18/tcp/40002/p2p/12D3KooWDWi6q5Q67J7iox3P2xUoJtApE3eqtXB1c9wiJGDVTnAh" });
 
@@ -119,40 +115,13 @@ int main(int argc, char* argv[])
         taskSplitter.SplitTask(task, subTasks, imagesplit);
         taskQueue->EnqueueTask(task, subTasks);
     }
-    //std::cout << "LOCALADDRESS ::: " << pubs->GetLocalAddress() << std::endl;
-    ////Client
-    //pubs2->Start(40002, { pubs->GetLocalAddress() });
 
-    ////GlobalDB
-    //size_t serviceindex = 1;
-    //auto globalDB2 = std::make_shared<sgns::crdt::GlobalDB>(
-    //    io,
-    //    (boost::format("CRDT.Datastore.TEST.%d") % serviceindex).str(),
-    //    40010 + serviceindex,
-    //    std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>(pubs2, "CRDT.Datastore.TEST.Channel"));
-    //auto crdtOptions2 = sgns::crdt::CrdtOptions::DefaultOptions();
-    //auto initRes = globalDB2->Init(crdtOptions2);
-    ////Processing Service Values
-    //auto taskQueue2 = std::make_shared<sgns::processing::ProcessingTaskQueueImpl>(globalDB2);
-    ////auto processingCore = std::make_shared<ProcessingCoreImpl>(100000);
-    //auto enqueuer2 = std::make_shared<SubTaskEnqueuerImpl>(taskQueue2);
-    ////Processing Core
-    //auto processingCore2 = std::make_shared<ProcessingCoreImpl>(
-    //    globalDB2,
-    //    1000000,
-    //    2);
-
-    //ProcessingServiceImpl processingService(
-    //    pubs2,
-    //    maximalNodesCount,
-    //    enqueuer2,
-    //    std::make_shared<SubTaskStateStorageImpl>(),
-    //    std::make_shared<SubTaskResultStorageImpl>(globalDB2),
-    //    processingCore2);
-
-    //processingService.SetChannelListRequestTimeout(boost::posix_time::milliseconds(10000));
-
-    //processingService.StartProcessing(processingGridChannel);
+    //auto injector = libp2p::injector::makeHostInjector();
+    //auto iobs = injector.create<std::shared_ptr<boost::asio::io_context>>();
+    //auto host = injector.create<std::shared_ptr<libp2p::Host>>();
+    //auto ma = libp2p::multi::Multiaddress::create("/ip4/127.0.0.1/tcp/43000").value();
+    //auto bitswap = std::make_shared<sgns::ipfs_bitswap::Bitswap>(*host, host->getBus(), io);
+    //bitswap->
 
     
     //Run ASIO

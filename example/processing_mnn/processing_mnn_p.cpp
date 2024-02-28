@@ -53,11 +53,10 @@ int main(int argc, char* argv[])
     const auto poseModel = argv[1];
     const auto inputImageFileName = argv[2];
 
+    ImageSplitter imagesplit(inputImageFileName, 128, 128);
+
 
     const std::string processingGridChannel = "GRID_CHANNEL_ID";
-
-
-
 
     auto pubsubKeyPath = (boost::format("CRDT.Datastore.TEST.%d/pubs_processor") % 1).str();
     auto pubs2 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>(
