@@ -234,7 +234,7 @@ namespace
                     throw std::runtime_error("Maximal number of processed subtasks exceeded");
                 }
             }
-
+            std::cout << "Process subtask" << std::endl;
             std::this_thread::sleep_for(std::chrono::milliseconds(m_subTaskProcessingTime));
             result.set_ipfs_results_data_id((boost::format("%s_%s") % "RESULT_IPFS" % subTask.subtaskid()).str());
 

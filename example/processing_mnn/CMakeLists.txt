@@ -81,6 +81,7 @@ target_link_libraries(processing_mnn_p PRIVATE
 	ipfs-pubsub
     ${WIN_CRYPT_LIBRARY}
 	${MNN_LIBS}
+	AsyncIOManager
     )
 include_directories(../include)
 include_directories(./imageHelper)

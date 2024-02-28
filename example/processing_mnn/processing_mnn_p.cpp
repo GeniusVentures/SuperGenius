@@ -109,6 +109,7 @@ int main(int argc, char* argv[])
     processingService.StartProcessing(processingGridChannel);
 
     
+    
     //Run ASIO
     std::thread iothread([io]() { io->run(); });
     // Gracefully shutdown on signal
