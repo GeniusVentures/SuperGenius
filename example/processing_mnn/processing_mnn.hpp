@@ -22,7 +22,7 @@
 #include <openssl/sha.h>
 #include <boost/program_options.hpp>
 #include <boost/format.hpp>
-
+#include <ipfs_lite/ipfs/graphsync/graphsync.hpp>
 namespace
 {
     class ImageSplitter

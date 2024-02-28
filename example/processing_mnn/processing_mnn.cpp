@@ -64,19 +64,19 @@ int main(int argc, char* argv[])
         sgns::crdt::KeyPairFileStorage("CRDT.Datastore.TEST/pubs_dapp").GetKeyPair().value());
 
 
-    auto pubsubKeyPath = (boost::format("CRDT.Datastore.TEST.%d/pubs_processor") % 1).str();
-    auto pubs2 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>(
-        sgns::crdt::KeyPairFileStorage(pubsubKeyPath).GetKeyPair().value());
+    //auto pubsubKeyPath = (boost::format("CRDT.Datastore.TEST.%d/pubs_processor") % 1).str();
+    //auto pubs2 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>(
+    //    sgns::crdt::KeyPairFileStorage(pubsubKeyPath).GetKeyPair().value());
 
     //Start Pubsubs, add peers of other addresses.
-    pubs->Start(40001, { pubs2->GetLocalAddress() });
+    pubs->Start(40001, { "/ip4/192.168.46.18/tcp/40002/p2p/12D3KooWDWi6q5Q67J7iox3P2xUoJtApE3eqtXB1c9wiJGDVTnAh" });
 
     
 
     const size_t maximalNodesCount = 1;
 
     std::list<SGProcessing::Task> tasks;
-    size_t nTasks = 16;
+    size_t nTasks = 1;
     // Put tasks to Global DB
     for (size_t taskIdx = 0; taskIdx < nTasks; ++taskIdx)
     {
@@ -84,8 +84,8 @@ int main(int argc, char* argv[])
         //std::cout << "INdex " << taskIdx << std::endl;
         std::cout << "CIDString: " << libp2p::multi::ContentIdentifierCodec::toString(imagesplit.GetPartCID(taskIdx)).value() << std::endl;
         SGProcessing::Task task;
-        task.set_ipfs_block_id(libp2p::multi::ContentIdentifierCodec::toString(imagesplit.GetPartCID(taskIdx)).value());
-        //task.set_ipfs_block_id((boost::format("IPFS_BLOCK_ID_%1%") % (taskIdx + 1)).str());
+        //task.set_ipfs_block_id(libp2p::multi::ContentIdentifierCodec::toString(imagesplit.GetPartCID(taskIdx)).value());
+        task.set_ipfs_block_id((boost::format("IPFS_BLOCK_ID_%1%") % (taskIdx + 1)).str());
         task.set_block_len(imagesplit.GetPartSize(taskIdx));
         task.set_block_line_stride(imagesplit.GetPartStride(taskIdx));
         task.set_block_stride(imagesplit.GetPartSize(taskIdx));
@@ -106,8 +106,8 @@ int main(int argc, char* argv[])
     
 
     auto taskQueue = std::make_shared<sgns::processing::ProcessingTaskQueueImpl>(globalDB);
-    size_t nSubTasks = 1;
-    size_t nChunks = 1;
+    size_t nSubTasks = 2;
+    size_t nChunks = 2;
     TaskSplitter taskSplitter(
         nSubTasks,
         nChunks,
@@ -119,41 +119,42 @@ int main(int argc, char* argv[])
         taskSplitter.SplitTask(task, subTasks, imagesplit);
         taskQueue->EnqueueTask(task, subTasks);
     }
+    //std::cout << "LOCALADDRESS ::: " << pubs->GetLocalAddress() << std::endl;
+    ////Client
+    //pubs2->Start(40002, { pubs->GetLocalAddress() });
+
+    ////GlobalDB
+    //size_t serviceindex = 1;
+    //auto globalDB2 = std::make_shared<sgns::crdt::GlobalDB>(
+    //    io,
+    //    (boost::format("CRDT.Datastore.TEST.%d") % serviceindex).str(),
+    //    40010 + serviceindex,
+    //    std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>(pubs2, "CRDT.Datastore.TEST.Channel"));
+    //auto crdtOptions2 = sgns::crdt::CrdtOptions::DefaultOptions();
+    //auto initRes = globalDB2->Init(crdtOptions2);
+    ////Processing Service Values
+    //auto taskQueue2 = std::make_shared<sgns::processing::ProcessingTaskQueueImpl>(globalDB2);
+    ////auto processingCore = std::make_shared<ProcessingCoreImpl>(100000);
+    //auto enqueuer2 = std::make_shared<SubTaskEnqueuerImpl>(taskQueue2);
+    ////Processing Core
+    //auto processingCore2 = std::make_shared<ProcessingCoreImpl>(
+    //    globalDB2,
+    //    1000000,
+    //    2);
+
+    //ProcessingServiceImpl processingService(
+    //    pubs2,
+    //    maximalNodesCount,
+    //    enqueuer2,
+    //    std::make_shared<SubTaskStateStorageImpl>(),
+    //    std::make_shared<SubTaskResultStorageImpl>(globalDB2),
+    //    processingCore2);
+
+    //processingService.SetChannelListRequestTimeout(boost::posix_time::milliseconds(10000));
+
+    //processingService.StartProcessing(processingGridChannel);
+
     
-    //Client
-    pubs2->Start(40002, { pubs->GetLocalAddress() });
-
-    //GlobalDB
-    size_t serviceindex = 1;
-    auto globalDB2 = std::make_shared<sgns::crdt::GlobalDB>(
-        io,
-        (boost::format("CRDT.Datastore.TEST.%d") % serviceindex).str(),
-        40010 + serviceindex,
-        std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>(pubs2, "CRDT.Datastore.TEST.Channel"));
-    auto crdtOptions2 = sgns::crdt::CrdtOptions::DefaultOptions();
-    auto initRes = globalDB2->Init(crdtOptions2);
-    //Processing Service Values
-    auto taskQueue2 = std::make_shared<sgns::processing::ProcessingTaskQueueImpl>(globalDB2);
-    //auto processingCore = std::make_shared<ProcessingCoreImpl>(100000);
-    auto enqueuer2 = std::make_shared<SubTaskEnqueuerImpl>(taskQueue2);
-    //Processing Core
-    auto processingCore2 = std::make_shared<ProcessingCoreImpl>(
-        globalDB2,
-        1000000,
-        2);
-
-    ProcessingServiceImpl processingService(
-        pubs2,
-        maximalNodesCount,
-        enqueuer2,
-        std::make_shared<SubTaskStateStorageImpl>(),
-        std::make_shared<SubTaskResultStorageImpl>(globalDB2),
-        processingCore2);
-
-    processingService.SetChannelListRequestTimeout(boost::posix_time::milliseconds(10000));
-
-    processingService.StartProcessing(processingGridChannel);
-
     //Run ASIO
     std::thread iothread([io]() { io->run(); });
     // Gracefully shutdown on signal
