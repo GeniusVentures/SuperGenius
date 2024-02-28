@@ -6,6 +6,7 @@
 #include "primitives/authority.hpp"
 #include "primitives/block.hpp"
 #include "primitives/block_id.hpp"
+#include "integration/IComponent.hpp"
 
 namespace sgns::verification {
 
@@ -13,7 +14,7 @@ namespace sgns::verification {
    * @brief Iterates over the list of accessible peers and tries to fetch
    * missing blocks from them
    */
-  class ProductionSynchronizer {
+  class ProductionSynchronizer : public IComponent {
    public:
     using BlocksHandler =
         std::function<void(const std::vector<primitives::Block> &)>;

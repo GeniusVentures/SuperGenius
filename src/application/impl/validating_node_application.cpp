@@ -21,6 +21,10 @@
 #include "integration/ExtrinsicGossiperFactory.hpp"
 #include "integration/ProductionFactory.hpp"
 #include "integration/BlockExecutorFactory.hpp"
+#include "integration/ProductionConfigurationFactory.hpp"
+#include "integration/ProductionSynchronizerFactory.hpp"
+#include "integration/OwnPeerInfoFactory.hpp"
+#include "integration/BlockValidatorFactory.hpp"
 
 #include "storage/trie/supergenius_trie/supergenius_trie_factory_impl.hpp"
 #include "storage/trie/serialization/supergenius_codec.hpp"
@@ -72,6 +76,10 @@ namespace sgns::application
         component_factory->Register( AuthorApiFactory::create(), "AuthorApi", boost::none );
         component_factory->Register( ExtrinsicObserverFactory::create(), "ExtrinsicObserver", boost::none );
         component_factory->Register( BlockTreeFactory::create(), "BlockTree", boost::none );
+        component_factory->Register( BlockValidatorFactory::create(), "BlockValidator", boost::none );
+        component_factory->Register( OwnPeerInfoFactory::create(app_config->p2p_port()), "OwnPeerInfo", boost::none );
+        component_factory->Register( ProductionConfigurationFactory::create(), "ProductionConfiguration", boost::none );
+        component_factory->Register( ProductionSynchronizerFactory::create(), "ProductionSynchronizer", boost::none );
         component_factory->Register( BlockExecutorFactory::create(), "BlockExecutor", boost::none );
         component_factory->Register( ProductionFactory::create(*io_context_), "Production", boost::none );
 

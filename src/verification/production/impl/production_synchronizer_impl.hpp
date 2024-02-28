@@ -28,6 +28,11 @@ namespace sgns::verification {
                  primitives::AuthorityIndex authority_index,
                  const BlocksHandler &block_list_handler) override;
 
+    std::string GetName() override
+    {
+      return "ProductionSynchronizerImpl";
+    }
+
    private:
     /**
      * Select next client to be polled

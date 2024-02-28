@@ -16,6 +16,7 @@ namespace sgns::verification {
                       const primitives::BlockHash &,
                       primitives::AuthorityIndex,
                       const BlocksHandler &));
+    MOCK_METHOD0(GetName, std::string());
   };
 
 }  // namespace sgns::verification

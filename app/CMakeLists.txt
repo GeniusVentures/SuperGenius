@@ -32,6 +32,10 @@ add_executable (sgns_demo
       gossiper_broadcast
       waitable_timer
       production
+      remote_sync_protocol_client
+      dummy_sync_protocol_client
+      production_synchronizer
+      block_validator
       p2p::p2p_basic_host
       p2p::p2p_default_network
       p2p::p2p_peer_repository
