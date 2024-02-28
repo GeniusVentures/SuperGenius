@@ -20,6 +20,7 @@
 #include "integration/PoolModeratorFactory.hpp"
 #include "integration/ExtrinsicGossiperFactory.hpp"
 #include "integration/ProductionFactory.hpp"
+#include "integration/BlockExecutorFactory.hpp"
 
 #include "storage/trie/supergenius_trie/supergenius_trie_factory_impl.hpp"
 #include "storage/trie/serialization/supergenius_codec.hpp"
@@ -71,6 +72,7 @@ namespace sgns::application
         component_factory->Register( AuthorApiFactory::create(), "AuthorApi", boost::none );
         component_factory->Register( ExtrinsicObserverFactory::create(), "ExtrinsicObserver", boost::none );
         component_factory->Register( BlockTreeFactory::create(), "BlockTree", boost::none );
+        component_factory->Register( BlockExecutorFactory::create(), "BlockExecutor", boost::none );
         component_factory->Register( ProductionFactory::create(*io_context_), "Production", boost::none );
 
         auto result = component_factory->GetComponent( "AppStateManager", boost::none );
