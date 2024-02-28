@@ -28,6 +28,9 @@ namespace
     class ImageSplitter
     {
     public:
+        ImageSplitter() {
+
+        }
         ImageSplitter(
             const char* filename,
             int width,
@@ -241,6 +244,10 @@ namespace
         {
         }
 
+        void setImageSplitter(const ImageSplitter& imagesplit) {
+            imagesplit_ = imagesplit;
+        }
+
         void  ProcessSubTask(
             const SGProcessing::SubTask& subTask, SGProcessing::SubTaskResult& result,
             uint32_t initialHashCode) override
@@ -256,35 +263,40 @@ namespace
                     throw std::runtime_error("Maximal number of processed subtasks exceeded");
                 }
             }
+            std::cout << "Test CID:       " << imagesplit_.GetPartCID(1).toPrettyString("") << std::endl;
             std::cout << "Process subtask " << subTask.subtaskid() << std::endl;
-            std::this_thread::sleep_for(std::chrono::milliseconds(m_subTaskProcessingTime));
-            result.set_ipfs_results_data_id((boost::format("%s_%s") % "RESULT_IPFS" % subTask.subtaskid()).str());
+            std::cout << "IPFS BLOCK:           " << subTask.ipfsblock() << std::endl;
+            
+            //auto hash = libp2p::multi::Multihash::create()
+            auto data = imagesplit_.GetPartByCid(sgns::CID::fromString(subTask.ipfsblock()).value());
+            //std::this_thread::sleep_for(std::chrono::milliseconds(m_subTaskProcessingTime));
+            //result.set_ipfs_results_data_id((boost::format("%s_%s") % "RESULT_IPFS" % subTask.subtaskid()).str());
 
-            bool isValidationSubTask = (subTask.subtaskid() == "subtask_validation");
-            size_t subTaskResultHash = initialHashCode;
-            for (int chunkIdx = 0; chunkIdx < subTask.chunkstoprocess_size(); ++chunkIdx)
-            {
-                const auto& chunk = subTask.chunkstoprocess(chunkIdx);
+            //bool isValidationSubTask = (subTask.subtaskid() == "subtask_validation");
+            //size_t subTaskResultHash = initialHashCode;
+            //for (int chunkIdx = 0; chunkIdx < subTask.chunkstoprocess_size(); ++chunkIdx)
+            //{
+            //    const auto& chunk = subTask.chunkstoprocess(chunkIdx);
 
-                // Chunk result hash should be calculated
-                // Chunk data hash is calculated just as a stub
-                size_t chunkHash = 0;
-                if (isValidationSubTask)
-                {
-                    chunkHash = ((size_t)chunkIdx < m_validationChunkHashes.size()) ?
-                        m_validationChunkHashes[chunkIdx] : std::hash<std::string>{}(chunk.SerializeAsString());
-                }
-                else
-                {
-                    chunkHash = ((size_t)chunkIdx < m_chunkResulHashes.size()) ?
-                        m_chunkResulHashes[chunkIdx] : std::hash<std::string>{}(chunk.SerializeAsString());
-                }
+            //    // Chunk result hash should be calculated
+            //    // Chunk data hash is calculated just as a stub
+            //    size_t chunkHash = 0;
+            //    if (isValidationSubTask)
+            //    {
+            //        chunkHash = ((size_t)chunkIdx < m_validationChunkHashes.size()) ?
+            //            m_validationChunkHashes[chunkIdx] : std::hash<std::string>{}(chunk.SerializeAsString());
+            //    }
+            //    else
+            //    {
+            //        chunkHash = ((size_t)chunkIdx < m_chunkResulHashes.size()) ?
+            //            m_chunkResulHashes[chunkIdx] : std::hash<std::string>{}(chunk.SerializeAsString());
+            //    }
 
-                result.add_chunk_hashes(chunkHash);
-                boost::hash_combine(subTaskResultHash, chunkHash);
-            }
+            //    result.add_chunk_hashes(chunkHash);
+            //    boost::hash_combine(subTaskResultHash, chunkHash);
+            //}
 
-            result.set_result_hash(subTaskResultHash);
+            //result.set_result_hash(subTaskResultHash);
         }
 
         std::vector<size_t> m_chunkResulHashes;
@@ -297,61 +309,7 @@ namespace
 
         std::mutex m_subTaskCountMutex;
         size_t m_processingSubTaskCount;
+        ImageSplitter imagesplit_;
     };
-
-
-    //class ProcessingTaskQueueImpl : public ProcessingTaskQueue
-    //{
-    //public:
-    //    ProcessingTaskQueueImpl()
-    //    {
-    //    }
-
-    //    void EnqueueTask(
-    //        const SGProcessing::Task& task,
-    //        const std::list<SGProcessing::SubTask>& subTasks)
-    //    {
-    //        m_tasks.push_back(task);
-    //        m_subTasks.emplace(task.ipfs_block_id(), subTasks);
-    //    }
-
-    //    bool GetSubTasks(
-    //        const std::string& taskId,
-    //        std::list<SGProcessing::SubTask>& subTasks)
-    //    {
-    //        auto it = m_subTasks.find(taskId);
-    //        if (it != m_subTasks.end())
-    //        {
-    //            subTasks = it->second;
-    //            return true;
-    //        }
-
-    //        return false;
-    //    }
-
-    //    bool GrabTask(std::string& taskKey, SGProcessing::Task& task) override
-    //    {
-    //        if (m_tasks.empty())
-    //        {
-    //            return false;
-    //        }
-
-
-    //        task = std::move(m_tasks.back());
-    //        m_tasks.pop_back();
-    //        taskKey = (boost::format("TASK_%d") % m_tasks.size()).str();
-
-    //        return true;
-    //    };
-
-    //    bool CompleteTask(const std::string& taskKey, const SGProcessing::TaskResult& task) override
-    //    {
-    //        return false;
-    //    }
-
-    //private:
-    //    std::list<SGProcessing::Task> m_tasks;
-    //    std::map<std::string, std::list<SGProcessing::SubTask>> m_subTasks;
-    //};
 
 }

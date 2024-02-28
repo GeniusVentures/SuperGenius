@@ -94,6 +94,7 @@ int main(int argc, char* argv[])
         globalDB2,
         1000000,
         2);
+    processingCore2->setImageSplitter(imagesplit);
 
     ProcessingServiceImpl processingService(
         pubs2,
@@ -102,7 +103,7 @@ int main(int argc, char* argv[])
         std::make_shared<SubTaskStateStorageImpl>(),
         std::make_shared<SubTaskResultStorageImpl>(globalDB2),
         processingCore2);
-
+    
     processingService.SetChannelListRequestTimeout(boost::posix_time::milliseconds(10000));
 
     processingService.StartProcessing(processingGridChannel);
