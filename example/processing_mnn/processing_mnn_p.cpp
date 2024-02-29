@@ -72,7 +72,7 @@ int main(int argc, char* argv[])
 
     
     //Client
-    pubs2->Start(40002, { "/ip4/192.168.46.18/tcp/40001/p2p/12D3KooWNajVfR8TiFtUrQAvUpfPbftoaLgdoUbgvigNVZbYMv2o" });
+    pubs2->Start(40002, { "/ip4/192.168.46.18/tcp/40001/p2p/12D3KooWAqi3qqAWhZtAmXtxCE4NsAkKSVHGuJ3xzrJdrCNnh5yz" });
 
     //Create GlobalDB
     size_t serviceindex = 1;

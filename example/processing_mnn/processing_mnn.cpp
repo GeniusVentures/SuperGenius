@@ -63,18 +63,20 @@ int main(int argc, char* argv[])
         sgns::crdt::KeyPairFileStorage("CRDT.Datastore.TEST/pubs_dapp").GetKeyPair().value());
 
     //Start Pubsubs, add peers of other addresses. We'll probably use DHT Discovery bootstrapping in the future.
-    pubs->Start(40001, { "/ip4/192.168.46.18/tcp/40002/p2p/12D3KooWDWi6q5Q67J7iox3P2xUoJtApE3eqtXB1c9wiJGDVTnAh" });
+    pubs->Start(40001, { "/ip4/192.168.46.18/tcp/40002/p2p/12D3KooWRm16iwAdRsAYzGGXU9rq9ZqGbJqaP2kYxe4mCdhEQz67" });
 
     const size_t maximalNodesCount = 1;
 
     //Make Tasks
     std::list<SGProcessing::Task> tasks;
-    size_t nTasks = 16;
+    size_t nTasks = 1;
     // Put tasks to Global DB
     for (size_t taskIdx = 0; taskIdx < nTasks; ++taskIdx)
     {
         SGProcessing::Task task;
-        task.set_ipfs_block_id(libp2p::multi::ContentIdentifierCodec::toString(imagesplit.GetPartCID(taskIdx)).value());
+        std::cout << "CID STRING:    " << libp2p::multi::ContentIdentifierCodec::toString(imagesplit.GetPartCID(taskIdx)).value() << std::endl;
+        //task.set_ipfs_block_id(libp2p::multi::ContentIdentifierCodec::toString(imagesplit.GetPartCID(taskIdx)).value());
+        task.set_ipfs_block_id("posenet");
         task.set_block_len(imagesplit.GetPartSize(taskIdx));
         task.set_block_line_stride(imagesplit.GetPartStride(taskIdx));
         task.set_block_stride(imagesplit.GetPartSize(taskIdx));
@@ -96,7 +98,7 @@ int main(int argc, char* argv[])
     
     //Split tasks into subtasks
     auto taskQueue = std::make_shared<sgns::processing::ProcessingTaskQueueImpl>(globalDB);
-    size_t nSubTasks = 0;
+    size_t nSubTasks = imagesplit.GetPartCount();
     size_t nChunks = 0;
     TaskSplitter taskSplitter(
         nSubTasks,
@@ -105,6 +107,7 @@ int main(int argc, char* argv[])
 
     for (auto& task : tasks)
     {
+        std::cout << "subtask" << std::endl;
         std::list<SGProcessing::SubTask> subTasks;
         taskSplitter.SplitTask(task, subTasks, imagesplit);
         taskQueue->EnqueueTask(task, subTasks);
