@@ -264,4 +264,89 @@ namespace sgns::mnn
 
         return 0;
     }
+
+    std::vector<uint8_t> MNN_PoseNet::StartProcessing()
+    {
+
+        unsigned char* data = reinterpret_cast<unsigned char*>(imageData_->data());
+        //Get Target WIdth
+        const int targetWidth = static_cast<int>((float)originalWidth_ / (float)OUTPUT_STRIDE) * OUTPUT_STRIDE + 1;
+        const int targetHeight = static_cast<int>((float)originalHeight_ / (float)OUTPUT_STRIDE) * OUTPUT_STRIDE + 1;
+
+        //Scale
+        CV::Point scale;
+        scale.fX = (float)originalWidth_ / (float)targetWidth;
+        scale.fY = (float)originalHeight_ / (float)targetHeight;
+
+        // create net and session
+        auto mnnNet = std::shared_ptr<MNN::Interpreter>(MNN::Interpreter::createFromFile(modelFile_));
+        MNN::ScheduleConfig netConfig;
+        netConfig.type = MNN_FORWARD_VULKAN;
+        netConfig.numThread = 4;
+        auto session = mnnNet->createSession(netConfig);
+
+        auto input = mnnNet->getSessionInput(session, nullptr);
+
+        if (input->elementSize() <= 4) {
+            mnnNet->resizeTensor(input, { 1, 3, targetHeight, targetWidth });
+            mnnNet->resizeSession(session);
+        }
+        // preprocess input image
+        {
+            const float means[3] = { 127.5f, 127.5f, 127.5f };
+            const float norms[3] = { 2.0f / 255.0f, 2.0f / 255.0f, 2.0f / 255.0f };
+            CV::ImageProcess::Config preProcessConfig;
+            ::memcpy(preProcessConfig.mean, means, sizeof(means));
+            ::memcpy(preProcessConfig.normal, norms, sizeof(norms));
+            preProcessConfig.sourceFormat = CV::RGBA;
+            preProcessConfig.destFormat = CV::RGB;
+            preProcessConfig.filterType = CV::BILINEAR;
+
+            auto pretreat = std::shared_ptr<CV::ImageProcess>(CV::ImageProcess::create(preProcessConfig));
+            CV::Matrix trans;
+
+            // Dst -> [0, 1]
+            trans.postScale(1.0 / targetWidth, 1.0 / targetHeight);
+            //[0, 1] -> Src
+            trans.postScale(originalWidth_, originalHeight_);
+
+            pretreat->setMatrix(trans);
+            const auto rgbaPtr = reinterpret_cast<uint8_t*>(data);
+            pretreat->convert(rgbaPtr, originalWidth_, originalHeight_, 0, input);
+        }
+        {
+            AUTOTIME;
+            mnnNet->runSession(session);
+        }
+
+        // get output
+        auto offsets = mnnNet->getSessionOutput(session, OFFSET_NODE_NAME);
+        auto displacementFwd = mnnNet->getSessionOutput(session, DISPLACE_FWD_NODE_NAME);
+        auto displacementBwd = mnnNet->getSessionOutput(session, DISPLACE_BWD_NODE_NAME);
+        auto heatmaps = mnnNet->getSessionOutput(session, HEATMAPS);
+
+        Tensor offsetsHost(offsets, Tensor::CAFFE);
+        Tensor displacementFwdHost(displacementFwd, Tensor::CAFFE);
+        Tensor displacementBwdHost(displacementBwd, Tensor::CAFFE);
+        Tensor heatmapsHost(heatmaps, Tensor::CAFFE);
+
+        offsets->copyToHostTensor(&offsetsHost);
+        displacementFwd->copyToHostTensor(&displacementFwdHost);
+        displacementBwd->copyToHostTensor(&displacementBwdHost);
+        heatmaps->copyToHostTensor(&heatmapsHost);
+
+        std::vector<float> poseScores;
+        std::vector<std::vector<float>> poseKeypointScores;
+        std::vector<std::vector<CV::Point>> poseKeypointCoords;
+        {
+            AUTOTIME;
+            decodeMultiPose(&offsetsHost, &displacementFwdHost, &displacementBwdHost, &heatmapsHost, poseScores,
+                poseKeypointScores, poseKeypointCoords, scale);
+        }
+
+        drawPose(data, originalWidth_, originalHeight_, poseScores, poseKeypointScores, poseKeypointCoords);
+        stbi_write_png("outputImageFileName.png", originalWidth_, originalHeight_, 4, data, 4 * originalWidth_);
+        return std::vector<uint8_t>(data, data + imageData_->size());
+    }
 }
+

@@ -37,95 +37,18 @@ namespace sgns::mnn
 	class MNN_PoseNet
 	{
 	public:
-		MNN_PoseNet(uint8_t* imagedata, 
+		MNN_PoseNet(std::vector<uint8_t>* imagedata,
 			const char* modelfile, 
 			const int origwidth, 
 			const int origheight) : imageData_(imagedata), modelFile_(modelfile), originalWidth_(origwidth), originalHeight_(origheight)
 		{
 
 		}
-
-		void StartProcessing() 
+		~MNN_PoseNet()
 		{
-			//Get Target WIdth
-			const int targetWidth = static_cast<int>((float)originalWidth_ / (float)OUTPUT_STRIDE) * OUTPUT_STRIDE + 1;
-			const int targetHeight = static_cast<int>((float)originalHeight_ / (float)OUTPUT_STRIDE) * OUTPUT_STRIDE + 1;
-
-			//Scale
-			CV::Point scale;
-			scale.fX = (float)originalWidth_ / (float)targetWidth;
-			scale.fY = (float)originalHeight_ / (float)targetHeight;
-
-			// create net and session
-			auto mnnNet = std::shared_ptr<MNN::Interpreter>(MNN::Interpreter::createFromFile(modelFile_));
-			MNN::ScheduleConfig netConfig;
-			netConfig.type = MNN_FORWARD_VULKAN;
-			netConfig.numThread = 4;
-			auto session = mnnNet->createSession(netConfig);
-
-			auto input = mnnNet->getSessionInput(session, nullptr);
-
-			if (input->elementSize() <= 4) {
-				mnnNet->resizeTensor(input, { 1, 3, targetHeight, targetWidth });
-				mnnNet->resizeSession(session);
-			}
-			// preprocess input image
-			{
-				const float means[3] = { 127.5f, 127.5f, 127.5f };
-				const float norms[3] = { 2.0f / 255.0f, 2.0f / 255.0f, 2.0f / 255.0f };
-				CV::ImageProcess::Config preProcessConfig;
-				::memcpy(preProcessConfig.mean, means, sizeof(means));
-				::memcpy(preProcessConfig.normal, norms, sizeof(norms));
-				preProcessConfig.sourceFormat = CV::RGBA;
-				preProcessConfig.destFormat = CV::RGB;
-				preProcessConfig.filterType = CV::BILINEAR;
-
-				auto pretreat = std::shared_ptr<CV::ImageProcess>(CV::ImageProcess::create(preProcessConfig));
-				CV::Matrix trans;
-
-				// Dst -> [0, 1]
-				trans.postScale(1.0 / targetWidth, 1.0 / targetHeight);
-				//[0, 1] -> Src
-				trans.postScale(originalWidth_, originalHeight_);
-
-				pretreat->setMatrix(trans);
-                const auto rgbaPtr = reinterpret_cast<uint8_t*>(imageData_);
-				pretreat->convert(rgbaPtr, originalWidth_, originalHeight_, 0, input);
-			}
-			{
-				AUTOTIME;
-				mnnNet->runSession(session);
-			}
-
-			// get output
-			auto offsets = mnnNet->getSessionOutput(session, OFFSET_NODE_NAME);
-			auto displacementFwd = mnnNet->getSessionOutput(session, DISPLACE_FWD_NODE_NAME);
-			auto displacementBwd = mnnNet->getSessionOutput(session, DISPLACE_BWD_NODE_NAME);
-			auto heatmaps = mnnNet->getSessionOutput(session, HEATMAPS);
-
-			Tensor offsetsHost(offsets, Tensor::CAFFE);
-			Tensor displacementFwdHost(displacementFwd, Tensor::CAFFE);
-			Tensor displacementBwdHost(displacementBwd, Tensor::CAFFE);
-			Tensor heatmapsHost(heatmaps, Tensor::CAFFE);
-
-			offsets->copyToHostTensor(&offsetsHost);
-			displacementFwd->copyToHostTensor(&displacementFwdHost);
-			displacementBwd->copyToHostTensor(&displacementBwdHost);
-			heatmaps->copyToHostTensor(&heatmapsHost);
-
-			std::vector<float> poseScores;
-			std::vector<std::vector<float>> poseKeypointScores;
-			std::vector<std::vector<CV::Point>> poseKeypointCoords;
-			{
-				AUTOTIME;
-				decodeMultiPose(&offsetsHost, &displacementFwdHost, &displacementBwdHost, &heatmapsHost, poseScores,
-					poseKeypointScores, poseKeypointCoords, scale);
-			}
-
-			drawPose(imageData_, originalWidth_, originalHeight_, poseScores, poseKeypointScores, poseKeypointCoords);
-			stbi_write_png("outputImageFileName.png", originalWidth_, originalHeight_, 4, imageData_, 4 * originalWidth_);
 			stbi_image_free(imageData_);
 		}
+		std::vector<uint8_t> StartProcessing();
 	private:
 		static int changeColorCircle(uint32_t* src, CV::Point point, int width, int height);
 		static int drawPose(uint8_t* rgbaPtr, int width, int height, std::vector<float>& poseScores,
@@ -140,7 +63,7 @@ namespace sgns::mnn
 			std::vector<std::vector<float>>& poseKeypointScores,
 			std::vector<std::vector<CV::Point>>& poseKeypointCoords, CV::Point& scale);
 
-		uint8_t* imageData_;
+		std::vector<uint8_t>* imageData_;
 		const char* modelFile_;
 		int originalWidth_;
 		int originalHeight_;

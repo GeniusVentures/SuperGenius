@@ -96,8 +96,8 @@ int main(int argc, char* argv[])
     
     //Split tasks into subtasks
     auto taskQueue = std::make_shared<sgns::processing::ProcessingTaskQueueImpl>(globalDB);
-    size_t nSubTasks = 2;
-    size_t nChunks = 2;
+    size_t nSubTasks = 0;
+    size_t nChunks = 0;
     TaskSplitter taskSplitter(
         nSubTasks,
         nChunks,

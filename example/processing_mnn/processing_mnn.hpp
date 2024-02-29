@@ -26,6 +26,8 @@
 #include <boost/program_options.hpp>
 #include <boost/format.hpp>
 #include <ipfs_lite/ipfs/graphsync/graphsync.hpp>
+#include "mnn_posenet.hpp"
+
 namespace
 {
     class ImageSplitter
@@ -83,13 +85,13 @@ namespace
             return splitparts_.at(part);
         }
 
-        std::vector<uint8_t> GetPartByCid(libp2p::multi::ContentIdentifier cid)
+        size_t GetPartByCid(libp2p::multi::ContentIdentifier cid)
         {
             //Find the index of cid in cids_
             auto it = std::find(cids_.begin(), cids_.end(), cid);
             if (it == cids_.end()) {
                 //CID not found
-                return {};
+                return -1;
             }
 
             //Find index in splitparts_ corresponding to cid
@@ -97,11 +99,11 @@ namespace
 
             //Return the data
             if (index < splitparts_.size()) {
-                return splitparts_[index];
+                return index;
             }
             else {
                 //Index out of range
-                return {}; 
+                return -1; 
             }
         }
 
@@ -113,6 +115,16 @@ namespace
         uint32_t GetPartStride(int part)
         {
             return chunkWidthActual_.at(part);
+        }
+
+        int GetPartWidthActual(int part)
+        {
+            return chunkWidthActual_.at(part);
+        }
+
+        int GetPartHeightActual(int part)
+        {
+            return chunkHeightActual_.at(part);
         }
 
         size_t GetPartCount()
@@ -250,7 +262,9 @@ namespace
         void setImageSplitter(const ImageSplitter& imagesplit) {
             imagesplit_ = imagesplit;
         }
-
+        void setModelFile(const char* modelFile) {
+            modelFile_ = modelFile;
+        }
         void  ProcessSubTask(
             const SGProcessing::SubTask& subTask, SGProcessing::SubTaskResult& result,
             uint32_t initialHashCode) override
@@ -271,7 +285,36 @@ namespace
             std::cout << "IPFS BLOCK:           " << subTask.ipfsblock() << std::endl;
             
             //auto hash = libp2p::multi::Multihash::create()
-            auto data = imagesplit_.GetPartByCid(sgns::CID::fromString(subTask.ipfsblock()).value());
+
+            //Get Part Data 
+            auto dataindex = imagesplit_.GetPartByCid(sgns::CID::fromString(subTask.ipfsblock()).value());
+            auto data = imagesplit_.GetPart(dataindex);
+            auto width = imagesplit_.GetPartWidthActual(dataindex);
+            auto height = imagesplit_.GetPartHeightActual(dataindex);
+
+            auto mnnproc = sgns::mnn::MNN_PoseNet(&data, modelFile_, width, height);
+
+            auto procresults = mnnproc.StartProcessing();
+
+
+            gsl::span<const uint8_t> byte_span(procresults);
+            std::vector<uint8_t> shahash(SHA256_DIGEST_LENGTH);
+            SHA256_CTX sha256;
+            SHA256_Init(&sha256);
+            SHA256_Update(&sha256, &procresults, sizeof(procresults));
+            SHA256_Final(shahash.data(), &sha256);
+            auto hash = libp2p::multi::Multihash::create(libp2p::multi::HashType::sha256, shahash);
+            //auto cid = libp2p::multi::ContentIdentifier(
+            //    libp2p::multi::ContentIdentifier::Version::V0,
+            //    libp2p::multi::MulticodecType::Code::DAG_PB,
+            //    hash.value()
+            //);
+            sgns::CID cid(libp2p::multi::ContentIdentifier(
+                libp2p::multi::ContentIdentifier::Version::V0,
+                libp2p::multi::MulticodecType::Code::DAG_PB,
+                hash.value()));
+
+            result.set_ipfs_results_data_id(cid.toString());
             //std::this_thread::sleep_for(std::chrono::milliseconds(m_subTaskProcessingTime));
             //result.set_ipfs_results_data_id((boost::format("%s_%s") % "RESULT_IPFS" % subTask.subtaskid()).str());
 
@@ -298,8 +341,14 @@ namespace
             //    result.add_chunk_hashes(chunkHash);
             //    boost::hash_combine(subTaskResultHash, chunkHash);
             //}
-
-            //result.set_result_hash(subTaskResultHash);
+            uint32_t temphash = 0;
+            if (shahash.size() >= 4)
+            {
+                for (int i = 0; i < 4; ++i) {
+                    temphash |= static_cast<uint32_t>(shahash[i]) << (8 * i);
+                }
+            }
+            result.set_result_hash(temphash);
         }
 
         std::vector<size_t> m_chunkResulHashes;
@@ -313,6 +362,7 @@ namespace
         std::mutex m_subTaskCountMutex;
         size_t m_processingSubTaskCount;
         ImageSplitter imagesplit_;
+        const char* modelFile_;
     };
 
 }
