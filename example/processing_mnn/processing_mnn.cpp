@@ -1,6 +1,4 @@
 #include "processing_mnn.hpp"
-#include "bitswap.hpp"
-#include <libp2p/injector/host_injector.hpp>
 
 using GossipPubSub = sgns::ipfs_pubsub::GossipPubSub;
 const std::string logger_config(R"(
@@ -50,13 +48,13 @@ int main(int argc, char* argv[])
     auto loggerBroadcaster = sgns::base::createLogger("PubSubBroadcasterExt");
     loggerBroadcaster->set_level(spdlog::level::trace);
 
-    //Load Image
+    //Inputs
     const auto poseModel = argv[1];
     const auto inputImageFileName = argv[2];
 
+    //Split Image into RGBA bytes
     ImageSplitter imagesplit(inputImageFileName, 128, 128);
-    std::cout << "Image Split Size: " << imagesplit.GetPartCount() << std::endl;
-    //return 1;
+
     const std::string processingGridChannel = "GRID_CHANNEL_ID";
 
     //Make Host Pubsubs
@@ -64,24 +62,19 @@ int main(int argc, char* argv[])
     auto pubs = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>(
         sgns::crdt::KeyPairFileStorage("CRDT.Datastore.TEST/pubs_dapp").GetKeyPair().value());
 
-    //Start Pubsubs, add peers of other addresses.
+    //Start Pubsubs, add peers of other addresses. We'll probably use DHT Discovery bootstrapping in the future.
     pubs->Start(40001, { "/ip4/192.168.46.18/tcp/40002/p2p/12D3KooWDWi6q5Q67J7iox3P2xUoJtApE3eqtXB1c9wiJGDVTnAh" });
-
-    
 
     const size_t maximalNodesCount = 1;
 
+    //Make Tasks
     std::list<SGProcessing::Task> tasks;
     size_t nTasks = 1;
     // Put tasks to Global DB
     for (size_t taskIdx = 0; taskIdx < nTasks; ++taskIdx)
     {
-        // And wait for its processing
-        //std::cout << "INdex " << taskIdx << std::endl;
-        std::cout << "CIDString: " << libp2p::multi::ContentIdentifierCodec::toString(imagesplit.GetPartCID(taskIdx)).value() << std::endl;
         SGProcessing::Task task;
         task.set_ipfs_block_id(libp2p::multi::ContentIdentifierCodec::toString(imagesplit.GetPartCID(taskIdx)).value());
-        //task.set_ipfs_block_id((boost::format("IPFS_BLOCK_ID_%1%") % (taskIdx + 1)).str());
         task.set_block_len(imagesplit.GetPartSize(taskIdx));
         task.set_block_line_stride(imagesplit.GetPartStride(taskIdx));
         task.set_block_stride(imagesplit.GetPartSize(taskIdx));
@@ -89,6 +82,7 @@ int main(int argc, char* argv[])
         task.set_results_channel((boost::format("RESULT_CHANNEL_ID_%1%") % (taskIdx + 1)).str());
         tasks.push_back(std::move(task));
     }
+
     //Asio Context
     auto io = std::make_shared<boost::asio::io_context>();
 
@@ -100,7 +94,7 @@ int main(int argc, char* argv[])
     auto crdtOptions = sgns::crdt::CrdtOptions::DefaultOptions();
     globalDB->Init(crdtOptions);
     
-
+    //Split tasks into subtasks
     auto taskQueue = std::make_shared<sgns::processing::ProcessingTaskQueueImpl>(globalDB);
     size_t nSubTasks = 2;
     size_t nChunks = 2;
@@ -115,14 +109,6 @@ int main(int argc, char* argv[])
         taskSplitter.SplitTask(task, subTasks, imagesplit);
         taskQueue->EnqueueTask(task, subTasks);
     }
-
-    //auto injector = libp2p::injector::makeHostInjector();
-    //auto iobs = injector.create<std::shared_ptr<boost::asio::io_context>>();
-    //auto host = injector.create<std::shared_ptr<libp2p::Host>>();
-    //auto ma = libp2p::multi::Multiaddress::create("/ip4/127.0.0.1/tcp/43000").value();
-    //auto bitswap = std::make_shared<sgns::ipfs_bitswap::Bitswap>(*host, host->getBus(), io);
-    //bitswap->
-
     
     //Run ASIO
     std::thread iothread([io]() { io->run(); });

@@ -49,22 +49,20 @@ int main(int argc, char* argv[])
     auto loggerBroadcaster = sgns::base::createLogger("PubSubBroadcasterExt");
     loggerBroadcaster->set_level(spdlog::level::trace);
 
-    //Load Image
+    //Inputs
     const auto poseModel = argv[1];
     const auto inputImageFileName = argv[2];
 
+    //Split Image into RGBA bytes
     ImageSplitter imagesplit(inputImageFileName, 128, 128);
 
 
     const std::string processingGridChannel = "GRID_CHANNEL_ID";
 
+    //Create Pubsub
     auto pubsubKeyPath = (boost::format("CRDT.Datastore.TEST.%d/pubs_processor") % 1).str();
     auto pubs2 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>(
         sgns::crdt::KeyPairFileStorage(pubsubKeyPath).GetKeyPair().value());
-
-    //Start Pubsubs, add peers of other addresses.
-
-    
 
     const size_t maximalNodesCount = 1;
 
@@ -76,7 +74,7 @@ int main(int argc, char* argv[])
     //Client
     pubs2->Start(40002, { "/ip4/192.168.46.18/tcp/40001/p2p/12D3KooWNajVfR8TiFtUrQAvUpfPbftoaLgdoUbgvigNVZbYMv2o" });
 
-    //GlobalDB
+    //Create GlobalDB
     size_t serviceindex = 1;
     auto globalDB2 = std::make_shared<sgns::crdt::GlobalDB>(
         io,
@@ -85,15 +83,18 @@ int main(int argc, char* argv[])
         std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>(pubs2, "CRDT.Datastore.TEST.Channel"));
     auto crdtOptions2 = sgns::crdt::CrdtOptions::DefaultOptions();
     auto initRes = globalDB2->Init(crdtOptions2);
+
     //Processing Service Values
     auto taskQueue2 = std::make_shared<sgns::processing::ProcessingTaskQueueImpl>(globalDB2);
-    //auto processingCore = std::make_shared<ProcessingCoreImpl>(100000);
     auto enqueuer2 = std::make_shared<SubTaskEnqueuerImpl>(taskQueue2);
+
     //Processing Core
     auto processingCore2 = std::make_shared<ProcessingCoreImpl>(
         globalDB2,
         1000000,
         2);
+
+    //Set Imagesplit, this replaces bitswap getting of file for now. Should use AsyncIOmanager in the future
     processingCore2->setImageSplitter(imagesplit);
 
     ProcessingServiceImpl processingService(

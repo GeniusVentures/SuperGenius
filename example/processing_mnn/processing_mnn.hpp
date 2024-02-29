@@ -1,3 +1,6 @@
+#ifndef PROCESSING_MNN
+#define PROCESSING_MNN
+
 #include <math.h>
 #include <fstream>
 #include <memory>
@@ -313,3 +316,6 @@ namespace
     };
 
 }
+
+
+#endif
