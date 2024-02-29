@@ -63,7 +63,15 @@ int main(int argc, char* argv[])
         sgns::crdt::KeyPairFileStorage("CRDT.Datastore.TEST/pubs_dapp").GetKeyPair().value());
 
     //Start Pubsubs, add peers of other addresses. We'll probably use DHT Discovery bootstrapping in the future.
-    pubs->Start(40001, { "/ip4/192.168.46.18/tcp/40002/p2p/12D3KooWRm16iwAdRsAYzGGXU9rq9ZqGbJqaP2kYxe4mCdhEQz67" });
+    pubs->Start(40001, { "/ip4/192.168.46.18/tcp/40002/p2p/12D3KooWRm16iwAdRsAYzGGXU9rq9ZqGbJqaP2kYxe4mCdhEQz67",
+        "/ip4/192.168.46.18/tcp/40003/p2p/12D3KooWEAKCDGsZA4MvDVDEzx7pA8rD6UyN6AXsGDCYChWce4Zi",
+        "/ip4/192.168.46.18/tcp/40004/p2p/12D3KooWKTNC88yV3g7bhBdTBxKqy1GT9GQhE6VP28BvVsUtdhX5",
+        "/ip4/192.168.46.18/tcp/40005/p2p/12D3KooWJXWW1mXV1rxf7zuspGTyyk5irwyfXKNy71AcYzGqUT29",
+        "/ip4/192.168.46.18/tcp/40006/p2p/12D3KooWELZFDj8qdMNKoXnc7bndgRQU4yhbaM7tqHCenjqpvn5P",
+        "/ip4/192.168.46.18/tcp/40007/p2p/12D3KooWR5SynE87dtwYd62K3GRGnoabpMsmyTiLc9pLhxMEXMgY",
+        "/ip4/192.168.46.18/tcp/40008/p2p/12D3KooWQp3fX4ZR8LevJMt8coBZa4AZK4VrsaQ22CxpWYiu5qj5",
+        "/ip4/192.168.46.18/tcp/40009/p2p/12D3KooWJGKGW5ETP6zxouH2HSSPhHxu8gpF8AbCGugVDY118UyS",
+        "/ip4/192.168.46.18/tcp/40010/p2p/12D3KooWDT7becpKYbZrH1ZfBibsfdMqHo6AMHr3b5aGCMLw91XW"});
 
     const size_t maximalNodesCount = 1;
 

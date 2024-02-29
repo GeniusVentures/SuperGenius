@@ -52,6 +52,9 @@ int main(int argc, char* argv[])
     //Inputs
     const auto poseModel = argv[1];
     const auto inputImageFileName = argv[2];
+    char* endPtr;
+    size_t serviceindex = std::strtoul(argv[3], &endPtr, 10);
+    
 
     //Split Image into RGBA bytes
     ImageSplitter imagesplit(inputImageFileName, 128, 128);
@@ -60,7 +63,7 @@ int main(int argc, char* argv[])
     const std::string processingGridChannel = "GRID_CHANNEL_ID";
 
     //Create Pubsub
-    auto pubsubKeyPath = (boost::format("CRDT.Datastore.TEST.%d/pubs_processor") % 1).str();
+    auto pubsubKeyPath = (boost::format("CRDT.Datastore.TEST.%d/pubs_processor") % serviceindex).str();
     auto pubs2 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>(
         sgns::crdt::KeyPairFileStorage(pubsubKeyPath).GetKeyPair().value());
 
@@ -72,10 +75,10 @@ int main(int argc, char* argv[])
 
     
     //Client
-    pubs2->Start(40002, { "/ip4/192.168.46.18/tcp/40001/p2p/12D3KooWAqi3qqAWhZtAmXtxCE4NsAkKSVHGuJ3xzrJdrCNnh5yz" });
+    pubs2->Start(40001 + serviceindex, { "/ip4/192.168.46.18/tcp/40001/p2p/12D3KooWAqi3qqAWhZtAmXtxCE4NsAkKSVHGuJ3xzrJdrCNnh5yz" });
 
     //Create GlobalDB
-    size_t serviceindex = 1;
+    //size_t serviceindex = 1;
     auto globalDB2 = std::make_shared<sgns::crdt::GlobalDB>(
         io,
         (boost::format("CRDT.Datastore.TEST.%d") % serviceindex).str(),
