@@ -4,9 +4,10 @@
 #include <outcome/outcome.hpp>
 
 #include "primitives/digest.hpp"
+#include "integration/IComponent.hpp"
 
 namespace sgns::authority {
-  class AuthorityUpdateObserver {
+  class AuthorityUpdateObserver : public IComponent {
    public:
     virtual ~AuthorityUpdateObserver() = default;
 

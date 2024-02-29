@@ -17,6 +17,8 @@ namespace sgns::verification {
     MOCK_CONST_METHOD1(
         getEpochDescriptor,
         outcome::result<NextEpochDescriptor>(EpochIndex epoch_number));
+    
+    MOCK_METHOD0(GetName(),std::string());
   };
 
 }  // namespace sgns::verification

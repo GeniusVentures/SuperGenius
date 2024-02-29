@@ -23,6 +23,8 @@ namespace sgns::verification {
                               const primitives::AuthorityId &authority_id,
                               const Threshold &threshold,
                               const Randomness &randomness));
+    
+    MOCK_METHOD0(GetName, std::string());
   };
 
 }  // namespace sgns::verification

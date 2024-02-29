@@ -29,6 +29,10 @@ namespace sgns::verification {
     outcome::result<NextEpochDescriptor> getEpochDescriptor(
         EpochIndex epoch_number) const override;
 
+    std::string GetName() override
+    {
+      return "EpochStorageImpl";
+    }
    private:
     std::shared_ptr<storage::BufferStorage> storage_;
   };

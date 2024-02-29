@@ -13,6 +13,8 @@ namespace sgns::authority {
                  outcome::result<void>(const primitives::VerificationEngineId &,
                                        const primitives::BlockInfo &,
                                        const primitives::Verification &));
+
+    MOCK_METHOD0(GetName, std::string());
   };
 }  // namespace sgns::authority
 

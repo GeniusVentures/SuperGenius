@@ -25,6 +25,10 @@
 #include "integration/ProductionSynchronizerFactory.hpp"
 #include "integration/OwnPeerInfoFactory.hpp"
 #include "integration/BlockValidatorFactory.hpp"
+#include "integration/SR25519ProviderFactory.hpp"
+#include "integration/EpochStorageFactory.hpp"
+#include "integration/AuthorityUpdateObserverFactory.hpp"
+#include "integration/ProposerFactory.hpp"
 
 #include "storage/trie/supergenius_trie/supergenius_trie_factory_impl.hpp"
 #include "storage/trie/serialization/supergenius_codec.hpp"
@@ -72,13 +76,17 @@ namespace sgns::application
         component_factory->Register( BlockStorageFactory::create(), "BlockStorage", boost::none );
         component_factory->Register( ExtrinsicGossiperFactory::create(), "ExtrinsicGossiper", boost::none );
         component_factory->Register( PoolModeratorFactory::create(), "PoolModerator", boost::none );
+        component_factory->Register( ProposerFactory::create(), "Proposer", boost::none );
         component_factory->Register( TranscationPoolFactory::create(), "TransactionPool", boost::none );
         component_factory->Register( AuthorApiFactory::create(), "AuthorApi", boost::none );
         component_factory->Register( ExtrinsicObserverFactory::create(), "ExtrinsicObserver", boost::none );
         component_factory->Register( BlockTreeFactory::create(), "BlockTree", boost::none );
+        component_factory->Register( ProductionConfigurationFactory::create(), "ProductionConfiguration", boost::none );
+        component_factory->Register( AuthorityUpdateObserverFactory::create(), "AuthorityUpdateObserver", boost::none );
+        component_factory->Register( EpochStorageFactory::create(), "EpochStorage", boost::none );
+        component_factory->Register( SR25519ProviderFactory::create(), "SR25519Provider", boost::none );
         component_factory->Register( BlockValidatorFactory::create(), "BlockValidator", boost::none );
         component_factory->Register( OwnPeerInfoFactory::create(app_config->p2p_port()), "OwnPeerInfo", boost::none );
-        component_factory->Register( ProductionConfigurationFactory::create(), "ProductionConfiguration", boost::none );
         component_factory->Register( ProductionSynchronizerFactory::create(), "ProductionSynchronizer", boost::none );
         component_factory->Register( BlockExecutorFactory::create(), "BlockExecutor", boost::none );
         component_factory->Register( ProductionFactory::create(*io_context_), "Production", boost::none );

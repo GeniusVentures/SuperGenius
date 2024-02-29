@@ -5,14 +5,14 @@ namespace sgns::authorship {
 
   ProposerImpl::ProposerImpl(
       std::shared_ptr<BlockBuilderFactory> block_builder_factory,
-      std::shared_ptr<transaction_pool::TransactionPool> transaction_pool,
-      std::shared_ptr<runtime::BlockBuilder> r_block_builder)
+      std::shared_ptr<transaction_pool::TransactionPool> transaction_pool/*,
+      std::shared_ptr<runtime::BlockBuilder> r_block_builder*/)
       : block_builder_factory_{std::move(block_builder_factory)},
-        transaction_pool_{std::move(transaction_pool)},
-        r_block_builder_{std::move(r_block_builder)} {
+        transaction_pool_{std::move(transaction_pool)}/*,
+        r_block_builder_{std::move(r_block_builder)}*/ {
     BOOST_ASSERT(block_builder_factory_);
     BOOST_ASSERT(transaction_pool_);
-    BOOST_ASSERT(r_block_builder_);
+    //BOOST_ASSERT(r_block_builder_);
   }
 
   outcome::result<primitives::Block> ProposerImpl::propose(
@@ -23,7 +23,9 @@ namespace sgns::authorship {
         block_builder),
         block_builder_factory_->create(parent_block_id, inherent_digest));
 
-    auto inherent_xts_res =
+
+    //TODO - Removed binaryen stuff (inherent_extrinsics). Replace with something else
+    /**auto inherent_xts_res =
         r_block_builder_->inherent_extrinsics(inherent_data);
     if (! inherent_xts_res) {
       logger_->error("BlockBuilder->inherent_extrinsics failed with error: {}",
@@ -31,6 +33,7 @@ namespace sgns::authorship {
       return inherent_xts_res.error();
     }
     auto inherent_xts = inherent_xts_res.value();
+    */
 
     auto log_push_error = [this](const primitives::Extrinsic &xt,
                                  std::string_view message) {
@@ -38,7 +41,7 @@ namespace sgns::authorship {
                     xt.data.toHex(),
                     message);
     };
-
+    /*
     for (const auto &xt : inherent_xts) {
       logger_->debug("Adding inherent extrinsic: {}", xt.data.toHex());
       auto inserted_res = block_builder->pushExtrinsic(xt);
@@ -47,6 +50,7 @@ namespace sgns::authorship {
         return inserted_res.error();
       }
     }
+    */
 
     const auto &ready_txs = transaction_pool_->getReadyTransactions();
 

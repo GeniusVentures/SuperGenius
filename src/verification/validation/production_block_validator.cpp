@@ -34,18 +34,18 @@ namespace sgns::verification {
 
   ProductionBlockValidator::ProductionBlockValidator(
       std::shared_ptr<blockchain::BlockTree> block_tree,
-      std::shared_ptr<runtime::TaggedTransactionQueue> tx_queue,
+      //std::shared_ptr<runtime::TaggedTransactionQueue> tx_queue,
       std::shared_ptr<crypto::Hasher> hasher,
       std::shared_ptr<crypto::VRFProvider> vrf_provider,
       std::shared_ptr<crypto::SR25519Provider> sr25519_provider)
       : block_tree_{std::move(block_tree)},
-        tx_queue_{std::move(tx_queue)},
+        //tx_queue_{std::move(tx_queue)},
         hasher_{std::move(hasher)},
         vrf_provider_{std::move(vrf_provider)},
         sr25519_provider_{std::move(sr25519_provider)},
         log_{base::createLogger("ProductionBlockValidator")} {
     BOOST_ASSERT(block_tree_);
-    BOOST_ASSERT(tx_queue_);
+    //BOOST_ASSERT(tx_queue_);
     BOOST_ASSERT(vrf_provider_);
     BOOST_ASSERT(sr25519_provider_);
   }
@@ -172,7 +172,9 @@ namespace sgns::verification {
       const primitives::BlockBody &block_body) const {
     return std::all_of(
         block_body.cbegin(), block_body.cend(), [this](const auto &ext) {
-          auto validation_res = tx_queue_->validate_transaction(ext);
+          //TODO - This needs to be replaced by new validation
+          //auto validation_res = tx_queue_->validate_transaction(ext);
+          outcome::result<primitives::TransactionValidity> validation_res = primitives::ValidTransaction();
           if (!validation_res) {
             log_->info("extrinsic validation failed: {}",
                        validation_res.error());

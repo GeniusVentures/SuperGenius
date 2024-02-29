@@ -17,18 +17,22 @@ namespace sgns::authorship {
 
     ProposerImpl(
         std::shared_ptr<BlockBuilderFactory> block_builder_factory,
-        std::shared_ptr<transaction_pool::TransactionPool> transaction_pool,
-        std::shared_ptr<runtime::BlockBuilder> r_block_builder);
+        std::shared_ptr<transaction_pool::TransactionPool> transaction_pool);
 
     outcome::result<primitives::Block> propose(
         const primitives::BlockId &parent_block_id,
         const primitives::InherentData &inherent_data,
         const primitives::Digest &inherent_digest) override;
 
+    std::string GetName() override
+    {
+      return "ProposerImpl";
+    }
+
    private:
     std::shared_ptr<BlockBuilderFactory> block_builder_factory_;
     std::shared_ptr<transaction_pool::TransactionPool> transaction_pool_;
-    std::shared_ptr<runtime::BlockBuilder> r_block_builder_;
+    //std::shared_ptr<runtime::BlockBuilder> r_block_builder_;
     base::Logger logger_ = base::createLogger("Proposer");
   };
 
