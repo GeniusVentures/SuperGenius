@@ -69,7 +69,7 @@ int main(int argc, char* argv[])
 
     //Make Tasks
     std::list<SGProcessing::Task> tasks;
-    size_t nTasks = 1;
+    size_t nTasks = 16;
     // Put tasks to Global DB
     for (size_t taskIdx = 0; taskIdx < nTasks; ++taskIdx)
     {

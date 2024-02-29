@@ -1,14 +1,8 @@
-#ifndef PROCESSING_MNN
-#define PROCESSING_MNN
-
+#pragma once
 #include <math.h>
 #include <fstream>
 #include <memory>
 #include <iostream>
-#define STB_IMAGE_IMPLEMENTATION
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "imageHelper/stb_image.h"
-#include "imageHelper/stb_image_write.h"
 #include "ipfs_pubsub/gossip_pubsub.hpp"
 #include "processing_task_queue_impl.hpp"
 #include "processing_subtask_result_storage_impl.hpp"
@@ -292,7 +286,7 @@ namespace
             auto width = imagesplit_.GetPartWidthActual(dataindex);
             auto height = imagesplit_.GetPartHeightActual(dataindex);
 
-            auto mnnproc = sgns::mnn::MNN_PoseNet(&data, modelFile_, width, height);
+            auto mnnproc = sgns::mnn::MNN_PoseNet(&data, modelFile_, width, height, (boost::format("%s_%s") % "RESULT_IPFS" % subTask.subtaskid()).str() + ".png");
 
             auto procresults = mnnproc.StartProcessing();
 
@@ -314,7 +308,7 @@ namespace
                 libp2p::multi::MulticodecType::Code::DAG_PB,
                 hash.value()));
 
-            result.set_ipfs_results_data_id(cid.toString());
+            result.set_ipfs_results_data_id(cid.toString().value());
             //std::this_thread::sleep_for(std::chrono::milliseconds(m_subTaskProcessingTime));
             //result.set_ipfs_results_data_id((boost::format("%s_%s") % "RESULT_IPFS" % subTask.subtaskid()).str());
 
@@ -349,6 +343,7 @@ namespace
                 }
             }
             result.set_result_hash(temphash);
+            std::cout << "end processing" << std::endl;
         }
 
         std::vector<size_t> m_chunkResulHashes;
@@ -367,5 +362,3 @@ namespace
 
 }
 
-
-#endif
