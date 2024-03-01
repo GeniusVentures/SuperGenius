@@ -11,7 +11,7 @@ sinks:
 groups:
   - name: gossip_pubsub_test
     sink: console
-    level: debug
+    level: warning
     children:
       - name: libp2p
       - name: Gossip
@@ -32,22 +32,22 @@ int main(int argc, char* argv[])
     libp2p::log::setLoggingSystem(logging_system);
     libp2p::log::setLevelOfGroup("gossip_pubsub_test", soralog::Level::ERROR_);
     auto loggerProcessingEngine = sgns::base::createLogger("ProcessingEngine");
-    loggerProcessingEngine->set_level(spdlog::level::trace);
+    loggerProcessingEngine->set_level(spdlog::level::off);
 
     auto loggerProcessingService = sgns::base::createLogger("ProcessingService");
-    loggerProcessingService->set_level(spdlog::level::trace);
+    loggerProcessingService->set_level(spdlog::level::debug);
 
     auto loggerProcessingQueueManager = sgns::base::createLogger("ProcessingSubTaskQueueManager");
-    loggerProcessingQueueManager->set_level(spdlog::level::debug);
+    loggerProcessingQueueManager->set_level(spdlog::level::info);
 
     auto loggerGlobalDB = sgns::base::createLogger("GlobalDB");
-    loggerGlobalDB->set_level(spdlog::level::trace);
+    loggerGlobalDB->set_level(spdlog::level::off);
 
     auto loggerDAGSyncer = sgns::base::createLogger("GraphsyncDAGSyncer");
-    loggerDAGSyncer->set_level(spdlog::level::trace);
+    loggerDAGSyncer->set_level(spdlog::level::off);
 
     auto loggerBroadcaster = sgns::base::createLogger("PubSubBroadcasterExt");
-    loggerBroadcaster->set_level(spdlog::level::trace);
+    loggerBroadcaster->set_level(spdlog::level::off);
 
     //Inputs
     const auto poseModel = argv[1];
