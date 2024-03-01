@@ -11,6 +11,7 @@ extern "C" {
 
 #include "base/blob.hpp"
 #include "base/mp_utils.hpp"
+#include "integration/IComponent.hpp"
 
 namespace sgns::crypto {
   namespace constants::sr25519 {
@@ -97,11 +98,12 @@ namespace sgns::crypto {
 
   using SR25519Seed = base::Blob<constants::sr25519::SEED_SIZE>;
 
-  struct SR25519Keypair {
+  struct SR25519Keypair : public IComponent {
     SR25519SecretKey secret_key;
     SR25519PublicKey public_key;
 
     SR25519Keypair() = default;
+    SR25519Keypair(SR25519SecretKey sk, SR25519PublicKey pk):  secret_key(sk),public_key(pk) {};
 
     bool operator==(const SR25519Keypair &other) const;
     bool operator!=(const SR25519Keypair &other) const;
@@ -109,6 +111,10 @@ namespace sgns::crypto {
     friend std::ostream &operator<<(std::ostream &out, const SR25519Keypair &test_struct)
     {
       return out << test_struct.secret_key << test_struct.public_key; 
+    }
+    std::string GetName() override
+    {
+      return "SR25519Keypair";
     }
 
   };

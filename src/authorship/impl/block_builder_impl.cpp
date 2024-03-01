@@ -5,16 +5,21 @@
 namespace sgns::authorship {
 
   BlockBuilderImpl::BlockBuilderImpl(
-      primitives::BlockHeader block_header,
-      std::shared_ptr<runtime::BlockBuilder> r_block_builder)
+      primitives::BlockHeader block_header/*,
+      std::shared_ptr<runtime::BlockBuilder> r_block_builder*/)
       : block_header_(std::move(block_header)),
-        r_block_builder_(std::move(r_block_builder)),
+        //r_block_builder_(std::move(r_block_builder)),
         logger_{base::createLogger("BlockBuilder")} {
-    BOOST_ASSERT(r_block_builder_ != nullptr);
+    //BOOST_ASSERT(r_block_builder_ != nullptr);
   }
 
   outcome::result<void> BlockBuilderImpl::pushExtrinsic(
       const primitives::Extrinsic &extrinsic) {
+
+        //TODO - Remove or replace this
+    return outcome::success();
+    /*
+
     auto apply_res = r_block_builder_->apply_extrinsic(extrinsic);
     if (! apply_res) {
       logger_->warn(
@@ -45,11 +50,16 @@ namespace sgns::authorship {
           logger_->warn(logger_error_template, extrinsic.data.toHex());
           return BlockBuilderError::EXTRINSIC_APPLICATION_FAILED;
         });
+      */
   }
 
   outcome::result<primitives::Block> BlockBuilderImpl::bake() const {
-    OUTCOME_TRY((auto &&, finalised_header), r_block_builder_->finalise_block());
+    /*OUTCOME_TRY((auto &&, finalised_header), r_block_builder_->finalise_block());
     return primitives::Block{finalised_header, extrinsics_};
+    */
+
+    
+    return primitives::Block{primitives::BlockHeader{}, extrinsics_};
   }
 
 }  // namespace sgns::authorship

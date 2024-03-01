@@ -29,6 +29,8 @@
 #include "integration/EpochStorageFactory.hpp"
 #include "integration/AuthorityUpdateObserverFactory.hpp"
 #include "integration/ProposerFactory.hpp"
+#include "integration/BlockBuilderManager.hpp"
+#include "integration/SR25519KeypairFactory.hpp"
 
 #include "storage/trie/supergenius_trie/supergenius_trie_factory_impl.hpp"
 #include "storage/trie/serialization/supergenius_codec.hpp"
@@ -76,8 +78,9 @@ namespace sgns::application
         component_factory->Register( BlockStorageFactory::create(), "BlockStorage", boost::none );
         component_factory->Register( ExtrinsicGossiperFactory::create(), "ExtrinsicGossiper", boost::none );
         component_factory->Register( PoolModeratorFactory::create(), "PoolModerator", boost::none );
-        component_factory->Register( ProposerFactory::create(), "Proposer", boost::none );
+        component_factory->Register( sgns::BlockBuilderManager{}.createFactory(), "BlockBuilderFactory", boost::none );
         component_factory->Register( TranscationPoolFactory::create(), "TransactionPool", boost::none );
+        component_factory->Register( ProposerFactory::create(), "Proposer", boost::none );
         component_factory->Register( AuthorApiFactory::create(), "AuthorApi", boost::none );
         component_factory->Register( ExtrinsicObserverFactory::create(), "ExtrinsicObserver", boost::none );
         component_factory->Register( BlockTreeFactory::create(), "BlockTree", boost::none );
@@ -89,6 +92,8 @@ namespace sgns::application
         component_factory->Register( OwnPeerInfoFactory::create(app_config->p2p_port()), "OwnPeerInfo", boost::none );
         component_factory->Register( ProductionSynchronizerFactory::create(), "ProductionSynchronizer", boost::none );
         component_factory->Register( BlockExecutorFactory::create(), "BlockExecutor", boost::none );
+        component_factory->Register( ExtrinsicGossiperFactory::create(), "ProductionGossiper", boost::none );
+        component_factory->Register( sgns::SR25519KeypairFactory{}.create(), "SR25519Keypair", boost::none );
         component_factory->Register( ProductionFactory::create(*io_context_), "Production", boost::none );
 
         auto result = component_factory->GetComponent( "AppStateManager", boost::none );
@@ -125,7 +130,6 @@ namespace sgns::application
             throw std::runtime_error( "Production not registered " );
         }
         production_ = std::dynamic_pointer_cast<sgns::verification::Production>( result.value() );
-        //production_        = std::make_shared<verification::ProductionImpl>();
         //finality_          = std::make_shared<verification::finality::FinalityImpl>();
         //router_            = std::make_shared<network::RouterLibp2p>();
 
@@ -136,7 +140,7 @@ namespace sgns::application
     {
         logger_->info( "Start as {} with PID {}", typeid( *this ).name(), getpid() );
 
-        //production_->setExecutionStrategy( production_execution_strategy_ );
+        production_->setExecutionStrategy( production_execution_strategy_ );
 
         app_state_manager_->atLaunch(
             [this]

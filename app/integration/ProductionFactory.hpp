@@ -116,12 +116,13 @@ public:
         }
         auto hasher = std::dynamic_pointer_cast<sgns::crypto::Hasher>( result.value() );
 
-        result = component_factory->GetComponent( "Timer", boost::none );
+        /**result = component_factory->GetComponent( "Timer", boost::none );
         if ( !result )
         {
             throw std::runtime_error( "Initialize Timer first" );
         }
         auto timer = std::dynamic_pointer_cast<sgns::clock::Timer>( result.value() );
+        */
 
         result = component_factory->GetComponent( "AuthorityUpdateObserver", boost::none );
         if ( !result )
