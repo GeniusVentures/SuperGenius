@@ -337,14 +337,15 @@ namespace
             //    result.add_chunk_hashes(chunkHash);
             //    boost::hash_combine(subTaskResultHash, chunkHash);
             //}
-            uint32_t temphash = 0;
-            if (shahash.size() >= 4)
-            {
-                for (int i = 0; i < 4; ++i) {
-                    temphash |= static_cast<uint32_t>(shahash[i]) << (8 * i);
-                }
-            }
-            result.set_result_hash(temphash);
+            //uint32_t temphash = 0;
+            //if (shahash.size() >= 4)
+            //{
+            //    for (int i = 0; i < 4; ++i) {
+            //        temphash |= static_cast<uint32_t>(shahash[i]) << (8 * i);
+            //    }
+            //}
+            std::string hashString(shahash.begin(), shahash.end());
+            result.set_result_hash(hashString.data());
             std::cout << "end processing" << std::endl;
         }
 
