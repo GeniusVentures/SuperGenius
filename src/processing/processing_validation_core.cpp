@@ -15,7 +15,7 @@ bool ProcessingValidationCore::ValidateResults(
     bool areResultsValid = true;
     // Compare result hashes for each chunk
     // If a chunk hashes didn't match each other add the all subtasks with invalid hashes to VALID ITEMS LIST
-    std::map<std::string, std::vector<uint32_t>> chunks;
+    std::map<std::string, std::vector<uint8_t>> chunks;
     for (int itemIdx = 0; itemIdx < subTasks.items_size(); ++itemIdx)
     {
         const auto& subTask = subTasks.items(itemIdx);
@@ -32,9 +32,10 @@ bool ProcessingValidationCore::ValidateResults(
                 for (int chunkIdx = 0; chunkIdx < subTask.chunkstoprocess_size(); ++chunkIdx)
                 {
                     auto it = chunks.insert(std::make_pair(
-                        subTask.chunkstoprocess(chunkIdx).SerializeAsString(), std::vector<uint32_t>()));
-
-                    it.first->second.push_back(itResult->second.chunk_hashes(chunkIdx));
+                        subTask.chunkstoprocess(chunkIdx).SerializeAsString(), std::vector<uint8_t>()));
+                    const std::string& chunkHashBytes = itResult->second.chunk_hashes(chunkIdx);
+                    //it.first->second.push_back(itResult->second.chunk_hashes(chunkIdx));
+                    it.first->second.insert(it.first->second.end(), chunkHashBytes.begin(), chunkHashBytes.end());
                 }
             }
         }
@@ -65,7 +66,7 @@ bool ProcessingValidationCore::ValidateResults(
 
 bool ProcessingValidationCore::CheckSubTaskResultHashes(
     const SGProcessing::SubTask& subTask,
-    const std::map<std::string, std::vector<uint32_t>>& chunks) const
+    const std::map<std::string, std::vector<uint8_t>>& chunks) const
 {
     for (int chunkIdx = 0; chunkIdx < subTask.chunkstoprocess_size(); ++chunkIdx)
     {

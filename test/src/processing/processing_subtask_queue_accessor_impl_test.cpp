@@ -73,11 +73,13 @@ namespace
                     chunkHash = std::hash<std::string>{}(chunk.SerializeAsString());
                 }
 
-                result.add_chunk_hashes(chunkHash);
+                std::string chunkHashString(reinterpret_cast<const char*>(&chunkHash), sizeof(chunkHash));
+                result.add_chunk_hashes(chunkHashString);
                 boost::hash_combine(subTaskResultHash, chunkHash);
             }
 
-            result.set_result_hash(subTaskResultHash);
+            std::string hashString(reinterpret_cast<const char*>(&subTaskResultHash), sizeof(subTaskResultHash));
+            result.set_result_hash(hashString);
 
             m_processedSubTasks.push_back(subTask);
             m_initialHashes.push_back(initialHashCode);

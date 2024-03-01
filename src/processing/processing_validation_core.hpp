@@ -35,7 +35,7 @@ public:
 private:
     bool CheckSubTaskResultHashes(
         const SGProcessing::SubTask& subTask,
-        const std::map<std::string, std::vector<uint32_t>>& chunks) const;
+        const std::map<std::string, std::vector<uint8_t>>& chunks) const;
 
     base::Logger m_logger = base::createLogger("ProcessingValidationCore");
 };

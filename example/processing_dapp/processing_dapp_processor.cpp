@@ -80,13 +80,14 @@ namespace
                 {
                     chunkHash = ((size_t)chunkIdx < m_chunkResulHashes.size()) ?
                         m_chunkResulHashes[chunkIdx] : std::hash<std::string>{}(chunk.SerializeAsString());
-                }
+                } 
 
-                result.add_chunk_hashes(chunkHash);
+                std::string chunkHashString(reinterpret_cast<const char*>(&chunkHash), sizeof(chunkHash));
+                result.add_chunk_hashes(chunkHashString);
                 boost::hash_combine(subTaskResultHash, chunkHash);
             }
-
-            result.set_result_hash(subTaskResultHash);
+            std::string hashString(reinterpret_cast<const char*>(&subTaskResultHash), sizeof(subTaskResultHash));
+            result.set_result_hash(hashString);
         }
 
         std::vector<size_t> m_chunkResulHashes;
