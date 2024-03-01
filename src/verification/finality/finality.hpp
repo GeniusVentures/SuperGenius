@@ -3,13 +3,14 @@
 #define SUPERGENIUS_SRC_VERIFICATION_FINALITY
 
 #include "verification/finality/round_observer.hpp"
+#include "integration/IComponent.hpp"
 
 namespace sgns::verification::finality {
 
   /**
    * Launches finality voting rounds
    */
-  class Finality : public RoundObserver {
+  class Finality : public RoundObserver, public IComponent {
    public:
     ~Finality() override = default;
 

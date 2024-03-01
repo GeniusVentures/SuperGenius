@@ -40,6 +40,7 @@ add_executable (sgns_demo
       epoch_storage
       authority_manager
       proposer
+      finality
       p2p::p2p_basic_host
       p2p::p2p_default_network
       p2p::p2p_peer_repository

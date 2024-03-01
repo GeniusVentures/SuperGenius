@@ -31,6 +31,7 @@
 #include "integration/ProposerFactory.hpp"
 #include "integration/BlockBuilderManager.hpp"
 #include "integration/SR25519KeypairFactory.hpp"
+#include "integration/FinalityFactory.hpp"
 
 #include "storage/trie/supergenius_trie/supergenius_trie_factory_impl.hpp"
 #include "storage/trie/serialization/supergenius_codec.hpp"
@@ -95,6 +96,7 @@ namespace sgns::application
         component_factory->Register( ExtrinsicGossiperFactory::create(), "ProductionGossiper", boost::none );
         component_factory->Register( sgns::SR25519KeypairFactory{}.create(), "SR25519Keypair", boost::none );
         component_factory->Register( ProductionFactory::create(*io_context_), "Production", boost::none );
+        component_factory->Register( sgns::FinalityFactory{}.create(io_context_), "Finality", boost::none );
 
         auto result = component_factory->GetComponent( "AppStateManager", boost::none );
         if ( !result )
@@ -130,6 +132,13 @@ namespace sgns::application
             throw std::runtime_error( "Production not registered " );
         }
         production_ = std::dynamic_pointer_cast<sgns::verification::Production>( result.value() );
+
+        result = component_factory->GetComponent( "Finality", boost::none );
+        if ( !result )
+        {
+            throw std::runtime_error( "Finality not registered " );
+        }
+        finality_ = std::dynamic_pointer_cast<sgns::verification::finality::Finality>( result.value() );
         //finality_          = std::make_shared<verification::finality::FinalityImpl>();
         //router_            = std::make_shared<network::RouterLibp2p>();
 

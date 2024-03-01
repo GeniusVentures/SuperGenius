@@ -21,7 +21,7 @@ namespace sgns::verification::finality {
       std::shared_ptr<Environment> environment,
       std::shared_ptr<storage::BufferStorage> storage,
       std::shared_ptr<crypto::ED25519Provider> crypto_provider,
-      std::shared_ptr<runtime::FinalityApi> finality_api,
+      //std::shared_ptr<runtime::FinalityApi> finality_api,
       const crypto::ED25519Keypair &keypair,
       std::shared_ptr<Clock> clock,
       std::shared_ptr<boost::asio::io_context> io_context,
@@ -30,7 +30,7 @@ namespace sgns::verification::finality {
         environment_{std::move(environment)},
         storage_{std::move(storage)},
         crypto_provider_{std::move(crypto_provider)},
-        finality_api_{std::move(finality_api)},
+        //finality_api_{std::move(finality_api)},
         keypair_{keypair},
         clock_{std::move(clock)},
         io_context_{std::move(io_context)},
@@ -39,7 +39,7 @@ namespace sgns::verification::finality {
     BOOST_ASSERT(environment_ != nullptr);
     BOOST_ASSERT(storage_ != nullptr);
     BOOST_ASSERT(crypto_provider_ != nullptr);
-    BOOST_ASSERT(finality_api_ != nullptr);
+    //BOOST_ASSERT(finality_api_ != nullptr);
     BOOST_ASSERT(clock_ != nullptr);
     BOOST_ASSERT(io_context_ != nullptr);
     BOOST_ASSERT(authority_manager_ != nullptr);
@@ -288,13 +288,17 @@ namespace sgns::verification::finality {
     });
 
     // get authorities
-    const auto &weighted_authorities_res =
+    /*const auto &weighted_authorities_res =
         finality_api_->authorities(primitives::BlockId(blockInfo.block_number));
     if (!weighted_authorities_res.has_value()) {
       logger_->error("Can't get authorities");
       return;
     };
     auto &weighted_authorities = weighted_authorities_res.value();
+    */
+    //TODO - Replace with actual authority list
+    primitives::AuthorityList weighted_authorities;
+
 
     // find signer in authorities
     auto weighted_authority_it =

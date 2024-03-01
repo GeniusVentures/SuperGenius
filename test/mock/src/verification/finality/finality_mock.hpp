@@ -13,6 +13,7 @@ namespace sgns::verification::finality {
     MOCK_METHOD0(executeNextRound, void());
     MOCK_METHOD1(onFinalize, void(const Fin &));
     MOCK_METHOD1(onVoteMessage, void(const VoteMessage &));
+    MOCK_METHOD0(GetName,std::string());
   };
 
 }  // namespace sgns::verification::finality
