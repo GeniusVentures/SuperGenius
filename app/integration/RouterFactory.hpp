@@ -94,16 +94,4 @@ namespace sgns
 
 }
 
-/*
-    RouterLibp2p(
-        libp2p::Host &host,
-        std::shared_ptr<ProductionObserver> production_observer,
-        std::shared_ptr<verification::finality::RoundObserver> finality_observer,
-        std::shared_ptr<SyncProtocolObserver> sync_observer,
-        std::shared_ptr<ExtrinsicObserver> extrinsic_observer,
-        std::shared_ptr<Gossiper> gossiper,
-        const PeerList &peer_list,
-        const OwnPeerInfo &own_info);
-
-*/
 #endif

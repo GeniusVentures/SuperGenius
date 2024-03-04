@@ -31,6 +31,11 @@ namespace sgns::network {
 
     outcome::result<BlocksResponse> onBlocksRequest(
         const BlocksRequest &request) const override;
+    
+    std::string GetName() override
+    {
+      return "SyncProtocolObserverImpl";
+    }
 
    private:
     blockchain::BlockTree::BlockHashVecRes retrieveRequestedHashes(

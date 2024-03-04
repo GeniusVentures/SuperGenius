@@ -38,6 +38,8 @@
 #include "integration/SteadyClockFactory.hpp"
 #include "integration/AuthorityManagerFactory.hpp"
 #include "integration/RouterFactory.hpp"
+#include "integration/SyncProtocolObserverFactory.hpp"
+#include "integration/ApiServiceFactory.hpp"
 
 #include "storage/trie/supergenius_trie/supergenius_trie_factory_impl.hpp"
 #include "storage/trie/serialization/supergenius_codec.hpp"
@@ -111,7 +113,9 @@ namespace sgns::application
         component_factory->Register( sgns::AuthorityManagerFactory{}.create(), "AuthorityManager", boost::none );
         component_factory->Register( sgns::FinalityFactory{}.create(io_context_), "Finality", boost::none );
         component_factory->Register( sgns::FinalityFactory{}.create(io_context_), "RoundObserver", boost::none );
+        component_factory->Register( sgns::SyncProtocolObserverFactory{}.create(), "SyncProtocolObserver", boost::none );
         component_factory->Register( sgns::RouterFactory{}.create(), "Router", boost::none );
+        component_factory->Register( sgns::ApiServiceFactory{}.create(), "ApiService", boost::none );
 
         auto result = component_factory->GetComponent( "AppStateManager", boost::none );
         if ( !result )
@@ -161,8 +165,13 @@ namespace sgns::application
             throw std::runtime_error( "Router not registered " );
         }
         router_ = std::dynamic_pointer_cast<sgns::network::Router>( result.value() );
-    
-        //jrpc_api_service_ = std::make_shared<api::ApiService>();
+        result = component_factory->GetComponent( "ApiService", boost::none );
+        if ( !result )
+        {
+            throw std::runtime_error( "ApiService not registered " );
+        }
+        jrpc_api_service_ = std::dynamic_pointer_cast<sgns::api::ApiService>( result.value() );
+
     }
 
     void ValidatingNodeApplication::run()
