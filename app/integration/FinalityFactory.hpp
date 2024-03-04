@@ -42,7 +42,7 @@ namespace sgns
             }
             auto environment = std::dynamic_pointer_cast<verification::finality::Environment>( result.value() );
 
-            result = component_factory->GetComponent( "BufferStorage", boost::none );
+            result = component_factory->GetComponent( "BufferStorage", boost::make_optional(std::string("rocksdb")));
 
             if ( !result )
             {

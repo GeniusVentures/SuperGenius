@@ -32,6 +32,7 @@
 #include "integration/BlockBuilderManager.hpp"
 #include "integration/SR25519KeypairFactory.hpp"
 #include "integration/FinalityFactory.hpp"
+#include "integration/EnvironmentFactory.hpp"
 
 #include "storage/trie/supergenius_trie/supergenius_trie_factory_impl.hpp"
 #include "storage/trie/serialization/supergenius_codec.hpp"
@@ -78,6 +79,7 @@ namespace sgns::application
         component_factory->Register( TrieStorageFactory::create(), "TrieStorage", boost::none );
         component_factory->Register( BlockStorageFactory::create(), "BlockStorage", boost::none );
         component_factory->Register( ExtrinsicGossiperFactory::create(), "ExtrinsicGossiper", boost::none );
+        component_factory->Register( ExtrinsicGossiperFactory::create(), "Gossiper", boost::none );
         component_factory->Register( PoolModeratorFactory::create(), "PoolModerator", boost::none );
         component_factory->Register( sgns::BlockBuilderManager{}.createFactory(), "BlockBuilderFactory", boost::none );
         component_factory->Register( TranscationPoolFactory::create(), "TransactionPool", boost::none );
@@ -96,6 +98,7 @@ namespace sgns::application
         component_factory->Register( ExtrinsicGossiperFactory::create(), "ProductionGossiper", boost::none );
         component_factory->Register( sgns::SR25519KeypairFactory{}.create(), "SR25519Keypair", boost::none );
         component_factory->Register( ProductionFactory::create(*io_context_), "Production", boost::none );
+        component_factory->Register( sgns::EnvironmentFactory{}.create(), "Environment", boost::none );
         component_factory->Register( sgns::FinalityFactory{}.create(io_context_), "Finality", boost::none );
 
         auto result = component_factory->GetComponent( "AppStateManager", boost::none );
