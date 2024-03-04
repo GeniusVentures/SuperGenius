@@ -4,13 +4,14 @@
 #define SUPERGENIUS_ROUTER_HPP
 
 #include <libp2p/connection/stream.hpp>
+#include "integration/IComponent.hpp"
 
 namespace sgns::network {
   /**
    * Router, which reads and delivers different network messages to the
    * observers, responsible for their processing
    */
-  class Router {
+  class Router : public IComponent {
    protected:
     using Stream = libp2p::connection::Stream;
 

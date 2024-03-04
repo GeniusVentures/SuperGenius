@@ -44,6 +44,11 @@ namespace sgns::network {
 
     void handleGossipProtocol(std::shared_ptr<Stream> stream) const override;
 
+    std::string GetName() override
+    {
+      return "RouterLibp2p";
+    }
+
    private:
     void readGossipMessage(std::shared_ptr<Stream> stream) const;
 

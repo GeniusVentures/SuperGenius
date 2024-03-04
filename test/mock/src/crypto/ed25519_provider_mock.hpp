@@ -22,6 +22,8 @@ namespace sgns::crypto {
         outcome::result<bool>(const ED25519Signature &signature,
                               gsl::span<uint8_t> message,
                               const ED25519PublicKey &public_key));
+
+    MOCK_METHOD0(GetName,std::string());
   };
 
 }  // namespace sgns::crypto

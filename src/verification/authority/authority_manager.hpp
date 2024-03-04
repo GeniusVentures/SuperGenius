@@ -2,9 +2,10 @@
 #define SUPERGENIUS_AUTHORITY_MANAGER
 
 #include "primitives/authority.hpp"
+#include "integration/IComponent.hpp"
 
 namespace sgns::authority {
-  class AuthorityManager {
+  class AuthorityManager : public IComponent {
    public:
     virtual ~AuthorityManager() = default;
 

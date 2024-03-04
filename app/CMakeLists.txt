@@ -42,6 +42,8 @@ add_executable (sgns_demo
       proposer
       finality
       environment
+      ed25519_provider
+      sgns_router
       p2p::p2p_basic_host
       p2p::p2p_default_network
       p2p::p2p_peer_repository

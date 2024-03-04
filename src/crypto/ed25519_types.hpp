@@ -5,6 +5,7 @@
 
 #include <ed25519/ed25519.h>
 #include "base/blob.hpp"
+#include "integration/IComponent.hpp"
 
 namespace sgns::crypto {
 
@@ -23,9 +24,12 @@ namespace sgns::crypto {
   using ED25519PrivateKey = base::Blob<constants::ed25519::PRIVKEY_SIZE>;
   using ED25519PublicKey = base::Blob<constants::ed25519::PUBKEY_SIZE>;
 
-  struct ED25519Keypair {
+  struct ED25519Keypair : public IComponent {
     ED25519PrivateKey private_key;
     ED25519PublicKey public_key;
+
+    ED25519Keypair() = default;
+    ED25519Keypair(ED25519PrivateKey prv_key,ED25519PublicKey pub_key): private_key(prv_key), public_key(pub_key) {};
 
     bool operator==(const ED25519Keypair &other) const;
     bool operator!=(const ED25519Keypair &other) const;
@@ -34,6 +38,10 @@ namespace sgns::crypto {
         return out << test_struct.private_key << test_struct.public_key; 
     }
 
+    std::string GetName() override
+    {
+      return "ED25519Keypair";
+    }
   };
 
   using ED25519Signature = base::Blob<constants::ed25519::SIGNATURE_SIZE>;

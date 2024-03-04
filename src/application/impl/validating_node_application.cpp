@@ -33,6 +33,11 @@
 #include "integration/SR25519KeypairFactory.hpp"
 #include "integration/FinalityFactory.hpp"
 #include "integration/EnvironmentFactory.hpp"
+#include "integration/ED25519ProviderFactory.hpp"
+#include "integration/ED25519KeyPairFactory.hpp"
+#include "integration/SteadyClockFactory.hpp"
+#include "integration/AuthorityManagerFactory.hpp"
+#include "integration/RouterFactory.hpp"
 
 #include "storage/trie/supergenius_trie/supergenius_trie_factory_impl.hpp"
 #include "storage/trie/serialization/supergenius_codec.hpp"
@@ -98,8 +103,15 @@ namespace sgns::application
         component_factory->Register( ExtrinsicGossiperFactory::create(), "ProductionGossiper", boost::none );
         component_factory->Register( sgns::SR25519KeypairFactory{}.create(), "SR25519Keypair", boost::none );
         component_factory->Register( ProductionFactory::create(*io_context_), "Production", boost::none );
+        component_factory->Register( ProductionFactory::create(*io_context_), "ProductionObserver", boost::none );
         component_factory->Register( sgns::EnvironmentFactory{}.create(), "Environment", boost::none );
+        component_factory->Register( sgns::ED25519ProviderFactory{}.create(), "ED25519Provider", boost::none );
+        component_factory->Register( sgns::ED25519KeyPairFactory{}.create(), "ED25519Keypair", boost::none );
+        component_factory->Register( sgns::SteadyClockFactory{}.create(), "SteadyClock", boost::none );
+        component_factory->Register( sgns::AuthorityManagerFactory{}.create(), "AuthorityManager", boost::none );
         component_factory->Register( sgns::FinalityFactory{}.create(io_context_), "Finality", boost::none );
+        component_factory->Register( sgns::FinalityFactory{}.create(io_context_), "RoundObserver", boost::none );
+        component_factory->Register( sgns::RouterFactory{}.create(), "Router", boost::none );
 
         auto result = component_factory->GetComponent( "AppStateManager", boost::none );
         if ( !result )
@@ -142,9 +154,14 @@ namespace sgns::application
             throw std::runtime_error( "Finality not registered " );
         }
         finality_ = std::dynamic_pointer_cast<sgns::verification::finality::Finality>( result.value() );
-        //finality_          = std::make_shared<verification::finality::FinalityImpl>();
-        //router_            = std::make_shared<network::RouterLibp2p>();
-
+        
+        result = component_factory->GetComponent( "Router", boost::none );
+        if ( !result )
+        {
+            throw std::runtime_error( "Router not registered " );
+        }
+        router_ = std::dynamic_pointer_cast<sgns::network::Router>( result.value() );
+    
         //jrpc_api_service_ = std::make_shared<api::ApiService>();
     }
 
