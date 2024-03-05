@@ -2,11 +2,12 @@
 #define SUPERGENIUS_API_SYSTEMAPI
 
 #include "application/configuration_storage.hpp"
+#include "integration/IComponent.hpp"
 
 namespace sgns::api {
 
   /// Auxiliary class that providing access for some app's parts over RPC
-  class SystemApi {
+  class SystemApi : public IComponent {
    public:
     virtual ~SystemApi() = default;
 

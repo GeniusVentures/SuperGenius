@@ -14,8 +14,8 @@ namespace sgns::api {
    public:
     StateApiImpl(std::shared_ptr<blockchain::BlockHeaderRepository> block_repo,
                  std::shared_ptr<const storage::trie::TrieStorage> trie_storage,
-                 std::shared_ptr<blockchain::BlockTree> block_tree,
-                 std::shared_ptr<runtime::Core> runtime_core);
+                 std::shared_ptr<blockchain::BlockTree> block_tree/*,
+                 std::shared_ptr<runtime::Core> runtime_core*/);
 
     void setApiService(
         std::shared_ptr<api::ApiService> const &api_service) override;
@@ -32,11 +32,16 @@ namespace sgns::api {
     outcome::result<void> unsubscribeStorage(
         const std::vector<uint32_t> &subscription_id) override;
 
+    std::string GetName() override
+    {
+        return "StateApiImpl";
+    }
+
    private:
     std::shared_ptr<blockchain::BlockHeaderRepository> block_repo_;
     std::shared_ptr<const storage::trie::TrieStorage> storage_;
     std::shared_ptr<blockchain::BlockTree> block_tree_;
-    std::shared_ptr<runtime::Core> runtime_core_;
+    //std::shared_ptr<runtime::Core> runtime_core_;
 
     std::weak_ptr<api::ApiService> api_service_;
   };

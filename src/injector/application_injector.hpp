@@ -167,19 +167,19 @@ namespace sgns::injector {
     auto server = injector.template create<std::shared_ptr<api::JRpcServer>>();
     std::vector<std::shared_ptr<api::JRpcProcessor>> processors{
         injector
-            .template create<std::shared_ptr<api::state::StateJrpcProcessor>>(),
+            .template create<std::shared_ptr<api::state::StateJRpcProcessor>>(),
         injector.template create<
             std::shared_ptr<api::author::AuthorJRpcProcessor>>(),
         injector
-            .template create<std::shared_ptr<api::chain::ChainJrpcProcessor>>(),
+            .template create<std::shared_ptr<api::chain::ChainJRpcProcessor>>(),
         injector.template create<
-            std::shared_ptr<api::system::SystemJrpcProcessor>>()};
+            std::shared_ptr<api::system::SystemJRpcProcessor>>()};
 
     initialized =
         std::make_shared<api::ApiService>(std::move(app_state_manager),
                                           std::move(rpc_thread_pool),
                                           std::move(listeners),
-                                          std::move(server),
+                                          std::move(sevrver),
                                           processors,
                                           std::move(subscription_engine));
 

@@ -15,6 +15,11 @@ namespace sgns::api {
     std::shared_ptr<application::ConfigurationStorage> getConfig()
         const override;
 
+    std::string GetName() override
+    {
+      return "SystemApiImpl";
+    }
+
    private:
     std::shared_ptr<application::ConfigurationStorage> config_;
   };

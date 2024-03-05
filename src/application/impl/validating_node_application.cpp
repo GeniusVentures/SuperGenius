@@ -45,6 +45,9 @@
 #include "integration/ListenerFactory.hpp"
 #include "integration/JRpcServerFactory.hpp"
 #include "integration/JRpcProcessorFactory.hpp"
+#include "integration/ChainApiFactory.hpp"
+#include "integration/StateApiFactory.hpp"
+#include "integration/SystemApiFactory.hpp"
 
 #include "storage/trie/supergenius_trie/supergenius_trie_factory_impl.hpp"
 #include "storage/trie/serialization/supergenius_codec.hpp"
@@ -110,7 +113,7 @@ namespace sgns::application
         component_factory->Register( ExtrinsicGossiperFactory::create(), "ProductionGossiper", boost::none );
         component_factory->Register( sgns::SR25519KeypairFactory{}.create(), "SR25519Keypair", boost::none );
         component_factory->Register( ProductionFactory::create( *io_context_ ), "Production", boost::none );
-        component_factory->Register( ProductionFactory::create( *io_context_ ), "ProductionObserver", boost::none );
+        component_factory->Register( (component_factory->GetComponent( "Production", boost::none )).value(), "ProductionObserver", boost::none );
         component_factory->Register( sgns::EnvironmentFactory{}.create(), "Environment", boost::none );
         component_factory->Register( sgns::ED25519ProviderFactory{}.create(), "ED25519Provider", boost::none );
         component_factory->Register( sgns::ED25519KeyPairFactory{}.create(), "ED25519Keypair", boost::none );
@@ -124,12 +127,15 @@ namespace sgns::application
         component_factory->Register( sgns::RpcThreadPoolFactory{}.create(), "RpcThreadPool", boost::none );
         component_factory->Register( sgns::ListenerFactory{}.create( "ws", app_config->rpc_ws_endpoint() ), "Listener",
                                      boost::make_optional( std::string( "ws" ) ) );
-        component_factory->Register( sgns::ListenerFactory{}.create( "http", app_config->rpc_ws_endpoint() ), "Listener",
+        component_factory->Register( sgns::ListenerFactory{}.create( "http", app_config->rpc_http_endpoint() ), "Listener",
                                      boost::make_optional( std::string( "http" ) ) );
         component_factory->Register( sgns::JRpcServerFactory{}.create(), "JRpcServer", boost::none );
         component_factory->Register( sgns::JRpcProcessorFactory{}.create("Author"), "JRpcProcessor", boost::make_optional( std::string( "Author" ) ) );
+        component_factory->Register( sgns::ChainApiFactory{}.create(), "ChainApi", boost::none );
         component_factory->Register( sgns::JRpcProcessorFactory{}.create("Chain"), "JRpcProcessor", boost::make_optional( std::string( "Chain" ) ) );
+        component_factory->Register( sgns::StateApiFactory{}.create(), "StateApi", boost::none );
         component_factory->Register( sgns::JRpcProcessorFactory{}.create("State"), "JRpcProcessor", boost::make_optional( std::string( "State" ) ) );
+        component_factory->Register( sgns::SystemApiFactory{}.create(), "SystemApi", boost::none );
         component_factory->Register( sgns::JRpcProcessorFactory{}.create("System"), "JRpcProcessor", boost::make_optional( std::string( "System" ) ) );
         component_factory->Register( sgns::ApiServiceFactory{}.create(), "ApiService", boost::none );
 

@@ -27,6 +27,11 @@ namespace sgns::api {
     outcome::result<std::vector<BlockHash>> getBlockHash(
         gsl::span<const ValueType> values) const override;
 
+    std::string GetName() override
+    {
+      return "ChainApiImpl";
+    }
+
    private:
     std::shared_ptr<blockchain::BlockHeaderRepository> block_repo_;
     std::shared_ptr<blockchain::BlockTree> block_tree_;
