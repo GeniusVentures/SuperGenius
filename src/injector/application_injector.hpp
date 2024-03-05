@@ -179,7 +179,7 @@ namespace sgns::injector {
         std::make_shared<api::ApiService>(std::move(app_state_manager),
                                           std::move(rpc_thread_pool),
                                           std::move(listeners),
-                                          std::move(sevrver),
+                                          std::move(server),
                                           processors,
                                           std::move(subscription_engine));
 
