@@ -38,6 +38,10 @@ namespace sgns::api {
 
     void setHandlerForNewSession(NewSessionHandler &&on_new_session) override;
 
+    std::string GetName() override
+    {
+      return "HttpListenerImpl";
+    }
    private:
     void acceptOnce() override;
 

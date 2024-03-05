@@ -39,14 +39,14 @@ namespace sgns
             }
             auto rpc_thread_pool = std::dynamic_pointer_cast<api::RpcThreadPool>( result.value() );
 
-            result = component_factory->GetComponent( "Listener", boost::make_optional( std::string( "Http" ) ) );
+            result = component_factory->GetComponent( "Listener", boost::make_optional( std::string( "http" ) ) );
             if ( !result )
             {
                 throw std::runtime_error( "Initialize Http Listener first" );
             }
             auto http_listener = std::dynamic_pointer_cast<api::Listener>( result.value() );
 
-            result = component_factory->GetComponent( "Listener", boost::make_optional( std::string( "Ws" ) ) );
+            result = component_factory->GetComponent( "Listener", boost::make_optional( std::string( "ws" ) ) );
             if ( !result )
             {
                 throw std::runtime_error( "Initialize Ws Listener first" );
@@ -65,7 +65,7 @@ namespace sgns
             result = component_factory->GetComponent( "JRpcProcessor", boost::make_optional( std::string( "State" ) ) );
             if ( !result )
             {
-                throw std::runtime_error( "Initialize StateJrpcProcessor first" );
+                throw std::runtime_error( "Initialize StateJRpcProcessor first" );
             }
             auto state_jrpc_proc = std::dynamic_pointer_cast<api::JRpcProcessor>( result.value() );
 
@@ -79,14 +79,14 @@ namespace sgns
             result = component_factory->GetComponent( "JRpcProcessor", boost::make_optional( std::string( "Chain" ) ) );
             if ( !result )
             {
-                throw std::runtime_error( "Initialize ChainJrpcProcessor first" );
+                throw std::runtime_error( "Initialize ChainJRpcProcessor first" );
             }
             auto chain_jrpc_proc = std::dynamic_pointer_cast<api::JRpcProcessor>( result.value() );
 
             result = component_factory->GetComponent( "JRpcProcessor", boost::make_optional( std::string( "System" ) ) );
             if ( !result )
             {
-                throw std::runtime_error( "Initialize SystemJrpcProcessor first" );
+                throw std::runtime_error( "Initialize SystemJRpcProcessor first" );
             }
             auto system_jrpc_proc = std::dynamic_pointer_cast<api::JRpcProcessor>( result.value() );
 

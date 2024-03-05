@@ -37,6 +37,11 @@ namespace sgns::api {
 
     void setHandlerForNewSession(NewSessionHandler &&on_new_session) override;
 
+    std::string GetName() override
+    {
+      return "WsListenerImpl";
+    }
+
    private:
     void acceptOnce() override;
 

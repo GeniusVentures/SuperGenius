@@ -40,6 +40,11 @@
 #include "integration/RouterFactory.hpp"
 #include "integration/SyncProtocolObserverFactory.hpp"
 #include "integration/ApiServiceFactory.hpp"
+#include "integration/RpcThreadPoolFactory.hpp"
+#include "integration/RpcContextFactory.hpp"
+#include "integration/ListenerFactory.hpp"
+#include "integration/JRpcServerFactory.hpp"
+#include "integration/JRpcProcessorFactory.hpp"
 
 #include "storage/trie/supergenius_trie/supergenius_trie_factory_impl.hpp"
 #include "storage/trie/serialization/supergenius_codec.hpp"
@@ -99,22 +104,33 @@ namespace sgns::application
         component_factory->Register( EpochStorageFactory::create(), "EpochStorage", boost::none );
         component_factory->Register( SR25519ProviderFactory::create(), "SR25519Provider", boost::none );
         component_factory->Register( BlockValidatorFactory::create(), "BlockValidator", boost::none );
-        component_factory->Register( OwnPeerInfoFactory::create(app_config->p2p_port()), "OwnPeerInfo", boost::none );
+        component_factory->Register( OwnPeerInfoFactory::create( app_config->p2p_port() ), "OwnPeerInfo", boost::none );
         component_factory->Register( ProductionSynchronizerFactory::create(), "ProductionSynchronizer", boost::none );
         component_factory->Register( BlockExecutorFactory::create(), "BlockExecutor", boost::none );
         component_factory->Register( ExtrinsicGossiperFactory::create(), "ProductionGossiper", boost::none );
         component_factory->Register( sgns::SR25519KeypairFactory{}.create(), "SR25519Keypair", boost::none );
-        component_factory->Register( ProductionFactory::create(*io_context_), "Production", boost::none );
-        component_factory->Register( ProductionFactory::create(*io_context_), "ProductionObserver", boost::none );
+        component_factory->Register( ProductionFactory::create( *io_context_ ), "Production", boost::none );
+        component_factory->Register( ProductionFactory::create( *io_context_ ), "ProductionObserver", boost::none );
         component_factory->Register( sgns::EnvironmentFactory{}.create(), "Environment", boost::none );
         component_factory->Register( sgns::ED25519ProviderFactory{}.create(), "ED25519Provider", boost::none );
         component_factory->Register( sgns::ED25519KeyPairFactory{}.create(), "ED25519Keypair", boost::none );
         component_factory->Register( sgns::SteadyClockFactory{}.create(), "SteadyClock", boost::none );
         component_factory->Register( sgns::AuthorityManagerFactory{}.create(), "AuthorityManager", boost::none );
-        component_factory->Register( sgns::FinalityFactory{}.create(io_context_), "Finality", boost::none );
-        component_factory->Register( sgns::FinalityFactory{}.create(io_context_), "RoundObserver", boost::none );
+        component_factory->Register( sgns::FinalityFactory{}.create( io_context_ ), "Finality", boost::none );
+        component_factory->Register( sgns::FinalityFactory{}.create( io_context_ ), "RoundObserver", boost::none );
         component_factory->Register( sgns::SyncProtocolObserverFactory{}.create(), "SyncProtocolObserver", boost::none );
         component_factory->Register( sgns::RouterFactory{}.create(), "Router", boost::none );
+        component_factory->Register( sgns::RpcContextFactory{}.create(), "RpcContext", boost::none );
+        component_factory->Register( sgns::RpcThreadPoolFactory{}.create(), "RpcThreadPool", boost::none );
+        component_factory->Register( sgns::ListenerFactory{}.create( "ws", app_config->rpc_ws_endpoint() ), "Listener",
+                                     boost::make_optional( std::string( "ws" ) ) );
+        component_factory->Register( sgns::ListenerFactory{}.create( "http", app_config->rpc_ws_endpoint() ), "Listener",
+                                     boost::make_optional( std::string( "http" ) ) );
+        component_factory->Register( sgns::JRpcServerFactory{}.create(), "JRpcServer", boost::none );
+        component_factory->Register( sgns::JRpcProcessorFactory{}.create("Author"), "JRpcProcessor", boost::make_optional( std::string( "Author" ) ) );
+        component_factory->Register( sgns::JRpcProcessorFactory{}.create("Chain"), "JRpcProcessor", boost::make_optional( std::string( "Chain" ) ) );
+        component_factory->Register( sgns::JRpcProcessorFactory{}.create("State"), "JRpcProcessor", boost::make_optional( std::string( "State" ) ) );
+        component_factory->Register( sgns::JRpcProcessorFactory{}.create("System"), "JRpcProcessor", boost::make_optional( std::string( "System" ) ) );
         component_factory->Register( sgns::ApiServiceFactory{}.create(), "ApiService", boost::none );
 
         auto result = component_factory->GetComponent( "AppStateManager", boost::none );
@@ -158,20 +174,19 @@ namespace sgns::application
             throw std::runtime_error( "Finality not registered " );
         }
         finality_ = std::dynamic_pointer_cast<sgns::verification::finality::Finality>( result.value() );
-        
+
         result = component_factory->GetComponent( "Router", boost::none );
         if ( !result )
         {
             throw std::runtime_error( "Router not registered " );
         }
         router_ = std::dynamic_pointer_cast<sgns::network::Router>( result.value() );
-        result = component_factory->GetComponent( "ApiService", boost::none );
+        result  = component_factory->GetComponent( "ApiService", boost::none );
         if ( !result )
         {
             throw std::runtime_error( "ApiService not registered " );
         }
         jrpc_api_service_ = std::dynamic_pointer_cast<sgns::api::ApiService>( result.value() );
-
     }
 
     void ValidatingNodeApplication::run()

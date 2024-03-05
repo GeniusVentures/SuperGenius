@@ -46,6 +46,13 @@ add_executable (sgns_demo
       sgns_router
       sync_protocol_observer
       api_service
+      api_transport
+      api_jrpc_server
+      chain_api_service
+      state_api_service
+      system_api_service
+      author_api_service
+      api_author_requests
       p2p::p2p_basic_host
       p2p::p2p_default_network
       p2p::p2p_peer_repository

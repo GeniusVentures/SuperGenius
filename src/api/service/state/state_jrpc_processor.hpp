@@ -9,13 +9,18 @@
 
 namespace sgns::api::state {
 
-  class StateJrpcProcessor : public JRpcProcessor {
+  class StateJRpcProcessor : public JRpcProcessor {
    public:
-    StateJrpcProcessor(std::shared_ptr<JRpcServer> server,
+    StateJRpcProcessor(std::shared_ptr<JRpcServer> server,
                        std::shared_ptr<StateApi> api);
-    ~StateJrpcProcessor() override = default;
+    ~StateJRpcProcessor() override = default;
 
     void registerHandlers() override;
+
+    std::string GetName() override
+    {
+      return "StateJRpcProcessor";
+    }
 
    private:
     std::shared_ptr<StateApi> api_;

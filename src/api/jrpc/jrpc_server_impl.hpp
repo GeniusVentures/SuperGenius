@@ -37,6 +37,11 @@ namespace sgns::api {
     void processJsonData(const jsonrpc::Value &from,
                          const ResponseHandler &cb) override;
 
+    std::string GetName() override
+    {
+      return "JRpcServerImpl";
+    }
+
    private:
     /// json rpc server instance
     jsonrpc::Server jsonrpc_handler_{};

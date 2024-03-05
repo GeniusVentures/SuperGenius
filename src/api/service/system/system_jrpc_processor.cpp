@@ -9,7 +9,7 @@
 
 namespace sgns::api::system {
 
-  SystemJrpcProcessor::SystemJrpcProcessor(std::shared_ptr<JRpcServer> server,
+  SystemJRpcProcessor::SystemJRpcProcessor(std::shared_ptr<JRpcServer> server,
                                            std::shared_ptr<SystemApi> api)
       : api_{std::move(api)}, server_{std::move(server)} {
     BOOST_ASSERT(api_ != nullptr);
@@ -19,7 +19,7 @@ namespace sgns::api::system {
   template <typename Request>
   using Handler = sgns::api::Method<Request, SystemApi>;
 
-  void SystemJrpcProcessor::registerHandlers() {
+  void SystemJRpcProcessor::registerHandlers() {
     server_->registerHandler("system_name", Handler<request::Name>(api_));
 
     server_->registerHandler("system_version", Handler<request::Version>(api_));

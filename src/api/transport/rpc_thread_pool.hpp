@@ -10,6 +10,7 @@
 #include "api/transport/rpc_io_context.hpp"
 #include "application/app_state_manager.hpp"
 #include "base/logger.hpp"
+#include "integration/IComponent.hpp"
 
 using sgns::application::AppStateManager;
 
@@ -18,7 +19,7 @@ namespace sgns::api {
   /**
    * @brief thread pool for serve RPC calls
    */
-  class RpcThreadPool : public std::enable_shared_from_this<RpcThreadPool> {
+  class RpcThreadPool : public std::enable_shared_from_this<RpcThreadPool>, public IComponent {
    public:
     using Context = RpcContext;
 
@@ -41,6 +42,11 @@ namespace sgns::api {
      * @brief stops pool
      */
     void stop();
+
+    std::string GetName() override
+    {
+      return "RpcThreadPool";
+    }
 
    private:
     std::shared_ptr<Context> context_;
