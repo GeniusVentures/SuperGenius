@@ -53,11 +53,12 @@ int main(int argc, char* argv[])
     const auto inputImageFileName = argv[2];
 
     //Split Image into RGBA bytes
-    ImageSplitter imagesplit(inputImageFileName, 128, 128);
+    ImageSplitter imagesplit(inputImageFileName, 540, 4860, 48600);
     // For 1350x900 broken into 135x90
     //bytes - 48,600
     //Block Stride - 540
     //Block Line Strike - 4860
+    return 1;
     const std::string processingGridChannel = "GRID_CHANNEL_ID";
 
     //Make Host Pubsubs

@@ -41,36 +41,45 @@ namespace
             int originChannel;
             inputImage = stbi_load(filename, &originalWidth, &originalHeight, &originChannel, 4);
             imageSize = originalWidth * originalHeight * 4;
-            for (uint32_t x = 0; x < imageSize; x += blocklen_)
-            {
-                std::vector<uint8_t> chunkBuffer(blocklen_);
-                uint32_t chunkoffset = 0;
-                for (uint32_t i = 0; i < blocklen_ && i < imageSize; i += blockstride_ + blocklinestride_)
-                {
-                    auto chunkData = inputImage + i;
-                    auto chunkEnd = std::min(chunkData + blockstride_, inputImage + imageSize);
-                    std::memcpy(chunkBuffer.data() + chunkoffset, chunkData, chunkEnd - chunkData);
-                    chunkoffset += chunkEnd - chunkData;
+            //std::cout << " Image Size : " << imageSize << std::endl;
+            for (int y = 0; y < originalHeight; y += blocklen_ / blockstride_) {
+                //std::cout << "OK" << y << " OK" << originalHeight << std::endl;
+                for (int x = 0; x < originalWidth; x += blockstride_/4) {
+                    //std::cout << "OKX " << x << " OKX " << originalWidth << std::endl;
+                    //Extract actual size
+                    auto chunkWidthActual = std::min(blockstride_/4, static_cast<uint32_t>(originalWidth - x));
+                    auto chunkHeightActual = std::min(blocklen_ / blockstride_, static_cast<uint32_t>(originalHeight - y));
+
+                    //Create Buffer
+                    std::vector<uint8_t> chunkBuffer(4 * chunkWidthActual * chunkHeightActual);
+                    //std::cout << "ChunKheightActual: " << chunkHeightActual << " Width: " << chunkWidthActual << std::endl;
+                    for (int i = 0; i < chunkHeightActual; i++)
+                    {
+                        auto chunkOffset = (y + i) * originalWidth * 4 + x * 4;
+                        auto chunkData = inputImage + chunkOffset;
+                        std::memcpy(chunkBuffer.data() + (i * 4 * chunkWidthActual), chunkData, 4 * chunkWidthActual);
+                    }
+                    std::string filename = "chunk_" + std::to_string(y+x) + ".png";
+                    int result = stbi_write_png(filename.c_str(), chunkWidthActual, chunkHeightActual, 4, chunkBuffer.data(), blockstride_);
+                    if (!result) {
+                        std::cerr << "Error writing PNG file: " << filename << "\n";
+                    }
+                    splitparts_.push_back(chunkBuffer);
+                    chunkWidthActual_.push_back(chunkWidthActual/4);
+                    chunkHeightActual_.push_back(chunkHeightActual/4);
+                    gsl::span<const uint8_t> byte_span(chunkBuffer);
+                    std::vector<uint8_t> shahash(SHA256_DIGEST_LENGTH);
+                    SHA256_CTX sha256;
+                    SHA256_Init(&sha256);
+                    SHA256_Update(&sha256, chunkBuffer.data(), chunkBuffer.size());
+                    SHA256_Final(shahash.data(), &sha256);
+                    auto hash = libp2p::multi::Multihash::create(libp2p::multi::HashType::sha256, shahash);
+                    cids_.push_back(libp2p::multi::ContentIdentifier(
+                        libp2p::multi::ContentIdentifier::Version::V0,
+                        libp2p::multi::MulticodecType::Code::DAG_PB,
+                        hash.value()
+                    ));
                 }
-                splitparts_.push_back(chunkBuffer);
-                uint32_t actualChunkWidth = (chunkoffset / 4) / (blockstride_ / 4);
-                uint32_t actualChunkHeight = chunkoffset / (blockstride_ + blocklinestride_);
-                chunkWidthActual_.push_back(actualChunkWidth);
-                chunkHeightActual_.push_back(actualChunkHeight);
-                std::cout << "Chunk Size W: " << actualChunkWidth << std::endl;
-                std::cout << "Chunk Size H: " << actualChunkHeight << std::endl;
-                gsl::span<const uint8_t> byte_span(chunkBuffer);
-                std::vector<uint8_t> shahash(SHA256_DIGEST_LENGTH);
-                SHA256_CTX sha256;
-                SHA256_Init(&sha256);
-                SHA256_Update(&sha256, chunkBuffer.data(), chunkBuffer.size());
-                SHA256_Final(shahash.data(), &sha256);
-                auto hash = libp2p::multi::Multihash::create(libp2p::multi::HashType::sha256, shahash);
-                cids_.push_back(libp2p::multi::ContentIdentifier(
-                    libp2p::multi::ContentIdentifier::Version::V0,
-                    libp2p::multi::MulticodecType::Code::DAG_PB,
-                    hash.value()
-                ));
             }
         }
 
