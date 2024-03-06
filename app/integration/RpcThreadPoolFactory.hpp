@@ -9,6 +9,7 @@
 
 #include "api/transport/rpc_thread_pool.hpp"
 #include "api/transport/rpc_io_context.hpp"
+#include "integration/RpcContextFactory.hpp"
 
 class CComponentFactory;
 namespace sgns
@@ -20,12 +21,14 @@ namespace sgns
         {
             auto component_factory = SINGLETONINSTANCE( CComponentFactory );
 
-            auto result = component_factory->GetComponent("RpcContext", boost::none);
+            /*auto result = component_factory->GetComponent("RpcContext", boost::none);
             if (!result)
             {
                 throw std::runtime_error("Initialize RpcContext first");
             }
             auto rpc_context = std::dynamic_pointer_cast<api::RpcContext>(result.value());
+            */
+            auto rpc_context = RpcContextFactory{}.create();
 
             return std::make_shared<api::RpcThreadPool>(rpc_context, api::RpcThreadPool::Configuration{});
         }

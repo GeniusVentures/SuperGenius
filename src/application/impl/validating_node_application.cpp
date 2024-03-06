@@ -72,10 +72,11 @@ namespace sgns::application
         production_execution_strategy_ = boost::filesystem::exists( app_config->rocksdb_path() ) ? Production::ExecutionStrategy::SYNC_FIRST :
                                                                                                    Production::ExecutionStrategy::GENESIS;
 
-        io_context_            = std::make_shared<boost::asio::io_context>();
         auto component_factory = SINGLETONINSTANCE( CComponentFactory );
+        component_factory->Register( sgns::RpcContextFactory{}.create(), "RpcContext", boost::none );
 
-        component_factory->Register( std::make_shared<sgns::application::AppStateManagerImpl>(), "AppStateManager", boost::none );
+        io_context_ = std::make_shared<boost::asio::io_context>();
+        component_factory->Register( AppStateManagerFactory::create(), "AppStateManager", boost::none );
         component_factory->Register( ConfigurationStorageFactory::create( app_config->genesis_path() ), "ConfigurationStorage", boost::none );
         component_factory->Register( KeyStorageFactory::create( app_config->keystore_path() ), "KeyStorage", boost::none );
         component_factory->Register( SystemClockFactory::create(), "SystemClock", boost::none );
@@ -92,7 +93,7 @@ namespace sgns::application
         component_factory->Register( TrieStorageBackendFactory::create(), "TrieStorageBackend", boost::none );
         component_factory->Register( TrieSerializerFactory::create(), "TrieSerializer", boost::none );
         component_factory->Register( TrieStorageFactory::create(), "TrieStorage", boost::none );
-        component_factory->Register( BlockStorageFactory::create(), "BlockStorage", boost::none );
+        component_factory->Register( sgns::BlockStorageFactory{}.create(), "BlockStorage", boost::none );
         component_factory->Register( ExtrinsicGossiperFactory::create(), "ExtrinsicGossiper", boost::none );
         component_factory->Register( ExtrinsicGossiperFactory::create(), "Gossiper", boost::none );
         component_factory->Register( PoolModeratorFactory::create(), "PoolModerator", boost::none );
@@ -113,7 +114,7 @@ namespace sgns::application
         component_factory->Register( ExtrinsicGossiperFactory::create(), "ProductionGossiper", boost::none );
         component_factory->Register( sgns::SR25519KeypairFactory{}.create(), "SR25519Keypair", boost::none );
         component_factory->Register( ProductionFactory::create( *io_context_ ), "Production", boost::none );
-        component_factory->Register( (component_factory->GetComponent( "Production", boost::none )).value(), "ProductionObserver", boost::none );
+        component_factory->Register( ( component_factory->GetComponent( "Production", boost::none ) ).value(), "ProductionObserver", boost::none );
         component_factory->Register( sgns::EnvironmentFactory{}.create(), "Environment", boost::none );
         component_factory->Register( sgns::ED25519ProviderFactory{}.create(), "ED25519Provider", boost::none );
         component_factory->Register( sgns::ED25519KeyPairFactory{}.create(), "ED25519Keypair", boost::none );
@@ -123,20 +124,24 @@ namespace sgns::application
         component_factory->Register( sgns::FinalityFactory{}.create( io_context_ ), "RoundObserver", boost::none );
         component_factory->Register( sgns::SyncProtocolObserverFactory{}.create(), "SyncProtocolObserver", boost::none );
         component_factory->Register( sgns::RouterFactory{}.create(), "Router", boost::none );
-        component_factory->Register( sgns::RpcContextFactory{}.create(), "RpcContext", boost::none );
+
         component_factory->Register( sgns::RpcThreadPoolFactory{}.create(), "RpcThreadPool", boost::none );
         component_factory->Register( sgns::ListenerFactory{}.create( "ws", app_config->rpc_ws_endpoint() ), "Listener",
                                      boost::make_optional( std::string( "ws" ) ) );
         component_factory->Register( sgns::ListenerFactory{}.create( "http", app_config->rpc_http_endpoint() ), "Listener",
                                      boost::make_optional( std::string( "http" ) ) );
         component_factory->Register( sgns::JRpcServerFactory{}.create(), "JRpcServer", boost::none );
-        component_factory->Register( sgns::JRpcProcessorFactory{}.create("Author"), "JRpcProcessor", boost::make_optional( std::string( "Author" ) ) );
+        component_factory->Register( sgns::JRpcProcessorFactory{}.create( "Author" ), "JRpcProcessor",
+                                     boost::make_optional( std::string( "Author" ) ) );
         component_factory->Register( sgns::ChainApiFactory{}.create(), "ChainApi", boost::none );
-        component_factory->Register( sgns::JRpcProcessorFactory{}.create("Chain"), "JRpcProcessor", boost::make_optional( std::string( "Chain" ) ) );
+        component_factory->Register( sgns::JRpcProcessorFactory{}.create( "Chain" ), "JRpcProcessor",
+                                     boost::make_optional( std::string( "Chain" ) ) );
         component_factory->Register( sgns::StateApiFactory{}.create(), "StateApi", boost::none );
-        component_factory->Register( sgns::JRpcProcessorFactory{}.create("State"), "JRpcProcessor", boost::make_optional( std::string( "State" ) ) );
+        component_factory->Register( sgns::JRpcProcessorFactory{}.create( "State" ), "JRpcProcessor",
+                                     boost::make_optional( std::string( "State" ) ) );
         component_factory->Register( sgns::SystemApiFactory{}.create(), "SystemApi", boost::none );
-        component_factory->Register( sgns::JRpcProcessorFactory{}.create("System"), "JRpcProcessor", boost::make_optional( std::string( "System" ) ) );
+        component_factory->Register( sgns::JRpcProcessorFactory{}.create( "System" ), "JRpcProcessor",
+                                     boost::make_optional( std::string( "System" ) ) );
         component_factory->Register( sgns::ApiServiceFactory{}.create(), "ApiService", boost::none );
 
         auto result = component_factory->GetComponent( "AppStateManager", boost::none );
@@ -205,28 +210,29 @@ namespace sgns::application
             [this]
             {
                 // execute listeners
-
                 io_context_->post(
                     [this]
                     {
-                        //di::bind<network::OwnPeerInfo>.to( [p2p_port{ app_config->p2p_port() }]( const auto &injector )
-                        //                                   { return get_peer_info( injector, p2p_port ); } ),
-                        //auto p2p_injector = libp2p::injector::makeHostInjector<BOOST_DI_CFG>();
-                        //auto                &key_marshaller = p2p_injector.template create<libp2p::crypto::marshaller::KeyMarshaller &>();
-                        //libp2p::peer::PeerId peer_id  = libp2p::peer::PeerId::fromPublicKey( key_marshaller.marshal( public_key ).value() ).value();
-                        //auto                 p2p_info = std::shared_ptr<network::OwnPeerInfo>();
-                        //const network::OwnPeerInfo &current_peer_info();
-                        //libp2p::Host &host = p2p_injector.template create<libp2p::Host &>();
-                        //for ( const auto &ma : current_peer_info.addresses )
-                        //{
-                        //    auto listen = host.listen( ma );
-                        //    if ( !listen )
-                        //    {
-                        //        logger_->error( "Cannot listen address {}. Error: {}", ma.getStringAddress(), listen.error().message() );
-                        //        std::exit( 1 );
-                        //    }
-                        //}
-                        //this->router_->init();
+                        auto component_factory = SINGLETONINSTANCE( CComponentFactory );
+                        auto result            = component_factory->GetComponent( "OwnPeerInfo", boost::none );
+                        if ( !result )
+                        {
+                            throw std::runtime_error( "OwnPeerInfo not registered " );
+                        }
+                        auto current_peer_info = std::dynamic_pointer_cast<sgns::network::OwnPeerInfo>( result.value() );
+
+                        auto  p2p_injector = libp2p::injector::makeHostInjector<BOOST_DI_CFG>();
+                        auto &host         = p2p_injector.template create<libp2p::Host &>();
+                        for ( const auto &ma : current_peer_info->addresses )
+                        {
+                            auto listen = host.listen( ma );
+                            if ( !listen )
+                            {
+                                logger_->error( "Cannot listen address {}. Error: {}", ma.getStringAddress(), listen.error().message() );
+                                std::exit( 1 );
+                            }
+                        }
+                        this->router_->init();
                     } );
                 return true;
             } );

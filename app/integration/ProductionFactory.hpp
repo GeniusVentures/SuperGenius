@@ -37,7 +37,8 @@ public:
         {
             throw std::runtime_error( "Initialize AppStateManager first" );
         }
-        auto app_st_manager = std::dynamic_pointer_cast<sgns::application::AppStateManager>( result.value() );
+        //auto app_state_manager = std::dynamic_pointer_cast<application::AppStateManager>( result.value() );
+        auto app_state_manager = AppStateManagerFactory::create();
 
         result = component_factory->GetComponent( "ProductionLottery", boost::none );
         if ( !result )
@@ -132,7 +133,7 @@ public:
         auto auth_updt_observer = std::dynamic_pointer_cast<sgns::authority::AuthorityUpdateObserver>( result.value() );
 
         return std::make_shared<sgns::verification::ProductionImpl>(         //
-            app_st_manager,                                                  //
+            app_state_manager,                                               //
             prod_lottery,                                                    //
             block_executor,                                                  //
             trie_storage,                                                    //

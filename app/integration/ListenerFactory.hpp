@@ -9,6 +9,7 @@
 
 #include "api/transport/impl/http/http_listener_impl.hpp"
 #include "api/transport/impl/ws/ws_listener_impl.hpp"
+#include "integration/RpcContextFactory.hpp"
 
 class CComponentFactory;
 namespace sgns
@@ -25,14 +26,17 @@ namespace sgns
             {
                 throw std::runtime_error( "Initialize AppStateManager first" );
             }
-            auto app_state_manager = std::dynamic_pointer_cast<application::AppStateManager>( result.value() );
+            //auto app_state_manager = std::dynamic_pointer_cast<application::AppStateManager>( result.value() );
+            auto app_state_manager = AppStateManagerFactory::create();
 
-            result = component_factory->GetComponent( "RpcContext", boost::none );
+            /*result = component_factory->GetComponent( "RpcContext", boost::none );
             if ( !result )
             {
                 throw std::runtime_error( "Initialize RpcContext first" );
             }
             auto rpc_context = std::dynamic_pointer_cast<api::RpcContext>( result.value() );
+            */
+            auto rpc_context = RpcContextFactory{}.create();
 
             api::Listener::Configuration listener_config;
             listener_config.endpoint = endpoint;

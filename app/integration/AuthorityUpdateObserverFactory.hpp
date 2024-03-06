@@ -25,7 +25,8 @@ public:
             throw std::runtime_error( "Initialize AppStateManager first" );
         }
 
-        auto app_state_manager = std::dynamic_pointer_cast<sgns::application::AppStateManager>( result.value() );
+            //auto app_state_manager = std::dynamic_pointer_cast<application::AppStateManager>( result.value() );
+            auto app_state_manager = AppStateManagerFactory::create();
 
         result = component_factory->GetComponent( "ProductionConfiguration", boost::none );
         if ( !result )
