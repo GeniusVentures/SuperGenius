@@ -430,7 +430,7 @@ namespace
             //}
             std::string hashString(shahash.begin(), shahash.end());
             result.set_result_hash(hashString.data());
-            std::cout << "end processing" << std::endl;
+            std::cout << "end processing " << std::endl;
         }
         std::vector<size_t> m_chunkResulHashes;
         std::vector<size_t> m_validationChunkHashes;
