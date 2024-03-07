@@ -89,9 +89,9 @@ int main(int argc, char* argv[])
         std::cout << "CID STRING:    " << libp2p::multi::ContentIdentifierCodec::toString(imagesplit.GetPartCID(taskIdx)).value() << std::endl;
         //task.set_ipfs_block_id(libp2p::multi::ContentIdentifierCodec::toString(imagesplit.GetPartCID(taskIdx)).value());
         task.set_ipfs_block_id("Qmbi9eFJSDyyoU2HiPJyGvwLb3rEacs78WUFbpKEYSzR47");
-        task.set_block_len(imagesplit.GetPartSize(taskIdx));
-        task.set_block_line_stride(imagesplit.GetPartStride(taskIdx));
-        task.set_block_stride(imagesplit.GetPartSize(taskIdx));
+        task.set_block_len(48600);
+        task.set_block_line_stride(540);
+        task.set_block_stride(4860);
         task.set_random_seed(0);
         task.set_results_channel((boost::format("RESULT_CHANNEL_ID_%1%") % (taskIdx + 1)).str());
         tasks.push_back(std::move(task));
