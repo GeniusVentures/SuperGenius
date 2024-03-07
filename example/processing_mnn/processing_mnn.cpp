@@ -58,7 +58,6 @@ int main(int argc, char* argv[])
     //bytes - 48,600
     //Block Stride - 540
     //Block Line Strike - 4860
-    return 1;
     const std::string processingGridChannel = "GRID_CHANNEL_ID";
 
     //Make Host Pubsubs

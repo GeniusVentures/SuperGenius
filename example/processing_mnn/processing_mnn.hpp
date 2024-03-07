@@ -21,6 +21,12 @@
 #include <boost/format.hpp>
 #include <ipfs_lite/ipfs/graphsync/graphsync.hpp>
 #include "mnn_posenet.hpp"
+//Async IO Manager Stuff
+#include "Singleton.hpp"
+#include "FileManager.hpp"
+#include "URLStringUtil.h"
+#include <libp2p/injector/host_injector.hpp>
+#include "libp2p/injector/kademlia_injector.hpp"
 
 namespace
 {
@@ -48,8 +54,12 @@ namespace
         ImageSplitter(const std::vector<char>& buffer, uint32_t blockstride, uint32_t blocklinestride, uint32_t blocklen)
             : blockstride_(blockstride), blocklinestride_(blocklinestride), blocklen_(blocklen) {
             // Set inputImage and imageSize from the provided buffer
-            inputImage = reinterpret_cast<const unsigned char*>(buffer.data());
-            imageSize = buffer.size();
+            //inputImage = reinterpret_cast<const unsigned char*>(buffer.data());
+            int originalWidth;
+            int originalHeight;
+            int originChannel;
+            inputImage = stbi_load_from_memory(reinterpret_cast<const stbi_uc*>(buffer.data()), buffer.size(), &originalWidth, &originalHeight, &originChannel, STBI_rgb_alpha);
+            imageSize = originalWidth * originalHeight * 4;
 
             SplitImageData();
         }
@@ -147,18 +157,18 @@ namespace
                     rowsdone
                     * (blocklen_ *
                         ((blockstride_ + blocklinestride_) / blockstride_));
-                std::cout << "buffer offset:  " << bufferoffset << std::endl;
+                //std::cout << "buffer offset:  " << bufferoffset << std::endl;
                 for (uint32_t size = 0; size < blocklen_; size += blockstride_)
                 {
                     auto chunkData = inputImage + bufferoffset;
                     std::memcpy(chunkBuffer.data() + (size), chunkData, blockstride_);
                     bufferoffset += blockstride_ + blocklinestride_;
                 }
-                std::string filename = "chunk_" + std::to_string(i) + ".png";
-                int result = stbi_write_png(filename.c_str(), blockstride_ / 4, blocklen_ / blockstride_, 4, chunkBuffer.data(), blockstride_);
-                if (!result) {
-                    std::cerr << "Error writing PNG file: " << filename << "\n";
-                }
+                //std::string filename = "chunk_" + std::to_string(i) + ".png";
+                //int result = stbi_write_png(filename.c_str(), blockstride_ / 4, blocklen_ / blockstride_, 4, chunkBuffer.data(), blockstride_);
+                //if (!result) {
+                //    std::cerr << "Error writing PNG file: " << filename << "\n";
+                //}
                 splitparts_.push_back(chunkBuffer);
                 chunkWidthActual_.push_back(blockstride_ / 4);
                 chunkHeightActual_.push_back(blocklen_ / blockstride_);
@@ -211,12 +221,13 @@ namespace
 
                 //auto subtaskId = base58.value();
                 SGProcessing::SubTask subtask;
-                //subtask.set_ipfsblock(task.ipfs_block_id());
-                subtask.set_ipfsblock(base58.value());
+                subtask.set_ipfsblock(task.ipfs_block_id());
+                //subtask.set_ipfsblock(base58.value());
                 //std::cout << "BLOCK ID CHECK: " << task.ipfs_block_id() << std::endl;
                 std::cout << "Subtask ID :: " << subtaskId << std::endl;
                 std::cout << "Subtask CID :: " << task.ipfs_block_id() << std::endl;
-                subtask.set_subtaskid(subtaskId);
+                subtask.set_subtaskid(base58.value());
+                //subtask.set_subtaskid(subtaskId);
 
                 for (size_t chunkIdx = 0; chunkIdx < m_nChunks; ++chunkIdx)
                 {
@@ -307,18 +318,60 @@ namespace
                     throw std::runtime_error("Maximal number of processed subtasks exceeded");
                 }
             }
-            std::cout << "Test CID:       " << imagesplit_.GetPartCID(1).toPrettyString("") << std::endl;
+            //std::cout << "Test CID:       " << imagesplit_.GetPartCID(1).toPrettyString("") << std::endl;
             std::cout << "Process subtask " << subTask.subtaskid() << std::endl;
             std::cout << "IPFS BLOCK:           " << subTask.ipfsblock() << std::endl;
             
             //auto hash = libp2p::multi::Multihash::create()
+            if (cidData_.find(subTask.ipfsblock()) == cidData_.end())
+            {
+                //ASIO for Async, should probably be made to use the main IO but this class doesn't have it 
+                libp2p::protocol::kademlia::Config kademlia_config;
+                kademlia_config.randomWalk.enabled = true;
+                kademlia_config.randomWalk.interval = std::chrono::seconds(300);
+                kademlia_config.requestConcurency = 20;
+                auto injector = libp2p::injector::makeHostInjector(
+                    libp2p::injector::makeKademliaInjector(
+                        libp2p::injector::useKademliaConfig(kademlia_config)));
+                auto ioc = injector.create<std::shared_ptr<boost::asio::io_context>>();
 
+                boost::asio::io_context::executor_type executor = ioc->get_executor();
+                boost::asio::executor_work_guard<boost::asio::io_context::executor_type> workGuard(executor);
+                //Get Image Async
+                FileManager::GetInstance().InitializeSingletons();
+                string fileURL = "ipfs://" + subTask.ipfsblock() + "/test.png";
+                auto data = FileManager::GetInstance().LoadASync(fileURL, false, false, ioc, [](const int& status)
+                    {
+                        std::cout << "status: " << status << std::endl;
+                    }, [subTask, &result, initialHashCode, this](std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers)
+                        {
+                            std::cout << "Final Callback" << std::endl;
+                            //this->cidData_.first.push_back(subTask.ipfsblock());
+                            //this->cidData_.second.push_back(buffers->second.at(0));
+                            this->cidData_.insert({ subTask.ipfsblock(), buffers->second.at(0) });
+                            this->ProcessSubTask2(subTask, result, initialHashCode, buffers->second.at(0));
+                        }, "file");
+                ioc->reset();
+                ioc->run();
+            }
+            else {
+                auto it = cidData_.find(subTask.ipfsblock());
+                ProcessSubTask2(subTask, result, initialHashCode, it->second);
+            }
+        }
+        void  ProcessSubTask2(
+            const SGProcessing::SubTask& subTask, SGProcessing::SubTaskResult& result,
+            uint32_t initialHashCode, std::vector<char> buffer)
+        {
+            //std::cout << "Process Subtask 2" << std::endl;
+            //Splite image
+            ImageSplitter animageSplit(buffer, 540, 4860, 48600);
             //Get Part Data 
-            auto dataindex = imagesplit_.GetPartByCid(sgns::CID::fromString(subTask.ipfsblock()).value());
-            auto data = imagesplit_.GetPart(dataindex);
-            auto width = imagesplit_.GetPartWidthActual(dataindex);
-            auto height = imagesplit_.GetPartHeightActual(dataindex);
-
+            //std::cout << "ID : " << subTask.subtaskid() << std::endl;
+            auto dataindex = animageSplit.GetPartByCid(sgns::CID::fromString(subTask.subtaskid()).value());
+            auto data = animageSplit.GetPart(dataindex);
+            auto width = animageSplit.GetPartWidthActual(dataindex);
+            auto height = animageSplit.GetPartHeightActual(dataindex);
             auto mnnproc = sgns::mnn::MNN_PoseNet(&data, modelFile_, width, height, (boost::format("%s_%s") % "RESULT_IPFS" % subTask.subtaskid()).str() + ".png");
 
             auto procresults = mnnproc.StartProcessing();
@@ -379,7 +432,6 @@ namespace
             result.set_result_hash(hashString.data());
             std::cout << "end processing" << std::endl;
         }
-
         std::vector<size_t> m_chunkResulHashes;
         std::vector<size_t> m_validationChunkHashes;
 
@@ -392,6 +444,7 @@ namespace
         size_t m_processingSubTaskCount;
         ImageSplitter imagesplit_;
         const char* modelFile_;
+        std::map<std::string, std::vector<char>> cidData_;
     };
 
 }

@@ -35,7 +35,7 @@ int main(int argc, char* argv[])
     loggerProcessingEngine->set_level(spdlog::level::off);
 
     auto loggerProcessingService = sgns::base::createLogger("ProcessingService");
-    loggerProcessingService->set_level(spdlog::level::debug);
+    loggerProcessingService->set_level(spdlog::level::off);
 
     auto loggerProcessingQueueManager = sgns::base::createLogger("ProcessingSubTaskQueueManager");
     loggerProcessingQueueManager->set_level(spdlog::level::info);
@@ -57,7 +57,7 @@ int main(int argc, char* argv[])
     
 
     //Split Image into RGBA bytes
-    ImageSplitter imagesplit(inputImageFileName, 128, 128);
+    //ImageSplitter imagesplit(inputImageFileName, 128, 128);
 
 
     const std::string processingGridChannel = "GRID_CHANNEL_ID";
@@ -72,7 +72,6 @@ int main(int argc, char* argv[])
 
     //Asio Context
     auto io = std::make_shared<boost::asio::io_context>();
-
     
     //Client
     pubs2->Start(40001 + serviceindex, { "/ip4/192.168.46.18/tcp/40001/p2p/12D3KooWAqi3qqAWhZtAmXtxCE4NsAkKSVHGuJ3xzrJdrCNnh5yz" });
@@ -98,7 +97,7 @@ int main(int argc, char* argv[])
         2);
 
     //Set Imagesplit, this replaces bitswap getting of file for now. Should use AsyncIOmanager in the future
-    processingCore2->setImageSplitter(imagesplit);
+    //processingCore2->setImageSplitter(imagesplit);
     processingCore2->setModelFile(poseModel);
 
     ProcessingServiceImpl processingService(
