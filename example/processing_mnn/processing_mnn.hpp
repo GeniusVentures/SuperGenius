@@ -36,6 +36,12 @@ namespace
         ImageSplitter() {
 
         }
+        /** Split an image loaded from fie
+        * @param filename - path/to/file.ext
+        * @param blockstride - 
+        * @param blocklinestride - 
+        * @param blocklen - 
+        */
         ImageSplitter(
             const char* filename,
             uint32_t blockstride,
@@ -51,7 +57,16 @@ namespace
             // Check if imageSize is evenly divisible by blocklen_
             SplitImageData();
         }
-        ImageSplitter(const std::vector<char>& buffer, uint32_t blockstride, uint32_t blocklinestride, uint32_t blocklen)
+        /** Split an image loaded from raw data of a file loaded elsewhere, i.e. asynciomanager
+        * @param buffer - Raw data of image file
+        * @param blockstride -
+        * @param blocklinestride -
+        * @param blocklen -
+        */
+        ImageSplitter(const std::vector<char>& buffer, 
+            uint32_t blockstride, 
+            uint32_t blocklinestride, 
+            uint32_t blocklen)
             : blockstride_(blockstride), blocklinestride_(blocklinestride), blocklen_(blocklen) {
             // Set inputImage and imageSize from the provided buffer
             //inputImage = reinterpret_cast<const unsigned char*>(buffer.data());
@@ -59,11 +74,36 @@ namespace
             int originalHeight;
             int originChannel;
             inputImage = stbi_load_from_memory(reinterpret_cast<const stbi_uc*>(buffer.data()), buffer.size(), &originalWidth, &originalHeight, &originChannel, STBI_rgb_alpha);
+            
             imageSize = originalWidth * originalHeight * 4;
 
             SplitImageData();
         }
         
+        /** Split an image loaded from raw RGBA bytes
+        * @param buffer - Raw RGBA
+        * @param blockstride -
+        * @param blocklinestride -
+        * @param blocklen -
+        */
+        ImageSplitter(const std::vector<uint8_t>& buffer, 
+            uint32_t blockstride, 
+            uint32_t blocklinestride, 
+            uint32_t blocklen)
+            : blockstride_(blockstride), blocklinestride_(blocklinestride), blocklen_(blocklen) {
+            // Set inputImage and imageSize from the provided buffer
+            //inputImage = reinterpret_cast<const unsigned char*>(buffer.data());
+
+            inputImage = reinterpret_cast<const unsigned char*>(buffer.data());
+            imageSize = buffer.size();
+
+            SplitImageData();
+        }
+
+        ~ImageSplitter()
+        {
+            //free(inputImage);
+        }
         std::vector<uint8_t> GetPart(int part)
         {
             return splitparts_.at(part);
@@ -234,9 +274,9 @@ namespace
                     SGProcessing::ProcessingChunk chunk;
                     chunk.set_chunkid((boost::format("CHUNK_%d_%d") % i % chunkId).str());
                     chunk.set_n_subchunks(1);
-                    chunk.set_line_stride(1);
+                    chunk.set_line_stride(540);
                     chunk.set_offset(0);
-                    chunk.set_stride(1);
+                    chunk.set_stride(4860);
                     chunk.set_subchunk_height(10);
                     chunk.set_subchunk_width(10);
 
@@ -384,55 +424,70 @@ namespace
             auto data = animageSplit.GetPart(dataindex);
             auto width = animageSplit.GetPartWidthActual(dataindex);
             auto height = animageSplit.GetPartHeightActual(dataindex);
-            auto mnnproc = sgns::mnn::MNN_PoseNet(&data, modelFile_, width, height, (boost::format("%s_%s") % "RESULT_IPFS" % subTask.subtaskid()).str() + ".png");
+            //auto mnnproc = sgns::mnn::MNN_PoseNet(&data, modelFile_, width, height, (boost::format("%s_%s") % "RESULT_IPFS" % subTask.subtaskid()).str() + ".png");
 
-            auto procresults = mnnproc.StartProcessing();
+            //auto procresults = mnnproc.StartProcessing();
 
 
-            gsl::span<const uint8_t> byte_span(procresults);
-            std::vector<uint8_t> shahash(SHA256_DIGEST_LENGTH);
-            SHA256_CTX sha256;
-            SHA256_Init(&sha256);
-            SHA256_Update(&sha256, &procresults, sizeof(procresults));
-            SHA256_Final(shahash.data(), &sha256);
-            auto hash = libp2p::multi::Multihash::create(libp2p::multi::HashType::sha256, shahash);
-            //auto cid = libp2p::multi::ContentIdentifier(
+            //gsl::span<const uint8_t> byte_span(procresults);
+            //std::vector<uint8_t> shahash(SHA256_DIGEST_LENGTH);
+            //SHA256_CTX sha256;
+            //SHA256_Init(&sha256);
+            //SHA256_Update(&sha256, &procresults, sizeof(procresults));
+            //SHA256_Final(shahash.data(), &sha256);
+            //auto hash = libp2p::multi::Multihash::create(libp2p::multi::HashType::sha256, shahash);
+            //sgns::CID cid(libp2p::multi::ContentIdentifier(
             //    libp2p::multi::ContentIdentifier::Version::V0,
             //    libp2p::multi::MulticodecType::Code::DAG_PB,
-            //    hash.value()
-            //);
-            sgns::CID cid(libp2p::multi::ContentIdentifier(
-                libp2p::multi::ContentIdentifier::Version::V0,
-                libp2p::multi::MulticodecType::Code::DAG_PB,
-                hash.value()));
+            //    hash.value()));
 
-            result.set_ipfs_results_data_id(cid.toString().value());
+            //result.set_ipfs_results_data_id(cid.toString().value());
             //std::this_thread::sleep_for(std::chrono::milliseconds(m_subTaskProcessingTime));
             //result.set_ipfs_results_data_id((boost::format("%s_%s") % "RESULT_IPFS" % subTask.subtaskid()).str());
 
-            //bool isValidationSubTask = (subTask.subtaskid() == "subtask_validation");
-            //size_t subTaskResultHash = initialHashCode;
-            //for (int chunkIdx = 0; chunkIdx < subTask.chunkstoprocess_size(); ++chunkIdx)
-            //{
-            //    const auto& chunk = subTask.chunkstoprocess(chunkIdx);
+            bool isValidationSubTask = (subTask.subtaskid() == "subtask_validation");
+            //std::string subTaskResultHash = "";
+            std::vector<uint8_t> subTaskResultHash(SHA256_DIGEST_LENGTH);
+            for (int chunkIdx = 0; chunkIdx < subTask.chunkstoprocess_size(); ++chunkIdx)
+            {
+                const auto& chunk = subTask.chunkstoprocess(chunkIdx);
+                std::vector<uint8_t> shahash(SHA256_DIGEST_LENGTH);
+                // Chunk result hash should be calculated
+                // Chunk data hash is calculated just as a stub
+                size_t chunkHash = 0;
+                if (isValidationSubTask)
+                {
+                    //chunkHash = ((size_t)chunkIdx < m_validationChunkHashes.size()) ?
+                    //    m_validationChunkHashes[chunkIdx] : std::hash<std::string>{}(chunk.SerializeAsString());
+                }
+                else
+                {
+                    //chunkHash = ((size_t)chunkIdx < m_chunkResulHashes.size()) ?
+                    //    m_chunkResulHashes[chunkIdx] : std::hash<std::string>{}(chunk.SerializeAsString());
+                    ImageSplitter ChunkSplit(animageSplit.GetPart(dataindex), chunk.line_stride(), chunk.stride(), chunk.subchunk_height()* chunk.line_stride());
+                    auto mnnproc = sgns::mnn::MNN_PoseNet(&data, modelFile_, width, height, (boost::format("%s_%s") % "RESULT_IPFS" % std::to_string(chunkIdx)).str() + ".png");
+                    auto procresults = mnnproc.StartProcessing();
 
-            //    // Chunk result hash should be calculated
-            //    // Chunk data hash is calculated just as a stub
-            //    size_t chunkHash = 0;
-            //    if (isValidationSubTask)
-            //    {
-            //        chunkHash = ((size_t)chunkIdx < m_validationChunkHashes.size()) ?
-            //            m_validationChunkHashes[chunkIdx] : std::hash<std::string>{}(chunk.SerializeAsString());
-            //    }
-            //    else
-            //    {
-            //        chunkHash = ((size_t)chunkIdx < m_chunkResulHashes.size()) ?
-            //            m_chunkResulHashes[chunkIdx] : std::hash<std::string>{}(chunk.SerializeAsString());
-            //    }
+                    gsl::span<const uint8_t> byte_span(procresults);
+                    
+                    SHA256_CTX sha256;
+                    SHA256_Init(&sha256);
+                    SHA256_Update(&sha256, &procresults, sizeof(procresults));
+                    SHA256_Final(shahash.data(), &sha256);
 
-            //    result.add_chunk_hashes(chunkHash);
-            //    boost::hash_combine(subTaskResultHash, chunkHash);
-            //}
+                }
+                std::string hashString(shahash.begin(), shahash.end());
+                result.add_chunk_hashes(hashString);
+
+
+                SHA256_CTX sha256;
+                SHA256_Init(&sha256);
+                std::string combinedHash = std::string(subTaskResultHash.begin(), subTaskResultHash.end()) + hashString;
+                SHA256_Update(&sha256, combinedHash.c_str(), sizeof(combinedHash));
+                SHA256_Final(subTaskResultHash.data(), &sha256);
+                //subTaskResultHash = SHA256(subTaskResultHash + hashString);
+                //boost::hash_combine(subTaskResultHash, chunkHash);
+            }
             //uint32_t temphash = 0;
             //if (shahash.size() >= 4)
             //{
@@ -440,8 +495,8 @@ namespace
             //        temphash |= static_cast<uint32_t>(shahash[i]) << (8 * i);
             //    }
             //}
-            std::string hashString(shahash.begin(), shahash.end());
-            result.set_result_hash(hashString.data());
+            std::string hashString(subTaskResultHash.begin(), subTaskResultHash.end());
+            result.set_result_hash(hashString);
             std::cout << "end processing " << std::endl;
         }
         std::vector<size_t> m_chunkResulHashes;
