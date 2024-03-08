@@ -22,11 +22,11 @@
 #include <ipfs_lite/ipfs/graphsync/graphsync.hpp>
 #include "mnn_posenet.hpp"
 //Async IO Manager Stuff
-#include "Singleton.hpp"
-#include "FileManager.hpp"
-#include "URLStringUtil.h"
-#include <libp2p/injector/host_injector.hpp>
-#include "libp2p/injector/kademlia_injector.hpp"
+//#include "Singleton.hpp"
+//#include "FileManager.hpp"
+//#include "URLStringUtil.h"
+//#include <libp2p/injector/host_injector.hpp>
+//#include "libp2p/injector/kademlia_injector.hpp"
 
 namespace
 {
@@ -294,6 +294,7 @@ namespace
             , m_subTaskProcessingTime(subTaskProcessingTime)
             , m_maximalProcessingSubTaskCount(maximalProcessingSubTaskCount)
             , m_processingSubTaskCount(0)
+            , modelFile_()
         {
         }
 
@@ -365,7 +366,18 @@ namespace
         {
             //std::cout << "Process Subtask 2" << std::endl;
             //Splite image
-            ImageSplitter animageSplit(buffer, 540, 4860, 48600);
+            SGProcessing::Task task;
+            //auto queryTasks = m_db->QueryKeyValues("tasks/TASK_" + subTask.ipfsblock());
+            auto queryTasks = m_db->Get("tasks/TASK_" + subTask.ipfsblock());
+            if (queryTasks.has_value())
+            {
+                auto element = queryTasks.value();
+                
+                task.ParseFromArray(element.data(), element.size());
+                //task.ParseFromArray(element, element.second.size());
+            }
+            std::cout << "Check out task " << task.block_len() << std::endl;
+            ImageSplitter animageSplit(buffer, task.block_line_stride(), task.block_stride(), task.block_len());
             //Get Part Data 
             //std::cout << "ID : " << subTask.subtaskid() << std::endl;
             auto dataindex = animageSplit.GetPartByCid(sgns::CID::fromString(subTask.subtaskid()).value());

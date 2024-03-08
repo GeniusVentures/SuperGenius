@@ -7,6 +7,12 @@
 #include <boost/format.hpp>
 
 #include <optional>
+//Async IO Manager Stuff
+#include "Singleton.hpp"
+#include "FileManager.hpp"
+#include "URLStringUtil.h"
+#include <libp2p/injector/host_injector.hpp>
+#include "libp2p/injector/kademlia_injector.hpp"
 
 namespace sgns::processing
 {
@@ -24,6 +30,7 @@ namespace sgns::processing
             const SGProcessing::Task& task,
             const std::list<SGProcessing::SubTask>& subTasks) override
         {
+            std::cout << "Enqueue Task" << std::endl;
             auto taskKey = (boost::format("tasks/TASK_%d") % task.ipfs_block_id()).str();
             sgns::base::Buffer valueBuffer;
             valueBuffer.put(task.SerializeAsString());
@@ -111,7 +118,6 @@ namespace sgns::processing
         bool GrabTask(std::string& grabbedTaskKey, SGProcessing::Task& task) override
         {
             m_logger->info("GRAB_TASK");
-
             auto queryTasks = m_db->QueryKeyValues("tasks");
             if (queryTasks.has_failure())
             {
