@@ -404,10 +404,8 @@ namespace
             const SGProcessing::SubTask& subTask, SGProcessing::SubTaskResult& result,
             uint32_t initialHashCode, std::vector<char> buffer)
         {
-            //std::cout << "Process Subtask 2" << std::endl;
             //Splite image
             SGProcessing::Task task;
-            //auto queryTasks = m_db->QueryKeyValues("tasks/TASK_" + subTask.ipfsblock());
             auto queryTasks = m_db->Get("tasks/TASK_" + subTask.ipfsblock());
             if (queryTasks.has_value())
             {
@@ -416,34 +414,9 @@ namespace
                 task.ParseFromArray(element.data(), element.size());
                 //task.ParseFromArray(element, element.second.size());
             }
-            std::cout << "Check out task " << task.block_len() << std::endl;
             ImageSplitter animageSplit(buffer, task.block_line_stride(), task.block_stride(), task.block_len());
             //Get Part Data 
-            //std::cout << "ID : " << subTask.subtaskid() << std::endl;
             auto dataindex = animageSplit.GetPartByCid(sgns::CID::fromString(subTask.subtaskid()).value());
-            auto data = animageSplit.GetPart(dataindex);
-            auto width = animageSplit.GetPartWidthActual(dataindex);
-            auto height = animageSplit.GetPartHeightActual(dataindex);
-            //auto mnnproc = sgns::mnn::MNN_PoseNet(&data, modelFile_, width, height, (boost::format("%s_%s") % "RESULT_IPFS" % subTask.subtaskid()).str() + ".png");
-
-            //auto procresults = mnnproc.StartProcessing();
-
-
-            //gsl::span<const uint8_t> byte_span(procresults);
-            //std::vector<uint8_t> shahash(SHA256_DIGEST_LENGTH);
-            //SHA256_CTX sha256;
-            //SHA256_Init(&sha256);
-            //SHA256_Update(&sha256, &procresults, sizeof(procresults));
-            //SHA256_Final(shahash.data(), &sha256);
-            //auto hash = libp2p::multi::Multihash::create(libp2p::multi::HashType::sha256, shahash);
-            //sgns::CID cid(libp2p::multi::ContentIdentifier(
-            //    libp2p::multi::ContentIdentifier::Version::V0,
-            //    libp2p::multi::MulticodecType::Code::DAG_PB,
-            //    hash.value()));
-
-            //result.set_ipfs_results_data_id(cid.toString().value());
-            //std::this_thread::sleep_for(std::chrono::milliseconds(m_subTaskProcessingTime));
-            //result.set_ipfs_results_data_id((boost::format("%s_%s") % "RESULT_IPFS" % subTask.subtaskid()).str());
 
             bool isValidationSubTask = (subTask.subtaskid() == "subtask_validation");
             //std::string subTaskResultHash = "";
@@ -453,7 +426,6 @@ namespace
                 const auto& chunk = subTask.chunkstoprocess(chunkIdx);
                 std::vector<uint8_t> shahash(SHA256_DIGEST_LENGTH);
                 // Chunk result hash should be calculated
-                // Chunk data hash is calculated just as a stub
                 size_t chunkHash = 0;
                 if (isValidationSubTask)
                 {
@@ -462,9 +434,10 @@ namespace
                 }
                 else
                 {
-                    //chunkHash = ((size_t)chunkIdx < m_chunkResulHashes.size()) ?
-                    //    m_chunkResulHashes[chunkIdx] : std::hash<std::string>{}(chunk.SerializeAsString());
-                    ImageSplitter ChunkSplit(animageSplit.GetPart(dataindex), chunk.line_stride(), chunk.stride(), chunk.subchunk_height()* chunk.line_stride());
+                    ImageSplitter ChunkSplit(animageSplit.GetPart(dataindex), chunk.line_stride(), chunk.stride(), animageSplit.GetPartHeightActual(dataindex)/chunk.subchunk_height()*chunk.line_stride());
+                    auto data = ChunkSplit.GetPart(chunkIdx);
+                    auto width = ChunkSplit.GetPartWidthActual(chunkIdx);
+                    auto height = ChunkSplit.GetPartHeightActual(chunkIdx);
                     auto mnnproc = sgns::mnn::MNN_PoseNet(&data, modelFile_, width, height, (boost::format("%s_%s") % "RESULT_IPFS" % std::to_string(chunkIdx)).str() + ".png");
                     auto procresults = mnnproc.StartProcessing();
 
@@ -485,16 +458,7 @@ namespace
                 std::string combinedHash = std::string(subTaskResultHash.begin(), subTaskResultHash.end()) + hashString;
                 SHA256_Update(&sha256, combinedHash.c_str(), sizeof(combinedHash));
                 SHA256_Final(subTaskResultHash.data(), &sha256);
-                //subTaskResultHash = SHA256(subTaskResultHash + hashString);
-                //boost::hash_combine(subTaskResultHash, chunkHash);
             }
-            //uint32_t temphash = 0;
-            //if (shahash.size() >= 4)
-            //{
-            //    for (int i = 0; i < 4; ++i) {
-            //        temphash |= static_cast<uint32_t>(shahash[i]) << (8 * i);
-            //    }
-            //}
             std::string hashString(subTaskResultHash.begin(), subTaskResultHash.end());
             result.set_result_hash(hashString);
             std::cout << "end processing " << std::endl;
