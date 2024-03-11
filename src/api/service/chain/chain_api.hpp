@@ -6,12 +6,13 @@
 #include "base/buffer.hpp"
 #include "outcome/outcome.hpp"
 #include "primitives/common.hpp"
+#include "integration/IComponent.hpp"
 
 namespace sgns::api {
   /**
    * @class ChainApi privides interface for blockchain api
    */
-  class ChainApi {
+  class ChainApi : public IComponent {
    public:
     virtual ~ChainApi() = default;
     using BlockNumber = primitives::BlockNumber;

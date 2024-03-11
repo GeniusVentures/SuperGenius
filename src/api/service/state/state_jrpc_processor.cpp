@@ -9,7 +9,7 @@
 
 namespace sgns::api::state {
 
-  StateJrpcProcessor::StateJrpcProcessor(std::shared_ptr<JRpcServer> server,
+  StateJRpcProcessor::StateJRpcProcessor(std::shared_ptr<JRpcServer> server,
                                          std::shared_ptr<StateApi> api)
       : api_{std::move(api)}, server_{std::move(server)} {
     BOOST_ASSERT(api_ != nullptr);
@@ -19,7 +19,7 @@ namespace sgns::api::state {
   template <typename Request>
   using Handler = sgns::api::Method<Request, StateApi>;
 
-  void StateJrpcProcessor::registerHandlers() {
+  void StateJRpcProcessor::registerHandlers() {
     server_->registerHandler("state_getStorage",
                              Handler<request::GetStorage>(api_));
 

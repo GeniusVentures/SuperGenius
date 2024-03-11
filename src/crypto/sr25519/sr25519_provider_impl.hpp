@@ -32,6 +32,10 @@ namespace sgns::crypto {
         const SR25519Signature &signature,
         gsl::span<const uint8_t> message,
         const SR25519PublicKey &public_key) const override;
+    std::string GetName() override
+    {
+      return "SR25519ProviderImpl";
+    }
 
    private:
     std::shared_ptr<CSPRNG> generator_;

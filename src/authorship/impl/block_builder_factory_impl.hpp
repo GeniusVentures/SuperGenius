@@ -14,17 +14,22 @@ namespace sgns::authorship {
     ~BlockBuilderFactoryImpl() override = default;
 
     BlockBuilderFactoryImpl(
-        std::shared_ptr<runtime::Core> r_core,
-        std::shared_ptr<runtime::BlockBuilder> r_block_builder,
+        //std::shared_ptr<runtime::Core> r_core,
+        //std::shared_ptr<runtime::BlockBuilder> r_block_builder,
         std::shared_ptr<blockchain::BlockHeaderRepository> header_backend);
 
     outcome::result<std::unique_ptr<BlockBuilder>> create(
         const sgns::primitives::BlockId &parent_id,
         primitives::Digest inherent_digest) const override;
+        
+    std::string GetName() override
+    {
+      return "BlockBuilderFactoryImpl";
+    }
 
    private:
-    std::shared_ptr<runtime::Core> r_core_;
-    std::shared_ptr<runtime::BlockBuilder> r_block_builder_;
+    //std::shared_ptr<runtime::Core> r_core_;
+    //std::shared_ptr<runtime::BlockBuilder> r_block_builder_;
     std::shared_ptr<blockchain::BlockHeaderRepository> header_backend_;
     base::Logger logger_;
   };

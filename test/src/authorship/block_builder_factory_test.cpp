@@ -58,7 +58,7 @@ TEST_F(BlockBuilderFactoryTest, CreateSuccessful) {
   // given
   EXPECT_CALL(*core_, initialise_block(expected_header_))
       .WillOnce(Return(outcome::success()));
-  BlockBuilderFactoryImpl factory(core_, block_builder_api_, header_backend_);
+  BlockBuilderFactoryImpl factory(/*core_, block_builder_api_,*/ header_backend_);
 
   // when
   auto block_builder_res = factory.create(parent_id_, inherent_digests_);
@@ -78,7 +78,7 @@ TEST_F(BlockBuilderFactoryTest, CreateFailed) {
   // given
   EXPECT_CALL(*core_, initialise_block(expected_header_))
       .WillOnce(Return(outcome::failure(boost::system::error_code{})));
-  BlockBuilderFactoryImpl factory(core_, block_builder_api_, header_backend_);
+  BlockBuilderFactoryImpl factory(/*core_, block_builder_api_,*/ header_backend_);
 
   // // when
   auto block_builder_res = factory.create(parent_id_, inherent_digests_);

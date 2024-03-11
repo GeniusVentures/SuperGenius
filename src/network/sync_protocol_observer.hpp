@@ -6,12 +6,13 @@
 #include <outcome/outcome.hpp>
 #include "network/types/blocks_request.hpp"
 #include "network/types/blocks_response.hpp"
+#include "integration/IComponent.hpp"
 
 namespace sgns::network {
   /**
    * Reactive part of Sync protocol
    */
-  struct SyncProtocolObserver {
+  struct SyncProtocolObserver : public IComponent {
     virtual ~SyncProtocolObserver() = default;
 
     /**

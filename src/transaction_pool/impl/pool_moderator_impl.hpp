@@ -55,6 +55,11 @@ namespace sgns::transaction_pool {
 
     size_t bannedNum() const override;
 
+    std::string GetName() override
+    {
+      return "PoolModeratorImpl";
+    }
+
    private:
     std::shared_ptr<clock::SystemClock> clock_;
     Params params_;

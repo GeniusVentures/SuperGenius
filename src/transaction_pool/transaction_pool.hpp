@@ -8,11 +8,12 @@
 #include "primitives/block_id.hpp"
 #include "primitives/transaction.hpp"
 #include <map>
+#include "integration/IComponent.hpp"
 namespace sgns::transaction_pool {
 
   using primitives::Transaction;
 
-  class TransactionPool {
+  class TransactionPool :public IComponent {
    public:
     struct Status;
     struct Limits;

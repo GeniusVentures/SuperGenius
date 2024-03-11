@@ -15,7 +15,7 @@ class AppConfigurationFactory
 public:
     static std::shared_ptr<sgns::application::AppConfiguration> create( sgns::base::Logger logger )
     {
-        return std::make_shared<sgns::application::AppConfigurationImpl>( std::move( logger ) );
+        return std::make_shared<sgns::application::AppConfigurationImpl>( logger );
     }
 };
 

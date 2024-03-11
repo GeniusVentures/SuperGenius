@@ -25,6 +25,34 @@ add_executable (sgns_demo
       changes_tracker
       trie_serializer
       supergenius_trie_factory
+      block_tree
+      extrinsic_observer
+      author_api_service
+      transaction_pool
+      gossiper_broadcast
+      waitable_timer
+      production
+      remote_sync_protocol_client
+      dummy_sync_protocol_client
+      production_synchronizer
+      block_validator
+      sr25519_provider
+      epoch_storage
+      authority_manager
+      proposer
+      finality
+      environment
+      ed25519_provider
+      sgns_router
+      sync_protocol_observer
+      api_service
+      api_transport
+      api_jrpc_server
+      chain_api_service
+      state_api_service
+      system_api_service
+      author_api_service
+      api_author_requests
       p2p::p2p_basic_host
       p2p::p2p_default_network
       p2p::p2p_peer_repository

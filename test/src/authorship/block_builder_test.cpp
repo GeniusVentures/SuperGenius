@@ -24,8 +24,8 @@ class BlockBuilderTest : public ::testing::Test {
     // add some number to the header to make it possible to differentiate it
     expected_header_.number = number_;
 
-    block_builder_ = std::make_shared<BlockBuilderImpl>(expected_header_,
-                                                        block_builder_api_);
+    block_builder_ = std::make_shared<BlockBuilderImpl>(expected_header_/*,
+                                                        block_builder_api_*/);
   }
 
  protected:

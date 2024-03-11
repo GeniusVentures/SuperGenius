@@ -5,9 +5,10 @@
 #include "base/blob.hpp"
 #include "primitives/extrinsic.hpp"
 #include "primitives/author_api_primitives.hpp"
+#include "integration/IComponent.hpp"
 
 namespace sgns::api {
-  class AuthorApi {
+  class AuthorApi : public IComponent {
    protected:
     using Hash256 = base::Hash256;
     using Buffer = base::Buffer;

@@ -19,6 +19,8 @@ namespace sgns::api {
     MOCK_METHOD1(removeExtrinsic,
                  outcome::result<std::vector<Hash256>>(
                      const std::vector<ExtrinsicKey> &));
+                     
+    MOCK_METHOD0(GetName, std::string());
   };
 
 }  // namespace sgns::api

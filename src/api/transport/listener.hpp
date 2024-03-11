@@ -8,13 +8,14 @@
 #include "api/transport/rpc_io_context.hpp"
 #include "api/transport/session.hpp"
 #include "outcome/outcome.hpp"
+#include "integration/IComponent.hpp"
 
 namespace sgns::api {
   /**
    * @brief server which listens for incoming connection,
    * accepts connections making session from socket
    */
-  class Listener {
+  class Listener : public IComponent {
    protected:
     using Acceptor = boost::asio::ip::tcp::acceptor;
     using Endpoint = boost::asio::ip::tcp::endpoint;

@@ -14,6 +14,7 @@
 #include "base/logger.hpp"
 #include "primitives/common.hpp"
 #include "subscription/subscriber.hpp"
+#include "integration/IComponent.hpp"
 
 namespace sgns::api {
 
@@ -22,7 +23,7 @@ namespace sgns::api {
   /**
    * Service listening for incoming JSON RPC request
    */
-  class ApiService final : public std::enable_shared_from_this<ApiService> {
+  class ApiService final : public std::enable_shared_from_this<ApiService>, public IComponent {
     using SessionPtr = std::shared_ptr<Session>;
 
     using SubscribedSessionType =
@@ -73,6 +74,11 @@ namespace sgns::api {
 
     outcome::result<void> unsubscribeSessionFromIds(
         const std::vector<uint32_t> &subscription_id);
+
+    std::string GetName() override
+    {
+        return "ApiService";
+    }
 
    private:
     SubscribedSessionPtr findSessionById(Session::SessionId id);

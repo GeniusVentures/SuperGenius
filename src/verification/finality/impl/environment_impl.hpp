@@ -63,6 +63,10 @@ namespace sgns::verification::finality {
         const primitives::BlockHash &block_hash,
         const FinalityJustification &justification) override;
 
+    std::string GetName() override
+    {
+        return "EnvironmentImpl";
+    }
    private:
     std::shared_ptr<blockchain::BlockTree> block_tree_;
     std::shared_ptr<blockchain::BlockHeaderRepository> header_repository_;

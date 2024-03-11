@@ -6,6 +6,7 @@
 #include <gsl/span>
 #include <outcome/outcome.hpp>
 #include "crypto/ed25519_types.hpp"
+#include "integration/IComponent.hpp"
 
 namespace sgns::crypto {
 
@@ -17,7 +18,7 @@ namespace sgns::crypto {
                           // method of bound function
   };
 
-  class ED25519Provider {
+  class ED25519Provider : public IComponent {
    public:
     virtual ~ED25519Provider() = default;
 

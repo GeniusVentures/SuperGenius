@@ -39,7 +39,6 @@ namespace sgns::verification {
      */
     ProductionBlockValidator(
         std::shared_ptr<blockchain::BlockTree> block_tree,
-        std::shared_ptr<runtime::TaggedTransactionQueue> tx_queue,
         std::shared_ptr<crypto::Hasher> hasher,
         std::shared_ptr<crypto::VRFProvider> vrf_provider,
         std::shared_ptr<crypto::SR25519Provider> sr25519_provider);
@@ -63,6 +62,11 @@ namespace sgns::verification {
         const primitives::AuthorityId &authority_id,
         const Threshold &threshold,
         const Randomness &randomness) const override;
+    
+    std::string GetName() override
+    {
+      return "ProductionBlockValidator";
+    }
 
    private:
     /**
@@ -114,7 +118,7 @@ namespace sgns::verification {
                                std::unordered_set<primitives::AuthorityIndex>>
         blocks_producers_;
 
-    std::shared_ptr<runtime::TaggedTransactionQueue> tx_queue_;
+    //std::shared_ptr<runtime::TaggedTransactionQueue> tx_queue_;
 
     std::shared_ptr<crypto::Hasher> hasher_;
 

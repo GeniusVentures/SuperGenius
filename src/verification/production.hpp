@@ -11,13 +11,14 @@
 #include "verification/production/types/production_meta.hpp"
 #include "verification/production/types/epoch.hpp"
 #include "network/production_observer.hpp"
+#include "integration/IComponent.hpp"
 
 namespace sgns::verification {
   /**
    * Production protocol, used for block production in the SuperGenius verification. One of
    * the two parts in that verification; the other is Finality finality
    */
-  class Production : public network::ProductionObserver {
+  class Production : public network::ProductionObserver, public IComponent {
    public:
     ~Production() override = default;
 

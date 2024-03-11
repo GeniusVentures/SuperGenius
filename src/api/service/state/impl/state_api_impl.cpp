@@ -8,16 +8,16 @@ namespace sgns::api {
   StateApiImpl::StateApiImpl(
       std::shared_ptr<blockchain::BlockHeaderRepository> block_repo,
       std::shared_ptr<const storage::trie::TrieStorage> trie_storage,
-      std::shared_ptr<blockchain::BlockTree> block_tree,
-      std::shared_ptr<runtime::Core> runtime_core)
+      std::shared_ptr<blockchain::BlockTree> block_tree/*,
+      std::shared_ptr<runtime::Core> runtime_core*/)
       : block_repo_{std::move(block_repo)},
         storage_{std::move(trie_storage)},
-        block_tree_{std::move(block_tree)},
-        runtime_core_{std::move(runtime_core)} {
+        block_tree_{std::move(block_tree)}/*,
+        runtime_core_{std::move(runtime_core)}*/ {
     BOOST_ASSERT(nullptr != block_repo_);
     BOOST_ASSERT(nullptr != storage_);
     BOOST_ASSERT(nullptr != block_tree_);
-    BOOST_ASSERT(nullptr != runtime_core_);
+    //BOOST_ASSERT(nullptr != runtime_core_);
   }
 
   outcome::result<base::Buffer> StateApiImpl::getStorage(
@@ -35,7 +35,9 @@ namespace sgns::api {
 
   outcome::result<primitives::Version> StateApiImpl::getRuntimeVersion(
       const boost::optional<primitives::BlockHash> &at) const {
-    return runtime_core_->version(at);
+    //return runtime_core_->version(at);
+
+    return primitives::Version{};
   }
 
   void StateApiImpl::setApiService(

@@ -70,6 +70,11 @@ namespace sgns::authority {
 
     outcome::result<void> onFinalize(
         const primitives::BlockInfo &block) override;
+    
+    std::string GetName() override
+    {
+        return "AuthorityManagerImpl";
+    }
 
    private:
     base::Logger log_;

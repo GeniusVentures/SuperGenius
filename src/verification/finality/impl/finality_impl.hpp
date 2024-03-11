@@ -25,12 +25,12 @@ namespace sgns::verification::finality {
                       public std::enable_shared_from_this<FinalityImpl> {
    public:
     ~FinalityImpl() override = default;
-
+    //TODO - Check if finalityAPI needed. Removed due to binaryen
     FinalityImpl(std::shared_ptr<application::AppStateManager> app_state_manager,
                 std::shared_ptr<Environment> environment,
                 std::shared_ptr<storage::BufferStorage> storage,
                 std::shared_ptr<crypto::ED25519Provider> crypto_provider,
-                std::shared_ptr<runtime::FinalityApi> finality_api,
+                //std::shared_ptr<runtime::FinalityApi> finality_api,
                 const crypto::ED25519Keypair &keypair,
                 std::shared_ptr<Clock> clock,
                 std::shared_ptr<boost::asio::io_context> io_context,
@@ -50,6 +50,11 @@ namespace sgns::verification::finality {
     void onVoteMessage(const VoteMessage &msg) override;
 
     void onFinalize(const Fin &f) override;
+
+    std::string GetName() override
+    {
+      return "FinalityImpl";
+    }
 
    private:
     std::shared_ptr<VotingRound> selectRound(RoundNumber round_number);
@@ -72,7 +77,7 @@ namespace sgns::verification::finality {
     std::shared_ptr<Environment> environment_;
     std::shared_ptr<storage::BufferStorage> storage_;
     std::shared_ptr<crypto::ED25519Provider> crypto_provider_;
-    std::shared_ptr<runtime::FinalityApi> finality_api_;
+    //std::shared_ptr<runtime::FinalityApi> finality_api_;
     crypto::ED25519Keypair keypair_;
     std::shared_ptr<Clock> clock_;
     std::shared_ptr<boost::asio::io_context> io_context_;

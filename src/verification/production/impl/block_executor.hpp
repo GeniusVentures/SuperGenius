@@ -13,10 +13,11 @@
 #include "primitives/production_configuration.hpp"
 #include "primitives/block_header.hpp"
 #include "transaction_pool/transaction_pool.hpp"
+#include "integration/IComponent.hpp"
 
 namespace sgns::verification {
 
-  class BlockExecutor : public std::enable_shared_from_this<BlockExecutor> {
+  class BlockExecutor : public std::enable_shared_from_this<BlockExecutor>, public IComponent {
    public:
     BlockExecutor(std::shared_ptr<blockchain::BlockTree> block_tree,
                   std::shared_ptr<primitives::ProductionConfiguration> configuration,
@@ -59,6 +60,11 @@ namespace sgns::verification {
                        const primitives::BlockHash &to,
                        primitives::AuthorityIndex authority_index,
                        std::function<void()> &&next);
+
+    std::string GetName() override
+    {
+      return "BlockExecutor";
+    }
 
    private:
     // should only be invoked when parent of block exists

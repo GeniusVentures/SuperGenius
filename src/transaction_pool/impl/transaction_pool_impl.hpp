@@ -16,7 +16,7 @@ namespace sgns::transaction_pool {
 
    public:
     TransactionPoolImpl(
-        std::unique_ptr<PoolModerator> moderator,
+        std::shared_ptr<PoolModerator> moderator,
         std::shared_ptr<blockchain::BlockHeaderRepository> header_repo,
         Limits limits);
 
@@ -42,6 +42,11 @@ namespace sgns::transaction_pool {
         const primitives::BlockId &at) override;
 
     Status getStatus() const override;
+
+    std::string GetName() override
+    {
+        return "TransactionPoolImpl";
+    }
 
    private:
     outcome::result<void> submitOne(const std::shared_ptr<Transaction> &tx);
@@ -94,7 +99,7 @@ namespace sgns::transaction_pool {
     base::Logger logger_ = base::createLogger(kDefaultLoggerTag);
 
     // bans stale and invalid transactions for some amount of time
-    std::unique_ptr<PoolModerator> moderator_;
+    std::shared_ptr<PoolModerator> moderator_;
 
     /// All of imported transaction, contained in the pool
     std::unordered_map<Transaction::Hash, std::shared_ptr<Transaction>>

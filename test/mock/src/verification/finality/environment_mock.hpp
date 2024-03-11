@@ -44,6 +44,8 @@ namespace sgns::verification::finality {
         finalize,
         outcome::result<void>(const primitives::BlockHash &block,
                               const FinalityJustification &justification));
+
+    MOCK_METHOD0(GetName, std::string());              
   };
 
 }  // namespace sgns::verification::finality

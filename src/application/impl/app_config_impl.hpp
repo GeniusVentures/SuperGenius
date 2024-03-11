@@ -111,7 +111,7 @@ namespace sgns::application {
 
     bool initialize_from_args(AppConfiguration::LoadScheme scheme,
                               int argc,
-                              char **argv);
+                              char **argv) override;
 
     DECLARE_PROPERTY(std::string, genesis_path);
     DECLARE_PROPERTY(std::string, keystore_path);

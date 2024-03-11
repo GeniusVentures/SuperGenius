@@ -9,13 +9,18 @@
 
 namespace sgns::api::system {
 
-  class SystemJrpcProcessor : public JRpcProcessor {
+  class SystemJRpcProcessor : public JRpcProcessor {
    public:
-    SystemJrpcProcessor(std::shared_ptr<JRpcServer> server,
+    SystemJRpcProcessor(std::shared_ptr<JRpcServer> server,
                         std::shared_ptr<SystemApi> api);
-    ~SystemJrpcProcessor() override = default;
+    ~SystemJRpcProcessor() override = default;
 
     void registerHandlers() override;
+
+    std::string GetName() override
+    {
+      return "SystemJRpcProcessor";
+    }
 
    private:
     std::shared_ptr<SystemApi> api_;

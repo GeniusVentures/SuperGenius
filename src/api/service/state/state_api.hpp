@@ -9,10 +9,11 @@
 #include "outcome/outcome.hpp"
 #include "primitives/common.hpp"
 #include "primitives/version.hpp"
+#include "integration/IComponent.hpp"
 
 namespace sgns::api {
 
-  class StateApi {
+  class StateApi : public IComponent {
    public:
     virtual ~StateApi() = default;
 

@@ -6,6 +6,7 @@
 #include "verification/finality/common.hpp"
 #include "verification/finality/completed_round.hpp"
 #include "verification/finality/structs.hpp"
+#include "integration/IComponent.hpp"
 
 namespace sgns::verification::finality {
 
@@ -13,7 +14,7 @@ namespace sgns::verification::finality {
    * Necessary environment for a voter.
    * This encapsulates the database and networking layers of the chain.
    */
-  struct Environment : public Chain {
+  struct Environment : public Chain, public IComponent {
     using CompleteHandler =
         std::function<void(outcome::result<CompletedRound>)>;
 

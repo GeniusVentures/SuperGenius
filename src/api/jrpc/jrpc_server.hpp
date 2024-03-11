@@ -6,6 +6,7 @@
 #include <jsonrpc-lean/value.h>
 
 #include <functional>
+#include "integration/IComponent.hpp"
 
 namespace sgns::api {
 
@@ -13,7 +14,7 @@ namespace sgns::api {
    * Instance of json rpc server, allows to register callbacks for rpc methods
    * and then invoke them
    */
-  class JRpcServer {
+  class JRpcServer : public IComponent {
    public:
     using Method = jsonrpc::MethodWrapper::Method;
 

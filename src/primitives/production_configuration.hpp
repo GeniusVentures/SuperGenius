@@ -7,6 +7,7 @@
 #include "verification/production/common.hpp"
 #include "crypto/sr25519_types.hpp"
 #include "primitives/authority.hpp"
+#include "integration/IComponent.hpp"
 
 namespace sgns::primitives {
 
@@ -16,7 +17,7 @@ namespace sgns::primitives {
   using Randomness = base::Blob<crypto::constants::sr25519::vrf::OUTPUT_SIZE>;
 
   /// Configuration data used by the PRODUCTION verification engine.
-  struct ProductionConfiguration {
+  struct ProductionConfiguration : public IComponent {
     /// The slot duration in milliseconds for PRODUCTION. Currently, only
     /// the value provided by this type at genesis will be used.
     ///
@@ -39,6 +40,10 @@ namespace sgns::primitives {
 
     /// The randomness for the genesis epoch.
     Randomness randomness;
+    std::string GetName() override
+    {
+      return "ProductionConfiguration";
+    }
   };
 
   template <class Stream,

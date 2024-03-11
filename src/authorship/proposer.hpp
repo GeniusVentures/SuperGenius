@@ -8,13 +8,14 @@
 #include "primitives/block_id.hpp"
 #include "primitives/digest.hpp"
 #include "primitives/inherent_data.hpp"
+#include "integration/IComponent.hpp"
 
 namespace sgns::authorship {
 
   /**
    * Create block to further proposal for verification
    */
-  class Proposer {
+  class Proposer : public IComponent {
    public:
     virtual ~Proposer() = default;
 

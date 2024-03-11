@@ -29,6 +29,8 @@ namespace sgns::transaction_pool {
         outcome::result<std::vector<Transaction>>(const primitives::BlockId &));
 
     MOCK_CONST_METHOD0(getStatus, Status());
+
+    MOCK_METHOD0(GetName,std::string());
   };
 
 }  // namespace sgns::transaction_pool

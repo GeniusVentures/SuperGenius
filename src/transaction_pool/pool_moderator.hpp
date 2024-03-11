@@ -4,6 +4,7 @@
 
 #include "primitives/block_id.hpp"
 #include "primitives/transaction.hpp"
+#include "integration/IComponent.hpp"
 
 namespace sgns::transaction_pool {
 
@@ -14,7 +15,7 @@ namespace sgns::transaction_pool {
    * time to prevent them from returning to the transaction pool when it is
    * undesirable
    */
-  class PoolModerator {
+  class PoolModerator : public IComponent {
    public:
     virtual ~PoolModerator() = default;
 

@@ -17,30 +17,28 @@ public:
     {
         auto component_factory = SINGLETONINSTANCE( CComponentFactory );
 
-        auto maybe_sgns_trie_fact =
-            component_factory->GetComponent( "SuperGeniusTrieFactory", boost::none );
+        auto maybe_sgns_trie_fact = component_factory->GetComponent( "SuperGeniusTrieFactory", boost::none );
         if ( !maybe_sgns_trie_fact )
         {
             throw std::runtime_error( "Initialize SuperGeniusTrieFactory first" );
         }
-        auto sgns_trie_fact = std::dynamic_pointer_cast<sgns::storage::trie::SuperGeniusTrieFactory>(maybe_sgns_trie_fact.value());
-        
+        auto sgns_trie_fact = std::dynamic_pointer_cast<sgns::storage::trie::SuperGeniusTrieFactory>( maybe_sgns_trie_fact.value() );
+
         auto maybe_codec = component_factory->GetComponent( "Codec", boost::none );
         if ( !maybe_codec )
         {
             throw std::runtime_error( "Initialize Codec first" );
         }
-        auto codec = std::dynamic_pointer_cast<sgns::storage::trie::Codec>(maybe_codec.value());
-        
+        auto codec = std::dynamic_pointer_cast<sgns::storage::trie::Codec>( maybe_codec.value() );
+
         auto maybe_trie_backend = component_factory->GetComponent( "TrieStorageBackend", boost::none );
         if ( !maybe_trie_backend )
         {
             throw std::runtime_error( "Initialize TrieStorageBackend first" );
         }
-        auto trie_backend = std::dynamic_pointer_cast<sgns::storage::trie::TrieStorageBackend>(maybe_trie_backend.value());
+        auto trie_backend = std::dynamic_pointer_cast<sgns::storage::trie::TrieStorageBackend>( maybe_trie_backend.value() );
 
-        return std::make_shared<sgns::storage::trie::TrieSerializerImpl>( sgns_trie_fact, codec,
-                                                                          trie_backend );
+        return std::make_shared<sgns::storage::trie::TrieSerializerImpl>( sgns_trie_fact, codec, trie_backend );
     }
 };
 

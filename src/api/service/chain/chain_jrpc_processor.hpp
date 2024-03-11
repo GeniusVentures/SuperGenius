@@ -10,11 +10,16 @@ namespace sgns::api::chain {
   /**
    * @brief extrinsic submission service implementation
    */
-  class ChainJrpcProcessor : public JRpcProcessor {
+  class ChainJRpcProcessor : public JRpcProcessor {
    public:
-    ChainJrpcProcessor(std::shared_ptr<JRpcServer> server,
+    ChainJRpcProcessor(std::shared_ptr<JRpcServer> server,
                        std::shared_ptr<ChainApi> api);
     void registerHandlers() override;
+
+    std::string GetName() override
+    {
+      return "ChainJRpcProcessor";
+    }
 
    private:
     std::shared_ptr<ChainApi> api_;

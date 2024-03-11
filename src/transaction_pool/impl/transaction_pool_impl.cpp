@@ -10,7 +10,7 @@ using sgns::primitives::Transaction;
 namespace sgns::transaction_pool {
 
   TransactionPoolImpl::TransactionPoolImpl(
-      std::unique_ptr<PoolModerator> moderator,
+      std::shared_ptr<PoolModerator> moderator,
       std::shared_ptr<blockchain::BlockHeaderRepository> header_repo,
       Limits limits)
       : header_repo_{std::move(header_repo)},

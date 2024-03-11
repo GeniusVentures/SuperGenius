@@ -23,6 +23,11 @@ namespace sgns::crypto {
         const ED25519Signature &signature,
         gsl::span<uint8_t> message,
         const ED25519PublicKey &public_key) const override;
+    
+    std::string GetName() override
+    {
+      return "ED25519ProviderImpl";
+    }
   };
 
 }  // namespace sgns::crypto

@@ -8,6 +8,7 @@
 #include "primitives/block_id.hpp"
 #include "runtime/block_builder.hpp"
 #include "runtime/core.hpp"
+#include "integration/IComponent.hpp"
 
 namespace sgns::authorship {
 
@@ -15,7 +16,7 @@ namespace sgns::authorship {
    * Creates new block builders. Each of them encapsulates the logic for
    * creating a single block from provided block information
    */
-  class BlockBuilderFactory {
+  class BlockBuilderFactory : public IComponent {
    public:
     virtual ~BlockBuilderFactory() = default;
 

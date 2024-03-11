@@ -16,6 +16,11 @@ namespace sgns::api::author {
     AuthorJRpcProcessor(std::shared_ptr<JRpcServer> server,
                         std::shared_ptr<AuthorApi> api);
 
+    std::string GetName() override
+    {
+      return "AuthorJRpcProcessor";
+    }
+
    private:
     void registerHandlers() override;
 

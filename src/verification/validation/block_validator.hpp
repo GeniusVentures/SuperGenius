@@ -6,12 +6,13 @@
 #include <outcome/outcome.hpp>
 #include "verification/production/types/epoch.hpp"
 #include "primitives/block.hpp"
+#include "integration/IComponent.hpp"
 
 namespace sgns::verification {
   /**
    * Validator of the blocks
    */
-  class BlockValidator {
+  class BlockValidator : public IComponent {
    public:
     virtual ~BlockValidator() = default;
 

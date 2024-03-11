@@ -7,7 +7,7 @@
 
 namespace sgns::api::chain {
 
-  ChainJrpcProcessor::ChainJrpcProcessor(std::shared_ptr<JRpcServer> server,
+  ChainJRpcProcessor::ChainJRpcProcessor(std::shared_ptr<JRpcServer> server,
                                          std::shared_ptr<ChainApi> api)
       : api_{std::move(api)}, server_{std::move(server)} {
     BOOST_ASSERT(api_ != nullptr);
@@ -17,7 +17,7 @@ namespace sgns::api::chain {
   template <typename Request>
   using Handler = Method<Request, ChainApi>;
 
-  void ChainJrpcProcessor::registerHandlers() {
+  void ChainJRpcProcessor::registerHandlers() {
     server_->registerHandler("chain_getBlockHash",
                              Handler<request::GetBlockhash>(api_));
   }
