@@ -58,6 +58,7 @@ target_link_libraries(processing_mnn PRIVATE
     ${WIN_CRYPT_LIBRARY}
 	${MNN_LIBS}
     )
+target_link_options(processing_mnn PRIVATE /WHOLEARCHIVE:${MNN_LIBS})
 target_link_libraries(processing_mnn_p PRIVATE
 #    ipfs-lite-cpp::ipfs_datastore_rocksdb
 #    ipfs-lite-cpp::buffer
@@ -85,5 +86,6 @@ target_link_libraries(processing_mnn_p PRIVATE
 	${MNN_LIBS}
 	AsyncIOManager
     )
+target_link_options(processing_mnn_p PRIVATE /WHOLEARCHIVE:${MNN_LIBS})
 include_directories(../include)
 include_directories(./imageHelper)

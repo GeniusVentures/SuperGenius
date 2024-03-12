@@ -307,7 +307,7 @@ int main(int argc, char* argv[]) {
     if (argc < 4) {
         std::cout << "Usage: ./multiPose.out model.mnn input.jpg pose.jpg" << std::endl;
     }
-
+    
     const auto poseModel = argv[1];
     const auto inputImageFileName = argv[2];
     const auto outputImageFileName = argv[3];

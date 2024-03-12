@@ -6,6 +6,7 @@
 #include <vector>
 #include <MNN/ImageProcess.hpp>
 #include <MNN/Interpreter.hpp>
+
 #define MNN_OPEN_TIME_TRACE
 #include <MNN/AutoTime.hpp>
 #define STB_IMAGE_IMPLEMENTATION
