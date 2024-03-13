@@ -13,7 +13,7 @@
 
 namespace sgns
 {
-    class GeniusBlockHeader; //TODO - Design new header or rework old one
+    //class GeniusBlockHeader; //TODO - Design new header or rework old one
 
     class IGeniusTransactions
     {
@@ -21,10 +21,10 @@ namespace sgns
         virtual ~IGeniusTransactions()            = default;
         virtual const std::string GetType() const = 0;
 
-        boost::optional<GeniusBlockHeader> InitHeader()
-        {
+        //boost::optional<GeniusBlockHeader> InitHeader()
+        //{
             //return GeniusBlockHeader();
-        }
+        //}
 
     private:
         //GeniusBlockHeader block_header;
