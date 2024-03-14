@@ -110,13 +110,13 @@ int main( int argc, char *argv[] )
     sgns::TransactionManager transaction_manager( globalDB, io, account );
     transaction_manager.Start();
 
-    size_t other_addr = 1;
-    if (serviceindex)
-    {
-        other_addr = 0;
-    }
-    auto transfer_transaction = std::make_shared<sgns::TransferTransaction>(10,uint256_t{wallet_addr[other_addr]});
-    transaction_manager.EnqueueTransaction(transfer_transaction);
+    //size_t other_addr = 1;
+    //if (serviceindex)
+    //{
+    //    other_addr = 0;
+    //}
+    //auto transfer_transaction = std::make_shared<sgns::TransferTransaction>(10,uint256_t{wallet_addr[other_addr]});
+    //transaction_manager.EnqueueTransaction(transfer_transaction);
 
     //Run ASIO
     std::thread iothread( [io]() { io->run(); } );
