@@ -15,14 +15,13 @@ namespace sgns
     class TransferTransaction : public IGeniusTransactions
     {
     public:
-
         //TODO - El Gamal encrypt the amount. Now only copying
         /**
          * @brief       Construct a new Transfer Transaction object
          * @param[in]   amount: Raw amount of the transaction
          * @param[in]   destination: Address of the destination
          */
-        TransferTransaction( const uint256_t &amount, const uint256_t &destination ) :  encrypted_amount( amount ), dest_address( destination ){};
+        TransferTransaction( const uint256_t &amount, const uint256_t &destination ) : encrypted_amount( amount ), dest_address( destination ){};
 
         /**
          * @brief      Default Transfer Transaction destructor
@@ -32,11 +31,48 @@ namespace sgns
         const std::string GetType() const override
         {
             return "transfer";
-        };
+        }
+        std::vector<uint8_t> SerializeByteVector() override
+        {
+            std::vector<uint8_t> serialized_class;
+            export_bits( encrypted_amount, std::back_inserter( serialized_class ), 8 );
+            auto filled_size = serialized_class.size();
+            if ( filled_size < 32 )
+            {
+                // If the exported data is smaller than the fixed size, pad with zeros
+                serialized_class.insert( serialized_class.begin(), 32 - filled_size, 0 );
+            }
+            export_bits( dest_address, std::back_inserter( serialized_class ), 8 );
+            filled_size = serialized_class.size();
+            if ( filled_size < 64 )
+            {
+                // If the exported data is smaller than the fixed size, pad with zeros
+                serialized_class.insert( serialized_class.begin(), 64 - filled_size, 0 );
+            }
+            return serialized_class;
+        }
+        static TransferTransaction DeSerializeByteVector( const std::vector<uint8_t> &data )
+        {
+            std::vector<uint8_t> serialized_class;
+            uint256_t            amount;
+            uint256_t            address;
+            auto                 half = data.size() / 2;
+            import_bits( amount, data.begin(), data.begin() + half );
+            import_bits( address, data.begin() + half, data.end() );
 
-    private:
+            return TransferTransaction( amount, address ); // Return new instance
+        }
+        const std::string GetAddress() const
+        {
+            std::ostringstream oss;
+            oss << std::hex << dest_address;
+
+            return ( "0x" + oss.str() );
+        }
+
         uint256_t encrypted_amount; ///< El Gamal encrypted amount
-        uint256_t dest_address;     ///< Destination node address
+        uint256_t dest_address; ///< Destination node address
+    private:
     };
 
 }

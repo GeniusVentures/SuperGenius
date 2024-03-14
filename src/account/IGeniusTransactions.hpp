@@ -21,9 +21,11 @@ namespace sgns
         virtual ~IGeniusTransactions()            = default;
         virtual const std::string GetType() const = 0;
 
+        virtual std::vector<uint8_t> SerializeByteVector()                                     = 0;
+
         //boost::optional<GeniusBlockHeader> InitHeader()
         //{
-            //return GeniusBlockHeader();
+        //return GeniusBlockHeader();
         //}
 
     private:

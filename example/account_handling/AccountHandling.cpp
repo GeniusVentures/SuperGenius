@@ -23,12 +23,11 @@
 #include <boost/format.hpp>
 #include <boost/asio.hpp>
 #include "TransactionManager.hpp"
+#include "account/TransferTransaction.hpp"
 
 #include <ipfs_lite/ipfs/graphsync/graphsync.hpp>
 #include "account/AccountManager.hpp"
 
-static const uint32_t    MAIN_NET_ID = 369;
-static const uint32_t    TEST_NET_ID = 963;
 std::vector<std::string> wallet_addr{ "0x4E8794BE4831C45D0699865028C8BE23D608C19C1E24371E3089614A50514262",
                                       "0x06DDC80283462181C02917CC3E99C7BC4BDB2856E19A392300A62DBA6262212C" };
 std::vector<std::string> pubsub_addr{ "/ip4/127.0.1.1/tcp/40002/p2p/12D3KooWNoW68GUPmjrW4uRE4W3f9weGneNNB6z45ZJ6MEFTPmvq",
@@ -80,9 +79,11 @@ int main( int argc, char *argv[] )
         balance = std::stoull( argv[2] );
     }
     own_wallet_address = wallet_addr[serviceindex];
-    auto account       = sgns::AccountManager{}.CreateAccount( own_wallet_address, balance );
+    auto maybe_account       = sgns::AccountManager{}.CreateAccount( own_wallet_address, balance );
 
     const std::string processingGridChannel = "GRID_CHANNEL_ID";
+
+    auto account = std::make_shared<sgns::GeniusAccount>(maybe_account.value());
 
     auto pubsubKeyPath = ( boost::format( "CRDT.Datastore.TEST.%d/pubs_processor" ) % serviceindex ).str();
     auto pubs          = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>( sgns::crdt::KeyPairFileStorage( pubsubKeyPath ).GetKeyPair().value() );
@@ -106,9 +107,17 @@ int main( int argc, char *argv[] )
     auto crdtOptions = sgns::crdt::CrdtOptions::DefaultOptions();
     globalDB->Init( crdtOptions );
 
-    sgns::TransactionManager transaction_manager(globalDB,io,own_wallet_address);
+    sgns::TransactionManager transaction_manager( globalDB, io, account );
     transaction_manager.Start();
-    
+
+    size_t other_addr = 1;
+    if (serviceindex)
+    {
+        other_addr = 0;
+    }
+    auto transfer_transaction = std::make_shared<sgns::TransferTransaction>(10,uint256_t{wallet_addr[other_addr]});
+    transaction_manager.EnqueueTransaction(transfer_transaction);
+
     //Run ASIO
     std::thread iothread( [io]() { io->run(); } );
     // Gracefully shutdown on signal

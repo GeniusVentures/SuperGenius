@@ -20,13 +20,25 @@ namespace sgns
         GeniusAccount( const uint256_t &addr, const uint64_t &initial_balance, const uint8_t token_type ) :
             address( addr ),            //
             balance( initial_balance ), //
-            token( token_type )         //
+            token( token_type ),        //
+            nonce( 0 )
         {
+            //TODO - Retrieve values where? on Transaction manager?
+        }
+
+        const std::string GetAddress() const
+        {
+            std::ostringstream oss;
+            oss << std::hex << address;
+
+            return ( "0x" + oss.str() );
         }
 
         uint256_t address;
         uint64_t  balance;
         uint8_t   token; //GNUS SGNUS ETC...
+        uint64_t  nonce;
+
     private:
     };
 }
