@@ -47,11 +47,15 @@ int main(int argc, char* argv[])
 
     auto loggerBroadcaster = sgns::base::createLogger("PubSubBroadcasterExt");
     loggerBroadcaster->set_level(spdlog::level::trace);
-    std::cout << "Check 1" << std::endl;
+    //Chunk Options 
+    std::vector<std::vector<uint32_t>> chunkOptions;
+    chunkOptions.push_back({ 1080, 0, 4320, 5, 5, 25 });
+    chunkOptions.push_back({ 540, 0, 4860, 10, 10, 100});
+    chunkOptions.push_back({ 270, 0, 5130, 20, 20, 400});
     //Inputs
     const auto poseModel = argv[1];
     const auto inputImageFileName = argv[2];
-    std::cout << "Check 2" << std::endl;
+
     //Split Image into RGBA bytes
     //ImageSplitter imagesplit(inputImageFileName, 540, 4860, 48600);
     ImageSplitter imagesplit(inputImageFileName, 5400, 0, 4860000);
@@ -60,12 +64,12 @@ int main(int argc, char* argv[])
     //Block Stride - 540
     //Block Line Strike - 4860
     const std::string processingGridChannel = "GRID_CHANNEL_ID";
-    std::cout << "Check 3" << std::endl;
+
     //Make Host Pubsubs
     std::vector<std::string> receivedMessages;
     auto pubs = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>(
         sgns::crdt::KeyPairFileStorage("CRDT.Datastore.TEST/pubs_dapp").GetKeyPair().value());
-    std::cout << "Check 4" << std::endl;
+
     //Start Pubsubs, add peers of other addresses. We'll probably use DHT Discovery bootstrapping in the future.
     pubs->Start(40001, { "/ip4/192.168.46.18/tcp/40002/p2p/12D3KooWRm16iwAdRsAYzGGXU9rq9ZqGbJqaP2kYxe4mCdhEQz67",
         "/ip4/192.168.46.18/tcp/40003/p2p/12D3KooWEAKCDGsZA4MvDVDEzx7pA8rD6UyN6AXsGDCYChWce4Zi",
@@ -81,12 +85,12 @@ int main(int argc, char* argv[])
 
     //Make Tasks
     std::list<SGProcessing::Task> tasks;
-    size_t nTasks = 1;
+    size_t nTasks = 2;
     // Put tasks to Global DB
     for (size_t taskIdx = 0; taskIdx < nTasks; ++taskIdx)
     {
         SGProcessing::Task task;
-        std::cout << "CID STRING:    " << libp2p::multi::ContentIdentifierCodec::toString(imagesplit.GetPartCID(taskIdx)).value() << std::endl;
+        //std::cout << "CID STRING:    " << libp2p::multi::ContentIdentifierCodec::toString(imagesplit.GetPartCID(taskIdx)).value() << std::endl;
         //task.set_ipfs_block_id(libp2p::multi::ContentIdentifierCodec::toString(imagesplit.GetPartCID(taskIdx)).value());
         task.set_ipfs_block_id("Qmbi9eFJSDyyoU2HiPJyGvwLb3rEacs78WUFbpKEYSzR47");
         //task.set_block_len(48600);
@@ -113,19 +117,22 @@ int main(int argc, char* argv[])
     
     //Split tasks into subtasks
     auto taskQueue = std::make_shared<sgns::processing::ProcessingTaskQueueImpl>(globalDB);
-    size_t nSubTasks = imagesplit.GetPartCount();
-    size_t nChunks = 25;
+
+    size_t nSubTasks = 1;
+    size_t nChunks = 0;
     TaskSplitter taskSplitter(
         nSubTasks,
         nChunks,
         false);
 
+    int chunkopt = 0;
     for (auto& task : tasks)
     {
         std::cout << "subtask" << std::endl;
         std::list<SGProcessing::SubTask> subTasks;
-        taskSplitter.SplitTask(task, subTasks, imagesplit);
+        taskSplitter.SplitTask(task, subTasks, imagesplit, chunkOptions.at(chunkopt));
         taskQueue->EnqueueTask(task, subTasks);
+        chunkopt++;
     }
     
     //Run ASIO

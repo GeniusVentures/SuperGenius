@@ -41,13 +41,13 @@ int main(int argc, char* argv[])
     loggerProcessingQueueManager->set_level(spdlog::level::debug);
 
     auto loggerGlobalDB = sgns::base::createLogger("GlobalDB");
-    loggerGlobalDB->set_level(spdlog::level::off);
+    loggerGlobalDB->set_level(spdlog::level::trace);
 
     auto loggerDAGSyncer = sgns::base::createLogger("GraphsyncDAGSyncer");
-    loggerDAGSyncer->set_level(spdlog::level::off);
+    loggerDAGSyncer->set_level(spdlog::level::trace);
 
     auto loggerBroadcaster = sgns::base::createLogger("PubSubBroadcasterExt");
-    loggerBroadcaster->set_level(spdlog::level::off);
+    loggerBroadcaster->set_level(spdlog::level::trace);
     std::cout << "Check 1" << std::endl;
     //Inputs
     const auto poseModel = argv[1];

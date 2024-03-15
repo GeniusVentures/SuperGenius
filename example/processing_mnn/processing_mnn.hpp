@@ -241,7 +241,7 @@ namespace
         {
         }
 
-        void SplitTask(const SGProcessing::Task& task, std::list<SGProcessing::SubTask>& subTasks, ImageSplitter& SplitImage)
+        void SplitTask(const SGProcessing::Task& task, std::list<SGProcessing::SubTask>& subTasks, ImageSplitter& SplitImage, std::vector<uint32_t> chunkOptions)
         {
             std::optional<SGProcessing::SubTask> validationSubtask;
             if (m_addValidationSubtask)
@@ -252,7 +252,7 @@ namespace
             size_t chunkId = 0;
             for (size_t i = 0; i < m_nSubTasks; ++i)
             {
-                auto cidcheck = SplitImage.GetPartCID(i);
+                auto cidcheck = SplitImage.GetPartCID(0);
                 auto base58 = libp2p::multi::ContentIdentifierCodec::toString(cidcheck);
                 //std::cout << "Base56:    " << base58.value() << std::endl;
                 //std::cout << "Task BlockID  : " << task.ipfs_block_id() << std::endl;
@@ -264,21 +264,28 @@ namespace
                 subtask.set_ipfsblock(task.ipfs_block_id());
                 //subtask.set_ipfsblock(base58.value());
                 //std::cout << "BLOCK ID CHECK: " << task.ipfs_block_id() << std::endl;
-                std::cout << "Subtask ID :: " << subtaskId << std::endl;
+                std::cout << "Subtask ID :: " << base58.value() + "_" + std::to_string(i) << std::endl;
                 std::cout << "Subtask CID :: " << task.ipfs_block_id() << std::endl;
-                subtask.set_subtaskid(base58.value());
-                //subtask.set_subtaskid(subtaskId);
 
-                for (size_t chunkIdx = 0; chunkIdx < m_nChunks; ++chunkIdx)
+                subtask.set_subtaskid(base58.value() + "_" + std::to_string(i));
+                //subtask.set_subtaskid(subtaskId);
+                std::cout << "Chunks?" << chunkOptions.at(5) << std::endl;
+                std::cout << "Chunks?" << chunkOptions.at(0) << std::endl;
+                std::cout << "Chunks?" << chunkOptions.at(1) << std::endl;
+                std::cout << "Chunks?" << chunkOptions.at(2) << std::endl;
+                std::cout << "Chunks?" << chunkOptions.at(3) << std::endl;
+                std::cout << "Chunks?" << chunkOptions.at(4) << std::endl;
+                for (size_t chunkIdx = 0; chunkIdx < chunkOptions.at(5); ++chunkIdx)
                 {
+                    std::cout << "AddChunk : " << chunkIdx << std::endl;
                     SGProcessing::ProcessingChunk chunk;
                     chunk.set_chunkid((boost::format("CHUNK_%d_%d") % i % chunkId).str());
                     chunk.set_n_subchunks(1);
-                    chunk.set_line_stride(1080);
-                    chunk.set_offset(0);
-                    chunk.set_stride(4320);
-                    chunk.set_subchunk_height(5);
-                    chunk.set_subchunk_width(5);
+                    chunk.set_line_stride(chunkOptions.at(0));
+                    chunk.set_offset(chunkOptions.at(1));
+                    chunk.set_stride(chunkOptions.at(2));
+                    chunk.set_subchunk_height(chunkOptions.at(3));
+                    chunk.set_subchunk_width(chunkOptions.at(4));
 
                     auto chunkToProcess = subtask.add_chunkstoprocess();
                     chunkToProcess->CopyFrom(chunk);
@@ -295,6 +302,7 @@ namespace
 
                     ++chunkId;
                 }
+                std::cout << "Subtask? " << subtask.chunkstoprocess_size() << std::endl;
                 subTasks.push_back(std::move(subtask));
             }
 
@@ -416,14 +424,18 @@ namespace
             }
             ImageSplitter animageSplit(buffer, task.block_line_stride(), task.block_stride(), task.block_len());
             //Get Part Data 
-            auto dataindex = animageSplit.GetPartByCid(sgns::CID::fromString(subTask.subtaskid()).value());
+            //auto dataindex = animageSplit.GetPartByCid(sgns::CID::fromString(subTask.subtaskid()).value());
+            auto dataindex = 0;
 
             bool isValidationSubTask = (subTask.subtaskid() == "subtask_validation");
+            auto basechunk = subTask.chunkstoprocess(0);
+            std::cout << "Check Nums:" << basechunk.line_stride() << std::endl;
+            ImageSplitter ChunkSplit(animageSplit.GetPart(dataindex), basechunk.line_stride(), basechunk.stride(), animageSplit.GetPartHeightActual(dataindex) / basechunk.subchunk_height() * basechunk.line_stride());
             //std::string subTaskResultHash = "";
             std::vector<uint8_t> subTaskResultHash(SHA256_DIGEST_LENGTH);
             for (int chunkIdx = 0; chunkIdx < subTask.chunkstoprocess_size()-1; ++chunkIdx)
             {
-                std::cout << "Chunk IDX:  " << chunkIdx << std::endl;
+                std::cout << "Chunk IDX:  " << chunkIdx << "Total: " << subTask.chunkstoprocess_size() - 1 << std::endl;
                 const auto& chunk = subTask.chunkstoprocess(chunkIdx);
                 std::vector<uint8_t> shahash(SHA256_DIGEST_LENGTH);
                 // Chunk result hash should be calculated
@@ -435,7 +447,7 @@ namespace
                 }
                 else
                 {
-                    ImageSplitter ChunkSplit(animageSplit.GetPart(dataindex), chunk.line_stride(), chunk.stride(), animageSplit.GetPartHeightActual(dataindex)/chunk.subchunk_height()*chunk.line_stride());
+                    
                     auto data = ChunkSplit.GetPart(chunkIdx);
                     auto width = ChunkSplit.GetPartWidthActual(chunkIdx);
                     auto height = ChunkSplit.GetPartHeightActual(chunkIdx);
