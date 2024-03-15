@@ -93,15 +93,10 @@ namespace sgns
 
                 std::string transaction_key =
                     "bc-" + std::string( TEST_NET ) + "/" + account_m->GetAddress() + "/tx/transfer/" + std::to_string( account_m->nonce );
-                account_m->nonce++;
 
                 std::string dagheader_key = "bc-" + std::string( TEST_NET ) + "/blockchain/" + std::to_string( last_block_id );
 
                 std::string blockchainkey = dagheader_key + "/tx/" + std::to_string( last_trans_on_block_id );
-
-                std::cout << "storing at key " << transaction_key << std::endl;
-
-                std::cout << "blockchain at key " << blockchainkey << std::endl;
 
                 sgns::crdt::GlobalDB::Buffer data_transaction;
                 sgns::crdt::GlobalDB::Buffer data_key;
@@ -113,19 +108,21 @@ namespace sgns
                 data_transaction.put( elem->SerializeByteVector() );
 
                 db_m->Put( { transaction_key }, data_transaction );
+                m_logger->debug( "Putting on " + transaction_key + " " + std::string( data_transaction.toString() ) );
 
                 data_key.put( transaction_key );
                 db_m->Put( { blockchainkey }, data_key );
+                m_logger->debug( "Putting on " + blockchainkey + " " + std::string( data_key.toString() ) );
 
-                //TODO - Fix this. Should be DAGHeader at the end
-                //But even so, for this example should be elem->GetAddress
+                //TODO - Fix this. Now I'm putting the sender's address. so it updates its values and nonce
                 data_dagheader.put( account_m->GetAddress() );
                 db_m->Put( { dagheader_key }, data_dagheader );
+                m_logger->debug( "Putting on " + dagheader_key + " " + std::string( data_dagheader.toString() ) );
             }
             lock.unlock(); // Manual unlock, no need to wait to run out of scope
         }
 
-        void GetTransactionsFromBlock( std::string block_path )
+        void GetTransactionsFromBlock( bool incoming, std::string block_path )
         {
             outcome::result<crdt::GlobalDB::Buffer> retval           = outcome::failure( boost::system::error_code{} );
             uint32_t                                num_transactions = 0;
@@ -133,7 +130,7 @@ namespace sgns
             do
             {
                 std::string next_transaction = block_path + "/tx/" + std::to_string( num_transactions );
-                m_logger->info( "Getting transaction list from: " + next_transaction );
+                m_logger->debug( "Getting transaction list from: " + next_transaction );
                 //search for the next transaction
                 retval = db_m->Get( { next_transaction } );
                 if ( retval )
@@ -143,7 +140,14 @@ namespace sgns
                     auto transaction_key = retval.value();
 
                     m_logger->info( "Transaction found on " + std::string( transaction_key.toString() ) );
-                    GetTransactionData( std::string( transaction_key.toString() ) );
+                    if ( incoming )
+                    {
+                        GetIncomingTransactionData( std::string( transaction_key.toString() ) );
+                    }
+                    else
+                    {
+                        GetOutgoingTransactionData( std::string( transaction_key.toString() ) );
+                    }
 
                     num_transactions++;
                 }
@@ -164,23 +168,28 @@ namespace sgns
                 retval = db_m->Get( { blockchainkey } );
                 if ( retval )
                 {
-                    m_logger->info( "Found new blockchain entry on " + blockchainkey );
-                    m_logger->info( "Getting DAGHeader value" );
+                    m_logger->debug( "Found new blockchain entry on " + blockchainkey );
+                    m_logger->debug( "Getting DAGHeader value" );
+                    bool incoming = true;
 
                     auto DAGHeader = retval.value();
-                    m_logger->info( "Destination address of Header: " + std::string( DAGHeader.toString() ) );
+                    m_logger->debug( "Destination address of Header: " + std::string( DAGHeader.toString() ) );
 
                     if ( DAGHeader.toString() == account_m->GetAddress() )
                     {
-                        m_logger->info( "Address is our own. Getting the transactions of the block" );
-                        GetTransactionsFromBlock( blockchainkey );
+                        m_logger->info( "The transaction is from me, incrementing nonce" );
+                        incoming = false;
+                        account_m->nonce++;
                     }
+
+                    GetTransactionsFromBlock( incoming, blockchainkey );
+
                     last_block_id++;
                 }
             } while ( retval );
         }
 
-        void GetTransactionData( std::string key )
+        void GetIncomingTransactionData( std::string key )
         {
             outcome::result<crdt::GlobalDB::Buffer> retval           = outcome::failure( boost::system::error_code{} );
             uint32_t                                num_transactions = 0;
@@ -191,16 +200,44 @@ namespace sgns
                 //Found transaction. See DAGStruct for transaction type.
                 //If transfer, update funds
                 auto maybe_transfer = retval.value();
-                m_logger->info( "Transfer transaction data " + std::string( maybe_transfer.toHex() ) );
+                m_logger->debug( "Transfer transaction data " + std::string( maybe_transfer.toHex() ) );
 
                 if ( maybe_transfer.size() == 64 )
                 {
                     TransferTransaction received = TransferTransaction::DeSerializeByteVector( maybe_transfer.toVector() );
 
-                    //m_logger->info( "Received amount" );
-                    //std::cout << "received amount " << received.encrypted_amount << std::endl;
-                    //received.encrypted_amount
-                    //    account_m->balance += maybe_transfer.amount;
+                    m_logger->debug( "RECEIVER ADDRESS " + received.GetAddress<std::string>() );
+                    m_logger->debug( "MY ADDRESS " + account_m->GetAddress() );
+
+                    if ( received.GetAddress<uint256_t>() == account_m->address )
+                    {
+                        m_logger->info( "NEW TRANSACTION TO ME " + received.GetAddress<std::string>() );
+                        account_m->balance += static_cast<uint64_t>( received.GetAmount<uint256_t>() );
+                        m_logger->info( "Updated balance " + std::to_string( account_m->balance ) );
+                    }
+                }
+            }
+        }
+        void GetOutgoingTransactionData( std::string key )
+        {
+            outcome::result<crdt::GlobalDB::Buffer> retval           = outcome::failure( boost::system::error_code{} );
+            uint32_t                                num_transactions = 0;
+
+            retval = db_m->Get( { key } );
+            if ( retval )
+            {
+                //Found transaction. See DAGStruct for transaction type.
+                //If transfer, update funds
+                auto maybe_transfer = retval.value();
+                m_logger->debug( "Transfer transaction data " + std::string( maybe_transfer.toHex() ) );
+
+                if ( maybe_transfer.size() == 64 )
+                {
+                    TransferTransaction received = TransferTransaction::DeSerializeByteVector( maybe_transfer.toVector() );
+
+                    m_logger->info( "Transaction from me " + received.GetAddress<std::string>() );
+                    account_m->balance -= static_cast<uint64_t>( received.GetAmount<uint256_t>() );
+                    m_logger->info( "Updated balance " + std::to_string( account_m->balance ) );
                 }
             }
         }

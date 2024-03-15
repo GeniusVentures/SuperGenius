@@ -62,17 +62,42 @@ namespace sgns
 
             return TransferTransaction( amount, address ); // Return new instance
         }
-        const std::string GetAddress() const
+        template <typename T>
+        const T GetAddress() const;
+
+        template <>
+        const std::string GetAddress<std::string>() const
         {
             std::ostringstream oss;
             oss << std::hex << dest_address;
 
             return ( "0x" + oss.str() );
         }
+        template <>
+        const uint256_t GetAddress<uint256_t>() const
+        {
+            return dest_address;
+        }
+        template <typename T>
+        const T GetAmount() const;
 
-        uint256_t encrypted_amount; ///< El Gamal encrypted amount
-        uint256_t dest_address; ///< Destination node address
+        template <>
+        const std::string GetAmount<std::string>() const
+        {
+            std::ostringstream oss;
+            oss << encrypted_amount;
+
+            return ( oss.str() );
+        }
+        template <>
+        const uint256_t GetAmount<uint256_t>() const
+        {
+            return encrypted_amount;
+        }
+
     private:
+        uint256_t encrypted_amount; ///< El Gamal encrypted amount
+        uint256_t dest_address;     ///< Destination node address
     };
 
 }
