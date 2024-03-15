@@ -433,9 +433,9 @@ namespace
             ImageSplitter ChunkSplit(animageSplit.GetPart(dataindex), basechunk.line_stride(), basechunk.stride(), animageSplit.GetPartHeightActual(dataindex) / basechunk.subchunk_height() * basechunk.line_stride());
             //std::string subTaskResultHash = "";
             std::vector<uint8_t> subTaskResultHash(SHA256_DIGEST_LENGTH);
-            for (int chunkIdx = 0; chunkIdx < subTask.chunkstoprocess_size()-1; ++chunkIdx)
+            for (int chunkIdx = 0; chunkIdx < subTask.chunkstoprocess_size(); ++chunkIdx)
             {
-                std::cout << "Chunk IDX:  " << chunkIdx << "Total: " << subTask.chunkstoprocess_size() - 1 << std::endl;
+                std::cout << "Chunk IDX:  " << chunkIdx << "Total: " << subTask.chunkstoprocess_size() << std::endl;
                 const auto& chunk = subTask.chunkstoprocess(chunkIdx);
                 std::vector<uint8_t> shahash(SHA256_DIGEST_LENGTH);
                 // Chunk result hash should be calculated

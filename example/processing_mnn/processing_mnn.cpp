@@ -49,9 +49,9 @@ int main(int argc, char* argv[])
     loggerBroadcaster->set_level(spdlog::level::trace);
     //Chunk Options 
     std::vector<std::vector<uint32_t>> chunkOptions;
-    chunkOptions.push_back({ 1080, 0, 4320, 5, 5, 25 });
-    chunkOptions.push_back({ 540, 0, 4860, 10, 10, 100});
-    chunkOptions.push_back({ 270, 0, 5130, 20, 20, 400});
+    chunkOptions.push_back({ 1080, 0, 4320, 5, 5, 24 });
+    chunkOptions.push_back({ 540, 0, 4860, 10, 10, 99});
+    chunkOptions.push_back({ 270, 0, 5130, 20, 20, 399});
     //Inputs
     const auto poseModel = argv[1];
     const auto inputImageFileName = argv[2];
