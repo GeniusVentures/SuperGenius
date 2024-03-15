@@ -33,6 +33,18 @@ namespace sgns
 
             return ( "0x" + oss.str() );
         }
+        const std::string GetBalance() const
+        {
+            return std::to_string(balance);
+        }
+        const std::string GetToken() const
+        {
+            return "GNUS Token";
+        }
+        const std::string GetNonce() const
+        {
+            return std::to_string(nonce);
+        }
 
         uint256_t address;
         uint64_t  balance;

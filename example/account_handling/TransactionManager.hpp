@@ -62,6 +62,17 @@ namespace sgns
             std::lock_guard<std::mutex> lock( mutex_m );
             out_transactions.emplace_back( std::move( element ) );
         }
+        void PrintAccountInfo()
+        {
+            std::cout << "Account Address: " << account_m->GetAddress() << std::endl;
+            std::cout << "Balance: " << account_m->GetBalance() << std::endl;
+            std::cout << "Token Type: " << account_m->GetToken() << std::endl;
+            std::cout << "Nonce: " << account_m->GetNonce() << std::endl;
+        }
+        const GeniusAccount &GetAccount() const
+        {
+            return *account_m;
+        }
 
         ~TransactionManager() = default;
 

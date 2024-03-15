@@ -66,8 +66,58 @@ void keyboard_input_thread()
         cv.notify_one();
     }
 }
+void CreateTransferTransaction( const std::vector<std::string> &args, sgns::TransactionManager &transaction_manager )
+{
+    if ( args.size() != 3 )
+    {
+        std::cerr << "Invalid transfer command format.\n";
+        return;
+    }
+    uint64_t amount = std::stoull( args[1] );
+    if ( amount > transaction_manager.GetAccount().balance )
+    {
+        std::cout << "Insufficient funds.\n";
+    }
+    else
+    {
+        auto transfer_transaction = std::make_shared<sgns::TransferTransaction>( uint256_t{ args[1] }, uint256_t{ args[2] } );
+        transaction_manager.EnqueueTransaction( transfer_transaction );
+    }
+}
+void CreateProcessingTransaction( const std::vector<std::string> &args, sgns::TransactionManager &transaction_manager )
+{
+    if ( args.size() != 2 )
+    {
+        std::cerr << "Invalid process command format.\n";
+        return;
+    }
 
-void process_events(sgns::TransactionManager &transaction_manager, std::string &destination_address)
+    //TODO - Create processing transaction
+    //auto transfer_transaction = std::make_shared<sgns::TransferTransaction>( uint256_t{ args[1] }, uint256_t{ args[2] } );
+    //transaction_manager.EnqueueTransaction( transfer_transaction );
+}
+void PrintAccountInfo( const std::vector<std::string> &args, sgns::TransactionManager &transaction_manager )
+{
+    if ( args.size() != 1 )
+    {
+        std::cerr << "Invalid info command format.\n";
+        return;
+    }
+    transaction_manager.PrintAccountInfo();
+
+    //TODO - Create processing transaction
+    //auto transfer_transaction = std::make_shared<sgns::TransferTransaction>( uint256_t{ args[1] }, uint256_t{ args[2] } );
+    //transaction_manager.EnqueueTransaction( transfer_transaction );
+}
+
+std::vector<std::string> split_string( const std::string &str )
+{
+    std::istringstream       iss( str );
+    std::vector<std::string> results( ( std::istream_iterator<std::string>( iss ) ), std::istream_iterator<std::string>() );
+    return results;
+}
+
+void process_events( sgns::TransactionManager &transaction_manager, std::string &destination_address )
 {
     std::unique_lock<std::mutex> lock( mutex );
     cv.wait( lock, [] { return !events.empty(); } );
@@ -76,10 +126,24 @@ void process_events(sgns::TransactionManager &transaction_manager, std::string &
     {
         std::string event = events.front();
         events.pop();
-        auto transfer_transaction = std::make_shared<sgns::TransferTransaction>( 10, uint256_t{ destination_address } );
-        transaction_manager.EnqueueTransaction( transfer_transaction );
-        // Process event
-        std::cout << "Event: " << event << std::endl;
+
+        auto arguments = split_string( event );
+        if ( arguments[0] == "transfer" )
+        {
+            CreateTransferTransaction( arguments, transaction_manager );
+        }
+        else if ( arguments[0] == "process" )
+        {
+            CreateProcessingTransaction( arguments, transaction_manager );
+        }
+        else if ( arguments[0] == "info" )
+        {
+            PrintAccountInfo( arguments, transaction_manager );
+        }
+        else
+        {
+            std::cerr << "Unknown command: " << arguments[0] << "\n";
+        }
     }
 }
 
@@ -103,8 +167,8 @@ int main( int argc, char *argv[] )
     auto loggerDAGSyncer = sgns::base::createLogger( "GraphsyncDAGSyncer" );
     loggerDAGSyncer->set_level( spdlog::level::debug );
 
-    auto loggerBroadcaster = sgns::base::createLogger( "PubSubBroadcasterExt" );
-    loggerBroadcaster->set_level( spdlog::level::debug );
+    //auto loggerBroadcaster = sgns::base::createLogger( "PubSubBroadcasterExt" );
+    //loggerBroadcaster->set_level( spdlog::level::debug );
 
     //Inputs
     std::string   own_wallet_address;
@@ -153,37 +217,15 @@ int main( int argc, char *argv[] )
         other_addr = 0;
     }
     std::string destination_address = wallet_addr[other_addr];
-    //auto        transfer_transaction = std::make_shared<sgns::TransferTransaction>( 10, uint256_t{ destination_address } );
-    //transaction_manager.EnqueueTransaction( transfer_transaction );
 
     auto                      task = std::make_shared<std::function<void()>>();
     boost::asio::steady_timer timer_keyboard( *io, boost::asio::chrono::milliseconds( 3000 ) );
 
-    //*task = [io, task, &destination_address, &transaction_manager, &timer_keyboard]()
-    //{
-        //char input = check_for_input();
-        //if ( input != 0 )
-        //{
-        // Handle input
-        //    std::cout << "Key pressed: " << input << std::endl;
-
-        // Trigger actions based on input
-
-        //}
-
-        // Reschedule the monitor task
-        //timer_keyboard.expires_after( std::chrono::milliseconds( 3000 ) );
-        //timer_keyboard.async_wait( [io, task]( const boost::system::error_code & ) { io->post( *task ); } );
-    //};
-    //io->post( *task );
-
-    //boost::asio::steady_timer timer( *io, std::chrono::milliseconds( 100 ) );
-    //timer.async_wait( [&]( const boost::system::error_code & ) { monitor_keyboard( timer, *io, transaction_manager, destination_address ); } );
     //Run ASIO
     std::thread iothread( [io]() { io->run(); } );
-    while (true)
+    while ( true )
     {
-        process_events(transaction_manager,destination_address);
+        process_events( transaction_manager, destination_address );
     }
     // Gracefully shutdown on signal
     boost::asio::signal_set signals( *pubs->GetAsioContext(), SIGINT, SIGTERM );
