@@ -128,6 +128,10 @@ void process_events( sgns::TransactionManager &transaction_manager, std::string 
         events.pop();
 
         auto arguments = split_string( event );
+        if ( arguments.size() == 0 )
+        {
+            return;
+        }
         if ( arguments[0] == "transfer" )
         {
             CreateTransferTransaction( arguments, transaction_manager );
