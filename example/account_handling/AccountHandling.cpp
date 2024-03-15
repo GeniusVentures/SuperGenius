@@ -96,6 +96,17 @@ void CreateProcessingTransaction( const std::vector<std::string> &args, sgns::Tr
     //auto transfer_transaction = std::make_shared<sgns::TransferTransaction>( uint256_t{ args[1] }, uint256_t{ args[2] } );
     //transaction_manager.EnqueueTransaction( transfer_transaction );
 }
+void MintTokens( const std::vector<std::string> &args, sgns::TransactionManager &transaction_manager )
+{
+    if ( args.size() != 2 )
+    {
+        std::cerr << "Invalid process command format.\n";
+        return;
+    }
+
+    auto mint_transaction = std::make_shared<sgns::MintTransaction>( std::stoull( args[1] ) );
+    transaction_manager.EnqueueTransaction( mint_transaction );
+}
 void PrintAccountInfo( const std::vector<std::string> &args, sgns::TransactionManager &transaction_manager )
 {
     if ( args.size() != 1 )
@@ -117,7 +128,7 @@ std::vector<std::string> split_string( const std::string &str )
     return results;
 }
 
-void process_events( sgns::TransactionManager &transaction_manager, std::string &destination_address )
+void process_events( sgns::TransactionManager &transaction_manager )
 {
     std::unique_lock<std::mutex> lock( mutex );
     cv.wait( lock, [] { return !events.empty(); } );
@@ -143,6 +154,10 @@ void process_events( sgns::TransactionManager &transaction_manager, std::string 
         else if ( arguments[0] == "info" )
         {
             PrintAccountInfo( arguments, transaction_manager );
+        }
+        else if ( arguments[0] == "mint" )
+        {
+            MintTokens( arguments, transaction_manager );
         }
         else
         {
@@ -175,15 +190,11 @@ int main( int argc, char *argv[] )
     //loggerBroadcaster->set_level( spdlog::level::debug );
 
     //Inputs
-    std::string   own_wallet_address;
-    size_t        serviceindex = std::strtoul( argv[1], nullptr, 10 );
-    std::uint32_t balance      = 0;
-    if ( argc == 3 )
-    {
-        balance = std::stoull( argv[2] );
-    }
-    own_wallet_address = wallet_addr[serviceindex];
-    auto maybe_account = sgns::AccountManager{}.CreateAccount( own_wallet_address, balance );
+    size_t      serviceindex = std::strtoul( argv[1], nullptr, 10 );
+    std::string own_wallet_address( argv[2] );
+    std::string pubs_address( argv[3] );
+
+    auto maybe_account = sgns::AccountManager{}.CreateAccount( own_wallet_address, 0 );
 
     const std::string processingGridChannel = "GRID_CHANNEL_ID";
 
@@ -196,8 +207,10 @@ int main( int argc, char *argv[] )
     std::vector<std::string> receivedMessages;
 
     //Start Pubsubs, add peers of other addresses. We'll probably use DHT Discovery bootstrapping in the future.
-    pubs->Start( 40001 + serviceindex, { pubsub_addr[serviceindex] } );
-    std::cout << "BOOSTRAPPING  " << pubs->GetLocalAddress() << " with " << pubsub_addr[serviceindex] << std::endl;
+    pubs->Start( 40001 + serviceindex, { pubs_address } );
+
+    std::cout << "***This is our pubsub address. Copy and past on other node third argument" << pubs->GetLocalAddress() << std::endl;
+    std::cout << "BOOSTRAPPING  " << pubs->GetLocalAddress() << " with " << pubs_address << std::endl;
 
     const size_t maximalNodesCount = 1;
 
@@ -215,21 +228,11 @@ int main( int argc, char *argv[] )
     sgns::TransactionManager transaction_manager( globalDB, io, account );
     transaction_manager.Start();
 
-    size_t other_addr = 1;
-    if ( serviceindex )
-    {
-        other_addr = 0;
-    }
-    std::string destination_address = wallet_addr[other_addr];
-
-    auto                      task = std::make_shared<std::function<void()>>();
-    boost::asio::steady_timer timer_keyboard( *io, boost::asio::chrono::milliseconds( 3000 ) );
-
     //Run ASIO
     std::thread iothread( [io]() { io->run(); } );
     while ( true )
     {
-        process_events( transaction_manager, destination_address );
+        process_events( transaction_manager );
     }
     // Gracefully shutdown on signal
     boost::asio::signal_set signals( *pubs->GetAsioContext(), SIGINT, SIGTERM );

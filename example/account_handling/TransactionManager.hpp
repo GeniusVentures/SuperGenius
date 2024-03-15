@@ -13,6 +13,7 @@
 #include <crdt/globaldb/globaldb.hpp>
 #include "account/IGeniusTransactions.hpp"
 #include "account/TransferTransaction.hpp"
+#include "account/MintTransaction.hpp"
 #include "account/GeniusAccount.hpp"
 
 #include "base/logger.hpp"
@@ -248,6 +249,15 @@ namespace sgns
 
                     m_logger->info( "Transaction from me " + received.GetAddress<std::string>() );
                     account_m->balance -= static_cast<uint64_t>( received.GetAmount<uint256_t>() );
+                    m_logger->info( "Updated balance " + std::to_string( account_m->balance ) );
+                }
+
+                if ( maybe_transfer.size() == 8 )
+                {
+                    MintTransaction received = MintTransaction::DeSerializeByteVector( maybe_transfer.toVector() );
+
+                    m_logger->info( "Minting new Tokens " + std::to_string(received.GetAmount()) );
+                    account_m->balance += received.GetAmount() ;
                     m_logger->info( "Updated balance " + std::to_string( account_m->balance ) );
                 }
             }
