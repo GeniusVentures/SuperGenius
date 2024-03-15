@@ -30,8 +30,6 @@
 
 std::vector<std::string> wallet_addr{ "0x4E8794BE4831C45D0699865028C8BE23D608C19C1E24371E3089614A50514262",
                                       "0x06DDC80283462181C02917CC3E99C7BC4BDB2856E19A392300A62DBA6262212C" };
-std::vector<std::string> pubsub_addr{ "/ip4/127.0.1.1/tcp/40002/p2p/12D3KooWNJ8CbJ6cdzG51f2j8L6jV6qBDddCMQVWbpDwFwBKifuQ ",
-                                      "/ip4/127.0.1.1/tcp/40001/p2p/12D3KooWSqTL7KvGQLZkHHoxKJKHn3pxeYSv2zyic7uBjKes4EYL  " };
 
 using GossipPubSub = sgns::ipfs_pubsub::GossipPubSub;
 const std::string logger_config( R"(
