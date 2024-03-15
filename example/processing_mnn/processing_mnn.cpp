@@ -47,11 +47,11 @@ int main(int argc, char* argv[])
 
     auto loggerBroadcaster = sgns::base::createLogger("PubSubBroadcasterExt");
     loggerBroadcaster->set_level(spdlog::level::trace);
-
+    std::cout << "Check 1" << std::endl;
     //Inputs
     const auto poseModel = argv[1];
     const auto inputImageFileName = argv[2];
-
+    std::cout << "Check 2" << std::endl;
     //Split Image into RGBA bytes
     //ImageSplitter imagesplit(inputImageFileName, 540, 4860, 48600);
     ImageSplitter imagesplit(inputImageFileName, 5400, 0, 4860000);
@@ -60,12 +60,12 @@ int main(int argc, char* argv[])
     //Block Stride - 540
     //Block Line Strike - 4860
     const std::string processingGridChannel = "GRID_CHANNEL_ID";
-
+    std::cout << "Check 3" << std::endl;
     //Make Host Pubsubs
     std::vector<std::string> receivedMessages;
     auto pubs = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>(
         sgns::crdt::KeyPairFileStorage("CRDT.Datastore.TEST/pubs_dapp").GetKeyPair().value());
-
+    std::cout << "Check 4" << std::endl;
     //Start Pubsubs, add peers of other addresses. We'll probably use DHT Discovery bootstrapping in the future.
     pubs->Start(40001, { "/ip4/192.168.46.18/tcp/40002/p2p/12D3KooWRm16iwAdRsAYzGGXU9rq9ZqGbJqaP2kYxe4mCdhEQz67",
         "/ip4/192.168.46.18/tcp/40003/p2p/12D3KooWEAKCDGsZA4MvDVDEzx7pA8rD6UyN6AXsGDCYChWce4Zi",
@@ -76,7 +76,7 @@ int main(int argc, char* argv[])
         "/ip4/192.168.46.18/tcp/40008/p2p/12D3KooWQp3fX4ZR8LevJMt8coBZa4AZK4VrsaQ22CxpWYiu5qj5",
         "/ip4/192.168.46.18/tcp/40009/p2p/12D3KooWJGKGW5ETP6zxouH2HSSPhHxu8gpF8AbCGugVDY118UyS",
         "/ip4/192.168.46.18/tcp/40010/p2p/12D3KooWDT7becpKYbZrH1ZfBibsfdMqHo6AMHr3b5aGCMLw91XW"});
-
+    std::cout << "Check 5" << std::endl;
     const size_t maximalNodesCount = 1;
 
     //Make Tasks
@@ -114,7 +114,7 @@ int main(int argc, char* argv[])
     //Split tasks into subtasks
     auto taskQueue = std::make_shared<sgns::processing::ProcessingTaskQueueImpl>(globalDB);
     size_t nSubTasks = imagesplit.GetPartCount();
-    size_t nChunks = 100;
+    size_t nChunks = 25;
     TaskSplitter taskSplitter(
         nSubTasks,
         nChunks,

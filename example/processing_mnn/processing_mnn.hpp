@@ -274,11 +274,11 @@ namespace
                     SGProcessing::ProcessingChunk chunk;
                     chunk.set_chunkid((boost::format("CHUNK_%d_%d") % i % chunkId).str());
                     chunk.set_n_subchunks(1);
-                    chunk.set_line_stride(540);
+                    chunk.set_line_stride(1080);
                     chunk.set_offset(0);
-                    chunk.set_stride(4860);
-                    chunk.set_subchunk_height(10);
-                    chunk.set_subchunk_width(10);
+                    chunk.set_stride(4320);
+                    chunk.set_subchunk_height(5);
+                    chunk.set_subchunk_width(5);
 
                     auto chunkToProcess = subtask.add_chunkstoprocess();
                     chunkToProcess->CopyFrom(chunk);
@@ -421,8 +421,9 @@ namespace
             bool isValidationSubTask = (subTask.subtaskid() == "subtask_validation");
             //std::string subTaskResultHash = "";
             std::vector<uint8_t> subTaskResultHash(SHA256_DIGEST_LENGTH);
-            for (int chunkIdx = 0; chunkIdx < subTask.chunkstoprocess_size(); ++chunkIdx)
+            for (int chunkIdx = 0; chunkIdx < subTask.chunkstoprocess_size()-1; ++chunkIdx)
             {
+                std::cout << "Chunk IDX:  " << chunkIdx << std::endl;
                 const auto& chunk = subTask.chunkstoprocess(chunkIdx);
                 std::vector<uint8_t> shahash(SHA256_DIGEST_LENGTH);
                 // Chunk result hash should be calculated

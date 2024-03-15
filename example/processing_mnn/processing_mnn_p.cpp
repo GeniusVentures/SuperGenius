@@ -48,7 +48,7 @@ int main(int argc, char* argv[])
 
     auto loggerBroadcaster = sgns::base::createLogger("PubSubBroadcasterExt");
     loggerBroadcaster->set_level(spdlog::level::off);
-
+    std::cout << "Check 1" << std::endl;
     //Inputs
     const auto poseModel = argv[1];
     const auto inputImageFileName = argv[2];
@@ -75,7 +75,7 @@ int main(int argc, char* argv[])
     
     //Client
     pubs2->Start(40001 + serviceindex, { "/ip4/192.168.46.18/tcp/40001/p2p/12D3KooWAqi3qqAWhZtAmXtxCE4NsAkKSVHGuJ3xzrJdrCNnh5yz" });
-
+    
     //Create GlobalDB
     //size_t serviceindex = 1;
     auto globalDB2 = std::make_shared<sgns::crdt::GlobalDB>(
