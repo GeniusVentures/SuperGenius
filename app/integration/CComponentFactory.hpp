@@ -7,6 +7,7 @@
 #ifndef _CCOMPONENT_FACTORY_HPP_
 #define _CCOMPONENT_FACTORY_HPP_
 
+#include <unordered_map>
 #include "IComponentFactory.hpp"
 #include "Singleton.hpp"
 
