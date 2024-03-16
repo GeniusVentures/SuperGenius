@@ -48,6 +48,9 @@ int main(int argc, char* argv[])
 
     auto loggerBroadcaster = sgns::base::createLogger("PubSubBroadcasterExt");
     loggerBroadcaster->set_level(spdlog::level::trace);
+
+    auto loggerValidcore = sgns::base::createLogger("ProcessingValidationCore");
+    loggerValidcore->set_level(spdlog::level::trace);
     std::cout << "Check 1" << std::endl;
     //Inputs
     const auto poseModel = argv[1];

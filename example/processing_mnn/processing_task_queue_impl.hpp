@@ -54,6 +54,8 @@ namespace sgns::processing
             for (auto& subTask: subTasks)
             {
                 auto subTaskKey = (boost::format("subtasks/TASK_%s/%s") % task.ipfs_block_id() % subTask.subtaskid()).str();
+                std::cout << "SUbtask Key " << subTaskKey << std::endl;
+                std::cout << "Subtask chunk check " << subTask.chunkstoprocess_size() << std::endl;
                 valueBuffer.put(subTask.SerializeAsString());
                 auto setKeyResult = m_db->Put(sgns::crdt::HierarchicalKey(subTaskKey), valueBuffer);
                 if (setKeyResult.has_failure())

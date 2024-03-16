@@ -50,8 +50,8 @@ int main(int argc, char* argv[])
     //Chunk Options 
     std::vector<std::vector<uint32_t>> chunkOptions;
     chunkOptions.push_back({ 1080, 0, 4320, 5, 5, 24 });
-    chunkOptions.push_back({ 540, 0, 4860, 10, 10, 99});
-    chunkOptions.push_back({ 270, 0, 5130, 20, 20, 399});
+    //chunkOptions.push_back({ 540, 0, 4860, 10, 10, 99});
+    //chunkOptions.push_back({ 270, 0, 5130, 20, 20, 399});
     //Inputs
     const auto poseModel = argv[1];
     const auto inputImageFileName = argv[2];
@@ -85,7 +85,7 @@ int main(int argc, char* argv[])
 
     //Make Tasks
     std::list<SGProcessing::Task> tasks;
-    size_t nTasks = 2;
+    size_t nTasks = 1;
     // Put tasks to Global DB
     for (size_t taskIdx = 0; taskIdx < nTasks; ++taskIdx)
     {
@@ -118,7 +118,7 @@ int main(int argc, char* argv[])
     //Split tasks into subtasks
     auto taskQueue = std::make_shared<sgns::processing::ProcessingTaskQueueImpl>(globalDB);
 
-    size_t nSubTasks = 1;
+    size_t nSubTasks = chunkOptions.size();
     size_t nChunks = 0;
     TaskSplitter taskSplitter(
         nSubTasks,
@@ -130,7 +130,7 @@ int main(int argc, char* argv[])
     {
         std::cout << "subtask" << std::endl;
         std::list<SGProcessing::SubTask> subTasks;
-        taskSplitter.SplitTask(task, subTasks, imagesplit, chunkOptions.at(chunkopt));
+        taskSplitter.SplitTask(task, subTasks, imagesplit, chunkOptions);
         taskQueue->EnqueueTask(task, subTasks);
         chunkopt++;
     }

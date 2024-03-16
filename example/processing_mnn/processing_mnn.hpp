@@ -241,7 +241,7 @@ namespace
         {
         }
 
-        void SplitTask(const SGProcessing::Task& task, std::list<SGProcessing::SubTask>& subTasks, ImageSplitter& SplitImage, std::vector<uint32_t> chunkOptions)
+        void SplitTask(const SGProcessing::Task& task, std::list<SGProcessing::SubTask>& subTasks, ImageSplitter& SplitImage, std::vector<std::vector<uint32_t>> chunkOptions)
         {
             std::optional<SGProcessing::SubTask> validationSubtask;
             if (m_addValidationSubtask)
@@ -269,23 +269,23 @@ namespace
 
                 subtask.set_subtaskid(base58.value() + "_" + std::to_string(i));
                 //subtask.set_subtaskid(subtaskId);
-                std::cout << "Chunks?" << chunkOptions.at(5) << std::endl;
-                std::cout << "Chunks?" << chunkOptions.at(0) << std::endl;
-                std::cout << "Chunks?" << chunkOptions.at(1) << std::endl;
-                std::cout << "Chunks?" << chunkOptions.at(2) << std::endl;
-                std::cout << "Chunks?" << chunkOptions.at(3) << std::endl;
-                std::cout << "Chunks?" << chunkOptions.at(4) << std::endl;
-                for (size_t chunkIdx = 0; chunkIdx < chunkOptions.at(5); ++chunkIdx)
+                //std::cout << "Chunks?" << chunkOptions.at(i).at(5) << std::endl;
+                //std::cout << "Chunks?" << chunkOptions.at(i).at(0) << std::endl;
+                //std::cout << "Chunks?" << chunkOptions.at(i).at(1) << std::endl;
+                //std::cout << "Chunks?" << chunkOptions.at(i).at(2) << std::endl;
+                //std::cout << "Chunks?" << chunkOptions.at(i).at(3) << std::endl;
+                //std::cout << "Chunks?" << chunkOptions.at(i).at(4) << std::endl;
+                for (size_t chunkIdx = 0; chunkIdx < chunkOptions.at(i).at(5); ++chunkIdx)
                 {
-                    std::cout << "AddChunk : " << chunkIdx << std::endl;
+                    //std::cout << "AddChunk : " << chunkIdx << std::endl;
                     SGProcessing::ProcessingChunk chunk;
                     chunk.set_chunkid((boost::format("CHUNK_%d_%d") % i % chunkId).str());
                     chunk.set_n_subchunks(1);
-                    chunk.set_line_stride(chunkOptions.at(0));
-                    chunk.set_offset(chunkOptions.at(1));
-                    chunk.set_stride(chunkOptions.at(2));
-                    chunk.set_subchunk_height(chunkOptions.at(3));
-                    chunk.set_subchunk_width(chunkOptions.at(4));
+                    chunk.set_line_stride(chunkOptions.at(i).at(0));
+                    chunk.set_offset(chunkOptions.at(i).at(1));
+                    chunk.set_stride(chunkOptions.at(i).at(2));
+                    chunk.set_subchunk_height(chunkOptions.at(i).at(3));
+                    chunk.set_subchunk_width(chunkOptions.at(i).at(4));
 
                     auto chunkToProcess = subtask.add_chunkstoprocess();
                     chunkToProcess->CopyFrom(chunk);
@@ -302,7 +302,7 @@ namespace
 
                     ++chunkId;
                 }
-                std::cout << "Subtask? " << subtask.chunkstoprocess_size() << std::endl;
+                //std::cout << "Subtask? " << subtask.chunkstoprocess_size() << std::endl;
                 subTasks.push_back(std::move(subtask));
             }
 
@@ -429,7 +429,7 @@ namespace
 
             bool isValidationSubTask = (subTask.subtaskid() == "subtask_validation");
             auto basechunk = subTask.chunkstoprocess(0);
-            std::cout << "Check Nums:" << basechunk.line_stride() << std::endl;
+            //std::cout << "Check Nums:" << basechunk.line_stride() << std::endl;
             ImageSplitter ChunkSplit(animageSplit.GetPart(dataindex), basechunk.line_stride(), basechunk.stride(), animageSplit.GetPartHeightActual(dataindex) / basechunk.subchunk_height() * basechunk.line_stride());
             //std::string subTaskResultHash = "";
             std::vector<uint8_t> subTaskResultHash(SHA256_DIGEST_LENGTH);
