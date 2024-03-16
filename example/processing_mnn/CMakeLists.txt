@@ -93,7 +93,7 @@ target_link_libraries(processing_mnn_p PRIVATE
 if(WIN32)
 	target_link_options(processing_mnn_p PRIVATE /WHOLEARCHIVE:${MNN_LIBS})
 else()
-	target_link_options(processing_mnn PRIVATE "-Wl,-force_load,${MNN_LIBS}")
+	target_link_options(processing_mnn_p PRIVATE "-Wl,-force_load,${MNN_LIBS}")
 endif()
 include_directories(../include)
 include_directories(./imageHelper)
