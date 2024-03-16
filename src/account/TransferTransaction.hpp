@@ -47,7 +47,7 @@ namespace sgns
             if ( filled_size < 64 )
             {
                 // If the exported data is smaller than the fixed size, pad with zeros
-                serialized_class.insert( serialized_class.begin(), 64 - filled_size, 0 );
+                serialized_class.insert( serialized_class.begin() + 32, 64 - filled_size, 0 );
             }
             return serialized_class;
         }
