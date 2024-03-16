@@ -18,6 +18,8 @@ target_link_libraries(ipfs_pubsub
 #    ipfs-lite-cpp::ipfs_merkledag_service
 #    ipfs-lite-cpp::graphsync
     logger
+	crdt_globaldb
+	processing_service
     p2p::p2p_basic_host
     p2p::p2p_default_network
     p2p::p2p_peer_repository
@@ -28,6 +30,7 @@ target_link_libraries(ipfs_pubsub
     p2p::p2p_kademlia
     p2p::p2p_identify
     p2p::p2p_ping
+	p2p::p2p_logger
     Boost::Boost.DI
     Boost::program_options
     ipfs-bitswap-cpp
