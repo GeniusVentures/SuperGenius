@@ -74,7 +74,7 @@ namespace sgns::mnn
 			//stbi_image_free(imageData_);
 		};
 		//std::vector<uint8_t> StartProcessing();
-        std::vector<uint8_t> MNN_PoseNet::StartProcessing()
+        std::vector<uint8_t> StartProcessing()
         {
 
             unsigned char* data = reinterpret_cast<unsigned char*>(imageData_->data());
