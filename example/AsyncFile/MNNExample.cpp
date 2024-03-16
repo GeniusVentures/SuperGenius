@@ -13,6 +13,7 @@
 //#include "WSLoader.hpp"
 #include "URLStringUtil.h"
 #include <libp2p/injector/host_injector.hpp>
+#include "libp2p/injector/kademlia_injector.hpp"
 
 /**
  * This program is example to loading MNN model file
@@ -96,7 +97,16 @@ int main(int argc, char **argv)
 
     //auto ioc = std::make_shared<boost::asio::io_context>();
     
-    auto injector = libp2p::injector::makeHostInjector();
+    //auto injector = libp2p::injector::makeHostInjector();
+    libp2p::protocol::kademlia::Config kademlia_config;
+    kademlia_config.randomWalk.enabled = true;
+    kademlia_config.randomWalk.interval = std::chrono::seconds(300);
+    kademlia_config.requestConcurency = 20;
+    //auto injector = libp2p::injector::makeHostInjector();
+    auto injector = libp2p::injector::makeHostInjector(
+        // libp2p::injector::useKeyPair(kp), // Use predefined keypair
+        libp2p::injector::makeKademliaInjector(
+            libp2p::injector::useKademliaConfig(kademlia_config)));
     auto ioc = injector.create<std::shared_ptr<boost::asio::io_context>>();
 
     // Create a work guard to keep the io_context alive
@@ -113,7 +123,10 @@ int main(int argc, char **argv)
         auto data = FileManager::GetInstance().LoadASync(file_names[i], false, true, ioc, [](const int& status)
         {
                 std::cout << "status: " << status << std::endl;
-        },"file");
+            }, [](std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers)
+                {
+                    std::cout << "Final Callback" << std::endl;
+                },"file");
         //FileManager::GetInstance().IncrementOutstandingOperations();
 
         //std::cout << "LoadFile: " << file_names[i] << std::endl;
