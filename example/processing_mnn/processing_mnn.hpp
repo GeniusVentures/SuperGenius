@@ -397,8 +397,16 @@ namespace
                             std::cout << "Final Callback" << std::endl;
                             //this->cidData_.first.push_back(subTask.ipfsblock());
                             //this->cidData_.second.push_back(buffers->second.at(0));
-                            this->cidData_.insert({ subTask.ipfsblock(), buffers->second.at(0) });
-                            this->ProcessSubTask2(subTask, result, initialHashCode, buffers->second.at(0));
+                            
+                            if (!buffers || (buffers->first.empty() && buffers->second.empty()))
+                            {
+                                std::cout << "Buffer from AsyncIO is 0" << std::endl;
+                                return;
+                            }
+                            else {
+                                this->cidData_.insert({ subTask.ipfsblock(), buffers->second.at(0) });
+                                this->ProcessSubTask2(subTask, result, initialHashCode, buffers->second.at(0));
+                            }
                         }, "file");
                 ioc->reset();
                 ioc->run();
@@ -412,6 +420,11 @@ namespace
             const SGProcessing::SubTask& subTask, SGProcessing::SubTaskResult& result,
             uint32_t initialHashCode, std::vector<char> buffer)
         {
+            if (buffer.size() == 0)
+            {
+                std::cout << "No file obtained from IPFS" << std::endl;
+                return;
+            }
             //Splite image
             SGProcessing::Task task;
             auto queryTasks = m_db->Get("tasks/TASK_" + subTask.ipfsblock());
