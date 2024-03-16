@@ -247,4 +247,5 @@ int main( int argc, char *argv[] )
         input_thread.join();
     }
     iothread.join();
+    return 0;
 }
