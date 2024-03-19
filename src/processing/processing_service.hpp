@@ -36,7 +36,6 @@ private:
     */
     void Listen(const std::string& processingGridChannelId);
     void SendChannelListRequest();
-
     /** Asynschonous callback to process received messages other processing services.
     * @param message - a message structure containing the messsage data and its sender peer information.
     * @return None
@@ -65,6 +64,7 @@ private:
 
     boost::asio::deadline_timer m_timerChannelListRequestTimeout;
     boost::posix_time::time_duration m_channelListRequestTimeout;
+    bool m_waitingCHannelRequest = false;
 
     std::atomic<bool> m_isStopped;
     mutable std::mutex m_mutexNodes;

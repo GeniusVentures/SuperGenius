@@ -124,6 +124,7 @@ namespace
     }
 }
 
+
 int main(int argc, char* argv[])
 {
     //auto options = parseCommandLine(argc, argv);
@@ -141,7 +142,7 @@ int main(int argc, char* argv[])
     groups:
       - name: main
         sink: console
-        level: error
+        level: info
         children:
           - name: libp2p
           - name: kademlia
@@ -189,24 +190,22 @@ int main(int argc, char* argv[])
             .create<std::shared_ptr<libp2p::protocol::kademlia::Kademlia>>();
 
         std::vector<std::string> bootstrapAddresses = {
-            "/ip4/202.61.244.123/tcp/4001/p2p/QmUikGKv3RysyCYZxNoGWjf8Y1qPjhrp8NeV4fYyNyqcDQ",
-
-            // bootstrap peers list is obtained using ipfs config show command
-            "/dnsaddr/bootstrap.libp2p.io/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt",
+            //"/dnsaddr/bootstrap.libp2p.io/p2p/QmNnooDu7bfjPFoTZYxMNLWUQJyrVwtbZg5gBMjTezGAJN",
+            //"/dnsaddr/bootstrap.libp2p.io/p2p/QmQCU2EcMqAqQPR2i9bChDtGNJchTbq5TbXJJ16u19uLTa",
+            //"/dnsaddr/bootstrap.libp2p.io/p2p/QmbLHAnMoJPWSCR5Zhtx6BHJX9KiKNN6tpvbUcqanj75Nb",
+            //"/dnsaddr/bootstrap.libp2p.io/p2p/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt",
             "/ip4/104.131.131.82/tcp/4001/p2p/QmaCpDMGvV2BGHeYERUEnRQAwe3N8SzbUtfsmvsqQLuvuJ",
-            // @note /quic address is not supported by libp2p implementation
-            //"/ip4/104.131.131.82/udp/4001/quic/p2p/QmaCpDMGvV2BGHeYERUEnRQAwe3N8SzbUtfsmvsqQLuvuJ",
-            "/dnsaddr/bootstrap.libp2p.io/p2p/QmNnooDu7bfjPFoTZYxMNLWUQJyrVwtbZg5gBMjTezGAJN",
-            "/dnsaddr/bootstrap.libp2p.io/p2p/QmQCU2EcMqAqQPR2i9bChDtGNJchTbq5TbXJJ16u19uLTa",
-            "/dnsaddr/bootstrap.libp2p.io/p2p/QmbLHAnMoJPWSCR5Zhtx6BHJX9KiKNN6tpvbUcqanj75Nb",
+            //"/ip4/127.0.0.1/tcp/4001/p2p/12D3KooWFMdNiBFk5ojGNzWjqSTL1HGLu8rXns5kwqUPTrbFNtEN",
+            //"/ip4/45.76.254.171/tcp/41523/p2p/12D3KooWEiD3woWu41x1Evn6Jb3np6xf6ap1duFxHthHuFt8NRV2",
+            //"/ip4/3.134.102.131/tcp/4001/p2p/QmZ6Nin1S7kCRfCjfQEwhudnWvf9BJpT5yy93VPz9VVyoZ"
         };
 
         // Hello world
-        auto cid = libp2p::multi::ContentIdentifierCodec::fromString("QmWATWQ7fVPP2EFGu71UkfnqhYXDYH566qy47CnJDgvs8u").value();
+        auto cid = libp2p::multi::ContentIdentifierCodec::fromString("QmSnuWmxptJZdLJpKRarxBMS2Ju2oANVrgbr2xWbie9b2D").value();
 
         // The peer id is received in findProviders response.
         //auto peer_id = libp2p::peer::PeerId::fromBase58("QmRXP6S7qwSH4vjSrZeJUGT68ww8rQVhoFWU5Kp7UkVkPN").value();
-        auto peer_id = libp2p::peer::PeerId::fromBase58("QmSrq3jnqGAja4z96Jq9SMQFJ8TzbRAgrMLi1sTR6Ane6W").value();
+        //auto peer_id = libp2p::peer::PeerId::fromBase58("QmTigmvYEhvcwEpZMuXHcC5HGQG4iKDCKaNeZuoy69QsJw").value();
 
         // Peers addresses: 
         // /ip4/127.0.0.1/udp/4001/quic;
@@ -228,12 +227,12 @@ int main(int argc, char* argv[])
             ).value();
 
 
-        auto identityManager = injector.create<std::shared_ptr<libp2p::peer::IdentityManager>>();
-        auto keyMarshaller = injector.create<std::shared_ptr<libp2p::crypto::marshaller::KeyMarshaller>>();
+        //auto identityManager = injector.create<std::shared_ptr<libp2p::peer::IdentityManager>>();
+        //auto keyMarshaller = injector.create<std::shared_ptr<libp2p::crypto::marshaller::KeyMarshaller>>();
 
-        auto identifyMessageProcessor = std::make_shared<libp2p::protocol::IdentifyMessageProcessor>(
-            *host, host->getNetwork().getConnectionManager(), *identityManager, keyMarshaller);
-        auto identify = std::make_shared<libp2p::protocol::Identify>(*host, identifyMessageProcessor, host->getBus());
+        //auto identifyMessageProcessor = std::make_shared<libp2p::protocol::IdentifyMessageProcessor>(
+        //    *host, host->getNetwork().getConnectionManager(), *identityManager, keyMarshaller);
+        //auto identify = std::make_shared<libp2p::protocol::Identify>(*host, identifyMessageProcessor, host->getBus());
 
         auto pingSession = std::make_shared<PingSession>(io, host);
         pingSession->Init();
@@ -254,7 +253,7 @@ int main(int argc, char* argv[])
                 std::exit(EXIT_FAILURE);
             }
 
-            identify->start();
+            //identify->start();
             bitswap->start();
             host->start();
 
@@ -274,7 +273,8 @@ int main(int argc, char* argv[])
             /*/
             dht->Start();
 
-            dht->FindProviders(cid, [bitswap, &cid, &blockRequestor](libp2p::outcome::result<std::vector<libp2p::peer::PeerInfo>> res) {
+            //dht->FindProviders(cid, [dht, bitswap, &cid, &blockRequestor](libp2p::outcome::result<std::vector<libp2p::peer::PeerInfo>> res) {
+            dht->FindProviders(cid, [dht, host, io, bitswap, &cid, &blockRequestor](libp2p::outcome::result<std::vector<libp2p::peer::PeerInfo>> res) {
                 if (!res) {
                     std::cerr << "Cannot find providers: " << res.error().message() << std::endl;
                     return;
@@ -308,7 +308,7 @@ int main(int argc, char* argv[])
                 else
                 {
                     std::cout << "Empty providers list received" << std::endl;
-                    std::exit(EXIT_FAILURE);
+                    //std::exit(EXIT_FAILURE);
                 }
             });
             //*/
@@ -317,7 +317,7 @@ int main(int argc, char* argv[])
 
         boost::asio::signal_set signals(*io, SIGINT, SIGTERM);
         signals.async_wait(
-            [&io](const boost::system::error_code&, int) { io->stop(); });
+            [&io](const boost::system::error_code&, int) { std::cout << "test" << std::endl << "test" << std::endl << "test" << std::endl << "test" << std::endl << "test" << std::endl << "test" << std::endl;  io->stop(); });
         io->run();
     }
     catch (const std::exception& e)
@@ -329,3 +329,13 @@ int main(int argc, char* argv[])
     return EXIT_SUCCESS;
 }
 
+
+void findprovhandler(libp2p::outcome::result<std::vector<libp2p::peer::PeerInfo>> res)
+{
+    if (!res) {
+        std::cerr << "Cannot find providers: " << res.error().message() << std::endl;
+        return;
+    }
+
+    std::cout << "Providers: " << std::endl;
+}

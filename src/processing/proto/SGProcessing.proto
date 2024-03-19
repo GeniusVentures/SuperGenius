@@ -75,8 +75,8 @@ message SubTaskQueueRequest
 // SubTask results are published to result_channel
 message SubTaskResult
 {
-    uint32 result_hash = 1; // hash of results
-    repeated uint32 chunk_hashes = 2; // the hashes for each chunk
+    bytes result_hash = 1; // hash of results
+    repeated bytes chunk_hashes = 2; // the hashes for each chunk
     string ipfs_results_data_id = 3; // UUID of the results data on ipfs
     string subtaskid = 4; // linked subtask id
 }

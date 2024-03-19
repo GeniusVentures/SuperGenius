@@ -87,6 +87,13 @@ public:
     void ChangeSubTaskProcessingStates(
         const std::set<std::string>& subTaskIds, bool isProcessed);
 
+    /** Check whether queue has been initialized to prevent nullptr access to the queue.
+    */
+    bool IsQueueInit()
+    {
+        return (m_queue != nullptr);
+    }
+
     /** Checks if all subtask in the queue are processed
     * @return true if the queue is processed
     */

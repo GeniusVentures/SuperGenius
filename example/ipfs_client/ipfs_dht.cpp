@@ -1,4 +1,5 @@
 #include "ipfs_dht.hpp"
+#include <iostream>
 
 #include <libp2p/multi/content_identifier_codec.hpp>
 
@@ -16,6 +17,7 @@ void IpfsDHT::Start()
 {
     auto&& bootstrapNodes = GetBootstrapNodes();
     for (auto& bootstrap_node : bootstrapNodes) {
+        std::cout << "node" << std::endl;
         kademlia_->addPeer(bootstrap_node, true);
     }
 

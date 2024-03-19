@@ -65,16 +65,18 @@ void ProcessingServiceImpl::Listen(const std::string& processingGridChannelId)
 
 void ProcessingServiceImpl::SendChannelListRequest()
 {
+    if (m_waitingCHannelRequest) return;
+    m_waitingCHannelRequest = true;
     SGProcessing::GridChannelMessage gridMessage;
     auto channelRequest = gridMessage.mutable_processing_channel_request();
     channelRequest->set_environment("any");
 
     m_gridChannel->Publish(gridMessage.SerializeAsString());
     m_logger->debug("List of processing channels requested");
-
     m_timerChannelListRequestTimeout.expires_from_now(m_channelListRequestTimeout);
     m_timerChannelListRequestTimeout.async_wait(std::bind(&ProcessingServiceImpl::HandleRequestTimeout, this));
 }
+
 
 void ProcessingServiceImpl::OnMessage(boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message&> message)
 {
@@ -199,6 +201,7 @@ void ProcessingServiceImpl::SetChannelListRequestTimeout(
 
 void ProcessingServiceImpl::HandleRequestTimeout()
 {
+    m_waitingCHannelRequest = false;
     m_logger->debug("QUEUE_REQUEST_TIMEOUT");
     m_timerChannelListRequestTimeout.expires_at(boost::posix_time::pos_infin);
 

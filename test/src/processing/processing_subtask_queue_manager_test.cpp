@@ -385,7 +385,7 @@ TEST_F(ProcessingSubTaskQueueManagerTest, ValidateResults)
 
     std::map<std::string, SGProcessing::SubTaskResult> results;
     SGProcessing::SubTaskResult subTaskResult;
-    subTaskResult.add_chunk_hashes(1);
+    subTaskResult.add_chunk_hashes("1");
     subTaskResult.set_subtaskid("SUBTASK_1");
 
     results.emplace(subTaskResult.subtaskid(), subTaskResult);
