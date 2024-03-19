@@ -40,6 +40,12 @@ using namespace MNN;
 
 #define CIRCLE_RADIUS 3
 
+#ifdef __APPLE__
+#define MNN_FORWARD_TYPE MNN_FORWARD_METAL
+#else
+#define MNN_FORWARD_TYPE MNN_FORWARD_VULKAN
+#endif
+
 inline float clip(float value, float min, float max) {
     if (value < 0) {
         return 0;
@@ -331,7 +337,7 @@ int main(int argc, char* argv[]) {
     // create net and session
     auto mnnNet = std::shared_ptr<MNN::Interpreter>(MNN::Interpreter::createFromFile(poseModel));
     MNN::ScheduleConfig netConfig;
-    netConfig.type = MNN_FORWARD_VULKAN;
+    netConfig.type = MNN_FORWARD_TYPE;
     netConfig.numThread = 4;
     auto session = mnnNet->createSession(netConfig);
 
