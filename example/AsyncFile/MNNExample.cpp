@@ -3,7 +3,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include "Singleton.hpp"
+#include "ASIOSingleton.hpp"
 #include "FileManager.hpp"
 //#include "MNNLoader.hpp"
 //#include "MNNParser.hpp"
