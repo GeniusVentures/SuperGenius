@@ -16,6 +16,7 @@ bool ProcessingValidationCore::ValidateResults(
     // Compare result hashes for each chunk
     // If a chunk hashes didn't match each other add the all subtasks with invalid hashes to VALID ITEMS LIST
     std::map<std::string, std::vector<uint8_t>> chunks;
+    
     for (int itemIdx = 0; itemIdx < subTasks.items_size(); ++itemIdx)
     {
         const auto& subTask = subTasks.items(itemIdx);
@@ -68,6 +69,7 @@ bool ProcessingValidationCore::CheckSubTaskResultHashes(
     const SGProcessing::SubTask& subTask,
     const std::map<std::string, std::vector<uint8_t>>& chunks) const
 {
+    std::unordered_set<std::string> encounteredHashes;
     for (int chunkIdx = 0; chunkIdx < subTask.chunkstoprocess_size(); ++chunkIdx)
     {
         const auto& chunk = subTask.chunkstoprocess(chunkIdx);
@@ -75,9 +77,14 @@ bool ProcessingValidationCore::CheckSubTaskResultHashes(
         if (it != chunks.end())
         {
             // Check duplicated chunks only
-            if ((it->second.size() >= 2)
-                && !std::equal(it->second.begin() + 1, it->second.end(), it->second.begin()))
-            {
+            //if ((it->second.size() >= 2)
+            //    && !std::equal(it->second.begin() + 1, it->second.end(), it->second.begin()))
+            //{
+            //    m_logger->debug("INVALID_CHUNK_RESULT_HASH [{}, {}]", subTask.subtaskid(), chunk.chunkid());
+            //    return false;
+            //}
+            std::string chunkHash(it->second.begin(), it->second.end());
+            if (!encounteredHashes.insert(chunkHash).second) {
                 m_logger->debug("INVALID_CHUNK_RESULT_HASH [{}, {}]", subTask.subtaskid(), chunk.chunkid());
                 return false;
             }
