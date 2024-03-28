@@ -1,5 +1,7 @@
 add_library(processing_service
     processing_core.hpp
+	impl/processing_core_impl.hpp
+	impl/processing_core_impl.cpp
     processing_engine.hpp
     processing_engine.cpp
     processing_node.hpp
