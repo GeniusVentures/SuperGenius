@@ -32,6 +32,20 @@ target_include_directories(processing_mnn PRIVATE ${GSL_INCLUDE_DIR})
 
 target_include_directories(processing_mnn_p PRIVATE ${GSL_INCLUDE_DIR}) 
 
+if(APPLE)
+	set(XCFRAMEWORK_PATH "${_THIRDPARTY_BUILD_DIR}/moltenvk/build/lib/MoltenVK.xcframework")
+	target_link_libraries(processing_mnn PRIVATE 	
+		"-framework CoreFoundation"
+		"-framework CoreGraphics"
+		"-framework CoreServices"
+		"-framework IOKit"
+		"-framework IOSurface"
+		"-framework Metal"
+		"-framework QuartzCore"
+		"-framework AppKit"
+		${XCFRAMEWORK_PATH} 
+		)
+endif()
 target_link_libraries(processing_mnn PRIVATE
 #    ipfs-lite-cpp::ipfs_datastore_rocksdb
 #    ipfs-lite-cpp::buffer
@@ -62,6 +76,21 @@ if(WIN32)
 	target_link_options(processing_mnn PRIVATE /WHOLEARCHIVE:${MNN_LIBS})
 else()
 	target_link_options(processing_mnn PRIVATE "-Wl,-force_load,${MNN_LIBS}")
+endif()
+
+if(APPLE)
+	set(XCFRAMEWORK_PATH "${_THIRDPARTY_BUILD_DIR}/moltenvk/build/lib/MoltenVK.xcframework")
+	target_link_libraries(processing_mnn_p PRIVATE 	
+		"-framework CoreFoundation"
+		"-framework CoreGraphics"
+		"-framework CoreServices"
+		"-framework IOKit"
+		"-framework IOSurface"
+		"-framework Metal"
+		"-framework QuartzCore"
+		"-framework AppKit"
+		${XCFRAMEWORK_PATH} 
+		)
 endif()
 target_link_libraries(processing_mnn_p PRIVATE
 #    ipfs-lite-cpp::ipfs_datastore_rocksdb
