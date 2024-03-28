@@ -5,7 +5,7 @@
 //  Created by MNN on 2018/09/26.
 //  Copyright © 2018, Alibaba Group Holding Limited
 //
-
+#include <filesystem>
 #include <math.h>
 #include <fstream>
 #include <iostream>
@@ -300,6 +300,15 @@ static int decodeMultiPose(const Tensor* offsets, const Tensor* displacementFwd,
 }
 
 void saveImage(const char* fileName, uint8_t* imageData, int width, int height) {
+    std::filesystem::path filePath = std::filesystem::path(fileName).parent_path();
+    try {
+        std::filesystem::create_directories(filePath);
+
+    }
+    catch (const std::exception& e) {
+        std::cout << "Directory Creation Failed: " << e.what() << std::endl;
+    }
+
     stbi_write_png(fileName, width, height, 4, imageData, 4 * width);
 }
 

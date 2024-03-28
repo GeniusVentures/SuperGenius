@@ -71,7 +71,7 @@ int main(int argc, char* argv[])
         sgns::crdt::KeyPairFileStorage("CRDT.Datastore.TEST/pubs_dapp").GetKeyPair().value());
 
     //Start Pubsubs, add peers of other addresses. We'll probably use DHT Discovery bootstrapping in the future.
-    pubs->Start(40001, { "/ip4/192.168.46.18/tcp/40002/p2p/12D3KooWRm16iwAdRsAYzGGXU9rq9ZqGbJqaP2kYxe4mCdhEQz67",
+    pubs->Start(40001, { "/ip4/192.168.46.18/tcp/40002/p2p/12D3KooWNJqmc8QPbW3muX4XEi6eR63gEWXkVW2VqNVC1jyge6wb",
         "/ip4/192.168.46.18/tcp/40003/p2p/12D3KooWEAKCDGsZA4MvDVDEzx7pA8rD6UyN6AXsGDCYChWce4Zi",
         "/ip4/192.168.46.18/tcp/40004/p2p/12D3KooWKTNC88yV3g7bhBdTBxKqy1GT9GQhE6VP28BvVsUtdhX5",
         "/ip4/192.168.46.18/tcp/40005/p2p/12D3KooWJXWW1mXV1rxf7zuspGTyyk5irwyfXKNy71AcYzGqUT29",
