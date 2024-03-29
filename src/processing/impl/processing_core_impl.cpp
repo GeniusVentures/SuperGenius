@@ -17,6 +17,6 @@ namespace sgns::processing
                 throw std::runtime_error("Maximal number of processed subtasks exceeded");
             }
         }
-
+        m_processor->StartProcessing();
     }
 }

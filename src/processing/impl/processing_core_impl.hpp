@@ -5,6 +5,7 @@
 #include <iostream>
 #include <processing/processing_core.hpp>
 #include <crdt/globaldb/globaldb.hpp>
+#include <processing/processing_processor.hpp>
 
 namespace sgns::processing
 {
@@ -14,11 +15,13 @@ namespace sgns::processing
         ProcessingCoreImpl(
             std::shared_ptr<sgns::crdt::GlobalDB> db,
             size_t subTaskProcessingTime,
-            size_t maximalProcessingSubTaskCount)
+            size_t maximalProcessingSubTaskCount,
+            ProcessingProcessor* processor)
             : m_db(db)
             , m_subTaskProcessingTime(subTaskProcessingTime)
             , m_maximalProcessingSubTaskCount(maximalProcessingSubTaskCount)
             , m_processingSubTaskCount(0)
+            , m_processor(processor)
         {
         }
 
@@ -31,6 +34,7 @@ namespace sgns::processing
 
     private:
         std::shared_ptr<sgns::crdt::GlobalDB> m_db;
+        ProcessingProcessor* m_processor;
         size_t m_subTaskProcessingTime;
         size_t m_maximalProcessingSubTaskCount;
 

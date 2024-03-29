@@ -6,6 +6,7 @@
 #include <vector>
 #include <MNN/ImageProcess.hpp>
 #include <MNN/Interpreter.hpp>
+#include <processing/processing_processor.hpp>
 
 #define MNN_OPEN_TIME_TRACE
 #include <MNN/AutoTime.hpp>
@@ -31,7 +32,7 @@
 
 #define CIRCLE_RADIUS 3
 
-namespace sgns::mnn
+namespace sgns::processing
 {
 	using namespace MNN;
     inline float clip(float value, float min, float max) {
@@ -58,7 +59,7 @@ namespace sgns::mnn
         {"leftKnee", "leftAnkle"},    {"nose", "rightShoulder"},     {"rightShoulder", "rightElbow"},
         {"rightElbow", "rightWrist"}, {"rightShoulder", "rightHip"}, {"rightHip", "rightKnee"},
         {"rightKnee", "rightAnkle"} };
-	class MNN_PoseNet
+	class MNN_PoseNet : public ProcessingProcessor
 	{
 	public:
 		MNN_PoseNet(std::vector<uint8_t>* imagedata,
@@ -74,7 +75,7 @@ namespace sgns::mnn
 			//stbi_image_free(imageData_);
 		};
 		//std::vector<uint8_t> StartProcessing();
-        std::vector<uint8_t> StartProcessing()
+        std::vector<uint8_t> StartProcessing() override
         {
 
             unsigned char* data = reinterpret_cast<unsigned char*>(imageData_->data());
@@ -158,18 +159,7 @@ namespace sgns::mnn
             return std::vector<uint8_t>(data, data + imageData_->size());
         }
 	private:
-		//static int changeColorCircle(uint32_t* src, CV::Point point, int width, int height);
-		//static int drawPose(uint8_t* rgbaPtr, int width, int height, std::vector<float>& poseScores,
-		//	std::vector<std::vector<float>>& poseKeypointScores,
-		//	std::vector<std::vector<CV::Point>>& poseKeypointCoords);
-		//static CV::Point getCoordsFromTensor(const Tensor* dataTensor, int id, int x, int y, bool getCoord = true);
-		//static int decodePoseImpl(float curScore, int curId, const CV::Point& originalOnImageCoords, const Tensor* heatmaps,
-		//	const Tensor* offsets, const Tensor* displacementFwd, const Tensor* displacementBwd,
-		//	std::vector<float>& instanceKeypointScores, std::vector<CV::Point>& instanceKeypointCoords);
-		//static int decodeMultiPose(const Tensor* offsets, const Tensor* displacementFwd, const Tensor* displacementBwd,
-		//	const Tensor* heatmaps, std::vector<float>& poseScores,
-		//	std::vector<std::vector<float>>& poseKeypointScores,
-		//	std::vector<std::vector<CV::Point>>& poseKeypointCoords, CV::Point& scale);
+
         static int changeColorCircle(uint32_t* src, CV::Point point, int width, int height) {
             for (int y = -CIRCLE_RADIUS; y < (CIRCLE_RADIUS + 1); ++y) {
                 for (int x = -CIRCLE_RADIUS; x < (CIRCLE_RADIUS + 1); ++x) {
