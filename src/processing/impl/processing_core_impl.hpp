@@ -6,6 +6,15 @@
 #include <processing/processing_core.hpp>
 #include <crdt/globaldb/globaldb.hpp>
 #include <processing/processing_processor.hpp>
+#include <libp2p/log/configurator.hpp>
+#include <libp2p/log/logger.hpp>
+#include <libp2p/multi/multibase_codec/multibase_codec_impl.hpp>
+#include <libp2p/multi/content_identifier_codec.hpp>
+#include <libp2p/injector/host_injector.hpp>
+#include "libp2p/injector/kademlia_injector.hpp"
+#include "Singleton.hpp"
+#include "FileManager.hpp"
+#include "URLStringUtil.h"
 
 namespace sgns::processing
 {
@@ -54,6 +63,7 @@ namespace sgns::processing
 
         std::mutex m_subTaskCountMutex;
         size_t m_processingSubTaskCount;
+        std::map<std::string, std::vector<char>> cidData_;
     };
 }
 

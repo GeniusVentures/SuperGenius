@@ -62,21 +62,27 @@ namespace sgns::processing
 	class MNN_PoseNet : public ProcessingProcessor
 	{
 	public:
-		MNN_PoseNet(std::vector<uint8_t>* imagedata,
-			const char* modelfile, 
-			const int origwidth, 
-			const int origheight,
-			std::string filename) : imageData_(imagedata), modelFile_(modelfile), originalWidth_(origwidth), originalHeight_(origheight), fileName_(filename)
-		{
+		MNN_PoseNet() : imageData_(nullptr), modelFile_(nullptr), originalHeight_(0), originalWidth_(0) {}
 
-		}
 		~MNN_PoseNet()
 		{
 			//stbi_image_free(imageData_);
 		};
         std::vector<uint8_t> StartProcessing() override
         {
-            MNNProcess();
+            for (auto image : *imageData_)
+            {
+                MNNProcess();
+            }
+        }
+        void SetImageData(std::vector<std::vector<uint8_t>>* imageData)
+        {
+            imageData_ = imageData;
+        }
+
+        void SetModelFile(std::vector<uint8_t>* modelFile)
+        {
+            modelFile_ = modelFile;
         }
         std::vector<uint8_t> MNNProcess()
         {
@@ -92,7 +98,9 @@ namespace sgns::processing
             scale.fY = (float)originalHeight_ / (float)targetHeight;
 
             // create net and session
-            auto mnnNet = std::shared_ptr<MNN::Interpreter>(MNN::Interpreter::createFromFile(modelFile_));
+            const void* buffer = static_cast<const void*>(modelFile_->data());
+            //auto mnnNet = std::shared_ptr<MNN::Interpreter>(MNN::Interpreter::createFromFile(modelFile_));
+            auto mnnNet = std::shared_ptr<MNN::Interpreter>(MNN::Interpreter::createFromBuffer(buffer, modelFile_->size()));
             MNN::ScheduleConfig netConfig;
             netConfig.type = MNN_FORWARD_VULKAN;
             netConfig.numThread = 4;
@@ -413,8 +421,8 @@ namespace sgns::processing
             return 0;
         }
 
-		std::vector<uint8_t>* imageData_;
-		const char* modelFile_;
+		std::vector<std::vector<uint8_t>>* imageData_;
+        std::vector<uint8_t>* modelFile_;
 		int originalWidth_;
 		int originalHeight_;
 		std::string fileName_;
