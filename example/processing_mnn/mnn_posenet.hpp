@@ -74,8 +74,11 @@ namespace sgns::processing
 		{
 			//stbi_image_free(imageData_);
 		};
-		//std::vector<uint8_t> StartProcessing();
         std::vector<uint8_t> StartProcessing() override
+        {
+            MNNProcess();
+        }
+        std::vector<uint8_t> MNNProcess()
         {
 
             unsigned char* data = reinterpret_cast<unsigned char*>(imageData_->data());

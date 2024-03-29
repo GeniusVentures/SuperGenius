@@ -15,13 +15,12 @@ namespace sgns::processing
         ProcessingCoreImpl(
             std::shared_ptr<sgns::crdt::GlobalDB> db,
             size_t subTaskProcessingTime,
-            size_t maximalProcessingSubTaskCount,
-            ProcessingProcessor* processor)
+            size_t maximalProcessingSubTaskCount)
             : m_db(db)
             , m_subTaskProcessingTime(subTaskProcessingTime)
             , m_maximalProcessingSubTaskCount(maximalProcessingSubTaskCount)
             , m_processingSubTaskCount(0)
-            , m_processor(processor)
+            , m_processor(nullptr)
         {
         }
 
@@ -29,12 +28,27 @@ namespace sgns::processing
             const SGProcessing::SubTask& subTask, SGProcessing::SubTaskResult& result,
             uint32_t initialHashCode) override;
 
+        void RegisterProcessorFactory(const std::string& name, std::function<std::unique_ptr<ProcessingProcessor>()> factoryFunction) {
+            m_processorFactories[name] = factoryFunction;
+        }
+
+        void SetProcessorByName(const std::string& name) {
+            auto factoryFunction = m_processorFactories.find(name);
+            if (factoryFunction != m_processorFactories.end()) {
+                m_processor = factoryFunction->second();
+            }
+            else {
+                std::cerr << "Unknown processor name: " << name << std::endl;
+            }
+        }
+
         std::vector<size_t> m_chunkResulHashes;
         std::vector<size_t> m_validationChunkHashes;
 
     private:
         std::shared_ptr<sgns::crdt::GlobalDB> m_db;
-        ProcessingProcessor* m_processor;
+        std::unique_ptr<ProcessingProcessor> m_processor;
+        std::unordered_map<std::string, std::function<std::unique_ptr<ProcessingProcessor>()>> m_processorFactories;
         size_t m_subTaskProcessingTime;
         size_t m_maximalProcessingSubTaskCount;
 
