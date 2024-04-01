@@ -1,4 +1,5 @@
-
+#ifndef GRPC_FOR_SUPERGENIUS_PROCESSING_CORE_IMPL_HPP
+#define GRPC_FOR_SUPERGENIUS_PROCESSING_CORE_IMPL_HPP
 #include <math.h>
 #include <fstream>
 #include <memory>
@@ -68,3 +69,4 @@ namespace sgns::processing
 }
 
 
+#endif

@@ -68,13 +68,42 @@ namespace sgns::processing
 		{
 			//stbi_image_free(imageData_);
 		};
-        std::vector<uint8_t> StartProcessing() override
+        std::vector<uint8_t> StartProcessing(size_t numchunks,
+            uint32_t blockstride,
+            uint32_t blocklinestride,
+            uint32_t blocklen) override
         {
             for (auto image : *imageData_)
             {
                 MNNProcess();
             }
         }
+
+        void SetData(std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers) override
+        {
+            const auto& filePaths = buffers->first;
+            const auto& fileDatas = buffers->second;
+            for (size_t i = 0; i < filePaths.size(); ++i) {
+                const std::string& filePath = filePaths[i];
+
+                size_t dotPos = filePath.find_last_of('.');
+                if (dotPos != std::string::npos && dotPos < filePath.size() - 1) {
+                    std::string extension = filePath.substr(dotPos + 1);
+                    if (extension == "mnn")
+                    {
+
+                    }
+                    else if (extension == "jpg" || extension == "jpeg" || extension == "png")
+                    {
+
+                    }
+                    else {
+                        std::cerr << "Unsupported file extension: " << extension << " for file: " << filePath << std::endl;
+                    }
+                }
+            }
+        }
+
         void SetImageData(std::vector<std::vector<uint8_t>>* imageData)
         {
             imageData_ = imageData;

@@ -2,6 +2,7 @@ add_library(processing_service
     processing_core.hpp
 	impl/processing_core_impl.hpp
 	impl/processing_core_impl.cpp
+	processing_imagesplit.hpp
 	processing_processor.hpp
     processing_engine.hpp
     processing_engine.cpp
