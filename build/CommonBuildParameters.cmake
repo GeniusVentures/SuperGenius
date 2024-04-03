@@ -74,14 +74,12 @@ include_directories(${RocksDB_INCLUDE_DIR})
 # --------------------------------------------------------
 # Set config of opencv
 set(OpenCV_STATIC ON)
+set(OpenCV_SHARED OFF)
 set(OpenCV_DIR "${_THIRDPARTY_BUILD_DIR}/opencv")
 set(OpenCV_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/opencv/include")
-find_package(OpenCV REQUIRED COMPONENTS core imgproc imgcodecs)
-include_directories(${OpenCV_DIR})
-message(STATUS "OpenCV LIB PATH: ${OpenCV_LIB_PATH}")
-set_target_properties(opencv_core PROPERTIES IMPORTED_LOCATION ${OpenCV_LIB_PATH})
-set_target_properties(opencv_imgproc PROPERTIES IMPORTED_LOCATION ${OpenCV_LIB_PATH})
-set_target_properties(opencv_imgcodecs PROPERTIES IMPORTED_LOCATION ${OpenCV_LIB_PATH})
+find_package(OpenCV REQUIRED core imgproc imgcodecs)
+include_directories(${OpenCV_INCLUDE_DIR})
+
 # --------------------------------------------------------
 # Set config of Microsoft.GSL
 set(GSL_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/Microsoft.GSL/include")

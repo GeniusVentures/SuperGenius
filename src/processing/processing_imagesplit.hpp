@@ -8,6 +8,7 @@
 #include <vector>
 #include <openssl/sha.h>
 #include <libp2p/multi/content_identifier_codec.hpp>
+#include <opencv2/opencv.hpp>
 
 namespace sgns::processing
 {
@@ -23,43 +24,50 @@ namespace sgns::processing
         * @param blocklinestride - 
         * @param blocklen - 
         */
-        //ImageSplitter(
-        //    const char* filename,
-        //    uint32_t blockstride,
-        //    uint32_t blocklinestride,
-        //    uint32_t blocklen
-        //) : blockstride_(blockstride), blocklinestride_(blocklinestride), blocklen_(blocklen) {
-        //    int originalWidth;
-        //    int originalHeight;
-        //    int originChannel;
-        //    inputImage = stbi_load(filename, &originalWidth, &originalHeight, &originChannel, 4);
-        //    imageSize = originalWidth * originalHeight * 4;
-        //    //std::cout << " Image Size : " << imageSize << std::endl;
-        //    // Check if imageSize is evenly divisible by blocklen_
-        //    SplitImageData();
-        //}
+        ImageSplitter(
+            const char* filename,
+            uint32_t blockstride,
+            uint32_t blocklinestride,
+            uint32_t blocklen
+        ) : blockstride_(blockstride), blocklinestride_(blocklinestride), blocklen_(blocklen) {
+            int originalWidth;
+            int originalHeight;
+            int originChannel;
+            cv::Mat inputImage = cv::imread(filename);
+            originalWidth = inputImage.cols;
+            originalHeight = inputImage.rows;
+            originChannel = inputImage.channels();
+            imageSize = originalWidth * originalHeight * 4;
+            //std::cout << " Image Size : " << imageSize << std::endl;
+            // Check if imageSize is evenly divisible by blocklen_
+            SplitImageData();
+        }
         /** Split an image loaded from raw data of a file loaded elsewhere, i.e. asynciomanager
         * @param buffer - Raw data of image file
         * @param blockstride -
         * @param blocklinestride -
         * @param blocklen -
         */
-        //ImageSplitter(const std::vector<char>& buffer, 
-        //    uint32_t blockstride, 
-        //    uint32_t blocklinestride, 
-        //    uint32_t blocklen)
-        //    : blockstride_(blockstride), blocklinestride_(blocklinestride), blocklen_(blocklen) {
-        //    // Set inputImage and imageSize from the provided buffer
-        //    //inputImage = reinterpret_cast<const unsigned char*>(buffer.data());
-        //    int originalWidth;
-        //    int originalHeight;
-        //    int originChannel;
-        //    inputImage = stbi_load_from_memory(reinterpret_cast<const stbi_uc*>(buffer.data()), buffer.size(), &originalWidth, &originalHeight, &originChannel, STBI_rgb_alpha);
-        //    
-        //    imageSize = originalWidth * originalHeight * 4;
+        ImageSplitter(const std::vector<char>& buffer, 
+            uint32_t blockstride, 
+            uint32_t blocklinestride, 
+            uint32_t blocklen)
+            : blockstride_(blockstride), blocklinestride_(blocklinestride), blocklen_(blocklen) {
+            // Set inputImage and imageSize from the provided buffer
+            //inputImage = reinterpret_cast<const unsigned char*>(buffer.data());
+            int originalWidth;
+            int originalHeight;
+            int originChannel;
+            cv::Mat inputImage;
+            inputImage = cv::imdecode(buffer, cv::IMREAD_COLOR);
+            originalWidth = inputImage.cols;
+            originalHeight = inputImage.rows;
+            originChannel = inputImage.channels();
 
-        //    SplitImageData();
-        //}
+            imageSize = originalWidth * originalHeight * 4;
+
+            SplitImageData();
+        }
         
         /** Split an image loaded from raw RGBA bytes
         * @param buffer - Raw RGBA
