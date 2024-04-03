@@ -7,6 +7,8 @@
 #include "primitives/block_header.hpp"
 #include "primitives/block_id.hpp"
 #include "storage/buffer_map_types.hpp"
+#include <crdt/globaldb/globaldb.hpp>
+#include <crdt/globaldb/keypair_file_storage.hpp>
 
 /**
  * Auxiliary functions to simplify usage of persistant map based storage
@@ -59,7 +61,7 @@ namespace sgns::blockchain {
    * @param value data to be put to the storage
    * @return storage error if any
    */
-  outcome::result<void> putWithPrefix(storage::BufferStorage &map,
+  outcome::result<void> putWithPrefix(crdt::GlobalDB &db,
                                       prefix::Prefix prefix,
                                       primitives::BlockNumber num,
                                       base::Hash256 block_hash,
@@ -73,7 +75,7 @@ namespace sgns::blockchain {
    * @return encoded entry or error
    */
   outcome::result<base::Buffer> getWithPrefix(
-      const storage::BufferStorage &map,
+      crdt::GlobalDB &db,
       prefix::Prefix prefix,
       const primitives::BlockId &block_id);
 

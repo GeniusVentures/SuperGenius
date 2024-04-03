@@ -4,6 +4,7 @@
 
 #include "blockchain/impl/common.hpp"
 #include "storage/database_error.hpp"
+#include <crdt/globaldb/globaldb.hpp>
 
 using sgns::blockchain::prefix::Prefix;
 using sgns::base::Buffer;
@@ -22,7 +23,7 @@ OUTCOME_CPP_DEFINE_CATEGORY_3(sgns::blockchain, KeyValueRepositoryError, e) {
 
 namespace sgns::blockchain {
 
-  outcome::result<void> putWithPrefix(storage::BufferStorage &map,
+  outcome::result<void> putWithPrefix(crdt::GlobalDB &db,
                                       prefix::Prefix prefix,
                                       BlockNumber num,
                                       Hash256 block_hash,
@@ -33,17 +34,17 @@ namespace sgns::blockchain {
         prependPrefix(numberToIndexKey(num), Prefix::ID_TO_LOOKUP_KEY);
     auto hash_to_idx_key =
         prependPrefix(Buffer{block_hash}, Prefix::ID_TO_LOOKUP_KEY);
-    BOOST_OUTCOME_TRYV2(auto &&, map.put(num_to_idx_key, block_lookup_key));
-    BOOST_OUTCOME_TRYV2(auto &&, map.put(hash_to_idx_key, block_lookup_key));
-    return map.put(value_lookup_key, value);
+    BOOST_OUTCOME_TRYV2(auto &&, db.Put({"num_to_idx_key"}, block_lookup_key));
+    BOOST_OUTCOME_TRYV2(auto &&, db.Put({"hash_to_idx_key"}, block_lookup_key));
+    return db.Put({"value_lookup_key"}, value);
   }
 
   outcome::result<base::Buffer> getWithPrefix(
-      const storage::BufferStorage &map,
+      crdt::GlobalDB &db,
       prefix::Prefix prefix,
       const primitives::BlockId &block_id) {
-    OUTCOME_TRY((auto &&, key), idToLookupKey(map, block_id));
-    return map.get(prependPrefix(key, prefix));
+    OUTCOME_TRY((auto &&, key), idToLookupKey(db, block_id));
+    return db.Get({"prependPrefix(key, prefix)"});
   }
 
   base::Buffer numberToIndexKey(primitives::BlockNumber n) {

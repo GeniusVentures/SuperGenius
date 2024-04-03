@@ -18,15 +18,17 @@ using sgns::primitives::BlockNumber;
 namespace sgns::blockchain {
 
   KeyValueBlockHeaderRepository::KeyValueBlockHeaderRepository(
-      std::shared_ptr<storage::BufferStorage> map,
-      std::shared_ptr<crypto::Hasher> hasher)
-      : map_{std::move(map)}, hasher_{std::move(hasher)} {
+      std::shared_ptr<crdt::GlobalDB> db,
+      std::shared_ptr<crypto::Hasher> hasher,
+      std::string &net_id)
+      : db_{std::move(db)}, hasher_{std::move(hasher)} {
     BOOST_ASSERT(hasher_);
+    block_header_key_prefix = net_id + std::string(BLOCKCHAIN_PATH);
   }
 
   outcome::result<BlockNumber> KeyValueBlockHeaderRepository::getNumberByHash(
       const Hash256 &hash) const {
-    OUTCOME_TRY((auto &&, key), idToLookupKey(*map_, hash));
+    OUTCOME_TRY((auto &&, key), idToLookupKey(*db_, hash));
 
     auto maybe_number = lookupKeyToNumber(key);
 
@@ -43,7 +45,7 @@ namespace sgns::blockchain {
 
   outcome::result<primitives::BlockHeader>
   KeyValueBlockHeaderRepository::getBlockHeader(const BlockId &id) const {
-    auto header_res = getWithPrefix(*map_, Prefix::HEADER, id);
+    auto header_res = getWithPrefix(*db_, Prefix::HEADER, id);
     if (!header_res) {
       return (isNotFoundError(header_res.error())) ? Error::BLOCK_NOT_FOUND
                                                    : header_res.error();

@@ -6,6 +6,8 @@
 #include "storage/in_memory/in_memory_storage.hpp"
 #include "storage/trie/supergenius_trie/supergenius_trie_impl.hpp"
 #include "storage/trie/serialization/trie_serializer_impl.hpp"
+#include <crdt/globaldb/globaldb.hpp>
+#include <crdt/globaldb/keypair_file_storage.hpp>
 
 OUTCOME_CPP_DEFINE_CATEGORY_3(sgns::blockchain, Error, e) {
   switch (e) {
@@ -17,18 +19,17 @@ OUTCOME_CPP_DEFINE_CATEGORY_3(sgns::blockchain, Error, e) {
 
 namespace sgns::blockchain {
 
-  outcome::result<base::Buffer> idToLookupKey(const ReadableBufferMap &map,
+  outcome::result<base::Buffer> idToLookupKey(crdt::GlobalDB &db,
                                                 const primitives::BlockId &id) {
     auto key = visit_in_place(
         id,
-        [&map](const primitives::BlockNumber &n) {
-          auto key = prependPrefix(numberToIndexKey(n),
-                                   prefix::Prefix::ID_TO_LOOKUP_KEY);
-          return map.get(key);
+        [&db](const primitives::BlockNumber &n) {
+          //auto key = prependPrefix(numberToIndexKey(n),
+          //                         prefix::Prefix::ID_TO_LOOKUP_KEY);
+          return base::Buffer{};//.append(std::to_string( n )) ;
         },
-        [&map](const base::Hash256 &hash) {
-          return map.get(prependPrefix(base::Buffer{hash},
-                                       prefix::Prefix::ID_TO_LOOKUP_KEY));
+        [&db](const base::Hash256 &hash) {
+          return db.Get({"prependPrefix(base::Buffer{hash},prefix::Prefix::ID_TO_LOOKUP_KEY)"});
         });
     if (!key && isNotFoundError(key.error())) {
       return Error::BLOCK_NOT_FOUND;

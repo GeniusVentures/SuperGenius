@@ -8,6 +8,7 @@
 #include "base/buffer.hpp"
 #include "primitives/block_id.hpp"
 #include "storage/buffer_map_types.hpp"
+#include <crdt/globaldb/globaldb.hpp>
 
 namespace sgns::blockchain {
   using ReadableBufferMap =
@@ -24,7 +25,7 @@ namespace sgns::blockchain {
    * Convert a block ID into a key, which is a first part of a key, by which the
    * columns are stored in the database
    */
-  outcome::result<base::Buffer> idToLookupKey(const ReadableBufferMap &map,
+  outcome::result<base::Buffer> idToLookupKey(crdt::GlobalDB &db,
                                                 const primitives::BlockId &id);
 
   /**
