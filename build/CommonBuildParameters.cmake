@@ -306,7 +306,7 @@ link_directories(
 )
 
 add_subdirectory(${PROJECT_ROOT}/src ${CMAKE_BINARY_DIR}/src)
-add_subdirectory(${PROJECT_ROOT}/app ${CMAKE_BINARY_DIR}/app)
+#add_subdirectory(${PROJECT_ROOT}/app ${CMAKE_BINARY_DIR}/app)
 
 
 if (TESTING)
