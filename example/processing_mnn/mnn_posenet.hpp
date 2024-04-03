@@ -7,7 +7,7 @@
 #include <MNN/ImageProcess.hpp>
 #include <MNN/Interpreter.hpp>
 #include <processing/processing_processor.hpp>
-
+#include <processing/processing_imagesplit.hpp>
 #define MNN_OPEN_TIME_TRACE
 #include <MNN/AutoTime.hpp>
 #define STB_IMAGE_IMPLEMENTATION
@@ -62,20 +62,63 @@ namespace sgns::processing
 	class MNN_PoseNet : public ProcessingProcessor
 	{
 	public:
-		MNN_PoseNet() : imageData_(nullptr), modelFile_(nullptr), originalHeight_(0), originalWidth_(0) {}
+		MNN_PoseNet() : imageData_(nullptr), modelFile_(nullptr) {}
 
 		~MNN_PoseNet()
 		{
 			//stbi_image_free(imageData_);
 		};
-        std::vector<uint8_t> StartProcessing(size_t numchunks,
-            uint32_t blockstride,
-            uint32_t blocklinestride,
-            uint32_t blocklen) override
+        std::vector<uint8_t> StartProcessing(SGProcessing::SubTaskResult& result, const SGProcessing::Task& task, const SGProcessing::SubTask& subTask) override
         {
             for (auto image : *imageData_)
             {
-                MNNProcess();
+                ImageSplitter animageSplit(image, task.block_line_stride(), task.block_stride(), task.block_len());
+                auto dataindex = 0;
+                auto basechunk = subTask.chunkstoprocess(0);
+                bool isValidationSubTask = (subTask.subtaskid() == "subtask_validation");
+                ImageSplitter ChunkSplit(animageSplit.GetPart(dataindex), basechunk.line_stride(), basechunk.stride(), animageSplit.GetPartHeightActual(dataindex) / basechunk.subchunk_height() * basechunk.line_stride());
+                std::vector<uint8_t> subTaskResultHash(SHA256_DIGEST_LENGTH);
+                for (int chunkIdx = 0; chunkIdx < subTask.chunkstoprocess_size(); ++chunkIdx)
+                {
+                    std::cout << "Chunk IDX:  " << chunkIdx << "Total: " << subTask.chunkstoprocess_size() << std::endl;
+                    const auto& chunk = subTask.chunkstoprocess(chunkIdx);
+                    std::vector<uint8_t> shahash(SHA256_DIGEST_LENGTH);
+                    // Chunk result hash should be calculated
+                    size_t chunkHash = 0;
+                    if (isValidationSubTask)
+                    {
+                        //chunkHash = ((size_t)chunkIdx < m_validationChunkHashes.size()) ?
+                        //    m_validationChunkHashes[chunkIdx] : std::hash<std::string>{}(chunk.SerializeAsString());
+                    }
+                    else
+                    {
+                                
+                        auto data = ChunkSplit.GetPart(chunkIdx);
+                        auto width = ChunkSplit.GetPartWidthActual(chunkIdx);
+                        auto height = ChunkSplit.GetPartHeightActual(chunkIdx);
+                        //auto mnnproc = sgns::mnn::MNN_PoseNet(&data, modelFile_, width, height, (boost::format("%s_%s") % "RESULT_IPFS" % std::to_string(chunkIdx)).str() + ".png");
+                        auto procresults = MNNProcess(&data, width, height);
+
+                        gsl::span<const uint8_t> byte_span(procresults);
+                                
+                        SHA256_CTX sha256;
+                        SHA256_Init(&sha256);
+                        SHA256_Update(&sha256, &procresults, sizeof(procresults));
+                        SHA256_Final(shahash.data(), &sha256);
+
+                    }
+                    std::string hashString(shahash.begin(), shahash.end());
+                    result.add_chunk_hashes(hashString);
+
+
+                    SHA256_CTX sha256;
+                    SHA256_Init(&sha256);
+                    std::string combinedHash = std::string(subTaskResultHash.begin(), subTaskResultHash.end()) + hashString;
+                    SHA256_Update(&sha256, combinedHash.c_str(), sizeof(combinedHash));
+                    SHA256_Final(subTaskResultHash.data(), &sha256);
+                }
+                return subTaskResultHash;
+                std::cout << "end processing " << std::endl;
             }
         }
 
@@ -91,11 +134,11 @@ namespace sgns::processing
                     std::string extension = filePath.substr(dotPos + 1);
                     if (extension == "mnn")
                     {
-
+                        modelFile_->assign(fileDatas[i].begin(),fileDatas[i].end());
                     }
                     else if (extension == "jpg" || extension == "jpeg" || extension == "png")
                     {
-
+                        imageData_->push_back(fileDatas[i]);
                     }
                     else {
                         std::cerr << "Unsupported file extension: " << extension << " for file: " << filePath << std::endl;
@@ -106,25 +149,26 @@ namespace sgns::processing
 
         void SetImageData(std::vector<std::vector<uint8_t>>* imageData)
         {
-            imageData_ = imageData;
+            //imageData_ = imageData;
         }
 
         void SetModelFile(std::vector<uint8_t>* modelFile)
         {
             modelFile_ = modelFile;
         }
-        std::vector<uint8_t> MNNProcess()
+        std::vector<uint8_t> MNNProcess(std::vector<uint8_t>* imgdata, const int origwidth,
+            const int origheight)
         {
 
-            unsigned char* data = reinterpret_cast<unsigned char*>(imageData_->data());
+            unsigned char* data = reinterpret_cast<unsigned char*>(imgdata);
             //Get Target WIdth
-            const int targetWidth = static_cast<int>((float)originalWidth_ / (float)OUTPUT_STRIDE) * OUTPUT_STRIDE + 1;
-            const int targetHeight = static_cast<int>((float)originalHeight_ / (float)OUTPUT_STRIDE) * OUTPUT_STRIDE + 1;
+            const int targetWidth = static_cast<int>((float)origwidth / (float)OUTPUT_STRIDE) * OUTPUT_STRIDE + 1;
+            const int targetHeight = static_cast<int>((float)origheight / (float)OUTPUT_STRIDE) * OUTPUT_STRIDE + 1;
 
             //Scale
             CV::Point scale;
-            scale.fX = (float)originalWidth_ / (float)targetWidth;
-            scale.fY = (float)originalHeight_ / (float)targetHeight;
+            scale.fX = (float)origwidth / (float)targetWidth;
+            scale.fY = (float)origheight / (float)targetHeight;
 
             // create net and session
             const void* buffer = static_cast<const void*>(modelFile_->data());
@@ -158,11 +202,11 @@ namespace sgns::processing
                 // Dst -> [0, 1]
                 trans.postScale(1.0 / targetWidth, 1.0 / targetHeight);
                 //[0, 1] -> Src
-                trans.postScale(originalWidth_, originalHeight_);
+                trans.postScale(origwidth, origheight);
 
                 pretreat->setMatrix(trans);
                 const auto rgbaPtr = reinterpret_cast<uint8_t*>(data);
-                pretreat->convert(rgbaPtr, originalWidth_, originalHeight_, 0, input);
+                pretreat->convert(rgbaPtr, origwidth, origheight, 0, input);
             }
             {
                 AUTOTIME;
@@ -194,8 +238,8 @@ namespace sgns::processing
                     poseKeypointScores, poseKeypointCoords, scale);
             }
 
-            drawPose(data, originalWidth_, originalHeight_, poseScores, poseKeypointScores, poseKeypointCoords);
-            stbi_write_png(fileName_.c_str(), originalWidth_, originalHeight_, 4, data, 4 * originalWidth_);
+            drawPose(data, origwidth, origheight, poseScores, poseKeypointScores, poseKeypointCoords);
+            stbi_write_png(fileName_.c_str(), origwidth, origheight, 4, data, 4 * origwidth);
             return std::vector<uint8_t>(data, data + imageData_->size());
         }
 	private:
@@ -450,10 +494,10 @@ namespace sgns::processing
             return 0;
         }
 
-		std::vector<std::vector<uint8_t>>* imageData_;
+		std::vector<std::vector<char>>* imageData_;
         std::vector<uint8_t>* modelFile_;
-		int originalWidth_;
-		int originalHeight_;
+		//int originalWidth_;
+		//int originalHeight_;
 		std::string fileName_;
 	};
 

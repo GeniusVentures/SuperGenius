@@ -31,10 +31,12 @@ namespace sgns::processing
 
             boost::asio::io_context::executor_type executor = ioc->get_executor();
             boost::asio::executor_work_guard<boost::asio::io_context::executor_type> workGuard(executor);
+
             //Get Image Async
             FileManager::GetInstance().InitializeSingletons();
             string fileURL = "ipfs://" + subTask.ipfsblock() + "/test.png";
-            auto data = FileManager::GetInstance().LoadASync(fileURL, false, false, ioc, [](const int& status)
+
+            auto data = FileManager::GetInstance().LoadASync(fileURL, false, false, ioc, [&result, &subTask](const int& status)
                 {
                     std::cout << "status: " << status << std::endl;
                 }, [subTask, &result, initialHashCode, this](std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers)
@@ -47,14 +49,29 @@ namespace sgns::processing
                             return;
                         }
                         else {
+                            //Get Task
+                            SGProcessing::Task task;
+                            auto queryTasks = m_db->Get("tasks/TASK_" + subTask.ipfsblock());
+                            if (queryTasks.has_value())
+                            {
+                                auto element = queryTasks.value();
+
+                                task.ParseFromArray(element.data(), element.size());
+                                //task.ParseFromArray(element, element.second.size());
+                            }
                             this->cidData_.insert({ subTask.ipfsblock(), buffers->second.at(0) });
                             //this->ProcessSubTask2(subTask, result, initialHashCode, buffers->second.at(0));
-                            m_processor->StartProcessing();
+                            m_processor->SetData(buffers);
+                            auto tempresult = m_processor->StartProcessing(result, task, subTask);
+                            std::string hashString(tempresult.begin(), tempresult.end());
+                            result.set_result_hash(hashString);
                         }
                     }, "file");
             ioc->reset();
             ioc->run();
         }
-        m_processor->StartProcessing();
+        //TODO: Pass CIDData Into this and start processing
+        //m_processor->SetData(cidData_);
+        //m_processor->StartProcessing();
     }
 }

@@ -10,6 +10,7 @@
 #include <iostream>
 #include <memory>
 #include <vector>
+#include <processing/proto/SGProcessing.pb.h>
 
 namespace sgns::processing
 {
@@ -22,10 +23,7 @@ namespace sgns::processing
 
         /** Process data
         */
-        virtual std::vector<uint8_t> StartProcessing(size_t numchunks, 
-            uint32_t blockstride,
-            uint32_t blocklinestride,
-            uint32_t blocklen) = 0;
+        virtual std::vector<uint8_t> StartProcessing(SGProcessing::SubTaskResult& result, const SGProcessing::Task& task, const SGProcessing::SubTask& subTask) = 0;
 
 
         virtual void SetData(std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers) = 0;
