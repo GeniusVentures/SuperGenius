@@ -39,7 +39,8 @@ target_include_directories(processing_service
     PUBLIC $<BUILD_INTERFACE:${PROTO_SRC_DIR}>
    "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
 )
-
+message(STATUS "OpenCV LIB PATH2: ${OpenCV_LIB_PATH}")
+message(STATUS "OpenCV LIB PATH2: ${OpenCV_LIBRARIES}")
 target_link_libraries(processing_service
     ipfs-pubsub
     SGProcessingProto
@@ -54,5 +55,12 @@ target_link_libraries(processing_service
     p2p::p2p_inmem_protocol_repository
     p2p::p2p_gossip
     p2p::asio_scheduler
+	#${OpenCV_LIBRARIES}
+	${OpenCV_LIB_PATH}/opencv_core490d.lib
+	${OpenCV_LIB_PATH}/opencv_imgproc490d.lib
+	${OpenCV_LIB_PATH}/opencv_imgcodecs490d.lib
     ${WIN_CRYPT_LIBRARY}
     )
+set_target_properties(opencv_core PROPERTIES IMPORTED_LOCATION ${OpenCV_LIB_PATH}/opencv_core490d.lib)
+set_target_properties(opencv_imgproc PROPERTIES IMPORTED_LOCATION ${OpenCV_LIB_PATH}/opencv_imgproc490d.lib)
+set_target_properties(opencv_imgcodecs PROPERTIES IMPORTED_LOCATION ${OpenCV_LIB_PATH}/opencv_imgcodecs490d.lib)
