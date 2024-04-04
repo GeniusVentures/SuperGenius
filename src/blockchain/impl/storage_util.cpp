@@ -43,7 +43,7 @@ namespace sgns::blockchain {
       crdt::GlobalDB &db,
       prefix::Prefix prefix,
       const primitives::BlockId &block_id) {
-    OUTCOME_TRY((auto &&, key), idToLookupKey(db, block_id));
+    OUTCOME_TRY((auto &&, key), idToBufferKey(db, block_id));
     return db.Get({"prependPrefix(key, prefix)"});
   }
 
@@ -64,13 +64,22 @@ namespace sgns::blockchain {
     return lookup_key;
   }
 
-  outcome::result<primitives::BlockNumber> lookupKeyToNumber(
+  outcome::result<primitives::BlockNumber> BufferToNumber(
       const base::Buffer &key) {
-    if (key.size() < 4) {
+    if (key.size() > 8) {
       return outcome::failure(KeyValueRepositoryError::INVALID_KEY);
     }
-    return (uint64_t(key[0]) << 24u) | (uint64_t(key[1]) << 16u)
-           | (uint64_t(key[2]) << 8u) | uint64_t(key[3]);
+    primitives::BlockNumber retval = 0;
+    std::size_t byte_num = 0;
+
+    //TODO - Check endianess
+    for ( auto byte_it = key.rbegin(); byte_it != key.rend(); ++byte_it, ++byte_num )
+    {
+        retval += (*byte_it << (byte_num * 8));
+    }
+    return retval;
+    //return (uint64_t(key[0]) << 24u) | (uint64_t(key[1]) << 16u)
+    //       | (uint64_t(key[2]) << 8u) | uint64_t(key[3]);
   }
 
   base::Buffer prependPrefix(const base::Buffer &key,

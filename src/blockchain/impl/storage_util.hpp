@@ -96,9 +96,9 @@ namespace sgns::blockchain {
                                           const base::Hash256 &hash);
 
   /**
-   * Convert lookup key to a block number
+   * Converts buffer data to a block number
    */
-  outcome::result<primitives::BlockNumber> lookupKeyToNumber(
+  outcome::result<primitives::BlockNumber> BufferToNumber(
       const base::Buffer &key);
 
   /**

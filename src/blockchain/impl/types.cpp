@@ -19,21 +19,43 @@ OUTCOME_CPP_DEFINE_CATEGORY_3(sgns::blockchain, Error, e) {
 
 namespace sgns::blockchain {
 
-  outcome::result<base::Buffer> idToLookupKey(crdt::GlobalDB &db,
+  outcome::result<base::Buffer> idToBufferKey(crdt::GlobalDB &db,
                                                 const primitives::BlockId &id) {
     auto key = visit_in_place(
         id,
-        [&db](const primitives::BlockNumber &n) {
+        [](const primitives::BlockNumber &n) {
           //auto key = prependPrefix(numberToIndexKey(n),
           //                         prefix::Prefix::ID_TO_LOOKUP_KEY);
-          return base::Buffer{};//.append(std::to_string( n )) ;
+          return base::Buffer{}.put(std::to_string( n ));
         },
         [&db](const base::Hash256 &hash) {
-          return db.Get({"prependPrefix(base::Buffer{hash},prefix::Prefix::ID_TO_LOOKUP_KEY)"});
+          return db.Get({hash.toString()});
         });
     if (!key && isNotFoundError(key.error())) {
       return Error::BLOCK_NOT_FOUND;
     }
+    return key;
+  }
+  outcome::result<std::string> idToStringKey(crdt::GlobalDB &db,
+                                                const primitives::BlockId &id) {
+    auto key = visit_in_place(
+        id,
+        [](const primitives::BlockNumber &n) {
+          return std::to_string( n );
+        },
+        [&db](const base::Hash256 &hash) {
+          auto key = db.Get({hash.toString()});
+          if (key)
+          {
+            return std::string(key.value().toString());
+          }
+          else
+          {
+            return std::string{};
+          }
+        });
+    if (key.empty())
+        return outcome::failure(boost::system::error_code{});
     return key;
   }
 

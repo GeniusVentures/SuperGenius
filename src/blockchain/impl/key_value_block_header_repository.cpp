@@ -28,9 +28,9 @@ namespace sgns::blockchain {
 
   outcome::result<BlockNumber> KeyValueBlockHeaderRepository::getNumberByHash(
       const Hash256 &hash) const {
-    OUTCOME_TRY((auto &&, key), idToLookupKey(*db_, hash));
+    OUTCOME_TRY((auto &&, key), idToBufferKey(*db_, hash));
 
-    auto maybe_number = lookupKeyToNumber(key);
+    auto maybe_number = BufferToNumber(key);
 
     return maybe_number;
   }
@@ -45,7 +45,9 @@ namespace sgns::blockchain {
 
   outcome::result<primitives::BlockHeader>
   KeyValueBlockHeaderRepository::getBlockHeader(const BlockId &id) const {
-    auto header_res = getWithPrefix(*db_, Prefix::HEADER, id);
+    OUTCOME_TRY((auto &&, header_string_val), idToStringKey(*db_,id));
+
+    auto header_res = db_->Get({block_header_key_prefix + header_string_val});
     if (!header_res) {
       return (isNotFoundError(header_res.error())) ? Error::BLOCK_NOT_FOUND
                                                    : header_res.error();
