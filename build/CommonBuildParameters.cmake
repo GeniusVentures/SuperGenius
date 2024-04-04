@@ -72,13 +72,8 @@ find_package(RocksDB CONFIG REQUIRED)
 include_directories(${RocksDB_INCLUDE_DIR})
 
 # --------------------------------------------------------
-# Set config of opencv
-set(OpenCV_STATIC ON)
-set(OpenCV_SHARED OFF)
-set(OpenCV_DIR "${_THIRDPARTY_BUILD_DIR}/opencv")
-set(OpenCV_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/opencv/include")
-find_package(OpenCV REQUIRED core imgproc imgcodecs)
-include_directories(${OpenCV_INCLUDE_DIR})
+# Set config of stb
+include_directories(${_THIRDPARTY_BUILD_DIR}/stb/include)
 
 # --------------------------------------------------------
 # Set config of Microsoft.GSL

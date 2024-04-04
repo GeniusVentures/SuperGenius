@@ -8,7 +8,8 @@
 #include <vector>
 #include <openssl/sha.h>
 #include <libp2p/multi/content_identifier_codec.hpp>
-#include <opencv2/opencv.hpp>
+#include <stb_image.h>
+#include <stb_image_write.h>
 
 namespace sgns::processing
 {
@@ -33,10 +34,7 @@ namespace sgns::processing
             int originalWidth;
             int originalHeight;
             int originChannel;
-            cv::Mat inputImage = cv::imread(filename);
-            originalWidth = inputImage.cols;
-            originalHeight = inputImage.rows;
-            originChannel = inputImage.channels();
+            inputImage = stbi_load(filename, &originalWidth, &originalHeight, &originChannel, 4);
             imageSize = originalWidth * originalHeight * 4;
             //std::cout << " Image Size : " << imageSize << std::endl;
             // Check if imageSize is evenly divisible by blocklen_
@@ -58,12 +56,7 @@ namespace sgns::processing
             int originalWidth;
             int originalHeight;
             int originChannel;
-            cv::Mat inputImage;
-            inputImage = cv::imdecode(buffer, cv::IMREAD_COLOR);
-            originalWidth = inputImage.cols;
-            originalHeight = inputImage.rows;
-            originChannel = inputImage.channels();
-
+            inputImage = stbi_load_from_memory(reinterpret_cast<const stbi_uc*>(buffer.data()), buffer.size(), &originalWidth, &originalHeight, &originChannel, STBI_rgb_alpha);
             imageSize = originalWidth * originalHeight * 4;
 
             SplitImageData();
