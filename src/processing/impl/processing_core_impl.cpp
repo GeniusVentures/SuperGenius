@@ -61,8 +61,8 @@ namespace sgns::processing
                             }
                             this->cidData_.insert({ subTask.ipfsblock(), buffers->second.at(0) });
                             //this->ProcessSubTask2(subTask, result, initialHashCode, buffers->second.at(0));
-                            m_processor->SetData(buffers);
-                            auto tempresult = m_processor->StartProcessing(result, task, subTask);
+                            this->m_processor->SetData(buffers);
+                            auto tempresult = this->m_processor->StartProcessing(result, task, subTask);
                             std::string hashString(tempresult.begin(), tempresult.end());
                             result.set_result_hash(hashString);
                         }

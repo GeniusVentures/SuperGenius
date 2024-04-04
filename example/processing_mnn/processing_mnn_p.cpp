@@ -99,6 +99,7 @@ int main(int argc, char* argv[])
         1000000,
         2);
     processingCore2->RegisterProcessorFactory("posenet", []() { return std::make_unique<MNN_PoseNet>(); });
+    processingCore2->SetProcessorByName("posenet");
     //Set Imagesplit, this replaces bitswap getting of file for now. Should use AsyncIOmanager in the future
     //processingCore2->setImageSplitter(imagesplit);
     //processingCore2->setModelFile(poseModel);

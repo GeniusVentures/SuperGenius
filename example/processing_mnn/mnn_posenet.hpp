@@ -62,7 +62,7 @@ namespace sgns::processing
 	class MNN_PoseNet : public ProcessingProcessor
 	{
 	public:
-		MNN_PoseNet() : imageData_(nullptr), modelFile_(nullptr) {}
+		MNN_PoseNet() : imageData_(std::make_unique<std::vector<std::vector<char>>>()), modelFile_(std::make_unique<std::vector<uint8_t>>()) {}
 
 		~MNN_PoseNet()
 		{
@@ -134,7 +134,9 @@ namespace sgns::processing
                     std::string extension = filePath.substr(dotPos + 1);
                     if (extension == "mnn")
                     {
+                        //modelFile_ = new std::vector<uint8_t>();
                         modelFile_->assign(fileDatas[i].begin(),fileDatas[i].end());
+
                     }
                     else if (extension == "jpg" || extension == "jpeg" || extension == "png")
                     {
@@ -154,7 +156,7 @@ namespace sgns::processing
 
         void SetModelFile(std::vector<uint8_t>* modelFile)
         {
-            modelFile_ = modelFile;
+            //modelFile_ = modelFile;
         }
         std::vector<uint8_t> MNNProcess(std::vector<uint8_t>* imgdata, const int origwidth,
             const int origheight)
@@ -494,8 +496,8 @@ namespace sgns::processing
             return 0;
         }
 
-		std::vector<std::vector<char>>* imageData_;
-        std::vector<uint8_t>* modelFile_;
+		std::unique_ptr<std::vector<std::vector<char>>> imageData_;
+        std::unique_ptr<std::vector<uint8_t>> modelFile_;
 		//int originalWidth_;
 		//int originalHeight_;
 		std::string fileName_;
