@@ -4,6 +4,7 @@
 #include <libp2p/host/host.hpp>
 
 #include <ipfs_lite/ipfs/graphsync/graphsync.hpp>
+#include "outcome/outcome.hpp"
 
 /// runs event loop for max_milliseconds or until SIGINT or SIGTERM
 void runEventLoop(const std::shared_ptr<boost::asio::io_context>& io,
@@ -54,7 +55,7 @@ public:
 private:
     static void insertNode(Storage& dst, const std::string& data_str);
 
-    sgns::outcome::result<size_t> select(
+    outcome::result<size_t> select(
         const sgns::CID& cid,
         gsl::span<const uint8_t> selector,
         std::function<bool(const sgns::CID& cid, const sgns::common::Buffer& data)> handler)

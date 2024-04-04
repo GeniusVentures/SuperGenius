@@ -4,6 +4,7 @@
 
 #include <primitives/cid/cid.hpp>
 #include <ipfs_lite/ipfs/merkledag/merkledag_service.hpp>
+#include "outcome/outcome.hpp"
 
 namespace sgns::crdt
 {
