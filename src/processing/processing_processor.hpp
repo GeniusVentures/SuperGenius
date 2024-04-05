@@ -22,11 +22,16 @@ namespace sgns::processing
         {
         }
 
-        /** Process data
+        /** Start processing data
+        * @param result - Reference to result item to set hashes to
+        * @param task - Reference to task to get image split data
+        * @param subTask - Reference to subtask to get chunk data from
         */
         virtual std::vector<uint8_t> StartProcessing(SGProcessing::SubTaskResult& result, const SGProcessing::Task& task, const SGProcessing::SubTask& subTask) = 0;
 
-
+        /** Set data for processor
+        * @param buffers - Data containing file name and data pair lists.
+        */
         virtual void SetData(std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers) = 0;
     };
 }

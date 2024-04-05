@@ -34,14 +34,26 @@ namespace sgns::processing
         {
         }
 
+        /** Process a single subtask
+        * @param subTask - subtask that needs to be processed
+        * @param result - subtask result
+        * @param initialHashCode - an initial hash code which is used to calculate result hash
+        */
         void ProcessSubTask(
             const SGProcessing::SubTask& subTask, SGProcessing::SubTaskResult& result,
             uint32_t initialHashCode) override;
 
+        /** Register an available processor
+        * @param name - Name of processor
+        * @param factoryFunction - Pointer to processor
+        */
         void RegisterProcessorFactory(const std::string& name, std::function<std::unique_ptr<ProcessingProcessor>()> factoryFunction) {
             m_processorFactories[name] = factoryFunction;
         }
 
+        /** Set the current processor by name
+        * @param name - Name of processor
+        */
         void SetProcessorByName(const std::string& name) {
             auto factoryFunction = m_processorFactories.find(name);
             if (factoryFunction != m_processorFactories.end()) {
