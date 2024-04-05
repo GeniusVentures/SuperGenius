@@ -123,7 +123,7 @@ namespace sgns::blockchain {
     // the rest of the fields have default value
 
     OUTCOME_TRY((auto &&, genesis_block_hash), block_storage->putBlock(genesis_block));
-    BOOST_OUTCOME_TRYV2(auto &&, db->Put({"storage::kGenesisBlockHashLookupKey"},
+    BOOST_OUTCOME_TRYV2(auto &&, db->Put({std::string((storage::kGenesisBlockHashLookupKey).toString())},
                              Buffer{genesis_block_hash}));
     BOOST_OUTCOME_TRYV2(auto &&, block_storage->setLastFinalizedBlockHash(genesis_block_hash));
 
@@ -288,7 +288,7 @@ namespace sgns::blockchain {
 
   outcome::result<primitives::BlockHash>
   KeyValueBlockStorage::getGenesisBlockHash() const {
-    auto hash_res = db_->Get({"storage::kGenesisBlockHashLookupKey"});
+    auto hash_res = db_->Get({std::string((storage::kGenesisBlockHashLookupKey).toString())});
     if (hash_res.has_value()) {
       primitives::BlockHash hash;
       std::copy(hash_res.value().begin(), hash_res.value().end(), hash.begin());
@@ -304,7 +304,7 @@ namespace sgns::blockchain {
 
   outcome::result<primitives::BlockHash>
   KeyValueBlockStorage::getLastFinalizedBlockHash() const {
-    auto hash_res = db_->Get({"storage::kLastFinalizedBlockHashLookupKey"});
+    auto hash_res = db_->Get({std::string((storage::kLastFinalizedBlockHashLookupKey).toString())});
     if (hash_res.has_value()) {
       primitives::BlockHash hash;
       std::copy(hash_res.value().begin(), hash_res.value().end(), hash.begin());
@@ -321,7 +321,7 @@ namespace sgns::blockchain {
   outcome::result<void> KeyValueBlockStorage::setLastFinalizedBlockHash(
       const primitives::BlockHash &hash) {
     BOOST_OUTCOME_TRYV2(auto &&,
-        db_->Put({"storage::kLastFinalizedBlockHashLookupKey"}, Buffer{hash}));
+        db_->Put({std::string((storage::kLastFinalizedBlockHashLookupKey).toString())}, Buffer{hash}));
 
     return outcome::success();
   }
