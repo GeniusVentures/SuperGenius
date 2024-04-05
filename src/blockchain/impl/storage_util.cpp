@@ -31,13 +31,14 @@ namespace sgns::blockchain {
     auto block_lookup_key = numberAndHashToLookupKey(num, block_hash);
     auto value_lookup_key = prependPrefix(block_lookup_key, prefix);
     auto num_to_idx_key =
-        prependPrefix(numberToIndexKey(num), Prefix::ID_TO_LOOKUP_KEY);
+        prependPrefix(NumberToBuffer(num), Prefix::ID_TO_LOOKUP_KEY);
     auto hash_to_idx_key =
         prependPrefix(Buffer{block_hash}, Prefix::ID_TO_LOOKUP_KEY);
     BOOST_OUTCOME_TRYV2(auto &&, db.Put({"num_to_idx_key"}, block_lookup_key));
     BOOST_OUTCOME_TRYV2(auto &&, db.Put({"hash_to_idx_key"}, block_lookup_key));
     return db.Put({"value_lookup_key"}, value);
   }
+
 
   outcome::result<base::Buffer> getWithPrefix(
       crdt::GlobalDB &db,
@@ -47,35 +48,43 @@ namespace sgns::blockchain {
     return db.Get({"prependPrefix(key, prefix)"});
   }
 
-  base::Buffer numberToIndexKey(primitives::BlockNumber n) {
+  base::Buffer NumberToBuffer(primitives::BlockNumber n) {
     // TODO(Harrm) Figure out why exactly it is this way in substrate
-    BOOST_ASSERT((n & 0xffffffff00000000) == 0);
+    //BOOST_ASSERT((n & 0xffffffff00000000) == 0);
 
-    return {uint8_t(n >> 24u),
-            uint8_t((n >> 16u) & 0xffu),
-            uint8_t((n >> 8u) & 0xffu),
-            uint8_t(n & 0xffu)};
+    base::Buffer retval;
+
+    //Little endian
+    for ( std::size_t i = 0; i < sizeof(primitives::BlockNumber); ++i )
+    {
+        retval.putUint8(static_cast<uint8_t>((n >> (i * 8)) & 0xffu))  ;
+    }
+    return retval;
+
+    //return {uint8_t(n >> 24u),
+    //        uint8_t((n >> 16u) & 0xffu),
+    //        uint8_t((n >> 8u) & 0xffu),
+    //        uint8_t(n & 0xffu)};
   }
 
   base::Buffer numberAndHashToLookupKey(primitives::BlockNumber number,
                                           const base::Hash256 &hash) {
-    auto lookup_key = numberToIndexKey(number);
+    auto lookup_key = NumberToBuffer(number);
     lookup_key.put(hash);
     return lookup_key;
   }
 
   outcome::result<primitives::BlockNumber> BufferToNumber(
       const base::Buffer &key) {
-    if (key.size() > 8) {
+    if (key.size() > sizeof(primitives::BlockNumber)) {
       return outcome::failure(KeyValueRepositoryError::INVALID_KEY);
     }
     primitives::BlockNumber retval = 0;
-    std::size_t byte_num = 0;
 
-    //TODO - Check endianess
-    for ( auto byte_it = key.rbegin(); byte_it != key.rend(); ++byte_it, ++byte_num )
+    //Little endian
+    for ( std::size_t i = 0; i < key.size(); ++i )
     {
-        retval += (*byte_it << (byte_num * 8));
+        retval += (key[i] << (i * 8));
     }
     return retval;
     //return (uint64_t(key[0]) << 24u) | (uint64_t(key[1]) << 16u)

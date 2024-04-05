@@ -86,7 +86,7 @@ namespace sgns::blockchain {
    * In the current database schema, this kind of key is only used for
    * lookups into an index, NOT for storing header data or others.
    */
-  base::Buffer numberToIndexKey(primitives::BlockNumber n);
+  base::Buffer NumberToBuffer(primitives::BlockNumber n);
 
   /**
    * Convert number and hash into long lookup key for blocks that are
