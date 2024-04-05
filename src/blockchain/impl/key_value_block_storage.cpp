@@ -225,8 +225,9 @@ namespace sgns::blockchain {
     //  (in side-chains whom rejected by finalization)
     //  for avoid leaks of storage space
     auto block_hash = hasher_->blake2b_256(scale::encode(block.header).value());
-    auto block_in_storage_res =
-        getWithPrefix(*db_, Prefix::HEADER, block_hash);
+    //auto block_in_storage_res =
+    //    getWithPrefix(*db_, Prefix::HEADER, block_hash);
+    auto block_in_storage_res = header_repo_->getBlockHeader(block_hash);
     if (block_in_storage_res.has_value()) {
       return Error::BLOCK_EXISTS;
     }
