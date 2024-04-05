@@ -28,6 +28,8 @@ namespace sgns::blockchain
         
         auto putBlockHeader( const primitives::BlockHeader &header ) -> outcome::result<primitives::BlockHash> override;
 
+        auto removeBlockHeader( const primitives::BlockId &id )-> outcome::result<primitives::BlockHeader> override;
+
         auto getBlockStatus( const primitives::BlockId &id ) const -> outcome::result<blockchain::BlockStatus> override;
 
         std::string GetName() override

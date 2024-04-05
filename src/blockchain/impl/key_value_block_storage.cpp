@@ -208,7 +208,7 @@ namespace sgns::blockchain {
     
     OUTCOME_TRY((auto &&, id_string), idToStringKey(*db_, block_number));
     //TODO - For now one block data per block header. Revisit this
-    BOOST_OUTCOME_TRYV2(auto &&, db_->Put({header_repo_->GetHeaderPath()+id_string+ "tx/0"},Buffer{encoded_block_data}));
+    BOOST_OUTCOME_TRYV2(auto &&, db_->Put({header_repo_->GetHeaderPath() + id_string + "tx/0"},Buffer{encoded_block_data}));
 
     
     //BOOST_OUTCOME_TRYV2(auto &&, putWithPrefix(*db_,
@@ -271,10 +271,10 @@ namespace sgns::blockchain {
       const primitives::BlockNumber &number) {
     auto block_lookup_key = numberAndHashToLookupKey(number, hash);
     auto header_lookup_key = prependPrefix(block_lookup_key, Prefix::HEADER);
-    if (auto rm_res = db_->Remove({"header_lookup_key"}); !rm_res) {
+    if (auto rm_res = header_repo_->removeBlockHeader(number)) {
       logger_->error("could not remove header from the storage: {}",
                      rm_res.error().message());
-      return rm_res;
+      return outcome::success();
     }
 
     auto body_lookup_key = prependPrefix(block_lookup_key, Prefix::BLOCK_DATA);
