@@ -24,7 +24,7 @@ namespace sgns::blockchain {
     auto key = visit_in_place(
         id,
         [](const primitives::BlockNumber &n) {
-          //auto key = prependPrefix(numberToIndexKey(n),
+          //auto key = prependPrefix(NumberToBuffer(n),
           //                         prefix::Prefix::ID_TO_LOOKUP_KEY);
           return base::Buffer{}.put(std::to_string( n ));
         },
