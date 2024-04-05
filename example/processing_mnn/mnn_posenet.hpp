@@ -162,7 +162,7 @@ namespace sgns::processing
             const int origheight)
         {
 
-            unsigned char* data = reinterpret_cast<unsigned char*>(imgdata);
+            unsigned char* data = reinterpret_cast<unsigned char*>(imgdata->data());
             //Get Target WIdth
             const int targetWidth = static_cast<int>((float)origwidth / (float)OUTPUT_STRIDE) * OUTPUT_STRIDE + 1;
             const int targetHeight = static_cast<int>((float)origheight / (float)OUTPUT_STRIDE) * OUTPUT_STRIDE + 1;
