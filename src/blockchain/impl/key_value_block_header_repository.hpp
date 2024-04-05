@@ -25,6 +25,8 @@ namespace sgns::blockchain
         auto getHashByNumber( const primitives::BlockNumber &number ) const -> outcome::result<base::Hash256> override;
 
         auto getBlockHeader( const primitives::BlockId &id ) const -> outcome::result<primitives::BlockHeader> override;
+        
+        auto putBlockHeader( const primitives::BlockHeader &header ) -> outcome::result<primitives::BlockHash> override;
 
         auto getBlockStatus( const primitives::BlockId &id ) const -> outcome::result<blockchain::BlockStatus> override;
 
@@ -32,6 +34,8 @@ namespace sgns::blockchain
         {
             return "KeyValueBlockHeaderRepository";
         }
+
+        std::string GetHeaderPath() const;
 
     private:
         static constexpr std::string_view BLOCKCHAIN_PATH = "blockchain/";

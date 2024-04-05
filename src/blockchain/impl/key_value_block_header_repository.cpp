@@ -55,11 +55,36 @@ namespace sgns::blockchain {
 
     return scale::decode<primitives::BlockHeader>(header_res.value());
   }
+  
+  outcome::result<primitives::BlockHash> KeyValueBlockHeaderRepository::putBlockHeader(
+      const primitives::BlockHeader &header) {
+    OUTCOME_TRY((auto &&, encoded_header), scale::encode(header));
+    auto header_hash = hasher_->blake2b_256(encoded_header);
+   // BOOST_OUTCOME_TRYV2(auto &&, putWithPrefix(*db_,
+   //                           Prefix::HEADER,
+   //                           header.number,
+   //                           header_hash,
+   //                           Buffer{std::move(encoded_header)}));
+
+    //Store block humber with hash as its key
+    OUTCOME_TRY((auto &&, header_num_hash), getHashByNumber(header.number));
+    OUTCOME_TRY((auto &&, hash_key_string), idToStringKey(*db_, header_num_hash));
+    OUTCOME_TRY((auto &&, id_string), idToStringKey(*db_, header.number));
+    BOOST_OUTCOME_TRYV2(auto &&, db_->Put({hash_key_string}, NumberToBuffer(header.number)));
+    BOOST_OUTCOME_TRYV2(auto &&, db_->Put({block_header_key_prefix + id_string}, base::Buffer{std::move(encoded_header)}));
+
+    return header_hash;
+  }
 
   outcome::result<BlockStatus> KeyValueBlockHeaderRepository::getBlockStatus(
       const primitives::BlockId &id) const {
     return getBlockHeader(id).has_value() ? BlockStatus::InChain
                                           : BlockStatus::Unknown;
+  }
+
+  std::string KeyValueBlockHeaderRepository::GetHeaderPath() const
+  {
+    return block_header_key_prefix;
   }
 
 }  // namespace sgns::blockchain
