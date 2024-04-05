@@ -1,4 +1,4 @@
-#include "mnn_posenet.hpp"
+#include "processing_processor_mnn_posenet.hpp"
 
 
 namespace sgns::processing

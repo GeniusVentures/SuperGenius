@@ -10,6 +10,7 @@
 #include <iostream>
 #include <memory>
 #include <vector>
+#include <processing/processing_imagesplit.hpp>
 #include <processing/proto/SGProcessing.pb.h>
 
 namespace sgns::processing

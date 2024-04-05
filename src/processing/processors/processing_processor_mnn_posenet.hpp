@@ -7,7 +7,6 @@
 #include <MNN/ImageProcess.hpp>
 #include <MNN/Interpreter.hpp>
 #include <processing/processing_processor.hpp>
-#include <processing/processing_imagesplit.hpp>
 #define MNN_OPEN_TIME_TRACE
 #include <MNN/AutoTime.hpp>
 

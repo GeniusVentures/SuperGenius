@@ -8,8 +8,12 @@
 #include <vector>
 #include <openssl/sha.h>
 #include <libp2p/multi/content_identifier_codec.hpp>
+#ifndef stbi_load_from_memory
+#define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb_image.h>
 #include <stb_image_write.h>
+#endif
 
 namespace sgns::processing
 {

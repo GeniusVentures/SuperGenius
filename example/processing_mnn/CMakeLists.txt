@@ -1,9 +1,3 @@
-#Find MNN Stuff
-set(MNN_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/MNN/include")
-set(MNN_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/MNN/lib")
-include_directories(${MNN_INCLUDE_DIR})
-set(MNN_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../MNN/include")
-FILE(GLOB MNN_LIBS "${MNN_LIBRARY_DIR}/*")
 
 add_executable(processing_mnn
     processing_mnn.cpp
@@ -19,8 +13,6 @@ add_executable(processing_mnn_p
 	processing_mnn.hpp
 	processing_subtask_result_storage.cpp
 	processing_subtask_result_storage_impl.hpp
-	mnn_posenet.cpp
-	mnn_posenet.hpp
     )
 
 # Copy the required headers to install directory
@@ -32,20 +24,6 @@ target_include_directories(processing_mnn PRIVATE ${GSL_INCLUDE_DIR})
 
 target_include_directories(processing_mnn_p PRIVATE ${GSL_INCLUDE_DIR}) 
 
-if(APPLE)
-	set(XCFRAMEWORK_PATH "${_THIRDPARTY_BUILD_DIR}/moltenvk/build/lib/MoltenVK.xcframework")
-	target_link_libraries(processing_mnn PRIVATE 	
-		"-framework CoreFoundation"
-		"-framework CoreGraphics"
-		"-framework CoreServices"
-		"-framework IOKit"
-		"-framework IOSurface"
-		"-framework Metal"
-		"-framework QuartzCore"
-		"-framework AppKit"
-		${XCFRAMEWORK_PATH} 
-		)
-endif()
 target_link_libraries(processing_mnn PRIVATE
 #    ipfs-lite-cpp::ipfs_datastore_rocksdb
 #    ipfs-lite-cpp::buffer
@@ -70,28 +48,10 @@ target_link_libraries(processing_mnn PRIVATE
     ipfs-bitswap-cpp
 	ipfs-pubsub
     ${WIN_CRYPT_LIBRARY}
-	${MNN_LIBS}
     )
-if(WIN32)
-	target_link_options(processing_mnn PRIVATE /WHOLEARCHIVE:${MNN_LIBS})
-else()
-	target_link_options(processing_mnn PRIVATE "-Wl,-force_load,${MNN_LIBS}")
-endif()
 
-if(APPLE)
-	set(XCFRAMEWORK_PATH "${_THIRDPARTY_BUILD_DIR}/moltenvk/build/lib/MoltenVK.xcframework")
-	target_link_libraries(processing_mnn_p PRIVATE 	
-		"-framework CoreFoundation"
-		"-framework CoreGraphics"
-		"-framework CoreServices"
-		"-framework IOKit"
-		"-framework IOSurface"
-		"-framework Metal"
-		"-framework QuartzCore"
-		"-framework AppKit"
-		${XCFRAMEWORK_PATH} 
-		)
-endif()
+
+
 target_link_libraries(processing_mnn_p PRIVATE
 #    ipfs-lite-cpp::ipfs_datastore_rocksdb
 #    ipfs-lite-cpp::buffer
@@ -116,13 +76,7 @@ target_link_libraries(processing_mnn_p PRIVATE
     ipfs-bitswap-cpp
 	ipfs-pubsub
     ${WIN_CRYPT_LIBRARY}
-	${MNN_LIBS}
 	AsyncIOManager
     )
-if(WIN32)
-	target_link_options(processing_mnn_p PRIVATE /WHOLEARCHIVE:${MNN_LIBS})
-else()
-	target_link_options(processing_mnn_p PRIVATE "-Wl,-force_load,${MNN_LIBS}")
-endif()
 include_directories(../include)
 include_directories(./imageHelper)
