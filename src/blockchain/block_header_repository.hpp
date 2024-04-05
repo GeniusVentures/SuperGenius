@@ -48,6 +48,9 @@ namespace sgns::blockchain {
      */
     virtual outcome::result<primitives::BlockHeader> getBlockHeader(
         const primitives::BlockId &id) const = 0;
+    
+    virtual outcome::result<primitives::BlockHash> putBlockHeader(
+        const primitives::BlockHeader &header) = 0;
 
     /**
      * @param id of a block which status is returned
