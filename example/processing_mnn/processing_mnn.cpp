@@ -1,3 +1,5 @@
+#define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "processing_mnn.hpp"
 
 using GossipPubSub = sgns::ipfs_pubsub::GossipPubSub;

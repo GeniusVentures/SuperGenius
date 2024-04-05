@@ -421,7 +421,7 @@ namespace sgns::processing
         return 0;
     }
 
-    float clip(float value, float min, float max) {
+    float MNN_PoseNet::clip(float value, float min, float max) {
         if (value < 0) {
             return 0;
         }
