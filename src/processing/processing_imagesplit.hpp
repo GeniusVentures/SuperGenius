@@ -22,7 +22,7 @@ namespace sgns::processing
         ImageSplitter() {
 
         }
-        /** Split an image loaded from fie
+        /** Split an image loaded from file
         * @param filename - path/to/file.ext
         * @param blockstride - Stride to use for access pattern
         * @param blocklinestride - Line stride in bytes to get to next block start
