@@ -5,7 +5,7 @@
 #include <iostream>
 #include "ipfs_pubsub/gossip_pubsub.hpp"
 #include "processing/impl/processing_task_queue_impl.hpp"
-#include "processing_subtask_result_storage_impl.hpp"
+#include "processing/impl/processing_subtask_result_storage_impl.hpp"
 #include <processing/processing_service.hpp>
 #include <processing/processing_subtask_enqueuer_impl.hpp>
 #include <crdt/globaldb/globaldb.hpp>

@@ -32,6 +32,8 @@ add_library(processing_service
     processing_subtask_queue_manager.hpp
     processing_subtask_queue_manager.cpp
     processing_subtask_result_storage.hpp
+	impl/processing_subtask_result_storage_impl.hpp 
+	impl/processing_subtask_result_storage_impl.cpp
     processing_subtask_state_storage.hpp
     processing_task_queue.hpp
 	impl/processing_task_queue_impl.hpp
