@@ -75,17 +75,11 @@ namespace sgns::blockchain {
     return header_hash;
   }
 
-  outcome::result<primitives::BlockHeader>
+  outcome::result<void>
   KeyValueBlockHeaderRepository::removeBlockHeader(const BlockId &id) {
     OUTCOME_TRY((auto &&, header_string_val), idToStringKey(*db_,id));
 
-    auto header_res = db_->Get({block_header_key_prefix + header_string_val});
-    if (!header_res) {
-      return (isNotFoundError(header_res.error())) ? Error::BLOCK_NOT_FOUND
-                                                   : header_res.error();
-    }
-
-    return scale::decode<primitives::BlockHeader>(header_res.value());
+    return db_->Remove({block_header_key_prefix + header_string_val});
   }
 
   outcome::result<BlockStatus> KeyValueBlockHeaderRepository::getBlockStatus(

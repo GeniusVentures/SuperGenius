@@ -15,7 +15,7 @@ namespace sgns::blockchain {
         const primitives::BlockNumber &number));
     MOCK_CONST_METHOD1(getBlockHeader, outcome::result<primitives::BlockHeader> (
         const primitives::BlockId &id));
-    MOCK_METHOD1(removeBlockHeader, outcome::result<primitives::BlockHeader> (
+    MOCK_METHOD1(removeBlockHeader, outcome::result<void> (
         const primitives::BlockId &id));
     MOCK_METHOD1(putBlockHeader, outcome::result<primitives::BlockHash> (
         const primitives::BlockHeader &header));

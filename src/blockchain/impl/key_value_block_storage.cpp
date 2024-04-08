@@ -269,21 +269,17 @@ namespace sgns::blockchain {
   outcome::result<void> KeyValueBlockStorage::removeBlock(
       const primitives::BlockHash &hash,
       const primitives::BlockNumber &number) {
-    auto block_lookup_key = numberAndHashToLookupKey(number, hash);
-    auto header_lookup_key = prependPrefix(block_lookup_key, Prefix::HEADER);
-    if (auto rm_res = header_repo_->removeBlockHeader(number)) {
-      logger_->error("could not remove header from the storage: {}",
-                     rm_res.error().message());
-      return outcome::success();
+    auto header_rm_res = header_repo_->removeBlockHeader(number);
+    if (header_rm_res.has_failure())
+    {
+      return header_rm_res;
     }
 
-    auto body_lookup_key = prependPrefix(block_lookup_key, Prefix::BLOCK_DATA);
-    if (auto rm_res = db_->Remove({"body_lookup_key"}); !rm_res) {
-      logger_->error("could not remove body from the storage: {}",
-                     rm_res.error().message());
-      return rm_res;
-    }
-    return outcome::success();
+    OUTCOME_TRY((auto &&, key), idToBufferKey(*db_, number));
+
+    //TODO - For now one block data per block header. Revisit this
+    return db_->Remove({header_repo_->GetHeaderPath()+std::string(key.toString())+ "tx/0"});
+
   }
 
   outcome::result<primitives::BlockHash>

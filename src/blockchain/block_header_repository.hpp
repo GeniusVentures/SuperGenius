@@ -52,7 +52,7 @@ namespace sgns::blockchain {
     virtual outcome::result<primitives::BlockHash> putBlockHeader(
         const primitives::BlockHeader &header) = 0;
     
-    virtual outcome::result<primitives::BlockHeader> removeBlockHeader(
+    virtual outcome::result<void> removeBlockHeader(
         const primitives::BlockId &id) = 0;
 
     /**
