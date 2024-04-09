@@ -55,7 +55,9 @@ namespace sgns::blockchain {
           }
         });
     if (key.empty())
-        return outcome::failure(boost::system::error_code{});
+    {
+        return outcome::failure(blockchain::Error::BLOCK_NOT_FOUND);
+    }
     return key;
   }
 
