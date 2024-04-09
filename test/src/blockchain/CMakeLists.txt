@@ -5,6 +5,7 @@ addtest(block_header_repository_test
 target_link_libraries(block_header_repository_test
     block_header_repository
     base_rocksdb_test
+    base_crdt_test
     hasher
     blockchain_common
     )
@@ -26,6 +27,7 @@ addtest(block_storage_test
     )
 target_link_libraries(block_storage_test
     block_storage
+    base_crdt_test
     )
 if(FORCE_MULTILE)
   set_target_properties(block_storage_test PROPERTIES LINK_FLAGS "${MULTIPLE_OPTION}")
