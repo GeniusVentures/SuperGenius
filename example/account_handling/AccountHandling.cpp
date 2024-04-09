@@ -24,6 +24,10 @@
 #include <boost/asio.hpp>
 #include "TransactionManager.hpp"
 #include "account/TransferTransaction.hpp"
+#include "blockchain/impl/common.hpp"
+#include "blockchain/impl/key_value_block_header_repository.hpp"
+#include "blockchain/impl/key_value_block_storage.hpp"
+#include "crypto/hasher/hasher_impl.hpp"
 
 #include <ipfs_lite/ipfs/graphsync/graphsync.hpp>
 #include "account/AccountManager.hpp"
@@ -223,6 +227,18 @@ int main( int argc, char *argv[] )
     auto crdtOptions = sgns::crdt::CrdtOptions::DefaultOptions();
     globalDB->Init( crdtOptions );
 
+    sgns::base::Buffer root_hash;
+    root_hash.put(std::vector<uint8_t>(32ul, 1));
+    auto hasher_ = std::make_shared<sgns::crypto::HasherImpl>();
+    std::string db_path_ = "bc-963/";
+    auto header_repo_ = std::make_shared<sgns::blockchain::KeyValueBlockHeaderRepository>(globalDB, hasher_, db_path_);
+    auto maybe_block_storage = sgns::blockchain::KeyValueBlockStorage::create(root_hash,globalDB,hasher_,header_repo_,[](auto &) {});
+
+    if (!maybe_block_storage)
+    {
+        std::cout << "Error initializing blockchain" << std::endl;
+        return -1;
+    }
     sgns::TransactionManager transaction_manager( globalDB, io, account );
     transaction_manager.Start();
 
