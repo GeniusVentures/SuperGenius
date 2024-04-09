@@ -28,8 +28,8 @@ public:
         const SGProcessing::SubTask& subTask, SGProcessing::SubTaskResult& result,
         uint32_t initialHashCode) = 0;
 
-    /** Get processing type to set processor
-    * @param subTask - subtask that needs to be processed
+    /** Get processing type from json data to set processor
+    * @param jsondata - jsondata that needs to be parsed
     */
     virtual bool SetProcessingTypeFromJson(std::string jsondata) = 0;
 };

@@ -66,8 +66,8 @@ namespace sgns::processing
             }
         }
 
-        /** Get processing type to set processor
-        * @param subTask - subtask that needs to be processed
+        /** Get processing type from json data to set processor
+        * @param jsondata - jsondata that needs to be parsed
         */
         bool SetProcessingTypeFromJson(std::string jsondata) override;
 
