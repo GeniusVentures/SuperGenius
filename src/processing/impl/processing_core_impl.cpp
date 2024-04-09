@@ -1,5 +1,5 @@
 #include <processing/impl/processing_core_impl.hpp>
-
+#include <rapidjson/document.h>
 namespace sgns::processing
 {
     void ProcessingCoreImpl::ProcessSubTask(
@@ -49,6 +49,38 @@ namespace sgns::processing
                             return;
                         }
                         else {
+                            //Process settings json
+                            size_t index = 0;
+                            for (size_t i = 0; i < buffers->first.size(); ++i) {
+                                if (buffers->first[i].find("settings.json") != std::string::npos) {
+                                    index = i;
+                                    break;
+                                }
+                            }
+                            std::vector<char>& jsonData = buffers->second[index];
+                            std::string jsonString(jsonData.begin(), jsonData.end());
+                            rapidjson::Document doc;
+                            doc.Parse(jsonString.c_str());
+                            //Check if parsed
+                            if (!doc.IsObject()) {
+                                std::cerr << "Error parsing JSON" << std::endl;
+                                return;
+                            }
+                            if (doc.HasMember("model") && doc["model"].IsObject()) {
+                                const rapidjson::Value& model = doc["model"];
+                                if (model.HasMember("name") && model["name"].IsString()) {
+                                    std::string modelName = model["name"].GetString();
+                                    this->SetProcessorByName(modelName);
+                                    std::cout << "Model name: " << modelName << std::endl;
+                                }
+                                else {
+                                    std::cerr << "Model name not found or not a string" << std::endl;
+                                }
+                            }
+                            else {
+                                std::cerr << "Model object not found or not an object" << std::endl;
+                            }
+
                             //Get Task
                             SGProcessing::Task task;
                             auto queryTasks = m_db->Get("tasks/TASK_" + subTask.ipfsblock());

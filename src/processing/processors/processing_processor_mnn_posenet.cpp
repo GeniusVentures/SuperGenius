@@ -77,6 +77,10 @@ namespace sgns::processing
                 {
                     imageData_->push_back(fileDatas[i]);
                 }
+                else if (extension == "json")
+                {
+
+                }
                 else {
                     std::cerr << "Unsupported file extension: " << extension << " for file: " << filePath << std::endl;
                 }

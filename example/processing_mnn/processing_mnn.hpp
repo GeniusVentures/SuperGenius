@@ -3,11 +3,12 @@
 #include <fstream>
 #include <memory>
 #include <iostream>
-#include "ipfs_pubsub/gossip_pubsub.hpp"
 #include "processing/impl/processing_task_queue_impl.hpp"
 #include "processing/impl/processing_subtask_result_storage_impl.hpp"
 #include <processing/processing_service.hpp>
 #include <processing/processing_subtask_enqueuer_impl.hpp>
+#include <processing/processors/processing_processor_mnn_posenet.hpp>
+#include <processing/impl/processing_core_impl.hpp>
 #include <crdt/globaldb/globaldb.hpp>
 #include <crdt/globaldb/keypair_file_storage.hpp>
 #include <crdt/globaldb/proto/broadcast.pb.h>
@@ -20,8 +21,8 @@
 #include <boost/program_options.hpp>
 #include <boost/format.hpp>
 #include <ipfs_lite/ipfs/graphsync/graphsync.hpp>
-#include "processing/processors/processing_processor_mnn_posenet.hpp"
-#include <processing/impl/processing_core_impl.hpp>
+#include "ipfs_pubsub/gossip_pubsub.hpp"
+
 
 namespace
 {

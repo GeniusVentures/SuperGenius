@@ -73,7 +73,7 @@ int main(int argc, char* argv[])
         sgns::crdt::KeyPairFileStorage("CRDT.Datastore.TEST/pubs_dapp").GetKeyPair().value());
 
     //Start Pubsubs, add peers of other addresses. We'll probably use DHT Discovery bootstrapping in the future.
-    pubs->Start(40001, { "/ip4/192.168.46.18/tcp/40002/p2p/12D3KooWNJqmc8QPbW3muX4XEi6eR63gEWXkVW2VqNVC1jyge6wb",
+    pubs->Start(40001, { "/ip4/192.168.56.1/tcp/40002/p2p/12D3KooWN5uDa467nLbyohorgEkB4TGBDBSVJq7wp8WkdHar2T6s",
         "/ip4/192.168.46.18/tcp/40003/p2p/12D3KooWEAKCDGsZA4MvDVDEzx7pA8rD6UyN6AXsGDCYChWce4Zi",
         "/ip4/192.168.46.18/tcp/40004/p2p/12D3KooWKTNC88yV3g7bhBdTBxKqy1GT9GQhE6VP28BvVsUtdhX5",
         "/ip4/192.168.46.18/tcp/40005/p2p/12D3KooWJXWW1mXV1rxf7zuspGTyyk5irwyfXKNy71AcYzGqUT29",
@@ -94,7 +94,7 @@ int main(int argc, char* argv[])
         SGProcessing::Task task;
         //std::cout << "CID STRING:    " << libp2p::multi::ContentIdentifierCodec::toString(imagesplit.GetPartCID(taskIdx)).value() << std::endl;
         //task.set_ipfs_block_id(libp2p::multi::ContentIdentifierCodec::toString(imagesplit.GetPartCID(taskIdx)).value());
-        task.set_ipfs_block_id("QmaYDgvD89aNwVFWp91vGFVjP6hFMsyEntKhFMxLyATXvr");
+        task.set_ipfs_block_id("QmagrfcEhX6aVuFqrRoUU5K6yvjpNiCxnJA6o2tT38Kvxx");
         //task.set_block_len(48600);
         //task.set_block_line_stride(540);
         //task.set_block_stride(4860);
