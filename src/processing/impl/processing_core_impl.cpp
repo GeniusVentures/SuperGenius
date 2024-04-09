@@ -68,7 +68,6 @@ namespace sgns::processing
                             //Set processor or fail.
                             if (!this->SetProcessingTypeFromJson(jsonString))
                             {
-                                std::cerr << "settings.json has no processor name defined" << std::endl;
                                 return;
                             }
                             
@@ -113,9 +112,15 @@ namespace sgns::processing
             const rapidjson::Value& model = doc["model"];
             if (model.HasMember("name") && model["name"].IsString()) {
                 std::string modelName = model["name"].GetString();
-                SetProcessorByName(modelName);
                 std::cout << "Model name: " << modelName << std::endl;
-                return true;
+                if (SetProcessorByName(modelName))
+                {
+                    return true;
+                }
+                else
+                {
+                    std::cerr << "No processor by name in settings json" << std::endl;
+                }
             }
             else {
                 std::cerr << "Model name not found or not a string" << std::endl;

@@ -54,13 +54,15 @@ namespace sgns::processing
         /** Set the current processor by name
         * @param name - Name of processor
         */
-        void SetProcessorByName(const std::string& name) {
+        bool SetProcessorByName(const std::string& name) {
             auto factoryFunction = m_processorFactories.find(name);
             if (factoryFunction != m_processorFactories.end()) {
                 m_processor = factoryFunction->second();
+                return true;
             }
             else {
                 std::cerr << "Unknown processor name: " << name << std::endl;
+                return false;
             }
         }
 
