@@ -64,6 +64,12 @@ namespace sgns::processing
             }
         }
 
+        /** Get processing type to set processor
+        * @param subTask - subtask that needs to be processed
+        */
+        bool SetProcessingTypeFromJson(std::string jsondata) override;
+
+
         std::vector<size_t> m_chunkResulHashes;
         std::vector<size_t> m_validationChunkHashes;
 

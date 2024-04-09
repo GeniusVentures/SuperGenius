@@ -50,36 +50,28 @@ namespace sgns::processing
                         }
                         else {
                             //Process settings json
-                            size_t index = 0;
+                            size_t index = std::string::npos;
                             for (size_t i = 0; i < buffers->first.size(); ++i) {
                                 if (buffers->first[i].find("settings.json") != std::string::npos) {
                                     index = i;
                                     break;
                                 }
                             }
-                            std::vector<char>& jsonData = buffers->second[index];
-                            std::string jsonString(jsonData.begin(), jsonData.end());
-                            rapidjson::Document doc;
-                            doc.Parse(jsonString.c_str());
-                            //Check if parsed
-                            if (!doc.IsObject()) {
-                                std::cerr << "Error parsing JSON" << std::endl;
+                            if (index == std::string::npos)
+                            {
+                                std::cerr << "settings.json doesn't exist" << std::endl;
                                 return;
                             }
-                            if (doc.HasMember("model") && doc["model"].IsObject()) {
-                                const rapidjson::Value& model = doc["model"];
-                                if (model.HasMember("name") && model["name"].IsString()) {
-                                    std::string modelName = model["name"].GetString();
-                                    this->SetProcessorByName(modelName);
-                                    std::cout << "Model name: " << modelName << std::endl;
-                                }
-                                else {
-                                    std::cerr << "Model name not found or not a string" << std::endl;
-                                }
+                            std::vector<char>& jsonData = buffers->second[index];
+                            std::string jsonString(jsonData.begin(), jsonData.end());
+
+                            //Set processor or fail.
+                            if (!this->SetProcessingTypeFromJson(jsonString))
+                            {
+                                std::cerr << "settings.json has no processor name defined" << std::endl;
+                                return;
                             }
-                            else {
-                                std::cerr << "Model object not found or not an object" << std::endl;
-                            }
+                            
 
                             //Get Task
                             SGProcessing::Task task;
@@ -105,5 +97,34 @@ namespace sgns::processing
         //TODO: Pass CIDData Into this and start processing
         //m_processor->SetData(cidData_);
         //m_processor->StartProcessing();
+    }
+
+
+    bool ProcessingCoreImpl::SetProcessingTypeFromJson(std::string jsondata)
+    {
+        rapidjson::Document doc;
+        doc.Parse(jsondata.c_str());
+        //Check if parsed
+        if (!doc.IsObject()) {
+            std::cerr << "Error parsing JSON" << std::endl;
+            return false;
+        }
+        if (doc.HasMember("model") && doc["model"].IsObject()) {
+            const rapidjson::Value& model = doc["model"];
+            if (model.HasMember("name") && model["name"].IsString()) {
+                std::string modelName = model["name"].GetString();
+                SetProcessorByName(modelName);
+                std::cout << "Model name: " << modelName << std::endl;
+                return true;
+            }
+            else {
+                std::cerr << "Model name not found or not a string" << std::endl;
+                return false;
+            }
+        }
+        else {
+            std::cerr << "Model object not found or not an object" << std::endl;
+            return false;
+        }
     }
 }
