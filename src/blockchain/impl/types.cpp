@@ -29,7 +29,7 @@ namespace sgns::blockchain {
           return base::Buffer{}.put(std::to_string( n ));
         },
         [&db](const base::Hash256 &hash) {
-          return db.Get({hash.toString()});
+          return db.Get({hash.toReadableString()});
         });
     if (!key && isNotFoundError(key.error())) {
       return Error::BLOCK_NOT_FOUND;
@@ -44,10 +44,10 @@ namespace sgns::blockchain {
           return std::to_string( n );
         },
         [&db](const base::Hash256 &hash) {
-          auto key = db.Get({hash.toString()});
+          auto key = db.Get({hash.toReadableString()});
           if (key)
           {
-            return std::string(key.value().toString());
+            return std::to_string(BufferToNumber(key.value()).value());
           }
           else
           {
