@@ -18,18 +18,19 @@ namespace sgns
     class IGeniusTransactions
     {
     public:
-        virtual ~IGeniusTransactions()            = default;
-        virtual const std::string GetType() const = 0;
+        IGeniusTransactions( const std::string &type ) : transaction_type( type )
+        {
+        }
+        virtual ~IGeniusTransactions() = default;
+        virtual const std::string GetType() const
+        {
+            return transaction_type;
+        }
 
-        virtual std::vector<uint8_t> SerializeByteVector()                                     = 0;
-
-        //boost::optional<GeniusBlockHeader> InitHeader()
-        //{
-        //return GeniusBlockHeader();
-        //}
+        virtual std::vector<uint8_t> SerializeByteVector() = 0;
 
     private:
-        //GeniusBlockHeader block_header;
+        const std::string transaction_type;
     };
 }
 
