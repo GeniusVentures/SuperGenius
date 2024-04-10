@@ -11,10 +11,12 @@
 #include <deque>
 #include <sstream>
 #include <crdt/globaldb/globaldb.hpp>
+#include <account/proto/SGTransaction.pb.h>
 #include "account/IGeniusTransactions.hpp"
 #include "account/TransferTransaction.hpp"
 #include "account/MintTransaction.hpp"
 #include "account/GeniusAccount.hpp"
+#include "blockchain/block_storage.hpp"
 
 #include "base/logger.hpp"
 
@@ -23,20 +25,21 @@ namespace sgns
     class TransactionManager
     {
     public:
-        TransactionManager( std::shared_ptr<crdt::GlobalDB> db, std::shared_ptr<boost::asio::io_context> ctx,
-                            std::shared_ptr<GeniusAccount> account ) :
+        TransactionManager( std::shared_ptr<crdt::GlobalDB> db, std::shared_ptr<boost::asio::io_context> ctx, std::shared_ptr<GeniusAccount> account,
+                            std::shared_ptr<blockchain::BlockStorage> block_storage ) :
             db_m( std::move( db ) ),                                                                                    //
             ctx_m( std::move( ctx ) ),                                                                                  //
             account_m( std::move( account ) ),                                                                          //
+            block_storage_m( std::move( block_storage ) ),                                                              //
             timer_m( std::make_shared<boost::asio::steady_timer>( *ctx_m, boost::asio::chrono::milliseconds( 300 ) ) ), //
-            last_block_id( 0 ),                                                                                         //
+            last_block_id_m( 0 ),                                                                                       //
             last_trans_on_block_id( 0 )
 
         {
             m_logger->info( "Initializing values by reading whole blockchain" );
 
             CheckBlockchain();
-            m_logger->info( "Last valid block ID" + std::to_string( last_block_id ) );
+            m_logger->info( "Last valid block ID" + std::to_string( last_block_id_m ) );
         }
         void Start()
         {
@@ -84,8 +87,9 @@ namespace sgns
         std::deque<std::shared_ptr<IGeniusTransactions>> out_transactions;
         std::shared_ptr<boost::asio::steady_timer>       timer_m;
         mutable std::mutex                               mutex_m;
-        std::uint64_t                                    last_block_id;
+        primitives::BlockNumber                          last_block_id_m;
         std::uint64_t                                    last_trans_on_block_id;
+        std::shared_ptr<blockchain::BlockStorage>        block_storage_m;
 
         static constexpr std::string_view MAIN_NET = "369";
         static constexpr std::string_view TEST_NET = "963";
@@ -106,7 +110,7 @@ namespace sgns
                 std::string transaction_key =
                     "bc-" + std::string( TEST_NET ) + "/" + account_m->GetAddress() + "/tx/transfer/" + std::to_string( account_m->nonce );
 
-                std::string dagheader_key = "bc-" + std::string( TEST_NET ) + "/blockchain/" + std::to_string( last_block_id );
+                std::string dagheader_key = "bc-" + std::string( TEST_NET ) + "/blockchain/" + std::to_string( last_block_id_m );
 
                 std::string blockchainkey = dagheader_key + "/tx/" + std::to_string( last_trans_on_block_id );
 
@@ -134,12 +138,42 @@ namespace sgns
             lock.unlock(); // Manual unlock, no need to wait to run out of scope
         }
 
-        void GetTransactionsFromBlock( bool incoming, std::string block_path )
+        void GetTransactionsFromBlock( const primitives::BlockNumber &block_number )
         {
-            outcome::result<crdt::GlobalDB::Buffer> retval           = outcome::failure( boost::system::error_code{} );
-            uint32_t                                num_transactions = 0;
+            outcome::result<primitives::BlockBody> retval          = outcome::failure( boost::system::error_code{} );
+            std::size_t                            transaction_num = 0;
+            //do
+            {
+                retval = block_storage_m->getBlockBody( block_number /*, transaction_num*/ );
+                m_logger->debug( "Trying to read transaction " + std::to_string( transaction_num ) );
 
-            do
+                if ( retval )
+                {
+                    //any block will need checking
+                    m_logger->debug( "Getting transaction " + std::to_string( transaction_num ) );
+
+                    //this is a vector<extrinsics>, which is a vector<buffer>
+                    auto block_body = retval.value();
+                    //m_logger->debug( "Destination address of Header: " + std::string( DAGHeader.toString() ) );
+
+                    //Just one buffer for now
+                    if ( block_body.size() == 1 )
+                    {
+                        m_logger->info( "The block data is " + std::string( block_body[0].data.toString() ) );
+                        //ParseTransaction( std::string(block_body[0].data.toString()) );
+                    }
+                    else
+                    {
+                        m_logger->info( "The block size is " + std::to_string( block_body.size() ) );
+                    }
+                }
+                transaction_num++;
+            }
+            // while (retval);
+            //outcome::result<crdt::GlobalDB::Buffer> retval           = outcome::failure( boost::system::error_code{} );
+            //uint32_t                                num_transactions = 0;
+
+            /*do
             {
                 std::string next_transaction = block_path + "/tx/" + std::to_string( num_transactions );
                 m_logger->debug( "Getting transaction list from: " + next_transaction );
@@ -163,18 +197,53 @@ namespace sgns
 
                     num_transactions++;
                 }
-            } while ( retval );
+            } while ( retval );*/
+        }
+        void ParseFundsTransaction( std::string transaction_key )
+        {
+            if ( transaction_key.find( "transfer" ) != std::string::npos )
+            {
+                //it's a transfer transaction. See if i'm a sender
+                if ( transaction_key.find( account_m->GetAddress() ) != std::string::npos )
+                {
+                    //OUTCOME_TRY((auto &&, encoded_block_data), scale::encode(to_insert));
+                    //I'm sending funds
+                }
+            }
         }
         /**
          * @brief      Checks the blockchain for any new blocks to sync current values
          */
         void CheckBlockchain()
         {
-            outcome::result<crdt::GlobalDB::Buffer> retval = outcome::failure( boost::system::error_code{} );
-
+            outcome::result<primitives::BlockHeader> retval = outcome::failure( boost::system::error_code{} );
             do
             {
-                std::string blockchainkey = "bc-" + std::string( TEST_NET ) + "/blockchain/" + std::to_string( last_block_id );
+                retval = block_storage_m->getBlockHeader( last_block_id_m );
+                if ( retval )
+                {
+                    //any block will need checking
+                    m_logger->debug( "Found new blockchain entry for block " + std::to_string( last_block_id_m ) );
+                    m_logger->debug( "Getting DAGHeader value" );
+                    bool incoming = true;
+
+                    auto DAGHeader = retval.value();
+                    //m_logger->debug( "Destination address of Header: " + std::string( DAGHeader.toString() ) );
+
+                    //validation that index is the same as number
+                    if ( DAGHeader.number == last_block_id_m )
+                    {
+                        m_logger->info( "Checking transactions from block" );
+                        GetTransactionsFromBlock( DAGHeader.number );
+                    }
+                }
+                last_block_id_m++;
+            } while ( retval );
+
+            /*do
+            {
+                block_storage_m->getBlockHeader( last_block_id_m );
+                //std::string blockchainkey = "bc-" + std::string( TEST_NET ) + "/blockchain/" + std::to_string( last_block_id_m );
 
                 //search for the latest blockchain entry
                 retval = db_m->Get( { blockchainkey } );
@@ -196,9 +265,9 @@ namespace sgns
 
                     GetTransactionsFromBlock( incoming, blockchainkey );
 
-                    last_block_id++;
+                    last_block_id_m++;
                 }
-            } while ( retval );
+            } while ( retval );*/
         }
 
         void GetIncomingTransactionData( std::string key )
@@ -256,8 +325,8 @@ namespace sgns
                 {
                     MintTransaction received = MintTransaction::DeSerializeByteVector( maybe_transfer.toVector() );
 
-                    m_logger->info( "Minting new Tokens " + std::to_string(received.GetAmount()) );
-                    account_m->balance += received.GetAmount() ;
+                    m_logger->info( "Minting new Tokens " + std::to_string( received.GetAmount() ) );
+                    account_m->balance += received.GetAmount();
                     m_logger->info( "Updated balance " + std::to_string( account_m->balance ) );
                 }
             }

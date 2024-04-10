@@ -239,7 +239,7 @@ int main( int argc, char *argv[] )
         std::cout << "Error initializing blockchain" << std::endl;
         return -1;
     }
-    sgns::TransactionManager transaction_manager( globalDB, io, account );
+    sgns::TransactionManager transaction_manager( globalDB, io, account,maybe_block_storage.value() );
     transaction_manager.Start();
 
     //Run ASIO

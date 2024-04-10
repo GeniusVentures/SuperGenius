@@ -11,11 +11,11 @@ add_executable(account_handling
 #    ipfs-lite-cpp::ipld_node
 #    ipfs-lite-cpp::ipfs_merkledag_service
 #    ipfs-lite-cpp::graphsync
+    sgns_account
     blockchain_common
     block_header_repository
     block_storage
     logger
-	#processing_service
 	crdt_globaldb
     p2p::p2p_basic_host
     p2p::p2p_default_network
