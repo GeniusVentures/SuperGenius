@@ -8,8 +8,8 @@
 
 namespace sgns
 {
-    MintTransaction::MintTransaction( const uint64_t &new_amount ) :
-        IGeniusTransactions( "mint" ), //
+    MintTransaction::MintTransaction( const uint64_t &new_amount,  const SGTransaction::DAGStruct &dag ) :
+        IGeniusTransactions( "mint" , SetDAGWithType(dag,"processing")), //
         amount( new_amount )           //
     {
     }
@@ -29,7 +29,7 @@ namespace sgns
         uint64_t v64;
         std::memcpy( &v64, &( *data.begin() ), sizeof( v64 ) );
 
-        return MintTransaction( v64 ); // Return new instance
+        return MintTransaction( v64 ,{} ); // Return new instance
     }
     const uint64_t MintTransaction::GetAmount() const
     {

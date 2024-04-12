@@ -8,8 +8,10 @@
 #define _TRANSACTION_MANAGER_HPP_
 #include <memory>
 #include <boost/asio.hpp>
+#include <boost/format.hpp>
 #include <deque>
 #include <sstream>
+#include <cstdint>
 #include <crdt/globaldb/globaldb.hpp>
 #include <account/proto/SGTransaction.pb.h>
 #include "account/IGeniusTransactions.hpp"
@@ -80,6 +82,22 @@ namespace sgns
 
         ~TransactionManager() = default;
 
+        void TransferFunds( const uint256_t &amount, const uint256_t &destination )
+        {
+            auto transfer_transaction = std::make_shared<sgns::TransferTransaction>( amount, destination, FillDAGStruct() );
+            this->EnqueueTransaction( transfer_transaction );
+        }
+        void MintFunds( const uint64_t &amount )
+        {
+            auto mint_transaction = std::make_shared<sgns::MintTransaction>( amount, FillDAGStruct() );
+            this->EnqueueTransaction( mint_transaction );
+        }
+
+        SGTransaction::DAGStruct FillDAGStruct()
+        {
+            return SGTransaction::DAGStruct{};
+        }
+
     private:
         std::shared_ptr<crdt::GlobalDB>                  db_m;
         std::shared_ptr<boost::asio::io_context>         ctx_m;
@@ -91,26 +109,31 @@ namespace sgns
         std::uint64_t                                    last_trans_on_block_id;
         std::shared_ptr<blockchain::BlockStorage>        block_storage_m;
 
-        static constexpr std::string_view MAIN_NET = "369";
-        static constexpr std::string_view TEST_NET = "963";
+        static constexpr std::uint16_t MAIN_NET_ID = 369;
+        static constexpr std::uint16_t TEST_NET_ID = 963;
 
         base::Logger m_logger = sgns::base::createLogger( "TransactionManager" );
 
-        // static constexpr const char formatTransfer[]   = "bc-{}/{}/tx/transfer/{}";
-        // static constexpr const char formatProcessing[] = "bc-{}/{}/tx/processing/{}/{}/{}";
-        // static constexpr const char formatProof[]      = "bc-{}/{}/tx/processing/proof{}";
-        // static constexpr const char formatBlock[]      = "bc-{}/blockchain/{}";
+        static constexpr std::string_view  TRANSACTION_BASE_FORMAT  = "bc-%hu/0x%x/tx/";
+        static constexpr std::string_view  PROCESSING_FORMAT = "processing/%s/%s/%llu";
+        static constexpr std::string_view  TRANSFER_FORMAT = "transfer/%llu";
+        static constexpr std::string_view  MINT_FORMAT = "mint/%llu";
+        static constexpr std::string_view  ESCROW_FORMAT = "escrow/%llu";
+
+        static const boost::format transfer_tx_fmt;
+        static const boost::format process_tx_fmt;
+        static const boost::format mint_tx_fmt;
+        static const boost::format escrow_tx_fmt;
 
         void SendTransaction()
         {
             std::unique_lock<std::mutex> lock( mutex_m );
             if ( !out_transactions.empty() )
             {
-
                 std::string transaction_key =
-                    "bc-" + std::string( TEST_NET ) + "/" + account_m->GetAddress() + "/tx/transfer/" + std::to_string( account_m->nonce );
+                    "bc-" + std::to_string( TEST_NET_ID ) + "/" + account_m->GetAddress() + "/tx/transfer/" + std::to_string( account_m->nonce );
 
-                std::string dagheader_key = "bc-" + std::string( TEST_NET ) + "/blockchain/" + std::to_string( last_block_id_m );
+                std::string dagheader_key = "bc-" + std::to_string( TEST_NET_ID ) + "/blockchain/" + std::to_string( last_block_id_m );
 
                 std::string blockchainkey = dagheader_key + "/tx/" + std::to_string( last_trans_on_block_id );
 

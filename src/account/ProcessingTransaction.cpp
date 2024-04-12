@@ -9,8 +9,8 @@
 
 namespace sgns
 {
-    ProcessingTransaction::ProcessingTransaction( uint256_t hash ) :
-        IGeniusTransactions( "processing" ), //
+    ProcessingTransaction::ProcessingTransaction( uint256_t hash, const SGTransaction::DAGStruct &dag) :
+        IGeniusTransactions( "processing", SetDAGWithType(dag,"processing")), //
         hash_process_data( hash )            //
     {
     }
@@ -28,6 +28,6 @@ namespace sgns
         uint256_t hash;
         import_bits( hash, data.begin(), data.end() );
 
-        return ProcessingTransaction( hash ); // Return new instance
+        return ProcessingTransaction( hash, {} ); // Return new instance
     }
 }

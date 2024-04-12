@@ -17,7 +17,7 @@ namespace sgns
     class ProcessingTransaction : public IGeniusTransactions
     {
     public:
-        ProcessingTransaction( uint256_t hash );
+        ProcessingTransaction( uint256_t hash, const SGTransaction::DAGStruct &dag);
         ~ProcessingTransaction() = default;
 
         std::vector<uint8_t>         SerializeByteVector() override;

@@ -15,12 +15,12 @@ namespace sgns
     class MintTransaction : public IGeniusTransactions
     {
     public:
-        MintTransaction( const uint64_t &new_amount );
+        MintTransaction( const uint64_t &new_amount, const SGTransaction::DAGStruct &dag );
         ~MintTransaction() = default;
 
-        std::vector<uint8_t> SerializeByteVector() override;
+        std::vector<uint8_t>   SerializeByteVector() override;
         static MintTransaction DeSerializeByteVector( const std::vector<uint8_t> &data );
-        const uint64_t GetAmount() const;
+        const uint64_t         GetAmount() const;
 
     private:
         uint64_t amount;
