@@ -93,8 +93,7 @@ void CreateProcessingTransaction( const std::vector<std::string> &args, sgns::Tr
     }
 
     //TODO - Create processing transaction
-    //auto transfer_transaction = std::make_shared<sgns::TransferTransaction>( uint256_t{ args[1] }, uint256_t{ args[2] } );
-    //transaction_manager.EnqueueTransaction( transfer_transaction );
+
 }
 void MintTokens( const std::vector<std::string> &args, sgns::TransactionManager &transaction_manager )
 {
@@ -115,8 +114,6 @@ void PrintAccountInfo( const std::vector<std::string> &args, sgns::TransactionMa
     transaction_manager.PrintAccountInfo();
 
     //TODO - Create processing transaction
-    //auto transfer_transaction = std::make_shared<sgns::TransferTransaction>( uint256_t{ args[1] }, uint256_t{ args[2] } );
-    //transaction_manager.EnqueueTransaction( transfer_transaction );
 }
 
 std::vector<std::string> split_string( const std::string &str )

@@ -2,6 +2,7 @@
 add_proto_library(SGTransactionProto proto/SGTransaction.proto)
 
 add_library(sgns_account
+    TransactionManager.cpp
     TransferTransaction.cpp
     MintTransaction.cpp
     ProcessingTransaction.cpp
