@@ -7,19 +7,19 @@
 #ifndef _TRANSACTION_MANAGER_HPP_
 #define _TRANSACTION_MANAGER_HPP_
 #include <memory>
+#include <deque>
+#include <cstdint>
 #include <boost/asio.hpp>
 #include <boost/format.hpp>
-#include <deque>
-#include <sstream>
-#include <cstdint>
-#include <crdt/globaldb/globaldb.hpp>
-#include <account/proto/SGTransaction.pb.h>
+#include <boost/multiprecision/cpp_int.hpp>
+#include "crdt/globaldb/globaldb.hpp"
+#include "account/proto/SGTransaction.pb.h"
 #include "account/IGeniusTransactions.hpp"
 #include "account/GeniusAccount.hpp"
 #include "blockchain/block_storage.hpp"
-
 #include "base/logger.hpp"
 
+using namespace boost::multiprecision;
 namespace sgns
 {
     class TransactionManager
@@ -54,16 +54,16 @@ namespace sgns
 
         base::Logger m_logger = sgns::base::createLogger( "TransactionManager" );
 
-        static constexpr std::string_view TRANSACTION_BASE_FORMAT = "bc-%hu/0x%x/tx/";
-        static constexpr std::string_view PROCESSING_FORMAT       = "processing/%s/%s/%llu";
+        static constexpr std::string_view TRANSACTION_BASE_FORMAT = "bc-%hu/%x/tx/";
         static constexpr std::string_view TRANSFER_FORMAT         = "transfer/%llu";
+        static constexpr std::string_view PROCESSING_FORMAT       = "processing/%s/%s/%llu";
         static constexpr std::string_view MINT_FORMAT             = "mint/%llu";
         static constexpr std::string_view ESCROW_FORMAT           = "escrow/%llu";
 
-        static const boost::format transfer_tx_fmt;
-        static const boost::format process_tx_fmt;
-        static const boost::format mint_tx_fmt;
-        static const boost::format escrow_tx_fmt;
+        static const boost::format transfer_fmt_template;
+        static const boost::format process_fmt_template;
+        static const boost::format mint_fmt_template;
+        static const boost::format escrow_fmt_template;
 
         void                     Update();
         void                     EnqueueTransaction( std::shared_ptr<IGeniusTransactions> element );
@@ -71,13 +71,12 @@ namespace sgns
         void                     SendTransaction();
         void                     GetTransactionsFromBlock( const primitives::BlockNumber &block_number );
 
-        void ParseFundsTransaction( std::string transaction_key );
+        void ParseTransaction( std::string transaction_key );
         /**
          * @brief      Checks the blockchain for any new blocks to sync current values
          */
         void CheckBlockchain();
 
-        void GetIncomingTransactionData( std::string key );
         void GetOutgoingTransactionData( std::string key );
     };
 }

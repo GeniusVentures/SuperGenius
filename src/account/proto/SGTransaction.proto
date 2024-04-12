@@ -11,6 +11,10 @@ message DAGStruct
     bytes uncle_hash = 5; // 
     bytes data_hash = 6; // 
 }
+message DAGWrapper 
+{
+    DAGStruct dag_struct = 1;// 
+}
 message TransferTx
 {
     DAGStruct dag_struct = 1;// 

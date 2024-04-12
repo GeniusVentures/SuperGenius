@@ -189,7 +189,7 @@ int main( int argc, char *argv[] )
     std::string own_wallet_address( argv[2] );
     std::string pubs_address( argv[3] );
 
-    auto maybe_account = sgns::AccountManager{}.CreateAccount( own_wallet_address, 0 );
+    auto maybe_account = sgns::AccountManager{}.CreateAccount( own_wallet_address, 100 );
 
     const std::string processingGridChannel = "GRID_CHANNEL_ID";
 

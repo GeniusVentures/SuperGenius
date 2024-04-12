@@ -32,12 +32,14 @@ namespace sgns
 
         static boost::optional<SGTransaction::DAGStruct> DeSerializeDAGStruct( std::vector<uint8_t> &data )
         {
-            SGTransaction::DAGStruct dag;
-            if ( !dag.ParseFromArray( data.data(), data.size() ) )
+            SGTransaction::DAGWrapper dag_wrap;
+            if ( !dag_wrap.ParseFromArray( data.data(), data.size() ) )
             {
                 std::cerr << "Failed to parse DAGStruct from array." << std::endl;
                 return boost::none; 
             }
+            SGTransaction::DAGStruct dag;
+            dag.CopyFrom(*dag_wrap.mutable_dag_struct());
             return dag;
         }
 

@@ -33,23 +33,6 @@ namespace sgns
 
         tx_struct.SerializeToArray( serialized_proto.data(), serialized_proto.size() );
         return serialized_proto;
-        /*  std::vector<uint8_t> serialized_class;
-        export_bits( encrypted_amount, std::back_inserter( serialized_class ), 8 );
-        auto filled_size = serialized_class.size();
-        if ( filled_size < 32 )
-        {
-            // If the exported data is smaller than the fixed size, pad with zeros
-            serialized_class.insert( serialized_class.begin(), 32 - filled_size, 0 );
-        }
-        export_bits( dest_address, std::back_inserter( serialized_class ), 8 );
-        filled_size = serialized_class.size();
-        if ( filled_size < 64 )
-        {
-            // If the exported data is smaller than the fixed size, pad with zeros
-            serialized_class.insert( serialized_class.begin() + 32, 64 - filled_size, 0 );
-        }
-        return serialized_class;
-        */
     }
     TransferTransaction TransferTransaction::DeSerializeByteVector( const std::vector<uint8_t> &data )
     {
@@ -59,14 +42,6 @@ namespace sgns
         {
             std::cerr << "Failed to parse TransferTx from array." << std::endl;
         }
-        /*
-        std::vector<uint8_t> serialized_class;
-        uint256_t            amount;
-        uint256_t            address;
-        auto                 half = data.size() / 2;
-        import_bits( amount, data.begin(), data.begin() + half );
-        import_bits( address, data.begin() + half, data.end() );
-        */
 
         uint256_t            amount(tx_struct.encrypted_amount());
         uint256_t            address(tx_struct.dest_addr());
