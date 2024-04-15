@@ -8,28 +8,34 @@
 
 namespace sgns
 {
-    MintTransaction::MintTransaction( const uint64_t &new_amount,  const SGTransaction::DAGStruct &dag ) :
-        IGeniusTransactions( "mint" , SetDAGWithType(dag,"processing")), //
-        amount( new_amount )           //
+    MintTransaction::MintTransaction( const uint64_t &new_amount, const SGTransaction::DAGStruct &dag ) :
+        IGeniusTransactions( "mint", SetDAGWithType( dag, "mint" ) ), //
+        amount( new_amount )                                          //
     {
     }
     std::vector<uint8_t> MintTransaction::SerializeByteVector()
     {
-        std::vector<uint8_t> data;
-        uint8_t             *ptr = reinterpret_cast<uint8_t *>( &amount );
-        // For little-endian systems; if on a big-endian system, reverse the order of insertion
-        for ( size_t i = 0; i < sizeof( amount ); ++i )
-        {
-            data.push_back( ptr[i] );
-        }
-        return data;
+        SGTransaction::MintTx tx_struct;
+        tx_struct.mutable_dag_struct()->CopyFrom( this->dag_st );
+        tx_struct.set_amount( amount );
+        size_t               size = tx_struct.ByteSizeLong();
+        std::vector<uint8_t> serialized_proto( size );
+
+        tx_struct.SerializeToArray( serialized_proto.data(), serialized_proto.size() );
+        return serialized_proto;
     }
     MintTransaction MintTransaction::DeSerializeByteVector( const std::vector<uint8_t> &data )
     {
-        uint64_t v64;
-        std::memcpy( &v64, &( *data.begin() ), sizeof( v64 ) );
 
-        return MintTransaction( v64 ,{} ); // Return new instance
+        SGTransaction::MintTx tx_struct;
+        if ( !tx_struct.ParseFromArray( data.data(), data.size() ) )
+        {
+            std::cerr << "Failed to parse TransferTx from array." << std::endl;
+        }
+        uint64_t v64 = tx_struct.amount();
+        //std::memcpy( &v64, &( *data.begin() ), sizeof( v64 ) );
+
+        return MintTransaction( v64, tx_struct.dag_struct() ); // Return new instance
     }
     const uint64_t MintTransaction::GetAmount() const
     {

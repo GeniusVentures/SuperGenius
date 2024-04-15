@@ -54,7 +54,7 @@ namespace sgns
 
     void TransactionManager::PrintAccountInfo()
     {
-        std::cout << "Account Address: " << account_m->GetAddress() << std::endl;
+        std::cout << "Account Address: " << account_m->GetAddress<std::string>() << std::endl;
         std::cout << "Balance: " << account_m->GetBalance() << std::endl;
         std::cout << "Token Type: " << account_m->GetToken() << std::endl;
         std::cout << "Nonce: " << account_m->GetNonce() << std::endl;
@@ -85,9 +85,19 @@ namespace sgns
         std::lock_guard<std::mutex> lock( mutex_m );
         out_transactions.emplace_back( std::move( element ) );
     }
+    //TODO - Fill hash stuff on DAGStruct
     SGTransaction::DAGStruct TransactionManager::FillDAGStruct()
     {
-        return SGTransaction::DAGStruct{};
+        SGTransaction::DAGStruct dag;
+        auto                     timestamp = std::chrono::system_clock::now();
+
+        dag.set_previous_hash( "" );
+        dag.set_nonce( account_m->nonce );
+        dag.set_source_addr( account_m->GetAddress<std::string>() );
+        dag.set_timestamp( timestamp.time_since_epoch().count() );
+        dag.set_uncle_hash( "" );
+        dag.set_data_hash( "" );
+        return dag;
     }
 
     void TransactionManager::SendTransaction()
@@ -96,7 +106,7 @@ namespace sgns
         if ( !out_transactions.empty() )
         {
             boost::format transfer_tx_key( transfer_fmt_template );
-            transfer_tx_key % TEST_NET_ID % account_m->GetAddress() % account_m->nonce;
+            transfer_tx_key % TEST_NET_ID % account_m->GetAddress<std::string>() % account_m->nonce;
             //std::string transaction_key =
             //    "bc-" + std::to_string( TEST_NET_ID ) + "/" + account_m->GetAddress() + "/tx/transfer/" + std::to_string( account_m->nonce );
 
@@ -130,20 +140,10 @@ namespace sgns
 
             block_storage_m->putBlockData( header.number, block_data );
 
-            //sgns::crdt::GlobalDB::Buffer data_key;
-            //sgns::crdt::GlobalDB::Buffer data_dagheader;
-
             m_logger->debug( "Putting on " + transfer_tx_key.str() + " " + std::string( data_transaction.toString() ) );
-
-            //data_key.put( transfer_tx_key.str() );
-            //db_m->Put( { blockchainkey }, data_key );
             m_logger->debug( "Recording BlockHeader with number " + std::to_string( header.number ) );
             m_logger->debug( "Recording BlockData with number " + std::to_string( header.number ) );
             block_storage_m->setLastFinalizedBlockHash( new_hash.value() );
-            //TODO - Fix this. Now I'm putting the sender's address. so it updates its values and nonce
-            //data_dagheader.put( account_m->GetAddress() );
-            //db_m->Put( { dagheader_key }, data_dagheader );
-            //m_logger->debug( "Putting on " + dagheader_key + " " + std::string( data_dagheader.toString() ) );
         }
         lock.unlock(); // Manual unlock, no need to wait to run out of scope
     }
@@ -190,19 +190,47 @@ namespace sgns
             m_logger->debug( "Found the data, deserializing into DAG " + transaction_key );
             if ( maybe_dag )
             {
-                m_logger->debug( "DAG DESERIALIZED! " + maybe_dag.value().type() );
+                const std::string &string_src_address = maybe_dag.value().source_addr();
+                if ( string_src_address == account_m->GetAddress<std::string>() )
+                {
+                    m_logger->debug( "Incrementing nonce! " + string_src_address );
+                    account_m->nonce = maybe_dag.value().nonce() + 1;
+                }
                 if ( maybe_dag.value().type() == "transfer" )
                 {
                     m_logger->info( "Transfer transaction" );
                     TransferTransaction tx = TransferTransaction::DeSerializeByteVector( maybe_transaction_data.value().toVector() );
-
-                    std::cout << tx.GetAddress<std::string>() << std::endl;
-                    if ( tx.GetAddress<uint256_t>() == account_m->address )
+                    if ( tx.GetDstAddress<uint256_t>() == account_m->GetAddress<uint256_t>() )
                     {
-                        m_logger->info( "NEW TRANSACTION TO ME " + tx.GetAddress<std::string>() );
+                        m_logger->info( "NEW TRANSACTION TO ME " + tx.GetDstAddress<std::string>() );
                         account_m->balance += static_cast<uint64_t>( tx.GetAmount<uint256_t>() );
                         m_logger->info( "Updated balance " + std::to_string( account_m->balance ) );
                     }
+                    if ( tx.GetSrcAddress<uint256_t>() == account_m->GetAddress<uint256_t>() )
+                    {
+                        m_logger->info( "NEW TRANSACTION FROM ME " + tx.GetSrcAddress<std::string>() );
+                        account_m->balance -= static_cast<uint64_t>( tx.GetAmount<uint256_t>() );
+                        m_logger->info( "Updated balance " + std::to_string( account_m->balance ) );
+                    }
+                }
+                else if ( maybe_dag.value().type() == "mint" )
+                {
+                    m_logger->info( "Mint transaction" );
+                    MintTransaction tx = MintTransaction::DeSerializeByteVector( maybe_transaction_data.value().toVector() );
+
+                    //std::cout << tx.GetAddress<std::string>() << std::endl;
+                    if ( tx.GetSrcAddress<uint256_t>() == account_m->GetAddress<uint256_t>() )
+                    {
+                        m_logger->info( "NEW MINT TO ME " + tx.GetSrcAddress<std::string>() );
+                        account_m->balance += tx.GetAmount();
+                        m_logger->info( "Updated balance " + std::to_string( account_m->balance ) );
+                    }
+                }
+                else if ( maybe_dag.value().type() == "escrow" )
+                {
+                }
+                else if ( maybe_dag.value().type() == "process" )
+                {
                 }
             }
         }
@@ -233,41 +261,10 @@ namespace sgns
                     m_logger->info( "Checking transactions from block" );
                     GetTransactionsFromBlock( DAGHeader.number );
                 }
+                last_block_id_m++;
             }
-            last_block_id_m++;
+
         } while ( retval );
     }
 
-    void TransactionManager::GetOutgoingTransactionData( std::string key )
-    {
-        outcome::result<crdt::GlobalDB::Buffer> retval           = outcome::failure( boost::system::error_code{} );
-        uint32_t                                num_transactions = 0;
-
-        retval = db_m->Get( { key } );
-        if ( retval )
-        {
-            //Found transaction. See DAGStruct for transaction type.
-            //If transfer, update funds
-            auto maybe_transfer = retval.value();
-            m_logger->debug( "Transfer transaction data " + std::string( maybe_transfer.toHex() ) );
-
-            if ( maybe_transfer.size() == 64 )
-            {
-                TransferTransaction received = TransferTransaction::DeSerializeByteVector( maybe_transfer.toVector() );
-
-                m_logger->info( "Transaction from me " + received.GetAddress<std::string>() );
-                account_m->balance -= static_cast<uint64_t>( received.GetAmount<uint256_t>() );
-                m_logger->info( "Updated balance " + std::to_string( account_m->balance ) );
-            }
-
-            if ( maybe_transfer.size() == 8 )
-            {
-                MintTransaction received = MintTransaction::DeSerializeByteVector( maybe_transfer.toVector() );
-
-                m_logger->info( "Minting new Tokens " + std::to_string( received.GetAmount() ) );
-                account_m->balance += received.GetAmount();
-                m_logger->info( "Updated balance " + std::to_string( account_m->balance ) );
-            }
-        }
-    }
 }

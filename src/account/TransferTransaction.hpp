@@ -42,14 +42,9 @@ namespace sgns
          */
         static TransferTransaction DeSerializeByteVector( const std::vector<uint8_t> &data);
 
-        /**
-         * @brief      Get the Address object
-         * @tparam      T 
-         * @return      A @ref const T 
-         */
-        template <typename T>
-        const T GetAddress() const;
 
+        template <typename T>
+        const T GetDstAddress() const;
         /**
          * @brief      Get the Amount object
          * @tparam      T 

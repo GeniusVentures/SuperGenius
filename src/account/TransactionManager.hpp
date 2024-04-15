@@ -77,7 +77,6 @@ namespace sgns
          */
         void CheckBlockchain();
 
-        void GetOutgoingTransactionData( std::string key );
     };
 }
 

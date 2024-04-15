@@ -8,7 +8,8 @@
 
 namespace sgns
 {
-    TransferTransaction::TransferTransaction( const uint256_t &amount, const uint256_t &destination, const SGTransaction::DAGStruct &dag ) :
+    TransferTransaction::TransferTransaction( const uint256_t &amount, const uint256_t &destination,
+                                              const SGTransaction::DAGStruct &dag ) :
         IGeniusTransactions( "transfer", SetDAGWithType( dag, "transfer" ) ), //
         encrypted_amount( amount ),                                           //
         dest_address( destination )                                           //
@@ -17,14 +18,7 @@ namespace sgns
     std::vector<uint8_t> TransferTransaction::SerializeByteVector()
     {
         SGTransaction::TransferTx tx_struct;
-        SGTransaction::DAGStruct *dag_struct = tx_struct.mutable_dag_struct();
-        dag_struct->set_type( GetType() );
-        dag_struct->set_previous_hash( "" );
-        dag_struct->set_nonce( 0 );
-        dag_struct->set_timestamp( 0 );
-        dag_struct->set_uncle_hash( "" );
-        dag_struct->set_data_hash( "" );
-        tx_struct.set_source_addr( "" );
+        tx_struct.mutable_dag_struct()->CopyFrom(this->dag_st);
         tx_struct.set_token_id( 0 );
         tx_struct.set_encrypted_amount( encrypted_amount.str() );
         tx_struct.set_dest_addr( dest_address.str() );
@@ -43,13 +37,14 @@ namespace sgns
             std::cerr << "Failed to parse TransferTx from array." << std::endl;
         }
 
-        uint256_t            amount(tx_struct.encrypted_amount());
-        uint256_t            address(tx_struct.dest_addr());
+        uint256_t amount( tx_struct.encrypted_amount() );
+        uint256_t dest_address( tx_struct.dest_addr() );
 
-        return TransferTransaction( amount, address, tx_struct.dag_struct() ); // Return new instance
+        return TransferTransaction( amount, dest_address, tx_struct.dag_struct() ); // Return new instance
     }
+
     template <>
-    const std::string TransferTransaction::GetAddress<std::string>() const
+    const std::string TransferTransaction::GetDstAddress<std::string>() const
     {
         std::ostringstream oss;
         oss << std::hex << dest_address;
@@ -57,7 +52,7 @@ namespace sgns
         return ( "0x" + oss.str() );
     }
     template <>
-    const uint256_t TransferTransaction::GetAddress<uint256_t>() const
+    const uint256_t TransferTransaction::GetDstAddress<uint256_t>() const
     {
         return dest_address;
     }
