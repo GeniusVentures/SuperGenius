@@ -107,12 +107,7 @@ namespace sgns
         {
             boost::format transfer_tx_key( transfer_fmt_template );
             transfer_tx_key % TEST_NET_ID % account_m->GetAddress<std::string>() % account_m->nonce;
-            //std::string transaction_key =
-            //    "bc-" + std::to_string( TEST_NET_ID ) + "/" + account_m->GetAddress() + "/tx/transfer/" + std::to_string( account_m->nonce );
 
-            //std::string dagheader_key = "bc-" + std::to_string( TEST_NET_ID ) + "/blockchain/" + std::to_string( last_block_id_m );
-
-            //std::string blockchainkey = dagheader_key + "/tx/" + std::to_string( last_trans_on_block_id );
             auto elem = out_transactions.front();
             out_transactions.pop_front();
 
@@ -141,8 +136,7 @@ namespace sgns
             block_storage_m->putBlockData( header.number, block_data );
 
             m_logger->debug( "Putting on " + transfer_tx_key.str() + " " + std::string( data_transaction.toString() ) );
-            m_logger->debug( "Recording BlockHeader with number " + std::to_string( header.number ) );
-            m_logger->debug( "Recording BlockData with number " + std::to_string( header.number ) );
+            m_logger->debug( "Recording Block with number " + std::to_string( header.number ) );
             block_storage_m->setLastFinalizedBlockHash( new_hash.value() );
         }
         lock.unlock(); // Manual unlock, no need to wait to run out of scope
@@ -183,7 +177,6 @@ namespace sgns
     void TransactionManager::ParseTransaction( std::string transaction_key )
     {
         auto maybe_transaction_data = db_m->Get( { transaction_key } );
-        m_logger->debug( "Fetching transaction on " + transaction_key );
         if ( maybe_transaction_data )
         {
             auto maybe_dag = IGeniusTransactions::DeSerializeDAGStruct( maybe_transaction_data.value().toVector() );
@@ -193,7 +186,6 @@ namespace sgns
                 const std::string &string_src_address = maybe_dag.value().source_addr();
                 if ( string_src_address == account_m->GetAddress<std::string>() )
                 {
-                    m_logger->debug( "Incrementing nonce! " + string_src_address );
                     account_m->nonce = maybe_dag.value().nonce() + 1;
                 }
                 if ( maybe_dag.value().type() == "transfer" )
@@ -202,13 +194,11 @@ namespace sgns
                     TransferTransaction tx = TransferTransaction::DeSerializeByteVector( maybe_transaction_data.value().toVector() );
                     if ( tx.GetDstAddress<uint256_t>() == account_m->GetAddress<uint256_t>() )
                     {
-                        m_logger->info( "NEW TRANSACTION TO ME " + tx.GetDstAddress<std::string>() );
                         account_m->balance += static_cast<uint64_t>( tx.GetAmount<uint256_t>() );
                         m_logger->info( "Updated balance " + std::to_string( account_m->balance ) );
                     }
                     if ( tx.GetSrcAddress<uint256_t>() == account_m->GetAddress<uint256_t>() )
                     {
-                        m_logger->info( "NEW TRANSACTION FROM ME " + tx.GetSrcAddress<std::string>() );
                         account_m->balance -= static_cast<uint64_t>( tx.GetAmount<uint256_t>() );
                         m_logger->info( "Updated balance " + std::to_string( account_m->balance ) );
                     }
@@ -221,7 +211,6 @@ namespace sgns
                     //std::cout << tx.GetAddress<std::string>() << std::endl;
                     if ( tx.GetSrcAddress<uint256_t>() == account_m->GetAddress<uint256_t>() )
                     {
-                        m_logger->info( "NEW MINT TO ME " + tx.GetSrcAddress<std::string>() );
                         account_m->balance += tx.GetAmount();
                         m_logger->info( "Updated balance " + std::to_string( account_m->balance ) );
                     }

@@ -11,6 +11,9 @@
 #include <string>
 #include <boost/optional.hpp>
 #include "account/proto/SGTransaction.pb.h"
+#include <boost/multiprecision/cpp_int.hpp>
+
+using namespace boost::multiprecision;
 
 namespace sgns
 {
@@ -36,10 +39,10 @@ namespace sgns
             if ( !dag_wrap.ParseFromArray( data.data(), data.size() ) )
             {
                 std::cerr << "Failed to parse DAGStruct from array." << std::endl;
-                return boost::none; 
+                return boost::none;
             }
             SGTransaction::DAGStruct dag;
-            dag.CopyFrom(*dag_wrap.mutable_dag_struct());
+            dag.CopyFrom( *dag_wrap.mutable_dag_struct() );
             return dag;
         }
 
@@ -52,10 +55,30 @@ namespace sgns
 
         virtual std::vector<uint8_t> SerializeByteVector() = 0;
 
+        template <typename T>
+        const T GetSrcAddress() const;
+
+        template <>
+        const std::string GetSrcAddress<std::string>() const
+        {
+
+            //std::string address(bytes_data.begin(), bytes_data.end());
+            //std::ostringstream oss;
+            //oss << std::hex << src_address;
+
+            return dag_st.source_addr();
+        }
+        template <>
+        const uint256_t GetSrcAddress<uint256_t>() const
+        {
+            return uint256_t{dag_st.source_addr()};
+        }
+
+    protected:
+        SGTransaction::DAGStruct dag_st;
+
     private:
         const std::string transaction_type;
-
-        SGTransaction::DAGStruct dag_st;
     };
 }
 
