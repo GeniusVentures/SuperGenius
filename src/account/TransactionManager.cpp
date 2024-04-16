@@ -116,6 +116,8 @@ namespace sgns
             data_transaction.put( elem->SerializeByteVector() );
             db_m->Put( { transfer_tx_key.str() }, data_transaction );
 
+            account_m->nonce++;
+
             auto maybe_last_hash   = block_storage_m->getLastFinalizedBlockHash();
             auto maybe_last_header = block_storage_m->getBlockHeader( maybe_last_hash.value() );
 
@@ -135,7 +137,7 @@ namespace sgns
 
             block_storage_m->putBlockData( header.number, block_data );
 
-            m_logger->debug( "Putting on " + transfer_tx_key.str() + " " + std::string( data_transaction.toString() ) );
+            m_logger->debug( "Putting on " + transfer_tx_key.str() + " the data: " + std::string( data_transaction.toString() ) );
             m_logger->debug( "Recording Block with number " + std::to_string( header.number ) );
             block_storage_m->setLastFinalizedBlockHash( new_hash.value() );
         }
@@ -145,7 +147,7 @@ namespace sgns
     {
         outcome::result<primitives::BlockBody> retval          = outcome::failure( boost::system::error_code{} );
         std::size_t                            transaction_num = 0;
-        //do
+        do
         {
             retval = block_storage_m->getBlockBody( block_number /*, transaction_num*/ );
             m_logger->debug( "Trying to read transaction " + std::to_string( transaction_num ) );
@@ -170,9 +172,10 @@ namespace sgns
                 {
                     m_logger->info( "The block size is " + std::to_string( block_body.size() ) );
                 }
+                transaction_num++;
             }
-            transaction_num++;
         }
+        while ( !retval );
     }
     void TransactionManager::ParseTransaction( std::string transaction_key )
     {
@@ -195,12 +198,12 @@ namespace sgns
                     if ( tx.GetDstAddress<uint256_t>() == account_m->GetAddress<uint256_t>() )
                     {
                         account_m->balance += static_cast<uint64_t>( tx.GetAmount<uint256_t>() );
-                        m_logger->info( "Updated balance " + std::to_string( account_m->balance ) );
+                        m_logger->info( "Added tokens, balance " + std::to_string( account_m->balance ) );
                     }
                     if ( tx.GetSrcAddress<uint256_t>() == account_m->GetAddress<uint256_t>() )
                     {
                         account_m->balance -= static_cast<uint64_t>( tx.GetAmount<uint256_t>() );
-                        m_logger->info( "Updated balance " + std::to_string( account_m->balance ) );
+                        m_logger->info( "Subtracted tokens, balance " + std::to_string( account_m->balance ) );
                     }
                 }
                 else if ( maybe_dag.value().type() == "mint" )
@@ -212,7 +215,7 @@ namespace sgns
                     if ( tx.GetSrcAddress<uint256_t>() == account_m->GetAddress<uint256_t>() )
                     {
                         account_m->balance += tx.GetAmount();
-                        m_logger->info( "Updated balance " + std::to_string( account_m->balance ) );
+                        m_logger->info( "Created tokens, balance " + std::to_string( account_m->balance ) );
                     }
                 }
                 else if ( maybe_dag.value().type() == "escrow" )
