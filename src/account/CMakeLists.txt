@@ -11,4 +11,5 @@ add_library(sgns_account
 target_link_libraries(sgns_account
     SGTransactionProto
     Boost::boost
+	logger
 )
