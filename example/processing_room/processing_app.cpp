@@ -64,6 +64,10 @@ namespace
             : m_subTaskProcessingTime(subTaskProcessingTime)
         {
         }
+        bool SetProcessingTypeFromJson(std::string jsondata) override
+        {
+            return true; //TODO - This is wrong - Update this tests to the actual ProcessingCoreImpl on src/processing/impl
+        }
 
         void  ProcessSubTask(
             const SGProcessing::SubTask& subTask, SGProcessing::SubTaskResult& result,

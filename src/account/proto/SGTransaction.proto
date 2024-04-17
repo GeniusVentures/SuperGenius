@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package SGTransaction;
+
+message DAGStruct 
+{
+    string type = 1;// 
+    bytes previous_hash = 2; // 
+    bytes source_addr = 3; // 
+    uint64 nonce = 4; // 
+    int64 timestamp = 5; // 
+    bytes uncle_hash = 6; // 
+    bytes data_hash = 7; // 
+}
+message DAGWrapper 
+{
+    DAGStruct dag_struct = 1;// 
+}
+message TransferTx
+{
+    DAGStruct dag_struct = 1;// 
+    uint64 token_id = 2; // 
+    bytes encrypted_amount = 3; // 
+    bytes dest_addr = 4; // 
+}
+message ProcessingTx
+{
+    DAGStruct dag_struct = 1;// 
+    uint64 mpc_magic_key = 2; //
+    uint64 offset = 3; //
+    string job_cid = 4; // 
+    string subtask_cid = 5; // 
+}
+message MintTx
+{
+    DAGStruct dag_struct = 1;// 
+    uint64 amount = 2; // 
+}

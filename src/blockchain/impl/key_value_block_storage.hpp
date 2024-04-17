@@ -9,6 +9,8 @@
 #include "base/logger.hpp"
 #include "crypto/hasher.hpp"
 #include "storage/predefined_keys.hpp"
+#include <crdt/globaldb/globaldb.hpp>
+#include "blockchain/impl/key_value_block_header_repository.hpp"
 
 namespace sgns::blockchain {
 
@@ -29,30 +31,33 @@ namespace sgns::blockchain {
 
     static outcome::result<std::shared_ptr<KeyValueBlockStorage>> create(
         base::Buffer state_root,
-        const std::shared_ptr<storage::BufferStorage> &storage,
+        const std::shared_ptr<crdt::GlobalDB> &db,
         const std::shared_ptr<crypto::Hasher> &hasher,
+        const std::shared_ptr<KeyValueBlockHeaderRepository> &header_repo,
         const BlockHandler &on_finalized_block_found);
 
     /**
      * Initialise block storage with existing data
-     * @param storage underlying storage (must be empty)
+     * @param db underlying storage (must be empty)
      * @param hasher a hasher instance
      */
     static outcome::result<std::shared_ptr<KeyValueBlockStorage>> loadExisting(
-        const std::shared_ptr<storage::BufferStorage> &storage,
+        const std::shared_ptr<crdt::GlobalDB> &db,
         std::shared_ptr<crypto::Hasher> hasher,
+        std::shared_ptr<KeyValueBlockHeaderRepository> header_repo,
         const BlockHandler &on_finalized_block_found);
 
     /**
      * Initialise block storage with a genesis block which is created inside
      * from merkle trie root
-     * @param storage underlying storage (must be empty)
+     * @param db underlying storage (must be empty)
      * @param hasher a hasher instance
      */
     static outcome::result<std::shared_ptr<KeyValueBlockStorage>>
     createWithGenesis(base::Buffer state_root,
-                      const std::shared_ptr<storage::BufferStorage> &storage,
+                      const std::shared_ptr<crdt::GlobalDB> &db,
                       std::shared_ptr<crypto::Hasher> hasher,
+                      std::shared_ptr<KeyValueBlockHeaderRepository> header_repo,
                       const BlockHandler &on_genesis_created);
 
     outcome::result<primitives::BlockHash> getGenesisBlockHash() const override;
@@ -94,14 +99,16 @@ namespace sgns::blockchain {
     }
 
    private:
-    KeyValueBlockStorage(std::shared_ptr<storage::BufferStorage> storage,
-                         std::shared_ptr<crypto::Hasher> hasher);
+    KeyValueBlockStorage(std::shared_ptr<crdt::GlobalDB> db,
+                         std::shared_ptr<crypto::Hasher> hasher,
+                         std::shared_ptr<KeyValueBlockHeaderRepository> header_repo);
 
     outcome::result<void> ensureGenesisNotExists() const;
 
-    std::shared_ptr<storage::BufferStorage> storage_;
+    std::shared_ptr<crdt::GlobalDB> db_;
     std::shared_ptr<crypto::Hasher> hasher_;
     base::Logger logger_;
+    std::shared_ptr<KeyValueBlockHeaderRepository> header_repo_;
   };
 }  // namespace sgns::blockchain
 

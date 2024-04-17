@@ -53,6 +53,13 @@ namespace sgns::base {
   Buffer::iterator Buffer::end() {
     return data_.end();
   }
+  Buffer::reverse_iterator Buffer::rbegin() {
+    return data_.rbegin();
+  }
+
+  Buffer::reverse_iterator Buffer::rend() {
+    return data_.rend();
+  }
 
   Buffer &Buffer::putUint8(uint8_t n) {
     data_.push_back(n);
@@ -89,6 +96,13 @@ namespace sgns::base {
 
   Buffer::const_iterator Buffer::end() const {
     return data_.end();
+  }
+  Buffer::const_reverse_iterator Buffer::rbegin() const {
+    return data_.rbegin();
+  }
+
+  Buffer::const_reverse_iterator Buffer::rend() const {
+    return data_.rend();
   }
 
   const uint8_t *Buffer::data() const {

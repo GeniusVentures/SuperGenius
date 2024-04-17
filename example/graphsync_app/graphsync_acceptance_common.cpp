@@ -7,6 +7,7 @@
 
 #include <ipfs_lite/ipfs/graphsync/impl/graphsync_impl.hpp>
 #include <ipfs_lite/ipld/impl/ipld_node_impl.hpp>
+#include "outcome/outcome.hpp"
 
 void runEventLoop(const std::shared_ptr<boost::asio::io_context>& io,
     size_t max_milliseconds) {
@@ -82,7 +83,7 @@ void TestDataService::insertNode(TestDataService::Storage& dst,
     dst[node->getCID()] = node->getRawBytes();
 }
 
-sgns::outcome::result<size_t> TestDataService::select(
+outcome::result<size_t> TestDataService::select(
     const sgns::CID& cid,
     gsl::span<const uint8_t> selector,
     std::function<bool(const sgns::CID& cid, const sgns::common::Buffer& data)> handler)

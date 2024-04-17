@@ -59,6 +59,20 @@ namespace sgns::base {
     }
 
     /**
+     * Converts current blob to a readable std::string
+     */
+    std::string toReadableString() const noexcept {
+      std::string out_str;
+      char        temp_buf[3];
+      for ( auto it = this->begin(); it != this->end(); ++it )
+      {
+          snprintf( temp_buf, sizeof( temp_buf ), "%02x", *it );
+          out_str.append( temp_buf, sizeof( temp_buf ) - 1 );
+      }
+      return out_str;
+    }
+
+    /**
      * Converts current blob to hex string.
      */
     std::string toHex() const noexcept {

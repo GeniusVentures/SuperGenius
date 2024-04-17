@@ -1,5 +1,6 @@
-add_subdirectory(application)
+#add_subdirectory(application)
 add_subdirectory(api)
+add_subdirectory(account)
 add_subdirectory(base)
 add_subdirectory(blockchain)
 add_subdirectory(clock)
