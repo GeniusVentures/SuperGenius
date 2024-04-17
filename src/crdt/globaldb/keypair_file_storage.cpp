@@ -134,7 +134,14 @@ outcome::result<KeyPair> GenerateKeyPair(
 KeyPairFileStorage::KeyPairFileStorage(const boost::filesystem::path& keyPath)
     : m_keyPath(keyPath)
 {
-}
+    // Extract the directory path from the keyPath
+    boost::filesystem::path directory = m_keyPath.parent_path();
+
+    // Create the directory if it doesn't exist
+    if (!boost::filesystem::exists(directory)) {
+        boost::filesystem::create_directories(directory);
+    }
+}   
 
 outcome::result<libp2p::crypto::KeyPair> KeyPairFileStorage::GetKeyPair() const
 {

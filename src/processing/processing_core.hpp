@@ -27,6 +27,11 @@ public:
     virtual void ProcessSubTask(
         const SGProcessing::SubTask& subTask, SGProcessing::SubTaskResult& result,
         uint32_t initialHashCode) = 0;
+
+    /** Get processing type to set processor
+    * @param subTask - subtask that needs to be processed
+    */
+    virtual bool SetProcessingTypeFromJson(std::string jsondata) = 0;
 };
 
 } // namespace sgns::processing

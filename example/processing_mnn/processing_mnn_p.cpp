@@ -1,5 +1,6 @@
+#define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "processing_mnn.hpp"
-
 
 using GossipPubSub = sgns::ipfs_pubsub::GossipPubSub;
 const std::string logger_config(R"(
@@ -77,7 +78,7 @@ int main(int argc, char* argv[])
     auto io = std::make_shared<boost::asio::io_context>();
     
     //Client
-    pubs2->Start(40001 + serviceindex, { "/ip4/192.168.46.18/tcp/40001/p2p/12D3KooWH1B8qpYQCwoFWEkxDxhM3HBUgmMakZiAUJGL1KfHifGF" });
+    pubs2->Start(40001 + serviceindex, { "/ip4/192.168.56.1/tcp/40001/p2p/12D3KooWJs2FZMNDC8u8Y8ajpUXTRcDhRQhzyTP1Rif8P6XeCgoZ" });
     
     //Create GlobalDB
     //size_t serviceindex = 1;
@@ -98,10 +99,11 @@ int main(int argc, char* argv[])
         globalDB2,
         1000000,
         2);
-
+    processingCore2->RegisterProcessorFactory("posenet", []() { return std::make_unique<MNN_PoseNet>(); });
+    //processingCore2->SetProcessorByName("posenet");
     //Set Imagesplit, this replaces bitswap getting of file for now. Should use AsyncIOmanager in the future
     //processingCore2->setImageSplitter(imagesplit);
-    processingCore2->setModelFile(poseModel);
+    //processingCore2->setModelFile(poseModel);
 
     ProcessingServiceImpl processingService(
         pubs2,

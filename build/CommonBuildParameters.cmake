@@ -72,6 +72,10 @@ find_package(RocksDB CONFIG REQUIRED)
 include_directories(${RocksDB_INCLUDE_DIR})
 
 # --------------------------------------------------------
+# Set config of stb
+include_directories(${_THIRDPARTY_BUILD_DIR}/stb/include)
+
+# --------------------------------------------------------
 # Set config of Microsoft.GSL
 set(GSL_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/Microsoft.GSL/include")
 include_directories(${GSL_INCLUDE_DIR})
