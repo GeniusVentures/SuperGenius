@@ -31,4 +31,5 @@ target_link_libraries(sgns_account
     SGTransactionProto
     Boost::boost
     ${WIN_CRYPT_LIBRARY}
+	logger
 )
