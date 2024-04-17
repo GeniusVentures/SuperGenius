@@ -22,8 +22,11 @@
 #include <boost/program_options.hpp>
 #include <boost/format.hpp>
 #include <boost/asio.hpp>
-#include "TransactionManager.hpp"
-#include "account/TransferTransaction.hpp"
+#include "account/TransactionManager.hpp"
+#include "blockchain/impl/common.hpp"
+#include "blockchain/impl/key_value_block_header_repository.hpp"
+#include "blockchain/impl/key_value_block_storage.hpp"
+#include "crypto/hasher/hasher_impl.hpp"
 
 #include <ipfs_lite/ipfs/graphsync/graphsync.hpp>
 #include "account/AccountManager.hpp"
@@ -78,8 +81,7 @@ void CreateTransferTransaction( const std::vector<std::string> &args, sgns::Tran
     }
     else
     {
-        auto transfer_transaction = std::make_shared<sgns::TransferTransaction>( uint256_t{ args[1] }, uint256_t{ args[2] } );
-        transaction_manager.EnqueueTransaction( transfer_transaction );
+        transaction_manager.TransferFunds(uint256_t{ args[1] }, uint256_t{ args[2] });
     }
 }
 void CreateProcessingTransaction( const std::vector<std::string> &args, sgns::TransactionManager &transaction_manager )
@@ -91,8 +93,7 @@ void CreateProcessingTransaction( const std::vector<std::string> &args, sgns::Tr
     }
 
     //TODO - Create processing transaction
-    //auto transfer_transaction = std::make_shared<sgns::TransferTransaction>( uint256_t{ args[1] }, uint256_t{ args[2] } );
-    //transaction_manager.EnqueueTransaction( transfer_transaction );
+
 }
 void MintTokens( const std::vector<std::string> &args, sgns::TransactionManager &transaction_manager )
 {
@@ -101,9 +102,7 @@ void MintTokens( const std::vector<std::string> &args, sgns::TransactionManager 
         std::cerr << "Invalid process command format.\n";
         return;
     }
-
-    auto mint_transaction = std::make_shared<sgns::MintTransaction>( std::stoull( args[1] ) );
-    transaction_manager.EnqueueTransaction( mint_transaction );
+    transaction_manager.MintFunds(std::stoull( args[1] ));
 }
 void PrintAccountInfo( const std::vector<std::string> &args, sgns::TransactionManager &transaction_manager )
 {
@@ -115,8 +114,6 @@ void PrintAccountInfo( const std::vector<std::string> &args, sgns::TransactionMa
     transaction_manager.PrintAccountInfo();
 
     //TODO - Create processing transaction
-    //auto transfer_transaction = std::make_shared<sgns::TransferTransaction>( uint256_t{ args[1] }, uint256_t{ args[2] } );
-    //transaction_manager.EnqueueTransaction( transfer_transaction );
 }
 
 std::vector<std::string> split_string( const std::string &str )
@@ -192,7 +189,7 @@ int main( int argc, char *argv[] )
     std::string own_wallet_address( argv[2] );
     std::string pubs_address( argv[3] );
 
-    auto maybe_account = sgns::AccountManager{}.CreateAccount( own_wallet_address, 0 );
+    auto maybe_account = sgns::AccountManager{}.CreateAccount( own_wallet_address, 100 );
 
     const std::string processingGridChannel = "GRID_CHANNEL_ID";
 
@@ -223,7 +220,19 @@ int main( int argc, char *argv[] )
     auto crdtOptions = sgns::crdt::CrdtOptions::DefaultOptions();
     globalDB->Init( crdtOptions );
 
-    sgns::TransactionManager transaction_manager( globalDB, io, account );
+    sgns::base::Buffer root_hash;
+    root_hash.put(std::vector<uint8_t>(32ul, 1));
+    auto hasher_ = std::make_shared<sgns::crypto::HasherImpl>();
+    std::string db_path_ = "bc-963/";
+    auto header_repo_ = std::make_shared<sgns::blockchain::KeyValueBlockHeaderRepository>(globalDB, hasher_, db_path_);
+    auto maybe_block_storage = sgns::blockchain::KeyValueBlockStorage::create(root_hash,globalDB,hasher_,header_repo_,[](auto &) {});
+
+    if (!maybe_block_storage)
+    {
+        std::cout << "Error initializing blockchain" << std::endl;
+        return -1;
+    }
+    sgns::TransactionManager transaction_manager( globalDB, io, account,maybe_block_storage.value() );
     transaction_manager.Start();
 
     //Run ASIO

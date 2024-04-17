@@ -36,32 +36,35 @@ namespace sgns::blockchain {
   using Prefix = prefix::Prefix;
 
   KeyValueBlockStorage::KeyValueBlockStorage(
-      std::shared_ptr<storage::BufferStorage> storage,
-      std::shared_ptr<crypto::Hasher> hasher)
-      : storage_{std::move(storage)},
+      std::shared_ptr<crdt::GlobalDB> db,
+      std::shared_ptr<crypto::Hasher> hasher,
+      std::shared_ptr<KeyValueBlockHeaderRepository> header_repo)
+      : db_{std::move(db)},
         hasher_{std::move(hasher)},
-        logger_{base::createLogger("Block Storage:")} {}
+        logger_{base::createLogger("Block Storage:")},
+        header_repo_{std::move(header_repo)} {}
 
   outcome::result<std::shared_ptr<KeyValueBlockStorage>>
   KeyValueBlockStorage::create(
       base::Buffer state_root,
-      const std::shared_ptr<storage::BufferStorage> &storage,
+      const std::shared_ptr<crdt::GlobalDB> &db,
       const std::shared_ptr<crypto::Hasher> &hasher,
+      const std::shared_ptr<KeyValueBlockHeaderRepository> &header_repo,
       const BlockHandler &on_finalized_block_found) {
     auto block_storage = std::make_shared<KeyValueBlockStorage>(
-        KeyValueBlockStorage(storage, hasher));
+        KeyValueBlockStorage(db, hasher, header_repo));
 
     auto last_finalized_block_hash_res =
         block_storage->getLastFinalizedBlockHash();
 
     if (last_finalized_block_hash_res.has_value()) {
-      return loadExisting(storage, hasher, on_finalized_block_found);
+      return loadExisting(db, hasher, header_repo, on_finalized_block_found);
     }
 
     if (last_finalized_block_hash_res
         == outcome::failure(Error::FINALIZED_BLOCK_NOT_FOUND)) {
       return createWithGenesis(
-          std::move(state_root), storage, hasher, on_finalized_block_found);
+          std::move(state_root), db, hasher, header_repo, on_finalized_block_found);
     }
 
     return last_finalized_block_hash_res.error();
@@ -69,11 +72,12 @@ namespace sgns::blockchain {
 
   outcome::result<std::shared_ptr<KeyValueBlockStorage>>
   KeyValueBlockStorage::loadExisting(
-      const std::shared_ptr<storage::BufferStorage> &storage,
+      const std::shared_ptr<crdt::GlobalDB> &db,
       std::shared_ptr<crypto::Hasher> hasher,
+      std::shared_ptr<KeyValueBlockHeaderRepository> header_repo,
       const BlockHandler &on_finalized_block_found) {
     auto block_storage = std::make_shared<KeyValueBlockStorage>(
-        KeyValueBlockStorage(storage, std::move(hasher)));
+        KeyValueBlockStorage(db, std::move(hasher), header_repo));
 
     OUTCOME_TRY((auto &&, last_finalized_block_hash),
                 block_storage->getLastFinalizedBlockHash());
@@ -92,11 +96,12 @@ namespace sgns::blockchain {
   outcome::result<std::shared_ptr<KeyValueBlockStorage>>
   KeyValueBlockStorage::createWithGenesis(
       base::Buffer state_root,
-      const std::shared_ptr<storage::BufferStorage> &storage,
+      const std::shared_ptr<crdt::GlobalDB> &db,
       std::shared_ptr<crypto::Hasher> hasher,
+      std::shared_ptr<KeyValueBlockHeaderRepository> header_repo,
       const BlockHandler &on_genesis_created) {
     auto block_storage = std::make_shared<KeyValueBlockStorage>(
-        KeyValueBlockStorage(storage, std::move(hasher)));
+        KeyValueBlockStorage(db, std::move(hasher), header_repo));
 
     BOOST_OUTCOME_TRYV2(auto &&, block_storage->ensureGenesisNotExists());
 
@@ -118,7 +123,7 @@ namespace sgns::blockchain {
     // the rest of the fields have default value
 
     OUTCOME_TRY((auto &&, genesis_block_hash), block_storage->putBlock(genesis_block));
-    BOOST_OUTCOME_TRYV2(auto &&, storage->put(storage::kGenesisBlockHashLookupKey,
+    BOOST_OUTCOME_TRYV2(auto &&, db->Put({std::string((storage::kGenesisBlockHashLookupKey).toString())},
                              Buffer{genesis_block_hash}));
     BOOST_OUTCOME_TRYV2(auto &&, block_storage->setLastFinalizedBlockHash(genesis_block_hash));
 
@@ -128,9 +133,7 @@ namespace sgns::blockchain {
 
   outcome::result<primitives::BlockHeader> KeyValueBlockStorage::getBlockHeader(
       const primitives::BlockId &id) const {
-    OUTCOME_TRY((auto &&, encoded_header), getWithPrefix(*storage_, Prefix::HEADER, id));
-    OUTCOME_TRY((auto &&, header), scale::decode<primitives::BlockHeader>(encoded_header));
-    return std::move(header);
+    return header_repo_->getBlockHeader(id);
   }
 
   outcome::result<primitives::BlockBody> KeyValueBlockStorage::getBlockBody(
@@ -144,8 +147,15 @@ namespace sgns::blockchain {
 
   outcome::result<primitives::BlockData> KeyValueBlockStorage::getBlockData(
       const primitives::BlockId &id) const {
-    OUTCOME_TRY((auto &&, encoded_block_data),
-                getWithPrefix(*storage_, Prefix::BLOCK_DATA, id));
+
+    OUTCOME_TRY((auto &&, key), idToBufferKey(*db_, id));
+
+    //TODO - For now one block data per block header. Revisit this
+    OUTCOME_TRY((auto &&, encoded_block_data), db_->Get({header_repo_->GetHeaderPath()+std::string(key.toString())+ "tx/0"}));
+
+    
+    //OUTCOME_TRY((auto &&, encoded_block_data),
+    //            getWithPrefix(*db_, Prefix::BLOCK_DATA, id));
     OUTCOME_TRY((auto &&, block_data),
                 scale::decode<primitives::BlockData>(encoded_block_data));
     return std::move(block_data);
@@ -163,14 +173,7 @@ namespace sgns::blockchain {
 
   outcome::result<primitives::BlockHash> KeyValueBlockStorage::putBlockHeader(
       const primitives::BlockHeader &header) {
-    OUTCOME_TRY((auto &&, encoded_header), scale::encode(header));
-    auto block_hash = hasher_->blake2b_256(encoded_header);
-    BOOST_OUTCOME_TRYV2(auto &&, putWithPrefix(*storage_,
-                              Prefix::HEADER,
-                              header.number,
-                              block_hash,
-                              Buffer{std::move(encoded_header)}));
-    return block_hash;
+    return header_repo_->putBlockHeader(header);
   }
 
   outcome::result<void> KeyValueBlockStorage::putBlockData(
@@ -202,11 +205,17 @@ namespace sgns::blockchain {
     }
 
     OUTCOME_TRY((auto &&, encoded_block_data), scale::encode(to_insert));
-    BOOST_OUTCOME_TRYV2(auto &&, putWithPrefix(*storage_,
-                              Prefix::BLOCK_DATA,
-                              block_number,
-                              block_data.hash,
-                              Buffer{encoded_block_data}));
+    
+    OUTCOME_TRY((auto &&, id_string), idToStringKey(*db_, block_number));
+    //TODO - For now one block data per block header. Revisit this
+    BOOST_OUTCOME_TRYV2(auto &&, db_->Put({header_repo_->GetHeaderPath() + id_string + "tx/0"},Buffer{encoded_block_data}));
+
+    
+    //BOOST_OUTCOME_TRYV2(auto &&, putWithPrefix(*db_,
+    //                          Prefix::BLOCK_DATA,
+    //                          block_number,
+    //                          block_data.hash,
+    //                          Buffer{encoded_block_data}));
     return outcome::success();
   }
 
@@ -216,8 +225,9 @@ namespace sgns::blockchain {
     //  (in side-chains whom rejected by finalization)
     //  for avoid leaks of storage space
     auto block_hash = hasher_->blake2b_256(scale::encode(block.header).value());
-    auto block_in_storage_res =
-        getWithPrefix(*storage_, Prefix::HEADER, block_hash);
+    //auto block_in_storage_res =
+    //    getWithPrefix(*db_, Prefix::HEADER, block_hash);
+    auto block_in_storage_res = header_repo_->getBlockHeader(block_hash);
     if (block_in_storage_res.has_value()) {
       return Error::BLOCK_EXISTS;
     }
@@ -259,26 +269,22 @@ namespace sgns::blockchain {
   outcome::result<void> KeyValueBlockStorage::removeBlock(
       const primitives::BlockHash &hash,
       const primitives::BlockNumber &number) {
-    auto block_lookup_key = numberAndHashToLookupKey(number, hash);
-    auto header_lookup_key = prependPrefix(block_lookup_key, Prefix::HEADER);
-    if (auto rm_res = storage_->remove(header_lookup_key); !rm_res) {
-      logger_->error("could not remove header from the storage: {}",
-                     rm_res.error().message());
-      return rm_res;
+    auto header_rm_res = header_repo_->removeBlockHeader(number);
+    if (header_rm_res.has_failure())
+    {
+      return header_rm_res;
     }
 
-    auto body_lookup_key = prependPrefix(block_lookup_key, Prefix::BLOCK_DATA);
-    if (auto rm_res = storage_->remove(body_lookup_key); !rm_res) {
-      logger_->error("could not remove body from the storage: {}",
-                     rm_res.error().message());
-      return rm_res;
-    }
-    return outcome::success();
+    OUTCOME_TRY((auto &&, key), idToBufferKey(*db_, number));
+
+    //TODO - For now one block data per block header. Revisit this
+    return db_->Remove({header_repo_->GetHeaderPath()+std::string(key.toString())+ "tx/0"});
+
   }
 
   outcome::result<primitives::BlockHash>
   KeyValueBlockStorage::getGenesisBlockHash() const {
-    auto hash_res = storage_->get(storage::kGenesisBlockHashLookupKey);
+    auto hash_res = db_->Get({std::string((storage::kGenesisBlockHashLookupKey).toString())});
     if (hash_res.has_value()) {
       primitives::BlockHash hash;
       std::copy(hash_res.value().begin(), hash_res.value().end(), hash.begin());
@@ -294,7 +300,7 @@ namespace sgns::blockchain {
 
   outcome::result<primitives::BlockHash>
   KeyValueBlockStorage::getLastFinalizedBlockHash() const {
-    auto hash_res = storage_->get(storage::kLastFinalizedBlockHashLookupKey);
+    auto hash_res = db_->Get({std::string((storage::kLastFinalizedBlockHashLookupKey).toString())});
     if (hash_res.has_value()) {
       primitives::BlockHash hash;
       std::copy(hash_res.value().begin(), hash_res.value().end(), hash.begin());
@@ -311,7 +317,7 @@ namespace sgns::blockchain {
   outcome::result<void> KeyValueBlockStorage::setLastFinalizedBlockHash(
       const primitives::BlockHash &hash) {
     BOOST_OUTCOME_TRYV2(auto &&,
-        storage_->put(storage::kLastFinalizedBlockHashLookupKey, Buffer{hash}));
+        db_->Put({std::string((storage::kLastFinalizedBlockHashLookupKey).toString())}, Buffer{hash}));
 
     return outcome::success();
   }

@@ -67,7 +67,7 @@ target_link_libraries(processing_mnn PRIVATE
 if(WIN32)
 	target_link_options(processing_mnn PRIVATE /WHOLEARCHIVE:${MNN_LIBS})
 else()
-	target_link_options(processing_mnn PRIVATE "-Wl,-force_load,${MNN_LIBS}")
+	target_link_options(processing_mnn PRIVATE "-Wl,--whole-archive" ${MNN_LIBS} "-Wl,--no-whole-archive")
 endif()
 
 if(APPLE)
@@ -114,7 +114,7 @@ target_link_libraries(processing_mnn_p PRIVATE
 if(WIN32)
 	target_link_options(processing_mnn_p PRIVATE /WHOLEARCHIVE:${MNN_LIBS})
 else()
-	target_link_options(processing_mnn_p PRIVATE "-Wl,-force_load,${MNN_LIBS}")
+	target_link_options(processing_mnn_p PRIVATE "-Wl,--whole-archive" ${MNN_LIBS} "-Wl,--no-whole-archive")
 endif()
 include_directories(../include)
 include_directories(./imageHelper)

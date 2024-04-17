@@ -27,7 +27,7 @@ target_link_libraries(mnn_chunkprocess PRIVATE
 if(WIN32)
 	target_link_options(mnn_chunkprocess PRIVATE /WHOLEARCHIVE:${MNN_LIBS})
 else()
-	target_link_options(mnn_chunkprocess PRIVATE "-Wl,-force_load,${MNN_LIBS}")
+	target_link_options(mnn_chunkprocess PRIVATE "-Wl,--whole-archive" ${MNN_LIBS} "-Wl,--no-whole-archive")
 endif()
 include_directories(../include)
 include_directories(./imageHelper)

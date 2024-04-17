@@ -26,12 +26,21 @@ namespace sgns
             //TODO - Retrieve values where? on Transaction manager?
         }
 
+        template<typename T>
+        const T GetAddress() const;
+
+        template<>
         const std::string GetAddress() const
         {
             std::ostringstream oss;
             oss << std::hex << address;
 
             return ( "0x" + oss.str() );
+        }
+        template<>
+        const uint256_t GetAddress() const
+        {
+            return address;
         }
         const std::string GetBalance() const
         {

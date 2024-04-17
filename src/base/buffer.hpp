@@ -21,6 +21,8 @@ namespace sgns::base {
                  public boost::equality_comparable<std::vector<uint8_t>> {
    public:
     using iterator = std::vector<uint8_t>::iterator;
+    using reverse_iterator = std::vector<uint8_t>::reverse_iterator;
+    using const_reverse_iterator = std::vector<uint8_t>::const_reverse_iterator;
     using const_iterator = std::vector<uint8_t>::const_iterator;
     using value_type = uint8_t;
     // with this gsl::span can be built from Buffer
@@ -95,6 +97,26 @@ namespace sgns::base {
      * buffer.
      */
     iterator end();
+    /**
+     * @brief Iterator, which points to last of this buffer.
+     */
+    reverse_iterator rbegin();
+
+    /**
+     * @brief Iterator, which points to the element previous to first in this
+     * buffer.
+     */
+    reverse_iterator rend();
+    /**
+     * @brief Iterator, which points to last of this buffer.
+     */
+    const_reverse_iterator rbegin() const;
+
+    /**
+     * @brief Iterator, which points to the element previous to first in this
+     * buffer.
+     */
+    const_reverse_iterator rend() const;
 
     /**
      * @brief Iterator, which points to begin of this buffer.

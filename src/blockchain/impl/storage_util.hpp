@@ -7,6 +7,8 @@
 #include "primitives/block_header.hpp"
 #include "primitives/block_id.hpp"
 #include "storage/buffer_map_types.hpp"
+#include <crdt/globaldb/globaldb.hpp>
+#include <crdt/globaldb/keypair_file_storage.hpp>
 
 /**
  * Auxiliary functions to simplify usage of persistant map based storage
@@ -59,7 +61,7 @@ namespace sgns::blockchain {
    * @param value data to be put to the storage
    * @return storage error if any
    */
-  outcome::result<void> putWithPrefix(storage::BufferStorage &map,
+  outcome::result<void> putWithPrefix(crdt::GlobalDB &db,
                                       prefix::Prefix prefix,
                                       primitives::BlockNumber num,
                                       base::Hash256 block_hash,
@@ -73,7 +75,7 @@ namespace sgns::blockchain {
    * @return encoded entry or error
    */
   outcome::result<base::Buffer> getWithPrefix(
-      const storage::BufferStorage &map,
+      crdt::GlobalDB &db,
       prefix::Prefix prefix,
       const primitives::BlockId &block_id);
 
@@ -84,7 +86,7 @@ namespace sgns::blockchain {
    * In the current database schema, this kind of key is only used for
    * lookups into an index, NOT for storing header data or others.
    */
-  base::Buffer numberToIndexKey(primitives::BlockNumber n);
+  base::Buffer NumberToBuffer(primitives::BlockNumber n);
 
   /**
    * Convert number and hash into long lookup key for blocks that are
@@ -94,9 +96,9 @@ namespace sgns::blockchain {
                                           const base::Hash256 &hash);
 
   /**
-   * Convert lookup key to a block number
+   * Converts buffer data to a block number
    */
-  outcome::result<primitives::BlockNumber> lookupKeyToNumber(
+  outcome::result<primitives::BlockNumber> BufferToNumber(
       const base::Buffer &key);
 
   /**

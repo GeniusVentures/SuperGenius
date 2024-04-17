@@ -17,6 +17,7 @@ target_link_libraries(blockchain_common
     supergenius_trie
     supergenius_codec
     primitives
+    crdt_globaldb
     )
 
 add_library(block_tree
