@@ -32,4 +32,5 @@ target_link_libraries(sgns_account
     Boost::boost
     ${WIN_CRYPT_LIBRARY}
 	logger
+    ${WIN_CRYPT_LIBRARY}
 )
