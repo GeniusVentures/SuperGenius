@@ -1,7 +1,10 @@
 syntax = "proto3";
 
 package SGBlocks;
-
+message BlockID
+{
+    uint64 block_number = 1;
+}
 message BlockHashData 
 {
     bytes hash = 1;// 

@@ -105,17 +105,26 @@ namespace sgns
         std::unique_lock<std::mutex> lock( mutex_m );
         if ( !out_transactions.empty() )
         {
-            boost::format transfer_tx_key( transfer_fmt_template );
-            transfer_tx_key % TEST_NET_ID % account_m->GetAddress<std::string>() % account_m->nonce;
 
             auto elem = out_transactions.front();
             out_transactions.pop_front();
+            boost::format tx_key;
+            if ( elem->GetType() == "transfer" )
+            {
+                tx_key = transfer_fmt_template;
+                tx_key % TEST_NET_ID % account_m->GetAddress<std::string>() % account_m->nonce;
+            }
+            else if ( elem->GetType() == "mint" )
+            {
+                tx_key = mint_fmt_template;
+
+                tx_key % TEST_NET_ID % account_m->GetAddress<std::string>() % account_m->nonce;
+            }
 
             sgns::crdt::GlobalDB::Buffer data_transaction;
 
             data_transaction.put( elem->SerializeByteVector() );
-            db_m->Put( { transfer_tx_key.str() }, data_transaction );
-
+            db_m->Put( { tx_key.str() }, data_transaction );
             account_m->nonce++;
 
             auto maybe_last_hash   = block_storage_m->getLastFinalizedBlockHash();
@@ -132,12 +141,12 @@ namespace sgns
             primitives::BlockData block_data;
             block_data.hash   = new_hash.value();
             block_data.header = header;
-            primitives::BlockBody body{ { base::Buffer{}.put( transfer_tx_key.str() ) } };
+            primitives::BlockBody body{ { base::Buffer{}.put( tx_key.str() ) } };
             block_data.body = body;
 
             block_storage_m->putBlockData( header.number, block_data );
 
-            m_logger->debug( "Putting on " + transfer_tx_key.str() + " the data: " + std::string( data_transaction.toString() ) );
+            m_logger->debug( "Putting on " + tx_key.str() + " the data: " + std::string( data_transaction.toString() ) );
             m_logger->debug( "Recording Block with number " + std::to_string( header.number ) );
             block_storage_m->setLastFinalizedBlockHash( new_hash.value() );
         }
@@ -147,7 +156,7 @@ namespace sgns
     {
         outcome::result<primitives::BlockBody> retval          = outcome::failure( boost::system::error_code{} );
         std::size_t                            transaction_num = 0;
-        bool ret = true;
+        bool                                   ret             = true;
         //do
         {
             retval = block_storage_m->getBlockBody( block_number /*, transaction_num*/ );

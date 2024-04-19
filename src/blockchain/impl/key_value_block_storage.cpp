@@ -152,7 +152,7 @@ namespace sgns::blockchain {
     OUTCOME_TRY((auto &&, key), idToBufferKey(*db_, id));
 
     //TODO - For now one block data per block header. Revisit this
-    OUTCOME_TRY((auto &&, encoded_block_data), db_->Get({header_repo_->GetHeaderPath()+std::string(key.toString())+ "tx/0"}));
+    OUTCOME_TRY((auto &&, encoded_block_data), db_->Get({header_repo_->GetHeaderPath()+std::string(key.toString())+ "/tx/0"}));
 
     
     //OUTCOME_TRY((auto &&, encoded_block_data),
@@ -210,7 +210,7 @@ namespace sgns::blockchain {
     auto encoded_block_data = GetSerializedBlockData(to_insert);
     OUTCOME_TRY((auto &&, id_string), idToStringKey(*db_, block_number));
     //TODO - For now one block data per block header. Revisit this
-    BOOST_OUTCOME_TRYV2(auto &&, db_->Put({header_repo_->GetHeaderPath() + id_string + "tx/0"},Buffer{encoded_block_data}));
+    BOOST_OUTCOME_TRYV2(auto &&, db_->Put({header_repo_->GetHeaderPath() + id_string + "/tx/0"},Buffer{encoded_block_data}));
 
     
     //BOOST_OUTCOME_TRYV2(auto &&, putWithPrefix(*db_,
@@ -280,7 +280,7 @@ namespace sgns::blockchain {
     OUTCOME_TRY((auto &&, key), idToBufferKey(*db_, number));
 
     //TODO - For now one block data per block header. Revisit this
-    return db_->Remove({header_repo_->GetHeaderPath()+std::string(key.toString())+ "tx/0"});
+    return db_->Remove({header_repo_->GetHeaderPath()+std::string(key.toString())+ "/tx/0"});
 
   }
 
