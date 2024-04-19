@@ -38,11 +38,12 @@ namespace sgns
         boost::optional<GeniusAccount> CreateAccount( const std::string &priv_key_data, const uint64_t &initial_amount );
         //void ImportAccount(const std::string &priv_key_data);
 
-        void ProcessImage(const std::string &image_path, uint16_t funds);
+        void        ProcessImage( const std::string &image_path, uint16_t funds );
         std::string GetName() override
         {
             return "AccountManager";
         }
+        void MintTokens( uint64_t amount );
 
     private:
         std::shared_ptr<GeniusAccount>                             account_;
@@ -54,8 +55,8 @@ namespace sgns
         std::shared_ptr<blockchain::KeyValueBlockStorage>          block_storage_;
         std::shared_ptr<TransactionManager>                        transaction_manager_;
 
-        std::thread                                                                               io_thread;
-        std::shared_ptr<boost::asio::signal_set>                                                  signals_;
+        std::thread                              io_thread;
+        std::shared_ptr<boost::asio::signal_set> signals_;
 
         static constexpr std::string_view db_path_ = "bc-%d/";
         static constexpr std::uint16_t    MAIN_NET = 369;

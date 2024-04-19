@@ -33,7 +33,7 @@ void keyboard_input_thread()
     }
 }
 
-void PrintAccountInfo( const std::vector<std::string> &args/*, sgns::AccountManager &account_manager*/ )
+void PrintAccountInfo( const std::vector<std::string> &args, sgns::AccountManager &account_manager )
 {
     if ( args.size() != 1 )
     {
@@ -52,7 +52,7 @@ void MintTokens( const std::vector<std::string> &args, sgns::AccountManager &acc
         std::cerr << "Invalid process command format.\n";
         return;
     }
-    account_manager.MintFunds(std::stoull( args[1] ));
+    account_manager.MintTokens(std::stoull( args[1] ));
 }
 
 std::vector<std::string> split_string( const std::string &str )
@@ -109,7 +109,7 @@ int main( int argc, char *argv[] )
     std::string own_wallet_address( argv[1] );
     std::string pubs_address( argv[2] );
 
-    sgns::AccountManager node_instance( own_wallet_address );
+    sgns::AccountManager node_instance( own_wallet_address  );
 
     std::cout << "Insert \"process\", the image and the number of tokens to be" <<std::endl;
     while ( true )

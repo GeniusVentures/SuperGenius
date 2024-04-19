@@ -11,7 +11,7 @@ namespace sgns
 {
     AccountManager::AccountManager( const std::string &priv_key_data ) :
         account_( std::make_shared<GeniusAccount>( uint256_t{ priv_key_data }, 0, 0 ) ), //
-        io_( std::make_shared<boost::asio::io_context>() )                              //
+        io_( std::make_shared<boost::asio::io_context>() )                               //
     {
         const std::string logger_config( R"(
                     # ----------------
@@ -78,16 +78,17 @@ namespace sgns
         transaction_manager_->Start();
 
         io_thread = std::thread( [this]() { io_->run(); } );
-
     }
-    AccountManager::AccountManager() :
-        account_( std::make_shared<GeniusAccount>( 0, 0, 0 ) ) //
+    AccountManager::AccountManager() : account_( std::make_shared<GeniusAccount>( 0, 0, 0 ) ) //
 
     {
     }
     AccountManager::~AccountManager()
     {
-        signals_->cancel(); // Cancel any pending signals
+        if ( signals_ )
+        {
+            signals_->cancel(); // Cancel any pending signals
+        }
         if ( io_ )
         {
             io_->stop(); // Stop our io_context
@@ -100,8 +101,7 @@ namespace sgns
         {
             io_thread.join();
         }
-                std::cout <<"deleted_it " << std::endl;
-
+        std::cout << "deleted_it " << std::endl;
     }
 
     boost::optional<GeniusAccount> AccountManager::CreateAccount( const std::string &priv_key_data, const uint64_t &initial_amount )
@@ -110,12 +110,12 @@ namespace sgns
         return GeniusAccount( value_in_num, initial_amount, 0 );
     }
 
-    void AccountManager::ProcessImage(const std::string &image_path, uint16_t funds)
+    void AccountManager::ProcessImage( const std::string &image_path, uint16_t funds )
     {
-        transaction_manager_->TransferFunds(uint256_t{ funds }, uint256_t{ "0x100" });
+        transaction_manager_->TransferFunds( uint256_t{ funds }, uint256_t{ "0x100" } );
     }
-    void AccountManager::MintTokens(uint64_t amount)
+    void AccountManager::MintTokens( uint64_t amount )
     {
-        transaction_manager_->MintFunds(amount);
+        transaction_manager_->MintFunds( amount );
     }
 }
