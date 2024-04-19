@@ -16,7 +16,7 @@ namespace sgns::blockchain
     class KeyValueBlockHeaderRepository : public BlockHeaderRepository
     {
     public:
-        KeyValueBlockHeaderRepository( std::shared_ptr<crdt::GlobalDB> db, std::shared_ptr<crypto::Hasher> hasher, std::string &net_id );
+        KeyValueBlockHeaderRepository( std::shared_ptr<crdt::GlobalDB> db, std::shared_ptr<crypto::Hasher> hasher, const std::string &net_id );
 
         ~KeyValueBlockHeaderRepository() override = default;
 
@@ -38,6 +38,9 @@ namespace sgns::blockchain
         }
 
         std::string GetHeaderPath() const;
+        std::vector<uint8_t> GetHeaderSerializedData(const primitives::BlockHeader &header);
+        primitives::BlockHeader GetBlockHeaderFromSerialized(const std::vector<uint8_t> &serialized_data) const ;
+
 
     private:
         static constexpr std::string_view BLOCKCHAIN_PATH = "blockchain/";

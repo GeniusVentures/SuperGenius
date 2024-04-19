@@ -12,13 +12,12 @@ message BlockHeaderData
     uint64 block_number = 2;// 
     bytes state_root = 3; //
     bytes extrinsics_root = 4; //
-    bytes digest = 5//
+    bytes digest = 5;//
 }
 message BlockPayloadData
 {
-    DAGStruct dag_struct = 1;// 
-    uint64 token_id = 2; // 
-    bytes encrypted_amount = 3; // 
-    bytes dest_addr = 4; // 
+    bytes hash = 1;// 
+    BlockHeaderData header = 2;// 
+    repeated bytes block_body = 3;// 
 }
 

@@ -1,4 +1,4 @@
-
+add_proto_library(SGBlocksProto proto/SGBlocks.proto)
 
 add_library(blockchain_common
     types.cpp

@@ -5,6 +5,7 @@
 #include "blockchain/impl/storage_util.hpp"
 #include "scale/scale.hpp"
 #include "storage/database_error.hpp"
+#include "blockchain/impl/proto/SGBlocks.pb.h"
 
 OUTCOME_CPP_DEFINE_CATEGORY_3(sgns::blockchain,
                             KeyValueBlockStorage::Error,
@@ -156,8 +157,9 @@ namespace sgns::blockchain {
     
     //OUTCOME_TRY((auto &&, encoded_block_data),
     //            getWithPrefix(*db_, Prefix::BLOCK_DATA, id));
-    OUTCOME_TRY((auto &&, block_data),
-                scale::decode<primitives::BlockData>(encoded_block_data));
+    //OUTCOME_TRY((auto &&, block_data),
+    //            scale::decode<primitives::BlockData>(encoded_block_data));
+    auto block_data = GetBlockDataFromSerialized(encoded_block_data.toVector());
     return std::move(block_data);
   }
 
@@ -204,8 +206,8 @@ namespace sgns::blockchain {
           block_data.receipt ? block_data.receipt : existing_data.receipt;
     }
 
-    OUTCOME_TRY((auto &&, encoded_block_data), scale::encode(to_insert));
-    
+    //OUTCOME_TRY((auto &&, encoded_block_data), scale::encode(to_insert));
+    auto encoded_block_data = GetSerializedBlockData(to_insert);
     OUTCOME_TRY((auto &&, id_string), idToStringKey(*db_, block_number));
     //TODO - For now one block data per block header. Revisit this
     BOOST_OUTCOME_TRYV2(auto &&, db_->Put({header_repo_->GetHeaderPath() + id_string + "tx/0"},Buffer{encoded_block_data}));
@@ -224,7 +226,7 @@ namespace sgns::blockchain {
     // TODO(xDimon): Need to implement mechanism for wipe out orphan blocks
     //  (in side-chains whom rejected by finalization)
     //  for avoid leaks of storage space
-    auto block_hash = hasher_->blake2b_256(scale::encode(block.header).value());
+    auto block_hash = hasher_->blake2b_256(header_repo_->GetHeaderSerializedData(block.header));
     //auto block_in_storage_res =
     //    getWithPrefix(*db_, Prefix::HEADER, block_hash);
     auto block_in_storage_res = header_repo_->getBlockHeader(block_hash);
@@ -328,5 +330,61 @@ namespace sgns::blockchain {
       return Error::GENESIS_BLOCK_ALREADY_EXISTS;
     }
     return outcome::success();
+  }
+
+  std::vector<uint8_t> KeyValueBlockStorage::GetSerializedBlockData(const primitives::BlockData &block_data)
+  {
+    SGBlocks::BlockPayloadData data_proto;
+    SGBlocks::BlockHeaderData *header_data = data_proto.mutable_header();
+    if (block_data.header)
+    {
+      header_data->set_parent_hash(block_data.header.value().parent_hash.toReadableString());
+      header_data->set_block_number(block_data.header.value().number);
+      header_data->set_state_root(block_data.header.value().state_root.toReadableString());
+      header_data->set_extrinsics_root(block_data.header.value().extrinsics_root.toReadableString());
+    }
+    data_proto.set_hash(block_data.hash.toReadableString());
+    if (block_data.body)
+    {
+      for (const auto& body_data : block_data.body.value()) 
+      {
+          data_proto.add_block_body(std::string(body_data.data.toString()));
+      }
+    }
+
+    size_t               size = data_proto.ByteSizeLong();
+    std::vector<uint8_t> serialized_proto( size );
+
+    data_proto.SerializeToArray( serialized_proto.data(), serialized_proto.size() );
+
+    return serialized_proto;
+  }
+  primitives::BlockData KeyValueBlockStorage::GetBlockDataFromSerialized(const std::vector<uint8_t> &serialized_data) const
+  {
+    primitives::BlockData block_data;
+    SGBlocks::BlockPayloadData data_proto;
+    if ( !data_proto.ParseFromArray( serialized_data.data(), serialized_data.size() ) )
+    {
+        std::cerr << "Failed to parse BlockPayloadData from array." << std::endl;
+    }
+    primitives::BlockHeader header; 
+    header.parent_hash = (base::Hash256::fromReadableString(data_proto.header().parent_hash())).value();
+    header.number = data_proto.header().block_number();
+    header.state_root = (base::Hash256::fromReadableString(data_proto.header().state_root())).value();
+    header.extrinsics_root = (base::Hash256::fromReadableString(data_proto.header().extrinsics_root())).value();
+    block_data.header = header;
+    block_data.hash = (base::Hash256::fromReadableString(data_proto.hash())).value();
+
+    primitives::BlockBody body;
+    for (int i = 0; i < data_proto.block_body_size(); ++i)
+    {
+      const std::string& tmp = data_proto.block_body(i);
+      primitives::Extrinsic curr = {base::Buffer{}.put(tmp)};
+      body.push_back(curr);
+    }
+    block_data.body = body;
+
+
+    return block_data;
   }
 }  // namespace sgns::blockchain
