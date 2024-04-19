@@ -96,6 +96,24 @@ namespace sgns::base {
       return b;
     }
 
+
+    static outcome::result<Blob<size_>> fromReadableString(std::string_view data) {
+      if (data.size()/2 != size_) {
+        return BlobError::INCORRECT_LENGTH;
+      }
+      Blob<size_> b;
+
+      for ( std::size_t i = 0; i < data.size(); i+=2 )
+      {
+          std::string byteString = std::string(data).substr(i, 2);
+          char byte = static_cast<char>(std::stoul(byteString, nullptr, 16));
+          b[i/2] = static_cast<uint8_t>(byte);
+      }
+
+
+      return b;
+    }
+
     /**
      * Create Blob from hex string
      * @param hex hex string

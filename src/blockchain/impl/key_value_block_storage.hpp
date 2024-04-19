@@ -98,6 +98,9 @@ namespace sgns::blockchain {
         return "KeyValueBlockStorage";
     }
 
+    std::vector<uint8_t> GetSerializedBlockData(const primitives::BlockData &block_data);
+    primitives::BlockData GetBlockDataFromSerialized(const std::vector<uint8_t> &serialized_data) const;
+
    private:
     KeyValueBlockStorage(std::shared_ptr<crdt::GlobalDB> db,
                          std::shared_ptr<crypto::Hasher> hasher,

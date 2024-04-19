@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package SGBlocks;
+
+message BlockHashData 
+{
+    bytes hash = 1;// 
+}
+message BlockHeaderData 
+{
+    bytes parent_hash = 1;// 
+    uint64 block_number = 2;// 
+    bytes state_root = 3; //
+    bytes extrinsics_root = 4; //
+    bytes digest = 5;//
+}
+message BlockPayloadData
+{
+    bytes hash = 1;// 
+    BlockHeaderData header = 2;// 
+    repeated bytes block_body = 3;// 
+}
+

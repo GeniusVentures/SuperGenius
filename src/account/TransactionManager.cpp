@@ -143,14 +143,15 @@ namespace sgns
         }
         lock.unlock(); // Manual unlock, no need to wait to run out of scope
     }
-    void TransactionManager::GetTransactionsFromBlock( const primitives::BlockNumber &block_number )
+    bool TransactionManager::GetTransactionsFromBlock( const primitives::BlockNumber &block_number )
     {
         outcome::result<primitives::BlockBody> retval          = outcome::failure( boost::system::error_code{} );
         std::size_t                            transaction_num = 0;
-        do
+        bool ret = true;
+        //do
         {
             retval = block_storage_m->getBlockBody( block_number /*, transaction_num*/ );
-            m_logger->debug( "Trying to read transaction " + std::to_string( transaction_num ) );
+            //m_logger->debug( "Trying to read transaction " + std::to_string( transaction_num ) );
 
             if ( retval )
             {
@@ -173,9 +174,11 @@ namespace sgns
                     m_logger->info( "The block size is " + std::to_string( block_body.size() ) );
                 }
                 transaction_num++;
+                ret = true;
             }
         }
-        while ( !retval );
+        //while ( !retval );
+        return ret;
     }
     void TransactionManager::ParseTransaction( std::string transaction_key )
     {
@@ -242,7 +245,7 @@ namespace sgns
                 //any block will need checking
                 m_logger->debug( "Found new blockchain entry for block " + std::to_string( last_block_id_m ) );
                 m_logger->debug( "Getting DAGHeader value" );
-                bool incoming = true;
+                bool valid_transaction = true;
 
                 auto DAGHeader = retval.value();
                 //m_logger->debug( "Destination address of Header: " + std::string( DAGHeader.toString() ) );
@@ -251,9 +254,16 @@ namespace sgns
                 if ( DAGHeader.number == last_block_id_m )
                 {
                     m_logger->info( "Checking transactions from block" );
-                    GetTransactionsFromBlock( DAGHeader.number );
+                    valid_transaction = GetTransactionsFromBlock( DAGHeader.number );
                 }
-                last_block_id_m++;
+                if ( valid_transaction )
+                {
+                    last_block_id_m++;
+                }
+                else
+                {
+                    m_logger->debug( "Invalid transaction" );
+                }
             }
 
         } while ( retval );
