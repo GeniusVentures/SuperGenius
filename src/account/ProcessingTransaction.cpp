@@ -6,6 +6,7 @@
  */
 
 #include "account/ProcessingTransaction.hpp"
+#include "crypto/hasher/hasher_impl.hpp"
 
 namespace sgns
 {
@@ -13,6 +14,9 @@ namespace sgns
         IGeniusTransactions( "processing", SetDAGWithType(dag,"processing")), //
         hash_process_data( hash )            //
     {
+        auto hasher_ = std::make_shared<sgns::crypto::HasherImpl>();
+        auto hash_data = hasher_->blake2b_256(SerializeByteVector());
+        dag_st.set_data_hash(hash_data.toReadableString());
     }
 
     std::vector<uint8_t> ProcessingTransaction::SerializeByteVector()

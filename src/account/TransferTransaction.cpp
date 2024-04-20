@@ -5,6 +5,7 @@
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
 #include "account/TransferTransaction.hpp"
+#include "crypto/hasher/hasher_impl.hpp"
 
 namespace sgns
 {
@@ -14,6 +15,9 @@ namespace sgns
         encrypted_amount( amount ),                                           //
         dest_address( destination )                                           //
     {
+        auto hasher_ = std::make_shared<sgns::crypto::HasherImpl>();
+        auto hash = hasher_->blake2b_256(SerializeByteVector());
+        dag_st.set_data_hash(hash.toReadableString());
     }
     std::vector<uint8_t> TransferTransaction::SerializeByteVector()
     {

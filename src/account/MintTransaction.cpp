@@ -5,6 +5,7 @@
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
 #include "account/MintTransaction.hpp"
+#include "crypto/hasher/hasher_impl.hpp"
 
 namespace sgns
 {
@@ -12,6 +13,9 @@ namespace sgns
         IGeniusTransactions( "mint", SetDAGWithType( dag, "mint" ) ), //
         amount( new_amount )                                          //
     {
+        auto hasher_ = std::make_shared<sgns::crypto::HasherImpl>();
+        auto hash = hasher_->blake2b_256(SerializeByteVector());
+        dag_st.set_data_hash(hash.toReadableString());
     }
     std::vector<uint8_t> MintTransaction::SerializeByteVector()
     {

@@ -7,6 +7,7 @@
 #include "account/TransactionManager.hpp"
 #include "account/TransferTransaction.hpp"
 #include "account/MintTransaction.hpp"
+#include "account/ProcessingTransaction.hpp"
 
 namespace sgns
 {
@@ -96,7 +97,7 @@ namespace sgns
         dag.set_source_addr( account_m->GetAddress<std::string>() );
         dag.set_timestamp( timestamp.time_since_epoch().count() );
         dag.set_uncle_hash( "" );
-        dag.set_data_hash( "" );
+        dag.set_data_hash( "" ); //filled byt transaction class
         return dag;
     }
 
@@ -117,6 +118,18 @@ namespace sgns
             else if ( elem->GetType() == "mint" )
             {
                 tx_key = mint_fmt_template;
+
+                tx_key % TEST_NET_ID % account_m->GetAddress<std::string>() % account_m->nonce;
+            }
+            else if ( elem->GetType() == "processing" )
+            {
+                //tx_key = process_fmt_template;
+
+                //tx_key % TEST_NET_ID % account_m->GetAddress<std::string>() % account_m->nonce;
+            }
+            else if ( elem->GetType() == "escrow" )
+            {
+                tx_key = escrow_fmt_template;
 
                 tx_key % TEST_NET_ID % account_m->GetAddress<std::string>() % account_m->nonce;
             }
@@ -156,7 +169,7 @@ namespace sgns
     {
         outcome::result<primitives::BlockBody> retval          = outcome::failure( boost::system::error_code{} );
         std::size_t                            transaction_num = 0;
-        bool                                   ret             = true;
+        bool                                   ret             = false;
         //do
         {
             retval = block_storage_m->getBlockBody( block_number /*, transaction_num*/ );
@@ -235,6 +248,15 @@ namespace sgns
                 }
                 else if ( maybe_dag.value().type() == "process" )
                 {
+                    m_logger->info( "Process transaction" );
+                    ProcessingTransaction tx = ProcessingTransaction::DeSerializeByteVector( maybe_transaction_data.value().toVector() );
+
+                    //std::cout << tx.GetAddress<std::string>() << std::endl;
+                    /*if ( tx.GetSrcAddress<uint256_t>() == account_m->GetAddress<uint256_t>() )
+                    {
+                        account_m->balance += tx.GetAmount();
+                        m_logger->info( "Created tokens, balance " + std::to_string( account_m->balance ) );
+                    }*/
                 }
             }
         }

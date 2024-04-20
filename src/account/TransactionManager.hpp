@@ -48,6 +48,7 @@ namespace sgns
         primitives::BlockNumber                          last_block_id_m;
         std::uint64_t                                    last_trans_on_block_id;
         std::shared_ptr<blockchain::BlockStorage>        block_storage_m;
+        //Hash256                                          last_transaction_hash;
 
         static constexpr std::uint16_t MAIN_NET_ID = 369;
         static constexpr std::uint16_t TEST_NET_ID = 963;
