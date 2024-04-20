@@ -64,17 +64,9 @@ namespace sgns::blockchain {
     auto encoded_header = GetHeaderSerializedData(header);
     auto header_hash = hasher_->blake2b_256(encoded_header);
 
-    SGBlocks::BlockID blockID;
-
-    blockID.set_block_number(header.number);
-    size_t               size = blockID.ByteSizeLong();
-    std::vector<uint8_t> serialized_proto( size );
-
-    blockID.SerializeToArray( serialized_proto.data(), serialized_proto.size() );
-
 
     OUTCOME_TRY((auto &&, id_string), idToStringKey(*db_, header.number));
-    BOOST_OUTCOME_TRYV2( auto &&, db_->Put({header_hash.toReadableString() }, base::Buffer{std::move(serialized_proto)}));
+    BOOST_OUTCOME_TRYV2( auto &&, db_->Put({header_hash.toReadableString() }, NumberToBuffer(header.number)));
     BOOST_OUTCOME_TRYV2(auto &&, db_->Put({block_header_key_prefix + id_string}, base::Buffer{std::move(encoded_header)}));
 
     return header_hash;

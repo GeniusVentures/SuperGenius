@@ -5,6 +5,7 @@
 #include "blockchain/impl/common.hpp"
 #include "storage/database_error.hpp"
 #include <crdt/globaldb/globaldb.hpp>
+#include "blockchain/impl/proto/SGBlocks.pb.h"
 
 using sgns::blockchain::prefix::Prefix;
 using sgns::base::Buffer;
@@ -51,15 +52,22 @@ namespace sgns::blockchain {
   base::Buffer NumberToBuffer(primitives::BlockNumber n) {
     // TODO(Harrm) Figure out why exactly it is this way in substrate
     //BOOST_ASSERT((n & 0xffffffff00000000) == 0);
+    SGBlocks::BlockID blockID;
 
-    base::Buffer retval;
+    blockID.set_block_number(n);
+    size_t               size = blockID.ByteSizeLong();
+    std::vector<uint8_t> serialized_proto( size );
+
+    blockID.SerializeToArray( serialized_proto.data(), serialized_proto.size() );
+    return base::Buffer{serialized_proto};
+    /**base::Buffer retval;
 
     //Little endian
     for ( std::size_t i = 0; i < sizeof(primitives::BlockNumber); ++i )
     {
         retval.putUint8(static_cast<uint8_t>((n >> (i * 8)) & 0xffu))  ;
     }
-    return retval;
+    return retval;*/
 
     //return {uint8_t(n >> 24u),
     //        uint8_t((n >> 16u) & 0xffu),
@@ -79,14 +87,22 @@ namespace sgns::blockchain {
     if (key.size() > sizeof(primitives::BlockNumber)) {
       return outcome::failure(KeyValueRepositoryError::INVALID_KEY);
     }
-    primitives::BlockNumber retval = 0;
+    primitives::BlockNumber num;
+    SGBlocks::BlockID blockID;
+    if ( !blockID.ParseFromArray( key.toVector().data(), key.toVector().size() ) )
+    {
+        std::cerr << "Failed to parse BlockID from array." << std::endl;
+    }
+    num = blockID.block_number();
+    return num;
+    /*primitives::BlockNumber retval = 0;
 
     //Little endian
     for ( std::size_t i = 0; i < key.size(); ++i )
     {
         retval += (key[i] << (i * 8));
     }
-    return retval;
+    return retval;*/
     //return (uint64_t(key[0]) << 24u) | (uint64_t(key[1]) << 16u)
     //       | (uint64_t(key[2]) << 8u) | uint64_t(key[3]);
   }

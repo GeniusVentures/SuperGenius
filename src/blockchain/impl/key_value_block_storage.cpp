@@ -304,8 +304,14 @@ namespace sgns::blockchain {
   KeyValueBlockStorage::getLastFinalizedBlockHash() const {
     auto hash_res = db_->Get({std::string((storage::kLastFinalizedBlockHashLookupKey).toString())});
     if (hash_res.has_value()) {
-      primitives::BlockHash hash;
-      std::copy(hash_res.value().begin(), hash_res.value().end(), hash.begin());
+          primitives::BlockHash hash;
+    SGBlocks::BlockHashData hash_proto;
+    if ( !hash_proto.ParseFromArray( hash_res.value().data(), hash_res.value().size() ) )
+    {
+        std::cerr << "Failed to parse BlockPayloadData from array." << std::endl;
+    }
+    hash = (base::Hash256::fromReadableString(hash_proto.hash())).value();
+      //std::copy(hash_res.value().begin(), hash_res.value().end(), hash.begin());
       return hash;
     }
 
@@ -318,8 +324,17 @@ namespace sgns::blockchain {
 
   outcome::result<void> KeyValueBlockStorage::setLastFinalizedBlockHash(
       const primitives::BlockHash &hash) {
+
+        SGBlocks::BlockHashData hash_proto;
+
+        hash_proto.set_hash(hash.toReadableString());
+
+        size_t               size = hash_proto.ByteSizeLong();
+        std::vector<uint8_t> serialized_proto( size );
+
+        hash_proto.SerializeToArray( serialized_proto.data(), serialized_proto.size() );
     BOOST_OUTCOME_TRYV2(auto &&,
-        db_->Put({std::string((storage::kLastFinalizedBlockHashLookupKey).toString())}, Buffer{hash}));
+        db_->Put({std::string((storage::kLastFinalizedBlockHashLookupKey).toString())}, Buffer{serialized_proto}));
 
     return outcome::success();
   }
