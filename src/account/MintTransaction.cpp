@@ -41,7 +41,7 @@ namespace sgns
 
         return MintTransaction( v64, tx_struct.dag_struct() ); // Return new instance
     }
-    const uint64_t MintTransaction::GetAmount() const
+    uint64_t MintTransaction::GetAmount() const
     {
         return amount;
     }

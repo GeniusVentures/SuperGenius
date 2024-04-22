@@ -51,7 +51,7 @@ groups:
 # ----------------
   )" );
 
-std::mutex              mutex;
+std::mutex              keyboard_mutex;
 std::condition_variable cv;
 std::queue<std::string> events;
 
@@ -61,7 +61,7 @@ void keyboard_input_thread()
     while ( std::getline( std::cin, line ) )
     {
         {
-            std::lock_guard<std::mutex> lock( mutex );
+            std::lock_guard<std::mutex> lock( keyboard_mutex );
             events.push( line );
         }
         cv.notify_one();
@@ -125,7 +125,7 @@ std::vector<std::string> split_string( const std::string &str )
 
 void process_events( sgns::TransactionManager &transaction_manager )
 {
-    std::unique_lock<std::mutex> lock( mutex );
+    std::unique_lock<std::mutex> lock( keyboard_mutex );
     cv.wait( lock, [] { return !events.empty(); } );
 
     while ( !events.empty() )

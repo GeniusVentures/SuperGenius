@@ -10,6 +10,7 @@
 #include <vector>
 #include <string>
 #include <boost/optional.hpp>
+#include <boost/format.hpp>
 #include "account/proto/SGTransaction.pb.h"
 #include <boost/multiprecision/cpp_int.hpp>
 
@@ -55,6 +56,16 @@ namespace sgns
 
         virtual std::vector<uint8_t> SerializeByteVector() = 0;
 
+        virtual std::string GetTransactionSpecificPath() = 0;
+
+        std::string GetTransactionFullPath()
+        {
+            boost::format full_path( GetSrcAddress<std::string>() + "/tx/" + GetTransactionSpecificPath() + "/%llu" );
+            full_path % dag_st.nonce();
+
+            return full_path.str();
+        }
+
         template <typename T>
         const T GetSrcAddress() const;
 
@@ -71,7 +82,7 @@ namespace sgns
         template <>
         const uint256_t GetSrcAddress<uint256_t>() const
         {
-            return uint256_t{dag_st.source_addr()};
+            return uint256_t{ dag_st.source_addr() };
         }
 
     protected:

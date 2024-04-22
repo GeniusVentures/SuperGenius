@@ -11,15 +11,6 @@
 
 namespace sgns
 {
-    const boost::format TransactionManager::transfer_fmt_template( std::string( TransactionManager::TRANSACTION_BASE_FORMAT ) +
-                                                                   std::string( TransactionManager::TRANSFER_FORMAT ) );
-    const boost::format TransactionManager::process_fmt_template( std::string( TransactionManager::TRANSACTION_BASE_FORMAT ) +
-                                                                  std::string( TransactionManager::PROCESSING_FORMAT ) );
-    const boost::format TransactionManager::mint_fmt_template( std::string( TransactionManager::TRANSACTION_BASE_FORMAT ) +
-                                                               std::string( TransactionManager::MINT_FORMAT ) );
-    const boost::format TransactionManager::escrow_fmt_template( std::string( TransactionManager::TRANSACTION_BASE_FORMAT ) +
-                                                                 std::string( TransactionManager::ESCROW_FORMAT ) );
-
     TransactionManager::TransactionManager( std::shared_ptr<crdt::GlobalDB> db, std::shared_ptr<boost::asio::io_context> ctx,
                                             std::shared_ptr<GeniusAccount>            account,
                                             std::shared_ptr<blockchain::BlockStorage> block_storage ) :
@@ -75,6 +66,11 @@ namespace sgns
         auto mint_transaction = std::make_shared<sgns::MintTransaction>( amount, FillDAGStruct() );
         this->EnqueueTransaction( mint_transaction );
     }
+    void TransactionManager::HoldEscrow( const uint64_t &amount )
+    {
+        auto mint_transaction = std::make_shared<sgns::MintTransaction>( amount, FillDAGStruct() );
+        this->EnqueueTransaction( mint_transaction );
+    }
 
     void TransactionManager::Update()
     {
@@ -109,35 +105,16 @@ namespace sgns
 
             auto elem = out_transactions.front();
             out_transactions.pop_front();
-            boost::format tx_key;
-            if ( elem->GetType() == "transfer" )
-            {
-                tx_key = transfer_fmt_template;
-                tx_key % TEST_NET_ID % account_m->GetAddress<std::string>() % account_m->nonce;
-            }
-            else if ( elem->GetType() == "mint" )
-            {
-                tx_key = mint_fmt_template;
+            boost::format tx_key{ std::string( TRANSACTION_BASE_FORMAT ) };
 
-                tx_key % TEST_NET_ID % account_m->GetAddress<std::string>() % account_m->nonce;
-            }
-            else if ( elem->GetType() == "processing" )
-            {
-                //tx_key = process_fmt_template;
+            tx_key % TEST_NET_ID;
 
-                //tx_key % TEST_NET_ID % account_m->GetAddress<std::string>() % account_m->nonce;
-            }
-            else if ( elem->GetType() == "escrow" )
-            {
-                tx_key = escrow_fmt_template;
-
-                tx_key % TEST_NET_ID % account_m->GetAddress<std::string>() % account_m->nonce;
-            }
+            auto transaction_path = tx_key.str() + elem->GetTransactionFullPath();
 
             sgns::crdt::GlobalDB::Buffer data_transaction;
 
             data_transaction.put( elem->SerializeByteVector() );
-            db_m->Put( { tx_key.str() }, data_transaction );
+            db_m->Put( { transaction_path }, data_transaction );
             account_m->nonce++;
 
             auto maybe_last_hash   = block_storage_m->getLastFinalizedBlockHash();
@@ -154,12 +131,12 @@ namespace sgns
             primitives::BlockData block_data;
             block_data.hash   = new_hash.value();
             block_data.header = header;
-            primitives::BlockBody body{ { base::Buffer{}.put( tx_key.str() ) } };
+            primitives::BlockBody body{ { base::Buffer{}.put( transaction_path ) } };
             block_data.body = body;
 
             block_storage_m->putBlockData( header.number, block_data );
 
-            m_logger->debug( "Putting on " + tx_key.str() + " the data: " + std::string( data_transaction.toString() ) );
+            m_logger->debug( "Putting on " + transaction_path + " the data: " + std::string( data_transaction.toString() ) );
             m_logger->debug( "Recording Block with number " + std::to_string( header.number ) );
             block_storage_m->setLastFinalizedBlockHash( new_hash.value() );
         }
