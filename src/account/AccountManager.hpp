@@ -44,6 +44,7 @@ namespace sgns
             return "AccountManager";
         }
         void MintTokens( uint64_t amount );
+        void AddPeer(const std::string &peer);
 
     private:
         std::shared_ptr<GeniusAccount>                             account_;

@@ -16,7 +16,7 @@
 #include <boost/asio.hpp>
 #include "account/AccountManager.hpp"
 
-std::mutex              mutex;
+std::mutex              keyboard_mutex;
 std::condition_variable cv;
 std::queue<std::string> events;
 
@@ -26,7 +26,7 @@ void keyboard_input_thread()
     while ( std::getline( std::cin, line ) )
     {
         {
-            std::lock_guard<std::mutex> lock( mutex );
+            std::lock_guard<std::mutex> lock( keyboard_mutex );
             events.push( line );
         }
         cv.notify_one();
@@ -64,7 +64,7 @@ std::vector<std::string> split_string( const std::string &str )
 
 void process_events( sgns::AccountManager &account_manager )
 {
-    std::unique_lock<std::mutex> lock( mutex );
+    std::unique_lock<std::mutex> lock( keyboard_mutex );
     cv.wait( lock, [] { return !events.empty(); } );
 
     while ( !events.empty() )
@@ -80,7 +80,7 @@ void process_events( sgns::AccountManager &account_manager )
         }
         else if ( arguments[0] == "process" )
         {
-            account_manager.ProcessImage("image.mnn", 50);
+            account_manager.ProcessImage("image.mnn", 100);
             //CreateProcessingTransaction( arguments, transaction_manager );
         }
         else if ( arguments[0] == "mint" )
@@ -92,6 +92,10 @@ void process_events( sgns::AccountManager &account_manager )
         else if ( arguments[0] == "info" )
         {
             PrintAccountInfo( arguments, account_manager );
+        }
+        else if ( arguments[0] == "peer" )
+        {
+            account_manager.AddPeer( std::string{arguments[1]} );
         }
         else
         {

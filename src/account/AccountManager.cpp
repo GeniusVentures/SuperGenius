@@ -104,6 +104,11 @@ namespace sgns
         std::cout << "deleted_it " << std::endl;
     }
 
+    void AccountManager::AddPeer(const std::string &peer)
+    {
+        pubsub_->AddPeers({peer});
+    }
+
     boost::optional<GeniusAccount> AccountManager::CreateAccount( const std::string &priv_key_data, const uint64_t &initial_amount )
     {
         uint256_t value_in_num( priv_key_data );
@@ -112,6 +117,7 @@ namespace sgns
 
     void AccountManager::ProcessImage( const std::string &image_path, uint16_t funds )
     {
+        processing::ImageSplitter imagesplit(image_path.data(), 5400, 0, 4860000);
         transaction_manager_->TransferFunds( uint256_t{ funds }, uint256_t{ "0x100" } );
     }
     void AccountManager::MintTokens( uint64_t amount )
