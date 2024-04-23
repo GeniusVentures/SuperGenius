@@ -9,6 +9,8 @@ add_library(processing_service
 	impl/processing_core_impl.cpp
 	processing_imagesplit.hpp
 	processing_imagesplit.cpp
+	processing_tasksplit.hpp
+	processing_tasksplit.cpp
 	processing_processor.hpp
 	processors/processing_processor_mnn_posenet.hpp
 	processors/processing_processor_mnn_posenet.cpp

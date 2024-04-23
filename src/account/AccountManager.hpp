@@ -24,6 +24,7 @@
 #include "integration/IComponent.hpp"
 #include "account/GeniusAccount.hpp"
 #include "account/TransactionManager.hpp"
+#include "processing/impl/processing_task_queue_impl.hpp"
 
 using namespace boost::multiprecision;
 namespace sgns
@@ -44,7 +45,7 @@ namespace sgns
             return "AccountManager";
         }
         void MintTokens( uint64_t amount );
-        void AddPeer(const std::string &peer);
+        void AddPeer( const std::string &peer );
 
     private:
         std::shared_ptr<GeniusAccount>                             account_;
@@ -55,6 +56,7 @@ namespace sgns
         std::shared_ptr<blockchain::KeyValueBlockHeaderRepository> header_repo_;
         std::shared_ptr<blockchain::KeyValueBlockStorage>          block_storage_;
         std::shared_ptr<TransactionManager>                        transaction_manager_;
+        std::shared_ptr<processing::ProcessingTaskQueueImpl>       task_queue_;
 
         std::thread                              io_thread;
         std::shared_ptr<boost::asio::signal_set> signals_;
