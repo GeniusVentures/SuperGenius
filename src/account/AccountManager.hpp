@@ -25,6 +25,8 @@
 #include "account/GeniusAccount.hpp"
 #include "account/TransactionManager.hpp"
 #include "processing/impl/processing_task_queue_impl.hpp"
+#include "processing/impl/processing_core_impl.hpp"
+#include "processing/processing_service.hpp"
 
 using namespace boost::multiprecision;
 namespace sgns
@@ -57,13 +59,17 @@ namespace sgns
         std::shared_ptr<blockchain::KeyValueBlockStorage>          block_storage_;
         std::shared_ptr<TransactionManager>                        transaction_manager_;
         std::shared_ptr<processing::ProcessingTaskQueueImpl>       task_queue_;
+        std::shared_ptr<processing::ProcessingCoreImpl>            processing_core_;
+        std::shared_ptr<processing::ProcessingServiceImpl>         processing_service_;
 
         std::thread                              io_thread;
         std::shared_ptr<boost::asio::signal_set> signals_;
 
-        static constexpr std::string_view db_path_ = "bc-%d/";
-        static constexpr std::uint16_t    MAIN_NET = 369;
-        static constexpr std::uint16_t    TEST_NET = 963;
+        static constexpr std::string_view db_path_                = "bc-%d/";
+        static constexpr std::uint16_t    MAIN_NET                = 369;
+        static constexpr std::uint16_t    TEST_NET                = 963;
+        static constexpr std::size_t      MAX_NODES_COUNT         = 1;
+        static constexpr std::string_view PROCESSING_GRID_CHANNEL = "GRID_CHANNEL_ID";
     };
 };
 

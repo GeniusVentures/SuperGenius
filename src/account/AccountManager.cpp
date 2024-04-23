@@ -7,6 +7,10 @@
 #include "account/AccountManager.hpp"
 #include "processing/processing_imagesplit.hpp"
 #include "processing/processing_tasksplit.hpp"
+#include "processing/processing_subtask_enqueuer_impl.hpp"
+#include "processing/processing_subtask_result_storage.hpp"
+#include "processing/processors/processing_processor_mnn_posenet.hpp"
+#include "processing/impl/processing_subtask_result_storage_impl.hpp"
 
 namespace sgns
 {
@@ -55,9 +59,8 @@ namespace sgns
 
         io_ = std::make_shared<boost::asio::io_context>();
 
-        globaldb_ =
-            std::make_shared<crdt::GlobalDB>( io_, ( boost::format( "SuperGNUSNode.TestNet.%s" ) % priv_key_data ).str(), 40010,
-                                                    std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_, "SGNUS.TestNet.Channel" ) );
+        globaldb_ = std::make_shared<crdt::GlobalDB>( io_, ( boost::format( "SuperGNUSNode.TestNet.%s" ) % priv_key_data ).str(), 40010,
+                                                      std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_, "SGNUS.TestNet.Channel" ) );
 
         globaldb_->Init( crdt::CrdtOptions::DefaultOptions() );
 
@@ -65,8 +68,8 @@ namespace sgns
         root_hash.put( std::vector<uint8_t>( 32ul, 1 ) );
         hasher_ = std::make_shared<crypto::HasherImpl>();
 
-        header_repo_ = std::make_shared<blockchain::KeyValueBlockHeaderRepository>(
-            globaldb_, hasher_, ( boost::format( std::string( db_path_ ) ) % TEST_NET ).str() );
+        header_repo_             = std::make_shared<blockchain::KeyValueBlockHeaderRepository>( globaldb_, hasher_,
+                                                                                    ( boost::format( std::string( db_path_ ) ) % TEST_NET ).str() );
         auto maybe_block_storage = blockchain::KeyValueBlockStorage::create( root_hash, globaldb_, hasher_, header_repo_, []( auto & ) {} );
 
         if ( !maybe_block_storage )
@@ -77,7 +80,19 @@ namespace sgns
         block_storage_       = std::move( maybe_block_storage.value() );
         transaction_manager_ = std::make_shared<TransactionManager>( globaldb_, io_, account_, block_storage_ );
         transaction_manager_->Start();
-        task_queue_ = std::make_shared<processing::ProcessingTaskQueueImpl>( globaldb_ );
+
+        task_queue_      = std::make_shared<processing::ProcessingTaskQueueImpl>( globaldb_ );
+        processing_core_ = std::make_shared<processing::ProcessingCoreImpl>( globaldb_, 1000000, 2 );
+        processing_core_->RegisterProcessorFactory( "posenet", []() { return std::make_unique<processing::MNN_PoseNet>(); } );
+        processing_service_ =
+            std::make_shared<processing::ProcessingServiceImpl>( pubsub_,                                                             //
+                                                                 MAX_NODES_COUNT,                                                     //
+                                                                 std::make_shared<processing::SubTaskEnqueuerImpl>( task_queue_ ),    //
+                                                                 std::make_shared<processing::ProcessSubTaskStateStorage>(),          //
+                                                                 std::make_shared<processing::SubTaskResultStorageImpl>( globaldb_ ), //
+                                                                 processing_core_ );
+        processing_service_->SetChannelListRequestTimeout( boost::posix_time::milliseconds( 10000 ) );
+        processing_service_->StartProcessing( std::string( PROCESSING_GRID_CHANNEL ) );
 
         io_thread = std::thread( [this]() { io_->run(); } );
     }
@@ -141,8 +156,8 @@ namespace sgns
             tasks.push_back( std::move( task ) );
         }
 
-        size_t       nSubTasks = chunkOptions.size();
-        size_t       nChunks   = 0;
+        size_t                          nSubTasks = chunkOptions.size();
+        size_t                          nChunks   = 0;
         processing::ProcessTaskSplitter taskSplitter( nSubTasks, nChunks, false );
 
         for ( auto &task : tasks )

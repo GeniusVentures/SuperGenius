@@ -33,4 +33,5 @@ target_link_libraries(sgns_account
     Boost::boost
 	logger
     ${WIN_CRYPT_LIBRARY}
+    AsyncIOManager
 )
