@@ -55,8 +55,7 @@ int main(int argc, char* argv[])
     //chunkOptions.push_back({ 540, 0, 4860, 10, 10, 99});
     //chunkOptions.push_back({ 270, 0, 5130, 20, 20, 399});
     //Inputs
-    const auto poseModel = argv[1];
-    const auto inputImageFileName = argv[2];
+    const auto inputImageFileName = argv[1];
 
     //Split Image into RGBA bytes
     //ImageSplitter imagesplit(inputImageFileName, 540, 4860, 48600);

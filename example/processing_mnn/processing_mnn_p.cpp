@@ -54,10 +54,8 @@ int main(int argc, char* argv[])
     loggerValidcore->set_level(spdlog::level::trace);
     std::cout << "Check 1" << std::endl;
     //Inputs
-    const auto poseModel = argv[1];
-    const auto inputImageFileName = argv[2];
     char* endPtr;
-    size_t serviceindex = std::strtoul(argv[3], &endPtr, 10);
+    size_t serviceindex = std::strtoul(argv[1], &endPtr, 10);
     
 
     //Split Image into RGBA bytes
