@@ -80,7 +80,7 @@ void process_events( sgns::AccountManager &account_manager )
         }
         else if ( arguments[0] == "process" )
         {
-            account_manager.ProcessImage("image.mnn", 100);
+            account_manager.ProcessImage(arguments[1], 100);
             //CreateProcessingTransaction( arguments, transaction_manager );
         }
         else if ( arguments[0] == "mint" )

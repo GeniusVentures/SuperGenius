@@ -8,6 +8,7 @@
 #include "account/TransferTransaction.hpp"
 #include "account/MintTransaction.hpp"
 #include "account/ProcessingTransaction.hpp"
+#include "account/EscrowTransaction.hpp"
 
 namespace sgns
 {
@@ -58,18 +59,23 @@ namespace sgns
     }
     void TransactionManager::TransferFunds( const uint256_t &amount, const uint256_t &destination )
     {
-        auto transfer_transaction = std::make_shared<sgns::TransferTransaction>( amount, destination, FillDAGStruct() );
+        auto transfer_transaction = std::make_shared<TransferTransaction>( amount, destination, FillDAGStruct() );
         this->EnqueueTransaction( transfer_transaction );
     }
     void TransactionManager::MintFunds( const uint64_t &amount )
     {
-        auto mint_transaction = std::make_shared<sgns::MintTransaction>( amount, FillDAGStruct() );
+        auto mint_transaction = std::make_shared<MintTransaction>( amount, FillDAGStruct() );
         this->EnqueueTransaction( mint_transaction );
     }
-    void TransactionManager::HoldEscrow( const uint64_t &amount )
+    void TransactionManager::HoldEscrow( const uint64_t &amount, const std::string &job_id )
     {
-        auto mint_transaction = std::make_shared<sgns::MintTransaction>( amount, FillDAGStruct() );
-        this->EnqueueTransaction( mint_transaction );
+        auto escrow_transaction = std::make_shared<EscrowTransaction>( amount, job_id, FillDAGStruct() );
+        this->EnqueueTransaction( escrow_transaction );
+    }
+    void TransactionManager::ReleaseEscrow( const std::string &job_id )
+    {
+        auto escrow_transaction = std::make_shared<EscrowTransaction>( job_id, FillDAGStruct() );
+        this->EnqueueTransaction( escrow_transaction );
     }
 
     void TransactionManager::Update()
@@ -222,6 +228,23 @@ namespace sgns
                 }
                 else if ( maybe_dag.value().type() == "escrow" )
                 {
+                    m_logger->info( "Escrow transaction" );
+                    EscrowTransaction tx = EscrowTransaction::DeSerializeByteVector( maybe_transaction_data.value().toVector() );
+
+                    //std::cout << tx.GetAddress<std::string>() << std::endl;
+                    if ( tx.GetSrcAddress<uint256_t>() == account_m->GetAddress<uint256_t>() )
+                    {
+                        if ( tx.IsRelease() )
+                        {
+                            //account_m->balance += tx.GetAmount(); THIS AMOUNT IS ZERO ATM
+                            m_logger->info( "Released Escrow, balance " + std::to_string( account_m->balance ) );
+                        }
+                        else
+                        {
+                            account_m->balance -= tx.GetAmount();
+                            m_logger->info( "Hold Escrow, balance " + std::to_string( account_m->balance ) );
+                        }
+                    }
                 }
                 else if ( maybe_dag.value().type() == "process" )
                 {

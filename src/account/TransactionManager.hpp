@@ -37,7 +37,8 @@ namespace sgns
 
         void TransferFunds( const uint256_t &amount, const uint256_t &destination );
         void MintFunds( const uint64_t &amount );
-        void HoldEscrow( const uint64_t &amount );
+        void HoldEscrow( const uint64_t &amount, const std::string &job_id );
+        void ReleaseEscrow( const std::string &job_id );
 
     private:
         std::shared_ptr<crdt::GlobalDB>                  db_m;

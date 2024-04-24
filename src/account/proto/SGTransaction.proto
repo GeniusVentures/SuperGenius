@@ -36,3 +36,10 @@ message MintTx
     DAGStruct dag_struct = 1;// 
     uint64 amount = 2; // 
 }
+message EscrowTx
+{
+    DAGStruct dag_struct = 1;// 
+    uint64 amount = 2; // 
+    string job_cid = 3; // 
+    bool is_release = 4; //
+}

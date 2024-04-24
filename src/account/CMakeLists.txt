@@ -6,6 +6,7 @@ add_library(sgns_account
     TransferTransaction.cpp
     MintTransaction.cpp
     ProcessingTransaction.cpp
+    EscrowTransaction.cpp
     AccountManager.cpp
 )
 
