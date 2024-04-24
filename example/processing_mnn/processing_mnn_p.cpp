@@ -78,7 +78,7 @@ int main(int argc, char* argv[])
     auto io = std::make_shared<boost::asio::io_context>();
     
     //Client
-    pubs2->Start(40001 + serviceindex, { "/ip4/192.168.56.1/tcp/40001/p2p/12D3KooWJs2FZMNDC8u8Y8ajpUXTRcDhRQhzyTP1Rif8P6XeCgoZ" });
+    pubs2->Start(40001 + serviceindex, { "/ip4/192.168.46.18/tcp/40001/p2p/12D3KooWGvxwN8q3GqM2McBcZgGjpc86qPbKGdTG63T2sJUhcibh" });
     
     //Create GlobalDB
     //size_t serviceindex = 1;

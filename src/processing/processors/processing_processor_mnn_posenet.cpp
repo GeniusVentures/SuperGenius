@@ -33,7 +33,8 @@ namespace sgns::processing
                     auto width = ChunkSplit.GetPartWidthActual(chunkIdx);
                     auto height = ChunkSplit.GetPartHeightActual(chunkIdx);
                     //auto mnnproc = sgns::mnn::MNN_PoseNet(&data, modelFile_, width, height, (boost::format("%s_%s") % "RESULT_IPFS" % std::to_string(chunkIdx)).str() + ".png");
-                    auto procresults = MNNProcess(&data, width, height);
+                    std::string filenametemp = "./block/" + std::to_string(chunkIdx) + ".png";
+                    auto procresults = MNNProcess(&data, width, height, filenametemp);
 
                     gsl::span<const uint8_t> byte_span(procresults);
 
@@ -67,6 +68,7 @@ namespace sgns::processing
             size_t dotPos = filePath.find_last_of('.');
             if (dotPos != std::string::npos && dotPos < filePath.size() - 1) {
                 std::string extension = filePath.substr(dotPos + 1);
+                std::cout << "extension::: " << extension << std::endl;
                 if (extension == "mnn")
                 {
                     //modelFile_ = new std::vector<uint8_t>();
@@ -89,7 +91,7 @@ namespace sgns::processing
     }
 
     std::vector<uint8_t> MNN_PoseNet::MNNProcess(std::vector<uint8_t>* imgdata, const int origwidth,
-        const int origheight)
+        const int origheight, const std::string filename)
     {
 
         unsigned char* data = reinterpret_cast<unsigned char*>(imgdata->data());
@@ -171,7 +173,8 @@ namespace sgns::processing
         }
 
         drawPose(data, origwidth, origheight, poseScores, poseKeypointScores, poseKeypointCoords);
-        stbi_write_png(fileName_.c_str(), origwidth, origheight, 4, data, 4 * origwidth);
+        std::cout << "Filename " << filename.c_str() << std::endl;
+        stbi_write_png(filename.c_str(), origwidth, origheight, 4, data, 4 * origwidth);
         return std::vector<uint8_t>(data, data + imageData_->size());
     }
 
