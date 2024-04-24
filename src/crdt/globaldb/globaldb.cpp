@@ -44,6 +44,28 @@ GlobalDB::GlobalDB(
 {
 }
 
+
+std::string GetLocalIP(boost::asio::io_context& io)
+{
+    boost::asio::ip::tcp::resolver resolver(io);
+    boost::asio::ip::tcp::resolver::query query(boost::asio::ip::host_name(), "");
+    boost::asio::ip::tcp::resolver::iterator it = resolver.resolve(query);
+    boost::asio::ip::tcp::resolver::iterator end;
+    std::string addr("127.0.0.1");
+    while (it != end)
+    {
+        auto ep = it->endpoint();
+        if (ep.address().is_v4())
+        {
+            addr = ep.address().to_string();
+            break;
+        }
+        ++it;
+    }
+    return addr;
+}
+
+
 outcome::result<void> GlobalDB::Init(std::shared_ptr<CrdtOptions> crdtOptions)
 {
     std::shared_ptr<RocksDB> dataStore = nullptr;
@@ -89,8 +111,11 @@ outcome::result<void> GlobalDB::Init(std::shared_ptr<CrdtOptions> crdtOptions)
 
     auto dagSyncerHost = injector.create<std::shared_ptr<libp2p::Host>>();
 
-    auto listen_to = libp2p::multi::Multiaddress::create(
-        (boost::format("/ip4/127.0.0.1/tcp/%d/ipfs/%s") % m_dagSyncPort % dagSyncerHost->getId().toBase58()).str()).value();
+
+    std::string localaddress = (boost::format("/ip4/%s/tcp/%d/p2p/%s") % GetLocalIP(*io) % m_dagSyncPort % dagSyncerHost->getId().toBase58()).str();
+    //auto listen_to = libp2p::multi::Multiaddress::create(
+    //    (boost::format("/ip4/192.168.46.18/tcp/%d/ipfs/%s") % m_dagSyncPort % dagSyncerHost->getId().toBase58()).str()).value();
+    auto listen_to = libp2p::multi::Multiaddress::create(localaddress).value();
     m_logger->debug(listen_to.getStringAddress());
 
     auto scheduler = std::make_shared<libp2p::protocol::AsioScheduler>(io, libp2p::protocol::SchedulerConfig{});
