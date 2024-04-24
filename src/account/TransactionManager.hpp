@@ -37,6 +37,7 @@ namespace sgns
 
         void TransferFunds( const uint256_t &amount, const uint256_t &destination );
         void MintFunds( const uint64_t &amount );
+        void HoldEscrow( const uint64_t &amount );
 
     private:
         std::shared_ptr<crdt::GlobalDB>                  db_m;
@@ -55,16 +56,7 @@ namespace sgns
 
         base::Logger m_logger = sgns::base::createLogger( "TransactionManager" );
 
-        static constexpr std::string_view TRANSACTION_BASE_FORMAT = "bc-%hu/%x/tx/";
-        static constexpr std::string_view TRANSFER_FORMAT         = "transfer/%llu";
-        static constexpr std::string_view PROCESSING_FORMAT       = "processing/%s/%s/%llu";
-        static constexpr std::string_view MINT_FORMAT             = "mint/%llu";
-        static constexpr std::string_view ESCROW_FORMAT           = "escrow/%llu";
-
-        static const boost::format transfer_fmt_template;
-        static const boost::format process_fmt_template;
-        static const boost::format mint_fmt_template;
-        static const boost::format escrow_fmt_template;
+        static constexpr std::string_view TRANSACTION_BASE_FORMAT = "bc-%hu/";
 
         void                     Update();
         void                     EnqueueTransaction( std::shared_ptr<IGeniusTransactions> element );

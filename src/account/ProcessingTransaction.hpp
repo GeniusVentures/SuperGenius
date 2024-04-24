@@ -17,16 +17,24 @@ namespace sgns
     class ProcessingTransaction : public IGeniusTransactions
     {
     public:
-        ProcessingTransaction( uint256_t hash, const SGTransaction::DAGStruct &dag);
+        ProcessingTransaction( uint256_t hash, const SGTransaction::DAGStruct &dag );
         ~ProcessingTransaction() = default;
 
         std::vector<uint8_t>         SerializeByteVector() override;
         static ProcessingTransaction DeSerializeByteVector( const std::vector<uint8_t> &data );
 
+        std::string GetTransactionSpecificPath() override
+        {
+            boost::format processing_fmt( GetType() + "/%s/%s" );
+
+            processing_fmt % job_id % subtask_id;
+            return processing_fmt.str();
+        }
+
     private:
-        //std::string          job_id;            ///< Job ID
-        //std::string          subtask_id;        ///< SubTask ID
-        uint256_t hash_process_data; ///< Hash of the process data
+        std::string job_id;            ///< Job ID
+        std::string subtask_id;        ///< SubTask ID
+        uint256_t   hash_process_data; ///< Hash of the process data
         //std::vector<uint8_t> raw_data;          ///<The data being processed
     };
 }

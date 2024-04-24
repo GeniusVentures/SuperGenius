@@ -20,7 +20,12 @@ namespace sgns
 
         std::vector<uint8_t>   SerializeByteVector() override;
         static MintTransaction DeSerializeByteVector( const std::vector<uint8_t> &data );
-        const uint64_t         GetAmount() const;
+        uint64_t               GetAmount() const;
+
+        std::string GetTransactionSpecificPath() override
+        {
+            return GetType();
+        }
 
     private:
         uint64_t amount;

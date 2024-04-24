@@ -53,7 +53,13 @@ namespace sgns
         template <typename T>
         const T GetAmount() const;
 
+        std::string GetTransactionSpecificPath() override
+        {
+            return GetType();
+        }
+
     private:
+
         uint256_t encrypted_amount; ///< El Gamal encrypted amount
         uint256_t dest_address;     ///< Destination node address
     };
