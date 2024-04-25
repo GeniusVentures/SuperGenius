@@ -19,7 +19,7 @@ namespace sgns::processing
         
         if (cidData_.find(subTask.ipfsblock()) == cidData_.end())
         {
-            auto buffers = GetCidForProc(subTask, result, subTask.ipfsblock());
+            auto buffers = GetCidForProc(subTask.ipfsblock());
             SGProcessing::Task task;
             auto queryTasks = m_db->Get("tasks/TASK_" + subTask.ipfsblock());
             if (queryTasks.has_value())
@@ -45,9 +45,7 @@ namespace sgns::processing
     }
 
 
-    std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> ProcessingCoreImpl::GetCidForProc(const SGProcessing::SubTask& subTask, 
-        SGProcessing::SubTaskResult& result, 
-        std::string cid)
+    std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> ProcessingCoreImpl::GetCidForProc(std::string cid)
     {
         //ASIO for Async, should probably be made to use the main IO but this class doesn't have it 
         libp2p::protocol::kademlia::Config kademlia_config;
@@ -62,18 +60,16 @@ namespace sgns::processing
         boost::asio::io_context::executor_type executor = ioc->get_executor();
         boost::asio::executor_work_guard<boost::asio::io_context::executor_type> workGuard(executor);
 
-        //std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> mainbuffers;
         auto mainbuffers = std::make_shared<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>();
 
         //Get Image Async
         FileManager::GetInstance().InitializeSingletons();
-        //string fileURL = "ipfs://" + subTask.ipfsblock() + "/test.png";
         string fileURL = "https://ipfs.filebase.io/ipfs/" + cid + "/settings.json";
         std::cout << "FILE URLL: " << fileURL << std::endl;
-        auto data = FileManager::GetInstance().LoadASync(fileURL, false, false, ioc, [&result, &subTask, ioc, this](const int& status)
+        auto data = FileManager::GetInstance().LoadASync(fileURL, false, false, ioc, [ioc, this](const int& status)
             {
                 std::cout << "status: " << status << std::endl;
-            }, [subTask, &result, ioc, &mainbuffers, this](std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers)
+            }, [ioc, &mainbuffers, this](std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers)
                 {
                     std::cout << "Final Callback" << std::endl;
 
@@ -93,7 +89,7 @@ namespace sgns::processing
         ioc->reset();
         ioc->run();
 
-        //Parse json
+        //Parse json to look for settings
         size_t index = std::string::npos;
         for (size_t i = 0; i < mainbuffers->first.size(); ++i) {
             if (mainbuffers->first[i].find("settings.json") != std::string::npos) {
@@ -104,7 +100,7 @@ namespace sgns::processing
         if (index == std::string::npos)
         {
             std::cerr << "settings.json doesn't exist" << std::endl;
-            return  mainbuffers;
+            return mainbuffers;
         }
         std::vector<char>& jsonData = mainbuffers->second[index];
         std::string jsonString(jsonData.begin(), jsonData.end());
@@ -113,10 +109,10 @@ namespace sgns::processing
         if (!this->SetProcessingTypeFromJson(jsonString))
         {
             std::cerr << "No processor available for this type:" << jsonString << std::endl;
-            return  mainbuffers;
+            return mainbuffers;
         }
 
-        //Parse json
+        //Parse json to look for model/image
         rapidjson::Document document;
         document.Parse(jsonString.c_str());
         std::string modelFile = "";
@@ -149,18 +145,20 @@ namespace sgns::processing
         //Make results keepers
         std::pair<std::vector<std::string>, std::vector<std::vector<char>>> modelData;
         std::pair<std::vector<std::string>, std::vector<std::vector<char>>> imageData;
+
         //Get Model
-        string modelURL = "https://ipfs.filebase.io/ipfs/" + subTask.ipfsblock() + "/" + modelFile;
-        GetSubCidForProc(ioc, modelURL, modelData);
+        string modelURL = "https://ipfs.filebase.io/ipfs/" + cid + "/" + modelFile;
+        GetSubCidForProc(ioc, modelURL, mainbuffers);
 
 
-        //Get Image, TODO: Update to grab multiple
-        string imageUrl = "https://ipfs.filebase.io/ipfs/" + subTask.ipfsblock() + "/" + inputImage;
-        GetSubCidForProc(ioc, imageUrl, imageData);
+        //Get Image, TODO: Update to grab multiple files if needed
+        string imageUrl = "https://ipfs.filebase.io/ipfs/" + cid + "/" + inputImage;
+        GetSubCidForProc(ioc, imageUrl, mainbuffers);
 
         //Run IO
         ioc->reset();
         ioc->run();
+
         //Insert data obtained
         mainbuffers->first.insert(mainbuffers->first.end(), modelData.first.begin(), modelData.first.end());
         mainbuffers->second.insert(mainbuffers->second.end(), modelData.second.begin(), modelData.second.end());
@@ -170,7 +168,7 @@ namespace sgns::processing
         return mainbuffers;
     }
 
-    void ProcessingCoreImpl::GetSubCidForProc(std::shared_ptr<boost::asio::io_context> ioc,std::string url, std::pair<std::vector<std::string>, std::vector<std::vector<char>>> &results)
+    void ProcessingCoreImpl::GetSubCidForProc(std::shared_ptr<boost::asio::io_context> ioc,std::string url, std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>& results)
     {
         //std::pair<std::vector<std::string>, std::vector<std::vector<char>>> results;
         auto modeldata = FileManager::GetInstance().LoadASync(url, false, false, ioc, [this](const int& status)
@@ -178,8 +176,8 @@ namespace sgns::processing
                 std::cout << "status: " << status << std::endl;
             }, [&results, this](std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers)
                 {
-                    results.first.insert(results.first.end(), buffers->first.begin(), buffers->first.end());
-                    results.second.insert(results.second.end(), buffers->second.begin(), buffers->second.end());
+                    results->first.insert(results->first.end(), buffers->first.begin(), buffers->first.end());
+                    results->second.insert(results->second.end(), buffers->second.begin(), buffers->second.end());
                 }, "file");
 
     }

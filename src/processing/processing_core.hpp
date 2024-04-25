@@ -34,8 +34,16 @@ public:
     */
     virtual bool SetProcessingTypeFromJson(std::string jsondata) = 0;
 
-    virtual std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> GetCidForProc(const SGProcessing::SubTask& subTask, SGProcessing::SubTaskResult& result, std::string cid) = 0;
-    virtual void GetSubCidForProc(std::shared_ptr<boost::asio::io_context> ioc, std::string url, std::pair<std::vector<std::string>, std::vector<std::vector<char>>>& results) = 0;
+    /** Get settings.json and then get data we need for processing based on parsing
+    * @param CID - CID of directory to get settings.json from
+    */
+    virtual std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> GetCidForProc(std::string cid) = 0;
+    /** Get files from a set URL and insert them into pair reference
+    * @param ioc - IO context to run on
+    * @param url - ipfs gateway url to get from
+    * @param results - reference to data pair to insert into.
+    */
+    virtual void GetSubCidForProc(std::shared_ptr<boost::asio::io_context> ioc, std::string url, std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>& results) = 0;
 };
 
 } // namespace sgns::processing
