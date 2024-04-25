@@ -32,6 +32,9 @@ public:
     * @param jsondata - jsondata that needs to be parsed
     */
     virtual bool SetProcessingTypeFromJson(std::string jsondata) = 0;
+
+    virtual std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> GetCidForProc(const SGProcessing::SubTask& subTask, SGProcessing::SubTaskResult& result, std::string cid) = 0;
+    virtual std::pair<std::vector<std::string>, std::vector<std::vector<char>>> GetSubCidForProc(std::string url) = 0;
 };
 
 } // namespace sgns::processing

@@ -71,6 +71,8 @@ namespace sgns::processing
         */
         bool SetProcessingTypeFromJson(std::string jsondata) override;
 
+        std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> GetCidForProc(const SGProcessing::SubTask& subTask, SGProcessing::SubTaskResult& result, std::string cid) override;
+        std::pair<std::vector<std::string>, std::vector<std::vector<char>>> GetSubCidForProc(std::string url) override;
 
         std::vector<size_t> m_chunkResulHashes;
         std::vector<size_t> m_validationChunkHashes;
