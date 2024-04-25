@@ -146,24 +146,33 @@ namespace sgns::processing
             }
         }
 
-            //Get Model
+        //Make results keepers
+        std::pair<std::vector<std::string>, std::vector<std::vector<char>>> modelData;
+        std::pair<std::vector<std::string>, std::vector<std::vector<char>>> imageData;
+        //Get Model
         string modelURL = "https://ipfs.filebase.io/ipfs/" + subTask.ipfsblock() + "/" + modelFile;
-        auto modelData = GetSubCidForProc(ioc, modelURL);
+        GetSubCidForProc(ioc, modelURL, modelData);
+
+
+        //Get Image, TODO: Update to grab multiple
+        string imageUrl = "https://ipfs.filebase.io/ipfs/" + subTask.ipfsblock() + "/" + inputImage;
+        GetSubCidForProc(ioc, imageUrl, imageData);
+
+        //Run IO
+        ioc->reset();
+        ioc->run();
+        //Insert data obtained
         mainbuffers->first.insert(mainbuffers->first.end(), modelData.first.begin(), modelData.first.end());
         mainbuffers->second.insert(mainbuffers->second.end(), modelData.second.begin(), modelData.second.end());
-
-            //Get Image, TODO: Update to grab multiple
-        string imageUrl = "https://ipfs.filebase.io/ipfs/" + subTask.ipfsblock() + "/" + inputImage;
-        auto imageData = GetSubCidForProc(ioc, imageUrl);
         mainbuffers->first.insert(mainbuffers->first.end(), imageData.first.begin(), imageData.first.end());
         mainbuffers->second.insert(mainbuffers->second.end(), imageData.second.begin(), imageData.second.end());
 
         return mainbuffers;
     }
 
-    std::pair<std::vector<std::string>, std::vector<std::vector<char>>> ProcessingCoreImpl::GetSubCidForProc(std::shared_ptr<boost::asio::io_context> ioc,std::string url)
+    void ProcessingCoreImpl::GetSubCidForProc(std::shared_ptr<boost::asio::io_context> ioc,std::string url, std::pair<std::vector<std::string>, std::vector<std::vector<char>>> &results)
     {
-        std::pair<std::vector<std::string>, std::vector<std::vector<char>>> results;
+        //std::pair<std::vector<std::string>, std::vector<std::vector<char>>> results;
         auto modeldata = FileManager::GetInstance().LoadASync(url, false, false, ioc, [this](const int& status)
             {
                 std::cout << "status: " << status << std::endl;
@@ -173,10 +182,6 @@ namespace sgns::processing
                     results.second.insert(results.second.end(), buffers->second.begin(), buffers->second.end());
                 }, "file");
 
-        
-        ioc->reset();
-        ioc->run();
-        return results;
     }
 
 

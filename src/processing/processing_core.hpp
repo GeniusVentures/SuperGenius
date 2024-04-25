@@ -35,7 +35,7 @@ public:
     virtual bool SetProcessingTypeFromJson(std::string jsondata) = 0;
 
     virtual std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> GetCidForProc(const SGProcessing::SubTask& subTask, SGProcessing::SubTaskResult& result, std::string cid) = 0;
-    virtual std::pair<std::vector<std::string>, std::vector<std::vector<char>>> GetSubCidForProc(std::shared_ptr<boost::asio::io_context> ioc, std::string url) = 0;
+    virtual void GetSubCidForProc(std::shared_ptr<boost::asio::io_context> ioc, std::string url, std::pair<std::vector<std::string>, std::vector<std::vector<char>>>& results) = 0;
 };
 
 } // namespace sgns::processing
