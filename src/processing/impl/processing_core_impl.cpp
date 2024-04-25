@@ -36,7 +36,9 @@ namespace sgns::processing
             std::string hashString(tempresult.begin(), tempresult.end());
             result.set_result_hash(hashString);
         }
-        std::cout << "Outside of processing core -------------------------------------------- " << std::endl;
+        else {
+
+        }
         //TODO: Pass CIDData Into this and start processing
         //m_processor->SetData(cidData_);
         //m_processor->StartProcessing();
@@ -60,7 +62,9 @@ namespace sgns::processing
         boost::asio::io_context::executor_type executor = ioc->get_executor();
         boost::asio::executor_work_guard<boost::asio::io_context::executor_type> workGuard(executor);
 
-        std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> mainbuffers;
+        //std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> mainbuffers;
+        auto mainbuffers = std::make_shared<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>();
+
         //Get Image Async
         FileManager::GetInstance().InitializeSingletons();
         //string fileURL = "ipfs://" + subTask.ipfsblock() + "/test.png";
@@ -69,7 +73,7 @@ namespace sgns::processing
         auto data = FileManager::GetInstance().LoadASync(fileURL, false, false, ioc, [&result, &subTask, ioc, this](const int& status)
             {
                 std::cout << "status: " << status << std::endl;
-            }, [subTask, &result, ioc, mainbuffers, this](std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers)
+            }, [subTask, &result, ioc, &mainbuffers, this](std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers)
                 {
                     std::cout << "Final Callback" << std::endl;
 
@@ -80,117 +84,99 @@ namespace sgns::processing
                     }
                     else {
                         //Process settings json
-                        size_t index = std::string::npos;
-                        for (size_t i = 0; i < buffers->first.size(); ++i) {
-                            if (buffers->first[i].find("settings.json") != std::string::npos) {
-                                index = i;
-                                break;
-                            }
-                        }
-                        if (index == std::string::npos)
-                        {
-                            std::cerr << "settings.json doesn't exist" << std::endl;
-                            return;
-                        }
-                        std::vector<char>& jsonData = buffers->second[index];
-                        std::string jsonString(jsonData.begin(), jsonData.end());
 
-                        //Set processor or fail.
-                        if (!this->SetProcessingTypeFromJson(jsonString))
-                        {
-                            return;
-                        }
 
-                        //Parse json
-                        rapidjson::Document document;
-                        document.Parse(jsonString.c_str());
-                        std::string modelFile = "";
-                        // Extract model name
-                        if (document.HasMember("model") && document["model"].IsObject()) {
-                            const auto& model = document["model"];
-                            if (model.HasMember("file") && model["file"].IsString()) {
-                                modelFile = model["file"].GetString();
-                                std::cout << "Model File: " << modelFile << std::endl;
-                            }
-                            else {
-                                std::cerr << "No model file" << std::endl;
-                                return;
-                            }
-                        }
-                        // Extract input image name
-                        std::string inputImage = "";
-                        if (document.HasMember("input") && document["input"].IsObject()) {
-                            const auto& input = document["input"];
-                            if (input.HasMember("image") && input["image"].IsString()) {
-                                inputImage = input["image"].GetString();
-                                std::cout << "Input Image: " << inputImage << std::endl;
-                            }
-                            else {
-                                std::cerr << "No Input file" << std::endl;
-                                return;
-                            }
-                        }
                         mainbuffers->first.insert(mainbuffers->first.end(), buffers->first.begin(), buffers->first.end());
                         mainbuffers->second.insert(mainbuffers->second.end(), buffers->second.begin(), buffers->second.end());
-                        ////TODO: This is ugly and needs to be more elegant
-                        string modelURL = "https://ipfs.filebase.io/ipfs/" + subTask.ipfsblock() + "/" + modelFile;
-                        auto modeldata = FileManager::GetInstance().LoadASync(modelURL, false, false, ioc, [&result, &subTask, ioc, this](const int& status)
-                            {
-                                std::cout << "status: " << status << std::endl;
-                            }, [subTask, &result, ioc, inputImage, mainbuffers, this](std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> modelbuffers)
-                                {
-                                    if (!modelbuffers || (modelbuffers->first.empty() && modelbuffers->second.empty()))
-                                    {
-                                        std::cout << "Buffer from AsyncIO is 0" << std::endl;
-                                        return;
-                                    }
-                                    else {
-                                        mainbuffers->first.insert(mainbuffers->first.end(), modelbuffers->first.begin(), modelbuffers->first.end());
-                                        mainbuffers->second.insert(mainbuffers->second.end(), modelbuffers->second.begin(), modelbuffers->second.end());
-                                        string dataUrl = "https://ipfs.filebase.io/ipfs/" + subTask.ipfsblock() + "/" + inputImage;
-                                        auto filedata = FileManager::GetInstance().LoadASync(dataUrl, false, false, ioc, [&result, &subTask, ioc, this](const int& status)
-                                            {
-                                                std::cout << "status: " << status << std::endl;
-                                            }, [subTask, &result, ioc, mainbuffers, this](std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> databuffers)
-                                                {
-                                                    if (!databuffers || (databuffers->first.empty() && databuffers->second.empty()))
-                                                    {
-                                                        std::cout << "Buffer from AsyncIO is 0" << std::endl;
-                                                        return;
-                                                    }
-                                                    else {
-                                                        mainbuffers->first.insert(mainbuffers->first.end(), databuffers->first.begin(), databuffers->first.end());
-                                                        mainbuffers->second.insert(mainbuffers->second.end(), databuffers->second.begin(), databuffers->second.end());
-
-                                                    }
-                                                }, "file");
-                                        //ioc->reset();
-                                        //ioc->run();
-                                    }
-
-                                }, "file");
                     }
                 }, "file");
-        //std::cout << "Reset -----------------------" << std::endl;
         ioc->reset();
         ioc->run();
+
+        //Parse json
+        size_t index = std::string::npos;
+        for (size_t i = 0; i < mainbuffers->first.size(); ++i) {
+            if (mainbuffers->first[i].find("settings.json") != std::string::npos) {
+                index = i;
+                break;
+            }
+        }
+        if (index == std::string::npos)
+        {
+            std::cerr << "settings.json doesn't exist" << std::endl;
+            return  mainbuffers;
+        }
+        std::vector<char>& jsonData = mainbuffers->second[index];
+        std::string jsonString(jsonData.begin(), jsonData.end());
+
+        //Set processor or fail.
+        if (!this->SetProcessingTypeFromJson(jsonString))
+        {
+            std::cerr << "No processor available for this type:" << jsonString << std::endl;
+            return  mainbuffers;
+        }
+
+        //Parse json
+        rapidjson::Document document;
+        document.Parse(jsonString.c_str());
+        std::string modelFile = "";
+        // Extract model name
+        if (document.HasMember("model") && document["model"].IsObject()) {
+            const auto& model = document["model"];
+            if (model.HasMember("file") && model["file"].IsString()) {
+                modelFile = model["file"].GetString();
+                std::cout << "Model File: " << modelFile << std::endl;
+            }
+            else {
+                std::cerr << "No model file" << std::endl;
+                return mainbuffers;
+            }
+        }
+        // Extract input image name
+        std::string inputImage = "";
+        if (document.HasMember("input") && document["input"].IsObject()) {
+            const auto& input = document["input"];
+            if (input.HasMember("image") && input["image"].IsString()) {
+                inputImage = input["image"].GetString();
+                std::cout << "Input Image: " << inputImage << std::endl;
+            }
+            else {
+                std::cerr << "No Input file" << std::endl;
+                return mainbuffers;
+            }
+        }
+
+            //Get Model
+        string modelURL = "https://ipfs.filebase.io/ipfs/" + subTask.ipfsblock() + "/" + modelFile;
+        auto modelData = GetSubCidForProc(ioc, modelURL);
+        mainbuffers->first.insert(mainbuffers->first.end(), modelData.first.begin(), modelData.first.end());
+        mainbuffers->second.insert(mainbuffers->second.end(), modelData.second.begin(), modelData.second.end());
+
+            //Get Image, TODO: Update to grab multiple
+        string imageUrl = "https://ipfs.filebase.io/ipfs/" + subTask.ipfsblock() + "/" + inputImage;
+        auto imageData = GetSubCidForProc(ioc, imageUrl);
+        mainbuffers->first.insert(mainbuffers->first.end(), imageData.first.begin(), imageData.first.end());
+        mainbuffers->second.insert(mainbuffers->second.end(), imageData.second.begin(), imageData.second.end());
+
         return mainbuffers;
     }
 
-    std::pair<std::vector<std::string>, std::vector<std::vector<char>>> ProcessingCoreImpl::GetSubCidForProc(std::string url)
+    std::pair<std::vector<std::string>, std::vector<std::vector<char>>> ProcessingCoreImpl::GetSubCidForProc(std::shared_ptr<boost::asio::io_context> ioc,std::string url)
     {
         std::pair<std::vector<std::string>, std::vector<std::vector<char>>> results;
-        //auto modeldata = FileManager::GetInstance().LoadASync(url, false, false, [&results, this](const int& status)
-        //    {
-        //        std::cout << "status: " << status << std::endl;
-        //    }, [&results, this](std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers)
-        //        {
-        //            results.first.insert(result.first.end(), buffers->first.begin(), buffers->second.end());
-        //            results.second.insert(result.second.end(), buffers->second.begin(), buffers->second.end());
-        //        }, "file");
+        auto modeldata = FileManager::GetInstance().LoadASync(url, false, false, ioc, [this](const int& status)
+            {
+                std::cout << "status: " << status << std::endl;
+            }, [&results, this](std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers)
+                {
+                    results.first.insert(results.first.end(), buffers->first.begin(), buffers->first.end());
+                    results.second.insert(results.second.end(), buffers->second.begin(), buffers->second.end());
+                }, "file");
 
+        
+        ioc->reset();
+        ioc->run();
         return results;
-
     }
 
 
