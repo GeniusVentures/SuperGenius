@@ -93,7 +93,7 @@ int main(int argc, char* argv[])
         SGProcessing::Task task;
         //std::cout << "CID STRING:    " << libp2p::multi::ContentIdentifierCodec::toString(imagesplit.GetPartCID(taskIdx)).value() << std::endl;
         //task.set_ipfs_block_id(libp2p::multi::ContentIdentifierCodec::toString(imagesplit.GetPartCID(taskIdx)).value());
-        task.set_ipfs_block_id("QmZTKxCQiQYmkLHMTYNuY8sr2vXRU6ZnPYPSDbBV7op2mP");
+        task.set_ipfs_block_id("QmUDMvGQXbUKMsjmTzjf4ZuMx7tHx6Z4x8YH8RbwrgyGAf");
         //task.set_block_len(48600);
         //task.set_block_line_stride(540);
         //task.set_block_stride(4860);

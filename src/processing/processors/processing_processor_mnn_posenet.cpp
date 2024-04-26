@@ -8,7 +8,10 @@ namespace sgns::processing
     {
         for (auto image : *imageData_)
         {
-            ImageSplitter animageSplit(image, task.block_line_stride(), task.block_stride(), task.block_len());
+            std::vector<uint8_t> output(image.size());
+            std::transform(image.begin(), image.end(), output.begin(),
+                [](char c) { return static_cast<uint8_t>(c); });
+            ImageSplitter animageSplit(output, task.block_line_stride(), task.block_stride(), task.block_len());
             auto dataindex = 0;
             auto basechunk = subTask.chunkstoprocess(0);
             bool isValidationSubTask = (subTask.subtaskid() == "subtask_validation");
@@ -173,8 +176,8 @@ namespace sgns::processing
         }
 
         drawPose(data, origwidth, origheight, poseScores, poseKeypointScores, poseKeypointCoords);
-        std::cout << "Filename " << filename.c_str() << std::endl;
-        stbi_write_png(filename.c_str(), origwidth, origheight, 4, data, 4 * origwidth);
+        //std::cout << "Filename " << filename.c_str() << std::endl;
+        //stbi_write_png(filename.c_str(), origwidth, origheight, 4, data, 4 * origwidth);
         return std::vector<uint8_t>(data, data + imageData_->size());
     }
 

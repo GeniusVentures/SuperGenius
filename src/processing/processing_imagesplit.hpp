@@ -2,8 +2,8 @@
 * Header file for splitting images based on block stride, line stride, and size
 * @author Justin Church
 */
-#ifndef PROCESSING_IMAGESPLIT_HPP
-#define PROCESSING_IMAGESPLIT_HPP
+//#ifndef PROCESSING_IMAGESPLIT_HPP
+//#define PROCESSING_IMAGESPLIT_HPP
 #include <math.h>
 #include <fstream>
 #include <iostream>
@@ -11,8 +11,8 @@
 #include <vector>
 #include <openssl/sha.h>
 #include <libp2p/multi/content_identifier_codec.hpp>
-#include <stb_image.h>
-#include <stb_image_write.h>
+//#include <stb_image.h>
+//#include <stb_image_write.h>
 
 namespace sgns::processing
 {
