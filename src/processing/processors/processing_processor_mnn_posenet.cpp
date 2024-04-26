@@ -82,6 +82,10 @@ namespace sgns::processing
                 {
                     imageData_->push_back(fileDatas[i]);
                 }
+                else if (extension == "data")
+                {
+                    imageData_->push_back(fileDatas[i]);
+                }
                 else if (extension == "json")
                 {
 

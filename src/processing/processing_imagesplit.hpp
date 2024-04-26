@@ -2,8 +2,8 @@
 * Header file for splitting images based on block stride, line stride, and size
 * @author Justin Church
 */
-//#ifndef PROCESSING_IMAGESPLIT_HPP
-//#define PROCESSING_IMAGESPLIT_HPP
+#ifndef PROCESSING_IMAGESPLIT_HPP
+#define PROCESSING_IMAGESPLIT_HPP
 #include <math.h>
 #include <fstream>
 #include <iostream>
