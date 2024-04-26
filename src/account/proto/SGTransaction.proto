@@ -16,12 +16,24 @@ message DAGWrapper
 {
     DAGStruct dag_struct = 1;// 
 }
+
+message TransferUTXOInput
+{
+    bytes tx_id_hash = 1; // 
+    uint32 output_index = 2; //
+    bytes signature = 3; //
+}
+message TransferOutput
+{
+    bytes encrypted_amount = 1; // 
+    bytes dest_addr = 2; // 
+}
 message TransferTx
 {
     DAGStruct dag_struct = 1;// 
     uint64 token_id = 2; // 
-    bytes encrypted_amount = 3; // 
-    bytes dest_addr = 4; // 
+    repeated TransferUTXOInput inputs = 3; // 
+    repeated TransferOutput outputs = 4; // 
 }
 message ProcessingTx
 {
