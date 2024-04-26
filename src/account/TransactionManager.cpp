@@ -48,7 +48,7 @@ namespace sgns
     void TransactionManager::PrintAccountInfo()
     {
         std::cout << "Account Address: " << account_m->GetAddress<std::string>() << std::endl;
-        std::cout << "Balance: " << account_m->GetBalance() << std::endl;
+        std::cout << "Balance: " << account_m->GetBalance<std::string>() << std::endl;
         std::cout << "Token Type: " << account_m->GetToken() << std::endl;
         std::cout << "Nonce: " << account_m->GetNonce() << std::endl;
     }
@@ -59,7 +59,12 @@ namespace sgns
     }
     void TransactionManager::TransferFunds( const uint256_t &amount, const uint256_t &destination )
     {
-        auto transfer_transaction = std::make_shared<TransferTransaction>( amount, destination, FillDAGStruct() );
+        auto                                             params = account_m->GetInputsFromUTXO( uint64_t{ amount } );
+        std::vector<TransferTransaction::OutputDestInfo> dest_infos;
+        dest_infos.push_back( TransferTransaction::OutputDestInfo{ amount, destination } );
+        dest_infos.push_back( TransferTransaction::OutputDestInfo{ uint256_t{ params.second }, account_m->GetAddress<uint256_t>() } );
+
+        auto transfer_transaction = std::make_shared<TransferTransaction>( dest_infos, params.first, FillDAGStruct() );
         this->EnqueueTransaction( transfer_transaction );
     }
     void TransactionManager::MintFunds( const uint64_t &amount )
@@ -202,29 +207,12 @@ namespace sgns
                 if ( maybe_dag.value().type() == "transfer" )
                 {
                     m_logger->info( "Transfer transaction" );
-                    TransferTransaction tx = TransferTransaction::DeSerializeByteVector( maybe_transaction_data.value().toVector() );
-                    if ( tx.GetDstAddress<uint256_t>() == account_m->GetAddress<uint256_t>() )
-                    {
-                        account_m->balance += static_cast<uint64_t>( tx.GetAmount<uint256_t>() );
-                        m_logger->info( "Added tokens, balance " + std::to_string( account_m->balance ) );
-                    }
-                    if ( tx.GetSrcAddress<uint256_t>() == account_m->GetAddress<uint256_t>() )
-                    {
-                        account_m->balance -= static_cast<uint64_t>( tx.GetAmount<uint256_t>() );
-                        m_logger->info( "Subtracted tokens, balance " + std::to_string( account_m->balance ) );
-                    }
+                    ParseTransferTransaction( maybe_transaction_data.value().toVector() );
                 }
                 else if ( maybe_dag.value().type() == "mint" )
                 {
                     m_logger->info( "Mint transaction" );
-                    MintTransaction tx = MintTransaction::DeSerializeByteVector( maybe_transaction_data.value().toVector() );
-
-                    //std::cout << tx.GetAddress<std::string>() << std::endl;
-                    if ( tx.GetSrcAddress<uint256_t>() == account_m->GetAddress<uint256_t>() )
-                    {
-                        account_m->balance += tx.GetAmount();
-                        m_logger->info( "Created tokens, balance " + std::to_string( account_m->balance ) );
-                    }
+                    ParseMintTransaction( maybe_transaction_data.value().toVector() );
                 }
                 else if ( maybe_dag.value().type() == "escrow" )
                 {
@@ -237,12 +225,12 @@ namespace sgns
                         if ( tx.IsRelease() )
                         {
                             //account_m->balance += tx.GetAmount(); THIS AMOUNT IS ZERO ATM
-                            m_logger->info( "Released Escrow, balance " + std::to_string( account_m->balance ) );
+                            m_logger->info( "Released Escrow, balance " + account_m->GetBalance<std::string>() );
                         }
                         else
                         {
-                            account_m->balance -= tx.GetAmount();
-                            m_logger->info( "Hold Escrow, balance " + std::to_string( account_m->balance ) );
+                            //account_m->balance -= tx.GetAmount();
+                            m_logger->info( "Hold Escrow, balance " + account_m->GetBalance<std::string>());
                         }
                     }
                 }
@@ -298,6 +286,37 @@ namespace sgns
             }
 
         } while ( retval );
+    }
+
+    void TransactionManager::ParseTransferTransaction( const std::vector<std::uint8_t> &transaction_data )
+    {
+        TransferTransaction tx = TransferTransaction::DeSerializeByteVector( transaction_data );
+
+        auto dest_infos = tx.GetDstInfos();
+
+        for ( std::uint32_t i = 0; i < dest_infos.size(); ++i )
+        {
+            if ( dest_infos[i].dest_address == account_m->GetAddress<uint256_t>() )
+            {
+                auto       hash = ( base::Hash256::fromReadableString( tx.dag_st.data_hash() ) ).value();
+                GeniusUTXO new_utxo( hash, i, uint64_t{ dest_infos[i].encrypted_amount } );
+                account_m->PutUTXO( new_utxo );
+            }
+        }
+
+        account_m->RefreshUTXOs( tx.GetInputInfos() );
+    }
+    void TransactionManager::ParseMintTransaction( const std::vector<std::uint8_t> &transaction_data )
+    {
+        MintTransaction tx = MintTransaction::DeSerializeByteVector( transaction_data );
+
+        if ( tx.GetSrcAddress<uint256_t>() == account_m->GetAddress<uint256_t>() )
+        {
+            auto       hash = ( base::Hash256::fromReadableString( tx.dag_st.data_hash() ) ).value();
+            GeniusUTXO new_utxo( hash, 0, tx.GetAmount() );
+            account_m->PutUTXO( new_utxo );
+            m_logger->info( "Created tokens, balance " + account_m->GetBalance<std::string>() );
+        }
     }
 
 }

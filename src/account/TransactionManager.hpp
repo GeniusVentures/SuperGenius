@@ -66,11 +66,14 @@ namespace sgns
         bool                     GetTransactionsFromBlock( const primitives::BlockNumber &block_number );
 
         void ParseTransaction( std::string transaction_key );
-        /**
+
+        void ParseTransferTransaction( const std::vector<std::uint8_t> &transaction_data );
+        void ParseMintTransaction( const std::vector<std::uint8_t> &transaction_data );
+
+            /**
          * @brief      Checks the blockchain for any new blocks to sync current values
          */
-        void CheckBlockchain();
-
+            void CheckBlockchain();
     };
 }
 

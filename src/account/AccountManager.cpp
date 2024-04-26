@@ -141,9 +141,7 @@ namespace sgns
         size_t                        nTasks = 1;
         for ( size_t taskIdx = 0; taskIdx < nTasks; ++taskIdx )
         {
-
             SGProcessing::Task task;
-            std::cout << "tasks" << std::endl;
             //std::cout << "CID STRING:    " << libp2p::multi::ContentIdentifierCodec::toString(imagesplit.GetPartCID(taskIdx)).value() << std::endl;
             //task.set_ipfs_block_id(libp2p::multi::ContentIdentifierCodec::toString(imagesplit.GetPartCID(taskIdx)).value());
             task.set_ipfs_block_id( "QmagrfcEhX6aVuFqrRoUU5K6yvjpNiCxnJA6o2tT38Kvxx" );
