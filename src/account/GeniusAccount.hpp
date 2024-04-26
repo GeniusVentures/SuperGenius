@@ -10,6 +10,7 @@
 #include <vector>
 #include <cstdint>
 #include <boost/multiprecision/cpp_int.hpp>
+#include "account/GeniusUTXO.hpp"
 
 using namespace boost::multiprecision;
 namespace sgns
@@ -26,10 +27,10 @@ namespace sgns
             //TODO - Retrieve values where? on Transaction manager?
         }
 
-        template<typename T>
+        template <typename T>
         const T GetAddress() const;
 
-        template<>
+        template <>
         const std::string GetAddress() const
         {
             std::ostringstream oss;
@@ -37,14 +38,14 @@ namespace sgns
 
             return ( "0x" + oss.str() );
         }
-        template<>
+        template <>
         const uint256_t GetAddress() const
         {
             return address;
         }
         const std::string GetBalance() const
         {
-            return std::to_string(balance);
+            return std::to_string( balance );
         }
         const std::string GetToken() const
         {
@@ -52,13 +53,14 @@ namespace sgns
         }
         const std::string GetNonce() const
         {
-            return std::to_string(nonce);
+            return std::to_string( nonce );
         }
 
-        uint256_t address;
-        uint64_t  balance;
-        uint8_t   token; //GNUS SGNUS ETC...
-        uint64_t  nonce;
+        uint256_t               address;
+        uint64_t                balance;
+        uint8_t                 token; //GNUS SGNUS ETC...
+        uint64_t                nonce;
+        std::vector<GeniusUTXO> utxos;
 
     private:
     };
