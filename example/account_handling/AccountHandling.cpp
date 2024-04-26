@@ -29,7 +29,7 @@
 #include "crypto/hasher/hasher_impl.hpp"
 
 #include <ipfs_lite/ipfs/graphsync/graphsync.hpp>
-#include "account/AccountManager.hpp"
+#include "account/GeniusAccount.hpp"
 
 std::vector<std::string> wallet_addr{ "0x4E8794BE4831C45D0699865028C8BE23D608C19C1E24371E3089614A50514262",
                                       "0x06DDC80283462181C02917CC3E99C7BC4BDB2856E19A392300A62DBA6262212C" };
@@ -75,13 +75,13 @@ void CreateTransferTransaction( const std::vector<std::string> &args, sgns::Tran
         return;
     }
     uint64_t amount = std::stoull( args[1] );
-    if ( amount > transaction_manager.GetAccount().balance )
+    if ( amount > transaction_manager.GetAccount().GetBalance<uint64_t>() )
     {
         std::cout << "Insufficient funds.\n";
     }
     else
     {
-        transaction_manager.TransferFunds(uint256_t{ args[1] }, uint256_t{ args[2] });
+        transaction_manager.TransferFunds( uint256_t{ args[1] }, uint256_t{ args[2] } );
     }
 }
 void CreateProcessingTransaction( const std::vector<std::string> &args, sgns::TransactionManager &transaction_manager )
@@ -93,7 +93,6 @@ void CreateProcessingTransaction( const std::vector<std::string> &args, sgns::Tr
     }
 
     //TODO - Create processing transaction
-
 }
 void MintTokens( const std::vector<std::string> &args, sgns::TransactionManager &transaction_manager )
 {
@@ -102,7 +101,7 @@ void MintTokens( const std::vector<std::string> &args, sgns::TransactionManager 
         std::cerr << "Invalid process command format.\n";
         return;
     }
-    transaction_manager.MintFunds(std::stoull( args[1] ));
+    transaction_manager.MintFunds( std::stoull( args[1] ) );
 }
 void PrintAccountInfo( const std::vector<std::string> &args, sgns::TransactionManager &transaction_manager )
 {
@@ -185,15 +184,13 @@ int main( int argc, char *argv[] )
     //loggerBroadcaster->set_level( spdlog::level::debug );
 
     //Inputs
-    size_t      serviceindex = std::strtoul( argv[1], nullptr, 10 );
-    std::string own_wallet_address( argv[2] );
-    std::string pubs_address( argv[3] );
-
-    auto maybe_account = sgns::AccountManager{}.CreateAccount( own_wallet_address, 100 );
+    size_t               serviceindex = std::strtoul( argv[1], nullptr, 10 );
+    std::string          own_wallet_address( argv[2] );
+    std::string          pubs_address( argv[3] );
 
     const std::string processingGridChannel = "GRID_CHANNEL_ID";
 
-    auto account = std::make_shared<sgns::GeniusAccount>( maybe_account.value() );
+    auto account = std::make_shared<sgns::GeniusAccount>( uint256_t{own_wallet_address},0,0 );
 
     auto pubsubKeyPath = ( boost::format( "CRDT.Datastore.TEST.%d/pubs_processor" ) % serviceindex ).str();
     auto pubs          = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>( sgns::crdt::KeyPairFileStorage( pubsubKeyPath ).GetKeyPair().value() );
@@ -207,12 +204,12 @@ int main( int argc, char *argv[] )
     std::cout << "***This is our pubsub address. Copy and past on other node third argument" << pubs->GetLocalAddress() << std::endl;
     std::cout << "BOOSTRAPPING  " << pubs->GetLocalAddress() << " with " << pubs_address << std::endl;
 
-    const size_t maximalNodesCount = 1;
+    //const size_t maximalNodesCount = 1;
 
-    //Asio Context
+    ////Asio Context
     auto io = std::make_shared<boost::asio::io_context>();
 
-    //Add to GlobalDB
+    ////Add to GlobalDB
     auto globalDB =
         std::make_shared<sgns::crdt::GlobalDB>( io, ( boost::format( "CRDT.Datastore.TEST.%d" ) % serviceindex ).str(), 40010 + serviceindex,
                                                 std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>( pubs, "CRDT.Datastore.TEST.Channel" ) );
@@ -221,18 +218,18 @@ int main( int argc, char *argv[] )
     globalDB->Init( crdtOptions );
 
     sgns::base::Buffer root_hash;
-    root_hash.put(std::vector<uint8_t>(32ul, 1));
-    auto hasher_ = std::make_shared<sgns::crypto::HasherImpl>();
-    std::string db_path_ = "bc-963/";
-    auto header_repo_ = std::make_shared<sgns::blockchain::KeyValueBlockHeaderRepository>(globalDB, hasher_, db_path_);
-    auto maybe_block_storage = sgns::blockchain::KeyValueBlockStorage::create(root_hash,globalDB,hasher_,header_repo_,[](auto &) {});
+    root_hash.put( std::vector<uint8_t>( 32ul, 1 ) );
+    auto        hasher_             = std::make_shared<sgns::crypto::HasherImpl>();
+    std::string db_path_            = "bc-963/";
+    auto        header_repo_        = std::make_shared<sgns::blockchain::KeyValueBlockHeaderRepository>( globalDB, hasher_, db_path_ );
+    auto        maybe_block_storage = sgns::blockchain::KeyValueBlockStorage::create( root_hash, globalDB, hasher_, header_repo_, []( auto        &) {} );
 
-    if (!maybe_block_storage)
+    if ( !maybe_block_storage )
     {
         std::cout << "Error initializing blockchain" << std::endl;
         return -1;
     }
-    sgns::TransactionManager transaction_manager( globalDB, io, account,maybe_block_storage.value() );
+    sgns::TransactionManager transaction_manager( globalDB, io, account, maybe_block_storage.value() );
     transaction_manager.Start();
 
     //Run ASIO
