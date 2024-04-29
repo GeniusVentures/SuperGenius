@@ -9,7 +9,7 @@
 #include "account/IGeniusTransactions.hpp"
 #include <boost/multiprecision/cpp_int.hpp>
 #include "account/proto/SGTransaction.pb.h"
-#include "account/GeniusUTXO.hpp"
+#include "account/UTXOTxParameters.hpp"
 
 using namespace boost::multiprecision;
 namespace sgns
@@ -17,17 +17,6 @@ namespace sgns
     class TransferTransaction : public IGeniusTransactions
     {
     public:
-        struct InputUTXOInfo
-        {
-            base::Hash256 txid_hash_;
-            uint32_t      output_idx_;
-            std::string   signature_;
-        };
-        struct OutputDestInfo
-        {
-            uint256_t encrypted_amount; ///< El Gamal encrypted amount
-            uint256_t dest_address;     ///< Destination node address
-        };
         //TODO - El Gamal encrypt the amount. Now only copying
         /**
          * @brief       Construct a new Transfer Transaction object

@@ -111,13 +111,12 @@ namespace sgns
             return is_new;
         }
 
-        bool RefreshUTXOs( const std::vector<TransferTransaction::InputUTXOInfo> &infos )
+        bool RefreshUTXOs( const std::vector<InputUTXOInfo> &infos )
         {
-            std::cout << "Let's refresh the ones we spent" << std::endl;
             utxos.erase( std::remove_if( utxos.begin(), utxos.end(),
                                          [&infos]( const GeniusUTXO &x ) { //
                                              return std::any_of( infos.begin(), infos.end(),
-                                                                 [&x]( const TransferTransaction::InputUTXOInfo &a ) { //
+                                                                 [&x]( const InputUTXOInfo &a ) { //
                                                                      return ( ( a.txid_hash_ == x.GetTxID() ) &&
                                                                               ( a.output_idx_ == x.GetOutputIdx() ) );
                                                                  } );
@@ -126,9 +125,9 @@ namespace sgns
             return true;
         }
 
-        std::pair<std::vector<TransferTransaction::InputUTXOInfo>, uint64_t> GetInputsFromUTXO( const uint64_t &amount )
+        std::pair<std::vector<InputUTXOInfo>,uint64_t> GetInputsFromUTXO( const uint64_t &amount )
         {
-            std::vector<TransferTransaction::InputUTXOInfo> retval;
+            std::vector<InputUTXOInfo> retval;
 
             auto temp_utxos = utxos; //so we don't change anything unless success;
 
@@ -141,7 +140,7 @@ namespace sgns
                     break;
                 }
                 //TODO - Insert signature
-                TransferTransaction::InputUTXOInfo curr_input{ utxo.GetTxID(), utxo.GetOutputIdx(), "" };
+                InputUTXOInfo curr_input{ utxo.GetTxID(), utxo.GetOutputIdx(), "" };
                 remain -= utxo.GetAmount();
                 utxo.ToggleLock( true );
                 retval.push_back( curr_input );

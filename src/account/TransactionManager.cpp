@@ -60,11 +60,11 @@ namespace sgns
     void TransactionManager::TransferFunds( const uint256_t &amount, const uint256_t &destination )
     {
         auto                                             params = account_m->GetInputsFromUTXO( uint64_t{ amount } );
-        std::vector<TransferTransaction::OutputDestInfo> dest_infos;
-        dest_infos.push_back( TransferTransaction::OutputDestInfo{ amount, destination } );
+        std::vector<OutputDestInfo> dest_infos;
+        dest_infos.push_back( OutputDestInfo{ amount, destination } );
         if ( params.second )
         {
-            dest_infos.push_back( TransferTransaction::OutputDestInfo{ uint256_t{ params.second }, account_m->GetAddress<uint256_t>() } );
+            dest_infos.push_back( OutputDestInfo{ uint256_t{ params.second }, account_m->GetAddress<uint256_t>() } );
         }
 
         auto transfer_transaction = std::make_shared<TransferTransaction>( dest_infos, params.first, FillDAGStruct() );
