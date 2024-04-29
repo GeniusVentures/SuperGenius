@@ -62,10 +62,10 @@ namespace sgns
 
             for ( auto &curr : utxos )
             {
-                std::cout << "my utxo's ID: " << curr.GetTxID() << std::endl;
-                std::cout << "my utxo's Amount: " << curr.GetAmount() << std::endl;
-                std::cout << "my utxo's GetOutputIdx: " << curr.GetOutputIdx() << std::endl;
-                std::cout << "my utxo's GetLock: " << curr.GetLock() << std::endl;
+                std::cout << "utxo's ID: " << curr.GetTxID() << std::endl;
+                std::cout << "utxo's Amount: " << curr.GetAmount() << std::endl;
+                std::cout << "utxo's GetOutputIdx: " << curr.GetOutputIdx() << std::endl;
+                std::cout << "utxo's GetLock: " << curr.GetLock() << std::endl;
                 if ( curr.GetLock() == false )
                 {
                     retval += curr.GetAmount();
@@ -119,28 +119,10 @@ namespace sgns
                                              return std::any_of( infos.begin(), infos.end(),
                                                                  [&x]( const TransferTransaction::InputUTXOInfo &a ) { //
                                                                      return ( ( a.txid_hash_ == x.GetTxID() ) &&
-                                                                              ( a.output_idx_ == x.GetOutputIdx() ) && ( x.GetLock() == true ) );
+                                                                              ( a.output_idx_ == x.GetOutputIdx() ) );
                                                                  } );
                                          } ),
                          utxos.end() );
-            /*for ( auto &info : infos )
-            {
-                for ( std::size_t i = 0; i < utxos.size(); ++i )
-                {
-                    if ( utxos[i].txid_hash_ != info.txid_hash_ )
-                    {
-                        continue;
-                    }
-                    if ( utxos[i].output_idx_ != info.output_idx_ )
-                    {
-                        continue;
-                    }
-                    if ( utxos[i].locked_ == true )
-                    {
-                        utxos[i].locked_ = false;
-                    }
-                }
-            }*/
             return true;
         }
 

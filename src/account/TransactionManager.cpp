@@ -62,7 +62,10 @@ namespace sgns
         auto                                             params = account_m->GetInputsFromUTXO( uint64_t{ amount } );
         std::vector<TransferTransaction::OutputDestInfo> dest_infos;
         dest_infos.push_back( TransferTransaction::OutputDestInfo{ amount, destination } );
-        dest_infos.push_back( TransferTransaction::OutputDestInfo{ uint256_t{ params.second }, account_m->GetAddress<uint256_t>() } );
+        if ( params.second )
+        {
+            dest_infos.push_back( TransferTransaction::OutputDestInfo{ uint256_t{ params.second }, account_m->GetAddress<uint256_t>() } );
+        }
 
         auto transfer_transaction = std::make_shared<TransferTransaction>( dest_infos, params.first, FillDAGStruct() );
         this->EnqueueTransaction( transfer_transaction );
@@ -230,7 +233,7 @@ namespace sgns
                         else
                         {
                             //account_m->balance -= tx.GetAmount();
-                            m_logger->info( "Hold Escrow, balance " + account_m->GetBalance<std::string>());
+                            m_logger->info( "Hold Escrow, balance " + account_m->GetBalance<std::string>() );
                         }
                     }
                 }
