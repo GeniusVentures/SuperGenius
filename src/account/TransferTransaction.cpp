@@ -25,18 +25,18 @@ namespace sgns
         SGTransaction::TransferTx tx_struct;
         tx_struct.mutable_dag_struct()->CopyFrom( this->dag_st );
         tx_struct.set_token_id( 0 );
+        SGTransaction::UTXOTxParams *utxo_proto_params = tx_struct.mutable_utxo_params();
 
         for ( const auto &input : input_tx_ )
         {
-            SGTransaction::TransferUTXOInput *input_proto = tx_struct.add_inputs();
+            SGTransaction::TransferUTXOInput *input_proto = utxo_proto_params->add_inputs();
             input_proto->set_tx_id_hash( input.txid_hash_.toReadableString() );
             input_proto->set_output_index( input.output_idx_ );
             input_proto->set_signature( input.signature_ );
         }
         for ( const auto &output : outputs_ )
         {
-            SGTransaction::TransferOutput *output_proto = tx_struct.add_outputs();
-            ;
+            SGTransaction::TransferOutput *output_proto = utxo_proto_params->add_outputs();
             output_proto->set_encrypted_amount( output.encrypted_amount.str() );
             output_proto->set_dest_addr( output.dest_address.str() );
         }
@@ -55,9 +55,10 @@ namespace sgns
             std::cerr << "Failed to parse TransferTx from array." << std::endl;
         }
         std::vector<InputUTXOInfo> inputs;
-        for ( int i = 0; i < tx_struct.inputs_size(); ++i )
+        SGTransaction::UTXOTxParams *utxo_proto_params = tx_struct.mutable_utxo_params();
+        for ( int i = 0; i < utxo_proto_params->inputs_size(); ++i )
         {
-            const SGTransaction::TransferUTXOInput &input_proto = tx_struct.inputs( i );
+            const SGTransaction::TransferUTXOInput &input_proto = utxo_proto_params->inputs( i );
 
             InputUTXOInfo curr;
             curr.txid_hash_  = ( base::Hash256::fromReadableString( input_proto.tx_id_hash() ) ).value();
@@ -66,9 +67,9 @@ namespace sgns
             inputs.push_back( curr );
         }
         std::vector<OutputDestInfo> outputs;
-        for ( int i = 0; i < tx_struct.outputs_size(); ++i )
+        for ( int i = 0; i < utxo_proto_params->outputs_size(); ++i )
         {
-            const SGTransaction::TransferOutput &output_proto = tx_struct.outputs( i );
+            const SGTransaction::TransferOutput &output_proto = utxo_proto_params->outputs( i );
 
             OutputDestInfo curr{ uint256_t{ output_proto.encrypted_amount() }, uint256_t{ output_proto.dest_addr() } };
             outputs.push_back( curr );

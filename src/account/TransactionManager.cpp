@@ -9,15 +9,17 @@
 #include "account/MintTransaction.hpp"
 #include "account/ProcessingTransaction.hpp"
 #include "account/EscrowTransaction.hpp"
+#include "account/UTXOTxParameters.hpp"
 
 namespace sgns
 {
     TransactionManager::TransactionManager( std::shared_ptr<crdt::GlobalDB> db, std::shared_ptr<boost::asio::io_context> ctx,
-                                            std::shared_ptr<GeniusAccount>            account,
+                                            std::shared_ptr<GeniusAccount> account, std::shared_ptr<crypto::Hasher> hasher,
                                             std::shared_ptr<blockchain::BlockStorage> block_storage ) :
         db_m( std::move( db ) ),                                                                                    //
         ctx_m( std::move( ctx ) ),                                                                                  //
         account_m( std::move( account ) ),                                                                          //
+        hasher_m( std::move( hasher ) ),                                                                            //
         block_storage_m( std::move( block_storage ) ),                                                              //
         timer_m( std::make_shared<boost::asio::steady_timer>( *ctx_m, boost::asio::chrono::milliseconds( 300 ) ) ), //
         last_block_id_m( 0 ),                                                                                       //
@@ -57,33 +59,40 @@ namespace sgns
     {
         return *account_m;
     }
-    void TransactionManager::TransferFunds( const uint256_t &amount, const uint256_t &destination )
+    bool TransactionManager::TransferFunds( const uint256_t &amount, const uint256_t &destination )
     {
-        auto                                             params = account_m->GetInputsFromUTXO( uint64_t{ amount } );
-        std::vector<OutputDestInfo> dest_infos;
-        dest_infos.push_back( OutputDestInfo{ amount, destination } );
-        if ( params.second )
+        bool ret          = false;
+        auto maybe_params = UTXOTxParameters::create( account_m->utxos, account_m->address, uint64_t{ amount }, destination );
+
+        if ( maybe_params )
         {
-            dest_infos.push_back( OutputDestInfo{ uint256_t{ params.second }, account_m->GetAddress<uint256_t>() } );
+            account_m->utxos = UTXOTxParameters::UpdateUTXOList( account_m->utxos, maybe_params.value() );
+            auto transfer_transaction =
+                std::make_shared<TransferTransaction>( maybe_params.value().outputs_, maybe_params.value().inputs_, FillDAGStruct() );
+            this->EnqueueTransaction( transfer_transaction );
+            ret = true;
         }
 
-        auto transfer_transaction = std::make_shared<TransferTransaction>( dest_infos, params.first, FillDAGStruct() );
-        this->EnqueueTransaction( transfer_transaction );
+        return ret;
     }
     void TransactionManager::MintFunds( const uint64_t &amount )
     {
         auto mint_transaction = std::make_shared<MintTransaction>( amount, FillDAGStruct() );
         this->EnqueueTransaction( mint_transaction );
     }
-    void TransactionManager::HoldEscrow( const uint64_t &amount, const std::string &job_id )
+    bool TransactionManager::HoldEscrow( const uint64_t &amount, const std::string &job_id )
     {
-        auto escrow_transaction = std::make_shared<EscrowTransaction>( amount, job_id, FillDAGStruct() );
-        this->EnqueueTransaction( escrow_transaction );
-    }
-    void TransactionManager::ReleaseEscrow( const std::string &job_id )
-    {
-        auto escrow_transaction = std::make_shared<EscrowTransaction>( job_id, FillDAGStruct() );
-        this->EnqueueTransaction( escrow_transaction );
+        bool ret       = false;
+        auto hash_data = hasher_m->blake2b_256( std::vector<uint8_t>{ job_id.begin(), job_id.end() } );
+        auto maybe_params =
+            UTXOTxParameters::create( account_m->utxos, account_m->address, uint64_t{ amount }, uint256_t{ hash_data.toReadableString() } );
+        if ( maybe_params )
+        {
+            auto escrow_transaction = std::make_shared<EscrowTransaction>( maybe_params.value(), FillDAGStruct() );
+            this->EnqueueTransaction( escrow_transaction );
+            ret = true;
+        }
+            return ret;
     }
 
     void TransactionManager::Update()
@@ -225,16 +234,8 @@ namespace sgns
                     //std::cout << tx.GetAddress<std::string>() << std::endl;
                     if ( tx.GetSrcAddress<uint256_t>() == account_m->GetAddress<uint256_t>() )
                     {
-                        if ( tx.IsRelease() )
-                        {
-                            //account_m->balance += tx.GetAmount(); THIS AMOUNT IS ZERO ATM
-                            m_logger->info( "Released Escrow, balance " + account_m->GetBalance<std::string>() );
-                        }
-                        else
-                        {
-                            //account_m->balance -= tx.GetAmount();
-                            m_logger->info( "Hold Escrow, balance " + account_m->GetBalance<std::string>() );
-                        }
+                        //account_m->balance += tx.GetAmount(); THIS AMOUNT IS ZERO ATM
+                        m_logger->info( "Released Escrow, balance " + account_m->GetBalance<std::string>() );
                     }
                 }
                 else if ( maybe_dag.value().type() == "process" )
@@ -321,5 +322,21 @@ namespace sgns
             m_logger->info( "Created tokens, balance " + account_m->GetBalance<std::string>() );
         }
     }
+    void TransactionManager::ParseEscrowTransaction( const std::vector<std::uint8_t> &transaction_data )
+    {
+        EscrowTransaction tx = EscrowTransaction::DeSerializeByteVector( transaction_data );
 
+        auto dest_infos = tx.GetUTXOParameters();
+
+        if (dest_infos.outputs_.size() == 2)
+        {
+            //has to be 1 for me and 1 for escrow
+            if ( dest_infos.outputs_[1].dest_address == account_m->GetAddress<uint256_t>() )
+            {
+                auto       hash = ( base::Hash256::fromReadableString( tx.dag_st.data_hash() ) ).value();
+                GeniusUTXO new_utxo( hash, 1, uint64_t{ dest_infos.outputs_[1].encrypted_amount } );
+                account_m->PutUTXO( new_utxo );
+            }
+        }
+    }
 }

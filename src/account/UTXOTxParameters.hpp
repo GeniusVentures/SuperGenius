@@ -30,10 +30,15 @@ namespace sgns
         std::vector<InputUTXOInfo>  inputs_;
         std::vector<OutputDestInfo> outputs_;
 
-        outcome::result<UTXOTxParameters> create( std::vector<GeniusUTXO> &utxo_pool, const uint64_t &amount, const uint256_t &dest_address,
-                                                  const std::string signature = "" )
+        UTXOTxParameters( const std::vector<InputUTXOInfo> &inputs, const std::vector<OutputDestInfo> &outputs ) :
+            inputs_( inputs ), outputs_( outputs )
         {
-            UTXOTxParameters instance( utxo_pool, amount, dest_address, signature );
+        }
+
+        static outcome::result<UTXOTxParameters> create( const std::vector<GeniusUTXO> &utxo_pool, const uint256_t &src_address,
+                                                         const uint64_t &amount, const uint256_t &dest_address, const std::string signature = "" )
+        {
+            UTXOTxParameters instance( utxo_pool, src_address, amount, dest_address, signature );
 
             if ( instance.inputs_.size() )
             {
@@ -44,10 +49,10 @@ namespace sgns
                 return outcome::failure( boost::system::error_code{} );
             }
         }
-        outcome::result<UTXOTxParameters> create( std::vector<GeniusUTXO> &utxo_pool, const std::vector<OutputDestInfo> &destinations,
-                                                  const std::string signature = "" )
+        static outcome::result<UTXOTxParameters> create( const std::vector<GeniusUTXO> &utxo_pool, const uint256_t &src_address,
+                                                         const std::vector<OutputDestInfo> &destinations, const std::string signature = "" )
         {
-            UTXOTxParameters instance( utxo_pool, destinations, signature );
+            UTXOTxParameters instance( utxo_pool, src_address, destinations, signature );
 
             if ( instance.inputs_.size() )
             {
@@ -57,15 +62,35 @@ namespace sgns
             {
                 return outcome::failure( boost::system::error_code{} );
             }
+        }
+
+        static std::vector<GeniusUTXO> UpdateUTXOList( const std::vector<GeniusUTXO> &utxo_pool, const UTXOTxParameters &params )
+        {
+            auto updated_list = utxo_pool;
+
+            for ( auto &input_utxo : params.inputs_ )
+            {
+                for ( auto &utxo : updated_list )
+                {
+                    if ( input_utxo.txid_hash_ == utxo.GetTxID() )
+                    {
+                        utxo.ToggleLock( true );
+                    }
+                }
+            }
+
+            return updated_list;
         }
 
     private:
-        UTXOTxParameters( std::vector<GeniusUTXO> &utxo_pool, const uint64_t &amount, const uint256_t &dest_address, const std::string signature ) :
-            UTXOTxParameters( utxo_pool, { OutputDestInfo{ uint256_t{ amount }, dest_address } }, signature )
+        UTXOTxParameters( const std::vector<GeniusUTXO> &utxo_pool, const uint256_t &src_address, const uint64_t &amount,
+                          const uint256_t &dest_address, const std::string signature ) :
+            UTXOTxParameters( utxo_pool, src_address, { OutputDestInfo{ uint256_t{ amount }, dest_address } }, signature )
         {
         }
 
-        UTXOTxParameters( std::vector<GeniusUTXO> &utxo_pool, const std::vector<OutputDestInfo> &destinations, const std::string signature )
+        UTXOTxParameters( const std::vector<GeniusUTXO> &utxo_pool, const uint256_t &src_address, const std::vector<OutputDestInfo> &destinations,
+                          const std::string signature )
         {
             int64_t total_amount = 0;
 
@@ -73,11 +98,10 @@ namespace sgns
             {
                 total_amount += static_cast<int64_t>( dest_info.encrypted_amount );
             }
-            auto temp_utxos = utxo_pool; //so we don't change anything unless success;
 
             int64_t remain = total_amount;
 
-            for ( auto &utxo : temp_utxos )
+            for ( auto &utxo : utxo_pool )
             {
                 if ( remain <= 0 )
                 {
@@ -85,19 +109,23 @@ namespace sgns
                 }
                 InputUTXOInfo curr_input{ utxo.GetTxID(), utxo.GetOutputIdx(), signature };
                 remain -= utxo.GetAmount();
-                utxo.ToggleLock( true );
+
                 inputs_.push_back( curr_input );
             }
-            if ( remain <= 0 )
-            {
-                utxo_pool = temp_utxos;
-                outputs_  = destinations;
-                outputs_.push_back( { uint256_t( std::abs( remain ) ), destinations[0].dest_address } );
-            }
-            else
+            if ( remain > 0 )
             {
                 inputs_.clear();
                 outputs_.clear();
+            }
+            else
+            {
+                outputs_ = destinations;
+            }
+
+            if ( remain < 0 )
+            {
+                uint256_t change( std::abs( remain ) );
+                outputs_.push_back( { change, src_address } );
             }
         }
     };

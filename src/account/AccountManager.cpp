@@ -78,7 +78,7 @@ namespace sgns
             throw std::runtime_error( "Error initializing blockchain" );
         }
         block_storage_       = std::move( maybe_block_storage.value() );
-        transaction_manager_ = std::make_shared<TransactionManager>( globaldb_, io_, account_, block_storage_ );
+        transaction_manager_ = std::make_shared<TransactionManager>( globaldb_, io_, account_, hasher_, block_storage_ );
         transaction_manager_->Start();
 
         task_queue_      = std::make_shared<processing::ProcessingTaskQueueImpl>( globaldb_ );
@@ -168,8 +168,7 @@ namespace sgns
             task_queue_->EnqueueTask( task, subTasks );
         }
 
-        transaction_manager_->HoldEscrow( funds,"QmagrfcEhX6aVuFqrRoUU5K6yvjpNiCxnJA6o2tT38Kvxx" );
-        transaction_manager_->ReleaseEscrow( "QmagrfcEhX6aVuFqrRoUU5K6yvjpNiCxnJA6o2tT38Kvxx" );
+        transaction_manager_->HoldEscrow( funds, "QmagrfcEhX6aVuFqrRoUU5K6yvjpNiCxnJA6o2tT38Kvxx" );
     }
     void AccountManager::MintTokens( uint64_t amount )
     {

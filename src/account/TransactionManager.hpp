@@ -18,6 +18,7 @@
 #include "account/GeniusAccount.hpp"
 #include "blockchain/block_storage.hpp"
 #include "base/logger.hpp"
+#include "crypto/hasher.hpp"
 
 using namespace boost::multiprecision;
 namespace sgns
@@ -28,6 +29,7 @@ namespace sgns
         TransactionManager( std::shared_ptr<crdt::GlobalDB>           db,      //
                             std::shared_ptr<boost::asio::io_context>  ctx,     //
                             std::shared_ptr<GeniusAccount>            account, //
+                            std::shared_ptr<crypto::Hasher>           hasher,  //
                             std::shared_ptr<blockchain::BlockStorage> block_storage );
         ~TransactionManager() = default;
         void Start();
@@ -35,10 +37,9 @@ namespace sgns
 
         const GeniusAccount &GetAccount() const;
 
-        void TransferFunds( const uint256_t &amount, const uint256_t &destination );
+        bool TransferFunds( const uint256_t &amount, const uint256_t &destination );
         void MintFunds( const uint64_t &amount );
-        void HoldEscrow( const uint64_t &amount, const std::string &job_id );
-        void ReleaseEscrow( const std::string &job_id );
+        bool HoldEscrow( const uint64_t &amount, const std::string &job_id );
 
     private:
         std::shared_ptr<crdt::GlobalDB>                  db_m;
@@ -50,6 +51,14 @@ namespace sgns
         primitives::BlockNumber                          last_block_id_m;
         std::uint64_t                                    last_trans_on_block_id;
         std::shared_ptr<blockchain::BlockStorage>        block_storage_m;
+        std::shared_ptr<crypto::Hasher>                  hasher_m;
+
+        struct EscrowCtrl
+        {
+            uint256_t job_hash;
+            uint32_t  num_chunks;
+        };
+        std::vector<EscrowCtrl> escrow_ctrl_m;
         //Hash256                                          last_transaction_hash;
 
         static constexpr std::uint16_t MAIN_NET_ID = 369;
@@ -69,11 +78,11 @@ namespace sgns
 
         void ParseTransferTransaction( const std::vector<std::uint8_t> &transaction_data );
         void ParseMintTransaction( const std::vector<std::uint8_t> &transaction_data );
-
-            /**
+        void ParseEscrowTransaction( const std::vector<std::uint8_t> &transaction_data );
+        /**
          * @brief      Checks the blockchain for any new blocks to sync current values
          */
-            void CheckBlockchain();
+        void CheckBlockchain();
     };
 }
 

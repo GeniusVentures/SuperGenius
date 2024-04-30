@@ -125,38 +125,6 @@ namespace sgns
             return true;
         }
 
-        std::pair<std::vector<InputUTXOInfo>,uint64_t> GetInputsFromUTXO( const uint64_t &amount )
-        {
-            std::vector<InputUTXOInfo> retval;
-
-            auto temp_utxos = utxos; //so we don't change anything unless success;
-
-            int64_t remain = static_cast<int64_t>( amount );
-
-            for ( auto &utxo : temp_utxos )
-            {
-                if ( remain <= 0 )
-                {
-                    break;
-                }
-                //TODO - Insert signature
-                InputUTXOInfo curr_input{ utxo.GetTxID(), utxo.GetOutputIdx(), "" };
-                remain -= utxo.GetAmount();
-                utxo.ToggleLock( true );
-                retval.push_back( curr_input );
-            }
-
-            if ( remain <= 0 )
-            {
-                utxos = temp_utxos;
-            }
-            else
-            {
-                retval.clear();
-                remain = 0;
-            }
-            return std::make_pair( retval, static_cast<uint64_t>( std::abs( remain ) ) );
-        }
 
         uint256_t               address;
         uint8_t                 token; //GNUS SGNUS ETC...

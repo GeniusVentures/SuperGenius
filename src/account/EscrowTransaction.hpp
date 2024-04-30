@@ -9,13 +9,13 @@
 #include <cstdint>
 #include <string>
 #include "account/IGeniusTransactions.hpp"
+#include "account/UTXOTxParameters.hpp"
 namespace sgns
 {
     class EscrowTransaction : public IGeniusTransactions
     {
     public:
-        EscrowTransaction( const uint64_t &hold_amount, const std::string &job_id, const SGTransaction::DAGStruct &dag );
-        EscrowTransaction( const std::string &job_id, const SGTransaction::DAGStruct &dag );
+        EscrowTransaction( const UTXOTxParameters &params, const SGTransaction::DAGStruct &dag );
         ~EscrowTransaction() = default;
 
         std::vector<uint8_t>     SerializeByteVector() override;
@@ -27,15 +27,15 @@ namespace sgns
             return GetType();
         }
 
-        bool IsRelease() const
+        UTXOTxParameters GetUTXOParameters() const
         {
-            return is_release_;
+            return utxo_params_;
         }
 
     private:
-        uint64_t    amount_;
-        std::string job_id_;
-        bool        is_release_;
+        uint64_t         amount_;
+        std::string      job_id_;
+        UTXOTxParameters utxo_params_;
     };
 }
 

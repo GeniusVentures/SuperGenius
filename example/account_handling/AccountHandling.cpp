@@ -75,13 +75,9 @@ void CreateTransferTransaction( const std::vector<std::string> &args, sgns::Tran
         return;
     }
     uint64_t amount = std::stoull( args[1] );
-    if ( amount > transaction_manager.GetAccount().GetBalance<uint64_t>() )
+    if (! transaction_manager.TransferFunds( uint256_t{ args[1] }, uint256_t{ args[2] } ))
     {
         std::cout << "Insufficient funds.\n";
-    }
-    else
-    {
-        transaction_manager.TransferFunds( uint256_t{ args[1] }, uint256_t{ args[2] } );
     }
 }
 void CreateProcessingTransaction( const std::vector<std::string> &args, sgns::TransactionManager &transaction_manager )
@@ -229,7 +225,7 @@ int main( int argc, char *argv[] )
         std::cout << "Error initializing blockchain" << std::endl;
         return -1;
     }
-    sgns::TransactionManager transaction_manager( globalDB, io, account, maybe_block_storage.value() );
+    sgns::TransactionManager transaction_manager( globalDB, io, account, hasher_, maybe_block_storage.value() );
     transaction_manager.Start();
 
     //Run ASIO
