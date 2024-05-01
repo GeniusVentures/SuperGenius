@@ -70,8 +70,8 @@ namespace sgns
         uint64_t num_chunks = tx_struct.num_chunks();
         return EscrowTransaction( UTXOTxParameters{ inputs, outputs }, num_chunks, tx_struct.dag_struct() ); // Return new instance
     }
-    /*uint64_t EscrowTransaction::GetAmount() const
+    uint64_t EscrowTransaction::GetNumChunks() const
     {
-        return amount_;
-    }*/
+        return num_chunks_;
+    }
 }

@@ -80,7 +80,7 @@ namespace sgns
         auto mint_transaction = std::make_shared<MintTransaction>( amount, FillDAGStruct() );
         this->EnqueueTransaction( mint_transaction );
     }
-    bool TransactionManager::HoldEscrow( const uint64_t &amount, const std::string &job_id )
+    bool TransactionManager::HoldEscrow( const uint64_t &amount, const uint64_t &num_chunks, const std::string &job_id )
     {
         bool ret       = false;
         auto hash_data = hasher_m->blake2b_256( std::vector<uint8_t>{ job_id.begin(), job_id.end() } );
@@ -88,11 +88,11 @@ namespace sgns
             UTXOTxParameters::create( account_m->utxos, account_m->address, uint64_t{ amount }, uint256_t{ hash_data.toReadableString() } );
         if ( maybe_params )
         {
-            auto escrow_transaction = std::make_shared<EscrowTransaction>( maybe_params.value(),10, FillDAGStruct() );
+            auto escrow_transaction = std::make_shared<EscrowTransaction>( maybe_params.value(), num_chunks, FillDAGStruct() );
             this->EnqueueTransaction( escrow_transaction );
             ret = true;
         }
-            return ret;
+        return ret;
     }
 
     void TransactionManager::Update()
@@ -328,7 +328,7 @@ namespace sgns
 
         auto dest_infos = tx.GetUTXOParameters();
 
-        if (dest_infos.outputs_.size() == 2)
+        if ( dest_infos.outputs_.size() == 2 )
         {
             //has to be 1 for me and 1 for escrow
             if ( dest_infos.outputs_[1].dest_address == account_m->GetAddress<uint256_t>() )
@@ -337,6 +337,8 @@ namespace sgns
                 GeniusUTXO new_utxo( hash, 1, uint64_t{ dest_infos.outputs_[1].encrypted_amount } );
                 account_m->PutUTXO( new_utxo );
             }
+            EscrowCtrl ctrl{ dest_infos.outputs_[0].dest_address, tx.GetNumChunks() };
+            escrow_ctrl_m.push_back( ctrl );
         }
     }
 }

@@ -20,7 +20,7 @@ namespace sgns
 
         std::vector<uint8_t>     SerializeByteVector() override;
         static EscrowTransaction DeSerializeByteVector( const std::vector<uint8_t> &data );
-        uint64_t                 GetAmount() const;
+        uint64_t                 GetNumChunks() const;
 
         std::string GetTransactionSpecificPath() override
         {

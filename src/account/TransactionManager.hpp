@@ -39,7 +39,7 @@ namespace sgns
 
         bool TransferFunds( const uint256_t &amount, const uint256_t &destination );
         void MintFunds( const uint64_t &amount );
-        bool HoldEscrow( const uint64_t &amount, const std::string &job_id );
+        bool HoldEscrow( const uint64_t &amount, const uint64_t &num_chunks, const std::string &job_id );
 
     private:
         std::shared_ptr<crdt::GlobalDB>                  db_m;
@@ -56,7 +56,7 @@ namespace sgns
         struct EscrowCtrl
         {
             uint256_t job_hash;
-            uint32_t  num_chunks;
+            uint64_t  num_chunks;
         };
         std::vector<EscrowCtrl> escrow_ctrl_m;
         //Hash256                                          last_transaction_hash;

@@ -168,7 +168,7 @@ namespace sgns
             task_queue_->EnqueueTask( task, subTasks );
         }
 
-        transaction_manager_->HoldEscrow( funds, "QmagrfcEhX6aVuFqrRoUU5K6yvjpNiCxnJA6o2tT38Kvxx" );
+        transaction_manager_->HoldEscrow( funds, nChunks,"QmagrfcEhX6aVuFqrRoUU5K6yvjpNiCxnJA6o2tT38Kvxx" );
     }
     void AccountManager::MintTokens( uint64_t amount )
     {
