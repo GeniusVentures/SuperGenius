@@ -88,7 +88,7 @@ namespace sgns
             UTXOTxParameters::create( account_m->utxos, account_m->address, uint64_t{ amount }, uint256_t{ hash_data.toReadableString() } );
         if ( maybe_params )
         {
-            auto escrow_transaction = std::make_shared<EscrowTransaction>( maybe_params.value(), FillDAGStruct() );
+            auto escrow_transaction = std::make_shared<EscrowTransaction>( maybe_params.value(),10, FillDAGStruct() );
             this->EnqueueTransaction( escrow_transaction );
             ret = true;
         }

@@ -15,7 +15,7 @@ namespace sgns
     class EscrowTransaction : public IGeniusTransactions
     {
     public:
-        EscrowTransaction( const UTXOTxParameters &params, const SGTransaction::DAGStruct &dag );
+        EscrowTransaction( const UTXOTxParameters &params, const uint64_t &num_chunks, const SGTransaction::DAGStruct &dag );
         ~EscrowTransaction() = default;
 
         std::vector<uint8_t>     SerializeByteVector() override;
@@ -33,8 +33,7 @@ namespace sgns
         }
 
     private:
-        uint64_t         amount_;
-        std::string      job_id_;
+        uint64_t         num_chunks_;
         UTXOTxParameters utxo_params_;
     };
 }
