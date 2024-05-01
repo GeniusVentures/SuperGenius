@@ -123,7 +123,7 @@ namespace sgns
 
     void AccountManager::AddPeer( const std::string &peer )
     {
-        pubsub_->AddPeers( { peer } );
+        //pubsub_->AddPeers( { peer } );
     }
 
     boost::optional<GeniusAccount> AccountManager::CreateAccount( const std::string &priv_key_data, const uint64_t &initial_amount )

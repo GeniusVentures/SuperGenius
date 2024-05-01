@@ -57,5 +57,5 @@ message EscrowTx
 {
     DAGStruct dag_struct = 1;// 
     UTXOTxParams utxo_params = 2; //
-    uint64_t num_chunks = 3
+    uint64 num_chunks = 3;
 }
