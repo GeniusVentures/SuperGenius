@@ -1,6 +1,6 @@
 This is the block-lattice super fast cryptotoken system based on the original nanocurrency
 
-# Download SuperGenius project
+## Download SuperGenius project
 
 ```bash
 git clone git@github.com:GeniusVentures/SuperGenius.git --recursive 
@@ -8,7 +8,7 @@ cd SuperGenius
 git checkout develop
 ```
 
-# Download thirdparty project
+## Download thirdparty project
 
 ```bash
 cd ..
@@ -16,9 +16,9 @@ git clone git@github.com:GeniusVentures/thirdparty.git --recursive
 cd thirdparty
 git checkout develop
 ```
-# [Build thirdparty project](../../../thirdparty/blob/master/README.md)
+## [Build thirdparty project](../../../thirdparty/blob/master/README.md)
 
-Then folder structure as follows:
+The folder structure must be as follows:
 
 ```bash
     .
@@ -33,10 +33,14 @@ Then folder structure as follows:
         ├── readme.md                        # readme
         └── CMakeList.txt                    # CMake file
 ```
-# Build on Windows
+
+## Building
+
+### Windows
+
 I used visual studio 2019 to compile SuperGenius project.
-2. download OpenSSL and install
-3. build SuperGenius using following commands in Release configuration:
+1. Download OpenSSL and install
+2. Build SuperGenius using following commands in Release configuration:
     
 ```bash
     cd SuperGenius 
@@ -46,7 +50,7 @@ I used visual studio 2019 to compile SuperGenius project.
     cmake --build . --config Release
 ```
 
-if you are going to build and test , then use following commands
+if you are going to build and test, then use following commands
 
 ```bash
     cmake ../build/Windows -G "Visual Studio 16 2019" -A x64 -DTESTING=ON -DCMAKE_BUILD_TYPE=Release -DTHIRDPARTY_DIR=[ABSOLUTE_PATH_TO_THIRDPARTY_BUILD_RELEASE]
@@ -54,6 +58,7 @@ if you are going to build and test , then use following commands
     cd SuperGenius/src/SuperGenius-build
     ctest -C Release
 ```
+
 To run sepecific test with detailed log, you can use following commands.
 
 ```bash
@@ -78,7 +83,7 @@ You can use Debug configuration to debug in Visual Studio.
     ctest -C Debug
 ```
 
-# Build on Linux
+### Linux
 
 ```bash
     cd SuperGenius 
@@ -88,13 +93,14 @@ You can use Debug configuration to debug in Visual Studio.
     cmake --build . --config Release
 ```
 
-# Build on Linux for Android cross compile
-## Preinstall
+### Linux for Android cross compile
+
+#### Preinstall
 - CMake 
 - Android NDK Latest LTS Version (r21e) [(link)](https://developer.android.com/ndk/downloads#lts-downloads)
 - ([Build thirdparty project](../thirdparty/README.md))
 
-## Building
+#### Building
 ```bash
 export ANDROID_NDK=/path/to/android-ndk-r21e
 export ANDROID_TOOLCHAIN="$ANDROID_NDK/toolchains/llvm/prebuilt/linux-x86_64/bin"
@@ -109,7 +115,6 @@ cd ./.build/Android.armeabi-v7a
 cmake ../../build/Android/ -DANDROID_ABI="armeabi-v7a" -DCMAKE_ANDROID_NDK=$ANDROID_NDK -DANDROID_TOOLCHAIN=clang -DTHIRDPARTY_DIR=[ABSOLUTE_PATH_TO_THIRDPARTY_BUILD_Android.armeabi-v7a] 
 make -j4
 ```
-
 
 * arm64-v8a
 
@@ -137,7 +142,7 @@ cmake ../../build/Android/ -DANDROID_ABI="x86_64" -DCMAKE_ANDROID_NDK=$ANDROID_N
 make -j4
 ```
 
-# Build on OSX 
+### OSX 
 
 ```bash
 cd SuperGenius 
@@ -147,7 +152,7 @@ cmake ../../build/OSX -DCMAKE_BUILD_TYPE=Release -DTHIRDPARTY_DIR=[ABSOLUTE_PATH
 make -j4
 ```
 
-# Build on OSX for iOS cross compile 
+#### For iOS cross compile 
 
 ```bash
 cd SuperGenius 
@@ -156,3 +161,9 @@ cd .build/iOS
 cmake ../../build/iOS -DCMAKE_BUILD_TYPE=Release -DTHIRDPARTY_DIR=[ABSOLUTE_PATH_TO_THIRDPARTY_BUILD_RELEASE] -DCMAKE_TOOLCHAIN_FILE=[/ABSOLUTE/PATH/TO/GeniusTokens/SuperGenius/build/iOS/iOS.cmake] -DiOS_ABI=arm64-v8a -DIOS_ARCH="arm64" -DENABLE_ARC=0 -DENABLE_BITCODE=0 -DENABLE_VISIBILITY=1  -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_SYSTEM_PROCESSOR=arm64
 make -j4
 ```
+
+## Running tests
+
+### Linux
+
+Enter the `.build` directory and run `ctest -C Release`.
