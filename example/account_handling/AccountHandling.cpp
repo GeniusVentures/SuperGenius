@@ -260,34 +260,35 @@ int main( int argc, char *argv[] )
     std::cout << "CID Test::" << cidstring.value() << std::endl;
 
     //Also Find providers
-    pubs->GetDHT()->FindProviders(key, [=](libp2p::outcome::result<std::vector<libp2p::peer::PeerInfo>> res) {
-        std::cout << "Find Providers Callback" << std::endl;
-        if (!res) {
-            std::cerr << "Cannot find providers: " << res.error().message() << std::endl;
-            return false;
-        }
-        auto& providers = res.value();
-        if (!providers.empty())
-        {
-            std::cout << "Found provider!" << std::endl;
-            for (auto& provider : providers) {
-                std::cout << provider.id.toBase58() << std::endl;
-                auto providerid = provider.id.toBase58();
+    pubs->StartFindingPeers(io, key);
+    //pubs->GetDHT()->FindProviders(key, [=](libp2p::outcome::result<std::vector<libp2p::peer::PeerInfo>> res) {
+    //    std::cout << "Find Providers Callback" << std::endl;
+    //    if (!res) {
+    //        std::cerr << "Cannot find providers: " << res.error().message() << std::endl;
+    //        return false;
+    //    }
+    //    auto& providers = res.value();
+    //    if (!providers.empty())
+    //    {
+    //        std::cout << "Found provider!" << std::endl;
+    //        for (auto& provider : providers) {
+    //            std::cout << provider.id.toBase58() << std::endl;
+    //            auto providerid = provider.id.toBase58();
 
-                for (const auto& address : provider.addresses) {
+    //            for (const auto& address : provider.addresses) {
 
-                     //Assuming addAddress function accepts a multiaddress as argument
-                    bool hasPeerId = address.hasProtocol(libp2p::multi::Protocol::Code::P2P);
-                    if (hasPeerId) {
-                        std::cout << "Address: " << address.getStringAddress() << std::endl;
-                    }
-                }
-            }
-        }
-        else {
-            std::cout << "No providers" << std::endl;
-        }
-        });
+    //                 //Assuming addAddress function accepts a multiaddress as argument
+    //                bool hasPeerId = address.hasProtocol(libp2p::multi::Protocol::Code::P2P);
+    //                if (hasPeerId) {
+    //                    std::cout << "Address: " << address.getStringAddress() << std::endl;
+    //                }
+    //            }
+    //        }
+    //    }
+    //    else {
+    //        std::cout << "No providers" << std::endl;
+    //    }
+    //    });
     //Run ASIO
     std::thread iothread( [io]() { io->run(); } );
     while ( true )
