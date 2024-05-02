@@ -30,6 +30,7 @@
 
 #include <ipfs_lite/ipfs/graphsync/graphsync.hpp>
 #include "account/AccountManager.hpp"
+#include <libp2p/crypto/sha/sha256.hpp>
 
 std::vector<std::string> wallet_addr{ "0x4E8794BE4831C45D0699865028C8BE23D608C19C1E24371E3089614A50514262",
                                       "0x06DDC80283462181C02917CC3E99C7BC4BDB2856E19A392300A62DBA6262212C" };
@@ -181,13 +182,18 @@ int main( int argc, char *argv[] )
     auto loggerDAGSyncer = sgns::base::createLogger( "GraphsyncDAGSyncer" );
     loggerDAGSyncer->set_level( spdlog::level::debug );
 
+    auto logkad = sgns::base::createLogger("Kademlia");
+    logkad->set_level(spdlog::level::trace);
+
+    auto logNoise = sgns::base::createLogger("Noise");
+    logNoise->set_level(spdlog::level::trace);
     //auto loggerBroadcaster = sgns::base::createLogger( "PubSubBroadcasterExt" );
     //loggerBroadcaster->set_level( spdlog::level::debug );
 
     //Inputs
     size_t      serviceindex = std::strtoul( argv[1], nullptr, 10 );
     std::string own_wallet_address( argv[2] );
-    std::string pubs_address( argv[3] );
+    //std::string pubs_address( argv[3] );
 
     auto maybe_account = sgns::AccountManager{}.CreateAccount( own_wallet_address, 100 );
 
@@ -202,10 +208,10 @@ int main( int argc, char *argv[] )
     std::vector<std::string> receivedMessages;
 
     //Start Pubsubs, add peers of other addresses. We'll probably use DHT Discovery bootstrapping in the future.
-    pubs->Start( 40001 + serviceindex, { pubs_address } );
+    pubs->Start( 40001 + serviceindex, { } );
 
     std::cout << "***This is our pubsub address. Copy and past on other node third argument" << pubs->GetLocalAddress() << std::endl;
-    std::cout << "BOOSTRAPPING  " << pubs->GetLocalAddress() << " with " << pubs_address << std::endl;
+    //std::cout << "BOOSTRAPPING  " << pubs->GetLocalAddress() << " with " << pubs_address << std::endl;
 
     const size_t maximalNodesCount = 1;
 
@@ -215,7 +221,7 @@ int main( int argc, char *argv[] )
     //Add to GlobalDB
     auto globalDB =
         std::make_shared<sgns::crdt::GlobalDB>( io, ( boost::format( "CRDT.Datastore.TEST.%d" ) % serviceindex ).str(), 40010 + serviceindex,
-                                                std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>( pubs, "CRDT.Datastore.TEST.Channel" ) );
+                                                std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>( pubs, "SuperGenius" ) );
 
     auto crdtOptions = sgns::crdt::CrdtOptions::DefaultOptions();
     globalDB->Init( crdtOptions );
@@ -235,6 +241,53 @@ int main( int argc, char *argv[] )
     sgns::TransactionManager transaction_manager( globalDB, io, account,maybe_block_storage.value() );
     transaction_manager.Start();
 
+
+    // Encode the string to UTF-8 bytes
+    std::string inputString = "SuperGenius";
+    std::vector<unsigned char> inputBytes(inputString.begin(), inputString.end());
+
+    // Compute the SHA-256 hash of the input bytes
+    std::vector<unsigned char> hash(SHA256_DIGEST_LENGTH);
+    SHA256(inputBytes.data(), inputBytes.size(), hash.data());
+    //Provide CID
+    libp2p::protocol::kademlia::ContentId key(hash);
+    pubs->GetDHT()->Start();
+    pubs->GetDHT()->ProvideCID(key, true);
+    
+    auto cidtest = libp2p::multi::ContentIdentifierCodec::decode(key.data);
+    
+    auto cidstring = libp2p::multi::ContentIdentifierCodec::toString(cidtest.value());
+    std::cout << "CID Test::" << cidstring.value() << std::endl;
+
+    //Also Find providers
+    pubs->GetDHT()->FindProviders(key, [=](libp2p::outcome::result<std::vector<libp2p::peer::PeerInfo>> res) {
+        std::cout << "Find Providers Callback" << std::endl;
+        if (!res) {
+            std::cerr << "Cannot find providers: " << res.error().message() << std::endl;
+            return false;
+        }
+        auto& providers = res.value();
+        if (!providers.empty())
+        {
+            std::cout << "Found provider!" << std::endl;
+            for (auto& provider : providers) {
+                std::cout << provider.id.toBase58() << std::endl;
+                auto providerid = provider.id.toBase58();
+
+                for (const auto& address : provider.addresses) {
+
+                     //Assuming addAddress function accepts a multiaddress as argument
+                    bool hasPeerId = address.hasProtocol(libp2p::multi::Protocol::Code::P2P);
+                    if (hasPeerId) {
+                        std::cout << "Address: " << address.getStringAddress() << std::endl;
+                    }
+                }
+            }
+        }
+        else {
+            std::cout << "No providers" << std::endl;
+        }
+        });
     //Run ASIO
     std::thread iothread( [io]() { io->run(); } );
     while ( true )
