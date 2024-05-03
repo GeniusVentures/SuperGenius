@@ -1,0 +1,29 @@
+---
+BasedOnStyle: Microsoft
+AccessModifierOffset: -4
+AlignConsecutiveAssignments:
+  Enabled: true
+  AlignCompound: true
+AlignConsecutiveBitFields:
+  Enabled: true
+AlignConsecutiveDeclarations:
+  Enabled: true
+AlignConsecutiveShortCaseStatements:
+  Enabled: true
+BraceWrapping:
+  BeforeLambdaBody: true
+BreakConstructorInitializers: AfterColon
+BreakStringLiterals: false
+IndentCaseBlocks: true
+IndentCaseLabels: true
+InsertBraces: true
+InsertNewlineAtEOF: true
+NamespaceIndentation: All
+ReflowComments: false
+RemoveParentheses: ReturnStatement
+SeparateDefinitionBlocks: Always
+SortIncludes: Never
+SpacesInParens: Custom
+SpacesInParensOptions:
+  Other: true
+Standard: c++17
