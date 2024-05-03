@@ -19,6 +19,7 @@ IndentCaseBlocks: true
 IndentCaseLabels: true
 InsertBraces: true
 InsertNewlineAtEOF: true
+KeepEmptyLinesAtTheStartOfBlocks: false
 NamespaceIndentation: All
 ReflowComments: false
 RemoveParentheses: ReturnStatement
