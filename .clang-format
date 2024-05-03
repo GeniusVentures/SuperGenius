@@ -23,6 +23,7 @@ KeepEmptyLinesAtTheStartOfBlocks: false
 NamespaceIndentation: All
 ReflowComments: false
 RemoveParentheses: ReturnStatement
+RemoveSemicolon: true
 SeparateDefinitionBlocks: Always
 SortIncludes: Never
 SpacesInParens: Custom

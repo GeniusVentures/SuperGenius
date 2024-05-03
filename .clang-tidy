@@ -4,6 +4,7 @@ Checks: <
   
   bugprone-*
   -bugprone-easily-swappable-parameters
+  -bugprone-reserved-identifier
   
   cert-*
   
@@ -16,6 +17,7 @@ Checks: <
   -cppcoreguidelines-pro-type-reinterpret-cast
   
   google-*
+  -google-build-using-namespace
   -google-readability-namespace-comments
   
   hicpp-*
@@ -50,3 +52,4 @@ CheckOptions:
 
   readability-identifier-naming.VariableCase: lower_case
 
+  misc-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic: true
