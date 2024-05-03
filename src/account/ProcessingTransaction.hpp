@@ -23,6 +23,15 @@ namespace sgns
         std::vector<uint8_t>         SerializeByteVector() override;
         static ProcessingTransaction DeSerializeByteVector( const std::vector<uint8_t> &data );
 
+        uint256_t GetJobHash() const
+        {
+            return job_hash;
+        }
+        std::string GetChunkID() const
+        {
+            return chunk_id;
+        }
+
         std::string GetTransactionSpecificPath() override
         {
             boost::format processing_fmt( GetType() + "/%s/%s" );
@@ -33,7 +42,9 @@ namespace sgns
 
     private:
         std::string job_id;            ///< Job ID
+        uint256_t   job_hash;          ///< Job ID
         std::string subtask_id;        ///< SubTask ID
+        std::string chunk_id;        ///< SubTask ID
         uint256_t   hash_process_data; ///< Hash of the process data
         //std::vector<uint8_t> raw_data;          ///<The data being processed
     };

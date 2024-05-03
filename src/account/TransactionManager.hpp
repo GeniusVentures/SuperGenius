@@ -9,6 +9,7 @@
 #include <memory>
 #include <deque>
 #include <cstdint>
+#include <unordered_map>
 #include <boost/asio.hpp>
 #include <boost/format.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
@@ -55,8 +56,16 @@ namespace sgns
 
         struct EscrowCtrl
         {
-            uint256_t job_hash;
-            uint64_t  num_chunks;
+            uint256_t                                  src_addr;
+            uint256_t                                  job_hash;
+            uint256_t                                  full_amount;
+            uint64_t                                   num_chunks;
+            InputUTXOInfo                              original_input;
+            std::unordered_map<std::string, uint256_t> chunk_info;
+            EscrowCtrl( const uint256_t &src, const uint256_t &hash, const uint256_t &amount, const uint64_t &chunks, const InputUTXOInfo &input ) :
+                src_addr( src ), job_hash( hash ), full_amount( amount ), num_chunks( chunks ), original_input( input )
+            {
+            }
         };
         std::vector<EscrowCtrl> escrow_ctrl_m;
         //Hash256                                          last_transaction_hash;
@@ -79,6 +88,8 @@ namespace sgns
         void ParseTransferTransaction( const std::vector<std::uint8_t> &transaction_data );
         void ParseMintTransaction( const std::vector<std::uint8_t> &transaction_data );
         void ParseEscrowTransaction( const std::vector<std::uint8_t> &transaction_data );
+        void ParseProcessingTransaction( const std::vector<std::uint8_t> &transaction_data );
+
         /**
          * @brief      Checks the blockchain for any new blocks to sync current values
          */
