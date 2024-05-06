@@ -1,7 +1,5 @@
 # Run this command to always ignore formatting commits in `git blame`
 # git config blame.ignoreRevsFile .git-blame-ignore-revs
 
-# Old merging
-6dd883990c8d51010eba952330fedec440bd3a37
 # Reformats
 cd55bda30ece6f3af73bdbaea84e5cda93f8973a

@@ -1,55 +1,60 @@
 ---
-Checks: <
-  boost-*
-  
-  bugprone-*
-  -bugprone-easily-swappable-parameters
-  -bugprone-reserved-identifier
-  
-  cert-*
-  
-  concurrency-*
-  
-  cppcoreguidelines-*
-  -cppcoreguidelines-avoid-do-while
-  -cppcoreguidelines-non-private-member-variables-in-classes
-  -cppcoreguidelines-pro-bounds-pointer-arithmetic
-  -cppcoreguidelines-pro-type-reinterpret-cast
-  
-  google-*
-  -google-build-using-namespace
-  -google-readability-namespace-comments
-  
-  hicpp-*
-  
-  misc-*
-  -misc-include-cleaner
-  -misc-non-private-member-variables-in-classes¶
-  
-  modernize-*
-  -modernize-use-trailing-return-type
-  
-  performance-*
-  
-  portability-*
+Checks: >
+  boost-*,
 
-  readability-*
-  -readability-identifier-length
+  bugprone-*,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-reserved-identifier,
+
+  cert-*,
+  -cert-dcl51-cpp,
+  -cert-err58-cpp,
+
+  concurrency-*,
+
+  cppcoreguidelines-*,
+  -cppcoreguidelines-avoid-do-while,
+  -cppcoreguidelines-non-private-member-variables-in-classes,
+  -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+  -cppcoreguidelines-pro-type-reinterpret-cast,
+  -cppcoreguidelines-special-member-functions,
+
+  google-*,
+  -google-build-using-namespace,
+  -google-explicit-constructor,
+  -google-readability-namespace-comments,
+
+  hicpp-multiway-paths-covered,
+
+  misc-*,
+  -misc-include-cleaner,
+  -misc-non-private-member-variables-in-classes,
+
+  modernize-*,
+  -modernize-use-trailing-return-type,
+
+  performance-*,
+
+  portability-*,
+
+  readability-*,
+  -readability-identifier-length,
+  -readability-named-parameter
 
 FormatStyle: file
 
 CheckOptions:
-  performance-unnecessary-value-param.IncludeStyle: google
+  - {
+      key: misc-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic,
+      value: true,
+    }
 
-  readability-identifier-naming.EnumCase: CamelCase
-  readability-identifier-naming.EnumConstantCase: UPPER_CASE
+  - { key: performance-unnecessary-value-param.IncludeStyle, value: google }
+  
+  - { key: readability-identifier-naming.EnumCase, value: CamelCase }
+  - { key: readability-identifier-naming.EnumConstantCase, value: UPPER_CASE }
 
-  readability-identifier-naming.TypeAliasCase: CamelCase
-  readability-identifier-naming.TypeDefCase: CamelCase
+  - { key: readability-identifier-naming.TypeAliasCase, value: CamelCase }
+  - { key: readability-identifier-naming.TypeDefCase, value: CamelCase }
 
-  readability-identifier-naming.ClassMemberPrefix: m_
-  readability-identifier-naming.ClassMemberCase: CamelCase
-
-  readability-identifier-naming.VariableCase: lower_case
-
-  misc-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic: true
+  - { key: readability-identifier-naming.ClassMemberPrefix, value: m_ }
