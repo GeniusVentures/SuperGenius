@@ -15,12 +15,12 @@ namespace test
    * @brief Base test, which involves filesystem. Can be created with given
    * path. Clears path before test and after test.
    */
-    struct BaseFS_Test : public ::testing::Test
+    struct FSFixture : public ::testing::Test
     {
         // not explicit, intentionally
-        BaseFS_Test( fs::path path );
+        FSFixture( fs::path path );
 
-        ~BaseFS_Test() override
+        ~FSFixture() override
         {
             clear();
         }

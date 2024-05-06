@@ -3,7 +3,7 @@
 namespace test
 {
 
-    void BaseFS_Test::clear()
+    void FSFixture::clear()
     {
         if ( fs::exists( base_path ) )
         {
@@ -11,7 +11,7 @@ namespace test
         }
     }
 
-    BaseFS_Test::BaseFS_Test( fs::path path ) : base_path( std::move( path ) )
+    FSFixture::FSFixture( fs::path path ) : base_path( std::move( path ) )
     {
         clear();
         mkdir();
@@ -20,13 +20,13 @@ namespace test
         logger->set_level( spdlog::level::debug );
     }
 
-    void BaseFS_Test::SetUp()
+    void FSFixture::SetUp()
     {
         clear();
         mkdir();
     }
 
-    void BaseFS_Test::TearDown()
+    void FSFixture::TearDown()
     {
     }
 }
