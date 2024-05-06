@@ -24,29 +24,29 @@ using testing::_;
 using testing::Invoke;
 using testing::Return;
 
-class TrieBatchTest : public test::BaseRocksDB_Test {
- public:
-  TrieBatchTest() : BaseRocksDB_Test("rocksdbtest") {}
+class TrieBatchTest : public test::RocksDBFixture
+{
+public:
+    TrieBatchTest() : RocksDBFixture( "rocksdbtest" )
+    {
+    }
 
-  void SetUp() override {
-    open();
-    auto factory = std::make_shared<SuperGeniusTrieFactoryImpl>();
-    auto codec = std::make_shared<SuperGeniusCodec>();
-    auto serializer = std::make_shared<TrieSerializerImpl>(
-        factory,
-        codec,
-        std::make_shared<TrieStorageBackendImpl>(std::move(db_), kNodePrefix));
+    void SetUp() override
+    {
+        open();
+        auto factory    = std::make_shared<SuperGeniusTrieFactoryImpl>();
+        auto codec      = std::make_shared<SuperGeniusCodec>();
+        auto serializer = std::make_shared<TrieSerializerImpl>(
+            factory, codec, std::make_shared<TrieStorageBackendImpl>( std::move( db_ ), kNodePrefix ) );
 
-    trie = TrieStorageImpl::createEmpty(factory, codec, serializer, boost::none)
-               .value();
-  }
+        trie = TrieStorageImpl::createEmpty( factory, codec, serializer, boost::none ).value();
+    }
 
-  static const std::vector<std::pair<Buffer, Buffer>> data;
+    static const std::vector<std::pair<Buffer, Buffer>> data;
 
-  std::unique_ptr<TrieStorage> trie;
+    std::unique_ptr<TrieStorage> trie;
 
-  static const Buffer kNodePrefix;
- 
+    static const Buffer kNodePrefix;
 };
 
 const Buffer TrieBatchTest::kNodePrefix{1};

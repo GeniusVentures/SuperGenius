@@ -28,10 +28,10 @@ using sgns::storage::face::GenericStorageMock;
 using testing::_;
 using testing::Return;
 
-class BlockStorageTest : public test::BaseCRDT_Test
+class BlockStorageTest : public test::CRDTFixture
 {
 public:
-    BlockStorageTest() : BaseCRDT_Test( fs::path( "blockstoragetest.lvldb" ) )
+    BlockStorageTest() : CRDTFixture( fs::path( "blockstoragetest.lvldb" ) )
     {
     }
 

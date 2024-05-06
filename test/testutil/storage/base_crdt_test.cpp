@@ -31,7 +31,7 @@ groups:
 namespace test
 {
 
-    void BaseCRDT_Test::open()
+    void CRDTFixture::open()
     {
 
         auto logging_system = std::make_shared<soralog::LoggingSystem>( std::make_shared<soralog::ConfiguratorFromYAML>(
@@ -70,16 +70,16 @@ namespace test
         ASSERT_TRUE(db_) << "BaseCRDT_Test: db is nullptr";
     }
 
-    BaseCRDT_Test::BaseCRDT_Test( fs::path path ) : BaseFS_Test( std::move( path ) )
+    CRDTFixture::CRDTFixture( fs::path path ) : FSFixture( std::move( path ) )
     {
     }
 
-    void BaseCRDT_Test::SetUp()
+    void CRDTFixture::SetUp()
     {
         open();
     }
 
-    void BaseCRDT_Test::TearDown()
+    void CRDTFixture::TearDown()
     {
         // clear();
     }

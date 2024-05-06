@@ -12,9 +12,12 @@ namespace fs = boost::filesystem;
 
 namespace sgns::storage
 {
-  struct rocksdb_Open : public test::BaseFS_Test {
-    rocksdb_Open() : test::BaseFS_Test("supergenius_rocksdb_open") {}
-  };
+    struct rocksdb_Open : public test::FSFixture
+    {
+        rocksdb_Open() : test::FSFixture( "supergenius_rocksdb_open" )
+        {
+        }
+    };
 
   /**
    * @given options with disabled option `create_if_missing`

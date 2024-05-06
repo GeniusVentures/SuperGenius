@@ -15,10 +15,9 @@
 namespace test
 {
 
-    struct BaseCRDT_Test : public BaseFS_Test
+    struct CRDTFixture : public FSFixture
     {
-
-        BaseCRDT_Test( fs::path path );
+        CRDTFixture( fs::path path );
 
         void open();
 
