@@ -14,6 +14,7 @@ BraceWrapping:
   BeforeLambdaBody: true
 BreakConstructorInitializers: AfterColon
 BreakStringLiterals: false
+ColumnLimit: 120
 FixNamespaceComments: false
 IndentCaseBlocks: true
 IndentCaseLabels: true
