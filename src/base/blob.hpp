@@ -3,6 +3,7 @@
 #ifndef SUPERGENIUS_BLOB_HPP
 #define SUPERGENIUS_BLOB_HPP
 
+#include <cstddef>
 #include <array>
 
 #include <boost/functional/hash.hpp>
