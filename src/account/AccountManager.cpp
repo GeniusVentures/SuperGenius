@@ -5,7 +5,6 @@
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
 #include "account/AccountManager.hpp"
-#include "processing/processing_imagesplit.hpp"
 
 namespace sgns
 {

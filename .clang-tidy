@@ -14,6 +14,7 @@ Checks: >
 
   cppcoreguidelines-*,
   -cppcoreguidelines-avoid-do-while,
+  -cppcoreguidelines-avoid-magic-numbers,
   -cppcoreguidelines-non-private-member-variables-in-classes,
   -cppcoreguidelines-pro-bounds-pointer-arithmetic,
   -cppcoreguidelines-pro-type-reinterpret-cast,
@@ -39,6 +40,7 @@ Checks: >
 
   readability-*,
   -readability-identifier-length,
+  -readability-magic-numbers,
   -readability-named-parameter
 
 FormatStyle: file

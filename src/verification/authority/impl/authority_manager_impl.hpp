@@ -2,6 +2,7 @@
 #ifndef SUPERGENIUS_VERIFICATION_AUTHORITIES_MANAGER_IMPL
 #define SUPERGENIUS_VERIFICATION_AUTHORITIES_MANAGER_IMPL
 
+#include "base/logger.hpp"
 #include "verification/authority/authority_manager.hpp"
 #include "verification/authority/authority_update_observer.hpp"
 #include "verification/finality/finalization_observer.hpp"

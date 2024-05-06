@@ -6,13 +6,15 @@
  */
 
 #include "account/ProcessingTransaction.hpp"
+
+#include <utility>
 #include "crypto/hasher/hasher_impl.hpp"
 
 namespace sgns
 {
-    ProcessingTransaction::ProcessingTransaction( uint256_t hash, const SGTransaction::DAGStruct &dag) :
-        IGeniusTransactions( "processing", SetDAGWithType(dag,"processing")), //
-        hash_process_data( hash )            //
+    ProcessingTransaction::ProcessingTransaction( uint256_t hash, const SGTransaction::DAGStruct &dag ) :
+        IGeniusTransactions( "processing", SetDAGWithType( dag, "processing" ) ), //
+        hash_process_data( std::move( hash ) )
     {
         auto hasher_ = std::make_shared<sgns::crypto::HasherImpl>();
         auto hash_data = hasher_->blake2b_256(SerializeByteVector());
@@ -32,6 +34,6 @@ namespace sgns
         uint256_t hash;
         import_bits( hash, data.begin(), data.end() );
 
-        return ProcessingTransaction( hash, {} ); // Return new instance
+        return { hash, {} }; // Return new instance
     }
 }

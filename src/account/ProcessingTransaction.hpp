@@ -11,6 +11,7 @@
 #include <boost/multiprecision/cpp_int.hpp>
 
 using namespace boost::multiprecision;
+
 namespace sgns
 {
 
@@ -18,7 +19,7 @@ namespace sgns
     {
     public:
         ProcessingTransaction( uint256_t hash, const SGTransaction::DAGStruct &dag );
-        ~ProcessingTransaction() = default;
+        ~ProcessingTransaction() override = default;
 
         std::vector<uint8_t>         SerializeByteVector() override;
         static ProcessingTransaction DeSerializeByteVector( const std::vector<uint8_t> &data );

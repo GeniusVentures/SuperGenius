@@ -1,5 +1,3 @@
-
-
 #ifndef SUPERGENIUS_APP_CONFIG_IMPL_HPP
 #define SUPERGENIUS_APP_CONFIG_IMPL_HPP
 
@@ -66,7 +64,6 @@ namespace sgns::application {
     };
     // clang-format on
 
-   private:
     sgns::base::Logger logger_;
     std::string rpc_http_host_;
     std::string rpc_ws_host_;
@@ -83,7 +80,6 @@ namespace sgns::application {
      */
     // clang-format on
 
-   private:
     void validate_config(AppConfiguration::LoadScheme scheme);
     void read_config_from_file(const std::string &filepath);
 

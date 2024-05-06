@@ -18,7 +18,6 @@
 #include "ipfs_pubsub/gossip_pubsub.hpp"
 #include "crdt/globaldb/globaldb.hpp"
 #include "crypto/hasher/hasher_impl.hpp"
-#include "blockchain/impl/common.hpp"
 #include "blockchain/impl/key_value_block_header_repository.hpp"
 #include "blockchain/impl/key_value_block_storage.hpp"
 #include "integration/IComponent.hpp"

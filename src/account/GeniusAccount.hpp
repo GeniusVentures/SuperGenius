@@ -7,7 +7,6 @@
 #ifndef _GENIUS_ACCOUNT_HPP_
 #define _GENIUS_ACCOUNT_HPP_
 #include <string>
-#include <vector>
 #include <cstdint>
 #include <boost/multiprecision/cpp_int.hpp>
 
@@ -29,28 +28,30 @@ namespace sgns
         template<typename T>
         const T GetAddress() const;
 
-        template<>
-        const std::string GetAddress() const
+        template <> [[nodiscard]] const std::string GetAddress() const
         {
             std::ostringstream oss;
             oss << std::hex << address;
 
             return ( "0x" + oss.str() );
         }
-        template<>
-        const uint256_t GetAddress() const
+
+        template <> [[nodiscard]] const uint256_t GetAddress() const
         {
             return address;
         }
-        const std::string GetBalance() const
+
+        [[nodiscard]] std::string GetBalance() const
         {
             return std::to_string(balance);
         }
-        const std::string GetToken() const
+
+        [[nodiscard]] std::string GetToken() const
         {
             return "GNUS Token";
         }
-        const std::string GetNonce() const
+
+        [[nodiscard]] std::string GetNonce() const
         {
             return std::to_string(nonce);
         }
