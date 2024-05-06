@@ -62,13 +62,13 @@ ctest -C Release
 To run sepecific test with detailed log, you can use following commands.
 
 ```bash
-    ctest -C Release -R <test_name> --verbose
+ctest -C Release -R <test_name> --verbose
 ```
 
 To run all tests and display log for failed tests, you can use following commands.
 
 ```bash
-    ctest -C Release --output-on-failure
+ctest -C Release --output-on-failure
 ```
 
 You can use Debug configuration to debug in Visual Studio.
