@@ -20,11 +20,15 @@ Checks: >
   -cppcoreguidelines-pro-type-reinterpret-cast,
   -cppcoreguidelines-special-member-functions,
 
-  google-*,
-  -google-build-using-namespace,
-  -google-explicit-constructor,
-  -google-readability-namespace-comments,
-  -google-readability-todo,
+  google-build-explicit-make-pair,
+  google-build-namespaces,
+  google-default-arguments,
+  google-global-names-in-headers,
+  google-readability-avoid-underscore-in-googletest-name,
+  google-readability-casting,
+  google-runtime-int,
+  google-runtime-operator,
+  google-upgrade-googletest-case,
 
   hicpp-multiway-paths-covered,
 
@@ -61,3 +65,6 @@ CheckOptions:
   - { key: readability-identifier-naming.TypeDefCase, value: CamelCase }
 
   - { key: readability-identifier-naming.ClassMemberPrefix, value: m_ }
+
+  - { key: modernize-use-std-print.ReplacementPrintFunction, value: "fmt::print"}
+  - { key: modernize-use-std-print.ReplacementPrintlnFunction, value: "fmt::println"}
