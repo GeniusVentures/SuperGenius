@@ -1,5 +1,3 @@
-
-
 #ifndef SUPERGENIUS_BUFFER_HPP
 #define SUPERGENIUS_BUFFER_HPP
 
@@ -110,29 +108,29 @@ namespace sgns::base {
     /**
      * @brief Iterator, which points to last of this buffer.
      */
-    const_reverse_iterator rbegin() const;
+    [[nodiscard]] const_reverse_iterator rbegin() const;
 
     /**
      * @brief Iterator, which points to the element previous to first in this
      * buffer.
      */
-    const_reverse_iterator rend() const;
+    [[nodiscard]] const_reverse_iterator rend() const;
 
     /**
      * @brief Iterator, which points to begin of this buffer.
      */
-    const_iterator begin() const;
+    [[nodiscard]] const_iterator begin() const;
 
     /**
      * @brief Iterator, which points to the element next to the last in this
      * buffer.
      */
-    const_iterator end() const;
+    [[nodiscard]] const_iterator end() const;
 
     /**
      * @brief Getter for size of this buffer.
      */
-    size_t size() const;
+    [[nodiscard]] size_t size() const;
 
     /**
      * @brief Put a 8-bit {@param n} in this buffer.
@@ -239,9 +237,9 @@ namespace sgns::base {
      * @note Does not ensure correct encoding
      * @return string
      */
-     const std::string_view toString() const;
+    std::string_view toString() const;
 
-   private:
+private:
     std::vector<uint8_t> data_;
 
     template <typename T>

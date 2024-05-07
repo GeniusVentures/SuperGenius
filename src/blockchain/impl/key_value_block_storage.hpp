@@ -1,14 +1,10 @@
-
-
 #ifndef SUPERGENIUS_KEY_VALUE_BLOCK_STORAGE_HPP
 #define SUPERGENIUS_KEY_VALUE_BLOCK_STORAGE_HPP
 
 #include "blockchain/block_storage.hpp"
 
-#include "blockchain/impl/common.hpp"
 #include "base/logger.hpp"
 #include "crypto/hasher.hpp"
-#include "storage/predefined_keys.hpp"
 #include <crdt/globaldb/globaldb.hpp>
 #include "blockchain/impl/key_value_block_header_repository.hpp"
 

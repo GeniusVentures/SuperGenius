@@ -1,17 +1,12 @@
-
-
 #include "blockchain/impl/key_value_block_header_repository.hpp"
-
-#include <string_view>
 
 #include <boost/optional.hpp>
 
+#include "blockchain/impl/common.hpp"
 #include "blockchain/impl/storage_util.hpp"
-#include "base/hexutil.hpp"
 #include "scale/scale.hpp"
 #include "blockchain/impl/proto/SGBlocks.pb.h"
 
-using sgns::blockchain::prefix::Prefix;
 using sgns::base::Hash256;
 using sgns::primitives::BlockId;
 using sgns::primitives::BlockNumber;

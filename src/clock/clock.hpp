@@ -1,5 +1,3 @@
-
-
 #ifndef SUPERGENIUS_CLOCK_HPP
 #define SUPERGENIUS_CLOCK_HPP
 

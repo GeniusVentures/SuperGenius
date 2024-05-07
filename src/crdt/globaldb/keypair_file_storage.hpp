@@ -13,7 +13,7 @@ class KeyPairFileStorage
 public:
     KeyPairFileStorage(const boost::filesystem::path& keyPath);
 
-    outcome::result<libp2p::crypto::KeyPair> GetKeyPair() const;
+    [[nodiscard]] outcome::result<libp2p::crypto::KeyPair> GetKeyPair() const;
 
 private:
     boost::filesystem::path m_keyPath;

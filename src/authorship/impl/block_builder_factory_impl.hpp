@@ -1,4 +1,3 @@
-
 #ifndef SUPERGENIUS_SRC_AUTHORSHIP_IMPL_BLOCK_BUILDER_FACTORY_IMPL_HPP
 #define SUPERGENIUS_SRC_AUTHORSHIP_IMPL_BLOCK_BUILDER_FACTORY_IMPL_HPP
 
@@ -18,10 +17,9 @@ namespace sgns::authorship {
         //std::shared_ptr<runtime::BlockBuilder> r_block_builder,
         std::shared_ptr<blockchain::BlockHeaderRepository> header_backend);
 
-    outcome::result<std::unique_ptr<BlockBuilder>> create(
-        const sgns::primitives::BlockId &parent_id,
-        primitives::Digest inherent_digest) const override;
-        
+    [[nodiscard]] outcome::result<std::unique_ptr<BlockBuilder>> create(
+        const sgns::primitives::BlockId &parent_id, primitives::Digest inherent_digest ) const override;
+
     std::string GetName() override
     {
       return "BlockBuilderFactoryImpl";

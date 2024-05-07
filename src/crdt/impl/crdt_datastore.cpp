@@ -36,63 +36,63 @@ namespace sgns::crdt
   const std::string CrdtDatastore::headsNamespace_ = "h";
   const std::string CrdtDatastore::setsNamespace_ = "s";
 
-  CrdtDatastore::CrdtDatastore(const std::shared_ptr<DataStore>& aDatastore, const HierarchicalKey& aKey,
-    const std::shared_ptr<DAGSyncer>& aDagSyncer, const std::shared_ptr<Broadcaster>& aBroadcaster,
-    const std::shared_ptr<CrdtOptions>& aOptions)
+  CrdtDatastore::CrdtDatastore( const std::shared_ptr<DataStore> &aDatastore, const HierarchicalKey &aKey,
+                                const std::shared_ptr<DAGSyncer>   &aDagSyncer,
+                                const std::shared_ptr<Broadcaster> &aBroadcaster,
+                                const std::shared_ptr<CrdtOptions> &aOptions ) : namespaceKey_( aKey )
   {
-    this->namespaceKey_ = aKey;
+      // <namespace>/s
+      auto fullSetNs = aKey.ChildString( setsNamespace_ );
+      // <namespace>/h
+      auto fullHeadsNs = aKey.ChildString( headsNamespace_ );
 
-    // <namespace>/s
-    auto fullSetNs = aKey.ChildString(setsNamespace_);
-    // <namespace>/h
-    auto fullHeadsNs = aKey.ChildString(headsNamespace_);
-
-    int numberOfDagWorkers = 5;
-    if (aOptions != nullptr && !aOptions->Verify().has_failure() &&
-      aOptions->Verify().value() == CrdtOptions::VerifyErrorCode::Success)
-    {
-      this->options_ = aOptions;
-      this->putHookFunc_ = options_->putHookFunc;
-      this->deleteHookFunc_ = options_->deleteHookFunc;
-      this->logger_ = options_->logger;
-      numberOfDagWorkers = options_->numWorkers;
-    }
-
-    this->dataStore_ = aDatastore;
-
-    this->dagSyncer_ = aDagSyncer;
-    this->broadcaster_ = aBroadcaster;
-
-    this->set_ = std::make_shared<CrdtSet>(CrdtSet(aDatastore, fullSetNs, this->putHookFunc_, this->deleteHookFunc_));
-    this->heads_ = std::make_shared<CrdtHeads>(CrdtHeads(aDatastore, fullHeadsNs));
-
-    int numberOfHeads = 0;
-    uint64_t maxHeight = 0;
-    if (this->heads_ != nullptr)
-    {
-      std::vector<CID> heads;
-      auto getListResult = this->heads_->GetList(heads, maxHeight);
-      if (!getListResult.has_failure())
+      int numberOfDagWorkers = 5;
+      if ( aOptions != nullptr && !aOptions->Verify().has_failure() &&
+           aOptions->Verify().value() == CrdtOptions::VerifyErrorCode::Success )
       {
-        numberOfHeads = heads.size();
+          this->options_        = aOptions;
+          this->putHookFunc_    = options_->putHookFunc;
+          this->deleteHookFunc_ = options_->deleteHookFunc;
+          this->logger_         = options_->logger;
+          numberOfDagWorkers    = options_->numWorkers;
       }
-    }
 
-    LOG_INFO("crdt Datastore created. Number of heads: " << numberOfHeads << " Current max-height: " << maxHeight);
+      this->dataStore_ = aDatastore;
 
-    // Starting HandleNext worker thread
-    this->handleNextFuture_ = std::async(std::bind(&CrdtDatastore::HandleNext, this));
+      this->dagSyncer_   = aDagSyncer;
+      this->broadcaster_ = aBroadcaster;
 
-    // Starting Rebroadcast worker thread
-    this->rebroadcastFuture_ = std::async(std::bind(&CrdtDatastore::Rebroadcast, this));
+      this->set_ =
+          std::make_shared<CrdtSet>( CrdtSet( aDatastore, fullSetNs, this->putHookFunc_, this->deleteHookFunc_ ) );
+      this->heads_ = std::make_shared<CrdtHeads>( CrdtHeads( aDatastore, fullHeadsNs ) );
 
-    // Starting DAG worker threads 
-    for (int i = 0; i < numberOfDagWorkers; ++i)
-    {
-      auto dagWorker = std::make_shared<DagWorker>();
-      dagWorker->dagWorkerFuture_ = std::async(std::bind(&CrdtDatastore::SendJobWorker, this, dagWorker));
-      this->dagWorkers_.push_back(dagWorker);
-    }
+      int      numberOfHeads = 0;
+      uint64_t maxHeight     = 0;
+      if ( this->heads_ != nullptr )
+      {
+          std::vector<CID> heads;
+          auto             getListResult = this->heads_->GetList( heads, maxHeight );
+          if ( !getListResult.has_failure() )
+          {
+              numberOfHeads = heads.size();
+          }
+      }
+
+      LOG_INFO( "crdt Datastore created. Number of heads: " << numberOfHeads << " Current max-height: " << maxHeight );
+
+      // Starting HandleNext worker thread
+      this->handleNextFuture_ = std::async( std::bind( &CrdtDatastore::HandleNext, this ) );
+
+      // Starting Rebroadcast worker thread
+      this->rebroadcastFuture_ = std::async( std::bind( &CrdtDatastore::Rebroadcast, this ) );
+
+      // Starting DAG worker threads
+      for ( int i = 0; i < numberOfDagWorkers; ++i )
+      {
+          auto dagWorker              = std::make_shared<DagWorker>();
+          dagWorker->dagWorkerFuture_ = std::async( std::bind( &CrdtDatastore::SendJobWorker, this, dagWorker ) );
+          this->dagWorkers_.push_back( dagWorker );
+      }
   }
 
   CrdtDatastore::~CrdtDatastore()
@@ -180,11 +180,11 @@ namespace sgns::crdt
       auto broadcasterNextResult = broadcaster_->Next();
       if (broadcasterNextResult.has_failure())
       {
-        if (broadcasterNextResult.error().value() != (int)Broadcaster::ErrorCode::ErrNoMoreBroadcast)
-        {
-          LogDebug("Failed to get next broadcaster (error code " + 
-            std::to_string(broadcasterNextResult.error().value()) + ")");
-        }
+          if ( broadcasterNextResult.error().value() != static_cast<int>( Broadcaster::ErrorCode::ErrNoMoreBroadcast ) )
+          {
+              LogDebug( "Failed to get next broadcaster (error code " +
+                        std::to_string( broadcasterNextResult.error().value() ) + ")" );
+          }
         continue;
       }
 
@@ -223,7 +223,7 @@ namespace sgns::crdt
   void CrdtDatastore::Rebroadcast()
   {
     LogDebug("Rebroadcast thread started");
-    std::chrono::milliseconds rebroadcastIntervalMilliseconds = std::chrono::milliseconds(threadSleepTimeInMilliseconds_);
+    auto rebroadcastIntervalMilliseconds = std::chrono::milliseconds( threadSleepTimeInMilliseconds_ );
     if (options_ != nullptr)
     {
       rebroadcastIntervalMilliseconds = std::chrono::milliseconds(options_->rebroadcastIntervalMilliseconds);

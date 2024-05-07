@@ -1,12 +1,8 @@
-
-
 #ifndef SUPERGENIUS_CORE_BLOCKCHAIN_IMPL_PERSISTENT_MAP_UTIL_HPP
 #define SUPERGENIUS_CORE_BLOCKCHAIN_IMPL_PERSISTENT_MAP_UTIL_HPP
 
 #include "base/buffer.hpp"
-#include "primitives/block_header.hpp"
 #include "primitives/block_id.hpp"
-#include "storage/buffer_map_types.hpp"
 #include <crdt/globaldb/globaldb.hpp>
 #include <crdt/globaldb/keypair_file_storage.hpp>
 

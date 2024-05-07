@@ -1,5 +1,3 @@
-
-
 #ifndef SUPERGENIUS_TIMER_HPP
 #define SUPERGENIUS_TIMER_HPP
 

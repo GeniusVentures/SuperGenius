@@ -1,5 +1,3 @@
-
-
 #include "blockchain/impl/storage_util.hpp"
 
 #include "blockchain/impl/common.hpp"

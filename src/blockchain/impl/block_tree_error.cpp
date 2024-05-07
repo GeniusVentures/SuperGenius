@@ -1,5 +1,3 @@
-
-
 #include "blockchain/block_tree_error.hpp"
 
 OUTCOME_CPP_DEFINE_CATEGORY_3(sgns::blockchain, BlockTreeError, e) {

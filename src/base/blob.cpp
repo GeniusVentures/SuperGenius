@@ -1,5 +1,3 @@
-
-
 #include "base/blob.hpp"
 
 OUTCOME_CPP_DEFINE_CATEGORY_3(sgns::base, BlobError, e) {

@@ -24,6 +24,7 @@ Checks: >
   -google-build-using-namespace,
   -google-explicit-constructor,
   -google-readability-namespace-comments,
+  -google-readability-todo,
 
   hicpp-multiway-paths-covered,
 

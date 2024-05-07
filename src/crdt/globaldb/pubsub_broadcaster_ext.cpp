@@ -4,6 +4,7 @@
 #include <crdt/crdt_datastore.hpp>
 #include <ipfs_lite/ipld/ipld_node.hpp>
 #include <regex>
+#include <utility>
 
 namespace sgns::crdt
 {
@@ -34,14 +35,11 @@ namespace
     }
 }
 
-PubSubBroadcasterExt::PubSubBroadcasterExt(
-    std::shared_ptr<GossipPubSubTopic> pubSubTopic,
-    std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer,
-    libp2p::multi::Multiaddress dagSyncerMultiaddress)
-    : gossipPubSubTopic_(pubSubTopic)
-    , dagSyncer_(dagSyncer)
-    , dataStore_(nullptr)
-    , dagSyncerMultiaddress_(dagSyncerMultiaddress)
+PubSubBroadcasterExt::PubSubBroadcasterExt( std::shared_ptr<GossipPubSubTopic>              pubSubTopic,
+                                            std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer,
+                                            libp2p::multi::Multiaddress                     dagSyncerMultiaddress ) :
+    gossipPubSubTopic_( std::move( pubSubTopic ) ), dagSyncer_( std::move( dagSyncer ) ), dataStore_( nullptr ),
+    dagSyncerMultiaddress_( std::move( dagSyncerMultiaddress ) )
 {
     if (gossipPubSubTopic_ != nullptr)
     {
@@ -97,7 +95,7 @@ void PubSubBroadcasterExt::OnMessage(boost::optional<const GossipPubSub::Message
                         }
                     }
                 }
-                messageQueue_.push(std::make_tuple(std::move(peerId.value()), bmsg.data()));
+                messageQueue_.emplace( std::move( peerId.value() ), bmsg.data() );
             }
         }
     }

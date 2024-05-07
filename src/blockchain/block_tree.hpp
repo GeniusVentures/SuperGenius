@@ -1,5 +1,3 @@
-
-
 #ifndef SUPERGENIUS_BLOCK_TREE_HPP
 #define SUPERGENIUS_BLOCK_TREE_HPP
 
@@ -157,7 +155,7 @@ namespace sgns::blockchain {
      * @note deepest leaf is also a result of "SelectBestChain": if we are the
      * leader, we connect a block, which we constructed, to that deepest leaf
      */
-    virtual primitives::BlockInfo deepestLeaf() const = 0;
+    [[nodiscard]] virtual primitives::BlockInfo deepestLeaf() const = 0;
 
     /**
      * @brief Get the most recent block of the best (longest) chain among those
@@ -167,15 +165,15 @@ namespace sgns::blockchain {
      * @param max_number is the max block number that the resulting block (and
      * the target one) may possess
      */
-    virtual outcome::result<primitives::BlockInfo> getBestContaining(
-        const primitives::BlockHash &target_hash,
-        const boost::optional<primitives::BlockNumber> &max_number) const = 0;
+    [[nodiscard]] virtual outcome::result<primitives::BlockInfo> getBestContaining(
+        const primitives::BlockHash                    &target_hash,
+        const boost::optional<primitives::BlockNumber> &max_number ) const = 0;
 
     /**
      * Get all leaves of our tree
      * @return collection of the leaves
      */
-    virtual std::vector<primitives::BlockHash> getLeaves() const = 0;
+    [[nodiscard]] virtual std::vector<primitives::BlockHash> getLeaves() const = 0;
 
     /**
      * Get children of the block with specified hash
@@ -188,7 +186,7 @@ namespace sgns::blockchain {
      * Get the last finalized block
      * @return hash of the block
      */
-    virtual primitives::BlockInfo getLastFinalized() const = 0;
+    [[nodiscard]] virtual primitives::BlockInfo getLastFinalized() const = 0;
   };
 }  // namespace sgns::blockchain
 
