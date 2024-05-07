@@ -81,7 +81,8 @@ namespace sgns
         auto mint_transaction = std::make_shared<MintTransaction>( amount, FillDAGStruct() );
         this->EnqueueTransaction( mint_transaction );
     }
-    bool TransactionManager::HoldEscrow( const uint64_t &amount, const uint64_t &num_chunks, const std::string &job_id )
+    bool TransactionManager::HoldEscrow( const uint64_t &amount, const uint64_t &num_chunks, const uint256_t &dev_addr, const float &dev_cut,
+                                         const std::string &job_id )
     {
         bool ret       = false;
         auto hash_data = hasher_m->blake2b_256( std::vector<uint8_t>{ job_id.begin(), job_id.end() } );
@@ -89,7 +90,7 @@ namespace sgns
             UTXOTxParameters::create( account_m->utxos, account_m->address, uint64_t{ amount }, uint256_t{ hash_data.toReadableString() } );
         if ( maybe_params )
         {
-            auto escrow_transaction = std::make_shared<EscrowTransaction>( maybe_params.value(), num_chunks, FillDAGStruct() );
+            auto escrow_transaction = std::make_shared<EscrowTransaction>( maybe_params.value(), num_chunks, dev_addr, dev_cut, FillDAGStruct() );
             this->EnqueueTransaction( escrow_transaction );
             ret = true;
         }
@@ -329,8 +330,8 @@ namespace sgns
 
             escrow_utxo.txid_hash_  = hash;
             escrow_utxo.output_idx_ = 0;
-            escrow_utxo.signature_  = "";
-            EscrowCtrl ctrl( tx.GetSrcAddress<uint256_t>(), dest_infos.outputs_[0].dest_address, dest_infos.outputs_[0].encrypted_amount,
+            escrow_utxo.signature_  = ""; //TODO - Insert signature
+            EscrowCtrl ctrl( tx.GetDestAddress(), tx.GetDestCut(), dest_infos.outputs_[0].dest_address, dest_infos.outputs_[0].encrypted_amount,
                              tx.GetNumChunks(), escrow_utxo );
             escrow_ctrl_m.push_back( ctrl );
         }
@@ -350,20 +351,21 @@ namespace sgns
 
                     if ( ctrl.chunk_info.size() == ctrl.num_chunks )
                     {
+                        //Processing done
                         std::vector<OutputDestInfo> payout_peers;
 
-                        uint64_t peers_amount = ( 0.7f * uint64_t{ ctrl.full_amount } ) / ctrl.chunk_info.size();
+                        uint64_t peers_amount = ( ctrl.dev_cut * uint64_t{ ctrl.full_amount } ) / ctrl.chunk_info.size();
                         uint64_t remainder    = uint64_t{ ctrl.full_amount };
                         for ( auto &pair : ctrl.chunk_info )
                         {
                             payout_peers.push_back( { uint256_t{ peers_amount }, pair.second } );
                             remainder -= peers_amount;
                         }
-                        payout_peers.push_back( { uint256_t{ remainder }, 0x1000 } ); //DEV ADDR
+                        payout_peers.push_back( { uint256_t{ remainder }, ctrl.dev_addr } );
 
-                        auto transfer_transaction = std::make_shared<TransferTransaction>( payout_peers, std::vector<InputUTXOInfo>{ ctrl.original_input }, FillDAGStruct() );
+                        auto transfer_transaction =
+                            std::make_shared<TransferTransaction>( payout_peers, std::vector<InputUTXOInfo>{ ctrl.original_input }, FillDAGStruct() );
                         this->EnqueueTransaction( transfer_transaction );
-                        //Processing done
                     }
                 }
             }

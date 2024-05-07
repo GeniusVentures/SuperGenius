@@ -8,9 +8,12 @@
 
 namespace sgns
 {
-    EscrowTransaction::EscrowTransaction( const UTXOTxParameters &params, const uint64_t &num_chunks, const SGTransaction::DAGStruct &dag ) :
+    EscrowTransaction::EscrowTransaction( const UTXOTxParameters &params, const uint64_t &num_chunks, const uint256_t &dest_addr, const float &cut,
+                                          const SGTransaction::DAGStruct &dag ) :
         IGeniusTransactions( "escrow", SetDAGWithType( dag, "escrow" ) ), //
         utxo_params_( params ),                                           //
+        dev_addr( dest_addr ),                                            //
+        dev_cut( cut ),                                                   //
         num_chunks_( num_chunks )                                         //
     {
     }
@@ -34,6 +37,8 @@ namespace sgns
             output_proto->set_dest_addr( output.dest_address.str() );
         }
         tx_struct.set_num_chunks( num_chunks_ );
+        tx_struct.set_dev_addr( dev_addr.str() );
+        tx_struct.set_dev_cut( dev_cut );
         size_t               size = tx_struct.ByteSizeLong();
         std::vector<uint8_t> serialized_proto( size );
 
@@ -67,8 +72,10 @@ namespace sgns
             OutputDestInfo curr{ uint256_t{ output_proto.encrypted_amount() }, uint256_t{ output_proto.dest_addr() } };
             outputs.push_back( curr );
         }
-        uint64_t num_chunks = tx_struct.num_chunks();
-        return EscrowTransaction( UTXOTxParameters{ inputs, outputs }, num_chunks, tx_struct.dag_struct() ); // Return new instance
+        uint64_t  num_chunks = tx_struct.num_chunks();
+        float     dev_cut    = tx_struct.dev_cut();
+        uint256_t dev_addr( tx_struct.dev_addr() );
+        return EscrowTransaction( UTXOTxParameters{ inputs, outputs }, num_chunks, dev_addr, dev_cut, tx_struct.dag_struct() ); // Return new instance
     }
     uint64_t EscrowTransaction::GetNumChunks() const
     {

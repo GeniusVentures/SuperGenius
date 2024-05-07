@@ -40,7 +40,8 @@ namespace sgns
 
         bool TransferFunds( const uint256_t &amount, const uint256_t &destination );
         void MintFunds( const uint64_t &amount );
-        bool HoldEscrow( const uint64_t &amount, const uint64_t &num_chunks, const std::string &job_id );
+        bool HoldEscrow( const uint64_t &amount, const uint64_t &num_chunks, const uint256_t &dev_addr, const float &dev_cut,
+                         const std::string &job_id );
 
     private:
         std::shared_ptr<crdt::GlobalDB>                  db_m;
@@ -56,14 +57,21 @@ namespace sgns
 
         struct EscrowCtrl
         {
-            uint256_t                                  src_addr;
+            uint256_t                                  dev_addr;
+            float                                      dev_cut;
             uint256_t                                  job_hash;
             uint256_t                                  full_amount;
             uint64_t                                   num_chunks;
             InputUTXOInfo                              original_input;
             std::unordered_map<std::string, uint256_t> chunk_info;
-            EscrowCtrl( const uint256_t &src, const uint256_t &hash, const uint256_t &amount, const uint64_t &chunks, const InputUTXOInfo &input ) :
-                src_addr( src ), job_hash( hash ), full_amount( amount ), num_chunks( chunks ), original_input( input )
+            EscrowCtrl( const uint256_t &addr, const float &cut, const uint256_t &hash, const uint256_t &amount, const uint64_t &chunks,
+                        const InputUTXOInfo &input ) :
+                dev_addr( addr ),       //
+                dev_cut( cut ),         //
+                job_hash( hash ),       //
+                full_amount( amount ),  //
+                num_chunks( chunks ),   //
+                original_input( input ) //
             {
             }
         };
