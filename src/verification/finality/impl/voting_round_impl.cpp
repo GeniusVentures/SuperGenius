@@ -9,7 +9,6 @@
 #include "base/visitor.hpp"
 #include "verification/finality/finality.hpp"
 #include "verification/finality/impl/voting_round_error.hpp"
-#include "primitives/justification.hpp"
 
 namespace sgns::verification::finality {
 
@@ -128,15 +127,13 @@ namespace sgns::verification::finality {
   }
 
   void VotingRoundImpl::constructCurrentState() {
-    current_round_state_ = std::make_shared<RoundState>(RoundState{
-        /*.last_finalized_block =*/ previous_round_state_->finalized.value_or(
-            previous_round_state_->last_finalized_block),
-        /*.best_prevote_candidate =*/
-            convertToPrevote(previous_round_state_->finalized.value_or(
-                previous_round_state_->last_finalized_block)),
-        /*.best_final_candidate =*/
-            convertToBlockInfo(previous_round_state_->finalized.value_or(
-                previous_round_state_->last_finalized_block))});
+      current_round_state_ = std::make_shared<RoundState>(
+          RoundState{ .last_finalized_block =
+                          previous_round_state_->finalized.value_or( previous_round_state_->last_finalized_block ),
+                      .best_prevote_candidate = convertToPrevote(
+                          previous_round_state_->finalized.value_or( previous_round_state_->last_finalized_block ) ),
+                      .best_final_candidate = convertToBlockInfo( previous_round_state_->finalized.value_or(
+                          previous_round_state_->last_finalized_block ) ) } );
   }
 
   void VotingRoundImpl::play() {
@@ -478,8 +475,7 @@ namespace sgns::verification::finality {
             finalized.error().message());
         return;
       }
-      env_->onCompleted(CompletedRound{/*.round_number =*/ round_number_,
-                                       /*.state =*/ current_round_state_});
+      env_->onCompleted( CompletedRound{ round_number_, current_round_state_ } );
     } else {
       logger_->error("Validation of vote {} failed", f.vote.block_hash.toHex());
       env_->onCompleted(VotingRoundError::FIN_VALIDATION_FAILED);

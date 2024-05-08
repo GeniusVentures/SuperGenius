@@ -1,4 +1,3 @@
-
 #ifndef SUPERGENIUS_SRC_EXTENSIONS_IMPL_EXTENSION_FACTORY_IMPL_HPP
 #define SUPERGENIUS_SRC_EXTENSIONS_IMPL_EXTENSION_FACTORY_IMPL_HPP
 
@@ -45,6 +44,6 @@ namespace sgns::extensions {
     MiscExtension::CoreFactoryMethod core_factory_method_;
   };
 
-}  // namespace sgns::extensions
+}
 
-#endif  // SUPERGENIUS_SRC_EXTENSIONS_IMPL_EXTENSION_FACTORY_IMPL_HPP
+#endif

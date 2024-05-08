@@ -1,15 +1,10 @@
-
-
 #include "crypto/twox/twox.hpp"
 
 #include <xxhash/xxhash.h>
 
 namespace sgns::crypto {
-
   void make_twox64(const uint8_t *in, uint32_t len, uint8_t *out) {
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     auto *ptr = reinterpret_cast<uint64_t *>(out);
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
     ptr[0] = XXH64(in, len, 0);
   }
 
@@ -20,11 +15,8 @@ namespace sgns::crypto {
   }
 
   void make_twox128(const uint8_t *in, uint32_t len, uint8_t *out) {
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     auto *ptr = reinterpret_cast<uint64_t *>(out);
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
     ptr[0] = XXH64(in, len, 0);
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
     ptr[1] = XXH64(in, len, 1);
   }
 
@@ -35,15 +27,10 @@ namespace sgns::crypto {
   }
 
   void make_twox256(const uint8_t *in, uint32_t len, uint8_t *out) {
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     auto *ptr = reinterpret_cast<uint64_t *>(out);
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
     ptr[0] = XXH64(in, len, 0);
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
     ptr[1] = XXH64(in, len, 1);
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
     ptr[2] = XXH64(in, len, 2);
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
     ptr[3] = XXH64(in, len, 3);
   }
 
@@ -52,5 +39,4 @@ namespace sgns::crypto {
     make_twox256(buf.data(), buf.size(), hash.data());
     return hash;
   }
-
-}  // namespace sgns::crypto
+}

@@ -1,5 +1,3 @@
-
-
 #ifndef SUPERGENIUS_SRC_CRYPTO_RANDOM_GENERATOR_HPP
 #define SUPERGENIUS_SRC_CRYPTO_RANDOM_GENERATOR_HPP
 
@@ -8,6 +6,6 @@
 namespace sgns::crypto {
   using RandomGenerator = libp2p::crypto::random::RandomGenerator;
   using CSPRNG = libp2p::crypto::random::CSPRNG;
-}  // namespace sgns::crypto
+}
 
-#endif  // SUPERGENIUS_SRC_CRYPTO_RANDOM_GENERATOR_HPP
+#endif

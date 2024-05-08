@@ -1,12 +1,9 @@
-
-
 #ifndef SUPERGENIUS_SRC_CRYPTO_ED25519_ED25519_PROVIDER_IMPL_HPP
 #define SUPERGENIUS_SRC_CRYPTO_ED25519_ED25519_PROVIDER_IMPL_HPP
 
 #include "crypto/ed25519_provider.hpp"
 
 namespace sgns::crypto {
-
   class ED25519ProviderImpl : public ED25519Provider {
    public:
     ~ED25519ProviderImpl() override = default;
@@ -30,6 +27,6 @@ namespace sgns::crypto {
     }
   };
 
-}  // namespace sgns::crypto
+}
 
-#endif  // SUPERGENIUS_SRC_CRYPTO_ED25519_ED25519_PROVIDER_IMPL_HPP
+#endif

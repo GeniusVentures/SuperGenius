@@ -1,4 +1,3 @@
-
 #ifndef SUPERGENIUS_SRC_CRYPTO_SECP256K1_PROVIDER_IMPL_HPP
 #define SUPERGENIUS_SRC_CRYPTO_SECP256K1_PROVIDER_IMPL_HPP
 
@@ -7,7 +6,6 @@
 #include "crypto/secp256k1_provider.hpp"
 
 namespace sgns::crypto {
-
   enum class Secp256k1ProviderError {
     INVALID_ARGUMENT = 1,
     INVALID_V_VALUE,
@@ -37,8 +35,8 @@ namespace sgns::crypto {
 
     std::unique_ptr<secp256k1_context, void (*)(secp256k1_context *)> context_;
   };
-}  // namespace sgns::crypto
+}
 
 OUTCOME_HPP_DECLARE_ERROR_2(sgns::crypto, Secp256k1ProviderError);
 
-#endif  // SUPERGENIUS_SRC_CRYPTO_SECP256K1_PROVIDER_IMPL_HPP
+#endif

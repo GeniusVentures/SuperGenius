@@ -1,5 +1,3 @@
-
-
 #ifndef SUPERGENIUS_SHA256_HPP
 #define SUPERGENIUS_SHA256_HPP
 
@@ -22,6 +20,6 @@ namespace sgns::crypto {
    * @return hashed bytes
    */
   base::Hash256 sha256(gsl::span<const uint8_t> input);
-}  // namespace sgns::crypto
+}
 
-#endif  // SUPERGENIUS_SHA256_HPP
+#endif

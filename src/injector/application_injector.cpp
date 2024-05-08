@@ -1,4 +1,3 @@
-
 #include "injector/application_injector.hpp"
 
 OUTCOME_CPP_DEFINE_CATEGORY_3(sgns::injector, InjectorError, e) {

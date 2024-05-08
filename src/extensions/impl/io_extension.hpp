@@ -1,4 +1,3 @@
-
 #ifndef SUPERGENIUS_SRC_IO_EXTENSION_HPP
 #define SUPERGENIUS_SRC_IO_EXTENSION_HPP
 
@@ -44,6 +43,6 @@ namespace sgns::extensions {
     std::shared_ptr<runtime::WasmMemory> memory_;
     base::Logger logger_;
   };
-}  // namespace sgns::extensions
+}
 
-#endif  // SUPERGENIUS_SRC_IO_EXTENSION_HPP
+#endif

@@ -1,5 +1,3 @@
-
-
 #ifndef SUPERGENIUS_SRC_NETWORK_EXTRINSIC_OBSERVER_HPP
 #define SUPERGENIUS_SRC_NETWORK_EXTRINSIC_OBSERVER_HPP
 
@@ -10,7 +8,6 @@
 #include "integration/IComponent.hpp"
 
 namespace sgns::network {
-
   class ExtrinsicObserver : public IComponent {
    public:
     virtual ~ExtrinsicObserver() = default;
@@ -19,6 +16,6 @@ namespace sgns::network {
         const primitives::Extrinsic &extrinsic) = 0;
   };
 
-}  // namespace sgns::network
+}
 
-#endif  // SUPERGENIUS_SRC_NETWORK_EXTRINSIC_OBSERVER_HPP
+#endif

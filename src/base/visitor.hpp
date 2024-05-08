@@ -57,7 +57,7 @@ namespace sgns
     }
 
     /**
-   * @brief Inplace visitor for boost::variant. Bascially poor man's pattern matching for variants.
+   * @brief Inplace visitor for boost::variant.
    * @code{.cpp}
    *   boost::variant<int, std::string> value = "1234";
    *
