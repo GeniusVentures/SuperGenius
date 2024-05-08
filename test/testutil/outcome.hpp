@@ -1,9 +1,8 @@
-
-
 #ifndef SUPERGENIUS_GTEST_OUTCOME_UTIL_HPP
 #define SUPERGENIUS_GTEST_OUTCOME_UTIL_HPP
 
 #include <gtest/gtest.h>
+#include "outcome/outcome.hpp"
 
 #define PP_CAT(a, b) PP_CAT_I(a, b)
 #define PP_CAT_I(a, b) PP_CAT_II(~, a##b)
@@ -198,4 +197,4 @@
         << outcome::result<void>(_error_).error().message() << "'";       \
   }
 
-#endif  // SUPERGENIUS_GTEST_OUTCOME_UTIL_HPP
+#endif
