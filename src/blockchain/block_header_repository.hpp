@@ -28,8 +28,6 @@ namespace sgns::blockchain
     class BlockHeaderRepository : public IComponent
     {
     public:
-        ~BlockHeaderRepository() override = default;
-
         /**
         * @param hash - a blake2_256 hash of an SCALE encoded block header
         * @return the number of the block with the provided hash in case one is in
