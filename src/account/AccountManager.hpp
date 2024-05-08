@@ -28,6 +28,21 @@
 #include "processing/impl/processing_core_impl.hpp"
 #include "processing/processing_service.hpp"
 
+#ifndef __cplusplus
+extern "C"
+{
+#endif
+    typedef struct DevConfig
+    {
+        char  Addr[255];
+        float Cut;
+    } DevConfig_st;
+
+    typedef char AccountKey[255];
+#ifndef __cplusplus
+}
+#endif
+
 using namespace boost::multiprecision;
 namespace sgns
 {
@@ -35,7 +50,9 @@ namespace sgns
     {
 
     public:
-        AccountManager( const std::string &priv_key_data );
+        AccountManager( const AccountKey &priv_key_data, const DevConfig_st &dev_config );
+        //static AccountManager &GetInstance();
+
         AccountManager();
         ~AccountManager();
         boost::optional<GeniusAccount> CreateAccount( const std::string &priv_key_data, const uint64_t &initial_amount );
@@ -64,6 +81,9 @@ namespace sgns
 
         std::thread                              io_thread;
         std::shared_ptr<boost::asio::signal_set> signals_;
+
+        DevConfig_st dev_config_;
+        std::string  node_base_addr_;
 
         static constexpr std::string_view db_path_                = "bc-%d/";
         static constexpr std::uint16_t    MAIN_NET                = 369;

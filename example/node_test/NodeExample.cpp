@@ -52,7 +52,7 @@ void MintTokens( const std::vector<std::string> &args, sgns::AccountManager &acc
         std::cerr << "Invalid process command format.\n";
         return;
     }
-    account_manager.MintTokens(std::stoull( args[1] ));
+    account_manager.MintTokens( std::stoull( args[1] ) );
 }
 
 std::vector<std::string> split_string( const std::string &str )
@@ -69,7 +69,7 @@ void process_events( sgns::AccountManager &account_manager )
 
     while ( !events.empty() )
     {
-        std::cout << "simple event" <<std::endl;
+        std::cout << "simple event" << std::endl;
         std::string event = events.front();
         events.pop();
 
@@ -80,13 +80,13 @@ void process_events( sgns::AccountManager &account_manager )
         }
         else if ( arguments[0] == "process" )
         {
-            account_manager.ProcessImage(arguments[1], 100);
+            account_manager.ProcessImage( arguments[1], 100 );
             //CreateProcessingTransaction( arguments, transaction_manager );
         }
         else if ( arguments[0] == "mint" )
         {
             MintTokens( arguments, account_manager );
-            
+
             //CreateProcessingTransaction( arguments, transaction_manager );
         }
         else if ( arguments[0] == "info" )
@@ -95,7 +95,7 @@ void process_events( sgns::AccountManager &account_manager )
         }
         else if ( arguments[0] == "peer" )
         {
-            account_manager.AddPeer( std::string{arguments[1]} );
+            account_manager.AddPeer( std::string{ arguments[1] } );
         }
         else
         {
@@ -103,22 +103,28 @@ void process_events( sgns::AccountManager &account_manager )
         }
     }
 }
+//This is not used at the moment. Static initialization order fiasco issues on node
+AccountKey   ACCOUNT_KEY = "1";
+DevConfig_st DEV_CONFIG{ "0xcafecafe", 0.65f };
 
 int main( int argc, char *argv[] )
 {
     std::thread input_thread( keyboard_input_thread );
 
     //Inputs
+    AccountKey  key;
+    DevConfig_st local_config{ "0xbeefbeef", 0.65f };
 
-    std::string own_wallet_address( argv[1] );
-    std::string pubs_address( argv[2] );
+    strncpy( key, argv[1], sizeof( key ) );
 
-    sgns::AccountManager node_instance( own_wallet_address  );
 
-    std::cout << "Insert \"process\", the image and the number of tokens to be" <<std::endl;
+    sgns::AccountManager node_instance( key, local_config );
+
+    std::cout << "Insert \"process\", the image and the number of tokens to be" << std::endl;
     while ( true )
     {
         process_events( node_instance );
+        //process_events( sgns::AccountManager::GetInstance() );
     }
     if ( input_thread.joinable() )
     {
@@ -126,4 +132,3 @@ int main( int argc, char *argv[] )
     }
     return 0;
 }
-

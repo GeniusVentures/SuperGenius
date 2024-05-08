@@ -12,28 +12,41 @@
 #include "processing/processors/processing_processor_mnn_posenet.hpp"
 #include "processing/impl/processing_subtask_result_storage_impl.hpp"
 
+#ifndef __cplusplus
+extern "C"
+{
+#endif
+    extern AccountKey   ACCOUNT_KEY;
+    extern DevConfig_st DEV_CONFIG;
+#ifndef __cplusplus
+}
+#endif
+static const std::string logger_config( R"(
+            # ----------------
+            sinks:
+            - name: console
+                type: console
+                color: true
+            groups:
+            - name: SuperGeniusDemo
+                sink: console
+                level: info
+                children:
+                - name: libp2p
+                - name: Gossip
+            # ----------------
+            )" );
+
 namespace sgns
 {
-    AccountManager::AccountManager( const std::string &priv_key_data ) :
-        account_( std::make_shared<GeniusAccount>( uint256_t{ priv_key_data }, 0, 0 ) ), //
-        io_( std::make_shared<boost::asio::io_context>() )                               //
+    AccountManager::AccountManager( const AccountKey &priv_key_data, const DevConfig_st &dev_config ) :
+        account_( std::make_shared<GeniusAccount>( uint256_t{ std::string( priv_key_data ) }, 0, 0 ) ), //
+        io_( std::make_shared<boost::asio::io_context>() ),                                             //
+        node_base_addr_( priv_key_data ),                                                               //
+        dev_config_( dev_config )                                                                       //
     {
-        const std::string logger_config( R"(
-                    # ----------------
-                    sinks:
-                    - name: console
-                        type: console
-                        color: true
-                    groups:
-                    - name: SuperGeniusDemo
-                        sink: console
-                        level: info
-                        children:
-                        - name: libp2p
-                        - name: Gossip
-                    # ----------------
-                    )" );
-        auto              logging_system = std::make_shared<soralog::LoggingSystem>( std::make_shared<soralog::ConfiguratorFromYAML>(
+
+        auto logging_system = std::make_shared<soralog::LoggingSystem>( std::make_shared<soralog::ConfiguratorFromYAML>(
             // Original LibP2P logging config
             std::make_shared<libp2p::log::Configurator>(),
             // Additional logging config for application
@@ -52,14 +65,14 @@ namespace sgns
         //auto loggerBroadcaster = base::createLogger( "PubSubBroadcasterExt" );
         //loggerBroadcaster->set_level( spdlog::level::debug );
 
-        auto pubsubKeyPath = ( boost::format( "SuperGNUSNode.TestNet.%s/pubs_processor" ) % priv_key_data ).str();
+        auto pubsubKeyPath = ( boost::format( "SuperGNUSNode.TestNet.%s/pubs_processor" ) % node_base_addr_ ).str();
 
         pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>( crdt::KeyPairFileStorage( pubsubKeyPath ).GetKeyPair().value() );
         pubsub_->Start( 40001, { pubsub_->GetLocalAddress() } );
 
         io_ = std::make_shared<boost::asio::io_context>();
 
-        globaldb_ = std::make_shared<crdt::GlobalDB>( io_, ( boost::format( "SuperGNUSNode.TestNet.%s" ) % priv_key_data ).str(), 40010,
+        globaldb_ = std::make_shared<crdt::GlobalDB>( io_, ( boost::format( "SuperGNUSNode.TestNet.%s" ) % node_base_addr_ ).str(), 40010,
                                                       std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_, "SGNUS.TestNet.Channel" ) );
 
         globaldb_->Init( crdt::CrdtOptions::DefaultOptions() );
@@ -118,7 +131,6 @@ namespace sgns
         {
             io_thread.join();
         }
-        std::cout << "deleted_it " << std::endl;
     }
 
     void AccountManager::AddPeer( const std::string &peer )
@@ -128,7 +140,7 @@ namespace sgns
 
     boost::optional<GeniusAccount> AccountManager::CreateAccount( const std::string &priv_key_data, const uint64_t &initial_amount )
     {
-        uint256_t value_in_num( priv_key_data );
+        uint256_t value_in_num{ priv_key_data };
         return GeniusAccount( value_in_num, initial_amount, 0 );
     }
 
@@ -168,10 +180,18 @@ namespace sgns
             task_queue_->EnqueueTask( task, subTasks );
         }
 
-        transaction_manager_->HoldEscrow( funds, nChunks, 0x1000, 0.7f, "QmagrfcEhX6aVuFqrRoUU5K6yvjpNiCxnJA6o2tT38Kvxx" );
+        transaction_manager_->HoldEscrow( funds, nChunks, uint256_t{ std::string( dev_config_.Addr ) }, dev_config_.Cut,
+                                          "QmagrfcEhX6aVuFqrRoUU5K6yvjpNiCxnJA6o2tT38Kvxx" );
     }
     void AccountManager::MintTokens( uint64_t amount )
     {
         transaction_manager_->MintFunds( amount );
     }
+    /*
+    static AccountManager instance( ACCOUNT_KEY, DEV_CONFIG );
+    AccountManager       &AccountManager::GetInstance()
+    {
+        return instance;
+    }
+    */
 }
