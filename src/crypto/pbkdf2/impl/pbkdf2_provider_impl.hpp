@@ -1,5 +1,3 @@
-
-
 #ifndef SUPERGENIUS_CRYPTO_PBKDF2_PROVIDER_IMPL_HPP
 #define SUPERGENIUS_CRYPTO_PBKDF2_PROVIDER_IMPL_HPP
 
@@ -17,6 +15,6 @@ namespace sgns::crypto {
                                               size_t key_length) const override;
   };
 
-}  // namespace sgns::crypto
+}
 
-#endif  // SUPERGENIUS_CRYPTO_PBKDF2_PROVIDER_IMPL_HPP
+#endif

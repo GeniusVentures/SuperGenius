@@ -1,4 +1,3 @@
-
 #ifndef SUPERGENIUS_SRC_EXTENSION_IMPL_HPP
 #define SUPERGENIUS_SRC_EXTENSION_IMPL_HPP
 
@@ -247,6 +246,6 @@ namespace sgns::extensions {
     MiscExtension misc_ext_;
     StorageExtension storage_ext_;
   };
-}  // namespace sgns::extensions
+}
 
-#endif  // SUPERGENIUS_SRC_EXTENSION_IMPL_HPP
+#endif

@@ -1,4 +1,3 @@
-
 #include "extensions/impl/crypto_extension.hpp"
 
 #include <algorithm>

@@ -1,5 +1,3 @@
-
-
 #ifndef SUPERGENIUS_CRYPTO_STORE_IMPL_HPP
 #define SUPERGENIUS_CRYPTO_STORE_IMPL_HPP
 
@@ -15,7 +13,6 @@
 #include "crypto/sr25519_provider.hpp"
 
 namespace sgns::crypto {
-
   namespace store {
     using KeyPair = boost::variant<ED25519Keypair, SR25519Keypair>;
     using PublicKey = base::Blob<32>;
@@ -42,7 +39,7 @@ namespace sgns::crypto {
 
   inline std::ostream &operator<<(std::ostream &out, const CryptoStoreError &test_struct)
   {
-    return out << (int)test_struct; 
+    return out << static_cast<int>(test_struct); 
   }
 
   class CryptoStoreImpl : public CryptoStore {

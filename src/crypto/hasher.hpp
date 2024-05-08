@@ -1,5 +1,3 @@
-
-
 #ifndef SUPERGENIUS_SRC_HASHER_HASHER_HPP_
 #define SUPERGENIUS_SRC_HASHER_HASHER_HPP_
 
@@ -75,6 +73,6 @@ namespace sgns::crypto {
      */
     [[nodiscard]] virtual Hash256 sha2_256( gsl::span<const uint8_t> buffer ) const = 0;
   };
-}  // namespace sgns::crypto
+}
 
-#endif  // SUPERGENIUS_SRC_HASHER_HASHER_HPP_
+#endif

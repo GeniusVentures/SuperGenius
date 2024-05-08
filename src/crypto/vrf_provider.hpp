@@ -1,5 +1,3 @@
-
-
 #ifndef SUPERGENIUS_SRC_CRYPTO_VRF_VRF_PROVIDER_HPP
 #define SUPERGENIUS_SRC_CRYPTO_VRF_VRF_PROVIDER_HPP
 
@@ -10,7 +8,6 @@
 #include "integration/IComponent.hpp"
 
 namespace sgns::crypto {
-
   /**
    * SR25519 based verifiable random function implementation
    */
@@ -42,6 +39,6 @@ namespace sgns::crypto {
                         const SR25519PublicKey &public_key,
                         const VRFThreshold &threshold) const = 0;
   };
-}  // namespace sgns::crypto
+}
 
-#endif  // SUPERGENIUS_SRC_CRYPTO_VRF_VRF_PROVIDER_HPP
+#endif 

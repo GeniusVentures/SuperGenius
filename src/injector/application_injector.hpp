@@ -1,6 +1,6 @@
-
 #ifndef SUPERGENIUS_SRC_INJECTOR_APPLICATION_INJECTOR_HPP
 #define SUPERGENIUS_SRC_INJECTOR_APPLICATION_INJECTOR_HPP
+
 #include <boost/di.hpp>
 #include <boost/di/extension/scopes/shared.hpp>
 
@@ -42,25 +42,18 @@
 #include "blockchain/impl/key_value_block_header_repository.hpp"
 #include "blockchain/impl/key_value_block_storage.hpp"
 #include "blockchain/impl/storage_util.hpp"
-#include "boost/di/extension/injections/extensible_injector.hpp"
 #include "clock/impl/basic_waitable_timer.hpp"
 #include "clock/impl/clock_impl.hpp"
 #include "base/outcome_throw.hpp"
 #include "verification/authority/authority_manager.hpp"
 #include "verification/authority/authority_update_observer.hpp"
 #include "verification/authority/impl/authority_manager_impl.hpp"
-#include "verification/production/production_lottery.hpp"
-#include "verification/production/common.hpp"
-#include "verification/production/impl/production_lottery_impl.hpp"
 #include "verification/production/impl/production_synchronizer_impl.hpp"
 #include "verification/production/impl/epoch_storage_impl.hpp"
 #include "verification/finality/finalization_observer.hpp"
 #include "verification/finality/impl/environment_impl.hpp"
 #include "verification/finality/impl/finalization_composite.hpp"
 #include "verification/finality/impl/vote_crypto_provider_impl.hpp"
-#include "verification/finality/structs.hpp"
-#include "verification/finality/vote_graph.hpp"
-#include "verification/finality/vote_tracker.hpp"
 #include "verification/validation/production_block_validator.hpp"
 #include "primitives/production_configuration.hpp"
 #include "crypto/ed25519/ed25519_provider_impl.hpp"
@@ -75,7 +68,6 @@
 #include "network/impl/remote_sync_protocol_client.hpp"
 #include "network/impl/router_libp2p.hpp"
 #include "network/impl/sync_protocol_observer_impl.hpp"
-#include "network/sync_protocol_client.hpp"
 #include "network/sync_protocol_observer.hpp"
 #include "network/types/sync_clients_set.hpp"
 #include "runtime/binaryen/module/wasm_module_impl.hpp"
@@ -98,7 +90,6 @@
 #include "storage/predefined_keys.hpp"
 #include "storage/trie/impl/trie_storage_backend_impl.hpp"
 #include "storage/trie/impl/trie_storage_impl.hpp"
-#include "storage/trie/supergenius_trie/supergenius_node.hpp"
 #include "storage/trie/supergenius_trie/supergenius_trie_factory_impl.hpp"
 #include "storage/trie/serialization/supergenius_codec.hpp"
 #include "storage/trie/serialization/trie_serializer_impl.hpp"

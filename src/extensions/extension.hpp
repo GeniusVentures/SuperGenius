@@ -1,9 +1,7 @@
-
 #ifndef SUPERGENIUS_SRC_EXTENSION_HPP
 #define SUPERGENIUS_SRC_EXTENSION_HPP
 
 #include <cstdint>
-#include <functional>
 
 #include "runtime/types.hpp"
 #include "runtime/wasm_result.hpp"
@@ -487,6 +485,6 @@ namespace sgns::extensions {
     virtual runtime::WasmResult ext_misc_runtime_version_version_1(
         runtime::WasmSpan data) const = 0;
   };
-}  // namespace sgns::extensions
+}
 
-#endif  // SUPERGENIUS_SRC_EXTENSION_HPP
+#endif

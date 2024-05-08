@@ -1,11 +1,8 @@
-
-
 #include "crypto/crypto_store/crypto_store_impl.hpp"
 
 #include <fstream>
 
 #include <gsl/span>
-#include "base/visitor.hpp"
 #include "crypto/bip39/mnemonic.hpp"
 #include <set>
 
@@ -32,9 +29,14 @@ namespace sgns::crypto {
       }
 
       std::ifstream file;
-      auto close_file = gsl::finally([&file] {
-        if (file.is_open()) file.close();
-      });
+      auto          close_file = gsl::finally(
+          [&file]
+          {
+              if ( file.is_open() )
+              {
+                  file.close();
+              }
+          } );
 
       file.open(file_path.string(), std::ios::in);
       if (!file.is_open()) {
@@ -293,7 +295,7 @@ namespace sgns::crypto {
       }
     }
 
-    return ED25519Keys(keys.begin(), keys.end());
+    return { keys.begin(), keys.end() };
   }
 
   CryptoStore::SR25519Keys CryptoStoreImpl::getSr25519PublicKeys(
@@ -340,7 +342,7 @@ namespace sgns::crypto {
       }
     }
 
-    return SR25519Keys(keys.begin(), keys.end());
+    return { keys.begin(), keys.end() };
   }
 }  // namespace sgns::crypto
 

@@ -1,5 +1,3 @@
-
-
 #include "crypto/vrf/vrf_provider_impl.hpp"
 
 #include <gsl/span>
@@ -69,8 +67,7 @@ namespace sgns::crypto {
                                   output.output.data(),
                                   output.proof.data(),
                                   base::uint128_t_to_bytes(threshold).data());
-    return VRFVerifyOutput{/*.is_valid = */res.result == Sr25519SignatureResult::Ok,
-                           /*.is_less = */res.is_less};
+    return VRFVerifyOutput{ res.result == Sr25519SignatureResult::Ok, res.is_less };
   }
 
-}  // namespace sgns::crypto
+}

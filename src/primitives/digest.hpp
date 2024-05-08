@@ -1,5 +1,3 @@
-
-
 #ifndef SUPERGENIUS_SRC_PRIMITIVES_DIGEST_HPP
 #define SUPERGENIUS_SRC_PRIMITIVES_DIGEST_HPP
 
@@ -9,7 +7,6 @@
 #include "primitives/scheduled_change.hpp"
 
 namespace sgns::primitives {
-  
   /// Verification engine unique ID.
   using VerificationEngineId = base::Blob<4>;
 
@@ -88,8 +85,6 @@ namespace sgns::primitives {
     return s >> dic.verification_engine_id >> dic.data;
   }
 
-  /// Some other thing. Unsupported and experimental.
-  using Other = base::Buffer;
   /// Digest item that is able to encode/decode 'system' digest items and
   /// provide opaque access to other items.
   /// Note: order of types in variant matters. Should match type ids from here:
@@ -97,7 +92,7 @@ namespace sgns::primitives {
                                     Unused<1>,        // 1
                                     ChangesTrieRoot,  // 2
                                     Unused<3>,        // 3
-                                    Verification,        // 4
+                                    Verification,     // 4
                                     Seal,             // 5
                                     PreRuntime>;      // 6
 

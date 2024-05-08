@@ -1,5 +1,3 @@
-
-
 #ifndef SUPERGENIUS_SRC_NETWORK_EXTRINSIC_GOSSIPER_HPP
 #define SUPERGENIUS_SRC_NETWORK_EXTRINSIC_GOSSIPER_HPP
 
@@ -20,6 +18,6 @@ namespace sgns::network {
     virtual void transactionAnnounce(
         const network::TransactionAnnounce &announce) = 0;
   };
-}  // namespace sgns::network
+}
 
-#endif  // SUPERGENIUS_SRC_NETWORK_EXTRINSIC_GOSSIPER_HPP
+#endif

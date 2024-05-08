@@ -2,7 +2,6 @@
 #define SUPERGENIUS_PRIMITIVES_BLOCK_HEADER_HPP
 
 #include <type_traits>
-#include <vector>
 
 #include <boost/multiprecision/cpp_int.hpp>
 #include "base/blob.hpp"
@@ -40,9 +39,9 @@ namespace sgns::primitives
             out << bh.parent_hash << CompactInteger( bh.number ) << bh.state_root << bh.extrinsics_root;
 
             out << bh.digest.size();
-            for ( auto it = bh.digest.begin(); it != bh.digest.end(); ++it )
+            for ( const auto &it : bh.digest )
             {
-                out << ( *it ).which();
+                out << it.which();
             }
             return out;
         }

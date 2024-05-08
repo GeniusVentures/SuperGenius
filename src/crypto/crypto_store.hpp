@@ -1,17 +1,11 @@
-
-
 #ifndef SUPERGENIUS_CRYPTO_STORE_HPP
 #define SUPERGENIUS_CRYPTO_STORE_HPP
-
-#include <memory>
 
 #include <boost/filesystem.hpp>
 #include <boost/optional.hpp>
 #include <libp2p/crypto/key.hpp>
-#include "crypto/bip39/bip39_provider.hpp"
 #include "crypto/crypto_store/key_type.hpp"
 #include "crypto/ed25519_types.hpp"
-#include "crypto/secp256k1_types.hpp"
 #include "crypto/sr25519_types.hpp"
 
 namespace sgns::crypto {
@@ -110,6 +104,6 @@ namespace sgns::crypto {
      */
     virtual SR25519Keys getSr25519PublicKeys(KeyTypeId key_type) const = 0;
   };
-}  // namespace sgns::crypto
+}
 
-#endif  // SUPERGENIUS_CRYPTO_STORE_HPP
+#endif

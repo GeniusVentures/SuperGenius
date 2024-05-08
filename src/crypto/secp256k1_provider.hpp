@@ -1,4 +1,3 @@
-
 #ifndef SUPERGENIUS_SRC_CRYPTO_SECP256K1_PROVIDER_HPP
 #define SUPERGENIUS_SRC_CRYPTO_SECP256K1_PROVIDER_HPP
 
@@ -6,7 +5,6 @@
 #include "outcome/outcome.hpp"
 
 namespace sgns::crypto {
-
   /**
    * @class Secp256k1Provider provides public key recovery functionality
    */
@@ -37,6 +35,6 @@ namespace sgns::crypto {
         const secp256k1::MessageHash &message_hash) const = 0;
   };
 
-}  // namespace sgns::crypto
+}
 
-#endif  // SUPERGENIUS_SRC_CRYPTO_SECP256K1_PROVIDER_HPP
+#endif

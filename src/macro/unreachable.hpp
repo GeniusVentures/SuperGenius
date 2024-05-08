@@ -1,5 +1,3 @@
-
-
 #ifndef SUPERGENIUS_UNREACHABLE_HPP
 #define SUPERGENIUS_UNREACHABLE_HPP
 
@@ -20,4 +18,4 @@ class Unreachable_At_Line {};
 
 #undef GCC_VERSION
 
-#endif  // SUPERGENIUS_UNREACHABLE_HPP
+#endif

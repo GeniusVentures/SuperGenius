@@ -1,9 +1,7 @@
-
-
 #include "crypto/sr25519/sr25519_provider_impl.hpp"
 
 #include "crypto/sr25519_types.hpp"
-#include "libp2p/crypto/random_generator.hpp"
+#include <libp2p/crypto/random_generator.hpp>
 
 namespace sgns::crypto {
   SR25519ProviderImpl::SR25519ProviderImpl(std::shared_ptr<CSPRNG> generator)
@@ -62,7 +60,7 @@ namespace sgns::crypto {
     }
     return outcome::success(result);
   }
-}  // namespace sgns::crypto
+}
 
 OUTCOME_CPP_DEFINE_CATEGORY_3(sgns::crypto, SR25519ProviderError, e) {
   using sgns::crypto::SR25519ProviderError;

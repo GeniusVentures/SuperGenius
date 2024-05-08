@@ -1,21 +1,10 @@
-
 #ifndef SUPERGENIUS_SRC_INJECTOR_BLOCK_PRODUCING_NODE_INJECTOR_HPP
 #define SUPERGENIUS_SRC_INJECTOR_BLOCK_PRODUCING_NODE_INJECTOR_HPP
 
 #include "application/app_config.hpp"
-#include "application/impl/local_key_storage.hpp"
-#include "verification/production/impl/production_impl.hpp"
-#include "verification/production/impl/syncing_production_observer.hpp"
-#include "verification/finality/impl/syncing_round_observer.hpp"
-#include "injector/application_injector.hpp"
-#include "injector/validating_node_injector.hpp"
-#include "runtime/dummy/finality_api_dummy.hpp"
-#include "storage/in_memory/in_memory_storage.hpp"
 
 #include "platform/platform.hpp"
 namespace sgns::injector {
-  namespace di = boost::di;
-
   template <typename... Ts>
   auto makeBlockProducingNodeInjector(
       const application::AppConfigPtr &app_config, Ts &&... args) {
@@ -65,6 +54,6 @@ namespace sgns::injector {
         // user-defined overrides...
         std::forward<decltype(args)>(args)...);
   }
-}  // namespace sgns::injector
+}
 
-#endif  // SUPERGENIUS_SRC_INJECTOR_BLOCK_PRODUCING_NODE_INJECTOR_HPP
+#endif

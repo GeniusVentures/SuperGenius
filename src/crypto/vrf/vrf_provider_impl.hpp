@@ -1,5 +1,3 @@
-
-
 #ifndef SUPERGENIUS_SRC_VERIFICATION_VRF_VRF_HPP
 #define SUPERGENIUS_SRC_VERIFICATION_VRF_VRF_HPP
 
@@ -10,7 +8,6 @@
 #include "crypto/random_generator.hpp"
 
 namespace sgns::crypto {
-
   class VRFProviderImpl : public VRFProvider {
    public:
     explicit VRFProviderImpl(std::shared_ptr<CSPRNG> generator);
@@ -36,6 +33,6 @@ namespace sgns::crypto {
    private:
     std::shared_ptr<CSPRNG> generator_;
   };
-}  // namespace sgns::crypto
+}
 
-#endif  // SUPERGENIUS_SRC_VERIFICATION_VRF_VRF_HPP
+#endif
