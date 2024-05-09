@@ -31,6 +31,108 @@
 #include <ipfs_lite/ipfs/graphsync/graphsync.hpp>
 #include "account/AccountManager.hpp"
 #include <libp2p/crypto/sha/sha256.hpp>
+#include <libp2p/protocol/identify/identify.hpp>
+#include <upnp.h>
+#include <boost/asio/ip/udp.hpp>
+
+using namespace std;
+namespace net = upnp::net;
+
+const char* pad = "  ";
+
+ostream& operator<<(ostream& os, const upnp::igd::map_entry& e) {
+    return cerr << e.proto
+        << " EXT:" << e.ext_port
+        << " INT:" << e.int_port
+        << " ADDR:" << e.int_client
+        << " DURATION:" << e.lease_duration.count() << "s"
+        << " " << e.description;
+}
+
+void list_port_mappings_igd1(upnp::igd& igd, net::yield_context yield)
+{
+    cerr << "Getting list of port mappings IGD1\n";
+
+    for (unsigned i = 0; ; ++i) {
+        auto r = igd.get_generic_port_mapping_entry(i, yield);
+        if (!r) {
+            if (i == 0) {
+                cerr << pad << "Error: " << r.error() << "\n";
+            }
+            break;
+        }
+        cerr << pad << r.value() << "\n";
+    }
+}
+
+void list_port_mappings_igd2(upnp::igd& igd, net::yield_context yield)
+{
+    cerr << "Getting list of port mappings IGD2\n";
+
+    auto r = igd.get_list_of_port_mappings(upnp::igd::udp
+        , 0
+        , 65535
+        , 100
+        , yield);
+
+    if (r) {
+        cerr << pad << "Found " << r.value().size() << " entries:\n";
+        for (auto e : r.value()) {
+            cerr << pad << e << "\n";
+        }
+    }
+    else {
+        cerr << pad << "Error: " << r.error() << "\n";
+    }
+}
+
+void delete_port_mapping(upnp::igd& igd, uint16_t port, net::yield_context yield)
+{
+    cerr << "Removing port mapping EXT:" << port << "\n";
+    auto r = igd.delete_port_mapping(upnp::igd::udp, port, yield);
+    if (r) {
+        cerr << pad << "Success\n";
+    }
+    else {
+        cerr << pad << "Error: " << r.error() << "\n";
+    }
+}
+
+void get_external_address(upnp::igd& igd, net::yield_context yield)
+{
+    cerr << "Getting external address\n";
+
+    auto r = igd.get_external_address(yield);
+
+    if (r) {
+        cerr << pad << r.value() << "\n";
+    }
+    else {
+        cerr << pad << "Error: " << r.error() << "\n";
+    }
+}
+
+void add_port_mapping(upnp::igd& igd
+    , uint16_t ext_p
+    , uint16_t int_p
+    , net::yield_context yield)
+{
+    cerr << "Adding port mapping ext:" << ext_p << " int:" << int_p << "\n";
+
+    auto r = igd.add_port_mapping(upnp::igd::udp
+        , ext_p
+        , int_p
+        , "test"
+        , chrono::minutes(1)
+        , yield);
+
+    if (r) {
+        cerr << pad << "Success\n";
+    }
+    else {
+        cerr << pad << "Error: " << r.error() << "\n";
+    }
+}
 
 std::vector<std::string> wallet_addr{ "0x4E8794BE4831C45D0699865028C8BE23D608C19C1E24371E3089614A50514262",
                                       "0x06DDC80283462181C02917CC3E99C7BC4BDB2856E19A392300A62DBA6262212C" };
@@ -195,6 +297,61 @@ int main( int argc, char *argv[] )
     std::string own_wallet_address( argv[2] );
     //std::string pubs_address( argv[3] );
 
+
+    net::io_context ctx;
+
+    net::spawn(ctx, [&](net::yield_context yield) {
+        cerr << "Discovering IGDs\n";
+
+        auto r_igds = upnp::igd::discover(ctx.get_executor(), yield);
+        std::cout << "Ok" << std::endl;
+        if (r_igds) {
+            cerr << pad << "Success. Found " << r_igds.value().size() << " IGDs\n";
+        }
+        else {
+            std::cout << "Error getting IGD" << std::endl;
+            cerr << pad << "Error: " << r_igds.error().message() << "\n";
+            return;
+        }
+
+        auto igds = move(r_igds.value());
+
+        net::ip::udp::socket
+            socket(ctx, net::ip::udp::endpoint(net::ip::address_v4::any(), 0));
+
+        for (auto& igd : igds) {
+            cerr << "IGD:\n";
+            cerr << pad << igd.friendly_name() << "\n";
+
+            get_external_address(igd, yield);
+
+            add_port_mapping(igd, 7777, socket.local_endpoint().port(), yield);
+
+            list_port_mappings_igd1(igd, yield);
+            list_port_mappings_igd2(igd, yield);
+
+            //delete_port_mapping(igd, 7777, yield);
+        }
+
+        // Uncomment the below code to start receiving UDP packets on the
+        // socket which we made available from outside on port 7777.
+        //
+        //cerr << "Listening on UDP " << socket.local_endpoint() << "\n";
+
+        //while (true) {
+        //    upnp::error_code ec;
+        //    net::ip::udp::endpoint ep;
+        //    std::array<char, 256> d;
+        //    size_t size = socket.async_receive_from(net::buffer(d), ep, yield[ec]);
+        //    if (ec) { cerr << "Bye\n"; break; }
+        //    boost::string_view sv(d.data(), size);
+        //    std::cerr << "received " << sv << "\n";
+        //}
+        });
+
+    ctx.run();
+
+    std::cout << "ok" << std::endl;
     auto maybe_account = sgns::AccountManager{}.CreateAccount( own_wallet_address, 100 );
 
     const std::string processingGridChannel = "GRID_CHANNEL_ID";
@@ -251,8 +408,8 @@ int main( int argc, char *argv[] )
     SHA256(inputBytes.data(), inputBytes.size(), hash.data());
     //Provide CID
     libp2p::protocol::kademlia::ContentId key(hash);
-    pubs->GetDHT()->Start();
-    pubs->GetDHT()->ProvideCID(key, true);
+    //pubs->GetDHT()->Start();
+    //pubs->GetDHT()->ProvideCID(key, true);
     
     auto cidtest = libp2p::multi::ContentIdentifierCodec::decode(key.data);
     
@@ -260,7 +417,7 @@ int main( int argc, char *argv[] )
     std::cout << "CID Test::" << cidstring.value() << std::endl;
 
     //Also Find providers
-    pubs->StartFindingPeers(io, key);
+    //pubs->StartFindingPeers(io, key);
     //pubs->GetDHT()->FindProviders(key, [=](libp2p::outcome::result<std::vector<libp2p::peer::PeerInfo>> res) {
     //    std::cout << "Find Providers Callback" << std::endl;
     //    if (!res) {

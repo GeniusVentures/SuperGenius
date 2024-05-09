@@ -31,5 +31,7 @@ add_executable(account_handling
     Boost::program_options
     ipfs-bitswap-cpp
 	ipfs-pubsub
+	cpp_upnp
     ${WIN_CRYPT_LIBRARY}
     )
+	target_link_options(account_handling PRIVATE /WHOLEARCHIVE:cpp_upnp)
