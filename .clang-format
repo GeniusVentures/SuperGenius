@@ -1,5 +1,6 @@
 ---
 BasedOnStyle: Microsoft
+AlwaysBreakTemplateDeclarations: true
 AccessModifierOffset: -4
 AlignConsecutiveAssignments:
   Enabled: true
