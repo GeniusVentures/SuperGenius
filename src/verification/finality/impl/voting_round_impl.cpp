@@ -128,12 +128,9 @@ namespace sgns::verification::finality {
 
   void VotingRoundImpl::constructCurrentState() {
       current_round_state_ = std::make_shared<RoundState>(
-          RoundState{ .last_finalized_block =
-                          previous_round_state_->finalized.value_or( previous_round_state_->last_finalized_block ),
-                      .best_prevote_candidate = convertToPrevote(
-                          previous_round_state_->finalized.value_or( previous_round_state_->last_finalized_block ) ),
-                      .best_final_candidate = convertToBlockInfo( previous_round_state_->finalized.value_or(
-                          previous_round_state_->last_finalized_block ) ) } );
+          RoundState{  previous_round_state_->finalized.value_or( previous_round_state_->last_finalized_block ),
+                       convertToPrevote( previous_round_state_->finalized.value_or( previous_round_state_->last_finalized_block ) ),
+                       convertToBlockInfo( previous_round_state_->finalized.value_or( previous_round_state_->last_finalized_block ) ) } );
   }
 
   void VotingRoundImpl::play() {
