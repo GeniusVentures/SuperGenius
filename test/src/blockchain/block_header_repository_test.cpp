@@ -23,10 +23,10 @@ using sgns::primitives::BlockNumber;
 
 static BlockHeader defaultHeader( BlockNumber number )
 {
-    return { .parent_hash     = "ABCDEF"_hash256,
-             .number          = number,
-             .state_root      = "010203"_hash256,
-             .extrinsics_root = "DEADBEEF"_hash256 };
+    return { "ABCDEF"_hash256,
+             number,
+             "010203"_hash256,
+             "DEADBEEF"_hash256 };
 }
 
 static BlockHeader defaultHeader()

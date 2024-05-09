@@ -13,16 +13,17 @@
 #include "account/TransferTransaction.hpp"
 
 using namespace boost::multiprecision;
+
 namespace sgns
 {
     class GeniusAccount
     {
     public:
         GeniusAccount( const uint256_t &addr, const uint64_t &initial_balance, const uint8_t token_type ) :
-            address( addr ),            //
-            balance( initial_balance ), //
-            token( token_type ),        //
-            nonce( 0 )
+            address( addr ),           //
+            token( token_type ),       //
+            nonce( 0 ),                //
+            balance( initial_balance ) //
         {
             std::cout << "Genius account" << std::endl;
             //TODO - Retrieve values where? on Transaction manager?
@@ -37,24 +38,26 @@ namespace sgns
         template <typename T>
         const T GetAddress() const;
 
-        template <> [[nodiscard]] const std::string GetAddress() const
+        template <>
+        [[nodiscard]] const std::string GetAddress() const
         {
             std::ostringstream oss;
             oss << std::hex << address;
 
-            return ( "0x" + oss.str() );
+            return "0x" + oss.str();
         }
 
-        template <> [[nodiscard]] const uint256_t GetAddress() const
+        template <>
+        [[nodiscard]] const uint256_t GetAddress() const
         {
             return address;
         }
 
         template <typename T>
-        const T GetBalance() const;
+        [[nodiscard]] T GetBalance() const;
 
         template <>
-        const uint64_t GetBalance() const
+        [[nodiscard]] uint64_t GetBalance() const
         {
             uint64_t retval = 0;
 
@@ -71,8 +74,8 @@ namespace sgns
             }
             return retval;
         }
-        template <>
 
+        template <>
         [[nodiscard]] std::string GetBalance() const
         {
             return std::to_string( GetBalance<uint64_t>() );
@@ -90,7 +93,7 @@ namespace sgns
 
         bool PutUTXO( const GeniusUTXO &new_utxo )
         {
-          bool is_new = true;
+            bool is_new = true;
             for ( auto &curr : utxos )
             {
                 if ( new_utxo.GetTxID() != curr.GetTxID() )
@@ -113,19 +116,18 @@ namespace sgns
         }
 
         bool RefreshUTXOs( const std::vector<InputUTXOInfo> &infos )
-        {            
+        {
             utxos.erase( std::remove_if( utxos.begin(), utxos.end(),
                                          [&infos]( const GeniusUTXO &x ) { //
                                              return std::any_of( infos.begin(), infos.end(),
                                                                  [&x]( const InputUTXOInfo &a ) { //
-                                                                     return ( ( a.txid_hash_ == x.GetTxID() ) &&
-                                                                              ( a.output_idx_ == x.GetOutputIdx() ) );
+                                                                     return ( a.txid_hash_ == x.GetTxID() ) &&
+                                                                            ( a.output_idx_ == x.GetOutputIdx() );
                                                                  } );
                                          } ),
                          utxos.end() );
             return true;
         }
-
 
         uint256_t               address;
         uint8_t                 token; //GNUS SGNUS ETC...
