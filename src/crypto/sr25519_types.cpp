@@ -1,5 +1,3 @@
-
-
 #include "crypto/sr25519_types.hpp"
 
 namespace sgns::crypto {
@@ -19,4 +17,4 @@ namespace sgns::crypto {
     return !(*this == other);
   }
 
-}  // namespace sgns::crypto
+}

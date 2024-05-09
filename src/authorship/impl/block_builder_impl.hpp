@@ -1,13 +1,9 @@
-
 #ifndef SUPERGENIUS_SRC_AUTHORSHIP_IMPL_BLOCK_BUILDER_IMPL_HPP
 #define SUPERGENIUS_SRC_AUTHORSHIP_IMPL_BLOCK_BUILDER_IMPL_HPP
 
 #include "authorship/block_builder.hpp"
 
 #include "base/logger.hpp"
-#include "primitives/block_id.hpp"
-#include "runtime/block_builder.hpp"
-#include "runtime/core.hpp"
 
 namespace sgns::authorship {
 
@@ -21,9 +17,9 @@ namespace sgns::authorship {
     outcome::result<void> pushExtrinsic(
         const primitives::Extrinsic &extrinsic) override;
 
-    outcome::result<primitives::Block> bake() const override;
+    [[nodiscard]] outcome::result<primitives::Block> bake() const override;
 
-   private:
+private:
     primitives::BlockHeader block_header_;
     //std::shared_ptr<runtime::BlockBuilder> r_block_builder_;
     base::Logger logger_;

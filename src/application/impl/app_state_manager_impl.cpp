@@ -52,9 +52,18 @@ namespace sgns::application {
 
   void AppStateManagerImpl::reset() {
     std::lock_guard lg(mutex_);
-    while (!prepare_.empty()) prepare_.pop();
-    while (!launch_.empty()) launch_.pop();
-    while (!shutdown_.empty()) shutdown_.pop();
+    while ( !prepare_.empty() )
+    {
+        prepare_.pop();
+    }
+    while ( !launch_.empty() )
+    {
+        launch_.pop();
+    }
+    while ( !shutdown_.empty() )
+    {
+        shutdown_.pop();
+    }
     state_ = State::Init;
     shutdown_requested_ = false;
   }
@@ -139,9 +148,15 @@ namespace sgns::application {
       return;
     }
 
-    while (!prepare_.empty()) prepare_.pop();
+    while ( !prepare_.empty() )
+    {
+        prepare_.pop();
+    }
 
-    while (!launch_.empty()) launch_.pop();
+    while ( !launch_.empty() )
+    {
+        launch_.pop();
+    }
 
     state_ = State::ShuttingDown;
 

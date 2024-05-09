@@ -1,4 +1,3 @@
-
 #ifndef SUPERGENIUS_SRC_AUTHORSHIP_IMPL_AITHORING_IMPL_HPP
 #define SUPERGENIUS_SRC_AUTHORSHIP_IMPL_AITHORING_IMPL_HPP
 
@@ -6,7 +5,6 @@
 
 #include "authorship/block_builder_factory.hpp"
 #include "base/logger.hpp"
-#include "runtime/block_builder.hpp"
 #include "transaction_pool/transaction_pool.hpp"
 
 namespace sgns::authorship {

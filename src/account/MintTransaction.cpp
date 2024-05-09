@@ -14,9 +14,10 @@ namespace sgns
         amount( new_amount )                                          //
     {
         auto hasher_ = std::make_shared<sgns::crypto::HasherImpl>();
-        auto hash = hasher_->blake2b_256(SerializeByteVector());
-        dag_st.set_data_hash(hash.toReadableString());
+        auto hash    = hasher_->blake2b_256( SerializeByteVector() );
+        dag_st.set_data_hash( hash.toReadableString() );
     }
+
     std::vector<uint8_t> MintTransaction::SerializeByteVector()
     {
         SGTransaction::MintTx tx_struct;
@@ -28,9 +29,9 @@ namespace sgns
         tx_struct.SerializeToArray( serialized_proto.data(), serialized_proto.size() );
         return serialized_proto;
     }
+
     MintTransaction MintTransaction::DeSerializeByteVector( const std::vector<uint8_t> &data )
     {
-
         SGTransaction::MintTx tx_struct;
         if ( !tx_struct.ParseFromArray( data.data(), data.size() ) )
         {
@@ -39,8 +40,9 @@ namespace sgns
         uint64_t v64 = tx_struct.amount();
         //std::memcpy( &v64, &( *data.begin() ), sizeof( v64 ) );
 
-        return MintTransaction( v64, tx_struct.dag_struct() ); // Return new instance
+        return { v64, tx_struct.dag_struct() }; // Return new instance
     }
+
     uint64_t MintTransaction::GetAmount() const
     {
         return amount;

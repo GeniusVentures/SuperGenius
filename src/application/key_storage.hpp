@@ -19,17 +19,17 @@ namespace sgns::application {
     /**
      * Get the node sr25519 keypair, which is used, for example, in PRODUCTION
      */
-    virtual crypto::SR25519Keypair getLocalSr25519Keypair() const = 0;
+    [[nodiscard]] virtual crypto::SR25519Keypair getLocalSr25519Keypair() const = 0;
 
     /**
      * Get the node ed25519 keypair used in finality of verificaiton
      */
-    virtual crypto::ED25519Keypair getLocalEd25519Keypair() const = 0;
+    [[nodiscard]] virtual crypto::ED25519Keypair getLocalEd25519Keypair() const = 0;
 
     /**
      * Get the node libp2p keypair, which is used by libp2p network library
      */
-    virtual libp2p::crypto::KeyPair getP2PKeypair() const = 0;
+    [[nodiscard]] virtual libp2p::crypto::KeyPair getP2PKeypair() const = 0;
   };
 
 }

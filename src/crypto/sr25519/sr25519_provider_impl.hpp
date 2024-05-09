@@ -1,9 +1,6 @@
-
-
 #ifndef SUPERGENIUS_SRC_CRYPTO_SR25519_SR25519_PROVIDER_IMPL_HPP
 #define SUPERGENIUS_SRC_CRYPTO_SR25519_SR25519_PROVIDER_IMPL_HPP
 
-#include "crypto/random_generator.hpp"
 #include "crypto/sr25519_provider.hpp"
 
 namespace libp2p::crypto::random {
@@ -11,7 +8,6 @@ namespace libp2p::crypto::random {
 }
 
 namespace sgns::crypto {
-
   class SR25519ProviderImpl : public SR25519Provider {
     using CSPRNG = libp2p::crypto::random::CSPRNG;
 
@@ -41,6 +37,6 @@ namespace sgns::crypto {
     std::shared_ptr<CSPRNG> generator_;
   };
 
-}  // namespace sgns::crypto
+}
 
-#endif  // SUPERGENIUS_SRC_CRYPTO_SR25519_SR25519_PROVIDER_IMPL_HPP
+#endif

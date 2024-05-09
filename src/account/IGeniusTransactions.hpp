@@ -7,6 +7,7 @@
 #ifndef _IGENIUS_TRANSACTIONS_HPP_
 #define _IGENIUS_TRANSACTIONS_HPP_
 
+#include <utility>
 #include <vector>
 #include <string>
 #include <boost/optional.hpp>
@@ -23,13 +24,14 @@ namespace sgns
     class IGeniusTransactions
     {
     public:
-        IGeniusTransactions( const std::string &type, const SGTransaction::DAGStruct &dag ) :
-            transaction_type( type ), //
-            dag_st( dag )             //
+        IGeniusTransactions( std::string type, const SGTransaction::DAGStruct &dag ) :
+            dag_st( dag ), transaction_type( std::move( type ) )
         {
         }
+
         virtual ~IGeniusTransactions() = default;
-        const std::string GetType() const
+
+        [[nodiscard]] std::string GetType() const
         {
             return transaction_type;
         }
@@ -66,21 +68,18 @@ namespace sgns
             return full_path.str();
         }
 
-        template <typename T>
-        const T GetSrcAddress() const;
+        template <typename T> const T GetSrcAddress() const;
 
-        template <>
-        const std::string GetSrcAddress<std::string>() const
+        template <> const std::string GetSrcAddress<std::string>() const
         {
-
             //std::string address(bytes_data.begin(), bytes_data.end());
             //std::ostringstream oss;
             //oss << std::hex << src_address;
 
             return dag_st.source_addr();
         }
-        template <>
-        const uint256_t GetSrcAddress<uint256_t>() const
+
+        template <> const uint256_t GetSrcAddress<uint256_t>() const
         {
             return uint256_t{ dag_st.source_addr() };
         }

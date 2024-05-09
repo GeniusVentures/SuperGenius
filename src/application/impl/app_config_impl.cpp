@@ -14,7 +14,10 @@ namespace {
                             Func &&f) {
     assert(nullptr != name);
     auto it = vm.find(name);
-    if (it != vm.end()) std::forward<Func>(f)(it->second.as<T>());
+    if ( it != vm.end() )
+    {
+        std::forward<Func>( f )( it->second.as<T>() );
+    }
   }
 
   const std::string def_rpc_http_host = "0.0.0.0";
@@ -41,8 +44,7 @@ namespace sgns::application {
   AppConfigurationImpl::FilePtr AppConfigurationImpl::open_file(
       const std::string &filepath) {
     assert(!filepath.empty());
-    return AppConfigurationImpl::FilePtr(std::fopen(filepath.c_str(), "r"),
-                                         &std::fclose);
+    return { std::fopen( filepath.c_str(), "r" ), &std::fclose };
   }
 
   bool AppConfigurationImpl::load_str(const rapidjson::Value &val,
@@ -277,8 +279,10 @@ namespace sgns::application {
     });
 
     /// aggregate data from command line args
-    if (vm.end() != vm.find("single_finalizing_node"))
-      is_only_finalizing_ = true;
+    if ( vm.end() != vm.find( "single_finalizing_node" ) )
+    {
+        is_only_finalizing_ = true;
+    }
 
     find_argument<std::string>(
         vm, "genesis", [&](std::string const &val) { genesis_path_ = val; });
@@ -292,10 +296,14 @@ namespace sgns::application {
     find_argument<uint16_t>(
         vm, "p2p_port", [&](uint16_t val) { p2p_port_ = val; });
 
-    find_argument<int32_t>(vm, "verbosity", [&](int32_t val) {
-      if (val >= SPDLOG_LEVEL_TRACE && val <= SPDLOG_LEVEL_OFF)
-        verbosity_ = static_cast<spdlog::level::level_enum>(val);
-    });
+    find_argument<int32_t>( vm, "verbosity",
+                            [&]( int32_t val )
+                            {
+                                if ( val >= SPDLOG_LEVEL_TRACE && val <= SPDLOG_LEVEL_OFF )
+                                {
+                                    verbosity_ = static_cast<spdlog::level::level_enum>( val );
+                                }
+                            } );
 
     find_argument<std::string>(
         vm, "rpc_http_host", [&](std::string const &val) {

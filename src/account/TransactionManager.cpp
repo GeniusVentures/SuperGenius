@@ -23,7 +23,8 @@ namespace sgns
         block_storage_m( std::move( block_storage ) ),                                                              //
         timer_m( std::make_shared<boost::asio::steady_timer>( *ctx_m, boost::asio::chrono::milliseconds( 300 ) ) ), //
         last_block_id_m( 0 ),                                                                                       //
-        last_trans_on_block_id( 0 )
+        last_trans_on_block_id( 0 ),                                                                                //
+        block_storage_m( std::move( block_storage ) )
 
     {
         m_logger->set_level( spdlog::level::debug );
@@ -42,7 +43,8 @@ namespace sgns
             this->Update();
             this->timer_m->expires_after( boost::asio::chrono::milliseconds( 300 ) );
 
-            this->timer_m->async_wait( [this, task]( const boost::system::error_code & ) { this->ctx_m->post( *task ); } );
+            this->timer_m->async_wait( [this, task]( const boost::system::error_code & )
+                                       { this->ctx_m->post( *task ); } );
         };
         ctx_m->post( *task );
     }
@@ -75,7 +77,6 @@ namespace sgns
 
         return ret;
     }
-
     void TransactionManager::MintFunds( const uint64_t &amount )
     {
         auto mint_transaction = std::make_shared<MintTransaction>( amount, FillDAGStruct() );
@@ -102,11 +103,13 @@ namespace sgns
         SendTransaction();
         CheckBlockchain();
     }
+
     void TransactionManager::EnqueueTransaction( std::shared_ptr<IGeniusTransactions> element )
     {
         std::lock_guard<std::mutex> lock( mutex_m );
         out_transactions.emplace_back( std::move( element ) );
     }
+
     //TODO - Fill hash stuff on DAGStruct
     SGTransaction::DAGStruct TransactionManager::FillDAGStruct()
     {
@@ -127,7 +130,6 @@ namespace sgns
         std::unique_lock<std::mutex> lock( mutex_m );
         if ( !out_transactions.empty() )
         {
-
             auto elem = out_transactions.front();
             out_transactions.pop_front();
             boost::format tx_key{ std::string( TRANSACTION_BASE_FORMAT ) };
@@ -161,12 +163,14 @@ namespace sgns
 
             block_storage_m->putBlockData( header.number, block_data );
 
-            m_logger->debug( "Putting on " + transaction_path + " the data: " + std::string( data_transaction.toString() ) );
+            m_logger->debug( "Putting on " + transaction_path +
+                             " the data: " + std::string( data_transaction.toString() ) );
             m_logger->debug( "Recording Block with number " + std::to_string( header.number ) );
             block_storage_m->setLastFinalizedBlockHash( new_hash.value() );
         }
         lock.unlock(); // Manual unlock, no need to wait to run out of scope
     }
+
     bool TransactionManager::GetTransactionsFromBlock( const primitives::BlockNumber &block_number )
     {
         outcome::result<primitives::BlockBody> retval          = outcome::failure( boost::system::error_code{} );
@@ -204,6 +208,7 @@ namespace sgns
         //while ( !retval );
         return ret;
     }
+
     void TransactionManager::ParseTransaction( std::string transaction_key )
     {
         auto maybe_transaction_data = db_m->Get( { transaction_key } );

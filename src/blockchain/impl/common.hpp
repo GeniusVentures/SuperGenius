@@ -1,5 +1,3 @@
-
-
 #ifndef SUPERGENIUS_BLOCKCHAIN_COMMON_HPP
 #define SUPERGENIUS_BLOCKCHAIN_COMMON_HPP
 
@@ -7,7 +5,6 @@
 
 #include "base/buffer.hpp"
 #include "primitives/block_id.hpp"
-#include "storage/buffer_map_types.hpp"
 #include <crdt/globaldb/globaldb.hpp>
 
 namespace sgns::blockchain {

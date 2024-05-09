@@ -1,4 +1,3 @@
-
 #include "authorship/impl/block_builder_error.hpp"
 
 OUTCOME_CPP_DEFINE_CATEGORY_3(sgns::authorship, BlockBuilderError, e) {

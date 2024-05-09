@@ -52,10 +52,8 @@ int main(int argc, char* argv[])
     loggerValidcore->set_level(spdlog::level::trace);
     std::cout << "Check 1" << std::endl;
     //Inputs
-    const auto poseModel = argv[1];
-    const auto inputImageFileName = argv[2];
     char* endPtr;
-    size_t serviceindex = std::strtoul(argv[3], &endPtr, 10);
+    size_t serviceindex = std::strtoul(argv[1], &endPtr, 10);
     
 
     //Split Image into RGBA bytes
@@ -76,7 +74,7 @@ int main(int argc, char* argv[])
     auto io = std::make_shared<boost::asio::io_context>();
     
     //Client
-    pubs2->Start(40001 + serviceindex, { "/ip4/192.168.56.1/tcp/40001/p2p/12D3KooWJs2FZMNDC8u8Y8ajpUXTRcDhRQhzyTP1Rif8P6XeCgoZ" });
+    pubs2->Start(40001 + serviceindex, { "/ip4/192.168.46.18/tcp/40001/p2p/12D3KooWGvxwN8q3GqM2McBcZgGjpc86qPbKGdTG63T2sJUhcibh" });
     
     //Create GlobalDB
     //size_t serviceindex = 1;

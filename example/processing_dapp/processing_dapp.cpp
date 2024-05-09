@@ -206,7 +206,7 @@ int main(int argc, char* argv[])
     std::vector<std::string> pubsubBootstrapPeers;
     if (options->remote)
     {
-        pubsubBootstrapPeers = std::move(std::vector({ *options->remote }));
+        pubsubBootstrapPeers = std::vector( { *options->remote } );
     }
     pubs->Start(40001, pubsubBootstrapPeers);
 

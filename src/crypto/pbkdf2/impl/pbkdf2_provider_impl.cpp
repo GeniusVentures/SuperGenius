@@ -1,11 +1,8 @@
-
-
 #include "crypto/pbkdf2/impl/pbkdf2_provider_impl.hpp"
 
 #include <openssl/evp.h>
 
 namespace sgns::crypto {
-
   outcome::result<base::Buffer> Pbkdf2ProviderImpl::deriveKey(
       gsl::span<const uint8_t> data,
       gsl::span<const uint8_t> salt,
@@ -30,7 +27,7 @@ namespace sgns::crypto {
 
     return out;
   }
-}  // namespace sgns::crypto
+}
 
 OUTCOME_CPP_DEFINE_CATEGORY_3(sgns::crypto, Pbkdf2ProviderError, error) {
   using Error = sgns::crypto::Pbkdf2ProviderError;

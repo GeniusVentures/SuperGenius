@@ -1,9 +1,7 @@
-
 #ifndef SUPERGENIUS_SRC_CRYPTO_EXTENSION_HPP
 #define SUPERGENIUS_SRC_CRYPTO_EXTENSION_HPP
 
 #include "base/logger.hpp"
-#include "crypto/bip39/bip39_types.hpp"
 #include "crypto/crypto_store.hpp"
 #include "runtime/wasm_memory.hpp"
 
@@ -204,6 +202,6 @@ namespace sgns::extensions {
     std::shared_ptr<crypto::Bip39Provider> bip39_provider_;
     base::Logger logger_;
   };
-}  // namespace sgns::extensions
+}
 
-#endif  // SUPERGENIUS_SRC_CRYPTO_EXTENSION_HPP
+#endif

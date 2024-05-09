@@ -1,8 +1,7 @@
-
 #ifndef SUPERGENIUS_APPLICATION_DISPATCHER
 #define SUPERGENIUS_APPLICATION_DISPATCHER
 
-#include "base/logger.hpp"
+#include <memory>
 #include "integration/IComponent.hpp"
 
 namespace sgns::application {
@@ -76,9 +75,9 @@ namespace sgns::application {
     virtual void shutdown() = 0;
 
     /// Get current stage
-    virtual State state() const = 0;
+    [[nodiscard]] virtual State state() const = 0;
 
-   protected:
+protected:
     virtual void doPrepare() = 0;
     virtual void doLaunch() = 0;
     virtual void doShutdown() = 0;

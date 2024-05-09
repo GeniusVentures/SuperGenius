@@ -1,4 +1,3 @@
-
 #ifndef SUPERGENIUS_SRC_EXTENSIONS_EXTENSION_FACTORY_HPP
 #define SUPERGENIUS_SRC_EXTENSIONS_EXTENSION_FACTORY_HPP
 
@@ -25,6 +24,6 @@ namespace sgns::extensions {
         std::shared_ptr<runtime::TrieStorageProvider> storage_provider) const = 0;
   };
 
-}  // namespace sgns::extensions
+}
 
-#endif  // SUPERGENIUS_SRC_EXTENSIONS_EXTENSION_FACTORY_HPP
+#endif

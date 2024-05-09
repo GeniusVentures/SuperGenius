@@ -1,5 +1,3 @@
-
-
 #ifndef SUPERGENIUS_SRC_CRYPTO_VRF_TYPES
 #define SUPERGENIUS_SRC_CRYPTO_VRF_TYPES
 
@@ -10,7 +8,6 @@ extern "C" {
 #include <gsl/span>
 
 #include "base/blob.hpp"
-#include "base/mp_utils.hpp"
 #include "integration/IComponent.hpp"
 
 namespace sgns::crypto {
@@ -147,6 +144,6 @@ namespace sgns::crypto {
     return s >> o.output >> o.proof;
   }
 
-}  // namespace sgns::crypto
+}
 
-#endif  // SUPERGENIUS_SRC_CRYPTO_VRF_TYPES
+#endif

@@ -4,27 +4,32 @@
 
 namespace test {
 
-  void BaseRocksDB_Test::open() {
-    rocksdb::Options options;
-    options.create_if_missing = true;
+    void RocksDBFixture::open()
+    {
+        rocksdb::Options options;
+        options.create_if_missing = true;
 
-    auto r = rocksdb::create(getPathString(), options);
-    if (!r) {
-      throw std::invalid_argument(r.error().message());
+        auto r = rocksdb::create( getPathString(), options );
+        if ( !r )
+        {
+            throw std::invalid_argument( r.error().message() );
+        }
+
+        db_ = std::move( r.value() );
+        ASSERT_TRUE( db_ ) << "BaseRocksDB_Test: db is nullptr";
     }
 
-    db_ = std::move(r.value());
-    ASSERT_TRUE(db_) << "BaseRocksDB_Test: db is nullptr";
+    RocksDBFixture::RocksDBFixture( fs::path path ) : FSFixture( std::move( path ) )
+    {
+    }
+
+  void RocksDBFixture::SetUp()
+  {
+      open();
   }
 
-  BaseRocksDB_Test::BaseRocksDB_Test(fs::path path)
-      : BaseFS_Test(std::move(path)) {}
-
-  void BaseRocksDB_Test::SetUp() {
-    open();
-  }
-
-  void BaseRocksDB_Test::TearDown() {
-    // clear();
+  void RocksDBFixture::TearDown()
+  {
+      // clear();
   }
 }  // namespace test

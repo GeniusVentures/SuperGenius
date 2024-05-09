@@ -1,4 +1,3 @@
-
 #ifndef SUPERGENIUS_SRC_BLOCK_TREE_IMPL_HPP
 #define SUPERGENIUS_SRC_BLOCK_TREE_IMPL_HPP
 
@@ -7,16 +6,13 @@
 #include <boost/optional.hpp>
 #include <functional>
 #include <memory>
-#include <queue>
 #include <unordered_set>
 
 #include "blockchain/block_header_repository.hpp"
 #include "blockchain/block_storage.hpp"
-#include "blockchain/impl/common.hpp"
 #include "base/logger.hpp"
 #include "crypto/hasher.hpp"
 #include "network/extrinsic_observer.hpp"
-#include "transaction_pool/transaction_pool.hpp"
 
 namespace sgns::blockchain {
   /**
@@ -99,14 +95,14 @@ namespace sgns::blockchain {
 
     ~BlockTreeImpl() override = default;
 
-    outcome::result<primitives::BlockHeader> getBlockHeader(
-        const primitives::BlockId &block) const override;
+    [[nodiscard]] outcome::result<primitives::BlockHeader> getBlockHeader(
+        const primitives::BlockId &block ) const override;
 
-    outcome::result<primitives::BlockBody> getBlockBody(
-        const primitives::BlockId &block) const override;
+    [[nodiscard]] outcome::result<primitives::BlockBody> getBlockBody(
+        const primitives::BlockId &block ) const override;
 
-    outcome::result<primitives::Justification> getBlockJustification(
-        const primitives::BlockId &block) const override;
+    [[nodiscard]] outcome::result<primitives::Justification> getBlockJustification(
+        const primitives::BlockId &block ) const override;
 
     outcome::result<void> addBlockHeader(
         const primitives::BlockHeader &header) override;
@@ -137,18 +133,17 @@ namespace sgns::blockchain {
 
     BlockHashVecRes longestPath() override;
 
-    primitives::BlockInfo deepestLeaf() const override;
+    [[nodiscard]] primitives::BlockInfo deepestLeaf() const override;
 
-    outcome::result<primitives::BlockInfo> getBestContaining(
-        const primitives::BlockHash &target_hash,
-        const boost::optional<primitives::BlockNumber> &max_number)
-        const override;
+    [[nodiscard]] outcome::result<primitives::BlockInfo> getBestContaining(
+        const primitives::BlockHash                    &target_hash,
+        const boost::optional<primitives::BlockNumber> &max_number ) const override;
 
-    std::vector<primitives::BlockHash> getLeaves() const override;
+    [[nodiscard]] std::vector<primitives::BlockHash> getLeaves() const override;
 
     BlockHashVecRes getChildren(const primitives::BlockHash &block) override;
 
-    primitives::BlockInfo getLastFinalized() const override;
+    [[nodiscard]] primitives::BlockInfo getLastFinalized() const override;
 
     std::string GetName() override
     {

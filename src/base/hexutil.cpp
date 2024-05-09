@@ -1,5 +1,3 @@
-
-
 #include "base/hexutil.hpp"
 
 #include <boost/algorithm/hex.hpp>

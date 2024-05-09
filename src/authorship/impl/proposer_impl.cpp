@@ -1,4 +1,3 @@
-
 #include "authorship/impl/proposer_impl.hpp"
 
 namespace sgns::authorship {

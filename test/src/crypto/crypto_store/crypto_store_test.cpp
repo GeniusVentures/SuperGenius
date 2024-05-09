@@ -41,78 +41,69 @@ using namespace sgns::crypto::key_types;
 static CryptoStoreImpl::Path crypto_store_test_directory =
     boost::filesystem::temp_directory_path() / "crypto_store_test";
 
-struct CryptoStoreTest : public test::BaseFS_Test {
-  CryptoStoreTest() : BaseFS_Test(crypto_store_test_directory) {}
+struct CryptoStoreTest : public test::FSFixture
+{
+    CryptoStoreTest() : FSFixture( crypto_store_test_directory )
+    {
+    }
 
-  void SetUp() override {
-    auto ed25519_provider = std::make_shared<ED25519ProviderImpl>();
-    auto csprng = std::make_shared<BoostRandomGenerator>();
-    auto sr25519_provider = std::make_shared<SR25519ProviderImpl>(csprng);
-    auto secp256k1_provider = std::make_shared<Secp256k1ProviderImpl>();
+    void SetUp() override
+    {
+        auto ed25519_provider   = std::make_shared<ED25519ProviderImpl>();
+        auto csprng             = std::make_shared<BoostRandomGenerator>();
+        auto sr25519_provider   = std::make_shared<SR25519ProviderImpl>( csprng );
+        auto secp256k1_provider = std::make_shared<Secp256k1ProviderImpl>();
 
-    auto pbkdf2_provider = std::make_shared<Pbkdf2ProviderImpl>();
-    bip39_provider =
-        std::make_shared<Bip39ProviderImpl>(std::move(pbkdf2_provider));
-    crypto_store =
-        std::make_shared<CryptoStoreImpl>(std::move(ed25519_provider),
-                                          std::move(sr25519_provider),
-                                          std::move(secp256k1_provider),
-                                          bip39_provider,
-                                          std::move(csprng));
+        auto pbkdf2_provider = std::make_shared<Pbkdf2ProviderImpl>();
+        bip39_provider       = std::make_shared<Bip39ProviderImpl>( std::move( pbkdf2_provider ) );
+        crypto_store =
+            std::make_shared<CryptoStoreImpl>( std::move( ed25519_provider ), std::move( sr25519_provider ),
+                                               std::move( secp256k1_provider ), bip39_provider, std::move( csprng ) );
 
-    mnemonic =
-        "ozone drill grab fiber curtain grace pudding thank cruise elder eight "
-        "picnic";
-    EXPECT_OUTCOME_TRUE(e, Buffer::fromHex("9e885d952ad362caeb4efe34a8e91bd2"));
-    entropy = std::move(e);
-    EXPECT_OUTCOME_TRUE(s,
-                        Blob<32>::fromHex("a4681403ba5b6a3f3bd0b0604ce439a78244"
-                                          "c7d43b127ec35cd8325602dd47fd"));
-    seed = s;
-    key_type = kProd;
+        mnemonic = "ozone drill grab fiber curtain grace pudding thank cruise elder eight "
+                   "picnic";
+        EXPECT_OUTCOME_TRUE( e, Buffer::fromHex( "9e885d952ad362caeb4efe34a8e91bd2" ) );
+        entropy = std::move( e );
+        EXPECT_OUTCOME_TRUE( s, Blob<32>::fromHex( "a4681403ba5b6a3f3bd0b0604ce439a78244"
+                                                   "c7d43b127ec35cd8325602dd47fd" ) );
+        seed     = s;
+        key_type = kProd;
 
-    EXPECT_OUTCOME_TRUE(
-        ed_publ,
-//        ED25519PublicKey::fromHex("3e765f2bde3daadd443097b3145abf1f71f99f0aa946"
-//                                  "960990fe02aa26b7fc72"));
-        ED25519PublicKey::fromHex("3086e3f8cdc1e69f855a1b1907331b7594500c0fc40e"
-                                  "91e25e734513df85289f"));
-    EXPECT_OUTCOME_TRUE(
-        ed_priv,
-        ED25519PrivateKey::fromHex("a4681403ba5b6a3f3bd0b0604ce439a78244c7d43b1"
-                                   "27ec35cd8325602dd47fd"));
-    ed_pair = {ed_priv, ed_publ};
+        EXPECT_OUTCOME_TRUE( ed_publ,
+                             //        ED25519PublicKey::fromHex("3e765f2bde3daadd443097b3145abf1f71f99f0aa946"
+                             //                                  "960990fe02aa26b7fc72"));
+                             ED25519PublicKey::fromHex( "3086e3f8cdc1e69f855a1b1907331b7594500c0fc40e"
+                                                        "91e25e734513df85289f" ) );
+        EXPECT_OUTCOME_TRUE( ed_priv, ED25519PrivateKey::fromHex( "a4681403ba5b6a3f3bd0b0604ce439a78244c7d43b1"
+                                                                  "27ec35cd8325602dd47fd" ) );
+        ed_pair = { ed_priv, ed_publ };
 
-    EXPECT_OUTCOME_TRUE(
-        sr_publ,
-        SR25519PublicKey::fromHex("7e68abebffcfe3409af87fbb0b5254b7add6ec3efc1f5b882f3621df45afec15"));
-    EXPECT_OUTCOME_TRUE(
-        sr_secr,
-        SR25519SecretKey::fromHex(
-            "d0c92c34038c17ea76208b04623203cbd9ce0901e82486da0053c0c2c4488b69"
-            "19f52f334750e98500ba84fd528a6ff810b91b43d11e3d3eb1c2176c9dda0b57"));
-    sr_pair = {sr_secr, sr_publ};
+        EXPECT_OUTCOME_TRUE(
+            sr_publ, SR25519PublicKey::fromHex( "7e68abebffcfe3409af87fbb0b5254b7add6ec3efc1f5b882f3621df45afec15" ) );
+        EXPECT_OUTCOME_TRUE(
+            sr_secr, SR25519SecretKey::fromHex( "d0c92c34038c17ea76208b04623203cbd9ce0901e82486da0053c0c2c4488b69"
+                                                "19f52f334750e98500ba84fd528a6ff810b91b43d11e3d3eb1c2176c9dda0b57" ) );
+        sr_pair = { sr_secr, sr_publ };
 
-    EXPECT_OUTCOME_TRUE_MSG_1(
-        crypto_store->initialize(crypto_store_test_directory),
-        "initialization failed");
-  }
+        EXPECT_OUTCOME_TRUE_MSG_1( crypto_store->initialize( crypto_store_test_directory ), "initialization failed" );
+    }
 
-  bool isStoredOnDisk(KeyTypeId kt, const Blob<32> &public_key) {
-    auto file_name = sgns::crypto::decodeKeyTypeId(kt) + public_key.toHex();
-    auto file_path = crypto_store_test_directory / file_name;
-    return boost::filesystem::exists(file_path);
-  }
+    bool isStoredOnDisk( KeyTypeId kt, const Blob<32> &public_key )
+    {
+        auto file_name = sgns::crypto::decodeKeyTypeId( kt ) + public_key.toHex();
+        auto file_path = crypto_store_test_directory / file_name;
+        return boost::filesystem::exists( file_path );
+    }
 
-  std::shared_ptr<Bip39Provider> bip39_provider;
-  std::shared_ptr<CryptoStoreImpl> crypto_store;
-  std::string mnemonic;
-  Buffer entropy;
-  Blob<32> seed;
-  KeyTypeId key_type;
+    std::shared_ptr<Bip39Provider>   bip39_provider;
+    std::shared_ptr<CryptoStoreImpl> crypto_store;
+    std::string                      mnemonic;
+    Buffer                           entropy;
+    Blob<32>                         seed;
+    KeyTypeId                        key_type;
 
-  ED25519Keypair ed_pair;
-  SR25519Keypair sr_pair;
+    ED25519Keypair ed_pair;
+    SR25519Keypair sr_pair;
 };
 
 /**

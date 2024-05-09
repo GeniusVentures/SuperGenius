@@ -1,5 +1,3 @@
-
-
 #ifndef SUPERGENIUS_SRC_CRYPTO_ED25519_TYPES_HPP
 #define SUPERGENIUS_SRC_CRYPTO_ED25519_TYPES_HPP
 
@@ -8,7 +6,6 @@
 #include "integration/IComponent.hpp"
 
 namespace sgns::crypto {
-
   namespace constants::ed25519 {
     /**
      * Important constants to deal with ed25519
@@ -19,7 +16,7 @@ namespace sgns::crypto {
       SIGNATURE_SIZE = ed25519_signature_SIZE,
       SEED_SIZE = PRIVKEY_SIZE,
     };
-  }  // namespace constants::ed25519
+  }
 
   using ED25519PrivateKey = base::Blob<constants::ed25519::PRIVKEY_SIZE>;
   using ED25519PublicKey = base::Blob<constants::ed25519::PUBKEY_SIZE>;
@@ -47,6 +44,6 @@ namespace sgns::crypto {
   using ED25519Signature = base::Blob<constants::ed25519::SIGNATURE_SIZE>;
 
   using ED25519Seed = base::Blob<constants::ed25519::SEED_SIZE>;
-}  // namespace sgns::crypto
+}
 
-#endif  // SUPERGENIUS_SRC_CRYPTO_ED25519_TYPES_HPP
+#endif

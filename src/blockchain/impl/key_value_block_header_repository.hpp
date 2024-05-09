@@ -1,11 +1,8 @@
-
-
 #ifndef SUPERGENIUS_CORE_BLOCKCHAIN_IMPL_KEY_VALUE_BLOCK_HEADER_REPOSITORY_HPP
 #define SUPERGENIUS_CORE_BLOCKCHAIN_IMPL_KEY_VALUE_BLOCK_HEADER_REPOSITORY_HPP
 
 #include "blockchain/block_header_repository.hpp"
 
-#include "blockchain/impl/common.hpp"
 #include "crypto/hasher.hpp"
 #include <crdt/globaldb/globaldb.hpp>
 #include <crdt/globaldb/keypair_file_storage.hpp>

@@ -1,8 +1,7 @@
-
-
 #ifndef SUPERGENIUS_BLOB_HPP
 #define SUPERGENIUS_BLOB_HPP
 
+#include <cstddef>
 #include <array>
 
 #include <boost/functional/hash.hpp>
@@ -54,30 +53,35 @@ namespace sgns::base {
     /**
      * Converts current blob to std::string
      */
-    std::string toString() const noexcept {
-      return std::string{this->begin(), this->end()};
+    [[nodiscard]] std::string toString() const noexcept
+    {
+        return std::string{ this->begin(), this->end() };
     }
 
     /**
      * Converts current blob to a readable std::string
      */
-    std::string toReadableString() const noexcept {
-      std::string out_str;
-      char        temp_buf[3];
-      for ( auto it = this->begin(); it != this->end(); ++it )
-      {
-          snprintf( temp_buf, sizeof( temp_buf ), "%02x", *it );
-          out_str.append( temp_buf, sizeof( temp_buf ) - 1 );
-      }
-      return out_str;
+    [[nodiscard]] std::string toReadableString() const noexcept
+    {
+        std::string out_str;
+        char        temp_buf[3];
+
+        for ( auto it = this->begin(); it != this->end(); ++it )
+        {
+            snprintf( temp_buf, sizeof( temp_buf ), "%02x", *it );
+            out_str.append( temp_buf, sizeof( temp_buf ) - 1 );
+        }
+
+        return out_str;
     }
 
     /**
      * Converts current blob to hex string.
      */
-    std::string toHex() const noexcept {
-      // return hex_lower({this->begin(), this->end()});
-      return hex_lower(gsl::make_span(*this));
+    [[nodiscard]] std::string toHex() const noexcept
+    {
+        // return hex_lower({this->begin(), this->end()});
+        return hex_lower( gsl::make_span( *this ) );
     }
 
     /**

@@ -1,5 +1,3 @@
-
-
 #ifndef SUPERGENIUS_HEXUTIL_HPP
 #define SUPERGENIUS_HEXUTIL_HPP
 
@@ -80,10 +78,10 @@ namespace sgns::base {
       return UnhexError::VALUE_OUT_OF_RANGE;
     }
 
-    T result{0u};
+    T result{ 0U };
     for (auto b : bytes) {
       // check if `multiply by 10` will cause overflow
-      result <<= 8u;
+      result <<= 8U;
       result += b;
     }
 

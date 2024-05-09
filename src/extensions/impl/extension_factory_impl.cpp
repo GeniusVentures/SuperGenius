@@ -1,4 +1,3 @@
-
 #include "extensions/impl/extension_factory_impl.hpp"
 
 #include "extensions/impl/extension_impl.hpp"
@@ -46,4 +45,4 @@ namespace sgns::extensions {
                                            bip39_provider_,
                                            core_factory_method_);
   }
-}  // namespace sgns::extensions
+}

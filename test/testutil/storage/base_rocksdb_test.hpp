@@ -9,19 +9,20 @@
 
 namespace test {
 
-  struct BaseRocksDB_Test : public BaseFS_Test {
-    using rocksdb = sgns::storage::rocksdb;
+    struct RocksDBFixture : public FSFixture
+    {
+        using rocksdb = sgns::storage::rocksdb;
 
-    BaseRocksDB_Test(fs::path path);
+        RocksDBFixture( fs::path path );
 
-    void open();
+        void open();
 
-    void SetUp() override;
+        void SetUp() override;
 
-    void TearDown() override;
+        void TearDown() override;
 
-    std::shared_ptr<rocksdb> db_;
-  };
+        std::shared_ptr<rocksdb> db_;
+    };
 
 }  // namespace test
 

@@ -1,4 +1,3 @@
-
 #include "authorship/impl/block_builder_factory_impl.hpp"
 
 #include "authorship/impl/block_builder_impl.hpp"

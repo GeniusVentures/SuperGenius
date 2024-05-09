@@ -1,12 +1,8 @@
-
-
 #ifndef SUPERGENIUS_SCALE_UTIL_HPP
 #define SUPERGENIUS_SCALE_UTIL_HPP
 
-#include <algorithm>
 #include <array>
 #include <cstdint>
-#include <vector>
 
 #include <boost/endian/arithmetic.hpp>
 #include "base/outcome_throw.hpp"

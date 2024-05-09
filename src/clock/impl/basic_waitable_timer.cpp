@@ -1,5 +1,3 @@
-
-
 #include "clock/impl/basic_waitable_timer.hpp"
 
 namespace sgns::clock {

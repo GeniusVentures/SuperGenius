@@ -1,4 +1,3 @@
-
 #ifndef SUPERGENIUS_SRC_CRYPTO_SECP256K1_TYPES_HPP
 #define SUPERGENIUS_SRC_CRYPTO_SECP256K1_TYPES_HPP
 
@@ -44,6 +43,6 @@ namespace sgns::crypto::secp256k1 {
    * 32-byte sequence of bytes (presumably blake2s hash)
    */
   using MessageHash = base::Hash256;
-}  // namespace sgns::crypto::secp256k1
+}
 
-#endif  // SUPERGENIUS_SRC_CRYPTO_SECP256K1_TYPES_HPP
+#endif

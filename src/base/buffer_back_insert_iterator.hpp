@@ -1,4 +1,3 @@
-
 #include "base/buffer.hpp"
 
 using sgns::base::Buffer;

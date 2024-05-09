@@ -1,11 +1,10 @@
-
-
 #include "blockchain/impl/key_value_block_storage.hpp"
 
+#include "blockchain/impl/common.hpp"
 #include "blockchain/impl/storage_util.hpp"
-#include "scale/scale.hpp"
 #include "storage/database_error.hpp"
 #include "blockchain/impl/proto/SGBlocks.pb.h"
+#include "storage/predefined_keys.hpp"
 
 OUTCOME_CPP_DEFINE_CATEGORY_3(sgns::blockchain,
                             KeyValueBlockStorage::Error,

@@ -1,5 +1,3 @@
-
-
 #include "clock/impl/clock_impl.hpp"
 
 namespace sgns::clock {

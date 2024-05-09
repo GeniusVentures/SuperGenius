@@ -3,6 +3,8 @@
 
 #include <crdt/crdt_datastore.hpp>
 #include <ipfs_lite/ipld/ipld_node.hpp>
+#include <regex>
+#include <utility>
 
 namespace sgns::crdt
 {
@@ -33,14 +35,11 @@ namespace
     }
 }
 
-PubSubBroadcasterExt::PubSubBroadcasterExt(
-    std::shared_ptr<GossipPubSubTopic> pubSubTopic,
-    std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer,
-    libp2p::multi::Multiaddress dagSyncerMultiaddress)
-    : gossipPubSubTopic_(pubSubTopic)
-    , dagSyncer_(dagSyncer)
-    , dataStore_(nullptr)
-    , dagSyncerMultiaddress_(dagSyncerMultiaddress)
+PubSubBroadcasterExt::PubSubBroadcasterExt( std::shared_ptr<GossipPubSubTopic>              pubSubTopic,
+                                            std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer,
+                                            libp2p::multi::Multiaddress                     dagSyncerMultiaddress ) :
+    gossipPubSubTopic_( std::move( pubSubTopic ) ), dagSyncer_( std::move( dagSyncer ) ), dataStore_( nullptr ),
+    dagSyncerMultiaddress_( std::move( dagSyncerMultiaddress ) )
 {
     if (gossipPubSubTopic_ != nullptr)
     {
@@ -64,21 +63,39 @@ void PubSubBroadcasterExt::OnMessage(boost::optional<const GossipPubSub::Message
                 auto cids = dataStore_->DecodeBroadcast(buf);
                 if (!cids.has_failure())
                 {
-                    auto pi = PeerInfoFromString(bmsg.multiaddress());
-                    for (const auto& cid : cids.value())
+                    auto addressout = gossipPubSubTopic_->GetPubsub()->GetHost()->getPeerRepository().getAddressRepository().getAddresses(peerId.value());
+                    std::cout << "Has Value? " << addressout.has_value() << std::endl;
+                    if (addressout.has_value())
                     {
-                        if (pi.has_value())
+                        auto address = addressout.value();
+                        if (address.size() > 0)
                         {
-                            auto hb = dagSyncer_->HasBlock(cid);
-                            if (hb.has_value() && !hb.value())
-                            {
-                                m_logger->debug("Request node {} from {}", cid.toString().value(), pi.value().addresses[0].getStringAddress());
-                                dagSyncer_->AddRoute(cid, pi.value().id, pi.value().addresses[0]);
+                            auto addr = address[0].getStringAddress();
+                            std::regex ipRegex(R"(\b(?:\d{1,3}\.){3}\d{1,3}\b)");
+                            std::smatch match;
+                            std::string addrstring(addr);
+                            std::string finaladdr;
+                            if (std::regex_search(addrstring, match, ipRegex)) {
+                                std::regex ipRegex2("\\[IP\\]");
+                                finaladdr = std::regex_replace(bmsg.multiaddress(), ipRegex2, match.str());
+                                auto pi = PeerInfoFromString(finaladdr);
+                                for (const auto& cid : cids.value())
+                                {
+                                    if (pi.has_value())
+                                    {
+                                        auto hb = dagSyncer_->HasBlock(cid);
+                                        if (hb.has_value() && !hb.value())
+                                        {
+                                            m_logger->debug("Request node {} from {}", cid.toString().value(), pi.value().addresses[0].getStringAddress());
+                                            dagSyncer_->AddRoute(cid, pi.value().id, pi.value().addresses[0]);
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
                 }
-                messageQueue_.push(std::make_tuple(std::move(peerId.value()), bmsg.data()));
+                messageQueue_.emplace( std::move( peerId.value() ), bmsg.data() );
             }
         }
     }
@@ -103,7 +120,10 @@ outcome::result<void> PubSubBroadcasterExt::Broadcast(const base::Buffer& buff)
 
     sgns::crdt::broadcasting::BroadcastMessage bmsg;
     auto multiaddress = dagSyncerMultiaddress_.getStringAddress();
-    bmsg.set_multiaddress(std::string(multiaddress.begin(), multiaddress.end()));
+    std::regex ipRegex(R"(\b(?:\d{1,3}\.){3}\d{1,3}\b)");
+    auto strippedaddress = std::regex_replace(multiaddress.data(), ipRegex, "[IP]");
+
+    bmsg.set_multiaddress(std::string(strippedaddress.begin(), strippedaddress.end()));
     std::string data(buff.toString());
     bmsg.set_data(data);
     gossipPubSubTopic_->Publish(bmsg.SerializeAsString());

@@ -1,5 +1,3 @@
-
-
 #ifndef SUPERGENIUS_SRC_CRYPTO_ED25519_PROVIDER_HPP
 #define SUPERGENIUS_SRC_CRYPTO_ED25519_PROVIDER_HPP
 
@@ -9,7 +7,6 @@
 #include "integration/IComponent.hpp"
 
 namespace sgns::crypto {
-
   enum class ED25519ProviderError {
     FAILED_GENERATE_KEYPAIR = 1,
     SIGN_UNKNOWN_ERROR,   // unknown error occurred during call to `sign` method
@@ -55,8 +52,8 @@ namespace sgns::crypto {
         gsl::span<uint8_t> message,
         const ED25519PublicKey &public_key) const = 0;
   };
-}  // namespace sgns::crypto
+}
 
 OUTCOME_HPP_DECLARE_ERROR_2(sgns::crypto, ED25519ProviderError)
 
-#endif  // SUPERGENIUS_SRC_CRYPTO_ED25519_PROVIDER_HPP
+#endif

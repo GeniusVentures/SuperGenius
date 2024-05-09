@@ -1,5 +1,3 @@
-
-
 #include "blockchain/impl/storage_util.hpp"
 
 #include "blockchain/impl/common.hpp"
@@ -23,7 +21,6 @@ OUTCOME_CPP_DEFINE_CATEGORY_3(sgns::blockchain, KeyValueRepositoryError, e) {
 }
 
 namespace sgns::blockchain {
-
   outcome::result<void> putWithPrefix(crdt::GlobalDB &db,
                                       prefix::Prefix prefix,
                                       BlockNumber num,
@@ -58,7 +55,7 @@ namespace sgns::blockchain {
     size_t               size = blockID.ByteSizeLong();
     std::vector<uint8_t> serialized_proto( size );
 
-    blockID.SerializeToArray( serialized_proto.data(), serialized_proto.size() );
+    blockID.SerializeToArray( serialized_proto.data(), static_cast<int>(serialized_proto.size()) );
     return base::Buffer{serialized_proto};
     /**base::Buffer retval;
 
@@ -87,14 +84,15 @@ namespace sgns::blockchain {
     if (key.size() > sizeof(primitives::BlockNumber)) {
       return outcome::failure(KeyValueRepositoryError::INVALID_KEY);
     }
-    primitives::BlockNumber num;
+
     SGBlocks::BlockID blockID;
-    if ( !blockID.ParseFromArray( key.toVector().data(), key.toVector().size() ) )
+
+    if ( !blockID.ParseFromArray( key.toVector().data(), static_cast<int>(key.toVector().size()) ) )
     {
         std::cerr << "Failed to parse BlockID from array." << std::endl;
     }
-    num = blockID.block_number();
-    return num;
+
+    return blockID.block_number();
     /*primitives::BlockNumber retval = 0;
 
     //Little endian
@@ -120,8 +118,7 @@ namespace sgns::blockchain {
       return false;
     }
 
-    auto &&error = result.error();
-    return (error == storage::DatabaseError::NOT_FOUND);
+    return (result.error() == storage::DatabaseError::NOT_FOUND);
   }
 
 }  // namespace sgns::blockchain

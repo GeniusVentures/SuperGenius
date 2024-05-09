@@ -1,9 +1,6 @@
-
-
 #ifndef SUPERGENIUS_SRC_COMMON_WRAPPER_HPP
 #define SUPERGENIUS_SRC_COMMON_WRAPPER_HPP
 
-#include <memory>
 #include <type_traits>
 
 #include <boost/operators.hpp>

@@ -1,5 +1,10 @@
+//#define STB_IMAGE_IMPLEMENTATION
+//#define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "processing_mnn.hpp"
-
+#include <rapidjson/document.h>
+#include "Singleton.hpp"
+#include "FileManager.hpp"
+#include "URLStringUtil.h"
 using GossipPubSub = sgns::ipfs_pubsub::GossipPubSub;
 const std::string logger_config(R"(
 # ----------------
@@ -16,6 +21,112 @@ groups:
       - name: Gossip
 # ----------------
   )");
+
+std::vector<uint8_t> GetImageByCID(std::string cid)
+{
+    libp2p::protocol::kademlia::Config kademlia_config;
+    kademlia_config.randomWalk.enabled = true;
+    kademlia_config.randomWalk.interval = std::chrono::seconds(300);
+    kademlia_config.requestConcurency = 20;
+    auto injector = libp2p::injector::makeHostInjector(
+        libp2p::injector::makeKademliaInjector(
+            libp2p::injector::useKademliaConfig(kademlia_config)));
+    auto ioc = injector.create<std::shared_ptr<boost::asio::io_context>>();
+
+    boost::asio::io_context::executor_type executor = ioc->get_executor();
+    boost::asio::executor_work_guard<boost::asio::io_context::executor_type> workGuard(executor);
+
+    auto mainbuffers = std::make_shared<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>();
+
+    //Get Image Data from settings.json
+    FileManager::GetInstance().InitializeSingletons();
+    string fileURL = "https://ipfs.filebase.io/ipfs/" + cid + "/settings.json";
+    std::cout << "FILE URLL: " << fileURL << std::endl;
+    auto data = FileManager::GetInstance().LoadASync(fileURL, false, false, ioc, [ioc](const int& status)
+        {
+            std::cout << "status: " << status << std::endl;
+        }, [ioc, &mainbuffers](std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers)
+            {
+                std::cout << "Final Callback" << std::endl;
+
+                if (!buffers || (buffers->first.empty() && buffers->second.empty()))
+                {
+                    std::cout << "Buffer from AsyncIO is 0" << std::endl;
+                    return;
+                }
+                else {
+                    //Process settings json
+
+
+                    mainbuffers->first.insert(mainbuffers->first.end(), buffers->first.begin(), buffers->first.end());
+                    mainbuffers->second.insert(mainbuffers->second.end(), buffers->second.begin(), buffers->second.end());
+                }
+            }, "file");
+    ioc->reset();
+    ioc->run();
+
+
+    //Parse json
+    size_t index = std::string::npos;
+    for (size_t i = 0; i < mainbuffers->first.size(); ++i) {
+        if (mainbuffers->first[i].find("settings.json") != std::string::npos) {
+            index = i;
+            break;
+        }
+    }
+    if (index == std::string::npos)
+    {
+        std::cerr << "settings.json doesn't exist" << std::endl;
+        return std::vector<uint8_t>();
+    }
+    std::vector<char>& jsonData = mainbuffers->second[index];
+    std::string jsonString(jsonData.begin(), jsonData.end());
+    rapidjson::Document document;
+    document.Parse(jsonString.c_str());
+
+    // Extract input image name
+    std::string inputImage = "";
+    if (document.HasMember("input") && document["input"].IsObject()) {
+        const auto& input = document["input"];
+        if (input.HasMember("image") && input["image"].IsString()) {
+            inputImage = input["image"].GetString();
+            std::cout << "Input Image: " << inputImage << std::endl;
+        }
+        else {
+            std::cerr << "No Input file" << std::endl;
+            return std::vector<uint8_t>();
+        }
+    }
+
+    //Get Actual Image
+    string imageUrl = "https://ipfs.filebase.io/ipfs/" + cid + "/" + inputImage;
+    std::vector<char> imageData;
+    auto data2 = FileManager::GetInstance().LoadASync(imageUrl, false, false, ioc, [ioc](const int& status)
+        {
+            std::cout << "status: " << status << std::endl;
+        }, [ioc, &imageData](std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers)
+            {
+                std::cout << "Final Callback" << std::endl;
+
+                if (!buffers || (buffers->first.empty() && buffers->second.empty()))
+                {
+                    std::cout << "Buffer from AsyncIO is 0" << std::endl;
+                    return;
+                }
+                else {
+                    //Process settings json
+
+                    imageData.assign(buffers->second[0].begin(), buffers->second[0].end());
+                }
+            }, "file");
+    ioc->reset();
+    ioc->run();
+    std::vector<uint8_t> output(imageData.size());
+    std::transform(imageData.begin(), imageData.end(), output.begin(),
+        [](char c) { return static_cast<uint8_t>(c); });
+    return output;
+}
+
 
 int main(int argc, char* argv[])
 {
@@ -53,12 +164,14 @@ int main(int argc, char* argv[])
     //chunkOptions.push_back({ 540, 0, 4860, 10, 10, 99});
     //chunkOptions.push_back({ 270, 0, 5130, 20, 20, 399});
     //Inputs
-    const auto poseModel = argv[1];
-    const auto inputImageFileName = argv[2];
+    //const auto inputImageFileName = argv[1];
 
+
+    auto imagetosplit = GetImageByCID("QmUDMvGQXbUKMsjmTzjf4ZuMx7tHx6Z4x8YH8RbwrgyGAf");
+    if (imagetosplit.size() == 0) return 0;
     //Split Image into RGBA bytes
     //ImageSplitter imagesplit(inputImageFileName, 540, 4860, 48600);
-    ImageSplitter imagesplit(inputImageFileName, 5400, 0, 4860000);
+    ImageSplitter imagesplit(imagetosplit, 5400, 0, 4860000);
     // For 1350x900 broken into 135x90
     //bytes - 48,600
     //Block Stride - 540
@@ -71,7 +184,7 @@ int main(int argc, char* argv[])
         sgns::crdt::KeyPairFileStorage("CRDT.Datastore.TEST/pubs_dapp").GetKeyPair().value());
 
     //Start Pubsubs, add peers of other addresses. We'll probably use DHT Discovery bootstrapping in the future.
-    pubs->Start(40001, { "/ip4/192.168.56.1/tcp/40002/p2p/12D3KooWN5uDa467nLbyohorgEkB4TGBDBSVJq7wp8WkdHar2T6s",
+    pubs->Start(40001, { "/ip4/192.168.46.18/tcp/40002/p2p/12D3KooWLrZzsShKdg17w5PxhM4JKb3EaSM9H7Q3D4EWZnA3NvXK",
         "/ip4/192.168.46.18/tcp/40003/p2p/12D3KooWEAKCDGsZA4MvDVDEzx7pA8rD6UyN6AXsGDCYChWce4Zi",
         "/ip4/192.168.46.18/tcp/40004/p2p/12D3KooWKTNC88yV3g7bhBdTBxKqy1GT9GQhE6VP28BvVsUtdhX5",
         "/ip4/192.168.46.18/tcp/40005/p2p/12D3KooWJXWW1mXV1rxf7zuspGTyyk5irwyfXKNy71AcYzGqUT29",
@@ -92,7 +205,7 @@ int main(int argc, char* argv[])
         SGProcessing::Task task;
         //std::cout << "CID STRING:    " << libp2p::multi::ContentIdentifierCodec::toString(imagesplit.GetPartCID(taskIdx)).value() << std::endl;
         //task.set_ipfs_block_id(libp2p::multi::ContentIdentifierCodec::toString(imagesplit.GetPartCID(taskIdx)).value());
-        task.set_ipfs_block_id("QmagrfcEhX6aVuFqrRoUU5K6yvjpNiCxnJA6o2tT38Kvxx");
+        task.set_ipfs_block_id("QmUDMvGQXbUKMsjmTzjf4ZuMx7tHx6Z4x8YH8RbwrgyGAf");
         //task.set_block_len(48600);
         //task.set_block_line_stride(540);
         //task.set_block_stride(4860);

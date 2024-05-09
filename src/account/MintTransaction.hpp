@@ -6,6 +6,7 @@
  */
 #ifndef _MINT_TRANSACTION_HPP_
 #define _MINT_TRANSACTION_HPP_
+
 #include <vector>
 #include <cstdint>
 #include "account/IGeniusTransactions.hpp"

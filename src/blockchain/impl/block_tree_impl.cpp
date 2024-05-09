@@ -1,14 +1,9 @@
-
 #include "blockchain/impl/block_tree_impl.hpp"
 
 #include <algorithm>
 
 #include "blockchain/block_tree_error.hpp"
-#include "blockchain/impl/common.hpp"
 #include "blockchain/impl/storage_util.hpp"
-#include "base/visitor.hpp"
-#include "crypto/blake2/blake2b.h"
-#include "scale/scale.hpp"
 #include "storage/database_error.hpp"
 
 OUTCOME_CPP_DEFINE_CATEGORY_3(sgns::blockchain, BlockTreeImpl::Error, e) {

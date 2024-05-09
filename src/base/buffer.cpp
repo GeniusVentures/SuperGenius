@@ -1,5 +1,3 @@
-
-
 #include "base/buffer.hpp"
 #include "base/hexutil.hpp"
 #include <iostream>
@@ -36,8 +34,9 @@ namespace sgns::base {
     return hex_lower(data_);
   }
 
-  const std::string_view Buffer::toString() const {
-    return std::string_view(reinterpret_cast<const char*>(data_.data()), data_.size()); // NOLINT
+  std::string_view Buffer::toString() const
+  {
+      return { reinterpret_cast<const char *>( data_.data() ), data_.size() };
   }
 
   bool Buffer::empty() const {
