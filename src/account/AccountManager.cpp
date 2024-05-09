@@ -45,7 +45,6 @@ namespace sgns
         node_base_addr_( priv_key_data ),                                                               //
         dev_config_( dev_config )                                                                       //
     {
-
         auto logging_system = std::make_shared<soralog::LoggingSystem>( std::make_shared<soralog::ConfiguratorFromYAML>(
             // Original LibP2P logging config
             std::make_shared<libp2p::log::Configurator>(),
@@ -62,18 +61,26 @@ namespace sgns
         auto loggerDAGSyncer = base::createLogger( "GraphsyncDAGSyncer" );
         loggerDAGSyncer->set_level( spdlog::level::debug );
 
+        auto logkad = sgns::base::createLogger( "Kademlia" );
+        logkad->set_level( spdlog::level::trace );
+
+        auto logNoise = sgns::base::createLogger( "Noise" );
+        logNoise->set_level( spdlog::level::trace );
+
         //auto loggerBroadcaster = base::createLogger( "PubSubBroadcasterExt" );
         //loggerBroadcaster->set_level( spdlog::level::debug );
 
         auto pubsubKeyPath = ( boost::format( "SuperGNUSNode.TestNet.%s/pubs_processor" ) % node_base_addr_ ).str();
 
-        pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>( crdt::KeyPairFileStorage( pubsubKeyPath ).GetKeyPair().value() );
-        pubsub_->Start( 40001, { pubsub_->GetLocalAddress() } );
+        pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
+            crdt::KeyPairFileStorage( pubsubKeyPath ).GetKeyPair().value() );
+        pubsub_->Start( 40001, {} );
 
         io_ = std::make_shared<boost::asio::io_context>();
 
-        globaldb_ = std::make_shared<crdt::GlobalDB>( io_, ( boost::format( "SuperGNUSNode.TestNet.%s" ) % node_base_addr_ ).str(), 40010,
-                                                      std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_, "SGNUS.TestNet.Channel" ) );
+        globaldb_ = std::make_shared<crdt::GlobalDB>(
+            io_, ( boost::format( "SuperGNUSNode.TestNet.%s" ) % node_base_addr_ ).str(), 40010,
+            std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_, std::string(PROCESSING_CHANNEL)) );
 
         globaldb_->Init( crdt::CrdtOptions::DefaultOptions() );
 
@@ -81,38 +88,62 @@ namespace sgns
         root_hash.put( std::vector<uint8_t>( 32ul, 1 ) );
         hasher_ = std::make_shared<crypto::HasherImpl>();
 
-        header_repo_             = std::make_shared<blockchain::KeyValueBlockHeaderRepository>( globaldb_, hasher_,
-                                                                                    ( boost::format( std::string( db_path_ ) ) % TEST_NET ).str() );
-        auto maybe_block_storage = blockchain::KeyValueBlockStorage::create( root_hash, globaldb_, hasher_, header_repo_, []( auto & ) {} );
+        header_repo_ = std::make_shared<blockchain::KeyValueBlockHeaderRepository>(
+            globaldb_, hasher_, ( boost::format( std::string( db_path_ ) ) % TEST_NET ).str() );
+        auto maybe_block_storage =
+            blockchain::KeyValueBlockStorage::create( root_hash, globaldb_, hasher_, header_repo_, []( auto & ) {} );
 
         if ( !maybe_block_storage )
         {
             std::cout << "Error initializing blockchain" << std::endl;
             throw std::runtime_error( "Error initializing blockchain" );
         }
-        block_storage_       = std::move( maybe_block_storage.value() );
-        transaction_manager_ = std::make_shared<TransactionManager>( globaldb_, io_, account_, hasher_, block_storage_ );
+        block_storage_ = std::move( maybe_block_storage.value() );
+        transaction_manager_ =
+            std::make_shared<TransactionManager>( globaldb_, io_, account_, hasher_, block_storage_ );
         transaction_manager_->Start();
+
+        // Encode the string to UTF-8 bytes
+        std::vector<unsigned char> inputBytes( std::string(PROCESSING_CHANNEL).begin(), std::string(PROCESSING_CHANNEL).end() );
+
+        // Compute the SHA-256 hash of the input bytes
+        std::vector<unsigned char> hash( SHA256_DIGEST_LENGTH );
+        SHA256( inputBytes.data(), inputBytes.size(), hash.data() );
+        //Provide CID
+        libp2p::protocol::kademlia::ContentId key( hash );
+        pubsub_->GetDHT()->Start();
+        pubsub_->GetDHT()->ProvideCID( key, true );
+
+        auto cidtest = libp2p::multi::ContentIdentifierCodec::decode( key.data );
+
+        auto cidstring = libp2p::multi::ContentIdentifierCodec::toString( cidtest.value() );
+        std::cout << "CID Test::" << cidstring.value() << std::endl;
+
+        //Also Find providers
+        pubsub_->StartFindingPeers( io_, key );
 
         task_queue_      = std::make_shared<processing::ProcessingTaskQueueImpl>( globaldb_ );
         processing_core_ = std::make_shared<processing::ProcessingCoreImpl>( globaldb_, 1000000, 2 );
-        processing_core_->RegisterProcessorFactory( "posenet", []() { return std::make_unique<processing::MNN_PoseNet>(); } );
-        processing_service_ =
-            std::make_shared<processing::ProcessingServiceImpl>( pubsub_,                                                             //
-                                                                 MAX_NODES_COUNT,                                                     //
-                                                                 std::make_shared<processing::SubTaskEnqueuerImpl>( task_queue_ ),    //
-                                                                 std::make_shared<processing::ProcessSubTaskStateStorage>(),          //
-                                                                 std::make_shared<processing::SubTaskResultStorageImpl>( globaldb_ ), //
-                                                                 processing_core_ );
+        processing_core_->RegisterProcessorFactory( "posenet",
+                                                    []() { return std::make_unique<processing::MNN_PoseNet>(); } );
+        processing_service_ = std::make_shared<processing::ProcessingServiceImpl>(
+            pubsub_,                                                             //
+            MAX_NODES_COUNT,                                                     //
+            std::make_shared<processing::SubTaskEnqueuerImpl>( task_queue_ ),    //
+            std::make_shared<processing::ProcessSubTaskStateStorage>(),          //
+            std::make_shared<processing::SubTaskResultStorageImpl>( globaldb_ ), //
+            processing_core_ );
         processing_service_->SetChannelListRequestTimeout( boost::posix_time::milliseconds( 10000 ) );
         processing_service_->StartProcessing( std::string( PROCESSING_GRID_CHANNEL ) );
 
         io_thread = std::thread( [this]() { io_->run(); } );
     }
+
     AccountManager::AccountManager() : account_( std::make_shared<GeniusAccount>( 0, 0, 0 ) ) //
 
     {
     }
+
     AccountManager::~AccountManager()
     {
         if ( signals_ )
@@ -138,7 +169,8 @@ namespace sgns
         //pubsub_->AddPeers( { peer } );
     }
 
-    boost::optional<GeniusAccount> AccountManager::CreateAccount( const std::string &priv_key_data, const uint64_t &initial_amount )
+    boost::optional<GeniusAccount> AccountManager::CreateAccount( const std::string &priv_key_data,
+                                                                  const uint64_t    &initial_amount )
     {
         uint256_t value_in_num{ priv_key_data };
         return GeniusAccount( value_in_num, initial_amount, 0 );
@@ -183,10 +215,12 @@ namespace sgns
         transaction_manager_->HoldEscrow( funds, nChunks, uint256_t{ std::string( dev_config_.Addr ) }, dev_config_.Cut,
                                           "QmagrfcEhX6aVuFqrRoUU5K6yvjpNiCxnJA6o2tT38Kvxx" );
     }
+
     void AccountManager::MintTokens( uint64_t amount )
     {
         transaction_manager_->MintFunds( amount );
     }
+
     /*
     static AccountManager instance( ACCOUNT_KEY, DEV_CONFIG );
     AccountManager       &AccountManager::GetInstance()

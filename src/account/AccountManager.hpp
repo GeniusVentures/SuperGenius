@@ -43,25 +43,28 @@ extern "C"
 #endif
 
 using namespace boost::multiprecision;
+
 namespace sgns
 {
     class AccountManager : public IComponent
     {
-
     public:
         AccountManager( const AccountKey &priv_key_data, const DevConfig_st &dev_config );
         //static AccountManager &GetInstance();
 
         AccountManager();
         ~AccountManager();
-        boost::optional<GeniusAccount> CreateAccount( const std::string &priv_key_data, const uint64_t &initial_amount );
+        boost::optional<GeniusAccount> CreateAccount( const std::string &priv_key_data,
+                                                      const uint64_t    &initial_amount );
         //void ImportAccount(const std::string &priv_key_data);
 
-        void        ProcessImage( const std::string &image_path, uint16_t funds );
+        void ProcessImage( const std::string &image_path, uint16_t funds );
+
         std::string GetName() override
         {
             return "AccountManager";
         }
+
         void MintTokens( uint64_t amount );
         void AddPeer( const std::string &peer );
 
@@ -89,6 +92,7 @@ namespace sgns
         static constexpr std::uint16_t    TEST_NET                = 963;
         static constexpr std::size_t      MAX_NODES_COUNT         = 1;
         static constexpr std::string_view PROCESSING_GRID_CHANNEL = "GRID_CHANNEL_ID";
+        static constexpr std::string_view PROCESSING_CHANNEL      = "SGNUS.TestNet.Channel";
     };
 };
 
