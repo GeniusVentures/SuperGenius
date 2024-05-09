@@ -4,6 +4,7 @@
  * @date       2024-04-18
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
+#include <rapidjson/document.h>
 #include "account/AccountManager.hpp"
 #include "processing/processing_imagesplit.hpp"
 #include "processing/processing_tasksplit.hpp"
@@ -80,7 +81,7 @@ namespace sgns
 
         globaldb_ = std::make_shared<crdt::GlobalDB>(
             io_, ( boost::format( "SuperGNUSNode.TestNet.%s" ) % node_base_addr_ ).str(), 40010,
-            std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_, std::string(PROCESSING_CHANNEL)) );
+            std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_, std::string( PROCESSING_CHANNEL ) ) );
 
         globaldb_->Init( crdt::CrdtOptions::DefaultOptions() );
 
@@ -104,7 +105,8 @@ namespace sgns
         transaction_manager_->Start();
 
         // Encode the string to UTF-8 bytes
-        std::vector<unsigned char> inputBytes( std::string(PROCESSING_CHANNEL).begin(), std::string(PROCESSING_CHANNEL).end() );
+        std::string                temp = std::string( PROCESSING_CHANNEL );
+        std::vector<unsigned char> inputBytes( temp.begin(), temp.end() );
 
         // Compute the SHA-256 hash of the input bytes
         std::vector<unsigned char> hash( SHA256_DIGEST_LENGTH );
@@ -178,7 +180,8 @@ namespace sgns
 
     void AccountManager::ProcessImage( const std::string &image_path, uint16_t funds )
     {
-        processing::ImageSplitter          imagesplit( image_path.data(), 5400, 0, 4860000 );
+        auto                      mnn_image = GetImageByCID( "QmUDMvGQXbUKMsjmTzjf4ZuMx7tHx6Z4x8YH8RbwrgyGAf" );
+        processing::ImageSplitter imagesplit( mnn_image, 5400, 0, 4860000 );
         std::vector<std::vector<uint32_t>> chunkOptions;
         chunkOptions.push_back( { 1080, 0, 4320, 5, 5, 24 } );
         std::list<SGProcessing::Task> tasks;
@@ -188,7 +191,7 @@ namespace sgns
             SGProcessing::Task task;
             //std::cout << "CID STRING:    " << libp2p::multi::ContentIdentifierCodec::toString(imagesplit.GetPartCID(taskIdx)).value() << std::endl;
             //task.set_ipfs_block_id(libp2p::multi::ContentIdentifierCodec::toString(imagesplit.GetPartCID(taskIdx)).value());
-            task.set_ipfs_block_id( "QmagrfcEhX6aVuFqrRoUU5K6yvjpNiCxnJA6o2tT38Kvxx" );
+            task.set_ipfs_block_id( "QmUDMvGQXbUKMsjmTzjf4ZuMx7tHx6Z4x8YH8RbwrgyGAf" );
             //task.set_block_len(48600);
             //task.set_block_line_stride(540);
             //task.set_block_stride(4860);
@@ -213,12 +216,124 @@ namespace sgns
         }
 
         transaction_manager_->HoldEscrow( funds, nChunks, uint256_t{ std::string( dev_config_.Addr ) }, dev_config_.Cut,
-                                          "QmagrfcEhX6aVuFqrRoUU5K6yvjpNiCxnJA6o2tT38Kvxx" );
+                                          "QmUDMvGQXbUKMsjmTzjf4ZuMx7tHx6Z4x8YH8RbwrgyGAf" );
     }
 
     void AccountManager::MintTokens( uint64_t amount )
     {
         transaction_manager_->MintFunds( amount );
+    }
+
+    std::vector<uint8_t> AccountManager::GetImageByCID( std::string cid )
+    {
+        libp2p::protocol::kademlia::Config kademlia_config;
+        kademlia_config.randomWalk.enabled  = true;
+        kademlia_config.randomWalk.interval = std::chrono::seconds( 300 );
+        kademlia_config.requestConcurency   = 20;
+        auto injector                       = libp2p::injector::makeHostInjector(
+            libp2p::injector::makeKademliaInjector( libp2p::injector::useKademliaConfig( kademlia_config ) ) );
+        auto ioc = injector.create<std::shared_ptr<boost::asio::io_context>>();
+
+        boost::asio::io_context::executor_type                                   executor = ioc->get_executor();
+        boost::asio::executor_work_guard<boost::asio::io_context::executor_type> workGuard( executor );
+
+        auto mainbuffers = std::make_shared<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>();
+
+        //Get Image Data from settings.json
+        FileManager::GetInstance().InitializeSingletons();
+        string fileURL = "https://ipfs.filebase.io/ipfs/" + cid + "/settings.json";
+        std::cout << "FILE URLL: " << fileURL << std::endl;
+        auto data = FileManager::GetInstance().LoadASync(
+            fileURL, false, false, ioc, [ioc]( const int &status ) { std::cout << "status: " << status << std::endl; },
+            [ioc, &mainbuffers](
+                std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers )
+            {
+                std::cout << "Final Callback" << std::endl;
+
+                if ( !buffers || ( buffers->first.empty() && buffers->second.empty() ) )
+                {
+                    std::cout << "Buffer from AsyncIO is 0" << std::endl;
+                    return;
+                }
+                else
+                {
+                    //Process settings json
+
+                    mainbuffers->first.insert( mainbuffers->first.end(), buffers->first.begin(), buffers->first.end() );
+                    mainbuffers->second.insert( mainbuffers->second.end(), buffers->second.begin(),
+                                                buffers->second.end() );
+                }
+            },
+            "file" );
+        ioc->reset();
+        ioc->run();
+
+        //Parse json
+        size_t index = std::string::npos;
+        for ( size_t i = 0; i < mainbuffers->first.size(); ++i )
+        {
+            if ( mainbuffers->first[i].find( "settings.json" ) != std::string::npos )
+            {
+                index = i;
+                break;
+            }
+        }
+        if ( index == std::string::npos )
+        {
+            std::cerr << "settings.json doesn't exist" << std::endl;
+            return std::vector<uint8_t>();
+        }
+        std::vector<char>  &jsonData = mainbuffers->second[index];
+        std::string         jsonString( jsonData.begin(), jsonData.end() );
+        rapidjson::Document document;
+        document.Parse( jsonString.c_str() );
+
+        // Extract input image name
+        std::string inputImage = "";
+        if ( document.HasMember( "input" ) && document["input"].IsObject() )
+        {
+            const auto &input = document["input"];
+            if ( input.HasMember( "image" ) && input["image"].IsString() )
+            {
+                inputImage = input["image"].GetString();
+                std::cout << "Input Image: " << inputImage << std::endl;
+            }
+            else
+            {
+                std::cerr << "No Input file" << std::endl;
+                return std::vector<uint8_t>();
+            }
+        }
+
+        //Get Actual Image
+        string            imageUrl = "https://ipfs.filebase.io/ipfs/" + cid + "/" + inputImage;
+        std::vector<char> imageData;
+        auto              data2 = FileManager::GetInstance().LoadASync(
+            imageUrl, false, false, ioc, [ioc]( const int &status ) { std::cout << "status: " << status << std::endl; },
+            [ioc,
+             &imageData]( std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers )
+            {
+                std::cout << "Final Callback" << std::endl;
+
+                if ( !buffers || ( buffers->first.empty() && buffers->second.empty() ) )
+                {
+                    std::cout << "Buffer from AsyncIO is 0" << std::endl;
+                    return;
+                }
+                else
+                {
+                    //Process settings json
+
+                    imageData.assign( buffers->second[0].begin(), buffers->second[0].end() );
+                }
+            },
+            "file" );
+        ioc->reset();
+        ioc->run();
+        std::vector<uint8_t> output( imageData.size() );
+        std::transform( imageData.begin(), imageData.end(), output.begin(),
+                        []( char c ) { return static_cast<uint8_t>( c ); } );
+        return output;
     }
 
     /*

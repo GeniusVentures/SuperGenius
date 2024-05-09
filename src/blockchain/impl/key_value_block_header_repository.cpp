@@ -34,7 +34,7 @@ namespace sgns::blockchain
         const primitives::BlockNumber &number ) const
     {
         OUTCOME_TRY( ( auto &&, header ), getBlockHeader( number ) );
-        OUTCOME_TRY( ( auto &&, enc_header ), scale::encode( header ) );
+        auto enc_header = GetHeaderSerializedData( header );
 
         return hasher_->blake2b_256( enc_header );
     }
@@ -85,7 +85,7 @@ namespace sgns::blockchain
         return block_header_key_prefix;
     }
 
-    std::vector<uint8_t> KeyValueBlockHeaderRepository::GetHeaderSerializedData( const primitives::BlockHeader &header )
+    std::vector<uint8_t> KeyValueBlockHeaderRepository::GetHeaderSerializedData( const primitives::BlockHeader &header ) const
     {
         SGBlocks::BlockHeaderData header_proto;
         header_proto.set_parent_hash( header.parent_hash.toReadableString() );

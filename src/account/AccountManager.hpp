@@ -68,6 +68,8 @@ namespace sgns
         void MintTokens( uint64_t amount );
         void AddPeer( const std::string &peer );
 
+        std::vector<uint8_t> GetImageByCID( std::string cid );
+
     private:
         std::shared_ptr<GeniusAccount>                             account_;
         std::shared_ptr<ipfs_pubsub::GossipPubSub>                 pubsub_;
