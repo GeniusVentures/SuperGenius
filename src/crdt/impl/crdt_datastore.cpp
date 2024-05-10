@@ -4,6 +4,7 @@
 #include <crdt/proto/bcast.pb.h>
 #include <google/protobuf/unknown_field_set.h>
 #include <ipfs_lite/ipld/impl/ipld_node_impl.hpp>
+#include <thread>
 
 namespace sgns::crdt
 {
