@@ -39,8 +39,8 @@ namespace sgns::base {
      * @brief constructor enabling initializer list
      * @param l initializer list
      */
-    explicit Blob(const std::array<byte_t, size_> &l) {
-      std::copy(l.begin(), l.end(), this->begin());
+    explicit Blob( const std::array<byte_t, size_> &l ) : std::array<byte_t, size_>( l )
+    {
     }
 
     /**
