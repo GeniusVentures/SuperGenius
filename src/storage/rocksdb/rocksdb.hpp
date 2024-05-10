@@ -33,7 +33,7 @@ namespace sgns::storage
     using Slice = ::ROCKSDB_NAMESPACE::Slice;
     using QueryResult = std::map<Buffer, Buffer>;
 
-    ~rocksdb() override = default;
+    ~rocksdb() override;
 
     /**
      * @brief Factory method to create an instance of rocksdb class.
