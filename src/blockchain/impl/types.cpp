@@ -32,6 +32,7 @@ namespace sgns::blockchain {
     }
     return key;
   }
+
   outcome::result<std::string> idToStringKey(crdt::GlobalDB &db,
                                                 const primitives::BlockId &id) {
     auto key = visit_in_place(
@@ -41,14 +42,14 @@ namespace sgns::blockchain {
         },
         [&db](const base::Hash256 &hash) {
           auto key = db.Get({hash.toReadableString()});
+          
           if (key)
           {
             return std::to_string(BufferToNumber(key.value()).value());
           }
-          else
-          {
-            return std::string{};
-          }
+
+          return std::string{};
+         
         });
     if (key.empty())
     {
