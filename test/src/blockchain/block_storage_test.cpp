@@ -31,66 +31,34 @@ using testing::Return;
 class BlockStorageTest : public test::CRDTFixture
 {
 public:
-    BlockStorageTest() : CRDTFixture( fs::path( "blockstoragetest.lvldb" ) )
+    BlockStorageTest() :
+        CRDTFixture( fs::path( "blockstoragetest.lvldb" ) ), hasher( std::make_shared<sgns::crypto::HasherImpl>() ),
+        header_repo_( std::make_shared<KeyValueBlockHeaderRepository>( db_, hasher, "teststorage-963/" ) )
     {
+        root_hash.put( std::vector<uint8_t>( 32UL, 1 ) );
+
+        createWithGenesis();
     }
-
-    void SetUp() override
-    {
-        root_hash.put( std::vector<uint8_t>( 32ul, 1 ) );
-        hasher               = std::make_shared<sgns::crypto::HasherImpl>();
-        std::string db_path_ = "teststorage-963/";
-        header_repo_         = std::make_shared<KeyValueBlockHeaderRepository>( db_, hasher, db_path_ );
-    }
-
-    BlockHash genesis_block_hash{ { 'g', 'e', 'n', 'e', 's', 'i', 's' } };
-    BlockHash regular_block_hash{ { 'r', 'e', 'g', 'u', 'l', 'a', 'r' } };
-    Buffer    root_hash;
-
-    KeyValueBlockStorage::BlockHandler block_handler = []( auto & ) {};
 
     std::shared_ptr<KeyValueBlockStorage> createWithGenesis()
     {
-        //EXPECT_CALL(*hasher, blake2b_256(_))
-        //    // calculate hash of genesis block at check existance of block
-        //    .WillOnce(Return(genesis_block_hash))
-        //    // calculate hash of genesis block at put block header
-        //    .WillRepeatedly(Return(genesis_block_hash));
-
-        //EXPECT_CALL(*storage, get(_))
-        //    // trying to get last finalized block hash which not exists yet
-        //    .WillOnce(Return(sgns::blockchain::Error::BLOCK_NOT_FOUND))
-        //    // check of block data during block insertion
-        //    .WillOnce(Return(sgns::storage::DatabaseError::NOT_FOUND))
-        //    .WillOnce(Return(sgns::storage::DatabaseError::NOT_FOUND));
-        //
-        //EXPECT_CALL(*storage, put(_, _))
-        //    // put key-value for lookup data
-        //    .WillRepeatedly(Return(outcome::success()));
-        //
-        //EXPECT_CALL(*storage, put_rv(_, _))
-        //    // put key-value for lookup data
-        //    .WillRepeatedly(Return(outcome::success()));
-
-        EXPECT_OUTCOME_TRUE( new_block_storage, KeyValueBlockStorage::createWithGenesis(
-                                                    root_hash, db_, hasher, header_repo_, block_handler ) );
+        EXPECT_OUTCOME_TRUE(
+            new_block_storage,
+            KeyValueBlockStorage::createWithGenesis( root_hash, db_, hasher, header_repo_, block_handler ) );
 
         return new_block_storage;
     }
 
+    BlockHash genesis_block_hash{ { 'g', 'e', 'n', 'e', 's', 'i', 's' } };
+    BlockHash regular_block_hash{ { 'r', 'e', 'g', 'u', 'l', 'a', 'r' } };
+
+    KeyValueBlockStorage::BlockHandler block_handler = []( auto & ) {};
+
+    Buffer root_hash;
+
     std::shared_ptr<sgns::crypto::Hasher>          hasher;
     std::shared_ptr<KeyValueBlockHeaderRepository> header_repo_;
 };
-
-/**
- * @given a hasher instance, a genesis block, and an empty map storage
- * @when initialising a block storage from it
- * @then initialisation will successful
- */
-TEST_F( BlockStorageTest, CreateWithGenesis )
-{
-    createWithGenesis();
-}
 
 /**
  * @given a hasher instance, a genesis block, and an map storage containing the
@@ -101,12 +69,9 @@ TEST_F( BlockStorageTest, CreateWithGenesis )
  */
 TEST_F( BlockStorageTest, CreateWithExistingGenesis )
 {
-    //EXPECT_CALL(*storage, get(_))
-    // trying to get last finalized block hash to ensure he not exists yet
-    //     .WillOnce(Return(Buffer{genesis_block_hash}));
-
     EXPECT_OUTCOME_ERROR(
-        res, KeyValueBlockStorage::createWithGenesis( root_hash, db_, hasher, header_repo_, block_handler ),
+        res,
+        KeyValueBlockStorage::createWithGenesis( root_hash, db_, hasher, header_repo_, block_handler ),
         KeyValueBlockStorage::Error::GENESIS_BLOCK_ALREADY_EXISTS );
 }
 
