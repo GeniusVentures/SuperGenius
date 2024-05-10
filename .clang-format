@@ -10,6 +10,8 @@ AlignConsecutiveDeclarations:
   Enabled: true
 AlignConsecutiveShortCaseStatements:
   Enabled: true
+BinPackArguments: false
+BinPackParameters: false
 BraceWrapping:
   BeforeLambdaBody: true
 BreakConstructorInitializers: AfterColon
