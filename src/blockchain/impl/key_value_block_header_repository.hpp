@@ -35,9 +35,10 @@ namespace sgns::blockchain
         }
 
         std::string GetHeaderPath() const;
-        std::vector<uint8_t> GetHeaderSerializedData(const primitives::BlockHeader &header);
-        primitives::BlockHeader GetBlockHeaderFromSerialized(const std::vector<uint8_t> &serialized_data) const ;
 
+        static std::vector<uint8_t> GetHeaderSerializedData( const primitives::BlockHeader &header );
+
+        static primitives::BlockHeader GetBlockHeaderFromSerialized( const std::vector<uint8_t> &serialized_data );
 
     private:
         static constexpr std::string_view BLOCKCHAIN_PATH = "blockchain/";
