@@ -1,6 +1,7 @@
 #include "blockchain/impl/block_tree_impl.hpp"
 
 #include <algorithm>
+#include <utility>
 
 #include "blockchain/block_tree_error.hpp"
 #include "blockchain/impl/storage_util.hpp"
@@ -25,11 +26,13 @@ namespace sgns::blockchain {
   using Prefix = prefix::Prefix;
   using DatabaseError = sgns::storage::DatabaseError;
 
-  BlockTreeImpl::TreeNode::TreeNode(primitives::BlockHash hash,
-                                    primitives::BlockNumber depth,
-                                    const std::shared_ptr<TreeNode> &parent,
-                                    bool finalized)
-      : block_hash{hash}, depth{depth}, parent{parent}, finalized{finalized} {}
+  BlockTreeImpl::TreeNode::TreeNode( primitives::BlockHash     hash,
+                                     primitives::BlockNumber   depth,
+                                     std::shared_ptr<TreeNode> parent,
+                                     bool                      finalized ) :
+      block_hash{ hash }, depth{ depth }, parent{ parent }, finalized{ finalized }
+  {
+  }
 
   std::shared_ptr<BlockTreeImpl::TreeNode> BlockTreeImpl::TreeNode::getByHash(
       const primitives::BlockHash &hash) {
@@ -501,60 +504,70 @@ namespace sgns::blockchain {
     }
   }
 
-  outcome::result<void> BlockTreeImpl::prune(
-      const std::shared_ptr<TreeNode> &lastFinalizedNode) {
-    std::vector<std::pair<primitives::BlockHash, primitives::BlockNumber>>
-        to_remove;
+  outcome::result<void> BlockTreeImpl::prune( std::shared_ptr<TreeNode> lastFinalizedNode )
+  {
+      std::vector<std::pair<primitives::BlockHash, primitives::BlockNumber>> to_remove;
 
-    auto current_node = lastFinalizedNode;
+      auto current_node = std::move( lastFinalizedNode );
 
-    for (;;) {
-      auto parent_node = current_node->parent.lock();
-      if (!parent_node || parent_node->finalized) {
-        break;
+      for ( ;; )
+      {
+          auto parent_node = current_node->parent.lock();
+          if ( !parent_node || parent_node->finalized )
+          {
+              break;
+          }
+
+          auto main_chain_node = current_node;
+          current_node         = parent_node;
+
+          // collect hashes for removing (except main chain block)
+          for ( const auto &child : current_node->children )
+          {
+              if ( child->block_hash != main_chain_node->block_hash )
+              {
+                  collectDescendants( child, to_remove );
+                  to_remove.emplace_back( child->block_hash, child->depth );
+              }
+          }
+
+          // remove (in memory) all child, except main chain block
+          current_node->children = { main_chain_node };
       }
 
-      auto main_chain_node = current_node;
-      current_node = parent_node;
+      std::vector<primitives::Extrinsic> extrinsics;
 
-      // collect hashes for removing (except main chain block)
-      for (const auto &child : current_node->children) {
-        if (child->block_hash != main_chain_node->block_hash) {
-          collectDescendants(child, to_remove);
-          to_remove.emplace_back(child->block_hash, child->depth);
-        }
+      // remove from storage
+      for ( const auto &[hash, number] : to_remove )
+      {
+          auto block_body_res = storage_->getBlockBody( hash );
+          if ( block_body_res.has_value() )
+          {
+              extrinsics.reserve( extrinsics.size() + block_body_res.value().size() );
+              for ( auto &&extrinsic : block_body_res.value() )
+              {
+                  extrinsics.emplace_back( std::move( extrinsic ) );
+              }
+          }
+
+          BOOST_OUTCOME_TRYV2( auto &&, storage_->removeBlock( hash, number ) );
       }
 
-      // remove (in memory) all child, except main chain block
-      current_node->children = {main_chain_node};
-    }
-
-    std::vector<primitives::Extrinsic> extrinsics;
-
-    // remove from storage
-    for (const auto &[hash, number] : to_remove) {
-      auto block_body_res = storage_->getBlockBody(hash);
-      if (block_body_res.has_value()) {
-        extrinsics.reserve(extrinsics.size() + block_body_res.value().size());
-        for (auto &&extrinsic : block_body_res.value()) {
-          extrinsics.emplace_back(std::move(extrinsic));
-        }
+      // trying to return back extrinsics to transaction pool
+      for ( auto &&extrinsic : extrinsics )
+      {
+          auto result = extrinsic_observer_->onTxMessage( extrinsic );
+          if ( result )
+          {
+              log_->debug( "Reapplied tx {}", result.value() );
+          }
+          else
+          {
+              log_->debug( "Skipped tx: {}", result.error().message() );
+          }
       }
 
-      BOOST_OUTCOME_TRYV2(auto &&, storage_->removeBlock(hash, number));
-    }
-
-    // trying to return back extrinsics to transaction pool
-    for (auto &&extrinsic : extrinsics) {
-      auto result = extrinsic_observer_->onTxMessage(extrinsic);
-      if (result) {
-        log_->debug("Reapplied tx {}", result.value());
-      } else {
-        log_->debug("Skipped tx: {}", result.error().message());
-      }
-    }
-
-    return outcome::success();
+      return outcome::success();
   }
 
   void BlockTreeImpl::collectDescendants(

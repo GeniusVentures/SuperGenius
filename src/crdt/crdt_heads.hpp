@@ -20,7 +20,7 @@ namespace sgns::crdt
     * @param aDatastore Pointer to datastore
     * @param aNamespace Namespce key (e.g "/namespace")
     */
-    CrdtHeads(const std::shared_ptr<DataStore>& aDatastore, const HierarchicalKey& aNamespace);
+    CrdtHeads( std::shared_ptr<DataStore> aDatastore, const HierarchicalKey &aNamespace );
 
     /** Copy constructor
     */

@@ -37,9 +37,9 @@ namespace sgns::crdt
     using Logger = base::Logger;
     using BlockCallback = Graphsync::BlockCallback;
 
-    GraphsyncDAGSyncer(const std::shared_ptr<IpfsDatastore>& service, 
-      const std::shared_ptr<Graphsync>& graphsync, 
-      const std::shared_ptr<libp2p::Host>& host);
+    GraphsyncDAGSyncer( std::shared_ptr<IpfsDatastore> service,
+                        std::shared_ptr<Graphsync>     graphsync,
+                        std::shared_ptr<libp2p::Host>  host );
 
     outcome::result<void> Listen(const Multiaddress& listen_to);
 

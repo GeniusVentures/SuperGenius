@@ -48,8 +48,10 @@ namespace sgns::crdt
     * @param aPutHookPtr Function pointer to nofify when key added to datastore, default nullptr
     * @param aDeleteHookPtr Function pointer to nofify when key deleted from datastore, default nullptr
     */
-    CrdtSet(const std::shared_ptr<DataStore>& aDatastore, const HierarchicalKey& aNamespace,
-      const PutHookPtr aPutHookPtr = nullptr, const DeleteHookPtr aDeleteHookPtr = nullptr);
+    CrdtSet( std::shared_ptr<DataStore> aDatastore,
+             const HierarchicalKey     &aNamespace,
+             PutHookPtr                 aPutHookPtr    = nullptr,
+             DeleteHookPtr              aDeleteHookPtr = nullptr );
 
     /** Copy constructor
     */

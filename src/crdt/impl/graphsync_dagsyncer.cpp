@@ -1,16 +1,16 @@
 #include "crdt/graphsync_dagsyncer.hpp"
 
 #include <ipfs_lite/ipld/impl/ipld_node_impl.hpp>
+#include <utility>
 
 namespace sgns::crdt
 {
-GraphsyncDAGSyncer::GraphsyncDAGSyncer(const std::shared_ptr<IpfsDatastore>& service,
-    const std::shared_ptr<Graphsync>& graphsync, const std::shared_ptr<libp2p::Host>& host)
-    : dagService_(service)
-    , graphsync_(graphsync)
-    , host_(host)
-{
-}
+    GraphsyncDAGSyncer::GraphsyncDAGSyncer( std::shared_ptr<IpfsDatastore> service,
+                                            std::shared_ptr<Graphsync>     graphsync,
+                                            std::shared_ptr<libp2p::Host>  host ) :
+        dagService_( std::move( service ) ), graphsync_( std::move( graphsync ) ), host_( std::move( host ) )
+    {
+    }
 
 outcome::result<void> GraphsyncDAGSyncer::Listen(const Multiaddress& listen_to)
 {
