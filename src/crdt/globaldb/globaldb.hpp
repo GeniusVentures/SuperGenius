@@ -62,6 +62,11 @@ public:
     */
     std::shared_ptr<CrdtDataStoreTransaction> BeginTransaction();
 
+    auto GetDB()
+    {
+        return m_crdtDatastore->GetDB();
+    }
+
 private:
     std::shared_ptr<boost::asio::io_context> m_context;
     std::string m_databasePath;

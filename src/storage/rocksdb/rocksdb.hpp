@@ -86,7 +86,10 @@ namespace sgns::storage
       return "rocksdb";
     }
 
-    inline std::shared_ptr<DB> getDB() const { return db_; }
+    [[nodiscard]] std::shared_ptr<DB> getDB() const
+    {
+        return db_;
+    }
 
    private:
     std::shared_ptr<DB> db_;
