@@ -37,10 +37,10 @@ public:
     {
         root_hash.put( std::vector<uint8_t>( 32UL, 1 ) );
 
-        createWithGenesis();
+        CreateWithGenesis();
     }
 
-    std::shared_ptr<KeyValueBlockStorage> createWithGenesis()
+    std::shared_ptr<KeyValueBlockStorage> CreateWithGenesis()
     {
         EXPECT_OUTCOME_TRUE(
             new_block_storage,
@@ -83,16 +83,8 @@ TEST_F( BlockStorageTest, CreateWithExistingGenesis )
  */
 TEST_F( BlockStorageTest, LoadFromExistingStorage )
 {
-    //EXPECT_CALL(*storage, get(_))
-    //    // trying to get last finalized block hash to ensure he not exists yet
-    //    .WillOnce(Return(Buffer{genesis_block_hash}))
-    //    // getting header of last finalized block
-    //    .WillOnce(Return(Buffer{}))
-    //    .WillOnce(Return(Buffer{sgns::scale::encode(BlockHeader{}).value()}));
-
-    // auto new_block_storage_res =
-    //     KeyValueBlockStorage::loadExisting(storage, hasher, block_handler);
-    //EXPECT_TRUE(new_block_storage_res.has_value());
+    auto new_block_storage_res = KeyValueBlockStorage::loadExisting( db_, hasher, header_repo_, block_handler );
+    EXPECT_TRUE( new_block_storage_res.has_value() );
 }
 
 /**
