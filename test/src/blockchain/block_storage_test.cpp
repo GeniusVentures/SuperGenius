@@ -36,8 +36,6 @@ public:
         header_repo_( std::make_shared<KeyValueBlockHeaderRepository>( db_, hasher, "teststorage-963/" ) )
     {
         root_hash.put( std::vector<uint8_t>( 32UL, 1 ) );
-
-        CreateWithGenesis();
     }
 
     std::shared_ptr<KeyValueBlockStorage> CreateWithGenesis()
@@ -69,6 +67,8 @@ public:
  */
 TEST_F( BlockStorageTest, CreateWithExistingGenesis )
 {
+    (void)CreateWithGenesis();
+
     EXPECT_OUTCOME_ERROR(
         res,
         KeyValueBlockStorage::createWithGenesis( root_hash, db_, hasher, header_repo_, block_handler ),
@@ -83,6 +83,8 @@ TEST_F( BlockStorageTest, CreateWithExistingGenesis )
  */
 TEST_F( BlockStorageTest, LoadFromExistingStorage )
 {
+    (void)CreateWithGenesis();
+
     auto new_block_storage_res = KeyValueBlockStorage::loadExisting( db_, hasher, header_repo_, block_handler );
     EXPECT_TRUE( new_block_storage_res.has_value() );
 }
@@ -95,16 +97,9 @@ TEST_F( BlockStorageTest, LoadFromExistingStorage )
  */
 TEST_F( BlockStorageTest, LoadFromEmptyStorage )
 {
-    auto empty_storage = std::make_shared<GenericStorageMock<Buffer, Buffer>>();
-
-    //EXPECT_CALL(*empty_storage, get(_))
-    // trying to get last finalized block hash to ensure he not exists yet
-    //    .WillOnce(Return(KeyValueBlockStorage::Error::FINALIZED_BLOCK_NOT_FOUND));
-
-    //EXPECT_OUTCOME_ERROR(
-    //    res,
-    //    KeyValueBlockStorage::loadExisting(empty_storage, hasher, block_handler),
-    //    KeyValueBlockStorage::Error::FINALIZED_BLOCK_NOT_FOUND);
+    EXPECT_OUTCOME_ERROR( res,
+                          KeyValueBlockStorage::loadExisting( db_, hasher, header_repo_, block_handler ),
+                          KeyValueBlockStorage::Error::FINALIZED_BLOCK_NOT_FOUND );
 }
 
 /**
