@@ -66,5 +66,7 @@ CheckOptions:
 
   - { key: readability-identifier-naming.ClassMemberPrefix, value: m_ }
 
+  - { key: readability-identifier-naming.MethodCase, value: CamelCase }
+
   - { key: modernize-use-std-print.ReplacementPrintFunction, value: "fmt::print"}
   - { key: modernize-use-std-print.ReplacementPrintlnFunction, value: "fmt::println"}
