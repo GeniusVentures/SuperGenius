@@ -82,9 +82,9 @@ namespace sgns
         std::shared_ptr<processing::ProcessingTaskQueueImpl>       task_queue_;
         std::shared_ptr<processing::ProcessingCoreImpl>            processing_core_;
         std::shared_ptr<processing::ProcessingServiceImpl>         processing_service_;
+        std::shared_ptr<soralog::LoggingSystem>                    logging_system;
 
         std::thread                              io_thread;
-        std::shared_ptr<boost::asio::signal_set> signals_;
 
         DevConfig_st dev_config_;
         std::string  node_base_addr_;

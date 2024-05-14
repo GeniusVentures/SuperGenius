@@ -46,7 +46,7 @@ namespace sgns
         node_base_addr_( priv_key_data ),                                                               //
         dev_config_( dev_config )                                                                       //
     {
-        auto logging_system = std::make_shared<soralog::LoggingSystem>( std::make_shared<soralog::ConfiguratorFromYAML>(
+        logging_system = std::make_shared<soralog::LoggingSystem>( std::make_shared<soralog::ConfiguratorFromYAML>(
             // Original LibP2P logging config
             std::make_shared<libp2p::log::Configurator>(),
             // Additional logging config for application
@@ -76,8 +76,6 @@ namespace sgns
         pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
             crdt::KeyPairFileStorage( pubsubKeyPath ).GetKeyPair().value() );
         pubsub_->Start( 40001, {} );
-
-        io_ = std::make_shared<boost::asio::io_context>();
 
         globaldb_ = std::make_shared<crdt::GlobalDB>(
             io_, ( boost::format( "SuperGNUSNode.TestNet.%s" ) % node_base_addr_ ).str(), 40010,
@@ -148,10 +146,6 @@ namespace sgns
 
     AccountManager::~AccountManager()
     {
-        if ( signals_ )
-        {
-            signals_->cancel(); // Cancel any pending signals
-        }
         if ( io_ )
         {
             io_->stop(); // Stop our io_context
