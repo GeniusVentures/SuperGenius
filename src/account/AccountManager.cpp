@@ -4,6 +4,8 @@
  * @date       2024-04-18
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
+#include <boost/format.hpp>
+#include <boost/multiprecision/cpp_int.hpp>
 #include <rapidjson/document.h>
 #include "account/AccountManager.hpp"
 #include "processing/processing_imagesplit.hpp"
@@ -25,18 +27,20 @@ extern "C"
 static const std::string logger_config( R"(
             # ----------------
             sinks:
-            - name: console
+              - name: console
                 type: console
                 color: true
             groups:
-            - name: SuperGeniusDemo
+              - name: SuperGeniusDemo
                 sink: console
                 level: info
                 children:
-                - name: libp2p
-                - name: Gossip
+                  - name: libp2p
+                  - name: Gossip
             # ----------------
-            )" );
+              )" );
+
+using namespace boost::multiprecision;
 
 namespace sgns
 {
@@ -100,27 +104,7 @@ namespace sgns
         block_storage_ = std::move( maybe_block_storage.value() );
         transaction_manager_ =
             std::make_shared<TransactionManager>( globaldb_, io_, account_, hasher_, block_storage_ );
-        transaction_manager_->Start();
-
-        // Encode the string to UTF-8 bytes
-        std::string                temp = std::string( PROCESSING_CHANNEL );
-        std::vector<unsigned char> inputBytes( temp.begin(), temp.end() );
-
-        // Compute the SHA-256 hash of the input bytes
-        std::vector<unsigned char> hash( SHA256_DIGEST_LENGTH );
-        SHA256( inputBytes.data(), inputBytes.size(), hash.data() );
-        //Provide CID
-        libp2p::protocol::kademlia::ContentId key( hash );
-        pubsub_->GetDHT()->Start();
-        pubsub_->GetDHT()->ProvideCID( key, true );
-
-        auto cidtest = libp2p::multi::ContentIdentifierCodec::decode( key.data );
-
-        auto cidstring = libp2p::multi::ContentIdentifierCodec::toString( cidtest.value() );
-        std::cout << "CID Test::" << cidstring.value() << std::endl;
-
-        //Also Find providers
-        pubsub_->StartFindingPeers( io_, key );
+        
 
         task_queue_      = std::make_shared<processing::ProcessingTaskQueueImpl>( globaldb_ );
         processing_core_ = std::make_shared<processing::ProcessingCoreImpl>( globaldb_, 1000000, 2 );
@@ -136,12 +120,11 @@ namespace sgns
         processing_service_->SetChannelListRequestTimeout( boost::posix_time::milliseconds( 10000 ) );
         processing_service_->StartProcessing( std::string( PROCESSING_GRID_CHANNEL ) );
 
+        transaction_manager_->Start();
+
+        //DHTInit();
+
         io_thread = std::thread( [this]() { io_->run(); } );
-    }
-
-    AccountManager::AccountManager() : account_( std::make_shared<GeniusAccount>( 0, 0, 0 ) ) //
-
-    {
     }
 
     AccountManager::~AccountManager()
@@ -165,11 +148,27 @@ namespace sgns
         //pubsub_->AddPeers( { peer } );
     }
 
-    boost::optional<GeniusAccount> AccountManager::CreateAccount( const std::string &priv_key_data,
-                                                                  const uint64_t    &initial_amount )
+    void AccountManager::DHTInit()
     {
-        uint256_t value_in_num{ priv_key_data };
-        return GeniusAccount( value_in_num, initial_amount, 0 );
+        // Encode the string to UTF-8 bytes
+        std::string                temp = std::string( PROCESSING_CHANNEL );
+        std::vector<unsigned char> inputBytes( temp.begin(), temp.end() );
+
+        // Compute the SHA-256 hash of the input bytes
+        std::vector<unsigned char> hash( SHA256_DIGEST_LENGTH );
+        SHA256( inputBytes.data(), inputBytes.size(), hash.data() );
+        //Provide CID
+        libp2p::protocol::kademlia::ContentId key( hash );
+        pubsub_->GetDHT()->Start();
+        pubsub_->GetDHT()->ProvideCID( key, true );
+
+        auto cidtest = libp2p::multi::ContentIdentifierCodec::decode( key.data );
+
+        auto cidstring = libp2p::multi::ContentIdentifierCodec::toString( cidtest.value() );
+        std::cout << "CID Test::" << cidstring.value() << std::endl;
+
+        //Also Find providers
+        pubsub_->StartFindingPeers( io_, key );
     }
 
     void AccountManager::ProcessImage( const std::string &image_path, uint16_t funds )

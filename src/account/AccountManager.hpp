@@ -7,22 +7,23 @@
 #ifndef _ACCOUNT_MANAGER_HPP_
 #define _ACCOUNT_MANAGER_HPP_
 #include <memory>
-#include <boost/format.hpp>
 #include <boost/asio.hpp>
-#include <boost/multiprecision/cpp_int.hpp>
 #include <spdlog/sinks/basic_file_sink.h>
+#include "account/GeniusAccount.hpp"
+#include "ipfs_pubsub/gossip_pubsub.hpp"
+#include "crdt/globaldb/globaldb.hpp"
+#include "crdt/globaldb/keypair_file_storage.hpp"
+#include "crdt/globaldb/proto/broadcast.pb.h"
+#include "account/TransactionManager.hpp"
 #include <libp2p/log/configurator.hpp>
 #include <libp2p/log/logger.hpp>
 #include <libp2p/multi/multibase_codec/multibase_codec_impl.hpp>
 #include <libp2p/multi/content_identifier_codec.hpp>
-#include "ipfs_pubsub/gossip_pubsub.hpp"
-#include "crdt/globaldb/globaldb.hpp"
+#include <ipfs_lite/ipfs/graphsync/graphsync.hpp>
 #include "crypto/hasher/hasher_impl.hpp"
 #include "blockchain/impl/key_value_block_header_repository.hpp"
 #include "blockchain/impl/key_value_block_storage.hpp"
 #include "integration/IComponent.hpp"
-#include "account/GeniusAccount.hpp"
-#include "account/TransactionManager.hpp"
 #include "processing/impl/processing_task_queue_impl.hpp"
 #include "processing/impl/processing_core_impl.hpp"
 #include "processing/processing_service.hpp"
@@ -42,8 +43,6 @@ extern "C"
 }
 #endif
 
-using namespace boost::multiprecision;
-
 namespace sgns
 {
     class AccountManager : public IComponent
@@ -51,12 +50,7 @@ namespace sgns
     public:
         AccountManager( const AccountKey &priv_key_data, const DevConfig_st &dev_config );
         //static AccountManager &GetInstance();
-
-        AccountManager();
         ~AccountManager();
-        boost::optional<GeniusAccount> CreateAccount( const std::string &priv_key_data,
-                                                      const uint64_t    &initial_amount );
-        //void ImportAccount(const std::string &priv_key_data);
 
         void ProcessImage( const std::string &image_path, uint16_t funds );
 
@@ -65,6 +59,7 @@ namespace sgns
             return "AccountManager";
         }
 
+        void DHTInit();
         void MintTokens( uint64_t amount );
         void AddPeer( const std::string &peer );
 
@@ -84,7 +79,7 @@ namespace sgns
         std::shared_ptr<processing::ProcessingServiceImpl>         processing_service_;
         std::shared_ptr<soralog::LoggingSystem>                    logging_system;
 
-        std::thread                              io_thread;
+        std::thread io_thread;
 
         DevConfig_st dev_config_;
         std::string  node_base_addr_;
