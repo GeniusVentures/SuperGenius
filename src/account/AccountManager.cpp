@@ -6,6 +6,7 @@
  */
 #include <boost/format.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
+#include <boost/random.hpp>
 #include <rapidjson/document.h>
 #include "account/AccountManager.hpp"
 #include "processing/processing_imagesplit.hpp"
@@ -41,6 +42,7 @@ static const std::string logger_config( R"(
               )" );
 
 using namespace boost::multiprecision;
+namespace br = boost::random;
 
 namespace sgns
 {
@@ -79,10 +81,11 @@ namespace sgns
 
         pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
             crdt::KeyPairFileStorage( pubsubKeyPath ).GetKeyPair().value() );
-        pubsub_->Start( 40001, {} );
+        pubsub_->Start( 40001 + GenerateRandomPort( node_base_addr_ ), { pubsub_->GetLocalAddress() } );
 
         globaldb_ = std::make_shared<crdt::GlobalDB>(
-            io_, ( boost::format( "SuperGNUSNode.TestNet.%s" ) % node_base_addr_ ).str(), 40010,
+            io_, ( boost::format( "SuperGNUSNode.TestNet.%s" ) % node_base_addr_ ).str(),
+            40010 + GenerateRandomPort( node_base_addr_ ),
             std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_, std::string( PROCESSING_CHANNEL ) ) );
 
         globaldb_->Init( crdt::CrdtOptions::DefaultOptions() );
@@ -145,7 +148,7 @@ namespace sgns
 
     void AccountManager::AddPeer( const std::string &peer )
     {
-        //pubsub_->AddPeers( { peer } );
+        pubsub_->AddPeers( { peer } );
     }
 
     void AccountManager::DHTInit()
@@ -327,6 +330,20 @@ namespace sgns
         std::transform( imageData.begin(), imageData.end(), output.begin(),
                         []( char c ) { return static_cast<uint8_t>( c ); } );
         return output;
+    }
+
+    uint16_t AccountManager::GenerateRandomPort( const std::string &address )
+    {
+        uint32_t seed = static_cast<uint32_t>( uint256_t{ address } % 1000 );
+
+        // Setup the random number generator
+        br::mt19937                    rng( seed );    // Use the reduced number as seed
+        br::uniform_int_distribution<> dist( 0, 999 ); // Range: 0 to 9999
+
+        // Generate a 4-digit random number
+        //return dist( rng );
+
+        return static_cast<uint16_t>( seed );
     }
 
     /*
