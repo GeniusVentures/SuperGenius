@@ -1,14 +1,13 @@
 #ifndef SUPERGENIUS_CRDT_GLOBALDB_HPP
 #define SUPERGENIUS_CRDT_GLOBALDB_HPP
 
-#include <crdt/crdt_options.hpp>
-#include <outcome/outcome.hpp>
-
-#include <ipfs_pubsub/gossip_pubsub_topic.hpp>
-#include <crdt/crdt_datastore.hpp>
-
 #include <boost/asio/io_context.hpp>
 #include <boost/filesystem/path.hpp>
+#include <outcome/outcome.hpp>
+#include <ipfs_pubsub/gossip_pubsub_topic.hpp>
+#include "crdt/crdt_options.hpp"
+#include "crdt/crdt_datastore.hpp"
+
 
 namespace sgns::crdt
 {
