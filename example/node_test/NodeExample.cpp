@@ -14,7 +14,7 @@
 #include <boost/program_options.hpp>
 #include <boost/format.hpp>
 #include <boost/asio.hpp>
-#include "account/AccountManager.hpp"
+#include "account/GeniusNode.hpp"
 
 std::mutex              keyboard_mutex;
 std::condition_variable cv;
@@ -33,7 +33,7 @@ void keyboard_input_thread()
     }
 }
 
-void PrintAccountInfo( const std::vector<std::string> &args, sgns::AccountManager &account_manager )
+void PrintAccountInfo( const std::vector<std::string> &args, sgns::GeniusNode &account_manager )
 {
     if ( args.size() != 1 )
     {
@@ -45,7 +45,7 @@ void PrintAccountInfo( const std::vector<std::string> &args, sgns::AccountManage
 
     //TODO - Create processing transaction
 }
-void MintTokens( const std::vector<std::string> &args, sgns::AccountManager &account_manager )
+void MintTokens( const std::vector<std::string> &args, sgns::GeniusNode &account_manager )
 {
     if ( args.size() != 2 )
     {
@@ -62,7 +62,7 @@ std::vector<std::string> split_string( const std::string &str )
     return results;
 }
 
-void process_events( sgns::AccountManager &account_manager )
+void process_events( sgns::GeniusNode &account_manager )
 {
     std::unique_lock<std::mutex> lock( keyboard_mutex );
     cv.wait( lock, [] { return !events.empty(); } );
@@ -104,8 +104,8 @@ void process_events( sgns::AccountManager &account_manager )
     }
 }
 //This is not used at the moment. Static initialization order fiasco issues on node
-AccountKey   ACCOUNT_KEY = "1";
-DevConfig_st DEV_CONFIG{ "0xcafecafe", 0.65f };
+//AccountKey   ACCOUNT_KEY = "1";
+//DevConfig_st DEV_CONFIG{ "0xcafe", 0.65f };
 
 int main( int argc, char *argv[] )
 {
@@ -113,18 +113,18 @@ int main( int argc, char *argv[] )
 
     //Inputs
     AccountKey  key;
-    DevConfig_st local_config{ "0xbeefbeef", 0.65f };
+    DevConfig_st local_config{ "0xbeef", 0.7f };
 
     strncpy( key, argv[1], sizeof( key ) );
 
 
-    sgns::AccountManager node_instance( key, local_config );
+    sgns::GeniusNode node_instance( key, local_config );
 
     std::cout << "Insert \"process\", the image and the number of tokens to be" << std::endl;
     while ( true )
     {
         process_events( node_instance );
-        //process_events( sgns::AccountManager::GetInstance() );
+        //process_events( sgns::GeniusNode::GetInstance() );
     }
     if ( input_thread.joinable() )
     {

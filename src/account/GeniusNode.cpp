@@ -1,5 +1,5 @@
 /**
- * @file       AccountManager.cpp
+ * @file       GeniusNode.cpp
  * @brief      
  * @date       2024-04-18
  * @author     Henrique A. Klein (hklein@gnus.ai)
@@ -8,7 +8,7 @@
 #include <boost/multiprecision/cpp_int.hpp>
 #include <boost/random.hpp>
 #include <rapidjson/document.h>
-#include "account/AccountManager.hpp"
+#include "account/GeniusNode.hpp"
 #include "processing/processing_imagesplit.hpp"
 #include "processing/processing_tasksplit.hpp"
 #include "processing/processing_subtask_enqueuer_impl.hpp"
@@ -46,7 +46,7 @@ namespace br = boost::random;
 
 namespace sgns
 {
-    AccountManager::AccountManager( const AccountKey &priv_key_data, const DevConfig_st &dev_config ) :
+    GeniusNode::GeniusNode( const AccountKey &priv_key_data, const DevConfig_st &dev_config ) :
         account_( std::make_shared<GeniusAccount>( uint256_t{ std::string( priv_key_data ) }, 0, 0 ) ), //
         io_( std::make_shared<boost::asio::io_context>() ),                                             //
         node_base_addr_( priv_key_data ),                                                               //
@@ -130,7 +130,7 @@ namespace sgns
         io_thread = std::thread( [this]() { io_->run(); } );
     }
 
-    AccountManager::~AccountManager()
+    GeniusNode::~GeniusNode()
     {
         if ( io_ )
         {
@@ -146,12 +146,12 @@ namespace sgns
         }
     }
 
-    void AccountManager::AddPeer( const std::string &peer )
+    void GeniusNode::AddPeer( const std::string &peer )
     {
         pubsub_->AddPeers( { peer } );
     }
 
-    void AccountManager::DHTInit()
+    void GeniusNode::DHTInit()
     {
         // Encode the string to UTF-8 bytes
         std::string                temp = std::string( PROCESSING_CHANNEL );
@@ -174,7 +174,7 @@ namespace sgns
         pubsub_->StartFindingPeers( io_, key );
     }
 
-    void AccountManager::ProcessImage( const std::string &image_path, uint16_t funds )
+    void GeniusNode::ProcessImage( const std::string &image_path, uint16_t funds )
     {
         auto                      mnn_image = GetImageByCID( "QmUDMvGQXbUKMsjmTzjf4ZuMx7tHx6Z4x8YH8RbwrgyGAf" );
         processing::ImageSplitter imagesplit( mnn_image, 5400, 0, 4860000 );
@@ -215,12 +215,12 @@ namespace sgns
                                           "QmUDMvGQXbUKMsjmTzjf4ZuMx7tHx6Z4x8YH8RbwrgyGAf" );
     }
 
-    void AccountManager::MintTokens( uint64_t amount )
+    void GeniusNode::MintTokens( uint64_t amount )
     {
         transaction_manager_->MintFunds( amount );
     }
 
-    std::vector<uint8_t> AccountManager::GetImageByCID( std::string cid )
+    std::vector<uint8_t> GeniusNode::GetImageByCID( std::string cid )
     {
         libp2p::protocol::kademlia::Config kademlia_config;
         kademlia_config.randomWalk.enabled  = true;
@@ -332,7 +332,7 @@ namespace sgns
         return output;
     }
 
-    uint16_t AccountManager::GenerateRandomPort( const std::string &address )
+    uint16_t GeniusNode::GenerateRandomPort( const std::string &address )
     {
         uint32_t seed = static_cast<uint32_t>( uint256_t{ address } % 1000 );
 
@@ -347,8 +347,8 @@ namespace sgns
     }
 
     /*
-    static AccountManager instance( ACCOUNT_KEY, DEV_CONFIG );
-    AccountManager       &AccountManager::GetInstance()
+    static GeniusNode instance( ACCOUNT_KEY, DEV_CONFIG );
+    GeniusNode       &GeniusNode::GetInstance()
     {
         return instance;
     }

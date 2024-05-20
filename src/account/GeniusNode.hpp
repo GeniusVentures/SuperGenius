@@ -1,5 +1,5 @@
 /**
- * @file       AccountManager.hpp
+ * @file       GeniusNode.hpp
  * @brief      
  * @date       2024-03-11
  * @author     Henrique A. Klein (hklein@gnus.ai)
@@ -45,18 +45,18 @@ extern "C"
 
 namespace sgns
 {
-    class AccountManager : public IComponent
+    class GeniusNode : public IComponent
     {
     public:
-        AccountManager( const AccountKey &priv_key_data, const DevConfig_st &dev_config );
-        //static AccountManager &GetInstance();
-        ~AccountManager();
+        GeniusNode( const AccountKey &priv_key_data, const DevConfig_st &dev_config );
+        //static GeniusNode &GetInstance();
+        ~GeniusNode();
 
         void ProcessImage( const std::string &image_path, uint16_t funds );
 
         std::string GetName() override
         {
-            return "AccountManager";
+            return "GeniusNode";
         }
 
         void DHTInit();

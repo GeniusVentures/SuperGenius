@@ -7,7 +7,7 @@ add_library(sgns_account
     MintTransaction.cpp
     ProcessingTransaction.cpp
     EscrowTransaction.cpp
-    AccountManager.cpp
+    GeniusNode.cpp
 )
 
 target_link_libraries(sgns_account
