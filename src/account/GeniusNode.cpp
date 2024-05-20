@@ -107,7 +107,6 @@ namespace sgns
         block_storage_ = std::move( maybe_block_storage.value() );
         transaction_manager_ =
             std::make_shared<TransactionManager>( globaldb_, io_, account_, hasher_, block_storage_ );
-        
 
         task_queue_      = std::make_shared<processing::ProcessingTaskQueueImpl>( globaldb_ );
         processing_core_ = std::make_shared<processing::ProcessingCoreImpl>( globaldb_, 1000000, 2 );
@@ -176,43 +175,49 @@ namespace sgns
 
     void GeniusNode::ProcessImage( const std::string &image_path, uint16_t funds )
     {
-        auto                      mnn_image = GetImageByCID( "QmUDMvGQXbUKMsjmTzjf4ZuMx7tHx6Z4x8YH8RbwrgyGAf" );
-        processing::ImageSplitter imagesplit( mnn_image, 5400, 0, 4860000 );
-        std::vector<std::vector<uint32_t>> chunkOptions;
-        chunkOptions.push_back( { 1080, 0, 4320, 5, 5, 24 } );
-        std::list<SGProcessing::Task> tasks;
-        size_t                        nTasks = 1;
-        for ( size_t taskIdx = 0; taskIdx < nTasks; ++taskIdx )
+        if ( transaction_manager_->GetBalance() >= funds )
         {
-            SGProcessing::Task task;
-            //std::cout << "CID STRING:    " << libp2p::multi::ContentIdentifierCodec::toString(imagesplit.GetPartCID(taskIdx)).value() << std::endl;
-            //task.set_ipfs_block_id(libp2p::multi::ContentIdentifierCodec::toString(imagesplit.GetPartCID(taskIdx)).value());
-            task.set_ipfs_block_id( "QmUDMvGQXbUKMsjmTzjf4ZuMx7tHx6Z4x8YH8RbwrgyGAf" );
-            //task.set_block_len(48600);
-            //task.set_block_line_stride(540);
-            //task.set_block_stride(4860);
-            task.set_block_len( 4860000 );
-            task.set_block_line_stride( 5400 );
-            task.set_block_stride( 0 );
-            task.set_random_seed( 0 );
-            task.set_results_channel( ( boost::format( "RESULT_CHANNEL_ID_%1%" ) % ( taskIdx + 1 ) ).str() );
-            tasks.push_back( std::move( task ) );
+            auto                      mnn_image = GetImageByCID( "QmUDMvGQXbUKMsjmTzjf4ZuMx7tHx6Z4x8YH8RbwrgyGAf" );
+            processing::ImageSplitter imagesplit( mnn_image, 5400, 0, 4860000 );
+            std::vector<std::vector<uint32_t>> chunkOptions;
+            chunkOptions.push_back( { 1080, 0, 4320, 5, 5, 24 } );
+            std::list<SGProcessing::Task> tasks;
+            size_t                        nTasks = 1;
+            for ( size_t taskIdx = 0; taskIdx < nTasks; ++taskIdx )
+            {
+                SGProcessing::Task task;
+                //std::cout << "CID STRING:    " << libp2p::multi::ContentIdentifierCodec::toString(imagesplit.GetPartCID(taskIdx)).value() << std::endl;
+                //task.set_ipfs_block_id(libp2p::multi::ContentIdentifierCodec::toString(imagesplit.GetPartCID(taskIdx)).value());
+                task.set_ipfs_block_id( "QmUDMvGQXbUKMsjmTzjf4ZuMx7tHx6Z4x8YH8RbwrgyGAf" );
+                //task.set_block_len(48600);
+                //task.set_block_line_stride(540);
+                //task.set_block_stride(4860);
+                task.set_block_len( 4860000 );
+                task.set_block_line_stride( 5400 );
+                task.set_block_stride( 0 );
+                task.set_random_seed( 0 );
+                task.set_results_channel( ( boost::format( "RESULT_CHANNEL_ID_%1%" ) % ( taskIdx + 1 ) ).str() );
+                tasks.push_back( std::move( task ) );
+            }
+
+            size_t nSubTasks = chunkOptions.size();
+            size_t nChunks   = 0;
+            for ( auto &node : chunkOptions )
+            {
+                nChunks += node.at( 5 );
+            }
+            processing::ProcessTaskSplitter taskSplitter( nSubTasks, nChunks, false );
+
+            for ( auto &task : tasks )
+            {
+                std::list<SGProcessing::SubTask> subTasks;
+                taskSplitter.SplitTask( task, subTasks, imagesplit, chunkOptions );
+                task_queue_->EnqueueTask( task, subTasks );
+            }
+
+            transaction_manager_->HoldEscrow( funds, nChunks, uint256_t{ std::string( dev_config_.Addr ) },
+                                              dev_config_.Cut, "QmUDMvGQXbUKMsjmTzjf4ZuMx7tHx6Z4x8YH8RbwrgyGAf" );
         }
-
-        size_t                          nSubTasks = chunkOptions.size();
-        size_t                          nChunks   = 0;
-        processing::ProcessTaskSplitter taskSplitter( nSubTasks, nChunks, false );
-
-        for ( auto &task : tasks )
-        {
-            std::cout << "subtask" << std::endl;
-            std::list<SGProcessing::SubTask> subTasks;
-            taskSplitter.SplitTask( task, subTasks, imagesplit, chunkOptions );
-            task_queue_->EnqueueTask( task, subTasks );
-        }
-
-        transaction_manager_->HoldEscrow( funds, nChunks, uint256_t{ std::string( dev_config_.Addr ) }, dev_config_.Cut,
-                                          "QmUDMvGQXbUKMsjmTzjf4ZuMx7tHx6Z4x8YH8RbwrgyGAf" );
     }
 
     void GeniusNode::MintTokens( uint64_t amount )
