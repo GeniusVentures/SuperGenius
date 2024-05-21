@@ -38,10 +38,11 @@ namespace sgns
 
         const GeniusAccount &GetAccount() const;
 
-        bool TransferFunds( const uint256_t &amount, const uint256_t &destination );
-        void MintFunds( const uint64_t &amount );
-        bool HoldEscrow( const uint64_t &amount, const uint64_t &num_chunks, const uint256_t &dev_addr, const float &dev_cut,
-                         const std::string &job_id );
+        bool     TransferFunds( const uint256_t &amount, const uint256_t &destination );
+        void     MintFunds( const uint64_t &amount );
+        bool     HoldEscrow( const uint64_t &amount, const uint64_t &num_chunks, const uint256_t &dev_addr,
+                             const float &dev_cut, const std::string &job_id );
+        uint64_t GetBalance();
 
     private:
         std::shared_ptr<crdt::GlobalDB>                  db_m;
@@ -64,7 +65,9 @@ namespace sgns
             uint64_t                                   num_chunks;
             InputUTXOInfo                              original_input;
             std::unordered_map<std::string, uint256_t> chunk_info;
-            EscrowCtrl( const uint256_t &addr, const float &cut, const uint256_t &hash, const uint256_t &amount, const uint64_t &chunks,
+
+            EscrowCtrl( const uint256_t &addr, const float &cut, const uint256_t &hash, const uint256_t &amount,
+                        const uint64_t      &chunks,
                         const InputUTXOInfo &input ) :
                 dev_addr( addr ),       //
                 dev_cut( cut ),         //
