@@ -182,7 +182,8 @@ namespace sgns::processing
         drawPose(data, origwidth, origheight, poseScores, poseKeypointScores, poseKeypointCoords);
         //std::cout << "Filename " << filename.c_str() << std::endl;
         //stbi_write_png(filename.c_str(), origwidth, origheight, 4, data, 4 * origwidth);
-        return std::vector<uint8_t>(data, data + imageData_->size());
+        
+        return std::vector<uint8_t>(data, data + imgdata->size());
     }
 
     int MNN_PoseNet::changeColorCircle(uint32_t* src, CV::Point point, int width, int height) {
