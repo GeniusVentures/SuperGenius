@@ -2,12 +2,12 @@
 
 namespace sgns::processing
 {
-    ProcessingServiceImpl::ProcessingServiceImpl( std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> gossipPubSub,
-                                                  size_t                                           maximalNodesCount,
-                                                  std::shared_ptr<SubTaskEnqueuer>                 subTaskEnqueuer,
-                                                  std::shared_ptr<SubTaskStateStorage>             subTaskStateStorage,
-                                                  std::shared_ptr<SubTaskResultStorage>            subTaskResultStorage,
-                                                  std::shared_ptr<ProcessingCore>                  processingCore ) :
+    ProcessingServiceImpl::ProcessingServiceImpl( std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> gossipPubSub,      //
+                                                  size_t                                           maximalNodesCount, //
+                                                  std::shared_ptr<SubTaskEnqueuer>                 subTaskEnqueuer,   //
+                                                  std::shared_ptr<SubTaskStateStorage>  subTaskStateStorage,          //
+                                                  std::shared_ptr<SubTaskResultStorage> subTaskResultStorage,         //
+                                                  std::shared_ptr<ProcessingCore>       processingCore ) :
         m_gossipPubSub( gossipPubSub ),                                 //
         m_context( gossipPubSub->GetAsioContext() ),                    //
         m_maximalNodesCount( maximalNodesCount ),                       //
@@ -15,6 +15,30 @@ namespace sgns::processing
         m_subTaskStateStorage( subTaskStateStorage ),                   //
         m_subTaskResultStorage( subTaskResultStorage ),                 //
         m_processingCore( processingCore ),                             //
+        m_timerChannelListRequestTimeout( *m_context.get() ),           //
+        m_channelListRequestTimeout( boost::posix_time::seconds( 5 ) ), //
+        m_isStopped( true )                                             //
+    {
+    }
+
+    ProcessingServiceImpl::ProcessingServiceImpl(
+        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>         gossipPubSub,         //
+        size_t                                                   maximalNodesCount,    //
+        std::shared_ptr<SubTaskEnqueuer>                         subTaskEnqueuer,      //
+        std::shared_ptr<SubTaskStateStorage>                     subTaskStateStorage,  //
+        std::shared_ptr<SubTaskResultStorage>                    subTaskResultStorage, //
+        std::shared_ptr<ProcessingCore>                          processingCore,       //
+        std::function<void( const std::string &subTaskQueueId )> userCallbackSuccess,  //
+        std::function<void( const std::string &subTaskQueueId )> userCallbackError ) :
+        m_gossipPubSub( gossipPubSub ),                                 //
+        m_context( gossipPubSub->GetAsioContext() ),                    //
+        m_maximalNodesCount( maximalNodesCount ),                       //
+        m_subTaskEnqueuer( subTaskEnqueuer ),                           //
+        m_subTaskStateStorage( subTaskStateStorage ),                   //
+        m_subTaskResultStorage( subTaskResultStorage ),                 //
+        m_processingCore( processingCore ),                             //
+        userCallbackSuccess_( userCallbackSuccess ),                    //
+        userCallbackError_( userCallbackError ),                        //
         m_timerChannelListRequestTimeout( *m_context.get() ),           //
         m_channelListRequestTimeout( boost::posix_time::seconds( 5 ) ), //
         m_isStopped( true )                                             //
@@ -113,6 +137,11 @@ namespace sgns::processing
             m_processingNodes.erase( subTaskQueueId );
         }
 
+        if ( userCallbackSuccess_ )
+        {
+            userCallbackSuccess_( subTaskQueueId );
+        }
+
         if ( !m_isStopped )
         {
             SendChannelListRequest();
@@ -128,6 +157,10 @@ namespace sgns::processing
         {
             std::scoped_lock lock( m_mutexNodes );
             m_processingNodes.erase( subTaskQueueId );
+        }
+        if ( userCallbackError_ )
+        {
+            userCallbackError_( subTaskQueueId );
         }
 
         // @todo Stop processing?
