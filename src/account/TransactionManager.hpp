@@ -22,6 +22,7 @@
 #include "crypto/hasher.hpp"
 
 using namespace boost::multiprecision;
+
 namespace sgns
 {
     class TransactionManager
@@ -32,6 +33,14 @@ namespace sgns
                             std::shared_ptr<GeniusAccount>            account, //
                             std::shared_ptr<crypto::Hasher>           hasher,  //
                             std::shared_ptr<blockchain::BlockStorage> block_storage );
+
+        TransactionManager( std::shared_ptr<crdt::GlobalDB>            db,            //
+                            std::shared_ptr<boost::asio::io_context>   ctx,           //
+                            std::shared_ptr<GeniusAccount>             account,       //
+                            std::shared_ptr<crypto::Hasher>            hasher,        //
+                            std::shared_ptr<blockchain::BlockStorage>  block_storage, //
+                            std::function<void( const std::string & )> processing_finished_cb );
+
         ~TransactionManager() = default;
         void Start();
         void PrintAccountInfo();
@@ -42,6 +51,7 @@ namespace sgns
         void     MintFunds( const uint64_t &amount );
         bool     HoldEscrow( const uint64_t &amount, const uint64_t &num_chunks, const uint256_t &dev_addr,
                              const float &dev_cut, const std::string &job_id );
+        void     ProcessingDone( const std::string &subtask_id );
         uint64_t GetBalance();
 
     private:
@@ -55,6 +65,7 @@ namespace sgns
         std::uint64_t                                    last_trans_on_block_id;
         std::shared_ptr<blockchain::BlockStorage>        block_storage_m;
         std::shared_ptr<crypto::Hasher>                  hasher_m;
+        std::function<void( const std::string & )>       processing_finished_cb_m;
 
         struct EscrowCtrl
         {
@@ -62,22 +73,23 @@ namespace sgns
             float                                      dev_cut;
             uint256_t                                  job_hash;
             uint256_t                                  full_amount;
-            uint64_t                                   num_chunks;
+            uint64_t                                   num_subtasks;
             InputUTXOInfo                              original_input;
-            std::unordered_map<std::string, uint256_t> chunk_info;
+            std::unordered_map<std::string, uint256_t> subtask_info;
 
             EscrowCtrl( const uint256_t &addr, const float &cut, const uint256_t &hash, const uint256_t &amount,
-                        const uint64_t      &chunks,
+                        const uint64_t      &subtasks_num,
                         const InputUTXOInfo &input ) :
-                dev_addr( addr ),       //
-                dev_cut( cut ),         //
-                job_hash( hash ),       //
-                full_amount( amount ),  //
-                num_chunks( chunks ),   //
-                original_input( input ) //
+                dev_addr( addr ),             //
+                dev_cut( cut ),               //
+                job_hash( hash ),             //
+                full_amount( amount ),        //
+                num_subtasks( subtasks_num ), //
+                original_input( input )       //
             {
             }
         };
+
         std::vector<EscrowCtrl> escrow_ctrl_m;
         //Hash256                                          last_transaction_hash;
 

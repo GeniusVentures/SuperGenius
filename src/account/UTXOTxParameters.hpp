@@ -19,6 +19,7 @@ namespace sgns
         uint32_t      output_idx_;
         std::string   signature_;
     };
+
     struct OutputDestInfo
     {
         uint256_t encrypted_amount; ///< El Gamal encrypted amount
@@ -35,10 +36,14 @@ namespace sgns
         {
         }
 
-        static outcome::result<UTXOTxParameters> create( const std::vector<GeniusUTXO> &utxo_pool, const uint256_t &src_address,
-                                                         const uint64_t &amount, const uint256_t &dest_address, const std::string signature = "" )
+        static outcome::result<UTXOTxParameters> create( const std::vector<GeniusUTXO> &utxo_pool,
+                                                         const uint256_t &src_address, const uint64_t &amount,
+                                                         const uint256_t  &dest_address,
+                                                         const std::string signature = "" )
         {
             UTXOTxParameters instance( utxo_pool, src_address, amount, dest_address, signature );
+
+            std::cout << "Destination addr" << std::hex << dest_address << std::endl;
 
             if ( instance.inputs_.size() )
             {
@@ -49,8 +54,11 @@ namespace sgns
                 return outcome::failure( boost::system::error_code{} );
             }
         }
-        static outcome::result<UTXOTxParameters> create( const std::vector<GeniusUTXO> &utxo_pool, const uint256_t &src_address,
-                                                         const std::vector<OutputDestInfo> &destinations, const std::string signature = "" )
+
+        static outcome::result<UTXOTxParameters> create( const std::vector<GeniusUTXO>     &utxo_pool,
+                                                         const uint256_t                   &src_address,
+                                                         const std::vector<OutputDestInfo> &destinations,
+                                                         const std::string                  signature = "" )
         {
             UTXOTxParameters instance( utxo_pool, src_address, destinations, signature );
 
@@ -64,7 +72,8 @@ namespace sgns
             }
         }
 
-        static std::vector<GeniusUTXO> UpdateUTXOList( const std::vector<GeniusUTXO> &utxo_pool, const UTXOTxParameters &params )
+        static std::vector<GeniusUTXO> UpdateUTXOList( const std::vector<GeniusUTXO> &utxo_pool,
+                                                       const UTXOTxParameters        &params )
         {
             auto updated_list = utxo_pool;
 
@@ -83,14 +92,15 @@ namespace sgns
         }
 
     private:
-        UTXOTxParameters( const std::vector<GeniusUTXO> &utxo_pool, const uint256_t &src_address, const uint64_t &amount,
-                          const uint256_t &dest_address, const std::string signature ) :
-            UTXOTxParameters( utxo_pool, src_address, { OutputDestInfo{ uint256_t{ amount }, dest_address } }, signature )
+        UTXOTxParameters( const std::vector<GeniusUTXO> &utxo_pool, const uint256_t &src_address,
+                          const uint64_t &amount, const uint256_t &dest_address, const std::string signature ) :
+            UTXOTxParameters( utxo_pool, src_address, { OutputDestInfo{ uint256_t{ amount }, dest_address } },
+                              signature )
         {
         }
 
-        UTXOTxParameters( const std::vector<GeniusUTXO> &utxo_pool, const uint256_t &src_address, const std::vector<OutputDestInfo> &destinations,
-                          const std::string signature )
+        UTXOTxParameters( const std::vector<GeniusUTXO> &utxo_pool, const uint256_t &src_address,
+                          const std::vector<OutputDestInfo> &destinations, const std::string signature )
         {
             int64_t total_amount = 0;
 

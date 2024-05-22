@@ -18,14 +18,26 @@ namespace sgns
                                             std::shared_ptr<GeniusAccount>            account,
                                             std::shared_ptr<crypto::Hasher>           hasher,
                                             std::shared_ptr<blockchain::BlockStorage> block_storage ) :
+        TransactionManager( db, ctx, account, hasher, block_storage, nullptr )
+
+    {
+    }
+
+    TransactionManager::TransactionManager( std::shared_ptr<crdt::GlobalDB>            db,
+                                            std::shared_ptr<boost::asio::io_context>   ctx,
+                                            std::shared_ptr<GeniusAccount>             account,
+                                            std::shared_ptr<crypto::Hasher>            hasher,
+                                            std::shared_ptr<blockchain::BlockStorage>  block_storage,
+                                            std::function<void( const std::string & )> processing_finished_cb ) :
         db_m( std::move( db ) ),                                                                                    //
         ctx_m( std::move( ctx ) ),                                                                                  //
         account_m( std::move( account ) ),                                                                          //
         hasher_m( std::move( hasher ) ),                                                                            //
+        block_storage_m( std::move( block_storage ) ),                                                              //
+        processing_finished_cb_m( processing_finished_cb ),                                                         //
         timer_m( std::make_shared<boost::asio::steady_timer>( *ctx_m, boost::asio::chrono::milliseconds( 300 ) ) ), //
         last_block_id_m( 0 ),                                                                                       //
-        last_trans_on_block_id( 0 ),                                                                                //
-        block_storage_m( std::move( block_storage ) )
+        last_trans_on_block_id( 0 )                                                                                 //
 
     {
         m_logger->set_level( spdlog::level::debug );
@@ -90,8 +102,8 @@ namespace sgns
     bool TransactionManager::HoldEscrow( const uint64_t &amount, const uint64_t &num_chunks, const uint256_t &dev_addr,
                                          const float &dev_cut, const std::string &job_id )
     {
-        bool ret       = false;
-        auto hash_data = hasher_m->blake2b_256( std::vector<uint8_t>{ job_id.begin(), job_id.end() } );
+        bool ret          = false;
+        auto hash_data    = hasher_m->blake2b_256( std::vector<uint8_t>{ job_id.begin(), job_id.end() } );
         auto maybe_params = UTXOTxParameters::create( account_m->utxos, account_m->address, uint64_t{ amount },
                                                       uint256_t{ "0x" + hash_data.toReadableString() } );
         if ( maybe_params )
@@ -102,6 +114,12 @@ namespace sgns
             ret = true;
         }
         return ret;
+    }
+
+    void TransactionManager::ProcessingDone( const std::string &subtask_id )
+    {
+        auto process_transaction = std::make_shared<ProcessingTransaction>( subtask_id, subtask_id, FillDAGStruct() );
+        this->EnqueueTransaction( process_transaction );
     }
 
     uint64_t TransactionManager::GetBalance()
@@ -332,26 +350,29 @@ namespace sgns
     {
         EscrowTransaction tx = EscrowTransaction::DeSerializeByteVector( transaction_data );
 
-        auto dest_infos = tx.GetUTXOParameters();
-
-        if ( dest_infos.outputs_.size() == 2 )
+        if ( tx.GetSrcAddress<uint256_t>() == account_m->GetAddress<uint256_t>() )
         {
-            //has to be 1 for me and 1 for escrow
-            auto hash = ( base::Hash256::fromReadableString( tx.dag_st.data_hash() ) ).value();
-            if ( dest_infos.outputs_[1].dest_address == account_m->GetAddress<uint256_t>() )
-            {
-                GeniusUTXO new_utxo( hash, 1, uint64_t{ dest_infos.outputs_[1].encrypted_amount } );
-                account_m->PutUTXO( new_utxo );
-            }
-            auto          dest_infos = tx.GetUTXOParameters();
-            InputUTXOInfo escrow_utxo;
+            auto dest_infos = tx.GetUTXOParameters();
 
-            escrow_utxo.txid_hash_  = hash;
-            escrow_utxo.output_idx_ = 0;
-            escrow_utxo.signature_  = ""; //TODO - Insert signature
-            EscrowCtrl ctrl( tx.GetDestAddress(), tx.GetDestCut(), dest_infos.outputs_[0].dest_address,
-                             dest_infos.outputs_[0].encrypted_amount, tx.GetNumChunks(), escrow_utxo );
-            escrow_ctrl_m.push_back( ctrl );
+            if ( dest_infos.outputs_.size() == 2 )
+            {
+                //has to be 1 for me and 1 for escrow
+                auto hash = ( base::Hash256::fromReadableString( tx.dag_st.data_hash() ) ).value();
+                if ( dest_infos.outputs_[1].dest_address == account_m->GetAddress<uint256_t>() )
+                {
+                    GeniusUTXO new_utxo( hash, 1, uint64_t{ dest_infos.outputs_[1].encrypted_amount } );
+                    account_m->PutUTXO( new_utxo );
+                }
+                auto          dest_infos = tx.GetUTXOParameters();
+                InputUTXOInfo escrow_utxo;
+
+                escrow_utxo.txid_hash_  = hash;
+                escrow_utxo.output_idx_ = 0;
+                escrow_utxo.signature_  = ""; //TODO - Insert signature
+                EscrowCtrl ctrl( tx.GetDestAddress(), tx.GetDestCut(), dest_infos.outputs_[0].dest_address,
+                                 dest_infos.outputs_[0].encrypted_amount, tx.GetNumChunks(), escrow_utxo );
+                escrow_ctrl_m.push_back( ctrl );
+            }
         }
     }
 
@@ -365,17 +386,17 @@ namespace sgns
             {
                 if ( ctrl.job_hash == tx.GetJobHash() )
                 {
-                    ctrl.chunk_info[tx.GetChunkID()] = tx.GetSrcAddress<uint256_t>();
+                    ctrl.subtask_info[tx.GetSubtaskID()] = tx.GetSrcAddress<uint256_t>();
 
-                    if ( ctrl.chunk_info.size() == ctrl.num_chunks )
+                    if ( ctrl.subtask_info.size() == ctrl.num_subtasks )
                     {
                         //Processing done
                         std::vector<OutputDestInfo> payout_peers;
 
                         uint64_t peers_amount =
-                            ( ctrl.dev_cut * uint64_t{ ctrl.full_amount } ) / ctrl.chunk_info.size();
+                            ( ctrl.dev_cut * uint64_t{ ctrl.full_amount } ) / ctrl.subtask_info.size();
                         uint64_t remainder = uint64_t{ ctrl.full_amount };
-                        for ( auto &pair : ctrl.chunk_info )
+                        for ( auto &pair : ctrl.subtask_info )
                         {
                             payout_peers.push_back( { uint256_t{ peers_amount }, pair.second } );
                             remainder -= peers_amount;
@@ -385,6 +406,10 @@ namespace sgns
                         auto transfer_transaction = std::make_shared<TransferTransaction>(
                             payout_peers, std::vector<InputUTXOInfo>{ ctrl.original_input }, FillDAGStruct() );
                         this->EnqueueTransaction( transfer_transaction );
+                        if ( processing_finished_cb_m )
+                        {
+                            processing_finished_cb_m( tx.GetSubtaskID() );
+                        }
                     }
                 }
             }
