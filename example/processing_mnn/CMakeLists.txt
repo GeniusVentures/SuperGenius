@@ -66,9 +66,11 @@ target_link_libraries(processing_mnn PRIVATE
 	AsyncIOManager
     )
 if(WIN32)
-	target_link_options(processing_mnn PRIVATE /WHOLEARCHIVE:${MNN_LIBS})
+    target_link_options(processing_mnn PRIVATE /WHOLEARCHIVE:${MNN_LIBS})
+elseif(APPLE)
+    target_link_options(processing_mnn PRIVATE -force_load ${MNN_LIBS})
 else()
-	target_link_options(processing_mnn PRIVATE "-Wl,--whole-archive" ${MNN_LIBS} "-Wl,--no-whole-archive")
+    target_link_options(processing_mnn PRIVATE "-Wl,--whole-archive" ${MNN_LIBS} "-Wl,--no-whole-archive")
 endif()
 
 if(APPLE)
@@ -113,9 +115,11 @@ target_link_libraries(processing_mnn_p PRIVATE
 	AsyncIOManager
     )
 if(WIN32)
-	target_link_options(processing_mnn_p PRIVATE /WHOLEARCHIVE:${MNN_LIBS})
+    target_link_options(processing_mnn_p PRIVATE /WHOLEARCHIVE:${MNN_LIBS})
+elseif(APPLE)
+    target_link_options(processing_mnn_p PRIVATE -force_load ${MNN_LIBS})
 else()
-	target_link_options(processing_mnn_p PRIVATE "-Wl,--whole-archive" ${MNN_LIBS} "-Wl,--no-whole-archive")
+    target_link_options(processing_mnn_p PRIVATE "-Wl,--whole-archive" ${MNN_LIBS} "-Wl,--no-whole-archive")
 endif()
 include_directories(../include)
 include_directories(./imageHelper)

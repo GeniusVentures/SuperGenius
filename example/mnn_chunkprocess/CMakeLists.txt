@@ -25,9 +25,11 @@ target_link_libraries(mnn_chunkprocess PRIVATE
 
 	${MNN_LIBS})
 if(WIN32)
-	target_link_options(mnn_chunkprocess PRIVATE /WHOLEARCHIVE:${MNN_LIBS})
+    target_link_options(mnn_chunkprocess PRIVATE /WHOLEARCHIVE:${MNN_LIBS})
+elseif(APPLE)
+    target_link_options(mnn_chunkprocess PRIVATE -force_load ${MNN_LIBS})
 else()
-	target_link_options(mnn_chunkprocess PRIVATE "-Wl,--whole-archive" ${MNN_LIBS} "-Wl,--no-whole-archive")
+    target_link_options(mnn_chunkprocess PRIVATE "-Wl,--whole-archive" ${MNN_LIBS} "-Wl,--no-whole-archive")
 endif()
 include_directories(../include)
 include_directories(./imageHelper)

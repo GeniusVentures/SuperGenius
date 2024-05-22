@@ -70,7 +70,7 @@ if(APPLE)
 		)
 endif()
 
-target_link_libraries(processing_service
+target_link_libraries(processing_service PRIVATE
     ipfs-pubsub
     SGProcessingProto
     OpenSSL::Crypto
@@ -89,7 +89,9 @@ target_link_libraries(processing_service
     )
 	
 if(WIN32)
-	target_link_options(processing_service PRIVATE /WHOLEARCHIVE:${MNN_LIBS})
+    target_link_options(processing_service PRIVATE /WHOLEARCHIVE:${MNN_LIBS})
+elseif(APPLE)
+    target_link_options(processing_service PRIVATE -force_load ${MNN_LIBS})
 else()
-	target_link_options(processing_service PRIVATE  "-Wl,--whole-archive" ${MNN_LIBS} "-Wl,--no-whole-archive")
+    target_link_options(processing_service PRIVATE "-Wl,--whole-archive" ${MNN_LIBS} "-Wl,--no-whole-archive")
 endif()

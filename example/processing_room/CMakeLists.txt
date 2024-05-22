@@ -12,6 +12,7 @@ target_include_directories(processing_app PRIVATE ${GSL_INCLUDE_DIR})
 
 
 target_link_libraries(processing_app
+	SGProcessingProto
     processing_service
     logger
     Boost::program_options    

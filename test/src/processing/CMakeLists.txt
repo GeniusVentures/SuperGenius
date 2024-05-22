@@ -10,6 +10,7 @@ addtest(processing_service_test
 target_include_directories(processing_service_test PRIVATE ${GSL_INCLUDE_DIR})
 
 target_link_libraries(processing_service_test
+	SGProcessingProto
     processing_service
     logger
     )
