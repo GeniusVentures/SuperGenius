@@ -85,6 +85,8 @@ namespace sgns
         std::string  node_base_addr_;
 
         uint16_t GenerateRandomPort( const std::string &address );
+        void     ProcessingDone( const std::string subtask_id );
+        void     ProcessingError( const std::string subtask_id );
 
         static constexpr std::string_view db_path_                = "bc-%d/";
         static constexpr std::uint16_t    MAIN_NET                = 369;

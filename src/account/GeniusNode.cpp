@@ -104,9 +104,10 @@ namespace sgns
             std::cout << "Error initializing blockchain" << std::endl;
             throw std::runtime_error( "Error initializing blockchain" );
         }
-        block_storage_ = std::move( maybe_block_storage.value() );
-        transaction_manager_ =
-            std::make_shared<TransactionManager>( globaldb_, io_, account_, hasher_, block_storage_ );
+        block_storage_       = std::move( maybe_block_storage.value() );
+        transaction_manager_ = std::make_shared<TransactionManager>(
+            globaldb_, io_, account_, hasher_, block_storage_,
+            []( const std::string &var ) { std::cout << "FINISHED PROCESSING" << var << std::endl; } );
 
         task_queue_      = std::make_shared<processing::ProcessingTaskQueueImpl>( globaldb_ );
         processing_core_ = std::make_shared<processing::ProcessingCoreImpl>( globaldb_, 1000000, 2 );
@@ -118,7 +119,9 @@ namespace sgns
             std::make_shared<processing::SubTaskEnqueuerImpl>( task_queue_ ),    //
             std::make_shared<processing::ProcessSubTaskStateStorage>(),          //
             std::make_shared<processing::SubTaskResultStorageImpl>( globaldb_ ), //
-            processing_core_ );
+            processing_core_,                                                    //
+            [this]( const std::string &var ) { ProcessingDone( var ); },         //
+            [this]( const std::string &var ) { ProcessingError( var ); } );
         processing_service_->SetChannelListRequestTimeout( boost::posix_time::milliseconds( 10000 ) );
         processing_service_->StartProcessing( std::string( PROCESSING_GRID_CHANNEL ) );
 
@@ -215,7 +218,7 @@ namespace sgns
                 task_queue_->EnqueueTask( task, subTasks );
             }
 
-            transaction_manager_->HoldEscrow( funds, nChunks, uint256_t{ std::string( dev_config_.Addr ) },
+            transaction_manager_->HoldEscrow( funds, nSubTasks, uint256_t{ std::string( dev_config_.Addr ) },
                                               dev_config_.Cut, "QmUDMvGQXbUKMsjmTzjf4ZuMx7tHx6Z4x8YH8RbwrgyGAf" );
         }
     }
@@ -349,6 +352,18 @@ namespace sgns
         //return dist( rng );
 
         return static_cast<uint16_t>( seed );
+    }
+
+    void GeniusNode::ProcessingDone( const std::string subtask_id )
+    {
+        std::cout << "PROCESSING COMPLETE " << subtask_id << std::endl;
+        transaction_manager_->ProcessingDone( subtask_id );
+        //task_queue_->CompleteTask(subtask_id)
+    }
+
+    void GeniusNode::ProcessingError( const std::string subtask_id )
+    {
+        std::cout << "PROCESSING ERROR " << subtask_id << std::endl;
     }
 
     /*
