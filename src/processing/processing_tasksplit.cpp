@@ -28,7 +28,7 @@ namespace sgns
             size_t chunkId = 0;
             for ( size_t i = 0; i < m_nSubTasks; ++i )
             {
-                auto cidcheck = SplitImage.GetPartCID( 0 );
+                auto cidcheck = SplitImage.GetPartCID( i );
                 auto base58   = libp2p::multi::ContentIdentifierCodec::toString( cidcheck );
                 //std::cout << "Base56:    " << base58.value() << std::endl;
                 //std::cout << "Task BlockID  : " << task.ipfs_block_id() << std::endl;
