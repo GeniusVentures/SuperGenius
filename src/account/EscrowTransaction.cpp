@@ -5,10 +5,13 @@
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
 #include "account/EscrowTransaction.hpp"
+#include "crypto/hasher/hasher_impl.hpp"
+#include "base/blob.hpp"
 
 namespace sgns
 {
-    EscrowTransaction::EscrowTransaction( const UTXOTxParameters &params, const uint64_t &num_chunks, const uint256_t &dest_addr, const float &cut,
+    EscrowTransaction::EscrowTransaction( const UTXOTxParameters &params, const uint64_t &num_chunks,
+                                          const uint256_t &dest_addr, const float &cut,
                                           const SGTransaction::DAGStruct &dag ) :
         IGeniusTransactions( "escrow", SetDAGWithType( dag, "escrow" ) ), //
         utxo_params_( params ),                                           //
@@ -16,7 +19,11 @@ namespace sgns
         dev_cut( cut ),                                                   //
         num_chunks_( num_chunks )                                         //
     {
+        auto hasher_ = std::make_shared<sgns::crypto::HasherImpl>();
+        auto hash    = hasher_->blake2b_256( SerializeByteVector() );
+        dag_st.set_data_hash( hash.toReadableString() );
     }
+
     std::vector<uint8_t> EscrowTransaction::SerializeByteVector()
     {
         SGTransaction::EscrowTx tx_struct;
@@ -45,6 +52,7 @@ namespace sgns
         tx_struct.SerializeToArray( serialized_proto.data(), serialized_proto.size() );
         return serialized_proto;
     }
+
     EscrowTransaction EscrowTransaction::DeSerializeByteVector( const std::vector<uint8_t> &data )
     {
         SGTransaction::EscrowTx tx_struct;
@@ -75,8 +83,10 @@ namespace sgns
         uint64_t  num_chunks = tx_struct.num_chunks();
         float     dev_cut    = tx_struct.dev_cut();
         uint256_t dev_addr( tx_struct.dev_addr() );
-        return EscrowTransaction( UTXOTxParameters{ inputs, outputs }, num_chunks, dev_addr, dev_cut, tx_struct.dag_struct() ); // Return new instance
+        return EscrowTransaction( UTXOTxParameters{ inputs, outputs }, num_chunks, dev_addr, dev_cut,
+                                  tx_struct.dag_struct() ); // Return new instance
     }
+
     uint64_t EscrowTransaction::GetNumChunks() const
     {
         return num_chunks_;
