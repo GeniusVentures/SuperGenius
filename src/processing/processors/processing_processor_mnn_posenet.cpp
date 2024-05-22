@@ -1,5 +1,10 @@
 #include "processing_processor_mnn_posenet.hpp"
 
+//#define STB_IMAGE_IMPLEMENTATION
+//#define STB_IMAGE_WRITE_IMPLEMENTATION
+//#include "stb_image.h"
+//#include "stb_image_write.h"
+
 namespace sgns::processing
 {
     using namespace MNN;
@@ -35,18 +40,13 @@ namespace sgns::processing
                 }
                 else
                 {
-                    auto data   = ChunkSplit.GetPart( chunkIdx );
-                    auto width  = ChunkSplit.GetPartWidthActual( chunkIdx );
-                    auto height = ChunkSplit.GetPartHeightActual( chunkIdx );
-                    //auto mnnproc = sgns::mnn::MNN_PoseNet(&data, modelFile_, width, height, (boost::format("%s_%s") % "RESULT_IPFS" % std::to_string(chunkIdx)).str() + ".png");
-                    std::string filenametemp = "./block/" + std::to_string( chunkIdx ) + ".png";
-                    auto        procresults  = MNNProcess( &data, width, height, filenametemp );
-
-                    gsl::span<const uint8_t> byte_span( procresults );
+                    auto procresults =
+                        MNNProcess( ChunkSplit.GetPart( chunkIdx ), ChunkSplit.GetPartWidthActual( chunkIdx ),
+                                    ChunkSplit.GetPartHeightActual( chunkIdx ) );
 
                     SHA256_CTX sha256;
                     SHA256_Init( &sha256 );
-                    SHA256_Update( &sha256, &procresults, sizeof( procresults ) );
+                    SHA256_Update( &sha256, procresults.data(), procresults.size() );
                     SHA256_Final( shahash.data(), &sha256 );
                 }
                 std::string hashString( shahash.begin(), shahash.end() );
@@ -101,10 +101,10 @@ namespace sgns::processing
         }
     }
 
-    std::vector<uint8_t> MNN_PoseNet::MNNProcess( std::vector<uint8_t> *imgdata, const int origwidth,
+    std::vector<uint8_t> MNN_PoseNet::MNNProcess( const std::vector<uint8_t> &imgdata, const int origwidth,
                                                   const int origheight, const std::string filename )
     {
-        unsigned char *data = reinterpret_cast<unsigned char *>( imgdata->data() );
+        std::vector<uint8_t> ret_vect( imgdata );
         //Get Target WIdth
         const int targetWidth  = static_cast<int>( (float)origwidth / (float)OUTPUT_STRIDE ) * OUTPUT_STRIDE + 1;
         const int targetHeight = static_cast<int>( (float)origheight / (float)OUTPUT_STRIDE ) * OUTPUT_STRIDE + 1;
@@ -151,8 +151,7 @@ namespace sgns::processing
             trans.postScale( origwidth, origheight );
 
             pretreat->setMatrix( trans );
-            const auto rgbaPtr = reinterpret_cast<uint8_t *>( data );
-            pretreat->convert( rgbaPtr, origwidth, origheight, 0, input );
+            pretreat->convert( ret_vect.data(), origwidth, origheight, 0, input );
         }
         {
             AUTOTIME;
@@ -184,11 +183,14 @@ namespace sgns::processing
                              poseKeypointScores, poseKeypointCoords, scale );
         }
 
-        drawPose( data, origwidth, origheight, poseScores, poseKeypointScores, poseKeypointCoords );
-        //std::cout << "Filename " << filename.c_str() << std::endl;
-        //stbi_write_png(filename.c_str(), origwidth, origheight, 4, data, 4 * origwidth);
+        drawPose( ret_vect.data(), origwidth, origheight, poseScores, poseKeypointScores, poseKeypointCoords );
 
-        return std::vector<uint8_t>( data, data + imgdata->size() );
+        //if ( filename != "")
+        //{
+        //    std::cout << "Filename " << filename.c_str() << std::endl;
+        //    stbi_write_png( filename.c_str(), origwidth, origheight, 4, data, 4 * origwidth );
+        //}
+        return ret_vect;
     }
 
     int MNN_PoseNet::changeColorCircle( uint32_t *src, CV::Point point, int width, int height )

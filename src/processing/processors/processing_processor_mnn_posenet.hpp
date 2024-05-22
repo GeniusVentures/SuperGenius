@@ -70,8 +70,8 @@ namespace sgns::processing
         * @param origwidth - Width of image
         * @param origheight - Height of image
         */
-        std::vector<uint8_t> MNNProcess( std::vector<uint8_t> *imgdata, const int origwidth, const int origheight,
-                                         const std::string filename );
+        std::vector<uint8_t> MNNProcess( const std::vector<uint8_t> &imgdata, const int origwidth, const int origheight,
+                                         const std::string filename = "" );
 
         /** The following functions are pre/post processing functions from MNN demo that we may not use so I won't document yet.
         */
