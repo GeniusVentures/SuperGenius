@@ -6,12 +6,14 @@
 #ifndef GRPC_FOR_SUPERGENIUS_PROCESSING_TASK_QUEUE_IMPL_HPP
 #define GRPC_FOR_SUPERGENIUS_PROCESSING_TASK_QUEUE_IMPL_HPP
 
-#include <processing/processing_task_queue.hpp>
-#include <crdt/globaldb/globaldb.hpp>
-
-#include <boost/format.hpp>
-
 #include <optional>
+#include <utility>
+#include <boost/format.hpp>
+#include "outcome/outcome.hpp"
+
+#include "processing/processing_task_queue.hpp"
+#include "crdt/globaldb/globaldb.hpp"
+
 
 namespace sgns::processing
 {
@@ -42,7 +44,7 @@ namespace sgns::processing
         * @param grabbedTaskKey - id to look for task 
         * @param task - Reference of task
         */
-        bool GrabTask( std::string &grabbedTaskKey, SGProcessing::Task &task ) override;
+        outcome::result<std::pair<std::string, SGProcessing::Task>> GrabTask() override;
 
         /** Complete task by task key, returns true if successful
         * @param taskKey - id to look for task

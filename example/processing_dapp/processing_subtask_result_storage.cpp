@@ -25,10 +25,10 @@ void SubTaskResultStorageImpl::RemoveSubTaskResult(const std::string& subTaskId)
         sgns::crdt::HierarchicalKey((boost::format("results/%s") % subTaskId).str().c_str()));
 }
 
-void SubTaskResultStorageImpl::GetSubTaskResults(
-    const std::set<std::string>& subTaskIds,
-    std::vector<SGProcessing::SubTaskResult>& results)
+std::vector<SGProcessing::SubTaskResult> SubTaskResultStorageImpl::GetSubTaskResults(
+    const std::set<std::string>& subTaskIds)
 {
+    std::vector<SGProcessing::SubTaskResult> results;
     for (const auto& subTaskId : subTaskIds)
     {
         auto data = m_db->Get(sgns::crdt::HierarchicalKey((boost::format("results/%s") % subTaskId).str().c_str()));
@@ -41,6 +41,7 @@ void SubTaskResultStorageImpl::GetSubTaskResults(
             }
         }
     }
+    return results;
 }
 
 }

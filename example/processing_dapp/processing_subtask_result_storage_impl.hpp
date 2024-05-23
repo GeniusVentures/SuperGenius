@@ -22,9 +22,8 @@ namespace sgns::processing
         */
         void AddSubTaskResult(const SGProcessing::SubTaskResult& result) override;
         void RemoveSubTaskResult(const std::string& subTaskId) override;
-        void GetSubTaskResults(
-            const std::set<std::string>& subTaskIds,
-            std::vector<SGProcessing::SubTaskResult>& results) override;
+        std::vector<SGProcessing::SubTaskResult> GetSubTaskResults(
+            const std::set<std::string>& subTaskIds) override;
 
     private:
         std::shared_ptr<sgns::crdt::GlobalDB> m_db;

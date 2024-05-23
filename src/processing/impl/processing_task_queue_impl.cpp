@@ -86,63 +86,74 @@ namespace sgns::processing
         }
     }
 
-    bool ProcessingTaskQueueImpl::GrabTask( std::string &grabbedTaskKey, SGProcessing::Task &task )
+    outcome::result<std::pair<std::string, SGProcessing::Task>> ProcessingTaskQueueImpl::GrabTask()
     {
-        auto queryTasks = ;
-        if ( queryTasks.has_failure() )
-        {
-            m_logger->info( "Unable list tasks from CRDT datastore" );
-            return false;
-        }
+        m_logger->info( "GRAB_TASK" );
+        OUTCOME_TRY( ( auto &&, queryTasks ), m_db->QueryKeyValues( "tasks" ) );
 
+        m_logger->info( "Task list grabbed from CRDT datastore" );
+
+        bool                  task_grabbed = false;
         std::set<std::string> lockedTasks;
-        if ( queryTasks.has_value() )
+        SGProcessing::Task    task;
+        m_logger->info( "Number of tasks in Queue: {}", queryTasks.size() );
+        for ( auto element : queryTasks )
         {
-            m_logger->info( "TASK_QUEUE_SIZE: {}", queryTasks.value().size() );
-            bool isTaskGrabbed = false;
-            for ( auto element : queryTasks.value() )
+            auto taskKey = m_db->KeyToString( element.first );
+            if ( !taskKey.has_value() )
             {
-                auto taskKey = m_db->KeyToString( element.first );
-                if ( taskKey.has_value() )
-                {
-                    bool isTaskLocked = IsTaskLocked( taskKey.value() );
-                    m_logger->debug( "TASK_QUEUE_ITEM: {}, LOCKED: {}", taskKey.value(), isTaskLocked );
-
-                    if ( !isTaskLocked )
-                    {
-                        if ( task.ParseFromArray( element.second.data(), element.second.size() ) )
-                        {
-                            if ( LockTask( taskKey.value() ) )
-                            {
-                                m_logger->debug( "TASK_LOCKED {}", taskKey.value() );
-                                grabbedTaskKey = task.ipfs_block_id();
-                                return true;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        m_logger->debug( "TASK_PREVIOUSLY_LOCKED {}", taskKey.value() );
-                        lockedTasks.insert( taskKey.value() );
-                    }
-                }
-                else
-                {
-                    m_logger->debug( "Undable to convert a key to string" );
-                }
+                m_logger->debug( "Unable to convert a key to string" );
+                continue;
+            }
+            std::cout << "Trying to get results from  " << "task_results/" + taskKey.value() << std::endl;
+            auto maybe_previous_result = m_db->Get( { "task_results/" + taskKey.value() } );
+            if ( maybe_previous_result )
+            {
+                m_logger->debug( "Task already processed" );
+                continue;
             }
 
-            // No task was grabbed so far
-            for ( auto lockedTask : lockedTasks )
+            if ( IsTaskLocked( taskKey.value() ) )
             {
-                if ( MoveExpiredTaskLock( lockedTask, task ) )
-                {
-                    grabbedTaskKey = task.ipfs_block_id();
-                    return true;
-                }
+                m_logger->debug( "TASK_PREVIOUSLY_LOCKED {}", taskKey.value() );
+                lockedTasks.insert( taskKey.value() );
+                continue;
+            }
+            m_logger->debug( "TASK_QUEUE_ITEM: {}, LOCKED: true", taskKey.value() );
+            if ( !task.ParseFromArray( element.second.data(), element.second.size() ) )
+            {
+                m_logger->debug( "Couldn't parse the task from Protobuf" );
+                //TODO - Decide what to do with an invalid task - Maybe error?
+                continue;
+            }
+            if ( !LockTask( taskKey.value() ) )
+            {
+                m_logger->debug( "Failed to lock task" );
+                continue;
+            }
+            m_logger->debug( "TASK_LOCKED {}", taskKey.value() );
+            task_grabbed = true;
+            break;
+        }
+
+        // No task was grabbed so far
+        for ( auto lockedTask : lockedTasks )
+        {
+            if ( MoveExpiredTaskLock( lockedTask, task ) )
+            {
+                task_grabbed = true;
+                break;
             }
         }
-        return false;
+        
+        if ( task_grabbed )
+        {
+            return std::make_pair( task.ipfs_block_id(), task );
+        }
+        else
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
     }
 
     bool ProcessingTaskQueueImpl::CompleteTask( const std::string &taskKey, const SGProcessing::TaskResult &taskResult )
@@ -150,14 +161,17 @@ namespace sgns::processing
         sgns::base::Buffer data;
         data.put( taskResult.SerializeAsString() );
 
-        auto transaction = m_db->BeginTransaction();
-        transaction->AddToDelta( sgns::crdt::HierarchicalKey( "task_results/" + taskKey ), data );
-        transaction->RemoveFromDelta( sgns::crdt::HierarchicalKey( "lock_" + taskKey ) );
-        transaction->RemoveFromDelta( sgns::crdt::HierarchicalKey( taskKey ) );
-
-        auto res = transaction->PublishDelta();
+        std::cout << "Completing the task and storing results on " << "task_results/" + taskKey << std::endl;
+        m_db->Put({"task_results/tasks/TASK_" +  taskKey }, data);
+        m_db->Remove({"lock_tasks/TASK_" + taskKey});
+        //auto transaction = m_db->BeginTransaction();
+        //transaction->AddToDelta( sgns::crdt::HierarchicalKey( "task_results/" + taskKey ), data );
+        //transaction->RemoveFromDelta( sgns::crdt::HierarchicalKey( "lock_" + taskKey ) );
+        //transaction->RemoveFromDelta( sgns::crdt::HierarchicalKey( taskKey ) );
+//
+        //auto res = transaction->PublishDelta();
         m_logger->debug( "TASK_COMPLETED: {}", taskKey );
-        return !res.has_failure();
+        return true;
     }
 
     bool ProcessingTaskQueueImpl::IsTaskLocked( const std::string &taskKey )

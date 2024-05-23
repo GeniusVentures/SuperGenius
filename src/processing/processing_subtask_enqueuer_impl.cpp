@@ -9,10 +9,11 @@ namespace sgns::processing
 
     bool SubTaskEnqueuerImpl::EnqueueSubTasks( std::string &subTaskQueueId, std::list<SGProcessing::SubTask> &subTasks )
     {
-        SGProcessing::Task task;
-        std::string        taskKey;
-        if ( m_taskQueue->GrabTask( taskKey, task ) )
+        if ( auto maybe_grabbed = m_taskQueue->GrabTask() )
         {
+            std::string        taskKey = maybe_grabbed.value().first;
+            //SGProcessing::Task task    = maybe_grabbed.value().second; //TODO - Not used for anything. Rewrite this code
+
             subTaskQueueId = taskKey;
 
             m_taskQueue->GetSubTasks( taskKey, subTasks );
