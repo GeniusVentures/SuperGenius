@@ -31,3 +31,5 @@ target_link_libraries(block_tree
     rocksdb
     hasher
     )
+supergenius_install(blockchain_common)
+supergenius_install(block_tree)

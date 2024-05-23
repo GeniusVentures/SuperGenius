@@ -36,3 +36,5 @@ target_link_libraries(sgns_account
     ${WIN_CRYPT_LIBRARY}
     AsyncIOManager
 )
+
+supergenius_install(sgns_account)
