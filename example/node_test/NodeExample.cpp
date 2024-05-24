@@ -33,24 +33,44 @@ void keyboard_input_thread()
     }
 }
 
-void PrintAccountInfo( const std::vector<std::string> &args, sgns::GeniusNode &account_manager )
+void PrintAccountInfo( const std::vector<std::string> &args, sgns::GeniusNode &genius_node )
 {
     if ( args.size() != 1 )
     {
         std::cerr << "Invalid info command format.\n";
         return;
     }
-    std::cout << "Balance: " << account_manager.GetBalance() << std::endl;
+    std::cout << "Balance: " << genius_node.GetBalance() << std::endl;
 }
 
-void MintTokens( const std::vector<std::string> &args, sgns::GeniusNode &account_manager )
+void MintTokens( const std::vector<std::string> &args, sgns::GeniusNode &genius_node )
 {
     if ( args.size() != 2 )
+    {
+        std::cerr << "Invalid mint command format.\n";
+        return;
+    }
+    genius_node.MintTokens( std::stoull( args[1] ) );
+}
+
+void CreateProcessingTransaction( const std::vector<std::string> &args, sgns::GeniusNode &genius_node )
+{
+    if ( args.size() != 3 )
     {
         std::cerr << "Invalid process command format.\n";
         return;
     }
-    account_manager.MintTokens( std::stoull( args[1] ) );
+    uint64_t price = std::stoull( args[2] );
+
+    if ( genius_node.GetBalance() >= price )
+    {
+        genius_node.ProcessImage( "QmUDMvGQXbUKMsjmTzjf4ZuMx7tHx6Z4x8YH8RbwrgyGAf" /*args[1]*/,
+                                      std::stoull( args[2] ) );
+    }
+    else
+    {
+        std::cout << "Insufficient funds to process image " << std::endl; 
+    }
 }
 
 std::vector<std::string> split_string( const std::string &str )
@@ -61,7 +81,7 @@ std::vector<std::string> split_string( const std::string &str )
     return results;
 }
 
-void process_events( sgns::GeniusNode &account_manager )
+void process_events( sgns::GeniusNode &genius_node )
 {
     std::unique_lock<std::mutex> lock( keyboard_mutex );
     cv.wait( lock, [] { return !events.empty(); } );
@@ -79,22 +99,19 @@ void process_events( sgns::GeniusNode &account_manager )
         }
         else if ( arguments[0] == "process" )
         {
-            account_manager.ProcessImage( arguments[1], 100 );
-            //CreateProcessingTransaction( arguments, transaction_manager );
+            CreateProcessingTransaction( arguments, genius_node );
         }
         else if ( arguments[0] == "mint" )
         {
-            MintTokens( arguments, account_manager );
-
-            //CreateProcessingTransaction( arguments, transaction_manager );
+            MintTokens( arguments, genius_node );
         }
         else if ( arguments[0] == "info" )
         {
-            PrintAccountInfo( arguments, account_manager );
+            PrintAccountInfo( arguments, genius_node );
         }
         else if ( arguments[0] == "peer" )
         {
-            account_manager.AddPeer( std::string{ arguments[1] } );
+            genius_node.AddPeer( std::string{ arguments[1] } );
         }
         else
         {
