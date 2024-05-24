@@ -9,7 +9,8 @@
 
 #include "account/GeniusUTXO.hpp"
 #include <vector>
-#include <boost/outcome.hpp>
+#include "outcome/outcome.hpp"
+
 
 namespace sgns
 {
@@ -42,8 +43,6 @@ namespace sgns
                                                          const std::string signature = "" )
         {
             UTXOTxParameters instance( utxo_pool, src_address, amount, dest_address, signature );
-
-            std::cout << "Destination addr" << std::hex << dest_address << std::endl;
 
             if ( instance.inputs_.size() )
             {

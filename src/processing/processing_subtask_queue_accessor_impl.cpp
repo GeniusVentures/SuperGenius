@@ -52,8 +52,7 @@ void SubTaskQueueAccessorImpl::AssignSubTasks(std::list<SGProcessing::SubTask>& 
 
 void SubTaskQueueAccessorImpl::UpdateResultsFromStorage(const std::set<std::string>& subTaskIds)
 {
-    std::vector<SGProcessing::SubTaskResult> results;
-    m_subTaskResultStorage->GetSubTaskResults(subTaskIds, results);
+    auto results = m_subTaskResultStorage->GetSubTaskResults(subTaskIds);
 
     m_logger->debug("[RESULTS_LOADED] {} results loaded from results storage", results.size());
 

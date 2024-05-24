@@ -9,22 +9,18 @@
 
 namespace sgns::processing
 {
-// Encapsulates subtask queue construction algorithm
-class SubTaskEnqueuerImpl : public SubTaskEnqueuer
-{
-public:
-    SubTaskEnqueuerImpl(
-        std::shared_ptr<ProcessingTaskQueue> taskQueue);
+    // Encapsulates subtask queue construction algorithm
+    class SubTaskEnqueuerImpl : public SubTaskEnqueuer
+    {
+    public:
+        SubTaskEnqueuerImpl( std::shared_ptr<ProcessingTaskQueue> taskQueue );
 
-    bool EnqueueSubTasks(
-        std::string& subTaskQueueId, 
-        std::list<SGProcessing::SubTask>& subTasks) override;
+        bool EnqueueSubTasks( std::string &subTaskQueueId, std::list<SGProcessing::SubTask> &subTasks ) override;
 
-private:
-    std::shared_ptr<ProcessingTaskQueue> m_taskQueue;
-    sgns::base::Logger m_logger = sgns::base::createLogger("SubTaskEnqueuerImpl");
-
-};
+    private:
+        std::shared_ptr<ProcessingTaskQueue> m_taskQueue;
+        sgns::base::Logger                   m_logger = sgns::base::createLogger( "SubTaskEnqueuerImpl" );
+    };
 }
 
 #endif // SUPERGENIUS_PROCESSING_SUBTASK_ENQUEUER_IMPL_HPP

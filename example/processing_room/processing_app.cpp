@@ -28,9 +28,8 @@ namespace
     public:
         void AddSubTaskResult(const SGProcessing::SubTaskResult& subTaskResult) override {}
         void RemoveSubTaskResult(const std::string& subTaskId) override {}
-        void GetSubTaskResults(
-            const std::set<std::string>& subTaskIds,
-            std::vector<SGProcessing::SubTaskResult>& results) override {}
+        std::vector<SGProcessing::SubTaskResult> GetSubTaskResults(
+            const std::set<std::string>& subTaskIds) override { return {};}
     };
 
     class TaskSplitter
@@ -121,19 +120,19 @@ namespace
             return false;
         }
 
-        bool GrabTask(std::string& taskKey, SGProcessing::Task& task) override
+        outcome::result<std::pair<std::string, SGProcessing::Task>> GrabTask() override
         {
             if (m_tasks.empty())
             {
-                return false;
+                return outcome::failure(boost::system::error_code{});
             }
 
-
+            SGProcessing::Task task;
             task = std::move(m_tasks.back());
             m_tasks.pop_back();
-            taskKey = (boost::format("TASK_%d") %  m_tasks.size()).str();
+            std::string taskKey = (boost::format("TASK_%d") %  m_tasks.size()).str();
 
-            return true;
+            return std::make_pair(taskKey, task);
         };
 
         bool CompleteTask(const std::string& taskKey, const SGProcessing::TaskResult& task) override

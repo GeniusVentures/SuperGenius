@@ -7,9 +7,12 @@
 #define GRPC_FOR_SUPERGENIUS_PROCESSING_TASK_QUEUE_HPP
 
 #include <processing/proto/SGProcessing.pb.h>
-
+#include "outcome/outcome.hpp"
 #include <optional>
 #include <list>
+
+
+
 class ProcessingTaskQueue
 {
 /** Distributed task queue interface
@@ -38,7 +41,7 @@ public:
     * @return taskId - task id
     * @return task
     */
-    virtual bool GrabTask(std::string& taskId, SGProcessing::Task& task) = 0;
+    virtual outcome::result<std::pair<std::string, SGProcessing::Task>> GrabTask() = 0;
 
     /** Handles task completion
     * @param taskId - task id

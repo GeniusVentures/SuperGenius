@@ -354,14 +354,17 @@ namespace sgns
         {
             auto dest_infos = tx.GetUTXOParameters();
 
-            if ( dest_infos.outputs_.size() == 2 )
+            if ( dest_infos.outputs_.size() )
             {
-                //has to be 1 for me and 1 for escrow
+                //The first is the escrow, second is the change (might not happen)
                 auto hash = ( base::Hash256::fromReadableString( tx.dag_st.data_hash() ) ).value();
-                if ( dest_infos.outputs_[1].dest_address == account_m->GetAddress<uint256_t>() )
+                if ( dest_infos.outputs_.size() > 1 )
                 {
-                    GeniusUTXO new_utxo( hash, 1, uint64_t{ dest_infos.outputs_[1].encrypted_amount } );
-                    account_m->PutUTXO( new_utxo );
+                    if ( dest_infos.outputs_[1].dest_address == account_m->GetAddress<uint256_t>() )
+                    {
+                        GeniusUTXO new_utxo( hash, 1, uint64_t{ dest_infos.outputs_[1].encrypted_amount } );
+                        account_m->PutUTXO( new_utxo );
+                    }
                 }
                 auto          dest_infos = tx.GetUTXOParameters();
                 InputUTXOInfo escrow_utxo;
