@@ -28,18 +28,19 @@ namespace sgns
     class TransactionManager
     {
     public:
+        using ProcessFinishCbType = std::function<void( const std::string &, const std::set<std::string> & )>;
         TransactionManager( std::shared_ptr<crdt::GlobalDB>           db,      //
                             std::shared_ptr<boost::asio::io_context>  ctx,     //
                             std::shared_ptr<GeniusAccount>            account, //
                             std::shared_ptr<crypto::Hasher>           hasher,  //
                             std::shared_ptr<blockchain::BlockStorage> block_storage );
 
-        TransactionManager( std::shared_ptr<crdt::GlobalDB>            db,            //
-                            std::shared_ptr<boost::asio::io_context>   ctx,           //
-                            std::shared_ptr<GeniusAccount>             account,       //
-                            std::shared_ptr<crypto::Hasher>            hasher,        //
-                            std::shared_ptr<blockchain::BlockStorage>  block_storage, //
-                            std::function<void( const std::string & )> processing_finished_cb );
+        TransactionManager( std::shared_ptr<crdt::GlobalDB>           db,            //
+                            std::shared_ptr<boost::asio::io_context>  ctx,           //
+                            std::shared_ptr<GeniusAccount>            account,       //
+                            std::shared_ptr<crypto::Hasher>           hasher,        //
+                            std::shared_ptr<blockchain::BlockStorage> block_storage, //
+                            ProcessFinishCbType                       processing_finished_cb );
 
         ~TransactionManager() = default;
         void Start();
@@ -51,6 +52,7 @@ namespace sgns
         void     MintFunds( const uint64_t &amount );
         bool     HoldEscrow( const uint64_t &amount, const uint64_t &num_chunks, const uint256_t &dev_addr,
                              const float &dev_cut, const std::string &job_id );
+        bool     ReleaseEscrow( const std::string &job_id, const bool &pay );
         void     ProcessingDone( const std::string &subtask_id );
         uint64_t GetBalance();
 
@@ -65,7 +67,7 @@ namespace sgns
         std::uint64_t                                    last_trans_on_block_id;
         std::shared_ptr<blockchain::BlockStorage>        block_storage_m;
         std::shared_ptr<crypto::Hasher>                  hasher_m;
-        std::function<void( const std::string & )>       processing_finished_cb_m;
+        ProcessFinishCbType                              processing_finished_cb_m;
 
         struct EscrowCtrl
         {
@@ -75,6 +77,7 @@ namespace sgns
             uint256_t                                  full_amount;
             uint64_t                                   num_subtasks;
             InputUTXOInfo                              original_input;
+            std::vector<OutputDestInfo>                payout_peers;
             std::unordered_map<std::string, uint256_t> subtask_info;
 
             EscrowCtrl( const uint256_t &addr, const float &cut, const uint256_t &hash, const uint256_t &amount,
@@ -90,6 +93,7 @@ namespace sgns
             }
         };
 
+        //TODO - Replace with std::unordered_map<std::string, EscrowCtrl> for better performance, maybe?
         std::vector<EscrowCtrl> escrow_ctrl_m;
         //Hash256                                          last_transaction_hash;
 

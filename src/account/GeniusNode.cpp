@@ -14,7 +14,6 @@
 #include "processing/processing_subtask_enqueuer_impl.hpp"
 #include "processing/processing_subtask_result_storage.hpp"
 #include "processing/processors/processing_processor_mnn_posenet.hpp"
-#include "processing/impl/processing_subtask_result_storage_impl.hpp"
 
 #ifndef __cplusplus
 extern "C"
@@ -90,6 +89,23 @@ namespace sgns
 
         globaldb_->Init( crdt::CrdtOptions::DefaultOptions() );
 
+        task_queue_      = std::make_shared<processing::ProcessingTaskQueueImpl>( globaldb_ );
+        processing_core_ = std::make_shared<processing::ProcessingCoreImpl>( globaldb_, 1000000, 2 );
+        processing_core_->RegisterProcessorFactory( "posenet",
+                                                    []() { return std::make_unique<processing::MNN_PoseNet>(); } );
+
+        task_result_storage_ = std::make_shared<processing::SubTaskResultStorageImpl>( globaldb_ );
+        processing_service_  = std::make_shared<processing::ProcessingServiceImpl>(
+            pubsub_,                                                          //
+            MAX_NODES_COUNT,                                                  //
+            std::make_shared<processing::SubTaskEnqueuerImpl>( task_queue_ ), //
+            std::make_shared<processing::ProcessSubTaskStateStorage>(),       //
+            task_result_storage_,                                             //
+            processing_core_,                                                 //
+            [this]( const std::string &var ) { ProcessingDone( var ); },      //
+            [this]( const std::string &var ) { ProcessingError( var ); } );
+        processing_service_->SetChannelListRequestTimeout( boost::posix_time::milliseconds( 10000 ) );
+
         base::Buffer root_hash;
         root_hash.put( std::vector<uint8_t>( 32ul, 1 ) );
         hasher_ = std::make_shared<crypto::HasherImpl>();
@@ -107,25 +123,10 @@ namespace sgns
         block_storage_       = std::move( maybe_block_storage.value() );
         transaction_manager_ = std::make_shared<TransactionManager>(
             globaldb_, io_, account_, hasher_, block_storage_,
-            []( const std::string &var ) { std::cout << "FINISHED PROCESSING" << var << std::endl; } );
-
-        task_queue_      = std::make_shared<processing::ProcessingTaskQueueImpl>( globaldb_ );
-        processing_core_ = std::make_shared<processing::ProcessingCoreImpl>( globaldb_, 1000000, 2 );
-        processing_core_->RegisterProcessorFactory( "posenet",
-                                                    []() { return std::make_unique<processing::MNN_PoseNet>(); } );
-        processing_service_ = std::make_shared<processing::ProcessingServiceImpl>(
-            pubsub_,                                                             //
-            MAX_NODES_COUNT,                                                     //
-            std::make_shared<processing::SubTaskEnqueuerImpl>( task_queue_ ),    //
-            std::make_shared<processing::ProcessSubTaskStateStorage>(),          //
-            std::make_shared<processing::SubTaskResultStorageImpl>( globaldb_ ), //
-            processing_core_,                                                    //
-            [this]( const std::string &var ) { ProcessingDone( var ); },         //
-            [this]( const std::string &var ) { ProcessingError( var ); } );
-        processing_service_->SetChannelListRequestTimeout( boost::posix_time::milliseconds( 10000 ) );
-        processing_service_->StartProcessing( std::string( PROCESSING_GRID_CHANNEL ) );
+            [this]( const std::string &var, const std::set<std::string> &vars ) { ProcessingFinished( var, vars ); } );
 
         transaction_manager_->Start();
+        processing_service_->StartProcessing( std::string( PROCESSING_GRID_CHANNEL ) );
 
         //DHTInit();
 
@@ -226,6 +227,10 @@ namespace sgns
     void GeniusNode::MintTokens( uint64_t amount )
     {
         transaction_manager_->MintFunds( amount );
+    }
+    uint64_t GeniusNode::GetBalance()
+    {
+        return transaction_manager_->GetBalance();
     }
 
     std::vector<uint8_t> GeniusNode::GetImageByCID( std::string cid )
@@ -354,16 +359,35 @@ namespace sgns
         return static_cast<uint16_t>( seed );
     }
 
-    void GeniusNode::ProcessingDone( const std::string subtask_id )
+    void GeniusNode::ProcessingDone( const std::string &subtask_id )
     {
-        std::cout << "PROCESSING COMPLETE " << subtask_id << std::endl;
+        std::cout << "PROCESSING DONE " << subtask_id << std::endl;
         transaction_manager_->ProcessingDone( subtask_id );
-        //task_queue_->CompleteTask(subtask_id)
     }
 
-    void GeniusNode::ProcessingError( const std::string subtask_id )
+    void GeniusNode::ProcessingError( const std::string &subtask_id )
     {
         std::cout << "PROCESSING ERROR " << subtask_id << std::endl;
+    }
+
+    void GeniusNode::ProcessingFinished( const std::string &task_id, const std::set<std::string> &subtasks_ids )
+    {
+        if ( transaction_manager_->ReleaseEscrow( task_id, !task_queue_->IsTaskCompleted( task_id ) ) )
+        {
+            SGProcessing::TaskResult result;
+            std::cout << "PROCESSING FINISHED " << task_id << std::endl;
+            auto subtask_results = task_result_storage_->GetSubTaskResults( subtasks_ids );
+
+            SGProcessing::TaskResult taskResult;
+            auto                     results = taskResult.mutable_subtask_results();
+            for ( const auto &r : subtask_results )
+            {
+                auto result = results->Add();
+                result->CopyFrom( r );
+            }
+
+            task_queue_->CompleteTask( task_id, taskResult );
+        }
     }
 
     /*

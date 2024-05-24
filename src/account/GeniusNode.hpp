@@ -26,6 +26,7 @@
 #include "integration/IComponent.hpp"
 #include "processing/impl/processing_task_queue_impl.hpp"
 #include "processing/impl/processing_core_impl.hpp"
+#include "processing/impl/processing_subtask_result_storage_impl.hpp"
 #include "processing/processing_service.hpp"
 
 #ifndef __cplusplus
@@ -59,9 +60,10 @@ namespace sgns
             return "GeniusNode";
         }
 
-        void DHTInit();
-        void MintTokens( uint64_t amount );
-        void AddPeer( const std::string &peer );
+        void     DHTInit();
+        void     MintTokens( uint64_t amount );
+        void     AddPeer( const std::string &peer );
+        uint64_t GetBalance();
 
         std::vector<uint8_t> GetImageByCID( std::string cid );
 
@@ -77,6 +79,7 @@ namespace sgns
         std::shared_ptr<processing::ProcessingTaskQueueImpl>       task_queue_;
         std::shared_ptr<processing::ProcessingCoreImpl>            processing_core_;
         std::shared_ptr<processing::ProcessingServiceImpl>         processing_service_;
+        std::shared_ptr<processing::SubTaskResultStorageImpl>      task_result_storage_;
         std::shared_ptr<soralog::LoggingSystem>                    logging_system;
 
         std::thread io_thread;
@@ -85,8 +88,10 @@ namespace sgns
         std::string  node_base_addr_;
 
         uint16_t GenerateRandomPort( const std::string &address );
-        void     ProcessingDone( const std::string subtask_id );
-        void     ProcessingError( const std::string subtask_id );
+
+        void ProcessingDone( const std::string &subtask_id );
+        void ProcessingError( const std::string &subtask_id );
+        void ProcessingFinished( const std::string &task_id, const std::set<std::string> &subtasks_ids );
 
         static constexpr std::string_view db_path_                = "bc-%d/";
         static constexpr std::uint16_t    MAIN_NET                = 369;

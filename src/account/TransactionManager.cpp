@@ -23,12 +23,12 @@ namespace sgns
     {
     }
 
-    TransactionManager::TransactionManager( std::shared_ptr<crdt::GlobalDB>            db,
-                                            std::shared_ptr<boost::asio::io_context>   ctx,
-                                            std::shared_ptr<GeniusAccount>             account,
-                                            std::shared_ptr<crypto::Hasher>            hasher,
-                                            std::shared_ptr<blockchain::BlockStorage>  block_storage,
-                                            std::function<void( const std::string & )> processing_finished_cb ) :
+    TransactionManager::TransactionManager( std::shared_ptr<crdt::GlobalDB>           db,
+                                            std::shared_ptr<boost::asio::io_context>  ctx,
+                                            std::shared_ptr<GeniusAccount>            account,
+                                            std::shared_ptr<crypto::Hasher>           hasher,
+                                            std::shared_ptr<blockchain::BlockStorage> block_storage,
+                                            ProcessFinishCbType                       processing_finished_cb ) :
         db_m( std::move( db ) ),                                                                                    //
         ctx_m( std::move( ctx ) ),                                                                                  //
         account_m( std::move( account ) ),                                                                          //
@@ -42,13 +42,13 @@ namespace sgns
     {
         m_logger->set_level( spdlog::level::debug );
         m_logger->info( "Initializing values by reading whole blockchain" );
-
-        CheckBlockchain();
-        m_logger->info( "Last valid block ID" + std::to_string( last_block_id_m ) );
     }
 
     void TransactionManager::Start()
     {
+        CheckBlockchain();
+
+        m_logger->info( "Last valid block ID" + std::to_string( last_block_id_m ) );
         auto task = std::make_shared<std::function<void()>>();
 
         *task = [this, task]()
@@ -108,10 +108,41 @@ namespace sgns
                                                       uint256_t{ "0x" + hash_data.toReadableString() } );
         if ( maybe_params )
         {
+            account_m->utxos        = UTXOTxParameters::UpdateUTXOList( account_m->utxos, maybe_params.value() );
             auto escrow_transaction = std::make_shared<EscrowTransaction>( maybe_params.value(), num_chunks, dev_addr,
                                                                            dev_cut, FillDAGStruct() );
             this->EnqueueTransaction( escrow_transaction );
             ret = true;
+        }
+        return ret;
+    }
+
+    bool TransactionManager::ReleaseEscrow( const std::string &job_id, const bool &pay )
+    {
+        bool ret = false;
+        if ( escrow_ctrl_m.size() )
+        {
+            //TODO - hash in string form in escrolcontrol
+            auto hash_data = hasher_m->blake2b_256( std::vector<uint8_t>{ job_id.begin(), job_id.end() } );
+            auto job_hash  = uint256_t{ "0x" + hash_data.toReadableString() };
+            for ( auto it = escrow_ctrl_m.begin(); it != escrow_ctrl_m.end(); )
+            {
+                if ( job_hash == it->job_hash )
+                {
+                    if ( pay )
+                    {
+                        auto transfer_transaction = std::make_shared<TransferTransaction>(
+                            it->payout_peers, std::vector<InputUTXOInfo>{ it->original_input }, FillDAGStruct() );
+                        this->EnqueueTransaction( transfer_transaction );
+                        ret = true;
+                    }
+                    it = escrow_ctrl_m.erase( it );
+                }
+                else
+                {
+                    ++it;
+                }
+            }
         }
         return ret;
     }
@@ -329,7 +360,13 @@ namespace sgns
                 account_m->PutUTXO( new_utxo );
             }
         }
+        //tx.GetInputInfos()
+        for(auto &tx : tx.GetInputInfos())
+        {
+            std::cout << "UTXO to be updated " << tx.txid_hash_.toReadableString() << std::endl; 
+            std::cout << "UTXO output" << tx.output_idx_ << std::endl; 
 
+        }
         account_m->RefreshUTXOs( tx.GetInputInfos() );
     }
 
@@ -366,7 +403,7 @@ namespace sgns
                         account_m->PutUTXO( new_utxo );
                     }
                 }
-                auto          dest_infos = tx.GetUTXOParameters();
+                account_m->RefreshUTXOs( tx.GetUTXOParameters().inputs_ );
                 InputUTXOInfo escrow_utxo;
 
                 escrow_utxo.txid_hash_  = hash;
@@ -394,24 +431,21 @@ namespace sgns
                     if ( ctrl.subtask_info.size() == ctrl.num_subtasks )
                     {
                         //Processing done
-                        std::vector<OutputDestInfo> payout_peers;
-
                         uint64_t peers_amount =
                             ( ctrl.dev_cut * uint64_t{ ctrl.full_amount } ) / ctrl.subtask_info.size();
                         uint64_t remainder = uint64_t{ ctrl.full_amount };
+
+                        std::set<std::string> subtasks_ids;
                         for ( auto &pair : ctrl.subtask_info )
                         {
-                            payout_peers.push_back( { uint256_t{ peers_amount }, pair.second } );
+                            ctrl.payout_peers.push_back( { uint256_t{ peers_amount }, pair.second } );
                             remainder -= peers_amount;
+                            subtasks_ids.insert( pair.first );
                         }
-                        payout_peers.push_back( { uint256_t{ remainder }, ctrl.dev_addr } );
-
-                        auto transfer_transaction = std::make_shared<TransferTransaction>(
-                            payout_peers, std::vector<InputUTXOInfo>{ ctrl.original_input }, FillDAGStruct() );
-                        this->EnqueueTransaction( transfer_transaction );
+                        ctrl.payout_peers.push_back( { uint256_t{ remainder }, ctrl.dev_addr } );
                         if ( processing_finished_cb_m )
                         {
-                            processing_finished_cb_m( tx.GetSubtaskID() );
+                            processing_finished_cb_m( tx.GetSubtaskID(), subtasks_ids );
                         }
                     }
                 }

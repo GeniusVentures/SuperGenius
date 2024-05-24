@@ -145,7 +145,7 @@ namespace sgns::processing
                 break;
             }
         }
-        
+
         if ( task_grabbed )
         {
             return std::make_pair( task.ipfs_block_id(), task );
@@ -162,16 +162,26 @@ namespace sgns::processing
         data.put( taskResult.SerializeAsString() );
 
         std::cout << "Completing the task and storing results on " << "task_results/" + taskKey << std::endl;
-        m_db->Put({"task_results/tasks/TASK_" +  taskKey }, data);
-        m_db->Remove({"lock_tasks/TASK_" + taskKey});
+        m_db->Put( { "task_results/tasks/TASK_" + taskKey }, data );
+        m_db->Remove( { "lock_tasks/TASK_" + taskKey } );
         //auto transaction = m_db->BeginTransaction();
         //transaction->AddToDelta( sgns::crdt::HierarchicalKey( "task_results/" + taskKey ), data );
         //transaction->RemoveFromDelta( sgns::crdt::HierarchicalKey( "lock_" + taskKey ) );
         //transaction->RemoveFromDelta( sgns::crdt::HierarchicalKey( taskKey ) );
-//
+        //
         //auto res = transaction->PublishDelta();
         m_logger->debug( "TASK_COMPLETED: {}", taskKey );
         return true;
+    }
+
+    bool ProcessingTaskQueueImpl::IsTaskCompleted( const std::string &taskId )
+    {
+        bool ret = false;
+        if ( m_db->Get( { "task_results/tasks/TASK_" + taskId } ) )
+        {
+            ret = true;
+        }
+        return ret;
     }
 
     bool ProcessingTaskQueueImpl::IsTaskLocked( const std::string &taskKey )

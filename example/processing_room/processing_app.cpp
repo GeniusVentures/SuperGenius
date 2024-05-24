@@ -135,6 +135,11 @@ namespace
             return std::make_pair(taskKey, task);
         };
 
+        bool IsTaskCompleted( const std::string &taskId ) override
+        {
+            return true;
+        }
+
         bool CompleteTask(const std::string& taskKey, const SGProcessing::TaskResult& task) override
         {
             return false;

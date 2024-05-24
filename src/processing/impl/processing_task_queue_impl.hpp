@@ -52,6 +52,14 @@ namespace sgns::processing
         */
         bool CompleteTask( const std::string &taskKey, const SGProcessing::TaskResult &taskResult ) override;
 
+        /**
+         * @brief       
+         * @param[in]   taskId 
+         * @return      A @ref true 
+         * @return      A @ref false 
+         */
+        bool IsTaskCompleted( const std::string &taskId ) override;
+
         /** Find if a task is locked
         * @param taskKey - id to look for task
         */

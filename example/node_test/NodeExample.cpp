@@ -40,11 +40,9 @@ void PrintAccountInfo( const std::vector<std::string> &args, sgns::GeniusNode &a
         std::cerr << "Invalid info command format.\n";
         return;
     }
-    std::cout << "account info" << std::endl;
-    //transaction_manager.PrintAccountInfo();
-
-    //TODO - Create processing transaction
+    std::cout << "Balance: " << account_manager.GetBalance() << std::endl;
 }
+
 void MintTokens( const std::vector<std::string> &args, sgns::GeniusNode &account_manager )
 {
     if ( args.size() != 2 )
@@ -58,7 +56,8 @@ void MintTokens( const std::vector<std::string> &args, sgns::GeniusNode &account
 std::vector<std::string> split_string( const std::string &str )
 {
     std::istringstream       iss( str );
-    std::vector<std::string> results( ( std::istream_iterator<std::string>( iss ) ), std::istream_iterator<std::string>() );
+    std::vector<std::string> results( ( std::istream_iterator<std::string>( iss ) ),
+                                      std::istream_iterator<std::string>() );
     return results;
 }
 
@@ -103,6 +102,7 @@ void process_events( sgns::GeniusNode &account_manager )
         }
     }
 }
+
 //This is not used at the moment. Static initialization order fiasco issues on node
 //AccountKey   ACCOUNT_KEY = "1";
 //DevConfig_st DEV_CONFIG{ "0xcafe", 0.65f };
@@ -112,11 +112,10 @@ int main( int argc, char *argv[] )
     std::thread input_thread( keyboard_input_thread );
 
     //Inputs
-    AccountKey  key;
+    AccountKey   key;
     DevConfig_st local_config{ "0xbeef", 0.7f };
 
     strncpy( key, argv[1], sizeof( key ) );
-
 
     sgns::GeniusNode node_instance( key, local_config );
 
