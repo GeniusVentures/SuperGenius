@@ -181,8 +181,9 @@ namespace sgns
     {
         if ( transaction_manager_->GetBalance() >= funds )
         {
-            auto                      mnn_image = GetImageByCID( "QmUDMvGQXbUKMsjmTzjf4ZuMx7tHx6Z4x8YH8RbwrgyGAf" );
-            processing::ImageSplitter imagesplit( mnn_image, 5400, 0, 4860000 );
+            processing_service_->StopProcessing();
+            auto                               mnn_image = GetImageByCID( image_path );
+            processing::ImageSplitter          imagesplit( mnn_image, 5400, 0, 4860000 );
             std::vector<std::vector<uint32_t>> chunkOptions;
             chunkOptions.push_back( { 1080, 0, 4320, 5, 5, 24 } );
             std::list<SGProcessing::Task> tasks;
@@ -192,7 +193,7 @@ namespace sgns
                 SGProcessing::Task task;
                 //std::cout << "CID STRING:    " << libp2p::multi::ContentIdentifierCodec::toString(imagesplit.GetPartCID(taskIdx)).value() << std::endl;
                 //task.set_ipfs_block_id(libp2p::multi::ContentIdentifierCodec::toString(imagesplit.GetPartCID(taskIdx)).value());
-                task.set_ipfs_block_id( "QmUDMvGQXbUKMsjmTzjf4ZuMx7tHx6Z4x8YH8RbwrgyGAf" );
+                task.set_ipfs_block_id( image_path );
                 //task.set_block_len(48600);
                 //task.set_block_line_stride(540);
                 //task.set_block_stride(4860);
@@ -219,8 +220,10 @@ namespace sgns
                 task_queue_->EnqueueTask( task, subTasks );
             }
 
+            
+
             transaction_manager_->HoldEscrow( funds, nSubTasks, uint256_t{ std::string( dev_config_.Addr ) },
-                                              dev_config_.Cut, "QmUDMvGQXbUKMsjmTzjf4ZuMx7tHx6Z4x8YH8RbwrgyGAf" );
+                                              dev_config_.Cut, image_path );
         }
     }
 
@@ -228,6 +231,7 @@ namespace sgns
     {
         transaction_manager_->MintFunds( amount );
     }
+
     uint64_t GeniusNode::GetBalance()
     {
         return transaction_manager_->GetBalance();
@@ -385,7 +389,7 @@ namespace sgns
                 auto result = results->Add();
                 result->CopyFrom( r );
             }
-
+            processing_service_->StartProcessing( std::string( PROCESSING_GRID_CHANNEL ) );
             task_queue_->CompleteTask( task_id, taskResult );
         }
     }

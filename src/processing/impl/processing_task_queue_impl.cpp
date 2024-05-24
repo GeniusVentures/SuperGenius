@@ -88,15 +88,15 @@ namespace sgns::processing
 
     outcome::result<std::pair<std::string, SGProcessing::Task>> ProcessingTaskQueueImpl::GrabTask()
     {
-        m_logger->info( "GRAB_TASK" );
+        //m_logger->info( "GRAB_TASK" );
         OUTCOME_TRY( ( auto &&, queryTasks ), m_db->QueryKeyValues( "tasks" ) );
 
-        m_logger->info( "Task list grabbed from CRDT datastore" );
+        //m_logger->info( "Task list grabbed from CRDT datastore" );
 
         bool                  task_grabbed = false;
         std::set<std::string> lockedTasks;
         SGProcessing::Task    task;
-        m_logger->info( "Number of tasks in Queue: {}", queryTasks.size() );
+        //m_logger->info( "Number of tasks in Queue: {}", queryTasks.size() );
         for ( auto element : queryTasks )
         {
             auto taskKey = m_db->KeyToString( element.first );
@@ -105,7 +105,7 @@ namespace sgns::processing
                 m_logger->debug( "Unable to convert a key to string" );
                 continue;
             }
-            std::cout << "Trying to get results from  " << "task_results/" + taskKey.value() << std::endl;
+            //std::cout << "Trying to get results from  " << "task_results/" + taskKey.value() << std::endl;
             auto maybe_previous_result = m_db->Get( { "task_results/" + taskKey.value() } );
             if ( maybe_previous_result )
             {

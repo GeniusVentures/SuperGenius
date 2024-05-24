@@ -64,7 +64,7 @@ void PubSubBroadcasterExt::OnMessage(boost::optional<const GossipPubSub::Message
                 if (!cids.has_failure())
                 {
                     auto addressout = gossipPubSubTopic_->GetPubsub()->GetHost()->getPeerRepository().getAddressRepository().getAddresses(peerId.value());
-                    std::cout << "Has Value? " << addressout.has_value() << std::endl;
+                    //std::cout << "Has Value? " << addressout.has_value() << std::endl;
                     if (addressout.has_value())
                     {
                         auto address = addressout.value();

@@ -313,14 +313,15 @@ namespace sgns
     void TransactionManager::CheckBlockchain()
     {
         outcome::result<primitives::BlockHeader> retval = outcome::failure( boost::system::error_code{} );
+        //m_logger->debug( "Checking Blockchain" );
         do
         {
             retval = block_storage_m->getBlockHeader( last_block_id_m );
             if ( retval )
             {
                 //any block will need checking
-                m_logger->debug( "Found new blockchain entry for block " + std::to_string( last_block_id_m ) );
-                m_logger->debug( "Getting DAGHeader value" );
+                //m_logger->debug( "Found new blockchain entry for block " + std::to_string( last_block_id_m ) );
+                //m_logger->debug( "Getting DAGHeader value" );
                 bool valid_transaction = true;
 
                 auto DAGHeader = retval.value();
@@ -329,7 +330,7 @@ namespace sgns
                 //validation that index is the same as number
                 if ( DAGHeader.number == last_block_id_m )
                 {
-                    m_logger->info( "Checking transactions from block" );
+                    //m_logger->info( "Checking transactions from block" );
                     valid_transaction = GetTransactionsFromBlock( DAGHeader.number );
                 }
                 if ( valid_transaction )
@@ -338,7 +339,7 @@ namespace sgns
                 }
                 else
                 {
-                    m_logger->debug( "Invalid transaction" );
+                    //m_logger->debug( "Invalid transaction" );
                 }
             }
 
