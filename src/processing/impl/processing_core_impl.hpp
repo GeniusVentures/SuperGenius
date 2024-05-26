@@ -13,7 +13,6 @@
 #include "processing/processing_core.hpp"
 #include "crdt/globaldb/globaldb.hpp"
 #include "processing/processing_processor.hpp"
-#include "Singleton.hpp"
 #include "FileManager.hpp"
 #include "URLStringUtil.h"
 
