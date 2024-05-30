@@ -2,7 +2,8 @@
 
 #include "storage/trie/serialization/supergenius_codec.hpp"
 
-#include "crypto/blake2/blake2b.h"
+#include <crypto/blake2/blake2b.h>
+
 #include "scale/scale.hpp"
 #include "scale/scale_decoder_stream.hpp"
 #include "storage/trie/supergenius_trie/supergenius_node.hpp"
@@ -87,7 +88,7 @@ namespace sgns::storage::trie {
   base::Hash256 SuperGeniusCodec::hash256(const base::Buffer &buf) const {
     base::Hash256 out;
 
-    blake2b(out.data(),
+    sgns_blake2b(out.data(),
             base::Hash256::size(),
             nullptr,
             0,

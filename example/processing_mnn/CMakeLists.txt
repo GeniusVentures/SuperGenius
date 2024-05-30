@@ -107,7 +107,7 @@ target_link_libraries(processing_mnn_p PRIVATE
 	ipfs-pubsub
     ${WIN_CRYPT_LIBRARY}
 	${MNN_LIBS}
-	AsyncIOManager
+	
     )
 if(WIN32)
     target_link_options(processing_mnn_p PRIVATE /WHOLEARCHIVE:${MNN_LIBS})

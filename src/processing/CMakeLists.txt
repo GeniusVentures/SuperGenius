@@ -71,6 +71,7 @@ if(APPLE)
 endif()
 
 target_link_libraries(processing_service PRIVATE
+    crdt_globaldb
     ipfs-pubsub
     SGProcessingProto
     OpenSSL::Crypto
@@ -86,6 +87,7 @@ target_link_libraries(processing_service PRIVATE
     p2p::asio_scheduler
     ${WIN_CRYPT_LIBRARY}
 	${MNN_LIBS}
+    AsyncIOManager
     )
 	
 if(WIN32)
