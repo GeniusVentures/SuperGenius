@@ -39,7 +39,7 @@ void sha3_Init512(void *priv);
 
 enum SHA3_FLAGS sha3_SetFlags(void *priv, enum SHA3_FLAGS);
 
-void sha3_Update(void *priv, void const *bufIn, size_t len);
+void sgns_sha3_Update(void *priv, void const *bufIn, size_t len);
 
 void const *sha3_Finalize(void *priv);
 

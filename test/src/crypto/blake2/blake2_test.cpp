@@ -2,8 +2,8 @@
 #include <stdio.h>
 
 #include "testutil/literals.hpp"
-#include "crypto/blake2/blake2b.h"
-#include "crypto/blake2/blake2s.h"
+#include <crypto/blake2/blake2b.h>
+#include <crypto/blake2/blake2s.h>
 
 // Deterministic sequences (Fibonacci generator).
 
@@ -44,11 +44,11 @@ TEST(Blake2b, Correctness) {
       inlen = b2b_in_len[j];
 
       selftest_seq(in, inlen, inlen);  // unkeyed hash
-      blake2b(md, outlen, NULL, 0, in, inlen);
+      sgns_blake2b(md, outlen, NULL, 0, in, inlen);
       blake2b_update(&ctx, md, outlen);  // hash the hash
 
       selftest_seq(key, outlen, outlen);  // keyed hash
-      blake2b(md, outlen, key, outlen, in, inlen);
+      sgns_blake2b(md, outlen, key, outlen, in, inlen);
       blake2b_update(&ctx, md, outlen);  // hash the hash
     }
   }
