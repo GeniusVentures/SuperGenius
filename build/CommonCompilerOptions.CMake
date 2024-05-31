@@ -28,21 +28,22 @@ include(${PROJECT_ROOT}/cmake/install.cmake)
 include(${PROJECT_ROOT}/cmake/definition.cmake)
 include(${PROJECT_ROOT}/build/CompilationFlags.cmake)
 
-check_cxx_compiler_flag(-std=c++14 CXX14_SUPPORT)
-check_cxx_compiler_flag(-std=c++17 CXX17_SUPPORT)
+# Common compile options
 
+# This is a workaround that should be removed once we update Boost.
+if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    add_compile_options(-Wno-enum-constexpr-conversion)
+endif()
+
+# OS specific compile options
 if(EXISTS "${PROJECT_ROOT}/cmake/compile_option_by_platform/${CMAKE_SYSTEM_NAME}.cmake")
     print("add compile option: ${PROJECT_ROOT}/cmake/compile_option_by_platform/${CMAKE_SYSTEM_NAME}.cmake")
     include("${PROJECT_ROOT}/cmake/compile_option_by_platform/${CMAKE_SYSTEM_NAME}.cmake")
 endif()
 
-if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE Release)
-endif()
-
 if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -D_LIBCPP_ENABLE_CXX17_REMOVED_UNARY_BINARY_FUNCTION")
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_LIBCPP_ENABLE_CXX17_REMOVED_UNARY_BINARY_FUNCTION")
+    # This is a workaround and must be removed once we update Boost past 1.80
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_LIBCPP_ENABLE_CXX17_REMOVED_UNARY_BINARY_FUNCTION")
 endif()
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${EXTRA_CXX_FLAGS}")
@@ -70,6 +71,7 @@ if(NOT DEFINED THIRDPARTY_DIR)
 endif()
 
 if(NOT DEFINED CMAKE_BUILD_TYPE)
+    message("CMAKE_BUILD_TYPE not defined, setting to release mode")
     set(CMAKE_BUILD_TYPE "Release")
 endif()
 
