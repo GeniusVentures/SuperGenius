@@ -1,8 +1,8 @@
-
 # BOOST VERSION TO USE
 set(BOOST_MAJOR_VERSION "1" CACHE STRING "Boost Major Version")
 set(BOOST_MINOR_VERSION "80" CACHE STRING "Boost Minor Version")
 set(BOOST_PATCH_VERSION "0" CACHE STRING "Boost Patch Version")
+
 # convenience settings
 set(BOOST_VERSION "${BOOST_MAJOR_VERSION}.${BOOST_MINOR_VERSION}.${BOOST_PATCH_VERSION}")
 set(BOOST_VERSION_3U "${BOOST_MAJOR_VERSION}_${BOOST_MINOR_VERSION}_${BOOST_PATCH_VERSION}")
@@ -17,38 +17,44 @@ include_directories(${GTest_INCLUDE_DIR})
 
 # --------------------------------------------------------
 # Set config of protobuf project
-if (NOT DEFINED Protobuf_DIR)
+if(NOT DEFINED Protobuf_DIR)
     set(Protobuf_DIR "${_THIRDPARTY_BUILD_DIR}/grpc/lib/cmake/protobuf")
 endif()
-if (NOT DEFINED grpc_INCLUDE_DIR)
+
+if(NOT DEFINED grpc_INCLUDE_DIR)
     set(grpc_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/grpc/include")
 endif()
-if (NOT DEFINED Protobuf_INCLUDE_DIR)
+
+if(NOT DEFINED Protobuf_INCLUDE_DIR)
     set(Protobuf_INCLUDE_DIR "${grpc_INCLUDE_DIR}/google/protobuf")
 endif()
 
-find_package(Protobuf CONFIG REQUIRED )
+find_package(Protobuf CONFIG REQUIRED)
 
-if (NOT DEFINED PROTOC_EXECUTABLE)
+if(NOT DEFINED PROTOC_EXECUTABLE)
     set(PROTOC_EXECUTABLE "${_THIRDPARTY_BUILD_DIR}/grpc/bin/protoc${CMAKE_EXECUTABLE_SUFFIX}")
 endif()
 
 set(Protobuf_PROTOC_EXECUTABLE ${PROTOC_EXECUTABLE} CACHE PATH "Initial cache" FORCE)
+
 if(NOT TARGET protobuf::protoc)
-  add_executable(protobuf::protoc IMPORTED)
+    add_executable(protobuf::protoc IMPORTED)
 endif()
+
 if(EXISTS "${Protobuf_PROTOC_EXECUTABLE}")
-  set_target_properties(protobuf::protoc PROPERTIES
-              IMPORTED_LOCATION ${Protobuf_PROTOC_EXECUTABLE})
+    set_target_properties(protobuf::protoc PROPERTIES
+        IMPORTED_LOCATION ${Protobuf_PROTOC_EXECUTABLE})
 endif()
 
 # protoc definition #####################################################################################
 get_target_property(PROTOC_LOCATION protobuf::protoc IMPORTED_LOCATION)
 print("PROTOC_LOCATION: ${PROTOC_LOCATION}")
-if ( Protobuf_FOUND )
-    message( STATUS "Protobuf version : ${Protobuf_VERSION}" )
-    message( STATUS "Protobuf compiler : ${Protobuf_PROTOC_EXECUTABLE}")
+
+if(Protobuf_FOUND)
+    message(STATUS "Protobuf version : ${Protobuf_VERSION}")
+    message(STATUS "Protobuf compiler : ${Protobuf_PROTOC_EXECUTABLE}")
 endif()
+
 include(${PROJECT_ROOT}/cmake/functions.cmake)
 
 # --------------------------------------------------------
@@ -147,13 +153,15 @@ set(Boost_USE_STATIC_LIBS ON)
 set(Boost_NO_SYSTEM_PATHS ON)
 option(Boost_USE_STATIC_RUNTIME "Use static runtimes" ON)
 
-option (SGNS_STACKTRACE_BACKTRACE "Use BOOST_STACKTRACE_USE_BACKTRACE in stacktraces, for POSIX" OFF)
-if (SGNS_STACKTRACE_BACKTRACE)
-	add_definitions(-DSGNS_STACKTRACE_BACKTRACE=1)
-	if (BACKTRACE_INCLUDE)
-		add_definitions(-DBOOST_STACKTRACE_BACKTRACE_INCLUDE_FILE=${BACKTRACE_INCLUDE})
-	endif()
-endif ()
+option(SGNS_STACKTRACE_BACKTRACE "Use BOOST_STACKTRACE_USE_BACKTRACE in stacktraces, for POSIX" OFF)
+
+if(SGNS_STACKTRACE_BACKTRACE)
+    add_definitions(-DSGNS_STACKTRACE_BACKTRACE=1)
+
+    if(BACKTRACE_INCLUDE)
+        add_definitions(-DBOOST_STACKTRACE_BACKTRACE_INCLUDE_FILE=${BACKTRACE_INCLUDE})
+    endif()
+endif()
 
 # header only libraries must not be added here
 find_package(Boost REQUIRED COMPONENTS date_time filesystem random regex system thread log log_setup program_options)
@@ -182,15 +190,16 @@ set(c-ares_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/cares/include" CACHE PATH "Path
 # Set config of libp2p
 set(libp2p_DIR "${_THIRDPARTY_BUILD_DIR}/libp2p/lib/cmake/libp2p")
 set(libp2p_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/libp2p/lib")
-set(libp2p_INCLUDE_DIR    "${_THIRDPARTY_BUILD_DIR}/libp2p/include")
+set(libp2p_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/libp2p/include")
 find_package(libp2p CONFIG REQUIRED)
 include_directories(${libp2p_INCLUDE_DIR})
 
 # --------------------------------------------------------
 # Find and include cares if libp2p have not included it
-if (NOT TARGET c-ares::cares_static)
-  find_package(c-ares CONFIG REQUIRED)
+if(NOT TARGET c-ares::cares_static)
+    find_package(c-ares CONFIG REQUIRED)
 endif()
+
 include_directories(${c-ares_INCLUDE_DIR})
 
 # --------------------------------------------------------
@@ -244,11 +253,11 @@ include_directories(${jsonrpc_lean_INCLUDE_DIR})
 
 # --------------------------------------------------------
 # Set config of binaryen
-#set(binaryen_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/binaryen/include")
-#set(binaryen_LIBRARIES "${_THIRDPARTY_BUILD_DIR}/binaryen/lib")
-#set(binaryen_DIR "${_THIRDPARTY_BUILD_DIR}/binaryen/lib/cmake/binaryen")
-#find_package(binaryen CONFIG REQUIRED)
-#include_directories(${binaryen_INCLUDE_DIR} ${binaryen_INCLUDE_DIR}/binaryen)
+# set(binaryen_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/binaryen/include")
+# set(binaryen_LIBRARIES "${_THIRDPARTY_BUILD_DIR}/binaryen/lib")
+# set(binaryen_DIR "${_THIRDPARTY_BUILD_DIR}/binaryen/lib/cmake/binaryen")
+# find_package(binaryen CONFIG REQUIRED)
+# include_directories(${binaryen_INCLUDE_DIR} ${binaryen_INCLUDE_DIR}/binaryen)
 
 # --------------------------------------------------------
 # Set config of secp256k1
@@ -284,10 +293,10 @@ include_directories(${AsyncIOManager_INCLUDE_DIR})
 
 # --------------------------------------------------------
 include_directories(
-  ${PROJECT_ROOT}/src
+    ${PROJECT_ROOT}/src
 )
 include_directories(
-  ${PROJECT_ROOT}/app
+    ${PROJECT_ROOT}/app
 )
 
 ADD_DEFINITIONS(-D_HAS_AUTO_PTR_ETC=1)
@@ -305,47 +314,47 @@ print("CXX Release flags: ${CMAKE_CXX_FLAGS_RELEASE}")
 
 # --------------------------------------------------------
 link_directories(
-  ${Boost_LIB_DIR}
-  ${ipfs-lite-cpp_LIB_DIR}
+    ${Boost_LIB_DIR}
+    ${ipfs-lite-cpp_LIB_DIR}
 )
 
 add_subdirectory(${PROJECT_ROOT}/src ${CMAKE_BINARY_DIR}/src)
-#add_subdirectory(${PROJECT_ROOT}/app ${CMAKE_BINARY_DIR}/app)
 
+# add_subdirectory(${PROJECT_ROOT}/app ${CMAKE_BINARY_DIR}/app)
+if(TESTING)
+    enable_testing()
+    add_subdirectory(${PROJECT_ROOT}/test ${CMAKE_BINARY_DIR}/test)
+endif()
 
-if (TESTING)
-  enable_testing()
-  add_subdirectory(${PROJECT_ROOT}/test ${CMAKE_BINARY_DIR}/test)
-endif ()
-
-if (BUILD_EXAMPLES)
+if(BUILD_EXAMPLES)
     add_subdirectory(${PROJECT_ROOT}/example ${CMAKE_BINARY_DIR}/example)
-endif ()
+endif()
+
 add_subdirectory(${PROJECT_ROOT}/example/AsyncFile ${CMAKE_BINARY_DIR}/example/AsyncFile)
 add_subdirectory(${PROJECT_ROOT}/example/mnn_chunkprocess ${CMAKE_BINARY_DIR}/example/mnn_chunkprocess)
 
 install(
-  EXPORT supergeniusTargets
-  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/SuperGenius
-  NAMESPACE sgns::
+    EXPORT supergeniusTargets
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/SuperGenius
+    NAMESPACE sgns::
 )
 
 # generate the config file that is includes the exports
 configure_package_config_file(${PROJECT_ROOT}/cmake/config.cmake.in
-  "${CMAKE_CURRENT_BINARY_DIR}/SuperGeniusConfig.cmake"
-  INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/SuperGenius
-  NO_SET_AND_CHECK_MACRO
-  NO_CHECK_REQUIRED_COMPONENTS_MACRO
+    "${CMAKE_CURRENT_BINARY_DIR}/SuperGeniusConfig.cmake"
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/SuperGenius
+    NO_SET_AND_CHECK_MACRO
+    NO_CHECK_REQUIRED_COMPONENTS_MACRO
 )
 
 # generate the version file for the config file
 write_basic_package_version_file(
-  "${CMAKE_CURRENT_BINARY_DIR}/SuperGeniusConfigVersion.cmake"
-  VERSION "${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}"
-  COMPATIBILITY AnyNewerVersion
+    "${CMAKE_CURRENT_BINARY_DIR}/SuperGeniusConfigVersion.cmake"
+    VERSION "${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}"
+    COMPATIBILITY AnyNewerVersion
 )
 
-### install header files ###
+# ## install header files ###
 install_hfile(${PROJECT_ROOT}/src/api)
 install_hfile(${PROJECT_ROOT}/src/authorship)
 install_hfile(${PROJECT_ROOT}/src/application)
@@ -369,17 +378,17 @@ install_hfile(${PROJECT_ROOT}/src/subscription)
 install_hfile(${PROJECT_ROOT}/src/transaction_pool)
 install_hfile(${PROJECT_ROOT}/src/verification)
 
-### install proto header files ###
+# ## install proto header files ###
 install_hfile(${CMAKE_CURRENT_BINARY_DIR}/generated/crdt)
 install_hfile(${CMAKE_CURRENT_BINARY_DIR}/generated/processing)
 
 # install the configuration file
 install(FILES
-  ${CMAKE_CURRENT_BINARY_DIR}/SuperGeniusConfig.cmake
-  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/SuperGenius
+    ${CMAKE_CURRENT_BINARY_DIR}/SuperGeniusConfig.cmake
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/SuperGenius
 )
 
 install(FILES
-  ${CMAKE_CURRENT_BINARY_DIR}/SuperGeniusConfigVersion.cmake
-  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/SuperGenius
+    ${CMAKE_CURRENT_BINARY_DIR}/SuperGeniusConfigVersion.cmake
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/SuperGenius
 )
