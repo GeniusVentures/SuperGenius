@@ -162,6 +162,13 @@ cmake ../../build/iOS -DCMAKE_BUILD_TYPE=Release -DTHIRDPARTY_DIR=[ABSOLUTE_PATH
 make -j4
 ```
 
+## Installing
+On the root of the build folder, use the cmake install command
+
+```bash
+cmake --install .
+```
+
 ### Setting up VS Code intellisense
 
 This requires installing the (C/C++ Extension Pack)[https://marketplace.visualstudio.com/items?itemName=ms-vscode.cpptools-extension-pack]. Configure CMake Tools to appear under the toolbar, with this setting:
