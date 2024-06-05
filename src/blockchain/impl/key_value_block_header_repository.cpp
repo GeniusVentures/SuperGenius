@@ -4,7 +4,6 @@
 
 #include "blockchain/impl/common.hpp"
 #include "blockchain/impl/storage_util.hpp"
-#include "scale/scale.hpp"
 #include "blockchain/impl/proto/SGBlocks.pb.h"
 
 using sgns::base::Hash256;
@@ -34,9 +33,9 @@ namespace sgns::blockchain
         const primitives::BlockNumber &number ) const
     {
         OUTCOME_TRY( ( auto &&, header ), getBlockHeader( number ) );
-        auto enc_header = GetHeaderSerializedData( header );
+        auto serializedHeader = GetHeaderSerializedData( header );
 
-        return hasher_->blake2b_256( enc_header );
+        return hasher_->blake2b_256( serializedHeader );
     }
 
     outcome::result<primitives::BlockHeader> KeyValueBlockHeaderRepository::getBlockHeader( const BlockId &id ) const
@@ -49,14 +48,12 @@ namespace sgns::blockchain
             return ( isNotFoundError( header_res.error() ) ) ? Error::BLOCK_NOT_FOUND : header_res.error();
         }
 
-        //return scale::decode<primitives::BlockHeader>(header_res.value());
         return GetBlockHeaderFromSerialized( header_res.value().toVector() );
     }
 
     outcome::result<primitives::BlockHash> KeyValueBlockHeaderRepository::putBlockHeader(
         const primitives::BlockHeader &header )
     {
-        //OUTCOME_TRY((auto &&, encoded_header), scale::encode(header));
         auto encoded_header = GetHeaderSerializedData( header );
         auto header_hash    = hasher_->blake2b_256( encoded_header );
 
@@ -92,25 +89,26 @@ namespace sgns::blockchain
         header_proto.set_block_number( header.number );
         header_proto.set_state_root( header.state_root.toReadableString() );
         header_proto.set_extrinsics_root( header.extrinsics_root.toReadableString() );
-        //header_proto.set_digest(header.digest.toReadableString());
 
         size_t               size = header_proto.ByteSizeLong();
         std::vector<uint8_t> serialized_proto( size );
 
-        header_proto.SerializeToArray( serialized_proto.data(), serialized_proto.size() );
+        header_proto.SerializeToArray( serialized_proto.data(), static_cast<int>( serialized_proto.size() ) );
 
         return serialized_proto;
     }
 
     primitives::BlockHeader KeyValueBlockHeaderRepository::GetBlockHeaderFromSerialized(
-        const std::vector<uint8_t> &serialized_data ) const
+        const std::vector<uint8_t> &serialized_data )
     {
-        primitives::BlockHeader   block_header;
         SGBlocks::BlockHeaderData header_proto;
-        if ( !header_proto.ParseFromArray( serialized_data.data(), serialized_data.size() ) )
+
+        if ( !header_proto.ParseFromArray( serialized_data.data(), static_cast<int>( serialized_data.size() ) ) )
         {
             std::cerr << "Failed to parse BlockHeaderData from array." << std::endl;
         }
+
+        primitives::BlockHeader block_header;
         block_header.parent_hash     = ( Hash256::fromReadableString( header_proto.parent_hash() ) ).value();
         block_header.number          = header_proto.block_number();
         block_header.state_root      = ( Hash256::fromReadableString( header_proto.state_root() ) ).value();

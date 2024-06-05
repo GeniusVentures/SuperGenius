@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.12)
 
 # --------------------------------------------------------
 # if on Linux system, build the Linux executables
-if (NOT ${CMAKE_HOST_SYSTEM_NAME} MATCHES "Linux")
+if(NOT ${CMAKE_HOST_SYSTEM_NAME} MATCHES "Linux")
     message(FATAL_ERROR "${CMAKE_HOST_SYSTEM_NAME} host system name does not match Linux - Please select the correct folder for configuring project")
 endif()
 

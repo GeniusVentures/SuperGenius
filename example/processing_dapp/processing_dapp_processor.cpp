@@ -30,14 +30,10 @@ namespace
     class ProcessingCoreImpl : public ProcessingCore
     {
     public:
-        ProcessingCoreImpl(
-            std::shared_ptr<sgns::crdt::GlobalDB> db,
-            size_t subTaskProcessingTime,
-            size_t maximalProcessingSubTaskCount)
-            : m_db(db)
-            , m_subTaskProcessingTime(subTaskProcessingTime)
-            , m_maximalProcessingSubTaskCount(maximalProcessingSubTaskCount)
-            , m_processingSubTaskCount(0)
+        ProcessingCoreImpl( std::shared_ptr<sgns::crdt::GlobalDB> db, size_t subTaskProcessingTime,
+                            size_t maximalProcessingSubTaskCount ) :
+            m_db( std::move( db ) ), m_subTaskProcessingTime( subTaskProcessingTime ),
+            m_maximalProcessingSubTaskCount( maximalProcessingSubTaskCount ), m_processingSubTaskCount( 0 )
         {
         }
         bool SetProcessingTypeFromJson(std::string jsondata) override
@@ -274,7 +270,7 @@ int main(int argc, char* argv[])
     std::vector<std::string> pubsubBootstrapPeers;
     if (options->remote)
     {
-        pubsubBootstrapPeers = std::move(std::vector({ *options->remote }));
+        pubsubBootstrapPeers = std::vector( { *options->remote } );
     }
     pubs->Start(40001, pubsubBootstrapPeers);
 

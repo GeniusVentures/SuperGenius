@@ -33,7 +33,7 @@ namespace sgns::storage
     using Slice = ::ROCKSDB_NAMESPACE::Slice;
     using QueryResult = std::map<Buffer, Buffer>;
 
-    ~rocksdb() override = default;
+    ~rocksdb() override;
 
     /**
      * @brief Factory method to create an instance of rocksdb class.
@@ -86,7 +86,10 @@ namespace sgns::storage
       return "rocksdb";
     }
 
-    inline std::shared_ptr<DB> getDB() const { return db_; }
+    [[nodiscard]] std::shared_ptr<DB> getDB() const
+    {
+        return db_;
+    }
 
    private:
     std::shared_ptr<DB> db_;

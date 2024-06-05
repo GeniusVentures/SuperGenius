@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.12)
 
 # --------------------------------------------------------
 # if on Linux system, build the Android executables
-if (NOT ${CMAKE_HOST_SYSTEM_NAME} MATCHES "Linux")
+if(NOT ${CMAKE_HOST_SYSTEM_NAME} MATCHES "Linux")
     message(FATAL_ERROR "${CMAKE_HOST_SYSTEM_NAME} host system name does not match Linux for Android cross compiling - Please select the correct folder for configuring project")
 endif()
 
@@ -15,7 +15,7 @@ set(ANDROID_NATIVE_API_LEVEL 28)
 # --------------------------------------------------------
 # Check Android NDK version
 if(NOT CMAKE_ANDROID_NDK)
-	message(FATAL_ERROR "Cannot find Android NDK, make sure you pass -DCMAKE_ANDROID_NDK=[path_to_NDK]")
+    message(FATAL_ERROR "Cannot find Android NDK, make sure you pass -DCMAKE_ANDROID_NDK=[path_to_NDK]")
 endif()
 
 file(READ "${CMAKE_ANDROID_NDK}/source.properties" SOURCE_PROPERTIES_CONTENT)
@@ -25,19 +25,20 @@ set(CMAKE_ANDROID_NDK_VERSION_MINOR ${CMAKE_MATCH_2})
 
 message("--Android NDK version: ${CMAKE_ANDROID_NDK_VERSION}.${CMAKE_ANDROID_NDK_VERSION_MINOR}")
 
-if (NOT CMAKE_ANDROID_NDK_VERSION EQUAL 25)
-  message(FATAL_ERROR "Android NDK LTS Version (r25b) stable long term support version required")
+if(NOT CMAKE_ANDROID_NDK_VERSION EQUAL 25)
+    message(FATAL_ERROR "Android NDK LTS Version (r25b) stable long term support version required")
 endif()
 
 # --------------------------------------------------------
 # Check required input args
 if(NOT ANDROID_ABI)
-	message(FATAL_ERROR "Cannot find ANDROID_ABI, make sure you pass -DANDROID_ABI=[armeabi-v7a | arm64-v8a | x86 | x86_64]")
+    message(FATAL_ERROR "Cannot find ANDROID_ABI, make sure you pass -DANDROID_ABI=[armeabi-v7a | arm64-v8a | x86 | x86_64]")
 endif()
+
 set(CMAKE_ANDROID_ARCH_ABI ${ANDROID_ABI})
 
 if(NOT ANDROID_TOOLCHAIN)
-	message(FATAL_ERROR "Cannot find ANDROID_TOOLCHAIN, make sure you pass -DANDROID_TOOLCHAIN=[e.g clang]")
+    message(FATAL_ERROR "Cannot find ANDROID_TOOLCHAIN, make sure you pass -DANDROID_TOOLCHAIN=[e.g clang]")
 endif()
 
 # --------------------------------------------------------
@@ -47,8 +48,9 @@ set(CMAKE_ANDROID_STL_TYPE c++_static)
 # --------------------------------------------------------
 # Set toolchain file
 set(CMAKE_TOOLCHAIN_FILE "${CMAKE_ANDROID_NDK}/build/cmake/android.toolchain.cmake")
+
 if(NOT EXISTS ${CMAKE_TOOLCHAIN_FILE})
-  message(FATAL_ERROR "Android NDK toolchain file ${CMAKE_TOOLCHAIN_FILE} not found")
+    message(FATAL_ERROR "Android NDK toolchain file ${CMAKE_TOOLCHAIN_FILE} not found")
 endif()
 
 # --------------------------------------------------------

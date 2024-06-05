@@ -35,9 +35,11 @@ namespace sgns::blockchain
             return "KeyValueBlockHeaderRepository";
         }
 
-        std::string             GetHeaderPath() const;
-        std::vector<uint8_t>    GetHeaderSerializedData( const primitives::BlockHeader &header ) const;
-        primitives::BlockHeader GetBlockHeaderFromSerialized( const std::vector<uint8_t> &serialized_data ) const;
+        std::string GetHeaderPath() const;
+
+        static std::vector<uint8_t> GetHeaderSerializedData( const primitives::BlockHeader &header );
+
+        static primitives::BlockHeader GetBlockHeaderFromSerialized( const std::vector<uint8_t> &serialized_data );
 
     private:
         static constexpr std::string_view BLOCKCHAIN_PATH = "blockchain/";

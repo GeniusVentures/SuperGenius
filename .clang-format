@@ -13,6 +13,8 @@ AlignConsecutiveShortCaseStatements:
   Enabled: true
 BraceWrapping:
   BeforeLambdaBody: true
+BinPackArguments: false
+BinPackParameters: false
 BreakConstructorInitializers: AfterColon
 BreakStringLiterals: false
 ColumnLimit: 120
