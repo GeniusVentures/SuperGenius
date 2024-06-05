@@ -82,7 +82,7 @@ namespace sgns::blockchain
         return block_header_key_prefix;
     }
 
-    std::vector<uint8_t> KeyValueBlockHeaderRepository::GetHeaderSerializedData( const primitives::BlockHeader &header ) const
+    std::vector<uint8_t> KeyValueBlockHeaderRepository::GetHeaderSerializedData( const primitives::BlockHeader &header )
     {
         SGBlocks::BlockHeaderData header_proto;
         header_proto.set_parent_hash( header.parent_hash.toReadableString() );
