@@ -3,7 +3,7 @@
 
 #include "authorship/block_builder.hpp"
 #include "primitives/block_id.hpp"
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
 
 namespace sgns::authorship {
 

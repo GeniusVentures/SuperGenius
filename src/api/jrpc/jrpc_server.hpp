@@ -6,7 +6,7 @@
 #include <jsonrpc-lean/value.h>
 
 #include <functional>
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
 
 namespace sgns::api {
 

@@ -4,7 +4,7 @@
 #include <gsl/span>
 #include <outcome/outcome.hpp>
 #include "crypto/ed25519_types.hpp"
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
 
 namespace sgns::crypto {
   enum class ED25519ProviderError {

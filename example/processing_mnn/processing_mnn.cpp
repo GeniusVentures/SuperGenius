@@ -2,7 +2,6 @@
 //#define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "processing_mnn.hpp"
 #include <rapidjson/document.h>
-#include "Singleton.hpp"
 #include "FileManager.hpp"
 #include "URLStringUtil.h"
 using GossipPubSub = sgns::ipfs_pubsub::GossipPubSub;

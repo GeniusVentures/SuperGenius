@@ -4,7 +4,7 @@
 #define SUPERGENIUS_GENERIC_STORAGE_HPP
 
 #include "storage/face/generic_maps.hpp"
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
 
 namespace sgns::storage::face {
 

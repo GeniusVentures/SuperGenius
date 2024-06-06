@@ -7,7 +7,7 @@
 
 #include "verification/production/common.hpp"
 #include "verification/production/types/next_epoch_descriptor.hpp"
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
 
 namespace sgns::verification {
   /**

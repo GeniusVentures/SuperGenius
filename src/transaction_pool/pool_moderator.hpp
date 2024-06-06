@@ -4,7 +4,7 @@
 
 #include "primitives/block_id.hpp"
 #include "primitives/transaction.hpp"
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
 
 namespace sgns::transaction_pool {
 

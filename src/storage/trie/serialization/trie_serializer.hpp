@@ -5,7 +5,7 @@
 
 #include "outcome/outcome.hpp"
 #include "storage/trie/supergenius_trie/supergenius_trie.hpp"
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
 
 namespace sgns::storage::trie {
 

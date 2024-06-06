@@ -5,7 +5,7 @@
 #include "base/blob.hpp"
 #include "primitives/extrinsic.hpp"
 #include "primitives/author_api_primitives.hpp"
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
 
 namespace sgns::api {
   class AuthorApi : public IComponent {

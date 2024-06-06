@@ -8,7 +8,7 @@ extern "C" {
 #include <gsl/span>
 
 #include "base/blob.hpp"
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
 
 namespace sgns::crypto {
   namespace constants::sr25519 {

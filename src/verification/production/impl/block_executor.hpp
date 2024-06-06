@@ -13,7 +13,7 @@
 #include "primitives/production_configuration.hpp"
 #include "primitives/block_header.hpp"
 #include "transaction_pool/transaction_pool.hpp"
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
 
 namespace sgns::verification {
 

@@ -9,7 +9,7 @@
 #include "outcome/outcome.hpp"
 #include "primitives/common.hpp"
 #include "primitives/version.hpp"
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
 
 namespace sgns::api {
 

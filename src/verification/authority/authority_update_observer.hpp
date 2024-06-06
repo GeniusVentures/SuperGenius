@@ -4,7 +4,7 @@
 #include <outcome/outcome.hpp>
 
 #include "primitives/digest.hpp"
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
 
 namespace sgns::authority {
   class AuthorityUpdateObserver : public IComponent {

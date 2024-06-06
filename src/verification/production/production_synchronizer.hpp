@@ -6,7 +6,7 @@
 #include "primitives/authority.hpp"
 #include "primitives/block.hpp"
 #include "primitives/block_id.hpp"
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
 
 namespace sgns::verification {
 

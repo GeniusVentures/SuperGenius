@@ -5,7 +5,7 @@
 #include "base/blob.hpp"
 #include "outcome/outcome.hpp"
 #include "primitives/extrinsic.hpp"
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
 
 namespace sgns::network {
   class ExtrinsicObserver : public IComponent {

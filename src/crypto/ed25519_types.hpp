@@ -3,7 +3,7 @@
 
 #include <ed25519/ed25519.h>
 #include "base/blob.hpp"
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
 
 namespace sgns::crypto {
   namespace constants::ed25519 {

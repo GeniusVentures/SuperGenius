@@ -10,7 +10,7 @@
 #include "api/transport/rpc_io_context.hpp"
 #include "application/app_state_manager.hpp"
 #include "base/logger.hpp"
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
 
 using sgns::application::AppStateManager;
 

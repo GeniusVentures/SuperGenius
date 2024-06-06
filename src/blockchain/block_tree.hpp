@@ -10,7 +10,7 @@
 #include "primitives/block_id.hpp"
 #include "primitives/common.hpp"
 #include "primitives/justification.hpp"
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
 
 namespace sgns::blockchain {
   /**
