@@ -8,7 +8,7 @@
 #define _AUTHOR_API_FACTORY_HPP_
 
 #include "api/service/author/impl/author_api_impl.hpp"
-#include "integration/CComponentFactory.hpp"
+#include "singleton/CComponentFactory.hpp"
 #include "transaction_pool/transaction_pool.hpp"
 #include "crypto/hasher.hpp"
 #include "network/extrinsic_gossiper.hpp"

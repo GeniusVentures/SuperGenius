@@ -7,7 +7,7 @@
 #ifndef _EXTRINSIC_OBSERVER_FACTORY_HPP_
 #define _EXTRINSIC_OBSERVER_FACTORY_HPP_
 #include "network/impl/extrinsic_observer_impl.hpp"
-#include "integration/CComponentFactory.hpp"
+#include "singleton/CComponentFactory.hpp"
 #include "api/service/author/author_api.hpp"
 
 class ExtrinsicObserverFactory

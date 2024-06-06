@@ -8,7 +8,7 @@
 #define _BLOCK_TREE_FACTORY_HPP_
 
 #include "blockchain/impl/block_tree_impl.hpp"
-#include "integration/CComponentFactory.hpp"
+#include "singleton/CComponentFactory.hpp"
 #include "blockchain/block_header_repository.hpp"
 #include "blockchain/block_storage.hpp"
 #include "network/extrinsic_observer.hpp"

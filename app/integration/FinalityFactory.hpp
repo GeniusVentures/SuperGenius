@@ -8,7 +8,7 @@
 #define _FINALITY_FACTORY_HPP_
 
 #include "verification/finality/impl/finality_impl.hpp"
-#include "integration/CComponentFactory.hpp"
+#include "singleton/CComponentFactory.hpp"
 #include "application/app_state_manager.hpp"
 #include "verification/finality/environment.hpp"
 #include "storage/buffer_map_types.hpp"

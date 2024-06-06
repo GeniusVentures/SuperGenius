@@ -9,7 +9,7 @@
 #define _BLOCK_HEADER_REPOSITORY_FACTORY_HPP_
 
 #include "blockchain/impl/key_value_block_header_repository.hpp"
-#include "integration/CComponentFactory.hpp"
+#include "singleton/CComponentFactory.hpp"
 
 class BlockHeaderRepositoryFactory
 {

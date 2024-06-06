@@ -8,7 +8,7 @@
 #define _BLOCK_STORAGE_FACTORY_HPP_
 
 #include "blockchain/block_storage.hpp"
-#include "integration/CComponentFactory.hpp"
+#include "singleton/CComponentFactory.hpp"
 #include "storage/trie/trie_storage.hpp"
 #include "blockchain/impl/key_value_block_storage.hpp"
 #include "application/key_storage.hpp"
