@@ -14,6 +14,8 @@
 #include "processing/processing_subtask_enqueuer_impl.hpp"
 #include "processing/processing_subtask_result_storage.hpp"
 #include "processing/processors/processing_processor_mnn_posenet.hpp"
+#include "singleton/CComponentFactory.hpp"
+#include "local_secure_storage/ISecureStorage.hpp"
 
 #ifndef __cplusplus
 extern "C"
@@ -50,6 +52,14 @@ namespace sgns
         node_base_addr_( priv_key_data ),                                                               //
         dev_config_( dev_config )                                                                       //
     {
+        auto component_factory = SINGLETONINSTANCE( CComponentFactory );
+        auto result = component_factory->GetComponent( "LocalSecureStorage");
+        if ( !result )
+        {
+            throw std::runtime_error( "Initialize LocalSecureStorage first" );
+        }
+        auto secure_storage = std::dynamic_pointer_cast<ISecureStorage>( result.value() );
+        secure_storage->Load("sgns_key");
         logging_system = std::make_shared<soralog::LoggingSystem>( std::make_shared<soralog::ConfiguratorFromYAML>(
             // Original LibP2P logging config
             std::make_shared<libp2p::log::Configurator>(),
@@ -105,7 +115,8 @@ namespace sgns
         pubsub_->Start( 40001 + GenerateRandomPort( node_base_addr_ ), { pubsub_->GetLocalAddress() } , addresses);
 
         globaldb_ = std::make_shared<crdt::GlobalDB>(
-            io_, ( boost::format( "SuperGNUSNode.TestNet.%s" ) % node_base_addr_ ).str(),
+            io_,
+            ( boost::format( "SuperGNUSNode.TestNet.%s" ) % node_base_addr_ ).str(),
             40010 + GenerateRandomPort( node_base_addr_ ),
             std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_, std::string( PROCESSING_CHANNEL ) ) , addresses);
 
@@ -144,7 +155,11 @@ namespace sgns
         }
         block_storage_       = std::move( maybe_block_storage.value() );
         transaction_manager_ = std::make_shared<TransactionManager>(
-            globaldb_, io_, account_, hasher_, block_storage_,
+            globaldb_,
+            io_,
+            account_,
+            hasher_,
+            block_storage_,
             [this]( const std::string &var, const std::set<std::string> &vars ) { ProcessingFinished( var, vars ); } );
 
         transaction_manager_->Start();
@@ -242,10 +257,8 @@ namespace sgns
                 task_queue_->EnqueueTask( task, subTasks );
             }
 
-            
-
-            transaction_manager_->HoldEscrow( funds, nSubTasks, uint256_t{ std::string( dev_config_.Addr ) },
-                                              dev_config_.Cut, image_path );
+            transaction_manager_->HoldEscrow(
+                funds, nSubTasks, uint256_t{ std::string( dev_config_.Addr ) }, dev_config_.Cut, image_path );
         }
     }
 
@@ -279,14 +292,20 @@ namespace sgns
         string fileURL = "https://ipfs.filebase.io/ipfs/" + cid + "/settings.json";
         std::cout << "FILE URLL: " << fileURL << std::endl;
         auto data = FileManager::GetInstance().LoadASync(
-            fileURL, false, false, ioc, [ioc](const sgns::AsyncError::CustomResult& status) { 
-                if (status.has_value())
+            fileURL,
+            false,
+            false,
+            ioc,
+            [ioc]( const sgns::AsyncError::CustomResult &status )
+            {
+                if ( status.has_value() )
                 {
                     std::cout << "Success: " << status.value().message << std::endl;
                 }
-                else {
+                else
+                {
                     std::cout << "Error: " << status.error() << std::endl;
-                }
+                };
             },
             [ioc, &mainbuffers](
                 std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers )
@@ -303,8 +322,8 @@ namespace sgns
                     //Process settings json
 
                     mainbuffers->first.insert( mainbuffers->first.end(), buffers->first.begin(), buffers->first.end() );
-                    mainbuffers->second.insert( mainbuffers->second.end(), buffers->second.begin(),
-                                                buffers->second.end() );
+                    mainbuffers->second.insert(
+                        mainbuffers->second.end(), buffers->second.begin(), buffers->second.end() );
                 }
             },
             "file" );
@@ -352,12 +371,18 @@ namespace sgns
         string            imageUrl = "https://ipfs.filebase.io/ipfs/" + cid + "/" + inputImage;
         std::vector<char> imageData;
         auto              data2 = FileManager::GetInstance().LoadASync(
-            imageUrl, false, false, ioc, [ioc](const sgns::AsyncError::CustomResult& status) { 
-                if (status.has_value())
+            imageUrl,
+            false,
+            false,
+            ioc,
+            [ioc]( const sgns::AsyncError::CustomResult &status )
+            {
+                if ( status.has_value() )
                 {
                     std::cout << "Success: " << status.value().message << std::endl;
                 }
-                else {
+                else
+                {
                     std::cout << "Error: " << status.error() << std::endl;
                 }
             },
@@ -382,8 +407,8 @@ namespace sgns
         ioc->reset();
         ioc->run();
         std::vector<uint8_t> output( imageData.size() );
-        std::transform( imageData.begin(), imageData.end(), output.begin(),
-                        []( char c ) { return static_cast<uint8_t>( c ); } );
+        std::transform(
+            imageData.begin(), imageData.end(), output.begin(), []( char c ) { return static_cast<uint8_t>( c ); } );
         return output;
     }
 
