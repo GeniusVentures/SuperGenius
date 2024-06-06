@@ -8,8 +8,8 @@
 #define _CCOMPONENT_FACTORY_HPP_
 
 #include <unordered_map>
-#include "IComponentFactory.hpp"
-#include "Singleton.hpp"
+#include "singleton/IComponentFactory.hpp"
+#include "singleton/Singleton.hpp"
 
 class CComponentFactory : public IComponentFactory
 {
@@ -19,10 +19,12 @@ private:
     std::unordered_map<std::string, std::shared_ptr<IComponent>> ComponentTable;
 
 public:
-    void Register( std::shared_ptr<IComponent> component, const std::string &type, const boost::optional<std::string> &variant ) override;
+    void Register( std::shared_ptr<IComponent>         component,
+                   const std::string                  &type,
+                   const boost::optional<std::string> &variant = boost::none ) override;
 
-    boost::optional<std::shared_ptr<IComponent>> GetComponent( const std::string &type, const boost::optional<std::string> &variant ) override;
-
+    outcome::result<std::shared_ptr<IComponent>> GetComponent(
+        const std::string &type, const boost::optional<std::string> &variant = boost::none ) override;
 };
 
 #endif

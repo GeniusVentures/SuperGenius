@@ -396,6 +396,8 @@ install_hfile(${PROJECT_ROOT}/src/transaction_pool)
 install_hfile(${PROJECT_ROOT}/src/verification)
 install_hfile(${PROJECT_ROOT}/src/account)
 install_hfile(${PROJECT_ROOT}/app/integration)
+install_hfile(${PROJECT_ROOT}/src/local_secure_storage)
+install_hfile(${PROJECT_ROOT}/src/singleton)
 
 # ## install proto header files ###
 install_hfile(${CMAKE_CURRENT_BINARY_DIR}/generated/crdt)
