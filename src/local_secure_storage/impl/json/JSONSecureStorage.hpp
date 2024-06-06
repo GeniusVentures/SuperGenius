@@ -22,7 +22,7 @@ namespace sgns
 
         std::string GetName() override
         {
-            return "JSONSecureStorage";
+            return "LocalSecureStorage";
         }
 
         static JSONSecureStorage &GetInstance();
