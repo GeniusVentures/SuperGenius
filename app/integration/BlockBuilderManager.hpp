@@ -9,7 +9,7 @@
 
 #include "authorship/impl/block_builder_factory_impl.hpp"
 #include "authorship/impl/block_builder_impl.hpp"
-#include "integration/CComponentFactory.hpp"
+#include "singleton/CComponentFactory.hpp"
 #include "blockchain/block_header_repository.hpp"
 
 namespace sgns

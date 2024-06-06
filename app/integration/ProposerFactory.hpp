@@ -8,7 +8,7 @@
 #define _PROPOSER_FACTORY_HPP_
 
 #include "authorship/impl/proposer_impl.hpp"
-#include "integration/CComponentFactory.hpp"
+#include "singleton/CComponentFactory.hpp"
 #include "transaction_pool/transaction_pool.hpp"
 
 class ProposerFactory

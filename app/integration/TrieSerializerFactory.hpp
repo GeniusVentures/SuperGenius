@@ -8,7 +8,7 @@
 #define _TRIE_SERIALIZER_FACTORY_HPP_
 
 #include "storage/trie/serialization/trie_serializer_impl.hpp"
-#include "integration/CComponentFactory.hpp"
+#include "singleton/CComponentFactory.hpp"
 
 class TrieSerializerFactory
 {

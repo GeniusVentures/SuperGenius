@@ -8,7 +8,7 @@
 #define _OWN_PEER_INFO_FACTORY_HPP_
 
 #include "network/types/own_peer_info.hpp"
-#include "integration/CComponentFactory.hpp"
+#include "singleton/CComponentFactory.hpp"
 #include "application/key_storage.hpp"
 #include <libp2p/injector/host_injector.hpp>
 #include "base/outcome_throw.hpp"

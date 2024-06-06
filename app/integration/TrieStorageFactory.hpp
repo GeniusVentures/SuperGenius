@@ -13,7 +13,7 @@
 #include "storage/trie/serialization/trie_serializer.hpp"
 #include "storage/changes_trie/changes_tracker.hpp"
 #include "application/configuration_storage.hpp"
-#include "integration/CComponentFactory.hpp"
+#include "singleton/CComponentFactory.hpp"
 #include "base/outcome_throw.hpp"
 
 class TrieStorageFactory

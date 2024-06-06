@@ -8,7 +8,7 @@
 #define _AUTHORITY_UPDATE_OBSERVER_FACTORY_HPP_
 
 #include "verification/authority/impl/authority_manager_impl.hpp"
-#include "integration/CComponentFactory.hpp"
+#include "singleton/CComponentFactory.hpp"
 #include "application/app_state_manager.hpp"
 #include "blockchain/block_tree.hpp"
 #include "storage/buffer_map_types.hpp"

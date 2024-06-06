@@ -8,7 +8,7 @@
 #ifndef _PRODUCTION_FACTORY_HPP_
 #define _PRODUCTION_FACTORY_HPP_
 
-#include "integration/CComponentFactory.hpp"
+#include "singleton/CComponentFactory.hpp"
 #include "verification/production/impl/production_impl.hpp"
 #include "application/app_state_manager.hpp"
 #include "verification/production/production_lottery.hpp"

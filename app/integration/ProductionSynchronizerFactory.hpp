@@ -7,7 +7,7 @@
 #ifndef _PRODUCTION_SYNCHRONIZER_FACTORY_HPP_
 #define _PRODUCTION_SYNCHRONIZER_FACTORY_HPP_
 #include "verification/production/impl/production_synchronizer_impl.hpp"
-#include "integration/CComponentFactory.hpp"
+#include "singleton/CComponentFactory.hpp"
 #include "application/configuration_storage.hpp"
 #include "blockchain/block_tree.hpp"
 #include "blockchain/block_header_repository.hpp"

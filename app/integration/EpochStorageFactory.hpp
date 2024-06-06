@@ -7,7 +7,7 @@
 #ifndef _EPOCH_STORAGE_HPP_
 #define _EPOCH_STORAGE_HPP_
 #include "verification/production/impl/epoch_storage_impl.hpp"
-#include "integration/CComponentFactory.hpp"
+#include "singleton/CComponentFactory.hpp"
 #include "storage/buffer_map_types.hpp"
 
 class EpochStorageFactory

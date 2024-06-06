@@ -8,7 +8,7 @@
 #define _BLOCK_VALIDATOR_FACTORY_HPP_
 
 #include "verification/validation/production_block_validator.hpp"
-#include "integration/CComponentFactory.hpp"
+#include "singleton/CComponentFactory.hpp"
 #include "blockchain/block_tree.hpp"
 #include "crypto/hasher.hpp"
 #include "crypto/sr25519_provider.hpp"

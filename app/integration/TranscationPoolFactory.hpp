@@ -8,7 +8,7 @@
 #define _TRANSACTION_POOL_FACTORY_HPP_
 
 #include "transaction_pool/impl/transaction_pool_impl.hpp"
-#include "integration/CComponentFactory.hpp"
+#include "singleton/CComponentFactory.hpp"
 #include "transaction_pool/pool_moderator.hpp"
 #include "blockchain/block_header_repository.hpp"
 

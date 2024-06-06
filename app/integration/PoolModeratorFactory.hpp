@@ -8,7 +8,7 @@
 #define _POOL_MODERATOR_FACTORY_HPP_
 
 #include "transaction_pool/impl/pool_moderator_impl.hpp"
-#include "integration/CComponentFactory.hpp"
+#include "singleton/CComponentFactory.hpp"
 #include "clock/clock.hpp"
 
 class PoolModeratorFactory
