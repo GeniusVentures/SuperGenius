@@ -110,6 +110,13 @@ find_package(yaml-cpp CONFIG REQUIRED)
 include_directories(${yaml-cpp_INCLUDE_DIR})
 
 # --------------------------------------------------------
+# Set config of delta-enabled-crdts
+set(delta-enabled-crdts_DIR "${_THIRDPARTY_BUILD_DIR}/delta-enabled-crdts/lib/cmake/delta-enabled-crdts")
+set(delta-enabled-crdts_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/delta-enabled-crdts/include")
+find_package(delta-enabled-crdts CONFIG REQUIRED)
+include_directories(${delta-enabled-crdts_INCLUDE_DIR})
+
+# --------------------------------------------------------
 # Set config of  tsl_hat_trie
 set(tsl_hat_trie_DIR "${_THIRDPARTY_BUILD_DIR}/tsl_hat_trie/lib/cmake/tsl_hat_trie")
 set(tsl_hat_trie_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/tsl_hat_trie/include")
