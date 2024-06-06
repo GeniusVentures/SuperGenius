@@ -7,7 +7,9 @@
 #include <cstdio>
 #include <array>
 #include <rapidjson/document.h>
+#include <rapidjson/writer.h>
 #include <rapidjson/filereadstream.h>
+#include <rapidjson/filewritestream.h>
 #include "singleton/CComponentFactory.hpp"
 #include "local_secure_storage/impl/json/JSONSecureStorage.hpp"
 
@@ -53,14 +55,31 @@ namespace sgns
 
     outcome::result<void> JSONSecureStorage::Save( const std::string &key, const SecureBufferType &buffer )
     {
+        auto file = std::fopen( "secure_storage.json", "w" );
+        if ( !file )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
+
+
+        std::array<char, 512>                         buff{};
+        rapidjson::FileWriteStream                    output_stream( file, buff.data(), buff.size() );
+        rapidjson::Writer<rapidjson::FileWriteStream> writer( output_stream );
+        writer.StartObject();
+        writer.Key( key.data() );
+        writer.String( buffer.data() );
+        writer.EndObject();
+
+        std::fclose( file );
+
         return outcome::success();
     }
 
     JSONSecureStorage JSONSecureStorage::Create()
     {
         JSONSecureStorage new_instance;
-        auto component_factory = SINGLETONINSTANCE( CComponentFactory );
-        component_factory->Register( std::make_shared<JSONSecureStorage>(new_instance), "LocalSecureStorage" );
+        auto              component_factory = SINGLETONINSTANCE( CComponentFactory );
+        component_factory->Register( std::make_shared<JSONSecureStorage>( new_instance ), "LocalSecureStorage" );
         return new_instance;
     }
 

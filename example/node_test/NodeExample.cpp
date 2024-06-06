@@ -15,7 +15,7 @@
 #include <boost/format.hpp>
 #include <boost/asio.hpp>
 #include "account/GeniusNode.hpp"
-
+#include "local_secure_storage/impl/json/JSONSecureStorage.hpp"
 std::mutex              keyboard_mutex;
 std::condition_variable cv;
 std::queue<std::string> events;

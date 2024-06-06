@@ -59,7 +59,26 @@ namespace sgns
             throw std::runtime_error( "Initialize LocalSecureStorage first" );
         }
         auto secure_storage = std::dynamic_pointer_cast<ISecureStorage>( result.value() );
-        secure_storage->Load("sgns_key");
+        auto load_res = secure_storage->Load("sgns_key");
+
+        uint256_t key_seed;
+        if (!load_res)
+        {
+            //Create file/key
+            //key_seed = ProofSystemGetRandomSeed(); TODO - Organize KDF stuff in another repo
+            key_seed = 0xdeadbeef;
+                        std::ostringstream oss;
+            oss << std::hex << key_seed;
+
+            std::string key_string = "0x" + oss.str();
+            secure_storage->Save("sgns_key", key_string);
+        }
+        else
+        {   
+            key_seed = uint256_t{load_res.value()};
+        }
+
+        //node_base_addr_ = KDFGenerate(key_seed);  TODO - Organize KDF stuff in another repo
         logging_system = std::make_shared<soralog::LoggingSystem>( std::make_shared<soralog::ConfiguratorFromYAML>(
             // Original LibP2P logging config
             std::make_shared<libp2p::log::Configurator>(),
