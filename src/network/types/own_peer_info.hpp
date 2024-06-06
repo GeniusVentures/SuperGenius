@@ -4,7 +4,7 @@
 #define SUPERGENIUS_SRC_NETWORK_TYPES_OWNPEERINFO
 
 #include <libp2p/peer/peer_info.hpp>
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
 
 namespace sgns::network {
 

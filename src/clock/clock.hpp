@@ -2,7 +2,7 @@
 #define SUPERGENIUS_CLOCK_HPP
 
 #include <chrono>
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
 
 namespace sgns::clock {
 

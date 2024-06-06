@@ -14,7 +14,7 @@
 #include "base/logger.hpp"
 #include "primitives/common.hpp"
 #include "subscription/subscriber.hpp"
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
 
 namespace sgns::api {
 

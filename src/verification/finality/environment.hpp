@@ -6,7 +6,7 @@
 #include "verification/finality/common.hpp"
 #include "verification/finality/completed_round.hpp"
 #include "verification/finality/structs.hpp"
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
 
 namespace sgns::verification::finality {
 

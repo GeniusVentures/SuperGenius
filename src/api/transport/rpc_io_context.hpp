@@ -3,7 +3,7 @@
 #define SUPERGENIUS_SRC_API_RPC_IO_CONTEXT_HPP
 
 #include <boost/asio/io_context.hpp>
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
 
 namespace sgns::api {
 

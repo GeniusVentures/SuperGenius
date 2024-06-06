@@ -6,7 +6,7 @@
 #include "base/blob.hpp"  // for Hash256
 #include "base/buffer.hpp"
 #include "storage/trie/node.hpp"
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
 
 namespace sgns::storage::trie {
 

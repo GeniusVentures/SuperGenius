@@ -2,7 +2,7 @@
 #define SUPERGENIUS_SRC_HASHER_HASHER_HPP_
 
 #include "base/blob.hpp"
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
 
 namespace sgns::crypto {
   class Hasher : public IComponent {

@@ -8,7 +8,7 @@
 #include "api/transport/rpc_io_context.hpp"
 #include "api/transport/session.hpp"
 #include "outcome/outcome.hpp"
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
 
 namespace sgns::api {
   /**

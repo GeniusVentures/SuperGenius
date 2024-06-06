@@ -4,7 +4,7 @@
 #define SUPERGENIUS_ROUTER_HPP
 
 #include <libp2p/connection/stream.hpp>
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
 
 namespace sgns::network {
   /**

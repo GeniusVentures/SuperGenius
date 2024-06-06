@@ -3,7 +3,7 @@
 #define SUPERGENIUS_SRC_VERIFICATION_FINALITY
 
 #include "verification/finality/round_observer.hpp"
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
 
 namespace sgns::verification::finality {
 

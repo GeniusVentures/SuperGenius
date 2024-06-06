@@ -58,7 +58,7 @@
 #include <boost/filesystem.hpp>
 #include <libp2p/injector/host_injector.hpp>
 #include "clock/impl/clock_impl.hpp"
-#include "integration/CComponentFactory.hpp"
+#include "singleton/CComponentFactory.hpp"
 
 namespace sgns::application
 {

@@ -5,7 +5,7 @@
 
 #include "base/blob.hpp"
 #include "storage/trie/trie_batches.hpp"
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
 
 namespace sgns::storage::trie {
 
