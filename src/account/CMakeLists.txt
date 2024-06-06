@@ -11,6 +11,8 @@ add_library(sgns_account
 )
 
 target_link_libraries(sgns_account
+    json_secure_storage
+    component_factory
     processing_service
     block_header_repository
     block_storage

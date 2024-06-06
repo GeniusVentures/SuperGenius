@@ -12,17 +12,20 @@
 #include <vector>
 #include <cstdint>
 #include "outcome/outcome.hpp"
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
 
-class ISecureStorage : public IComponent, public std::enable_shared_from_this<ISecureStorage>
+namespace sgns
 {
-public:
-    virtual ~ISecureStorage() = default;
+    class ISecureStorage : public IComponent, public std::enable_shared_from_this<ISecureStorage>
+    {
+    public:
+        virtual ~ISecureStorage() = default;
 
-    using SecureBufferType = std::string;
+        using SecureBufferType = std::string;
 
-    virtual outcome::result<SecureBufferType> Load( const std::string &key )                                 = 0;
-    virtual outcome::result<void>             Save( const std::string &key, const SecureBufferType &buffer ) = 0;
-};
+        virtual outcome::result<SecureBufferType> Load( const std::string &key )                                 = 0;
+        virtual outcome::result<void>             Save( const std::string &key, const SecureBufferType &buffer ) = 0;
+    };
+}
 
 #endif

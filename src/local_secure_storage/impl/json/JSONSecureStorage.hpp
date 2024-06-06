@@ -10,20 +10,39 @@
 
 #include "local_secure_storage/ISecureStorage.hpp"
 
-class JSONSecureStorage : public ISecureStorage
+namespace sgns
 {
-private:
-    JSONSecureStorage();
 
-public:
-    ~JSONSecureStorage() = default;
-    outcome::result<SecureBufferType> Load( const std::string &key ) override;
-    outcome::result<void>             Save( const std::string &key, const SecureBufferType &buffer ) override;
-
-    std::string GetName() override
+    class JSONSecureStorage : public ISecureStorage
     {
-        return "JSONSecureStorage";
-    }
-};
+    public:
+        ~JSONSecureStorage() = default;
+        outcome::result<SecureBufferType> Load( const std::string &key ) override;
+        outcome::result<void>             Save( const std::string &key, const SecureBufferType &buffer ) override;
+
+        std::string GetName() override
+        {
+            return "JSONSecureStorage";
+        }
+
+        static JSONSecureStorage &GetInstance();
+
+    private:
+        friend struct JSONRegister;
+        static void RegisterComponent();
+        JSONSecureStorage() = default;
+        static JSONSecureStorage Create();
+    };
+
+    struct JSONRegister
+    {
+        JSONRegister()
+        {
+            JSONSecureStorage::RegisterComponent();
+        }
+    };
+
+    static JSONRegister JSONRegister;
+}
 
 #endif
