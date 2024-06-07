@@ -79,7 +79,6 @@ namespace sgns
         std::thread io_thread;
 
         DevConfig_st2 dev_config_;
-        std::string   node_base_addr_;
 
         static constexpr std::string_view db_path_                = "bc-%d/";
         static constexpr std::uint16_t    MAIN_NET                = 369;

@@ -14,14 +14,12 @@
 #include "processing/processing_subtask_enqueuer_impl.hpp"
 #include "processing/processing_subtask_result_storage.hpp"
 #include "processing/processors/processing_processor_mnn_posenet.hpp"
-#include "singleton/CComponentFactory.hpp"
-#include "local_secure_storage/ISecureStorage.hpp"
+
 
 #ifndef __cplusplus
 extern "C"
 {
 #endif
-    extern AccountKey   ACCOUNT_KEY;
     extern DevConfig_st DEV_CONFIG;
 #ifndef __cplusplus
 }
@@ -46,39 +44,12 @@ namespace br = boost::random;
 
 namespace sgns
 {
-    GeniusNode::GeniusNode( const AccountKey &priv_key_data, const DevConfig_st &dev_config ) :
-        account_( std::make_shared<GeniusAccount>( uint256_t{ std::string( priv_key_data ) }, 0, 0 ) ), //
+    GeniusNode::GeniusNode( const DevConfig_st &dev_config ) :
+        account_( std::make_shared<GeniusAccount>( 0 ) ), //
         io_( std::make_shared<boost::asio::io_context>() ),                                             //
-        node_base_addr_( priv_key_data ),                                                               //
         dev_config_( dev_config )                                                                       //
     {
-        auto component_factory = SINGLETONINSTANCE( CComponentFactory );
-        auto result = component_factory->GetComponent( "LocalSecureStorage");
-        if ( !result )
-        {
-            throw std::runtime_error( "Initialize LocalSecureStorage first" );
-        }
-        auto secure_storage = std::dynamic_pointer_cast<ISecureStorage>( result.value() );
-        auto load_res = secure_storage->Load("sgns_key");
 
-        uint256_t key_seed;
-        if (!load_res)
-        {
-            //Create file/key
-            //key_seed = ProofSystemGetRandomSeed(); TODO - Organize KDF stuff in another repo
-            key_seed = 0xdeadbeef;
-                        std::ostringstream oss;
-            oss << std::hex << key_seed;
-
-            std::string key_string = "0x" + oss.str();
-            secure_storage->Save("sgns_key", key_string);
-        }
-        else
-        {   
-            key_seed = uint256_t{load_res.value()};
-        }
-
-        //node_base_addr_ = KDFGenerate(key_seed);  TODO - Organize KDF stuff in another repo
         logging_system = std::make_shared<soralog::LoggingSystem>( std::make_shared<soralog::ConfiguratorFromYAML>(
             // Original LibP2P logging config
             std::make_shared<libp2p::log::Configurator>(),
@@ -127,16 +98,16 @@ namespace sgns
         //auto loggerBroadcaster = base::createLogger( "PubSubBroadcasterExt" );
         //loggerBroadcaster->set_level( spdlog::level::debug );
 
-        auto pubsubKeyPath = ( boost::format( "SuperGNUSNode.TestNet.%s/pubs_processor" ) % node_base_addr_ ).str();
+        auto pubsubKeyPath = ( boost::format( "SuperGNUSNode.TestNet.%s/pubs_processor" ) % account_->GetAddress<std::string>() ).str();
 
         pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
             crdt::KeyPairFileStorage( pubsubKeyPath ).GetKeyPair().value() );
-        pubsub_->Start( 40001 + GenerateRandomPort( node_base_addr_ ), { pubsub_->GetLocalAddress() } , addresses);
+        pubsub_->Start( 40001 + GenerateRandomPort( account_->GetAddress<std::string>() ), { pubsub_->GetLocalAddress() } , addresses);
 
         globaldb_ = std::make_shared<crdt::GlobalDB>(
             io_,
-            ( boost::format( "SuperGNUSNode.TestNet.%s" ) % node_base_addr_ ).str(),
-            40010 + GenerateRandomPort( node_base_addr_ ),
+            ( boost::format( "SuperGNUSNode.TestNet.%s" ) % account_->GetAddress<std::string>() ).str(),
+            40010 + GenerateRandomPort( account_->GetAddress<std::string>() ),
             std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_, std::string( PROCESSING_CHANNEL ) ) , addresses);
 
         globaldb_->Init( crdt::CrdtOptions::DefaultOptions() );

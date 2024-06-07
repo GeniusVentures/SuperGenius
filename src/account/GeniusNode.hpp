@@ -36,11 +36,11 @@ extern "C"
 #endif
     typedef struct DevConfig
     {
-        char  Addr[255];
-        float Cut;
+        char   Addr[255];
+        double Cut;
+        double TokenValueInGNUS;
+        int    TokenID;
     } DevConfig_st;
-
-    typedef char AccountKey[255];
 #ifndef __cplusplus
 }
 #endif
@@ -50,7 +50,7 @@ namespace sgns
     class GeniusNode : public IComponent
     {
     public:
-        GeniusNode( const AccountKey &priv_key_data, const DevConfig_st &dev_config );
+        GeniusNode( const DevConfig_st &dev_config );
         //static GeniusNode &GetInstance();
         ~GeniusNode();
 
@@ -86,7 +86,6 @@ namespace sgns
         std::thread io_thread;
 
         DevConfig_st dev_config_;
-        std::string  node_base_addr_;
 
         uint16_t GenerateRandomPort( const std::string &address );
 

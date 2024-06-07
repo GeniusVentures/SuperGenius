@@ -66,8 +66,11 @@ namespace sgns
         rapidjson::FileWriteStream                    output_stream( file, buff.data(), buff.size() );
         rapidjson::Writer<rapidjson::FileWriteStream> writer( output_stream );
         writer.StartObject();
+        writer.Key( "GeniusAccount");
+        writer.StartObject();
         writer.Key( key.data() );
         writer.String( buffer.data() );
+        writer.EndObject();
         writer.EndObject();
 
         std::fclose( file );

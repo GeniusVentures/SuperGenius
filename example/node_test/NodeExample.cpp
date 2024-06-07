@@ -121,20 +121,16 @@ void process_events( sgns::GeniusNode &genius_node )
 }
 
 //This is not used at the moment. Static initialization order fiasco issues on node
-//AccountKey   ACCOUNT_KEY = "1";
-//DevConfig_st DEV_CONFIG{ "0xcafe", 0.65f };
+//DevConfig_st DEV_CONFIG{ "0xcafe", 0.65, 1.0, 0 };
 
 int main( int argc, char *argv[] )
 {
     std::thread input_thread( keyboard_input_thread );
 
     //Inputs
-    AccountKey   key;
-    DevConfig_st local_config{ "0xbeef", 0.7f };
+    DevConfig_st local_config{ "0xbeef", 0.7, 1.0, 0 };
 
-    strncpy( key, argv[1], sizeof( key ) );
-
-    sgns::GeniusNode node_instance( key, local_config );
+    sgns::GeniusNode node_instance( local_config );
 
     std::cout << "Insert \"process\", the image and the number of tokens to be" << std::endl;
     while ( true )
