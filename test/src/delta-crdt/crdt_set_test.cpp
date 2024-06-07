@@ -11,6 +11,93 @@ namespace sgns::crdt
   using sgns::storage::rocksdb;
   using sgns::base::Buffer;
   namespace fs = boost::filesystem;
+  class Key {
+  public:
+      Key() : fullPath("/") {}
+      Key(const std::string& path) : fullPath(path) {}
+
+      Key child(const std::string& subKey) const {
+          return Key(fullPath + "/" + subKey);
+      }
+
+      std::string toString() const {
+          return fullPath;
+      }
+
+      bool operator<(const Key& other) const {
+          return fullPath < other.fullPath;
+      }
+
+      friend std::ostream& operator<<(std::ostream& os, const Key& key) {
+          os << key.toString();
+          return os;
+      }
+
+  private:
+      std::string fullPath;
+  };
+
+  class HierarchicalAWORSet {
+  public:
+      HierarchicalAWORSet(const sgns::crdt::Key& keyPrefix) : prefix(keyPrefix) {}
+
+      void add(const std::string& key, char val) {
+          auto fullKey = prefix.child(key);
+          auto it = sets.find(fullKey);
+          if (it == sets.end()) {
+              crdts::AWORSet<char, sgns::crdt::Key> newSet(fullKey);
+              newSet = newSet.add(val);
+              sets[fullKey] = newSet;
+          }
+          else {
+              it->second = it->second.add(val);
+          }
+      }
+
+      void remove(const std::string& key, char val) {
+          auto fullKey = prefix.child(key);
+          auto it = sets.find(fullKey);
+          if (it == sets.end()) {
+              crdts::AWORSet<char, sgns::crdt::Key> newSet(fullKey);
+              newSet = newSet.rmv(val);
+              sets[fullKey] = newSet;
+          }
+          else {
+              it->second = it->second.rmv(val);
+          }
+      }
+
+      std::set<char> read(const std::string& key) {
+          auto fullKey = prefix.child(key);
+          auto it = sets.find(fullKey);
+          if (it != sets.end()) {
+              return it->second.read();
+          }
+          return {};
+      }
+
+      void join(const HierarchicalAWORSet& other) {
+          for (const auto& [key, set] : other.sets) {
+              if (sets.find(key) == sets.end()) {
+                  sets[key] = set;
+              }
+              else {
+                  sets[key].join(set);
+              }
+          }
+      }
+
+      friend std::ostream& operator<<(std::ostream& output, const HierarchicalAWORSet& o) {
+          for (const auto& [key, set] : o.sets) {
+              output << "Key: " << key << "\n" << set << "\n";
+          }
+          return output;
+      }
+
+  private:
+      sgns::crdt::Key prefix;
+      std::map<sgns::crdt::Key, crdts::AWORSet<char, sgns::crdt::Key>> sets;
+  };
 
 
   TEST(CrdtSetTest, TestSetKeys)
@@ -21,25 +108,68 @@ namespace sgns::crdt
     std::cout << "hKey: " << hKey << std::endl;
     auto crdtSet = CrdtSet(nullptr, hKey);
     std::string strTest = "test";
-    crdts::AWORSet<char> o1("idx"), o2("idy"), do1, do2;
-    do1.join(o1.add('a'));
-    do1.join(o1.add('b'));
+    //crdts::AWORSet<char> o1("idx"), o2("idy"), do1, do2;
+    //do1.join(o1.add('a'));
+    //do1.join(o1.add('b'));
 
-    do2.join(o2.add('b'));
-    do2.join(o2.add('c'));
-    do2.join(o2.rmv('b'));
-    crdts::AWORSet<char> o3 = join(o1, o2);
-    crdts::AWORSet<char> o4 = join(join(o1, do1), join(o2, do1));
-    std::cout << o3 << std::endl;
-    std::cout << o4 << std::endl;
-    std::cout << o3.in('c') << o3.in('b') << std::endl;
-    assert(o3.in('c') == true && o3.in('b') == true);
+    //do2.join(o2.add('b'));
+    //do2.join(o2.add('c'));
+    //do2.join(o2.rmv('b'));
+    //
+    //std::cout << o1 << std::endl;
+    //std::cout << o2 << std::endl;
+    //crdts::AWORSet<char> o3 = join(o1, o2);
+    //crdts::AWORSet<char> o4 = join(join(o1, do1), join(o2, do1));
 
-    crdts::AWORSet<string> o5("idz");
-    o5.add("hello");
-    o5.add("world");
-    o5.add("my");
-    cout << o5 << endl;
+    //std::cout << o3 << std::endl;
+    //std::cout << o4 << std::endl;
+    //std::cout << o3.in('c') << o3.in('b') << std::endl;
+    //assert(o3.in('c') == true && o3.in('b') == true);
+    //for (const auto& e : o1.read()) std::cout << e << " ";
+    //std::cout << std::endl;
+    //auto set_contents = o3.read();
+    //auto search_value = 'c';
+    //auto it = set_contents.find(search_value);
+    //if (it != set_contents.end()) {
+    //    std::cout << "Found: " << *it << std::endl;
+    //}
+    //else {
+    //    std::cout << "Value not found" << std::endl;
+    //}
+    ////std::cout << o1.read() << std::endl;
+
+    //crdts::AWORSet<string> o5("idz");
+    //o5.add("hello");
+    //o5.add("world");
+    //o5.add("my");
+    //cout << o5 << endl;
+    //for (const auto& e : o5.read()) std::cout << e << " ";
+    // 
+    Key prefix("/namespace");
+    HierarchicalAWORSet hSet(prefix);
+    hSet.add("key", 'a');
+    hSet.add("s/key", 'b');
+    hSet.add("t/key", 'c');
+    std::cout << "Read /namespace/key: ";
+    for (const auto& e : hSet.read("key")) {
+        std::cout << e << " ";
+    }
+    std::cout << std::endl;
+
+    std::cout << "Read /namespace/s/key: ";
+    for (const auto& e : hSet.read("s/key")) {
+        std::cout << e << " ";
+    }
+    std::cout << std::endl;
+
+    std::cout << "Read /namespace/t/key: ";
+    for (const auto& e : hSet.read("t/key")) {
+        std::cout << e << " ";
+    }
+    std::cout << std::endl;
+
+    std::cout << hSet << std::endl;
+
     //EXPECT_STRCASEEQ((strNamespace + "/key").c_str(), );
     std::cout << "GetKey:" << crdtSet.KeyPrefix("key").GetKey().c_str() << std::endl;
     std::cout << "GetKey:" << crdtSet.ElemsPrefix("key").GetKey().c_str() << std::endl;
