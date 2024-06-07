@@ -11,6 +11,9 @@ namespace sgns::crdt
   using sgns::storage::rocksdb;
   using sgns::base::Buffer;
   namespace fs = boost::filesystem;
+
+
+
   class Key {
   public:
       Key() : fullPath("/") {}
@@ -37,6 +40,8 @@ namespace sgns::crdt
       std::string fullPath;
   };
 
+  // Explicitly instantiate AWORSet for char and sgns::crdt::Key
+  template class crdts::AWORSet<char, sgns::crdt::Key>;
   class HierarchicalAWORSet {
   public:
       HierarchicalAWORSet(const sgns::crdt::Key& keyPrefix) : prefix(keyPrefix) {}
@@ -145,6 +150,7 @@ namespace sgns::crdt
     //cout << o5 << endl;
     //for (const auto& e : o5.read()) std::cout << e << " ";
     // 
+    crdts::AWORSet<char, sgns::crdt::Key> do1, do2;
     Key prefix("/namespace");
     HierarchicalAWORSet hSet(prefix);
     hSet.add("key", 'a');
