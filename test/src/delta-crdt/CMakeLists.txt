@@ -1,9 +1,10 @@
 
 addtest(delta-crdt_test
     crdt_set_test.cpp
+	delta-crdts.hpp
     )
 target_link_libraries(delta-crdt_test
-	delta-enabled-crdts
+	#delta-enabled-crdts
     crdt_datastore
     rocksdb
     database_error
