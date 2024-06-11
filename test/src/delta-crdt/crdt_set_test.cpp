@@ -42,7 +42,7 @@ namespace sgns::crdt
       using Buffer = base::Buffer;
       using DataStore = storage::rocksdb;
       using QueryResult = DataStore::QueryResult;
-      HierarchicalAWORSet(const std::shared_ptr<DataStore>& dataStore, const std::string& ns)
+      HierarchicalAWORSet(const std::shared_ptr<DataStore>& dataStore, const HierarchicalKey& ns)
           : dataStore_(dataStore), prefix(ns) {}
 
       HierarchicalKey KeyPrefix(const std::string& key) const {
@@ -179,7 +179,7 @@ namespace sgns::crdt
   TEST(CrdtSetTest, TestSetKeys)
   {
     std::string strNamespace = "/namespace";
-    sgns::crdt::HierarchicalAWORSet crdtSet(nullptr, strNamespace);
+    HierarchicalAWORSet crdtSet(nullptr, strNamespace);
     EXPECT_STRCASEEQ((strNamespace + "/key").c_str(), crdtSet.KeyPrefix("key").GetKey().c_str());
     EXPECT_STRCASEEQ((strNamespace + "/s/key").c_str(), crdtSet.ElemsPrefix("key").GetKey().c_str());
     EXPECT_STRCASEEQ((strNamespace + "/t/key").c_str(), crdtSet.TombsPrefix("key").GetKey().c_str());
@@ -197,7 +197,7 @@ namespace sgns::crdt
     auto dataStoreResult = rocksdb::create(databasePath, options);
     auto dataStore = dataStoreResult.value();
 
-    CrdtSet crdtSetInvalid = CrdtSet(nullptr, HierarchicalKey("/namespace"));
+    HierarchicalAWORSet crdtSetInvalid(nullptr, HierarchicalKey("/namespace"));
 
     Buffer valueBuffer;
     valueBuffer.put("V456");
