@@ -6,7 +6,10 @@
 #include <boost/filesystem.hpp>
 #include <src/delta-crdt/delta-crdts.hpp>
 #include <iostream>
-
+#include <storage/database_error.hpp>
+#include <boost/algorithm/string.hpp>
+#include <boost/system/error_code.hpp>
+#include <boost/lexical_cast.hpp>
 
 namespace sgns::crdt
 {
@@ -34,7 +37,13 @@ namespace sgns::crdt
 
   class HierarchicalAWORSet {
   public:
-      HierarchicalAWORSet(const std::string& ns) : prefix(ns) {}
+      using Delta = pb::Delta;
+      using Element = pb::Element;
+      using Buffer = base::Buffer;
+      using DataStore = storage::rocksdb;
+      using QueryResult = DataStore::QueryResult;
+      HierarchicalAWORSet(const std::shared_ptr<DataStore>& dataStore, const std::string& ns)
+          : dataStore_(dataStore), prefix(ns) {}
 
       HierarchicalKey KeyPrefix(const std::string& key) const {
           return prefix.ChildString(key);
@@ -63,18 +72,114 @@ namespace sgns::crdt
           }
           return {};
       }
+      outcome::result<void> SetValue(const std::unique_ptr<storage::BufferBatch>& aDataStore, const std::string& aKey,
+          const std::string& aID, const Buffer& aValue, const uint64_t& aPriority);
 
-      // Other methods and members for managing the hierarchical AWORSet can be added here
 
+      outcome::result<void> SetValue(const std::string& aKey, const std::string& aID, const Buffer& aValue,
+          const uint64_t& aPriority);
   private:
+      std::shared_ptr<DataStore> dataStore_;
       HierarchicalKey prefix;
       std::map<std::string, crdts::AWORSet<char, std::string>> sets;
   };
 
+
+  outcome::result<void> HierarchicalAWORSet::SetValue(const std::unique_ptr<storage::BufferBatch>& aDataStore, const std::string& aKey,
+      const std::string& aID, const Buffer& aValue, const uint64_t& aPriority)
+  {
+      //if (aDataStore == nullptr)
+      //{
+      //    return outcome::failure(boost::system::error_code{});
+      //}
+
+      //// If this key was tombstoned already, do not store/update the value at all.
+      //auto isDeletedResult = this->InTombsKeyID(aKey, aID);
+      //if (isDeletedResult.has_failure() || isDeletedResult.value() == true)
+      //{
+      //    return outcome::failure(boost::system::error_code{});
+      //}
+
+      //auto priorityResult = this->GetPriority(aKey);
+      //if (priorityResult.has_failure())
+      //{
+      //    return outcome::failure(priorityResult.error());
+      //}
+
+      //if (aPriority < priorityResult.value())
+      //{
+      //    return outcome::success();
+      //}
+
+      //auto valueK = this->ValueKey(aKey);
+
+      //if (aPriority == priorityResult.value())
+      //{
+      //    auto valueResult = this->GetValueFromDatastore(valueK);
+      //    if (valueResult.has_failure())
+      //    {
+      //        return outcome::failure(valueResult.error());
+      //    }
+
+      //    // if bytes.Compare(valueResult.value(), aValue) >= 0 {
+      //    // comparing two data lexicographically,  valueResult >= aValue, no need to store value
+      //    if (!boost::lexicographical_compare<std::string, std::string>(valueResult.value(), std::string(aValue.toString())))
+      //    {
+      //        return outcome::success();
+      //    }
+      //}
+
+      //// store value
+      //Buffer valueKeyBuffer;
+      //valueKeyBuffer.put(valueK.GetKey());
+
+      //auto putResult = aDataStore->put(valueKeyBuffer, aValue);
+      //if (putResult.has_failure())
+      //{
+      //    return outcome::failure(putResult.error());
+      //}
+
+      //// store priority
+      //auto setPriorityResult = this->SetPriority(aKey, aPriority);
+      //if (setPriorityResult.has_failure())
+      //{
+      //    return outcome::failure(setPriorityResult.error());
+      //}
+
+      //// trigger add hook
+      //if (this->putHookFunc_ != nullptr)
+      //{
+      //    putHookFunc_(aKey, aValue);
+      //}
+
+      return outcome::success();
+  }
+
+  outcome::result<void> HierarchicalAWORSet::SetValue(const std::string& aKey, const std::string& aID, const Buffer& aValue,
+      const uint64_t& aPriority) {
+      if (dataStore_ == nullptr) {
+          return outcome::failure(boost::system::error_code{});
+      }
+
+      auto batchDatastore = this->dataStore_->batch();
+      auto setValueResult = this->SetValue(batchDatastore, aKey, aID, aValue, aPriority);
+      if (setValueResult.has_failure())
+      {
+          return outcome::failure(setValueResult.error());
+      }
+
+      auto commitResult = batchDatastore->commit();
+      if (commitResult.has_failure()) {
+          return outcome::failure(commitResult.error());
+      }
+
+      return outcome::success();
+  }
+
   TEST(CrdtSetTest, TestSetKeys)
   {
     std::string strNamespace = "/namespace";
-    sgns::crdt::HierarchicalAWORSet crdtSet(strNamespace);
+    sgns::crdt::HierarchicalAWORSet crdtSet(nullptr, strNamespace);
     EXPECT_STRCASEEQ((strNamespace + "/key").c_str(), crdtSet.KeyPrefix("key").GetKey().c_str());
     EXPECT_STRCASEEQ((strNamespace + "/s/key").c_str(), crdtSet.ElemsPrefix("key").GetKey().c_str());
     EXPECT_STRCASEEQ((strNamespace + "/t/key").c_str(), crdtSet.TombsPrefix("key").GetKey().c_str());
