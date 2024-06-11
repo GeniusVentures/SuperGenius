@@ -18,23 +18,6 @@ namespace sgns::crdt
   namespace fs = boost::filesystem;
 
 
-
-  class Key {
-  public:
-      Key(const std::string& key) : key_(key) {}
-
-      std::string GetKey() const {
-          return key_;
-      }
-
-      Key child(const std::string& subKey) const {
-          return Key(key_ + "/" + subKey);
-      }
-
-  private:
-      std::string key_;
-  };
-
   class HierarchicalAWORSet {
   public:
       using Delta = pb::Delta;
@@ -89,6 +72,7 @@ namespace sgns::crdt
       outcome::result<uint64_t> GetPriority(const std::string& aKey);
       outcome::result<void> SetPriority(const std::string& aKey, const uint64_t& aPriority);
       outcome::result<std::shared_ptr<Delta>> CreateDeltaToAdd(const std::string& aKey, const std::string& aValue);
+      outcome::result<std::shared_ptr<Delta>> CreateDeltaToRemove(const std::string& aKey);
   private:
       std::shared_ptr<DataStore> dataStore_;
       HierarchicalKey prefix;
@@ -388,6 +372,57 @@ namespace sgns::crdt
       valueBuffer.put(strPriority);
 
       return this->dataStore_->put(keyBuffer, valueBuffer);
+  }
+
+  outcome::result<std::shared_ptr<HierarchicalAWORSet::Delta>> HierarchicalAWORSet::CreateDeltaToAdd(const std::string& aKey, const std::string& aValue)
+  {
+      auto delta = std::make_shared<Delta>();
+      auto element = delta->add_elements();
+      element->set_key(aKey);
+      element->set_value(aValue);
+
+      return delta;
+  }
+
+  outcome::result<std::shared_ptr<HierarchicalAWORSet::Delta>> HierarchicalAWORSet::CreateDeltaToRemove(const std::string& aKey)
+  {
+      auto delta = std::make_shared<Delta>();
+      // /namespace/s/<key>
+      auto prefix = this->ElemsPrefix(aKey);
+      auto strElemsPrefix = prefix.GetKey();
+
+      Buffer keyPrefixBuffer;
+      keyPrefixBuffer.put(strElemsPrefix);
+      auto queryResult = this->dataStore_->query(keyPrefixBuffer);
+      if (queryResult.has_failure())
+      {
+          return outcome::failure(queryResult.error());
+      }
+
+      for (const auto& bufferKeyAndValue : queryResult.value())
+      {
+          std::string keyWithPrefix = std::string(bufferKeyAndValue.first.toString());
+          std::string id = keyWithPrefix.erase(0, strElemsPrefix.size());
+
+          auto hId = HierarchicalKey(id);
+
+          if (!hId.IsTopLevel())
+          {
+              continue;
+          }
+
+          // check if its already tombed, which case don't add it to the
+          // Remove delta set.
+          auto isDeletedResult = this->InTombsKeyID(aKey, hId.GetKey());
+          if (isDeletedResult.has_value() && !isDeletedResult.value())
+          {
+              auto tombstone = delta->add_tombstones();
+              tombstone->set_key(aKey);
+              tombstone->set_id(hId.GetKey());
+          }
+      }
+
+      return delta;
   }
 
   TEST(CrdtSetTest, TestSetKeys)
