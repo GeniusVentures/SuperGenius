@@ -11,6 +11,7 @@ add_library(sgns_account
 )
 
 target_link_libraries(sgns_account
+    GeniusKDF
     json_secure_storage
     component_factory
     processing_service

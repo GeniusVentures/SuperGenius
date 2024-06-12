@@ -5,7 +5,6 @@
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
 #include <boost/format.hpp>
-#include <boost/multiprecision/cpp_int.hpp>
 #include <rapidjson/document.h>
 #include "AccountHelper.hpp"
 #include "processing/processing_imagesplit.hpp"

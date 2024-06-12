@@ -13,11 +13,9 @@
 #include "account/TransferTransaction.hpp"
 #include "singleton/CComponentFactory.hpp"
 #include "local_secure_storage/ISecureStorage.hpp"
-//#include <nil/crypto3/multiprecision/cpp_int.hpp>
-//#include <nil/crypto3/multiprecision/cpp_int/serialize.hpp>
-//#include <nil/crypto3/hash/sha2.hpp>
-//#include <nil/crypto3/multiprecision/number.hpp>
-//#include <KDFGenerator/KDFGenerator.hpp>
+#include <KDFGenerator/KDFGenerator.hpp>
+#include "outcome/outcome.hpp"
+#include "base/util.hpp"
 
 using namespace boost::multiprecision;
 
@@ -158,24 +156,26 @@ namespace sgns
             auto secure_storage = std::dynamic_pointer_cast<ISecureStorage>( icomponent );
             auto load_res       = secure_storage->Load( "sgns_key" );
 
-            uint256_t key_seed;
+            std::vector<uint8_t> key_seed;
             if ( !load_res )
             {
                 //Create file/key
-                //key_seed = ProofSystemGetRandomSeed(); TODO - Organize KDF stuff in another repo
-                key_seed = 0xdeadbeef;
+                auto               random_number = GenerateRandomNumber();
                 std::ostringstream oss;
-                oss << std::hex << key_seed;
+                oss << std::hex << random_number;
 
-                std::string key_string = "0x" + oss.str();
-                BOOST_OUTCOME_TRYV2(  auto &&,  secure_storage->Save( "sgns_key", key_string ));      
+                std::string rnd_string = "0x" + oss.str();
+                BOOST_OUTCOME_TRYV2( auto &&, secure_storage->Save( "sgns_key", rnd_string ) );
+                key_seed = HexASCII2NumStr<std::uint8_t>( rnd_string.data(), rnd_string.size() );
             }
             else
             {
-                key_seed = uint256_t{ load_res.value() };
+                key_seed = HexASCII2NumStr<std::uint8_t>( &load_res.value().data()[2], load_res.value().size() - 2 );
+
             }
-            //uint256_t result = KDFGenerator::GenerateKDF<nil::crypto3::hashes::sha2<256>>( key_seed );
-            return key_seed;
+            auto result = KDFGenerator::GenerateKDF( key_seed, KDFGenerator::HashType::SHA256 );
+
+            return Vector2Num<uint256_t>( result );
         }
     };
 }
