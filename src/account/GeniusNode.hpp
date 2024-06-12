@@ -28,6 +28,7 @@
 #include "processing/impl/processing_core_impl.hpp"
 #include "processing/impl/processing_subtask_result_storage_impl.hpp"
 #include "processing/processing_service.hpp"
+#include "upnp.hpp"
 
 #ifndef __cplusplus
 extern "C"

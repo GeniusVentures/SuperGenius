@@ -33,10 +33,9 @@ static const std::string logger_config( R"(
             groups:
               - name: SuperGeniusDemo
                 sink: console
-                level: info
+                level: error
                 children:
                   - name: libp2p
-                  - name: Gossip
             # ----------------
               )" );
 
@@ -65,14 +64,33 @@ namespace sgns
         loggerGlobalDB->set_level( spdlog::level::debug );
 
         auto loggerDAGSyncer = base::createLogger( "GraphsyncDAGSyncer" );
-        loggerDAGSyncer->set_level( spdlog::level::debug );
+        loggerDAGSyncer->set_level( spdlog::level::off );
 
         auto logkad = sgns::base::createLogger( "Kademlia" );
-        logkad->set_level( spdlog::level::trace );
+        logkad->set_level( spdlog::level::off );
 
         auto logNoise = sgns::base::createLogger( "Noise" );
-        logNoise->set_level( spdlog::level::trace );
+        logNoise->set_level( spdlog::level::off );
 
+        auto pubsubport = 40001 + GenerateRandomPort(node_base_addr_);
+        //UPNP
+        auto upnp = std::make_shared<sgns::upnp::UPNP>();
+        auto gotIGD = upnp->GetIGD();
+        if (gotIGD)
+        {
+            auto openedPort = upnp->OpenPort(pubsubport, pubsubport, "TCP", 1800);
+            auto wanip = upnp->GetWanIP();
+            auto lanip = upnp->GetLocalIP();
+            std::cout << "Wan IP: " << wanip << std::endl;
+            std::cout << "Lan IP: " << lanip << std::endl;
+            if (!openedPort)
+            {
+                std::cerr << "Failed to open port" << std::endl;
+            }
+            else {
+                std::cout << "Open Port Success" << std::endl;
+            }
+        }
         //auto loggerBroadcaster = base::createLogger( "PubSubBroadcasterExt" );
         //loggerBroadcaster->set_level( spdlog::level::debug );
 
@@ -128,7 +146,7 @@ namespace sgns
         transaction_manager_->Start();
         processing_service_->StartProcessing( std::string( PROCESSING_GRID_CHANNEL ) );
 
-        //DHTInit();
+        DHTInit();
 
         io_thread = std::thread( [this]() { io_->run(); } );
     }

@@ -31,6 +31,7 @@ target_link_libraries(sgns_account
     SGTransactionProto
     Boost::boost
 	logger
+	gnus_upnp
     ${WIN_CRYPT_LIBRARY}
 )
 set_target_properties(sgns_account PROPERTIES PUBLIC_HEADER "GeniusNode.hpp")

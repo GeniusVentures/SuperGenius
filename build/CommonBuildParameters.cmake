@@ -292,6 +292,14 @@ find_package(AsyncIOManager CONFIG REQUIRED)
 include_directories(${AsyncIOManager_INCLUDE_DIR})
 
 # --------------------------------------------------------
+# Set config of gnus_upnp
+set(gnus_upnp_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/gnus_upnp/include")
+set(gnus_upnp_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/gnus_upnp/lib")
+set(gnus_upnp_DIR "${_THIRDPARTY_BUILD_DIR}/gnus_upnp/lib/cmake/gnus_upnp")
+find_package(gnus_upnp CONFIG REQUIRED)
+include_directories(${gnus_upnp_INCLUDE_DIR})
+
+# --------------------------------------------------------
 include_directories(
     ${PROJECT_ROOT}/src
 )
