@@ -73,6 +73,7 @@ namespace sgns
         logNoise->set_level( spdlog::level::off );
 
         auto pubsubport = 40001 + GenerateRandomPort(node_base_addr_);
+        std::vector<std::string> addresses;
         //UPNP
         auto upnp = std::make_shared<sgns::upnp::UPNP>();
         auto gotIGD = upnp->GetIGD();
@@ -83,6 +84,8 @@ namespace sgns
             auto lanip = upnp->GetLocalIP();
             std::cout << "Wan IP: " << wanip << std::endl;
             std::cout << "Lan IP: " << lanip << std::endl;
+            addresses.push_back(lanip);
+            addresses.push_back(wanip);
             if (!openedPort)
             {
                 std::cerr << "Failed to open port" << std::endl;
@@ -91,6 +94,7 @@ namespace sgns
                 std::cout << "Open Port Success" << std::endl;
             }
         }
+        
         //auto loggerBroadcaster = base::createLogger( "PubSubBroadcasterExt" );
         //loggerBroadcaster->set_level( spdlog::level::debug );
 
@@ -98,7 +102,7 @@ namespace sgns
 
         pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
             crdt::KeyPairFileStorage( pubsubKeyPath ).GetKeyPair().value() );
-        pubsub_->Start( 40001 + GenerateRandomPort( node_base_addr_ ), { pubsub_->GetLocalAddress() } );
+        pubsub_->Start( 40001 + GenerateRandomPort( node_base_addr_ ), { pubsub_->GetLocalAddress() } , addresses);
 
         globaldb_ = std::make_shared<crdt::GlobalDB>(
             io_, ( boost::format( "SuperGNUSNode.TestNet.%s" ) % node_base_addr_ ).str(),
