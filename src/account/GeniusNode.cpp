@@ -107,7 +107,7 @@ namespace sgns
         globaldb_ = std::make_shared<crdt::GlobalDB>(
             io_, ( boost::format( "SuperGNUSNode.TestNet.%s" ) % node_base_addr_ ).str(),
             40010 + GenerateRandomPort( node_base_addr_ ),
-            std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_, std::string( PROCESSING_CHANNEL ) ) );
+            std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_, std::string( PROCESSING_CHANNEL ) ) , addresses);
 
         globaldb_->Init( crdt::CrdtOptions::DefaultOptions() );
 

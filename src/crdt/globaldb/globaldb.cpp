@@ -36,11 +36,13 @@ GlobalDB::GlobalDB(
     std::shared_ptr<boost::asio::io_context> context,
     std::string databasePath,
     int dagSyncPort,
-    std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> broadcastChannel)
+    std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> broadcastChannel,
+    std::vector<std::string> gsaddresses)
     : m_context(std::move(context))
     , m_databasePath(std::move(databasePath))
     , m_dagSyncPort(dagSyncPort)
     , m_broadcastChannel(std::move(broadcastChannel))
+    , m_graphSyncAddrs(gsaddresses)
 {
 }
 
@@ -111,8 +113,19 @@ outcome::result<void> GlobalDB::Init(std::shared_ptr<CrdtOptions> crdtOptions)
 
     auto dagSyncerHost = injector.create<std::shared_ptr<libp2p::Host>>();
 
-
-    std::string localaddress = (boost::format("/ip4/%s/tcp/%d/p2p/%s") % GetLocalIP(*io) % m_dagSyncPort % dagSyncerHost->getId().toBase58()).str();
+    //If we used upnp we should have an address list, if not just get local ip
+    std::string localaddress;
+    std::string wanaddress;
+    if (m_graphSyncAddrs.empty())
+    {
+        localaddress = (boost::format("/ip4/%s/tcp/%d/p2p/%s") % GetLocalIP(*io) % m_dagSyncPort % dagSyncerHost->getId().toBase58()).str();
+    }
+    else {
+        //use the first address, which should be the lan address for listening
+        localaddress = (boost::format("/ip4/%s/tcp/%d/p2p/%s") % m_graphSyncAddrs[0] % m_dagSyncPort % dagSyncerHost->getId().toBase58()).str();
+        wanaddress = (boost::format("/ip4/%s/tcp/%d/p2p/%s") % m_graphSyncAddrs[1] % m_dagSyncPort % dagSyncerHost->getId().toBase58()).str();
+    }
+    
     //auto listen_to = libp2p::multi::Multiaddress::create(
     //    (boost::format("/ip4/192.168.46.18/tcp/%d/ipfs/%s") % m_dagSyncPort % dagSyncerHost->getId().toBase58()).str()).value();
     auto listen_to = libp2p::multi::Multiaddress::create(localaddress).value();
@@ -132,7 +145,16 @@ outcome::result<void> GlobalDB::Init(std::shared_ptr<CrdtOptions> crdtOptions)
 
     // Create pubsub broadcaster
     //auto broadcaster = std::make_shared<PubSubBroadcaster>(m_broadcastChannel);
-    auto broadcaster = std::make_shared<PubSubBroadcasterExt>(m_broadcastChannel, dagSyncer, listen_to);
+    std::shared_ptr<PubSubBroadcasterExt> broadcaster;
+    if (m_graphSyncAddrs.empty())
+    {
+        auto broadcaster = std::make_shared<PubSubBroadcasterExt>(m_broadcastChannel, dagSyncer, listen_to);
+    }
+    else
+    {
+        auto listen_towan = libp2p::multi::Multiaddress::create(wanaddress).value();
+        auto broadcaster = std::make_shared<PubSubBroadcasterExt>(m_broadcastChannel, dagSyncer, listen_towan);
+    }
     broadcaster->SetLogger(m_logger);
 
     m_crdtDatastore = std::make_shared<CrdtDatastore>(
