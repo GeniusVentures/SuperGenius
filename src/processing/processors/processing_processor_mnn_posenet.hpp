@@ -70,43 +70,12 @@ namespace sgns::processing
         * @param origwidth - Width of image
         * @param origheight - Height of image
         */
-        std::vector<uint8_t> MNNProcess( const std::vector<uint8_t> &imgdata, const int origwidth, const int origheight,
+        MNN::Tensor MNNProcess( const std::vector<uint8_t> &imgdata, const int origwidth, const int origheight,
                                          const std::string filename = "" );
-
-        /** The following functions are pre/post processing functions from MNN demo that we may not use so I won't document yet.
-        */
-        int       changeColorCircle( uint32_t *src, CV::Point point, int width, int height );
-        int       drawPose( uint8_t *rgbaPtr, int width, int height, std::vector<float> &poseScores,
-                            std::vector<std::vector<float>>     &poseKeypointScores,
-                            std::vector<std::vector<CV::Point>> &poseKeypointCoords );
-        CV::Point getCoordsFromTensor( const Tensor *dataTensor, int id, int x, int y, bool getCoord = true );
-        int   decodePoseImpl( float curScore, int curId, const CV::Point &originalOnImageCoords, const Tensor *heatmaps,
-                              const Tensor *offsets, const Tensor *displacementFwd, const Tensor *displacementBwd,
-                              std::vector<float>     &instanceKeypointScores,
-                              std::vector<CV::Point> &instanceKeypointCoords );
-        int   decodeMultiPose( const Tensor *offsets, const Tensor *displacementFwd, const Tensor *displacementBwd,
-                               const Tensor *heatmaps, std::vector<float> &poseScores,
-                               std::vector<std::vector<float>>     &poseKeypointScores,
-                               std::vector<std::vector<CV::Point>> &poseKeypointCoords, CV::Point &scale );
-        float clip( float value, float min, float max );
 
         std::unique_ptr<std::vector<std::vector<char>>> imageData_;
         std::unique_ptr<std::vector<uint8_t>>           modelFile_;
         std::string                                     fileName_;
-
-        //Pose Model Names
-        const std::vector<std::string> PoseNames{
-            "nose",          "leftEye",   "rightEye",   "leftEar",   "rightEar",   "leftShoulder",
-            "rightShoulder", "leftElbow", "rightElbow", "leftWrist", "rightWrist", "leftHip",
-            "rightHip",      "leftKnee",  "rightKnee",  "leftAnkle", "rightAnkle" };
-
-        const std::vector<std::pair<std::string, std::string>> PoseChain{
-            { "nose", "leftEye" },          { "leftEye", "leftEar" },        { "nose", "rightEye" },
-            { "rightEye", "rightEar" },     { "nose", "leftShoulder" },      { "leftShoulder", "leftElbow" },
-            { "leftElbow", "leftWrist" },   { "leftShoulder", "leftHip" },   { "leftHip", "leftKnee" },
-            { "leftKnee", "leftAnkle" },    { "nose", "rightShoulder" },     { "rightShoulder", "rightElbow" },
-            { "rightElbow", "rightWrist" }, { "rightShoulder", "rightHip" }, { "rightHip", "rightKnee" },
-            { "rightKnee", "rightAnkle" } };
     };
 
 }

@@ -196,7 +196,7 @@ namespace sgns
         std::cout << "CID Test::" << cidstring.value() << std::endl;
 
         //Also Find providers
-        pubsub_->StartFindingPeers( io_, key );
+        pubsub_->StartFindingPeers( key );
     }
 
     void GeniusNode::ProcessImage( const std::string &image_path, uint16_t funds )
