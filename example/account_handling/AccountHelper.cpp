@@ -120,6 +120,7 @@ namespace sgns
         pubsub_->StartFindingPeers( key );
 
 
+
         // UNCOMMENT THESE NEXT 2 LINES TO CAUSE pubsub_->GetDHT()->Start(); to crash
         //task_queue_      = std::make_shared<processing::ProcessingTaskQueueImpl>( globaldb_ );
         //processing_core_ = std::make_shared<processing::ProcessingCoreImpl>( globaldb_, 1000000, 2 );
