@@ -117,7 +117,7 @@ namespace sgns
         std::cout << "CID Test::" << cidstring.value() << std::endl;
 
         //Also Find providers
-        pubsub_->StartFindingPeers( io_, key );
+        pubsub_->StartFindingPeers( key );
 
 
         // UNCOMMENT THESE NEXT 2 LINES TO CAUSE pubsub_->GetDHT()->Start(); to crash
