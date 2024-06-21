@@ -16,7 +16,7 @@ if(POLICY CMP0042)
     cmake_policy(SET CMP0042 NEW)
 endif()
 
-set(IOS_DEPLOYMENT_TARGET 12.0)
+set(IOS_DEPLOYMENT_TARGET 13.0)
 
 # --------------------------------------------------------
 # Project
@@ -26,9 +26,9 @@ project(SuperGenius C CXX)
 # Set cross compiling settings
 set(CMAKE_SYSTEM_NAME "iOS")
 
-set(Protobuf_DIR "${iOS_Protobuf_DIR}")
-set(Protobuf_INCLUDE_DIR "${iOS_Protobuf_INCLUDE_DIR}")
-set(Protobuf_LIBRARIES "${iOS_Protobuf_LIBRARIES}")
+#set(Protobuf_DIR "${iOS_Protobuf_DIR}")
+#set(Protobuf_INCLUDE_DIR "${iOS_Protobuf_INCLUDE_DIR}")
+#set(Protobuf_LIBRARIES "${iOS_Protobuf_LIBRARIES}")
 
 # set(Boost_USE_STATIC_RUNTIME OFF)
 
@@ -77,8 +77,9 @@ set(CMAKE_XCODE_ATTRIBUTE_ONLY_ACTIVE_ARCH YES)
 
 # --------------------------------------------------------
 # Set host system protoc executable path
-set(PROTOC_EXECUTABLE "${THIRDPARTY_BUILD_DIR}/protobuf-host/bin/protoc")
-
+string(REPLACE "iOS" "OSX" THIRDPARTY_HOST_DIR "${THIRDPARTY_BUILD_DIR}")
+set(PROTOC_EXECUTABLE "${THIRDPARTY_HOST_DIR}/protobuf/bin/protoc")
+message(WARNINGS "PRotoc exe ${PROTOC_EXECUTABLE}")
 # --------------------------------------------------------
 # Set custom protobuf path for iOS
 set(iOS_Protobuf_DIR "${THIRDPARTY_BUILD_DIR}/protobuf/lib/cmake/protobuf")
