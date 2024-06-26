@@ -1,10 +1,4 @@
-cmake_minimum_required(VERSION 3.12)
-
-# --------------------------------------------------------
-# if on Linux system, build the Android executables
-if(NOT ${CMAKE_HOST_SYSTEM_NAME} MATCHES "Linux")
-    message(FATAL_ERROR "${CMAKE_HOST_SYSTEM_NAME} host system name does not match Linux for Android cross compiling - Please select the correct folder for configuring project")
-endif()
+cmake_minimum_required(VERSION 3.15)
 
 # --------------------------------------------------------
 # Set cross compiling settings
@@ -53,6 +47,9 @@ if(NOT EXISTS ${CMAKE_TOOLCHAIN_FILE})
     message(FATAL_ERROR "Android NDK toolchain file ${CMAKE_TOOLCHAIN_FILE} not found")
 endif()
 
+set(Boost_COMPILER "clang")
+
+
 # --------------------------------------------------------
 # Project
 project(SuperGenius C CXX)
@@ -71,7 +68,10 @@ set(ABI_SUBFOLDER_NAME "/${ANDROID_ABI}")
 
 # --------------------------------------------------------
 # Set host system protoc executable path
-set(PROTOC_EXECUTABLE "${THIRDPARTY_BUILD_DIR}/protobuf/bin/protoc")
+
+message("executable ${THIRDPARTY_DIR}/build/${CMAKE_HOST_SYSTEM_NAME}/${CMAKE_BUILD_TYPE}/protobuf/${ANDROID_ABI}")
+set(PROTOC_EXECUTABLE "${THIRDPARTY_DIR}/build/${CMAKE_HOST_SYSTEM_NAME}/${CMAKE_BUILD_TYPE}/protobuf/${ANDROID_ABI}/bin/protoc")
+#set(PROTOC_EXECUTABLE "${THIRDPARTY_BUILD_DIR}/protobuf/bin/protoc")
 
 # --------------------------------------------------------
 # Allow multiple definitions

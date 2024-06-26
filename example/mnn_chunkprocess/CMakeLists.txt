@@ -39,6 +39,11 @@ if(APPLE)
         ${PLATFORM_SPECIFIC_FRAMEWORKS}
         ${XCFRAMEWORK_PATH}
     )
+elseif(ANDROID)
+    find_library( log-lib log )
+    target_link_libraries(mnn_chunkprocess PRIVATE
+    ${log-lib}
+)
 endif()
 
 target_link_libraries(mnn_chunkprocess PRIVATE 	
