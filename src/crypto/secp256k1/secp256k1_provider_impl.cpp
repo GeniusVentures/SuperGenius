@@ -1,6 +1,5 @@
 #include "crypto/secp256k1/secp256k1_provider_impl.hpp"
-
-#include <secp256k1_recovery.h>
+#include "secp256k1_recovery.h"
 
 namespace sgns::crypto {
 
