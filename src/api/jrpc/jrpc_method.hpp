@@ -18,7 +18,9 @@ namespace sgns::api {
     std::weak_ptr<Api> api_;
 
    public:
-    explicit Method(const std::shared_ptr<Api> &api) : api_(api) {}
+       explicit Method( std::shared_ptr<Api> api ) : api_( api )
+       {
+       }
 
     jsonrpc::Value operator()(const jsonrpc::Request::Parameters &params) {
       auto api = api_.lock();

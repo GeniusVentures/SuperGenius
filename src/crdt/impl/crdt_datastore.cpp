@@ -5,6 +5,7 @@
 #include <google/protobuf/unknown_field_set.h>
 #include <ipfs_lite/ipld/impl/ipld_node_impl.hpp>
 #include <thread>
+#include <utility>
 
 namespace sgns::crdt
 {
@@ -37,10 +38,13 @@ namespace sgns::crdt
   const std::string CrdtDatastore::headsNamespace_ = "h";
   const std::string CrdtDatastore::setsNamespace_ = "s";
 
-  CrdtDatastore::CrdtDatastore( const std::shared_ptr<DataStore> &aDatastore, const HierarchicalKey &aKey,
-                                const std::shared_ptr<DAGSyncer>   &aDagSyncer,
-                                const std::shared_ptr<Broadcaster> &aBroadcaster,
-                                const std::shared_ptr<CrdtOptions> &aOptions ) : namespaceKey_( aKey )
+  CrdtDatastore::CrdtDatastore( std::shared_ptr<DataStore>          aDatastore,
+                                const HierarchicalKey              &aKey,
+                                std::shared_ptr<DAGSyncer>          aDagSyncer,
+                                std::shared_ptr<Broadcaster>        aBroadcaster,
+                                const std::shared_ptr<CrdtOptions> &aOptions ) :
+      dataStore_( std::move( aDatastore ) ), namespaceKey_( aKey ), broadcaster_( std::move( aBroadcaster ) ),
+      dagSyncer_( std::move( aDagSyncer ) )
   {
       // <namespace>/s
       auto fullSetNs = aKey.ChildString( setsNamespace_ );
@@ -57,11 +61,6 @@ namespace sgns::crdt
           this->logger_         = options_->logger;
           numberOfDagWorkers    = options_->numWorkers;
       }
-
-      this->dataStore_ = aDatastore;
-
-      this->dagSyncer_   = aDagSyncer;
-      this->broadcaster_ = aBroadcaster;
 
       this->set_ =
           std::make_shared<CrdtSet>( CrdtSet( aDatastore, fullSetNs, this->putHookFunc_, this->deleteHookFunc_ ) );
@@ -101,7 +100,7 @@ namespace sgns::crdt
     this->Close();
   }
 
-  //static 
+  //static
   std::shared_ptr<CrdtDatastore::Delta> CrdtDatastore::DeltaMerge(const std::shared_ptr<Delta>& aDelta1, const std::shared_ptr<Delta>& aDelta2)
   {
     auto result = std::make_shared<CrdtDatastore::Delta>();

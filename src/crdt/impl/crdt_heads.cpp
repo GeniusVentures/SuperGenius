@@ -3,16 +3,15 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/system/error_code.hpp>
 #include <boost/lexical_cast.hpp>
+#include <utility>
 
 namespace sgns::crdt
 {
-  CrdtHeads::CrdtHeads(const std::shared_ptr<DataStore>& aDatastore, const HierarchicalKey& aNamespace)
-  {
-    this->dataStore_ = aDatastore;
-    this->namespaceKey_ = aNamespace;
-
-    auto result = this->PrimeCache();
-  }
+    CrdtHeads::CrdtHeads( std::shared_ptr<DataStore> aDatastore, const HierarchicalKey &aNamespace ) :
+        dataStore_( std::move( aDatastore ) ), namespaceKey_( aNamespace )
+    {
+        auto result = this->PrimeCache();
+    }
 
   CrdtHeads::CrdtHeads(const CrdtHeads& aHeads)
   {

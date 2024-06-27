@@ -3,6 +3,7 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/system/error_code.hpp>
 #include <boost/lexical_cast.hpp>
+#include <utility>
 
 namespace sgns::crdt
 {
@@ -12,14 +13,13 @@ namespace sgns::crdt
   const std::string CrdtSet::valueSuffix_ = "v";
   const std::string CrdtSet::prioritySuffix_ = "p";
 
-
-  CrdtSet::CrdtSet(const std::shared_ptr<DataStore>& aDatastore, const HierarchicalKey& aNamespace,
-    const PutHookPtr aPutHookPtr /*=nullptr*/, const DeleteHookPtr aDeleteHookPtr /*=nullptr*/) 
+  CrdtSet::CrdtSet( std::shared_ptr<DataStore> aDatastore,
+                    const HierarchicalKey     &aNamespace,
+                    PutHookPtr                 aPutHookPtr,
+                    DeleteHookPtr              aDeleteHookPtr ) :
+      dataStore_( std::move( aDatastore ) ), namespaceKey_( aNamespace ), putHookFunc_( std::move( aPutHookPtr ) ),
+      deleteHookFunc_( std::move( aDeleteHookPtr ) )
   {
-    this->dataStore_ = aDatastore;
-    this->namespaceKey_ = aNamespace;
-    this->putHookFunc_ = aPutHookPtr;
-    this->deleteHookFunc_ = aDeleteHookPtr;
   }
 
   CrdtSet::CrdtSet(const CrdtSet& aSet)

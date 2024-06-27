@@ -14,7 +14,7 @@ public:
     using GossipPubSub = sgns::ipfs_pubsub::GossipPubSub;
     using GossipPubSubTopic = sgns::ipfs_pubsub::GossipPubSubTopic;
 
-    PubSubBroadcaster(const std::shared_ptr<GossipPubSubTopic>& pubSubTopic);
+    PubSubBroadcaster( std::shared_ptr<GossipPubSubTopic> pubSubTopic );
 
     void SetLogger(const sgns::base::Logger& logger);
 

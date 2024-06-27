@@ -116,9 +116,11 @@ namespace sgns::crdt
     * \sa CrdtOptions
     *
     */
-    CrdtDatastore(const std::shared_ptr<DataStore>& aDatastore, const HierarchicalKey& aKey,
-      const std::shared_ptr<DAGSyncer>& aDagSyncer, const std::shared_ptr<Broadcaster>& aBroadcaster,
-      const std::shared_ptr<CrdtOptions>& aOptions);
+    CrdtDatastore( std::shared_ptr<DataStore>          aDatastore,
+                   const HierarchicalKey              &aKey,
+                   std::shared_ptr<DAGSyncer>          aDagSyncer,
+                   std::shared_ptr<Broadcaster>        aBroadcaster,
+                   const std::shared_ptr<CrdtOptions> &aOptions );
 
     /** Destructor
     */
