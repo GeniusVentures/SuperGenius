@@ -15,6 +15,11 @@ namespace sgns::storage
 {
   using BlockBasedTableOptions = ::ROCKSDB_NAMESPACE::BlockBasedTableOptions;
 
+  rocksdb::~rocksdb()
+  {
+      db_->Close();
+  }
+
   outcome::result<std::shared_ptr<rocksdb>> rocksdb::create(
       std::string_view path, Options options) 
   {

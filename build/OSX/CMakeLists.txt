@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.12)
 
 # --------------------------------------------------------
 # if on OSX Darwin system, build the OSX executables
-if (NOT ${CMAKE_HOST_SYSTEM_NAME} MATCHES "Darwin")
+if(NOT ${CMAKE_HOST_SYSTEM_NAME} MATCHES "Darwin")
     message(FATAL_ERROR "${CMAKE_HOST_SYSTEM_NAME} host system name does not match OSX Darwin - Please select the correct folder for configuring project")
 endif()
 
@@ -18,7 +18,6 @@ include(../CommonCompilerOptions.CMake)
 
 # ------------------------------------------
 # Set OSX specific runtime options
-
 set(CMAKE_OSX_ARCHITECTURES "x86_64")
 set(CMAKE_MACOSX_RPATH 1)
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM "BOTH")
@@ -28,8 +27,8 @@ set(CMAKE_IOS_INSTALL_COMBINED TRUE)
 # Assuming that xcode 12.0 is installed you most probably have ios sdk 14.0 or later installed (tested on Big Sur)
 # if you don't set a deployment target it will be set the way you only get 64-bit builds
 if(NOT DEFINED DEPLOYMENT_TARGET AND XCODE_VERSION_INT VERSION_GREATER 12.0)
-  # Temporarily fix the arm64 issues in CMake install-combined by excluding arm64 for simulator builds (needed for Apple Silicon...)
-  set(CMAKE_XCODE_ATTRIBUTE_EXCLUDED_ARCHS[sdk=iphonesimulator*] "arm64")
+    # Temporarily fix the arm64 issues in CMake install-combined by excluding arm64 for simulator builds (needed for Apple Silicon...)
+    set(CMAKE_XCODE_ATTRIBUTE_EXCLUDED_ARCHS[sdk=iphonesimulator*] "arm64")
 endif()
 
 # --------------------------------------------------------
@@ -58,7 +57,6 @@ set(TESTING ON)
 # --------------------------------------------------------
 # Set custom subfolder for ABI
 set(ABI_SUBFOLDER_NAME "")
-
 # --------------------------------------------------------
 # Include common build parameters
 include(../CommonBuildParameters.cmake)

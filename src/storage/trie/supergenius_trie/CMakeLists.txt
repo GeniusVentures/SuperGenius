@@ -33,7 +33,6 @@ set_target_properties(supergenius_trie PROPERTIES PUBLIC_HEADER "supergenius_tri
 target_link_libraries(supergenius_trie
     supergenius_node
     trie_error
-    supergenius_codec
     supergenius_trie_cursor
     )
 supergenius_install(supergenius_trie)

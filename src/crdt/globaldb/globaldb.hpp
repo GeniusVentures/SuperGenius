@@ -1,14 +1,13 @@
 #ifndef SUPERGENIUS_CRDT_GLOBALDB_HPP
 #define SUPERGENIUS_CRDT_GLOBALDB_HPP
 
-#include <crdt/crdt_options.hpp>
-#include <outcome/outcome.hpp>
-
-#include <ipfs_pubsub/gossip_pubsub_topic.hpp>
-#include <crdt/crdt_datastore.hpp>
-
 #include <boost/asio/io_context.hpp>
 #include <boost/filesystem/path.hpp>
+#include <outcome/outcome.hpp>
+#include <ipfs_pubsub/gossip_pubsub_topic.hpp>
+#include "crdt/crdt_options.hpp"
+#include "crdt/crdt_datastore.hpp"
+
 
 namespace sgns::crdt
 {
@@ -22,7 +21,8 @@ public:
         std::shared_ptr<boost::asio::io_context> context,
         std::string databasePath,
         int dagSyncPort,
-        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> broadcastChannel);
+        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> broadcastChannel,
+        std::vector<std::string> gsaddresses = {});
 
     outcome::result<void> Init(std::shared_ptr<CrdtOptions> crdtOptions);
 
@@ -62,10 +62,16 @@ public:
     */
     std::shared_ptr<CrdtDataStoreTransaction> BeginTransaction();
 
+    auto GetDB()
+    {
+        return m_crdtDatastore->GetDB();
+    }
+
 private:
     std::shared_ptr<boost::asio::io_context> m_context;
     std::string m_databasePath;
     int m_dagSyncPort;
+    std::vector<std::string> m_graphSyncAddrs;
     std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> m_broadcastChannel;
 
     std::shared_ptr<CrdtDatastore> m_crdtDatastore;

@@ -1,6 +1,7 @@
 ---
 BasedOnStyle: Microsoft
 AccessModifierOffset: -4
+AlwaysBreakTemplateDeclarations: true
 AlignConsecutiveAssignments:
   Enabled: true
   AlignCompound: true

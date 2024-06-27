@@ -20,3 +20,4 @@ target_link_libraries(crdt_globaldb
     p2p::p2p_protocol_echo
     ${WIN_CRYPT_LIBRARY}
     )
+supergenius_install(crdt_globaldb)

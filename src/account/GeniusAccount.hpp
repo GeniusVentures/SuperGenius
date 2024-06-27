@@ -9,41 +9,76 @@
 #include <string>
 #include <cstdint>
 #include <boost/multiprecision/cpp_int.hpp>
+#include "account/GeniusUTXO.hpp"
+#include "account/TransferTransaction.hpp"
 
 using namespace boost::multiprecision;
+
 namespace sgns
 {
     class GeniusAccount
     {
     public:
         GeniusAccount( const uint256_t &addr, const uint64_t &initial_balance, const uint8_t token_type ) :
-            address( addr ),            //
-            balance( initial_balance ), //
-            token( token_type ),        //
-            nonce( 0 )
+            address( addr ),           //
+            token( token_type ),       //
+            nonce( 0 ),                //
+            balance( initial_balance ) //
         {
+            std::cout << "Genius account" << std::endl;
             //TODO - Retrieve values where? on Transaction manager?
         }
 
-        template<typename T>
+        ~GeniusAccount()
+        {
+            utxos.clear();
+            std::cout << "Delete account" << std::endl;
+        }
+
+        template <typename T>
         const T GetAddress() const;
 
-        template <> [[nodiscard]] const std::string GetAddress() const
+        template <>
+        [[nodiscard]] const std::string GetAddress() const
         {
             std::ostringstream oss;
             oss << std::hex << address;
 
-            return ( "0x" + oss.str() );
+            return "0x" + oss.str();
         }
 
-        template <> [[nodiscard]] const uint256_t GetAddress() const
+        template <>
+        [[nodiscard]] const uint256_t GetAddress() const
         {
             return address;
         }
 
+        template <typename T>
+        [[nodiscard]] T GetBalance() const;
+
+        template <>
+        [[nodiscard]] uint64_t GetBalance() const
+        {
+            uint64_t retval = 0;
+
+            for ( auto &curr : utxos )
+            {
+                std::cout << "utxo's ID: " << curr.GetTxID() << std::endl;
+                std::cout << "utxo's Amount: " << curr.GetAmount() << std::endl;
+                std::cout << "utxo's GetOutputIdx: " << curr.GetOutputIdx() << std::endl;
+                std::cout << "utxo's GetLock: " << curr.GetLock() << std::endl;
+                if ( curr.GetLock() == false )
+                {
+                    retval += curr.GetAmount();
+                }
+            }
+            return retval;
+        }
+
+        template <>
         [[nodiscard]] std::string GetBalance() const
         {
-            return std::to_string(balance);
+            return std::to_string( GetBalance<uint64_t>() );
         }
 
         [[nodiscard]] std::string GetToken() const
@@ -53,15 +88,54 @@ namespace sgns
 
         [[nodiscard]] std::string GetNonce() const
         {
-            return std::to_string(nonce);
+            return std::to_string( nonce );
         }
 
-        uint256_t address;
-        uint64_t  balance;
-        uint8_t   token; //GNUS SGNUS ETC...
-        uint64_t  nonce;
+        bool PutUTXO( const GeniusUTXO &new_utxo )
+        {
+            bool is_new = true;
+            for ( auto &curr : utxos )
+            {
+                if ( new_utxo.GetTxID() != curr.GetTxID() )
+                {
+                    continue;
+                }
+                if ( new_utxo.GetOutputIdx() != curr.GetOutputIdx() )
+                {
+                    continue;
+                }
+                //TODO - If it's the same, might be locked, then unlock
+                is_new = false;
+                break;
+            }
+            if ( is_new )
+            {
+                utxos.push_back( new_utxo );
+            }
+            return is_new;
+        }
+
+        bool RefreshUTXOs( const std::vector<InputUTXOInfo> &infos )
+        {
+            utxos.erase( std::remove_if( utxos.begin(), utxos.end(),
+                                         [&infos]( const GeniusUTXO &x ) { //
+                                             return std::any_of( infos.begin(), infos.end(),
+                                                                 [&x]( const InputUTXOInfo &a ) { //
+                                                                     return ( a.txid_hash_ == x.GetTxID() ) &&
+                                                                            ( a.output_idx_ == x.GetOutputIdx() );
+                                                                 } );
+                                         } ),
+                         utxos.end() );
+            return true;
+        }
+
+        uint256_t               address;
+        uint8_t                 token; //GNUS SGNUS ETC...
+        uint64_t                nonce;
+        std::vector<GeniusUTXO> utxos;
 
     private:
+        uint64_t balance;
     };
 }
 

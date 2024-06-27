@@ -5,7 +5,7 @@
 #include <unordered_set>
 
 #include <boost/endian/arithmetic.hpp>
-
+#include <array>
 namespace sgns::crypto {
 
   bool isSupportedKeyType(KeyTypeId k) {

@@ -4,8 +4,8 @@
 
 #include <gsl/span>
 
-#include "crypto/blake2/blake2b.h"
-#include "crypto/blake2/blake2s.h"
+#include <crypto/blake2/blake2b.h>
+#include <crypto/blake2/blake2s.h>
 #include "crypto/keccak/keccak.h"
 #include "crypto/sha/sha256.hpp"
 //-------------------
@@ -27,7 +27,7 @@ namespace sgns::crypto {
 
   Hash128 HasherImpl::blake2b_128(gsl::span<const uint8_t> buffer) const {
     Hash128 out;
-    blake2b(out.data(), 16, nullptr, 0, buffer.data(), buffer.size());
+    sgns_blake2b(out.data(), 16, nullptr, 0, buffer.data(), buffer.size());
     return out;
   }
 
@@ -38,7 +38,7 @@ namespace sgns::crypto {
 
   Hash256 HasherImpl::blake2b_256(gsl::span<const uint8_t> buffer) const {
     Hash256 out;
-    blake2b(out.data(), 32, nullptr, 0, buffer.data(), buffer.size());
+    sgns_blake2b(out.data(), 32, nullptr, 0, buffer.data(), buffer.size());
     return out;
   }
 

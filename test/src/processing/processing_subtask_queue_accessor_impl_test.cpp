@@ -32,9 +32,8 @@ namespace
     public:
         void AddSubTaskResult(const SGProcessing::SubTaskResult& subTaskResult) override {}
         void RemoveSubTaskResult(const std::string& subTaskId) override {}
-        void GetSubTaskResults(
-            const std::set<std::string>& subTaskIds,
-            std::vector<SGProcessing::SubTaskResult>& results) override {}
+        std::vector<SGProcessing::SubTaskResult> GetSubTaskResults(
+            const std::set<std::string>& subTaskIds) override { return {};}
 
     };
 

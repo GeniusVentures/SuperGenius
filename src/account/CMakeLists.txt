@@ -6,15 +6,17 @@ add_library(sgns_account
     TransferTransaction.cpp
     MintTransaction.cpp
     ProcessingTransaction.cpp
-    AccountManager.cpp
+    EscrowTransaction.cpp
+    GeniusNode.cpp
 )
 
 target_link_libraries(sgns_account
-    blockchain_common
+    processing_service
     block_header_repository
     block_storage
     logger
 	crdt_globaldb
+    crdt_graphsync_dagsyncer
     p2p::p2p_basic_host
     p2p::p2p_default_network
     p2p::p2p_peer_repository
@@ -26,10 +28,12 @@ target_link_libraries(sgns_account
     p2p::p2p_identify
     p2p::p2p_ping
     Boost::Boost.DI
-    ipfs-bitswap-cpp
-	ipfs-pubsub
     SGTransactionProto
     Boost::boost
 	logger
+	gnus_upnp
     ${WIN_CRYPT_LIBRARY}
 )
+set_target_properties(sgns_account PROPERTIES PUBLIC_HEADER "GeniusNode.hpp")
+
+supergenius_install(sgns_account)

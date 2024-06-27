@@ -17,9 +17,10 @@ namespace sgns::api {
         id_(id) {}
 
   void WsSession::start() {
-    boost::asio::dispatch(stream_.get_executor(),
-                          boost::beast::bind_front_handler(&WsSession::onRun,
-                                                           shared_from_this()));
+      boost::asio::dispatch(stream_.get_executor(),
+          boost::asio::bind_executor(stream_.get_executor(),
+              std::bind(&WsSession::onRun,
+                  shared_from_this())));
   }
 
   void WsSession::stop() {
@@ -34,15 +35,21 @@ namespace sgns::api {
   }
 
   void WsSession::asyncRead() {
-    stream_.async_read(rbuffer_,
-                       boost::beast::bind_front_handler(&WsSession::onRead,
-                                                        shared_from_this()));
+      stream_.async_read(rbuffer_,
+          boost::asio::bind_executor(stream_.get_executor(),
+              std::bind(&WsSession::onRead,
+                  shared_from_this(),
+                  std::placeholders::_1,
+                  std::placeholders::_2)));
   }
 
   void WsSession::asyncWrite() {
-    stream_.async_write(wbuffer_.data(),
-                        boost::beast::bind_front_handler(&WsSession::onWrite,
-                                                         shared_from_this()));
+      stream_.async_write(wbuffer_.data(),
+          boost::asio::bind_executor(stream_.get_executor(),
+              std::bind(&WsSession::onWrite,
+                  shared_from_this(),
+                  std::placeholders::_1,
+                  std::placeholders::_2)));
   }
 
   sgns::api::Session::SessionId WsSession::id() const {
@@ -59,20 +66,22 @@ namespace sgns::api {
   }
 
   void WsSession::onRun() {
-    // Set suggested timeout settings for the websocket
-    stream_.set_option(boost::beast::websocket::stream_base::timeout::suggested(
-        boost::beast::role_type::server));
+      // Set suggested timeout settings for the websocket
+      stream_.set_option(boost::beast::websocket::stream_base::timeout::suggested(
+          boost::beast::role_type::server));
 
-    // Set a decorator to change the Server of the handshake
-    stream_.set_option(boost::beast::websocket::stream_base::decorator(
-        [](boost::beast::websocket::response_type &res) {
-          res.set(boost::beast::http::field::server,
+      // Set a decorator to change the Server of the handshake
+      stream_.set_option(boost::beast::websocket::stream_base::decorator(
+          [](boost::beast::websocket::response_type& res) {
+              res.set(boost::beast::http::field::server,
                   std::string(BOOST_BEAST_VERSION_STRING)
-                      + " websocket-server-async");
-        }));
-    // Accept the websocket handshake
-    stream_.async_accept(boost::beast::bind_front_handler(&WsSession::onAccept,
-                                                          shared_from_this()));
+                  + " websocket-server-async");
+          }));
+      // Accept the websocket handshake
+      stream_.async_accept(boost::asio::bind_executor(stream_.get_executor(),
+          std::bind(&WsSession::onAccept,
+              shared_from_this(),
+              std::placeholders::_1)));
   }
 
   void WsSession::onAccept(boost::system::error_code ec) {

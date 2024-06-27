@@ -4,7 +4,7 @@ add_library(hasher
     )
 set_target_properties(hasher PROPERTIES PUBLIC_HEADER "hasher/hasher_impl.hpp")
 target_link_libraries(hasher
-    blake2
+    ipfs-lite-cpp::blake2
     twox
     buffer
     sha
@@ -95,7 +95,6 @@ target_link_libraries(pbkdf2_provider
 supergenius_install(pbkdf2_provider)
 
 add_subdirectory(bip39)
-add_subdirectory(blake2)
 add_subdirectory(crypto_store)
 add_subdirectory(keccak)
 add_subdirectory(sha)

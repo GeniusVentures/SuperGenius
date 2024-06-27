@@ -39,14 +39,9 @@ if(APPLE)
 		)
 endif()
 target_link_libraries(processing_mnn PRIVATE
-#    ipfs-lite-cpp::ipfs_datastore_rocksdb
-#    ipfs-lite-cpp::buffer
-#    ipfs-lite-cpp::ipld_node
-#    ipfs-lite-cpp::ipfs_merkledag_service
-#    ipfs-lite-cpp::graphsync
     logger
-	processing_service
-	crdt_globaldb
+    processing_service
+    crdt_globaldb
     p2p::p2p_basic_host
     p2p::p2p_default_network
     p2p::p2p_peer_repository
@@ -60,20 +55,22 @@ target_link_libraries(processing_mnn PRIVATE
     Boost::Boost.DI
     Boost::program_options
     ipfs-bitswap-cpp
-	ipfs-pubsub
+    ipfs-pubsub
     ${WIN_CRYPT_LIBRARY}
-	${MNN_LIBS}
-	AsyncIOManager
+    ${MNN_LIBS}
+    AsyncIOManager
     )
 if(WIN32)
-	target_link_options(processing_mnn PRIVATE /WHOLEARCHIVE:${MNN_LIBS})
+    target_link_options(processing_mnn PRIVATE /WHOLEARCHIVE:${MNN_LIBS})
+elseif(APPLE)
+#    target_link_options(processing_mnn PRIVATE -force_load ${MNN_LIBS})
 else()
-	target_link_options(processing_mnn PRIVATE "-Wl,--whole-archive" ${MNN_LIBS} "-Wl,--no-whole-archive")
+    target_link_options(processing_mnn PRIVATE "-Wl,--whole-archive" ${MNN_LIBS} "-Wl,--no-whole-archive")
 endif()
 
 if(APPLE)
 	set(XCFRAMEWORK_PATH "${_THIRDPARTY_BUILD_DIR}/moltenvk/build/lib/MoltenVK.xcframework")
-	target_link_libraries(processing_mnn_p PRIVATE 	
+	target_link_libraries(processing_mnn_p PRIVATE
 		"-framework CoreFoundation"
 		"-framework CoreGraphics"
 		"-framework CoreServices"
@@ -110,12 +107,14 @@ target_link_libraries(processing_mnn_p PRIVATE
 	ipfs-pubsub
     ${WIN_CRYPT_LIBRARY}
 	${MNN_LIBS}
-	AsyncIOManager
+	
     )
 if(WIN32)
-	target_link_options(processing_mnn_p PRIVATE /WHOLEARCHIVE:${MNN_LIBS})
+    target_link_options(processing_mnn_p PRIVATE /WHOLEARCHIVE:${MNN_LIBS})
+elseif(APPLE)
+#    target_link_options(processing_mnn_p PRIVATE -force_load ${MNN_LIBS})
 else()
-	target_link_options(processing_mnn_p PRIVATE "-Wl,--whole-archive" ${MNN_LIBS} "-Wl,--no-whole-archive")
+    target_link_options(processing_mnn_p PRIVATE "-Wl,--whole-archive" ${MNN_LIBS} "-Wl,--no-whole-archive")
 endif()
 include_directories(../include)
 include_directories(./imageHelper)

@@ -1,5 +1,6 @@
 add_executable(account_handling
     AccountHandling.cpp
+    AccountHelper.cpp
     )
     include_directories(
         ${PROJECT_SOURCE_DIR}/src

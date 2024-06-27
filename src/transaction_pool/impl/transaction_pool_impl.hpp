@@ -8,6 +8,7 @@
 #include "base/logger.hpp"
 #include "transaction_pool/pool_moderator.hpp"
 #include "transaction_pool/transaction_pool.hpp"
+#include <list>
 
 namespace sgns::transaction_pool {
 

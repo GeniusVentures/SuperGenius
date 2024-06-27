@@ -84,7 +84,6 @@ namespace sgns
             return uint256_t{ dag_st.source_addr() };
         }
 
-    protected:
         SGTransaction::DAGStruct dag_st;
 
     private:

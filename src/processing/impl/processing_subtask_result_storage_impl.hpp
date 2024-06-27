@@ -11,7 +11,7 @@
 
 namespace sgns::processing
 {
-/** Handles subtask states storage
+    /** Handles subtask states storage
 */
     class SubTaskResultStorageImpl : public SubTaskResultStorage
     {
@@ -19,25 +19,23 @@ namespace sgns::processing
         /** Create a subtask storage
         * @param db - CRDT globaldb to use
         */
-        SubTaskResultStorageImpl(std::shared_ptr<sgns::crdt::GlobalDB> db);
+        SubTaskResultStorageImpl( std::shared_ptr<sgns::crdt::GlobalDB> db );
 
         /** Add a subtask result
         * @param result - Result to add
         */
-        void AddSubTaskResult(const SGProcessing::SubTaskResult& result) override;
+        void AddSubTaskResult( const SGProcessing::SubTaskResult &result ) override;
 
         /** Remove a subtask result
         * @param subTaskId - Result ID to remove
         */
-        void RemoveSubTaskResult(const std::string& subTaskId) override;
+        void RemoveSubTaskResult( const std::string &subTaskId ) override;
 
         /** Get results for subtasks
         * @param subTaskIds - List of subtasks IDs to get results for
         * @param results - List of results reference.
         */
-        void GetSubTaskResults(
-            const std::set<std::string>& subTaskIds,
-            std::vector<SGProcessing::SubTaskResult>& results) override;
+        std::vector<SGProcessing::SubTaskResult> GetSubTaskResults( const std::set<std::string> &subTaskIds ) override;
 
     private:
         std::shared_ptr<sgns::crdt::GlobalDB> m_db;

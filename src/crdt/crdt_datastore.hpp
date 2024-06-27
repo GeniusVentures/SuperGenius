@@ -10,13 +10,11 @@
 #include <crdt/dagsyncer.hpp>
 #include <crdt/crdt_options.hpp>
 #include <storage/rocksdb/rocksdb.hpp>
-#include <primitives/cid/cid.hpp>
 #include <ipfs_lite/ipld/ipld_node.hpp>
 #include <shared_mutex>
 #include <future>
 #include <chrono>
 #include <queue>
-#include <thread>
 
 namespace sgns::crdt
 {
@@ -210,6 +208,11 @@ namespace sgns::crdt
     * @return pointer to delta or outcome::failure on error
     */
     outcome::result<std::shared_ptr<Delta>> CreateDeltaToRemove(const std::string& key);
+
+    auto GetDB()
+    {
+        return dataStore_->getDB();
+    }
 
   protected:
 
