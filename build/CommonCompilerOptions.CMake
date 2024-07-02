@@ -30,20 +30,10 @@ include(${PROJECT_ROOT}/build/CompilationFlags.cmake)
 
 # Common compile options
 
-# This is a workaround that should be removed once we update Boost.
-if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    add_compile_options(-Wno-enum-constexpr-conversion)
-endif()
-
 # OS specific compile options
 if(EXISTS "${PROJECT_ROOT}/cmake/compile_option_by_platform/${CMAKE_SYSTEM_NAME}.cmake")
     print("add compile option: ${PROJECT_ROOT}/cmake/compile_option_by_platform/${CMAKE_SYSTEM_NAME}.cmake")
     include("${PROJECT_ROOT}/cmake/compile_option_by_platform/${CMAKE_SYSTEM_NAME}.cmake")
-endif()
-
-if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-    # This is a workaround and must be removed once we update Boost past 1.80
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_LIBCPP_ENABLE_CXX17_REMOVED_UNARY_BINARY_FUNCTION")
 endif()
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${EXTRA_CXX_FLAGS}")
@@ -79,6 +69,9 @@ if(NOT DEFINED THIRDPARTY_BUILD_DIR)
     print("Setting third party build directory default")
     get_filename_component(BUILD_PLATFORM_NAME ${CMAKE_CURRENT_SOURCE_DIR} NAME)
     set(THIRDPARTY_BUILD_DIR "${THIRDPARTY_DIR}/build/${BUILD_PLATFORM_NAME}/${CMAKE_BUILD_TYPE}")
+    if (DEFINED ANDROID_ABI)
+        set(THIRDPARTY_BUILD_DIR "${THIRDPARTY_BUILD_DIR}/${ANDROID_ABI}")
+    endif()
 endif()
 
 set(_THIRDPARTY_BUILD_DIR "${THIRDPARTY_BUILD_DIR}")
