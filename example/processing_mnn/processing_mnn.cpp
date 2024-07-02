@@ -42,9 +42,15 @@ std::vector<uint8_t> GetImageByCID(std::string cid)
     FileManager::GetInstance().InitializeSingletons();
     string fileURL = "https://ipfs.filebase.io/ipfs/" + cid + "/settings.json";
     std::cout << "FILE URLL: " << fileURL << std::endl;
-    auto data = FileManager::GetInstance().LoadASync(fileURL, false, false, ioc, [ioc](const int& status)
+    auto data = FileManager::GetInstance().LoadASync(fileURL, false, false, ioc, [ioc](const sgns::AsyncError::CustomResult& status)
         {
-            std::cout << "status: " << status << std::endl;
+            if (status.has_value())
+            {
+                std::cout << "Success: " << status.value().message << std::endl;
+            }
+            else {
+                std::cout << "Error: " << status.error() << std::endl;
+            }
         }, [ioc, &mainbuffers](std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers)
             {
                 std::cout << "Final Callback" << std::endl;
@@ -101,9 +107,15 @@ std::vector<uint8_t> GetImageByCID(std::string cid)
     //Get Actual Image
     string imageUrl = "https://ipfs.filebase.io/ipfs/" + cid + "/" + inputImage;
     std::vector<char> imageData;
-    auto data2 = FileManager::GetInstance().LoadASync(imageUrl, false, false, ioc, [ioc](const int& status)
+    auto data2 = FileManager::GetInstance().LoadASync(imageUrl, false, false, ioc, [ioc](const sgns::AsyncError::CustomResult& status)
         {
-            std::cout << "status: " << status << std::endl;
+            if (status.has_value())
+            {
+                std::cout << "Success: " << status.value().message << std::endl;
+            }
+            else {
+                std::cout << "Error: " << status.error() << std::endl;
+            }
         }, [ioc, &imageData](std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers)
             {
                 std::cout << "Final Callback" << std::endl;
