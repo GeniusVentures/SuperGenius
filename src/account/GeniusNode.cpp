@@ -279,7 +279,15 @@ namespace sgns
         string fileURL = "https://ipfs.filebase.io/ipfs/" + cid + "/settings.json";
         std::cout << "FILE URLL: " << fileURL << std::endl;
         auto data = FileManager::GetInstance().LoadASync(
-            fileURL, false, false, ioc, [ioc]( const int &status ) { std::cout << "status: " << status << std::endl; },
+            fileURL, false, false, ioc, [ioc](const sgns::AsyncError::CustomResult& status) { 
+                if (status.has_value())
+                {
+                    std::cout << "Success: " << status.value().message << std::endl;
+                }
+                else {
+                    std::cout << "Error: " << status.error() << std::endl;
+                }
+            },
             [ioc, &mainbuffers](
                 std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers )
             {
@@ -344,7 +352,15 @@ namespace sgns
         string            imageUrl = "https://ipfs.filebase.io/ipfs/" + cid + "/" + inputImage;
         std::vector<char> imageData;
         auto              data2 = FileManager::GetInstance().LoadASync(
-            imageUrl, false, false, ioc, [ioc]( const int &status ) { std::cout << "status: " << status << std::endl; },
+            imageUrl, false, false, ioc, [ioc](const sgns::AsyncError::CustomResult& status) { 
+                if (status.has_value())
+                {
+                    std::cout << "Success: " << status.value().message << std::endl;
+                }
+                else {
+                    std::cout << "Error: " << status.error() << std::endl;
+                }
+            },
             [ioc,
              &imageData]( std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers )
             {
