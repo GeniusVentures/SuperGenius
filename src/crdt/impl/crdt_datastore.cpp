@@ -63,8 +63,8 @@ namespace sgns::crdt
       }
 
       this->set_ =
-          std::make_shared<CrdtSet>( CrdtSet( aDatastore, fullSetNs, this->putHookFunc_, this->deleteHookFunc_ ) );
-      this->heads_ = std::make_shared<CrdtHeads>( CrdtHeads( aDatastore, fullHeadsNs ) );
+          std::make_shared<CrdtSet>( CrdtSet( dataStore_, fullSetNs, this->putHookFunc_, this->deleteHookFunc_ ) );
+      this->heads_ = std::make_shared<CrdtHeads>( CrdtHeads( dataStore_, fullHeadsNs ) );
 
       int      numberOfHeads = 0;
       uint64_t maxHeight     = 0;
