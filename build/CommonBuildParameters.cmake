@@ -348,9 +348,6 @@ if(BUILD_EXAMPLES)
     add_subdirectory(${PROJECT_ROOT}/example ${CMAKE_BINARY_DIR}/example)
 endif()
 
-add_subdirectory(${PROJECT_ROOT}/example/AsyncFile ${CMAKE_BINARY_DIR}/example/AsyncFile)
-add_subdirectory(${PROJECT_ROOT}/example/mnn_chunkprocess ${CMAKE_BINARY_DIR}/example/mnn_chunkprocess)
-
 install(
     EXPORT supergeniusTargets
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/SuperGenius
