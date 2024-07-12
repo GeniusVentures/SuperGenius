@@ -63,7 +63,7 @@ namespace sgns
                 {
                     // handle genesis initialization, which happens when there is not
                     // authorities and last completed round in the storage
-                    if ( !buff_storage->get( storage::kAuthoritySetKey ) )
+                    if ( !buff_storage->get( storage::GetAuthoritySetKey() ) )
                     {
                         // insert authorities
                         // TODO - Insert authorities here from finalityAPI
@@ -86,7 +86,7 @@ namespace sgns
                                            weighted_authority.weight );
                         }
                         BOOST_ASSERT_MSG( voters.size() != 0, "Finality voters are empty" );
-                        auto authorities_put_res = buff_storage->put( storage::kAuthoritySetKey, base::Buffer( scale::encode( voters ).value() ) );
+                        auto authorities_put_res = buff_storage->put( storage::GetAuthoritySetKey(), base::Buffer( scale::encode( voters ).value() ) );
                         if ( !authorities_put_res )
                         {
                             BOOST_ASSERT_MSG( false, "Could not insert authorities" );

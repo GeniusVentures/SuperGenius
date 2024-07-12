@@ -124,11 +124,10 @@ namespace sgns::blockchain {
       genesis_block.header.state_root      = state_root_blob;
       // the rest of the fields have default value
 
-      OUTCOME_TRY( ( auto &&, genesis_block_hash ), block_storage->putBlock( genesis_block ) );
-      BOOST_OUTCOME_TRYV2( auto &&,
-                           db->Put( { std::string( ( storage::kGenesisBlockHashLookupKey ).toString() ) },
-                                    Buffer{ genesis_block_hash } ) );
-      BOOST_OUTCOME_TRYV2( auto &&, block_storage->setLastFinalizedBlockHash( genesis_block_hash ) );
+    OUTCOME_TRY((auto &&, genesis_block_hash), block_storage->putBlock(genesis_block));
+    BOOST_OUTCOME_TRYV2(auto &&, db->Put({storage::GetGenesisBlockHashLookupKey()},
+                             Buffer{genesis_block_hash}));
+    BOOST_OUTCOME_TRYV2(auto &&, block_storage->setLastFinalizedBlockHash(genesis_block_hash));
 
       on_genesis_created( genesis_block );
       return std::move( block_storage );
@@ -288,7 +287,7 @@ namespace sgns::blockchain {
 
   outcome::result<primitives::BlockHash>
   KeyValueBlockStorage::getGenesisBlockHash() const {
-    auto hash_res = db_->Get({std::string((storage::kGenesisBlockHashLookupKey).toString())});
+    auto hash_res = db_->Get({storage::GetGenesisBlockHashLookupKey()});
     if (hash_res.has_value()) {
       primitives::BlockHash hash;
       std::copy(hash_res.value().begin(), hash_res.value().end(), hash.begin());
@@ -304,7 +303,7 @@ namespace sgns::blockchain {
 
   outcome::result<primitives::BlockHash>
   KeyValueBlockStorage::getLastFinalizedBlockHash() const {
-    auto hash_res = db_->Get({std::string((storage::kLastFinalizedBlockHashLookupKey).toString())});
+    auto hash_res = db_->Get({storage::GetLastFinalizedBlockHashLookupKey()});
     if (hash_res.has_value()) {
           primitives::BlockHash hash;
     SGBlocks::BlockHashData hash_proto;
@@ -336,7 +335,7 @@ namespace sgns::blockchain {
 
         hash_proto.SerializeToArray( serialized_proto.data(), serialized_proto.size() );
     BOOST_OUTCOME_TRYV2(auto &&,
-        db_->Put({std::string((storage::kLastFinalizedBlockHashLookupKey).toString())}, Buffer{serialized_proto}));
+        db_->Put({storage::GetLastFinalizedBlockHashLookupKey()}, Buffer{serialized_proto}));
 
     return outcome::success();
   }
