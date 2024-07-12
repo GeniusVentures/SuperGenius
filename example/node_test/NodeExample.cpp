@@ -14,8 +14,8 @@
 #include <boost/program_options.hpp>
 #include <boost/format.hpp>
 #include <boost/asio.hpp>
-#include "account/GeniusNode.hpp"
 #include "local_secure_storage/impl/json/JSONSecureStorage.hpp"
+#include "account/GeniusNode.hpp"
 std::mutex              keyboard_mutex;
 std::condition_variable cv;
 std::queue<std::string> events;
@@ -121,22 +121,22 @@ void process_events( sgns::GeniusNode &genius_node )
 }
 
 //This is not used at the moment. Static initialization order fiasco issues on node
-//DevConfig_st DEV_CONFIG{ "0xcafe", 0.65, 1.0, 0 };
+DevConfig_st DEV_CONFIG{ "0xcafe", 0.65, 1.0, 0 };
 
 int main( int argc, char *argv[] )
 {
     std::thread input_thread( keyboard_input_thread );
 
     //Inputs
-    DevConfig_st local_config{ "0xbeef", 0.7, 1.0, 0 };
+    //DevConfig_st local_config{ "0xbeef", 0.7, 1.0, 0 };
 
-    sgns::GeniusNode node_instance( local_config );
+    //sgns::GeniusNode node_instance( local_config );
 
     std::cout << "Insert \"process\", the image and the number of tokens to be" << std::endl;
     while ( true )
     {
-        process_events( node_instance );
-        //process_events( sgns::GeniusNode::GetInstance() );
+        //process_events( node_instance );
+        process_events( sgns::GeniusNode::GetInstance() );
     }
     if ( input_thread.joinable() )
     {

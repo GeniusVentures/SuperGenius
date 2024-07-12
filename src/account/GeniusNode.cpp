@@ -16,28 +16,6 @@
 #include "processing/processors/processing_processor_mnn_posenet.hpp"
 
 
-#ifndef __cplusplus
-extern "C"
-{
-#endif
-    extern DevConfig_st DEV_CONFIG;
-#ifndef __cplusplus
-}
-#endif
-static const std::string logger_config( R"(
-            # ----------------
-            sinks:
-              - name: console
-                type: console
-                color: true
-            groups:
-              - name: SuperGeniusDemo
-                sink: console
-                level: error
-                children:
-                  - name: libp2p
-            # ----------------
-              )" );
 
 using namespace boost::multiprecision;
 namespace br = boost::random;
@@ -45,7 +23,7 @@ namespace br = boost::random;
 namespace sgns
 {
     GeniusNode::GeniusNode( const DevConfig_st &dev_config ) :
-        account_( std::make_shared<GeniusAccount>( 0 ) ), //
+        account_( std::make_shared<GeniusAccount>( static_cast<uint8_t>(dev_config.TokenID) ) ), //
         io_( std::make_shared<boost::asio::io_context>() ),                                             //
         dev_config_( dev_config )                                                                       //
     {
@@ -54,7 +32,7 @@ namespace sgns
             // Original LibP2P logging config
             std::make_shared<libp2p::log::Configurator>(),
             // Additional logging config for application
-            logger_config ) );
+            GetLoggingSystem()) );
         logging_system->configure();
 
         libp2p::log::setLoggingSystem( logging_system );
@@ -448,7 +426,7 @@ namespace sgns
     }
 
     /*
-    static GeniusNode instance( ACCOUNT_KEY, DEV_CONFIG );
+    static GeniusNode instance( DEV_CONFIG );
     GeniusNode       &GeniusNode::GetInstance()
     {
         return instance;

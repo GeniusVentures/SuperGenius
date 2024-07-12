@@ -45,6 +45,15 @@ extern "C"
 }
 #endif
 
+#ifndef __cplusplus
+extern "C"
+{
+#endif
+    extern DevConfig_st DEV_CONFIG;
+#ifndef __cplusplus
+}
+#endif
+
 namespace sgns
 {
     class GeniusNode : public IComponent
@@ -99,7 +108,28 @@ namespace sgns
         static constexpr std::size_t      MAX_NODES_COUNT         = 1;
         static constexpr std::string_view PROCESSING_GRID_CHANNEL = "GRID_CHANNEL_ID";
         static constexpr std::string_view PROCESSING_CHANNEL      = "SGNUS.TestNet.Channel";
+
+        static const std::string &GetLoggingSystem()
+        {
+            static const std::string logger_config = R"(
+        # ----------------
+        sinks:
+            - name: console
+            type: console
+            color: true
+        groups:
+            - name: SuperGeniusDemo
+            sink: console
+            level: info
+            children:
+                - name: libp2p
+                - name: Gossip
+        # ----------------
+            )";
+            return logger_config;
+        }
     };
+
 };
 
 #endif
