@@ -15,24 +15,21 @@
 #include "processing/processing_subtask_result_storage.hpp"
 #include "processing/processors/processing_processor_mnn_posenet.hpp"
 
-
-
 using namespace boost::multiprecision;
 namespace br = boost::random;
 
 namespace sgns
 {
     GeniusNode::GeniusNode( const DevConfig_st &dev_config ) :
-        account_( std::make_shared<GeniusAccount>( static_cast<uint8_t>(dev_config.TokenID) ) ), //
-        io_( std::make_shared<boost::asio::io_context>() ),                                             //
-        dev_config_( dev_config )                                                                       //
+        account_( std::make_shared<GeniusAccount>( static_cast<uint8_t>( dev_config.TokenID ) ) ), //
+        io_( std::make_shared<boost::asio::io_context>() ),                                        //
+        dev_config_( dev_config )                                                                  //
     {
-
         logging_system = std::make_shared<soralog::LoggingSystem>( std::make_shared<soralog::ConfiguratorFromYAML>(
             // Original LibP2P logging config
             std::make_shared<libp2p::log::Configurator>(),
             // Additional logging config for application
-            GetLoggingSystem()) );
+            GetLoggingSystem() ) );
         logging_system->configure();
 
         libp2p::log::setLoggingSystem( logging_system );
@@ -50,43 +47,46 @@ namespace sgns
         auto logNoise = sgns::base::createLogger( "Noise" );
         logNoise->set_level( spdlog::level::off );
 
-        auto pubsubport = 40001 + GenerateRandomPort(node_base_addr_);
+        auto                     pubsubport = 40001 + GenerateRandomPort( account_->GetAddress<std::string>() );
         std::vector<std::string> addresses;
         //UPNP
-        auto upnp = std::make_shared<sgns::upnp::UPNP>();
+        auto upnp   = std::make_shared<sgns::upnp::UPNP>();
         auto gotIGD = upnp->GetIGD();
-        if (gotIGD)
+        if ( gotIGD )
         {
-            auto openedPort = upnp->OpenPort(pubsubport, pubsubport, "TCP", 1800);
-            auto wanip = upnp->GetWanIP();
-            auto lanip = upnp->GetLocalIP();
+            auto openedPort = upnp->OpenPort( pubsubport, pubsubport, "TCP", 1800 );
+            auto wanip      = upnp->GetWanIP();
+            auto lanip      = upnp->GetLocalIP();
             std::cout << "Wan IP: " << wanip << std::endl;
             std::cout << "Lan IP: " << lanip << std::endl;
-            addresses.push_back(lanip);
-            addresses.push_back(wanip);
-            if (!openedPort)
+            addresses.push_back( lanip );
+            addresses.push_back( wanip );
+            if ( !openedPort )
             {
                 std::cerr << "Failed to open port" << std::endl;
             }
-            else {
+            else
+            {
                 std::cout << "Open Port Success" << std::endl;
             }
         }
-        
+
         //auto loggerBroadcaster = base::createLogger( "PubSubBroadcasterExt" );
         //loggerBroadcaster->set_level( spdlog::level::debug );
 
-        auto pubsubKeyPath = ( boost::format( "SuperGNUSNode.TestNet.%s/pubs_processor" ) % account_->GetAddress<std::string>() ).str();
+        auto pubsubKeyPath =
+            ( boost::format( "SuperGNUSNode.TestNet.%s/pubs_processor" ) % account_->GetAddress<std::string>() ).str();
 
         pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
             crdt::KeyPairFileStorage( pubsubKeyPath ).GetKeyPair().value() );
-        pubsub_->Start( 40001 + GenerateRandomPort( account_->GetAddress<std::string>() ), { pubsub_->GetLocalAddress() } , addresses);
+        pubsub_->Start( pubsubport, { pubsub_->GetLocalAddress() }, addresses );
 
         globaldb_ = std::make_shared<crdt::GlobalDB>(
             io_,
             ( boost::format( "SuperGNUSNode.TestNet.%s" ) % account_->GetAddress<std::string>() ).str(),
             40010 + GenerateRandomPort( account_->GetAddress<std::string>() ),
-            std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_, std::string( PROCESSING_CHANNEL ) ) , addresses);
+            std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_, std::string( PROCESSING_CHANNEL ) ),
+            addresses );
 
         globaldb_->Init( crdt::CrdtOptions::DefaultOptions() );
 

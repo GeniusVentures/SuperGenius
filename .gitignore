@@ -29,7 +29,6 @@ rel/
 
 # IDEs
 .idea
-.vscode
 
 # Visual Studio
 *.vcxproj
