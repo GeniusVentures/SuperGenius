@@ -60,7 +60,7 @@ namespace sgns
     {
     public:
         GeniusNode( const DevConfig_st &dev_config );
-        //static GeniusNode &GetInstance();
+        static GeniusNode &GetInstance();
         ~GeniusNode();
 
         void ProcessImage( const std::string &image_path, uint16_t funds );
@@ -128,6 +128,8 @@ namespace sgns
             )";
             return logger_config;
         }
+
+        static GeniusNode instance;
     };
 
 };
