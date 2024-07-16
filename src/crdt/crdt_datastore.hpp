@@ -358,9 +358,9 @@ namespace sgns::crdt
     std::shared_ptr<DAGSyncer> dagSyncer_ = nullptr;
     Logger logger_;
 
-    static const std::chrono::milliseconds threadSleepTimeInMilliseconds_;
-    static const std::string headsNamespace_; // "h"
-    static const std::string setsNamespace_; // "s"
+    static constexpr std::chrono::milliseconds threadSleepTimeInMilliseconds_ = std::chrono::milliseconds(100);
+    static constexpr std::string_view headsNamespace_ = "h";
+    static constexpr std::string_view setsNamespace_ = "s"; 
 
     PutHookPtr putHookFunc_ = nullptr;
     DeleteHookPtr deleteHookFunc_ = nullptr;

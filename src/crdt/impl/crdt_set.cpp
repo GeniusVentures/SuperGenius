@@ -7,11 +7,6 @@
 
 namespace sgns::crdt
 {
-  const std::string CrdtSet::elemsNamespace_ = "s";
-  const std::string CrdtSet::tombsNamespace_ = "t";
-  const std::string CrdtSet::keysNamespace_ = "k";
-  const std::string CrdtSet::valueSuffix_ = "v";
-  const std::string CrdtSet::prioritySuffix_ = "p";
 
   CrdtSet::CrdtSet( std::shared_ptr<DataStore> aDatastore,
                     const HierarchicalKey     &aNamespace,
@@ -211,13 +206,13 @@ namespace sgns::crdt
         elements.insert(element);
         break;
       case QuerySuffix::QUERY_PRIORITYSUFFIX:
-        if (boost::algorithm::ends_with(key, "/" + this->prioritySuffix_))
+        if (boost::algorithm::ends_with(key, "/" + GetPrioritySuffix()))
         {
           elements.insert(element);
         }
         break;
       case QuerySuffix::QUERY_VALUESUFFIX:
-        if (boost::algorithm::ends_with(key, "/" + this->valueSuffix_))
+        if (boost::algorithm::ends_with(key, "/" + GetValueSuffix()))
         {
           elements.insert(element);
         }
@@ -312,31 +307,31 @@ namespace sgns::crdt
   HierarchicalKey CrdtSet::ElemsPrefix(const std::string& aKey)
   {
     // /namespace/s/<key>
-    return this->KeyPrefix(elemsNamespace_).ChildString(aKey);
+    return this->KeyPrefix(std::string(elemsNamespace_)).ChildString(aKey);
   }
 
   HierarchicalKey CrdtSet::TombsPrefix(const std::string& aKey)
   {
     // /namespace/t/<key>
-    return this->KeyPrefix(tombsNamespace_).ChildString(aKey);
+    return this->KeyPrefix(std::string(tombsNamespace_)).ChildString(aKey);
   }
 
   HierarchicalKey CrdtSet::KeysKey(const std::string& aKey)
   {
     // /namespace/k/<key>
-    return this->KeyPrefix(keysNamespace_).ChildString(aKey);
+    return this->KeyPrefix(std::string(keysNamespace_)).ChildString(aKey);
   }
 
   HierarchicalKey CrdtSet::ValueKey(const std::string& aKey)
   {
     // /namespace/k/<key>/v
-    return this->KeysKey(aKey).ChildString(valueSuffix_);
+    return this->KeysKey(aKey).ChildString(GetValueSuffix());
   }
 
   HierarchicalKey CrdtSet::PriorityKey(const std::string& aKey)
   {
     // /namespace/k/<key>/p
-    return this->KeysKey(aKey).ChildString(prioritySuffix_);
+    return this->KeysKey(aKey).ChildString(GetPrioritySuffix());
   }
 
   outcome::result<uint64_t> CrdtSet::GetPriority(const std::string& aKey)
