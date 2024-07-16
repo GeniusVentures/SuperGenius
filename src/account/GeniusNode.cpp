@@ -427,9 +427,5 @@ namespace sgns
         }
     }
 
-    GeniusNode &GeniusNode::GetInstance()
-    {
-        return instance;
-    }
 
 }

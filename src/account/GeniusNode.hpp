@@ -60,7 +60,10 @@ namespace sgns
     {
     public:
         GeniusNode( const DevConfig_st &dev_config );
-        static GeniusNode &GetInstance();
+        static GeniusNode &GetInstance() 
+        {
+            return instance;
+        }
         ~GeniusNode();
 
         void ProcessImage( const std::string &image_path, uint16_t funds );
