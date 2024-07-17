@@ -8,7 +8,7 @@
 #define _BLOCK_EXECUTOR_FACTORY_HPP_
 
 #include "verification/production/impl/block_executor.hpp"
-#include "integration/CComponentFactory.hpp"
+#include "singleton/CComponentFactory.hpp"
 #include "blockchain/block_tree.hpp"
 #include "primitives/production_configuration.hpp"
 #include "verification/production/production_synchronizer.hpp"

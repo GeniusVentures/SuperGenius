@@ -6,7 +6,7 @@
 #include <outcome/outcome.hpp>
 #include "network/types/blocks_request.hpp"
 #include "network/types/blocks_response.hpp"
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
 
 namespace sgns::network {
   /**

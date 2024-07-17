@@ -7,9 +7,10 @@
 
 #include "CComponentFactory.hpp"
 
-void CComponentFactory::Register( std::shared_ptr<IComponent> component, const std::string &type, const boost::optional<std::string> &variant )
+void CComponentFactory::Register( std::shared_ptr<IComponent>         component,
+                                  const std::string                  &type,
+                                  const boost::optional<std::string> &variant )
 {
-
     std::string key = type;
 
     if ( variant )
@@ -26,9 +27,9 @@ void CComponentFactory::Register( std::shared_ptr<IComponent> component, const s
     }
 }
 
-boost::optional<std::shared_ptr<IComponent>> CComponentFactory::GetComponent( const std::string &type, const boost::optional<std::string> &variant )
+outcome::result<std::shared_ptr<IComponent>> CComponentFactory::GetComponent(
+    const std::string &type, const boost::optional<std::string> &variant )
 {
-
     std::string key = type;
 
     if ( variant )
@@ -38,7 +39,7 @@ boost::optional<std::shared_ptr<IComponent>> CComponentFactory::GetComponent( co
 
     if ( ComponentTable.count( key ) == 0 )
     {
-        return boost::none;
+        return outcome::failure( boost::system::error_code{} );
     }
     else
     {

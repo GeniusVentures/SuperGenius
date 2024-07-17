@@ -24,7 +24,7 @@
 #include "crypto/hasher/hasher_impl.hpp"
 #include "blockchain/impl/key_value_block_header_repository.hpp"
 #include "blockchain/impl/key_value_block_storage.hpp"
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
 #include "processing/impl/processing_task_queue_impl.hpp"
 #include "processing/impl/processing_core_impl.hpp"
 #include "processing/processing_service.hpp"
@@ -79,7 +79,6 @@ namespace sgns
         std::thread io_thread;
 
         DevConfig_st2 dev_config_;
-        std::string   node_base_addr_;
 
         static constexpr std::string_view db_path_                = "bc-%d/";
         static constexpr std::uint16_t    MAIN_NET                = 369;

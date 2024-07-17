@@ -34,10 +34,6 @@ namespace sgns::crdt
 
   using CRDTBroadcast = pb::CRDTBroadcast;
 
-  const std::chrono::milliseconds CrdtDatastore::threadSleepTimeInMilliseconds_ = std::chrono::milliseconds(100); // ms
-  const std::string CrdtDatastore::headsNamespace_ = "h";
-  const std::string CrdtDatastore::setsNamespace_ = "s";
-
   CrdtDatastore::CrdtDatastore( std::shared_ptr<DataStore>          aDatastore,
                                 const HierarchicalKey              &aKey,
                                 std::shared_ptr<DAGSyncer>          aDagSyncer,
@@ -47,9 +43,9 @@ namespace sgns::crdt
       dagSyncer_( std::move( aDagSyncer ) )
   {
       // <namespace>/s
-      auto fullSetNs = aKey.ChildString( setsNamespace_ );
+      auto fullSetNs = aKey.ChildString( std::string(setsNamespace_) );
       // <namespace>/h
-      auto fullHeadsNs = aKey.ChildString( headsNamespace_ );
+      auto fullHeadsNs = aKey.ChildString( std::string(headsNamespace_) );
 
       int numberOfDagWorkers = 5;
       if ( aOptions != nullptr && !aOptions->Verify().has_failure() &&

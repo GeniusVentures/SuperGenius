@@ -5,7 +5,7 @@
 #include "application/genesis_raw_config.hpp"
 #include "network/types/peer_list.hpp"
 #include <set>
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
 #include "primitives/common.hpp"
 namespace sgns::application {
 

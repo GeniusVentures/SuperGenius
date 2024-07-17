@@ -11,6 +11,11 @@
 #include <boost/multiprecision/cpp_int.hpp>
 #include "account/GeniusUTXO.hpp"
 #include "account/TransferTransaction.hpp"
+#include "singleton/CComponentFactory.hpp"
+#include "local_secure_storage/ISecureStorage.hpp"
+#include <KDFGenerator/KDFGenerator.hpp>
+#include "outcome/outcome.hpp"
+#include "base/util.hpp"
 
 using namespace boost::multiprecision;
 
@@ -19,14 +24,18 @@ namespace sgns
     class GeniusAccount
     {
     public:
-        GeniusAccount( const uint256_t &addr, const uint64_t &initial_balance, const uint8_t token_type ) :
-            address( addr ),           //
-            token( token_type ),       //
-            nonce( 0 ),                //
-            balance( initial_balance ) //
+        GeniusAccount( const uint8_t token_type ) :
+            token( token_type ), //
+            nonce( 0 ),          //
+            balance( 0 )         //
         {
-            std::cout << "Genius account" << std::endl;
-            //TODO - Retrieve values where? on Transaction manager?
+            auto maybe_address = GenerateGeniusAddress();
+
+            if ( maybe_address )
+            {
+                address = maybe_address.value();
+            }
+            //TODO - Retrieve values where? Read through blockchain Here?
         }
 
         ~GeniusAccount()
@@ -117,9 +126,11 @@ namespace sgns
 
         bool RefreshUTXOs( const std::vector<InputUTXOInfo> &infos )
         {
-            utxos.erase( std::remove_if( utxos.begin(), utxos.end(),
+            utxos.erase( std::remove_if( utxos.begin(),
+                                         utxos.end(),
                                          [&infos]( const GeniusUTXO &x ) { //
-                                             return std::any_of( infos.begin(), infos.end(),
+                                             return std::any_of( infos.begin(),
+                                                                 infos.end(),
                                                                  [&x]( const InputUTXOInfo &a ) { //
                                                                      return ( a.txid_hash_ == x.GetTxID() ) &&
                                                                             ( a.output_idx_ == x.GetOutputIdx() );
@@ -136,6 +147,36 @@ namespace sgns
 
     private:
         uint64_t balance;
+
+        outcome::result<uint256_t> GenerateGeniusAddress()
+        {
+            auto component_factory = SINGLETONINSTANCE( CComponentFactory );
+            OUTCOME_TRY( ( auto &&, icomponent ), component_factory->GetComponent( "LocalSecureStorage" ) );
+
+            auto secure_storage = std::dynamic_pointer_cast<ISecureStorage>( icomponent );
+            auto load_res       = secure_storage->Load( "sgns_key" );
+
+            std::vector<uint8_t> key_seed;
+            if ( !load_res )
+            {
+                //Create file/key
+                auto               random_number = GenerateRandomNumber();
+                std::ostringstream oss;
+                oss << std::hex << random_number;
+
+                std::string rnd_string = "0x" + oss.str();
+                BOOST_OUTCOME_TRYV2( auto &&, secure_storage->Save( "sgns_key", rnd_string ) );
+                key_seed = HexASCII2NumStr<std::uint8_t>( rnd_string.data(), rnd_string.size() );
+            }
+            else
+            {
+                key_seed = HexASCII2NumStr<std::uint8_t>( &load_res.value().data()[2], load_res.value().size() - 2 );
+
+            }
+            auto result = KDFGenerator::GenerateKDF( key_seed, KDFGenerator::HashType::SHA256 );
+
+            return Vector2Num<uint256_t>( result );
+        }
     };
 }
 

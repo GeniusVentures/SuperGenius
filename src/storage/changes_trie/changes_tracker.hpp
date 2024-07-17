@@ -5,7 +5,7 @@
 #include "primitives/common.hpp"
 #include "primitives/extrinsic.hpp"
 #include "storage/changes_trie/changes_trie_config.hpp"
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
 
 namespace sgns::storage::changes_trie {
 

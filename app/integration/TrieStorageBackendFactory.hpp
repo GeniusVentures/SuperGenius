@@ -9,7 +9,7 @@
 #define _TRIE_STORAGE_BACKEND_FACTORY_HPP_
 #include "base/buffer.hpp"
 #include "blockchain/impl/storage_util.hpp"
-#include "integration/CComponentFactory.hpp"
+#include "singleton/CComponentFactory.hpp"
 #include "storage/trie/impl/trie_storage_backend_impl.hpp"
 
 class TrieStorageBackendFactory

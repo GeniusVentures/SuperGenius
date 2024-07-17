@@ -2,7 +2,7 @@
 #define SUPERGENIUS_APPLICATION_DISPATCHER
 
 #include <memory>
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
 
 namespace sgns::application {
 

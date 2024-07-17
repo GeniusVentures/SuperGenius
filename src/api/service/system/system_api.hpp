@@ -2,7 +2,7 @@
 #define SUPERGENIUS_API_SYSTEMAPI
 
 #include "application/configuration_storage.hpp"
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
 
 namespace sgns::api {
 

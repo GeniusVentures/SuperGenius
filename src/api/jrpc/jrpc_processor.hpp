@@ -3,7 +3,7 @@
 #define SUPERGENIUS_SRC_API_JRPC_JRPC_PROCESSOR_HPP
 
 #include <boost/noncopyable.hpp>
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
 
 namespace sgns::api {
   /**

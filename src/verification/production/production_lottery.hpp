@@ -7,7 +7,7 @@
 
 #include "verification/production/types/epoch.hpp"
 #include "crypto/sr25519_types.hpp"
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
 
 namespace sgns::verification {
   /**

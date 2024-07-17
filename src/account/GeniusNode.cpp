@@ -15,46 +15,23 @@
 #include "processing/processing_subtask_result_storage.hpp"
 #include "processing/processors/processing_processor_mnn_posenet.hpp"
 
-#ifndef __cplusplus
-extern "C"
-{
-#endif
-    extern AccountKey   ACCOUNT_KEY;
-    extern DevConfig_st DEV_CONFIG;
-#ifndef __cplusplus
-}
-#endif
-static const std::string logger_config( R"(
-            # ----------------
-            sinks:
-              - name: console
-                type: console
-                color: true
-            groups:
-              - name: SuperGeniusDemo
-                sink: console
-                level: error
-                children:
-                  - name: libp2p
-            # ----------------
-              )" );
-
 using namespace boost::multiprecision;
 namespace br = boost::random;
 
 namespace sgns
 {
-    GeniusNode::GeniusNode( const AccountKey &priv_key_data, const DevConfig_st &dev_config ) :
-        account_( std::make_shared<GeniusAccount>( uint256_t{ std::string( priv_key_data ) }, 0, 0 ) ), //
-        io_( std::make_shared<boost::asio::io_context>() ),                                             //
-        node_base_addr_( priv_key_data ),                                                               //
-        dev_config_( dev_config )                                                                       //
+    GeniusNode GeniusNode::instance( DEV_CONFIG );
+
+    GeniusNode::GeniusNode( const DevConfig_st &dev_config ) :
+        account_( std::make_shared<GeniusAccount>( static_cast<uint8_t>( dev_config.TokenID ) ) ), //
+        io_( std::make_shared<boost::asio::io_context>() ),                                        //
+        dev_config_( dev_config )                                                                  //
     {
         logging_system = std::make_shared<soralog::LoggingSystem>( std::make_shared<soralog::ConfiguratorFromYAML>(
             // Original LibP2P logging config
             std::make_shared<libp2p::log::Configurator>(),
             // Additional logging config for application
-            logger_config ) );
+            GetLoggingSystem() ) );
         logging_system->configure();
 
         libp2p::log::setLoggingSystem( logging_system );
@@ -72,42 +49,46 @@ namespace sgns
         auto logNoise = sgns::base::createLogger( "Noise" );
         logNoise->set_level( spdlog::level::off );
 
-        auto pubsubport = 40001 + GenerateRandomPort(node_base_addr_);
+        auto                     pubsubport = 40001 + GenerateRandomPort( account_->GetAddress<std::string>() );
         std::vector<std::string> addresses;
         //UPNP
-        auto upnp = std::make_shared<sgns::upnp::UPNP>();
+        auto upnp   = std::make_shared<sgns::upnp::UPNP>();
         auto gotIGD = upnp->GetIGD();
-        if (gotIGD)
+        if ( gotIGD )
         {
-            auto openedPort = upnp->OpenPort(pubsubport, pubsubport, "TCP", 1800);
-            auto wanip = upnp->GetWanIP();
-            auto lanip = upnp->GetLocalIP();
+            auto openedPort = upnp->OpenPort( pubsubport, pubsubport, "TCP", 1800 );
+            auto wanip      = upnp->GetWanIP();
+            auto lanip      = upnp->GetLocalIP();
             std::cout << "Wan IP: " << wanip << std::endl;
             std::cout << "Lan IP: " << lanip << std::endl;
-            addresses.push_back(lanip);
-            addresses.push_back(wanip);
-            if (!openedPort)
+            addresses.push_back( lanip );
+            addresses.push_back( wanip );
+            if ( !openedPort )
             {
                 std::cerr << "Failed to open port" << std::endl;
             }
-            else {
+            else
+            {
                 std::cout << "Open Port Success" << std::endl;
             }
         }
-        
+
         //auto loggerBroadcaster = base::createLogger( "PubSubBroadcasterExt" );
         //loggerBroadcaster->set_level( spdlog::level::debug );
 
-        auto pubsubKeyPath = ( boost::format( "SuperGNUSNode.TestNet.%s/pubs_processor" ) % node_base_addr_ ).str();
+        auto pubsubKeyPath =
+            ( boost::format( "SuperGNUSNode.TestNet.%s/pubs_processor" ) % account_->GetAddress<std::string>() ).str();
 
         pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
             crdt::KeyPairFileStorage( pubsubKeyPath ).GetKeyPair().value() );
-        pubsub_->Start( 40001 + GenerateRandomPort( node_base_addr_ ), { pubsub_->GetLocalAddress() } , addresses);
+        pubsub_->Start( pubsubport, { pubsub_->GetLocalAddress() }, addresses );
 
         globaldb_ = std::make_shared<crdt::GlobalDB>(
-            io_, ( boost::format( "SuperGNUSNode.TestNet.%s" ) % node_base_addr_ ).str(),
-            40010 + GenerateRandomPort( node_base_addr_ ),
-            std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_, std::string( PROCESSING_CHANNEL ) ) , addresses);
+            io_,
+            ( boost::format( "SuperGNUSNode.TestNet.%s" ) % account_->GetAddress<std::string>() ).str(),
+            40010 + GenerateRandomPort( account_->GetAddress<std::string>() ),
+            std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_, std::string( PROCESSING_CHANNEL ) ),
+            addresses );
 
         globaldb_->Init( crdt::CrdtOptions::DefaultOptions() );
 
@@ -144,7 +125,11 @@ namespace sgns
         }
         block_storage_       = std::move( maybe_block_storage.value() );
         transaction_manager_ = std::make_shared<TransactionManager>(
-            globaldb_, io_, account_, hasher_, block_storage_,
+            globaldb_,
+            io_,
+            account_,
+            hasher_,
+            block_storage_,
             [this]( const std::string &var, const std::set<std::string> &vars ) { ProcessingFinished( var, vars ); } );
 
         transaction_manager_->Start();
@@ -242,10 +227,8 @@ namespace sgns
                 task_queue_->EnqueueTask( task, subTasks );
             }
 
-            
-
-            transaction_manager_->HoldEscrow( funds, nSubTasks, uint256_t{ std::string( dev_config_.Addr ) },
-                                              dev_config_.Cut, image_path );
+            transaction_manager_->HoldEscrow(
+                funds, nSubTasks, uint256_t{ std::string( dev_config_.Addr ) }, dev_config_.Cut, image_path );
         }
     }
 
@@ -279,14 +262,20 @@ namespace sgns
         string fileURL = "https://ipfs.filebase.io/ipfs/" + cid + "/settings.json";
         std::cout << "FILE URLL: " << fileURL << std::endl;
         auto data = FileManager::GetInstance().LoadASync(
-            fileURL, false, false, ioc, [ioc](const sgns::AsyncError::CustomResult& status) { 
-                if (status.has_value())
+            fileURL,
+            false,
+            false,
+            ioc,
+            [ioc]( const sgns::AsyncError::CustomResult &status )
+            {
+                if ( status.has_value() )
                 {
                     std::cout << "Success: " << status.value().message << std::endl;
                 }
-                else {
+                else
+                {
                     std::cout << "Error: " << status.error() << std::endl;
-                }
+                };
             },
             [ioc, &mainbuffers](
                 std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers )
@@ -303,8 +292,8 @@ namespace sgns
                     //Process settings json
 
                     mainbuffers->first.insert( mainbuffers->first.end(), buffers->first.begin(), buffers->first.end() );
-                    mainbuffers->second.insert( mainbuffers->second.end(), buffers->second.begin(),
-                                                buffers->second.end() );
+                    mainbuffers->second.insert(
+                        mainbuffers->second.end(), buffers->second.begin(), buffers->second.end() );
                 }
             },
             "file" );
@@ -352,12 +341,18 @@ namespace sgns
         string            imageUrl = "https://ipfs.filebase.io/ipfs/" + cid + "/" + inputImage;
         std::vector<char> imageData;
         auto              data2 = FileManager::GetInstance().LoadASync(
-            imageUrl, false, false, ioc, [ioc](const sgns::AsyncError::CustomResult& status) { 
-                if (status.has_value())
+            imageUrl,
+            false,
+            false,
+            ioc,
+            [ioc]( const sgns::AsyncError::CustomResult &status )
+            {
+                if ( status.has_value() )
                 {
                     std::cout << "Success: " << status.value().message << std::endl;
                 }
-                else {
+                else
+                {
                     std::cout << "Error: " << status.error() << std::endl;
                 }
             },
@@ -382,8 +377,8 @@ namespace sgns
         ioc->reset();
         ioc->run();
         std::vector<uint8_t> output( imageData.size() );
-        std::transform( imageData.begin(), imageData.end(), output.begin(),
-                        []( char c ) { return static_cast<uint8_t>( c ); } );
+        std::transform(
+            imageData.begin(), imageData.end(), output.begin(), []( char c ) { return static_cast<uint8_t>( c ); } );
         return output;
     }
 
@@ -432,11 +427,5 @@ namespace sgns
         }
     }
 
-    /*
-    static GeniusNode instance( ACCOUNT_KEY, DEV_CONFIG );
-    GeniusNode       &GeniusNode::GetInstance()
-    {
-        return instance;
-    }
-    */
+
 }

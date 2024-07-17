@@ -77,11 +77,11 @@ namespace sgns::crdt
 
     /** Get priority suffix
     */
-    std::string GetPrioritySuffix() { return prioritySuffix_; }
+    std::string GetPrioritySuffix() { return std::string(prioritySuffix_); }
 
     /** Get value suffix
     */
-    std::string GetValueSuffix() { return valueSuffix_; }
+    std::string GetValueSuffix() { return std::string(valueSuffix_); }
 
     /** Get value from datastore for HierarchicalKey defined
     * @param aKey HierarchicalKey to get value from datastore
@@ -280,11 +280,11 @@ namespace sgns::crdt
     PutHookPtr putHookFunc_ = nullptr;
     DeleteHookPtr deleteHookFunc_ = nullptr;
 
-    static const std::string elemsNamespace_; // "s" -> elements namespace /set/s/<key>/<block>
-    static const std::string tombsNamespace_; // "t" -> tombstones namespace /set/t/<key>/<block>
-    static const std::string keysNamespace_; // "k" -> keys namespace /set/k/<key>/{v,p}
-    static const std::string valueSuffix_; // "v" for /keys namespace
-    static const std::string prioritySuffix_; // "p" for /keys namespace
+    static constexpr std::string_view elemsNamespace_ = "s"; // "s" -> elements namespace /set/s/<key>/<block>
+    static constexpr std::string_view tombsNamespace_ = "t"; // "t" -> tombstones namespace /set/t/<key>/<block>
+    static constexpr std::string_view keysNamespace_ = "k"; // "k" -> keys namespace /set/k/<key>/{v,p}
+    static constexpr std::string_view valueSuffix_ = "v"; // "v" for /keys namespace
+    static constexpr std::string_view prioritySuffix_ = "p"; // "p" for /keys namespace
   };
 
 } // namespace sgns::crdt

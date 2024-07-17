@@ -6,7 +6,7 @@
 #include "base/buffer.hpp"
 #include "outcome/outcome.hpp"
 #include "primitives/common.hpp"
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
 
 namespace sgns::api {
   /**

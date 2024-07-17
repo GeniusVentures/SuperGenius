@@ -5,7 +5,6 @@
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
 #include <boost/format.hpp>
-#include <boost/multiprecision/cpp_int.hpp>
 #include <rapidjson/document.h>
 #include "AccountHelper.hpp"
 #include "processing/processing_imagesplit.hpp"
@@ -42,9 +41,8 @@ static const std::string logger_config( R"(
 namespace sgns
 {
     AccountHelper::AccountHelper( const AccountKey2 &priv_key_data, const DevConfig_st2 &dev_config ) :
-        account_( std::make_shared<GeniusAccount>( uint256_t{ priv_key_data }, 0, 0 ) ), //
+        account_( std::make_shared<GeniusAccount>( 0 ) ), //
         io_( std::make_shared<boost::asio::io_context>() ),                              //
-        node_base_addr_( priv_key_data ),                                                //
         dev_config_( dev_config )                                                        //
     {
         logging_system = std::make_shared<soralog::LoggingSystem>( std::make_shared<soralog::ConfiguratorFromYAML>(
@@ -68,14 +66,14 @@ namespace sgns
         auto logNoise = sgns::base::createLogger( "Noise" );
         logNoise->set_level( spdlog::level::trace );
 
-        auto pubsubKeyPath = ( boost::format( "SuperGNUSNode.TestNet.%s/pubs_processor" ) % node_base_addr_ ).str();
+        auto pubsubKeyPath = ( boost::format( "SuperGNUSNode.TestNet.%s/pubs_processor" ) % account_->GetAddress<std::string>() ).str();
 
         pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
             crdt::KeyPairFileStorage( pubsubKeyPath ).GetKeyPair().value() );
         pubsub_->Start( 40001, {} );
 
         globaldb_ = std::make_shared<crdt::GlobalDB>(
-            io_, ( boost::format( "SuperGNUSNode.TestNet.%s" ) % node_base_addr_ ).str(), 40010,
+            io_, ( boost::format( "SuperGNUSNode.TestNet.%s" ) % account_->GetAddress<std::string>() ).str(), 40010,
             std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_, std::string( PROCESSING_CHANNEL ) ) );
 
         globaldb_->Init( crdt::CrdtOptions::DefaultOptions() );

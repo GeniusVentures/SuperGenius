@@ -23,7 +23,7 @@
 #include "crypto/hasher/hasher_impl.hpp"
 #include "blockchain/impl/key_value_block_header_repository.hpp"
 #include "blockchain/impl/key_value_block_storage.hpp"
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
 #include "processing/impl/processing_task_queue_impl.hpp"
 #include "processing/impl/processing_core_impl.hpp"
 #include "processing/impl/processing_subtask_result_storage_impl.hpp"
@@ -36,11 +36,20 @@ extern "C"
 #endif
     typedef struct DevConfig
     {
-        char  Addr[255];
-        float Cut;
+        char   Addr[255];
+        double Cut;
+        double TokenValueInGNUS;
+        int    TokenID;
     } DevConfig_st;
+#ifndef __cplusplus
+}
+#endif
 
-    typedef char AccountKey[255];
+#ifndef __cplusplus
+extern "C"
+{
+#endif
+    extern DevConfig_st DEV_CONFIG;
 #ifndef __cplusplus
 }
 #endif
@@ -50,8 +59,11 @@ namespace sgns
     class GeniusNode : public IComponent
     {
     public:
-        GeniusNode( const AccountKey &priv_key_data, const DevConfig_st &dev_config );
-        //static GeniusNode &GetInstance();
+        GeniusNode( const DevConfig_st &dev_config );
+        static GeniusNode &GetInstance() 
+        {
+            return instance;
+        }
         ~GeniusNode();
 
         void ProcessImage( const std::string &image_path, uint16_t funds );
@@ -86,7 +98,6 @@ namespace sgns
         std::thread io_thread;
 
         DevConfig_st dev_config_;
-        std::string  node_base_addr_;
 
         uint16_t GenerateRandomPort( const std::string &address );
 
@@ -100,7 +111,30 @@ namespace sgns
         static constexpr std::size_t      MAX_NODES_COUNT         = 1;
         static constexpr std::string_view PROCESSING_GRID_CHANNEL = "GRID_CHANNEL_ID";
         static constexpr std::string_view PROCESSING_CHANNEL      = "SGNUS.TestNet.Channel";
+
+        static const std::string &GetLoggingSystem()
+        {
+            static const std::string logger_config = R"(
+        # ----------------
+        sinks:
+            - name: console
+            type: console
+            color: true
+        groups:
+            - name: SuperGeniusDemo
+            sink: console
+            level: info
+            children:
+                - name: libp2p
+                - name: Gossip
+        # ----------------
+            )";
+            return logger_config;
+        }
+
+        static GeniusNode instance;
     };
+
 };
 
 #endif
