@@ -50,6 +50,8 @@ namespace sgns
         logNoise->set_level( spdlog::level::off );
 
         auto                     pubsubport = 40001 + GenerateRandomPort( account_->GetAddress<std::string>() );
+        auto                     graphsyncport = 40010 + GenerateRandomPort( account_->GetAddress<std::string>() );
+
         std::vector<std::string> addresses;
         //UPNP
         auto upnp   = std::make_shared<sgns::upnp::UPNP>();
@@ -57,6 +59,7 @@ namespace sgns
         if ( gotIGD )
         {
             auto openedPort = upnp->OpenPort( pubsubport, pubsubport, "TCP", 1800 );
+            auto openedPort2 = upnp->OpenPort( graphsyncport, graphsyncport, "TCP", 1800 );
             auto wanip      = upnp->GetWanIP();
             auto lanip      = upnp->GetLocalIP();
             std::cout << "Wan IP: " << wanip << std::endl;
@@ -86,7 +89,7 @@ namespace sgns
         globaldb_ = std::make_shared<crdt::GlobalDB>(
             io_,
             ( boost::format( "SuperGNUSNode.TestNet.%s" ) % account_->GetAddress<std::string>() ).str(),
-            40010 + GenerateRandomPort( account_->GetAddress<std::string>() ),
+            graphsyncport,
             std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_, std::string( PROCESSING_CHANNEL ) ),
             addresses );
 
