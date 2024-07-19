@@ -126,10 +126,14 @@ int main( int argc, char *argv[] )
 {
     std::thread input_thread( keyboard_input_thread );
 
+    //Inputs
+
+    sgns::GeniusNode node_instance( DEV_CONFIG );
+
     std::cout << "Insert \"process\", the image and the number of tokens to be" << std::endl;
     while ( true )
     {
-        process_events( sgns::GeniusNode::GetInstance() );
+        process_events( node_instance );
     }
     if ( input_thread.joinable() )
     {

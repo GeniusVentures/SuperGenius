@@ -20,7 +20,7 @@ namespace br = boost::random;
 
 namespace sgns
 {
-    GeniusNode GeniusNode::instance( DEV_CONFIG );
+    //GeniusNode GeniusNode::instance( DEV_CONFIG );
 
     GeniusNode::GeniusNode( const DevConfig_st &dev_config ) :
         account_( std::make_shared<GeniusAccount>( static_cast<uint8_t>( dev_config.TokenID ) ) ), //
