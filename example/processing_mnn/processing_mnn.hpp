@@ -107,7 +107,6 @@ namespace
         }
     private:
         size_t m_nSubTasks;
-        size_t m_nChunks;
         bool m_addValidationSubtask;
     };
 

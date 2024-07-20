@@ -26,7 +26,7 @@ namespace sgns
 
         private:
             size_t m_nSubTasks;
-            size_t m_nChunks;
+            //size_t m_nChunks;
             bool   m_addValidationSubtask;
         };
 

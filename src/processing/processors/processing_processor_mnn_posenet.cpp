@@ -13,6 +13,7 @@ namespace sgns::processing
                                                        const SGProcessing::Task    &task,
                                                        const SGProcessing::SubTask &subTask )
     {
+        std::vector<uint8_t> subTaskResultHash(SHA256_DIGEST_LENGTH);
         for ( auto image : *imageData_ )
         {
             std::vector<uint8_t> output( image.size() );
@@ -25,7 +26,7 @@ namespace sgns::processing
             ImageSplitter ChunkSplit( animageSplit.GetPart( dataindex ), basechunk.line_stride(), basechunk.stride(),
                                       animageSplit.GetPartHeightActual( dataindex ) / basechunk.subchunk_height() *
                                           basechunk.line_stride() );
-            std::vector<uint8_t> subTaskResultHash( SHA256_DIGEST_LENGTH );
+            
             for ( int chunkIdx = 0; chunkIdx < subTask.chunkstoprocess_size(); ++chunkIdx )
             {
                 std::cout << "Chunk IDX:  " << chunkIdx << "Total: " << subTask.chunkstoprocess_size() << std::endl;
@@ -65,6 +66,7 @@ namespace sgns::processing
             }
             return subTaskResultHash;
         }
+        return subTaskResultHash;
     }
 
     void MNN_PoseNet::SetData(

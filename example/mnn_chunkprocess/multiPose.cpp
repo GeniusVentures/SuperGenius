@@ -109,7 +109,7 @@ static int decodePoseImpl(float curScore, int curId, const CV::Point& originalOn
     const int height              = heatmaps->height();
     const int width               = heatmaps->width();
     std::map<std::string, int> poseNamesID;
-    for (int i = 0; i < PoseNames.size(); ++i) {
+    for (size_t i = 0; i < PoseNames.size(); ++i) {
         poseNamesID[PoseNames[i]] = i;
     }
 
@@ -154,7 +154,7 @@ static int decodePoseImpl(float curScore, int curId, const CV::Point& originalOn
         }
     }
 
-    for (int edge = 0; edge < PoseChain.size(); ++edge) {
+    for (size_t edge = 0; edge < PoseChain.size(); ++edge) {
         const int sourceKeypointID = poseNamesID[PoseChain[edge].first];
         const int targetKeypointID = poseNamesID[PoseChain[edge].second];
         if (instanceKeypointScores[sourceKeypointID] > 0.0 && instanceKeypointScores[targetKeypointID] == 0.0) {
@@ -226,7 +226,7 @@ static int decodeMultiPose(const Tensor* offsets, const Tensor* displacementFwd,
 
     auto withinNMSRadius = [=, &poseKeypointCoords](const CV::Point& point, const int id) {
         bool withinThisPointRadius = false;
-        for (int i = 0; i < poseKeypointCoords.size(); ++i) {
+        for (size_t i = 0; i < poseKeypointCoords.size(); ++i) {
             const auto& curPoint = poseKeypointCoords[i][id];
             const auto sum       = powf((curPoint.fX - point.fX), 2) + powf((curPoint.fY - point.fY), 2);
             if (sum <= squareNMSRadius) {

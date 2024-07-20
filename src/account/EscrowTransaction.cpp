@@ -14,10 +14,10 @@ namespace sgns
                                           const uint256_t &dest_addr, const float &cut,
                                           const SGTransaction::DAGStruct &dag ) :
         IGeniusTransactions( "escrow", SetDAGWithType( dag, "escrow" ) ), //
-        utxo_params_( params ),                                           //
+        num_chunks_(num_chunks),                                         //
         dev_addr( dest_addr ),                                            //
         dev_cut( cut ),                                                   //
-        num_chunks_( num_chunks )                                         //
+        utxo_params_(params)                                           //
     {
         auto hasher_ = std::make_shared<sgns::crypto::HasherImpl>();
         auto hash    = hasher_->blake2b_256( SerializeByteVector() );
