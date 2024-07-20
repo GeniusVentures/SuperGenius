@@ -117,7 +117,7 @@ int main(int argc, char **argv)
     //    // Do nothing
     //};
     FileManager::GetInstance().InitializeSingletons();
-    for (int i = 0; i < file_names.size(); i++)
+    for (size_t i = 0; i < file_names.size(); i++)
     {
         std::cout << "LoadASync: " << file_names[i] << std::endl;
         auto data = FileManager::GetInstance().LoadASync(file_names[i], false, true, ioc, [](const sgns::AsyncError::CustomResult& status)

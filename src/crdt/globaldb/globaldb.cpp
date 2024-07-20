@@ -41,8 +41,8 @@ GlobalDB::GlobalDB(
     : m_context(std::move(context))
     , m_databasePath(std::move(databasePath))
     , m_dagSyncPort(dagSyncPort)
-    , m_broadcastChannel(std::move(broadcastChannel))
     , m_graphSyncAddrs(gsaddresses)
+    , m_broadcastChannel(std::move(broadcastChannel))
 {
 }
 

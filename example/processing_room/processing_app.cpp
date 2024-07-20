@@ -100,7 +100,7 @@ namespace
 
         void EnqueueTask(
             const SGProcessing::Task& task,
-            const std::list<SGProcessing::SubTask>& subTasks)
+            const std::list<SGProcessing::SubTask>& subTasks) override
         {
             m_tasks.push_back(task);
             m_subTasks.emplace(task.ipfs_block_id(), subTasks);
@@ -108,7 +108,7 @@ namespace
 
         bool GetSubTasks(
             const std::string& taskId,
-            std::list<SGProcessing::SubTask>& subTasks)
+            std::list<SGProcessing::SubTask>& subTasks) override
         {
             auto it = m_subTasks.find(taskId);
             if (it != m_subTasks.end())

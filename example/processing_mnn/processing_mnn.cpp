@@ -249,14 +249,12 @@ int main(int argc, char* argv[])
         nChunks,
         false);
 
-    int chunkopt = 0;
     for (auto& task : tasks)
     {
         std::cout << "subtask" << std::endl;
         std::list<SGProcessing::SubTask> subTasks;
         taskSplitter.SplitTask(task, subTasks, imagesplit, chunkOptions);
         taskQueue->EnqueueTask(task, subTasks);
-        chunkopt++;
     }
     
     //Run ASIO

@@ -20,7 +20,9 @@ if("${CMAKE_CXX_COMPILER_ID}" MATCHES "^(AppleClang|Clang|GNU)$")
     add_flag(-Wno-unused-function) # prints too many useless warnings
     add_flag(-Wno-format-nonliteral) # prints way too many warnings from spdlog
     add_flag(-Wno-gnu-zero-variadic-macro-arguments) # https://stackoverflow.com/questions/21266380/is-the-gnu-zero-variadic-macro-arguments-safe-to-ignore
-
+	add_flag(-Wno-unused-result) #Every logger call generates this
+	add_flag(-Wno-pessimizing-move) #Warning was irrelevant to situation
+	
     # promote to errors
     # add_flag(-Werror=unused-lambda-capture)  # error if lambda capture is unused
     # add_flag(-Werror=return-type)      # warning: control reaches end of non-void function [-Wreturn-type]
