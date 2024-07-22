@@ -46,6 +46,12 @@ namespace sgns
         auto loggerDAGSyncer = base::createLogger( "GraphsyncDAGSyncer" );
         loggerDAGSyncer->set_level( spdlog::level::off );
 
+        //auto loggerAutonat = base::createLogger("Autonat");
+        //loggerDAGSyncer->set_level(spdlog::level::trace);
+
+        //auto loggerAutonatMsg = base::createLogger("AutonatMsgProcessor");
+        //loggerDAGSyncer->set_level(spdlog::level::trace);
+
         auto logkad = sgns::base::createLogger( "Kademlia" );
         logkad->set_level( spdlog::level::off );
 
