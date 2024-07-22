@@ -27,8 +27,8 @@ namespace sgns::processing
             size_t maximalProcessingSubTaskCount)
             : m_db(db)
             //, m_subTaskProcessingTime(subTaskProcessingTime)
-            , m_maximalProcessingSubTaskCount(maximalProcessingSubTaskCount)
             , m_processor(nullptr)
+            , m_maximalProcessingSubTaskCount(maximalProcessingSubTaskCount)
             , m_processingSubTaskCount(0)
         {
         }
