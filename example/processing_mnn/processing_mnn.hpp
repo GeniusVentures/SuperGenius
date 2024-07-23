@@ -34,7 +34,6 @@ namespace
             size_t nChunks,
             bool addValidationSubtask)
             : m_nSubTasks(nSubTasks)
-            , m_nChunks(nChunks)
             , m_addValidationSubtask(addValidationSubtask)
         {
         }
@@ -107,7 +106,6 @@ namespace
         }
     private:
         size_t m_nSubTasks;
-        size_t m_nChunks;
         bool m_addValidationSubtask;
     };
 

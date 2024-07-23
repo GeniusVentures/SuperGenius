@@ -32,12 +32,12 @@ namespace sgns
         db_m( std::move( db ) ),                                                                                    //
         ctx_m( std::move( ctx ) ),                                                                                  //
         account_m( std::move( account ) ),                                                                          //
+        timer_m(std::make_shared<boost::asio::steady_timer>(*ctx_m, boost::asio::chrono::milliseconds(300))),       //
+        last_block_id_m(0),                                                                                         //
+        last_trans_on_block_id(0),                                                                                  //
+        block_storage_m(std::move(block_storage)),                                                                  //
         hasher_m( std::move( hasher ) ),                                                                            //
-        block_storage_m( std::move( block_storage ) ),                                                              //
-        processing_finished_cb_m( processing_finished_cb ),                                                         //
-        timer_m( std::make_shared<boost::asio::steady_timer>( *ctx_m, boost::asio::chrono::milliseconds( 300 ) ) ), //
-        last_block_id_m( 0 ),                                                                                       //
-        last_trans_on_block_id( 0 )                                                                                 //
+        processing_finished_cb_m( processing_finished_cb )                                                          //
 
     {
         m_logger->set_level( spdlog::level::debug );

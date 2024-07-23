@@ -37,11 +37,11 @@ namespace sgns::processing
         m_subTaskStateStorage( subTaskStateStorage ),                   //
         m_subTaskResultStorage( subTaskResultStorage ),                 //
         m_processingCore( processingCore ),                             //
-        userCallbackSuccess_( userCallbackSuccess ),                    //
-        userCallbackError_( userCallbackError ),                        //
         m_timerChannelListRequestTimeout( *m_context.get() ),           //
         m_channelListRequestTimeout( boost::posix_time::seconds( 5 ) ), //
-        m_isStopped( true )                                             //
+        m_isStopped( true ),                                            //
+        userCallbackSuccess_(userCallbackSuccess),                      //
+        userCallbackError_(userCallbackError)                           //
     {
     }
 

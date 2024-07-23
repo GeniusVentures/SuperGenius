@@ -11,7 +11,7 @@ namespace sgns
     {
         ProcessTaskSplitter::ProcessTaskSplitter( size_t nSubTasks, size_t nChunks, bool addValidationSubtask ) :
             m_nSubTasks( nSubTasks ), //
-            m_nChunks( nChunks ),     //
+            //m_nChunks( nChunks ),     //
             m_addValidationSubtask( addValidationSubtask )
         {
         }
