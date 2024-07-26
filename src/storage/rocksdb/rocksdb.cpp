@@ -1,9 +1,9 @@
 
 
+#include <memory>
 #include <storage/rocksdb/rocksdb.hpp>
 #include <boost/filesystem.hpp>
 #include <utility>
-#include <iostream>
 #include "storage/rocksdb/rocksdb_cursor.hpp"
 #include "storage/rocksdb/rocksdb_batch.hpp"
 #include "storage/rocksdb/rocksdb_util.hpp"
@@ -72,7 +72,7 @@ namespace sgns::storage
 
   void rocksdb::setReadOptions(ReadOptions ro) 
   {
-    ro_ = ro;
+    ro_ = std::move(ro);
   }
 
   void rocksdb::setWriteOptions(WriteOptions wo) 
@@ -110,7 +110,7 @@ namespace sgns::storage
     Buffer value;
 
     QueryResult results;
-    auto iter = db_->NewIterator(read_options);
+    auto iter = std::unique_ptr<rocksdb::Iterator>(db_->NewIterator(read_options));
     auto slicePrefix = make_slice(keyPrefix);
     for (iter->Seek(slicePrefix); iter->Valid() && iter->key().starts_with(slicePrefix); iter->Next())
     {
@@ -121,7 +121,6 @@ namespace sgns::storage
       value.put(iter->value().ToString());
       results[key] = value;
     }
-    delete iter;
     return results;
   }
 
