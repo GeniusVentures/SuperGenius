@@ -9,7 +9,7 @@ namespace sgns::crdt
     // Add slash to beginning if missing
     if (key.empty() || key[0] != '/')
     {
-      key = "/" + key;
+      key.insert(key.begin(), '/');
     }
 
     // Remove trailing slash 
@@ -21,30 +21,19 @@ namespace sgns::crdt
     this->key_ = key;
   }
 
-  HierarchicalKey::HierarchicalKey(const HierarchicalKey& aKey)
+  HierarchicalKey::HierarchicalKey( const HierarchicalKey &aKey ) : key_( aKey.key_ )
   {
-    this->key_ = aKey.key_;
   }
 
-  bool HierarchicalKey::operator==(const HierarchicalKey& aKey)
+  HierarchicalKey HierarchicalKey::ChildString(const std::string& s) const
   {
-    return this->key_ == aKey.key_;
-  }
-
-  bool HierarchicalKey::operator!=(const HierarchicalKey& aKey)
-  {
-    return !(*this == aKey);
-  }
-
-  HierarchicalKey HierarchicalKey::ChildString(const std::string& aString) const
-  {
-    std::string childString = aString;
+    std::string childString = s;
     if (childString.size() > 0 && childString[0] != '/')
     {
-      childString = "/" + childString;
+      childString.insert(childString.begin(), '/');
     }
 
-    return HierarchicalKey(this->key_ + childString);
+    return {this->key_ + childString};
   }
 
   bool HierarchicalKey::IsTopLevel() const
@@ -62,4 +51,4 @@ namespace sgns::crdt
     }
     return listOfNames;
   }
-} // namespace sgns::crdt
+}
