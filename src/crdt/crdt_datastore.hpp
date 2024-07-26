@@ -255,7 +255,7 @@ namespace sgns::crdt
     * @param aRootPriority root priority
     * @param aChildren vector of children CIDs
     */
-    void SendNewJobs(const CID& aRootCID, const uint64_t& aRootPriority, const std::vector<CID>& aChildren);
+    void SendNewJobs( const CID &aRootCID, uint64_t aRootPriority, const std::vector<CID> &aChildren );
 
     /** Sync ensures that all the data under the given prefix is flushed to disk in
     * the underlying datastore
@@ -269,7 +269,7 @@ namespace sgns::crdt
     * @param aSet set of CIDs to print
     * @return returns outcome::success on success or outcome::failure otherwise
     */
-    outcome::result<void> PrintDAGRec(const CID& aCID, const uint64_t& aDepth, std::vector<CID>& aSet);
+    outcome::result<void> PrintDAGRec( const CID &aCID, uint64_t aDepth, std::vector<CID> &aSet );
 
     /** Regularly send out a list of heads that we have not recently seen
     */
@@ -300,7 +300,10 @@ namespace sgns::crdt
     * @param aNode Pointer to IPLD node
     * @return list of CIDs or outcome::failure on error
     */
-    outcome::result<std::vector<CID>> ProcessNode(const CID& aRoot, const uint64_t& aRootPrio, const std::shared_ptr<Delta>& aDelta, const std::shared_ptr<Node>& aNode);
+    outcome::result<std::vector<CID>> ProcessNode( const CID                    &aRoot,
+                                                   uint64_t                      aRootPrio,
+                                                   const std::shared_ptr<Delta> &aDelta,
+                                                   const std::shared_ptr<Node>  &aNode );
 
     /** PutBlock add block node to DAGSyncer
     * @param aHeads list of CIDs to add to node as IPLD links
@@ -308,8 +311,9 @@ namespace sgns::crdt
     * @param aDelta Delta to serialize into IPLD node
     * @return IPLD node or outcome::failure on error
     */
-    outcome::result<std::shared_ptr<Node>> PutBlock(
-        const std::vector<CID>& aHeads, const uint64_t& aHeight, const std::shared_ptr<Delta>& aDelta);
+    outcome::result<std::shared_ptr<Node>> PutBlock( const std::vector<CID>       &aHeads,
+                                                     uint64_t                      aHeight,
+                                                     const std::shared_ptr<Delta> &aDelta );
 
     /** AddDAGNode adds node to DAGSyncer and processes new blocks.
     * @param aDelta Pointer to Delta used for generating node and process it

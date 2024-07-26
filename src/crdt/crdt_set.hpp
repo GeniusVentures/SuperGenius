@@ -77,11 +77,17 @@ namespace sgns::crdt
 
     /** Get priority suffix
     */
-    std::string GetPrioritySuffix() { return std::string(prioritySuffix_); }
+    static std::string GetPrioritySuffix()
+    {
+        return std::string( prioritySuffix_ );
+    }
 
     /** Get value suffix
     */
-    std::string GetValueSuffix() { return std::string(valueSuffix_); }
+    static std::string GetValueSuffix()
+    {
+        return std::string( valueSuffix_ );
+    }
 
     /** Get value from datastore for HierarchicalKey defined
     * @param aKey HierarchicalKey to get value from datastore
@@ -94,7 +100,8 @@ namespace sgns::crdt
     * @param aValue delta value to add to datastore
     * @return pointer to new delta or outcome::failure on error
     */
-    outcome::result<std::shared_ptr<Delta>> CreateDeltaToAdd(const std::string& aKey, const std::string& aValue);
+    static outcome::result<std::shared_ptr<Delta>> CreateDeltaToAdd( const std::string &aKey,
+                                                                     const std::string &aValue );
 
     /** Returns a new delta-set removing the given keys with prefix /namespace/s/<key>
     * @param aKey delta key to remove from datastore
@@ -186,7 +193,7 @@ namespace sgns::crdt
     * @param aPriority priority to save
     * @return priority of the key or outcome::failure on error
     */
-    outcome::result<void> SetPriority(const std::string& aKey, const uint64_t& aPriority);
+    outcome::result<void> SetPriority( const std::string &aKey, uint64_t aPriority );
 
     /** Sets a value to datastore if priority is higher. When equal, it sets if the
     * value is lexicographically higher than the current value.
@@ -196,7 +203,10 @@ namespace sgns::crdt
     * @param aPriority priority to save
     * @return priority of the key or outcome::failure on error
     */
-    outcome::result<void> SetValue(const std::string& aKey, const std::string& aID, const Buffer& aValue, const uint64_t& aPriority);
+    outcome::result<void> SetValue( const std::string &aKey,
+                                    const std::string &aID,
+                                    const Buffer      &aValue,
+                                    uint64_t           aPriority );
 
     /** Sets a value to datastore in batch mode if priority is higher. When equal, it sets if the
     * value is lexicographically higher than the current value.
@@ -207,8 +217,11 @@ namespace sgns::crdt
     * @param aPriority priority to save
     * @return priority of the key or outcome::failure on error
     */
-    outcome::result<void> SetValue(const std::unique_ptr<storage::BufferBatch>& aDataStore, const std::string& aKey,
-      const std::string& aID, const Buffer& aValue, const uint64_t& aPriority);
+    outcome::result<void> SetValue( const std::unique_ptr<storage::BufferBatch> &aDataStore,
+                                    const std::string                           &aKey,
+                                    const std::string                           &aID,
+                                    const Buffer                                &aValue,
+                                    uint64_t                                     aPriority );
 
     /** putElems adds items to the "elems" set. It will also set current
     * values and priorities for each element. This needs to run in a lock,
@@ -224,7 +237,7 @@ namespace sgns::crdt
     * @param aPriority priority to save
     * @return outcome::success on success or outcome::failure otherwise
     */
-    outcome::result<void> PutElems(std::vector<Element>& aElems, const std::string& aID, const uint64_t& aPriority);
+    outcome::result<void> PutElems( std::vector<Element> &aElems, const std::string &aID, uint64_t aPriority );
 
     /** PutTombs adds items to the "tombs" set (marked as deleted)
     * @param aElems list of elems to to into datastore
