@@ -13,7 +13,7 @@ ProcessingNode::ProcessingNode(
     std::function<void(const SGProcessing::TaskResult&)> taskResultProcessingSink,
     std::function<void(const std::string&)> processingErrorSink)
     : m_gossipPubSub(std::move(gossipPubSub))
-    , m_nodeId(m_gossipPubSub->GetLocalAddress()[0])
+    , m_nodeId(m_gossipPubSub->GetLocalAddress())
     , m_processingCore(processingCore)
     , m_subTaskStateStorage(subTaskStateStorage)
     , m_subTaskResultStorage(subTaskResultStorage)

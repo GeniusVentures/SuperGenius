@@ -62,6 +62,7 @@ namespace sgns
         //UPNP
         auto upnp   = std::make_shared<sgns::upnp::UPNP>();
         auto gotIGD = upnp->GetIGD();
+        std::string lanip = "";
         if ( gotIGD )
         {
             auto openedPort = upnp->OpenPort( pubsubport, pubsubport, "TCP", 1800 );
@@ -70,7 +71,7 @@ namespace sgns
             auto lanip      = upnp->GetLocalIP();
             std::cout << "Wan IP: " << wanip << std::endl;
             std::cout << "Lan IP: " << lanip << std::endl;
-            addresses.push_back( lanip );
+            //addresses.push_back( lanip );
             addresses.push_back( wanip );
             if ( !openedPort )
             {
@@ -90,14 +91,13 @@ namespace sgns
 
         pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
             crdt::KeyPairFileStorage( pubsubKeyPath ).GetKeyPair().value() );
-        pubsub_->Start( pubsubport, { pubsub_->GetLocalAddress() }, addresses );
+        pubsub_->Start( pubsubport, { pubsub_->GetLocalAddress() }, lanip, addresses );
 
         globaldb_ = std::make_shared<crdt::GlobalDB>(
             io_,
             ( boost::format( "SuperGNUSNode.TestNet.%s" ) % account_->GetAddress<std::string>() ).str(),
             graphsyncport,
-            std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_, std::string( PROCESSING_CHANNEL ) ),
-            addresses );
+            std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_, std::string( PROCESSING_CHANNEL ) ) );
 
         globaldb_->Init( crdt::CrdtOptions::DefaultOptions() );
 

@@ -22,7 +22,7 @@ public:
         std::string databasePath,
         int dagSyncPort,
         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> broadcastChannel,
-        std::vector<std::string> gsaddresses = {});
+        std::string gsaddresses = {});
 
     outcome::result<void> Init(std::shared_ptr<CrdtOptions> crdtOptions);
 
@@ -71,7 +71,7 @@ private:
     std::shared_ptr<boost::asio::io_context> m_context;
     std::string m_databasePath;
     int m_dagSyncPort;
-    std::vector<std::string> m_graphSyncAddrs;
+    std::string m_graphSyncAddrs;
     std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> m_broadcastChannel;
 
     std::shared_ptr<CrdtDatastore> m_crdtDatastore;

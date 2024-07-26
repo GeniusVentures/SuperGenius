@@ -2,6 +2,6 @@ syntax = "proto3";
 package sgns.crdt.broadcasting;
 
 message BroadcastMessage {
-    string multiaddress = 1;
+    repeated string multiaddress = 1;
     bytes data = 2;
 }
