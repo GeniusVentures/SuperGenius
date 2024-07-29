@@ -44,9 +44,9 @@ namespace sgns::verification {
     {
       out << test_struct.epoch_index << test_struct.start_slot << test_struct.epoch_duration ;
       out << test_struct.authorities.size();
-      for(auto it = test_struct.authorities.begin(); it != test_struct.authorities.end() ; it++)
+      for ( const auto &authorithy : test_struct.authorities )
       {
-        out << *it;
+          out << authorithy;
       }
       out << test_struct.randomness ;
       return out;

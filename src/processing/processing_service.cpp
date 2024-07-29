@@ -183,12 +183,17 @@ namespace sgns::processing
         std::scoped_lock lock( m_mutexNodes );
         if ( m_processingNodes.size() < m_maximalNodesCount )
         {
-            auto node = std::make_shared<ProcessingNode>( m_gossipPubSub, m_subTaskStateStorage, m_subTaskResultStorage,
+            auto node = std::make_shared<ProcessingNode>(
+                m_gossipPubSub,
+                m_subTaskStateStorage,
+                m_subTaskResultStorage,
                                                           m_processingCore,
                                                           std::bind( &ProcessingServiceImpl::OnQueueProcessingCompleted,
-                                                                     this, processingQueuelId, std::placeholders::_1 ),
-                                                          std::bind( &ProcessingServiceImpl::OnProcessingError, this,
-                                                                     processingQueuelId, std::placeholders::_1 ) );
+                           this,
+                           processingQueuelId,
+                           std::placeholders::_1 ),
+                std::bind(
+                    &ProcessingServiceImpl::OnProcessingError, this, processingQueuelId, std::placeholders::_1 ) );
 
             node->AttachTo( processingQueuelId );
             m_processingNodes[processingQueuelId] = node;
@@ -203,14 +208,14 @@ namespace sgns::processing
     void ProcessingServiceImpl::PublishLocalChannelList()
     {
         std::scoped_lock lock( m_mutexNodes );
-        for ( auto itNode = m_processingNodes.begin(); itNode != m_processingNodes.end(); ++itNode )
+        for ( auto &itNode : m_processingNodes )
         {
             // Only channel host answers to reduce a number of published messages
-            if ( itNode->second->HasQueueOwnership() )
+            if ( itNode.second->HasQueueOwnership() )
             {
                 SGProcessing::GridChannelMessage gridMessage;
                 auto                             channelResponse = gridMessage.mutable_processing_channel_response();
-                channelResponse->set_channel_id( itNode->first );
+                channelResponse->set_channel_id( itNode.first );
 
                 m_gridChannel->Publish( gridMessage.SerializeAsString() );
                 m_logger->debug( "Channel published. {}", channelResponse->channel_id() );

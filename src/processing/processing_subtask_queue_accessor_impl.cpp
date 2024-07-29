@@ -4,7 +4,7 @@
 
 namespace sgns::processing
 {
-SubTaskQueueAccessorImpl::SubTaskQueueAccessorImpl(
+    SubTaskQueueAccessorImpl::SubTaskQueueAccessorImpl(
         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>        gossipPubSub,
         std::shared_ptr<ProcessingSubTaskQueueManager>          subTaskQueueManager,
         std::shared_ptr<SubTaskStateStorage>                    subTaskStateStorage,
@@ -15,8 +15,8 @@ SubTaskQueueAccessorImpl::SubTaskQueueAccessorImpl(
         m_subTaskStateStorage( std::move( subTaskStateStorage ) ),
         m_subTaskResultStorage( std::move( subTaskResultStorage ) ),
         m_taskResultProcessingSink( std::move( taskResultProcessingSink ) )
-{
-    // @todo replace hardcoded channel identified with an input value
+    {
+        // @todo replace hardcoded channel identified with an input value
     m_resultChannel = std::make_shared<ipfs_pubsub::GossipPubSubTopic>( m_gossipPubSub, "RESULT_CHANNEL_ID" );
     m_logger->debug( "[CREATED] this: {}, thread_id {}", reinterpret_cast<size_t>( this ), std::this_thread::get_id() );
 }
@@ -91,7 +91,7 @@ void SubTaskQueueAccessorImpl::GrabSubTask(SubTaskGrabbedCallback onSubTaskGrabb
     auto queue = m_subTaskQueueManager->GetQueueSnapshot();
 
     std::set<std::string> subTaskIds;
-    for (size_t itemIdx = 0; itemIdx < (size_t)queue->subtasks().items_size(); ++itemIdx)
+    for ( size_t itemIdx = 0; itemIdx < static_cast<size_t>( queue->subtasks().items_size() ); ++itemIdx )
     {
         subTaskIds.insert(queue->subtasks().items(itemIdx).subtaskid());
     }
@@ -197,7 +197,8 @@ std::vector<std::tuple<std::string, SGProcessing::SubTaskResult>> SubTaskQueueAc
 {
     std::lock_guard<std::mutex> guard(m_mutexResults);
     std::vector<std::tuple<std::string, SGProcessing::SubTaskResult>> results;
-    for (auto& item : m_results)
+    results.reserve( m_results.size() );
+    for ( auto &item : m_results )
     {
         results.emplace_back( item.first, item.second );
     }
