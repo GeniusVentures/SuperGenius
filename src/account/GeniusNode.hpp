@@ -40,6 +40,7 @@ extern "C"
         double Cut;
         double TokenValueInGNUS;
         int    TokenID;
+        char   BaseWritePath[1024];
     } DevConfig_st;
 #ifndef __cplusplus
 }
@@ -60,10 +61,10 @@ namespace sgns
     {
     public:
         GeniusNode( const DevConfig_st &dev_config );
-       // static GeniusNode &GetInstance() 
-       // {
-       //     return instance;
-       // }
+        // static GeniusNode &GetInstance()
+        // {
+        //     return instance;
+        // }
         ~GeniusNode();
 
         void ProcessImage( const std::string &image_path, uint16_t funds );
@@ -94,6 +95,7 @@ namespace sgns
         std::shared_ptr<processing::ProcessingServiceImpl>         processing_service_;
         std::shared_ptr<processing::SubTaskResultStorageImpl>      task_result_storage_;
         std::shared_ptr<soralog::LoggingSystem>                    logging_system;
+        std::string                                                write_base_path_;
 
         std::thread io_thread;
 

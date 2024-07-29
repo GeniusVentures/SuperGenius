@@ -23,9 +23,11 @@ namespace sgns
     //GeniusNode GeniusNode::instance( DEV_CONFIG );
 
     GeniusNode::GeniusNode( const DevConfig_st &dev_config ) :
-        account_( std::make_shared<GeniusAccount>( static_cast<uint8_t>( dev_config.TokenID ) ) ), //
-        io_( std::make_shared<boost::asio::io_context>() ),                                        //
-        dev_config_( dev_config )                                                                  //
+        account_( std::make_shared<GeniusAccount>( static_cast<uint8_t>( dev_config.TokenID ),
+                                                   std::string( dev_config.BaseWritePath ) ) ), //
+        io_( std::make_shared<boost::asio::io_context>() ),                                     //
+        write_base_path_( dev_config.BaseWritePath ),                                           //
+        dev_config_( dev_config )                                                               //
     {
         logging_system = std::make_shared<soralog::LoggingSystem>( std::make_shared<soralog::ConfiguratorFromYAML>(
             // Original LibP2P logging config
@@ -49,8 +51,8 @@ namespace sgns
         auto logNoise = sgns::base::createLogger( "Noise" );
         logNoise->set_level( spdlog::level::off );
 
-        auto                     pubsubport = 40001 + GenerateRandomPort( account_->GetAddress<std::string>() );
-        auto                     graphsyncport = 40010 + GenerateRandomPort( account_->GetAddress<std::string>() );
+        auto pubsubport    = 40001 + GenerateRandomPort( account_->GetAddress<std::string>() );
+        auto graphsyncport = 40010 + GenerateRandomPort( account_->GetAddress<std::string>() );
 
         std::vector<std::string> addresses;
         //UPNP
@@ -58,10 +60,10 @@ namespace sgns
         auto gotIGD = upnp->GetIGD();
         if ( gotIGD )
         {
-            auto openedPort = upnp->OpenPort( pubsubport, pubsubport, "TCP", 1800 );
+            auto openedPort  = upnp->OpenPort( pubsubport, pubsubport, "TCP", 1800 );
             auto openedPort2 = upnp->OpenPort( graphsyncport, graphsyncport, "TCP", 1800 );
-            auto wanip      = upnp->GetWanIP();
-            auto lanip      = upnp->GetLocalIP();
+            auto wanip       = upnp->GetWanIP();
+            auto lanip       = upnp->GetLocalIP();
             std::cout << "Wan IP: " << wanip << std::endl;
             std::cout << "Lan IP: " << lanip << std::endl;
             addresses.push_back( lanip );
@@ -83,12 +85,13 @@ namespace sgns
             ( boost::format( "SuperGNUSNode.TestNet.%s/pubs_processor" ) % account_->GetAddress<std::string>() ).str();
 
         pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
-            crdt::KeyPairFileStorage( pubsubKeyPath ).GetKeyPair().value() );
+            crdt::KeyPairFileStorage( write_base_path_ + pubsubKeyPath ).GetKeyPair().value() );
         pubsub_->Start( pubsubport, { pubsub_->GetLocalAddress() }, addresses );
 
         globaldb_ = std::make_shared<crdt::GlobalDB>(
             io_,
-            ( boost::format( "SuperGNUSNode.TestNet.%s" ) % account_->GetAddress<std::string>() ).str(),
+            write_base_path_ +
+                ( boost::format( "SuperGNUSNode.TestNet.%s" ) % account_->GetAddress<std::string>() ).str(),
             graphsyncport,
             std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_, std::string( PROCESSING_CHANNEL ) ),
             addresses );
@@ -429,6 +432,5 @@ namespace sgns
             task_queue_->CompleteTask( task_id, taskResult );
         }
     }
-
 
 }

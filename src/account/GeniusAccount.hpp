@@ -24,12 +24,12 @@ namespace sgns
     class GeniusAccount
     {
     public:
-        GeniusAccount( const uint8_t token_type ) :
+        GeniusAccount( const uint8_t token_type, const std::string &base_path ) :
             token( token_type ), //
             nonce( 0 ),          //
             balance( 0 )         //
         {
-            auto maybe_address = GenerateGeniusAddress();
+            auto maybe_address = GenerateGeniusAddress( base_path );
 
             if ( maybe_address )
             {
@@ -148,13 +148,13 @@ namespace sgns
     private:
         uint64_t balance;
 
-        outcome::result<uint256_t> GenerateGeniusAddress()
+        outcome::result<uint256_t> GenerateGeniusAddress( const std::string &base_path )
         {
             auto component_factory = SINGLETONINSTANCE( CComponentFactory );
             OUTCOME_TRY( ( auto &&, icomponent ), component_factory->GetComponent( "LocalSecureStorage" ) );
 
             auto secure_storage = std::dynamic_pointer_cast<ISecureStorage>( icomponent );
-            auto load_res       = secure_storage->Load( "sgns_key" );
+            auto load_res       = secure_storage->Load( "sgns_key", base_path );
 
             std::vector<uint8_t> key_seed;
             if ( !load_res )
@@ -165,13 +165,12 @@ namespace sgns
                 oss << std::hex << random_number;
 
                 std::string rnd_string = "0x" + oss.str();
-                BOOST_OUTCOME_TRYV2( auto &&, secure_storage->Save( "sgns_key", rnd_string ) );
-                key_seed = HexASCII2NumStr<std::uint8_t>( rnd_string.data(), rnd_string.size() );
+                BOOST_OUTCOME_TRYV2( auto &&, secure_storage->Save( "sgns_key", rnd_string, base_path ) );
+                key_seed = HexASCII2NumStr<std::uint8_t>( oss.str().data(), oss.str().size() );
             }
             else
             {
                 key_seed = HexASCII2NumStr<std::uint8_t>( &load_res.value().data()[2], load_res.value().size() - 2 );
-
             }
             auto result = KDFGenerator::GenerateKDF( key_seed, KDFGenerator::HashType::SHA256 );
 
