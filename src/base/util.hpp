@@ -49,7 +49,7 @@ namespace sgns
     static bool isLittleEndian()
     {
         std::uint32_t num     = 1;
-        std::uint8_t *bytePtr = reinterpret_cast<std::uint8_t *>( &num );
+        auto         *bytePtr = reinterpret_cast<std::uint8_t *>( &num );
 
         return *bytePtr == 1;
     }
@@ -124,7 +124,7 @@ namespace sgns
     template <typename T>
     static std::vector<uint8_t> Num2Vector( const T &num, std::size_t num_bytes_resolution = sizeof( T ) )
     {
-        const uint8_t *bytesPtr = reinterpret_cast<const uint8_t *>( &num );
+        const auto *bytesPtr = reinterpret_cast<const uint8_t *>( &num );
         return std::vector<uint8_t>( bytesPtr, bytesPtr + sizeof( T ) );
     }
 
@@ -175,9 +175,9 @@ namespace sgns
             {
                 return out_vect.begin();
             }
-            
-                return out_vect.end();
-            
+
+            return out_vect.end();
+           
         };
 
         for ( std::size_t i = 0; i < char_ptr_size; i += num_nibbles_resolution )

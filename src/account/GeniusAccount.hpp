@@ -170,7 +170,7 @@ namespace sgns
             }
             else
             {
-                key_seed = HexASCII2NumStr<std::uint8_t>( &load_res.value().data()[2], load_res.value().size() - 2 );
+                key_seed = HexASCII2NumStr<std::uint8_t>( &load_res.value()[2], load_res.value().size() - 2 );
             }
             auto result = KDFGenerator::GenerateKDF( key_seed, KDFGenerator::HashType::SHA256 );
 

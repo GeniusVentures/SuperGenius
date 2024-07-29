@@ -36,17 +36,16 @@ namespace sgns::processing
     //    SplitImageData();
     //}
 
-    ImageSplitter::ImageSplitter(const std::vector<uint8_t>& buffer,
-        uint32_t blockstride,
-        uint32_t blocklinestride,
-        uint32_t blocklen)
-        : blockstride_(blockstride), blocklinestride_(blocklinestride), blocklen_(blocklen) {
-        // Set inputImage and imageSize from the provided buffer
-        //inputImage = reinterpret_cast<const unsigned char*>(buffer.data());
-
-        inputImage = reinterpret_cast<const unsigned char*>(buffer.data());
-        imageSize = buffer.size();
-
+    ImageSplitter::ImageSplitter( const std::vector<uint8_t> &buffer,
+                                  uint32_t                    blockstride,
+                                  uint32_t                    blocklinestride,
+                                  uint32_t                    blocklen ) :
+        blockstride_( blockstride ),
+        blocklinestride_( blocklinestride ),
+        blocklen_( blocklen ),
+        inputImage( reinterpret_cast<const unsigned char *>( buffer.data() ) ),
+        imageSize( buffer.size() )
+    {
         SplitImageData();
     }
 
@@ -72,7 +71,7 @@ namespace sgns::processing
             return index;
         }
             //Index out of range
-            return -1;
+        return -1;
     }
 
     void ImageSplitter::SplitImageData()
@@ -116,7 +115,7 @@ namespace sgns::processing
             SHA256_Final(shahash.data(), &sha256);
             auto hash = libp2p::multi::Multihash::create(libp2p::multi::HashType::sha256, shahash);
             cids_.emplace_back( libp2p::multi::ContentIdentifier::Version::V0,
-                libp2p::multi::MulticodecType::Code::DAG_PB,
+                                libp2p::multi::MulticodecType::Code::DAG_PB,
                                 hash.value() );
         }
     }

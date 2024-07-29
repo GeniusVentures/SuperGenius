@@ -87,8 +87,7 @@ namespace sgns
         uint64_t  num_chunks = tx_struct.num_chunks();
         float     dev_cut    = tx_struct.dev_cut();
         uint256_t dev_addr( tx_struct.dev_addr() );
-        return EscrowTransaction( UTXOTxParameters{ inputs, outputs }, num_chunks, dev_addr, dev_cut,
-                                  tx_struct.dag_struct() ); // Return new instance
+        return { UTXOTxParameters{ inputs, outputs }, num_chunks, dev_addr, dev_cut, tx_struct.dag_struct() };
     }
 
     uint64_t EscrowTransaction::GetNumChunks() const

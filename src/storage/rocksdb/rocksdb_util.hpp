@@ -77,7 +77,7 @@ namespace sgns::storage
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     const auto *ptr = reinterpret_cast<const uint8_t *>(s.data());
     // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-    return base::Buffer(ptr, ptr + s.size());
+    return { ptr, ptr + s.size() };
   }
 
 }  // namespace sgns::storage
