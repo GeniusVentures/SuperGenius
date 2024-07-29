@@ -148,7 +148,7 @@ namespace sgns
     private:
         uint64_t balance;
 
-        outcome::result<uint256_t> GenerateGeniusAddress( const std::string &base_path )
+        static outcome::result<uint256_t> GenerateGeniusAddress( const std::string &base_path )
         {
             auto component_factory = SINGLETONINSTANCE( CComponentFactory );
             OUTCOME_TRY( ( auto &&, icomponent ), component_factory->GetComponent( "LocalSecureStorage" ) );

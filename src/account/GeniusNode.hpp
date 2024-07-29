@@ -101,10 +101,10 @@ namespace sgns
 
         DevConfig_st dev_config_;
 
-        uint16_t GenerateRandomPort( const std::string &address );
+        static uint16_t GenerateRandomPort( const std::string &address );
 
         void ProcessingDone( const std::string &subtask_id );
-        void ProcessingError( const std::string &subtask_id );
+        static void ProcessingError( const std::string &subtask_id );
         void ProcessingFinished( const std::string &task_id, const std::set<std::string> &subtasks_ids );
 
         static constexpr std::string_view db_path_                = "bc-%d/";

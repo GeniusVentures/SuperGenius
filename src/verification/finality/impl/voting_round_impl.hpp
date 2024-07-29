@@ -184,7 +184,7 @@ namespace sgns::verification::finality {
     bool isPrimary() const;
 
     /// Calculate threshold from the total weights of voters
-    size_t getThreshold(const std::shared_ptr<VoterSet> &voters);
+    static size_t getThreshold( const std::shared_ptr<VoterSet> &voters );
 
     /// Triggered when we receive \param signed_prevote for the current peer
     void onSignedPrevote(const SignedMessage &signed_prevote);

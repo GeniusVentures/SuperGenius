@@ -406,7 +406,7 @@ namespace sgns::storage::trie {
   }
 
   uint32_t SuperGeniusTrieImpl::getCommonPrefixLength(const KeyNibbles &pref1,
-                                                   const KeyNibbles &pref2) const {
+                                                   const KeyNibbles &pref2) {
     size_t length = 0;
     auto min = pref1.size();
 

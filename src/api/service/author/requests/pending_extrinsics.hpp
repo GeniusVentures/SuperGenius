@@ -14,7 +14,7 @@ namespace sgns::api::author::request {
     explicit PendingExtrinsics(std::shared_ptr<AuthorApi> api)
         : api_(std::move(api)){};
 
-    outcome::result<void> init(const jsonrpc::Request::Parameters &params);
+    static outcome::result<void> init( const jsonrpc::Request::Parameters &params );
 
     outcome::result<std::vector<primitives::Extrinsic>> execute();
 

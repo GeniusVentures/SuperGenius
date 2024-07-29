@@ -24,11 +24,11 @@ namespace sgns::api::system::request {
     explicit Version(std::shared_ptr<SystemApi> api);
     ~Version() = default;
 
-    outcome::result<void> init(const jsonrpc::Request::Parameters &params);
+    static outcome::result<void> init( const jsonrpc::Request::Parameters &params );
 
-    outcome::result<std::string> execute();
+    static outcome::result<std::string> execute();
 
-   private:
+private:
     std::shared_ptr<SystemApi> api_;
   };
 

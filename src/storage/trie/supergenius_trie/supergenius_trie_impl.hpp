@@ -85,8 +85,7 @@ namespace sgns::storage::trie {
     outcome::result<NodePtr> detachNode(const NodePtr &parent,
                                         const KeyNibbles &prefix_nibbles);
 
-    uint32_t getCommonPrefixLength(const KeyNibbles &pref1,
-                                   const KeyNibbles &pref2) const;
+    static uint32_t getCommonPrefixLength( const KeyNibbles &pref1, const KeyNibbles &pref2 );
 
     outcome::result<NodePtr> retrieveChild(BranchPtr parent,
                                            uint8_t idx) const override;
