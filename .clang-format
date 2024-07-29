@@ -25,6 +25,7 @@ InsertBraces: true
 InsertNewlineAtEOF: true
 KeepEmptyLinesAtTheStartOfBlocks: false
 NamespaceIndentation: All
+PackConstructorInitializers: NextLine
 ReflowComments: false
 RemoveParentheses: ReturnStatement
 RemoveSemicolon: true
