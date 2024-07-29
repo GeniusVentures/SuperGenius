@@ -59,10 +59,8 @@ namespace sgns::processing
                 m_processor = factoryFunction->second();
                 return true;
             }
-            else {
-                std::cerr << "Unknown processor name: " << name << std::endl;
-                return false;
-            }
+            std::cerr << "Unknown processor name: " << name << std::endl;
+            return false;
         }
 
         /** Get processing type from json data to set processor

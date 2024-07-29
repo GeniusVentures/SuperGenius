@@ -8,8 +8,8 @@ namespace sgns::processing
 {
     ProcessingEngine::ProcessingEngine( std::string nodeId, std::shared_ptr<ProcessingCore> processingCore ) :
         m_nodeId( std::move( nodeId ) ), m_processingCore( std::move( processingCore ) )
-{
-}
+    {
+    }
 
 ProcessingEngine::~ProcessingEngine()
 {
@@ -43,7 +43,7 @@ void ProcessingEngine::StopQueueProcessing()
 bool ProcessingEngine::IsQueueProcessingStarted() const
 {
     std::lock_guard<std::mutex> queueGuard(m_mutexSubTaskQueue);
-    return (m_subTaskQueueAccessor.get() != nullptr);
+    return m_subTaskQueueAccessor != nullptr;
 }
 
 void ProcessingEngine::OnSubTaskGrabbed(boost::optional<const SGProcessing::SubTask&> subTask)

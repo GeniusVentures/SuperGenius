@@ -71,10 +71,8 @@ namespace sgns::processing
         if (index < splitparts_.size()) {
             return index;
         }
-        else {
             //Index out of range
             return -1;
-        }
     }
 
     void ImageSplitter::SplitImageData()

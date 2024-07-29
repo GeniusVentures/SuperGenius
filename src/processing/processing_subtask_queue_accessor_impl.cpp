@@ -129,7 +129,10 @@ void SubTaskQueueAccessorImpl::CompleteSubTask(const std::string& subTaskId, con
 
 void SubTaskQueueAccessorImpl::OnResultReceived(SGProcessing::SubTaskResult&& subTaskResult)
 {
-    if (!m_subTaskQueueManager->IsQueueInit()) return;
+    if ( !m_subTaskQueueManager->IsQueueInit() )
+    {
+        return;
+    }
     std::string subTaskId = subTaskResult.subtaskid();
 
     // Results accumulation

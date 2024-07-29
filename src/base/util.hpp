@@ -175,10 +175,9 @@ namespace sgns
             {
                 return out_vect.begin();
             }
-            else
-            {
+            
                 return out_vect.end();
-            }
+            
         };
 
         for ( std::size_t i = 0; i < char_ptr_size; i += num_nibbles_resolution )

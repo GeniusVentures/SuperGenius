@@ -52,10 +52,8 @@ namespace sgns
             {
                 return instance;
             }
-            else
-            {
-                return outcome::failure( boost::system::error_code{} );
-            }
+
+            return outcome::failure( boost::system::error_code{} );
         }
 
         static outcome::result<UTXOTxParameters> create( const std::vector<GeniusUTXO>     &utxo_pool,
@@ -69,7 +67,7 @@ namespace sgns
             {
                 return instance;
             }
-                return outcome::failure( boost::system::error_code{} );
+            return outcome::failure( boost::system::error_code{} );
         }
 
         static std::vector<GeniusUTXO> UpdateUTXOList( const std::vector<GeniusUTXO> &utxo_pool,
@@ -125,7 +123,7 @@ namespace sgns
                     break;
                 }
                 InputUTXOInfo curr_input{ utxo.GetTxID(), utxo.GetOutputIdx(), std::move( signature ) };
-                remain -= utxo.GetAmount();
+                remain -= static_cast<int64_t>( utxo.GetAmount() );
 
                 inputs_.push_back( curr_input );
             }
