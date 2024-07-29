@@ -5,19 +5,23 @@
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
 #include "account/EscrowTransaction.hpp"
+
+#include <utility>
 #include "crypto/hasher/hasher_impl.hpp"
 #include "base/blob.hpp"
 
 namespace sgns
 {
-    EscrowTransaction::EscrowTransaction( const UTXOTxParameters &params, const uint64_t &num_chunks,
-                                          const uint256_t &dest_addr, const float &cut,
+    EscrowTransaction::EscrowTransaction( UTXOTxParameters                params,
+                                          uint64_t                        num_chunks,
+                                          uint256_t                       dest_addr,
+                                          float                           cut,
                                           const SGTransaction::DAGStruct &dag ) :
-        IGeniusTransactions( "escrow", SetDAGWithType( dag, "escrow" ) ), //
-        num_chunks_(num_chunks),                                         //
-        dev_addr( dest_addr ),                                            //
-        dev_cut( cut ),                                                   //
-        utxo_params_(params)                                           //
+        IGeniusTransactions( "escrow", SetDAGWithType( dag, "escrow" ) ),
+        num_chunks_( num_chunks ),
+        dev_addr( std::move( dest_addr ) ),
+        dev_cut( cut ),
+        utxo_params_( std::move( params ) )
     {
         auto hasher_ = std::make_shared<sgns::crypto::HasherImpl>();
         auto hash    = hasher_->blake2b_256( SerializeByteVector() );

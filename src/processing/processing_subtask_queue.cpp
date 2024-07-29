@@ -1,15 +1,13 @@
 #include "processing_subtask_queue.hpp"
 
-#include <numeric>
 #include <sstream>
+#include <utility>
 
 namespace sgns::processing
 {
 ////////////////////////////////////////////////////////////////////////////////
-ProcessingSubTaskQueue::ProcessingSubTaskQueue(
-    const std::string& localNodeId)
-    : m_localNodeId(localNodeId)
-    , m_queue(nullptr)
+ProcessingSubTaskQueue::ProcessingSubTaskQueue( std::string localNodeId ) :
+    m_localNodeId( std::move( localNodeId ) ), m_queue( nullptr )
 {
 }
 

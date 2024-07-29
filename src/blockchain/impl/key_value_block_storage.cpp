@@ -2,10 +2,6 @@
 
 #include <utility>
 
-#include <utility>
-
-#include <utility>
-
 #include "blockchain/impl/common.hpp"
 #include "blockchain/impl/storage_util.hpp"
 #include "storage/database_error.hpp"
@@ -274,13 +270,13 @@ namespace sgns::blockchain {
       const primitives::BlockNumber &number) {
     auto header_rm_res = header_repo_->removeBlockHeader(number);
     if (header_rm_res.has_failure())
-    {
-      return header_rm_res;
-    }
+      {
+          return header_rm_res;
+      }
 
     OUTCOME_TRY((auto &&, key), idToBufferKey(*db_, number));
 
-    //TODO - For now one block data per block header. Revisit this
+      //TODO - For now one block data per block header. Revisit this
     return db_->Remove({header_repo_->GetHeaderPath()+std::string(key.toString())+ "/tx/0"});
 
   }

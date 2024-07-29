@@ -24,8 +24,8 @@ namespace sgns
     class IGeniusTransactions
     {
     public:
-        IGeniusTransactions( std::string type, const SGTransaction::DAGStruct &dag ) :
-            dag_st( dag ), transaction_type( std::move( type ) )
+        IGeniusTransactions( std::string type, SGTransaction::DAGStruct dag ) :
+            dag_st( std::move( dag ) ), transaction_type( std::move( type ) )
         {
         }
 

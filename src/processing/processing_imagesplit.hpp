@@ -70,7 +70,7 @@ namespace sgns::processing
         /** Get index of a part by CID
         * @param cid - CID of part
         */
-        size_t GetPartByCid(libp2p::multi::ContentIdentifier cid);
+        size_t GetPartByCid( const libp2p::multi::ContentIdentifier &cid );
 
         /** Get size of part in bytes
         * @param part - index

@@ -5,6 +5,9 @@
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
 #include "account/TransactionManager.hpp"
+
+#include <utility>
+
 #include "account/TransferTransaction.hpp"
 #include "account/MintTransaction.hpp"
 #include "account/ProcessingTransaction.hpp"
@@ -18,7 +21,12 @@ namespace sgns
                                             std::shared_ptr<GeniusAccount>            account,
                                             std::shared_ptr<crypto::Hasher>           hasher,
                                             std::shared_ptr<blockchain::BlockStorage> block_storage ) :
-        TransactionManager( db, ctx, account, hasher, block_storage, nullptr )
+        TransactionManager( std::move( db ),
+                            std::move( ctx ),
+                            std::move( account ),
+                            std::move( hasher ),
+                            std::move( block_storage ),
+                            nullptr )
 
     {
     }
@@ -29,15 +37,15 @@ namespace sgns
                                             std::shared_ptr<crypto::Hasher>           hasher,
                                             std::shared_ptr<blockchain::BlockStorage> block_storage,
                                             ProcessFinishCbType                       processing_finished_cb ) :
-        db_m( std::move( db ) ),                                                                                    //
-        ctx_m( std::move( ctx ) ),                                                                                  //
-        account_m( std::move( account ) ),                                                                          //
-        timer_m(std::make_shared<boost::asio::steady_timer>(*ctx_m, boost::asio::chrono::milliseconds(300))),       //
-        last_block_id_m(0),                                                                                         //
-        last_trans_on_block_id(0),                                                                                  //
-        block_storage_m(std::move(block_storage)),                                                                  //
-        hasher_m( std::move( hasher ) ),                                                                            //
-        processing_finished_cb_m( processing_finished_cb )                                                          //
+        db_m( std::move( db ) ),
+        ctx_m( std::move( ctx ) ),
+        account_m( std::move( account ) ),
+        timer_m( std::make_shared<boost::asio::steady_timer>( *ctx_m, boost::asio::chrono::milliseconds( 300 ) ) ),
+        last_block_id_m( 0 ),
+        last_trans_on_block_id( 0 ),
+        block_storage_m( std::move( block_storage ) ),
+        hasher_m( std::move( hasher ) ),
+        processing_finished_cb_m( std::move( processing_finished_cb ) )
 
     {
         m_logger->set_level( spdlog::level::debug );
@@ -93,14 +101,14 @@ namespace sgns
         return ret;
     }
 
-    void TransactionManager::MintFunds( const uint64_t &amount )
+    void TransactionManager::MintFunds( uint64_t amount )
     {
         auto mint_transaction = std::make_shared<MintTransaction>( amount, FillDAGStruct() );
         this->EnqueueTransaction( mint_transaction );
     }
 
-    bool TransactionManager::HoldEscrow( const uint64_t &amount, const uint64_t &num_chunks, const uint256_t &dev_addr,
-                                         const float &dev_cut, const std::string &job_id )
+    bool TransactionManager::HoldEscrow(
+        uint64_t amount, uint64_t num_chunks, const uint256_t &dev_addr, float dev_cut, const std::string &job_id )
     {
         bool ret          = false;
         auto hash_data    = hasher_m->blake2b_256( std::vector<uint8_t>{ job_id.begin(), job_id.end() } );
@@ -269,7 +277,7 @@ namespace sgns
         return ret;
     }
 
-    void TransactionManager::ParseTransaction( std::string transaction_key )
+    void TransactionManager::ParseTransaction( const std::string &transaction_key )
     {
         auto maybe_transaction_data = db_m->Get( { transaction_key } );
         if ( maybe_transaction_data )

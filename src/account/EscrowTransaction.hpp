@@ -15,7 +15,10 @@ namespace sgns
     class EscrowTransaction : public IGeniusTransactions
     {
     public:
-        EscrowTransaction( const UTXOTxParameters &params, const uint64_t &num_chunks, const uint256_t &dest_addr, const float &cut,
+        EscrowTransaction( UTXOTxParameters                params,
+                           uint64_t                        num_chunks,
+                           uint256_t                       dest_addr,
+                           float                           cut,
                            const SGTransaction::DAGStruct &dag );
         ~EscrowTransaction() = default;
 

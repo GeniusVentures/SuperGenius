@@ -131,8 +131,7 @@ outcome::result<KeyPair> GenerateKeyPair(
 }
 }
 
-KeyPairFileStorage::KeyPairFileStorage(const boost::filesystem::path& keyPath)
-    : m_keyPath(keyPath)
+KeyPairFileStorage::KeyPairFileStorage( boost::filesystem::path keyPath ) : m_keyPath( std::move( keyPath ) )
 {
     // Extract the directory path from the keyPath
     boost::filesystem::path directory = m_keyPath.parent_path();

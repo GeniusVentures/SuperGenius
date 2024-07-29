@@ -109,10 +109,10 @@ namespace sgns::processing
         }
     }
 
-    MNN::Tensor MNN_PoseNet::MNNProcess( const std::vector<uint8_t> &imgdata,
-                                         const int                   origwidth,
-                                         const int                   origheight,
-                                         const std::string          &filename )
+    std::unique_ptr<MNN::Tensor> MNN_PoseNet::MNNProcess( const std::vector<uint8_t> &imgdata,
+                                                          int                         origwidth,
+                                                          int                         origheight,
+                                                          const std::string          &filename )
     {
         std::vector<uint8_t> ret_vect( imgdata );
         //Get Target WIdth

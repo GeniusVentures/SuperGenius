@@ -25,7 +25,7 @@ namespace sgns::processing
             std::shared_ptr<sgns::crdt::GlobalDB> db,
             size_t subTaskProcessingTime,
             size_t maximalProcessingSubTaskCount)
-            : m_db(db)
+            : m_db(std::move(db))
             //, m_subTaskProcessingTime(subTaskProcessingTime)
             , m_processor(nullptr)
             , m_maximalProcessingSubTaskCount(maximalProcessingSubTaskCount)
@@ -47,7 +47,7 @@ namespace sgns::processing
         * @param factoryFunction - Pointer to processor
         */
         void RegisterProcessorFactory(const std::string& name, std::function<std::unique_ptr<ProcessingProcessor>()> factoryFunction) {
-            m_processorFactories[name] = factoryFunction;
+            m_processorFactories[name] = std::move( factoryFunction );
         }
 
         /** Set the current processor by name

@@ -11,7 +11,7 @@ namespace sgns::crdt
 class KeyPairFileStorage
 {
 public:
-    KeyPairFileStorage(const boost::filesystem::path& keyPath);
+    KeyPairFileStorage( boost::filesystem::path keyPath );
 
     [[nodiscard]] outcome::result<libp2p::crypto::KeyPair> GetKeyPair() const;
 

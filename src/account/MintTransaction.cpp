@@ -9,7 +9,7 @@
 
 namespace sgns
 {
-    MintTransaction::MintTransaction( const uint64_t &new_amount, const SGTransaction::DAGStruct &dag ) :
+    MintTransaction::MintTransaction( uint64_t new_amount, const SGTransaction::DAGStruct &dag ) :
         IGeniusTransactions( "mint", SetDAGWithType( dag, "mint" ) ), //
         amount( new_amount )                                          //
     {

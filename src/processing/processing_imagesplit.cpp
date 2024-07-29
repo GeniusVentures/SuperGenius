@@ -54,7 +54,8 @@ namespace sgns::processing
     {
         return splitparts_.at(part);
     }
-    size_t ImageSplitter::GetPartByCid(libp2p::multi::ContentIdentifier cid)
+
+    size_t ImageSplitter::GetPartByCid( const libp2p::multi::ContentIdentifier &cid )
     {
         //Find the index of cid in cids_
         auto it = std::find(cids_.begin(), cids_.end(), cid);

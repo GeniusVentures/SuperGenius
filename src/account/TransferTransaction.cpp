@@ -78,11 +78,12 @@ namespace sgns
         return TransferTransaction( outputs, inputs, tx_struct.dag_struct() ); // Return new instance
     }
 
-    const std::vector<OutputDestInfo> TransferTransaction::GetDstInfos() const
+    std::vector<OutputDestInfo> TransferTransaction::GetDstInfos()
     {
         return outputs_;
     }
-    const std::vector<InputUTXOInfo> TransferTransaction::GetInputInfos() const
+
+    std::vector<InputUTXOInfo> TransferTransaction::GetInputInfos()
     {
         return input_tx_;
     }

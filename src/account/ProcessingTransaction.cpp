@@ -12,11 +12,12 @@
 
 namespace sgns
 {
-    ProcessingTransaction::ProcessingTransaction( const std::string &job_id, const std::string &subtask_id,
+    ProcessingTransaction::ProcessingTransaction( const std::string              &job_id,
+                                                  std::string                     subtask_id,
                                                   const SGTransaction::DAGStruct &dag ) :
 
         IGeniusTransactions( "process", SetDAGWithType( dag, "process" ) ), //
-        job_id_( job_id ), subtask_id_( subtask_id )
+        job_id_( job_id ), subtask_id_( std::move( subtask_id ) )
     {
         auto hasher_   = std::make_shared<sgns::crypto::HasherImpl>();
         auto hash_data = hasher_->blake2b_256( SerializeByteVector() );

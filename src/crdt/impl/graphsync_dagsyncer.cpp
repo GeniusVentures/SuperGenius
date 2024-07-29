@@ -202,7 +202,7 @@ void GraphsyncDAGSyncer::RequestProgressCallback(
     logger_->trace("request progress: code={}, extensions={}", statusCodeToString(code), formatExtensions(extensions));
 }
 
-void GraphsyncDAGSyncer::BlockReceivedCallback(CID cid, sgns::common::Buffer buffer)
+void GraphsyncDAGSyncer::BlockReceivedCallback( const CID &cid, sgns::common::Buffer buffer )
 {
     logger_->trace("Block received: cid={}, extensions={}", cid.toString().value(), buffer.toHex());
     auto hb = HasBlock(cid);

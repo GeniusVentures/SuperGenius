@@ -4,10 +4,9 @@
 
 #include <sr25519.h>
 #include <boost/assert.hpp>
+#include <utility>
 
-#include "blockchain/block_tree_error.hpp"
 #include "base/buffer.hpp"
-#include "verification/production/production_error.hpp"
 #include "verification/production/impl/production_digests_util.hpp"
 #include "verification/production/impl/threshold_util.hpp"
 #include "verification/production/types/production_block_header.hpp"

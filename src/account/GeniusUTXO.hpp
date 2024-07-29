@@ -14,7 +14,7 @@ namespace sgns
     class GeniusUTXO
     {
     public:
-        GeniusUTXO( const base::Hash256 &hash, const uint32_t &previous_index, const uint64_t &amount ) :
+        GeniusUTXO( const base::Hash256 &hash, uint32_t previous_index, uint64_t amount ) :
             txid_hash_( hash ),            //
             output_idx_( previous_index ), //
             amount_( amount ),             //

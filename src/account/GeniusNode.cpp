@@ -256,7 +256,7 @@ namespace sgns
         return transaction_manager_->GetBalance();
     }
 
-    std::vector<uint8_t> GeniusNode::GetImageByCID( std::string cid )
+    std::vector<uint8_t> GeniusNode::GetImageByCID( const std::string &cid )
     {
         libp2p::protocol::kademlia::Config kademlia_config;
         kademlia_config.randomWalk.enabled  = true;

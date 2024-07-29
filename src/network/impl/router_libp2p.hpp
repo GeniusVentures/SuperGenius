@@ -39,8 +39,7 @@ namespace sgns::network {
 
     void init() override;
 
-    void handleSyncProtocol(
-        const std::shared_ptr<Stream> &stream) const override;
+    void handleSyncProtocol( std::shared_ptr<Stream> stream ) const override;
 
     void handleGossipProtocol(std::shared_ptr<Stream> stream) const override;
 

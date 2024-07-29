@@ -66,8 +66,7 @@ namespace sgns::network {
                host_addresses.front().getStringAddress());
   }
 
-  void RouterLibp2p::handleSyncProtocol(
-      const std::shared_ptr<Stream> &stream) const {
+  void RouterLibp2p::handleSyncProtocol( std::shared_ptr<Stream>stream ) const {
     RPC<ScaleMessageReadWriter>::read<BlocksRequest, BlocksResponse>(
         stream,
         [self{shared_from_this()}, stream](auto &&request) {

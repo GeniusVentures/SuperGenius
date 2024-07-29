@@ -27,8 +27,7 @@ namespace sgns::network {
      * Handle stream, which is opened over a Sync protocol
      * @param stream to be handled
      */
-    virtual void handleSyncProtocol(
-        const std::shared_ptr<Stream> &stream) const = 0;
+    virtual void handleSyncProtocol( std::shared_ptr<Stream> stream ) const = 0;
 
     /**
      * Handle stream, which is opened over a Gossip protocol

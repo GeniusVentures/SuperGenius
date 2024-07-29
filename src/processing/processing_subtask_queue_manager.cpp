@@ -1,20 +1,22 @@
 #include "processing_subtask_queue_manager.hpp"
 
+#include <utility>
+
 namespace sgns::processing
 {
 ////////////////////////////////////////////////////////////////////////////////
 ProcessingSubTaskQueueManager::ProcessingSubTaskQueueManager(
     std::shared_ptr<ProcessingSubTaskQueueChannel> queueChannel,
-    std::shared_ptr<boost::asio::io_context> context,
-    const std::string& localNodeId)
-    : m_queueChannel(queueChannel)
-    , m_context(std::move(context))
-    , m_localNodeId(localNodeId)
-    , m_dltQueueResponseTimeout(*m_context.get())
-    , m_queueResponseTimeout(boost::posix_time::seconds(5))
-    , m_dltGrabSubTaskTimeout(*m_context.get())
-    , m_processingQueue(localNodeId)
-    , m_processingTimeout(std::chrono::seconds(10))
+    std::shared_ptr<boost::asio::io_context>       context,
+    const std::string                             &localNodeId ) :
+    m_queueChannel( std::move( queueChannel ) ),
+    m_context( std::move( context ) ),
+    m_localNodeId( localNodeId ),
+    m_dltQueueResponseTimeout( *m_context ),
+    m_queueResponseTimeout( boost::posix_time::seconds( 5 ) ),
+    m_dltGrabSubTaskTimeout( *m_context ),
+    m_processingQueue( localNodeId ),
+    m_processingTimeout( std::chrono::seconds( 10 ) )
 {
 }
 
@@ -351,7 +353,7 @@ bool ProcessingSubTaskQueueManager::IsProcessed() const
 void ProcessingSubTaskQueueManager::SetSubTaskQueueAssignmentEventSink(
     std::function<void(const std::vector<std::string>&)> subTaskQueueAssignmentEventSink)
 {
-    m_subTaskQueueAssignmentEventSink = subTaskQueueAssignmentEventSink;
+    m_subTaskQueueAssignmentEventSink = std::move( subTaskQueueAssignmentEventSink );
     if (m_subTaskQueueAssignmentEventSink)
     {
         std::unique_lock<std::mutex> guard(m_queueMutex);

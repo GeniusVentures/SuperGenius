@@ -72,7 +72,7 @@ namespace sgns::crdt
         const PeerId& peer, boost::optional<Multiaddress> address, const CID& root_cid) const;
 
     void RequestProgressCallback(ResponseStatusCode code, const std::vector<Extension>& extensions) const;
-    void BlockReceivedCallback(CID cid, sgns::common::Buffer buffer);
+    void BlockReceivedCallback( const CID &cid, sgns::common::Buffer buffer );
 
     bool started_ = false;
 

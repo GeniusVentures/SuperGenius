@@ -18,7 +18,7 @@ namespace sgns
     class ProcessingTransaction : public IGeniusTransactions
     {
     public:
-        ProcessingTransaction( const std::string &job_id, const std::string &subtask_id, const SGTransaction::DAGStruct &dag );
+        ProcessingTransaction( const std::string &job_id, std::string subtask_id, const SGTransaction::DAGStruct &dag );
         ~ProcessingTransaction() override = default;
 
         std::vector<uint8_t>         SerializeByteVector() override;

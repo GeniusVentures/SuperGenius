@@ -19,7 +19,7 @@ public:
     /** Construct an empty queue
     * @param localNodeId local processing node ID
     */
-    ProcessingSubTaskQueue(const std::string& localNodeId);
+    ProcessingSubTaskQueue( std::string localNodeId );
 
     /** Create a subtask queue by splitting the task to subtasks using the processing code
     * @param task - task that should be split into subtasks

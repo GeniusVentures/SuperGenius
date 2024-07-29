@@ -1,23 +1,24 @@
 #include "processing_subtask_queue_accessor_impl.hpp"
 #include <thread>
+#include <utility>
 
 namespace sgns::processing
 {
 SubTaskQueueAccessorImpl::SubTaskQueueAccessorImpl(
-    std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> gossipPubSub,
-    std::shared_ptr<ProcessingSubTaskQueueManager> subTaskQueueManager,
-    std::shared_ptr<SubTaskStateStorage> subTaskStateStorage,
-    std::shared_ptr<SubTaskResultStorage> subTaskResultStorage,
-    std::function<void(const SGProcessing::TaskResult&)> taskResultProcessingSink)
-    : m_gossipPubSub(gossipPubSub)
-    , m_subTaskQueueManager(subTaskQueueManager)
-    , m_subTaskStateStorage(subTaskStateStorage)
-    , m_subTaskResultStorage(subTaskResultStorage)
-    , m_taskResultProcessingSink(taskResultProcessingSink)
+        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>        gossipPubSub,
+        std::shared_ptr<ProcessingSubTaskQueueManager>          subTaskQueueManager,
+        std::shared_ptr<SubTaskStateStorage>                    subTaskStateStorage,
+        std::shared_ptr<SubTaskResultStorage>                   subTaskResultStorage,
+        std::function<void( const SGProcessing::TaskResult & )> taskResultProcessingSink ) :
+        m_gossipPubSub( std::move( gossipPubSub ) ),
+        m_subTaskQueueManager( std::move( subTaskQueueManager ) ),
+        m_subTaskStateStorage( std::move( subTaskStateStorage ) ),
+        m_subTaskResultStorage( std::move( subTaskResultStorage ) ),
+        m_taskResultProcessingSink( std::move( taskResultProcessingSink ) )
 {
     // @todo replace hardcoded channel identified with an input value
-    m_resultChannel = std::make_shared<ipfs_pubsub::GossipPubSubTopic>(m_gossipPubSub, "RESULT_CHANNEL_ID");
-    m_logger->debug("[CREATED] this: {}, thread_id {}", reinterpret_cast<size_t>(this), std::this_thread::get_id());
+    m_resultChannel = std::make_shared<ipfs_pubsub::GossipPubSubTopic>( m_gossipPubSub, "RESULT_CHANNEL_ID" );
+    m_logger->debug( "[CREATED] this: {}, thread_id {}", reinterpret_cast<size_t>( this ), std::this_thread::get_id() );
 }
 
 SubTaskQueueAccessorImpl::~SubTaskQueueAccessorImpl()

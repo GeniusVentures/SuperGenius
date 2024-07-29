@@ -32,20 +32,18 @@ using GossipPubSub = sgns::ipfs_pubsub::GossipPubSub;
 using GraphsyncImpl = sgns::ipfs_lite::ipfs::graphsync::GraphsyncImpl;
 using GossipPubSubTopic = sgns::ipfs_pubsub::GossipPubSubTopic;
 
-GlobalDB::GlobalDB(
-    std::shared_ptr<boost::asio::io_context> context,
-    std::string databasePath,
-    int dagSyncPort,
+GlobalDB::GlobalDB( std::shared_ptr<boost::asio::io_context>              context,
+                    std::string                                           databasePath,
+                    int                                                   dagSyncPort,
     std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> broadcastChannel,
-    std::vector<std::string> gsaddresses)
-    : m_context(std::move(context))
-    , m_databasePath(std::move(databasePath))
-    , m_dagSyncPort(dagSyncPort)
-    , m_graphSyncAddrs(gsaddresses)
-    , m_broadcastChannel(std::move(broadcastChannel))
+                    std::vector<std::string>                              gsaddresses ) :
+    m_context( std::move( context ) ),
+    m_databasePath( std::move( databasePath ) ),
+    m_dagSyncPort( dagSyncPort ),
+    m_graphSyncAddrs( std::move( gsaddresses ) ),
+    m_broadcastChannel( std::move( broadcastChannel ) )
 {
 }
-
 
 std::string GetLocalIP(boost::asio::io_context& io)
 {
