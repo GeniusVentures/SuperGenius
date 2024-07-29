@@ -48,7 +48,7 @@ namespace sgns
         {
             UTXOTxParameters instance( utxo_pool, src_address, amount, dest_address, std::move( signature ) );
 
-            if ( instance.inputs_.size() )
+            if ( !instance.inputs_.empty() )
             {
                 return instance;
             }
@@ -65,14 +65,11 @@ namespace sgns
         {
             UTXOTxParameters instance( utxo_pool, src_address, destinations, std::move( signature ) );
 
-            if ( instance.inputs_.size() )
+            if ( !instance.inputs_.empty() )
             {
                 return instance;
             }
-            else
-            {
                 return outcome::failure( boost::system::error_code{} );
-            }
         }
 
         static std::vector<GeniusUTXO> UpdateUTXOList( const std::vector<GeniusUTXO> &utxo_pool,

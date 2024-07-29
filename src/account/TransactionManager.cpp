@@ -128,7 +128,7 @@ namespace sgns
     bool TransactionManager::ReleaseEscrow( const std::string &job_id, const bool &pay )
     {
         bool ret = false;
-        if ( escrow_ctrl_m.size() )
+        if ( !escrow_ctrl_m.empty() )
         {
             //TODO - hash in string form in escrolcontrol
             auto hash_data = hasher_m->blake2b_256( std::vector<uint8_t>{ job_id.begin(), job_id.end() } );
@@ -400,7 +400,7 @@ namespace sgns
         {
             auto dest_infos = tx.GetUTXOParameters();
 
-            if ( dest_infos.outputs_.size() )
+            if ( !dest_infos.outputs_.empty() )
             {
                 //The first is the escrow, second is the change (might not happen)
                 auto hash = ( base::Hash256::fromReadableString( tx.dag_st.data_hash() ) ).value();
@@ -427,7 +427,7 @@ namespace sgns
 
     void TransactionManager::ParseProcessingTransaction( const std::vector<std::uint8_t> &transaction_data )
     {
-        if ( escrow_ctrl_m.size() )
+        if ( !escrow_ctrl_m.empty() )
         {
             ProcessingTransaction tx = ProcessingTransaction::DeSerializeByteVector( transaction_data );
 

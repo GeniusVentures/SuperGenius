@@ -28,7 +28,7 @@ namespace sgns::crdt
   HierarchicalKey HierarchicalKey::ChildString(const std::string& s) const
   {
     std::string childString = s;
-    if (childString.size() > 0 && childString[0] != '/')
+    if ( !childString.empty() && childString[0] != '/' )
     {
       childString.insert(childString.begin(), '/');
     }

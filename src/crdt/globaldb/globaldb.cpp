@@ -35,7 +35,7 @@ using GossipPubSubTopic = sgns::ipfs_pubsub::GossipPubSubTopic;
 GlobalDB::GlobalDB( std::shared_ptr<boost::asio::io_context>              context,
                     std::string                                           databasePath,
                     int                                                   dagSyncPort,
-    std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> broadcastChannel,
+                    std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> broadcastChannel,
                     std::vector<std::string>                              gsaddresses ) :
     m_context( std::move( context ) ),
     m_databasePath( std::move( databasePath ) ),
@@ -65,8 +65,7 @@ std::string GetLocalIP(boost::asio::io_context& io)
     return addr;
 }
 
-
-outcome::result<void> GlobalDB::Init(std::shared_ptr<CrdtOptions> crdtOptions)
+outcome::result<void> GlobalDB::Init( std::shared_ptr<CrdtOptions> crdtOptions )
 {
     std::shared_ptr<RocksDB> dataStore = nullptr;
     auto databasePathAbsolute = boost::filesystem::absolute(m_databasePath).string();
@@ -87,7 +86,7 @@ outcome::result<void> GlobalDB::Init(std::shared_ptr<CrdtOptions> crdtOptions)
     }
 
     boost::filesystem::path keyPath = databasePathAbsolute + "/key";
-    KeyPairFileStorage keyPairStorage(keyPath);
+    KeyPairFileStorage      keyPairStorage( keyPath );
     auto keyPair = keyPairStorage.GetKeyPair();
     // injector creates and ties dependent objects
     auto injector = libp2p::injector::makeHostInjector<BOOST_DI_CFG>(
@@ -244,14 +243,15 @@ outcome::result<std::string> GlobalDB::KeyToString(const Buffer& key) const
 
     auto sKey = std::string(key.toString());
 
-    size_t prefixPos = (keysPrefix.value().size() != 0) ? sKey.find(keysPrefix.value(), 0) : 0;
+    size_t prefixPos = ( !keysPrefix.value().empty() ) ? sKey.find( keysPrefix.value(), 0 ) : 0;
     if (prefixPos != 0)
     {
         return outcome::failure(boost::system::error_code{});
     }
 
     size_t keyPos = keysPrefix.value().size();
-    auto suffixPos = (valueSuffix.value().size() != 0) ? sKey.rfind(valueSuffix.value(), std::string::npos) : sKey.size();
+    auto   suffixPos =
+        ( !valueSuffix.value().empty() ) ? sKey.rfind( valueSuffix.value(), std::string::npos ) : sKey.size();
     if ((suffixPos == std::string::npos) || (suffixPos < keyPos))
     {
         return outcome::failure(boost::system::error_code{});
