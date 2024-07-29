@@ -474,8 +474,7 @@ namespace sgns::blockchain {
     leaf_depths.reserve(leaves.size());
     for (auto &leaf : leaves) {
       auto leaf_node = tree_->getByHash(leaf);
-      leaf_depths.emplace_back(
-          primitives::BlockInfo{leaf_node->depth, leaf_node->block_hash});
+      leaf_depths.emplace_back( leaf_node->depth, leaf_node->block_hash );
     }
     std::sort(leaf_depths.begin(),
               leaf_depths.end(),

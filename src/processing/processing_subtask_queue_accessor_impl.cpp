@@ -199,7 +199,7 @@ std::vector<std::tuple<std::string, SGProcessing::SubTaskResult>> SubTaskQueueAc
     std::vector<std::tuple<std::string, SGProcessing::SubTaskResult>> results;
     for (auto& item : m_results)
     {
-        results.push_back({ item.first, item.second });
+        results.emplace_back( item.first, item.second );
     }
     std::sort(results.begin(), results.end(),
         [](const std::tuple<std::string, SGProcessing::SubTaskResult>& v1,

@@ -240,7 +240,7 @@ namespace sgns::storage::trie {
         auto parent_as_branch = std::dynamic_pointer_cast<BranchNode>(parent);
         OUTCOME_TRY((auto &&, n), retrieveChild(parent_as_branch, key_nibbles[length]));
         OUTCOME_TRY((auto &&, path), getPath(n, key_nibbles.subspan(length + 1)));
-        path.push_front({parent_as_branch, key_nibbles[length]});
+        path.emplace_front( parent_as_branch, key_nibbles[length] );
         return std::move(path);
       }
       case T::Leaf:

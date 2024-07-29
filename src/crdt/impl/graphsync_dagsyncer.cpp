@@ -1,6 +1,7 @@
 #include "crdt/graphsync_dagsyncer.hpp"
 
 #include <ipfs_lite/ipld/impl/ipld_node_impl.hpp>
+#include <memory>
 #include <utility>
 
 namespace sgns::crdt
@@ -51,20 +52,23 @@ outcome::result<std::future<std::shared_ptr<ipfs_lite::ipld::IPLDNode>>> Graphsy
     auto result = std::make_shared<std::promise<std::shared_ptr<ipfs_lite::ipld::IPLDNode>>>();
     std::vector<Extension> extensions;
     ResponseMetadata response_metadata{};
-    Extension response_metadata_extension = ipfs_lite::ipfs::graphsync::encodeResponseMetadata(response_metadata);
+    Extension response_metadata_extension = ipfs_lite::ipfs::graphsync::encodeResponseMetadata( response_metadata );
     extensions.push_back(response_metadata_extension);
 
     std::vector<CID> cids;
-    Extension do_not_send_cids_extension = ipfs_lite::ipfs::graphsync::encodeDontSendCids(cids);
+    Extension        do_not_send_cids_extension = ipfs_lite::ipfs::graphsync::encodeDontSendCids( cids );
     extensions.push_back(do_not_send_cids_extension);
-    auto subscription = graphsync_->makeRequest(peer, std::move(address), root_cid, {}, extensions,
-        std::bind(&GraphsyncDAGSyncer::RequestProgressCallback, this, std::placeholders::_1, std::placeholders::_2));
+    auto subscription = graphsync_->makeRequest(
+        peer,
+        std::move( address ),
+        root_cid,
+        {},
+        extensions,
+        std::bind( &GraphsyncDAGSyncer::RequestProgressCallback, this, std::placeholders::_1, std::placeholders::_2 ) );
 
     // keeping subscriptions alive, otherwise they cancel themselves
-    requests_.insert(std::make_pair(root_cid, std::make_tuple(
-        std::shared_ptr<Subscription>(new Subscription(std::move(subscription))),
-        result)));
-
+    requests_.insert( std::make_pair(
+        root_cid, std::make_tuple( std::make_shared<Subscription>( std::move( subscription ) ), result ) ) );
 
     return result->get_future();
 }

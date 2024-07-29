@@ -115,11 +115,9 @@ namespace sgns::processing
             SHA256_Update(&sha256, chunkBuffer.data(), chunkBuffer.size());
             SHA256_Final(shahash.data(), &sha256);
             auto hash = libp2p::multi::Multihash::create(libp2p::multi::HashType::sha256, shahash);
-            cids_.push_back(libp2p::multi::ContentIdentifier(
-                libp2p::multi::ContentIdentifier::Version::V0,
+            cids_.emplace_back( libp2p::multi::ContentIdentifier::Version::V0,
                 libp2p::multi::MulticodecType::Code::DAG_PB,
-                hash.value()
-            ));
+                                hash.value() );
         }
     }
 
