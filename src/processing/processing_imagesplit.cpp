@@ -125,37 +125,37 @@ namespace sgns::processing
         }
     }
 
-    uint32_t ImageSplitter::GetPartSize(int part)
+    uint32_t ImageSplitter::GetPartSize(int part) const
     {
         return splitparts_.at(part).size();
     }
 
-    uint32_t ImageSplitter::GetPartStride(int part)
+    uint32_t ImageSplitter::GetPartStride(int part) const
     {
         return chunkWidthActual_.at(part);
     }
 
-    int ImageSplitter::GetPartWidthActual(int part)
+    int ImageSplitter::GetPartWidthActual(int part) const
     {
         return chunkWidthActual_.at(part);
     }
 
-    int ImageSplitter::GetPartHeightActual(int part)
+    int ImageSplitter::GetPartHeightActual(int part) const
     {
         return chunkHeightActual_.at(part);
     }
 
-    size_t ImageSplitter::GetPartCount()
+    size_t ImageSplitter::GetPartCount() const
     {
         return splitparts_.size();
     }
 
-    size_t ImageSplitter::GetImageSize()
+    size_t ImageSplitter::GetImageSize() const
     {
         return imageSize;
     }
 
-    libp2p::multi::ContentIdentifier ImageSplitter::GetPartCID(int part)
+    libp2p::multi::ContentIdentifier ImageSplitter::GetPartCID(int part) const
     {
         return cids_.at(part);
     }

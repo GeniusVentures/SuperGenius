@@ -68,7 +68,7 @@ namespace sgns::crdt
     }
 
     /** Verifies CrdtOptions */
-    outcome::result<VerifyErrorCode> Verify()
+    outcome::result<VerifyErrorCode> Verify() const
     {
       if (rebroadcastIntervalMilliseconds <= 0)
       {

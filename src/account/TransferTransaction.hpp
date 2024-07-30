@@ -44,8 +44,8 @@ namespace sgns
          */
         static TransferTransaction DeSerializeByteVector( const std::vector<uint8_t> &data );
 
-        std::vector<OutputDestInfo> GetDstInfos();
-        std::vector<InputUTXOInfo>  GetInputInfos();
+        std::vector<OutputDestInfo> GetDstInfos() const;
+        std::vector<InputUTXOInfo>  GetInputInfos() const;
 
         std::string GetTransactionSpecificPath() override
         {

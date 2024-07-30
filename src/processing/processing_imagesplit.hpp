@@ -70,37 +70,37 @@ namespace sgns::processing
         /** Get index of a part by CID
         * @param cid - CID of part
         */
-        size_t GetPartByCid( const libp2p::multi::ContentIdentifier &cid );
+        size_t GetPartByCid( const libp2p::multi::ContentIdentifier &cid ) const;
 
         /** Get size of part in bytes
         * @param part - index
         */
-        uint32_t GetPartSize(int part);
+        uint32_t GetPartSize( int part ) const;
 
         /** Get stride of part 
         * @param part - index
         */
-        uint32_t GetPartStride(int part);
+        uint32_t GetPartStride( int part ) const;
 
         /** Get Width of part
         * @param part - index
         */
-        int GetPartWidthActual(int part);
+        int GetPartWidthActual( int part ) const;
 
         /** Get Height of part
         * @param part - index
         */
-        int GetPartHeightActual(int part);
+        int GetPartHeightActual( int part ) const;
 
         /** Get total number of parts
         */
-        size_t GetPartCount();
+        size_t GetPartCount() const;
 
         /** Get image size
         */
-        size_t GetImageSize();
+        size_t GetImageSize() const;
 
-        libp2p::multi::ContentIdentifier GetPartCID(int part);
+        libp2p::multi::ContentIdentifier GetPartCID( int part ) const;
 
     private:
         /** Function that actually splits image data
