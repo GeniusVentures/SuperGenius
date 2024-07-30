@@ -78,7 +78,7 @@ namespace sgns
                 std::cout << "utxo's Amount: " << curr.GetAmount() << std::endl;
                 std::cout << "utxo's GetOutputIdx: " << curr.GetOutputIdx() << std::endl;
                 std::cout << "utxo's GetLock: " << curr.GetLock() << std::endl;
-                if ( curr.GetLock() == false )
+                if ( !curr.GetLock() )
                 {
                     retval += curr.GetAmount();
                 }
