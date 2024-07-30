@@ -68,24 +68,27 @@ namespace sgns::base {
    * @param value source hex string
    * @return unhexed value
    */
-  template <class T, typename = std::enable_if<std::is_unsigned_v<T>>>
-  outcome::result<T> unhexNumber(std::string_view value) {
-    std::vector<uint8_t> bytes;
-    OUTCOME_TRY((auto &&, bts), base::unhexWith0x(value));
-    bytes = std::move(bts);
+  template <class T, typename = std::enable_if_t<std::is_unsigned_v<T>>>
+  outcome::result<T> unhexNumber( std::string_view value )
+  {
+      std::vector<uint8_t> bytes;
+      OUTCOME_TRY( ( auto &&, bts ), base::unhexWith0x( value ) );
+      bytes = std::move( bts );
 
-    if (bytes.size() > sizeof(T)) {
-      return UnhexError::VALUE_OUT_OF_RANGE;
-    }
+      if ( bytes.size() > sizeof( T ) )
+      {
+          return UnhexError::VALUE_OUT_OF_RANGE;
+      }
 
-    T result{ 0U };
-    for (auto b : bytes) {
-      // check if `multiply by 10` will cause overflow
-      result <<= 8U;
-      result += b;
-    }
+      T result{ 0U };
+      for ( auto b : bytes )
+      {
+          // check if `multiply by 10` will cause overflow
+          result <<= 8U;
+          result  += b;
+      }
 
-    return result;
+      return result;
   }
 
 }  // namespace sgns::base

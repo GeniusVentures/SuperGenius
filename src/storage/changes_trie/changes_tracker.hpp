@@ -19,7 +19,7 @@ namespace sgns::storage::changes_trie {
     using GetExtrinsicIndexDelegate =
         std::function<outcome::result<base::Buffer>()>;
 
-    virtual ~ChangesTracker() = default;
+    ~ChangesTracker() override = default;
 
     /**
      * @param f is a functor that returns the current extrinsic index

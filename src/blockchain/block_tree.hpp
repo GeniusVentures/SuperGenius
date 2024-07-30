@@ -24,7 +24,7 @@ namespace sgns::blockchain {
   struct BlockTree : public IComponent {
     using BlockHashVecRes = outcome::result<std::vector<primitives::BlockHash>>;
 
-    virtual ~BlockTree() = default;
+    ~BlockTree() override = default;
 
     /**
      * Get block header by provided block id

@@ -18,7 +18,7 @@ namespace sgns::api {
    public:
     using Method = jsonrpc::MethodWrapper::Method;
 
-    virtual ~JRpcServer() = default;
+    ~JRpcServer() override = default;
 
     /**
      * @brief registers rpc request handler lambda

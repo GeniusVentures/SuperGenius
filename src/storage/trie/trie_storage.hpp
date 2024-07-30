@@ -18,7 +18,7 @@ namespace sgns::storage::trie {
    */
   class TrieStorage : public IComponent {
    public:
-    virtual ~TrieStorage() = default;
+       ~TrieStorage() override = default;
 
     virtual outcome::result<std::unique_ptr<PersistentTrieBatch>>
     getPersistentBatch() = 0;

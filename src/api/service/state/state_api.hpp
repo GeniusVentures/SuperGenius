@@ -15,7 +15,7 @@ namespace sgns::api {
 
   class StateApi : public IComponent {
    public:
-    virtual ~StateApi() = default;
+       ~StateApi() override = default;
 
     virtual void setApiService(
         const std::shared_ptr<api::ApiService> &api_service) = 0;

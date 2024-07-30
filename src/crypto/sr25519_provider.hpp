@@ -22,7 +22,7 @@ namespace sgns::crypto {
 
   class SR25519Provider : public IComponent {
    public:
-    virtual ~SR25519Provider() = default;
+       ~SR25519Provider() override = default;
 
     /**
      * Generates random keypair for signing the message

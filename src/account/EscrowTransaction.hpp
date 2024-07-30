@@ -20,7 +20,7 @@ namespace sgns
                            uint256_t                       dest_addr,
                            float                           cut,
                            const SGTransaction::DAGStruct &dag );
-        ~EscrowTransaction() = default;
+        ~EscrowTransaction() override = default;
 
         std::vector<uint8_t>     SerializeByteVector() override;
         static EscrowTransaction DeSerializeByteVector( const std::vector<uint8_t> &data );

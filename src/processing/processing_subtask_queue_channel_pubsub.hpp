@@ -30,7 +30,7 @@ public:
         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> gossipPubSub,
         const std::string& processingQueueChannelId);
 
-    virtual ~ProcessingSubTaskQueueChannelPubSub();
+    ~ProcessingSubTaskQueueChannelPubSub() override;
 
     /** ProcessingSubTaskQueueChannel overrides
     */

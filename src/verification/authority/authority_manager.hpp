@@ -8,7 +8,7 @@
 namespace sgns::authority {
   class AuthorityManager : public IComponent {
    public:
-    virtual ~AuthorityManager() = default;
+       ~AuthorityManager() override = default;
 
     /**
      * @brief Returns authorities according specified block

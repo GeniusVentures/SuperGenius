@@ -9,7 +9,7 @@ namespace sgns::api {
   /// Auxiliary class that providing access for some app's parts over RPC
   class SystemApi : public IComponent {
    public:
-    virtual ~SystemApi() = default;
+       ~SystemApi() override = default;
 
     virtual std::shared_ptr<application::ConfigurationStorage> getConfig()
         const = 0;

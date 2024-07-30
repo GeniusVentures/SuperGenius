@@ -25,11 +25,11 @@ namespace sgns::verification {
    *
    */
   struct ProductionLottery : public IComponent {
-    virtual ~ProductionLottery() = default;
+      ~ProductionLottery() override = default;
 
-    using SlotsLeadership = std::vector<boost::optional<crypto::VRFOutput>>;
+      using SlotsLeadership = std::vector<boost::optional<crypto::VRFOutput>>;
 
-    /**
+      /**
      * Compute leadership for all slots in the given epoch
      * @param epoch is an information about epoch where we calculate leadership
      * @param threshold is a maximum value that is considered valid by vrf
@@ -41,7 +41,7 @@ namespace sgns::verification {
         const Threshold &threshold,
         const crypto::SR25519Keypair &keypair) const = 0;
 
-    /**
+      /**
      * Compute randomness for the next epoch
      * @param last_epoch_randomness - randomness of the last epoch
      * @param new_epoch_index - index of the new epoch
@@ -53,7 +53,7 @@ namespace sgns::verification {
         const Randomness &last_epoch_randomness,
         EpochLength new_epoch_index) = 0;
 
-    /**
+      /**
      * Submit a VRF value for this epoch
      * @param value to be submitted
      *

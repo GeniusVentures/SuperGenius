@@ -17,7 +17,7 @@ namespace sgns::crypto {
 
   class ED25519Provider : public IComponent {
    public:
-    virtual ~ED25519Provider() = default;
+       ~ED25519Provider() override = default;
 
     /**
      * Generates random keypair for signing the message

@@ -64,7 +64,7 @@ namespace sgns
         // {
         //     return instance;
         // }
-        ~GeniusNode();
+        ~GeniusNode() override;
 
         void ProcessImage( const std::string &image_path, uint16_t funds );
 
@@ -102,9 +102,9 @@ namespace sgns
 
         static uint16_t GenerateRandomPort( const std::string &address );
 
-        void ProcessingDone( const std::string &subtask_id );
+        void        ProcessingDone( const std::string &subtask_id );
         static void ProcessingError( const std::string &subtask_id );
-        void ProcessingFinished( const std::string &task_id, const std::set<std::string> &subtasks_ids );
+        void        ProcessingFinished( const std::string &task_id, const std::set<std::string> &subtasks_ids );
 
         static constexpr std::string_view db_path_                = "bc-%d/";
         static constexpr std::uint16_t    MAIN_NET                = 369;

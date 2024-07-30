@@ -25,7 +25,7 @@ namespace sgns::application {
       ReadyToStop,
     };
 
-    virtual ~AppStateManager() = default;
+     ~AppStateManager() override = default;
 
     /**
      * @brief Execute \param cb at stage of prepare application

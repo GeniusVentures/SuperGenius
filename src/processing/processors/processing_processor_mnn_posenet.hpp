@@ -46,7 +46,7 @@ namespace sgns::processing
         {
         }
 
-        ~MNN_PoseNet(){
+        ~MNN_PoseNet() override{
             //stbi_image_free(imageData_);
         };
         /** Start processing data

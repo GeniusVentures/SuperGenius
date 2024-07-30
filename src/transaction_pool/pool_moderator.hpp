@@ -17,7 +17,7 @@ namespace sgns::transaction_pool {
    */
   class PoolModerator : public IComponent {
    public:
-    virtual ~PoolModerator() = default;
+       ~PoolModerator() override = default;
 
     /**
      * Bans a transaction for a fixed amount of time

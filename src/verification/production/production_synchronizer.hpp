@@ -19,7 +19,7 @@ namespace sgns::verification {
     using BlocksHandler =
         std::function<void(const std::vector<primitives::Block> &)>;
 
-    virtual ~ProductionSynchronizer() = default;
+    ~ProductionSynchronizer() override = default;
 
     /**
      * Request blocks between provided ones

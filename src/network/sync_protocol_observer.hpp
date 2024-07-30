@@ -13,7 +13,7 @@ namespace sgns::network {
    * Reactive part of Sync protocol
    */
   struct SyncProtocolObserver : public IComponent {
-    virtual ~SyncProtocolObserver() = default;
+      ~SyncProtocolObserver() override = default;
 
     /**
      * Process a blocks request

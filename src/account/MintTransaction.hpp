@@ -18,7 +18,7 @@ namespace sgns
     {
     public:
         MintTransaction( uint64_t new_amount, const SGTransaction::DAGStruct &dag );
-        ~MintTransaction() = default;
+        ~MintTransaction() override = default;
 
         std::vector<uint8_t>   SerializeByteVector() override;
         static MintTransaction DeSerializeByteVector( const std::vector<uint8_t> &data );

@@ -16,9 +16,7 @@ namespace sgns::processing
     class ImageSplitter
     {
     public:
-        ImageSplitter() {
-
-        }
+        ImageSplitter() = default;
         /** Split an image loaded from file
         * @param filename - path/to/file.ext
         * @param blockstride - Stride to use for access pattern

@@ -17,36 +17,36 @@ namespace sgns::application {
    */
   class ConfigurationStorage : public IComponent {
    public:
-    virtual ~ConfigurationStorage() = default;
+       ~ConfigurationStorage() override = default;
 
-    [[nodiscard]] virtual const std::string &name() const = 0;
+       [[nodiscard]] virtual const std::string &name() const = 0;
 
-    [[nodiscard]] virtual const std::string &id() const = 0;
+       [[nodiscard]] virtual const std::string &id() const = 0;
 
-    [[nodiscard]] virtual const std::string &chainType() const = 0;
+       [[nodiscard]] virtual const std::string &chainType() const = 0;
 
-    /// Return ids of peer nodes of the current node
-    [[nodiscard]] virtual network::PeerList getBootNodes() const = 0;
+       /// Return ids of peer nodes of the current node
+       [[nodiscard]] virtual network::PeerList getBootNodes() const = 0;
 
-    [[nodiscard]] virtual const std::vector<std::pair<std::string, size_t>> &telemetryEndpoints() const = 0;
+       [[nodiscard]] virtual const std::vector<std::pair<std::string, size_t>> &telemetryEndpoints() const = 0;
 
-    [[nodiscard]] virtual const std::string &protocolId() const = 0;
+       [[nodiscard]] virtual const std::string &protocolId() const = 0;
 
-    [[nodiscard]] virtual const std::map<std::string, std::string> &properties() const = 0;
+       [[nodiscard]] virtual const std::map<std::string, std::string> &properties() const = 0;
 
-    [[nodiscard]] virtual boost::optional<std::reference_wrapper<const std::string>> getProperty(
-        const std::string &property ) const = 0;
+       [[nodiscard]] virtual boost::optional<std::reference_wrapper<const std::string>> getProperty(
+           const std::string &property ) const = 0;
 
-    [[nodiscard]] virtual const std::set<primitives::BlockHash> &forkBlocks() const = 0;
+       [[nodiscard]] virtual const std::set<primitives::BlockHash> &forkBlocks() const = 0;
 
-    [[nodiscard]] virtual const std::set<primitives::BlockHash> &badBlocks() const = 0;
+       [[nodiscard]] virtual const std::set<primitives::BlockHash> &badBlocks() const = 0;
 
-    [[nodiscard]] virtual boost::optional<std::string> verificationEngine() const = 0;
+       [[nodiscard]] virtual boost::optional<std::string> verificationEngine() const = 0;
 
-    /**
+       /**
      * @return genesis block of the chain
      */
-    [[nodiscard]] virtual GenesisRawConfig getGenesis() const = 0;
+       [[nodiscard]] virtual GenesisRawConfig getGenesis() const = 0;
   };
 
 }  // namespace sgns::application

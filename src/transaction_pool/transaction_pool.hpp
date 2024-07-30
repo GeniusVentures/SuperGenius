@@ -19,7 +19,7 @@ namespace sgns::transaction_pool {
     struct Status;
     struct Limits;
 
-    virtual ~TransactionPool() = default;
+    ~TransactionPool() override = default;
 
     /**
      * Import one verified transaction to the pool. If it has unresolved

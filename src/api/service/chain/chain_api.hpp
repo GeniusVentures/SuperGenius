@@ -14,7 +14,7 @@ namespace sgns::api {
    */
   class ChainApi : public IComponent {
    public:
-    virtual ~ChainApi() = default;
+       ~ChainApi() override = default;
     using BlockNumber = primitives::BlockNumber;
     using BlockHash = sgns::primitives::BlockHash;
     using ValueType = boost::variant<BlockNumber, std::string>;

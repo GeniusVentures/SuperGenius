@@ -13,9 +13,9 @@ namespace sgns::verification {
    */
   class BlockValidator : public IComponent {
    public:
-    virtual ~BlockValidator() = default;
+       ~BlockValidator() override = default;
 
-    /**
+       /**
      * Validate the block
      * @param block to be validated
      * @param authority_id authority that sent this block
@@ -25,11 +25,11 @@ namespace sgns::verification {
      */
     virtual outcome::result<void> validateBlock(
         const primitives::Block &block,
-        const primitives::AuthorityId &authority_id,
+                                                    const primitives::AuthorityId &authority_id,
         const Threshold &threshold,
         const Randomness &randomness) const = 0;
 
-    /**
+       /**
      * Validate the block header
      * @param block to be validated
      * @param authority_id authority that sent this block
@@ -39,7 +39,7 @@ namespace sgns::verification {
      */
     virtual outcome::result<void> validateHeader(
         const primitives::BlockHeader &block_header,
-        const primitives::AuthorityId &authority_id,
+                                                     const primitives::AuthorityId &authority_id,
         const Threshold &threshold,
         const Randomness &randomness) const = 0;
   };

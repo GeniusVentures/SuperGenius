@@ -38,7 +38,7 @@ namespace sgns::storage::trie {
         SuperGeniusTrie::NodePtr root,
         ChildRetrieveFunctor f = defaultChildRetriever) const = 0;
 
-    virtual ~SuperGeniusTrieFactory() = default;
+    ~SuperGeniusTrieFactory() override = default;
   };
 
 }  // namespace sgns::storage::trie

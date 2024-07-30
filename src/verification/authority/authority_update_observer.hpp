@@ -10,9 +10,9 @@
 namespace sgns::authority {
   class AuthorityUpdateObserver : public IComponent {
    public:
-    virtual ~AuthorityUpdateObserver() = default;
+       ~AuthorityUpdateObserver() override = default;
 
-    /**
+       /**
      * Processes verification message in block digest
      * @param message
      * @return failure or nothing

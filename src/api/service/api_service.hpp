@@ -58,7 +58,7 @@ namespace sgns::api {
         const std::vector<std::shared_ptr<JRpcProcessor>> &processors,
         SubscriptionEnginePtr subscription_engine);
 
-    virtual ~ApiService() = default;
+    ~ApiService() override = default;
 
     /** @see AppStateManager::takeControl */
     bool prepare();
@@ -86,7 +86,6 @@ namespace sgns::api {
     SubscribedSessionPtr storeSessionWithId(
         Session::SessionId id, const std::shared_ptr<Session> &session);
 
-   private:
     std::shared_ptr<api::RpcThreadPool> thread_pool_;
     std::vector<sptr<Listener>> listeners_;
     std::shared_ptr<JRpcServer> server_;

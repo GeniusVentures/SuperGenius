@@ -36,8 +36,7 @@ public:
         std::shared_ptr<SubTaskStateStorage> subTaskStateStorage,
         std::shared_ptr<SubTaskResultStorage> subTaskResultStorage,
         std::function<void(const SGProcessing::TaskResult&)> taskResultProcessingSink);
-    virtual ~SubTaskQueueAccessorImpl();
-    
+    ~SubTaskQueueAccessorImpl() override;
 
     /** SubTaskQueueAccessor overrides
     */

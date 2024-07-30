@@ -17,9 +17,7 @@ namespace sgns::processing
     class ProcessingProcessor
     {
     public:
-        virtual ~ProcessingProcessor()
-        {
-        }
+        virtual ~ProcessingProcessor() = default;
 
         /** Start processing data
         * @param result - Reference to result item to set hashes to

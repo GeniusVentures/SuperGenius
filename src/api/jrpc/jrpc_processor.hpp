@@ -11,12 +11,12 @@ namespace sgns::api {
    */
 class JRpcProcessor: private boost::noncopyable, public IComponent {
    public:
-    virtual ~JRpcProcessor() = default;
+       ~JRpcProcessor() override = default;
 
-    /**
+       /**
      * @brief registers callbacks for jrpc request
      */
-    virtual void registerHandlers() = 0;
+       virtual void registerHandlers() = 0;
   };
 }  // namespace sgns::api
 

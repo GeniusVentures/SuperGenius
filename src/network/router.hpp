@@ -16,7 +16,7 @@ namespace sgns::network {
     using Stream = libp2p::connection::Stream;
 
    public:
-    virtual ~Router() = default;
+       ~Router() override = default;
 
     /**
      * Start accepting new connections and messages on this router

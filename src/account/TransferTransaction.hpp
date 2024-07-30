@@ -30,7 +30,7 @@ namespace sgns
         /**
          * @brief      Default Transfer Transaction destructor
          */
-        ~TransferTransaction() = default;
+        ~TransferTransaction() override = default;
 
         /**
          * @brief      
