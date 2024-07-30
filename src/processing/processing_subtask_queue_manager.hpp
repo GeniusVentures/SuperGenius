@@ -22,7 +22,7 @@ namespace sgns::processing
 class ProcessingSubTaskQueueManager
 {
 public:
-    typedef std::function<void(boost::optional<const SGProcessing::SubTask&>)> SubTaskGrabbedCallback;
+    using SubTaskGrabbedCallback = std::function<void( boost::optional<const SGProcessing::SubTask &> )>;
 
     /** Construct an empty queue
     * @param queueChannel - task processing channel

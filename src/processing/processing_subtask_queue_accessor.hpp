@@ -17,7 +17,8 @@ namespace sgns::processing
 class SubTaskQueueAccessor
 {
 public:
-    typedef std::function<void(boost::optional<const SGProcessing::SubTask&>)> SubTaskGrabbedCallback;
+    using SubTaskGrabbedCallback = std::function<void( boost::optional<const SGProcessing::SubTask &> )>;
+
     virtual ~SubTaskQueueAccessor() = default;
 
     /** Starts a waiting for subtasks queue 

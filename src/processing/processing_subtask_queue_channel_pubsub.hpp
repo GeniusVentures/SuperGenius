@@ -19,8 +19,8 @@ class ProcessingSubTaskQueueChannelPubSub : public ProcessingSubTaskQueueChannel
     public std::enable_shared_from_this<ProcessingSubTaskQueueChannelPubSub>
 {
 public:
-    typedef std::function<bool(const SGProcessing::SubTaskQueueRequest&)> QueueRequestSink;
-    typedef std::function<bool(SGProcessing::SubTaskQueue*)> QueueUpdateSink;
+    using QueueRequestSink = std::function<bool( const SGProcessing::SubTaskQueueRequest & )>;
+    using QueueUpdateSink  = std::function<bool( SGProcessing::SubTaskQueue  *)>;
 
     /** Constructs subtask queue channel object
     * @param gossipPubSub - ipfs pubsub
