@@ -130,7 +130,6 @@ namespace sgns::verification {
      */
     void synchronizeSlots(const primitives::BlockHeader &new_header);
 
-   private:
     std::shared_ptr<application::AppStateManager> app_state_manager_;
     std::shared_ptr<ProductionLottery> lottery_;
     std::shared_ptr<BlockExecutor> block_executor_;
@@ -153,7 +152,7 @@ namespace sgns::verification {
 
     /// Estimates of the first block production slot time. Input for the median
     /// algorithm
-    std::vector<ProductionTimePoint> first_slot_times_{};
+    std::vector<ProductionTimePoint> first_slot_times_;
 
     /// Number of blocks we need to use in median algorithm to get the slot time
     const uint32_t kSlotTail = 30;

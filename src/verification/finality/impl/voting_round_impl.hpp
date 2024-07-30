@@ -236,7 +236,6 @@ namespace sgns::verification::finality {
     bool validate(const BlockInfo &vote,
                   const FinalityJustification &justification) const;
 
-   private:
     std::weak_ptr<Finality> finality_;
 
     Stage stage_ = Stage::INIT;
