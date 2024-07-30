@@ -2,7 +2,7 @@
 #ifndef SUPERGENIUS_SRC_POOL_MODERATOR_HPP
 #define SUPERGENIUS_SRC_POOL_MODERATOR_HPP
 
-#include "primitives/block_id.hpp"
+#include "primitives/common.hpp"
 #include "primitives/transaction.hpp"
 #include "singleton/IComponent.hpp"
 

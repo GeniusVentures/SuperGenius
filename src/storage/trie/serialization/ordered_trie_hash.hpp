@@ -4,7 +4,6 @@
 #define SUPERGENIUS_ORDERED_TRIE_HASH_HPP
 
 #include "base/buffer.hpp"
-#include "crypto/hasher.hpp"
 #include "scale/scale.hpp"
 #include "storage/trie/supergenius_trie/supergenius_trie_impl.hpp"
 #include "storage/trie/serialization/supergenius_codec.hpp"

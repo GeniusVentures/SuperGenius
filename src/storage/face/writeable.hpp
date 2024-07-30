@@ -3,7 +3,7 @@
 #ifndef SUPERGENIUS_WRITEABLE_HPP
 #define SUPERGENIUS_WRITEABLE_HPP
 
-#include <outcome/outcome.hpp>
+#include "outcome/outcome.hpp"
 
 namespace sgns::storage::face {
 

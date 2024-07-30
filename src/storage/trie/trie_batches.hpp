@@ -4,7 +4,6 @@
 #define SUPERGENIUS_STORAGE_TRIE_IMPL_TRIE_BATCH
 
 #include "storage/buffer_map_types.hpp"
-#include "storage/trie/supergenius_trie/supergenius_trie_cursor.hpp"
 
 namespace sgns::storage::trie {
 

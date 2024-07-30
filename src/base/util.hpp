@@ -10,14 +10,11 @@
 #define _UTIL_HPP
 
 #include <string>
-#include <sstream>
-#include <iomanip>
 #include <vector>
 #include <type_traits>
 #include <optional>
 #include <algorithm>
-#include <tuple>
-#include <array>
+
 #include <boost/random.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
 

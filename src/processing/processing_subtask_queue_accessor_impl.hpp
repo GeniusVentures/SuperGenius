@@ -6,11 +6,11 @@
 #ifndef SUPERGENIUS_PROCESSING_SUBTASK_QUEUE_ACCESSOR_IMPL_HPP
 #define SUPERGENIUS_PROCESSING_SUBTASK_QUEUE_ACCESSOR_IMPL_HPP
 
-#include <processing/processing_subtask_queue_accessor.hpp>
-#include <processing/processing_subtask_queue_manager.hpp>
-#include <processing/processing_subtask_state_storage.hpp>
-#include <processing/processing_subtask_result_storage.hpp>
-#include <processing/processing_validation_core.hpp>
+#include "processing/processing_subtask_queue_accessor.hpp"
+#include "processing/processing_subtask_queue_manager.hpp"
+#include "processing/processing_subtask_state_storage.hpp"
+#include "processing/processing_subtask_result_storage.hpp"
+#include "processing/processing_validation_core.hpp"
 
 #include <ipfs_pubsub/gossip_pubsub_topic.hpp>
 #include <list>

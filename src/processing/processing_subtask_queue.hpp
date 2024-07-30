@@ -6,8 +6,8 @@
 #ifndef SUPERGENIUS_PROCESSING_SUBTASK_QUEUE_HPP
 #define SUPERGENIUS_PROCESSING_SUBTASK_QUEUE_HPP
 
-#include <processing/proto/SGProcessing.pb.h>
-#include <base/logger.hpp>
+#include "processing/proto/SGProcessing.pb.h"
+#include "base/logger.hpp"
 
 namespace sgns::processing
 {

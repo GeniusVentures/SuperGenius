@@ -4,8 +4,7 @@
 #include "network/common.hpp"
 #include "network/rpc.hpp"
 #include "network/types/block_announce.hpp"
-#include "network/types/blocks_request.hpp"
-#include "network/types/blocks_response.hpp"
+#include "network/helpers/scale_message_read_writer.hpp"
 #include "network/types/peer_list.hpp"
 #include "scale/scale.hpp"
 

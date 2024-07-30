@@ -5,6 +5,7 @@
 #include <cstdint>
 
 #include <boost/endian/arithmetic.hpp>
+
 #include "base/outcome_throw.hpp"
 #include "macro/unreachable.hpp"
 #include "scale/scale_error.hpp"

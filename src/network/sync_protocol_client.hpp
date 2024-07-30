@@ -5,7 +5,7 @@
 
 #include <functional>
 
-#include <outcome/outcome.hpp>
+#include "outcome/outcome.hpp"
 #include "network/types/blocks_request.hpp"
 #include "network/types/blocks_response.hpp"
 

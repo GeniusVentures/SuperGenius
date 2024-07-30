@@ -7,11 +7,13 @@
 #ifndef _UTXO_TX_PARAMETERS_HPP_
 #define _UTXO_TX_PARAMETERS_HPP_
 
-#include "account/GeniusUTXO.hpp"
 #include <utility>
 #include <vector>
-#include "outcome/outcome.hpp"
+
 #include <boost/multiprecision/cpp_int.hpp>
+
+#include "account/GeniusUTXO.hpp"
+#include "outcome/outcome.hpp"
 
 namespace sgns
 {

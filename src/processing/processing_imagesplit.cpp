@@ -1,6 +1,6 @@
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#include <processing/processing_imagesplit.hpp>
+#include "processing/processing_imagesplit.hpp"
 
 namespace sgns::processing
 {
@@ -54,7 +54,7 @@ namespace sgns::processing
         return splitparts_.at(part);
     }
 
-    size_t ImageSplitter::GetPartByCid( const libp2p::multi::ContentIdentifier &cid )
+    size_t ImageSplitter::GetPartByCid( const libp2p::multi::ContentIdentifier &cid ) const
     {
         //Find the index of cid in cids_
         auto it = std::find(cids_.begin(), cids_.end(), cid);

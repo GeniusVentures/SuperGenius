@@ -2,7 +2,7 @@
 #ifndef SUPERGENIUS_SRC_RUNTIME_PARACHAIN_HOST_HPP
 #define SUPERGENIUS_SRC_RUNTIME_PARACHAIN_HOST_HPP
 
-#include "primitives/block_id.hpp"
+#include "base/buffer.hpp"
 #include "primitives/parachain_host.hpp"
 
 namespace sgns::runtime {

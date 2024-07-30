@@ -3,7 +3,7 @@
 
 #include <mutex>
 #include <storage/rocksdb/rocksdb.hpp>
-#include <crdt/hierarchical_key.hpp>
+#include "crdt/hierarchical_key.hpp"
 #include <primitives/cid/cid.hpp>
 
 namespace sgns::crdt

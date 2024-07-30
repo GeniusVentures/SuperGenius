@@ -1,10 +1,10 @@
 #ifndef GRPC_FOR_SUPERGENIUS_PROCESSING_SERVICE
 #define GRPC_FOR_SUPERGENIUS_PROCESSING_SERVICE
 
-#include <processing/processing_node.hpp>
-#include <processing/processing_subtask_enqueuer.hpp>
-
 #include <map>
+
+#include "processing/processing_node.hpp"
+#include "processing/processing_subtask_enqueuer.hpp"
 
 namespace sgns::processing
 {

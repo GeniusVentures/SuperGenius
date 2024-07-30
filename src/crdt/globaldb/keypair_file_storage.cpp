@@ -1,4 +1,4 @@
-#include <crdt/globaldb/keypair_file_storage.hpp>
+#include "crdt/globaldb/keypair_file_storage.hpp"
 
 #include <libp2p/crypto/key_marshaller/key_marshaller_impl.hpp>
 #include <libp2p/crypto/key_validator/key_validator_impl.hpp>

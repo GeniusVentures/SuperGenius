@@ -3,9 +3,6 @@
 #ifndef SUPERGENIUS_EPOCH_HPP
 #define SUPERGENIUS_EPOCH_HPP
 
-#include <chrono>
-#include <vector>
-
 #include "verification/production/common.hpp"
 #include "primitives/authority.hpp"
 

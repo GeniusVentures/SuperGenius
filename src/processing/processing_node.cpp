@@ -1,7 +1,9 @@
 #include "processing_node.hpp"
-#include "processing_subtask_queue_channel_pubsub.hpp"
-#include <processing/processing_subtask_queue_accessor_impl.hpp>
+
 #include <utility>
+
+#include "processing_subtask_queue_channel_pubsub.hpp"
+#include "processing/processing_subtask_queue_accessor_impl.hpp"
 
 namespace sgns::processing
 {

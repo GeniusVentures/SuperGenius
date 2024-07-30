@@ -3,9 +3,10 @@
 #ifndef SUPERGENIUS_SRC_PRIMITIVES_VERSION_HPP
 #define SUPERGENIUS_SRC_PRIMITIVES_VERSION_HPP
 
-#include <array>
 #include <string>
 #include <vector>
+
+#include "base/blob.hpp"
 
 namespace sgns::primitives {
   /**

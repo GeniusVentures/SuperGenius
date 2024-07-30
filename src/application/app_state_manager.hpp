@@ -1,7 +1,10 @@
 #ifndef SUPERGENIUS_APPLICATION_DISPATCHER
 #define SUPERGENIUS_APPLICATION_DISPATCHER
 
+#include <functional>
 #include <memory>
+#include <stdexcept>
+
 #include "singleton/IComponent.hpp"
 
 namespace sgns::application {

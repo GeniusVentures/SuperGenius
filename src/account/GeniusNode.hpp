@@ -7,28 +7,27 @@
 #ifndef _ACCOUNT_MANAGER_HPP_
 #define _ACCOUNT_MANAGER_HPP_
 #include <memory>
+
 #include <boost/asio.hpp>
 #include <spdlog/sinks/basic_file_sink.h>
-#include "account/GeniusAccount.hpp"
-#include "ipfs_pubsub/gossip_pubsub.hpp"
-#include "crdt/globaldb/globaldb.hpp"
-#include "crdt/globaldb/keypair_file_storage.hpp"
-#include "crdt/globaldb/proto/broadcast.pb.h"
-#include "account/TransactionManager.hpp"
 #include <libp2p/log/configurator.hpp>
 #include <libp2p/log/logger.hpp>
 #include <libp2p/multi/multibase_codec/multibase_codec_impl.hpp>
 #include <libp2p/multi/content_identifier_codec.hpp>
+
+#include "account/GeniusAccount.hpp"
+#include "ipfs_pubsub/gossip_pubsub.hpp"
+#include "crdt/globaldb/globaldb.hpp"
+#include "account/TransactionManager.hpp"
 #include <ipfs_lite/ipfs/graphsync/graphsync.hpp>
 #include "crypto/hasher/hasher_impl.hpp"
 #include "blockchain/impl/key_value_block_header_repository.hpp"
 #include "blockchain/impl/key_value_block_storage.hpp"
-#include "singleton/IComponent.hpp"
-#include "processing/impl/processing_task_queue_impl.hpp"
 #include "processing/impl/processing_core_impl.hpp"
 #include "processing/impl/processing_subtask_result_storage_impl.hpp"
 #include "processing/processing_service.hpp"
-#include "upnp.hpp"
+#include "singleton/IComponent.hpp"
+#include "processing/impl/processing_task_queue_impl.hpp"
 
 #ifndef __cplusplus
 extern "C"

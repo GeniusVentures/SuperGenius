@@ -3,7 +3,7 @@
 #ifndef SUPERGENIUS_SRC_STORAGE_DATABASE_ERROR_DATABASE_ERROR_HPP
 #define SUPERGENIUS_SRC_STORAGE_DATABASE_ERROR_DATABASE_ERROR_HPP
 
-#include <outcome/outcome.hpp>
+#include "outcome/outcome.hpp"
 
 namespace sgns::storage {
 

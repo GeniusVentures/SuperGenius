@@ -2,7 +2,6 @@
 
 #include "storage/trie/supergenius_trie/supergenius_trie_impl.hpp"
 
-#include <functional>
 #include <utility>
 
 #include "storage/trie/supergenius_trie/supergenius_trie_cursor.hpp"

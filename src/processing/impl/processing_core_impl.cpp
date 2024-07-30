@@ -1,5 +1,9 @@
-#include <processing/impl/processing_core_impl.hpp>
+#include "processing/impl/processing_core_impl.hpp"
+
 #include <rapidjson/document.h>
+
+#include "FileManager.hpp"
+
 namespace sgns::processing
 {
     void ProcessingCoreImpl::ProcessSubTask(

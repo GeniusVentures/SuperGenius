@@ -6,7 +6,7 @@
 #include <cstdint>
 
 #include <boost/operators.hpp>
-#include "primitives/session_key.hpp"
+#include "base/blob.hpp"
 
 namespace sgns::primitives {
   using BlocksRequestId = uint64_t;

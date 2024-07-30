@@ -4,13 +4,15 @@
 #define SUPERGENIUS_SRC_SCALE_SCALE_ENCODER_STREAM_HPP
 
 #include <deque>
+#include <list>
 
+#include <boost/variant/get.hpp>
+#include <boost/variant/variant.hpp>
 #include <boost/optional.hpp>
 #include <gsl/span>
+
 #include "scale/detail/fixed_witdh_integer.hpp"
-#include "scale/detail/tuple.hpp"
-#include "scale/detail/variant.hpp"
-#include <list>
+#include "scale/types.hpp"
 
 namespace sgns::scale {
   /**

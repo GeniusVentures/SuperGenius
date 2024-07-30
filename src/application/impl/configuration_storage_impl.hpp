@@ -6,7 +6,7 @@
 
 #include <boost/property_tree/ptree.hpp>
 
-#include <base/logger.hpp>
+#include "base/logger.hpp"
 
 namespace sgns::application
 {

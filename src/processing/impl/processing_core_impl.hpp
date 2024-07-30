@@ -1,20 +1,21 @@
 #ifndef GRPC_FOR_SUPERGENIUS_PROCESSING_CORE_IMPL_HPP
 #define GRPC_FOR_SUPERGENIUS_PROCESSING_CORE_IMPL_HPP
-#include <math.h>
-#include <fstream>
+
+#include <cmath>
 #include <memory>
 #include <iostream>
+#include <utility>
+
 #include <libp2p/log/configurator.hpp>
 #include <libp2p/log/logger.hpp>
 #include <libp2p/multi/multibase_codec/multibase_codec_impl.hpp>
 #include <libp2p/multi/content_identifier_codec.hpp>
 #include <libp2p/injector/host_injector.hpp>
 #include <libp2p/injector/kademlia_injector.hpp>
+
 #include "processing/processing_core.hpp"
 #include "crdt/globaldb/globaldb.hpp"
 #include "processing/processing_processor.hpp"
-#include "FileManager.hpp"
-#include "URLStringUtil.h"
 
 namespace sgns::processing
 {

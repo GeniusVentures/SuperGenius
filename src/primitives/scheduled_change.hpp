@@ -3,7 +3,6 @@
 #define SUPERGENIUS_SRC_PRIMITIVES_SCHEDULED_CHANGE
 
 #include "primitives/authority.hpp"
-#include "primitives/common.hpp"
 
 namespace sgns::primitives {
   struct DelayInChain {

@@ -1,5 +1,6 @@
 #include "storage/changes_trie/impl/storage_changes_tracker_impl.hpp"
 
+#include "subscription/subscriber.hpp"
 #include "scale/scale.hpp"
 #include "storage/changes_trie/impl/changes_trie.hpp"
 

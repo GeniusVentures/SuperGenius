@@ -6,7 +6,7 @@
 #ifndef SUPERGENIUS_PROCESSING_SUBTASK_QUEUE_CHANNEL_HPP
 #define SUPERGENIUS_PROCESSING_SUBTASK_QUEUE_CHANNEL_HPP
 
-#include <processing/proto/SGProcessing.pb.h>
+#include "processing/proto/SGProcessing.pb.h"
 
 #include <string>
 #include <memory>

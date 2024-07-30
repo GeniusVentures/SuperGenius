@@ -9,6 +9,7 @@
 
 #include <vector>
 #include <cstdint>
+
 #include "account/IGeniusTransactions.hpp"
 
 namespace sgns

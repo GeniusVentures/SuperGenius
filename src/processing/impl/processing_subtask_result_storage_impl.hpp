@@ -6,8 +6,8 @@
 #ifndef GRPC_FOR_SUPERGENIUS_PROCESSING_SUBTASK_RESULT_STORAGE_IMPL_HPP
 #define GRPC_FOR_SUPERGENIUS_PROCESSING_SUBTASK_RESULT_STORAGE_IMPL_HPP
 
-#include <processing/processing_subtask_result_storage.hpp>
-#include <crdt/globaldb/globaldb.hpp>
+#include "processing/processing_subtask_result_storage.hpp"
+#include "crdt/globaldb/globaldb.hpp"
 
 namespace sgns::processing
 {

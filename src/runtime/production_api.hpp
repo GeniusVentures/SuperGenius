@@ -3,7 +3,7 @@
 #ifndef SUPERGENIUS_SRC_RUNTIME_PRODUCTION_API_HPP
 #define SUPERGENIUS_SRC_RUNTIME_PRODUCTION_API_HPP
 
-#include <outcome/outcome.hpp>
+#include "outcome/outcome.hpp"
 
 #include "primitives/production_configuration.hpp"
 #include "primitives/block_id.hpp"

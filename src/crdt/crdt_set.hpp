@@ -3,8 +3,8 @@
 
 #include <mutex>
 #include <storage/rocksdb/rocksdb.hpp>
-#include <crdt/hierarchical_key.hpp>
-#include <crdt/proto/delta.pb.h>
+#include "crdt/hierarchical_key.hpp"
+#include "crdt/proto/delta.pb.h"
 
 namespace sgns::crdt
 {

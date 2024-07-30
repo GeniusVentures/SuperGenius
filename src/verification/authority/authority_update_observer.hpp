@@ -1,8 +1,9 @@
 #ifndef SUPERGENIUS_AUTHORITY_UPDATE_OBSERVER
 #define SUPERGENIUS_AUTHORITY_UPDATE_OBSERVER
 
-#include <outcome/outcome.hpp>
+#include "outcome/outcome.hpp"
 
+#include "primitives/common.hpp"
 #include "primitives/digest.hpp"
 #include "singleton/IComponent.hpp"
 

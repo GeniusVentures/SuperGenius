@@ -6,10 +6,10 @@
 #ifndef SUPERGENIUS_PROCESSING_SUBTASK_QUEUE_CHANNEL_PUBSUB_HPP
 #define SUPERGENIUS_PROCESSING_SUBTASK_QUEUE_CHANNEL_PUBSUB_HPP
 
-#include <processing/processing_subtask_queue_channel.hpp>
+#include "processing/processing_subtask_queue_channel.hpp"
 
 #include <ipfs_pubsub/gossip_pubsub_topic.hpp>
-#include <base/logger.hpp>
+#include "base/logger.hpp"
 
 namespace sgns::processing
 {

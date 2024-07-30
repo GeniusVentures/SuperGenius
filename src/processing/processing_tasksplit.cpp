@@ -5,6 +5,7 @@
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
 #include "processing/processing_tasksplit.hpp"
+
 namespace sgns
 {
     namespace processing

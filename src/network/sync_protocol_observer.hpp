@@ -3,7 +3,7 @@
 #ifndef SUPERGENIUS_SYNC_PROTOCOL_OBSERVER_HPP
 #define SUPERGENIUS_SYNC_PROTOCOL_OBSERVER_HPP
 
-#include <outcome/outcome.hpp>
+#include "outcome/outcome.hpp"
 #include "network/types/blocks_request.hpp"
 #include "network/types/blocks_response.hpp"
 #include "singleton/IComponent.hpp"

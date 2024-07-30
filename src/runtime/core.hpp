@@ -3,7 +3,7 @@
 #ifndef SUPERGENIUS_RUNTIME_CORE_HPP
 #define SUPERGENIUS_RUNTIME_CORE_HPP
 
-#include <outcome/outcome.hpp>
+#include "outcome/outcome.hpp"
 #include <vector>
 
 #include "primitives/authority.hpp"

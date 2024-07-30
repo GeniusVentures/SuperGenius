@@ -2,8 +2,8 @@
 #define SUPERGENIUS_GRAPHSYNC_DAGSYNCER_HPP
 
 #include "crdt/dagsyncer.hpp"
-#include <base/logger.hpp>
-#include <base/buffer.hpp>
+#include "base/logger.hpp"
+#include "base/buffer.hpp"
 
 #include <ipfs_lite/ipfs/graphsync/graphsync.hpp>
 #include <ipfs_lite/ipfs/graphsync/extension.hpp>

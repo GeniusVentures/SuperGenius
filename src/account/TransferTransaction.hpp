@@ -6,8 +6,9 @@
  */
 #ifndef _TRANSFER_TRANSACTION_HPP_
 #define _TRANSFER_TRANSACTION_HPP_
-#include "account/IGeniusTransactions.hpp"
 #include <boost/multiprecision/cpp_int.hpp>
+
+#include "account/IGeniusTransactions.hpp"
 #include "account/proto/SGTransaction.pb.h"
 #include "account/UTXOTxParameters.hpp"
 

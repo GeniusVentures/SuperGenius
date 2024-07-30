@@ -2,6 +2,7 @@
 #define SUPERGENIUS_AUTHORITY_MANAGER
 
 #include "primitives/authority.hpp"
+#include "primitives/common.hpp"
 #include "singleton/IComponent.hpp"
 
 namespace sgns::authority {

@@ -5,7 +5,7 @@
 
 #include "base/logger.hpp"
 #include "crypto/hasher.hpp"
-#include <crdt/globaldb/globaldb.hpp>
+#include "crdt/globaldb/globaldb.hpp"
 #include "blockchain/impl/key_value_block_header_repository.hpp"
 
 namespace sgns::blockchain {

@@ -3,15 +3,14 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "storage/changes_trie/impl/storage_changes_tracker_impl.hpp"
 #include "storage/in_memory/in_memory_storage.hpp"
 #include "storage/trie/impl/trie_storage_backend_impl.hpp"
 #include "storage/trie/impl/trie_storage_impl.hpp"
+#include "storage/trie/serialization/supergenius_codec.hpp"
 #include "storage/trie/supergenius_trie/supergenius_trie_factory_impl.hpp"
 #include "storage/trie/supergenius_trie/trie_error.hpp"
 #include "storage/trie/serialization/trie_serializer_impl.hpp"
 #include "storage/trie/trie_batches.hpp"
-#include "storage/trie/impl/persistent_trie_batch_impl.hpp"
 #include "testutil/literals.hpp"
 #include "testutil/outcome.hpp"
 #include "testutil/storage/base_rocksdb_test.hpp"
@@ -19,7 +18,6 @@
 using namespace sgns::storage::trie;
 using sgns::base::Buffer;
 using sgns::base::Hash256;
-using sgns::storage::face::WriteBatch;
 using testing::_;
 using testing::Invoke;
 using testing::Return;

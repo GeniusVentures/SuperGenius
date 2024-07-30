@@ -3,10 +3,9 @@
 #ifndef SUPERGENIUS_BLOCK_VALIDATOR_HPP
 #define SUPERGENIUS_BLOCK_VALIDATOR_HPP
 
-#include <outcome/outcome.hpp>
-#include "verification/production/types/epoch.hpp"
 #include "primitives/block.hpp"
 #include "singleton/IComponent.hpp"
+#include "verification/production/common.hpp"
 
 namespace sgns::verification {
   /**

@@ -6,9 +6,8 @@
 #ifndef GRPC_FOR_SUPERGENIUS_PROCESSING_TASK_QUEUE_HPP
 #define GRPC_FOR_SUPERGENIUS_PROCESSING_TASK_QUEUE_HPP
 
-#include <processing/proto/SGProcessing.pb.h>
+#include "processing/proto/SGProcessing.pb.h"
 #include "outcome/outcome.hpp"
-#include <optional>
 #include <list>
 
 class ProcessingTaskQueue

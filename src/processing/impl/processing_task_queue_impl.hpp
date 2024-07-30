@@ -6,11 +6,11 @@
 #ifndef GRPC_FOR_SUPERGENIUS_PROCESSING_TASK_QUEUE_IMPL_HPP
 #define GRPC_FOR_SUPERGENIUS_PROCESSING_TASK_QUEUE_IMPL_HPP
 
-#include <optional>
 #include <utility>
-#include <boost/format.hpp>
-#include "outcome/outcome.hpp"
 
+#include <boost/format.hpp>
+
+#include "outcome/outcome.hpp"
 #include "processing/processing_task_queue.hpp"
 #include "crdt/globaldb/globaldb.hpp"
 

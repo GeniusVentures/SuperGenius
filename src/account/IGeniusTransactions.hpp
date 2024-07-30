@@ -10,10 +10,12 @@
 #include <utility>
 #include <vector>
 #include <string>
+
 #include <boost/optional.hpp>
 #include <boost/format.hpp>
-#include "account/proto/SGTransaction.pb.h"
 #include <boost/multiprecision/cpp_int.hpp>
+
+#include "account/proto/SGTransaction.pb.h"
 
 using namespace boost::multiprecision;
 

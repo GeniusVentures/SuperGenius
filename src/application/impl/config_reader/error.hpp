@@ -2,7 +2,7 @@
 #ifndef SUPERGENIUS_APPLICATION_CONFIG_READER_ERROR_HPP
 #define SUPERGENIUS_APPLICATION_CONFIG_READER_ERROR_HPP
 
-#include <outcome/outcome.hpp>
+#include "outcome/outcome.hpp"
 
 namespace sgns::application {
 

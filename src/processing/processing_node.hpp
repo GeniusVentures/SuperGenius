@@ -6,13 +6,13 @@
 #ifndef GRPC_FOR_SUPERGENIUS_PROCESSING_NODE
 #define GRPC_FOR_SUPERGENIUS_PROCESSING_NODE
 
-#include <processing/processing_engine.hpp>
-#include <processing/processing_subtask_queue_manager.hpp>
-#include <processing/processing_subtask_queue_accessor.hpp>
-#include <processing/processing_subtask_state_storage.hpp>
-#include <processing/processing_subtask_result_storage.hpp>
-
 #include <ipfs_pubsub/gossip_pubsub_topic.hpp>
+
+#include "processing/processing_engine.hpp"
+#include "processing/processing_subtask_queue_manager.hpp"
+#include "processing/processing_subtask_queue_accessor.hpp"
+#include "processing/processing_subtask_state_storage.hpp"
+#include "processing/processing_subtask_result_storage.hpp"
 
 namespace sgns::processing
 {

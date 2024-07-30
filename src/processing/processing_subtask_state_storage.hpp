@@ -6,7 +6,7 @@
 #ifndef GRPC_FOR_SUPERGENIUS_PROCESSING_SUBTASK_STATE_STORAGE_HPP
 #define GRPC_FOR_SUPERGENIUS_PROCESSING_SUBTASK_STATE_STORAGE_HPP
 
-#include <processing/proto/SGProcessing.pb.h>
+#include "processing/proto/SGProcessing.pb.h"
 #include <optional>
 
 namespace sgns::processing

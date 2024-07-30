@@ -3,7 +3,6 @@
 
 #include "base/buffer.hpp"
 #include "primitives/common.hpp"
-#include "primitives/extrinsic.hpp"
 #include "storage/changes_trie/changes_trie_config.hpp"
 #include "singleton/IComponent.hpp"
 

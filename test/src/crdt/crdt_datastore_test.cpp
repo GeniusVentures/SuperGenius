@@ -1,7 +1,7 @@
-#include <crdt/crdt_datastore.hpp>
+#include "crdt/crdt_datastore.hpp"
 #include <gtest/gtest.h>
 #include <storage/rocksdb/rocksdb.hpp>
-#include <outcome/outcome.hpp>
+#include "outcome/outcome.hpp"
 #include <testutil/outcome.hpp>
 #include <boost/filesystem.hpp>
 #include <ipfs_lite/ipfs/merkledag/impl/merkledag_service_impl.hpp>
@@ -10,7 +10,7 @@
 #include <string>
 #include <boost/asio/error.hpp>
 #include <thread>
-#include <crdt/proto/bcast.pb.h>
+#include "crdt/proto/bcast.pb.h"
 
 namespace sgns::crdt
 {

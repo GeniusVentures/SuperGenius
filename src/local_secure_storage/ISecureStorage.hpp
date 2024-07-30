@@ -9,8 +9,7 @@
 #define _I_SECURE_STORAGE_HPP_
 
 #include <string>
-#include <vector>
-#include <cstdint>
+
 #include "outcome/outcome.hpp"
 #include "singleton/IComponent.hpp"
 

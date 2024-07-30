@@ -1,7 +1,7 @@
 #ifndef SUPERGENIUS_PROCESSING_SUBTASK_ENQUEUER_HPP
 #define SUPERGENIUS_PROCESSING_SUBTASK_ENQUEUER_HPP
 
-#include <processing/proto/SGProcessing.pb.h>
+#include "processing/proto/SGProcessing.pb.h"
 #include <list>
 #include <string>
 

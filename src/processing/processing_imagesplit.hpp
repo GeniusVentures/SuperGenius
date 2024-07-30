@@ -4,10 +4,7 @@
 */
 #ifndef PROCESSING_IMAGESPLIT_HPP
 #define PROCESSING_IMAGESPLIT_HPP
-#include <math.h>
-#include <fstream>
-#include <iostream>
-#include <memory>
+#include <cmath>
 #include <vector>
 #include <openssl/sha.h>
 #include <libp2p/multi/content_identifier_codec.hpp>

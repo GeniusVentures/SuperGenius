@@ -5,7 +5,8 @@
 
 #include <rocksdb/status.h>
 #include <gsl/span>
-#include <outcome/outcome.hpp>
+
+#include "outcome/outcome.hpp"
 #include "base/buffer.hpp"
 #include "base/logger.hpp"
 #include "storage/database_error.hpp"

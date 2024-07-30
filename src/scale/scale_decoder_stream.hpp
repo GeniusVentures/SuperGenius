@@ -4,15 +4,16 @@
 #define SUPERGENIUS_SRC_SCALE_SCALE_DECODER_STREAM_HPP
 
 #include <array>
+#include <list>
 
+#include <boost/variant/variant.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
 #include <boost/optional.hpp>
 #include <gsl/span>
+
 #include "base/outcome_throw.hpp"
 #include "scale/detail/fixed_witdh_integer.hpp"
-#include "scale/detail/tuple.hpp"
-#include "scale/detail/variant.hpp"
-#include <list>
+#include "scale/types.hpp"
 
 namespace sgns::scale {
   class ScaleDecoderStream {

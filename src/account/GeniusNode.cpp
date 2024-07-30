@@ -8,11 +8,13 @@
 #include <boost/multiprecision/cpp_int.hpp>
 #include <boost/random.hpp>
 #include <rapidjson/document.h>
+
 #include "account/GeniusNode.hpp"
+#include "FileManager.hpp"
+#include "upnp.hpp"
 #include "processing/processing_imagesplit.hpp"
 #include "processing/processing_tasksplit.hpp"
 #include "processing/processing_subtask_enqueuer_impl.hpp"
-#include "processing/processing_subtask_result_storage.hpp"
 #include "processing/processors/processing_processor_mnn_posenet.hpp"
 #include "local_secure_storage/impl/json/JSONSecureStorage.hpp"
 

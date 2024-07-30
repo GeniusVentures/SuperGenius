@@ -6,8 +6,7 @@
 #include <vector>
 
 #include <boost/optional.hpp>
-#include <outcome/outcome.hpp>
-#include "verification/finality/common.hpp"
+#include "outcome/outcome.hpp"
 #include "verification/finality/structs.hpp"
 
 namespace sgns::verification::finality {

@@ -1,4 +1,5 @@
 #include "processing_processor_mnn_posenet.hpp"
+#include "processing/processing_imagesplit.hpp"
 
 //#define STB_IMAGE_IMPLEMENTATION
 //#define STB_IMAGE_WRITE_IMPLEMENTATION

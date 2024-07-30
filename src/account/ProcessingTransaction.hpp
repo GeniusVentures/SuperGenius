@@ -7,8 +7,10 @@
 #ifndef _PROCESSING_TRANSACTION_HPP_
 #define _PROCESSING_TRANSACTION_HPP_
 #include <string>
-#include "account/IGeniusTransactions.hpp"
+
 #include <boost/multiprecision/cpp_int.hpp>
+
+#include "account/IGeniusTransactions.hpp"
 
 using namespace boost::multiprecision;
 

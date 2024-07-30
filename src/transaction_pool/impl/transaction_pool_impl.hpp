@@ -2,7 +2,7 @@
 #ifndef SUPERGENIUS_SRC_TRANSACTION_POOL_IMPL_HPP
 #define SUPERGENIUS_SRC_TRANSACTION_POOL_IMPL_HPP
 
-#include <outcome/outcome.hpp>
+#include "outcome/outcome.hpp"
 
 #include "blockchain/block_header_repository.hpp"
 #include "base/logger.hpp"

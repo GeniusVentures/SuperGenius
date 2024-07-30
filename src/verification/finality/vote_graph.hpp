@@ -5,7 +5,6 @@
 
 #include <boost/operators.hpp>
 
-#include "verification/finality/chain.hpp"
 #include "verification/finality/vote_weight.hpp"
 
 namespace sgns::verification::finality {

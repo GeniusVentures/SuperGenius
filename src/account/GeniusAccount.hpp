@@ -8,9 +8,11 @@
 #define _GENIUS_ACCOUNT_HPP_
 #include <string>
 #include <cstdint>
+
 #include <boost/multiprecision/cpp_int.hpp>
+
 #include "account/GeniusUTXO.hpp"
-#include "account/TransferTransaction.hpp"
+#include "account/UTXOTxParameters.hpp"
 #include "singleton/CComponentFactory.hpp"
 #include "local_secure_storage/ISecureStorage.hpp"
 #include <KDFGenerator/KDFGenerator.hpp>

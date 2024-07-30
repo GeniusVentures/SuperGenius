@@ -6,7 +6,7 @@
 #ifndef SUPERGENIUS_PROCESSING_SUBTASK_QUEUE_ACCESSOR_HPP
 #define SUPERGENIUS_PROCESSING_SUBTASK_QUEUE_ACCESSOR_HPP
 
-#include <processing/proto/SGProcessing.pb.h>
+#include "processing/proto/SGProcessing.pb.h"
 #include <boost/optional.hpp>
 #include <list>
 

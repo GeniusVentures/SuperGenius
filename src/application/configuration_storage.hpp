@@ -1,10 +1,12 @@
 #ifndef SUPERGENIUS_CONFIGURATION_STORAGE_HPP
 #define SUPERGENIUS_CONFIGURATION_STORAGE_HPP
 
+#include <set>
+
 #include <libp2p/peer/peer_info.hpp>
+
 #include "application/genesis_raw_config.hpp"
 #include "network/types/peer_list.hpp"
-#include <set>
 #include "singleton/IComponent.hpp"
 #include "primitives/common.hpp"
 namespace sgns::application {

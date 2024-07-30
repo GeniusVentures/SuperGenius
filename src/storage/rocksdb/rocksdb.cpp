@@ -1,15 +1,18 @@
 
 
 #include <memory>
-#include <storage/rocksdb/rocksdb.hpp>
-#include <boost/filesystem.hpp>
 #include <utility>
-#include "storage/rocksdb/rocksdb_cursor.hpp"
-#include "storage/rocksdb/rocksdb_batch.hpp"
-#include "storage/rocksdb/rocksdb_util.hpp"
+
+#include <boost/filesystem.hpp>
+
 #include <rocksdb/table.h>
 #include <rocksdb/filter_policy.h>
 #include <rocksdb/slice_transform.h>
+
+#include <storage/rocksdb/rocksdb.hpp>
+#include "storage/rocksdb/rocksdb_cursor.hpp"
+#include "storage/rocksdb/rocksdb_batch.hpp"
+#include "storage/rocksdb/rocksdb_util.hpp"
 
 namespace sgns::storage 
 {

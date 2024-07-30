@@ -1,6 +1,8 @@
 #ifndef SUPERGENIUS_UNUSED
 #define SUPERGENIUS_UNUSED
 
+#include <cstddef>
+
 namespace sgns {
 
   /// Special zero-size-type for some things

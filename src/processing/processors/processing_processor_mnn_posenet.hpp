@@ -3,14 +3,13 @@
 * @author Justin Church
 */
 #pragma once
-#include <math.h>
-#include <fstream>
-#include <iostream>
+#include <cmath>
 #include <memory>
 #include <vector>
+
 #include <MNN/ImageProcess.hpp>
 #include <MNN/Interpreter.hpp>
-#include <processing/processing_processor.hpp>
+#include "processing/processing_processor.hpp"
 #define MNN_OPEN_TIME_TRACE
 #include <MNN/AutoTime.hpp>
 

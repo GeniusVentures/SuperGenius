@@ -6,7 +6,6 @@
 #include <memory>
 #include <unordered_map>
 #include <unordered_set>
-#include <utility>
 
 #include "blockchain/block_tree.hpp"
 #include "base/logger.hpp"
@@ -16,7 +15,6 @@
 #include "crypto/hasher.hpp"
 #include "crypto/vrf_provider.hpp"
 #include "primitives/authority.hpp"
-#include "runtime/tagged_transaction_queue.hpp"
 
 namespace sgns::crypto {
   class SR25519Provider;

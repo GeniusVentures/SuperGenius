@@ -6,7 +6,6 @@
 #include "storage/trie/supergenius_trie/supergenius_trie.hpp"
 
 #include "storage/buffer_map_types.hpp"
-#include "storage/trie/serialization/supergenius_codec.hpp"
 
 namespace sgns::storage::trie {
 

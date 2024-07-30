@@ -2,7 +2,7 @@
 #ifndef SUPERGENIUS_SRC_RUNTIME_COMMON_TRIE_STORAGE_PROVIDER_IMPL
 #define SUPERGENIUS_SRC_RUNTIME_COMMON_TRIE_STORAGE_PROVIDER_IMPL
 
-#include <base/buffer.hpp>
+#include "base/buffer.hpp"
 #include "runtime/trie_storage_provider.hpp"
 
 #include "storage/trie/trie_storage.hpp"

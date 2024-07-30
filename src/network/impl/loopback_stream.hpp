@@ -4,8 +4,8 @@
 
 #include <boost/asio/streambuf.hpp>
 #include <libp2p/connection/stream.hpp>
+#include <libp2p/peer/peer_info.hpp>
 
-#include "base/buffer.hpp"
 #include "base/logger.hpp"
 #include "outcome/outcome.hpp"
 

@@ -3,6 +3,7 @@
 #define SUPERGENIUS_VERIFICATION_AUTHORITIES_SCHEDULE_NODE
 
 #include "primitives/authority.hpp"
+#include "primitives/common.hpp"
 
 namespace sgns::authority {
 

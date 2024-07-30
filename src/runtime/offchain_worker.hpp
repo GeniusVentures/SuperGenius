@@ -2,7 +2,7 @@
 #ifndef SUPERGENIUS_SRC_RUNTIME_OFFCHAIN_WORKER_HPP
 #define SUPERGENIUS_SRC_RUNTIME_OFFCHAIN_WORKER_HPP
 
-#include <outcome/outcome.hpp>
+#include "outcome/outcome.hpp"
 #include "base/buffer.hpp"
 #include "primitives/common.hpp"
 

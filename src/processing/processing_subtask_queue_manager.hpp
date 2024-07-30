@@ -6,10 +6,10 @@
 #ifndef SUPERGENIUS_PROCESSING_SUBTASK_QUEUE_MANAGER_HPP
 #define SUPERGENIUS_PROCESSING_SUBTASK_QUEUE_MANAGER_HPP
 
-#include <processing/processing_subtask_queue.hpp>
-#include <processing/processing_subtask_queue_channel.hpp>
+#include "processing/processing_subtask_queue.hpp"
+#include "processing/processing_subtask_queue_channel.hpp"
 
-#include <processing/proto/SGProcessing.pb.h>
+#include "processing/proto/SGProcessing.pb.h"
 
 #include <boost/asio.hpp>
 #include <boost/optional.hpp>

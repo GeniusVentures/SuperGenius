@@ -5,7 +5,7 @@
 #ifndef GRPC_FOR_SUPERGENIUS_PROCESSING_CORE_HPP
 #define GRPC_FOR_SUPERGENIUS_PROCESSING_CORE_HPP
 
-#include <processing/proto/SGProcessing.pb.h>
+#include "processing/proto/SGProcessing.pb.h"
 #include <list>
 #include <boost/asio/io_context.hpp>
 
