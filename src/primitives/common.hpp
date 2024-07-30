@@ -25,7 +25,7 @@ namespace sgns::primitives {
           : block_number(n), block_hash(h) {}
 
       BlockNumber block_number{};
-      BlockHash block_hash{};
+      BlockHash   block_hash;
 
       bool operator==(const BlockInfoT<Tag> &o) const {
         return block_number == o.block_number && block_hash == o.block_hash;

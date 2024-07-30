@@ -25,7 +25,7 @@ namespace sgns::verification {
     primitives::AuthorityList authorities;
 
     /// randomness of the epoch
-    Randomness randomness{};
+    Randomness randomness;
 
     bool operator==(const Epoch &other) const {
       return epoch_index == other.epoch_index && start_slot == other.start_slot

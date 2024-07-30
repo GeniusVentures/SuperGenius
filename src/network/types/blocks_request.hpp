@@ -22,15 +22,15 @@ namespace sgns::network {
     /// bits, showing, which parts of BlockData to return
     BlockAttributes fields{};
     /// start from this block
-    primitives::BlockId from{};
+    primitives::BlockId from;
     /// end at this block; an implementation defined maximum is used when
     /// unspecified
-    boost::optional<primitives::BlockHash> to{};
+    boost::optional<primitives::BlockHash> to;
     /// sequence direction
     Direction direction{};
     /// maximum number of blocks to return; an implementation defined maximum is
     /// used when unspecified
-    boost::optional<uint32_t> max{};
+    boost::optional<uint32_t> max;
 
     /// includes HEADER, BODY and JUSTIFICATION
     static constexpr BlockAttributes kBasicAttributes{19};

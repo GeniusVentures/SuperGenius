@@ -17,8 +17,8 @@ namespace sgns::verification::finality {
     // graph entry
     struct Entry : public boost::equality_comparable<Entry> {
       BlockNumber number{};
-      std::vector<BlockHash> ancestors{};
-      std::vector<BlockHash> descendents{};
+      std::vector<BlockHash> ancestors;
+      std::vector<BlockHash> descendents;
       VoteWeight cumulative_vote;
 
       bool operator==(const Entry &o) const {
