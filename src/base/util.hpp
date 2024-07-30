@@ -63,8 +63,8 @@ namespace sgns
     static T Vector2Num( const std::vector<uint8_t> &bytes )
     {
         static_assert(
-            std::is_integral<T>::value || std::is_same<T, boost::multiprecision::uint128_t>::value ||
-                std::is_same<T, boost::multiprecision::uint256_t>::value,
+            std::is_integral_v<T> || std::is_same_v<T, boost::multiprecision::uint128_t> ||
+                std::is_same_v<T, boost::multiprecision::uint256_t>,
             "T must be an integral type or boost::multiprecision::uint128_t or boost::multiprecision::uint256_t" );
         if ( bytes.size() > sizeof( T ) )
         {
@@ -192,7 +192,7 @@ namespace sgns
      * @tparam      T std::vector<uint8_t> or std::array<uint8_t,N>
      */
     template <typename T>
-    static typename std::enable_if<std::is_same<typename T::value_type, uint8_t>::value>::type AdjustEndianess(
+    static std::enable_if_t<std::is_same_v<typename T::value_type, uint8_t>> AdjustEndianess(
         T                                  &data,
         std::optional<typename T::iterator> start  = std::nullopt,
         std::optional<typename T::iterator> finish = std::nullopt )

@@ -18,19 +18,17 @@ namespace sgns::scale::detail {
    * @param value integer value
    * @return byte array representation of value
    */
-  template <class T,
-            class S,
-            typename I = std::decay_t<T>,
-            typename = std::enable_if_t<std::is_integral<I>::value>>
-  void encodeInteger(T value, S &out) {  // no need to take integers by &&
-    constexpr size_t size = sizeof(T);
-    constexpr size_t bits = size * 8;
-    boost::endian::endian_buffer<boost::endian::order::little, T, bits> buf{};
-    buf = value;  // cannot initialize, only assign
-    for (size_t i = 0; i < size; ++i) {
-      // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-      out << buf.data()[i];
-    }
+  template <class T, class S, typename I = std::decay_t<T>, typename = std::enable_if_t<std::is_integral_v<I>>>
+  void encodeInteger( T value, S &out )
+  { // no need to take integers by &&
+      constexpr size_t size = sizeof( T );
+      constexpr size_t bits = size * 8;
+      boost::endian::endian_buffer<boost::endian::order::little, T, bits> buf{};
+      buf = value;  // cannot initialize, only assign
+      for (size_t i = 0; i < size; ++i) {
+          // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+          out << buf.data()[i];
+      }
   }
 
   /**

@@ -110,23 +110,24 @@ namespace sgns::scale {
      * @param v value of integral type
      * @return reference to stream
      */
-    template <typename T,
-              typename I = std::decay_t<T>,
-              typename = std::enable_if_t<std::is_integral<I>::value>>
-    ScaleDecoderStream &operator>>(T &v) {
-      // check bool
-      if constexpr (std::is_same<I, bool>::value) {
-        v = decodeBool();
+    template <typename T, typename I = std::decay_t<T>, typename = std::enable_if_t<std::is_integral_v<I>>>
+    ScaleDecoderStream &operator>>( T &v )
+    {
+        // check bool
+        if constexpr ( std::is_same<I, bool>::value )
+        {
+            v = decodeBool();
+            return *this;
+        }
+        // check byte
+        if constexpr ( sizeof( T ) == 1u )
+        {
+            v = nextByte();
+            return *this;
+        }
+        // decode any other integer
+        v = detail::decodeInteger<I>( *this );
         return *this;
-      }
-      // check byte
-      if constexpr (sizeof(T) == 1u) {
-        v = nextByte();
-        return *this;
-      }
-      // decode any other integer
-      v = detail::decodeInteger<I>(*this);
-      return *this;
     }
 
     /**
