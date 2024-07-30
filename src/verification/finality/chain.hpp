@@ -38,9 +38,9 @@ namespace sgns::verification::finality {
      * @returns true if {@param block} is a descendent of or equal to the
      * given {@param base}.
      */
-    inline bool isEqualOrDescendOf(const primitives::BlockHash &base,
-                            const primitives::BlockHash &block) const {
-      return base == block ? true : getAncestry(base, block).has_value();
+    bool isEqualOrDescendOf( const primitives::BlockHash &base, const primitives::BlockHash &block ) const
+    {
+        return base == block ? true : getAncestry( base, block ).has_value();
     }
   };
 

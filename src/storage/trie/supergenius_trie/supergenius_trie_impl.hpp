@@ -12,9 +12,9 @@ namespace sgns::storage::trie {
   class SuperGeniusTrieImpl : public SuperGeniusTrie {
     // a child is obtained from the branch list of children as-is.
     // should be used when the trie is completely in memory
-    inline static outcome::result<NodePtr> defaultChildRetrieveFunctor(
-        const BranchPtr &parent, uint8_t idx) {
-      return parent->children.at(idx);
+    static outcome::result<NodePtr> defaultChildRetrieveFunctor( const BranchPtr &parent, uint8_t idx )
+    {
+        return parent->children.at( idx );
     }
 
    public:

@@ -85,12 +85,12 @@ namespace sgns::crdt
       return VerifyErrorCode::Success;
     }
 
-    inline bool operator==( const CrdtOptions& rhs ) const
+    bool operator==( const CrdtOptions &rhs ) const
     {
       return logger == rhs.logger && rebroadcastIntervalMilliseconds == rhs.rebroadcastIntervalMilliseconds;
     }
 
-    inline bool operator!=( const CrdtOptions& rhs ) const
+    bool operator!=( const CrdtOptions &rhs ) const
     {
       return !operator==( rhs );
     }

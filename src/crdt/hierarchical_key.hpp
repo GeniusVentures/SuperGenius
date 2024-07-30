@@ -58,12 +58,12 @@ namespace sgns::crdt
 
     bool IsTopLevel() const;
 
-    inline bool operator==(const HierarchicalKey& rhs) const
+    bool operator==( const HierarchicalKey &rhs ) const
     {
       return key_ == rhs.key_;
     }
 
-    inline bool operator!=(const HierarchicalKey& rhs) const
+    bool operator!=( const HierarchicalKey &rhs ) const
     {
       return !operator==(rhs);
     }
