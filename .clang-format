@@ -1,6 +1,8 @@
 ---
 BasedOnStyle: Microsoft
 AccessModifierOffset: -4
+AllowAllArgumentsOnNextLine: false
+AllowAllParametersOfDeclarationOnNextLine: false
 AlwaysBreakTemplateDeclarations: true
 AlignConsecutiveAssignments:
   Enabled: true
@@ -12,6 +14,7 @@ AlignConsecutiveDeclarations:
 AlignConsecutiveShortCaseStatements:
   Enabled: true
 BraceWrapping:
+  AfterCaseLabel: true
   BeforeLambdaBody: true
 BinPackArguments: false
 BinPackParameters: false
@@ -19,10 +22,11 @@ BreakConstructorInitializers: AfterColon
 BreakStringLiterals: false
 ColumnLimit: 120
 FixNamespaceComments: false
-IndentCaseBlocks: true
+IndentCaseBlocks: false
 IndentCaseLabels: true
 InsertBraces: true
 InsertNewlineAtEOF: true
+InsertTrailingCommas: Wrapped
 KeepEmptyLinesAtTheStartOfBlocks: false
 NamespaceIndentation: All
 PackConstructorInitializers: NextLine
