@@ -116,20 +116,36 @@ namespace sgns
 
         static const std::string &GetLoggingSystem()
         {
+            //static const std::string logger_config = R"(
+            //# ----------------
+            //sinks:
+            //  - name: console
+            //    type: console
+            //    color: true
+            //groups:
+            //  - name: SuperGeniusDemo
+            //    sink: console
+            //    level: info
+            //    children:
+            //      - name: libp2p
+            //      - name: Gossip
+            //# ----------------
+            //)";
             static const std::string logger_config = R"(
-        # ----------------
-        sinks:
-            - name: console
-            type: console
-            color: true
-        groups:
-            - name: SuperGeniusDemo
-            sink: console
-            level: info
-            children:
-                - name: libp2p
-                - name: Gossip
-        # ----------------
+            # ----------------
+            sinks:
+              - name: file
+                type: file
+                capacity: 20480
+                path: sgnslog.log
+            groups:
+              - name: SuperGeniusDemo
+                sink: file
+                level: info
+                children:
+                  - name: libp2p
+                  - name: Gossip
+            # ----------------
             )";
             return logger_config;
         }

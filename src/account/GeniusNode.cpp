@@ -35,10 +35,11 @@ namespace sgns
             std::make_shared<libp2p::log::Configurator>(),
             // Additional logging config for application
             GetLoggingSystem() ) );
-        logging_system->configure();
-
+        auto result = logging_system->configure();
+        std::cout << "Log Result: " << result.message << std::endl;
         libp2p::log::setLoggingSystem( logging_system );
-        libp2p::log::setLevelOfGroup( "SuperGNUSNode", soralog::Level::ERROR_ );
+        libp2p::log::setLevelOfGroup( "SuperGeniusDemo", soralog::Level::ERROR_ );
+        //libp2p::log::setLevelOfGroup("SuperGeniusDemoFile", soralog::Level::ERROR_);
 
         auto loggerGlobalDB = base::createLogger( "GlobalDB" );
         loggerGlobalDB->set_level( spdlog::level::debug );
