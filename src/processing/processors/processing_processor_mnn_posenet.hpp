@@ -70,7 +70,7 @@ namespace sgns::processing
         * @param origwidth - Width of image
         * @param origheight - Height of image
         */
-        MNN::Tensor MNNProcess( const std::vector<uint8_t> &imgdata, const int origwidth, const int origheight,
+        std::unique_ptr<MNN::Tensor> MNNProcess( const std::vector<uint8_t> &imgdata, const int origwidth, const int origheight,
                                          const std::string filename = "" );
 
         std::unique_ptr<std::vector<std::vector<char>>> imageData_;
