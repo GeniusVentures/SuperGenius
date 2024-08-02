@@ -31,6 +31,7 @@ namespace sgns::processing
                 std::cout << "Chunk IDX:  " << chunkIdx << "Total: " << subTask.chunkstoprocess_size() << std::endl;
                 const auto          &chunk = subTask.chunkstoprocess( chunkIdx );
                 std::vector<uint8_t> shahash( SHA256_DIGEST_LENGTH );
+
                 // Chunk result hash should be calculated
                 size_t chunkHash = 0;
                 if ( isValidationSubTask )
@@ -44,8 +45,9 @@ namespace sgns::processing
                         MNNProcess( ChunkSplit.GetPart( chunkIdx ), ChunkSplit.GetPartWidthActual( chunkIdx ),
                                     ChunkSplit.GetPartHeightActual( chunkIdx ) );
 
-                    const float* data = procresults.host<float>();
-                    size_t dataSize = procresults.elementSize() * sizeof(float);
+                    const float* data = procresults->host<float>();
+                    size_t dataSize = procresults->elementSize() * sizeof(float);
+                   
                     SHA256_CTX sha256;
                     SHA256_Init(&sha256);
                     SHA256_Update(&sha256, data, dataSize);
@@ -103,83 +105,73 @@ namespace sgns::processing
         }
     }
 
-    MNN::Tensor MNN_PoseNet::MNNProcess( const std::vector<uint8_t> &imgdata, const int origwidth,
-                                                  const int origheight, const std::string filename )
-    {
-        std::vector<uint8_t> ret_vect( imgdata );
-        //Get Target WIdth
-        const int targetWidth  = static_cast<int>( (float)origwidth / (float)OUTPUT_STRIDE ) * OUTPUT_STRIDE + 1;
-        const int targetHeight = static_cast<int>( (float)origheight / (float)OUTPUT_STRIDE ) * OUTPUT_STRIDE + 1;
+    std::unique_ptr<MNN::Tensor> MNN_PoseNet::MNNProcess(const std::vector<uint8_t>& imgdata, const int origwidth,
+        const int origheight, const std::string filename) {
+        std::vector<uint8_t> ret_vect(imgdata);
 
-        //Scale
+        // Get Target Width
+        const int targetWidth = static_cast<int>((float)origwidth / (float)OUTPUT_STRIDE) * OUTPUT_STRIDE + 1;
+        const int targetHeight = static_cast<int>((float)origheight / (float)OUTPUT_STRIDE) * OUTPUT_STRIDE + 1;
+
+        // Scale
         CV::Point scale;
         scale.fX = (float)origwidth / (float)targetWidth;
         scale.fY = (float)origheight / (float)targetHeight;
 
-        // create net and session
-        const void *buffer = static_cast<const void *>( modelFile_->data() );
-        //auto mnnNet = std::shared_ptr<MNN::Interpreter>(MNN::Interpreter::createFromFile(modelFile_));
-        auto mnnNet =
-            std::shared_ptr<MNN::Interpreter>( MNN::Interpreter::createFromBuffer( buffer, modelFile_->size() ) );
+        // Create net and session
+        const void* buffer = static_cast<const void*>(modelFile_->data());
+        auto mnnNet = std::shared_ptr<MNN::Interpreter>(MNN::Interpreter::createFromBuffer(buffer, modelFile_->size()));
         MNN::ScheduleConfig netConfig;
-        netConfig.type      = MNN_FORWARD_VULKAN;
+        netConfig.type = MNN_FORWARD_VULKAN;
         netConfig.numThread = 4;
-        auto session        = mnnNet->createSession( netConfig );
+        auto session = mnnNet->createSession(netConfig);
 
-        auto input = mnnNet->getSessionInput( session, nullptr );
+        auto input = mnnNet->getSessionInput(session, nullptr);
 
-        if ( input->elementSize() <= 4 )
-        {
-            mnnNet->resizeTensor( input, { 1, 3, targetHeight, targetWidth } );
-            mnnNet->resizeSession( session );
+        if (input->elementSize() <= 4) {
+            mnnNet->resizeTensor(input, { 1, 3, targetHeight, targetWidth });
+            mnnNet->resizeSession(session);
         }
-        // preprocess input image
+
+        // Preprocess input image
         {
             const float              means[3] = { 127.5f, 127.5f, 127.5f };
             const float              norms[3] = { 2.0f / 255.0f, 2.0f / 255.0f, 2.0f / 255.0f };
             CV::ImageProcess::Config preProcessConfig;
-            ::memcpy( preProcessConfig.mean, means, sizeof( means ) );
-            ::memcpy( preProcessConfig.normal, norms, sizeof( norms ) );
+            ::memcpy(preProcessConfig.mean, means, sizeof(means));
+            ::memcpy(preProcessConfig.normal, norms, sizeof(norms));
             preProcessConfig.sourceFormat = CV::RGBA;
-            preProcessConfig.destFormat   = CV::RGB;
-            preProcessConfig.filterType   = CV::BILINEAR;
+            preProcessConfig.destFormat = CV::RGB;
+            preProcessConfig.filterType = CV::BILINEAR;
 
-            auto       pretreat = std::shared_ptr<CV::ImageProcess>( CV::ImageProcess::create( preProcessConfig ) );
+            auto       pretreat = std::shared_ptr<CV::ImageProcess>(CV::ImageProcess::create(preProcessConfig));
             CV::Matrix trans;
 
             // Dst -> [0, 1]
-            trans.postScale( 1.0 / targetWidth, 1.0 / targetHeight );
+            trans.postScale(1.0 / targetWidth, 1.0 / targetHeight);
             //[0, 1] -> Src
-            trans.postScale( origwidth, origheight );
+            trans.postScale(origwidth, origheight);
 
-            pretreat->setMatrix( trans );
-            pretreat->convert( ret_vect.data(), origwidth, origheight, 0, input );
+            pretreat->setMatrix(trans);
+            pretreat->convert(ret_vect.data(), origwidth, origheight, 0, input);
         }
+
+        // Log preprocessed input tensor data hash
+        {
+            const float* inputData = input->host<float>();
+            size_t inputDataSize = input->elementSize() * sizeof(float);
+        }
+
         {
             AUTOTIME;
-            mnnNet->runSession( session );
+            mnnNet->runSession(session);
         }
 
-        // get output
-        //auto offsets         = mnnNet->getSessionOutput( session, OFFSET_NODE_NAME );
-        //auto displacementFwd = mnnNet->getSessionOutput( session, DISPLACE_FWD_NODE_NAME );
-        //auto displacementBwd = mnnNet->getSessionOutput( session, DISPLACE_BWD_NODE_NAME );
-        //auto heatmaps        = mnnNet->getSessionOutput( session, HEATMAPS );
-
-        //Tensor offsetsHost( offsets, Tensor::CAFFE );
-        //Tensor displacementFwdHost( displacementFwd, Tensor::CAFFE );
-        //Tensor displacementBwdHost( displacementBwd, Tensor::CAFFE );
-        //Tensor heatmapsHost( heatmaps, Tensor::CAFFE );
-
-        //offsets->copyToHostTensor( &offsetsHost );
-        //displacementFwd->copyToHostTensor( &displacementFwdHost );
-        //displacementBwd->copyToHostTensor( &displacementBwdHost );
-        //heatmaps->copyToHostTensor( &heatmapsHost );
         auto outputTensor = mnnNet->getSessionOutput(session, nullptr);
-        MNN::Tensor outputHost(outputTensor, MNN::Tensor::CAFFE);
-        outputTensor->copyToHostTensor(&outputHost);
+        auto outputHost = std::make_unique<MNN::Tensor>(outputTensor, MNN::Tensor::CAFFE);
+        outputTensor->copyToHostTensor(outputHost.get());
 
-        return outputTensor;
+        return outputHost;
     }
 
 }
