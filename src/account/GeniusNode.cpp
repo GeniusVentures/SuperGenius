@@ -14,6 +14,7 @@
 #include "processing/processing_subtask_enqueuer_impl.hpp"
 #include "processing/processing_subtask_result_storage.hpp"
 #include "processing/processors/processing_processor_mnn_posenet.hpp"
+#include "local_secure_storage/impl/json/JSONSecureStorage.hpp"
 
 using namespace boost::multiprecision;
 namespace br = boost::random;
