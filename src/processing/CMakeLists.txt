@@ -87,14 +87,15 @@ target_link_libraries(processing_service PRIVATE
     p2p::asio_scheduler
     ${WIN_CRYPT_LIBRARY}
 	${MNN_LIBS}
+    Vulkan::Vulkan
     AsyncIOManager
     )
 	
 if(WIN32)
-    target_link_options(processing_service PRIVATE /WHOLEARCHIVE:${MNN_LIBS})
+    target_link_options(processing_service PUBLIC /WHOLEARCHIVE:${MNN_LIBS})
 elseif(APPLE)
-    target_link_options(processing_service PRIVATE -force_load ${MNN_LIBS})
+    target_link_options(processing_service PUBLIC -force_load ${MNN_LIBS})
 else()
-    target_link_options(processing_service PRIVATE "-Wl,--whole-archive" ${MNN_LIBS} "-Wl,--no-whole-archive")
+    target_link_options(processing_service PUBLIC "-Wl,--whole-archive" ${MNN_LIBS} "-Wl,--no-whole-archive")
 endif()
 supergenius_install(processing_service)
