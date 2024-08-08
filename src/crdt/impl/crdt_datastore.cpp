@@ -298,10 +298,26 @@ namespace sgns::crdt
   {
     // Make a list of heads we received
     CRDTBroadcast bcastData;
-    bcastData.MergeFromString(std::string(buff.toString()));
+    auto string_data = std::string(buff.toString());
+
+    if (!string_data.size())
+    {
+      return outcome::failure(boost::system::error_code{});
+    }
+    if (!bcastData.MergeFromString(string_data))
+    {
+      return outcome::failure(boost::system::error_code{});
+    }
+    if (!bcastData.IsInitialized()) {
+        return outcome::failure(boost::system::error_code{});
+    }
 
     // Compatibility: before we were publishing CIDs directly
     auto msgReflect = bcastData.GetReflection();
+
+    if (msgReflect == nullptr) {
+        return outcome::failure(boost::system::error_code{});
+    }
 
     if (!msgReflect->GetUnknownFields(bcastData).empty())
     {
