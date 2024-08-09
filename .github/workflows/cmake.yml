@@ -6,11 +6,15 @@ on: [push, pull_request, workflow_dispatch]
 
 jobs:        
   Windows:
-    runs-on: windows-2019        
+    runs-on: windows-latest      
     steps:
       - name: Get branch name
         id: branch-name
         uses: tj-actions/branch-names@v6
+
+      - name: Install Windows host dependencies
+        run: |
+          choco install ccache -A
 
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - name: Checkout SuperGenius repository 
@@ -25,7 +29,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           path: 'thirdparty'
           submodules: 'recursive' 
-          ref: ${{ steps.branch-name.outputs.current_branch }}
+          ref: develop
           
       - name: Thirdparty Create Build Directory
         run: cmake -E make_directory ${{github.workspace}}/thirdparty/.build          
@@ -55,6 +59,19 @@ jobs:
       - name: Get branch name
         id: branch-name
         uses: tj-actions/branch-names@v6
+
+      - name: Set clang as the default compiler
+        run: |
+          sudo update-alternatives --install /usr/bin/cc cc $(which clang) 100
+          sudo update-alternatives --install /usr/bin/c++ c++ $(which clang++) 100
+          sudo update-alternatives --set cc $(which clang)
+          sudo update-alternatives --set c++ $(which clang++)
+
+      - name: Install Linux host dependencies
+        run: |
+          sudo apt install ccache ninja-build -y
+          sudo apt install vulkan-tools vulkan-validationlayers-dev libvulkan-dev -y
+          echo "CMAKE_GENERATOR=Ninja" >> $GITHUB_ENV
     
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v3
