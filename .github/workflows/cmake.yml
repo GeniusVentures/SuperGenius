@@ -27,6 +27,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           path: 'SuperGenius'
+          submodules: "recursive"
       
       - name: Check out thirdparty repository
         uses: actions/checkout@v3
@@ -53,7 +54,7 @@ jobs:
 
       - name: Configure CMake
         working-directory: ${{github.workspace}}/SuperGenius/.build
-        run: cmake -S ../build/Windows/ -DCMAKE_BUILD_TYPE=Release -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty/ -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty/.build
+        run: cmake -S ../build/Windows/ -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty/ -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty/.build
 
       - name: Compile
         working-directory: ${{github.workspace}}/SuperGenius/.build
@@ -88,7 +89,8 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v3
         with:
-          path: 'SuperGenius'    
+          path: 'SuperGenius'
+          submodules: "recursive"    
       
       - name: Check out thirdparty repository
         uses: actions/checkout@v3
@@ -138,6 +140,7 @@ jobs:
       - uses: actions/checkout@v3
         with:
           path: 'SuperGenius'
+          submodules: "recursive"
           
       - name: Download Android NDK
         run: |
@@ -204,7 +207,7 @@ jobs:
           echo "Check clang path:"
           which clang
           env
-          cmake -S ../build/Android/ -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty/ -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty/.build
+          cmake -S ../build/Android/ -DANDROID_ABI="arm64-v8a" -DCMAKE_ANDROID_NDK=$ANDROID_NDK -DANDROID_TOOLCHAIN=clang -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty/ -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty/.build
       
       - name: Compile
         working-directory: ${{github.workspace}}/SuperGenius/.build
@@ -227,6 +230,7 @@ jobs:
       - uses: actions/checkout@v3
         with:
           path: 'SuperGenius'
+          submodules: "recursive"
       
       # Workaround for arm64 build 
       - name: Ensure latest macOS SDK is used
@@ -284,7 +288,8 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v3
         with:
-          path: 'SuperGenius'    
+          path: 'SuperGenius'
+          submodules: "recursive"    
 
       - name: Install bindgen
         run: cargo install cbindgen
@@ -312,7 +317,7 @@ jobs:
 
       - name: Thirdparty Configure CMake
         working-directory: ${{github.workspace}}/thirdparty/.build
-        run: cmake -S ../build/iOS/ -DCMAKE_BUILD_TYPE=Release --DPLATFORM=OS64
+        run: cmake -S ../build/iOS/ -DCMAKE_BUILD_TYPE=Release -DPLATFORM=OS64
 
       - name: Thirdparty Compile
         working-directory: ${{github.workspace}}/thirdparty/.build
@@ -323,7 +328,7 @@ jobs:
 
       - name: Configure CMake
         working-directory: ${{github.workspace}}/SuperGenius/.build
-        run: cmake -S ../build/iOS/ -DCMAKE_BUILD_TYPE=Release -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty/ -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty/.build
+        run: cmake -S ../build/iOS/ -DCMAKE_BUILD_TYPE=Release -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty/ -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty/.build -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/SuperGenius/build/iOS/iOS.cmake -DiOS_ABI=arm64-v8a -DIOS_ARCH="arm64" -DENABLE_ARC=0 -DENABLE_BITCODE=0 -DENABLE_VISIBILITY=1  -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_SYSTEM_PROCESSOR=arm64
 
       - name: Compile
         working-directory: ${{github.workspace}}/SuperGenius/.build
