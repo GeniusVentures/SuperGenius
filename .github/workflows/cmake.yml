@@ -16,6 +16,12 @@ jobs:
         run: |
           choco install ccache -A
 
+      - name: Install bindgen
+        run: cargo install cbindgen
+
+      - name: Add Rust wasm target
+        run: rustup target add wasm32-unknown-emscripten
+
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - name: Checkout SuperGenius repository 
         uses: actions/checkout@v3
@@ -36,7 +42,7 @@ jobs:
 
       - name: Thirdparty Configure CMake
         working-directory: ${{github.workspace}}/thirdparty/.build
-        run: cmake -S ../build/Windows/ -G "Visual Studio 16 2019" -A x64 -DCMAKE_BUILD_TYPE=Release
+        run: cmake -S ../build/Windows/ -DCMAKE_BUILD_TYPE=Release
 
       - name: Thirdparty Compile
         working-directory: ${{github.workspace}}/thirdparty/.build
@@ -72,6 +78,12 @@ jobs:
           sudo apt install ccache ninja-build -y
           sudo apt install vulkan-tools vulkan-validationlayers-dev libvulkan-dev -y
           echo "CMAKE_GENERATOR=Ninja" >> $GITHUB_ENV
+
+      - name: Install bindgen
+        run: cargo install cbindgen
+
+      - name: Add Rust wasm target
+        run: rustup target add wasm32-unknown-emscripten
     
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v3
@@ -134,6 +146,16 @@ jobs:
           curl -o ndk.zip ${{ env.NDK_URL }} 
           unzip ndk.zip 
           rm ndk.zip
+
+      - name: Install bindgen
+        run: cargo install cbindgen
+
+      - name: Add Rust wasm target
+        run: rustup target add wasm32-unknown-emscripten
+      
+      - name: Add Android toolchain
+        run: |
+          rustup target add aarch64-linux-android
           
       - name: Check out thirdparty repository
         uses: actions/checkout@v3
@@ -182,7 +204,7 @@ jobs:
           echo "Check clang path:"
           which clang
           env
-          cmake -S ../build/Android/ -DANDROID_ABI="arm64-v8a" -DCMAKE_ANDROID_NDK=$ANDROID_NDK -DANDROID_TOOLCHAIN=clang -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty/ -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty/.build
+          cmake -S ../build/Android/ -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty/ -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty/.build
       
       - name: Compile
         working-directory: ${{github.workspace}}/SuperGenius/.build
@@ -211,7 +233,16 @@ jobs:
         run: |
           sudo xcode-select --switch "$(find /Applications -mindepth 1 -maxdepth 1 ! -type l | grep "Xcode_[\.0-9]*app" | sort -V | tail -1)/Contents/Developer"
           sudo rm -Rf /Library/Developer/CommandLineTools/SDKs/*
-          
+      
+      - name: Install bindgen
+        run: cargo install cbindgen
+
+      - name: Add Rust wasm target
+        run: rustup target add wasm32-unknown-emscripten
+
+      - name: Add Darwin rust toolchain
+        run: rustup target add x86_64-apple-darwin
+      
       - name: Check out thirdparty repository
         uses: actions/checkout@v3
         with:
@@ -254,11 +285,19 @@ jobs:
       - uses: actions/checkout@v3
         with:
           path: 'SuperGenius'    
+
+      - name: Install bindgen
+        run: cargo install cbindgen
+
+      - name: Add Rust wasm target
+        run: rustup target add wasm32-unknown-emscripten    
       
-      - uses: actions/setup-python@v2
-        with:
-          python-version: '3.5' # Version range or exact version of a Python version to use, using SemVer's version range syntax
-          
+      - name: Add iOS toolchain
+        run: |
+          rustup toolchain install nightly-aarch64-apple-darwin
+          rustup component add rust-src --toolchain nightly-aarch64-apple-darwin
+          rustup target add aarch64-apple-ios
+
       - name: Check out thirdparty repository
         uses: actions/checkout@v3
         with:
@@ -273,7 +312,7 @@ jobs:
 
       - name: Thirdparty Configure CMake
         working-directory: ${{github.workspace}}/thirdparty/.build
-        run: cmake -S ../build/iOS/ -DCMAKE_BUILD_TYPE=Release -DiOS_ABI=arm64-v8a -DIOS_ARCH="arm64" -DENABLE_ARC=0 -DENABLE_BITCODE=0 -DENABLE_VISIBILITY=1  -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_SYSTEM_PROCESSOR=arm64 -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/thirdparty/build/iOS/iOS.cmake 
+        run: cmake -S ../build/iOS/ -DCMAKE_BUILD_TYPE=Release --DPLATFORM=OS64
 
       - name: Thirdparty Compile
         working-directory: ${{github.workspace}}/thirdparty/.build
@@ -284,7 +323,7 @@ jobs:
 
       - name: Configure CMake
         working-directory: ${{github.workspace}}/SuperGenius/.build
-        run: cmake -S ../build/iOS/ -DCMAKE_BUILD_TYPE=Release -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty/ -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty/.build -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/SuperGenius/build/iOS/iOS.cmake -DiOS_ABI=arm64-v8a -DIOS_ARCH="arm64" -DENABLE_ARC=0 -DENABLE_BITCODE=0 -DENABLE_VISIBILITY=1  -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_SYSTEM_PROCESSOR=arm64
+        run: cmake -S ../build/iOS/ -DCMAKE_BUILD_TYPE=Release -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty/ -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty/.build
 
       - name: Compile
         working-directory: ${{github.workspace}}/SuperGenius/.build
