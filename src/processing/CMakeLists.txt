@@ -87,7 +87,7 @@ target_link_libraries(processing_service PRIVATE
     p2p::asio_scheduler
     ${WIN_CRYPT_LIBRARY}
 	${MNN_LIBS}
-    Vulkan::Vulkan
+    ${VULKAN_LIBS}
     AsyncIOManager
     )
 	

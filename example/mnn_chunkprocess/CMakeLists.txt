@@ -49,7 +49,7 @@ endif()
 target_link_libraries(mnn_chunkprocess PRIVATE 	
 
 	${MNN_LIBS}
-    Vulkan::Vulkan
+    ${VULKAN_LIBS}
     
 )
 if(WIN32)

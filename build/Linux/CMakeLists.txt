@@ -40,7 +40,8 @@ set(EXTRA_CXX_FLAGS)
 # --------------------------------------------------------
 # Set custom subfolder for ABI
 set(ABI_SUBFOLDER_NAME "")
-
+find_package(Vulkan REQUIRED)
+set(VULKAN_LIBS Vulkan::Vulkan)
 # --------------------------------------------------------
 # Include common build parameters
 include(../CommonBuildParameters.cmake)
