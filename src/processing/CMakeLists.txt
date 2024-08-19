@@ -94,9 +94,7 @@ target_link_libraries(processing_service PRIVATE
 	
 if(WIN32)
     target_link_options(processing_service PUBLIC /WHOLEARCHIVE:${MNN_LIBS})
-elseif(APPLE)
-    target_link_options(processing_service PUBLIC -force_load ${MNN_LIBS})
-else()
+elseif(NOT APPLE)
     target_link_options(processing_service PUBLIC "-Wl,--whole-archive" ${MNN_LIBS} "-Wl,--no-whole-archive")
 endif()
 supergenius_install(processing_service)
