@@ -55,20 +55,21 @@ target_include_directories(processing_service
    ${MNN_INCLUDE_DIR}
 )
 
-#if(APPLE)
-#	set(XCFRAMEWORK_PATH "${_THIRDPARTY_BUILD_DIR}/moltenvk/build/lib/MoltenVK.xcframework")
-#	target_link_libraries(processing_service PRIVATE 	
-#		"-framework CoreFoundation"
-#		"-framework CoreGraphics"
-#		"-framework CoreServices"
-#		"-framework IOKit"
-#		"-framework IOSurface"
-#		"-framework Metal"
-#		"-framework QuartzCore"
-#		"-framework AppKit"
+if(APPLE)
+	set(XCFRAMEWORK_PATH "${_THIRDPARTY_BUILD_DIR}/moltenvk/build/lib/MoltenVK.xcframework")
+	target_link_libraries(processing_service PRIVATE
+		"-framework CoreFoundation"
+		"-framework CoreGraphics"
+		"-framework CoreServices"
+		"-framework IOKit"
+		"-framework IOSurface"
+		"-framework Metal"
+		"-framework QuartzCore"
+		"-framework AppKit"
 #		${XCFRAMEWORK_PATH} 
-#		)
-#endif()
+		"-framework Foundation"
+		)
+endif()
 
 target_link_libraries(processing_service PRIVATE
     crdt_globaldb
