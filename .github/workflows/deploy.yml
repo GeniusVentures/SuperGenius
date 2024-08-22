@@ -1,8 +1,8 @@
 name: Deploy SGNUS
 
 on:
-  workflow_dispatch:
-  workflows: ["Release Build CI"]  # Ensure this matches the name of your build workflow
+  workflow_run:
+    workflows: ["Release Build CI"]
     types:
       - completed
 env:
