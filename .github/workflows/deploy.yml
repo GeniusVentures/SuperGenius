@@ -2,11 +2,6 @@ name: Deploy SGNUS
 
 on:
   workflow_dispatch:
-  workflow_run:
-    workflows: ["Release Build CI"]
-    types:
-      - completed
-
 env:
   GH_TOKEN: ${{ secrets.GNUS_TOKEN_1 }}
 
@@ -15,17 +10,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Download Windows Build Artifacts
-        uses: actions/download-artifact@v3
-        with:
-          name: windows-build
-          path: ${{github.workspace}}/windows-build
-
       - name: Download Linux Build Artifacts
         uses: actions/download-artifact@v3
         with:
           name: linux-build
           path: ${{github.workspace}}/linux-build
+      
+      - name: Download Windows Build Artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: windows-build
+          path: ${{github.workspace}}/windows-build
 
       - name: Download Android Build Artifacts
         uses: actions/download-artifact@v3

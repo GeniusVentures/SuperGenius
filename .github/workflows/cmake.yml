@@ -49,6 +49,17 @@ jobs:
         working-directory: ${{github.workspace}}/SuperGenius/.build
         run: cmake --build . --config Release
 
+      - name: Create install directory
+        working-directory: ${{github.workspace}}/SuperGenius/.build
+        run: cmake --install .
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: windows-build
+          path: ${{github.workspace}}/SuperGenius/.build/
+          retention-days: 3  
+
   Linux:
     runs-on: ubuntu-latest        
     steps:
@@ -90,7 +101,18 @@ jobs:
 
       - name: Compile
         working-directory: ${{github.workspace}}/SuperGenius/.build
-        run: make -j8
+        run: cmake --build . --config Release -j
+
+      - name: Install
+        working-directory: ${{github.workspace}}/SuperGenius/.build
+        run: cmake --install .
+        
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: linux-build
+          path: ${{github.workspace}}/SuperGenius/.build/
+          retention-days: 3  
         
   Android:
     runs-on: ubuntu-latest
@@ -173,8 +195,14 @@ jobs:
       
       - name: On error
         working-directory: ${{github.workspace}}/SuperGenius/.build
-        if: ${{ failure() }}
-        run: cat example/graphsync_app/CMakeFiles/graphsync_app.dir/build.make
+        run: cmake --install .
+        
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: android-build
+          path: ${{github.workspace}}/SuperGenius/.build/
+          retention-days: 3
 
 
   MacOS:
@@ -225,6 +253,17 @@ jobs:
       - name: Compile
         working-directory: ${{github.workspace}}/SuperGenius/.build
         run: make -j8
+
+      - name: Install
+        working-directory: ${{github.workspace}}/SuperGenius/.build
+        run: cmake --install .
+        
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: osx-build
+          path: ${{github.workspace}}/SuperGenius/.build/
+          retention-days: 3  
   
   iOS:
     runs-on: macos-latest        
@@ -272,4 +311,15 @@ jobs:
       - name: Compile
         working-directory: ${{github.workspace}}/SuperGenius/.build
         run: make -j8
+      
+      - name: Install
+        working-directory: ${{github.workspace}}/SuperGenius/.build
+        run: cmake --install .
+        
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: ios-build
+          path: ${{github.workspace}}/SuperGenius/.build/
+          retention-days: 3  
         
