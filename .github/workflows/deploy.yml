@@ -1,22 +1,17 @@
-name: Deploy SuperGenius
+name: Deploy SuperGenius Test
 
 
 on: 
   push:
     branches: 
-      #- develop
+      - develop
       - main
   pull_request:
     branches: 
-      #- develop
+      - develop
       - main
   workflow_dispatch:
-#on:
-#  workflow_dispatch:
-# workflow_run:
-#    workflows: ["Release Build CI"]  
-#    types:
-#      - completed
+
 env:
   GH_TOKEN: ${{ secrets.GNUS_TOKEN_1 }}
 
