@@ -78,7 +78,7 @@ set(CMAKE_XCODE_ATTRIBUTE_ONLY_ACTIVE_ARCH YES)
 # --------------------------------------------------------
 # Set host system protoc executable path
 
-set(PROTOC_EXECUTABLE "${_THIRDPARTY_BUILD_DIR}/gRPC_host/bin/protoc${CMAKE_EXECUTABLE_SUFFIX}")
+set(PROTOC_EXECUTABLE "${_THIRDPARTY_BUILD_DIR}/protobuf_host/bin/protoc${CMAKE_EXECUTABLE_SUFFIX}")
 
 # --------------------------------------------------------
 # Set custom protobuf path for iOS
