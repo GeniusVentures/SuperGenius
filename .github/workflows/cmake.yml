@@ -79,7 +79,7 @@ jobs:
         with:
           name: windows-build
           path: ${{github.workspace}}/SuperGenius/.build/
-          retention-days: 1  
+          retention-days: 3  
 
   Linux:
     runs-on: ubuntu-latest        
@@ -152,7 +152,7 @@ jobs:
         with:
           name: linux-build
           path: ${{github.workspace}}/SuperGenius/.build/
-          retention-days: 1  
+          retention-days: 3  
         
   Android:
     runs-on: ubuntu-latest
@@ -252,7 +252,7 @@ jobs:
         with:
           name: android-build
           path: ${{github.workspace}}/SuperGenius/.build/
-          retention-days: 1  
+          retention-days: 3
 
 
   MacOS:
@@ -322,7 +322,7 @@ jobs:
         with:
           name: osx-build
           path: ${{github.workspace}}/SuperGenius/.build/
-          retention-days: 1  
+          retention-days: 3  
   
   iOS:
     runs-on: macos-latest        
@@ -388,5 +388,5 @@ jobs:
         with:
           name: ios-build
           path: ${{github.workspace}}/SuperGenius/.build/
-          retention-days: 1  
+          retention-days: 3  
         
