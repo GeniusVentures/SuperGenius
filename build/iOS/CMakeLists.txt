@@ -105,7 +105,7 @@ set(EXTRA_CXX_FLAGS -std=c++17)
 
 # --------------------------------------------------------
 # Set custom subfolder for ABI
-set(ABI_SUBFOLDER_NAME "/${iOS_ABI}")
+set(ABI_SUBFOLDER_NAME "/aarch64")
 
 set(TESTING OFF)
 # --------------------------------------------------------
