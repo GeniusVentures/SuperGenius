@@ -2,6 +2,9 @@ name: Deploy SGNUS
 
 on:
   workflow_dispatch:
+  workflows: ["Release Build CI"]  # Ensure this matches the name of your build workflow
+    types:
+      - completed
 env:
   GH_TOKEN: ${{ secrets.GNUS_TOKEN_1 }}
 
