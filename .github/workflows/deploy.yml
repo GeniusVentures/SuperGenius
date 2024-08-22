@@ -1,11 +1,14 @@
 name: Deploy SuperGenius
 
 on:
-  workflow_run:
+  workflow_dispatch:
+# workflow_run:
 #    workflows: ["Release Build CI"]  
 #    types:
 #      - completed
-
+env:
+  GH_TOKEN: ${{ secrets.GNUS_TOKEN_1 }}
+  
 jobs:
   deploy:
     runs-on: ubuntu-latest
