@@ -13,8 +13,6 @@ on:
       - main
   workflow_dispatch:
 
-env:
-  GH_TOKEN: ${{ secrets.GNUS_TOKEN_1 }}
 jobs:        
   Windows:
     runs-on: windows-latest      
@@ -109,6 +107,8 @@ jobs:
         if: ${{ github.event_name == 'workflow_dispatch' }}
         id: create_release
         uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GNUS_TOKEN_1 }}
         with:
           tag_name: ${{ env.RELEASE_TAG }}
           release_name: ${{ env.RELEASE_NAME }}
@@ -118,6 +118,8 @@ jobs:
       - name: Upload Release Asset
         if: ${{ github.event_name == 'workflow_dispatch' }}
         uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GNUS_TOKEN_1 }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ${{ env.FILE_NAME }}
@@ -225,6 +227,8 @@ jobs:
         if: ${{ github.event_name == 'workflow_dispatch' }}
         id: create_release
         uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GNUS_TOKEN_1 }}
         with:
           tag_name: ${{ env.RELEASE_TAG }}
           release_name: ${{ env.RELEASE_NAME }}
@@ -234,6 +238,8 @@ jobs:
       - name: Upload Release Asset
         if: ${{ github.event_name == 'workflow_dispatch' }}
         uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GNUS_TOKEN_1 }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ${{ env.FILE_NAME }}
