@@ -158,7 +158,7 @@ outcome::result<void> PubSubBroadcasterExt::Broadcast(const base::Buffer& buff)
     //If no addresses existed, we don't have anything to broadcast that is not otherwise a local address.
     if (bmsg.multiaddress_size() <= 0)
     {
-        return outcome::failure(boost::system::error_code{});
+        return outcome::success();
     }
     //bmsg.set_multiaddress(std::string(multiaddress.begin(), multiaddress.end()));
     std::string data(buff.toString());
