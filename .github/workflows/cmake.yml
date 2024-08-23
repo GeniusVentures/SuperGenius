@@ -78,6 +78,7 @@ jobs:
         working-directory: ${{github.workspace}}/SuperGenius
         if: ${{ github.event_name == 'workflow_dispatch' }}
         run: |
+          shopt -s extglob
           rm -rf !(build) .[!.]* ..?*
           cd build
           rm -rf !(Windows) .[!.]* ..?*
@@ -193,6 +194,7 @@ jobs:
         working-directory: ${{github.workspace}}/SuperGenius
         if: ${{ github.event_name == 'workflow_dispatch' }}
         run: |
+          shopt -s extglob
           rm -rf !(build) .[!.]* ..?*
           cd build
           rm -rf !(Linux) .[!.]* ..?*
@@ -281,7 +283,7 @@ jobs:
           repository: 'GeniusVentures/thirdparty'
           path: 'thirdparty'
           submodules: 'recursive' 
-          ref: ${{ steps.branch-name.outputs.current_branch }}
+          ref: develop
           
       - name: Thirdparty Create Build Directory
         run: cmake -E make_directory ${{github.workspace}}/thirdparty/.build          
@@ -373,7 +375,7 @@ jobs:
           repository: 'GeniusVentures/thirdparty'
           path: 'thirdparty'
           submodules: 'recursive' 
-          ref: ${{ steps.branch-name.outputs.current_branch }}
+          ref: develop
           
       - name: Thirdparty Create Build Directory
         run: cmake -E make_directory ${{github.workspace}}/thirdparty/.build          
@@ -439,7 +441,7 @@ jobs:
           repository: 'GeniusVentures/thirdparty'
           path: 'thirdparty'
           submodules: 'recursive' 
-          ref: ${{ steps.branch-name.outputs.current_branch }}
+          ref: develop
           
       - name: Thirdparty Create Build Directory
         run: cmake -E make_directory ${{github.workspace}}/thirdparty/.build          
