@@ -300,6 +300,13 @@ set(AsyncIOManager_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/AsyncIOManager/lib")
 set(AsyncIOManager_DIR "${_THIRDPARTY_BUILD_DIR}/AsyncIOManager/lib/cmake/AsyncIOManager")
 find_package(AsyncIOManager CONFIG REQUIRED)
 include_directories(${AsyncIOManager_INCLUDE_DIR})
+# --------------------------------------------------------
+# Set config of crypto3
+#set(crypto3_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/crypto3/include")
+#set(crypto3_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/crypto3/lib")
+#set(crypto3_DIR "${_THIRDPARTY_BUILD_DIR}/crypto3/lib/cmake/crypto3")
+#find_package(crypto3 CONFIG REQUIRED)
+#include_directories(${crypto3_INCLUDE_DIR})
 include_directories(
 "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/algebra/include"
 "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/block/include"
@@ -325,6 +332,7 @@ include_directories(
 "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/vdf/include"
 "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/zk/include"
 )
+
 
 # --------------------------------------------------------
 # Set config of gnus_upnp

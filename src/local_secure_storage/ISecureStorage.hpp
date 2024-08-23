@@ -23,8 +23,8 @@ namespace sgns
 
         using SecureBufferType = std::string;
 
-        virtual outcome::result<SecureBufferType> Load( const std::string &key )                                 = 0;
-        virtual outcome::result<void>             Save( const std::string &key, const SecureBufferType &buffer ) = 0;
+        virtual outcome::result<SecureBufferType> Load( const std::string &key, const std::string directory = "" ) = 0;
+        virtual outcome::result<void>             Save( const std::string &key, const SecureBufferType &buffer, const std::string directory = "" )   = 0;
     };
 }
 

@@ -57,7 +57,7 @@ target_include_directories(processing_service
 
 if(APPLE)
 	set(XCFRAMEWORK_PATH "${_THIRDPARTY_BUILD_DIR}/moltenvk/build/lib/MoltenVK.xcframework")
-	target_link_libraries(processing_service PRIVATE 	
+	target_link_libraries(processing_service PRIVATE
 		"-framework CoreFoundation"
 		"-framework CoreGraphics"
 		"-framework CoreServices"
@@ -66,7 +66,8 @@ if(APPLE)
 		"-framework Metal"
 		"-framework QuartzCore"
 		"-framework AppKit"
-		${XCFRAMEWORK_PATH} 
+#		${XCFRAMEWORK_PATH} 
+		"-framework Foundation"
 		)
 endif()
 
@@ -87,14 +88,15 @@ target_link_libraries(processing_service PRIVATE
     p2p::asio_scheduler
     ${WIN_CRYPT_LIBRARY}
 	${MNN_LIBS}
+    ${VULKAN_LIBS}
     AsyncIOManager
     )
 	
 if(WIN32)
-    target_link_options(processing_service PRIVATE /WHOLEARCHIVE:${MNN_LIBS})
+    target_link_options(processing_service PUBLIC /WHOLEARCHIVE:${MNN_LIBS})
 elseif(APPLE)
-    target_link_options(processing_service PRIVATE -force_load ${MNN_LIBS})
+    target_link_options(processing_service PUBLIC -force_load ${MNN_LIBS})
 else()
-    target_link_options(processing_service PRIVATE "-Wl,--whole-archive" ${MNN_LIBS} "-Wl,--no-whole-archive")
+    target_link_options(processing_service PUBLIC "-Wl,--whole-archive" ${MNN_LIBS} "-Wl,--no-whole-archive")
 endif()
 supergenius_install(processing_service)

@@ -2,37 +2,58 @@ name: Release Build CI
 
 # Controls when the workflow will run
 # Triggers the workflow on push or pull request events and manually from the Actions tab
-on: [push, pull_request, workflow_dispatch]
+on: 
+  push:
+    branches: 
+      - develop
+      - main
+  pull_request:
+    branches: 
+      - develop
+      - main
+  workflow_dispatch:
 
+env:
+  GH_TOKEN: ${{ secrets.GNUS_TOKEN_1 }}
 jobs:        
   Windows:
-    runs-on: windows-2019        
+    runs-on: windows-latest      
     steps:
       - name: Get branch name
         id: branch-name
         uses: tj-actions/branch-names@v6
+
+      - name: Install Windows host dependencies
+        run: |
+          choco install ccache -A
+
+      - name: Install bindgen
+        run: cargo install cbindgen
+
+      - name: Add Rust wasm target
+        run: rustup target add wasm32-unknown-emscripten
 
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - name: Checkout SuperGenius repository 
         uses: actions/checkout@v3
         with:
           path: 'SuperGenius'
+          submodules: "recursive"
       
       - name: Check out thirdparty repository
         uses: actions/checkout@v3
         with:
           repository: 'GeniusVentures/thirdparty'
-          token: ${{ secrets.GITHUB_TOKEN }}
           path: 'thirdparty'
           submodules: 'recursive' 
-          ref: ${{ steps.branch-name.outputs.current_branch }}
+          ref: develop
           
       - name: Thirdparty Create Build Directory
         run: cmake -E make_directory ${{github.workspace}}/thirdparty/.build          
 
       - name: Thirdparty Configure CMake
         working-directory: ${{github.workspace}}/thirdparty/.build
-        run: cmake -S ../build/Windows/ -G "Visual Studio 16 2019" -A x64 -DCMAKE_BUILD_TYPE=Release
+        run: cmake -S ../build/Windows/ -DCMAKE_BUILD_TYPE=Release
 
       - name: Thirdparty Compile
         working-directory: ${{github.workspace}}/thirdparty/.build
@@ -43,11 +64,22 @@ jobs:
 
       - name: Configure CMake
         working-directory: ${{github.workspace}}/SuperGenius/.build
-        run: cmake -S ../build/Windows/ -G "Visual Studio 16 2019" -A x64 -DCMAKE_BUILD_TYPE=Release -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty/ -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty/.build
+        run: cmake -S ../build/Windows/ -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty/ -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty/.build
 
       - name: Compile
         working-directory: ${{github.workspace}}/SuperGenius/.build
         run: cmake --build . --config Release
+
+      - name: Create install directory
+        working-directory: ${{github.workspace}}/SuperGenius/.build
+        run: cmake --install .
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: windows-build
+          path: ${{github.workspace}}/SuperGenius/.build/
+          retention-days: 3  
 
   Linux:
     runs-on: ubuntu-latest        
@@ -55,17 +87,36 @@ jobs:
       - name: Get branch name
         id: branch-name
         uses: tj-actions/branch-names@v6
+
+      - name: Set clang as the default compiler
+        run: |
+          sudo update-alternatives --install /usr/bin/cc cc $(which clang) 100
+          sudo update-alternatives --install /usr/bin/c++ c++ $(which clang++) 100
+          sudo update-alternatives --set cc $(which clang)
+          sudo update-alternatives --set c++ $(which clang++)
+
+      - name: Install Linux host dependencies
+        run: |
+          sudo apt install ccache ninja-build -y
+          sudo apt install vulkan-tools vulkan-validationlayers-dev libvulkan-dev -y
+          echo "CMAKE_GENERATOR=Ninja" >> $GITHUB_ENV
+
+      - name: Install bindgen
+        run: cargo install cbindgen
+
+      - name: Add Rust wasm target
+        run: rustup target add wasm32-unknown-emscripten
     
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v3
         with:
-          path: 'SuperGenius'    
+          path: 'SuperGenius'
+          submodules: "recursive"    
       
       - name: Check out thirdparty repository
         uses: actions/checkout@v3
         with:
           repository: 'GeniusVentures/thirdparty'
-          token: ${{ secrets.GITHUB_TOKEN }}
           path: 'thirdparty'
           submodules: 'recursive' 
           ref: develop
@@ -79,7 +130,7 @@ jobs:
 
       - name: Thirdparty Compile
         working-directory: ${{github.workspace}}/thirdparty/.build
-        run: make -j8
+        run: cmake --build . --config Release -j
       
       - name: Create Build Directory
         run: cmake -E make_directory ${{github.workspace}}/SuperGenius/.build          
@@ -90,7 +141,18 @@ jobs:
 
       - name: Compile
         working-directory: ${{github.workspace}}/SuperGenius/.build
-        run: make -j8
+        run: cmake --build . --config Release -j
+
+      - name: Install
+        working-directory: ${{github.workspace}}/SuperGenius/.build
+        run: cmake --install .
+        
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: linux-build
+          path: ${{github.workspace}}/SuperGenius/.build/
+          retention-days: 3  
         
   Android:
     runs-on: ubuntu-latest
@@ -109,6 +171,7 @@ jobs:
       - uses: actions/checkout@v3
         with:
           path: 'SuperGenius'
+          submodules: "recursive"
           
       - name: Download Android NDK
         run: |
@@ -117,12 +180,21 @@ jobs:
           curl -o ndk.zip ${{ env.NDK_URL }} 
           unzip ndk.zip 
           rm ndk.zip
+
+      - name: Install bindgen
+        run: cargo install cbindgen
+
+      - name: Add Rust wasm target
+        run: rustup target add wasm32-unknown-emscripten
+      
+      - name: Add Android toolchain
+        run: |
+          rustup target add aarch64-linux-android
           
       - name: Check out thirdparty repository
         uses: actions/checkout@v3
         with:
           repository: 'GeniusVentures/thirdparty'
-          token: ${{ secrets.GITHUB_TOKEN }}
           path: 'thirdparty'
           submodules: 'recursive' 
           ref: ${{ steps.branch-name.outputs.current_branch }}
@@ -171,10 +243,16 @@ jobs:
         working-directory: ${{github.workspace}}/SuperGenius/.build
         run: make -j8
       
-      - name: On error
+      - name: Install
         working-directory: ${{github.workspace}}/SuperGenius/.build
-        if: ${{ failure() }}
-        run: cat example/graphsync_app/CMakeFiles/graphsync_app.dir/build.make
+        run: cmake --install .
+        
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: android-build
+          path: ${{github.workspace}}/SuperGenius/.build/
+          retention-days: 3
 
 
   MacOS:
@@ -188,18 +266,27 @@ jobs:
       - uses: actions/checkout@v3
         with:
           path: 'SuperGenius'
+          submodules: "recursive"
       
       # Workaround for arm64 build 
       - name: Ensure latest macOS SDK is used
         run: |
           sudo xcode-select --switch "$(find /Applications -mindepth 1 -maxdepth 1 ! -type l | grep "Xcode_[\.0-9]*app" | sort -V | tail -1)/Contents/Developer"
           sudo rm -Rf /Library/Developer/CommandLineTools/SDKs/*
-          
+      
+      - name: Install bindgen
+        run: cargo install cbindgen
+
+      - name: Add Rust wasm target
+        run: rustup target add wasm32-unknown-emscripten
+
+      - name: Add Darwin rust toolchain
+        run: rustup target add x86_64-apple-darwin
+      
       - name: Check out thirdparty repository
         uses: actions/checkout@v3
         with:
           repository: 'GeniusVentures/thirdparty'
-          token: ${{ secrets.GITHUB_TOKEN }}
           path: 'thirdparty'
           submodules: 'recursive' 
           ref: ${{ steps.branch-name.outputs.current_branch }}
@@ -225,6 +312,17 @@ jobs:
       - name: Compile
         working-directory: ${{github.workspace}}/SuperGenius/.build
         run: make -j8
+
+      - name: Install
+        working-directory: ${{github.workspace}}/SuperGenius/.build
+        run: cmake --install .
+        
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: osx-build
+          path: ${{github.workspace}}/SuperGenius/.build/
+          retention-days: 3  
   
   iOS:
     runs-on: macos-latest        
@@ -236,17 +334,25 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v3
         with:
-          path: 'SuperGenius'    
+          path: 'SuperGenius'
+          submodules: "recursive"    
+
+      - name: Install bindgen
+        run: cargo install cbindgen
+
+      - name: Add Rust wasm target
+        run: rustup target add wasm32-unknown-emscripten    
       
-      - uses: actions/setup-python@v2
-        with:
-          python-version: '3.5' # Version range or exact version of a Python version to use, using SemVer's version range syntax
-          
+      - name: Add iOS toolchain
+        run: |
+          rustup toolchain install nightly-aarch64-apple-darwin
+          rustup component add rust-src --toolchain nightly-aarch64-apple-darwin
+          rustup target add aarch64-apple-ios
+
       - name: Check out thirdparty repository
         uses: actions/checkout@v3
         with:
           repository: 'GeniusVentures/thirdparty'
-          token: ${{ secrets.GITHUB_TOKEN }}
           path: 'thirdparty'
           submodules: 'recursive' 
           ref: ${{ steps.branch-name.outputs.current_branch }}
@@ -256,7 +362,7 @@ jobs:
 
       - name: Thirdparty Configure CMake
         working-directory: ${{github.workspace}}/thirdparty/.build
-        run: cmake -S ../build/iOS/ -DCMAKE_BUILD_TYPE=Release -DiOS_ABI=arm64-v8a -DIOS_ARCH="arm64" -DENABLE_ARC=0 -DENABLE_BITCODE=0 -DENABLE_VISIBILITY=1  -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_SYSTEM_PROCESSOR=arm64 -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/thirdparty/build/iOS/iOS.cmake 
+        run: cmake -S ../build/iOS/ -DCMAKE_BUILD_TYPE=Release -DPLATFORM=OS64
 
       - name: Thirdparty Compile
         working-directory: ${{github.workspace}}/thirdparty/.build
@@ -272,4 +378,15 @@ jobs:
       - name: Compile
         working-directory: ${{github.workspace}}/SuperGenius/.build
         run: make -j8
+      
+      - name: Install
+        working-directory: ${{github.workspace}}/SuperGenius/.build
+        run: cmake --install .
+        
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: ios-build
+          path: ${{github.workspace}}/SuperGenius/.build/
+          retention-days: 3  
         

@@ -15,9 +15,11 @@
 
 namespace sgns
 {
-    outcome::result<JSONSecureStorage::SecureBufferType> JSONSecureStorage::Load( const std::string &key )
+    outcome::result<JSONSecureStorage::SecureBufferType> JSONSecureStorage::Load( const std::string &key,
+                                                                                  const std::string  directory )
     {
-        auto file = std::fopen( "secure_storage.json", "r" );
+        auto fullpath = directory + "secure_storage.json";
+        auto file     = std::fopen( fullpath.data(), "r" );
         if ( !file )
         {
             return outcome::failure( boost::system::error_code{} );
@@ -53,20 +55,22 @@ namespace sgns
         return result;
     }
 
-    outcome::result<void> JSONSecureStorage::Save( const std::string &key, const SecureBufferType &buffer )
+    outcome::result<void> JSONSecureStorage::Save( const std::string      &key,
+                                                   const SecureBufferType &buffer,
+                                                   const std::string       directory )
     {
-        auto file = std::fopen( "secure_storage.json", "w" );
+        auto fullpath = directory + "secure_storage.json";
+        auto file     = std::fopen( fullpath.data(), "w" );
         if ( !file )
         {
             return outcome::failure( boost::system::error_code{} );
         }
 
-
         std::array<char, 512>                         buff{};
         rapidjson::FileWriteStream                    output_stream( file, buff.data(), buff.size() );
         rapidjson::Writer<rapidjson::FileWriteStream> writer( output_stream );
         writer.StartObject();
-        writer.Key( "GeniusAccount");
+        writer.Key( "GeniusAccount" );
         writer.StartObject();
         writer.Key( key.data() );
         writer.String( buffer.data() );

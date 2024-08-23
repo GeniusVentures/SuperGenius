@@ -35,7 +35,7 @@ if(APPLE)
 		"-framework Metal"
 		"-framework QuartzCore"
 		"-framework AppKit"
-		${XCFRAMEWORK_PATH} 
+#		${XCFRAMEWORK_PATH} 
 		)
 endif()
 target_link_libraries(processing_mnn PRIVATE
@@ -57,16 +57,8 @@ target_link_libraries(processing_mnn PRIVATE
     ipfs-bitswap-cpp
     ipfs-pubsub
     ${WIN_CRYPT_LIBRARY}
-    ${MNN_LIBS}
     AsyncIOManager
     )
-if(WIN32)
-    target_link_options(processing_mnn PRIVATE /WHOLEARCHIVE:${MNN_LIBS})
-elseif(APPLE)
-#    target_link_options(processing_mnn PRIVATE -force_load ${MNN_LIBS})
-else()
-    target_link_options(processing_mnn PRIVATE "-Wl,--whole-archive" ${MNN_LIBS} "-Wl,--no-whole-archive")
-endif()
 
 if(APPLE)
 	set(XCFRAMEWORK_PATH "${_THIRDPARTY_BUILD_DIR}/moltenvk/build/lib/MoltenVK.xcframework")
@@ -79,7 +71,7 @@ if(APPLE)
 		"-framework Metal"
 		"-framework QuartzCore"
 		"-framework AppKit"
-		${XCFRAMEWORK_PATH} 
+#		${XCFRAMEWORK_PATH} 
 		)
 endif()
 target_link_libraries(processing_mnn_p PRIVATE
@@ -106,15 +98,6 @@ target_link_libraries(processing_mnn_p PRIVATE
     ipfs-bitswap-cpp
 	ipfs-pubsub
     ${WIN_CRYPT_LIBRARY}
-	${MNN_LIBS}
-	
     )
-if(WIN32)
-    target_link_options(processing_mnn_p PRIVATE /WHOLEARCHIVE:${MNN_LIBS})
-elseif(APPLE)
-#    target_link_options(processing_mnn_p PRIVATE -force_load ${MNN_LIBS})
-else()
-    target_link_options(processing_mnn_p PRIVATE "-Wl,--whole-archive" ${MNN_LIBS} "-Wl,--no-whole-archive")
-endif()
 include_directories(../include)
 include_directories(./imageHelper)

@@ -37,9 +37,10 @@ if(APPLE)
     set(XCFRAMEWORK_PATH "${_THIRDPARTY_BUILD_DIR}/moltenvk/build/lib/MoltenVK.xcframework")
     target_link_libraries(mnn_chunkprocess PRIVATE
         ${PLATFORM_SPECIFIC_FRAMEWORKS}
-        ${XCFRAMEWORK_PATH}
+#        ${XCFRAMEWORK_PATH}
     )
-elseif(ANDROID)
+endif()
+if(ANDROID)
     find_library( log-lib log )
     target_link_libraries(mnn_chunkprocess PRIVATE
     ${log-lib}
@@ -48,13 +49,16 @@ endif()
 
 target_link_libraries(mnn_chunkprocess PRIVATE 	
 
-	${MNN_LIBS})
+	${MNN_LIBS}
+    ${VULKAN_LIBS}
+    
+)
 if(WIN32)
-    target_link_options(mnn_chunkprocess PRIVATE /WHOLEARCHIVE:${MNN_LIBS})
+    target_link_options(mnn_chunkprocess PUBLIC /WHOLEARCHIVE:${MNN_LIBS})
 elseif(APPLE)
-    target_link_options(mnn_chunkprocess PRIVATE -force_load ${MNN_LIBS})
+    target_link_options(mnn_chunkprocess PUBLIC -force_load ${MNN_LIBS})
 else()
-    target_link_options(mnn_chunkprocess PRIVATE "-Wl,--whole-archive" ${MNN_LIBS} "-Wl,--no-whole-archive")
+    target_link_options(mnn_chunkprocess PUBLIC "-Wl,--whole-archive" ${MNN_LIBS} "-Wl,--no-whole-archive")
 endif()
 include_directories(../include)
 include_directories(./imageHelper)
