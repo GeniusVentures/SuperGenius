@@ -436,7 +436,7 @@ jobs:
 
       - name: Thirdparty Configure CMake
         working-directory: ${{github.workspace}}/thirdparty/build/OSX/Release 
-        run: cmake -S ../build/OSX/ -DCMAKE_BUILD_TYPE=Release
+        run: cmake -S .. -DCMAKE_BUILD_TYPE=Release
 
       - name: Thirdparty Compile
         working-directory: ${{github.workspace}}/thirdparty/build/OSX/Release 
@@ -549,7 +549,7 @@ jobs:
 
       - name: Thirdparty Configure CMake
         working-directory: ${{github.workspace}}/thirdparty/build/iOS/Release 
-        run: cmake -S ../build/iOS/ -DCMAKE_BUILD_TYPE=Release -DPLATFORM=OS64
+        run: cmake -S .. -DCMAKE_BUILD_TYPE=Release -DPLATFORM=OS64
 
       - name: Thirdparty Compile
         working-directory: ${{github.workspace}}/thirdparty/build/iOS/Release 
