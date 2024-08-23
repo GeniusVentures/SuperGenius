@@ -32,10 +32,11 @@ namespace sgns
             std::make_shared<libp2p::log::Configurator>(),
             // Additional logging config for application
             GetLoggingSystem() ) );
-        logging_system->configure();
-
+        auto result = logging_system->configure();
+        std::cout << "Log Result: " << result.message << std::endl;
         libp2p::log::setLoggingSystem( logging_system );
-        libp2p::log::setLevelOfGroup( "SuperGNUSNode", soralog::Level::ERROR_ );
+        libp2p::log::setLevelOfGroup( "SuperGeniusDemo", soralog::Level::INFO );
+        //libp2p::log::setLevelOfGroup("SuperGeniusDemoFile", soralog::Level::ERROR_);
 
         auto loggerGlobalDB = base::createLogger( "GlobalDB" );
         loggerGlobalDB->set_level( spdlog::level::debug );
@@ -65,22 +66,22 @@ namespace sgns
         std::string lanip = "";
         if ( gotIGD )
         {
-            auto openedPort = upnp->OpenPort( pubsubport, pubsubport, "TCP", 1800 );
-            auto openedPort2 = upnp->OpenPort( graphsyncport, graphsyncport, "TCP", 1800 );
-            auto wanip      = upnp->GetWanIP();
-            auto lanip      = upnp->GetLocalIP();
-            std::cout << "Wan IP: " << wanip << std::endl;
-            std::cout << "Lan IP: " << lanip << std::endl;
-            //addresses.push_back( lanip );
-            addresses.push_back( wanip );
-            if ( !openedPort )
-            {
-                std::cerr << "Failed to open port" << std::endl;
-            }
-            else
-            {
-                std::cout << "Open Port Success" << std::endl;
-            }
+            //auto openedPort = upnp->OpenPort( pubsubport, pubsubport, "TCP", 1800 );
+            //auto openedPort2 = upnp->OpenPort( graphsyncport, graphsyncport, "TCP", 1800 );
+            //auto wanip      = upnp->GetWanIP();
+            //auto lanip      = upnp->GetLocalIP();
+            //std::cout << "Wan IP: " << wanip << std::endl;
+            //std::cout << "Lan IP: " << lanip << std::endl;
+            ////addresses.push_back( lanip );
+            //addresses.push_back( wanip );
+            //if ( !openedPort )
+            //{
+            //    std::cerr << "Failed to open port" << std::endl;
+            //}
+            //else
+            //{
+            //    std::cout << "Open Port Success" << std::endl;
+            //}
         }
 
         //auto loggerBroadcaster = base::createLogger( "PubSubBroadcasterExt" );
@@ -129,7 +130,7 @@ namespace sgns
 
         if ( !maybe_block_storage )
         {
-            std::cout << "Error initializing blockchain" << std::endl;
+            std::cout << "Error initializing blockchain" << maybe_block_storage.error().message() << std::endl;
             throw std::runtime_error( "Error initializing blockchain" );
         }
         block_storage_       = std::move( maybe_block_storage.value() );
