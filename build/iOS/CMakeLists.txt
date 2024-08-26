@@ -25,7 +25,7 @@ endif()
 project(SuperGenius LANGUAGES C CXX)
 
 # include common compiler options
-include(../CommonCompilerOptions.CMake)
+include(../CommonCompilerOptions.cmake)
 
 # Turn off examples
 set(BUILD_EXAMPLES OFF)

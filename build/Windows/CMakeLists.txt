@@ -39,7 +39,7 @@ foreach(CompilerFlag ${CompilerFlags})
 endforeach()
 
 # build common libraries by platforms
-include(../CommonCompilerOptions.CMake)
+include(../CommonCompilerOptions.cmake)
 
 # TODO: Check grpc install on Windows
 set(Protobuf_DIR "${_THIRDPARTY_BUILD_DIR}/grpc/cmake")

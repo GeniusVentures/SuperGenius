@@ -48,7 +48,7 @@ set(Boost_COMPILER "clang")
 project(SuperGenius C CXX)
 
 # include common compiler options
-include(../CommonCompilerOptions.CMake)
+include(../CommonCompilerOptions.cmake)
 
 # Turn off examples
 set(BUILD_EXAMPLES OFF)

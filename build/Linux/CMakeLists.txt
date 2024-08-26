@@ -14,7 +14,7 @@ set(CMAKE_TOOLCHAIN_FILE "${_BUILD_FOLDER}/cmake/toolchain/cxx17.cmake" CACHE IN
 project(SuperGenius C CXX)
 
 # include common compiler options
-include(../CommonCompilerOptions.CMake)
+include(../CommonCompilerOptions.cmake)
 
 # Set OS threading settings
 set(CMAKE_THREAD_LIBS_INIT "-lpthread")

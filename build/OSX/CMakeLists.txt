@@ -11,7 +11,7 @@ set(CMAKE_OSX_DEPLOYMENT_TARGET "12.1" CACHE STRING "Minimum OS X deployment ver
 project(SuperGenius C CXX)
 
 # include common compiler options
-include(../CommonCompilerOptions.CMake)
+include(../CommonCompilerOptions.cmake)
 
 # Set OSX specific runtime options
 set(CMAKE_OSX_ARCHITECTURES "x86_64")
