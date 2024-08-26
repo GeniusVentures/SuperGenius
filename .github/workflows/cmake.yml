@@ -564,7 +564,7 @@ jobs:
 
       - name: Configure CMake
         working-directory: ${{github.workspace}}/SuperGenius/build/iOS/Release 
-        run: cmake -S .. -DCMAKE_BUILD_TYPE=Release -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty/ -DCMAKE_TOOLCHAIN_FILE=${{github.workspace}}/SuperGenius/build/iOS/iOS.cmake -DiOS_ABI=arm64-v8a -DIOS_ARCH="arm64" -DENABLE_ARC=0 -DENABLE_BITCODE=0 -DENABLE_VISIBILITY=1  -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_SYSTEM_PROCESSOR=arm64
+        run: cmake -S .. -DCMAKE_BUILD_TYPE=Release -DPLATFORM=OS64 -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty/
 
       - name: Compile
         working-directory: ${{github.workspace}}/SuperGenius/build/iOS/Release 
