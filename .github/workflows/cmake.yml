@@ -84,7 +84,7 @@ jobs:
           rm -rf !(Release) .[!.]* ..?*
           cd Release
           rm -rf !(SuperGenius) .[!.]* ..?*
-          cd ${{github.workspace}}
+          cd $GITHUB_WORKSPACE
           tar -czvf SuperGenius.tar.gz SuperGenius/
         shell: bash
       
