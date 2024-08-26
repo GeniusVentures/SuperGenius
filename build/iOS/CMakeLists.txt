@@ -10,51 +10,25 @@ if(POLICY CMP0042)
     cmake_policy(SET CMP0042 NEW)
 endif()
 
-set(IOS_DEPLOYMENT_TARGET 13.0)
+if(NOT DEFINED CMAKE_TOOLCHAIN_FILE)
+    set(NAMED_LANGUAGE_SUPPORT OFF CACHE BOOL "Toolchain named language support parameter")
+    set(ENABLE_BITCODE OFF CACHE BOOL "Toolchain bitcode enable parameter")
+    set(ENABLE_ARC OFF CACHE BOOL "Toolchain enable arc parameter")
+    set(ENABLE_VISIBILITY ON CACHE BOOL "Toolchain visibility parameter")
+    set(ENABLE_STRICT_TRY_COMPILE OFF CACHE BOOL "Toolchain try_compile enable parameter")
+    set(PLATFORM OS64 CACHE STRING "Toolchain platform parameter")
+    set(DEPLOYMENT_TARGET "16" CACHE STRING "Minimum iOS version")
+    set(CMAKE_TOOLCHAIN_FILE "${CMAKE_CURRENT_SOURCE_DIR}/../apple.toolchain.cmake" CACHE STRING "Toolchain file")
+endif()
 
 # Project
-project(SuperGenius C CXX)
-
-# Set cross compiling settings
-set(CMAKE_SYSTEM_NAME "iOS")
+project(SuperGenius LANGUAGES C CXX)
 
 # include common compiler options
 include(../CommonCompilerOptions.CMake)
 
-set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM "BOTH")
-set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
-
 # Turn off examples
 set(BUILD_EXAMPLES OFF)
-
-# Set toolchain file
-set(CMAKE_TOOLCHAIN_FILE "${CMAKE_CURRENT_SOURCE_DIR}/iOS.cmake")
-
-# Check required input args
-if(NOT CMAKE_TOOLCHAIN_FILE)
-    message(FATAL_ERROR "Cannot find CMAKE_TOOLCHAIN_FILE, make sure you pass -DCMAKE_TOOLCHAIN_FILE=[arm64]")
-endif()
-
-if(NOT iOS_ABI)
-    message(FATAL_ERROR "Cannot find iOS_ABI, make sure you pass -DiOS_ABI=[arm64-v8a]")
-endif()
-
-if(NOT IOS_ARCH)
-    message(FATAL_ERROR "Cannot find IOS_ARCH, make sure you pass -DIOS_ARCH=[arm64]")
-endif()
-
-if(NOT CMAKE_OSX_ARCHITECTURES)
-    message(FATAL_ERROR "Cannot find CMAKE_OSX_ARCHITECTURES, make sure you pass -DCMAKE_OSX_ARCHITECTURES=[arm64]")
-endif()
-
-if(NOT CMAKE_SYSTEM_PROCESSOR)
-    message(FATAL_ERROR "Cannot find CMAKE_SYSTEM_PROCESSOR, make sure you pass -DCMAKE_SYSTEM_PROCESSOR=[arm64]")
-endif()
-
-# Config param for android
-set(ENABLE_ARC "0")
-set(ENABLE_BITCODE NO)
-set(CMAKE_XCODE_ATTRIBUTE_ONLY_ACTIVE_ARCH YES)
 
 # Set host system protoc executable path
 set(PROTOC_EXECUTABLE "${_THIRDPARTY_BUILD_DIR}/protobuf_host/bin/protoc${CMAKE_EXECUTABLE_SUFFIX}")
@@ -82,5 +56,6 @@ set(EXTRA_CXX_FLAGS -std=c++17)
 set(ABI_SUBFOLDER_NAME "/aarch64")
 
 set(TESTING OFF)
+
 # Include common build paramaeters
 include(../CommonBuildParameters.cmake)
