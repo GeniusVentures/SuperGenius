@@ -124,7 +124,7 @@ namespace sgns
                 {
                     break;
                 }
-                InputUTXOInfo curr_input{ utxo.GetTxID(), utxo.GetOutputIdx(), std::move( signature ) };
+                InputUTXOInfo curr_input{ utxo.GetTxID(), utxo.GetOutputIdx(), signature };
                 remain -= static_cast<int64_t>( utxo.GetAmount() );
 
                 inputs_.push_back( curr_input );

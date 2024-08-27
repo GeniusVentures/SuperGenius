@@ -1,5 +1,3 @@
-
-
 #ifndef SUPERGENIUS_SRC_PRIMITIVES_COMMON_HPP
 #define SUPERGENIUS_SRC_PRIMITIVES_COMMON_HPP
 
@@ -19,10 +17,11 @@ namespace sgns::primitives {
     // (BlockInfo, Prevote, Precommit, PrimaryPropose)
     template <typename Tag>
     struct BlockInfoT : public boost::equality_comparable<BlockInfoT<Tag>> {
-      BlockInfoT() = default;
+      constexpr BlockInfoT() = default;
 
-      BlockInfoT(const BlockNumber &n, const BlockHash &h)
-          : block_number(n), block_hash(h) {}
+      constexpr BlockInfoT( BlockNumber n, BlockHash h ) : block_number( n ), block_hash( h )
+      {
+      }
 
       BlockNumber block_number{};
       BlockHash   block_hash;

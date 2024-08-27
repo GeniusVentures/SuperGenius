@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.22)
 
 if(POLICY CMP0025)
     # NEW: report OS X version of Clang as "AppleClang"
@@ -48,9 +48,6 @@ set(THREADS_PREFER_PTHREAD_FLAG ON)
 # Allow multiple definitions
 set(FORCE_MULTILE ON)
 set(MULTIPLE_OPTION "-Xlink=-force:multiple")
-
-# Set extra compiler flags
-set(EXTRA_CXX_FLAGS -std=c++17)
 
 # Set custom subfolder for ABI
 set(ABI_SUBFOLDER_NAME "/aarch64")

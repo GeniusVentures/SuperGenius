@@ -27,7 +27,7 @@ namespace sgns::authority {
     std::shared_ptr<ScheduleNode> makeDescendant(
         const primitives::BlockInfo &block, bool finalized = false);
 
-    const primitives::BlockInfo                block;
+    const primitives::BlockInfo                block{};
     std::weak_ptr<ScheduleNode> parent;
     std::vector<std::shared_ptr<ScheduleNode>> descendants;
 

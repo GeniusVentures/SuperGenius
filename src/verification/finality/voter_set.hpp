@@ -4,6 +4,7 @@
 #define SUPERGENIUS_SRC_VERIFICATION_FINALITY_VOTER_SET_HPP
 
 #include <boost/optional.hpp>
+#include <unordered_map>
 
 #include "verification/finality/common.hpp"
 
