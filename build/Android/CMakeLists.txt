@@ -1,12 +1,10 @@
 cmake_minimum_required(VERSION 3.15)
 
-# --------------------------------------------------------
 # Set cross compiling settings
 set(CMAKE_SYSTEM_NAME Android)
 set(CMAKE_SYSTEM_VERSION 28) # API level
 set(ANDROID_NATIVE_API_LEVEL 28)
 
-# --------------------------------------------------------
 # Check Android NDK version
 if(NOT CMAKE_ANDROID_NDK)
     message(FATAL_ERROR "Cannot find Android NDK, make sure you pass -DCMAKE_ANDROID_NDK=[path_to_NDK]")
@@ -23,7 +21,6 @@ if(NOT CMAKE_ANDROID_NDK_VERSION EQUAL 25)
     message(FATAL_ERROR "Android NDK LTS Version (r25b) stable long term support version required")
 endif()
 
-# --------------------------------------------------------
 # Check required input args
 if(NOT ANDROID_ABI)
     message(FATAL_ERROR "Cannot find ANDROID_ABI, make sure you pass -DANDROID_ABI=[armeabi-v7a | arm64-v8a | x86 | x86_64]")
@@ -35,11 +32,9 @@ if(NOT ANDROID_TOOLCHAIN)
     message(FATAL_ERROR "Cannot find ANDROID_TOOLCHAIN, make sure you pass -DANDROID_TOOLCHAIN=[e.g clang]")
 endif()
 
-# --------------------------------------------------------
 # Config param for android
 set(CMAKE_ANDROID_STL_TYPE c++_static)
 
-# --------------------------------------------------------
 # Set toolchain file
 set(CMAKE_TOOLCHAIN_FILE "${CMAKE_ANDROID_NDK}/build/cmake/android.toolchain.cmake")
 
@@ -49,39 +44,29 @@ endif()
 
 set(Boost_COMPILER "clang")
 
-
-# --------------------------------------------------------
 # Project
 project(SuperGenius C CXX)
 
-# --------------------------------------------------------
 # include common compiler options
-include(../CommonCompilerOptions.CMake)
+include(../CommonCompilerOptions.cmake)
 
-# --------------------------------------------------------
 # Turn off examples
 set(BUILD_EXAMPLES OFF)
 
-# --------------------------------------------------------
 # Set custom subfolder for ABI
 set(ABI_SUBFOLDER_NAME "/${ANDROID_ABI}")
 
-# --------------------------------------------------------
 # Set host system protoc executable path
-
 set(PROTOC_EXECUTABLE "${_THIRDPARTY_BUILD_DIR}/protobuf_host/bin/protoc${CMAKE_EXECUTABLE_SUFFIX}")
 
-# --------------------------------------------------------
 # Allow multiple definitions
 set(FORCE_MULTILE OFF)
 
-# --------------------------------------------------------
 # Set extra compiler flags
 set(EXTRA_CXX_FLAGS -Wno-error)
 
 set(TESTING OFF)
 
-# --------------------------------------------------------
 # Include common build parameters
 include(../CommonBuildParameters.cmake)
 

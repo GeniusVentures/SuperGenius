@@ -1,4 +1,3 @@
-# ------------------------------------------
 # Set PROJECT_ROOT folder
 get_filename_component(CURRENT_SOURCE_PARENT "${CMAKE_CURRENT_SOURCE_DIR}" DIRECTORY ABSOLUTE)
 get_filename_component(PROJECT_ROOT "${CURRENT_SOURCE_PARENT}" DIRECTORY ABSOLUTE)
@@ -8,7 +7,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Package config ######################################################################################
+# Package config
 set(CPACK_PACKAGE_VERSION_MAJOR "21")
 set(CPACK_PACKAGE_VERSION_MINOR "0")
 set(CPACK_PACKAGE_VERSION_PATCH "0")
@@ -46,7 +45,6 @@ else()
     print("Using toolchain file: ${CMAKE_TOOLCHAIN_FILE}")
 endif()
 
-# --------------------------------------------------------
 # define third party directory
 if(NOT DEFINED THIRDPARTY_DIR)
     if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../../thirdparty/README.md")
@@ -69,7 +67,8 @@ if(NOT DEFINED THIRDPARTY_BUILD_DIR)
     print("Setting third party build directory default")
     get_filename_component(BUILD_PLATFORM_NAME ${CMAKE_CURRENT_SOURCE_DIR} NAME)
     set(THIRDPARTY_BUILD_DIR "${THIRDPARTY_DIR}/build/${BUILD_PLATFORM_NAME}/${CMAKE_BUILD_TYPE}")
-    if (DEFINED ANDROID_ABI)
+
+    if(DEFINED ANDROID_ABI)
         set(THIRDPARTY_BUILD_DIR "${THIRDPARTY_BUILD_DIR}/${ANDROID_ABI}")
     endif()
 endif()
