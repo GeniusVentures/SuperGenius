@@ -188,7 +188,7 @@ namespace sgns
         //Provide CID
         libp2p::protocol::kademlia::ContentId key( hash );
         pubsub_->GetDHT()->Start();
-        pubsub_->GetDHT()->ProvideCID( key, true );
+        pubsub_->ProvideCID( key );
 
         auto cidtest = libp2p::multi::ContentIdentifierCodec::decode( key.data );
 
