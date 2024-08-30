@@ -38,7 +38,7 @@ namespace sgns
         auto result = logging_system->configure();
         std::cout << "Log Result: " << result.message << std::endl;
         libp2p::log::setLoggingSystem( logging_system );
-        libp2p::log::setLevelOfGroup( "SuperGeniusDemo", soralog::Level::INFO );
+        libp2p::log::setLevelOfGroup( "SuperGeniusDemo", soralog::Level::TRACE );
         //libp2p::log::setLevelOfGroup("SuperGeniusDemoFile", soralog::Level::ERROR_);
 
         auto loggerGlobalDB = base::createLogger( "GlobalDB" );
@@ -98,7 +98,11 @@ namespace sgns
         pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
             crdt::KeyPairFileStorage( write_base_path_ + pubsubKeyPath ).GetKeyPair().value() );
         pubsub_->Start(pubsubport, { pubsub_->GetLocalAddress() }, lanip, addresses);
+        auto testaddress = libp2p::multi::Multiaddress::create("/ip4/34.132.146.252/tcp/4001/p2p/12D3KooWQE5Yf2UBJBYRb8QqcSFsUd7jByB7nxS5Q6HAfssNmhn4/p2p-circuit/p2p/12D3KooWLed78tyZsvuiEZpoc7LaTPheV4o2mgsmk9iahhHDZJ4B");
+        std::cout << "Has circuit relay " << testaddress.value().hasCircuitRelay() << " : " << testaddress.value().getStringAddress() << std::endl;
 
+        auto testaddress2 = libp2p::multi::Multiaddress::create("/ip4/34.132.146.252/tcp/4001/p2p/12D3KooWQE5Yf2UBJBYRb8QqcSFsUd7jByB7nxS5Q6HAfssNmhn4/p2p-circuit");
+        std::cout << "Has circuit relay " << testaddress2.value().hasCircuitRelay() << " : " << testaddress2.value().getStringAddress() << std::endl;
         globaldb_ = std::make_shared<crdt::GlobalDB>(
             io_,
             (boost::format("SuperGNUSNode.TestNet.%s") % account_->GetAddress<std::string>()).str(),
