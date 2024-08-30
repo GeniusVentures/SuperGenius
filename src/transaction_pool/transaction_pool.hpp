@@ -3,11 +3,12 @@
 #ifndef SUPERGENIUS_TRANSACTION_POOL_HPP
 #define SUPERGENIUS_TRANSACTION_POOL_HPP
 
-#include <outcome/outcome.hpp>
+#include <map>
+
+#include "outcome/outcome.hpp"
 
 #include "primitives/block_id.hpp"
 #include "primitives/transaction.hpp"
-#include <map>
 #include "singleton/IComponent.hpp"
 namespace sgns::transaction_pool {
 
@@ -18,7 +19,7 @@ namespace sgns::transaction_pool {
     struct Status;
     struct Limits;
 
-    virtual ~TransactionPool() = default;
+    ~TransactionPool() override = default;
 
     /**
      * Import one verified transaction to the pool. If it has unresolved

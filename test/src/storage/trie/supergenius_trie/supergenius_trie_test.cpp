@@ -1,8 +1,5 @@
-
-
 #include <gtest/gtest.h>
 
-#include "storage/in_memory/in_memory_storage.hpp"
 #include "storage/trie/supergenius_trie/supergenius_trie_impl.hpp"
 #include "storage/trie/supergenius_trie/trie_error.hpp"
 #include "testutil/literals.hpp"
@@ -11,7 +8,6 @@
 using sgns::base::Buffer;
 using sgns::base::Hash256;
 using sgns::storage::trie::KeyNibbles;
-using sgns::storage::trie::SuperGeniusCodec;
 using sgns::storage::trie::SuperGeniusTrie;
 using sgns::storage::trie::SuperGeniusTrieImpl;
 

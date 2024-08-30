@@ -4,8 +4,7 @@
 #include "network/common.hpp"
 #include "network/rpc.hpp"
 #include "network/types/block_announce.hpp"
-#include "network/types/blocks_request.hpp"
-#include "network/types/blocks_response.hpp"
+#include "network/helpers/scale_message_read_writer.hpp"
 #include "network/types/peer_list.hpp"
 #include "scale/scale.hpp"
 
@@ -66,8 +65,7 @@ namespace sgns::network {
                host_addresses.front().getStringAddress());
   }
 
-  void RouterLibp2p::handleSyncProtocol(
-      const std::shared_ptr<Stream> &stream) const {
+  void RouterLibp2p::handleSyncProtocol( std::shared_ptr<Stream>stream ) const {
     RPC<ScaleMessageReadWriter>::read<BlocksRequest, BlocksResponse>(
         stream,
         [self{shared_from_this()}, stream](auto &&request) {

@@ -1,12 +1,10 @@
-
-
 #ifndef SUPERGENIUS_SRC_PRIMITIVES_COMMON_HPP
 #define SUPERGENIUS_SRC_PRIMITIVES_COMMON_HPP
 
 #include <cstdint>
 
 #include <boost/operators.hpp>
-#include "primitives/session_key.hpp"
+#include "base/blob.hpp"
 
 namespace sgns::primitives {
   using BlocksRequestId = uint64_t;
@@ -19,13 +17,14 @@ namespace sgns::primitives {
     // (BlockInfo, Prevote, Precommit, PrimaryPropose)
     template <typename Tag>
     struct BlockInfoT : public boost::equality_comparable<BlockInfoT<Tag>> {
-      BlockInfoT() = default;
+      constexpr BlockInfoT() = default;
 
-      BlockInfoT(const BlockNumber &n, const BlockHash &h)
-          : block_number(n), block_hash(h) {}
+      constexpr BlockInfoT( BlockNumber n, BlockHash h ) : block_number( n ), block_hash( h )
+      {
+      }
 
       BlockNumber block_number{};
-      BlockHash block_hash{};
+      BlockHash   block_hash;
 
       bool operator==(const BlockInfoT<Tag> &o) const {
         return block_number == o.block_number && block_hash == o.block_hash;

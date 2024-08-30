@@ -1,4 +1,4 @@
-#include <crdt/crdt_heads.hpp>
+#include "crdt/crdt_heads.hpp"
 #include <storage/database_error.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/system/error_code.hpp>
@@ -61,7 +61,9 @@ namespace sgns::crdt
     return this->namespaceKey_.ChildString(cidToStringResult.value());
   }
 
-  outcome::result<void> CrdtHeads::Write(const std::unique_ptr<storage::BufferBatch>& aDataStore, const CID& aCid, const uint64_t& aHeight)
+  outcome::result<void> CrdtHeads::Write( const std::unique_ptr<storage::BufferBatch> &aDataStore,
+                                          const CID                                   &aCid,
+                                          uint64_t                                     aHeight )
   {
     if (aDataStore == nullptr)
     {
@@ -74,15 +76,7 @@ namespace sgns::crdt
       return outcome::failure(getKeyResult.error());
     }
 
-    std::string strHeight;
-    try
-    {
-      strHeight = boost::lexical_cast<std::string>(aHeight);
-    }
-    catch (boost::bad_lexical_cast&)
-    {
-      return outcome::failure(boost::system::error_code{});
-    }
+    std::string strHeight = std::to_string( aHeight );
 
     Buffer keyBuffer;
     keyBuffer.put(getKeyResult.value().GetKey());
@@ -124,7 +118,7 @@ namespace sgns::crdt
     std::lock_guard lg(this->mutex_);
 
     auto isHeadResult = this->IsHead(aCid);
-    if (isHeadResult.has_failure() || isHeadResult.value() == false)
+    if ( isHeadResult.has_failure() || !isHeadResult.value() )
     {
       // Not a head
       return outcome::failure(boost::system::error_code{});
@@ -139,7 +133,7 @@ namespace sgns::crdt
     return this->cache_.size();
   }
 
-  outcome::result<void> CrdtHeads::Add(const CID& aCid, const uint64_t& aHeight)
+  outcome::result<void> CrdtHeads::Add( const CID &aCid, uint64_t aHeight )
   {
     if (this->dataStore_ == nullptr)
     {
@@ -163,7 +157,7 @@ namespace sgns::crdt
     return outcome::success();
   }
 
-  outcome::result<void> CrdtHeads::Replace(const CID& aCidHead, const CID& aNewHeadCid, const uint64_t& aHeight)
+  outcome::result<void> CrdtHeads::Replace( const CID &aCidHead, const CID &aNewHeadCid, uint64_t aHeight )
   {
     if (this->dataStore_ == nullptr)
     {

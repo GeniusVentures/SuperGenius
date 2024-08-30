@@ -19,8 +19,8 @@ namespace sgns::api {
     using ExtrinsicKey = primitives::ExtrinsicKey;
 
    public:
-    virtual ~AuthorApi() = default;
-    /**
+       ~AuthorApi() override = default;
+       /**
      * @brief validates and sends extrinsic to transaction pool
      * @param bytes encoded extrinsic
      * @return hash of successfully validated extrinsic
@@ -29,12 +29,12 @@ namespace sgns::api {
     virtual outcome::result<Hash256> submitExtrinsic(
         const Extrinsic &extrinsic) = 0;
 
-    /**
+       /**
      * @return collection of pending extrinsics
      */
-    virtual outcome::result<std::vector<Extrinsic>> pendingExtrinsics() = 0;
+       virtual outcome::result<std::vector<Extrinsic>> pendingExtrinsics() = 0;
 
-    // TODO(yuraz): will be documented later (no task yet)
+       // TODO(yuraz): will be documented later (no task yet)
     virtual outcome::result<std::vector<Hash256>> removeExtrinsic(
         const std::vector<ExtrinsicKey> &keys) = 0;
   };

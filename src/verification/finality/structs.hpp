@@ -5,15 +5,11 @@
 
 #include <boost/asio/steady_timer.hpp>
 #include <boost/variant.hpp>
-#include <base/buffer.hpp>
+#include "base/buffer.hpp"
 #include <scale/scale.hpp>
 
-#include "base/blob.hpp"
 #include "base/visitor.hpp"
-#include "base/wrapper.hpp"
 #include "verification/finality/common.hpp"
-#include "crypto/ed25519_types.hpp"
-#include "primitives/authority.hpp"
 #include "primitives/common.hpp"
 
 namespace sgns::verification::finality {

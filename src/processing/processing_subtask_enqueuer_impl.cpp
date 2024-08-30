@@ -1,9 +1,11 @@
 #include "processing_subtask_enqueuer_impl.hpp"
 
+#include <utility>
+
 namespace sgns::processing
 {
     SubTaskEnqueuerImpl::SubTaskEnqueuerImpl( std::shared_ptr<ProcessingTaskQueue> taskQueue ) :
-        m_taskQueue( taskQueue )
+        m_taskQueue( std::move( taskQueue ) )
     {
     }
 

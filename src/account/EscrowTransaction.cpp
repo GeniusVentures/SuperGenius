@@ -5,19 +5,24 @@
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
 #include "account/EscrowTransaction.hpp"
+
+#include <utility>
+
 #include "crypto/hasher/hasher_impl.hpp"
 #include "base/blob.hpp"
 
 namespace sgns
 {
-    EscrowTransaction::EscrowTransaction( const UTXOTxParameters &params, const uint64_t &num_chunks,
-                                          const uint256_t &dest_addr, const float &cut,
+    EscrowTransaction::EscrowTransaction( UTXOTxParameters                params,
+                                          uint64_t                        num_chunks,
+                                          uint256_t                       dest_addr,
+                                          float                           cut,
                                           const SGTransaction::DAGStruct &dag ) :
-        IGeniusTransactions( "escrow", SetDAGWithType( dag, "escrow" ) ), //
-        num_chunks_(num_chunks),                                         //
-        dev_addr( dest_addr ),                                            //
-        dev_cut( cut ),                                                   //
-        utxo_params_(params)                                           //
+        IGeniusTransactions( "escrow", SetDAGWithType( dag, "escrow" ) ),
+        num_chunks_( num_chunks ),
+        dev_addr( std::move( dest_addr ) ),
+        dev_cut( cut ),
+        utxo_params_( std::move( params ) )
     {
         auto hasher_ = std::make_shared<sgns::crypto::HasherImpl>();
         auto hash    = hasher_->blake2b_256( SerializeByteVector() );
@@ -83,8 +88,7 @@ namespace sgns
         uint64_t  num_chunks = tx_struct.num_chunks();
         float     dev_cut    = tx_struct.dev_cut();
         uint256_t dev_addr( tx_struct.dev_addr() );
-        return EscrowTransaction( UTXOTxParameters{ inputs, outputs }, num_chunks, dev_addr, dev_cut,
-                                  tx_struct.dag_struct() ); // Return new instance
+        return { UTXOTxParameters{ inputs, outputs }, num_chunks, dev_addr, dev_cut, tx_struct.dag_struct() };
     }
 
     uint64_t EscrowTransaction::GetNumChunks() const

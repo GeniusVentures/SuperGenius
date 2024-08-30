@@ -1,11 +1,12 @@
 #ifndef SUPERGENIUS_PROCESSING_SUBTASK_ENQUEUER_IMPL_HPP
 #define SUPERGENIUS_PROCESSING_SUBTASK_ENQUEUER_IMPL_HPP
 
-#include <base/logger.hpp>
-#include <processing/processing_subtask_enqueuer.hpp>
-#include <processing/processing_task_queue.hpp>
 #include <list>
 #include <string>
+
+#include "base/logger.hpp"
+#include "processing/processing_subtask_enqueuer.hpp"
+#include "processing/processing_task_queue.hpp"
 
 namespace sgns::processing
 {

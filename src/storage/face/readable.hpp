@@ -3,8 +3,7 @@
 #ifndef SUPERGENIUS_READABLE_HPP
 #define SUPERGENIUS_READABLE_HPP
 
-#include <outcome/outcome.hpp>
-#include "storage/face/map_cursor.hpp"
+#include "outcome/outcome.hpp"
 
 namespace sgns::storage::face {
 

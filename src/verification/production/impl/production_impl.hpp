@@ -8,12 +8,13 @@
 #include <memory>
 
 #include <boost/asio/basic_waitable_timer.hpp>
-#include <outcome/outcome.hpp>
+#include "outcome/outcome.hpp"
 #include "application/app_state_manager.hpp"
 #include "authorship/proposer.hpp"
 #include "blockchain/block_tree.hpp"
 #include "clock/timer.hpp"
 #include "base/logger.hpp"
+#include "verification/production/types/production_meta.hpp"
 #include "verification/production/production_gossiper.hpp"
 #include "verification/production/production_lottery.hpp"
 #include "verification/production/epoch_storage.hpp"
@@ -21,7 +22,6 @@
 #include "crypto/hasher.hpp"
 #include "crypto/sr25519_types.hpp"
 #include "primitives/production_configuration.hpp"
-#include "primitives/common.hpp"
 #include "storage/trie/trie_storage.hpp"
 
 namespace sgns::verification {
@@ -130,7 +130,6 @@ namespace sgns::verification {
      */
     void synchronizeSlots(const primitives::BlockHeader &new_header);
 
-   private:
     std::shared_ptr<application::AppStateManager> app_state_manager_;
     std::shared_ptr<ProductionLottery> lottery_;
     std::shared_ptr<BlockExecutor> block_executor_;
@@ -153,7 +152,7 @@ namespace sgns::verification {
 
     /// Estimates of the first block production slot time. Input for the median
     /// algorithm
-    std::vector<ProductionTimePoint> first_slot_times_{};
+    std::vector<ProductionTimePoint> first_slot_times_;
 
     /// Number of blocks we need to use in median algorithm to get the slot time
     const uint32_t kSlotTail = 30;

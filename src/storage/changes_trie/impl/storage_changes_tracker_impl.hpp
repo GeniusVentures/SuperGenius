@@ -1,12 +1,12 @@
 #ifndef SUPERGENIUS_STORAGE_CHANGES_TRIE_STORAGE_CHANGES_TRACKER_IMPL
 #define SUPERGENIUS_STORAGE_CHANGES_TRIE_STORAGE_CHANGES_TRACKER_IMPL
 
-#include "storage/changes_trie/changes_tracker.hpp"
-
-#include "subscription/subscriber.hpp"
-//-------------//
 #include <set>
 #include <map>
+
+#include "primitives/extrinsic.hpp"
+#include "storage/changes_trie/changes_tracker.hpp"
+#include "subscription/subscription_engine.hpp"
 
 namespace sgns::storage::trie {
   class Codec;

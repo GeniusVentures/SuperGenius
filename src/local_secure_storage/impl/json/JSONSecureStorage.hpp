@@ -16,9 +16,11 @@ namespace sgns
     class JSONSecureStorage : public ISecureStorage
     {
     public:
-        ~JSONSecureStorage() = default;
+        ~JSONSecureStorage() override = default;
         outcome::result<SecureBufferType> Load( const std::string &key, const std::string directory = "" ) override;
-        outcome::result<void>             Save( const std::string &key, const SecureBufferType &buffer, const std::string directory = "" ) override;
+        outcome::result<void>             Save( const std::string      &key,
+                                                const SecureBufferType &buffer,
+                                                const std::string       directory = "" ) override;
 
         std::string GetName() override
         {

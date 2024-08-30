@@ -1,7 +1,7 @@
 #include "processing/impl/processing_task_queue_impl.hpp"
 
-#include <crdt/globaldb/globaldb.hpp>
-#include <crdt/globaldb/keypair_file_storage.hpp>
+#include "crdt/globaldb/globaldb.hpp"
+#include "crdt/globaldb/keypair_file_storage.hpp"
 
 #include <libp2p/multi/multibase_codec/multibase_codec_impl.hpp>
 #include <libp2p/log/configurator.hpp>

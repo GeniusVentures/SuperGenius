@@ -10,7 +10,7 @@
 namespace sgns::network {
   class ExtrinsicObserver : public IComponent {
    public:
-    virtual ~ExtrinsicObserver() = default;
+       ~ExtrinsicObserver() override = default;
 
     virtual outcome::result<base::Hash256> onTxMessage(
         const primitives::Extrinsic &extrinsic) = 0;

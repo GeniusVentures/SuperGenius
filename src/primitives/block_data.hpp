@@ -16,11 +16,11 @@ namespace sgns::primitives {
    */
   struct BlockData {
     primitives::BlockHash hash;
-    boost::optional<primitives::BlockHeader> header{};
-    boost::optional<primitives::BlockBody> body{};
-    boost::optional<base::Buffer> receipt{};
-    boost::optional<base::Buffer> message_queue{};
-    boost::optional<primitives::Justification> justification{};
+    boost::optional<primitives::BlockHeader>   header;
+    boost::optional<primitives::BlockBody>     body;
+    boost::optional<base::Buffer>              receipt;
+    boost::optional<base::Buffer>              message_queue;
+    boost::optional<primitives::Justification> justification;
 
     /**
      * Convert a block data into the block

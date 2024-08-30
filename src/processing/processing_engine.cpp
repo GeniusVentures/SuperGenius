@@ -2,17 +2,14 @@
 
 #include <thread>
 #include <memory>
-#include "processing_subtask_queue_manager.hpp"
+#include <utility>
 
 namespace sgns::processing
 {
-ProcessingEngine::ProcessingEngine(
-    std::string nodeId,
-    std::shared_ptr<ProcessingCore> processingCore)
-    : m_nodeId(std::move(nodeId))
-    , m_processingCore(processingCore)
-{
-}
+    ProcessingEngine::ProcessingEngine( std::string nodeId, std::shared_ptr<ProcessingCore> processingCore ) :
+        m_nodeId( std::move( nodeId ) ), m_processingCore( std::move( processingCore ) )
+    {
+    }
 
 ProcessingEngine::~ProcessingEngine()
 {
@@ -22,8 +19,8 @@ ProcessingEngine::~ProcessingEngine()
 void ProcessingEngine::StartQueueProcessing(
     std::shared_ptr<SubTaskQueueAccessor> subTaskQueueAccessor)
 {
-    std::lock_guard<std::mutex> queueGuard(m_mutexSubTaskQueue);
-    m_subTaskQueueAccessor = subTaskQueueAccessor;
+    std::lock_guard<std::mutex> queueGuard( m_mutexSubTaskQueue );
+    m_subTaskQueueAccessor = std::move( subTaskQueueAccessor );
 
     m_subTaskQueueAccessor->GrabSubTask(
         [weakThis(weak_from_this())](boost::optional<const SGProcessing::SubTask&> subTask) {
@@ -46,7 +43,7 @@ void ProcessingEngine::StopQueueProcessing()
 bool ProcessingEngine::IsQueueProcessingStarted() const
 {
     std::lock_guard<std::mutex> queueGuard(m_mutexSubTaskQueue);
-    return (m_subTaskQueueAccessor.get() != nullptr);
+    return m_subTaskQueueAccessor != nullptr;
 }
 
 void ProcessingEngine::OnSubTaskGrabbed(boost::optional<const SGProcessing::SubTask&> subTask)
@@ -62,7 +59,7 @@ void ProcessingEngine::OnSubTaskGrabbed(boost::optional<const SGProcessing::SubT
 
 void ProcessingEngine::SetProcessingErrorSink(std::function<void(const std::string&)> processingErrorSink)
 {
-    m_processingErrorSink = processingErrorSink;
+    m_processingErrorSink = std::move( processingErrorSink );
 }
 
 void ProcessingEngine::ProcessSubTask(SGProcessing::SubTask subTask)

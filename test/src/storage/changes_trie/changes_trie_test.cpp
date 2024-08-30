@@ -3,7 +3,7 @@
 #include <gtest/gtest.h>
 
 #include "mock/src/storage/trie/trie_storage_mock.hpp"
-#include "storage/changes_trie/impl/storage_changes_tracker_impl.hpp"
+#include "storage/trie/serialization/supergenius_codec.hpp"
 #include "storage/trie/supergenius_trie/supergenius_trie_factory_impl.hpp"
 #include "testutil/literals.hpp"
 

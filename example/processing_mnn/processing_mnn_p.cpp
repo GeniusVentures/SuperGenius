@@ -1,3 +1,15 @@
+#include <ipfs_pubsub/gossip_pubsub.hpp>
+#include <ipfs_pubsub/gossip_pubsub_topic.hpp>
+
+#include "base/logger.hpp"
+#include "crdt/globaldb/globaldb.hpp"
+#include "crdt/globaldb/keypair_file_storage.hpp"
+#include "processing/impl/processing_core_impl.hpp"
+#include "processing/impl/processing_subtask_result_storage_impl.hpp"
+#include "processing/impl/processing_task_queue_impl.hpp"
+#include "processing/processing_service.hpp"
+#include "processing/processing_subtask_enqueuer_impl.hpp"
+#include "processing/processors/processing_processor_mnn_posenet.hpp"
 #include "processing_mnn.hpp"
 
 using GossipPubSub = sgns::ipfs_pubsub::GossipPubSub;

@@ -19,7 +19,7 @@ namespace sgns::crdt
                         if ( peerId.has_value() )
                         {
                             std::scoped_lock lock( mutex_ );
-                            listOfMessages_.push( std::make_tuple( std::move( peerId.value() ), std::move( cid ) ) );
+                            listOfMessages_.emplace( std::move( peerId.value() ), std::move( cid ) );
                         }
                     }
                 } );

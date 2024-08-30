@@ -13,14 +13,14 @@ namespace sgns::authorship {
    */
   class BlockBuilderFactory : public IComponent {
    public:
-    virtual ~BlockBuilderFactory() = default;
+       ~BlockBuilderFactory() override = default;
 
-    /**
+       /**
      * Prepares BlockBuilder for creating block on top of parent block and using
      * provided digests. Also initialises the block created in BlockBuilder
      */
-    [[nodiscard]] virtual outcome::result<std::unique_ptr<BlockBuilder>> create(
-        const primitives::BlockId &parent_id, primitives::Digest inherent_digest ) const = 0;
+       [[nodiscard]] virtual outcome::result<std::unique_ptr<BlockBuilder>> create(
+           const primitives::BlockId &parent_id, primitives::Digest inherent_digest ) const = 0;
   };
 
 }  // namespace sgns::authorship

@@ -2,9 +2,10 @@
 
 #include <algorithm>
 #include <exception>
-#include <gsl/span>
 
+#include <gsl/span>
 #include <boost/assert.hpp>
+
 #include "crypto/bip39/bip39_provider.hpp"
 #include "crypto/bip39/mnemonic.hpp"
 #include "crypto/crypto_store.hpp"

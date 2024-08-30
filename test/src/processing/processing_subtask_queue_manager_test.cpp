@@ -1,7 +1,7 @@
-#include <processing/processing_subtask_queue_manager.hpp>
+#include "processing/processing_subtask_queue_manager.hpp"
 
 // @todo Move to separate test suite
-#include <processing/processing_validation_core.hpp>
+#include "processing/processing_validation_core.hpp"
 
 #include <libp2p/log/configurator.hpp>
 #include <libp2p/log/logger.hpp>

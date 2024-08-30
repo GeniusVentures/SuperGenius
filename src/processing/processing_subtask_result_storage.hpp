@@ -6,8 +6,7 @@
 #ifndef GRPC_FOR_SUPERGENIUS_PROCESSING_SUTASK_RESULT_STORAGE_HPP
 #define GRPC_FOR_SUPERGENIUS_PROCESSING_SUTASK_RESULT_STORAGE_HPP
 
-#include <processing/proto/SGProcessing.pb.h>
-#include <chrono>
+#include "processing/proto/SGProcessing.pb.h"
 
 namespace sgns::processing
 {

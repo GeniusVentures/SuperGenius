@@ -16,7 +16,7 @@ namespace sgns::storage::trie {
    */
   class Codec : public IComponent{
    public:
-    virtual ~Codec() = default;
+       ~Codec() override = default;
 
     /**
      * @brief Encode node to byte representation

@@ -5,7 +5,6 @@
 
 #include <boost/optional.hpp>
 
-#include "base/blob.hpp"
 #include "base/buffer.hpp"
 #include "storage/trie/node.hpp"
 

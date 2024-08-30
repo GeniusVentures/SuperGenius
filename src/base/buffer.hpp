@@ -7,7 +7,7 @@
 #include <boost/container_hash/hash.hpp>
 #include <boost/operators.hpp>
 #include <gsl/span>
-#include <outcome/outcome.hpp>
+#include "outcome/outcome.hpp"
 
 namespace sgns::base {
 

@@ -7,28 +7,27 @@
 #ifndef _ACCOUNT_MANAGER_HPP_
 #define _ACCOUNT_MANAGER_HPP_
 #include <memory>
+
 #include <boost/asio.hpp>
 #include <spdlog/sinks/basic_file_sink.h>
-#include "account/GeniusAccount.hpp"
-#include "ipfs_pubsub/gossip_pubsub.hpp"
-#include "crdt/globaldb/globaldb.hpp"
-#include "crdt/globaldb/keypair_file_storage.hpp"
-#include "crdt/globaldb/proto/broadcast.pb.h"
-#include "account/TransactionManager.hpp"
 #include <libp2p/log/configurator.hpp>
 #include <libp2p/log/logger.hpp>
 #include <libp2p/multi/multibase_codec/multibase_codec_impl.hpp>
 #include <libp2p/multi/content_identifier_codec.hpp>
+
+#include "account/GeniusAccount.hpp"
+#include "ipfs_pubsub/gossip_pubsub.hpp"
+#include "crdt/globaldb/globaldb.hpp"
+#include "account/TransactionManager.hpp"
 #include <ipfs_lite/ipfs/graphsync/graphsync.hpp>
 #include "crypto/hasher/hasher_impl.hpp"
 #include "blockchain/impl/key_value_block_header_repository.hpp"
 #include "blockchain/impl/key_value_block_storage.hpp"
-#include "singleton/IComponent.hpp"
-#include "processing/impl/processing_task_queue_impl.hpp"
 #include "processing/impl/processing_core_impl.hpp"
 #include "processing/impl/processing_subtask_result_storage_impl.hpp"
 #include "processing/processing_service.hpp"
-#include "upnp.hpp"
+#include "singleton/IComponent.hpp"
+#include "processing/impl/processing_task_queue_impl.hpp"
 
 #ifndef __cplusplus
 extern "C"
@@ -65,7 +64,7 @@ namespace sgns
         // {
         //     return instance;
         // }
-        ~GeniusNode();
+        ~GeniusNode() override;
 
         void ProcessImage( const std::string &image_path, uint16_t funds );
 
@@ -79,7 +78,7 @@ namespace sgns
         void     AddPeer( const std::string &peer );
         uint64_t GetBalance();
 
-        std::vector<uint8_t> GetImageByCID( std::string cid );
+        static std::vector<uint8_t> GetImageByCID( const std::string &cid );
 
     private:
         std::shared_ptr<GeniusAccount>                             account_;
@@ -101,11 +100,11 @@ namespace sgns
 
         DevConfig_st dev_config_;
 
-        uint16_t GenerateRandomPort( const std::string &address );
+        static uint16_t GenerateRandomPort( const std::string &address );
 
-        void ProcessingDone( const std::string &subtask_id );
-        void ProcessingError( const std::string &subtask_id );
-        void ProcessingFinished( const std::string &task_id, const std::set<std::string> &subtasks_ids );
+        void        ProcessingDone( const std::string &subtask_id );
+        static void ProcessingError( const std::string &subtask_id );
+        void        ProcessingFinished( const std::string &task_id, const std::set<std::string> &subtasks_ids );
 
         static constexpr std::string_view db_path_                = "bc-%d/";
         static constexpr std::uint16_t    MAIN_NET                = 369;

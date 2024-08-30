@@ -1,9 +1,5 @@
 #include <utility>
 
-#include <utility>
-
-#include <exception>
-
 #include "extensions/impl/memory_extension.hpp"
 
 namespace sgns::extensions {

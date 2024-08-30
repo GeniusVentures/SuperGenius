@@ -8,9 +8,11 @@
 #define _GENIUS_ACCOUNT_HPP_
 #include <string>
 #include <cstdint>
+
 #include <boost/multiprecision/cpp_int.hpp>
+
 #include "account/GeniusUTXO.hpp"
-#include "account/TransferTransaction.hpp"
+#include "account/UTXOTxParameters.hpp"
 #include "singleton/CComponentFactory.hpp"
 #include "local_secure_storage/ISecureStorage.hpp"
 #include <KDFGenerator/KDFGenerator.hpp>
@@ -76,7 +78,7 @@ namespace sgns
                 std::cout << "utxo's Amount: " << curr.GetAmount() << std::endl;
                 std::cout << "utxo's GetOutputIdx: " << curr.GetOutputIdx() << std::endl;
                 std::cout << "utxo's GetLock: " << curr.GetLock() << std::endl;
-                if ( curr.GetLock() == false )
+                if ( !curr.GetLock() )
                 {
                     retval += curr.GetAmount();
                 }
@@ -148,7 +150,7 @@ namespace sgns
     private:
         uint64_t balance;
 
-        outcome::result<uint256_t> GenerateGeniusAddress( const std::string &base_path )
+        static outcome::result<uint256_t> GenerateGeniusAddress( const std::string &base_path )
         {
             auto component_factory = SINGLETONINSTANCE( CComponentFactory );
             OUTCOME_TRY( ( auto &&, icomponent ), component_factory->GetComponent( "LocalSecureStorage" ) );
@@ -170,7 +172,7 @@ namespace sgns
             }
             else
             {
-                key_seed = HexASCII2NumStr<std::uint8_t>( &load_res.value().data()[2], load_res.value().size() - 2 );
+                key_seed = HexASCII2NumStr<std::uint8_t>( &load_res.value()[2], load_res.value().size() - 2 );
             }
             auto result = KDFGenerator::GenerateKDF( key_seed, KDFGenerator::HashType::SHA256 );
 

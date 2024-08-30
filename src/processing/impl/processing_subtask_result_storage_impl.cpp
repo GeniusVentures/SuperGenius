@@ -1,6 +1,6 @@
 #include "processing_subtask_result_storage_impl.hpp"
-#include <boost/format.hpp>
 #include <utility>
+#include <boost/format.hpp>
 
 namespace sgns::processing
 {

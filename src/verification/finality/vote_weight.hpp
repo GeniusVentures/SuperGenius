@@ -3,10 +3,9 @@
 #ifndef SUPERGENIUS_SRC_VERIFICATION_FINALITY_VOTE_WEIGHT_HPP
 #define SUPERGENIUS_SRC_VERIFICATION_FINALITY_VOTE_WEIGHT_HPP
 
-#include <numeric>
-
 #include <boost/dynamic_bitset.hpp>
 #include <boost/operators.hpp>
+
 #include "verification/finality/structs.hpp"
 #include "verification/finality/voter_set.hpp"
 

@@ -1,4 +1,4 @@
-#include <processing/impl/processing_task_queue_impl.hpp>
+#include "processing/impl/processing_task_queue_impl.hpp"
 
 namespace sgns::processing
 {
@@ -79,11 +79,9 @@ namespace sgns::processing
 
             return true;
         }
-        else
-        {
-            m_logger->debug( "NO_SUBTASKS_FOUND. TaskId {}", taskId );
-            return false;
-        }
+
+        m_logger->debug( "NO_SUBTASKS_FOUND. TaskId {}", taskId );
+        return false;
     }
 
     outcome::result<std::pair<std::string, SGProcessing::Task>> ProcessingTaskQueueImpl::GrabTask()
@@ -150,10 +148,8 @@ namespace sgns::processing
         {
             return std::make_pair( task.ipfs_block_id(), task );
         }
-        else
-        {
-            return outcome::failure( boost::system::error_code{} );
-        }
+
+        return outcome::failure( boost::system::error_code{} );
     }
 
     bool ProcessingTaskQueueImpl::CompleteTask( const std::string &taskKey, const SGProcessing::TaskResult &taskResult )

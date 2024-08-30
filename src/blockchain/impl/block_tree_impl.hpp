@@ -37,7 +37,7 @@ namespace sgns::blockchain {
 
         bool finalized;
 
-        std::vector<std::shared_ptr<TreeNode>> children{};
+        std::vector<std::shared_ptr<TreeNode>> children;
 
         /**
        * Get a node of the tree, containing block with the specified hash, if it

@@ -3,7 +3,7 @@
 #define SUPERGENIUS_SRC_RUNTIME_FINALITY_API_HPP
 
 #include <boost/optional.hpp>
-#include <outcome/outcome.hpp>
+#include "outcome/outcome.hpp"
 #include "base/buffer.hpp"
 #include "primitives/authority.hpp"
 #include "primitives/block_id.hpp"

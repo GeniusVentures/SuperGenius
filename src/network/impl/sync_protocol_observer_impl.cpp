@@ -3,7 +3,7 @@
 
 #include <boost/assert.hpp>
 
-#include "network/common.hpp"
+#include "network/types/block_attributes.hpp"
 
 OUTCOME_CPP_DEFINE_CATEGORY_3(sgns::network,
                             SyncProtocolObserverImpl::Error,

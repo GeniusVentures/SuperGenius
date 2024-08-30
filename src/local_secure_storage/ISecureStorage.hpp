@@ -9,8 +9,7 @@
 #define _I_SECURE_STORAGE_HPP_
 
 #include <string>
-#include <vector>
-#include <cstdint>
+
 #include "outcome/outcome.hpp"
 #include "singleton/IComponent.hpp"
 
@@ -19,7 +18,7 @@ namespace sgns
     class ISecureStorage : public IComponent, public std::enable_shared_from_this<ISecureStorage>
     {
     public:
-        virtual ~ISecureStorage() = default;
+        ~ISecureStorage() override = default;
 
         using SecureBufferType = std::string;
 

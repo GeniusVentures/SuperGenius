@@ -9,10 +9,13 @@
 #include <memory>
 #include <deque>
 #include <cstdint>
+#include <utility>
 #include <unordered_map>
+
 #include <boost/asio.hpp>
 #include <boost/format.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
+
 #include "crdt/globaldb/globaldb.hpp"
 #include "account/proto/SGTransaction.pb.h"
 #include "account/IGeniusTransactions.hpp"
@@ -49,9 +52,9 @@ namespace sgns
         const GeniusAccount &GetAccount() const;
 
         bool     TransferFunds( const uint256_t &amount, const uint256_t &destination );
-        void     MintFunds( const uint64_t &amount );
-        bool     HoldEscrow( const uint64_t &amount, const uint64_t &num_chunks, const uint256_t &dev_addr,
-                             const float &dev_cut, const std::string &job_id );
+        void     MintFunds( uint64_t amount );
+        bool     HoldEscrow(
+                uint64_t amount, uint64_t num_chunks, const uint256_t &dev_addr, float dev_cut, const std::string &job_id );
         bool     ReleaseEscrow( const std::string &job_id, const bool &pay );
         void     ProcessingDone( const std::string &subtask_id );
         uint64_t GetBalance();
@@ -80,15 +83,18 @@ namespace sgns
             std::vector<OutputDestInfo>                payout_peers;
             std::unordered_map<std::string, uint256_t> subtask_info;
 
-            EscrowCtrl( const uint256_t &addr, const float &cut, const uint256_t &hash, const uint256_t &amount,
-                        const uint64_t      &subtasks_num,
-                        const InputUTXOInfo &input ) :
-                dev_addr( addr ),             //
-                dev_cut( cut ),               //
-                job_hash( hash ),             //
-                full_amount( amount ),        //
-                num_subtasks( subtasks_num ), //
-                original_input( input )       //
+            EscrowCtrl( uint256_t     addr,
+                        float         cut,
+                        uint256_t     hash,
+                        uint256_t     amount,
+                        uint64_t      subtasks_num,
+                        InputUTXOInfo input ) :
+                dev_addr( std::move( addr ) ),
+                dev_cut( cut ),
+                job_hash( std::move( hash ) ),
+                full_amount( std::move( amount ) ),
+                num_subtasks( subtasks_num ),
+                original_input( std::move( input ) )
             {
             }
         };
@@ -110,7 +116,7 @@ namespace sgns
         void                     SendTransaction();
         bool                     GetTransactionsFromBlock( const primitives::BlockNumber &block_number );
 
-        void ParseTransaction( std::string transaction_key );
+        void ParseTransaction( const std::string &transaction_key );
 
         void ParseTransferTransaction( const std::vector<std::uint8_t> &transaction_data );
         void ParseMintTransaction( const std::vector<std::uint8_t> &transaction_data );

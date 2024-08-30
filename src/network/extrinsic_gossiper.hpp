@@ -9,7 +9,7 @@ namespace sgns::network {
    * Sends messages, related to author api, over the Gossip protocol
    */
   struct ExtrinsicGossiper : public IComponent {
-    virtual ~ExtrinsicGossiper() = default;
+      ~ExtrinsicGossiper() override = default;
 
     /**
      * Send TxAnnounce message

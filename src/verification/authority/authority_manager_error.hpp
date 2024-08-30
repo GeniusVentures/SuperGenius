@@ -1,7 +1,7 @@
 #ifndef SUPERGENIUS_VERIFICATION_AUTHORITIES_MANAGER_ERROR
 #define SUPERGENIUS_VERIFICATION_AUTHORITIES_MANAGER_ERROR
 
-#include <outcome/outcome.hpp>
+#include "outcome/outcome.hpp"
 
 namespace sgns::authority {
   enum class AuthorityManagerError {

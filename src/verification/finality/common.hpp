@@ -3,12 +3,8 @@
 #ifndef SUPERGENIUS_SRC_VERIFICATION_FINALITY_COMMON_HPP
 #define SUPERGENIUS_SRC_VERIFICATION_FINALITY_COMMON_HPP
 
-#include <unordered_map>
-
 #include "clock/clock.hpp"
-#include "base/wrapper.hpp"
 #include "crypto/ed25519_types.hpp"
-#include "primitives/authority.hpp"
 #include "primitives/common.hpp"
 
 namespace sgns::verification::finality {

@@ -8,11 +8,13 @@
 #include <boost/multiprecision/cpp_int.hpp>
 #include <boost/random.hpp>
 #include <rapidjson/document.h>
+
 #include "account/GeniusNode.hpp"
+#include "FileManager.hpp"
+#include "upnp.hpp"
 #include "processing/processing_imagesplit.hpp"
 #include "processing/processing_tasksplit.hpp"
 #include "processing/processing_subtask_enqueuer_impl.hpp"
-#include "processing/processing_subtask_result_storage.hpp"
 #include "processing/processors/processing_processor_mnn_posenet.hpp"
 #include "local_secure_storage/impl/json/JSONSecureStorage.hpp"
 
@@ -256,7 +258,7 @@ namespace sgns
         return transaction_manager_->GetBalance();
     }
 
-    std::vector<uint8_t> GeniusNode::GetImageByCID( std::string cid )
+    std::vector<uint8_t> GeniusNode::GetImageByCID( const std::string &cid )
     {
         libp2p::protocol::kademlia::Config kademlia_config;
         kademlia_config.randomWalk.enabled  = true;
@@ -301,14 +303,10 @@ namespace sgns
                     std::cout << "Buffer from AsyncIO is 0" << std::endl;
                     return;
                 }
-                else
-                {
-                    //Process settings json
+                //Process settings json
 
-                    mainbuffers->first.insert( mainbuffers->first.end(), buffers->first.begin(), buffers->first.end() );
-                    mainbuffers->second.insert(
-                        mainbuffers->second.end(), buffers->second.begin(), buffers->second.end() );
-                }
+                mainbuffers->first.insert( mainbuffers->first.end(), buffers->first.begin(), buffers->first.end() );
+                mainbuffers->second.insert( mainbuffers->second.end(), buffers->second.begin(), buffers->second.end() );
             },
             "file" );
         ioc->reset();
@@ -327,7 +325,7 @@ namespace sgns
         if ( index == std::string::npos )
         {
             std::cerr << "settings.json doesn't exist" << std::endl;
-            return std::vector<uint8_t>();
+            return {};
         }
         std::vector<char>  &jsonData = mainbuffers->second[index];
         std::string         jsonString( jsonData.begin(), jsonData.end() );
@@ -335,7 +333,7 @@ namespace sgns
         document.Parse( jsonString.c_str() );
 
         // Extract input image name
-        std::string inputImage = "";
+        std::string inputImage;
         if ( document.HasMember( "input" ) && document["input"].IsObject() )
         {
             const auto &input = document["input"];
@@ -347,7 +345,7 @@ namespace sgns
             else
             {
                 std::cerr << "No Input file" << std::endl;
-                return std::vector<uint8_t>();
+                return {};
             }
         }
 
@@ -380,12 +378,10 @@ namespace sgns
                     std::cout << "Buffer from AsyncIO is 0" << std::endl;
                     return;
                 }
-                else
-                {
-                    //Process settings json
 
-                    imageData.assign( buffers->second[0].begin(), buffers->second[0].end() );
-                }
+                //Process settings json
+
+                imageData.assign( buffers->second[0].begin(), buffers->second[0].end() );
             },
             "file" );
         ioc->reset();

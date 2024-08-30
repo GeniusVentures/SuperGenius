@@ -1,5 +1,9 @@
-#include <processing/impl/processing_core_impl.hpp>
+#include "processing/impl/processing_core_impl.hpp"
+
 #include <rapidjson/document.h>
+
+#include "FileManager.hpp"
+
 namespace sgns::processing
 {
     void ProcessingCoreImpl::ProcessSubTask(
@@ -84,13 +88,12 @@ namespace sgns::processing
                         std::cout << "Buffer from AsyncIO is 0" << std::endl;
                         return;
                     }
-                    else {
                         //Process settings json
 
+                    mainbuffers->first.insert( mainbuffers->first.end(), buffers->first.begin(), buffers->first.end() );
+                    mainbuffers->second.insert(
+                        mainbuffers->second.end(), buffers->second.begin(), buffers->second.end() );
 
-                        mainbuffers->first.insert(mainbuffers->first.end(), buffers->first.begin(), buffers->first.end());
-                        mainbuffers->second.insert(mainbuffers->second.end(), buffers->second.begin(), buffers->second.end());
-                    }
                 }, "file");
         ioc->reset();
         ioc->run();
@@ -121,7 +124,7 @@ namespace sgns::processing
         //Parse json to look for model/image
         rapidjson::Document document;
         document.Parse(jsonString.c_str());
-        std::string modelFile = "";
+        std::string modelFile;
         // Extract model name
         if (document.HasMember("model") && document["model"].IsObject()) {
             const auto& model = document["model"];
@@ -135,7 +138,7 @@ namespace sgns::processing
             }
         }
         // Extract input image name
-        std::string inputImage = "";
+        std::string inputImage;
         if (document.HasMember("input") && document["input"].IsObject()) {
             const auto& input = document["input"];
             if (input.HasMember("image") && input["image"].IsString()) {
@@ -213,20 +216,16 @@ namespace sgns::processing
                 {
                     return true;
                 }
-                else
-                {
-                    std::cerr << "No processor by name in settings json" << std::endl;
-                    return false;
-                }
-            }
-            else {
-                std::cerr << "Model name not found or not a string" << std::endl;
+
+                std::cerr << "No processor by name in settings json" << std::endl;
                 return false;
             }
-        }
-        else {
-            std::cerr << "Model object not found or not an object" << std::endl;
+
+            std::cerr << "Model name not found or not a string" << std::endl;
             return false;
         }
+
+        std::cerr << "Model object not found or not an object" << std::endl;
+        return false;
     }
 }

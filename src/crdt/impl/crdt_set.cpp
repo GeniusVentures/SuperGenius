@@ -1,4 +1,4 @@
-#include <crdt/crdt_set.hpp>
+#include "crdt/crdt_set.hpp"
 #include <storage/database_error.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/system/error_code.hpp>
@@ -358,7 +358,7 @@ namespace sgns::crdt
     return priority;
   }
 
-  outcome::result<void> CrdtSet::SetPriority(const std::string& aKey, const uint64_t& aPriority)
+  outcome::result<void> CrdtSet::SetPriority( const std::string &aKey, uint64_t aPriority )
   {
     if (this->dataStore_ == nullptr)
     {
@@ -367,15 +367,7 @@ namespace sgns::crdt
 
     auto prioK = this->PriorityKey(aKey);
 
-    std::string strPriority; 
-    try
-    {
-      strPriority = boost::lexical_cast<std::string>(aPriority + 1);
-    }
-    catch (boost::bad_lexical_cast&)
-    {
-      return outcome::failure(boost::system::error_code{});
-    }
+    std::string strPriority = std::to_string( aPriority + 1 );
 
     Buffer keyBuffer;
     keyBuffer.put(prioK.GetKey());
@@ -386,8 +378,10 @@ namespace sgns::crdt
     return this->dataStore_->put(keyBuffer, valueBuffer);
   }
 
-  outcome::result<void> CrdtSet::SetValue(const std::string& aKey, const std::string& aID, const Buffer& aValue, 
-    const uint64_t& aPriority)
+  outcome::result<void> CrdtSet::SetValue( const std::string &aKey,
+                                           const std::string &aID,
+                                           const Buffer      &aValue,
+                                           uint64_t           aPriority )
   {
     if (this->dataStore_ == nullptr)
     {
@@ -410,8 +404,11 @@ namespace sgns::crdt
     return outcome::success();
   }
 
-  outcome::result<void> CrdtSet::SetValue(const std::unique_ptr<storage::BufferBatch>& aDataStore, const std::string& aKey, 
-    const std::string& aID, const Buffer& aValue, const uint64_t& aPriority)
+  outcome::result<void> CrdtSet::SetValue( const std::unique_ptr<storage::BufferBatch> &aDataStore,
+                                           const std::string                           &aKey,
+                                           const std::string                           &aID,
+                                           const Buffer                                &aValue,
+                                           uint64_t                                     aPriority )
   {
     if (aDataStore == nullptr)
     {
@@ -420,7 +417,7 @@ namespace sgns::crdt
 
     // If this key was tombstoned already, do not store/update the value at all.
     auto isDeletedResult = this->InTombsKeyID(aKey, aID);
-    if (isDeletedResult.has_failure() || isDeletedResult.value() == true)
+    if ( isDeletedResult.has_failure() || isDeletedResult.value() )
     {
       return outcome::failure(boost::system::error_code{});
     }
@@ -480,7 +477,7 @@ namespace sgns::crdt
     return outcome::success();
   }
 
-  outcome::result<void> CrdtSet::PutElems(std::vector<Element>& aElems, const std::string& aID, const uint64_t& aPriority)
+  outcome::result<void> CrdtSet::PutElems( std::vector<Element> &aElems, const std::string &aID, uint64_t aPriority )
   {
     if (aElems.empty())
     {
@@ -554,7 +551,7 @@ namespace sgns::crdt
     for (const auto& tomb : aTombs)
     {
       // /namespace/tombs/<key>/<id>
-      auto key = tomb.key();
+      const auto &key        = tomb.key();
       auto kNamespace = this->TombsPrefix(key).ChildString(tomb.id());
 
       keyBuffer.clear();

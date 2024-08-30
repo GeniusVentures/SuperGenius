@@ -1,7 +1,10 @@
 #ifndef SUPERGENIUS_APPLICATION_DISPATCHER
 #define SUPERGENIUS_APPLICATION_DISPATCHER
 
+#include <functional>
 #include <memory>
+#include <stdexcept>
+
 #include "singleton/IComponent.hpp"
 
 namespace sgns::application {
@@ -22,7 +25,7 @@ namespace sgns::application {
       ReadyToStop,
     };
 
-    virtual ~AppStateManager() = default;
+     ~AppStateManager() override = default;
 
     /**
      * @brief Execute \param cb at stage of prepare application

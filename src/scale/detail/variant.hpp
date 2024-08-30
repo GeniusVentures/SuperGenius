@@ -4,7 +4,6 @@
 #define SUPERGENIUS_SCALE_DETAIL_VARIANT_HPP
 
 #include <boost/variant.hpp>
-#include <outcome/outcome.hpp>
 #include "base/outcome_throw.hpp"
 #include "base/visitor.hpp"
 #include "scale/scale_error.hpp"

@@ -55,7 +55,7 @@ jobs:
 
       - name: Thirdparty Compile
         working-directory: ${{github.workspace}}/thirdparty/build/Windows/Release
-        run: cmake --build . --config Release
+        run: cmake --build . --config Release -j
         
       - name: Create Build Directory
         run: cmake -E make_directory ${{github.workspace}}/SuperGenius/build/Windows/Release         
@@ -66,7 +66,7 @@ jobs:
 
       - name: Compile
         working-directory: ${{github.workspace}}/SuperGenius/build/Windows/Release
-        run: cmake --build . --config Release
+        run: cmake --build . --config Release -j
 
       - name: Create install directory
         working-directory: ${{github.workspace}}/SuperGenius/build/Windows/Release
@@ -528,6 +528,11 @@ jobs:
           path: 'SuperGenius'
           submodules: "recursive"    
 
+      - name: Install Ninja
+        run: |
+          brew install ccache ninja
+          echo "CMAKE_GENERATOR=Ninja" >> $GITHUB_ENV
+
       - name: Install bindgen
         run: cargo install cbindgen
 
@@ -557,7 +562,7 @@ jobs:
 
       - name: Thirdparty Compile
         working-directory: ${{github.workspace}}/thirdparty/build/iOS/Release 
-        run: make -j8
+        run: cmake --build . -j --config Release
         
       - name: Create Build Directory
         run: cmake -E make_directory ${{github.workspace}}/SuperGenius/build/iOS/Release          
@@ -568,7 +573,7 @@ jobs:
 
       - name: Compile
         working-directory: ${{github.workspace}}/SuperGenius/build/iOS/Release 
-        run: make -j8
+        run: cmake --build . -j --config Release
       
       - name: Install
         working-directory: ${{github.workspace}}/SuperGenius/build/iOS/Release 

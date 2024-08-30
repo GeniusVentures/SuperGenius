@@ -5,22 +5,19 @@
 */
 #ifndef PROCESSING_PROCESSOR_HPP
 #define PROCESSING_PROCESSOR_HPP
-#include <math.h>
-#include <fstream>
-#include <iostream>
+
+#include <cmath>
 #include <memory>
 #include <vector>
-#include <processing/processing_imagesplit.hpp>
-#include <processing/proto/SGProcessing.pb.h>
+
+#include "processing/proto/SGProcessing.pb.h"
 
 namespace sgns::processing
 {
     class ProcessingProcessor
     {
     public:
-        virtual ~ProcessingProcessor()
-        {
-        }
+        virtual ~ProcessingProcessor() = default;
 
         /** Start processing data
         * @param result - Reference to result item to set hashes to

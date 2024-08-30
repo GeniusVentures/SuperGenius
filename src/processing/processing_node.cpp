@@ -1,24 +1,26 @@
 #include "processing_node.hpp"
+
+#include <utility>
+
 #include "processing_subtask_queue_channel_pubsub.hpp"
-#include <processing/processing_subtask_queue_accessor_impl.hpp>
+#include "processing/processing_subtask_queue_accessor_impl.hpp"
 
 namespace sgns::processing
 {
 ////////////////////////////////////////////////////////////////////////////////
-ProcessingNode::ProcessingNode(
-    std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> gossipPubSub,
-    std::shared_ptr<SubTaskStateStorage> subTaskStateStorage,
-    std::shared_ptr<SubTaskResultStorage> subTaskResultStorage,
-    std::shared_ptr<ProcessingCore> processingCore,
-    std::function<void(const SGProcessing::TaskResult&)> taskResultProcessingSink,
-    std::function<void(const std::string&)> processingErrorSink)
-    : m_gossipPubSub(std::move(gossipPubSub))
-    , m_nodeId(m_gossipPubSub->GetLocalAddress()[0])
-    , m_processingCore(processingCore)
-    , m_subTaskStateStorage(subTaskStateStorage)
-    , m_subTaskResultStorage(subTaskResultStorage)
-    , m_taskResultProcessingSink(taskResultProcessingSink)
-    , m_processingErrorSink(processingErrorSink)
+ProcessingNode::ProcessingNode( std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>        gossipPubSub,
+                                std::shared_ptr<SubTaskStateStorage>                    subTaskStateStorage,
+                                std::shared_ptr<SubTaskResultStorage>                   subTaskResultStorage,
+                                std::shared_ptr<ProcessingCore>                         processingCore,
+                                std::function<void( const SGProcessing::TaskResult & )> taskResultProcessingSink,
+                                std::function<void( const std::string & )>              processingErrorSink ) :
+    m_gossipPubSub( std::move( gossipPubSub ) ),
+    m_nodeId( m_gossipPubSub->GetLocalAddress()[0] ),
+    m_processingCore( std::move( processingCore ) ),
+    m_subTaskStateStorage( std::move( subTaskStateStorage ) ),
+    m_subTaskResultStorage( std::move( subTaskResultStorage ) ),
+    m_taskResultProcessingSink( std::move( taskResultProcessingSink ) ),
+    m_processingErrorSink( std::move( processingErrorSink ) )
 {
 }
 

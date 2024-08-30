@@ -2,7 +2,7 @@
 
 #include "blockchain/impl/common.hpp"
 #include "storage/database_error.hpp"
-#include <crdt/globaldb/globaldb.hpp>
+#include "crdt/globaldb/globaldb.hpp"
 #include "blockchain/impl/proto/SGBlocks.pb.h"
 
 using sgns::blockchain::prefix::Prefix;

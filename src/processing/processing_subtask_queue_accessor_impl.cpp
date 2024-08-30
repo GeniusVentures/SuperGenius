@@ -1,23 +1,24 @@
 #include "processing_subtask_queue_accessor_impl.hpp"
 #include <thread>
+#include <utility>
 
 namespace sgns::processing
 {
-SubTaskQueueAccessorImpl::SubTaskQueueAccessorImpl(
-    std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> gossipPubSub,
-    std::shared_ptr<ProcessingSubTaskQueueManager> subTaskQueueManager,
-    std::shared_ptr<SubTaskStateStorage> subTaskStateStorage,
-    std::shared_ptr<SubTaskResultStorage> subTaskResultStorage,
-    std::function<void(const SGProcessing::TaskResult&)> taskResultProcessingSink)
-    : m_gossipPubSub(gossipPubSub)
-    , m_subTaskQueueManager(subTaskQueueManager)
-    , m_subTaskStateStorage(subTaskStateStorage)
-    , m_subTaskResultStorage(subTaskResultStorage)
-    , m_taskResultProcessingSink(taskResultProcessingSink)
-{
-    // @todo replace hardcoded channel identified with an input value
-    m_resultChannel = std::make_shared<ipfs_pubsub::GossipPubSubTopic>(m_gossipPubSub, "RESULT_CHANNEL_ID");
-    m_logger->debug("[CREATED] this: {}, thread_id {}", reinterpret_cast<size_t>(this), std::this_thread::get_id());
+    SubTaskQueueAccessorImpl::SubTaskQueueAccessorImpl(
+        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>        gossipPubSub,
+        std::shared_ptr<ProcessingSubTaskQueueManager>          subTaskQueueManager,
+        std::shared_ptr<SubTaskStateStorage>                    subTaskStateStorage,
+        std::shared_ptr<SubTaskResultStorage>                   subTaskResultStorage,
+        std::function<void( const SGProcessing::TaskResult & )> taskResultProcessingSink ) :
+        m_gossipPubSub( std::move( gossipPubSub ) ),
+        m_subTaskQueueManager( std::move( subTaskQueueManager ) ),
+        m_subTaskStateStorage( std::move( subTaskStateStorage ) ),
+        m_subTaskResultStorage( std::move( subTaskResultStorage ) ),
+        m_taskResultProcessingSink( std::move( taskResultProcessingSink ) )
+    {
+        // @todo replace hardcoded channel identified with an input value
+    m_resultChannel = std::make_shared<ipfs_pubsub::GossipPubSubTopic>( m_gossipPubSub, "RESULT_CHANNEL_ID" );
+    m_logger->debug( "[CREATED] this: {}, thread_id {}", reinterpret_cast<size_t>( this ), std::this_thread::get_id() );
 }
 
 SubTaskQueueAccessorImpl::~SubTaskQueueAccessorImpl()
@@ -90,7 +91,7 @@ void SubTaskQueueAccessorImpl::GrabSubTask(SubTaskGrabbedCallback onSubTaskGrabb
     auto queue = m_subTaskQueueManager->GetQueueSnapshot();
 
     std::set<std::string> subTaskIds;
-    for (size_t itemIdx = 0; itemIdx < (size_t)queue->subtasks().items_size(); ++itemIdx)
+    for ( size_t itemIdx = 0; itemIdx < static_cast<size_t>( queue->subtasks().items_size() ); ++itemIdx )
     {
         subTaskIds.insert(queue->subtasks().items(itemIdx).subtaskid());
     }
@@ -128,7 +129,10 @@ void SubTaskQueueAccessorImpl::CompleteSubTask(const std::string& subTaskId, con
 
 void SubTaskQueueAccessorImpl::OnResultReceived(SGProcessing::SubTaskResult&& subTaskResult)
 {
-    if (!m_subTaskQueueManager->IsQueueInit()) return;
+    if ( !m_subTaskQueueManager->IsQueueInit() )
+    {
+        return;
+    }
     std::string subTaskId = subTaskResult.subtaskid();
 
     // Results accumulation
@@ -193,9 +197,10 @@ std::vector<std::tuple<std::string, SGProcessing::SubTaskResult>> SubTaskQueueAc
 {
     std::lock_guard<std::mutex> guard(m_mutexResults);
     std::vector<std::tuple<std::string, SGProcessing::SubTaskResult>> results;
-    for (auto& item : m_results)
+    results.reserve( m_results.size() );
+    for ( auto &item : m_results )
     {
-        results.push_back({ item.first, item.second });
+        results.emplace_back( item.first, item.second );
     }
     std::sort(results.begin(), results.end(),
         [](const std::tuple<std::string, SGProcessing::SubTaskResult>& v1,

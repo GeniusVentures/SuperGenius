@@ -1,7 +1,7 @@
 #ifndef SUPERGENIUS_VERIFICATION_AUTHORITIES_UPDATE_OBSERVER_ERROR
 #define SUPERGENIUS_VERIFICATION_AUTHORITIES_UPDATE_OBSERVER_ERROR
 
-#include <outcome/outcome.hpp>
+#include "outcome/outcome.hpp"
 
 namespace sgns::authority {
 

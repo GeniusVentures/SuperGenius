@@ -14,7 +14,7 @@ namespace sgns::storage::trie {
    */
   class TrieSerializer : public IComponent{
    public:
-    virtual ~TrieSerializer() = default;
+       ~TrieSerializer() override = default;
 
     /**
      * @return root hash of an empty trie

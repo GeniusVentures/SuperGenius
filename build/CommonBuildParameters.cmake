@@ -8,11 +8,16 @@ set(BOOST_VERSION "${BOOST_MAJOR_VERSION}.${BOOST_MINOR_VERSION}.${BOOST_PATCH_V
 set(BOOST_VERSION_3U "${BOOST_MAJOR_VERSION}_${BOOST_MINOR_VERSION}_${BOOST_PATCH_VERSION}")
 set(BOOST_VERSION_2U "${BOOST_MAJOR_VERSION}_${BOOST_MINOR_VERSION}")
 
-# GTest
-set(GTest_DIR "${_THIRDPARTY_BUILD_DIR}/GTest/lib/cmake/GTest")
-set(GTest_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/GTest/include")
-find_package(GTest CONFIG REQUIRED)
-include_directories(${GTest_INCLUDE_DIR})
+# --------------------------------------------------------
+# Set config of GTest
+set(BUILD_TESTING "ON" CACHE BOOL "Build tests")
+
+if(BUILD_TESTING)
+    set(GTest_DIR "${_THIRDPARTY_BUILD_DIR}/GTest/lib/cmake/GTest")
+    set(GTest_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/GTest/include")
+    find_package(GTest CONFIG REQUIRED)
+    include_directories(${GTest_INCLUDE_DIR})
+endif()
 
 # absl
 if(NOT DEFINED absl_DIR)
@@ -271,12 +276,13 @@ set(AsyncIOManager_DIR "${_THIRDPARTY_BUILD_DIR}/AsyncIOManager/lib/cmake/AsyncI
 find_package(AsyncIOManager CONFIG REQUIRED)
 include_directories(${AsyncIOManager_INCLUDE_DIR})
 
-# crypto3
-# set(crypto3_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/crypto3/include")
-# set(crypto3_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/crypto3/lib")
-# set(crypto3_DIR "${_THIRDPARTY_BUILD_DIR}/crypto3/lib/cmake/crypto3")
-# find_package(crypto3 CONFIG REQUIRED)
-# include_directories(${crypto3_INCLUDE_DIR})
+# --------------------------------------------------------
+# Set config of crypto3
+#set(crypto3_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/crypto3/include")
+#set(crypto3_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/crypto3/lib")
+#set(crypto3_DIR "${_THIRDPARTY_BUILD_DIR}/crypto3/lib/cmake/crypto3")
+#find_package(crypto3 CONFIG REQUIRED)
+#include_directories(${crypto3_INCLUDE_DIR})
 include_directories(
     "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/algebra/include"
     "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/block/include"
@@ -343,7 +349,7 @@ add_subdirectory(${PROJECT_ROOT}/src ${CMAKE_BINARY_DIR}/src)
 add_subdirectory(${PROJECT_ROOT}/GeniusKDF ${CMAKE_BINARY_DIR}/GeniusKDF)
 
 # add_subdirectory(${PROJECT_ROOT}/app ${CMAKE_BINARY_DIR}/app)
-if(TESTING)
+if(BUILD_TESTING)
     enable_testing()
     add_subdirectory(${PROJECT_ROOT}/test ${CMAKE_BINARY_DIR}/test)
 endif()
