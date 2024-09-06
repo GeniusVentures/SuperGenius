@@ -92,8 +92,9 @@ namespace sgns
         if ( maybe_params )
         {
             account_m->utxos          = UTXOTxParameters::UpdateUTXOList( account_m->utxos, maybe_params.value() );
-            auto transfer_transaction = std::make_shared<TransferTransaction>(
-                maybe_params.value().outputs_, maybe_params.value().inputs_, FillDAGStruct() );
+            auto transfer_transaction = std::make_shared<TransferTransaction>( maybe_params.value().outputs_,
+                                                                               maybe_params.value().inputs_,
+                                                                               FillDAGStruct() );
             this->EnqueueTransaction( transfer_transaction );
             ret = true;
         }
@@ -107,21 +108,30 @@ namespace sgns
         this->EnqueueTransaction( mint_transaction );
     }
 
-    bool TransactionManager::HoldEscrow(
-        uint64_t amount, uint64_t num_chunks, const uint256_t &dev_addr, float dev_cut, const std::string &job_id )
+    bool TransactionManager::HoldEscrow( uint64_t           amount,
+                                         uint64_t           num_chunks,
+                                         const uint256_t   &dev_addr,
+                                         float              dev_cut,
+                                         const std::string &job_id )
     {
         bool ret          = false;
         auto hash_data    = hasher_m->blake2b_256( std::vector<uint8_t>{ job_id.begin(), job_id.end() } );
-        auto maybe_params = UTXOTxParameters::create( account_m->utxos, account_m->address, uint64_t{ amount },
+        auto maybe_params = UTXOTxParameters::create( account_m->utxos,
+                                                      account_m->address,
+                                                      uint64_t{ amount },
                                                       uint256_t{ "0x" + hash_data.toReadableString() } );
         if ( maybe_params )
         {
             account_m->utxos        = UTXOTxParameters::UpdateUTXOList( account_m->utxos, maybe_params.value() );
-            auto escrow_transaction = std::make_shared<EscrowTransaction>( maybe_params.value(), num_chunks, dev_addr,
-                                                                           dev_cut, FillDAGStruct() );
+            auto escrow_transaction = std::make_shared<EscrowTransaction>( maybe_params.value(),
+                                                                           num_chunks,
+                                                                           dev_addr,
+                                                                           dev_cut,
+                                                                           FillDAGStruct() );
             this->EnqueueTransaction( escrow_transaction );
             ret = true;
         }
+
         return ret;
     }
 
