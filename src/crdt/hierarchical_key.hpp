@@ -28,11 +28,11 @@ namespace sgns::crdt
 
     /** Constructs a key from {@param s}.
     */
-    HierarchicalKey(const std::string& s);
+    HierarchicalKey( std::string key );
 
     /** Copy constructor
     */
-    HierarchicalKey(const HierarchicalKey&);
+    HierarchicalKey( const HierarchicalKey & ) = default;
 
     virtual ~HierarchicalKey() = default;
 
