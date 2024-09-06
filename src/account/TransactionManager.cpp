@@ -137,9 +137,13 @@ namespace sgns
 
     bool TransactionManager::ReleaseEscrow( const std::string &job_id, const bool &pay )
     {
-        bool ret = false;
-        if ( !escrow_ctrl_m.empty() )
+        if ( escrow_ctrl_m.empty() )
         {
+            return false;
+        }
+
+        bool ret = false;
+
             //TODO - hash in string form in escrolcontrol
             auto hash_data = hasher_m->blake2b_256( std::vector<uint8_t>{ job_id.begin(), job_id.end() } );
             auto job_hash  = uint256_t{ "0x" + hash_data.toReadableString() };
@@ -149,8 +153,10 @@ namespace sgns
                 {
                     if ( pay )
                     {
-                        auto transfer_transaction = std::make_shared<TransferTransaction>(
-                            it->payout_peers, std::vector<InputUTXOInfo>{ it->original_input }, FillDAGStruct() );
+                    auto transfer_transaction =
+                        std::make_shared<TransferTransaction>( it->payout_peers,
+                                                               std::vector<InputUTXOInfo>{ it->original_input },
+                                                               FillDAGStruct() );
                         this->EnqueueTransaction( transfer_transaction );
                         ret = true;
                     }
@@ -161,7 +167,7 @@ namespace sgns
                     ++it;
                 }
             }
-        }
+
         return ret;
     }
 
@@ -206,8 +212,11 @@ namespace sgns
     void TransactionManager::SendTransaction()
     {
         std::unique_lock<std::mutex> lock( mutex_m );
-        if ( !out_transactions.empty() )
+        if ( out_transactions.empty() )
         {
+            return;
+        }
+
             auto elem = out_transactions.front();
             out_transactions.pop_front();
             boost::format tx_key{ std::string( TRANSACTION_BASE_FORMAT ) };
@@ -233,11 +242,9 @@ namespace sgns
 
             auto new_hash = block_storage_m->putBlockHeader( header );
 
-            primitives::BlockData block_data;
-            block_data.hash   = new_hash.value();
-            block_data.header = header;
             primitives::BlockBody body{ { base::Buffer{}.put( transaction_path ) } };
-            block_data.body = body;
+
+        primitives::BlockData block_data{ new_hash.value(), header, body };
 
             block_storage_m->putBlockData( header.number, block_data );
 
@@ -246,10 +253,7 @@ namespace sgns
             m_logger->debug( "Recording Block with number " + std::to_string( header.number ) );
             block_storage_m->setLastFinalizedBlockHash( new_hash.value() );
         }
-        lock.unlock(); // Manual unlock, no need to wait to run out of scope
-    }
 
-    bool TransactionManager::GetTransactionsFromBlock( const primitives::BlockNumber &block_number )
     {
         outcome::result<primitives::BlockBody> retval          = outcome::failure( boost::system::error_code{} );
         std::size_t                            transaction_num = 0;
@@ -437,8 +441,11 @@ namespace sgns
 
     void TransactionManager::ParseProcessingTransaction( const std::vector<std::uint8_t> &transaction_data )
     {
-        if ( !escrow_ctrl_m.empty() )
+        if ( escrow_ctrl_m.empty() )
         {
+            return;
+        }
+
             ProcessingTransaction tx = ProcessingTransaction::DeSerializeByteVector( transaction_data );
 
             for ( auto &ctrl : escrow_ctrl_m )
@@ -450,9 +457,8 @@ namespace sgns
                     if ( ctrl.subtask_info.size() == ctrl.num_subtasks )
                     {
                         //Processing done
-                        uint64_t peers_amount =
-                            ( ctrl.dev_cut * uint64_t{ ctrl.full_amount } ) / ctrl.subtask_info.size();
-                        uint64_t remainder = uint64_t{ ctrl.full_amount };
+                    uint64_t peers_amount = ( ctrl.dev_cut * uint64_t{ ctrl.full_amount } ) / ctrl.subtask_info.size();
+                    auto     remainder    = uint64_t{ ctrl.full_amount };
 
                         std::set<std::string> subtasks_ids;
                         for ( auto &pair : ctrl.subtask_info )
@@ -465,7 +471,6 @@ namespace sgns
                         if ( processing_finished_cb_m )
                         {
                             processing_finished_cb_m( tx.GetSubtaskID(), subtasks_ids );
-                        }
                     }
                 }
             }
