@@ -23,11 +23,13 @@
 #include "blockchain/block_storage.hpp"
 #include "base/logger.hpp"
 #include "crypto/hasher.hpp"
-
-using namespace boost::multiprecision;
+#include "outcome/outcome.hpp"
+#include "primitives/common.hpp"
 
 namespace sgns
 {
+    using namespace boost::multiprecision;
+
     class TransactionManager
     {
     public:
@@ -100,10 +102,10 @@ namespace sgns
         void                     EnqueueTransaction( std::shared_ptr<IGeniusTransactions> element );
         SGTransaction::DAGStruct FillDAGStruct();
         void                     SendTransaction();
-        bool                     GetTransactionsFromBlock( const primitives::BlockNumber &block_number );
+        outcome::result<std::vector<std::vector<uint8_t>>> GetTransactionsFromBlock(
+            const primitives::BlockId &block_number );
 
-        void ParseTransaction( const std::string &transaction_key );
-
+        outcome::result<std::vector<uint8_t>> ParseTransaction( std::string_view transaction_key );
         void ParseTransferTransaction( const std::vector<std::uint8_t> &transaction_data );
         void ParseMintTransaction( const std::vector<std::uint8_t> &transaction_data );
         void ParseEscrowTransaction( const std::vector<std::uint8_t> &transaction_data );

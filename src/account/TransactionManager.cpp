@@ -13,6 +13,8 @@
 #include "account/ProcessingTransaction.hpp"
 #include "account/EscrowTransaction.hpp"
 #include "account/UTXOTxParameters.hpp"
+#include "outcome/outcome.hpp"
+#include "primitives/block.hpp"
 
 namespace sgns
 {
@@ -144,29 +146,29 @@ namespace sgns
 
         bool ret = false;
 
-            //TODO - hash in string form in escrolcontrol
-            auto hash_data = hasher_m->blake2b_256( std::vector<uint8_t>{ job_id.begin(), job_id.end() } );
-            auto job_hash  = uint256_t{ "0x" + hash_data.toReadableString() };
-            for ( auto it = escrow_ctrl_m.begin(); it != escrow_ctrl_m.end(); )
+        //TODO - hash in string form in escrolcontrol
+        auto hash_data = hasher_m->blake2b_256( std::vector<uint8_t>{ job_id.begin(), job_id.end() } );
+        auto job_hash  = uint256_t{ "0x" + hash_data.toReadableString() };
+        for ( auto it = escrow_ctrl_m.begin(); it != escrow_ctrl_m.end(); )
+        {
+            if ( job_hash == it->job_hash )
             {
-                if ( job_hash == it->job_hash )
+                if ( pay )
                 {
-                    if ( pay )
-                    {
                     auto transfer_transaction =
                         std::make_shared<TransferTransaction>( it->payout_peers,
                                                                std::vector<InputUTXOInfo>{ it->original_input },
                                                                FillDAGStruct() );
-                        this->EnqueueTransaction( transfer_transaction );
-                        ret = true;
-                    }
-                    it = escrow_ctrl_m.erase( it );
+                    this->EnqueueTransaction( transfer_transaction );
+                    ret = true;
                 }
-                else
-                {
-                    ++it;
-                }
+                it = escrow_ctrl_m.erase( it );
             }
+            else
+            {
+                ++it;
+            }
+        }
 
         return ret;
     }
@@ -217,87 +219,71 @@ namespace sgns
             return;
         }
 
-            auto elem = out_transactions.front();
-            out_transactions.pop_front();
-            boost::format tx_key{ std::string( TRANSACTION_BASE_FORMAT ) };
+        auto elem = out_transactions.front();
+        out_transactions.pop_front();
+        boost::format tx_key{ std::string( TRANSACTION_BASE_FORMAT ) };
 
-            tx_key % TEST_NET_ID;
+        tx_key % TEST_NET_ID;
 
-            auto transaction_path = tx_key.str() + elem->GetTransactionFullPath();
+        auto transaction_path = tx_key.str() + elem->GetTransactionFullPath();
 
-            sgns::crdt::GlobalDB::Buffer data_transaction;
+        sgns::crdt::GlobalDB::Buffer data_transaction;
 
-            data_transaction.put( elem->SerializeByteVector() );
-            db_m->Put( { transaction_path }, data_transaction );
-            account_m->nonce++;
+        data_transaction.put( elem->SerializeByteVector() );
+        db_m->Put( { transaction_path }, data_transaction );
+        account_m->nonce++;
 
-            auto maybe_last_hash   = block_storage_m->getLastFinalizedBlockHash();
-            auto maybe_last_header = block_storage_m->getBlockHeader( maybe_last_hash.value() );
+        auto maybe_last_hash   = block_storage_m->getLastFinalizedBlockHash();
+        auto maybe_last_header = block_storage_m->getBlockHeader( maybe_last_hash.value() );
 
-            primitives::BlockHeader header( maybe_last_header.value() );
+        primitives::BlockHeader header( maybe_last_header.value() );
 
-            header.parent_hash = maybe_last_hash.value();
+        header.parent_hash = maybe_last_hash.value();
 
-            header.number++;
+        header.number++;
 
-            auto new_hash = block_storage_m->putBlockHeader( header );
+        auto new_hash = block_storage_m->putBlockHeader( header );
 
-            primitives::BlockBody body{ { base::Buffer{}.put( transaction_path ) } };
+        primitives::BlockBody body{ { base::Buffer{}.put( transaction_path ) } };
 
         primitives::BlockData block_data{ new_hash.value(), header, body };
 
-            block_storage_m->putBlockData( header.number, block_data );
+        block_storage_m->putBlockData( header.number, block_data );
 
-            m_logger->debug( "Putting on " + transaction_path +
-                             " the data: " + std::string( data_transaction.toString() ) );
-            m_logger->debug( "Recording Block with number " + std::to_string( header.number ) );
-            block_storage_m->setLastFinalizedBlockHash( new_hash.value() );
-        }
-
-    {
-        outcome::result<primitives::BlockBody> retval          = outcome::failure( boost::system::error_code{} );
-        std::size_t                            transaction_num = 0;
-        bool                                   ret             = false;
-        //do
-        {
-            retval = block_storage_m->getBlockBody( block_number /*, transaction_num*/ );
-            //m_logger->debug( "Trying to read transaction " + std::to_string( transaction_num ) );
-
-            if ( retval )
-            {
-                //any block will need checking
-                m_logger->debug( "Getting transaction " + std::to_string( transaction_num ) );
-
-                //this is a vector<extrinsics>, which is a vector<buffer>
-                auto block_body = retval.value();
-                //m_logger->debug( "Destination address of Header: " + std::string( DAGHeader.toString() ) );
-
-                //Just one buffer for now
-                if ( block_body.size() == 1 )
-                {
-                    m_logger->info( "The block data is " + std::string( block_body[0].data.toString() ) );
-
-                    ParseTransaction( std::string( block_body[0].data.toString() ) );
-                }
-                else
-                {
-                    m_logger->info( "The block size is " + std::to_string( block_body.size() ) );
-                }
-                transaction_num++;
-                ret = true;
-            }
-        }
-        //while ( !retval );
-        return ret;
+        m_logger->debug( "Putting on " + transaction_path +
+                         " the data: " + std::string( data_transaction.toString() ) );
+        m_logger->debug( "Recording Block with number " + std::to_string( header.number ) );
+        block_storage_m->setLastFinalizedBlockHash( new_hash.value() );
     }
 
-    void TransactionManager::ParseTransaction( const std::string &transaction_key )
+    outcome::result<std::vector<std::vector<uint8_t>>> TransactionManager::GetTransactionsFromBlock(
+        const primitives::BlockId &block_number )
     {
-        auto maybe_transaction_data = db_m->Get( { transaction_key } );
-        if ( maybe_transaction_data )
+        if ( auto block_body = block_storage_m->getBlockBody( block_number ); block_body )
         {
-            auto maybe_dag = IGeniusTransactions::DeSerializeDAGStruct( maybe_transaction_data.value().toVector() );
-            m_logger->debug( "Found the data, deserializing into DAG " + transaction_key );
+            std::vector<std::vector<uint8_t>> ret;
+
+            for ( auto &key : block_body.value() )
+            {
+                if ( auto transaction = ParseTransaction( key.data.toString() ); transaction )
+                {
+                    ret.push_back( std::move( transaction.value() ) );
+                }
+            }
+
+            return ret;
+        }
+
+        return std::errc::invalid_argument;
+    }
+
+    outcome::result<std::vector<uint8_t>> TransactionManager::ParseTransaction( std::string_view transaction_key )
+    {
+        if ( auto maybe_transaction_data = db_m->Get( { std::string( transaction_key ) } ); maybe_transaction_data )
+        {
+            auto transaction_data = maybe_transaction_data.value().toVector();
+            auto maybe_dag        = IGeniusTransactions::DeSerializeDAGStruct( transaction_data );
+            m_logger->debug( "Found the data, deserializing into DAG {}", transaction_key );
             if ( maybe_dag )
             {
                 const std::string &string_src_address = maybe_dag.value().source_addr();
@@ -308,25 +294,28 @@ namespace sgns
                 if ( maybe_dag.value().type() == "transfer" )
                 {
                     m_logger->info( "Transfer transaction" );
-                    ParseTransferTransaction( maybe_transaction_data.value().toVector() );
+                    ParseTransferTransaction( transaction_data );
                 }
                 else if ( maybe_dag.value().type() == "mint" )
                 {
                     m_logger->info( "Mint transaction" );
-                    ParseMintTransaction( maybe_transaction_data.value().toVector() );
+                    ParseMintTransaction( transaction_data );
                 }
                 else if ( maybe_dag.value().type() == "escrow" )
                 {
                     m_logger->info( "Escrow transaction" );
-                    ParseEscrowTransaction( maybe_transaction_data.value().toVector() );
+                    ParseEscrowTransaction( transaction_data );
                 }
                 else if ( maybe_dag.value().type() == "process" )
                 {
                     m_logger->info( "Process transaction" );
-                    ParseProcessingTransaction( maybe_transaction_data.value().toVector() );
+                    ParseProcessingTransaction( transaction_data );
                 }
             }
+            return transaction_data;
         }
+
+        return std::errc::invalid_argument;
     }
 
     /**
@@ -335,33 +324,17 @@ namespace sgns
     void TransactionManager::CheckBlockchain()
     {
         outcome::result<primitives::BlockHeader> retval = outcome::failure( boost::system::error_code{} );
-        //m_logger->debug( "Checking Blockchain" );
+
         do
         {
-            retval = block_storage_m->getBlockHeader( last_block_id_m );
-            if ( retval )
+            if ( retval = block_storage_m->getBlockHeader( last_block_id_m ); retval )
             {
-                //any block will need checking
-                //m_logger->debug( "Found new blockchain entry for block " + std::to_string( last_block_id_m ) );
-                //m_logger->debug( "Getting DAGHeader value" );
-                bool valid_transaction = true;
-
-                auto DAGHeader = retval.value();
-                //m_logger->debug( "Destination address of Header: " + std::string( DAGHeader.toString() ) );
-
-                //validation that index is the same as number
-                if ( DAGHeader.number == last_block_id_m )
+                if ( auto DAGHeader = retval.value(); DAGHeader.number == last_block_id_m )
                 {
-                    //m_logger->info( "Checking transactions from block" );
-                    valid_transaction = GetTransactionsFromBlock( DAGHeader.number );
-                }
-                if ( valid_transaction )
-                {
-                    last_block_id_m++;
-                }
-                else
-                {
-                    //m_logger->debug( "Invalid transaction" );
+                    if ( auto transactions = GetTransactionsFromBlock( DAGHeader.number ); transactions )
+                    {
+                        last_block_id_m++;
+                    }
                 }
             }
 
@@ -383,13 +356,13 @@ namespace sgns
                 account_m->PutUTXO( new_utxo );
             }
         }
-        //tx.GetInputInfos()
-        for(auto &tx : tx.GetInputInfos())
-        {
-            std::cout << "UTXO to be updated " << tx.txid_hash_.toReadableString() << std::endl; 
-            std::cout << "UTXO output" << tx.output_idx_ << std::endl; 
 
+        for ( auto &tx : tx.GetInputInfos() )
+        {
+            std::cout << "UTXO to be updated " << tx.txid_hash_.toReadableString() << std::endl;
+            std::cout << "UTXO output" << tx.output_idx_ << std::endl;
         }
+
         account_m->RefreshUTXOs( tx.GetInputInfos() );
     }
 
@@ -432,8 +405,12 @@ namespace sgns
                 escrow_utxo.txid_hash_  = hash;
                 escrow_utxo.output_idx_ = 0;
                 escrow_utxo.signature_  = ""; //TODO - Insert signature
-                EscrowCtrl ctrl( tx.GetDestAddress(), tx.GetDestCut(), dest_infos.outputs_[0].dest_address,
-                                 dest_infos.outputs_[0].encrypted_amount, tx.GetNumChunks(), escrow_utxo );
+                EscrowCtrl ctrl( tx.GetDestAddress(),
+                                 tx.GetDestCut(),
+                                 dest_infos.outputs_[0].dest_address,
+                                 dest_infos.outputs_[0].encrypted_amount,
+                                 tx.GetNumChunks(),
+                                 escrow_utxo );
                 escrow_ctrl_m.push_back( ctrl );
             }
         }
@@ -446,31 +423,31 @@ namespace sgns
             return;
         }
 
-            ProcessingTransaction tx = ProcessingTransaction::DeSerializeByteVector( transaction_data );
+        ProcessingTransaction tx = ProcessingTransaction::DeSerializeByteVector( transaction_data );
 
-            for ( auto &ctrl : escrow_ctrl_m )
+        for ( auto &ctrl : escrow_ctrl_m )
+        {
+            if ( ctrl.job_hash == tx.GetJobHash() )
             {
-                if ( ctrl.job_hash == tx.GetJobHash() )
-                {
-                    ctrl.subtask_info[tx.GetSubtaskID()] = tx.GetSrcAddress<uint256_t>();
+                ctrl.subtask_info[tx.GetSubtaskID()] = tx.GetSrcAddress<uint256_t>();
 
-                    if ( ctrl.subtask_info.size() == ctrl.num_subtasks )
-                    {
-                        //Processing done
+                if ( ctrl.subtask_info.size() == ctrl.num_subtasks )
+                {
+                    //Processing done
                     uint64_t peers_amount = ( ctrl.dev_cut * uint64_t{ ctrl.full_amount } ) / ctrl.subtask_info.size();
                     auto     remainder    = uint64_t{ ctrl.full_amount };
 
-                        std::set<std::string> subtasks_ids;
-                        for ( auto &pair : ctrl.subtask_info )
-                        {
-                            ctrl.payout_peers.push_back( { uint256_t{ peers_amount }, pair.second } );
-                            remainder -= peers_amount;
-                            subtasks_ids.insert( pair.first );
-                        }
-                        ctrl.payout_peers.push_back( { uint256_t{ remainder }, ctrl.dev_addr } );
-                        if ( processing_finished_cb_m )
-                        {
-                            processing_finished_cb_m( tx.GetSubtaskID(), subtasks_ids );
+                    std::set<std::string> subtasks_ids;
+                    for ( auto &pair : ctrl.subtask_info )
+                    {
+                        ctrl.payout_peers.push_back( { uint256_t{ peers_amount }, pair.second } );
+                        remainder -= peers_amount;
+                        subtasks_ids.insert( pair.first );
+                    }
+                    ctrl.payout_peers.push_back( { uint256_t{ remainder }, ctrl.dev_addr } );
+                    if ( processing_finished_cb_m )
+                    {
+                        processing_finished_cb_m( tx.GetSubtaskID(), subtasks_ids );
                     }
                 }
             }
