@@ -62,17 +62,19 @@ namespace sgns
                 COMPONENT_CONSTANT_COLUMNS + LOOKUP_CONSTANT_COLUMNS,
                 COMPONENT_SELECTOR_COLUMNS + LOOKUP_SELECTOR_COLUMNS );
 
-            nil::blueprint::generation_mode gen_mode = nil::blueprint::generation_mode::assignments() | nil::blueprint::generation_mode::circuit();
+            nil::blueprint::generation_mode gen_mode =
+                nil::blueprint::generation_mode::assignments() | nil::blueprint::generation_mode::circuit();
+            nil::blueprint::print_format circuit_output_print_format = no_print;
 
-            //nil::blueprint::assigner<BlueprintFieldType> assigner_instance( desc,
-            //                                                                STACK_SIZE,
-            //                                                                std::string(LOG_LEVEL),
-            //                                                                MAX_NUM_PROVERS,
-            //                                                                TARGET_PROVER,
-            //                                                                gen_mode,
-            //                                                                policy,
-            //                                                                circuit_output_print_format,
-            //                                                                check_validity );
+            nil::blueprint::assigner<BlueprintFieldType> assigner_instance( desc,
+                                                                            STACK_SIZE,
+                                                                            LOG_LEVEL,
+                                                                            MAX_NUM_PROVERS,
+                                                                            TARGET_PROVER,
+                                                                            gen_mode,
+                                                                            std::string(POLICY),
+                                                                            circuit_output_print_format,
+                                                                            std::string(CHECK_VALIDITY) == "check" );
         }
 
         ~GeniusAssigner() = default;
@@ -86,9 +88,11 @@ namespace sgns
         constexpr static const std::size_t      COMPONENT_SELECTOR_COLUMNS = 50;
         constexpr static const std::size_t      LOOKUP_SELECTOR_COLUMNS    = 6;
         constexpr static const long             STACK_SIZE                 = 4000000;
-        constexpr static const std::string_view LOG_LEVEL                  = "info";
+        constexpr static const boost::log::trivial::severity_level LOG_LEVEL                  = boost::log::trivial::info;
         constexpr static const std::uint32_t    MAX_NUM_PROVERS            = 1;
         constexpr static const std::uint32_t    TARGET_PROVER              = std::numeric_limits<std::uint32_t>::max();
+        constexpr static const std::string_view POLICY                     = "default";
+        constexpr static const std::string_view CHECK_VALIDITY             = "";
     };
 }
 
