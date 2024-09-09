@@ -245,6 +245,27 @@ include_directories(
     "${_THIRDPARTY_BUILD_DIR}/crypto3/include"
 )
 
+# blueprint
+set(blueprint_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/blueprint/include")
+set(blueprint_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/blueprint/lib")
+set(blueprint_DIR "${_THIRDPARTY_BUILD_DIR}/blueprint/lib/cmake/blueprint")
+find_package(blueprint CONFIG REQUIRED)
+include_directories(${blueprint_INCLUDE_DIR})
+
+# circifier
+set(LLVM_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/circifier/include")
+set(LLVM_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/circifier/lib")
+set(LLVM_DIR "${_THIRDPARTY_BUILD_DIR}/circifier/lib/cmake/llvm")
+find_package(LLVM CONFIG REQUIRED)
+include_directories(${LLVM_INCLUDE_DIR})
+
+# assigner
+set(assigner_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/assigner/include")
+set(assigner_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/assigner/lib")
+set(assigner_DIR "${_THIRDPARTY_BUILD_DIR}/assigner/lib/cmake/assigner")
+find_package(assigner CONFIG REQUIRED)
+include_directories(${assigner_INCLUDE_DIR})
+
 # gnus_upnp
 set(gnus_upnp_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/gnus_upnp/include")
 set(gnus_upnp_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/gnus_upnp/lib")
