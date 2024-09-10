@@ -219,17 +219,21 @@ namespace sgns
             return;
         }
 
-        auto elem = out_transactions.front();
+        auto transaction = out_transactions.front();
         out_transactions.pop_front();
         boost::format tx_key{ std::string( TRANSACTION_BASE_FORMAT ) };
 
         tx_key % TEST_NET_ID;
 
-        auto transaction_path = tx_key.str() + elem->GetTransactionFullPath();
+        auto transaction_path = tx_key.str() + transaction->GetTransactionFullPath();
+
+        auto serialized_transaction = transaction->SerializeByteVector();
 
         sgns::crdt::GlobalDB::Buffer data_transaction;
+        data_transaction.put( serialized_transaction );
 
-        data_transaction.put( elem->SerializeByteVector() );
+        this->transactions.push_back( std::move( serialized_transaction ) );
+
         db_m->Put( { transaction_path }, data_transaction );
         account_m->nonce++;
 
@@ -333,6 +337,9 @@ namespace sgns
                 {
                     if ( auto transactions = GetTransactionsFromBlock( DAGHeader.number ); transactions )
                     {
+                        this->transactions.insert( this->transactions.end(),
+                                                   transactions.value().begin(),
+                                                   transactions.value().end() );
                         last_block_id_m++;
                     }
                 }

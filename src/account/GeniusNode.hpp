@@ -78,6 +78,11 @@ namespace sgns
         void     AddPeer( const std::string &peer );
         uint64_t GetBalance();
 
+        [[nodiscard]] const std::vector<std::vector<uint8_t>> &GetTransactions() const
+        {
+            return transaction_manager_->GetTransactions();
+        }
+
         static std::vector<uint8_t> GetImageByCID( const std::string &cid );
 
     private:
