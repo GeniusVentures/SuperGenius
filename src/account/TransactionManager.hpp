@@ -55,6 +55,11 @@ namespace sgns
 
         const GeniusAccount &GetAccount() const;
 
+        const std::vector<std::vector<uint8_t>> &GetTransactions() const
+        {
+            return transactions;
+        }
+
         bool     TransferFunds( const uint256_t &amount, const uint256_t &destination );
         void     MintFunds( uint64_t amount );
         bool     HoldEscrow( uint64_t           amount,
