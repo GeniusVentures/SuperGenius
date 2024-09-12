@@ -166,14 +166,15 @@ namespace sgns
                     {
                         std::cout << "Something wrong with output " << "./table.tbl" << std::endl;
                     }
-
-                    print_assignment_table<nil::marshalling::option::big_endian,
-                                           ArithmetizationType,
-                                           BlueprintFieldType>( assigner_instance.assignments[0],
-                                                                print_table_kind::SINGLE_PROVER,
-                                                                COMPONENT_CONSTANT_COLUMNS,
-                                                                COMPONENT_SELECTOR_COLUMNS,
-                                                                otable );
+                    auto AssignmentTable =
+                        BuildPlonkAssignmentTable<nil::marshalling::option::big_endian,
+                                                  ArithmetizationType,
+                                                  BlueprintFieldType>( assigner_instance.assignments[0],
+                                                                       print_table_kind::SINGLE_PROVER,
+                                                                       COMPONENT_CONSTANT_COLUMNS,
+                                                                       COMPONENT_SELECTOR_COLUMNS );
+                    print_assignment_table<nil::marshalling::option::big_endian, ArithmetizationType>( AssignmentTable,
+                                                                                                       otable );
 
                     otable.close();
                 }
@@ -187,12 +188,13 @@ namespace sgns
                     {
                         std::cout << "Something wrong with output " << "./circuit.crct" << std::endl;
                     }
-
-                    print_circuit<nil::marshalling::option::big_endian, ArithmetizationType, ConstraintSystemType>(
-                        assigner_instance.circuits[0],
-                        assigner_instance.assignments[0],
-                        false,
-                        ocircuit );
+                    auto PlonkCircuit =
+                        BuildPlonkConstraintSystem<nil::marshalling::option::big_endian,
+                                                   ArithmetizationType,
+                                                   ConstraintSystemType>( assigner_instance.circuits[0],
+                                                                          assigner_instance.assignments[0],
+                                                                          false );
+                    print_circuit<nil::marshalling::option::big_endian, ConstraintSystemType>( PlonkCircuit, ocircuit );
                     ocircuit.close();
                 }
             }
@@ -217,14 +219,16 @@ namespace sgns
                             std::cout << "Something wrong with output " << "./table.tbl" + std::to_string( idx )
                                       << std::endl;
                         }
-
-                        print_assignment_table<nil::marshalling::option::big_endian,
-                                               ArithmetizationType,
-                                               BlueprintFieldType>( assigner_instance.assignments[idx],
-                                                                    print_table_kind::MULTI_PROVER,
-                                                                    COMPONENT_CONSTANT_COLUMNS,
-                                                                    COMPONENT_SELECTOR_COLUMNS,
-                                                                    otable );
+                        auto AssignmentTable =
+                            BuildPlonkAssignmentTable<nil::marshalling::option::big_endian,
+                                                      ArithmetizationType,
+                                                      BlueprintFieldType>( assigner_instance.assignments[idx],
+                                                                           print_table_kind::MULTI_PROVER,
+                                                                           COMPONENT_CONSTANT_COLUMNS,
+                                                                           COMPONENT_SELECTOR_COLUMNS );
+                        print_assignment_table<nil::marshalling::option::big_endian, ArithmetizationType>(
+                            AssignmentTable,
+                            otable );
 
                         otable.close();
                     }
@@ -242,11 +246,14 @@ namespace sgns
                         }
 
                         ASSERT_MSG( idx < assigner_instance.circuits.size(), "Not found circuit" );
-                        print_circuit<nil::marshalling::option::big_endian, ArithmetizationType, ConstraintSystemType>(
-                            assigner_instance.circuits[idx],
-                            assigner_instance.assignments[idx],
-                            ( idx > 0 ),
-                            ocircuit );
+                        auto PlonkCircuit =
+                            BuildPlonkConstraintSystem<nil::marshalling::option::big_endian,
+                                                       ArithmetizationType,
+                                                       ConstraintSystemType>( assigner_instance.circuits[idx],
+                                                                              assigner_instance.assignments[idx],
+                                                                              ( idx > 0 ) );
+                        print_circuit<nil::marshalling::option::big_endian, ConstraintSystemType>( PlonkCircuit,
+                                                                                                   ocircuit );
 
                         ocircuit.close();
                     }
@@ -362,53 +369,71 @@ namespace sgns
             std::copy( table_col.begin(), table_col.end(), start );
         }
 
-        //template <typename Endianness, typename ArithmetizationType, typename BlueprintFieldType>
-        //nil::crypto3::marshalling::types::plonk_assignment_table<nil::marshalling::field_type<Endianness>,
-        //                                                         assignment_proxy<ArithmetizationType>>
-        //BuildPlonkAssignmentTable( const assignment_proxy<ArithmetizationType> &table_proxy,
-        //                           print_table_kind                             print_kind,
-        //                           std::uint32_t                                ComponentConstantColumns,
-        //                           std::uint32_t                                ComponentSelectorColumns )
-        //{
-        //    using table_value_marshalling_type =
-        //        nil::crypto3::marshalling::types::plonk_assignment_table<nil::marshalling::field_type<Endianness>,
-        //                                                                 assignment_proxy<ArithmetizationType>>;
-        //    std::uint32_t usable_rows_amount = GetUsableRowsAmount<ArithmetizationType>( table_proxy, print_kind );
-        //                std::uint32_t total_columns =
-        //        witness_size + shared_size + public_input_size + constant_size + selector_size;
-        //
-        //
-        //    std::uint32_t padded_rows_amount = std::pow( 2, std::ceil( std::log2( usable_rows_amount ) ) );
-        //    if ( padded_rows_amount == usable_rows_amount )
-        //    {
-        //        padded_rows_amount *= 2;
-        //    }
-        //    if ( padded_rows_amount < 8 )
-        //    {
-        //        padded_rows_amount = 8;
-        //    }
-        //    total_size = padded_rows_amount * total_columns;
-        //    auto filled_val = table_value_marshalling_type( std::make_tuple(
-        //        nil::marshalling::types::integral<TTypeBase, std::size_t>( table_proxy.witnesses_amount() ),
-        //        nil::marshalling::types::integral<TTypeBase, std::size_t>(
-        //            table_proxy.public_inputs_amount() + ( print_kind == print_table_kind::MULTI_PROVER ) ? 1 : 0 ),
-        //        nil::marshalling::types::integral<TTypeBase, std::size_t>( table_proxy.constants_amount() ),
-        //        nil::marshalling::types::integral<TTypeBase, std::size_t>( table_proxy.selectors_amount() ),
-        //        nil::marshalling::types::integral<TTypeBase, std::size_t>( usable_rows_amount ),
-        //        nil::marshalling::types::integral<TTypeBase, std::size_t>( padded_rows_amount ),
-        //        nil::crypto3::marshalling::types::
-        //            fill_field_element_vector<typename AssignmentTableType::field_type::value_type, Endianness>(
-        //                table_witness_values ),
-        //        nil::crypto3::marshalling::types::
-        //            fill_field_element_vector<typename AssignmentTableType::field_type::value_type, Endianness>(
-        //                table_public_input_values ),
-        //        nil::crypto3::marshalling::types::
-        //            fill_field_element_vector<typename AssignmentTableType::field_type::value_type, Endianness>(
-        //                table_constant_values ),
-        //        nil::crypto3::marshalling::types::
-        //            fill_field_element_vector<typename AssignmentTableType::field_type::value_type, Endianness>(
-        //                table_selector_values ) ) );
-        //}
+        template <typename Endianness, typename ArithmetizationType, typename BlueprintFieldType>
+        nil::crypto3::marshalling::types::plonk_assignment_table<nil::marshalling::field_type<Endianness>,
+                                                                 assignment_proxy<ArithmetizationType>>
+        BuildPlonkAssignmentTable( const assignment_proxy<ArithmetizationType> &table_proxy,
+                                   print_table_kind                             print_kind,
+                                   std::uint32_t                                ComponentConstantColumns,
+                                   std::uint32_t                                ComponentSelectorColumns )
+        {
+            using AssignmentTableType = assignment_proxy<ArithmetizationType>;
+
+            std::uint32_t total_size;
+            std::uint32_t shared_size        = ( print_kind == print_table_kind::MULTI_PROVER ) ? 1 : 0;
+            std::uint32_t public_input_size  = table_proxy.public_inputs_amount();
+            std::uint32_t usable_rows_amount = GetUsableRowsAmount<ArithmetizationType>( table_proxy, print_kind );
+            //std::uint32_t total_columns      = table_proxy.witnesses_amount() + shared_size +
+            //                              table_proxy.public_inputs_amount() + table_proxy.selectors_amount() +
+            //                              table_proxy.selectors_amount();
+
+            std::uint32_t padded_rows_amount = std::pow( 2, std::ceil( std::log2( usable_rows_amount ) ) );
+            if ( padded_rows_amount == usable_rows_amount )
+            {
+                padded_rows_amount *= 2;
+            }
+            if ( padded_rows_amount < 8 )
+            {
+                padded_rows_amount = 8;
+            }
+            //total_size = padded_rows_amount * total_columns;
+
+            using TTypeBase = nil::marshalling::field_type<Endianness>;
+            using table_value_marshalling_type =
+                nil::crypto3::marshalling::types::plonk_assignment_table<TTypeBase, AssignmentTableType>;
+
+            using column_type = typename crypto3::zk::snark::plonk_column<BlueprintFieldType>;
+
+            auto table_vectors = GetTableVectors<AssignmentTableType, BlueprintFieldType>( table_proxy,
+                                                                                           print_kind,
+                                                                                           ComponentConstantColumns,
+                                                                                           ComponentSelectorColumns,
+                                                                                           padded_rows_amount );
+
+            auto filled_val = table_value_marshalling_type( std::make_tuple(
+                nil::marshalling::types::integral<TTypeBase, std::size_t>( table_proxy.witnesses_amount() ),
+                nil::marshalling::types::integral<TTypeBase, std::size_t>( table_proxy.public_inputs_amount() +
+                                                                           shared_size ),
+                nil::marshalling::types::integral<TTypeBase, std::size_t>( table_proxy.constants_amount() ),
+                nil::marshalling::types::integral<TTypeBase, std::size_t>( table_proxy.selectors_amount() ),
+                nil::marshalling::types::integral<TTypeBase, std::size_t>( usable_rows_amount ),
+                nil::marshalling::types::integral<TTypeBase, std::size_t>( padded_rows_amount ),
+                nil::crypto3::marshalling::types::
+                    fill_field_element_vector<typename AssignmentTableType::field_type::value_type, Endianness>(
+                        table_vectors.witness_values ),
+                nil::crypto3::marshalling::types::
+                    fill_field_element_vector<typename AssignmentTableType::field_type::value_type, Endianness>(
+                        table_vectors.public_input_values ),
+                nil::crypto3::marshalling::types::
+                    fill_field_element_vector<typename AssignmentTableType::field_type::value_type, Endianness>(
+                        table_vectors.constant_values ),
+                nil::crypto3::marshalling::types::
+                    fill_field_element_vector<typename AssignmentTableType::field_type::value_type, Endianness>(
+                        table_vectors.selector_values ) ) );
+
+            return filled_val;
+        }
+
         template <typename ArithmetizationType>
         std::uint32_t GetUsableRowsAmount( const assignment_proxy<ArithmetizationType> &table_proxy,
                                            print_table_kind                             print_kind )
@@ -485,95 +510,60 @@ namespace sgns
             std::vector<typename AssignmentTableType::field_type::value_type> selector_values;
         };
 
-        template <typename Endianness, typename ArithmetizationType, typename BlueprintFieldType>
-        void print_assignment_table( const assignment_proxy<ArithmetizationType> &table_proxy,
-                                     print_table_kind                             print_kind,
-                                     std::uint32_t                                ComponentConstantColumns,
-                                     std::uint32_t                                ComponentSelectorColumns,
-                                     std::ostream                                &out = std::cout )
+        template <typename AssignmentTableType, typename BlueprintFieldType>
+        AssignTableValueVectors<AssignmentTableType> GetTableVectors(
+            const assignment_proxy<ArithmetizationType> &table_proxy,
+            print_table_kind                             print_kind,
+            std::uint32_t                                ComponentConstantColumns,
+            std::uint32_t                                ComponentSelectorColumns,
+            std::uint32_t                                padded_rows_amount )
         {
-            using AssignmentTableType = assignment_proxy<ArithmetizationType>;
-
-            std::uint32_t total_size;
-            std::uint32_t shared_size       = ( print_kind == print_table_kind::MULTI_PROVER ) ? 1 : 0;
-            std::uint32_t public_input_size = table_proxy.public_inputs_amount();
-            std::uint32_t witness_size      = table_proxy.witnesses_amount();
-            std::uint32_t constant_size     = table_proxy.constants_amount();
-            std::uint32_t selector_size     = table_proxy.selectors_amount();
-
-            std::uint32_t usable_rows_amount = GetUsableRowsAmount<ArithmetizationType>( table_proxy, print_kind );
-            std::uint32_t total_columns =
-                witness_size + shared_size + public_input_size + constant_size + selector_size;
-
-            std::uint32_t padded_rows_amount = std::pow( 2, std::ceil( std::log2( usable_rows_amount ) ) );
-            if ( padded_rows_amount == usable_rows_amount )
-            {
-                padded_rows_amount *= 2;
-            }
-            if ( padded_rows_amount < 8 )
-            {
-                padded_rows_amount = 8;
-            }
-            total_size = padded_rows_amount * total_columns;
-
-            using TTypeBase = nil::marshalling::field_type<Endianness>;
-            using table_value_marshalling_type =
-                nil::crypto3::marshalling::types::plonk_assignment_table<TTypeBase, AssignmentTableType>;
-
-            using column_type = typename crypto3::zk::snark::plonk_column<BlueprintFieldType>;
-
+            std::uint32_t shared_size = ( print_kind == print_table_kind::MULTI_PROVER ) ? 1 : 0;
             AssignTableValueVectors<AssignmentTableType> table_vectors;
-            table_vectors.witness_values.resize( padded_rows_amount * witness_size, 0 );
-            table_vectors.public_input_values.resize( padded_rows_amount * ( public_input_size + shared_size ), 0 );
-            table_vectors.constant_values.resize( padded_rows_amount * constant_size, 0 );
-            table_vectors.selector_values.resize( padded_rows_amount * selector_size, 0 );
-
-            //std::vector<typename AssignmentTableType::field_type::value_type> table_witness_values( padded_rows_amount *
-            //                                                                                            witness_size,
-            //                                                                                        0 );
-            std::vector<typename AssignmentTableType::field_type::value_type> table_public_input_values(
-                padded_rows_amount * ( public_input_size + shared_size ),
-                0 );
-            std::vector<typename AssignmentTableType::field_type::value_type> table_constant_values(
-                padded_rows_amount * constant_size,
-                0 );
-            std::vector<typename AssignmentTableType::field_type::value_type> table_selector_values(
-                padded_rows_amount * selector_size,
-                0 );
+            table_vectors.witness_values.resize( padded_rows_amount * table_proxy.witnesses_amount(), 0 );
+            table_vectors.public_input_values.resize( padded_rows_amount *
+                                                          ( table_proxy.public_inputs_amount() + shared_size ),
+                                                      0 );
+            table_vectors.constant_values.resize( padded_rows_amount * table_proxy.constants_amount(), 0 );
+            table_vectors.selector_values.resize( padded_rows_amount * table_proxy.selectors_amount(), 0 );
             if ( print_kind == print_table_kind::SINGLE_PROVER )
             {
                 auto it = table_vectors.witness_values.begin();
-                for ( std::uint32_t i = 0; i < witness_size; i++ )
+                for ( std::uint32_t i = 0; i < table_proxy.witnesses_amount(); i++ )
                 {
-                    fill_vector_value<typename AssignmentTableType::field_type::value_type, column_type>(
+                    fill_vector_value<typename AssignmentTableType::field_type::value_type,
+                                      typename crypto3::zk::snark::plonk_column<BlueprintFieldType>>(
                         table_vectors.witness_values,
                         table_proxy.witness( i ),
                         it );
                     it += padded_rows_amount;
                 }
-                it = table_public_input_values.begin();
-                for ( std::uint32_t i = 0; i < public_input_size; i++ )
+                it = table_vectors.public_input_values.begin();
+                for ( std::uint32_t i = 0; i < table_proxy.public_inputs_amount(); i++ )
                 {
-                    fill_vector_value<typename AssignmentTableType::field_type::value_type, column_type>(
-                        table_public_input_values,
+                    fill_vector_value<typename AssignmentTableType::field_type::value_type,
+                                      typename crypto3::zk::snark::plonk_column<BlueprintFieldType>>(
+                        table_vectors.public_input_values,
                         table_proxy.public_input( i ),
                         it );
                     it += padded_rows_amount;
                 }
-                it = table_constant_values.begin();
-                for ( std::uint32_t i = 0; i < constant_size; i++ )
+                it = table_vectors.constant_values.begin();
+                for ( std::uint32_t i = 0; i < table_proxy.constants_amount(); i++ )
                 {
-                    fill_vector_value<typename AssignmentTableType::field_type::value_type, column_type>(
-                        table_constant_values,
+                    fill_vector_value<typename AssignmentTableType::field_type::value_type,
+                                      typename crypto3::zk::snark::plonk_column<BlueprintFieldType>>(
+                        table_vectors.constant_values,
                         table_proxy.constant( i ),
                         it );
                     it += padded_rows_amount;
                 }
-                it = table_selector_values.begin();
-                for ( std::uint32_t i = 0; i < selector_size; i++ )
+                it = table_vectors.selector_values.begin();
+                for ( std::uint32_t i = 0; i < table_proxy.selectors_amount(); i++ )
                 {
-                    fill_vector_value<typename AssignmentTableType::field_type::value_type, column_type>(
-                        table_selector_values,
+                    fill_vector_value<typename AssignmentTableType::field_type::value_type,
+                                      typename crypto3::zk::snark::plonk_column<BlueprintFieldType>>(
+                        table_vectors.selector_values,
                         table_proxy.selector( i ),
                         it );
                     it += padded_rows_amount;
@@ -585,7 +575,7 @@ namespace sgns
                 const auto   &selector_rows = table_proxy.get_used_selector_rows();
                 std::uint32_t witness_idx   = 0;
                 // witness
-                for ( std::size_t i = 0; i < witness_size; i++ )
+                for ( std::size_t i = 0; i < table_proxy.witnesses_amount(); i++ )
                 {
                     const auto    column_size = table_proxy.witness_column_size( i );
                     std::uint32_t offset      = 0;
@@ -601,11 +591,12 @@ namespace sgns
                 }
                 // public input
                 std::uint32_t pub_inp_idx = 0;
-                auto          it_pub_inp  = table_public_input_values.begin();
-                for ( std::uint32_t i = 0; i < public_input_size; i++ )
+                auto          it_pub_inp  = table_vectors.public_input_values.begin();
+                for ( std::uint32_t i = 0; i < table_proxy.public_inputs_amount(); i++ )
                 {
-                    fill_vector_value<typename AssignmentTableType::field_type::value_type, column_type>(
-                        table_public_input_values,
+                    fill_vector_value<typename AssignmentTableType::field_type::value_type,
+                                      typename crypto3::zk::snark::plonk_column<BlueprintFieldType>>(
+                        table_vectors.public_input_values,
                         table_proxy.public_input( i ),
                         it_pub_inp );
                     it_pub_inp  += padded_rows_amount;
@@ -613,8 +604,9 @@ namespace sgns
                 }
                 for ( std::uint32_t i = 0; i < shared_size; i++ )
                 {
-                    fill_vector_value<typename AssignmentTableType::field_type::value_type, column_type>(
-                        table_public_input_values,
+                    fill_vector_value<typename AssignmentTableType::field_type::value_type,
+                                      typename crypto3::zk::snark::plonk_column<BlueprintFieldType>>(
+                        table_vectors.public_input_values,
                         table_proxy.shared( i ),
                         it_pub_inp );
                     it_pub_inp  += padded_rows_amount;
@@ -630,7 +622,7 @@ namespace sgns
                     {
                         if ( j < column_size )
                         {
-                            table_constant_values[constant_idx + offset] = table_proxy.constant( i, j );
+                            table_vectors.constant_values[constant_idx + offset] = table_proxy.constant( i, j );
                             offset++;
                         }
                     }
@@ -638,11 +630,12 @@ namespace sgns
                     constant_idx += padded_rows_amount;
                 }
 
-                auto it_const = table_constant_values.begin() + constant_idx;
-                for ( std::uint32_t i = ComponentConstantColumns; i < constant_size; i++ )
+                auto it_const = table_vectors.constant_values.begin() + constant_idx;
+                for ( std::uint32_t i = ComponentConstantColumns; i < table_proxy.constants_amount(); i++ )
                 {
-                    fill_vector_value<typename AssignmentTableType::field_type::value_type, column_type>(
-                        table_constant_values,
+                    fill_vector_value<typename AssignmentTableType::field_type::value_type,
+                                      typename crypto3::zk::snark::plonk_column<BlueprintFieldType>>(
+                        table_vectors.constant_values,
                         table_proxy.constant( i ),
                         it_const );
                     it_const     += padded_rows_amount;
@@ -660,7 +653,7 @@ namespace sgns
                         {
                             if ( selector_rows.find( j ) != selector_rows.end() )
                             {
-                                table_selector_values[selector_idx + offset] = table_proxy.selector( i, j );
+                                table_vectors.selector_values[selector_idx + offset] = table_proxy.selector( i, j );
                             }
                             offset++;
                         }
@@ -668,64 +661,42 @@ namespace sgns
                     selector_idx += padded_rows_amount;
                 }
 
-                auto it_selector = table_selector_values.begin();
-                for ( std::uint32_t i = ComponentSelectorColumns; i < selector_size; i++ )
+                auto it_selector = table_vectors.selector_values.begin();
+                for ( std::uint32_t i = ComponentSelectorColumns; i < table_proxy.selectors_amount(); i++ )
                 {
-                    fill_vector_value<typename AssignmentTableType::field_type::value_type, column_type>(
-                        table_selector_values,
+                    fill_vector_value<typename AssignmentTableType::field_type::value_type,
+                                      typename crypto3::zk::snark::plonk_column<BlueprintFieldType>>(
+                        table_vectors.selector_values,
                         table_proxy.selector( i ),
                         it_selector );
                     it_selector  += padded_rows_amount;
                     selector_idx += padded_rows_amount;
                 }
-                ASSERT_MSG( witness_idx + pub_inp_idx + constant_idx + selector_idx == total_size,
-                            "Printed index not equal required assignment size" );
             }
 
-            auto filled_val = table_value_marshalling_type( std::make_tuple(
-                nil::marshalling::types::integral<TTypeBase, std::size_t>( witness_size ),
-                nil::marshalling::types::integral<TTypeBase, std::size_t>( public_input_size + shared_size ),
-                nil::marshalling::types::integral<TTypeBase, std::size_t>( constant_size ),
-                nil::marshalling::types::integral<TTypeBase, std::size_t>( selector_size ),
-                nil::marshalling::types::integral<TTypeBase, std::size_t>( usable_rows_amount ),
-                nil::marshalling::types::integral<TTypeBase, std::size_t>( padded_rows_amount ),
-                nil::crypto3::marshalling::types::
-                    fill_field_element_vector<typename AssignmentTableType::field_type::value_type, Endianness>(
-                        table_vectors.witness_values ),
-                nil::crypto3::marshalling::types::
-                    fill_field_element_vector<typename AssignmentTableType::field_type::value_type, Endianness>(
-                        table_public_input_values ),
-                nil::crypto3::marshalling::types::
-                    fill_field_element_vector<typename AssignmentTableType::field_type::value_type, Endianness>(
-                        table_constant_values ),
-                nil::crypto3::marshalling::types::
-                    fill_field_element_vector<typename AssignmentTableType::field_type::value_type, Endianness>(
-                        table_selector_values ) ) );
+            return table_vectors;
+        }
 
-            table_vectors.witness_values.clear();
-            table_vectors.witness_values.shrink_to_fit();
-
-            table_public_input_values.clear();
-            table_public_input_values.shrink_to_fit();
-
-            table_constant_values.clear();
-            table_constant_values.shrink_to_fit();
-
-            table_selector_values.clear();
-            table_selector_values.shrink_to_fit();
-
+        template <typename Endianness, typename ArithmetizationType>
+        void print_assignment_table(
+            const nil::crypto3::marshalling::types::plonk_assignment_table<nil::marshalling::field_type<Endianness>,
+                                                                           assignment_proxy<ArithmetizationType>>
+                         &table,
+            std::ostream &out = std::cout )
+        {
             std::vector<std::uint8_t> cv;
-            cv.resize( filled_val.length(), 0x00 );
+            cv.resize( table.length(), 0x00 );
             auto                          write_iter = cv.begin();
-            nil::marshalling::status_type status     = filled_val.write( write_iter, cv.size() );
+            nil::marshalling::status_type status     = table.write( write_iter, cv.size() );
             out.write( reinterpret_cast<char *>( cv.data() ), cv.size() );
         }
 
         template <typename Endianness, typename ArithmetizationType, typename ConstraintSystemType>
-        void print_circuit( const circuit_proxy<ArithmetizationType>    &circuit_proxy,
-                            const assignment_proxy<ArithmetizationType> &table_proxy,
-                            bool                                         rename_required,
-                            std::ostream                                &out = std::cout )
+        nil::crypto3::marshalling::types::plonk_constraint_system<nil::marshalling::field_type<Endianness>,
+                                                                  ConstraintSystemType>
+        BuildPlonkConstraintSystem( const circuit_proxy<ArithmetizationType>    &circuit_proxy,
+                                    const assignment_proxy<ArithmetizationType> &table_proxy,
+                                    bool                                         rename_required )
         {
             using TTypeBase = nil::marshalling::field_type<Endianness>;
             using value_marshalling_type =
@@ -778,7 +749,6 @@ namespace sgns
                     local_row++;
                 }
             }
-
             const auto                                                &lookup_gates = circuit_proxy.lookup_gates();
             typename ConstraintSystemType::lookup_gates_container_type used_lookup_gates;
             const auto &used_lookup_gates_idx = circuit_proxy.get_used_lookup_gates();
@@ -809,10 +779,21 @@ namespace sgns
                     fill_plonk_lookup_tables<Endianness, typename ConstraintSystemType::lookup_tables_type::value_type>(
                         used_lookup_tables ) ) );
 
+            return filled_val;
+        }
+
+        template <typename Endianness, typename ConstraintSystemType>
+        void print_circuit(
+            const nil::crypto3::marshalling::types::plonk_constraint_system<nil::marshalling::field_type<Endianness>,
+                                                                            ConstraintSystemType> &circuit,
+
+            std::ostream &out = std::cout )
+
+        {
             std::vector<std::uint8_t> cv;
-            cv.resize( filled_val.length(), 0x00 );
+            cv.resize( circuit.length(), 0x00 );
             auto                          write_iter = cv.begin();
-            nil::marshalling::status_type status     = filled_val.write( write_iter, cv.size() );
+            nil::marshalling::status_type status     = circuit.write( write_iter, cv.size() );
             out.write( reinterpret_cast<char *>( cv.data() ), cv.size() );
         }
     };
