@@ -10,3 +10,5 @@ add_subdirectory(storage)
 add_subdirectory(crdt)
 add_subdirectory(processing)
 add_subdirectory(watcher)
+
+add_subdirectory(proof)
