@@ -13,11 +13,11 @@
 
 TEST( ProofAssignerTest, GenerateCircuitAndTableFromFile )
 {
+    std::cout << "Current working directory: " << std::filesystem::current_path() << std::endl;
 
-        std::cout << "Current working directory: " 
-              << std::filesystem::current_path() 
-              << std::endl;
-    auto GeniusAssigner = sgns::GeniusAssigner();
-
-
+    auto             GeniusAssigner = sgns::GeniusAssigner();
+    std::vector<int> public_inputs  = { 5, 11 };
+    // EXPECT_EQ(GeniusAssigner.GenerateCircuitAndTable(public_inputs,{},"./bytecode.ll"),AssignerError::EMPTY_BYTECODE);
+    auto result = GeniusAssigner.GenerateCircuitAndTable( public_inputs, {}, "./bytecode.ll" );
+    ASSERT_TRUE(result.has_value()); 
 }

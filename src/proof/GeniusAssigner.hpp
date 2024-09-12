@@ -27,6 +27,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
 #include <boost/log/trivial.hpp>
+#include "outcome/outcome.hpp"
 
 //#include <nil/crypto3/algebra/curves/ed25519.hpp>
 //#include <nil/crypto3/algebra/fields/arithmetic_params/ed25519.hpp>
@@ -51,19 +52,46 @@
 #define _GENIUS_ASSIGNER_HPP_
 
 using namespace nil;
-using namespace nil::crypto3;
+//using namespace nil::crypto3;
 using namespace nil::blueprint;
 
 namespace sgns
 {
     class GeniusAssigner
     {
-        using BlueprintFieldType   = typename algebra::curves::pallas::base_field_type;
+        using BlueprintFieldType   = typename crypto3::algebra::curves::pallas::base_field_type;
         using ArithmetizationType  = crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>;
-        using ConstraintSystemType = zk::snark::plonk_constraint_system<BlueprintFieldType>;
+        using ConstraintSystemType = crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>;
+        using AssignerEndianess    = nil::marshalling::option::big_endian;
+        using PlonkConstraintSystemType =
+            crypto3::marshalling::types::plonk_constraint_system<marshalling::field_type<AssignerEndianess>,
+                                                                 ConstraintSystemType>;
+        using PlonkAssignTableType =
+            crypto3::marshalling::types::plonk_assignment_table<marshalling::field_type<AssignerEndianess>,
+                                                                assignment_proxy<ArithmetizationType>>;
 
     public:
-        GeniusAssigner()
+        enum class AssignerError
+        {
+            EMPTY_BYTECODE = 0,
+            BYTECODE_MISMATCH,
+            HAS_SIZE_ESTIMATION,
+        };
+
+        struct AssignerOutput
+        {
+            explicit AssignerOutput( PlonkConstraintSystemType new_constrains, PlonkAssignTableType new_table ) :
+                constrains( std::move( new_constrains ) ), table( std::move( new_table ) )
+            {
+            }
+
+            PlonkConstraintSystemType constrains;
+            PlonkAssignTableType      table;
+        };
+
+        GeniusAssigner() :
+            gen_mode_( nil::blueprint::generation_mode::assignments() | nil::blueprint::generation_mode::circuit() )
+
         {
             nil::crypto3::zk::snark::plonk_table_description<BlueprintFieldType> desc(
                 WITNESS_COLUMNS,
@@ -71,234 +99,24 @@ namespace sgns
                 COMPONENT_CONSTANT_COLUMNS + LOOKUP_CONSTANT_COLUMNS,
                 COMPONENT_SELECTOR_COLUMNS + LOOKUP_SELECTOR_COLUMNS );
 
-            nil::blueprint::generation_mode gen_mode =
-                nil::blueprint::generation_mode::assignments() | nil::blueprint::generation_mode::circuit();
             nil::blueprint::print_format circuit_output_print_format = no_print;
 
-            nil::blueprint::assigner<BlueprintFieldType> assigner_instance( desc,
-                                                                            STACK_SIZE,
-                                                                            LOG_LEVEL,
-                                                                            MAX_NUM_PROVERS,
-                                                                            TARGET_PROVER,
-                                                                            gen_mode,
-                                                                            std::string( POLICY ),
-                                                                            circuit_output_print_format,
-                                                                            std::string( CHECK_VALIDITY ) == "check" );
-
-            std::vector<int> public_inputs = { 5, 11 };
-
-            boost::json::array json_array;
-
-            // Loop through the regular_array and create boost::json::objects for each element
-            for ( const int &value : public_inputs )
-            {
-                boost::json::object obj;
-                obj["field"] = value;        // Add {"field": value} to the object
-                json_array.push_back( obj ); // Add the object to the boost::json::array
-            }
-            //boost::json::value public_input_json_value;
-            //if ( !read_json( "./pub_input.inp", public_input_json_value ) )
-            //{
-            //    std::cout << "Error reading public input" << std::endl;
-            //}
-
-            boost::json::value private_input_json_value = boost::json::array();
-            if ( !read_json( "./prvt_input.inp", private_input_json_value ) )
-            {
-                std::cout << "Error reading private input" << std::endl;
-            }
-            if ( !assigner_instance.parse_ir_file( "./bytecode.ll" ) )
-            {
-                std::cout << "Error parsing bytecode" << std::endl;
-            }
-            if ( !assigner_instance.evaluate( json_array, private_input_json_value.as_array() ) )
-            {
-                std::cout << "Error parsing bytecode" << std::endl;
-            }
-            if ( gen_mode.has_size_estimation() )
-            {
-                std::cout << "Gen mode has estimation" << std::endl;
-            }
-
-            // pack lookup tables
-            if ( assigner_instance.circuits[0].get_reserved_tables().size() > 0 )
-            {
-                std::vector<std::size_t> lookup_columns_indices;
-                lookup_columns_indices.resize( LOOKUP_CONSTANT_COLUMNS );
-                // fill ComponentConstantColumns, ComponentConstantColumns + 1, ...
-                std::iota( lookup_columns_indices.begin(), lookup_columns_indices.end(), COMPONENT_CONSTANT_COLUMNS );
-                // check if lookup selectors were not used
-                auto max_used_selector_idx = assigner_instance.assignments[0].selectors_amount() - 1;
-                while ( max_used_selector_idx > 0 )
-                {
-                    max_used_selector_idx--;
-                    if ( assigner_instance.assignments[0].selector( max_used_selector_idx ).size() > 0 )
-                    {
-                        break;
-                    }
-                }
-
-                ASSERT( max_used_selector_idx < COMPONENT_SELECTOR_COLUMNS );
-                std::uint32_t max_lookup_rows = 500000;
-                auto          usable_rows_amount =
-                    zk::snark::pack_lookup_tables_horizontal( assigner_instance.circuits[0].get_reserved_indices(),
-                                                              assigner_instance.circuits[0].get_reserved_tables(),
-                                                              assigner_instance.circuits[0].get(),
-                                                              assigner_instance.assignments[0].get(),
-                                                              lookup_columns_indices,
-                                                              max_used_selector_idx + 1,
-                                                              0,
-                                                              max_lookup_rows );
-            }
-
-            constexpr std::uint32_t invalid_target_prover = std::numeric_limits<std::uint32_t>::max();
-
-            // print assignment tables and circuits
-            if ( assigner_instance.assignments.size() == 1 &&
-                 ( TARGET_PROVER == 0 || TARGET_PROVER == invalid_target_prover ) )
-            {
-                // print assignment table
-                if ( gen_mode.has_assignments() )
-                {
-                    std::ofstream otable;
-                    otable.open( "./table.tbl", std::ios_base::binary | std::ios_base::out );
-                    if ( !otable )
-                    {
-                        std::cout << "Something wrong with output " << "./table.tbl" << std::endl;
-                    }
-                    auto AssignmentTable =
-                        BuildPlonkAssignmentTable<nil::marshalling::option::big_endian,
-                                                  ArithmetizationType,
-                                                  BlueprintFieldType>( assigner_instance.assignments[0],
-                                                                       print_table_kind::SINGLE_PROVER,
-                                                                       COMPONENT_CONSTANT_COLUMNS,
-                                                                       COMPONENT_SELECTOR_COLUMNS );
-                    print_assignment_table<nil::marshalling::option::big_endian, ArithmetizationType>( AssignmentTable,
-                                                                                                       otable );
-
-                    otable.close();
-                }
-
-                // print circuit
-                if ( gen_mode.has_circuit() )
-                {
-                    std::ofstream ocircuit;
-                    ocircuit.open( "./circuit.crct", std::ios_base::binary | std::ios_base::out );
-                    if ( !ocircuit )
-                    {
-                        std::cout << "Something wrong with output " << "./circuit.crct" << std::endl;
-                    }
-                    auto PlonkCircuit =
-                        BuildPlonkConstraintSystem<nil::marshalling::option::big_endian,
-                                                   ArithmetizationType,
-                                                   ConstraintSystemType>( assigner_instance.circuits[0],
-                                                                          assigner_instance.assignments[0],
-                                                                          false );
-                    print_circuit<nil::marshalling::option::big_endian, ConstraintSystemType>( PlonkCircuit, ocircuit );
-                    ocircuit.close();
-                }
-            }
-            else if ( assigner_instance.assignments.size() > 1 &&
-                      ( TARGET_PROVER < assigner_instance.assignments.size() ||
-                        TARGET_PROVER == invalid_target_prover ) )
-            {
-                std::uint32_t start_idx = ( TARGET_PROVER == invalid_target_prover ) ? 0 : TARGET_PROVER;
-                std::uint32_t end_idx   = ( TARGET_PROVER == invalid_target_prover )
-                                              ? assigner_instance.assignments.size()
-                                              : TARGET_PROVER + 1;
-                for ( std::uint32_t idx = start_idx; idx < end_idx; idx++ )
-                {
-                    // print assignment table
-                    if ( gen_mode.has_assignments() )
-                    {
-                        std::ofstream otable;
-                        otable.open( "./table.tbl" + std::to_string( idx ),
-                                     std::ios_base::binary | std::ios_base::out );
-                        if ( !otable )
-                        {
-                            std::cout << "Something wrong with output " << "./table.tbl" + std::to_string( idx )
-                                      << std::endl;
-                        }
-                        auto AssignmentTable =
-                            BuildPlonkAssignmentTable<nil::marshalling::option::big_endian,
-                                                      ArithmetizationType,
-                                                      BlueprintFieldType>( assigner_instance.assignments[idx],
-                                                                           print_table_kind::MULTI_PROVER,
-                                                                           COMPONENT_CONSTANT_COLUMNS,
-                                                                           COMPONENT_SELECTOR_COLUMNS );
-                        print_assignment_table<nil::marshalling::option::big_endian, ArithmetizationType>(
-                            AssignmentTable,
-                            otable );
-
-                        otable.close();
-                    }
-
-                    // print circuit
-                    if ( gen_mode.has_circuit() )
-                    {
-                        std::ofstream ocircuit;
-                        ocircuit.open( "./circuit.crct" + std::to_string( idx ),
-                                       std::ios_base::binary | std::ios_base::out );
-                        if ( !ocircuit )
-                        {
-                            std::cout << "Something wrong with output " << "./circuit.crct" + std::to_string( idx )
-                                      << std::endl;
-                        }
-
-                        ASSERT_MSG( idx < assigner_instance.circuits.size(), "Not found circuit" );
-                        auto PlonkCircuit =
-                            BuildPlonkConstraintSystem<nil::marshalling::option::big_endian,
-                                                       ArithmetizationType,
-                                                       ConstraintSystemType>( assigner_instance.circuits[idx],
-                                                                              assigner_instance.assignments[idx],
-                                                                              ( idx > 0 ) );
-                        print_circuit<nil::marshalling::option::big_endian, ConstraintSystemType>( PlonkCircuit,
-                                                                                                   ocircuit );
-
-                        ocircuit.close();
-                    }
-                }
-            }
-            else
-            {
-                std::cout << "No data for print: target prover " << TARGET_PROVER << ", actual number of provers "
-                          << assigner_instance.assignments.size() << std::endl;
-            }
-            if ( ( CHECK_VALIDITY == "check" ) && gen_mode.has_assignments() && gen_mode.has_circuit() )
-            {
-                if ( assigner_instance.assignments.size() == 1 &&
-                     ( TARGET_PROVER == 0 || TARGET_PROVER == invalid_target_prover ) )
-                {
-                    ASSERT_MSG( nil::blueprint::is_satisfied( assigner_instance.circuits[0].get(),
-                                                              assigner_instance.assignments[0].get() ),
-                                "The circuit is not satisfied" );
-                }
-                else if ( assigner_instance.assignments.size() > 1 &&
-                          ( TARGET_PROVER < assigner_instance.assignments.size() ||
-                            TARGET_PROVER == invalid_target_prover ) )
-                {
-                    //  check only for target prover if set
-                    std::uint32_t start_idx = ( TARGET_PROVER == invalid_target_prover ) ? 0 : TARGET_PROVER;
-                    std::uint32_t end_idx   = ( TARGET_PROVER == invalid_target_prover )
-                                                  ? assigner_instance.assignments.size()
-                                                  : TARGET_PROVER + 1;
-                    for ( std::uint32_t idx = start_idx; idx < end_idx; idx++ )
-                    {
-                        assigner_instance.assignments[idx].set_check( true );
-                        bool is_accessible = nil::blueprint::is_satisfied( assigner_instance.circuits[idx],
-                                                                           assigner_instance.assignments[idx] );
-                        assigner_instance.assignments[idx].set_check( false );
-                        ASSERT_MSG( is_accessible,
-                                    ( "The circuit is not satisfied on prover " + std::to_string( idx ) ).c_str() );
-                    }
-                }
-                else
-                {
-                    std::cout << "No data for check: target prover " << TARGET_PROVER << ", actual number of provers "
-                              << assigner_instance.assignments.size() << std::endl;
-                }
-            }
+            assigner_instance_ = std::make_shared<nil::blueprint::assigner<BlueprintFieldType>>(
+                desc,
+                STACK_SIZE,
+                LOG_LEVEL,
+                MAX_NUM_PROVERS,
+                TARGET_PROVER,
+                gen_mode_,
+                std::string( POLICY ),
+                circuit_output_print_format,
+                std::string( CHECK_VALIDITY ) == "check" );
         }
+
+        outcome::result<AssignerOutput> GenerateCircuitAndTable( const std::vector<int> &public_inputs,
+                                                                 const std::vector<int> &private_inputs,
+                                                                 const std::string      &bytecode_file_path );
+        void PrintCircuitAndTable( const AssignerOutput &public_inputs, const std::string &table_path, const std::string &circuit_path );
 
         ~GeniusAssigner() = default;
 
@@ -316,6 +134,9 @@ namespace sgns
         constexpr static const std::uint32_t    TARGET_PROVER  = std::numeric_limits<std::uint32_t>::max();
         constexpr static const std::string_view POLICY         = "default";
         constexpr static const std::string_view CHECK_VALIDITY = "";
+
+        std::shared_ptr<nil::blueprint::assigner<BlueprintFieldType>> assigner_instance_;
+        nil::blueprint::generation_mode                               gen_mode_;
 
         enum class print_table_kind
         {
@@ -798,5 +619,7 @@ namespace sgns
         }
     };
 }
+
+OUTCOME_HPP_DECLARE_ERROR_2( sgns, GeniusAssigner::AssignerError );
 
 #endif
