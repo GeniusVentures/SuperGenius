@@ -83,6 +83,11 @@ namespace sgns
             return transaction_manager_->GetTransactions();
         }
 
+        std::string GetAddress()
+        {
+            return account_->GetAddress<std::string>();
+        }
+
         static std::vector<uint8_t> GetImageByCID( const std::string &cid );
 
     private:

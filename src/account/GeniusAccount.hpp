@@ -47,10 +47,10 @@ namespace sgns
         }
 
         template <typename T>
-        const T GetAddress() const;
+        T GetAddress() const;
 
         template <>
-        [[nodiscard]] const std::string GetAddress() const
+        [[nodiscard]] std::string GetAddress() const
         {
             std::ostringstream oss;
             oss << std::hex << address;
@@ -59,7 +59,7 @@ namespace sgns
         }
 
         template <>
-        [[nodiscard]] const uint256_t GetAddress() const
+        [[nodiscard]] uint256_t GetAddress() const
         {
             return address;
         }
