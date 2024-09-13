@@ -76,6 +76,13 @@ namespace sgns
             EMPTY_BYTECODE = 0,
             BYTECODE_MISMATCH,
             HAS_SIZE_ESTIMATION,
+            TABLE_PATH_ERROR,
+            CIRCUIT_PATH_ERROR,
+            SELECTOR_COLUMNS_INVALID,
+            WRONG_TARGET_PROVER,
+            UNSATISFIED_CIRCUIT,
+            TABLE_CIRCUIT_NUM_MISMATCH,
+            CIRCUIT_NOT_FOUND,
         };
 
         struct AssignerOutput
@@ -113,10 +120,12 @@ namespace sgns
                 std::string( CHECK_VALIDITY ) == "check" );
         }
 
-        outcome::result<AssignerOutput> GenerateCircuitAndTable( const std::vector<int> &public_inputs,
-                                                                 const std::vector<int> &private_inputs,
-                                                                 const std::string      &bytecode_file_path );
-        void PrintCircuitAndTable( const AssignerOutput &public_inputs, const std::string &table_path, const std::string &circuit_path );
+        outcome::result<std::vector<AssignerOutput>> GenerateCircuitAndTable( const std::vector<int> &public_inputs,
+                                                                              const std::vector<int> &private_inputs,
+                                                                              const std::string &bytecode_file_path );
+        void PrintCircuitAndTable( const std::vector<AssignerOutput> &public_inputs,
+                                   const std::string                 &table_path,
+                                   const std::string                 &circuit_path );
 
         ~GeniusAssigner() = default;
 
