@@ -18,8 +18,10 @@ TEST( ProofAssignerTest, GenerateCircuitAndTableFromFile )
     auto             GeniusAssigner = sgns::GeniusAssigner();
     std::vector<int> public_inputs  = { 5, 11 };
     // EXPECT_EQ(GeniusAssigner.GenerateCircuitAndTable(public_inputs,{},"./bytecode.ll"),AssignerError::EMPTY_BYTECODE);
-    auto result = GeniusAssigner.GenerateCircuitAndTable( public_inputs, {}, "./bytecode.ll" );
-    ASSERT_TRUE(result.has_value()); 
+    auto assign_result = GeniusAssigner.GenerateCircuitAndTable( public_inputs, {}, "../../../../../../test/src/proof/bytecode.ll" );
+    ASSERT_TRUE(assign_result.has_value()); 
 
-    EXPECT_EQ(result.has_value().size(),1);
+    EXPECT_EQ(assign_result.value().size(),1);
+    auto print_result = GeniusAssigner.PrintCircuitAndTable( assign_result.value(), "../../../../../../test/src/proof/table.tbl", "../../../../../../test/src/proof/circuit.crct" );
+    ASSERT_FALSE(print_result.has_error()); 
 }

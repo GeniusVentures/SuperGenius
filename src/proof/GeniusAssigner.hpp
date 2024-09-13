@@ -123,9 +123,9 @@ namespace sgns
         outcome::result<std::vector<AssignerOutput>> GenerateCircuitAndTable( const std::vector<int> &public_inputs,
                                                                               const std::vector<int> &private_inputs,
                                                                               const std::string &bytecode_file_path );
-        void PrintCircuitAndTable( const std::vector<AssignerOutput> &public_inputs,
-                                   const std::string                 &table_path,
-                                   const std::string                 &circuit_path );
+        outcome::result<void> PrintCircuitAndTable( const std::vector<AssignerOutput> &public_inputs,
+                                                    const std::string                 &table_path,
+                                                    const std::string                 &circuit_path );
 
         ~GeniusAssigner() = default;
 
@@ -420,7 +420,6 @@ namespace sgns
                     witness_idx += padded_rows_amount;
                 }
                 // public input
-                std::uint32_t pub_inp_idx = 0;
                 auto          it_pub_inp  = table_vectors.public_input_values.begin();
                 for ( std::uint32_t i = 0; i < table_proxy.public_inputs_amount(); i++ )
                 {
@@ -430,7 +429,6 @@ namespace sgns
                         table_proxy.public_input( i ),
                         it_pub_inp );
                     it_pub_inp  += padded_rows_amount;
-                    pub_inp_idx += padded_rows_amount;
                 }
                 for ( std::uint32_t i = 0; i < shared_size; i++ )
                 {
@@ -440,7 +438,6 @@ namespace sgns
                         table_proxy.shared( i ),
                         it_pub_inp );
                     it_pub_inp  += padded_rows_amount;
-                    pub_inp_idx += padded_rows_amount;
                 }
                 // constant
                 std::uint32_t constant_idx = 0;
