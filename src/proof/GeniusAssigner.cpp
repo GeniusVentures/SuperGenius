@@ -119,12 +119,6 @@ namespace sgns
             // print assignment table
             if ( gen_mode_.has_assignments() )
             {
-                std::ofstream otable;
-                otable.open( "./table.tbl", std::ios_base::binary | std::ios_base::out );
-                if ( !otable )
-                {
-                    std::cout << "Something wrong with output " << "./table.tbl" << std::endl;
-                }
                 auto AssignmentTable =
                     BuildPlonkAssignmentTable<nil::marshalling::option::big_endian,
                                               ArithmetizationType,
@@ -133,21 +127,11 @@ namespace sgns
                                                                    COMPONENT_CONSTANT_COLUMNS,
                                                                    COMPONENT_SELECTOR_COLUMNS );
                 AssignmentTableVector.push_back( AssignmentTable );
-                print_assignment_table<nil::marshalling::option::big_endian, ArithmetizationType>( AssignmentTable,
-                                                                                                   otable );
-
-                otable.close();
             }
 
             // print circuit
             if ( gen_mode_.has_circuit() )
             {
-                std::ofstream ocircuit;
-                ocircuit.open( "./circuit.crct", std::ios_base::binary | std::ios_base::out );
-                if ( !ocircuit )
-                {
-                    std::cout << "Something wrong with output " << "./circuit.crct" << std::endl;
-                }
                 auto PlonkCircuit =
                     BuildPlonkConstraintSystem<nil::marshalling::option::big_endian,
                                                ArithmetizationType,
@@ -155,10 +139,8 @@ namespace sgns
                                                                       assigner_instance_->assignments[0],
                                                                       false );
                 PlonkCircuitVector.push_back( PlonkCircuit );
-                print_circuit<nil::marshalling::option::big_endian, ConstraintSystemType>( PlonkCircuit, ocircuit );
-                ocircuit.close();
             }
-            if ( ( CHECK_VALIDITY == "check" ) && !PlonkCircuitVector.empty() && !AssignmentTableVector.empty() )
+            if ( ( CHECK_VALIDITY == "check" ) && gen_mode_.has_assignments() && gen_mode_.has_circuit() )
             {
                 if ( !nil::blueprint::is_satisfied( assigner_instance_->circuits[0].get(),
                                                     assigner_instance_->assignments[0].get() ) )
@@ -178,13 +160,6 @@ namespace sgns
                 // print assignment table
                 if ( gen_mode_.has_assignments() )
                 {
-                    std::ofstream otable;
-                    otable.open( "./table.tbl" + std::to_string( idx ), std::ios_base::binary | std::ios_base::out );
-                    if ( !otable )
-                    {
-                        std::cout << "Something wrong with output " << "./table.tbl" + std::to_string( idx )
-                                  << std::endl;
-                    }
                     auto AssignmentTable =
                         BuildPlonkAssignmentTable<nil::marshalling::option::big_endian,
                                                   ArithmetizationType,
@@ -193,25 +168,11 @@ namespace sgns
                                                                        COMPONENT_CONSTANT_COLUMNS,
                                                                        COMPONENT_SELECTOR_COLUMNS );
                     AssignmentTableVector.push_back( AssignmentTable );
-                    print_assignment_table<nil::marshalling::option::big_endian, ArithmetizationType>( AssignmentTable,
-                                                                                                       otable );
-
-                    otable.close();
                 }
 
                 // print circuit
                 if ( gen_mode_.has_circuit() )
                 {
-                    std::ofstream ocircuit;
-                    ocircuit.open( "./circuit.crct" + std::to_string( idx ),
-                                   std::ios_base::binary | std::ios_base::out );
-                    if ( !ocircuit )
-                    {
-                        std::cout << "Something wrong with output " << "./circuit.crct" + std::to_string( idx )
-                                  << std::endl;
-                    }
-
-                    ASSERT_MSG( idx < assigner_instance_->circuits.size(), "Not found circuit" );
                     auto PlonkCircuit =
                         BuildPlonkConstraintSystem<nil::marshalling::option::big_endian,
                                                    ArithmetizationType,
@@ -219,9 +180,6 @@ namespace sgns
                                                                           assigner_instance_->assignments[idx],
                                                                           ( idx > 0 ) );
                     PlonkCircuitVector.push_back( PlonkCircuit );
-                    print_circuit<nil::marshalling::option::big_endian, ConstraintSystemType>( PlonkCircuit, ocircuit );
-
-                    ocircuit.close();
                 }
                 if ( ( CHECK_VALIDITY == "check" ) && gen_mode_.has_assignments() && gen_mode_.has_circuit() )
                 {
