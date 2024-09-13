@@ -10,6 +10,39 @@
 
 #include <string>
 
+#include <boost/filesystem/path.hpp>
+#include <boost/log/trivial.hpp>
+
+#include <nil/marshalling/status_type.hpp>
+#include <nil/marshalling/field_type.hpp>
+#include <nil/marshalling/endianness.hpp>
+#include <nil/crypto3/zk/snark/arithmetization/plonk/params.hpp>
+#include <nil/crypto3/zk/snark/arithmetization/plonk/constraint_system.hpp>
+#include <nil/crypto3/marshalling/zk/types/plonk/constraint_system.hpp>
+#include <nil/crypto3/marshalling/zk/types/plonk/assignment_table.hpp>
+#include <nil/crypto3/algebra/curves/pallas.hpp>
+#include <nil/crypto3/algebra/fields/arithmetic_params/pallas.hpp>
+
+
+#include <nil/crypto3/marshalling/zk/types/placeholder/common_data.hpp>
+#include <nil/crypto3/marshalling/zk/types/placeholder/proof.hpp>
+#include <nil/crypto3/math/algorithms/calculate_domain_set.hpp>
+#include <nil/crypto3/multiprecision/cpp_int.hpp>
+#include <nil/crypto3/zk/snark/systems/plonk/placeholder/detail/placeholder_policy.hpp>
+#include <nil/crypto3/zk/snark/systems/plonk/placeholder/params.hpp>
+#include <nil/crypto3/zk/snark/systems/plonk/placeholder/preprocessor.hpp>
+#include <nil/crypto3/zk/snark/systems/plonk/placeholder/profiling.hpp>
+#include <nil/crypto3/zk/snark/systems/plonk/placeholder/proof.hpp>
+#include <nil/crypto3/zk/snark/systems/plonk/placeholder/prover.hpp>
+#include <nil/crypto3/zk/snark/systems/plonk/placeholder/verifier.hpp>
+
+
+
+#include <nil/crypto3/algebra/curves/pallas.hpp>
+#include <nil/crypto3/hash/keccak.hpp>
+
+#include "outcome/outcome.hpp"
+
 using namespace nil;
 
 namespace sgns
@@ -17,12 +50,26 @@ namespace sgns
     class GeniusProver
     {
         using BlueprintFieldType   = typename crypto3::algebra::curves::pallas::base_field_type;
-        using ConstraintSystemType = crypto3::zk::snark::plonk_constraint_system<BlueprintField>;
+        using HashType             = crypto3::hashes::keccak_1600<256>;
         using ProverEndianess      = nil::marshalling::option::big_endian;
+        using ConstraintSystemType = crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>;
+        using TableDescriptionType = crypto3::zk::snark::plonk_table_description<BlueprintFieldType>;
+        using LpcParams         = crypto3::zk::commitments::list_polynomial_commitment_params<HashType, HashType, 9, 2>;
+        using Lpc               = crypto3::zk::commitments::list_polynomial_commitment<BlueprintFieldType, LpcParams>;
+        using LpcScheme         = typename crypto3::zk::commitments::lpc_commitment_scheme<Lpc>;
+        using FriParams         = typename Lpc::fri_type::params_type;
+        using CircuitParams     = crypto3::zk::snark::placeholder_circuit_params<BlueprintFieldType>;
+        using PlaceholderParams = crypto3::zk::snark::placeholder_params<CircuitParams, LpcScheme>;
+        using PublicPreprocessedData =
+            typename crypto3::zk::snark::placeholder_public_preprocessor<BlueprintFieldType,
+                                                                         PlaceholderParams>::preprocessed_data_type;
+        using PrivatePreprocessedData =
+            typename crypto3::zk::snark::placeholder_private_preprocessor<BlueprintFieldType,
+                                                                          PlaceholderParams>::preprocessed_data_type;
 
     public:
         GeniusProver( std::size_t component_constant_columns = COMPONENT_CONSTANT_COLUMNS_DEFAULT,
-                      std::size_t expand_factor              = EXPAND_FACTOR_DEFAULT ) :
+                      std::size_t expand_factor              = EXPAND_FACTOR_DEFAULT ) 
             : component_constant_columns_( component_constant_columns ), expand_factor_( expand_factor )
         {
         }
@@ -38,14 +85,19 @@ namespace sgns
         const std::size_t component_constant_columns_;
         const std::size_t expand_factor_;
 
-        ConstraintSystemType constraint_system_;
+        ConstraintSystemType    constraint_system_;
+        TableDescriptionType    table_description_;
+        FriParams               fri_params_;
+        LpcScheme               lpc_scheme_;
+        PublicPreprocessedData  public_preprocessed_data_;
+        PrivatePreprocessedData private_preprocessed_data_;
 
         bool prepare_for_operation( const boost::filesystem::path &circuit_file,
                                     const boost::filesystem::path &assignment_table_file )
         {
-            using TTypeBase = marshalling::field_type<ProverEndianess>;
+            using TTypeBase = nil::marshalling::field_type<ProverEndianess>;
             using ConstraintMarshalling =
-                nil::crypto3::marshalling::types::plonk_constraint_system<TTypeBase, ConstraintSystemType>;
+                crypto3::marshalling::types::plonk_constraint_system<TTypeBase, ConstraintSystemType>;
 
             using Column          = crypto3::zk::snark::plonk_column<BlueprintFieldType>;
             using AssignmentTable = crypto3::zk::snark::plonk_table<BlueprintFieldType, Column>;
@@ -84,23 +136,22 @@ namespace sgns
 
             std::size_t permutation_size = table_description_->witness_columns +
                                            table_description_->public_input_columns + component_constant_columns_;
-            lpc_scheme_.emplace( *fri_params_ );
+            lpc_scheme_.emplace( fri_params_ );
 
-            BOOST_LOG_TRIVIAL( info ) << "Preprocessing public data";
             public_preprocessed_data_.emplace(
-                nil::crypto3::zk::snark::placeholder_public_preprocessor<BlueprintFieldType, PlaceholderParams>::
-                    process( *constraint_system_,
+                crypto3::zk::snark::placeholder_public_preprocessor<BlueprintFieldType, PlaceholderParams>::
+                    process( constraint_system_,
                              assignment_table.move_public_table(),
-                             *table_description_,
-                             *lpc_scheme_,
+                             table_description_,
+                             lpc_scheme_,
                              permutation_size ) );
 
             BOOST_LOG_TRIVIAL( info ) << "Preprocessing private data";
             private_preprocessed_data_.emplace(
                 nil::crypto3::zk::snark::placeholder_private_preprocessor<BlueprintField, PlaceholderParams>::process(
-                    *constraint_system_,
+                    constraint_system_,
                     assignment_table.move_private_table(),
-                    *table_description_ ) );
+                    table_description_ ) );
             return true;
         }
     };
