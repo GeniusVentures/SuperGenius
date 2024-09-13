@@ -39,7 +39,7 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, GeniusAssigner::AssignerError, e )
 namespace sgns
 {
 
-    outcome::result<GeniusAssigner::AssignerOutput> GeniusAssigner::GenerateCircuitAndTable(
+    outcome::result<std::vector<GeniusAssigner::AssignerOutput>> GeniusAssigner::GenerateCircuitAndTable(
         const std::vector<int> &public_inputs,
         const std::vector<int> &private_inputs,
         const std::string      &bytecode_file_path )
@@ -94,7 +94,7 @@ namespace sgns
 
             if ( max_used_selector_idx >= COMPONENT_SELECTOR_COLUMNS )
             {
-                return outcome::failure( AssignerError::SELECTOR_IDX_INVALID );
+                return outcome::failure( AssignerError::SELECTOR_COLUMNS_INVALID );
             }
             std::uint32_t max_lookup_rows    = 500000;
             auto          usable_rows_amount = crypto3::zk::snark::pack_lookup_tables_horizontal(
@@ -207,15 +207,15 @@ namespace sgns
         std::vector<AssignerOutput> outputs;
         for ( auto i = 0; i < AssignmentTableVector.size(); ++i )
         {
-            outputs.push_back( { PlonkCircuitVector.at( 1 ), AssignmentTableVector.at( i ) } );
+            outputs.push_back( AssignerOutput{ PlonkCircuitVector.at( i ), AssignmentTableVector.at( i ) } );
         }
 
         return outputs;
     }
 
-    void GeniusAssigner::PrintCircuitAndTable( const std::vector<AssignerOutput> &assigner_outputs,
-                                               const std::string                 &table_path,
-                                               const std::string                 &circuit_path )
+    outcome::result<void> GeniusAssigner::PrintCircuitAndTable( const std::vector<AssignerOutput> &assigner_outputs,
+                                                                const std::string                 &table_path,
+                                                                const std::string                 &circuit_path )
     {
         for ( auto i = 0; i < assigner_outputs.size(); ++i )
         {
@@ -240,7 +240,7 @@ namespace sgns
                 return outcome::failure( AssignerError::CIRCUIT_NOT_FOUND );
             }
 
-            print_circuit<nil::marshalling::option::big_endian, ConstraintSystemType>( assigner_outputs.at( i ).circuit,
+            print_circuit<nil::marshalling::option::big_endian, ConstraintSystemType>( assigner_outputs.at( i ).constrains,
                                                                                        ocircuit );
 
             ocircuit.close();
