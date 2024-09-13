@@ -20,4 +20,6 @@ TEST( ProofAssignerTest, GenerateCircuitAndTableFromFile )
     // EXPECT_EQ(GeniusAssigner.GenerateCircuitAndTable(public_inputs,{},"./bytecode.ll"),AssignerError::EMPTY_BYTECODE);
     auto result = GeniusAssigner.GenerateCircuitAndTable( public_inputs, {}, "./bytecode.ll" );
     ASSERT_TRUE(result.has_value()); 
+
+    EXPECT_EQ(result.has_value().size(),1);
 }
