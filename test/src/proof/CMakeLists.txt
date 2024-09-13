@@ -3,7 +3,7 @@ addtest(proof_generation_test
     ProofAssignerTest.cpp
     )
 target_link_libraries(proof_generation_test
-    proof_generator
+    genius_assigner
     Boost::boost
     Boost::log
     Boost::random

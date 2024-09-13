@@ -17,7 +17,6 @@ TEST( ProofAssignerTest, GenerateCircuitAndTableFromFile )
 
     auto             GeniusAssigner = sgns::GeniusAssigner();
     std::vector<int> public_inputs  = { 5, 11 };
-    // EXPECT_EQ(GeniusAssigner.GenerateCircuitAndTable(public_inputs,{},"./bytecode.ll"),AssignerError::EMPTY_BYTECODE);
     auto assign_result = GeniusAssigner.GenerateCircuitAndTable( public_inputs, {}, "../../../../../../test/src/proof/bytecode.ll" );
     ASSERT_TRUE(assign_result.has_value()); 
 
