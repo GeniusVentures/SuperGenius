@@ -13,8 +13,6 @@
 
 TEST( ProofAssignerTest, GenerateCircuitAndTableFromFile )
 {
-    std::cout << "Current working directory: " << std::filesystem::current_path() << std::endl;
-
     auto             GeniusAssigner = sgns::GeniusAssigner();
     std::vector<int> public_inputs  = { 5, 11 };
     auto assign_result = GeniusAssigner.GenerateCircuitAndTable( public_inputs, {}, "../../../../../../test/src/proof/bytecode.ll" );
