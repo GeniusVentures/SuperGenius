@@ -88,6 +88,11 @@ namespace sgns
             return account_->GetAddress<std::string>();
         }
 
+        bool TransferFunds( uint64_t amount, const uint256_t &destination )
+        {
+            return transaction_manager_->TransferFunds( amount, destination );
+        }
+
         static std::vector<uint8_t> GetImageByCID( const std::string &cid );
 
     private:
