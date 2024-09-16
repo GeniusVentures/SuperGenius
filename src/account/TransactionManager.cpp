@@ -85,11 +85,10 @@ namespace sgns
         return *account_m;
     }
 
-    bool TransactionManager::TransferFunds( const uint256_t &amount, const uint256_t &destination )
+    bool TransactionManager::TransferFunds( uint64_t amount, const uint256_t &destination )
     {
         bool ret = false;
-        auto maybe_params =
-            UTXOTxParameters::create( account_m->utxos, account_m->address, uint64_t{ amount }, destination );
+        auto maybe_params = UTXOTxParameters::create( account_m->utxos, account_m->address, amount, destination );
 
         if ( maybe_params )
         {

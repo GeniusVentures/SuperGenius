@@ -60,7 +60,7 @@ namespace sgns
             return transactions;
         }
 
-        bool     TransferFunds( const uint256_t &amount, const uint256_t &destination );
+        bool     TransferFunds( uint64_t amount, const uint256_t &destination );
         void     MintFunds( uint64_t amount );
         bool     HoldEscrow( uint64_t           amount,
                              uint64_t           num_chunks,
