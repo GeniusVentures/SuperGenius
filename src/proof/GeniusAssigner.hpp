@@ -60,17 +60,19 @@ namespace sgns
     class GeniusAssigner
     {
         using BlueprintFieldType   = typename crypto3::algebra::curves::pallas::base_field_type;
+        using AssignerEndianess    = nil::marshalling::option::big_endian;
         using ArithmetizationType  = crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>;
         using ConstraintSystemType = crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>;
-        using AssignerEndianess    = nil::marshalling::option::big_endian;
-        using PlonkConstraintSystemType =
-            crypto3::marshalling::types::plonk_constraint_system<marshalling::field_type<AssignerEndianess>,
-                                                                 ConstraintSystemType>;
-        using PlonkAssignTableType =
-            crypto3::marshalling::types::plonk_assignment_table<marshalling::field_type<AssignerEndianess>,
-                                                                assignment_proxy<ArithmetizationType>>;
 
     public:
+        using PlonkConstraintSystemType =
+            crypto3::marshalling::types::plonk_constraint_system<nil::marshalling::field_type<AssignerEndianess>,
+                                                                 ConstraintSystemType>;
+        using PlonkAssignTableType =
+            crypto3::marshalling::types::plonk_assignment_table<nil::marshalling::field_type<AssignerEndianess>,
+                                                                assignment_proxy<ArithmetizationType>>;
+        using TableDescriptionType = crypto3::zk::snark::plonk_table_description<BlueprintFieldType>;
+
         enum class AssignerError
         {
             EMPTY_BYTECODE = 0,
@@ -97,7 +99,11 @@ namespace sgns
         };
 
         GeniusAssigner() :
-            gen_mode_( nil::blueprint::generation_mode::assignments() | nil::blueprint::generation_mode::circuit() )
+            gen_mode_( nil::blueprint::generation_mode::assignments() | nil::blueprint::generation_mode::circuit() ),
+            table_description_( WITNESS_COLUMNS,
+                                PUBLIC_INPUT_COLUMNS,
+                                COMPONENT_CONSTANT_COLUMNS + LOOKUP_CONSTANT_COLUMNS,
+                                COMPONENT_SELECTOR_COLUMNS + LOOKUP_SELECTOR_COLUMNS )
 
         {
             nil::crypto3::zk::snark::plonk_table_description<BlueprintFieldType> desc(
@@ -128,6 +134,7 @@ namespace sgns
                                                     const std::string                 &circuit_path );
 
         ~GeniusAssigner() = default;
+        crypto3::zk::snark::plonk_table_description<BlueprintFieldType> table_description_;
 
     private:
         //TODO - Check if better on cmakelists, since the zkllvm executable does it like this for plonk_table_description variables
@@ -420,7 +427,7 @@ namespace sgns
                     witness_idx += padded_rows_amount;
                 }
                 // public input
-                auto          it_pub_inp  = table_vectors.public_input_values.begin();
+                auto it_pub_inp = table_vectors.public_input_values.begin();
                 for ( std::uint32_t i = 0; i < table_proxy.public_inputs_amount(); i++ )
                 {
                     fill_vector_value<typename AssignmentTableType::field_type::value_type,
@@ -428,7 +435,7 @@ namespace sgns
                         table_vectors.public_input_values,
                         table_proxy.public_input( i ),
                         it_pub_inp );
-                    it_pub_inp  += padded_rows_amount;
+                    it_pub_inp += padded_rows_amount;
                 }
                 for ( std::uint32_t i = 0; i < shared_size; i++ )
                 {
@@ -437,7 +444,7 @@ namespace sgns
                         table_vectors.public_input_values,
                         table_proxy.shared( i ),
                         it_pub_inp );
-                    it_pub_inp  += padded_rows_amount;
+                    it_pub_inp += padded_rows_amount;
                 }
                 // constant
                 std::uint32_t constant_idx = 0;
