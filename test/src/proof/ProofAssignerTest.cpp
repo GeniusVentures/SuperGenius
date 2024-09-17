@@ -40,4 +40,16 @@ TEST( ProofAssignerTest, GenerateProof )
                                                 "../../../../../../test/src/proof/circuit.crct0",
                                                 "../../../../../../test/src/proof/table.tbl0",
                                                 "../../../../../../test/src/proof/proof.bin" ) );
+    auto proof_result = GeniusProver.GenerateProof( assign_result.value(),
+                                                      GeniusAssigner.table_description_,
+                                                      "../../../../../../test/src/proof/sgnus_proof.bin" );
+
+    //if ( proof_result.has_error() )
+    //{
+    //    // Print the error information
+    //    auto error = proof_result.error();
+    //    std::cerr << "Proof Error occurred: " << error.message() << std::endl; // Assuming error has a message method
+    //}
+    //// Assert that the function was successful (i.e., no error occurred)
+    //ASSERT_FALSE( proof_result.has_error() ) << "Proof Expected success but got an error!";
 }
