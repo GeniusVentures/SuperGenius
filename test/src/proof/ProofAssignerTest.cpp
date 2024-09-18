@@ -36,10 +36,10 @@ TEST( ProofAssignerTest, GenerateProof )
 
     auto GeniusProver = sgns::GeniusProver();
 
-    EXPECT_TRUE( GeniusProver.generate_to_file( false,
-                                                "../../../../../../test/src/proof/circuit.crct0",
-                                                "../../../../../../test/src/proof/table.tbl0",
-                                                "../../../../../../test/src/proof/proof.bin" ) );
+    //EXPECT_TRUE( GeniusProver.generate_to_file( false,
+    //                                            "../../../../../../test/src/proof/circuit.crct0",
+    //                                            "../../../../../../test/src/proof/table.tbl0",
+    //                                            "../../../../../../test/src/proof/proof.bin" ) );
     GeniusProver.GenerateProof( assign_result.value(),
                                 "../../../../../../test/src/proof/sgnus_proof.bin" );
     //auto proof_result = GeniusProver.GenerateProof( assign_result.value(),

@@ -18,17 +18,20 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, GeniusProver::ProverError, e )
     return "Unknown error";
 }
 
-outcome::result<GeniusProver::ProofType> GeniusProver::GenerateProof(
-    const std::vector<GeniusAssigner::AssignerOutput> &assigner_outputs,
-    const boost::filesystem::path                     &proof_file_ )
+namespace sgns
 {
-    auto constrains_sys = MakePlonkConstraintSystem( assigner_outputs.at( 0 ).constrains );
+
+    outcome::result<GeniusProver::ProofType> GeniusProver::GenerateProof(
+        const std::vector<GeniusAssigner::AssignerOutput> &assigner_outputs,
+        const boost::filesystem::path                     &proof_file_ )
+    {
+        auto constrains_sys = MakePlonkConstraintSystem( assigner_outputs.at( 0 ).constrains );
 
     auto [plonk_table_desc, assignment_table] = MakePlonkTableDescription( assigner_outputs.at( 0 ).table );
 
-    std::size_t table_rows_log = std::ceil( std::log2( plonk_table_desc.rows_amount ) );
+        std::size_t table_rows_log = std::ceil( std::log2( plonk_table_desc.rows_amount ) );
 
-    auto fri_params = MakeFRIParams( table_rows_log, 1, expand_factor_ );
+        auto fri_params = MakeFRIParams( table_rows_log, 1, expand_factor_ );
 
     std::size_t permutation_size =
         plonk_table_desc.witness_columns + plonk_table_desc.public_input_columns + component_constant_columns_;
@@ -48,113 +51,149 @@ outcome::result<GeniusProver::ProofType> GeniusProver::GenerateProof(
             assignment_table.move_private_table(),
             plonk_table_desc ) );
 
-    ProofSnarkType proof = ProverType::process( public_preprocessed_data,
-                                                private_preprocessed_data,
-                                                plonk_table_desc,
-                                                constrains_sys,
-                                                lpc_scheme );
-    BOOST_LOG_TRIVIAL( info ) << "Proof generated";
+        ProofSnarkType proof = ProverType::process( public_preprocessed_data,
+                                                    private_preprocessed_data,
+                                                    plonk_table_desc,
+                                                    constrains_sys,
+                                                    lpc_scheme );
+        BOOST_LOG_TRIVIAL( info ) << "Proof generated";
 
-    if ( !VerifyProof( proof, public_preprocessed_data, plonk_table_desc, constrains_sys, lpc_scheme ) )
-    {
-        return outcome::failure( ProverError::INVALID_PROOF_GENERATED );
+        if ( !VerifyProof( proof, public_preprocessed_data, plonk_table_desc, constrains_sys, lpc_scheme ) )
+        {
+            return outcome::failure( ProverError::INVALID_PROOF_GENERATED );
+        }
+
+        BOOST_LOG_TRIVIAL( info ) << "Writing proof to " << proof_file_;
+        auto filled_placeholder_proof = FillPlaceholderProof( proof, fri_params );
+        bool res                      = encode_marshalling_to_file( proof_file_, filled_placeholder_proof, true );
+        if ( res )
+        {
+            BOOST_LOG_TRIVIAL( info ) << "Proof written";
+        }
+        return filled_placeholder_proof;
     }
 
-    BOOST_LOG_TRIVIAL( info ) << "Writing proof to " << proof_file_;
-    auto filled_placeholder_proof = FillPlaceholderProof( proof, fri_params );
-    bool res                      = encode_marshalling_to_file( proof_file_, filled_placeholder_proof, true );
-    if ( res )
+    outcome::result<GeniusProver::ProofType> GeniusProver::GenerateProof(
+        const boost::filesystem::path &circuit_file,
+        const boost::filesystem::path &assignment_table_file )
     {
-        BOOST_LOG_TRIVIAL( info ) << "Proof written";
-    }
-    return ProofType;
-}
-
-outcome::result<GeniusProver::ProofType> GeniusProver::GenerateProof(
-    const boost::filesystem::path &circuit_file,
-    const boost::filesystem::path &assignment_table_file )
-{
-}
-
-bool GeniusProver::VerifyProof( const ProofSnarkType         &proof,
-                                const PublicPreprocessedData &public_data,
-                                const TableDescriptionType   &desc,
-                                const ConstraintSystemType   &constrains_sys,
-                                const LpcScheme              &scheme ) const
-{
-    BOOST_LOG_TRIVIAL( info ) << "Verifying proof...";
-    bool verification_result =
-        crypto3::zk::snark::placeholder_verifier<BlueprintFieldType, PlaceholderParams>::process( public_data,
-                                                                                                  proof,
-                                                                                                  desc,
-                                                                                                  constrains_sys,
-                                                                                                  scheme );
-
-    if ( verification_result )
-    {
-        BOOST_LOG_TRIVIAL( info ) << "Proof is verified";
-    }
-    else
-    {
-        BOOST_LOG_TRIVIAL( error ) << "Proof verification failed";
     }
 
-    return verification_result;
-}
+    bool GeniusProver::VerifyProof( const ProofSnarkType         &proof,
+                                    const PublicPreprocessedData &public_data,
+                                    const TableDescriptionType   &desc,
+                                    const ConstraintSystemType   &constrains_sys,
+                                    const LpcScheme              &scheme ) const
+    {
+        BOOST_LOG_TRIVIAL( info ) << "Verifying proof...";
+        bool verification_result =
+            crypto3::zk::snark::placeholder_verifier<BlueprintFieldType, PlaceholderParams>::process( public_data,
+                                                                                                      proof,
+                                                                                                      desc,
+                                                                                                      constrains_sys,
+                                                                                                      scheme );
 
-GeniusProver::ConstraintSystemType GeniusProver::MakePlonkConstraintSystem(
-    const GeniusAssigner::PlonkConstraintSystemType &constrains )
-{
-    ConstraintSystemType constraint_sys(
-        crypto3::marshalling::types::make_plonk_constraint_system<ProverEndianess, ConstraintSystemType>(
-            constrains ) );
+        if ( verification_result )
+        {
+            BOOST_LOG_TRIVIAL( info ) << "Proof is verified";
+        }
+        else
+        {
+            BOOST_LOG_TRIVIAL( error ) << "Proof verification failed";
+        }
 
-    return constraint_sys;
-}
+        return verification_result;
+    }
 
-std::pair<GeniusProver::TableDescriptionType, GeniusProver::AssignmentTableType> GeniusProver::
-    MakePlonkTableDescription( const GeniusAssigner::PlonkAssignTableType &table )
-{
-    //auto marshalled_table =
-    //    decode_marshalling_from_file<GeniusAssigner::PlonkAssignTableType>( assignment_table_file );
-    //if ( !marshalled_table )
-    //{
-    //    return false;
-    //}
-    //auto [table_description, assignment_table] =
-    return crypto3::marshalling::types::make_assignment_table<ProverEndianess, AssignmentTableType>( table );
-}
+    GeniusProver::ConstraintSystemType GeniusProver::MakePlonkConstraintSystem(
+        const GeniusAssigner::PlonkConstraintSystemType &constrains )
+    {
+        ConstraintSystemType constraint_sys(
+            crypto3::marshalling::types::make_plonk_constraint_system<ProverEndianess, ConstraintSystemType>(
+                constrains ) );
 
-GeniusProver::FriParams GeniusProver::MakeFRIParams( std::size_t degree_log,
-                                                     const int   max_step      = 1,
-                                                     std::size_t expand_factor = 0 )
-{
-    std::size_t r = degree_log - 1;
+        return constraint_sys;
+    }
 
-    return Lpc::fri_type::params_type(
-        ( 1 << degree_log ) - 1, // max_degree
-        crypto3::math::calculate_domain_set<BlueprintFieldType>( degree_log + expand_factor, r ),
-        generate_random_step_list( r, max_step ),
-        expand_factor );
-}
+    GeniusProver::PlonkTablePair GeniusProver::MakePlonkTableDescription(
+        const GeniusAssigner::PlonkAssignTableType &table )
+    {
+        //auto marshalled_table =
+        //    decode_marshalling_from_file<GeniusAssigner::PlonkAssignTableType>( assignment_table_file );
+        //if ( !marshalled_table )
+        //{
+        //    return false;
+        //}
+        //auto [table_description, assignment_table] =
+        return crypto3::marshalling::types::make_assignment_table<ProverEndianess, AssignmentTableType>( table );
+    }
 
-GeniusProver::PublicPreprocessedData GeniusProver::ConstructPublicPreprocessedData(
-    const ConstraintSystemType &constrains,
-    const TableDescriptionType &desc,
-    const AssignmentTableType  &tbl,
-    const FriParams            &fri_params )
-{
-    std::size_t permutation_size = desc.witness_columns + desc.public_input_columns + component_constant_columns_;
+    GeniusProver::FriParams GeniusProver::MakeFRIParams( std::size_t degree_log,
+                                                         const int   max_step,
+                                                         std::size_t expand_factor )
+    {
+        std::size_t r = degree_log - 1;
 
-    PublicPreprocessedData public_preprocessed_data( PublicPreprocessor::process( constrains,
-                                                                                  tbl.move_public_table(),
-                                                                                  desc,
-                                                                                  LpcScheme( fri_params ),
-                                                                                  permutation_size ) );
+        return Lpc::fri_type::params_type(
+            ( 1 << degree_log ) - 1, // max_degree
+            crypto3::math::calculate_domain_set<BlueprintFieldType>( degree_log + expand_factor, r ),
+            GenerateRandomStepList( r, max_step ),
+            expand_factor );
+    }
 
-    return public_preprocessed_data;
-}
 
-GeniusProver::PrivatePreprocessedData GeniusProver::ConstructPrivatePreprocessedData()
-{
+    GeniusProver::ProofType GeniusProver::FillPlaceholderProof( const ProofSnarkType &proof,
+                                                                const FriParams      &commitment_params )
+    {
+        using TTypeBase = nil::marshalling::field_type<ProverEndianess>;
+
+        nil::marshalling::types::array_list<
+            TTypeBase,
+            typename crypto3::marshalling::types::commitment<TTypeBase,
+                                                             typename ProofSnarkType::commitment_scheme_type>::type,
+            nil::marshalling::option::sequence_size_field_prefix<
+                nil::marshalling::types::integral<TTypeBase, std::uint8_t>>>
+            filled_commitments;
+        for ( const auto &it : proof.commitments )
+        {
+            filled_commitments.value().push_back(
+                crypto3::marshalling::types::fill_commitment<ProverEndianess,
+                                                             typename ProofSnarkType::commitment_scheme_type>(
+                    it.second ) );
+        }
+
+        return ProofType( std::make_tuple(
+            filled_commitments,
+            crypto3::marshalling::types::fill_placeholder_evaluation_proof<ProverEndianess, ProofSnarkType>(
+                proof.eval_proof,
+                commitment_params ) ) );
+    }
+
+    std::vector<std::size_t> GeniusProver::GenerateRandomStepList( const std::size_t r, const int max_step )
+    {
+        using Distribution = std::uniform_int_distribution<int>;
+        static std::random_device random_engine;
+
+        std::vector<std::size_t> step_list;
+        std::size_t              steps_sum = 0;
+        while ( steps_sum != r )
+        {
+            if ( r - steps_sum <= max_step )
+            {
+                while ( r - steps_sum != 1 )
+                {
+                    step_list.emplace_back( r - steps_sum - 1 );
+                    steps_sum += step_list.back();
+                }
+                step_list.emplace_back( 1 );
+                steps_sum += step_list.back();
+            }
+            else
+            {
+                step_list.emplace_back( Distribution( 1, max_step )( random_engine ) );
+                steps_sum += step_list.back();
+            }
+        }
+        return step_list;
+    }
 }
