@@ -40,10 +40,13 @@ TEST( ProofAssignerTest, GenerateProof )
                                                 "../../../../../../test/src/proof/circuit.crct0",
                                                 "../../../../../../test/src/proof/table.tbl0",
                                                 "../../../../../../test/src/proof/proof.bin" ) );
-    auto proof_result = GeniusProver.GenerateProof( assign_result.value(),
-                                                      GeniusAssigner.table_description_,
-                                                      "../../../../../../test/src/proof/sgnus_proof.bin" );
-
+    GeniusProver.GenerateProof( assign_result.value(),
+                                GeniusAssigner.table_description_,
+                                "../../../../../../test/src/proof/sgnus_proof.bin" );
+    //auto proof_result = GeniusProver.GenerateProof( assign_result.value(),
+    //                                                  GeniusAssigner.table_description_,
+    //                                                  "../../../../../../test/src/proof/sgnus_proof.bin" );
+    //
     //if ( proof_result.has_error() )
     //{
     //    // Print the error information
