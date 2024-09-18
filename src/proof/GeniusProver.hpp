@@ -40,20 +40,12 @@
 #include <nil/crypto3/zk/snark/systems/plonk/placeholder/prover.hpp>
 #include <nil/crypto3/zk/snark/systems/plonk/placeholder/verifier.hpp>
 
-//#include <nil/marshalling/types/bundle.hpp>
-//#include <nil/marshalling/types/array_list.hpp>
-//#include <nil/marshalling/types/integral.hpp>
-//#include <nil/marshalling/status_type.hpp>
-//#include <nil/marshalling/options.hpp>
-//
-//#include <nil/crypto3/marshalling/algebra/types/field_element.hpp>
 #include <nil/crypto3/marshalling/zk/types/commitments/lpc.hpp>
 
 #include <nil/crypto3/algebra/curves/pallas.hpp>
 #include <nil/crypto3/hash/keccak.hpp>
 
 #include "outcome/outcome.hpp"
-//
 
 using namespace nil;
 
@@ -92,85 +84,22 @@ namespace sgns
         {
         }
 
-        void GenerateProof( const std::vector<GeniusAssigner::AssignerOutput> &assigner_outputs,
-                            const boost::filesystem::path                     &proof_file_ )
+        enum class ProverError
         {
-            auto constrains_sys = MakePlonkConstraintSystem( assigner_outputs.at( 0 ).constrains );
+            INVALID_PROOF_GENERATED = 0,
+        };
 
-            auto [plonk_table_desc, assignment_table] = MakePlonkTableDescription( assigner_outputs.at( 0 ).table );
+        outcome::result<ProofType> GenerateProof( const std::vector<GeniusAssigner::AssignerOutput> &assigner_outputs,
+                                                  const boost::filesystem::path                     &proof_file_ );
 
-            std::size_t table_rows_log = std::ceil( std::log2( plonk_table_desc.rows_amount ) );
-
-            auto fri_params = MakeFRIParams( table_rows_log, 1, expand_factor_ );
-
-            std::size_t permutation_size =
-                plonk_table_desc.witness_columns + plonk_table_desc.public_input_columns + component_constant_columns_;
-            LpcScheme lpc_scheme( fri_params );
-
-            PublicPreprocessedData public_preprocessed_data(
-                crypto3::zk::snark::placeholder_public_preprocessor<BlueprintFieldType, PlaceholderParams>::process(
-                    constrains_sys,
-                    assignment_table.move_public_table(),
-                    plonk_table_desc,
-                    lpc_scheme,
-                    permutation_size ) );
-
-            PrivatePreprocessedData private_preprocessed_data(
-                nil::crypto3::zk::snark::placeholder_private_preprocessor<BlueprintFieldType, PlaceholderParams>::
-                    process( constrains_sys, assignment_table.move_private_table(), plonk_table_desc ) );
-
-            ProofSnarkType proof = ProverType::process( public_preprocessed_data,
-                                                        private_preprocessed_data,
-                                                        plonk_table_desc,
-                                                        constrains_sys,
-                                                        lpc_scheme );
-            BOOST_LOG_TRIVIAL( info ) << "Proof generated";
-
-            if ( !VerifyProof( proof, public_preprocessed_data, plonk_table_desc, constrains_sys, lpc_scheme ) )
-            {
-                //return outcome::failure( boost::system::error_code{} );
-            }
-
-            BOOST_LOG_TRIVIAL( info ) << "Writing proof to " << proof_file_;
-            auto filled_placeholder_proof = FillPlaceholderProof( proof, fri_params );
-            bool res                      = encode_marshalling_to_file( proof_file_, filled_placeholder_proof, true );
-            if ( res )
-            {
-                BOOST_LOG_TRIVIAL( info ) << "Proof written";
-            }
-        }
-
-        void GenerateProof( const boost::filesystem::path &circuit_file,
-                            const boost::filesystem::path &assignment_table_file )
-        {
-        }
+        outcome::result<ProofType> GenerateProof( const boost::filesystem::path &circuit_file,
+                                                  const boost::filesystem::path &assignment_table_file );
 
         bool VerifyProof( const ProofSnarkType         &proof,
                           const PublicPreprocessedData &public_data,
                           const TableDescriptionType   &desc,
                           const ConstraintSystemType   &constrains_sys,
-                          const LpcScheme              &scheme ) const
-        {
-            BOOST_LOG_TRIVIAL( info ) << "Verifying proof...";
-            bool verification_result =
-                crypto3::zk::snark::placeholder_verifier<BlueprintFieldType, PlaceholderParams>::process(
-                    public_data,
-                    proof,
-                    desc,
-                    constrains_sys,
-                    scheme );
-
-            if ( verification_result )
-            {
-                BOOST_LOG_TRIVIAL( info ) << "Proof is verified";
-            }
-            else
-            {
-                BOOST_LOG_TRIVIAL( error ) << "Proof verification failed";
-            }
-
-            return verification_result;
-        }
+                          const LpcScheme              &scheme ) const;
 
         bool generate_to_file( bool                           skip_verification,
                                const boost::filesystem::path &circuit_file,
@@ -230,49 +159,25 @@ namespace sgns
         const std::size_t component_constant_columns_;
         const std::size_t expand_factor_;
 
-        std::shared_ptr<ConstraintSystemType>    constraint_system_;
-        std::shared_ptr<TableDescriptionType>    table_description_;
-        std::shared_ptr<FriParams>               fri_params_;
-        std::shared_ptr<LpcScheme>               lpc_scheme_;
-        std::shared_ptr<PublicPreprocessedData>  public_preprocessed_data_;
-        std::shared_ptr<PrivatePreprocessedData> private_preprocessed_data_;
+        //std::shared_ptr<ConstraintSystemType>    constraint_system_;
+        //std::shared_ptr<TableDescriptionType>    table_description_;
+        //std::shared_ptr<FriParams>               fri_params_;
+        //std::shared_ptr<LpcScheme>               lpc_scheme_;
+        //std::shared_ptr<PublicPreprocessedData>  public_preprocessed_data_;
+        //std::shared_ptr<PrivatePreprocessedData> private_preprocessed_data_;
 
-        ConstraintSystemType MakePlonkConstraintSystem( const GeniusAssigner::PlonkConstraintSystemType &constrains )
-        {
-            ConstraintSystemType constraint_sys(
-                crypto3::marshalling::types::make_plonk_constraint_system<ProverEndianess, ConstraintSystemType>(
-                    constrains ) );
-
-            return constraint_sys;
-        }
+        ConstraintSystemType MakePlonkConstraintSystem( const GeniusAssigner::PlonkConstraintSystemType &constrains );
 
         std::pair<TableDescriptionType, AssignmentTableType> MakePlonkTableDescription(
-            const GeniusAssigner::PlonkAssignTableType &table )
-        {
-            //auto marshalled_table =
-            //    decode_marshalling_from_file<GeniusAssigner::PlonkAssignTableType>( assignment_table_file );
-            //if ( !marshalled_table )
-            //{
-            //    return false;
-            //}
-            //auto [table_description, assignment_table] =
-            return crypto3::marshalling::types::make_assignment_table<ProverEndianess, AssignmentTableType>( table );
-        }
+            const GeniusAssigner::PlonkAssignTableType &table );
 
-        Lpc::fri_type::params_type MakeFRIParams( std::size_t degree_log,
-                                                  const int   max_step      = 1,
-                                                  std::size_t expand_factor = 0 )
-        {
-            std::size_t r = degree_log - 1;
+        FriParams MakeFRIParams( std::size_t degree_log, const int max_step = 1, std::size_t expand_factor = 0 );
 
-            return Lpc::fri_type::params_type(
-                ( 1 << degree_log ) - 1, // max_degree
-                crypto3::math::calculate_domain_set<BlueprintFieldType>( degree_log + expand_factor, r ),
-                generate_random_step_list( r, max_step ),
-                expand_factor );
-        }
-
-        PublicPreprocessedData ConstructPublicPreprocessedData();
+        PublicPreprocessedData  ConstructPublicPreprocessedData( const ConstraintSystemType &constrains,
+                                                                 const TableDescriptionType &desc,
+                                                                 const AssignmentTableType  &tbl,
+                                                                 const FriParams &fri_params);
+        PrivatePreprocessedData ConstructPrivatePreprocessedData();
 
         bool verify( const ProofSnarkType &proof ) const
         {
@@ -638,5 +543,7 @@ namespace sgns
         }
     };
 }
+
+OUTCOME_HPP_DECLARE_ERROR_2( sgns, GeniusProver::ProverError );
 
 #endif
