@@ -92,15 +92,18 @@ namespace sgns
         {
         }
 
-        outcome::result<void> GenerateProof( const std::vector<GeniusAssigner::AssignerOutput> &assigner_outputs,
+        void GenerateProof( const std::vector<GeniusAssigner::AssignerOutput> &assigner_outputs,
                                              const TableDescriptionType                        &desc,
-                                             const boost::filesystem::path &proof_file_ )
+                                             const boost::filesystem::path                     &proof_file_ )
         {
             auto constrains_sys = MakePlonkConstraintSystem( assigner_outputs.at( 0 ).constrains );
 
             auto [plonk_table_desc, assignment_table] = MakePlonkTableDescription( assigner_outputs.at( 0 ).table );
 
-            //auto plonk_table_desc = desc;
+            //TableDescriptionType plonk_table_desc(desc);
+            //auto assignment_table = assigner_outputs.at( 0 ).plonk_table;
+
+            //BOOST_LOG_TRIVIAL( info ) << "desc " << plonk_table_desc.rows_amount ;
 
             std::size_t table_rows_log = std::ceil( std::log2( plonk_table_desc.rows_amount ) );
 
@@ -129,9 +132,9 @@ namespace sgns
                                                         lpc_scheme );
             BOOST_LOG_TRIVIAL( info ) << "Proof generated";
 
-            if ( !verify( proof ) )
+            if ( !VerifyProof( proof, public_preprocessed_data, plonk_table_desc, constrains_sys, lpc_scheme ) )
             {
-                return outcome::failure(boost::system::error_code{});
+                //return outcome::failure( boost::system::error_code{} );
             }
 
             BOOST_LOG_TRIVIAL( info ) << "Writing proof to " << proof_file_;
@@ -143,9 +146,36 @@ namespace sgns
             }
         }
 
-        outcome::result<void> GenerateProof( const boost::filesystem::path &circuit_file,
+        void GenerateProof( const boost::filesystem::path &circuit_file,
                                              const boost::filesystem::path &assignment_table_file )
         {
+        }
+
+        bool VerifyProof( const ProofSnarkType         &proof,
+                          const PublicPreprocessedData &public_data,
+                          const TableDescriptionType   &desc,
+                          const ConstraintSystemType   &constrains_sys,
+                          const LpcScheme              &scheme ) const
+        {
+            BOOST_LOG_TRIVIAL( info ) << "Verifying proof...";
+            bool verification_result =
+                crypto3::zk::snark::placeholder_verifier<BlueprintFieldType, PlaceholderParams>::process(
+                    public_data,
+                    proof,
+                    desc,
+                    constrains_sys,
+                    scheme );
+
+            if ( verification_result )
+            {
+                BOOST_LOG_TRIVIAL( info ) << "Proof is verified";
+            }
+            else
+            {
+                BOOST_LOG_TRIVIAL( error ) << "Proof verification failed";
+            }
+
+            return verification_result;
         }
 
         bool generate_to_file( bool                           skip_verification,
@@ -241,6 +271,8 @@ namespace sgns
         {
             std::size_t r = degree_log - 1;
 
+            BOOST_LOG_TRIVIAL( info ) << "FRI "<< degree_log;
+
             return Lpc::fri_type::params_type(
                 ( 1 << degree_log ) - 1, // max_degree
                 crypto3::math::calculate_domain_set<BlueprintFieldType>( degree_log + expand_factor, r ),
@@ -250,7 +282,7 @@ namespace sgns
 
         PublicPreprocessedData ConstructPublicPreprocessedData();
 
-            bool verify( const ProofSnarkType &proof ) const
+        bool verify( const ProofSnarkType &proof ) const
         {
             BOOST_LOG_TRIVIAL( info ) << "Verifying proof...";
             bool verification_result =
@@ -305,6 +337,9 @@ namespace sgns
                 nil::crypto3::marshalling::types::make_assignment_table<ProverEndianess, AssignmentTable>(
                     *marshalled_table );
             table_description_ = std::make_shared<TableDescriptionType>( table_description );
+
+            BOOST_LOG_TRIVIAL( info ) << "desc1 " << table_description.rows_amount ;
+            BOOST_LOG_TRIVIAL( info ) << "desc2 " << table_description_->rows_amount ;
 
             // Lambdas and grinding bits should be passed threw preprocessor directives
             std::size_t table_rows_log = std::ceil( std::log2( table_description_->rows_amount ) );
@@ -415,6 +450,8 @@ namespace sgns
                                                            std::size_t expand_factor = 0 )
         {
             std::size_t r = degree_log - 1;
+
+            BOOST_LOG_TRIVIAL( info ) << "fri original  "<< degree_log;
 
             return typename FRIScheme::params_type(
                 ( 1 << degree_log ) - 1, // max_degree

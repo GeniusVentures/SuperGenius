@@ -240,8 +240,9 @@ namespace sgns
                 return outcome::failure( AssignerError::CIRCUIT_NOT_FOUND );
             }
 
-            print_circuit<nil::marshalling::option::big_endian, ConstraintSystemType>( assigner_outputs.at( i ).constrains,
-                                                                                       ocircuit );
+            print_circuit<nil::marshalling::option::big_endian, ConstraintSystemType>(
+                assigner_outputs.at( i ).constrains,
+                ocircuit );
 
             ocircuit.close();
         }
