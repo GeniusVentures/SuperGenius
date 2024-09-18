@@ -66,16 +66,17 @@ namespace sgns
         using FriParams         = typename Lpc::fri_type::params_type;
         using CircuitParams     = crypto3::zk::snark::placeholder_circuit_params<BlueprintFieldType>;
         using PlaceholderParams = crypto3::zk::snark::placeholder_params<CircuitParams, LpcScheme>;
-        using PublicPreprocessedData =
-            typename crypto3::zk::snark::placeholder_public_preprocessor<BlueprintFieldType,
-                                                                         PlaceholderParams>::preprocessed_data_type;
-        using PrivatePreprocessedData =
-            typename crypto3::zk::snark::placeholder_private_preprocessor<BlueprintFieldType,
-                                                                          PlaceholderParams>::preprocessed_data_type;
-        using ProofSnarkType = crypto3::zk::snark::placeholder_proof<BlueprintFieldType, PlaceholderParams>;
+        using PublicPreprocessor =
+            crypto3::zk::snark::placeholder_public_preprocessor<BlueprintFieldType, PlaceholderParams>;
+        using PublicPreprocessedData = PublicPreprocessor::preprocessed_data_type;
+        using PrivatePreprocessor =
+            crypto3::zk::snark::placeholder_private_preprocessor<BlueprintFieldType, PlaceholderParams>;
+        using PrivatePreprocessedData = PrivatePreprocessor::preprocessed_data_type;
+        using ProofSnarkType          = crypto3::zk::snark::placeholder_proof<BlueprintFieldType, PlaceholderParams>;
         using ProofType  = crypto3::marshalling::types::placeholder_proof<nil::marshalling::field_type<ProverEndianess>,
                                                                           ProofSnarkType>;
         using ProverType = crypto3::zk::snark::placeholder_prover<BlueprintFieldType, PlaceholderParams>;
+        using PlonkTablePair = std::pair<TableDescriptionType, AssignmentTableType>;
 
     public:
         GeniusProver( std::size_t component_constant_columns = COMPONENT_CONSTANT_COLUMNS_DEFAULT,
@@ -101,56 +102,56 @@ namespace sgns
                           const ConstraintSystemType   &constrains_sys,
                           const LpcScheme              &scheme ) const;
 
-        bool generate_to_file( bool                           skip_verification,
-                               const boost::filesystem::path &circuit_file,
-                               const boost::filesystem::path &assignment_table_file,
-                               const boost::filesystem::path &proof_file_ )
-        {
-            if ( !can_write_to_file( proof_file_.string() ) )
-            {
-                BOOST_LOG_TRIVIAL( error ) << "Can't write to file " << proof_file_;
-                return false;
-            }
+        //bool generate_to_file( bool                           skip_verification,
+        //                       const boost::filesystem::path &circuit_file,
+        //                       const boost::filesystem::path &assignment_table_file,
+        //                       const boost::filesystem::path &proof_file_ )
+        //{
+        //    if ( !can_write_to_file( proof_file_.string() ) )
+        //    {
+        //        BOOST_LOG_TRIVIAL( error ) << "Can't write to file " << proof_file_;
+        //        return false;
+        //    }
 
-            prepare_for_operation( circuit_file, assignment_table_file );
+        //    prepare_for_operation( circuit_file, assignment_table_file );
 
-            BOOST_ASSERT( public_preprocessed_data_ );
-            BOOST_ASSERT( private_preprocessed_data_ );
-            BOOST_ASSERT( table_description_ );
-            BOOST_ASSERT( constraint_system_ );
-            BOOST_ASSERT( lpc_scheme_ );
-            BOOST_ASSERT( fri_params_ );
+        //    BOOST_ASSERT( public_preprocessed_data_ );
+        //    BOOST_ASSERT( private_preprocessed_data_ );
+        //    BOOST_ASSERT( table_description_ );
+        //    BOOST_ASSERT( constraint_system_ );
+        //    BOOST_ASSERT( lpc_scheme_ );
+        //    BOOST_ASSERT( fri_params_ );
 
-            BOOST_LOG_TRIVIAL( info ) << "Generating proof...";
-            ProofSnarkType proof = ProverType::process( *public_preprocessed_data_,
-                                                        *private_preprocessed_data_,
-                                                        *table_description_,
-                                                        *constraint_system_,
-                                                        *lpc_scheme_ );
-            BOOST_LOG_TRIVIAL( info ) << "Proof generated";
+        //    BOOST_LOG_TRIVIAL( info ) << "Generating proof...";
+        //    ProofSnarkType proof = ProverType::process( *public_preprocessed_data_,
+        //                                                *private_preprocessed_data_,
+        //                                                *table_description_,
+        //                                                *constraint_system_,
+        //                                                *lpc_scheme_ );
+        //    BOOST_LOG_TRIVIAL( info ) << "Proof generated";
 
-            if ( skip_verification )
-            {
-                BOOST_LOG_TRIVIAL( info ) << "Skipping proof verification";
-            }
-            else
-            {
-                if ( !verify( proof ) )
-                {
-                    return false;
-                }
-            }
+        //    if ( skip_verification )
+        //    {
+        //        BOOST_LOG_TRIVIAL( info ) << "Skipping proof verification";
+        //    }
+        //    else
+        //    {
+        //        if ( !verify( proof ) )
+        //        {
+        //            return false;
+        //        }
+        //    }
 
-            BOOST_LOG_TRIVIAL( info ) << "Writing proof to " << proof_file_;
-            auto filled_placeholder_proof = FillPlaceholderProof( proof, *fri_params_ );
-            bool res                      = encode_marshalling_to_file( proof_file_, filled_placeholder_proof, true );
-            if ( res )
-            {
-                BOOST_LOG_TRIVIAL( info ) << "Proof written";
-            }
+        //    BOOST_LOG_TRIVIAL( info ) << "Writing proof to " << proof_file_;
+        //    auto filled_placeholder_proof = FillPlaceholderProof( proof, *fri_params_ );
+        //    bool res                      = encode_marshalling_to_file( proof_file_, filled_placeholder_proof, true );
+        //    if ( res )
+        //    {
+        //        BOOST_LOG_TRIVIAL( info ) << "Proof written";
+        //    }
 
-            return res;
-        }
+        //    return res;
+        //}
 
     private:
         constexpr static const std::size_t COMPONENT_CONSTANT_COLUMNS_DEFAULT = 5;
@@ -168,97 +169,68 @@ namespace sgns
 
         ConstraintSystemType MakePlonkConstraintSystem( const GeniusAssigner::PlonkConstraintSystemType &constrains );
 
-        std::pair<TableDescriptionType, AssignmentTableType> MakePlonkTableDescription(
-            const GeniusAssigner::PlonkAssignTableType &table );
+        PlonkTablePair MakePlonkTableDescription( const GeniusAssigner::PlonkAssignTableType &table );
 
         FriParams MakeFRIParams( std::size_t degree_log, const int max_step = 1, std::size_t expand_factor = 0 );
 
-        PublicPreprocessedData  ConstructPublicPreprocessedData( const ConstraintSystemType &constrains,
-                                                                 const TableDescriptionType &desc,
-                                                                 const AssignmentTableType  &tbl,
-                                                                 const FriParams &fri_params);
-        PrivatePreprocessedData ConstructPrivatePreprocessedData();
 
-        bool verify( const ProofSnarkType &proof ) const
-        {
-            BOOST_LOG_TRIVIAL( info ) << "Verifying proof...";
-            bool verification_result =
-                crypto3::zk::snark::placeholder_verifier<BlueprintFieldType, PlaceholderParams>::process(
-                    *public_preprocessed_data_,
-                    proof,
-                    *table_description_,
-                    *constraint_system_,
-                    *lpc_scheme_ );
-
-            if ( verification_result )
-            {
-                BOOST_LOG_TRIVIAL( info ) << "Proof is verified";
-            }
-            else
-            {
-                BOOST_LOG_TRIVIAL( error ) << "Proof verification failed";
-            }
-
-            return verification_result;
-        }
-
-        bool prepare_for_operation( const boost::filesystem::path &circuit_file,
-                                    const boost::filesystem::path &assignment_table_file )
-        {
-            using TTypeBase             = nil::marshalling::field_type<ProverEndianess>;
-            using ConstraintMarshalling = //HENRIQUE
-                crypto3::marshalling::types::plonk_constraint_system<TTypeBase, ConstraintSystemType>;
-
-            using Column          = crypto3::zk::snark::plonk_column<BlueprintFieldType>;
-            using AssignmentTable = crypto3::zk::snark::plonk_table<BlueprintFieldType, Column>;
-
-            {
-                auto marshalled_value = decode_marshalling_from_file<ConstraintMarshalling>( circuit_file );
-                if ( !marshalled_value )
-                {
-                    return false;
-                }
-                constraint_system_ = std::make_shared<ConstraintSystemType>(
-                    crypto3::marshalling::types::make_plonk_constraint_system<ProverEndianess, ConstraintSystemType>(
-                        *marshalled_value ) );
-            }
-            //henrique
-            using TableValueMarshalling =
-                crypto3::marshalling::types::plonk_assignment_table<TTypeBase, AssignmentTable>;
-            auto marshalled_table = decode_marshalling_from_file<TableValueMarshalling>( assignment_table_file );
-            if ( !marshalled_table )
-            {
-                return false;
-            }
-            auto [table_description, assignment_table] =
-                nil::crypto3::marshalling::types::make_assignment_table<ProverEndianess, AssignmentTable>(
-                    *marshalled_table );
-            table_description_ = std::make_shared<TableDescriptionType>( table_description );
-
-            // Lambdas and grinding bits should be passed threw preprocessor directives
-            std::size_t table_rows_log = std::ceil( std::log2( table_description_->rows_amount ) );
-
-            fri_params_ = std::make_shared<FriParams>(
-                create_fri_params<typename Lpc::fri_type, BlueprintFieldType>( table_rows_log, 1, expand_factor_ ) );
-
-            std::size_t permutation_size = table_description_->witness_columns +
-                                           table_description_->public_input_columns + component_constant_columns_;
-            lpc_scheme_ = std::make_shared<LpcScheme>( *fri_params_ );
-
-            public_preprocessed_data_ = std::make_shared<PublicPreprocessedData>(
-                crypto3::zk::snark::placeholder_public_preprocessor<BlueprintFieldType, PlaceholderParams>::process(
-                    *constraint_system_,
-                    assignment_table.move_public_table(),
-                    *table_description_,
-                    *lpc_scheme_,
-                    permutation_size ) );
-
-            BOOST_LOG_TRIVIAL( info ) << "Preprocessing private data";
-            private_preprocessed_data_ = std::make_shared<PrivatePreprocessedData>(
-                nil::crypto3::zk::snark::placeholder_private_preprocessor<BlueprintFieldType, PlaceholderParams>::
-                    process( *constraint_system_, assignment_table.move_private_table(), *table_description_ ) );
-            return true;
-        }
+        //bool prepare_for_operation( const boost::filesystem::path &circuit_file,
+        //                            const boost::filesystem::path &assignment_table_file )
+        //{
+        //    using TTypeBase             = nil::marshalling::field_type<ProverEndianess>;
+        //    using ConstraintMarshalling = //HENRIQUE
+        //        crypto3::marshalling::types::plonk_constraint_system<TTypeBase, ConstraintSystemType>;
+        //
+        //    using Column          = crypto3::zk::snark::plonk_column<BlueprintFieldType>;
+        //    using AssignmentTable = crypto3::zk::snark::plonk_table<BlueprintFieldType, Column>;
+        //
+        //    {
+        //        auto marshalled_value = decode_marshalling_from_file<ConstraintMarshalling>( circuit_file );
+        //        if ( !marshalled_value )
+        //        {
+        //            return false;
+        //        }
+        //        constraint_system_ = std::make_shared<ConstraintSystemType>(
+        //            crypto3::marshalling::types::make_plonk_constraint_system<ProverEndianess, ConstraintSystemType>(
+        //                *marshalled_value ) );
+        //    }
+        //    //henrique
+        //    using TableValueMarshalling =
+        //        crypto3::marshalling::types::plonk_assignment_table<TTypeBase, AssignmentTable>;
+        //    auto marshalled_table = decode_marshalling_from_file<TableValueMarshalling>( assignment_table_file );
+        //    if ( !marshalled_table )
+        //    {
+        //        return false;
+        //    }
+        //    auto [table_description, assignment_table] =
+        //        nil::crypto3::marshalling::types::make_assignment_table<ProverEndianess, AssignmentTable>(
+        //            *marshalled_table );
+        //    table_description_ = std::make_shared<TableDescriptionType>( table_description );
+        //
+        //    // Lambdas and grinding bits should be passed threw preprocessor directives
+        //    std::size_t table_rows_log = std::ceil( std::log2( table_description_->rows_amount ) );
+        //
+        //    fri_params_ = std::make_shared<FriParams>(
+        //        create_fri_params<typename Lpc::fri_type, BlueprintFieldType>( table_rows_log, 1, expand_factor_ ) );
+        //
+        //    std::size_t permutation_size = table_description_->witness_columns +
+        //                                   table_description_->public_input_columns + component_constant_columns_;
+        //    lpc_scheme_ = std::make_shared<LpcScheme>( *fri_params_ );
+        //
+        //    public_preprocessed_data_ = std::make_shared<PublicPreprocessedData>(
+        //        crypto3::zk::snark::placeholder_public_preprocessor<BlueprintFieldType, PlaceholderParams>::process(
+        //            *constraint_system_,
+        //            assignment_table.move_public_table(),
+        //            *table_description_,
+        //            *lpc_scheme_,
+        //            permutation_size ) );
+        //
+        //    BOOST_LOG_TRIVIAL( info ) << "Preprocessing private data";
+        //    private_preprocessed_data_ = std::make_shared<PrivatePreprocessedData>(
+        //        nil::crypto3::zk::snark::placeholder_private_preprocessor<BlueprintFieldType, PlaceholderParams>::
+        //            process( *constraint_system_, assignment_table.move_private_table(), *table_description_ ) );
+        //    return true;
+        //}
 
         template <typename MarshallingType>
         std::optional<MarshallingType> decode_marshalling_from_file( const boost::filesystem::path &path,
@@ -338,47 +310,7 @@ namespace sgns
             return v;
         }
 
-        template <typename FRIScheme, typename FieldType>
-        typename FRIScheme::params_type create_fri_params( std::size_t degree_log,
-                                                           const int   max_step      = 1,
-                                                           std::size_t expand_factor = 0 )
-        {
-            std::size_t r = degree_log - 1;
-
-            return typename FRIScheme::params_type(
-                ( 1 << degree_log ) - 1, // max_degree
-                nil::crypto3::math::calculate_domain_set<FieldType>( degree_log + expand_factor, r ),
-                generate_random_step_list( r, max_step ),
-                expand_factor );
-        }
-
-        std::vector<std::size_t> generate_random_step_list( const std::size_t r, const int max_step )
-        {
-            using Distribution = std::uniform_int_distribution<int>;
-            static std::random_device random_engine;
-
-            std::vector<std::size_t> step_list;
-            std::size_t              steps_sum = 0;
-            while ( steps_sum != r )
-            {
-                if ( r - steps_sum <= max_step )
-                {
-                    while ( r - steps_sum != 1 )
-                    {
-                        step_list.emplace_back( r - steps_sum - 1 );
-                        steps_sum += step_list.back();
-                    }
-                    step_list.emplace_back( 1 );
-                    steps_sum += step_list.back();
-                }
-                else
-                {
-                    step_list.emplace_back( Distribution( 1, max_step )( random_engine ) );
-                    steps_sum += step_list.back();
-                }
-            }
-            return step_list;
-        }
+        std::vector<std::size_t> GenerateRandomStepList( const std::size_t r, const int max_step );
 
         template <typename StreamType>
         std::optional<StreamType> open_file( const std::string &path, std::ios_base::openmode mode )
@@ -452,31 +384,7 @@ namespace sgns
             return true;
         }
 
-        ProofType FillPlaceholderProof( const ProofSnarkType &proof, const FriParams &commitment_params )
-        {
-            using TTypeBase = nil::marshalling::field_type<ProverEndianess>;
-
-            nil::marshalling::types::array_list<
-                TTypeBase,
-                typename crypto3::marshalling::types::commitment<TTypeBase,
-                                                                 typename ProofSnarkType::commitment_scheme_type>::type,
-                nil::marshalling::option::sequence_size_field_prefix<
-                    nil::marshalling::types::integral<TTypeBase, std::uint8_t>>>
-                filled_commitments;
-            for ( const auto &it : proof.commitments )
-            {
-                filled_commitments.value().push_back(
-                    crypto3::marshalling::types::fill_commitment<ProverEndianess,
-                                                                 typename ProofSnarkType::commitment_scheme_type>(
-                        it.second ) );
-            }
-
-            return ProofType( std::make_tuple(
-                filled_commitments,
-                crypto3::marshalling::types::fill_placeholder_evaluation_proof<ProverEndianess, ProofSnarkType>(
-                    proof.eval_proof,
-                    commitment_params ) ) );
-        }
+        ProofType FillPlaceholderProof( const ProofSnarkType &proof, const FriParams &commitment_params );
 
         template <typename MarshallingType>
         bool encode_marshalling_to_file( const boost::filesystem::path &path,
