@@ -5,6 +5,9 @@
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
 
+#ifndef _GENIUS_ASSIGNER_HPP_
+#define _GENIUS_ASSIGNER_HPP_
+
 #include <cstdint>
 #include <cstdio>
 #include <nil/marshalling/status_type.hpp>
@@ -18,7 +21,6 @@
 #include <nil/crypto3/algebra/fields/arithmetic_params/pallas.hpp>
 #include <nil/crypto3/algebra/curves/bls12.hpp>
 #include <nil/blueprint/assigner.hpp>
-#include <nil/blueprint/asserts.hpp>
 #include <nil/blueprint/utils/satisfiability_check.hpp>
 
 
@@ -26,8 +28,7 @@
 #include "outcome/outcome.hpp"
 
 
-#ifndef _GENIUS_ASSIGNER_HPP_
-#define _GENIUS_ASSIGNER_HPP_
+
 
 using namespace nil;
 
