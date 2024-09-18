@@ -93,17 +93,11 @@ namespace sgns
         }
 
         void GenerateProof( const std::vector<GeniusAssigner::AssignerOutput> &assigner_outputs,
-                                             const TableDescriptionType                        &desc,
-                                             const boost::filesystem::path                     &proof_file_ )
+                            const boost::filesystem::path                     &proof_file_ )
         {
             auto constrains_sys = MakePlonkConstraintSystem( assigner_outputs.at( 0 ).constrains );
 
             auto [plonk_table_desc, assignment_table] = MakePlonkTableDescription( assigner_outputs.at( 0 ).table );
-
-            //TableDescriptionType plonk_table_desc(desc);
-            //auto assignment_table = assigner_outputs.at( 0 ).plonk_table;
-
-            //BOOST_LOG_TRIVIAL( info ) << "desc " << plonk_table_desc.rows_amount ;
 
             std::size_t table_rows_log = std::ceil( std::log2( plonk_table_desc.rows_amount ) );
 
@@ -147,7 +141,7 @@ namespace sgns
         }
 
         void GenerateProof( const boost::filesystem::path &circuit_file,
-                                             const boost::filesystem::path &assignment_table_file )
+                            const boost::filesystem::path &assignment_table_file )
         {
         }
 
@@ -271,8 +265,6 @@ namespace sgns
         {
             std::size_t r = degree_log - 1;
 
-            BOOST_LOG_TRIVIAL( info ) << "FRI "<< degree_log;
-
             return Lpc::fri_type::params_type(
                 ( 1 << degree_log ) - 1, // max_degree
                 crypto3::math::calculate_domain_set<BlueprintFieldType>( degree_log + expand_factor, r ),
@@ -337,9 +329,6 @@ namespace sgns
                 nil::crypto3::marshalling::types::make_assignment_table<ProverEndianess, AssignmentTable>(
                     *marshalled_table );
             table_description_ = std::make_shared<TableDescriptionType>( table_description );
-
-            BOOST_LOG_TRIVIAL( info ) << "desc1 " << table_description.rows_amount ;
-            BOOST_LOG_TRIVIAL( info ) << "desc2 " << table_description_->rows_amount ;
 
             // Lambdas and grinding bits should be passed threw preprocessor directives
             std::size_t table_rows_log = std::ceil( std::log2( table_description_->rows_amount ) );
@@ -450,8 +439,6 @@ namespace sgns
                                                            std::size_t expand_factor = 0 )
         {
             std::size_t r = degree_log - 1;
-
-            BOOST_LOG_TRIVIAL( info ) << "fri original  "<< degree_log;
 
             return typename FRIScheme::params_type(
                 ( 1 << degree_log ) - 1, // max_degree

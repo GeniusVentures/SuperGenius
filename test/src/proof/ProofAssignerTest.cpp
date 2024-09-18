@@ -41,7 +41,6 @@ TEST( ProofAssignerTest, GenerateProof )
                                                 "../../../../../../test/src/proof/table.tbl0",
                                                 "../../../../../../test/src/proof/proof.bin" ) );
     GeniusProver.GenerateProof( assign_result.value(),
-                                GeniusAssigner.table_description_,
                                 "../../../../../../test/src/proof/sgnus_proof.bin" );
     //auto proof_result = GeniusProver.GenerateProof( assign_result.value(),
     //                                                  GeniusAssigner.table_description_,
