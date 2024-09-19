@@ -40,9 +40,20 @@ TEST( ProofAssignerTest, GenerateProof )
     //                                            "../../../../../../test/src/proof/circuit.crct0",
     //                                            "../../../../../../test/src/proof/table.tbl0",
     //                                            "../../../../../../test/src/proof/proof.bin" ) );
-    GeniusProver.GenerateProof( assign_result.value(),
-                                "../../../../../../test/src/proof/sgnus_proof.bin" );
-    //auto proof_result = GeniusProver.GenerateProof( assign_result.value(),
+    //GeniusProver.GenerateProof( assign_result.value(),
+    //                            "../../../../../../test/src/proof/sgnus_proof.bin" );
+    auto proof_result = GeniusProver.GenerateProof( assign_result.value() );
+    if ( proof_result.has_error() )
+    {
+        // Print the error information
+        auto error = proof_result.error();
+        std::cerr << "Proof Error occurred: " << error.message() << std::endl; // Assuming error has a message method
+    }
+    // Assert that the function was successful (i.e., no error occurred)
+    ASSERT_FALSE( proof_result.has_error() ) << "Proof Expected success but got an error!";
+
+    EXPECT_TRUE(
+        GeniusProver.WriteProofToFile( proof_result.value(), "../../../../../../test/src/proof/sgnus_proof.bin" ) );
     //                                                  GeniusAssigner.table_description_,
     //                                                  "../../../../../../test/src/proof/sgnus_proof.bin" );
     //
