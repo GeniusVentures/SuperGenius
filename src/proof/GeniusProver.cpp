@@ -6,6 +6,7 @@
  */
 
 #include "GeniusProver.hpp"
+#include "NilFileHelper.hpp"
 
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, GeniusProver::ProverError, e )
 {
@@ -22,54 +23,47 @@ namespace sgns
 {
 
     outcome::result<GeniusProver::ProofType> GeniusProver::GenerateProof(
-        const std::vector<GeniusAssigner::AssignerOutput> &assigner_outputs,
-        const boost::filesystem::path                     &proof_file_ )
+        const std::vector<GeniusAssigner::AssignerOutput> &assigner_outputs )
     {
         auto constrains_sys = MakePlonkConstraintSystem( assigner_outputs.at( 0 ).constrains );
 
-    auto [plonk_table_desc, assignment_table] = MakePlonkTableDescription( assigner_outputs.at( 0 ).table );
+        auto [plonk_table_desc, assignment_table] = MakePlonkTableDescription( assigner_outputs.at( 0 ).table );
 
         std::size_t table_rows_log = std::ceil( std::log2( plonk_table_desc.rows_amount ) );
 
         auto fri_params = MakeFRIParams( table_rows_log, 1, expand_factor_ );
 
-    std::size_t permutation_size =
-        plonk_table_desc.witness_columns + plonk_table_desc.public_input_columns + component_constant_columns_;
-    LpcScheme lpc_scheme( fri_params );
+        std::size_t permutation_size =
+            plonk_table_desc.witness_columns + plonk_table_desc.public_input_columns + component_constant_columns_;
+        LpcScheme lpc_scheme( fri_params );
 
-    PublicPreprocessedData public_preprocessed_data(
-        crypto3::zk::snark::placeholder_public_preprocessor<BlueprintFieldType, PlaceholderParams>::process(
-            constrains_sys,
-            assignment_table.move_public_table(),
-            plonk_table_desc,
-            lpc_scheme,
-            permutation_size ) );
+        PublicPreprocessedData public_preprocessed_data(
+            crypto3::zk::snark::placeholder_public_preprocessor<BlueprintFieldType, PlaceholderParams>::process(
+                constrains_sys,
+                assignment_table.move_public_table(),
+                plonk_table_desc,
+                lpc_scheme,
+                permutation_size ) );
 
-    PrivatePreprocessedData private_preprocessed_data(
-        nil::crypto3::zk::snark::placeholder_private_preprocessor<BlueprintFieldType, PlaceholderParams>::process(
-            constrains_sys,
-            assignment_table.move_private_table(),
-            plonk_table_desc ) );
+        PrivatePreprocessedData private_preprocessed_data(
+            nil::crypto3::zk::snark::placeholder_private_preprocessor<BlueprintFieldType, PlaceholderParams>::process(
+                constrains_sys,
+                assignment_table.move_private_table(),
+                plonk_table_desc ) );
 
         ProofSnarkType proof = ProverType::process( public_preprocessed_data,
                                                     private_preprocessed_data,
                                                     plonk_table_desc,
                                                     constrains_sys,
                                                     lpc_scheme );
-        BOOST_LOG_TRIVIAL( info ) << "Proof generated";
 
         if ( !VerifyProof( proof, public_preprocessed_data, plonk_table_desc, constrains_sys, lpc_scheme ) )
         {
             return outcome::failure( ProverError::INVALID_PROOF_GENERATED );
         }
 
-        BOOST_LOG_TRIVIAL( info ) << "Writing proof to " << proof_file_;
         auto filled_placeholder_proof = FillPlaceholderProof( proof, fri_params );
-        bool res                      = encode_marshalling_to_file( proof_file_, filled_placeholder_proof, true );
-        if ( res )
-        {
-            BOOST_LOG_TRIVIAL( info ) << "Proof written";
-        }
+
         return filled_placeholder_proof;
     }
 
@@ -85,24 +79,27 @@ namespace sgns
                                     const ConstraintSystemType   &constrains_sys,
                                     const LpcScheme              &scheme ) const
     {
-        BOOST_LOG_TRIVIAL( info ) << "Verifying proof...";
-        bool verification_result =
-            crypto3::zk::snark::placeholder_verifier<BlueprintFieldType, PlaceholderParams>::process( public_data,
-                                                                                                      proof,
-                                                                                                      desc,
-                                                                                                      constrains_sys,
-                                                                                                      scheme );
+        return crypto3::zk::snark::placeholder_verifier<BlueprintFieldType, PlaceholderParams>::process( public_data,
+                                                                                                         proof,
+                                                                                                         desc,
+                                                                                                         constrains_sys,
+                                                                                                         scheme );
+    }
 
-        if ( verification_result )
+    bool GeniusProver::WriteProofToFile( const ProofType &proof, const std::string &path )
+    {
+        bool          ret = false;
+        std::ofstream oproof;
+        oproof.open( path, std::ios_base::out );
+        if ( oproof.is_open() )
         {
-            BOOST_LOG_TRIVIAL( info ) << "Proof is verified";
-        }
-        else
-        {
-            BOOST_LOG_TRIVIAL( error ) << "Proof verification failed";
+            NilFileHelper::PrintMarshalledData( proof, oproof, false );
+
+            oproof.close();
+            ret = true;
         }
 
-        return verification_result;
+        return ret;
     }
 
     GeniusProver::ConstraintSystemType GeniusProver::MakePlonkConstraintSystem(
@@ -140,7 +137,6 @@ namespace sgns
             GenerateRandomStepList( r, max_step ),
             expand_factor );
     }
-
 
     GeniusProver::ProofType GeniusProver::FillPlaceholderProof( const ProofSnarkType &proof,
                                                                 const FriParams      &commitment_params )

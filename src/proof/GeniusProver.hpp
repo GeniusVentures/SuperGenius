@@ -90,8 +90,7 @@ namespace sgns
             INVALID_PROOF_GENERATED = 0,
         };
 
-        outcome::result<ProofType> GenerateProof( const std::vector<GeniusAssigner::AssignerOutput> &assigner_outputs,
-                                                  const boost::filesystem::path                     &proof_file_ );
+        outcome::result<ProofType> GenerateProof( const std::vector<GeniusAssigner::AssignerOutput> &assigner_outputs );
 
         outcome::result<ProofType> GenerateProof( const boost::filesystem::path &circuit_file,
                                                   const boost::filesystem::path &assignment_table_file );
@@ -101,6 +100,8 @@ namespace sgns
                           const TableDescriptionType   &desc,
                           const ConstraintSystemType   &constrains_sys,
                           const LpcScheme              &scheme ) const;
+
+        bool WriteProofToFile( const ProofType &proof, const std::string &path );
 
         //bool generate_to_file( bool                           skip_verification,
         //                       const boost::filesystem::path &circuit_file,
@@ -172,7 +173,6 @@ namespace sgns
         PlonkTablePair MakePlonkTableDescription( const GeniusAssigner::PlonkAssignTableType &table );
 
         FriParams MakeFRIParams( std::size_t degree_log, const int max_step = 1, std::size_t expand_factor = 0 );
-
 
         //bool prepare_for_operation( const boost::filesystem::path &circuit_file,
         //                            const boost::filesystem::path &assignment_table_file )
