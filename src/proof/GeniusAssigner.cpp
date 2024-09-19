@@ -8,6 +8,7 @@
 #include <boost/json/src.hpp>
 
 #include "GeniusAssigner.hpp"
+#include "FileOperations.hpp"
 
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, GeniusAssigner::AssignerError, e )
 {
@@ -215,7 +216,7 @@ namespace sgns
             {
                 return outcome::failure( AssignerError::TABLE_PATH_ERROR );
             }
-            PrintAssignerOutput<PlonkAssignTableType>( assigner_outputs.at( i ).table, otable );
+            NilFileHelper::PrintMarshalledData<PlonkAssignTableType>( assigner_outputs.at( i ).table, otable );
 
             otable.close();
 
@@ -230,7 +231,7 @@ namespace sgns
                 return outcome::failure( AssignerError::CIRCUIT_NOT_FOUND );
             }
 
-            PrintAssignerOutput<PlonkConstraintSystemType>( assigner_outputs.at( i ).constrains, ocircuit );
+            NilFileHelper::PrintMarshalledData<PlonkConstraintSystemType>( assigner_outputs.at( i ).constrains, ocircuit );
 
             ocircuit.close();
         }
@@ -602,16 +603,6 @@ namespace sgns
                 typename ConstraintSystemType::lookup_tables_type::value_type>( used_lookup_tables ) ) );
 
         return filled_val;
-    }
-
-    template <typename AssignerOutput>
-    void GeniusAssigner::PrintAssignerOutput( const AssignerOutput &output, std::ostream &out )
-    {
-        std::vector<std::uint8_t> cv;
-        cv.resize( output.length(), 0x00 );
-        auto                          write_iter = cv.begin();
-        nil::marshalling::status_type status     = output.write( write_iter, cv.size() );
-        out.write( reinterpret_cast<char *>( cv.data() ), cv.size() );
     }
 
     template <typename ValueType, typename ContainerType>
