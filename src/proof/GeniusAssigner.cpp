@@ -8,7 +8,7 @@
 #include <boost/json/src.hpp>
 
 #include "GeniusAssigner.hpp"
-#include "FileOperations.hpp"
+#include "NilFileHelper.hpp"
 
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, GeniusAssigner::AssignerError, e )
 {
