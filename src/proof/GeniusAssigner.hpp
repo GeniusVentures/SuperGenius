@@ -156,9 +156,6 @@ namespace sgns
             const AssignmentTableType                                &table_proxy,
             bool                                                      rename_required );
 
-        template <typename AssignerOutput>
-        void PrintAssignerOutput( const AssignerOutput &output, std::ostream &out = std::cout );
-
         template <typename ValueType, typename ContainerType>
         void FillVectorValue( std::vector<ValueType>                   &table_values,
                               const ContainerType                      &table_col,
