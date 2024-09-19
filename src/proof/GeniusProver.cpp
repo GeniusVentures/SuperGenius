@@ -15,6 +15,12 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, GeniusProver::ProverError, e )
     {
         case ProverError::INVALID_PROOF_GENERATED:
             return "The provided proof is verified to be false.";
+        case ProverError::TABLE_PATH_ERROR:
+            return "The assignment table file is not on the informed path.";
+        case ProverError::CIRCUIT_PATH_ERROR:
+            return "The circuit file is not on the informed path.";
+        case ProverError::PROOF_PATH_ERROR:
+            return "The proof file can't be saved on the informed path.";
     }
     return "Unknown error";
 }
@@ -29,13 +35,12 @@ namespace sgns
 
         auto [plonk_table_desc, assignment_table] = MakePlonkTableDescription( assigner_outputs.at( 0 ).table );
 
-        std::size_t table_rows_log = std::ceil( std::log2( plonk_table_desc.rows_amount ) );
+        auto fri_params = MakeFRIParams( plonk_table_desc.rows_amount, 1, expand_factor_ );
 
-        auto fri_params = MakeFRIParams( table_rows_log, 1, expand_factor_ );
+        LpcScheme lpc_scheme( fri_params );
 
         std::size_t permutation_size =
             plonk_table_desc.witness_columns + plonk_table_desc.public_input_columns + component_constant_columns_;
-        LpcScheme lpc_scheme( fri_params );
 
         PublicPreprocessedData public_preprocessed_data(
             crypto3::zk::snark::placeholder_public_preprocessor<BlueprintFieldType, PlaceholderParams>::process(
@@ -67,10 +72,29 @@ namespace sgns
         return filled_placeholder_proof;
     }
 
-    outcome::result<GeniusProver::ProofType> GeniusProver::GenerateProof(
-        const boost::filesystem::path &circuit_file,
-        const boost::filesystem::path &assignment_table_file )
+    outcome::result<GeniusProver::ProofType> GeniusProver::GenerateProof( const std::string &circuit_file,
+                                                                          const std::string &assignment_table_file )
     {
+        std::ifstream itable;
+        itable.open( assignment_table_file, std::ios_base::in | std::ios::binary | std::ios::ate );
+        if ( !itable )
+        {
+            return outcome::failure( ProverError::TABLE_PATH_ERROR );
+        }
+        OUTCOME_TRY( ( auto &&, plonk_table ), NilFileHelper::DecodeMarshalledData<GeniusAssigner::PlonkAssignTableType>( itable ) );
+        itable.close();
+        std::ifstream icircuit;
+        icircuit.open( assignment_table_file, std::ios_base::in | std::ios::binary | std::ios::ate );
+        if ( !icircuit )
+        {
+            return outcome::failure( ProverError::CIRCUIT_PATH_ERROR );
+        }
+        OUTCOME_TRY( ( auto &&, plonk_constrains ),
+                     NilFileHelper::DecodeMarshalledData<GeniusAssigner::PlonkConstraintSystemType>( icircuit ) );
+        icircuit.close();
+        GeniusAssigner::AssignerOutput assigner_outputs( plonk_constrains, plonk_table );
+
+        return GenerateProof( { assigner_outputs } );
     }
 
     bool GeniusProver::VerifyProof( const ProofSnarkType         &proof,
@@ -115,25 +139,19 @@ namespace sgns
     GeniusProver::PlonkTablePair GeniusProver::MakePlonkTableDescription(
         const GeniusAssigner::PlonkAssignTableType &table )
     {
-        //auto marshalled_table =
-        //    decode_marshalling_from_file<GeniusAssigner::PlonkAssignTableType>( assignment_table_file );
-        //if ( !marshalled_table )
-        //{
-        //    return false;
-        //}
-        //auto [table_description, assignment_table] =
         return crypto3::marshalling::types::make_assignment_table<ProverEndianess, AssignmentTableType>( table );
     }
 
-    GeniusProver::FriParams GeniusProver::MakeFRIParams( std::size_t degree_log,
+    GeniusProver::FriParams GeniusProver::MakeFRIParams( std::size_t rows_amount,
                                                          const int   max_step,
                                                          std::size_t expand_factor )
     {
-        std::size_t r = degree_log - 1;
+        std::size_t table_rows_log = std::ceil( std::log2( rows_amount ) );
+        std::size_t r              = table_rows_log - 1;
 
         return Lpc::fri_type::params_type(
-            ( 1 << degree_log ) - 1, // max_degree
-            crypto3::math::calculate_domain_set<BlueprintFieldType>( degree_log + expand_factor, r ),
+            ( 1 << table_rows_log ) - 1, // max_degree
+            crypto3::math::calculate_domain_set<BlueprintFieldType>( table_rows_log + expand_factor, r ),
             GenerateRandomStepList( r, max_step ),
             expand_factor );
     }
