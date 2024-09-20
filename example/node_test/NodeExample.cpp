@@ -4,6 +4,7 @@
  * @date       2024-04-18
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
+#include <cstring>
 #include <math.h>
 #include <fstream>
 #include <memory>
@@ -120,10 +121,23 @@ void process_events( sgns::GeniusNode &genius_node )
     }
 }
 
-DevConfig_st DEV_CONFIG{ "0xcafe", 0.65, 1.0, 0 , "./"};
-
+// 1 -> DEV_CONFIG's base path
 int main( int argc, char *argv[] )
 {
+    DevConfig_st DEV_CONFIG{ "0xcafe", 0.65, 1.0, 0, "./" };
+
+    if ( argc >= 2 )
+    {
+        size_t len = strlen( argv[1] );
+
+        if ( len > 1024 )
+        {
+            std::exit( EINVAL );
+        }
+
+        memcpy( DEV_CONFIG.BaseWritePath, argv[1], len + 1 );
+    }
+
     std::thread input_thread( keyboard_input_thread );
 
     //Inputs
