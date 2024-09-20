@@ -42,7 +42,8 @@ TEST( ProofAssignerTest, GenerateProof )
     //                                            "../../../../../../test/src/proof/proof.bin" ) );
     //GeniusProver.GenerateProof( assign_result.value(),
     //                            "../../../../../../test/src/proof/sgnus_proof.bin" );
-    auto proof_result = GeniusProver.GenerateProof( assign_result.value() );
+    auto assign_value = assign_result.value().at( 0 );
+    auto proof_result = GeniusProver.GenerateProof( assign_value );
     if ( proof_result.has_error() )
     {
         // Print the error information
@@ -52,6 +53,7 @@ TEST( ProofAssignerTest, GenerateProof )
     // Assert that the function was successful (i.e., no error occurred)
     ASSERT_FALSE( proof_result.has_error() ) << "Proof Expected success but got an error!";
 
+    EXPECT_TRUE( GeniusProver.VerifyProof( proof_result.value(), assign_value) );
     EXPECT_TRUE(
         GeniusProver.WriteProofToFile( proof_result.value(), "../../../../../../test/src/proof/sgnus_proof.bin" ) );
     //                                                  GeniusAssigner.table_description_,

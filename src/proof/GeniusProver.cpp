@@ -29,11 +29,11 @@ namespace sgns
 {
 
     outcome::result<GeniusProver::ProofType> GeniusProver::GenerateProof(
-        const std::vector<GeniusAssigner::AssignerOutput> &assigner_outputs )
+        const GeniusAssigner::AssignerOutput &assigner_outputs ) const
     {
-        auto constrains_sys = MakePlonkConstraintSystem( assigner_outputs.at( 0 ).constrains );
+        auto constrains_sys = MakePlonkConstraintSystem( assigner_outputs.constrains );
 
-        auto [plonk_table_desc, assignment_table] = MakePlonkTableDescription( assigner_outputs.at( 0 ).table );
+        auto [plonk_table_desc, assignment_table] = MakePlonkTableDescription( assigner_outputs.table );
 
         auto fri_params = MakeFRIParams( plonk_table_desc.rows_amount, 1, expand_factor_ );
 
@@ -43,18 +43,14 @@ namespace sgns
             plonk_table_desc.witness_columns + plonk_table_desc.public_input_columns + component_constant_columns_;
 
         PublicPreprocessedData public_preprocessed_data(
-            crypto3::zk::snark::placeholder_public_preprocessor<BlueprintFieldType, PlaceholderParams>::process(
-                constrains_sys,
-                assignment_table.move_public_table(),
-                plonk_table_desc,
-                lpc_scheme,
-                permutation_size ) );
+            PublicPreprocessor::process( constrains_sys,
+                                         assignment_table.move_public_table(),
+                                         plonk_table_desc,
+                                         lpc_scheme,
+                                         permutation_size ) );
 
         PrivatePreprocessedData private_preprocessed_data(
-            nil::crypto3::zk::snark::placeholder_private_preprocessor<BlueprintFieldType, PlaceholderParams>::process(
-                constrains_sys,
-                assignment_table.move_private_table(),
-                plonk_table_desc ) );
+            PrivatePreprocessor::process( constrains_sys, assignment_table.move_private_table(), plonk_table_desc ) );
 
         ProofSnarkType proof = ProverType::process( public_preprocessed_data,
                                                     private_preprocessed_data,
@@ -72,8 +68,9 @@ namespace sgns
         return filled_placeholder_proof;
     }
 
-    outcome::result<GeniusProver::ProofType> GeniusProver::GenerateProof( const std::string &circuit_file,
-                                                                          const std::string &assignment_table_file )
+    outcome::result<GeniusProver::ProofType> GeniusProver::GenerateProof(
+        const std::string &circuit_file,
+        const std::string &assignment_table_file ) const
     {
         std::ifstream itable;
         itable.open( assignment_table_file, std::ios_base::in | std::ios::binary | std::ios::ate );
@@ -81,7 +78,8 @@ namespace sgns
         {
             return outcome::failure( ProverError::TABLE_PATH_ERROR );
         }
-        OUTCOME_TRY( ( auto &&, plonk_table ), NilFileHelper::DecodeMarshalledData<GeniusAssigner::PlonkAssignTableType>( itable ) );
+        OUTCOME_TRY( ( auto &&, plonk_table ),
+                     NilFileHelper::DecodeMarshalledData<GeniusAssigner::PlonkAssignTableType>( itable ) );
         itable.close();
         std::ifstream icircuit;
         icircuit.open( assignment_table_file, std::ios_base::in | std::ios::binary | std::ios::ate );
@@ -97,6 +95,38 @@ namespace sgns
         return GenerateProof( { assigner_outputs } );
     }
 
+    bool GeniusProver::VerifyProof( const ProofType                      &proof,
+                                    const GeniusAssigner::AssignerOutput &assigner_outputs ) const
+    {
+        auto constrains_sys = MakePlonkConstraintSystem( assigner_outputs.constrains );
+
+        auto [plonk_table_desc, assignment_table] = MakePlonkTableDescription( assigner_outputs.table );
+
+        auto fri_params = MakeFRIParams( plonk_table_desc.rows_amount, 1, expand_factor_ );
+
+        LpcScheme lpc_scheme( fri_params );
+
+        std::size_t permutation_size =
+            plonk_table_desc.witness_columns + plonk_table_desc.public_input_columns + component_constant_columns_;
+
+        PublicPreprocessedData public_preprocessed_data(
+            crypto3::zk::snark::placeholder_public_preprocessor<BlueprintFieldType, PlaceholderParams>::process(
+                constrains_sys,
+                assignment_table.move_public_table(),
+                plonk_table_desc,
+                lpc_scheme,
+                permutation_size ) );
+
+        auto proof_snark =
+            crypto3::marshalling::types::make_placeholder_proof<ProverEndianess, ProofSnarkType>( proof );
+        return crypto3::zk::snark::placeholder_verifier<BlueprintFieldType, PlaceholderParams>::process(
+            public_preprocessed_data,
+            proof_snark,
+            plonk_table_desc,
+            constrains_sys,
+            lpc_scheme );
+    }
+
     bool GeniusProver::VerifyProof( const ProofSnarkType         &proof,
                                     const PublicPreprocessedData &public_data,
                                     const TableDescriptionType   &desc,
@@ -110,7 +140,7 @@ namespace sgns
                                                                                                          scheme );
     }
 
-    bool GeniusProver::WriteProofToFile( const ProofType &proof, const std::string &path )
+    bool GeniusProver::WriteProofToFile( const ProofType &proof, const std::string &path ) const
     {
         bool          ret = false;
         std::ofstream oproof;
@@ -127,7 +157,7 @@ namespace sgns
     }
 
     GeniusProver::ConstraintSystemType GeniusProver::MakePlonkConstraintSystem(
-        const GeniusAssigner::PlonkConstraintSystemType &constrains )
+        const GeniusAssigner::PlonkConstraintSystemType &constrains ) const
     {
         ConstraintSystemType constraint_sys(
             crypto3::marshalling::types::make_plonk_constraint_system<ProverEndianess, ConstraintSystemType>(
@@ -137,14 +167,14 @@ namespace sgns
     }
 
     GeniusProver::PlonkTablePair GeniusProver::MakePlonkTableDescription(
-        const GeniusAssigner::PlonkAssignTableType &table )
+        const GeniusAssigner::PlonkAssignTableType &table ) const
     {
         return crypto3::marshalling::types::make_assignment_table<ProverEndianess, AssignmentTableType>( table );
     }
 
     GeniusProver::FriParams GeniusProver::MakeFRIParams( std::size_t rows_amount,
                                                          const int   max_step,
-                                                         std::size_t expand_factor )
+                                                         std::size_t expand_factor ) const
     {
         std::size_t table_rows_log = std::ceil( std::log2( rows_amount ) );
         std::size_t r              = table_rows_log - 1;
@@ -157,7 +187,7 @@ namespace sgns
     }
 
     GeniusProver::ProofType GeniusProver::FillPlaceholderProof( const ProofSnarkType &proof,
-                                                                const FriParams      &commitment_params )
+                                                                const FriParams      &commitment_params ) const
     {
         using TTypeBase = nil::marshalling::field_type<ProverEndianess>;
 
@@ -183,7 +213,7 @@ namespace sgns
                 commitment_params ) ) );
     }
 
-    std::vector<std::size_t> GeniusProver::GenerateRandomStepList( const std::size_t r, const int max_step )
+    std::vector<std::size_t> GeniusProver::GenerateRandomStepList( const std::size_t r, const int max_step ) const
     {
         using Distribution = std::uniform_int_distribution<int>;
         static std::random_device random_engine;
