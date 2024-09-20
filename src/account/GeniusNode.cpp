@@ -23,7 +23,7 @@ namespace sgns
 {
     //GeniusNode GeniusNode::instance( DEV_CONFIG );
 
-    GeniusNode::GeniusNode( const DevConfig_st &dev_config ) :
+    GeniusNode::GeniusNode( const DevConfig_st &dev_config, std::vector<std::string> bootstrapPeers ) :
         account_( std::make_shared<GeniusAccount>( static_cast<uint8_t>( dev_config.TokenID ),
                                                    std::string( dev_config.BaseWritePath ) ) ), //
         io_( std::make_shared<boost::asio::io_context>() ),                                     //
@@ -97,7 +97,8 @@ namespace sgns
 
         pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
             crdt::KeyPairFileStorage( write_base_path_ + pubsubKeyPath ).GetKeyPair().value() );
-        pubsub_->Start(pubsubport, { pubsub_->GetLocalAddress() }, lanip, addresses);
+
+        pubsub_->Start( pubsubport, bootstrapPeers, lanip, addresses );
         auto testaddress = libp2p::multi::Multiaddress::create("/ip4/34.132.146.252/tcp/4001/p2p/12D3KooWQE5Yf2UBJBYRb8QqcSFsUd7jByB7nxS5Q6HAfssNmhn4/p2p-circuit/p2p/12D3KooWLed78tyZsvuiEZpoc7LaTPheV4o2mgsmk9iahhHDZJ4B");
         std::cout << "Has circuit relay " << testaddress.value().hasCircuitRelay() << " : " << testaddress.value().getStringAddress() << std::endl;
 

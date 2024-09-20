@@ -60,7 +60,7 @@ namespace sgns
     class GeniusNode : public IComponent
     {
     public:
-        GeniusNode( const DevConfig_st &dev_config );
+        GeniusNode( const DevConfig_st &dev_config, std::vector<std::string> bootstrapPeers = {} );
         // static GeniusNode &GetInstance()
         // {
         //     return instance;

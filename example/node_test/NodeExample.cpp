@@ -142,7 +142,24 @@ int main( int argc, char *argv[] )
 
     //Inputs
 
-    sgns::GeniusNode node_instance( DEV_CONFIG );
+    std::vector<std::string> bootstrapPeers;
+
+    if ( strchr( DEV_CONFIG.BaseWritePath, '1' ) != nullptr )
+    {
+        bootstrapPeers.emplace_back(
+            "/ip4/192.168.68.124/tcp/40872/p2p/12D3KooWHrButxd78fN3uENgBDzJV3JXSokCS1R78K6DH6ffgDyW" );
+        bootstrapPeers.emplace_back(
+            "/ip4/192.168.68.124/tcp/40718/p2p/12D3KooWNRMyTEbEkkAT6YwMXfwMFZQCaf63yWY5bni81xPxNktk" );
+    }
+    else if ( strchr( DEV_CONFIG.BaseWritePath, '2' ) != nullptr )
+    {
+        bootstrapPeers.emplace_back(
+            "/ip4/192.168.68.124/tcp/40709/p2p/12D3KooWJDNK4BpAL8kmQzYhKUUNTiwQxccRGDk9rbMpaJonZ8yL" );
+        bootstrapPeers.emplace_back(
+            "/ip4/192.168.68.124/tcp/40881/p2p/12D3KooWKe7ktcqnXTXJkwQMhf8aRjBiev8N1hp7xtoqcyiRaoK5" );
+    }
+
+    sgns::GeniusNode node_instance( DEV_CONFIG, std::move( bootstrapPeers ) );
 
     std::cout << "Insert \"process\", the image and the number of tokens to be" << std::endl;
     while ( true )
