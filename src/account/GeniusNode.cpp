@@ -47,6 +47,8 @@ namespace sgns
         auto loggerDAGSyncer = base::createLogger( "GraphsyncDAGSyncer" );
         loggerDAGSyncer->set_level( spdlog::level::off );
 
+        auto loggerBroadcaster = base::createLogger("PubSubBroadcasterExt");
+        loggerBroadcaster->set_level(spdlog::level::trace);
         //auto loggerAutonat = base::createLogger("Autonat");
         //loggerDAGSyncer->set_level(spdlog::level::trace);
 
@@ -102,7 +104,14 @@ namespace sgns
         std::cout << "Has circuit relay " << testaddress.value().hasCircuitRelay() << " : " << testaddress.value().getStringAddress() << std::endl;
 
         auto testaddress2 = libp2p::multi::Multiaddress::create("/ip4/34.132.146.252/tcp/4001/p2p/12D3KooWQE5Yf2UBJBYRb8QqcSFsUd7jByB7nxS5Q6HAfssNmhn4/p2p-circuit");
-        std::cout << "Has circuit relay " << testaddress2.value().hasCircuitRelay() << " : " << testaddress2.value().getStringAddress() << std::endl;
+        if (testaddress2.has_error())
+        {
+            std::cout << "Test address error: " << testaddress2.error().message() << std::endl;
+        }
+        else {
+            std::cout << "Has circuit relay " << testaddress2.value().hasProtocol(libp2p::multi::Protocol::Code::TCP) << " : " << testaddress2.value().getStringAddress() << std::endl;
+        }
+        
         globaldb_ = std::make_shared<crdt::GlobalDB>(
             io_,
             (boost::format("SuperGNUSNode.TestNet.%s") % account_->GetAddress<std::string>()).str(),

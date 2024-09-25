@@ -21,7 +21,7 @@ public:
         std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer,
         libp2p::multi::Multiaddress dagSyncerMultiaddress);
 
-    void SetLogger(const sgns::base::Logger& logger);
+    //void SetLogger(const sgns::base::Logger& logger);
     void SetCrdtDataStore(CrdtDatastore* dataStore);
 
     /**
@@ -42,7 +42,7 @@ private:
     CrdtDatastore* dataStore_;
     libp2p::multi::Multiaddress dagSyncerMultiaddress_;
     std::queue<std::tuple<libp2p::peer::PeerId, std::string>> messageQueue_;
-    sgns::base::Logger logger_ = nullptr;
+    //sgns::base::Logger logger_ = nullptr;
     std::mutex mutex_;
 
     sgns::base::Logger m_logger = sgns::base::createLogger("PubSubBroadcasterExt");

@@ -63,6 +63,7 @@ PubSubBroadcasterExt::PubSubBroadcasterExt( std::shared_ptr<GossipPubSubTopic>  
     gossipPubSubTopic_( std::move( pubSubTopic ) ), dagSyncer_( std::move( dagSyncer ) ), dataStore_( nullptr ),
     dagSyncerMultiaddress_(std::move(dagSyncerMultiaddress))
 {
+    m_logger->trace("Intializing Pubsub Broadcaster");
     if (gossipPubSubTopic_ != nullptr)
     {
         gossipPubSubTopic_->Subscribe(std::bind(&PubSubBroadcasterExt::OnMessage, this, std::placeholders::_1));
@@ -71,14 +72,17 @@ PubSubBroadcasterExt::PubSubBroadcasterExt( std::shared_ptr<GossipPubSubTopic>  
 
 void PubSubBroadcasterExt::OnMessage(boost::optional<const GossipPubSub::Message&> message)
 {
+    m_logger->trace("Got a message");
     if (message)
     {
         sgns::crdt::broadcasting::BroadcastMessage bmsg;
         if (bmsg.ParseFromArray(message->data.data(), message->data.size()))
         {
+            
             auto peerId = libp2p::peer::PeerId::fromBytes(message->from);
             if (peerId.has_value())
             {
+                m_logger->trace("Message from peer {}", peerId.value().toBase58());
                 std::scoped_lock lock(mutex_);
                 base::Buffer buf;
                 buf.put(bmsg.data());
@@ -106,10 +110,10 @@ void PubSubBroadcasterExt::OnMessage(boost::optional<const GossipPubSub::Message
     }
 }
 
-void PubSubBroadcasterExt::SetLogger(const sgns::base::Logger& logger)
-{ 
-    logger_ = logger; 
-}
+//void PubSubBroadcasterExt::SetLogger(const sgns::base::Logger& logger)
+//{ 
+//    logger_ = logger; 
+//}
 
 void PubSubBroadcasterExt::SetCrdtDataStore(CrdtDatastore* dataStore)
 {

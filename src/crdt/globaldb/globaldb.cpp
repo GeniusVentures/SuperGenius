@@ -211,7 +211,7 @@ outcome::result<void> GlobalDB::Init(std::shared_ptr<CrdtOptions> crdtOptions)
         //auto listen_towan = libp2p::multi::Multiaddress::create(wanaddress).value();
         broadcaster = std::make_shared<PubSubBroadcasterExt>(m_broadcastChannel, dagSyncer, listen_to);
     }
-    broadcaster->SetLogger(m_logger);
+    //broadcaster->SetLogger(m_logger);
 
     m_crdtDatastore = std::make_shared<CrdtDatastore>(
         dataStore, HierarchicalKey("crdt"), dagSyncer, broadcaster, crdtOptions);
