@@ -11,7 +11,7 @@ target_link_libraries(wasm_memory_test
 #target_link_libraries(runtime_external_interface_test
 #    binaryen_runtime_external_interface
 #    )
-#if(FORCE_MULTILE)
+#if(FORCE_MULTIPLE)
 #  set_target_properties(runtime_external_interface_test PROPERTIES LINK_FLAGS "${MULTIPLE_OPTION}")
 #endif()
 
@@ -26,6 +26,7 @@ target_link_libraries(core_integration_test
     ${USER_ENV_LIBRARY}
     ${WIN_CRYPT_LIBRARY}
     )
-if(FORCE_MULTILE)
+
+if(FORCE_MULTIPLE)
   set_target_properties(core_integration_test PROPERTIES LINK_FLAGS "${MULTIPLE_OPTION}")
 endif()

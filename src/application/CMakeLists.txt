@@ -46,7 +46,7 @@ target_link_libraries(configuration_storage
 #    block_producing_node_injector
 #    blob
 #    )
-#if(FORCE_MULTILE)
+#if(FORCE_MULTIPLE)
 #  set_target_properties(block_producing_node_application PROPERTIES LINK_FLAGS "${MULTIPLE_OPTION}")
 #endif()
 
@@ -56,7 +56,8 @@ add_library(validating_node_application
 target_link_libraries(validating_node_application
     blob
     )
-if(FORCE_MULTILE)
+
+if(FORCE_MULTIPLE)
   set_target_properties(validating_node_application PROPERTIES LINK_FLAGS "${MULTIPLE_OPTION}")
 endif()
 
@@ -67,6 +68,6 @@ endif()
 #    syncing_node_injector
 #    blob
 #    )
-#if(FORCE_MULTILE)
+#if(FORCE_MULTIPLE)
 #  set_target_properties(syncing_node_application PROPERTIES LINK_FLAGS "${MULTIPLE_OPTION}")
 #endif()

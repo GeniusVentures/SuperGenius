@@ -24,7 +24,7 @@ set(CMAKE_USE_PTHREADS_INIT ON)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 
 # Allow multiple definitions
-set(FORCE_MULTILE ON)
+set(FORCE_MULTIPLE ON)
 set(MULTIPLE_OPTION "-z muldefs")
 
 # Set extra compiler flags

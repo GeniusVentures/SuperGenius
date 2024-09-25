@@ -54,7 +54,7 @@ set(WIN_SOCK_LIBRARY wsock32 ws2_32)
 set(WIN_CRYPT_LIBRARY crypt32)
 
 # Allow multiple definitions
-set(FORCE_MULTILE ON)
+set(FORCE_MULTIPLE ON)
 set(MULTIPLE_OPTION /FORCE:MULTIPLE)
 
 # Set extra compiler flags

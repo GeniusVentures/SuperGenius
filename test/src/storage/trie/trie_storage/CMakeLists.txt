@@ -10,9 +10,8 @@ addtest(supergenius_trie_storage_test
     ordered_trie_hash_test.cpp
     )
 
-#target_compile_options (supergenius_trie_storage_test PRIVATE /wd4251 /wd4101)
-
-if(FORCE_MULTILE)
+# target_compile_options (supergenius_trie_storage_test PRIVATE /wd4251 /wd4101)
+if(FORCE_MULTIPLE)
   set_target_properties(supergenius_trie_storage_test  PROPERTIES LINK_FLAGS "${MULTIPLE_OPTION}")
 endif()
 

@@ -10,7 +10,7 @@
 #    sr25519_provider
 #    ${USER_ENV_LIBRARY}
 #    )
-#if(FORCE_MULTILE)
+#if(FORCE_MULTIPLE)
 #  set_target_properties(production_test PROPERTIES LINK_FLAGS "${MULTIPLE_OPTION}")
 #endif()
 

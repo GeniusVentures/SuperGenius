@@ -10,7 +10,7 @@ addtest(crypto_store_test
     crypto_store_test.cpp
     )
 
-if(FORCE_MULTILE)
+if(FORCE_MULTIPLE)
   set_target_properties(crypto_store_test PROPERTIES LINK_FLAGS "${MULTIPLE_OPTION}")
 endif()
   
