@@ -8,35 +8,15 @@ endif()
 # Project
 project(SuperGenius C CXX)
 
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
-set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /MT")
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /MTd")
+if(NOT CMAKE_VS_GLOBALS MATCHES "(^|;)UseMultiToolTask=")
+    list(APPEND CMAKE_VS_GLOBALS UseMultiToolTask=true)
+endif()
 
-if(CMAKE_BUILD_TYPE EQUAL Debug)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MTd")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MTd")
-    set(MSVC_RUNTIME_LIBRARY_OPTION "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-endif(CMAKE_BUILD_TYPE EQUAL Debug)
+if(NOT CMAKE_VS_GLOBALS MATCHES "(^|;)EnforceProcessCountAcrossBuilds=")
+    list(APPEND CMAKE_VS_GLOBALS EnforceProcessCountAcrossBuilds=true)
+endif()
 
-if(CMAKE_BUILD_TYPE EQUAL Release)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MT")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MT")
-    set(MSVC_RUNTIME_LIBRARY_OPTION "MultiThreaded$<$<CONFIG:Realease>:Release>")
-endif(CMAKE_BUILD_TYPE EQUAL Release)
-
-set(CompilerFlags
-    CMAKE_CXX_FLAGS
-    CMAKE_CXX_FLAGS_DEBUG
-    CMAKE_CXX_FLAGS_RELEASE
-    CMAKE_C_FLAGS
-    CMAKE_C_FLAGS_DEBUG
-    CMAKE_C_FLAGS_RELEASE
-)
-
-foreach(CompilerFlag ${CompilerFlags})
-    string(REPLACE "/MD" "/MT" ${CompilerFlag} "${${CompilerFlag}}")
-endforeach()
+set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded$<$<CONFIG:Debug>:Debug>)
 
 # build common libraries by platforms
 include(../CommonCompilerOptions.cmake)

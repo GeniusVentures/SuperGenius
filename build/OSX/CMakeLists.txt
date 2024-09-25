@@ -37,10 +37,9 @@ set(TESTING ON)
 
 # Set custom subfolder for ABI
 set(ABI_SUBFOLDER_NAME "")
-set(Vulkan_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/moltenvk/build/include")
-set(Vulkan_LIBRARY "${_THIRDPARTY_BUILD_DIR}/moltenvk/build/lib/MoltenVK.xcframework")
+
+set(ENV{VULKAN_SDK} "${_THIRDPARTY_BUILD_DIR}/Vulkan-Loader")
 find_package(Vulkan REQUIRED)
-set(VULKAN_LIBS Vulkan::Vulkan)
 
 # Include common build parameters
 include(../CommonBuildParameters.cmake)
