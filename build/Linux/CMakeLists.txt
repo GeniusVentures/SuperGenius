@@ -34,6 +34,7 @@ set(EXTRA_CXX_FLAGS)
 set(ABI_SUBFOLDER_NAME "")
 
 set(ENV{VULKAN_SDK} "${_THIRDPARTY_BUILD_DIR}/Vulkan-Loader")
+message(WARNING "VULKAN_SDK: ${ENV${VULKAN_SDK}}")
 find_package(Vulkan REQUIRED)
 set(VULKAN_LIBS Vulkan::Vulkan)
 
