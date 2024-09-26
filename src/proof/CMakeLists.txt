@@ -7,12 +7,15 @@ add_library(genius_assigner
 
 target_link_libraries(genius_assigner
     outcome
+    Boost::boost
     LLVMIRReader
     LLVMCore
     LLVMSupport
 )
 target_link_libraries(genius_prover
+    genius_assigner
     outcome
+    Boost::boost
 )
 
 supergenius_install(genius_assigner)

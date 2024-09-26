@@ -1,6 +1,6 @@
 /**
  * @file       GeniusProver.cpp
- * @brief      
+ * @brief      Source file of the prover from circuit to zkproof
  * @date       2024-09-13
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */

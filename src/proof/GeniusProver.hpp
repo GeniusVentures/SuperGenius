@@ -1,6 +1,6 @@
 /**
  * @file       GeniusProver.hpp
- * @brief      
+ * @brief      Header file of the prover from circuit to zkproof
  * @date       2024-09-13
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
@@ -52,6 +52,9 @@ using namespace nil;
 
 namespace sgns
 {
+    /**
+     * @brief      Prover class of SuperGenius
+     */
     class GeniusProver
     {
         using BlueprintFieldType   = typename crypto3::algebra::curves::pallas::base_field_type;
@@ -80,6 +83,11 @@ namespace sgns
         using PlonkTablePair = std::pair<TableDescriptionType, AssignmentTableType>;
 
     public:
+        /**
+         * @brief       Constructs a GeniusProver with component constant columns and expand factor
+         * @param[in]   component_constant_columns 
+         * @param[in]   expand_factor 
+         */
         GeniusProver( std::size_t component_constant_columns = COMPONENT_CONSTANT_COLUMNS_DEFAULT,
                       std::size_t expand_factor              = EXPAND_FACTOR_DEFAULT ) :
             component_constant_columns_( component_constant_columns ), expand_factor_( expand_factor )
