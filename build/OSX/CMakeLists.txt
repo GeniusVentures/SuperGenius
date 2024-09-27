@@ -38,8 +38,5 @@ set(TESTING ON)
 # Set custom subfolder for ABI
 set(ABI_SUBFOLDER_NAME "")
 
-set(ENV{VULKAN_SDK} "${_THIRDPARTY_BUILD_DIR}/Vulkan-Loader")
-find_package(Vulkan REQUIRED)
-
 # Include common build parameters
 include(../CommonBuildParameters.cmake)

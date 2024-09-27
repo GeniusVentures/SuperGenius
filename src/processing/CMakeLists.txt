@@ -92,10 +92,10 @@ target_link_libraries(processing_service PRIVATE
     p2p::p2p_gossip
     p2p::asio_scheduler
     ${WIN_CRYPT_LIBRARY}
-	${MNN_LIBS}
-    ${VULKAN_LIBS}
+    ${MNN_LIBS}
+    Vulkan::Vulkan
     AsyncIOManager
-    )
+)
 	
 if(WIN32)
     target_link_options(processing_service PUBLIC /WHOLEARCHIVE:${MNN_LIBS})
