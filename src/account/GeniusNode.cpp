@@ -15,6 +15,9 @@
 #include "processing/processing_subtask_result_storage.hpp"
 #include "processing/processors/processing_processor_mnn_posenet.hpp"
 #include "local_secure_storage/impl/json/JSONSecureStorage.hpp"
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
 
 using namespace boost::multiprecision;
 namespace br = boost::random;
@@ -226,11 +229,12 @@ namespace sgns
             for ( size_t taskIdx = 0; taskIdx < nTasks; ++taskIdx )
             {
                 SGProcessing::Task task;
+                boost::uuids::uuid uuid = boost::uuids::random_generator()();
                 //std::cout << "CID STRING:    " << libp2p::multi::ContentIdentifierCodec::toString(imagesplit.GetPartCID(taskIdx)).value() << std::endl;
                 //task.set_ipfs_block_id(libp2p::multi::ContentIdentifierCodec::toString(imagesplit.GetPartCID(taskIdx)).value());
-                task.set_ipfs_block_id( image_path );
-                std::string json_data = R"({"key": "value"})";
-                task.set_json_data(json_data);
+                task.set_ipfs_block_id(boost::uuids::to_string(uuid));
+
+                task.set_json_data(image_path);
                 //task.set_block_len(48600);
                 //task.set_block_line_stride(540);
                 //task.set_block_stride(4860);

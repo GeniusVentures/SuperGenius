@@ -17,7 +17,7 @@ namespace sgns
         }
 
         void ProcessTaskSplitter::SplitTask( const SGProcessing::Task &task, std::list<SGProcessing::SubTask> &subTasks,
-                                             sgns::processing::ImageSplitter &SplitImage, std::vector<std::vector<uint32_t>> chunkOptions )
+                                             sgns::processing::ImageSplitter &SplitImage, uint32_t numchunks )
         {
             std::optional<SGProcessing::SubTask> validationSubtask;
             if ( m_addValidationSubtask )
@@ -44,17 +44,17 @@ namespace sgns
                 std::cout << "Subtask CID :: " << task.ipfs_block_id() << std::endl;
 
                 subtask.set_subtaskid( base58.value() + "_" + std::to_string( i ) );
-                for ( size_t chunkIdx = 0; chunkIdx < chunkOptions.at( i ).at( 5 ); ++chunkIdx )
+                for ( size_t chunkIdx = 0; chunkIdx < numchunks; ++chunkIdx )
                 {
                     //std::cout << "AddChunk : " << chunkIdx << std::endl;
                     SGProcessing::ProcessingChunk chunk;
                     chunk.set_chunkid( ( boost::format( "CHUNK_%d_%d" ) % i % chunkId ).str() );
                     chunk.set_n_subchunks( 1 );
-                    chunk.set_line_stride( chunkOptions.at( i ).at( 0 ) );
-                    chunk.set_offset( chunkOptions.at( i ).at( 1 ) );
-                    chunk.set_stride( chunkOptions.at( i ).at( 2 ) );
-                    chunk.set_subchunk_height( chunkOptions.at( i ).at( 3 ) );
-                    chunk.set_subchunk_width( chunkOptions.at( i ).at( 4 ) );
+                    //chunk.set_line_stride( chunkOptions.at( i ).at( 0 ) );
+                    //chunk.set_offset( chunkOptions.at( i ).at( 1 ) );
+                    //chunk.set_stride( chunkOptions.at( i ).at( 2 ) );
+                    //chunk.set_subchunk_height( chunkOptions.at( i ).at( 3 ) );
+                    //chunk.set_subchunk_width( chunkOptions.at( i ).at( 4 ) );
 
                     auto chunkToProcess = subtask.add_chunkstoprocess();
                     chunkToProcess->CopyFrom( chunk );

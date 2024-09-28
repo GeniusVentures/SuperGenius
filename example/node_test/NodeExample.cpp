@@ -64,7 +64,31 @@ void CreateProcessingTransaction( const std::vector<std::string> &args, sgns::Ge
 
     if ( genius_node.GetBalance() >= price )
     {
-        genius_node.ProcessImage( "QmUDMvGQXbUKMsjmTzjf4ZuMx7tHx6Z4x8YH8RbwrgyGAf" /*args[1]*/,
+        std::string json_data = R"(
+                {
+                  "data": {
+	                "type": "https",
+	                "URL": "https://ipfs.filebase.io/ipfs/QmUDMvGQXbUKMsjmTzjf4ZuMx7tHx6Z4x8YH8RbwrgyGAf/",
+                  }
+                  "model": {
+                    "name": "posenet",
+                    "file": "model.mnn"
+                  },
+                  "input": {
+                    "image": "data/frisbee3.data",
+	                "block_len": 4860000 ,
+	                "block_line_stride": 5400,
+	                "block_stride": 0,
+	                "chunk_line_stride": 1080,
+	                "chunk_offset": 0,
+	                "chunk_stride": 4320,
+	                "chunk_subchunk_height": 5,
+	                "chunk_subchunk_width": 5,
+	                "chunk_count": 24
+                  }
+                }
+                )";
+        genius_node.ProcessImage( json_data /*args[1]*/,
                                       std::stoull( args[2] ) );
     }
     else
