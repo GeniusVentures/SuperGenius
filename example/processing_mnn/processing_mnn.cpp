@@ -220,9 +220,9 @@ int main(int argc, char* argv[])
         //task.set_block_len(48600);
         //task.set_block_line_stride(540);
         //task.set_block_stride(4860);
-        task.set_block_len(4860000);
-        task.set_block_line_stride(5400);
-        task.set_block_stride(0);
+        //task.set_block_len(4860000);
+        //task.set_block_line_stride(5400);
+        //task.set_block_stride(0);
         task.set_random_seed(0);
         task.set_results_channel((boost::format("RESULT_CHANNEL_ID_%1%") % (taskIdx + 1)).str());
         tasks.push_back(std::move(task));

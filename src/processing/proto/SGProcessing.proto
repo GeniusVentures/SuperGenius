@@ -9,11 +9,12 @@ package SGProcessing;
 message Task 
 {
     string ipfs_block_id = 1;// source block data to be processed
-    uint32 block_len = 2; // and ipfs block's length in bytes
-    uint32 block_stride = 3; // Stride to use for access pattern
-    uint32 block_line_stride = 4; // Line stride in bytes to get to next block start
-    float random_seed = 5; // used to randomly choose verifier block
-    string results_channel = 6; // which channel to publish results to.
+	bytes json_data = 2; // Job information json
+    //uint32 block_len = 3; // and ipfs block's length in bytes
+    //uint32 block_stride = 4; // Stride to use for access pattern
+    //uint32 block_line_stride = 5; // Line stride in bytes to get to next block start
+    float random_seed = 6; // used to randomly choose verifier block
+    string results_channel = 7; // which channel to publish results to.
 }
 
 message TaskLock
