@@ -4,6 +4,9 @@ add_library(genius_prover
 add_library(genius_assigner
     GeniusAssigner.cpp
 )
+add_library(transfer_proof
+    TransferProof.cpp
+)
 
 target_link_libraries(genius_assigner
     outcome
@@ -17,6 +20,14 @@ target_link_libraries(genius_prover
     outcome
     Boost::boost
 )
+target_link_libraries(transfer_proof
+    genius_assigner
+    outcome
+    Boost::boost
+    Boost::log
+    Boost::unit_test_framework
+)
 
 supergenius_install(genius_assigner)
 supergenius_install(genius_prover)
+supergenius_install(transfer_proof)

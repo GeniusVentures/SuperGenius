@@ -38,6 +38,7 @@ target_link_libraries(sgns_account
     Boost::boost
     logger
     gnus_upnp
+    transfer_proof
     KeyGeneration
     AsyncIOManager
     ${WIN_CRYPT_LIBRARY}
