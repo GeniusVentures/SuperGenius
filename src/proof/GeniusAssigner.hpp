@@ -23,12 +23,8 @@
 #include <nil/blueprint/assigner.hpp>
 #include <nil/blueprint/utils/satisfiability_check.hpp>
 
-
 #include <boost/log/trivial.hpp>
 #include "outcome/outcome.hpp"
-
-
-
 
 using namespace nil;
 
@@ -99,6 +95,10 @@ namespace sgns
             PlonkAssignTableType      table;
         };
 
+        outcome::result<std::vector<AssignerOutput>> GenerateCircuitAndTable(
+            const boost::json::array &public_inputs_json,
+            const boost::json::array &private_inputs_json,
+            const std::string        &bytecode_file_path );
         outcome::result<std::vector<AssignerOutput>> GenerateCircuitAndTable( const std::vector<int> &public_inputs,
                                                                               const std::vector<int> &private_inputs,
                                                                               const std::string &bytecode_file_path );

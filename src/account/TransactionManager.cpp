@@ -13,6 +13,7 @@
 #include "account/ProcessingTransaction.hpp"
 #include "account/EscrowTransaction.hpp"
 #include "account/UTXOTxParameters.hpp"
+#include "proof/TransferProof.hpp"
 
 namespace sgns
 {
@@ -104,6 +105,8 @@ namespace sgns
     void TransactionManager::MintFunds( uint64_t amount )
     {
         auto mint_transaction = std::make_shared<MintTransaction>( amount, FillDAGStruct() );
+        TransferProof proof("bytecode.ll", 1000, amount);
+        proof.GenerateProof();
         this->EnqueueTransaction( mint_transaction );
     }
 

@@ -43,32 +43,15 @@ namespace sgns
 {
 
     outcome::result<std::vector<GeniusAssigner::AssignerOutput>> GeniusAssigner::GenerateCircuitAndTable(
-        const std::vector<int> &public_inputs,
-        const std::vector<int> &private_inputs,
-        const std::string      &bytecode_file_path )
+        const boost::json::array &public_inputs_json,
+        const boost::json::array &private_inputs_json,
+        const std::string        &bytecode_file_path )
     {
-        boost::json::array public_inputs_json_array;
-        boost::json::array private_inputs_json_array;
-
-        // Loop through the regular_array and create boost::json::objects for each element
-        for ( const int &value : public_inputs )
-        {
-            boost::json::object obj;
-            obj["field"] = value;                      // Add {"field": value} to the object
-            public_inputs_json_array.push_back( obj ); // Add the object to the boost::json::array
-        }
-        for ( const int &value : private_inputs )
-        {
-            boost::json::object obj;
-            obj["field"] = value;                       // Add {"field": value} to the object
-            private_inputs_json_array.push_back( obj ); // Add the object to the boost::json::array
-        }
-
         if ( !assigner_instance_->parse_ir_file( bytecode_file_path.data() ) )
         {
             return outcome::failure( AssignerError::EMPTY_BYTECODE );
         }
-        if ( !assigner_instance_->evaluate( public_inputs_json_array, private_inputs_json_array ) )
+        if ( !assigner_instance_->evaluate( public_inputs_json, private_inputs_json ) )
         {
             return outcome::failure( AssignerError::BYTECODE_MISMATCH );
         }
@@ -204,6 +187,31 @@ namespace sgns
         return outputs;
     }
 
+    outcome::result<std::vector<GeniusAssigner::AssignerOutput>> GeniusAssigner::GenerateCircuitAndTable(
+        const std::vector<int> &public_inputs,
+        const std::vector<int> &private_inputs,
+        const std::string      &bytecode_file_path )
+    {
+        boost::json::array public_inputs_json_array;
+        boost::json::array private_inputs_json_array;
+
+        // Loop through the regular_array and create boost::json::objects for each element
+        for ( const int &value : public_inputs )
+        {
+            boost::json::object obj;
+            obj["field"] = value;                      // Add {"field": value} to the object
+            public_inputs_json_array.push_back( obj ); // Add the object to the boost::json::array
+        }
+        for ( const int &value : private_inputs )
+        {
+            boost::json::object obj;
+            obj["field"] = value;                       // Add {"field": value} to the object
+            private_inputs_json_array.push_back( obj ); // Add the object to the boost::json::array
+        }
+
+        return GenerateCircuitAndTable( public_inputs_json_array, private_inputs_json_array, bytecode_file_path );
+    }
+
     outcome::result<void> GeniusAssigner::PrintCircuitAndTable( const std::vector<AssignerOutput> &assigner_outputs,
                                                                 const std::string                 &table_path,
                                                                 const std::string                 &circuit_path )
@@ -231,7 +239,8 @@ namespace sgns
                 return outcome::failure( AssignerError::CIRCUIT_NOT_FOUND );
             }
 
-            NilFileHelper::PrintMarshalledData<PlonkConstraintSystemType>( assigner_outputs.at( i ).constrains, ocircuit );
+            NilFileHelper::PrintMarshalledData<PlonkConstraintSystemType>( assigner_outputs.at( i ).constrains,
+                                                                           ocircuit );
 
             ocircuit.close();
         }
