@@ -222,8 +222,8 @@ namespace sgns
             processing_service_->StopProcessing();
             auto                               mnn_image = GetImageByCID( image_path );
             processing::ImageSplitter          imagesplit( mnn_image, 5400, 0, 4860000 );
-            std::vector<std::vector<uint32_t>> chunkOptions;
-            chunkOptions.push_back( { 1080, 0, 4320, 5, 5, 24 } );
+            //std::vector<std::vector<uint32_t>> chunkOptions;
+            //chunkOptions.push_back( { 1080, 0, 4320, 5, 5, 24 } );
             std::list<SGProcessing::Task> tasks;
             size_t                        nTasks = 1;
             for ( size_t taskIdx = 0; taskIdx < nTasks; ++taskIdx )
@@ -246,18 +246,18 @@ namespace sgns
                 tasks.push_back( std::move( task ) );
             }
 
-            size_t nSubTasks = chunkOptions.size();
+            size_t nSubTasks = 24;
             size_t nChunks   = 0;
-            for ( auto &node : chunkOptions )
-            {
-                nChunks += node.at( 5 );
-            }
-            processing::ProcessTaskSplitter taskSplitter( nSubTasks, nChunks, false );
+            //for ( auto &node : chunkOptions )
+            //{
+            //    nChunks += node.at( 5 );
+            //}
+            processing::ProcessTaskSplitter taskSplitter( nSubTasks, 0, false );
 
             for ( auto &task : tasks )
             {
                 std::list<SGProcessing::SubTask> subTasks;
-                taskSplitter.SplitTask( task, subTasks, imagesplit, chunkOptions );
+                taskSplitter.SplitTask( task, subTasks, imagesplit, 24 );
                 task_queue_->EnqueueTask( task, subTasks );
             }
 
