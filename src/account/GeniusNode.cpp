@@ -209,14 +209,13 @@ namespace sgns
         if ( transaction_manager_->GetBalance() >= funds )
         {
             processing_service_->StopProcessing();
-            auto                               mnn_image = GetImageByCID( image_path );
-            processing::ImageSplitter          imagesplit( mnn_image, 5400, 0, 4860000 );
+            
             //std::vector<std::vector<uint32_t>> chunkOptions;
             //chunkOptions.push_back( { 1080, 0, 4320, 5, 5, 24 } );
-            std::list<SGProcessing::Task> tasks;
-            size_t                        nTasks = 1;
-            for ( size_t taskIdx = 0; taskIdx < nTasks; ++taskIdx )
-            {
+            //std::list<SGProcessing::Task> tasks;
+            //size_t                        nTasks = 1;
+            //for ( size_t taskIdx = 0; taskIdx < nTasks; ++taskIdx )
+            //{
                 SGProcessing::Task task;
                 boost::uuids::uuid uuid = boost::uuids::random_generator()();
                 //std::cout << "CID STRING:    " << libp2p::multi::ContentIdentifierCodec::toString(imagesplit.GetPartCID(taskIdx)).value() << std::endl;
@@ -231,40 +230,47 @@ namespace sgns
                 //task.set_block_line_stride( 5400 );
                 //task.set_block_stride( 0 );
                 task.set_random_seed( 0 );
-                task.set_results_channel( ( boost::format( "RESULT_CHANNEL_ID_%1%" ) % ( taskIdx + 1 ) ).str() );
-                tasks.push_back( std::move( task ) );
-            }
+                task.set_results_channel( ( boost::format( "RESULT_CHANNEL_ID_%1%" ) % ( 1 ) ).str() );
+                //tasks.push_back( std::move( task ) );
+            //}
+            //Number of SubTasks is number of input Images.
             rapidjson::Document document;
             document.Parse(image_path.c_str());
-
             size_t nSubTasks = 1;
-            size_t nChunks   = 0;
-            if (document.HasMember("input") && document["input"].IsObject())
-            {
-                const auto& input = document["input"];
-                if (input.HasMember("chunk_count") && input["chunk_count"].IsInt())
-                {
-                    nChunks = input["chunk_count"].GetInt();
-                }
-                else
-                {
-                    std::cerr << "No information on number of subtasks" << std::endl;
-                    return;
-                }
+            rapidjson::Value inputArray;
+            if (document.HasMember("input") && document["input"].IsArray()) {
+                inputArray = document["input"];
+                nSubTasks = inputArray.Size();
             }
-            //for ( auto &node : chunkOptions )
-            //{
-            //    nChunks += node.at( 5 );
-            //}
-            processing::ProcessTaskSplitter taskSplitter( nSubTasks, 0, false );
-
-            for ( auto &task : tasks )
+            processing::ProcessTaskSplitter taskSplitter(nSubTasks, 0, false);
+            auto                               mnn_image = GetImageByCID(image_path);
+            if (mnn_image.size() != inputArray.Size())
             {
-                std::list<SGProcessing::SubTask> subTasks;
-                taskSplitter.SplitTask( task, subTasks, imagesplit, nChunks);
-                task_queue_->EnqueueTask( task, subTasks );
+                std::cout << "Input size does not match, did an image fail to be obtained?" << std::endl;
+                return;
             }
+            int imageindex = 0;
+            std::list<SGProcessing::SubTask> subTasks;
+            for (const auto& input : inputArray.GetArray())
+            {
+                auto image = mnn_image[imageindex];
+                processing::ImageSplitter          imagesplit(image, input["block_line_stride"].GetInt(), input["block_stride"].GetInt(), input["block_len"].GetInt());
 
+
+
+
+                
+                size_t nChunks = input["chunk_count"].GetInt();               
+                //Assumption: There will always be 1 task, with several subtasks per json. So this for loop isn't really doing anything.
+                //for (auto& task : tasks)
+                //{
+                    
+                    taskSplitter.SplitTask(task, subTasks, imagesplit, nChunks);
+                    
+                //}
+                imageindex++;
+            }
+            task_queue_->EnqueueTask(task, subTasks);
             transaction_manager_->HoldEscrow(
                 funds, nSubTasks, uint256_t{ std::string( dev_config_.Addr ) }, dev_config_.Cut, image_path );
         }
