@@ -6,9 +6,8 @@
  */
 #include "TransferProof.hpp"
 
-#include <boost/json/src.hpp  
-//#include <boost/json.hpp  
-//#include "GeniusAssigner.hpp"
+#include <boost/json.hpp>
+#include "GeniusAssigner.hpp"
 #include "GeniusProver.hpp"
 #include <nil/crypto3/multiprecision/cpp_int.hpp>
 #include <nil/crypto3/algebra/curves/pallas.hpp>
@@ -58,10 +57,10 @@ namespace sgns
 
     TransferProof::TransferProof( std::string bytecode_path, uint64_t balance, uint64_t amount ) :
         IBasicProof( std::move( bytecode_path ) ), //
-        balance_( std::move( balance ) ),                    //
-        amount_( std::move( amount ) )                       //
+        balance_( std::move( balance ) ),          //
+        amount_( std::move( amount ) )             //
     {
-        //assigner_ = std::make_shared<sgns::GeniusAssigner>();
+        assigner_ = std::make_shared<sgns::GeniusAssigner>();
         //prover_   = std::make_shared<sgns::GeniusProver>();
     }
 
@@ -84,10 +83,10 @@ namespace sgns
 
         public_inputs_json_array.push_back( GenerateArrayParameter( ranges ) );
 
-        //auto hidden_assigner = std::static_pointer_cast<sgns::GeniusAssigner>( assigner_ );
+        auto hidden_assigner = std::static_pointer_cast<sgns::GeniusAssigner>( assigner_ );
         //auto hidden_prover = std::static_pointer_cast<sgns::GeniusProver>( assigner_ );
 
-        //hidden_assigner->GenerateCircuitAndTable( public_inputs_json_array, private_inputs_json_array, bytecode_path_ );
+        hidden_assigner->GenerateCircuitAndTable( public_inputs_json_array, private_inputs_json_array, bytecode_path_ );
 
         //boost::json::value json_value = public_inputs_json_array;
 

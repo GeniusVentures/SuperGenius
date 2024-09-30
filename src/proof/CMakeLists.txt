@@ -23,14 +23,11 @@ target_link_libraries(genius_prover
     Boost::boost
 )
 target_link_libraries(transfer_proof
-    #genius_assigner
+    genius_assigner
     outcome
     Boost::boost
     Boost::log
     #Boost::json
-    LLVMIRReader
-    LLVMCore
-    LLVMSupport
     Boost::unit_test_framework
 )
 

@@ -12,6 +12,8 @@ set(BOOST_VERSION_2U "${BOOST_MAJOR_VERSION}_${BOOST_MINOR_VERSION}")
 # Set config of GTest
 set(BUILD_TESTING "ON" CACHE BOOL "Build tests")
 
+add_definitions(-D_USE_INSTALLED_BOOST_JSON_=TRUE)
+
 if(BUILD_TESTING)
     set(GTest_DIR "${_THIRDPARTY_BUILD_DIR}/GTest/lib/cmake/GTest")
     set(GTest_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/GTest/include")
