@@ -69,7 +69,8 @@ add_executable (sgns_demo
       #${USER_ENV_LIBRARY}  # On windows platform , sr25519 library needs extra library userenv, so folllowing code is added
       #${WIN_CRYPT_LIBRARY}
       )
-  if(FORCE_MULTILE)
+
+if(FORCE_MULTIPLE)
     set_target_properties(sgns_demo PROPERTIES LINK_FLAGS ${MULTIPLE_OPTION})
   endif()
 

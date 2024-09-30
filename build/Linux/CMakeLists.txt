@@ -24,7 +24,7 @@ set(CMAKE_USE_PTHREADS_INIT ON)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 
 # Allow multiple definitions
-set(FORCE_MULTILE ON)
+set(FORCE_MULTIPLE ON)
 set(MULTIPLE_OPTION "-z muldefs")
 
 # Set extra compiler flags
@@ -32,8 +32,6 @@ set(EXTRA_CXX_FLAGS)
 
 # Set custom subfolder for ABI
 set(ABI_SUBFOLDER_NAME "")
-find_package(Vulkan REQUIRED)
-set(VULKAN_LIBS Vulkan::Vulkan)
 
 # Include common build parameters
 include(../CommonBuildParameters.cmake)

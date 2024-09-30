@@ -18,7 +18,6 @@ target_link_libraries(processing_app
     Boost::program_options    
     )
 
-
-if(FORCE_MULTILE)
+if(FORCE_MULTIPLE)
   set_target_properties(processing_app PROPERTIES LINK_FLAGS "${MULTIPLE_OPTION}")
 endif()
