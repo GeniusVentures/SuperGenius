@@ -62,65 +62,82 @@ namespace sgns::processing
 
         auto mainbuffers = std::make_shared<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>();
 
-        //Get Image Async
-        FileManager::GetInstance().InitializeSingletons();
-        string fileURL = "https://ipfs.filebase.io/ipfs/" + cid + "/settings.json";
-        std::cout << "FILE URLL: " << fileURL << std::endl;
-        auto data = FileManager::GetInstance().LoadASync(fileURL, false, false, ioc, [ioc](const sgns::AsyncError::CustomResult& status)
-            {
-                if (status.has_value())
-                {
-                    std::cout << "Success: " << status.value().message << std::endl;
-                }
-                else {
-                    std::cout << "Error: " << status.error() << std::endl;
-                }
-            }, [ioc, &mainbuffers](std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers)
-                {
-                    std::cout << "Final Callback" << std::endl;
+        ////Get Image Async
+        //FileManager::GetInstance().InitializeSingletons();
+        //string fileURL = "https://ipfs.filebase.io/ipfs/" + cid + "/settings.json";
+        //std::cout << "FILE URLL: " << fileURL << std::endl;
+        //auto data = FileManager::GetInstance().LoadASync(fileURL, false, false, ioc, [ioc](const sgns::AsyncError::CustomResult& status)
+        //    {
+        //        if (status.has_value())
+        //        {
+        //            std::cout << "Success: " << status.value().message << std::endl;
+        //        }
+        //        else {
+        //            std::cout << "Error: " << status.error() << std::endl;
+        //        }
+        //    }, [ioc, &mainbuffers](std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers)
+        //        {
+        //            std::cout << "Final Callback" << std::endl;
 
-                    if (!buffers || (buffers->first.empty() && buffers->second.empty()))
-                    {
-                        std::cout << "Buffer from AsyncIO is 0" << std::endl;
-                        return;
-                    }
-                    else {
-                        //Process settings json
+        //            if (!buffers || (buffers->first.empty() && buffers->second.empty()))
+        //            {
+        //                std::cout << "Buffer from AsyncIO is 0" << std::endl;
+        //                return;
+        //            }
+        //            else {
+        //                //Process settings json
 
 
-                        mainbuffers->first.insert(mainbuffers->first.end(), buffers->first.begin(), buffers->first.end());
-                        mainbuffers->second.insert(mainbuffers->second.end(), buffers->second.begin(), buffers->second.end());
-                    }
-                }, "file");
-        ioc->reset();
-        ioc->run();
+        //                mainbuffers->first.insert(mainbuffers->first.end(), buffers->first.begin(), buffers->first.end());
+        //                mainbuffers->second.insert(mainbuffers->second.end(), buffers->second.begin(), buffers->second.end());
+        //            }
+        //        }, "file");
+        //ioc->reset();
+        //ioc->run();
 
         //Parse json to look for settings
-        size_t index = std::string::npos;
-        for (size_t i = 0; i < mainbuffers->first.size(); ++i) {
-            if (mainbuffers->first[i].find("settings.json") != std::string::npos) {
-                index = i;
-                break;
-            }
-        }
-        if (index == std::string::npos)
-        {
-            std::cerr << "settings.json doesn't exist" << std::endl;
-            return mainbuffers;
-        }
-        std::vector<char>& jsonData = mainbuffers->second[index];
-        std::string jsonString(jsonData.begin(), jsonData.end());
+        //size_t index = std::string::npos;
+        //for (size_t i = 0; i < mainbuffers->first.size(); ++i) {
+        //    if (mainbuffers->first[i].find("settings.json") != std::string::npos) {
+        //        index = i;
+        //        break;
+        //    }
+        //}
+        //if (index == std::string::npos)
+        //{
+        //    std::cerr << "settings.json doesn't exist" << std::endl;
+        //    return mainbuffers;
+        //}
+        //std::vector<char>& jsonData = mainbuffers->second[index];
+        //std::string jsonString(jsonData.begin(), jsonData.end());
 
-        //Set processor or fail.
-        if (!this->SetProcessingTypeFromJson(jsonString))
-        {
-            std::cerr << "No processor available for this type:" << jsonString << std::endl;
-            return mainbuffers;
-        }
+        ////Set processor or fail.
+        //if (!this->SetProcessingTypeFromJson(jsonString))
+        //{
+        //    std::cerr << "No processor available for this type:" << jsonString << std::endl;
+        //    return mainbuffers;
+        //}
 
         //Parse json to look for model/image
         rapidjson::Document document;
-        document.Parse(jsonString.c_str());
+        document.Parse(cid.c_str());
+
+
+        std::string imageUrl = "";
+        if (document.HasMember("data") && document["data"].IsObject())
+        {
+            const auto& input = document["data"];
+            if (input.HasMember("URL") && input["URL"].IsString())
+            {
+                imageUrl = input["URL"].GetString();
+                std::cout << "Input Image URL: " << imageUrl << std::endl;
+            }
+            else
+            {
+                std::cerr << "No Input file" << std::endl;
+                return mainbuffers;
+            }
+        }
         std::string modelFile = "";
         // Extract model name
         if (document.HasMember("model") && document["model"].IsObject()) {
@@ -135,41 +152,72 @@ namespace sgns::processing
             }
         }
         // Extract input image name
-        std::string inputImage = "";
-        if (document.HasMember("input") && document["input"].IsObject()) {
-            const auto& input = document["input"];
-            if (input.HasMember("image") && input["image"].IsString()) {
-                inputImage = input["image"].GetString();
-                std::cout << "Input Image: " << inputImage << std::endl;
+        //std::string inputImage = "";
+        //if (document.HasMember("input") && document["input"].IsObject()) {
+        //    const auto& input = document["input"];
+        //    if (input.HasMember("image") && input["image"].IsString()) {
+        //        inputImage = input["image"].GetString();
+        //        std::cout << "Input Image: " << inputImage << std::endl;
+        //    }
+        //    else {
+        //        std::cerr << "No Input file" << std::endl;
+        //        return mainbuffers;
+        //    }
+        //}
+
+        std::vector<std::pair<std::string, std::string>> imageresults;
+        if (document.HasMember("input") && document["input"].IsArray()) {
+            const auto& inputArray = document["input"];
+
+            for (const auto& input : inputArray.GetArray()) {
+                if (input.IsObject()) {
+                    std::string inputImage = "";
+                    if (input.HasMember("image") && input["image"].IsString()) {
+                        inputImage = input["image"].GetString();
+                        std::cout << "Input Image: " << inputImage << std::endl;
+
+                        // Add URL and input image to results
+                        imageresults.emplace_back(imageUrl, inputImage);
+                    }
+                    else {
+                        std::cerr << "No Input image" << std::endl;
+                    }
+                }
+                else {
+                    std::cerr << "Input array element is not an object" << std::endl;
+                }
             }
-            else {
-                std::cerr << "No Input file" << std::endl;
-                return mainbuffers;
-            }
+        }
+        else {
+            std::cerr << "No input array" << std::endl;
+            return {};
         }
 
         //Make results keepers
-        std::pair<std::vector<std::string>, std::vector<std::vector<char>>> modelData;
-        std::pair<std::vector<std::string>, std::vector<std::vector<char>>> imageData;
+        //std::pair<std::vector<std::string>, std::vector<std::vector<char>>> modelData;
+        //std::pair<std::vector<std::string>, std::vector<std::vector<char>>> imageData;
 
         //Get Model
-        string modelURL = "https://ipfs.filebase.io/ipfs/" + cid + "/" + modelFile;
+        string modelURL = imageUrl + modelFile;
         GetSubCidForProc(ioc, modelURL, mainbuffers);
 
 
         //Get Image, TODO: Update to grab multiple files if needed
-        string imageUrl = "https://ipfs.filebase.io/ipfs/" + cid + "/" + inputImage;
-        GetSubCidForProc(ioc, imageUrl, mainbuffers);
-
+        //string imageUrl = "https://ipfs.filebase.io/ipfs/" + cid + "/" + inputImage;
+        for (const auto& result : imageresults) {
+            const auto& [url, image] = result;
+            std::string fullUrl = url + image;
+            GetSubCidForProc(ioc, fullUrl, mainbuffers);
+        }
         //Run IO
         ioc->reset();
         ioc->run();
 
         //Insert data obtained
-        mainbuffers->first.insert(mainbuffers->first.end(), modelData.first.begin(), modelData.first.end());
-        mainbuffers->second.insert(mainbuffers->second.end(), modelData.second.begin(), modelData.second.end());
-        mainbuffers->first.insert(mainbuffers->first.end(), imageData.first.begin(), imageData.first.end());
-        mainbuffers->second.insert(mainbuffers->second.end(), imageData.second.begin(), imageData.second.end());
+        //mainbuffers->first.insert(mainbuffers->first.end(), modelData.first.begin(), modelData.first.end());
+        //mainbuffers->second.insert(mainbuffers->second.end(), modelData.second.begin(), modelData.second.end());
+        //mainbuffers->first.insert(mainbuffers->first.end(), imageData.first.begin(), imageData.first.end());
+        //mainbuffers->second.insert(mainbuffers->second.end(), imageData.second.begin(), imageData.second.end());
 
         return mainbuffers;
     }

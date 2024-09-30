@@ -256,10 +256,6 @@ namespace sgns
                 auto image = mnn_image[imageindex];
                 processing::ImageSplitter          imagesplit(image, input["block_line_stride"].GetInt(), input["block_stride"].GetInt(), input["block_len"].GetInt());
 
-
-
-
-                
                 size_t nChunks = input["chunk_count"].GetInt();               
                 //Assumption: There will always be 1 task, with several subtasks per json. So this for loop isn't really doing anything.
                 //for (auto& task : tasks)
