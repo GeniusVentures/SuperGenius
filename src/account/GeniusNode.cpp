@@ -103,17 +103,6 @@ namespace sgns
         pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
             crdt::KeyPairFileStorage( write_base_path_ + pubsubKeyPath ).GetKeyPair().value() );
         pubsub_->Start(pubsubport, { pubsub_->GetLocalAddress() }, lanip, addresses);
-        auto testaddress = libp2p::multi::Multiaddress::create("/ip4/34.132.146.252/tcp/4001/p2p/12D3KooWQE5Yf2UBJBYRb8QqcSFsUd7jByB7nxS5Q6HAfssNmhn4/p2p-circuit/p2p/12D3KooWLed78tyZsvuiEZpoc7LaTPheV4o2mgsmk9iahhHDZJ4B");
-        std::cout << "Has circuit relay " << testaddress.value().hasCircuitRelay() << " : " << testaddress.value().getStringAddress() << std::endl;
-
-        auto testaddress2 = libp2p::multi::Multiaddress::create("/ip4/34.132.146.252/tcp/4001/p2p/12D3KooWQE5Yf2UBJBYRb8QqcSFsUd7jByB7nxS5Q6HAfssNmhn4/p2p-circuit");
-        if (testaddress2.has_error())
-        {
-            std::cout << "Test address error: " << testaddress2.error().message() << std::endl;
-        }
-        else {
-            std::cout << "Has circuit relay " << testaddress2.value().hasProtocol(libp2p::multi::Protocol::Code::TCP) << " : " << testaddress2.value().getStringAddress() << std::endl;
-        }
         
         globaldb_ = std::make_shared<crdt::GlobalDB>(
             io_,
@@ -245,9 +234,24 @@ namespace sgns
                 task.set_results_channel( ( boost::format( "RESULT_CHANNEL_ID_%1%" ) % ( taskIdx + 1 ) ).str() );
                 tasks.push_back( std::move( task ) );
             }
+            rapidjson::Document document;
+            document.Parse(image_path.c_str());
 
-            size_t nSubTasks = 24;
+            size_t nSubTasks = 1;
             size_t nChunks   = 0;
+            if (document.HasMember("input") && document["input"].IsObject())
+            {
+                const auto& input = document["input"];
+                if (input.HasMember("chunk_count") && input["chunk_count"].IsInt())
+                {
+                    nChunks = input["chunk_count"].GetInt();
+                }
+                else
+                {
+                    std::cerr << "No information on number of subtasks" << std::endl;
+                    return;
+                }
+            }
             //for ( auto &node : chunkOptions )
             //{
             //    nChunks += node.at( 5 );
@@ -257,7 +261,7 @@ namespace sgns
             for ( auto &task : tasks )
             {
                 std::list<SGProcessing::SubTask> subTasks;
-                taskSplitter.SplitTask( task, subTasks, imagesplit, 24 );
+                taskSplitter.SplitTask( task, subTasks, imagesplit, nChunks);
                 task_queue_->EnqueueTask( task, subTasks );
             }
 
@@ -276,7 +280,7 @@ namespace sgns
         return transaction_manager_->GetBalance();
     }
 
-    std::vector<uint8_t> GeniusNode::GetImageByCID( std::string cid )
+    std::vector<std::vector<uint8_t>> GeniusNode::GetImageByCID( std::string cid )
     {
         libp2p::protocol::kademlia::Config kademlia_config;
         kademlia_config.randomWalk.enabled  = true;
@@ -291,128 +295,166 @@ namespace sgns
 
         auto mainbuffers = std::make_shared<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>();
 
-        //Get Image Data from settings.json
-        FileManager::GetInstance().InitializeSingletons();
-        string fileURL = "https://ipfs.filebase.io/ipfs/" + cid + "/settings.json";
-        std::cout << "FILE URLL: " << fileURL << std::endl;
-        auto data = FileManager::GetInstance().LoadASync(
-            fileURL,
-            false,
-            false,
-            ioc,
-            [ioc]( const sgns::AsyncError::CustomResult &status )
-            {
-                if ( status.has_value() )
-                {
-                    std::cout << "Success: " << status.value().message << std::endl;
-                }
-                else
-                {
-                    std::cout << "Error: " << status.error() << std::endl;
-                };
-            },
-            [ioc, &mainbuffers](
-                std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers )
-            {
-                std::cout << "Final Callback" << std::endl;
 
-                if ( !buffers || ( buffers->first.empty() && buffers->second.empty() ) )
-                {
-                    std::cout << "Buffer from AsyncIO is 0" << std::endl;
-                    return;
-                }
-                else
-                {
-                    //Process settings json
+        ////Get Image Data from settings.json
+        //FileManager::GetInstance().InitializeSingletons();
+        //string fileURL = "https://ipfs.filebase.io/ipfs/" + cid + "/settings.json";
+        //std::cout << "FILE URLL: " << fileURL << std::endl;
+        //auto data = FileManager::GetInstance().LoadASync(
+        //    fileURL,
+        //    false,
+        //    false,
+        //    ioc,
+        //    [ioc]( const sgns::AsyncError::CustomResult &status )
+        //    {
+        //        if ( status.has_value() )
+        //        {
+        //            std::cout << "Success: " << status.value().message << std::endl;
+        //        }
+        //        else
+        //        {
+        //            std::cout << "Error: " << status.error() << std::endl;
+        //        };
+        //    },
+        //    [ioc, &mainbuffers](
+        //        std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers )
+        //    {
+        //        std::cout << "Final Callback" << std::endl;
 
-                    mainbuffers->first.insert( mainbuffers->first.end(), buffers->first.begin(), buffers->first.end() );
-                    mainbuffers->second.insert(
-                        mainbuffers->second.end(), buffers->second.begin(), buffers->second.end() );
-                }
-            },
-            "file" );
-        ioc->reset();
-        ioc->run();
+        //        if ( !buffers || ( buffers->first.empty() && buffers->second.empty() ) )
+        //        {
+        //            std::cout << "Buffer from AsyncIO is 0" << std::endl;
+        //            return;
+        //        }
+        //        else
+        //        {
+        //            //Process settings json
+
+        //            mainbuffers->first.insert( mainbuffers->first.end(), buffers->first.begin(), buffers->first.end() );
+        //            mainbuffers->second.insert(
+        //                mainbuffers->second.end(), buffers->second.begin(), buffers->second.end() );
+        //        }
+        //    },
+        //    "file" );
+        //ioc->reset();
+        //ioc->run();
 
         //Parse json
-        size_t index = std::string::npos;
-        for ( size_t i = 0; i < mainbuffers->first.size(); ++i )
-        {
-            if ( mainbuffers->first[i].find( "settings.json" ) != std::string::npos )
-            {
-                index = i;
-                break;
-            }
-        }
-        if ( index == std::string::npos )
-        {
-            std::cerr << "settings.json doesn't exist" << std::endl;
-            return std::vector<uint8_t>();
-        }
-        std::vector<char>  &jsonData = mainbuffers->second[index];
-        std::string         jsonString( jsonData.begin(), jsonData.end() );
+        //size_t index = std::string::npos;
+        //for ( size_t i = 0; i < mainbuffers->first.size(); ++i )
+        //{
+        //    if ( mainbuffers->first[i].find( "settings.json" ) != std::string::npos )
+        //    {
+        //        index = i;
+        //        break;
+        //    }
+        //}
+        //if ( index == std::string::npos )
+        //{
+        //    std::cerr << "settings.json doesn't exist" << std::endl;
+        //    return std::vector<uint8_t>();
+        //}
+        //std::vector<char>  &jsonData = mainbuffers->second[index];
+        //std::string         jsonString( jsonData.begin(), jsonData.end() );
         rapidjson::Document document;
-        document.Parse( jsonString.c_str() );
+        document.Parse( cid.c_str() );
 
-        // Extract input image name
-        std::string inputImage = "";
-        if ( document.HasMember( "input" ) && document["input"].IsObject() )
+        //Extract URL
+        std::string imageUrl = "";
+        if (document.HasMember("data") && document["data"].IsObject())
         {
-            const auto &input = document["input"];
-            if ( input.HasMember( "image" ) && input["image"].IsString() )
+            const auto& input = document["data"];
+            if (input.HasMember("URL") && input["URL"].IsString())
             {
-                inputImage = input["image"].GetString();
-                std::cout << "Input Image: " << inputImage << std::endl;
+                imageUrl = input["URL"].GetString();
+                std::cout << "Input Image URL: " << imageUrl << std::endl;
             }
             else
             {
                 std::cerr << "No Input file" << std::endl;
-                return std::vector<uint8_t>();
+                return std::vector<std::vector<uint8_t>>();
             }
+        }
+        // Extract input image name
+        std::vector<std::pair<std::string, std::string>> imageresults;
+        if (document.HasMember("input") && document["input"].IsArray()) {
+            const auto& inputArray = document["input"];
+
+            for (const auto& input : inputArray.GetArray()) {
+                if (input.IsObject()) {
+                    std::string inputImage = "";
+                    if (input.HasMember("image") && input["image"].IsString()) {
+                        inputImage = input["image"].GetString();
+                        std::cout << "Input Image: " << inputImage << std::endl;
+
+                        // Add URL and input image to results
+                        imageresults.emplace_back(imageUrl, inputImage);
+                    }
+                    else {
+                        std::cerr << "No Input image" << std::endl;
+                    }
+                }
+                else {
+                    std::cerr << "Input array element is not an object" << std::endl;
+                }
+            }
+        }
+        else {
+            std::cerr << "No input array" << std::endl;
+            return {};
         }
 
         //Get Actual Image
-        string            imageUrl = "https://ipfs.filebase.io/ipfs/" + cid + "/" + inputImage;
-        std::vector<char> imageData;
-        auto              data2 = FileManager::GetInstance().LoadASync(
-            imageUrl,
-            false,
-            false,
-            ioc,
-            [ioc]( const sgns::AsyncError::CustomResult &status )
-            {
-                if ( status.has_value() )
+        //string            imageUrl = "https://ipfs.filebase.io/ipfs/" + cid + "/" + inputImage;
+        //imageUrl += inputImage;
+        std::vector<std::vector<char>> imageData;
+        for (const auto& result : imageresults) {
+            const auto& [url, image] = result;
+            std::string fullUrl = url + image;
+            auto              data2 = FileManager::GetInstance().LoadASync(
+                fullUrl,
+                false,
+                false,
+                ioc,
+                [ioc](const sgns::AsyncError::CustomResult& status)
                 {
-                    std::cout << "Success: " << status.value().message << std::endl;
-                }
-                else
+                    if (status.has_value())
+                    {
+                        std::cout << "Success: " << status.value().message << std::endl;
+                    }
+                    else
+                    {
+                        std::cout << "Error: " << status.error() << std::endl;
+                    }
+                },
+                [ioc,
+                &imageData](std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers)
                 {
-                    std::cout << "Error: " << status.error() << std::endl;
-                }
-            },
-            [ioc,
-             &imageData]( std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers )
-            {
-                std::cout << "Final Callback" << std::endl;
+                    std::cout << "Final Callback" << std::endl;
 
-                if ( !buffers || ( buffers->first.empty() && buffers->second.empty() ) )
-                {
-                    std::cout << "Buffer from AsyncIO is 0" << std::endl;
-                    return;
-                }
-                else
-                {
-                    //Process settings json
+                    if (!buffers || (buffers->first.empty() && buffers->second.empty()))
+                    {
+                        std::cout << "Buffer from AsyncIO is 0" << std::endl;
+                        return;
+                    }
+                    else
+                    {
+                        //Process settings json
 
-                    imageData.assign( buffers->second[0].begin(), buffers->second[0].end() );
-                }
-            },
-            "file" );
+                        //imageData.assign(buffers->second[0].begin(), buffers->second[0].end());
+                        imageData.push_back(buffers->second[0]);
+                    }
+                },
+                "file");
+        }
         ioc->reset();
         ioc->run();
-        std::vector<uint8_t> output( imageData.size() );
-        std::transform(
-            imageData.begin(), imageData.end(), output.begin(), []( char c ) { return static_cast<uint8_t>( c ); } );
+        std::vector<std::vector<uint8_t>> output;
+        for (const auto& indImage : imageData) {
+            std::vector<uint8_t> byteArray(indImage.begin(), indImage.end());
+            output.push_back(byteArray);
+        }
+
         return output;
     }
 
