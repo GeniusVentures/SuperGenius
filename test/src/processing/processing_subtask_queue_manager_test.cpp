@@ -363,11 +363,11 @@ TEST_F(ProcessingSubTaskQueueManagerTest, ValidateResults)
     SGProcessing::ProcessingChunk chunk1;
     chunk1.set_chunkid("CHUNK_1");
     chunk1.set_n_subchunks(1);
-    chunk1.set_line_stride(1);
-    chunk1.set_offset(0);
-    chunk1.set_stride(1);
-    chunk1.set_subchunk_height(10);
-    chunk1.set_subchunk_width(10);
+    //chunk1.set_line_stride(1);
+    //chunk1.set_offset(0);
+    //chunk1.set_stride(1);
+    //chunk1.set_subchunk_height(10);
+    //chunk1.set_subchunk_width(10);
 
     {
         auto subtask = subTasks.add_items();
@@ -454,11 +454,11 @@ TEST_F(ProcessingSubTaskQueueManagerTest, TaskSplitSucceeded)
     SGProcessing::ProcessingChunk chunk1;
     chunk1.set_chunkid("CHUNK_1");
     chunk1.set_n_subchunks(1);
-    chunk1.set_line_stride(1);
-    chunk1.set_offset(0);
-    chunk1.set_stride(1);
-    chunk1.set_subchunk_height(10);
-    chunk1.set_subchunk_width(10);
+    //chunk1.set_line_stride(1);
+    //chunk1.set_offset(0);
+    //chunk1.set_stride(1);
+    //chunk1.set_subchunk_height(10);
+    //chunk1.set_subchunk_width(10);
 
     {
         SGProcessing::SubTask subtask;

@@ -87,7 +87,7 @@ namespace
         {
             return true; //TODO - This is wrong - Update this tests to the actual ProcessingCoreImpl on src/processing/impl
         }
-        std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> GetCidForProc(std::string cid) override
+        std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> GetCidForProc(std::string json_data, std::string base_json) override
         {
             return nullptr;
         }

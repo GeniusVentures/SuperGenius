@@ -71,11 +71,11 @@ namespace
                     SGProcessing::ProcessingChunk chunk;
                     chunk.set_chunkid((boost::format("CHUNK_%d_%d") % i % chunkId).str());
                     chunk.set_n_subchunks(1);
-                    chunk.set_line_stride(chunkOptions.at(i).at(0));
-                    chunk.set_offset(chunkOptions.at(i).at(1));
-                    chunk.set_stride(chunkOptions.at(i).at(2));
-                    chunk.set_subchunk_height(chunkOptions.at(i).at(3));
-                    chunk.set_subchunk_width(chunkOptions.at(i).at(4));
+                    //chunk.set_line_stride(chunkOptions.at(i).at(0));
+                    //chunk.set_offset(chunkOptions.at(i).at(1));
+                    //chunk.set_stride(chunkOptions.at(i).at(2));
+                    //chunk.set_subchunk_height(chunkOptions.at(i).at(3));
+                    //chunk.set_subchunk_width(chunkOptions.at(i).at(4));
 
                     auto chunkToProcess = subtask.add_chunkstoprocess();
                     chunkToProcess->CopyFrom(chunk);
