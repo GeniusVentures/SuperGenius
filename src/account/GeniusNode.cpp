@@ -8,6 +8,8 @@
 #include <boost/multiprecision/cpp_int.hpp>
 #include <boost/random.hpp>
 #include <rapidjson/document.h>
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/writer.h>
 #include "account/GeniusNode.hpp"
 #include "processing/processing_imagesplit.hpp"
 #include "processing/processing_tasksplit.hpp"
@@ -260,8 +262,11 @@ namespace sgns
                 //Assumption: There will always be 1 task, with several subtasks per json. So this for loop isn't really doing anything.
                 //for (auto& task : tasks)
                 //{
-                    
-                    taskSplitter.SplitTask(task, subTasks, imagesplit, nChunks);
+                rapidjson::StringBuffer buffer;
+                rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+                input.Accept(writer);
+                std::string inputAsString = buffer.GetString();
+                    taskSplitter.SplitTask(task, subTasks, inputAsString, imagesplit, nChunks);
                     
                 //}
                 imageindex++;

@@ -27,9 +27,10 @@ message TaskLock
 message SubTask 
 {
     string ipfsblock = 1; // source block data to be processed
-    repeated ProcessingChunk chunksToProcess = 2; // array of chunks to process
-    uint32 datalen = 3; // length of ipfsBlock?
-    string subtaskid = 4; // unique subtask ID
+	string json_data = 2; //json data of the specific inputs for this subtask
+    repeated ProcessingChunk chunksToProcess = 3; // array of chunks to process
+    uint32 datalen = 4; // length of ipfsBlock?
+    string subtaskid = 5; // unique subtask ID
 }
 
 message ProcessingChunk 

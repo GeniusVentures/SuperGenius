@@ -21,7 +21,7 @@ namespace sgns
         public:
             ProcessTaskSplitter( size_t nSubTasks, size_t nChunks, bool addValidationSubtask );
 
-            void SplitTask( const SGProcessing::Task &task, std::list<SGProcessing::SubTask> &subTasks, sgns::processing::ImageSplitter &SplitImage,
+            void SplitTask( const SGProcessing::Task &task, std::list<SGProcessing::SubTask> &subTasks, std::string json_data, sgns::processing::ImageSplitter &SplitImage,
                             uint32_t numchunks );
 
         private:

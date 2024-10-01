@@ -16,20 +16,21 @@ namespace sgns::processing
             m_processingSubTaskCount = 0;
             throw std::runtime_error("Maximal number of processed subtasks exceeded");
         }
-        
-        if (cidData_.find(subTask.ipfsblock()) == cidData_.end())
+        SGProcessing::Task task;
+        auto queryTasks = m_db->Get("tasks/TASK_" + subTask.ipfsblock());
+        if (queryTasks.has_value())
         {
-            auto buffers = GetCidForProc(subTask.ipfsblock());
-            SGProcessing::Task task;
-            auto queryTasks = m_db->Get("tasks/TASK_" + subTask.ipfsblock());
-            if (queryTasks.has_value())
-            {
-                auto element = queryTasks.value();
+            auto element = queryTasks.value();
 
-                task.ParseFromArray(element.data(), element.size());
-                //task.ParseFromArray(element, element.second.size());
-            }
-            this->cidData_.insert({ subTask.ipfsblock(), buffers->second.at(0) });
+            task.ParseFromArray(element.data(), element.size());
+            //task.ParseFromArray(element, element.second.size());
+        }
+        if (cidData_.find(task.ipfs_block_id()) == cidData_.end())
+        {
+
+            auto buffers = GetCidForProc(task.json_data());
+
+            this->cidData_.insert({ task.ipfs_block_id(), buffers->second.at(0) });
             //this->ProcessSubTask2(subTask, result, initialHashCode, buffers->second.at(0));
             this->m_processor->SetData(buffers);
             auto tempresult = this->m_processor->StartProcessing(result, task, subTask);
@@ -37,7 +38,10 @@ namespace sgns::processing
             result.set_result_hash(hashString);
         }
         else {
-
+            this->m_processor->SetData(cidData_.at(task.ipfs_block_id()));
+            auto tempresult = this->m_processor->StartProcessing(result, task, subTask);
+            std::string hashString(tempresult.begin(), tempresult.end());
+            result.set_result_hash(hashString);
         }
         //TODO: Pass CIDData Into this and start processing
         //m_processor->SetData(cidData_);
