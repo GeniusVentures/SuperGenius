@@ -32,7 +32,7 @@ namespace sgns::processing
         if (cidData_.find(subTask.ipfsblock()) == cidData_.end())
         {
 
-            auto buffers = GetCidForProc(subTask.ipfsblock(), task.json_data());
+            auto buffers = GetCidForProc(subTask.json_data(), task.json_data());
 
 
             this->cidData_.insert({ subTask.ipfsblock(), buffers });

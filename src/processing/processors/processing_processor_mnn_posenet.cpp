@@ -1,4 +1,5 @@
 #include "processing_processor_mnn_posenet.hpp"
+#include <rapidjson/document.h>
 
 //#define STB_IMAGE_IMPLEMENTATION
 //#define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -14,6 +15,18 @@ namespace sgns::processing
                                                        const SGProcessing::SubTask &subTask )
     {
         std::vector<uint8_t> subTaskResultHash(SHA256_DIGEST_LENGTH);
+        rapidjson::Document document;
+        document.Parse(subTask.json_data().c_str());
+        auto block_len = document["block_len"].GetInt();
+        auto block_line_stride = document["block_line_stride"].GetInt();
+        auto block_stride = document["block_stride"].GetInt();
+        auto chunk_line_stride = document["chunk_line_stride"].GetInt();
+        auto chunk_offset = document["chunk_offset"].GetInt();
+        auto chunk_stride = document["chunk_stride"].GetInt();
+        auto chunk_subchunk_height = document["chunk_subchunk_height"].GetInt();
+        auto chunk_subchunk_width = document["chunk_subchunk_width"].GetInt();
+        auto chunk_count = document["chunk_count"].GetInt();
+
         for ( auto image : *imageData_ )
         {
             std::vector<uint8_t> output( image.size() );
@@ -24,9 +37,9 @@ namespace sgns::processing
             auto          dataindex           = 0;
             auto          basechunk           = subTask.chunkstoprocess( 0 );
             bool          isValidationSubTask = ( subTask.subtaskid() == "subtask_validation" );
-            ImageSplitter ChunkSplit( animageSplit.GetPart( dataindex ), basechunk.line_stride(), basechunk.stride(),
-                                      animageSplit.GetPartHeightActual( dataindex ) / basechunk.subchunk_height() *
-                                          basechunk.line_stride() );
+            ImageSplitter ChunkSplit( animageSplit.GetPart( dataindex ), chunk_line_stride, chunk_stride,
+                                      animageSplit.GetPartHeightActual( dataindex ) / chunk_subchunk_height *
+                                            chunk_line_stride);
             
             for ( int chunkIdx = 0; chunkIdx < subTask.chunkstoprocess_size(); ++chunkIdx )
             {
