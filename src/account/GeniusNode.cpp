@@ -416,6 +416,7 @@ namespace sgns
         }
 
         //Get Actual Image
+        FileManager::GetInstance().InitializeSingletons();
         //string            imageUrl = "https://ipfs.filebase.io/ipfs/" + cid + "/" + inputImage;
         //imageUrl += inputImage;
         std::vector<std::vector<char>> imageData;

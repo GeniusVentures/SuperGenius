@@ -116,6 +116,8 @@ namespace sgns::processing
             return mainbuffers;
         }
     
+        //Init Loaders
+        FileManager::GetInstance().InitializeSingletons();
         //Get Model
         string modelURL = baseUrl + modelFile;
         GetSubCidForProc(ioc, modelURL, mainbuffers);
