@@ -244,7 +244,11 @@ namespace sgns
                 inputArray = document["input"];
                 nSubTasks = inputArray.Size();
             }
-            processing::ProcessTaskSplitter taskSplitter(nSubTasks, 0, false);
+            else {
+                std::cout << "This json lacks information" << std::endl;
+                return;
+            }
+            processing::ProcessTaskSplitter taskSplitter;
             auto                               mnn_image = GetImageByCID(image_path);
             if (mnn_image.size() != inputArray.Size())
             {
@@ -266,7 +270,7 @@ namespace sgns
                 rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
                 input.Accept(writer);
                 std::string inputAsString = buffer.GetString();
-                    taskSplitter.SplitTask(task, subTasks, inputAsString, imagesplit, nChunks);
+                taskSplitter.SplitTask(task, subTasks, inputAsString, nChunks, false);
                     
                 //}
                 imageindex++;

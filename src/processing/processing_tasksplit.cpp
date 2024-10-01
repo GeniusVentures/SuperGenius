@@ -12,18 +12,15 @@ namespace sgns
 {
     namespace processing
     {
-        ProcessTaskSplitter::ProcessTaskSplitter( size_t nSubTasks, size_t nChunks, bool addValidationSubtask ) :
-            m_nSubTasks( nSubTasks ), //
-            //m_nChunks( nChunks ),     //
-            m_addValidationSubtask( addValidationSubtask )
+        ProcessTaskSplitter::ProcessTaskSplitter()
         {
         }
 
         void ProcessTaskSplitter::SplitTask( const SGProcessing::Task &task, std::list<SGProcessing::SubTask> &subTasks, std::string json_data,
-                                             sgns::processing::ImageSplitter &SplitImage, uint32_t numchunks )
+                                             uint32_t numchunks, bool addvalidationsubtask)
         {
             std::optional<SGProcessing::SubTask> validationSubtask;
-            if ( m_addValidationSubtask )
+            if (addvalidationsubtask)
             {
                 validationSubtask = SGProcessing::SubTask();
             }
@@ -31,11 +28,11 @@ namespace sgns
             size_t chunkId = 0;
             //auto subtaskId = base58.value();
             SGProcessing::SubTask subtask;
+
+            //IPFS Block is the task ID for lookup
             subtask.set_ipfsblock( task.ipfs_block_id() );
 
             subtask.set_json_data(json_data);
-            //std::cout << "Subtask ID :: " << base58.value() + "_" + std::to_string( i ) << std::endl;
-            //std::cout << "Subtask CID :: " << task.ipfs_block_id() << std::endl;
 
             //Generate a subtask uuid.
             boost::uuids::uuid uuid = boost::uuids::random_generator()();
@@ -47,11 +44,6 @@ namespace sgns
                 SGProcessing::ProcessingChunk chunk;
                 chunk.set_chunkid( ( boost::format( "CHUNK_%d_%d" ) % uuidstring % chunkId ).str() );
                 chunk.set_n_subchunks( 1 );
-                //chunk.set_line_stride( chunkOptions.at( i ).at( 0 ) );
-                //chunk.set_offset( chunkOptions.at( i ).at( 1 ) );
-                //chunk.set_stride( chunkOptions.at( i ).at( 2 ) );
-                //chunk.set_subchunk_height( chunkOptions.at( i ).at( 3 ) );
-                //chunk.set_subchunk_width( chunkOptions.at( i ).at( 4 ) );
 
                 auto chunkToProcess = subtask.add_chunkstoprocess();
                 chunkToProcess->CopyFrom( chunk );
@@ -72,7 +64,7 @@ namespace sgns
             subTasks.push_back( std::move( subtask ) );
             
 
-            if ( validationSubtask )
+            if (addvalidationsubtask)
             {
                 auto subtaskId = ( boost::format( "subtask_validation" ) ).str();
                 validationSubtask->set_ipfsblock( task.ipfs_block_id() );

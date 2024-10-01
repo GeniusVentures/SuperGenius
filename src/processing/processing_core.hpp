@@ -37,7 +37,7 @@ public:
     /** Get settings.json and then get data we need for processing based on parsing
     * @param CID - CID of directory to get settings.json from
     */
-    virtual std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> GetCidForProc(std::string cid) = 0;
+    virtual std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> GetCidForProc(std::string json_data, std::string base_json) = 0;
     /** Get files from a set URL and insert them into pair reference
     * @param ioc - IO context to run on
     * @param url - ipfs gateway url to get from
