@@ -33,7 +33,11 @@ namespace sgns::processing
         {
 
             auto buffers = GetCidForProc(subTask.json_data(), task.json_data());
-
+            if (buffers->first.size() <= 0)
+            {
+                std::cout << "No buffer from job data" << std::endl;
+                return;
+            }
 
             this->cidData_.insert({ subTask.ipfsblock(), buffers });
             //this->ProcessSubTask2(subTask, result, initialHashCode, buffers->second.at(0));
@@ -44,7 +48,11 @@ namespace sgns::processing
         }
         else {
             auto buffers = cidData_.at(subTask.ipfsblock());
-
+            if (buffers->first.size() <= 0)
+            {
+                std::cout << "No buffer from job data" << std::endl;
+                return;
+            }
             // Set data and process
             this->m_processor->SetData(buffers);
             auto tempresult = this->m_processor->StartProcessing(result, task, subTask);
@@ -107,12 +115,12 @@ namespace sgns::processing
             }
         }
 
-        std::vector<std::pair<std::string, std::string>> imageresults;
-        if (document.HasMember("image") && document["image"].IsObject()) {
+        //std::vector<std::pair<std::string, std::string>> imageresults;
+        if (document.HasMember("image") && document["image"].IsString()) {
             const auto& image = document["image"].GetString();
         }
         else {
-            std::cerr << "No input array" << std::endl;
+            std::cerr << "No input image" << std::endl;
             return mainbuffers;
         }
     
