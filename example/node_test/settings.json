@@ -21,7 +21,7 @@
 		"chunk_count": 24
 	},
 	{
-		"image": "data/frisebee3.data",
+		"image": "data/frisbee3.data",
 		"block_len": 768432 ,
 		"block_line_stride": 2048,
 		"block_stride": 0,
