@@ -116,8 +116,9 @@ namespace sgns::processing
         }
 
         //std::vector<std::pair<std::string, std::string>> imageresults;
+        std::string image = "";
         if (document.HasMember("image") && document["image"].IsString()) {
-            const auto& image = document["image"].GetString();
+            image = document["image"].GetString();
         }
         else {
             std::cerr << "No input image" << std::endl;
@@ -138,7 +139,7 @@ namespace sgns::processing
         //    std::string fullUrl = url + image;
         //    GetSubCidForProc(ioc, fullUrl, mainbuffers);
         //}
-        string imageUrl = baseUrl + modelFile;
+        string imageUrl = baseUrl + image;
         GetSubCidForProc(ioc, imageUrl, mainbuffers);
         //Run IO
         ioc->reset();
