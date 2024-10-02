@@ -33,7 +33,7 @@ namespace sgns::processing
             std::transform( image.begin(), image.end(), output.begin(),
                             []( char c ) { return static_cast<uint8_t>( c ); } );
             //ImageSplitter animageSplit( output, task.block_line_stride(), task.block_stride(), task.block_len() );
-            ImageSplitter animageSplit(output, 1, 1, 1);
+            ImageSplitter animageSplit(output, block_line_stride, block_stride, block_len);
             auto          dataindex           = 0;
             auto          basechunk           = subTask.chunkstoprocess( 0 );
             bool          isValidationSubTask = ( subTask.subtaskid() == "subtask_validation" );

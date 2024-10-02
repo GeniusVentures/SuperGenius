@@ -79,6 +79,13 @@ namespace sgns::processing
 
         auto mainbuffers = std::make_shared<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>();
 
+        //Set processor or fail.
+        if (!this->SetProcessingTypeFromJson(base_json))
+        {
+            std::cerr << "No processor available for this type:" << base_json << std::endl;
+            return mainbuffers;
+        }
+
         //Parse json to look for model/image
         rapidjson::Document document;
         document.Parse(json_data.c_str());
