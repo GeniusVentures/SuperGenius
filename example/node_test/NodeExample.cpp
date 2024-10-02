@@ -16,6 +16,8 @@
 #include <boost/asio.hpp>
 #include "local_secure_storage/impl/json/JSONSecureStorage.hpp"
 #include "account/GeniusNode.hpp"
+#include "FileManager.hpp"
+
 std::mutex              keyboard_mutex;
 std::condition_variable cv;
 std::queue<std::string> events;
@@ -55,41 +57,75 @@ void MintTokens( const std::vector<std::string> &args, sgns::GeniusNode &genius_
 
 void CreateProcessingTransaction( const std::vector<std::string> &args, sgns::GeniusNode &genius_node )
 {
-    if ( args.size() != 3 )
+    if ( args.size() != 4 )
     {
         std::cerr << "Invalid process command format.\n";
         return;
     }
     uint64_t price = std::stoull( args[2] );
+    std::string procxml_loc = args[3];
+    std::string json_data = "";
+    if (procxml_loc.size() > 0)
+    {
+        libp2p::protocol::kademlia::Config kademlia_config;
+        kademlia_config.randomWalk.enabled = true;
+        kademlia_config.randomWalk.interval = std::chrono::seconds(300);
+        kademlia_config.requestConcurency = 20;
+        auto injector = libp2p::injector::makeHostInjector(
+            libp2p::injector::makeKademliaInjector(libp2p::injector::useKademliaConfig(kademlia_config)));
+        auto ioc = injector.create<std::shared_ptr<boost::asio::io_context>>();
+
+        boost::asio::io_context::executor_type                                   executor = ioc->get_executor();
+        boost::asio::executor_work_guard<boost::asio::io_context::executor_type> workGuard(executor);
+        FileManager::GetInstance().InitializeSingletons();
+        auto data = FileManager::GetInstance().LoadASync(procxml_loc, false, false, ioc, [ioc](const sgns::AsyncError::CustomResult& status) {
+            if (status.has_value())
+            {
+                std::cout << "Success: " << status.value().message << std::endl;
+            }
+            else
+            {
+                std::cout << "Error: " << status.error() << std::endl;
+            };
+            }, [ioc, &json_data](std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers) {
+                json_data = std::string(buffers->second[0].begin(), buffers->second[0].end());
+                },"file");
+            ioc->run();
+    }
 
     if ( genius_node.GetBalance() >= price )
     {
-        std::string json_data = R"(
-                {
-                  "data": {
-	                "type": "https",
-	                "URL": "https://ipfs.filebase.io/ipfs/QmUDMvGQXbUKMsjmTzjf4ZuMx7tHx6Z4x8YH8RbwrgyGAf/"
-                  },
-                  "model": {
-                    "name": "posenet",
-                    "file": "model.mnn"
-                  },
-                  "input": [
-	                {
-		                "image": "data/ballet.data",
-		                "block_len": 4860000 ,
-		                "block_line_stride": 5400,
-		                "block_stride": 0,
-		                "chunk_line_stride": 1080,
-		                "chunk_offset": 0,
-		                "chunk_stride": 4320,
-		                "chunk_subchunk_height": 5,
-		                "chunk_subchunk_width": 5,
-		                "chunk_count": 24
-	                }
-                  ]
-                }
-                )";
+        if (json_data.empty())
+        {
+            std::cerr << "No input XML obtained" << std::endl;;
+            return;
+        }
+        //std::string json_data = R"(
+        //        {
+        //          "data": {
+	       //         "type": "https",
+	       //         "URL": "https://ipfs.filebase.io/ipfs/QmUDMvGQXbUKMsjmTzjf4ZuMx7tHx6Z4x8YH8RbwrgyGAf/"
+        //          },
+        //          "model": {
+        //            "name": "posenet",
+        //            "file": "model.mnn"
+        //          },
+        //          "input": [
+	       //         {
+		      //          "image": "data/ballet.data",
+		      //          "block_len": 4860000 ,
+		      //          "block_line_stride": 5400,
+		      //          "block_stride": 0,
+		      //          "chunk_line_stride": 1080,
+		      //          "chunk_offset": 0,
+		      //          "chunk_stride": 4320,
+		      //          "chunk_subchunk_height": 5,
+		      //          "chunk_subchunk_width": 5,
+		      //          "chunk_count": 24
+	       //         }
+        //          ]
+        //        }
+        //        )";
         genius_node.ProcessImage( json_data /*args[1]*/,
                                       std::stoull( args[2] ) );
     }
