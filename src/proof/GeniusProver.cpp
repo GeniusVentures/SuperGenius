@@ -163,6 +163,11 @@ namespace sgns
         return ret;
     }
 
+    std::vector<uint8_t> GeniusProver::WriteProofToVector( const ProofType &proof ) const
+    {
+        return NilFileHelper::GetMarshalledData( proof, false );
+    }
+
     GeniusProver::ConstraintSystemType GeniusProver::MakePlonkConstraintSystem(
         const GeniusAssigner::PlonkConstraintSystemType &constrains ) const
     {

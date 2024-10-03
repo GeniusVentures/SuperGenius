@@ -9,6 +9,7 @@
 #define _GENIUS_PROVER_HPP_
 
 #include <string>
+#include <cstdint>
 
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/path.hpp>
@@ -39,7 +40,6 @@
 #include <nil/crypto3/zk/snark/systems/plonk/placeholder/proof.hpp>
 #include <nil/crypto3/zk/snark/systems/plonk/placeholder/prover.hpp>
 #include <nil/crypto3/zk/snark/systems/plonk/placeholder/verifier.hpp>
-
 
 #include <nil/crypto3/marshalling/zk/types/commitments/lpc.hpp>
 
@@ -116,7 +116,8 @@ namespace sgns
                           const ConstraintSystemType   &constrains_sys,
                           const LpcScheme              &scheme ) const;
 
-        bool WriteProofToFile( const ProofType &proof, const std::string &path ) const;
+        bool                 WriteProofToFile( const ProofType &proof, const std::string &path ) const;
+        std::vector<uint8_t> WriteProofToVector( const ProofType &proof ) const;
 
     private:
         constexpr static const std::size_t COMPONENT_CONSTANT_COLUMNS_DEFAULT = 5;
