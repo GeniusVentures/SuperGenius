@@ -12,7 +12,9 @@ namespace sgns::processing
 
     std::vector<uint8_t> MNN_PoseNet::StartProcessing( SGProcessing::SubTaskResult &result,
                                                        const SGProcessing::Task    &task,
-                                                       const SGProcessing::SubTask &subTask )
+                                                       const SGProcessing::SubTask &subTask, 
+                                                       std::vector<char> imageData, 
+                                                       std::vector<uint8_t> modelFile)
     {
         std::vector<uint8_t> subTaskResultHash(SHA256_DIGEST_LENGTH);
         rapidjson::Document document;
@@ -27,10 +29,10 @@ namespace sgns::processing
         auto chunk_subchunk_width = document["chunk_subchunk_width"].GetInt();
         auto chunk_count = document["chunk_count"].GetInt();
 
-        for ( auto image : *imageData_ )
-        {
-            std::vector<uint8_t> output( image.size() );
-            std::transform( image.begin(), image.end(), output.begin(),
+        //for ( auto image : *imageData_ )
+        //{
+            std::vector<uint8_t> output(imageData.size());
+            std::transform(imageData.begin(), imageData.end(), output.begin(),
                             []( char c ) { return static_cast<uint8_t>( c ); } );
             //ImageSplitter animageSplit( output, task.block_line_stride(), task.block_stride(), task.block_len() );
             ImageSplitter animageSplit(output, block_line_stride, block_stride, block_len);
@@ -79,47 +81,47 @@ namespace sgns::processing
                 SHA256_Final( subTaskResultHash.data(), &sha256 );
             }
             return subTaskResultHash;
-        }
-        return subTaskResultHash;
+        //}
+        //return subTaskResultHash;
     }
 
-    void MNN_PoseNet::SetData(
-        std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers )
-    {
-        const auto &filePaths = buffers->first;
-        const auto &fileDatas = buffers->second;
-        for ( size_t i = 0; i < filePaths.size(); ++i )
-        {
-            const std::string &filePath = filePaths[i];
+    //void MNN_PoseNet::SetData(
+    //    std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers )
+    //{
+    //    const auto &filePaths = buffers->first;
+    //    const auto &fileDatas = buffers->second;
+    //    for ( size_t i = 0; i < filePaths.size(); ++i )
+    //    {
+    //        const std::string &filePath = filePaths[i];
 
-            size_t dotPos = filePath.find_last_of( '.' );
-            if ( dotPos != std::string::npos && dotPos < filePath.size() - 1 )
-            {
-                std::string extension = filePath.substr( dotPos + 1 );
-                std::cout << "extension::: " << extension << std::endl;
-                if ( extension == "mnn" )
-                {
-                    //modelFile_ = new std::vector<uint8_t>();
-                    modelFile_->assign( fileDatas[i].begin(), fileDatas[i].end() );
-                }
-                else if ( extension == "jpg" || extension == "jpeg" || extension == "png" )
-                {
-                    imageData_->push_back( fileDatas[i] );
-                }
-                else if ( extension == "data" )
-                {
-                    imageData_->push_back( fileDatas[i] );
-                }
-                else if ( extension == "json" )
-                {
-                }
-                else
-                {
-                    std::cerr << "Unsupported file extension: " << extension << " for file: " << filePath << std::endl;
-                }
-            }
-        }
-    }
+    //        size_t dotPos = filePath.find_last_of( '.' );
+    //        if ( dotPos != std::string::npos && dotPos < filePath.size() - 1 )
+    //        {
+    //            std::string extension = filePath.substr( dotPos + 1 );
+    //            std::cout << "extension::: " << extension << std::endl;
+    //            if ( extension == "mnn" )
+    //            {
+    //                //modelFile_ = new std::vector<uint8_t>();
+    //                modelFile_->assign( fileDatas[i].begin(), fileDatas[i].end() );
+    //            }
+    //            else if ( extension == "jpg" || extension == "jpeg" || extension == "png" )
+    //            {
+    //                imageData_->push_back( fileDatas[i] );
+    //            }
+    //            else if ( extension == "data" )
+    //            {
+    //                imageData_->push_back( fileDatas[i] );
+    //            }
+    //            else if ( extension == "json" )
+    //            {
+    //            }
+    //            else
+    //            {
+    //                std::cerr << "Unsupported file extension: " << extension << " for file: " << filePath << std::endl;
+    //            }
+    //        }
+    //    }
+    //}
 
     std::unique_ptr<MNN::Tensor> MNN_PoseNet::MNNProcess(const std::vector<uint8_t>& imgdata, const int origwidth,
         const int origheight, const std::string filename) {

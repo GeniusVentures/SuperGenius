@@ -42,8 +42,8 @@ namespace sgns::processing
         /** Create a posenet processor
         */
         MNN_PoseNet() :
-            imageData_( std::make_unique<std::vector<std::vector<char>>>() ),
-            modelFile_( std::make_unique<std::vector<uint8_t>>() )
+            //imageData_( std::make_unique<std::vector<std::vector<char>>>() ),
+            //modelFile_( std::make_unique<std::vector<uint8_t>>() )
         {
         }
 
@@ -56,13 +56,13 @@ namespace sgns::processing
         * @param subTask - Reference to subtask to get chunk data from
         */
         std::vector<uint8_t> StartProcessing( SGProcessing::SubTaskResult &result, const SGProcessing::Task &task,
-                                              const SGProcessing::SubTask &subTask ) override;
+                                              const SGProcessing::SubTask &subTask, std::vector<char> imageData, std::vector<uint8_t> modelFile ) override;
 
         /** Set data for processor
         * @param buffers - Data containing file name and data pair lists.
         */
-        void SetData(
-            std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers ) override;
+        //void SetData(
+        //    std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers ) override;
 
     private:
         /** Run MNN processing on image
@@ -73,9 +73,9 @@ namespace sgns::processing
         std::unique_ptr<MNN::Tensor> MNNProcess( const std::vector<uint8_t> &imgdata, const int origwidth, const int origheight,
                                          const std::string filename = "" );
 
-        std::unique_ptr<std::vector<std::vector<char>>> imageData_;
-        std::unique_ptr<std::vector<uint8_t>>           modelFile_;
-        std::string                                     fileName_;
+        //std::unique_ptr<std::vector<std::vector<char>>> imageData_;
+        //std::unique_ptr<std::vector<uint8_t>>           modelFile_;
+        //std::string                                     fileName_;
     };
 
 }

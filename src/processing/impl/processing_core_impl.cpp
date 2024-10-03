@@ -126,6 +126,7 @@ namespace sgns::processing
         std::string image = "";
         if (document.HasMember("image") && document["image"].IsString()) {
             image = document["image"].GetString();
+            std::cout << "Image File: " << image << std::endl;
         }
         else {
             std::cerr << "No input image" << std::endl;
