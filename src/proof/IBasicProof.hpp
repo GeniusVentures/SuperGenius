@@ -20,8 +20,10 @@ public:
 
     virtual std::string GetProofType() const = 0;
 
-private:
+protected:
     const std::string bytecode_path_;
+
+private:
 };
 
 #endif

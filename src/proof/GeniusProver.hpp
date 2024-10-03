@@ -99,7 +99,8 @@ namespace sgns
             INVALID_PROOF_GENERATED = 0,
             TABLE_PATH_ERROR,
             CIRCUIT_PATH_ERROR,
-            PROOF_PATH_ERROR
+            PROOF_PATH_ERROR,
+            EMPTY_PROOF
         };
 
         outcome::result<ProofType> GenerateProof( const GeniusAssigner::AssignerOutput &assigner_outputs ) const;

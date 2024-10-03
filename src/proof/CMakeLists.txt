@@ -24,6 +24,7 @@ target_link_libraries(genius_prover
 )
 target_link_libraries(transfer_proof
     genius_assigner
+    genius_prover
     outcome
     Boost::boost
     Boost::log
