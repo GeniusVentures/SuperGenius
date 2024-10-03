@@ -98,10 +98,11 @@ namespace sgns
         outcome::result<std::vector<AssignerOutput>> GenerateCircuitAndTable(
             const boost::json::array &public_inputs_json,
             const boost::json::array &private_inputs_json,
-            const std::string        &bytecode_file_path );
-        outcome::result<std::vector<AssignerOutput>> GenerateCircuitAndTable( const std::vector<int> &public_inputs,
-                                                                              const std::vector<int> &private_inputs,
-                                                                              const std::string &bytecode_file_path );
+            const std::string        &bytecode_file_payload );
+        outcome::result<std::vector<AssignerOutput>> GenerateCircuitAndTable(
+            const std::vector<int> &public_inputs,
+            const std::vector<int> &private_inputs,
+            const std::string      &bytecode_file_payload );
         outcome::result<void> PrintCircuitAndTable( const std::vector<AssignerOutput> &public_inputs,
                                                     const std::string                 &table_path,
                                                     const std::string                 &circuit_path );

@@ -13,13 +13,14 @@
 #include "proof/GeniusProver.hpp"
 #include <boost/json.hpp>
 #include "proof/TransferProof.hpp"
+#include "BytecodeTest.hpp"
 
 TEST( ProofAssignerTest, GenerateProof )
 {
     auto             GeniusAssigner = sgns::GeniusAssigner();
     std::vector<int> public_inputs  = { 5, 11 };
     auto             assign_result =
-        GeniusAssigner.GenerateCircuitAndTable( public_inputs, {}, "../../../../../../test/src/proof/bytecode.ll" );
+        GeniusAssigner.GenerateCircuitAndTable( public_inputs, {}, std::string(ByteCodeTest) );
     ASSERT_TRUE( assign_result.has_value() );
 
     EXPECT_EQ( assign_result.value().size(), 1 );
@@ -57,7 +58,7 @@ TEST( ProofAssignerTest, GenerateProof )
 
 TEST( ProofAssignerTest, TransactionProof )
 {
-    auto TxProof = sgns::TransferProof( "../../../../../../src/proof/TransactionVerifierCircuit.ll", 1000, 500 );
+    auto TxProof = sgns::TransferProof( 1000, 500 );
 
     auto proof_result = TxProof.GenerateProof();
 

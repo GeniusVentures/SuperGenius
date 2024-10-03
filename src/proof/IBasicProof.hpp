@@ -12,7 +12,7 @@
 class IBasicProof
 {
 public:
-    explicit IBasicProof( std::string bytecode_path ) : bytecode_path_( std::move( bytecode_path ) )
+    explicit IBasicProof( std::string bytecode_payload ) : bytecode_payload_( std::move( bytecode_payload ) )
     {
     }
 
@@ -21,7 +21,7 @@ public:
     virtual std::string GetProofType() const = 0;
 
 protected:
-    const std::string bytecode_path_;
+    const std::string bytecode_payload_;
 
 private:
 };
