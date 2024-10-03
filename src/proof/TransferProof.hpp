@@ -22,7 +22,7 @@ namespace sgns
     class TransferProof : public IBasicProof
     {
     public:
-        explicit TransferProof( std::string bytecode_path, uint64_t balance, uint64_t amount );
+        explicit TransferProof( uint64_t balance, uint64_t amount );
 
         ~TransferProof() = default;
 

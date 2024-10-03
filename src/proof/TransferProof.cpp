@@ -5,6 +5,7 @@
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
 #include "TransferProof.hpp"
+#include "circuits/TransactionVerifierCircuit.hpp"
 
 #include <boost/json.hpp>
 #include "GeniusAssigner.hpp"
@@ -35,8 +36,8 @@ using namespace nil::crypto3::algebra::curves;
 namespace sgns
 {
 
-    TransferProof::TransferProof( std::string bytecode_path, uint64_t balance, uint64_t amount ) :
-        IBasicProof( std::move( bytecode_path ) ), //
+    TransferProof::TransferProof( uint64_t balance, uint64_t amount ) :
+        IBasicProof( std::string( TransactionCircuit ) ), //
         balance_( std::move( balance ) ),          //
         amount_( std::move( amount ) )             //
     {
@@ -83,7 +84,7 @@ namespace sgns
         OUTCOME_TRY( ( auto &&, assign_value ),
                      hidden_assigner->GenerateCircuitAndTable( public_inputs_json_array,
                                                                private_inputs_json_array,
-                                                               bytecode_path_ ) );
+                                                               bytecode_payload_ ) );
         OUTCOME_TRY( ( auto &&, proof_value ), hidden_prover->GenerateProof( assign_value.at( 0 ) ) );
 
         if ( !hidden_prover->VerifyProof( proof_value, assign_value.at( 0 ) ) )

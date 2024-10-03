@@ -45,9 +45,9 @@ namespace sgns
     outcome::result<std::vector<GeniusAssigner::AssignerOutput>> GeniusAssigner::GenerateCircuitAndTable(
         const boost::json::array &public_inputs_json,
         const boost::json::array &private_inputs_json,
-        const std::string        &bytecode_file_path )
+        const std::string        &bytecode_file_payload )
     {
-        if ( !assigner_instance_->parse_ir_file( bytecode_file_path.data() ) )
+        if ( !assigner_instance_->parse_ir_buffer( bytecode_file_payload.data() ) )
         {
             return outcome::failure( AssignerError::EMPTY_BYTECODE );
         }
@@ -190,7 +190,7 @@ namespace sgns
     outcome::result<std::vector<GeniusAssigner::AssignerOutput>> GeniusAssigner::GenerateCircuitAndTable(
         const std::vector<int> &public_inputs,
         const std::vector<int> &private_inputs,
-        const std::string      &bytecode_file_path )
+        const std::string      &bytecode_file_payload )
     {
         boost::json::array public_inputs_json_array;
         boost::json::array private_inputs_json_array;
@@ -209,7 +209,7 @@ namespace sgns
             private_inputs_json_array.push_back( obj ); // Add the object to the boost::json::array
         }
 
-        return GenerateCircuitAndTable( public_inputs_json_array, private_inputs_json_array, bytecode_file_path );
+        return GenerateCircuitAndTable( public_inputs_json_array, private_inputs_json_array, bytecode_file_payload );
     }
 
     outcome::result<void> GeniusAssigner::PrintCircuitAndTable( const std::vector<AssignerOutput> &assigner_outputs,
