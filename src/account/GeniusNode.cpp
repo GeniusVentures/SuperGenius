@@ -104,7 +104,7 @@ namespace sgns
 
         pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
             crdt::KeyPairFileStorage( write_base_path_ + pubsubKeyPath ).GetKeyPair().value() );
-        pubsub_->Start(pubsubport, { pubsub_->GetLocalAddress() }, lanip, addresses);
+        pubsub_->Start(pubsubport, { "/ip4/192.168.46.116/tcp/40300/p2p/12D3KooWM6u26Xj8N1PzWUiUX5p8thqRRCrgmgEP41RHPVNw9r4f", "/ip4/192.168.46.116/tcp/40096/p2p/12D3KooWHNgFsbvDU2JVpY6RrAsWnGujsmmargFtJRXHQvx8fWzE", "/ip4/192.168.46.116/tcp/40697/p2p/12D3KooWJbnptXWuugfqwDJGgZVAHyAvN3LZMFpwHRhQGzuY58rT"}, lanip, addresses);
         
         globaldb_ = std::make_shared<crdt::GlobalDB>(
             io_,
@@ -249,18 +249,18 @@ namespace sgns
                 return;
             }
             processing::ProcessTaskSplitter taskSplitter;
-            auto                               mnn_image = GetImageByCID(image_path);
-            if (mnn_image.size() != inputArray.Size())
-            {
-                std::cout << "Input size does not match, did an image fail to be obtained?" << std::endl;
-                return;
-            }
-            int imageindex = 0;
+            //auto                               mnn_image = GetImageByCID(image_path);
+            //if (mnn_image.size() != inputArray.Size())
+            //{
+            //    std::cout << "Input size does not match, did an image fail to be obtained?" << std::endl;
+            //    return;
+            //}
+            //int imageindex = 0;
             std::list<SGProcessing::SubTask> subTasks;
             for (const auto& input : inputArray.GetArray())
             {
-                auto image = mnn_image[imageindex];
-                processing::ImageSplitter          imagesplit(image, input["block_line_stride"].GetInt(), input["block_stride"].GetInt(), input["block_len"].GetInt());
+                //auto image = mnn_image[imageindex];
+                //processing::ImageSplitter          imagesplit(image, input["block_line_stride"].GetInt(), input["block_stride"].GetInt(), input["block_len"].GetInt());
 
                 size_t nChunks = input["chunk_count"].GetInt();               
                 //Assumption: There will always be 1 task, with several subtasks per json. So this for loop isn't really doing anything.
@@ -273,7 +273,7 @@ namespace sgns
                 taskSplitter.SplitTask(task, subTasks, inputAsString, nChunks, false);
                     
                 //}
-                imageindex++;
+                //imageindex++;
             }
             task_queue_->EnqueueTask(task, subTasks);
             transaction_manager_->HoldEscrow(

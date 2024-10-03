@@ -91,10 +91,13 @@ void CreateProcessingTransaction( const std::vector<std::string> &args, sgns::Ge
                 json_data = std::string(buffers->second[0].begin(), buffers->second[0].end());
                 },"file");
             ioc->run();
+            ioc->stop();
+            ioc->reset();
     }
 
     if ( genius_node.GetBalance() >= price )
     {
+        
         if (json_data.empty())
         {
             std::cerr << "No input XML obtained" << std::endl;;
