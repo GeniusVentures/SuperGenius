@@ -21,6 +21,8 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, GeniusProver::ProverError, e )
             return "The circuit file is not on the informed path.";
         case ProverError::PROOF_PATH_ERROR:
             return "The proof file can't be saved on the informed path.";
+        case ProverError::EMPTY_PROOF:
+            return "The constrains are zeroad, so the Proof circuit is a constant function";
     }
     return "Unknown error";
 }
@@ -32,6 +34,11 @@ namespace sgns
         const GeniusAssigner::AssignerOutput &assigner_outputs ) const
     {
         auto constrains_sys = MakePlonkConstraintSystem( assigner_outputs.constrains );
+
+        if ( ( constrains_sys.max_gates_degree() == 0 ) && ( constrains_sys.max_lookup_gates_degree() == 0 ) )
+        {
+            return outcome::failure( ProverError::EMPTY_PROOF );
+        }
 
         auto [plonk_table_desc, assignment_table] = MakePlonkTableDescription( assigner_outputs.table );
 

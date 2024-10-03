@@ -12,9 +12,8 @@
 #include <cstdio>
 #include <array>
 #include <memory>
+#include <boost/json.hpp>
 #include "IBasicProof.hpp"
-
-
 
 namespace sgns
 {
@@ -33,8 +32,10 @@ namespace sgns
 
         void GenerateProof();
 
+        std::pair<boost::json::array, boost::json::array> GenerateJsonParameters();
+
     private:
-        const std::string bytecode_path_;
+        //const std::string bytecode_path_;
         //const typename pallas::template g1_type<coordinates::affine>::value_type generator;
         //const typename pallas::scalar_field_type::value_type base_seed     = 12345; // Example seed for TOTP
         //const typename pallas::scalar_field_type::value_type provided_totp = 67890; // Example provided TOTP
@@ -45,8 +46,8 @@ namespace sgns
         static constexpr std::array<uint64_t, 4> ranges            = { 1000, 2000, 3000, 4000 };
         uint64_t                                 balance_;
         uint64_t                                 amount_;
-        std::shared_ptr<void> assigner_;
-        std::shared_ptr<void> prover_;
+        std::shared_ptr<void>                    assigner_;
+        std::shared_ptr<void>                    prover_;
     };
 }
 #endif
