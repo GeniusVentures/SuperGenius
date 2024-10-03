@@ -156,7 +156,7 @@ namespace sgns::processing
         return mainbuffers;
     }
 
-    void ProcessingCoreImpl::GetSubCidForProc(std::shared_ptr<boost::asio::io_context> ioc,std::string url, std::vector<char>& results)
+    void ProcessingCoreImpl::GetSubCidForProc(std::shared_ptr<boost::asio::io_context> ioc, std::string url, std::vector<char>& results)
     {
         //std::pair<std::vector<std::string>, std::vector<std::vector<char>>> results;
         auto modeldata = FileManager::GetInstance().LoadASync(url, false, false, ioc, [](const sgns::AsyncError::CustomResult& status)
@@ -172,7 +172,7 @@ namespace sgns::processing
                 {
                     //results->first.insert(results->first.end(), buffers->first.begin(), buffers->first.end());
                     //results->second.insert(results->second.end(), buffers->second.begin(), buffers->second.end());
-                    results.insert(results.end(), buffers->second.begin(), buffers->second.end());
+                    results.insert(results.end(), buffers->second[0].begin(), buffers->second[0].end());
                 }, "file");
 
     }
