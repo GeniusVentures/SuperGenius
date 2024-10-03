@@ -41,7 +41,7 @@ namespace sgns::processing
     public:
         /** Create a posenet processor
         */
-        MNN_PoseNet() :
+        MNN_PoseNet() 
             //imageData_( std::make_unique<std::vector<std::vector<char>>>() ),
             //modelFile_( std::make_unique<std::vector<uint8_t>>() )
         {
@@ -56,7 +56,7 @@ namespace sgns::processing
         * @param subTask - Reference to subtask to get chunk data from
         */
         std::vector<uint8_t> StartProcessing( SGProcessing::SubTaskResult &result, const SGProcessing::Task &task,
-                                              const SGProcessing::SubTask &subTask, std::vector<char> imageData, std::vector<uint8_t> modelFile ) override;
+                                              const SGProcessing::SubTask &subTask, std::vector<char> imageData, std::vector<char> modelFile ) override;
 
         /** Set data for processor
         * @param buffers - Data containing file name and data pair lists.
@@ -70,7 +70,7 @@ namespace sgns::processing
         * @param origwidth - Width of image
         * @param origheight - Height of image
         */
-        std::unique_ptr<MNN::Tensor> MNNProcess( const std::vector<uint8_t> &imgdata, const int origwidth, const int origheight,
+        std::unique_ptr<MNN::Tensor> MNNProcess( const std::vector<uint8_t> &imgdata, std::vector<uint8_t> &modelFile, const int origwidth, const int origheight,
                                          const std::string filename = "" );
 
         //std::unique_ptr<std::vector<std::vector<char>>> imageData_;

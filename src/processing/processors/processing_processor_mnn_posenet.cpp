@@ -14,8 +14,12 @@ namespace sgns::processing
                                                        const SGProcessing::Task    &task,
                                                        const SGProcessing::SubTask &subTask, 
                                                        std::vector<char> imageData, 
-                                                       std::vector<uint8_t> modelFile)
+                                                       std::vector<char> modelFile)
     {
+        std::vector<uint8_t> modelFile_bytes;
+        modelFile_bytes.assign(modelFile.begin(), modelFile.end());
+
+            //Get stride data
         std::vector<uint8_t> subTaskResultHash(SHA256_DIGEST_LENGTH);
         rapidjson::Document document;
         document.Parse(subTask.json_data().c_str());
@@ -59,7 +63,7 @@ namespace sgns::processing
                 else
                 {
                     auto procresults =
-                        MNNProcess( ChunkSplit.GetPart( chunkIdx ), ChunkSplit.GetPartWidthActual( chunkIdx ),
+                        MNNProcess( ChunkSplit.GetPart( chunkIdx ), modelFile_bytes, ChunkSplit.GetPartWidthActual( chunkIdx ),
                                     ChunkSplit.GetPartHeightActual( chunkIdx ) );
 
                     const float* data = procresults->host<float>();
@@ -123,7 +127,7 @@ namespace sgns::processing
     //    }
     //}
 
-    std::unique_ptr<MNN::Tensor> MNN_PoseNet::MNNProcess(const std::vector<uint8_t>& imgdata, const int origwidth,
+    std::unique_ptr<MNN::Tensor> MNN_PoseNet::MNNProcess(const std::vector<uint8_t>& imgdata, std::vector<uint8_t>& modelFile, const int origwidth,
         const int origheight, const std::string filename) {
         std::vector<uint8_t> ret_vect(imgdata);
 
@@ -137,8 +141,8 @@ namespace sgns::processing
         scale.fY = (float)origheight / (float)targetHeight;
 
         // Create net and session
-        const void* buffer = static_cast<const void*>(modelFile_->data());
-        auto mnnNet = std::shared_ptr<MNN::Interpreter>(MNN::Interpreter::createFromBuffer(buffer, modelFile_->size()));
+        const void* buffer = static_cast<const void*>(modelFile.data());
+        auto mnnNet = std::shared_ptr<MNN::Interpreter>(MNN::Interpreter::createFromBuffer(buffer, modelFile.size()));
         MNN::ScheduleConfig netConfig;
         netConfig.type = MNN_FORWARD_VULKAN;
         netConfig.numThread = 4;

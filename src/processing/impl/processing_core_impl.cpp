@@ -41,8 +41,8 @@ namespace sgns::processing
 
             this->cidData_.insert({ subTask.ipfsblock(), buffers });
             //this->ProcessSubTask2(subTask, result, initialHashCode, buffers->second.at(0));
-            this->m_processor->SetData(buffers);
-            auto tempresult = this->m_processor->StartProcessing(result, task, subTask);
+            //this->m_processor->SetData(buffers);
+            auto tempresult = this->m_processor->StartProcessing(result, task, subTask, buffers->second, buffers->first);
             std::string hashString(tempresult.begin(), tempresult.end());
             result.set_result_hash(hashString);
         }
@@ -54,15 +54,15 @@ namespace sgns::processing
                 return;
             }
             // Set data and process
-            this->m_processor->SetData(buffers);
-            auto tempresult = this->m_processor->StartProcessing(result, task, subTask);
+            //this->m_processor->SetData(buffers);
+            auto tempresult = this->m_processor->StartProcessing(result, task, subTask, buffers->second, buffers->first);
             std::string hashString(tempresult.begin(), tempresult.end());
             result.set_result_hash(hashString);
         }
     }
 
 
-    std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> ProcessingCoreImpl::GetCidForProc(std::string json_data, std::string base_json)
+    std::shared_ptr<std::pair<std::vector<char>, std::vector<char>>> ProcessingCoreImpl::GetCidForProc(std::string json_data, std::string base_json)
     {
         //ASIO for Async, should probably be made to use the main IO but this class doesn't have it 
         libp2p::protocol::kademlia::Config kademlia_config;
@@ -77,7 +77,7 @@ namespace sgns::processing
         boost::asio::io_context::executor_type executor = ioc->get_executor();
         boost::asio::executor_work_guard<boost::asio::io_context::executor_type> workGuard(executor);
 
-        auto mainbuffers = std::make_shared<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>();
+        auto mainbuffers = std::make_shared<std::pair<std::vector<char>, std::vector<char>>>();
 
         //Set processor or fail.
         if (!this->SetProcessingTypeFromJson(base_json))
@@ -137,7 +137,7 @@ namespace sgns::processing
         FileManager::GetInstance().InitializeSingletons();
         //Get Model
         string modelURL = baseUrl + modelFile;
-        GetSubCidForProc(ioc, modelURL, mainbuffers);
+        GetSubCidForProc(ioc, modelURL, mainbuffers->first);
 
 
         //Get Image, TODO: Update to grab multiple files if needed
@@ -148,7 +148,7 @@ namespace sgns::processing
         //    GetSubCidForProc(ioc, fullUrl, mainbuffers);
         //}
         string imageUrl = baseUrl + image;
-        GetSubCidForProc(ioc, imageUrl, mainbuffers);
+        GetSubCidForProc(ioc, imageUrl, mainbuffers->second);
         //Run IO
         ioc->reset();
         ioc->run();
@@ -156,7 +156,7 @@ namespace sgns::processing
         return mainbuffers;
     }
 
-    void ProcessingCoreImpl::GetSubCidForProc(std::shared_ptr<boost::asio::io_context> ioc,std::string url, std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>& results)
+    void ProcessingCoreImpl::GetSubCidForProc(std::shared_ptr<boost::asio::io_context> ioc,std::string url, std::vector<char>& results)
     {
         //std::pair<std::vector<std::string>, std::vector<std::vector<char>>> results;
         auto modeldata = FileManager::GetInstance().LoadASync(url, false, false, ioc, [](const sgns::AsyncError::CustomResult& status)
@@ -170,8 +170,9 @@ namespace sgns::processing
                 }
             }, [&results](std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers)
                 {
-                    results->first.insert(results->first.end(), buffers->first.begin(), buffers->first.end());
-                    results->second.insert(results->second.end(), buffers->second.begin(), buffers->second.end());
+                    //results->first.insert(results->first.end(), buffers->first.begin(), buffers->first.end());
+                    //results->second.insert(results->second.end(), buffers->second.begin(), buffers->second.end());
+                    results.insert(results.end(), buffers->second.begin(), buffers->second.end());
                 }, "file");
 
     }
