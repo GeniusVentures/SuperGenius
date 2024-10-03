@@ -35,18 +35,29 @@ namespace sgns
         }
 
         template <typename MarshalledData>
+        static std::vector<uint8_t> GetMarshalledData( const MarshalledData &output, bool binary = true )
+        {
+            std::vector<std::uint8_t> cv;
+            cv.resize( output.length(), 0x00 );
+            auto                          write_iter = cv.begin();
+            nil::marshalling::status_type status     = output.write( write_iter, cv.size() );
+
+            return cv;
+        }
+
+        template <typename MarshalledData>
         static outcome::result<MarshalledData> DecodeMarshalledData( std::ifstream &in, bool binary = true )
 
         {
             std::vector<std::uint8_t> v;
             if ( binary )
             {
-                OUTCOME_TRY((auto &&, result), ReadFromBin( in ) );
+                OUTCOME_TRY( ( auto &&, result ), ReadFromBin( in ) );
                 v = std::move( result );
             }
             else
             {
-                OUTCOME_TRY( (auto &&, result), ReadFromHex( in ) );
+                OUTCOME_TRY( ( auto &&, result ), ReadFromHex( in ) );
                 v = std::move( result );
             }
 
