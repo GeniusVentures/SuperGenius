@@ -73,6 +73,8 @@ namespace sgns
         GeniusProof retval( std::move( filled_placeholder_proof ),
                             std::move( constrains_sys ),
                             std::move( pub_table ) );
+        retval.rows_amount = plonk_table_desc.rows_amount;
+        retval.usable_rows_amount = plonk_table_desc.usable_rows_amount;
 
         return retval;
     }
@@ -106,6 +108,35 @@ namespace sgns
 
     bool GeniusProver::VerifyProof( const GeniusProof &proof ) const
     {
+        auto plonk_table_desc = GeniusAssigner::GetPlonkTableDescription();
+        
+        plonk_table_desc.usable_rows_amount = proof.usable_rows_amount;
+        plonk_table_desc.rows_amount = proof.rows_amount;
+
+        auto fri_params = MakeFRIParams( plonk_table_desc.rows_amount, 1, expand_factor_ );
+
+        LpcScheme lpc_scheme( fri_params );
+
+
+        std::size_t permutation_size =
+            plonk_table_desc.witness_columns + plonk_table_desc.public_input_columns + component_constant_columns_;
+
+        PublicPreprocessedData public_preprocessed_data(
+            crypto3::zk::snark::placeholder_public_preprocessor<BlueprintFieldType, PlaceholderParams>::process(
+                proof.constrains,
+                proof.table,
+                plonk_table_desc,
+                lpc_scheme,
+                permutation_size ) );
+
+        auto proof_snark =
+            crypto3::marshalling::types::make_placeholder_proof<ProverEndianess, ProofSnarkType>( proof.proof );
+        return crypto3::zk::snark::placeholder_verifier<BlueprintFieldType, PlaceholderParams>::process(
+            public_preprocessed_data,
+            proof_snark,
+            plonk_table_desc,
+            proof.constrains,
+            lpc_scheme );
         return true;
     }
 

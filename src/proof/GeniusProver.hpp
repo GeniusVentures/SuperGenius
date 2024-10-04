@@ -116,6 +116,8 @@ namespace sgns
             ProofType            proof;
             ConstraintSystemType constrains;
             PublicTableType      table;
+            std::size_t          usable_rows_amount;
+            std::size_t          rows_amount;
         };
 
         outcome::result<GeniusProof> GenerateProof( const GeniusAssigner::AssignerOutput &assigner_outputs ) const;
