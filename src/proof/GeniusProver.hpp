@@ -64,6 +64,7 @@ namespace sgns
         using TableDescriptionType = crypto3::zk::snark::plonk_table_description<BlueprintFieldType>;
         using PlonkColumn          = crypto3::zk::snark::plonk_column<BlueprintFieldType>;
         using AssignmentTableType  = crypto3::zk::snark::plonk_table<BlueprintFieldType, PlonkColumn>;
+        using PublicTableType      = crypto3::zk::snark::plonk_public_table<BlueprintFieldType, PlonkColumn>;
         using LpcParams         = crypto3::zk::commitments::list_polynomial_commitment_params<HashType, HashType, 9, 2>;
         using Lpc               = crypto3::zk::commitments::list_polynomial_commitment<BlueprintFieldType, LpcParams>;
         using LpcScheme         = typename crypto3::zk::commitments::lpc_commitment_scheme<Lpc>;
@@ -103,11 +104,26 @@ namespace sgns
             EMPTY_PROOF
         };
 
-        outcome::result<ProofType> GenerateProof( const GeniusAssigner::AssignerOutput &assigner_outputs ) const;
+        struct GeniusProof
+        {
+            GeniusProof( ProofType new_proof, ConstraintSystemType new_constrains, PublicTableType new_table ) :
+                proof( std::move( new_proof ) ),           //
+                constrains( std::move( new_constrains ) ), //
+                table( std::move( new_table ) )            //
+            {
+            }
 
-        outcome::result<ProofType> GenerateProof( const std::string &circuit_file,
-                                                  const std::string &assignment_table_file ) const;
+            ProofType            proof;
+            ConstraintSystemType constrains;
+            PublicTableType      table;
+        };
 
+        outcome::result<GeniusProof> GenerateProof( const GeniusAssigner::AssignerOutput &assigner_outputs ) const;
+
+        outcome::result<GeniusProof> GenerateProof( const std::string &circuit_file,
+                                                    const std::string &assignment_table_file ) const;
+
+        bool VerifyProof( const GeniusProof &proof ) const;
         bool VerifyProof( const ProofType &proof, const GeniusAssigner::AssignerOutput &assigner_outputs ) const;
 
         bool VerifyProof( const ProofSnarkType         &proof,

@@ -50,9 +50,9 @@ TEST( ProofAssignerTest, GenerateProof )
     // Assert that the function was successful (i.e., no error occurred)
     ASSERT_FALSE( proof_result.has_error() ) << "Proof Expected success but got an error!";
 
-    EXPECT_TRUE( GeniusProver.VerifyProof( proof_result.value(), assign_value ) );
+    EXPECT_TRUE( GeniusProver.VerifyProof( proof_result.value().proof, assign_value ) );
     EXPECT_TRUE(
-        GeniusProver.WriteProofToFile( proof_result.value(), "../../../../../../test/src/proof/sgnus_proof.bin" ) );
+        GeniusProver.WriteProofToFile( proof_result.value().proof, "../../../../../../test/src/proof/sgnus_proof.bin" ) );
 
 }
 
