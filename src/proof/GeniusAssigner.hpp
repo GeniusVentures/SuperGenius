@@ -36,10 +36,10 @@ namespace sgns
         using AssignerEndianess    = nil::marshalling::option::big_endian;
         using ArithmetizationType  = crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>;
         using ConstraintSystemType = crypto3::zk::snark::plonk_constraint_system<BlueprintFieldType>;
-        using TableDescriptionType = crypto3::zk::snark::plonk_table_description<BlueprintFieldType>;
         using AssignmentTableType  = nil::blueprint::assignment_proxy<ArithmetizationType>;
 
     public:
+        using TableDescriptionType = crypto3::zk::snark::plonk_table_description<BlueprintFieldType>;
         using PlonkConstraintSystemType =
             crypto3::marshalling::types::plonk_constraint_system<nil::marshalling::field_type<AssignerEndianess>,
                                                                  ConstraintSystemType>;
@@ -51,13 +51,8 @@ namespace sgns
             gen_mode_( nil::blueprint::generation_mode::assignments() | nil::blueprint::generation_mode::circuit() )
 
         {
-            TableDescriptionType desc( WITNESS_COLUMNS,
-                                       PUBLIC_INPUT_COLUMNS,
-                                       COMPONENT_CONSTANT_COLUMNS + LOOKUP_CONSTANT_COLUMNS,
-                                       COMPONENT_SELECTOR_COLUMNS + LOOKUP_SELECTOR_COLUMNS );
-
             assigner_instance_ = std::make_shared<nil::blueprint::assigner<BlueprintFieldType>>(
-                desc,
+                GetPlonkTableDescription(),
                 STACK_SIZE,
                 LOG_LEVEL,
                 MAX_NUM_PROVERS,
@@ -94,6 +89,16 @@ namespace sgns
             PlonkConstraintSystemType constrains;
             PlonkAssignTableType      table;
         };
+
+        static const TableDescriptionType &GetPlonkTableDescription() 
+        {
+            static const TableDescriptionType desc( WITNESS_COLUMNS,
+                                                    PUBLIC_INPUT_COLUMNS,
+                                                    COMPONENT_CONSTANT_COLUMNS + LOOKUP_CONSTANT_COLUMNS,
+                                                    COMPONENT_SELECTOR_COLUMNS + LOOKUP_SELECTOR_COLUMNS );
+
+            return desc;
+        }
 
         outcome::result<std::vector<AssignerOutput>> GenerateCircuitAndTable(
             const boost::json::array &public_inputs_json,
