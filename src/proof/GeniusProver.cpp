@@ -30,7 +30,7 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, GeniusProver::ProverError, e )
 namespace sgns
 {
 
-    outcome::result<GeniusProver::ProofType> GeniusProver::GenerateProof(
+    outcome::result<GeniusProver::GeniusProof> GeniusProver::GenerateProof(
         const GeniusAssigner::AssignerOutput &assigner_outputs ) const
     {
         auto constrains_sys = MakePlonkConstraintSystem( assigner_outputs.constrains );
@@ -49,12 +49,10 @@ namespace sgns
         std::size_t permutation_size =
             plonk_table_desc.witness_columns + plonk_table_desc.public_input_columns + component_constant_columns_;
 
+        auto pub_table = assignment_table.move_public_table();
+
         PublicPreprocessedData public_preprocessed_data(
-            PublicPreprocessor::process( constrains_sys,
-                                         assignment_table.move_public_table(),
-                                         plonk_table_desc,
-                                         lpc_scheme,
-                                         permutation_size ) );
+            PublicPreprocessor::process( constrains_sys, pub_table, plonk_table_desc, lpc_scheme, permutation_size ) );
 
         PrivatePreprocessedData private_preprocessed_data(
             PrivatePreprocessor::process( constrains_sys, assignment_table.move_private_table(), plonk_table_desc ) );
@@ -72,10 +70,14 @@ namespace sgns
 
         auto filled_placeholder_proof = FillPlaceholderProof( proof, fri_params );
 
-        return filled_placeholder_proof;
+        GeniusProof retval( std::move( filled_placeholder_proof ),
+                            std::move( constrains_sys ),
+                            std::move( pub_table ) );
+
+        return retval;
     }
 
-    outcome::result<GeniusProver::ProofType> GeniusProver::GenerateProof(
+    outcome::result<GeniusProver::GeniusProof> GeniusProver::GenerateProof(
         const std::string &circuit_file,
         const std::string &assignment_table_file ) const
     {
@@ -100,6 +102,11 @@ namespace sgns
         GeniusAssigner::AssignerOutput assigner_outputs( plonk_constrains, plonk_table );
 
         return GenerateProof( { assigner_outputs } );
+    }
+
+    bool GeniusProver::VerifyProof( const GeniusProof &proof ) const
+    {
+        return true;
     }
 
     bool GeniusProver::VerifyProof( const ProofType                      &proof,

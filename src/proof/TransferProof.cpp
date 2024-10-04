@@ -38,8 +38,8 @@ namespace sgns
 
     TransferProof::TransferProof( uint64_t balance, uint64_t amount ) :
         IBasicProof( std::string( TransactionCircuit ) ), //
-        balance_( std::move( balance ) ),          //
-        amount_( std::move( amount ) )             //
+        balance_( std::move( balance ) ),                 //
+        amount_( std::move( amount ) )                    //
     {
         assigner_ = std::make_shared<sgns::GeniusAssigner>();
         prover_   = std::make_shared<sgns::GeniusProver>();
@@ -87,12 +87,12 @@ namespace sgns
                                                                bytecode_payload_ ) );
         OUTCOME_TRY( ( auto &&, proof_value ), hidden_prover->GenerateProof( assign_value.at( 0 ) ) );
 
-        if ( !hidden_prover->VerifyProof( proof_value, assign_value.at( 0 ) ) )
+        if ( !hidden_prover->VerifyProof( proof_value ) )
         {
             return outcome::failure( TxProofError::INVALID_PROOF );
         }
 
-        return hidden_prover->WriteProofToVector( proof_value );
+        return hidden_prover->WriteProofToVector( proof_value.proof );
     }
 
     boost::json::object TransferProof::GenerateIntParameter( uint64_t value )
