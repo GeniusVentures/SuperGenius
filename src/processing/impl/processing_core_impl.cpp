@@ -29,7 +29,7 @@ namespace sgns::processing
             std::cout << "No root task for subtask" << std::endl;
             return;
         }
-        if (cidData_.find(subTask.ipfsblock()) == cidData_.end())
+        if (cidData_.find(subTask.subtaskid()) == cidData_.end())
         {
 
             auto buffers = GetCidForProc(subTask.json_data(), task.json_data());
@@ -39,7 +39,7 @@ namespace sgns::processing
                 return;
             }
 
-            this->cidData_.insert({ subTask.ipfsblock(), buffers });
+            this->cidData_.insert({ subTask.subtaskid(), buffers });
             //this->ProcessSubTask2(subTask, result, initialHashCode, buffers->second.at(0));
             //this->m_processor->SetData(buffers);
             auto tempresult = this->m_processor->StartProcessing(result, task, subTask, buffers->second, buffers->first);
@@ -47,7 +47,7 @@ namespace sgns::processing
             result.set_result_hash(hashString);
         }
         else {
-            auto buffers = cidData_.at(subTask.ipfsblock());
+            auto buffers = cidData_.at(subTask.subtaskid());
             if (buffers->first.size() <= 0)
             {
                 std::cout << "No buffer from job data" << std::endl;

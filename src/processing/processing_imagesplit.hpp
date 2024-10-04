@@ -114,7 +114,7 @@ namespace sgns::processing
         uint64_t blocklinestride_;
         uint64_t blocklen_;
         const unsigned char* inputImage;
-        size_t imageSize;
+        uint64_t imageSize;
         std::vector<int> chunkWidthActual_;
         std::vector<int> chunkHeightActual_;
         std::vector<libp2p::multi::ContentIdentifier> cids_;

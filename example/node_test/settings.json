@@ -22,7 +22,7 @@
 	},
 	{
 		"image": "data/frisbee3.data",
-		"block_len": 768432 ,
+		"block_len": 786432 ,
 		"block_line_stride": 2048,
 		"block_stride": 0,
 		"chunk_line_stride": 512,
