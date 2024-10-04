@@ -23,15 +23,15 @@ namespace sgns::processing
         std::vector<uint8_t> subTaskResultHash(SHA256_DIGEST_LENGTH);
         rapidjson::Document document;
         document.Parse(subTask.json_data().c_str());
-        auto block_len = document["block_len"].GetInt();
-        auto block_line_stride = document["block_line_stride"].GetInt();
-        auto block_stride = document["block_stride"].GetInt();
-        auto chunk_line_stride = document["chunk_line_stride"].GetInt();
-        auto chunk_offset = document["chunk_offset"].GetInt();
-        auto chunk_stride = document["chunk_stride"].GetInt();
-        auto chunk_subchunk_height = document["chunk_subchunk_height"].GetInt();
-        auto chunk_subchunk_width = document["chunk_subchunk_width"].GetInt();
-        auto chunk_count = document["chunk_count"].GetInt();
+        auto block_len = document["block_len"].GetUint64();
+        auto block_line_stride = document["block_line_stride"].GetUint64();
+        auto block_stride = document["block_stride"].GetUint64();
+        auto chunk_line_stride = document["chunk_line_stride"].GetUint64();
+        auto chunk_offset = document["chunk_offset"].GetUint64();
+        auto chunk_stride = document["chunk_stride"].GetUint64();
+        auto chunk_subchunk_height = document["chunk_subchunk_height"].GetUint64();
+        auto chunk_subchunk_width = document["chunk_subchunk_width"].GetUint64();
+        auto chunk_count = document["chunk_count"].GetUint64();
 
         //for ( auto image : *imageData_ )
         //{
