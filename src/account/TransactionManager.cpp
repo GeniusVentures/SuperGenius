@@ -94,12 +94,18 @@ namespace sgns
 
         if ( maybe_params )
         {
-            account_m->utxos          = UTXOTxParameters::UpdateUTXOList( account_m->utxos, maybe_params.value() );
             auto transfer_transaction = std::make_shared<TransferTransaction>( maybe_params.value().outputs_,
                                                                                maybe_params.value().inputs_,
                                                                                FillDAGStruct() );
-            this->EnqueueTransaction( transfer_transaction );
-            ret = true;
+
+            TransferProof prover( account_m->GetBalance<uint64_t>(), uint64_t{ amount } );
+            auto          proof_result = prover.GenerateProof();
+            if ( proof_result.has_value() )
+            {
+                account_m->utxos = UTXOTxParameters::UpdateUTXOList( account_m->utxos, maybe_params.value() );
+                this->EnqueueTransaction( std::make_pair( transfer_transaction, proof_result.value() ) );
+                ret = true;
+            }
         }
 
         return ret;
@@ -107,10 +113,13 @@ namespace sgns
 
     void TransactionManager::MintFunds( uint64_t amount )
     {
-        auto mint_transaction = std::make_shared<MintTransaction>( amount, FillDAGStruct() );
-        TransferProof proof("bytecode.ll", 1000, amount);
-        proof.GenerateProof();
-        this->EnqueueTransaction( std::move( mint_transaction ) );
+        auto          mint_transaction = std::make_shared<MintTransaction>( amount, FillDAGStruct() );
+        TransferProof prover( 100000, amount );
+        auto          proof_result = prover.GenerateProof();
+        if ( proof_result.has_value() )
+        {
+            this->EnqueueTransaction( std::make_pair( std::move( mint_transaction ), proof_result.value() ) );
+        }
     }
 
     bool TransactionManager::HoldEscrow( uint64_t           amount,
@@ -127,16 +136,21 @@ namespace sgns
                                                       uint256_t{ "0x" + hash_data.toReadableString() } );
         if ( maybe_params )
         {
-            account_m->utxos        = UTXOTxParameters::UpdateUTXOList( account_m->utxos, maybe_params.value() );
             auto escrow_transaction = std::make_shared<EscrowTransaction>( maybe_params.value(),
                                                                            num_chunks,
                                                                            dev_addr,
                                                                            dev_cut,
                                                                            FillDAGStruct() );
-            this->EnqueueTransaction( escrow_transaction );
-            ret = true;
-        }
 
+            TransferProof prover( account_m->GetBalance<uint64_t>(), amount );
+            auto          proof_result = prover.GenerateProof();
+            if ( proof_result.has_value() )
+            {
+                account_m->utxos = UTXOTxParameters::UpdateUTXOList( account_m->utxos, maybe_params.value() );
+                this->EnqueueTransaction( std::make_pair( escrow_transaction, proof_result.value() ) );
+                ret = true;
+            }
+        }
         return ret;
     }
 
@@ -160,10 +174,16 @@ namespace sgns
                 {
                     auto transfer_transaction =
                         std::make_shared<TransferTransaction>( it->payout_peers,
-                                                               std::vector<InputUTXOInfo>{ it->original_input },
-                                                               FillDAGStruct() );
-                    this->EnqueueTransaction( transfer_transaction );
-                    ret = true;
+                                                                std::vector<InputUTXOInfo>{ it->original_input },
+                                                                FillDAGStruct() );
+                    //TODO - Create with the real balance and amount
+                    TransferProof prover( 100000, 1000 );
+                    auto          proof_result = prover.GenerateProof();
+                    if ( proof_result.has_value() )
+                    {
+                        this->EnqueueTransaction( std::make_pair( transfer_transaction, proof_result.value() ) );
+                        ret = true;
+                    }
                 }
                 it = escrow_ctrl_m.erase( it );
             }
@@ -181,8 +201,15 @@ namespace sgns
         for (auto& subtask : taskresult.subtask_results())
         {
             auto process_transaction = std::make_shared<ProcessingTransaction>(task_id, subtask.subtaskid(), FillDAGStruct());
-            this->EnqueueTransaction(process_transaction);
+    
+        //TransferProof prover( 100000, amount );
+        //auto          proof_result = prover.GenerateProof();
+        //if ( proof_result.has_value() )
+        //{
+            //TODO - Check what we might have to prove here
+            this->EnqueueTransaction( std::make_pair(process_transaction, SGProof::ProofStruct{}));
         }
+        //}
     }
 
     uint64_t TransactionManager::GetBalance()
@@ -196,7 +223,7 @@ namespace sgns
         CheckBlockchain();
     }
 
-    void TransactionManager::EnqueueTransaction( std::shared_ptr<IGeniusTransactions> element )
+    void TransactionManager::EnqueueTransaction( TransactionPair element )
     {
         std::lock_guard<std::mutex> lock( mutex_m );
         out_transactions.emplace_back( std::move( element ) );
@@ -225,10 +252,9 @@ namespace sgns
             return;
         }
 
-        auto transaction = out_transactions.front();
+        auto [transaction, proof] = out_transactions.front();
         out_transactions.pop_front();
         boost::format tx_key{ std::string( TRANSACTION_BASE_FORMAT ) };
-
         tx_key % TEST_NET_ID;
 
         auto transaction_path = tx_key.str() + transaction->GetTransactionFullPath();

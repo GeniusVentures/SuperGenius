@@ -24,6 +24,7 @@
 #include "blockchain/block_storage.hpp"
 #include "base/logger.hpp"
 #include "crypto/hasher.hpp"
+#include "proof/proto/SGProof.pb.h"
 #include "processing/proto/SGProcessing.pb.h"
 #include "outcome/outcome.hpp"
 #include "primitives/common.hpp"
@@ -35,6 +36,8 @@ namespace sgns
     class TransactionManager
     {
     public:
+        using TransactionPair = std::pair<std::shared_ptr<IGeniusTransactions>, SGProof::ProofStruct>;
+
         using ProcessFinishCbType = std::function<void( const std::string &, const std::set<std::string> & )>;
 
         TransactionManager( std::shared_ptr<crdt::GlobalDB>           db,
@@ -106,7 +109,7 @@ namespace sgns
         static constexpr std::string_view TRANSACTION_BASE_FORMAT = "bc-%hu/";
 
         void                     Update();
-        void                     EnqueueTransaction( std::shared_ptr<IGeniusTransactions> element );
+        void                     EnqueueTransaction( TransactionPair element );
         SGTransaction::DAGStruct FillDAGStruct();
         void                     SendTransaction();
         bool GetTransactionsFromBlock(
@@ -127,7 +130,7 @@ namespace sgns
         std::shared_ptr<boost::asio::io_context>         ctx_m;
         std::shared_ptr<GeniusAccount>                   account_m;
         std::vector<std::vector<std::uint8_t>>           transactions;
-        std::deque<std::shared_ptr<IGeniusTransactions>> out_transactions;
+        std::deque<TransactionPair> out_transactions;
         std::shared_ptr<boost::asio::steady_timer>       timer_m;
         mutable std::mutex                               mutex_m;
         primitives::BlockNumber                          last_block_id_m;

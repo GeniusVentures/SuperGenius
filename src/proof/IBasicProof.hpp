@@ -8,6 +8,8 @@
 #ifndef _IBASIC_PROOF_HPP_
 #define _IBASIC_PROOF_HPP_
 #include <string>
+#include "proof/proto/SGProof.pb.h"
+#include "outcome/outcome.hpp"
 
 class IBasicProof
 {
@@ -19,6 +21,8 @@ public:
     virtual ~IBasicProof() = default;
 
     virtual std::string GetProofType() const = 0;
+
+    virtual outcome::result<SGProof::ProofStruct> GenerateProof() = 0;
 
 protected:
     const std::string bytecode_payload_;

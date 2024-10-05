@@ -13,6 +13,7 @@
 #include <nil/crypto3/multiprecision/cpp_int.hpp>
 #include <nil/crypto3/algebra/curves/pallas.hpp>
 #include <nil/crypto3/algebra/marshalling.hpp>
+#include "NilFileHelper.hpp"
 
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, TransferProof::TxProofError, e )
 {
@@ -74,8 +75,9 @@ namespace sgns
         return std::make_pair( public_inputs_json_array, private_inputs_json_array );
     }
 
-    outcome::result<std::vector<uint8_t>> TransferProof::GenerateProof()
+    outcome::result<SGProof::ProofStruct> TransferProof::GenerateProof()
     {
+        SGProof::ProofStruct retval;
         auto [public_inputs_json_array, private_inputs_json_array] = GenerateJsonParameters();
 
         auto hidden_assigner = std::static_pointer_cast<sgns::GeniusAssigner>( assigner_ );
@@ -85,15 +87,43 @@ namespace sgns
                      hidden_assigner->GenerateCircuitAndTable( public_inputs_json_array,
                                                                private_inputs_json_array,
                                                                bytecode_payload_ ) );
-        OUTCOME_TRY( ( auto &&, proof_value ), hidden_prover->GenerateProof( assign_value.at( 0 ) ) );
+        OUTCOME_TRY( ( auto &&, proof_value ), hidden_prover->CreateProof( assign_value.at( 0 ) ) );
 
         if ( !hidden_prover->VerifyProof( proof_value ) )
         {
             return outcome::failure( TxProofError::INVALID_PROOF );
         }
-
-        return hidden_prover->WriteProofToVector( proof_value.proof );
+        auto proof_vector = hidden_prover->WriteProofToVector( proof_value.proof );
+        retval.set_proof_data( std::string( proof_vector.begin(), proof_vector.end() ) );
+        //auto constrains_vector = NilFileHelper::GetMarshalledData( proof_value.constrains, false );
+        //retval.set_constrains( std::string( constrains_vector.begin(), constrains_vector.end() ) );
+        //auto public_data_vector = NilFileHelper::GetMarshalledData( proof_value.table, false );
+        //retval.set_public_data( std::string( public_data_vector.begin(), public_data_vector.end() ) );
+        retval.set_usable_rows_amount( proof_value.usable_rows_amount );
+        retval.set_rows_amount( proof_value.rows_amount );
+        return retval;
     }
+
+    //outcome::result<std::vector<uint8_t>> TransferProof::GenerateProof()
+    //{
+    //    auto [public_inputs_json_array, private_inputs_json_array] = GenerateJsonParameters();
+//
+    //    auto hidden_assigner = std::static_pointer_cast<sgns::GeniusAssigner>( assigner_ );
+    //    auto hidden_prover   = std::static_pointer_cast<sgns::GeniusProver>( prover_ );
+//
+    //    OUTCOME_TRY( ( auto &&, assign_value ),
+    //                 hidden_assigner->GenerateCircuitAndTable( public_inputs_json_array,
+    //                                                           private_inputs_json_array,
+    //                                                           bytecode_payload_ ) );
+    //    OUTCOME_TRY( ( auto &&, proof_value ), hidden_prover->GenerateProof( assign_value.at( 0 ) ) );
+//
+    //    if ( !hidden_prover->VerifyProof( proof_value ) )
+    //    {
+    //        return outcome::failure( TxProofError::INVALID_PROOF );
+    //    }
+//
+    //    return hidden_prover->WriteProofToVector( proof_value.proof );
+    //}
 
     boost::json::object TransferProof::GenerateIntParameter( uint64_t value )
     {

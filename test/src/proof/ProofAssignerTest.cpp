@@ -15,7 +15,7 @@
 #include "proof/TransferProof.hpp"
 #include "BytecodeTest.hpp"
 
-TEST( ProofAssignerTest, GenerateProof )
+TEST( ProofAssignerTest, CreateProof )
 {
     auto             GeniusAssigner = sgns::GeniusAssigner();
     std::vector<int> public_inputs  = { 5, 11 };
@@ -40,7 +40,7 @@ TEST( ProofAssignerTest, GenerateProof )
     auto GeniusProver = sgns::GeniusProver();
 
     auto assign_value = assign_result.value().at( 0 );
-    auto proof_result = GeniusProver.GenerateProof( assign_value );
+    auto proof_result = GeniusProver.CreateProof( assign_value );
     if ( proof_result.has_error() )
     {
         // Print the error information
