@@ -1,3 +1,5 @@
+add_proto_library(SGProofProto proto/SGProof.proto)
+
 add_library(genius_prover
     GeniusProver.cpp
 )
@@ -25,6 +27,7 @@ target_link_libraries(genius_prover
 target_link_libraries(transfer_proof
     genius_assigner
     genius_prover
+    SGProofProto
     outcome
     Boost::boost
     Boost::log

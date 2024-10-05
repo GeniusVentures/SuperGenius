@@ -39,7 +39,8 @@ namespace sgns
             return "Transfer";
         }
 
-        outcome::result<std::vector<uint8_t>> GenerateProof();
+        outcome::result<SGProof::ProofStruct>   GenerateProof() override;
+        //outcome::result<std::vector<uint8_t>> GenerateProof();
 
     private:
         static constexpr uint64_t                generator_X_point = 1;     // Example seed for TOTP

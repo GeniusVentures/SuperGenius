@@ -92,11 +92,18 @@ namespace sgns
 
         if ( maybe_params )
         {
-            account_m->utxos          = UTXOTxParameters::UpdateUTXOList( account_m->utxos, maybe_params.value() );
-            auto transfer_transaction = std::make_shared<TransferTransaction>(
-                maybe_params.value().outputs_, maybe_params.value().inputs_, FillDAGStruct() );
-            this->EnqueueTransaction( transfer_transaction );
-            ret = true;
+            auto transfer_transaction = std::make_shared<TransferTransaction>( maybe_params.value().outputs_,
+                                                                               maybe_params.value().inputs_,
+                                                                               FillDAGStruct() );
+
+            TransferProof prover( account_m->GetBalance<uint64_t>(), uint64_t{ amount } );
+            auto          proof_result = prover.GenerateProof();
+            if ( proof_result.has_value() )
+            {
+                account_m->utxos = UTXOTxParameters::UpdateUTXOList( account_m->utxos, maybe_params.value() );
+                this->EnqueueTransaction( std::make_pair( transfer_transaction, proof_result.value() ) );
+                ret = true;
+            }
         }
 
         return ret;
@@ -104,26 +111,43 @@ namespace sgns
 
     void TransactionManager::MintFunds( uint64_t amount )
     {
-        auto mint_transaction = std::make_shared<MintTransaction>( amount, FillDAGStruct() );
-        TransferProof proof("bytecode.ll", 1000, amount);
-        proof.GenerateProof();
-        this->EnqueueTransaction( mint_transaction );
+        auto          mint_transaction = std::make_shared<MintTransaction>( amount, FillDAGStruct() );
+        TransferProof prover( 100000, amount );
+        auto          proof_result = prover.GenerateProof();
+        if ( proof_result.has_value() )
+        {
+            this->EnqueueTransaction( std::make_pair( mint_transaction, proof_result.value() ) );
+        }
     }
 
-    bool TransactionManager::HoldEscrow(
-        uint64_t amount, uint64_t num_chunks, const uint256_t &dev_addr, float dev_cut, const std::string &job_id )
+    bool TransactionManager::HoldEscrow( uint64_t           amount,
+                                         uint64_t           num_chunks,
+                                         const uint256_t   &dev_addr,
+                                         float              dev_cut,
+                                         const std::string &job_id )
     {
         bool ret          = false;
         auto hash_data    = hasher_m->blake2b_256( std::vector<uint8_t>{ job_id.begin(), job_id.end() } );
-        auto maybe_params = UTXOTxParameters::create( account_m->utxos, account_m->address, uint64_t{ amount },
+        auto maybe_params = UTXOTxParameters::create( account_m->utxos,
+                                                      account_m->address,
+                                                      uint64_t{ amount },
                                                       uint256_t{ "0x" + hash_data.toReadableString() } );
         if ( maybe_params )
         {
-            account_m->utxos        = UTXOTxParameters::UpdateUTXOList( account_m->utxos, maybe_params.value() );
-            auto escrow_transaction = std::make_shared<EscrowTransaction>( maybe_params.value(), num_chunks, dev_addr,
-                                                                           dev_cut, FillDAGStruct() );
-            this->EnqueueTransaction( escrow_transaction );
-            ret = true;
+            auto escrow_transaction = std::make_shared<EscrowTransaction>( maybe_params.value(),
+                                                                           num_chunks,
+                                                                           dev_addr,
+                                                                           dev_cut,
+                                                                           FillDAGStruct() );
+
+            TransferProof prover( account_m->GetBalance<uint64_t>(), amount );
+            auto          proof_result = prover.GenerateProof();
+            if ( proof_result.has_value() )
+            {
+                account_m->utxos = UTXOTxParameters::UpdateUTXOList( account_m->utxos, maybe_params.value() );
+                this->EnqueueTransaction( std::make_pair( escrow_transaction, proof_result.value() ) );
+                ret = true;
+            }
         }
         return ret;
     }
@@ -142,10 +166,18 @@ namespace sgns
                 {
                     if ( pay )
                     {
-                        auto transfer_transaction = std::make_shared<TransferTransaction>(
-                            it->payout_peers, std::vector<InputUTXOInfo>{ it->original_input }, FillDAGStruct() );
-                        this->EnqueueTransaction( transfer_transaction );
-                        ret = true;
+                        auto transfer_transaction =
+                            std::make_shared<TransferTransaction>( it->payout_peers,
+                                                                   std::vector<InputUTXOInfo>{ it->original_input },
+                                                                   FillDAGStruct() );
+                        //TODO - Create with the real balance and amount
+                        TransferProof prover( 100000, 1000 );
+                        auto          proof_result = prover.GenerateProof();
+                        if ( proof_result.has_value() )
+                        {
+                            this->EnqueueTransaction( std::make_pair( transfer_transaction, proof_result.value() ) );
+                            ret = true;
+                        }
                     }
                     it = escrow_ctrl_m.erase( it );
                 }
@@ -161,7 +193,14 @@ namespace sgns
     void TransactionManager::ProcessingDone( const std::string &subtask_id )
     {
         auto process_transaction = std::make_shared<ProcessingTransaction>( subtask_id, subtask_id, FillDAGStruct() );
-        this->EnqueueTransaction( process_transaction );
+
+        //TransferProof prover( 100000, amount );
+        //auto          proof_result = prover.GenerateProof();
+        //if ( proof_result.has_value() )
+        //{
+            //TODO - Check what we might have to prove here
+            this->EnqueueTransaction( std::make_pair( process_transaction, SGProof::ProofStruct{}) );
+        //}
     }
 
     uint64_t TransactionManager::GetBalance()
@@ -175,7 +214,7 @@ namespace sgns
         CheckBlockchain();
     }
 
-    void TransactionManager::EnqueueTransaction( std::shared_ptr<IGeniusTransactions> element )
+    void TransactionManager::EnqueueTransaction( TransactionPair element )
     {
         std::lock_guard<std::mutex> lock( mutex_m );
         out_transactions.emplace_back( std::move( element ) );
@@ -201,10 +240,9 @@ namespace sgns
         std::unique_lock<std::mutex> lock( mutex_m );
         if ( !out_transactions.empty() )
         {
-            auto elem = out_transactions.front();
+            auto [elem, proof] = out_transactions.front();
             out_transactions.pop_front();
             boost::format tx_key{ std::string( TRANSACTION_BASE_FORMAT ) };
-
             tx_key % TEST_NET_ID;
 
             auto transaction_path = tx_key.str() + elem->GetTransactionFullPath();
@@ -373,11 +411,10 @@ namespace sgns
             }
         }
         //tx.GetInputInfos()
-        for(auto &tx : tx.GetInputInfos())
+        for ( auto &tx : tx.GetInputInfos() )
         {
-            std::cout << "UTXO to be updated " << tx.txid_hash_.toReadableString() << std::endl; 
-            std::cout << "UTXO output" << tx.output_idx_ << std::endl; 
-
+            std::cout << "UTXO to be updated " << tx.txid_hash_.toReadableString() << std::endl;
+            std::cout << "UTXO output" << tx.output_idx_ << std::endl;
         }
         account_m->RefreshUTXOs( tx.GetInputInfos() );
     }
@@ -421,8 +458,12 @@ namespace sgns
                 escrow_utxo.txid_hash_  = hash;
                 escrow_utxo.output_idx_ = 0;
                 escrow_utxo.signature_  = ""; //TODO - Insert signature
-                EscrowCtrl ctrl( tx.GetDestAddress(), tx.GetDestCut(), dest_infos.outputs_[0].dest_address,
-                                 dest_infos.outputs_[0].encrypted_amount, tx.GetNumChunks(), escrow_utxo );
+                EscrowCtrl ctrl( tx.GetDestAddress(),
+                                 tx.GetDestCut(),
+                                 dest_infos.outputs_[0].dest_address,
+                                 dest_infos.outputs_[0].encrypted_amount,
+                                 tx.GetNumChunks(),
+                                 escrow_utxo );
                 escrow_ctrl_m.push_back( ctrl );
             }
         }

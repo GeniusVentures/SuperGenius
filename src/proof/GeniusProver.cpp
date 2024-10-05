@@ -30,7 +30,7 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, GeniusProver::ProverError, e )
 namespace sgns
 {
 
-    outcome::result<GeniusProver::GeniusProof> GeniusProver::GenerateProof(
+    outcome::result<GeniusProver::GeniusProof> GeniusProver::CreateProof(
         const GeniusAssigner::AssignerOutput &assigner_outputs ) const
     {
         auto constrains_sys = MakePlonkConstraintSystem( assigner_outputs.constrains );
@@ -79,7 +79,7 @@ namespace sgns
         return retval;
     }
 
-    outcome::result<GeniusProver::GeniusProof> GeniusProver::GenerateProof(
+    outcome::result<GeniusProver::GeniusProof> GeniusProver::CreateProof(
         const std::string &circuit_file,
         const std::string &assignment_table_file ) const
     {
@@ -103,7 +103,7 @@ namespace sgns
         icircuit.close();
         GeniusAssigner::AssignerOutput assigner_outputs( plonk_constrains, plonk_table );
 
-        return GenerateProof( { assigner_outputs } );
+        return CreateProof( { assigner_outputs } );
     }
 
     bool GeniusProver::VerifyProof( const GeniusProof &proof ) const

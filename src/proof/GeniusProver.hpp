@@ -116,14 +116,14 @@ namespace sgns
             ProofType            proof;
             ConstraintSystemType constrains;
             PublicTableType      table;
-            std::size_t          usable_rows_amount;
-            std::size_t          rows_amount;
+            std::uint64_t        usable_rows_amount;
+            std::uint64_t        rows_amount;
         };
 
-        outcome::result<GeniusProof> GenerateProof( const GeniusAssigner::AssignerOutput &assigner_outputs ) const;
+        outcome::result<GeniusProof> CreateProof( const GeniusAssigner::AssignerOutput &assigner_outputs ) const;
 
-        outcome::result<GeniusProof> GenerateProof( const std::string &circuit_file,
-                                                    const std::string &assignment_table_file ) const;
+        outcome::result<GeniusProof> CreateProof( const std::string &circuit_file,
+                                                  const std::string &assignment_table_file ) const;
 
         bool VerifyProof( const GeniusProof &proof ) const;
         bool VerifyProof( const ProofType &proof, const GeniusAssigner::AssignerOutput &assigner_outputs ) const;

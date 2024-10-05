@@ -23,6 +23,7 @@
 #include "blockchain/block_storage.hpp"
 #include "base/logger.hpp"
 #include "crypto/hasher.hpp"
+#include "proof/proto/SGProof.pb.h"
 
 using namespace boost::multiprecision;
 
@@ -31,6 +32,8 @@ namespace sgns
     class TransactionManager
     {
     public:
+        using TransactionPair = std::pair<std::shared_ptr<IGeniusTransactions>, SGProof::ProofStruct>;
+
         using ProcessFinishCbType = std::function<void( const std::string &, const std::set<std::string> & )>;
         TransactionManager( std::shared_ptr<crdt::GlobalDB>           db,      //
                             std::shared_ptr<boost::asio::io_context>  ctx,     //
@@ -53,24 +56,27 @@ namespace sgns
 
         bool     TransferFunds( const uint256_t &amount, const uint256_t &destination );
         void     MintFunds( uint64_t amount );
-        bool     HoldEscrow(
-                uint64_t amount, uint64_t num_chunks, const uint256_t &dev_addr, float dev_cut, const std::string &job_id );
+        bool     HoldEscrow( uint64_t           amount,
+                             uint64_t           num_chunks,
+                             const uint256_t   &dev_addr,
+                             float              dev_cut,
+                             const std::string &job_id );
         bool     ReleaseEscrow( const std::string &job_id, const bool &pay );
         void     ProcessingDone( const std::string &subtask_id );
         uint64_t GetBalance();
 
     private:
-        std::shared_ptr<crdt::GlobalDB>                  db_m;
-        std::shared_ptr<boost::asio::io_context>         ctx_m;
-        std::shared_ptr<GeniusAccount>                   account_m;
-        std::deque<std::shared_ptr<IGeniusTransactions>> out_transactions;
-        std::shared_ptr<boost::asio::steady_timer>       timer_m;
-        mutable std::mutex                               mutex_m;
-        primitives::BlockNumber                          last_block_id_m;
-        std::uint64_t                                    last_trans_on_block_id;
-        std::shared_ptr<blockchain::BlockStorage>        block_storage_m;
-        std::shared_ptr<crypto::Hasher>                  hasher_m;
-        ProcessFinishCbType                              processing_finished_cb_m;
+        std::shared_ptr<crdt::GlobalDB>            db_m;
+        std::shared_ptr<boost::asio::io_context>   ctx_m;
+        std::shared_ptr<GeniusAccount>             account_m;
+        std::deque<TransactionPair>                out_transactions;
+        std::shared_ptr<boost::asio::steady_timer> timer_m;
+        mutable std::mutex                         mutex_m;
+        primitives::BlockNumber                    last_block_id_m;
+        std::uint64_t                              last_trans_on_block_id;
+        std::shared_ptr<blockchain::BlockStorage>  block_storage_m;
+        std::shared_ptr<crypto::Hasher>            hasher_m;
+        ProcessFinishCbType                        processing_finished_cb_m;
 
         struct EscrowCtrl
         {
@@ -111,7 +117,7 @@ namespace sgns
         static constexpr std::string_view TRANSACTION_BASE_FORMAT = "bc-%hu/";
 
         void                     Update();
-        void                     EnqueueTransaction( std::shared_ptr<IGeniusTransactions> element );
+        void                     EnqueueTransaction( TransactionPair element );
         SGTransaction::DAGStruct FillDAGStruct();
         void                     SendTransaction();
         bool                     GetTransactionsFromBlock( const primitives::BlockNumber &block_number );
