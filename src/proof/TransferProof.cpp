@@ -95,12 +95,10 @@ namespace sgns
         }
         auto proof_vector = hidden_prover->WriteProofToVector( proof_value.proof );
         retval.set_proof_data( std::string( proof_vector.begin(), proof_vector.end() ) );
-        //auto constrains_vector = NilFileHelper::GetMarshalledData( proof_value.constrains, false );
-        //retval.set_constrains( std::string( constrains_vector.begin(), constrains_vector.end() ) );
-        //auto public_data_vector = NilFileHelper::GetMarshalledData( proof_value.table, false );
-        //retval.set_public_data( std::string( public_data_vector.begin(), public_data_vector.end() ) );
-        retval.set_usable_rows_amount( proof_value.usable_rows_amount );
-        retval.set_rows_amount( proof_value.rows_amount );
+        auto constrains_vector = NilFileHelper::GetMarshalledData( proof_value.constrains, false );
+        retval.set_constrains( std::string( constrains_vector.begin(), constrains_vector.end() ) );
+        auto public_data_vector = NilFileHelper::GetMarshalledData( proof_value.table, false );
+        retval.set_public_data( std::string( public_data_vector.begin(), public_data_vector.end() ) );
         return retval;
     }
 

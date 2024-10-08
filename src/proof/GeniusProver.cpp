@@ -49,11 +49,11 @@ namespace sgns
         std::size_t permutation_size =
             plonk_table_desc.witness_columns + plonk_table_desc.public_input_columns + component_constant_columns_;
 
-        auto pub_table = assignment_table.move_public_table();
-
-        PublicPreprocessedData public_preprocessed_data(
-            PublicPreprocessor::process( constrains_sys, pub_table, plonk_table_desc, lpc_scheme, permutation_size ) );
-
+        PublicPreprocessedData  public_preprocessed_data( PublicPreprocessor::process( constrains_sys,
+                                                                                      assignment_table.public_table(),
+                                                                                      plonk_table_desc,
+                                                                                      lpc_scheme,
+                                                                                      permutation_size ) );
         PrivatePreprocessedData private_preprocessed_data(
             PrivatePreprocessor::process( constrains_sys, assignment_table.move_private_table(), plonk_table_desc ) );
 
@@ -70,11 +70,18 @@ namespace sgns
 
         auto filled_placeholder_proof = FillPlaceholderProof( proof, fri_params );
 
+        auto marshalled_constrains =
+            crypto3::marshalling::types::fill_plonk_constraint_system<ProverEndianess, ConstraintSystemType>(
+                constrains_sys );
+
+        auto marshalled_table =
+            crypto3::marshalling::types::fill_assignment_table<ProverEndianess, AssignmentTableType>(
+                std::get<4>( assigner_outputs.table.value() ).value(),
+                assignment_table );
+
         GeniusProof retval( std::move( filled_placeholder_proof ),
-                            std::move( constrains_sys ),
-                            std::move( pub_table ) );
-        retval.rows_amount = plonk_table_desc.rows_amount;
-        retval.usable_rows_amount = plonk_table_desc.usable_rows_amount;
+                            std::move( marshalled_constrains ),
+                            std::move( marshalled_table ) );
 
         return retval;
     }
@@ -109,22 +116,28 @@ namespace sgns
     bool GeniusProver::VerifyProof( const GeniusProof &proof ) const
     {
         auto plonk_table_desc = GeniusAssigner::GetPlonkTableDescription();
-        
-        plonk_table_desc.usable_rows_amount = proof.usable_rows_amount;
-        plonk_table_desc.rows_amount = proof.rows_amount;
+
+        auto [constructed_desc, assignment_table] =
+            crypto3::marshalling::types::make_assignment_table<ProverEndianess, AssignmentTableType>( proof.table );
+
+        auto constrains_sys =
+            crypto3::marshalling::types::make_plonk_constraint_system<ProverEndianess, ConstraintSystemType>(
+                proof.constrains );
+
+        plonk_table_desc.usable_rows_amount = constructed_desc.usable_rows_amount;
+        plonk_table_desc.rows_amount        = constructed_desc.rows_amount;
 
         auto fri_params = MakeFRIParams( plonk_table_desc.rows_amount, 1, expand_factor_ );
 
         LpcScheme lpc_scheme( fri_params );
-
 
         std::size_t permutation_size =
             plonk_table_desc.witness_columns + plonk_table_desc.public_input_columns + component_constant_columns_;
 
         PublicPreprocessedData public_preprocessed_data(
             crypto3::zk::snark::placeholder_public_preprocessor<BlueprintFieldType, PlaceholderParams>::process(
-                proof.constrains,
-                proof.table,
+                constrains_sys,
+                assignment_table.public_table(),
                 plonk_table_desc,
                 lpc_scheme,
                 permutation_size ) );
@@ -135,9 +148,8 @@ namespace sgns
             public_preprocessed_data,
             proof_snark,
             plonk_table_desc,
-            proof.constrains,
+            constrains_sys,
             lpc_scheme );
-        return true;
     }
 
     bool GeniusProver::VerifyProof( const ProofType                      &proof,

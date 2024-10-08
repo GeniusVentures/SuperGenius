@@ -149,7 +149,7 @@ namespace sgns
                                                         std::uint32_t              ComponentConstantColumns,
                                                         std::uint32_t              ComponentSelectorColumns );
 
-        std::uint32_t GetUsableRowsAmount( const AssignmentTableType &table_proxy, PrintTableKind print_kind );
+        static std::uint32_t GetUsableRowsAmount( const AssignmentTableType &table_proxy, PrintTableKind print_kind );
 
         TableVectors GetTableVectors( const AssignmentTableType &table_proxy,
                                       PrintTableKind             print_kind,
