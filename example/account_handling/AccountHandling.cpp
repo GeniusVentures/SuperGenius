@@ -4,9 +4,7 @@
  * @date       2024-03-12
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
-#include <math.h>
-#include <fstream>
-#include <memory>
+#include <cmath>
 #include <iostream>
 #include <cstdlib>
 #include <cstdint>
@@ -15,11 +13,9 @@
 #include <boost/format.hpp>
 #include <boost/asio.hpp>
 #include "account/TransactionManager.hpp"
-#include "blockchain/impl/common.hpp"
-#include "blockchain/impl/key_value_block_header_repository.hpp"
-#include "blockchain/impl/key_value_block_storage.hpp"
-#include "crypto/hasher/hasher_impl.hpp"
 #include "AccountHelper.hpp"
+
+using namespace boost::multiprecision;
 
 std::vector<std::string> wallet_addr{ "0x4E8794BE4831C45D0699865028C8BE23D608C19C1E24371E3089614A50514262",
                                       "0x06DDC80283462181C02917CC3E99C7BC4BDB2856E19A392300A62DBA6262212C" };

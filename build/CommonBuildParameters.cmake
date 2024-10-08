@@ -284,29 +284,7 @@ include_directories(${AsyncIOManager_INCLUDE_DIR})
 #find_package(crypto3 CONFIG REQUIRED)
 #include_directories(${crypto3_INCLUDE_DIR})
 include_directories(
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/algebra/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/block/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/codec/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/containers/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/hash/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/kdf/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/mac/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/math/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/marshalling/algebra/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/marshalling/core/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/marshalling/multiprecision/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/marshalling/zk/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/modes/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/multiprecision/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/passhash/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/pbkdf/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/pkpad/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/pubkey/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/random/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/stream/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/threshold/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/vdf/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/zk/include"
+    "${_THIRDPARTY_BUILD_DIR}/crypto3/include"
 )
 
 # gnus_upnp

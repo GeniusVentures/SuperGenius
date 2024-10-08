@@ -17,10 +17,10 @@
 
 #include "account/proto/SGTransaction.pb.h"
 
-using namespace boost::multiprecision;
-
 namespace sgns
 {
+    using namespace boost::multiprecision;
+
     //class GeniusBlockHeader; //TODO - Design new header or rework old one
 
     class IGeniusTransactions

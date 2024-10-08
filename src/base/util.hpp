@@ -18,10 +18,10 @@
 #include <boost/random.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
 
-using namespace boost::multiprecision;
-
 namespace sgns
 {
+    using namespace boost::multiprecision;
+
     /**
      * @brief       Convert a byte array to a hexadecimal string.
      * @param[in]   bytes A vector of bytes to be converted.
