@@ -51,7 +51,7 @@ namespace sgns
     class AccountHelper : public IComponent
     {
     public:
-        AccountHelper( const AccountKey2 &priv_key_data, const DevConfig_st2 &dev_config );
+        AccountHelper( const AccountKey2 &priv_key_data, const DevConfig_st2 &dev_config, const char *eth_private_key );
         ~AccountHelper();
 
         std::string GetName() override

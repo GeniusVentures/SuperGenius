@@ -10,7 +10,9 @@
 #include <cstdint>
 
 #include <boost/multiprecision/cpp_int.hpp>
+#include <boost/multiprecision/fwd.hpp>
 
+#include "ProofSystem/ElGamalKeyGenerator.hpp"
 #include "account/GeniusUTXO.hpp"
 #include "account/UTXOTxParameters.hpp"
 #include <KDFGenerator/KDFGenerator.hpp>
@@ -23,12 +25,12 @@ namespace sgns
     class GeniusAccount
     {
     public:
-        GeniusAccount( const uint8_t token_type, const std::string &base_path ) :
+        GeniusAccount( const uint8_t token_type, const std::string &base_path, const char *eth_private_key ) :
             token( token_type ), //
             nonce( 0 ),          //
             balance( 0 )         //
         {
-            auto maybe_address = GenerateGeniusAddress( base_path );
+            auto maybe_address = GenerateGeniusAddress( base_path, eth_private_key );
 
             if ( maybe_address )
             {
@@ -50,15 +52,16 @@ namespace sgns
         [[nodiscard]] std::string GetAddress() const
         {
             std::ostringstream oss;
-            oss << std::hex << address;
+            oss << "0x";
+            oss << std::hex << address.GetPublicKey().public_key_value;
 
-            return "0x" + oss.str();
+            return oss.str();
         }
 
         template <>
-        [[nodiscard]] uint256_t GetAddress() const
+        [[nodiscard]] boost::multiprecision::uint256_t GetAddress() const
         {
-            return address;
+            return boost::multiprecision::uint256_t( address.GetPublicKey().public_key_value.str() );
         }
 
         template <typename T>
@@ -139,7 +142,7 @@ namespace sgns
             return true;
         }
 
-        uint256_t               address;
+        KeyGenerator::ElGamal   address;
         uint8_t                 token; //GNUS SGNUS ETC...
         uint64_t                nonce;
         std::vector<GeniusUTXO> utxos;
@@ -147,34 +150,8 @@ namespace sgns
     private:
         uint64_t balance;
 
-        static outcome::result<uint256_t> GenerateGeniusAddress( const std::string &base_path )
-        {
-            auto component_factory = SINGLETONINSTANCE( CComponentFactory );
-            OUTCOME_TRY( ( auto &&, icomponent ), component_factory->GetComponent( "LocalSecureStorage" ) );
-
-            auto secure_storage = std::dynamic_pointer_cast<ISecureStorage>( icomponent );
-            auto load_res       = secure_storage->Load( "sgns_key", base_path );
-
-            std::vector<uint8_t> key_seed;
-            if ( !load_res )
-            {
-                //Create file/key
-                auto               random_number = GenerateRandomNumber();
-                std::ostringstream oss;
-                oss << std::hex << random_number;
-
-                std::string rnd_string = "0x" + oss.str();
-                BOOST_OUTCOME_TRYV2( auto &&, secure_storage->Save( "sgns_key", rnd_string, base_path ) );
-                key_seed = HexASCII2NumStr<std::uint8_t>( oss.str().data(), oss.str().size() );
-            }
-            else
-            {
-                key_seed = HexASCII2NumStr<std::uint8_t>( &load_res.value()[2], load_res.value().size() - 2 );
-            }
-            auto result = KDFGenerator::GenerateKDF( key_seed, KDFGenerator::HashType::SHA256 );
-
-            return Vector2Num<uint256_t>( result );
-        }
+        static outcome::result<KeyGenerator::ElGamal> GenerateGeniusAddress( const std::string &base_path,
+                                                                             const char        *eth_private_key );
     };
 }
 

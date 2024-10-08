@@ -44,7 +44,7 @@ jobs:
           repository: 'GeniusVentures/thirdparty'
           path: 'thirdparty'
           submodules: 'recursive' 
-          ref: develop
+          ref: fix-crypto3-for-sgns
           
       - name: Thirdparty Create Build Directory
         run: cmake -E make_directory ${{github.workspace}}/thirdparty/build/Windows/Release          
