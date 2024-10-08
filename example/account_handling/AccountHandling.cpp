@@ -144,7 +144,7 @@ int main( int argc, char *argv[] )
 
     strncpy( key, argv[2], sizeof( key ) );
 
-    sgns::AccountHelper helper( key, local_config );
+    sgns::AccountHelper helper( key, local_config, "deadbeef" );
 
     while ( true )
     {
