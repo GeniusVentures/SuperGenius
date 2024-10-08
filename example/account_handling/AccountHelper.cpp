@@ -7,12 +7,7 @@
 #include <boost/format.hpp>
 #include <rapidjson/document.h>
 #include "AccountHelper.hpp"
-#include "processing/processing_imagesplit.hpp"
-#include "processing/processing_tasksplit.hpp"
-#include "processing/processing_subtask_enqueuer_impl.hpp"
-#include "processing/processing_subtask_result_storage.hpp"
-#include "processing/processors/processing_processor_mnn_posenet.hpp"
-#include "processing/impl/processing_subtask_result_storage_impl.hpp"
+
 #ifndef __cplusplus
 extern "C"
 {

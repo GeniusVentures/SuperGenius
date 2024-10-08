@@ -13,16 +13,13 @@
 
 #include "account/GeniusUTXO.hpp"
 #include "account/UTXOTxParameters.hpp"
-#include "singleton/CComponentFactory.hpp"
-#include "local_secure_storage/ISecureStorage.hpp"
 #include <KDFGenerator/KDFGenerator.hpp>
 #include "outcome/outcome.hpp"
-#include "base/util.hpp"
-
-using namespace boost::multiprecision;
 
 namespace sgns
 {
+    using namespace boost::multiprecision;
+
     class GeniusAccount
     {
     public:
