@@ -78,9 +78,15 @@ namespace sgns
             crypto3::zk::snark::placeholder_private_preprocessor<BlueprintFieldType, PlaceholderParams>;
         using PrivatePreprocessedData = PrivatePreprocessor::preprocessed_data_type;
         using ProofSnarkType          = crypto3::zk::snark::placeholder_proof<BlueprintFieldType, PlaceholderParams>;
-        using ProofType  = crypto3::marshalling::types::placeholder_proof<nil::marshalling::field_type<ProverEndianess>,
-                                                                          ProofSnarkType>;
-        using ProverType = crypto3::zk::snark::placeholder_prover<BlueprintFieldType, PlaceholderParams>;
+        using ProofType = crypto3::marshalling::types::placeholder_proof<nil::marshalling::field_type<ProverEndianess>,
+                                                                         ProofSnarkType>;
+        using ConstraintMarshallingType =
+            crypto3::marshalling::types::plonk_constraint_system<nil::marshalling::field_type<ProverEndianess>,
+                                                                 ConstraintSystemType>;
+        using PlonkMarshalledTableType =
+            crypto3::marshalling::types::plonk_assignment_table<nil::marshalling::field_type<ProverEndianess>,
+                                                                AssignmentTableType>;
+        using ProverType     = crypto3::zk::snark::placeholder_prover<BlueprintFieldType, PlaceholderParams>;
         using PlonkTablePair = std::pair<TableDescriptionType, AssignmentTableType>;
 
     public:
@@ -106,18 +112,18 @@ namespace sgns
 
         struct GeniusProof
         {
-            GeniusProof( ProofType new_proof, ConstraintSystemType new_constrains, PublicTableType new_table ) :
+            GeniusProof( ProofType                 new_proof,
+                         ConstraintMarshallingType new_constrains,
+                         PlonkMarshalledTableType  new_table ) :
                 proof( std::move( new_proof ) ),           //
                 constrains( std::move( new_constrains ) ), //
                 table( std::move( new_table ) )            //
             {
             }
 
-            ProofType            proof;
-            ConstraintSystemType constrains;
-            PublicTableType      table;
-            std::uint64_t        usable_rows_amount;
-            std::uint64_t        rows_amount;
+            ProofType                 proof;
+            ConstraintMarshallingType constrains;
+            PlonkMarshalledTableType  table;
         };
 
         outcome::result<GeniusProof> CreateProof( const GeniusAssigner::AssignerOutput &assigner_outputs ) const;
