@@ -88,7 +88,8 @@ namespace sgns
     bool TransactionManager::TransferFunds( uint64_t amount, const uint256_t &destination )
     {
         bool ret = false;
-        auto maybe_params = UTXOTxParameters::create( account_m->utxos, account_m->address, amount, destination );
+        auto maybe_params =
+            UTXOTxParameters::create( account_m->utxos, account_m->address.GetPublicKey(), amount, destination );
 
         if ( maybe_params )
         {
@@ -118,7 +119,7 @@ namespace sgns
         bool ret          = false;
         auto hash_data    = hasher_m->blake2b_256( std::vector<uint8_t>{ job_id.begin(), job_id.end() } );
         auto maybe_params = UTXOTxParameters::create( account_m->utxos,
-                                                      account_m->address,
+                                                      account_m->address.GetPublicKey(),
                                                       uint64_t{ amount },
                                                       uint256_t{ "0x" + hash_data.toReadableString() } );
         if ( maybe_params )
