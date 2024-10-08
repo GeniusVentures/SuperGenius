@@ -59,7 +59,7 @@ namespace sgns
     class GeniusNode : public IComponent
     {
     public:
-        GeniusNode( const DevConfig_st &dev_config );
+        GeniusNode( const DevConfig_st &dev_config, const char *eth_private_key );
         // static GeniusNode &GetInstance()
         // {
         //     return instance;

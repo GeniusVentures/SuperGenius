@@ -6,6 +6,7 @@
  */
 #ifndef _TRANSACTION_MANAGER_HPP_
 #define _TRANSACTION_MANAGER_HPP_
+
 #include <memory>
 #include <deque>
 #include <cstdint>
