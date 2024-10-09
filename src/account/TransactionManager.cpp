@@ -246,12 +246,18 @@ namespace sgns
             tx_key % TEST_NET_ID;
 
             auto transaction_path = tx_key.str() + elem->GetTransactionFullPath();
+            auto proof_path = tx_key.str() + elem->GetProofFullPath();
 
             sgns::crdt::GlobalDB::Buffer data_transaction;
 
             data_transaction.put( elem->SerializeByteVector() );
             db_m->Put( { transaction_path }, data_transaction );
             account_m->nonce++;
+
+
+            sgns::crdt::GlobalDB::Buffer proof_transaction;
+            proof_transaction.put( IBasicProof::SerializeProof(proof) );
+            db_m->Put( { proof_path }, proof_transaction );
 
             auto maybe_last_hash   = block_storage_m->getLastFinalizedBlockHash();
             auto maybe_last_header = block_storage_m->getBlockHeader( maybe_last_hash.value() );
