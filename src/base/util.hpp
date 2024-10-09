@@ -18,10 +18,10 @@
 #include <boost/random.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
 
-using namespace boost::multiprecision;
-
 namespace sgns
 {
+    using namespace boost::multiprecision;
+
     /**
      * @brief       Convert a byte array to a hexadecimal string.
      * @param[in]   bytes A vector of bytes to be converted.
@@ -210,15 +210,6 @@ namespace sgns
             std::reverse( start.value(), finish.value() );
         }
     }
-
-    static uint256_t GenerateRandomNumber()
-    {
-        boost::random::mt19937                             gen( clock() );
-        boost::random::uniform_int_distribution<uint256_t> dist( std::numeric_limits<uint256_t>::min(),
-                                                                 std::numeric_limits<uint256_t>::max() );
-        return dist( gen );
-    }
-
 }
 
 #endif //_UTIL_HPP

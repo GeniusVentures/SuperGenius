@@ -5,3 +5,6 @@
 [submodule "GeniusKDF"]
 	path = GeniusKDF
 	url = ../GeniusKDF
+[submodule "ProofSystem"]
+	path = ProofSystem
+	url = ../ProofSystem

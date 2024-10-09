@@ -3,27 +3,22 @@
 namespace sgns::crdt
 {
 
-  HierarchicalKey::HierarchicalKey(const std::string& s) 
-  {
-    std::string key = s;
-    // Add slash to beginning if missing
-    if (key.empty() || key[0] != '/')
+    HierarchicalKey::HierarchicalKey( std::string key )
     {
-      key.insert(key.begin(), '/');
+        // Add slash to beginning if missing
+        if ( key.empty() || key[0] != '/' )
+        {
+            key.insert( key.begin(), '/' );
+        }
+
+        // Remove trailing slash
+        if ( key.size() > 1 && key[key.size() - 1] == '/' )
+        {
+            key.erase( key.begin() + key.size() - 1 );
+        }
+
+        this->key_ = key;
     }
-
-    // Remove trailing slash 
-    if (key.size() > 1 && key[key.size() - 1] == '/')
-    {
-      key.erase(key.begin() + key.size() - 1);
-    }
-
-    this->key_ = key;
-  }
-
-  HierarchicalKey::HierarchicalKey( const HierarchicalKey &aKey ) : key_( aKey.key_ )
-  {
-  }
 
   HierarchicalKey HierarchicalKey::ChildString(const std::string& s) const
   {

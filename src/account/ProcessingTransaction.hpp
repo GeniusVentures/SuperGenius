@@ -12,10 +12,9 @@
 
 #include "account/IGeniusTransactions.hpp"
 
-using namespace boost::multiprecision;
-
 namespace sgns
 {
+    using namespace boost::multiprecision;
 
     class ProcessingTransaction : public IGeniusTransactions
     {
