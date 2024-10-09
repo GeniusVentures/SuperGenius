@@ -6,7 +6,5 @@ message ProofStruct
 {
     bytes proof_data = 1;// 
     bytes constrains = 2; // 
-    bytes public_data = 3; // 
-    uint64 usable_rows_amount = 4; // 
-    uint64 rows_amount = 5; // 
+    bytes plonk_table = 3; // 
 }

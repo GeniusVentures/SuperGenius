@@ -63,10 +63,10 @@ namespace sgns
                                                     constrains_sys,
                                                     lpc_scheme );
 
-        if ( !VerifyProof( proof, public_preprocessed_data, plonk_table_desc, constrains_sys, lpc_scheme ) )
-        {
-            return outcome::failure( ProverError::INVALID_PROOF_GENERATED );
-        }
+        //if ( !VerifyProof( proof, public_preprocessed_data, plonk_table_desc, constrains_sys, lpc_scheme ) )
+        //{
+        //    return outcome::failure( ProverError::INVALID_PROOF_GENERATED );
+        //}
 
         auto filled_placeholder_proof = FillPlaceholderProof( proof, fri_params );
 

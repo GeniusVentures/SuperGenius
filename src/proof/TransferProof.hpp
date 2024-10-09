@@ -8,13 +8,12 @@
 #ifndef _TRANSFER_PROOF_HPP_
 #define _TRANSFER_PROOF_HPP_
 
+#include <string>
 #include <cstdint>
-#include <cstdio>
 #include <array>
-#include <memory>
+#include <utility>
 #include <boost/json.hpp>
 #include "IBasicProof.hpp"
-#include "outcome/outcome.hpp"
 
 namespace sgns
 {
@@ -26,20 +25,14 @@ namespace sgns
 
         ~TransferProof() = default;
 
-        enum class TxProofError
-        {
-            INSUFFICIENT_FUNDS = 0,
-            INVALID_PROOF,
-            BYTECODE_NOT_FOUND,
-            INVALID_CIRCUIT,
-        };
 
         std::string GetProofType() const override
         {
             return "Transfer";
         }
 
-        outcome::result<SGProof::ProofStruct>   GenerateProof() override;
+        //outcome::result<SGProof::ProofStruct> GenerateProof() override;
+
         //outcome::result<std::vector<uint8_t>> GenerateProof();
 
     private:
@@ -50,10 +43,9 @@ namespace sgns
         static constexpr std::array<uint64_t, 4> ranges            = { 1000, 2000, 3000, 4000 };
         uint64_t                                 balance_;
         uint64_t                                 amount_;
-        std::shared_ptr<void>                    assigner_;
-        std::shared_ptr<void>                    prover_;
 
-        std::pair<boost::json::array, boost::json::array> GenerateJsonParameters();
+
+        std::pair<boost::json::array, boost::json::array> GenerateJsonParameters() override;
         boost::json::object                               GenerateIntParameter( uint64_t value );
         boost::json::object                               GenerateArrayParameter( std::array<uint64_t, 4> values );
         boost::json::object                               GenerateFieldParameter( uint64_t value );
@@ -61,5 +53,5 @@ namespace sgns
     };
 }
 
-OUTCOME_HPP_DECLARE_ERROR_2( sgns, TransferProof::TxProofError );
+
 #endif

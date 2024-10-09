@@ -9,6 +9,9 @@ add_library(genius_assigner
 add_library(transfer_proof
     TransferProof.cpp
 )
+add_library(basic_proof
+    IBasicProof.cpp
+)
 
 target_link_libraries(genius_assigner
     outcome
@@ -24,9 +27,16 @@ target_link_libraries(genius_prover
     outcome
     Boost::boost
 )
+target_link_libraries(basic_proof
+    genius_assigner
+    genius_prover
+    outcome
+    SGProofProto
+)
 target_link_libraries(transfer_proof
     genius_assigner
     genius_prover
+    basic_proof
     SGProofProto
     outcome
     Boost::boost
@@ -38,3 +48,4 @@ target_link_libraries(transfer_proof
 supergenius_install(genius_assigner)
 supergenius_install(genius_prover)
 supergenius_install(transfer_proof)
+supergenius_install(basic_proof)
