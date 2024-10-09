@@ -6,31 +6,8 @@
  */
 #include "TransferProof.hpp"
 #include "circuits/TransactionVerifierCircuit.hpp"
-
-#include <boost/json.hpp>
-#include "GeniusAssigner.hpp"
-#include "GeniusProver.hpp"
 #include <nil/crypto3/multiprecision/cpp_int.hpp>
 #include <nil/crypto3/algebra/curves/pallas.hpp>
-#include <nil/crypto3/algebra/marshalling.hpp>
-#include "NilFileHelper.hpp"
-
-OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, TransferProof::TxProofError, e )
-{
-    using TxProofError = sgns::TransferProof::TxProofError;
-    switch ( e )
-    {
-        case TxProofError::INSUFFICIENT_FUNDS:
-            return "No sufficient funds for the transaction";
-        case TxProofError::INVALID_PROOF:
-            return "The generated proof os not valid";
-        case TxProofError::BYTECODE_NOT_FOUND:
-            return "The bytecode was not found";
-        case TxProofError::INVALID_CIRCUIT:
-            return "The provided bytecode is invalid";
-    }
-    return "Unknown error";
-}
 
 using namespace nil::crypto3::algebra::curves;
 
@@ -42,8 +19,6 @@ namespace sgns
         balance_( std::move( balance ) ),                 //
         amount_( std::move( amount ) )                    //
     {
-        assigner_ = std::make_shared<sgns::GeniusAssigner>();
-        prover_   = std::make_shared<sgns::GeniusProver>();
     }
 
     std::pair<boost::json::array, boost::json::array> TransferProof::GenerateJsonParameters()
@@ -74,54 +49,6 @@ namespace sgns
         //std::cout << boost::json::serialize( json_value2 ) << std::endl;
         return std::make_pair( public_inputs_json_array, private_inputs_json_array );
     }
-
-    outcome::result<SGProof::ProofStruct> TransferProof::GenerateProof()
-    {
-        SGProof::ProofStruct retval;
-        auto [public_inputs_json_array, private_inputs_json_array] = GenerateJsonParameters();
-
-        auto hidden_assigner = std::static_pointer_cast<sgns::GeniusAssigner>( assigner_ );
-        auto hidden_prover   = std::static_pointer_cast<sgns::GeniusProver>( prover_ );
-
-        OUTCOME_TRY( ( auto &&, assign_value ),
-                     hidden_assigner->GenerateCircuitAndTable( public_inputs_json_array,
-                                                               private_inputs_json_array,
-                                                               bytecode_payload_ ) );
-        OUTCOME_TRY( ( auto &&, proof_value ), hidden_prover->CreateProof( assign_value.at( 0 ) ) );
-
-        if ( !hidden_prover->VerifyProof( proof_value ) )
-        {
-            return outcome::failure( TxProofError::INVALID_PROOF );
-        }
-        auto proof_vector = hidden_prover->WriteProofToVector( proof_value.proof );
-        retval.set_proof_data( std::string( proof_vector.begin(), proof_vector.end() ) );
-        auto constrains_vector = NilFileHelper::GetMarshalledData( proof_value.constrains, false );
-        retval.set_constrains( std::string( constrains_vector.begin(), constrains_vector.end() ) );
-        auto public_data_vector = NilFileHelper::GetMarshalledData( proof_value.table, false );
-        retval.set_public_data( std::string( public_data_vector.begin(), public_data_vector.end() ) );
-        return retval;
-    }
-
-    //outcome::result<std::vector<uint8_t>> TransferProof::GenerateProof()
-    //{
-    //    auto [public_inputs_json_array, private_inputs_json_array] = GenerateJsonParameters();
-//
-    //    auto hidden_assigner = std::static_pointer_cast<sgns::GeniusAssigner>( assigner_ );
-    //    auto hidden_prover   = std::static_pointer_cast<sgns::GeniusProver>( prover_ );
-//
-    //    OUTCOME_TRY( ( auto &&, assign_value ),
-    //                 hidden_assigner->GenerateCircuitAndTable( public_inputs_json_array,
-    //                                                           private_inputs_json_array,
-    //                                                           bytecode_payload_ ) );
-    //    OUTCOME_TRY( ( auto &&, proof_value ), hidden_prover->GenerateProof( assign_value.at( 0 ) ) );
-//
-    //    if ( !hidden_prover->VerifyProof( proof_value ) )
-    //    {
-    //        return outcome::failure( TxProofError::INVALID_PROOF );
-    //    }
-//
-    //    return hidden_prover->WriteProofToVector( proof_value.proof );
-    //}
 
     boost::json::object TransferProof::GenerateIntParameter( uint64_t value )
     {

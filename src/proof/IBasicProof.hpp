@@ -8,26 +8,49 @@
 #ifndef _IBASIC_PROOF_HPP_
 #define _IBASIC_PROOF_HPP_
 #include <string>
+#include <vector>
+#include <cstdint>
+#include <memory>
+#include <utility>
+#include <boost/json.hpp>
 #include "proof/proto/SGProof.pb.h"
 #include "outcome/outcome.hpp"
 
-class IBasicProof
+namespace sgns
 {
-public:
-    explicit IBasicProof( std::string bytecode_payload ) : bytecode_payload_( std::move( bytecode_payload ) )
+
+    class IBasicProof
     {
-    }
+    public:
+        explicit IBasicProof( std::string bytecode_payload );
 
-    virtual ~IBasicProof() = default;
+        virtual ~IBasicProof() = default;
 
-    virtual std::string GetProofType() const = 0;
+        enum class Error
+        {
+            INSUFFICIENT_FUNDS = 0,
+            INVALID_PROOF,
+            BYTECODE_NOT_FOUND,
+            INVALID_CIRCUIT,
+        };
 
-    virtual outcome::result<SGProof::ProofStruct> GenerateProof() = 0;
+        virtual std::string GetProofType() const = 0;
 
-protected:
-    const std::string bytecode_payload_;
+        outcome::result<SGProof::ProofStruct> GenerateProof();
 
-private:
-};
+        static std::vector<uint8_t> SerializeProof( const SGProof::ProofStruct &proof );
+
+    protected:
+    private:
+        const std::string     bytecode_payload_;
+        std::shared_ptr<void> assigner_;
+        std::shared_ptr<void> prover_;
+
+        virtual std::pair<boost::json::array, boost::json::array> GenerateJsonParameters() = 0;
+    };
+
+}
+
+OUTCOME_HPP_DECLARE_ERROR_2( sgns, IBasicProof::Error );
 
 #endif
