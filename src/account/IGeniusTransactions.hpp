@@ -69,6 +69,13 @@ namespace sgns
 
             return full_path.str();
         }
+        std::string GetProofFullPath()
+        {
+        boost::format full_path( GetSrcAddress<std::string>() + "/tx/" + "proof" + "/%llu" );
+            full_path % dag_st.nonce();
+
+            return full_path.str();
+        }
 
         template <typename T>
         T GetSrcAddress() const;
