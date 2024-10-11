@@ -50,23 +50,22 @@ void disable_raw_mode() {
 #ifdef _WIN32
     DWORD mode;
     HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
-    GetConsoleMode(hInput, &mode);
-    SetConsoleMode(hInput, mode | (ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT));
+    SetConsoleMode(hInput, mode | ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT);
 #else
     termios term;
     tcgetattr(STDIN_FILENO, &term);
-    term.c_lflag |= (ICANON | ECHO);
+    term.c_lflag |= ICANON | ECHO;
     tcsetattr(STDIN_FILENO, TCSANOW, &term);
 #endif
 }
 
 void clear_line() {
-    std::cout << "\r\033[K"; // Move to start of line and clear in POSIX
+    std::cout << "\r\033[K";  // Clear the current line
 }
 
 void redraw_prompt() {
     clear_line();
-    std::cout << "> " << current_input << std::flush;
+    std::cout << "> " << current_input << std::flush;  // Redraw the input prompt
 }
 
 void keyboard_input_thread() {
@@ -74,14 +73,18 @@ void keyboard_input_thread() {
 
     while (!finished) {
         char ch;
-        std::cin.get(ch);  // Read one character at a time
+        std::cin.get(ch);
 
         {
             std::lock_guard<std::mutex> lock(keyboard_mutex);
-            if (!finished && (ch == '\n' || ch == '\r')) {
-                events.push(current_input);
-                current_input.clear();
-                std::cout << std::endl;  // Move to the next line after pressing enter
+            if (ch == '\n' || ch == '\r') {
+                // Check for both newline and carriage return
+                if (!current_input.empty()) {
+                    events.push(current_input);
+                    current_input.clear();
+                    cv.notify_one();  // Notify the event processor
+                }
+                std::cout << std::endl;
             }
             else if (ch == 127 || ch == '\b') { // Handle backspace
                 if (!current_input.empty()) {
@@ -98,7 +101,6 @@ void keyboard_input_thread() {
 
     disable_raw_mode();
 }
-
 
 void PrintAccountInfo( const std::vector<std::string> &args, sgns::GeniusNode &genius_node )
 {
@@ -211,46 +213,47 @@ std::vector<std::string> split_string( const std::string &str )
     return results;
 }
 
-void process_events( sgns::GeniusNode &genius_node )
-{
-    std::unique_lock<std::mutex> lock( keyboard_mutex );
-    cv.wait( lock, [] { return !events.empty(); } );
+void process_events(sgns::GeniusNode& genius_node) {
+    while (!finished) {
+        std::unique_lock<std::mutex> lock(keyboard_mutex);
+        cv.wait(lock, [] { return !events.empty() || finished; });
 
-    while ( !events.empty() )
-    {
-        std::cout << "simple event" << std::endl;
-        std::string event = events.front();
-        events.pop();
+        while (!events.empty()) {
+            std::string event = std::move(events.front());
+            events.pop();
 
-        lock.unlock();
-        auto arguments = split_string( event );
-        if ( arguments.size() == 0 )
-        {
-            return;
+            lock.unlock();  // Unlock while processing
+
+            auto arguments = split_string(event);
+            if (arguments.empty()) {
+                std::cerr << "Invalid command\n";
+            }
+            else if (arguments[0] == "process") {
+                CreateProcessingTransaction(arguments, genius_node);
+            }
+            else if (arguments[0] == "mint") {
+                MintTokens(arguments, genius_node);
+            }
+            else if (arguments[0] == "info") {
+                PrintAccountInfo(arguments, genius_node);
+            }
+            else if (arguments[0] == "peer") {
+                if (arguments.size() > 1) {
+                    genius_node.AddPeer(arguments[1]);
+                }
+                else {
+                    std::cerr << "Invalid peer command\n";
+                }
+            }
+            else {
+                std::cerr << "Unknown command: " << arguments[0] << "\n";
+            }
+
+            lock.lock();  // Re-lock before checking the condition again
         }
-        else if ( arguments[0] == "process" )
-        {
-            CreateProcessingTransaction( arguments, genius_node );
-        }
-        else if ( arguments[0] == "mint" )
-        {
-            MintTokens( arguments, genius_node );
-        }
-        else if ( arguments[0] == "info" )
-        {
-            PrintAccountInfo( arguments, genius_node );
-        }
-        else if ( arguments[0] == "peer" )
-        {
-            genius_node.AddPeer( std::string{ arguments[1] } );
-        }
-        else
-        {
-            std::cerr << "Unknown command: " << arguments[0] << "\n";
-        }
-        lock.lock();
     }
 }
+
 
 DevConfig_st DEV_CONFIG{ "0xcafe", 0.65, 1.0, 0 , "./"};
 
@@ -264,10 +267,10 @@ int main( int argc, char *argv[] )
 
     std::cout << "Insert \"process\", the image and the number of tokens to be" << std::endl;
     redraw_prompt();
-    while ( !finished )
-    {
+    //while ( !finished )
+    //{
         process_events( node_instance );
-    }
+    //}
     if ( input_thread.joinable() )
     {
         input_thread.join();
