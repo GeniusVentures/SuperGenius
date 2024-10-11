@@ -43,7 +43,7 @@ namespace sgns
         auto result = logging_system->configure();
         std::cout << "Log Result: " << result.message << std::endl;
         libp2p::log::setLoggingSystem( logging_system );
-        libp2p::log::setLevelOfGroup( "SuperGeniusDemo", soralog::Level::DEBUG );
+        libp2p::log::setLevelOfGroup( "SuperGeniusDemo", soralog::Level::ERROR_ );
         //libp2p::log::setLevelOfGroup("SuperGeniusDemoFile", soralog::Level::ERROR_);
 
         auto loggerGlobalDB = base::createLogger( "GlobalDB" );
@@ -290,13 +290,18 @@ namespace sgns
     {
         return transaction_manager_->GetBalance();
     }
-
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="cid"></param>
+    /// <returns></returns>
     std::vector<std::vector<uint8_t>> GeniusNode::GetImageByCID( std::string cid )
     {
         libp2p::protocol::kademlia::Config kademlia_config;
         kademlia_config.randomWalk.enabled  = true;
         kademlia_config.randomWalk.interval = std::chrono::seconds( 300 );
-        kademlia_config.requestConcurency   = 20;
+        kademlia_config.requestConcurency   = 3;
+        kademlia_config.maxProvidersPerKey = 300;
         auto injector                       = libp2p::injector::makeHostInjector(
             libp2p::injector::makeKademliaInjector( libp2p::injector::useKademliaConfig( kademlia_config ) ) );
         auto ioc = injector.create<std::shared_ptr<boost::asio::io_context>>();

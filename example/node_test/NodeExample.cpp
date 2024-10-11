@@ -10,6 +10,13 @@
 #include <iostream>
 #include <cstdlib>
 #include <cstdint>
+#include <atomic>
+#ifdef _WIN32
+//#include <windows.h>
+#else
+#include <termios.h>
+#include <unistd.h>
+#endif
 
 #include <boost/program_options.hpp>
 #include <boost/format.hpp>
@@ -21,19 +28,77 @@
 std::mutex              keyboard_mutex;
 std::condition_variable cv;
 std::queue<std::string> events;
+std::string current_input;
+std::atomic<bool> finished(false);
 
-void keyboard_input_thread()
-{
-    std::string line;
-    while ( std::getline( std::cin, line ) )
-    {
-        {
-            std::lock_guard<std::mutex> lock( keyboard_mutex );
-            events.push( line );
-        }
-        cv.notify_one();
-    }
+
+void enable_raw_mode() {
+#ifdef _WIN32
+    DWORD mode;
+    HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
+    GetConsoleMode(hInput, &mode);
+    SetConsoleMode(hInput, mode & ~(ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT));
+#else
+    termios term;
+    tcgetattr(STDIN_FILENO, &term);
+    term.c_lflag &= ~(ICANON | ECHO);
+    tcsetattr(STDIN_FILENO, TCSANOW, &term);
+#endif
 }
+
+void disable_raw_mode() {
+#ifdef _WIN32
+    DWORD mode;
+    HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
+    GetConsoleMode(hInput, &mode);
+    SetConsoleMode(hInput, mode | (ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT));
+#else
+    termios term;
+    tcgetattr(STDIN_FILENO, &term);
+    term.c_lflag |= (ICANON | ECHO);
+    tcsetattr(STDIN_FILENO, TCSANOW, &term);
+#endif
+}
+
+void clear_line() {
+    std::cout << "\r\033[K"; // Move to start of line and clear in POSIX
+}
+
+void redraw_prompt() {
+    clear_line();
+    std::cout << "> " << current_input << std::flush;
+}
+
+void keyboard_input_thread() {
+    enable_raw_mode();
+
+    while (!finished) {
+        char ch;
+        std::cin.get(ch);  // Read one character at a time
+
+        {
+            std::lock_guard<std::mutex> lock(keyboard_mutex);
+            if (!finished && (ch == '\n' || ch == '\r')) {
+                events.push(current_input);
+                current_input.clear();
+                std::cout << std::endl;  // Move to the next line after pressing enter
+            }
+            else if (ch == 127 || ch == '\b') { // Handle backspace
+                if (!current_input.empty()) {
+                    current_input.pop_back();
+                }
+            }
+            else if (std::isprint(ch) || std::isspace(ch)) {
+                current_input += ch;
+            }
+        }
+
+        redraw_prompt();
+    }
+
+    disable_raw_mode();
+}
+
 
 void PrintAccountInfo( const std::vector<std::string> &args, sgns::GeniusNode &genius_node )
 {
@@ -157,6 +222,7 @@ void process_events( sgns::GeniusNode &genius_node )
         std::string event = events.front();
         events.pop();
 
+        lock.unlock();
         auto arguments = split_string( event );
         if ( arguments.size() == 0 )
         {
@@ -182,6 +248,7 @@ void process_events( sgns::GeniusNode &genius_node )
         {
             std::cerr << "Unknown command: " << arguments[0] << "\n";
         }
+        lock.lock();
     }
 }
 
@@ -189,14 +256,15 @@ DevConfig_st DEV_CONFIG{ "0xcafe", 0.65, 1.0, 0 , "./"};
 
 int main( int argc, char *argv[] )
 {
-    std::thread input_thread( keyboard_input_thread );
+    std::thread input_thread(keyboard_input_thread);
 
     //Inputs
 
     sgns::GeniusNode node_instance( DEV_CONFIG );
 
     std::cout << "Insert \"process\", the image and the number of tokens to be" << std::endl;
-    while ( true )
+    redraw_prompt();
+    while ( !finished )
     {
         process_events( node_instance );
     }
