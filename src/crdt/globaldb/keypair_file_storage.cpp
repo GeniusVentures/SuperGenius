@@ -15,8 +15,6 @@
 #include <libp2p/crypto/ecdsa_provider/ecdsa_provider_impl.hpp>
 #include <libp2p/crypto/hmac_provider/hmac_provider_impl.hpp>
 
-#include <crypto/ed25519/ed25519_provider_impl.hpp>
-
 namespace sgns::crdt
 {
     using CryptoProvider = libp2p::crypto::CryptoProviderImpl;
