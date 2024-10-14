@@ -15,7 +15,8 @@ add_library(threshold_util
     )
 target_link_libraries(threshold_util
     primitives
-    )
+    sr25519_types
+)
 
 add_library(production_digests_util
     production_digests_util.cpp
@@ -23,7 +24,8 @@ add_library(production_digests_util
 target_link_libraries(production_digests_util
     primitives
     scale
-    )
+    sr25519_types
+)
 
 add_library(block_executor
     block_executor.cpp
@@ -70,4 +72,5 @@ add_library(syncing_production_observer
 target_link_libraries(syncing_production_observer
     logger
     primitives
-    )
+    sr25519_types
+)

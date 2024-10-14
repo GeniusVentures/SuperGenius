@@ -40,8 +40,16 @@ target_link_libraries(sgns_account
     logger
     gnus_upnp
     KeyGeneration
+    AsyncIOManager
     ${WIN_CRYPT_LIBRARY}
 )
+
+target_include_directories(
+    sgns_account
+    PRIVATE
+    ${AsyncIOManager_INCLUDE_DIR}
+)
+
 set_target_properties(sgns_account PROPERTIES PUBLIC_HEADER "GeniusNode.hpp")
 
 supergenius_install(sgns_account)
