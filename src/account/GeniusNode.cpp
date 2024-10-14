@@ -78,22 +78,22 @@ namespace sgns
         if ( gotIGD )
         {
 
-            //auto openedPort = upnp->OpenPort( pubsubport, pubsubport, "TCP", 1800 );
-            //auto openedPort2 = upnp->OpenPort( graphsyncport, graphsyncport, "TCP", 1800 );
-            //auto wanip      = upnp->GetWanIP();
-            //auto lanip      = upnp->GetLocalIP();
-            //std::cout << "Wan IP: " << wanip << std::endl;
-            //std::cout << "Lan IP: " << lanip << std::endl;
-            ////addresses.push_back( lanip );
-            //addresses.push_back( wanip );
-            //if ( !openedPort )
-            //{
-            //    std::cerr << "Failed to open port" << std::endl;
-            //}
-            //else
-            //{
-            //    std::cout << "Open Port Success" << std::endl;
-            //}
+            auto openedPort = upnp->OpenPort( pubsubport, pubsubport, "TCP", 1800 );
+            auto openedPort2 = upnp->OpenPort( graphsyncport, graphsyncport, "TCP", 1800 );
+            auto wanip      = upnp->GetWanIP();
+            auto lanip      = upnp->GetLocalIP();
+            std::cout << "Wan IP: " << wanip << std::endl;
+            std::cout << "Lan IP: " << lanip << std::endl;
+            //addresses.push_back( lanip );
+            addresses.push_back( wanip );
+            if ( !openedPort )
+            {
+                std::cerr << "Failed to open port" << std::endl;
+            }
+            else
+            {
+                std::cout << "Open Port Success" << std::endl;
+            }
         }
 
         //auto loggerBroadcaster = base::createLogger( "PubSubBroadcasterExt" );
@@ -144,6 +144,7 @@ namespace sgns
         {
             std::cout << "Error initializing blockchain" << maybe_block_storage.error().message() << std::endl;
             throw std::runtime_error( "Error initializing blockchain" );
+            return;
         }
         block_storage_       = std::move( maybe_block_storage.value() );
         transaction_manager_ = std::make_shared<TransactionManager>(
