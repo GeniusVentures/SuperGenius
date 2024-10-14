@@ -3,6 +3,7 @@ add_library(json_secure_storage
 )
 target_link_libraries(json_secure_storage
     outcome
+    rapidjson
 )
 
 supergenius_install(json_secure_storage)

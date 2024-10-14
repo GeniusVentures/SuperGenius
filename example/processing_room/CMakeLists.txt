@@ -12,11 +12,12 @@ target_include_directories(processing_app PRIVATE ${GSL_INCLUDE_DIR})
 
 
 target_link_libraries(processing_app
-	SGProcessingProto
+    SGProcessingProto
     processing_service
     logger
-    Boost::program_options    
-    )
+    Boost::program_options
+    ipfs-pubsub
+)
 
 
 if(FORCE_MULTILE)
