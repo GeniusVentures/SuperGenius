@@ -11,7 +11,10 @@ add_library(api_transport
     impl/http/http_listener_impl.cpp
     impl/ws/ws_listener_impl.hpp
     impl/ws/ws_listener_impl.cpp
+    impl/ws/ws_client_impl.hpp
+    impl/ws/ws_client_impl.cpp
     )
+
 target_link_libraries(api_transport
     Boost::boost
     logger
