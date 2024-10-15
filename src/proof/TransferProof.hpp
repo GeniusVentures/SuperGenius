@@ -14,6 +14,7 @@
 #include <utility>
 #include <boost/json.hpp>
 #include "IBasicProof.hpp"
+#include "circuits/TransactionVerifierCircuit.hpp"
 
 namespace sgns
 {
@@ -25,15 +26,16 @@ namespace sgns
 
         ~TransferProof() = default;
 
-
         std::string GetProofType() const override
         {
             return "Transfer";
         }
 
-        //outcome::result<SGProof::ProofStruct> GenerateProof() override;
-
-        //outcome::result<std::vector<uint8_t>> GenerateProof();
+        static boost::json::object GenerateIntParameter( uint64_t value );
+        static boost::json::object GenerateArrayParameter( std::array<uint64_t, 4> values );
+        static boost::json::object GenerateFieldParameter( uint64_t value );
+        template <typename T>
+        static boost::json::object GenerateCurveParameter( T value );
 
     private:
         static constexpr uint64_t                generator_X_point = 1;     // Example seed for TOTP
@@ -44,14 +46,25 @@ namespace sgns
         uint64_t                                 balance_;
         uint64_t                                 amount_;
 
-
+        outcome::result<std::vector<uint8_t>>             SerializePublicParameters() override;
         std::pair<boost::json::array, boost::json::array> GenerateJsonParameters() override;
-        boost::json::object                               GenerateIntParameter( uint64_t value );
-        boost::json::object                               GenerateArrayParameter( std::array<uint64_t, 4> values );
-        boost::json::object                               GenerateFieldParameter( uint64_t value );
-        boost::json::object                               GenerateCurveParameter( uint64_t value );
-    };
-}
+        static outcome::result<std::pair<boost::json::array, boost::json::array>> DeSerializePublicParams(
+            const std::vector<uint8_t> &full_proof_data );
 
+        // Static function to register the class
+        static inline bool Register()
+        {
+            RegisterDeserializer( "Transfer", &TransferProof::DeSerializePublicParams );
+            RegisterBytecode( "Transfer", std::string( TransactionCircuit ) );
+            return true;
+        }
+
+        // Static constructor for the derived class to insert into the map
+        static inline bool registered =  Register();
+    };
+
+    // Initialize the static variable and trigger registration
+    //bool TransferProof::registered = TransferProof::Register();
+}
 
 #endif

@@ -19,8 +19,7 @@ TEST( ProofAssignerTest, CreateProof )
 {
     auto             GeniusAssigner = sgns::GeniusAssigner();
     std::vector<int> public_inputs  = { 5, 11 };
-    auto             assign_result =
-        GeniusAssigner.GenerateCircuitAndTable( public_inputs, {}, std::string(ByteCodeTest) );
+    auto assign_result = GeniusAssigner.GenerateCircuitAndTable( public_inputs, {}, std::string( ByteCodeTest ) );
     ASSERT_TRUE( assign_result.has_value() );
 
     EXPECT_EQ( assign_result.value().size(), 1 );
@@ -51,16 +50,15 @@ TEST( ProofAssignerTest, CreateProof )
     ASSERT_FALSE( proof_result.has_error() ) << "Proof Expected success but got an error!";
 
     EXPECT_TRUE( GeniusProver.VerifyProof( proof_result.value().proof, assign_value ) );
-    EXPECT_TRUE(
-        GeniusProver.WriteProofToFile( proof_result.value().proof, "../../../../../../test/src/proof/sgnus_proof.bin" ) );
-
+    EXPECT_TRUE( GeniusProver.WriteProofToFile( proof_result.value().proof,
+                                                "../../../../../../test/src/proof/sgnus_proof.bin" ) );
 }
 
 TEST( ProofAssignerTest, TransactionProof )
 {
     auto TxProof = sgns::TransferProof( 1000, 500 );
 
-    auto proof_result = TxProof.GenerateProof();
+    auto proof_result = TxProof.GenerateFullProof();
 
     if ( proof_result.has_error() )
     {
@@ -71,4 +69,5 @@ TEST( ProofAssignerTest, TransactionProof )
     // Assert that the function was successful (i.e., no error occurred)
     ASSERT_FALSE( proof_result.has_error() ) << "Proof Expected success but got an error!";
 
+    EXPECT_TRUE( TxProof.VerifyFullProof( proof_result.value() ) );
 }
