@@ -147,10 +147,19 @@ outcome::result<void> GlobalDB::Init(std::shared_ptr<CrdtOptions> crdtOptions)
     boost::filesystem::path keyPath = databasePathAbsolute + "/key";
     KeyPairFileStorage keyPairStorage(keyPath);
     auto keyPair = keyPairStorage.GetKeyPair();
+    //Kademlia Config
+    libp2p::protocol::kademlia::Config kademlia_config;
+    kademlia_config.randomWalk.enabled = true;
+    kademlia_config.randomWalk.interval = std::chrono::seconds(300);
+    kademlia_config.requestConcurency = 3;
+    kademlia_config.maxProvidersPerKey = 300;
     // injector creates and ties dependent objects
     auto injector = libp2p::injector::makeHostInjector<BOOST_DI_CFG>(
         boost::di::bind<boost::asio::io_context>.to(m_context)[boost::di::override],
-        boost::di::bind<libp2p::crypto::KeyPair>.to(keyPair.value())[boost::di::override]);
+        boost::di::bind<libp2p::crypto::KeyPair>.to(keyPair.value())[boost::di::override],
+        libp2p::injector::makeKademliaInjector(libp2p::injector::useKademliaConfig(kademlia_config)));
+
+
 
     // create asio context
     auto io = injector.create<std::shared_ptr<boost::asio::io_context>>();
@@ -168,6 +177,21 @@ outcome::result<void> GlobalDB::Init(std::shared_ptr<CrdtOptions> crdtOptions)
     auto ipfsDataStore = std::make_shared<RocksdbDatastore>(ipfsDBResult.value());
 
     auto dagSyncerHost = injector.create<std::shared_ptr<libp2p::Host>>();
+
+    //Make a DHT
+    auto kademlia =
+        injector
+        .create<std::shared_ptr<libp2p::protocol::kademlia::Kademlia>>();
+    dht_ = std::make_shared<sgns::ipfs_lite::ipfs::dht::IpfsDHT>(kademlia, bootstrapAddresses_, m_context);
+    //Make Holepunch Client
+    holepunchmsgproc_ = std::make_shared<libp2p::protocol::HolepunchClientMsgProc>(*dagSyncerHost, dagSyncerHost->getNetwork().getConnectionManager());
+    holepunch_ = std::make_shared<libp2p::protocol::HolepunchClient>(*dagSyncerHost, holepunchmsgproc_, dagSyncerHost->getBus());
+    holepunch_->start();
+    //Make Identify
+    identifymsgproc_ = std::make_shared<libp2p::protocol::IdentifyMessageProcessor>(
+        *dagSyncerHost, dagSyncerHost->getNetwork().getConnectionManager(), *injector.create<std::shared_ptr<libp2p::peer::IdentityManager>>(), injector.create<std::shared_ptr<libp2p::crypto::marshaller::KeyMarshaller>>());
+    identify_ = std::make_shared<libp2p::protocol::Identify>(*dagSyncerHost, identifymsgproc_, dagSyncerHost->getBus(), injector.create<std::shared_ptr<libp2p::transport::Upgrader>>(), [this]() {  });
+    identify_->start();
 
     //If we used upnp we should have an address list, if not just get local ip
     std::string localaddress;
@@ -199,6 +223,8 @@ outcome::result<void> GlobalDB::Init(std::shared_ptr<CrdtOptions> crdtOptions)
         // @todo Check if the error is not fatal
     }
 
+    dht_->Start();
+    dht_->bootstrap();
     // Create pubsub broadcaster
     //auto broadcaster = std::make_shared<PubSubBroadcaster>(m_broadcastChannel);
     std::shared_ptr<PubSubBroadcasterExt> broadcaster;

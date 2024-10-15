@@ -91,9 +91,14 @@ public:
               //                                             {},
               //                                             extensions,
               //                                             requestProgressCallback());
+
+        boost::optional<std::vector<libp2p::multi::Multiaddress>> addresses;
+        if (address) {
+            addresses = std::vector<libp2p::multi::Multiaddress>{ *address };
+        }
         requests_.push_back(std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::Subscription>(
             new sgns::ipfs_lite::ipfs::graphsync::Subscription(std::move(graphsync_->makeRequest(peer,
-            std::move(address),
+            std::move(addresses),
             root_cid,
             {},
             extensions,
