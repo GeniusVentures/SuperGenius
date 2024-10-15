@@ -78,6 +78,10 @@ namespace sgns
             crypto3::zk::snark::placeholder_private_preprocessor<BlueprintFieldType, PlaceholderParams>;
         using PrivatePreprocessedData = PrivatePreprocessor::preprocessed_data_type;
         using ProofSnarkType          = crypto3::zk::snark::placeholder_proof<BlueprintFieldType, PlaceholderParams>;
+        using ProverType              = crypto3::zk::snark::placeholder_prover<BlueprintFieldType, PlaceholderParams>;
+        using PlonkTablePair          = std::pair<TableDescriptionType, AssignmentTableType>;
+
+    public:
         using ProofType = crypto3::marshalling::types::placeholder_proof<nil::marshalling::field_type<ProverEndianess>,
                                                                          ProofSnarkType>;
         using ConstraintMarshallingType =
@@ -86,18 +90,13 @@ namespace sgns
         using PlonkMarshalledTableType =
             crypto3::marshalling::types::plonk_assignment_table<nil::marshalling::field_type<ProverEndianess>,
                                                                 AssignmentTableType>;
-        using ProverType     = crypto3::zk::snark::placeholder_prover<BlueprintFieldType, PlaceholderParams>;
-        using PlonkTablePair = std::pair<TableDescriptionType, AssignmentTableType>;
 
-    public:
         /**
          * @brief       Constructs a GeniusProver with component constant columns and expand factor
          * @param[in]   component_constant_columns 
          * @param[in]   expand_factor 
          */
-        GeniusProver( std::size_t component_constant_columns = COMPONENT_CONSTANT_COLUMNS_DEFAULT,
-                      std::size_t expand_factor              = EXPAND_FACTOR_DEFAULT ) :
-            component_constant_columns_( component_constant_columns ), expand_factor_( expand_factor )
+        GeniusProver()
         {
         }
 
@@ -131,14 +130,14 @@ namespace sgns
         outcome::result<GeniusProof> CreateProof( const std::string &circuit_file,
                                                   const std::string &assignment_table_file ) const;
 
-        bool VerifyProof( const GeniusProof &proof ) const;
-        bool VerifyProof( const ProofType &proof, const GeniusAssigner::AssignerOutput &assigner_outputs ) const;
+        static bool VerifyProof( const GeniusProof &proof );
+        static bool VerifyProof( const ProofType &proof, const GeniusAssigner::AssignerOutput &assigner_outputs );
 
-        bool VerifyProof( const ProofSnarkType         &proof,
-                          const PublicPreprocessedData &public_data,
-                          const TableDescriptionType   &desc,
-                          const ConstraintSystemType   &constrains_sys,
-                          const LpcScheme              &scheme ) const;
+        static bool VerifyProof( const ProofSnarkType         &proof,
+                                 const PublicPreprocessedData &public_data,
+                                 const TableDescriptionType   &desc,
+                                 const ConstraintSystemType   &constrains_sys,
+                                 const LpcScheme              &scheme );
 
         bool                 WriteProofToFile( const ProofType &proof, const std::string &path ) const;
         std::vector<uint8_t> WriteProofToVector( const ProofType &proof ) const;
@@ -147,17 +146,16 @@ namespace sgns
         constexpr static const std::size_t COMPONENT_CONSTANT_COLUMNS_DEFAULT = 5;
         constexpr static const std::size_t EXPAND_FACTOR_DEFAULT              = 2;
 
-        const std::size_t component_constant_columns_;
-        const std::size_t expand_factor_;
+        static ConstraintSystemType MakePlonkConstraintSystem(
+            const GeniusAssigner::PlonkConstraintSystemType &constrains );
 
-        ConstraintSystemType MakePlonkConstraintSystem(
-            const GeniusAssigner::PlonkConstraintSystemType &constrains ) const;
+        static PlonkTablePair MakePlonkTableDescription( const GeniusAssigner::PlonkAssignTableType &table );
 
-        PlonkTablePair MakePlonkTableDescription( const GeniusAssigner::PlonkAssignTableType &table ) const;
+        static FriParams MakeFRIParams( std::size_t rows_amount,
+                                        const int   max_step      = 1,
+                                        std::size_t expand_factor = 0 );
 
-        FriParams MakeFRIParams( std::size_t rows_amount, const int max_step = 1, std::size_t expand_factor = 0 ) const;
-
-        std::vector<std::size_t> GenerateRandomStepList( const std::size_t r, const int max_step ) const;
+        static std::vector<std::size_t> GenerateRandomStepList( const std::size_t r, const int max_step );
 
         ProofType FillPlaceholderProof( const ProofSnarkType &proof, const FriParams &commitment_params ) const;
     };
