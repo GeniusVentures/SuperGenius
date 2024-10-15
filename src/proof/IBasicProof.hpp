@@ -22,6 +22,10 @@ namespace sgns
     class IBasicProof
     {
     public:
+        using PublicParamDeserializeFn =
+            std::function<outcome::result<std::pair<boost::json::array, boost::json::array>>(
+                const std::vector<uint8_t> & )>;
+
         explicit IBasicProof( std::string bytecode_payload );
 
         virtual ~IBasicProof() = default;
@@ -32,20 +36,40 @@ namespace sgns
             INVALID_PROOF,
             BYTECODE_NOT_FOUND,
             INVALID_CIRCUIT,
+            INVALID_PROTO_PROOF,
+            INVALID_PROOF_TYPE,
+            UNEXPECTED_PROOF_TYPE
         };
 
         virtual std::string GetProofType() const = 0;
 
-        outcome::result<SGProof::ProofStruct> GenerateProof();
+        outcome::result<std::vector<uint8_t>> GenerateFullProof();
 
-        static std::vector<uint8_t> SerializeProof( const SGProof::ProofStruct &proof );
+        static outcome::result<bool> VerifyFullProof( const std::vector<uint8_t> &full_proof_data );
 
     protected:
+        static inline std::map<std::string, PublicParamDeserializeFn> PublicParamDeSerializers;
+        static inline std::map<std::string, std::string>              ByteCodeMap;
+
+        static void RegisterDeserializer( const std::string &proof_type, PublicParamDeserializeFn fn )
+        {
+            PublicParamDeSerializers[proof_type] = fn;
+        }
+
+        static void RegisterBytecode( const std::string &proof_type, std::string bytecode )
+        {
+            ByteCodeMap[proof_type] = std::move( bytecode );
+        }
+
     private:
         const std::string     bytecode_payload_;
         std::shared_ptr<void> assigner_;
         std::shared_ptr<void> prover_;
 
+        static SGProof::BaseProofData                 DeSerializeProof( const std::vector<uint8_t> &proof_data );
+        static std::vector<uint8_t>                   SerializeProof( const SGProof::BaseProofData &proof );
+        outcome::result<SGProof::BaseProofData>       GenerateProof();
+        virtual outcome::result<std::vector<uint8_t>> SerializePublicParameters()          = 0;
         virtual std::pair<boost::json::array, boost::json::array> GenerateJsonParameters() = 0;
     };
 
