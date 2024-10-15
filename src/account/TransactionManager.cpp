@@ -99,7 +99,7 @@ namespace sgns
                                                                                FillDAGStruct() );
 
             TransferProof prover( account_m->GetBalance<uint64_t>(), uint64_t{ amount } );
-            auto          proof_result = prover.GenerateProof();
+            auto          proof_result = prover.GenerateFullProof();
             if ( proof_result.has_value() )
             {
                 account_m->utxos = UTXOTxParameters::UpdateUTXOList( account_m->utxos, maybe_params.value() );
@@ -115,7 +115,7 @@ namespace sgns
     {
         auto          mint_transaction = std::make_shared<MintTransaction>( amount, FillDAGStruct() );
         TransferProof prover( 100000, amount );
-        auto          proof_result = prover.GenerateProof();
+        auto          proof_result = prover.GenerateFullProof();
         if ( proof_result.has_value() )
         {
             this->EnqueueTransaction( std::make_pair( std::move( mint_transaction ), proof_result.value() ) );
@@ -143,7 +143,7 @@ namespace sgns
                                                                            FillDAGStruct() );
 
             TransferProof prover( account_m->GetBalance<uint64_t>(), amount );
-            auto          proof_result = prover.GenerateProof();
+            auto          proof_result = prover.GenerateFullProof();
             if ( proof_result.has_value() )
             {
                 account_m->utxos = UTXOTxParameters::UpdateUTXOList( account_m->utxos, maybe_params.value() );
@@ -178,7 +178,7 @@ namespace sgns
                                                                 FillDAGStruct() );
                     //TODO - Create with the real balance and amount
                     TransferProof prover( 100000, 1000 );
-                    auto          proof_result = prover.GenerateProof();
+                    auto          proof_result = prover.GenerateFullProof();
                     if ( proof_result.has_value() )
                     {
                         this->EnqueueTransaction( std::make_pair( transfer_transaction, proof_result.value() ) );
@@ -203,11 +203,11 @@ namespace sgns
             auto process_transaction = std::make_shared<ProcessingTransaction>(task_id, subtask.subtaskid(), FillDAGStruct());
     
         //TransferProof prover( 100000, amount );
-        //auto          proof_result = prover.GenerateProof();
+        //auto          proof_result = prover.GenerateFullProof();
         //if ( proof_result.has_value() )
         //{
-            //TODO - Check what we might have to prove here
-            this->EnqueueTransaction( std::make_pair(process_transaction, SGProof::ProofStruct{}));
+        //TODO - Check what we might have to prove here
+        this->EnqueueTransaction( std::make_pair(process_transaction, std::vector<uint8_t>{}));
         }
         //}
     }
@@ -268,7 +268,9 @@ namespace sgns
 
 
             sgns::crdt::GlobalDB::Buffer proof_transaction;
-            proof_transaction.put( IBasicProof::SerializeProof(proof) );
+
+            //std::cout << " creating with proof with size  " <<  proof_vector.size() << std::endl;
+            proof_transaction.put( proof );
             db_m->Put( { proof_path }, proof_transaction );
 
             auto maybe_last_hash   = block_storage_m->getLastFinalizedBlockHash();
@@ -344,7 +346,13 @@ namespace sgns
             m_logger->debug( "Found the data, deserializing into DAG {}", transaction_key );
             if ( maybe_dag )
             {
+                //TODO Verify the Snark
                 const std::string &string_src_address = maybe_dag.value().source_addr();
+                if ( !VerifyTransaction( string_src_address, maybe_dag.value().nonce() ) )
+                {
+                    m_logger->info( "Invalid PROOF" );
+                    return;
+                }
                 if ( string_src_address == account_m->GetAddress<std::string>() )
                 {
                     account_m->nonce = maybe_dag.value().nonce() + 1;
@@ -374,6 +382,52 @@ namespace sgns
         }
 
         return std::errc::invalid_argument;
+    }
+
+    bool TransactionManager::VerifyTransaction( const std::string &string_src_address, const uint64_t nonce )
+    {
+        bool ret = false;
+
+        boost::format proof_key{ std::string( TRANSACTION_BASE_FORMAT ) + string_src_address + "/tx/proof" +
+                                 "/%llu" };
+        proof_key % TEST_NET_ID;
+        proof_key % nonce;
+
+            std::cout << " proof_key.str() the proof in " <<  proof_key.str() << std::endl;
+
+
+        auto maybe_proof_data = db_m->Get( { proof_key.str() } );
+
+        if ( maybe_proof_data.has_value() )
+        {
+            auto value_vector = maybe_proof_data.value().toVector();
+            std::cout << " it has value with size  " <<  value_vector.size() << std::endl;
+            auto proof_struct = IBasicProof::VerifyFullProof( maybe_proof_data.value().toVector() );
+        }
+        return ret;
+    }
+
+    bool TransactionManager::VerifyTransaction( const std::string &string_src_address, const uint64_t nonce )
+    {
+        bool ret = false;
+
+        boost::format proof_key{ std::string( TRANSACTION_BASE_FORMAT ) + string_src_address + "/tx/proof" +
+                                 "/%llu" };
+        proof_key % TEST_NET_ID;
+        proof_key % nonce;
+
+            std::cout << " proof_key.str() the proof in " <<  proof_key.str() << std::endl;
+
+
+        auto maybe_proof_data = db_m->Get( { proof_key.str() } );
+
+        if ( maybe_proof_data.has_value() )
+        {
+            auto value_vector = maybe_proof_data.value().toVector();
+            std::cout << " it has value with size  " <<  value_vector.size() << std::endl;
+            auto proof_struct = IBasicProof::VerifyFullProof( maybe_proof_data.value().toVector() );
+        }
+        return ret;
     }
 
     /**

@@ -36,7 +36,7 @@ namespace sgns
     class TransactionManager
     {
     public:
-        using TransactionPair = std::pair<std::shared_ptr<IGeniusTransactions>, SGProof::ProofStruct>;
+        using TransactionPair = std::pair<std::shared_ptr<IGeniusTransactions>, std::vector<uint8_t>>;
 
         using ProcessFinishCbType = std::function<void( const std::string &, const std::set<std::string> & )>;
 
@@ -115,6 +115,7 @@ namespace sgns
         bool GetTransactionsFromBlock(
             const primitives::BlockNumber &block_number );
 
+        bool VerifyTransaction( const std::string &string_src_address, const uint64_t nonce );
         outcome::result<std::vector<uint8_t>> ParseTransaction( std::string_view transaction_key );
         void ParseTransferTransaction( const std::vector<std::uint8_t> &transaction_data );
         void ParseMintTransaction( const std::vector<std::uint8_t> &transaction_data );
