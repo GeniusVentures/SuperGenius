@@ -32,7 +32,7 @@ namespace sgns
     class TransactionManager
     {
     public:
-        using TransactionPair = std::pair<std::shared_ptr<IGeniusTransactions>, SGProof::ProofStruct>;
+        using TransactionPair = std::pair<std::shared_ptr<IGeniusTransactions>, std::vector<uint8_t>>;
 
         using ProcessFinishCbType = std::function<void( const std::string &, const std::set<std::string> & )>;
         TransactionManager( std::shared_ptr<crdt::GlobalDB>           db,      //
@@ -122,6 +122,7 @@ namespace sgns
         void                     SendTransaction();
         bool                     GetTransactionsFromBlock( const primitives::BlockNumber &block_number );
 
+        bool VerifyTransaction( const std::string &string_src_address, const uint64_t nonce );
         void ParseTransaction( const std::string &transaction_key );
 
         void ParseTransferTransaction( const std::vector<std::uint8_t> &transaction_data );
