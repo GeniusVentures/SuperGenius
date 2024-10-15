@@ -37,7 +37,7 @@ outcome::result<void> GraphsyncDAGSyncer::Listen(const Multiaddress& listen_to)
 }
 
 outcome::result<std::future<std::shared_ptr<ipfs_lite::ipld::IPLDNode>>> GraphsyncDAGSyncer::RequestNode(
-    const PeerId& peer, boost::optional<Multiaddress> address, const CID& root_cid) const
+    const PeerId& peer, boost::optional<std::vector<Multiaddress>> address, const CID& root_cid) const
 {
     if(!started_)
     {
@@ -69,7 +69,7 @@ outcome::result<std::future<std::shared_ptr<ipfs_lite::ipld::IPLDNode>>> Graphsy
     return result->get_future();
 }
 
-void GraphsyncDAGSyncer::AddRoute(const CID& cid, const PeerId& peer, Multiaddress& address)
+void GraphsyncDAGSyncer::AddRoute(const CID& cid, const PeerId& peer, std::vector<Multiaddress>& address)
 {
     routing_.insert(std::make_pair(cid, std::make_tuple(peer, address)));
 }
