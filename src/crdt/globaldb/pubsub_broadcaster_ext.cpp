@@ -162,7 +162,13 @@ outcome::result<void> PubSubBroadcasterExt::Broadcast(const base::Buffer& buff)
     // We are trusting that observed addresses from pubsub are correct to avoid doing this twice.
     // We still probably need autonat/circuit relay/holepunching on the dagsyncer, which may remove this code.
     // Add them to the broadcast message
-    auto peer_info = gossipPubSubTopic_->GetPubsub()->GetHost()->getPeerInfo();
+    auto peer_info_res = dagSyncer_->GetPeerInfo();
+    if (!peer_info_res)
+    {
+        m_logger->error("Dag syncer has no peer info");
+        return outcome::failure(boost::system::error_code{});
+    }
+    auto peer_info = peer_info_res.value();
     bpi->set_id(std::string(peer_info.id.toVector().begin(), peer_info.id.toVector().end()));
 
     auto mas = peer_info.addresses;

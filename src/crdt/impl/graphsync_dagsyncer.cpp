@@ -183,6 +183,15 @@ outcome::result<GraphsyncDAGSyncer::PeerId> GraphsyncDAGSyncer::GetId() const
     return outcome::failure(boost::system::error_code{});
 }
 
+outcome::result<libp2p::peer::PeerInfo> GraphsyncDAGSyncer::GetPeerInfo() const
+{
+    if (host_ != nullptr)
+    {
+        return host_->getPeerInfo();
+    }
+    return outcome::failure(boost::system::error_code{});
+}
+
 namespace
 {
     std::string formatExtensions(const std::vector<GraphsyncDAGSyncer::Extension>& extensions)

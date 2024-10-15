@@ -158,7 +158,7 @@ namespace sgns
         transaction_manager_->Start();
         processing_service_->StartProcessing( std::string( PROCESSING_GRID_CHANNEL ) );
 
-        DHTInit();
+        //DHTInit();
 
         io_thread = std::thread( [this]() { io_->run(); } );
     }

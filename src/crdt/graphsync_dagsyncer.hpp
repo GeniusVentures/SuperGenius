@@ -67,6 +67,8 @@ namespace sgns::crdt
     /* Returns peer ID */
     outcome::result<PeerId> GetId() const;
 
+    outcome::result<libp2p::peer::PeerInfo> GetPeerInfo() const;
+
   protected:
     outcome::result<std::future<std::shared_ptr<ipfs_lite::ipld::IPLDNode>>> RequestNode(
         const PeerId& peer, boost::optional<std::vector<Multiaddress>> address, const CID& root_cid) const;
