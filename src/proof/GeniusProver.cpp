@@ -42,12 +42,12 @@ namespace sgns
 
         auto [plonk_table_desc, assignment_table] = MakePlonkTableDescription( assigner_outputs.table );
 
-        auto fri_params = MakeFRIParams( plonk_table_desc.rows_amount, 1, expand_factor_ );
+        auto fri_params = MakeFRIParams( plonk_table_desc.rows_amount, 1, EXPAND_FACTOR_DEFAULT );
 
         LpcScheme lpc_scheme( fri_params );
 
         std::size_t permutation_size =
-            plonk_table_desc.witness_columns + plonk_table_desc.public_input_columns + component_constant_columns_;
+            plonk_table_desc.witness_columns + plonk_table_desc.public_input_columns + COMPONENT_CONSTANT_COLUMNS_DEFAULT;
 
         PublicPreprocessedData  public_preprocessed_data( PublicPreprocessor::process( constrains_sys,
                                                                                       assignment_table.public_table(),
@@ -113,7 +113,7 @@ namespace sgns
         return CreateProof( { assigner_outputs } );
     }
 
-    bool GeniusProver::VerifyProof( const GeniusProof &proof ) const
+    bool GeniusProver::VerifyProof( const GeniusProof &proof )
     {
         auto plonk_table_desc = GeniusAssigner::GetPlonkTableDescription();
 
@@ -127,12 +127,12 @@ namespace sgns
         plonk_table_desc.usable_rows_amount = constructed_desc.usable_rows_amount;
         plonk_table_desc.rows_amount        = constructed_desc.rows_amount;
 
-        auto fri_params = MakeFRIParams( plonk_table_desc.rows_amount, 1, expand_factor_ );
+        auto fri_params = MakeFRIParams( plonk_table_desc.rows_amount, 1, EXPAND_FACTOR_DEFAULT );
 
         LpcScheme lpc_scheme( fri_params );
 
         std::size_t permutation_size =
-            plonk_table_desc.witness_columns + plonk_table_desc.public_input_columns + component_constant_columns_;
+            plonk_table_desc.witness_columns + plonk_table_desc.public_input_columns + COMPONENT_CONSTANT_COLUMNS_DEFAULT;
 
         PublicPreprocessedData public_preprocessed_data(
             crypto3::zk::snark::placeholder_public_preprocessor<BlueprintFieldType, PlaceholderParams>::process(
@@ -153,18 +153,18 @@ namespace sgns
     }
 
     bool GeniusProver::VerifyProof( const ProofType                      &proof,
-                                    const GeniusAssigner::AssignerOutput &assigner_outputs ) const
+                                    const GeniusAssigner::AssignerOutput &assigner_outputs )
     {
         auto constrains_sys = MakePlonkConstraintSystem( assigner_outputs.constrains );
 
         auto [plonk_table_desc, assignment_table] = MakePlonkTableDescription( assigner_outputs.table );
 
-        auto fri_params = MakeFRIParams( plonk_table_desc.rows_amount, 1, expand_factor_ );
+        auto fri_params = MakeFRIParams( plonk_table_desc.rows_amount, 1, EXPAND_FACTOR_DEFAULT );
 
         LpcScheme lpc_scheme( fri_params );
 
         std::size_t permutation_size =
-            plonk_table_desc.witness_columns + plonk_table_desc.public_input_columns + component_constant_columns_;
+            plonk_table_desc.witness_columns + plonk_table_desc.public_input_columns + COMPONENT_CONSTANT_COLUMNS_DEFAULT;
 
         PublicPreprocessedData public_preprocessed_data(
             crypto3::zk::snark::placeholder_public_preprocessor<BlueprintFieldType, PlaceholderParams>::process(
@@ -188,7 +188,7 @@ namespace sgns
                                     const PublicPreprocessedData &public_data,
                                     const TableDescriptionType   &desc,
                                     const ConstraintSystemType   &constrains_sys,
-                                    const LpcScheme              &scheme ) const
+                                    const LpcScheme              &scheme )
     {
         return crypto3::zk::snark::placeholder_verifier<BlueprintFieldType, PlaceholderParams>::process( public_data,
                                                                                                          proof,
@@ -219,7 +219,7 @@ namespace sgns
     }
 
     GeniusProver::ConstraintSystemType GeniusProver::MakePlonkConstraintSystem(
-        const GeniusAssigner::PlonkConstraintSystemType &constrains ) const
+        const GeniusAssigner::PlonkConstraintSystemType &constrains )
     {
         ConstraintSystemType constraint_sys(
             crypto3::marshalling::types::make_plonk_constraint_system<ProverEndianess, ConstraintSystemType>(
@@ -229,14 +229,14 @@ namespace sgns
     }
 
     GeniusProver::PlonkTablePair GeniusProver::MakePlonkTableDescription(
-        const GeniusAssigner::PlonkAssignTableType &table ) const
+        const GeniusAssigner::PlonkAssignTableType &table )
     {
         return crypto3::marshalling::types::make_assignment_table<ProverEndianess, AssignmentTableType>( table );
     }
 
     GeniusProver::FriParams GeniusProver::MakeFRIParams( std::size_t rows_amount,
                                                          const int   max_step,
-                                                         std::size_t expand_factor ) const
+                                                         std::size_t expand_factor )
     {
         std::size_t table_rows_log = std::ceil( std::log2( rows_amount ) );
         std::size_t r              = table_rows_log - 1;
@@ -275,7 +275,7 @@ namespace sgns
                 commitment_params ) ) );
     }
 
-    std::vector<std::size_t> GeniusProver::GenerateRandomStepList( const std::size_t r, const int max_step ) const
+    std::vector<std::size_t> GeniusProver::GenerateRandomStepList( const std::size_t r, const int max_step )
     {
         using Distribution = std::uniform_int_distribution<int>;
         static std::random_device random_engine;
