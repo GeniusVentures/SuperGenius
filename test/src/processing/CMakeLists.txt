@@ -17,7 +17,3 @@ target_link_libraries(processing_service_test
     p2p::p2p_logger
     ipfs-pubsub
 )
-
-#if(FORCE_MULTILE)
-# set_target_properties(processing_service_test PROPERTIES LINK_FLAGS "${MULTIPLE_OPTION}")
-#endif()

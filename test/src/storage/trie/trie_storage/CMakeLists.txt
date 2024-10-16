@@ -12,10 +12,6 @@ addtest(supergenius_trie_storage_test
 
 #target_compile_options (supergenius_trie_storage_test PRIVATE /wd4251 /wd4101)
 
-if(FORCE_MULTILE)
-  set_target_properties(supergenius_trie_storage_test  PROPERTIES LINK_FLAGS "${MULTIPLE_OPTION}")
-endif()
-
 target_link_libraries(supergenius_trie_storage_test
     trie_storage
     rocksdb

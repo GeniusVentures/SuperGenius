@@ -23,10 +23,6 @@ set(CMAKE_USE_WIN32_THREADS_INIT OFF)
 set(CMAKE_USE_PTHREADS_INIT ON)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 
-# Allow multiple definitions
-set(FORCE_MULTILE ON)
-set(MULTIPLE_OPTION "-z muldefs")
-
 # Set extra compiler flags
 set(EXTRA_CXX_FLAGS)
 

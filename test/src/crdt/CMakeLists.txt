@@ -17,7 +17,3 @@ target_link_libraries(crdt_test
     Boost::boost
     Boost::filesystem
 )
-
-if(FORCE_MULTILE)
-    set_target_properties(crdt_test PROPERTIES LINK_FLAGS "${MULTIPLE_OPTION}")
-endif()
