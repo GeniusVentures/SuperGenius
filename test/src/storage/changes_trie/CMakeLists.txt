@@ -2,9 +2,6 @@
 addtest(changes_trie_test
     changes_trie_test.cpp
     )
-if(FORCE_MULTILE)
-  set_target_properties(changes_trie_test PROPERTIES LINK_FLAGS "${MULTIPLE_OPTION}")
-endif()
 
 target_link_libraries(changes_trie_test
     changes_tracker
@@ -15,9 +12,6 @@ target_link_libraries(changes_trie_test
 addtest(changes_tracker_test
     changes_tracker_test.cpp
     )
-if(FORCE_MULTILE)
-  set_target_properties(changes_tracker_test PROPERTIES LINK_FLAGS "${MULTIPLE_OPTION}")
-endif()
 
 target_link_libraries(changes_tracker_test
     changes_tracker

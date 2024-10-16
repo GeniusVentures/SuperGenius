@@ -45,10 +45,6 @@ set(CMAKE_USE_WIN32_THREADS_INIT OFF)
 set(CMAKE_USE_PTHREADS_INIT ON)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 
-# Allow multiple definitions
-set(FORCE_MULTILE ON)
-set(MULTIPLE_OPTION "-Xlink=-force:multiple")
-
 # Set custom subfolder for ABI
 set(ABI_SUBFOLDER_NAME "/aarch64")
 
