@@ -109,7 +109,7 @@ void PubSubBroadcasterExt::OnMessage(boost::optional<const GossipPubSub::Message
                             auto hb = dagSyncer_->HasBlock(cid);
                             if (hb.has_value() && !hb.value())
                             {
-                                m_logger->debug("Request node {} from {}", cid.toString().value(), addrvector[0].getStringAddress());
+                                //m_logger->debug("Request node {} from {}", cid.toString().value(), addrvector[0].getStringAddress());
                                 dagSyncer_->AddRoute(cid, peerId, addrvector);
                             }
                         }

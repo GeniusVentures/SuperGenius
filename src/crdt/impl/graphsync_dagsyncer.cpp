@@ -254,7 +254,11 @@ void GraphsyncDAGSyncer::BlockReceivedCallback(CID cid, sgns::common::Buffer buf
                 {
                     for (auto link : node.value()->getLinks())
                     {
-                        AddRoute(link.get().getCID(), std::get<0>(it->second), std::get<1>(it->second));
+                        auto linkhb = HasBlock(link.get().getCID());
+                        if (linkhb.has_value() && !linkhb.value())
+                        {
+                            AddRoute(link.get().getCID(), std::get<0>(it->second), std::get<1>(it->second));
+                        }
                     }
                 }
 

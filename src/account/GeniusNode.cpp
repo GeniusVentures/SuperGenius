@@ -43,7 +43,7 @@ namespace sgns
         auto result = logging_system->configure();
         std::cout << "Log Result: " << result.message << std::endl;
         libp2p::log::setLoggingSystem( logging_system );
-        libp2p::log::setLevelOfGroup( "SuperGeniusDemo", soralog::Level::ERROR_ );
+        libp2p::log::setLevelOfGroup( "SuperGeniusDemo", soralog::Level::OFF );
         //libp2p::log::setLevelOfGroup("SuperGeniusDemoFile", soralog::Level::ERROR_);
 
         auto loggerGlobalDB = base::createLogger( "GlobalDB" );
@@ -104,7 +104,7 @@ namespace sgns
 
         pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
             crdt::KeyPairFileStorage( write_base_path_ + pubsubKeyPath ).GetKeyPair().value() );
-        pubsub_->Start(pubsubport, { "/ip4/192.168.46.116/tcp/40300/p2p/12D3KooWM6u26Xj8N1PzWUiUX5p8thqRRCrgmgEP41RHPVNw9r4f", "/ip4/192.168.46.116/tcp/40096/p2p/12D3KooWHNgFsbvDU2JVpY6RrAsWnGujsmmargFtJRXHQvx8fWzE", "/ip4/192.168.46.116/tcp/40697/p2p/12D3KooWJbnptXWuugfqwDJGgZVAHyAvN3LZMFpwHRhQGzuY58rT"}, lanip, addresses);
+        pubsub_->Start(pubsubport, { "/ip4/192.168.46.116/tcp/40813/p2p/12D3KooWEhjSt5fxdsqftw8A1XdzfQy2JNZGiqi4rmFDQPoinV9Y", "/ip4/192.168.46.116/tcp/40096/p2p/12D3KooWHNgFsbvDU2JVpY6RrAsWnGujsmmargFtJRXHQvx8fWzE", "/ip4/192.168.46.116/tcp/40697/p2p/12D3KooWJbnptXWuugfqwDJGgZVAHyAvN3LZMFpwHRhQGzuY58rT"}, lanip, addresses);
         
         globaldb_ = std::make_shared<crdt::GlobalDB>(
             io_,
@@ -158,7 +158,7 @@ namespace sgns
         transaction_manager_->Start();
         processing_service_->StartProcessing( std::string( PROCESSING_GRID_CHANNEL ) );
 
-        //DHTInit();
+        DHTInit();
 
         io_thread = std::thread( [this]() { io_->run(); } );
     }

@@ -339,7 +339,7 @@ namespace sgns
                 }
                 else
                 {
-                    //m_logger->debug( "Invalid transaction" );
+                    m_logger->debug( "Invalid transaction" );
                 }
             }
 

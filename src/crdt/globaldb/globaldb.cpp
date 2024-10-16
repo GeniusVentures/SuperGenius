@@ -226,7 +226,7 @@ outcome::result<void> GlobalDB::Init(std::shared_ptr<CrdtOptions> crdtOptions)
 
     dht_->Start();
     dht_->bootstrap();
-    scheduleBootstrap(io, dagSyncerHost);
+    //scheduleBootstrap(io, dagSyncerHost);
     // Create pubsub broadcaster
     //auto broadcaster = std::make_shared<PubSubBroadcaster>(m_broadcastChannel);
     std::shared_ptr<PubSubBroadcasterExt> broadcaster;
