@@ -18,8 +18,3 @@ target_link_libraries(processing_app
     Boost::program_options
     ipfs-pubsub
 )
-
-
-if(FORCE_MULTILE)
-  set_target_properties(processing_app PROPERTIES LINK_FLAGS "${MULTIPLE_OPTION}")
-endif()
