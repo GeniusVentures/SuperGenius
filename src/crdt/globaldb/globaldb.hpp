@@ -15,7 +15,7 @@
 
 namespace sgns::crdt
 {
-class GlobalDB
+class GlobalDB : public std::enable_shared_from_this<GlobalDB>
 {
 public:
     using Buffer = base::Buffer;
@@ -72,6 +72,8 @@ public:
     }
 
 private:
+    void scheduleBootstrap(std::shared_ptr<boost::asio::io_context> io_context, std::shared_ptr<libp2p::Host> host);
+
     std::shared_ptr<boost::asio::io_context> m_context;
     std::string m_databasePath;
     int m_dagSyncPort;
@@ -83,6 +85,8 @@ private:
     std::shared_ptr<libp2p::protocol::IdentifyMessageProcessor> identifymsgproc_;
     std::shared_ptr<libp2p::protocol::HolepunchClient> holepunch_;
     std::shared_ptr<libp2p::protocol::HolepunchClientMsgProc> holepunchmsgproc_;
+
+    int obsAddrRetries = 0;
 
     std::shared_ptr<CrdtDatastore> m_crdtDatastore;
 

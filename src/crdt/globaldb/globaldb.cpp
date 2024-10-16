@@ -190,7 +190,8 @@ outcome::result<void> GlobalDB::Init(std::shared_ptr<CrdtOptions> crdtOptions)
     //Make Identify
     identifymsgproc_ = std::make_shared<libp2p::protocol::IdentifyMessageProcessor>(
         *dagSyncerHost, dagSyncerHost->getNetwork().getConnectionManager(), *injector.create<std::shared_ptr<libp2p::peer::IdentityManager>>(), injector.create<std::shared_ptr<libp2p::crypto::marshaller::KeyMarshaller>>());
-    identify_ = std::make_shared<libp2p::protocol::Identify>(*dagSyncerHost, identifymsgproc_, dagSyncerHost->getBus(), injector.create<std::shared_ptr<libp2p::transport::Upgrader>>(), [this]() {  });
+    identify_ = std::make_shared<libp2p::protocol::Identify>(*dagSyncerHost, identifymsgproc_, dagSyncerHost->getBus(), injector.create<std::shared_ptr<libp2p::transport::Upgrader>>(), [self{ shared_from_this() }]() {
+        });
     identify_->start();
 
     //If we used upnp we should have an address list, if not just get local ip
@@ -225,6 +226,7 @@ outcome::result<void> GlobalDB::Init(std::shared_ptr<CrdtOptions> crdtOptions)
 
     dht_->Start();
     dht_->bootstrap();
+    scheduleBootstrap(io, dagSyncerHost);
     // Create pubsub broadcaster
     //auto broadcaster = std::make_shared<PubSubBroadcaster>(m_broadcastChannel);
     std::shared_ptr<PubSubBroadcasterExt> broadcaster;
@@ -266,6 +268,23 @@ outcome::result<void> GlobalDB::Init(std::shared_ptr<CrdtOptions> crdtOptions)
     //    });
     //}
     return outcome::success();
+}
+
+void GlobalDB::scheduleBootstrap(std::shared_ptr<boost::asio::io_context> io_context, std::shared_ptr<libp2p::Host> host)
+{
+    auto timer = std::make_shared<boost::asio::steady_timer>(*io_context);
+    timer->expires_after(std::chrono::seconds(30));
+
+    timer->async_wait([self{ shared_from_this() }, timer, io_context, host](const boost::system::error_code& ec) {
+        if (!ec && self->obsAddrRetries < 3) {
+            if (host->getObservedAddressesReal().size() <= 0)
+            {
+                self->dht_->bootstrap();
+                ++self->obsAddrRetries;
+                self->scheduleBootstrap(io_context, host);
+            }
+        }
+        });
 }
 
 outcome::result<void> GlobalDB::Put(const HierarchicalKey& key, const Buffer& value)
