@@ -232,6 +232,10 @@ void GraphsyncDAGSyncer::BlockReceivedCallback(CID cid, sgns::common::Buffer buf
         if (!node.has_failure())
         {
             auto res = dagService_.addNode(node.value());
+            if (!res)
+            {
+                logger_->error("Error adding node to dagservice {}", res.error().message());
+            }
             std::stringstream sslinks;
             for (const auto& link : node.value()->getLinks())
             {

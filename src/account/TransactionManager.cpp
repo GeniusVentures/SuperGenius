@@ -239,7 +239,7 @@ namespace sgns
         //do
         {
             retval = block_storage_m->getBlockBody( block_number /*, transaction_num*/ );
-            m_logger->debug( "Trying to read transaction " + std::to_string(block_number) );
+            //m_logger->debug( "Trying to read transaction " + std::to_string(block_number) );
 
             if ( retval )
             {
@@ -323,15 +323,15 @@ namespace sgns
             if ( retval )
             {
                 //any block will need checking
-                m_logger->debug( "Found new blockchain entry for block " + std::to_string( last_block_id_m ) );
-                m_logger->debug( "Getting DAGHeader value" );
+                //m_logger->debug( "Found new blockchain entry for block " + std::to_string( last_block_id_m ) );
+                //m_logger->debug( "Getting DAGHeader value" );
                 bool valid_transaction = true;
 
                 auto DAGHeader = retval.value();
                 //m_logger->debug( "Destination address of Header: " + std::string( DAGHeader.toString() ) );
 
                 //validation that index is the same as number
-                m_logger->debug("Compare {} with {}", DAGHeader.number, last_block_id_m);
+                //m_logger->debug("Compare {} with {}", DAGHeader.number, last_block_id_m);
                 if ( DAGHeader.number == last_block_id_m )
                 {
                     //m_logger->info( "Checking transactions from block" );
@@ -344,6 +344,7 @@ namespace sgns
                 else
                 {
                     m_logger->debug( "Invalid transaction");
+                    break;
                 }
             }
             else {

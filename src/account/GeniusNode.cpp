@@ -47,7 +47,7 @@ namespace sgns
         //libp2p::log::setLevelOfGroup("SuperGeniusDemoFile", soralog::Level::ERROR_);
 
         auto loggerGlobalDB = base::createLogger( "GlobalDB" );
-        loggerGlobalDB->set_level( spdlog::level::debug );
+        loggerGlobalDB->set_level( spdlog::level::trace );
 
         auto loggerDAGSyncer = base::createLogger("GraphsyncDAGSyncer");
         loggerDAGSyncer->set_level( spdlog::level::trace );
@@ -56,7 +56,7 @@ namespace sgns
         loggerBroadcaster->set_level(spdlog::level::trace);
 
         auto loggerDataStore = base::createLogger("CrdtDatastore");
-        loggerDataStore->set_level(spdlog::level::trace);
+        loggerDataStore->set_level(spdlog::level::off);
         
         auto loggedTransactions = base::createLogger("TransactionManager");
         loggedTransactions->set_level(spdlog::level::off);
