@@ -12,7 +12,6 @@
 #include "account/proto/SGTransaction.pb.h"
 #include "account/UTXOTxParameters.hpp"
 
-using namespace boost::multiprecision;
 namespace sgns
 {
     class TransferTransaction : public IGeniusTransactions

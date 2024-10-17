@@ -128,7 +128,7 @@ int main( int argc, char *argv[] )
 
     //Inputs
 
-    sgns::GeniusNode node_instance( DEV_CONFIG );
+    sgns::GeniusNode node_instance( DEV_CONFIG, "deadbeef" );
 
     std::cout << "Insert \"process\", the image and the number of tokens to be" << std::endl;
     while ( true )

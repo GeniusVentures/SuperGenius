@@ -15,7 +15,9 @@ on:
 
 jobs:        
   Windows:
-    runs-on: windows-latest      
+    runs-on: windows-latest     
+    env:
+        CMAKE_GENERATOR: Ninja
     steps:
       - name: Get branch name
         id: branch-name
@@ -23,7 +25,7 @@ jobs:
 
       - name: Install Windows host dependencies
         run: |
-          choco install ccache -A
+          choco install ccache ninja -A
 
       - name: Install bindgen
         run: cargo install cbindgen
@@ -44,7 +46,7 @@ jobs:
           repository: 'GeniusVentures/thirdparty'
           path: 'thirdparty'
           submodules: 'recursive' 
-          ref: develop
+          ref: fix-crypto3-for-sgns
           
       - name: Thirdparty Create Build Directory
         run: cmake -E make_directory ${{github.workspace}}/thirdparty/build/Windows/Release          
@@ -167,7 +169,7 @@ jobs:
           repository: 'GeniusVentures/thirdparty'
           path: 'thirdparty'
           submodules: 'recursive' 
-          ref: develop
+          ref: fix-crypto3-for-sgns
           
       - name: Thirdparty Create Build Directory
         run: cmake -E make_directory ${{github.workspace}}/thirdparty/build/Linux/Release        
@@ -292,7 +294,7 @@ jobs:
           repository: 'GeniusVentures/thirdparty'
           path: 'thirdparty'
           submodules: 'recursive' 
-          ref: develop
+          ref: fix-crypto3-for-sgns
           
       - name: Thirdparty Create Build Directory
         run: cmake -E make_directory ${{github.workspace}}/thirdparty/build/Android/Release/arm64-v8a      
@@ -433,7 +435,7 @@ jobs:
           repository: 'GeniusVentures/thirdparty'
           path: 'thirdparty'
           submodules: 'recursive' 
-          ref: develop
+          ref: fix-crypto3-for-sgns
           
       - name: Thirdparty Create Build Directory
         run: cmake -E make_directory ${{github.workspace}}/thirdparty/build/OSX/Release      
@@ -551,7 +553,7 @@ jobs:
           repository: 'GeniusVentures/thirdparty'
           path: 'thirdparty'
           submodules: 'recursive' 
-          ref: develop
+          ref: fix-crypto3-for-sgns
           
       - name: Thirdparty Create Build Directory
         run: cmake -E make_directory ${{github.workspace}}/thirdparty/build/iOS/Release     

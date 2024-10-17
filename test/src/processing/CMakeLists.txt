@@ -10,11 +10,10 @@ addtest(processing_service_test
 target_include_directories(processing_service_test PRIVATE ${GSL_INCLUDE_DIR})
 
 target_link_libraries(processing_service_test
-	SGProcessingProto
+    SGProcessingProto
     processing_service
     logger
-    )
-
-#if(FORCE_MULTILE)
-# set_target_properties(processing_service_test PROPERTIES LINK_FLAGS "${MULTIPLE_OPTION}")
-#endif()
+    Boost::boost
+    p2p::p2p_logger
+    ipfs-pubsub
+)

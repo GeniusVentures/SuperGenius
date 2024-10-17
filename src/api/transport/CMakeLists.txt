@@ -15,7 +15,8 @@ add_library(api_transport
 target_link_libraries(api_transport
     Boost::boost
     logger
-    )
+    outcome
+)
 
 add_library(rpc_thread_pool
     rpc_io_context.hpp

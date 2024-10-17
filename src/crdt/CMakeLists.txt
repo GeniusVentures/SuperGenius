@@ -32,7 +32,8 @@ target_link_libraries(crdt_heads
     buffer
     hierarchical_key
     rocksdb
-    )
+    ipfs-lite-cpp::cid
+)
 supergenius_install(crdt_heads)
 
 add_library(crdt_datastore 
