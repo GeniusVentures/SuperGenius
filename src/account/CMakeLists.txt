@@ -39,6 +39,7 @@ target_link_libraries(sgns_account
     logger
     gnus_upnp
     transfer_proof
+    processing_proof
     KeyGeneration
     AsyncIOManager
     ${WIN_CRYPT_LIBRARY}

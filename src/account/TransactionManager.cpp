@@ -16,6 +16,7 @@
 #include "outcome/outcome.hpp"
 #include "primitives/block.hpp"
 #include "proof/TransferProof.hpp"
+#include "proof/ProcessingProof.hpp"
 
 namespace sgns
 {
@@ -177,7 +178,7 @@ namespace sgns
                                                                 std::vector<InputUTXOInfo>{ it->original_input },
                                                                 FillDAGStruct() );
                     //TODO - Create with the real balance and amount
-                    TransferProof prover( 100000, 1000 );
+                    TransferProof prover( uint64_t{it->full_amount}, uint64_t{it->full_amount} );
                     auto          proof_result = prover.GenerateFullProof();
                     if ( proof_result.has_value() )
                     {
@@ -202,14 +203,14 @@ namespace sgns
         {
             auto process_transaction = std::make_shared<ProcessingTransaction>(task_id, subtask.subtaskid(), FillDAGStruct());
     
-        //TransferProof prover( 100000, amount );
-        //auto          proof_result = prover.GenerateFullProof();
-        //if ( proof_result.has_value() )
-        //{
-        //TODO - Check what we might have to prove here
-        this->EnqueueTransaction( std::make_pair(process_transaction, std::vector<uint8_t>{}));
+        ProcessingProof prover( subtask_id );
+        auto            proof_result = prover.GenerateFullProof();
+        if ( proof_result.has_value() )
+        {
+            //TODO - Check what we might have to prove here
+            this->EnqueueTransaction( std::make_pair(process_transaction, std::vector<uint8_t>{} ));
         }
-        //}
+        }
     }
 
     uint64_t TransactionManager::GetBalance()
@@ -388,13 +389,11 @@ namespace sgns
     {
         bool ret = false;
 
-        boost::format proof_key{ std::string( TRANSACTION_BASE_FORMAT ) + string_src_address + "/tx/proof" +
-                                 "/%llu" };
+        boost::format proof_key{ std::string( TRANSACTION_BASE_FORMAT ) + string_src_address + "/tx/proof" + "/%llu" };
         proof_key % TEST_NET_ID;
         proof_key % nonce;
 
-            std::cout << " proof_key.str() the proof in " <<  proof_key.str() << std::endl;
-
+        std::cout << " proof_key.str() the proof in " << proof_key.str() << std::endl;
 
         auto maybe_proof_data = db_m->Get( { proof_key.str() } );
 
@@ -411,22 +410,20 @@ namespace sgns
     {
         bool ret = false;
 
-        boost::format proof_key{ std::string( TRANSACTION_BASE_FORMAT ) + string_src_address + "/tx/proof" +
-                                 "/%llu" };
+        boost::format proof_key{ std::string( TRANSACTION_BASE_FORMAT ) + string_src_address + "/tx/proof" + "/%llu" };
         proof_key % TEST_NET_ID;
         proof_key % nonce;
 
-            std::cout << " proof_key.str() the proof in " <<  proof_key.str() << std::endl;
-
+        std::cout << " proof_key.str() the proof in " << proof_key.str() << std::endl;
 
         auto maybe_proof_data = db_m->Get( { proof_key.str() } );
 
         if ( maybe_proof_data.has_value() )
         {
             auto value_vector = maybe_proof_data.value().toVector();
-            std::cout << " it has value with size  " <<  value_vector.size() << std::endl;
+            std::cout << " it has value with size  " << value_vector.size() << std::endl;
             auto maybe_proof_validity = IBasicProof::VerifyFullProof( maybe_proof_data.value().toVector() );
-            if (maybe_proof_validity.has_value())
+            if ( maybe_proof_validity.has_value() )
             {
                 ret = maybe_proof_validity.value();
             }
