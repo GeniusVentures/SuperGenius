@@ -37,16 +37,16 @@ namespace sgns
 
         std::ostringstream Y_coord_stream;
         Y_coord_stream << std::hex << value.Y;
-        // Ensure the hex string has an even number of characters
+
         std::string x_coord_string = X_coord_stream.str();
         std::string y_coord_string = Y_coord_stream.str();
         if ( x_coord_string.size() % 2 != 0 )
         {
-            x_coord_string = "0" + x_coord_string; // Add leading zero if necessary
+            x_coord_string = "0" + x_coord_string; 
         }
         if ( y_coord_string.size() % 2 != 0 )
         {
-            y_coord_string = "0" + y_coord_string; // Add leading zero if necessary
+            y_coord_string = "0" + y_coord_string; 
         }
 
         commit_coordinates.push_back( boost::json::value( "0x" + x_coord_string ) );
@@ -56,68 +56,50 @@ namespace sgns
         return commit_obj;
     }
 
-    outcome::result<std::vector<uint8_t>> TransferProof::SerializePublicParameters()
+    outcome::result<std::vector<uint8_t>> TransferProof::SerializeFullProof( const SGProof::BaseProofData &base_proof )
     {
+        SGProof::TransferProofProto transfer_proof_proto;
+        transfer_proof_proto.mutable_proof_data()->CopyFrom( base_proof );
         typename pallas::template g1_type<coordinates::affine>::value_type generator( generator_X_point,
                                                                                       generator_Y_point );
-        SGProof::TransferProofPublicInputs                                 pub_inputs;
         auto                                                               balance_commitment = balance_ * generator;
         auto                                                               amount_commitment  = amount_ * generator;
         auto new_balance_commitment = ( balance_ - amount_ ) * generator;
 
-        std::vector<std::uint8_t> balance_vector( 64 );
+        auto PointToVector =
+            []( typename pallas::template g1_type<coordinates::affine>::value_type point ) -> std::vector<std::uint8_t>
+        {
+            std::vector<std::uint8_t> retval( 64 );
 
-        nil::marshalling::bincode::field<pallas::base_field_type>::field_element_to_bytes<
-            std::vector<std::uint8_t>::iterator>( balance_commitment.X,
-                                                  balance_vector.begin(),
-                                                  balance_vector.begin() + balance_vector.size() / 2 );
-        nil::marshalling::bincode::field<pallas::base_field_type>::field_element_to_bytes<
-            std::vector<std::uint8_t>::iterator>( balance_commitment.Y,
-                                                  balance_vector.begin() + balance_vector.size() / 2,
-                                                  balance_vector.end() );
+            nil::marshalling::bincode::field<pallas::base_field_type>::field_element_to_bytes<
+                std::vector<std::uint8_t>::iterator>( point.X, retval.begin(), retval.begin() + retval.size() / 2 );
+            nil::marshalling::bincode::field<pallas::base_field_type>::field_element_to_bytes<
+                std::vector<std::uint8_t>::iterator>( point.Y, retval.begin() + retval.size() / 2, retval.end() );
+            return retval;
+        };
 
-        std::vector<std::uint8_t> amount_vector( 64 );
+        auto balance_vector     = PointToVector( balance_commitment );
+        auto amount_vector      = PointToVector( amount_commitment );
+        auto new_balance_vector = PointToVector( new_balance_commitment );
+        auto generator_vector   = PointToVector( generator );
 
-        nil::marshalling::bincode::field<pallas::base_field_type>::field_element_to_bytes<
-            std::vector<std::uint8_t>::iterator>( amount_commitment.X,
-                                                  amount_vector.begin(),
-                                                  amount_vector.begin() + amount_vector.size() / 2 );
-        nil::marshalling::bincode::field<pallas::base_field_type>::field_element_to_bytes<
-            std::vector<std::uint8_t>::iterator>( amount_commitment.Y,
-                                                  amount_vector.begin() + amount_vector.size() / 2,
-                                                  amount_vector.end() );
-        std::vector<std::uint8_t> new_balance_vector( 64 );
+        transfer_proof_proto.mutable_public_input()->set_balance_commitment(
+            std::string( balance_vector.begin(), balance_vector.end() ) );
+        transfer_proof_proto.mutable_public_input()->set_amount_commitment(
+            std::string( amount_vector.begin(), amount_vector.end() ) );
+        transfer_proof_proto.mutable_public_input()->set_new_balance_commitment(
+            std::string( new_balance_vector.begin(), new_balance_vector.end() ) );
+        transfer_proof_proto.mutable_public_input()->set_generator(
+            std::string( generator_vector.begin(), generator_vector.end() ) );
+        for ( const auto &value : ranges )
+        {
+            transfer_proof_proto.mutable_public_input()->add_ranges( value );
+        }
 
-        nil::marshalling::bincode::field<pallas::base_field_type>::field_element_to_bytes<
-            std::vector<std::uint8_t>::iterator>( new_balance_commitment.X,
-                                                  new_balance_vector.begin(),
-                                                  new_balance_vector.begin() + new_balance_vector.size() / 2 );
-        nil::marshalling::bincode::field<pallas::base_field_type>::field_element_to_bytes<
-            std::vector<std::uint8_t>::iterator>( new_balance_commitment.Y,
-                                                  new_balance_vector.begin() + new_balance_vector.size() / 2,
-                                                  new_balance_vector.end() );
-        std::vector<std::uint8_t> generator_vector( 64 );
-
-        nil::marshalling::bincode::field<pallas::base_field_type>::field_element_to_bytes<
-            std::vector<std::uint8_t>::iterator>( generator.X,
-                                                  generator_vector.begin(),
-                                                  generator_vector.begin() + generator_vector.size() / 2 );
-        nil::marshalling::bincode::field<pallas::base_field_type>::field_element_to_bytes<
-            std::vector<std::uint8_t>::iterator>( generator.Y,
-                                                  generator_vector.begin() + generator_vector.size() / 2,
-                                                  generator_vector.end() );
-
-        pub_inputs.set_balance_commitment( std::string( balance_vector.begin(), balance_vector.end() ) );
-        pub_inputs.set_amount_commitment( std::string( amount_vector.begin(), amount_vector.end() ) );
-        pub_inputs.set_new_balance_commitment( std::string( new_balance_vector.begin(), new_balance_vector.end() ) );
-        pub_inputs.set_generator( std::string( generator_vector.begin(), generator_vector.end() ) );
-        //TODO set ranges once we use them
-        //pub_inputs.set_ranges(  );
-
-        size_t               size = pub_inputs.ByteSizeLong();
+        size_t               size = transfer_proof_proto.ByteSizeLong();
         std::vector<uint8_t> serialized_proto( size );
 
-        pub_inputs.SerializeToArray( serialized_proto.data(), serialized_proto.size() );
+        transfer_proof_proto.SerializeToArray( serialized_proto.data(), serialized_proto.size() );
         return serialized_proto;
     }
 
@@ -140,15 +122,6 @@ namespace sgns
         private_inputs_json_array.push_back( GenerateFieldParameter( base_seed ) );
         private_inputs_json_array.push_back( GenerateFieldParameter( provided_totp ) );
 
-        boost::json::value json_value = public_inputs_json_array;
-
-        // Print the JSON structure
-        //std::cout << boost::json::serialize( json_value ) << std::endl;
-
-        boost::json::value json_value2 = private_inputs_json_array;
-
-        // Print the JSON structure
-        //std::cout << boost::json::serialize( json_value2 ) << std::endl;
         return std::make_pair( public_inputs_json_array, private_inputs_json_array );
     }
 
@@ -160,36 +133,47 @@ namespace sgns
         {
             return IBasicProof::Error::INVALID_PROTO_PROOF;
         }
-        if ( transfer_proof.proof_data().type() != "Transfer" )
+        if ( transfer_proof.proof_data().type() != std::string( TRANSFER_TYPE_NAME ) )
         {
             return IBasicProof::Error::UNEXPECTED_PROOF_TYPE;
         }
-        auto bytesToVector = []( const std::string &bytes ) -> std::vector<uint8_t>
+        auto StringToVector = []( const std::string &bytes ) -> std::vector<uint8_t>
         { return std::vector<uint8_t>( bytes.begin(), bytes.end() ); };
 
-        std::vector<uint8_t> balance_commitment_data =
-            std::vector<uint8_t>( bytesToVector( transfer_proof.public_input().balance_commitment() ) );
-        std::vector<uint8_t> amount_commitment_data =
-            std::vector<uint8_t>( bytesToVector( transfer_proof.public_input().amount_commitment() ) );
-        std::vector<uint8_t> new_balance_commitment_data =
-            std::vector<uint8_t>( bytesToVector( transfer_proof.public_input().new_balance_commitment() ) );
-        std::vector<uint8_t> generator_data =
-            std::vector<uint8_t>( bytesToVector( transfer_proof.public_input().generator() ) );
+        auto VectorToPoint = []( std::vector<uint8_t> bytes ) ->
+            typename pallas::template g1_type<coordinates::affine>::value_type
+        {
+            auto x_data =
+                nil::marshalling::bincode::field<typename pallas::base_field_type>::template field_element_from_bytes<
+                    std::vector<std::uint8_t>::iterator>( bytes.begin(), bytes.begin() + bytes.size() / 2 );
+            auto y_data =
+                nil::marshalling::bincode::field<typename pallas::base_field_type>::template field_element_from_bytes<
+                    std::vector<std::uint8_t>::iterator>( bytes.begin() + bytes.size() / 2, bytes.end() );
+            typename pallas::template g1_type<coordinates::affine>::value_type point( x_data.second, y_data.second );
+            return point;
+        };
 
-        auto x_data =
-            nil::marshalling::bincode::field<typename pallas::base_field_type>::template field_element_from_bytes<
-                std::vector<std::uint8_t>::iterator>( balance_commitment_data.begin(),
-                                                      balance_commitment_data.begin() +
-                                                          balance_commitment_data.size() / 2 );
-        auto y_data =
-            nil::marshalling::bincode::field<typename pallas::base_field_type>::template field_element_from_bytes<
-                std::vector<std::uint8_t>::iterator>( balance_commitment_data.begin() +
-                                                          balance_commitment_data.size() / 2,
-                                                      balance_commitment_data.end() );
-        typename pallas::template g1_type<coordinates::affine>::value_type balance_commitment( x_data.second,
-                                                                                               y_data.second );
-        std::array<uint64_t, 4>                                            ranges;
-        for ( auto i = 0; ( i < transfer_proof.public_input().ranges_size() ) && ( i < ranges.size() ); ++i )
+        std::vector<uint8_t> balance_commitment_data =
+            std::vector<uint8_t>( StringToVector( transfer_proof.public_input().balance_commitment() ) );
+        std::vector<uint8_t> amount_commitment_data =
+            std::vector<uint8_t>( StringToVector( transfer_proof.public_input().amount_commitment() ) );
+        std::vector<uint8_t> new_balance_commitment_data =
+            std::vector<uint8_t>( StringToVector( transfer_proof.public_input().new_balance_commitment() ) );
+        std::vector<uint8_t> generator_data =
+            std::vector<uint8_t>( StringToVector( transfer_proof.public_input().generator() ) );
+
+        auto balance_commitment     = VectorToPoint( balance_commitment_data );
+        auto amount_commitment      = VectorToPoint( amount_commitment_data );
+        auto new_balance_commitment = VectorToPoint( new_balance_commitment_data );
+        auto generator              = VectorToPoint( generator_data );
+
+        if ( transfer_proof.public_input().ranges_size() != 4 )
+        {
+            return IBasicProof::Error::INVALID_PUBLIC_PARAMETERS;
+        }
+
+        std::array<uint64_t, 4> ranges;
+        for ( auto i = 0; i < transfer_proof.public_input().ranges_size(); ++i )
         {
             ranges[i] = transfer_proof.public_input().ranges( i );
         }
@@ -201,23 +185,13 @@ namespace sgns
         private_inputs_json_array.push_back( TransferProof::GenerateFieldParameter( 0 ) );
         private_inputs_json_array.push_back( TransferProof::GenerateFieldParameter( 0 ) );
         public_inputs_json_array.push_back( TransferProof::GenerateCurveParameter( balance_commitment ) );
-        public_inputs_json_array.push_back( TransferProof::GenerateCurveParameter( balance_commitment ) );
-        public_inputs_json_array.push_back(
-            TransferProof::GenerateCurveParameter( balance_commitment - balance_commitment ) );
-        public_inputs_json_array.push_back( TransferProof::GenerateCurveParameter( balance_commitment ) ); //GENERATOR
+        public_inputs_json_array.push_back( TransferProof::GenerateCurveParameter( amount_commitment ) );
+        public_inputs_json_array.push_back( TransferProof::GenerateCurveParameter( new_balance_commitment ) );
+        public_inputs_json_array.push_back( TransferProof::GenerateCurveParameter( generator ) );
         public_inputs_json_array.push_back( TransferProof::GenerateArrayParameter( ranges ) );
         private_inputs_json_array.push_back( TransferProof::GenerateFieldParameter( 0 ) );
         private_inputs_json_array.push_back( TransferProof::GenerateFieldParameter( 0 ) );
 
-        boost::json::value json_value = public_inputs_json_array;
-
-        // Print the JSON structure
-        //std::cout << boost::json::serialize( json_value ) << std::endl;
-
-        boost::json::value json_value2 = private_inputs_json_array;
-
-        // Print the JSON structure
-        //std::cout << boost::json::serialize( json_value2 ) << std::endl;
         return std::make_pair( public_inputs_json_array, private_inputs_json_array );
     }
 
@@ -235,7 +209,7 @@ namespace sgns
 
         for ( const auto &value : values )
         {
-            field_array.push_back( GenerateFieldParameter( value ) ); // Add to the array
+            field_array.push_back( GenerateFieldParameter( value ) );
         }
         boost::json::object array_obj;
         array_obj["array"] = field_array;
@@ -246,12 +220,9 @@ namespace sgns
     boost::json::object TransferProof::GenerateFieldParameter( uint64_t value )
     {
         boost::json::object obj;
-        obj["field"] = value; // Add {"field": value} to the object
+        obj["field"] = value;
 
         return obj;
     }
-
-   // bool TransferProof::Register()
-
 
 }

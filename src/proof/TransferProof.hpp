@@ -13,6 +13,7 @@
 #include <array>
 #include <utility>
 #include <boost/json.hpp>
+#include <string_view>
 #include "IBasicProof.hpp"
 #include "circuits/TransactionVerifierCircuit.hpp"
 
@@ -28,7 +29,7 @@ namespace sgns
 
         std::string GetProofType() const override
         {
-            return "Transfer";
+            return std::string( TRANSFER_TYPE_NAME );
         }
 
         static boost::json::object GenerateIntParameter( uint64_t value );
@@ -46,25 +47,23 @@ namespace sgns
         uint64_t                                 balance_;
         uint64_t                                 amount_;
 
-        outcome::result<std::vector<uint8_t>>             SerializePublicParameters() override;
-        std::pair<boost::json::array, boost::json::array> GenerateJsonParameters() override;
+        outcome::result<std::vector<uint8_t>> SerializeFullProof(
+            const SGProof::BaseProofData &base_proof_data ) override;
+        std::pair<boost::json::array, boost::json::array>                         GenerateJsonParameters() override;
         static outcome::result<std::pair<boost::json::array, boost::json::array>> DeSerializePublicParams(
             const std::vector<uint8_t> &full_proof_data );
 
-        // Static function to register the class
+        static constexpr std::string_view TRANSFER_TYPE_NAME = "Transfer";
+
         static inline bool Register()
         {
-            RegisterDeserializer( "Transfer", &TransferProof::DeSerializePublicParams );
-            RegisterBytecode( "Transfer", std::string( TransactionCircuit ) );
+            RegisterDeserializer( std::string( TRANSFER_TYPE_NAME ), &TransferProof::DeSerializePublicParams );
+            RegisterBytecode( std::string( TRANSFER_TYPE_NAME ), std::string( TransactionCircuit ) );
             return true;
         }
 
-        // Static constructor for the derived class to insert into the map
-        static inline bool registered =  Register();
+        static inline bool registered = Register();
     };
-
-    // Initialize the static variable and trigger registration
-    //bool TransferProof::registered = TransferProof::Register();
 }
 
 #endif

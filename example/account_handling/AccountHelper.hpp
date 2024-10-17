@@ -8,6 +8,7 @@
 #ifndef _ACCOUNT_HELPER_HPP_
 #define _ACCOUNT_HELPER_HPP_
 #include <memory>
+#include <string_view>
 #include <boost/asio.hpp>
 #include <spdlog/sinks/basic_file_sink.h>
 #include "account/GeniusAccount.hpp"
