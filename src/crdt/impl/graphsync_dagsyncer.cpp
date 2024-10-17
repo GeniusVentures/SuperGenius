@@ -61,6 +61,7 @@ outcome::result<std::future<std::shared_ptr<ipfs_lite::ipld::IPLDNode>>> Graphsy
         std::bind(&GraphsyncDAGSyncer::RequestProgressCallback, this, std::placeholders::_1, std::placeholders::_2));
 
     // keeping subscriptions alive, otherwise they cancel themselves
+    logger_->debug("Requesting Node {} ", root_cid.toString().value());
     requests_.insert(std::make_pair(root_cid, std::make_tuple(
         std::shared_ptr<Subscription>(new Subscription(std::move(subscription))),
         result)));
@@ -274,6 +275,9 @@ void GraphsyncDAGSyncer::BlockReceivedCallback(CID cid, sgns::common::Buffer buf
         {
             logger_->error("Cannot create node from received block data for CID {}", cid.toString().value());
         }
+    }
+    else {
+        logger_->error("We already had this {}", cid.toString().value());
     }
 }
 }

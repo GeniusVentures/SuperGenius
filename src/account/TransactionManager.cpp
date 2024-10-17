@@ -239,12 +239,12 @@ namespace sgns
         //do
         {
             retval = block_storage_m->getBlockBody( block_number /*, transaction_num*/ );
-            //m_logger->debug( "Trying to read transaction " + std::to_string( transaction_num ) );
+            m_logger->debug( "Trying to read transaction " + std::to_string(block_number) );
 
             if ( retval )
             {
                 //any block will need checking
-                m_logger->debug( "Getting transaction " + std::to_string( transaction_num ) );
+                m_logger->debug( "Getting transaction " + std::to_string(block_number) );
 
                 //this is a vector<extrinsics>, which is a vector<buffer>
                 auto block_body = retval.value();
@@ -263,6 +263,9 @@ namespace sgns
                 }
                 transaction_num++;
                 ret = true;
+            }
+            else{
+                m_logger->debug("Return Value error {} ", retval.error().message());
             }
         }
         //while ( !retval );
@@ -320,14 +323,15 @@ namespace sgns
             if ( retval )
             {
                 //any block will need checking
-                //m_logger->debug( "Found new blockchain entry for block " + std::to_string( last_block_id_m ) );
-                //m_logger->debug( "Getting DAGHeader value" );
+                m_logger->debug( "Found new blockchain entry for block " + std::to_string( last_block_id_m ) );
+                m_logger->debug( "Getting DAGHeader value" );
                 bool valid_transaction = true;
 
                 auto DAGHeader = retval.value();
                 //m_logger->debug( "Destination address of Header: " + std::string( DAGHeader.toString() ) );
 
                 //validation that index is the same as number
+                m_logger->debug("Compare {} with {}", DAGHeader.number, last_block_id_m);
                 if ( DAGHeader.number == last_block_id_m )
                 {
                     //m_logger->info( "Checking transactions from block" );
@@ -339,8 +343,11 @@ namespace sgns
                 }
                 else
                 {
-                    m_logger->debug( "Invalid transaction" );
+                    m_logger->debug( "Invalid transaction");
                 }
+            }
+            else {
+                //m_logger->debug("Block Chain ret fail {}", retval.error().message());
             }
 
         } while ( retval );

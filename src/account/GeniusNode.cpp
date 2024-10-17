@@ -54,6 +54,12 @@ namespace sgns
 
         auto loggerBroadcaster = base::createLogger("PubSubBroadcasterExt");
         loggerBroadcaster->set_level(spdlog::level::trace);
+
+        auto loggerDataStore = base::createLogger("CrdtDatastore");
+        loggerDataStore->set_level(spdlog::level::trace);
+        
+        auto loggedTransactions = base::createLogger("TransactionManager");
+        loggedTransactions->set_level(spdlog::level::off);
         //auto loggerAutonat = base::createLogger("Autonat");
         //loggerDAGSyncer->set_level(spdlog::level::trace);
 

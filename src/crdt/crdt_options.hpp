@@ -60,7 +60,7 @@ namespace sgns::crdt
     static std::shared_ptr<CrdtOptions> DefaultOptions()
     {
       auto options = std::make_shared<CrdtOptions>();
-      options->logger = nullptr; //base::createLogger("CrdtDatastore");
+      options->logger = base::createLogger("CrdtDatastore");
       options->rebroadcastIntervalMilliseconds = 10000; // 10s
       options->dagSyncerTimeoutSec = 300; // 5 mins
       options->numWorkers = 5;
