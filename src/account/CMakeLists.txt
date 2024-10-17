@@ -36,6 +36,7 @@ target_link_libraries(sgns_account
 	logger
 	gnus_upnp
     transfer_proof
+    processing_proof
     ${WIN_CRYPT_LIBRARY}
 )
 set_target_properties(sgns_account PROPERTIES PUBLIC_HEADER "GeniusNode.hpp")

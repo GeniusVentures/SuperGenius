@@ -55,6 +55,10 @@ namespace sgns
     outcome::result<SGProof::BaseProofData> IBasicProof::GenerateProof()
     {
         SGProof::BaseProofData retval;
+        if ( bytecode_payload_ == "Bypass" )
+        {
+            return retval;
+        }
         auto [public_inputs_json_array, private_inputs_json_array] = GenerateJsonParameters();
 
         GeniusAssigner assigner;
@@ -104,6 +108,10 @@ namespace sgns
         auto bytecode = ByteCodeMap.find( base_proof.proof_data().type() );
 
         if ( bytecode == ByteCodeMap.end() )
+        {
+            return Error::BYTECODE_NOT_FOUND;
+        }
+        if ( bytecode->second == "Bypass" )
         {
             return Error::BYTECODE_NOT_FOUND;
         }

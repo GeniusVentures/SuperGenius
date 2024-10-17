@@ -9,6 +9,9 @@ add_library(genius_assigner
 add_library(transfer_proof
     TransferProof.cpp
 )
+add_library(processing_proof
+    ProcessingProof.cpp
+)
 add_library(basic_proof
     IBasicProof.cpp
 )
@@ -41,11 +44,19 @@ target_link_libraries(transfer_proof
     outcome
     Boost::boost
     Boost::log
-    #Boost::json
+    Boost::unit_test_framework
+)
+target_link_libraries(processing_proof
+    basic_proof
+    SGProofProto
+    outcome
+    Boost::boost
+    Boost::log
     Boost::unit_test_framework
 )
 
 supergenius_install(genius_assigner)
 supergenius_install(genius_prover)
 supergenius_install(transfer_proof)
+supergenius_install(processing_proof)
 supergenius_install(basic_proof)
