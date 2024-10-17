@@ -38,7 +38,8 @@ namespace sgns
             INVALID_CIRCUIT,
             INVALID_PROTO_PROOF,
             INVALID_PROOF_TYPE,
-            UNEXPECTED_PROOF_TYPE
+            UNEXPECTED_PROOF_TYPE,
+            INVALID_PUBLIC_PARAMETERS
         };
 
         virtual std::string GetProofType() const = 0;
@@ -62,14 +63,14 @@ namespace sgns
         }
 
     private:
-        const std::string     bytecode_payload_;
-        std::shared_ptr<void> assigner_;
-        std::shared_ptr<void> prover_;
+        const std::string bytecode_payload_;
 
-        static SGProof::BaseProofData                 DeSerializeProof( const std::vector<uint8_t> &proof_data );
-        static std::vector<uint8_t>                   SerializeProof( const SGProof::BaseProofData &proof );
-        outcome::result<SGProof::BaseProofData>       GenerateProof();
-        virtual outcome::result<std::vector<uint8_t>> SerializePublicParameters()          = 0;
+        static outcome::result<SGProof::BaseProofProto> DeSerializeBaseProof( const std::vector<uint8_t> &proof_data );
+
+        outcome::result<SGProof::BaseProofData>         GenerateProof();
+        virtual outcome::result<std::vector<uint8_t>>   SerializeFullProof(
+              const SGProof::BaseProofData &base_proof_data ) = 0;
+
         virtual std::pair<boost::json::array, boost::json::array> GenerateJsonParameters() = 0;
     };
 

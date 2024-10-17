@@ -425,7 +425,11 @@ namespace sgns
         {
             auto value_vector = maybe_proof_data.value().toVector();
             std::cout << " it has value with size  " <<  value_vector.size() << std::endl;
-            auto proof_struct = IBasicProof::VerifyFullProof( maybe_proof_data.value().toVector() );
+            auto maybe_proof_validity = IBasicProof::VerifyFullProof( maybe_proof_data.value().toVector() );
+            if (maybe_proof_validity.has_value())
+            {
+                ret = maybe_proof_validity.value();
+            }
         }
         return ret;
     }
