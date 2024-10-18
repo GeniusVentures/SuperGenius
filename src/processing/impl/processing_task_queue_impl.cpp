@@ -24,8 +24,9 @@ namespace sgns::processing
         {
             m_logger->debug( "[{}] placed to GlobalDB ", taskKey );
         }
-        for ( auto &subTask : subTasks )
+        for (auto& subTask : subTasks)
         {
+            valueBuffer.clear();
             auto subTaskKey =
                 ( boost::format( "subtasks/TASK_%s/%s" ) % task.ipfs_block_id() % subTask.subtaskid() ).str();
             valueBuffer.put( subTask.SerializeAsString() );
@@ -69,6 +70,7 @@ namespace sgns::processing
                 SGProcessing::SubTask subTask;
                 if ( subTask.ParseFromArray( element.second.data(), element.second.size() ) )
                 {
+                    m_logger->debug("Subtask check {}", subTask.chunkstoprocess_size());
                     subTasks.push_back( std::move( subTask ) );
                 }
                 else

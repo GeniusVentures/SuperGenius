@@ -40,7 +40,7 @@ namespace sgns
             subtask.set_subtaskid(uuidstring);
             for ( size_t chunkIdx = 0; chunkIdx < numchunks; ++chunkIdx )
             {
-                //std::cout << "AddChunk : " << chunkIdx << std::endl;
+                std::cout << "AddChunk : " << chunkIdx << std::endl;
                 SGProcessing::ProcessingChunk chunk;
                 chunk.set_chunkid( ( boost::format( "CHUNK_%d_%d" ) % uuidstring % chunkId ).str() );
                 chunk.set_n_subchunks( 1 );
@@ -60,7 +60,7 @@ namespace sgns
 
                 ++chunkId;
             }
-            //std::cout << "Subtask? " << subtask.chunkstoprocess_size() << std::endl;
+            std::cout << "Subtask? " << subtask.chunkstoprocess_size() << std::endl;
             subTasks.push_back( std::move( subtask ) );
             
 

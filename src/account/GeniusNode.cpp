@@ -58,8 +58,12 @@ namespace sgns
         auto loggerDataStore = base::createLogger("CrdtDatastore");
         loggerDataStore->set_level(spdlog::level::off);
         
-        auto loggedTransactions = base::createLogger("TransactionManager");
-        loggedTransactions->set_level(spdlog::level::off);
+        auto loggerTransactions = base::createLogger("TransactionManager");
+        loggerTransactions->set_level(spdlog::level::off);
+
+        auto loggerQueue = base::createLogger("ProcessingTaskQueueImpl");
+        loggerQueue->set_level(spdlog::level::trace);
+        
         //auto loggerAutonat = base::createLogger("Autonat");
         //loggerDAGSyncer->set_level(spdlog::level::trace);
 
@@ -282,6 +286,7 @@ namespace sgns
                 //}
                 //imageindex++;
             }
+
             task_queue_->EnqueueTask(task, subTasks);
             transaction_manager_->HoldEscrow(
                 funds, nSubTasks, uint256_t{ std::string( dev_config_.Addr ) }, dev_config_.Cut, image_path );
