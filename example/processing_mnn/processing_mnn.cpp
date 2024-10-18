@@ -182,7 +182,7 @@ int main(int argc, char* argv[])
     if (imagetosplit.size() == 0) return 0;
     //Split Image into RGBA bytes
     //ImageSplitter imagesplit(inputImageFileName, 540, 4860, 48600);
-    ImageSplitter imagesplit(imagetosplit, 5400, 0, 4860000);
+    ImageSplitter imagesplit(imagetosplit, 5400, 0, 4860000, 4);
     // For 1350x900 broken into 135x90
     //bytes - 48,600
     //Block Stride - 540
