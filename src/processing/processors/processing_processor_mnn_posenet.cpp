@@ -40,13 +40,13 @@ namespace sgns::processing
             std::transform(imageData.begin(), imageData.end(), output.begin(),
                             []( char c ) { return static_cast<uint8_t>( c ); } );
             //ImageSplitter animageSplit( output, task.block_line_stride(), task.block_stride(), task.block_len() );
-            ImageSplitter animageSplit(output, block_line_stride, block_stride, block_len);
+            ImageSplitter animageSplit(output, block_line_stride, block_stride, block_len, channels);
             auto          dataindex           = 0;
             auto          basechunk           = subTask.chunkstoprocess( 0 );
             bool          isValidationSubTask = ( subTask.subtaskid() == "subtask_validation" );
             ImageSplitter ChunkSplit( animageSplit.GetPart( dataindex ), chunk_line_stride, chunk_stride,
                                       animageSplit.GetPartHeightActual( dataindex ) / chunk_subchunk_height *
-                                            chunk_line_stride);
+                                            chunk_line_stride, channels);
             
             for ( int chunkIdx = 0; chunkIdx < subTask.chunkstoprocess_size(); ++chunkIdx )
             {
