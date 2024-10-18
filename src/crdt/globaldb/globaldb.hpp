@@ -80,11 +80,11 @@ private:
     std::string m_graphSyncAddrs;
     std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> m_broadcastChannel;
 
-    std::shared_ptr<sgns::ipfs_lite::ipfs::dht::IpfsDHT> dht_;
-    std::shared_ptr<libp2p::protocol::Identify> identify_;
-    std::shared_ptr<libp2p::protocol::IdentifyMessageProcessor> identifymsgproc_;
-    std::shared_ptr<libp2p::protocol::HolepunchClient> holepunch_;
-    std::shared_ptr<libp2p::protocol::HolepunchClientMsgProc> holepunchmsgproc_;
+    //std::shared_ptr<sgns::ipfs_lite::ipfs::dht::IpfsDHT> dht_;
+    //std::shared_ptr<libp2p::protocol::Identify> identify_;
+    //std::shared_ptr<libp2p::protocol::IdentifyMessageProcessor> identifymsgproc_;
+    //std::shared_ptr<libp2p::protocol::HolepunchClient> holepunch_;
+    //std::shared_ptr<libp2p::protocol::HolepunchClientMsgProc> holepunchmsgproc_;
 
     int obsAddrRetries = 0;
 

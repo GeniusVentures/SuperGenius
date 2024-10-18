@@ -179,20 +179,20 @@ outcome::result<void> GlobalDB::Init(std::shared_ptr<CrdtOptions> crdtOptions)
     auto dagSyncerHost = injector.create<std::shared_ptr<libp2p::Host>>();
 
     //Make a DHT
-    auto kademlia =
-        injector
-        .create<std::shared_ptr<libp2p::protocol::kademlia::Kademlia>>();
-    dht_ = std::make_shared<sgns::ipfs_lite::ipfs::dht::IpfsDHT>(kademlia, bootstrapAddresses_, m_context);
-    //Make Holepunch Client
-    holepunchmsgproc_ = std::make_shared<libp2p::protocol::HolepunchClientMsgProc>(*dagSyncerHost, dagSyncerHost->getNetwork().getConnectionManager());
-    holepunch_ = std::make_shared<libp2p::protocol::HolepunchClient>(*dagSyncerHost, holepunchmsgproc_, dagSyncerHost->getBus());
-    holepunch_->start();
-    //Make Identify
-    identifymsgproc_ = std::make_shared<libp2p::protocol::IdentifyMessageProcessor>(
-        *dagSyncerHost, dagSyncerHost->getNetwork().getConnectionManager(), *injector.create<std::shared_ptr<libp2p::peer::IdentityManager>>(), injector.create<std::shared_ptr<libp2p::crypto::marshaller::KeyMarshaller>>());
-    identify_ = std::make_shared<libp2p::protocol::Identify>(*dagSyncerHost, identifymsgproc_, dagSyncerHost->getBus(), injector.create<std::shared_ptr<libp2p::transport::Upgrader>>(), [self{ shared_from_this() }]() {
-        });
-    identify_->start();
+    //auto kademlia =
+    //    injector
+    //    .create<std::shared_ptr<libp2p::protocol::kademlia::Kademlia>>();
+    //dht_ = std::make_shared<sgns::ipfs_lite::ipfs::dht::IpfsDHT>(kademlia, bootstrapAddresses_, m_context);
+    ////Make Holepunch Client
+    //holepunchmsgproc_ = std::make_shared<libp2p::protocol::HolepunchClientMsgProc>(*dagSyncerHost, dagSyncerHost->getNetwork().getConnectionManager());
+    //holepunch_ = std::make_shared<libp2p::protocol::HolepunchClient>(*dagSyncerHost, holepunchmsgproc_, dagSyncerHost->getBus());
+    //holepunch_->start();
+    ////Make Identify
+    //identifymsgproc_ = std::make_shared<libp2p::protocol::IdentifyMessageProcessor>(
+    //    *dagSyncerHost, dagSyncerHost->getNetwork().getConnectionManager(), *injector.create<std::shared_ptr<libp2p::peer::IdentityManager>>(), injector.create<std::shared_ptr<libp2p::crypto::marshaller::KeyMarshaller>>());
+    //identify_ = std::make_shared<libp2p::protocol::Identify>(*dagSyncerHost, identifymsgproc_, dagSyncerHost->getBus(), injector.create<std::shared_ptr<libp2p::transport::Upgrader>>(), [self{ shared_from_this() }]() {
+    //    });
+    //identify_->start();
 
     //If we used upnp we should have an address list, if not just get local ip
     std::string localaddress;
@@ -224,8 +224,8 @@ outcome::result<void> GlobalDB::Init(std::shared_ptr<CrdtOptions> crdtOptions)
         // @todo Check if the error is not fatal
     }
 
-    dht_->Start();
-    dht_->bootstrap();
+    //dht_->Start();
+    //dht_->bootstrap();
     //scheduleBootstrap(io, dagSyncerHost);
     // Create pubsub broadcaster
     //auto broadcaster = std::make_shared<PubSubBroadcaster>(m_broadcastChannel);
@@ -270,22 +270,22 @@ outcome::result<void> GlobalDB::Init(std::shared_ptr<CrdtOptions> crdtOptions)
     return outcome::success();
 }
 
-void GlobalDB::scheduleBootstrap(std::shared_ptr<boost::asio::io_context> io_context, std::shared_ptr<libp2p::Host> host)
-{
-    auto timer = std::make_shared<boost::asio::steady_timer>(*io_context);
-    timer->expires_after(std::chrono::seconds(30));
-
-    timer->async_wait([self{ shared_from_this() }, timer, io_context, host](const boost::system::error_code& ec) {
-        if (!ec && self->obsAddrRetries < 3) {
-            if (host->getObservedAddressesReal().size() <= 0)
-            {
-                self->dht_->bootstrap();
-                ++self->obsAddrRetries;
-                self->scheduleBootstrap(io_context, host);
-            }
-        }
-        });
-}
+//void GlobalDB::scheduleBootstrap(std::shared_ptr<boost::asio::io_context> io_context, std::shared_ptr<libp2p::Host> host)
+//{
+//    auto timer = std::make_shared<boost::asio::steady_timer>(*io_context);
+//    timer->expires_after(std::chrono::seconds(30));
+//
+//    timer->async_wait([self{ shared_from_this() }, timer, io_context, host](const boost::system::error_code& ec) {
+//        if (!ec && self->obsAddrRetries < 3) {
+//            if (host->getObservedAddressesReal().size() <= 0)
+//            {
+//                self->dht_->bootstrap();
+//                ++self->obsAddrRetries;
+//                self->scheduleBootstrap(io_context, host);
+//            }
+//        }
+//        });
+//}
 
 outcome::result<void> GlobalDB::Put(const HierarchicalKey& key, const Buffer& value)
 {

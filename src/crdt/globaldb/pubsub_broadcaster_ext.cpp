@@ -144,11 +144,11 @@ outcome::result<void> PubSubBroadcasterExt::Broadcast(const base::Buffer& buff)
     auto bpi = new sgns::crdt::broadcasting::BroadcastMessage_PeerInfo;
     
     //Get the port from the dagsyncer
-    //auto port_opt = dagSyncerMultiaddress_.getFirstValueForProtocol(libp2p::multi::Protocol::Code::TCP);
-    //if (!port_opt) {
-    //    return outcome::failure(boost::system::error_code{});
-    //}
-    //auto port = port_opt.value();
+    auto port_opt = dagSyncerMultiaddress_.getFirstValueForProtocol(libp2p::multi::Protocol::Code::TCP);
+    if (!port_opt) {
+        return outcome::failure(boost::system::error_code{});
+    }
+    auto port = port_opt.value();
     
     //Get peer ID from dagsyncer
     //auto peer_id_opt = dagSyncerMultiaddress_.getPeerId();
@@ -183,7 +183,21 @@ outcome::result<void> PubSubBroadcasterExt::Broadcast(const base::Buffer& buff)
         //    bmsg.add_multiaddress(std::string(addrstr.begin(), addrstr.end()));
         //}
     }
-
+    auto pubsubObserved = gossipPubSubTopic_->GetPubsub()->GetHost()->getObservedAddressesReal();
+    for (auto& address : pubsubObserved)
+    {
+        auto ip_address_opt = address.getFirstValueForProtocol(libp2p::multi::Protocol::Code::IP4);
+        if (ip_address_opt) {
+            auto new_address = libp2p::multi::Multiaddress::create(fmt::format("/ip4/{}/tcp/{}/p2p/{}", ip_address_opt.value(), port, peer_info.id.toBase58()));
+            auto addrstr = new_address.value().getStringAddress();
+            if (new_address)
+            {
+                m_logger->info("Address Broadcast Converted {}", new_address.value().getStringAddress());
+                bpi->add_addrs(new_address.value().getStringAddress());
+            }
+            
+        }
+    }
 
     //If no addresses existed, we don't have anything to broadcast that is not otherwise a local address.
     if (bpi->addrs_size() <= 0)

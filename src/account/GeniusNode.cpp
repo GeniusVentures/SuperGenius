@@ -43,7 +43,7 @@ namespace sgns
         auto result = logging_system->configure();
         std::cout << "Log Result: " << result.message << std::endl;
         libp2p::log::setLoggingSystem( logging_system );
-        libp2p::log::setLevelOfGroup( "SuperGeniusDemo", soralog::Level::OFF );
+        libp2p::log::setLevelOfGroup( "SuperGeniusDemo", soralog::Level::TRACE );
         //libp2p::log::setLevelOfGroup("SuperGeniusDemoFile", soralog::Level::ERROR_);
 
         auto loggerGlobalDB = base::createLogger( "GlobalDB" );
@@ -110,7 +110,7 @@ namespace sgns
 
         pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
             crdt::KeyPairFileStorage( write_base_path_ + pubsubKeyPath ).GetKeyPair().value() );
-        pubsub_->Start(pubsubport, { "/ip4/192.168.46.116/tcp/40813/p2p/12D3KooWEhjSt5fxdsqftw8A1XdzfQy2JNZGiqi4rmFDQPoinV9Y", "/ip4/192.168.46.116/tcp/40096/p2p/12D3KooWHNgFsbvDU2JVpY6RrAsWnGujsmmargFtJRXHQvx8fWzE", "/ip4/192.168.46.116/tcp/40697/p2p/12D3KooWJbnptXWuugfqwDJGgZVAHyAvN3LZMFpwHRhQGzuY58rT"}, lanip, addresses);
+        pubsub_->Start(pubsubport, { "/ip4/137.184.224.118/tcp/4001/p2p/12D3KooWKhqPn4nAXJRxyDESgqj3dBBBBVvmwFAShVkTdhioLwYG", "/ip4/192.168.46.116/tcp/40813/p2p/12D3KooWEhjSt5fxdsqftw8A1XdzfQy2JNZGiqi4rmFDQPoinV9Y", "/ip4/192.168.46.116/tcp/40096/p2p/12D3KooWHNgFsbvDU2JVpY6RrAsWnGujsmmargFtJRXHQvx8fWzE", "/ip4/192.168.46.116/tcp/40697/p2p/12D3KooWJbnptXWuugfqwDJGgZVAHyAvN3LZMFpwHRhQGzuY58rT"}, lanip, addresses);
         
         globaldb_ = std::make_shared<crdt::GlobalDB>(
             io_,
