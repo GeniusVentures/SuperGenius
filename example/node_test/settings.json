@@ -18,7 +18,8 @@
 		"chunk_stride": 4320,
 		"chunk_subchunk_height": 5,
 		"chunk_subchunk_width": 5,
-		"chunk_count": 24
+		"chunk_count": 24,
+		"channels": 4
 	},
 	{
 		"image": "data/frisbee3.data",
@@ -30,7 +31,8 @@
 		"chunk_stride": 1152,
 		"chunk_subchunk_height": 4,
 		"chunk_subchunk_width": 4,
-		"chunk_count": 16
+		"chunk_count": 16,
+		"channels": 3
 	}
   ]
 }

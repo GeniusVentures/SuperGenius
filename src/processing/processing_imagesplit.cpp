@@ -39,8 +39,9 @@ namespace sgns::processing
     ImageSplitter::ImageSplitter(const std::vector<uint8_t>& buffer,
         uint64_t blockstride,
         uint64_t blocklinestride,
-        uint64_t blocklen)
-        : blockstride_(blockstride), blocklinestride_(blocklinestride), blocklen_(blocklen) {
+        uint64_t blocklen,
+        int channels)
+        : blockstride_(blockstride), blocklinestride_(blocklinestride), blocklen_(blocklen), channels_(channels) {
         // Set inputImage and imageSize from the provided buffer
         //inputImage = reinterpret_cast<const unsigned char*>(buffer.data());
 
@@ -109,7 +110,7 @@ namespace sgns::processing
             //    std::cerr << "Error writing PNG file: " << filename << "\n";
             //}
             splitparts_.push_back(chunkBuffer);
-            chunkWidthActual_.push_back(blockstride_ / 4);
+            chunkWidthActual_.push_back(blockstride_ / channels_);
             chunkHeightActual_.push_back(blocklen_ / blockstride_);
             gsl::span<const uint8_t> byte_span(chunkBuffer);
             std::vector<uint8_t> shahash(SHA256_DIGEST_LENGTH);

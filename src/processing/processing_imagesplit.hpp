@@ -32,7 +32,8 @@ namespace sgns::processing
             const char* filename,
             uint64_t blockstride,
             uint64_t blocklinestride,
-            uint64_t blocklen
+            uint64_t blocklen,
+            int channels
         );
 
         /** Split an image loaded from raw data of a file loaded elsewhere, i.e. asynciomanager
@@ -44,7 +45,8 @@ namespace sgns::processing
         ImageSplitter(const std::vector<char>& buffer,
             uint64_t blockstride,
             uint64_t blocklinestride,
-            uint64_t blocklen);
+            uint64_t blocklen,
+            int channels);
         
         /** Split an image loaded from raw RGBA bytes
         * @param buffer - Raw RGBA
@@ -55,7 +57,8 @@ namespace sgns::processing
         ImageSplitter(const std::vector<uint8_t>& buffer,
             uint64_t blockstride,
             uint64_t blocklinestride,
-            uint64_t blocklen);
+            uint64_t blocklen,
+            int channels);
 
         ~ImageSplitter()
         {
@@ -113,6 +116,7 @@ namespace sgns::processing
         uint64_t blockstride_;
         uint64_t blocklinestride_;
         uint64_t blocklen_;
+        int channels_;
         const unsigned char* inputImage;
         uint64_t imageSize;
         std::vector<int> chunkWidthActual_;

@@ -32,6 +32,7 @@ namespace sgns::processing
         auto chunk_subchunk_height = document["chunk_subchunk_height"].GetUint64();
         auto chunk_subchunk_width = document["chunk_subchunk_width"].GetUint64();
         auto chunk_count = document["chunk_count"].GetUint64();
+        auto channels = document["channels"].GetUint64();
 
         //for ( auto image : *imageData_ )
         //{
@@ -63,7 +64,7 @@ namespace sgns::processing
                 else
                 {
                     auto procresults =
-                        MNNProcess( ChunkSplit.GetPart( chunkIdx ), modelFile_bytes, ChunkSplit.GetPartWidthActual( chunkIdx ),
+                        MNNProcess( ChunkSplit.GetPart( chunkIdx ), modelFile_bytes, channels, ChunkSplit.GetPartWidthActual( chunkIdx ),
                                     ChunkSplit.GetPartHeightActual( chunkIdx ) );
 
                     const float* data = procresults->host<float>();
@@ -127,7 +128,7 @@ namespace sgns::processing
     //    }
     //}
 
-    std::unique_ptr<MNN::Tensor> MNN_PoseNet::MNNProcess(const std::vector<uint8_t>& imgdata, std::vector<uint8_t>& modelFile, const int origwidth,
+    std::unique_ptr<MNN::Tensor> MNN_PoseNet::MNNProcess(const std::vector<uint8_t>& imgdata, std::vector<uint8_t>& modelFile, const int channels, const int origwidth,
         const int origheight, const std::string filename) {
         std::vector<uint8_t> ret_vect(imgdata);
 
@@ -163,6 +164,10 @@ namespace sgns::processing
             ::memcpy(preProcessConfig.mean, means, sizeof(means));
             ::memcpy(preProcessConfig.normal, norms, sizeof(norms));
             preProcessConfig.sourceFormat = CV::RGBA;
+            if (channels == 3)
+            {
+                preProcessConfig.sourceFormat = CV::RGB;
+            }
             preProcessConfig.destFormat = CV::RGB;
             preProcessConfig.filterType = CV::BILINEAR;
 
