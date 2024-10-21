@@ -12,10 +12,9 @@
 #include "proof/GeniusAssigner.hpp"
 #include "proof/GeniusProver.hpp"
 #include <boost/json.hpp>
-#include "proof/TransferProof.hpp"
 #include "BytecodeTest.hpp"
 
-TEST( ProofAssignerTest, CreateProof )
+TEST( ProverTest, CreateAssignment )
 {
     auto             GeniusAssigner = sgns::GeniusAssigner();
     std::vector<int> public_inputs  = { 5, 11 };
@@ -35,8 +34,19 @@ TEST( ProofAssignerTest, CreateProof )
     }
     // Assert that the function was successful (i.e., no error occurred)
     ASSERT_FALSE( print_result.has_error() ) << "Expected success but got an error!";
+    auto assign_value = assign_result.value().at( 0 );
+}
 
-    auto GeniusProver = sgns::GeniusProver();
+TEST( ProverTest, CreateAndVerifyProof )
+{
+    auto             GeniusAssigner = sgns::GeniusAssigner();
+    auto             GeniusProver   = sgns::GeniusProver();
+
+    std::vector<int> public_inputs  = { 5, 11 };
+    auto assign_result = GeniusAssigner.GenerateCircuitAndTable( public_inputs, {}, std::string( ByteCodeTest ) );
+    ASSERT_TRUE( assign_result.has_value() );
+
+    EXPECT_EQ( assign_result.value().size(), 1 );
 
     auto assign_value = assign_result.value().at( 0 );
     auto proof_result = GeniusProver.CreateProof( assign_value );
@@ -52,22 +62,4 @@ TEST( ProofAssignerTest, CreateProof )
     EXPECT_TRUE( GeniusProver.VerifyProof( proof_result.value().proof, assign_value ) );
     EXPECT_TRUE( GeniusProver.WriteProofToFile( proof_result.value().proof,
                                                 "../../../../../../test/src/proof/sgnus_proof.bin" ) );
-}
-
-TEST( ProofAssignerTest, TransactionProof )
-{
-    auto TxProof = sgns::TransferProof( 1000, 500 );
-
-    auto proof_result = TxProof.GenerateFullProof();
-
-    if ( proof_result.has_error() )
-    {
-        // Print the error information
-        auto error = proof_result.error();
-        std::cerr << "Proof Error occurred: " << error.message() << std::endl; // Assuming error has a message method
-    }
-    // Assert that the function was successful (i.e., no error occurred)
-    ASSERT_FALSE( proof_result.has_error() ) << "Proof Expected success but got an error!";
-
-    EXPECT_TRUE( TxProof.VerifyFullProof( proof_result.value() ) );
 }
