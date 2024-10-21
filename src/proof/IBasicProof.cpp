@@ -113,19 +113,29 @@ namespace sgns
         }
         if ( bytecode->second == "Bypass" )
         {
-            return Error::BYTECODE_NOT_FOUND;
+            return true;
         }
 
         OUTCOME_TRY( ( auto &&, parameter_pair ), ParameterDeserializer->second( proof_data ) );
-        auto [public_inputs_json_array, private_inputs_json_array] = parameter_pair;
 
-        auto snark = GetSnarkFromProto( base_proof.proof_data() );
+        return VerifyFullProof( parameter_pair, base_proof.proof_data(), std::move( bytecode->second ) );
+    }
+
+    outcome::result<bool> IBasicProof::VerifyFullProof(
+        const std::pair<boost::json::array, boost::json::array> &parameters,
+        const SGProof::BaseProofData                            &proof_data,
+        std::string                                              proof_bytecode )
+
+    {
+        auto [public_inputs_json_array, private_inputs_json_array] = parameters;
+
+        auto snark = GetSnarkFromProto( proof_data );
 
         GeniusAssigner assigner;
 
         OUTCOME_TRY(
             ( auto &&, assign_value ),
-            assigner.GenerateCircuitAndTable( public_inputs_json_array, private_inputs_json_array, bytecode->second ) );
+            assigner.GenerateCircuitAndTable( public_inputs_json_array, private_inputs_json_array, proof_bytecode ) );
 
         GeniusProver::GeniusProof genius_proof( snark, assign_value.at( 0 ).constrains, assign_value.at( 0 ).table );
 
