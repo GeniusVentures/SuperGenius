@@ -289,7 +289,7 @@ namespace sgns
 
             task_queue_->EnqueueTask(task, subTasks);
             transaction_manager_->HoldEscrow(
-                funds, nSubTasks, uint256_t{ std::string( dev_config_.Addr ) }, dev_config_.Cut, image_path );
+                funds, nSubTasks, uint256_t{ std::string( dev_config_.Addr ) }, dev_config_.Cut, boost::uuids::to_string(uuid) );
         }
     }
 
