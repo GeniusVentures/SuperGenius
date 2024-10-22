@@ -20,6 +20,7 @@
 #include "blockchain/block_storage.hpp"
 #include "base/logger.hpp"
 #include "crypto/hasher.hpp"
+#include "processing/proto/SGProcessing.pb.h"
 
 using namespace boost::multiprecision;
 
@@ -53,7 +54,7 @@ namespace sgns
         bool     HoldEscrow( const uint64_t &amount, const uint64_t &num_chunks, const uint256_t &dev_addr,
                              const float &dev_cut, const std::string &job_id );
         bool     ReleaseEscrow( const std::string &job_id, const bool &pay );
-        void     ProcessingDone( const std::string &subtask_id );
+        void     ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult );
         uint64_t GetBalance();
 
     private:

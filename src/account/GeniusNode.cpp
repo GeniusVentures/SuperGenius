@@ -137,7 +137,7 @@ namespace sgns
             std::make_shared<processing::ProcessSubTaskStateStorage>(),       //
             task_result_storage_,                                             //
             processing_core_,                                                 //
-            [this]( const std::string &var ) { ProcessingDone( var ); },      //
+            [this]( const std::string &var, const SGProcessing::TaskResult &taskresult) { ProcessingDone( var, taskresult ); },      //
             [this]( const std::string &var ) { ProcessingError( var ); } );
         processing_service_->SetChannelListRequestTimeout( boost::posix_time::milliseconds( 10000 ) );
 
@@ -501,15 +501,15 @@ namespace sgns
         return static_cast<uint16_t>( seed );
     }
 
-    void GeniusNode::ProcessingDone( const std::string &subtask_id )
+    void GeniusNode::ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult)
     {
-        std::cout << "PROCESSING DONE " << subtask_id << std::endl;
-        transaction_manager_->ProcessingDone( subtask_id );
+        std::cout << "PROCESSING DONE " << task_id << std::endl;
+        transaction_manager_->ProcessingDone(task_id, taskresult);
     }
 
-    void GeniusNode::ProcessingError( const std::string &subtask_id )
+    void GeniusNode::ProcessingError( const std::string &task_id )
     {
-        std::cout << "PROCESSING ERROR " << subtask_id << std::endl;
+        std::cout << "PROCESSING ERROR " << task_id << std::endl;
     }
 
     void GeniusNode::ProcessingFinished( const std::string &task_id, const std::set<std::string> &subtasks_ids )

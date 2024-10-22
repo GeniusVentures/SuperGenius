@@ -103,8 +103,8 @@ namespace sgns
 
         uint16_t GenerateRandomPort( const std::string &address );
 
-        void ProcessingDone( const std::string &subtask_id );
-        void ProcessingError( const std::string &subtask_id );
+        void ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult);
+        void ProcessingError( const std::string &task_id );
         void ProcessingFinished( const std::string &task_id, const std::set<std::string> &subtasks_ids );
 
         static constexpr std::string_view db_path_                = "bc-%d/";

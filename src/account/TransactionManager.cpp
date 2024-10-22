@@ -147,10 +147,13 @@ namespace sgns
         return ret;
     }
 
-    void TransactionManager::ProcessingDone( const std::string &subtask_id )
+    void TransactionManager::ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult )
     {
-        auto process_transaction = std::make_shared<ProcessingTransaction>( subtask_id, subtask_id, FillDAGStruct() );
-        this->EnqueueTransaction( process_transaction );
+        for (auto& subtask : taskresult.subtask_results())
+        {
+            auto process_transaction = std::make_shared<ProcessingTransaction>(task_id, subtask.subtaskid(), FillDAGStruct());
+            this->EnqueueTransaction(process_transaction);
+        }
     }
 
     uint64_t TransactionManager::GetBalance()
@@ -454,7 +457,7 @@ namespace sgns
                         ctrl.payout_peers.push_back( { uint256_t{ remainder }, ctrl.dev_addr } );
                         if ( processing_finished_cb_m )
                         {
-                            processing_finished_cb_m( tx.GetSubtaskID(), subtasks_ids );
+                            processing_finished_cb_m( tx.GetTaskID(), subtasks_ids);
                         }
                     }
                 }
