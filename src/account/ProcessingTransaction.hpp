@@ -35,7 +35,7 @@ namespace sgns
 
         std::string GetTaskID() const
         {
-            return subtask_id_;
+            return job_id_;
         }
 
         std::string GetTransactionSpecificPath() override
