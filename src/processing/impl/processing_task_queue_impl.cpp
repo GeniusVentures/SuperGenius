@@ -52,6 +52,11 @@ namespace sgns::processing
     bool ProcessingTaskQueueImpl::GetSubTasks( const std::string &taskId, std::list<SGProcessing::SubTask> &subTasks )
     {
         m_logger->debug( "SUBTASKS_REQUESTED. TaskId: {}", taskId );
+        if (IsTaskCompleted(taskId))
+        {
+            m_logger->debug("TASK_COMPLETED. TaskId {}", taskId);
+            return false;
+        }
         auto key           = ( boost::format( "subtasks/TASK_%s" ) % taskId ).str();
         auto querySubTasks = m_db->QueryKeyValues( key );
 

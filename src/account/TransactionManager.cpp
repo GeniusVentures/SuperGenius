@@ -430,7 +430,7 @@ namespace sgns
         if ( escrow_ctrl_m.size() )
         {
             ProcessingTransaction tx = ProcessingTransaction::DeSerializeByteVector( transaction_data );
-
+            
             for ( auto &ctrl : escrow_ctrl_m )
             {
                 if ( ctrl.job_hash == tx.GetJobHash() )
