@@ -90,7 +90,7 @@ namespace sgns
             PlonkAssignTableType      table;
         };
 
-        static const TableDescriptionType &GetPlonkTableDescription() 
+        static const TableDescriptionType &GetPlonkTableDescription()
         {
             static const TableDescriptionType desc( WITNESS_COLUMNS,
                                                     PUBLIC_INPUT_COLUMNS,

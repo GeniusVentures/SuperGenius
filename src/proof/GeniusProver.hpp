@@ -90,6 +90,7 @@ namespace sgns
         using PlonkMarshalledTableType =
             crypto3::marshalling::types::plonk_assignment_table<nil::marshalling::field_type<ProverEndianess>,
                                                                 AssignmentTableType>;
+        using ParameterType = std::vector<BlueprintFieldType::value_type>;
 
         /**
          * @brief       Constructs a GeniusProver with component constant columns and expand factor
@@ -137,7 +138,8 @@ namespace sgns
                                  const PublicPreprocessedData &public_data,
                                  const TableDescriptionType   &desc,
                                  const ConstraintSystemType   &constrains_sys,
-                                 const LpcScheme              &scheme );
+                                 const LpcScheme              &scheme,
+                                 std::vector<ParameterType>    pub_parameters );
 
         bool                 WriteProofToFile( const ProofType &proof, const std::string &path ) const;
         std::vector<uint8_t> WriteProofToVector( const ProofType &proof ) const;

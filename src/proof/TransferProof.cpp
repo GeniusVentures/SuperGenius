@@ -114,7 +114,7 @@ namespace sgns
         private_inputs_json_array.push_back( GenerateIntParameter( amount_ ) );
         private_inputs_json_array.push_back( GenerateFieldParameter( balance_ ) );
         private_inputs_json_array.push_back( GenerateFieldParameter( amount_ ) );
-        public_inputs_json_array.push_back( GenerateCurveParameter( amount_ * generator ) );
+        public_inputs_json_array.push_back( GenerateCurveParameter( balance_ * generator ) );
         public_inputs_json_array.push_back( GenerateCurveParameter( amount_ * generator ) );
         public_inputs_json_array.push_back( GenerateCurveParameter( ( balance_ - amount_ ) * generator ) );
         public_inputs_json_array.push_back( GenerateCurveParameter( generator ) ); //GENERATOR
@@ -194,9 +194,9 @@ namespace sgns
         private_inputs_json_array.push_back( TransferProof::GenerateIntParameter( 0 ) );
         private_inputs_json_array.push_back( TransferProof::GenerateFieldParameter( 0 ) );
         private_inputs_json_array.push_back( TransferProof::GenerateFieldParameter( 0 ) );
-        public_inputs_json_array.push_back( TransferProof::GenerateCurveParameter( generator ) );
-        public_inputs_json_array.push_back( TransferProof::GenerateCurveParameter( generator ) );
-        public_inputs_json_array.push_back( TransferProof::GenerateCurveParameter( generator ) );
+        public_inputs_json_array.push_back( TransferProof::GenerateCurveParameter( balance_commitment ) );
+        public_inputs_json_array.push_back( TransferProof::GenerateCurveParameter( amount_commitment ) );
+        public_inputs_json_array.push_back( TransferProof::GenerateCurveParameter( new_balance_commitment ) );
         public_inputs_json_array.push_back( TransferProof::GenerateCurveParameter( generator ) );
         public_inputs_json_array.push_back( TransferProof::GenerateArrayParameter( ranges ) );
         private_inputs_json_array.push_back( TransferProof::GenerateFieldParameter( 0 ) );

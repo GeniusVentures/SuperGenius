@@ -46,8 +46,8 @@ namespace sgns
 
         LpcScheme lpc_scheme( fri_params );
 
-        std::size_t permutation_size =
-            plonk_table_desc.witness_columns + plonk_table_desc.public_input_columns + COMPONENT_CONSTANT_COLUMNS_DEFAULT;
+        std::size_t permutation_size = plonk_table_desc.witness_columns + plonk_table_desc.public_input_columns +
+                                       COMPONENT_CONSTANT_COLUMNS_DEFAULT;
 
         PublicPreprocessedData  public_preprocessed_data( PublicPreprocessor::process( constrains_sys,
                                                                                       assignment_table.public_table(),
@@ -62,11 +62,6 @@ namespace sgns
                                                     plonk_table_desc,
                                                     constrains_sys,
                                                     lpc_scheme );
-
-        //if ( !VerifyProof( proof, public_preprocessed_data, plonk_table_desc, constrains_sys, lpc_scheme ) )
-        //{
-        //    return outcome::failure( ProverError::INVALID_PROOF_GENERATED );
-        //}
 
         auto filled_placeholder_proof = FillPlaceholderProof( proof, fri_params );
 
@@ -131,8 +126,20 @@ namespace sgns
 
         LpcScheme lpc_scheme( fri_params );
 
-        std::size_t permutation_size =
-            plonk_table_desc.witness_columns + plonk_table_desc.public_input_columns + COMPONENT_CONSTANT_COLUMNS_DEFAULT;
+        std::size_t permutation_size = plonk_table_desc.witness_columns + plonk_table_desc.public_input_columns +
+                                       COMPONENT_CONSTANT_COLUMNS_DEFAULT;
+
+        auto pub_input = assignment_table.public_inputs();
+        //auto pub_input = pub_parameters;
+        //for ( auto input_vector : pub_input )
+        //{
+        //    std::cout << "input :";
+        //    for ( auto input : input_vector )
+        //    {
+        //        std::cout << ", " << input;
+        //    }
+        //    std::cout << std::endl;
+        //}
 
         PublicPreprocessedData public_preprocessed_data(
             crypto3::zk::snark::placeholder_public_preprocessor<BlueprintFieldType, PlaceholderParams>::process(
@@ -149,11 +156,11 @@ namespace sgns
             proof_snark,
             plonk_table_desc,
             constrains_sys,
-            lpc_scheme );
+            lpc_scheme,
+            pub_input );
     }
 
-    bool GeniusProver::VerifyProof( const ProofType                      &proof,
-                                    const GeniusAssigner::AssignerOutput &assigner_outputs )
+    bool GeniusProver::VerifyProof( const ProofType &proof, const GeniusAssigner::AssignerOutput &assigner_outputs )
     {
         auto constrains_sys = MakePlonkConstraintSystem( assigner_outputs.constrains );
 
@@ -163,8 +170,8 @@ namespace sgns
 
         LpcScheme lpc_scheme( fri_params );
 
-        std::size_t permutation_size =
-            plonk_table_desc.witness_columns + plonk_table_desc.public_input_columns + COMPONENT_CONSTANT_COLUMNS_DEFAULT;
+        std::size_t permutation_size = plonk_table_desc.witness_columns + plonk_table_desc.public_input_columns +
+                                       COMPONENT_CONSTANT_COLUMNS_DEFAULT;
 
         PublicPreprocessedData public_preprocessed_data(
             crypto3::zk::snark::placeholder_public_preprocessor<BlueprintFieldType, PlaceholderParams>::process(
@@ -188,13 +195,16 @@ namespace sgns
                                     const PublicPreprocessedData &public_data,
                                     const TableDescriptionType   &desc,
                                     const ConstraintSystemType   &constrains_sys,
-                                    const LpcScheme              &scheme )
+                                    const LpcScheme              &scheme,
+                                    std::vector<ParameterType>    pub_parameters )
     {
-        return crypto3::zk::snark::placeholder_verifier<BlueprintFieldType, PlaceholderParams>::process( public_data,
-                                                                                                         proof,
-                                                                                                         desc,
-                                                                                                         constrains_sys,
-                                                                                                         scheme );
+        return crypto3::zk::snark::placeholder_verifier<BlueprintFieldType, PlaceholderParams>::process(
+            public_data,
+            proof,
+            desc,
+            constrains_sys,
+            scheme,
+            pub_parameters );
     }
 
     bool GeniusProver::WriteProofToFile( const ProofType &proof, const std::string &path ) const
