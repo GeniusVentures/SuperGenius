@@ -25,7 +25,7 @@ namespace sgns
     class GeniusAccount
     {
     public:
-        GeniusAccount( const uint8_t token_type, const std::string &base_path, const char *eth_private_key ) :
+        GeniusAccount( const uint8_t token_type, const std::string &base_path, std::string_view eth_private_key ) :
             token( token_type ), //
             nonce( 0 ),          //
             balance( 0 )         //
@@ -37,6 +37,7 @@ namespace sgns
                 address = maybe_address.value();
             }
             //TODO - Retrieve values where? Read through blockchain Here?
+            // How to deal with errors?
         }
 
         ~GeniusAccount()
@@ -150,8 +151,8 @@ namespace sgns
     private:
         uint64_t balance;
 
-        static outcome::result<KeyGenerator::ElGamal> GenerateGeniusAddress( const std::string &base_path,
-                                                                             const char        *eth_private_key );
+        static outcome::result<KeyGenerator::ElGamal> GenerateGeniusAddress( std::string_view base_path,
+                                                                             std::string_view eth_private_key );
     };
 }
 
