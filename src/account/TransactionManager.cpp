@@ -107,7 +107,7 @@ namespace sgns
     void TransactionManager::MintFunds( uint64_t amount )
     {
         auto mint_transaction = std::make_shared<MintTransaction>( amount, FillDAGStruct() );
-        this->EnqueueTransaction( mint_transaction );
+        this->EnqueueTransaction( std::move( mint_transaction ) );
     }
 
     bool TransactionManager::HoldEscrow( uint64_t           amount,
@@ -227,12 +227,8 @@ namespace sgns
 
         auto transaction_path = tx_key.str() + transaction->GetTransactionFullPath();
 
-        auto serialized_transaction = transaction->SerializeByteVector();
-
         sgns::crdt::GlobalDB::Buffer data_transaction;
-        data_transaction.put( serialized_transaction );
-
-        this->transactions.push_back( std::move( serialized_transaction ) );
+        data_transaction.put( transaction->SerializeByteVector() );
 
         db_m->Put( { transaction_path }, data_transaction );
         account_m->nonce++;
