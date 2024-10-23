@@ -31,19 +31,18 @@ namespace sgns::verification::finality {
      */
     boost::optional<BlockInfo> finalized;
 
-    inline bool operator==(const RoundState &round_state) const {
-      return std::tie(last_finalized_block,
-                      best_prevote_candidate,
-                      best_final_candidate,
-                      finalized)
-             == std::tie(round_state.last_finalized_block,
+    bool operator==( const RoundState &round_state ) const
+    {
+        return std::tie( last_finalized_block, best_prevote_candidate, best_final_candidate, finalized ) ==
+               std::tie( round_state.last_finalized_block,
                          round_state.best_prevote_candidate,
                          round_state.best_final_candidate,
-                         round_state.finalized);
+                         round_state.finalized );
     }
 
-    inline bool operator!=(const RoundState &round_state) const {
-      return !operator==(round_state);
+    bool operator!=( const RoundState &round_state ) const
+    {
+        return !operator==( round_state );
     }
   };
 

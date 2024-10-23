@@ -4,7 +4,6 @@
 #define SUPERGENIUS_TRIE_SUPERGENIUS_CODEC_IMPL_HPP
 
 #include <memory>
-#include <optional>
 #include <string>
 
 #include "storage/trie/serialization/buffer_stream.hpp"

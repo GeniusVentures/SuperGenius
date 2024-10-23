@@ -1,10 +1,11 @@
-#include <crdt/crdt_datastore.hpp>
+#include "crdt/crdt_datastore.hpp"
 #include <storage/rocksdb/rocksdb.hpp>
 #include <iostream>
-#include <crdt/proto/bcast.pb.h>
+#include "crdt/proto/bcast.pb.h"
 #include <google/protobuf/unknown_field_set.h>
 #include <ipfs_lite/ipld/impl/ipld_node_impl.hpp>
 #include <thread>
+#include <utility>
 
 namespace sgns::crdt
 {
@@ -33,19 +34,18 @@ namespace sgns::crdt
 
   using CRDTBroadcast = pb::CRDTBroadcast;
 
-  const std::chrono::milliseconds CrdtDatastore::threadSleepTimeInMilliseconds_ = std::chrono::milliseconds(100); // ms
-  const std::string CrdtDatastore::headsNamespace_ = "h";
-  const std::string CrdtDatastore::setsNamespace_ = "s";
-
-  CrdtDatastore::CrdtDatastore( const std::shared_ptr<DataStore> &aDatastore, const HierarchicalKey &aKey,
-                                const std::shared_ptr<DAGSyncer>   &aDagSyncer,
-                                const std::shared_ptr<Broadcaster> &aBroadcaster,
-                                const std::shared_ptr<CrdtOptions> &aOptions ) : namespaceKey_( aKey )
+  CrdtDatastore::CrdtDatastore( std::shared_ptr<DataStore>          aDatastore,
+                                const HierarchicalKey              &aKey,
+                                std::shared_ptr<DAGSyncer>          aDagSyncer,
+                                std::shared_ptr<Broadcaster>        aBroadcaster,
+                                const std::shared_ptr<CrdtOptions> &aOptions ) :
+      dataStore_( std::move( aDatastore ) ), namespaceKey_( aKey ), broadcaster_( std::move( aBroadcaster ) ),
+      dagSyncer_( std::move( aDagSyncer ) )
   {
       // <namespace>/s
-      auto fullSetNs = aKey.ChildString( setsNamespace_ );
+      auto fullSetNs = aKey.ChildString( std::string(setsNamespace_) );
       // <namespace>/h
-      auto fullHeadsNs = aKey.ChildString( headsNamespace_ );
+      auto fullHeadsNs = aKey.ChildString( std::string(headsNamespace_) );
 
       int numberOfDagWorkers = 5;
       if ( aOptions != nullptr && !aOptions->Verify().has_failure() &&
@@ -58,14 +58,9 @@ namespace sgns::crdt
           numberOfDagWorkers    = options_->numWorkers;
       }
 
-      this->dataStore_ = aDatastore;
-
-      this->dagSyncer_   = aDagSyncer;
-      this->broadcaster_ = aBroadcaster;
-
       this->set_ =
-          std::make_shared<CrdtSet>( CrdtSet( aDatastore, fullSetNs, this->putHookFunc_, this->deleteHookFunc_ ) );
-      this->heads_ = std::make_shared<CrdtHeads>( CrdtHeads( aDatastore, fullHeadsNs ) );
+          std::make_shared<CrdtSet>( CrdtSet( dataStore_, fullSetNs, this->putHookFunc_, this->deleteHookFunc_ ) );
+      this->heads_ = std::make_shared<CrdtHeads>( CrdtHeads( dataStore_, fullHeadsNs ) );
 
       int      numberOfHeads = 0;
       uint64_t maxHeight     = 0;
@@ -101,7 +96,7 @@ namespace sgns::crdt
     this->Close();
   }
 
-  //static 
+  //static
   std::shared_ptr<CrdtDatastore::Delta> CrdtDatastore::DeltaMerge(const std::shared_ptr<Delta>& aDelta1, const std::shared_ptr<Delta>& aDelta2)
   {
     auto result = std::make_shared<CrdtDatastore::Delta>();
@@ -303,10 +298,26 @@ namespace sgns::crdt
   {
     // Make a list of heads we received
     CRDTBroadcast bcastData;
-    bcastData.MergeFromString(std::string(buff.toString()));
+    auto string_data = std::string(buff.toString());
+
+    if (!string_data.size())
+    {
+      return outcome::failure(boost::system::error_code{});
+    }
+    if (!bcastData.MergeFromString(string_data))
+    {
+      return outcome::failure(boost::system::error_code{});
+    }
+    if (!bcastData.IsInitialized()) {
+        return outcome::failure(boost::system::error_code{});
+    }
 
     // Compatibility: before we were publishing CIDs directly
     auto msgReflect = bcastData.GetReflection();
+
+    if (msgReflect == nullptr) {
+        return outcome::failure(boost::system::error_code{});
+    }
 
     if (!msgReflect->GetUnknownFields(bcastData).empty())
     {
@@ -414,7 +425,7 @@ namespace sgns::crdt
     return outcome::success();
   }
 
-    void CrdtDatastore::SendNewJobs(const CID& aRootCID, const uint64_t& aRootPriority, const std::vector<CID>& aChildren)
+  void CrdtDatastore::SendNewJobs( const CID &aRootCID, uint64_t aRootPriority, const std::vector<CID> &aChildren )
   {
     // sendNewJobs calls getDeltas with the given
     // children and sends each response to the workers. 
@@ -697,8 +708,9 @@ namespace sgns::crdt
     return outcome::success();
   }
 
-  outcome::result<std::shared_ptr<CrdtDatastore::Node>> CrdtDatastore::PutBlock(
-      const std::vector<CID>& aHeads, const uint64_t& aHeight, const std::shared_ptr<Delta>& aDelta)
+  outcome::result<std::shared_ptr<CrdtDatastore::Node>> CrdtDatastore::PutBlock( const std::vector<CID>       &aHeads,
+                                                                                 uint64_t                      aHeight,
+                                                                                 const std::shared_ptr<Delta> &aDelta )
   {
     if (aDelta == nullptr)
     {
@@ -738,8 +750,10 @@ namespace sgns::crdt
     return node;
   }
 
-  outcome::result<std::vector<CID>> CrdtDatastore::ProcessNode(const CID& aRoot, const uint64_t& aRootPrio, 
-    const std::shared_ptr<Delta>& aDelta, const std::shared_ptr<Node>& aNode)
+  outcome::result<std::vector<CID>> CrdtDatastore::ProcessNode( const CID                    &aRoot,
+                                                                uint64_t                      aRootPrio,
+                                                                const std::shared_ptr<Delta> &aDelta,
+                                                                const std::shared_ptr<Node>  &aNode )
   {
     if (this->set_ == nullptr || this->heads_ == nullptr || this->dagSyncer_ == nullptr || 
       aDelta == nullptr || aNode == nullptr)
@@ -913,7 +927,7 @@ namespace sgns::crdt
     return outcome::success();
   }
 
-  outcome::result<void> CrdtDatastore::PrintDAGRec(const CID& aCID, const uint64_t& aDepth, std::vector<CID>& aSet)
+  outcome::result<void> CrdtDatastore::PrintDAGRec( const CID &aCID, uint64_t aDepth, std::vector<CID> &aSet )
   {
     std::ostringstream line; 
     for (uint64_t i = 0; i < aDepth; ++i)

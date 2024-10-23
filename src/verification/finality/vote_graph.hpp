@@ -5,7 +5,6 @@
 
 #include <boost/operators.hpp>
 
-#include "verification/finality/chain.hpp"
 #include "verification/finality/vote_weight.hpp"
 
 namespace sgns::verification::finality {
@@ -18,8 +17,8 @@ namespace sgns::verification::finality {
     // graph entry
     struct Entry : public boost::equality_comparable<Entry> {
       BlockNumber number{};
-      std::vector<BlockHash> ancestors{};
-      std::vector<BlockHash> descendents{};
+      std::vector<BlockHash> ancestors;
+      std::vector<BlockHash> descendents;
       VoteWeight cumulative_vote;
 
       bool operator==(const Entry &o) const {
@@ -65,25 +64,23 @@ namespace sgns::verification::finality {
     /// should be in reverse order from the old base's parent.
     virtual void adjustBase(const std::vector<BlockHash> &ancestry_proof) = 0;
 
-    inline virtual outcome::result<void> insert(const Vote &vote,
+    virtual outcome::result<void> insert( const Vote &vote,
 
-                                                const VoteWeight &weigth) {
-      return visit_in_place(
-          vote, [this, &weigth](const auto &vote) -> outcome::result<void> {
-            return insert(BlockInfo{vote.block_number, vote.block_hash},
-                          weigth);
-          });
+                                          const VoteWeight &weigth )
+    {
+        return visit_in_place( vote,
+                               [this, &weigth]( const auto &vote ) -> outcome::result<void>
+                               { return insert( BlockInfo{ vote.block_number, vote.block_hash }, weigth ); } );
     }
 
-    inline virtual outcome::result<void> insert(const Prevote &prevote,
-                                                const VoteWeight &vote) {
-      return insert(BlockInfo{prevote.block_number, prevote.block_hash}, vote);
+    virtual outcome::result<void> insert( const Prevote &prevote, const VoteWeight &vote )
+    {
+        return insert( BlockInfo{ prevote.block_number, prevote.block_hash }, vote );
     }
 
-    inline virtual outcome::result<void> insert(const Precommit &precommit,
-                                                const VoteWeight &vote) {
-      return insert(BlockInfo{precommit.block_number, precommit.block_hash},
-                    vote);
+    virtual outcome::result<void> insert( const Precommit &precommit, const VoteWeight &vote )
+    {
+        return insert( BlockInfo{ precommit.block_number, precommit.block_hash }, vote );
     }
 
     /// Insert a vote with given value into the graph at given hash and number.

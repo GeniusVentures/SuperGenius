@@ -2,8 +2,8 @@
 #define SUPERGENIUS_GRAPHSYNC_DAGSYNCER_HPP
 
 #include "crdt/dagsyncer.hpp"
-#include <base/logger.hpp>
-#include <base/buffer.hpp>
+#include "base/logger.hpp"
+#include "base/buffer.hpp"
 
 #include <ipfs_lite/ipfs/graphsync/graphsync.hpp>
 #include <ipfs_lite/ipfs/graphsync/extension.hpp>
@@ -37,9 +37,9 @@ namespace sgns::crdt
     using Logger = base::Logger;
     using BlockCallback = Graphsync::BlockCallback;
 
-    GraphsyncDAGSyncer(const std::shared_ptr<IpfsDatastore>& service, 
-      const std::shared_ptr<Graphsync>& graphsync, 
-      const std::shared_ptr<libp2p::Host>& host);
+    GraphsyncDAGSyncer( std::shared_ptr<IpfsDatastore> service,
+                        std::shared_ptr<Graphsync>     graphsync,
+                        std::shared_ptr<libp2p::Host>  host );
 
     outcome::result<void> Listen(const Multiaddress& listen_to);
 
@@ -72,7 +72,7 @@ namespace sgns::crdt
         const PeerId& peer, boost::optional<Multiaddress> address, const CID& root_cid) const;
 
     void RequestProgressCallback(ResponseStatusCode code, const std::vector<Extension>& extensions) const;
-    void BlockReceivedCallback(CID cid, sgns::common::Buffer buffer);
+    void BlockReceivedCallback( const CID &cid, sgns::common::Buffer buffer );
 
     bool started_ = false;
 

@@ -1,8 +1,8 @@
 #ifndef SUPERGENIUS_CRDT_PUBSUB_BROADCASTER_HPP
 #define SUPERGENIUS_CRDT_PUBSUB_BROADCASTER_HPP
 
-#include <crdt/broadcaster.hpp>
-#include <base/logger.hpp>
+#include "crdt/broadcaster.hpp"
+#include "base/logger.hpp"
 #include <ipfs_pubsub/gossip_pubsub_topic.hpp>
 #include <queue>
 
@@ -14,7 +14,7 @@ public:
     using GossipPubSub = sgns::ipfs_pubsub::GossipPubSub;
     using GossipPubSubTopic = sgns::ipfs_pubsub::GossipPubSubTopic;
 
-    PubSubBroadcaster(const std::shared_ptr<GossipPubSubTopic>& pubSubTopic);
+    PubSubBroadcaster( std::shared_ptr<GossipPubSubTopic> pubSubTopic );
 
     void SetLogger(const sgns::base::Logger& logger);
 

@@ -4,6 +4,7 @@
 #define SUPERGENIUS_SRC_VERIFICATION_PRODUCTION_TYPES_NEXT_EPOCH_DESCRIPTOR_HPP
 
 #include "primitives/authority.hpp"
+#include "verification/production/common.hpp"
 
 namespace sgns::verification {
 

@@ -2,6 +2,6 @@
 [submodule "gRPCForSuperGenius"]
 	path = gRPCForSuperGenius
 	url = ../gRPCForSuperGenius.git
-[submodule "zkPOC"]
-	path = zkPOC
-	url = ../zkPOC.git
+[submodule "GeniusKDF"]
+	path = GeniusKDF
+	url = ../GeniusKDF

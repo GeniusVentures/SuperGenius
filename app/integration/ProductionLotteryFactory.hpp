@@ -9,7 +9,7 @@
 
 #include "verification/production/impl/production_lottery_impl.hpp"
 #include "crypto/vrf_provider.hpp"
-#include "integration/CComponentFactory.hpp"
+#include "singleton/CComponentFactory.hpp"
 
 class ProductionLotteryFactory
 {

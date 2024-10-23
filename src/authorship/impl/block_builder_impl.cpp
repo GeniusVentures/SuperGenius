@@ -1,7 +1,5 @@
 #include "authorship/impl/block_builder_impl.hpp"
 
-#include "authorship/impl/block_builder_error.hpp"
-
 namespace sgns::authorship {
 
   BlockBuilderImpl::BlockBuilderImpl(

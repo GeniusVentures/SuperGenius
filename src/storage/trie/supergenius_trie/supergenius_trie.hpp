@@ -3,8 +3,9 @@
 #ifndef SUPERGENIUS_STORAGE_TRIE_SUPERGENIUS_TRIE_HPP
 #define SUPERGENIUS_STORAGE_TRIE_SUPERGENIUS_TRIE_HPP
 
-#include "storage/face/generic_maps.hpp"
+#include <list>
 
+#include "storage/face/generic_maps.hpp"
 #include "storage/trie/supergenius_trie/supergenius_node.hpp"
 
 namespace sgns::storage::trie {

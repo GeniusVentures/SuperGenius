@@ -2,7 +2,7 @@
 #ifndef SUPERGENIUS_SRC_RUNTIME_METADATA_HPP
 #define SUPERGENIUS_SRC_RUNTIME_METADATA_HPP
 
-#include <outcome/outcome.hpp>
+#include "outcome/outcome.hpp"
 #include "primitives/opaque_metadata.hpp"
 
 namespace sgns::runtime {

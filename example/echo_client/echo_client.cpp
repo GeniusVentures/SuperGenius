@@ -16,7 +16,7 @@ int main(int argc, char *argv[])
   using libp2p::crypto::PrivateKey;
   using libp2p::crypto::PublicKey;
   using GossipPubSub = sgns::ipfs_pubsub::GossipPubSub;
-  using GossipPubSubTopic = sgns::ipfs_pubsub::GossipPubSubTopic;
+  //using GossipPubSubTopic = sgns::ipfs_pubsub::GossipPubSubTopic;
   namespace po = boost::program_options;
 
   int portNumber = 0;

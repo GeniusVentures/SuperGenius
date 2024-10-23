@@ -3,11 +3,9 @@
 #ifndef SUPERGENIUS_TRIE_DB_BACKEND_HPP
 #define SUPERGENIUS_TRIE_DB_BACKEND_HPP
 
-#include <outcome/outcome.hpp>
+#include "outcome/outcome.hpp"
 
-#include "base/buffer.hpp"
 #include "storage/buffer_map_types.hpp"
-#include "storage/trie/supergenius_trie/supergenius_node.hpp"
 
 namespace sgns::storage::trie {
 

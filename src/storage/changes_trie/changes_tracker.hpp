@@ -3,9 +3,8 @@
 
 #include "base/buffer.hpp"
 #include "primitives/common.hpp"
-#include "primitives/extrinsic.hpp"
 #include "storage/changes_trie/changes_trie_config.hpp"
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
 
 namespace sgns::storage::changes_trie {
 
@@ -20,7 +19,7 @@ namespace sgns::storage::changes_trie {
     using GetExtrinsicIndexDelegate =
         std::function<outcome::result<base::Buffer>()>;
 
-    virtual ~ChangesTracker() = default;
+    ~ChangesTracker() override = default;
 
     /**
      * @param f is a functor that returns the current extrinsic index

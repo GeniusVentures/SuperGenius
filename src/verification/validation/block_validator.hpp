@@ -3,10 +3,9 @@
 #ifndef SUPERGENIUS_BLOCK_VALIDATOR_HPP
 #define SUPERGENIUS_BLOCK_VALIDATOR_HPP
 
-#include <outcome/outcome.hpp>
-#include "verification/production/types/epoch.hpp"
 #include "primitives/block.hpp"
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
+#include "verification/production/common.hpp"
 
 namespace sgns::verification {
   /**
@@ -14,9 +13,9 @@ namespace sgns::verification {
    */
   class BlockValidator : public IComponent {
    public:
-    virtual ~BlockValidator() = default;
+       ~BlockValidator() override = default;
 
-    /**
+       /**
      * Validate the block
      * @param block to be validated
      * @param authority_id authority that sent this block
@@ -26,11 +25,11 @@ namespace sgns::verification {
      */
     virtual outcome::result<void> validateBlock(
         const primitives::Block &block,
-        const primitives::AuthorityId &authority_id,
+                                                    const primitives::AuthorityId &authority_id,
         const Threshold &threshold,
         const Randomness &randomness) const = 0;
 
-    /**
+       /**
      * Validate the block header
      * @param block to be validated
      * @param authority_id authority that sent this block
@@ -40,7 +39,7 @@ namespace sgns::verification {
      */
     virtual outcome::result<void> validateHeader(
         const primitives::BlockHeader &block_header,
-        const primitives::AuthorityId &authority_id,
+                                                     const primitives::AuthorityId &authority_id,
         const Threshold &threshold,
         const Randomness &randomness) const = 0;
   };

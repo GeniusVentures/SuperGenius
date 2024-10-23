@@ -16,12 +16,29 @@ message DAGWrapper
 {
     DAGStruct dag_struct = 1;// 
 }
+
+message TransferUTXOInput
+{
+    bytes tx_id_hash = 1; // 
+    uint32 output_index = 2; //
+    bytes signature = 3; //
+}
+message TransferOutput
+{
+    bytes encrypted_amount = 1; // 
+    bytes dest_addr = 2; // 
+}
+message UTXOTxParams
+{
+    repeated TransferUTXOInput inputs = 1; // 
+    repeated TransferOutput outputs = 2; // 
+}
 message TransferTx
 {
     DAGStruct dag_struct = 1;// 
     uint64 token_id = 2; // 
-    bytes encrypted_amount = 3; // 
-    bytes dest_addr = 4; // 
+    UTXOTxParams utxo_params = 3; //
+
 }
 message ProcessingTx
 {
@@ -35,4 +52,12 @@ message MintTx
 {
     DAGStruct dag_struct = 1;// 
     uint64 amount = 2; // 
+}
+message EscrowTx
+{
+    DAGStruct dag_struct = 1;// 
+    UTXOTxParams utxo_params = 2; //
+    uint64 num_chunks = 3;
+    bytes dev_addr = 4; // 
+    float dev_cut = 5; // 
 }

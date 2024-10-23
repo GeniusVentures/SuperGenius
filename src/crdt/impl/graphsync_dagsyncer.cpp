@@ -1,16 +1,17 @@
 #include "crdt/graphsync_dagsyncer.hpp"
 
 #include <ipfs_lite/ipld/impl/ipld_node_impl.hpp>
+#include <memory>
+#include <utility>
 
 namespace sgns::crdt
 {
-GraphsyncDAGSyncer::GraphsyncDAGSyncer(const std::shared_ptr<IpfsDatastore>& service,
-    const std::shared_ptr<Graphsync>& graphsync, const std::shared_ptr<libp2p::Host>& host)
-    : dagService_(service)
-    , graphsync_(graphsync)
-    , host_(host)
-{
-}
+    GraphsyncDAGSyncer::GraphsyncDAGSyncer( std::shared_ptr<IpfsDatastore> service,
+                                            std::shared_ptr<Graphsync>     graphsync,
+                                            std::shared_ptr<libp2p::Host>  host ) :
+        dagService_( std::move( service ) ), graphsync_( std::move( graphsync ) ), host_( std::move( host ) )
+    {
+    }
 
 outcome::result<void> GraphsyncDAGSyncer::Listen(const Multiaddress& listen_to)
 {
@@ -51,20 +52,23 @@ outcome::result<std::future<std::shared_ptr<ipfs_lite::ipld::IPLDNode>>> Graphsy
     auto result = std::make_shared<std::promise<std::shared_ptr<ipfs_lite::ipld::IPLDNode>>>();
     std::vector<Extension> extensions;
     ResponseMetadata response_metadata{};
-    Extension response_metadata_extension = ipfs_lite::ipfs::graphsync::encodeResponseMetadata(response_metadata);
+    Extension response_metadata_extension = ipfs_lite::ipfs::graphsync::encodeResponseMetadata( response_metadata );
     extensions.push_back(response_metadata_extension);
 
     std::vector<CID> cids;
-    Extension do_not_send_cids_extension = ipfs_lite::ipfs::graphsync::encodeDontSendCids(cids);
+    Extension        do_not_send_cids_extension = ipfs_lite::ipfs::graphsync::encodeDontSendCids( cids );
     extensions.push_back(do_not_send_cids_extension);
-    auto subscription = graphsync_->makeRequest(peer, std::move(address), root_cid, {}, extensions,
-        std::bind(&GraphsyncDAGSyncer::RequestProgressCallback, this, std::placeholders::_1, std::placeholders::_2));
+    auto subscription = graphsync_->makeRequest(
+        peer,
+        std::move( address ),
+        root_cid,
+        {},
+        extensions,
+        std::bind( &GraphsyncDAGSyncer::RequestProgressCallback, this, std::placeholders::_1, std::placeholders::_2 ) );
 
     // keeping subscriptions alive, otherwise they cancel themselves
-    requests_.insert(std::make_pair(root_cid, std::make_tuple(
-        std::shared_ptr<Subscription>(new Subscription(std::move(subscription))),
-        result)));
-
+    requests_.insert( std::make_pair(
+        root_cid, std::make_tuple( std::make_shared<Subscription>( std::move( subscription ) ), result ) ) );
 
     return result->get_future();
 }
@@ -202,7 +206,7 @@ void GraphsyncDAGSyncer::RequestProgressCallback(
     logger_->trace("request progress: code={}, extensions={}", statusCodeToString(code), formatExtensions(extensions));
 }
 
-void GraphsyncDAGSyncer::BlockReceivedCallback(CID cid, sgns::common::Buffer buffer)
+void GraphsyncDAGSyncer::BlockReceivedCallback( const CID &cid, sgns::common::Buffer buffer )
 {
     logger_->trace("Block received: cid={}, extensions={}", cid.toString().value(), buffer.toHex());
     auto hb = HasBlock(cid);

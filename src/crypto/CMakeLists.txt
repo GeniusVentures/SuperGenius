@@ -4,7 +4,7 @@ add_library(hasher
     )
 set_target_properties(hasher PROPERTIES PUBLIC_HEADER "hasher/hasher_impl.hpp")
 target_link_libraries(hasher
-    blake2
+    ipfs-lite-cpp::blake2
     twox
     buffer
     sha
@@ -30,8 +30,8 @@ add_library(ed25519_types
 set_target_properties(ed25519_types PROPERTIES PUBLIC_HEADER "ed25519_types.hpp")
 target_link_libraries(ed25519_types
     blob
-    sgns::ed25519
-    )
+    iroha::ed25519
+)
 supergenius_install(ed25519_types)
 
 add_library(vrf_provider
@@ -75,9 +75,9 @@ target_link_libraries(secp256k1_provider PUBLIC
     PUBLIC OpenSSL::SSL
     blob
     buffer
-    secp256k1::secp256k1
+    libsecp256k1::secp256k1
     scale
-    )
+)
 supergenius_install(
     secp256k1_provider
 )
@@ -95,7 +95,6 @@ target_link_libraries(pbkdf2_provider
 supergenius_install(pbkdf2_provider)
 
 add_subdirectory(bip39)
-add_subdirectory(blake2)
 add_subdirectory(crypto_store)
 add_subdirectory(keccak)
 add_subdirectory(sha)

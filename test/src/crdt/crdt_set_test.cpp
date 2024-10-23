@@ -1,7 +1,7 @@
-#include <crdt/crdt_set.hpp>
+#include "crdt/crdt_set.hpp"
 #include <gtest/gtest.h>
 #include <storage/rocksdb/rocksdb.hpp>
-#include <outcome/outcome.hpp>
+#include "outcome/outcome.hpp"
 #include <testutil/outcome.hpp>
 #include <boost/filesystem.hpp>
 

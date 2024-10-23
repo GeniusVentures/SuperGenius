@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include <testutil/outcome.hpp>
-#include <crdt/hierarchical_key.hpp>
+#include "crdt/hierarchical_key.hpp"
 
 namespace sgns::crdt
 {

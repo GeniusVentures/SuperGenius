@@ -83,19 +83,16 @@ namespace sgns::application {
     void validate_config(AppConfiguration::LoadScheme scheme);
     void read_config_from_file(const std::string &filepath);
 
-    bool load_str(const rapidjson::Value &val,
-                  char const *name,
-                  std::string &target);
-    bool load_u16(const rapidjson::Value &val,
-                  char const *name,
-                  uint16_t &target);
-    bool load_bool(const rapidjson::Value &val, char const *name, bool &target);
+    static bool load_str( const rapidjson::Value &val, char const *name, std::string &target );
+    static bool load_u16( const rapidjson::Value &val, char const *name, uint16_t &target );
+    static bool load_bool( const rapidjson::Value &val, char const *name, bool &target );
 
     boost::asio::ip::tcp::endpoint get_endpoint_from(const std::string &host,
                                                      uint16_t port);
-    FilePtr open_file(const std::string &filepath);
 
-   public:
+    static FilePtr open_file( const std::string &filepath );
+
+public:
     explicit AppConfigurationImpl(base::Logger logger);
     ~AppConfigurationImpl() override = default;
 

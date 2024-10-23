@@ -13,7 +13,7 @@
 //#include "WSLoader.hpp"
 #include "URLStringUtil.h"
 #include <libp2p/injector/host_injector.hpp>
-#include "libp2p/injector/kademlia_injector.hpp"
+#include <libp2p/injector/kademlia_injector.hpp>
 
 /**
  * This program is example to loading MNN model file
@@ -117,12 +117,18 @@ int main(int argc, char **argv)
     //    // Do nothing
     //};
     FileManager::GetInstance().InitializeSingletons();
-    for (int i = 0; i < file_names.size(); i++)
+    for (size_t i = 0; i < file_names.size(); i++)
     {
         std::cout << "LoadASync: " << file_names[i] << std::endl;
-        auto data = FileManager::GetInstance().LoadASync(file_names[i], false, true, ioc, [](const int& status)
+        auto data = FileManager::GetInstance().LoadASync(file_names[i], false, true, ioc, [](const sgns::AsyncError::CustomResult& status)
         {
-                std::cout << "status: " << status << std::endl;
+                if (status.has_value())
+                {
+                    std::cout << "Success: " << status.value().message << std::endl;
+                }
+                else {
+                    std::cout << "Error: " << status.error() << std::endl;
+                }
             }, [](std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers)
                 {
                     std::cout << "Final Callback" << std::endl;

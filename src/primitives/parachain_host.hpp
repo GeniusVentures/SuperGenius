@@ -9,7 +9,6 @@
 #include <boost/optional.hpp>
 #include <boost/variant.hpp>
 #include "base/blob.hpp"
-#include "base/buffer.hpp"
 
 namespace sgns::primitives::parachain {
   /**

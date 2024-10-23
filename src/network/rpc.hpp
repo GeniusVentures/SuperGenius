@@ -1,17 +1,16 @@
-
-
 #ifndef SUPERGENIUS_RPC_HPP
 #define SUPERGENIUS_RPC_HPP
 
 #include <functional>
 #include <memory>
 
-#include <outcome/outcome.hpp>
-#include "base/buffer.hpp"
-#include "libp2p/basic/readwriter.hpp"
-#include "libp2p/host/host.hpp"
-#include "libp2p/peer/peer_info.hpp"
-#include "libp2p/peer/protocol.hpp"
+#include "outcome/outcome.hpp"
+#include <spdlog/spdlog.h>
+
+#include <libp2p/basic/readwriter.hpp>
+#include <libp2p/host/host.hpp>
+#include <libp2p/peer/peer_info.hpp>
+#include <libp2p/peer/protocol.hpp>
 
 namespace sgns::network {
   /**

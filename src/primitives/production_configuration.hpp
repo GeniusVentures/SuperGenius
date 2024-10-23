@@ -4,10 +4,10 @@
 #define SUPERGENIUS_CORE_PRIMITIVES_PRODUCTION_CONFIGURATION_HPP
 
 #include "base/blob.hpp"
-#include "verification/production/common.hpp"
 #include "crypto/sr25519_types.hpp"
 #include "primitives/authority.hpp"
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
+#include "verification/production/common.hpp"
 
 namespace sgns::primitives {
 

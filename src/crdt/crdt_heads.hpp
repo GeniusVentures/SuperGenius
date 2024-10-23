@@ -3,7 +3,7 @@
 
 #include <mutex>
 #include <storage/rocksdb/rocksdb.hpp>
-#include <crdt/hierarchical_key.hpp>
+#include "crdt/hierarchical_key.hpp"
 #include <primitives/cid/cid.hpp>
 
 namespace sgns::crdt
@@ -20,7 +20,7 @@ namespace sgns::crdt
     * @param aDatastore Pointer to datastore
     * @param aNamespace Namespce key (e.g "/namespace")
     */
-    CrdtHeads(const std::shared_ptr<DataStore>& aDatastore, const HierarchicalKey& aNamespace);
+    CrdtHeads( std::shared_ptr<DataStore> aDatastore, const HierarchicalKey &aNamespace );
 
     /** Copy constructor
     */
@@ -77,7 +77,7 @@ namespace sgns::crdt
     * @param aHeight height of head
     * @return outcome::failure on error
     */
-    outcome::result<void> Add(const CID& aCid, const uint64_t& aHeight);
+    outcome::result<void> Add( const CID &aCid, uint64_t aHeight );
 
     /** Replace a head with a new cid.
     * @param aCidHead Content identifier of head to replace
@@ -85,7 +85,7 @@ namespace sgns::crdt
     * @param aHeight height of head
     * @return outcome::failure on error
     */
-    outcome::result<void> Replace(const CID& aCidHead, const CID& aNewHeadCid, const uint64_t& aHeight);
+    outcome::result<void> Replace( const CID &aCidHead, const CID &aNewHeadCid, uint64_t aHeight );
 
     /** Returns the list of current heads plus the max height.
     * @param aHeads output reference to list of CIDs
@@ -102,19 +102,21 @@ namespace sgns::crdt
     * @param aHeight height of CID head
     * @return outcome::failure on error
     */
-    outcome::result<void> Write(const std::unique_ptr<storage::BufferBatch>& aDataStore, const CID& aCid, const uint64_t& aHeight);
+      outcome::result<void> Write( const std::unique_ptr<storage::BufferBatch> &aDataStore,
+                                   const CID                                   &aCid,
+                                   uint64_t                                     aHeight );
 
-    /** Delete data from datastore in batch mode
+      /** Delete data from datastore in batch mode
     * @param aDataStore Pointer to datastore batch
     * @param aCid Content identifier to remove
     */
-    outcome::result<void> Delete(const std::unique_ptr<storage::BufferBatch>& aDataStore, const CID& aCid);
+      outcome::result<void> Delete( const std::unique_ptr<storage::BufferBatch> &aDataStore, const CID &aCid );
 
-    /** primeCache builds the heads cache based on what's in storage; since
+      /** primeCache builds the heads cache based on what's in storage; since
     * it is called from the constructor only we don't bother locking.
     * @return outcome::failure on error
     */
-    outcome::result<void> PrimeCache();
+      outcome::result<void> PrimeCache();
 
   private:
 

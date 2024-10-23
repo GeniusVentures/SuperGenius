@@ -4,7 +4,7 @@
 #define SUPERGENIUS_STORAGE_TRIE_IMPL_SUPERGENIUS_TRIE_FACTORY
 
 #include "storage/trie/supergenius_trie/supergenius_trie.hpp"
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
 
 namespace sgns::storage::trie {
 
@@ -38,7 +38,7 @@ namespace sgns::storage::trie {
         SuperGeniusTrie::NodePtr root,
         ChildRetrieveFunctor f = defaultChildRetriever) const = 0;
 
-    virtual ~SuperGeniusTrieFactory() = default;
+    ~SuperGeniusTrieFactory() override = default;
   };
 
 }  // namespace sgns::storage::trie

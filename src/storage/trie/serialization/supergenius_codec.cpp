@@ -2,7 +2,8 @@
 
 #include "storage/trie/serialization/supergenius_codec.hpp"
 
-#include "crypto/blake2/blake2b.h"
+#include <crypto/blake2/blake2b.h>
+
 #include "scale/scale.hpp"
 #include "scale/scale_decoder_stream.hpp"
 #include "storage/trie/supergenius_trie/supergenius_node.hpp"
@@ -87,7 +88,7 @@ namespace sgns::storage::trie {
   base::Hash256 SuperGeniusCodec::hash256(const base::Buffer &buf) const {
     base::Hash256 out;
 
-    blake2b(out.data(),
+    sgns_blake2b(out.data(),
             base::Hash256::size(),
             nullptr,
             0,
@@ -133,9 +134,10 @@ namespace sgns::storage::trie {
     head <<= 6u;  // head_{6..7} * 64
 
     // set bits 0..5, partial key length
-    if (node.key_nibbles.size() < 63u) {
-      head |= uint8_t(node.key_nibbles.size());
-      return Buffer{head};  // header contains 1 byte
+    if ( node.key_nibbles.size() < 63U )
+    {
+        head |= static_cast<uint8_t>( node.key_nibbles.size() );
+        return Buffer{ head }; // header contains 1 byte
     }
     // if partial key length is greater than 62, then the rest of the length is
     // stored in consequent bytes

@@ -6,26 +6,40 @@
  */
 #include "account/TransferTransaction.hpp"
 #include "crypto/hasher/hasher_impl.hpp"
+#include "base/blob.hpp"
 
 namespace sgns
 {
-    TransferTransaction::TransferTransaction( const uint256_t &amount, const uint256_t &destination,
+    TransferTransaction::TransferTransaction( const std::vector<OutputDestInfo> &destinations, const std::vector<InputUTXOInfo> &inputs,
                                               const SGTransaction::DAGStruct &dag ) :
         IGeniusTransactions( "transfer", SetDAGWithType( dag, "transfer" ) ), //
-        encrypted_amount( amount ),                                           //
-        dest_address( destination )                                           //
+        input_tx_( inputs ),                                                  //
+        outputs_( destinations )                                              //
     {
         auto hasher_ = std::make_shared<sgns::crypto::HasherImpl>();
-        auto hash = hasher_->blake2b_256(SerializeByteVector());
-        dag_st.set_data_hash(hash.toReadableString());
+        auto hash    = hasher_->blake2b_256( SerializeByteVector() );
+        dag_st.set_data_hash( hash.toReadableString() );
     }
     std::vector<uint8_t> TransferTransaction::SerializeByteVector()
     {
         SGTransaction::TransferTx tx_struct;
-        tx_struct.mutable_dag_struct()->CopyFrom(this->dag_st);
+        tx_struct.mutable_dag_struct()->CopyFrom( this->dag_st );
         tx_struct.set_token_id( 0 );
-        tx_struct.set_encrypted_amount( encrypted_amount.str() );
-        tx_struct.set_dest_addr( dest_address.str() );
+        SGTransaction::UTXOTxParams *utxo_proto_params = tx_struct.mutable_utxo_params();
+
+        for ( const auto &input : input_tx_ )
+        {
+            SGTransaction::TransferUTXOInput *input_proto = utxo_proto_params->add_inputs();
+            input_proto->set_tx_id_hash( input.txid_hash_.toReadableString() );
+            input_proto->set_output_index( input.output_idx_ );
+            input_proto->set_signature( input.signature_ );
+        }
+        for ( const auto &output : outputs_ )
+        {
+            SGTransaction::TransferOutput *output_proto = utxo_proto_params->add_outputs();
+            output_proto->set_encrypted_amount( output.encrypted_amount.str() );
+            output_proto->set_dest_addr( output.dest_address.str() );
+        }
         size_t               size = tx_struct.ByteSizeLong();
         std::vector<uint8_t> serialized_proto( size );
 
@@ -40,38 +54,38 @@ namespace sgns
         {
             std::cerr << "Failed to parse TransferTx from array." << std::endl;
         }
+        std::vector<InputUTXOInfo> inputs;
+        SGTransaction::UTXOTxParams *utxo_proto_params = tx_struct.mutable_utxo_params();
+        for ( int i = 0; i < utxo_proto_params->inputs_size(); ++i )
+        {
+            const SGTransaction::TransferUTXOInput &input_proto = utxo_proto_params->inputs( i );
 
-        uint256_t amount( tx_struct.encrypted_amount() );
-        uint256_t dest_address( tx_struct.dest_addr() );
+            InputUTXOInfo curr;
+            curr.txid_hash_  = ( base::Hash256::fromReadableString( input_proto.tx_id_hash() ) ).value();
+            curr.output_idx_ = input_proto.output_index();
+            curr.signature_  = input_proto.signature();
+            inputs.push_back( curr );
+        }
+        std::vector<OutputDestInfo> outputs;
+        for ( int i = 0; i < utxo_proto_params->outputs_size(); ++i )
+        {
+            const SGTransaction::TransferOutput &output_proto = utxo_proto_params->outputs( i );
 
-        return TransferTransaction( amount, dest_address, tx_struct.dag_struct() ); // Return new instance
+            OutputDestInfo curr{ uint256_t{ output_proto.encrypted_amount() }, uint256_t{ output_proto.dest_addr() } };
+            outputs.push_back( curr );
+        }
+
+        return TransferTransaction( outputs, inputs, tx_struct.dag_struct() ); // Return new instance
     }
 
-    template <>
-    const std::string TransferTransaction::GetDstAddress<std::string>() const
+    std::vector<OutputDestInfo> TransferTransaction::GetDstInfos() const
     {
-        std::ostringstream oss;
-        oss << std::hex << dest_address;
-
-        return ( "0x" + oss.str() );
-    }
-    template <>
-    const uint256_t TransferTransaction::GetDstAddress<uint256_t>() const
-    {
-        return dest_address;
+        return outputs_;
     }
 
-    template <>
-    const std::string TransferTransaction::GetAmount<std::string>() const
+    std::vector<InputUTXOInfo> TransferTransaction::GetInputInfos() const
     {
-        std::ostringstream oss;
-        oss << encrypted_amount;
+        return input_tx_;
+    }
 
-        return ( oss.str() );
-    }
-    template <>
-    const uint256_t TransferTransaction::GetAmount<uint256_t>() const
-    {
-        return encrypted_amount;
-    }
 }

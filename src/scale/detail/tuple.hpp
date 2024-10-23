@@ -3,6 +3,7 @@
 #ifndef SUPERGENIUS_SCALE_DETAIL_TUPLE_HPP
 #define SUPERGENIUS_SCALE_DETAIL_TUPLE_HPP
 
+#include <cstdint>
 #include <tuple>
 
 namespace sgns::scale::detail {

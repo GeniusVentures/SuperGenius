@@ -2,14 +2,14 @@
 #define SUPERGENIUS_SRC_NETWORK_EXTRINSIC_GOSSIPER_HPP
 
 #include "network/types/transaction_announce.hpp"
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
 
 namespace sgns::network {
   /**
    * Sends messages, related to author api, over the Gossip protocol
    */
   struct ExtrinsicGossiper : public IComponent {
-    virtual ~ExtrinsicGossiper() = default;
+      ~ExtrinsicGossiper() override = default;
 
     /**
      * Send TxAnnounce message

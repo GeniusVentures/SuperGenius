@@ -5,7 +5,7 @@
 #include "primitives/block_id.hpp"
 #include "primitives/digest.hpp"
 #include "primitives/inherent_data.hpp"
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
 
 namespace sgns::authorship {
 

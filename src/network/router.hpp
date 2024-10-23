@@ -4,7 +4,7 @@
 #define SUPERGENIUS_ROUTER_HPP
 
 #include <libp2p/connection/stream.hpp>
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
 
 namespace sgns::network {
   /**
@@ -16,7 +16,7 @@ namespace sgns::network {
     using Stream = libp2p::connection::Stream;
 
    public:
-    virtual ~Router() = default;
+       ~Router() override = default;
 
     /**
      * Start accepting new connections and messages on this router
@@ -27,8 +27,7 @@ namespace sgns::network {
      * Handle stream, which is opened over a Sync protocol
      * @param stream to be handled
      */
-    virtual void handleSyncProtocol(
-        const std::shared_ptr<Stream> &stream) const = 0;
+    virtual void handleSyncProtocol( std::shared_ptr<Stream> stream ) const = 0;
 
     /**
      * Handle stream, which is opened over a Gossip protocol

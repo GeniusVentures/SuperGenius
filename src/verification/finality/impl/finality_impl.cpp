@@ -16,35 +16,34 @@ namespace sgns::verification::finality {
 
   static size_t round_id = 0;
 
-  FinalityImpl::FinalityImpl(
-      std::shared_ptr<application::AppStateManager> app_state_manager,
-      std::shared_ptr<Environment> environment,
-      std::shared_ptr<storage::BufferStorage> storage,
-      std::shared_ptr<crypto::ED25519Provider> crypto_provider,
-      //std::shared_ptr<runtime::FinalityApi> finality_api,
-      const crypto::ED25519Keypair &keypair,
-      std::shared_ptr<Clock> clock,
-      std::shared_ptr<boost::asio::io_context> io_context,
-      std::shared_ptr<authority::AuthorityManager> authority_manager)
-      : app_state_manager_(std::move(app_state_manager)),
-        environment_{std::move(environment)},
-        storage_{std::move(storage)},
-        crypto_provider_{std::move(crypto_provider)},
-        //finality_api_{std::move(finality_api)},
-        keypair_{keypair},
-        clock_{std::move(clock)},
-        io_context_{std::move(io_context)},
-        authority_manager_(std::move(authority_manager)) {
-    BOOST_ASSERT(app_state_manager_ != nullptr);
-    BOOST_ASSERT(environment_ != nullptr);
-    BOOST_ASSERT(storage_ != nullptr);
-    BOOST_ASSERT(crypto_provider_ != nullptr);
-    //BOOST_ASSERT(finality_api_ != nullptr);
-    BOOST_ASSERT(clock_ != nullptr);
-    BOOST_ASSERT(io_context_ != nullptr);
-    BOOST_ASSERT(authority_manager_ != nullptr);
+  FinalityImpl::FinalityImpl( std::shared_ptr<application::AppStateManager> app_state_manager,
+                              std::shared_ptr<Environment>                  environment,
+                              std::shared_ptr<storage::BufferStorage>       storage,
+                              std::shared_ptr<crypto::ED25519Provider>      crypto_provider,
+                              //std::shared_ptr<runtime::FinalityApi> finality_api,
+                              crypto::ED25519Keypair                       keypair,
+                              std::shared_ptr<Clock>                       clock,
+                              std::shared_ptr<boost::asio::io_context>     io_context,
+                              std::shared_ptr<authority::AuthorityManager> authority_manager ) :
+      app_state_manager_( std::move( app_state_manager ) ),
+      environment_{ std::move( environment ) },
+      storage_{ std::move( storage ) },
+      crypto_provider_{ std::move( crypto_provider ) },
+      keypair_{ std::move( keypair ) },
+      clock_{ std::move( clock ) },
+      io_context_{ std::move( io_context ) },
+      authority_manager_( std::move( authority_manager ) )
+  {
+      BOOST_ASSERT( app_state_manager_ != nullptr );
+      BOOST_ASSERT( environment_ != nullptr );
+      BOOST_ASSERT( storage_ != nullptr );
+      BOOST_ASSERT( crypto_provider_ != nullptr );
+      //BOOST_ASSERT(finality_api_ != nullptr);
+      BOOST_ASSERT( clock_ != nullptr );
+      BOOST_ASSERT( io_context_ != nullptr );
+      BOOST_ASSERT( authority_manager_ != nullptr );
 
-    app_state_manager_->takeControl(*this);
+      app_state_manager_->takeControl( *this );
   }
 
   bool FinalityImpl::prepare() {
@@ -221,13 +220,13 @@ namespace sgns::verification::finality {
      * incremented voter set and consisting of new voters. Also round number
      * should be reset to 0
      */
-    OUTCOME_TRY((auto &&, voters_encoded), storage_->get(storage::kAuthoritySetKey));
+    OUTCOME_TRY((auto &&, voters_encoded), storage_->get(base::Buffer().put(storage::GetAuthoritySetKey())));
     OUTCOME_TRY((auto &&, voter_set), scale::decode<VoterSet>(voters_encoded));
     return std::make_shared<VoterSet>(voter_set);
   }
 
   outcome::result<CompletedRound> FinalityImpl::getLastCompletedRound() const {
-    auto last_round_encoded_res = storage_->get(storage::kSetStateKey);
+    auto last_round_encoded_res = storage_->get(base::Buffer().put(storage::GetSetStateKey()));
 
     // Saved data exists
     if (last_round_encoded_res.has_value()) {
@@ -244,7 +243,7 @@ namespace sgns::verification::finality {
     }
 
     // No saved data - make from genesis
-    auto genesis_hash_res = storage_->get(storage::kGenesisBlockHashLookupKey);
+    auto genesis_hash_res = storage_->get(base::Buffer().put(storage::GetGenesisBlockHashLookupKey()));
     if (! genesis_hash_res.has_value()) {
       logger_->critical(
           "Can't retrieve genesis block hash: {}. Stopping finality execution",
@@ -349,14 +348,14 @@ namespace sgns::verification::finality {
                      completed_round.round_number);
 
       if (auto put_res = storage_->put(
-              storage::kSetStateKey,
+              base::Buffer().put(storage::GetSetStateKey()),
               base::Buffer(scale::encode(completed_round).value()));
           ! put_res) {
         logger_->error("New round state was not added to the storage");
         return;
       }
 
-      BOOST_ASSERT(storage_->get(storage::kSetStateKey));
+      BOOST_ASSERT(storage_->get(base::Buffer().put(storage::GetSetStateKey())));
     }
 
     boost::asio::post(*io_context_, [wp = weak_from_this()] {

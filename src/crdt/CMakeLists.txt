@@ -1,6 +1,5 @@
 
 add_library(hierarchical_key
-	hierarchical_key.hpp
 	impl/hierarchical_key.cpp
 	)
 target_link_libraries(hierarchical_key
@@ -12,7 +11,6 @@ supergenius_install(hierarchical_key)
 add_proto_library(crdt_delta proto/delta.proto)
 add_proto_library(crdt_bcast proto/bcast.proto)
 add_library(crdt_set 
-    crdt_set.hpp
     impl/crdt_set.cpp
     )
 set_target_properties(crdt_set PROPERTIES PUBLIC_HEADER "crdt_set.hpp")
@@ -26,7 +24,6 @@ target_link_libraries(crdt_set
 supergenius_install(crdt_set)
 
 add_library(crdt_heads 
-    crdt_heads.hpp
     impl/crdt_heads.cpp
     )
 set_target_properties(crdt_heads PROPERTIES PUBLIC_HEADER "crdt_heads.hpp")
@@ -39,8 +36,6 @@ target_link_libraries(crdt_heads
 supergenius_install(crdt_heads)
 
 add_library(crdt_datastore 
-    crdt_options.hpp 
-    crdt_datastore.hpp
     impl/crdt_datastore.cpp
     )
 set_target_properties(crdt_datastore PROPERTIES PUBLIC_HEADER "crdt_options.hpp;crdt_datastore.hpp")

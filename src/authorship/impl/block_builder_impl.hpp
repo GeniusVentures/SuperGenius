@@ -24,7 +24,7 @@ private:
     //std::shared_ptr<runtime::BlockBuilder> r_block_builder_;
     base::Logger logger_;
 
-    std::vector<primitives::Extrinsic> extrinsics_{};
+    std::vector<primitives::Extrinsic> extrinsics_;
   };
 
 }  // namespace sgns::authorship

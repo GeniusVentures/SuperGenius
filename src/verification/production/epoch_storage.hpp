@@ -7,14 +7,14 @@
 
 #include "verification/production/common.hpp"
 #include "verification/production/types/next_epoch_descriptor.hpp"
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
 
 namespace sgns::verification {
   /**
    * Allows to store epochs
    */
   struct EpochStorage : public IComponent {
-    virtual ~EpochStorage() = default;
+      ~EpochStorage() override = default;
 
     /**
      * Stores epoch's information by its number

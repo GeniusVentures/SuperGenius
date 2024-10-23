@@ -6,10 +6,10 @@
 #ifndef SUPERGENIUS_PROCESSING_SUBTASK_QUEUE_CHANNEL_PUBSUB_HPP
 #define SUPERGENIUS_PROCESSING_SUBTASK_QUEUE_CHANNEL_PUBSUB_HPP
 
-#include <processing/processing_subtask_queue_channel.hpp>
+#include "processing/processing_subtask_queue_channel.hpp"
 
 #include <ipfs_pubsub/gossip_pubsub_topic.hpp>
-#include <base/logger.hpp>
+#include "base/logger.hpp"
 
 namespace sgns::processing
 {
@@ -19,8 +19,8 @@ class ProcessingSubTaskQueueChannelPubSub : public ProcessingSubTaskQueueChannel
     public std::enable_shared_from_this<ProcessingSubTaskQueueChannelPubSub>
 {
 public:
-    typedef std::function<bool(const SGProcessing::SubTaskQueueRequest&)> QueueRequestSink;
-    typedef std::function<bool(SGProcessing::SubTaskQueue*)> QueueUpdateSink;
+    using QueueRequestSink = std::function<bool( const SGProcessing::SubTaskQueueRequest & )>;
+    using QueueUpdateSink  = std::function<bool( SGProcessing::SubTaskQueue  *)>;
 
     /** Constructs subtask queue channel object
     * @param gossipPubSub - ipfs pubsub
@@ -30,7 +30,7 @@ public:
         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> gossipPubSub,
         const std::string& processingQueueChannelId);
 
-    virtual ~ProcessingSubTaskQueueChannelPubSub();
+    ~ProcessingSubTaskQueueChannelPubSub() override;
 
     /** ProcessingSubTaskQueueChannel overrides
     */

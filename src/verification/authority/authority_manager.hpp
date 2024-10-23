@@ -2,12 +2,13 @@
 #define SUPERGENIUS_AUTHORITY_MANAGER
 
 #include "primitives/authority.hpp"
-#include "integration/IComponent.hpp"
+#include "primitives/common.hpp"
+#include "singleton/IComponent.hpp"
 
 namespace sgns::authority {
   class AuthorityManager : public IComponent {
    public:
-    virtual ~AuthorityManager() = default;
+       ~AuthorityManager() override = default;
 
     /**
      * @brief Returns authorities according specified block

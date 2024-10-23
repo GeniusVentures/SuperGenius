@@ -3,8 +3,8 @@
 #include "pubsub_broadcaster_ext.hpp"
 #include "keypair_file_storage.hpp"
 
-#include <crdt/crdt_datastore.hpp>
-#include <crdt/graphsync_dagsyncer.hpp>
+#include "crdt/crdt_datastore.hpp"
+#include "crdt/graphsync_dagsyncer.hpp"
 
 #include <ipfs_lite/ipfs/merkledag/impl/merkledag_service_impl.hpp>
 #include <ipfs_lite/ipfs/impl/datastore_rocksdb.hpp>
@@ -32,18 +32,18 @@ using GossipPubSub = sgns::ipfs_pubsub::GossipPubSub;
 using GraphsyncImpl = sgns::ipfs_lite::ipfs::graphsync::GraphsyncImpl;
 using GossipPubSubTopic = sgns::ipfs_pubsub::GossipPubSubTopic;
 
-GlobalDB::GlobalDB(
-    std::shared_ptr<boost::asio::io_context> context,
-    std::string databasePath,
-    int dagSyncPort,
-    std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> broadcastChannel)
-    : m_context(std::move(context))
-    , m_databasePath(std::move(databasePath))
-    , m_dagSyncPort(dagSyncPort)
-    , m_broadcastChannel(std::move(broadcastChannel))
+GlobalDB::GlobalDB( std::shared_ptr<boost::asio::io_context>              context,
+                    std::string                                           databasePath,
+                    int                                                   dagSyncPort,
+                    std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> broadcastChannel,
+                    std::vector<std::string>                              gsaddresses ) :
+    m_context( std::move( context ) ),
+    m_databasePath( std::move( databasePath ) ),
+    m_dagSyncPort( dagSyncPort ),
+    m_graphSyncAddrs( std::move( gsaddresses ) ),
+    m_broadcastChannel( std::move( broadcastChannel ) )
 {
 }
-
 
 std::string GetLocalIP(boost::asio::io_context& io)
 {
@@ -65,8 +65,7 @@ std::string GetLocalIP(boost::asio::io_context& io)
     return addr;
 }
 
-
-outcome::result<void> GlobalDB::Init(std::shared_ptr<CrdtOptions> crdtOptions)
+outcome::result<void> GlobalDB::Init( std::shared_ptr<CrdtOptions> crdtOptions )
 {
     std::shared_ptr<RocksDB> dataStore = nullptr;
     auto databasePathAbsolute = boost::filesystem::absolute(m_databasePath).string();
@@ -87,7 +86,7 @@ outcome::result<void> GlobalDB::Init(std::shared_ptr<CrdtOptions> crdtOptions)
     }
 
     boost::filesystem::path keyPath = databasePathAbsolute + "/key";
-    KeyPairFileStorage keyPairStorage(keyPath);
+    KeyPairFileStorage      keyPairStorage( keyPath );
     auto keyPair = keyPairStorage.GetKeyPair();
     // injector creates and ties dependent objects
     auto injector = libp2p::injector::makeHostInjector<BOOST_DI_CFG>(
@@ -111,8 +110,19 @@ outcome::result<void> GlobalDB::Init(std::shared_ptr<CrdtOptions> crdtOptions)
 
     auto dagSyncerHost = injector.create<std::shared_ptr<libp2p::Host>>();
 
-
-    std::string localaddress = (boost::format("/ip4/%s/tcp/%d/p2p/%s") % GetLocalIP(*io) % m_dagSyncPort % dagSyncerHost->getId().toBase58()).str();
+    //If we used upnp we should have an address list, if not just get local ip
+    std::string localaddress;
+    std::string wanaddress;
+    if (m_graphSyncAddrs.empty())
+    {
+        localaddress = (boost::format("/ip4/%s/tcp/%d/p2p/%s") % GetLocalIP(*io) % m_dagSyncPort % dagSyncerHost->getId().toBase58()).str();
+    }
+    else {
+        //use the first address, which should be the lan address for listening
+        localaddress = (boost::format("/ip4/%s/tcp/%d/p2p/%s") % m_graphSyncAddrs[0] % m_dagSyncPort % dagSyncerHost->getId().toBase58()).str();
+        wanaddress = (boost::format("/ip4/%s/tcp/%d/p2p/%s") % m_graphSyncAddrs[1] % m_dagSyncPort % dagSyncerHost->getId().toBase58()).str();
+    }
+    
     //auto listen_to = libp2p::multi::Multiaddress::create(
     //    (boost::format("/ip4/192.168.46.18/tcp/%d/ipfs/%s") % m_dagSyncPort % dagSyncerHost->getId().toBase58()).str()).value();
     auto listen_to = libp2p::multi::Multiaddress::create(localaddress).value();
@@ -132,7 +142,16 @@ outcome::result<void> GlobalDB::Init(std::shared_ptr<CrdtOptions> crdtOptions)
 
     // Create pubsub broadcaster
     //auto broadcaster = std::make_shared<PubSubBroadcaster>(m_broadcastChannel);
-    auto broadcaster = std::make_shared<PubSubBroadcasterExt>(m_broadcastChannel, dagSyncer, listen_to);
+    std::shared_ptr<PubSubBroadcasterExt> broadcaster;
+    if (m_graphSyncAddrs.empty())
+    {
+        broadcaster = std::make_shared<PubSubBroadcasterExt>(m_broadcastChannel, dagSyncer, listen_to);
+    }
+    else
+    {
+        auto listen_towan = libp2p::multi::Multiaddress::create(wanaddress).value();
+        broadcaster = std::make_shared<PubSubBroadcasterExt>(m_broadcastChannel, dagSyncer, listen_towan);
+    }
     broadcaster->SetLogger(m_logger);
 
     m_crdtDatastore = std::make_shared<CrdtDatastore>(
@@ -224,14 +243,15 @@ outcome::result<std::string> GlobalDB::KeyToString(const Buffer& key) const
 
     auto sKey = std::string(key.toString());
 
-    size_t prefixPos = (keysPrefix.value().size() != 0) ? sKey.find(keysPrefix.value(), 0) : 0;
+    size_t prefixPos = ( !keysPrefix.value().empty() ) ? sKey.find( keysPrefix.value(), 0 ) : 0;
     if (prefixPos != 0)
     {
         return outcome::failure(boost::system::error_code{});
     }
 
     size_t keyPos = keysPrefix.value().size();
-    auto suffixPos = (valueSuffix.value().size() != 0) ? sKey.rfind(valueSuffix.value(), std::string::npos) : sKey.size();
+    auto   suffixPos =
+        ( !valueSuffix.value().empty() ) ? sKey.rfind( valueSuffix.value(), std::string::npos ) : sKey.size();
     if ((suffixPos == std::string::npos) || (suffixPos < keyPos))
     {
         return outcome::failure(boost::system::error_code{});

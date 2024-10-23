@@ -3,9 +3,6 @@
 #ifndef SUPERGENIUS_VERIFICATION_VERIFICATION_PRODUCTION_GOSSIPER_HPP
 #define SUPERGENIUS_VERIFICATION_VERIFICATION_PRODUCTION_GOSSIPER_HPP
 
-#include <functional>
-
-#include <outcome/outcome.hpp>
 #include "network/types/block_announce.hpp"
 
 namespace sgns::verification {

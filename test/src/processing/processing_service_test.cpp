@@ -1,6 +1,6 @@
 
-#include <processing/processing_service.hpp>
-#include <processing/processing_subtask_enqueuer_impl.hpp>
+#include "processing/processing_service.hpp"
+#include "processing/processing_subtask_enqueuer_impl.hpp"
 
 #include <libp2p/log/configurator.hpp>
 #include <libp2p/log/logger.hpp>
@@ -27,9 +27,8 @@ class SubTaskResultStorageMock : public SubTaskResultStorage
 public:
     void AddSubTaskResult(const SGProcessing::SubTaskResult& subTaskResult) override {}
     void RemoveSubTaskResult(const std::string& subTaskId) override {}
-    void GetSubTaskResults(
-        const std::set<std::string>& subTaskIds,
-        std::vector<SGProcessing::SubTaskResult>& results) override {}
+    std::vector<SGProcessing::SubTaskResult> GetSubTaskResults(
+        const std::set<std::string>& subTaskIds) override { return {};}
 };
 
 class ProcessingCoreImpl : public ProcessingCore
@@ -67,11 +66,16 @@ public:
         return false;
     }
 
-    bool GrabTask(std::string& taskKey, SGProcessing::Task& task) override
+    outcome::result<std::pair<std::string, SGProcessing::Task>> GrabTask() override
     {
-        return false;
+        return outcome::failure(boost::system::error_code{});
     }
-
+    
+    bool IsTaskCompleted( const std::string &taskId ) override
+    {
+        return true;
+    }
+    
     bool CompleteTask(const std::string& taskKey, const SGProcessing::TaskResult& task) override
     {
         return false;

@@ -1,15 +1,14 @@
 
 
 #include <gtest/gtest.h>
-
-#include "scale/scale.hpp"
-
 #include <gsl/span>
-#include "testutil/outcome.hpp"
+
+#include "base/visitor.hpp"
+#include "scale/scale_decoder_stream.hpp"
+#include "scale/scale_encoder_stream.hpp"
+#include "scale/types.hpp"
 
 using sgns::scale::ByteArray;
-using sgns::scale::decode;
-using sgns::scale::encode;
 using sgns::scale::ScaleDecoderStream;
 using sgns::scale::ScaleEncoderStream;
 

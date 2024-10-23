@@ -1,7 +1,7 @@
 #ifndef SUPERGENIUS_BLOCK_TREE_ERROR_HPP
 #define SUPERGENIUS_BLOCK_TREE_ERROR_HPP
 
-#include <outcome/outcome.hpp>
+#include "outcome/outcome.hpp"
 
 namespace sgns::blockchain {
   /**

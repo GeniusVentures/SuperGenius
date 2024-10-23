@@ -3,14 +3,13 @@
 * @author Justin Church
 */
 #pragma once
-#include <math.h>
-#include <fstream>
-#include <iostream>
+#include <cmath>
 #include <memory>
 #include <vector>
+
 #include <MNN/ImageProcess.hpp>
 #include <MNN/Interpreter.hpp>
-#include <processing/processing_processor.hpp>
+#include "processing/processing_processor.hpp"
 #define MNN_OPEN_TIME_TRACE
 #include <MNN/AutoTime.hpp>
 
@@ -34,76 +33,51 @@
 
 namespace sgns::processing
 {
-	using namespace MNN;
+    using namespace MNN;
 
-
-	class MNN_PoseNet : public ProcessingProcessor
-	{
-	public:
+    class MNN_PoseNet : public ProcessingProcessor
+    {
+    public:
         /** Create a posenet processor
         */
-		MNN_PoseNet() : imageData_(std::make_unique<std::vector<std::vector<char>>>()), modelFile_(std::make_unique<std::vector<uint8_t>>()) {}
+        MNN_PoseNet() :
+            imageData_( std::make_unique<std::vector<std::vector<char>>>() ),
+            modelFile_( std::make_unique<std::vector<uint8_t>>() )
+        {
+        }
 
-		~MNN_PoseNet()
-		{
-			//stbi_image_free(imageData_);
-		};
+        ~MNN_PoseNet() override{
+            //stbi_image_free(imageData_);
+        };
         /** Start processing data
         * @param result - Reference to result item to set hashes to
         * @param task - Reference to task to get image split data
         * @param subTask - Reference to subtask to get chunk data from
         */
-        std::vector<uint8_t> StartProcessing(SGProcessing::SubTaskResult& result, const SGProcessing::Task& task, const SGProcessing::SubTask& subTask) override;
+        std::vector<uint8_t> StartProcessing( SGProcessing::SubTaskResult &result,
+                                              const SGProcessing::Task    &task,
+                                              const SGProcessing::SubTask &subTask ) override;
 
         /** Set data for processor
         * @param buffers - Data containing file name and data pair lists.
         */
-        void SetData(std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers) override;
+        void SetData(
+            std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers ) override;
 
-
-	private:
+    private:
         /** Run MNN processing on image
         * @param imgdata - RGBA image bytes
         * @param origwidth - Width of image
         * @param origheight - Height of image
         */
-        std::vector<uint8_t> MNNProcess(std::vector<uint8_t>* imgdata, const int origwidth,
-            const int origheight, const std::string filename);
+        std::unique_ptr<MNN::Tensor> MNNProcess( const std::vector<uint8_t> &imgdata,
+                                                 int                         origwidth,
+                                                 int                         origheight,
+                                                 const std::string          &filename = "" );
 
-        /** The following functions are pre/post processing functions from MNN demo that we may not use so I won't document yet.
-        */
-        int changeColorCircle(uint32_t* src, CV::Point point, int width, int height);
-        int drawPose(uint8_t* rgbaPtr, int width, int height, std::vector<float>& poseScores,
-            std::vector<std::vector<float>>& poseKeypointScores,
-            std::vector<std::vector<CV::Point>>& poseKeypointCoords);
-        CV::Point getCoordsFromTensor(const Tensor* dataTensor, int id, int x, int y, bool getCoord = true);
-        int decodePoseImpl(float curScore, int curId, const CV::Point& originalOnImageCoords, const Tensor* heatmaps,
-            const Tensor* offsets, const Tensor* displacementFwd, const Tensor* displacementBwd,
-            std::vector<float>& instanceKeypointScores, std::vector<CV::Point>& instanceKeypointCoords);
-        int decodeMultiPose(const Tensor* offsets, const Tensor* displacementFwd, const Tensor* displacementBwd,
-            const Tensor* heatmaps, std::vector<float>& poseScores,
-            std::vector<std::vector<float>>& poseKeypointScores,
-            std::vector<std::vector<CV::Point>>& poseKeypointCoords, CV::Point& scale);
-        float clip(float value, float min, float max);
-
-
-		std::unique_ptr<std::vector<std::vector<char>>> imageData_;
-        std::unique_ptr<std::vector<uint8_t>> modelFile_;
-		std::string fileName_;
-
-        //Pose Model Names
-        const std::vector<std::string> PoseNames{ "nose",         "leftEye",       "rightEye",  "leftEar",    "rightEar",
-                                             "leftShoulder", "rightShoulder", "leftElbow", "rightElbow", "leftWrist",
-                                             "rightWrist",   "leftHip",       "rightHip",  "leftKnee",   "rightKnee",
-                                             "leftAnkle",    "rightAnkle" };
-
-        const std::vector<std::pair<std::string, std::string>> PoseChain{
-            {"nose", "leftEye"},          {"leftEye", "leftEar"},        {"nose", "rightEye"},
-            {"rightEye", "rightEar"},     {"nose", "leftShoulder"},      {"leftShoulder", "leftElbow"},
-            {"leftElbow", "leftWrist"},   {"leftShoulder", "leftHip"},   {"leftHip", "leftKnee"},
-            {"leftKnee", "leftAnkle"},    {"nose", "rightShoulder"},     {"rightShoulder", "rightElbow"},
-            {"rightElbow", "rightWrist"}, {"rightShoulder", "rightHip"}, {"rightHip", "rightKnee"},
-            {"rightKnee", "rightAnkle"} };
-	};
+        std::unique_ptr<std::vector<std::vector<char>>> imageData_;
+        std::unique_ptr<std::vector<uint8_t>>           modelFile_;
+        std::string                                     fileName_;
+    };
 
 }

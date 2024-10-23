@@ -2,7 +2,7 @@
 #ifndef SUPERGENIUS_BROADCASTER_HPP
 #define SUPERGENIUS_BROADCASTER_HPP
 
-#include <base/buffer.hpp>
+#include "base/buffer.hpp"
 
 namespace sgns::crdt
 {

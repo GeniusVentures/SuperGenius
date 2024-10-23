@@ -18,7 +18,7 @@ add_library(supergenius_codec
 set_target_properties(supergenius_codec PROPERTIES PUBLIC_HEADER "supergenius_codec.hpp")
 target_link_libraries(supergenius_codec
     scale
-    blake2
+    ipfs-lite-cpp::blake2
     blob
     supergenius_node
     )

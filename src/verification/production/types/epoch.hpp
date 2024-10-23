@@ -3,9 +3,6 @@
 #ifndef SUPERGENIUS_EPOCH_HPP
 #define SUPERGENIUS_EPOCH_HPP
 
-#include <chrono>
-#include <vector>
-
 #include "verification/production/common.hpp"
 #include "primitives/authority.hpp"
 
@@ -28,7 +25,7 @@ namespace sgns::verification {
     primitives::AuthorityList authorities;
 
     /// randomness of the epoch
-    Randomness randomness{};
+    Randomness randomness;
 
     bool operator==(const Epoch &other) const {
       return epoch_index == other.epoch_index && start_slot == other.start_slot
@@ -44,9 +41,9 @@ namespace sgns::verification {
     {
       out << test_struct.epoch_index << test_struct.start_slot << test_struct.epoch_duration ;
       out << test_struct.authorities.size();
-      for(auto it = test_struct.authorities.begin(); it != test_struct.authorities.end() ; it++)
+      for ( const auto &authorithy : test_struct.authorities )
       {
-        out << *it;
+          out << authorithy;
       }
       out << test_struct.randomness ;
       return out;

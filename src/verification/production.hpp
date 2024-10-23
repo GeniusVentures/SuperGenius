@@ -6,12 +6,10 @@
 #include <boost/optional.hpp>
 #include <boost/optional/optional_io.hpp>
 
-
 #include "verification/production/common.hpp"
-#include "verification/production/types/production_meta.hpp"
 #include "verification/production/types/epoch.hpp"
 #include "network/production_observer.hpp"
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
 
 namespace sgns::verification {
   /**

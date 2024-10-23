@@ -25,28 +25,28 @@ namespace sgns::blockchain {
      * requested
      */
     struct TreeNode : public std::enable_shared_from_this<TreeNode> {
-      TreeNode(primitives::BlockHash hash,
-               primitives::BlockNumber depth,
-               const std::shared_ptr<TreeNode> &parent,
-               bool finalized = false);
+        TreeNode( primitives::BlockHash     hash,
+                  primitives::BlockNumber   depth,
+                  std::shared_ptr<TreeNode> parent,
+                  bool                      finalized = false );
 
-      primitives::BlockHash block_hash;
-      primitives::BlockNumber depth;
+        primitives::BlockHash   block_hash;
+        primitives::BlockNumber depth;
 
-      std::weak_ptr<TreeNode> parent;
+        std::weak_ptr<TreeNode> parent;
 
-      bool finalized;
+        bool finalized;
 
-      std::vector<std::shared_ptr<TreeNode>> children{};
+        std::vector<std::shared_ptr<TreeNode>> children;
 
-      /**
+        /**
        * Get a node of the tree, containing block with the specified hash, if it
        * can be found
        */
-      std::shared_ptr<TreeNode> getByHash(const primitives::BlockHash &hash);
+        std::shared_ptr<TreeNode> getByHash( const primitives::BlockHash &hash );
 
-      bool operator==(const TreeNode &other) const;
-      bool operator!=(const TreeNode &other) const;
+        bool operator==( const TreeNode &other ) const;
+        bool operator!=( const TreeNode &other ) const;
     };
 
     /**
@@ -181,8 +181,7 @@ namespace sgns::blockchain {
         std::vector<std::pair<primitives::BlockHash, primitives::BlockNumber>>
             &container);
 
-    outcome::result<void> prune(
-        const std::shared_ptr<TreeNode> &lastFinalizedNode);
+    outcome::result<void> prune( std::shared_ptr<TreeNode> lastFinalizedNode );
 
     std::shared_ptr<BlockHeaderRepository> header_repo_;
     std::shared_ptr<BlockStorage> storage_;

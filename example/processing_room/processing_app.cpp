@@ -1,5 +1,5 @@
-#include <processing/processing_service.hpp>
-#include <processing/processing_subtask_enqueuer_impl.hpp>
+#include "processing/processing_service.hpp"
+#include "processing/processing_subtask_enqueuer_impl.hpp"
 
 #include <iostream>
 #include <thread>
@@ -28,9 +28,8 @@ namespace
     public:
         void AddSubTaskResult(const SGProcessing::SubTaskResult& subTaskResult) override {}
         void RemoveSubTaskResult(const std::string& subTaskId) override {}
-        void GetSubTaskResults(
-            const std::set<std::string>& subTaskIds,
-            std::vector<SGProcessing::SubTaskResult>& results) override {}
+        std::vector<SGProcessing::SubTaskResult> GetSubTaskResults(
+            const std::set<std::string>& subTaskIds) override { return {};}
     };
 
     class TaskSplitter
@@ -101,7 +100,7 @@ namespace
 
         void EnqueueTask(
             const SGProcessing::Task& task,
-            const std::list<SGProcessing::SubTask>& subTasks)
+            const std::list<SGProcessing::SubTask>& subTasks) override
         {
             m_tasks.push_back(task);
             m_subTasks.emplace(task.ipfs_block_id(), subTasks);
@@ -109,7 +108,7 @@ namespace
 
         bool GetSubTasks(
             const std::string& taskId,
-            std::list<SGProcessing::SubTask>& subTasks)
+            std::list<SGProcessing::SubTask>& subTasks) override
         {
             auto it = m_subTasks.find(taskId);
             if (it != m_subTasks.end())
@@ -121,20 +120,25 @@ namespace
             return false;
         }
 
-        bool GrabTask(std::string& taskKey, SGProcessing::Task& task) override
+        outcome::result<std::pair<std::string, SGProcessing::Task>> GrabTask() override
         {
             if (m_tasks.empty())
             {
-                return false;
+                return outcome::failure(boost::system::error_code{});
             }
 
-
+            SGProcessing::Task task;
             task = std::move(m_tasks.back());
             m_tasks.pop_back();
-            taskKey = (boost::format("TASK_%d") %  m_tasks.size()).str();
+            std::string taskKey = (boost::format("TASK_%d") %  m_tasks.size()).str();
 
-            return true;
+            return std::make_pair(taskKey, task);
         };
+
+        bool IsTaskCompleted( const std::string &taskId ) override
+        {
+            return true;
+        }
 
         bool CompleteTask(const std::string& taskKey, const SGProcessing::TaskResult& task) override
         {

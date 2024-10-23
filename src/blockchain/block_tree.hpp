@@ -5,12 +5,12 @@
 #include <vector>
 
 #include <boost/optional.hpp>
-#include <outcome/outcome.hpp>
+#include "outcome/outcome.hpp"
 #include "primitives/block.hpp"
 #include "primitives/block_id.hpp"
 #include "primitives/common.hpp"
 #include "primitives/justification.hpp"
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
 
 namespace sgns::blockchain {
   /**
@@ -24,7 +24,7 @@ namespace sgns::blockchain {
   struct BlockTree : public IComponent {
     using BlockHashVecRes = outcome::result<std::vector<primitives::BlockHash>>;
 
-    virtual ~BlockTree() = default;
+    ~BlockTree() override = default;
 
     /**
      * Get block header by provided block id

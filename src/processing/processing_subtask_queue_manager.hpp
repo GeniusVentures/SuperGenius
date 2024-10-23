@@ -6,10 +6,10 @@
 #ifndef SUPERGENIUS_PROCESSING_SUBTASK_QUEUE_MANAGER_HPP
 #define SUPERGENIUS_PROCESSING_SUBTASK_QUEUE_MANAGER_HPP
 
-#include <processing/processing_subtask_queue.hpp>
-#include <processing/processing_subtask_queue_channel.hpp>
+#include "processing/processing_subtask_queue.hpp"
+#include "processing/processing_subtask_queue_channel.hpp"
 
-#include <processing/proto/SGProcessing.pb.h>
+#include "processing/proto/SGProcessing.pb.h"
 
 #include <boost/asio.hpp>
 #include <boost/optional.hpp>
@@ -22,7 +22,7 @@ namespace sgns::processing
 class ProcessingSubTaskQueueManager
 {
 public:
-    typedef std::function<void(boost::optional<const SGProcessing::SubTask&>)> SubTaskGrabbedCallback;
+    using SubTaskGrabbedCallback = std::function<void( boost::optional<const SGProcessing::SubTask &> )>;
 
     /** Construct an empty queue
     * @param queueChannel - task processing channel

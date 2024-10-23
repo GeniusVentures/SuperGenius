@@ -1,108 +1,86 @@
 This is the block-lattice super fast cryptotoken system based on the original nanocurrency
 
-## Download SuperGenius project
 
-```bash
-git clone git@github.com:GeniusVentures/SuperGenius.git --recursive 
-cd SuperGenius
-git checkout develop
-```
 
 ## Download thirdparty project
 
 ```bash
 cd ..
-git clone git@github.com:GeniusVentures/thirdparty.git --recursive 
+git clone git@github.com:GeniusVentures/thirdparty.git
 cd thirdparty
 git checkout develop
+git submodule update --init --recursive
 ```
 ## [Build thirdparty project](../../../thirdparty/blob/master/README.md)
 
-The folder structure must be as follows:
+## Download SuperGenius project
+
+```bash
+git clone git@github.com:GeniusVentures/SuperGenius.git 
+cd SuperGenius
+git checkout develop
+git submodule update --init --recursive
+```
+
+Ideally the folder structure should be as follows
 
 ```bash
 .
-├── thirdparty                           # geniustokens thirdparty
-│   ├── grpc                             # grpc latest version (current v1.28.1)
-│   ├── libp2p                           # libp2p cross-compile branch
-│   └── ipfs-lite-cpp                    # current repo
-│        ├── ipfs-lite                   # sub folder
-│        ├── readme.md                   # readme
-│        └── CMakeList.txt               # CMake file
+├── thirdparty                          # SuperGenius project
+│   └── build                            # build directory
+│        ├── Android                     # Android build directory
+│        ├── Linux                       # Linux build directory
+│        ├── Windows                     # Windows build directory
+│        ├── OSX                         # OSX build directory
+|            └── Release                 # Release build of OSX (Created when building for OSX Release)
+|        └── iOS                         # iOS build directory
 └── SuperGenius   
-    ├── readme.md                        # readme
-    └── CMakeList.txt                    # CMake file
+│   └── build                            # build directory
+│        ├── Android                     # Android build directory
+│        ├── Linux                       # Linux build directory
+│        ├── Windows                     # Windows build directory
+│        ├── OSX                         # OSX build directory
+|            └── Release                 # Release build of OSX (Created when building for OSX Release)
+|        └── iOS                         # iOS build directory
 ```
 
 ## Building
 
+Chose the CMAKE_BUILD_TYPE according to the desired configuration (Debug or Release). Chose TESTING ON of OFF to enable unit tests.
+
 ### Windows
 
-I used visual studio 2019 to compile SuperGenius project.
-1. Download OpenSSL and install
-2. Build SuperGenius using following commands in Release configuration:
-    
-```bash
-cd SuperGenius 
-md .build 
-cd .build 
-cmake ../build/Windows -G "Visual Studio 16 2019" -A x64 -DCMAKE_BUILD_TYPE=Release -DTHIRDPARTY_DIR=[ABSOLUTE_PATH_TO_THIRDPARTY_BUILD_RELEASE] -DTESTING=OFF
-cmake --build . --config Release
-```
-
-If you are going to build and test, then use following commands
+Use Visual Studio 17 2022 to compile SuperGenius project. 
 
 ```bash
-cmake ../build/Windows -G "Visual Studio 16 2019" -A x64 -DTESTING=ON -DCMAKE_BUILD_TYPE=Release -DTHIRDPARTY_DIR=[ABSOLUTE_PATH_TO_THIRDPARTY_BUILD_RELEASE]
-cmake --build . --config Release
-cd SuperGenius/src/SuperGenius-build
-ctest -C Release
+cd build
+cd Windows 
+md [Debug or Release] 
+cd [Debug or Release]
+cmake .. -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=[Debug or Release] -DTHIRDPARTY_DIR=[ABSOLUTE_PATH_TO_THIRDPARTY_PROJECT] -DTESTING=[ON or OFF]
+cmake --build . --config [Debug or Release]
 ```
 
-To run sepecific test with detailed log, you can use following commands.
-
-```bash
-ctest -C Release -R <test_name> --verbose
-```
-
-To run all tests and display log for failed tests, you can use following commands.
-
-```bash
-ctest -C Release --output-on-failure
-```
-
-You can use Debug configuration to debug in Visual Studio.
- 
- example build commands
-
-```bash
-cmake ../build/Windows -G "Visual Studio 16 2019" -A x64 -DTESTING=ON  -DCMAKE_BUILD_TYPE=Debug  -DTHIRDPARTY_DIR=[ABSOLUTE_PATH_TO_THIRDPARTY_BUILD_DEBUG]
-
-cmake --build . --config Debug
-cd SuperGenius/src/SuperGenius-build
-ctest -C Debug
-```
 
 ### Linux
 
 ```bash
-cd SuperGenius 
-mkdir .build 
-cd .build 
-cmake ../build/Linux -DCMAKE_BUILD_TYPE=Release -DTHIRDPARTY_DIR=[ABSOLUTE_PATH_TO_THIRDPARTY_BUILD_RELEASE] 
-cmake --build . --config Release
+cd build/Linux
+mkdir [Debug or Release] 
+cd [Debug or Release]
+cmake .. -DCMAKE_BUILD_TYPE=[Debug or Release] -DTHIRDPARTY_DIR=[ABSOLUTE_PATH_TO_THIRDPARTY_PROJECT] -DTESTING=[ON or OFF]
+cmake --build . --config [Debug or Release]
 ```
 
-### Linux for Android cross compile
+### Android Cross-Compile on Linux/OSX Hosts
 
 #### Preinstall
 - CMake 
-- Android NDK Latest LTS Version (r21e) [(link)](https://developer.android.com/ndk/downloads#lts-downloads)
-- ([Build thirdparty project](../thirdparty/README.md))
+- Android NDK Latest LTS Version (r25b) [(link)](https://github.com/android/ndk/wiki/Unsupported-Downloads)
 
 #### Building
 ```bash
-export ANDROID_NDK=/path/to/android-ndk-r21e
+export ANDROID_NDK=/path/to/android-ndk-r25b
 export ANDROID_TOOLCHAIN="$ANDROID_NDK/toolchains/llvm/prebuilt/linux-x86_64/bin"
 export PATH="$ANDROID_TOOLCHAIN":"$PATH" 
 ```
@@ -110,66 +88,81 @@ export PATH="$ANDROID_TOOLCHAIN":"$PATH"
 * armeabi-v7a
 
 ```bash
-mkdir .build/Android.armeabi-v7a
-cd ./.build/Android.armeabi-v7a
-cmake ../../build/Android/ -DANDROID_ABI="armeabi-v7a" -DCMAKE_ANDROID_NDK=$ANDROID_NDK -DANDROID_TOOLCHAIN=clang -DTHIRDPARTY_DIR=[ABSOLUTE_PATH_TO_THIRDPARTY_BUILD_Android.armeabi-v7a] 
-make -j4
+cd build/Android
+mkdir -p [Debug or Release]/armeabi-v7a
+cd [Debug or Release]/armeabi-v7a
+cmake ../../ -DANDROID_ABI="armeabi-v7a" -DCMAKE_ANDROID_NDK=$ANDROID_NDK -DANDROID_TOOLCHAIN=clang -DTHIRDPARTY_DIR=[ABSOLUTE_PATH_TO_THIRDPARTY_PROJECT] 
+cmake --build . --config [Debug or Release]
 ```
 
 * arm64-v8a
 
 ```bash
-mkdir .build/Android.arm64-v8a
-cd ./.build/Android.arm64-v8a
-cmake ../../build/Android/ -DANDROID_ABI="arm64-v8a" -DCMAKE_ANDROID_NDK=$ANDROID_NDK -DANDROID_TOOLCHAIN=clang -DTHIRDPARTY_DIR=[ABSOLUTE_PATH_TO_THIRDPARTY_BUILD_Android.arm64-v8a] 
-make -j4
+cd build/Android
+mkdir -p [Debug or Release]/arm64-v8a
+cd [Debug or Release]/arm64-v8a
+cmake ../../ -DANDROID_ABI="arm64-v8a" -DCMAKE_ANDROID_NDK=$ANDROID_NDK -DANDROID_TOOLCHAIN=clang -DTHIRDPARTY_DIR=[ABSOLUTE_PATH_TO_THIRDPARTY_PROJECT] -DSUPERGENIUS_SRC_DIR=[ABSOLUTE_PATH_TO_SUPERGENIUS_PROJECT]
+cmake --build . --config [Debug or Release]
 ```
 
 * x86
 
 ```bash
-mkdir .build/Android.x86
-cd ./.build/Android.x86
-cmake ../../build/Android/ -DANDROID_ABI="x86" -DCMAKE_ANDROID_NDK=$ANDROID_NDK -DANDROID_TOOLCHAIN=clang -DTHIRDPARTY_DIR=[ABSOLUTE_PATH_TO_THIRDPARTY_BUILD_Android.x86]
-make -j4
+cd build/Android
+mkdir -p [Debug or Release]/x86
+cd [Debug or Release]/x86
+cmake ../../ -DANDROID_ABI="x86" -DCMAKE_ANDROID_NDK=$ANDROID_NDK -DANDROID_TOOLCHAIN=clang -DTHIRDPARTY_DIR=[ABSOLUTE_PATH_TO_THIRDPARTY_PROJECT] -DSUPERGENIUS_SRC_DIR=[ABSOLUTE_PATH_TO_SUPERGENIUS_PROJECT]
+cmake --build . --config [Debug or Release]
 ```
 
 * x86_64
 ```bash
-mkdir .build/Android.x86_64
-cd ./.build/Android.x86_64
-cmake ../../build/Android/ -DANDROID_ABI="x86_64" -DCMAKE_ANDROID_NDK=$ANDROID_NDK -DANDROID_TOOLCHAIN=clang -DTHIRDPARTY_DIR=[ABSOLUTE_PATH_TO_THIRDPARTY_BUILD_Android.x86_64]
-make -j4
+cd build/Android
+mkdir -p [Debug or Release]/x86_64
+cd [Debug or Release]/x86_64
+cmake ../../ -DANDROID_ABI="x86_64" -DCMAKE_ANDROID_NDK=$ANDROID_NDK -DANDROID_TOOLCHAIN=clang -DTHIRDPARTY_DIR=[ABSOLUTE_PATH_TO_THIRDPARTY_PROJECT] -DSUPERGENIUS_SRC_DIR=[ABSOLUTE_PATH_TO_SUPERGENIUS_PROJECT]
+cmake --build . --config [Debug or Release]
 ```
 
-### OSX 
+### OSX (x86_64 & Arm64) 
 
 ```bash
-cd SuperGenius 
-mkdir .build/OSX 
-cd .build/OSX
-cmake ../../build/OSX -DCMAKE_BUILD_TYPE=Release -DTHIRDPARTY_DIR=[ABSOLUTE_PATH_TO_THIRDPARTY_BUILD_RELEASE] 
-make -j4
+cd build/OSX
+mkdir [Debug or Release] 
+cd [Debug or Release]
+cmake .. -DCMAKE_BUILD_TYPE=[Debug or Release] -DTHIRDPARTY_DIR=[ABSOLUTE_PATH_TO_THIRDPARTY_PROJECT]
+cmake --build . --config [Debug or Release]
 ```
 
-#### For iOS cross compile 
+### iOS cross compile 
 
 ```bash
-cd SuperGenius 
-mkdir .build/iOS 
-cd .build/iOS
-cmake ../../build/iOS -DCMAKE_BUILD_TYPE=Release -DTHIRDPARTY_DIR=[ABSOLUTE_PATH_TO_THIRDPARTY_BUILD_RELEASE] -DCMAKE_TOOLCHAIN_FILE=[/ABSOLUTE/PATH/TO/GeniusTokens/SuperGenius/build/iOS/iOS.cmake] -DiOS_ABI=arm64-v8a -DIOS_ARCH="arm64" -DENABLE_ARC=0 -DENABLE_BITCODE=0 -DENABLE_VISIBILITY=1  -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_SYSTEM_PROCESSOR=arm64
-make -j4
+cd build/iOS
+mkdir [Debug or Release] 
+cd [Debug or Release]
+cmake .. -DCMAKE_BUILD_TYPE=[Debug or Release] -DTHIRDPARTY_DIR=[ABSOLUTE_PATH_TO_THIRDPARTY_PROJECT] -DCMAKE_TOOLCHAIN_FILE=../iOS.cmake -DiOS_ABI=arm64-v8a -DIOS_ARCH="arm64" -DENABLE_ARC=0 -DENABLE_BITCODE=0 -DENABLE_VISIBILITY=1  -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_SYSTEM_PROCESSOR=arm64 
+cmake --build . --config [Debug or Release]
 ```
-
-## Installing
-On the root of the build folder, use the cmake install command
+## Unit tests
+If you configured and built with -DTESTING=ON, you can execute the unit tests on the root of the build directory.
 
 ```bash
-cmake --install .
+ctest -C [Debug or Release]
 ```
 
-### Setting up VS Code intellisense
+To run sepecific test with detailed log, you can use following commands.
+
+```bash
+ctest -C [Debug or Release] -R <test_name> --verbose
+```
+
+To run all tests and display log for failed tests, you can use following commands.
+
+```bash
+ctest -C [Debug or Release] --output-on-failure
+```
+
+## Setting up VS Code intellisense
 
 This requires installing the (C/C++ Extension Pack)[https://marketplace.visualstudio.com/items?itemName=ms-vscode.cpptools-extension-pack]. Configure CMake Tools to appear under the toolbar, with this setting:
 
@@ -192,8 +185,4 @@ By pressing `CTRL + P` and picking `CMake: Configure`, choose the `CMakeLists.tx
 
 This will also configure the `thirdparty` directory. Now, it should be working.
 
-## Running tests
 
-### Linux
-
-Enter the `.build` directory and run `ctest -C Release`.

@@ -5,8 +5,8 @@
 #include <libp2p/log/logger.hpp>
 #include <libp2p/injector/host_injector.hpp>
 #include <libp2p/multi/multibase_codec/multibase_codec_impl.hpp>
-#include <crdt/globaldb/globaldb.hpp>
-#include <crdt/globaldb/keypair_file_storage.hpp>
+#include "crdt/globaldb/globaldb.hpp"
+#include "crdt/globaldb/keypair_file_storage.hpp"
 #include <libp2p/host/basic_host.hpp>
 
 using GossipPubSub = sgns::ipfs_pubsub::GossipPubSub;
@@ -51,8 +51,8 @@ int main(int argc, char* argv[])
         sgns::crdt::KeyPairFileStorage("CRDT.Datastore.TEST/pubs_dapp").GetKeyPair().value());
     auto pubs2 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>(
         sgns::crdt::KeyPairFileStorage("CRDT.Datastore.TEST2/pubs_processor").GetKeyPair().value());
-    pubs2->Start(40002, { pubs->GetLocalAddress(), "", });
-    pubs->Start(40001, { pubs2->GetLocalAddress(), "", });
+    pubs2->Start(40002, { pubs->GetLocalAddress()[0], "",});
+    pubs->Start(40001, { pubs2->GetLocalAddress()[0], "",});
     std::string topic = "SuperGenius";
     auto pubsTopic1 = pubs->Subscribe(topic, [&](boost::optional<const GossipPubSub::Message&> msg)
         {

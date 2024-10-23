@@ -4,8 +4,6 @@
 #define SUPERGENIUS_EPOCH_STORAGE_DUMB_HPP
 
 #include "verification/production/epoch_storage.hpp"
-
-#include <unordered_map>
 #include "storage/buffer_map_types.hpp"
 
 namespace sgns::verification {

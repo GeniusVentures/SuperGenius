@@ -23,7 +23,6 @@ namespace sgns::application
             kFullSyncing,
         };
 
-    public:
         virtual ~AppConfiguration() = default;
 
         /**

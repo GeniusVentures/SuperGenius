@@ -17,7 +17,7 @@
 #include <crypto/pbkdf2/impl/pbkdf2_provider_impl.hpp>
 #include <crypto/secp256k1/secp256k1_provider_impl.hpp>
 
-#include <outcome/outcome.hpp>
+#include "outcome/outcome.hpp"
 #include "api/service/api_service.hpp"
 #include "api/service/author/author_jrpc_processor.hpp"
 #include "api/service/author/impl/author_api_impl.hpp"
@@ -256,7 +256,7 @@ namespace sgns::injector {
         [&db, &injector](const primitives::Block &genesis_block) {
           // handle genesis initialization, which happens when there is not
           // authorities and last completed round in the storage
-          if (! db->get(storage::kAuthoritySetKey)) {
+          if (! db->get(storage::GetAuthoritySetKey())) {
             // insert authorities
             auto finality_api =
                 injector.template create<sptr<runtime::FinalityApi>>();
@@ -280,7 +280,7 @@ namespace sgns::injector {
             }
             BOOST_ASSERT_MSG(voters.size() != 0, "Finality voters are empty");
             auto authorities_put_res =
-                db->put(storage::kAuthoritySetKey,
+                db->put(storage::GetAuthoritySetKey(),
                         base::Buffer(scale::encode(voters).value()));
             if (! authorities_put_res) {
               BOOST_ASSERT_MSG(false, "Could not insert authorities");

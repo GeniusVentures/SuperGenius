@@ -1,25 +1,20 @@
-#include <crdt/crdt_set.hpp>
+#include "crdt/crdt_set.hpp"
 #include <storage/database_error.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/system/error_code.hpp>
 #include <boost/lexical_cast.hpp>
+#include <utility>
 
 namespace sgns::crdt
 {
-  const std::string CrdtSet::elemsNamespace_ = "s";
-  const std::string CrdtSet::tombsNamespace_ = "t";
-  const std::string CrdtSet::keysNamespace_ = "k";
-  const std::string CrdtSet::valueSuffix_ = "v";
-  const std::string CrdtSet::prioritySuffix_ = "p";
 
-
-  CrdtSet::CrdtSet(const std::shared_ptr<DataStore>& aDatastore, const HierarchicalKey& aNamespace,
-    const PutHookPtr aPutHookPtr /*=nullptr*/, const DeleteHookPtr aDeleteHookPtr /*=nullptr*/) 
+  CrdtSet::CrdtSet( std::shared_ptr<DataStore> aDatastore,
+                    const HierarchicalKey     &aNamespace,
+                    PutHookPtr                 aPutHookPtr,
+                    DeleteHookPtr              aDeleteHookPtr ) :
+      dataStore_( std::move( aDatastore ) ), namespaceKey_( aNamespace ), putHookFunc_( std::move( aPutHookPtr ) ),
+      deleteHookFunc_( std::move( aDeleteHookPtr ) )
   {
-    this->dataStore_ = aDatastore;
-    this->namespaceKey_ = aNamespace;
-    this->putHookFunc_ = aPutHookPtr;
-    this->deleteHookFunc_ = aDeleteHookPtr;
   }
 
   CrdtSet::CrdtSet(const CrdtSet& aSet)
@@ -211,13 +206,13 @@ namespace sgns::crdt
         elements.insert(element);
         break;
       case QuerySuffix::QUERY_PRIORITYSUFFIX:
-        if (boost::algorithm::ends_with(key, "/" + this->prioritySuffix_))
+        if (boost::algorithm::ends_with(key, "/" + GetPrioritySuffix()))
         {
           elements.insert(element);
         }
         break;
       case QuerySuffix::QUERY_VALUESUFFIX:
-        if (boost::algorithm::ends_with(key, "/" + this->valueSuffix_))
+        if (boost::algorithm::ends_with(key, "/" + GetValueSuffix()))
         {
           elements.insert(element);
         }
@@ -312,31 +307,31 @@ namespace sgns::crdt
   HierarchicalKey CrdtSet::ElemsPrefix(const std::string& aKey)
   {
     // /namespace/s/<key>
-    return this->KeyPrefix(elemsNamespace_).ChildString(aKey);
+    return this->KeyPrefix(std::string(elemsNamespace_)).ChildString(aKey);
   }
 
   HierarchicalKey CrdtSet::TombsPrefix(const std::string& aKey)
   {
     // /namespace/t/<key>
-    return this->KeyPrefix(tombsNamespace_).ChildString(aKey);
+    return this->KeyPrefix(std::string(tombsNamespace_)).ChildString(aKey);
   }
 
   HierarchicalKey CrdtSet::KeysKey(const std::string& aKey)
   {
     // /namespace/k/<key>
-    return this->KeyPrefix(keysNamespace_).ChildString(aKey);
+    return this->KeyPrefix(std::string(keysNamespace_)).ChildString(aKey);
   }
 
   HierarchicalKey CrdtSet::ValueKey(const std::string& aKey)
   {
     // /namespace/k/<key>/v
-    return this->KeysKey(aKey).ChildString(valueSuffix_);
+    return this->KeysKey(aKey).ChildString(GetValueSuffix());
   }
 
   HierarchicalKey CrdtSet::PriorityKey(const std::string& aKey)
   {
     // /namespace/k/<key>/p
-    return this->KeysKey(aKey).ChildString(prioritySuffix_);
+    return this->KeysKey(aKey).ChildString(GetPrioritySuffix());
   }
 
   outcome::result<uint64_t> CrdtSet::GetPriority(const std::string& aKey)
@@ -363,7 +358,7 @@ namespace sgns::crdt
     return priority;
   }
 
-  outcome::result<void> CrdtSet::SetPriority(const std::string& aKey, const uint64_t& aPriority)
+  outcome::result<void> CrdtSet::SetPriority( const std::string &aKey, uint64_t aPriority )
   {
     if (this->dataStore_ == nullptr)
     {
@@ -372,15 +367,7 @@ namespace sgns::crdt
 
     auto prioK = this->PriorityKey(aKey);
 
-    std::string strPriority; 
-    try
-    {
-      strPriority = boost::lexical_cast<std::string>(aPriority + 1);
-    }
-    catch (boost::bad_lexical_cast&)
-    {
-      return outcome::failure(boost::system::error_code{});
-    }
+    std::string strPriority = std::to_string( aPriority + 1 );
 
     Buffer keyBuffer;
     keyBuffer.put(prioK.GetKey());
@@ -391,8 +378,10 @@ namespace sgns::crdt
     return this->dataStore_->put(keyBuffer, valueBuffer);
   }
 
-  outcome::result<void> CrdtSet::SetValue(const std::string& aKey, const std::string& aID, const Buffer& aValue, 
-    const uint64_t& aPriority)
+  outcome::result<void> CrdtSet::SetValue( const std::string &aKey,
+                                           const std::string &aID,
+                                           const Buffer      &aValue,
+                                           uint64_t           aPriority )
   {
     if (this->dataStore_ == nullptr)
     {
@@ -415,8 +404,11 @@ namespace sgns::crdt
     return outcome::success();
   }
 
-  outcome::result<void> CrdtSet::SetValue(const std::unique_ptr<storage::BufferBatch>& aDataStore, const std::string& aKey, 
-    const std::string& aID, const Buffer& aValue, const uint64_t& aPriority)
+  outcome::result<void> CrdtSet::SetValue( const std::unique_ptr<storage::BufferBatch> &aDataStore,
+                                           const std::string                           &aKey,
+                                           const std::string                           &aID,
+                                           const Buffer                                &aValue,
+                                           uint64_t                                     aPriority )
   {
     if (aDataStore == nullptr)
     {
@@ -425,7 +417,7 @@ namespace sgns::crdt
 
     // If this key was tombstoned already, do not store/update the value at all.
     auto isDeletedResult = this->InTombsKeyID(aKey, aID);
-    if (isDeletedResult.has_failure() || isDeletedResult.value() == true)
+    if ( isDeletedResult.has_failure() || isDeletedResult.value() )
     {
       return outcome::failure(boost::system::error_code{});
     }
@@ -485,7 +477,7 @@ namespace sgns::crdt
     return outcome::success();
   }
 
-  outcome::result<void> CrdtSet::PutElems(std::vector<Element>& aElems, const std::string& aID, const uint64_t& aPriority)
+  outcome::result<void> CrdtSet::PutElems( std::vector<Element> &aElems, const std::string &aID, uint64_t aPriority )
   {
     if (aElems.empty())
     {
@@ -559,7 +551,7 @@ namespace sgns::crdt
     for (const auto& tomb : aTombs)
     {
       // /namespace/tombs/<key>/<id>
-      auto key = tomb.key();
+      const auto &key        = tomb.key();
       auto kNamespace = this->TombsPrefix(key).ChildString(tomb.id());
 
       keyBuffer.clear();

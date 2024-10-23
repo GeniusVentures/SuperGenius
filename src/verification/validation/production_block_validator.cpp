@@ -6,6 +6,7 @@
 #include <boost/assert.hpp>
 
 #include "base/mp_utils.hpp"
+#include "primitives/transaction_validity.hpp"
 #include "verification/production/impl/production_digests_util.hpp"
 #include "crypto/sr25519_provider.hpp"
 #include "scale/scale.hpp"

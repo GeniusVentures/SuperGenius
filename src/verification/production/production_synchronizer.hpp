@@ -6,7 +6,7 @@
 #include "primitives/authority.hpp"
 #include "primitives/block.hpp"
 #include "primitives/block_id.hpp"
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
 
 namespace sgns::verification {
 
@@ -19,7 +19,7 @@ namespace sgns::verification {
     using BlocksHandler =
         std::function<void(const std::vector<primitives::Block> &)>;
 
-    virtual ~ProductionSynchronizer() = default;
+    ~ProductionSynchronizer() override = default;
 
     /**
      * Request blocks between provided ones

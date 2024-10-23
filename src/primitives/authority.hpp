@@ -4,9 +4,7 @@
 #define SUPERGENIUS_AUTHORITY_HPP
 
 #include <cstdint>
-#include <functional>
-
-#include "primitives/common.hpp"
+#include "primitives/session_key.hpp"
 
 namespace sgns::primitives {
   using AuthorityWeight = uint64_t;

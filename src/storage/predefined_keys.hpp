@@ -3,20 +3,34 @@
 #ifndef SUPERGENIUS_SRC_STORAGE_PREDEFINED_KEYS_HPP
 #define SUPERGENIUS_SRC_STORAGE_PREDEFINED_KEYS_HPP
 
-#include "base/buffer.hpp"
+#include <string>
 
-namespace sgns::storage {
+namespace sgns::storage
+{
+    const std::string &GetAuthoritySetKey()
+    {
+        static const std::string kAuthoritySetKey = "finality_voters";
+        return kAuthoritySetKey;
+    }
 
-  inline const base::Buffer kAuthoritySetKey =
-      base::Buffer().put("finality_voters");
-  inline const base::Buffer kSetStateKey =
-      base::Buffer().put("finality_completed_round");
-  ;
-  inline const base::Buffer kGenesisBlockHashLookupKey =
-      base::Buffer().put(":sgns:genesis_block_hash");
-  inline const base::Buffer kLastFinalizedBlockHashLookupKey =
-      base::Buffer().put(":sgns:last_finalized_block_hash");
+    const std::string &GetSetStateKey()
+    {
+        static const std::string kSetStateKey = "finality_completed_round";
+        return kSetStateKey;
+    }
 
-}  // namespace sgns::storage
+    const std::string &GetGenesisBlockHashLookupKey()
+    {
+        static const std::string kGenesisBlockHashLookupKey = ":sgns:genesis_block_hash";
+        return kGenesisBlockHashLookupKey;
+    }
 
-#endif  // SUPERGENIUS_SRC_STORAGE_PREDEFINED_KEYS_HPP
+    const std::string &GetLastFinalizedBlockHashLookupKey()
+    {
+        static const std::string kLastFinalizedBlockHashLookupKey = ":sgns:last_finalized_block_hash";
+        return kLastFinalizedBlockHashLookupKey;
+    }
+
+} // namespace sgns::storage
+
+#endif // SUPERGENIUS_SRC_STORAGE_PREDEFINED_KEYS_HPP

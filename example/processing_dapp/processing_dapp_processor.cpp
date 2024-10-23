@@ -1,21 +1,18 @@
-#include "processing_task_queue_impl.hpp"
-#include "processing_subtask_result_storage_impl.hpp"
-
-#include <processing/processing_service.hpp>
-#include <processing/processing_subtask_enqueuer_impl.hpp>
-
-#include <crdt/globaldb/keypair_file_storage.hpp>
-#include <crdt/globaldb/globaldb.hpp>
-
+#include <iostream>
+#include <thread>
+#include <boost/program_options.hpp>
 #include <libp2p/multi/multibase_codec/multibase_codec_impl.hpp>
 #include <libp2p/log/configurator.hpp>
 #include <libp2p/log/logger.hpp>
+#include "processing/impl/processing_task_queue_impl.hpp"
+#include "processing_subtask_result_storage_impl.hpp"
+#include "processing/processing_service.hpp"
+#include "processing/processing_subtask_enqueuer_impl.hpp"
+#include "crdt/globaldb/keypair_file_storage.hpp"
+#include "crdt/globaldb/globaldb.hpp"
 
-#include <boost/program_options.hpp>
 
-#include <iostream>
-#include <thread>
-#include <utility>
+
 
 using namespace sgns::processing;
 

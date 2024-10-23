@@ -2,7 +2,7 @@
 #ifndef SUPERGENIUS_ADAPTERS_ERRORS
 #define SUPERGENIUS_ADAPTERS_ERRORS
 
-#include <outcome/outcome.hpp>
+#include "outcome/outcome.hpp"
 
 namespace sgns::network {
   /**

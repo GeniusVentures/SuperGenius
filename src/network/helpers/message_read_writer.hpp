@@ -35,7 +35,6 @@ namespace sgns::network {
     MessageReadWriter(const MessageReadWriter&) = delete;
     MessageReadWriter& operator=(const MessageReadWriter&) = delete;
 
-   public:
     template<typename T>
     static size_t need_to_reserve(const T &t) {
       return AdapterType::size(t) + AncestorType::need_to_reserve(t);

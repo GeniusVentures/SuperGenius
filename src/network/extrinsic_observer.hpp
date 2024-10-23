@@ -5,12 +5,12 @@
 #include "base/blob.hpp"
 #include "outcome/outcome.hpp"
 #include "primitives/extrinsic.hpp"
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
 
 namespace sgns::network {
   class ExtrinsicObserver : public IComponent {
    public:
-    virtual ~ExtrinsicObserver() = default;
+       ~ExtrinsicObserver() override = default;
 
     virtual outcome::result<base::Hash256> onTxMessage(
         const primitives::Extrinsic &extrinsic) = 0;

@@ -2,7 +2,7 @@
 #define SUPERGENIUS_CLOCK_HPP
 
 #include <chrono>
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
 
 namespace sgns::clock {
 
@@ -22,7 +22,7 @@ namespace sgns::clock {
      */
     using TimePoint = typename ClockType::time_point;
 
-    virtual ~Clock() = default;
+    ~Clock() override = default;
 
     /**
      * @return a time point representing the current time

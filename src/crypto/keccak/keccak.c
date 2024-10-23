@@ -123,7 +123,7 @@ enum SHA3_FLAGS sha3_SetFlags(void *priv, enum SHA3_FLAGS flags) {
   return flags;
 }
 
-void sha3_Update(void *priv, void const *bufIn, size_t len) {
+void sgns_sha3_Update(void *priv, void const *bufIn, size_t len) {
   sha3_context *ctx = (sha3_context *)priv;
 
   /* 0...7 -- how much is needed to have a word */
@@ -281,7 +281,7 @@ sha3_return_t sha3_HashBuffer(unsigned bitSize,
   if (sha3_SetFlags(&c, flags) != flags) {
     return SHA3_RETURN_BAD_PARAMS;
   }
-  sha3_Update(&c, in, inBytes);
+  sgns_sha3_Update(&c, in, inBytes);
   const void *h = sha3_Finalize(&c);
 
   if (outBytes > bitSize / 8) outBytes = bitSize / 8;

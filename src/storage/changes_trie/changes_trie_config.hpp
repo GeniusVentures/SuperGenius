@@ -4,6 +4,7 @@
 #define SUPERGENIUS_STORAGE_CHANGES_TRIE_CHANGES_TRIE_CONFIG
 
 #include <cstdint>
+#include <type_traits>
 
 namespace sgns::storage::changes_trie {
 

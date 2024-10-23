@@ -1,11 +1,11 @@
 #ifndef SUPERGENIUS_BLOCKCHAIN_COMMON_HPP
 #define SUPERGENIUS_BLOCKCHAIN_COMMON_HPP
 
-#include <outcome/outcome.hpp>
+#include "outcome/outcome.hpp"
 
 #include "base/buffer.hpp"
 #include "primitives/block_id.hpp"
-#include <crdt/globaldb/globaldb.hpp>
+#include "crdt/globaldb/globaldb.hpp"
 
 namespace sgns::blockchain {
   using ReadableBufferMap =

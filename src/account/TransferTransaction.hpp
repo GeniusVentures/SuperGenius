@@ -6,9 +6,11 @@
  */
 #ifndef _TRANSFER_TRANSACTION_HPP_
 #define _TRANSFER_TRANSACTION_HPP_
-#include "account/IGeniusTransactions.hpp"
 #include <boost/multiprecision/cpp_int.hpp>
+
+#include "account/IGeniusTransactions.hpp"
 #include "account/proto/SGTransaction.pb.h"
+#include "account/UTXOTxParameters.hpp"
 
 using namespace boost::multiprecision;
 namespace sgns
@@ -22,12 +24,13 @@ namespace sgns
          * @param[in]   amount: Raw amount of the transaction
          * @param[in]   destination: Address of the destination
          */
-        TransferTransaction( const uint256_t &amount, const uint256_t &destination, const SGTransaction::DAGStruct &dag );
+        TransferTransaction( const std::vector<OutputDestInfo> &destinations, const std::vector<InputUTXOInfo> &inputs,
+                             const SGTransaction::DAGStruct &dag );
 
         /**
          * @brief      Default Transfer Transaction destructor
          */
-        ~TransferTransaction() = default;
+        ~TransferTransaction() override = default;
 
         /**
          * @brief      
@@ -40,18 +43,10 @@ namespace sgns
          * @param[in]   data 
          * @return      A @ref TransferTransaction 
          */
-        static TransferTransaction DeSerializeByteVector( const std::vector<uint8_t> &data);
+        static TransferTransaction DeSerializeByteVector( const std::vector<uint8_t> &data );
 
-
-        template <typename T>
-        const T GetDstAddress() const;
-        /**
-         * @brief      Get the Amount object
-         * @tparam      T 
-         * @return      A @ref const T 
-         */
-        template <typename T>
-        const T GetAmount() const;
+        std::vector<OutputDestInfo> GetDstInfos() const;
+        std::vector<InputUTXOInfo>  GetInputInfos() const;
 
         std::string GetTransactionSpecificPath() override
         {
@@ -59,9 +54,8 @@ namespace sgns
         }
 
     private:
-
-        uint256_t encrypted_amount; ///< El Gamal encrypted amount
-        uint256_t dest_address;     ///< Destination node address
+        std::vector<InputUTXOInfo>  input_tx_;
+        std::vector<OutputDestInfo> outputs_;
     };
 
 }

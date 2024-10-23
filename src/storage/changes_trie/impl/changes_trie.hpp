@@ -3,12 +3,12 @@
 #ifndef SUPERGENIUS_SRC_STORAGE_CHANGES_TRIE_IMPL_CHANGES_TRIE
 #define SUPERGENIUS_SRC_STORAGE_CHANGES_TRIE_IMPL_CHANGES_TRIE
 
-#include <boost/variant.hpp>
 #include <map>
+#include <boost/variant.hpp>
 
-#include "blockchain/block_header_repository.hpp"
 #include "base/buffer.hpp"
 #include "base/logger.hpp"
+#include "base/unused.hpp"
 #include "primitives/common.hpp"
 #include "primitives/extrinsic.hpp"
 #include "storage/changes_trie/changes_trie_config.hpp"

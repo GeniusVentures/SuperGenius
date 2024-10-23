@@ -1,21 +1,21 @@
 #ifndef GRPC_FOR_SUPERGENIUS_PROCESSING_CORE_IMPL_HPP
 #define GRPC_FOR_SUPERGENIUS_PROCESSING_CORE_IMPL_HPP
-#include <math.h>
-#include <fstream>
+
+#include <cmath>
 #include <memory>
 #include <iostream>
-#include <processing/processing_core.hpp>
-#include <crdt/globaldb/globaldb.hpp>
-#include <processing/processing_processor.hpp>
+#include <utility>
+
 #include <libp2p/log/configurator.hpp>
 #include <libp2p/log/logger.hpp>
 #include <libp2p/multi/multibase_codec/multibase_codec_impl.hpp>
 #include <libp2p/multi/content_identifier_codec.hpp>
 #include <libp2p/injector/host_injector.hpp>
-#include "libp2p/injector/kademlia_injector.hpp"
-#include "Singleton.hpp"
-#include "FileManager.hpp"
-#include "URLStringUtil.h"
+#include <libp2p/injector/kademlia_injector.hpp>
+
+#include "processing/processing_core.hpp"
+#include "crdt/globaldb/globaldb.hpp"
+#include "processing/processing_processor.hpp"
 
 namespace sgns::processing
 {
@@ -26,11 +26,11 @@ namespace sgns::processing
             std::shared_ptr<sgns::crdt::GlobalDB> db,
             size_t subTaskProcessingTime,
             size_t maximalProcessingSubTaskCount)
-            : m_db(db)
-            , m_subTaskProcessingTime(subTaskProcessingTime)
+            : m_db(std::move(db))
+            //, m_subTaskProcessingTime(subTaskProcessingTime)
+            , m_processor(nullptr)
             , m_maximalProcessingSubTaskCount(maximalProcessingSubTaskCount)
             , m_processingSubTaskCount(0)
-            , m_processor(nullptr)
         {
         }
 
@@ -48,7 +48,7 @@ namespace sgns::processing
         * @param factoryFunction - Pointer to processor
         */
         void RegisterProcessorFactory(const std::string& name, std::function<std::unique_ptr<ProcessingProcessor>()> factoryFunction) {
-            m_processorFactories[name] = factoryFunction;
+            m_processorFactories[name] = std::move( factoryFunction );
         }
 
         /** Set the current processor by name
@@ -60,10 +60,8 @@ namespace sgns::processing
                 m_processor = factoryFunction->second();
                 return true;
             }
-            else {
-                std::cerr << "Unknown processor name: " << name << std::endl;
-                return false;
-            }
+            std::cerr << "Unknown processor name: " << name << std::endl;
+            return false;
         }
 
         /** Get processing type from json data to set processor
@@ -89,7 +87,7 @@ namespace sgns::processing
         std::shared_ptr<sgns::crdt::GlobalDB> m_db;
         std::unique_ptr<ProcessingProcessor> m_processor;
         std::unordered_map<std::string, std::function<std::unique_ptr<ProcessingProcessor>()>> m_processorFactories;
-        size_t m_subTaskProcessingTime;
+        //size_t m_subTaskProcessingTime;
         size_t m_maximalProcessingSubTaskCount;
 
         std::mutex m_subTaskCountMutex;

@@ -1,5 +1,9 @@
-#include <processing/impl/processing_core_impl.hpp>
+#include "processing/impl/processing_core_impl.hpp"
+
 #include <rapidjson/document.h>
+
+#include "FileManager.hpp"
+
 namespace sgns::processing
 {
     void ProcessingCoreImpl::ProcessSubTask(
@@ -66,10 +70,16 @@ namespace sgns::processing
         FileManager::GetInstance().InitializeSingletons();
         string fileURL = "https://ipfs.filebase.io/ipfs/" + cid + "/settings.json";
         std::cout << "FILE URLL: " << fileURL << std::endl;
-        auto data = FileManager::GetInstance().LoadASync(fileURL, false, false, ioc, [ioc, this](const int& status)
+        auto data = FileManager::GetInstance().LoadASync(fileURL, false, false, ioc, [ioc](const sgns::AsyncError::CustomResult& status)
             {
-                std::cout << "status: " << status << std::endl;
-            }, [ioc, &mainbuffers, this](std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers)
+                if (status.has_value())
+                {
+                    std::cout << "Success: " << status.value().message << std::endl;
+                }
+                else {
+                    std::cout << "Error: " << status.error() << std::endl;
+                }
+            }, [ioc, &mainbuffers](std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers)
                 {
                     std::cout << "Final Callback" << std::endl;
 
@@ -78,13 +88,12 @@ namespace sgns::processing
                         std::cout << "Buffer from AsyncIO is 0" << std::endl;
                         return;
                     }
-                    else {
                         //Process settings json
 
+                    mainbuffers->first.insert( mainbuffers->first.end(), buffers->first.begin(), buffers->first.end() );
+                    mainbuffers->second.insert(
+                        mainbuffers->second.end(), buffers->second.begin(), buffers->second.end() );
 
-                        mainbuffers->first.insert(mainbuffers->first.end(), buffers->first.begin(), buffers->first.end());
-                        mainbuffers->second.insert(mainbuffers->second.end(), buffers->second.begin(), buffers->second.end());
-                    }
                 }, "file");
         ioc->reset();
         ioc->run();
@@ -115,7 +124,7 @@ namespace sgns::processing
         //Parse json to look for model/image
         rapidjson::Document document;
         document.Parse(jsonString.c_str());
-        std::string modelFile = "";
+        std::string modelFile;
         // Extract model name
         if (document.HasMember("model") && document["model"].IsObject()) {
             const auto& model = document["model"];
@@ -129,7 +138,7 @@ namespace sgns::processing
             }
         }
         // Extract input image name
-        std::string inputImage = "";
+        std::string inputImage;
         if (document.HasMember("input") && document["input"].IsObject()) {
             const auto& input = document["input"];
             if (input.HasMember("image") && input["image"].IsString()) {
@@ -171,10 +180,16 @@ namespace sgns::processing
     void ProcessingCoreImpl::GetSubCidForProc(std::shared_ptr<boost::asio::io_context> ioc,std::string url, std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>& results)
     {
         //std::pair<std::vector<std::string>, std::vector<std::vector<char>>> results;
-        auto modeldata = FileManager::GetInstance().LoadASync(url, false, false, ioc, [this](const int& status)
+        auto modeldata = FileManager::GetInstance().LoadASync(url, false, false, ioc, [](const sgns::AsyncError::CustomResult& status)
             {
-                std::cout << "status: " << status << std::endl;
-            }, [&results, this](std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers)
+                if (status.has_value())
+                {
+                    std::cout << "Success: " << status.value().message << std::endl;
+                }
+                else {
+                    std::cout << "Error: " << status.error() << std::endl;
+                }
+            }, [&results](std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers)
                 {
                     results->first.insert(results->first.end(), buffers->first.begin(), buffers->first.end());
                     results->second.insert(results->second.end(), buffers->second.begin(), buffers->second.end());
@@ -201,19 +216,16 @@ namespace sgns::processing
                 {
                     return true;
                 }
-                else
-                {
-                    std::cerr << "No processor by name in settings json" << std::endl;
-                }
-            }
-            else {
-                std::cerr << "Model name not found or not a string" << std::endl;
+
+                std::cerr << "No processor by name in settings json" << std::endl;
                 return false;
             }
-        }
-        else {
-            std::cerr << "Model object not found or not an object" << std::endl;
+
+            std::cerr << "Model name not found or not a string" << std::endl;
             return false;
         }
+
+        std::cerr << "Model object not found or not an object" << std::endl;
+        return false;
     }
 }

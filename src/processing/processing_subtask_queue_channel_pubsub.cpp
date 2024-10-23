@@ -1,13 +1,13 @@
 #include "processing_subtask_queue_channel_pubsub.hpp"
 #include <thread>
+#include <utility>
 
 namespace sgns::processing
 {
 ////////////////////////////////////////////////////////////////////////////////
 ProcessingSubTaskQueueChannelPubSub::ProcessingSubTaskQueueChannelPubSub(
-    std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> gossipPubSub,
-    const std::string& processingQueueChannelId)
-    : m_gossipPubSub(gossipPubSub)
+    std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> gossipPubSub, const std::string &processingQueueChannelId ) :
+    m_gossipPubSub( std::move( gossipPubSub ) )
 {
     using GossipPubSubTopic = sgns::ipfs_pubsub::GossipPubSubTopic;
     m_processingQueueChannel = std::make_shared<GossipPubSubTopic>(m_gossipPubSub, processingQueueChannelId);
@@ -35,7 +35,7 @@ void ProcessingSubTaskQueueChannelPubSub::RequestQueueOwnership(const std::strin
 {
     // Send a request to grab a subtask queue
     SGProcessing::ProcessingChannelMessage message;
-    auto request = message.mutable_subtask_queue_request();
+    auto                                   request = message.mutable_subtask_queue_request();
     request->set_node_id(nodeId);
     m_processingQueueChannel->Publish(message.SerializeAsString());
 }

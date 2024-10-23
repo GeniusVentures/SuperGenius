@@ -1,8 +1,8 @@
-#include <processing/processing_engine.hpp>
-#include <processing/processing_subtask_queue_accessor_impl.hpp>
-#include <processing/processing_subtask_queue_channel_pubsub.hpp>
-#include <processing/processing_subtask_state_storage.hpp>
-#include <processing/processing_subtask_result_storage.hpp>
+#include "processing/processing_engine.hpp"
+#include "processing/processing_subtask_queue_accessor_impl.hpp"
+#include "processing/processing_subtask_queue_channel_pubsub.hpp"
+#include "processing/processing_subtask_state_storage.hpp"
+#include "processing/processing_subtask_result_storage.hpp"
 
 #include <gtest/gtest.h>
 
@@ -32,9 +32,8 @@ namespace
     public:
         void AddSubTaskResult(const SGProcessing::SubTaskResult& subTaskResult) override {}
         void RemoveSubTaskResult(const std::string& subTaskId) override {}
-        void GetSubTaskResults(
-            const std::set<std::string>& subTaskIds,
-            std::vector<SGProcessing::SubTaskResult>& results) override {}
+        std::vector<SGProcessing::SubTaskResult> GetSubTaskResults(
+            const std::set<std::string>& subTaskIds) override { return {};}
 
     };
 

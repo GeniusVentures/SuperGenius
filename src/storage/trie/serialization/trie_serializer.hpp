@@ -5,7 +5,7 @@
 
 #include "outcome/outcome.hpp"
 #include "storage/trie/supergenius_trie/supergenius_trie.hpp"
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
 
 namespace sgns::storage::trie {
 
@@ -14,7 +14,7 @@ namespace sgns::storage::trie {
    */
   class TrieSerializer : public IComponent{
    public:
-    virtual ~TrieSerializer() = default;
+       ~TrieSerializer() override = default;
 
     /**
      * @return root hash of an empty trie

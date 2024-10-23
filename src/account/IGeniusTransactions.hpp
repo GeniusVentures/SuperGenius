@@ -10,10 +10,12 @@
 #include <utility>
 #include <vector>
 #include <string>
+
 #include <boost/optional.hpp>
 #include <boost/format.hpp>
-#include "account/proto/SGTransaction.pb.h"
 #include <boost/multiprecision/cpp_int.hpp>
+
+#include "account/proto/SGTransaction.pb.h"
 
 using namespace boost::multiprecision;
 
@@ -24,8 +26,8 @@ namespace sgns
     class IGeniusTransactions
     {
     public:
-        IGeniusTransactions( std::string type, const SGTransaction::DAGStruct &dag ) :
-            dag_st( dag ), transaction_type( std::move( type ) )
+        IGeniusTransactions( std::string type, SGTransaction::DAGStruct dag ) :
+            dag_st( std::move( dag ) ), transaction_type( std::move( type ) )
         {
         }
 
@@ -84,7 +86,6 @@ namespace sgns
             return uint256_t{ dag_st.source_addr() };
         }
 
-    protected:
         SGTransaction::DAGStruct dag_st;
 
     private:

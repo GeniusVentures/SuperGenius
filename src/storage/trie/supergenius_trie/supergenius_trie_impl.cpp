@@ -2,7 +2,6 @@
 
 #include "storage/trie/supergenius_trie/supergenius_trie_impl.hpp"
 
-#include <functional>
 #include <utility>
 
 #include "storage/trie/supergenius_trie/supergenius_trie_cursor.hpp"
@@ -240,7 +239,7 @@ namespace sgns::storage::trie {
         auto parent_as_branch = std::dynamic_pointer_cast<BranchNode>(parent);
         OUTCOME_TRY((auto &&, n), retrieveChild(parent_as_branch, key_nibbles[length]));
         OUTCOME_TRY((auto &&, path), getPath(n, key_nibbles.subspan(length + 1)));
-        path.push_front({parent_as_branch, key_nibbles[length]});
+        path.emplace_front( parent_as_branch, key_nibbles[length] );
         return std::move(path);
       }
       case T::Leaf:
@@ -406,7 +405,7 @@ namespace sgns::storage::trie {
   }
 
   uint32_t SuperGeniusTrieImpl::getCommonPrefixLength(const KeyNibbles &pref1,
-                                                   const KeyNibbles &pref2) const {
+                                                   const KeyNibbles &pref2) {
     size_t length = 0;
     auto min = pref1.size();
 

@@ -5,7 +5,7 @@
 #include "primitives/block_data.hpp"
 #include "primitives/block_id.hpp"
 #include "primitives/justification.hpp"
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
 
 namespace sgns::blockchain {
 
@@ -15,7 +15,7 @@ namespace sgns::blockchain {
    */
   class BlockStorage : public IComponent {
    public:
-    virtual ~BlockStorage() = default;
+       ~BlockStorage() override = default;
 
     /// Get hash of genesis block
     virtual outcome::result<primitives::BlockHash> getGenesisBlockHash()

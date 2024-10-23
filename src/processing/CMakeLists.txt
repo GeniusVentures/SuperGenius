@@ -9,6 +9,8 @@ add_library(processing_service
 	impl/processing_core_impl.cpp
 	processing_imagesplit.hpp
 	processing_imagesplit.cpp
+	processing_tasksplit.hpp
+	processing_tasksplit.cpp
 	processing_processor.hpp
 	processors/processing_processor_mnn_posenet.hpp
 	processors/processing_processor_mnn_posenet.cpp
@@ -55,20 +57,27 @@ target_include_directories(processing_service
 
 if(APPLE)
 	set(XCFRAMEWORK_PATH "${_THIRDPARTY_BUILD_DIR}/moltenvk/build/lib/MoltenVK.xcframework")
-	target_link_libraries(processing_service PRIVATE 	
-		"-framework CoreFoundation"
-		"-framework CoreGraphics"
-		"-framework CoreServices"
-		"-framework IOKit"
-		"-framework IOSurface"
-		"-framework Metal"
-		"-framework QuartzCore"
-		"-framework AppKit"
-		${XCFRAMEWORK_PATH} 
-		)
+    target_link_libraries(processing_service PRIVATE
+        "-framework CoreFoundation"
+        "-framework CoreGraphics"
+        "-framework CoreServices"
+        "-framework IOKit"
+        "-framework IOSurface"
+        "-framework Metal"
+        "-framework QuartzCore"
+
+        # ${XCFRAMEWORK_PATH}
+        "-framework Foundation"
+    )
+
+    if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+        target_link_libraries(processing_service PRIVATE
+            "-framework AppKit")
+    endif()
 endif()
 
-target_link_libraries(processing_service
+target_link_libraries(processing_service PRIVATE
+    crdt_globaldb
     ipfs-pubsub
     SGProcessingProto
     OpenSSL::Crypto
@@ -84,10 +93,15 @@ target_link_libraries(processing_service
     p2p::asio_scheduler
     ${WIN_CRYPT_LIBRARY}
 	${MNN_LIBS}
+    ${VULKAN_LIBS}
+    AsyncIOManager
     )
 	
 if(WIN32)
-	target_link_options(processing_service PRIVATE /WHOLEARCHIVE:${MNN_LIBS})
+    target_link_options(processing_service PUBLIC /WHOLEARCHIVE:${MNN_LIBS})
+elseif(APPLE)
+    target_link_options(processing_service PUBLIC -force_load ${MNN_LIBS})
 else()
-	target_link_options(processing_service PRIVATE  "-Wl,--whole-archive" ${MNN_LIBS} "-Wl,--no-whole-archive")
+    target_link_options(processing_service PUBLIC "-Wl,--whole-archive" ${MNN_LIBS} "-Wl,--no-whole-archive")
 endif()
+supergenius_install(processing_service)

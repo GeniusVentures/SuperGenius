@@ -2,9 +2,9 @@
 #define SUPERGENIUS_SRC_CRYPTO_ED25519_PROVIDER_HPP
 
 #include <gsl/span>
-#include <outcome/outcome.hpp>
+#include "outcome/outcome.hpp"
 #include "crypto/ed25519_types.hpp"
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
 
 namespace sgns::crypto {
   enum class ED25519ProviderError {
@@ -17,7 +17,7 @@ namespace sgns::crypto {
 
   class ED25519Provider : public IComponent {
    public:
-    virtual ~ED25519Provider() = default;
+       ~ED25519Provider() override = default;
 
     /**
      * Generates random keypair for signing the message

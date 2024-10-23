@@ -2,9 +2,7 @@
 #ifndef SUPERGENIUS_SRC_VERIFICATION_FINALITY_GOSSIPER_HPP
 #define SUPERGENIUS_SRC_VERIFICATION_FINALITY_GOSSIPER_HPP
 
-#include <functional>
-
-#include <outcome/outcome.hpp>
+#include "outcome/outcome.hpp"
 #include "verification/finality/structs.hpp"
 
 namespace sgns::verification::finality {

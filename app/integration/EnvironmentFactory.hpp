@@ -7,7 +7,7 @@
 #ifndef _ENVIRONMENT_FACTORY_HPP_
 #define _ENVIRONMENT_FACTORY_HPP_
 #include "verification/finality/impl/environment_impl.hpp"
-#include "integration/CComponentFactory.hpp"
+#include "singleton/CComponentFactory.hpp"
 #include "blockchain/block_tree.hpp"
 #include "blockchain/block_header_repository.hpp"
 #include "verification/finality/gossiper.hpp"

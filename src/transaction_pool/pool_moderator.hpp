@@ -2,9 +2,9 @@
 #ifndef SUPERGENIUS_SRC_POOL_MODERATOR_HPP
 #define SUPERGENIUS_SRC_POOL_MODERATOR_HPP
 
-#include "primitives/block_id.hpp"
+#include "primitives/common.hpp"
 #include "primitives/transaction.hpp"
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
 
 namespace sgns::transaction_pool {
 
@@ -17,7 +17,7 @@ namespace sgns::transaction_pool {
    */
   class PoolModerator : public IComponent {
    public:
-    virtual ~PoolModerator() = default;
+       ~PoolModerator() override = default;
 
     /**
      * Bans a transaction for a fixed amount of time

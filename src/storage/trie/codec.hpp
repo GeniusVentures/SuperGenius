@@ -6,7 +6,7 @@
 #include "base/blob.hpp"  // for Hash256
 #include "base/buffer.hpp"
 #include "storage/trie/node.hpp"
-#include "integration/IComponent.hpp"
+#include "singleton/IComponent.hpp"
 
 namespace sgns::storage::trie {
 
@@ -16,7 +16,7 @@ namespace sgns::storage::trie {
    */
   class Codec : public IComponent{
    public:
-    virtual ~Codec() = default;
+       ~Codec() override = default;
 
     /**
      * @brief Encode node to byte representation

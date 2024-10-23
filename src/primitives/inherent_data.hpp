@@ -8,12 +8,11 @@
 
 #include <boost/iterator_adaptors.hpp>
 #include <boost/optional.hpp>
-#include <outcome/outcome.hpp>
+#include "outcome/outcome.hpp"
 #include "base/blob.hpp"
 #include "base/buffer.hpp"
 #include "base/outcome_throw.hpp"
 #include "scale/scale.hpp"
-#include "scale/scale_error.hpp"
 
 namespace sgns::primitives {
   /**

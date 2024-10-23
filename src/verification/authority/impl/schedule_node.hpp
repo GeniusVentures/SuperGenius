@@ -3,6 +3,7 @@
 #define SUPERGENIUS_VERIFICATION_AUTHORITIES_SCHEDULE_NODE
 
 #include "primitives/authority.hpp"
+#include "primitives/common.hpp"
 
 namespace sgns::authority {
 
@@ -26,9 +27,9 @@ namespace sgns::authority {
     std::shared_ptr<ScheduleNode> makeDescendant(
         const primitives::BlockInfo &block, bool finalized = false);
 
-    const primitives::BlockInfo block{};
+    const primitives::BlockInfo                block{};
     std::weak_ptr<ScheduleNode> parent;
-    std::vector<std::shared_ptr<ScheduleNode>> descendants{};
+    std::vector<std::shared_ptr<ScheduleNode>> descendants;
 
     // Current authorities
     std::shared_ptr<const primitives::AuthorityList> actual_authorities;
@@ -38,11 +39,11 @@ namespace sgns::authority {
 
     // For scheduled changes
     primitives::BlockNumber scheduled_after = INACTIVE;
-    std::shared_ptr<const primitives::AuthorityList> scheduled_authorities{};
+    std::shared_ptr<const primitives::AuthorityList> scheduled_authorities;
 
     // For forced changed
     primitives::BlockNumber forced_for = INACTIVE;
-    std::shared_ptr<const primitives::AuthorityList> forced_authorities{};
+    std::shared_ptr<const primitives::AuthorityList> forced_authorities;
 
     // For pause
     primitives::BlockNumber pause_after = INACTIVE;

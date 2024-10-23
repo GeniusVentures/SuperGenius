@@ -27,3 +27,6 @@ target_link_libraries(block_storage
     hasher
     scale
     )
+supergenius_install(block_storage)
+supergenius_install(block_header_repository)
+supergenius_install(block_tree_error)

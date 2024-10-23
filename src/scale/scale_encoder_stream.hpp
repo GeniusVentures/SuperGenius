@@ -4,13 +4,15 @@
 #define SUPERGENIUS_SRC_SCALE_SCALE_ENCODER_STREAM_HPP
 
 #include <deque>
+#include <list>
 
+#include <boost/variant/get.hpp>
+#include <boost/variant/variant.hpp>
 #include <boost/optional.hpp>
 #include <gsl/span>
+
 #include "scale/detail/fixed_witdh_integer.hpp"
-#include "scale/detail/tuple.hpp"
-#include "scale/detail/variant.hpp"
-#include <list>
+#include "scale/types.hpp"
 
 namespace sgns::scale {
   /**
@@ -195,23 +197,24 @@ namespace sgns::scale {
      * @param v value of integral type
      * @return reference to stream
      */
-    template <typename T,
-              typename I = std::decay_t<T>,
-              typename = std::enable_if_t<std::is_integral<I>::value>>
-    ScaleEncoderStream &operator<<(T &&v) {
-      // encode bool
-      if constexpr (std::is_same<I, bool>::value) {
-        uint8_t byte = (v ? 1u : 0u);
-        return putByte(byte);
-      }
-      // put byte
-      if constexpr (sizeof(T) == 1u) {
-        // to avoid infinite recursion
-        return putByte(static_cast<uint8_t>(v));
-      }
-      // encode any other integer
-      detail::encodeInteger<I>(v, *this);
-      return *this;
+    template <typename T, typename I = std::decay_t<T>, typename = std::enable_if_t<std::is_integral_v<I>>>
+    ScaleEncoderStream &operator<<( T &&v )
+    {
+        // encode bool
+        if constexpr ( std::is_same<I, bool>::value )
+        {
+            uint8_t byte = ( v ? 1u : 0u );
+            return putByte( byte );
+        }
+        // put byte
+        if constexpr ( sizeof( T ) == 1u )
+        {
+            // to avoid infinite recursion
+            return putByte( static_cast<uint8_t>( v ) );
+        }
+        // encode any other integer
+        detail::encodeInteger<I>( v, *this );
+        return *this;
     }
 
     /**
