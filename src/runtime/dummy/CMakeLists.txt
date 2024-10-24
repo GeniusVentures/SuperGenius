@@ -3,4 +3,6 @@ add_library(finality_api_dummy
     )
 target_link_libraries(finality_api_dummy
     primitives
-    )
+    sr25519_types
+    ed25519_types
+)

@@ -7,12 +7,7 @@
 #include <boost/format.hpp>
 #include <rapidjson/document.h>
 #include "AccountHelper.hpp"
-#include "processing/processing_imagesplit.hpp"
-#include "processing/processing_tasksplit.hpp"
-#include "processing/processing_subtask_enqueuer_impl.hpp"
-#include "processing/processing_subtask_result_storage.hpp"
-#include "processing/processors/processing_processor_mnn_posenet.hpp"
-#include "processing/impl/processing_subtask_result_storage_impl.hpp"
+
 #ifndef __cplusplus
 extern "C"
 {
@@ -40,10 +35,12 @@ static const std::string logger_config( R"(
 
 namespace sgns
 {
-    AccountHelper::AccountHelper( const AccountKey2 &priv_key_data, const DevConfig_st2 &dev_config ) :
-        account_( std::make_shared<GeniusAccount>( 0 ,"")), //
-        io_( std::make_shared<boost::asio::io_context>() ),   //
-        dev_config_( dev_config )                             //
+    AccountHelper::AccountHelper( const AccountKey2   &priv_key_data,
+                                  const DevConfig_st2 &dev_config,
+                                  const char          *eth_private_key ) :
+        account_( std::make_shared<GeniusAccount>( 0, "", eth_private_key ) ),
+        io_( std::make_shared<boost::asio::io_context>() ),
+        dev_config_( dev_config )
     {
         logging_system = std::make_shared<soralog::LoggingSystem>( std::make_shared<soralog::ConfiguratorFromYAML>(
             // Original LibP2P logging config

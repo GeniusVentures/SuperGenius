@@ -17,10 +17,10 @@
 
 #include "account/proto/SGTransaction.pb.h"
 
-using namespace boost::multiprecision;
-
 namespace sgns
 {
+    using namespace boost::multiprecision;
+
     //class GeniusBlockHeader; //TODO - Design new header or rework old one
 
     class IGeniusTransactions
@@ -70,9 +70,11 @@ namespace sgns
             return full_path.str();
         }
 
-        template <typename T> const T GetSrcAddress() const;
+        template <typename T>
+        T GetSrcAddress() const;
 
-        template <> const std::string GetSrcAddress<std::string>() const
+        template <>
+        std::string GetSrcAddress<std::string>() const
         {
             //std::string address(bytes_data.begin(), bytes_data.end());
             //std::ostringstream oss;
@@ -81,7 +83,8 @@ namespace sgns
             return dag_st.source_addr();
         }
 
-        template <> const uint256_t GetSrcAddress<uint256_t>() const
+        template <>
+        uint256_t GetSrcAddress<uint256_t>() const
         {
             return uint256_t{ dag_st.source_addr() };
         }

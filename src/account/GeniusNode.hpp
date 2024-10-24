@@ -59,7 +59,7 @@ namespace sgns
     class GeniusNode : public IComponent
     {
     public:
-        GeniusNode( const DevConfig_st &dev_config );
+        GeniusNode( const DevConfig_st &dev_config, const char *eth_private_key );
         // static GeniusNode &GetInstance()
         // {
         //     return instance;
@@ -77,6 +77,21 @@ namespace sgns
         void     MintTokens( uint64_t amount );
         void     AddPeer( const std::string &peer );
         uint64_t GetBalance();
+
+        [[nodiscard]] const std::vector<std::vector<uint8_t>> &GetTransactions() const
+        {
+            return transaction_manager_->GetTransactions();
+        }
+
+        std::string GetAddress()
+        {
+            return account_->GetAddress<std::string>();
+        }
+
+        bool TransferFunds( uint64_t amount, const uint256_t &destination )
+        {
+            return transaction_manager_->TransferFunds( amount, destination );
+        }
 
         static std::vector<uint8_t> GetImageByCID( const std::string &cid );
 
