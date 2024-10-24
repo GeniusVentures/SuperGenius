@@ -301,6 +301,7 @@ include_directories(
     "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/threshold/include"
     "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/vdf/include"
     "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/zk/include"
+	"${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/common/include"
 )
 
 # gnus_upnp
