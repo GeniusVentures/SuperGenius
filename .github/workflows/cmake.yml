@@ -51,7 +51,7 @@ jobs:
           repository: 'GeniusVentures/thirdparty'
           path: 'thirdparty'
           submodules: 'recursive' 
-          ref: ${{ steps.check_branch_first_repo.outputs.branch_exists == 'true' && steps.branch-name.outputs.current_branch || 'develop' }}
+          ref: ${{ steps.check_branch.outputs.branch_exists == 'true' && steps.branch-name.outputs.current_branch || 'develop' }}
           
       - name: Thirdparty Create Build Directory
         run: cmake -E make_directory ${{github.workspace}}/thirdparty/build/Windows/Release          
@@ -181,7 +181,7 @@ jobs:
           repository: 'GeniusVentures/thirdparty'
           path: 'thirdparty'
           submodules: 'recursive' 
-          ref: ${{ steps.check_branch_first_repo.outputs.branch_exists == 'true' && steps.branch-name.outputs.current_branch || 'develop' }}
+          ref: ${{ steps.check_branch.outputs.branch_exists == 'true' && steps.branch-name.outputs.current_branch || 'develop' }}
           
       - name: Thirdparty Create Build Directory
         run: cmake -E make_directory ${{github.workspace}}/thirdparty/build/Linux/Release        
@@ -313,7 +313,7 @@ jobs:
           repository: 'GeniusVentures/thirdparty'
           path: 'thirdparty'
           submodules: 'recursive' 
-          ref: ${{ steps.check_branch_first_repo.outputs.branch_exists == 'true' && steps.branch-name.outputs.current_branch || 'develop' }}
+          ref: ${{ steps.check_branch.outputs.branch_exists == 'true' && steps.branch-name.outputs.current_branch || 'develop' }}
           
       - name: Thirdparty Create Build Directory
         run: cmake -E make_directory ${{github.workspace}}/thirdparty/build/Android/Release/arm64-v8a      
@@ -461,7 +461,7 @@ jobs:
           repository: 'GeniusVentures/thirdparty'
           path: 'thirdparty'
           submodules: 'recursive' 
-          ref: ${{ steps.check_branch_first_repo.outputs.branch_exists == 'true' && steps.branch-name.outputs.current_branch || 'develop' }}
+          ref: ${{ steps.check_branch.outputs.branch_exists == 'true' && steps.branch-name.outputs.current_branch || 'develop' }}
           
       - name: Thirdparty Create Build Directory
         run: cmake -E make_directory ${{github.workspace}}/thirdparty/build/OSX/Release      
@@ -586,7 +586,7 @@ jobs:
           repository: 'GeniusVentures/thirdparty'
           path: 'thirdparty'
           submodules: 'recursive' 
-          ref: ${{ steps.check_branch_first_repo.outputs.branch_exists == 'true' && steps.branch-name.outputs.current_branch || 'develop' }}
+          ref: ${{ steps.check_branch.outputs.branch_exists == 'true' && steps.branch-name.outputs.current_branch || 'develop' }}
           
       - name: Thirdparty Create Build Directory
         run: cmake -E make_directory ${{github.workspace}}/thirdparty/build/iOS/Release     
