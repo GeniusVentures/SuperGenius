@@ -251,6 +251,9 @@ include_directories(
     ${PROJECT_ROOT}/GeniusKDF
 )
 include_directories(
+    ${PROJECT_ROOT}/ProofSystem
+)
+include_directories(
     ${PROJECT_ROOT}/app
 )
 
@@ -275,6 +278,8 @@ link_directories(
 add_subdirectory(${PROJECT_ROOT}/src ${CMAKE_BINARY_DIR}/src)
 
 add_subdirectory(${PROJECT_ROOT}/GeniusKDF ${CMAKE_BINARY_DIR}/GeniusKDF)
+
+add_subdirectory(${PROJECT_ROOT}/ProofSystem ${CMAKE_BINARY_DIR}/ProofSystem)
 
 # add_subdirectory(${PROJECT_ROOT}/app ${CMAKE_BINARY_DIR}/app)
 if(BUILD_TESTING)
