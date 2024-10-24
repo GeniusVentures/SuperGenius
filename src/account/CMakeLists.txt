@@ -1,7 +1,6 @@
 
 add_proto_library(SGTransactionProto proto/SGTransaction.proto)
 
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../../ProofSystem "${CMAKE_BINARY_DIR}/ProofSystem")
 
 add_library(sgns_account
     TransactionManager.cpp
