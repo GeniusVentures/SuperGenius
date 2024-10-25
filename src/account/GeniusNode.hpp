@@ -79,8 +79,6 @@ namespace sgns
         void     AddPeer( const std::string &peer );
         uint64_t GetBalance();
 
-        std::vector<std::vector<uint8_t>> GetImageByCID( std::string cid );
-
     private:
         std::shared_ptr<GeniusAccount>                             account_;
         std::shared_ptr<ipfs_pubsub::GossipPubSub>                 pubsub_;
