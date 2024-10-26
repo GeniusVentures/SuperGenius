@@ -51,7 +51,8 @@ target_include_directories(processing_service PRIVATE ${GSL_INCLUDE_DIR})
 target_include_directories(processing_service
     PUBLIC $<BUILD_INTERFACE:${PROTO_SRC_DIR}>
     "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
-    ${MNN_INCLUDE_DIR}
+    $<BUILD_INTERFACE:${MNN_INCLUDE_DIR}>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/MNN>
 )
 
 if(APPLE)
@@ -91,7 +92,8 @@ target_link_libraries(processing_service PRIVATE
     p2p::p2p_gossip
     p2p::asio_scheduler
     ${WIN_CRYPT_LIBRARY}
-    ${MNN_LIBS}
+    $<BUILD_INTERFACE:${MNN_LIBS}>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_LIBDIR}/$<TARGET_FILE_NAME:MNN>>
     ${VULKAN_LIBS}
     AsyncIOManager
     rapidjson
@@ -99,13 +101,31 @@ target_link_libraries(processing_service PRIVATE
 )
 
 target_include_directories(processing_service PRIVATE ${AsyncIOManager_INCLUDE_DIR})
-
 if(WIN32)
-    target_link_options(processing_service PUBLIC /WHOLEARCHIVE:${MNN_LIBS})
+    target_link_options(processing_service PUBLIC
+        /WHOLEARCHIVE
+        $<BUILD_INTERFACE:${MNN_LIBS}>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_LIBDIR}/$<TARGET_FILE_NAME:MNN>>
+    )
 elseif(APPLE)
-    target_link_options(processing_service PUBLIC -force_load ${MNN_LIBS})
+    target_link_options(processing_service PUBLIC
+        -force_load
+        $<BUILD_INTERFACE:${MNN_LIBS}>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_LIBDIR}/$<TARGET_FILE_NAME:MNN>>
+    )
 else()
-    target_link_options(processing_service PUBLIC "-Wl,--whole-archive" ${MNN_LIBS} "-Wl,--no-whole-archive")
+    target_link_options(processing_service PUBLIC
+        "-Wl,--whole-archive"
+        $<BUILD_INTERFACE:${MNN_LIBS}>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_LIBDIR}/$<TARGET_FILE_NAME:MNN>>
+        "-Wl,--no-whole-archive"
+    )
 endif()
+
+install(FILES "${MNN_LIBS}"
+        DESTINATION "${CMAKE_INSTALL_LIBDIR}")
+install(DIRECTORY "${MNN_INCLUDE_DIR}/"
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/MNN"
+        FILES_MATCHING PATTERN "*.h*")
 
 supergenius_install(processing_service)
