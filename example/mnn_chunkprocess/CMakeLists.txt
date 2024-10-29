@@ -56,9 +56,9 @@ endif()
 
 #Wholearchive MNN
 if(WIN32)
-    target_link_options(mnn_chunkprocess PUBLIC /WHOLEARCHIVE:{MNN_LIB_PATH})
+    target_link_options(mnn_chunkprocess PUBLIC /WHOLEARCHIVE:${MNN_LIB_PATH})
 elseif(APPLE)
-    target_link_options(mnn_chunkprocess PUBLIC -force_load {MNN_LIB_PATH})
+    target_link_options(mnn_chunkprocess PUBLIC -force_load ${MNN_LIB_PATH})
 else()
     target_link_options(mnn_chunkprocess PUBLIC
         "-Wl,--whole-archive"
