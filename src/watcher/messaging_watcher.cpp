@@ -1,4 +1,5 @@
 #include "messaging_watcher.hpp"
+#include <iostream>
 
 namespace sgns::watcher {
     MessagingWatcher::MessagingWatcher(const rapidjson::Document &config, MessageCallback callback)

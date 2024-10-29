@@ -4,10 +4,8 @@
 #include <rapidjson/document.h>
 #include <boost/thread.hpp>
 #include <functional>
-#include <stdlib.h>
 #include <vector>
 #include <string>
-#include <iostream>
 
 namespace sgns::watcher {
     class MessagingWatcher {
