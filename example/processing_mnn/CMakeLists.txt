@@ -1,9 +1,4 @@
-#Find MNN Stuff
-set(MNN_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/MNN/include")
-set(MNN_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/MNN/lib")
-include_directories(${MNN_INCLUDE_DIR})
-set(MNN_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../MNN/include")
-FILE(GLOB MNN_LIBS "${MNN_LIBRARY_DIR}/*")
+
 
 add_executable(processing_mnn
     processing_mnn.cpp
@@ -108,5 +103,23 @@ target_link_libraries(processing_mnn_p PRIVATE
     ipfs-pubsub
     ${WIN_CRYPT_LIBRARY}
 )
+if(WIN32)
+    target_link_options(processing_mnn PUBLIC /WHOLEARCHIVE:"$<TARGET_FILE:processing_service>")
+    target_link_options(processing_mnn_p PUBLIC /WHOLEARCHIVE:"$<TARGET_FILE:processing_service>")
+elseif(APPLE)
+    target_link_options(processing_mnn PUBLIC -force_load "$<TARGET_FILE:processing_service>")
+    target_link_options(processing_mnn_p PUBLIC -force_load "$<TARGET_FILE:processing_service>")
+else()
+    target_link_options(processing_mnn PUBLIC
+        "-Wl,--whole-archive"
+        "$<TARGET_FILE:processing_service>"
+        "-Wl,--no-whole-archive"
+    )
+    target_link_options(processing_mnn_p PUBLIC
+        "-Wl,--whole-archive"
+        "$<TARGET_FILE:processing_service>"
+        "-Wl,--no-whole-archive"
+    )
+endif()
 include_directories(../include)
 include_directories(./imageHelper)

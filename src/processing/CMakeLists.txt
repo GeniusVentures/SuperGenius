@@ -1,8 +1,3 @@
-set(MNN_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/MNN/include")
-set(MNN_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/MNN/lib")
-include_directories(${MNN_INCLUDE_DIR})
-FILE(GLOB MNN_LIBS "${MNN_LIBRARY_DIR}/*")
-
 add_library(processing_service
     processing_core.hpp
     impl/processing_core_impl.hpp
@@ -51,7 +46,6 @@ target_include_directories(processing_service PRIVATE ${GSL_INCLUDE_DIR})
 target_include_directories(processing_service
     PUBLIC $<BUILD_INTERFACE:${PROTO_SRC_DIR}>
     "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
-    ${MNN_INCLUDE_DIR}
 )
 
 if(APPLE)
@@ -91,21 +85,31 @@ target_link_libraries(processing_service PRIVATE
     p2p::p2p_gossip
     p2p::asio_scheduler
     ${WIN_CRYPT_LIBRARY}
-    ${MNN_LIBS}
     ${VULKAN_LIBS}
     AsyncIOManager
     rapidjson
     ipfs-pubsub
 )
-
+target_link_libraries(processing_service PUBLIC
+    MNN::MNN)
 target_include_directories(processing_service PRIVATE ${AsyncIOManager_INCLUDE_DIR})
 
-if(WIN32)
-    target_link_options(processing_service PUBLIC /WHOLEARCHIVE:${MNN_LIBS})
-elseif(APPLE)
-    target_link_options(processing_service PUBLIC -force_load ${MNN_LIBS})
-else()
-    target_link_options(processing_service PUBLIC "-Wl,--whole-archive" ${MNN_LIBS} "-Wl,--no-whole-archive")
-endif()
 
+#if(WIN32)
+#    target_link_options(processing_service PUBLIC
+#        /WHOLEARCHIVE
+#        MNN::MNN
+#    )
+#elseif(APPLE)
+#    target_link_options(processing_service PUBLIC
+#        -force_load
+#        MNN::MNN
+#    )
+#else()
+#    target_link_options(processing_service PUBLIC
+#        "-Wl,--whole-archive"
+#        MNN::MNN
+#        "-Wl,--no-whole-archive"
+#    )
+#endif()
 supergenius_install(processing_service)
