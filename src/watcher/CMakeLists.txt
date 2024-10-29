@@ -7,5 +7,5 @@ add_library(watcher_service
         messaging_watcher.hpp
 )
 
-target_link_libraries(watcher_service
+target_link_libraries(watcher_service rapidjson Boost::thread
 )
