@@ -1,11 +1,4 @@
 #add_subdirectory(application)
-set(MNN_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/MNN/include")
-set(MNN_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/MNN/lib")
-include_directories(${MNN_INCLUDE_DIR})
-set(MNN_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../MNN/include")
-FILE(GLOB MNN_LIBS "${MNN_LIBRARY_DIR}/*")
-
-
 add_executable(mnn_chunkprocess multiPose.cpp)
 
 if(APPLE)
@@ -47,18 +40,31 @@ if(ANDROID)
 )
 endif()
 
-target_link_libraries(mnn_chunkprocess PRIVATE 	
-
-	${MNN_LIBS}
+target_link_libraries(mnn_chunkprocess PUBLIC
     ${VULKAN_LIBS}
-    
 )
+target_link_libraries(mnn_chunkprocess PUBLIC
+	MNN::MNN
+)
+
+#Since we link directly to MNN here we need to wholearchive the lib path, this is fine
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    get_target_property(MNN_LIB_PATH MNN::MNN IMPORTED_LOCATION_DEBUG)
+elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
+    get_target_property(MNN_LIB_PATH MNN::MNN IMPORTED_LOCATION_RELEASE)
+endif()
+
+#Wholearchive MNN
 if(WIN32)
-    target_link_options(mnn_chunkprocess PUBLIC /WHOLEARCHIVE:${MNN_LIBS})
+    target_link_options(mnn_chunkprocess PUBLIC /WHOLEARCHIVE:${MNN_LIB_PATH})
 elseif(APPLE)
-    target_link_options(mnn_chunkprocess PUBLIC -force_load ${MNN_LIBS})
+    target_link_options(mnn_chunkprocess PUBLIC -force_load ${MNN_LIB_PATH})
 else()
-    target_link_options(mnn_chunkprocess PUBLIC "-Wl,--whole-archive" ${MNN_LIBS} "-Wl,--no-whole-archive")
+    target_link_options(mnn_chunkprocess PUBLIC
+        "-Wl,--whole-archive"
+        ${MNN_LIB_PATH}
+        "-Wl,--no-whole-archive"
+    )
 endif()
 include_directories(../include)
 include_directories(./imageHelper)

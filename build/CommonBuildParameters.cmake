@@ -70,6 +70,14 @@ endif()
 
 include(${PROJECT_ROOT}/cmake/functions.cmake)
 
+#mnn
+set(MNN_DIR "${_THIRDPARTY_BUILD_DIR}/MNN/lib/cmake/MNN")
+find_package(MNN CONFIG REQUIRED)
+set(MNN_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/MNN/include")
+message(STATIS "INCLUDE DIR ${MNN_INCLUDE_DIR}")
+include_directories(${MNN_INCLUDE_DIR})
+get_target_property(MNN_LIB_PATH MNN::MNN IMPORTED_LOCATION)
+message(STATUS "MNN PATH ${MNN_LIB_PATH}")
 # openssl project
 set(OPENSSL_DIR "${_THIRDPARTY_BUILD_DIR}/openssl/build/${CMAKE_SYSTEM_NAME}${ABI_SUBFOLDER_NAME}" CACHE PATH "Path to OpenSSL install folder")
 set(OPENSSL_USE_STATIC_LIBS ON CACHE BOOL "OpenSSL use static libs")
@@ -290,6 +298,9 @@ endif()
 if(BUILD_EXAMPLES)
     add_subdirectory(${PROJECT_ROOT}/example ${CMAKE_BINARY_DIR}/example)
 endif()
+
+
+
 
 install(
     EXPORT supergeniusTargets
