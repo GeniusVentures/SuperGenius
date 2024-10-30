@@ -11,6 +11,8 @@
 
 #include "application/app_config.hpp"
 #include "application/impl/validating_node_application.hpp"
+#include "application/impl/syncing_node_application.hpp"
+#include "application/impl/bridging_node_application.hpp"
 
 class SuperGeniusDemoApp
 {
@@ -24,6 +26,8 @@ public:
 private:
     std::shared_ptr<sgns::application::AppConfiguration>          cfg;
     std::shared_ptr<sgns::application::ValidatingNodeApplication> validation_node;
+    std::shared_ptr<sgns::application::SyncingNodeApplication> syncingNode;
+    std::shared_ptr<sgns::application::BridgingNodeApplication> bridgingNode;
 };
 
 #endif

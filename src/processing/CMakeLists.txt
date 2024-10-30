@@ -94,7 +94,6 @@ target_link_libraries(processing_service PUBLIC
     MNN::MNN)
 target_include_directories(processing_service PRIVATE ${AsyncIOManager_INCLUDE_DIR})
 
-
 #if(WIN32)
 #    target_link_options(processing_service PUBLIC
 #        /WHOLEARCHIVE
@@ -112,4 +111,5 @@ target_include_directories(processing_service PRIVATE ${AsyncIOManager_INCLUDE_D
 #        "-Wl,--no-whole-archive"
 #    )
 #endif()
+
 supergenius_install(processing_service)

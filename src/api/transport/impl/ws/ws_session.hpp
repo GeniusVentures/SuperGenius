@@ -31,10 +31,9 @@ namespace sgns::api {
 
     /**
      * @brief constructor
-     * @param socket socket instance
+     * @param context context of session
      * @param config session configuration
      * @param id session id
-     * @param type of this session
      */
     WsSession(Context &context, Configuration config, SessionId id);
 

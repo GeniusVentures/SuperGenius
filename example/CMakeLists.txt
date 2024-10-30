@@ -10,3 +10,5 @@ add_subdirectory(processing_mnn)
 add_subdirectory(node_test)
 add_subdirectory(AsyncFile)
 add_subdirectory(mnn_chunkprocess)
+add_subdirectory(evm_messaging_dapp)
+
