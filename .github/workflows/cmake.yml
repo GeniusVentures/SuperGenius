@@ -17,6 +17,7 @@ jobs:
   build:
     env:
       GRPC_BUILD_ENABLE_CCACHE: "ON"
+      GH_TOKEN: ${{ secrets.GNUS_TOKEN_1 }}
     runs-on: ${{matrix.host}}
     strategy:
       fail-fast: false
@@ -55,13 +56,20 @@ jobs:
           fi
         shell: bash
 
-      - name: Check out thirdparty repository
-        uses: actions/checkout@v4
-        with:
-          repository: 'GeniusVentures/thirdparty'
-          path: 'thirdparty'
-          submodules: 'recursive'
-          ref: "${{ env.branch_name }}"
+      - name: Download thirdparty release
+        working-directory: ${{github.workspace}}
+        run: |
+          mkdir thirdparty
+          cd thirdparty
+
+          tag_name=${{matrix.target}}-${branch_name}-Release
+
+          gh release download ${tag_name} --repo GeniusVentures/thirdparty -p "*-lib.tar.gz"
+
+          for library in *-lib.tar.gz; do
+            tar -xzvf "$library"
+          done
+        shell: bash
 
       - name: Set clang as the default compiler
         if: ${{ matrix.host == 'ubuntu-latest' }}
@@ -109,56 +117,26 @@ jobs:
 
       - name: Add Rust target
         run: rustup target add wasm32-unknown-emscripten
-
-      - name: Configure Thirdparty CMake for Mac x86
-        if: ${{ matrix.target == 'OSX'}}
-        working-directory: ${{github.workspace}}/thirdparty
-        run: cmake -S build/${{matrix.target}} -B build/${{matrix.target}}/Release -DCMAKE_BUILD_TYPE=Release -DPLATFORM=MAC
-
-      - name: Configure Thirdparty CMake for iOS
-        if: ${{ matrix.target == 'iOS'}}
-        working-directory: ${{github.workspace}}/thirdparty
-        run: cmake -S build/${{matrix.target}} -B build/${{matrix.target}}/Release -DCMAKE_BUILD_TYPE=Release -DPLATFORM=OS64
-
-      - name: Configure Thirdparty CMake for Android
-        if: ${{ matrix.target == 'Android'}}
-        working-directory: ${{github.workspace}}/thirdparty
-        run: cmake -S build/${{matrix.target}} -B build/${{matrix.target}}/Release/${{matrix.abi}} -DCMAKE_BUILD_TYPE=Release -DANDROID_ABI=${{matrix.abi}}
-
-      - name: Configure Thirdparty CMake
-        if: ${{ matrix.target != 'OSX' && matrix.target != 'iOS' && matrix.target != 'Android' }}
-        working-directory: ${{github.workspace}}/thirdparty
-        run: cmake -S build/${{matrix.target}} -B build/${{matrix.target}}/Release -DCMAKE_BUILD_TYPE=Release
-
-      - name: Build Thirdparty for Android
-        if: ${{ matrix.target == 'Android' }}
-        working-directory: ${{github.workspace}}/thirdparty
-        run: cmake --build build/${{matrix.target}}/Release/${{matrix.abi}} --config Release -j
-
-      - name: Build Thirdparty
-        if: ${{matrix.target != 'Android'}}
-        working-directory: ${{github.workspace}}/thirdparty
-        run: cmake --build build/${{matrix.target}}/Release --config Release -j
-
+      
       - name: Configure SuperGenius CMake for Mac x86
         if: ${{ matrix.target == 'OSX'}}
         working-directory: ${{github.workspace}}/SuperGenius
-        run: cmake -S build/${{matrix.target}} -B build/${{matrix.target}}/Release -DCMAKE_BUILD_TYPE=Release -DPLATFORM=MAC
+        run: cmake -S build/${{matrix.target}} -B build/${{matrix.target}}/Release -DCMAKE_BUILD_TYPE=Release -DPLATFORM=MAC -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty
 
       - name: Configure SuperGenius CMake for iOS
         if: ${{ matrix.target == 'iOS'}}
         working-directory: ${{github.workspace}}/SuperGenius
-        run: cmake -S build/${{matrix.target}} -B build/${{matrix.target}}/Release -DCMAKE_BUILD_TYPE=Release -DPLATFORM=OS64
+        run: cmake -S build/${{matrix.target}} -B build/${{matrix.target}}/Release -DCMAKE_BUILD_TYPE=Release -DPLATFORM=OS64 -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty
 
       - name: Configure SuperGenius CMake for Android
         if: ${{ matrix.target == 'Android'}}
         working-directory: ${{github.workspace}}/SuperGenius
-        run: cmake -S build/${{matrix.target}} -B build/${{matrix.target}}/Release/${{matrix.abi}} -DCMAKE_BUILD_TYPE=Release -DANDROID_ABI=${{matrix.abi}}
+        run: cmake -S build/${{matrix.target}} -B build/${{matrix.target}}/Release/${{matrix.abi}} -DCMAKE_BUILD_TYPE=Release -DANDROID_ABI=${{matrix.abi}} -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty
 
       - name: Configure SuperGenius CMake
         if: ${{ matrix.target != 'OSX' && matrix.target != 'iOS' && matrix.target != 'Android' }}
         working-directory: ${{github.workspace}}/SuperGenius
-        run: cmake -S build/${{matrix.target}} -B build/${{matrix.target}}/Release -DCMAKE_BUILD_TYPE=Release
+        run: cmake -S build/${{matrix.target}} -B build/${{matrix.target}}/Release -DCMAKE_BUILD_TYPE=Release -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty
 
       - name: Build SuperGenius
         if: ${{ matrix.target != 'Android' }}
