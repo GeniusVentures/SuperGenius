@@ -82,8 +82,6 @@ namespace sgns::processing
     void ImageSplitter::SplitImageData()
     {
         // Check if imageSize is evenly divisible by blocklen_
-        std::cout << "Image Size: " << imageSize << std::endl;
-        std::cout << "Blocklen Size: " << blocklen_ << std::endl;
         if (imageSize % blocklen_ != 0) {
             throw std::invalid_argument("Image size is not evenly divisible by block length");
         }
