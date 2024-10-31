@@ -6,11 +6,11 @@
 #ifndef GRPC_FOR_SUPERGENIUS_PROCESSING_TASK_QUEUE_IMPL_HPP
 #define GRPC_FOR_SUPERGENIUS_PROCESSING_TASK_QUEUE_IMPL_HPP
 
-#include <optional>
 #include <utility>
-#include <boost/format.hpp>
-#include "outcome/outcome.hpp"
 
+#include <boost/format.hpp>
+
+#include "outcome/outcome.hpp"
 #include "processing/processing_task_queue.hpp"
 #include "crdt/globaldb/globaldb.hpp"
 
@@ -24,7 +24,7 @@ namespace sgns::processing
         * @param db - CRDT globaldb to use
         */
         ProcessingTaskQueueImpl( std::shared_ptr<sgns::crdt::GlobalDB> db ) :
-            m_db( db ), m_processingTimeout( std::chrono::seconds( 10 ) )
+            m_db( std::move( db ) ), m_processingTimeout( std::chrono::seconds( 10 ) )
         {
         }
 

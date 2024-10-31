@@ -6,7 +6,7 @@
 #ifndef SUPERGENIUS_PROCESSING_SUBTASK_QUEUE_ACCESSOR_HPP
 #define SUPERGENIUS_PROCESSING_SUBTASK_QUEUE_ACCESSOR_HPP
 
-#include <processing/proto/SGProcessing.pb.h>
+#include "processing/proto/SGProcessing.pb.h"
 #include <boost/optional.hpp>
 #include <list>
 
@@ -17,7 +17,8 @@ namespace sgns::processing
 class SubTaskQueueAccessor
 {
 public:
-    typedef std::function<void(boost::optional<const SGProcessing::SubTask&>)> SubTaskGrabbedCallback;
+    using SubTaskGrabbedCallback = std::function<void( boost::optional<const SGProcessing::SubTask &> )>;
+
     virtual ~SubTaskQueueAccessor() = default;
 
     /** Starts a waiting for subtasks queue 

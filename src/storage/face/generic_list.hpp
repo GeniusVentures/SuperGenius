@@ -76,7 +76,6 @@ namespace sgns::face {
   class ForwardIterator {
    public:
     using iterator_category = std::forward_iterator_tag;
-    using difference_type = ssize_t;
     using pointer = typename Container::value_type *;
     using const_pointer = const typename Container::value_type *;
     using reference = typename Container::value_type &;

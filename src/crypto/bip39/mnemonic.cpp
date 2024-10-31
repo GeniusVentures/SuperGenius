@@ -47,10 +47,10 @@ namespace sgns::crypto::bip39 {
       mnemonic_list = phrase;
     }
 
-    if (mnemonic_list.find("/") != std::string_view::npos) {
-      base::createLogger(kMnemonicLoggerString)
-          ->error("junctions are not supported yet");
-      return bip39::MnemonicError::INVALID_MNEMONIC;
+    if ( mnemonic_list.find( '/' ) != std::string_view::npos )
+    {
+        base::createLogger( kMnemonicLoggerString )->error( "junctions are not supported yet" );
+        return bip39::MnemonicError::INVALID_MNEMONIC;
     }
 
     // split word list into separate words

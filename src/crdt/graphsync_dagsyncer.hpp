@@ -2,8 +2,8 @@
 #define SUPERGENIUS_GRAPHSYNC_DAGSYNCER_HPP
 
 #include "crdt/dagsyncer.hpp"
-#include <base/logger.hpp>
-#include <base/buffer.hpp>
+#include "base/logger.hpp"
+#include "base/buffer.hpp"
 
 #include <ipfs_lite/ipfs/graphsync/graphsync.hpp>
 #include <ipfs_lite/ipfs/graphsync/extension.hpp>
@@ -74,7 +74,7 @@ namespace sgns::crdt
         const PeerId& peer, boost::optional<std::vector<Multiaddress>> address, const CID& root_cid) const;
 
     void RequestProgressCallback(ResponseStatusCode code, const std::vector<Extension>& extensions) const;
-    void BlockReceivedCallback(CID cid, sgns::common::Buffer buffer);
+    void BlockReceivedCallback( const CID &cid, sgns::common::Buffer buffer );
 
     bool started_ = false;
 

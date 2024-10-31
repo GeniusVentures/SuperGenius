@@ -1,9 +1,9 @@
 #ifndef SUPERGENIUS_CRDT_OPTIONS_HPP
 #define SUPERGENIUS_CRDT_OPTIONS_HPP
 
-#include <base/buffer.hpp>
-#include <base/logger.hpp>
-#include <crdt/hierarchical_key.hpp>
+#include "base/buffer.hpp"
+#include "base/logger.hpp"
+#include "crdt/hierarchical_key.hpp"
 #include <functional>
 
 namespace sgns::crdt
@@ -68,7 +68,7 @@ namespace sgns::crdt
     }
 
     /** Verifies CrdtOptions */
-    outcome::result<VerifyErrorCode> Verify()
+    outcome::result<VerifyErrorCode> Verify() const
     {
       if (rebroadcastIntervalMilliseconds <= 0)
       {
@@ -85,12 +85,12 @@ namespace sgns::crdt
       return VerifyErrorCode::Success;
     }
 
-    inline bool operator==( const CrdtOptions& rhs ) const
+    bool operator==( const CrdtOptions &rhs ) const
     {
       return logger == rhs.logger && rebroadcastIntervalMilliseconds == rhs.rebroadcastIntervalMilliseconds;
     }
 
-    inline bool operator!=( const CrdtOptions& rhs ) const
+    bool operator!=( const CrdtOptions &rhs ) const
     {
       return !operator==( rhs );
     }

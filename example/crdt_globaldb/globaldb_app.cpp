@@ -8,8 +8,8 @@
 #include <boost/filesystem.hpp>
 #include <boost/random.hpp>
 
-#include <crdt/globaldb/globaldb.hpp>
-#include <crdt/globaldb/keypair_file_storage.hpp>
+#include "crdt/globaldb/globaldb.hpp"
+#include "crdt/globaldb/keypair_file_storage.hpp"
 
 #include <libp2p/log/configurator.hpp>
 #include <libp2p/log/logger.hpp>

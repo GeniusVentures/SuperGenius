@@ -126,9 +126,7 @@ namespace sgns::api {
      * otherwise
      * @return composed request
      */
-    auto makeBadResponse(std::string_view message,
-                         unsigned version,
-                         bool keep_alive);
+    static auto makeBadResponse( std::string_view message, unsigned version, bool keep_alive );
 
     /**
      * @brief reports error code and message

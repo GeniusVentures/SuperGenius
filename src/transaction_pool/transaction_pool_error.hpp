@@ -3,7 +3,7 @@
 #ifndef SUPERGENIUS_SRC_TRANSACTION_POOL_TRANSACTION_POOL_ERROR_HPP
 #define SUPERGENIUS_SRC_TRANSACTION_POOL_TRANSACTION_POOL_ERROR_HPP
 
-#include <outcome/outcome.hpp>
+#include "outcome/outcome.hpp"
 
 namespace sgns::transaction_pool {
   enum class TransactionPoolError {

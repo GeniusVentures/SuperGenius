@@ -4,7 +4,7 @@
 
 #include <list>
 
-#include <outcome/outcome.hpp>
+#include "outcome/outcome.hpp"
 #include "primitives/apply_result.hpp"
 #include "primitives/block.hpp"
 #include "primitives/block_header.hpp"

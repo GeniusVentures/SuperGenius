@@ -7,7 +7,7 @@
 
 #include <libp2p/basic/message_read_writer_uvarint.hpp>
 #include <libp2p/basic/protobuf_message_read_writer.hpp>
-#include <outcome/outcome.hpp>
+#include "outcome/outcome.hpp"
 
 #include "network/helpers/message_read_writer.hpp"
 #include "network/adapters/uvar.hpp"

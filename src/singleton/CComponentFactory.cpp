@@ -41,8 +41,6 @@ outcome::result<std::shared_ptr<IComponent>> CComponentFactory::GetComponent(
     {
         return outcome::failure( boost::system::error_code{} );
     }
-    else
-    {
-        return ComponentTable[key];
-    }
+
+    return ComponentTable[key];
 }

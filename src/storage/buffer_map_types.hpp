@@ -11,7 +11,6 @@
 #include <gsl/span>
 
 #include "base/buffer.hpp"
-#include "storage/face/batchable.hpp"
 #include "storage/face/generic_storage.hpp"
 #include "storage/face/write_batch.hpp"
 

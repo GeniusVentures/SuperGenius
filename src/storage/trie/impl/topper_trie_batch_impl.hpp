@@ -3,12 +3,12 @@
 #ifndef SUPERGENIUS_SRC_STORAGE_TRIE_IMPL_TOPPER_TRIE_BATCH_IMPL
 #define SUPERGENIUS_SRC_STORAGE_TRIE_IMPL_TOPPER_TRIE_BATCH_IMPL
 
-#include "storage/trie/trie_batches.hpp"
-
-#include "storage/trie/supergenius_trie/supergenius_trie_factory.hpp"
-
 #include <map>
 #include <list>
+
+#include <boost/optional.hpp>
+
+#include "storage/trie/trie_batches.hpp"
 
 namespace sgns::storage::trie {
 

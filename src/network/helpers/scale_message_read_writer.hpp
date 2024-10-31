@@ -7,7 +7,7 @@
 #include <memory>
 
 #include <libp2p/basic/message_read_writer_uvarint.hpp>
-#include <outcome/outcome.hpp>
+#include "outcome/outcome.hpp"
 
 #include "scale/scale.hpp"
 
@@ -23,8 +23,7 @@ namespace sgns::network {
    public:
     explicit ScaleMessageReadWriter(
         std::shared_ptr<libp2p::basic::MessageReadWriter> read_writer);
-    explicit ScaleMessageReadWriter(
-        const std::shared_ptr<libp2p::basic::ReadWriter> &read_writer);
+    explicit ScaleMessageReadWriter( std::shared_ptr<libp2p::basic::ReadWriter> read_writer );
 
     /**
      * Read a SCALE-encoded message from the channel

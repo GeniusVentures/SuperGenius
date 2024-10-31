@@ -7,28 +7,27 @@
 #ifndef _ACCOUNT_MANAGER_HPP_
 #define _ACCOUNT_MANAGER_HPP_
 #include <memory>
+
 #include <boost/asio.hpp>
 #include <spdlog/sinks/basic_file_sink.h>
-#include "account/GeniusAccount.hpp"
-#include "ipfs_pubsub/gossip_pubsub.hpp"
-#include "crdt/globaldb/globaldb.hpp"
-#include "crdt/globaldb/keypair_file_storage.hpp"
-#include "crdt/globaldb/proto/broadcast.pb.h"
-#include "account/TransactionManager.hpp"
 #include <libp2p/log/configurator.hpp>
 #include <libp2p/log/logger.hpp>
 #include <libp2p/multi/multibase_codec/multibase_codec_impl.hpp>
 #include <libp2p/multi/content_identifier_codec.hpp>
+
+#include "account/GeniusAccount.hpp"
+#include "ipfs_pubsub/gossip_pubsub.hpp"
+#include "crdt/globaldb/globaldb.hpp"
+#include "account/TransactionManager.hpp"
 #include <ipfs_lite/ipfs/graphsync/graphsync.hpp>
 #include "crypto/hasher/hasher_impl.hpp"
 #include "blockchain/impl/key_value_block_header_repository.hpp"
 #include "blockchain/impl/key_value_block_storage.hpp"
-#include "singleton/IComponent.hpp"
-#include "processing/impl/processing_task_queue_impl.hpp"
 #include "processing/impl/processing_core_impl.hpp"
 #include "processing/impl/processing_subtask_result_storage_impl.hpp"
 #include "processing/processing_service.hpp"
-#include "upnp.hpp"
+#include "singleton/IComponent.hpp"
+#include "processing/impl/processing_task_queue_impl.hpp"
 
 #ifndef __cplusplus
 extern "C"
@@ -60,12 +59,12 @@ namespace sgns
     class GeniusNode : public IComponent
     {
     public:
-        GeniusNode( const DevConfig_st &dev_config );
+        GeniusNode( const DevConfig_st &dev_config, const char *eth_private_key );
         // static GeniusNode &GetInstance()
         // {
         //     return instance;
         // }
-        ~GeniusNode();
+        ~GeniusNode() override;
 
         void ProcessImage( const std::string &image_path, uint16_t funds );
 
@@ -78,6 +77,23 @@ namespace sgns
         void     MintTokens( uint64_t amount );
         void     AddPeer( const std::string &peer );
         uint64_t GetBalance();
+
+        [[nodiscard]] const std::vector<std::vector<uint8_t>> &GetTransactions() const
+        {
+            return transaction_manager_->GetTransactions();
+        }
+
+        std::string GetAddress()
+        {
+            return account_->GetAddress<std::string>();
+        }
+
+        bool TransferFunds( uint64_t amount, const uint256_t &destination )
+        {
+            return transaction_manager_->TransferFunds( amount, destination );
+        }
+
+        static std::vector<uint8_t> GetImageByCID( const std::string &cid );
 
     private:
         std::shared_ptr<GeniusAccount>                             account_;
@@ -99,7 +115,7 @@ namespace sgns
 
         DevConfig_st dev_config_;
 
-        uint16_t GenerateRandomPort( const std::string &address );
+        static uint16_t GenerateRandomPort( const std::string &address );
 
         void ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult);
         void ProcessingError( const std::string &task_id );

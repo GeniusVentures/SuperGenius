@@ -1,7 +1,6 @@
 #ifndef SUPERGENIUS_SRC_VERIFICATION_FINALITY_VOTING_ROUND_HPP
 #define SUPERGENIUS_SRC_VERIFICATION_FINALITY_VOTING_ROUND_HPP
 
-#include "verification/finality/round_observer.hpp"
 #include "verification/finality/round_state.hpp"
 
 namespace sgns::verification::finality {

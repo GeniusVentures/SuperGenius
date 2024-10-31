@@ -3,8 +3,8 @@
 #include "pubsub_broadcaster_ext.hpp"
 #include "keypair_file_storage.hpp"
 
-#include <crdt/crdt_datastore.hpp>
-#include <crdt/graphsync_dagsyncer.hpp>
+#include "crdt/crdt_datastore.hpp"
+#include "crdt/graphsync_dagsyncer.hpp"
 
 #include <ipfs_lite/ipfs/merkledag/impl/merkledag_service_impl.hpp>
 #include <ipfs_lite/ipfs/impl/datastore_rocksdb.hpp>
@@ -56,7 +56,6 @@ GlobalDB::GlobalDB(
     , m_broadcastChannel(std::move(broadcastChannel))
 {
 }
-
 
 std::string GetLocalIP(boost::asio::io_context& io)
 {
@@ -123,8 +122,7 @@ std::string GetLocalIP(boost::asio::io_context& io)
 #endif
 }
 
-
-outcome::result<void> GlobalDB::Init(std::shared_ptr<CrdtOptions> crdtOptions)
+outcome::result<void> GlobalDB::Init( std::shared_ptr<CrdtOptions> crdtOptions )
 {
     std::shared_ptr<RocksDB> dataStore = nullptr;
     auto databasePathAbsolute = boost::filesystem::absolute(m_databasePath).string();
@@ -145,7 +143,7 @@ outcome::result<void> GlobalDB::Init(std::shared_ptr<CrdtOptions> crdtOptions)
     }
 
     boost::filesystem::path keyPath = databasePathAbsolute + "/key";
-    KeyPairFileStorage keyPairStorage(keyPath);
+    KeyPairFileStorage      keyPairStorage( keyPath );
     auto keyPair = keyPairStorage.GetKeyPair();
     //Kademlia Config
     libp2p::protocol::kademlia::Config kademlia_config;
@@ -347,14 +345,15 @@ outcome::result<std::string> GlobalDB::KeyToString(const Buffer& key) const
 
     auto sKey = std::string(key.toString());
 
-    size_t prefixPos = (keysPrefix.value().size() != 0) ? sKey.find(keysPrefix.value(), 0) : 0;
+    size_t prefixPos = ( !keysPrefix.value().empty() ) ? sKey.find( keysPrefix.value(), 0 ) : 0;
     if (prefixPos != 0)
     {
         return outcome::failure(boost::system::error_code{});
     }
 
     size_t keyPos = keysPrefix.value().size();
-    auto suffixPos = (valueSuffix.value().size() != 0) ? sKey.rfind(valueSuffix.value(), std::string::npos) : sKey.size();
+    auto   suffixPos =
+        ( !valueSuffix.value().empty() ) ? sKey.rfind( valueSuffix.value(), std::string::npos ) : sKey.size();
     if ((suffixPos == std::string::npos) || (suffixPos < keyPos))
     {
         return outcome::failure(boost::system::error_code{});

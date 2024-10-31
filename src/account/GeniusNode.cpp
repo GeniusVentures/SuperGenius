@@ -11,10 +11,11 @@
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 #include "account/GeniusNode.hpp"
+#include "FileManager.hpp"
+#include "upnp.hpp"
 #include "processing/processing_imagesplit.hpp"
 #include "processing/processing_tasksplit.hpp"
 #include "processing/processing_subtask_enqueuer_impl.hpp"
-#include "processing/processing_subtask_result_storage.hpp"
 #include "processing/processors/processing_processor_mnn_posenet.hpp"
 #include "local_secure_storage/impl/json/JSONSecureStorage.hpp"
 #include <boost/uuid/uuid.hpp>
@@ -28,12 +29,13 @@ namespace sgns
 {
     //GeniusNode GeniusNode::instance( DEV_CONFIG );
 
-    GeniusNode::GeniusNode( const DevConfig_st &dev_config ) :
+    GeniusNode::GeniusNode( const DevConfig_st &dev_config, const char *eth_private_key ) :
         account_( std::make_shared<GeniusAccount>( static_cast<uint8_t>( dev_config.TokenID ),
-                                                   std::string( dev_config.BaseWritePath ) ) ), //
-        io_( std::make_shared<boost::asio::io_context>() ),                                     //
-        write_base_path_( dev_config.BaseWritePath ),                                           //
-        dev_config_( dev_config )                                                               //
+                                                   std::string( dev_config.BaseWritePath ),
+                                                   eth_private_key ) ),
+        io_( std::make_shared<boost::asio::io_context>() ),
+        write_base_path_( dev_config.BaseWritePath ),
+        dev_config_( dev_config )
     {
         logging_system = std::make_shared<soralog::LoggingSystem>( std::make_shared<soralog::ConfiguratorFromYAML>(
             // Original LibP2P logging config
@@ -302,6 +304,7 @@ namespace sgns
     {
         return transaction_manager_->GetBalance();
     }
+
 
     uint16_t GeniusNode::GenerateRandomPort( const std::string &address )
     {

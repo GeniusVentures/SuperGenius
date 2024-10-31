@@ -10,21 +10,18 @@
 #define _UTIL_HPP
 
 #include <string>
-#include <sstream>
-#include <iomanip>
 #include <vector>
 #include <type_traits>
 #include <optional>
 #include <algorithm>
-#include <tuple>
-#include <array>
+
 #include <boost/random.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
 
-using namespace boost::multiprecision;
-
 namespace sgns
 {
+    using namespace boost::multiprecision;
+
     /**
      * @brief       Convert a byte array to a hexadecimal string.
      * @param[in]   bytes A vector of bytes to be converted.
@@ -49,7 +46,7 @@ namespace sgns
     static bool isLittleEndian()
     {
         std::uint32_t num     = 1;
-        std::uint8_t *bytePtr = reinterpret_cast<std::uint8_t *>( &num );
+        auto         *bytePtr = reinterpret_cast<std::uint8_t *>( &num );
 
         return *bytePtr == 1;
     }
@@ -66,8 +63,8 @@ namespace sgns
     static T Vector2Num( const std::vector<uint8_t> &bytes )
     {
         static_assert(
-            std::is_integral<T>::value || std::is_same<T, boost::multiprecision::uint128_t>::value ||
-                std::is_same<T, boost::multiprecision::uint256_t>::value,
+            std::is_integral_v<T> || std::is_same_v<T, boost::multiprecision::uint128_t> ||
+                std::is_same_v<T, boost::multiprecision::uint256_t>,
             "T must be an integral type or boost::multiprecision::uint128_t or boost::multiprecision::uint256_t" );
         if ( bytes.size() > sizeof( T ) )
         {
@@ -124,7 +121,7 @@ namespace sgns
     template <typename T>
     static std::vector<uint8_t> Num2Vector( const T &num, std::size_t num_bytes_resolution = sizeof( T ) )
     {
-        const uint8_t *bytesPtr = reinterpret_cast<const uint8_t *>( &num );
+        const auto *bytesPtr = reinterpret_cast<const uint8_t *>( &num );
         return std::vector<uint8_t>( bytesPtr, bytesPtr + sizeof( T ) );
     }
 
@@ -175,10 +172,9 @@ namespace sgns
             {
                 return out_vect.begin();
             }
-            else
-            {
-                return out_vect.end();
-            }
+
+            return out_vect.end();
+           
         };
 
         for ( std::size_t i = 0; i < char_ptr_size; i += num_nibbles_resolution )
@@ -196,7 +192,7 @@ namespace sgns
      * @tparam      T std::vector<uint8_t> or std::array<uint8_t,N>
      */
     template <typename T>
-    static typename std::enable_if<std::is_same<typename T::value_type, uint8_t>::value>::type AdjustEndianess(
+    static std::enable_if_t<std::is_same_v<typename T::value_type, uint8_t>> AdjustEndianess(
         T                                  &data,
         std::optional<typename T::iterator> start  = std::nullopt,
         std::optional<typename T::iterator> finish = std::nullopt )
@@ -214,15 +210,6 @@ namespace sgns
             std::reverse( start.value(), finish.value() );
         }
     }
-
-    static uint256_t GenerateRandomNumber()
-    {
-        boost::random::mt19937                             gen( clock() );
-        boost::random::uniform_int_distribution<uint256_t> dist( std::numeric_limits<uint256_t>::min(),
-                                                                 std::numeric_limits<uint256_t>::max() );
-        return dist( gen );
-    }
-
 }
 
 #endif //_UTIL_HPP

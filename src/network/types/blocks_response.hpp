@@ -18,7 +18,7 @@ namespace sgns::network {
    */
   struct BlocksResponse {
     primitives::BlocksRequestId id;
-    std::vector<primitives::BlockData> blocks{};
+    std::vector<primitives::BlockData> blocks;
   };
 
   /**

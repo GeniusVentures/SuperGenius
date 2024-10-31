@@ -28,8 +28,9 @@ namespace sgns::primitives {
     {
       out  << b.header;
       out << b.body.size();
-      for (auto it = b.body.begin(); it != b.body.end(); ++it) {
-        out << *it;
+      for ( const auto &it : b.body )
+      {
+          out << it;
       }
       return out ;
     }

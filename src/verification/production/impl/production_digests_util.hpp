@@ -10,7 +10,7 @@
 #include "verification/production/types/next_epoch_descriptor.hpp"
 #include "verification/production/types/seal.hpp"
 #include "outcome/outcome.hpp"
-#include "primitives/block.hpp"
+#include "primitives/block_header.hpp"
 
 namespace sgns::verification {
 

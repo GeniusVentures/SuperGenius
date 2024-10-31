@@ -13,7 +13,7 @@ namespace sgns::crypto {
    */
   class VRFProvider : public IComponent {
    public:
-    virtual ~VRFProvider() = default;
+       ~VRFProvider() override = default;
 
     /**
      * Generates random keypair for signing the message

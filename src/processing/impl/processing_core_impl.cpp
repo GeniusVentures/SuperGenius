@@ -1,5 +1,9 @@
-#include <processing/impl/processing_core_impl.hpp>
+#include "processing/impl/processing_core_impl.hpp"
+
 #include <rapidjson/document.h>
+
+#include "FileManager.hpp"
+
 namespace sgns::processing
 {
     void ProcessingCoreImpl::ProcessSubTask(
@@ -109,6 +113,7 @@ namespace sgns::processing
             }
         }
         std::string modelFile = "";
+
         // Extract model name
         if (base_document.HasMember("model") && base_document["model"].IsObject()) {
             const auto& model = base_document["model"];
@@ -196,20 +201,16 @@ namespace sgns::processing
                 {
                     return true;
                 }
-                else
-                {
-                    std::cerr << "No processor by name in settings json" << std::endl;
-                    return false;
-                }
-            }
-            else {
-                std::cerr << "Model name not found or not a string" << std::endl;
+
+                std::cerr << "No processor by name in settings json" << std::endl;
                 return false;
             }
-        }
-        else {
-            std::cerr << "Model object not found or not an object" << std::endl;
+
+            std::cerr << "Model name not found or not a string" << std::endl;
             return false;
         }
+
+        std::cerr << "Model object not found or not an object" << std::endl;
+        return false;
     }
 }

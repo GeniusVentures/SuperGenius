@@ -1,9 +1,17 @@
 //#define STB_IMAGE_IMPLEMENTATION
 //#define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "processing_mnn.hpp"
+
+#include <ipfs_pubsub/gossip_pubsub.hpp>
 #include <rapidjson/document.h>
+
 #include "FileManager.hpp"
-#include "URLStringUtil.h"
+#include "base/logger.hpp"
+#include "crdt/globaldb/globaldb.hpp"
+#include "crdt/globaldb/keypair_file_storage.hpp"
+#include "processing/impl/processing_task_queue_impl.hpp"
+#include "processing/processing_imagesplit.hpp"
+
 using GossipPubSub = sgns::ipfs_pubsub::GossipPubSub;
 const std::string logger_config(R"(
 # ----------------

@@ -26,8 +26,7 @@
 #include <libp2p/log/configurator.hpp>
 #include <libp2p/log/sublogger.hpp>
 #include <libp2p/multi/content_identifier_codec.hpp>
-#include <base/logger.hpp>
-
+#include "base/logger.hpp"
 
 #include <ipfs_lite/ipld/impl/ipld_node_impl.hpp>
 #include <libp2p/protocol/kademlia/kademlia.hpp>

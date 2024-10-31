@@ -28,17 +28,13 @@ namespace sgns::crdt
 
     /** Constructs a key from {@param s}.
     */
-    HierarchicalKey(const std::string& s);
+    HierarchicalKey( std::string key );
 
     /** Copy constructor
     */
-    HierarchicalKey(const HierarchicalKey&);
+    HierarchicalKey( const HierarchicalKey & ) = default;
 
     virtual ~HierarchicalKey() = default;
-
-    bool operator==(const HierarchicalKey&);
-
-    bool operator!=(const HierarchicalKey&);
 
     HierarchicalKey& operator=(const HierarchicalKey&) = default;
 
@@ -46,9 +42,11 @@ namespace sgns::crdt
 
     std::string GetKey() const { return key_; };
 
-    /** ChildString returns the `child` Key of this Key -- string helper.
-    *   NewKey("/Comedy/MontyPython").ChildString("Actor:JohnCleese")
-    *   NewKey("/Comedy/MontyPython/Actor:JohnCleese")
+    /** @brief Appends `s` to the key.
+     * @param s String to be appended
+     * 
+     * NewKey("/Comedy/MontyPython").ChildString("Actor:JohnCleese")
+     * NewKey("/Comedy/MontyPython/Actor:JohnCleese")
     */
     HierarchicalKey ChildString(const std::string& s) const;
 
@@ -60,12 +58,12 @@ namespace sgns::crdt
 
     bool IsTopLevel() const;
 
-    inline bool operator==(const HierarchicalKey& rhs) const
+    bool operator==( const HierarchicalKey &rhs ) const
     {
       return key_ == rhs.key_;
     }
 
-    inline bool operator!=(const HierarchicalKey& rhs) const
+    bool operator!=( const HierarchicalKey &rhs ) const
     {
       return !operator==(rhs);
     }

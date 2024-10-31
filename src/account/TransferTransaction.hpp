@@ -6,12 +6,12 @@
  */
 #ifndef _TRANSFER_TRANSACTION_HPP_
 #define _TRANSFER_TRANSACTION_HPP_
-#include "account/IGeniusTransactions.hpp"
 #include <boost/multiprecision/cpp_int.hpp>
+
+#include "account/IGeniusTransactions.hpp"
 #include "account/proto/SGTransaction.pb.h"
 #include "account/UTXOTxParameters.hpp"
 
-using namespace boost::multiprecision;
 namespace sgns
 {
     class TransferTransaction : public IGeniusTransactions
@@ -29,7 +29,7 @@ namespace sgns
         /**
          * @brief      Default Transfer Transaction destructor
          */
-        ~TransferTransaction() = default;
+        ~TransferTransaction() override = default;
 
         /**
          * @brief      
@@ -44,8 +44,8 @@ namespace sgns
          */
         static TransferTransaction DeSerializeByteVector( const std::vector<uint8_t> &data );
 
-        const std::vector<OutputDestInfo> GetDstInfos() const;
-        const std::vector<InputUTXOInfo> GetInputInfos() const;
+        std::vector<OutputDestInfo> GetDstInfos() const;
+        std::vector<InputUTXOInfo>  GetInputInfos() const;
 
         std::string GetTransactionSpecificPath() override
         {

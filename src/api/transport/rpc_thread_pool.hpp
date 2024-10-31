@@ -31,7 +31,7 @@ namespace sgns::api {
     RpcThreadPool(std::shared_ptr<Context> context,
                   const Configuration &configuration);
 
-    ~RpcThreadPool() = default;
+    ~RpcThreadPool() override = default;
 
     /**
      * @brief starts pool

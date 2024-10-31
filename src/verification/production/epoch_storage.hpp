@@ -14,7 +14,7 @@ namespace sgns::verification {
    * Allows to store epochs
    */
   struct EpochStorage : public IComponent {
-    virtual ~EpochStorage() = default;
+      ~EpochStorage() override = default;
 
     /**
      * Stores epoch's information by its number

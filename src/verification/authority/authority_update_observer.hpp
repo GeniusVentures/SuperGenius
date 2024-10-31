@@ -1,17 +1,18 @@
 #ifndef SUPERGENIUS_AUTHORITY_UPDATE_OBSERVER
 #define SUPERGENIUS_AUTHORITY_UPDATE_OBSERVER
 
-#include <outcome/outcome.hpp>
+#include "outcome/outcome.hpp"
 
+#include "primitives/common.hpp"
 #include "primitives/digest.hpp"
 #include "singleton/IComponent.hpp"
 
 namespace sgns::authority {
   class AuthorityUpdateObserver : public IComponent {
    public:
-    virtual ~AuthorityUpdateObserver() = default;
+       ~AuthorityUpdateObserver() override = default;
 
-    /**
+       /**
      * Processes verification message in block digest
      * @param message
      * @return failure or nothing

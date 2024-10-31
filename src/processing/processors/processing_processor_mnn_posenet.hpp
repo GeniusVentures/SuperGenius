@@ -3,14 +3,13 @@
 * @author Justin Church
 */
 #pragma once
-#include <math.h>
-#include <fstream>
-#include <iostream>
+#include <cmath>
 #include <memory>
 #include <vector>
+
 #include <MNN/ImageProcess.hpp>
 #include <MNN/Interpreter.hpp>
-#include <processing/processing_processor.hpp>
+#include "processing/processing_processor.hpp"
 #define MNN_OPEN_TIME_TRACE
 #include <MNN/AutoTime.hpp>
 
@@ -47,7 +46,7 @@ namespace sgns::processing
         {
         }
 
-        ~MNN_PoseNet(){
+        ~MNN_PoseNet() override{
             //stbi_image_free(imageData_);
         };
         /** Start processing data
@@ -55,8 +54,11 @@ namespace sgns::processing
         * @param task - Reference to task to get image split data
         * @param subTask - Reference to subtask to get chunk data from
         */
-        std::vector<uint8_t> StartProcessing( SGProcessing::SubTaskResult &result, const SGProcessing::Task &task,
-                                              const SGProcessing::SubTask &subTask, std::vector<char> imageData, std::vector<char> modelFile ) override;
+        std::vector<uint8_t> StartProcessing( SGProcessing::SubTaskResult &result, 
+                                              const SGProcessing::Task &task,
+                                              const SGProcessing::SubTask &subTask, 
+                                              std::vector<char> imageData, 
+                                              std::vector<char> modelFile ) override;
 
         /** Set data for processor
         * @param buffers - Data containing file name and data pair lists.
@@ -70,8 +72,12 @@ namespace sgns::processing
         * @param origwidth - Width of image
         * @param origheight - Height of image
         */
-        std::unique_ptr<MNN::Tensor> MNNProcess( const std::vector<uint8_t> &imgdata, std::vector<uint8_t> &modelFile, const int channels, const int origwidth, const int origheight,
-                                         const std::string filename = "" );
+        std::unique_ptr<MNN::Tensor> MNNProcess( const std::vector<uint8_t> &imgdata, 
+                                                std::vector<uint8_t> &modelFile, 
+                                                const int channels, 
+                                                const int origwidth, 
+                                                const int origheight,
+                                                const std::string filename = "" );
 
         //std::unique_ptr<std::vector<std::vector<char>>> imageData_;
         //std::unique_ptr<std::vector<uint8_t>>           modelFile_;

@@ -6,7 +6,6 @@
 #include <memory>
 
 #include "storage/face/write_batch.hpp"
-#include "storage/face/writeable.hpp"
 
 namespace sgns::storage::face {
 

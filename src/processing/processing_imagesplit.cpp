@@ -1,6 +1,6 @@
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#include <processing/processing_imagesplit.hpp>
+#include "processing/processing_imagesplit.hpp"
 
 namespace sgns::processing
 {
@@ -36,18 +36,21 @@ namespace sgns::processing
     //    SplitImageData();
     //}
 
+
     ImageSplitter::ImageSplitter(const std::vector<uint8_t>& buffer,
         uint64_t blockstride,
         uint64_t blocklinestride,
         uint64_t blocklen,
         int channels)
-        : blockstride_(blockstride), blocklinestride_(blocklinestride), blocklen_(blocklen), channels_(channels) {
+        : blockstride_(blockstride), 
+        blocklinestride_(blocklinestride), 
+        blocklen_(blocklen), 
+        channels_(channels) {
         // Set inputImage and imageSize from the provided buffer
         //inputImage = reinterpret_cast<const unsigned char*>(buffer.data());
 
         inputImage = reinterpret_cast<const unsigned char*>(buffer.data());
         imageSize = buffer.size();
-
         SplitImageData();
     }
 
@@ -55,7 +58,8 @@ namespace sgns::processing
     {
         return splitparts_.at(part);
     }
-    size_t ImageSplitter::GetPartByCid(libp2p::multi::ContentIdentifier cid)
+
+    size_t ImageSplitter::GetPartByCid( const libp2p::multi::ContentIdentifier &cid ) const
     {
         //Find the index of cid in cids_
         auto it = std::find(cids_.begin(), cids_.end(), cid);
@@ -71,10 +75,8 @@ namespace sgns::processing
         if (index < splitparts_.size()) {
             return index;
         }
-        else {
             //Index out of range
-            return -1;
-        }
+        return -1;
     }
 
     void ImageSplitter::SplitImageData()
@@ -119,45 +121,43 @@ namespace sgns::processing
             SHA256_Update(&sha256, chunkBuffer.data(), chunkBuffer.size());
             SHA256_Final(shahash.data(), &sha256);
             auto hash = libp2p::multi::Multihash::create(libp2p::multi::HashType::sha256, shahash);
-            cids_.push_back(libp2p::multi::ContentIdentifier(
-                libp2p::multi::ContentIdentifier::Version::V0,
-                libp2p::multi::MulticodecType::Code::DAG_PB,
-                hash.value()
-            ));
+            cids_.emplace_back( libp2p::multi::ContentIdentifier::Version::V0,
+                                libp2p::multi::MulticodecType::Code::DAG_PB,
+                                hash.value() );
         }
     }
 
-    uint32_t ImageSplitter::GetPartSize(int part)
+    uint32_t ImageSplitter::GetPartSize(int part) const
     {
         return splitparts_.at(part).size();
     }
 
-    uint32_t ImageSplitter::GetPartStride(int part)
+    uint32_t ImageSplitter::GetPartStride(int part) const
     {
         return chunkWidthActual_.at(part);
     }
 
-    int ImageSplitter::GetPartWidthActual(int part)
+    int ImageSplitter::GetPartWidthActual(int part) const
     {
         return chunkWidthActual_.at(part);
     }
 
-    int ImageSplitter::GetPartHeightActual(int part)
+    int ImageSplitter::GetPartHeightActual(int part) const
     {
         return chunkHeightActual_.at(part);
     }
 
-    size_t ImageSplitter::GetPartCount()
+    size_t ImageSplitter::GetPartCount() const
     {
         return splitparts_.size();
     }
 
-    size_t ImageSplitter::GetImageSize()
+    size_t ImageSplitter::GetImageSize() const
     {
         return imageSize;
     }
 
-    libp2p::multi::ContentIdentifier ImageSplitter::GetPartCID(int part)
+    libp2p::multi::ContentIdentifier ImageSplitter::GetPartCID(int part) const
     {
         return cids_.at(part);
     }

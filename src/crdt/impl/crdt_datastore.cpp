@@ -1,7 +1,7 @@
-#include <crdt/crdt_datastore.hpp>
+#include "crdt/crdt_datastore.hpp"
 #include <storage/rocksdb/rocksdb.hpp>
 #include <iostream>
-#include <crdt/proto/bcast.pb.h>
+#include "crdt/proto/bcast.pb.h"
 #include <google/protobuf/unknown_field_set.h>
 #include <ipfs_lite/ipld/impl/ipld_node_impl.hpp>
 #include <thread>
@@ -425,7 +425,7 @@ namespace sgns::crdt
     return outcome::success();
   }
 
-    void CrdtDatastore::SendNewJobs(const CID& aRootCID, const uint64_t& aRootPriority, const std::vector<CID>& aChildren)
+  void CrdtDatastore::SendNewJobs( const CID &aRootCID, uint64_t aRootPriority, const std::vector<CID> &aChildren )
   {
     // sendNewJobs calls getDeltas with the given
     // children and sends each response to the workers. 
@@ -708,8 +708,9 @@ namespace sgns::crdt
     return outcome::success();
   }
 
-  outcome::result<std::shared_ptr<CrdtDatastore::Node>> CrdtDatastore::PutBlock(
-      const std::vector<CID>& aHeads, const uint64_t& aHeight, const std::shared_ptr<Delta>& aDelta)
+  outcome::result<std::shared_ptr<CrdtDatastore::Node>> CrdtDatastore::PutBlock( const std::vector<CID>       &aHeads,
+                                                                                 uint64_t                      aHeight,
+                                                                                 const std::shared_ptr<Delta> &aDelta )
   {
     if (aDelta == nullptr)
     {
@@ -749,8 +750,10 @@ namespace sgns::crdt
     return node;
   }
 
-  outcome::result<std::vector<CID>> CrdtDatastore::ProcessNode(const CID& aRoot, const uint64_t& aRootPrio, 
-    const std::shared_ptr<Delta>& aDelta, const std::shared_ptr<Node>& aNode)
+  outcome::result<std::vector<CID>> CrdtDatastore::ProcessNode( const CID                    &aRoot,
+                                                                uint64_t                      aRootPrio,
+                                                                const std::shared_ptr<Delta> &aDelta,
+                                                                const std::shared_ptr<Node>  &aNode )
   {
     if (this->set_ == nullptr || this->heads_ == nullptr || this->dagSyncer_ == nullptr || 
       aDelta == nullptr || aNode == nullptr)
@@ -924,7 +927,7 @@ namespace sgns::crdt
     return outcome::success();
   }
 
-  outcome::result<void> CrdtDatastore::PrintDAGRec(const CID& aCID, const uint64_t& aDepth, std::vector<CID>& aSet)
+  outcome::result<void> CrdtDatastore::PrintDAGRec( const CID &aCID, uint64_t aDepth, std::vector<CID> &aSet )
   {
     std::ostringstream line; 
     for (uint64_t i = 0; i < aDepth; ++i)

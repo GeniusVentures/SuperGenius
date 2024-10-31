@@ -1,47 +1,49 @@
 #include "processing_service.hpp"
 
+#include <utility>
+
 namespace sgns::processing
 {
-    ProcessingServiceImpl::ProcessingServiceImpl( std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> gossipPubSub,      //
-                                                  size_t                                           maximalNodesCount, //
-                                                  std::shared_ptr<SubTaskEnqueuer>                 subTaskEnqueuer,   //
-                                                  std::shared_ptr<SubTaskStateStorage>  subTaskStateStorage,          //
-                                                  std::shared_ptr<SubTaskResultStorage> subTaskResultStorage,         //
-                                                  std::shared_ptr<ProcessingCore>       processingCore ) :
-        m_gossipPubSub( gossipPubSub ),                                 //
-        m_context( gossipPubSub->GetAsioContext() ),                    //
-        m_maximalNodesCount( maximalNodesCount ),                       //
-        m_subTaskEnqueuer( subTaskEnqueuer ),                           //
-        m_subTaskStateStorage( subTaskStateStorage ),                   //
-        m_subTaskResultStorage( subTaskResultStorage ),                 //
-        m_processingCore( processingCore ),                             //
-        m_timerChannelListRequestTimeout( *m_context.get() ),           //
-        m_channelListRequestTimeout( boost::posix_time::seconds( 5 ) ), //
-        m_isStopped( true )                                             //
+    ProcessingServiceImpl::ProcessingServiceImpl( std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> gossipPubSub,
+                                                  size_t                                           maximalNodesCount,
+                                                  std::shared_ptr<SubTaskEnqueuer>                 subTaskEnqueuer,
+                                                  std::shared_ptr<SubTaskStateStorage>             subTaskStateStorage,
+                                                  std::shared_ptr<SubTaskResultStorage>            subTaskResultStorage,
+                                                  std::shared_ptr<ProcessingCore>                  processingCore ) :
+        m_gossipPubSub( std::move( gossipPubSub ) ),
+        m_context( m_gossipPubSub->GetAsioContext() ),
+        m_maximalNodesCount( maximalNodesCount ),
+        m_subTaskEnqueuer( std::move( subTaskEnqueuer ) ),
+        m_subTaskStateStorage( std::move( subTaskStateStorage ) ),
+        m_subTaskResultStorage( std::move( subTaskResultStorage ) ),
+        m_processingCore( std::move( processingCore ) ),
+        m_timerChannelListRequestTimeout( *m_context ),
+        m_channelListRequestTimeout( boost::posix_time::seconds( 5 ) ),
+        m_isStopped( true )
     {
     }
 
     ProcessingServiceImpl::ProcessingServiceImpl(
-        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>         gossipPubSub,         //
-        size_t                                                   maximalNodesCount,    //
-        std::shared_ptr<SubTaskEnqueuer>                         subTaskEnqueuer,      //
-        std::shared_ptr<SubTaskStateStorage>                     subTaskStateStorage,  //
-        std::shared_ptr<SubTaskResultStorage>                    subTaskResultStorage, //
-        std::shared_ptr<ProcessingCore>                          processingCore,       //
-        std::function<void( const std::string &subTaskQueueId, const SGProcessing::TaskResult &taskresult )> userCallbackSuccess,  //
+        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>         gossipPubSub,
+        size_t                                                   maximalNodesCount,
+        std::shared_ptr<SubTaskEnqueuer>                         subTaskEnqueuer,
+        std::shared_ptr<SubTaskStateStorage>                     subTaskStateStorage,
+        std::shared_ptr<SubTaskResultStorage>                    subTaskResultStorage,
+        std::shared_ptr<ProcessingCore>                          processingCore,
+        std::function<void( const std::string &subTaskQueueId, const SGProcessing::TaskResult &taskresult )> userCallbackSuccess,
         std::function<void( const std::string &subTaskQueueId )> userCallbackError ) :
-        m_gossipPubSub( gossipPubSub ),                                 //
-        m_context( gossipPubSub->GetAsioContext() ),                    //
-        m_maximalNodesCount( maximalNodesCount ),                       //
-        m_subTaskEnqueuer( subTaskEnqueuer ),                           //
-        m_subTaskStateStorage( subTaskStateStorage ),                   //
-        m_subTaskResultStorage( subTaskResultStorage ),                 //
-        m_processingCore( processingCore ),                             //
-        m_timerChannelListRequestTimeout( *m_context.get() ),           //
-        m_channelListRequestTimeout( boost::posix_time::seconds( 5 ) ), //
-        m_isStopped( true ),                                            //
-        userCallbackSuccess_(userCallbackSuccess),                      //
-        userCallbackError_(userCallbackError)                           //
+        m_gossipPubSub( std::move( gossipPubSub ) ),
+        m_context( m_gossipPubSub->GetAsioContext() ),
+        m_maximalNodesCount( maximalNodesCount ),
+        m_subTaskEnqueuer( std::move( subTaskEnqueuer ) ),
+        m_subTaskStateStorage( std::move( subTaskStateStorage ) ),
+        m_subTaskResultStorage( std::move( subTaskResultStorage ) ),
+        m_processingCore( std::move( processingCore ) ),
+        m_timerChannelListRequestTimeout( *m_context ),
+        m_channelListRequestTimeout( boost::posix_time::seconds( 5 ) ),
+        m_isStopped( true ),
+        userCallbackSuccess_( std::move( userCallbackSuccess ) ),
+        userCallbackError_( std::move( userCallbackError ) )
     {
     }
 
@@ -181,12 +183,17 @@ namespace sgns::processing
         std::scoped_lock lock( m_mutexNodes );
         if ( m_processingNodes.size() < m_maximalNodesCount )
         {
-            auto node = std::make_shared<ProcessingNode>( m_gossipPubSub, m_subTaskStateStorage, m_subTaskResultStorage,
+            auto node = std::make_shared<ProcessingNode>(
+                m_gossipPubSub,
+                m_subTaskStateStorage,
+                m_subTaskResultStorage,
                                                           m_processingCore,
                                                           std::bind( &ProcessingServiceImpl::OnQueueProcessingCompleted,
-                                                                     this, processingQueuelId, std::placeholders::_1 ),
-                                                          std::bind( &ProcessingServiceImpl::OnProcessingError, this,
-                                                                     processingQueuelId, std::placeholders::_1 ) );
+                           this,
+                           processingQueuelId,
+                           std::placeholders::_1 ),
+                std::bind(
+                    &ProcessingServiceImpl::OnProcessingError, this, processingQueuelId, std::placeholders::_1 ) );
 
             node->AttachTo( processingQueuelId );
             m_processingNodes[processingQueuelId] = node;
@@ -201,14 +208,14 @@ namespace sgns::processing
     void ProcessingServiceImpl::PublishLocalChannelList()
     {
         std::scoped_lock lock( m_mutexNodes );
-        for ( auto itNode = m_processingNodes.begin(); itNode != m_processingNodes.end(); ++itNode )
+        for ( auto &itNode : m_processingNodes )
         {
             // Only channel host answers to reduce a number of published messages
-            if ( itNode->second->HasQueueOwnership() )
+            if ( itNode.second->HasQueueOwnership() )
             {
                 SGProcessing::GridChannelMessage gridMessage;
                 auto                             channelResponse = gridMessage.mutable_processing_channel_response();
-                channelResponse->set_channel_id( itNode->first );
+                channelResponse->set_channel_id( itNode.first );
 
                 m_gridChannel->Publish( gridMessage.SerializeAsString() );
                 m_logger->debug( "Channel published. {}", channelResponse->channel_id() );

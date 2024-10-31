@@ -6,16 +6,15 @@
 #include "storage/trie/supergenius_trie/supergenius_trie.hpp"
 
 #include "storage/buffer_map_types.hpp"
-#include "storage/trie/serialization/supergenius_codec.hpp"
 
 namespace sgns::storage::trie {
 
   class SuperGeniusTrieImpl : public SuperGeniusTrie {
     // a child is obtained from the branch list of children as-is.
     // should be used when the trie is completely in memory
-    inline static outcome::result<NodePtr> defaultChildRetrieveFunctor(
-        const BranchPtr &parent, uint8_t idx) {
-      return parent->children.at(idx);
+    static outcome::result<NodePtr> defaultChildRetrieveFunctor( const BranchPtr &parent, uint8_t idx )
+    {
+        return parent->children.at( idx );
     }
 
    public:
@@ -85,8 +84,7 @@ namespace sgns::storage::trie {
     outcome::result<NodePtr> detachNode(const NodePtr &parent,
                                         const KeyNibbles &prefix_nibbles);
 
-    uint32_t getCommonPrefixLength(const KeyNibbles &pref1,
-                                   const KeyNibbles &pref2) const;
+    static uint32_t getCommonPrefixLength( const KeyNibbles &pref1, const KeyNibbles &pref2 );
 
     outcome::result<NodePtr> retrieveChild(BranchPtr parent,
                                            uint8_t idx) const override;

@@ -3,11 +3,11 @@
 #ifndef SUPERGENIUS_SRC_VERIFICATION_FINALITY_VOTE_GRAPH_VOTE_GRAPH_IMPL_HPP
 #define SUPERGENIUS_SRC_VERIFICATION_FINALITY_VOTE_GRAPH_VOTE_GRAPH_IMPL_HPP
 
-#include "verification/finality/vote_graph.hpp"
-
-#include <numeric>
 #include <unordered_map>
 #include <unordered_set>
+
+#include "verification/finality/chain.hpp"
+#include "verification/finality/vote_graph.hpp"
 
 namespace sgns::verification::finality {
 

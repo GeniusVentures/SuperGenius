@@ -26,15 +26,15 @@ namespace sgns::verification::finality {
    public:
     ~FinalityImpl() override = default;
     //TODO - Check if finalityAPI needed. Removed due to binaryen
-    FinalityImpl(std::shared_ptr<application::AppStateManager> app_state_manager,
-                std::shared_ptr<Environment> environment,
-                std::shared_ptr<storage::BufferStorage> storage,
-                std::shared_ptr<crypto::ED25519Provider> crypto_provider,
-                //std::shared_ptr<runtime::FinalityApi> finality_api,
-                const crypto::ED25519Keypair &keypair,
-                std::shared_ptr<Clock> clock,
-                std::shared_ptr<boost::asio::io_context> io_context,
-                std::shared_ptr<authority::AuthorityManager> authority_manager);
+    FinalityImpl( std::shared_ptr<application::AppStateManager> app_state_manager,
+                  std::shared_ptr<Environment>                  environment,
+                  std::shared_ptr<storage::BufferStorage>       storage,
+                  std::shared_ptr<crypto::ED25519Provider>      crypto_provider,
+                  crypto::ED25519Keypair                        keypair,
+                  //std::shared_ptr<runtime::FinalityApi> finality_api,
+                  std::shared_ptr<Clock>                       clock,
+                  std::shared_ptr<boost::asio::io_context>     io_context,
+                  std::shared_ptr<authority::AuthorityManager> authority_manager );
 
     /** @see AppStateManager::takeControl */
     bool prepare();

@@ -4,8 +4,8 @@
 #include "blockchain/block_header_repository.hpp"
 
 #include "crypto/hasher.hpp"
-#include <crdt/globaldb/globaldb.hpp>
-#include <crdt/globaldb/keypair_file_storage.hpp>
+#include "crdt/globaldb/globaldb.hpp"
+#include "crdt/globaldb/keypair_file_storage.hpp"
 
 namespace sgns::blockchain
 {

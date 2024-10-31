@@ -59,7 +59,7 @@ namespace sgns::network {
 
   void GossiperBroadcast::addStream(
       std::shared_ptr<libp2p::connection::Stream> stream) {
-    syncing_streams_.push_back(stream);
+      syncing_streams_.push_back( std::move( stream ) );
   }
 
   void GossiperBroadcast::broadcast(GossipMessage &&msg) {

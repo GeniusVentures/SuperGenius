@@ -17,7 +17,7 @@
 #include <crypto/pbkdf2/impl/pbkdf2_provider_impl.hpp>
 #include <crypto/secp256k1/secp256k1_provider_impl.hpp>
 
-#include <outcome/outcome.hpp>
+#include "outcome/outcome.hpp"
 #include "api/service/api_service.hpp"
 #include "api/service/author/author_jrpc_processor.hpp"
 #include "api/service/author/impl/author_api_impl.hpp"

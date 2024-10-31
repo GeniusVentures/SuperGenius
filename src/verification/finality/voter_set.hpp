@@ -4,6 +4,7 @@
 #define SUPERGENIUS_SRC_VERIFICATION_FINALITY_VOTER_SET_HPP
 
 #include <boost/optional.hpp>
+#include <unordered_map>
 
 #include "verification/finality/common.hpp"
 
@@ -26,15 +27,17 @@ namespace sgns::verification::finality {
     /**
      * \return voters
      */
-    inline const std::vector<Id> &voters() const {
-      return voters_;
+    const std::vector<Id> &voters() const
+    {
+        return voters_;
     }
 
     /**
      * \return uniqie voter set membership
      */
-    inline MembershipCounter id() const {
-      return id_;
+    MembershipCounter id() const
+    {
+        return id_;
     }
 
     /**
@@ -52,26 +55,30 @@ namespace sgns::verification::finality {
      */
     boost::optional<size_t> voterWeight(size_t voter_index) const;
 
-    inline size_t size() const {
-      return voters_.size();
+    size_t size() const
+    {
+        return voters_.size();
     }
 
-    inline bool empty() const {
-      return voters_.empty();
+    bool empty() const
+    {
+        return voters_.empty();
     }
 
     /**
      * \return total weight of all voters
      */
-    inline size_t totalWeight() const {
-      return total_weight_;
+    size_t totalWeight() const
+    {
+        return total_weight_;
     }
 
     /**
      * \return map of pairs <id, weight>
      */
-    inline const std::unordered_map<Id, size_t> &weightMap() const {
-      return weight_map_;
+    const std::unordered_map<Id, size_t> &weightMap() const
+    {
+        return weight_map_;
     }
 
    private:

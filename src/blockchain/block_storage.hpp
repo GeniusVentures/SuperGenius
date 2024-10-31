@@ -15,7 +15,7 @@ namespace sgns::blockchain {
    */
   class BlockStorage : public IComponent {
    public:
-    virtual ~BlockStorage() = default;
+       ~BlockStorage() override = default;
 
     /// Get hash of genesis block
     virtual outcome::result<primitives::BlockHash> getGenesisBlockHash()

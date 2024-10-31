@@ -4,9 +4,7 @@
  * @date       2024-03-12
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
-#include <math.h>
-#include <fstream>
-#include <memory>
+#include <cmath>
 #include <iostream>
 #include <cstdlib>
 #include <cstdint>
@@ -15,11 +13,9 @@
 #include <boost/format.hpp>
 #include <boost/asio.hpp>
 #include "account/TransactionManager.hpp"
-#include "blockchain/impl/common.hpp"
-#include "blockchain/impl/key_value_block_header_repository.hpp"
-#include "blockchain/impl/key_value_block_storage.hpp"
-#include "crypto/hasher/hasher_impl.hpp"
 #include "AccountHelper.hpp"
+
+using namespace boost::multiprecision;
 
 std::vector<std::string> wallet_addr{ "0x4E8794BE4831C45D0699865028C8BE23D608C19C1E24371E3089614A50514262",
                                       "0x06DDC80283462181C02917CC3E99C7BC4BDB2856E19A392300A62DBA6262212C" };
@@ -51,7 +47,7 @@ void CreateTransferTransaction( const std::vector<std::string> &args, sgns::Tran
         return;
     }
     uint64_t amount = std::stoull( args[1] );
-    if ( !transaction_manager.TransferFunds( uint256_t{ args[1] }, uint256_t{ args[2] } ) )
+    if ( !transaction_manager.TransferFunds( amount, uint256_t{ args[2] } ) )
     {
         std::cout << "Insufficient funds.\n";
     }
@@ -148,7 +144,7 @@ int main( int argc, char *argv[] )
 
     strncpy( key, argv[2], sizeof( key ) );
 
-    sgns::AccountHelper helper( key, local_config );
+    sgns::AccountHelper helper( key, local_config, "deadbeef" );
 
     while ( true )
     {

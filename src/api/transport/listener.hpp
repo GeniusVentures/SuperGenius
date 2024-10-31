@@ -33,7 +33,7 @@ namespace sgns::api {
       }
     };
 
-    virtual ~Listener() = default;
+    ~Listener() override = default;
 
     /**
      * @brief Bind endpoint

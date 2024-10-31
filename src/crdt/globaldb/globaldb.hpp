@@ -3,7 +3,7 @@
 
 #include <boost/asio/io_context.hpp>
 #include <boost/filesystem/path.hpp>
-#include <outcome/outcome.hpp>
+#include "outcome/outcome.hpp"
 #include <ipfs_pubsub/gossip_pubsub_topic.hpp>
 #include "crdt/crdt_options.hpp"
 #include "crdt/crdt_datastore.hpp"

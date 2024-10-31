@@ -1,20 +1,22 @@
 #include "processing_subtask_queue_manager.hpp"
 
+#include <utility>
+
 namespace sgns::processing
 {
 ////////////////////////////////////////////////////////////////////////////////
 ProcessingSubTaskQueueManager::ProcessingSubTaskQueueManager(
     std::shared_ptr<ProcessingSubTaskQueueChannel> queueChannel,
-    std::shared_ptr<boost::asio::io_context> context,
-    const std::string& localNodeId)
-    : m_queueChannel(queueChannel)
-    , m_context(std::move(context))
-    , m_localNodeId(localNodeId)
-    , m_dltQueueResponseTimeout(*m_context.get())
-    , m_queueResponseTimeout(boost::posix_time::seconds(5))
-    , m_dltGrabSubTaskTimeout(*m_context.get())
-    , m_processingQueue(localNodeId)
-    , m_processingTimeout(std::chrono::seconds(10))
+    std::shared_ptr<boost::asio::io_context>       context,
+    const std::string                             &localNodeId ) :
+    m_queueChannel( std::move( queueChannel ) ),
+    m_context( std::move( context ) ),
+    m_localNodeId( localNodeId ),
+    m_dltQueueResponseTimeout( *m_context ),
+    m_queueResponseTimeout( boost::posix_time::seconds( 5 ) ),
+    m_dltGrabSubTaskTimeout( *m_context ),
+    m_processingQueue( localNodeId ),
+    m_processingTimeout( std::chrono::seconds( 10 ) )
 {
 }
 
@@ -39,10 +41,10 @@ bool ProcessingSubTaskQueueManager::CreateQueue(
     auto queue = std::make_shared<SGProcessing::SubTaskQueue>();
     auto queueSubTasks = queue->mutable_subtasks();
     auto processingQueue = queue->mutable_processing_queue();
-    for (auto itSubTask = subTasks.begin(); itSubTask != subTasks.end(); ++itSubTask)
+    for ( auto itSubTask : subTasks )
     {
         // Move subtask to heap
-        auto subTask = std::make_unique<SGProcessing::SubTask>(std::move(*itSubTask));
+        auto subTask = std::make_unique<SGProcessing::SubTask>( std::move( itSubTask ) );
         queueSubTasks->mutable_items()->AddAllocated(subTask.release());
         processingQueue->add_items();
     }
@@ -72,7 +74,8 @@ bool ProcessingSubTaskQueueManager::CreateQueue(
     if (m_subTaskQueueAssignmentEventSink)
     {
         std::vector<std::string> subTaskIds;
-        for (int subTaskIdx = 0; subTaskIdx < m_queue->subtasks().items_size(); ++subTaskIdx)
+        subTaskIds.reserve( m_queue->subtasks().items_size() );
+        for ( int subTaskIdx = 0; subTaskIdx < m_queue->subtasks().items_size(); ++subTaskIdx )
         {
             subTaskIds.push_back(m_queue->subtasks().items(subTaskIdx).subtaskid());
         }
@@ -86,7 +89,7 @@ bool ProcessingSubTaskQueueManager::CreateQueue(
 
 bool ProcessingSubTaskQueueManager::UpdateQueue(SGProcessing::SubTaskQueue* pQueue)
 {
-    if (pQueue)
+    if ( pQueue != nullptr )
     {
         std::shared_ptr<SGProcessing::SubTaskQueue> queue(pQueue);
 
@@ -117,7 +120,7 @@ void ProcessingSubTaskQueueManager::ProcessPendingSubTaskGrabbing()
     m_dltGrabSubTaskTimeout.expires_at(boost::posix_time::pos_infin);
     while (!m_onSubTaskGrabbedCallbacks.empty())
     {
-        size_t itemIdx;
+        size_t itemIdx = 0;
         if (m_processingQueue.GrabItem(itemIdx))
         {
             LogQueue();
@@ -139,7 +142,7 @@ void ProcessingSubTaskQueueManager::ProcessPendingSubTaskGrabbing()
 
     if (!m_onSubTaskGrabbedCallbacks.empty())
     {
-        if (m_processedSubTaskIds.size() <(size_t)m_queue->processing_queue().items_size())
+        if ( m_processedSubTaskIds.size() < static_cast<size_t>( m_queue->processing_queue().items_size() ) )
         {
             // Wait for subtasks are processed
             auto timestamp = std::chrono::system_clock::now();
@@ -179,8 +182,8 @@ void ProcessingSubTaskQueueManager::HandleGrabSubTaskTimeout(const boost::system
         std::lock_guard<std::mutex> guard(m_queueMutex);
         m_dltGrabSubTaskTimeout.expires_at(boost::posix_time::pos_infin);
         m_logger->debug("HANDLE_GRAB_TIMEOUT");
-        if (!m_onSubTaskGrabbedCallbacks.empty()
-            && (m_processedSubTaskIds.size() < (size_t)m_queue->processing_queue().items_size()))
+        if ( !m_onSubTaskGrabbedCallbacks.empty() &&
+             ( m_processedSubTaskIds.size() < static_cast<size_t>( m_queue->processing_queue().items_size() ) ) )
         {
             GrabSubTasks();
         }
@@ -248,7 +251,8 @@ bool ProcessingSubTaskQueueManager::ProcessSubTaskQueueMessage(SGProcessing::Sub
         if (!queueInitilalized && queueChanged)
         {    
             std::vector<std::string> subTaskIds;
-            for (int subTaskIdx = 0; subTaskIdx < queue->subtasks().items_size(); ++subTaskIdx)
+            subTaskIds.reserve( queue->subtasks().items_size() );
+            for ( int subTaskIdx = 0; subTaskIdx < queue->subtasks().items_size(); ++subTaskIdx )
             {
                 subTaskIds.push_back(queue->subtasks().items(subTaskIdx).subtaskid());
             }
@@ -263,7 +267,7 @@ bool ProcessingSubTaskQueueManager::ProcessSubTaskQueueMessage(SGProcessing::Sub
 bool ProcessingSubTaskQueueManager::ProcessSubTaskQueueRequestMessage(
     const SGProcessing::SubTaskQueueRequest& request)
 {
-    std::lock_guard<std::mutex> guard(m_queueMutex);
+    std::lock_guard<std::mutex> guard( m_queueMutex );
     if (m_processingQueue.MoveOwnershipTo(request.node_id()))
     {
         LogQueue();
@@ -351,16 +355,17 @@ bool ProcessingSubTaskQueueManager::IsProcessed() const
 void ProcessingSubTaskQueueManager::SetSubTaskQueueAssignmentEventSink(
     std::function<void(const std::vector<std::string>&)> subTaskQueueAssignmentEventSink)
 {
-    m_subTaskQueueAssignmentEventSink = subTaskQueueAssignmentEventSink;
+    m_subTaskQueueAssignmentEventSink = std::move( subTaskQueueAssignmentEventSink );
     if (m_subTaskQueueAssignmentEventSink)
     {
         std::unique_lock<std::mutex> guard(m_queueMutex);
-        bool isQueueInitialized = (m_queue != nullptr);
+        bool                         isQueueInitialized = ( m_queue != nullptr );
 
         if (isQueueInitialized)
         {
             std::vector<std::string> subTaskIds;
-            for (int subTaskIdx = 0; subTaskIdx < m_queue->subtasks().items_size(); ++subTaskIdx)
+            subTaskIds.reserve( m_queue->subtasks().items_size() );
+            for ( int subTaskIdx = 0; subTaskIdx < m_queue->subtasks().items_size(); ++subTaskIdx )
             {
                 subTaskIds.push_back(m_queue->subtasks().items(subTaskIdx).subtaskid());
             }

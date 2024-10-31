@@ -1,15 +1,13 @@
 #include "processing_subtask_queue.hpp"
 
-#include <numeric>
 #include <sstream>
+#include <utility>
 
 namespace sgns::processing
 {
 ////////////////////////////////////////////////////////////////////////////////
-ProcessingSubTaskQueue::ProcessingSubTaskQueue(
-    const std::string& localNodeId)
-    : m_localNodeId(localNodeId)
-    , m_queue(nullptr)
+ProcessingSubTaskQueue::ProcessingSubTaskQueue( std::string localNodeId ) :
+    m_localNodeId( std::move( localNodeId ) ), m_queue( nullptr )
 {
 }
 
@@ -24,8 +22,7 @@ void ProcessingSubTaskQueue::CreateQueue(
 bool ProcessingSubTaskQueue::UpdateQueue(
     SGProcessing::ProcessingQueue* queue, const std::vector<int>& enabledItemIndices)
 {
-    if (!m_queue
-        || (m_queue->last_update_timestamp() <= queue->last_update_timestamp()))
+    if ( ( m_queue == nullptr ) || ( m_queue->last_update_timestamp() <= queue->last_update_timestamp() ) )
     {
         m_queue = queue;
         m_enabledItemIndices = enabledItemIndices;
@@ -123,11 +120,9 @@ bool ProcessingSubTaskQueue::RollbackOwnership()
                     ChangeOwnershipTo(m_localNodeId);
                     return true;
                 }
-                else
-                {
-                    // Another node should take the ownership
-                    return false;
-                }
+
+                // Another node should take the ownership
+                return false;
             }
         }
     }
@@ -146,11 +141,9 @@ bool ProcessingSubTaskQueue::RollbackOwnership()
                     ChangeOwnershipTo(m_localNodeId);
                     return true;
                 }
-                else
-                {
-                    // Another node should take the ownership
-                    return false;
-                }
+
+                // Another node should take the ownership
+                return false;
             }
         }
     }
@@ -163,7 +156,7 @@ bool ProcessingSubTaskQueue::RollbackOwnership()
 
 bool ProcessingSubTaskQueue::HasOwnership() const
 {
-    return (m_queue && m_queue->owner_node_id() == m_localNodeId);
+    return ( m_queue != nullptr ) && m_queue->owner_node_id() == m_localNodeId;
 }
 
 bool ProcessingSubTaskQueue::UnlockExpiredItems(std::chrono::system_clock::duration expirationTimeout)

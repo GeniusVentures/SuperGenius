@@ -1,50 +1,34 @@
-#include <crdt/hierarchical_key.hpp>
+#include "crdt/hierarchical_key.hpp"
 #include <boost/algorithm/string.hpp>
 namespace sgns::crdt
 {
 
-  HierarchicalKey::HierarchicalKey(const std::string& s) 
-  {
-    std::string key = s;
-    // Add slash to beginning if missing
-    if (key.empty() || key[0] != '/')
+    HierarchicalKey::HierarchicalKey( std::string key )
     {
-      key = "/" + key;
+        // Add slash to beginning if missing
+        if ( key.empty() || key[0] != '/' )
+        {
+            key.insert( key.begin(), '/' );
+        }
+
+        // Remove trailing slash
+        if ( key.size() > 1 && key[key.size() - 1] == '/' )
+        {
+            key.erase( key.begin() + key.size() - 1 );
+        }
+
+        this->key_ = key;
     }
 
-    // Remove trailing slash 
-    if (key.size() > 1 && key[key.size() - 1] == '/')
+  HierarchicalKey HierarchicalKey::ChildString(const std::string& s) const
+  {
+    std::string childString = s;
+    if ( !childString.empty() && childString[0] != '/' )
     {
-      key.erase(key.begin() + key.size() - 1);
+      childString.insert(childString.begin(), '/');
     }
 
-    this->key_ = key;
-  }
-
-  HierarchicalKey::HierarchicalKey(const HierarchicalKey& aKey)
-  {
-    this->key_ = aKey.key_;
-  }
-
-  bool HierarchicalKey::operator==(const HierarchicalKey& aKey)
-  {
-    return this->key_ == aKey.key_;
-  }
-
-  bool HierarchicalKey::operator!=(const HierarchicalKey& aKey)
-  {
-    return !(*this == aKey);
-  }
-
-  HierarchicalKey HierarchicalKey::ChildString(const std::string& aString) const
-  {
-    std::string childString = aString;
-    if (childString.size() > 0 && childString[0] != '/')
-    {
-      childString = "/" + childString;
-    }
-
-    return HierarchicalKey(this->key_ + childString);
+    return {this->key_ + childString};
   }
 
   bool HierarchicalKey::IsTopLevel() const
@@ -62,4 +46,4 @@ namespace sgns::crdt
     }
     return listOfNames;
   }
-} // namespace sgns::crdt
+}

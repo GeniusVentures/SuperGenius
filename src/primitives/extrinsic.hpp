@@ -18,8 +18,9 @@ namespace sgns::primitives {
   struct Extrinsic {
     base::Buffer data;  ///< extrinsic content as byte array
 
-    inline bool operator==(const Extrinsic &rhs) const {
-      return data == rhs.data;
+    bool operator==( const Extrinsic &rhs ) const
+    {
+        return data == rhs.data;
     }
     friend std::ostream &operator<<(std::ostream &out, const Extrinsic &v)
     {

@@ -1,10 +1,10 @@
 #ifndef GRPC_FOR_SUPERGENIUS_PROCESSING_SERVICE
 #define GRPC_FOR_SUPERGENIUS_PROCESSING_SERVICE
 
-#include <processing/processing_node.hpp>
-#include <processing/processing_subtask_enqueuer.hpp>
-
 #include <map>
+
+#include "processing/processing_node.hpp"
+#include "processing/processing_subtask_enqueuer.hpp"
 
 namespace sgns::processing
 {
@@ -15,12 +15,14 @@ namespace sgns::processing
     * @param gossipPubSub - pubsub service
     * @param maximalNodesCount - maximal number of processing nodes allowed to be handled by the service
     */
-        ProcessingServiceImpl( std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> gossipPubSub, size_t maximalNodesCount,
-                               std::shared_ptr<SubTaskEnqueuer>      subTaskEnqueuer,
-                               std::shared_ptr<SubTaskStateStorage>  subTaskStateStorage,
-                               std::shared_ptr<SubTaskResultStorage> subTaskResultStorage,
-                               std::shared_ptr<ProcessingCore>       processingCore );
-        ProcessingServiceImpl( std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> gossipPubSub, size_t maximalNodesCount,
+        ProcessingServiceImpl( std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> gossipPubSub,
+                               size_t                                           maximalNodesCount,
+                               std::shared_ptr<SubTaskEnqueuer>                 subTaskEnqueuer,
+                               std::shared_ptr<SubTaskStateStorage>             subTaskStateStorage,
+                               std::shared_ptr<SubTaskResultStorage>            subTaskResultStorage,
+                               std::shared_ptr<ProcessingCore>                  processingCore );
+        ProcessingServiceImpl( std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>         gossipPubSub,
+                               size_t                                                   maximalNodesCount,
                                std::shared_ptr<SubTaskEnqueuer>                         subTaskEnqueuer,
                                std::shared_ptr<SubTaskStateStorage>                     subTaskStateStorage,
                                std::shared_ptr<SubTaskResultStorage>                    subTaskResultStorage,

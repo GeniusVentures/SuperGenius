@@ -10,22 +10,24 @@
 #include <utility>
 #include <vector>
 #include <string>
+
 #include <boost/optional.hpp>
 #include <boost/format.hpp>
-#include "account/proto/SGTransaction.pb.h"
 #include <boost/multiprecision/cpp_int.hpp>
 
-using namespace boost::multiprecision;
+#include "account/proto/SGTransaction.pb.h"
 
 namespace sgns
 {
+    using namespace boost::multiprecision;
+
     //class GeniusBlockHeader; //TODO - Design new header or rework old one
 
     class IGeniusTransactions
     {
     public:
-        IGeniusTransactions( std::string type, const SGTransaction::DAGStruct &dag ) :
-            dag_st( dag ), transaction_type( std::move( type ) )
+        IGeniusTransactions( std::string type, SGTransaction::DAGStruct dag ) :
+            dag_st( std::move( dag ) ), transaction_type( std::move( type ) )
         {
         }
 
@@ -68,9 +70,11 @@ namespace sgns
             return full_path.str();
         }
 
-        template <typename T> const T GetSrcAddress() const;
+        template <typename T>
+        T GetSrcAddress() const;
 
-        template <> const std::string GetSrcAddress<std::string>() const
+        template <>
+        std::string GetSrcAddress<std::string>() const
         {
             //std::string address(bytes_data.begin(), bytes_data.end());
             //std::ostringstream oss;
@@ -79,7 +83,8 @@ namespace sgns
             return dag_st.source_addr();
         }
 
-        template <> const uint256_t GetSrcAddress<uint256_t>() const
+        template <>
+        uint256_t GetSrcAddress<uint256_t>() const
         {
             return uint256_t{ dag_st.source_addr() };
         }

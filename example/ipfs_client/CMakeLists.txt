@@ -16,11 +16,8 @@ target_include_directories(ipfs_client PRIVATE ${GSL_INCLUDE_DIR})
 
 
 target_link_libraries(ipfs_client
-#    ipfs-lite-cpp::ipfs_datastore_rocksdb
-#    ipfs-lite-cpp::buffer
-#    ipfs-lite-cpp::ipld_node
-#    ipfs-lite-cpp::ipfs_merkledag_service
-#    ipfs-lite-cpp::graphsync
+    ipfs-lite-cpp::ipld_node_protobuf
+    ipfs-lite-cpp::cbor
     logger
     p2p::p2p_basic_host
     p2p::p2p_default_network
@@ -36,4 +33,4 @@ target_link_libraries(ipfs_client
     Boost::program_options
     ipfs-bitswap-cpp
     ${WIN_CRYPT_LIBRARY}
-    )
+)

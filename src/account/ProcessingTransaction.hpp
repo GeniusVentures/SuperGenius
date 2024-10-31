@@ -7,18 +7,19 @@
 #ifndef _PROCESSING_TRANSACTION_HPP_
 #define _PROCESSING_TRANSACTION_HPP_
 #include <string>
-#include "account/IGeniusTransactions.hpp"
+
 #include <boost/multiprecision/cpp_int.hpp>
 
-using namespace boost::multiprecision;
+#include "account/IGeniusTransactions.hpp"
 
 namespace sgns
 {
+    using namespace boost::multiprecision;
 
     class ProcessingTransaction : public IGeniusTransactions
     {
     public:
-        ProcessingTransaction( const std::string &job_id, const std::string &subtask_id, const SGTransaction::DAGStruct &dag );
+        ProcessingTransaction( const std::string &job_id, std::string subtask_id, const SGTransaction::DAGStruct &dag );
         ~ProcessingTransaction() override = default;
 
         std::vector<uint8_t>         SerializeByteVector() override;

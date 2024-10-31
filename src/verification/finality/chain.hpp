@@ -6,8 +6,7 @@
 #include <vector>
 
 #include <boost/optional.hpp>
-#include <outcome/outcome.hpp>
-#include "verification/finality/common.hpp"
+#include "outcome/outcome.hpp"
 #include "verification/finality/structs.hpp"
 
 namespace sgns::verification::finality {
@@ -39,9 +38,9 @@ namespace sgns::verification::finality {
      * @returns true if {@param block} is a descendent of or equal to the
      * given {@param base}.
      */
-    inline bool isEqualOrDescendOf(const primitives::BlockHash &base,
-                            const primitives::BlockHash &block) const {
-      return base == block ? true : getAncestry(base, block).has_value();
+    bool isEqualOrDescendOf( const primitives::BlockHash &base, const primitives::BlockHash &block ) const
+    {
+        return base == block ? true : getAncestry( base, block ).has_value();
     }
   };
 

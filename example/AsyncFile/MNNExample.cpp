@@ -13,7 +13,7 @@
 //#include "WSLoader.hpp"
 #include "URLStringUtil.h"
 #include <libp2p/injector/host_injector.hpp>
-#include "libp2p/injector/kademlia_injector.hpp"
+#include <libp2p/injector/kademlia_injector.hpp>
 
 /**
  * This program is example to loading MNN model file
