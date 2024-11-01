@@ -16,13 +16,22 @@ void customMessageHandler(const std::string &message) {
     std::cout << "Custom Message Handler: " << message << std::endl;
 }
 
-EvmMessagingDapp::EvmMessagingDapp(const rapidjson::Document &config, const std::string &contractAddress,
-                                   const std::vector<sgns::evmwatcher::EvmMessagingWatcher::TopicFilter> &topicFilters) {
-    evmWatcher = std::make_unique<sgns::evmwatcher::EvmMessagingWatcher>(config, customMessageHandler, contractAddress, topicFilters);
+EvmMessagingDapp::EvmMessagingDapp(const std::vector<rapidjson::Document> &configs, const std::vector<std::string> &contractAddresses,
+                                   const std::vector<std::vector<sgns::evmwatcher::EvmMessagingWatcher::TopicFilter>> &topicFilters) {
+    if (configs.size() != contractAddresses.size() || configs.size() != topicFilters.size()) {
+        throw std::runtime_error("The number of configurations, contract addresses, and topic filter sets must match");
+    }
+
+    // Loop through each config and create an EvmMessagingWatcher for each configuration, contract address, and set of topic filters
+    for (size_t i = 0; i < configs.size(); ++i) {
+        auto evmWatcher = std::make_shared<sgns::evmwatcher::EvmMessagingWatcher>(configs[i], customMessageHandler, contractAddresses[i], topicFilters[i]);
+        sgns::watcher::MessagingWatcher::addWatcher(evmWatcher);
+    }
 }
 
 void EvmMessagingDapp::start() {
-    evmWatcher->startWatching();
+    // Start all watchers
+    sgns::watcher::MessagingWatcher::startAll();
     std::cout << "EvmMessagingDapp is running. Press Ctrl+C to stop..." << std::endl;
 
     while (keepRunning) {
@@ -33,14 +42,14 @@ void EvmMessagingDapp::start() {
 }
 
 void EvmMessagingDapp::stop() {
-    evmWatcher->stopWatching();
-    std::cout << "Watcher stopped." << std::endl;
+    // Stop all watchers
+    sgns::watcher::MessagingWatcher::stopAll();
 }
 
 int main() {
     signal(SIGINT, signalHandler);
 
-    // Load the configuration directly as a JSON string
+    // Load the configuration directly as a JSON string representing an array of configs
     const char* json = R"([
         {
             "rpc_url": "http://localhost:8545",
@@ -50,20 +59,42 @@ int main() {
         }
     ])";
 
-    rapidjson::Document config;
-    config.Parse(json);
+    // Parse the JSON string to a rapidjson document
+    rapidjson::Document configArray;
+    configArray.Parse(json);
 
-    // Define topics to watch
-    std::vector<sgns::evmwatcher::EvmMessagingWatcher::TopicFilter> topicFilters = {
+    // Define topics to watch for each configuration
+    std::vector<std::vector<sgns::evmwatcher::EvmMessagingWatcher::TopicFilter>> const topicFilters = {
+        {
             {"BridgeSourceBurned(address,uint256,uint256,uint256,uint256)"}
+        }
     };
 
-    // The contract address that we want to watch
-    std::string contractAddress = "0x1234567890abcdef1234567890abcdef12345678";
+    // The contract addresses that we want to watch
+    std::vector<std::string> contractAddresses = {
+        "0x1234567890abcdef1234567890abcdef12345678"
+    };
 
-    // Create and start the EvmMessagingDapp
-    EvmMessagingDapp dapp(config, contractAddress, topicFilters);
-    dapp.start();
+    // Convert the JSON array to a vector of rapidjson::Document configurations
+    std::vector<rapidjson::Document> configs;
+    if (configArray.IsArray()) {
+        for (rapidjson::SizeType i = 0; i < configArray.Size(); ++i) {
+            rapidjson::Document config;
+            config.CopyFrom(configArray[i], config.GetAllocator());
+            configs.push_back(std::move(config));
+        }
+    }
+
+    // Ensure that the number of configurations matches the number of contract addresses
+    if (configs.size() != contractAddresses.size()) {
+        throw std::runtime_error("The number of configurations must match the number of contract addresses");
+    }
+
+    // Create and start the EvmMessagingDapp with the array of configurations and contract addresses
+    for (size_t i = 0; i < configs.size(); ++i) {
+        EvmMessagingDapp dapp(configs, contractAddresses, topicFilters);
+        dapp.start();
+    }
 
     return 0;
 }

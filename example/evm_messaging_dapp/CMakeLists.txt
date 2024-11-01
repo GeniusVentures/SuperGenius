@@ -8,6 +8,7 @@ include_directories(
 )
 
 target_link_libraries(evm_messaging_dapp PRIVATE
+        watcher_service
         evm_watcher_service
         logger
         Boost::program_options
