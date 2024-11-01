@@ -67,14 +67,14 @@ namespace
         {
             return true; //TODO - This is wrong - Update this tests to the actual ProcessingCoreImpl on src/processing/impl
         }
-        std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> GetCidForProc(std::string cid) override
+        std::shared_ptr<std::pair<std::vector<char>, std::vector<char>>> GetCidForProc(std::string json_data, std::string base_json) override
         {
             return nullptr;
         }
 
-        void GetSubCidForProc(std::shared_ptr<boost::asio::io_context> ioc, std::string url, std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>& results) override
+        void GetSubCidForProc(std::shared_ptr<boost::asio::io_context> ioc, std::string url, std::vector<char>& results) override
         {
-            
+            return;
         }
         void  ProcessSubTask(
             const SGProcessing::SubTask& subTask, SGProcessing::SubTaskResult& result,
@@ -299,9 +299,9 @@ int main(int argc, char* argv[])
     {
         SGProcessing::Task task;
         task.set_ipfs_block_id("IPFS_BLOCK_ID_1");
-        task.set_block_len(1000);
-        task.set_block_line_stride(2);
-        task.set_block_stride(4);
+        //task.set_block_len(1000);
+        //task.set_block_line_stride(2);
+        //task.set_block_stride(4);
         task.set_random_seed(0);
         task.set_results_channel("RESULT_CHANNEL_ID_1");
         tasks.push_back(std::move(task));

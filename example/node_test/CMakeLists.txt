@@ -7,7 +7,7 @@ add_executable(node_example
     target_link_libraries(node_example PRIVATE
     sgns_account
     )
-
+target_include_directories(node_example PRIVATE ${AsyncIOManager_INCLUDE_DIR})
 if(WIN32)
     target_link_options(node_example PUBLIC /WHOLEARCHIVE:"$<TARGET_FILE:sgns_account>")
 

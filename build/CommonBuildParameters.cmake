@@ -366,3 +366,4 @@ install(FILES
     ${CMAKE_CURRENT_BINARY_DIR}/SuperGeniusConfigVersion.cmake
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/SuperGenius
 )
+

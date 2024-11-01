@@ -24,6 +24,7 @@
 #include "blockchain/block_storage.hpp"
 #include "base/logger.hpp"
 #include "crypto/hasher.hpp"
+#include "processing/proto/SGProcessing.pb.h"
 #include "outcome/outcome.hpp"
 #include "primitives/common.hpp"
 
@@ -69,7 +70,7 @@ namespace sgns
                              float              dev_cut,
                              const std::string &job_id );
         bool     ReleaseEscrow( const std::string &job_id, const bool &pay );
-        void     ProcessingDone( const std::string &subtask_id );
+        void     ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult );
         uint64_t GetBalance();
 
     private:
@@ -108,8 +109,8 @@ namespace sgns
         void                     EnqueueTransaction( std::shared_ptr<IGeniusTransactions> element );
         SGTransaction::DAGStruct FillDAGStruct();
         void                     SendTransaction();
-        outcome::result<std::vector<std::vector<uint8_t>>> GetTransactionsFromBlock(
-            const primitives::BlockId &block_number );
+        bool GetTransactionsFromBlock(
+            const primitives::BlockNumber &block_number );
 
         outcome::result<std::vector<uint8_t>> ParseTransaction( std::string_view transaction_key );
         void ParseTransferTransaction( const std::vector<std::uint8_t> &transaction_data );

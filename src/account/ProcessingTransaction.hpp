@@ -34,6 +34,11 @@ namespace sgns
             return subtask_id_;
         }
 
+        std::string GetTaskID() const
+        {
+            return job_id_;
+        }
+
         std::string GetTransactionSpecificPath() override
         {
             boost::format processing_fmt( GetType() + "/%s/%s" );

@@ -18,6 +18,17 @@
 
 #include <boost/format.hpp>
 
+#if defined(_WIN32)
+#include <winsock2.h>
+#include <iphlpapi.h>
+#pragma comment(lib, "iphlpapi.lib")
+#pragma comment(lib, "ws2_32.lib")
+#else
+#include <ifaddrs.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#endif
+
 namespace sgns::crdt
 {
 using RocksDB = sgns::storage::rocksdb;
@@ -32,37 +43,83 @@ using GossipPubSub = sgns::ipfs_pubsub::GossipPubSub;
 using GraphsyncImpl = sgns::ipfs_lite::ipfs::graphsync::GraphsyncImpl;
 using GossipPubSubTopic = sgns::ipfs_pubsub::GossipPubSubTopic;
 
-GlobalDB::GlobalDB( std::shared_ptr<boost::asio::io_context>              context,
-                    std::string                                           databasePath,
-                    int                                                   dagSyncPort,
-                    std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> broadcastChannel,
-                    std::vector<std::string>                              gsaddresses ) :
-    m_context( std::move( context ) ),
-    m_databasePath( std::move( databasePath ) ),
-    m_dagSyncPort( dagSyncPort ),
-    m_graphSyncAddrs( std::move( gsaddresses ) ),
-    m_broadcastChannel( std::move( broadcastChannel ) )
+GlobalDB::GlobalDB(
+    std::shared_ptr<boost::asio::io_context> context,
+    std::string databasePath,
+    int dagSyncPort,
+    std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> broadcastChannel,
+    std::string gsaddresses)
+    : m_context(std::move(context))
+    , m_databasePath(std::move(databasePath))
+    , m_dagSyncPort(dagSyncPort)
+    , m_graphSyncAddrs(gsaddresses)
+    , m_broadcastChannel(std::move(broadcastChannel))
 {
 }
 
 std::string GetLocalIP(boost::asio::io_context& io)
 {
-    boost::asio::ip::tcp::resolver resolver(io);
-    boost::asio::ip::tcp::resolver::query query(boost::asio::ip::host_name(), "");
-    boost::asio::ip::tcp::resolver::iterator it = resolver.resolve(query);
-    boost::asio::ip::tcp::resolver::iterator end;
-    std::string addr("127.0.0.1");
-    while (it != end)
-    {
-        auto ep = it->endpoint();
-        if (ep.address().is_v4())
-        {
-            addr = ep.address().to_string();
-            break;
-        }
-        ++it;
+#if defined(_WIN32)
+    // Windows implementation using GetAdaptersAddresses
+    ULONG bufferSize = 15000;
+    IP_ADAPTER_ADDRESSES* adapterAddresses = (IP_ADAPTER_ADDRESSES*)malloc(bufferSize);
+
+    if (GetAdaptersAddresses(AF_INET, 0, nullptr, adapterAddresses, &bufferSize) == ERROR_BUFFER_OVERFLOW) {
+        free(adapterAddresses);
+        adapterAddresses = (IP_ADAPTER_ADDRESSES*)malloc(bufferSize);
     }
+
+    std::string addr = "127.0.0.1"; // Default to localhost
+
+    if (GetAdaptersAddresses(AF_INET, 0, nullptr, adapterAddresses, &bufferSize) == NO_ERROR) {
+        for (IP_ADAPTER_ADDRESSES* adapter = adapterAddresses; adapter; adapter = adapter->Next) {
+            if (adapter->OperStatus == IfOperStatusUp && adapter->IfType != IF_TYPE_SOFTWARE_LOOPBACK) {
+                for (IP_ADAPTER_UNICAST_ADDRESS* unicast = adapter->FirstUnicastAddress; unicast; unicast = unicast->Next) {
+                    SOCKADDR* addrStruct = unicast->Address.lpSockaddr;
+                    if (addrStruct->sa_family == AF_INET) { // For IPv4
+                        char buffer[INET_ADDRSTRLEN];
+                        inet_ntop(AF_INET, &(((struct sockaddr_in*)addrStruct)->sin_addr), buffer, INET_ADDRSTRLEN);
+                        addr = buffer;
+                        break;
+                    }
+                }
+            }
+            if (addr != "127.0.0.1") break; // Stop if we found a non-loopback IP
+        }
+    }
+
+    free(adapterAddresses);
     return addr;
+
+#else
+    // Unix-like implementation using getifaddrs
+    struct ifaddrs* ifaddr, * ifa;
+    int family;
+    std::string addr = "127.0.0.1"; // Default to localhost
+
+    if (getifaddrs(&ifaddr) == -1) {
+        perror("getifaddrs");
+        return addr;
+    }
+
+    for (ifa = ifaddr; ifa != nullptr; ifa = ifa->ifa_next) {
+        if (ifa->ifa_addr == nullptr) continue;
+        family = ifa->ifa_addr->sa_family;
+
+        // We only want IPv4 addresses
+        if (family == AF_INET && !(ifa->ifa_flags & IFF_LOOPBACK)) {
+            char host[NI_MAXHOST];
+            int s = getnameinfo(ifa->ifa_addr, sizeof(struct sockaddr_in), host, NI_MAXHOST, nullptr, 0, NI_NUMERICHOST);
+            if (s == 0) {
+                addr = host;
+                break;
+            }
+        }
+    }
+
+    freeifaddrs(ifaddr);
+    return addr;
+#endif
 }
 
 outcome::result<void> GlobalDB::Init( std::shared_ptr<CrdtOptions> crdtOptions )
@@ -88,10 +145,19 @@ outcome::result<void> GlobalDB::Init( std::shared_ptr<CrdtOptions> crdtOptions )
     boost::filesystem::path keyPath = databasePathAbsolute + "/key";
     KeyPairFileStorage      keyPairStorage( keyPath );
     auto keyPair = keyPairStorage.GetKeyPair();
+    //Kademlia Config
+    libp2p::protocol::kademlia::Config kademlia_config;
+    kademlia_config.randomWalk.enabled = true;
+    kademlia_config.randomWalk.interval = std::chrono::seconds(300);
+    kademlia_config.requestConcurency = 3;
+    kademlia_config.maxProvidersPerKey = 300;
     // injector creates and ties dependent objects
     auto injector = libp2p::injector::makeHostInjector<BOOST_DI_CFG>(
         boost::di::bind<boost::asio::io_context>.to(m_context)[boost::di::override],
-        boost::di::bind<libp2p::crypto::KeyPair>.to(keyPair.value())[boost::di::override]);
+        boost::di::bind<libp2p::crypto::KeyPair>.to(keyPair.value())[boost::di::override],
+        libp2p::injector::makeKademliaInjector(libp2p::injector::useKademliaConfig(kademlia_config)));
+
+
 
     // create asio context
     auto io = injector.create<std::shared_ptr<boost::asio::io_context>>();
@@ -110,6 +176,22 @@ outcome::result<void> GlobalDB::Init( std::shared_ptr<CrdtOptions> crdtOptions )
 
     auto dagSyncerHost = injector.create<std::shared_ptr<libp2p::Host>>();
 
+    //Make a DHT
+    //auto kademlia =
+    //    injector
+    //    .create<std::shared_ptr<libp2p::protocol::kademlia::Kademlia>>();
+    //dht_ = std::make_shared<sgns::ipfs_lite::ipfs::dht::IpfsDHT>(kademlia, bootstrapAddresses_, m_context);
+    ////Make Holepunch Client
+    //holepunchmsgproc_ = std::make_shared<libp2p::protocol::HolepunchClientMsgProc>(*dagSyncerHost, dagSyncerHost->getNetwork().getConnectionManager());
+    //holepunch_ = std::make_shared<libp2p::protocol::HolepunchClient>(*dagSyncerHost, holepunchmsgproc_, dagSyncerHost->getBus());
+    //holepunch_->start();
+    ////Make Identify
+    //identifymsgproc_ = std::make_shared<libp2p::protocol::IdentifyMessageProcessor>(
+    //    *dagSyncerHost, dagSyncerHost->getNetwork().getConnectionManager(), *injector.create<std::shared_ptr<libp2p::peer::IdentityManager>>(), injector.create<std::shared_ptr<libp2p::crypto::marshaller::KeyMarshaller>>());
+    //identify_ = std::make_shared<libp2p::protocol::Identify>(*dagSyncerHost, identifymsgproc_, dagSyncerHost->getBus(), injector.create<std::shared_ptr<libp2p::transport::Upgrader>>(), [self{ shared_from_this() }]() {
+    //    });
+    //identify_->start();
+
     //If we used upnp we should have an address list, if not just get local ip
     std::string localaddress;
     std::string wanaddress;
@@ -119,10 +201,10 @@ outcome::result<void> GlobalDB::Init( std::shared_ptr<CrdtOptions> crdtOptions )
     }
     else {
         //use the first address, which should be the lan address for listening
-        localaddress = (boost::format("/ip4/%s/tcp/%d/p2p/%s") % m_graphSyncAddrs[0] % m_dagSyncPort % dagSyncerHost->getId().toBase58()).str();
-        wanaddress = (boost::format("/ip4/%s/tcp/%d/p2p/%s") % m_graphSyncAddrs[1] % m_dagSyncPort % dagSyncerHost->getId().toBase58()).str();
+        localaddress = (boost::format("/ip4/%s/tcp/%d/p2p/%s") % m_graphSyncAddrs % m_dagSyncPort % dagSyncerHost->getId().toBase58()).str();
+        //wanaddress = (boost::format("/ip4/%s/tcp/%d/p2p/%s") % m_graphSyncAddrs[1] % m_dagSyncPort % dagSyncerHost->getId().toBase58()).str();
     }
-    
+    //m_broadcastChannel->GetPubsub()->GetHost()->getObservedAddresses()
     //auto listen_to = libp2p::multi::Multiaddress::create(
     //    (boost::format("/ip4/192.168.46.18/tcp/%d/ipfs/%s") % m_dagSyncPort % dagSyncerHost->getId().toBase58()).str()).value();
     auto listen_to = libp2p::multi::Multiaddress::create(localaddress).value();
@@ -140,6 +222,9 @@ outcome::result<void> GlobalDB::Init( std::shared_ptr<CrdtOptions> crdtOptions )
         // @todo Check if the error is not fatal
     }
 
+    //dht_->Start();
+    //dht_->bootstrap();
+    //scheduleBootstrap(io, dagSyncerHost);
     // Create pubsub broadcaster
     //auto broadcaster = std::make_shared<PubSubBroadcaster>(m_broadcastChannel);
     std::shared_ptr<PubSubBroadcasterExt> broadcaster;
@@ -149,10 +234,10 @@ outcome::result<void> GlobalDB::Init( std::shared_ptr<CrdtOptions> crdtOptions )
     }
     else
     {
-        auto listen_towan = libp2p::multi::Multiaddress::create(wanaddress).value();
-        broadcaster = std::make_shared<PubSubBroadcasterExt>(m_broadcastChannel, dagSyncer, listen_towan);
+        //auto listen_towan = libp2p::multi::Multiaddress::create(wanaddress).value();
+        broadcaster = std::make_shared<PubSubBroadcasterExt>(m_broadcastChannel, dagSyncer, listen_to);
     }
-    broadcaster->SetLogger(m_logger);
+    //broadcaster->SetLogger(m_logger);
 
     m_crdtDatastore = std::make_shared<CrdtDatastore>(
         dataStore, HierarchicalKey("crdt"), dagSyncer, broadcaster, crdtOptions);
@@ -182,6 +267,23 @@ outcome::result<void> GlobalDB::Init( std::shared_ptr<CrdtOptions> crdtOptions )
     //}
     return outcome::success();
 }
+
+//void GlobalDB::scheduleBootstrap(std::shared_ptr<boost::asio::io_context> io_context, std::shared_ptr<libp2p::Host> host)
+//{
+//    auto timer = std::make_shared<boost::asio::steady_timer>(*io_context);
+//    timer->expires_after(std::chrono::seconds(30));
+//
+//    timer->async_wait([self{ shared_from_this() }, timer, io_context, host](const boost::system::error_code& ec) {
+//        if (!ec && self->obsAddrRetries < 3) {
+//            if (host->getObservedAddressesReal().size() <= 0)
+//            {
+//                self->dht_->bootstrap();
+//                ++self->obsAddrRetries;
+//                self->scheduleBootstrap(io_context, host);
+//            }
+//        }
+//        });
+//}
 
 outcome::result<void> GlobalDB::Put(const HierarchicalKey& key, const Buffer& value)
 {

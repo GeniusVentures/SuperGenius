@@ -1,0 +1,38 @@
+{
+  "data": {
+	"type": "https",
+	"URL": "https://ipfs.filebase.io/ipfs/QmdHvvEXRUgmyn1q3nkQwf9yE412Vzy5gSuGAukHRLicXA/"
+  },
+  "model": {
+    "name": "posenet",
+    "file": "model.mnn"
+  },
+  "input": [
+	{
+		"image": "data/ballet.data",
+		"block_len": 4860000 ,
+		"block_line_stride": 5400,
+		"block_stride": 0,
+		"chunk_line_stride": 1080,
+		"chunk_offset": 0,
+		"chunk_stride": 4320,
+		"chunk_subchunk_height": 5,
+		"chunk_subchunk_width": 5,
+		"chunk_count": 25,
+		"channels": 4
+	},
+	{
+		"image": "data/frisbee3.data",
+		"block_len": 786432 ,
+		"block_line_stride": 1536,
+		"block_stride": 0,
+		"chunk_line_stride": 384,
+		"chunk_offset": 0,
+		"chunk_stride": 1152,
+		"chunk_subchunk_height": 4,
+		"chunk_subchunk_width": 4,
+		"chunk_count": 16,
+		"channels": 3
+	}
+  ]
+}

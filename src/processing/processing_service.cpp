@@ -30,7 +30,7 @@ namespace sgns::processing
         std::shared_ptr<SubTaskStateStorage>                     subTaskStateStorage,
         std::shared_ptr<SubTaskResultStorage>                    subTaskResultStorage,
         std::shared_ptr<ProcessingCore>                          processingCore,
-        std::function<void( const std::string &subTaskQueueId )> userCallbackSuccess,
+        std::function<void( const std::string &subTaskQueueId, const SGProcessing::TaskResult &taskresult )> userCallbackSuccess,
         std::function<void( const std::string &subTaskQueueId )> userCallbackError ) :
         m_gossipPubSub( std::move( gossipPubSub ) ),
         m_context( m_gossipPubSub->GetAsioContext() ),
@@ -141,7 +141,7 @@ namespace sgns::processing
 
         if ( userCallbackSuccess_ )
         {
-            userCallbackSuccess_( subTaskQueueId );
+            userCallbackSuccess_( subTaskQueueId, taskResult );
         }
 
         if ( !m_isStopped )

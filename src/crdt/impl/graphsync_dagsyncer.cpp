@@ -38,7 +38,7 @@ outcome::result<void> GraphsyncDAGSyncer::Listen(const Multiaddress& listen_to)
 }
 
 outcome::result<std::future<std::shared_ptr<ipfs_lite::ipld::IPLDNode>>> GraphsyncDAGSyncer::RequestNode(
-    const PeerId& peer, boost::optional<Multiaddress> address, const CID& root_cid) const
+    const PeerId& peer, boost::optional<std::vector<Multiaddress>> address, const CID& root_cid) const
 {
     if(!started_)
     {
@@ -67,13 +67,14 @@ outcome::result<std::future<std::shared_ptr<ipfs_lite::ipld::IPLDNode>>> Graphsy
         std::bind( &GraphsyncDAGSyncer::RequestProgressCallback, this, std::placeholders::_1, std::placeholders::_2 ) );
 
     // keeping subscriptions alive, otherwise they cancel themselves
+    logger_->debug("Requesting Node {} ", root_cid.toString().value());
     requests_.insert( std::make_pair(
         root_cid, std::make_tuple( std::make_shared<Subscription>( std::move( subscription ) ), result ) ) );
 
     return result->get_future();
 }
 
-void GraphsyncDAGSyncer::AddRoute(const CID& cid, const PeerId& peer, Multiaddress& address)
+void GraphsyncDAGSyncer::AddRoute(const CID& cid, const PeerId& peer, std::vector<Multiaddress>& address)
 {
     routing_.insert(std::make_pair(cid, std::make_tuple(peer, address)));
 }
@@ -187,6 +188,15 @@ outcome::result<GraphsyncDAGSyncer::PeerId> GraphsyncDAGSyncer::GetId() const
     return outcome::failure(boost::system::error_code{});
 }
 
+outcome::result<libp2p::peer::PeerInfo> GraphsyncDAGSyncer::GetPeerInfo() const
+{
+    if (host_ != nullptr)
+    {
+        return host_->getPeerInfo();
+    }
+    return outcome::failure(boost::system::error_code{});
+}
+
 namespace
 {
     std::string formatExtensions(const std::vector<GraphsyncDAGSyncer::Extension>& extensions)
@@ -226,6 +236,10 @@ void GraphsyncDAGSyncer::BlockReceivedCallback( const CID &cid, sgns::common::Bu
         if (!node.has_failure())
         {
             auto res = dagService_.addNode(node.value());
+            if (!res)
+            {
+                logger_->error("Error adding node to dagservice {}", res.error().message());
+            }
             std::stringstream sslinks;
             for (const auto& link : node.value()->getLinks())
             {
@@ -249,7 +263,11 @@ void GraphsyncDAGSyncer::BlockReceivedCallback( const CID &cid, sgns::common::Bu
                 {
                     for (auto link : node.value()->getLinks())
                     {
-                        AddRoute(link.get().getCID(), std::get<0>(it->second), std::get<1>(it->second));
+                        auto linkhb = HasBlock(link.get().getCID());
+                        if (linkhb.has_value() && !linkhb.value())
+                        {
+                            AddRoute(link.get().getCID(), std::get<0>(it->second), std::get<1>(it->second));
+                        }
                     }
                 }
 
@@ -265,6 +283,9 @@ void GraphsyncDAGSyncer::BlockReceivedCallback( const CID &cid, sgns::common::Bu
         {
             logger_->error("Cannot create node from received block data for CID {}", cid.toString().value());
         }
+    }
+    else {
+        logger_->error("We already had this {}", cid.toString().value());
     }
 }
 }

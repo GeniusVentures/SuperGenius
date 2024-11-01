@@ -27,7 +27,7 @@ namespace sgns::processing
                                std::shared_ptr<SubTaskStateStorage>                     subTaskStateStorage,
                                std::shared_ptr<SubTaskResultStorage>                    subTaskResultStorage,
                                std::shared_ptr<ProcessingCore>                          processingCore,
-                               std::function<void( const std::string &subTaskQueueId )> userCallbackSuccess,
+                               std::function<void( const std::string &subTaskQueueId, const SGProcessing::TaskResult &taskresult )> userCallbackSuccess,
                                std::function<void( const std::string &subTaskQueueId )> userCallbackError );
 
         void StartProcessing( const std::string &processingGridChannelId );
@@ -72,7 +72,7 @@ namespace sgns::processing
         bool                                                     m_waitingCHannelRequest = false;
         std::atomic<bool>                                        m_isStopped;
         mutable std::mutex                                       m_mutexNodes;
-        std::function<void( const std::string &subTaskQueueId )> userCallbackSuccess_;
+        std::function<void( const std::string &subTaskQueueId, const SGProcessing::TaskResult &taskresult )> userCallbackSuccess_;
         std::function<void( const std::string &subTaskQueueId )> userCallbackError_;
 
         base::Logger m_logger = base::createLogger( "ProcessingService" );

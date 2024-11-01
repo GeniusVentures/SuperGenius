@@ -190,7 +190,7 @@ int main(int argc, char* argv[])
     if (imagetosplit.size() == 0) return 0;
     //Split Image into RGBA bytes
     //ImageSplitter imagesplit(inputImageFileName, 540, 4860, 48600);
-    ImageSplitter imagesplit(imagetosplit, 5400, 0, 4860000);
+    ImageSplitter imagesplit(imagetosplit, 5400, 0, 4860000, 4);
     // For 1350x900 broken into 135x90
     //bytes - 48,600
     //Block Stride - 540
@@ -228,9 +228,9 @@ int main(int argc, char* argv[])
         //task.set_block_len(48600);
         //task.set_block_line_stride(540);
         //task.set_block_stride(4860);
-        task.set_block_len(4860000);
-        task.set_block_line_stride(5400);
-        task.set_block_stride(0);
+        //task.set_block_len(4860000);
+        //task.set_block_line_stride(5400);
+        //task.set_block_stride(0);
         task.set_random_seed(0);
         task.set_results_channel((boost::format("RESULT_CHANNEL_ID_%1%") % (taskIdx + 1)).str());
         tasks.push_back(std::move(task));

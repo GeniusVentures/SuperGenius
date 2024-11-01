@@ -117,9 +117,9 @@ namespace sgns
 
         static uint16_t GenerateRandomPort( const std::string &address );
 
-        void        ProcessingDone( const std::string &subtask_id );
-        static void ProcessingError( const std::string &subtask_id );
-        void        ProcessingFinished( const std::string &task_id, const std::set<std::string> &subtasks_ids );
+        void ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult);
+        void ProcessingError( const std::string &task_id );
+        void ProcessingFinished( const std::string &task_id, const std::set<std::string> &subtasks_ids );
 
         static constexpr std::string_view db_path_                = "bc-%d/";
         static constexpr std::uint16_t    MAIN_NET                = 369;
@@ -150,12 +150,12 @@ namespace sgns
             sinks:
               - name: file
                 type: file
-                capacity: 20480
+                capacity: 40480
                 path: sgnslog.log
             groups:
               - name: SuperGeniusDemo
                 sink: file
-                level: info
+                level: debug
                 children:
                   - name: libp2p
                   - name: Gossip

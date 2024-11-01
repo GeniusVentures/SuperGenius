@@ -1,4 +1,5 @@
 #include "processing_processor_mnn_posenet.hpp"
+#include <rapidjson/document.h>
 #include "processing/processing_imagesplit.hpp"
 
 //#define STB_IMAGE_IMPLEMENTATION
@@ -12,24 +13,42 @@ namespace sgns::processing
 
     std::vector<uint8_t> MNN_PoseNet::StartProcessing( SGProcessing::SubTaskResult &result,
                                                        const SGProcessing::Task    &task,
-                                                       const SGProcessing::SubTask &subTask )
+                                                       const SGProcessing::SubTask &subTask, 
+                                                       std::vector<char> imageData, 
+                                                       std::vector<char> modelFile)
     {
-        std::vector<uint8_t> subTaskResultHash( SHA256_DIGEST_LENGTH );
-        for ( auto image : *imageData_ )
-        {
-            std::vector<uint8_t> output( image.size() );
-            std::transform(
-                image.begin(), image.end(), output.begin(), []( char c ) { return static_cast<uint8_t>( c ); } );
-            ImageSplitter animageSplit( output, task.block_line_stride(), task.block_stride(), task.block_len() );
+        std::vector<uint8_t> modelFile_bytes;
+        modelFile_bytes.assign(modelFile.begin(), modelFile.end());
+
+            //Get stride data
+        std::vector<uint8_t> subTaskResultHash(SHA256_DIGEST_LENGTH);
+        rapidjson::Document document;
+        document.Parse(subTask.json_data().c_str());
+        auto block_len = document["block_len"].GetUint64();
+        auto block_line_stride = document["block_line_stride"].GetUint64();
+        auto block_stride = document["block_stride"].GetUint64();
+        auto chunk_line_stride = document["chunk_line_stride"].GetUint64();
+        auto chunk_offset = document["chunk_offset"].GetUint64();
+        auto chunk_stride = document["chunk_stride"].GetUint64();
+        auto chunk_subchunk_height = document["chunk_subchunk_height"].GetUint64();
+        auto chunk_subchunk_width = document["chunk_subchunk_width"].GetUint64();
+        auto chunk_count = document["chunk_count"].GetUint64();
+        auto channels = document["channels"].GetUint64();
+
+        //for ( auto image : *imageData_ )
+        //{
+            std::vector<uint8_t> output(imageData.size());
+            std::transform(imageData.begin(), imageData.end(), output.begin(),
+                            []( char c ) { return static_cast<uint8_t>( c ); } );
+            //ImageSplitter animageSplit( output, task.block_line_stride(), task.block_stride(), task.block_len() );
+            ImageSplitter animageSplit(output, block_line_stride, block_stride, block_len, channels);
             auto          dataindex           = 0;
             auto          basechunk           = subTask.chunkstoprocess( 0 );
             bool          isValidationSubTask = ( subTask.subtaskid() == "subtask_validation" );
-            ImageSplitter ChunkSplit( animageSplit.GetPart( dataindex ),
-                                      basechunk.line_stride(),
-                                      basechunk.stride(),
-                                      animageSplit.GetPartHeightActual( dataindex ) / basechunk.subchunk_height() *
-                                          basechunk.line_stride() );
-
+            ImageSplitter ChunkSplit( animageSplit.GetPart( dataindex ), chunk_line_stride, chunk_stride,
+                                      animageSplit.GetPartHeightActual( dataindex ) / chunk_subchunk_height *
+                                            chunk_line_stride, channels);
+            
             for ( int chunkIdx = 0; chunkIdx < subTask.chunkstoprocess_size(); ++chunkIdx )
             {
                 std::cout << "Chunk IDX:  " << chunkIdx << "Total: " << subTask.chunkstoprocess_size() << std::endl;
@@ -45,13 +64,12 @@ namespace sgns::processing
                 }
                 else
                 {
-                    auto procresults = MNNProcess( ChunkSplit.GetPart( chunkIdx ),
-                                                   ChunkSplit.GetPartWidthActual( chunkIdx ),
-                                                   ChunkSplit.GetPartHeightActual( chunkIdx ) );
+                    auto procresults =
+                        MNNProcess( ChunkSplit.GetPart( chunkIdx ), modelFile_bytes, channels, ChunkSplit.GetPartWidthActual( chunkIdx ),
+                                    ChunkSplit.GetPartHeightActual( chunkIdx ) );
 
                     const float *data     = procresults->host<float>();
                     size_t       dataSize = procresults->elementSize() * sizeof( float );
-
                     SHA256_CTX sha256;
                     SHA256_Init( &sha256 );
                     SHA256_Update( &sha256, data, dataSize );
@@ -68,71 +86,32 @@ namespace sgns::processing
                 SHA256_Final( subTaskResultHash.data(), &sha256 );
             }
             return subTaskResultHash;
-        }
-        return subTaskResultHash;
+        //}
+        //return subTaskResultHash;
     }
 
-    void MNN_PoseNet::SetData(
-        std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers )
+    std::unique_ptr<MNN::Tensor> MNN_PoseNet::MNNProcess(const std::vector<uint8_t>& imgdata, 
+                                                         std::vector<uint8_t>& modelFile, 
+                                                         const int channels, 
+                                                         const int origwidth,
+                                                         const int origheight, 
+                                                         const std::string filename) 
     {
-        const auto &filePaths = buffers->first;
-        const auto &fileDatas = buffers->second;
-        for ( size_t i = 0; i < filePaths.size(); ++i )
-        {
-            const std::string &filePath = filePaths[i];
+        std::vector<uint8_t> ret_vect(imgdata);
 
-            size_t dotPos = filePath.find_last_of( '.' );
-            if ( dotPos != std::string::npos && dotPos < filePath.size() - 1 )
-            {
-                std::string extension = filePath.substr( dotPos + 1 );
-                std::cout << "extension::: " << extension << std::endl;
-                if ( extension == "mnn" )
-                {
-                    //modelFile_ = new std::vector<uint8_t>();
-                    modelFile_->assign( fileDatas[i].begin(), fileDatas[i].end() );
-                }
-                else if ( extension == "jpg" || extension == "jpeg" || extension == "png" )
-                {
-                    imageData_->push_back( fileDatas[i] );
-                }
-                else if ( extension == "data" )
-                {
-                    imageData_->push_back( fileDatas[i] );
-                }
-                else if ( extension == "json" )
-                {
-                }
-                else
-                {
-                    std::cerr << "Unsupported file extension: " << extension << " for file: " << filePath << std::endl;
-                }
-            }
-        }
-    }
+        // Get Target Width
+        const int targetWidth = static_cast<int>((float)origwidth / (float)OUTPUT_STRIDE) * OUTPUT_STRIDE + 1;
+        const int targetHeight = static_cast<int>((float)origheight / (float)OUTPUT_STRIDE) * OUTPUT_STRIDE + 1;
 
-    std::unique_ptr<MNN::Tensor> MNN_PoseNet::MNNProcess( const std::vector<uint8_t> &imgdata,
-                                                          const int                   origwidth,
-                                                          const int                   origheight,
-                                                          const std::string          &filename )
-    {
-        std::vector<uint8_t> ret_vect( imgdata );
-        //Get Target WIdth
-        const int targetWidth =
-            static_cast<int>( static_cast<float>( origwidth ) / static_cast<float>( OUTPUT_STRIDE ) ) * OUTPUT_STRIDE +
-            1;
-        const int targetHeight =
-            static_cast<int>( static_cast<float>( origheight ) / static_cast<float>( OUTPUT_STRIDE ) ) * OUTPUT_STRIDE +
-            1;
-
-        //Scale
-        CV::Point scale{};
-        scale.fX = static_cast<float>( origwidth ) / static_cast<float>( targetWidth );
-        scale.fY = static_cast<float>( origheight ) / static_cast<float>( targetHeight );
+        // Scale
+        CV::Point scale;
+        scale.fX = (float)origwidth / (float)targetWidth;
+        scale.fY = (float)origheight / (float)targetHeight;
 
         // Create net and session
-        const void *buffer = static_cast<const void *>( modelFile_->data() );
-        auto        mnnNet =
-            std::shared_ptr<MNN::Interpreter>( MNN::Interpreter::createFromBuffer( buffer, modelFile_->size() ) );
+        const void* buffer = static_cast<const void*>( modelFile.data() );
+        auto mnnNet = std::shared_ptr<MNN::Interpreter>( MNN::Interpreter::createFromBuffer( buffer, modelFile.size() ) );
+
         MNN::ScheduleConfig netConfig;
         netConfig.type      = MNN_FORWARD_VULKAN;
         netConfig.numThread = 4;
@@ -154,8 +133,13 @@ namespace sgns::processing
             ::memcpy( preProcessConfig.mean, means, sizeof( means ) );
             ::memcpy( preProcessConfig.normal, norms, sizeof( norms ) );
             preProcessConfig.sourceFormat = CV::RGBA;
-            preProcessConfig.destFormat   = CV::RGB;
-            preProcessConfig.filterType   = CV::BILINEAR;
+
+            if (channels == 3)
+            {
+                preProcessConfig.sourceFormat = CV::RGB;
+            }
+            preProcessConfig.destFormat = CV::RGB;
+            preProcessConfig.filterType = CV::BILINEAR;
 
             auto       pretreat = std::shared_ptr<CV::ImageProcess>( CV::ImageProcess::create( preProcessConfig ) );
             CV::Matrix trans;

@@ -25,6 +25,8 @@ if(CMAKE_BUILD_TYPE EQUAL Release)
     set(MSVC_RUNTIME_LIBRARY_OPTION "MultiThreaded$<$<CONFIG:Realease>:Release>")
 endif(CMAKE_BUILD_TYPE EQUAL Release)
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /constexpr:steps2000000")
+
 set(CompilerFlags
     CMAKE_CXX_FLAGS
     CMAKE_CXX_FLAGS_DEBUG

@@ -9,11 +9,12 @@ package SGProcessing;
 message Task 
 {
     string ipfs_block_id = 1;// source block data to be processed
-    uint32 block_len = 2; // and ipfs block's length in bytes
-    uint32 block_stride = 3; // Stride to use for access pattern
-    uint32 block_line_stride = 4; // Line stride in bytes to get to next block start
-    float random_seed = 5; // used to randomly choose verifier block
-    string results_channel = 6; // which channel to publish results to.
+	bytes json_data = 2; // Job information json
+    //uint32 block_len = 3; // and ipfs block's length in bytes
+    //uint32 block_stride = 4; // Stride to use for access pattern
+    //uint32 block_line_stride = 5; // Line stride in bytes to get to next block start
+    float random_seed = 3; // used to randomly choose verifier block
+    string results_channel = 4; // which channel to publish results to.
 }
 
 message TaskLock
@@ -26,20 +27,21 @@ message TaskLock
 message SubTask 
 {
     string ipfsblock = 1; // source block data to be processed
-    repeated ProcessingChunk chunksToProcess = 2; // array of chunks to process
-    uint32 datalen = 3; // length of ipfsBlock?
-    string subtaskid = 4; // unique subtask ID
+	string json_data = 2; //json data of the specific inputs for this subtask
+    repeated ProcessingChunk chunksToProcess = 3; // array of chunks to process
+    uint32 datalen = 4; // length of ipfsBlock?
+    string subtaskid = 5; // unique subtask ID
 }
 
 message ProcessingChunk 
 {
     string chunkid = 1; // unique process chunk ID
-    uint32 offset = 2; // offset into data
-    uint32 subchunk_width = 3; // width of subchunk/subblock
-    uint32 subchunk_height = 4; // height of chunk/block
-    uint32 stride = 5; // stride to use for overall data chunk
-    uint32 line_stride = 6; // stride of one line of data
-    uint32 n_subchunks = 7; // number of chunks to process  
+    //uint32 offset = 2; // offset into data
+    //uint32 subchunk_width = 3; // width of subchunk/subblock
+    //uint32 subchunk_height = 4; // height of chunk/block
+    //uint32 stride = 5; // stride to use for overall data chunk
+    //uint32 line_stride = 6; // stride of one line of data
+    uint32 n_subchunks = 2; // number of chunks to process  
 }
 
 message ProcessingQueueItem

@@ -48,14 +48,14 @@ namespace
         {
             return true; //TODO - This is wrong - Update this tests to the actual ProcessingCoreImpl on src/processing/impl
         }
-        std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> GetCidForProc(std::string cid) override
+        std::shared_ptr<std::pair<std::vector<char>, std::vector<char>>> GetCidForProc(std::string json_data, std::string base_json) override
         {
             return nullptr;
         }
 
-        void GetSubCidForProc(std::shared_ptr<boost::asio::io_context> ioc, std::string url, std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>& results) override
+        void GetSubCidForProc(std::shared_ptr<boost::asio::io_context> ioc, std::string url, std::vector<char>& results) override
         {
-            
+            return;
         }
 
         void ProcessSubTask(
@@ -234,11 +234,11 @@ TEST_F(SubTaskQueueAccessorImplTest, TaskFinalization)
     SGProcessing::ProcessingChunk chunk1;
     chunk1.set_chunkid("CHUNK_1");
     chunk1.set_n_subchunks(1);
-    chunk1.set_line_stride(1);
-    chunk1.set_offset(0);
-    chunk1.set_stride(1);
-    chunk1.set_subchunk_height(10);
-    chunk1.set_subchunk_width(10);
+    //chunk1.set_line_stride(1);
+    //chunk1.set_offset(0);
+    //chunk1.set_stride(1);
+    //chunk1.set_subchunk_height(10);
+    //chunk1.set_subchunk_width(10);
 
     auto queue = std::make_unique<SGProcessing::SubTaskQueue>();
     // Local queue wrapped owns the queue
@@ -311,11 +311,11 @@ TEST_F(SubTaskQueueAccessorImplTest, InvalidSubTasksRestart)
     SGProcessing::ProcessingChunk chunk1;
     chunk1.set_chunkid("CHUNK_1");
     chunk1.set_n_subchunks(1);
-    chunk1.set_line_stride(1);
-    chunk1.set_offset(0);
-    chunk1.set_stride(1);
-    chunk1.set_subchunk_height(10);
-    chunk1.set_subchunk_width(10);
+    //chunk1.set_line_stride(1);
+    //chunk1.set_offset(0);
+    //chunk1.set_stride(1);
+    //chunk1.set_subchunk_height(10);
+    //chunk1.set_subchunk_width(10);
 
     auto queue = std::make_unique<SGProcessing::SubTaskQueue>();
     // Local queue wrapper owns the queue

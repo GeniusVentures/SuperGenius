@@ -15,7 +15,7 @@ ProcessingNode::ProcessingNode( std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>
                                 std::function<void( const SGProcessing::TaskResult & )> taskResultProcessingSink,
                                 std::function<void( const std::string & )>              processingErrorSink ) :
     m_gossipPubSub( std::move( gossipPubSub ) ),
-    m_nodeId( m_gossipPubSub->GetLocalAddress()[0] ),
+    m_nodeId( m_gossipPubSub->GetLocalAddress() ),
     m_processingCore( std::move( processingCore ) ),
     m_subTaskStateStorage( std::move( subTaskStateStorage ) ),
     m_subTaskResultStorage( std::move( subTaskResultStorage ) ),

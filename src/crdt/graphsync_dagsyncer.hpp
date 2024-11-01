@@ -43,7 +43,7 @@ namespace sgns::crdt
 
     outcome::result<void> Listen(const Multiaddress& listen_to);
 
-    void AddRoute(const CID& cid, const PeerId& peer, Multiaddress& address);
+    void AddRoute(const CID& cid, const PeerId& peer, std::vector<Multiaddress>& address);
 
     // DAGService interface implementation
     outcome::result<void> addNode(std::shared_ptr<const ipfs_lite::ipld::IPLDNode> node) override;
@@ -67,9 +67,11 @@ namespace sgns::crdt
     /* Returns peer ID */
     outcome::result<PeerId> GetId() const;
 
+    outcome::result<libp2p::peer::PeerInfo> GetPeerInfo() const;
+
   protected:
     outcome::result<std::future<std::shared_ptr<ipfs_lite::ipld::IPLDNode>>> RequestNode(
-        const PeerId& peer, boost::optional<Multiaddress> address, const CID& root_cid) const;
+        const PeerId& peer, boost::optional<std::vector<Multiaddress>> address, const CID& root_cid) const;
 
     void RequestProgressCallback(ResponseStatusCode code, const std::vector<Extension>& extensions) const;
     void BlockReceivedCallback( const CID &cid, sgns::common::Buffer buffer );
@@ -94,7 +96,7 @@ namespace sgns::crdt
     // std::vector<Subscription> requests_;
     mutable std::map<CID, std::tuple<std::shared_ptr<Subscription>, 
         std::shared_ptr<std::promise<std::shared_ptr<ipfs_lite::ipld::IPLDNode>>>>> requests_;
-    std::map<CID, std::tuple<PeerId, Multiaddress>> routing_;
+    std::map<CID, std::tuple<PeerId, std::vector<Multiaddress>>> routing_;
 
   };
 }
