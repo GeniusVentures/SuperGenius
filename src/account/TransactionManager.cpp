@@ -259,45 +259,62 @@ namespace sgns
         block_storage_m->setLastFinalizedBlockHash( new_hash.value() );
     }
 
-    bool TransactionManager::GetTransactionsFromBlock( const primitives::BlockNumber &block_number )
+    outcome::result<std::vector<std::vector<uint8_t>>> TransactionManager::GetTransactionsFromBlock(
+            const primitives::BlockId &block_number )
     {
-        outcome::result<primitives::BlockBody> retval          = outcome::failure( boost::system::error_code{} );
-        std::size_t                            transaction_num = 0;
-        bool                                   ret             = false;
-        //do
+        // outcome::result<primitives::BlockBody> retval          = outcome::failure( boost::system::error_code{} );
+        // std::size_t                            transaction_num = 0;
+        // bool                                   ret             = false;
+        // //do
+        // {
+        //     retval = block_storage_m->getBlockBody( block_number /*, transaction_num*/ );
+        //     //m_logger->debug( "Trying to read transaction " + std::to_string(block_number) );
+
+        //     if ( retval )
+        //     {
+        //         //any block will need checking
+        //         m_logger->debug( "Getting transaction " + std::to_string(block_number) );
+
+        //         //this is a vector<extrinsics>, which is a vector<buffer>
+        //         auto block_body = retval.value();
+        //         //m_logger->debug( "Destination address of Header: " + std::string( DAGHeader.toString() ) );
+
+        //         //Just one buffer for now
+        //         if ( block_body.size() == 1 )
+        //         {
+        //             m_logger->info( "The block data is " + std::string( block_body[0].data.toString() ) );
+
+        //             ParseTransaction( std::string( block_body[0].data.toString() ) );
+        //         }
+        //         else
+        //         {
+        //             m_logger->info( "The block size is " + std::to_string( block_body.size() ) );
+        //         }
+        //         transaction_num++;
+        //         ret = true;
+        //     }
+        //     else{
+        //         m_logger->debug("Return Value error {} ", retval.error().message());
+        //     }
+        // }
+        // //while ( !retval );
+        // return ret;
+        if ( auto block_body = block_storage_m->getBlockBody( block_number ); block_body )
         {
-            retval = block_storage_m->getBlockBody( block_number /*, transaction_num*/ );
-            //m_logger->debug( "Trying to read transaction " + std::to_string(block_number) );
+            std::vector<std::vector<uint8_t>> ret;
 
-            if ( retval )
+            for ( auto &key : block_body.value() )
             {
-                //any block will need checking
-                m_logger->debug( "Getting transaction " + std::to_string(block_number) );
-
-                //this is a vector<extrinsics>, which is a vector<buffer>
-                auto block_body = retval.value();
-                //m_logger->debug( "Destination address of Header: " + std::string( DAGHeader.toString() ) );
-
-                //Just one buffer for now
-                if ( block_body.size() == 1 )
+                if ( auto transaction = ParseTransaction( key.data.toString() ); transaction )
                 {
-                    m_logger->info( "The block data is " + std::string( block_body[0].data.toString() ) );
+                    ret.push_back( std::move( transaction.value() ) );
+                }
+            }
 
-                    ParseTransaction( std::string( block_body[0].data.toString() ) );
-                }
-                else
-                {
-                    m_logger->info( "The block size is " + std::to_string( block_body.size() ) );
-                }
-                transaction_num++;
-                ret = true;
-            }
-            else{
-                m_logger->debug("Return Value error {} ", retval.error().message());
-            }
+            return ret;
         }
-        //while ( !retval );
-        return ret;
+
+        return std::errc::invalid_argument;
     }
 
     outcome::result<std::vector<uint8_t>> TransactionManager::ParseTransaction( std::string_view transaction_key )
@@ -346,40 +363,63 @@ namespace sgns
          */
     void TransactionManager::CheckBlockchain()
     {
+        // outcome::result<primitives::BlockHeader> retval = outcome::failure( boost::system::error_code{} );
+        // //m_logger->debug( "Checking Blockchain" );
+        // do
+        // {
+        //     retval = block_storage_m->getBlockHeader( last_block_id_m );
+        //     if ( retval )
+        //     {
+        //         //any block will need checking
+        //         //m_logger->debug( "Found new blockchain entry for block " + std::to_string( last_block_id_m ) );
+        //         //m_logger->debug( "Getting DAGHeader value" );
+        //         bool valid_transaction = true;
+
+        //         auto DAGHeader = retval.value();
+        //         //m_logger->debug( "Destination address of Header: " + std::string( DAGHeader.toString() ) );
+
+        //         //validation that index is the same as number
+        //         //m_logger->debug("Compare {} with {}", DAGHeader.number, last_block_id_m);
+        //         if ( DAGHeader.number == last_block_id_m )
+        //         {
+        //             //m_logger->info( "Checking transactions from block" );
+        //             valid_transaction = GetTransactionsFromBlock( DAGHeader.number );
+        //         }
+        //         if ( valid_transaction )
+        //         {
+        //             last_block_id_m++;
+        //         }
+        //         else
+        //         {
+        //             m_logger->debug( "Invalid transaction");
+        //             break;
+        //         }
+        //     }
+        //     else {
+        //         //m_logger->debug("Block Chain ret fail {}", retval.error().message());
+        //     }
+
+        // } while ( retval );
         outcome::result<primitives::BlockHeader> retval = outcome::failure( boost::system::error_code{} );
-        //m_logger->debug( "Checking Blockchain" );
+
         do
         {
-            retval = block_storage_m->getBlockHeader( last_block_id_m );
-            if ( retval )
+            if ( retval = block_storage_m->getBlockHeader( last_block_id_m ); retval )
             {
-                //any block will need checking
-                //m_logger->debug( "Found new blockchain entry for block " + std::to_string( last_block_id_m ) );
-                //m_logger->debug( "Getting DAGHeader value" );
-                bool valid_transaction = true;
-
-                auto DAGHeader = retval.value();
-                //m_logger->debug( "Destination address of Header: " + std::string( DAGHeader.toString() ) );
-
-                //validation that index is the same as number
-                //m_logger->debug("Compare {} with {}", DAGHeader.number, last_block_id_m);
-                if ( DAGHeader.number == last_block_id_m )
+                if ( auto DAGHeader = retval.value(); DAGHeader.number == last_block_id_m )
                 {
-                    //m_logger->info( "Checking transactions from block" );
-                    valid_transaction = GetTransactionsFromBlock( DAGHeader.number );
+                    if ( auto transactions = GetTransactionsFromBlock( DAGHeader.number ); transactions )
+                    {
+                        this->transactions.insert( this->transactions.end(),
+                                                   transactions.value().begin(),
+                                                   transactions.value().end() );
+                        last_block_id_m++;
+                    }
+                    else{
+                        m_logger->debug( "Invalid transaction, hopefully just waiting for complete block.");
+                        break;
+                    }
                 }
-                if ( valid_transaction )
-                {
-                    last_block_id_m++;
-                }
-                else
-                {
-                    m_logger->debug( "Invalid transaction");
-                    break;
-                }
-            }
-            else {
-                //m_logger->debug("Block Chain ret fail {}", retval.error().message());
             }
 
         } while ( retval );
