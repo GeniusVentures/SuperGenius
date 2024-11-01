@@ -1,46 +1,48 @@
 #ifndef MESSAGING_WATCHER_HPP
 #define MESSAGING_WATCHER_HPP
 
-#include <rapidjson/document.h>
-#include <boost/thread.hpp>
 #include <functional>
-#include <vector>
 #include <string>
+#include <boost/thread.hpp>
+#include <rapidjson/document.h>
 
 namespace sgns::watcher {
-    class MessagingWatcher {
+
+    class MessagingWatcher
+    {
     public:
         using MessageCallback = std::function<void(const std::string &)>;
 
-        struct ChainConfig {
-            std::string rpc_url;
-            std::string chain_id;
-            std::string chain_name;
-            std::string ws_url;
-        };
+        virtual ~MessagingWatcher() = default;
 
-        MessagingWatcher(const rapidjson::Document &config, MessageCallback callback);
+        virtual void startWatching();
+        virtual void stopWatching();
 
-        void startWatching();
+        bool isRunning() const;
 
-        void stopWatching();
+        // Static methods to manage all watchers
+        static void addWatcher(const std::shared_ptr<MessagingWatcher> &newWatcher);
+        static void startAll();
+        static void stopAll();
 
-        std::vector<ChainConfig> getChains() const; // Public getter for chains_
-
+    protected:
+        // Protected callback to be used by derived classes
         MessageCallback messageCallback;
-    private:
-        void parseConfig(const rapidjson::Document &config);
+        // Constructor that takes a callback to initialize messageCallback
+        explicit MessagingWatcher(MessageCallback callback);
 
-        void watch();
-
-        void setupHttpListener(const ChainConfig &chainConfig);
-
-        void setupWebSocketListener(const ChainConfig &chainConfig);
-
-        std::vector<ChainConfig> chains;
-        boost::thread watcherThread;
         bool running;
+        mutable std::mutex running_mutex;
+        boost::thread watcherThread;
+
+        // Protected virtual watch function to be overridden by derived classes
+        virtual void watch();
+
+    private:
+        // Static vector to hold all watcher instances
+        static std::vector<std::shared_ptr<MessagingWatcher>> m_watchers;
     };
 
-}
+}  // namespace sgns::watcher
+
 #endif // MESSAGING_WATCHER_HPP

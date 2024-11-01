@@ -19,6 +19,7 @@ target_link_libraries(api_transport
     Boost::boost
     logger
     outcome
+    OpenSSL::SSL
 )
 
 add_library(rpc_thread_pool

@@ -1,66 +1,63 @@
 #include "messaging_watcher.hpp"
+#include <boost/thread.hpp>
 #include <iostream>
 
 namespace sgns::watcher {
-    MessagingWatcher::MessagingWatcher(const rapidjson::Document &config, MessageCallback callback)
-            : messageCallback(callback), running(false) {
-        parseConfig(config);
-    }
 
-    void MessagingWatcher::parseConfig(const rapidjson::Document &config) {
-        if (!config.IsArray()) {
-            throw std::runtime_error("Config must be an array of chain configurations");
-        }
+    // Static vector to hold all watcher instances
+    std::vector<std::shared_ptr<MessagingWatcher>> MessagingWatcher::m_watchers;
 
-        for (rapidjson::SizeType i = 0; i < config.Size(); i++) {
-            const auto &chain = config[i];
-            ChainConfig chainConfig;
-            chainConfig.rpc_url = chain["rpc_url"].GetString();
-            chainConfig.chain_id = chain["chain_id"].GetString();
-            chainConfig.chain_name = chain["chain_name"].GetString();
-            chainConfig.ws_url = chain["ws_url"].GetString();
-            chains.push_back(chainConfig);
-        }
-    }
-
-    std::vector <MessagingWatcher::ChainConfig> MessagingWatcher::getChains() const {
-        return chains;
+    MessagingWatcher::MessagingWatcher(MessageCallback callback)
+        : messageCallback(std::move(callback)), running(false) {
     }
 
     void MessagingWatcher::startWatching() {
-        if (running) return; // Already running
+        std::lock_guard<std::mutex> lock(running_mutex);
+        if (running) return;
 
         running = true;
         watcherThread = boost::thread(&MessagingWatcher::watch, this);
     }
 
     void MessagingWatcher::stopWatching() {
-        running = false;
+        {
+            std::lock_guard<std::mutex> lock(running_mutex);
+            running = false;
+        }
+
         if (watcherThread.joinable()) {
             watcherThread.join();
         }
     }
 
-    void MessagingWatcher::watch() {
-        for (const auto &chain: chains) {
-            setupHttpListener(chain);
-            setupWebSocketListener(chain);
-        }
+    void MessagingWatcher::addWatcher(const std::shared_ptr<MessagingWatcher> &newWatcher) {
+        m_watchers.push_back(newWatcher);
+    }
 
+    void MessagingWatcher::startAll() {
+        for (const auto &watcher : m_watchers) {
+            watcher->startWatching();
+        }
+    }
+
+    void MessagingWatcher::stopAll() {
+        for (const auto &watcher : m_watchers) {
+            watcher->stopWatching();
+        }
+    }
+
+    void MessagingWatcher::watch() {
         while (running) {
+            // Placeholder: This function should be implemented by derived classes
+            // Here, it will simply sleep for 1 second, but derived classes should provide a real implementation.
             boost::this_thread::sleep_for(boost::chrono::seconds(1));
         }
     }
 
-    void MessagingWatcher::setupHttpListener(const ChainConfig &chainConfig) {
-        std::cout << "Started HTTP listener for chain: " << chainConfig.chain_name << std::endl;
+    bool MessagingWatcher::isRunning() const {
+        std::lock_guard<std::mutex> const lock(running_mutex);
+        return running;
     }
 
-    void MessagingWatcher::setupWebSocketListener(const ChainConfig &chainConfig) {
-        std::cout << "Started WebSocket listener for chain: " << chainConfig.chain_name << std::endl;
 
-        if (messageCallback) {
-            messageCallback("Message received from " + chainConfig.chain_name);
-        }
-    }
-}
+}  // namespace sgns::watcher
