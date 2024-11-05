@@ -203,7 +203,7 @@ namespace sgns
         {
             auto process_transaction = std::make_shared<ProcessingTransaction>(task_id, subtask.subtaskid(), FillDAGStruct());
     
-        ProcessingProof prover( subtask_id );
+        ProcessingProof prover( task_id );
         auto            proof_result = prover.GenerateFullProof();
         if ( proof_result.has_value() )
         {
@@ -352,7 +352,7 @@ namespace sgns
                 if ( !VerifyTransaction( string_src_address, maybe_dag.value().nonce() ) )
                 {
                     m_logger->info( "Invalid PROOF" );
-                    return;
+                     return std::errc::invalid_argument;
                 }
                 if ( string_src_address == account_m->GetAddress<std::string>() )
                 {
@@ -383,27 +383,6 @@ namespace sgns
         }
 
         return std::errc::invalid_argument;
-    }
-
-    bool TransactionManager::VerifyTransaction( const std::string &string_src_address, const uint64_t nonce )
-    {
-        bool ret = false;
-
-        boost::format proof_key{ std::string( TRANSACTION_BASE_FORMAT ) + string_src_address + "/tx/proof" + "/%llu" };
-        proof_key % TEST_NET_ID;
-        proof_key % nonce;
-
-        std::cout << " proof_key.str() the proof in " << proof_key.str() << std::endl;
-
-        auto maybe_proof_data = db_m->Get( { proof_key.str() } );
-
-        if ( maybe_proof_data.has_value() )
-        {
-            auto value_vector = maybe_proof_data.value().toVector();
-            std::cout << " it has value with size  " <<  value_vector.size() << std::endl;
-            auto proof_struct = IBasicProof::VerifyFullProof( maybe_proof_data.value().toVector() );
-        }
-        return ret;
     }
 
     bool TransactionManager::VerifyTransaction( const std::string &string_src_address, const uint64_t nonce )
