@@ -3,7 +3,6 @@ BasedOnStyle: Microsoft
 AccessModifierOffset: -4
 AllowAllArgumentsOnNextLine: false
 AllowAllParametersOfDeclarationOnNextLine: false
-AlwaysBreakTemplateDeclarations: true
 AlignConsecutiveAssignments:
   Enabled: true
   AlignCompound: true
@@ -13,6 +12,9 @@ AlignConsecutiveDeclarations:
   Enabled: true
 AlignConsecutiveShortCaseStatements:
   Enabled: true
+AllowShortBlocksOnASingleLine: Empty
+AllowShortFunctionsOnASingleLine: Empty
+AlwaysBreakTemplateDeclarations: true
 BraceWrapping:
   AfterCaseLabel: true
   BeforeLambdaBody: true
@@ -30,6 +32,8 @@ InsertTrailingCommas: Wrapped
 KeepEmptyLinesAtTheStartOfBlocks: false
 NamespaceIndentation: All
 PackConstructorInitializers: NextLine
+PenaltyBreakAssignment: 190
+PenaltyBreakBeforeFirstCallParameter: 2
 ReflowComments: false
 RemoveParentheses: ReturnStatement
 RemoveSemicolon: true
