@@ -196,6 +196,7 @@ namespace sgns
     void TransactionManager::EnqueueTransaction( std::shared_ptr<IGeniusTransactions> element )
     {
         std::lock_guard<std::mutex> lock( mutex_m );
+        this->account_m->nonce += 1;
         out_transactions.emplace_back( std::move( element ) );
     }
 
@@ -234,7 +235,6 @@ namespace sgns
         data_transaction.put( transaction->SerializeByteVector() );
 
         db_m->Put( { transaction_path }, data_transaction );
-        account_m->nonce++;
 
         auto maybe_last_hash   = block_storage_m->getLastFinalizedBlockHash();
         auto maybe_last_header = block_storage_m->getBlockHeader( maybe_last_hash.value() );
