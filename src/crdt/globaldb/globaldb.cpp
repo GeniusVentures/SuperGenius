@@ -29,6 +29,23 @@
 #include <netinet/in.h>
 #endif
 
+OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::crdt, GlobalDB::Error, e )
+{
+    using ProofError = sgns::crdt::GlobalDB::Error;
+    switch ( e )
+    {
+        case ProofError::ROCKSDB_IO:
+            return "RocksDB I/O error";
+        case ProofError::IPFS_DB_NOT_CREATED:
+            return "IPFS Database creation error";
+        case ProofError::DAG_SYNCHER_NOT_LISTENING:
+            return "DAG Syncher listen error";
+        case ProofError::CRDT_DATASTORE_NOT_CREATED:
+            return "CRDT DataStore creation error";
+    }
+    return "Unknown error";
+}
+
 namespace sgns::crdt
 {
 using RocksDB = sgns::storage::rocksdb;
@@ -139,7 +156,7 @@ outcome::result<void> GlobalDB::Init( std::shared_ptr<CrdtOptions> crdtOptions )
     catch (std::exception& e)
     {
         m_logger->error("Unable to open database: " + std::string(e.what()));
-        return outcome::failure(boost::system::error_code{});
+        return Error::ROCKSDB_IO;
     }
 
     boost::filesystem::path keyPath = databasePathAbsolute + "/key";
@@ -169,7 +186,7 @@ outcome::result<void> GlobalDB::Init( std::shared_ptr<CrdtOptions> crdtOptions )
     if (ipfsDBResult.has_error())
     {
         m_logger->error("Unable to create database for IPFS datastore");
-        return outcome::failure(boost::system::error_code{});
+        return Error::IPFS_DB_NOT_CREATED;
     }
 
     auto ipfsDataStore = std::make_shared<RocksdbDatastore>(ipfsDBResult.value());
@@ -220,6 +237,8 @@ outcome::result<void> GlobalDB::Init( std::shared_ptr<CrdtOptions> crdtOptions )
     {
         m_logger->warn("DAG syncer failed to listen " + std::string(listen_to.getStringAddress()));
         // @todo Check if the error is not fatal
+        return Error::DAG_SYNCHER_NOT_LISTENING;
+
     }
 
     //dht_->Start();
@@ -244,7 +263,7 @@ outcome::result<void> GlobalDB::Init( std::shared_ptr<CrdtOptions> crdtOptions )
     if (m_crdtDatastore == nullptr)
     {
         m_logger->error("Unable to create CRDT datastore");
-        return outcome::failure(boost::system::error_code{});
+        return Error::CRDT_DATASTORE_NOT_CREATED;
     }
 
     // TODO: bootstrapping
