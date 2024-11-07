@@ -175,10 +175,10 @@ namespace sgns
                 {
                     auto transfer_transaction =
                         std::make_shared<TransferTransaction>( it->payout_peers,
-                                                                std::vector<InputUTXOInfo>{ it->original_input },
-                                                                FillDAGStruct() );
+                                                               std::vector<InputUTXOInfo>{ it->original_input },
+                                                               FillDAGStruct() );
                     //TODO - Create with the real balance and amount
-                    TransferProof prover( uint64_t{it->full_amount}, uint64_t{it->full_amount} );
+                    TransferProof prover( uint64_t{ it->full_amount }, uint64_t{ it->full_amount } );
                     auto          proof_result = prover.GenerateFullProof();
                     if ( proof_result.has_value() )
                     {
@@ -199,17 +199,18 @@ namespace sgns
 
     void TransactionManager::ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult )
     {
-        for (auto& subtask : taskresult.subtask_results())
+        for ( auto &subtask : taskresult.subtask_results() )
         {
-            auto process_transaction = std::make_shared<ProcessingTransaction>(task_id, subtask.subtaskid(), FillDAGStruct());
-    
-        ProcessingProof prover( task_id );
-        auto            proof_result = prover.GenerateFullProof();
-        if ( proof_result.has_value() )
-        {
-            //TODO - Check what we might have to prove here
-            this->EnqueueTransaction( std::make_pair(process_transaction, std::vector<uint8_t>{} ));
-        }
+            auto process_transaction =
+                std::make_shared<ProcessingTransaction>( task_id, subtask.subtaskid(), FillDAGStruct() );
+
+            ProcessingProof prover( task_id );
+            auto            proof_result = prover.GenerateFullProof();
+            if ( proof_result.has_value() )
+            {
+                //TODO - Check what we might have to prove here
+                this->EnqueueTransaction( std::make_pair( process_transaction, std::vector<uint8_t>{} ) );
+            }
         }
     }
 
@@ -259,7 +260,7 @@ namespace sgns
         tx_key % TEST_NET_ID;
 
         auto transaction_path = tx_key.str() + transaction->GetTransactionFullPath();
-            auto proof_path = tx_key.str() + transaction->GetProofFullPath();
+        auto proof_path       = tx_key.str() + transaction->GetProofFullPath();
 
         sgns::crdt::GlobalDB::Buffer data_transaction;
         data_transaction.put( transaction->SerializeByteVector() );
@@ -267,15 +268,14 @@ namespace sgns
         db_m->Put( { transaction_path }, data_transaction );
         account_m->nonce++;
 
+        sgns::crdt::GlobalDB::Buffer proof_transaction;
 
-            sgns::crdt::GlobalDB::Buffer proof_transaction;
+        //std::cout << " creating with proof with size  " <<  proof_vector.size() << std::endl;
+        proof_transaction.put( proof );
+        db_m->Put( { proof_path }, proof_transaction );
 
-            //std::cout << " creating with proof with size  " <<  proof_vector.size() << std::endl;
-            proof_transaction.put( proof );
-            db_m->Put( { proof_path }, proof_transaction );
-
-            auto maybe_last_hash   = block_storage_m->getLastFinalizedBlockHash();
-            auto maybe_last_header = block_storage_m->getBlockHeader( maybe_last_hash.value() );
+        auto maybe_last_hash   = block_storage_m->getLastFinalizedBlockHash();
+        auto maybe_last_header = block_storage_m->getBlockHeader( maybe_last_hash.value() );
 
         primitives::BlockHeader header( maybe_last_header.value() );
 
@@ -310,7 +310,7 @@ namespace sgns
             if ( retval )
             {
                 //any block will need checking
-                m_logger->debug( "Getting transaction " + std::to_string(block_number) );
+                m_logger->debug( "Getting transaction " + std::to_string( block_number ) );
 
                 //this is a vector<extrinsics>, which is a vector<buffer>
                 auto block_body = retval.value();
@@ -330,8 +330,9 @@ namespace sgns
                 transaction_num++;
                 ret = true;
             }
-            else{
-                m_logger->debug("Return Value error {} ", retval.error().message());
+            else
+            {
+                m_logger->debug( "Return Value error {} ", retval.error().message() );
             }
         }
         //while ( !retval );
@@ -352,7 +353,7 @@ namespace sgns
                 if ( !VerifyTransaction( string_src_address, maybe_dag.value().nonce() ) )
                 {
                     m_logger->info( "Invalid PROOF" );
-                     return std::errc::invalid_argument;
+                    return std::errc::invalid_argument;
                 }
                 if ( string_src_address == account_m->GetAddress<std::string>() )
                 {
@@ -443,11 +444,12 @@ namespace sgns
                 }
                 else
                 {
-                    m_logger->debug( "Invalid transaction");
+                    m_logger->debug( "Invalid transaction" );
                     break;
                 }
             }
-            else {
+            else
+            {
                 //m_logger->debug("Block Chain ret fail {}", retval.error().message());
             }
 
@@ -534,7 +536,7 @@ namespace sgns
         if ( escrow_ctrl_m.size() )
         {
             ProcessingTransaction tx = ProcessingTransaction::DeSerializeByteVector( transaction_data );
-            
+
             for ( auto &ctrl : escrow_ctrl_m )
             {
                 if ( ctrl.job_hash == tx.GetJobHash() )
@@ -558,7 +560,7 @@ namespace sgns
                         ctrl.payout_peers.push_back( { uint256_t{ remainder }, ctrl.dev_addr } );
                         if ( processing_finished_cb_m )
                         {
-                            processing_finished_cb_m( tx.GetTaskID(), subtasks_ids);
+                            processing_finished_cb_m( tx.GetTaskID(), subtasks_ids );
                         }
                     }
                 }
