@@ -465,6 +465,7 @@ install_hfile(${CMAKE_CURRENT_BINARY_DIR}/generated/crdt)
 install_hfile(${CMAKE_CURRENT_BINARY_DIR}/generated/processing)
 install_hfile(${CMAKE_CURRENT_BINARY_DIR}/generated/account)
 install_hfile(${CMAKE_CURRENT_BINARY_DIR}/generated/blockchain)
+install_hfile(${CMAKE_CURRENT_BINARY_DIR}/generated/proof)
 
 # install the configuration file
 install(FILES
