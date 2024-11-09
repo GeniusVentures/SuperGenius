@@ -51,20 +51,20 @@ using namespace MNN;
         std::vector<uint8_t> ret_vect(imgdata);
 
         // Get Target Width
-        const int targetWidth = static_cast<int>((float)origwidth / (float)OUTPUT_STRIDE) * OUTPUT_STRIDE + 1;
-        const int targetHeight = static_cast<int>((float)origheight / (float)OUTPUT_STRIDE) * OUTPUT_STRIDE + 1;
+        //const int targetWidth = static_cast<int>((float)origwidth / (float)OUTPUT_STRIDE) * OUTPUT_STRIDE + 1;
+        //const int targetHeight = static_cast<int>((float)origheight / (float)OUTPUT_STRIDE) * OUTPUT_STRIDE + 1;
 
         // Scale
-        CV::Point scale;
-        scale.fX = (float)origwidth / (float)targetWidth;
-        scale.fY = (float)origheight / (float)targetHeight;
+        //CV::Point scale;
+        //scale.fX = (float)origwidth / (float)targetWidth;
+        //scale.fY = (float)origheight / (float)targetHeight;
 
         // Create net and session
         const void* buffer = static_cast<const void*>( modelFile.data() );
         auto mnnNet = std::shared_ptr<MNN::Interpreter>( MNN::Interpreter::createFromBuffer( buffer, modelFile.size() ) );
 
         MNN::ScheduleConfig netConfig;
-        netConfig.type      = MNN_FORWARD_VULKAN;
+        netConfig.type      = MNN_FORWARD_CPU;
         netConfig.numThread = 4;
         auto session        = mnnNet->createSession( netConfig );
 
@@ -72,7 +72,7 @@ using namespace MNN;
 
         if ( input->elementSize() <= 4 )
         {
-            mnnNet->resizeTensor( input, { 1, 3, targetHeight, targetWidth } );
+            mnnNet->resizeTensor( input, { 1, 3, origwidth, origheight } );
             mnnNet->resizeSession( session );
         }
 
@@ -96,7 +96,7 @@ using namespace MNN;
             CV::Matrix trans;
 
             // Dst -> [0, 1]
-            trans.postScale( 1.0 / targetWidth, 1.0 / targetHeight );
+            //trans.postScale( 1.0 / targetWidth, 1.0 / targetHeight );
             //[0, 1] -> Src
             trans.postScale( origwidth, origheight );
 
@@ -116,10 +116,24 @@ using namespace MNN;
         }
 
         auto outputTensor = mnnNet->getSessionOutput( session, nullptr );
+        int outputWidth = outputTensor->width();
+        int outputHeight = outputTensor->height();
+        int outputChannels = outputTensor->channel();
         auto outputHost   = std::make_unique<MNN::Tensor>( outputTensor, MNN::Tensor::CAFFE );
         outputTensor->copyToHostTensor( outputHost.get() );
 
         //return outputHost;
+            // Write output data to an image file
+        std::vector<uint8_t> outputData(outputWidth * outputHeight * outputChannels);
+        float* tensorData = outputHost->host<float>();
+
+        // Convert from float to uint8 for image saving
+        for (int i = 0; i < outputWidth * outputHeight * outputChannels; i++) {
+            outputData[i] = static_cast<uint8_t>(tensorData[i] * 255.0f);
+        }
+
+        // Save as PNG (supports RGB, RGB with channels = 3)
+        stbi_write_png("output_image.png", outputWidth, outputHeight, outputChannels, outputData.data(), outputWidth * outputChannels);
     }
 
     std::vector<uint8_t> loadFileToByteArray(const std::string& filePath) {
