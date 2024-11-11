@@ -35,18 +35,18 @@ namespace sgns::processing
 {
     using namespace MNN;
 
-    class MNN_PoseNet : public ProcessingProcessor
+    class MNN_Image : public ProcessingProcessor
     {
     public:
         /** Create a posenet processor
         */
-        MNN_PoseNet() 
+        MNN_Image() 
             //imageData_( std::make_unique<std::vector<std::vector<char>>>() ),
             //modelFile_( std::make_unique<std::vector<uint8_t>>() )
         {
         }
 
-        ~MNN_PoseNet() override{
+        ~MNN_Image() override{
             //stbi_image_free(imageData_);
         };
         /** Start processing data
@@ -72,7 +72,7 @@ namespace sgns::processing
         * @param origwidth - Width of image
         * @param origheight - Height of image
         */
-        std::unique_ptr<MNN::Tensor> MNNProcess( const std::vector<uint8_t> &imgdata, 
+        std::unique_ptr<MNN::Tensor> Process( const std::vector<uint8_t> &imgdata, 
                                                 std::vector<uint8_t> &modelFile, 
                                                 const int channels, 
                                                 const int origwidth, 

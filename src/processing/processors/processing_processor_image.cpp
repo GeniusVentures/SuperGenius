@@ -1,4 +1,4 @@
-#include "processing_processor_mnn_posenet.hpp"
+#include "processing_processor_image.hpp"
 #include <rapidjson/document.h>
 #include "processing/processing_imagesplit.hpp"
 
@@ -11,7 +11,7 @@ namespace sgns::processing
 {
     using namespace MNN;
 
-    std::vector<uint8_t> MNN_PoseNet::StartProcessing( SGProcessing::SubTaskResult &result,
+    std::vector<uint8_t> MNN_Image::StartProcessing( SGProcessing::SubTaskResult &result,
                                                        const SGProcessing::Task    &task,
                                                        const SGProcessing::SubTask &subTask, 
                                                        std::vector<char> imageData, 
@@ -65,7 +65,7 @@ namespace sgns::processing
                 else
                 {
                     auto procresults =
-                        MNNProcess( ChunkSplit.GetPart( chunkIdx ), modelFile_bytes, channels, ChunkSplit.GetPartWidthActual( chunkIdx ),
+                        Process( ChunkSplit.GetPart( chunkIdx ), modelFile_bytes, channels, ChunkSplit.GetPartWidthActual( chunkIdx ),
                                     ChunkSplit.GetPartHeightActual( chunkIdx ) );
 
                     const float *data     = procresults->host<float>();
@@ -90,7 +90,7 @@ namespace sgns::processing
         //return subTaskResultHash;
     }
 
-    std::unique_ptr<MNN::Tensor> MNN_PoseNet::MNNProcess(const std::vector<uint8_t>& imgdata, 
+    std::unique_ptr<MNN::Tensor> MNN_Image::Process(const std::vector<uint8_t>& imgdata, 
                                                          std::vector<uint8_t>& modelFile, 
                                                          const int channels, 
                                                          const int origwidth,

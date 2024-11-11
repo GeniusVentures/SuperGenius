@@ -9,7 +9,7 @@
 #include "processing/impl/processing_task_queue_impl.hpp"
 #include "processing/processing_service.hpp"
 #include "processing/processing_subtask_enqueuer_impl.hpp"
-#include "processing/processors/processing_processor_mnn_posenet.hpp"
+#include "processing/processors/processing_processor_image.hpp"
 #include "processing_mnn.hpp"
 
 using GossipPubSub = sgns::ipfs_pubsub::GossipPubSub;
@@ -107,7 +107,7 @@ int main(int argc, char* argv[])
         globalDB2,
         1000000,
         2);
-    processingCore2->RegisterProcessorFactory("posenet", []() { return std::make_unique<MNN_PoseNet>(); });
+    processingCore2->RegisterProcessorFactory("mnnimage", []() { return std::make_unique<MNN_Image>(); });
     //processingCore2->SetProcessorByName("posenet");
     //Set Imagesplit, this replaces bitswap getting of file for now. Should use AsyncIOmanager in the future
     //processingCore2->setImageSplitter(imagesplit);

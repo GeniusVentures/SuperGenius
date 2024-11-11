@@ -7,8 +7,8 @@ add_library(processing_service
     processing_tasksplit.hpp
     processing_tasksplit.cpp
     processing_processor.hpp
-    processors/processing_processor_mnn_posenet.hpp
-    processors/processing_processor_mnn_posenet.cpp
+    processors/processing_processor_image.hpp
+    processors/processing_processor_image.cpp
     processing_engine.hpp
     processing_engine.cpp
     processing_node.hpp
