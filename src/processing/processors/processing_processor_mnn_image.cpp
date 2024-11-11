@@ -1,4 +1,4 @@
-#include "processing_processor_image.hpp"
+#include "processing_processor_mnn_image.hpp"
 #include <rapidjson/document.h>
 #include "processing/processing_imagesplit.hpp"
 

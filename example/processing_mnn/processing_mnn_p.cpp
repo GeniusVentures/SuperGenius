@@ -9,7 +9,7 @@
 #include "processing/impl/processing_task_queue_impl.hpp"
 #include "processing/processing_service.hpp"
 #include "processing/processing_subtask_enqueuer_impl.hpp"
-#include "processing/processors/processing_processor_image.hpp"
+#include "processing/processors/processing_processor_mnn_image.hpp"
 #include "processing_mnn.hpp"
 
 using GossipPubSub = sgns::ipfs_pubsub::GossipPubSub;
