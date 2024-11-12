@@ -23,6 +23,7 @@ jobs:
       fail-fast: false
       matrix:
         target: [Android, iOS, OSX, Linux, Windows]
+        build-type: [Release]
         include:
           - target: Linux
             host: ubuntu-latest
@@ -39,21 +40,30 @@ jobs:
       - name: Checkout SuperGenius repository
         uses: actions/checkout@v4
         with:
-          path: 'SuperGenius'
+          path: "SuperGenius"
           submodules: "recursive"
 
-      # Determine branch name to use for thirdparty repository
-      - name: Set branch name for thirdparty
-        id: branch_check
+      - name: Set branch name for thirdparty download
+        id: branch-name
         run: |
-          branch_name=$(git -C SuperGenius rev-parse --abbrev-ref HEAD)
-
-          # Check if the branch exists in the thirdparty repository
-          if git ls-remote --heads https://github.com/GeniusVentures/thirdparty.git $branch_name | grep -q $branch_name; then
-            echo "branch_name=$branch_name" >> $GITHUB_ENV
+          if ${{github.event_name == 'pull_request'}}; then
+              current_branch=${{ github.event.pull_request.head.ref }}
           else
-            echo "branch_name=develop" >> $GITHUB_ENV
+              current_branch=$GITHUB_REF_NAME
           fi
+
+          echo "Identified current branch as ${current_branch}"
+
+          if git ls-remote --heads https://github.com/GeniusVentures/thirdparty.git $current_branch | grep -q $current_branch; then
+              echo "Using same branch for thirdparty"
+              thirdparty_branch=${current_branch}
+          else
+              echo "Using develop branch from thirdparty"
+              thirdparty_branch=develop
+          fi
+
+          echo "THIRDPARTY_BRANCH=$thirdparty_branch" >>$GITHUB_OUTPUT
+          echo "SGNS_BRANCH=$current_branch" >>$GITHUB_OUTPUT
         shell: bash
 
       - name: Download thirdparty release
@@ -62,38 +72,38 @@ jobs:
           mkdir thirdparty
           cd thirdparty
 
-          tag_name=${{matrix.target}}-${branch_name}-Release
+          tag_name=${{matrix.target}}-${{steps.branch-name.outputs.THIRDPARTY_BRANCH}}-Release
 
           gh release download ${tag_name} --repo GeniusVentures/thirdparty -p "*-lib.tar.gz"
 
+          echo "Found libraries:"
+
           for library in *-lib.tar.gz; do
-            tar -xzvf "$library"
+              echo "${library}"
+              tar -xzf "${library}"
           done
         shell: bash
 
-      - name: Set clang as the default compiler
-        if: ${{ matrix.host == 'ubuntu-latest' }}
+      - name: Configure Linux host
+        if: ${{ matrix.host == 'ubuntu-latest'}}
         run: |
           sudo update-alternatives --install /usr/bin/cc cc $(which clang) 100
           sudo update-alternatives --install /usr/bin/c++ c++ $(which clang++) 100
           sudo update-alternatives --set cc $(which clang)
           sudo update-alternatives --set c++ $(which clang++)
-
-      - name: Install Linux host dependencies
-        if: ${{ matrix.host == 'ubuntu-latest'}}
-        run: |
+           
           sudo apt install ccache ninja-build libvulkan-dev -y
           echo "CMAKE_GENERATOR=Ninja" >> $GITHUB_ENV
 
-      - name: Install Windows host dependencies
+      - name: Configure Windows host
         if: ${{ matrix.host == 'windows-latest'}}
         run: |
           choco install ccache -A
 
-      - name: Install Darwin host dependencies
+      - name: Configure macOS host
         if: ${{ matrix.host == 'macos-latest'}}
         run: |
-          brew install ccache ninja
+          brew install ccache ninja bash
           echo "CMAKE_GENERATOR=Ninja" >> $GITHUB_ENV
 
       - name: Add Darwin toolchain
@@ -115,48 +125,52 @@ jobs:
       - name: Install bindgen
         run: cargo install cbindgen
 
-      - name: Add Rust target
+      - name: Add wasm Rust target
         run: rustup target add wasm32-unknown-emscripten
-      
-      - name: Configure SuperGenius CMake for Mac x86
-        if: ${{ matrix.target == 'OSX'}}
-        working-directory: ${{github.workspace}}/SuperGenius
-        run: cmake -S build/${{matrix.target}} -B build/${{matrix.target}}/Release -DCMAKE_BUILD_TYPE=Release -DPLATFORM=MAC -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty
 
-      - name: Configure SuperGenius CMake for iOS
-        if: ${{ matrix.target == 'iOS'}}
-        working-directory: ${{github.workspace}}/SuperGenius
-        run: cmake -S build/${{matrix.target}} -B build/${{matrix.target}}/Release -DCMAKE_BUILD_TYPE=Release -DPLATFORM=OS64 -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty
+      - name: Set build directory
+        run: |
+          if ${{matrix.target == 'Android'}}; then
+            BUILD_DIRECTORY=build/${{matrix.target}}/${{matrix.build-type}}/${{matrix.abi}}
+          else
+            BUILD_DIRECTORY=build/${{matrix.target}}/${{matrix.build-type}}
+          fi
+          echo "BUILD_DIRECTORY=$BUILD_DIRECTORY" >> $GITHUB_ENV
+        shell: bash
 
-      - name: Configure SuperGenius CMake for Android
+      - name: Configure CMake for Android
         if: ${{ matrix.target == 'Android'}}
         working-directory: ${{github.workspace}}/SuperGenius
-        run: cmake -S build/${{matrix.target}} -B build/${{matrix.target}}/Release/${{matrix.abi}} -DCMAKE_BUILD_TYPE=Release -DANDROID_ABI=${{matrix.abi}} -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty
+        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DANDROID_ABI=${{matrix.abi}} -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty
 
-      - name: Configure SuperGenius CMake
-        if: ${{ matrix.target != 'OSX' && matrix.target != 'iOS' && matrix.target != 'Android' }}
+      - name: Configure CMake for Mac x86
+        if: ${{ matrix.target == 'OSX'}}
         working-directory: ${{github.workspace}}/SuperGenius
-        run: cmake -S build/${{matrix.target}} -B build/${{matrix.target}}/Release -DCMAKE_BUILD_TYPE=Release -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty
+        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DPLATFORM=MAC -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty
+
+      - name: Configure CMake for iOS
+        if: ${{ matrix.target == 'iOS'}}
+        working-directory: ${{github.workspace}}/SuperGenius
+        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DPLATFORM=OS64 -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty
+
+      - name: Configure CMake for Linux
+        if: ${{matrix.target == 'Linux'}}
+        working-directory: ${{github.workspace}}/SuperGenius
+        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty
+
+      - name: Configure CMake for Windows
+        if: ${{matrix.target == 'Windows'}}
+        working-directory: ${{github.workspace}}/SuperGenius
+        run: cmake -S build/${{matrix.target}} -B $env:BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty
 
       - name: Build SuperGenius
-        if: ${{ matrix.target != 'Android' }}
         working-directory: ${{github.workspace}}/SuperGenius
-        run: |
-          if [ '${{matrix.target}}' == 'Android' ]; then
-            cmake --build build/${{matrix.target}}/Release/${{matrix.abi}} --config Release -j
-          else
-            cmake --build build/${{matrix.target}}/Release --config Release -j
-          fi
+        run: cmake --build $BUILD_DIRECTORY --config ${{matrix.build-type}} -j
         shell: bash
 
       - name: Install SuperGenius
-        working-directory: ${{github.workspace}}/SuperGenius/build/${{matrix.target}}/Release
-        run: |
-          if [ '${{matrix.target}}' == 'Android' ]; then
-              cd ${{matrix.abi}}
-          fi
-          cmake --install .
-        shell: bash
+        working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
+        run: cmake --install .
 
       - name: Compressing Build Artifacts
         working-directory: ${{github.workspace}}/SuperGenius
@@ -169,7 +183,7 @@ jobs:
           cd ${{matrix.target}}
           rm -rf !(Release) .[!.]* ..?*
           cd Release
-          if [[ "${{matrix.target == 'Android'}}"]]; then
+          if ${{matrix.target == 'Android'}}; then
             rm -rf !(${{matrix.abi}}) .[!.]* ..?*
             cd ${{matrix.abi}}
           fi
@@ -182,17 +196,19 @@ jobs:
         id: vars
         if: ${{ github.event_name == 'workflow_dispatch' }}
         run: |
-          if [ '${{matrix.target}}' == 'Android' ]; then
+          if ${{matrix.target == 'Android'}}; then
             OS_NAME=${{matrix.target}}-${{matrix.abi}}
           else
             OS_NAME=${{matrix.target}}
           fi
-          BRANCH_NAME=${GITHUB_REF#refs/heads/}
-          BUILD_TYPE=Release
-          FILE_NAME="${OS_NAME}-${BRANCH_NAME}-${BUILD_TYPE}.tar.gz"
-          echo "RELEASE_TAG=${OS_NAME}-${BRANCH_NAME}-${BUILD_TYPE}-${GITHUB_SHA::7}" >> $GITHUB_ENV
-          echo "RELEASE_NAME=${OS_NAME} ${BRANCH_NAME} ${BUILD_TYPE} (${GITHUB_SHA::7})" >> $GITHUB_ENV
-          echo "FILE_NAME=$FILE_NAME" >> $GITHUB_ENV
+
+          branch_name=${{steps.branch-name.outputs.SGNS_BRANCH}}
+          build_type=Release
+          file_name="${OS_NAME}-${branch_name}-${build_type}.tar.gz"
+
+          echo "RELEASE_TAG=${OS_NAME}-${branch_name}-${build_type}-${GITHUB_SHA::7}" >> $GITHUB_ENV
+          echo "RELEASE_NAME=${OS_NAME} ${branch_name} ${build_type} (${GITHUB_SHA::7})" >> $GITHUB_ENV
+          echo "FILE_NAME=$file_name" >> $GITHUB_ENV
         shell: bash
 
       - name: Rename Artifact
