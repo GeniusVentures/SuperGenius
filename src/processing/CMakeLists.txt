@@ -11,6 +11,8 @@ add_library(processing_service
     processors/processing_processor_mnn_image.cpp
     processors/processing_processor_mnn_audio.hpp
     processors/processing_processor_mnn_audio.cpp
+    processors/processing_processor_mnn_ml.hpp
+    processors/processing_processor_mnn_ml.cpp
     processing_engine.hpp
     processing_engine.cpp
     processing_node.hpp
