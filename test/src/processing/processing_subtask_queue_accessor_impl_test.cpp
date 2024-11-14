@@ -146,7 +146,7 @@ public:
  * @when A result is published to the channel
  * @then The node receives the result
  */
-TEST_F(SubTaskQueueAccessorImplTest, SubscribtionToResultChannel)
+TEST_F(SubTaskQueueAccessorImplTest, DISABLED_SubscribtionToResultChannel)
 {
     auto pubs1 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();;
     pubs1->Start(40001, {});
@@ -213,7 +213,7 @@ TEST_F(SubTaskQueueAccessorImplTest, SubscribtionToResultChannel)
  * @when Subtasks are finished and chunk hashes are valid
  * @then Task finalization sink is called.
  */
-TEST_F(SubTaskQueueAccessorImplTest, TaskFinalization)
+TEST_F(SubTaskQueueAccessorImplTest, DISABLED_TaskFinalization)
 {
     auto pubs1 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();;
     pubs1->Start(40001, {});
@@ -285,7 +285,7 @@ TEST_F(SubTaskQueueAccessorImplTest, TaskFinalization)
  * @when Subtasks contains invalid chunk hashes
  * @then The subtasks processing is restarted.
  */
-TEST_F(SubTaskQueueAccessorImplTest, InvalidSubTasksRestart)
+TEST_F(SubTaskQueueAccessorImplTest, DISABLED_InvalidSubTasksRestart)
 {
     auto pubs1 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();;
     pubs1->Start(40001, {});

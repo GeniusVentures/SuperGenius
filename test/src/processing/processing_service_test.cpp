@@ -92,7 +92,7 @@ sinks:
 groups:
   - name: processing_service_test
     sink: console
-    level: info
+    level: off
     children:
       - name: libp2p
       - name: Gossip
@@ -114,7 +114,7 @@ public:
         logging_system->configure();
 
         libp2p::log::setLoggingSystem(logging_system);
-        libp2p::log::setLevelOfGroup("processing_service_test", soralog::Level::DEBUG);
+        libp2p::log::setLevelOfGroup("processing_service_test", soralog::Level::OFF);
     }
 };
 /**
