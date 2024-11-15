@@ -87,7 +87,7 @@ namespace sgns::blockchain
 
         on_finalized_block_found( finalized_block );
 
-        return std::move( block_storage );
+        return block_storage;
     }
 
     outcome::result<std::shared_ptr<KeyValueBlockStorage>> KeyValueBlockStorage::createWithGenesis(
