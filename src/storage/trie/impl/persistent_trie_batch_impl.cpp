@@ -47,7 +47,7 @@ namespace sgns::storage::trie {
   outcome::result<Buffer> PersistentTrieBatchImpl::commit() {
     OUTCOME_TRY((auto &&, root), serializer_->storeTrie(*trie_));
     root_changed_handler_(root);
-    return std::move(root);
+    return root;
   }
 
   std::unique_ptr<TopperTrieBatch> PersistentTrieBatchImpl::batchOnTop() {

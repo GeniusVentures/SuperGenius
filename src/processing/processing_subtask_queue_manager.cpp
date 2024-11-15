@@ -312,7 +312,7 @@ std::unique_ptr<SGProcessing::SubTaskQueue> ProcessingSubTaskQueueManager::GetQu
     {
         queue->CopyFrom(*m_queue.get());
     }
-    return std::move(queue);
+    return queue;
 }
 
 void ProcessingSubTaskQueueManager::ChangeSubTaskProcessingStates(

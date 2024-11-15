@@ -123,7 +123,7 @@ namespace sgns::blockchain
         BOOST_OUTCOME_TRYV2( auto &&, block_storage->setLastFinalizedBlockHash( genesis_block_hash ) );
 
         on_genesis_created( genesis_block );
-        return std::move( block_storage );
+        return block_storage;
     }
 
     outcome::result<primitives::BlockHeader> KeyValueBlockStorage::getBlockHeader( const primitives::BlockId &id ) const
@@ -154,7 +154,7 @@ namespace sgns::blockchain
         //OUTCOME_TRY((auto &&, block_data),
         //            scale::decode<primitives::BlockData>(encoded_block_data));
         auto block_data = GetBlockDataFromSerialized( encoded_block_data.toVector() );
-        return std::move( block_data );
+        return block_data;
     }
 
     outcome::result<primitives::Justification> KeyValueBlockStorage::getJustification(
@@ -307,7 +307,6 @@ namespace sgns::blockchain
                 std::cerr << "Failed to parse BlockPayloadData from array." << std::endl;
             }
             hash = ( base::Hash256::fromReadableString( hash_proto.hash() ) ).value();
-            //std::copy(hash_res.value().begin(), hash_res.value().end(), hash.begin());
             return hash;
         }
 
@@ -402,4 +401,4 @@ namespace sgns::blockchain
 
         return block_data;
     }
-} // namespace sgns::blockchain
+}
