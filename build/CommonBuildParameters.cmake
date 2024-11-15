@@ -14,6 +14,12 @@ set(BUILD_TESTING "ON" CACHE BOOL "Build tests")
 
 add_definitions(-D_USE_INSTALLED_BOOST_JSON_=TRUE)
 
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_definitions(-DDEBUG_BYTECODE_CIRCUITS)
+else()
+    add_definitions(-DRELEASE_BYTECODE_CIRCUITS)
+endif()
+
 if(BUILD_TESTING)
     set(GTest_DIR "${_THIRDPARTY_BUILD_DIR}/GTest/lib/cmake/GTest")
     set(GTest_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/GTest/include")

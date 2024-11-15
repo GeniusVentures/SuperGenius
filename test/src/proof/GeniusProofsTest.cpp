@@ -88,15 +88,19 @@ TEST( GeniusProofsTest, InvalidTransferProof )
     auto base_proof = IBasicProofTest::DeSerializeBaseProof( proof_result.value() );
 
     auto AnotherTxProof = TransferProofTest( 700, 1200 );
+#ifdef RELEASE_BYTECODE_CIRCUITS
+    std::string TransactionBytecode{ std::string( TransactionCircuit ) };
+#else
+    std::string TransactionBytecode{ std::string( TransactionCircuitDebug ) };
+#endif
 
     auto wrong_parameters = AnotherTxProof.GenerateJsonParameters();
     auto right_parameters = TxProof2.GenerateJsonParameters();
 
     std::vector<sgns::GeniusProver::ParameterType> parameters;
 
-    verification_result = TxProof2.VerifyFullProof( wrong_parameters,
-                                                    base_proof.value().proof_data(),
-                                                    std::string( TransactionCircuit ) );
+    verification_result =
+        TxProof2.VerifyFullProof( wrong_parameters, base_proof.value().proof_data(), TransactionBytecode );
     if ( verification_result.has_error() )
     {
         // Print the error information
@@ -107,9 +111,8 @@ TEST( GeniusProofsTest, InvalidTransferProof )
     // Assert that the function was successful (i.e., no error occurred)
     ASSERT_FALSE( verification_result.has_error() ) << "Verification Expected success but got an error!";
     EXPECT_FALSE( verification_result.value() );
-    verification_result = TxProof2.VerifyFullProof( right_parameters,
-                                                    base_proof.value().proof_data(),
-                                                    std::string( TransactionCircuit ) );
+    verification_result =
+        TxProof2.VerifyFullProof( right_parameters, base_proof.value().proof_data(), TransactionBytecode );
     if ( verification_result.has_error() )
     {
         // Print the error information

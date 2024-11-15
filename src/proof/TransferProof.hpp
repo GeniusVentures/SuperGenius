@@ -126,7 +126,12 @@ namespace sgns
         static inline bool Register()
         {
             RegisterDeserializer( std::string( TRANSFER_TYPE_NAME ), &TransferProof::DeSerializePublicParams );
+#ifdef RELEASE_BYTECODE_CIRCUITS
             RegisterBytecode( std::string( TRANSFER_TYPE_NAME ), std::string( TransactionCircuit ) );
+#else
+            RegisterBytecode( std::string( TRANSFER_TYPE_NAME ), std::string( TransactionCircuitDebug ) );
+#endif
+
             return true;
         }
 

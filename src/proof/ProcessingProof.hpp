@@ -15,7 +15,6 @@
 #include <boost/json.hpp>
 #include <string_view>
 #include "IBasicProof.hpp"
-#include "circuits/TransactionVerifierCircuit.hpp"
 
 namespace sgns
 {

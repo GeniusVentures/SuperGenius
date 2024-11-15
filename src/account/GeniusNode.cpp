@@ -45,7 +45,7 @@ namespace sgns
         auto result    = logging_system->configure();
         std::cout << "Log Result: " << result.message << std::endl;
         libp2p::log::setLoggingSystem( logging_system );
-        libp2p::log::setLevelOfGroup( "SuperGeniusDemo", soralog::Level::ERROR_ );
+        libp2p::log::setLevelOfGroup( "SuperGeniusDemo", soralog::Level::TRACE );
         //libp2p::log::setLevelOfGroup("SuperGeniusDemoFile", soralog::Level::ERROR_);
 
         auto loggerGlobalDB = base::createLogger( "GlobalDB" );
@@ -132,7 +132,6 @@ namespace sgns
         auto global_db_init_result = globaldb_->Init( crdt::CrdtOptions::DefaultOptions() );
         if ( global_db_init_result.has_error() )
         {
-            // Print the error information
             auto error = global_db_init_result.error();
             throw std::runtime_error( error.message() );
             return;
