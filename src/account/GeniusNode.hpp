@@ -92,6 +92,11 @@ namespace sgns
         {
             return transaction_manager_->TransferFunds( amount, destination );
         }
+        
+        std::shared_ptr<ipfs_pubsub::GossipPubSub> GetPubSub()
+        {
+            return pubsub_;
+        }
 
         static std::vector<uint8_t> GetImageByCID( const std::string &cid );
 
