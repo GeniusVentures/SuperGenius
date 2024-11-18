@@ -11,9 +11,9 @@
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 #include "account/GeniusNode.hpp"
-#include "FileManager.hpp"
+#include "base/buffer.hpp"
+#include "primitives/common.hpp"
 #include "upnp.hpp"
-#include "processing/processing_imagesplit.hpp"
 #include "processing/processing_tasksplit.hpp"
 #include "processing/processing_subtask_enqueuer_impl.hpp"
 #include "processing/processors/processing_processor_mnn_posenet.hpp"
@@ -305,6 +305,33 @@ namespace sgns
         return transaction_manager_->GetBalance();
     }
 
+    std::vector<base::Buffer> GeniusNode::GetBlocks()
+    {
+        std::vector<base::Buffer> out;
+        primitives::BlockNumber   id = 0;
+
+        outcome::result<primitives::BlockHeader> retval = outcome::failure( boost::system::error_code{} );
+        do
+        {
+            if ( retval = block_storage_->getBlockHeader( id ); retval )
+            {
+                if ( auto DAGHeader = retval.value(); DAGHeader.number == id )
+                {
+                    if ( auto block = block_storage_->GetRawBlock( id ); block )
+                    {
+                        out.push_back( std::move( block.value() ) );
+                        id++;
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+            }
+        } while ( retval );
+
+        return out;
+    }
 
     uint16_t GeniusNode::GenerateRandomPort( const std::string &address )
     {

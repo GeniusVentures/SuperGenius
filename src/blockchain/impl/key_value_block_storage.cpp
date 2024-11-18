@@ -143,16 +143,8 @@ namespace sgns::blockchain
 
     outcome::result<primitives::BlockData> KeyValueBlockStorage::getBlockData( const primitives::BlockId &id ) const
     {
-        OUTCOME_TRY( ( auto &&, key ), idToBufferKey( *db_, id ) );
+        OUTCOME_TRY( ( auto &&, encoded_block_data ), GetRawBlock( id ) );
 
-        //TODO - For now one block data per block header. Revisit this
-        OUTCOME_TRY( ( auto &&, encoded_block_data ),
-                     db_->Get( { header_repo_->GetHeaderPath() + std::string( key.toString() ) + "/tx/0" } ) );
-
-        //OUTCOME_TRY((auto &&, encoded_block_data),
-        //            getWithPrefix(*db_, Prefix::BLOCK_DATA, id));
-        //OUTCOME_TRY((auto &&, block_data),
-        //            scale::decode<primitives::BlockData>(encoded_block_data));
         auto block_data = GetBlockDataFromSerialized( encoded_block_data.toVector() );
         return block_data;
     }
@@ -400,5 +392,16 @@ namespace sgns::blockchain
         block_data.body = body;
 
         return block_data;
+    }
+
+    outcome::result<base::Buffer> KeyValueBlockStorage::GetRawBlock( const primitives::BlockId &id ) const
+    {
+        OUTCOME_TRY( ( auto &&, key ), idToBufferKey( *db_, id ) );
+
+        //TODO - For now one block data per block header. Revisit this
+        OUTCOME_TRY( ( auto &&, encoded_block_data ),
+                     db_->Get( { header_repo_->GetHeaderPath() + std::string( key.toString() ) + "/tx/0" } ) );
+
+        return encoded_block_data;
     }
 }

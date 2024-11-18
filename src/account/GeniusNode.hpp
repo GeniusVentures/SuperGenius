@@ -16,6 +16,7 @@
 #include <libp2p/multi/content_identifier_codec.hpp>
 
 #include "account/GeniusAccount.hpp"
+#include "base/buffer.hpp"
 #include "ipfs_pubsub/gossip_pubsub.hpp"
 #include "crdt/globaldb/globaldb.hpp"
 #include "account/TransactionManager.hpp"
@@ -92,6 +93,8 @@ namespace sgns
         {
             return transaction_manager_->TransferFunds( amount, destination );
         }
+
+        [[nodiscard]] std::vector<base::Buffer> GetBlocks();
 
         static std::vector<uint8_t> GetImageByCID( const std::string &cid );
 

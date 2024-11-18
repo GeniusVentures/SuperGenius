@@ -1,6 +1,7 @@
 #ifndef SUPERGENIUS_KEY_VALUE_BLOCK_STORAGE_HPP
 #define SUPERGENIUS_KEY_VALUE_BLOCK_STORAGE_HPP
 
+#include "base/buffer.hpp"
 #include "blockchain/block_storage.hpp"
 
 #include "base/logger.hpp"
@@ -67,6 +68,7 @@ namespace sgns::blockchain
         outcome::result<primitives::BlockHeader>   getBlockHeader( const primitives::BlockId &id ) const override;
         outcome::result<primitives::BlockBody>     getBlockBody( const primitives::BlockId &id ) const override;
         outcome::result<primitives::BlockData>     getBlockData( const primitives::BlockId &id ) const override;
+        outcome::result<base::Buffer>              GetRawBlock( const primitives::BlockId &id ) const;
         outcome::result<primitives::Justification> getJustification( const primitives::BlockId &block ) const override;
 
         outcome::result<primitives::BlockHash> putBlockHeader( const primitives::BlockHeader &header ) override;
