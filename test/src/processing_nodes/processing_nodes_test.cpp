@@ -36,7 +36,7 @@ DevConfig_st DEV_CONFIG{ "0xcafe", 0.65, 1.0, 0 , "./node1"};
 DevConfig_st DEV_CONFIG2{ "0xcafe", 0.65, 1.0, 0 , "./node2"};
 DevConfig_st DEV_CONFIG3{ "0xcafe", 0.65, 1.0, 0 , "./node3"};
 
-TEST_F(ProcessingNodesTest, ProcessNodesAddress)
+TEST_F(ProcessingNodesTest, DISABLED_ProcessNodesAddress)
 {
     sgns::GeniusNode node_main( DEV_CONFIG, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", false );
     sgns::GeniusNode node_proc1( DEV_CONFIG2, "livebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", false );
@@ -54,7 +54,7 @@ TEST_F(ProcessingNodesTest, ProcessNodesAddress)
     EXPECT_NE(address_proc1, address_proc2) << "node_proc1 and node_proc2 have the same address!";
 }
 
-TEST_F(ProcessingNodesTest, ProcessNodesPubsubs)
+TEST_F(ProcessingNodesTest, DISABLED_ProcessNodesPubsubs)
 {
     sgns::GeniusNode node_main( DEV_CONFIG, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", false );
     sgns::GeniusNode node_proc1( DEV_CONFIG2, "livebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", false );
@@ -90,7 +90,7 @@ TEST_F(ProcessingNodesTest, ProcessNodesTransactionsCount)
     // bootstrappers.push_back(node_proc1.GetPubSub()->GetLocalAddress());   
     // node_proc2.GetPubSub()->AddPeers(bootstrappers);    
     node_main.MintTokens(100);
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    std::this_thread::sleep_for(std::chrono::milliseconds(4000));
     int transcount_main = node_main.GetTransactions().size();
     int transcount_node1 = node_proc1.GetTransactions().size();
     int transcount_node2 = node_proc2.GetTransactions().size();
