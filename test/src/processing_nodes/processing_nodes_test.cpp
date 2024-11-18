@@ -15,6 +15,9 @@
 #include <unistd.h>
 #endif
 
+#include <functional>
+#include <thread>
+
 #include <boost/program_options.hpp>
 #include <boost/format.hpp>
 #include <boost/asio.hpp>
@@ -66,5 +69,32 @@ TEST_F(ProcessingNodesTest, ProcessNodesPubsubs)
     EXPECT_NE(address_main, address_proc1) << "node_main and node_proc1 have the same address!";
     EXPECT_NE(address_main, address_proc2) << "node_main and node_proc2 have the same address!";
     EXPECT_NE(address_proc1, address_proc2) << "node_proc1 and node_proc2 have the same address!";
+}
 
+TEST_F(ProcessingNodesTest, ProcessNodesTransactionsCount)
+{
+    sgns::GeniusNode node_main( DEV_CONFIG, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", false );
+    sgns::GeniusNode node_proc1( DEV_CONFIG2, "livebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", false );
+    sgns::GeniusNode node_proc2( DEV_CONFIG3, "zzombeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", false );
+    //Bootstrap everyone to connect to each other
+    std::vector<std::string> bootstrappers;
+    bootstrappers.push_back(node_proc1.GetPubSub()->GetLocalAddress());
+    bootstrappers.push_back(node_proc2.GetPubSub()->GetLocalAddress());
+    node_main.GetPubSub()->AddPeers(bootstrappers);
+    // bootstrappers.clear();
+    // bootstrappers.push_back(node_main.GetPubSub()->GetLocalAddress());
+    // bootstrappers.push_back(node_proc2.GetPubSub()->GetLocalAddress());   
+    // node_proc1.GetPubSub()->AddPeers(bootstrappers);
+    // bootstrappers.clear();
+    // bootstrappers.push_back(node_main.GetPubSub()->GetLocalAddress());
+    // bootstrappers.push_back(node_proc1.GetPubSub()->GetLocalAddress());   
+    // node_proc2.GetPubSub()->AddPeers(bootstrappers);    
+    node_main.MintTokens(100);
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    int transcount_main = node_main.GetTransactions().size();
+    int transcount_node1 = node_proc1.GetTransactions().size();
+    int transcount_node2 = node_proc2.GetTransactions().size();
+    ASSERT_EQ(1, transcount_main);
+    ASSERT_EQ(1, transcount_node1);
+    ASSERT_EQ(1, transcount_node2);
 }
