@@ -35,9 +35,9 @@ DevConfig_st DEV_CONFIG3{ "0xcafe", 0.65, 1.0, 0 , "./node3"};
 
 TEST_F(ProcessingNodesTest, ProcessNodesAddress)
 {
-    sgns::GeniusNode node_main( DEV_CONFIG, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" );
-    sgns::GeniusNode node_proc1( DEV_CONFIG2, "livebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" );
-    sgns::GeniusNode node_proc2( DEV_CONFIG3, "zzombeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" );
+    sgns::GeniusNode node_main( DEV_CONFIG, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", false );
+    sgns::GeniusNode node_proc1( DEV_CONFIG2, "livebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", false );
+    sgns::GeniusNode node_proc2( DEV_CONFIG3, "zzombeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", false );
     std::string address_main = node_main.GetAddress();
     std::string address_proc1 = node_proc1.GetAddress();
     std::string address_proc2 = node_proc2.GetAddress();
@@ -53,9 +53,9 @@ TEST_F(ProcessingNodesTest, ProcessNodesAddress)
 
 TEST_F(ProcessingNodesTest, ProcessNodesPubsubs)
 {
-    sgns::GeniusNode node_main( DEV_CONFIG, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" );
-    sgns::GeniusNode node_proc1( DEV_CONFIG2, "livebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" );
-    sgns::GeniusNode node_proc2( DEV_CONFIG3, "zzombeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" );
+    sgns::GeniusNode node_main( DEV_CONFIG, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", false );
+    sgns::GeniusNode node_proc1( DEV_CONFIG2, "livebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", false );
+    sgns::GeniusNode node_proc2( DEV_CONFIG3, "zzombeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", false );
     std::string address_main = node_main.GetPubSub()->GetLocalAddress();
     std::string address_proc1 = node_proc1.GetPubSub()->GetLocalAddress();
     std::string address_proc2 = node_proc2.GetPubSub()->GetLocalAddress();

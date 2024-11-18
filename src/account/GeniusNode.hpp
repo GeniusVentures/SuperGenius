@@ -59,7 +59,7 @@ namespace sgns
     class GeniusNode : public IComponent
     {
     public:
-        GeniusNode( const DevConfig_st &dev_config, const char *eth_private_key );
+        GeniusNode( const DevConfig_st &dev_config, const char *eth_private_key, bool autodht = true );
         // static GeniusNode &GetInstance()
         // {
         //     return instance;
@@ -92,7 +92,7 @@ namespace sgns
         {
             return transaction_manager_->TransferFunds( amount, destination );
         }
-        
+
         std::shared_ptr<ipfs_pubsub::GossipPubSub> GetPubSub()
         {
             return pubsub_;
@@ -115,6 +115,7 @@ namespace sgns
         std::shared_ptr<processing::SubTaskResultStorageImpl>      task_result_storage_;
         std::shared_ptr<soralog::LoggingSystem>                    logging_system;
         std::string                                                write_base_path_;
+        bool                                                       autodht_;
 
         std::thread io_thread;
 
