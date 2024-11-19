@@ -26,24 +26,46 @@
 #include "FileManager.hpp"
 class ProcessingNodesTest : public ::testing::Test
 {
-public:
-    virtual void SetUp() override
+protected:
+    static sgns::GeniusNode* node_main;
+    static sgns::GeniusNode* node_proc1;
+    static sgns::GeniusNode* node_proc2;
+
+    static DevConfig_st DEV_CONFIG;
+    static DevConfig_st DEV_CONFIG2;
+    static DevConfig_st DEV_CONFIG3;
+
+    static void SetUpTestSuite()
     {
-        
+        node_main = new sgns::GeniusNode(DEV_CONFIG, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", false);
+        node_proc1 = new sgns::GeniusNode(DEV_CONFIG2, "livebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", false);
+        node_proc2 = new sgns::GeniusNode(DEV_CONFIG3, "zzombeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", false);
+    }
+
+    static void TearDownTestSuite()
+    {
+        std::cout << "Tear Down" << std::endl;
+        delete node_main;
+        delete node_proc1;
+        delete node_proc2;
     }
 };
-DevConfig_st DEV_CONFIG{ "0xcafe", 0.65, 1.0, 0 , "./node1"};
-DevConfig_st DEV_CONFIG2{ "0xcafe", 0.65, 1.0, 0 , "./node2"};
-DevConfig_st DEV_CONFIG3{ "0xcafe", 0.65, 1.0, 0 , "./node3"};
 
-TEST_F(ProcessingNodesTest, DISABLED_ProcessNodesAddress)
+// Static member initialization
+sgns::GeniusNode* ProcessingNodesTest::node_main = nullptr;
+sgns::GeniusNode* ProcessingNodesTest::node_proc1 = nullptr;
+sgns::GeniusNode* ProcessingNodesTest::node_proc2 = nullptr;
+
+DevConfig_st ProcessingNodesTest::DEV_CONFIG = { "0xcafe", 0.65, 1.0, 0, "./node1" };
+DevConfig_st ProcessingNodesTest::DEV_CONFIG2 = { "0xcafe", 0.65, 1.0, 0, "./node2" };
+DevConfig_st ProcessingNodesTest::DEV_CONFIG3 = { "0xcafe", 0.65, 1.0, 0, "./node3" };
+
+
+TEST_F(ProcessingNodesTest, ProcessNodesAddress)
 {
-    sgns::GeniusNode node_main( DEV_CONFIG, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", false );
-    sgns::GeniusNode node_proc1( DEV_CONFIG2, "livebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", false );
-    sgns::GeniusNode node_proc2( DEV_CONFIG3, "zzombeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", false );
-    std::string address_main = node_main.GetAddress();
-    std::string address_proc1 = node_proc1.GetAddress();
-    std::string address_proc2 = node_proc2.GetAddress();
+    std::string address_main = node_main->GetAddress();
+    std::string address_proc1 = node_proc1->GetAddress();
+    std::string address_proc2 = node_proc2->GetAddress();
     // std::cout << "Addresses " << std::endl;
     // std::cout << "Main Node: " << address_main << std::endl;
     // std::cout << "Proc Node 1: " << address_proc1 << std::endl;
@@ -54,14 +76,11 @@ TEST_F(ProcessingNodesTest, DISABLED_ProcessNodesAddress)
     EXPECT_NE(address_proc1, address_proc2) << "node_proc1 and node_proc2 have the same address!";
 }
 
-TEST_F(ProcessingNodesTest, DISABLED_ProcessNodesPubsubs)
+TEST_F(ProcessingNodesTest, ProcessNodesPubsubs)
 {
-    sgns::GeniusNode node_main( DEV_CONFIG, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", false );
-    sgns::GeniusNode node_proc1( DEV_CONFIG2, "livebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", false );
-    sgns::GeniusNode node_proc2( DEV_CONFIG3, "zzombeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", false );
-    std::string address_main = node_main.GetPubSub()->GetLocalAddress();
-    std::string address_proc1 = node_proc1.GetPubSub()->GetLocalAddress();
-    std::string address_proc2 = node_proc2.GetPubSub()->GetLocalAddress();
+    std::string address_main = node_main->GetPubSub()->GetLocalAddress();
+    std::string address_proc1 = node_proc1->GetPubSub()->GetLocalAddress();
+    std::string address_proc2 = node_proc2->GetPubSub()->GetLocalAddress();
     // std::cout << "Addresses " << std::endl;
     // std::cout << "Main Node: " << address_main << std::endl;
     // std::cout << "Proc Node 1: " << address_proc1 << std::endl;
@@ -73,14 +92,11 @@ TEST_F(ProcessingNodesTest, DISABLED_ProcessNodesPubsubs)
 
 TEST_F(ProcessingNodesTest, ProcessNodesTransactionsCount)
 {
-    sgns::GeniusNode node_main( DEV_CONFIG, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", false );
-    sgns::GeniusNode node_proc1( DEV_CONFIG2, "livebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", false );
-    sgns::GeniusNode node_proc2( DEV_CONFIG3, "zzombeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", false );
     //Bootstrap everyone to connect to each other
     std::vector<std::string> bootstrappers;
-    bootstrappers.push_back(node_proc1.GetPubSub()->GetLocalAddress());
-    bootstrappers.push_back(node_proc2.GetPubSub()->GetLocalAddress());
-    node_main.GetPubSub()->AddPeers(bootstrappers);
+    bootstrappers.push_back(node_proc1->GetPubSub()->GetLocalAddress());
+    bootstrappers.push_back(node_proc2->GetPubSub()->GetLocalAddress());
+    node_main->GetPubSub()->AddPeers(bootstrappers);
     // bootstrappers.clear();
     // bootstrappers.push_back(node_main.GetPubSub()->GetLocalAddress());
     // bootstrappers.push_back(node_proc2.GetPubSub()->GetLocalAddress());   
@@ -89,11 +105,11 @@ TEST_F(ProcessingNodesTest, ProcessNodesTransactionsCount)
     // bootstrappers.push_back(node_main.GetPubSub()->GetLocalAddress());
     // bootstrappers.push_back(node_proc1.GetPubSub()->GetLocalAddress());   
     // node_proc2.GetPubSub()->AddPeers(bootstrappers);    
-    node_main.MintTokens(100);
+    node_main->MintTokens(100);
     std::this_thread::sleep_for(std::chrono::milliseconds(4000));
-    int transcount_main = node_main.GetTransactions().size();
-    int transcount_node1 = node_proc1.GetTransactions().size();
-    int transcount_node2 = node_proc2.GetTransactions().size();
+    int transcount_main = node_main->GetTransactions().size();
+    int transcount_node1 = node_proc1->GetTransactions().size();
+    int transcount_node2 = node_proc2->GetTransactions().size();
     ASSERT_EQ(1, transcount_main);
     ASSERT_EQ(1, transcount_node1);
     ASSERT_EQ(1, transcount_node2);
