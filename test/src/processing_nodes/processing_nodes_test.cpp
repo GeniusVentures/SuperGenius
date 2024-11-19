@@ -46,8 +46,11 @@ protected:
     {
         std::cout << "Tear Down" << std::endl;
         delete node_main;
+        std::cout << "Tear Down2" << std::endl;
         delete node_proc1;
+        std::cout << "Tear Down3" << std::endl;
         delete node_proc2;
+        std::cout << "Tear Down4" << std::endl;
     }
 };
 
@@ -106,10 +109,14 @@ TEST_F(ProcessingNodesTest, ProcessNodesTransactionsCount)
     // bootstrappers.push_back(node_proc1.GetPubSub()->GetLocalAddress());   
     // node_proc2.GetPubSub()->AddPeers(bootstrappers);    
     node_main->MintTokens(100);
-    std::this_thread::sleep_for(std::chrono::milliseconds(4000));
+    std::this_thread::sleep_for(std::chrono::milliseconds(10000));
     int transcount_main = node_main->GetTransactions().size();
     int transcount_node1 = node_proc1->GetTransactions().size();
     int transcount_node2 = node_proc2->GetTransactions().size();
+    std::cout << "Count 1" << transcount_main << std::endl;
+    std::cout << "Count 2" << transcount_node1 << std::endl;
+    std::cout << "Count 3" << transcount_node2 << std::endl;
+
     ASSERT_EQ(1, transcount_main);
     ASSERT_EQ(1, transcount_node1);
     ASSERT_EQ(1, transcount_node2);
