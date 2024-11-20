@@ -24,6 +24,9 @@
 #include "local_secure_storage/impl/json/JSONSecureStorage.hpp"
 #include "account/GeniusNode.hpp"
 #include "FileManager.hpp"
+#include <boost/dll.hpp>
+#include <boost/algorithm/string/replace.hpp>
+
 class ProcessingNodesTest : public ::testing::Test
 {
 protected:
@@ -35,13 +38,24 @@ protected:
     static DevConfig_st DEV_CONFIG2;
     static DevConfig_st DEV_CONFIG3;
 
+    static std::string binary_path;
+
     static void SetUpTestSuite()
     {
+        std::string binary_path = boost::dll::program_location().parent_path().string();
+        std::strncpy(DEV_CONFIG.BaseWritePath, (binary_path + "/node1").c_str(), sizeof(DEV_CONFIG.BaseWritePath));
+        std::strncpy(DEV_CONFIG2.BaseWritePath, (binary_path + "/node2").c_str(), sizeof(DEV_CONFIG2.BaseWritePath));
+        std::strncpy(DEV_CONFIG3.BaseWritePath, (binary_path + "/node3").c_str(), sizeof(DEV_CONFIG3.BaseWritePath));
 
+        // Ensure null termination in case the string is too long
+        DEV_CONFIG.BaseWritePath[sizeof(DEV_CONFIG.BaseWritePath) - 1] = '\0';
+        DEV_CONFIG2.BaseWritePath[sizeof(DEV_CONFIG2.BaseWritePath) - 1] = '\0';
+        DEV_CONFIG3.BaseWritePath[sizeof(DEV_CONFIG3.BaseWritePath) - 1] = '\0';
         node_main = new sgns::GeniusNode(DEV_CONFIG, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", false, false);
         node_proc1 = new sgns::GeniusNode(DEV_CONFIG2, "livebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", false, true);
         node_proc2 = new sgns::GeniusNode(DEV_CONFIG3, "zzombeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", false, true);
-        std::cout << "nodes made" << std::endl;
+
+            //Connect to each other
         std::vector<std::string> bootstrappers;
         bootstrappers.push_back(node_proc1->GetPubSub()->GetLocalAddress());
         bootstrappers.push_back(node_proc2->GetPubSub()->GetLocalAddress());
@@ -68,6 +82,8 @@ sgns::GeniusNode* ProcessingNodesTest::node_proc2 = nullptr;
 DevConfig_st ProcessingNodesTest::DEV_CONFIG = { "0xcafe", 0.65, 1.0, 0, "./node1" };
 DevConfig_st ProcessingNodesTest::DEV_CONFIG2 = { "0xcafe", 0.65, 1.0, 0, "./node2" };
 DevConfig_st ProcessingNodesTest::DEV_CONFIG3 = { "0xcafe", 0.65, 1.0, 0, "./node3" };
+
+std::string ProcessingNodesTest::binary_path = "";
 
 TEST_F(ProcessingNodesTest, ProcessNodesAddress)
 {
@@ -101,7 +117,7 @@ TEST_F(ProcessingNodesTest, ProcessNodesPubsubs)
 TEST_F(ProcessingNodesTest, ProcessNodesTransactionsCount)
 {
     node_main->MintTokens(100);
-    std::this_thread::sleep_for(std::chrono::milliseconds(10000));
+    std::this_thread::sleep_for(std::chrono::milliseconds(4000));
     int transcount_main = node_main->GetTransactions().size();
     int transcount_node1 = node_proc1->GetTransactions().size();
     int transcount_node2 = node_proc2->GetTransactions().size();
@@ -119,17 +135,17 @@ TEST_F(ProcessingNodesTest, DISABLED_ProcessingNodeTransfer)
     int balance_main = node_main->GetBalance();
     int balance_node1 = node_proc1->GetBalance();
     int balance_node2 = node_proc2->GetBalance();
-    //node_main->TransferFunds(1,static_cast<boost::multiprecision::uint256_t>(node_proc1->account_->address.GetPublicKey())));
 }
 
 
 TEST_F(ProcessingNodesTest, PostProcessing)
 {
+    std::string bin_path = boost::dll::program_location().parent_path().string() + "/";
         std::string json_data = R"(
                 {
                 "data": {
-                    "type": "https",
-                    "URL": "https://ipfs.filebase.io/ipfs/QmdHvvEXRUgmyn1q3nkQwf9yE412Vzy5gSuGAukHRLicXA/"
+                    "type": "file",
+                    "URL": "file://[basepath]../../../../test/src/processing_nodes/"
                 },
                 "model": {
                     "name": "mnnimage",
@@ -165,6 +181,8 @@ TEST_F(ProcessingNodesTest, PostProcessing)
                 ]
                 }
                )";
+        boost::replace_all(json_data, "[basepath]", bin_path);
+        std::cout << "Json Data: " << json_data << std::endl;
         int balance_main = node_main->GetBalance();
         int balance_node1 = node_proc1->GetBalance();
         int balance_node2 = node_proc2->GetBalance();
