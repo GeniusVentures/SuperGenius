@@ -42,6 +42,10 @@ protected:
         node_proc1 = new sgns::GeniusNode(DEV_CONFIG2, "livebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", false);
         node_proc2 = new sgns::GeniusNode(DEV_CONFIG3, "zzombeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", false);
         std::cout << "nodes made" << std::endl;
+        std::vector<std::string> bootstrappers;
+        bootstrappers.push_back(node_proc1->GetPubSub()->GetLocalAddress());
+        bootstrappers.push_back(node_proc2->GetPubSub()->GetLocalAddress());
+        node_main->GetPubSub()->AddPeers(bootstrappers);
     }
 
     static void TearDownTestSuite()
@@ -70,10 +74,10 @@ TEST_F(ProcessingNodesTest, ProcessNodesAddress)
     std::string address_main = node_main->GetAddress();
     std::string address_proc1 = node_proc1->GetAddress();
     std::string address_proc2 = node_proc2->GetAddress();
-    // std::cout << "Addresses " << std::endl;
-    // std::cout << "Main Node: " << address_main << std::endl;
-    // std::cout << "Proc Node 1: " << address_proc1 << std::endl;
-    // std::cout << "Proc Node 2: " << address_proc2 << std::endl;
+    std::cout << "Addresses " << std::endl;
+    std::cout << "Main Node: " << address_main << std::endl;
+    std::cout << "Proc Node 1: " << address_proc1 << std::endl;
+    std::cout << "Proc Node 2: " << address_proc2 << std::endl;
 
     EXPECT_NE(address_main, address_proc1) << "node_main and node_proc1 have the same address!";
     EXPECT_NE(address_main, address_proc2) << "node_main and node_proc2 have the same address!";
@@ -96,19 +100,6 @@ TEST_F(ProcessingNodesTest, ProcessNodesPubsubs)
 
 TEST_F(ProcessingNodesTest, ProcessNodesTransactionsCount)
 {
-    //Bootstrap everyone to connect to each other
-    std::vector<std::string> bootstrappers;
-    bootstrappers.push_back(node_proc1->GetPubSub()->GetLocalAddress());
-    bootstrappers.push_back(node_proc2->GetPubSub()->GetLocalAddress());
-    node_main->GetPubSub()->AddPeers(bootstrappers);
-    // bootstrappers.clear();
-    // bootstrappers.push_back(node_main.GetPubSub()->GetLocalAddress());
-    // bootstrappers.push_back(node_proc2.GetPubSub()->GetLocalAddress());   
-    // node_proc1.GetPubSub()->AddPeers(bootstrappers);
-    // bootstrappers.clear();
-    // bootstrappers.push_back(node_main.GetPubSub()->GetLocalAddress());
-    // bootstrappers.push_back(node_proc1.GetPubSub()->GetLocalAddress());   
-    // node_proc2.GetPubSub()->AddPeers(bootstrappers);    
     node_main->MintTokens(100);
     std::this_thread::sleep_for(std::chrono::milliseconds(10000));
     int transcount_main = node_main->GetTransactions().size();
@@ -118,7 +109,62 @@ TEST_F(ProcessingNodesTest, ProcessNodesTransactionsCount)
     std::cout << "Count 2" << transcount_node1 << std::endl;
     std::cout << "Count 3" << transcount_node2 << std::endl;
 
-    //ASSERT_EQ(1, transcount_main);
     ASSERT_EQ(transcount_main, transcount_node1);
     ASSERT_EQ(transcount_main, transcount_node2);
+}
+
+
+TEST_F(ProcessingNodesTest, DISABLED_ProcessingNodeTransfer)
+{
+    int balance_main = node_main->GetBalance();
+    int balance_node1 = node_proc1->GetBalance();
+    int balance_node2 = node_proc2->GetBalance();
+    //node_main->TransferFunds(1,static_cast<boost::multiprecision::uint256_t>(node_proc1->account_->address.GetPublicKey())));
+}
+
+
+TEST_F(ProcessingNodesTest, PostProcessing)
+{
+        std::string json_data = R"(
+                {
+                "data": {
+                    "type": "https",
+                    "URL": "https://ipfs.filebase.io/ipfs/QmdHvvEXRUgmyn1q3nkQwf9yE412Vzy5gSuGAukHRLicXA/"
+                },
+                "model": {
+                    "name": "mnnimage",
+                    "file": "model.mnn"
+                },
+                "input": [
+                    {
+                        "image": "data/ballet.data",
+                        "block_len": 4860000 ,
+                        "block_line_stride": 5400,
+                        "block_stride": 0,
+                        "chunk_line_stride": 1080,
+                        "chunk_offset": 0,
+                        "chunk_stride": 4320,
+                        "chunk_subchunk_height": 5,
+                        "chunk_subchunk_width": 5,
+                        "chunk_count": 25,
+                        "channels": 4
+                    },
+                    {
+                        "image": "data/frisbee3.data",
+                        "block_len": 786432 ,
+                        "block_line_stride": 1536,
+                        "block_stride": 0,
+                        "chunk_line_stride": 384,
+                        "chunk_offset": 0,
+                        "chunk_stride": 1152,
+                        "chunk_subchunk_height": 4,
+                        "chunk_subchunk_width": 4,
+                        "chunk_count": 16,
+                        "channels": 3
+                    }
+                ]
+                }
+               )";
+        node_main->ProcessImage(json_data,4);
+        std::this_thread::sleep_for(std::chrono::milliseconds(10000));
 }
