@@ -165,6 +165,11 @@ TEST_F(ProcessingNodesTest, PostProcessing)
                 ]
                 }
                )";
+        int balance_main = node_main->GetBalance();
+        int balance_node1 = node_proc1->GetBalance();
+        int balance_node2 = node_proc2->GetBalance();
         node_main->ProcessImage(json_data,4);
         std::this_thread::sleep_for(std::chrono::milliseconds(10000));
+        ASSERT_EQ(balance_main-4, node_main->GetBalance());
+        //ASSERT_EQ(transcount_main, transcount_node2);       
 }

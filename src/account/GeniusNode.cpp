@@ -50,13 +50,13 @@ namespace sgns
         //libp2p::log::setLevelOfGroup("SuperGeniusDemoFile", soralog::Level::ERROR_);
 
         auto loggerGlobalDB = base::createLogger( "GlobalDB" );
-        loggerGlobalDB->set_level( spdlog::level::trace );
+        loggerGlobalDB->set_level( spdlog::level::off );
 
         auto loggerDAGSyncer = base::createLogger("GraphsyncDAGSyncer");
-        loggerDAGSyncer->set_level( spdlog::level::trace );
+        loggerDAGSyncer->set_level( spdlog::level::off );
 
         auto loggerBroadcaster = base::createLogger("PubSubBroadcasterExt");
-        loggerBroadcaster->set_level(spdlog::level::trace);
+        loggerBroadcaster->set_level(spdlog::level::off);
 
         auto loggerDataStore = base::createLogger("CrdtDatastore");
         loggerDataStore->set_level(spdlog::level::off);
@@ -65,8 +65,13 @@ namespace sgns
         loggerTransactions->set_level(spdlog::level::off);
 
         auto loggerQueue = base::createLogger("ProcessingTaskQueueImpl");
-        loggerQueue->set_level(spdlog::level::trace);
-        
+        loggerQueue->set_level(spdlog::level::off);
+
+        auto loggerRocksDB = base::createLogger("rocksdb");
+        loggerRocksDB->set_level(spdlog::level::off);
+
+        auto loggerTM = base::createLogger("TransactionManager");
+        loggerTM->set_level(spdlog::level::off); 
         //auto loggerAutonat = base::createLogger("Autonat");
         //loggerDAGSyncer->set_level(spdlog::level::trace);
 
