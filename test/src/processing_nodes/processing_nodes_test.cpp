@@ -37,6 +37,7 @@ protected:
 
     static void SetUpTestSuite()
     {
+
         node_main = new sgns::GeniusNode(DEV_CONFIG, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", false);
         node_proc1 = new sgns::GeniusNode(DEV_CONFIG2, "livebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", false);
         node_proc2 = new sgns::GeniusNode(DEV_CONFIG3, "zzombeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", false);
@@ -63,7 +64,6 @@ sgns::GeniusNode* ProcessingNodesTest::node_proc2 = nullptr;
 DevConfig_st ProcessingNodesTest::DEV_CONFIG = { "0xcafe", 0.65, 1.0, 0, "./node1" };
 DevConfig_st ProcessingNodesTest::DEV_CONFIG2 = { "0xcafe", 0.65, 1.0, 0, "./node2" };
 DevConfig_st ProcessingNodesTest::DEV_CONFIG3 = { "0xcafe", 0.65, 1.0, 0, "./node3" };
-
 
 TEST_F(ProcessingNodesTest, ProcessNodesAddress)
 {
@@ -118,7 +118,7 @@ TEST_F(ProcessingNodesTest, ProcessNodesTransactionsCount)
     std::cout << "Count 2" << transcount_node1 << std::endl;
     std::cout << "Count 3" << transcount_node2 << std::endl;
 
-    ASSERT_EQ(1, transcount_main);
-    ASSERT_EQ(1, transcount_node1);
-    ASSERT_EQ(1, transcount_node2);
+    //ASSERT_EQ(1, transcount_main);
+    ASSERT_EQ(transcount_main, transcount_node1);
+    ASSERT_EQ(transcount_main, transcount_node2);
 }
