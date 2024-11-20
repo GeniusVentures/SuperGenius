@@ -50,7 +50,7 @@ namespace sgns
         processing_finished_cb_m( std::move( processing_finished_cb ) )
 
     {
-        m_logger->set_level( spdlog::level::debug );
+        m_logger->set_level( spdlog::level::off );
         m_logger->info( "Initializing values by reading whole blockchain" );
     }
 

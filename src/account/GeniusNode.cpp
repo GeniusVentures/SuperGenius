@@ -29,14 +29,15 @@ namespace sgns
 {
     //GeniusNode GeniusNode::instance( DEV_CONFIG );
 
-    GeniusNode::GeniusNode( const DevConfig_st &dev_config, const char *eth_private_key, bool autodht ) :
+    GeniusNode::GeniusNode( const DevConfig_st &dev_config, const char *eth_private_key, bool autodht, bool isprocessor ) :
         account_( std::make_shared<GeniusAccount>( static_cast<uint8_t>( dev_config.TokenID ),
                                                    std::string( dev_config.BaseWritePath ),
                                                    eth_private_key ) ),
         io_( std::make_shared<boost::asio::io_context>() ),
         write_base_path_( dev_config.BaseWritePath ),
         dev_config_( dev_config ),
-        autodht_(autodht)
+        autodht_(autodht),
+        isprocessor_(isprocessor)
     {
         logging_system = std::make_shared<soralog::LoggingSystem>( std::make_shared<soralog::ConfiguratorFromYAML>(
             // Original LibP2P logging config
@@ -174,7 +175,7 @@ namespace sgns
             [this]( const std::string &var, const std::set<std::string> &vars ) { ProcessingFinished( var, vars ); } );
 
         transaction_manager_->Start();
-        processing_service_->StartProcessing( std::string( PROCESSING_GRID_CHANNEL ) );
+        if(isprocessor_) processing_service_->StartProcessing( std::string( PROCESSING_GRID_CHANNEL ) );
 
         if(autodht_) DHTInit();
 

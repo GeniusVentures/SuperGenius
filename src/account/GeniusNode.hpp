@@ -59,7 +59,7 @@ namespace sgns
     class GeniusNode : public IComponent
     {
     public:
-        GeniusNode( const DevConfig_st &dev_config, const char *eth_private_key, bool autodht = true );
+        GeniusNode( const DevConfig_st &dev_config, const char *eth_private_key, bool autodht = true, bool isprocessor = true );
         // static GeniusNode &GetInstance()
         // {
         //     return instance;
@@ -116,6 +116,7 @@ namespace sgns
         std::shared_ptr<soralog::LoggingSystem>                    logging_system;
         std::string                                                write_base_path_;
         bool                                                       autodht_;
+        bool                                                       isprocessor_;
 
         std::thread io_thread;
 
