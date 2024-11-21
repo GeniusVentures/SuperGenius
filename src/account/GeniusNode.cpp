@@ -85,6 +85,9 @@ namespace sgns
         auto logNoise = sgns::base::createLogger( "Noise" );
         logNoise->set_level( spdlog::level::off );
 
+        auto loggerSubQueue = base::createLogger("ProcessingSubTaskQueueAccessorImpl");
+        loggerSubQueue->set_level(spdlog::level::trace);
+
 
         auto pubsubport    = 40001 + GenerateRandomPort( account_->GetAddress<std::string>() );
         auto graphsyncport = 40010 + GenerateRandomPort( account_->GetAddress<std::string>() );

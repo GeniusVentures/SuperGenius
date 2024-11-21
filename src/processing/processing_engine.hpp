@@ -49,6 +49,7 @@ private:
     std::shared_ptr<SubTaskQueueAccessor> m_subTaskQueueAccessor;
 
     mutable std::mutex m_mutexSubTaskQueue;
+    std::chrono::steady_clock::time_point m_lastProcessedTime;
     
     base::Logger m_logger = base::createLogger("ProcessingEngine");
 };

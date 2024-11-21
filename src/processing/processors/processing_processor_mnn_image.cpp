@@ -1,7 +1,8 @@
 #include "processing_processor_mnn_image.hpp"
 #include <rapidjson/document.h>
 #include "processing/processing_imagesplit.hpp"
-
+#include <functional>
+#include <thread>
 //#define STB_IMAGE_IMPLEMENTATION
 //#define STB_IMAGE_WRITE_IMPLEMENTATION
 //#include "stb_image.h"

@@ -38,6 +38,7 @@ namespace sgns
             //Generate a subtask uuid.
             boost::uuids::uuid uuid = boost::uuids::random_generator()();
             auto uuidstring = boost::uuids::to_string(uuid);
+            std::cout << "Subtask UID: " << uuidstring << std::endl;
             subtask.set_subtaskid(uuidstring);
             for ( size_t chunkIdx = 0; chunkIdx < numchunks; ++chunkIdx )
             {

@@ -92,7 +92,9 @@ namespace sgns::processing
 
         std::mutex m_subTaskCountMutex;
         size_t m_processingSubTaskCount;
+
         std::map<std::string, std::shared_ptr<std::pair<std::vector<char>, std::vector<char>>>> cidData_;
+        
     };
 }
 

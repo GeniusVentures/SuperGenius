@@ -184,14 +184,15 @@ TEST_F(ProcessingNodesTest, PostProcessing)
                )";
         boost::replace_all(json_data, "[basepath]", bin_path);
         std::cout << "Json Data: " << json_data << std::endl;
+
+        node_main->ProcessImage(json_data,cost);
         int balance_main = node_main->GetBalance();
         int balance_node1 = node_proc1->GetBalance();
         int balance_node2 = node_proc2->GetBalance();
         std::cout << "Balances: " << balance_main << std::endl;
         std::cout << "Balances: " << balance_node1 << std::endl;
         std::cout << "Balances: " << balance_node2 << std::endl;
-        node_main->ProcessImage(json_data,cost);
-        std::this_thread::sleep_for(std::chrono::milliseconds(10000));
+        std::this_thread::sleep_for(std::chrono::milliseconds(30000));
         ASSERT_EQ(balance_main-cost, node_main->GetBalance());
         //ASSERT_EQ(transcount_main, transcount_node2);       
 }
