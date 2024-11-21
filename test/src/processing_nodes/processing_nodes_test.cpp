@@ -140,6 +140,7 @@ TEST_F(ProcessingNodesTest, DISABLED_ProcessingNodeTransfer)
 
 TEST_F(ProcessingNodesTest, PostProcessing)
 {
+    int cost = 8;
     std::string bin_path = boost::dll::program_location().parent_path().string() + "/";
         std::string json_data = R"(
                 {
@@ -186,8 +187,11 @@ TEST_F(ProcessingNodesTest, PostProcessing)
         int balance_main = node_main->GetBalance();
         int balance_node1 = node_proc1->GetBalance();
         int balance_node2 = node_proc2->GetBalance();
-        node_main->ProcessImage(json_data,4);
+        std::cout << "Balances: " << balance_main << std::endl;
+        std::cout << "Balances: " << balance_node1 << std::endl;
+        std::cout << "Balances: " << balance_node2 << std::endl;
+        node_main->ProcessImage(json_data,cost);
         std::this_thread::sleep_for(std::chrono::milliseconds(10000));
-        ASSERT_EQ(balance_main-4, node_main->GetBalance());
+        ASSERT_EQ(balance_main-cost, node_main->GetBalance());
         //ASSERT_EQ(transcount_main, transcount_node2);       
 }
