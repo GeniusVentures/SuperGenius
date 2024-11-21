@@ -246,8 +246,6 @@ find_package(AsyncIOManager CONFIG REQUIRED)
 
 # --------------------------------------------------------
 # Set config of crypto3
-# set(crypto3_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/crypto3/include")
-# set(crypto3_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/crypto3/lib")
 add_library(crypto3::algebra INTERFACE IMPORTED)
 add_library(crypto3::block INTERFACE IMPORTED)
 add_library(crypto3::blueprint INTERFACE IMPORTED)
@@ -306,60 +304,15 @@ set_target_properties(marshalling::crypto3_zk PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES "${_THIRDPARTY_BUILD_DIR}/zkLLVM/include"
 )
 
-# set(crypto3_hash_DIR "${_THIRDPARTY_BUILD_DIR}/zkLLVM/lib/cmake/crypto3_hash")
-# set(crypto3_algebra_DIR "${_THIRDPARTY_BUILD_DIR}/zkLLVM/lib/cmake/crypto3_algebra")
-# find_package(crypto3_algebra CONFIG REQUIRED)
-# find_package(crypto3_hash CONFIG REQUIRED)
-# include_directories(${crypto3_INCLUDE_DIR})
-include_directories(
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/algebra/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/block/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/codec/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/containers/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/hash/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/kdf/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/mac/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/math/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/marshalling/algebra/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/marshalling/core/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/marshalling/multiprecision/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/marshalling/zk/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/modes/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/multiprecision/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/passhash/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/pbkdf/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/pkpad/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/pubkey/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/random/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/stream/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/threshold/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/vdf/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/zk/include"
-
-)
-
-# blueprint
-set(blueprint_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/zkLLVM/include")
-
-# set(blueprint_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/blueprint/lib")
-# set(blueprint_DIR "${_THIRDPARTY_BUILD_DIR}/blueprint/lib/cmake/blueprint")
-# find_package(blueprint CONFIG REQUIRED)
-include_directories(${blueprint_INCLUDE_DIR})
+# zkLLVM
+set(zkLLVM_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/zkLLVM/include")
+include_directories(${zkLLVM_INCLUDE_DIR})
 
 # circifier
 # set(LLVM_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/circifier/include")
 # set(LLVM_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/circifier/lib")
 set(LLVM_DIR "${_THIRDPARTY_BUILD_DIR}/zkLLVM/lib/cmake/llvm")
 find_package(LLVM CONFIG REQUIRED)
-
-# include_directories(${LLVM_INCLUDE_DIR})
-
-# assigner
-# set(assigner_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/assigner/include")
-# set(assigner_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/assigner/lib")
-# set(assigner_DIR "${_THIRDPARTY_BUILD_DIR}/assigner/lib/cmake/assigner")
-# find_package(assigner CONFIG REQUIRED)
-# include_directories(${assigner_INCLUDE_DIR})
 
 # gnus_upnp
 set(gnus_upnp_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/gnus_upnp/include")
