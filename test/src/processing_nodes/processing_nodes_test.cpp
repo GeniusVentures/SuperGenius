@@ -43,9 +43,9 @@ protected:
     static void SetUpTestSuite()
     {
         std::string binary_path = boost::dll::program_location().parent_path().string();
-        std::strncpy(DEV_CONFIG.BaseWritePath, (binary_path + "/node1").c_str(), sizeof(DEV_CONFIG.BaseWritePath));
-        std::strncpy(DEV_CONFIG2.BaseWritePath, (binary_path + "/node2").c_str(), sizeof(DEV_CONFIG2.BaseWritePath));
-        std::strncpy(DEV_CONFIG3.BaseWritePath, (binary_path + "/node3").c_str(), sizeof(DEV_CONFIG3.BaseWritePath));
+        std::strncpy(DEV_CONFIG.BaseWritePath, (binary_path + "/node1/").c_str(), sizeof(DEV_CONFIG.BaseWritePath));
+        std::strncpy(DEV_CONFIG2.BaseWritePath, (binary_path + "/node2/").c_str(), sizeof(DEV_CONFIG2.BaseWritePath));
+        std::strncpy(DEV_CONFIG3.BaseWritePath, (binary_path + "/node3/").c_str(), sizeof(DEV_CONFIG3.BaseWritePath));
 
         // Ensure null termination in case the string is too long
         DEV_CONFIG.BaseWritePath[sizeof(DEV_CONFIG.BaseWritePath) - 1] = '\0';

@@ -66,7 +66,7 @@ namespace sgns
         loggerTransactions->set_level(spdlog::level::off);
 
         auto loggerQueue = base::createLogger("ProcessingTaskQueueImpl");
-        loggerQueue->set_level(spdlog::level::off);
+        loggerQueue->set_level(spdlog::level::trace);
 
         auto loggerRocksDB = base::createLogger("rocksdb");
         loggerRocksDB->set_level(spdlog::level::off);
@@ -119,7 +119,7 @@ namespace sgns
         //loggerBroadcaster->set_level( spdlog::level::debug );
 
         auto pubsubKeyPath =
-            ( boost::format( "SuperGNUSNode.TestNet.%s/pubs_processor" ) % account_->GetAddress<std::string>() ).str();
+            ( boost::format("SuperGNUSNode.TestNet.%s/pubs_processor" ) % account_->GetAddress<std::string>() ).str();
 
         pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
             crdt::KeyPairFileStorage( write_base_path_ + pubsubKeyPath ).GetKeyPair().value() );
@@ -127,7 +127,7 @@ namespace sgns
         
         globaldb_ = std::make_shared<crdt::GlobalDB>(
             io_,
-            (boost::format("SuperGNUSNode.TestNet.%s") % account_->GetAddress<std::string>()).str(),
+            (boost::format(write_base_path_ + "SuperGNUSNode.TestNet.%s") % account_->GetAddress<std::string>()).str(),
             graphsyncport,
             std::make_shared<ipfs_pubsub::GossipPubSubTopic>(pubsub_, std::string(PROCESSING_CHANNEL)));
 
