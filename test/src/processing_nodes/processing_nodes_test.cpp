@@ -117,7 +117,7 @@ TEST_F(ProcessingNodesTest, ProcessNodesPubsubs)
 TEST_F(ProcessingNodesTest, ProcessNodesTransactionsCount)
 {
     node_main->MintTokens(100);
-    std::this_thread::sleep_for(std::chrono::milliseconds(4000));
+    std::this_thread::sleep_for(std::chrono::milliseconds(10000));
     int transcount_main = node_main->GetTransactions().size();
     int transcount_node1 = node_proc1->GetTransactions().size();
     int transcount_node2 = node_proc2->GetTransactions().size();
@@ -184,15 +184,19 @@ TEST_F(ProcessingNodesTest, PostProcessing)
                )";
         boost::replace_all(json_data, "[basepath]", bin_path);
         std::cout << "Json Data: " << json_data << std::endl;
-
-        node_main->ProcessImage(json_data,cost);
         int balance_main = node_main->GetBalance();
         int balance_node1 = node_proc1->GetBalance();
         int balance_node2 = node_proc2->GetBalance();
+        node_main->ProcessImage(json_data,cost);
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(30000));
         std::cout << "Balances: " << balance_main << std::endl;
         std::cout << "Balances: " << balance_node1 << std::endl;
         std::cout << "Balances: " << balance_node2 << std::endl;
-        std::this_thread::sleep_for(std::chrono::milliseconds(30000));
+        std::cout << "Balances After: " << node_main->GetBalance() << std::endl;
+        std::cout << "Balances After: " << node_proc1->GetBalance() << std::endl;
+        std::cout << "Balances After: " << node_proc2->GetBalance() << std::endl;
         ASSERT_EQ(balance_main-cost, node_main->GetBalance());
-        //ASSERT_EQ(transcount_main, transcount_node2);       
+        ASSERT_EQ(balance_node1+2, node_proc1->GetBalance());     
+        ASSERT_EQ(balance_node2+2, node_proc2->GetBalance());    
 }
