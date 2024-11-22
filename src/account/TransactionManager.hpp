@@ -35,7 +35,8 @@ namespace sgns
     class TransactionManager
     {
     public:
-        using ProcessFinishCbType = std::function<void( const std::string &, const std::set<std::string> & )>;
+        using ProcessFinishCbType = std::function<
+            void( const std::string &, const std::set<std::string> &, const std::vector<OutputDestInfo> & )>;
 
         TransactionManager( std::shared_ptr<crdt::GlobalDB>           db,
                             std::shared_ptr<boost::asio::io_context>  ctx,
@@ -69,7 +70,9 @@ namespace sgns
                              const uint256_t   &dev_addr,
                              float              dev_cut,
                              const std::string &job_id );
-        bool     ReleaseEscrow( const std::string &job_id, const bool &pay );
+        bool     ReleaseEscrow( const std::string                 &job_id,
+                                const bool                        &pay,
+                                const std::vector<OutputDestInfo> &destinations );
         void     ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult );
         uint64_t GetBalance();
 
@@ -91,14 +94,12 @@ namespace sgns
             {
             }
 
-            uint256_t                                  dev_addr;
-            float                                      dev_cut;
-            uint256_t                                  job_hash;
-            uint256_t                                  full_amount;
-            uint64_t                                   num_subtasks;
-            InputUTXOInfo                              original_input;
-            std::vector<OutputDestInfo>                payout_peers;
-            std::unordered_map<std::string, uint256_t> subtask_info;
+            uint256_t     dev_addr;
+            float         dev_cut;
+            uint256_t     job_hash;
+            uint256_t     full_amount;
+            uint64_t      num_subtasks;
+            InputUTXOInfo original_input;
         };
 
         static constexpr std::uint16_t    MAIN_NET_ID             = 369;

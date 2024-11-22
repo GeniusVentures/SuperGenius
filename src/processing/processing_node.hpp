@@ -32,7 +32,8 @@ public:
         std::shared_ptr<SubTaskResultStorage> subTaskResultStorage,
         std::shared_ptr<ProcessingCore> processingCore,
         std::function<void(const SGProcessing::TaskResult&)> taskResultProcessingSink,
-        std::function<void(const std::string&)> processingErrorSink);
+        std::function<void(const std::string&)> processingErrorSink,
+        std::string node_id );
 
     ~ProcessingNode();
 

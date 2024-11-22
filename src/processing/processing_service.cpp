@@ -19,7 +19,8 @@ namespace sgns::processing
         m_processingCore( std::move( processingCore ) ),
         m_timerChannelListRequestTimeout( *m_context ),
         m_channelListRequestTimeout( boost::posix_time::seconds( 5 ) ),
-        m_isStopped( true )
+        m_isStopped( true ),
+        node_address_(m_gossipPubSub->GetLocalAddress() )
     {
     }
 
@@ -31,7 +32,8 @@ namespace sgns::processing
         std::shared_ptr<SubTaskResultStorage>                    subTaskResultStorage,
         std::shared_ptr<ProcessingCore>                          processingCore,
         std::function<void( const std::string &subTaskQueueId, const SGProcessing::TaskResult &taskresult )> userCallbackSuccess,
-        std::function<void( const std::string &subTaskQueueId )> userCallbackError ) :
+        std::function<void( const std::string &subTaskQueueId )> userCallbackError,
+        std::string node_address ) :
         m_gossipPubSub( std::move( gossipPubSub ) ),
         m_context( m_gossipPubSub->GetAsioContext() ),
         m_maximalNodesCount( maximalNodesCount ),
@@ -43,7 +45,8 @@ namespace sgns::processing
         m_channelListRequestTimeout( boost::posix_time::seconds( 5 ) ),
         m_isStopped( true ),
         userCallbackSuccess_( std::move( userCallbackSuccess ) ),
-        userCallbackError_( std::move( userCallbackError ) )
+        userCallbackError_( std::move( userCallbackError ) ),
+        node_address_(std::move(node_address))
     {
     }
 
@@ -193,7 +196,8 @@ namespace sgns::processing
                            processingQueuelId,
                            std::placeholders::_1 ),
                 std::bind(
-                    &ProcessingServiceImpl::OnProcessingError, this, processingQueuelId, std::placeholders::_1 ) );
+                    &ProcessingServiceImpl::OnProcessingError, this, processingQueuelId, std::placeholders::_1 ),
+                node_address_ );
 
             node->AttachTo( processingQueuelId );
             m_processingNodes[processingQueuelId] = node;
@@ -258,7 +262,7 @@ namespace sgns::processing
                     std::bind( &ProcessingServiceImpl::OnQueueProcessingCompleted, this, subTaskQueueId,
                                std::placeholders::_1 ),
                     std::bind( &ProcessingServiceImpl::OnProcessingError, this, subTaskQueueId,
-                               std::placeholders::_1 ) );
+                               std::placeholders::_1 ),node_address_ );
 
                 // @todo Figure out if the task is still available for other peers
                 // @todo Check if it is better to call EnqueueSubTasks within host

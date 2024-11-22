@@ -59,7 +59,10 @@ namespace sgns
     class GeniusNode : public IComponent
     {
     public:
-        GeniusNode( const DevConfig_st &dev_config, const char *eth_private_key, bool autodht = true, bool isprocessor = true );
+        GeniusNode( const DevConfig_st &dev_config,
+                    const char         *eth_private_key,
+                    bool                autodht     = true,
+                    bool                isprocessor = true );
         // static GeniusNode &GetInstance()
         // {
         //     return instance;
@@ -124,9 +127,11 @@ namespace sgns
 
         static uint16_t GenerateRandomPort( const std::string &address );
 
-        void ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult);
+        void ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult );
         void ProcessingError( const std::string &task_id );
-        void ProcessingFinished( const std::string &task_id, const std::set<std::string> &subtasks_ids );
+        void ProcessingFinished( const std::string                 &task_id,
+                                 const std::set<std::string>       &subtasks_ids,
+                                 const std::vector<OutputDestInfo> &destinations );
 
         static constexpr std::string_view db_path_                = "bc-%d/";
         static constexpr std::uint16_t    MAIN_NET                = 369;

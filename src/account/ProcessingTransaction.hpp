@@ -19,7 +19,10 @@ namespace sgns
     class ProcessingTransaction : public IGeniusTransactions
     {
     public:
-        ProcessingTransaction( const std::string &job_id, std::string subtask_id, const SGTransaction::DAGStruct &dag );
+        ProcessingTransaction( const std::string              &job_id,
+                               std::vector<std::string>        subtask_ids,
+                               std::vector<std::string>        node_addresses,
+                               const SGTransaction::DAGStruct &dag );
         ~ProcessingTransaction() override = default;
 
         std::vector<uint8_t>         SerializeByteVector() override;
@@ -29,9 +32,14 @@ namespace sgns
         {
             return job_hash_;
         }
-        std::string GetSubtaskID() const
+
+        std::vector<std::string> GetSubtaskIDs() const
         {
-            return subtask_id_;
+            return subtask_ids_;
+        }
+        std::vector<std::string> GetNodeAddresses() const
+        {
+            return node_addresses_;
         }
 
         std::string GetTaskID() const
@@ -41,17 +49,17 @@ namespace sgns
 
         std::string GetTransactionSpecificPath() override
         {
-            boost::format processing_fmt( GetType() + "/%s/%s" );
+            boost::format processing_fmt( GetType() + "/%s" );
 
-            processing_fmt % job_id_ % subtask_id_;
+            processing_fmt % job_id_;
             return processing_fmt.str();
         }
 
     private:
-        std::string job_id_;            ///< Job ID
-        uint256_t   job_hash_;          ///< Job ID
-        std::string subtask_id_;        ///< SubTask ID
-        std::string chunk_id_;        ///< SubTask ID
+        std::string              job_id_;         ///< Job ID
+        uint256_t                job_hash_;       ///< Job ID
+        std::vector<std::string> subtask_ids_;    ///< SubTask ID
+        std::vector<std::string> node_addresses_; ///< Addresses/ID of processors
         //uint256_t   hash_process_data; ///< Hash of the process data
         //std::vector<uint8_t> raw_data;          ///<The data being processed
     };

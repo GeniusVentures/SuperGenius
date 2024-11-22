@@ -137,7 +137,7 @@ namespace sgns
         return ret;
     }
 
-    bool TransactionManager::ReleaseEscrow( const std::string &job_id, const bool &pay )
+    bool TransactionManager::ReleaseEscrow( const std::string &job_id, const bool &pay,const std::vector<OutputDestInfo> &destinations )
     {
         if ( escrow_ctrl_m.empty() )
         {
@@ -156,7 +156,7 @@ namespace sgns
                 if ( pay )
                 {
                     auto transfer_transaction =
-                        std::make_shared<TransferTransaction>( it->payout_peers,
+                        std::make_shared<TransferTransaction>( destinations,
                                                                std::vector<InputUTXOInfo>{ it->original_input },
                                                                FillDAGStruct() );
                     this->EnqueueTransaction( transfer_transaction );
@@ -175,12 +175,18 @@ namespace sgns
 
     void TransactionManager::ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult )
     {
-        for (auto& subtask : taskresult.subtask_results())
+        std::vector<std::string> subtask_ids;
+        std::vector<std::string> node_addresses;
+        for ( auto &subtask : taskresult.subtask_results() )
         {
             std::cout << "Actually Queue Transaction" << subtask.subtaskid() << std::endl;
-            auto process_transaction = std::make_shared<ProcessingTransaction>(task_id, subtask.subtaskid(), FillDAGStructProc());
-            this->EnqueueTransaction(process_transaction);
+            subtask_ids.push_back( subtask.subtaskid() );
+            node_addresses.push_back( subtask.node_address() );
         }
+
+        auto process_transaction =
+            std::make_shared<ProcessingTransaction>( task_id, subtask_ids, node_addresses, FillDAGStruct() );
+        this->EnqueueTransaction( process_transaction );
     }
 
     uint64_t TransactionManager::GetBalance()
@@ -356,8 +362,9 @@ namespace sgns
                                                    transactions.value().end() );
                         last_block_id_m++;
                     }
-                    else{
-                        m_logger->debug( "Invalid transaction, hopefully just waiting for complete block.");
+                    else
+                    {
+                        m_logger->debug( "Invalid transaction, hopefully just waiting for complete block." );
                         break;
                     }
                 }
@@ -454,26 +461,25 @@ namespace sgns
         {
             if ( ctrl.job_hash == tx.GetJobHash() )
             {
-                ctrl.subtask_info[tx.GetSubtaskID()] = tx.GetSrcAddress<uint256_t>();
+                //Processing done
+                uint64_t peers_amount = ( ctrl.dev_cut * uint64_t{ ctrl.full_amount } ) / tx.GetNodeAddresses().size();
+                auto     remainder    = uint64_t{ ctrl.full_amount };
 
-                if ( ctrl.subtask_info.size() == ctrl.num_subtasks )
+                std::set<std::string>       subtasks_ids;
+                std::vector<OutputDestInfo> payout_peers;
+                for ( auto &subtask_id : tx.GetSubtaskIDs() )
                 {
-                    //Processing done
-                    uint64_t peers_amount = ( ctrl.dev_cut * uint64_t{ ctrl.full_amount } ) / ctrl.subtask_info.size();
-                    auto     remainder    = uint64_t{ ctrl.full_amount };
-
-                    std::set<std::string> subtasks_ids;
-                    for ( auto &pair : ctrl.subtask_info )
-                    {
-                        ctrl.payout_peers.push_back( { uint256_t{ peers_amount }, pair.second } );
-                        remainder -= peers_amount;
-                        subtasks_ids.insert( pair.first );
-                    }
-                    ctrl.payout_peers.push_back( { uint256_t{ remainder }, ctrl.dev_addr } );
-                    if ( processing_finished_cb_m )
-                    {
-                        processing_finished_cb_m( tx.GetTaskID(), subtasks_ids);
-                    }
+                    subtasks_ids.insert( subtask_id );
+                }
+                for ( auto &node_address : tx.GetNodeAddresses() )
+                {
+                    payout_peers.push_back( { uint256_t{ peers_amount }, uint256_t{ node_address } } );
+                    remainder -= peers_amount;
+                }
+                payout_peers.push_back( { uint256_t{ remainder }, ctrl.dev_addr } );
+                if ( processing_finished_cb_m )
+                {
+                    processing_finished_cb_m( tx.GetTaskID(), subtasks_ids, payout_peers );
                 }
             }
         }

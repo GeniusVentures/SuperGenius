@@ -46,7 +46,8 @@ message ProcessingTx
     uint64 mpc_magic_key = 2; //
     uint64 offset = 3; //
     string job_cid = 4; // 
-    string subtask_cid = 5; // 
+    repeated string subtask_cids = 5; // 
+    repeated string node_addresses = 6;
 }
 message MintTx
 {

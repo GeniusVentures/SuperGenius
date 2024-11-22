@@ -86,6 +86,7 @@ void ProcessingEngine::ProcessSubTask(SGProcessing::SubTask subTask)
                 subTask, result, std::hash<std::string>{}(_this->m_nodeId));
             // @todo replace results_channel with subtaskid
             result.set_subtaskid(subTask.subtaskid());
+            result.set_node_address(_this->m_nodeId);
             _this->m_logger->debug("[PROCESSED]. ({}).", subTask.subtaskid());
             std::lock_guard<std::mutex> queueGuard(_this->m_mutexSubTaskQueue);
             if (_this->m_subTaskQueueAccessor)

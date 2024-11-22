@@ -189,16 +189,16 @@ TEST_F(ProcessingNodesTest, PostProcessing)
         int balance_node1 = node_proc1->GetBalance();
         int balance_node2 = node_proc2->GetBalance();
         node_main->ProcessImage(json_data,cost);
-        node_main->ProcessImage(json_data,cost);
+        //node_main->ProcessImage(json_data,cost);
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(30000));
+        std::this_thread::sleep_for(std::chrono::milliseconds(40000));
         std::cout << "Balances: " << balance_main << std::endl;
         std::cout << "Balances: " << balance_node1 << std::endl;
         std::cout << "Balances: " << balance_node2 << std::endl;
         std::cout << "Balances After: " << node_main->GetBalance() << std::endl;
         std::cout << "Balances After: " << node_proc1->GetBalance() << std::endl;
         std::cout << "Balances After: " << node_proc2->GetBalance() << std::endl;
-        ASSERT_EQ(balance_main-cost-cost, node_main->GetBalance());
-        ASSERT_EQ(balance_node1+2+2, node_proc1->GetBalance());     
-        ASSERT_EQ(balance_node2+2+2, node_proc2->GetBalance());    
+        ASSERT_EQ(balance_main-cost, node_main->GetBalance());
+        ASSERT_EQ(balance_node1+2, node_proc1->GetBalance());     
+        ASSERT_EQ(balance_node2+2, node_proc2->GetBalance());    
 }

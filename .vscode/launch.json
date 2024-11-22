@@ -11,6 +11,15 @@
             "program": "${workspaceFolder}/build/Linux/Debug/example/node_test/node_example",
             "args": [],
             "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Processing Nodes Uni Test (Linux)",
+            "program": "${workspaceFolder}/build/Linux/Debug/test_bin/processing_nodes_test",
+            "args": ["-R processing_nodes"],
+            "cwd": "${workspaceFolder}"
         }
     ]
+    
 }
