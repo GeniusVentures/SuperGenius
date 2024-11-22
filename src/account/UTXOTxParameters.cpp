@@ -21,6 +21,10 @@ sgns::UTXOTxParameters::UTXOTxParameters( const std::vector<GeniusUTXO>         
         {
             break;
         }
+        if ( utxo.GetLock() )
+        {
+            continue;
+        }
         InputUTXOInfo curr_input{ utxo.GetTxID(), utxo.GetOutputIdx(), signature };
         remain -= static_cast<int64_t>( utxo.GetAmount() );
 
