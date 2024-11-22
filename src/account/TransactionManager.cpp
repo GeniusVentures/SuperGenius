@@ -177,7 +177,8 @@ namespace sgns
     {
         for (auto& subtask : taskresult.subtask_results())
         {
-            auto process_transaction = std::make_shared<ProcessingTransaction>(task_id, subtask.subtaskid(), FillDAGStruct());
+            std::cout << "Actually Queue Transaction" << subtask.subtaskid() << std::endl;
+            auto process_transaction = std::make_shared<ProcessingTransaction>(task_id, subtask.subtaskid(), FillDAGStructProc());
             this->EnqueueTransaction(process_transaction);
         }
     }
@@ -202,6 +203,20 @@ namespace sgns
 
     //TODO - Fill hash stuff on DAGStruct
     SGTransaction::DAGStruct TransactionManager::FillDAGStruct()
+    {
+        SGTransaction::DAGStruct dag;
+        auto                     timestamp = std::chrono::system_clock::now();
+
+        dag.set_previous_hash( "" );
+        dag.set_nonce( account_m->nonce );
+        dag.set_source_addr( account_m->GetAddress<std::string>() );
+        dag.set_timestamp( timestamp.time_since_epoch().count() );
+        dag.set_uncle_hash( "" );
+        dag.set_data_hash( "" ); //filled byt transaction class
+        return dag;
+    }
+
+    SGTransaction::DAGStruct TransactionManager::FillDAGStructProc()
     {
         SGTransaction::DAGStruct dag;
         auto                     timestamp = std::chrono::system_clock::now();

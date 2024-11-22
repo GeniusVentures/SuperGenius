@@ -51,7 +51,7 @@ protected:
         DEV_CONFIG.BaseWritePath[sizeof(DEV_CONFIG.BaseWritePath) - 1] = '\0';
         DEV_CONFIG2.BaseWritePath[sizeof(DEV_CONFIG2.BaseWritePath) - 1] = '\0';
         DEV_CONFIG3.BaseWritePath[sizeof(DEV_CONFIG3.BaseWritePath) - 1] = '\0';
-        node_main = new sgns::GeniusNode(DEV_CONFIG, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", false, false);
+        node_main = new sgns::GeniusNode(DEV_CONFIG, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", false, true);
         node_proc1 = new sgns::GeniusNode(DEV_CONFIG2, "livebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", false, true);
         node_proc2 = new sgns::GeniusNode(DEV_CONFIG3, "zzombeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", false, true);
 
@@ -188,6 +188,7 @@ TEST_F(ProcessingNodesTest, PostProcessing)
         int balance_node1 = node_proc1->GetBalance();
         int balance_node2 = node_proc2->GetBalance();
         node_main->ProcessImage(json_data,cost);
+        node_main->ProcessImage(json_data,cost);
 
         std::this_thread::sleep_for(std::chrono::milliseconds(30000));
         std::cout << "Balances: " << balance_main << std::endl;
@@ -196,7 +197,7 @@ TEST_F(ProcessingNodesTest, PostProcessing)
         std::cout << "Balances After: " << node_main->GetBalance() << std::endl;
         std::cout << "Balances After: " << node_proc1->GetBalance() << std::endl;
         std::cout << "Balances After: " << node_proc2->GetBalance() << std::endl;
-        ASSERT_EQ(balance_main-cost, node_main->GetBalance());
-        ASSERT_EQ(balance_node1+2, node_proc1->GetBalance());     
-        ASSERT_EQ(balance_node2+2, node_proc2->GetBalance());    
+        ASSERT_EQ(balance_main-cost-cost, node_main->GetBalance());
+        ASSERT_EQ(balance_node1+2+2, node_proc1->GetBalance());     
+        ASSERT_EQ(balance_node2+2+2, node_proc2->GetBalance());    
 }

@@ -231,6 +231,9 @@ namespace sgns
 
     void GeniusNode::ProcessImage( const std::string &image_path, uint16_t funds )
     {
+        std::cout << "---------------------------------------------------------------" << std::endl;
+        std::cout << "Process Image?" << transaction_manager_->GetBalance() << std::endl;
+                std::cout << "---------------------------------------------------------------" << std::endl;
         if ( transaction_manager_->GetBalance() >= funds )
         {
             processing_service_->StopProcessing();

@@ -108,6 +108,7 @@ namespace sgns
         void                     Update();
         void                     EnqueueTransaction( std::shared_ptr<IGeniusTransactions> element );
         SGTransaction::DAGStruct FillDAGStruct();
+        SGTransaction::DAGStruct FillDAGStructProc();
         void                     SendTransaction();
         outcome::result<std::vector<std::vector<uint8_t>>> GetTransactionsFromBlock(
             const primitives::BlockId &block_number );
