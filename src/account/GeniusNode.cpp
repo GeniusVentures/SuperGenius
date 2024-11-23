@@ -147,7 +147,7 @@ namespace sgns
         globaldb_->Init( crdt::CrdtOptions::DefaultOptions() );
 
         task_queue_      = std::make_shared<processing::ProcessingTaskQueueImpl>( globaldb_ );
-        processing_core_ = std::make_shared<processing::ProcessingCoreImpl>( globaldb_, 1000000, 2 );
+        processing_core_ = std::make_shared<processing::ProcessingCoreImpl>( globaldb_, 1000000, 1 );
         processing_core_->RegisterProcessorFactory( "mnnimage",
                                                     []() { return std::make_unique<processing::MNN_Image>(); } );
 

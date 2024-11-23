@@ -65,16 +65,16 @@ void ProcessingEngine::SetProcessingErrorSink(std::function<void(const std::stri
 void ProcessingEngine::ProcessSubTask(SGProcessing::SubTask subTask)
 {
 
-            // Cooldown check
-    auto now = std::chrono::steady_clock::now();
-    auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - m_lastProcessedTime);
-    if (elapsed < std::chrono::minutes(2))
-    {
-        std::cout << "Cooldown active. Skipping processing of subtask." << std::endl;
-        return;
-    }
+    //         // Cooldown check
+    // auto now = std::chrono::steady_clock::now();
+    // auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - m_lastProcessedTime);
+    // if (elapsed < std::chrono::minutes(2))
+    // {
+    //     std::cout << "Cooldown active. Skipping processing of subtask." << std::endl;
+    //     return;
+    // }
 
-    m_lastProcessedTime = now;
+    // m_lastProcessedTime = now;
     m_logger->debug("[PROCESSING_STARTED]. ({}).", subTask.subtaskid());
     std::thread thread([subTask(std::move(subTask)), _this(shared_from_this())]()
     {

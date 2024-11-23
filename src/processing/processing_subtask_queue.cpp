@@ -86,6 +86,11 @@ void ProcessingSubTaskQueue::ChangeOwnershipTo(const std::string& nodeId)
 
 bool ProcessingSubTaskQueue::RollbackOwnership()
 {
+    if(m_queue == nullptr)
+    {
+        //TODO: Why can this be nullptr?
+        return false;
+    }
     if (HasOwnership())
     {
         // Do nothing. The node is already the queue owner
