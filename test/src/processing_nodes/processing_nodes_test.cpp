@@ -51,7 +51,7 @@ protected:
         DEV_CONFIG.BaseWritePath[sizeof(DEV_CONFIG.BaseWritePath) - 1] = '\0';
         DEV_CONFIG2.BaseWritePath[sizeof(DEV_CONFIG2.BaseWritePath) - 1] = '\0';
         DEV_CONFIG3.BaseWritePath[sizeof(DEV_CONFIG3.BaseWritePath) - 1] = '\0';
-        node_main = new sgns::GeniusNode(DEV_CONFIG, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", false, true);
+        node_main = new sgns::GeniusNode(DEV_CONFIG, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", false, false);
         node_proc1 = new sgns::GeniusNode(DEV_CONFIG2, "livebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", false, true);
         node_proc2 = new sgns::GeniusNode(DEV_CONFIG3, "zzombeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", false, true);
 
@@ -60,6 +60,15 @@ protected:
         bootstrappers.push_back(node_proc1->GetPubSub()->GetLocalAddress());
         bootstrappers.push_back(node_proc2->GetPubSub()->GetLocalAddress());
         node_main->GetPubSub()->AddPeers(bootstrappers);
+
+        bootstrappers.clear();
+        bootstrappers.push_back(node_main->GetPubSub()->GetLocalAddress());
+        bootstrappers.push_back(node_proc2->GetPubSub()->GetLocalAddress());
+        node_proc1->GetPubSub()->AddPeers(bootstrappers);
+        bootstrappers.clear();
+        bootstrappers.push_back(node_main->GetPubSub()->GetLocalAddress());
+        bootstrappers.push_back(node_proc1->GetPubSub()->GetLocalAddress());
+        node_proc2->GetPubSub()->AddPeers(bootstrappers);
     }
 
     static void TearDownTestSuite()

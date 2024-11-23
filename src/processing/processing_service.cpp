@@ -270,7 +270,9 @@ namespace sgns::processing
                 node->CreateProcessingHost( subTaskQueueId, subTasks );
 
                 m_processingNodes[subTaskQueueId] = node;
+                
                 m_logger->debug( "New processing channel created. {}", subTaskQueueId );
+                PublishLocalChannelList();
             }
             else
             {

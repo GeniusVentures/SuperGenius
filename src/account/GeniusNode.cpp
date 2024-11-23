@@ -90,6 +90,8 @@ namespace sgns
 
         auto loggerSubQueue = base::createLogger( "ProcessingSubTaskQueueAccessorImpl" );
         loggerSubQueue->set_level( spdlog::level::trace );
+        auto loggerProcServ = base::createLogger( "ProcessingService" );
+        loggerProcServ->set_level( spdlog::level::trace );
 
         auto pubsubport    = 40001 + GenerateRandomPort( account_->GetAddress<std::string>() );
         auto graphsyncport = 40010 + GenerateRandomPort( account_->GetAddress<std::string>() );
@@ -256,7 +258,7 @@ namespace sgns
         std::cout << "---------------------------------------------------------------" << std::endl;
         if ( transaction_manager_->GetBalance() >= funds )
         {
-            processing_service_->StopProcessing();
+            //processing_service_->StopProcessing();
 
             //std::vector<std::vector<uint32_t>> chunkOptions;
             //chunkOptions.push_back( { 1080, 0, 4320, 5, 5, 24 } );
@@ -385,7 +387,7 @@ namespace sgns
                 auto result = results->Add();
                 result->CopyFrom( r );
             }
-            processing_service_->StartProcessing( std::string( PROCESSING_GRID_CHANNEL ) );
+            //processing_service_->StartProcessing( std::string( PROCESSING_GRID_CHANNEL ) );
             task_queue_->CompleteTask( task_id, taskResult );
         }
     }
