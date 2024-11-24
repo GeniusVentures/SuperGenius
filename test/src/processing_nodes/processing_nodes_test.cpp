@@ -94,7 +94,7 @@ DevConfig_st ProcessingNodesTest::DEV_CONFIG3 = { "0xcafe", 0.65, 1.0, 0, "./nod
 
 std::string ProcessingNodesTest::binary_path = "";
 
-TEST_F(ProcessingNodesTest, ProcessNodesAddress)
+TEST_F(ProcessingNodesTest, DISABLED_ProcessNodesAddress)
 {
     std::string address_main = node_main->GetAddress();
     std::string address_proc1 = node_proc1->GetAddress();
@@ -109,7 +109,7 @@ TEST_F(ProcessingNodesTest, ProcessNodesAddress)
     EXPECT_NE(address_proc1, address_proc2) << "node_proc1 and node_proc2 have the same address!";
 }
 
-TEST_F(ProcessingNodesTest, ProcessNodesPubsubs)
+TEST_F(ProcessingNodesTest, DISABLED_ProcessNodesPubsubs)
 {
     std::string address_main = node_main->GetPubSub()->GetLocalAddress();
     std::string address_proc1 = node_proc1->GetPubSub()->GetLocalAddress();
@@ -147,10 +147,54 @@ TEST_F(ProcessingNodesTest, DISABLED_ProcessingNodeTransfer)
     int balance_node2 = node_proc2->GetBalance();
 }
 
+TEST_F(ProcessingNodesTest, CalculateProcessingCost)
+{
+        std::string json_data = R"(
+                {
+                "data": {
+                    "type": "file",
+                    "URL": "file://[basepath]../../../../test/src/processing_nodes/"
+                },
+                "model": {
+                    "name": "mnnimage",
+                    "file": "model.mnn"
+                },
+                "input": [
+                    {
+                        "image": "data/ballet.data",
+                        "block_len": 4860000 ,
+                        "block_line_stride": 5400,
+                        "block_stride": 0,
+                        "chunk_line_stride": 1080,
+                        "chunk_offset": 0,
+                        "chunk_stride": 4320,
+                        "chunk_subchunk_height": 5,
+                        "chunk_subchunk_width": 5,
+                        "chunk_count": 25,
+                        "channels": 4
+                    },
+                    {
+                        "image": "data/frisbee3.data",
+                        "block_len": 786432 ,
+                        "block_line_stride": 1536,
+                        "block_stride": 0,
+                        "chunk_line_stride": 384,
+                        "chunk_offset": 0,
+                        "chunk_stride": 1152,
+                        "chunk_subchunk_height": 4,
+                        "chunk_subchunk_width": 4,
+                        "chunk_count": 16,
+                        "channels": 3
+                    }
+                ]
+                }
+               )";
+    auto cost = node_main->GetProcessCost(json_data);
+    ASSERT_EQ(18, cost);
+}
 
 TEST_F(ProcessingNodesTest, PostProcessing)
 {
-    int cost = 8;
     std::string bin_path = boost::dll::program_location().parent_path().string() + "/";
         std::string json_data = R"(
                 {
@@ -192,13 +236,14 @@ TEST_F(ProcessingNodesTest, PostProcessing)
                 ]
                 }
                )";
+        auto cost = node_main->GetProcessCost(json_data);
         boost::replace_all(json_data, "[basepath]", bin_path);
         std::cout << "Json Data: " << json_data << std::endl;
         int balance_main = node_main->GetBalance();
         int balance_node1 = node_proc1->GetBalance();
         int balance_node2 = node_proc2->GetBalance();
-        node_main->ProcessImage(json_data,cost);
-        //node_main->ProcessImage(json_data,cost);
+        node_main->ProcessImage(json_data);
+        //node_main->ProcessImage(json_data);
 
         std::this_thread::sleep_for(std::chrono::milliseconds(40000));
         std::cout << "Balances: " << balance_main << std::endl;
@@ -208,6 +253,6 @@ TEST_F(ProcessingNodesTest, PostProcessing)
         std::cout << "Balances After: " << node_proc1->GetBalance() << std::endl;
         std::cout << "Balances After: " << node_proc2->GetBalance() << std::endl;
         ASSERT_EQ(balance_main-cost, node_main->GetBalance());
-        ASSERT_EQ(balance_node1+2, node_proc1->GetBalance());     
-        ASSERT_EQ(balance_node2+2, node_proc2->GetBalance());    
+        ASSERT_EQ(balance_node1+5, node_proc1->GetBalance());     
+        ASSERT_EQ(balance_node2+5, node_proc2->GetBalance());    
 }

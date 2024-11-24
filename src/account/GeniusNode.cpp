@@ -251,11 +251,16 @@ namespace sgns
         pubsub_->StartFindingPeers( key );
     }
 
-    void GeniusNode::ProcessImage( const std::string &image_path, uint16_t funds )
+    void GeniusNode::ProcessImage( const std::string &image_path )
     {
-        std::cout << "---------------------------------------------------------------" << std::endl;
-        std::cout << "Process Image?" << transaction_manager_->GetBalance() << std::endl;
-        std::cout << "---------------------------------------------------------------" << std::endl;
+        // std::cout << "---------------------------------------------------------------" << std::endl;
+        // std::cout << "Process Image?" << transaction_manager_->GetBalance() << std::endl;
+        // std::cout << "---------------------------------------------------------------" << std::endl;
+        uint16_t funds = GetProcessCost(image_path);
+        if(funds < 0)
+        {
+            return;
+        }
         if ( transaction_manager_->GetBalance() >= funds )
         {
             //processing_service_->StopProcessing();
@@ -335,6 +340,42 @@ namespace sgns
         }
     }
 
+    uint64_t GeniusNode::GetProcessCost(const std::string &json_data)
+    {
+        uint64_t cost = 0;
+
+        //Parse Json
+        rapidjson::Document document;
+        document.Parse( json_data.c_str() );
+        size_t           nSubTasks = 1;
+        rapidjson::Value inputArray;
+        if ( document.HasMember( "input" ) && document["input"].IsArray() )
+        {
+            inputArray = document["input"];
+            nSubTasks  = inputArray.Size();
+        }
+        else
+        {
+            std::cout << "This json lacks inputs" << std::endl;
+            return -1;
+        }
+        for ( const auto &input : inputArray.GetArray() )
+        {
+            if (input.HasMember("block_len") && input["block_len"].IsUint64())
+            {
+                uint64_t block_len = input["block_len"].GetUint64();
+                cost += (block_len / 300000);
+                std::cout << "Block length: " << block_len << std::endl;
+            }
+            else
+            {
+                std::cout << "Missing or invalid block_len in input" << std::endl;
+                return -1;
+            }
+        }
+        return std::max(cost, static_cast<uint64_t>(1));
+    }
+    
     void GeniusNode::MintTokens( uint64_t amount )
     {
         transaction_manager_->MintFunds( amount );

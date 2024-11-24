@@ -196,8 +196,8 @@ void CreateProcessingTransaction( const std::vector<std::string> &args, sgns::Ge
         //          ]
         //        }
         //        )";
-        genius_node.ProcessImage( json_data /*args[1]*/,
-                                      std::stoull( args[2] ) );
+        genius_node.ProcessImage( json_data /*args[1]*/
+                                      );
     }
     else
     {

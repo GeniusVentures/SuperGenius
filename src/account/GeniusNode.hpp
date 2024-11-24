@@ -69,7 +69,9 @@ namespace sgns
         // }
         ~GeniusNode() override;
 
-        void ProcessImage( const std::string &image_path, uint16_t funds );
+        void ProcessImage( const std::string &image_path );
+
+        uint64_t GetProcessCost(const std::string &json_data);
 
         std::string GetName() override
         {
