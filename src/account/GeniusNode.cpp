@@ -257,7 +257,7 @@ namespace sgns
         // std::cout << "Process Image?" << transaction_manager_->GetBalance() << std::endl;
         // std::cout << "---------------------------------------------------------------" << std::endl;
         auto funds = GetProcessCost(image_path);
-        if(funds < 0)
+        if(funds <= 0)
         {
             return;
         }
@@ -346,7 +346,11 @@ namespace sgns
 
         //Parse Json
         rapidjson::Document document;
-        document.Parse( json_data.c_str() );
+        if (document.Parse(json_data.c_str()).HasParseError())
+        {
+            std::cout << "Invalid JSON data provided" << std::endl;
+            return 0; 
+        }
         size_t           nSubTasks = 1;
         rapidjson::Value inputArray;
         if ( document.HasMember( "input" ) && document["input"].IsArray() )
@@ -357,7 +361,7 @@ namespace sgns
         else
         {
             std::cout << "This json lacks inputs" << std::endl;
-            return -1;
+            return 0;
         }
         for ( const auto &input : inputArray.GetArray() )
         {
@@ -370,7 +374,7 @@ namespace sgns
             else
             {
                 std::cout << "Missing or invalid block_len in input" << std::endl;
-                return -1;
+                return 0;
             }
         }
         return std::max(cost, static_cast<uint64_t>(1));

@@ -193,6 +193,15 @@ TEST_F(ProcessingNodesTest, CalculateProcessingCost)
     ASSERT_EQ(18, cost);
 }
 
+TEST_F(ProcessingNodesTest, CalculateProcessingCostFail)
+{
+        std::string json_data = R"(
+                garbage
+               )";
+    auto cost = node_main->GetProcessCost(json_data);
+    ASSERT_EQ(0, cost);
+}
+
 TEST_F(ProcessingNodesTest, PostProcessing)
 {
     std::string bin_path = boost::dll::program_location().parent_path().string() + "/";
