@@ -256,7 +256,7 @@ namespace sgns
         // std::cout << "---------------------------------------------------------------" << std::endl;
         // std::cout << "Process Image?" << transaction_manager_->GetBalance() << std::endl;
         // std::cout << "---------------------------------------------------------------" << std::endl;
-        uint16_t funds = GetProcessCost(image_path);
+        auto funds = GetProcessCost(image_path);
         if(funds < 0)
         {
             return;
