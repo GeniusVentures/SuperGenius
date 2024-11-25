@@ -63,16 +63,16 @@ namespace sgns
             return transactions;
         }
 
-        bool     TransferFunds( uint64_t amount, const uint256_t &destination );
-        void     MintFunds( uint64_t amount );
-        bool     HoldEscrow( uint64_t           amount,
-                             uint64_t           num_chunks,
-                             const uint256_t   &dev_addr,
-                             float              dev_cut,
-                             const std::string &job_id );
-        bool     ReleaseEscrow( const std::string                 &job_id,
-                                const bool                        &pay,
-                                const std::vector<OutputDestInfo> &destinations );
+        bool                         TransferFunds( uint64_t amount, const uint256_t &destination );
+        void                         MintFunds( uint64_t amount );
+        outcome::result<std::string> HoldEscrow( uint64_t           amount,
+                                                 uint64_t           num_chunks,
+                                                 const uint256_t   &dev_addr,
+                                                 float              dev_cut,
+                                                 const std::string &job_id );
+        bool                         ReleaseEscrow( const std::string                 &job_id,
+                                                    const bool                        &pay,
+                                                    const std::vector<OutputDestInfo> &destinations );
         void     ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult );
         uint64_t GetBalance();
 
@@ -110,7 +110,10 @@ namespace sgns
         void                     EnqueueTransaction( std::shared_ptr<IGeniusTransactions> element );
         SGTransaction::DAGStruct FillDAGStruct();
         SGTransaction::DAGStruct FillDAGStructProc();
-        void                     SendTransaction();
+        outcome::result<void>    SendTransaction();
+        std::string              GetTransactionPath( std::shared_ptr<IGeniusTransactions> element );
+        outcome::result<void>    RecordBlock( const std::vector<std::string> &transaction_keys );
+
         outcome::result<std::vector<std::vector<uint8_t>>> GetTransactionsFromBlock(
             const primitives::BlockId &block_number );
 

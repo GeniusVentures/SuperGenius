@@ -15,6 +15,7 @@ message Task
     //uint32 block_line_stride = 5; // Line stride in bytes to get to next block start
     float random_seed = 3; // used to randomly choose verifier block
     string results_channel = 4; // which channel to publish results to.
+    string escrow_path = 5; //the path of the escrow transaction
 }
 
 message TaskLock

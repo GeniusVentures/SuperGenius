@@ -87,9 +87,11 @@ namespace sgns
 
     bool TransactionManager::TransferFunds( uint64_t amount, const uint256_t &destination )
     {
-        bool ret = false;
-        auto maybe_params =
-            UTXOTxParameters::create( account_m->utxos, account_m->address.GetPublicKey(), amount, destination );
+        bool ret          = false;
+        auto maybe_params = UTXOTxParameters::create( account_m->utxos,
+                                                      account_m->address.GetPublicKey(),
+                                                      amount,
+                                                      destination );
 
         if ( maybe_params )
         {
@@ -110,34 +112,35 @@ namespace sgns
         this->EnqueueTransaction( std::move( mint_transaction ) );
     }
 
-    bool TransactionManager::HoldEscrow( uint64_t           amount,
-                                         uint64_t           num_chunks,
-                                         const uint256_t   &dev_addr,
-                                         float              dev_cut,
-                                         const std::string &job_id )
+    outcome::result<std::string> TransactionManager::HoldEscrow( uint64_t           amount,
+                                                                 uint64_t           num_chunks,
+                                                                 const uint256_t   &dev_addr,
+                                                                 float              dev_cut,
+                                                                 const std::string &job_id )
     {
-        bool ret          = false;
-        auto hash_data    = hasher_m->blake2b_256( std::vector<uint8_t>{ job_id.begin(), job_id.end() } );
-        auto maybe_params = UTXOTxParameters::create( account_m->utxos,
-                                                      account_m->address.GetPublicKey(),
-                                                      uint64_t{ amount },
-                                                      uint256_t{ "0x" + hash_data.toReadableString() } );
-        if ( maybe_params )
-        {
-            account_m->utxos        = UTXOTxParameters::UpdateUTXOList( account_m->utxos, maybe_params.value() );
-            auto escrow_transaction = std::make_shared<EscrowTransaction>( maybe_params.value(),
-                                                                           num_chunks,
-                                                                           dev_addr,
-                                                                           dev_cut,
-                                                                           FillDAGStruct() );
-            this->EnqueueTransaction( escrow_transaction );
-            ret = true;
-        }
+        bool ret       = false;
+        auto hash_data = hasher_m->blake2b_256( std::vector<uint8_t>{ job_id.begin(), job_id.end() } );
 
-        return ret;
+        OUTCOME_TRY( ( auto &&, params ),
+                     UTXOTxParameters::create( account_m->utxos,
+                                               account_m->address.GetPublicKey(),
+                                               uint64_t{ amount },
+                                               uint256_t{ "0x" + hash_data.toReadableString() } ) );
+
+        account_m->utxos        = UTXOTxParameters::UpdateUTXOList( account_m->utxos, params );
+        auto escrow_transaction = std::make_shared<EscrowTransaction>( params,
+                                                                       num_chunks,
+                                                                       dev_addr,
+                                                                       dev_cut,
+                                                                       FillDAGStruct() );
+        this->EnqueueTransaction( escrow_transaction );
+
+        return GetTransactionPath( escrow_transaction );
     }
 
-    bool TransactionManager::ReleaseEscrow( const std::string &job_id, const bool &pay,const std::vector<OutputDestInfo> &destinations )
+    bool TransactionManager::ReleaseEscrow( const std::string                 &job_id,
+                                            const bool                        &pay,
+                                            const std::vector<OutputDestInfo> &destinations )
     {
         if ( escrow_ctrl_m.empty() )
         {
@@ -155,10 +158,10 @@ namespace sgns
             {
                 if ( pay )
                 {
-                    auto transfer_transaction =
-                        std::make_shared<TransferTransaction>( destinations,
-                                                               std::vector<InputUTXOInfo>{ it->original_input },
-                                                               FillDAGStruct() );
+                    auto transfer_transaction = std::make_shared<TransferTransaction>(
+                        destinations,
+                        std::vector<InputUTXOInfo>{ it->original_input },
+                        FillDAGStruct() );
                     this->EnqueueTransaction( transfer_transaction );
                     ret = true;
                 }
@@ -184,8 +187,10 @@ namespace sgns
             node_addresses.push_back( subtask.node_address() );
         }
 
-        auto process_transaction =
-            std::make_shared<ProcessingTransaction>( task_id, subtask_ids, node_addresses, FillDAGStruct() );
+        auto process_transaction = std::make_shared<ProcessingTransaction>( task_id,
+                                                                            subtask_ids,
+                                                                            node_addresses,
+                                                                            FillDAGStruct() );
         this->EnqueueTransaction( process_transaction );
     }
 
@@ -236,48 +241,70 @@ namespace sgns
         return dag;
     }
 
-    void TransactionManager::SendTransaction()
+    outcome::result<void> TransactionManager::SendTransaction()
     {
         std::unique_lock<std::mutex> lock( mutex_m );
         if ( out_transactions.empty() )
         {
-            return;
+            return std::errc::invalid_argument;
         }
 
         auto transaction = out_transactions.front();
         out_transactions.pop_front();
-        boost::format tx_key{ std::string( TRANSACTION_BASE_FORMAT ) };
 
-        tx_key % TEST_NET_ID;
-
-        auto transaction_path = tx_key.str() + transaction->GetTransactionFullPath();
+        auto transaction_path = GetTransactionPath( transaction );
 
         sgns::crdt::GlobalDB::Buffer data_transaction;
         data_transaction.put( transaction->SerializeByteVector() );
 
-        db_m->Put( { transaction_path }, data_transaction );
-
-        auto maybe_last_hash   = block_storage_m->getLastFinalizedBlockHash();
-        auto maybe_last_header = block_storage_m->getBlockHeader( maybe_last_hash.value() );
-
-        primitives::BlockHeader header( maybe_last_header.value() );
-
-        header.parent_hash = maybe_last_hash.value();
-
-        header.number++;
-
-        auto new_hash = block_storage_m->putBlockHeader( header );
-
-        primitives::BlockBody body{ { base::Buffer{}.put( transaction_path ) } };
-
-        primitives::BlockData block_data{ new_hash.value(), header, body };
-
-        block_storage_m->putBlockData( header.number, block_data );
+        BOOST_OUTCOME_TRYV2( auto &&, db_m->Put( { transaction_path }, data_transaction ) );
 
         m_logger->debug( "Putting on " + transaction_path +
                          " the data: " + std::string( data_transaction.toString() ) );
+
+        BOOST_OUTCOME_TRYV2( auto &&, RecordBlock( { transaction_path } ) );
+        return outcome::success();
+    }
+
+    std::string TransactionManager::GetTransactionPath( std::shared_ptr<IGeniusTransactions> element )
+    {
+        boost::format tx_key{ std::string( TRANSACTION_BASE_FORMAT ) };
+
+        tx_key % TEST_NET_ID;
+
+        auto transaction_path = tx_key.str() + element->GetTransactionFullPath();
+
+        return transaction_path;
+    }
+
+    outcome::result<void> TransactionManager::RecordBlock( const std::vector<std::string> &transaction_keys )
+    {
+        OUTCOME_TRY( ( auto &&, last_hash ), block_storage_m->getLastFinalizedBlockHash() );
+        OUTCOME_TRY( ( auto &&, last_header ), block_storage_m->getBlockHeader( last_hash ) );
+
+        primitives::BlockHeader header( last_header );
+
+        header.parent_hash = last_hash;
+
+        header.number++;
+
+        OUTCOME_TRY( ( auto &&, new_hash ), block_storage_m->putBlockHeader( header ) );
+
+        primitives::BlockBody body;
+
+        for ( auto &transaction : transaction_keys )
+        {
+            body.push_back( { base::Buffer{}.put( transaction ) } );
+        }
+
+        primitives::BlockData block_data{ new_hash, header, body };
+
+        BOOST_OUTCOME_TRYV2( auto &&, block_storage_m->putBlockData( header.number, block_data ) );
+
         m_logger->debug( "Recording Block with number " + std::to_string( header.number ) );
-        block_storage_m->setLastFinalizedBlockHash( new_hash.value() );
+
+        BOOST_OUTCOME_TRYV2( auto &&, block_storage_m->setLastFinalizedBlockHash( new_hash ) );
+        return outcome::success();
     }
 
     outcome::result<std::vector<std::vector<uint8_t>>> TransactionManager::GetTransactionsFromBlock(

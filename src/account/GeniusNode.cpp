@@ -173,8 +173,11 @@ namespace sgns
             globaldb_,
             hasher_,
             ( boost::format( std::string( db_path_ ) ) % TEST_NET ).str() );
-        auto maybe_block_storage =
-            blockchain::KeyValueBlockStorage::create( root_hash, globaldb_, hasher_, header_repo_, []( auto & ) {} );
+        auto maybe_block_storage = blockchain::KeyValueBlockStorage::create( root_hash,
+                                                                             globaldb_,
+                                                                             hasher_,
+                                                                             header_repo_,
+                                                                             []( auto & ) {} );
 
         if ( !maybe_block_storage )
         {
@@ -265,30 +268,15 @@ namespace sgns
         {
             //processing_service_->StopProcessing();
 
-            //std::vector<std::vector<uint32_t>> chunkOptions;
-            //chunkOptions.push_back( { 1080, 0, 4320, 5, 5, 24 } );
-            //std::list<SGProcessing::Task> tasks;
-            //size_t                        nTasks = 1;
-            //for ( size_t taskIdx = 0; taskIdx < nTasks; ++taskIdx )
-            //{
             SGProcessing::Task task;
             boost::uuids::uuid uuid = boost::uuids::random_generator()();
-            //std::cout << "CID STRING:    " << libp2p::multi::ContentIdentifierCodec::toString(imagesplit.GetPartCID(taskIdx)).value() << std::endl;
-            //task.set_ipfs_block_id(libp2p::multi::ContentIdentifierCodec::toString(imagesplit.GetPartCID(taskIdx)).value());
             task.set_ipfs_block_id( boost::uuids::to_string( uuid ) );
 
             task.set_json_data( image_path );
-            //task.set_block_len(48600);
-            //task.set_block_line_stride(540);
-            //task.set_block_stride(4860);
-            //task.set_block_len( 4860000 );
-            //task.set_block_line_stride( 5400 );
-            //task.set_block_stride( 0 );
+
             task.set_random_seed( 0 );
             task.set_results_channel( ( boost::format( "RESULT_CHANNEL_ID_%1%" ) % ( 1 ) ).str() );
-            //tasks.push_back( std::move( task ) );
-            //}
-            //Number of SubTasks is number of input Images.
+
             rapidjson::Document document;
             document.Parse( image_path.c_str() );
             size_t           nSubTasks = 1;
@@ -303,40 +291,26 @@ namespace sgns
                 std::cout << "This json lacks information" << std::endl;
                 return;
             }
-            processing::ProcessTaskSplitter taskSplitter;
-            //auto                               mnn_image = GetImageByCID(image_path);
-            //if (mnn_image.size() != inputArray.Size())
-            //{
-            //    std::cout << "Input size does not match, did an image fail to be obtained?" << std::endl;
-            //    return;
-            //}
-            //int imageindex = 0;
+            processing::ProcessTaskSplitter  taskSplitter;
             std::list<SGProcessing::SubTask> subTasks;
             for ( const auto &input : inputArray.GetArray() )
             {
-                //auto image = mnn_image[imageindex];
-                //processing::ImageSplitter          imagesplit(image, input["block_line_stride"].GetInt(), input["block_stride"].GetInt(), input["block_len"].GetInt());
-
-                size_t nChunks = input["chunk_count"].GetInt();
-                //Assumption: There will always be 1 task, with several subtasks per json. So this for loop isn't really doing anything.
-                //for (auto& task : tasks)
-                //{
+                size_t                                     nChunks = input["chunk_count"].GetInt();
                 rapidjson::StringBuffer                    buffer;
                 rapidjson::Writer<rapidjson::StringBuffer> writer( buffer );
+                
                 input.Accept( writer );
                 std::string inputAsString = buffer.GetString();
                 taskSplitter.SplitTask( task, subTasks, inputAsString, nChunks, false );
-
-                //}
-                //imageindex++;
             }
 
+            auto maybe_escrow_path = transaction_manager_->HoldEscrow( funds,
+                                                                       nSubTasks,
+                                                                       uint256_t{ std::string( dev_config_.Addr ) },
+                                                                       dev_config_.Cut,
+                                                                       boost::uuids::to_string( uuid ) );
+            task.set_escrow_path( maybe_escrow_path.value() );
             task_queue_->EnqueueTask( task, subTasks );
-            transaction_manager_->HoldEscrow( funds,
-                                              nSubTasks,
-                                              uint256_t{ std::string( dev_config_.Addr ) },
-                                              dev_config_.Cut,
-                                              boost::uuids::to_string( uuid ) );
         }
     }
 

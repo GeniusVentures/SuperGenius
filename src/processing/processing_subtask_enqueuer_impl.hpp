@@ -16,7 +16,7 @@ namespace sgns::processing
     public:
         SubTaskEnqueuerImpl( std::shared_ptr<ProcessingTaskQueue> taskQueue );
 
-        bool EnqueueSubTasks( std::string &subTaskQueueId, std::list<SGProcessing::SubTask> &subTasks ) override;
+        outcome::result<SGProcessing::Task>  EnqueueSubTasks( std::string &subTaskQueueId, std::list<SGProcessing::SubTask> &subTasks ) override;
 
     private:
         std::shared_ptr<ProcessingTaskQueue> m_taskQueue;
