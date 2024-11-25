@@ -58,9 +58,8 @@ namespace sgns::crdt
           numberOfDagWorkers    = options_->numWorkers;
       }
 
-      this->set_ =
-          std::make_shared<CrdtSet>( CrdtSet( dataStore_, fullSetNs, this->putHookFunc_, this->deleteHookFunc_ ) );
-      this->heads_ = std::make_shared<CrdtHeads>( CrdtHeads( dataStore_, fullHeadsNs ) );
+      this->set_   = std::make_shared<CrdtSet>( dataStore_, fullSetNs, this->putHookFunc_, this->deleteHookFunc_ );
+      this->heads_ = std::make_shared<CrdtHeads>( dataStore_, fullHeadsNs );
 
       int      numberOfHeads = 0;
       uint64_t maxHeight     = 0;

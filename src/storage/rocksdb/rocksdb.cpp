@@ -43,7 +43,7 @@ namespace sgns::storage
       auto l = std::make_unique<rocksdb>();
       l->db_ = std::shared_ptr<DB>(db);
       l->logger_ = base::createLogger("rocksdb");
-      return std::move(l); // clang 6.0.1 issue
+      return l;
     }
 
     return error_as_result<std::shared_ptr<rocksdb>>(status);
@@ -59,7 +59,7 @@ namespace sgns::storage
     auto l = std::make_unique<rocksdb>();
     l->db_ = db;
     l->logger_ = base::createLogger("rocksdb");
-    return std::move(l); // clang 6.0.1 issue
+    return l;
   }
 
   std::unique_ptr<BufferMapCursor> rocksdb::cursor() 

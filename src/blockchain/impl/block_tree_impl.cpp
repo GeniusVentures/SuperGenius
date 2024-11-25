@@ -293,7 +293,7 @@ namespace sgns::blockchain {
     // reverted one in this case
     OUTCOME_TRY((auto &&, chain), getChainByBlocks(finish_block_hash.value(), block));
     std::reverse(chain.begin(), chain.end());
-    return std::move(chain);
+    return chain;
   }
 
   BlockTreeImpl::BlockHashVecRes BlockTreeImpl::getChainByBlocks(

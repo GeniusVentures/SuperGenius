@@ -12,8 +12,8 @@ namespace sgns::authority {
 
   std::shared_ptr<ScheduleNode> ScheduleNode::createAsRoot(
       primitives::BlockInfo block) {
-    auto fake_parent = std::make_shared<ScheduleNode>(ScheduleNode());
-    return std::make_shared<ScheduleNode>(fake_parent, block);
+      auto fake_parent = std::make_shared<ScheduleNode>();
+      return std::make_shared<ScheduleNode>( fake_parent, block );
   }
 
   outcome::result<void> ScheduleNode::ensureReadyToSchedule() const {
