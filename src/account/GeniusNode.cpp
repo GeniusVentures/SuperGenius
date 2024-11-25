@@ -95,6 +95,7 @@ namespace sgns
 
         auto pubsubport    = 40001 + GenerateRandomPort( account_->GetAddress<std::string>() );
         auto graphsyncport = 40010 + GenerateRandomPort( account_->GetAddress<std::string>() );
+        
 
         std::vector<std::string> addresses;
         //UPNP
@@ -261,6 +262,7 @@ namespace sgns
         {
             return;
         }
+
         if ( transaction_manager_->GetBalance() >= funds )
         {
             //processing_service_->StopProcessing();
@@ -343,12 +345,13 @@ namespace sgns
     uint64_t GeniusNode::GetProcessCost(const std::string &json_data)
     {
         uint64_t cost = 0;
-
+        std::cout << "Received JSON data: " << json_data << std::endl;
         //Parse Json
         rapidjson::Document document;
         if (document.Parse(json_data.c_str()).HasParseError())
         {
             std::cout << "Invalid JSON data provided" << std::endl;
+            std::cout << "Error: " << document.GetParseError() << " Offset: " << document.GetErrorOffset() << std::endl;
             return 0; 
         }
         size_t           nSubTasks = 1;
@@ -377,6 +380,7 @@ namespace sgns
                 return 0;
             }
         }
+        std::cout << "Return Cost: " << std::max(cost, static_cast<uint64_t>(1)) << std::endl;
         return std::max(cost, static_cast<uint64_t>(1));
     }
     
