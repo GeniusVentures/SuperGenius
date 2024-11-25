@@ -252,6 +252,29 @@ namespace sgns
         pubsub_->StartFindingPeers( key );
     }
 
+    std::string generate_uuid_with_ipfs_id(const std::string& ipfs_id) {
+        // Hash the IPFS ID
+        std::hash<std::string> hasher;
+        uint64_t id_hash = hasher(ipfs_id);
+
+        // Get a high-resolution timestamp
+        auto now = std::chrono::high_resolution_clock::now();
+        auto timestamp = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                            now.time_since_epoch())
+                            .count();
+
+        // Combine the IPFS ID hash and timestamp to create a seed
+        uint64_t seed = id_hash ^ static_cast<uint64_t>(timestamp);
+
+        // Seed the PRNG
+        std::mt19937 gen(seed);
+        boost::uuids::basic_random_generator<std::mt19937> uuid_gen(gen);
+
+        // Generate UUID
+        boost::uuids::uuid uuid = uuid_gen();
+        return boost::uuids::to_string(uuid);
+    }
+
     void GeniusNode::ProcessImage( const std::string &image_path )
     {
         // std::cout << "---------------------------------------------------------------" << std::endl;
@@ -274,10 +297,13 @@ namespace sgns
             //for ( size_t taskIdx = 0; taskIdx < nTasks; ++taskIdx )
             //{
             SGProcessing::Task task;
-            boost::uuids::uuid uuid = boost::uuids::random_generator()();
+            //boost::uuids::uuid uuid = boost::uuids::random_generator()();
+            //boost::uuids::random_generator_pure gen;
+            //boost::uuids::uuid uuid = gen();
+            auto uuidstring = generate_uuid_with_ipfs_id(pubsub_->GetHost()->getId().toBase58());
             //std::cout << "CID STRING:    " << libp2p::multi::ContentIdentifierCodec::toString(imagesplit.GetPartCID(taskIdx)).value() << std::endl;
             //task.set_ipfs_block_id(libp2p::multi::ContentIdentifierCodec::toString(imagesplit.GetPartCID(taskIdx)).value());
-            task.set_ipfs_block_id( boost::uuids::to_string( uuid ) );
+            task.set_ipfs_block_id( uuidstring );
 
             task.set_json_data( image_path );
             //task.set_block_len(48600);
@@ -327,7 +353,7 @@ namespace sgns
                 rapidjson::Writer<rapidjson::StringBuffer> writer( buffer );
                 input.Accept( writer );
                 std::string inputAsString = buffer.GetString();
-                taskSplitter.SplitTask( task, subTasks, inputAsString, nChunks, false );
+                taskSplitter.SplitTask( task, subTasks, inputAsString, nChunks, false, pubsub_->GetHost()->getId().toBase58() );
 
                 //}
                 //imageindex++;
@@ -338,7 +364,7 @@ namespace sgns
                                               nSubTasks,
                                               uint256_t{ std::string( dev_config_.Addr ) },
                                               dev_config_.Cut,
-                                              boost::uuids::to_string( uuid ) );
+                                              uuidstring );
         }
     }
 
