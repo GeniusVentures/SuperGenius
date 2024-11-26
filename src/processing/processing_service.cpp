@@ -249,43 +249,53 @@ namespace sgns::processing
         {
             return;
         }
-
-        std::scoped_lock lock( m_mutexNodes );
-        while ( m_processingNodes.size() < m_maximalNodesCount )
+        bool node_dispatched = false;
         {
-            std::string                      subTaskQueueId;
-            std::list<SGProcessing::SubTask> subTasks;
-
-            if ( auto maybe_task = m_subTaskEnqueuer->EnqueueSubTasks( subTaskQueueId, subTasks ); maybe_task )
+            std::scoped_lock lock( m_mutexNodes );
+            while ( m_processingNodes.size() < m_maximalNodesCount )
             {
-                auto node = std::make_shared<ProcessingNode>(
-                    m_gossipPubSub,
-                    m_subTaskStateStorage,
-                    m_subTaskResultStorage,
-                    m_processingCore,
-                    std::bind( &ProcessingServiceImpl::OnQueueProcessingCompleted,
-                               this,
-                               subTaskQueueId,
-                               std::placeholders::_1 ),
-                    std::bind( &ProcessingServiceImpl::OnProcessingError, this, subTaskQueueId, std::placeholders::_1 ),
-                    node_address_ );
+                std::string                      subTaskQueueId;
+                std::list<SGProcessing::SubTask> subTasks;
 
-                // @todo Figure out if the task is still available for other peers
-                // @todo Check if it is better to call EnqueueSubTasks within host
-                // and return subTaskQueueId from processing host?
-                node->CreateProcessingHost( subTaskQueueId, subTasks );
+                if ( auto maybe_task = m_subTaskEnqueuer->EnqueueSubTasks( subTaskQueueId, subTasks ); maybe_task )
+                {
+                    auto node = std::make_shared<ProcessingNode>(
+                        m_gossipPubSub,
+                        m_subTaskStateStorage,
+                        m_subTaskResultStorage,
+                        m_processingCore,
+                        std::bind( &ProcessingServiceImpl::OnQueueProcessingCompleted,
+                                   this,
+                                   subTaskQueueId,
+                                   std::placeholders::_1 ),
+                        std::bind( &ProcessingServiceImpl::OnProcessingError,
+                                   this,
+                                   subTaskQueueId,
+                                   std::placeholders::_1 ),
+                        node_address_ );
 
-                m_processingNodes[subTaskQueueId] = node;
-                
-                m_logger->debug( "New processing channel created. {}", subTaskQueueId );
-                PublishLocalChannelList();
+                    // @todo Figure out if the task is still available for other peers
+                    // @todo Check if it is better to call EnqueueSubTasks within host
+                    // and return subTaskQueueId from processing host?
+                    node->CreateProcessingHost( subTaskQueueId, subTasks );
+
+                    m_processingNodes[subTaskQueueId] = node;
+
+                    m_logger->debug( "New processing channel created. {}", subTaskQueueId );
+                    node_dispatched = true;
+                    //PublishLocalChannelList();
+                }
+                else
+                {
+                    // If no tasks enquued, try to get available slots in existent queues
+                    SendChannelListRequest();
+                    break;
+                }
             }
-            else
-            {
-                // If no tasks enquued, try to get available slots in existent queues
-                SendChannelListRequest();
-                break;
-            }
+        }
+        if ( node_dispatched )
+        {
+            PublishLocalChannelList();
         }
     }
 }

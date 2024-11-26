@@ -23,6 +23,7 @@ namespace sgns::processing
         m_taskResultProcessingSink( std::move( taskResultProcessingSink ) ),
         m_processingErrorSink( std::move( processingErrorSink ) )
     {
+        std::cout << "Processing node created with address " << m_nodeId << std::endl;
     }
 
     ProcessingNode::~ProcessingNode() {}
