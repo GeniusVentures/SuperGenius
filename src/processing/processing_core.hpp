@@ -6,6 +6,7 @@
 #define GRPC_FOR_SUPERGENIUS_PROCESSING_CORE_HPP
 
 #include "processing/proto/SGProcessing.pb.h"
+#include "outcome/outcome.hpp"
 #include <list>
 #include <boost/asio/io_context.hpp>
 
@@ -25,9 +26,8 @@ public:
     * @param result - subtask result
     * @param initialHashCode - an initial hash code which is used to calculate result hash
     */
-    virtual void ProcessSubTask(
-        const SGProcessing::SubTask& subTask, SGProcessing::SubTaskResult& result,
-        uint32_t initialHashCode) = 0;
+    virtual outcome::result<SGProcessing::SubTaskResult> ProcessSubTask(
+        const SGProcessing::SubTask& subTask, uint32_t initialHashCode) = 0;
 
     /** Get processing type from json data to set processor
     * @param jsondata - jsondata that needs to be parsed

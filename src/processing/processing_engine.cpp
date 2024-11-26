@@ -6,7 +6,8 @@
 
 namespace sgns::processing
 {
-    ProcessingEngine::ProcessingEngine( std::string nodeId, std::shared_ptr<ProcessingCore> processingCore ) :
+    ProcessingEngine::ProcessingEngine( std::string                     nodeId,
+                                        std::shared_ptr<ProcessingCore> processingCore ) :
         m_nodeId( std::move( nodeId ) ),
         m_processingCore( std::move( processingCore ) ),
         m_lastProcessedTime( std::chrono::steady_clock::now() - std::chrono::minutes( 2 ) )
@@ -82,13 +83,13 @@ namespace sgns::processing
         std::thread thread(
             [subTask( std::move( subTask ) ), _this( shared_from_this() )]()
             {
-                try
+                // @todo set initial hash code that depends on node id
+                auto maybe_result = _this->m_processingCore->ProcessSubTask(
+                    subTask,
+                    std::hash<std::string>{}( _this->m_nodeId ) );
+                if ( maybe_result.has_value() )
                 {
-                    SGProcessing::SubTaskResult result;
-                    // @todo set initial hash code that depends on node id
-                    _this->m_processingCore->ProcessSubTask( subTask,
-                                                             result,
-                                                             std::hash<std::string>{}( _this->m_nodeId ) );
+                    SGProcessing::SubTaskResult result = maybe_result.value();
                     // @todo replace results_channel with subtaskid
                     result.set_subtaskid( subTask.subtaskid() );
                     result.set_node_address( _this->m_nodeId );
@@ -111,11 +112,11 @@ namespace sgns::processing
                             } );
                     }
                 }
-                catch ( std::exception &ex )
+                else
                 {
                     if ( _this->m_processingErrorSink )
                     {
-                        _this->m_processingErrorSink( ex.what() );
+                        _this->m_processingErrorSink( maybe_result.error().message() );
                     }
                 }
             } );

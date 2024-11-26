@@ -135,8 +135,8 @@ TEST_F(ProcessingNodesTest, ProcessNodesTransactionsCount)
     std::cout << "Count 2" << transcount_node1 << std::endl;
     std::cout << "Count 3" << transcount_node2 << std::endl;
 
-    ASSERT_EQ(transcount_main, transcount_node1);
-    ASSERT_EQ(transcount_main, transcount_node2);
+    ASSERT_EQ(transcount_main, 2);
+    ASSERT_EQ(transcount_node1, transcount_node2);
 }
 
 

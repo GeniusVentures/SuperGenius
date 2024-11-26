@@ -97,10 +97,10 @@ namespace
             return;
         }
 
-        void ProcessSubTask(
-            const SGProcessing::SubTask& subTask, SGProcessing::SubTaskResult& result,
-            uint32_t initialHashCode) override 
+        outcome::result<SGProcessing::SubTaskResult> ProcessSubTask(
+        const SGProcessing::SubTask& subTask, uint32_t initialHashCode) override 
         {
+            SGProcessing::SubTaskResult result;
             if (m_processingMillisec > 0)
             {
                 std::this_thread::sleep_for(std::chrono::milliseconds(m_processingMillisec));
@@ -134,6 +134,7 @@ namespace
 
             m_processedSubTasks.push_back(subTask);
             m_initialHashes.push_back(initialHashCode);
+            return result;
         };
 
         std::vector<SGProcessing::SubTask> m_processedSubTasks;

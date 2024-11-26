@@ -44,7 +44,7 @@ namespace sgns::processing
             }
             else
             {
-                m_logger->debug( "[{}] placed to GlobalDB ", taskKey );
+                m_logger->debug( "[{}] placed to GlobalDB ", subTaskKey );
             }
         }
     }

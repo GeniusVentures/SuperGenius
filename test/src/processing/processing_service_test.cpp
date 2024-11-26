@@ -34,9 +34,8 @@ public:
 class ProcessingCoreImpl : public ProcessingCore
 {
 public:
-    void  ProcessSubTask(
-        const SGProcessing::SubTask& subTask, SGProcessing::SubTaskResult& result,
-        uint32_t initialHashCode) override {};
+    outcome::result<SGProcessing::SubTaskResult> ProcessSubTask(
+        const SGProcessing::SubTask& subTask, uint32_t initialHashCode) override { return SGProcessing::SubTaskResult{};};
     bool SetProcessingTypeFromJson(std::string jsondata) override
     {
         return true; //TODO - This is wrong - Update this tests to the actual ProcessingCoreImpl on src/processing/impl
