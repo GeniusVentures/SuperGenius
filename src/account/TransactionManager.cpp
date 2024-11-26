@@ -179,7 +179,7 @@ namespace sgns
         std::vector<std::string> node_addresses;
         for ( auto &subtask : taskresult.subtask_results() )
         {
-            std::cout << "Actually Queue Transaction" << subtask.subtaskid() << std::endl;
+            std::cout << "Actually Queue Transaction" << subtask.subtaskid() << "     " << subtask.node_address() << std::endl;
             subtask_ids.push_back( subtask.subtaskid() );
             node_addresses.push_back( subtask.node_address() );
         }
@@ -473,6 +473,7 @@ namespace sgns
                 }
                 for ( auto &node_address : tx.GetNodeAddresses() )
                 {
+                    std::cout << "Node Address " << node_address << std::endl;
                     payout_peers.push_back( { uint256_t{ peers_amount }, uint256_t{ node_address } } );
                     remainder -= peers_amount;
                 }

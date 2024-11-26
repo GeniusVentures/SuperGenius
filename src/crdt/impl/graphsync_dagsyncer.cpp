@@ -97,8 +97,12 @@ outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> GraphsyncDAGSyncer::
             {
                 return res.as_failure();
             }
-            res.value().wait();
-            node = res.value().get();
+            if (res.value().wait_for(std::chrono::seconds(10)) == std::future_status::ready) {
+                node = res.value().get();
+            } else {
+                logger_->error("Timeout while waiting for node fetch: {}", cid.toString().value());
+                return outcome::failure(boost::system::errc::timed_out);
+            }
         }
     }
     return node;

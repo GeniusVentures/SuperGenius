@@ -42,7 +42,7 @@ namespace sgns::processing
         m_subTaskResultStorage( std::move( subTaskResultStorage ) ),
         m_processingCore( std::move( processingCore ) ),
         m_timerChannelListRequestTimeout( *m_context ),
-        m_channelListRequestTimeout( boost::posix_time::seconds( 5 ) ),
+        m_channelListRequestTimeout( boost::posix_time::seconds( 1 ) ),
         m_isStopped( true ),
         userCallbackSuccess_( std::move( userCallbackSuccess ) ),
         userCallbackError_( std::move( userCallbackError ) ),
@@ -110,6 +110,7 @@ namespace sgns::processing
 
     void ProcessingServiceImpl::OnMessage( boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message &> message )
     {
+        m_logger->debug( "On Message.");
         if ( message )
         {
             SGProcessing::GridChannelMessage gridMessage;
@@ -211,9 +212,11 @@ namespace sgns::processing
 
     void ProcessingServiceImpl::PublishLocalChannelList()
     {
+        m_logger->debug( "Publish Local Channels.");
         std::scoped_lock lock( m_mutexNodes );
         for ( auto &itNode : m_processingNodes )
         {
+            m_logger->debug( "Owns Channel? {}.", itNode.second->HasQueueOwnership());
             // Only channel host answers to reduce a number of published messages
             if ( itNode.second->HasQueueOwnership() )
             {
@@ -272,11 +275,12 @@ namespace sgns::processing
                 m_processingNodes[subTaskQueueId] = node;
                 
                 m_logger->debug( "New processing channel created. {}", subTaskQueueId );
-                PublishLocalChannelList();
+                //PublishLocalChannelList();
             }
             else
             {
                 // If no tasks enquued, try to get available slots in existent queues
+                m_logger->debug( "No tasks to queue." );
                 SendChannelListRequest();
                 break;
             }

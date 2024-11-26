@@ -73,7 +73,7 @@ namespace sgns::processing
         boost::posix_time::time_duration                       m_channelListRequestTimeout;
         bool                                                   m_waitingCHannelRequest = false;
         std::atomic<bool>                                      m_isStopped;
-        mutable std::recursive_mutex                           m_mutexNodes;
+        mutable std::mutex                                     m_mutexNodes;
         std::function<void( const std::string &subTaskQueueId, const SGProcessing::TaskResult &taskresult )>
                                                                  userCallbackSuccess_;
         std::function<void( const std::string &subTaskQueueId )> userCallbackError_;
