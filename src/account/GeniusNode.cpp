@@ -163,7 +163,7 @@ namespace sgns
             { ProcessingDone( var, taskresult ); }, //
             [this]( const std::string &var ) { ProcessingError( var ); },
             account_->GetAddress<std::string>() );
-        processing_service_->SetChannelListRequestTimeout( boost::posix_time::milliseconds( 10000 ) );
+        processing_service_->SetChannelListRequestTimeout( boost::posix_time::milliseconds( 3000 ) );
 
         base::Buffer root_hash;
         root_hash.put( std::vector<uint8_t>( 32ul, 1 ) );
@@ -259,8 +259,8 @@ namespace sgns
         // std::cout << "---------------------------------------------------------------" << std::endl;
         // std::cout << "Process Image?" << transaction_manager_->GetBalance() << std::endl;
         // std::cout << "---------------------------------------------------------------" << std::endl;
-        auto funds = GetProcessCost(image_path);
-        if(funds <= 0)
+        auto funds = GetProcessCost( image_path );
+        if ( funds <= 0 )
         {
             return;
         }
@@ -298,7 +298,7 @@ namespace sgns
                 size_t                                     nChunks = input["chunk_count"].GetInt();
                 rapidjson::StringBuffer                    buffer;
                 rapidjson::Writer<rapidjson::StringBuffer> writer( buffer );
-                
+
                 input.Accept( writer );
                 std::string inputAsString = buffer.GetString();
                 taskSplitter.SplitTask( task, subTasks, inputAsString, nChunks, false );
@@ -314,16 +314,16 @@ namespace sgns
         }
     }
 
-    uint64_t GeniusNode::GetProcessCost(const std::string &json_data)
+    uint64_t GeniusNode::GetProcessCost( const std::string &json_data )
     {
         uint64_t cost = 0;
 
         //Parse Json
         rapidjson::Document document;
-        if (document.Parse(json_data.c_str()).HasParseError())
+        if ( document.Parse( json_data.c_str() ).HasParseError() )
         {
             std::cout << "Invalid JSON data provided" << std::endl;
-            return 0; 
+            return 0;
         }
         size_t           nSubTasks = 1;
         rapidjson::Value inputArray;
@@ -339,10 +339,10 @@ namespace sgns
         }
         for ( const auto &input : inputArray.GetArray() )
         {
-            if (input.HasMember("block_len") && input["block_len"].IsUint64())
+            if ( input.HasMember( "block_len" ) && input["block_len"].IsUint64() )
             {
-                uint64_t block_len = input["block_len"].GetUint64();
-                cost += (block_len / 300000);
+                uint64_t block_len  = input["block_len"].GetUint64();
+                cost               += ( block_len / 300000 );
                 std::cout << "Block length: " << block_len << std::endl;
             }
             else
@@ -351,9 +351,9 @@ namespace sgns
                 return 0;
             }
         }
-        return std::max(cost, static_cast<uint64_t>(1));
+        return std::max( cost, static_cast<uint64_t>( 1 ) );
     }
-    
+
     void GeniusNode::MintTokens( uint64_t amount )
     {
         transaction_manager_->MintFunds( amount );

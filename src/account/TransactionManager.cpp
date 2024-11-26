@@ -182,7 +182,7 @@ namespace sgns
         std::vector<std::string> node_addresses;
         for ( auto &subtask : taskresult.subtask_results() )
         {
-            std::cout << "Actually Queue Transaction" << subtask.subtaskid() << std::endl;
+            std::cout << "Subtask Result " << subtask.subtaskid()  << "from " << subtask.node_address() << std::endl;
             subtask_ids.push_back( subtask.subtaskid() );
             node_addresses.push_back( subtask.node_address() );
         }
