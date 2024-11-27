@@ -50,7 +50,8 @@ namespace sgns
         return serialized_proto;
     }
 
-    ProcessingTransaction ProcessingTransaction::DeSerializeByteVector( const std::vector<uint8_t> &data )
+    std::shared_ptr<ProcessingTransaction> ProcessingTransaction::DeSerializeByteVector(
+        const std::vector<uint8_t> &data )
     {
         SGTransaction::ProcessingTx tx_struct;
         if ( !tx_struct.ParseFromArray( data.data(), data.size() ) )
@@ -61,6 +62,9 @@ namespace sgns
         std::vector<std::string> subtask_ids( tx_struct.subtask_cids().begin(), tx_struct.subtask_cids().end() );
         std::vector<std::string> node_addresses( tx_struct.node_addresses().begin(), tx_struct.node_addresses().end() );
 
-        return { tx_struct.job_cid(), subtask_ids, node_addresses, tx_struct.dag_struct() }; // Return new instance
+        return std::make_shared<ProcessingTransaction>( tx_struct.job_cid(),
+                                                        subtask_ids,
+                                                        node_addresses,
+                                                        tx_struct.dag_struct() ); // Return new instance
     }
 }

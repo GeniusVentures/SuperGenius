@@ -25,8 +25,8 @@ namespace sgns
                                const SGTransaction::DAGStruct &dag );
         ~ProcessingTransaction() override = default;
 
-        std::vector<uint8_t>         SerializeByteVector() override;
-        static ProcessingTransaction DeSerializeByteVector( const std::vector<uint8_t> &data );
+        std::vector<uint8_t>                          SerializeByteVector() override;
+        static std::shared_ptr<ProcessingTransaction> DeSerializeByteVector( const std::vector<uint8_t> &data );
 
         uint256_t GetJobHash() const
         {
@@ -62,6 +62,21 @@ namespace sgns
         std::vector<std::string> node_addresses_; ///< Addresses/ID of processors
         //uint256_t   hash_process_data; ///< Hash of the process data
         //std::vector<uint8_t> raw_data;          ///<The data being processed
+
+        /**
+         * @brief       Registers the deserializer for the transfer transaction type.
+         * @return      A boolean indicating successful registration.
+         */
+        static inline bool Register()
+        {
+            RegisterDeserializer( "process", &ProcessingTransaction::DeSerializeByteVector );
+            return true;
+        }
+
+        /** 
+         * @brief       Static variable to ensure registration happens on inclusion of header file.
+         */
+        static inline bool registered = Register();
     };
 }
 
