@@ -38,9 +38,9 @@ namespace sgns
                                                    eth_private_key ) ),
         io_( std::make_shared<boost::asio::io_context>() ),
         write_base_path_( dev_config.BaseWritePath ),
-        dev_config_( dev_config ),
         autodht_( autodht ),
-        isprocessor_( isprocessor )
+        isprocessor_( isprocessor ),
+        dev_config_( dev_config )
     {
         logging_system = std::make_shared<soralog::LoggingSystem>( std::make_shared<soralog::ConfiguratorFromYAML>(
             // Original LibP2P logging config

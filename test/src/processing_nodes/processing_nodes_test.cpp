@@ -1,12 +1,10 @@
 #include <gtest/gtest.h>
 
-#include <math.h>
+#include <cmath>
 #include <fstream>
 #include <memory>
 #include <iostream>
-#include <cstdlib>
 #include <cstdint>
-#include <atomic>
 
 #ifdef _WIN32
 //#include <windows.h>
@@ -57,44 +55,54 @@ protected:
         DEV_CONFIG.BaseWritePath[sizeof( DEV_CONFIG.BaseWritePath ) - 1]   = '\0';
         DEV_CONFIG2.BaseWritePath[sizeof( DEV_CONFIG2.BaseWritePath ) - 1] = '\0';
         DEV_CONFIG3.BaseWritePath[sizeof( DEV_CONFIG3.BaseWritePath ) - 1] = '\0';
-        node_main                                                          = new sgns::GeniusNode( DEV_CONFIG,
+
+        node_main  = new sgns::GeniusNode( DEV_CONFIG,
                                           "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
                                           false,
                                           false );
-        node_proc1                                                         = new sgns::GeniusNode( DEV_CONFIG2,
+        node_proc1 = new sgns::GeniusNode( DEV_CONFIG2,
                                            "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
                                            false,
                                            true );
-        node_proc2                                                         = new sgns::GeniusNode( DEV_CONFIG3,
+        node_proc2 = new sgns::GeniusNode( DEV_CONFIG3,
                                            "fecabeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
                                            false,
                                            true );
 
         //Connect to each other
-        std::vector<std::string> bootstrappers;
-        bootstrappers.push_back( node_proc1->GetPubSub()->GetLocalAddress() );
-        bootstrappers.push_back( node_proc2->GetPubSub()->GetLocalAddress() );
+        std::vector bootstrappers = { node_proc1->GetPubSub()->GetLocalAddress(),
+                                      node_proc2->GetPubSub()->GetLocalAddress() };
         node_main->GetPubSub()->AddPeers( bootstrappers );
 
-        bootstrappers.clear();
-        bootstrappers.push_back( node_main->GetPubSub()->GetLocalAddress() );
-        bootstrappers.push_back( node_proc2->GetPubSub()->GetLocalAddress() );
+        bootstrappers = { node_main->GetPubSub()->GetLocalAddress(), node_proc2->GetPubSub()->GetLocalAddress() };
         node_proc1->GetPubSub()->AddPeers( bootstrappers );
-        bootstrappers.clear();
-        bootstrappers.push_back( node_main->GetPubSub()->GetLocalAddress() );
-        bootstrappers.push_back( node_proc1->GetPubSub()->GetLocalAddress() );
+
+        bootstrappers = { node_main->GetPubSub()->GetLocalAddress(), node_proc1->GetPubSub()->GetLocalAddress() };
         node_proc2->GetPubSub()->AddPeers( bootstrappers );
     }
 
     static void TearDownTestSuite()
     {
-        std::cout << "Tear Down" << std::endl;
+        std::cout << "Tear down main" << std::endl;
         delete node_main;
-        std::cout << "Tear Down2" << std::endl;
+        if ( !std::filesystem::remove_all( DEV_CONFIG.BaseWritePath ) )
+        {
+            std::cerr << "Could not delete main node files\n";
+        }
+
+        std::cout << "Tear down 2" << std::endl;
         delete node_proc1;
-        std::cout << "Tear Down3" << std::endl;
+        if ( !std::filesystem::remove_all( DEV_CONFIG2.BaseWritePath ) )
+        {
+            std::cerr << "Could not delete node 2 files\n";
+        }
+
+        std::cout << "Tear down 3" << std::endl;
         delete node_proc2;
-        std::cout << "Tear Down4" << std::endl;
+        if ( !std::filesystem::remove_all( DEV_CONFIG3.BaseWritePath ) )
+        {
+            std::cerr << "Could not delete node 3 files\n";
+        }
     }
 };
 
