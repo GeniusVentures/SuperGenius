@@ -11,10 +11,10 @@
 #include <vector>
 #include <string>
 
-#include <boost/optional.hpp>
 #include <boost/format.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
 
+#include "outcome/outcome.hpp"
 #include "account/proto/SGTransaction.pb.h"
 
 namespace sgns
@@ -44,13 +44,13 @@ namespace sgns
             return transaction_type;
         }
 
-        static boost::optional<SGTransaction::DAGStruct> DeSerializeDAGStruct( std::vector<uint8_t> &data )
+        static outcome::result<SGTransaction::DAGStruct> DeSerializeDAGStruct( std::vector<uint8_t> &data )
         {
             SGTransaction::DAGWrapper dag_wrap;
             if ( !dag_wrap.ParseFromArray( data.data(), data.size() ) )
             {
                 std::cerr << "Failed to parse DAGStruct from array." << std::endl;
-                return boost::none;
+                return outcome::failure(boost::system::error_code{});
             }
             SGTransaction::DAGStruct dag;
             dag.CopyFrom( *dag_wrap.mutable_dag_struct() );
