@@ -14,15 +14,15 @@
 namespace sgns
 {
     EscrowTransaction::EscrowTransaction( UTXOTxParameters                params,
-                                          uint64_t                        num_chunks,
-                                          uint256_t                       dest_addr,
-                                          float                           cut,
+                                          uint64_t                        amount,
+                                          uint256_t                       dev_addr,
+                                          float                           peers_cut,
                                           const SGTransaction::DAGStruct &dag ) :
         IGeniusTransactions( "escrow", SetDAGWithType( dag, "escrow" ) ),
-        num_chunks_( num_chunks ),
-        dev_addr( std::move( dest_addr ) ),
-        dev_cut( cut ),
-        utxo_params_( std::move( params ) )
+        utxo_params_( std::move( params ) ),
+        amount_( std::move( amount ) ),
+        dev_addr_( std::move( dev_addr ) ),
+        peers_cut_( peers_cut )
     {
         auto hasher_ = std::make_shared<sgns::crypto::HasherImpl>();
         auto hash    = hasher_->blake2b_256( SerializeByteVector() );
@@ -48,9 +48,9 @@ namespace sgns
             output_proto->set_encrypted_amount( output.encrypted_amount.str() );
             output_proto->set_dest_addr( output.dest_address.str() );
         }
-        tx_struct.set_num_chunks( num_chunks_ );
-        tx_struct.set_dev_addr( dev_addr.str() );
-        tx_struct.set_dev_cut( dev_cut );
+        tx_struct.set_amount( amount_ );
+        tx_struct.set_dev_addr( dev_addr_.str() );
+        tx_struct.set_peers_cut( peers_cut_ );
         size_t               size = tx_struct.ByteSizeLong();
         std::vector<uint8_t> serialized_proto( size );
 
@@ -58,7 +58,7 @@ namespace sgns
         return serialized_proto;
     }
 
-    EscrowTransaction EscrowTransaction::DeSerializeByteVector( const std::vector<uint8_t> &data )
+    std::shared_ptr<EscrowTransaction> EscrowTransaction::DeSerializeByteVector( const std::vector<uint8_t> &data )
     {
         SGTransaction::EscrowTx tx_struct;
         if ( !tx_struct.ParseFromArray( data.data(), data.size() ) )
@@ -85,14 +85,14 @@ namespace sgns
             OutputDestInfo curr{ uint256_t{ output_proto.encrypted_amount() }, uint256_t{ output_proto.dest_addr() } };
             outputs.push_back( curr );
         }
-        uint64_t  num_chunks = tx_struct.num_chunks();
-        float     dev_cut    = tx_struct.dev_cut();
+        uint64_t  amount    = tx_struct.amount();
+        float     peers_cut = tx_struct.peers_cut();
         uint256_t dev_addr( tx_struct.dev_addr() );
-        return { UTXOTxParameters{ inputs, outputs }, num_chunks, dev_addr, dev_cut, tx_struct.dag_struct() };
+        return std::make_shared<EscrowTransaction>( UTXOTxParameters{ inputs, outputs },
+                                                    amount,
+                                                    dev_addr,
+                                                    peers_cut,
+                                                    tx_struct.dag_struct() );
     }
 
-    uint64_t EscrowTransaction::GetNumChunks() const
-    {
-        return num_chunks_;
-    }
 }
