@@ -305,7 +305,6 @@ namespace sgns
             }
 
             auto maybe_escrow_path = transaction_manager_->HoldEscrow( funds,
-                                                                       nSubTasks,
                                                                        uint256_t{ std::string( dev_config_.Addr ) },
                                                                        dev_config_.Cut,
                                                                        boost::uuids::to_string( uuid ) );
@@ -380,13 +379,21 @@ namespace sgns
 
     void GeniusNode::ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult )
     {
-        std::cout << "PROCESSING DONE " << task_id << std::endl;
-        transaction_manager_->ProcessingDone( task_id, taskresult );
+        std::cout << "[" << account_->GetAddress<std::string>() << "] SUCESS PROCESSING TASK " << task_id << std::endl;
+        if ( !task_queue_->IsTaskCompleted( task_id ) )
+        {
+            transaction_manager_->ProcessingDone( task_id, taskresult );
+            task_queue_->CompleteTask( task_id, taskresult );
+        }
+        else
+        {
+            std::cout << "Task Already completed!" << std::endl;
+        }
     }
 
     void GeniusNode::ProcessingError( const std::string &task_id )
     {
-        std::cout << "PROCESSING ERROR " << task_id << std::endl;
+        std::cout << "[" << account_->GetAddress<std::string>() << "] ERROR PROCESSING SUBTASK" << task_id << std::endl;
     }
 
     void GeniusNode::ProcessingFinished( const std::string                 &task_id,
