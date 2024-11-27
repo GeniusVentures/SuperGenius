@@ -56,11 +56,17 @@ namespace sgns
         auto loggerGlobalDB = base::createLogger( "GlobalDB" );
         loggerGlobalDB->set_level( spdlog::level::off );
 
+if(isprocessor_)
+{
+        auto loggerDAGSyncer = base::createLogger( "GraphsyncDAGSyncer" );
+        loggerDAGSyncer->set_level( spdlog::level::trace );
+}
+else{
         auto loggerDAGSyncer = base::createLogger( "GraphsyncDAGSyncer" );
         loggerDAGSyncer->set_level( spdlog::level::off );
-
+}
         auto loggerBroadcaster = base::createLogger( "PubSubBroadcasterExt" );
-        loggerBroadcaster->set_level( spdlog::level::off );
+        loggerBroadcaster->set_level( spdlog::level::trace );
 
         auto loggerDataStore = base::createLogger( "CrdtDatastore" );
         loggerDataStore->set_level( spdlog::level::off );
@@ -69,7 +75,7 @@ namespace sgns
         loggerTransactions->set_level( spdlog::level::off );
 
         auto loggerQueue = base::createLogger( "ProcessingTaskQueueImpl" );
-        loggerQueue->set_level( spdlog::level::trace );
+        loggerQueue->set_level( spdlog::level::off );
 
         auto loggerRocksDB = base::createLogger( "rocksdb" );
         loggerRocksDB->set_level( spdlog::level::off );
