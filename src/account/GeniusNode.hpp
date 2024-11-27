@@ -134,9 +134,6 @@ namespace sgns
 
         void ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult );
         void ProcessingError( const std::string &task_id );
-        void ProcessingFinished( const std::string                 &task_id,
-                                 const std::set<std::string>       &subtasks_ids,
-                                 const std::vector<OutputDestInfo> &destinations );
 
         static constexpr std::string_view db_path_                = "bc-%d/";
         static constexpr std::uint16_t    MAIN_NET                = 369;

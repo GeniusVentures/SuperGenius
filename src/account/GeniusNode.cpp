@@ -38,9 +38,9 @@ namespace sgns
                                                    eth_private_key ) ),
         io_( std::make_shared<boost::asio::io_context>() ),
         write_base_path_( dev_config.BaseWritePath ),
-        dev_config_( dev_config ),
         autodht_( autodht ),
-        isprocessor_( isprocessor )
+        isprocessor_( isprocessor ),
+        dev_config_( dev_config )
     {
         logging_system = std::make_shared<soralog::LoggingSystem>( std::make_shared<soralog::ConfiguratorFromYAML>(
             // Original LibP2P logging config
@@ -170,7 +170,7 @@ else{
             { ProcessingDone( var, taskresult ); }, //
             [this]( const std::string &var ) { ProcessingError( var ); },
             account_->GetAddress<std::string>() );
-        processing_service_->SetChannelListRequestTimeout( boost::posix_time::milliseconds( 10000 ) );
+        processing_service_->SetChannelListRequestTimeout( boost::posix_time::milliseconds( 3000 ) );
 
         base::Buffer root_hash;
         root_hash.put( std::vector<uint8_t>( 32ul, 1 ) );
@@ -180,8 +180,11 @@ else{
             globaldb_,
             hasher_,
             ( boost::format( std::string( db_path_ ) ) % TEST_NET ).str() );
-        auto maybe_block_storage =
-            blockchain::KeyValueBlockStorage::create( root_hash, globaldb_, hasher_, header_repo_, []( auto & ) {} );
+        auto maybe_block_storage = blockchain::KeyValueBlockStorage::create( root_hash,
+                                                                             globaldb_,
+                                                                             hasher_,
+                                                                             header_repo_,
+                                                                             []( auto & ) {} );
 
         if ( !maybe_block_storage )
         {
@@ -194,11 +197,7 @@ else{
                                                                      io_,
                                                                      account_,
                                                                      hasher_,
-                                                                     block_storage_,
-                                                                     [this]( const std::string                 &var,
-                                                                             const std::set<std::string>       &vars,
-                                                                             const std::vector<OutputDestInfo> &vars2 )
-                                                                     { ProcessingFinished( var, vars, vars2 ); } );
+                                                                     block_storage_ );
 
         transaction_manager_->Start();
         if ( isprocessor_ )
@@ -286,8 +285,8 @@ else{
         // std::cout << "---------------------------------------------------------------" << std::endl;
         // std::cout << "Process Image?" << transaction_manager_->GetBalance() << std::endl;
         // std::cout << "---------------------------------------------------------------" << std::endl;
-        auto funds = GetProcessCost(image_path);
-        if(funds <= 0)
+        auto funds = GetProcessCost( image_path );
+        if ( funds <= 0 )
         {
             return;
         }
@@ -296,12 +295,6 @@ else{
         {
             //processing_service_->StopProcessing();
 
-            //std::vector<std::vector<uint32_t>> chunkOptions;
-            //chunkOptions.push_back( { 1080, 0, 4320, 5, 5, 24 } );
-            //std::list<SGProcessing::Task> tasks;
-            //size_t                        nTasks = 1;
-            //for ( size_t taskIdx = 0; taskIdx < nTasks; ++taskIdx )
-            //{
             SGProcessing::Task task;
             //boost::uuids::uuid uuid = boost::uuids::random_generator()();
             //boost::uuids::random_generator_pure gen;
@@ -312,17 +305,10 @@ else{
             task.set_ipfs_block_id( uuidstring );
 
             task.set_json_data( image_path );
-            //task.set_block_len(48600);
-            //task.set_block_line_stride(540);
-            //task.set_block_stride(4860);
-            //task.set_block_len( 4860000 );
-            //task.set_block_line_stride( 5400 );
-            //task.set_block_stride( 0 );
+
             task.set_random_seed( 0 );
             task.set_results_channel( ( boost::format( "RESULT_CHANNEL_ID_%1%" ) % ( 1 ) ).str() );
-            //tasks.push_back( std::move( task ) );
-            //}
-            //Number of SubTasks is number of input Images.
+
             rapidjson::Document document;
             document.Parse( image_path.c_str() );
             size_t           nSubTasks = 1;
@@ -337,26 +323,14 @@ else{
                 std::cout << "This json lacks information" << std::endl;
                 return;
             }
-            processing::ProcessTaskSplitter taskSplitter;
-            //auto                               mnn_image = GetImageByCID(image_path);
-            //if (mnn_image.size() != inputArray.Size())
-            //{
-            //    std::cout << "Input size does not match, did an image fail to be obtained?" << std::endl;
-            //    return;
-            //}
-            //int imageindex = 0;
+            processing::ProcessTaskSplitter  taskSplitter;
             std::list<SGProcessing::SubTask> subTasks;
             for ( const auto &input : inputArray.GetArray() )
             {
-                //auto image = mnn_image[imageindex];
-                //processing::ImageSplitter          imagesplit(image, input["block_line_stride"].GetInt(), input["block_stride"].GetInt(), input["block_len"].GetInt());
-
-                size_t nChunks = input["chunk_count"].GetInt();
-                //Assumption: There will always be 1 task, with several subtasks per json. So this for loop isn't really doing anything.
-                //for (auto& task : tasks)
-                //{
+                size_t                                     nChunks = input["chunk_count"].GetInt();
                 rapidjson::StringBuffer                    buffer;
                 rapidjson::Writer<rapidjson::StringBuffer> writer( buffer );
+
                 input.Accept( writer );
                 std::string inputAsString = buffer.GetString();
                 taskSplitter.SplitTask( task, subTasks, inputAsString, nChunks, false, pubsub_->GetHost()->getId().toBase58() );
@@ -365,26 +339,25 @@ else{
                 //imageindex++;
             }
 
+            auto maybe_escrow_path = transaction_manager_->HoldEscrow( funds,
+                                                                       uint256_t{ std::string( dev_config_.Addr ) },
+                                                                       dev_config_.Cut,
+                                                                       uuidstring );
+            task.set_escrow_path( maybe_escrow_path.value() );
             task_queue_->EnqueueTask( task, subTasks );
-            transaction_manager_->HoldEscrow( funds,
-                                              nSubTasks,
-                                              uint256_t{ std::string( dev_config_.Addr ) },
-                                              dev_config_.Cut,
-                                              uuidstring );
         }
     }
 
-    uint64_t GeniusNode::GetProcessCost(const std::string &json_data)
+    uint64_t GeniusNode::GetProcessCost( const std::string &json_data )
     {
         uint64_t cost = 0;
         std::cout << "Received JSON data: " << json_data << std::endl;
         //Parse Json
         rapidjson::Document document;
-        if (document.Parse(json_data.c_str()).HasParseError())
+        if ( document.Parse( json_data.c_str() ).HasParseError() )
         {
             std::cout << "Invalid JSON data provided" << std::endl;
-            std::cout << "Error: " << document.GetParseError() << " Offset: " << document.GetErrorOffset() << std::endl;
-            return 0; 
+            return 0;
         }
         size_t           nSubTasks = 1;
         rapidjson::Value inputArray;
@@ -400,10 +373,10 @@ else{
         }
         for ( const auto &input : inputArray.GetArray() )
         {
-            if (input.HasMember("block_len") && input["block_len"].IsUint64())
+            if ( input.HasMember( "block_len" ) && input["block_len"].IsUint64() )
             {
-                uint64_t block_len = input["block_len"].GetUint64();
-                cost += (block_len / 300000);
+                uint64_t block_len  = input["block_len"].GetUint64();
+                cost               += ( block_len / 300000 );
                 std::cout << "Block length: " << block_len << std::endl;
             }
             else
@@ -412,10 +385,9 @@ else{
                 return 0;
             }
         }
-        std::cout << "Return Cost: " << std::max(cost, static_cast<uint64_t>(1)) << std::endl;
-        return std::max(cost, static_cast<uint64_t>(1));
+        return std::max( cost, static_cast<uint64_t>( 1 ) );
     }
-    
+
     void GeniusNode::MintTokens( uint64_t amount )
     {
         transaction_manager_->MintFunds( amount );
@@ -470,35 +442,21 @@ else{
 
     void GeniusNode::ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult )
     {
-        std::cout << "PROCESSING DONE " << task_id << std::endl;
-        transaction_manager_->ProcessingDone( task_id, taskresult );
+        std::cout << "[" << account_->GetAddress<std::string>() << "] SUCESS PROCESSING TASK " << task_id << std::endl;
+        if ( !task_queue_->IsTaskCompleted( task_id ) )
+        {
+            transaction_manager_->ProcessingDone( task_id, taskresult );
+            task_queue_->CompleteTask( task_id, taskresult );
+        }
+        else
+        {
+            std::cout << "Task Already completed!" << std::endl;
+        }
     }
 
     void GeniusNode::ProcessingError( const std::string &task_id )
     {
-        std::cout << "PROCESSING ERROR " << task_id << std::endl;
-    }
-
-    void GeniusNode::ProcessingFinished( const std::string                 &task_id,
-                                         const std::set<std::string>       &subtasks_ids,
-                                         const std::vector<OutputDestInfo> &destinations )
-    {
-        if ( transaction_manager_->ReleaseEscrow( task_id, !task_queue_->IsTaskCompleted( task_id ), destinations ) )
-        {
-            SGProcessing::TaskResult result;
-            std::cout << "PROCESSING FINISHED " << task_id << std::endl;
-            auto subtask_results = task_result_storage_->GetSubTaskResults( subtasks_ids );
-
-            SGProcessing::TaskResult taskResult;
-            auto                     results = taskResult.mutable_subtask_results();
-            for ( const auto &r : subtask_results )
-            {
-                auto result = results->Add();
-                result->CopyFrom( r );
-            }
-            //processing_service_->StartProcessing( std::string( PROCESSING_GRID_CHANNEL ) );
-            task_queue_->CompleteTask( task_id, taskResult );
-        }
+        std::cout << "[" << account_->GetAddress<std::string>() << "] ERROR PROCESSING SUBTASK" << task_id << std::endl;
     }
 
 }

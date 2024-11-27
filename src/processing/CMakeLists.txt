@@ -94,7 +94,7 @@ target_link_libraries(processing_service PRIVATE
     rapidjson
     ipfs-pubsub
 )
-target_link_libraries(processing_service PUBLIC
+TARGET_LINK_LIBRARIES_WHOLE_ARCHIVE_W_TYPE(processing_service PUBLIC
     MNN::MNN)
 target_include_directories(processing_service PRIVATE ${AsyncIOManager_INCLUDE_DIR})
 

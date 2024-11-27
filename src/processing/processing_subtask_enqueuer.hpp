@@ -2,6 +2,7 @@
 #define SUPERGENIUS_PROCESSING_SUBTASK_ENQUEUER_HPP
 
 #include "processing/proto/SGProcessing.pb.h"
+#include "outcome/outcome.hpp"
 #include <list>
 #include <string>
 
@@ -13,7 +14,7 @@ class SubTaskEnqueuer
 public:
     virtual ~SubTaskEnqueuer() = default;
 
-    virtual bool EnqueueSubTasks(
+    virtual outcome::result<SGProcessing::Task> EnqueueSubTasks(
         std::string& subTaskQueueId, 
         std::list<SGProcessing::SubTask>& subTasks) = 0;
 };    

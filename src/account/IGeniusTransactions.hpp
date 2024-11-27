@@ -26,6 +26,12 @@ namespace sgns
     class IGeniusTransactions
     {
     public:
+        /**
+         * @brief   Alias for the de-serializer method type to be implemented in derived classes
+         */
+        using TransactionDeserializeFn =
+            std::function<std::shared_ptr<IGeniusTransactions>( const std::vector<uint8_t> & )>;
+
         IGeniusTransactions( std::string type, SGTransaction::DAGStruct dag ) :
             dag_st( std::move( dag ) ), transaction_type( std::move( type ) )
         {
@@ -89,7 +95,23 @@ namespace sgns
             return uint256_t{ dag_st.source_addr() };
         }
 
-        SGTransaction::DAGStruct dag_st;
+        SGTransaction::DAGStruct                                                dag_st;
+        static inline std::unordered_map<std::string, TransactionDeserializeFn> deserializers_map;
+
+        /**
+         * @brief       Registers a deserializer function for a specific transaction type.
+         * @param[in]   transaction_type The transaction type for which the deserializer is registered.
+         * @param[in]   fn The deserializer function to be registered.
+         */
+        static void RegisterDeserializer( const std::string &transaction_type, TransactionDeserializeFn fn )
+        {
+            deserializers_map[transaction_type] = fn;
+        }
+
+        static std::unordered_map<std::string, TransactionDeserializeFn> &GetDeSerializers()
+        {
+            return deserializers_map;
+        }
 
     private:
         const std::string transaction_type;

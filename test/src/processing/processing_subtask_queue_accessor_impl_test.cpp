@@ -58,10 +58,10 @@ namespace
             return;
         }
 
-        void ProcessSubTask(
-            const SGProcessing::SubTask& subTask, SGProcessing::SubTaskResult& result,
-            uint32_t initialHashCode) override 
+        outcome::result<SGProcessing::SubTaskResult> ProcessSubTask(
+        const SGProcessing::SubTask& subTask, uint32_t initialHashCode) override 
         {
+            SGProcessing::SubTaskResult result;
             if (m_processingMillisec > 0)
             {
                 std::this_thread::sleep_for(std::chrono::milliseconds(m_processingMillisec));
@@ -95,6 +95,7 @@ namespace
 
             m_processedSubTasks.push_back(subTask);
             m_initialHashes.push_back(initialHashCode);
+            return result;
         };
 
         std::vector<SGProcessing::SubTask> m_processedSubTasks;
@@ -166,7 +167,7 @@ TEST_F(SubTaskQueueAccessorImplTest, DISABLED_SubscribtionToResultChannel)
     auto processingCore = std::make_shared<ProcessingCoreImpl>(0);
 
     auto nodeId = "NODE_1";
-    auto engine = std::make_shared<ProcessingEngine>(nodeId, processingCore);
+    auto engine = std::make_shared<ProcessingEngine>(nodeId,nodeId, processingCore);
 
     auto queue = std::make_unique<SGProcessing::SubTaskQueue>();
     queue->mutable_processing_queue()->set_owner_node_id("DIFFERENT_NODE_ID");
@@ -227,7 +228,7 @@ TEST_F(SubTaskQueueAccessorImplTest, DISABLED_TaskFinalization)
     auto nodeId1 = "NODE_1";
 
     bool isTaskFinalized = false;
-    auto engine1 = std::make_shared<ProcessingEngine>(nodeId1, processingCore);
+    auto engine1 = std::make_shared<ProcessingEngine>(nodeId1,nodeId1, processingCore);
     processingCore->m_chunkResultHashes["SUBTASK_ID1"] = { 0 };
     processingCore->m_chunkResultHashes["SUBTASK_ID2"] = { 0 };
 
@@ -340,10 +341,10 @@ TEST_F(SubTaskQueueAccessorImplTest, DISABLED_InvalidSubTasksRestart)
     processingQueueManager1->ProcessSubTaskQueueMessage(queue.release());
 
     bool isTaskFinalized1 = false;
-    auto engine1 = std::make_shared<ProcessingEngine>(nodeId1, processingCore1);
+    auto engine1 = std::make_shared<ProcessingEngine>(nodeId1, nodeId1, processingCore1);
 
     bool isTaskFinalized2 = false;
-    auto engine2 = std::make_shared<ProcessingEngine>(nodeId2, processingCore2);
+    auto engine2 = std::make_shared<ProcessingEngine>(nodeId2, nodeId2, processingCore2);
 
     auto subTaskQueueAccessor1 = std::make_shared<SubTaskQueueAccessorImpl>(
         pubs1,

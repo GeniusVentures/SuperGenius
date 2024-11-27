@@ -97,10 +97,10 @@ namespace
             return;
         }
 
-        void ProcessSubTask(
-            const SGProcessing::SubTask& subTask, SGProcessing::SubTaskResult& result,
-            uint32_t initialHashCode) override 
+        outcome::result<SGProcessing::SubTaskResult> ProcessSubTask(
+        const SGProcessing::SubTask& subTask, uint32_t initialHashCode) override 
         {
+            SGProcessing::SubTaskResult result;
             if (m_processingMillisec > 0)
             {
                 std::this_thread::sleep_for(std::chrono::milliseconds(m_processingMillisec));
@@ -134,6 +134,7 @@ namespace
 
             m_processedSubTasks.push_back(subTask);
             m_initialHashes.push_back(initialHashCode);
+            return result;
         };
 
         std::vector<SGProcessing::SubTask> m_processedSubTasks;
@@ -191,7 +192,7 @@ TEST_F(ProcessingEngineTest, DISABLED_SubTaskProcessing)
     auto processingCore = std::make_shared<ProcessingCoreImpl>(0);
 
     auto nodeId = "NODE_1";
-    auto engine = std::make_shared<ProcessingEngine>(nodeId, processingCore);
+    auto engine = std::make_shared<ProcessingEngine>(nodeId,nodeId, processingCore);
 
     std::list<SGProcessing::SubTask> subTasks;
     auto subTaskQueueAccessor = std::make_shared<SubTaskQueueAccessorMock>(context);
@@ -235,8 +236,8 @@ TEST_F(ProcessingEngineTest, DISABLED_SharedSubTaskProcessing)
     auto nodeId1 = "NODE_1";
     auto nodeId2 = "NODE_2";
 
-    auto engine1 = std::make_shared<ProcessingEngine>(nodeId1, processingCore);
-    auto engine2 = std::make_shared<ProcessingEngine>(nodeId2, processingCore);
+    auto engine1 = std::make_shared<ProcessingEngine>(nodeId1,nodeId1, processingCore);
+    auto engine2 = std::make_shared<ProcessingEngine>(nodeId2,nodeId2, processingCore);
 
     auto subTaskQueueAccessor1 = std::make_shared<SubTaskQueueAccessorMock>(context);
     {

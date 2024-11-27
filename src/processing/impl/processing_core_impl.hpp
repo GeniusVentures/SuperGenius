@@ -22,6 +22,12 @@ namespace sgns::processing
     class ProcessingCoreImpl : public ProcessingCore
     {
     public:
+
+        enum class Error {
+            MAX_NUMBER_SUBTASKS = 1,
+            GLOBALDB_READ_ERROR,
+            NO_BUFFER_FROM_JOB_DATA
+        };
         ProcessingCoreImpl(
             std::shared_ptr<sgns::crdt::GlobalDB> db,
             size_t subTaskProcessingTime,
@@ -39,9 +45,8 @@ namespace sgns::processing
         * @param result - subtask result
         * @param initialHashCode - an initial hash code which is used to calculate result hash
         */
-        void ProcessSubTask(
-            const SGProcessing::SubTask& subTask, SGProcessing::SubTaskResult& result,
-            uint32_t initialHashCode) override;
+        outcome::result<SGProcessing::SubTaskResult> ProcessSubTask(
+        const SGProcessing::SubTask& subTask, uint32_t initialHashCode) override;
 
         /** Register an available processor
         * @param name - Name of processor
@@ -97,6 +102,9 @@ namespace sgns::processing
         
     };
 }
+
+OUTCOME_HPP_DECLARE_ERROR_2(sgns::processing, ProcessingCoreImpl::Error);
+
 
 
 #endif

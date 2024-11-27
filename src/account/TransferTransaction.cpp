@@ -10,8 +10,9 @@
 
 namespace sgns
 {
-    TransferTransaction::TransferTransaction( const std::vector<OutputDestInfo> &destinations, const std::vector<InputUTXOInfo> &inputs,
-                                              const SGTransaction::DAGStruct &dag ) :
+    TransferTransaction::TransferTransaction( const std::vector<OutputDestInfo> &destinations,
+                                              const std::vector<InputUTXOInfo>  &inputs,
+                                              const SGTransaction::DAGStruct    &dag ) :
         IGeniusTransactions( "transfer", SetDAGWithType( dag, "transfer" ) ), //
         input_tx_( inputs ),                                                  //
         outputs_( destinations )                                              //
@@ -20,6 +21,7 @@ namespace sgns
         auto hash    = hasher_->blake2b_256( SerializeByteVector() );
         dag_st.set_data_hash( hash.toReadableString() );
     }
+
     std::vector<uint8_t> TransferTransaction::SerializeByteVector()
     {
         SGTransaction::TransferTx tx_struct;
@@ -46,15 +48,15 @@ namespace sgns
         tx_struct.SerializeToArray( serialized_proto.data(), serialized_proto.size() );
         return serialized_proto;
     }
-    TransferTransaction TransferTransaction::DeSerializeByteVector( const std::vector<uint8_t> &data )
-    {
 
+    std::shared_ptr<TransferTransaction> TransferTransaction::DeSerializeByteVector( const std::vector<uint8_t> &data )
+    {
         SGTransaction::TransferTx tx_struct;
         if ( !tx_struct.ParseFromArray( data.data(), data.size() ) )
         {
             std::cerr << "Failed to parse TransferTx from array." << std::endl;
         }
-        std::vector<InputUTXOInfo> inputs;
+        std::vector<InputUTXOInfo>   inputs;
         SGTransaction::UTXOTxParams *utxo_proto_params = tx_struct.mutable_utxo_params();
         for ( int i = 0; i < utxo_proto_params->inputs_size(); ++i )
         {
@@ -75,7 +77,7 @@ namespace sgns
             outputs.push_back( curr );
         }
 
-        return TransferTransaction( outputs, inputs, tx_struct.dag_struct() ); // Return new instance
+        return std::make_shared<TransferTransaction>( outputs, inputs, tx_struct.dag_struct() ); // Return new instance
     }
 
     std::vector<OutputDestInfo> TransferTransaction::GetDstInfos() const
