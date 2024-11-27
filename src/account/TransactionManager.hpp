@@ -39,21 +39,11 @@ namespace sgns
     class TransactionManager
     {
     public:
-        using ProcessFinishCbType = std::function<
-            void( const std::string &, const std::set<std::string> &, const std::vector<OutputDestInfo> & )>;
-
         TransactionManager( std::shared_ptr<crdt::GlobalDB>           db,
                             std::shared_ptr<boost::asio::io_context>  ctx,
                             std::shared_ptr<GeniusAccount>            account,
                             std::shared_ptr<crypto::Hasher>           hasher,
                             std::shared_ptr<blockchain::BlockStorage> block_storage );
-
-        TransactionManager( std::shared_ptr<crdt::GlobalDB>           db,
-                            std::shared_ptr<boost::asio::io_context>  ctx,
-                            std::shared_ptr<GeniusAccount>            account,
-                            std::shared_ptr<crypto::Hasher>           hasher,
-                            std::shared_ptr<blockchain::BlockStorage> block_storage,
-                            ProcessFinishCbType                       processing_finished_cb );
 
         ~TransactionManager() = default;
 
@@ -73,9 +63,6 @@ namespace sgns
                                                  const uint256_t   &dev_addr,
                                                  float              peers_cut,
                                                  const std::string &job_id );
-        bool                         ReleaseEscrow( const std::string                 &job_id,
-                                                    const bool                        &pay,
-                                                    const std::vector<OutputDestInfo> &destinations );
         void     ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult );
         uint64_t GetBalance();
 
@@ -87,7 +74,6 @@ namespace sgns
         void                     Update();
         void                     EnqueueTransaction( std::shared_ptr<IGeniusTransactions> element );
         SGTransaction::DAGStruct FillDAGStruct();
-        SGTransaction::DAGStruct FillDAGStructProc();
         outcome::result<void>    SendTransaction();
         std::string              GetTransactionPath( std::shared_ptr<IGeniusTransactions> element );
         outcome::result<void>    RecordBlock( const std::vector<std::string> &transaction_keys );
@@ -97,10 +83,9 @@ namespace sgns
 
         outcome::result<std::shared_ptr<IGeniusTransactions>> FetchTransaction( std::string_view transaction_key );
         outcome::result<std::vector<uint8_t>>                 ParseTransaction( std::string_view transaction_key );
-        void ParseTransferTransaction( const std::vector<std::uint8_t> &transaction_data );
-        void ParseMintTransaction( const std::vector<std::uint8_t> &transaction_data );
-        void ParseEscrowTransaction( const std::vector<std::uint8_t> &transaction_data );
-        void ParseProcessingTransaction( const std::vector<std::uint8_t> &transaction_data );
+        void ParseTransferTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
+        void ParseMintTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
+        void ParseEscrowTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
 
         /**
          * @brief      Checks the blockchain for any new blocks to sync current values
@@ -118,7 +103,6 @@ namespace sgns
         std::uint64_t                                    last_trans_on_block_id;
         std::shared_ptr<blockchain::BlockStorage>        block_storage_m;
         std::shared_ptr<crypto::Hasher>                  hasher_m;
-        ProcessFinishCbType                              processing_finished_cb_m;
 
         base::Logger m_logger = sgns::base::createLogger( "TransactionManager" );
     };

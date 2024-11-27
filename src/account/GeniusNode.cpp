@@ -190,11 +190,7 @@ namespace sgns
                                                                      io_,
                                                                      account_,
                                                                      hasher_,
-                                                                     block_storage_,
-                                                                     [this]( const std::string                 &var,
-                                                                             const std::set<std::string>       &vars,
-                                                                             const std::vector<OutputDestInfo> &vars2 )
-                                                                     { ProcessingFinished( var, vars, vars2 ); } );
+                                                                     block_storage_ );
 
         transaction_manager_->Start();
         if ( isprocessor_ )
@@ -394,28 +390,6 @@ namespace sgns
     void GeniusNode::ProcessingError( const std::string &task_id )
     {
         std::cout << "[" << account_->GetAddress<std::string>() << "] ERROR PROCESSING SUBTASK" << task_id << std::endl;
-    }
-
-    void GeniusNode::ProcessingFinished( const std::string                 &task_id,
-                                         const std::set<std::string>       &subtasks_ids,
-                                         const std::vector<OutputDestInfo> &destinations )
-    {
-        if ( transaction_manager_->ReleaseEscrow( task_id, !task_queue_->IsTaskCompleted( task_id ), destinations ) )
-        {
-            SGProcessing::TaskResult result;
-            std::cout << "PROCESSING FINISHED " << task_id << std::endl;
-            auto subtask_results = task_result_storage_->GetSubTaskResults( subtasks_ids );
-
-            SGProcessing::TaskResult taskResult;
-            auto                     results = taskResult.mutable_subtask_results();
-            for ( const auto &r : subtask_results )
-            {
-                auto result = results->Add();
-                result->CopyFrom( r );
-            }
-            //processing_service_->StartProcessing( std::string( PROCESSING_GRID_CHANNEL ) );
-            task_queue_->CompleteTask( task_id, taskResult );
-        }
     }
 
 }
