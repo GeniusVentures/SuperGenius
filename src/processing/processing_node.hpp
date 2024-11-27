@@ -32,7 +32,8 @@ namespace sgns::processing
                         std::shared_ptr<ProcessingCore>                         processingCore,
                         std::function<void( const SGProcessing::TaskResult & )> taskResultProcessingSink,
                         std::function<void( const std::string & )>              processingErrorSink,
-                        std::string                                             node_id );
+                        std::string                                             node_id,
+                        std::string                                             escrow_path );
 
         ~ProcessingNode();
 
@@ -53,6 +54,7 @@ namespace sgns::processing
         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> m_gossipPubSub;
 
         std::string                           m_nodeId;
+        std::string                           m_escrowId;
         std::shared_ptr<ProcessingCore>       m_processingCore;
         std::shared_ptr<SubTaskStateStorage>  m_subTaskStateStorage;
         std::shared_ptr<SubTaskResultStorage> m_subTaskResultStorage;

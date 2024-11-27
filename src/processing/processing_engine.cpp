@@ -7,8 +7,10 @@
 namespace sgns::processing
 {
     ProcessingEngine::ProcessingEngine( std::string                     nodeId,
+                                        std::string                     escrow_path,
                                         std::shared_ptr<ProcessingCore> processingCore ) :
         m_nodeId( std::move( nodeId ) ),
+        m_escrowPath( std::move( escrow_path ) ),
         m_processingCore( std::move( processingCore ) ),
         m_lastProcessedTime( std::chrono::steady_clock::now() - std::chrono::minutes( 2 ) )
     {
@@ -93,6 +95,7 @@ namespace sgns::processing
                     // @todo replace results_channel with subtaskid
                     result.set_subtaskid( subTask.subtaskid() );
                     result.set_node_address( _this->m_nodeId );
+                    result.set_escrow_path( _this->m_escrowPath );
                     _this->m_logger->debug( "[PROCESSED]. ({}).", subTask.subtaskid() );
                     std::lock_guard<std::mutex> queueGuard( _this->m_mutexSubTaskQueue );
                     if ( _this->m_subTaskQueueAccessor )

@@ -21,7 +21,7 @@ namespace sgns::processing
     * @param nodeId - current processing node ID
     * @param processingCore specific processing core that process a subtask using specific algorithm
     */
-        ProcessingEngine( std::string nodeId, std::shared_ptr<ProcessingCore> processingCore );
+        ProcessingEngine( std::string nodeId, std::string escrow_path, std::shared_ptr<ProcessingCore> processingCore );
         ~ProcessingEngine();
 
         // @todo rename to StartProcessing
@@ -41,6 +41,7 @@ namespace sgns::processing
         void ProcessSubTask( SGProcessing::SubTask subTask );
 
         std::string                                m_nodeId;
+        std::string                                m_escrowPath;
         std::shared_ptr<ProcessingCore>            m_processingCore;
         std::function<void( const std::string & )> m_processingErrorSink;
 

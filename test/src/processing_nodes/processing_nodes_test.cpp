@@ -269,16 +269,12 @@ TEST_F( ProcessingNodesTest, PostProcessing )
     //node_main->ProcessImage(json_data);
 
     std::this_thread::sleep_for( std::chrono::milliseconds( 40000 ) );
-    std::cout << "Balances: " << balance_main << std::endl;
-    std::cout << "Balances: " << balance_node1 << std::endl;
-    std::cout << "Balances: " << balance_node2 << std::endl;
-    if ( node_proc1->GetBalance() == 0 || node_proc2->GetBalance() == 0 )
-    {
-        std::this_thread::sleep_for( std::chrono::milliseconds( 10000 ) );
-    }
-    std::cout << "Balances After: " << node_main->GetBalance() << std::endl;
-    std::cout << "Balances After: " << node_proc1->GetBalance() << std::endl;
-    std::cout << "Balances After: " << node_proc2->GetBalance() << std::endl;
+    std::cout << "Balance main (Before): " << balance_main << std::endl;
+    std::cout << "Balance node1 (Before): " << balance_node1 << std::endl;
+    std::cout << "Balance node2 (Before): " << balance_node2 << std::endl;
+    std::cout << "Balance main (After): " << node_main->GetBalance() << std::endl;
+    std::cout << "Balance node1 (After):" << node_proc1->GetBalance() << std::endl;
+    std::cout << "Balance node2 (After):" << node_proc2->GetBalance() << std::endl;
     ASSERT_EQ( balance_main - cost, node_main->GetBalance() );
     ASSERT_EQ( balance_node1 + 5, node_proc1->GetBalance() );
     ASSERT_EQ( balance_node2 + 5, node_proc2->GetBalance() );

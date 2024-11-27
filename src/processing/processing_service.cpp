@@ -197,7 +197,8 @@ namespace sgns::processing
                            processingQueuelId,
                            std::placeholders::_1 ),
                 std::bind( &ProcessingServiceImpl::OnProcessingError, this, processingQueuelId, std::placeholders::_1 ),
-                node_address_ );
+                node_address_,
+                "" );
 
             node->AttachTo( processingQueuelId );
             m_processingNodes[processingQueuelId] = node;
@@ -257,22 +258,20 @@ namespace sgns::processing
                 std::string                      subTaskQueueId;
                 std::list<SGProcessing::SubTask> subTasks;
 
-                if ( auto maybe_task = m_subTaskEnqueuer->EnqueueSubTasks( subTaskQueueId, subTasks ); maybe_task )
-                {
-                    auto node = std::make_shared<ProcessingNode>(
-                        m_gossipPubSub,
-                        m_subTaskStateStorage,
-                        m_subTaskResultStorage,
-                        m_processingCore,
-                        std::bind( &ProcessingServiceImpl::OnQueueProcessingCompleted,
-                                   this,
-                                   subTaskQueueId,
-                                   std::placeholders::_1 ),
-                        std::bind( &ProcessingServiceImpl::OnProcessingError,
-                                   this,
-                                   subTaskQueueId,
-                                   std::placeholders::_1 ),
-                        node_address_ );
+            if ( auto maybe_task = m_subTaskEnqueuer->EnqueueSubTasks( subTaskQueueId, subTasks ); maybe_task )
+            {
+                auto node = std::make_shared<ProcessingNode>(
+                    m_gossipPubSub,
+                    m_subTaskStateStorage,
+                    m_subTaskResultStorage,
+                    m_processingCore,
+                    std::bind( &ProcessingServiceImpl::OnQueueProcessingCompleted,
+                               this,
+                               subTaskQueueId,
+                               std::placeholders::_1 ),
+                    std::bind( &ProcessingServiceImpl::OnProcessingError, this, subTaskQueueId, std::placeholders::_1 ),
+                    node_address_,
+                    maybe_task.value().escrow_path() );
 
                     // @todo Figure out if the task is still available for other peers
                     // @todo Check if it is better to call EnqueueSubTasks within host
