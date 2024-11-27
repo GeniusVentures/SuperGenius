@@ -30,9 +30,9 @@
 class ProcessingNodesTest : public ::testing::Test
 {
 protected:
-    static sgns::GeniusNode* node_main;
-    static sgns::GeniusNode* node_proc1;
-    static sgns::GeniusNode* node_proc2;
+    static sgns::GeniusNode *node_main;
+    static sgns::GeniusNode *node_proc1;
+    static sgns::GeniusNode *node_proc2;
 
     static DevConfig_st DEV_CONFIG;
     static DevConfig_st DEV_CONFIG2;
@@ -43,32 +43,47 @@ protected:
     static void SetUpTestSuite()
     {
         std::string binary_path = boost::dll::program_location().parent_path().string();
-        std::strncpy(DEV_CONFIG.BaseWritePath, (binary_path + "/node1/").c_str(), sizeof(DEV_CONFIG.BaseWritePath));
-        std::strncpy(DEV_CONFIG2.BaseWritePath, (binary_path + "/node2/").c_str(), sizeof(DEV_CONFIG2.BaseWritePath));
-        std::strncpy(DEV_CONFIG3.BaseWritePath, (binary_path + "/node3/").c_str(), sizeof(DEV_CONFIG3.BaseWritePath));
+        std::strncpy( DEV_CONFIG.BaseWritePath,
+                      ( binary_path + "/node1/" ).c_str(),
+                      sizeof( DEV_CONFIG.BaseWritePath ) );
+        std::strncpy( DEV_CONFIG2.BaseWritePath,
+                      ( binary_path + "/node2/" ).c_str(),
+                      sizeof( DEV_CONFIG2.BaseWritePath ) );
+        std::strncpy( DEV_CONFIG3.BaseWritePath,
+                      ( binary_path + "/node3/" ).c_str(),
+                      sizeof( DEV_CONFIG3.BaseWritePath ) );
 
         // Ensure null termination in case the string is too long
-        DEV_CONFIG.BaseWritePath[sizeof(DEV_CONFIG.BaseWritePath) - 1] = '\0';
-        DEV_CONFIG2.BaseWritePath[sizeof(DEV_CONFIG2.BaseWritePath) - 1] = '\0';
-        DEV_CONFIG3.BaseWritePath[sizeof(DEV_CONFIG3.BaseWritePath) - 1] = '\0';
-        node_main = new sgns::GeniusNode(DEV_CONFIG, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", false, false);
-        node_proc1 = new sgns::GeniusNode(DEV_CONFIG2, "livebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", false, true);
-        node_proc2 = new sgns::GeniusNode(DEV_CONFIG3, "zzombeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", false, true);
+        DEV_CONFIG.BaseWritePath[sizeof( DEV_CONFIG.BaseWritePath ) - 1]   = '\0';
+        DEV_CONFIG2.BaseWritePath[sizeof( DEV_CONFIG2.BaseWritePath ) - 1] = '\0';
+        DEV_CONFIG3.BaseWritePath[sizeof( DEV_CONFIG3.BaseWritePath ) - 1] = '\0';
+        node_main                                                          = new sgns::GeniusNode( DEV_CONFIG,
+                                          "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+                                          false,
+                                          false );
+        node_proc1                                                         = new sgns::GeniusNode( DEV_CONFIG2,
+                                           "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+                                           false,
+                                           true );
+        node_proc2                                                         = new sgns::GeniusNode( DEV_CONFIG3,
+                                           "fecabeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+                                           false,
+                                           true );
 
-            //Connect to each other
+        //Connect to each other
         std::vector<std::string> bootstrappers;
-        bootstrappers.push_back(node_proc1->GetPubSub()->GetLocalAddress());
-        bootstrappers.push_back(node_proc2->GetPubSub()->GetLocalAddress());
-        node_main->GetPubSub()->AddPeers(bootstrappers);
+        bootstrappers.push_back( node_proc1->GetPubSub()->GetLocalAddress() );
+        bootstrappers.push_back( node_proc2->GetPubSub()->GetLocalAddress() );
+        node_main->GetPubSub()->AddPeers( bootstrappers );
 
         bootstrappers.clear();
-        bootstrappers.push_back(node_main->GetPubSub()->GetLocalAddress());
-        bootstrappers.push_back(node_proc2->GetPubSub()->GetLocalAddress());
-        node_proc1->GetPubSub()->AddPeers(bootstrappers);
+        bootstrappers.push_back( node_main->GetPubSub()->GetLocalAddress() );
+        bootstrappers.push_back( node_proc2->GetPubSub()->GetLocalAddress() );
+        node_proc1->GetPubSub()->AddPeers( bootstrappers );
         bootstrappers.clear();
-        bootstrappers.push_back(node_main->GetPubSub()->GetLocalAddress());
-        bootstrappers.push_back(node_proc1->GetPubSub()->GetLocalAddress());
-        node_proc2->GetPubSub()->AddPeers(bootstrappers);
+        bootstrappers.push_back( node_main->GetPubSub()->GetLocalAddress() );
+        bootstrappers.push_back( node_proc1->GetPubSub()->GetLocalAddress() );
+        node_proc2->GetPubSub()->AddPeers( bootstrappers );
     }
 
     static void TearDownTestSuite()
@@ -84,19 +99,19 @@ protected:
 };
 
 // Static member initialization
-sgns::GeniusNode* ProcessingNodesTest::node_main = nullptr;
-sgns::GeniusNode* ProcessingNodesTest::node_proc1 = nullptr;
-sgns::GeniusNode* ProcessingNodesTest::node_proc2 = nullptr;
+sgns::GeniusNode *ProcessingNodesTest::node_main  = nullptr;
+sgns::GeniusNode *ProcessingNodesTest::node_proc1 = nullptr;
+sgns::GeniusNode *ProcessingNodesTest::node_proc2 = nullptr;
 
-DevConfig_st ProcessingNodesTest::DEV_CONFIG = { "0xcafe", 0.65, 1.0, 0, "./node1" };
+DevConfig_st ProcessingNodesTest::DEV_CONFIG  = { "0xcafe", 0.65, 1.0, 0, "./node1" };
 DevConfig_st ProcessingNodesTest::DEV_CONFIG2 = { "0xcafe", 0.65, 1.0, 0, "./node2" };
 DevConfig_st ProcessingNodesTest::DEV_CONFIG3 = { "0xcafe", 0.65, 1.0, 0, "./node3" };
 
 std::string ProcessingNodesTest::binary_path = "";
 
-TEST_F(ProcessingNodesTest, DISABLED_ProcessNodesAddress)
+TEST_F( ProcessingNodesTest, DISABLED_ProcessNodesAddress )
 {
-    std::string address_main = node_main->GetAddress();
+    std::string address_main  = node_main->GetAddress();
     std::string address_proc1 = node_proc1->GetAddress();
     std::string address_proc2 = node_proc2->GetAddress();
     std::cout << "Addresses " << std::endl;
@@ -104,52 +119,51 @@ TEST_F(ProcessingNodesTest, DISABLED_ProcessNodesAddress)
     std::cout << "Proc Node 1: " << address_proc1 << std::endl;
     std::cout << "Proc Node 2: " << address_proc2 << std::endl;
 
-    EXPECT_NE(address_main, address_proc1) << "node_main and node_proc1 have the same address!";
-    EXPECT_NE(address_main, address_proc2) << "node_main and node_proc2 have the same address!";
-    EXPECT_NE(address_proc1, address_proc2) << "node_proc1 and node_proc2 have the same address!";
+    EXPECT_NE( address_main, address_proc1 ) << "node_main and node_proc1 have the same address!";
+    EXPECT_NE( address_main, address_proc2 ) << "node_main and node_proc2 have the same address!";
+    EXPECT_NE( address_proc1, address_proc2 ) << "node_proc1 and node_proc2 have the same address!";
 }
 
-TEST_F(ProcessingNodesTest, DISABLED_ProcessNodesPubsubs)
+TEST_F( ProcessingNodesTest, DISABLED_ProcessNodesPubsubs )
 {
-    std::string address_main = node_main->GetPubSub()->GetLocalAddress();
+    std::string address_main  = node_main->GetPubSub()->GetLocalAddress();
     std::string address_proc1 = node_proc1->GetPubSub()->GetLocalAddress();
     std::string address_proc2 = node_proc2->GetPubSub()->GetLocalAddress();
     // std::cout << "Addresses " << std::endl;
     // std::cout << "Main Node: " << address_main << std::endl;
     // std::cout << "Proc Node 1: " << address_proc1 << std::endl;
     // std::cout << "Proc Node 2: " << address_proc2 << std::endl;
-    EXPECT_NE(address_main, address_proc1) << "node_main and node_proc1 have the same address!";
-    EXPECT_NE(address_main, address_proc2) << "node_main and node_proc2 have the same address!";
-    EXPECT_NE(address_proc1, address_proc2) << "node_proc1 and node_proc2 have the same address!";
+    EXPECT_NE( address_main, address_proc1 ) << "node_main and node_proc1 have the same address!";
+    EXPECT_NE( address_main, address_proc2 ) << "node_main and node_proc2 have the same address!";
+    EXPECT_NE( address_proc1, address_proc2 ) << "node_proc1 and node_proc2 have the same address!";
 }
 
-TEST_F(ProcessingNodesTest, ProcessNodesTransactionsCount)
+TEST_F( ProcessingNodesTest, ProcessNodesTransactionsCount )
 {
-    node_main->MintTokens(50);
-    node_main->MintTokens(50);
-    std::this_thread::sleep_for(std::chrono::milliseconds(10000));
-    int transcount_main = node_main->GetTransactions().size();
+    node_main->MintTokens( 50 );
+    node_main->MintTokens( 50 );
+    std::this_thread::sleep_for( std::chrono::milliseconds( 10000 ) );
+    int transcount_main  = node_main->GetTransactions().size();
     int transcount_node1 = node_proc1->GetTransactions().size();
     int transcount_node2 = node_proc2->GetTransactions().size();
     std::cout << "Count 1" << transcount_main << std::endl;
     std::cout << "Count 2" << transcount_node1 << std::endl;
     std::cout << "Count 3" << transcount_node2 << std::endl;
 
-    ASSERT_EQ(transcount_main, 2);
-    ASSERT_EQ(transcount_node1, transcount_node2);
+    ASSERT_EQ( transcount_main, 2 );
+    ASSERT_EQ( transcount_node1, transcount_node2 );
 }
 
-
-TEST_F(ProcessingNodesTest, DISABLED_ProcessingNodeTransfer)
+TEST_F( ProcessingNodesTest, DISABLED_ProcessingNodeTransfer )
 {
-    int balance_main = node_main->GetBalance();
+    int balance_main  = node_main->GetBalance();
     int balance_node1 = node_proc1->GetBalance();
     int balance_node2 = node_proc2->GetBalance();
 }
 
-TEST_F(ProcessingNodesTest, CalculateProcessingCost)
+TEST_F( ProcessingNodesTest, CalculateProcessingCost )
 {
-        std::string json_data = R"(
+    std::string json_data = R"(
                 {
                 "data": {
                     "type": "file",
@@ -189,23 +203,23 @@ TEST_F(ProcessingNodesTest, CalculateProcessingCost)
                 ]
                 }
                )";
-    auto cost = node_main->GetProcessCost(json_data);
-    ASSERT_EQ(18, cost);
+    auto        cost      = node_main->GetProcessCost( json_data );
+    ASSERT_EQ( 18, cost );
 }
 
-TEST_F(ProcessingNodesTest, CalculateProcessingCostFail)
+TEST_F( ProcessingNodesTest, CalculateProcessingCostFail )
 {
-        std::string json_data = R"(
+    std::string json_data = R"(
                 garbage
                )";
-    auto cost = node_main->GetProcessCost(json_data);
-    ASSERT_EQ(0, cost);
+    auto        cost      = node_main->GetProcessCost( json_data );
+    ASSERT_EQ( 0, cost );
 }
 
-TEST_F(ProcessingNodesTest, PostProcessing)
+TEST_F( ProcessingNodesTest, PostProcessing )
 {
-    std::string bin_path = boost::dll::program_location().parent_path().string() + "/";
-        std::string json_data = R"(
+    std::string bin_path  = boost::dll::program_location().parent_path().string() + "/";
+    std::string json_data = R"(
                 {
                 "data": {
                     "type": "file",
@@ -245,23 +259,27 @@ TEST_F(ProcessingNodesTest, PostProcessing)
                 ]
                 }
                )";
-        auto cost = node_main->GetProcessCost(json_data);
-        boost::replace_all(json_data, "[basepath]", bin_path);
-        std::cout << "Json Data: " << json_data << std::endl;
-        int balance_main = node_main->GetBalance();
-        int balance_node1 = node_proc1->GetBalance();
-        int balance_node2 = node_proc2->GetBalance();
-        node_main->ProcessImage(json_data);
-        //node_main->ProcessImage(json_data);
+    auto        cost      = node_main->GetProcessCost( json_data );
+    boost::replace_all( json_data, "[basepath]", bin_path );
+    std::cout << "Json Data: " << json_data << std::endl;
+    int balance_main  = node_main->GetBalance();
+    int balance_node1 = node_proc1->GetBalance();
+    int balance_node2 = node_proc2->GetBalance();
+    node_main->ProcessImage( json_data );
+    //node_main->ProcessImage(json_data);
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(40000));
-        std::cout << "Balances: " << balance_main << std::endl;
-        std::cout << "Balances: " << balance_node1 << std::endl;
-        std::cout << "Balances: " << balance_node2 << std::endl;
-        std::cout << "Balances After: " << node_main->GetBalance() << std::endl;
-        std::cout << "Balances After: " << node_proc1->GetBalance() << std::endl;
-        std::cout << "Balances After: " << node_proc2->GetBalance() << std::endl;
-        ASSERT_EQ(balance_main-cost, node_main->GetBalance());
-        ASSERT_EQ(balance_node1+5, node_proc1->GetBalance());     
-        ASSERT_EQ(balance_node2+5, node_proc2->GetBalance());    
+    std::this_thread::sleep_for( std::chrono::milliseconds( 40000 ) );
+    std::cout << "Balances: " << balance_main << std::endl;
+    std::cout << "Balances: " << balance_node1 << std::endl;
+    std::cout << "Balances: " << balance_node2 << std::endl;
+    if ( node_proc1->GetBalance() == 0 || node_proc2->GetBalance() == 0 )
+    {
+        std::this_thread::sleep_for( std::chrono::milliseconds( 10000 ) );
+    }
+    std::cout << "Balances After: " << node_main->GetBalance() << std::endl;
+    std::cout << "Balances After: " << node_proc1->GetBalance() << std::endl;
+    std::cout << "Balances After: " << node_proc2->GetBalance() << std::endl;
+    ASSERT_EQ( balance_main - cost, node_main->GetBalance() );
+    ASSERT_EQ( balance_node1 + 5, node_proc1->GetBalance() );
+    ASSERT_EQ( balance_node2 + 5, node_proc2->GetBalance() );
 }
