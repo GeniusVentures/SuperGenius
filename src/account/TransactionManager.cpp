@@ -123,8 +123,15 @@ namespace sgns
     void TransactionManager::ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult )
     {
         //Fetch Escrow
-
-        auto maybe_tx = FetchTransaction( taskresult.subtask_results( 0 ).escrow_path() );
+        std::string escrow_path;
+        for ( auto &subtask : taskresult.subtask_results() )
+        {
+            if ( subtask.escrow_path() != "" )
+            {
+                escrow_path = subtask.escrow_path();
+            }
+        }
+        auto maybe_tx = FetchTransaction( escrow_path );
         if ( maybe_tx.has_error() )
         {
             std::cout << "ERROR IN FETCHING TRANSACTION" << std::endl;
@@ -260,81 +267,49 @@ namespace sgns
     outcome::result<std::vector<std::vector<uint8_t>>> TransactionManager::GetTransactionsFromBlock(
         const primitives::BlockId &block_number )
     {
-        if ( auto block_body = block_storage_m->getBlockBody( block_number ); block_body )
+        OUTCOME_TRY( ( auto &&, block_body ), block_storage_m->getBlockBody( block_number ) );
+        std::vector<std::vector<uint8_t>> ret;
+
+        for ( auto &key : block_body )
         {
-            std::vector<std::vector<uint8_t>> ret;
-
-            for ( auto &key : block_body.value() )
-            {
-                if ( auto transaction = ParseTransaction( key.data.toString() ); transaction )
-                {
-                    ret.push_back( std::move( transaction.value() ) );
-                }
-            }
-
-            return ret;
+            OUTCOME_TRY( ( auto &&, transaction ), FetchTransaction( key.data.toString() ) );
+            BOOST_OUTCOME_TRYV2( auto &&, ParseTransaction( transaction ) );
+            ret.push_back( std::move( transaction->SerializeByteVector() ) );
         }
 
-        return std::errc::invalid_argument;
+        return ret;
     }
 
-    outcome::result<std::vector<uint8_t>> TransactionManager::ParseTransaction( std::string_view transaction_key )
+    outcome::result<void> TransactionManager::ParseTransaction( const std::shared_ptr<IGeniusTransactions> &tx )
     {
-        if ( auto maybe_transaction_data = db_m->Get( { std::string( transaction_key ) } ); maybe_transaction_data )
+        auto it = transaction_parsers.find( tx->GetType() );
+        if ( it == transaction_parsers.end() )
         {
-            auto transaction_data = maybe_transaction_data.value().toVector();
-            auto maybe_dag        = IGeniusTransactions::DeSerializeDAGStruct( transaction_data );
-            m_logger->debug( "Found the data, deserializing into DAG {}", transaction_key );
-            if ( maybe_dag )
-            {
-                const std::string &string_src_address = maybe_dag.value().source_addr();
-                if ( string_src_address == account_m->GetAddress<std::string>() )
-                {
-                    account_m->nonce = maybe_dag.value().nonce() + 1;
-                }
-                if ( maybe_dag.value().type() == "transfer" )
-                {
-                    m_logger->info( "Transfer transaction" );
-                    ParseTransferTransaction(  TransferTransaction::DeSerializeByteVector( transaction_data ) );
-                }
-                else if ( maybe_dag.value().type() == "mint" )
-                {
-                    m_logger->info( "Mint transaction" );
-                    ParseMintTransaction( MintTransaction::DeSerializeByteVector( transaction_data ));
-                }
-                else if ( maybe_dag.value().type() == "escrow" )
-                {
-                    m_logger->info( "Escrow transaction" );
-                    ParseEscrowTransaction( EscrowTransaction::DeSerializeByteVector( transaction_data ) );
-                }
-            }
-            return transaction_data;
+            m_logger->info( "No Parser Available" );
+            return std::errc::invalid_argument;
         }
 
-        return std::errc::invalid_argument;
+        return ( this->*( it->second ) )( tx );
     }
 
     outcome::result<std::shared_ptr<IGeniusTransactions>> TransactionManager::FetchTransaction(
         std::string_view transaction_key )
     {
-        if ( auto maybe_transaction_data = db_m->Get( { std::string( transaction_key ) } ); maybe_transaction_data )
-        {
-            auto transaction_data = maybe_transaction_data.value().toVector();
-            auto maybe_dag        = IGeniusTransactions::DeSerializeDAGStruct( transaction_data );
-            m_logger->debug( "Found the data, deserializing into DAG {}", transaction_key );
+        OUTCOME_TRY( ( auto &&, transaction_data ), db_m->Get( { std::string( transaction_key ) } ) );
 
-            auto it = IGeniusTransactions::GetDeSerializers().find( "escrow" );
-            if ( it == IGeniusTransactions::GetDeSerializers().end() )
-            {
-                m_logger->info( "Invalid transaction found. No Deserialization available" );
-                return std::errc::invalid_argument;
-            }
-            return it->second( transaction_data );
-        }
-        else
+        auto transaction_data_vector = transaction_data.toVector();
+
+        OUTCOME_TRY( ( auto &&, dag ), IGeniusTransactions::DeSerializeDAGStruct( transaction_data_vector ) );
+
+        m_logger->debug( "Found the data, deserializing into DAG {}", transaction_key );
+
+        auto it = IGeniusTransactions::GetDeSerializers().find( dag.type() );
+        if ( it == IGeniusTransactions::GetDeSerializers().end() )
         {
+            m_logger->info( "Invalid transaction found. No Deserialization available" );
             return std::errc::invalid_argument;
         }
+        return it->second( transaction_data_vector );
     }
 
     /**
@@ -368,10 +343,10 @@ namespace sgns
         } while ( retval );
     }
 
-    void TransactionManager::ParseTransferTransaction( const std::shared_ptr<IGeniusTransactions> &tx )
+    outcome::result<void> TransactionManager::ParseTransferTransaction( const std::shared_ptr<IGeniusTransactions> &tx )
     {
-        auto transfer_tx = std::dynamic_pointer_cast<TransferTransaction>(tx);
-        auto dest_infos = transfer_tx->GetDstInfos();
+        auto transfer_tx = std::dynamic_pointer_cast<TransferTransaction>( tx );
+        auto dest_infos  = transfer_tx->GetDstInfos();
 
         for ( std::uint32_t i = 0; i < dest_infos.size(); ++i )
         {
@@ -390,11 +365,12 @@ namespace sgns
         }
 
         account_m->RefreshUTXOs( transfer_tx->GetInputInfos() );
+        return outcome::success();
     }
 
-    void TransactionManager::ParseMintTransaction( const std::shared_ptr<IGeniusTransactions> &tx )
+    outcome::result<void> TransactionManager::ParseMintTransaction( const std::shared_ptr<IGeniusTransactions> &tx )
     {
-        auto mint_tx = std::dynamic_pointer_cast<MintTransaction>(tx);
+        auto mint_tx = std::dynamic_pointer_cast<MintTransaction>( tx );
         if ( mint_tx->GetSrcAddress<uint256_t>() == account_m->GetAddress<uint256_t>() )
         {
             auto       hash = ( base::Hash256::fromReadableString( mint_tx->dag_st.data_hash() ) ).value();
@@ -402,11 +378,12 @@ namespace sgns
             account_m->PutUTXO( new_utxo );
             m_logger->info( "Created tokens, balance " + account_m->GetBalance<std::string>() );
         }
+        return outcome::success();
     }
 
-    void TransactionManager::ParseEscrowTransaction( const std::shared_ptr<IGeniusTransactions> &tx )
+    outcome::result<void> TransactionManager::ParseEscrowTransaction( const std::shared_ptr<IGeniusTransactions> &tx )
     {
-        auto escrow_tx = std::dynamic_pointer_cast<EscrowTransaction>(tx);
+        auto escrow_tx = std::dynamic_pointer_cast<EscrowTransaction>( tx );
 
         if ( escrow_tx->GetSrcAddress<uint256_t>() == account_m->GetAddress<uint256_t>() )
         {
@@ -427,6 +404,7 @@ namespace sgns
                 account_m->RefreshUTXOs( escrow_tx->GetUTXOParameters().inputs_ );
             }
         }
+        return outcome::success();
     }
 
 }

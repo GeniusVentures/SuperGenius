@@ -70,6 +70,8 @@ namespace sgns
         static constexpr std::uint16_t    MAIN_NET_ID             = 369;
         static constexpr std::uint16_t    TEST_NET_ID             = 963;
         static constexpr std::string_view TRANSACTION_BASE_FORMAT = "bc-%hu/";
+        using TransactionParserFn =
+            outcome::result<void> ( TransactionManager::* )( const std::shared_ptr<IGeniusTransactions> & );
 
         void                     Update();
         void                     EnqueueTransaction( std::shared_ptr<IGeniusTransactions> element );
@@ -82,10 +84,7 @@ namespace sgns
             const primitives::BlockId &block_number );
 
         outcome::result<std::shared_ptr<IGeniusTransactions>> FetchTransaction( std::string_view transaction_key );
-        outcome::result<std::vector<uint8_t>>                 ParseTransaction( std::string_view transaction_key );
-        void ParseTransferTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
-        void ParseMintTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
-        void ParseEscrowTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
+        outcome::result<void> ParseTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
 
         /**
          * @brief      Checks the blockchain for any new blocks to sync current values
@@ -103,6 +102,17 @@ namespace sgns
         std::uint64_t                                    last_trans_on_block_id;
         std::shared_ptr<blockchain::BlockStorage>        block_storage_m;
         std::shared_ptr<crypto::Hasher>                  hasher_m;
+
+        outcome::result<void> ParseTransferTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
+        outcome::result<void> ParseMintTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
+        outcome::result<void> ParseEscrowTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
+
+        static inline const std::unordered_map<std::string, TransactionParserFn> transaction_parsers = {
+            { "transfer", &TransactionManager::ParseTransferTransaction },
+            { "mint", &TransactionManager::ParseMintTransaction },
+            { "escrow", &TransactionManager::ParseEscrowTransaction },
+
+        };
 
         base::Logger m_logger = sgns::base::createLogger( "TransactionManager" );
     };
