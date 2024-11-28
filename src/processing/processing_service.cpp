@@ -184,10 +184,12 @@ namespace sgns::processing
         {
             return;
         }
-
+        m_logger->debug( "Accept Processing CHannel.");
         std::scoped_lock lock( m_mutexNodes );
+        m_logger->debug( "Accept Processing CHannel 2. {} {}",m_processingNodes.size(),m_maximalNodesCount);
         if ( m_processingNodes.size() < m_maximalNodesCount )
         {
+            m_logger->debug( "Accept Channel Create Node");
             auto node = std::make_shared<ProcessingNode>(
                 m_gossipPubSub,
                 m_subTaskStateStorage,
@@ -200,7 +202,7 @@ namespace sgns::processing
                 std::bind( &ProcessingServiceImpl::OnProcessingError, this, processingQueuelId, std::placeholders::_1 ),
                 node_address_,
                 "" );
-
+            m_logger->debug( "Attach to processing Queue");
             node->AttachTo( processingQueuelId );
             m_processingNodes[processingQueuelId] = node;
         }
@@ -260,9 +262,9 @@ namespace sgns::processing
             {
                 std::string                      subTaskQueueId;
                 std::list<SGProcessing::SubTask> subTasks;
-
-            if ( auto maybe_task = m_subTaskEnqueuer->EnqueueSubTasks( subTaskQueueId, subTasks ); maybe_task )
-            {
+                auto maybe_task = m_subTaskEnqueuer->EnqueueSubTasks( subTaskQueueId, subTasks );
+                if ( maybe_task )
+                {
                 auto node = std::make_shared<ProcessingNode>(
                     m_gossipPubSub,
                     m_subTaskStateStorage,
@@ -297,7 +299,7 @@ namespace sgns::processing
         }
         if ( node_dispatched )
         {
-            PublishLocalChannelList();
+           PublishLocalChannelList();
         }
     }
 }

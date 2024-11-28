@@ -85,7 +85,7 @@ namespace sgns::processing
                     std::string( subTaskResultHash.begin(), subTaskResultHash.end() ) + hashString;
                 SHA256_Update( &sha256, combinedHash.c_str(), sizeof( combinedHash ) );
                 SHA256_Final( subTaskResultHash.data(), &sha256 );
-                std::this_thread::sleep_for(std::chrono::milliseconds(150));
+                std::this_thread::sleep_for(std::chrono::milliseconds(500));
             }
             return subTaskResultHash;
         //}
@@ -117,6 +117,7 @@ namespace sgns::processing
         MNN::ScheduleConfig netConfig;
         netConfig.type      = MNN_FORWARD_VULKAN;
         netConfig.numThread = 4;
+        netConfig.mode = 0;
         auto session        = mnnNet->createSession( netConfig );
 
         auto input = mnnNet->getSessionInput( session, nullptr );

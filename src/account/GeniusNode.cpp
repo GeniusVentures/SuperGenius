@@ -59,14 +59,14 @@ namespace sgns
 if(isprocessor_)
 {
         auto loggerDAGSyncer = base::createLogger( "GraphsyncDAGSyncer" );
-        loggerDAGSyncer->set_level( spdlog::level::trace );
+        loggerDAGSyncer->set_level( spdlog::level::off );
 }
 else{
         auto loggerDAGSyncer = base::createLogger( "GraphsyncDAGSyncer" );
         loggerDAGSyncer->set_level( spdlog::level::off );
 }
         auto loggerBroadcaster = base::createLogger( "PubSubBroadcasterExt" );
-        loggerBroadcaster->set_level( spdlog::level::trace );
+        loggerBroadcaster->set_level( spdlog::level::off );
 
         auto loggerDataStore = base::createLogger( "CrdtDatastore" );
         loggerDataStore->set_level( spdlog::level::off );
@@ -75,7 +75,7 @@ else{
         loggerTransactions->set_level( spdlog::level::off );
 
         auto loggerQueue = base::createLogger( "ProcessingTaskQueueImpl" );
-        loggerQueue->set_level( spdlog::level::off );
+        loggerQueue->set_level( spdlog::level::trace );
 
         auto loggerRocksDB = base::createLogger( "rocksdb" );
         loggerRocksDB->set_level( spdlog::level::off );
@@ -98,6 +98,10 @@ else{
         loggerSubQueue->set_level( spdlog::level::trace );
         auto loggerProcServ = base::createLogger( "ProcessingService" );
         loggerProcServ->set_level( spdlog::level::trace );
+
+        auto loggerProcqm = base::createLogger( "ProcessingSubTaskQueueManager" );
+        loggerProcqm->set_level( spdlog::level::trace );
+        
 
         auto pubsubport    = 40001 + GenerateRandomPort( account_->GetAddress<std::string>() );
         auto graphsyncport = 40010 + GenerateRandomPort( account_->GetAddress<std::string>() );
