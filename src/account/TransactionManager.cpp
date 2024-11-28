@@ -274,6 +274,10 @@ namespace sgns
         {
             OUTCOME_TRY( ( auto &&, transaction ), FetchTransaction( key.data.toString() ) );
             BOOST_OUTCOME_TRYV2( auto &&, ParseTransaction( transaction ) );
+            if ( transaction->GetSrcAddress<uint256_t>() == account_m->GetAddress<uint256_t>() )
+            {
+                account_m->nonce = transaction->dag_st.nonce() + 1;
+            }
             ret.push_back( std::move( transaction->SerializeByteVector() ) );
         }
 
