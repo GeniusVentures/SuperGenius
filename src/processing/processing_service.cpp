@@ -111,7 +111,7 @@ namespace sgns::processing
 
     void ProcessingServiceImpl::OnMessage( boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message &> message )
     {
-        m_logger->debug( "On Message.");
+        m_logger->debug( "On Message. this {}", reinterpret_cast<size_t>(this));
         if ( message )
         {
             SGProcessing::GridChannelMessage gridMessage;
@@ -184,7 +184,7 @@ namespace sgns::processing
         {
             return;
         }
-        m_logger->debug( "Accept Processing CHannel.");
+        m_logger->debug( "Accept Processing CHannel. this {}", reinterpret_cast<size_t>(this));
         std::scoped_lock lock( m_mutexNodes );
         m_logger->debug( "Accept Processing CHannel 2. {} {}",m_processingNodes.size(),m_maximalNodesCount);
         if ( m_processingNodes.size() < m_maximalNodesCount )

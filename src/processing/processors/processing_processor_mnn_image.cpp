@@ -115,7 +115,7 @@ namespace sgns::processing
         auto mnnNet = std::shared_ptr<MNN::Interpreter>( MNN::Interpreter::createFromBuffer( buffer, modelFile.size() ) );
 
         MNN::ScheduleConfig netConfig;
-        netConfig.type      = MNN_FORWARD_VULKAN;
+        netConfig.type      = MNN_FORWARD_CPU;
         netConfig.numThread = 4;
         netConfig.mode = 0;
         auto session        = mnnNet->createSession( netConfig );

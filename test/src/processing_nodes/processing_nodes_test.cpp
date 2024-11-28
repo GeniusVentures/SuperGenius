@@ -60,10 +60,12 @@ protected:
                                           "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
                                           false,
                                           false );
+        std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
         node_proc1 = new sgns::GeniusNode( DEV_CONFIG2,
                                            "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
                                            false,
                                            true );
+        std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
         node_proc2 = new sgns::GeniusNode( DEV_CONFIG3,
                                            "fecabeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
                                            false,
@@ -85,24 +87,24 @@ protected:
     {
         std::cout << "Tear down main" << std::endl;
         delete node_main;
-        if ( !std::filesystem::remove_all( DEV_CONFIG.BaseWritePath ) )
-        {
-            std::cerr << "Could not delete main node files\n";
-        }
+        // if ( !std::filesystem::remove_all( DEV_CONFIG.BaseWritePath ) )
+        // {
+        //     std::cerr << "Could not delete main node files\n";
+        // }
 
         std::cout << "Tear down 2" << std::endl;
         delete node_proc1;
-        if ( !std::filesystem::remove_all( DEV_CONFIG2.BaseWritePath ) )
-        {
-            std::cerr << "Could not delete node 2 files\n";
-        }
+        // if ( !std::filesystem::remove_all( DEV_CONFIG2.BaseWritePath ) )
+        // {
+        //     std::cerr << "Could not delete node 2 files\n";
+        // }
 
         std::cout << "Tear down 3" << std::endl;
         delete node_proc2;
-        if ( !std::filesystem::remove_all( DEV_CONFIG3.BaseWritePath ) )
-        {
-            std::cerr << "Could not delete node 3 files\n";
-        }
+        // if ( !std::filesystem::remove_all( DEV_CONFIG3.BaseWritePath ) )
+        // {
+        //     std::cerr << "Could not delete node 3 files\n";
+        // }
     }
 };
 
