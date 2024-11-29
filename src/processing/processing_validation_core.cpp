@@ -25,7 +25,7 @@ bool ProcessingValidationCore::ValidateResults(
         {
             if (itResult->second.chunk_hashes_size() != subTask.chunkstoprocess_size())
             {
-                m_logger->error("WRONG_RESULT_HASHES_LENGTH {}", subTask.subtaskid());
+                m_logger->error("WRONG_RESULT_HASHES_LENGTH {}: {} {}", subTask.subtaskid(), itResult->second.chunk_hashes_size(), subTask.chunkstoprocess_size());
                 invalidSubTaskIds.insert(subTask.subtaskid());
             }
             else

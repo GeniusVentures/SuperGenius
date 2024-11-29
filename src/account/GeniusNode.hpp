@@ -16,6 +16,7 @@
 #include <libp2p/multi/content_identifier_codec.hpp>
 
 #include "account/GeniusAccount.hpp"
+#include "base/buffer.hpp"
 #include "ipfs_pubsub/gossip_pubsub.hpp"
 #include "crdt/globaldb/globaldb.hpp"
 #include "account/TransactionManager.hpp"
@@ -59,14 +60,19 @@ namespace sgns
     class GeniusNode : public IComponent
     {
     public:
-        GeniusNode( const DevConfig_st &dev_config, const char *eth_private_key );
+        GeniusNode( const DevConfig_st &dev_config,
+                    const char         *eth_private_key,
+                    bool                autodht     = true,
+                    bool                isprocessor = true );
         // static GeniusNode &GetInstance()
         // {
         //     return instance;
         // }
         ~GeniusNode() override;
 
-        void ProcessImage( const std::string &image_path, uint16_t funds );
+        void ProcessImage( const std::string &image_path );
+
+        uint64_t GetProcessCost(const std::string &json_data);
 
         std::string GetName() override
         {
@@ -93,6 +99,13 @@ namespace sgns
             return transaction_manager_->TransferFunds( amount, destination );
         }
 
+        std::shared_ptr<ipfs_pubsub::GossipPubSub> GetPubSub()
+        {
+            return pubsub_;
+        }
+
+        [[nodiscard]] std::vector<base::Buffer> GetBlocks();
+
         static std::vector<uint8_t> GetImageByCID( const std::string &cid );
 
     private:
@@ -110,6 +123,8 @@ namespace sgns
         std::shared_ptr<processing::SubTaskResultStorageImpl>      task_result_storage_;
         std::shared_ptr<soralog::LoggingSystem>                    logging_system;
         std::string                                                write_base_path_;
+        bool                                                       autodht_;
+        bool                                                       isprocessor_;
 
         std::thread io_thread;
 
@@ -117,9 +132,8 @@ namespace sgns
 
         static uint16_t GenerateRandomPort( const std::string &address );
 
-        void ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult);
+        void ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult );
         void ProcessingError( const std::string &task_id );
-        void ProcessingFinished( const std::string &task_id, const std::set<std::string> &subtasks_ids );
 
         static constexpr std::string_view db_path_                = "bc-%d/";
         static constexpr std::uint16_t    MAIN_NET                = 369;

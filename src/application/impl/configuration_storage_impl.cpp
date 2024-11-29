@@ -20,11 +20,10 @@ namespace sgns::application {
   */
   outcome::result<std::shared_ptr<ConfigurationStorageImpl>>
   ConfigurationStorageImpl::create(const std::string &path) {
-    auto config_storage =
-        std::make_shared<ConfigurationStorageImpl>(ConfigurationStorageImpl());
-    BOOST_OUTCOME_TRYV2(auto &&, config_storage->loadFromJson(path));
+      auto config_storage = std::make_shared<ConfigurationStorageImpl>();
+      BOOST_OUTCOME_TRYV2( auto &&, config_storage->loadFromJson( path ) );
 
-    return config_storage;
+      return config_storage;
   }
 
   namespace pt = boost::property_tree;

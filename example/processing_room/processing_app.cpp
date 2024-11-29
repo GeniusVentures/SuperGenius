@@ -76,14 +76,15 @@ namespace
         {
             return;
         }
-        void  ProcessSubTask(
-            const SGProcessing::SubTask& subTask, SGProcessing::SubTaskResult& result,
-            uint32_t initialHashCode) override
+        outcome::result<SGProcessing::SubTaskResult> ProcessSubTask(
+        const SGProcessing::SubTask& subTask, uint32_t initialHashCode) override
         {
+            SGProcessing::SubTaskResult result;
             std::cout << "SubTask processing started. " << subTask.subtaskid() << std::endl;
             std::this_thread::sleep_for(std::chrono::milliseconds(m_subTaskProcessingTime));
             std::cout << "SubTask processed. " << subTask.subtaskid() << std::endl;
             result.set_ipfs_results_data_id((boost::format("%s_%s") % "RESULT_IPFS" % subTask.subtaskid()).str());
+            return result;
         }
 
     private:

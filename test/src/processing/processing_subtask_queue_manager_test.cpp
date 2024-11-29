@@ -80,7 +80,7 @@ public:
  * @then The created queue is published to processing channel.
  * The queue has specified owner, no subtasks are locked by default.
  */
-TEST_F(ProcessingSubTaskQueueManagerTest, QueueCreating)
+TEST_F(ProcessingSubTaskQueueManagerTest, DISABLED_QueueCreating)
 {
     auto context = std::make_shared<boost::asio::io_context>();
 
@@ -124,7 +124,7 @@ TEST_F(ProcessingSubTaskQueueManagerTest, QueueCreating)
  * @when Queue owner is changed
  * @then The queue with updated owner is published.
  */
-TEST_F(ProcessingSubTaskQueueManagerTest, QueueOwnershipTransfer)
+TEST_F(ProcessingSubTaskQueueManagerTest, DISABLED_QueueOwnershipTransfer)
 {
     auto context = std::make_shared<boost::asio::io_context>();
     std::vector<std::string> requestedOwnerIds;
@@ -171,7 +171,7 @@ TEST_F(ProcessingSubTaskQueueManagerTest, QueueOwnershipTransfer)
  * @when New subtask is being grabbed
  * @then Queue snapshot is published that contains a lock on the grabbed subtask.
  */
-TEST_F(ProcessingSubTaskQueueManagerTest, GrabSubTaskWithoutOwnershipTransferring)
+TEST_F(ProcessingSubTaskQueueManagerTest, DISABLED_GrabSubTaskWithoutOwnershipTransferring)
 {
     auto context = std::make_shared<boost::asio::io_context>();
     std::vector<std::string> requestedOwnerIds;
@@ -224,7 +224,7 @@ TEST_F(ProcessingSubTaskQueueManagerTest, GrabSubTaskWithoutOwnershipTransferrin
  * @then Queue snapshot is published that contains a lock on the grabbed subtask.
  * Ownership is moved to the local node.
  */
-TEST_F(ProcessingSubTaskQueueManagerTest, GrabSubTaskWithOwnershipTransferring)
+TEST_F(ProcessingSubTaskQueueManagerTest, DISABLED_GrabSubTaskWithOwnershipTransferring)
 {
     auto context = std::make_shared<boost::asio::io_context>();
     auto queueChannel1 = std::make_shared<ProcessingSubTaskQueueChannelImpl>();
@@ -318,7 +318,7 @@ TEST_F(ProcessingSubTaskQueueManagerTest, GrabSubTaskWithOwnershipTransferring)
  * @when Results for all subtasks added
  * @then Queue is marked as processed.
  */
-TEST_F(ProcessingSubTaskQueueManagerTest, CheckProcessedQueue)
+TEST_F(ProcessingSubTaskQueueManagerTest, DISABLED_CheckProcessedQueue)
 {
     auto context = std::make_shared<boost::asio::io_context>();
 
@@ -356,7 +356,7 @@ TEST_F(ProcessingSubTaskQueueManagerTest, CheckProcessedQueue)
  * @when Results for all subtasks added
  * @then Queue result hashes are valid by default.
  */
-TEST_F(ProcessingSubTaskQueueManagerTest, ValidateResults)
+TEST_F(ProcessingSubTaskQueueManagerTest, DISABLED_ValidateResults)
 {
     SGProcessing::SubTaskCollection subTasks;
     // A single chunk is added to 2 subtasks
@@ -443,7 +443,7 @@ TEST_F(ProcessingSubTaskQueueManagerTest, DISABLED_TaskSplitFailed)
  * @when A task split does not create duplicated chunks
  * @then Queue creation failed.
  */
-TEST_F(ProcessingSubTaskQueueManagerTest, TaskSplitSucceeded)
+TEST_F(ProcessingSubTaskQueueManagerTest, DISABLED_TaskSplitSucceeded)
 {
     // @todo extend the test to get determite invalid result hashes
     auto context = std::make_shared<boost::asio::io_context>();

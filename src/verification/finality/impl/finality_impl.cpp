@@ -264,7 +264,7 @@ namespace sgns::verification::finality {
 
     CompletedRound zero_round{/*.round_number = */0, /*.state = */round_state};
 
-    return std::move(zero_round);
+    return zero_round;
   }
 
   void FinalityImpl::executeNextRound() {
@@ -279,7 +279,10 @@ namespace sgns::verification::finality {
 
   void FinalityImpl::onVoteMessage(const VoteMessage &msg) {
     std::shared_ptr<VotingRound> target_round = selectRound(msg.round_number);
-    if (! target_round) return;
+    if ( !target_round )
+    {
+        return;
+    }
 
     // get block info
     auto blockInfo = visit_in_place(msg.vote.message, [](const auto &vote) {

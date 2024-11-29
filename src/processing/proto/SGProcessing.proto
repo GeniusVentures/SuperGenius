@@ -15,6 +15,7 @@ message Task
     //uint32 block_line_stride = 5; // Line stride in bytes to get to next block start
     float random_seed = 3; // used to randomly choose verifier block
     string results_channel = 4; // which channel to publish results to.
+    string escrow_path = 5; //the path of the escrow transaction
 }
 
 message TaskLock
@@ -81,6 +82,8 @@ message SubTaskResult
     repeated bytes chunk_hashes = 2; // the hashes for each chunk
     string ipfs_results_data_id = 3; // UUID of the results data on ipfs
     string subtaskid = 4; // linked subtask id
+    string node_address = 5; // The processor node ID/address
+    string escrow_path = 6; //the path of the escrow transaction
 }
 
 message SubTaskState

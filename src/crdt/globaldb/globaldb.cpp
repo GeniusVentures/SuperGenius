@@ -15,7 +15,7 @@
 #include <libp2p/injector/host_injector.hpp>
 #include <libp2p/protocol/common/asio/asio_scheduler.hpp>
 #include <libp2p/common/literals.hpp>
-
+#include <boost/di/extension/scopes/shared.hpp>
 #include <boost/format.hpp>
 
 #if defined(_WIN32)
@@ -152,10 +152,10 @@ outcome::result<void> GlobalDB::Init( std::shared_ptr<CrdtOptions> crdtOptions )
     kademlia_config.requestConcurency = 3;
     kademlia_config.maxProvidersPerKey = 300;
     // injector creates and ties dependent objects
-    auto injector = libp2p::injector::makeHostInjector<BOOST_DI_CFG>(
+    auto injector = libp2p::injector::makeHostInjector<boost::di::extension::shared_config>(
         boost::di::bind<boost::asio::io_context>.to(m_context)[boost::di::override],
-        boost::di::bind<libp2p::crypto::KeyPair>.to(keyPair.value())[boost::di::override],
-        libp2p::injector::makeKademliaInjector(libp2p::injector::useKademliaConfig(kademlia_config)));
+        boost::di::bind<libp2p::crypto::KeyPair>.to(keyPair.value())[boost::di::override]
+        );
 
 
 

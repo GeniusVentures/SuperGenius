@@ -30,7 +30,7 @@ namespace sgns
         return serialized_proto;
     }
 
-    MintTransaction MintTransaction::DeSerializeByteVector( const std::vector<uint8_t> &data )
+    std::shared_ptr<MintTransaction> MintTransaction::DeSerializeByteVector( const std::vector<uint8_t> &data )
     {
         SGTransaction::MintTx tx_struct;
         if ( !tx_struct.ParseFromArray( data.data(), data.size() ) )
@@ -40,7 +40,7 @@ namespace sgns
         uint64_t v64 = tx_struct.amount();
         //std::memcpy( &v64, &( *data.begin() ), sizeof( v64 ) );
 
-        return { v64, tx_struct.dag_struct() }; // Return new instance
+        return std::make_shared<MintTransaction>( v64, tx_struct.dag_struct() ); // Return new instance
     }
 
     uint64_t MintTransaction::GetAmount() const

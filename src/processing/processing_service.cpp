@@ -19,19 +19,22 @@ namespace sgns::processing
         m_processingCore( std::move( processingCore ) ),
         m_timerChannelListRequestTimeout( *m_context ),
         m_channelListRequestTimeout( boost::posix_time::seconds( 5 ) ),
-        m_isStopped( true )
+        m_isStopped( true ),
+        node_address_( m_gossipPubSub->GetLocalAddress() )
     {
     }
 
     ProcessingServiceImpl::ProcessingServiceImpl(
-        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>         gossipPubSub,
-        size_t                                                   maximalNodesCount,
-        std::shared_ptr<SubTaskEnqueuer>                         subTaskEnqueuer,
-        std::shared_ptr<SubTaskStateStorage>                     subTaskStateStorage,
-        std::shared_ptr<SubTaskResultStorage>                    subTaskResultStorage,
-        std::shared_ptr<ProcessingCore>                          processingCore,
-        std::function<void( const std::string &subTaskQueueId, const SGProcessing::TaskResult &taskresult )> userCallbackSuccess,
-        std::function<void( const std::string &subTaskQueueId )> userCallbackError ) :
+        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> gossipPubSub,
+        size_t                                           maximalNodesCount,
+        std::shared_ptr<SubTaskEnqueuer>                 subTaskEnqueuer,
+        std::shared_ptr<SubTaskStateStorage>             subTaskStateStorage,
+        std::shared_ptr<SubTaskResultStorage>            subTaskResultStorage,
+        std::shared_ptr<ProcessingCore>                  processingCore,
+        std::function<void( const std::string &subTaskQueueId, const SGProcessing::TaskResult &taskresult )>
+                                                                 userCallbackSuccess,
+        std::function<void( const std::string &subTaskQueueId )> userCallbackError,
+        std::string                                              node_address ) :
         m_gossipPubSub( std::move( gossipPubSub ) ),
         m_context( m_gossipPubSub->GetAsioContext() ),
         m_maximalNodesCount( maximalNodesCount ),
@@ -40,10 +43,11 @@ namespace sgns::processing
         m_subTaskResultStorage( std::move( subTaskResultStorage ) ),
         m_processingCore( std::move( processingCore ) ),
         m_timerChannelListRequestTimeout( *m_context ),
-        m_channelListRequestTimeout( boost::posix_time::seconds( 5 ) ),
+        m_channelListRequestTimeout( boost::posix_time::seconds( 1 ) ),
         m_isStopped( true ),
         userCallbackSuccess_( std::move( userCallbackSuccess ) ),
-        userCallbackError_( std::move( userCallbackError ) )
+        userCallbackError_( std::move( userCallbackError ) ),
+        node_address_( std::move( node_address ) )
     {
     }
 
@@ -107,6 +111,7 @@ namespace sgns::processing
 
     void ProcessingServiceImpl::OnMessage( boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message &> message )
     {
+        m_logger->debug( "On Message. this {}", reinterpret_cast<size_t>(this));
         if ( message )
         {
             SGProcessing::GridChannelMessage gridMessage;
@@ -179,22 +184,25 @@ namespace sgns::processing
         {
             return;
         }
-
+        m_logger->debug( "Accept Processing CHannel. this {}", reinterpret_cast<size_t>(this));
         std::scoped_lock lock( m_mutexNodes );
+        m_logger->debug( "Accept Processing CHannel 2. {} {}",m_processingNodes.size(),m_maximalNodesCount);
         if ( m_processingNodes.size() < m_maximalNodesCount )
         {
+            m_logger->debug( "Accept Channel Create Node");
             auto node = std::make_shared<ProcessingNode>(
                 m_gossipPubSub,
                 m_subTaskStateStorage,
                 m_subTaskResultStorage,
-                                                          m_processingCore,
-                                                          std::bind( &ProcessingServiceImpl::OnQueueProcessingCompleted,
+                m_processingCore,
+                std::bind( &ProcessingServiceImpl::OnQueueProcessingCompleted,
                            this,
                            processingQueuelId,
                            std::placeholders::_1 ),
-                std::bind(
-                    &ProcessingServiceImpl::OnProcessingError, this, processingQueuelId, std::placeholders::_1 ) );
-
+                std::bind( &ProcessingServiceImpl::OnProcessingError, this, processingQueuelId, std::placeholders::_1 ),
+                node_address_,
+                "" );
+            m_logger->debug( "Attach to processing Queue");
             node->AttachTo( processingQueuelId );
             m_processingNodes[processingQueuelId] = node;
         }
@@ -207,9 +215,11 @@ namespace sgns::processing
 
     void ProcessingServiceImpl::PublishLocalChannelList()
     {
+        m_logger->debug( "Publish Local Channels.");
         std::scoped_lock lock( m_mutexNodes );
         for ( auto &itNode : m_processingNodes )
         {
+            m_logger->debug( "Owns Channel? {}.", itNode.second->HasQueueOwnership());
             // Only channel host answers to reduce a number of published messages
             if ( itNode.second->HasQueueOwnership() )
             {
@@ -245,35 +255,51 @@ namespace sgns::processing
         {
             return;
         }
-
-        std::scoped_lock lock( m_mutexNodes );
-        while ( m_processingNodes.size() < m_maximalNodesCount )
+        bool node_dispatched = false;
         {
-            std::string                      subTaskQueueId;
-            std::list<SGProcessing::SubTask> subTasks;
-            if ( m_subTaskEnqueuer->EnqueueSubTasks( subTaskQueueId, subTasks ) )
+            std::scoped_lock lock( m_mutexNodes );
+            while ( m_processingNodes.size() < m_maximalNodesCount )
             {
+                std::string                      subTaskQueueId;
+                std::list<SGProcessing::SubTask> subTasks;
+                auto maybe_task = m_subTaskEnqueuer->EnqueueSubTasks( subTaskQueueId, subTasks );
+                if ( maybe_task )
+                {
                 auto node = std::make_shared<ProcessingNode>(
-                    m_gossipPubSub, m_subTaskStateStorage, m_subTaskResultStorage, m_processingCore,
-                    std::bind( &ProcessingServiceImpl::OnQueueProcessingCompleted, this, subTaskQueueId,
+                    m_gossipPubSub,
+                    m_subTaskStateStorage,
+                    m_subTaskResultStorage,
+                    m_processingCore,
+                    std::bind( &ProcessingServiceImpl::OnQueueProcessingCompleted,
+                               this,
+                               subTaskQueueId,
                                std::placeholders::_1 ),
-                    std::bind( &ProcessingServiceImpl::OnProcessingError, this, subTaskQueueId,
-                               std::placeholders::_1 ) );
+                    std::bind( &ProcessingServiceImpl::OnProcessingError, this, subTaskQueueId, std::placeholders::_1 ),
+                    node_address_,
+                    maybe_task.value().escrow_path() );
 
-                // @todo Figure out if the task is still available for other peers
-                // @todo Check if it is better to call EnqueueSubTasks within host
-                // and return subTaskQueueId from processing host?
-                node->CreateProcessingHost( subTaskQueueId, subTasks );
+                    // @todo Figure out if the task is still available for other peers
+                    // @todo Check if it is better to call EnqueueSubTasks within host
+                    // and return subTaskQueueId from processing host?
+                    node->CreateProcessingHost( subTaskQueueId, subTasks );
 
-                m_processingNodes[subTaskQueueId] = node;
-                m_logger->debug( "New processing channel created. {}", subTaskQueueId );
+                    m_processingNodes[subTaskQueueId] = node;
+
+                    m_logger->debug( "New processing channel created. {}", subTaskQueueId );
+                    node_dispatched = true;
+                    //PublishLocalChannelList();
+                }
+                else
+                {
+                    // If no tasks enquued, try to get available slots in existent queues
+                    SendChannelListRequest();
+                    break;
+                }
             }
-            else
-            {
-                // If no tasks enquued, try to get available slots in existent queues
-                SendChannelListRequest();
-                break;
-            }
+        }
+        if ( node_dispatched )
+        {
+           PublishLocalChannelList();
         }
     }
 }

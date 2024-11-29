@@ -31,10 +31,12 @@ namespace sgns
             balance( 0 )         //
         {
             auto maybe_address = GenerateGeniusAddress( base_path, eth_private_key );
-
-            if ( maybe_address )
+            if (maybe_address)
             {
                 address = maybe_address.value();
+            }
+            else{
+                std::cout << "Error Is? " << maybe_address.error().message() << std::endl;
             }
             //TODO - Retrieve values where? Read through blockchain Here?
             // How to deal with errors?
@@ -73,17 +75,16 @@ namespace sgns
         {
             uint64_t retval = 0;
 
+            std::cout << "utxo's ID: ";
             for ( auto &curr : utxos )
             {
-                std::cout << "utxo's ID: " << curr.GetTxID() << std::endl;
-                std::cout << "utxo's Amount: " << curr.GetAmount() << std::endl;
-                std::cout << "utxo's GetOutputIdx: " << curr.GetOutputIdx() << std::endl;
-                std::cout << "utxo's GetLock: " << curr.GetLock() << std::endl;
+                std::cout << curr.GetTxID() << "(" << curr.GetAmount() << "), ";
                 if ( !curr.GetLock() )
                 {
                     retval += curr.GetAmount();
                 }
             }
+            std::cout << std::endl;
             return retval;
         }
 

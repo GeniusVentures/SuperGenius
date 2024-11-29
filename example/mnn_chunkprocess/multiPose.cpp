@@ -41,277 +41,120 @@ using namespace MNN;
 
 #define CIRCLE_RADIUS 3
 
-inline float clip(float value, float min, float max) {
-    if (value < 0) {
-        return 0;
-    } else if (value > max) {
-        return max;
-    } else {
-        return value;
+
+    void MNNProcess(const std::vector<uint8_t>& imgdata, 
+                                                         std::vector<uint8_t>& modelFile, 
+                                                         const int channels, 
+                                                         const int origwidth,
+                                                         const int origheight) 
+    {
+        std::vector<uint8_t> ret_vect(imgdata);
+
+        // Get Target Width
+        //const int targetWidth = static_cast<int>((float)origwidth / (float)OUTPUT_STRIDE) * OUTPUT_STRIDE + 1;
+        //const int targetHeight = static_cast<int>((float)origheight / (float)OUTPUT_STRIDE) * OUTPUT_STRIDE + 1;
+
+        // Scale
+        //CV::Point scale;
+        //scale.fX = (float)origwidth / (float)targetWidth;
+        //scale.fY = (float)origheight / (float)targetHeight;
+
+        // Create net and session
+        const void* buffer = static_cast<const void*>( modelFile.data() );
+        auto mnnNet = std::shared_ptr<MNN::Interpreter>( MNN::Interpreter::createFromBuffer( buffer, modelFile.size() ) );
+
+        MNN::ScheduleConfig netConfig;
+        netConfig.type      = MNN_FORWARD_CPU;
+        netConfig.numThread = 4;
+        auto session        = mnnNet->createSession( netConfig );
+
+        auto input = mnnNet->getSessionInput( session, nullptr );
+
+        if ( input->elementSize() <= 4 )
+        {
+            mnnNet->resizeTensor( input, { 1, 3, origwidth, origheight } );
+            mnnNet->resizeSession( session );
+        }
+
+        // Preprocess input image
+        {
+            const float              means[3] = { 127.5f, 127.5f, 127.5f };
+            const float              norms[3] = { 2.0f / 255.0f, 2.0f / 255.0f, 2.0f / 255.0f };
+            CV::ImageProcess::Config preProcessConfig;
+            ::memcpy( preProcessConfig.mean, means, sizeof( means ) );
+            ::memcpy( preProcessConfig.normal, norms, sizeof( norms ) );
+            preProcessConfig.sourceFormat = CV::RGBA;
+
+            if (channels == 3)
+            {
+                preProcessConfig.sourceFormat = CV::RGB;
+            }
+            preProcessConfig.destFormat = CV::RGB;
+            preProcessConfig.filterType = CV::BILINEAR;
+
+            auto       pretreat = std::shared_ptr<CV::ImageProcess>( CV::ImageProcess::create( preProcessConfig ) );
+            CV::Matrix trans;
+
+            // Dst -> [0, 1]
+            //trans.postScale( 1.0 / targetWidth, 1.0 / targetHeight );
+            //[0, 1] -> Src
+            trans.postScale( origwidth, origheight );
+
+            pretreat->setMatrix( trans );
+            pretreat->convert( ret_vect.data(), origwidth, origheight, 0, input );
+        }
+
+        // Log preprocessed input tensor data hash
+        {
+            const float *inputData     = input->host<float>();
+            size_t       inputDataSize = input->elementSize() * sizeof( float );
+        }
+
+        {
+            AUTOTIME;
+            mnnNet->runSession( session );
+        }
+
+        auto outputTensor = mnnNet->getSessionOutput( session, nullptr );
+        int outputWidth = outputTensor->width();
+        int outputHeight = outputTensor->height();
+        int outputChannels = outputTensor->channel();
+        auto outputHost   = std::make_unique<MNN::Tensor>( outputTensor, MNN::Tensor::CAFFE );
+        outputTensor->copyToHostTensor( outputHost.get() );
+
+        //return outputHost;
+            // Write output data to an image file
+        std::vector<uint8_t> outputData(outputWidth * outputHeight * outputChannels);
+        float* tensorData = outputHost->host<float>();
+
+        // Convert from float to uint8 for image saving
+        for (int i = 0; i < outputWidth * outputHeight * outputChannels; i++) {
+            outputData[i] = static_cast<uint8_t>(tensorData[i] * 255.0f);
+        }
+
+        // Save as PNG (supports RGB, RGB with channels = 3)
+        stbi_write_png("output_image.png", outputWidth, outputHeight, outputChannels, outputData.data(), outputWidth * outputChannels);
     }
+
+    std::vector<uint8_t> loadFileToByteArray(const std::string& filePath) {
+    std::ifstream file(filePath, std::ios::binary | std::ios::ate);  // Open file at end to get size
+    if (!file) {
+        std::cerr << "Failed to open file: " << filePath << std::endl;
+        return {};
+    }
+
+    std::streamsize fileSize = file.tellg();  // Get file size
+    file.seekg(0, std::ios::beg);  // Go back to the beginning of the file
+
+    std::vector<uint8_t> buffer(fileSize);  // Create a vector of appropriate size
+    if (!file.read(reinterpret_cast<char*>(buffer.data()), fileSize)) {
+        std::cerr << "Failed to read file: " << filePath << std::endl;
+        return {};
+    }
+
+    return buffer;
 }
 
-static int changeColorCircle(uint32_t* src, CV::Point point, int width, int height) {
-    for (int y = -CIRCLE_RADIUS; y < (CIRCLE_RADIUS + 1); ++y) {
-        for (int x = -CIRCLE_RADIUS; x < (CIRCLE_RADIUS + 1); ++x) {
-            const int xx = static_cast<int>(point.fX + x);
-            const int yy = static_cast<int>(point.fY + y);
-            if (xx >= 0 && xx < width && yy >= 0 && yy < height) {
-                int index  = yy * width + xx;
-                src[index] = 0xFFFF00FF;
-            }
-        }
-    }
-
-    return 0;
-}
-
-static int drawPose(uint8_t* rgbaPtr, int width, int height, std::vector<float>& poseScores,
-                    std::vector<std::vector<float>>& poseKeypointScores,
-                    std::vector<std::vector<CV::Point>>& poseKeypointCoords) {
-    const int poseCount = poseScores.size();
-    for (int i = 0; i < poseCount; ++i) {
-        if (poseScores[i] > MIN_POSE_SCORE) {
-            for (int id = 0; id < NUM_KEYPOINTS; ++id) {
-                if (poseKeypointScores[i][id] > SCORE_THRESHOLD) {
-                    CV::Point point = poseKeypointCoords[i][id];
-                    changeColorCircle((uint32_t*)rgbaPtr, point, width, height);
-                }
-            }
-        }
-    }
-
-    return 0;
-}
-
-static CV::Point getCoordsFromTensor(const Tensor* dataTensor, int id, int x, int y, bool getCoord = true) {
-    // dataTensor must be [1,c,h,w]
-    auto dataPtr         = dataTensor->host<float>();
-    const int xOffset    = dataTensor->channel() / 2;
-    const int indexPlane = y * dataTensor->stride(2) + x;
-    const int indexY     = id * dataTensor->stride(1) + indexPlane;
-    const int indexX     = (id + xOffset) * dataTensor->stride(1) + indexPlane;
-    CV::Point point;
-    if (getCoord) {
-        point.set(dataPtr[indexX], dataPtr[indexY]);
-    } else {
-        point.set(0.0, dataPtr[indexY]);
-    }
-    return point;
-};
-
-// decode pose and posenet model reference from https://github.com/rwightman/posenet-python
-static int decodePoseImpl(float curScore, int curId, const CV::Point& originalOnImageCoords, const Tensor* heatmaps,
-                          const Tensor* offsets, const Tensor* displacementFwd, const Tensor* displacementBwd,
-                          std::vector<float>& instanceKeypointScores, std::vector<CV::Point>& instanceKeypointCoords) {
-    instanceKeypointScores[curId] = curScore;
-    instanceKeypointCoords[curId] = originalOnImageCoords;
-    const int height              = heatmaps->height();
-    const int width               = heatmaps->width();
-    std::map<std::string, int> poseNamesID;
-    for (size_t i = 0; i < PoseNames.size(); ++i) {
-        poseNamesID[PoseNames[i]] = i;
-    }
-
-    auto traverseToTargetKeypoint = [=](int edgeId, const CV::Point& sourcekeypointCoord, int targetKeypointId,
-                                        const Tensor* displacement) {
-        int sourceKeypointIndicesX =
-            static_cast<int>(clip(round(sourcekeypointCoord.fX / (float)OUTPUT_STRIDE), 0, (float)(width - 1)));
-        int sourceKeypointIndicesY =
-            static_cast<int>(clip(round(sourcekeypointCoord.fY / (float)OUTPUT_STRIDE), 0, (float)(height - 1)));
-
-        auto displacementCoord =
-            getCoordsFromTensor(displacement, edgeId, sourceKeypointIndicesX, sourceKeypointIndicesY);
-        float displacedPointX = sourcekeypointCoord.fX + displacementCoord.fX;
-        float displacedPointY = sourcekeypointCoord.fY + displacementCoord.fY;
-
-        int displacedPointIndicesX =
-            static_cast<int>(clip(round(displacedPointX / OUTPUT_STRIDE), 0, (float)(width - 1)));
-        int displacedPointIndicesY =
-            static_cast<int>(clip(round(displacedPointY / OUTPUT_STRIDE), 0, (float)(height - 1)));
-
-        float score =
-            getCoordsFromTensor(heatmaps, targetKeypointId, displacedPointIndicesX, displacedPointIndicesY, false).fY;
-        auto offset = getCoordsFromTensor(offsets, targetKeypointId, displacedPointIndicesX, displacedPointIndicesY);
-
-        CV::Point imageCoord;
-        imageCoord.fX = displacedPointIndicesX * OUTPUT_STRIDE + offset.fX;
-        imageCoord.fY = displacedPointIndicesY * OUTPUT_STRIDE + offset.fY;
-
-        return std::make_pair(score, imageCoord);
-    };
-
-    MNN_ASSERT((NUM_KEYPOINTS - 1) == PoseChain.size());
-
-    for (int edge = PoseChain.size() - 1; edge >= 0; --edge) {
-        const int targetKeypointID = poseNamesID[PoseChain[edge].first];
-        const int sourceKeypointID = poseNamesID[PoseChain[edge].second];
-        if (instanceKeypointScores[sourceKeypointID] > 0.0 && instanceKeypointScores[targetKeypointID] == 0.0) {
-            auto curInstance = traverseToTargetKeypoint(edge, instanceKeypointCoords[sourceKeypointID],
-                                                        targetKeypointID, displacementBwd);
-            instanceKeypointScores[targetKeypointID] = curInstance.first;
-            instanceKeypointCoords[targetKeypointID] = curInstance.second;
-        }
-    }
-
-    for (size_t edge = 0; edge < PoseChain.size(); ++edge) {
-        const int sourceKeypointID = poseNamesID[PoseChain[edge].first];
-        const int targetKeypointID = poseNamesID[PoseChain[edge].second];
-        if (instanceKeypointScores[sourceKeypointID] > 0.0 && instanceKeypointScores[targetKeypointID] == 0.0) {
-            auto curInstance = traverseToTargetKeypoint(edge, instanceKeypointCoords[sourceKeypointID],
-                                                        targetKeypointID, displacementFwd);
-            instanceKeypointScores[targetKeypointID] = curInstance.first;
-            instanceKeypointCoords[targetKeypointID] = curInstance.second;
-        }
-    }
-
-    return 0;
-}
-
-static int decodeMultiPose(const Tensor* offsets, const Tensor* displacementFwd, const Tensor* displacementBwd,
-                           const Tensor* heatmaps, std::vector<float>& poseScores,
-                           std::vector<std::vector<float>>& poseKeypointScores,
-                           std::vector<std::vector<CV::Point>>& poseKeypointCoords, CV::Point& scale) {
-    // keypoint_id, score, coord((x,y))
-    typedef std::pair<int, std::pair<float, CV::Point>> partsType;
-    std::vector<partsType> parts;
-
-    const int channel  = heatmaps->channel();
-    const int height   = heatmaps->height();
-    const int width    = heatmaps->width();
-    auto maximumFilter = [&parts, width, height](const int id, const float* startPtr) {
-        for (int y = 0; y < height; ++y) {
-            for (int x = 0; x < width; ++x) {
-                // check whether (y,x) is the max value around the neighborhood
-                bool isMaxVaule = true;
-                float maxValue  = startPtr[y * width + x];
-                {
-                    for (int i = -LOCAL_MAXIMUM_RADIUS; i < (LOCAL_MAXIMUM_RADIUS + 1); ++i) {
-                        for (int j = -LOCAL_MAXIMUM_RADIUS; j < (LOCAL_MAXIMUM_RADIUS + 1); ++j) {
-                            float value = 0.0f;
-                            int yCoord  = y + i;
-                            int xCoord  = x + j;
-                            if (yCoord >= 0 && yCoord < height && xCoord >= 0 && xCoord < width) {
-                                value = startPtr[yCoord * width + xCoord];
-                            }
-                            if (maxValue < value) {
-                                isMaxVaule = false;
-                                break;
-                            }
-                        }
-                    }
-                }
-
-                if (isMaxVaule && maxValue >= SCORE_THRESHOLD) {
-                    CV::Point coord;
-                    coord.set(x, y);
-                    parts.push_back(std::make_pair(id, std::make_pair(maxValue, coord)));
-                }
-            }
-        }
-    };
-
-    auto scoresPtr = heatmaps->host<float>();
-
-    for (int id = 0; id < channel; ++id) {
-        auto idScoresPtr = scoresPtr + id * width * height;
-        maximumFilter(id, idScoresPtr);
-    }
-
-    // sort the parts according to score
-    std::sort(parts.begin(), parts.end(),
-              [](const partsType& a, const partsType& b) { return a.second.first > b.second.first; });
-
-    const int squareNMSRadius = NMS_RADIUS * NMS_RADIUS;
-
-    auto withinNMSRadius = [=, &poseKeypointCoords](const CV::Point& point, const int id) {
-        bool withinThisPointRadius = false;
-        for (size_t i = 0; i < poseKeypointCoords.size(); ++i) {
-            const auto& curPoint = poseKeypointCoords[i][id];
-            const auto sum       = powf((curPoint.fX - point.fX), 2) + powf((curPoint.fY - point.fY), 2);
-            if (sum <= squareNMSRadius) {
-                withinThisPointRadius = true;
-                break;
-            }
-        }
-        return withinThisPointRadius;
-    };
-
-    std::vector<float> instanceKeypointScores(NUM_KEYPOINTS);
-    std::vector<CV::Point> instanceKeypointCoords(NUM_KEYPOINTS);
-
-    auto getInstanceScore = [&]() {
-        float notOverlappedScores = 0.0f;
-        const int poseNums        = poseKeypointCoords.size();
-        if (poseNums == 0) {
-            for (int i = 0; i < NUM_KEYPOINTS; ++i) {
-                notOverlappedScores += instanceKeypointScores[i];
-            }
-        } else {
-            for (int id = 0; id < NUM_KEYPOINTS; ++id) {
-                if (!withinNMSRadius(instanceKeypointCoords[id], id)) {
-                    notOverlappedScores += instanceKeypointScores[id];
-                }
-            }
-        }
-
-        return notOverlappedScores / NUM_KEYPOINTS;
-    };
-
-    int poseCount = 0;
-    for (const auto& part : parts) {
-        if (poseCount >= MAX_POSE_DETECTIONS) {
-            break;
-        }
-        const auto curScore  = part.second.first;
-        const auto curId     = part.first;
-        const auto& curPoint = part.second.second;
-
-        const auto offsetXY = getCoordsFromTensor(offsets, curId, (int)curPoint.fX, (int)curPoint.fY);
-        CV::Point originalOnImageCoords;
-        originalOnImageCoords.fX = curPoint.fX * OUTPUT_STRIDE + offsetXY.fX;
-        originalOnImageCoords.fY = curPoint.fY * OUTPUT_STRIDE + offsetXY.fY;
-
-        if (withinNMSRadius(originalOnImageCoords, curId)) {
-            continue;
-        }
-        ::memset(instanceKeypointScores.data(), 0, sizeof(float) * NUM_KEYPOINTS);
-        ::memset(instanceKeypointCoords.data(), 0, sizeof(CV::Point) * NUM_KEYPOINTS);
-        decodePoseImpl(curScore, curId, originalOnImageCoords, heatmaps, offsets, displacementFwd, displacementBwd,
-                       instanceKeypointScores, instanceKeypointCoords);
-
-        float poseScore = getInstanceScore();
-        if (poseScore > MIN_POSE_SCORE) {
-            poseScores.push_back(poseScore);
-            poseKeypointScores.push_back(instanceKeypointScores);
-            poseKeypointCoords.push_back(instanceKeypointCoords);
-            poseCount++;
-        }
-    }
-
-    // scale the pose keypoint coords
-    for (int i = 0; i < poseCount; ++i) {
-        for (int id = 0; id < NUM_KEYPOINTS; ++id) {
-            poseKeypointCoords[i][id].fX *= scale.fX;
-            poseKeypointCoords[i][id].fY *= scale.fY;
-        }
-    }
-
-    return 0;
-}
-
-void saveImage(const char* fileName, uint8_t* imageData, int width, int height) {
-    std::filesystem::path filePath = std::filesystem::path(fileName).parent_path();
-    try {
-        std::filesystem::create_directories(filePath);
-
-    }
-    catch (const std::exception& e) {
-        std::cout << "Directory Creation Failed: " << e.what() << std::endl;
-    }
-
-    stbi_write_png(fileName, width, height, 4, imageData, 4 * width);
-}
 
 int main(int argc, char* argv[]) {
     if (argc < 4) {
@@ -330,130 +173,9 @@ int main(int argc, char* argv[]) {
         MNN_ERROR("Invalid path: %s\n", inputImageFileName);
         return 0;
     }
-    
-    const int targetWidth = static_cast<int>((float)originalWidth / (float)OUTPUT_STRIDE) * OUTPUT_STRIDE + 1;
-    const int targetHeight = static_cast<int>((float)originalHeight / (float)OUTPUT_STRIDE) * OUTPUT_STRIDE + 1;
-
-    CV::Point scale;
-    scale.fX = (float)originalWidth / (float)targetWidth;
-    scale.fY = (float)originalHeight / (float)targetHeight;
-
-    // create net and session
-    auto mnnNet = std::shared_ptr<MNN::Interpreter>(MNN::Interpreter::createFromFile(poseModel));
-    MNN::ScheduleConfig netConfig;
-    netConfig.type = MNN_FORWARD_VULKAN;
-    netConfig.numThread = 4;
-    auto session = mnnNet->createSession(netConfig);
-
-    auto input = mnnNet->getSessionInput(session, nullptr);
-
-    if (input->elementSize() <= 4) {
-        mnnNet->resizeTensor(input, { 1, 3, targetHeight, targetWidth });
-        mnnNet->resizeSession(session);
-    }
-
-    // preprocess input image
-    {
-        const float means[3] = { 127.5f, 127.5f, 127.5f };
-        const float norms[3] = { 2.0f / 255.0f, 2.0f / 255.0f, 2.0f / 255.0f };
-        CV::ImageProcess::Config preProcessConfig;
-        ::memcpy(preProcessConfig.mean, means, sizeof(means));
-        ::memcpy(preProcessConfig.normal, norms, sizeof(norms));
-        preProcessConfig.sourceFormat = CV::RGBA;
-        preProcessConfig.destFormat = CV::RGB;
-        preProcessConfig.filterType = CV::BILINEAR;
-
-        auto pretreat = std::shared_ptr<CV::ImageProcess>(CV::ImageProcess::create(preProcessConfig));
-        CV::Matrix trans;
-
-        // Dst -> [0, 1]
-        trans.postScale(1.0 / targetWidth, 1.0 / targetHeight);
-        //[0, 1] -> Src
-        trans.postScale(originalWidth, originalHeight);
-
-        pretreat->setMatrix(trans);
-        const auto rgbaPtr = reinterpret_cast<uint8_t*>(inputImage);
-        pretreat->convert(rgbaPtr, originalWidth, originalHeight, 0, input);
-    }
-
-    // Set the chunk size
-    const int chunkWidth = 64;
-    const int chunkHeight = 64;
-    
-    // Run inference for each chunk
-    for (int y = 0; y < originalHeight; y += chunkHeight) {
-        for (int x = 0; x < originalWidth; x += chunkWidth) {
-            int mul = 5;
-            
-            // Extract a chunk from the input image
-            auto chunkWidthActual = std::min(chunkWidth, originalWidth - x);
-            auto chunkHeightActual = std::min(chunkHeight, originalHeight - y);
-            uint8_t* chunkBuffer = new uint8_t[4 * chunkWidthActual * chunkHeightActual];
-            //Image data is line by line, if we want just a chunk of the image we have to create a buffer line by line, this probably won't be an issue in final version
-            //If the chunks get too small there isn't really any way for posenet to see anything pose related. 
-            for (int i = 0; i < chunkHeightActual; i++)
-            {
-                auto chunkOffset = (y+i) * originalWidth * 4 + x * 4;
-                auto chunkData = inputImage + chunkOffset;
-                std::memcpy(chunkBuffer + (i * 4 * chunkWidthActual), chunkData, 4 * chunkWidthActual);
-            }
-            
-            // Create a new tensor for the chunk
-            auto chunkTensor = mnnNet->getSessionInput(session, nullptr);
-            chunkTensor->copyFromHostTensor(input);
-            chunkTensor->buffer().dimensions = 4; // Set the number of dimensions
-            chunkTensor->buffer().dim[0].extent = 1; // Batch size
-            chunkTensor->buffer().dim[1].extent = 3; // Number of channels
-            chunkTensor->buffer().dim[2].extent = chunkHeightActual; // Height
-            chunkTensor->buffer().dim[3].extent = chunkWidthActual; // Width
-            
-            // Run inference for the chunk
-            {
-                AUTOTIME;
-                mnnNet->runSession(session);
-            }
-
-            // Get and process the output for the chunk
-            auto offsets = mnnNet->getSessionOutput(session, OFFSET_NODE_NAME);
-            auto displacementFwd = mnnNet->getSessionOutput(session, DISPLACE_FWD_NODE_NAME);
-            auto displacementBwd = mnnNet->getSessionOutput(session, DISPLACE_BWD_NODE_NAME);
-            auto heatmaps = mnnNet->getSessionOutput(session, HEATMAPS);
-
-            Tensor offsetsHost(offsets, Tensor::CAFFE);
-            Tensor displacementFwdHost(displacementFwd, Tensor::CAFFE);
-            Tensor displacementBwdHost(displacementBwd, Tensor::CAFFE);
-            Tensor heatmapsHost(heatmaps, Tensor::CAFFE);
-
-            offsets->copyToHostTensor(&offsetsHost);
-            displacementFwd->copyToHostTensor(&displacementFwdHost);
-            displacementBwd->copyToHostTensor(&displacementBwdHost);
-            heatmaps->copyToHostTensor(&heatmapsHost);
-
-            std::vector<float> poseScores;
-            std::vector<std::vector<float>> poseKeypointScores;
-            std::vector<std::vector<CV::Point>> poseKeypointCoords;
-
-            // Decode and process the output for the chunk
-            decodeMultiPose(&offsetsHost, &displacementFwdHost, &displacementBwdHost, &heatmapsHost, poseScores,
-                poseKeypointScores, poseKeypointCoords, scale);
-
-            // Draw the pose for the chunk on the input image
-            drawPose(chunkBuffer, chunkWidthActual, chunkHeightActual, poseScores, poseKeypointScores, poseKeypointCoords);
-            drawPose(inputImage, originalWidth, originalHeight, poseScores, poseKeypointScores, poseKeypointCoords);
-            // Save the processed chunk image
-            char chunkFileName[256];
-            snprintf(chunkFileName, sizeof(chunkFileName), "./chunk/chunk_%d_%d.png", x, y);
-            printf("Saving chunk image to: %s\n", chunkFileName);
-            saveImage(chunkFileName, chunkBuffer, chunkWidthActual, chunkHeightActual);
-
-            // Free the allocated buffer for the chunk
-            delete[] chunkBuffer;
-        }
-    }
-
-    // Save the final output image, this is processed as a single chunk just to see what the output should be.
-    stbi_write_png(outputImageFileName, originalWidth, originalHeight, 4, inputImage, 4 * originalWidth);
-    stbi_image_free(inputImage);
+    std::vector<uint8_t> imgdata(inputImage, inputImage + (originalWidth * originalHeight * 4));
+    std::vector<uint8_t> modelFile = loadFileToByteArray(poseModel);
+    MNNProcess(imgdata, modelFile ,originChannel, originalWidth, originalHeight);
 
     return 0;
 }

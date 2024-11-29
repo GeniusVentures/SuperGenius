@@ -11,10 +11,10 @@
 #include <vector>
 #include <string>
 
-#include <boost/optional.hpp>
 #include <boost/format.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
 
+#include "outcome/outcome.hpp"
 #include "account/proto/SGTransaction.pb.h"
 
 namespace sgns
@@ -26,6 +26,12 @@ namespace sgns
     class IGeniusTransactions
     {
     public:
+        /**
+         * @brief   Alias for the de-serializer method type to be implemented in derived classes
+         */
+        using TransactionDeserializeFn =
+            std::function<std::shared_ptr<IGeniusTransactions>( const std::vector<uint8_t> & )>;
+
         IGeniusTransactions( std::string type, SGTransaction::DAGStruct dag ) :
             dag_st( std::move( dag ) ), transaction_type( std::move( type ) )
         {
@@ -38,13 +44,13 @@ namespace sgns
             return transaction_type;
         }
 
-        static boost::optional<SGTransaction::DAGStruct> DeSerializeDAGStruct( std::vector<uint8_t> &data )
+        static outcome::result<SGTransaction::DAGStruct> DeSerializeDAGStruct( std::vector<uint8_t> &data )
         {
             SGTransaction::DAGWrapper dag_wrap;
             if ( !dag_wrap.ParseFromArray( data.data(), data.size() ) )
             {
                 std::cerr << "Failed to parse DAGStruct from array." << std::endl;
-                return boost::none;
+                return outcome::failure(boost::system::error_code{});
             }
             SGTransaction::DAGStruct dag;
             dag.CopyFrom( *dag_wrap.mutable_dag_struct() );
@@ -89,7 +95,23 @@ namespace sgns
             return uint256_t{ dag_st.source_addr() };
         }
 
-        SGTransaction::DAGStruct dag_st;
+        SGTransaction::DAGStruct                                                dag_st;
+        static inline std::unordered_map<std::string, TransactionDeserializeFn> deserializers_map;
+
+        /**
+         * @brief       Registers a deserializer function for a specific transaction type.
+         * @param[in]   transaction_type The transaction type for which the deserializer is registered.
+         * @param[in]   fn The deserializer function to be registered.
+         */
+        static void RegisterDeserializer( const std::string &transaction_type, TransactionDeserializeFn fn )
+        {
+            deserializers_map[transaction_type] = fn;
+        }
+
+        static std::unordered_map<std::string, TransactionDeserializeFn> &GetDeSerializers()
+        {
+            return deserializers_map;
+        }
 
     private:
         const std::string transaction_type;
