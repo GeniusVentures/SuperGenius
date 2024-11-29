@@ -334,6 +334,9 @@ namespace sgns
                         this->transactions.insert( this->transactions.end(),
                                                    transactions.value().begin(),
                                                    transactions.value().end() );
+
+                        std::cout << "[ " << account_m->GetAddress<uint256_t>() << " ] CHECKING BLOCKCHAIN "
+                                  << last_block_id_m << std::endl;
                         last_block_id_m++;
                     }
                     else
