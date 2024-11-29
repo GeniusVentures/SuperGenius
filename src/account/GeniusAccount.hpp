@@ -25,27 +25,11 @@ namespace sgns
     class GeniusAccount
     {
     public:
-        GeniusAccount( const uint8_t token_type, const std::string &base_path, std::string_view eth_private_key ) :
-            token( token_type ), //
-            nonce( 0 ),          //
-            balance( 0 )         //
-        {
-            auto maybe_address = GenerateGeniusAddress( base_path, eth_private_key );
-            if (maybe_address)
-            {
-                address = maybe_address.value();
-            }
-            else{
-                std::cout << "Error Is? " << maybe_address.error().message() << std::endl;
-            }
-            //TODO - Retrieve values where? Read through blockchain Here?
-            // How to deal with errors?
-        }
+        GeniusAccount( uint8_t token_type, std::string_view base_path, std::string_view eth_private_key );
 
         ~GeniusAccount()
         {
             utxos.clear();
-            std::cout << "Delete account" << std::endl;
         }
 
         template <typename T>
@@ -62,9 +46,9 @@ namespace sgns
         }
 
         template <>
-        [[nodiscard]] boost::multiprecision::uint256_t GetAddress() const
+        [[nodiscard]] uint256_t GetAddress() const
         {
-            return boost::multiprecision::uint256_t( address.GetPublicKey().public_key_value.str() );
+            return uint256_t( address.GetPublicKey().public_key_value.str() );
         }
 
         template <typename T>

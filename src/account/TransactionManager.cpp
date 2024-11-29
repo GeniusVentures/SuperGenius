@@ -126,9 +126,10 @@ namespace sgns
         std::string escrow_path;
         for ( auto &subtask : taskresult.subtask_results() )
         {
-            if ( subtask.escrow_path() != "" )
+            if ( !subtask.escrow_path().empty() )
             {
                 escrow_path = subtask.escrow_path();
+                break;
             }
         }
         auto maybe_tx = FetchTransaction( escrow_path );

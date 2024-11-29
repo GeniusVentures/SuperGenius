@@ -7,6 +7,25 @@
 #include "singleton/CComponentFactory.hpp"
 #include <nil/crypto3/pubkey/algorithm/sign.hpp>
 
+sgns::GeniusAccount::GeniusAccount( const uint8_t    token_type,
+                                    std::string_view base_path,
+                                    std::string_view eth_private_key ) :
+    token( token_type ), nonce( 0 ), balance( 0 )
+{
+    if ( auto maybe_address = GenerateGeniusAddress( base_path, eth_private_key ); maybe_address.has_value() )
+    {
+        address = maybe_address.value();
+    }
+    else
+    {
+        std::cerr << "Error Is? " << maybe_address.error().message() << std::endl;
+        throw std::runtime_error( "Could not generate wallet address" );
+    }
+
+    //TODO - Retrieve values where? Read through blockchain Here?
+    // How to deal with errors?
+}
+
 outcome::result<KeyGenerator::ElGamal> sgns::GeniusAccount::GenerateGeniusAddress( std::string_view base_path,
                                                                                    std::string_view eth_private_key )
 {
@@ -43,8 +62,8 @@ outcome::result<KeyGenerator::ElGamal> sgns::GeniusAccount::GenerateGeniusAddres
                                                   signed_vector.begin() + signed_vector.size() / 2,
                                                   signed_vector.end() );
 
-        std::array<uint8_t, 32> hashed =
-            nil::crypto3::hash<ecdsa_t::hashes::sha2<256>>( signed_vector.cbegin(), signed_vector.cend() );
+        std::array<uint8_t, 32> hashed = nil::crypto3::hash<ecdsa_t::hashes::sha2<256>>( signed_vector.cbegin(),
+                                                                                         signed_vector.cend() );
 
         key_seed = nil::crypto3::multiprecision::uint256_t( hashed );
 

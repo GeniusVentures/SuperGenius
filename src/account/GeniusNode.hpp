@@ -1,9 +1,3 @@
-/**
- * @file       GeniusNode.hpp
- * @brief      
- * @date       2024-03-11
- * @author     Henrique A. Klein (hklein@gnus.ai)
- */
 #ifndef _ACCOUNT_MANAGER_HPP_
 #define _ACCOUNT_MANAGER_HPP_
 #include <memory>
@@ -72,7 +66,7 @@ namespace sgns
 
         void ProcessImage( const std::string &image_path );
 
-        uint64_t GetProcessCost(const std::string &json_data);
+        uint64_t GetProcessCost( const std::string &json_data );
 
         std::string GetName() override
         {
@@ -181,6 +175,6 @@ namespace sgns
         //static GeniusNode instance;
     };
 
-};
+}
 
 #endif

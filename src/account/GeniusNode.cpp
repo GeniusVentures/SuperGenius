@@ -27,14 +27,12 @@ namespace br = boost::random;
 
 namespace sgns
 {
-    //GeniusNode GeniusNode::instance( DEV_CONFIG );
-
     GeniusNode::GeniusNode( const DevConfig_st &dev_config,
                             const char         *eth_private_key,
                             bool                autodht,
                             bool                isprocessor ) :
         account_( std::make_shared<GeniusAccount>( static_cast<uint8_t>( dev_config.TokenID ),
-                                                   std::string( dev_config.BaseWritePath ),
+                                                   dev_config.BaseWritePath,
                                                    eth_private_key ) ),
         io_( std::make_shared<boost::asio::io_context>() ),
         write_base_path_( dev_config.BaseWritePath ),
@@ -51,7 +49,6 @@ namespace sgns
         std::cout << "Log Result: " << result.message << std::endl;
         libp2p::log::setLoggingSystem( logging_system );
         libp2p::log::setLevelOfGroup( "SuperGeniusDemo", soralog::Level::TRACE );
-        //libp2p::log::setLevelOfGroup("SuperGeniusDemoFile", soralog::Level::ERROR_);
 
         auto loggerGlobalDB = base::createLogger( "GlobalDB" );
         loggerGlobalDB->set_level( spdlog::level::off );
@@ -82,11 +79,6 @@ else{
 
         auto loggerTM = base::createLogger( "TransactionManager" );
         loggerTM->set_level( spdlog::level::off );
-        //auto loggerAutonat = base::createLogger("Autonat");
-        //loggerDAGSyncer->set_level(spdlog::level::trace);
-
-        //auto loggerAutonatMsg = base::createLogger("AutonatMsgProcessor");
-        //loggerDAGSyncer->set_level(spdlog::level::trace);
 
         auto logkad = sgns::base::createLogger( "Kademlia" );
         logkad->set_level( spdlog::level::off );
@@ -109,20 +101,18 @@ else{
 
         std::vector<std::string> addresses;
         //UPNP
-        auto        upnp   = std::make_shared<sgns::upnp::UPNP>();
-        auto        gotIGD = upnp->GetIGD();
-        std::string lanip  = "";
-        if ( gotIGD )
+        auto        upnp = std::make_shared<upnp::UPNP>();
+        std::string lanip;
+        if ( upnp->GetIGD() )
         {
             auto openedPort  = upnp->OpenPort( pubsubport, pubsubport, "TCP", 1800 );
             auto openedPort2 = upnp->OpenPort( graphsyncport, graphsyncport, "TCP", 1800 );
             auto wanip       = upnp->GetWanIP();
-            auto lanip       = upnp->GetLocalIP();
+            lanip            = upnp->GetLocalIP();
             std::cout << "Wan IP: " << wanip << std::endl;
             std::cout << "Lan IP: " << lanip << std::endl;
-            //addresses.push_back( lanip );
             addresses.push_back( wanip );
-            if ( !openedPort )
+            if ( !openedPort || !openedPort2 )
             {
                 std::cerr << "Failed to open port" << std::endl;
             }
@@ -131,9 +121,6 @@ else{
                 std::cout << "Open Port Success" << std::endl;
             }
         }
-
-        //auto loggerBroadcaster = base::createLogger( "PubSubBroadcasterExt" );
-        //loggerBroadcaster->set_level( spdlog::level::debug );
 
         auto pubsubKeyPath =
             ( boost::format( "SuperGNUSNode.TestNet.%s/pubs_processor" ) % account_->GetAddress<std::string>() ).str();
@@ -155,12 +142,15 @@ else{
             graphsyncport,
             std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_, std::string( PROCESSING_CHANNEL ) ) );
 
-        globaldb_->Init( crdt::CrdtOptions::DefaultOptions() );
+        if (!globaldb_->Init( crdt::CrdtOptions::DefaultOptions() ).has_value() )
+        {
+            throw std::runtime_error("Could not start GlobalDB");
+        }
 
         task_queue_      = std::make_shared<processing::ProcessingTaskQueueImpl>( globaldb_ );
         processing_core_ = std::make_shared<processing::ProcessingCoreImpl>( globaldb_, 1000000, 1 );
         processing_core_->RegisterProcessorFactory( "mnnimage",
-                                                    []() { return std::make_unique<processing::MNN_Image>(); } );
+                                                    [] { return std::make_unique<processing::MNN_Image>(); } );
 
         task_result_storage_ = std::make_shared<processing::SubTaskResultStorageImpl>( globaldb_ );
         processing_service_  = std::make_shared<processing::ProcessingServiceImpl>(
@@ -192,9 +182,8 @@ else{
 
         if ( !maybe_block_storage )
         {
-            std::cout << "Error initializing blockchain" << maybe_block_storage.error().message() << std::endl;
+            std::cerr << "Error initializing blockchain: " << maybe_block_storage.error().message() << std::endl;
             throw std::runtime_error( "Error initializing blockchain" );
-            return;
         }
         block_storage_       = std::move( maybe_block_storage.value() );
         transaction_manager_ = std::make_shared<TransactionManager>( globaldb_,
