@@ -10,6 +10,10 @@ addtest(crypto_store_test
     crypto_store_test.cpp
     )
 
+if(FORCE_MULTIPLE)
+  set_target_properties(crypto_store_test PROPERTIES LINK_FLAGS "${MULTIPLE_OPTION}")
+endif()
+  
 target_link_libraries(crypto_store_test
     ${USER_ENV_LIBRARY}
     ${WIN_SOCK_LIBRARY}

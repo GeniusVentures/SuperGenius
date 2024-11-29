@@ -9,6 +9,10 @@ target_link_libraries(trie_serializer
     )
 supergenius_install(trie_serializer)
 
+if(FORCE_MULTIPLE)
+  set_target_properties(trie_serializer PROPERTIES LINK_FLAGS "${MULTIPLE_OPTION}")
+endif()
+
 add_library(supergenius_codec
     supergenius_codec.cpp
     )

@@ -41,10 +41,8 @@ if(ANDROID)
 endif()
 
 target_link_libraries(mnn_chunkprocess PUBLIC
-    ${VULKAN_LIBS}
-)
-target_link_libraries(mnn_chunkprocess PUBLIC
 	MNN::MNN
+    Vulkan::Vulkan
 )
 
 #Since we link directly to MNN here we need to wholearchive the lib path, this is fine

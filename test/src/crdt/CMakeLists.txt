@@ -16,4 +16,8 @@ target_link_libraries(crdt_test
     p2p::p2p_multiaddress
     Boost::boost
     Boost::filesystem
-)
+    )
+
+if(FORCE_MULTIPLE)
+  set_target_properties(crdt_test PROPERTIES LINK_FLAGS "${MULTIPLE_OPTION}")
+endif()

@@ -89,8 +89,8 @@ target_link_libraries(processing_service PRIVATE
     p2p::p2p_gossip
     p2p::asio_scheduler
     ${WIN_CRYPT_LIBRARY}
-    ${VULKAN_LIBS}
     AsyncIOManager
+    Vulkan::Vulkan
     rapidjson
     ipfs-pubsub
 )
