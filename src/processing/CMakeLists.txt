@@ -68,8 +68,13 @@ if(APPLE)
     )
 
     if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+        # macOS specific
         target_link_libraries(processing_service PRIVATE
             "-framework AppKit")
+    elseif(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+        # iOS specific
+        target_link_libraries(processing_service PRIVATE
+            "-framework UIKit")
     endif()
 endif()
 
