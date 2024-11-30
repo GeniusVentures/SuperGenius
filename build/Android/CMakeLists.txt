@@ -22,6 +22,8 @@ set(ANDROID_USE_LEGACY_TOOLCHAIN_FILE OFF CACHE BOOL "Disabling legacy toolchain
 
 set(CMAKE_TOOLCHAIN_FILE "${CMAKE_ANDROID_NDK}/build/cmake/android.toolchain.cmake")
 
+set(Boost_COMPILER "clang")
+
 project(SuperGenius C CXX)
 
 # include common compiler options
