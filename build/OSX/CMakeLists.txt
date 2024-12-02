@@ -26,6 +26,7 @@ set(CMAKE_USE_WIN32_THREADS_INIT OFF)
 set(CMAKE_USE_PTHREADS_INIT ON)
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 
+
 # Set extra compiler flags
 set(EXTRA_CXX_FLAGS)
 
@@ -33,10 +34,10 @@ set(TESTING ON)
 
 # Set custom subfolder for ABI
 set(ABI_SUBFOLDER_NAME "")
+
+#MoltenVK 
 set(Vulkan_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/moltenvk/build/include")
 set(Vulkan_LIBRARY "${_THIRDPARTY_BUILD_DIR}/moltenvk/build/lib/MoltenVK.xcframework")
-find_package(Vulkan REQUIRED)
-set(VULKAN_LIBS Vulkan::Vulkan)
 
 # Include common build parameters
 include(../CommonBuildParameters.cmake)

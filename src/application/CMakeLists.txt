@@ -54,6 +54,10 @@ target_link_libraries(validating_node_application
     blob
     )
 
+if(FORCE_MULTIPLE)
+  set_target_properties(validating_node_application PROPERTIES LINK_FLAGS "${MULTIPLE_OPTION}")
+endif()
+
 #add_library(syncing_node_application
 #    impl/syncing_node_application.cpp
 #    )

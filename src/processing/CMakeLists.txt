@@ -68,8 +68,13 @@ if(APPLE)
     )
 
     if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+        # macOS specific
         target_link_libraries(processing_service PRIVATE
             "-framework AppKit")
+    elseif(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+        # iOS specific
+        target_link_libraries(processing_service PRIVATE
+            "-framework UIKit")
     endif()
 endif()
 
@@ -89,8 +94,8 @@ target_link_libraries(processing_service PRIVATE
     p2p::p2p_gossip
     p2p::asio_scheduler
     ${WIN_CRYPT_LIBRARY}
-    ${VULKAN_LIBS}
     AsyncIOManager
+    Vulkan::Vulkan
     rapidjson
     ipfs-pubsub
 )

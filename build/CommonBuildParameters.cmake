@@ -186,6 +186,20 @@ if(NOT TARGET c-ares::cares_static)
     find_package(c-ares CONFIG REQUIRED)
 endif()
 
+include_directories(${c-ares_INCLUDE_DIR})
+
+# Vulkan
+find_package(Vulkan)
+
+if(NOT TARGET Vulkan::Vulkan)
+    if(NOT DEFINED $ENV{VULKAN_SDK})
+        set(ENV{VULKAN_SDK} "${_THIRDPARTY_BUILD_DIR}/Vulkan-Loader")
+    endif()
+
+    find_package(Vulkan REQUIRED)
+endif()
+
+
 # ipfs-lite-cpp
 set(ipfs-lite-cpp_DIR "${_THIRDPARTY_BUILD_DIR}/ipfs-lite-cpp/lib/cmake/ipfs-lite-cpp")
 find_package(ipfs-lite-cpp CONFIG REQUIRED)

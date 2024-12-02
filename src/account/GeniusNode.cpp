@@ -460,7 +460,7 @@ else{
 
     void GeniusNode::ProcessingError( const std::string &task_id )
     {
-        std::cout << "[" << account_->GetAddress<std::string>() << "] ERROR PROCESSING SUBTASK" << task_id << std::endl;
+        //std::cout << "[" << account_->GetAddress<std::string>() << "] ERROR PROCESSING SUBTASK" << task_id << std::endl;
     }
 
 }
