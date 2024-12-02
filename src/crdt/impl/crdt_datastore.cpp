@@ -177,8 +177,8 @@ namespace sgns::crdt
       {
           if ( broadcasterNextResult.error().value() != static_cast<int>( Broadcaster::ErrorCode::ErrNoMoreBroadcast ) )
           {
-              LogDebug( "Failed to get next broadcaster (error code " +
-                        std::to_string( broadcasterNextResult.error().value() ) + ")" );
+              //LogDebug( "Failed to get next broadcaster (error code " +
+              //          std::to_string( broadcasterNextResult.error().value() ) + ")" );
           }
         continue;
       }
@@ -444,7 +444,7 @@ namespace sgns::crdt
     uint64_t rootPriority = aRootPriority;
     if (rootPriority == 0)
     {
-      std::shared_lock lock(dagWorkerMutex_);
+      std::unique_lock lock(dagWorkerMutex_);
       auto getNodeResult = dagSyncer_->getNode(aChildren[0]);
       if (getNodeResult.has_failure())
       {
@@ -469,9 +469,9 @@ namespace sgns::crdt
     for (const auto& cid : aChildren)
     {
       //Fetch only root node with all children, but without children of their children
-      dagWorkerMutex_.lock_shared();
-      auto graphResult = dagSyncer_->fetchGraphOnDepth(cid, 1);
-      dagWorkerMutex_.unlock_shared();
+      std::unique_lock lock(dagWorkerMutex_);
+      auto graphResult = dagSyncer_->fetchGraphOnDepth(cid, 1); 
+      lock.unlock();
       if (graphResult.has_failure())
       {
         LOG_ERROR("SendNewJobs: error fetching graph for CID:" << cid.toString().value());
@@ -698,6 +698,12 @@ namespace sgns::crdt
         return outcome::failure(encodedBufferResult.error());
       }
 
+       LOG_DEBUG("Sending CIDs: " );
+       for (auto id : cids)
+       {
+        LOG_DEBUG(id.toString().value());
+       }
+
       auto bcastResult = this->broadcaster_->Broadcast(encodedBufferResult.value());
       if (bcastResult.has_failure())
       {
@@ -819,7 +825,7 @@ namespace sgns::crdt
         continue;
       }
 
-      std::shared_lock lock(this->dagWorkerMutex_);
+      std::unique_lock lock(dagWorkerMutex_);
       auto knowBlockResult = this->dagSyncer_->HasBlock(child);
       if (knowBlockResult.has_failure())
       {
