@@ -52,7 +52,8 @@ message ProcessingTx
 message MintTx
 {
     DAGStruct dag_struct = 1;// 
-    uint64 amount = 2; // 
+    bytes chain_id = 2;
+    uint64 amount = 3; // 
 }
 message EscrowTx
 {

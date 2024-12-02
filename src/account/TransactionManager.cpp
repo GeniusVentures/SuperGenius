@@ -89,9 +89,9 @@ namespace sgns
         return ret;
     }
 
-    void TransactionManager::MintFunds( uint64_t amount )
+    void TransactionManager::MintFunds( uint64_t amount, std::string transaction_hash, std::string chainid )
     {
-        auto mint_transaction = std::make_shared<MintTransaction>( amount, FillDAGStruct() );
+        auto mint_transaction = std::make_shared<MintTransaction>( amount, chainid, FillDAGStruct( transaction_hash ) );
         this->EnqueueTransaction( std::move( mint_transaction ) );
     }
 
@@ -184,12 +184,12 @@ namespace sgns
     }
 
     //TODO - Fill hash stuff on DAGStruct
-    SGTransaction::DAGStruct TransactionManager::FillDAGStruct()
+    SGTransaction::DAGStruct TransactionManager::FillDAGStruct(std::string transaction_hash)
     {
         SGTransaction::DAGStruct dag;
         auto                     timestamp = std::chrono::system_clock::now();
 
-        dag.set_previous_hash( "" );
+        dag.set_previous_hash( transaction_hash );
         dag.set_nonce( account_m->nonce );
         dag.set_source_addr( account_m->GetAddress<std::string>() );
         dag.set_timestamp( timestamp.time_since_epoch().count() );

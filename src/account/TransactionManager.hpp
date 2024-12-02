@@ -58,7 +58,9 @@ namespace sgns
         }
 
         bool                         TransferFunds( uint64_t amount, const uint256_t &destination );
-        void                         MintFunds( uint64_t amount );
+        void                         MintFunds(     uint64_t amount, 
+                                                    std::string transaction_hash, 
+                                                    std::string chainid );
         outcome::result<std::string> HoldEscrow( uint64_t           amount,
                                                  const uint256_t   &dev_addr,
                                                  float              peers_cut,
@@ -75,7 +77,7 @@ namespace sgns
 
         void                     Update();
         void                     EnqueueTransaction( std::shared_ptr<IGeniusTransactions> element );
-        SGTransaction::DAGStruct FillDAGStruct();
+        SGTransaction::DAGStruct FillDAGStruct(std::string transaction_hash = "");
         outcome::result<void>    SendTransaction();
         std::string              GetTransactionPath( std::shared_ptr<IGeniusTransactions> element );
         outcome::result<void>    RecordBlock( const std::vector<std::string> &transaction_keys );

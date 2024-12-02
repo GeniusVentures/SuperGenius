@@ -9,9 +9,10 @@
 
 namespace sgns
 {
-    MintTransaction::MintTransaction( uint64_t new_amount, const SGTransaction::DAGStruct &dag ) :
+    MintTransaction::MintTransaction( uint64_t new_amount, std::string chainid, const SGTransaction::DAGStruct &dag ) :
         IGeniusTransactions( "mint", SetDAGWithType( dag, "mint" ) ), //
-        amount( new_amount )                                          //
+        amount( new_amount ),                                         //
+        chain_id( chainid )                                           //
     {
         auto hasher_ = std::make_shared<sgns::crypto::HasherImpl>();
         auto hash    = hasher_->blake2b_256( SerializeByteVector() );
@@ -23,6 +24,7 @@ namespace sgns
         SGTransaction::MintTx tx_struct;
         tx_struct.mutable_dag_struct()->CopyFrom( this->dag_st );
         tx_struct.set_amount( amount );
+        tx_struct.set_chain_id( chain_id );
         size_t               size = tx_struct.ByteSizeLong();
         std::vector<uint8_t> serialized_proto( size );
 
@@ -38,9 +40,10 @@ namespace sgns
             std::cerr << "Failed to parse TransferTx from array." << std::endl;
         }
         uint64_t v64 = tx_struct.amount();
+        std::string chainid = tx_struct.chain_id();
         //std::memcpy( &v64, &( *data.begin() ), sizeof( v64 ) );
 
-        return std::make_shared<MintTransaction>( v64, tx_struct.dag_struct() ); // Return new instance
+        return std::make_shared<MintTransaction>( v64, chainid, tx_struct.dag_struct() ); // Return new instance
     }
 
     uint64_t MintTransaction::GetAmount() const

@@ -392,9 +392,9 @@ else{
         return std::max( cost, static_cast<uint64_t>( 1 ) );
     }
 
-    void GeniusNode::MintTokens( uint64_t amount )
+    void GeniusNode::MintTokens( uint64_t amount, std::string transaction_hash, std::string chainid )
     {
-        transaction_manager_->MintFunds( amount );
+        transaction_manager_->MintFunds( amount, transaction_hash, chainid );
     }
 
     uint64_t GeniusNode::GetBalance()

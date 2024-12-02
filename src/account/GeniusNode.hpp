@@ -80,7 +80,7 @@ namespace sgns
         }
 
         void     DHTInit();
-        void     MintTokens( uint64_t amount );
+        void     MintTokens( uint64_t amount, std::string transaction_hash, std::string chainid );
         void     AddPeer( const std::string &peer );
         uint64_t GetBalance();
 
