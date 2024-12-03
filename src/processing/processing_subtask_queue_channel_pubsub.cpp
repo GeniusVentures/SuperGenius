@@ -4,7 +4,6 @@
 
 namespace sgns::processing
 {
-////////////////////////////////////////////////////////////////////////////////
 ProcessingSubTaskQueueChannelPubSub::ProcessingSubTaskQueueChannelPubSub(
     std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> gossipPubSub, const std::string &processingQueueChannelId ) :
     m_gossipPubSub( std::move( gossipPubSub ) )
@@ -100,6 +99,4 @@ void ProcessingSubTaskQueueChannelPubSub::HandleSubTaskQueue(SGProcessing::Proce
         m_queueUpdateSink(channelMesssage.release_subtask_queue());
     }
 }
-
-////////////////////////////////////////////////////////////////////////////////
 }

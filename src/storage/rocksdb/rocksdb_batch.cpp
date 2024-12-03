@@ -1,5 +1,3 @@
-
-
 #include "storage/rocksdb/rocksdb_batch.hpp"
 
 #include "storage/rocksdb/rocksdb_util.hpp"

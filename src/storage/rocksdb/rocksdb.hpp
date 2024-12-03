@@ -70,7 +70,7 @@ namespace sgns::storage
 
     outcome::result<QueryResult> query(const Buffer& keyPrefix) const;
 
-    bool contains(const Buffer &key) const override;
+    [[nodiscard]] bool contains(const Buffer &key) const override;
 
     bool empty() const override;
 

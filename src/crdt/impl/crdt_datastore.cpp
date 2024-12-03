@@ -707,7 +707,7 @@ namespace sgns::crdt
     return outcome::success();
   }
 
-  outcome::result<std::shared_ptr<CrdtDatastore::Node>> CrdtDatastore::PutBlock( const std::vector<CID>       &aHeads,
+  outcome::result<std::shared_ptr<CrdtDatastore::IPLDNode>> CrdtDatastore::PutBlock( const std::vector<CID>       &aHeads,
                                                                                  uint64_t                      aHeight,
                                                                                  const std::shared_ptr<Delta> &aDelta )
   {
@@ -752,7 +752,7 @@ namespace sgns::crdt
   outcome::result<std::vector<CID>> CrdtDatastore::ProcessNode( const CID                    &aRoot,
                                                                 uint64_t                      aRootPrio,
                                                                 const std::shared_ptr<Delta> &aDelta,
-                                                                const std::shared_ptr<Node>  &aNode )
+                                                                const std::shared_ptr<IPLDNode>  &aNode )
   {
     if (this->set_ == nullptr || this->heads_ == nullptr || this->dagSyncer_ == nullptr || 
       aDelta == nullptr || aNode == nullptr)
