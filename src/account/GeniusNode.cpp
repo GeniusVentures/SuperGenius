@@ -57,12 +57,12 @@ GeniusNode::GeniusNode( const DevConfig_st &dev_config, const char *eth_private_
     if ( isprocessor_ )
     {
         auto loggerDAGSyncer = base::createLogger( "GraphsyncDAGSyncer" );
-        loggerDAGSyncer->set_level( spdlog::level::off );
+        loggerDAGSyncer->set_level( spdlog::level::debug );
     }
     else
     {
         auto loggerDAGSyncer = base::createLogger( "GraphsyncDAGSyncer" );
-        loggerDAGSyncer->set_level( spdlog::level::off );
+        loggerDAGSyncer->set_level( spdlog::level::debug );
     }
     auto loggerBroadcaster = base::createLogger( "PubSubBroadcasterExt" );
     loggerBroadcaster->set_level( spdlog::level::debug );
