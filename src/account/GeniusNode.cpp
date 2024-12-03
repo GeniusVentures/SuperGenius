@@ -65,10 +65,10 @@ GeniusNode::GeniusNode( const DevConfig_st &dev_config, const char *eth_private_
         loggerDAGSyncer->set_level( spdlog::level::off );
     }
     auto loggerBroadcaster = base::createLogger( "PubSubBroadcasterExt" );
-    loggerBroadcaster->set_level( spdlog::level::off );
+    loggerBroadcaster->set_level( spdlog::level::debug );
 
     auto loggerDataStore = base::createLogger( "CrdtDatastore" );
-    loggerDataStore->set_level( spdlog::level::off );
+    loggerDataStore->set_level( spdlog::level::debug );
 
     auto loggerTransactions = base::createLogger( "TransactionManager" );
     loggerTransactions->set_level( spdlog::level::off );

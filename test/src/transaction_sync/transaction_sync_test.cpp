@@ -70,12 +70,12 @@ protected:
 
 TEST_F( TransactionSyncTest, TransactionMintSync )
 {
-    node_proc1->MintTokens( 10 );
-    node_proc1->MintTokens( 21 );
-    node_proc1->MintTokens( 32 );
-    node_proc1->MintTokens( 43 );
-    node_proc1->MintTokens( 54 );
-    node_proc1->MintTokens( 65 );
+    node_proc1->MintTokens( 10, "", "", "" );
+    node_proc1->MintTokens( 21, "", "", "" );
+    node_proc1->MintTokens( 32, "", "", "" );
+    node_proc1->MintTokens( 43, "", "", "" );
+    node_proc1->MintTokens( 54, "", "", "" );
+    node_proc1->MintTokens( 65, "", "", "" );
     node_proc1->GetPubSub()->AddPeers( { node_proc2->GetPubSub()->GetLocalAddress() } );
     node_proc2->GetPubSub()->AddPeers( { node_proc1->GetPubSub()->GetLocalAddress() } );
 

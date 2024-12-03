@@ -56,8 +56,8 @@ namespace sgns::crdt
     EXPECT_OUTCOME_TRUE_1(crdtHeads.Add(cid1, height1));
 
     // Test if cis is head 
-    EXPECT_OUTCOME_EQ(crdtHeads.IsHead(cid1), true);
-    EXPECT_OUTCOME_EQ(crdtHeads.IsHead(cid2), false);
+    EXPECT_EQ(crdtHeads.IsHead(cid1), true);
+    EXPECT_EQ(crdtHeads.IsHead(cid2), false);
     
     // Check cid height
     EXPECT_OUTCOME_EQ(crdtHeads.GetHeadHeight(cid1), height1);
@@ -114,8 +114,8 @@ namespace sgns::crdt
 
     EXPECT_OUTCOME_EQ(crdtHeads.GetLenght(), 2);
     EXPECT_OUTCOME_TRUE_1(crdtHeads.Replace(cid2, cid3, height2));
-    EXPECT_OUTCOME_EQ(crdtHeads.IsHead(cid2), false);
-    EXPECT_OUTCOME_EQ(crdtHeads.IsHead(cid3), true);
+    EXPECT_EQ(crdtHeads.IsHead(cid2), false);
+    EXPECT_EQ(crdtHeads.IsHead(cid3), true);
     EXPECT_OUTCOME_EQ(crdtHeads.GetHeadHeight(cid3), height2);
     EXPECT_OUTCOME_EQ(crdtHeads.GetLenght(), 2);
 

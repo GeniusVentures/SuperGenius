@@ -747,7 +747,7 @@ namespace sgns::crdt
         return outcome::success();
     }
 
-    outcome::result<std::shared_ptr<CrdtDatastore::Node>> CrdtDatastore::PutBlock(
+    outcome::result<std::shared_ptr<CrdtDatastore::IPLDNode>> CrdtDatastore::PutBlock(
         const std::vector<CID>       &aHeads,
         uint64_t                      aHeight,
         const std::shared_ptr<Delta> &aDelta )
@@ -793,7 +793,7 @@ namespace sgns::crdt
     outcome::result<std::vector<CID>> CrdtDatastore::ProcessNode( const CID                    &aRoot,
                                                                   uint64_t                      aRootPrio,
                                                                   const std::shared_ptr<Delta> &aDelta,
-                                                                  const std::shared_ptr<Node>  &aNode )
+                                                                  const std::shared_ptr<IPLDNode>  &aNode )
     {
         if ( this->set_ == nullptr || this->heads_ == nullptr || this->dagSyncer_ == nullptr || aDelta == nullptr ||
              aNode == nullptr )
@@ -857,13 +857,8 @@ namespace sgns::crdt
         {
             auto child        = link.get().getCID();
             auto isHeadResult = this->heads_->IsHead( child );
-            if ( isHeadResult.has_failure() )
-            {
-                LOG_ERROR( "ProcessNode: error checking if " << child.toString().value() << " is head" );
-                return outcome::failure( isHeadResult.error() );
-            }
 
-            if ( isHeadResult.value() == true )
+            if ( isHeadResult == true )
             {
                 // reached one of the current heads.Replace it with
                 // the tip of this branch
