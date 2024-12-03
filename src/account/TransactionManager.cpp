@@ -193,7 +193,7 @@ namespace sgns
         dag.set_previous_hash( transaction_hash );
         dag.set_nonce( account_m->nonce );
         dag.set_source_addr( account_m->GetAddress<std::string>() );
-        dag.set_timestamp( timestamp.time_since_epoch().count() );
+        dag.set_timestamp( 0 );
         dag.set_uncle_hash( "" );
         dag.set_data_hash( "" ); //filled byt transaction class
         return dag;
@@ -201,7 +201,7 @@ namespace sgns
 
     outcome::result<void> TransactionManager::SendTransaction()
     {
-        std::unique_lock<std::mutex> lock( mutex_m );
+        std::unique_lock lock( mutex_m );
         if ( out_transactions.empty() )
         {
             return std::errc::invalid_argument;

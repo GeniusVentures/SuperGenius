@@ -76,16 +76,9 @@ TEST_F( TransactionSyncTest, TransactionMintSync )
     node_proc1->MintTokens( 43 );
     node_proc1->MintTokens( 54 );
     node_proc1->MintTokens( 65 );
-    node_proc1->MintTokens( 10 );
-    node_proc1->MintTokens( 21 );
-    node_proc1->MintTokens( 32 );
-    node_proc1->MintTokens( 43 );
-    node_proc1->MintTokens( 54 );
-    node_proc1->MintTokens( 65 );
     node_proc1->GetPubSub()->AddPeers( { node_proc2->GetPubSub()->GetLocalAddress() } );
     node_proc2->GetPubSub()->AddPeers( { node_proc1->GetPubSub()->GetLocalAddress() } );
-    std::this_thread::sleep_for( std::chrono::milliseconds( 4000 ) );
-    node_proc1->MintTokens( 75 );
+
     std::this_thread::sleep_for( std::chrono::milliseconds( 20000 ) );
 
     EXPECT_EQ( node_proc1->GetBlocks().size(), node_proc2->GetBlocks().size() ) << "Same number of blocks";

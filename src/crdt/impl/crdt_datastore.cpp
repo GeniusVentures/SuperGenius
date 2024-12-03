@@ -476,22 +476,47 @@ namespace sgns::crdt
         for ( const auto &cid : aChildren )
         {
             //Fetch only root node with all children, but without children of their children
-            std::unique_lock lock( dagWorkerMutex_ );
-            auto             graphResult = dagSyncer_->fetchGraphOnDepth( cid, 1 );
-            lock.unlock();
-            if ( graphResult.has_failure() )
+            constexpr int maxRetries = 3;
+            int           retryCount = 0;
+            bool          success    = false;
+
+            std::shared_ptr<ipfs_lite::ipfs::merkledag::Leaf> leaf;
+            common::Buffer                                    nodeBuffer;
+
+            // Retry loop for fetching the graph
+            while ( retryCount < maxRetries )
             {
-                LOG_ERROR( "SendNewJobs: error fetching graph for CID:" << cid.toString().value() );
+                std::unique_lock lock( dagWorkerMutex_ );
+                auto             graphResult = dagSyncer_->fetchGraphOnDepth( cid, 1 );
+                lock.unlock();
+
+                if ( graphResult.has_failure() )
+                {
+                    LOG_ERROR( "SendNewJobs: error fetching graph for CID:" << cid.toString().value() << " Retry "
+                                                                            << retryCount + 1 << "/" << maxRetries );
+                    retryCount++;
+                    debug_flag = true;
+                    continue;
+                }
+
+                // Fetch successful
+                leaf       = graphResult.value();
+                nodeBuffer = leaf->content();
+                success    = true;
+                break;
+            }
+            if ( !success )
+            {
+                LOG_ERROR( "SendNewJobs: failed to fetch graph for CID:" << cid.toString().value() << " after "
+                                                                         << maxRetries << " retries." );
                 continue;
             }
-
-            auto leaf       = graphResult.value();
-            auto nodeBuffer = leaf->content();
 
             // @todo Check if it is OK that the node has only content and doesn't have links
             auto nodeResult = ipfs_lite::ipld::IPLDNodeImpl::createFromRawBytes( nodeBuffer );
             if ( nodeResult.has_failure() )
             {
+                LOG_ERROR( "SendNewJobs: Can't create IPLDNodeImpl with leaf content " << nodeBuffer.size() );
                 continue;
             }
             auto node = nodeResult.value();
@@ -499,6 +524,7 @@ namespace sgns::crdt
             auto delta = std::make_shared<Delta>();
             if ( !delta->ParseFromArray( nodeBuffer.data(), nodeBuffer.size() ) )
             {
+                LOG_ERROR( "SendNewJobs: Can't parse data with size " << nodeBuffer.size() );
                 continue;
             }
 
@@ -706,11 +732,11 @@ namespace sgns::crdt
                 return outcome::failure( encodedBufferResult.error() );
             }
 
-            LOG_DEBUG( "Sending CIDs: " );
-            for ( auto id : cids )
-            {
-                LOG_DEBUG( id.toString().value() );
-            }
+            //LOG_DEBUG( "Sending CIDs: " );
+            //for ( auto id : cids )
+            //{
+            //    LOG_DEBUG( id.toString().value() );
+            //}
 
             auto bcastResult = this->broadcaster_->Broadcast( encodedBufferResult.value() );
             if ( bcastResult.has_failure() )
@@ -783,6 +809,14 @@ namespace sgns::crdt
             return outcome::failure( strCidResult.error() );
         }
         HierarchicalKey hKey( strCidResult.value() );
+        if ( debug_flag )
+        {
+            LOG_ERROR( "hKey: " << hKey.GetKey() );
+            std::vector<Element> tombstones( aDelta->tombstones().begin(), aDelta->tombstones().end() );
+            std::vector<Element> elements( aDelta->elements().begin(), aDelta->elements().end() );
+            PrintTombs( tombstones );
+            PrintElements( elements );
+        }
 
         {
             std::unique_lock lock( dagWorkerMutex_ );
@@ -802,6 +836,10 @@ namespace sgns::crdt
 
         std::vector<CID> children;
         auto             links = aNode->getLinks();
+        if ( debug_flag  )
+        {
+            LOG_ERROR( "links size: " << links.size() );
+        }
         if ( links.empty() )
         {
             // we reached the bottom, we are a leaf.
@@ -1086,6 +1124,26 @@ namespace sgns::crdt
     outcome::result<std::shared_ptr<CrdtDatastore::Delta>> CrdtDatastore::CreateDeltaToRemove( const std::string &key )
     {
         return set_->CreateDeltaToRemove( key );
+    }
+
+    void CrdtDatastore::PrintTombs( const std::vector<Element> &aTombs )
+    {
+        std::cout << "Tombs" << std::endl;
+        for ( const auto &tomb : aTombs )
+        {
+            // /namespace/tombs/<key>/<id>
+            std::cout << tomb.key() << ", " << tomb.id() << std::endl;
+        }
+    }
+
+    void CrdtDatastore::PrintElements( const std::vector<Element> &aElems )
+    {
+        std::cout << "Elems" << std::endl;
+        for ( const auto &tomb : aElems )
+        {
+            // /namespace/tombs/<key>/<id>
+            std::cout << tomb.key() << ", " << tomb.id() << std::endl;
+        }
     }
 
 }

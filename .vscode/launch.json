@@ -19,6 +19,14 @@
             "program": "${workspaceFolder}/build/Linux/Debug/test_bin/processing_nodes_test",
             "args": ["-R processing_nodes"],
             "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Transaction Sync Unit Test (Linux)",
+            "program": "${workspaceFolder}/build/Linux/Debug/test_bin/transaction_sync_test",
+            "args": ["-R transaction_sync"],
+            "cwd": "${workspaceFolder}"
         }
     ]
     

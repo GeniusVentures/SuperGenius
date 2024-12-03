@@ -98,7 +98,7 @@ outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> GraphsyncDAGSyncer::
                 return res.as_failure();
             }
             //res.value().wait();
-            if (res.value().wait_for(std::chrono::seconds(10)) == std::future_status::ready) {
+            if (res.value().wait_for(std::chrono::seconds(5)) == std::future_status::ready) {
                 node = res.value().get();
             } else {
                 logger_->error("Timeout while waiting for node fetch: {}", cid.toString().value());
