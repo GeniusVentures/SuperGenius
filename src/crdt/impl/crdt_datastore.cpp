@@ -16,21 +16,21 @@ namespace sgns::crdt
     std::ostringstream msgStream; \
     msgStream << msg << std::ends; \
     this->logger_->info(msgStream.str()); \
-  } 
+  }
 #define LOG_ERROR(msg) \
   if (this->logger_ != nullptr) \
   { \
     std::ostringstream msgStream; \
     msgStream << msg << std::ends; \
     this->logger_->error(msgStream.str()); \
-  } 
+  }
 #define LOG_DEBUG(msg) \
   if (this->logger_ != nullptr) \
   { \
     std::ostringstream msgStream; \
     msgStream << msg << std::ends; \
     this->logger_->debug(msgStream.str()); \
-  } 
+  }
 
   using CRDTBroadcast = pb::CRDTBroadcast;
 
@@ -158,7 +158,7 @@ namespace sgns::crdt
 
   void CrdtDatastore::HandleNext()
   {
-  
+
     if (broadcaster_ == nullptr)
     {
       // offline
@@ -186,7 +186,7 @@ namespace sgns::crdt
       auto decodeResult = DecodeBroadcast(broadcasterNextResult.value());
       if (decodeResult.has_failure())
       {
-        LogError("Broadcaster: Unable to decode broadcast (error code " + 
+        LogError("Broadcaster: Unable to decode broadcast (error code " +
           std::to_string(broadcasterNextResult.error().value()) + ")");
         continue;
       }
@@ -197,7 +197,7 @@ namespace sgns::crdt
         auto handleBlockResult = HandleBlock(bCastHeadCID);
         if (handleBlockResult.has_failure())
         {
-          LogError("Broadcaster: Unable to handle block (error code " + 
+          LogError("Broadcaster: Unable to handle block (error code " +
             std::to_string(handleBlockResult.error().value()) + ")");
           continue;
         }
@@ -427,7 +427,7 @@ namespace sgns::crdt
   void CrdtDatastore::SendNewJobs( const CID &aRootCID, uint64_t aRootPriority, const std::vector<CID> &aChildren )
   {
     // sendNewJobs calls getDeltas with the given
-    // children and sends each response to the workers. 
+    // children and sends each response to the workers.
 
     if (this->dagSyncer_ == nullptr || aChildren.empty())
     {
@@ -470,7 +470,7 @@ namespace sgns::crdt
     {
       //Fetch only root node with all children, but without children of their children
       dagWorkerMutex_.lock_shared();
-      auto graphResult = dagSyncer_->fetchGraphOnDepth(cid, 1); 
+      auto graphResult = dagSyncer_->fetchGraphOnDepth(cid, 1);
       dagWorkerMutex_.unlock_shared();
       if (graphResult.has_failure())
       {
@@ -689,7 +689,7 @@ namespace sgns::crdt
     {
       return outcome::failure(boost::system::error_code{});
     }
-    
+
     if (!cids.empty())
     {
       auto encodedBufferResult = this->EncodeBroadcast(cids);
@@ -754,7 +754,7 @@ namespace sgns::crdt
                                                                 const std::shared_ptr<Delta> &aDelta,
                                                                 const std::shared_ptr<IPLDNode>  &aNode )
   {
-    if (this->set_ == nullptr || this->heads_ == nullptr || this->dagSyncer_ == nullptr || 
+    if (this->set_ == nullptr || this->heads_ == nullptr || this->dagSyncer_ == nullptr ||
       aDelta == nullptr || aNode == nullptr)
     {
       return outcome::failure(boost::system::error_code{});
@@ -770,7 +770,7 @@ namespace sgns::crdt
     HierarchicalKey hKey(strCidResult.value());
 
     {
-      std::shared_lock lock(this->dagWorkerMutex_);
+      const std::unique_lock lock(this->dagWorkerMutex_);
       auto mergeResult = this->set_->Merge(aDelta, hKey.GetKey());
       if (mergeResult.has_failure())
       {
@@ -784,7 +784,7 @@ namespace sgns::crdt
     {
       LOG_INFO("ProcessNode: merged delta from " << strCidResult.value() << " (priority: " << priority << ")");
     }
- 
+
     std::vector<CID> children;
     auto links = aNode->getLinks();
     if (links.empty())
@@ -796,6 +796,7 @@ namespace sgns::crdt
         LOG_ERROR("ProcessNode: error adding head " << aRoot.toString().value());
         return outcome::failure(addHeadResult.error());
       }
+
       return outcome::success(children);
     }
 
@@ -803,14 +804,8 @@ namespace sgns::crdt
     for (const auto& link : links)
     {
       auto child = link.get().getCID();
-      auto isHeadResult = this->heads_->IsHead(child);
-      if (isHeadResult.has_failure())
-      {
-        LOG_ERROR("ProcessNode: error checking if " << child.toString().value() << " is head");
-        return outcome::failure(isHeadResult.error());
-      }
 
-      if (isHeadResult.value() == true)
+      if (this->heads_->IsHead(child))
       {
         // reached one of the current heads.Replace it with
         // the tip of this branch
@@ -832,7 +827,7 @@ namespace sgns::crdt
         return outcome::failure(knowBlockResult.error());
       }
 
-      if (knowBlockResult.value() == true)
+      if (knowBlockResult.value())
       {
         // we reached a non-head node in the known tree.
         // This means our root block is a new head.
@@ -867,7 +862,7 @@ namespace sgns::crdt
       return outcome::failure(getListResult.error());
     }
 
-    height = height + 1; // This implies our minimum height is 1  
+    height = height + 1; // This implies our minimum height is 1
     aDelta->set_priority(height);
 
     auto putBlockResult = this->PutBlock(heads, height, aDelta);
@@ -883,7 +878,7 @@ namespace sgns::crdt
     // returning. Since our block references current heads, children
     // should be empty
     LOG_INFO("AddDAGNode: Processing generated block " << node->getCID().toString().value());
-    
+
     auto processNodeResult = this->ProcessNode(node->getCID(), height, aDelta, node);
     if (processNodeResult.has_failure())
     {
@@ -928,7 +923,7 @@ namespace sgns::crdt
 
   outcome::result<void> CrdtDatastore::PrintDAGRec( const CID &aCID, uint64_t aDepth, std::vector<CID> &aSet )
   {
-    std::ostringstream line; 
+    std::ostringstream line;
     for (uint64_t i = 0; i < aDepth; ++i)
     {
       line << " ";
@@ -1028,7 +1023,7 @@ namespace sgns::crdt
     //   - Read the value entry from the /setNamespace/keysNamespace/<key>/valueSuffix path
 
     // Be safe and just sync everything in our namespace
-    if (aKey.GetKey() == "/") 
+    if (aKey.GetKey() == "/")
     {
       return this->Sync(this->namespaceKey_);
     }

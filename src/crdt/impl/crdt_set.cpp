@@ -575,7 +575,7 @@ namespace sgns::crdt
       return outcome::failure(commitResult.error());
     }
 
-    if (deleteHookFunc_ != nullptr)
+    if (deleteHookFunc_)
     {
       for (const auto& key : deletedKeys)
       {
@@ -586,15 +586,14 @@ namespace sgns::crdt
     return outcome::success();
   }
 
-  outcome::result<void> CrdtSet::Merge(const std::shared_ptr<CrdtSet::Delta>& aDelta, const std::string& aID)
+  outcome::result<void> CrdtSet::Merge(const std::shared_ptr<Delta>& aDelta, const std::string& aID)
   {
     if (aDelta == nullptr)
     {
       return outcome::failure(boost::system::error_code{});
     }
 
-    std::vector<Element> tombstones(aDelta->tombstones().begin(), aDelta->tombstones().end());
-    auto putTombsResult = this->PutTombs(tombstones);
+    auto putTombsResult = this->PutTombs(std::vector(aDelta->tombstones().begin(), aDelta->tombstones().end()));
     if (putTombsResult.has_failure())
     {
       return outcome::failure(putTombsResult.error());

@@ -16,7 +16,10 @@ public:
 
     PubSubBroadcaster( std::shared_ptr<GossipPubSubTopic> pubSubTopic );
 
-    void SetLogger(const sgns::base::Logger& logger);
+    void SetLogger(base::Logger logger)
+    {
+        logger_ = std::move(logger);
+    }
 
     /**
     * Send {@param buff} payload to other replicas.
@@ -31,7 +34,7 @@ public:
 private:
     std::shared_ptr<GossipPubSubTopic> gossipPubSubTopic_;
     std::queue<std::tuple<libp2p::peer::PeerId, std::string>> listOfMessages_;
-    sgns::base::Logger logger_ = nullptr;
+    base::Logger logger_ = nullptr;
     std::mutex mutex_;
 };
 }

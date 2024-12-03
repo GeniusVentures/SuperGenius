@@ -31,17 +31,17 @@
 
 namespace sgns::crdt
 {
-using RocksDB = sgns::storage::rocksdb;
-using CrdtOptions = sgns::crdt::CrdtOptions;
-using CrdtDatastore = sgns::crdt::CrdtDatastore;
-using HierarchicalKey = sgns::crdt::HierarchicalKey;
-using PubSubBroadcaster = sgns::crdt::PubSubBroadcaster;
-using GraphsyncDAGSyncer = sgns::crdt::GraphsyncDAGSyncer;
-using RocksdbDatastore = sgns::ipfs_lite::ipfs::RocksdbDatastore;
-using IpfsRocksDb = sgns::ipfs_lite::rocksdb;
-using GossipPubSub = sgns::ipfs_pubsub::GossipPubSub;
-using GraphsyncImpl = sgns::ipfs_lite::ipfs::graphsync::GraphsyncImpl;
-using GossipPubSubTopic = sgns::ipfs_pubsub::GossipPubSubTopic;
+using RocksDB            = storage::rocksdb;
+using CrdtOptions        = crdt::CrdtOptions;
+using CrdtDatastore      = crdt::CrdtDatastore;
+using HierarchicalKey    = crdt::HierarchicalKey;
+using PubSubBroadcaster  = crdt::PubSubBroadcaster;
+using GraphsyncDAGSyncer = crdt::GraphsyncDAGSyncer;
+using RocksdbDatastore   = ipfs_lite::ipfs::RocksdbDatastore;
+using IpfsRocksDb        = ipfs_lite::rocksdb;
+using GossipPubSub       = ipfs_pubsub::GossipPubSub;
+using GraphsyncImpl      = ipfs_lite::ipfs::graphsync::GraphsyncImpl;
+using GossipPubSubTopic  = ipfs_pubsub::GossipPubSubTopic;
 
 GlobalDB::GlobalDB(
     std::shared_ptr<boost::asio::io_context> context,
@@ -133,13 +133,15 @@ outcome::result<void> GlobalDB::Init( std::shared_ptr<CrdtOptions> crdtOptions )
     options.create_if_missing = true;  // intentionally
     try
     {
-        auto dataStoreResult = RocksDB::create(databasePathAbsolute, options);
+        if (auto dataStoreResult = RocksDB::create( databasePathAbsolute, options ); dataStoreResult.has_value())
+        {
         dataStore = dataStoreResult.value();
     }
-    catch (std::exception& e)
+    }
+    catch (std::exception &e)
     {
-        m_logger->error("Unable to open database: " + std::string(e.what()));
-        return outcome::failure(boost::system::error_code{});
+        m_logger->error( "Unable to open database: " + std::string( e.what() ) );
+        return outcome::failure( boost::system::error_code{} );
     }
 
     boost::filesystem::path keyPath = databasePathAbsolute + "/key";
