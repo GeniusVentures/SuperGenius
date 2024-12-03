@@ -60,7 +60,8 @@ namespace sgns
         bool                         TransferFunds( uint64_t amount, const uint256_t &destination );
         void                         MintFunds(     uint64_t amount, 
                                                     std::string transaction_hash, 
-                                                    std::string chainid );
+                                                    std::string chainid,
+                                                    std::string tokenid );
         outcome::result<std::string> HoldEscrow( uint64_t           amount,
                                                  const uint256_t   &dev_addr,
                                                  float              peers_cut,

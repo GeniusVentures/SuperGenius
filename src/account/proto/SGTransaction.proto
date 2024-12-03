@@ -53,7 +53,8 @@ message MintTx
 {
     DAGStruct dag_struct = 1;// 
     bytes chain_id = 2;
-    uint64 amount = 3; // 
+    bytes token_id = 3;
+    uint64 amount = 4; // 
 }
 message EscrowTx
 {

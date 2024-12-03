@@ -71,7 +71,7 @@ void MintTokens( const std::vector<std::string> &args, sgns::TransactionManager 
         std::cerr << "Invalid process command format.\n";
         return;
     }
-    transaction_manager.MintFunds( std::stoull( args[1] ), "", "" );
+    transaction_manager.MintFunds( std::stoull( args[1] ), "", "", "" );
 }
 
 void PrintAccountInfo( const std::vector<std::string> &args, sgns::TransactionManager &transaction_manager )

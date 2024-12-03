@@ -89,9 +89,9 @@ namespace sgns
         return ret;
     }
 
-    void TransactionManager::MintFunds( uint64_t amount, std::string transaction_hash, std::string chainid )
+    void TransactionManager::MintFunds( uint64_t amount, std::string transaction_hash, std::string chainid, std::string tokenid )
     {
-        auto mint_transaction = std::make_shared<MintTransaction>( amount, chainid, FillDAGStruct( transaction_hash ) );
+        auto mint_transaction = std::make_shared<MintTransaction>( amount, chainid, tokenid, FillDAGStruct( transaction_hash ) );
         this->EnqueueTransaction( std::move( mint_transaction ) );
     }
 

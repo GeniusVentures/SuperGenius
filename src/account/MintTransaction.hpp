@@ -17,7 +17,7 @@ namespace sgns
     class MintTransaction : public IGeniusTransactions
     {
     public:
-        MintTransaction( uint64_t new_amount, std::string chainid,  const SGTransaction::DAGStruct &dag );
+        MintTransaction( uint64_t new_amount, std::string chainid, std::string tokenid,  const SGTransaction::DAGStruct &dag );
         ~MintTransaction() override = default;
 
         std::vector<uint8_t>                    SerializeByteVector() override;
@@ -32,6 +32,7 @@ namespace sgns
     private:
         uint64_t amount;
         std::string chain_id;
+        std::string token_id;
 
         /**
          * @brief       Registers the deserializer for the transfer transaction type.

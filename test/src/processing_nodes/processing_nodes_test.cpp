@@ -150,8 +150,8 @@ TEST_F( ProcessingNodesTest, DISABLED_ProcessNodesPubsubs )
 
 TEST_F( ProcessingNodesTest, ProcessNodesTransactionsCount )
 {
-    node_main->MintTokens( 50, "", "" );
-    node_main->MintTokens( 50, "", "" );
+    node_main->MintTokens( 50, "", "", "" );
+    node_main->MintTokens( 50, "", "", "" );
     std::this_thread::sleep_for( std::chrono::milliseconds( 10000 ) );
     int transcount_main  = node_main->GetTransactions().size();
     int transcount_node1 = node_proc1->GetTransactions().size();

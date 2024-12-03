@@ -119,7 +119,7 @@ void MintTokens( const std::vector<std::string> &args, sgns::GeniusNode &genius_
         std::cerr << "Invalid mint command format.\n";
         return;
     }
-    genius_node.MintTokens( std::stoull( args[1] ), "", "" );
+    genius_node.MintTokens( std::stoull( args[1] ), "", "", "" );
 }
 
 void CreateProcessingTransaction( const std::vector<std::string> &args, sgns::GeniusNode &genius_node )
