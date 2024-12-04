@@ -79,7 +79,7 @@ namespace sgns::crdt
     bool started_ = false;
 
     /** Starts instance and subscribes to blocks */
-    outcome::result<bool> StartSync();
+    outcome::result<void> StartSync();
 
     /** Stops instance */
     void StopSync();

@@ -846,7 +846,7 @@ namespace sgns::crdt
             auto child        = link.get().getCID();
             auto isHeadResult = this->heads_->IsHead( child );
 
-            if ( isHeadResult == true )
+            if ( isHeadResult )
             {
                 // reached one of the current heads.Replace it with
                 // the tip of this branch
@@ -869,7 +869,7 @@ namespace sgns::crdt
                 return outcome::failure( knowBlockResult.error() );
             }
 
-            if ( knowBlockResult.value() == true )
+            if ( knowBlockResult.value() )
             {
                 // we reached a non-head node in the known tree.
                 // This means our root block is a new head.

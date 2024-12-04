@@ -1,4 +1,5 @@
 #include "crdt/graphsync_dagsyncer.hpp"
+#include "outcome/outcome.hpp"
 
 #include <ipfs_lite/ipld/impl/ipld_node_impl.hpp>
 #include <memory>
@@ -23,11 +24,9 @@ namespace sgns::crdt
         auto listen_res = host_->listen( listen_to );
         if ( listen_res.has_failure() )
         {
-            /*logger->trace("Cannot listen to multiaddress {}, {}",
-            listen_to.getStringAddress(),
-            listen_res.error().message());*/
             return listen_res.error();
         }
+
         auto startResult = this->StartSync();
         if ( startResult.has_failure() )
         {
@@ -156,36 +155,35 @@ namespace sgns::crdt
         return getNodeResult.has_value();
     }
 
-    outcome::result<bool> GraphsyncDAGSyncer::StartSync()
+    outcome::result<void> GraphsyncDAGSyncer::StartSync()
     {
-        if ( !started_ )
+        if ( started_ )
         {
-            if ( graphsync_ == nullptr )
-            {
-                return outcome::failure( boost::system::error_code{} );
-            }
-
-            auto dagService = std::make_shared<MerkleDagBridgeImpl>( shared_from_this() );
-            if ( dagService == nullptr )
-            {
-                return outcome::failure( boost::system::error_code{} );
-            }
-
-            BlockCallback blockCallback = std::bind( &GraphsyncDAGSyncer::BlockReceivedCallback,
-                                                     this,
-                                                     std::placeholders::_1,
-                                                     std::placeholders::_2 );
-            graphsync_->start( dagService, blockCallback );
-
-            if ( host_ == nullptr )
-            {
-                return outcome::failure( boost::system::error_code{} );
-            }
-            host_->start();
-
-            started_ = true;
+            return outcome::success();
         }
-        return started_;
+
+        if ( graphsync_ == nullptr )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
+
+        auto dagService = std::make_shared<MerkleDagBridgeImpl>( shared_from_this() );
+
+        BlockCallback blockCallback = std::bind( &GraphsyncDAGSyncer::BlockReceivedCallback,
+                                                 this,
+                                                 std::placeholders::_1,
+                                                 std::placeholders::_2 );
+        graphsync_->start( dagService, blockCallback );
+
+        if ( host_ == nullptr )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
+        host_->start();
+
+        started_ = true;
+
+        return outcome::success();
     }
 
     void GraphsyncDAGSyncer::StopSync()
@@ -248,70 +246,64 @@ namespace sgns::crdt
         if ( hb.has_failure() )
         {
             logger_->debug( "HasBlock failed: {}, cid: {}", hb.error().message().c_str(), cid.toString().value() );
+            return;
         }
-        else
-        {
-            logger_->debug( "HasBlock: {}, cid: {}", hb.value(), cid.toString().value() );
-        }
+        logger_->debug( "HasBlock: {}, cid: {}", hb.value(), cid.toString().value() );
 
-        if ( hb.has_value() && !hb.value() )
-        {
-            auto node = ipfs_lite::ipld::IPLDNodeImpl::createFromRawBytes( buffer );
-            if ( !node.has_failure() )
-            {
-                auto itSubscription = requests_.find( cid );
-                if ( itSubscription != requests_.end() )
-                {
-                    auto res = dagService_.addNode( node.value() );
-                    if ( !res )
-                    {
-                        logger_->error( "Error adding node to dagservice {}", res.error().message() );
-                    }
-                    std::stringstream sslinks;
-                    for ( const auto &link : node.value()->getLinks() )
-                    {
-                        sslinks << "[";
-                        sslinks << link.get().getCID().toString().value();
-                        sslinks << link.get().getName();
-                        sslinks << "], ";
-                    }
-                    logger_->error( "Node added to dagService. CID: {}, links: [{}]",
-                                    node.value()->getCID().toString().value(),
-                                    sslinks.str() );
-
-                    // @todo performance optimization is required
-
-                    logger_->debug( "Request found {}", cid.toString().value() );
-
-                    auto it = routing_.find( cid );
-                    if ( it != routing_.end() )
-                    {
-                        for ( auto link : node.value()->getLinks() )
-                        {
-                            auto linkhb = HasBlock( link.get().getCID() );
-                            if ( linkhb.has_value() && !linkhb.value() )
-                            {
-                                AddRoute( link.get().getCID(), std::get<0>( it->second ), std::get<1>( it->second ) );
-                            }
-                        }
-                    }
-
-                    // @todo check if multiple requests of the same CID works as expected.
-                    std::get<1>( itSubscription->second )->set_value( node.value() );
-                }
-                else
-                {
-                    logger_->debug( "Unexpected block received {}", cid.toString().value() );
-                }
-            }
-            else
-            {
-                logger_->error( "Cannot create node from received block data for CID {}", cid.toString().value() );
-            }
-        }
-        else
+        if ( hb.value() )
         {
             logger_->error( "We already had this {}", cid.toString().value() );
+            return;
         }
+
+        auto node = ipfs_lite::ipld::IPLDNodeImpl::createFromRawBytes( buffer );
+        if ( node.has_failure() )
+        {
+            logger_->error( "Cannot create node from received block data for CID {}", cid.toString().value() );
+            return;
+        }
+
+        auto itSubscription = requests_.find( cid );
+        if ( itSubscription == requests_.end() )
+        {
+            logger_->debug( "Unexpected block received {}", cid.toString().value() );
+            return;
+        }
+
+        auto res = dagService_.addNode( node.value() );
+        if ( !res )
+        {
+            logger_->error( "Error adding node to dagservice {}", res.error().message() );
+        }
+        std::stringstream sslinks;
+        for ( const auto &link : node.value()->getLinks() )
+        {
+            sslinks << "[";
+            sslinks << link.get().getCID().toString().value();
+            sslinks << link.get().getName();
+            sslinks << "], ";
+        }
+        logger_->error( "Node added to dagService. CID: {}, links: [{}]",
+                        node.value()->getCID().toString().value(),
+                        sslinks.str() );
+
+        // @todo performance optimization is required
+
+        logger_->debug( "Request found {}", cid.toString().value() );
+
+        auto it = routing_.find( cid );
+        if ( it != routing_.end() )
+        {
+            for ( auto link : node.value()->getLinks() )
+            {
+                auto linkhb = HasBlock( link.get().getCID() );
+                if ( linkhb.has_value() && !linkhb.value() )
+                {
+                    AddRoute( link.get().getCID(), std::get<0>( it->second ), std::get<1>( it->second ) );
+                }
+            }
+        }
+        // @todo check if multiple requests of the same CID works as expected.
+        std::get<1>( itSubscription->second )->set_value( node.value() );
     }
 }
