@@ -61,7 +61,7 @@ namespace sgns
         loggerDAGSyncer->set_level( spdlog::level::off );
 
         auto loggerBroadcaster = base::createLogger( "PubSubBroadcasterExt" );
-        loggerBroadcaster->set_level( spdlog::level::off );
+        loggerBroadcaster->set_level( spdlog::level::trace );
 
         auto loggerDataStore = base::createLogger( "CrdtDatastore" );
         loggerDataStore->set_level( spdlog::level::off );
