@@ -57,18 +57,18 @@ GeniusNode::GeniusNode( const DevConfig_st &dev_config, const char *eth_private_
     if ( isprocessor_ )
     {
         auto loggerDAGSyncer = base::createLogger( "GraphsyncDAGSyncer" );
-        loggerDAGSyncer->set_level( spdlog::level::debug );
+        loggerDAGSyncer->set_level( spdlog::level::off );
     }
     else
     {
         auto loggerDAGSyncer = base::createLogger( "GraphsyncDAGSyncer" );
-        loggerDAGSyncer->set_level( spdlog::level::debug );
+        loggerDAGSyncer->set_level( spdlog::level::off );
     }
     auto loggerBroadcaster = base::createLogger( "PubSubBroadcasterExt" );
-    loggerBroadcaster->set_level( spdlog::level::debug );
+    loggerBroadcaster->set_level( spdlog::level::off );
 
     auto loggerDataStore = base::createLogger( "CrdtDatastore" );
-    loggerDataStore->set_level( spdlog::level::debug );
+    loggerDataStore->set_level( spdlog::level::off );
 
     auto loggerTransactions = base::createLogger( "TransactionManager" );
     loggerTransactions->set_level( spdlog::level::off );
@@ -89,15 +89,16 @@ GeniusNode::GeniusNode( const DevConfig_st &dev_config, const char *eth_private_
     logNoise->set_level( spdlog::level::off );
 
     auto loggerSubQueue = base::createLogger( "ProcessingSubTaskQueueAccessorImpl" );
-    loggerSubQueue->set_level( spdlog::level::trace );
+    loggerSubQueue->set_level( spdlog::level::off );
     auto loggerProcServ = base::createLogger( "ProcessingService" );
-    loggerProcServ->set_level( spdlog::level::trace );
+    loggerProcServ->set_level( spdlog::level::off );
 
     auto loggerProcqm = base::createLogger( "ProcessingSubTaskQueueManager" );
-    loggerProcqm->set_level( spdlog::level::trace );
-
-    auto pubsubport    = 40001 + GenerateRandomPort( account_->GetAddress<std::string>() );
-    auto graphsyncport = 40010 + GenerateRandomPort( account_->GetAddress<std::string>() );
+    loggerProcqm->set_level( spdlog::level::off );
+    auto tokenid = dev_config_.TokenID;
+    
+    auto pubsubport    = 40001 + GenerateRandomPort( account_->GetAddress<std::string>() + std::to_string(tokenid) );
+    auto graphsyncport = 40010 + GenerateRandomPort( account_->GetAddress<std::string>() + std::to_string(tokenid) );
 
     std::vector<std::string> addresses;
     //UPNP
