@@ -495,7 +495,6 @@ namespace sgns::crdt
                     LOG_ERROR( "SendNewJobs: error fetching graph for CID:" << cid.toString().value() << " Retry "
                                                                             << retryCount + 1 << "/" << maxRetries );
                     retryCount++;
-                    debug_flag = true;
                     continue;
                 }
 
@@ -809,14 +808,6 @@ namespace sgns::crdt
             return outcome::failure( strCidResult.error() );
         }
         HierarchicalKey hKey( strCidResult.value() );
-        if ( debug_flag )
-        {
-            LOG_ERROR( "hKey: " << hKey.GetKey() );
-            std::vector<Element> tombstones( aDelta->tombstones().begin(), aDelta->tombstones().end() );
-            std::vector<Element> elements( aDelta->elements().begin(), aDelta->elements().end() );
-            PrintTombs( tombstones );
-            PrintElements( elements );
-        }
 
         {
             std::unique_lock lock( dagWorkerMutex_ );
@@ -836,10 +827,7 @@ namespace sgns::crdt
 
         std::vector<CID> children;
         auto             links = aNode->getLinks();
-        if ( debug_flag  )
-        {
-            LOG_ERROR( "links size: " << links.size() );
-        }
+
         if ( links.empty() )
         {
             // we reached the bottom, we are a leaf.

@@ -381,7 +381,6 @@ namespace sgns::crdt
     std::vector<std::shared_ptr<DagWorker>> dagWorkers_;
     std::shared_mutex dagWorkerMutex_;
     std::queue<DagJob> dagWorkerJobList;
-    static inline bool debug_flag = true;
   };
 
 } // namespace sgns::crdt
