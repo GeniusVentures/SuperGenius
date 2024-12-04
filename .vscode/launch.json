@@ -27,6 +27,14 @@
             "program": "${workspaceFolder}/build/Linux/Debug/test_bin/transaction_sync_test",
             "args": ["-R transaction_sync"],
             "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Multi Account Access Test (Linux)",
+            "program": "${workspaceFolder}/build/Linux/Debug/test_bin/multi_account_test",
+            "args": ["-R transaction_sync"],
+            "cwd": "${workspaceFolder}"
         }
     ]
     

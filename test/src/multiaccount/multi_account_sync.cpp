@@ -122,18 +122,49 @@ std::string MultiAccountTest::binary_path = "";
 TEST_F( MultiAccountTest, SyncThroughThirdNode )
 {
     node_main->MintTokens( 50, "", "", "" );
-    std::this_thread::sleep_for( std::chrono::milliseconds( 10000 ) );
+    std::this_thread::sleep_for( std::chrono::milliseconds( 20000 ) );
     int transcount_main  = node_main->GetTransactions().size();
     int transcount_node1 = node_proc1->GetTransactions().size();
-    //int transcount_node2 = node_proc2->GetTransactions().size();
     std::cout << "Count 1" << transcount_main << std::endl;
     std::cout << "Count 2" << transcount_node1 << std::endl;
-    //std::cout << "Count 3" << transcount_node2 << std::endl;
     int balance_main = node_main->GetBalance();
     int balance_node1 = node_proc1->GetBalance();
     std::cout << "Balance 1" << balance_main << std::endl;
     std::cout << "Balance 2" << balance_node1 << std::endl;  
-    //ASSERT_EQ( transcount_main, 2 );
+
+    //These nodes share an account, so they should both have 50 tokens and 1 transaction.
+    ASSERT_EQ( transcount_node1, transcount_main );
+    ASSERT_EQ( balance_node1, balance_main );
+}
+
+TEST_F( MultiAccountTest, SyncThroughEachOther )
+{
+    //Delete third node
+    delete node_proc2;
+    node_proc2 = nullptr;
+    //Have the 2 shared address nodes connect to each other
+    std::vector bootstrappers = { node_proc1->GetPubSub()->GetLocalAddress() };
+    node_main->GetPubSub()->AddPeers( bootstrappers );
+
+    bootstrappers = { node_main->GetPubSub()->GetLocalAddress() };
+    node_proc1->GetPubSub()->AddPeers( bootstrappers );
+
+    //Just making sure they connect
+    std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
+    //Mint On each
+    node_main->MintTokens( 50, "", "", "" );
+    node_proc1->MintTokens( 50, "", "", "" );
+    std::this_thread::sleep_for( std::chrono::milliseconds( 20000 ) );
+    int transcount_main  = node_main->GetTransactions().size();
+    int transcount_node1 = node_proc1->GetTransactions().size();
+    std::cout << "Count 1" << transcount_main << std::endl;
+    std::cout << "Count 2" << transcount_node1 << std::endl;
+    int balance_main = node_main->GetBalance();
+    int balance_node1 = node_proc1->GetBalance();
+    std::cout << "Balance 1" << balance_main << std::endl;
+    std::cout << "Balance 2" << balance_node1 << std::endl;  
+
+    //These nodes share an account, so they should both have 50 tokens and 1 transaction.
     ASSERT_EQ( transcount_node1, transcount_main );
     ASSERT_EQ( balance_node1, balance_main );
 }
