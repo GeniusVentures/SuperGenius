@@ -418,11 +418,11 @@ namespace sgns::crdt
             return outcome::failure( dagSyncerResult.error() );
         }
 
-        if ( dagSyncerResult.value() )
-        {
-            // cid is known. Skip walking tree
-            return outcome::success();
-        }
+        //if ( dagSyncerResult.value() )
+        //{
+        //    // cid is known. Skip walking tree
+        //    return outcome::success();
+        //}
 
         std::vector<CID> children;
         children.push_back( aCid );
@@ -453,6 +453,7 @@ namespace sgns::crdt
         {
             std::unique_lock lock( dagWorkerMutex_ );
             auto             getNodeResult = dagSyncer_->getNode( aChildren[0] );
+
             if ( getNodeResult.has_failure() )
             {
                 return;
@@ -482,6 +483,8 @@ namespace sgns::crdt
 
             std::shared_ptr<ipfs_lite::ipfs::merkledag::Leaf> leaf;
             common::Buffer                                    nodeBuffer;
+            LOG_DEBUG( "SendNewJobs: TRYING TO FETCH NODE : " << cid.toString().value());
+
 
             // Retry loop for fetching the graph
             while ( retryCount < maxRetries )
@@ -532,8 +535,11 @@ namespace sgns::crdt
             dagJob.rootPriority_ = rootPriority;
             dagJob.delta_        = delta;
             dagJob.node_         = node;
+            LogInfo( "SendNewJobs PUSHING CID=" + dagJob.rootCid_.toString().value() +
+                     " priority=" + std::to_string( dagJob.rootPriority_ ) );
             {
                 std::unique_lock lock( dagWorkerMutex_ );
+
                 dagWorkerJobList.push( dagJob );
             }
         }
@@ -789,10 +795,10 @@ namespace sgns::crdt
         return node;
     }
 
-    outcome::result<std::vector<CID>> CrdtDatastore::ProcessNode( const CID                    &aRoot,
-                                                                  uint64_t                      aRootPrio,
-                                                                  const std::shared_ptr<Delta> &aDelta,
-                                                                  const std::shared_ptr<IPLDNode>  &aNode )
+    outcome::result<std::vector<CID>> CrdtDatastore::ProcessNode( const CID                       &aRoot,
+                                                                  uint64_t                         aRootPrio,
+                                                                  const std::shared_ptr<Delta>    &aDelta,
+                                                                  const std::shared_ptr<IPLDNode> &aNode )
     {
         if ( this->set_ == nullptr || this->heads_ == nullptr || this->dagSyncer_ == nullptr || aDelta == nullptr ||
              aNode == nullptr )
@@ -986,7 +992,7 @@ namespace sgns::crdt
         }
 
         auto getNodeResult = this->dagSyncer_->getNode( aCID );
-        ;
+
         if ( getNodeResult.has_failure() )
         {
             return outcome::failure( getNodeResult.error() );

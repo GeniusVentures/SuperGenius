@@ -114,7 +114,7 @@ void PubSubBroadcasterExt::OnMessage(boost::optional<const GossipPubSub::Message
                             }
                             else
                             {                                                        
-                                m_logger->debug("Not adding route node {} from {} {} {}", cid.toString().value(), addrvector[0].getStringAddress(),hb.has_value(),  hb.value());
+                                m_logger->trace("Not adding route node {} from {} {} {}", cid.toString().value(), addrvector[0].getStringAddress(),hb.has_value(),  hb.value());
 
                             }
                         }

@@ -4,6 +4,7 @@
 #include <ipfs_lite/ipld/impl/ipld_node_impl.hpp>
 #include <memory>
 #include <utility>
+#include <thread>
 
 namespace sgns::crdt
 {
@@ -78,6 +79,44 @@ namespace sgns::crdt
         return result->get_future();
     }
 
+    outcome::result<std::shared_ptr<ipfs_lite::ipfs::graphsync::Subscription>> GraphsyncDAGSyncer::NewRequestNode(
+        const PeerId                              &peer,
+        boost::optional<std::vector<Multiaddress>> address,
+        const CID                                 &root_cid ) const
+    {
+        if ( !started_ )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
+
+        if ( graphsync_ == nullptr )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
+        auto                   result = std::make_shared<std::promise<std::shared_ptr<ipfs_lite::ipld::IPLDNode>>>();
+        std::vector<Extension> extensions;
+        ResponseMetadata       response_metadata{};
+        Extension response_metadata_extension = ipfs_lite::ipfs::graphsync::encodeResponseMetadata( response_metadata );
+        extensions.push_back( response_metadata_extension );
+
+        std::vector<CID> cids;
+        Extension        do_not_send_cids_extension = ipfs_lite::ipfs::graphsync::encodeDontSendCids( cids );
+        extensions.push_back( do_not_send_cids_extension );
+        auto subscription = graphsync_->makeRequest( peer,
+                                                     std::move( address ),
+                                                     root_cid,
+                                                     {},
+                                                     extensions,
+                                                     std::bind( &GraphsyncDAGSyncer::RequestProgressCallback,
+                                                                this,
+                                                                std::placeholders::_1,
+                                                                std::placeholders::_2 ) );
+
+        // keeping subscriptions alive, otherwise they cancel themselves
+        logger_->debug( "Requesting Node {} ", root_cid.toString().value() );
+        return std::make_shared<Subscription>( std::move( subscription ) );
+    }
+
     void GraphsyncDAGSyncer::AddRoute( const CID &cid, const PeerId &peer, std::vector<Multiaddress> &address )
     {
         routing_.insert( std::make_pair( cid, std::make_tuple( peer, address ) ) );
@@ -96,21 +135,55 @@ namespace sgns::crdt
             auto it = routing_.find( cid );
             if ( it != routing_.end() )
             {
-                auto res = RequestNode( std::get<0>( it->second ), std::get<1>( it->second ), it->first );
-                if ( res.has_failure() )
+                if ( auto maybe_cid_block = GrabCIDBlock( it->first ); maybe_cid_block )
                 {
-                    return res.as_failure();
-                }
-                //res.value().wait();
-                if ( res.value().wait_for( std::chrono::seconds( 5 ) ) == std::future_status::ready )
-                {
-                    node = res.value().get();
+                    DeleteCIDBlock( it->first );
+                    return maybe_cid_block;
                 }
                 else
                 {
+                    auto res = NewRequestNode( std::get<0>( it->second ), std::get<1>( it->second ), it->first );
+                    if ( res.has_error() )
+                    {
+                        return res.as_failure();
+                    }
+                    auto start_time = std::chrono::steady_clock::now();
+                    while ( std::chrono::steady_clock::now() - start_time < std::chrono::seconds( 5 ) )
+                    {
+                        auto result = GrabCIDBlock( it->first ); // Call the internal GrabCIDBlock
+                        if ( result )
+                        {
+                            DeleteCIDBlock( it->first );
+
+                            return result; // Return the block if successfully grabbed
+                        }
+                        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) ); // Retry after a short delay
+                    }
                     logger_->error( "Timeout while waiting for node fetch: {}", cid.toString().value() );
                     return outcome::failure( boost::system::errc::timed_out );
                 }
+                //if ( std::find( unexpected_blocks.begin(), unexpected_blocks.end(), it->first ) !=
+                //     unexpected_blocks.end() )
+                //{
+                //    logger_->debug( "getNode: Someone requested a unexpected block {}",
+                //                    it->first.toString().value(),
+                //                    cid.toString().value() );
+                //}
+                //auto res = RequestNode( std::get<0>( it->second ), std::get<1>( it->second ), it->first );
+                //if ( res.has_failure() )
+                //{
+                //    return res.as_failure();
+                //}
+                ////res.value().wait();
+                //if ( res.value().wait_for( std::chrono::seconds( 5 ) ) == std::future_status::ready )
+                //{
+                //    node = res.value().get();
+                //}
+                //else
+                //{
+                //    logger_->error( "Timeout while waiting for node fetch: {}", cid.toString().value() );
+                //    return outcome::failure( boost::system::errc::timed_out );
+                //}
                 //node = res.value().get();
             }
         }
@@ -263,12 +336,12 @@ namespace sgns::crdt
             return;
         }
 
-        auto itSubscription = requests_.find( cid );
-        if ( itSubscription == requests_.end() )
-        {
-            logger_->debug( "Unexpected block received {}", cid.toString().value() );
-            return;
-        }
+        //auto itSubscription = requests_.find( cid );
+        //if ( itSubscription == requests_.end() )
+        //{
+        //    logger_->debug( "Unexpected block received {}", cid.toString().value() );
+        //    return;
+        //}
 
         auto res = dagService_.addNode( node.value() );
         if ( !res )
@@ -304,6 +377,8 @@ namespace sgns::crdt
             }
         }
         // @todo check if multiple requests of the same CID works as expected.
-        std::get<1>( itSubscription->second )->set_value( node.value() );
+        AddCIDBlock( cid, node.value() );
+
+        //std::get<1>( itSubscription->second )->set_value( node.value() );
     }
 }
