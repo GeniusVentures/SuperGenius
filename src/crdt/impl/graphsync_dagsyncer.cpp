@@ -381,4 +381,33 @@ namespace sgns::crdt
 
         //std::get<1>( itSubscription->second )->set_value( node.value() );
     }
+
+    void GraphsyncDAGSyncer::AddCIDBlock( const CID &cid, const std::shared_ptr<ipfs_lite::ipld::IPLDNode> &block )
+    {
+        std::lock_guard<std::mutex> lock( mutex_ );
+        received_blocks_[cid] = block; // Insert or update the block associated with the CID
+    }
+
+    outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> GraphsyncDAGSyncer::GrabCIDBlock( const CID &cid ) const
+    {
+        std::lock_guard<std::mutex> lock( mutex_ );
+        auto                        it = received_blocks_.find( cid );
+        if ( it != received_blocks_.end() )
+        {
+            return it->second;
+        }
+        return outcome::failure( boost::system::error_code{} ); // Return an appropriate failure result
+    }
+
+    outcome::result<void> GraphsyncDAGSyncer::DeleteCIDBlock( const CID &cid ) const
+    {
+        std::lock_guard<std::mutex> lock( mutex_ );
+        auto                        it = received_blocks_.find( cid );
+        if ( it != received_blocks_.end() )
+        {
+            received_blocks_.erase( it );
+            return outcome::success();
+        }
+        return outcome::failure( boost::system::error_code{} ); // Return an appropriate failure result
+    }
 }
