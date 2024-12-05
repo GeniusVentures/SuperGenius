@@ -407,16 +407,16 @@ namespace sgns::crdt
         // This includes the case when the block is a current
         // head.
 
-        if ( this->dagSyncer_ == nullptr )
+        if ( dagSyncer_ == nullptr )
         {
             return outcome::failure( boost::system::error_code{} );
         }
-        auto dagSyncerResult = this->dagSyncer_->HasBlock( aCid );
-        if ( dagSyncerResult.has_failure() )
-        {
-            LOG_ERROR( "HandleBlock: error checking for known block" );
-            return outcome::failure( dagSyncerResult.error() );
-        }
+        //auto dagSyncerResult = dagSyncer_->HasBlock( aCid );
+        //if ( dagSyncerResult.has_failure() )
+        //{
+        //    LOG_ERROR( "HandleBlock: error checking for known block" );
+        //    return outcome::failure( dagSyncerResult.error() );
+        //}
 
         //if ( dagSyncerResult.value() )
         //{
@@ -424,9 +424,12 @@ namespace sgns::crdt
         //    return outcome::success();
         //}
 
-        std::vector<CID> children;
-        children.push_back( aCid );
-        SendNewJobs( aCid, 0, children );
+        if ( !ContainsCID( aCid ) )
+        {
+            std::vector<CID> children;
+            children.push_back( aCid );
+            SendNewJobs( aCid, 0, children );
+        }
 
         return outcome::success();
     }
@@ -483,8 +486,7 @@ namespace sgns::crdt
 
             std::shared_ptr<ipfs_lite::ipfs::merkledag::Leaf> leaf;
             common::Buffer                                    nodeBuffer;
-            LOG_DEBUG( "SendNewJobs: TRYING TO FETCH NODE : " << cid.toString().value());
-
+            LOG_DEBUG( "SendNewJobs: TRYING TO FETCH NODE : " << cid.toString().value() );
 
             // Retry loop for fetching the graph
             while ( retryCount < maxRetries )
@@ -843,54 +845,56 @@ namespace sgns::crdt
                 LOG_ERROR( "ProcessNode: error adding head " << aRoot.toString().value() );
                 return outcome::failure( addHeadResult.error() );
             }
-            return outcome::success( children );
         }
-
-        // walkToChildren
-        for ( const auto &link : links )
+        else
         {
-            auto child        = link.get().getCID();
-            auto isHeadResult = this->heads_->IsHead( child );
-
-            if ( isHeadResult )
+            // walkToChildren
+            for ( const auto &link : links )
             {
-                // reached one of the current heads.Replace it with
-                // the tip of this branch
-                auto replaceResult = this->heads_->Replace( child, aRoot, aRootPrio );
-                if ( replaceResult.has_failure() )
+                auto child        = link.get().getCID();
+                auto isHeadResult = this->heads_->IsHead( child );
+
+                if ( isHeadResult )
                 {
-                    LOG_ERROR( "ProcessNode: error replacing head " << child.toString().value() << " -> "
-                                                                    << aRoot.toString().value() );
-                    return outcome::failure( replaceResult.error() );
+                    // reached one of the current heads.Replace it with
+                    // the tip of this branch
+                    auto replaceResult = this->heads_->Replace( child, aRoot, aRootPrio );
+                    if ( replaceResult.has_failure() )
+                    {
+                        LOG_ERROR( "ProcessNode: error replacing head " << child.toString().value() << " -> "
+                                                                        << aRoot.toString().value() );
+                        return outcome::failure( replaceResult.error() );
+                    }
+
+                    continue;
                 }
 
-                continue;
-            }
-
-            std::unique_lock lock( dagWorkerMutex_ );
-            auto             knowBlockResult = this->dagSyncer_->HasBlock( child );
-            if ( knowBlockResult.has_failure() )
-            {
-                LOG_ERROR( "ProcessNode: error checking for known block " << child.toString().value() );
-                return outcome::failure( knowBlockResult.error() );
-            }
-
-            if ( knowBlockResult.value() )
-            {
-                // we reached a non-head node in the known tree.
-                // This means our root block is a new head.
-                auto addHeadResult = this->heads_->Add( aRoot, aRootPrio );
-                if ( addHeadResult.has_failure() )
+                std::unique_lock lock( dagWorkerMutex_ );
+                auto             knowBlockResult = this->dagSyncer_->HasBlock( child );
+                if ( knowBlockResult.has_failure() )
                 {
-                    // Don't let this failure prevent us from processing the other links.
-                    LOG_ERROR( "ProcessNode: error adding head " << aRoot.toString().value() );
+                    LOG_ERROR( "ProcessNode: error checking for known block " << child.toString().value() );
+                    return outcome::failure( knowBlockResult.error() );
                 }
-                continue;
-            }
 
-            children.push_back( child );
+                if ( knowBlockResult.value() )
+                {
+                    // we reached a non-head node in the known tree.
+                    // This means our root block is a new head.
+                    auto addHeadResult = this->heads_->Add( aRoot, aRootPrio );
+                    if ( addHeadResult.has_failure() )
+                    {
+                        // Don't let this failure prevent us from processing the other links.
+                        LOG_ERROR( "ProcessNode: error adding head " << aRoot.toString().value() );
+                    }
+                    continue;
+                }
+
+                children.push_back( child );
+            }
         }
 
+        AddProcessedCID( aRoot );
         return children;
     }
 
@@ -1135,4 +1139,33 @@ namespace sgns::crdt
         }
     }
 
+    void CrdtDatastore::AddProcessedCID( const CID &cid )
+    {
+        std::lock_guard<std::mutex> lock( mutex_processed_cids );
+        processed_cids.insert( cid );
+    }
+
+    // Check if a CID exists in the set
+    bool CrdtDatastore::ContainsCID( const CID &cid )
+    {
+        std::lock_guard<std::mutex> lock( mutex_processed_cids );
+        return processed_cids.find( cid ) != processed_cids.end();
+    }
+
+    // Delete multiple CIDs from the set
+    bool CrdtDatastore::DeleteCIDS( const std::vector<CID> &cids )
+    {
+        std::lock_guard<std::mutex> lock( mutex_processed_cids );
+        bool                        all_deleted = true;
+
+        for ( const auto &cid : cids )
+        {
+            if ( processed_cids.erase( cid ) == 0 )
+            {
+                all_deleted = false; // If a CID is not found, mark as not fully successful
+            }
+        }
+
+        return all_deleted;
+    }
 }

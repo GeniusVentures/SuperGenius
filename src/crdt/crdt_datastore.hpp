@@ -15,6 +15,7 @@
 #include <future>
 #include <chrono>
 #include <queue>
+#include <set>
 
 namespace sgns::crdt
 {
@@ -381,6 +382,13 @@ namespace sgns::crdt
     std::vector<std::shared_ptr<DagWorker>> dagWorkers_;
     std::shared_mutex dagWorkerMutex_;
     std::queue<DagJob> dagWorkerJobList;
+
+    std::mutex mutex_processed_cids;
+    std::set<CID> processed_cids;
+
+    void AddProcessedCID(const CID &cid);
+    bool ContainsCID(const CID &cid);
+    bool DeleteCIDS(const std::vector<CID> &cid);
   };
 
 } // namespace sgns::crdt
