@@ -21,6 +21,7 @@
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
+#include <thread>
 
 using namespace boost::multiprecision;
 namespace br = boost::random;
@@ -101,8 +102,8 @@ namespace sgns
         std::string lanip;
         if ( upnp->GetIGD() )
         {
-            auto openedPort  = upnp->OpenPort( pubsubport, pubsubport, "TCP", 1800 );
-            auto openedPort2 = upnp->OpenPort( graphsyncport, graphsyncport, "TCP", 1800 );
+            auto openedPort  = upnp->OpenPort( pubsubport, pubsubport, "TCP", 3600 );
+            auto openedPort2 = upnp->OpenPort( graphsyncport, graphsyncport, "TCP", 3600 );
             auto wanip       = upnp->GetWanIP();
             lanip            = upnp->GetLocalIP();
             std::cout << "Wan IP: " << wanip << std::endl;
@@ -195,6 +196,7 @@ namespace sgns
         {
             DHTInit();
         }
+        RefreshUPNP(pubsubport, graphsyncport);
 
         io_thread = std::thread( [this]() { io_->run(); } );
     }
@@ -213,6 +215,49 @@ namespace sgns
         {
             io_thread.join();
         }
+        stop_upnp = true; 
+        if (upnp_thread.joinable()) {
+            upnp_thread.join(); 
+        }
+    }
+
+    void GeniusNode::RefreshUPNP( int pubsubport, int graphsyncport )
+    {
+        if (upnp_thread.joinable()) {
+            stop_upnp = true; // Signal the existing thread to stop
+            upnp_thread.join(); // Wait for it to finish
+        }
+
+        stop_upnp = false; // Reset the stop flag for the new thread
+
+        upnp_thread = std::thread([this, pubsubport, graphsyncport]() {
+            auto next_refresh_time = std::chrono::steady_clock::now() + std::chrono::minutes(60);
+
+            while (!stop_upnp) {
+                if (std::chrono::steady_clock::now() >= next_refresh_time) {
+                    // Refresh UPnP mappings
+                    auto upnp = std::make_shared<upnp::UPNP>();
+                    if (upnp->GetIGD()) {
+                        auto openedPort = upnp->OpenPort(pubsubport, pubsubport, "TCP", 3600);
+                        auto openedPort2 = upnp->OpenPort(graphsyncport, graphsyncport, "TCP", 3600);
+                        if (!openedPort || !openedPort2) {
+                            std::cerr << "Failed to open port" << std::endl;
+                        } else {
+                            std::cout << "Open Port Success" << std::endl;
+                        }
+                    }
+                    else{
+                        std::cout << "No IGD" << std::endl;
+                    }
+
+                    // Update the next refresh time
+                    next_refresh_time = std::chrono::steady_clock::now() + std::chrono::minutes(60);
+                }
+
+                // Sleep briefly to avoid busy-waiting
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            }
+        });
     }
 
     void GeniusNode::AddPeer( const std::string &peer )

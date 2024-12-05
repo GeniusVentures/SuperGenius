@@ -76,6 +76,7 @@ namespace sgns
         void     DHTInit();
         void     MintTokens( uint64_t amount, std::string transaction_hash, std::string chainid, std::string tokenid );
         void     AddPeer( const std::string &peer );
+        void     RefreshUPNP( int pubsubport, int graphsyncport );
         uint64_t GetBalance();
 
         [[nodiscard]] const std::vector<std::vector<uint8_t>> &GetTransactions() const
@@ -121,6 +122,8 @@ namespace sgns
         bool                                                       isprocessor_;
 
         std::thread io_thread;
+        std::thread upnp_thread;
+        std::atomic<bool> stop_upnp{false};
 
         DevConfig_st dev_config_;
 
