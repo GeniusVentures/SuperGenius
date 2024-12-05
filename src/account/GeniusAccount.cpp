@@ -7,70 +7,77 @@
 #include "singleton/CComponentFactory.hpp"
 #include <nil/crypto3/pubkey/algorithm/sign.hpp>
 
-sgns::GeniusAccount::GeniusAccount( const uint8_t    token_type,
-                                    std::string_view base_path,
-                                    std::string_view eth_private_key ) :
-    token( token_type ), nonce( 0 ), balance( 0 )
+namespace sgns
 {
-    if ( auto maybe_address = GenerateGeniusAddress( base_path, eth_private_key ); maybe_address.has_value() )
+    GeniusAccount::GeniusAccount( const uint8_t token_type, std::string_view base_path, const char *eth_private_key ) :
+        token( token_type ), nonce( 0 ), balance( 0 )
     {
-        address = maybe_address.value();
-    }
-    else
-    {
-        std::cerr << "Error Is? " << maybe_address.error().message() << std::endl;
-        throw std::runtime_error( "Could not generate wallet address" );
-    }
+        if ( auto maybe_address = GenerateGeniusAddress( base_path, eth_private_key ); maybe_address.has_value() )
+        {
+            address = maybe_address.value();
+        }
+        else
+        {
+            std::cerr << "Could not get SGNS address: " << maybe_address.error().message() << std::endl;
+            throw std::runtime_error( maybe_address.error().message() );
+        }
 
-    //TODO - Retrieve values where? Read through blockchain Here?
-    // How to deal with errors?
-}
-
-outcome::result<KeyGenerator::ElGamal> sgns::GeniusAccount::GenerateGeniusAddress( std::string_view base_path,
-                                                                                   std::string_view eth_private_key )
-{
-    auto component_factory = SINGLETONINSTANCE( CComponentFactory );
-    OUTCOME_TRY( ( auto &&, icomponent ), component_factory->GetComponent( "LocalSecureStorage" ) );
-
-    auto secure_storage = std::dynamic_pointer_cast<ISecureStorage>( icomponent );
-    auto load_res       = secure_storage->Load( "sgns_key", std::string( base_path ) );
-
-    nil::crypto3::multiprecision::uint256_t key_seed;
-    if ( load_res )
-    {
-        key_seed = nil::crypto3::multiprecision::uint256_t( load_res.value() );
-    }
-    else
-    {
-        ethereum::EthereumKeyGenerator private_key( eth_private_key );
-
-        KeyGenerator::ElGamal elgamal_pubkey_predefined( 0x1234_cppui256 );
-
-        auto fixed_public_key = elgamal_pubkey_predefined.GetPublicKey().public_key_value.str();
-
-        nil::crypto3::pubkey::public_key<ethereum::policy_type>::signature_type signed_secret =
-            nil::crypto3::sign<ethereum::policy_type>( fixed_public_key, private_key.get_private_key() );
-
-        std::vector<std::uint8_t> signed_vector( 64 );
-
-        nil::marshalling::bincode::field<ecdsa_t::scalar_field_type>::field_element_to_bytes<
-            std::vector<std::uint8_t>::iterator>( std::get<0>( signed_secret ),
-                                                  signed_vector.begin(),
-                                                  signed_vector.begin() + signed_vector.size() / 2 );
-        nil::marshalling::bincode::field<ecdsa_t::scalar_field_type>::field_element_to_bytes<
-            std::vector<std::uint8_t>::iterator>( std::get<1>( signed_secret ),
-                                                  signed_vector.begin() + signed_vector.size() / 2,
-                                                  signed_vector.end() );
-
-        std::array<uint8_t, 32> hashed = nil::crypto3::hash<ecdsa_t::hashes::sha2<256>>( signed_vector.cbegin(),
-                                                                                         signed_vector.cend() );
-
-        key_seed = nil::crypto3::multiprecision::uint256_t( hashed );
-
-        BOOST_OUTCOME_TRYV2( auto &&, secure_storage->Save( "sgns_key", key_seed.str(), std::string( base_path ) ) );
+        //TODO - Retrieve values where? Read through blockchain Here?
+        // How to deal with errors?
     }
 
-    KeyGenerator::ElGamal sgnus_key( key_seed );
+    outcome::result<KeyGenerator::ElGamal> GeniusAccount::GenerateGeniusAddress( std::string_view base_path,
+                                                                                 const char      *eth_private_key )
+    {
+        auto component_factory = SINGLETONINSTANCE( CComponentFactory );
+        OUTCOME_TRY( ( auto &&, icomponent ), component_factory->GetComponent( "LocalSecureStorage" ) );
 
-    return sgnus_key;
+        auto secure_storage = std::dynamic_pointer_cast<ISecureStorage>( icomponent );
+        auto load_res       = secure_storage->Load( "sgns_key", std::string( base_path ) );
+
+        nil::crypto3::multiprecision::uint256_t key_seed;
+        if ( load_res )
+        {
+            key_seed = nil::crypto3::multiprecision::uint256_t( load_res.value() );
+        }
+        else
+        {
+            if ( eth_private_key == nullptr )
+            {
+                return outcome::failure( std::errc::invalid_argument );
+            }
+
+            ethereum::EthereumKeyGenerator private_key( eth_private_key );
+
+            KeyGenerator::ElGamal elgamal_pubkey_predefined( 0x1234_cppui256 );
+
+            auto fixed_public_key = elgamal_pubkey_predefined.GetPublicKey().public_key_value.str();
+
+            nil::crypto3::pubkey::public_key<ethereum::policy_type>::signature_type signed_secret =
+                nil::crypto3::sign<ethereum::policy_type>( fixed_public_key, private_key.get_private_key() );
+
+            std::vector<std::uint8_t> signed_vector( 64 );
+
+            nil::marshalling::bincode::field<ecdsa_t::scalar_field_type>::field_element_to_bytes<
+                std::vector<std::uint8_t>::iterator>( std::get<0>( signed_secret ),
+                                                      signed_vector.begin(),
+                                                      signed_vector.begin() + signed_vector.size() / 2 );
+            nil::marshalling::bincode::field<ecdsa_t::scalar_field_type>::field_element_to_bytes<
+                std::vector<std::uint8_t>::iterator>( std::get<1>( signed_secret ),
+                                                      signed_vector.begin() + signed_vector.size() / 2,
+                                                      signed_vector.end() );
+
+            std::array<uint8_t, 32> hashed = nil::crypto3::hash<ecdsa_t::hashes::sha2<256>>( signed_vector.cbegin(),
+                                                                                             signed_vector.cend() );
+
+            key_seed = nil::crypto3::multiprecision::uint256_t( hashed );
+
+            BOOST_OUTCOME_TRYV2( auto &&,
+                                 secure_storage->Save( "sgns_key", key_seed.str(), std::string( base_path ) ) );
+        }
+
+        KeyGenerator::ElGamal sgnus_key( key_seed );
+
+        return sgnus_key;
+    }
 }
