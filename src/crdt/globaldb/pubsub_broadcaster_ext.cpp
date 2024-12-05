@@ -193,18 +193,18 @@ outcome::result<void> PubSubBroadcasterExt::Broadcast(const base::Buffer& buff)
         }
     }
 
-    // auto mas = peer_info.addresses;
-    // for (auto& address : mas)
-    // {
-    //     bpi->add_addrs(address.getStringAddress());
-    //     m_logger->info("Address Broadcast {}", address.getStringAddress());
-    //     //auto ip_address_opt = address.getFirstValueForProtocol(libp2p::multi::Protocol::Code::IP4);
-    //     //if (ip_address_opt) {
-    //     //    auto new_address = libp2p::multi::Multiaddress::create(fmt::format("/ip4/{}/tcp/{}/p2p/{}", ip_address_opt.value(), port, peer_id));
-    //     //    auto addrstr = new_address.value().getStringAddress();
-    //     //    bmsg.add_multiaddress(std::string(addrstr.begin(), addrstr.end()));
-    //     //}
-    // }
+    auto mas = peer_info.addresses;
+    for (auto& address : mas)
+    {
+        bpi->add_addrs(address.getStringAddress());
+        m_logger->info("Address Broadcast {}", address.getStringAddress());
+        //auto ip_address_opt = address.getFirstValueForProtocol(libp2p::multi::Protocol::Code::IP4);
+        //if (ip_address_opt) {
+        //    auto new_address = libp2p::multi::Multiaddress::create(fmt::format("/ip4/{}/tcp/{}/p2p/{}", ip_address_opt.value(), port, peer_id));
+        //    auto addrstr = new_address.value().getStringAddress();
+        //    bmsg.add_multiaddress(std::string(addrstr.begin(), addrstr.end()));
+        //}
+    }
 
     //If no addresses existed, we don't have anything to broadcast that is not otherwise a local address.
     if (bpi->addrs_size() <= 0)

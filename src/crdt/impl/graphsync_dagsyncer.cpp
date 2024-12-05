@@ -148,7 +148,7 @@ namespace sgns::crdt
                         return res.as_failure();
                     }
                     auto start_time = std::chrono::steady_clock::now();
-                    while ( std::chrono::steady_clock::now() - start_time < std::chrono::seconds( 5 ) )
+                    while ( std::chrono::steady_clock::now() - start_time < std::chrono::seconds( 60 ) )
                     {
                         auto result = GrabCIDBlock( it->first ); // Call the internal GrabCIDBlock
                         if ( result )
