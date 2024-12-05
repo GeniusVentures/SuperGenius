@@ -25,7 +25,7 @@ namespace sgns
     class GeniusAccount
     {
     public:
-        GeniusAccount( uint8_t token_type, std::string_view base_path, std::string_view eth_private_key );
+        GeniusAccount( uint8_t token_type, std::string_view base_path, const char *eth_private_key );
 
         ~GeniusAccount()
         {
@@ -137,7 +137,7 @@ namespace sgns
         uint64_t balance;
 
         static outcome::result<KeyGenerator::ElGamal> GenerateGeniusAddress( std::string_view base_path,
-                                                                             std::string_view eth_private_key );
+                                                                             const char      *eth_private_key );
     };
 }
 
