@@ -52,7 +52,7 @@ namespace sgns
         }
         std::cout << "Log Result: " << result.message << std::endl;
         libp2p::log::setLoggingSystem( logging_system );
-        libp2p::log::setLevelOfGroup( "SuperGeniusDemo", soralog::Level::OFF );
+        libp2p::log::setLevelOfGroup( "SuperGeniusDemo", soralog::Level::TRACE );
 
         auto loggerGlobalDB = base::createLogger( "GlobalDB" );
         loggerGlobalDB->set_level( spdlog::level::off );
@@ -61,7 +61,7 @@ namespace sgns
         loggerDAGSyncer->set_level( spdlog::level::off );
 
         auto loggerBroadcaster = base::createLogger( "PubSubBroadcasterExt" );
-        loggerBroadcaster->set_level( spdlog::level::off );
+        loggerBroadcaster->set_level( spdlog::level::trace );
 
         auto loggerDataStore = base::createLogger( "CrdtDatastore" );
         loggerDataStore->set_level( spdlog::level::off );
@@ -95,7 +95,6 @@ namespace sgns
     
     auto pubsubport    = 40001 + GenerateRandomPort( account_->GetAddress<std::string>() + std::to_string(tokenid) );
     auto graphsyncport = 40010 + GenerateRandomPort( account_->GetAddress<std::string>() + std::to_string(tokenid) );
-
         std::vector<std::string> addresses;
         //UPNP
         auto        upnp = std::make_shared<upnp::UPNP>();
@@ -125,7 +124,7 @@ namespace sgns
         pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
             crdt::KeyPairFileStorage( write_base_path_ + pubsubKeyPath ).GetKeyPair().value() );
         pubsub_->Start( pubsubport,
-                        { "/dns/sg-fullnode-1.gnus.ai/tcp/40137/p2p/12D3KooWHg3L8ebQyFhLRv7mTtWeYKTrT7LGjuBKUGSxWre7aG1g" },
+                        { "/dns4/sg-fullnode-1.gnus.ai/tcp/40385/p2p/12D3KooWBqcxStdb4f9s4zT3bQiTDXYB56VJ77Rt7eEdjw4kXTwi" },
                         lanip,
                         addresses );
 

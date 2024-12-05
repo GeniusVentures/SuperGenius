@@ -263,7 +263,7 @@ int main( int argc, char *argv[] )
 
     //Inputs
 
-    sgns::GeniusNode node_instance( DEV_CONFIG, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", true, false );
+    sgns::GeniusNode node_instance( DEV_CONFIG, "livebeefdeadbeeflivebeefdeadbeeflivebeefdeadbeeflivebeefdeadbeef", true, false );
 
     std::cout << "Insert \"process\", the image and the number of tokens to be" << std::endl;
     redraw_prompt();
