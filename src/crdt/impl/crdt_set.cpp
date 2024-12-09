@@ -645,4 +645,24 @@ namespace sgns::crdt
     auto aPriority = GetPriority(aKeyList.at(3).GetKey());
     return SetValue(aKey, aID, aValue, aPriority.value());
   }
+
+      void CrdtSet::PrintTombs( const std::vector<Element> &aTombs )
+    {
+        std::cout << "Tombs" << std::endl;
+        for ( const auto &tomb : aTombs )
+        {
+            // /namespace/tombs/<key>/<id>
+            std::cout << tomb.key() << ", " << tomb.id() << std::endl;
+        }
+    }
+
+    void CrdtSet::PrintElements( const std::vector<Element> &aElems )
+    {
+        std::cout << "Elems" << std::endl;
+        for ( const auto &tomb : aElems )
+        {
+            // /namespace/tombs/<key>/<id>
+            std::cout << tomb.key() << ", " << tomb.id() << std::endl;
+        }
+    }
 }

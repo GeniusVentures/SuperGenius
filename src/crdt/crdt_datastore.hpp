@@ -348,9 +348,6 @@ namespace sgns::crdt
     */
     void LogDebug(std::string message);
 
-    void PrintTombs(const std::vector<Element>& aTombs);
-    void PrintElements(const std::vector<Element>& aElems);
-
     std::shared_ptr<DataStore> dataStore_ = nullptr;
     std::shared_ptr<CrdtOptions> options_ = nullptr;
 

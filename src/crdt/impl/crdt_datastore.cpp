@@ -1119,25 +1119,7 @@ namespace sgns::crdt
         return set_->CreateDeltaToRemove( key );
     }
 
-    void CrdtDatastore::PrintTombs( const std::vector<Element> &aTombs )
-    {
-        std::cout << "Tombs" << std::endl;
-        for ( const auto &tomb : aTombs )
-        {
-            // /namespace/tombs/<key>/<id>
-            std::cout << tomb.key() << ", " << tomb.id() << std::endl;
-        }
-    }
 
-    void CrdtDatastore::PrintElements( const std::vector<Element> &aElems )
-    {
-        std::cout << "Elems" << std::endl;
-        for ( const auto &tomb : aElems )
-        {
-            // /namespace/tombs/<key>/<id>
-            std::cout << tomb.key() << ", " << tomb.id() << std::endl;
-        }
-    }
 
     void CrdtDatastore::AddProcessedCID( const CID &cid )
     {
