@@ -39,11 +39,13 @@ namespace sgns
     class TransactionManager
     {
     public:
-        TransactionManager( std::shared_ptr<crdt::GlobalDB>           db,
-                            std::shared_ptr<boost::asio::io_context>  ctx,
-                            std::shared_ptr<GeniusAccount>            account,
-                            std::shared_ptr<crypto::Hasher>           hasher,
-                            std::shared_ptr<blockchain::BlockStorage> block_storage );
+        TransactionManager( std::shared_ptr<boost::asio::io_context>         ctx,
+                            std::shared_ptr<GeniusAccount>                   account,
+                            std::shared_ptr<crypto::Hasher>                  hasher,
+                            std::shared_ptr<blockchain::BlockStorage>        block_storage,
+                            std::string                                      base_path,
+                            uint16_t                                         port,
+                            std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub );
 
         ~TransactionManager() = default;
 
@@ -57,11 +59,8 @@ namespace sgns
             return transactions;
         }
 
-        bool                         TransferFunds( uint64_t amount, const uint256_t &destination );
-        void                         MintFunds(     uint64_t amount, 
-                                                    std::string transaction_hash, 
-                                                    std::string chainid,
-                                                    std::string tokenid );
+        bool TransferFunds( uint64_t amount, const uint256_t &destination );
+        void MintFunds( uint64_t amount, std::string transaction_hash, std::string chainid, std::string tokenid );
         outcome::result<std::string> HoldEscrow( uint64_t           amount,
                                                  const uint256_t   &dev_addr,
                                                  float              peers_cut,
@@ -78,7 +77,7 @@ namespace sgns
 
         void                     Update();
         void                     EnqueueTransaction( std::shared_ptr<IGeniusTransactions> element );
-        SGTransaction::DAGStruct FillDAGStruct(std::string transaction_hash = "");
+        SGTransaction::DAGStruct FillDAGStruct( std::string transaction_hash = "" );
         outcome::result<void>    SendTransaction();
         std::string              GetTransactionPath( std::shared_ptr<IGeniusTransactions> element );
         outcome::result<void>    RecordBlock( const std::vector<std::string> &transaction_keys );
@@ -86,7 +85,9 @@ namespace sgns
         outcome::result<std::vector<std::vector<uint8_t>>> GetTransactionsFromBlock(
             const primitives::BlockId &block_number );
 
-        outcome::result<std::shared_ptr<IGeniusTransactions>> FetchTransaction( std::string_view transaction_key );
+        outcome::result<std::shared_ptr<IGeniusTransactions>> FetchTransaction(
+            const std::shared_ptr<crdt::GlobalDB> &db,
+            std::string_view                       transaction_key );
         outcome::result<void> ParseTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
 
         /**
@@ -94,7 +95,15 @@ namespace sgns
          */
         void CheckBlockchain();
 
-        std::shared_ptr<crdt::GlobalDB>                  db_m;
+        outcome::result<void> CheckIncoming();
+
+        outcome::result<void> CheckOutgoing();
+
+        std::shared_ptr<crdt::GlobalDB>                  outgoing_db_m;
+        std::shared_ptr<crdt::GlobalDB>                  incoming_db_m;
+        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub_m;
+        std::string                                      base_path_m;
+        uint16_t                                         port_m;
         std::shared_ptr<boost::asio::io_context>         ctx_m;
         std::shared_ptr<GeniusAccount>                   account_m;
         std::vector<std::vector<std::uint8_t>>           transactions;
@@ -105,6 +114,9 @@ namespace sgns
         std::uint64_t                                    last_trans_on_block_id;
         std::shared_ptr<blockchain::BlockStorage>        block_storage_m;
         std::shared_ptr<crypto::Hasher>                  hasher_m;
+
+        std::unordered_map<std::string, std::vector<std::uint8_t>> outgoing_tx_processed_m;
+        std::unordered_map<std::string, std::vector<std::uint8_t>> incoming_tx_processed_m;
 
         outcome::result<void> ParseTransferTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
         outcome::result<void> ParseMintTransaction( const std::shared_ptr<IGeniusTransactions> &tx );

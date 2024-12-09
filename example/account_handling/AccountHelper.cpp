@@ -83,18 +83,29 @@ namespace sgns
         hasher_ = std::make_shared<crypto::HasherImpl>();
 
         header_repo_ = std::make_shared<blockchain::KeyValueBlockHeaderRepository>(
-            globaldb_, hasher_, ( boost::format( std::string( db_path_ ) ) % TEST_NET ).str() );
-        auto maybe_block_storage =
-            blockchain::KeyValueBlockStorage::create( root_hash, globaldb_, hasher_, header_repo_, []( auto & ) {} );
+            globaldb_,
+            hasher_,
+            ( boost::format( std::string( db_path_ ) ) % TEST_NET ).str() );
+        auto maybe_block_storage = blockchain::KeyValueBlockStorage::create( root_hash,
+                                                                             globaldb_,
+                                                                             hasher_,
+                                                                             header_repo_,
+                                                                             []( auto & ) {} );
 
         if ( !maybe_block_storage )
         {
             std::cout << "Error initializing blockchain" << std::endl;
             throw std::runtime_error( "Error initializing blockchain" );
         }
-        block_storage_ = std::move( maybe_block_storage.value() );
-        transaction_manager_ =
-            std::make_shared<TransactionManager>( globaldb_, io_, account_, hasher_, block_storage_ );
+        block_storage_       = std::move( maybe_block_storage.value() );
+        transaction_manager_ = std::make_shared<TransactionManager>(
+            io_,
+            account_,
+            hasher_,
+            block_storage_,
+            ( boost::format( "SuperGNUSNode.TestNet.%s" ) % account_->GetAddress<std::string>() ).str(),
+            40010,
+            pubsub_ );
         transaction_manager_->Start();
 
         // Encode the string to UTF-8 bytes

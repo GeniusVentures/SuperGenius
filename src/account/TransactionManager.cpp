@@ -13,28 +13,55 @@
 #include "account/ProcessingTransaction.hpp"
 #include "account/EscrowTransaction.hpp"
 #include "account/UTXOTxParameters.hpp"
+#include "crdt/globaldb/globaldb.hpp"
 #include "outcome/outcome.hpp"
 #include "primitives/block.hpp"
 
 namespace sgns
 {
-    TransactionManager::TransactionManager( std::shared_ptr<crdt::GlobalDB>           db,
-                                            std::shared_ptr<boost::asio::io_context>  ctx,
-                                            std::shared_ptr<GeniusAccount>            account,
-                                            std::shared_ptr<crypto::Hasher>           hasher,
-                                            std::shared_ptr<blockchain::BlockStorage> block_storage ) :
-        db_m( std::move( db ) ),
+    TransactionManager::TransactionManager( std::shared_ptr<boost::asio::io_context>         ctx,
+                                            std::shared_ptr<GeniusAccount>                   account,
+                                            std::shared_ptr<crypto::Hasher>                  hasher,
+                                            std::shared_ptr<blockchain::BlockStorage>        block_storage,
+                                            std::string                                      base_path,
+                                            uint16_t                                         port,
+                                            std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub ) :
         ctx_m( std::move( ctx ) ),
         account_m( std::move( account ) ),
+        hasher_m( std::move( hasher ) ),
+        block_storage_m( std::move( block_storage ) ),
+        base_path_m( std::move( base_path ) ),
+        pubsub_m( std::move( pubsub ) ),
+        port_m( std::move( port ) ),
         timer_m( std::make_shared<boost::asio::steady_timer>( *ctx_m, boost::asio::chrono::milliseconds( 300 ) ) ),
         last_block_id_m( 0 ),
-        last_trans_on_block_id( 0 ),
-        block_storage_m( std::move( block_storage ) ),
-        hasher_m( std::move( hasher ) )
+        last_trans_on_block_id( 0 )
 
     {
         m_logger->set_level( spdlog::level::off );
         m_logger->info( "Initializing values by reading whole blockchain" );
+
+        outgoing_db_m = std::make_shared<crdt::GlobalDB>(
+            ctx_m,
+            ( boost::format( base_path_m + "/txs/out" ) ).str(),
+            port_m,
+            std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_m,
+                                                              account_m->GetAddress<std::string>() + "out" ) );
+
+        if ( !outgoing_db_m->Init( crdt::CrdtOptions::DefaultOptions() ).has_value() )
+        {
+            throw std::runtime_error( "Could not start Outgoing GlobalDB" );
+        }
+        incoming_db_m = std::make_shared<crdt::GlobalDB>(
+            ctx_m,
+            ( boost::format( base_path_m + "/txs/in" ) ).str(),
+            port_m,
+            std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_m, account_m->GetAddress<std::string>() + "in" ) );
+
+        if ( !incoming_db_m->Init( crdt::CrdtOptions::DefaultOptions() ).has_value() )
+        {
+            throw std::runtime_error( "Could not start Incoming GlobalDB" );
+        }
     }
 
     void TransactionManager::Start()
@@ -89,9 +116,15 @@ namespace sgns
         return ret;
     }
 
-    void TransactionManager::MintFunds( uint64_t amount, std::string transaction_hash, std::string chainid, std::string tokenid )
+    void TransactionManager::MintFunds( uint64_t    amount,
+                                        std::string transaction_hash,
+                                        std::string chainid,
+                                        std::string tokenid )
     {
-        auto mint_transaction = std::make_shared<MintTransaction>( amount, chainid, tokenid, FillDAGStruct( transaction_hash ) );
+        auto mint_transaction = std::make_shared<MintTransaction>( amount,
+                                                                   chainid,
+                                                                   tokenid,
+                                                                   FillDAGStruct( transaction_hash ) );
         this->EnqueueTransaction( std::move( mint_transaction ) );
     }
 
@@ -132,7 +165,7 @@ namespace sgns
                 break;
             }
         }
-        auto maybe_tx = FetchTransaction( escrow_path );
+        auto maybe_tx = FetchTransaction( outgoing_db_m, escrow_path ); //TODO - Fix this
         if ( maybe_tx.has_error() )
         {
             std::cout << "ERROR IN FETCHING TRANSACTION" << std::endl;
@@ -185,7 +218,7 @@ namespace sgns
     }
 
     //TODO - Fill hash stuff on DAGStruct
-    SGTransaction::DAGStruct TransactionManager::FillDAGStruct(std::string transaction_hash)
+    SGTransaction::DAGStruct TransactionManager::FillDAGStruct( std::string transaction_hash )
     {
         SGTransaction::DAGStruct dag;
         auto                     timestamp = std::chrono::system_clock::now();
@@ -215,7 +248,7 @@ namespace sgns
         sgns::crdt::GlobalDB::Buffer data_transaction;
         data_transaction.put( transaction->SerializeByteVector() );
 
-        BOOST_OUTCOME_TRYV2( auto &&, db_m->Put( { transaction_path }, data_transaction ) );
+        BOOST_OUTCOME_TRYV2( auto &&, outgoing_db_m->Put( { transaction_path }, data_transaction ) );
 
         m_logger->debug( "Putting on " + transaction_path +
                          " the data: " + std::string( data_transaction.toString() ) );
@@ -273,7 +306,7 @@ namespace sgns
 
         for ( auto &key : block_body )
         {
-            OUTCOME_TRY( ( auto &&, transaction ), FetchTransaction( key.data.toString() ) );
+            OUTCOME_TRY( ( auto &&, transaction ), FetchTransaction( outgoing_db_m, key.data.toString() ) );
             BOOST_OUTCOME_TRYV2( auto &&, ParseTransaction( transaction ) );
             if ( transaction->GetSrcAddress<uint256_t>() == account_m->GetAddress<uint256_t>() )
             {
@@ -298,9 +331,10 @@ namespace sgns
     }
 
     outcome::result<std::shared_ptr<IGeniusTransactions>> TransactionManager::FetchTransaction(
-        std::string_view transaction_key )
+        const std::shared_ptr<crdt::GlobalDB> &db,
+        std::string_view                       transaction_key )
     {
-        OUTCOME_TRY( ( auto &&, transaction_data ), db_m->Get( { std::string( transaction_key ) } ) );
+        OUTCOME_TRY( ( auto &&, transaction_data ), db->Get( { std::string( transaction_key ) } ) );
 
         auto transaction_data_vector = transaction_data.toVector();
 
@@ -349,6 +383,96 @@ namespace sgns
             }
 
         } while ( retval );
+    }
+
+    outcome::result<void> TransactionManager::CheckIncoming()
+    {
+        boost::format tx_key{ std::string( TRANSACTION_BASE_FORMAT ) };
+
+        tx_key % TEST_NET_ID;
+
+        auto transaction_paths = tx_key.str() + "in" + account_m->GetAddress<std::string>();
+        m_logger->info( "Probing incoming transactions on " + transaction_paths );
+        OUTCOME_TRY( ( auto &&, transaction_list ), incoming_db_m->QueryKeyValues( transaction_paths ) );
+
+        m_logger->info( "Incoming transaction list grabbed from CRDT" );
+
+        //m_logger->info( "Number of tasks in Queue: {}", queryTasks.size() );
+        for ( auto element : transaction_list )
+        {
+            auto transaction_key = incoming_db_m->KeyToString( element.first );
+            if ( !transaction_key.has_value() )
+            {
+                m_logger->debug( "Unable to convert a key to string" );
+                continue;
+            }
+            if ( outgoing_tx_processed_m.find( { transaction_key.value() } ) == outgoing_tx_processed_m.end() )
+            {
+                m_logger->debug( "Transaction already processed: " + transaction_key.value() );
+                continue;
+            }
+
+            auto maybe_transaction = FetchTransaction( incoming_db_m, { transaction_key.value() } );
+            if ( !maybe_transaction.has_value() )
+            {
+                m_logger->debug( "Can't fetch transaction" );
+                continue;
+            }
+            auto maybe_parsed = ParseTransaction( maybe_transaction.value() );
+            if ( !maybe_parsed.has_error() )
+            {
+                m_logger->debug( "Can't parse the transaction" );
+                continue;
+            }
+            incoming_tx_processed_m[{ transaction_key.value() }] = maybe_transaction.value()->SerializeByteVector();
+        }
+    }
+
+    outcome::result<void> TransactionManager::CheckOutgoing()
+    {
+        boost::format tx_key{ std::string( TRANSACTION_BASE_FORMAT ) };
+
+        tx_key % TEST_NET_ID;
+
+        auto transaction_paths = tx_key.str() + account_m->GetAddress<std::string>();
+        m_logger->info( "Probing transactions on " + transaction_paths );
+        OUTCOME_TRY( ( auto &&, transaction_list ), outgoing_db_m->QueryKeyValues( transaction_paths ) );
+
+        m_logger->info( "Transaction list grabbed from CRDT" );
+
+        //m_logger->info( "Number of tasks in Queue: {}", queryTasks.size() );
+        for ( auto element : transaction_list )
+        {
+            auto transaction_key = outgoing_db_m->KeyToString( element.first );
+            if ( !transaction_key.has_value() )
+            {
+                m_logger->debug( "Unable to convert a key to string" );
+                continue;
+            }
+            if ( outgoing_tx_processed_m.find( { transaction_key.value() } ) == outgoing_tx_processed_m.end() )
+            {
+                m_logger->debug( "Transaction already processed: " + transaction_key.value() );
+                continue;
+            }
+
+            auto maybe_transaction = FetchTransaction( outgoing_db_m, { transaction_key.value() } );
+            if ( !maybe_transaction.has_value() )
+            {
+                m_logger->debug( "Can't fetch transaction" );
+                continue;
+            }
+            auto maybe_parsed = ParseTransaction( maybe_transaction.value() );
+            if ( !maybe_parsed.has_error() )
+            {
+                m_logger->debug( "Can't parse the transaction" );
+                continue;
+            }
+            //if ( maybe_transaction.value()->GetSrcAddress<uint256_t>() == account_m->GetAddress<uint256_t>() )
+            {
+                account_m->nonce = maybe_transaction.value()->dag_st.nonce() + 1;
+            }
+            outgoing_tx_processed_m[{ transaction_key.value() }] = maybe_transaction.value()->SerializeByteVector();
+        }
     }
 
     outcome::result<void> TransactionManager::ParseTransferTransaction( const std::shared_ptr<IGeniusTransactions> &tx )

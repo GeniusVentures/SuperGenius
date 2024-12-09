@@ -85,17 +85,19 @@ namespace sgns
         auto logNoise = base::createLogger( "Noise" );
         logNoise->set_level( spdlog::level::off );
 
-    auto loggerSubQueue = base::createLogger( "ProcessingSubTaskQueueAccessorImpl" );
-    loggerSubQueue->set_level( spdlog::level::off );
-    auto loggerProcServ = base::createLogger( "ProcessingService" );
-    loggerProcServ->set_level( spdlog::level::off );
+        auto loggerSubQueue = base::createLogger( "ProcessingSubTaskQueueAccessorImpl" );
+        loggerSubQueue->set_level( spdlog::level::off );
+        auto loggerProcServ = base::createLogger( "ProcessingService" );
+        loggerProcServ->set_level( spdlog::level::off );
 
-    auto loggerProcqm = base::createLogger( "ProcessingSubTaskQueueManager" );
-    loggerProcqm->set_level( spdlog::level::off );
-    auto tokenid = dev_config_.TokenID;
-    
-    auto pubsubport    = 40001 + GenerateRandomPort( account_->GetAddress<std::string>() + std::to_string(tokenid) );
-    auto graphsyncport = 40010 + GenerateRandomPort( account_->GetAddress<std::string>() + std::to_string(tokenid) );
+        auto loggerProcqm = base::createLogger( "ProcessingSubTaskQueueManager" );
+        loggerProcqm->set_level( spdlog::level::off );
+        auto tokenid = dev_config_.TokenID;
+
+        auto pubsubport = 40001 + GenerateRandomPort( account_->GetAddress<std::string>() + std::to_string( tokenid ) );
+        auto graphsyncport = 40010 +
+                             GenerateRandomPort( account_->GetAddress<std::string>() + std::to_string( tokenid ) );
+
         std::vector<std::string> addresses;
         //UPNP
         auto        upnp = std::make_shared<upnp::UPNP>();
@@ -168,23 +170,37 @@ namespace sgns
             globaldb_,
             hasher_,
             ( boost::format( std::string( db_path_ ) ) % TEST_NET ).str() );
-        auto maybe_block_storage = blockchain::KeyValueBlockStorage::create( root_hash,
-                                                                             globaldb_,
-                                                                             hasher_,
-                                                                             header_repo_,
-                                                                             []( auto & ) {} );
 
-        if ( !maybe_block_storage )
+        auto start_time = std::chrono::steady_clock::now();
+        while ( std::chrono::steady_clock::now() - start_time < std::chrono::seconds( 300 ) )
         {
-            std::cerr << "Error initializing blockchain: " << maybe_block_storage.error().message() << std::endl;
+            auto maybe_block_storage = blockchain::KeyValueBlockStorage::create( root_hash,
+                                                                                 globaldb_,
+                                                                                 hasher_,
+                                                                                 header_repo_,
+                                                                                 []( auto & ) {} );
+            if ( maybe_block_storage )
+            {
+                block_storage_ = std::move( maybe_block_storage.value() );
+
+                break;
+            }
+            std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) ); // Retry after a short delay
+        }
+
+        if ( block_storage_ == nullptr )
+        {
+            std::cerr << "Error initializing blockchain " << std::endl;
             throw std::runtime_error( "Error initializing blockchain" );
         }
-        block_storage_       = std::move( maybe_block_storage.value() );
-        transaction_manager_ = std::make_shared<TransactionManager>( globaldb_,
-                                                                     io_,
-                                                                     account_,
-                                                                     hasher_,
-                                                                     block_storage_ );
+        transaction_manager_ = std::make_shared<TransactionManager>(
+            io_,
+            account_,
+            hasher_,
+            block_storage_,
+            ( boost::format( "SuperGNUSNode.TestNet.%s" ) % account_->GetAddress<std::string>() ).str(),
+            graphsyncport,
+            pubsub_ );
 
         transaction_manager_->Start();
         if ( isprocessor_ )
