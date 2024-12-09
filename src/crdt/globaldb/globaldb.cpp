@@ -162,6 +162,11 @@ namespace sgns::crdt
             {
                 dataStore = dataStoreResult.value();
             }
+            else
+            {
+                m_logger->error( "Unable to open database: " + std::string( e.what() ) );
+                return outcome::failure( boost::system::error_code{} );
+            }
         }
         catch ( std::exception &e )
         {
