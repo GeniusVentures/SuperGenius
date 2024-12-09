@@ -115,13 +115,15 @@ namespace sgns
         std::shared_ptr<blockchain::BlockStorage>        block_storage_m;
         std::shared_ptr<crypto::Hasher>                  hasher_m;
 
-        std::unordered_map<std::string, std::vector<std::uint8_t>> outgoing_tx_processed_m;
-        std::unordered_map<std::string, std::vector<std::uint8_t>> incoming_tx_processed_m;
+        std::unordered_map<std::string, std::vector<std::uint8_t>>       outgoing_tx_processed_m;
+        std::unordered_map<std::string, std::vector<std::uint8_t>>       incoming_tx_processed_m;
+        std::unordered_map<std::string, std::shared_ptr<crdt::GlobalDB>> destination_dbs_m;
 
         outcome::result<void> ParseTransferTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
         outcome::result<void> ParseMintTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
         outcome::result<void> ParseEscrowTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
 
+        outcome::result<void> NotifyDestinationOfTransfer( const std::shared_ptr<IGeniusTransactions> &tx );
         static inline const std::unordered_map<std::string, TransactionParserFn> transaction_parsers = {
             { "transfer", &TransactionManager::ParseTransferTransaction },
             { "mint", &TransactionManager::ParseMintTransaction },

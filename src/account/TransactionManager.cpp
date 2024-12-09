@@ -38,7 +38,7 @@ namespace sgns
         last_trans_on_block_id( 0 )
 
     {
-        m_logger->set_level( spdlog::level::off );
+        m_logger->set_level( spdlog::level::debug );
         m_logger->info( "Initializing values by reading whole blockchain" );
 
         outgoing_db_m = std::make_shared<crdt::GlobalDB>(
@@ -66,8 +66,9 @@ namespace sgns
 
     void TransactionManager::Start()
     {
-        CheckBlockchain();
-
+        //CheckBlockchain();
+        CheckIncoming();
+        CheckOutgoing();
         m_logger->info( "Last valid block ID" + std::to_string( last_block_id_m ) );
         auto task = std::make_shared<std::function<void()>>();
 
@@ -207,13 +208,14 @@ namespace sgns
     void TransactionManager::Update()
     {
         SendTransaction();
-        CheckBlockchain();
+        //CheckBlockchain();
+        CheckIncoming();
+        CheckOutgoing();
     }
 
     void TransactionManager::EnqueueTransaction( std::shared_ptr<IGeniusTransactions> element )
     {
         std::lock_guard<std::mutex> lock( mutex_m );
-        this->account_m->nonce += 1;
         out_transactions.emplace_back( std::move( element ) );
     }
 
@@ -224,9 +226,9 @@ namespace sgns
         auto                     timestamp = std::chrono::system_clock::now();
 
         dag.set_previous_hash( transaction_hash );
-        dag.set_nonce( account_m->nonce );
+        dag.set_nonce( 0 );
         dag.set_source_addr( account_m->GetAddress<std::string>() );
-        dag.set_timestamp( 0 );
+        dag.set_timestamp( timestamp.time_since_epoch().count() );
         dag.set_uncle_hash( "" );
         dag.set_data_hash( "" ); //filled byt transaction class
         return dag;
@@ -242,6 +244,9 @@ namespace sgns
 
         auto transaction = out_transactions.front();
         out_transactions.pop_front();
+        account_m->nonce = account_m->nonce + 1;
+
+        transaction->dag_st.set_nonce( account_m->nonce );
 
         auto transaction_path = GetTransactionPath( transaction );
 
@@ -252,8 +257,11 @@ namespace sgns
 
         m_logger->debug( "Putting on " + transaction_path +
                          " the data: " + std::string( data_transaction.toString() ) );
+        if ( transaction->GetType() == "transfer" )
+        {
+        }
 
-        BOOST_OUTCOME_TRYV2( auto &&, RecordBlock( { transaction_path } ) );
+        //BOOST_OUTCOME_TRYV2( auto &&, RecordBlock( { transaction_path } ) );
         return outcome::success();
     }
 
@@ -392,10 +400,10 @@ namespace sgns
         tx_key % TEST_NET_ID;
 
         auto transaction_paths = tx_key.str() + "in" + account_m->GetAddress<std::string>();
-        m_logger->info( "Probing incoming transactions on " + transaction_paths );
+        m_logger->trace( "Probing incoming transactions on " + transaction_paths );
         OUTCOME_TRY( ( auto &&, transaction_list ), incoming_db_m->QueryKeyValues( transaction_paths ) );
 
-        m_logger->info( "Incoming transaction list grabbed from CRDT" );
+        m_logger->trace( "Incoming transaction list grabbed from CRDT" );
 
         //m_logger->info( "Number of tasks in Queue: {}", queryTasks.size() );
         for ( auto element : transaction_list )
@@ -406,9 +414,9 @@ namespace sgns
                 m_logger->debug( "Unable to convert a key to string" );
                 continue;
             }
-            if ( outgoing_tx_processed_m.find( { transaction_key.value() } ) == outgoing_tx_processed_m.end() )
+            if ( incoming_tx_processed_m.find( { transaction_key.value() } ) != incoming_tx_processed_m.end() )
             {
-                m_logger->debug( "Transaction already processed: " + transaction_key.value() );
+                m_logger->trace( "Transaction already processed: " + transaction_key.value() );
                 continue;
             }
 
@@ -419,13 +427,14 @@ namespace sgns
                 continue;
             }
             auto maybe_parsed = ParseTransaction( maybe_transaction.value() );
-            if ( !maybe_parsed.has_error() )
+            if ( maybe_parsed.has_error() )
             {
                 m_logger->debug( "Can't parse the transaction" );
                 continue;
             }
             incoming_tx_processed_m[{ transaction_key.value() }] = maybe_transaction.value()->SerializeByteVector();
         }
+        return outcome::success();
     }
 
     outcome::result<void> TransactionManager::CheckOutgoing()
@@ -435,10 +444,10 @@ namespace sgns
         tx_key % TEST_NET_ID;
 
         auto transaction_paths = tx_key.str() + account_m->GetAddress<std::string>();
-        m_logger->info( "Probing transactions on " + transaction_paths );
+        m_logger->trace( "Probing transactions on " + transaction_paths );
         OUTCOME_TRY( ( auto &&, transaction_list ), outgoing_db_m->QueryKeyValues( transaction_paths ) );
 
-        m_logger->info( "Transaction list grabbed from CRDT" );
+        m_logger->trace( "Transaction list grabbed from CRDT" );
 
         //m_logger->info( "Number of tasks in Queue: {}", queryTasks.size() );
         for ( auto element : transaction_list )
@@ -449,9 +458,9 @@ namespace sgns
                 m_logger->debug( "Unable to convert a key to string" );
                 continue;
             }
-            if ( outgoing_tx_processed_m.find( { transaction_key.value() } ) == outgoing_tx_processed_m.end() )
+            if ( outgoing_tx_processed_m.find( { transaction_key.value() } ) != outgoing_tx_processed_m.end() )
             {
-                m_logger->debug( "Transaction already processed: " + transaction_key.value() );
+                m_logger->trace( "Transaction already processed: " + transaction_key.value() );
                 continue;
             }
 
@@ -461,18 +470,21 @@ namespace sgns
                 m_logger->debug( "Can't fetch transaction" );
                 continue;
             }
+            m_logger->debug( "Transaction fetched on " + transaction_key.value() );
             auto maybe_parsed = ParseTransaction( maybe_transaction.value() );
-            if ( !maybe_parsed.has_error() )
+            if ( maybe_parsed.has_error() )
             {
                 m_logger->debug( "Can't parse the transaction" );
                 continue;
             }
+            m_logger->debug( "Transaction parsed " + transaction_key.value() );
             //if ( maybe_transaction.value()->GetSrcAddress<uint256_t>() == account_m->GetAddress<uint256_t>() )
             {
                 account_m->nonce = maybe_transaction.value()->dag_st.nonce() + 1;
             }
             outgoing_tx_processed_m[{ transaction_key.value() }] = maybe_transaction.value()->SerializeByteVector();
         }
+        return outcome::success();
     }
 
     outcome::result<void> TransactionManager::ParseTransferTransaction( const std::shared_ptr<IGeniusTransactions> &tx )
@@ -536,6 +548,53 @@ namespace sgns
                 account_m->RefreshUTXOs( escrow_tx->GetUTXOParameters().inputs_ );
             }
         }
+        return outcome::success();
+    }
+
+    outcome::result<void> TransactionManager::NotifyDestinationOfTransfer(
+        const std::shared_ptr<IGeniusTransactions> &tx )
+    {
+        auto transfer_tx = std::dynamic_pointer_cast<TransferTransaction>( tx );
+        auto dest_infos  = transfer_tx->GetDstInfos();
+
+        for ( std::uint32_t i = 0; i < dest_infos.size(); ++i )
+        {
+            if ( dest_infos[i].dest_address != account_m->GetAddress<uint256_t>() )
+            {
+                std::string                     peer_address = dest_infos[i].dest_address.str();
+                std::shared_ptr<crdt::GlobalDB> destination_db;
+                auto                            destination_db_it = destination_dbs_m.find( peer_address );
+                if ( destination_db_it == destination_dbs_m.end() )
+                {
+                    destination_db = std::make_shared<crdt::GlobalDB>(
+                        ctx_m,
+                        ( boost::format( base_path_m + "/txs/out/" + peer_address ) ).str(),
+                        port_m,
+                        std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_m, peer_address + "in" ) );
+                    if ( !destination_db->Init( crdt::CrdtOptions::DefaultOptions() ).has_value() )
+                    {
+                        throw std::runtime_error( "Could not start Destination GlobalDB" );
+                    }
+                    destination_dbs_m[peer_address] = destination_db;
+                }
+                else
+                {
+                    destination_db = destination_db_it->second;
+                }
+
+                boost::format tx_key{ std::string( TRANSACTION_BASE_FORMAT ) };
+
+                tx_key % TEST_NET_ID;
+
+                auto transaction_paths = tx_key.str() + "in" + peer_address + GetTransactionPath( tx );
+
+                sgns::crdt::GlobalDB::Buffer data_transaction;
+                data_transaction.put( tx->SerializeByteVector() );
+
+                BOOST_OUTCOME_TRYV2( auto &&, destination_db->Put( { transaction_paths }, data_transaction ) );
+            }
+        }
+
         return outcome::success();
     }
 
