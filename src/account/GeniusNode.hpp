@@ -83,10 +83,18 @@ namespace sgns
         {
             return transaction_manager_->GetTransactions();
         }
+        template <typename T>
+        T GetAddress() const;
 
-        std::string GetAddress()
+        template <>
+        std::string GetAddress() const
         {
             return account_->GetAddress<std::string>();
+        }
+        template <>
+        uint256_t GetAddress() const
+        {
+            return account_->GetAddress<uint256_t>();
         }
 
         bool TransferFunds( uint64_t amount, const uint256_t &destination )
@@ -126,8 +134,6 @@ namespace sgns
         std::atomic<bool> stop_upnp{false};
 
         DevConfig_st dev_config_;
-
-        static uint16_t GenerateRandomPort( const std::string &address );
 
         void ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult );
         void ProcessingError( const std::string &task_id );

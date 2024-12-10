@@ -21,6 +21,7 @@
 namespace sgns
 {
     using namespace boost::multiprecision;
+    namespace br = boost::random;
 
     /**
      * @brief       Convert a byte array to a hexadecimal string.
@@ -174,7 +175,6 @@ namespace sgns
             }
 
             return out_vect.end();
-           
         };
 
         for ( std::size_t i = 0; i < char_ptr_size; i += num_nibbles_resolution )
@@ -209,6 +209,18 @@ namespace sgns
         {
             std::reverse( start.value(), finish.value() );
         }
+    }
+
+    static uint16_t GenerateRandomPort( uint16_t base, const std::string &seed )
+    {
+        uint32_t seed_number = static_cast<uint32_t>( uint256_t{ seed } % 1000 );
+
+        // Setup the random number generator
+        br::mt19937                    rng( seed_number ); // Use the reduced number as seed
+        br::uniform_int_distribution<> dist( 0, 999 );     // Range: 0 to 9999
+
+        // Generate a 4-digit random number
+        return base + dist( rng );
     }
 }
 

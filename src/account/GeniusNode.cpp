@@ -6,10 +6,11 @@
  */
 #include <boost/format.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
-#include <boost/random.hpp>
+
 #include <rapidjson/document.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
+#include "base/util.hpp"
 #include "account/GeniusNode.hpp"
 #include "FileManager.hpp"
 #include "upnp.hpp"
@@ -24,7 +25,7 @@
 #include <thread>
 
 using namespace boost::multiprecision;
-namespace br = boost::random;
+
 
 namespace sgns
 {
@@ -94,9 +95,9 @@ namespace sgns
         loggerProcqm->set_level( spdlog::level::off );
         auto tokenid = dev_config_.TokenID;
 
-        auto pubsubport = 40001 + GenerateRandomPort( account_->GetAddress<std::string>() + std::to_string( tokenid ) );
-        auto graphsyncport = 40010 +
-                             GenerateRandomPort( account_->GetAddress<std::string>() + std::to_string( tokenid ) );
+        auto pubsubport = GenerateRandomPort( 40001, account_->GetAddress<std::string>() + std::to_string( tokenid ) );
+        auto graphsyncport = GenerateRandomPort( 40010,
+                                                 account_->GetAddress<std::string>() + std::to_string( tokenid ) );
 
         std::vector<std::string> addresses;
         //UPNP
@@ -465,20 +466,6 @@ namespace sgns
         } while ( retval );
 
         return out;
-    }
-
-    uint16_t GeniusNode::GenerateRandomPort( const std::string &address )
-    {
-        uint32_t seed = static_cast<uint32_t>( uint256_t{ address } % 1000 );
-
-        // Setup the random number generator
-        br::mt19937                    rng( seed );    // Use the reduced number as seed
-        br::uniform_int_distribution<> dist( 0, 999 ); // Range: 0 to 9999
-
-        // Generate a 4-digit random number
-        //return dist( rng );
-
-        return static_cast<uint16_t>( seed );
     }
 
     void GeniusNode::ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult )
