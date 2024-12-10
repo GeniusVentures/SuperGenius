@@ -7,6 +7,7 @@
 #include "account/TransactionManager.hpp"
 
 #include <utility>
+#include <algorithm>
 
 #include "account/TransferTransaction.hpp"
 #include "account/MintTransaction.hpp"
@@ -479,9 +480,8 @@ namespace sgns
             }
             m_logger->debug( "Transaction parsed " + transaction_key.value() );
             //if ( maybe_transaction.value()->GetSrcAddress<uint256_t>() == account_m->GetAddress<uint256_t>() )
-            {
-                account_m->nonce = maybe_transaction.value()->dag_st.nonce() + 1;
-            }
+            account_m->nonce = std::max(account_m->nonce, maybe_transaction.value()->dag_st.nonce() );
+
             outgoing_tx_processed_m[{ transaction_key.value() }] = maybe_transaction.value()->SerializeByteVector();
         }
         return outcome::success();
