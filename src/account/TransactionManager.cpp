@@ -14,26 +14,27 @@
 #include "account/ProcessingTransaction.hpp"
 #include "account/EscrowTransaction.hpp"
 #include "account/UTXOTxParameters.hpp"
+#include "base/util.hpp"
 #include "crdt/globaldb/globaldb.hpp"
 #include "outcome/outcome.hpp"
 #include "primitives/block.hpp"
 
 namespace sgns
 {
-    TransactionManager::TransactionManager( std::shared_ptr<boost::asio::io_context>         ctx,
+    TransactionManager::TransactionManager( std::shared_ptr<crdt::GlobalDB>                 processing_db,
+                                            std::shared_ptr<boost::asio::io_context>         ctx,
                                             std::shared_ptr<GeniusAccount>                   account,
                                             std::shared_ptr<crypto::Hasher>                  hasher,
                                             std::shared_ptr<blockchain::BlockStorage>        block_storage,
                                             std::string                                      base_path,
-                                            uint16_t                                         port,
                                             std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub ) :
+        processing_db_m( std::move( processing_db ) ),
         ctx_m( std::move( ctx ) ),
         account_m( std::move( account ) ),
         hasher_m( std::move( hasher ) ),
         block_storage_m( std::move( block_storage ) ),
         base_path_m( std::move( base_path ) ),
         pubsub_m( std::move( pubsub ) ),
-        port_m( std::move( port ) ),
         timer_m( std::make_shared<boost::asio::steady_timer>( *ctx_m, boost::asio::chrono::milliseconds( 300 ) ) ),
         last_block_id_m( 0 ),
         last_trans_on_block_id( 0 )
@@ -42,27 +43,32 @@ namespace sgns
         m_logger->set_level( spdlog::level::debug );
         m_logger->info( "Initializing values by reading whole blockchain" );
 
+        auto out_port = GenerateRandomPort( 41000, account_m->GetAddress<std::string>() );
+
         outgoing_db_m = std::make_shared<crdt::GlobalDB>(
             ctx_m,
-            ( boost::format( base_path_m + "/txs/out" ) ).str(),
-            port_m,
+            ( boost::format( base_path_m + "_out" ) ).str(),
+            out_port,
             std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_m,
                                                               account_m->GetAddress<std::string>() + "out" ) );
 
+        used_ports_m.insert( out_port );
         if ( !outgoing_db_m->Init( crdt::CrdtOptions::DefaultOptions() ).has_value() )
         {
             throw std::runtime_error( "Could not start Outgoing GlobalDB" );
         }
+        auto in_port  = GenerateRandomPort( 42000, account_m->GetAddress<std::string>() );
         incoming_db_m = std::make_shared<crdt::GlobalDB>(
             ctx_m,
-            ( boost::format( base_path_m + "/txs/in" ) ).str(),
-            port_m,
+            ( boost::format( base_path_m + "_in" ) ).str(),
+            in_port,
             std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_m, account_m->GetAddress<std::string>() + "in" ) );
 
         if ( !incoming_db_m->Init( crdt::CrdtOptions::DefaultOptions() ).has_value() )
         {
             throw std::runtime_error( "Could not start Incoming GlobalDB" );
         }
+        used_ports_m.insert( in_port );
     }
 
     void TransactionManager::Start()
@@ -167,7 +173,7 @@ namespace sgns
                 break;
             }
         }
-        auto maybe_tx = FetchTransaction( outgoing_db_m, escrow_path ); //TODO - Fix this
+        auto maybe_tx = FetchTransaction( processing_db_m, escrow_path ); 
         if ( maybe_tx.has_error() )
         {
             std::cout << "ERROR IN FETCHING TRANSACTION" << std::endl;
@@ -260,6 +266,8 @@ namespace sgns
                          " the data: " + std::string( data_transaction.toString() ) );
         if ( transaction->GetType() == "transfer" )
         {
+            m_logger->debug( "Notifying receiving peers of transfers" );
+            NotifyDestinationOfTransfer( transaction );
         }
 
         //BOOST_OUTCOME_TRYV2( auto &&, RecordBlock( { transaction_path } ) );
@@ -480,7 +488,7 @@ namespace sgns
             }
             m_logger->debug( "Transaction parsed " + transaction_key.value() );
             //if ( maybe_transaction.value()->GetSrcAddress<uint256_t>() == account_m->GetAddress<uint256_t>() )
-            account_m->nonce = std::max(account_m->nonce, maybe_transaction.value()->dag_st.nonce() );
+            account_m->nonce = std::max( account_m->nonce, maybe_transaction.value()->dag_st.nonce() );
 
             outgoing_tx_processed_m[{ transaction_key.value() }] = maybe_transaction.value()->SerializeByteVector();
         }
@@ -561,21 +569,34 @@ namespace sgns
         {
             if ( dest_infos[i].dest_address != account_m->GetAddress<uint256_t>() )
             {
-                std::string                     peer_address = dest_infos[i].dest_address.str();
+                std::ostringstream oss;
+                oss << "0x";
+                oss << std::hex << dest_infos[i].dest_address;
+                std::string peer_address = oss.str();
+                m_logger->debug( "Sending notification to " + peer_address );
                 std::shared_ptr<crdt::GlobalDB> destination_db;
                 auto                            destination_db_it = destination_dbs_m.find( peer_address );
                 if ( destination_db_it == destination_dbs_m.end() )
                 {
+                    uint16_t new_port     = 43000;
+                    int8_t   port_retries = 3;
+                    do
+                    {
+                        new_port = GenerateRandomPort( 43000, account_m->GetAddress<std::string>() );
+
+                    } while ( ( used_ports_m.find( new_port ) != used_ports_m.end() ) && ( --port_retries > 0 ) );
+
                     destination_db = std::make_shared<crdt::GlobalDB>(
                         ctx_m,
-                        ( boost::format( base_path_m + "/txs/out/" + peer_address ) ).str(),
-                        port_m,
+                        ( boost::format( base_path_m + "_out/" + peer_address ) ).str(),
+                        new_port,
                         std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_m, peer_address + "in" ) );
                     if ( !destination_db->Init( crdt::CrdtOptions::DefaultOptions() ).has_value() )
                     {
                         throw std::runtime_error( "Could not start Destination GlobalDB" );
                     }
                     destination_dbs_m[peer_address] = destination_db;
+                    used_ports_m.insert( new_port );
                 }
                 else
                 {
@@ -594,6 +615,18 @@ namespace sgns
                 BOOST_OUTCOME_TRYV2( auto &&, destination_db->Put( { transaction_paths }, data_transaction ) );
             }
         }
+
+        return outcome::success();
+    }
+
+    outcome::result<void> TransactionManager::PostEscrowOnProcessingDB( const std::shared_ptr<IGeniusTransactions> &tx )
+    {
+        auto transaction_path = GetTransactionPath( tx );
+
+        sgns::crdt::GlobalDB::Buffer data_transaction;
+        data_transaction.put( tx->SerializeByteVector() );
+
+        BOOST_OUTCOME_TRYV2( auto &&, processing_db_m->Put( { transaction_path }, data_transaction ) );
 
         return outcome::success();
     }

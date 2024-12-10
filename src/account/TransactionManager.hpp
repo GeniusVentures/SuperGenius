@@ -39,12 +39,12 @@ namespace sgns
     class TransactionManager
     {
     public:
-        TransactionManager( std::shared_ptr<boost::asio::io_context>         ctx,
+        TransactionManager( std::shared_ptr<crdt::GlobalDB>                  processing_db,
+                            std::shared_ptr<boost::asio::io_context>         ctx,
                             std::shared_ptr<GeniusAccount>                   account,
                             std::shared_ptr<crypto::Hasher>                  hasher,
                             std::shared_ptr<blockchain::BlockStorage>        block_storage,
                             std::string                                      base_path,
-                            uint16_t                                         port,
                             std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub );
 
         ~TransactionManager() = default;
@@ -99,6 +99,7 @@ namespace sgns
 
         outcome::result<void> CheckOutgoing();
 
+        std::shared_ptr<crdt::GlobalDB>                  processing_db_m;
         std::shared_ptr<crdt::GlobalDB>                  outgoing_db_m;
         std::shared_ptr<crdt::GlobalDB>                  incoming_db_m;
         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub_m;
@@ -118,12 +119,15 @@ namespace sgns
         std::unordered_map<std::string, std::vector<std::uint8_t>>       outgoing_tx_processed_m;
         std::unordered_map<std::string, std::vector<std::uint8_t>>       incoming_tx_processed_m;
         std::unordered_map<std::string, std::shared_ptr<crdt::GlobalDB>> destination_dbs_m;
+        std::set<uint16_t>                                               used_ports_m;
 
         outcome::result<void> ParseTransferTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
         outcome::result<void> ParseMintTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
         outcome::result<void> ParseEscrowTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
 
         outcome::result<void> NotifyDestinationOfTransfer( const std::shared_ptr<IGeniusTransactions> &tx );
+        outcome::result<void> PostEscrowOnProcessingDB( const std::shared_ptr<IGeniusTransactions> &tx );
+
         static inline const std::unordered_map<std::string, TransactionParserFn> transaction_parsers = {
             { "transfer", &TransactionManager::ParseTransferTransaction },
             { "mint", &TransactionManager::ParseMintTransaction },

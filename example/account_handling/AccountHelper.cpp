@@ -99,12 +99,12 @@ namespace sgns
         }
         block_storage_       = std::move( maybe_block_storage.value() );
         transaction_manager_ = std::make_shared<TransactionManager>(
+            globaldb_,
             io_,
             account_,
             hasher_,
             block_storage_,
             ( boost::format( "SuperGNUSNode.TestNet.%s" ) % account_->GetAddress<std::string>() ).str(),
-            40010,
             pubsub_ );
         transaction_manager_->Start();
 

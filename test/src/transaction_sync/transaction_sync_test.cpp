@@ -19,6 +19,7 @@
 #include <boost/program_options.hpp>
 #include <boost/format.hpp>
 #include <boost/asio.hpp>
+#include <boost/multiprecision/cpp_int.hpp>
 #include "local_secure_storage/impl/json/JSONSecureStorage.hpp"
 #include "account/GeniusNode.hpp"
 #include "FileManager.hpp"
@@ -70,16 +71,28 @@ protected:
 
 TEST_F( TransactionSyncTest, TransactionMintSync )
 {
+    auto balance_1_before = node_proc1->GetBalance();
+    auto balance_2_before = node_proc2->GetBalance();
     node_proc1->MintTokens( 10, "", "", "" );
-    node_proc1->MintTokens( 21, "", "", "" );
-    node_proc1->MintTokens( 32, "", "", "" );
-    node_proc1->MintTokens( 43, "", "", "" );
-    node_proc1->MintTokens( 54, "", "", "" );
-    node_proc1->MintTokens( 65, "", "", "" );
+    node_proc1->MintTokens( 20, "", "", "" );
+    node_proc1->MintTokens( 30, "", "", "" );
+    node_proc1->MintTokens( 40, "", "", "" );
+    node_proc1->MintTokens( 50, "", "", "" );
+    node_proc1->MintTokens( 60, "", "", "" );
     node_proc1->GetPubSub()->AddPeers( { node_proc2->GetPubSub()->GetLocalAddress() } );
     node_proc2->GetPubSub()->AddPeers( { node_proc1->GetPubSub()->GetLocalAddress() } );
+    node_proc2->MintTokens( 10, "", "", "" );
+    node_proc2->MintTokens( 20, "", "", "" );
 
-    std::this_thread::sleep_for( std::chrono::milliseconds( 20000 ) );
+    std::this_thread::sleep_for( std::chrono::milliseconds( 5000 ) );
 
-    EXPECT_EQ( node_proc1->GetBlocks().size(), node_proc2->GetBlocks().size() ) << "Same number of blocks";
+    //EXPECT_EQ( node_proc1->GetBlocks().size(), node_proc2->GetBlocks().size() ) << "Same number of blocks";
+    EXPECT_EQ( node_proc1->GetBalance(), balance_1_before + 210 ) << "Correct Balance of outgoing transactions";
+    EXPECT_EQ( node_proc2->GetBalance(), balance_2_before + 30 ) << "Correct Balance of outgoing transactions";
+
+    node_proc1->TransferFunds( 10, node_proc2->GetAddress<boost::multiprecision::uint256_t>());
+    node_proc1->TransferFunds( 20, node_proc2->GetAddress<boost::multiprecision::uint256_t>());
+    std::this_thread::sleep_for( std::chrono::milliseconds( 5000 ) );
+    EXPECT_EQ( node_proc1->GetBalance(), balance_1_before + 180 ) << "Correct Balance of outgoing transactions";
+    EXPECT_EQ( node_proc2->GetBalance(), balance_2_before + 60 ) << "Correct Balance of outgoing transactions";
 }

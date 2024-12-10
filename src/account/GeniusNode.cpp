@@ -26,7 +26,6 @@
 
 using namespace boost::multiprecision;
 
-
 namespace sgns
 {
     GeniusNode::GeniusNode( const DevConfig_st &dev_config,
@@ -186,12 +185,13 @@ namespace sgns
         block_storage_ = std::move( maybe_block_storage.value() );
 
         transaction_manager_ = std::make_shared<TransactionManager>(
+            globaldb_,
             io_,
             account_,
             hasher_,
             block_storage_,
-            ( boost::format( write_base_path_ + "SuperGNUSNode.TestNet.%s" ) % account_->GetAddress<std::string>() ).str(),
-            graphsyncport,
+            ( boost::format( write_base_path_ + "SuperGNUSNode.TestNet.%s" ) % account_->GetAddress<std::string>() )
+                .str(),
             pubsub_ );
 
         transaction_manager_->Start();
