@@ -407,7 +407,7 @@ namespace sgns
             if ( input.HasMember( "block_len" ) && input["block_len"].IsUint64() )
             {
                 uint64_t block_len  = input["block_len"].GetUint64();
-                cost               += ( block_len / 300000 );
+                cost               += ( block_len / 2100000 );
                 std::cout << "Block length: " << block_len << std::endl;
             }
             else
