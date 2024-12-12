@@ -55,7 +55,8 @@ namespace sgns
         GeniusNode( const DevConfig_st &dev_config,
                     const char         *eth_private_key,
                     bool                autodht     = true,
-                    bool                isprocessor = true );
+                    bool                isprocessor = true,
+                    int                 baseport = 40001 );
         // static GeniusNode &GetInstance()
         // {
         //     return instance;

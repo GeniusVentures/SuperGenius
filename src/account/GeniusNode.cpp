@@ -32,7 +32,8 @@ namespace sgns
     GeniusNode::GeniusNode( const DevConfig_st &dev_config,
                             const char         *eth_private_key,
                             bool                autodht,
-                            bool                isprocessor ) :
+                            bool                isprocessor,
+                            int                 baseport ) :
         account_( std::make_shared<GeniusAccount>( static_cast<uint8_t>( dev_config.TokenID ),
                                                    dev_config.BaseWritePath,
                                                    eth_private_key ) ),
@@ -95,7 +96,7 @@ namespace sgns
         loggerProcqm->set_level( spdlog::level::off );
         auto tokenid = dev_config_.TokenID;
 
-        auto pubsubport = GenerateRandomPort( 40001, account_->GetAddress<std::string>() + std::to_string( tokenid ) );
+        auto pubsubport = GenerateRandomPort( baseport, account_->GetAddress<std::string>() + std::to_string( tokenid ) );
         auto graphsyncport = pubsubport + 10;
 
         std::vector<std::string> addresses;
