@@ -26,45 +26,51 @@ namespace sgns
                                             std::shared_ptr<GeniusAccount>                   account,
                                             std::shared_ptr<crypto::Hasher>                  hasher,
                                             std::string                                      base_path,
-                                            std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub ) :
+                                            std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub,
+                                            std::shared_ptr<upnp::UPNP>                      upnp,
+                                            uint16_t                                         base_port ) :
         processing_db_m( std::move( processing_db ) ),
         ctx_m( std::move( ctx ) ),
         account_m( std::move( account ) ),
         hasher_m( std::move( hasher ) ),
         base_path_m( std::move( base_path ) ),
         pubsub_m( std::move( pubsub ) ),
+        upnp_m( std::move( upnp ) ),
+        base_port_m( std::move( base_port + 1) ),
         timer_m( std::make_shared<boost::asio::steady_timer>( *ctx_m, boost::asio::chrono::milliseconds( 300 ) ) )
 
     {
         m_logger->set_level( spdlog::level::off );
         m_logger->info( "Initializing values by reading whole blockchain" );
 
-        auto out_port = GenerateRandomPort( 41000, account_m->GetAddress<std::string>() );
-
         outgoing_db_m = std::make_shared<crdt::GlobalDB>(
             ctx_m,
             ( boost::format( base_path_m + "_out" ) ).str(),
-            out_port,
+            base_port_m,
             std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_m,
                                                               account_m->GetAddress<std::string>() + "out" ) );
 
-        used_ports_m.insert( out_port );
+        used_ports_m.insert( base_port_m );
+        base_port_m++;
         if ( !outgoing_db_m->Init( crdt::CrdtOptions::DefaultOptions() ).has_value() )
         {
             throw std::runtime_error( "Could not start Outgoing GlobalDB" );
         }
-        auto in_port  = GenerateRandomPort( 42000, account_m->GetAddress<std::string>() );
+
         incoming_db_m = std::make_shared<crdt::GlobalDB>(
             ctx_m,
             ( boost::format( base_path_m + "_in" ) ).str(),
-            in_port,
+            base_port_m,
             std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_m, account_m->GetAddress<std::string>() + "in" ) );
 
         if ( !incoming_db_m->Init( crdt::CrdtOptions::DefaultOptions() ).has_value() )
         {
             throw std::runtime_error( "Could not start Incoming GlobalDB" );
         }
-        used_ports_m.insert( in_port );
+        used_ports_m.insert( base_port_m );
+        base_port_m++;
+        
+        RefreshPorts();
     }
 
     void TransactionManager::Start()
@@ -220,6 +226,12 @@ namespace sgns
         SendTransaction();
         CheckIncoming();
         CheckOutgoing();
+        static auto start_time = std::chrono::steady_clock::now();
+        if ( std::chrono::steady_clock::now() - start_time > std::chrono::minutes( 60 ) )
+        {
+            start_time = std::chrono::steady_clock::now();
+            RefreshPorts();
+        }
     }
 
     void TransactionManager::EnqueueTransaction( std::shared_ptr<IGeniusTransactions> element )
@@ -497,27 +509,21 @@ namespace sgns
                 auto                            destination_db_it = destination_dbs_m.find( peer_address );
                 if ( destination_db_it == destination_dbs_m.end() )
                 {
-                    uint16_t new_port     = 43000;
-                    int8_t   port_retries = 3;
-                    do
-                    {
-                        new_port = GenerateRandomPort( 43000, account_m->GetAddress<std::string>() );
-
-                    } while ( ( used_ports_m.find( new_port ) != used_ports_m.end() ) && ( --port_retries > 0 ) );
-
-                    m_logger->debug( "Port to sync  " + std::to_string( new_port ) );
+                    m_logger->debug( "Port to sync  " + std::to_string( base_port_m ) );
 
                     destination_db = std::make_shared<crdt::GlobalDB>(
                         ctx_m,
                         ( boost::format( base_path_m + "_out/" + peer_address ) ).str(),
-                        new_port,
+                        base_port_m,
                         std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_m, peer_address + "in" ) );
                     if ( !destination_db->Init( crdt::CrdtOptions::DefaultOptions() ).has_value() )
                     {
                         throw std::runtime_error( "Could not start Destination GlobalDB" );
                     }
                     destination_dbs_m[peer_address] = destination_db;
-                    used_ports_m.insert( new_port );
+                    used_ports_m.insert( base_port_m );
+                    base_port_m++;
+                    RefreshPorts();
                 }
                 else
                 {
@@ -583,4 +589,14 @@ namespace sgns
         return result;
     }
 
+    void TransactionManager::RefreshPorts()
+    {
+        if ( upnp_m->GetIGD() )
+        {
+            for ( auto &port : used_ports_m )
+            {
+                upnp_m->OpenPort( port, port, "TCP", 3600 );
+            }
+        }
+    }
 }

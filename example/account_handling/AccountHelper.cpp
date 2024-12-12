@@ -104,7 +104,9 @@ namespace sgns
             account_,
             hasher_,
             ( boost::format( "SuperGNUSNode.TestNet.%s" ) % account_->GetAddress<std::string>() ).str(),
-            pubsub_ );
+            pubsub_,
+            nullptr,
+            40010 );
         transaction_manager_->Start();
 
         // Encode the string to UTF-8 bytes

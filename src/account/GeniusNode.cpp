@@ -63,7 +63,7 @@ namespace sgns
         loggerDAGSyncer->set_level( spdlog::level::off );
 
         auto loggerBroadcaster = base::createLogger( "PubSubBroadcasterExt" );
-        loggerBroadcaster->set_level( spdlog::level::trace );
+        loggerBroadcaster->set_level( spdlog::level::off );
 
         auto loggerDataStore = base::createLogger( "CrdtDatastore" );
         loggerDataStore->set_level( spdlog::level::off );
@@ -96,8 +96,7 @@ namespace sgns
         auto tokenid = dev_config_.TokenID;
 
         auto pubsubport = GenerateRandomPort( 40001, account_->GetAddress<std::string>() + std::to_string( tokenid ) );
-        auto graphsyncport = GenerateRandomPort( 40010,
-                                                 account_->GetAddress<std::string>() + std::to_string( tokenid ) );
+        auto graphsyncport = pubsubport + 10;
 
         std::vector<std::string> addresses;
         //UPNP
@@ -127,10 +126,11 @@ namespace sgns
 
         pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
             crdt::KeyPairFileStorage( write_base_path_ + pubsubKeyPath ).GetKeyPair().value() );
-        pubsub_->Start( pubsubport,
-                        { "/dns4/sg-fullnode-1.gnus.ai/tcp/40385/p2p/12D3KooWBqcxStdb4f9s4zT3bQiTDXYB56VJ77Rt7eEdjw4kXTwi" },
-                        lanip,
-                        addresses );
+        pubsub_->Start(
+            pubsubport,
+            { "/dns4/sg-fullnode-1.gnus.ai/tcp/40385/p2p/12D3KooWBqcxStdb4f9s4zT3bQiTDXYB56VJ77Rt7eEdjw4kXTwi" },
+            lanip,
+            addresses );
 
         globaldb_ = std::make_shared<crdt::GlobalDB>(
             io_,
@@ -170,7 +170,9 @@ namespace sgns
             std::make_shared<crypto::HasherImpl>(),
             ( boost::format( write_base_path_ + "SuperGNUSNode.TestNet.%s" ) % account_->GetAddress<std::string>() )
                 .str(),
-            pubsub_ );
+            pubsub_,
+            upnp,
+            graphsyncport );
 
         transaction_manager_->Start();
         if ( isprocessor_ )
@@ -182,7 +184,7 @@ namespace sgns
         {
             DHTInit();
         }
-        RefreshUPNP(pubsubport, graphsyncport);
+        RefreshUPNP( pubsubport, graphsyncport );
 
         io_thread = std::thread( [this]() { io_->run(); } );
     }
@@ -201,49 +203,60 @@ namespace sgns
         {
             io_thread.join();
         }
-        stop_upnp = true; 
-        if (upnp_thread.joinable()) {
-            upnp_thread.join(); 
+        stop_upnp = true;
+        if ( upnp_thread.joinable() )
+        {
+            upnp_thread.join();
         }
     }
 
     void GeniusNode::RefreshUPNP( int pubsubport, int graphsyncport )
     {
-        if (upnp_thread.joinable()) {
-            stop_upnp = true; // Signal the existing thread to stop
+        if ( upnp_thread.joinable() )
+        {
+            stop_upnp = true;   // Signal the existing thread to stop
             upnp_thread.join(); // Wait for it to finish
         }
 
         stop_upnp = false; // Reset the stop flag for the new thread
 
-        upnp_thread = std::thread([this, pubsubport, graphsyncport]() {
-            auto next_refresh_time = std::chrono::steady_clock::now() + std::chrono::minutes(60);
+        upnp_thread = std::thread(
+            [this, pubsubport, graphsyncport]()
+            {
+                auto next_refresh_time = std::chrono::steady_clock::now() + std::chrono::minutes( 60 );
 
-            while (!stop_upnp) {
-                if (std::chrono::steady_clock::now() >= next_refresh_time) {
-                    // Refresh UPnP mappings
-                    auto upnp = std::make_shared<upnp::UPNP>();
-                    if (upnp->GetIGD()) {
-                        auto openedPort = upnp->OpenPort(pubsubport, pubsubport, "TCP", 3600);
-                        auto openedPort2 = upnp->OpenPort(graphsyncport, graphsyncport, "TCP", 3600);
-                        if (!openedPort || !openedPort2) {
-                            std::cerr << "Failed to open port" << std::endl;
-                        } else {
-                            std::cout << "Open Port Success" << std::endl;
+                while ( !stop_upnp )
+                {
+                    if ( std::chrono::steady_clock::now() >= next_refresh_time )
+                    {
+                        // Refresh UPnP mappings
+                        auto upnp = std::make_shared<upnp::UPNP>();
+                        if ( upnp->GetIGD() )
+                        {
+                            auto openedPort  = upnp->OpenPort( pubsubport, pubsubport, "TCP", 3600 );
+                            auto openedPort2 = upnp->OpenPort( graphsyncport, graphsyncport, "TCP", 3600 );
+                            if ( !openedPort || !openedPort2 )
+                            {
+                                std::cerr << "Failed to open port" << std::endl;
+                            }
+                            else
+                            {
+                                std::cout << "Open Port Success" << std::endl;
+                            }
                         }
-                    }
-                    else{
-                        std::cout << "No IGD" << std::endl;
+                        else
+                        {
+                            std::cout << "No IGD" << std::endl;
+                        }
+
+                        // Update the next refresh time
+                        next_refresh_time = std::chrono::steady_clock::now() + std::chrono::minutes( 60 );
                     }
 
-                    // Update the next refresh time
-                    next_refresh_time = std::chrono::steady_clock::now() + std::chrono::minutes(60);
+                    // Sleep briefly to avoid busy-waiting
+                    std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
                 }
-
-                // Sleep briefly to avoid busy-waiting
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            }
-        });
+            } );
     }
 
     void GeniusNode::AddPeer( const std::string &peer )

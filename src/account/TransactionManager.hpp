@@ -31,6 +31,7 @@
 #include "processing/proto/SGProcessing.pb.h"
 #include "outcome/outcome.hpp"
 #include "primitives/common.hpp"
+#include "upnp.hpp"
 
 namespace sgns
 {
@@ -44,7 +45,9 @@ namespace sgns
                             std::shared_ptr<GeniusAccount>                   account,
                             std::shared_ptr<crypto::Hasher>                  hasher,
                             std::string                                      base_path,
-                            std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub );
+                            std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub,
+                            std::shared_ptr<upnp::UPNP>                      upnp,
+                            uint16_t                                         base_port );
 
         ~TransactionManager() = default;
 
@@ -87,6 +90,8 @@ namespace sgns
 
         outcome::result<void> CheckOutgoing();
 
+        void RefreshPorts();
+
         std::shared_ptr<crdt::GlobalDB>                  processing_db_m;
         std::shared_ptr<crdt::GlobalDB>                  outgoing_db_m;
         std::shared_ptr<crdt::GlobalDB>                  incoming_db_m;
@@ -98,6 +103,8 @@ namespace sgns
         std::shared_ptr<boost::asio::steady_timer>       timer_m;
         mutable std::mutex                               mutex_m;
         std::shared_ptr<crypto::Hasher>                  hasher_m;
+        std::shared_ptr<upnp::UPNP>                      upnp_m;
+        uint16_t                                         base_port_m;
 
         std::map<std::string, std::vector<std::uint8_t>>                 outgoing_tx_processed_m;
         std::map<std::string, std::vector<std::uint8_t>>                 incoming_tx_processed_m;

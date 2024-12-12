@@ -222,7 +222,7 @@ namespace sgns
 
 
         br::mt19937                    rng( seed_hash );
-        br::uniform_int_distribution<> dist( 0, 2999 );
+        br::uniform_int_distribution<> dist( 0, 999 );
 
         // Generate a random port and add to the base
         return base + dist( rng );
