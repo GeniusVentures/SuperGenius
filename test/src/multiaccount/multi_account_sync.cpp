@@ -123,8 +123,8 @@ TEST_F( MultiAccountTest, SyncThroughThirdNode )
 {
     node_main->MintTokens( 50, "", "", "" );
     std::this_thread::sleep_for( std::chrono::milliseconds( 20000 ) );
-    int transcount_main  = node_main->GetTransactions().size();
-    int transcount_node1 = node_proc1->GetTransactions().size();
+    int transcount_main  = node_main->GetOutTransactions().size();
+    int transcount_node1 = node_proc1->GetOutTransactions().size();
     std::cout << "Count 1" << transcount_main << std::endl;
     std::cout << "Count 2" << transcount_node1 << std::endl;
     int balance_main = node_main->GetBalance();
@@ -156,8 +156,8 @@ TEST_F( MultiAccountTest, SyncThroughEachOther )
     std::this_thread::sleep_for( std::chrono::milliseconds( 5000 ) );
     node_proc1->MintTokens( 50, "", "", "" );
     std::this_thread::sleep_for( std::chrono::milliseconds( 10000 ) );
-    int transcount_main  = node_main->GetTransactions().size();
-    int transcount_node1 = node_proc1->GetTransactions().size();
+    int transcount_main  = node_main->GetOutTransactions().size();
+    int transcount_node1 = node_proc1->GetOutTransactions().size();
     std::cout << "Count 1" << transcount_main << std::endl;
     std::cout << "Count 2" << transcount_node1 << std::endl;
     int balance_main = node_main->GetBalance();

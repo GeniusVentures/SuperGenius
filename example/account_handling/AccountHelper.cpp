@@ -103,7 +103,6 @@ namespace sgns
             io_,
             account_,
             hasher_,
-            block_storage_,
             ( boost::format( "SuperGNUSNode.TestNet.%s" ) % account_->GetAddress<std::string>() ).str(),
             pubsub_ );
         transaction_manager_->Start();

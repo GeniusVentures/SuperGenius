@@ -16,8 +16,6 @@
 #include "account/TransactionManager.hpp"
 #include <ipfs_lite/ipfs/graphsync/graphsync.hpp>
 #include "crypto/hasher/hasher_impl.hpp"
-#include "blockchain/impl/key_value_block_header_repository.hpp"
-#include "blockchain/impl/key_value_block_storage.hpp"
 #include "processing/impl/processing_core_impl.hpp"
 #include "processing/impl/processing_subtask_result_storage_impl.hpp"
 #include "processing/processing_service.hpp"
@@ -79,10 +77,16 @@ namespace sgns
         void     RefreshUPNP( int pubsubport, int graphsyncport );
         uint64_t GetBalance();
 
-        [[nodiscard]] const std::vector<std::vector<uint8_t>> &GetTransactions() const
+        [[nodiscard]] const std::vector<std::vector<uint8_t>> GetInTransactions() const
         {
-            return transaction_manager_->GetTransactions();
+            return transaction_manager_->GetInTransactions();
         }
+
+        [[nodiscard]] const std::vector<std::vector<uint8_t>> GetOutTransactions() const
+        {
+            return transaction_manager_->GetOutTransactions();
+        }
+
         template <typename T>
         T GetAddress() const;
 
@@ -91,6 +95,7 @@ namespace sgns
         {
             return account_->GetAddress<std::string>();
         }
+
         template <>
         uint256_t GetAddress() const
         {
@@ -107,27 +112,23 @@ namespace sgns
             return pubsub_;
         }
 
-        [[nodiscard]] std::vector<base::Buffer> GetBlocks();
 
         static std::vector<uint8_t> GetImageByCID( const std::string &cid );
 
     private:
-        std::shared_ptr<GeniusAccount>                             account_;
-        std::shared_ptr<ipfs_pubsub::GossipPubSub>                 pubsub_;
-        std::shared_ptr<boost::asio::io_context>                   io_;
-        std::shared_ptr<crdt::GlobalDB>                            globaldb_;
-        std::shared_ptr<crypto::HasherImpl>                        hasher_;
-        std::shared_ptr<blockchain::KeyValueBlockHeaderRepository> header_repo_;
-        std::shared_ptr<blockchain::KeyValueBlockStorage>          block_storage_;
-        std::shared_ptr<TransactionManager>                        transaction_manager_;
-        std::shared_ptr<processing::ProcessingTaskQueueImpl>       task_queue_;
-        std::shared_ptr<processing::ProcessingCoreImpl>            processing_core_;
-        std::shared_ptr<processing::ProcessingServiceImpl>         processing_service_;
-        std::shared_ptr<processing::SubTaskResultStorageImpl>      task_result_storage_;
-        std::shared_ptr<soralog::LoggingSystem>                    logging_system;
-        std::string                                                write_base_path_;
-        bool                                                       autodht_;
-        bool                                                       isprocessor_;
+        std::shared_ptr<GeniusAccount>                        account_;
+        std::shared_ptr<ipfs_pubsub::GossipPubSub>            pubsub_;
+        std::shared_ptr<boost::asio::io_context>              io_;
+        std::shared_ptr<crdt::GlobalDB>                       globaldb_;
+        std::shared_ptr<TransactionManager>                   transaction_manager_;
+        std::shared_ptr<processing::ProcessingTaskQueueImpl>  task_queue_;
+        std::shared_ptr<processing::ProcessingCoreImpl>       processing_core_;
+        std::shared_ptr<processing::ProcessingServiceImpl>    processing_service_;
+        std::shared_ptr<processing::SubTaskResultStorageImpl> task_result_storage_;
+        std::shared_ptr<soralog::LoggingSystem>               logging_system;
+        std::string                                           write_base_path_;
+        bool                                                  autodht_;
+        bool                                                  isprocessor_;
 
         std::thread io_thread;
         std::thread upnp_thread;
@@ -142,7 +143,7 @@ namespace sgns
         static constexpr std::uint16_t    MAIN_NET                = 369;
         static constexpr std::uint16_t    TEST_NET                = 963;
         static constexpr std::size_t      MAX_NODES_COUNT         = 1;
-        static constexpr std::string_view PROCESSING_GRID_CHANNEL = "GRID_CHANNEL_ID";
+        static constexpr std::string_view PROCESSING_GRID_CHANNEL = "SGNUS.Jobs.1a";
         static constexpr std::string_view PROCESSING_CHANNEL      = "SGNUS.TestNet.Channel";
 
         static const std::string &GetLoggingSystem()

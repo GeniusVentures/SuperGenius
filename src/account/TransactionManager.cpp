@@ -25,19 +25,15 @@ namespace sgns
                                             std::shared_ptr<boost::asio::io_context>         ctx,
                                             std::shared_ptr<GeniusAccount>                   account,
                                             std::shared_ptr<crypto::Hasher>                  hasher,
-                                            std::shared_ptr<blockchain::BlockStorage>        block_storage,
                                             std::string                                      base_path,
                                             std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub ) :
         processing_db_m( std::move( processing_db ) ),
         ctx_m( std::move( ctx ) ),
         account_m( std::move( account ) ),
         hasher_m( std::move( hasher ) ),
-        block_storage_m( std::move( block_storage ) ),
         base_path_m( std::move( base_path ) ),
         pubsub_m( std::move( pubsub ) ),
-        timer_m( std::make_shared<boost::asio::steady_timer>( *ctx_m, boost::asio::chrono::milliseconds( 300 ) ) ),
-        last_block_id_m( 0 ),
-        last_trans_on_block_id( 0 )
+        timer_m( std::make_shared<boost::asio::steady_timer>( *ctx_m, boost::asio::chrono::milliseconds( 300 ) ) )
 
     {
         m_logger->set_level( spdlog::level::off );
@@ -73,10 +69,8 @@ namespace sgns
 
     void TransactionManager::Start()
     {
-        //CheckBlockchain();
         CheckIncoming();
         CheckOutgoing();
-        m_logger->info( "Last valid block ID" + std::to_string( last_block_id_m ) );
         auto task = std::make_shared<std::function<void()>>();
 
         *task = [this, task]()
@@ -224,7 +218,6 @@ namespace sgns
     void TransactionManager::Update()
     {
         SendTransaction();
-        //CheckBlockchain();
         CheckIncoming();
         CheckOutgoing();
     }
@@ -232,7 +225,7 @@ namespace sgns
     void TransactionManager::EnqueueTransaction( std::shared_ptr<IGeniusTransactions> element )
     {
         std::lock_guard<std::mutex> lock( mutex_m );
-        out_transactions.emplace_back( std::move( element ) );
+        tx_queue_m.emplace_back( std::move( element ) );
     }
 
     //TODO - Fill hash stuff on DAGStruct
@@ -253,13 +246,13 @@ namespace sgns
     outcome::result<void> TransactionManager::SendTransaction()
     {
         std::unique_lock lock( mutex_m );
-        if ( out_transactions.empty() )
+        if ( tx_queue_m.empty() )
         {
             return std::errc::invalid_argument;
         }
 
-        auto transaction = out_transactions.front();
-        out_transactions.pop_front();
+        auto transaction = tx_queue_m.front();
+        tx_queue_m.pop_front();
         account_m->nonce = account_m->nonce + 1;
 
         transaction->dag_st.set_nonce( account_m->nonce );
@@ -284,7 +277,6 @@ namespace sgns
             PostEscrowOnProcessingDB( transaction );
         }
 
-        //BOOST_OUTCOME_TRYV2( auto &&, RecordBlock( { transaction_path } ) );
         return outcome::success();
     }
 
@@ -297,56 +289,6 @@ namespace sgns
         auto transaction_path = tx_key.str() + element->GetTransactionFullPath();
 
         return transaction_path;
-    }
-
-    outcome::result<void> TransactionManager::RecordBlock( const std::vector<std::string> &transaction_keys )
-    {
-        OUTCOME_TRY( ( auto &&, last_hash ), block_storage_m->getLastFinalizedBlockHash() );
-        OUTCOME_TRY( ( auto &&, last_header ), block_storage_m->getBlockHeader( last_hash ) );
-
-        primitives::BlockHeader header( last_header );
-
-        header.parent_hash = last_hash;
-
-        header.number++;
-
-        OUTCOME_TRY( ( auto &&, new_hash ), block_storage_m->putBlockHeader( header ) );
-
-        primitives::BlockBody body;
-
-        for ( auto &transaction : transaction_keys )
-        {
-            body.push_back( { base::Buffer{}.put( transaction ) } );
-        }
-
-        primitives::BlockData block_data{ new_hash, header, body };
-
-        BOOST_OUTCOME_TRYV2( auto &&, block_storage_m->putBlockData( header.number, block_data ) );
-
-        m_logger->debug( "Recording Block with number " + std::to_string( header.number ) );
-
-        BOOST_OUTCOME_TRYV2( auto &&, block_storage_m->setLastFinalizedBlockHash( new_hash ) );
-        return outcome::success();
-    }
-
-    outcome::result<std::vector<std::vector<uint8_t>>> TransactionManager::GetTransactionsFromBlock(
-        const primitives::BlockId &block_number )
-    {
-        OUTCOME_TRY( ( auto &&, block_body ), block_storage_m->getBlockBody( block_number ) );
-        std::vector<std::vector<uint8_t>> ret;
-
-        for ( auto &key : block_body )
-        {
-            OUTCOME_TRY( ( auto &&, transaction ), FetchTransaction( outgoing_db_m, key.data.toString() ) );
-            BOOST_OUTCOME_TRYV2( auto &&, ParseTransaction( transaction ) );
-            if ( transaction->GetSrcAddress<uint256_t>() == account_m->GetAddress<uint256_t>() )
-            {
-                account_m->nonce = transaction->dag_st.nonce() + 1;
-            }
-            ret.push_back( std::move( transaction->SerializeByteVector() ) );
-        }
-
-        return ret;
     }
 
     outcome::result<void> TransactionManager::ParseTransaction( const std::shared_ptr<IGeniusTransactions> &tx )
@@ -380,40 +322,6 @@ namespace sgns
             return std::errc::invalid_argument;
         }
         return it->second( transaction_data_vector );
-    }
-
-    /**
-         * @brief      Checks the blockchain for any new blocks to sync current values
-         */
-    void TransactionManager::CheckBlockchain()
-    {
-        outcome::result<primitives::BlockHeader> retval = outcome::failure( boost::system::error_code{} );
-
-        do
-        {
-            if ( retval = block_storage_m->getBlockHeader( last_block_id_m ); retval )
-            {
-                if ( auto DAGHeader = retval.value(); DAGHeader.number == last_block_id_m )
-                {
-                    if ( auto transactions = GetTransactionsFromBlock( DAGHeader.number ); transactions )
-                    {
-                        this->transactions.insert( this->transactions.end(),
-                                                   transactions.value().begin(),
-                                                   transactions.value().end() );
-
-                        std::cout << "[ " << account_m->GetAddress<uint256_t>() << " ] CHECKING BLOCKCHAIN "
-                                  << last_block_id_m << std::endl;
-                        last_block_id_m++;
-                    }
-                    else
-                    {
-                        m_logger->debug( "Invalid transaction, hopefully just waiting for complete block." );
-                        break;
-                    }
-                }
-            }
-
-        } while ( retval );
     }
 
     outcome::result<void> TransactionManager::CheckIncoming()
@@ -651,6 +559,28 @@ namespace sgns
         }
 
         return outcome::success();
+    }
+
+    const std::vector<std::vector<uint8_t>> TransactionManager::GetOutTransactions() const
+    {
+        std::vector<std::vector<std::uint8_t>> result;
+        result.reserve( outgoing_tx_processed_m.size() );
+        for ( const auto &[key, value] : outgoing_tx_processed_m )
+        {
+            result.push_back( value );
+        }
+        return result;
+    }
+
+    const std::vector<std::vector<uint8_t>> TransactionManager::GetInTransactions() const
+    {
+        std::vector<std::vector<std::uint8_t>> result;
+        result.reserve( incoming_tx_processed_m.size() );
+        for ( const auto &[key, value] : incoming_tx_processed_m )
+        {
+            result.push_back( value );
+        }
+        return result;
     }
 
 }

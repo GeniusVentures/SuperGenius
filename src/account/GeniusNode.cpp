@@ -12,6 +12,7 @@
 #include <rapidjson/writer.h>
 #include "base/util.hpp"
 #include "account/GeniusNode.hpp"
+#include "crdt/globaldb/keypair_file_storage.hpp"
 #include "FileManager.hpp"
 #include "upnp.hpp"
 #include "processing/processing_imagesplit.hpp"
@@ -71,7 +72,7 @@ namespace sgns
         loggerTransactions->set_level( spdlog::level::off );
 
         auto loggerQueue = base::createLogger( "ProcessingTaskQueueImpl" );
-        loggerQueue->set_level( spdlog::level::debug );
+        loggerQueue->set_level( spdlog::level::off );
 
         auto loggerRocksDB = base::createLogger( "rocksdb" );
         loggerRocksDB->set_level( spdlog::level::off );
@@ -88,7 +89,7 @@ namespace sgns
         auto loggerSubQueue = base::createLogger( "ProcessingSubTaskQueueAccessorImpl" );
         loggerSubQueue->set_level( spdlog::level::off );
         auto loggerProcServ = base::createLogger( "ProcessingService" );
-        loggerProcServ->set_level( spdlog::level::debug );
+        loggerProcServ->set_level( spdlog::level::off );
 
         auto loggerProcqm = base::createLogger( "ProcessingSubTaskQueueManager" );
         loggerProcqm->set_level( spdlog::level::off );
@@ -162,34 +163,11 @@ namespace sgns
             account_->GetAddress<std::string>() );
         processing_service_->SetChannelListRequestTimeout( boost::posix_time::milliseconds( 3000 ) );
 
-        base::Buffer root_hash;
-        root_hash.put( std::vector<uint8_t>( 32ul, 1 ) );
-        hasher_ = std::make_shared<crypto::HasherImpl>();
-
-        header_repo_ = std::make_shared<blockchain::KeyValueBlockHeaderRepository>(
-            globaldb_,
-            hasher_,
-            ( boost::format( std::string( db_path_ ) ) % TEST_NET ).str() );
-
-        auto maybe_block_storage = blockchain::KeyValueBlockStorage::create( root_hash,
-                                                                             globaldb_,
-                                                                             hasher_,
-                                                                             header_repo_,
-                                                                             []( auto & ) {} );
-
-        if ( !maybe_block_storage )
-        {
-            std::cerr << "Error initializing blockchain: " << maybe_block_storage.error().message() << std::endl;
-            throw std::runtime_error( "Error initializing blockchain" );
-        }
-        block_storage_ = std::move( maybe_block_storage.value() );
-
         transaction_manager_ = std::make_shared<TransactionManager>(
             globaldb_,
             io_,
             account_,
-            hasher_,
-            block_storage_,
+            std::make_shared<crypto::HasherImpl>(),
             ( boost::format( write_base_path_ + "SuperGNUSNode.TestNet.%s" ) % account_->GetAddress<std::string>() )
                 .str(),
             pubsub_ );
@@ -439,34 +417,6 @@ namespace sgns
     uint64_t GeniusNode::GetBalance()
     {
         return transaction_manager_->GetBalance();
-    }
-
-    std::vector<base::Buffer> GeniusNode::GetBlocks()
-    {
-        std::vector<base::Buffer> out;
-        primitives::BlockNumber   id = 0;
-
-        outcome::result<primitives::BlockHeader> retval = outcome::failure( boost::system::error_code{} );
-        do
-        {
-            if ( retval = block_storage_->getBlockHeader( id ); retval )
-            {
-                if ( auto DAGHeader = retval.value(); DAGHeader.number == id )
-                {
-                    if ( auto block = block_storage_->GetRawBlock( id ); block )
-                    {
-                        out.push_back( std::move( block.value() ) );
-                        id++;
-                    }
-                    else
-                    {
-                        break;
-                    }
-                }
-            }
-        } while ( retval );
-
-        return out;
     }
 
     void GeniusNode::ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult )

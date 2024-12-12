@@ -11,6 +11,7 @@
 #include <deque>
 #include <cstdint>
 #include <utility>
+#include <map>
 #include <unordered_map>
 
 #include <boost/asio.hpp>
@@ -25,7 +26,6 @@
 #include "account/EscrowTransaction.hpp"
 #include "account/ProcessingTransaction.hpp"
 #include "account/GeniusAccount.hpp"
-#include "blockchain/block_storage.hpp"
 #include "base/logger.hpp"
 #include "crypto/hasher.hpp"
 #include "processing/proto/SGProcessing.pb.h"
@@ -43,7 +43,6 @@ namespace sgns
                             std::shared_ptr<boost::asio::io_context>         ctx,
                             std::shared_ptr<GeniusAccount>                   account,
                             std::shared_ptr<crypto::Hasher>                  hasher,
-                            std::shared_ptr<blockchain::BlockStorage>        block_storage,
                             std::string                                      base_path,
                             std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub );
 
@@ -54,10 +53,8 @@ namespace sgns
 
         const GeniusAccount &GetAccount() const;
 
-        const std::vector<std::vector<uint8_t>> &GetTransactions() const
-        {
-            return transactions;
-        }
+        const std::vector<std::vector<uint8_t>> GetOutTransactions() const;
+        const std::vector<std::vector<uint8_t>> GetInTransactions() const;
 
         bool TransferFunds( uint64_t amount, const uint256_t &destination );
         void MintFunds( uint64_t amount, std::string transaction_hash, std::string chainid, std::string tokenid );
@@ -80,20 +77,11 @@ namespace sgns
         SGTransaction::DAGStruct FillDAGStruct( std::string transaction_hash = "" );
         outcome::result<void>    SendTransaction();
         std::string              GetTransactionPath( std::shared_ptr<IGeniusTransactions> element );
-        outcome::result<void>    RecordBlock( const std::vector<std::string> &transaction_keys );
-
-        outcome::result<std::vector<std::vector<uint8_t>>> GetTransactionsFromBlock(
-            const primitives::BlockId &block_number );
 
         outcome::result<std::shared_ptr<IGeniusTransactions>> FetchTransaction(
             const std::shared_ptr<crdt::GlobalDB> &db,
             std::string_view                       transaction_key );
         outcome::result<void> ParseTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
-
-        /**
-         * @brief      Checks the blockchain for any new blocks to sync current values
-         */
-        void CheckBlockchain();
 
         outcome::result<void> CheckIncoming();
 
@@ -104,20 +92,15 @@ namespace sgns
         std::shared_ptr<crdt::GlobalDB>                  incoming_db_m;
         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub_m;
         std::string                                      base_path_m;
-        uint16_t                                         port_m;
         std::shared_ptr<boost::asio::io_context>         ctx_m;
         std::shared_ptr<GeniusAccount>                   account_m;
-        std::vector<std::vector<std::uint8_t>>           transactions;
-        std::deque<std::shared_ptr<IGeniusTransactions>> out_transactions;
+        std::deque<std::shared_ptr<IGeniusTransactions>> tx_queue_m;
         std::shared_ptr<boost::asio::steady_timer>       timer_m;
         mutable std::mutex                               mutex_m;
-        primitives::BlockNumber                          last_block_id_m;
-        std::uint64_t                                    last_trans_on_block_id;
-        std::shared_ptr<blockchain::BlockStorage>        block_storage_m;
         std::shared_ptr<crypto::Hasher>                  hasher_m;
 
-        std::unordered_map<std::string, std::vector<std::uint8_t>>       outgoing_tx_processed_m;
-        std::unordered_map<std::string, std::vector<std::uint8_t>>       incoming_tx_processed_m;
+        std::map<std::string, std::vector<std::uint8_t>>                 outgoing_tx_processed_m;
+        std::map<std::string, std::vector<std::uint8_t>>                 incoming_tx_processed_m;
         std::unordered_map<std::string, std::shared_ptr<crdt::GlobalDB>> destination_dbs_m;
         std::set<uint16_t>                                               used_ports_m;
 

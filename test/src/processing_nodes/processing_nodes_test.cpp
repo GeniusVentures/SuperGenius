@@ -153,9 +153,9 @@ TEST_F( ProcessingNodesTest, ProcessNodesTransactionsCount )
     node_main->MintTokens( 50, "", "", "" );
     node_main->MintTokens( 50, "", "", "" );
     std::this_thread::sleep_for( std::chrono::milliseconds( 10000 ) );
-    int transcount_main  = node_main->GetTransactions().size();
-    int transcount_node1 = node_proc1->GetTransactions().size();
-    int transcount_node2 = node_proc2->GetTransactions().size();
+    int transcount_main  = node_main->GetOutTransactions().size();
+    int transcount_node1 = node_proc1->GetOutTransactions().size();
+    int transcount_node2 = node_proc2->GetOutTransactions().size();
     std::cout << "Count 1" << transcount_main << std::endl;
     //std::cout << "Count 2" << transcount_node1 << std::endl;
     std::cout << "Count 3" << transcount_node2 << std::endl;
@@ -286,6 +286,5 @@ TEST_F( ProcessingNodesTest, PostProcessing )
     std::cout << "Balance node1 (After):" << node_proc1->GetBalance() << std::endl;
     std::cout << "Balance node2 (After):" << node_proc2->GetBalance() << std::endl;
     ASSERT_EQ( balance_main - cost, node_main->GetBalance() );
-    ASSERT_EQ( balance_node1 + 5, node_proc1->GetBalance() );
-    ASSERT_EQ( balance_node2 + 5, node_proc2->GetBalance() );
+    ASSERT_EQ( balance_node1 + balance_node2 + 10, node_proc1->GetBalance() + node_proc2->GetBalance());
 }

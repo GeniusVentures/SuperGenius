@@ -86,7 +86,6 @@ TEST_F( TransactionSyncTest, TransactionMintSync )
 
     std::this_thread::sleep_for( std::chrono::milliseconds( 5000 ) );
 
-    //EXPECT_EQ( node_proc1->GetBlocks().size(), node_proc2->GetBlocks().size() ) << "Same number of blocks";
     EXPECT_EQ( node_proc1->GetBalance(), balance_1_before + 210 ) << "Correct Balance of outgoing transactions";
     EXPECT_EQ( node_proc2->GetBalance(), balance_2_before + 30 ) << "Correct Balance of outgoing transactions";
 
