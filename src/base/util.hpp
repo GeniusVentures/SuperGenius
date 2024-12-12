@@ -220,10 +220,9 @@ namespace sgns
             seed_hash = seed_hash * 31 + static_cast<uint8_t>( c );
         }
 
-        uint32_t combined_seed = seed_hash + static_cast<uint32_t>( clock() );
 
-        br::mt19937                    rng( combined_seed );
-        br::uniform_int_distribution<> dist( 0, 9999 );
+        br::mt19937                    rng( seed_hash );
+        br::uniform_int_distribution<> dist( 0, 2999 );
 
         // Generate a random port and add to the base
         return base + dist( rng );
