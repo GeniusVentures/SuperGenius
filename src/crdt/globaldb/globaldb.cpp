@@ -184,7 +184,7 @@ namespace sgns::crdt
         kademlia_config.requestConcurency   = 3;
         kademlia_config.maxProvidersPerKey  = 300;
         // injector creates and ties dependent objects
-        auto injector = libp2p::injector::makeHostInjector<BOOST_DI_CFG>(
+        auto injector = libp2p::injector::makeHostInjector<boost::di::extension::shared_config>(
             boost::di::bind<boost::asio::io_context>.to( m_context )[boost::di::override],
             boost::di::bind<libp2p::crypto::KeyPair>.to( keyPair.value() )[boost::di::override] );
 
