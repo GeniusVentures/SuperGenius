@@ -129,7 +129,7 @@ namespace sgns
             crdt::KeyPairFileStorage( write_base_path_ + pubsubKeyPath ).GetKeyPair().value() );
         pubsub_->Start(
             pubsubport,
-            { "/dns4/sg-fullnode-1.gnus.ai/tcp/40385/p2p/12D3KooWBqcxStdb4f9s4zT3bQiTDXYB56VJ77Rt7eEdjw4kXTwi" },
+            { "/dns4/sg-fullnode-1.gnus.ai/tcp/40052/p2p/12D3KooWBqcxStdb4f9s4zT3bQiTDXYB56VJ77Rt7eEdjw4kXTwi" },
             lanip,
             addresses );
 
