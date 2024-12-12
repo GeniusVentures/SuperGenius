@@ -21,7 +21,7 @@
 
 namespace sgns
 {
-    TransactionManager::TransactionManager( std::shared_ptr<crdt::GlobalDB>                 processing_db,
+    TransactionManager::TransactionManager( std::shared_ptr<crdt::GlobalDB>                  processing_db,
                                             std::shared_ptr<boost::asio::io_context>         ctx,
                                             std::shared_ptr<GeniusAccount>                   account,
                                             std::shared_ptr<crypto::Hasher>                  hasher,
@@ -40,7 +40,7 @@ namespace sgns
         last_trans_on_block_id( 0 )
 
     {
-        m_logger->set_level( spdlog::level::debug );
+        m_logger->set_level( spdlog::level::off );
         m_logger->info( "Initializing values by reading whole blockchain" );
 
         auto out_port = GenerateRandomPort( 41000, account_m->GetAddress<std::string>() );
@@ -157,13 +157,19 @@ namespace sgns
                                                                        peers_cut,
                                                                        FillDAGStruct() );
         this->EnqueueTransaction( escrow_transaction );
+        m_logger->debug( "Holding escrow to 0x" + hash_data.toReadableString() );
 
-        return GetTransactionPath( escrow_transaction );
+        return "0x" + hash_data.toReadableString();
     }
 
-    void TransactionManager::ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult )
+    outcome::result<void> TransactionManager::ProcessingDone( const std::string              &task_id,
+                                                              const SGProcessing::TaskResult &taskresult )
     {
-        //Fetch Escrow
+        if ( taskresult.subtask_results().size() == 0 )
+        {
+            m_logger->debug( "No result on " + task_id );
+            return outcome::failure( boost::system::error_code{} );
+        }
         std::string escrow_path;
         for ( auto &subtask : taskresult.subtask_results() )
         {
@@ -173,12 +179,15 @@ namespace sgns
                 break;
             }
         }
-        auto maybe_tx = FetchTransaction( processing_db_m, escrow_path ); 
-        if ( maybe_tx.has_error() )
+        if ( escrow_path.empty() )
         {
-            std::cout << "ERROR IN FETCHING TRANSACTION" << std::endl;
+            m_logger->debug( "Escrow NOT FOUND on " + task_id );
+            return outcome::failure( boost::system::error_code{} );
         }
-        std::shared_ptr<EscrowTransaction> escrow_tx = std::dynamic_pointer_cast<EscrowTransaction>( maybe_tx.value() );
+        m_logger->debug( "Fetching escrow from processing DB at " + escrow_path );
+        OUTCOME_TRY( ( auto &&, transaction ), FetchTransaction( processing_db_m, escrow_path ) );
+
+        std::shared_ptr<EscrowTransaction> escrow_tx = std::dynamic_pointer_cast<EscrowTransaction>( transaction );
         std::vector<std::string>           subtask_ids;
         std::vector<OutputDestInfo>        payout_peers;
         uint64_t peers_amount = ( escrow_tx->GetPeersCut() * uint64_t{ escrow_tx->GetAmount() } ) /
@@ -196,7 +205,7 @@ namespace sgns
 
         escrow_utxo_input.txid_hash_  = ( base::Hash256::fromReadableString( escrow_tx->dag_st.data_hash() ) ).value();
         escrow_utxo_input.output_idx_ = 0;
-        escrow_utxo_input.signature_  = "";
+        escrow_utxo_input.signature_  = ""; //TODO - Signature
 
         auto transfer_transaction = std::make_shared<TransferTransaction>(
             payout_peers,
@@ -204,7 +213,7 @@ namespace sgns
             FillDAGStruct() );
         this->EnqueueTransaction( transfer_transaction );
 
-        //task_queue_->CompleteTask( task_id, taskresult );
+        return outcome::success();
     }
 
     uint64_t TransactionManager::GetBalance()
@@ -268,6 +277,11 @@ namespace sgns
         {
             m_logger->debug( "Notifying receiving peers of transfers" );
             NotifyDestinationOfTransfer( transaction );
+        }
+        else if ( transaction->GetType() == "escrow" )
+        {
+            m_logger->debug( "Posting Escrow transaction into processing db" );
+            PostEscrowOnProcessingDB( transaction );
         }
 
         //BOOST_OUTCOME_TRYV2( auto &&, RecordBlock( { transaction_path } ) );
@@ -512,8 +526,8 @@ namespace sgns
 
         for ( auto &input : transfer_tx->GetInputInfos() )
         {
-            std::cout << "UTXO to be updated " << input.txid_hash_.toReadableString() << std::endl;
-            std::cout << "UTXO output" << input.output_idx_ << std::endl;
+            m_logger->trace( "UTXO to be updated {}", input.txid_hash_.toReadableString() );
+            m_logger->trace( "UTXO output {}", input.output_idx_ );
         }
 
         account_m->RefreshUTXOs( transfer_tx->GetInputInfos() );
@@ -569,10 +583,7 @@ namespace sgns
         {
             if ( dest_infos[i].dest_address != account_m->GetAddress<uint256_t>() )
             {
-                std::ostringstream oss;
-                oss << "0x";
-                oss << std::hex << dest_infos[i].dest_address;
-                std::string peer_address = oss.str();
+                std::string peer_address = Uint256ToString( dest_infos[i].dest_address );
                 m_logger->debug( "Sending notification to " + peer_address );
                 std::shared_ptr<crdt::GlobalDB> destination_db;
                 auto                            destination_db_it = destination_dbs_m.find( peer_address );
@@ -585,6 +596,8 @@ namespace sgns
                         new_port = GenerateRandomPort( 43000, account_m->GetAddress<std::string>() );
 
                     } while ( ( used_ports_m.find( new_port ) != used_ports_m.end() ) && ( --port_retries > 0 ) );
+
+                    m_logger->debug( "Port to sync  " + std::to_string( new_port ) );
 
                     destination_db = std::make_shared<crdt::GlobalDB>(
                         ctx_m,
@@ -621,12 +634,21 @@ namespace sgns
 
     outcome::result<void> TransactionManager::PostEscrowOnProcessingDB( const std::shared_ptr<IGeniusTransactions> &tx )
     {
-        auto transaction_path = GetTransactionPath( tx );
+        auto escrow_tx = std::dynamic_pointer_cast<EscrowTransaction>( tx );
 
-        sgns::crdt::GlobalDB::Buffer data_transaction;
-        data_transaction.put( tx->SerializeByteVector() );
+        auto dest_infos = escrow_tx->GetUTXOParameters();
 
-        BOOST_OUTCOME_TRYV2( auto &&, processing_db_m->Put( { transaction_path }, data_transaction ) );
+        if ( !dest_infos.outputs_.empty() )
+        {
+            std::string job_id_hash = Uint256ToString( dest_infos.outputs_[0].dest_address );
+
+            sgns::crdt::GlobalDB::Buffer data_transaction;
+            data_transaction.put( tx->SerializeByteVector() );
+
+            m_logger->debug( "Escrow sent to processing db on path " + job_id_hash );
+
+            BOOST_OUTCOME_TRYV2( auto &&, processing_db_m->Put( { job_id_hash }, data_transaction ) );
+        }
 
         return outcome::success();
     }

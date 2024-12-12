@@ -65,8 +65,8 @@ namespace sgns
                                                  const uint256_t   &dev_addr,
                                                  float              peers_cut,
                                                  const std::string &job_id );
-        void     ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult );
-        uint64_t GetBalance();
+        outcome::result<void> ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult );
+        uint64_t              GetBalance();
 
     private:
         static constexpr std::uint16_t    MAIN_NET_ID             = 369;

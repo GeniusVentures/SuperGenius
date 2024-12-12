@@ -14,8 +14,9 @@
 #include <type_traits>
 #include <optional>
 #include <algorithm>
-
 #include <boost/random.hpp>
+#include <boost/random/mersenne_twister.hpp>
+#include <boost/random/uniform_int_distribution.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
 
 namespace sgns
@@ -213,14 +214,27 @@ namespace sgns
 
     static uint16_t GenerateRandomPort( uint16_t base, const std::string &seed )
     {
-        uint32_t seed_number = static_cast<uint32_t>( uint256_t{ seed } % 1000 );
+        uint32_t seed_hash = 0;
+        for ( char c : seed )
+        {
+            seed_hash = seed_hash * 31 + static_cast<uint8_t>( c );
+        }
 
-        // Setup the random number generator
-        br::mt19937                    rng( seed_number ); // Use the reduced number as seed
-        br::uniform_int_distribution<> dist( 0, 999 );     // Range: 0 to 9999
+        uint32_t combined_seed = seed_hash + static_cast<uint32_t>( clock() );
 
-        // Generate a 4-digit random number
+        br::mt19937                    rng( combined_seed );
+        br::uniform_int_distribution<> dist( 0, 9999 );
+
+        // Generate a random port and add to the base
         return base + dist( rng );
+    }
+
+    static std::string Uint256ToString( const uint256_t &value )
+    {
+        std::ostringstream oss;
+        oss << "0x";
+        oss << std::hex << std::setw( 64 ) << std::setfill( '0' ) << value;
+        return oss.str();
     }
 }
 

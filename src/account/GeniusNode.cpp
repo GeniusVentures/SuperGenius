@@ -71,7 +71,7 @@ namespace sgns
         loggerTransactions->set_level( spdlog::level::off );
 
         auto loggerQueue = base::createLogger( "ProcessingTaskQueueImpl" );
-        loggerQueue->set_level( spdlog::level::off );
+        loggerQueue->set_level( spdlog::level::debug );
 
         auto loggerRocksDB = base::createLogger( "rocksdb" );
         loggerRocksDB->set_level( spdlog::level::off );
@@ -88,7 +88,7 @@ namespace sgns
         auto loggerSubQueue = base::createLogger( "ProcessingSubTaskQueueAccessorImpl" );
         loggerSubQueue->set_level( spdlog::level::off );
         auto loggerProcServ = base::createLogger( "ProcessingService" );
-        loggerProcServ->set_level( spdlog::level::off );
+        loggerProcServ->set_level( spdlog::level::debug );
 
         auto loggerProcqm = base::createLogger( "ProcessingSubTaskQueueManager" );
         loggerProcqm->set_level( spdlog::level::off );
@@ -382,6 +382,7 @@ namespace sgns
                                                                        uint256_t{ std::string( dev_config_.Addr ) },
                                                                        dev_config_.Cut,
                                                                        uuidstring );
+
             task.set_escrow_path( maybe_escrow_path.value() );
             task_queue_->EnqueueTask( task, subTasks );
         }
@@ -470,11 +471,17 @@ namespace sgns
 
     void GeniusNode::ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult )
     {
-        std::cout << "[" << account_->GetAddress<std::string>() << "] SUCESS PROCESSING TASK " << task_id << std::endl;
+        std::cout << "[" << account_->GetAddress<std::string>() << "] SUCCESS PROCESSING TASK " << task_id << std::endl;
         if ( !task_queue_->IsTaskCompleted( task_id ) )
         {
-            transaction_manager_->ProcessingDone( task_id, taskresult );
-            task_queue_->CompleteTask( task_id, taskresult );
+            if ( transaction_manager_->ProcessingDone( task_id, taskresult ) )
+            {
+                task_queue_->CompleteTask( task_id, taskresult );
+            }
+            else
+            {
+                std::cout << "Invalid results!" << std::endl;
+            }
         }
         else
         {
