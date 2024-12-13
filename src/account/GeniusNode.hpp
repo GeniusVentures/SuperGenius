@@ -56,7 +56,7 @@ namespace sgns
                     const char         *eth_private_key,
                     bool                autodht     = true,
                     bool                isprocessor = true,
-                    int                 baseport = 40001 );
+                    uint16_t            base_port   = 40001 );
         // static GeniusNode &GetInstance()
         // {
         //     return instance;
@@ -65,7 +65,7 @@ namespace sgns
 
         void ProcessImage( const std::string &image_path );
 
-        uint64_t GetProcessCost( const std::string &json_data );
+        double GetProcessCost( const std::string &json_data );
 
         std::string GetName() override
         {
@@ -73,10 +73,10 @@ namespace sgns
         }
 
         void     DHTInit();
-        void     MintTokens( uint64_t amount, std::string transaction_hash, std::string chainid, std::string tokenid );
+        void     MintTokens( double amount, std::string transaction_hash, std::string chainid, std::string tokenid );
         void     AddPeer( const std::string &peer );
         void     RefreshUPNP( int pubsubport, int graphsyncport );
-        uint64_t GetBalance();
+        double GetBalance();
 
         [[nodiscard]] const std::vector<std::vector<uint8_t>> GetInTransactions() const
         {
@@ -103,7 +103,7 @@ namespace sgns
             return account_->GetAddress<uint256_t>();
         }
 
-        bool TransferFunds( uint64_t amount, const uint256_t &destination )
+        bool TransferFunds( double amount, const uint256_t &destination )
         {
             return transaction_manager_->TransferFunds( amount, destination );
         }
@@ -112,7 +112,6 @@ namespace sgns
         {
             return pubsub_;
         }
-
 
         static std::vector<uint8_t> GetImageByCID( const std::string &cid );
 
@@ -131,9 +130,9 @@ namespace sgns
         bool                                                  autodht_;
         bool                                                  isprocessor_;
 
-        std::thread io_thread;
-        std::thread upnp_thread;
-        std::atomic<bool> stop_upnp{false};
+        std::thread       io_thread;
+        std::thread       upnp_thread;
+        std::atomic<bool> stop_upnp{ false };
 
         DevConfig_st dev_config_;
 
@@ -144,8 +143,8 @@ namespace sgns
         static constexpr std::uint16_t    MAIN_NET                = 369;
         static constexpr std::uint16_t    TEST_NET                = 963;
         static constexpr std::size_t      MAX_NODES_COUNT         = 1;
-        static constexpr std::string_view PROCESSING_GRID_CHANNEL = "SGNUS.Jobs.1a";
-        static constexpr std::string_view PROCESSING_CHANNEL      = "SGNUS.TestNet.Channel.1a";
+        static constexpr std::string_view PROCESSING_GRID_CHANNEL = "SGNUS.Jobs.1a.02";
+        static constexpr std::string_view PROCESSING_CHANNEL      = "SGNUS.TestNet.Channel.1a.02";
 
         static const std::string &GetLoggingSystem()
         {

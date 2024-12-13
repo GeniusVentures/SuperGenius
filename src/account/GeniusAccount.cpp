@@ -10,7 +10,7 @@
 namespace sgns
 {
     GeniusAccount::GeniusAccount( const uint8_t token_type, std::string_view base_path, const char *eth_private_key ) :
-        token( token_type ), nonce( 0 ), balance( 0 )
+        token( token_type ), nonce( 0 )
     {
         if ( auto maybe_address = GenerateGeniusAddress( base_path, eth_private_key ); maybe_address.has_value() )
         {

@@ -33,7 +33,7 @@ namespace sgns
                             const char         *eth_private_key,
                             bool                autodht,
                             bool                isprocessor,
-                            int                 baseport ) :
+                            uint16_t            base_port ) :
         account_( std::make_shared<GeniusAccount>( static_cast<uint8_t>( dev_config.TokenID ),
                                                    dev_config.BaseWritePath,
                                                    eth_private_key ) ),
@@ -96,7 +96,8 @@ namespace sgns
         loggerProcqm->set_level( spdlog::level::off );
         auto tokenid = dev_config_.TokenID;
 
-        auto pubsubport = GenerateRandomPort( baseport, account_->GetAddress<std::string>() + std::to_string( tokenid ) );
+        auto pubsubport    = GenerateRandomPort( base_port,
+                                              account_->GetAddress<std::string>() + std::to_string( tokenid ) );
         auto graphsyncport = pubsubport + 10;
 
         std::vector<std::string> addresses;
@@ -123,7 +124,7 @@ namespace sgns
         }
 
         auto pubsubKeyPath =
-            ( boost::format( "SuperGNUSNode.TestNet.%s/pubs_processor" ) % account_->GetAddress<std::string>() ).str();
+            ( boost::format( "SuperGNUSNode.TestNet.1a.02.%s/pubs_processor" ) % account_->GetAddress<std::string>() ).str();
 
         pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
             crdt::KeyPairFileStorage( write_base_path_ + pubsubKeyPath ).GetKeyPair().value() );
@@ -135,7 +136,7 @@ namespace sgns
 
         globaldb_ = std::make_shared<crdt::GlobalDB>(
             io_,
-            ( boost::format( write_base_path_ + "SuperGNUSNode.TestNet.%s" ) % account_->GetAddress<std::string>() )
+            ( boost::format( write_base_path_ + "SuperGNUSNode.TestNet.1a.02.%s" ) % account_->GetAddress<std::string>() )
                 .str(),
             graphsyncport,
             std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_, std::string( PROCESSING_CHANNEL ) ) );
@@ -169,7 +170,7 @@ namespace sgns
             io_,
             account_,
             std::make_shared<crypto::HasherImpl>(),
-            ( boost::format( write_base_path_ + "SuperGNUSNode.TestNet.%s" ) % account_->GetAddress<std::string>() )
+            ( boost::format( write_base_path_ + "SuperGNUSNode.TestNet.1a.02.%s" ) % account_->GetAddress<std::string>() )
                 .str(),
             pubsub_,
             upnp,
@@ -380,9 +381,9 @@ namespace sgns
         }
     }
 
-    uint64_t GeniusNode::GetProcessCost( const std::string &json_data )
+    double GeniusNode::GetProcessCost( const std::string &json_data )
     {
-        uint64_t cost = 0;
+        double cost = 0;
         std::cout << "Received JSON data: " << json_data << std::endl;
         //Parse Json
         rapidjson::Document document;
@@ -407,8 +408,8 @@ namespace sgns
         {
             if ( input.HasMember( "block_len" ) && input["block_len"].IsUint64() )
             {
-                uint64_t block_len  = input["block_len"].GetUint64();
-                cost               += ( block_len / 2100000 );
+                double block_len  = static_cast<double>( input["block_len"].GetUint64() );
+                cost             += ( block_len / 2100000 );
                 std::cout << "Block length: " << block_len << std::endl;
             }
             else
@@ -417,18 +418,15 @@ namespace sgns
                 return 0;
             }
         }
-        return std::max( cost, static_cast<uint64_t>( 1 ) );
+        return std::max( cost, static_cast<double>( 1 ) );
     }
 
-    void GeniusNode::MintTokens( uint64_t    amount,
-                                 std::string transaction_hash,
-                                 std::string chainid,
-                                 std::string tokenid )
+    void GeniusNode::MintTokens( double amount, std::string transaction_hash, std::string chainid, std::string tokenid )
     {
         transaction_manager_->MintFunds( amount, transaction_hash, chainid, tokenid );
     }
 
-    uint64_t GeniusNode::GetBalance()
+    double GeniusNode::GetBalance()
     {
         return transaction_manager_->GetBalance();
     }

@@ -166,9 +166,9 @@ TEST_F( ProcessingNodesTest, ProcessNodesTransactionsCount )
 
 TEST_F( ProcessingNodesTest, DISABLED_ProcessingNodeTransfer )
 {
-    int balance_main  = node_main->GetBalance();
-    int balance_node1 = node_proc1->GetBalance();
-    int balance_node2 = node_proc2->GetBalance();
+    double balance_main  = node_main->GetBalance();
+    double balance_node1 = node_proc1->GetBalance();
+    double balance_node2 = node_proc2->GetBalance();
 }
 
 TEST_F( ProcessingNodesTest, DISABLED_CalculateProcessingCost )
@@ -272,9 +272,9 @@ TEST_F( ProcessingNodesTest, PostProcessing )
     auto        cost      = node_main->GetProcessCost( json_data );
     boost::replace_all( json_data, "[basepath]", bin_path );
     std::cout << "Json Data: " << json_data << std::endl;
-    int balance_main  = node_main->GetBalance();
-    int balance_node1 = node_proc1->GetBalance();
-    int balance_node2 = node_proc2->GetBalance();
+    double balance_main  = node_main->GetBalance();
+    double balance_node1 = node_proc1->GetBalance();
+    double balance_node2 = node_proc2->GetBalance();
     node_main->ProcessImage( json_data );
     //node_main->ProcessImage(json_data);
 
@@ -286,5 +286,5 @@ TEST_F( ProcessingNodesTest, PostProcessing )
     std::cout << "Balance node1 (After):" << node_proc1->GetBalance() << std::endl;
     std::cout << "Balance node2 (After):" << node_proc2->GetBalance() << std::endl;
     ASSERT_EQ( balance_main - cost, node_main->GetBalance() );
-    ASSERT_EQ( balance_node1 + balance_node2 + 10, node_proc1->GetBalance() + node_proc2->GetBalance());
+    ASSERT_EQ( balance_node1 + balance_node2 + cost*DEV_CONFIG.Cut, node_proc1->GetBalance() + node_proc2->GetBalance());
 }

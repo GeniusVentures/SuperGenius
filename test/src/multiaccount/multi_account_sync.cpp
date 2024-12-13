@@ -127,8 +127,8 @@ TEST_F( MultiAccountTest, SyncThroughThirdNode )
     int transcount_node1 = node_proc1->GetOutTransactions().size();
     std::cout << "Count 1" << transcount_main << std::endl;
     std::cout << "Count 2" << transcount_node1 << std::endl;
-    int balance_main = node_main->GetBalance();
-    int balance_node1 = node_proc1->GetBalance();
+    double balance_main = node_main->GetBalance();
+    double balance_node1 = node_proc1->GetBalance();
     std::cout << "Balance 1" << balance_main << std::endl;
     std::cout << "Balance 2" << balance_node1 << std::endl;  
 
@@ -160,8 +160,8 @@ TEST_F( MultiAccountTest, SyncThroughEachOther )
     int transcount_node1 = node_proc1->GetOutTransactions().size();
     std::cout << "Count 1" << transcount_main << std::endl;
     std::cout << "Count 2" << transcount_node1 << std::endl;
-    int balance_main = node_main->GetBalance();
-    int balance_node1 = node_proc1->GetBalance();
+    double balance_main = node_main->GetBalance();
+    double balance_node1 = node_proc1->GetBalance();
     std::cout << "Balance 1" << balance_main << std::endl;
     std::cout << "Balance 2" << balance_node1 << std::endl;  
 
