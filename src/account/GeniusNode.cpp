@@ -86,6 +86,8 @@ namespace sgns
 
         auto logNoise = base::createLogger( "Noise" );
         logNoise->set_level( spdlog::level::off );
+        auto logProcessingEngine = base::createLogger( "ProcessingEngine" );
+        logProcessingEngine->set_level( spdlog::level::debug );
 
         auto loggerSubQueue = base::createLogger( "ProcessingSubTaskQueueAccessorImpl" );
         loggerSubQueue->set_level( spdlog::level::off );

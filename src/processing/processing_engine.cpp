@@ -18,9 +18,7 @@ namespace sgns::processing
 
     ProcessingEngine::~ProcessingEngine()
     {
-        m_logger->debug( "[RELEASED] this: {}, thread_id {}",
-                         reinterpret_cast<size_t>( this ),
-                         std::this_thread::get_id() );
+        m_logger->debug( "[RELEASED] m_nodeId: {},", m_nodeId );
     }
 
     void ProcessingEngine::StartQueueProcessing( std::shared_ptr<SubTaskQueueAccessor> subTaskQueueAccessor )
@@ -44,7 +42,7 @@ namespace sgns::processing
     {
         std::lock_guard<std::mutex> queueGuard( m_mutexSubTaskQueue );
         m_subTaskQueueAccessor.reset();
-        m_logger->debug( "[PROCESSING_STOPPED] this: {}", reinterpret_cast<size_t>( this ) );
+        m_logger->debug( "[PROCESSING_STOPPED] m_nodeId: {}", m_nodeId );
     }
 
     bool ProcessingEngine::IsQueueProcessingStarted() const
@@ -57,10 +55,13 @@ namespace sgns::processing
     {
         if ( subTask )
         {
-            m_logger->debug( "[GRABBED]. ({}).", subTask->subtaskid() );
+            m_logger->debug( "[GRABBED] m_nodeId ({}), subtask ({}).", m_nodeId, subTask->subtaskid() );
             ProcessSubTask( *subTask );
         }
-
+        else
+        {
+            m_logger->debug( "ALL SUBTASKS ARE GRABBED. ({}).", m_nodeId );
+        }
         // When results for all subtasks are available, no subtask is received (optnull).
     }
 
@@ -81,7 +82,7 @@ namespace sgns::processing
         // }
 
         // m_lastProcessedTime = now;
-        m_logger->debug( "[PROCESSING_STARTED]. ({}).", subTask.subtaskid() );
+        m_logger->debug( "[PROCESSING_STARTED]. m_nodeId ({}), subtask ({}).", m_nodeId, subTask.subtaskid() );
         std::thread thread(
             [subTask( std::move( subTask ) ), _this( shared_from_this() )]()
             {
@@ -96,7 +97,9 @@ namespace sgns::processing
                     result.set_subtaskid( subTask.subtaskid() );
                     result.set_node_address( _this->m_nodeId );
                     result.set_escrow_path( _this->m_escrowPath );
-                    _this->m_logger->debug( "[PROCESSED]. ({}).", subTask.subtaskid() );
+                    _this->m_logger->debug( "[PROCESSED]. m_nodeId ({}), subtask ({}).",
+                                            _this->m_nodeId,
+                                            subTask.subtaskid() );
                     std::lock_guard<std::mutex> queueGuard( _this->m_mutexSubTaskQueue );
                     if ( _this->m_subTaskQueueAccessor )
                     {
