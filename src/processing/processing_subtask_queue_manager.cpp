@@ -8,7 +8,8 @@ namespace sgns::processing
     ProcessingSubTaskQueueManager::ProcessingSubTaskQueueManager(
         std::shared_ptr<ProcessingSubTaskQueueChannel> queueChannel,
         std::shared_ptr<boost::asio::io_context>       context,
-        const std::string                             &localNodeId ) :
+        const std::string                             &localNodeId,
+        std::function<void( const std::string & )>     processingErrorSink ) :
         m_queueChannel( std::move( queueChannel ) ),
         m_context( std::move( context ) ),
         m_localNodeId( localNodeId ),
@@ -16,7 +17,8 @@ namespace sgns::processing
         m_queueResponseTimeout( boost::posix_time::seconds( 5 ) ),
         m_dltGrabSubTaskTimeout( *m_context ),
         m_processingQueue( localNodeId ),
-        m_processingTimeout( std::chrono::seconds( 10 ) )
+        m_processingTimeout( std::chrono::seconds( 10 ) ),
+        m_processingErrorSink( std::move( processingErrorSink ) )
     {
     }
 
@@ -164,12 +166,18 @@ namespace sgns::processing
             }
             else
             {
+                bool no_more_subtasks = false;
                 while ( !m_onSubTaskGrabbedCallbacks.empty() )
                 {
+                    no_more_subtasks = true;
                     // Let the requester know that there are no available subtasks
                     m_onSubTaskGrabbedCallbacks.front()( {} );
                     // Reset the callback
                     m_onSubTaskGrabbedCallbacks.pop_front();
+                }
+                if ( no_more_subtasks )
+                {
+                    m_processingErrorSink( "deleting process node, no more subtasks" );
                 }
             }
         }

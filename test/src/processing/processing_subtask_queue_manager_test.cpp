@@ -107,7 +107,7 @@ TEST_F(ProcessingSubTaskQueueManagerTest, DISABLED_QueueCreating)
     }
 
     std::string nodeId = "SOME_ID";
-    ProcessingSubTaskQueueManager queueManager(queueChannel, context, nodeId);
+    ProcessingSubTaskQueueManager queueManager(queueChannel, context, nodeId,[](const std::string &){});
 
     queueManager.CreateQueue(subTasks);
 
@@ -151,7 +151,7 @@ TEST_F(ProcessingSubTaskQueueManagerTest, DISABLED_QueueOwnershipTransfer)
     }
 
     auto nodeId1 = "OLD_QUEUE_OWNER";
-    ProcessingSubTaskQueueManager queueManager(queueChannel, context, nodeId1);
+    ProcessingSubTaskQueueManager queueManager(queueChannel, context, nodeId1,[](const std::string &){});
 
     queueManager.CreateQueue(subTasks);
 
@@ -198,7 +198,7 @@ TEST_F(ProcessingSubTaskQueueManagerTest, DISABLED_GrabSubTaskWithoutOwnershipTr
     }
 
     auto nodeId = "SOME_ID";
-    ProcessingSubTaskQueueManager queueManager(queueChannel, context, nodeId);
+    ProcessingSubTaskQueueManager queueManager(queueChannel, context, nodeId,[](const std::string &){});
 
     queueManager.CreateQueue(subTasks);
 
@@ -207,6 +207,7 @@ TEST_F(ProcessingSubTaskQueueManagerTest, DISABLED_GrabSubTaskWithoutOwnershipTr
         {
             // process subtask
         }
+        return true;
         });
 
     ASSERT_EQ(2, queueSnapshotSet.size());
@@ -243,7 +244,7 @@ TEST_F(ProcessingSubTaskQueueManagerTest, DISABLED_GrabSubTaskWithOwnershipTrans
 
     auto nodeId1 = "NODE1_ID";
 
-    ProcessingSubTaskQueueManager queueManager1(queueChannel1, context, nodeId1);
+    ProcessingSubTaskQueueManager queueManager1(queueChannel1, context, nodeId1,[](const std::string &){});
 
     std::vector<std::string> requestedOwnerIds;
     std::vector<SGProcessing::SubTaskQueue> queueSnapshotSet;
@@ -268,7 +269,7 @@ TEST_F(ProcessingSubTaskQueueManagerTest, DISABLED_GrabSubTaskWithOwnershipTrans
     };
 
     auto nodeId2 = "NODE2_ID";
-    ProcessingSubTaskQueueManager queueManager2(queueChannel2, context, nodeId2);
+    ProcessingSubTaskQueueManager queueManager2(queueChannel2, context, nodeId2,[](const std::string &){});
 
     queueChannel1->queueOwnershipRequestSink =
         [context, &requestedOwnerIds, &queueManager2](const std::string& nodeId) {
@@ -298,6 +299,7 @@ TEST_F(ProcessingSubTaskQueueManagerTest, DISABLED_GrabSubTaskWithOwnershipTrans
         {
             // process subtask
         }
+        return true;
         });
 
     context->run();
@@ -337,7 +339,7 @@ TEST_F(ProcessingSubTaskQueueManagerTest, DISABLED_CheckProcessedQueue)
     auto queueChannel1 = std::make_shared<ProcessingSubTaskQueueChannelImpl>();
     auto nodeId1 = "NODE1_ID";
 
-    ProcessingSubTaskQueueManager queueManager1(queueChannel1, context, nodeId1);
+    ProcessingSubTaskQueueManager queueManager1(queueChannel1, context, nodeId1,[](const std::string &){});
 
     // Create the queue on node1
     queueManager1.CreateQueue(subTasks);
@@ -432,7 +434,7 @@ TEST_F(ProcessingSubTaskQueueManagerTest, DISABLED_TaskSplitFailed)
     auto queueChannel1 = std::make_shared<ProcessingSubTaskQueueChannelImpl>();
     auto nodeId1 = "NODE1_ID";
 
-    ProcessingSubTaskQueueManager queueManager1(queueChannel1, context, nodeId1);
+    ProcessingSubTaskQueueManager queueManager1(queueChannel1, context, nodeId1,[](const std::string &){});
 
     // Create the queue on node1
     ASSERT_FALSE(queueManager1.CreateQueue(subTasks));
@@ -479,7 +481,7 @@ TEST_F(ProcessingSubTaskQueueManagerTest, DISABLED_TaskSplitSucceeded)
     auto queueChannel1 = std::make_shared<ProcessingSubTaskQueueChannelImpl>();
     auto nodeId1 = "NODE1_ID";
 
-    ProcessingSubTaskQueueManager queueManager1(queueChannel1, context, nodeId1);
+    ProcessingSubTaskQueueManager queueManager1(queueChannel1, context, nodeId1,[](const std::string &){});
 
     // Create the queue on node1
     ASSERT_TRUE(queueManager1.CreateQueue(subTasks));

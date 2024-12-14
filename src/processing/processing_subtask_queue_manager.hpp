@@ -31,7 +31,8 @@ namespace sgns::processing
     */
         ProcessingSubTaskQueueManager( std::shared_ptr<ProcessingSubTaskQueueChannel> queueChannel,
                                        std::shared_ptr<boost::asio::io_context>       context,
-                                       const std::string                             &localNodeId );
+                                       const std::string                             &localNodeId,
+                                       std::function<void( const std::string & )>     processingErrorSink );
         ~ProcessingSubTaskQueueManager();
 
         /** Set a timeout for subtask processing
@@ -129,8 +130,9 @@ namespace sgns::processing
 
         boost::asio::deadline_timer m_dltGrabSubTaskTimeout;
 
-        ProcessingSubTaskQueue              m_processingQueue;
-        std::chrono::system_clock::duration m_processingTimeout;
+        ProcessingSubTaskQueue                     m_processingQueue;
+        std::chrono::system_clock::duration        m_processingTimeout;
+        std::function<void( const std::string & )> m_processingErrorSink;
 
         base::Logger m_logger = base::createLogger( "ProcessingSubTaskQueueManager" );
     };

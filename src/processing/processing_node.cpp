@@ -38,7 +38,8 @@ namespace sgns::processing
 
         m_subtaskQueueManager = std::make_shared<ProcessingSubTaskQueueManager>( processingQueueChannel,
                                                                                  m_gossipPubSub->GetAsioContext(),
-                                                                                 m_nodeId );
+                                                                                 m_nodeId,
+                                                                                 m_processingErrorSink );
 
         m_subTaskQueueAccessor = std::make_shared<SubTaskQueueAccessorImpl>( m_gossipPubSub,
                                                                              m_subtaskQueueManager,
