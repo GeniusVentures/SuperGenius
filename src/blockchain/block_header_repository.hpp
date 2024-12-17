@@ -1,8 +1,6 @@
 #ifndef SUPERGENIUS_CORE_BLOCKCHAIN_BLOCK_HEADER_REPOSITORY_HPP
 #define SUPERGENIUS_CORE_BLOCKCHAIN_BLOCK_HEADER_REPOSITORY_HPP
 
-#include <boost/optional.hpp>
-
 #include "outcome/outcome.hpp"
 #include "base/blob.hpp"
 #include "primitives/block_header.hpp"

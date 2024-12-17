@@ -1,10 +1,12 @@
-
 add_library(block_validator
-production_block_validator.cpp
+    production_block_validator.cpp
 )
 target_link_libraries(block_validator
-outcome
-production_digests_util
-mp_utils
-logger
+    PUBLIC
+    outcome
+    logger
+    mp_utils
+    sr25519_types
+    INTERFACE
+    production_digests_util
 )

@@ -1,19 +1,19 @@
-
-
 addtest(bip39_integration_test
     bip39_integration_test.cpp
-    )
+)
 target_link_libraries(bip39_integration_test
     bip39_provider
+    Boost::headers
     ${WIN_CRYPT_LIBRARY}
     ${WIN_SOCK_LIBRARY}
-    )
+)
 
 addtest(entropy_calculation_test
     entropy_calculation_test.cpp
-    )
+)
 target_link_libraries(entropy_calculation_test
     bip39_provider
+    Boost::headers
     ${WIN_CRYPT_LIBRARY}
     ${WIN_SOCK_LIBRARY}
-    )
+)

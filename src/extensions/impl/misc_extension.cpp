@@ -1,6 +1,3 @@
-
-#include <exception>
-
 #include "extensions/impl/misc_extension.hpp"
 
 #include "runtime/common/const_wasm_provider.hpp"

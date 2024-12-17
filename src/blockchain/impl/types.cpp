@@ -3,7 +3,6 @@
 #include "base/visitor.hpp"
 #include "storage/trie/serialization/supergenius_codec.hpp"
 #include "storage/trie/supergenius_trie/supergenius_trie_impl.hpp"
-#include "crdt/globaldb/globaldb.hpp"
 
 OUTCOME_CPP_DEFINE_CATEGORY_3(sgns::blockchain, Error, e) {
   switch (e) {

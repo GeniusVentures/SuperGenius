@@ -3,10 +3,7 @@
 
 #include "crdt/dagsyncer.hpp"
 #include "base/logger.hpp"
-#include "base/buffer.hpp"
 
-#include <ipfs_lite/ipfs/graphsync/graphsync.hpp>
-#include <ipfs_lite/ipfs/graphsync/extension.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/merkledag_bridge_impl.hpp>
 #include <ipfs_lite/ipfs/merkledag/impl/merkledag_service_impl.hpp>
 
