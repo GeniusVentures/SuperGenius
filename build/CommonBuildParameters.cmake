@@ -1,6 +1,6 @@
 # BOOST VERSION TO USE
 set(BOOST_MAJOR_VERSION "1" CACHE STRING "Boost Major Version")
-set(BOOST_MINOR_VERSION "85" CACHE STRING "Boost Minor Version")
+set(BOOST_MINOR_VERSION "86" CACHE STRING "Boost Minor Version")
 set(BOOST_PATCH_VERSION "0" CACHE STRING "Boost Patch Version")
 
 # convenience settings
