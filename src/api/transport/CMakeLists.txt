@@ -22,6 +22,11 @@ target_link_libraries(api_transport
     OpenSSL::SSL
 )
 
+# Add /bigobj flag for MSVC compiler specifically for api_transport
+if (MSVC)
+    target_compile_options(api_transport PRIVATE /bigobj)
+endif()
+
 add_library(rpc_thread_pool
     rpc_io_context.hpp
     rpc_thread_pool.hpp
