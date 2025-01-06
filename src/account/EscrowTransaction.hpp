@@ -17,7 +17,7 @@ namespace sgns
     {
     public:
         EscrowTransaction( UTXOTxParameters                params,
-                           double                        amount,
+                           uint64_t                        amount,
                            uint256_t                       dev_addr,
                            float                           peers_cut,
                            const SGTransaction::DAGStruct &dag );
@@ -42,7 +42,7 @@ namespace sgns
             return dev_addr_;
         }
 
-        double GetAmount() const
+        uint64_t GetAmount() const
         {
             return amount_;
         }
@@ -54,7 +54,7 @@ namespace sgns
 
     private:
         UTXOTxParameters utxo_params_;
-        double         amount_;
+        uint64_t         amount_;
         uint256_t        dev_addr_;
         float            peers_cut_;
 

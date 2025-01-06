@@ -15,10 +15,10 @@ namespace sgns
     class GeniusUTXO
     {
     public:
-        GeniusUTXO( const base::Hash256 &hash, uint32_t previous_index, double amount ) :
+        GeniusUTXO( const base::Hash256 &hash, uint32_t previous_index, uint64_t amount ) :
             txid_hash_( hash ),            //
             output_idx_( previous_index ), //
-            amount_( RoundTo5Digits(amount) ),             //
+            amount_( amount ),             //
             locked_( false )               //
         {
         }
@@ -38,7 +38,7 @@ namespace sgns
             return output_idx_;
         }
 
-        double GetAmount() const
+        uint64_t GetAmount() const
         {
             return amount_;
         }
@@ -51,7 +51,7 @@ namespace sgns
     private:
         base::Hash256 txid_hash_;
         uint32_t      output_idx_;
-        double        amount_;
+        uint64_t      amount_;
         bool          locked_;
     };
 }

@@ -41,7 +41,8 @@ namespace sgns
         write_base_path_( dev_config.BaseWritePath ),
         autodht_( autodht ),
         isprocessor_( isprocessor ),
-        dev_config_( dev_config )
+        dev_config_( dev_config ),
+        token_value_in_minions( GNUS_VALUE_IN_MINIONS * dev_config_.TokenValueInGNUS )
     {
         logging_system = std::make_shared<soralog::LoggingSystem>( std::make_shared<soralog::ConfiguratorFromYAML>(
             // Original LibP2P logging config
@@ -125,8 +126,9 @@ namespace sgns
             }
         }
 
-        auto pubsubKeyPath =
-            ( boost::format( "SuperGNUSNode.TestNet.1a.02.%s/pubs_processor" ) % account_->GetAddress<std::string>() ).str();
+        auto pubsubKeyPath = ( boost::format( "SuperGNUSNode.TestNet.1a.02.%s/pubs_processor" ) %
+                               account_->GetAddress<std::string>() )
+                                 .str();
 
         pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
             crdt::KeyPairFileStorage( write_base_path_ + pubsubKeyPath ).GetKeyPair().value() );
@@ -138,7 +140,8 @@ namespace sgns
 
         globaldb_ = std::make_shared<crdt::GlobalDB>(
             io_,
-            ( boost::format( write_base_path_ + "SuperGNUSNode.TestNet.1a.02.%s" ) % account_->GetAddress<std::string>() )
+            ( boost::format( write_base_path_ + "SuperGNUSNode.TestNet.1a.02.%s" ) %
+              account_->GetAddress<std::string>() )
                 .str(),
             graphsyncport,
             std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_, std::string( PROCESSING_CHANNEL ) ) );
@@ -172,7 +175,8 @@ namespace sgns
             io_,
             account_,
             std::make_shared<crypto::HasherImpl>(),
-            ( boost::format( write_base_path_ + "SuperGNUSNode.TestNet.1a.02.%s" ) % account_->GetAddress<std::string>() )
+            ( boost::format( write_base_path_ + "SuperGNUSNode.TestNet.1a.02.%s" ) %
+              account_->GetAddress<std::string>() )
                 .str(),
             pubsub_,
             upnp,
@@ -383,9 +387,9 @@ namespace sgns
         }
     }
 
-    double GeniusNode::GetProcessCost( const std::string &json_data )
+    uint64_t GeniusNode::GetProcessCost( const std::string &json_data )
     {
-        double cost = 0;
+        uint64_t cost = 0;
         std::cout << "Received JSON data: " << json_data << std::endl;
         //Parse Json
         rapidjson::Document document;
@@ -410,8 +414,10 @@ namespace sgns
         {
             if ( input.HasMember( "block_len" ) && input["block_len"].IsUint64() )
             {
-                double block_len  = static_cast<double>( input["block_len"].GetUint64() );
-                cost             += ( block_len / 2100000 );
+                uint64_t block_len = input["block_len"].GetUint64();
+                //5646432
+                // 005 646 432
+                cost += block_len;
                 std::cout << "Block length: " << block_len << std::endl;
             }
             else
@@ -420,15 +426,33 @@ namespace sgns
                 return 0;
             }
         }
-        return std::max( cost, static_cast<double>( 1 ) );
+        cost = cost * 100;
+        std::cout << "Final cost in Minions: " << cost << std::endl;
+        std::cout << "Final cost in GNUS: " << cost / 100000000 << std::endl;
+        return cost;
     }
 
-    void GeniusNode::MintTokens( double amount, std::string transaction_hash, std::string chainid, std::string tokenid )
+    bool GeniusNode::MintTokens( uint64_t    amount,
+                                 std::string transaction_hash,
+                                 std::string chainid,
+                                 std::string tokenid )
     {
-        transaction_manager_->MintFunds( amount, transaction_hash, chainid, tokenid );
+        bool ret = false;
+        do
+        {
+            if ( amount > std::numeric_limits<uint64_t>::max() / token_value_in_minions )
+            {
+                break;
+            }
+            uint64_t value_in_minions = amount * token_value_in_minions;
+
+            value_in_minions = value_in_minions / GNUS_VALUE_IN_MINIONS;
+            ret              = true;
+            transaction_manager_->MintFunds( value_in_minions, transaction_hash, chainid, tokenid );
+        } while ( 0 );
     }
 
-    double GeniusNode::GetBalance()
+    uint64_t GeniusNode::GetBalance()
     {
         return transaction_manager_->GetBalance();
     }

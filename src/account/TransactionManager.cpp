@@ -103,7 +103,7 @@ namespace sgns
         return *account_m;
     }
 
-    bool TransactionManager::TransferFunds( double amount, const uint256_t &destination )
+    bool TransactionManager::TransferFunds( uint64_t amount, const uint256_t &destination )
     {
         bool ret          = false;
         auto maybe_params = UTXOTxParameters::create( account_m->utxos,
@@ -124,19 +124,19 @@ namespace sgns
         return ret;
     }
 
-    void TransactionManager::MintFunds( double      amount,
+    void TransactionManager::MintFunds( uint64_t    amount,
                                         std::string transaction_hash,
                                         std::string chainid,
                                         std::string tokenid )
     {
-        auto mint_transaction = std::make_shared<MintTransaction>( RoundTo5Digits( amount ),
+        auto mint_transaction = std::make_shared<MintTransaction>( amount,
                                                                    chainid,
                                                                    tokenid,
                                                                    FillDAGStruct( transaction_hash ) );
         this->EnqueueTransaction( std::move( mint_transaction ) );
     }
 
-    outcome::result<std::string> TransactionManager::HoldEscrow( double             amount,
+    outcome::result<std::string> TransactionManager::HoldEscrow( uint64_t           amount,
                                                                  const uint256_t   &dev_addr,
                                                                  float              peers_cut,
                                                                  const std::string &job_id )
@@ -152,14 +152,12 @@ namespace sgns
 
         account_m->utxos        = UTXOTxParameters::UpdateUTXOList( account_m->utxos, params );
         auto escrow_transaction = std::make_shared<EscrowTransaction>( params,
-                                                                       RoundTo5Digits( amount ),
+                                                                       amount,
                                                                        dev_addr,
                                                                        peers_cut,
                                                                        FillDAGStruct() );
         this->EnqueueTransaction( escrow_transaction );
-        m_logger->debug( "Holding escrow to 0x{} wih the amount {}",
-                         hash_data.toReadableString(),
-                         RoundTo5Digits( amount ) );
+        m_logger->debug( "Holding escrow to 0x{} wih the amount {}", hash_data.toReadableString(), amount );
 
         return "0x" + hash_data.toReadableString();
     }
@@ -192,9 +190,9 @@ namespace sgns
         std::shared_ptr<EscrowTransaction> escrow_tx = std::dynamic_pointer_cast<EscrowTransaction>( transaction );
         std::vector<std::string>           subtask_ids;
         std::vector<OutputDestInfo>        payout_peers;
-        double peers_amount = RoundTo5Digits( ( escrow_tx->GetPeersCut() * escrow_tx->GetAmount() ) /
-                                              static_cast<double>( taskresult.subtask_results().size() ) );
-        auto   remainder    = escrow_tx->GetAmount();
+        uint64_t                           peers_amount = ( escrow_tx->GetPeersCut() * escrow_tx->GetAmount() ) /
+                                static_cast<uint64_t>( taskresult.subtask_results().size() );
+        auto remainder = escrow_tx->GetAmount();
         for ( auto &subtask : taskresult.subtask_results() )
         {
             std::cout << "Subtask Result " << subtask.subtaskid() << "from " << subtask.node_address() << std::endl;
@@ -204,7 +202,7 @@ namespace sgns
             remainder -= peers_amount;
         }
         m_logger->debug( "Sending to dev {}", remainder );
-        payout_peers.push_back( { RoundTo5Digits( remainder ), escrow_tx->GetDevAddress() } );
+        payout_peers.push_back( { remainder, escrow_tx->GetDevAddress() } );
         InputUTXOInfo escrow_utxo_input;
 
         escrow_utxo_input.txid_hash_  = ( base::Hash256::fromReadableString( escrow_tx->dag_st.data_hash() ) ).value();
@@ -220,9 +218,9 @@ namespace sgns
         return outcome::success();
     }
 
-    double TransactionManager::GetBalance()
+    uint64_t TransactionManager::GetBalance()
     {
-        return account_m->GetBalance<double>();
+        return account_m->GetBalance<uint64_t>();
     }
 
     void TransactionManager::Update()

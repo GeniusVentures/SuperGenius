@@ -14,7 +14,7 @@
 namespace sgns
 {
     EscrowTransaction::EscrowTransaction( UTXOTxParameters                params,
-                                          double                          amount,
+                                          uint64_t                        amount,
                                           uint256_t                       dev_addr,
                                           float                           peers_cut,
                                           const SGTransaction::DAGStruct &dag ) :
@@ -85,7 +85,7 @@ namespace sgns
             OutputDestInfo curr{ output_proto.encrypted_amount(), uint256_t{ output_proto.dest_addr() } };
             outputs.push_back( curr );
         }
-        double    amount    = tx_struct.amount();
+        uint64_t  amount    = tx_struct.amount();
         float     peers_cut = tx_struct.peers_cut();
         uint256_t dev_addr( tx_struct.dev_addr() );
         return std::make_shared<EscrowTransaction>( UTXOTxParameters{ inputs, outputs },

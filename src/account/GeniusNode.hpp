@@ -65,7 +65,7 @@ namespace sgns
 
         void ProcessImage( const std::string &image_path );
 
-        double GetProcessCost( const std::string &json_data );
+        uint64_t GetProcessCost( const std::string &json_data );
 
         std::string GetName() override
         {
@@ -73,10 +73,10 @@ namespace sgns
         }
 
         void     DHTInit();
-        void     MintTokens( double amount, std::string transaction_hash, std::string chainid, std::string tokenid );
+        bool     MintTokens( uint64_t amount, std::string transaction_hash, std::string chainid, std::string tokenid );
         void     AddPeer( const std::string &peer );
         void     RefreshUPNP( int pubsubport, int graphsyncport );
-        double GetBalance();
+        uint64_t GetBalance();
 
         [[nodiscard]] const std::vector<std::vector<uint8_t>> GetInTransactions() const
         {
@@ -103,7 +103,7 @@ namespace sgns
             return account_->GetAddress<uint256_t>();
         }
 
-        bool TransferFunds( double amount, const uint256_t &destination )
+        bool TransferFunds( uint64_t amount, const uint256_t &destination )
         {
             return transaction_manager_->TransferFunds( amount, destination );
         }
@@ -134,7 +134,10 @@ namespace sgns
         std::thread       upnp_thread;
         std::atomic<bool> stop_upnp{ false };
 
-        DevConfig_st dev_config_;
+        DevConfig_st   dev_config_;
+        const uint64_t token_value_in_minions;
+
+        static constexpr uint64_t GNUS_VALUE_IN_MINIONS = 1000000000;
 
         void ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult );
         void ProcessingError( const std::string &task_id );

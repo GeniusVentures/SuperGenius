@@ -2,25 +2,23 @@
 #include <boost/multiprecision/fwd.hpp>
 #include <cmath>
 
-
 sgns::UTXOTxParameters::UTXOTxParameters( const std::vector<GeniusUTXO>          &utxo_pool,
                                           const KeyGenerator::ElGamal::PublicKey &src_address,
                                           const std::vector<OutputDestInfo>      &destinations,
                                           std::string                             signature )
 {
-    double total_amount = 0.0;
+    int64_t total_amount = 0;
 
     for ( auto &dest_info : destinations )
     {
-        total_amount += dest_info.encrypted_amount;
+        total_amount += static_cast<int64_t>( dest_info.encrypted_amount );
     }
 
-    double remain  = total_amount;
-    double epsilon = 1e-9; // Define a tolerance
+    int64_t remain = total_amount;
 
     for ( auto &utxo : utxo_pool )
     {
-        if ( remain <= epsilon )
+        if ( remain <= 0 )
         {
             break;
         }
@@ -29,11 +27,11 @@ sgns::UTXOTxParameters::UTXOTxParameters( const std::vector<GeniusUTXO>         
             continue;
         }
         InputUTXOInfo curr_input{ utxo.GetTxID(), utxo.GetOutputIdx(), signature };
-        remain -= utxo.GetAmount();
+        remain -= static_cast<int64_t>( utxo.GetAmount() );
 
         inputs_.push_back( curr_input );
     }
-    if ( remain > epsilon )
+    if ( remain > 0 )
     {
         inputs_.clear();
         outputs_.clear();
@@ -43,10 +41,10 @@ sgns::UTXOTxParameters::UTXOTxParameters( const std::vector<GeniusUTXO>         
         outputs_ = destinations;
     }
 
-    if ( remain < epsilon )
+    if ( remain < 0 )
     {
-        double change( std::abs( remain ) );
-        auto   str_address = src_address.public_key_value.str();
+        uint64_t change( std::abs( remain ) );
+        auto     str_address = src_address.public_key_value.str();
         outputs_.push_back( { change, uint256_t( str_address ) } );
     }
 }
