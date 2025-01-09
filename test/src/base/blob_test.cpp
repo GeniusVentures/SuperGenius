@@ -13,7 +13,7 @@ using namespace sgns::base;
  */
 TEST(BlobTest, CreateFromValidHex) {
   std::string hex32 = "00ff";
-  std::array<byte_t, 2> expected{0, 255};
+  std::array<uint8_t, 2> expected{ 0, 255 };
 
   auto result = Blob<2>::fromHex(hex32);
   ASSERT_NO_THROW({
@@ -68,14 +68,14 @@ TEST(BlobTest, CreateFromWrongLendthHex) {
  * given string
  */
 TEST(BlobTest, CreateFromValidString) {
-  std::array<byte_t, 5> expected{'a', 's', 'd', 'f', 'g'};
-  std::string valid_str{expected.begin(), expected.end()};
+    std::array<uint8_t, 5> expected{ 'a', 's', 'd', 'f', 'g' };
+    std::string valid_str{ expected.begin(), expected.end() };
 
-  auto result = Blob<5>::fromString(valid_str);
-  ASSERT_NO_THROW({
-    auto blob = result.value();
-    EXPECT_EQ(blob, expected);
-  }) << "fromString returned an error instead of value";
+    auto result = Blob<5>::fromString( valid_str );
+    ASSERT_NO_THROW( {
+        auto blob = result.value();
+        EXPECT_EQ( blob, expected );
+    } ) << "fromString returned an error instead of value";
 }
 
 /**
@@ -115,10 +115,10 @@ TEST(BlobTest, ToHexTest) {
  * @then blob.toString() returns the string made of that characters
  */
 TEST(BlobTest, ToStringTest) {
-  std::array<byte_t, 5> expected{'a', 's', 'd', 'f', 'g'};
+    std::array<uint8_t, 5> expected{ 'a', 's', 'd', 'f', 'g' };
 
-  Blob<5> blob;
-  std::copy(expected.begin(), expected.end(), blob.begin());
+    Blob<5> blob;
+    std::copy( expected.begin(), expected.end(), blob.begin() );
 
-  ASSERT_EQ(blob.toString(), std::string(expected.begin(), expected.end()));
+    ASSERT_EQ( blob.toString(), std::string( expected.begin(), expected.end() ) );
 }

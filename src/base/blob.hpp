@@ -15,8 +15,6 @@ namespace sgns::base {
    */
   enum class BlobError { INCORRECT_LENGTH = 1 };
 
-  using byte_t = uint8_t;
-
   /**
    * Base type which represents blob of fixed size.
    *
@@ -26,7 +24,7 @@ namespace sgns::base {
    * For std::array it is possible, so we prefer it over std::string.
    */
   template <size_t size_>
-  class Blob : public std::array<byte_t, size_> {
+  class Blob : public std::array<uint8_t, size_> {
    public:
     /**
      * Initialize blob value
@@ -39,7 +37,7 @@ namespace sgns::base {
      * @brief constructor enabling initializer list
      * @param l initializer list
      */
-    explicit constexpr Blob( const std::array<byte_t, size_> &l )
+    explicit constexpr Blob( const std::array<uint8_t, size_> &l )
     {
         std::copy( l.begin(), l.end(), this->begin() );
     }
