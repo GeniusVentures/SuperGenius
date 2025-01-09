@@ -350,7 +350,7 @@ namespace sgns
 
         tx_key % TEST_NET_ID;
 
-        auto transaction_path = tx_key.str() + element->GetTransactionFullPath();
+        auto transaction_path = tx_key.str() + element.GetTransactionFullPath();
 
         return transaction_path;
     }
@@ -628,6 +628,12 @@ namespace sgns
                 {
                     destination_db = destination_db_it->second;
                 }
+
+                boost::format tx_key{ std::string( TRANSACTION_BASE_FORMAT ) };
+
+                tx_key % TEST_NET_ID;
+
+                auto transaction_paths = tx_key.str() + "in" + peer_address + GetTransactionPath( *tx );
 
                 sgns::crdt::GlobalDB::Buffer data_transaction;
                 data_transaction.put( tx->SerializeByteVector() );
