@@ -17,6 +17,7 @@ add_library(sgns_account
     GeniusAccount.cpp
     GeniusNode.cpp
     UTXOTxParameters.cpp
+    IGeniusTransactions.cpp
 )
 
 target_link_libraries(sgns_account

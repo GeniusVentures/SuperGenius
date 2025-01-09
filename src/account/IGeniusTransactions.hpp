@@ -44,24 +44,12 @@ namespace sgns
             return transaction_type;
         }
 
-        static outcome::result<SGTransaction::DAGStruct> DeSerializeDAGStruct( std::vector<uint8_t> &data )
-        {
-            SGTransaction::DAGWrapper dag_wrap;
-            if ( !dag_wrap.ParseFromArray( data.data(), data.size() ) )
-            {
-                std::cerr << "Failed to parse DAGStruct from array." << std::endl;
-                return outcome::failure( boost::system::error_code{} );
-            }
-            SGTransaction::DAGStruct dag;
-            dag.CopyFrom( *dag_wrap.mutable_dag_struct() );
-            return dag;
-        }
+        static outcome::result<SGTransaction::DAGStruct> DeSerializeDAGStruct( std::vector<uint8_t> &data );
 
-        static SGTransaction::DAGStruct SetDAGWithType( const SGTransaction::DAGStruct &dag, const std::string &type )
+        static SGTransaction::DAGStruct SetDAGWithType( SGTransaction::DAGStruct dag, const std::string &type )
         {
-            SGTransaction::DAGStruct dag_with_type = dag;
-            dag_with_type.set_type( type );
-            return dag_with_type;
+            dag.set_type( type );
+            return dag;
         }
 
         virtual std::vector<uint8_t> SerializeByteVector() = 0;
@@ -113,7 +101,7 @@ namespace sgns
          */
         static void RegisterDeserializer( const std::string &transaction_type, TransactionDeserializeFn fn )
         {
-            deserializers_map[transaction_type] = fn;
+            deserializers_map[transaction_type] = std::move( fn );
         }
 
         static std::unordered_map<std::string, TransactionDeserializeFn> &GetDeSerializers()
