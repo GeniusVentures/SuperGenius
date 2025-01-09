@@ -4,7 +4,6 @@
 
 #include <boost/optional.hpp>
 #include "outcome/outcome.hpp"
-#include "base/buffer.hpp"
 #include "primitives/authority.hpp"
 #include "primitives/block_id.hpp"
 #include "primitives/digest.hpp"

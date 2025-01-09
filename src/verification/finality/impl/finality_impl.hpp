@@ -6,7 +6,6 @@
 #include "verification/finality/finality.hpp"
 
 #include "application/app_state_manager.hpp"
-#include "blockchain/block_tree.hpp"
 #include "base/logger.hpp"
 #include "verification/authority/authority_manager.hpp"
 #include "verification/finality/completed_round.hpp"
@@ -14,9 +13,6 @@
 #include "verification/finality/impl/voting_round_impl.hpp"
 #include "verification/finality/voter_set.hpp"
 #include "crypto/ed25519_provider.hpp"
-#include "crypto/hasher.hpp"
-#include "network/gossiper.hpp"
-#include "runtime/finality_api.hpp"
 #include "storage/buffer_map_types.hpp"
 
 namespace sgns::verification::finality {

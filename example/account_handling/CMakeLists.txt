@@ -32,5 +32,6 @@ add_executable(account_handling
     Boost::program_options
     ipfs-bitswap-cpp
 	ipfs-pubsub
+    rapidjson
     ${WIN_CRYPT_LIBRARY}
     )

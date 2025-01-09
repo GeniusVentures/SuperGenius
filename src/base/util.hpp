@@ -14,6 +14,7 @@
 #include <type_traits>
 #include <optional>
 #include <algorithm>
+#include <cmath>
 #include <boost/random.hpp>
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_int_distribution.hpp>
@@ -220,7 +221,6 @@ namespace sgns
             seed_hash = seed_hash * 31 + static_cast<uint8_t>( c );
         }
 
-
         br::mt19937                    rng( seed_hash );
         br::uniform_int_distribution<> dist( 0, 300 );
 
@@ -234,6 +234,12 @@ namespace sgns
         oss << "0x";
         oss << std::hex << std::setw( 64 ) << std::setfill( '0' ) << value;
         return oss.str();
+    }
+
+    static double RoundTo5Digits( double value )
+    {
+        double scale = 1e5; // Scale factor for 4-digit precision
+        return std::round( value * scale ) / scale;
     }
 }
 

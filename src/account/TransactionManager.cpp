@@ -30,14 +30,14 @@ namespace sgns
                                             std::shared_ptr<upnp::UPNP>                      upnp,
                                             uint16_t                                         base_port ) :
         processing_db_m( std::move( processing_db ) ),
+        pubsub_m( std::move( pubsub ) ),
+        base_path_m( std::move( base_path ) ),
         ctx_m( std::move( ctx ) ),
         account_m( std::move( account ) ),
+        timer_m( std::make_shared<boost::asio::steady_timer>( *ctx_m, boost::asio::chrono::milliseconds( 300 ) ) ),
         hasher_m( std::move( hasher ) ),
-        base_path_m( std::move( base_path ) ),
-        pubsub_m( std::move( pubsub ) ),
         upnp_m( std::move( upnp ) ),
-        base_port_m( std::move( base_port + 1) ),
-        timer_m( std::make_shared<boost::asio::steady_timer>( *ctx_m, boost::asio::chrono::milliseconds( 300 ) ) )
+        base_port_m( base_port + 1 )
 
     {
         m_logger->set_level( spdlog::level::off );
@@ -69,7 +69,7 @@ namespace sgns
         }
         used_ports_m.insert( base_port_m );
         base_port_m++;
-        
+
         RefreshPorts();
     }
 
@@ -103,7 +103,7 @@ namespace sgns
         return *account_m;
     }
 
-    bool TransactionManager::TransferFunds( uint64_t amount, const uint256_t &destination )
+    bool TransactionManager::TransferFunds( double amount, const uint256_t &destination )
     {
         bool ret          = false;
         auto maybe_params = UTXOTxParameters::create( account_m->utxos,
@@ -124,19 +124,19 @@ namespace sgns
         return ret;
     }
 
-    void TransactionManager::MintFunds( uint64_t    amount,
+    void TransactionManager::MintFunds( double      amount,
                                         std::string transaction_hash,
                                         std::string chainid,
                                         std::string tokenid )
     {
-        auto mint_transaction = std::make_shared<MintTransaction>( amount,
+        auto mint_transaction = std::make_shared<MintTransaction>( RoundTo5Digits( amount ),
                                                                    chainid,
                                                                    tokenid,
                                                                    FillDAGStruct( transaction_hash ) );
         this->EnqueueTransaction( std::move( mint_transaction ) );
     }
 
-    outcome::result<std::string> TransactionManager::HoldEscrow( uint64_t           amount,
+    outcome::result<std::string> TransactionManager::HoldEscrow( double             amount,
                                                                  const uint256_t   &dev_addr,
                                                                  float              peers_cut,
                                                                  const std::string &job_id )
@@ -147,17 +147,19 @@ namespace sgns
         OUTCOME_TRY( ( auto &&, params ),
                      UTXOTxParameters::create( account_m->utxos,
                                                account_m->address.GetPublicKey(),
-                                               uint64_t{ amount },
+                                               amount,
                                                uint256_t{ "0x" + hash_data.toReadableString() } ) );
 
         account_m->utxos        = UTXOTxParameters::UpdateUTXOList( account_m->utxos, params );
         auto escrow_transaction = std::make_shared<EscrowTransaction>( params,
-                                                                       amount,
+                                                                       RoundTo5Digits( amount ),
                                                                        dev_addr,
                                                                        peers_cut,
                                                                        FillDAGStruct() );
         this->EnqueueTransaction( escrow_transaction );
-        m_logger->debug( "Holding escrow to 0x" + hash_data.toReadableString() );
+        m_logger->debug( "Holding escrow to 0x{} wih the amount {}",
+                         hash_data.toReadableString(),
+                         RoundTo5Digits( amount ) );
 
         return "0x" + hash_data.toReadableString();
     }
@@ -190,17 +192,19 @@ namespace sgns
         std::shared_ptr<EscrowTransaction> escrow_tx = std::dynamic_pointer_cast<EscrowTransaction>( transaction );
         std::vector<std::string>           subtask_ids;
         std::vector<OutputDestInfo>        payout_peers;
-        uint64_t peers_amount = ( escrow_tx->GetPeersCut() * uint64_t{ escrow_tx->GetAmount() } ) /
-                                taskresult.subtask_results().size();
-        auto remainder = escrow_tx->GetAmount();
+        double peers_amount = RoundTo5Digits( ( escrow_tx->GetPeersCut() * escrow_tx->GetAmount() ) /
+                                              static_cast<double>( taskresult.subtask_results().size() ) );
+        auto   remainder    = escrow_tx->GetAmount();
         for ( auto &subtask : taskresult.subtask_results() )
         {
             std::cout << "Subtask Result " << subtask.subtaskid() << "from " << subtask.node_address() << std::endl;
+            m_logger->debug( "Paying out {} ", peers_amount );
             subtask_ids.push_back( subtask.subtaskid() );
-            payout_peers.push_back( { uint256_t{ peers_amount }, uint256_t{ subtask.node_address() } } );
+            payout_peers.push_back( { peers_amount, uint256_t{ subtask.node_address() } } );
             remainder -= peers_amount;
         }
-        payout_peers.push_back( { uint256_t{ remainder }, escrow_tx->GetDevAddress() } );
+        m_logger->debug( "Sending to dev {}", remainder );
+        payout_peers.push_back( { RoundTo5Digits( remainder ), escrow_tx->GetDevAddress() } );
         InputUTXOInfo escrow_utxo_input;
 
         escrow_utxo_input.txid_hash_  = ( base::Hash256::fromReadableString( escrow_tx->dag_st.data_hash() ) ).value();
@@ -216,9 +220,9 @@ namespace sgns
         return outcome::success();
     }
 
-    uint64_t TransactionManager::GetBalance()
+    double TransactionManager::GetBalance()
     {
-        return account_m->GetBalance<uint64_t>();
+        return account_m->GetBalance<double>();
     }
 
     void TransactionManager::Update()
@@ -276,8 +280,7 @@ namespace sgns
 
         BOOST_OUTCOME_TRYV2( auto &&, outgoing_db_m->Put( { transaction_path }, data_transaction ) );
 
-        m_logger->debug( "Putting on " + transaction_path +
-                         " the data: " + std::string( data_transaction.toString() ) );
+        m_logger->debug( "Recording the transaction on " + transaction_path );
         if ( transaction->GetType() == "transfer" )
         {
             m_logger->debug( "Notifying receiving peers of transfers" );
@@ -439,7 +442,7 @@ namespace sgns
             if ( dest_infos[i].dest_address == account_m->GetAddress<uint256_t>() )
             {
                 auto       hash = ( base::Hash256::fromReadableString( transfer_tx->dag_st.data_hash() ) ).value();
-                GeniusUTXO new_utxo( hash, i, uint64_t{ dest_infos[i].encrypted_amount } );
+                GeniusUTXO new_utxo( hash, i, dest_infos[i].encrypted_amount );
                 account_m->PutUTXO( new_utxo );
             }
         }
@@ -483,7 +486,7 @@ namespace sgns
                 {
                     if ( dest_infos.outputs_[1].dest_address == account_m->GetAddress<uint256_t>() )
                     {
-                        GeniusUTXO new_utxo( hash, 1, uint64_t{ dest_infos.outputs_[1].encrypted_amount } );
+                        GeniusUTXO new_utxo( hash, 1, dest_infos.outputs_[1].encrypted_amount );
                         account_m->PutUTXO( new_utxo );
                     }
                 }

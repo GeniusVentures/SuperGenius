@@ -177,7 +177,7 @@ TEST_F(SubTaskQueueAccessorImplTest, DISABLED_SubscribtionToResultChannel)
     subTask->set_subtaskid("SUBTASK_ID");
 
     auto processingQueueManager = std::make_shared<ProcessingSubTaskQueueManager>(
-        queueChannel, pubs1->GetAsioContext(), nodeId);
+        queueChannel, pubs1->GetAsioContext(), nodeId, [](const std::string &){});
     // The local queue wrapper doesn't own the queue
     processingQueueManager->ProcessSubTaskQueueMessage(queue.release());
 
@@ -260,7 +260,7 @@ TEST_F(SubTaskQueueAccessorImplTest, DISABLED_TaskFinalization)
     }
 
     auto processingQueueManager1 = std::make_shared<ProcessingSubTaskQueueManager>(
-        queueChannel, pubs1->GetAsioContext(), nodeId1);
+        queueChannel, pubs1->GetAsioContext(), nodeId1,[](const std::string &){});
     processingQueueManager1->ProcessSubTaskQueueMessage(queue.release());
 
     auto subTaskQueueAccessor1 = std::make_shared<SubTaskQueueAccessorImpl>(
@@ -337,7 +337,7 @@ TEST_F(SubTaskQueueAccessorImplTest, DISABLED_InvalidSubTasksRestart)
     }
 
     auto processingQueueManager1 = std::make_shared<ProcessingSubTaskQueueManager>(
-        queueChannel, pubs1->GetAsioContext(), nodeId1);
+        queueChannel, pubs1->GetAsioContext(), nodeId1,[](const std::string &){});
     processingQueueManager1->ProcessSubTaskQueueMessage(queue.release());
 
     bool isTaskFinalized1 = false;
@@ -364,7 +364,7 @@ TEST_F(SubTaskQueueAccessorImplTest, DISABLED_InvalidSubTasksRestart)
     ASSERT_FALSE(isTaskFinalized1);
 
     auto processingQueueManager2 = std::make_shared<ProcessingSubTaskQueueManager>(
-        queueChannel, pubs1->GetAsioContext(), nodeId2);
+        queueChannel, pubs1->GetAsioContext(), nodeId2,[](const std::string &){});
     processingQueueManager2->SetProcessingTimeout(std::chrono::milliseconds(500));
 
     // Change queue owner

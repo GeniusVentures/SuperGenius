@@ -39,7 +39,7 @@ namespace sgns
         for ( const auto &output : outputs_ )
         {
             SGTransaction::TransferOutput *output_proto = utxo_proto_params->add_outputs();
-            output_proto->set_encrypted_amount( output.encrypted_amount.str() );
+            output_proto->set_encrypted_amount( output.encrypted_amount );
             output_proto->set_dest_addr( output.dest_address.str() );
         }
         size_t               size = tx_struct.ByteSizeLong();
@@ -73,7 +73,7 @@ namespace sgns
         {
             const SGTransaction::TransferOutput &output_proto = utxo_proto_params->outputs( i );
 
-            OutputDestInfo curr{ uint256_t{ output_proto.encrypted_amount() }, uint256_t{ output_proto.dest_addr() } };
+            OutputDestInfo curr{ output_proto.encrypted_amount() , uint256_t{ output_proto.dest_addr() } };
             outputs.push_back( curr );
         }
 

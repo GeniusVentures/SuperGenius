@@ -78,47 +78,21 @@ if(APPLE)
     endif()
 endif()
 
-target_link_libraries(processing_service PRIVATE
+target_link_libraries(processing_service
+    PRIVATE
     crdt_globaldb
     ipfs-pubsub
     SGProcessingProto
-    OpenSSL::Crypto
-    OpenSSL::SSL
-    Boost::Boost.DI
-    p2p::p2p_basic_host
-    p2p::p2p_default_network
-    p2p::p2p_peer_repository
-    p2p::p2p_inmem_address_repository
-    p2p::p2p_inmem_key_repository
-    p2p::p2p_inmem_protocol_repository
-    p2p::p2p_gossip
-    p2p::asio_scheduler
     ${WIN_CRYPT_LIBRARY}
     AsyncIOManager
     Vulkan::Vulkan
     rapidjson
-    ipfs-pubsub
 )
 TARGET_LINK_LIBRARIES_WHOLE_ARCHIVE_W_TYPE(processing_service PUBLIC
-    MNN::MNN)
-target_include_directories(processing_service PRIVATE ${AsyncIOManager_INCLUDE_DIR})
+    MNN::MNN
 
-#if(WIN32)
-#    target_link_options(processing_service PUBLIC
-#        /WHOLEARCHIVE
-#        MNN::MNN
-#    )
-#elseif(APPLE)
-#    target_link_options(processing_service PUBLIC
-#        -force_load
-#        MNN::MNN
-#    )
-#else()
-#    target_link_options(processing_service PUBLIC
-#        "-Wl,--whole-archive"
-#        MNN::MNN
-#        "-Wl,--no-whole-archive"
-#    )
-#endif()
+    # Vulkan::Vulkan
+)
+target_include_directories(processing_service PRIVATE ${AsyncIOManager_INCLUDE_DIR})
 
 supergenius_install(processing_service)

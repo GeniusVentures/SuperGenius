@@ -1,7 +1,6 @@
 #ifndef SUPERGENIUS_CRYPTO_STORE_IMPL_HPP
 #define SUPERGENIUS_CRYPTO_STORE_IMPL_HPP
 
-#include <boost/filesystem.hpp>
 #include <boost/variant.hpp>
 #include "base/blob.hpp"
 #include "base/logger.hpp"

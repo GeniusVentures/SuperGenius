@@ -1,9 +1,8 @@
-
-
 add_library(twox twox.cpp)
-set_target_properties(twox PROPERTIES PUBLIC_HEADER "twox.hpp")
 target_link_libraries(twox
-  xxhash
+    PUBLIC
     blob
-  )
+    PRIVATE
+    xxhash
+)
 supergenius_install(twox)

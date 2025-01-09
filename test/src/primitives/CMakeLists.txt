@@ -10,5 +10,5 @@ target_link_libraries(primitives_codec_test
     primitives
     scale
     testutil_primitives_generator
-    Boost::boost
-    )
+    Boost::headers
+)

@@ -15,6 +15,7 @@
 #include "ProofSystem/ElGamalKeyGenerator.hpp"
 #include "account/GeniusUTXO.hpp"
 #include "outcome/outcome.hpp"
+#include "base/util.hpp"
 
 namespace sgns
 {
@@ -29,7 +30,7 @@ namespace sgns
 
     struct OutputDestInfo
     {
-        uint256_t encrypted_amount; ///< El Gamal encrypted amount
+        double    encrypted_amount; ///< El Gamal encrypted amount
         uint256_t dest_address;     ///< Destination node address
     };
 
@@ -45,11 +46,15 @@ namespace sgns
 
         static outcome::result<UTXOTxParameters> create( const std::vector<GeniusUTXO>          &utxo_pool,
                                                          const KeyGenerator::ElGamal::PublicKey &src_address,
-                                                         uint64_t                                amount,
+                                                         double                                  amount,
                                                          const uint256_t                        &dest_address,
                                                          std::string                             signature = "" )
         {
-            UTXOTxParameters instance( utxo_pool, src_address, amount, dest_address, std::move( signature ) );
+            UTXOTxParameters instance( utxo_pool,
+                                       src_address,
+                                       RoundTo5Digits( amount ),
+                                       dest_address,
+                                       std::move( signature ) );
 
             if ( !instance.inputs_.empty() )
             {
@@ -95,12 +100,12 @@ namespace sgns
     private:
         UTXOTxParameters( const std::vector<GeniusUTXO>          &utxo_pool,
                           const KeyGenerator::ElGamal::PublicKey &src_address,
-                          uint64_t                                amount,
+                          double                                  amount,
                           const uint256_t                        &dest_address,
                           std::string                             signature ) :
             UTXOTxParameters( utxo_pool,
                               src_address,
-                              { OutputDestInfo{ uint256_t{ amount }, dest_address } },
+                              { OutputDestInfo{ RoundTo5Digits( amount ), dest_address } },
                               std::move( signature ) )
         {
         }

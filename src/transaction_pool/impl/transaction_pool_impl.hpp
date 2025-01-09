@@ -2,13 +2,13 @@
 #ifndef SUPERGENIUS_SRC_TRANSACTION_POOL_IMPL_HPP
 #define SUPERGENIUS_SRC_TRANSACTION_POOL_IMPL_HPP
 
-#include "outcome/outcome.hpp"
+#include <list>
 
+#include "outcome/outcome.hpp"
 #include "blockchain/block_header_repository.hpp"
 #include "base/logger.hpp"
 #include "transaction_pool/pool_moderator.hpp"
 #include "transaction_pool/transaction_pool.hpp"
-#include <list>
 
 namespace sgns::transaction_pool {
 

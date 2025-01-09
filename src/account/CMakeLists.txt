@@ -14,13 +14,19 @@ add_library(sgns_account
 )
 
 target_link_libraries(sgns_account
+    PUBLIC
+    Boost::headers
+    KeyGeneration
+    outcome
+    logger
     GeniusKDF
+    crdt_globaldb
+    PRIVATE
     json_secure_storage
     component_factory
     processing_service
     block_header_repository
     block_storage
-    logger
     crdt_globaldb
     crdt_graphsync_dagsyncer
     p2p::p2p_basic_host
@@ -35,11 +41,14 @@ target_link_libraries(sgns_account
     p2p::p2p_ping
     Boost::Boost.DI
     SGTransactionProto
-    Boost::boost
     logger
     gnus_upnp
-    KeyGeneration
     AsyncIOManager
+    ${TrustWalletCore}
+    ${wallet_core_rs}
+    ${TrezorCrypto}
+    protobuf::libprotobuf
+    rapidjson
     ${WIN_CRYPT_LIBRARY}
 )
 
@@ -47,8 +56,10 @@ target_include_directories(
     sgns_account
     PRIVATE
     ${AsyncIOManager_INCLUDE_DIR}
+    ${TrustWalletCore_INCLUDE_DIR}
 )
 
 set_target_properties(sgns_account PROPERTIES PUBLIC_HEADER "GeniusNode.hpp")
 
 supergenius_install(sgns_account)
+install(DIRECTORY "${CMAKE_SOURCE_DIR}/../../ProofSystem/include/" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}" FILES_MATCHING PATTERN "*.h*")

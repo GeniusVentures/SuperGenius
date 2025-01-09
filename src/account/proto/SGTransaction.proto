@@ -25,7 +25,7 @@ message TransferUTXOInput
 }
 message TransferOutput
 {
-    bytes encrypted_amount = 1; // 
+    double encrypted_amount = 1; // 
     bytes dest_addr = 2; // 
 }
 message UTXOTxParams
@@ -54,13 +54,13 @@ message MintTx
     DAGStruct dag_struct = 1;// 
     bytes chain_id = 2;
     bytes token_id = 3;
-    uint64 amount = 4; // 
+    double amount = 4; // 
 }
 message EscrowTx
 {
     DAGStruct dag_struct = 1;// 
     UTXOTxParams utxo_params = 2; //
-    uint64 amount = 3;
+    double amount = 3;
     bytes dev_addr = 4; // 
     float peers_cut = 5; // 
 }

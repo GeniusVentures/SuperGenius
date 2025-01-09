@@ -8,36 +8,41 @@
 #define _GENIUS_UTXO_HPP
 
 #include "base/blob.hpp"
+#include "base/util.hpp"
 
 namespace sgns
 {
     class GeniusUTXO
     {
     public:
-        GeniusUTXO( const base::Hash256 &hash, uint32_t previous_index, uint64_t amount ) :
+        GeniusUTXO( const base::Hash256 &hash, uint32_t previous_index, double amount ) :
             txid_hash_( hash ),            //
             output_idx_( previous_index ), //
-            amount_( amount ),             //
+            amount_( RoundTo5Digits(amount) ),             //
             locked_( false )               //
         {
         }
 
-        void ToggleLock(bool lock)
+        void ToggleLock( bool lock )
         {
             locked_ = lock;
         }
+
         base::Hash256 GetTxID() const
         {
             return txid_hash_;
         }
+
         uint32_t GetOutputIdx() const
         {
             return output_idx_;
         }
-        uint64_t GetAmount() const
+
+        double GetAmount() const
         {
             return amount_;
         }
+
         bool GetLock() const
         {
             return locked_;
@@ -46,7 +51,7 @@ namespace sgns
     private:
         base::Hash256 txid_hash_;
         uint32_t      output_idx_;
-        uint64_t      amount_;
+        double        amount_;
         bool          locked_;
     };
 }

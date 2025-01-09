@@ -55,7 +55,7 @@ namespace sgns::processing
     {
         if ( !m_isStopped )
         {
-            m_logger->debug( "[SERVICE_WAS_PREVIOUSLY_STARTED]" );
+            m_logger->debug( "[{}] [SERVICE_WAS_PREVIOUSLY_STARTED]", node_address_ );
             return;
         }
 
@@ -63,7 +63,7 @@ namespace sgns::processing
 
         Listen( processingGridChannelId );
         SendChannelListRequest();
-        m_logger->debug( "[SERVICE_STARTED]" );
+        m_logger->debug( "[{}] [SERVICE_STARTED]", node_address_ );
     }
 
     void ProcessingServiceImpl::StopProcessing()
@@ -82,7 +82,7 @@ namespace sgns::processing
             m_processingNodes = {};
         }
 
-        m_logger->debug( "[SERVICE_STOPPED]" );
+        m_logger->debug( "[{}] [SERVICE_STOPPED]", node_address_ );
     }
 
     void ProcessingServiceImpl::Listen( const std::string &processingGridChannelId )
@@ -111,7 +111,7 @@ namespace sgns::processing
 
     void ProcessingServiceImpl::OnMessage( boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message &> message )
     {
-        m_logger->debug( "On Message. this {}", reinterpret_cast<size_t>(this));
+        m_logger->debug( "[{}] On Message.", node_address_ );
         if ( message )
         {
             SGProcessing::GridChannelMessage gridMessage;
@@ -121,7 +121,7 @@ namespace sgns::processing
                 {
                     auto response = gridMessage.processing_channel_response();
 
-                    m_logger->debug( "Processing channel received. id:{}", response.channel_id() );
+                    m_logger->debug( "[{}] Processing channel received. id:{}", node_address_, response.channel_id() );
 
                     AcceptProcessingChannel( response.channel_id() );
                 }
@@ -137,7 +137,7 @@ namespace sgns::processing
     void ProcessingServiceImpl::OnQueueProcessingCompleted( const std::string              &subTaskQueueId,
                                                             const SGProcessing::TaskResult &taskResult )
     {
-        m_logger->debug( "SUBTASK_QUEUE_PROCESSING_COMPLETED: {}", subTaskQueueId );
+        m_logger->debug( "[{}] SUBTASK_QUEUE_PROCESSING_COMPLETED: {}", node_address_, subTaskQueueId );
 
         {
             std::scoped_lock lock( m_mutexNodes );
@@ -159,7 +159,7 @@ namespace sgns::processing
 
     void ProcessingServiceImpl::OnProcessingError( const std::string &subTaskQueueId, const std::string &errorMessage )
     {
-        m_logger->error( "PROCESSING_ERROR reason: {}", errorMessage );
+        m_logger->error( "[{}] PROCESSING_ERROR reason: {}", node_address_, errorMessage );
 
         {
             std::scoped_lock lock( m_mutexNodes );
@@ -184,12 +184,15 @@ namespace sgns::processing
         {
             return;
         }
-        m_logger->debug( "Accept Processing CHannel. this {}", reinterpret_cast<size_t>(this));
+        m_logger->debug( "[{}] AcceptProcessingChannel", node_address_ );
         std::scoped_lock lock( m_mutexNodes );
-        m_logger->debug( "Accept Processing CHannel 2. {} {}",m_processingNodes.size(),m_maximalNodesCount);
+        m_logger->debug( "[{}] Number of nodes: {}, Max nodes:  {}",
+                         node_address_,
+                         m_processingNodes.size(),
+                         m_maximalNodesCount );
         if ( m_processingNodes.size() < m_maximalNodesCount )
         {
-            m_logger->debug( "Accept Channel Create Node");
+            m_logger->debug( "[{}] Accept Channel Create Node", node_address_ );
             auto node = std::make_shared<ProcessingNode>(
                 m_gossipPubSub,
                 m_subTaskStateStorage,
@@ -202,7 +205,7 @@ namespace sgns::processing
                 std::bind( &ProcessingServiceImpl::OnProcessingError, this, processingQueuelId, std::placeholders::_1 ),
                 node_address_,
                 "" );
-            m_logger->debug( "Attach to processing Queue");
+            m_logger->debug( "Attach to processing Queue" );
             node->AttachTo( processingQueuelId );
             m_processingNodes[processingQueuelId] = node;
         }
@@ -215,11 +218,11 @@ namespace sgns::processing
 
     void ProcessingServiceImpl::PublishLocalChannelList()
     {
-        m_logger->debug( "Publish Local Channels.");
+        m_logger->debug( "Publish Local Channels." );
         std::scoped_lock lock( m_mutexNodes );
         for ( auto &itNode : m_processingNodes )
         {
-            m_logger->debug( "Owns Channel? {}.", itNode.second->HasQueueOwnership());
+            m_logger->debug( "Owns Channel? {}.", itNode.second->HasQueueOwnership() );
             // Only channel host answers to reduce a number of published messages
             if ( itNode.second->HasQueueOwnership() )
             {
@@ -265,18 +268,22 @@ namespace sgns::processing
                 auto maybe_task = m_subTaskEnqueuer->EnqueueSubTasks( subTaskQueueId, subTasks );
                 if ( maybe_task )
                 {
-                auto node = std::make_shared<ProcessingNode>(
-                    m_gossipPubSub,
-                    m_subTaskStateStorage,
-                    m_subTaskResultStorage,
-                    m_processingCore,
-                    std::bind( &ProcessingServiceImpl::OnQueueProcessingCompleted,
-                               this,
-                               subTaskQueueId,
-                               std::placeholders::_1 ),
-                    std::bind( &ProcessingServiceImpl::OnProcessingError, this, subTaskQueueId, std::placeholders::_1 ),
-                    node_address_,
-                    maybe_task.value().escrow_path() );
+                    m_logger->debug( "[{}] Grabbed task, creating first node", node_address_ );
+                    auto node = std::make_shared<ProcessingNode>(
+                        m_gossipPubSub,
+                        m_subTaskStateStorage,
+                        m_subTaskResultStorage,
+                        m_processingCore,
+                        std::bind( &ProcessingServiceImpl::OnQueueProcessingCompleted,
+                                   this,
+                                   subTaskQueueId,
+                                   std::placeholders::_1 ),
+                        std::bind( &ProcessingServiceImpl::OnProcessingError,
+                                   this,
+                                   subTaskQueueId,
+                                   std::placeholders::_1 ),
+                        node_address_,
+                        maybe_task.value().escrow_path() );
 
                     // @todo Figure out if the task is still available for other peers
                     // @todo Check if it is better to call EnqueueSubTasks within host
@@ -299,7 +306,7 @@ namespace sgns::processing
         }
         if ( node_dispatched )
         {
-           PublishLocalChannelList();
+            PublishLocalChannelList();
         }
     }
 }

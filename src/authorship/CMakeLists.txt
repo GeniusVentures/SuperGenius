@@ -4,28 +4,35 @@ add_library(block_builder
     impl/block_builder_impl.hpp
     impl/block_builder_error.cpp
     impl/block_builder_error.hpp
-    )
+)
 target_link_libraries(block_builder
-    outcome
-    buffer
+    PUBLIC
+    primitives
     logger
-    )
+)
 
 add_library(block_builder_factory
     block_builder_factory.hpp
     impl/block_builder_factory_impl.cpp
     impl/block_builder_factory_impl.hpp
-    )
+)
 target_link_libraries(block_builder_factory
+    PUBLIC
     block_builder
+    primitives
+    PRIVATE
     block_header_repository
-    )
+)
 
 add_library(proposer
     proposer.hpp
     impl/proposer_impl.cpp
     impl/proposer_impl.hpp
-    )
+)
 target_link_libraries(proposer
+    PUBLIC
+    primitives
+    PRIVATE
+    logger
     block_builder_factory
-    )
+)

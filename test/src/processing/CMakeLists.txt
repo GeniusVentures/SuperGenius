@@ -13,7 +13,7 @@ target_link_libraries(processing_service_test
     SGProcessingProto
     processing_service
     logger
-    Boost::boost
+    Boost::headers
     p2p::p2p_logger
     ipfs-pubsub
 )

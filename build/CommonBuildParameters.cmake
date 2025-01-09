@@ -16,7 +16,6 @@ if(BUILD_TESTING)
     set(GTest_DIR "${_THIRDPARTY_BUILD_DIR}/GTest/lib/cmake/GTest")
     set(GTest_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/GTest/include")
     find_package(GTest CONFIG REQUIRED)
-    include_directories(${GTest_INCLUDE_DIR})
 endif()
 
 # absl
@@ -70,7 +69,7 @@ endif()
 
 include(${PROJECT_ROOT}/cmake/functions.cmake)
 
-#mnn
+# MNN
 set(MNN_DIR "${_THIRDPARTY_BUILD_DIR}/MNN/lib/cmake/MNN")
 find_package(MNN CONFIG REQUIRED)
 set(MNN_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/MNN/include")
@@ -78,7 +77,8 @@ message(STATIS "INCLUDE DIR ${MNN_INCLUDE_DIR}")
 include_directories(${MNN_INCLUDE_DIR})
 get_target_property(MNN_LIB_PATH MNN::MNN IMPORTED_LOCATION)
 message(STATUS "MNN PATH ${MNN_LIB_PATH}")
-# openssl project
+
+# OpenSSL
 set(OPENSSL_DIR "${_THIRDPARTY_BUILD_DIR}/openssl/build/${CMAKE_SYSTEM_NAME}${ABI_SUBFOLDER_NAME}" CACHE PATH "Path to OpenSSL install folder")
 set(OPENSSL_USE_STATIC_LIBS ON CACHE BOOL "OpenSSL use static libs")
 set(OPENSSL_MSVC_STATIC_RT ON CACHE BOOL "OpenSSL use static RT")
@@ -199,7 +199,6 @@ if(NOT TARGET Vulkan::Vulkan)
     find_package(Vulkan REQUIRED)
 endif()
 
-
 # ipfs-lite-cpp
 set(ipfs-lite-cpp_DIR "${_THIRDPARTY_BUILD_DIR}/ipfs-lite-cpp/lib/cmake/ipfs-lite-cpp")
 find_package(ipfs-lite-cpp CONFIG REQUIRED)
@@ -266,6 +265,13 @@ set(gnus_upnp_DIR "${_THIRDPARTY_BUILD_DIR}/gnus_upnp/lib/cmake/gnus_upnp")
 find_package(gnus_upnp CONFIG REQUIRED)
 include_directories(${gnus_upnp_INCLUDE_DIR})
 
+# wallet-core
+set(TrustWalletCore_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/wallet-core/lib")
+set(TrustWalletCore_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/wallet-core/include")
+find_library(TrezorCrypto TrezorCrypto HINTS ${TrustWalletCore_LIBRARY_DIR} REQUIRED)
+find_library(wallet_core_rs wallet_core_rs HINTS ${TrustWalletCore_LIBRARY_DIR} REQUIRED)
+find_library(TrustWalletCore TrustWalletCore HINTS ${TrustWalletCore_LIBRARY_DIR} REQUIRED)
+
 include_directories(
     ${PROJECT_ROOT}/src
 )
@@ -312,9 +318,6 @@ endif()
 if(BUILD_EXAMPLES)
     add_subdirectory(${PROJECT_ROOT}/example ${CMAKE_BINARY_DIR}/example)
 endif()
-
-
-
 
 install(
     EXPORT supergeniusTargets
@@ -380,4 +383,3 @@ install(FILES
     ${CMAKE_CURRENT_BINARY_DIR}/SuperGeniusConfigVersion.cmake
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/SuperGenius
 )
-

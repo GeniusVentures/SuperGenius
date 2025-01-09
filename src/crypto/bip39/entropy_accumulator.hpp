@@ -3,7 +3,6 @@
 #ifndef SUPERGENIUS_CRYPTO_BIP39_ENTROPY_HPP
 #define SUPERGENIUS_CRYPTO_BIP39_ENTROPY_HPP
 
-#include <boost/assert.hpp>
 #include "outcome/outcome.hpp"
 
 #include <bitset>

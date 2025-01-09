@@ -1,12 +1,8 @@
-
-
 #ifndef SUPERGENIUS_PRODUCTION_BLOCK_HEADER_HPP
 #define SUPERGENIUS_PRODUCTION_BLOCK_HEADER_HPP
 
 #include "verification/production/common.hpp"
 #include "crypto/sr25519_types.hpp"
-#include "primitives/common.hpp"
-#include "primitives/digest.hpp"
 
 namespace sgns::verification {
   /**
@@ -55,6 +51,6 @@ namespace sgns::verification {
     return s >> fake_type_index >> bh.authority_index >> bh.slot_number
            >> fake_weight >> bh.vrf_output;
   }
-}  // namespace sgns::verification
+}
 
-#endif  // SUPERGENIUS_PRODUCTION_BLOCK_HEADER_HPP
+#endif

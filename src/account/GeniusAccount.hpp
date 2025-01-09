@@ -25,6 +25,8 @@ namespace sgns
     class GeniusAccount
     {
     public:
+        static const std::array<uint8_t, 32> ELGAMAL_PUBKEY_PREDEFINED;
+
         GeniusAccount( uint8_t token_type, std::string_view base_path, const char *eth_private_key );
 
         ~GeniusAccount()
@@ -55,9 +57,9 @@ namespace sgns
         [[nodiscard]] T GetBalance() const;
 
         template <>
-        [[nodiscard]] uint64_t GetBalance() const
+        [[nodiscard]] double GetBalance() const
         {
-            uint64_t retval = 0;
+            double retval = 0;
 
             //std::cout << "utxo's ID: ";
             for ( auto &curr : utxos )
@@ -75,7 +77,7 @@ namespace sgns
         template <>
         [[nodiscard]] std::string GetBalance() const
         {
-            return std::to_string( GetBalance<uint64_t>() );
+            return std::to_string( GetBalance<double>() );
         }
 
         [[nodiscard]] std::string GetToken() const
@@ -134,7 +136,7 @@ namespace sgns
         std::vector<GeniusUTXO> utxos;
 
     private:
-        uint64_t balance;
+        //uint64_t balance;
 
         static outcome::result<KeyGenerator::ElGamal> GenerateGeniusAddress( std::string_view base_path,
                                                                              const char      *eth_private_key );

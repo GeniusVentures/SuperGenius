@@ -1,5 +1,3 @@
-
-
 #ifndef SUPERGENIUS_PRODUCTION_IMPL_HPP
 #define SUPERGENIUS_PRODUCTION_IMPL_HPP
 
@@ -11,17 +9,12 @@
 #include "outcome/outcome.hpp"
 #include "application/app_state_manager.hpp"
 #include "authorship/proposer.hpp"
-#include "blockchain/block_tree.hpp"
 #include "clock/timer.hpp"
 #include "base/logger.hpp"
 #include "verification/production/types/production_meta.hpp"
 #include "verification/production/production_gossiper.hpp"
-#include "verification/production/production_lottery.hpp"
-#include "verification/production/epoch_storage.hpp"
 #include "verification/production/impl/block_executor.hpp"
 #include "crypto/hasher.hpp"
-#include "crypto/sr25519_types.hpp"
-#include "primitives/production_configuration.hpp"
 #include "storage/trie/trie_storage.hpp"
 
 namespace sgns::verification {
@@ -165,6 +158,6 @@ namespace sgns::verification {
 
     base::Logger log_;
   };
-}  // namespace sgns::verification
+}
 
-#endif  // SUPERGENIUS_PRODUCTION_IMPL_HPP
+#endif
