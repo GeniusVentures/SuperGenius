@@ -9,6 +9,8 @@
 #include "singleton/CComponentFactory.hpp"
 #include "WalletCore/PrivateKey.h"
 #include <nil/crypto3/pubkey/algorithm/sign.hpp>
+#include <boost/algorithm/hex.hpp>
+
 using namespace boost::multiprecision::literals;
 
 namespace
@@ -65,8 +67,14 @@ namespace sgns
                 return outcome::failure( std::errc::invalid_argument );
             }
 
-            TW::PrivateKey private_key( eth_private_key );
+            std::vector<uint8_t> private_key_bytes;
+            boost::algorithm::unhex(eth_private_key, eth_private_key + strlen(eth_private_key), std::back_inserter(private_key_bytes));
 
+            if (private_key_bytes.size() != TW::PrivateKey::_size) {
+                return outcome::failure(std::make_error_code(std::errc::invalid_argument)); 
+            }
+
+            TW::PrivateKey private_key( private_key_bytes );
             auto signed_secret = private_key.sign(
                 TW::Data( ELGAMAL_PUBKEY_PREDEFINED.cbegin(), ELGAMAL_PUBKEY_PREDEFINED.cend() ),
                 TWCurveSECP256k1 );
