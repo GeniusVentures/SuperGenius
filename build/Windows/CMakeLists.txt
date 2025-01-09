@@ -45,6 +45,7 @@ set(CMAKE_TOOLCHAIN_FILE "${PROJECT_ROOT}/cmake/toolchain/cxx17.cmake")
 
 # Set Windows crypto and socket library
 set(USER_ENV_LIBRARY userenv)
+set(WIN_API_LIBRARY ntdll)
 set(WIN_SOCK_LIBRARY wsock32 ws2_32)
 set(WIN_CRYPT_LIBRARY crypt32)
 

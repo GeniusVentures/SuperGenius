@@ -9,7 +9,7 @@ target_link_libraries(processing_nodes_test
     sgns_account
 )
 if(WIN32)
-    target_link_options(processing_nodes_test PUBLIC /WHOLEARCHIVE:"$<TARGET_FILE:sgns_account>")
+    target_link_options(processing_nodes_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:sgns_account>)
 
 elseif(APPLE)
     target_link_options(processing_nodes_test PUBLIC -force_load "$<TARGET_FILE:sgns_account>")

@@ -44,6 +44,8 @@ target_link_libraries(sgns_account
     logger
     gnus_upnp
     AsyncIOManager
+    ${WIN_API_LIBRARY}
+    ${USER_ENV_LIBRARY}
     ${TrustWalletCore}
     ${wallet_core_rs}
     ${TrezorCrypto}
@@ -60,6 +62,8 @@ target_include_directories(
 )
 
 set_target_properties(sgns_account PROPERTIES PUBLIC_HEADER "GeniusNode.hpp")
-
+if (MSVC)
+    target_compile_options(sgns_account PRIVATE /constexpr:steps10000000)
+endif()
 supergenius_install(sgns_account)
 install(DIRECTORY "${CMAKE_SOURCE_DIR}/../../ProofSystem/include/" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}" FILES_MATCHING PATTERN "*.h*")

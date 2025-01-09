@@ -5,10 +5,11 @@
 #include "ProofSystem/KDFGenerator.hpp"
 #include "WalletCore/Hash.h"
 #include "local_secure_storage/ISecureStorage.hpp"
-#include "nil/crypto3/multiprecision/cpp_int/import_export.hpp"
+#include "nil/crypto3/multiprecision/cpp_int_modular/import_export.hpp"
 #include "singleton/CComponentFactory.hpp"
 #include "WalletCore/PrivateKey.h"
 #include <nil/crypto3/pubkey/algorithm/sign.hpp>
+using namespace boost::multiprecision::literals;
 
 namespace
 {
@@ -52,10 +53,10 @@ namespace sgns
         auto secure_storage = std::dynamic_pointer_cast<ISecureStorage>( icomponent );
         auto load_res       = secure_storage->Load( "sgns_key", std::string( base_path ) );
 
-        nil::crypto3::multiprecision::uint256_t key_seed;
+        boost::multiprecision::uint256_t key_seed;
         if ( load_res )
         {
-            key_seed = nil::crypto3::multiprecision::uint256_t( load_res.value() );
+            key_seed = boost::multiprecision::uint256_t( load_res.value() );
         }
         else
         {
@@ -78,7 +79,7 @@ namespace sgns
 
             auto hashed = TW::Hash::sha256( signed_secret );
 
-            key_seed = nil::crypto3::multiprecision::uint256_t( hashed );
+            key_seed = boost::multiprecision::uint256_t( hashed );
 
             BOOST_OUTCOME_TRYV2( auto &&,
                                  secure_storage->Save( "sgns_key", key_seed.str(), std::string( base_path ) ) );
