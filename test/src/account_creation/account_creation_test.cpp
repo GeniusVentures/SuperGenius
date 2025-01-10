@@ -44,6 +44,9 @@ TEST_F(AccountCreationTest, AccountCreationAddress )
 {
 
     sgns::GeniusAccount account(0, ".", "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef");
+    sgns::GeniusAccount account2(0, ".", "deedbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef");
     std::string address_main = account.GetAddress<std::string>();
+    std::string address_main2 = account2.GetAddress<std::string>();
     EXPECT_EQ(address_main, "0xcffb285925b6e961cd9f3edf6568042f8282eee682f173b6330c8dc024a701a7") << "Address is not expected" << address_main;
+    EXPECT_NE(address_main, address_main2) << "Addresses are equal even though they should not be";
 }
