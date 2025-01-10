@@ -268,10 +268,9 @@ include_directories(${gnus_upnp_INCLUDE_DIR})
 # wallet-core
 set(TrustWalletCore_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/wallet-core/lib")
 set(TrustWalletCore_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/wallet-core/include")
-
-find_library(TrezorCrypto TrezorCrypto HINTS ${TrustWalletCore_LIBRARY_DIR} REQUIRED)
-find_library(wallet_core_rs wallet_core_rs HINTS ${TrustWalletCore_LIBRARY_DIR} REQUIRED)
-find_library(TrustWalletCore TrustWalletCore HINTS ${TrustWalletCore_LIBRARY_DIR} REQUIRED)
+find_library(TrezorCrypto TrezorCrypto PATHS ${TrustWalletCore_LIBRARY_DIR} REQUIRED)
+find_library(wallet_core_rs wallet_core_rs PATHS ${TrustWalletCore_LIBRARY_DIR} REQUIRED)
+find_library(TrustWalletCore TrustWalletCore PATHS ${TrustWalletCore_LIBRARY_DIR} REQUIRED)
 
 include_directories(
     ${PROJECT_ROOT}/src
