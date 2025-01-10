@@ -153,7 +153,7 @@ jobs:
       - name: Install Linux host dependencies
         run: |
           sudo apt install ccache ninja-build -y
-          sudo apt install vulkan-tools vulkan-validationlayers-dev libvulkan-dev -y
+          sudo apt install vulkan-tools libvulkan-dev -y
           echo "CMAKE_GENERATOR=Ninja" >> $GITHUB_ENV
 
       - name: Install bindgen
