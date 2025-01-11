@@ -19,7 +19,6 @@ target_link_libraries(sgns_account
     KeyGeneration
     outcome
     logger
-    GeniusKDF
     crdt_globaldb
     PRIVATE
     json_secure_storage

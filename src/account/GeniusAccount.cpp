@@ -2,7 +2,6 @@
 
 #include "ProofSystem/ElGamalKeyGenerator.hpp"
 #include "ProofSystem/EthereumKeyGenerator.hpp"
-#include "ProofSystem/KDFGenerator.hpp"
 #include "WalletCore/Hash.h"
 #include "local_secure_storage/ISecureStorage.hpp"
 #include "nil/crypto3/multiprecision/cpp_int_modular/import_export.hpp"

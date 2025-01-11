@@ -15,7 +15,6 @@
 #include "ProofSystem/ElGamalKeyGenerator.hpp"
 #include "account/GeniusUTXO.hpp"
 #include "account/UTXOTxParameters.hpp"
-#include <KDFGenerator/KDFGenerator.hpp>
 #include "outcome/outcome.hpp"
 
 namespace sgns
