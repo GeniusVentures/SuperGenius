@@ -19,6 +19,7 @@ target_link_libraries(api_transport
     Boost::headers
     logger
     outcome
+    OpenSSL::SSL
 )
 
 # Add /bigobj flag for MSVC compiler specifically for api_transport
