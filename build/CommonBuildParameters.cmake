@@ -255,7 +255,7 @@ find_package(AsyncIOManager CONFIG REQUIRED)
 # find_package(crypto3 CONFIG REQUIRED)
 # include_directories(${crypto3_INCLUDE_DIR})
 include_directories(
-    "${_THIRDPARTY_BUILD_DIR}/crypto3/include"
+    "${_THIRDPARTY_BUILD_DIR}/zkLLVM/include"
 )
 
 # gnus_upnp
@@ -305,7 +305,7 @@ link_directories(
 
 add_subdirectory(${PROJECT_ROOT}/src ${CMAKE_BINARY_DIR}/src)
 
-add_subdirectory(${PROJECT_ROOT}/GeniusKDF ${CMAKE_BINARY_DIR}/GeniusKDF)
+#add_subdirectory(${PROJECT_ROOT}/GeniusKDF ${CMAKE_BINARY_DIR}/GeniusKDF)
 
 add_subdirectory(${PROJECT_ROOT}/ProofSystem ${CMAKE_BINARY_DIR}/ProofSystem)
 
