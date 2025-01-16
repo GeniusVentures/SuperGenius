@@ -1,6 +1,6 @@
 # BOOST VERSION TO USE
 set(BOOST_MAJOR_VERSION "1" CACHE STRING "Boost Major Version")
-set(BOOST_MINOR_VERSION "86" CACHE STRING "Boost Minor Version")
+set(BOOST_MINOR_VERSION "85" CACHE STRING "Boost Minor Version")
 set(BOOST_PATCH_VERSION "0" CACHE STRING "Boost Patch Version")
 
 # convenience settings
@@ -268,6 +268,7 @@ include_directories(${gnus_upnp_INCLUDE_DIR})
 # wallet-core
 set(TrustWalletCore_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/wallet-core/lib")
 set(TrustWalletCore_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/wallet-core/include")
+
 find_library(TrezorCrypto TrezorCrypto HINTS ${TrustWalletCore_LIBRARY_DIR} REQUIRED)
 find_library(wallet_core_rs wallet_core_rs HINTS ${TrustWalletCore_LIBRARY_DIR} REQUIRED)
 find_library(TrustWalletCore TrustWalletCore HINTS ${TrustWalletCore_LIBRARY_DIR} REQUIRED)
