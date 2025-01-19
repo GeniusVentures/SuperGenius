@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.22)
 
 if(NOT DEFINED CMAKE_TOOLCHAIN_FILE)
     # set(_PLATFORM "MAC_UNIVERSAL" CACHE STRING "Setting the build for both x86_64 and arm64")
-    set(_PLATFORM "MAC" CACHE STRING "Setting the default build for x86_64")
+    set(_PLATFORM "MAC_UNIVERSAL" CACHE STRING "Setting the default build for x86_64")
 
     set(NAMED_LANGUAGE_SUPPORT OFF CACHE BOOL "Toolchain named language support parameter")
     set(ENABLE_BITCODE OFF CACHE BOOL "Toolchain bitcode enable parameter")
