@@ -4,6 +4,7 @@
 
 #include <ipfs_pubsub/gossip_pubsub.hpp>
 #include <rapidjson/document.h>
+#include <libp2p/injector/kademlia_injector.hpp>
 
 #include "FileManager.hpp"
 #include "base/logger.hpp"
