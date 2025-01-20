@@ -42,7 +42,7 @@ namespace sgns
         timer_m( std::make_shared<boost::asio::steady_timer>( *ctx_m, boost::asio::chrono::milliseconds( 300 ) ) )
 
     {
-        m_logger->set_level( spdlog::level::off );
+        m_logger->set_level( spdlog::level::debug );
         m_logger->info( "Initializing values by reading whole blockchain" );
 
         outgoing_db_m = std::make_shared<crdt::GlobalDB>(
@@ -141,7 +141,7 @@ namespace sgns
                                                                    chainid,
                                                                    tokenid,
                                                                    FillDAGStruct( transaction_hash ) );
-        TransferProof prover( 100000, static_cast<uint64_t>( amount ) );
+        TransferProof prover( 1000000000000000, static_cast<uint64_t>( amount ) ); //Mint max 1000000 gnus per transaction
         auto          proof_result = prover.GenerateFullProof();
         if ( proof_result.has_value() )
         {
@@ -235,7 +235,7 @@ namespace sgns
             FillDAGStruct() );
 
         //TODO - Create with the real balance and amount
-        TransferProof prover( 0, 0 );
+        TransferProof prover( 1, 1 );
 
         OUTCOME_TRY( ( auto &&, proof_result ), prover.GenerateFullProof() );
 
@@ -373,7 +373,7 @@ namespace sgns
         auto it = IGeniusTransactions::GetDeSerializers().find( dag.type() );
         if ( it == IGeniusTransactions::GetDeSerializers().end() )
         {
-            m_logger->info( "Invalid transaction found. No Deserialization available" );
+            m_logger->info( "Invalid transaction found. No Deserialization available for type {}", dag.type() );
             return std::errc::invalid_argument;
         }
         return it->second( transaction_data_vector );
@@ -434,7 +434,7 @@ namespace sgns
 
         tx_key % TEST_NET_ID;
 
-        auto transaction_paths = tx_key.str() + account_m->GetAddress<std::string>();
+        auto transaction_paths = tx_key.str() + account_m->GetAddress<std::string>() + "/tx";
         m_logger->trace( "Probing transactions on " + transaction_paths );
         OUTCOME_TRY( ( auto &&, transaction_list ), outgoing_db_m->QueryKeyValues( transaction_paths ) );
 
@@ -481,7 +481,7 @@ namespace sgns
     {
         bool ret = false;
 
-        boost::format proof_key{ std::string( TRANSACTION_BASE_FORMAT ) + string_src_address + "/tx/proof" + "/%llu" };
+        boost::format proof_key{ std::string( TRANSACTION_BASE_FORMAT ) + string_src_address + "/proof" + "/%llu" };
         proof_key % TEST_NET_ID;
         proof_key % nonce;
 
