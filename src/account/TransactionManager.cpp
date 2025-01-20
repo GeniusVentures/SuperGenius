@@ -119,7 +119,7 @@ namespace sgns
                                                                                maybe_params.value().inputs_,
                                                                                FillDAGStruct() );
 
-            TransferProof prover( account_m->GetBalance<uint64_t>(), uint64_t{ amount } );
+            TransferProof prover( static_cast<uint64_t>(account_m->GetBalance<double>()), static_cast<uint64_t>( amount ) );
             auto          proof_result = prover.GenerateFullProof();
             if ( proof_result.has_value() )
             {
@@ -141,7 +141,7 @@ namespace sgns
                                                                    chainid,
                                                                    tokenid,
                                                                    FillDAGStruct( transaction_hash ) );
-        TransferProof prover( 100000, amount );
+        TransferProof prover( 100000, static_cast<uint64_t>( amount ) );
         auto          proof_result = prover.GenerateFullProof();
         if ( proof_result.has_value() )
         {
@@ -169,18 +169,15 @@ namespace sgns
                                                                        dev_addr,
                                                                        peers_cut,
                                                                        FillDAGStruct() );
-        
-        TransferProof prover( account_m->GetBalance<uint64_t>(), amount );
-        auto          proof_result = prover.GenerateFullProof();
-        if ( proof_result.has_value() )
-        {
-            account_m->utxos = UTXOTxParameters::UpdateUTXOList( account_m->utxos, params );
-            this->EnqueueTransaction( std::make_pair( escrow_transaction, proof_result.value() ) );
-            m_logger->debug( "Holding escrow to 0x{} wih the amount {}",
-                            hash_data.toReadableString(),
-                            RoundTo5Digits( amount ) );
-            ret = true;
-        }
+
+        TransferProof prover( static_cast<uint64_t>(account_m->GetBalance<double>()), static_cast<uint64_t>( amount ) );
+        OUTCOME_TRY( ( auto &&, proof_result ), prover.GenerateFullProof() );
+
+        account_m->utxos = UTXOTxParameters::UpdateUTXOList( account_m->utxos, params );
+        this->EnqueueTransaction( std::make_pair( escrow_transaction, proof_result ) );
+        m_logger->debug( "Holding escrow to 0x{} wih the amount {}",
+                         hash_data.toReadableString(),
+                         RoundTo5Digits( amount ) );
 
         return "0x" + hash_data.toReadableString();
     }
@@ -236,15 +233,13 @@ namespace sgns
             payout_peers,
             std::vector<InputUTXOInfo>{ escrow_utxo_input },
             FillDAGStruct() );
-        
+
         //TODO - Create with the real balance and amount
-        TransferProof prover( uint64_t{ it->full_amount }, uint64_t{ it->full_amount } );
-        auto          proof_result = prover.GenerateFullProof();
-        if ( proof_result.has_value() )
-        {
-            this->EnqueueTransaction( std::make_pair( transfer_transaction, proof_result.value() ) );
-            ret = true;
-        }
+        TransferProof prover( 0, 0 );
+
+        OUTCOME_TRY( ( auto &&, proof_result ), prover.GenerateFullProof() );
+
+        this->EnqueueTransaction( std::make_pair( transfer_transaction, proof_result ) );
 
         return outcome::success();
     }
@@ -302,7 +297,7 @@ namespace sgns
         transaction->dag_st.set_nonce( account_m->nonce );
 
         auto transaction_path = GetTransactionPath( transaction );
-        auto proof_path       = tx_key.str() + transaction->GetProofFullPath();
+        auto proof_path       = GetTransactionProofPath( transaction );
 
         sgns::crdt::GlobalDB::Buffer data_transaction;
         data_transaction.put( transaction->SerializeByteVector() );
@@ -312,7 +307,7 @@ namespace sgns
 
         //std::cout << " creating with proof with size  " <<  proof_vector.size() << std::endl;
         proof_transaction.put( proof );
-        db_m->Put( { proof_path }, proof_transaction );
+        outgoing_db_m->Put( { proof_path }, proof_transaction );
 
         m_logger->debug( "Recording the transaction on " + transaction_path );
         if ( transaction->GetType() == "transfer" )
@@ -338,6 +333,17 @@ namespace sgns
         auto transaction_path = tx_key.str() + element->GetTransactionFullPath();
 
         return transaction_path;
+    }
+
+    std::string TransactionManager::GetTransactionProofPath( std::shared_ptr<IGeniusTransactions> element )
+    {
+        boost::format tx_key{ std::string( TRANSACTION_BASE_FORMAT ) };
+
+        tx_key % TEST_NET_ID;
+
+        auto proof_path = tx_key.str() + element->GetProofFullPath();
+
+        return proof_path;
     }
 
     outcome::result<void> TransactionManager::ParseTransaction( const std::shared_ptr<IGeniusTransactions> &tx )
@@ -481,7 +487,7 @@ namespace sgns
 
         std::cout << " proof_key.str() the proof in " << proof_key.str() << std::endl;
 
-        auto maybe_proof_data = db_m->Get( { proof_key.str() } );
+        auto maybe_proof_data = incoming_db_m->Get( { proof_key.str() } );
 
         if ( maybe_proof_data.has_value() )
         {
