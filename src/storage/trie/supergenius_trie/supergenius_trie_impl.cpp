@@ -240,7 +240,7 @@ namespace sgns::storage::trie {
         OUTCOME_TRY((auto &&, n), retrieveChild(parent_as_branch, key_nibbles[length]));
         OUTCOME_TRY((auto &&, path), getPath(n, key_nibbles.subspan(length + 1)));
         path.emplace_front( parent_as_branch, key_nibbles[length] );
-        return std::move(path);
+        return path;
       }
       case T::Leaf:
         if (parent->key_nibbles == key_nibbles) {
@@ -307,7 +307,7 @@ namespace sgns::storage::trie {
           parent_as_branch->children.at(key_nibbles[length]) = n;
         }
         OUTCOME_TRY((auto &&, n), handleDeletion(parent_as_branch, newRoot, key_nibbles));
-        return std::move(n);
+        return n;
       }
       case T::Leaf:
         if (parent->key_nibbles == key_nibbles || key_nibbles.empty()) {

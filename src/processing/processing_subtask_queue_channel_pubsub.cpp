@@ -4,7 +4,6 @@
 
 namespace sgns::processing
 {
-////////////////////////////////////////////////////////////////////////////////
 ProcessingSubTaskQueueChannelPubSub::ProcessingSubTaskQueueChannelPubSub(
     std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> gossipPubSub, const std::string &processingQueueChannelId ) :
     m_gossipPubSub( std::move( gossipPubSub ) )
@@ -23,7 +22,7 @@ void ProcessingSubTaskQueueChannelPubSub::Listen(size_t msSubscriptionWaitingDur
     // Run messages processing once all dependent object are created
     m_processingQueueChannel->Subscribe(
         std::bind(
-            &ProcessingSubTaskQueueChannelPubSub::OnProcessingChannelMessage, 
+            &ProcessingSubTaskQueueChannelPubSub::OnProcessingChannelMessage,
             weak_from_this(), std::placeholders::_1));
     if (msSubscriptionWaitingDuration > 0)
     {
@@ -35,8 +34,7 @@ void ProcessingSubTaskQueueChannelPubSub::RequestQueueOwnership(const std::strin
 {
     // Send a request to grab a subtask queue
     SGProcessing::ProcessingChannelMessage message;
-    auto                                   request = message.mutable_subtask_queue_request();
-    request->set_node_id(nodeId);
+    message.mutable_subtask_queue_request()->set_node_id(nodeId);
     m_processingQueueChannel->Publish(message.SerializeAsString());
 }
 
@@ -67,7 +65,7 @@ void ProcessingSubTaskQueueChannelPubSub::OnProcessingChannelMessage(
     {
         return;
     }
-    
+
     if (message)
     {
         SGProcessing::ProcessingChannelMessage channelMesssage;
@@ -87,19 +85,17 @@ void ProcessingSubTaskQueueChannelPubSub::OnProcessingChannelMessage(
 
 void ProcessingSubTaskQueueChannelPubSub::HandleSubTaskQueueRequest(SGProcessing::ProcessingChannelMessage& channelMesssage)
 {
-    if (m_queueRequestSink)
+    if (m_queueRequestSink && !m_queueRequestSink(channelMesssage.subtask_queue_request()))
     {
-        m_queueRequestSink(channelMesssage.subtask_queue_request());
+        m_logger->error("Could not queue request sink");
     }
 }
 
 void ProcessingSubTaskQueueChannelPubSub::HandleSubTaskQueue(SGProcessing::ProcessingChannelMessage& channelMesssage)
 {
-    if (m_queueUpdateSink)
+    if (m_queueUpdateSink && !m_queueUpdateSink(channelMesssage.release_subtask_queue()))
     {
-        m_queueUpdateSink(channelMesssage.release_subtask_queue());
+        m_logger->error("Could not update sink");
     }
 }
-
-////////////////////////////////////////////////////////////////////////////////
 }

@@ -26,19 +26,13 @@ namespace sgns::crdt
         }
     }
 
-void PubSubBroadcaster::SetLogger(const sgns::base::Logger& logger)
-{ 
-    logger_ = logger; 
-}
-
 outcome::result<void> PubSubBroadcaster::Broadcast(const base::Buffer& buff)
 {
     if (this->gossipPubSubTopic_ == nullptr)
     {
         return outcome::failure(boost::system::error_code{});
     }
-    const std::string bCastData(buff.toString());
-    gossipPubSubTopic_->Publish(bCastData);
+    gossipPubSubTopic_->Publish(buff.toVector());
     return outcome::success();
 }
 

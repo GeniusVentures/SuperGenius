@@ -9,21 +9,22 @@ namespace sgns::processing
     {
     }
 
-    bool SubTaskEnqueuerImpl::EnqueueSubTasks( std::string &subTaskQueueId, std::list<SGProcessing::SubTask> &subTasks )
+    outcome::result<SGProcessing::Task> SubTaskEnqueuerImpl::EnqueueSubTasks(
+        std::string                      &subTaskQueueId,
+        std::list<SGProcessing::SubTask> &subTasks )
     {
-        if ( auto maybe_grabbed = m_taskQueue->GrabTask() )
-        {
-            std::string        taskKey = maybe_grabbed.value().first;
-            //SGProcessing::Task task    = maybe_grabbed.value().second; //TODO - Not used for anything. Rewrite this code
+        OUTCOME_TRY( ( auto &&, task_result ), m_taskQueue->GrabTask() );
 
-            subTaskQueueId = taskKey;
+        auto [taskKey, task] = task_result;
+        //std::string taskKey = maybe_grabbed.value().first;
+        //SGProcessing::Task task    = maybe_grabbed.value().second; //TODO - Not used for anything. Rewrite this code
 
-            m_taskQueue->GetSubTasks( taskKey, subTasks );
+        subTaskQueueId = taskKey;
 
-            m_logger->debug( "ENQUEUE_SUBTASKS: {}", subTasks.size() );
-            return true;
-        }
-        return false;
+        m_taskQueue->GetSubTasks( taskKey, subTasks );
+
+        m_logger->debug( "ENQUEUE_SUBTASKS: {}", subTasks.size() );
+        return task;
     }
 
 }

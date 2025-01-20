@@ -24,6 +24,8 @@
 #include "local_secure_storage/impl/json/JSONSecureStorage.hpp"
 #include "account/GeniusNode.hpp"
 #include "FileManager.hpp"
+#include <thread>
+#include <chrono>
 
 std::mutex              keyboard_mutex;
 std::condition_variable cv;
@@ -119,7 +121,7 @@ void MintTokens( const std::vector<std::string> &args, sgns::GeniusNode &genius_
         std::cerr << "Invalid mint command format.\n";
         return;
     }
-    genius_node.MintTokens( std::stoull( args[1] ) );
+    genius_node.MintTokens( std::stoull( args[1] ), "", "", "" );
 }
 
 void CreateProcessingTransaction( const std::vector<std::string> &args, sgns::GeniusNode &genius_node )
@@ -170,34 +172,48 @@ void CreateProcessingTransaction( const std::vector<std::string> &args, sgns::Ge
             std::cerr << "No input XML obtained" << std::endl;;
             return;
         }
-        //std::string json_data = R"(
-        //        {
-        //          "data": {
-	       //         "type": "https",
-	       //         "URL": "https://ipfs.filebase.io/ipfs/QmUDMvGQXbUKMsjmTzjf4ZuMx7tHx6Z4x8YH8RbwrgyGAf/"
-        //          },
-        //          "model": {
-        //            "name": "posenet",
-        //            "file": "model.mnn"
-        //          },
-        //          "input": [
-	       //         {
-		      //          "image": "data/ballet.data",
-		      //          "block_len": 4860000 ,
-		      //          "block_line_stride": 5400,
-		      //          "block_stride": 0,
-		      //          "chunk_line_stride": 1080,
-		      //          "chunk_offset": 0,
-		      //          "chunk_stride": 4320,
-		      //          "chunk_subchunk_height": 5,
-		      //          "chunk_subchunk_width": 5,
-		      //          "chunk_count": 24
-	       //         }
-        //          ]
-        //        }
+        // std::string json_data = R"(
+        //         {
+        //         "data": {
+        //             "type": "https",
+        //             "URL": "https://ipfs.filebase.io/ipfs/QmdHvvEXRUgmyn1q3nkQwf9yE412Vzy5gSuGAukHRLicXA/"
+        //         },
+        //         "model": {
+        //             "name": "mnnimage",
+        //             "file": "model.mnn"
+        //         },
+        //         "input": [
+        //             {
+        //                 "image": "data/ballet.data",
+        //                 "block_len": 4860000 ,
+        //                 "block_line_stride": 5400,
+        //                 "block_stride": 0,
+        //                 "chunk_line_stride": 1080,
+        //                 "chunk_offset": 0,
+        //                 "chunk_stride": 4320,
+        //                 "chunk_subchunk_height": 5,
+        //                 "chunk_subchunk_width": 5,
+        //                 "chunk_count": 25,
+        //                 "channels": 4
+        //             },
+        //             {
+        //                 "image": "data/frisbee3.data",
+        //                 "block_len": 786432 ,
+        //                 "block_line_stride": 1536,
+        //                 "block_stride": 0,
+        //                 "chunk_line_stride": 384,
+        //                 "chunk_offset": 0,
+        //                 "chunk_stride": 1152,
+        //                 "chunk_subchunk_height": 4,
+        //                 "chunk_subchunk_width": 4,
+        //                 "chunk_count": 16,
+        //                 "channels": 3
+        //             }
+        //         ]
+        //         }
         //        )";
-        genius_node.ProcessImage( json_data /*args[1]*/,
-                                      std::stoull( args[2] ) );
+        genius_node.ProcessImage( json_data /*args[1]*/
+                                      );
     }
     else
     {
@@ -255,16 +271,68 @@ void process_events(sgns::GeniusNode& genius_node) {
 }
 
 
+void periodic_processing(sgns::GeniusNode &genius_node) {
+    while (!finished) {
+        std::this_thread::sleep_for(std::chrono::minutes(30)); // Wait for 30 minutes
+        if (finished) break;  // Exit if the application is shutting down
+        
+        std::string json_data = R"(
+                {
+                "data": {
+                    "type": "https",
+                    "URL": "https://ipfs.filebase.io/ipfs/QmdHvvEXRUgmyn1q3nkQwf9yE412Vzy5gSuGAukHRLicXA/"
+                },
+                "model": {
+                    "name": "mnnimage",
+                    "file": "model.mnn"
+                },
+                "input": [
+                    {
+                        "image": "data/ballet.data",
+                        "block_len": 4860000 ,
+                        "block_line_stride": 5400,
+                        "block_stride": 0,
+                        "chunk_line_stride": 1080,
+                        "chunk_offset": 0,
+                        "chunk_stride": 4320,
+                        "chunk_subchunk_height": 5,
+                        "chunk_subchunk_width": 5,
+                        "chunk_count": 25,
+                        "channels": 4
+                    },
+                    {
+                        "image": "data/frisbee3.data",
+                        "block_len": 786432 ,
+                        "block_line_stride": 1536,
+                        "block_stride": 0,
+                        "chunk_line_stride": 384,
+                        "chunk_offset": 0,
+                        "chunk_stride": 1152,
+                        "chunk_subchunk_height": 4,
+                        "chunk_subchunk_width": 4,
+                        "chunk_count": 16,
+                        "channels": 3
+                    }
+                ]
+                }
+               )";
+                genius_node.ProcessImage( json_data /*args[1]*/
+                                      );
+    }
+}
+
 DevConfig_st DEV_CONFIG{ "0xcafe", 0.65, 1.0, 0 , "./"};
 
 int main( int argc, char *argv[] )
 {
     std::thread input_thread(keyboard_input_thread);
 
+    
     //Inputs
 
-    sgns::GeniusNode node_instance( DEV_CONFIG, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" );
+    sgns::GeniusNode node_instance( DEV_CONFIG, "livebeefdeadbeeflivebeefdeadbeeflivebeefdeadbeeflivebeefdeadbeef", true, false );
 
+    std::thread processing_thread(periodic_processing, std::ref(node_instance));
     std::cout << "Insert \"process\", the image and the number of tokens to be" << std::endl;
     redraw_prompt();
     //while ( !finished )
@@ -274,6 +342,9 @@ int main( int argc, char *argv[] )
     if ( input_thread.joinable() )
     {
         input_thread.join();
+    }
+    if (processing_thread.joinable()) {
+        processing_thread.join();
     }
     return 0;
 }

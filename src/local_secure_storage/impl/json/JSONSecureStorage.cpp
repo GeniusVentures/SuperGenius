@@ -12,6 +12,7 @@
 #include <rapidjson/filewritestream.h>
 #include "singleton/CComponentFactory.hpp"
 #include "local_secure_storage/impl/json/JSONSecureStorage.hpp"
+#include <boost/filesystem.hpp>
 
 namespace sgns
 {
@@ -56,28 +57,39 @@ namespace sgns
     }
 
     outcome::result<void> JSONSecureStorage::Save( const std::string      &key,
-                                                   const SecureBufferType &buffer,
-                                                   const std::string       directory )
+                                                const SecureBufferType &buffer,
+                                                const std::string       directory )
     {
-        auto fullpath = directory + "secure_storage.json";
-        auto file     = std::fopen( fullpath.data(), "w" );
-        if ( !file )
+        auto fullpath = directory + "/secure_storage.json";
+
+        // Ensure the directory exists (create it if necessary)
+        boost::system::error_code ec;
+        boost::filesystem::create_directories(directory, ec);
+        if (ec) // Check for errors during directory creation
         {
-            return outcome::failure( boost::system::error_code{} );
+            return outcome::failure(ec);
         }
 
+        auto file = std::fopen(fullpath.c_str(), "w");
+        if (!file)
+        {
+            // Return a meaningful error code for file opening failure
+            return outcome::failure(boost::system::error_code(errno, boost::system::generic_category()));
+        }
+
+        // Proceed with writing JSON data
         std::array<char, 512>                         buff{};
-        rapidjson::FileWriteStream                    output_stream( file, buff.data(), buff.size() );
-        rapidjson::Writer<rapidjson::FileWriteStream> writer( output_stream );
+        rapidjson::FileWriteStream                    output_stream(file, buff.data(), buff.size());
+        rapidjson::Writer<rapidjson::FileWriteStream> writer(output_stream);
         writer.StartObject();
-        writer.Key( "GeniusAccount" );
+        writer.Key("GeniusAccount");
         writer.StartObject();
-        writer.Key( key.data() );
-        writer.String( buffer.data() );
+        writer.Key(key.c_str());
+        writer.String(buffer.data());
         writer.EndObject();
         writer.EndObject();
 
-        std::fclose( file );
+        std::fclose(file);
 
         return outcome::success();
     }

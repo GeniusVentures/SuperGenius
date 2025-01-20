@@ -23,3 +23,7 @@ target_link_libraries(core_integration_test
     ${USER_ENV_LIBRARY}
     ${WIN_CRYPT_LIBRARY}
     )
+
+if(FORCE_MULTIPLE)
+  set_target_properties(core_integration_test PROPERTIES LINK_FLAGS "${MULTIPLE_OPTION}")
+endif()

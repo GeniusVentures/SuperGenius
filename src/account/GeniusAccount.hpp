@@ -25,25 +25,11 @@ namespace sgns
     class GeniusAccount
     {
     public:
-        GeniusAccount( const uint8_t token_type, const std::string &base_path, std::string_view eth_private_key ) :
-            token( token_type ), //
-            nonce( 0 ),          //
-            balance( 0 )         //
-        {
-            auto maybe_address = GenerateGeniusAddress( base_path, eth_private_key );
-
-            if ( maybe_address )
-            {
-                address = maybe_address.value();
-            }
-            //TODO - Retrieve values where? Read through blockchain Here?
-            // How to deal with errors?
-        }
+        GeniusAccount( uint8_t token_type, std::string_view base_path, const char *eth_private_key );
 
         ~GeniusAccount()
         {
             utxos.clear();
-            std::cout << "Delete account" << std::endl;
         }
 
         template <typename T>
@@ -60,37 +46,36 @@ namespace sgns
         }
 
         template <>
-        [[nodiscard]] boost::multiprecision::uint256_t GetAddress() const
+        [[nodiscard]] uint256_t GetAddress() const
         {
-            return boost::multiprecision::uint256_t( address.GetPublicKey().public_key_value.str() );
+            return uint256_t( address.GetPublicKey().public_key_value.str() );
         }
 
         template <typename T>
         [[nodiscard]] T GetBalance() const;
 
         template <>
-        [[nodiscard]] uint64_t GetBalance() const
+        [[nodiscard]] double GetBalance() const
         {
-            uint64_t retval = 0;
+            double retval = 0;
 
+            //std::cout << "utxo's ID: ";
             for ( auto &curr : utxos )
             {
-                std::cout << "utxo's ID: " << curr.GetTxID() << std::endl;
-                std::cout << "utxo's Amount: " << curr.GetAmount() << std::endl;
-                std::cout << "utxo's GetOutputIdx: " << curr.GetOutputIdx() << std::endl;
-                std::cout << "utxo's GetLock: " << curr.GetLock() << std::endl;
+                //std::cout << curr.GetTxID() << "(" << curr.GetAmount() << "), ";
                 if ( !curr.GetLock() )
                 {
                     retval += curr.GetAmount();
                 }
             }
+            //std::cout << std::endl;
             return retval;
         }
 
         template <>
         [[nodiscard]] std::string GetBalance() const
         {
-            return std::to_string( GetBalance<uint64_t>() );
+            return std::to_string( GetBalance<double>() );
         }
 
         [[nodiscard]] std::string GetToken() const
@@ -149,10 +134,10 @@ namespace sgns
         std::vector<GeniusUTXO> utxos;
 
     private:
-        uint64_t balance;
+        //uint64_t balance;
 
         static outcome::result<KeyGenerator::ElGamal> GenerateGeniusAddress( std::string_view base_path,
-                                                                             std::string_view eth_private_key );
+                                                                             const char      *eth_private_key );
     };
 }
 

@@ -15,6 +15,7 @@
 #include <future>
 #include <chrono>
 #include <queue>
+#include <set>
 
 namespace sgns::crdt
 {
@@ -102,7 +103,7 @@ namespace sgns::crdt
     using QueryResult = DataStore::QueryResult;
     using Delta = pb::Delta;
     using Element = pb::Element;
-    using Node = ipfs_lite::ipld::IPLDNode;
+    using IPLDNode = ipfs_lite::ipld::IPLDNode;
 
     using PutHookPtr = std::function<void(const std::string& k, const Buffer& v)>;
     using DeleteHookPtr = std::function<void(const std::string& k)>;
@@ -223,7 +224,7 @@ namespace sgns::crdt
       CID rootCid_; /*> Root CID */
       uint64_t rootPriority_; /*> root priority */
       std::shared_ptr<Delta> delta_; /*> pointer to delta */
-      std::shared_ptr<Node> node_; /*> pointer to node */
+      std::shared_ptr<IPLDNode> node_; /*> pointer to node */
     };
 
     /** DAG worker structure to keep track of worker threads
@@ -303,7 +304,7 @@ namespace sgns::crdt
     outcome::result<std::vector<CID>> ProcessNode( const CID                    &aRoot,
                                                    uint64_t                      aRootPrio,
                                                    const std::shared_ptr<Delta> &aDelta,
-                                                   const std::shared_ptr<Node>  &aNode );
+                                                   const std::shared_ptr<IPLDNode>  &aNode );
 
     /** PutBlock add block node to DAGSyncer
     * @param aHeads list of CIDs to add to node as IPLD links
@@ -311,7 +312,7 @@ namespace sgns::crdt
     * @param aDelta Delta to serialize into IPLD node
     * @return IPLD node or outcome::failure on error
     */
-    outcome::result<std::shared_ptr<Node>> PutBlock( const std::vector<CID>       &aHeads,
+    outcome::result<std::shared_ptr<IPLDNode>> PutBlock( const std::vector<CID>       &aHeads,
                                                      uint64_t                      aHeight,
                                                      const std::shared_ptr<Delta> &aDelta );
 
@@ -378,6 +379,13 @@ namespace sgns::crdt
     std::vector<std::shared_ptr<DagWorker>> dagWorkers_;
     std::shared_mutex dagWorkerMutex_;
     std::queue<DagJob> dagWorkerJobList;
+
+    std::mutex mutex_processed_cids;
+    std::set<CID> processed_cids;
+
+    void AddProcessedCID(const CID &cid);
+    bool ContainsCID(const CID &cid);
+    bool DeleteCIDS(const std::vector<CID> &cid);
   };
 
 } // namespace sgns::crdt

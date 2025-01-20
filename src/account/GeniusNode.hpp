@@ -1,9 +1,3 @@
-/**
- * @file       GeniusNode.hpp
- * @brief      
- * @date       2024-03-11
- * @author     Henrique A. Klein (hklein@gnus.ai)
- */
 #ifndef _ACCOUNT_MANAGER_HPP_
 #define _ACCOUNT_MANAGER_HPP_
 #include <memory>
@@ -16,13 +10,12 @@
 #include <libp2p/multi/content_identifier_codec.hpp>
 
 #include "account/GeniusAccount.hpp"
+#include "base/buffer.hpp"
 #include "ipfs_pubsub/gossip_pubsub.hpp"
 #include "crdt/globaldb/globaldb.hpp"
 #include "account/TransactionManager.hpp"
 #include <ipfs_lite/ipfs/graphsync/graphsync.hpp>
 #include "crypto/hasher/hasher_impl.hpp"
-#include "blockchain/impl/key_value_block_header_repository.hpp"
-#include "blockchain/impl/key_value_block_storage.hpp"
 #include "processing/impl/processing_core_impl.hpp"
 #include "processing/impl/processing_subtask_result_storage_impl.hpp"
 #include "processing/processing_service.hpp"
@@ -59,14 +52,20 @@ namespace sgns
     class GeniusNode : public IComponent
     {
     public:
-        GeniusNode( const DevConfig_st &dev_config, const char *eth_private_key );
+        GeniusNode( const DevConfig_st &dev_config,
+                    const char         *eth_private_key,
+                    bool                autodht     = true,
+                    bool                isprocessor = true,
+                    uint16_t            base_port   = 40001 );
         // static GeniusNode &GetInstance()
         // {
         //     return instance;
         // }
         ~GeniusNode() override;
 
-        void ProcessImage( const std::string &image_path, uint16_t funds );
+        void ProcessImage( const std::string &image_path );
+
+        double GetProcessCost( const std::string &json_data );
 
         std::string GetName() override
         {
@@ -74,59 +73,78 @@ namespace sgns
         }
 
         void     DHTInit();
-        void     MintTokens( uint64_t amount );
+        void     MintTokens( double amount, std::string transaction_hash, std::string chainid, std::string tokenid );
         void     AddPeer( const std::string &peer );
-        uint64_t GetBalance();
+        void     RefreshUPNP( int pubsubport, int graphsyncport );
+        double GetBalance();
 
-        [[nodiscard]] const std::vector<std::vector<uint8_t>> &GetTransactions() const
+        [[nodiscard]] const std::vector<std::vector<uint8_t>> GetInTransactions() const
         {
-            return transaction_manager_->GetTransactions();
+            return transaction_manager_->GetInTransactions();
         }
 
-        std::string GetAddress()
+        [[nodiscard]] const std::vector<std::vector<uint8_t>> GetOutTransactions() const
+        {
+            return transaction_manager_->GetOutTransactions();
+        }
+
+        template <typename T>
+        T GetAddress() const;
+
+        template <>
+        std::string GetAddress() const
         {
             return account_->GetAddress<std::string>();
         }
 
-        bool TransferFunds( uint64_t amount, const uint256_t &destination )
+        template <>
+        uint256_t GetAddress() const
+        {
+            return account_->GetAddress<uint256_t>();
+        }
+
+        bool TransferFunds( double amount, const uint256_t &destination )
         {
             return transaction_manager_->TransferFunds( amount, destination );
+        }
+
+        std::shared_ptr<ipfs_pubsub::GossipPubSub> GetPubSub()
+        {
+            return pubsub_;
         }
 
         static std::vector<uint8_t> GetImageByCID( const std::string &cid );
 
     private:
-        std::shared_ptr<GeniusAccount>                             account_;
-        std::shared_ptr<ipfs_pubsub::GossipPubSub>                 pubsub_;
-        std::shared_ptr<boost::asio::io_context>                   io_;
-        std::shared_ptr<crdt::GlobalDB>                            globaldb_;
-        std::shared_ptr<crypto::HasherImpl>                        hasher_;
-        std::shared_ptr<blockchain::KeyValueBlockHeaderRepository> header_repo_;
-        std::shared_ptr<blockchain::KeyValueBlockStorage>          block_storage_;
-        std::shared_ptr<TransactionManager>                        transaction_manager_;
-        std::shared_ptr<processing::ProcessingTaskQueueImpl>       task_queue_;
-        std::shared_ptr<processing::ProcessingCoreImpl>            processing_core_;
-        std::shared_ptr<processing::ProcessingServiceImpl>         processing_service_;
-        std::shared_ptr<processing::SubTaskResultStorageImpl>      task_result_storage_;
-        std::shared_ptr<soralog::LoggingSystem>                    logging_system;
-        std::string                                                write_base_path_;
+        std::shared_ptr<GeniusAccount>                        account_;
+        std::shared_ptr<ipfs_pubsub::GossipPubSub>            pubsub_;
+        std::shared_ptr<boost::asio::io_context>              io_;
+        std::shared_ptr<crdt::GlobalDB>                       globaldb_;
+        std::shared_ptr<TransactionManager>                   transaction_manager_;
+        std::shared_ptr<processing::ProcessingTaskQueueImpl>  task_queue_;
+        std::shared_ptr<processing::ProcessingCoreImpl>       processing_core_;
+        std::shared_ptr<processing::ProcessingServiceImpl>    processing_service_;
+        std::shared_ptr<processing::SubTaskResultStorageImpl> task_result_storage_;
+        std::shared_ptr<soralog::LoggingSystem>               logging_system;
+        std::string                                           write_base_path_;
+        bool                                                  autodht_;
+        bool                                                  isprocessor_;
 
-        std::thread io_thread;
+        std::thread       io_thread;
+        std::thread       upnp_thread;
+        std::atomic<bool> stop_upnp{ false };
 
         DevConfig_st dev_config_;
 
-        static uint16_t GenerateRandomPort( const std::string &address );
-
-        void ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult);
+        void ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult );
         void ProcessingError( const std::string &task_id );
-        void ProcessingFinished( const std::string &task_id, const std::set<std::string> &subtasks_ids );
 
         static constexpr std::string_view db_path_                = "bc-%d/";
         static constexpr std::uint16_t    MAIN_NET                = 369;
         static constexpr std::uint16_t    TEST_NET                = 963;
         static constexpr std::size_t      MAX_NODES_COUNT         = 1;
-        static constexpr std::string_view PROCESSING_GRID_CHANNEL = "GRID_CHANNEL_ID";
-        static constexpr std::string_view PROCESSING_CHANNEL      = "SGNUS.TestNet.Channel";
+        static constexpr std::string_view PROCESSING_GRID_CHANNEL = "SGNUS.Jobs.1a.02";
+        static constexpr std::string_view PROCESSING_CHANNEL      = "SGNUS.TestNet.Channel.1a.02";
 
         static const std::string &GetLoggingSystem()
         {
@@ -167,6 +185,6 @@ namespace sgns
         //static GeniusNode instance;
     };
 
-};
+}
 
 #endif

@@ -4,7 +4,7 @@
 	"URL": "https://ipfs.filebase.io/ipfs/QmdHvvEXRUgmyn1q3nkQwf9yE412Vzy5gSuGAukHRLicXA/"
   },
   "model": {
-    "name": "posenet",
+    "name": "mnnimage",
     "file": "model.mnn"
   },
   "input": [

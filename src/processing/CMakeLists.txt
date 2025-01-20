@@ -7,8 +7,12 @@ add_library(processing_service
     processing_tasksplit.hpp
     processing_tasksplit.cpp
     processing_processor.hpp
-    processors/processing_processor_mnn_posenet.hpp
-    processors/processing_processor_mnn_posenet.cpp
+    processors/processing_processor_mnn_image.hpp
+    processors/processing_processor_mnn_image.cpp
+    processors/processing_processor_mnn_audio.hpp
+    processors/processing_processor_mnn_audio.cpp
+    processors/processing_processor_mnn_ml.hpp
+    processors/processing_processor_mnn_ml.cpp
     processing_engine.hpp
     processing_engine.cpp
     processing_node.hpp
@@ -64,8 +68,13 @@ if(APPLE)
     )
 
     if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+        # macOS specific
         target_link_libraries(processing_service PRIVATE
             "-framework AppKit")
+    elseif(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+        # iOS specific
+        target_link_libraries(processing_service PRIVATE
+            "-framework UIKit")
     endif()
 endif()
 
@@ -85,12 +94,12 @@ target_link_libraries(processing_service PRIVATE
     p2p::p2p_gossip
     p2p::asio_scheduler
     ${WIN_CRYPT_LIBRARY}
-    ${VULKAN_LIBS}
     AsyncIOManager
+    Vulkan::Vulkan
     rapidjson
     ipfs-pubsub
 )
-target_link_libraries(processing_service PUBLIC
+TARGET_LINK_LIBRARIES_WHOLE_ARCHIVE_W_TYPE(processing_service PUBLIC
     MNN::MNN)
 target_include_directories(processing_service PRIVATE ${AsyncIOManager_INCLUDE_DIR})
 

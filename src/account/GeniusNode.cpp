@@ -6,35 +6,41 @@
  */
 #include <boost/format.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
-#include <boost/random.hpp>
+
 #include <rapidjson/document.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
+#include "base/util.hpp"
 #include "account/GeniusNode.hpp"
+#include "crdt/globaldb/keypair_file_storage.hpp"
 #include "FileManager.hpp"
 #include "upnp.hpp"
 #include "processing/processing_imagesplit.hpp"
 #include "processing/processing_tasksplit.hpp"
 #include "processing/processing_subtask_enqueuer_impl.hpp"
-#include "processing/processors/processing_processor_mnn_posenet.hpp"
+#include "processing/processors/processing_processor_mnn_image.hpp"
 #include "local_secure_storage/impl/json/JSONSecureStorage.hpp"
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
+#include <thread>
 
 using namespace boost::multiprecision;
-namespace br = boost::random;
 
 namespace sgns
 {
-    //GeniusNode GeniusNode::instance( DEV_CONFIG );
-
-    GeniusNode::GeniusNode( const DevConfig_st &dev_config, const char *eth_private_key ) :
+    GeniusNode::GeniusNode( const DevConfig_st &dev_config,
+                            const char         *eth_private_key,
+                            bool                autodht,
+                            bool                isprocessor,
+                            uint16_t            base_port ) :
         account_( std::make_shared<GeniusAccount>( static_cast<uint8_t>( dev_config.TokenID ),
-                                                   std::string( dev_config.BaseWritePath ),
+                                                   dev_config.BaseWritePath,
                                                    eth_private_key ) ),
         io_( std::make_shared<boost::asio::io_context>() ),
         write_base_path_( dev_config.BaseWritePath ),
+        autodht_( autodht ),
+        isprocessor_( isprocessor ),
         dev_config_( dev_config )
     {
         logging_system = std::make_shared<soralog::LoggingSystem>( std::make_shared<soralog::ConfiguratorFromYAML>(
@@ -43,19 +49,22 @@ namespace sgns
             // Additional logging config for application
             GetLoggingSystem() ) );
         auto result    = logging_system->configure();
+        if ( result.has_error )
+        {
+            throw std::runtime_error( "Could not configure logger" );
+        }
         std::cout << "Log Result: " << result.message << std::endl;
         libp2p::log::setLoggingSystem( logging_system );
         libp2p::log::setLevelOfGroup( "SuperGeniusDemo", soralog::Level::TRACE );
-        //libp2p::log::setLevelOfGroup("SuperGeniusDemoFile", soralog::Level::ERROR_);
 
         auto loggerGlobalDB = base::createLogger( "GlobalDB" );
-        loggerGlobalDB->set_level( spdlog::level::trace );
+        loggerGlobalDB->set_level( spdlog::level::off );
 
         auto loggerDAGSyncer = base::createLogger( "GraphsyncDAGSyncer" );
-        loggerDAGSyncer->set_level( spdlog::level::trace );
+        loggerDAGSyncer->set_level( spdlog::level::off );
 
         auto loggerBroadcaster = base::createLogger( "PubSubBroadcasterExt" );
-        loggerBroadcaster->set_level( spdlog::level::trace );
+        loggerBroadcaster->set_level( spdlog::level::off );
 
         auto loggerDataStore = base::createLogger( "CrdtDatastore" );
         loggerDataStore->set_level( spdlog::level::off );
@@ -64,39 +73,49 @@ namespace sgns
         loggerTransactions->set_level( spdlog::level::off );
 
         auto loggerQueue = base::createLogger( "ProcessingTaskQueueImpl" );
-        loggerQueue->set_level( spdlog::level::trace );
+        loggerQueue->set_level( spdlog::level::off );
 
-        //auto loggerAutonat = base::createLogger("Autonat");
-        //loggerDAGSyncer->set_level(spdlog::level::trace);
+        auto loggerRocksDB = base::createLogger( "rocksdb" );
+        loggerRocksDB->set_level( spdlog::level::off );
 
-        //auto loggerAutonatMsg = base::createLogger("AutonatMsgProcessor");
-        //loggerDAGSyncer->set_level(spdlog::level::trace);
+        auto loggerTM = base::createLogger( "TransactionManager" );
+        loggerTM->set_level( spdlog::level::off );
 
-        auto logkad = sgns::base::createLogger( "Kademlia" );
+        auto logkad = base::createLogger( "Kademlia" );
         logkad->set_level( spdlog::level::off );
 
-        auto logNoise = sgns::base::createLogger( "Noise" );
+        auto logNoise = base::createLogger( "Noise" );
         logNoise->set_level( spdlog::level::off );
+        auto logProcessingEngine = base::createLogger( "ProcessingEngine" );
+        logProcessingEngine->set_level( spdlog::level::debug );
 
-        auto pubsubport    = 40001 + GenerateRandomPort( account_->GetAddress<std::string>() );
-        auto graphsyncport = 40010 + GenerateRandomPort( account_->GetAddress<std::string>() );
+        auto loggerSubQueue = base::createLogger( "ProcessingSubTaskQueueAccessorImpl" );
+        loggerSubQueue->set_level( spdlog::level::off );
+        auto loggerProcServ = base::createLogger( "ProcessingService" );
+        loggerProcServ->set_level( spdlog::level::off );
+
+        auto loggerProcqm = base::createLogger( "ProcessingSubTaskQueueManager" );
+        loggerProcqm->set_level( spdlog::level::off );
+        auto tokenid = dev_config_.TokenID;
+
+        auto pubsubport    = GenerateRandomPort( base_port,
+                                              account_->GetAddress<std::string>() + std::to_string( tokenid ) );
+        auto graphsyncport = pubsubport + 10;
 
         std::vector<std::string> addresses;
         //UPNP
-        auto        upnp   = std::make_shared<sgns::upnp::UPNP>();
-        auto        gotIGD = upnp->GetIGD();
-        std::string lanip  = "";
-        if ( gotIGD )
+        auto        upnp = std::make_shared<upnp::UPNP>();
+        std::string lanip;
+        if ( upnp->GetIGD() )
         {
-            auto openedPort  = upnp->OpenPort( pubsubport, pubsubport, "TCP", 1800 );
-            auto openedPort2 = upnp->OpenPort( graphsyncport, graphsyncport, "TCP", 1800 );
+            auto openedPort  = upnp->OpenPort( pubsubport, pubsubport, "TCP", 3600 );
+            auto openedPort2 = upnp->OpenPort( graphsyncport, graphsyncport, "TCP", 3600 );
             auto wanip       = upnp->GetWanIP();
-            auto lanip       = upnp->GetLocalIP();
+            lanip            = upnp->GetLocalIP();
             std::cout << "Wan IP: " << wanip << std::endl;
             std::cout << "Lan IP: " << lanip << std::endl;
-            //addresses.push_back( lanip );
             addresses.push_back( wanip );
-            if ( !openedPort )
+            if ( !openedPort || !openedPort2 )
             {
                 std::cerr << "Failed to open port" << std::endl;
             }
@@ -106,26 +125,22 @@ namespace sgns
             }
         }
 
-        //auto loggerBroadcaster = base::createLogger( "PubSubBroadcasterExt" );
-        //loggerBroadcaster->set_level( spdlog::level::debug );
-
         auto pubsubKeyPath =
-            ( boost::format( "SuperGNUSNode.TestNet.%s/pubs_processor" ) % account_->GetAddress<std::string>() ).str();
+            ( boost::format( "SuperGNUSNode.TestNet.1a.02.%s/pubs_processor" ) % account_->GetAddress<std::string>() ).str();
 
         pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
             crdt::KeyPairFileStorage( write_base_path_ + pubsubKeyPath ).GetKeyPair().value() );
-        pubsub_->Start( pubsubport,
-                        { "/ip4/137.184.224.118/tcp/4001/p2p/12D3KooWKhqPn4nAXJRxyDESgqj3dBBBBVvmwFAShVkTdhioLwYG",
-                          "/ip4/192.168.46.116/tcp/40813/p2p/12D3KooWEhjSt5fxdsqftw8A1XdzfQy2JNZGiqi4rmFDQPoinV9Y",
-                          "/ip4/192.168.46.116/tcp/40096/p2p/12D3KooWHNgFsbvDU2JVpY6RrAsWnGujsmmargFtJRXHQvx8fWzE",
-                          "/ip4/192.168.46.116/tcp/40697/p2p/12D3KooWJbnptXWuugfqwDJGgZVAHyAvN3LZMFpwHRhQGzuY58rT" },
-                        lanip,
-                        addresses );
+        pubsub_->Start(
+            pubsubport,
+            { "/dns4/sg-fullnode-1.gnus.ai/tcp/40052/p2p/12D3KooWBqcxStdb4f9s4zT3bQiTDXYB56VJ77Rt7eEdjw4kXTwi" },
+            lanip,
+            addresses );
 
         globaldb_ = std::make_shared<crdt::GlobalDB>(
             io_,
             write_base_path_ +
-                ( boost::format( "SuperGNUSNode.TestNet.%s" ) % account_->GetAddress<std::string>() ).str(),
+                (  boost::format( write_base_path_ +  "SuperGNUSNode.TestNet.1a.02.%s"  ) % account_->GetAddress<std::string>()  )
+                .str(),
             graphsyncport,
             std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_, std::string( PROCESSING_CHANNEL ) ) );
 
@@ -138,9 +153,9 @@ namespace sgns
         }
 
         task_queue_      = std::make_shared<processing::ProcessingTaskQueueImpl>( globaldb_ );
-        processing_core_ = std::make_shared<processing::ProcessingCoreImpl>( globaldb_, 1000000, 2 );
-        processing_core_->RegisterProcessorFactory( "posenet",
-                                                    []() { return std::make_unique<processing::MNN_PoseNet>(); } );
+        processing_core_ = std::make_shared<processing::ProcessingCoreImpl>( globaldb_, 1000000, 1 );
+        processing_core_->RegisterProcessorFactory( "mnnimage",
+                                                    [] { return std::make_unique<processing::MNN_Image>(); } );
 
         task_result_storage_ = std::make_shared<processing::SubTaskResultStorageImpl>( globaldb_ );
         processing_service_  = std::make_shared<processing::ProcessingServiceImpl>(
@@ -152,39 +167,32 @@ namespace sgns
             processing_core_,                                                 //
             [this]( const std::string &var, const SGProcessing::TaskResult &taskresult )
             { ProcessingDone( var, taskresult ); }, //
-            [this]( const std::string &var ) { ProcessingError( var ); } );
-        processing_service_->SetChannelListRequestTimeout( boost::posix_time::milliseconds( 10000 ) );
+            [this]( const std::string &var ) { ProcessingError( var ); },
+            account_->GetAddress<std::string>() );
+        processing_service_->SetChannelListRequestTimeout( boost::posix_time::milliseconds( 3000 ) );
 
-        base::Buffer root_hash;
-        root_hash.put( std::vector<uint8_t>( 32ul, 1 ) );
-        hasher_ = std::make_shared<crypto::HasherImpl>();
-
-        header_repo_ = std::make_shared<blockchain::KeyValueBlockHeaderRepository>(
-            globaldb_,
-            hasher_,
-            ( boost::format( std::string( db_path_ ) ) % TEST_NET ).str() );
-        auto maybe_block_storage =
-            blockchain::KeyValueBlockStorage::create( root_hash, globaldb_, hasher_, header_repo_, []( auto & ) {} );
-
-        if ( !maybe_block_storage )
-        {
-            std::cout << "Error initializing blockchain" << maybe_block_storage.error().message() << std::endl;
-            throw std::runtime_error( "Error initializing blockchain" );
-            return;
-        }
-        block_storage_       = std::move( maybe_block_storage.value() );
         transaction_manager_ = std::make_shared<TransactionManager>(
             globaldb_,
             io_,
             account_,
-            hasher_,
-            block_storage_,
-            [this]( const std::string &var, const std::set<std::string> &vars ) { ProcessingFinished( var, vars ); } );
+            std::make_shared<crypto::HasherImpl>(),
+            ( boost::format( write_base_path_ + "SuperGNUSNode.TestNet.1a.02.%s" ) % account_->GetAddress<std::string>() )
+                .str(),
+            pubsub_,
+            upnp,
+            graphsyncport );
 
         transaction_manager_->Start();
-        processing_service_->StartProcessing( std::string( PROCESSING_GRID_CHANNEL ) );
+        if ( isprocessor_ )
+        {
+            processing_service_->StartProcessing( std::string( PROCESSING_GRID_CHANNEL ) );
+        }
 
-        DHTInit();
+        if ( autodht_ )
+        {
+            DHTInit();
+        }
+        RefreshUPNP( pubsubport, graphsyncport );
 
         io_thread = std::thread( [this]() { io_->run(); } );
     }
@@ -203,6 +211,60 @@ namespace sgns
         {
             io_thread.join();
         }
+        stop_upnp = true;
+        if ( upnp_thread.joinable() )
+        {
+            upnp_thread.join();
+        }
+    }
+
+    void GeniusNode::RefreshUPNP( int pubsubport, int graphsyncport )
+    {
+        if ( upnp_thread.joinable() )
+        {
+            stop_upnp = true;   // Signal the existing thread to stop
+            upnp_thread.join(); // Wait for it to finish
+        }
+
+        stop_upnp = false; // Reset the stop flag for the new thread
+
+        upnp_thread = std::thread(
+            [this, pubsubport, graphsyncport]()
+            {
+                auto next_refresh_time = std::chrono::steady_clock::now() + std::chrono::minutes( 60 );
+
+                while ( !stop_upnp )
+                {
+                    if ( std::chrono::steady_clock::now() >= next_refresh_time )
+                    {
+                        // Refresh UPnP mappings
+                        auto upnp = std::make_shared<upnp::UPNP>();
+                        if ( upnp->GetIGD() )
+                        {
+                            auto openedPort  = upnp->OpenPort( pubsubport, pubsubport, "TCP", 3600 );
+                            auto openedPort2 = upnp->OpenPort( graphsyncport, graphsyncport, "TCP", 3600 );
+                            if ( !openedPort || !openedPort2 )
+                            {
+                                std::cerr << "Failed to open port" << std::endl;
+                            }
+                            else
+                            {
+                                std::cout << "Open Port Success" << std::endl;
+                            }
+                        }
+                        else
+                        {
+                            std::cout << "No IGD" << std::endl;
+                        }
+
+                        // Update the next refresh time
+                        next_refresh_time = std::chrono::steady_clock::now() + std::chrono::minutes( 60 );
+                    }
+
+                    // Sleep briefly to avoid busy-waiting
+                    std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+                }
+            } );
     }
 
     void GeniusNode::AddPeer( const std::string &peer )
@@ -233,36 +295,57 @@ namespace sgns
         pubsub_->StartFindingPeers( key );
     }
 
-    void GeniusNode::ProcessImage( const std::string &image_path, uint16_t funds )
+    std::string generate_uuid_with_ipfs_id( const std::string &ipfs_id )
     {
+        // Hash the IPFS ID
+        std::hash<std::string> hasher;
+        uint64_t               id_hash = hasher( ipfs_id );
+
+        // Get a high-resolution timestamp
+        auto now       = std::chrono::high_resolution_clock::now();
+        auto timestamp = std::chrono::duration_cast<std::chrono::nanoseconds>( now.time_since_epoch() ).count();
+
+        // Combine the IPFS ID hash and timestamp to create a seed
+        uint64_t seed = id_hash ^ static_cast<uint64_t>( timestamp );
+
+        // Seed the PRNG
+        std::mt19937                                       gen( seed );
+        boost::uuids::basic_random_generator<std::mt19937> uuid_gen( gen );
+
+        // Generate UUID
+        boost::uuids::uuid uuid = uuid_gen();
+        return boost::uuids::to_string( uuid );
+    }
+
+    void GeniusNode::ProcessImage( const std::string &image_path )
+    {
+        // std::cout << "---------------------------------------------------------------" << std::endl;
+        // std::cout << "Process Image?" << transaction_manager_->GetBalance() << std::endl;
+        // std::cout << "---------------------------------------------------------------" << std::endl;
+        auto funds = GetProcessCost( image_path );
+        if ( funds <= 0 )
+        {
+            return;
+        }
+
         if ( transaction_manager_->GetBalance() >= funds )
         {
-            processing_service_->StopProcessing();
+            //processing_service_->StopProcessing();
 
-            //std::vector<std::vector<uint32_t>> chunkOptions;
-            //chunkOptions.push_back( { 1080, 0, 4320, 5, 5, 24 } );
-            //std::list<SGProcessing::Task> tasks;
-            //size_t                        nTasks = 1;
-            //for ( size_t taskIdx = 0; taskIdx < nTasks; ++taskIdx )
-            //{
             SGProcessing::Task task;
-            boost::uuids::uuid uuid = boost::uuids::random_generator()();
+            //boost::uuids::uuid uuid = boost::uuids::random_generator()();
+            //boost::uuids::random_generator_pure gen;
+            //boost::uuids::uuid uuid = gen();
+            auto uuidstring = generate_uuid_with_ipfs_id( pubsub_->GetHost()->getId().toBase58() );
             //std::cout << "CID STRING:    " << libp2p::multi::ContentIdentifierCodec::toString(imagesplit.GetPartCID(taskIdx)).value() << std::endl;
             //task.set_ipfs_block_id(libp2p::multi::ContentIdentifierCodec::toString(imagesplit.GetPartCID(taskIdx)).value());
-            task.set_ipfs_block_id( boost::uuids::to_string( uuid ) );
+            task.set_ipfs_block_id( uuidstring );
 
             task.set_json_data( image_path );
-            //task.set_block_len(48600);
-            //task.set_block_line_stride(540);
-            //task.set_block_stride(4860);
-            //task.set_block_len( 4860000 );
-            //task.set_block_line_stride( 5400 );
-            //task.set_block_stride( 0 );
+
             task.set_random_seed( 0 );
             task.set_results_channel( ( boost::format( "RESULT_CHANNEL_ID_%1%" ) % ( 1 ) ).str() );
-            //tasks.push_back( std::move( task ) );
-            //}
-            //Number of SubTasks is number of input Images.
+
             rapidjson::Document document;
             document.Parse( image_path.c_str() );
             size_t           nSubTasks = 1;
@@ -277,96 +360,106 @@ namespace sgns
                 std::cout << "This json lacks information" << std::endl;
                 return;
             }
-            processing::ProcessTaskSplitter taskSplitter;
-            //auto                               mnn_image = GetImageByCID(image_path);
-            //if (mnn_image.size() != inputArray.Size())
-            //{
-            //    std::cout << "Input size does not match, did an image fail to be obtained?" << std::endl;
-            //    return;
-            //}
-            //int imageindex = 0;
+            processing::ProcessTaskSplitter  taskSplitter;
             std::list<SGProcessing::SubTask> subTasks;
             for ( const auto &input : inputArray.GetArray() )
             {
-                //auto image = mnn_image[imageindex];
-                //processing::ImageSplitter          imagesplit(image, input["block_line_stride"].GetInt(), input["block_stride"].GetInt(), input["block_len"].GetInt());
-
-                size_t nChunks = input["chunk_count"].GetInt();
-                //Assumption: There will always be 1 task, with several subtasks per json. So this for loop isn't really doing anything.
-                //for (auto& task : tasks)
-                //{
+                size_t                                     nChunks = input["chunk_count"].GetInt();
                 rapidjson::StringBuffer                    buffer;
                 rapidjson::Writer<rapidjson::StringBuffer> writer( buffer );
+
                 input.Accept( writer );
                 std::string inputAsString = buffer.GetString();
-                taskSplitter.SplitTask( task, subTasks, inputAsString, nChunks, false );
+                taskSplitter
+                    .SplitTask( task, subTasks, inputAsString, nChunks, false, pubsub_->GetHost()->getId().toBase58() );
 
                 //}
                 //imageindex++;
             }
 
+            auto maybe_escrow_path = transaction_manager_->HoldEscrow( funds,
+                                                                       uint256_t{ std::string( dev_config_.Addr ) },
+                                                                       dev_config_.Cut,
+                                                                       uuidstring );
+
+            task.set_escrow_path( maybe_escrow_path.value() );
             task_queue_->EnqueueTask( task, subTasks );
-            transaction_manager_->HoldEscrow( funds,
-                                              nSubTasks,
-                                              uint256_t{ std::string( dev_config_.Addr ) },
-                                              dev_config_.Cut,
-                                              boost::uuids::to_string( uuid ) );
         }
     }
 
-    void GeniusNode::MintTokens( uint64_t amount )
+    double GeniusNode::GetProcessCost( const std::string &json_data )
     {
-        transaction_manager_->MintFunds( amount );
+        double cost = 0;
+        std::cout << "Received JSON data: " << json_data << std::endl;
+        //Parse Json
+        rapidjson::Document document;
+        if ( document.Parse( json_data.c_str() ).HasParseError() )
+        {
+            std::cout << "Invalid JSON data provided" << std::endl;
+            return 0;
+        }
+        size_t           nSubTasks = 1;
+        rapidjson::Value inputArray;
+        if ( document.HasMember( "input" ) && document["input"].IsArray() )
+        {
+            inputArray = document["input"];
+            nSubTasks  = inputArray.Size();
+        }
+        else
+        {
+            std::cout << "This json lacks inputs" << std::endl;
+            return 0;
+        }
+        for ( const auto &input : inputArray.GetArray() )
+        {
+            if ( input.HasMember( "block_len" ) && input["block_len"].IsUint64() )
+            {
+                double block_len  = static_cast<double>( input["block_len"].GetUint64() );
+                cost             += ( block_len / 2100000 );
+                std::cout << "Block length: " << block_len << std::endl;
+            }
+            else
+            {
+                std::cout << "Missing or invalid block_len in input" << std::endl;
+                return 0;
+            }
+        }
+        return std::max( cost, static_cast<double>( 1 ) );
     }
 
-    uint64_t GeniusNode::GetBalance()
+    void GeniusNode::MintTokens( double amount, std::string transaction_hash, std::string chainid, std::string tokenid )
+    {
+        transaction_manager_->MintFunds( amount, transaction_hash, chainid, tokenid );
+    }
+
+    double GeniusNode::GetBalance()
     {
         return transaction_manager_->GetBalance();
     }
 
-    uint16_t GeniusNode::GenerateRandomPort( const std::string &address )
-    {
-        uint32_t seed = static_cast<uint32_t>( uint256_t{ address } % 1000 );
-
-        // Setup the random number generator
-        br::mt19937                    rng( seed );    // Use the reduced number as seed
-        br::uniform_int_distribution<> dist( 0, 999 ); // Range: 0 to 9999
-
-        // Generate a 4-digit random number
-        //return dist( rng );
-
-        return static_cast<uint16_t>( seed );
-    }
-
     void GeniusNode::ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult )
     {
-        std::cout << "PROCESSING DONE " << task_id << std::endl;
-        transaction_manager_->ProcessingDone( task_id, taskresult );
+        std::cout << "[" << account_->GetAddress<std::string>() << "] SUCCESS PROCESSING TASK " << task_id << std::endl;
+        if ( !task_queue_->IsTaskCompleted( task_id ) )
+        {
+            if ( transaction_manager_->ProcessingDone( task_id, taskresult ) )
+            {
+                task_queue_->CompleteTask( task_id, taskresult );
+            }
+            else
+            {
+                std::cout << "Invalid results!" << std::endl;
+            }
+        }
+        else
+        {
+            std::cout << "Task Already completed!" << std::endl;
+        }
     }
 
     void GeniusNode::ProcessingError( const std::string &task_id )
     {
-        std::cout << "PROCESSING ERROR " << task_id << std::endl;
-    }
-
-    void GeniusNode::ProcessingFinished( const std::string &task_id, const std::set<std::string> &subtasks_ids )
-    {
-        if ( transaction_manager_->ReleaseEscrow( task_id, !task_queue_->IsTaskCompleted( task_id ) ) )
-        {
-            SGProcessing::TaskResult result;
-            std::cout << "PROCESSING FINISHED " << task_id << std::endl;
-            auto subtask_results = task_result_storage_->GetSubTaskResults( subtasks_ids );
-
-            SGProcessing::TaskResult taskResult;
-            auto                     results = taskResult.mutable_subtask_results();
-            for ( const auto &r : subtask_results )
-            {
-                auto result = results->Add();
-                result->CopyFrom( r );
-            }
-            processing_service_->StartProcessing( std::string( PROCESSING_GRID_CHANNEL ) );
-            task_queue_->CompleteTask( task_id, taskResult );
-        }
+        //std::cout << "[" << account_->GetAddress<std::string>() << "] ERROR PROCESSING SUBTASK" << task_id << std::endl;
     }
 
 }

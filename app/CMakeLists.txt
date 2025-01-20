@@ -70,4 +70,8 @@ add_executable (sgns_demo
       #${WIN_CRYPT_LIBRARY}
       )
 
+if(FORCE_MULTIPLE)
+    set_target_properties(sgns_demo PROPERTIES LINK_FLAGS ${MULTIPLE_OPTION})
+  endif()
+
   supergenius_install(sgns_demo)

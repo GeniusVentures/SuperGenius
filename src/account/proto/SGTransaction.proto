@@ -25,7 +25,7 @@ message TransferUTXOInput
 }
 message TransferOutput
 {
-    bytes encrypted_amount = 1; // 
+    double encrypted_amount = 1; // 
     bytes dest_addr = 2; // 
 }
 message UTXOTxParams
@@ -46,18 +46,21 @@ message ProcessingTx
     uint64 mpc_magic_key = 2; //
     uint64 offset = 3; //
     string job_cid = 4; // 
-    string subtask_cid = 5; // 
+    repeated string subtask_cids = 5; // 
+    repeated string node_addresses = 6;
 }
 message MintTx
 {
     DAGStruct dag_struct = 1;// 
-    uint64 amount = 2; // 
+    bytes chain_id = 2;
+    bytes token_id = 3;
+    double amount = 4; // 
 }
 message EscrowTx
 {
     DAGStruct dag_struct = 1;// 
     UTXOTxParams utxo_params = 2; //
-    uint64 num_chunks = 3;
+    double amount = 3;
     bytes dev_addr = 4; // 
-    float dev_cut = 5; // 
+    float peers_cut = 5; // 
 }

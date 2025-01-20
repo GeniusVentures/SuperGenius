@@ -88,7 +88,7 @@ namespace sgns::authority {
     std::for_each(authorities->begin(),
                   authorities->end(),
                   [](auto &authority) { authority.weight = 0; });
-    return std::move(authorities);
+    return authorities;
   }
 
   outcome::result<void> AuthorityManagerImpl::applyScheduledChange(

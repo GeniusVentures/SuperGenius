@@ -52,10 +52,10 @@ namespace
             return;
         }
 
-        void  ProcessSubTask(
-            const SGProcessing::SubTask& subTask, SGProcessing::SubTaskResult& result,
-            uint32_t initialHashCode) override 
+        outcome::result<SGProcessing::SubTaskResult> ProcessSubTask(
+        const SGProcessing::SubTask& subTask, uint32_t initialHashCode) override 
         {
+            SGProcessing::SubTaskResult result;
             {
                 std::scoped_lock<std::mutex> subTaskCountLock(m_subTaskCountMutex);
                 ++m_processingSubTaskCount;
@@ -64,7 +64,8 @@ namespace
                 {
                     // Reset the counter to allow processing restart
                     m_processingSubTaskCount = 0;
-                    throw std::runtime_error("Maximal number of processed subtasks exceeded");
+                    //throw std::runtime_error("Maximal number of processed subtasks exceeded");
+                    return outcome::failure( boost::system::error_code{} );
                 }
             }
 
@@ -97,6 +98,7 @@ namespace
             }
             std::string hashString(reinterpret_cast<const char*>(&subTaskResultHash), sizeof(subTaskResultHash));
             result.set_result_hash(hashString);
+            return result;
         }
 
         std::vector<size_t> m_chunkResulHashes;
