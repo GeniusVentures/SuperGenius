@@ -12,7 +12,9 @@
 #include <boost/multiprecision/cpp_int.hpp>
 #include <boost/multiprecision/fwd.hpp>
 
-#include "ProofSystem/ElGamalKeyGenerator.hpp"
+#include <ProofSystem/ElGamalKeyGenerator.hpp>
+#include <ProofSystem/EthereumKeyGenerator.hpp>
+
 #include "account/GeniusUTXO.hpp"
 #include "account/UTXOTxParameters.hpp"
 #include "outcome/outcome.hpp"
@@ -41,7 +43,7 @@ namespace sgns
         {
             std::ostringstream oss;
             oss << "0x";
-            oss << std::hex << address.GetPublicKey().public_key_value;
+            oss << std::hex << elgamal_address.GetPublicKey().public_key_value;
 
             return oss.str();
         }
@@ -49,7 +51,7 @@ namespace sgns
         template <>
         [[nodiscard]] uint256_t GetAddress() const
         {
-            return uint256_t( address.GetPublicKey().public_key_value.str() );
+            return uint256_t( elgamal_address.GetPublicKey().public_key_value.str() );
         }
 
         template <typename T>
@@ -129,7 +131,9 @@ namespace sgns
             return true;
         }
 
-        KeyGenerator::ElGamal   address;
+        KeyGenerator::ElGamal          elgamal_address;
+        ethereum::EthereumKeyGenerator eth_address;
+
         uint8_t                 token; //GNUS SGNUS ETC...
         uint64_t                nonce;
         std::vector<GeniusUTXO> utxos;
@@ -137,8 +141,9 @@ namespace sgns
     private:
         //uint64_t balance;
 
-        static outcome::result<KeyGenerator::ElGamal> GenerateGeniusAddress( std::string_view base_path,
-                                                                             const char      *eth_private_key );
+        static outcome::result<std::pair<KeyGenerator::ElGamal, ethereum::EthereumKeyGenerator>> GenerateGeniusAddress(
+            std::string_view base_path,
+            const char      *eth_private_key );
     };
 }
 
