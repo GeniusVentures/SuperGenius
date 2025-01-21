@@ -37,10 +37,14 @@ namespace sgns::base {
     std::vector<uint8_t> blob;
     blob.reserve((hex.size() + 1) / 2);
 
-    try {
-      boost::algorithm::unhex(hex.begin(), hex.end(), std::back_inserter(blob));
-      return blob;
+    if ( hex[0] == '0' && hex[1] == 'x' )
+    {
+        hex = std::string_view( &hex[2], hex.length() - 2 );
+    }
 
+    try {
+        boost::algorithm::unhex( hex, std::back_inserter( blob ) );
+        return blob;
     } catch (const boost::algorithm::not_enough_input &e) {
       return UnhexError::NOT_ENOUGH_INPUT;
 
