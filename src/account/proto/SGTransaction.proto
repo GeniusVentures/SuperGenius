@@ -11,7 +11,9 @@ message DAGStruct
     int64 timestamp = 5; // 
     bytes uncle_hash = 6; // 
     bytes data_hash = 7; // 
+    bytes signature = 8;    
 }
+
 message DAGWrapper 
 {
     DAGStruct dag_struct = 1;// 

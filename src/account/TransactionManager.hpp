@@ -10,11 +10,9 @@
 #include <memory>
 #include <deque>
 #include <cstdint>
-#include <utility>
 #include <map>
 #include <unordered_map>
 
-#include <boost/asio.hpp>
 #include <boost/format.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
 
@@ -31,7 +29,6 @@
 #include "proof/proto/SGProof.pb.h"
 #include "processing/proto/SGProcessing.pb.h"
 #include "outcome/outcome.hpp"
-#include "primitives/common.hpp"
 #include "upnp.hpp"
 
 namespace sgns
@@ -59,8 +56,8 @@ namespace sgns
 
         const GeniusAccount &GetAccount() const;
 
-        const std::vector<std::vector<uint8_t>> GetOutTransactions() const;
-        const std::vector<std::vector<uint8_t>> GetInTransactions() const;
+        std::vector<std::vector<uint8_t>> GetOutTransactions() const;
+        std::vector<std::vector<uint8_t>> GetInTransactions() const;
 
         bool TransferFunds( double amount, const uint256_t &destination );
         void MintFunds( double amount, std::string transaction_hash, std::string chainid, std::string tokenid );
@@ -80,10 +77,10 @@ namespace sgns
 
         void                     Update();
         void                     EnqueueTransaction( TransactionPair element );
-        SGTransaction::DAGStruct FillDAGStruct( std::string transaction_hash = "" );
+        SGTransaction::DAGStruct FillDAGStruct( std::string transaction_hash = "" ) const;
         outcome::result<void>    SendTransaction();
-        std::string              GetTransactionPath( std::shared_ptr<IGeniusTransactions> element );
-        std::string              GetTransactionProofPath( std::shared_ptr<IGeniusTransactions> element );
+        std::string              GetTransactionPath( IGeniusTransactions &element );
+        std::string              GetTransactionProofPath( IGeniusTransactions& element );
         std::string              GetNotificationPath( const std::string &destination );
 
         outcome::result<std::shared_ptr<IGeniusTransactions>> FetchTransaction(
@@ -97,6 +94,9 @@ namespace sgns
         outcome::result<void> CheckOutgoing();
 
         void RefreshPorts();
+
+        std::vector<uint8_t> MakeSignature( SGTransaction::DAGStruct dag_st ) const;
+        bool                 CheckDAGStructSignature( SGTransaction::DAGStruct dag_st ) const;
 
         std::shared_ptr<crdt::GlobalDB>                  processing_db_m;
         std::shared_ptr<boost::asio::io_context>         ctx_m;
@@ -129,7 +129,6 @@ namespace sgns
             { "transfer", &TransactionManager::ParseTransferTransaction },
             { "mint", &TransactionManager::ParseMintTransaction },
             { "escrow", &TransactionManager::ParseEscrowTransaction },
-
         };
 
         base::Logger m_logger = sgns::base::createLogger( "TransactionManager" );
