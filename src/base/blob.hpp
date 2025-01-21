@@ -155,6 +155,11 @@ namespace sgns::base {
       std::copy(span.begin(), span.end(), blob.begin());
       return blob;
     }
+
+    [[nodiscard]] std::vector<uint8_t> ToVec() const
+    {
+        return { this->begin(), this->end() };
+    }
   };
 
   // extern specification of the most frequently instantiated blob
