@@ -148,10 +148,11 @@ namespace sgns
                                         std::string chainid,
                                         std::string tokenid )
     {
-        auto mint_transaction = std::make_shared<MintTransaction>( RoundTo5Digits( amount ),
-                                                                   chainid,
-                                                                   tokenid,
-                                                                   FillDAGStruct( transaction_hash ) );
+        auto mint_transaction = std::make_shared<MintTransaction>(
+            MintTransaction::New( RoundTo5Digits( amount ),
+                                  std::move( chainid ),
+                                  std::move( tokenid ),
+                                  FillDAGStruct( std::move( transaction_hash ) ) ) );
         std::optional<std::vector<uint8_t>> maybe_proof;
 #ifdef _PROOF_ENABLED
         TransferProof prover( 1000000000000000,
@@ -180,11 +181,8 @@ namespace sgns
                                                uint256_t{ "0x" + hash_data.toReadableString() } ) );
 
         account_m->utxos        = UTXOTxParameters::UpdateUTXOList( account_m->utxos, params );
-        auto escrow_transaction = std::make_shared<EscrowTransaction>( params,
-                                                                       RoundTo5Digits( amount ),
-                                                                       dev_addr,
-                                                                       peers_cut,
-                                                                       FillDAGStruct() );
+        auto escrow_transaction = std::make_shared<EscrowTransaction>(
+            EscrowTransaction::New( params, RoundTo5Digits( amount ), dev_addr, peers_cut, FillDAGStruct() ) );
 
         std::optional<std::vector<uint8_t>> maybe_proof;
 #ifdef _PROOF_ENABLED
@@ -243,7 +241,7 @@ namespace sgns
         escrow_utxo_input.signature_  = ""; //TODO - Signature
 
         auto transfer_transaction = std::make_shared<TransferTransaction>(
-            payout_peers,
+            TransferTransaction::New( payout_peers,
             std::vector<InputUTXOInfo>{ escrow_utxo_input },
             FillDAGStruct() );
 
