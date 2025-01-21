@@ -1,23 +1,19 @@
 #include "GeniusAccount.hpp"
 
 #include "ProofSystem/ElGamalKeyGenerator.hpp"
-//#include "ProofSystem/EthereumKeyGenerator.hpp"
+#include "ProofSystem/EthereumKeyGenerator.hpp"
 #include "WalletCore/Hash.h"
 #include "local_secure_storage/ISecureStorage.hpp"
-#include "nil/crypto3/multiprecision/cpp_int/import_export.hpp"
 #include "singleton/CComponentFactory.hpp"
 #include "WalletCore/PrivateKey.h"
 #include <nil/crypto3/pubkey/algorithm/sign.hpp>
 #include <boost/algorithm/hex.hpp>
 
-using namespace nil::crypto3::multiprecision::literals;
-using cpp_int = nil::crypto3::multiprecision::cpp_int;
-
 namespace
 {
     std::array<uint8_t, 32> get_elgamal_pubkey()
     {
-        const cpp_int           elgamal_key = KeyGenerator::ElGamal( 0x1234_cppui256 ).GetPublicKey().public_key_value;
+        const auto              elgamal_key = KeyGenerator::ElGamal( 0x1234_cppui256 ).GetPublicKey().public_key_value;
         std::array<uint8_t, 32> exported;
         export_bits( elgamal_key, exported.begin(), 8, false );
 
@@ -34,7 +30,7 @@ namespace sgns
     {
         if ( auto maybe_address = GenerateGeniusAddress( base_path, eth_private_key ); maybe_address.has_value() )
         {
-            address = maybe_address.value();
+            auto [elgamal_address, eth_address] = maybe_address.value();
         }
         else
         {
@@ -46,8 +42,8 @@ namespace sgns
         // How to deal with errors?
     }
 
-    outcome::result<KeyGenerator::ElGamal> GeniusAccount::GenerateGeniusAddress( std::string_view base_path,
-                                                                                 const char      *eth_private_key )
+    outcome::result<std::pair<KeyGenerator::ElGamal, ethereum::EthereumKeyGenerator>> GeniusAccount::
+        GenerateGeniusAddress( std::string_view base_path, const char *eth_private_key )
     {
         auto component_factory = SINGLETONINSTANCE( CComponentFactory );
         OUTCOME_TRY( ( auto &&, icomponent ), component_factory->GetComponent( "LocalSecureStorage" ) );
@@ -67,14 +63,10 @@ namespace sgns
                 return outcome::failure( std::errc::invalid_argument );
             }
 
-            std::vector<uint8_t> private_key_bytes;
-            boost::algorithm::unhex(eth_private_key, eth_private_key + strlen(eth_private_key), std::back_inserter(private_key_bytes));
+            OUTCOME_TRY( auto as_vec, base::unhex( eth_private_key ) );
 
-            if (private_key_bytes.size() != TW::PrivateKey::_size) {
-                return outcome::failure(std::make_error_code(std::errc::invalid_argument)); 
-            }
+            TW::PrivateKey private_key( as_vec );
 
-            TW::PrivateKey private_key( private_key_bytes );
             auto signed_secret = private_key.sign(
                 TW::Data( ELGAMAL_PUBKEY_PREDEFINED.cbegin(), ELGAMAL_PUBKEY_PREDEFINED.cend() ),
                 TWCurveSECP256k1 );
@@ -93,8 +85,9 @@ namespace sgns
                                  secure_storage->Save( "sgns_key", key_seed.str(), std::string( base_path ) ) );
         }
 
-        KeyGenerator::ElGamal sgnus_key( key_seed );
+        KeyGenerator::ElGamal          elgamal_key( key_seed );
+        ethereum::EthereumKeyGenerator eth_key( key_seed );
 
-        return sgnus_key;
+        return std::make_pair( std::move( elgamal_key ), std::move( eth_key ) );
     }
 }
