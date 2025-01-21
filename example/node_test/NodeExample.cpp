@@ -30,70 +30,80 @@
 std::mutex              keyboard_mutex;
 std::condition_variable cv;
 std::queue<std::string> events;
-std::string current_input;
-std::atomic<bool> finished(false);
+std::string             current_input;
+std::atomic<bool>       finished( false );
 
-
-void enable_raw_mode() {
+void enable_raw_mode()
+{
 #ifdef _WIN32
-    DWORD mode;
-    HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
-    GetConsoleMode(hInput, &mode);
-    SetConsoleMode(hInput, mode & ~(ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT));
+    DWORD  mode;
+    HANDLE hInput = GetStdHandle( STD_INPUT_HANDLE );
+    GetConsoleMode( hInput, &mode );
+    SetConsoleMode( hInput, mode & ~( ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT ) );
 #else
     termios term;
-    tcgetattr(STDIN_FILENO, &term);
-    term.c_lflag &= ~(ICANON | ECHO);
-    tcsetattr(STDIN_FILENO, TCSANOW, &term);
+    tcgetattr( STDIN_FILENO, &term );
+    term.c_lflag &= ~( ICANON | ECHO );
+    tcsetattr( STDIN_FILENO, TCSANOW, &term );
 #endif
 }
 
-void disable_raw_mode() {
+void disable_raw_mode()
+{
 #ifdef _WIN32
-    DWORD mode;
-    HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
-    SetConsoleMode(hInput, mode | ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT);
+    DWORD  mode;
+    HANDLE hInput = GetStdHandle( STD_INPUT_HANDLE );
+    SetConsoleMode( hInput, mode | ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT );
 #else
     termios term;
-    tcgetattr(STDIN_FILENO, &term);
+    tcgetattr( STDIN_FILENO, &term );
     term.c_lflag |= ICANON | ECHO;
-    tcsetattr(STDIN_FILENO, TCSANOW, &term);
+    tcsetattr( STDIN_FILENO, TCSANOW, &term );
 #endif
 }
 
-void clear_line() {
-    std::cout << "\r\033[K";  // Clear the current line
+void clear_line()
+{
+    std::cout << "\r\033[K"; // Clear the current line
 }
 
-void redraw_prompt() {
+void redraw_prompt()
+{
     clear_line();
-    std::cout << "> " << current_input << std::flush;  // Redraw the input prompt
+    std::cout << "> " << current_input << std::flush; // Redraw the input prompt
 }
 
-void keyboard_input_thread() {
+void keyboard_input_thread()
+{
     enable_raw_mode();
 
-    while (!finished) {
+    while ( !finished )
+    {
         char ch;
-        std::cin.get(ch);
+        std::cin.get( ch );
 
         {
-            std::lock_guard<std::mutex> lock(keyboard_mutex);
-            if (ch == '\n' || ch == '\r') {
+            std::lock_guard<std::mutex> lock( keyboard_mutex );
+            if ( ch == '\n' || ch == '\r' )
+            {
                 // Check for both newline and carriage return
-                if (!current_input.empty()) {
-                    events.push(current_input);
+                if ( !current_input.empty() )
+                {
+                    events.push( current_input );
                     current_input.clear();
-                    cv.notify_one();  // Notify the event processor
+                    cv.notify_one(); // Notify the event processor
                 }
                 std::cout << std::endl;
             }
-            else if (ch == 127 || ch == '\b') { // Handle backspace
-                if (!current_input.empty()) {
+            else if ( ch == 127 || ch == '\b' )
+            { // Handle backspace
+                if ( !current_input.empty() )
+                {
                     current_input.pop_back();
                 }
             }
-            else if (std::isprint(ch) || std::isspace(ch)) {
+            else if ( std::isprint( ch ) || std::isspace( ch ) )
+            {
                 current_input += ch;
             }
         }
@@ -131,45 +141,53 @@ void CreateProcessingTransaction( const std::vector<std::string> &args, sgns::Ge
         std::cerr << "Invalid process command format.\n";
         return;
     }
-    uint64_t price = std::stoull( args[2] );
+    uint64_t    price       = std::stoull( args[2] );
     std::string procxml_loc = args[3];
-    std::string json_data = "";
-    if (procxml_loc.size() > 0)
+    std::string json_data   = "";
+    if ( procxml_loc.size() > 0 )
     {
         libp2p::protocol::kademlia::Config kademlia_config;
-        kademlia_config.randomWalk.enabled = true;
-        kademlia_config.randomWalk.interval = std::chrono::seconds(300);
-        kademlia_config.requestConcurency = 20;
-        auto injector = libp2p::injector::makeHostInjector(
-            libp2p::injector::makeKademliaInjector(libp2p::injector::useKademliaConfig(kademlia_config)));
+        kademlia_config.randomWalk.enabled  = true;
+        kademlia_config.randomWalk.interval = std::chrono::seconds( 300 );
+        kademlia_config.requestConcurency   = 20;
+        auto injector                       = libp2p::injector::makeHostInjector(
+            libp2p::injector::makeKademliaInjector( libp2p::injector::useKademliaConfig( kademlia_config ) ) );
         auto ioc = injector.create<std::shared_ptr<boost::asio::io_context>>();
 
         boost::asio::io_context::executor_type                                   executor = ioc->get_executor();
-        boost::asio::executor_work_guard<boost::asio::io_context::executor_type> workGuard(executor);
+        boost::asio::executor_work_guard<boost::asio::io_context::executor_type> workGuard( executor );
         FileManager::GetInstance().InitializeSingletons();
-        auto data = FileManager::GetInstance().LoadASync(procxml_loc, false, false, ioc, [ioc](const sgns::AsyncError::CustomResult& status) {
-            if (status.has_value())
+        auto data = FileManager::GetInstance().LoadASync(
+            procxml_loc,
+            false,
+            false,
+            ioc,
+            [ioc]( const sgns::AsyncError::CustomResult &status )
             {
-                std::cout << "Success: " << status.value().message << std::endl;
-            }
-            else
-            {
-                std::cout << "Error: " << status.error() << std::endl;
-            };
-            }, [ioc, &json_data](std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers) {
-                json_data = std::string(buffers->second[0].begin(), buffers->second[0].end());
-                },"file");
-            ioc->run();
-            ioc->stop();
-            ioc->reset();
+                if ( status.has_value() )
+                {
+                    std::cout << "Success: " << status.value().message << std::endl;
+                }
+                else
+                {
+                    std::cout << "Error: " << status.error() << std::endl;
+                };
+            },
+            [ioc,
+             &json_data]( std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers )
+            { json_data = std::string( buffers->second[0].begin(), buffers->second[0].end() ); },
+            "file" );
+        ioc->run();
+        ioc->stop();
+        ioc->reset();
     }
 
     if ( genius_node.GetBalance() >= price )
     {
-        
-        if (json_data.empty())
+        if ( json_data.empty() )
         {
-            std::cerr << "No input XML obtained" << std::endl;;
+            std::cerr << "No input XML obtained" << std::endl;
+            ;
             return;
         }
         // std::string json_data = R"(
@@ -213,11 +231,11 @@ void CreateProcessingTransaction( const std::vector<std::string> &args, sgns::Ge
         //         }
         //        )";
         genius_node.ProcessImage( json_data /*args[1]*/
-                                      );
+        );
     }
     else
     {
-        std::cout << "Insufficient funds to process image " << std::endl; 
+        std::cout << "Insufficient funds to process image " << std::endl;
     }
 }
 
@@ -229,53 +247,68 @@ std::vector<std::string> split_string( const std::string &str )
     return results;
 }
 
-void process_events(sgns::GeniusNode& genius_node) {
-    while (!finished) {
-        std::unique_lock<std::mutex> lock(keyboard_mutex);
-        cv.wait(lock, [] { return !events.empty() || finished; });
+void process_events( sgns::GeniusNode &genius_node )
+{
+    while ( !finished )
+    {
+        std::unique_lock<std::mutex> lock( keyboard_mutex );
+        cv.wait( lock, [] { return !events.empty() || finished; } );
 
-        while (!events.empty()) {
-            std::string event = std::move(events.front());
+        while ( !events.empty() )
+        {
+            std::string event = std::move( events.front() );
             events.pop();
 
-            lock.unlock();  // Unlock while processing
+            lock.unlock(); // Unlock while processing
 
-            auto arguments = split_string(event);
-            if (arguments.empty()) {
+            auto arguments = split_string( event );
+            if ( arguments.empty() )
+            {
                 std::cerr << "Invalid command\n";
             }
-            else if (arguments[0] == "process") {
-                CreateProcessingTransaction(arguments, genius_node);
+            else if ( arguments[0] == "process" )
+            {
+                CreateProcessingTransaction( arguments, genius_node );
             }
-            else if (arguments[0] == "mint") {
-                MintTokens(arguments, genius_node);
+            else if ( arguments[0] == "mint" )
+            {
+                MintTokens( arguments, genius_node );
             }
-            else if (arguments[0] == "info") {
-                PrintAccountInfo(arguments, genius_node);
+            else if ( arguments[0] == "info" )
+            {
+                PrintAccountInfo( arguments, genius_node );
             }
-            else if (arguments[0] == "peer") {
-                if (arguments.size() > 1) {
-                    genius_node.AddPeer(arguments[1]);
+            else if ( arguments[0] == "peer" )
+            {
+                if ( arguments.size() > 1 )
+                {
+                    genius_node.AddPeer( arguments[1] );
                 }
-                else {
+                else
+                {
                     std::cerr << "Invalid peer command\n";
                 }
             }
-            else {
+            else
+            {
                 std::cerr << "Unknown command: " << arguments[0] << "\n";
             }
 
-            lock.lock();  // Re-lock before checking the condition again
+            lock.lock(); // Re-lock before checking the condition again
         }
     }
 }
 
+void periodic_processing( sgns::GeniusNode &genius_node )
+{
+    while ( !finished )
+    {
+        std::this_thread::sleep_for( std::chrono::minutes( 30 ) ); // Wait for 30 minutes
+        if ( finished )
+        {
+            break; // Exit if the application is shutting down
+        }
 
-void periodic_processing(sgns::GeniusNode &genius_node) {
-    while (!finished) {
-        std::this_thread::sleep_for(std::chrono::minutes(30)); // Wait for 30 minutes
-        if (finished) break;  // Exit if the application is shutting down
-        
         std::string json_data = R"(
                 {
                 "data": {
@@ -316,34 +349,37 @@ void periodic_processing(sgns::GeniusNode &genius_node) {
                 ]
                 }
                )";
-                genius_node.ProcessImage( json_data /*args[1]*/
-                                      );
+        genius_node.ProcessImage( json_data /*args[1]*/
+        );
     }
 }
 
-DevConfig_st DEV_CONFIG{ "0xcafe", 0.65, 1.0, 0 , "./"};
+DevConfig_st DEV_CONFIG{ "0xcafe", 0.65, 1.0, 0, "./" };
 
 int main( int argc, char *argv[] )
 {
-    std::thread input_thread(keyboard_input_thread);
+    std::thread input_thread( keyboard_input_thread );
 
-    
     //Inputs
 
-    sgns::GeniusNode node_instance( DEV_CONFIG, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", true, false );
+    sgns::GeniusNode node_instance( DEV_CONFIG,
+                                    "0xee0ecb044f2147a105fc3e89e0080dd2fbf60672d54d32f914423cba2964dcbc",
+                                    true,
+                                    false );
 
-    std::thread processing_thread(periodic_processing, std::ref(node_instance));
+    std::thread processing_thread( periodic_processing, std::ref( node_instance ) );
     std::cout << "Insert \"process\", the image and the number of tokens to be" << std::endl;
     redraw_prompt();
     //while ( !finished )
     //{
-        process_events( node_instance );
+    process_events( node_instance );
     //}
     if ( input_thread.joinable() )
     {
         input_thread.join();
     }
-    if (processing_thread.joinable()) {
+    if ( processing_thread.joinable() )
+    {
         processing_thread.join();
     }
     return 0;
