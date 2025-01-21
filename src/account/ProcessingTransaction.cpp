@@ -12,13 +12,13 @@
 
 namespace sgns
 {
-    ProcessingTransaction::ProcessingTransaction( const std::string              &job_id,
-                                                  std::vector<std::string>        subtask_ids,
-                                                  std::vector<std::string>        node_addresses,
-                                                  const SGTransaction::DAGStruct &dag ) :
+    ProcessingTransaction::ProcessingTransaction( std::string              job_id,
+                                                  std::vector<std::string> subtask_ids,
+                                                  std::vector<std::string> node_addresses,
+                                                  SGTransaction::DAGStruct dag ) :
 
-        IGeniusTransactions( "process", SetDAGWithType( dag, "process" ) ), //
-        job_id_( job_id ),
+        IGeniusTransactions( "process", SetDAGWithType( std::move( dag ), "process" ) ), //
+        job_id_( std::move( job_id ) ),
         subtask_ids_( std::move( subtask_ids ) ),
         node_addresses_( std::move( node_addresses ) )
     {
@@ -27,6 +27,19 @@ namespace sgns
         dag_st.set_data_hash( hash_data.toReadableString() );
         hash_data = hasher_->blake2b_256( std::vector<uint8_t>{ job_id.begin(), job_id.end() } );
         job_hash_ = uint256_t{ "0x" + hash_data.toReadableString() };
+    }
+
+    ProcessingTransaction ProcessingTransaction::New( std::string              job_id,
+                                                      std::vector<std::string> subtask_ids,
+                                                      std::vector<std::string> node_addresses,
+                                                      SGTransaction::DAGStruct dag )
+    {
+        ProcessingTransaction instance( std::move( job_id ),
+                                        std::move( subtask_ids ),
+                                        std::move( node_addresses ),
+                                        std::move( dag ) );
+        instance.FillHash();
+        return instance;
     }
 
     std::vector<uint8_t> ProcessingTransaction::SerializeByteVector()
@@ -56,15 +69,13 @@ namespace sgns
         SGTransaction::ProcessingTx tx_struct;
         if ( !tx_struct.ParseFromArray( data.data(), data.size() ) )
         {
-            std::cerr << "Failed to parse TransferTx from array." << std::endl;
+            std::cerr << "Failed to parse TransferTx from array.\n";
         }
 
         std::vector<std::string> subtask_ids( tx_struct.subtask_cids().begin(), tx_struct.subtask_cids().end() );
         std::vector<std::string> node_addresses( tx_struct.node_addresses().begin(), tx_struct.node_addresses().end() );
 
-        return std::make_shared<ProcessingTransaction>( tx_struct.job_cid(),
-                                                        subtask_ids,
-                                                        node_addresses,
-                                                        tx_struct.dag_struct() ); // Return new instance
+        return std::make_shared<ProcessingTransaction>(
+            ProcessingTransaction( tx_struct.job_cid(), subtask_ids, node_addresses, tx_struct.dag_struct() ) );
     }
 }

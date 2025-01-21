@@ -17,6 +17,8 @@
 #include "outcome/outcome.hpp"
 #include "account/proto/SGTransaction.pb.h"
 
+#include <gsl/span>
+
 namespace sgns
 {
     using namespace boost::multiprecision;
@@ -44,7 +46,7 @@ namespace sgns
             return transaction_type;
         }
 
-        static outcome::result<SGTransaction::DAGStruct> DeSerializeDAGStruct( std::vector<uint8_t> &data );
+        static outcome::result<SGTransaction::DAGStruct> DeSerializeDAGStruct( const std::vector<uint8_t> &data );
 
         static SGTransaction::DAGStruct SetDAGWithType( SGTransaction::DAGStruct dag, const std::string &type )
         {
@@ -91,9 +93,6 @@ namespace sgns
             return uint256_t{ dag_st.source_addr() };
         }
 
-        SGTransaction::DAGStruct                                                dag_st;
-        static inline std::unordered_map<std::string, TransactionDeserializeFn> deserializers_map;
-
         /**
          * @brief       Registers a deserializer function for a specific transaction type.
          * @param[in]   transaction_type The transaction type for which the deserializer is registered.
@@ -108,6 +107,11 @@ namespace sgns
         {
             return deserializers_map;
         }
+
+        void FillHash();
+
+        SGTransaction::DAGStruct                                                dag_st;
+        static inline std::unordered_map<std::string, TransactionDeserializeFn> deserializers_map;
 
     private:
         const std::string transaction_type;

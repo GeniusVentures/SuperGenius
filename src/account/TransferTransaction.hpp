@@ -17,16 +17,9 @@ namespace sgns
     class TransferTransaction : public IGeniusTransactions
     {
     public:
-        //TODO - El Gamal encrypt the amount. Now only copying
-        /**
-         * @brief       Construct a new Transfer Transaction object
-         * @param[in]   amount: Raw amount of the transaction
-         * @param[in]   destination: Address of the destination
-         */
-        TransferTransaction( const std::vector<OutputDestInfo> &destinations,
-                             const std::vector<InputUTXOInfo>  &inputs,
-                             const SGTransaction::DAGStruct    &dag );
-
+        static TransferTransaction New( std::vector<OutputDestInfo> destinations,
+                                        std::vector<InputUTXOInfo>  inputs,
+                                        SGTransaction::DAGStruct    dag );
         /**
          * @brief      Default Transfer Transaction destructor
          */
@@ -54,6 +47,16 @@ namespace sgns
         }
 
     private:
+        //TODO - El Gamal encrypt the amount. Now only copying
+        /**
+         * @brief       Construct a new Transfer Transaction object
+         * @param[in]   amount: Raw amount of the transaction
+         * @param[in]   destination: Address of the destination
+         */
+        TransferTransaction( std::vector<OutputDestInfo> destinations,
+                             std::vector<InputUTXOInfo>  inputs,
+                             SGTransaction::DAGStruct    dag );
+
         std::vector<InputUTXOInfo>  input_tx_;
         std::vector<OutputDestInfo> outputs_;
 

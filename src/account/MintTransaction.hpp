@@ -17,11 +17,17 @@ namespace sgns
     class MintTransaction : public IGeniusTransactions
     {
     public:
-        MintTransaction( double new_amount, std::string chainid, std::string tokenid,  const SGTransaction::DAGStruct &dag );
         ~MintTransaction() override = default;
 
-        std::vector<uint8_t>                    SerializeByteVector() override;
         static std::shared_ptr<MintTransaction> DeSerializeByteVector( const std::vector<uint8_t> &data );
+
+        static MintTransaction New( double                   new_amount,
+                                    std::string              chain_id,
+                                    std::string              token_id,
+                                    SGTransaction::DAGStruct dag );
+
+        std::vector<uint8_t> SerializeByteVector() override;
+
         double                                GetAmount() const;
 
         std::string GetTransactionSpecificPath() override
@@ -30,6 +36,8 @@ namespace sgns
         }
 
     private:
+        MintTransaction( double new_amount, std::string chain_id, std::string token_id, SGTransaction::DAGStruct dag );
+
         double amount;
         std::string chain_id;
         std::string token_id;

@@ -16,15 +16,17 @@ namespace sgns
     class EscrowTransaction : public IGeniusTransactions
     {
     public:
-        EscrowTransaction( UTXOTxParameters                params,
-                           double                        amount,
-                           uint256_t                       dev_addr,
-                           float                           peers_cut,
-                           const SGTransaction::DAGStruct &dag );
+        static EscrowTransaction New( UTXOTxParameters         params,
+                                      double                   amount,
+                                      uint256_t                dev_addr,
+                                      float                    peers_cut,
+                                      SGTransaction::DAGStruct dag );
+
+        static std::shared_ptr<EscrowTransaction> DeSerializeByteVector( const std::vector<uint8_t> &data );
+
         ~EscrowTransaction() override = default;
 
         std::vector<uint8_t>                      SerializeByteVector() override;
-        static std::shared_ptr<EscrowTransaction> DeSerializeByteVector( const std::vector<uint8_t> &data );
         uint64_t                                  GetNumChunks() const;
 
         std::string GetTransactionSpecificPath() override
@@ -53,6 +55,12 @@ namespace sgns
         }
 
     private:
+        EscrowTransaction( UTXOTxParameters         params,
+                           double                   amount,
+                           uint256_t                dev_addr,
+                           float                    peers_cut,
+                           SGTransaction::DAGStruct dag );
+
         UTXOTxParameters utxo_params_;
         double         amount_;
         uint256_t        dev_addr_;
@@ -62,7 +70,7 @@ namespace sgns
          * @brief       Registers the deserializer for the transfer transaction type.
          * @return      A boolean indicating successful registration.
          */
-        static inline bool Register()
+        static bool Register()
         {
             RegisterDeserializer( "escrow", &EscrowTransaction::DeSerializeByteVector );
             return true;

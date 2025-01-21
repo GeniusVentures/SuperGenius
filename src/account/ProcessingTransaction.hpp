@@ -19,14 +19,16 @@ namespace sgns
     class ProcessingTransaction : public IGeniusTransactions
     {
     public:
-        ProcessingTransaction( const std::string              &job_id,
-                               std::vector<std::string>        subtask_ids,
-                               std::vector<std::string>        node_addresses,
-                               const SGTransaction::DAGStruct &dag );
+        static std::shared_ptr<ProcessingTransaction> DeSerializeByteVector( const std::vector<uint8_t> &data );
+
+        static ProcessingTransaction New( std::string              job_id,
+                                          std::vector<std::string> subtask_ids,
+                                          std::vector<std::string> node_addresses,
+                                          SGTransaction::DAGStruct dag );
+
         ~ProcessingTransaction() override = default;
 
-        std::vector<uint8_t>                          SerializeByteVector() override;
-        static std::shared_ptr<ProcessingTransaction> DeSerializeByteVector( const std::vector<uint8_t> &data );
+        std::vector<uint8_t> SerializeByteVector() override;
 
         uint256_t GetJobHash() const
         {
@@ -56,6 +58,11 @@ namespace sgns
         }
 
     private:
+        ProcessingTransaction( std::string              job_id,
+                               std::vector<std::string> subtask_ids,
+                               std::vector<std::string> node_addresses,
+                               SGTransaction::DAGStruct dag );
+
         std::string              job_id_;         ///< Job ID
         uint256_t                job_hash_;       ///< Job ID
         std::vector<std::string> subtask_ids_;    ///< SubTask ID
