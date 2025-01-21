@@ -88,7 +88,7 @@ namespace sgns
         outcome::result<std::shared_ptr<IGeniusTransactions>> FetchTransaction(
             const std::shared_ptr<crdt::GlobalDB> &db,
             std::string_view                       transaction_key );
-        bool VerifyTransaction( const std::string &string_src_address, const uint64_t nonce );
+        outcome::result<bool> CheckProof( const std::shared_ptr<IGeniusTransactions> &tx );
         outcome::result<void> ParseTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
 
         outcome::result<void> CheckIncoming();
@@ -98,18 +98,18 @@ namespace sgns
         void RefreshPorts();
 
         std::shared_ptr<crdt::GlobalDB>                  processing_db_m;
-        std::shared_ptr<crdt::GlobalDB>                  outgoing_db_m;
-        std::shared_ptr<crdt::GlobalDB>                  incoming_db_m;
-        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub_m;
-        std::string                                      base_path_m;
         std::shared_ptr<boost::asio::io_context>         ctx_m;
         std::shared_ptr<GeniusAccount>                   account_m;
-        std::deque<TransactionPair> tx_queue_m;
-        std::shared_ptr<boost::asio::steady_timer>       timer_m;
-        mutable std::mutex                               mutex_m;
         std::shared_ptr<crypto::Hasher>                  hasher_m;
+        std::string                                      base_path_m;
+        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub_m;
         std::shared_ptr<upnp::UPNP>                      upnp_m;
         uint16_t                                         base_port_m;
+        std::shared_ptr<boost::asio::steady_timer>       timer_m;
+        std::shared_ptr<crdt::GlobalDB>                  outgoing_db_m;
+        std::shared_ptr<crdt::GlobalDB>                  incoming_db_m;
+        std::deque<TransactionPair>                      tx_queue_m;
+        mutable std::mutex                               mutex_m;
 
         std::map<std::string, std::vector<std::uint8_t>>                 outgoing_tx_processed_m;
         std::map<std::string, std::vector<std::uint8_t>>                 incoming_tx_processed_m;
@@ -120,7 +120,7 @@ namespace sgns
         outcome::result<void> ParseMintTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
         outcome::result<void> ParseEscrowTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
 
-        outcome::result<void> NotifyDestinationOfTransfer( const std::shared_ptr<IGeniusTransactions> &tx );
+        outcome::result<void> NotifyDestinationOfTransfer( const std::shared_ptr<IGeniusTransactions> &tx, std::optional<std::vector<uint8_t>> proof );
         outcome::result<void> PostEscrowOnProcessingDB( const std::shared_ptr<IGeniusTransactions> &tx );
 
         static inline const std::unordered_map<std::string, TransactionParserFn> transaction_parsers = {

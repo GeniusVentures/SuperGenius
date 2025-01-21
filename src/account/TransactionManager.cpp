@@ -119,7 +119,8 @@ namespace sgns
                                                                                maybe_params.value().inputs_,
                                                                                FillDAGStruct() );
 
-            TransferProof prover( static_cast<uint64_t>(account_m->GetBalance<double>()), static_cast<uint64_t>( amount ) );
+            TransferProof prover( static_cast<uint64_t>( account_m->GetBalance<double>() ),
+                                  static_cast<uint64_t>( amount ) );
             auto          proof_result = prover.GenerateFullProof();
             if ( proof_result.has_value() )
             {
@@ -141,7 +142,8 @@ namespace sgns
                                                                    chainid,
                                                                    tokenid,
                                                                    FillDAGStruct( transaction_hash ) );
-        TransferProof prover( 1000000000000000, static_cast<uint64_t>( amount ) ); //Mint max 1000000 gnus per transaction
+        TransferProof prover( 1000000000000000,
+                              static_cast<uint64_t>( amount ) ); //Mint max 1000000 gnus per transaction
         auto          proof_result = prover.GenerateFullProof();
         if ( proof_result.has_value() )
         {
@@ -170,7 +172,8 @@ namespace sgns
                                                                        peers_cut,
                                                                        FillDAGStruct() );
 
-        TransferProof prover( static_cast<uint64_t>(account_m->GetBalance<double>()), static_cast<uint64_t>( amount ) );
+        TransferProof prover( static_cast<uint64_t>( account_m->GetBalance<double>() ),
+                              static_cast<uint64_t>( amount ) );
         OUTCOME_TRY( ( auto &&, proof_result ), prover.GenerateFullProof() );
 
         account_m->utxos = UTXOTxParameters::UpdateUTXOList( account_m->utxos, params );
@@ -253,7 +256,7 @@ namespace sgns
     {
         SendTransaction();
         CheckIncoming();
-        CheckOutgoing();
+        //CheckOutgoing();
         static auto start_time = std::chrono::steady_clock::now();
         if ( std::chrono::steady_clock::now() - start_time > std::chrono::minutes( 60 ) )
         {
@@ -275,11 +278,12 @@ namespace sgns
         auto                     timestamp = std::chrono::system_clock::now();
 
         dag.set_previous_hash( transaction_hash );
-        dag.set_nonce( 0 );
+        dag.set_nonce( ++account_m->nonce );
         dag.set_source_addr( account_m->GetAddress<std::string>() );
         dag.set_timestamp( timestamp.time_since_epoch().count() );
         dag.set_uncle_hash( "" );
-        dag.set_data_hash( "" ); //filled byt transaction class
+        dag.set_data_hash( "" ); //filled by transaction class
+
         return dag;
     }
 
@@ -293,27 +297,25 @@ namespace sgns
 
         auto [transaction, proof] = tx_queue_m.front();
         tx_queue_m.pop_front();
-        account_m->nonce = account_m->nonce + 1;
-        transaction->dag_st.set_nonce( account_m->nonce );
 
-        auto transaction_path = GetTransactionPath( transaction );
-        auto proof_path       = GetTransactionProofPath( transaction );
-
+        m_logger->debug( "Recording the transaction on " + GetTransactionPath( transaction ) );
         sgns::crdt::GlobalDB::Buffer data_transaction;
         data_transaction.put( transaction->SerializeByteVector() );
-
-        BOOST_OUTCOME_TRYV2( auto &&, outgoing_db_m->Put( { transaction_path }, data_transaction ) );
-        sgns::crdt::GlobalDB::Buffer proof_transaction;
+        BOOST_OUTCOME_TRYV2( auto &&, outgoing_db_m->Put( { GetTransactionPath( transaction ) }, data_transaction ) );
 
         //std::cout << " creating with proof with size  " <<  proof_vector.size() << std::endl;
+        m_logger->debug( "Recording the proof on " + GetTransactionProofPath( transaction ) );
+        sgns::crdt::GlobalDB::Buffer proof_transaction;
         proof_transaction.put( proof );
-        outgoing_db_m->Put( { proof_path }, proof_transaction );
+        BOOST_OUTCOME_TRYV2( auto &&,
+                             outgoing_db_m->Put( { GetTransactionProofPath( transaction ) }, proof_transaction ) );
 
-        m_logger->debug( "Recording the transaction on " + transaction_path );
+        BOOST_OUTCOME_TRYV2( auto &&, ParseTransaction( transaction ) );
+
         if ( transaction->GetType() == "transfer" )
         {
             m_logger->debug( "Notifying receiving peers of transfers" );
-            NotifyDestinationOfTransfer( transaction );
+            NotifyDestinationOfTransfer( transaction, proof );
         }
         else if ( transaction->GetType() == "escrow" )
         {
@@ -379,13 +381,23 @@ namespace sgns
         return it->second( transaction_data_vector );
     }
 
+    outcome::result<bool> TransactionManager::CheckProof( const std::shared_ptr<IGeniusTransactions> &tx )
+    {
+        OUTCOME_TRY( ( auto &&, proof_data ), incoming_db_m->Get( { GetTransactionProofPath( tx ) } ) );
+
+        auto proof_data_vector = proof_data.toVector();
+
+        //std::cout << " it has value with size  " << proof_data.size() << std::endl;
+        return IBasicProof::VerifyFullProof( proof_data_vector );
+    }
+
     outcome::result<void> TransactionManager::CheckIncoming()
     {
         boost::format tx_key{ std::string( TRANSACTION_BASE_FORMAT ) };
 
         tx_key % TEST_NET_ID;
 
-        auto transaction_paths = tx_key.str() + "in" + account_m->GetAddress<std::string>();
+        auto transaction_paths = tx_key.str() + account_m->GetAddress<std::string>() + "/tx";
         m_logger->trace( "Probing incoming transactions on " + transaction_paths );
         OUTCOME_TRY( ( auto &&, transaction_list ), incoming_db_m->QueryKeyValues( transaction_paths ) );
 
@@ -412,11 +424,11 @@ namespace sgns
                 m_logger->debug( "Can't fetch transaction" );
                 continue;
             }
-            //if ( !VerifyTransaction( string_src_address, maybe_dag.value().nonce() ) )
-            //{
-            //    m_logger->info( "Invalid PROOF" );
-            //    return std::errc::invalid_argument;
-            //}
+            if ( !CheckProof( maybe_transaction.value() ) )
+            {
+                m_logger->info( "Invalid PROOF" );
+                continue;
+            }
             auto maybe_parsed = ParseTransaction( maybe_transaction.value() );
             if ( maybe_parsed.has_error() )
             {
@@ -475,31 +487,6 @@ namespace sgns
             outgoing_tx_processed_m[{ transaction_key.value() }] = maybe_transaction.value()->SerializeByteVector();
         }
         return outcome::success();
-    }
-
-    bool TransactionManager::VerifyTransaction( const std::string &string_src_address, const uint64_t nonce )
-    {
-        bool ret = false;
-
-        boost::format proof_key{ std::string( TRANSACTION_BASE_FORMAT ) + string_src_address + "/proof" + "/%llu" };
-        proof_key % TEST_NET_ID;
-        proof_key % nonce;
-
-        std::cout << " proof_key.str() the proof in " << proof_key.str() << std::endl;
-
-        auto maybe_proof_data = incoming_db_m->Get( { proof_key.str() } );
-
-        if ( maybe_proof_data.has_value() )
-        {
-            auto value_vector = maybe_proof_data.value().toVector();
-            std::cout << " it has value with size  " << value_vector.size() << std::endl;
-            auto maybe_proof_validity = IBasicProof::VerifyFullProof( maybe_proof_data.value().toVector() );
-            if ( maybe_proof_validity.has_value() )
-            {
-                ret = maybe_proof_validity.value();
-            }
-        }
-        return ret;
     }
 
     outcome::result<void> TransactionManager::ParseTransferTransaction( const std::shared_ptr<IGeniusTransactions> &tx )
@@ -567,7 +554,8 @@ namespace sgns
     }
 
     outcome::result<void> TransactionManager::NotifyDestinationOfTransfer(
-        const std::shared_ptr<IGeniusTransactions> &tx )
+        const std::shared_ptr<IGeniusTransactions> &tx,
+        std::optional<std::vector<uint8_t>>         proof )
     {
         auto transfer_tx = std::dynamic_pointer_cast<TransferTransaction>( tx );
         auto dest_infos  = transfer_tx->GetDstInfos();
@@ -603,16 +591,17 @@ namespace sgns
                     destination_db = destination_db_it->second;
                 }
 
-                boost::format tx_key{ std::string( TRANSACTION_BASE_FORMAT ) };
-
-                tx_key % TEST_NET_ID;
-
-                auto transaction_paths = tx_key.str() + "in" + peer_address + GetTransactionPath( tx );
-
                 sgns::crdt::GlobalDB::Buffer data_transaction;
                 data_transaction.put( tx->SerializeByteVector() );
 
-                BOOST_OUTCOME_TRYV2( auto &&, destination_db->Put( { transaction_paths }, data_transaction ) );
+                BOOST_OUTCOME_TRYV2( auto &&, destination_db->Put( { GetTransactionPath( tx ) }, data_transaction ) );
+                if ( proof )
+                {
+                    sgns::crdt::GlobalDB::Buffer proof_data;
+                    proof_data.put( proof.value() );
+                    BOOST_OUTCOME_TRYV2( auto &&,
+                                         destination_db->Put( { GetTransactionProofPath( tx ) }, proof_data ) );
+                }
             }
         }
 
