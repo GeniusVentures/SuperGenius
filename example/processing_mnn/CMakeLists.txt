@@ -104,8 +104,8 @@ target_link_libraries(processing_mnn_p PRIVATE
     ${WIN_CRYPT_LIBRARY}
 )
 if(WIN32)
-    target_link_options(processing_mnn PUBLIC /WHOLEARCHIVE:"$<TARGET_FILE:processing_service>")
-    target_link_options(processing_mnn_p PUBLIC /WHOLEARCHIVE:"$<TARGET_FILE:processing_service>")
+    target_link_options(processing_mnn PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:processing_service>)
+    target_link_options(processing_mnn_p PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:processing_service>)
 elseif(APPLE)
     target_link_options(processing_mnn PUBLIC -force_load "$<TARGET_FILE:processing_service>")
     target_link_options(processing_mnn_p PUBLIC -force_load "$<TARGET_FILE:processing_service>")

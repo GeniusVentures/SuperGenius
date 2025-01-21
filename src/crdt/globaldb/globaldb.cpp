@@ -15,6 +15,7 @@
 #include <libp2p/injector/host_injector.hpp>
 #include <libp2p/protocol/common/asio/asio_scheduler.hpp>
 #include <libp2p/common/literals.hpp>
+#include <libp2p/injector/kademlia_injector.hpp>
 #include <boost/di/extension/scopes/shared.hpp>
 #include <boost/format.hpp>
 

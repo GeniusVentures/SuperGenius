@@ -5,7 +5,7 @@ add_executable(account_handling
     include_directories(
         ${PROJECT_SOURCE_DIR}/src
         )
-    target_include_directories(account_handling PRIVATE ${GSL_INCLUDE_DIR}) 
+    target_include_directories(account_handling PRIVATE ${GSL_INCLUDE_DIR} ${TrustWalletCore_INCLUDE_DIR}) 
     target_link_libraries(account_handling PRIVATE
 #    ipfs-lite-cpp::ipfs_datastore_rocksdb
 #    ipfs-lite-cpp::buffer
@@ -32,5 +32,6 @@ add_executable(account_handling
     Boost::program_options
     ipfs-bitswap-cpp
 	ipfs-pubsub
+    rapidjson
     ${WIN_CRYPT_LIBRARY}
     )

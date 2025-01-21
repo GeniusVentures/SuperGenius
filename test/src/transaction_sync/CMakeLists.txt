@@ -8,8 +8,9 @@ target_include_directories(transaction_sync_test PRIVATE ${AsyncIOManager_INCLUD
 target_link_libraries(transaction_sync_test
     sgns_account
 )
+
 if(WIN32)
-    target_link_options(transaction_sync_test PUBLIC /WHOLEARCHIVE:"$<TARGET_FILE:sgns_account>")
+    target_link_options(transaction_sync_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:sgns_account>)
 
 elseif(APPLE)
     target_link_options(transaction_sync_test PUBLIC -force_load "$<TARGET_FILE:sgns_account>")

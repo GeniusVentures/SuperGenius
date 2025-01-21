@@ -1,4 +1,3 @@
-
 #ifndef SUPERGENIUS_SRC_API_TRANSPORT_LISTENER_HPP
 #define SUPERGENIUS_SRC_API_TRANSPORT_LISTENER_HPP
 
@@ -7,7 +6,6 @@
 
 #include "api/transport/rpc_io_context.hpp"
 #include "api/transport/session.hpp"
-#include "outcome/outcome.hpp"
 #include "singleton/IComponent.hpp"
 
 namespace sgns::api {
@@ -61,6 +59,6 @@ namespace sgns::api {
     /// Accept incoming connection
     virtual void acceptOnce() = 0;
   };
-}  // namespace sgns::api
+}
 
-#endif  // SUPERGENIUS_SRC_API_TRANSPORT_LISTENER_IMPL_HPP
+#endif

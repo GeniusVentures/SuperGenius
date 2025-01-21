@@ -76,7 +76,8 @@ namespace sgns::processing
                                                          const int origheight, 
                                                          const std::string filename) 
     {
-
+        auto outputHost = std::make_unique<MNN::Tensor>();
+        return outputHost;
     }
 
 }

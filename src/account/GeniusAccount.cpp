@@ -1,14 +1,34 @@
 #include "GeniusAccount.hpp"
 
 #include "ProofSystem/ElGamalKeyGenerator.hpp"
-#include "ProofSystem/EthereumKeyGenerator.hpp"
-#include "ProofSystem/KDFGenerator.hpp"
+//#include "ProofSystem/EthereumKeyGenerator.hpp"
+#include "WalletCore/Hash.h"
 #include "local_secure_storage/ISecureStorage.hpp"
+#include "nil/crypto3/multiprecision/cpp_int/import_export.hpp"
 #include "singleton/CComponentFactory.hpp"
+#include "WalletCore/PrivateKey.h"
 #include <nil/crypto3/pubkey/algorithm/sign.hpp>
+#include <boost/algorithm/hex.hpp>
+
+using namespace nil::crypto3::multiprecision::literals;
+using cpp_int = nil::crypto3::multiprecision::cpp_int;
+
+namespace
+{
+    std::array<uint8_t, 32> get_elgamal_pubkey()
+    {
+        const cpp_int           elgamal_key = KeyGenerator::ElGamal( 0x1234_cppui256 ).GetPublicKey().public_key_value;
+        std::array<uint8_t, 32> exported;
+        export_bits( elgamal_key, exported.begin(), 8, false );
+
+        return exported;
+    }
+}
 
 namespace sgns
 {
+    const std::array<uint8_t, 32> GeniusAccount::ELGAMAL_PUBKEY_PREDEFINED = get_elgamal_pubkey();
+
     GeniusAccount::GeniusAccount( const uint8_t token_type, std::string_view base_path, const char *eth_private_key ) :
         token( token_type ), nonce( 0 )
     {
@@ -47,28 +67,25 @@ namespace sgns
                 return outcome::failure( std::errc::invalid_argument );
             }
 
-            ethereum::EthereumKeyGenerator private_key( eth_private_key );
+            std::vector<uint8_t> private_key_bytes;
+            boost::algorithm::unhex(eth_private_key, eth_private_key + strlen(eth_private_key), std::back_inserter(private_key_bytes));
 
-            KeyGenerator::ElGamal elgamal_pubkey_predefined( 0x1234_cppui256 );
+            if (private_key_bytes.size() != TW::PrivateKey::_size) {
+                return outcome::failure(std::make_error_code(std::errc::invalid_argument)); 
+            }
 
-            auto fixed_public_key = elgamal_pubkey_predefined.GetPublicKey().public_key_value.str();
+            TW::PrivateKey private_key( private_key_bytes );
+            auto signed_secret = private_key.sign(
+                TW::Data( ELGAMAL_PUBKEY_PREDEFINED.cbegin(), ELGAMAL_PUBKEY_PREDEFINED.cend() ),
+                TWCurveSECP256k1 );
 
-            nil::crypto3::pubkey::public_key<ethereum::policy_type>::signature_type signed_secret =
-                nil::crypto3::sign<ethereum::policy_type>( fixed_public_key, private_key.get_private_key() );
+            if ( signed_secret.empty() )
+            {
+                std::cerr << "Could not sign secret\n";
+                return outcome::failure( std::errc::invalid_argument );
+            }
 
-            std::vector<std::uint8_t> signed_vector( 64 );
-
-            nil::marshalling::bincode::field<ecdsa_t::scalar_field_type>::field_element_to_bytes<
-                std::vector<std::uint8_t>::iterator>( std::get<0>( signed_secret ),
-                                                      signed_vector.begin(),
-                                                      signed_vector.begin() + signed_vector.size() / 2 );
-            nil::marshalling::bincode::field<ecdsa_t::scalar_field_type>::field_element_to_bytes<
-                std::vector<std::uint8_t>::iterator>( std::get<1>( signed_secret ),
-                                                      signed_vector.begin() + signed_vector.size() / 2,
-                                                      signed_vector.end() );
-
-            std::array<uint8_t, 32> hashed = nil::crypto3::hash<ecdsa_t::hashes::sha2<256>>( signed_vector.cbegin(),
-                                                                                             signed_vector.cend() );
+            auto hashed = TW::Hash::sha256( signed_secret );
 
             key_seed = nil::crypto3::multiprecision::uint256_t( hashed );
 

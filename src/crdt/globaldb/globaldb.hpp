@@ -11,7 +11,6 @@
 #include <libp2p/protocol/autonat/autonat.hpp>
 #include <libp2p/protocol/holepunch/holepunch_server.hpp>
 #include <libp2p/protocol/holepunch/holepunch_client.hpp>
-#include "ipfs_lite/dht/kademlia_dht.hpp"
 
 namespace sgns::crdt
 {

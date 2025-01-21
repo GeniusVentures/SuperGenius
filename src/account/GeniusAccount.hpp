@@ -15,7 +15,6 @@
 #include "ProofSystem/ElGamalKeyGenerator.hpp"
 #include "account/GeniusUTXO.hpp"
 #include "account/UTXOTxParameters.hpp"
-#include <KDFGenerator/KDFGenerator.hpp>
 #include "outcome/outcome.hpp"
 
 namespace sgns
@@ -25,6 +24,8 @@ namespace sgns
     class GeniusAccount
     {
     public:
+        static const std::array<uint8_t, 32> ELGAMAL_PUBKEY_PREDEFINED;
+
         GeniusAccount( uint8_t token_type, std::string_view base_path, const char *eth_private_key );
 
         ~GeniusAccount()

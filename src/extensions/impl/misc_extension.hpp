@@ -7,7 +7,6 @@
 #include <memory>
 
 #include "base/logger.hpp"
-#include "outcome/outcome.hpp"
 #include "runtime/types.hpp"
 #include "runtime/wasm_result.hpp"
 
@@ -16,7 +15,7 @@ namespace sgns::runtime {
   class CoreFactory;
   class Core;
   class WasmProvider;
-}  // namespace sgns::runtime
+}
 
 namespace sgns::extensions {
   /**
@@ -48,6 +47,6 @@ namespace sgns::extensions {
     base::Logger logger_;
     const uint64_t chain_id_ = 42;
   };
-}  // namespace sgns::extensions
+}
 
-#endif  // SUPERGENIUS_SRC_MISC_EXTENSION_HPP
+#endif

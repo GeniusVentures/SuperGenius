@@ -9,7 +9,7 @@ target_link_libraries(multi_account_test
     sgns_account
 )
 if(WIN32)
-    target_link_options(multi_account_test PUBLIC /WHOLEARCHIVE:"$<TARGET_FILE:sgns_account>")
+    target_link_options(multi_account_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:sgns_account>)
 
 elseif(APPLE)
     target_link_options(multi_account_test PUBLIC -force_load "$<TARGET_FILE:sgns_account>")

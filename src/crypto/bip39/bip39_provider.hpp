@@ -1,9 +1,6 @@
-
-
 #ifndef SUPERGENIUS_BIP39_PROVIDER_HPP
 #define SUPERGENIUS_BIP39_PROVIDER_HPP
 
-#include "base/buffer.hpp"
 #include "crypto/bip39/bip39_types.hpp"
 
 namespace sgns::crypto {
@@ -32,6 +29,6 @@ namespace sgns::crypto {
         gsl::span<const uint8_t> entropy, std::string_view password) = 0;
   };
 
-}  // namespace sgns::crypto
+}
 
-#endif  // SUPERGENIUS_BIP39_PROVIDER_HPP
+#endif

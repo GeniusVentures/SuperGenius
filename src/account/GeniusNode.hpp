@@ -4,15 +4,12 @@
 
 #include <boost/asio.hpp>
 #include <spdlog/sinks/basic_file_sink.h>
-#include <libp2p/log/configurator.hpp>
 #include <libp2p/log/logger.hpp>
 #include <libp2p/multi/multibase_codec/multibase_codec_impl.hpp>
 #include <libp2p/multi/content_identifier_codec.hpp>
 
 #include "account/GeniusAccount.hpp"
 #include "base/buffer.hpp"
-#include "ipfs_pubsub/gossip_pubsub.hpp"
-#include "crdt/globaldb/globaldb.hpp"
 #include "account/TransactionManager.hpp"
 #include <ipfs_lite/ipfs/graphsync/graphsync.hpp>
 #include "crypto/hasher/hasher_impl.hpp"

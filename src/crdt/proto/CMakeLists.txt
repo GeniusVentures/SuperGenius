@@ -1,7 +1,6 @@
-
 set(PROTOS
-    delta.proto 
-	bcast.proto 
+    delta.proto
+    bcast.proto
 )
 
 set(PROTO_SRC_DIR ${CMAKE_CURRENT_BINARY_DIR}/proto_buf)

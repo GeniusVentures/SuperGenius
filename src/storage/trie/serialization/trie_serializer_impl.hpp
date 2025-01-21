@@ -5,7 +5,6 @@
 
 #include "storage/trie/serialization/trie_serializer.hpp"
 
-#include "storage/buffer_map_types.hpp"
 #include "storage/trie/codec.hpp"
 #include "storage/trie/supergenius_trie/supergenius_trie_factory.hpp"
 #include "storage/trie/trie_storage_backend.hpp"

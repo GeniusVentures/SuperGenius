@@ -6,7 +6,7 @@
 
 #include "primitives/extrinsic.hpp"
 #include "storage/changes_trie/changes_tracker.hpp"
-#include "subscription/subscription_engine.hpp"
+#include "subscription/subscriber.hpp"
 
 namespace sgns::storage::trie {
   class Codec;

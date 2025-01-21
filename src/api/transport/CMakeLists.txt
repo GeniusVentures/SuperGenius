@@ -13,21 +13,27 @@ add_library(api_transport
     impl/ws/ws_listener_impl.cpp
     impl/ws/ws_client_impl.hpp
     impl/ws/ws_client_impl.cpp
-    )
-
+)
 target_link_libraries(api_transport
-    Boost::boost
+    PUBLIC
+    Boost::headers
     logger
     outcome
     OpenSSL::SSL
 )
 
+# Add /bigobj flag for MSVC compiler specifically for api_transport
+if (MSVC)
+    target_compile_options(api_transport PRIVATE /bigobj)
+endif()
+
 add_library(rpc_thread_pool
     rpc_io_context.hpp
     rpc_thread_pool.hpp
     rpc_thread_pool.cpp
-    )
+)
 target_link_libraries(rpc_thread_pool
-    Boost::boost
+    PUBLIC
+    Boost::headers
     logger
-    )
+)

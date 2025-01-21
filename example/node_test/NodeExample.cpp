@@ -330,7 +330,7 @@ int main( int argc, char *argv[] )
     
     //Inputs
 
-    sgns::GeniusNode node_instance( DEV_CONFIG, "livebeefdeadbeeflivebeefdeadbeeflivebeefdeadbeeflivebeefdeadbeef", true, false );
+    sgns::GeniusNode node_instance( DEV_CONFIG, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef", true, false );
 
     std::thread processing_thread(periodic_processing, std::ref(node_instance));
     std::cout << "Insert \"process\", the image and the number of tokens to be" << std::endl;
