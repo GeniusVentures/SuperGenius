@@ -140,7 +140,7 @@ namespace sgns
         globaldb_ = std::make_shared<crdt::GlobalDB>(
             io_,
             write_base_path_ +
-                (  boost::format( write_base_path_ +  "SuperGNUSNode.TestNet.1a.02.%s"  ) % account_->GetAddress<std::string>()  )
+                (  boost::format( "SuperGNUSNode.TestNet.1a.02.%s"  ) % account_->GetAddress<std::string>()  )
                 .str(),
             graphsyncport,
             std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_, std::string( PROCESSING_CHANNEL ) ) );

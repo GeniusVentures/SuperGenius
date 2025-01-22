@@ -161,7 +161,7 @@ TEST_F( ProcessingNodesTest, ProcessNodesTransactionsCount )
     std::cout << "Count 3" << transcount_node2 << std::endl;
 
     //ASSERT_EQ( transcount_main, 2 );
-   // ASSERT_EQ( transcount_node1, transcount_node2 );
+    // ASSERT_EQ( transcount_node1, transcount_node2 );
 }
 
 TEST_F( ProcessingNodesTest, DISABLED_ProcessingNodeTransfer )
@@ -286,5 +286,6 @@ TEST_F( ProcessingNodesTest, PostProcessing )
     std::cout << "Balance node1 (After):" << node_proc1->GetBalance() << std::endl;
     std::cout << "Balance node2 (After):" << node_proc2->GetBalance() << std::endl;
     ASSERT_EQ( balance_main - cost, node_main->GetBalance() );
-    ASSERT_EQ( balance_node1 + balance_node2 + cost*DEV_CONFIG.Cut, node_proc1->GetBalance() + node_proc2->GetBalance());
+    ASSERT_EQ( balance_node1 + balance_node2 + cost * DEV_CONFIG.Cut,
+               node_proc1->GetBalance() + node_proc2->GetBalance() );
 }
