@@ -84,6 +84,7 @@ namespace sgns
         outcome::result<void>    SendTransaction();
         std::string              GetTransactionPath( std::shared_ptr<IGeniusTransactions> element );
         std::string              GetTransactionProofPath( std::shared_ptr<IGeniusTransactions> element );
+        std::string              GetNotificationPath( const std::string &destination );
 
         outcome::result<std::shared_ptr<IGeniusTransactions>> FetchTransaction(
             const std::shared_ptr<crdt::GlobalDB> &db,

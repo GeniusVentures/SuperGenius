@@ -348,6 +348,17 @@ namespace sgns
         return proof_path;
     }
 
+    std::string TransactionManager::GetNotificationPath( const std::string &destination )
+    {
+        boost::format tx_key{ std::string( TRANSACTION_BASE_FORMAT ) };
+
+        tx_key % TEST_NET_ID;
+
+        auto notification_path = tx_key.str() + destination + "/notify/";
+
+        return notification_path;
+    }
+
     outcome::result<void> TransactionManager::ParseTransaction( const std::shared_ptr<IGeniusTransactions> &tx )
     {
         auto it = transaction_parsers.find( tx->GetType() );
@@ -383,7 +394,12 @@ namespace sgns
 
     outcome::result<bool> TransactionManager::CheckProof( const std::shared_ptr<IGeniusTransactions> &tx )
     {
-        OUTCOME_TRY( ( auto &&, proof_data ), incoming_db_m->Get( { GetTransactionProofPath( tx ) } ) );
+        m_logger->debug(
+            "Checking the proof in {}",
+            GetNotificationPath( account_m->GetAddress<std::string>() ) + "proof/" + GetTransactionProofPath( tx ) );
+        OUTCOME_TRY( ( auto &&, proof_data ),
+                     incoming_db_m->Get( { GetNotificationPath( account_m->GetAddress<std::string>() ) + "proof/" +
+                                           GetTransactionProofPath( tx ) } ) );
 
         auto proof_data_vector = proof_data.toVector();
 
@@ -393,11 +409,7 @@ namespace sgns
 
     outcome::result<void> TransactionManager::CheckIncoming()
     {
-        boost::format tx_key{ std::string( TRANSACTION_BASE_FORMAT ) };
-
-        tx_key % TEST_NET_ID;
-
-        auto transaction_paths = tx_key.str() + account_m->GetAddress<std::string>() + "/tx";
+        auto transaction_paths = GetNotificationPath( account_m->GetAddress<std::string>() ) + "tx/";
         m_logger->trace( "Probing incoming transactions on " + transaction_paths );
         OUTCOME_TRY( ( auto &&, transaction_list ), incoming_db_m->QueryKeyValues( transaction_paths ) );
 
@@ -418,13 +430,15 @@ namespace sgns
                 continue;
             }
 
+            m_logger->debug( "Finding incoming transaction: " + transaction_key.value() );
             auto maybe_transaction = FetchTransaction( incoming_db_m, { transaction_key.value() } );
             if ( !maybe_transaction.has_value() )
             {
                 m_logger->debug( "Can't fetch transaction" );
                 continue;
             }
-            if ( !CheckProof( maybe_transaction.value() ) )
+            auto maybe_proof = CheckProof( maybe_transaction.value() );
+            if ( !maybe_proof.has_value() )
             {
                 m_logger->info( "Invalid PROOF" );
                 continue;
@@ -594,13 +608,22 @@ namespace sgns
                 sgns::crdt::GlobalDB::Buffer data_transaction;
                 data_transaction.put( tx->SerializeByteVector() );
 
-                BOOST_OUTCOME_TRYV2( auto &&, destination_db->Put( { GetTransactionPath( tx ) }, data_transaction ) );
+                m_logger->debug( "Putting replicate transaction in {}",
+                                 GetNotificationPath( peer_address ) + "tx/" + GetTransactionPath( tx ) );
+                BOOST_OUTCOME_TRYV2(
+                    auto &&,
+                    destination_db->Put( { GetNotificationPath( peer_address ) + "tx/" + GetTransactionPath( tx ) },
+                                         data_transaction ) );
                 if ( proof )
                 {
+                    m_logger->debug( "Putting replicate PROOF in {}",
+                                     GetNotificationPath( peer_address ) + "proof/" + GetTransactionProofPath( tx ) );
                     sgns::crdt::GlobalDB::Buffer proof_data;
                     proof_data.put( proof.value() );
                     BOOST_OUTCOME_TRYV2( auto &&,
-                                         destination_db->Put( { GetTransactionProofPath( tx ) }, proof_data ) );
+                                         destination_db->Put( { GetNotificationPath( peer_address ) + "proof/" +
+                                                                GetTransactionProofPath( tx ) },
+                                                              proof_data ) );
                 }
             }
         }

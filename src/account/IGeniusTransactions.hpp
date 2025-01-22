@@ -78,7 +78,7 @@ namespace sgns
 
         std::string GetProofFullPath()
         {
-            boost::format full_path( GetSrcAddress<std::string>() + "/proof/" + "/%llu" );
+            boost::format full_path( GetSrcAddress<std::string>() + "/proof" + "/%llu" );
             full_path % dag_st.nonce();
 
             return full_path.str();
