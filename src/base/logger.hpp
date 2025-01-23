@@ -3,16 +3,20 @@
 
 #include <spdlog/fmt/ostr.h>
 #include <spdlog/spdlog.h>
+#if defined( ANDROID )
+#include <spdlog/sinks/android_sink.h>
+#endif
 
-namespace sgns::base {
-  using Logger = std::shared_ptr<spdlog::logger>;
+namespace sgns::base
+{
+    using Logger = std::shared_ptr<spdlog::logger>;
 
-  /**
+    /**
    * Provide logger object
    * @param tag - tagging name for identifying logger
    * @return logger object
    */
-  Logger createLogger(const std::string &tag);
-}  // namespace sgns::base
+    Logger createLogger( const std::string &tag );
+} // namespace sgns::base
 
-#endif  // SUPERGENIUS_LOGGER_HPP
+#endif // SUPERGENIUS_LOGGER_HPP

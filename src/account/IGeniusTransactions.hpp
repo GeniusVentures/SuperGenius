@@ -50,7 +50,7 @@ namespace sgns
             if ( !dag_wrap.ParseFromArray( data.data(), data.size() ) )
             {
                 std::cerr << "Failed to parse DAGStruct from array." << std::endl;
-                return outcome::failure(boost::system::error_code{});
+                return outcome::failure( boost::system::error_code{} );
             }
             SGTransaction::DAGStruct dag;
             dag.CopyFrom( *dag_wrap.mutable_dag_struct() );
@@ -71,6 +71,14 @@ namespace sgns
         std::string GetTransactionFullPath()
         {
             boost::format full_path( GetSrcAddress<std::string>() + "/tx/" + GetTransactionSpecificPath() + "/%llu" );
+            full_path % dag_st.nonce();
+
+            return full_path.str();
+        }
+
+        std::string GetProofFullPath()
+        {
+            boost::format full_path( GetSrcAddress<std::string>() + "/proof" + "/%llu" );
             full_path % dag_st.nonce();
 
             return full_path.str();

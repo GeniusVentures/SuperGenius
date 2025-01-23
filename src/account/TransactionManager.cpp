@@ -18,6 +18,8 @@
 #include "crdt/globaldb/globaldb.hpp"
 #include "outcome/outcome.hpp"
 #include "primitives/block.hpp"
+#include "proof/TransferProof.hpp"
+#include "proof/ProcessingProof.hpp"
 
 namespace sgns
 {
@@ -30,17 +32,17 @@ namespace sgns
                                             std::shared_ptr<upnp::UPNP>                      upnp,
                                             uint16_t                                         base_port ) :
         processing_db_m( std::move( processing_db ) ),
-        pubsub_m( std::move( pubsub ) ),
-        base_path_m( std::move( base_path ) ),
         ctx_m( std::move( ctx ) ),
         account_m( std::move( account ) ),
-        timer_m( std::make_shared<boost::asio::steady_timer>( *ctx_m, boost::asio::chrono::milliseconds( 300 ) ) ),
         hasher_m( std::move( hasher ) ),
+        base_path_m( std::move( base_path ) ),
+        pubsub_m( std::move( pubsub ) ),
         upnp_m( std::move( upnp ) ),
-        base_port_m( base_port + 1 )
+        base_port_m( base_port + 1 ),
+        timer_m( std::make_shared<boost::asio::steady_timer>( *ctx_m, boost::asio::chrono::milliseconds( 300 ) ) )
 
     {
-        m_logger->set_level( spdlog::level::off );
+        m_logger->set_level( spdlog::level::debug );
         m_logger->info( "Initializing values by reading whole blockchain" );
 
         outgoing_db_m = std::make_shared<crdt::GlobalDB>(
@@ -113,12 +115,27 @@ namespace sgns
 
         if ( maybe_params )
         {
-            account_m->utxos          = UTXOTxParameters::UpdateUTXOList( account_m->utxos, maybe_params.value() );
             auto transfer_transaction = std::make_shared<TransferTransaction>( maybe_params.value().outputs_,
                                                                                maybe_params.value().inputs_,
                                                                                FillDAGStruct() );
-            this->EnqueueTransaction( transfer_transaction );
+            std::optional<std::vector<uint8_t>> maybe_proof;
+#ifdef _PROOF_ENABLED
+            TransferProof prover( static_cast<uint64_t>( account_m->GetBalance<double>() ),
+                                  static_cast<uint64_t>( amount ) );
+            auto          proof_result = prover.GenerateFullProof();
+            if ( proof_result.has_value() )
+            {
+                maybe_proof = proof_result.value();
+                ret         = true;
+            }
+#else
             ret = true;
+#endif
+            if ( ret == true )
+            {
+                account_m->utxos = UTXOTxParameters::UpdateUTXOList( account_m->utxos, maybe_params.value() );
+                this->EnqueueTransaction( std::make_pair( transfer_transaction, maybe_proof ) );
+            }
         }
 
         return ret;
@@ -133,7 +150,17 @@ namespace sgns
                                                                    chainid,
                                                                    tokenid,
                                                                    FillDAGStruct( transaction_hash ) );
-        this->EnqueueTransaction( std::move( mint_transaction ) );
+        std::optional<std::vector<uint8_t>> maybe_proof;
+#ifdef _PROOF_ENABLED
+        TransferProof prover( 1000000000000000,
+                              static_cast<uint64_t>( amount ) ); //Mint max 1000000 gnus per transaction
+        auto          proof_result = prover.GenerateFullProof();
+        if ( proof_result.has_value() )
+        {
+            maybe_proof = proof_result.value();
+        }
+#endif
+        this->EnqueueTransaction( std::make_pair( std::move( mint_transaction ), maybe_proof ) );
     }
 
     outcome::result<std::string> TransactionManager::HoldEscrow( double             amount,
@@ -156,7 +183,18 @@ namespace sgns
                                                                        dev_addr,
                                                                        peers_cut,
                                                                        FillDAGStruct() );
-        this->EnqueueTransaction( escrow_transaction );
+
+        std::optional<std::vector<uint8_t>> maybe_proof;
+#ifdef _PROOF_ENABLED
+
+        TransferProof prover( static_cast<uint64_t>( account_m->GetBalance<double>() ),
+                              static_cast<uint64_t>( amount ) );
+        OUTCOME_TRY( ( auto &&, proof_result ), prover.GenerateFullProof() );
+        maybe_proof = proof_result;
+
+#endif
+        account_m->utxos = UTXOTxParameters::UpdateUTXOList( account_m->utxos, params );
+        this->EnqueueTransaction( std::make_pair( escrow_transaction, maybe_proof ) );
         m_logger->debug( "Holding escrow to 0x{} wih the amount {}",
                          hash_data.toReadableString(),
                          RoundTo5Digits( amount ) );
@@ -215,7 +253,17 @@ namespace sgns
             payout_peers,
             std::vector<InputUTXOInfo>{ escrow_utxo_input },
             FillDAGStruct() );
-        this->EnqueueTransaction( transfer_transaction );
+
+        std::optional<std::vector<uint8_t>> maybe_proof;
+#ifdef _PROOF_ENABLED
+        //TODO - Create with the real balance and amount
+        TransferProof prover( 1, 1 );
+
+        OUTCOME_TRY( ( auto &&, proof_result ), prover.GenerateFullProof() );
+        maybe_proof = proof_result;
+#endif
+
+        this->EnqueueTransaction( std::make_pair( transfer_transaction, maybe_proof ) );
 
         return outcome::success();
     }
@@ -229,7 +277,7 @@ namespace sgns
     {
         SendTransaction();
         CheckIncoming();
-        CheckOutgoing();
+        //CheckOutgoing();
         static auto start_time = std::chrono::steady_clock::now();
         if ( std::chrono::steady_clock::now() - start_time > std::chrono::minutes( 60 ) )
         {
@@ -238,7 +286,7 @@ namespace sgns
         }
     }
 
-    void TransactionManager::EnqueueTransaction( std::shared_ptr<IGeniusTransactions> element )
+    void TransactionManager::EnqueueTransaction( TransactionPair element )
     {
         std::lock_guard<std::mutex> lock( mutex_m );
         tx_queue_m.emplace_back( std::move( element ) );
@@ -251,11 +299,12 @@ namespace sgns
         auto                     timestamp = std::chrono::system_clock::now();
 
         dag.set_previous_hash( transaction_hash );
-        dag.set_nonce( 0 );
+        dag.set_nonce( ++account_m->nonce );
         dag.set_source_addr( account_m->GetAddress<std::string>() );
         dag.set_timestamp( timestamp.time_since_epoch().count() );
         dag.set_uncle_hash( "" );
-        dag.set_data_hash( "" ); //filled byt transaction class
+        dag.set_data_hash( "" ); //filled by transaction class
+
         return dag;
     }
 
@@ -267,24 +316,31 @@ namespace sgns
             return std::errc::invalid_argument;
         }
 
-        auto transaction = tx_queue_m.front();
+        auto [transaction, maybe_proof] = tx_queue_m.front();
         tx_queue_m.pop_front();
-        account_m->nonce = account_m->nonce + 1;
 
-        transaction->dag_st.set_nonce( account_m->nonce );
-
-        auto transaction_path = GetTransactionPath( transaction );
-
+        m_logger->debug( "Recording the transaction on " + GetTransactionPath( transaction ) );
         sgns::crdt::GlobalDB::Buffer data_transaction;
         data_transaction.put( transaction->SerializeByteVector() );
+        BOOST_OUTCOME_TRYV2( auto &&, outgoing_db_m->Put( { GetTransactionPath( transaction ) }, data_transaction ) );
 
-        BOOST_OUTCOME_TRYV2( auto &&, outgoing_db_m->Put( { transaction_path }, data_transaction ) );
+        if ( maybe_proof )
+        {
+            auto proof = maybe_proof.value();
+            //std::cout << " creating with proof with size  " <<  proof_vector.size() << std::endl;
+            m_logger->debug( "Recording the proof on " + GetTransactionProofPath( transaction ) );
+            sgns::crdt::GlobalDB::Buffer proof_transaction;
+            proof_transaction.put( proof );
+            BOOST_OUTCOME_TRYV2( auto &&,
+                                 outgoing_db_m->Put( { GetTransactionProofPath( transaction ) }, proof_transaction ) );
+        }
 
-        m_logger->debug( "Recording the transaction on " + transaction_path );
+        BOOST_OUTCOME_TRYV2( auto &&, ParseTransaction( transaction ) );
+
         if ( transaction->GetType() == "transfer" )
         {
             m_logger->debug( "Notifying receiving peers of transfers" );
-            NotifyDestinationOfTransfer( transaction );
+            NotifyDestinationOfTransfer( transaction, maybe_proof );
         }
         else if ( transaction->GetType() == "escrow" )
         {
@@ -304,6 +360,28 @@ namespace sgns
         auto transaction_path = tx_key.str() + element->GetTransactionFullPath();
 
         return transaction_path;
+    }
+
+    std::string TransactionManager::GetTransactionProofPath( std::shared_ptr<IGeniusTransactions> element )
+    {
+        boost::format tx_key{ std::string( TRANSACTION_BASE_FORMAT ) };
+
+        tx_key % TEST_NET_ID;
+
+        auto proof_path = tx_key.str() + element->GetProofFullPath();
+
+        return proof_path;
+    }
+
+    std::string TransactionManager::GetNotificationPath( const std::string &destination )
+    {
+        boost::format tx_key{ std::string( TRANSACTION_BASE_FORMAT ) };
+
+        tx_key % TEST_NET_ID;
+
+        auto notification_path = tx_key.str() + destination + "/notify/";
+
+        return notification_path;
     }
 
     outcome::result<void> TransactionManager::ParseTransaction( const std::shared_ptr<IGeniusTransactions> &tx )
@@ -333,19 +411,30 @@ namespace sgns
         auto it = IGeniusTransactions::GetDeSerializers().find( dag.type() );
         if ( it == IGeniusTransactions::GetDeSerializers().end() )
         {
-            m_logger->info( "Invalid transaction found. No Deserialization available" );
+            m_logger->info( "Invalid transaction found. No Deserialization available for type {}", dag.type() );
             return std::errc::invalid_argument;
         }
         return it->second( transaction_data_vector );
     }
 
+    outcome::result<bool> TransactionManager::CheckProof( const std::shared_ptr<IGeniusTransactions> &tx )
+    {
+        m_logger->debug(
+            "Checking the proof in {}",
+            GetNotificationPath( account_m->GetAddress<std::string>() ) + "proof/" + GetTransactionProofPath( tx ) );
+        OUTCOME_TRY( ( auto &&, proof_data ),
+                     incoming_db_m->Get( { GetNotificationPath( account_m->GetAddress<std::string>() ) + "proof/" +
+                                           GetTransactionProofPath( tx ) } ) );
+
+        auto proof_data_vector = proof_data.toVector();
+
+        //std::cout << " it has value with size  " << proof_data.size() << std::endl;
+        return IBasicProof::VerifyFullProof( proof_data_vector );
+    }
+
     outcome::result<void> TransactionManager::CheckIncoming()
     {
-        boost::format tx_key{ std::string( TRANSACTION_BASE_FORMAT ) };
-
-        tx_key % TEST_NET_ID;
-
-        auto transaction_paths = tx_key.str() + "in" + account_m->GetAddress<std::string>();
+        auto transaction_paths = GetNotificationPath( account_m->GetAddress<std::string>() ) + "tx/";
         m_logger->trace( "Probing incoming transactions on " + transaction_paths );
         OUTCOME_TRY( ( auto &&, transaction_list ), incoming_db_m->QueryKeyValues( transaction_paths ) );
 
@@ -366,12 +455,21 @@ namespace sgns
                 continue;
             }
 
+            m_logger->debug( "Finding incoming transaction: " + transaction_key.value() );
             auto maybe_transaction = FetchTransaction( incoming_db_m, { transaction_key.value() } );
             if ( !maybe_transaction.has_value() )
             {
                 m_logger->debug( "Can't fetch transaction" );
                 continue;
             }
+#ifdef _PROOF_ENABLED
+            auto maybe_proof = CheckProof( maybe_transaction.value() );
+            if ( !maybe_proof.has_value() )
+            {
+                m_logger->info( "Invalid PROOF" );
+                continue;
+            }
+#endif
             auto maybe_parsed = ParseTransaction( maybe_transaction.value() );
             if ( maybe_parsed.has_error() )
             {
@@ -389,7 +487,7 @@ namespace sgns
 
         tx_key % TEST_NET_ID;
 
-        auto transaction_paths = tx_key.str() + account_m->GetAddress<std::string>();
+        auto transaction_paths = tx_key.str() + account_m->GetAddress<std::string>() + "/tx";
         m_logger->trace( "Probing transactions on " + transaction_paths );
         OUTCOME_TRY( ( auto &&, transaction_list ), outgoing_db_m->QueryKeyValues( transaction_paths ) );
 
@@ -497,7 +595,8 @@ namespace sgns
     }
 
     outcome::result<void> TransactionManager::NotifyDestinationOfTransfer(
-        const std::shared_ptr<IGeniusTransactions> &tx )
+        const std::shared_ptr<IGeniusTransactions> &tx,
+        std::optional<std::vector<uint8_t>>         proof )
     {
         auto transfer_tx = std::dynamic_pointer_cast<TransferTransaction>( tx );
         auto dest_infos  = transfer_tx->GetDstInfos();
@@ -533,16 +632,26 @@ namespace sgns
                     destination_db = destination_db_it->second;
                 }
 
-                boost::format tx_key{ std::string( TRANSACTION_BASE_FORMAT ) };
-
-                tx_key % TEST_NET_ID;
-
-                auto transaction_paths = tx_key.str() + "in" + peer_address + GetTransactionPath( tx );
-
                 sgns::crdt::GlobalDB::Buffer data_transaction;
                 data_transaction.put( tx->SerializeByteVector() );
 
-                BOOST_OUTCOME_TRYV2( auto &&, destination_db->Put( { transaction_paths }, data_transaction ) );
+                m_logger->debug( "Putting replicate transaction in {}",
+                                 GetNotificationPath( peer_address ) + "tx/" + GetTransactionPath( tx ) );
+                BOOST_OUTCOME_TRYV2(
+                    auto &&,
+                    destination_db->Put( { GetNotificationPath( peer_address ) + "tx/" + GetTransactionPath( tx ) },
+                                         data_transaction ) );
+                if ( proof )
+                {
+                    m_logger->debug( "Putting replicate PROOF in {}",
+                                     GetNotificationPath( peer_address ) + "proof/" + GetTransactionProofPath( tx ) );
+                    sgns::crdt::GlobalDB::Buffer proof_data;
+                    proof_data.put( proof.value() );
+                    BOOST_OUTCOME_TRYV2( auto &&,
+                                         destination_db->Put( { GetNotificationPath( peer_address ) + "proof/" +
+                                                                GetTransactionProofPath( tx ) },
+                                                              proof_data ) );
+                }
             }
         }
 
