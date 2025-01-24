@@ -255,7 +255,7 @@ find_package(AsyncIOManager CONFIG REQUIRED)
 # find_package(crypto3 CONFIG REQUIRED)
 # include_directories(${crypto3_INCLUDE_DIR})
 include_directories(
-    "${_THIRDPARTY_BUILD_DIR}/zkLLVM/include"
+    "${ZKLLVM_DIR}/zkLLVM/include"
 )
 
 # gnus_upnp
