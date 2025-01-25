@@ -24,6 +24,7 @@
 #include "FileManager.hpp"
 #include <boost/dll.hpp>
 #include <boost/algorithm/string/replace.hpp>
+#include "base/util.hpp"
 
 class ProcessingNodesTest : public ::testing::Test
 {
@@ -56,7 +57,7 @@ protected:
         DEV_CONFIG2.BaseWritePath[sizeof( DEV_CONFIG2.BaseWritePath ) - 1] = '\0';
         DEV_CONFIG3.BaseWritePath[sizeof( DEV_CONFIG3.BaseWritePath ) - 1] = '\0';
 
-        node_main  = new sgns::GeniusNode( DEV_CONFIG,
+        node_main = new sgns::GeniusNode( DEV_CONFIG,
                                           "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
                                           false,
                                           false );
@@ -113,9 +114,9 @@ sgns::GeniusNode *ProcessingNodesTest::node_main  = nullptr;
 sgns::GeniusNode *ProcessingNodesTest::node_proc1 = nullptr;
 sgns::GeniusNode *ProcessingNodesTest::node_proc2 = nullptr;
 
-DevConfig_st ProcessingNodesTest::DEV_CONFIG  = { "0xcafe", 0.65, 1.0, 0, "./node1" };
-DevConfig_st ProcessingNodesTest::DEV_CONFIG2 = { "0xcafe", 0.65, 1.0, 0, "./node2" };
-DevConfig_st ProcessingNodesTest::DEV_CONFIG3 = { "0xcafe", 0.65, 1.0, 0, "./node3" };
+DevConfig_st ProcessingNodesTest::DEV_CONFIG  = { "0xcafe", 650000000, 1.0, 0, "./node1" };
+DevConfig_st ProcessingNodesTest::DEV_CONFIG2 = { "0xcafe", 650000000, 1.0, 0, "./node2" };
+DevConfig_st ProcessingNodesTest::DEV_CONFIG3 = { "0xcafe", 650000000, 1.0, 0, "./node3" };
 
 std::string ProcessingNodesTest::binary_path = "";
 
@@ -150,8 +151,8 @@ TEST_F( ProcessingNodesTest, DISABLED_ProcessNodesPubsubs )
 
 TEST_F( ProcessingNodesTest, ProcessNodesTransactionsCount )
 {
-    node_main->MintTokens( 50, "", "", "" );
-    node_main->MintTokens( 50, "", "", "" );
+    node_main->MintTokens( 50000000000, "", "", "" );
+    node_main->MintTokens( 50000000000, "", "", "" );
     std::this_thread::sleep_for( std::chrono::milliseconds( 10000 ) );
     int transcount_main  = node_main->GetOutTransactions().size();
     int transcount_node1 = node_proc1->GetOutTransactions().size();
@@ -270,22 +271,30 @@ TEST_F( ProcessingNodesTest, PostProcessing )
                 }
                )";
     auto        cost      = node_main->GetProcessCost( json_data );
+    ASSERT_EQ( 2688777142, cost );
     boost::replace_all( json_data, "[basepath]", bin_path );
     std::cout << "Json Data: " << json_data << std::endl;
-    double balance_main  = node_main->GetBalance();
-    double balance_node1 = node_proc1->GetBalance();
-    double balance_node2 = node_proc2->GetBalance();
+    auto balance_main  = node_main->GetBalance();
+    auto balance_node1 = node_proc1->GetBalance();
+    auto balance_node2 = node_proc2->GetBalance();
     node_main->ProcessImage( json_data );
     //node_main->ProcessImage(json_data);
 
     std::this_thread::sleep_for( std::chrono::milliseconds( 40000 ) );
-    std::cout << "Balance main (Before): " << balance_main << std::endl;
+    std::cout << "Balance main (Before):  " << balance_main << std::endl;
     std::cout << "Balance node1 (Before): " << balance_node1 << std::endl;
     std::cout << "Balance node2 (Before): " << balance_node2 << std::endl;
-    std::cout << "Balance main (After): " << node_main->GetBalance() << std::endl;
-    std::cout << "Balance node1 (After):" << node_proc1->GetBalance() << std::endl;
-    std::cout << "Balance node2 (After):" << node_proc2->GetBalance() << std::endl;
+    std::cout << "Cost:                   " << cost << std::endl;
+    std::cout << "Balance main (After):   " << node_main->GetBalance() << std::endl;
+    std::cout << "Balance node1 (After):  " << node_proc1->GetBalance() << std::endl;
+    std::cout << "Balance node2 (After):  " << node_proc2->GetBalance() << std::endl;
+
     ASSERT_EQ( balance_main - cost, node_main->GetBalance() );
-    ASSERT_EQ( balance_node1 + balance_node2 + cost * DEV_CONFIG.Cut,
+
+    ASSERT_EQ( balance_node1 + balance_node2 + ( cost * DEV_CONFIG.Cut ) / 1000000000,
                node_proc1->GetBalance() + node_proc2->GetBalance() );
+
+    auto gameDeveloperPayment = cost - ( cost * DEV_CONFIG.Cut ) / 1000000000;
+    ASSERT_EQ( balance_main + balance_node1 + balance_node2,
+               node_main->GetBalance() + node_proc1->GetBalance() + node_proc2->GetBalance() + gameDeveloperPayment );
 }

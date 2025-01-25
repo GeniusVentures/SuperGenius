@@ -107,7 +107,7 @@ namespace sgns
         return *account_m;
     }
 
-    bool TransactionManager::TransferFunds( double amount, const uint256_t &destination )
+    bool TransactionManager::TransferFunds( uint64_t amount, const uint256_t &destination )
     {
         bool ret          = false;
         auto maybe_params = UTXOTxParameters::create( account_m->utxos,
@@ -143,7 +143,7 @@ namespace sgns
         return ret;
     }
 
-    void TransactionManager::MintFunds( double      amount,
+    void TransactionManager::MintFunds( uint64_t    amount,
                                         std::string transaction_hash,
                                         std::string chainid,
                                         std::string tokenid )
@@ -165,9 +165,9 @@ namespace sgns
         this->EnqueueTransaction( std::make_pair( std::move( mint_transaction ), maybe_proof ) );
     }
 
-    outcome::result<std::string> TransactionManager::HoldEscrow( double             amount,
+    outcome::result<std::string> TransactionManager::HoldEscrow( uint64_t           amount,
                                                                  const uint256_t   &dev_addr,
-                                                                 float              peers_cut,
+                                                                 uint64_t           peers_cut,
                                                                  const std::string &job_id )
     {
         bool ret       = false;
@@ -223,9 +223,10 @@ namespace sgns
         std::shared_ptr<EscrowTransaction> escrow_tx = std::dynamic_pointer_cast<EscrowTransaction>( transaction );
         std::vector<std::string>           subtask_ids;
         std::vector<OutputDestInfo>        payout_peers;
-        double peers_amount = RoundTo5Digits( ( escrow_tx->GetPeersCut() * escrow_tx->GetAmount() ) /
-                                              static_cast<double>( taskresult.subtask_results().size() ) );
-        auto   remainder    = escrow_tx->GetAmount();
+
+        uint64_t peers_amount = FixedPointMultiply( escrow_tx->GetAmount(), escrow_tx->GetPeersCut() ) /
+                                static_cast<uint64_t>( taskresult.subtask_results().size() );
+        auto remainder = escrow_tx->GetAmount();
         for ( auto &subtask : taskresult.subtask_results() )
         {
             std::cout << "Subtask Result " << subtask.subtaskid() << "from " << subtask.node_address() << std::endl;
@@ -235,7 +236,7 @@ namespace sgns
             remainder -= peers_amount;
         }
         m_logger->debug( "Sending to dev {}", remainder );
-        payout_peers.push_back( { RoundTo5Digits( remainder ), escrow_tx->GetDevAddress() } );
+        payout_peers.push_back( { remainder, escrow_tx->GetDevAddress() } );
         InputUTXOInfo escrow_utxo_input;
 
         escrow_utxo_input.txid_hash_  = ( base::Hash256::fromReadableString( escrow_tx->dag_st.data_hash() ) ).value();
@@ -261,9 +262,9 @@ namespace sgns
         return outcome::success();
     }
 
-    double TransactionManager::GetBalance()
+    uint64_t TransactionManager::GetBalance()
     {
-        return account_m->GetBalance<double>();
+        return account_m->GetBalance<uint64_t>();
     }
 
     void TransactionManager::Update()

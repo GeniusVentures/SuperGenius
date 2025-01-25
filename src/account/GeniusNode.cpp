@@ -400,9 +400,9 @@ namespace sgns
         return task_queue_->EnqueueTask( task, subTasks );
     }
 
-    double GeniusNode::GetProcessCost( const std::string &json_data )
+    uint64_t GeniusNode::GetProcessCost( const std::string &json_data )
     {
-        double cost = 0;
+        uint64_t cost = 0;
         std::cout << "Received JSON data: " << json_data << std::endl;
         //Parse Json
         rapidjson::Document document;
@@ -423,12 +423,13 @@ namespace sgns
             std::cout << "This json lacks inputs" << std::endl;
             return 0;
         }
+        uint64_t block_total_len = 0;
         for ( const auto &input : inputArray.GetArray() )
         {
             if ( input.HasMember( "block_len" ) && input["block_len"].IsUint64() )
             {
-                double block_len  = static_cast<double>( input["block_len"].GetUint64() );
-                cost             += ( block_len / 2100000 );
+                auto block_len   = static_cast<uint64_t>( input["block_len"].GetUint64() );
+                block_total_len += block_len;
                 std::cout << "Block length: " << block_len << std::endl;
             }
             else
@@ -437,19 +438,29 @@ namespace sgns
                 return 0;
             }
         }
-        return std::max( cost, static_cast<double>( 1 ) );
+        auto result = FixedPointDivide( block_total_len, 2100000ULL );
+        if ( !result )
+        {
+            std::cout << "Error in division: " << result.error().message() << std::endl;
+        }
+        else
+        {
+            cost = result.value();
+        }
+
+        return std::max( cost, static_cast<uint64_t>( 1 ) );
     }
 
-    outcome::result<void> GeniusNode::MintTokens( double      amount,
-                                                  std::string transaction_hash,
-                                                  std::string chainid,
-                                                  std::string tokenid )
+    void GeniusNode::MintTokens( uint64_t    amount,
+                                 std::string transaction_hash,
+                                 std::string chainid,
+                                 std::string tokenid )
     {
         transaction_manager_->MintFunds( amount, transaction_hash, chainid, tokenid );
         return outcome::success();
     }
 
-    double GeniusNode::GetBalance()
+    uint64_t GeniusNode::GetBalance()
     {
         return transaction_manager_->GetBalance();
     }

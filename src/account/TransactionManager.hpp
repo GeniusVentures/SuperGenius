@@ -64,14 +64,14 @@ namespace sgns
         const std::vector<std::vector<uint8_t>> GetOutTransactions() const;
         const std::vector<std::vector<uint8_t>> GetInTransactions() const;
 
-        bool TransferFunds( double amount, const uint256_t &destination );
-        void MintFunds( double amount, std::string transaction_hash, std::string chainid, std::string tokenid );
-        outcome::result<std::string> HoldEscrow( double             amount,
+        bool TransferFunds( uint64_t amount, const uint256_t &destination );
+        void MintFunds( uint64_t amount, std::string transaction_hash, std::string chainid, std::string tokenid );
+        outcome::result<std::string> HoldEscrow( uint64_t           amount,
                                                  const uint256_t   &dev_addr,
-                                                 float              peers_cut,
+                                                 uint64_t           peers_cut,
                                                  const std::string &job_id );
         outcome::result<void> PayEscrow( const std::string &escrow_path, const SGProcessing::TaskResult &taskresult );
-        double                GetBalance();
+        uint64_t              GetBalance();
 
     private:
         static constexpr std::uint16_t    MAIN_NET_ID             = 369;

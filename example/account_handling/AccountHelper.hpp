@@ -37,8 +37,8 @@ extern "C"
 #endif
     typedef struct DevConfig
     {
-        char  Addr[255];
-        float Cut;
+        char     Addr[255];
+        uint64_t Cut;
     } DevConfig_st2;
 
     typedef char AccountKey2[255];
@@ -61,7 +61,6 @@ namespace sgns
         }
 
         std::shared_ptr<TransactionManager> GetManager();
-
 
     private:
         std::shared_ptr<GeniusAccount>                             account_;

@@ -56,9 +56,9 @@ namespace sgns
         [[nodiscard]] T GetBalance() const;
 
         template <>
-        [[nodiscard]] double GetBalance() const
+        [[nodiscard]] uint64_t GetBalance() const
         {
-            double retval = 0;
+            uint64_t retval = 0;
 
             //std::cout << "utxo's ID: ";
             for ( auto &curr : utxos )
@@ -76,7 +76,7 @@ namespace sgns
         template <>
         [[nodiscard]] std::string GetBalance() const
         {
-            return std::to_string( GetBalance<double>() );
+            return std::to_string( GetBalance<uint64_t>() );
         }
 
         [[nodiscard]] std::string GetToken() const

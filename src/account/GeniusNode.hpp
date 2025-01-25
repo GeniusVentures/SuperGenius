@@ -25,11 +25,11 @@ extern "C"
 #endif
     typedef struct DevConfig
     {
-        char   Addr[255];
-        double Cut;
-        double TokenValueInGNUS;
-        int    TokenID;
-        char   BaseWritePath[1024];
+        char     Addr[255];
+        uint64_t Cut;
+        double   TokenValueInGNUS;
+        int      TokenID;
+        char     BaseWritePath[1024];
     } DevConfig_st;
 #ifndef __cplusplus
 }
@@ -74,21 +74,18 @@ namespace sgns
 
         outcome::result<void> ProcessImage( const std::string &image_path );
 
-        double GetProcessCost( const std::string &json_data );
+        uint64_t GetProcessCost( const std::string &json_data );
 
         std::string GetName() override
         {
             return "GeniusNode";
         }
 
-        void                  DHTInit();
-        outcome::result<void> MintTokens( double      amount,
-                                          std::string transaction_hash,
-                                          std::string chainid,
-                                          std::string tokenid );
-        void                  AddPeer( const std::string &peer );
-        void                  RefreshUPNP( int pubsubport, int graphsyncport );
-        double                GetBalance();
+        void     DHTInit();
+        void     MintTokens( uint64_t amount, std::string transaction_hash, std::string chainid, std::string tokenid );
+        void     AddPeer( const std::string &peer );
+        void     RefreshUPNP( int pubsubport, int graphsyncport );
+        uint64_t GetBalance();
 
         [[nodiscard]] const std::vector<std::vector<uint8_t>> GetInTransactions() const
         {
@@ -115,7 +112,7 @@ namespace sgns
             return account_->GetAddress<uint256_t>();
         }
 
-        bool TransferFunds( double amount, const uint256_t &destination )
+        bool TransferFunds( uint64_t amount, const uint256_t &destination )
         {
             return transaction_manager_->TransferFunds( amount, destination );
         }

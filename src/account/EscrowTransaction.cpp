@@ -14,10 +14,11 @@
 namespace sgns
 {
     EscrowTransaction::EscrowTransaction( UTXOTxParameters                params,
-                                          double                          amount,
+                                          uint64_t                        amount,
                                           uint256_t                       dev_addr,
-                                          float                           peers_cut,
+                                          uint64_t                        peers_cut,
                                           const SGTransaction::DAGStruct &dag ) :
+
         IGeniusTransactions( "escrow", SetDAGWithType( dag, "escrow" ) ),
         utxo_params_( std::move( params ) ),
         amount_( std::move( amount ) ),
@@ -81,12 +82,11 @@ namespace sgns
         for ( int i = 0; i < utxo_proto_params->outputs_size(); ++i )
         {
             const SGTransaction::TransferOutput &output_proto = utxo_proto_params->outputs( i );
-
             OutputDestInfo curr{ output_proto.encrypted_amount(), uint256_t{ output_proto.dest_addr() } };
             outputs.push_back( curr );
         }
-        double    amount    = tx_struct.amount();
-        float     peers_cut = tx_struct.peers_cut();
+        uint64_t  amount    = tx_struct.amount();
+        uint64_t  peers_cut = tx_struct.peers_cut();
         uint256_t dev_addr( tx_struct.dev_addr() );
         return std::make_shared<EscrowTransaction>( UTXOTxParameters{ inputs, outputs },
                                                     amount,
