@@ -30,7 +30,7 @@ namespace sgns
 
     struct OutputDestInfo
     {
-        double    encrypted_amount; ///< El Gamal encrypted amount
+        uint64_t  encrypted_amount; ///< El Gamal encrypted amount
         uint256_t dest_address;     ///< Destination node address
     };
 
@@ -46,7 +46,7 @@ namespace sgns
 
         static outcome::result<UTXOTxParameters> create( const std::vector<GeniusUTXO>          &utxo_pool,
                                                          const KeyGenerator::ElGamal::PublicKey &src_address,
-                                                         double                                  amount,
+                                                         uint64_t                                amount,
                                                          const uint256_t                        &dest_address,
                                                          std::string                             signature = "" )
         {
@@ -100,12 +100,12 @@ namespace sgns
     private:
         UTXOTxParameters( const std::vector<GeniusUTXO>          &utxo_pool,
                           const KeyGenerator::ElGamal::PublicKey &src_address,
-                          double                                  amount,
+                          uint64_t                                amount,
                           const uint256_t                        &dest_address,
                           std::string                             signature ) :
             UTXOTxParameters( utxo_pool,
                               src_address,
-                              { OutputDestInfo{ RoundTo5Digits( amount ), dest_address } },
+                              { OutputDestInfo{ amount, dest_address } },
                               std::move( signature ) )
         {
         }
