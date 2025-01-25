@@ -48,7 +48,7 @@ endif()
 
 #define zkllvm directory
 if(NOT DEFINED ZKLLVM_DIR)
-    if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../../zkLLVM/README.md")
+    if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../../zkLLVM")
         print("Setting default zkLLVM directory")
         get_filename_component(BUILD_PLATFORM_NAME ${CMAKE_CURRENT_SOURCE_DIR} NAME)
         set(ZKLLVM_DIR "${CMAKE_CURRENT_LIST_DIR}/../../zkLLVM/build/${BUILD_PLATFORM_NAME}/Release/${ANDROID_ABI_FOLDER}" CACHE STRING "Default zkllvm Library")
