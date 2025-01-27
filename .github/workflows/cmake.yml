@@ -80,7 +80,7 @@ jobs:
 
           for library in *-lib.tar.gz; do
               echo "${library}"
-              tar -xzf "${library}"
+              tar -xzf "${library}" --exclude='*bin/assigner' --exclude='*bin/clang-zkllvm' --exclude='*bin/llvm-link-zkllvm' --exclude='*bin/transpiler'
           done
         shell: bash
 
