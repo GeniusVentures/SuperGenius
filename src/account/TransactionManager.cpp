@@ -224,9 +224,10 @@ namespace sgns
         std::vector<std::string>           subtask_ids;
         std::vector<OutputDestInfo>        payout_peers;
 
-        uint64_t peers_amount = sgns::fixed_point::multiply( escrow_tx->GetAmount(), escrow_tx->GetPeersCut() ) /
-                                static_cast<uint64_t>( taskresult.subtask_results().size() );
-        auto remainder = escrow_tx->GetAmount();
+        auto     mult_result  = sgns::fixed_point::multiply( escrow_tx->GetAmount(), escrow_tx->GetPeersCut() );
+        //TODO: check fail here, maybe if peer cut is greater than one to...
+        uint64_t peers_amount = mult_result.value() / static_cast<uint64_t>( taskresult.subtask_results().size() );
+        auto     remainder    = escrow_tx->GetAmount();
         for ( auto &subtask : taskresult.subtask_results() )
         {
             std::cout << "Subtask Result " << subtask.subtaskid() << "from " << subtask.node_address() << std::endl;

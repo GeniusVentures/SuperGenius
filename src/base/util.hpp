@@ -332,9 +332,9 @@ namespace sgns
          * @param[in]   a First number
          * @param[in]   b Second number
          * @param[in]   precision Number of decimal places (default: 9)
-         * @return      Result of multiplication in fixed-point representation
+         * @return      Outcome of multiplication in fixed-point representation
          */
-        static uint64_t multiply( uint64_t a, uint64_t b, uint64_t precision = 9 )
+        static outcome::result<uint64_t> multiply( uint64_t a, uint64_t b, uint64_t precision = 9 )
         {
             uint64_t scale = 1;
             for ( uint64_t i = 0; i < precision; ++i )
@@ -342,8 +342,15 @@ namespace sgns
                 scale *= 10;
             }
 
-            uint128_t result = static_cast<__uint128_t>( a ) * static_cast<__uint128_t>( b );
-            return static_cast<uint64_t>( result / scale );
+            uint128_t result = static_cast<uint128_t>( a ) * static_cast<uint128_t>( b );
+            result           = result / static_cast<uint128_t>( scale );
+
+            if ( result > std::numeric_limits<uint64_t>::max() )
+            {
+                return outcome::failure( std::make_error_code( std::errc::value_too_large ) );
+            }
+
+            return outcome::success( static_cast<uint64_t>( result ) );
         }
 
         /**
