@@ -52,7 +52,7 @@ namespace sgns
         {
             UTXOTxParameters instance( utxo_pool,
                                        src_address,
-                                       RoundTo5Digits( amount ),
+                                       amount,
                                        dest_address,
                                        std::move( signature ) );
 

@@ -122,7 +122,7 @@ namespace sgns
                                                                                FillDAGStruct() );
             std::optional<std::vector<uint8_t>> maybe_proof;
 #ifdef _PROOF_ENABLED
-            TransferProof prover( static_cast<uint64_t>( account_m->GetBalance<double>() ),
+            TransferProof prover( static_cast<uint64_t>( account_m->GetBalance<uint64_t>() ),
                                   static_cast<uint64_t>( amount ) );
             auto          proof_result = prover.GenerateFullProof();
             if ( proof_result.has_value() )
@@ -148,7 +148,7 @@ namespace sgns
                                         std::string chainid,
                                         std::string tokenid )
     {
-        auto mint_transaction = std::make_shared<MintTransaction>( RoundTo5Digits( amount ),
+        auto mint_transaction = std::make_shared<MintTransaction>( amount,
                                                                    chainid,
                                                                    tokenid,
                                                                    FillDAGStruct( transaction_hash ) );
@@ -181,7 +181,7 @@ namespace sgns
 
         account_m->utxos        = UTXOTxParameters::UpdateUTXOList( account_m->utxos, params );
         auto escrow_transaction = std::make_shared<EscrowTransaction>( params,
-                                                                       RoundTo5Digits( amount ),
+                                                                       amount,
                                                                        dev_addr,
                                                                        peers_cut,
                                                                        FillDAGStruct() );
@@ -189,7 +189,7 @@ namespace sgns
         std::optional<std::vector<uint8_t>> maybe_proof;
 #ifdef _PROOF_ENABLED
 
-        TransferProof prover( static_cast<uint64_t>( account_m->GetBalance<double>() ),
+        TransferProof prover( static_cast<uint64_t>( account_m->GetBalance<uint64_t>() ),
                               static_cast<uint64_t>( amount ) );
         OUTCOME_TRY( ( auto &&, proof_result ), prover.GenerateFullProof() );
         maybe_proof = proof_result;
@@ -199,7 +199,7 @@ namespace sgns
         this->EnqueueTransaction( std::make_pair( escrow_transaction, maybe_proof ) );
         m_logger->debug( "Holding escrow to 0x{} wih the amount {}",
                          hash_data.toReadableString(),
-                         RoundTo5Digits( amount ) );
+                         amount);
 
         return "0x" + hash_data.toReadableString();
     }
@@ -224,7 +224,7 @@ namespace sgns
         std::vector<std::string>           subtask_ids;
         std::vector<OutputDestInfo>        payout_peers;
 
-        uint64_t peers_amount = FixedPointMultiply( escrow_tx->GetAmount(), escrow_tx->GetPeersCut() ) /
+        uint64_t peers_amount = sgns::fixed_point::multiply( escrow_tx->GetAmount(), escrow_tx->GetPeersCut() ) /
                                 static_cast<uint64_t>( taskresult.subtask_results().size() );
         auto remainder = escrow_tx->GetAmount();
         for ( auto &subtask : taskresult.subtask_results() )

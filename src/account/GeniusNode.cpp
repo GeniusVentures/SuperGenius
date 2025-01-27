@@ -438,7 +438,7 @@ namespace sgns
                 return 0;
             }
         }
-        auto result = FixedPointDivide( block_total_len, 2100000ULL );
+        auto result = sgns::fixed_point::divide( block_total_len, 2100000ULL );
         if ( !result )
         {
             std::cout << "Error in division: " << result.error().message() << std::endl;
