@@ -359,12 +359,21 @@ namespace sgns
             {
                 return outcome::failure( std::make_error_code( std::errc::result_out_of_range ) );
             }
-            uint64_t scale = 1;
+
+            uint128_t scale = 1;
             for ( uint64_t i = 0; i < precision; ++i )
             {
                 scale *= 10;
             }
-            return outcome::success( ( a * scale ) / b );
+
+            uint128_t result = ( static_cast<uint128_t>( a ) * scale ) / b;
+
+            if ( result > std::numeric_limits<uint64_t>::max() )
+            {
+                return outcome::failure( std::make_error_code( std::errc::value_too_large ) );
+            }
+
+            return outcome::success( static_cast<uint64_t>( result ) );
         }
     }
 
