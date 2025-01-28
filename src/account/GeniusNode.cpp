@@ -451,12 +451,20 @@ namespace sgns
         return std::max( cost, static_cast<uint64_t>( 1 ) );
     }
 
-    void GeniusNode::MintTokens( uint64_t    amount,
-                                 std::string transaction_hash,
-                                 std::string chainid,
-                                 std::string tokenid )
+    outcome::result<void> GeniusNode::MintTokens( const std::string &amount_str,
+                                                  const std::string &transaction_hash,
+                                                  const std::string &chainid,
+                                                  const std::string &tokenid )
     {
-        transaction_manager_->MintFunds( amount, transaction_hash, chainid, tokenid );
+        auto result = sgns::fixed_point::fromString( amount_str );
+
+        if ( !result )
+        {
+            return outcome::failure( result.error() );
+        }
+
+        transaction_manager_->MintFunds( result.value(), transaction_hash, chainid, tokenid );
+
         return outcome::success();
     }
 

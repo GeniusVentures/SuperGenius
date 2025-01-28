@@ -121,7 +121,7 @@ std::string MultiAccountTest::binary_path = "";
 
 TEST_F( MultiAccountTest, SyncThroughThirdNode )
 {
-    node_main->MintTokens( 50, "", "", "" );
+    node_main->MintTokens( "50", "", "", "" );
     std::this_thread::sleep_for( std::chrono::milliseconds( 20000 ) );
     int transcount_main  = node_main->GetOutTransactions().size();
     int transcount_node1 = node_proc1->GetOutTransactions().size();
@@ -152,9 +152,9 @@ TEST_F( MultiAccountTest, SyncThroughEachOther )
     //Just making sure they connect
     std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
     //Mint On each
-    node_main->MintTokens( 50, "", "", "" );
+    node_main->MintTokens( "50", "", "", "" );
     std::this_thread::sleep_for( std::chrono::milliseconds( 5000 ) );
-    node_proc1->MintTokens( 50, "", "", "" );
+    node_proc1->MintTokens( "50", "", "", "" );
     std::this_thread::sleep_for( std::chrono::milliseconds( 10000 ) );
     int transcount_main  = node_main->GetOutTransactions().size();
     int transcount_node1 = node_proc1->GetOutTransactions().size();

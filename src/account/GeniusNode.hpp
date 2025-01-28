@@ -81,9 +81,17 @@ namespace sgns
             return "GeniusNode";
         }
 
-        void     DHTInit();
-        void     MintTokens( uint64_t amount, std::string transaction_hash, std::string chainid, std::string tokenid );
-        void     AddPeer( const std::string &peer );
+        void                  DHTInit();
+        /**
+         * @brief       Mints tokens by converting a string amount to fixed-point representation
+         * @param[in]   amount_str         Numeric string with up to 9 decimal places
+         * @return      Outcome of mint token operation
+         */
+        outcome::result<void> MintTokens( const std::string &amount_str,
+                                          const std::string &transaction_hash,
+                                          const std::string &chainid,
+                                          const std::string &tokenid );
+        void                  AddPeer( const std::string &peer );
         void     RefreshUPNP( int pubsubport, int graphsyncport );
         uint64_t GetBalance();
 
