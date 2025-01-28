@@ -37,8 +37,8 @@ extern "C"
 #endif
     typedef struct DevConfig
     {
-        char     Addr[255];
-        uint64_t Cut;
+        char        Addr[255];
+        std::string Cut;
     } DevConfig_st2;
 
     typedef char AccountKey2[255];

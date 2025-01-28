@@ -140,7 +140,7 @@ int main( int argc, char *argv[] )
     std::string own_wallet_address( argv[2] );
 
     AccountKey2   key;
-    DevConfig_st2 local_config{ "0xbeefbeef", 650000000 };
+    DevConfig_st2 local_config{ "0xbeefbeef", "0.65" };
 
     strncpy( key, argv[2], sizeof( key ) );
 
