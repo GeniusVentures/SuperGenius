@@ -385,14 +385,23 @@ namespace sgns
             taskSplitter
                 .SplitTask( task, subTasks, inputAsString, nChunks, false, pubsub_->GetHost()->getId().toBase58() );
 
-            //}
-            //imageindex++;
-        }
+                //}
+                //imageindex++;
+            }
+
+            auto cut = sgns::fixed_point::fromString( dev_config_.Cut );
+
+            if ( !cut )
+            {
+                //TODO: return outcome::failure( cut.error() );
+                return;
+            }
+
 
         OUTCOME_TRY( ( auto &&, escrow_path ),
                      transaction_manager_->HoldEscrow( funds,
                                                        uint256_t{ std::string( dev_config_.Addr ) },
-                                                       dev_config_.Cut,
+                                                       cut.value(),
                                                        uuidstring ) );
 
         task.set_escrow_path( escrow_path );

@@ -25,11 +25,11 @@ extern "C"
 #endif
     typedef struct DevConfig
     {
-        char     Addr[255];
-        uint64_t Cut;
-        double   TokenValueInGNUS;
-        int      TokenID;
-        char     BaseWritePath[1024];
+        char        Addr[255];
+        std::string Cut;
+        double      TokenValueInGNUS;
+        int         TokenID;
+        char        BaseWritePath[1024];
     } DevConfig_st;
 #ifndef __cplusplus
 }
@@ -81,7 +81,7 @@ namespace sgns
             return "GeniusNode";
         }
 
-        void                  DHTInit();
+        void DHTInit();
         /**
          * @brief       Mints tokens by converting a string amount to fixed-point representation
          * @param[in]   amount_str         Numeric string with up to 9 decimal places
@@ -92,8 +92,8 @@ namespace sgns
                                           const std::string &chainid,
                                           const std::string &tokenid );
         void                  AddPeer( const std::string &peer );
-        void     RefreshUPNP( int pubsubport, int graphsyncport );
-        uint64_t GetBalance();
+        void                  RefreshUPNP( int pubsubport, int graphsyncport );
+        uint64_t              GetBalance();
 
         [[nodiscard]] const std::vector<std::vector<uint8_t>> GetInTransactions() const
         {

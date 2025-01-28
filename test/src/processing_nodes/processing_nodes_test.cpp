@@ -115,9 +115,9 @@ sgns::GeniusNode *ProcessingNodesTest::node_main  = nullptr;
 sgns::GeniusNode *ProcessingNodesTest::node_proc1 = nullptr;
 sgns::GeniusNode *ProcessingNodesTest::node_proc2 = nullptr;
 
-DevConfig_st ProcessingNodesTest::DEV_CONFIG  = { "0xcafe", 650000000, 1.0, 0, "./node1" };
-DevConfig_st ProcessingNodesTest::DEV_CONFIG2 = { "0xcafe", 650000000, 1.0, 0, "./node2" };
-DevConfig_st ProcessingNodesTest::DEV_CONFIG3 = { "0xcafe", 650000000, 1.0, 0, "./node3" };
+DevConfig_st ProcessingNodesTest::DEV_CONFIG  = { "0xcafe", "0.65", 1.0, 0, "./node1" };
+DevConfig_st ProcessingNodesTest::DEV_CONFIG2 = { "0xcafe", "0.65", 1.0, 0, "./node2" };
+DevConfig_st ProcessingNodesTest::DEV_CONFIG3 = { "0xcafe", "0.65", 1.0, 0, "./node3" };
 
 std::string ProcessingNodesTest::binary_path = "";
 
@@ -291,11 +291,11 @@ TEST_F( ProcessingNodesTest, PostProcessing )
     std::cout << "Balance node2 (After):  " << node_proc2->GetBalance() << std::endl;
 
     ASSERT_EQ( balance_main - cost, node_main->GetBalance() );
-
-    ASSERT_EQ( balance_node1 + balance_node2 + ( cost * DEV_CONFIG.Cut ) / 1000000000,
+    //TODO: convert DEV_CONFIG.Cut from string to fixed and use below
+    ASSERT_EQ( balance_node1 + balance_node2 + ( cost * 650000000 ) / 1000000000,
                node_proc1->GetBalance() + node_proc2->GetBalance() );
 
-    auto gameDeveloperPayment = cost - ( cost * DEV_CONFIG.Cut ) / 1000000000;
+    auto gameDeveloperPayment = cost - ( cost * 650000000 ) / 1000000000;
     ASSERT_EQ( balance_main + balance_node1 + balance_node2,
                node_main->GetBalance() + node_proc1->GetBalance() + node_proc2->GetBalance() + gameDeveloperPayment );
 }

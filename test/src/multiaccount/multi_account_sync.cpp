@@ -112,9 +112,9 @@ sgns::GeniusNode *MultiAccountTest::node_main  = nullptr;
 sgns::GeniusNode *MultiAccountTest::node_proc1 = nullptr;
 sgns::GeniusNode *MultiAccountTest::node_proc2 = nullptr;
 
-DevConfig_st MultiAccountTest::DEV_CONFIG  = { "0xcafe", 650000000, 1.0, 0, "./node1" };
-DevConfig_st MultiAccountTest::DEV_CONFIG2 = { "0xcafe", 650000000, 1.0, 1, "./node2" };
-DevConfig_st MultiAccountTest::DEV_CONFIG3 = { "0xcafe", 650000000, 1.0, 0, "./node3" };
+DevConfig_st MultiAccountTest::DEV_CONFIG  = { "0xcafe", "0.65", 1.0, 0, "./node1" };
+DevConfig_st MultiAccountTest::DEV_CONFIG2 = { "0xcafe", "0.65", 1.0, 1, "./node2" };
+DevConfig_st MultiAccountTest::DEV_CONFIG3 = { "0xcafe", "0.65", 1.0, 0, "./node3" };
 
 std::string MultiAccountTest::binary_path = "";
 
