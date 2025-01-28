@@ -292,10 +292,10 @@ TEST_F( ProcessingNodesTest, PostProcessing )
 
     ASSERT_EQ( balance_main - cost, node_main->GetBalance() );
     //TODO: convert DEV_CONFIG.Cut from string to fixed and use below
-    ASSERT_EQ( balance_node1 + balance_node2 + ( cost * 650000000 ) / 1000000000,
+    ASSERT_EQ( balance_node1 + balance_node2 + ( cost * 65 ) / 100,
                node_proc1->GetBalance() + node_proc2->GetBalance() );
 
-    auto gameDeveloperPayment = cost - ( cost * 650000000 ) / 1000000000;
+    auto gameDeveloperPayment = cost - (( cost * 65 ) / 100);
     ASSERT_EQ( balance_main + balance_node1 + balance_node2,
                node_main->GetBalance() + node_proc1->GetBalance() + node_proc2->GetBalance() + gameDeveloperPayment );
 }
