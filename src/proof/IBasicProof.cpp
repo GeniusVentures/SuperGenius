@@ -37,10 +37,7 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, IBasicProof::Error, e )
 namespace sgns
 {
 
-    IBasicProof::IBasicProof( std::string bytecode_payload ) : bytecode_payload_( std::move( bytecode_payload ) )
-
-    {
-    }
+    IBasicProof::IBasicProof( std::string bytecode_payload ) : bytecode_payload_( std::move( bytecode_payload ) ) {}
 
     outcome::result<SGProof::BaseProofProto> IBasicProof::DeSerializeBaseProof( const std::vector<uint8_t> &proof_data )
     {
@@ -142,4 +139,37 @@ namespace sgns
 
         return GeniusProver::VerifyProof( genius_proof );
     }
+
+    boost::json::object IBasicProof::GenerateIntParameter( uint64_t value )
+    {
+        boost::json::object obj;
+        obj["int"] = value;
+
+        return obj;
+    }
+
+    template <std::size_t N>
+    boost::json::object IBasicProof::GenerateArrayParameter( const std::array<uint64_t, N> &values )
+    {
+        boost::json::array field_array;
+
+        for ( const auto &value : values )
+        {
+            field_array.push_back( GenerateFieldParameter( value ) );
+        }
+
+        boost::json::object array_obj;
+        array_obj["array"] = field_array;
+
+        return array_obj;
+    }
+
+    boost::json::object IBasicProof::GenerateFieldParameter( uint64_t value )
+    {
+        boost::json::object obj;
+        obj["field"] = value;
+
+        return obj;
+    }
+
 }

@@ -51,27 +51,6 @@ namespace sgns
         }
 
         /**
-         * @brief       Generates a JSON object for an integer parameter.
-         * @param[in]   value The integer value to be converted to a JSON object.
-         * @return      A JSON object containing the parameter.
-         */
-        static boost::json::object GenerateIntParameter( uint64_t value );
-
-        /**
-         * @brief       Generates a JSON object for an array parameter.
-         * @param[in]   values The array of values to be converted to a JSON object.
-         * @return      A JSON object containing the array parameter.
-         */
-        static boost::json::object GenerateArrayParameter( std::array<uint64_t, 4> values );
-
-        /**
-         * @brief       Generates a JSON object for a field parameter.
-         * @param[in]   value The field value to be converted to a JSON object.
-         * @return      A JSON object containing the field parameter.
-         */
-        static boost::json::object GenerateFieldParameter( uint64_t value );
-
-        /**
          * @brief       Generates a JSON object for a curve parameter.
          * @tparam      T The type of the curve parameter.
          * @param       value The curve value to be converted to a JSON object.
@@ -81,6 +60,13 @@ namespace sgns
         static boost::json::object GenerateCurveParameter( T value );
 
     protected:
+        static constexpr uint64_t generator_X_point = 1;     ///< X coordinate of the generator point
+        static constexpr uint64_t generator_Y_point = 2;     ///< Y coordinate of the generator point
+        static constexpr uint64_t base_seed         = 12345; ///< Base seed
+        static constexpr uint64_t provided_totp     = 67890; ///< Provided TOTP
+        
+        /// Array of range values used in transfer proofs.
+        static constexpr std::array<uint64_t, 4> ranges = { 1000, 2000, 3000, 4000 };
         /**
          * @brief       Serializes the full proof data and parameters
          * @param[in]   base_proof_data The base proof data to be appended to the public parameters
@@ -96,13 +82,6 @@ namespace sgns
         std::pair<boost::json::array, boost::json::array> GenerateJsonParameters() override;
 
     private:
-        static constexpr uint64_t generator_X_point = 1;     ///< X coordinate of the generator point
-        static constexpr uint64_t generator_Y_point = 2;     ///< Y coordinate of the generator point
-        static constexpr uint64_t base_seed         = 12345; ///< Base seed
-        static constexpr uint64_t provided_totp     = 67890; ///< Provided TOTP
-        /// Array of range values used in transfer proofs.
-        static constexpr std::array<uint64_t, 4> ranges = { 1000, 2000, 3000, 4000 };
-
         uint64_t balance_; ///< The balance associated with the transfer.
         uint64_t amount_;  ///< The amount to be transferred.
 

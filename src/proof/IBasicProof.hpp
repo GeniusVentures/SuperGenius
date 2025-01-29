@@ -31,9 +31,8 @@ namespace sgns
         /**
          * @brief   Alias for the de-serializer method type to be implemented in derived classes
          */
-        using PublicParamDeserializeFn =
-            std::function<outcome::result<std::pair<boost::json::array, boost::json::array>>(
-                const std::vector<uint8_t> & )>;
+        using PublicParamDeserializeFn = std::function<
+            outcome::result<std::pair<boost::json::array, boost::json::array>>( const std::vector<uint8_t> & )>;
 
         /**
          * @brief       Constructs a proof and informs the bytecode that will be used
@@ -90,6 +89,28 @@ namespace sgns
             const std::pair<boost::json::array, boost::json::array> &parameters,
             const SGProof::BaseProofData                            &proof_data,
             std::string                                              proof_bytecode );
+
+        /**
+         * @brief       Generates a JSON object for an integer parameter.
+         * @param[in]   value The integer value to be converted to a JSON object.
+         * @return      A JSON object containing the parameter.
+         */
+        static boost::json::object GenerateIntParameter( uint64_t value );
+
+        /**
+         * @brief       Generates a JSON object for an array parameter.
+         * @param[in]   values The array of values to be converted to a JSON object.
+         * @return      A JSON object containing the array parameter.
+         */
+        template <std::size_t N>
+        static boost::json::object GenerateArrayParameter( const std::array<uint64_t, N> &values );
+
+        /**
+         * @brief       Generates a JSON object for a field parameter.
+         * @param[in]   value The field value to be converted to a JSON object.
+         * @return      A JSON object containing the field parameter.
+         */
+        static boost::json::object GenerateFieldParameter( uint64_t value );
 
     protected:
         /** 

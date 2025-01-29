@@ -194,17 +194,17 @@ namespace sgns
         boost::json::array public_inputs_json_array;
         boost::json::array private_inputs_json_array;
 
-        private_inputs_json_array.push_back( TransferProof::GenerateIntParameter( 0 ) );
-        private_inputs_json_array.push_back( TransferProof::GenerateIntParameter( 0 ) );
-        private_inputs_json_array.push_back( TransferProof::GenerateFieldParameter( 0 ) );
-        private_inputs_json_array.push_back( TransferProof::GenerateFieldParameter( 0 ) );
-        public_inputs_json_array.push_back( TransferProof::GenerateCurveParameter( balance_commitment ) );
-        public_inputs_json_array.push_back( TransferProof::GenerateCurveParameter( amount_commitment ) );
-        public_inputs_json_array.push_back( TransferProof::GenerateCurveParameter( new_balance_commitment ) );
-        public_inputs_json_array.push_back( TransferProof::GenerateCurveParameter( generator ) );
-        public_inputs_json_array.push_back( TransferProof::GenerateArrayParameter( ranges ) );
-        private_inputs_json_array.push_back( TransferProof::GenerateFieldParameter( 0 ) );
-        private_inputs_json_array.push_back( TransferProof::GenerateFieldParameter( 0 ) );
+        private_inputs_json_array.push_back( GenerateIntParameter( 0 ) );
+        private_inputs_json_array.push_back( GenerateIntParameter( 0 ) );
+        private_inputs_json_array.push_back( GenerateFieldParameter( 0 ) );
+        private_inputs_json_array.push_back( GenerateFieldParameter( 0 ) );
+        public_inputs_json_array.push_back( GenerateCurveParameter( balance_commitment ) );
+        public_inputs_json_array.push_back( GenerateCurveParameter( amount_commitment ) );
+        public_inputs_json_array.push_back( GenerateCurveParameter( new_balance_commitment ) );
+        public_inputs_json_array.push_back( GenerateCurveParameter( generator ) );
+        public_inputs_json_array.push_back( GenerateArrayParameter( ranges ) );
+        private_inputs_json_array.push_back( GenerateFieldParameter( 0 ) );
+        private_inputs_json_array.push_back( GenerateFieldParameter( 0 ) );
 
         //boost::json::value json_value = public_inputs_json_array;
         //
@@ -218,34 +218,5 @@ namespace sgns
         return std::make_pair( public_inputs_json_array, private_inputs_json_array );
     }
 
-    boost::json::object TransferProof::GenerateIntParameter( uint64_t value )
-    {
-        boost::json::object obj;
-        obj["int"] = value;
-
-        return obj;
-    }
-
-    boost::json::object TransferProof::GenerateArrayParameter( std::array<uint64_t, 4> values )
-    {
-        boost::json::array field_array;
-
-        for ( const auto &value : values )
-        {
-            field_array.push_back( GenerateFieldParameter( value ) );
-        }
-        boost::json::object array_obj;
-        array_obj["array"] = field_array;
-
-        return array_obj;
-    }
-
-    boost::json::object TransferProof::GenerateFieldParameter( uint64_t value )
-    {
-        boost::json::object obj;
-        obj["field"] = value;
-
-        return obj;
-    }
 
 }
