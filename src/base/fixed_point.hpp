@@ -1,3 +1,11 @@
+/**
+ * @file        fixed_point.hpp
+ * @author      Luiz Guilherme Rizzatto Zucchi (luizgrz@gmail.com)
+ * @brief       Fixed-point arithmetic utilities
+ * @version     1.0
+ * @date        2025-01-29
+ * @copyright   Copyright (c) 2025
+ */
 #ifndef _FIXED_POINT_HPP
 #define _FIXED_POINT_HPP
 
@@ -13,12 +21,17 @@
 
 namespace sgns
 {
-    using namespace boost::multiprecision;
-
     namespace fixed_point
     {
+        /**
+         * @brief Maximum precision for fixed-point calculations.
+         */
         static constexpr uint64_t MAX_PRECISION = 16;
 
+        /**
+         * @brief Generates a table of scaling factors for different precision levels.
+         * @return A constexpr array of scaling factors.
+         */
         static constexpr std::array<uint64_t, MAX_PRECISION> generateScaleTable()
         {
             std::array<uint64_t, MAX_PRECISION> table{};
@@ -31,6 +44,9 @@ namespace sgns
             return table;
         }
 
+        /**
+         * @brief Precomputed table of scaling factors.
+         */
         static constexpr std::array<uint64_t, MAX_PRECISION> scale_table = generateScaleTable();
 
         /**
@@ -41,6 +57,10 @@ namespace sgns
          */
         static outcome::result<uint64_t> fromString( const std::string &str_value, uint64_t precision = 9 )
         {
+            if ( precision > MAX_PRECISION )
+            {
+                return outcome::failure( std::make_error_code( std::errc::value_too_large ) );
+            }
             if ( str_value.empty() )
             {
                 return outcome::failure( std::make_error_code( std::errc::invalid_argument ) );
@@ -59,7 +79,6 @@ namespace sgns
                 integer_str = str_value;
             }
 
-            // Parse the integer and fractional parts
             uint64_t integer_part    = 0;
             uint64_t fractional_part = 0;
 
@@ -82,7 +101,6 @@ namespace sgns
                 }
             }
 
-            // Adjust fractional part to match required precision
             if ( fractional_str.length() > precision )
             {
                 return outcome::failure( std::make_error_code( std::errc::value_too_large ) );
@@ -93,11 +111,6 @@ namespace sgns
                 fractional_part *= 10;
             }
 
-            uint64_t scale = 1;
-            for ( uint64_t i = 0; i < precision; ++i )
-            {
-                scale *= 10;
-            }
             return outcome::success( ( integer_part * scale_table[precision] ) + fractional_part );
         }
 
@@ -108,7 +121,11 @@ namespace sgns
          * @return      String representation
          */
         static std::string toString( uint64_t value, uint64_t precision = 9 )
-        {          
+        {
+            if ( precision > MAX_PRECISION )
+            {
+                return "Error: Precision too large";
+            }
             uint64_t integer_part    = value / scale_table[precision];
             uint64_t fractional_part = value % scale_table[precision];
             return std::to_string( integer_part ) + "." + std::to_string( fractional_part );
@@ -123,6 +140,11 @@ namespace sgns
          */
         static outcome::result<uint64_t> multiply( uint64_t a, uint64_t b, uint64_t precision = 9 )
         {
+            using namespace boost::multiprecision;
+            if ( precision > MAX_PRECISION )
+            {
+                return outcome::failure( std::make_error_code( std::errc::value_too_large ) );
+            }
             uint128_t result = static_cast<uint128_t>( a ) * static_cast<uint128_t>( b );
             result           = result / static_cast<uint128_t>( scale_table[precision] );
 
@@ -130,7 +152,6 @@ namespace sgns
             {
                 return outcome::failure( std::make_error_code( std::errc::value_too_large ) );
             }
-
             return outcome::success( static_cast<uint64_t>( result ) );
         }
 
@@ -143,13 +164,18 @@ namespace sgns
          */
         static outcome::result<uint64_t> divide( uint64_t a, uint64_t b, uint64_t precision = 9 )
         {
+            using namespace boost::multiprecision;
+            if ( precision > MAX_PRECISION )
+            {
+                return outcome::failure( std::make_error_code( std::errc::value_too_large ) );
+            }
             if ( b == 0 )
             {
                 return outcome::failure( std::make_error_code( std::errc::result_out_of_range ) );
             }
 
-            uint128_t result = ( static_cast<uint128_t>( a ) * scale_table[precision] ) / b;
-
+            uint128_t result = ( static_cast<uint128_t>( a ) * static_cast<uint128_t>( scale_table[precision] ) ) /
+                               static_cast<uint128_t>( b );
             if ( result > std::numeric_limits<uint64_t>::max() )
             {
                 return outcome::failure( std::make_error_code( std::errc::value_too_large ) );
@@ -159,4 +185,5 @@ namespace sgns
         }
     }
 }
-#endif
+
+#endif // _FIXED_POINT_HPP
