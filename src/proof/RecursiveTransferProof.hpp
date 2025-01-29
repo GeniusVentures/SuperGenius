@@ -6,7 +6,7 @@
  */
 
 #ifndef _RECURSIVE_TRANSFER_PROOF_HPP_
-#ifndef _RECURSIVE_TRANSFER_PROOF_HPP_
+#define _RECURSIVE_TRANSFER_PROOF_HPP_
 
 #include <string>
 #include <cstdint>
@@ -16,6 +16,8 @@
 #include <string_view>
 #include "GeniusProver.hpp"
 #include "IBasicProof.hpp"
+#include "TransferProof.hpp"
+
 #include "circuits/RecursiveTransactionCircuit.hpp"
 
 namespace sgns
@@ -31,19 +33,19 @@ namespace sgns
     {
     public:
         /**
-         * @brief       Constructor for the TransferProof class.
+         * @brief       Constructor for the RecursiveTransferProof class.
          * @param[in]   balance The balance of the account for the transfer.
          * @param[in]   amount The amount to be transferred.
          */
         explicit RecursiveTransferProof( uint64_t balance, uint64_t amount, GeniusProver::ProofSnarkType snark );
 
         /**
-         * @brief       Destructor for the TransferProof class.
+         * @brief       Destructor for the RecursiveTransferProof class.
          */
         ~RecursiveTransferProof() = default;
 
         /**
-         * @brief       Retrieves the type of proof for transfers.
+         * @brief       Retrieves the type of proof for recursive transfers.
          * @return      A string representing the type of the proof.
          */
         std::string GetProofType() const override
@@ -82,7 +84,7 @@ namespace sgns
         static constexpr std::string_view RECURSIVE_TRANSFER_TYPE_NAME = "RecursiveTransfer";
 
         /**
-         * @brief       Registers the deserializer and bytecode for the transfer proof type.
+         * @brief       Registers the deserializer and bytecode for the recursive transfer proof type.
          * @return      A boolean indicating successful registration.
          */
         static inline bool Register()

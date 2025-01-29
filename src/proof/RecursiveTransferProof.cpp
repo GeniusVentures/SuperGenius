@@ -1,15 +1,11 @@
 /**
- * @file       TransferProof.cpp
- * @brief      
- * @date       2024-09-29
+ * @file       RecursiveTransferProof.cpp
+ * @brief      Source file of the Recursive Transfer Proof
+ * @date       2025-01-29
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
-#include "TransferProof.hpp"
-#include <nil/crypto3/multiprecision/cpp_int.hpp>
-#include <nil/crypto3/algebra/curves/pallas.hpp>
-#include <nil/crypto3/hash/algorithm/hash.hpp>
-#include <nil/crypto3/hash/adaptor/hashed.hpp>
-#include <nil/crypto3/algebra/marshalling.hpp>
+#include "RecursiveTransferProof.hpp"
+
 #include "proof/proto/SGProof.pb.h"
 
 using namespace nil::crypto3::algebra::curves;
@@ -17,49 +13,13 @@ using namespace nil::crypto3::algebra::curves;
 namespace sgns
 {
 
-    TransferProof::TransferProof( uint64_t                   balance,
-                                  uint64_t                   amount,
-                                  std::optional<std::string> bytecode) :
+    RecursiveTransferProof::RecursiveTransferProof( uint64_t balance, uint64_t amount, GeniusProver::ProofSnarkType snark  ) :
 #ifdef RELEASE_BYTECODE_CIRCUITS
-        IBasicProof( bytecode.value_or( std::string( TransactionCircuit ) ) ), //
+        TransferProof( std::move( balance ), std::move( amount ), std::string( RecursiveTransactionCircuit ) ) //
 #else
-        IBasicProof( bytecode.value_or( std::string( TransactionCircuitDebug ) ) ), //
+        TransferProof( std::move( balance ), std::move( amount ), std::string( RecursiveTransactionCircuit ) ) //
 #endif
-        balance_( std::move( balance ) ), //
-        amount_( std::move( amount ) )    //
     {
-    }
-
-    template <>
-    boost::json::object TransferProof::GenerateCurveParameter(
-        pallas::template g1_type<coordinates::affine>::value_type value )
-    {
-        boost::json::object commit_obj;
-
-        boost::json::array commit_coordinates;
-
-        std::ostringstream X_coord_stream;
-        X_coord_stream << std::hex << value.X;
-
-        std::ostringstream Y_coord_stream;
-        Y_coord_stream << std::hex << value.Y;
-
-        std::string x_coord_string = X_coord_stream.str();
-        std::string y_coord_string = Y_coord_stream.str();
-        if ( x_coord_string.size() % 2 != 0 )
-        {
-            x_coord_string = "0" + x_coord_string;
-        }
-        if ( y_coord_string.size() % 2 != 0 )
-        {
-            y_coord_string = "0" + y_coord_string;
-        }
-
-        commit_coordinates.push_back( boost::json::value( "0x" + x_coord_string ) );
-        commit_coordinates.push_back( boost::json::value( "0x" + y_coord_string ) );
-        commit_obj["curve"] = commit_coordinates;
-
-        return commit_obj;
     }
 
     outcome::result<std::vector<uint8_t>> TransferProof::SerializeFullProof( const SGProof::BaseProofData &base_proof )

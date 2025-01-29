@@ -12,6 +12,9 @@ add_library(transfer_proof
 add_library(processing_proof
     ProcessingProof.cpp
 )
+add_library(recursive_transfer_proof
+    RecursiveTransferProof.cpp
+)
 add_library(basic_proof
     IBasicProof.cpp
 )
@@ -37,6 +40,17 @@ target_link_libraries(basic_proof
     SGProofProto
 )
 target_link_libraries(transfer_proof
+    genius_assigner
+    genius_prover
+    basic_proof
+    SGProofProto
+    outcome
+    Boost::boost
+    Boost::log
+    Boost::unit_test_framework
+)
+target_link_libraries(recursive_transfer_proof
+    transfer_proof
     genius_assigner
     genius_prover
     basic_proof

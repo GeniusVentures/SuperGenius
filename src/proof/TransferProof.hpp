@@ -12,6 +12,7 @@
 #include <cstdint>
 #include <array>
 #include <utility>
+#include <optional>
 #include <boost/json.hpp>
 #include <string_view>
 #include "IBasicProof.hpp"
@@ -34,7 +35,7 @@ namespace sgns
          * @param[in]   balance The balance of the account for the transfer.
          * @param[in]   amount The amount to be transferred.
          */
-        explicit TransferProof( uint64_t balance, uint64_t amount );
+        explicit TransferProof( uint64_t balance, uint64_t amount, std::optional<std::string> bytecode = std::nullopt );
 
         /**
          * @brief       Destructor for the TransferProof class.
@@ -64,7 +65,7 @@ namespace sgns
         static constexpr uint64_t generator_Y_point = 2;     ///< Y coordinate of the generator point
         static constexpr uint64_t base_seed         = 12345; ///< Base seed
         static constexpr uint64_t provided_totp     = 67890; ///< Provided TOTP
-        
+
         /// Array of range values used in transfer proofs.
         static constexpr std::array<uint64_t, 4> ranges = { 1000, 2000, 3000, 4000 };
         /**
