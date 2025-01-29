@@ -19,30 +19,16 @@
 #include "singleton/IComponent.hpp"
 #include "processing/impl/processing_task_queue_impl.hpp"
 
-#ifndef __cplusplus
-extern "C"
+typedef struct DevConfig
 {
-#endif
-    typedef struct DevConfig
-    {
-        char        Addr[255];
-        std::string Cut;
-        double      TokenValueInGNUS;
-        int         TokenID;
-        char        BaseWritePath[1024];
-    } DevConfig_st;
-#ifndef __cplusplus
-}
-#endif
+    char        Addr[255];
+    std::string Cut;
+    double      TokenValueInGNUS;
+    int         TokenID;
+    char        BaseWritePath[1024];
+} DevConfig_st;
 
-#ifndef __cplusplus
-extern "C"
-{
-#endif
-    extern DevConfig_st DEV_CONFIG;
-#ifndef __cplusplus
-}
-#endif
+extern DevConfig_st DEV_CONFIG;
 
 namespace sgns
 {

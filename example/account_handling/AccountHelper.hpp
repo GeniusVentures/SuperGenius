@@ -31,20 +31,13 @@
 #include "processing/processing_service.hpp"
 #include <libp2p/crypto/sha/sha256.hpp>
 
-#ifndef __cplusplus
-extern "C"
+typedef struct DevConfig
 {
-#endif
-    typedef struct DevConfig
-    {
-        char        Addr[255];
-        std::string Cut;
-    } DevConfig_st2;
+    char        Addr[255];
+    std::string Cut;
+} DevConfig_st2;
 
-    typedef char AccountKey2[255];
-#ifndef __cplusplus
-}
-#endif
+typedef char AccountKey2[255];
 
 namespace sgns
 {
