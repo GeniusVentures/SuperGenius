@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include <string>
 #include <vector>
-#include "base/util.hpp"
+#include "base/fixed_point.hpp"
 
 // ======================== FixedPointParamTest ========================
 struct FixedPointParamTestCase

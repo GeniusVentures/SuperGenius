@@ -15,6 +15,7 @@
 #include "account/EscrowTransaction.hpp"
 #include "account/UTXOTxParameters.hpp"
 #include "base/util.hpp"
+#include "base/fixed_point.hpp"
 #include "crdt/globaldb/globaldb.hpp"
 #include "outcome/outcome.hpp"
 #include "primitives/block.hpp"
