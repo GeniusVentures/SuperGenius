@@ -148,22 +148,6 @@ namespace sgns
         return obj;
     }
 
-    template <std::size_t N>
-    boost::json::object IBasicProof::GenerateArrayParameter( const std::array<uint64_t, N> &values )
-    {
-        boost::json::array field_array;
-
-        for ( const auto &value : values )
-        {
-            field_array.push_back( GenerateFieldParameter( value ) );
-        }
-
-        boost::json::object array_obj;
-        array_obj["array"] = field_array;
-
-        return array_obj;
-    }
-
     boost::json::object IBasicProof::GenerateFieldParameter( uint64_t value )
     {
         boost::json::object obj;

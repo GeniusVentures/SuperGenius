@@ -6,6 +6,9 @@ add_library(genius_prover
 add_library(genius_assigner
     GeniusAssigner.cpp
 )
+add_library(basic_proof
+    IBasicProof.cpp
+)
 add_library(transfer_proof
     TransferProof.cpp
 )
@@ -14,9 +17,6 @@ add_library(processing_proof
 )
 add_library(recursive_transfer_proof
     RecursiveTransferProof.cpp
-)
-add_library(basic_proof
-    IBasicProof.cpp
 )
 
 target_link_libraries(genius_assigner

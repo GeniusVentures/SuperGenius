@@ -103,7 +103,20 @@ namespace sgns
          * @return      A JSON object containing the array parameter.
          */
         template <std::size_t N>
-        static boost::json::object GenerateArrayParameter( const std::array<uint64_t, N> &values );
+        static boost::json::object GenerateArrayParameter( const std::array<uint64_t, N> &values )
+        {
+            boost::json::array field_array;
+
+            for ( const auto &value : values )
+            {
+                field_array.push_back( GenerateFieldParameter( value ) );
+            }
+
+            boost::json::object array_obj;
+            array_obj["array"] = field_array;
+
+            return array_obj;
+        }
 
         /**
          * @brief       Generates a JSON object for a field parameter.
