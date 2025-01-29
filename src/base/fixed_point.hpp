@@ -13,9 +13,25 @@
 
 namespace sgns
 {
+    using namespace boost::multiprecision;
+
     namespace fixed_point
     {
-        using namespace boost::multiprecision;
+        static constexpr uint64_t MAX_PRECISION = 16;
+
+        static constexpr std::array<uint64_t, MAX_PRECISION> generateScaleTable()
+        {
+            std::array<uint64_t, MAX_PRECISION> table{};
+            uint64_t                            value = 1;
+            for ( size_t i = 0; i < MAX_PRECISION; i++ )
+            {
+                table[i]  = value;
+                value    *= 10;
+            }
+            return table;
+        }
+
+        static constexpr std::array<uint64_t, MAX_PRECISION> scale_table = generateScaleTable();
 
         /**
          * @brief       Convert a string to fixed-point representation
@@ -82,8 +98,7 @@ namespace sgns
             {
                 scale *= 10;
             }
-
-            return outcome::success( ( integer_part * scale ) + fractional_part );
+            return outcome::success( ( integer_part * scale_table[precision] ) + fractional_part );
         }
 
         /**
@@ -93,14 +108,9 @@ namespace sgns
          * @return      String representation
          */
         static std::string toString( uint64_t value, uint64_t precision = 9 )
-        {
-            uint64_t scale = 1;
-            for ( uint64_t i = 0; i < precision; ++i )
-            {
-                scale *= 10;
-            }
-            uint64_t integer_part    = value / scale;
-            uint64_t fractional_part = value % scale;
+        {          
+            uint64_t integer_part    = value / scale_table[precision];
+            uint64_t fractional_part = value % scale_table[precision];
             return std::to_string( integer_part ) + "." + std::to_string( fractional_part );
         }
 
@@ -113,14 +123,8 @@ namespace sgns
          */
         static outcome::result<uint64_t> multiply( uint64_t a, uint64_t b, uint64_t precision = 9 )
         {
-            uint64_t scale = 1;
-            for ( uint64_t i = 0; i < precision; ++i )
-            {
-                scale *= 10;
-            }
-
             uint128_t result = static_cast<uint128_t>( a ) * static_cast<uint128_t>( b );
-            result           = result / static_cast<uint128_t>( scale );
+            result           = result / static_cast<uint128_t>( scale_table[precision] );
 
             if ( result > std::numeric_limits<uint64_t>::max() )
             {
@@ -144,13 +148,7 @@ namespace sgns
                 return outcome::failure( std::make_error_code( std::errc::result_out_of_range ) );
             }
 
-            uint128_t scale = 1;
-            for ( uint64_t i = 0; i < precision; ++i )
-            {
-                scale *= 10;
-            }
-
-            uint128_t result = ( static_cast<uint128_t>( a ) * scale ) / b;
+            uint128_t result = ( static_cast<uint128_t>( a ) * scale_table[precision] ) / b;
 
             if ( result > std::numeric_limits<uint64_t>::max() )
             {
