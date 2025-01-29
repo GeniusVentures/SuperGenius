@@ -77,11 +77,11 @@ namespace sgns
         using PrivatePreprocessor =
             crypto3::zk::snark::placeholder_private_preprocessor<BlueprintFieldType, PlaceholderParams>;
         using PrivatePreprocessedData = PrivatePreprocessor::preprocessed_data_type;
-        using ProofSnarkType          = crypto3::zk::snark::placeholder_proof<BlueprintFieldType, PlaceholderParams>;
         using ProverType              = crypto3::zk::snark::placeholder_prover<BlueprintFieldType, PlaceholderParams>;
         using PlonkTablePair          = std::pair<TableDescriptionType, AssignmentTableType>;
 
     public:
+        using ProofSnarkType = crypto3::zk::snark::placeholder_proof<BlueprintFieldType, PlaceholderParams>;
         using ProofType = crypto3::marshalling::types::placeholder_proof<nil::marshalling::field_type<ProverEndianess>,
                                                                          ProofSnarkType>;
         using ConstraintMarshallingType =
@@ -97,9 +97,7 @@ namespace sgns
          * @param[in]   component_constant_columns 
          * @param[in]   expand_factor 
          */
-        GeniusProver()
-        {
-        }
+        GeniusProver() {}
 
         enum class ProverError
         {
