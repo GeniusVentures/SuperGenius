@@ -29,7 +29,6 @@
 #include <nil/crypto3/algebra/curves/pallas.hpp>
 #include <nil/crypto3/algebra/fields/arithmetic_params/pallas.hpp>
 
-#include <nil/crypto3/marshalling/zk/types/placeholder/common_data.hpp>
 #include <nil/crypto3/marshalling/zk/types/placeholder/proof.hpp>
 #include <nil/crypto3/math/algorithms/calculate_domain_set.hpp>
 #include <nil/crypto3/multiprecision/cpp_int.hpp>

@@ -1,4 +1,3 @@
-
 #include "processing/processing_service.hpp"
 #include "processing/processing_subtask_enqueuer_impl.hpp"
 
@@ -54,9 +53,11 @@ public:
 class ProcessingTaskQueueImpl : public ProcessingTaskQueue
 {
 public:
-    outcome::result<void> EnqueueTask(
-        const SGProcessing::Task& task,
-        const std::list<SGProcessing::SubTask>& subTasks) override {}
+    outcome::result<void> EnqueueTask( const SGProcessing::Task               &task,
+                                       const std::list<SGProcessing::SubTask> &subTasks ) override
+    {
+        return outcome::success();
+    }
 
     bool GetSubTasks(
         const std::string& taskId,

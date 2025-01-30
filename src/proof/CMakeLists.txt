@@ -33,6 +33,9 @@ target_link_libraries(genius_prover
     outcome
     Boost::boost
 )
+if(MSVC)
+    target_compile_options(genius_prover PUBLIC /constexpr:steps1500000)
+endif()
 target_link_libraries(basic_proof
     genius_assigner
     genius_prover
