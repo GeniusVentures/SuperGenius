@@ -125,8 +125,8 @@ namespace sgns
         public_inputs_json_array.push_back( GenerateCurveParameter( ( balance_ - amount_ ) * generator ) );
         public_inputs_json_array.push_back( GenerateCurveParameter( generator ) ); //GENERATOR
         public_inputs_json_array.push_back( GenerateArrayParameter( ranges ) );
-        private_inputs_json_array.push_back( GenerateFieldParameter( base_seed ) );
-        private_inputs_json_array.push_back( GenerateFieldParameter( provided_totp ) );
+        //private_inputs_json_array.push_back( GenerateFieldParameter( base_seed ) );
+        //private_inputs_json_array.push_back( GenerateFieldParameter( provided_totp ) );
 
         //boost::json::value json_value = public_inputs_json_array;
 
@@ -205,8 +205,8 @@ namespace sgns
         public_inputs_json_array.push_back( GenerateCurveParameter( new_balance_commitment ) );
         public_inputs_json_array.push_back( GenerateCurveParameter( generator ) );
         public_inputs_json_array.push_back( GenerateArrayParameter( ranges ) );
-        private_inputs_json_array.push_back( GenerateFieldParameter( 0 ) );
-        private_inputs_json_array.push_back( GenerateFieldParameter( 0 ) );
+        //private_inputs_json_array.push_back( GenerateFieldParameter( 0 ) );
+        //private_inputs_json_array.push_back( GenerateFieldParameter( 0 ) );
 
         //boost::json::value json_value = public_inputs_json_array;
         //

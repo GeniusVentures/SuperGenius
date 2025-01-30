@@ -36,112 +36,105 @@ $_ZN3nil7crypto37algebra6fields16vesta_base_field10value_bitsE = comdat any
 @_ZN3nil7crypto37algebra6fields16vesta_base_field11number_bitsE = weak_odr dso_local local_unnamed_addr constant i64 255, comdat, align 8
 @_ZN3nil7crypto37algebra6fields16vesta_base_field10value_bitsE = weak_odr dso_local local_unnamed_addr constant i64 255, comdat, align 8
 
+; Function Attrs: circuit mustprogress
+define dso_local noundef zeroext i1 @_Z19ValidateTransactionyyu28__zkllvm_field_pallas_scalaru28__zkllvm_field_pallas_scalarNSt3__15arrayIu28__zkllvm_field_pallas_scalarLm4EEE(i64 noundef private_input %0, i64 noundef private_input %1, __zkllvm_field_pallas_scalar noundef private_input %2, __zkllvm_field_pallas_scalar noundef private_input %3, __zkllvm_curve_pallas %4, __zkllvm_curve_pallas %5, __zkllvm_curve_pallas %6, __zkllvm_curve_pallas %7, ptr noundef byval(%"struct.std::__1::array") align 1 %8) local_unnamed_addr #0 {
+  %10 = alloca %"struct.std::__1::array", align 1
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %10, ptr align 1 %8, i64 128, i1 false), !tbaa.struct !3
+  %11 = tail call noundef zeroext i1 @_Z25ValidateTransactionValuesyyu28__zkllvm_field_pallas_scalaru28__zkllvm_field_pallas_scalarNSt3__15arrayIu28__zkllvm_field_pallas_scalarLm4EEE(i64 noundef %0, i64 noundef %1, __zkllvm_field_pallas_scalar noundef %2, __zkllvm_field_pallas_scalar noundef %3, __zkllvm_curve_pallas %4, __zkllvm_curve_pallas %5, __zkllvm_curve_pallas %6, __zkllvm_curve_pallas %7, ptr noundef byval(%"struct.std::__1::array") align 1 %10)
+  ret i1 %11
+}
+
+; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: readwrite)
+declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg) #1
+
 ; Function Attrs: mustprogress nounwind
-define dso_local __zkllvm_curve_pallas @_Z28GeneratePointFromSeedAndTotpu28__zkllvm_field_pallas_scalaru28__zkllvm_field_pallas_scalar(__zkllvm_field_pallas_scalar noundef %0, __zkllvm_field_pallas_scalar noundef %1, __zkllvm_curve_pallas %2) local_unnamed_addr #0 {
+define dso_local noundef zeroext i1 @_Z25ValidateTransactionValuesyyu28__zkllvm_field_pallas_scalaru28__zkllvm_field_pallas_scalarNSt3__15arrayIu28__zkllvm_field_pallas_scalarLm4EEE(i64 noundef %0, i64 noundef %1, __zkllvm_field_pallas_scalar noundef %2, __zkllvm_field_pallas_scalar noundef %3, __zkllvm_curve_pallas %4, __zkllvm_curve_pallas %5, __zkllvm_curve_pallas %6, __zkllvm_curve_pallas %7, ptr noundef byval(%"struct.std::__1::array") align 1 %8) local_unnamed_addr #2 {
+  %10 = cmul __zkllvm_curve_pallas %7, __zkllvm_field_pallas_scalar %2
+  %11 = cmul __zkllvm_curve_pallas %7, __zkllvm_field_pallas_scalar %3
+  %12 = icmp uge i64 %0, %1
+  br i1 %12, label %13, label %19
+
+13:                                               ; preds = %9
+  %14 = icmp eq __zkllvm_curve_pallas %10, %4
+  %15 = icmp eq __zkllvm_curve_pallas %11, %5
+  %16 = xor i1 %14, true
+  %17 = xor i1 %15, true
+  %18 = select i1 %16, i1 true, i1 %17
+  br i1 %18, label %19, label %20
+
+19:                                               ; preds = %13, %9
+  br label %20
+
+20:                                               ; preds = %19, %13
+  %21 = phi i1 [ false, %19 ], [ true, %13 ]
+  ret i1 %21
+}
+
+; Function Attrs: mustprogress nounwind
+define dso_local __zkllvm_curve_pallas @_Z28GeneratePointFromSeedAndTotpu28__zkllvm_field_pallas_scalaru28__zkllvm_field_pallas_scalar(__zkllvm_field_pallas_scalar noundef %0, __zkllvm_field_pallas_scalar noundef %1, __zkllvm_curve_pallas %2) local_unnamed_addr #2 {
   %4 = cmul __zkllvm_curve_pallas %2, __zkllvm_field_pallas_scalar %0
   %5 = cmul __zkllvm_curve_pallas %2, __zkllvm_field_pallas_scalar %1
   %6 = add __zkllvm_curve_pallas %4, %5
   ret __zkllvm_curve_pallas %6
 }
 
-; Function Attrs: circuit mustprogress nounwind
-define dso_local noundef zeroext i1 @_Z19ValidateTransactionyyu28__zkllvm_field_pallas_scalaru28__zkllvm_field_pallas_scalarNSt3__15arrayIu28__zkllvm_field_pallas_scalarLm4EEEu28__zkllvm_field_pallas_scalaru28__zkllvm_field_pallas_scalar(i64 noundef private_input %0, i64 noundef private_input %1, __zkllvm_field_pallas_scalar noundef private_input %2, __zkllvm_field_pallas_scalar noundef private_input %3, __zkllvm_curve_pallas %4, __zkllvm_curve_pallas %5, __zkllvm_curve_pallas %6, __zkllvm_curve_pallas %7, ptr noundef byval(%"struct.std::__1::array") align 1 %8, __zkllvm_field_pallas_scalar noundef private_input %9, __zkllvm_field_pallas_scalar noundef private_input %10) local_unnamed_addr #1 {
-  %12 = cmul __zkllvm_curve_pallas %7, __zkllvm_field_pallas_scalar %2
-  %13 = cmul __zkllvm_curve_pallas %7, __zkllvm_field_pallas_scalar %3
-  %14 = icmp ne __zkllvm_field_pallas_scalar %9, f0x0
-  br i1 %14, label %15, label %22
-
-15:                                               ; preds = %11
-  %16 = tail call __zkllvm_curve_pallas @_Z28GeneratePointFromSeedAndTotpu28__zkllvm_field_pallas_scalaru28__zkllvm_field_pallas_scalar(__zkllvm_field_pallas_scalar noundef %9, __zkllvm_field_pallas_scalar noundef %10, __zkllvm_curve_pallas %7)
-  %17 = cmul __zkllvm_curve_pallas %7, __zkllvm_field_pallas_scalar %9
-  %18 = cmul __zkllvm_curve_pallas %7, __zkllvm_field_pallas_scalar %10
-  %19 = add __zkllvm_curve_pallas %17, %18
-  %20 = icmp eq __zkllvm_curve_pallas %16, %19
-  %21 = zext i1 %20 to i8
-  br label %22
-
-22:                                               ; preds = %15, %11
-  %23 = phi i8 [ %21, %15 ], [ 1, %11 ]
-  %24 = icmp uge i64 %0, %1
-  br i1 %24, label %25, label %33
-
-25:                                               ; preds = %22
-  %26 = trunc i8 %23 to i1
-  br i1 %26, label %27, label %33
-
-27:                                               ; preds = %25
-  %28 = icmp eq __zkllvm_curve_pallas %12, %4
-  %29 = icmp eq __zkllvm_curve_pallas %13, %5
-  %30 = xor i1 %28, true
-  %31 = xor i1 %29, true
-  %32 = select i1 %30, i1 true, i1 %31
-  br i1 %32, label %33, label %34
-
-33:                                               ; preds = %27, %25, %22
-  br label %34
-
-34:                                               ; preds = %33, %27
-  %35 = phi i1 [ false, %33 ], [ true, %27 ]
-  ret i1 %35
-}
-
 ; Function Attrs: nounwind
-define dso_local void @free(ptr noundef %0) local_unnamed_addr #2 {
+define dso_local void @free(ptr noundef %0) local_unnamed_addr #3 {
   tail call void @llvm.assigner.free(ptr %0)
   ret void
 }
 
 ; Function Attrs: nounwind
-declare void @llvm.assigner.free(ptr) #3
+declare void @llvm.assigner.free(ptr) #4
 
 ; Function Attrs: nounwind allocsize(0)
-define dso_local ptr @malloc(i64 noundef %0) local_unnamed_addr #4 {
+define dso_local ptr @malloc(i64 noundef %0) local_unnamed_addr #5 {
   %2 = tail call ptr @llvm.assigner.malloc(i64 %0)
   ret ptr %2
 }
 
 ; Function Attrs: nounwind
-declare ptr @llvm.assigner.malloc(i64) #3
+declare ptr @llvm.assigner.malloc(i64) #4
 
 ; Function Attrs: nounwind
-define dso_local i64 @strlen(ptr noundef %0) local_unnamed_addr #2 {
+define dso_local i64 @strlen(ptr noundef %0) local_unnamed_addr #3 {
   br label %2
 
 2:                                                ; preds = %2, %1
   %3 = phi i64 [ 0, %1 ], [ %8, %2 ]
   %4 = getelementptr inbounds i8, ptr %0, i64 %3
-  %5 = load i8, ptr %4, align 1, !tbaa !4
+  %5 = load i8, ptr %4, align 1, !tbaa !7
   %6 = sext i8 %5 to i32
   %7 = icmp ne i32 %6, 0
   %8 = add i64 %3, 1
-  br i1 %7, label %2, label %9, !llvm.loop !7
+  br i1 %7, label %2, label %9, !llvm.loop !10
 
 9:                                                ; preds = %2
   ret i64 %3
 }
 
 ; Function Attrs: nounwind
-define dso_local i32 @strcmp(ptr noundef %0, ptr noundef %1) local_unnamed_addr #2 {
+define dso_local i32 @strcmp(ptr noundef %0, ptr noundef %1) local_unnamed_addr #3 {
   br label %3
 
 3:                                                ; preds = %21, %2
   %4 = phi ptr [ %0, %2 ], [ %22, %21 ]
   %5 = phi ptr [ %1, %2 ], [ %23, %21 ]
-  %6 = load i8, ptr %4, align 1, !tbaa !4
+  %6 = load i8, ptr %4, align 1, !tbaa !7
   %7 = sext i8 %6 to i32
   %8 = icmp ne i32 %7, 0
   br i1 %8, label %13, label %9
 
 9:                                                ; preds = %3
-  %10 = load i8, ptr %5, align 1, !tbaa !4
+  %10 = load i8, ptr %5, align 1, !tbaa !7
   %11 = sext i8 %10 to i32
   %12 = icmp ne i32 %11, 0
   br i1 %12, label %13, label %24
 
 13:                                               ; preds = %9, %3
-  %14 = load i8, ptr %4, align 1, !tbaa !4
+  %14 = load i8, ptr %4, align 1, !tbaa !7
   %15 = sext i8 %14 to i32
-  %16 = load i8, ptr %5, align 1, !tbaa !4
+  %16 = load i8, ptr %5, align 1, !tbaa !7
   %17 = sext i8 %16 to i32
   %18 = icmp ne i32 %15, %17
   br i1 %18, label %19, label %21
@@ -153,7 +146,7 @@ define dso_local i32 @strcmp(ptr noundef %0, ptr noundef %1) local_unnamed_addr 
 21:                                               ; preds = %13
   %22 = getelementptr inbounds i8, ptr %4, i32 1
   %23 = getelementptr inbounds i8, ptr %5, i32 1
-  br label %3, !llvm.loop !10
+  br label %3, !llvm.loop !13
 
 24:                                               ; preds = %19, %9
   %25 = phi i32 [ %20, %19 ], [ 0, %9 ]
@@ -161,7 +154,7 @@ define dso_local i32 @strcmp(ptr noundef %0, ptr noundef %1) local_unnamed_addr 
 }
 
 ; Function Attrs: nounwind
-define dso_local i32 @strncmp(ptr noundef %0, ptr noundef %1, i64 noundef %2) local_unnamed_addr #2 {
+define dso_local i32 @strncmp(ptr noundef %0, ptr noundef %1, i64 noundef %2) local_unnamed_addr #3 {
   %4 = icmp ugt i64 %2, 0
   br i1 %4, label %5, label %29
 
@@ -169,21 +162,21 @@ define dso_local i32 @strncmp(ptr noundef %0, ptr noundef %1, i64 noundef %2) lo
   %6 = phi ptr [ %26, %24 ], [ %1, %3 ]
   %7 = phi ptr [ %25, %24 ], [ %0, %3 ]
   %8 = phi i64 [ %27, %24 ], [ %2, %3 ]
-  %9 = load i8, ptr %7, align 1, !tbaa !4
+  %9 = load i8, ptr %7, align 1, !tbaa !7
   %10 = sext i8 %9 to i32
   %11 = icmp ne i32 %10, 0
   br i1 %11, label %16, label %12
 
 12:                                               ; preds = %5
-  %13 = load i8, ptr %6, align 1, !tbaa !4
+  %13 = load i8, ptr %6, align 1, !tbaa !7
   %14 = sext i8 %13 to i32
   %15 = icmp ne i32 %14, 0
   br i1 %15, label %16, label %29
 
 16:                                               ; preds = %12, %5
-  %17 = load i8, ptr %7, align 1, !tbaa !4
+  %17 = load i8, ptr %7, align 1, !tbaa !7
   %18 = sext i8 %17 to i32
-  %19 = load i8, ptr %6, align 1, !tbaa !4
+  %19 = load i8, ptr %6, align 1, !tbaa !7
   %20 = sext i8 %19 to i32
   %21 = icmp ne i32 %18, %20
   br i1 %21, label %22, label %24
@@ -197,7 +190,7 @@ define dso_local i32 @strncmp(ptr noundef %0, ptr noundef %1, i64 noundef %2) lo
   %26 = getelementptr inbounds i8, ptr %6, i32 1
   %27 = add i64 %8, -1
   %28 = icmp ugt i64 %27, 0
-  br i1 %28, label %5, label %29, !llvm.loop !11
+  br i1 %28, label %5, label %29, !llvm.loop !14
 
 29:                                               ; preds = %24, %22, %12, %3
   %30 = phi i32 [ %23, %22 ], [ 0, %3 ], [ 0, %12 ], [ 0, %24 ]
@@ -205,9 +198,9 @@ define dso_local i32 @strncmp(ptr noundef %0, ptr noundef %1, i64 noundef %2) lo
 }
 
 ; Function Attrs: nounwind
-define dso_local ptr @strcpy(ptr noundef %0, ptr noundef %1) local_unnamed_addr #2 {
-  %3 = load i8, ptr %1, align 1, !tbaa !4
-  store i8 %3, ptr %0, align 1, !tbaa !4
+define dso_local ptr @strcpy(ptr noundef %0, ptr noundef %1) local_unnamed_addr #3 {
+  %3 = load i8, ptr %1, align 1, !tbaa !7
+  store i8 %3, ptr %0, align 1, !tbaa !7
   %4 = sext i8 %3 to i32
   %5 = icmp ne i32 %4, 0
   br i1 %5, label %6, label %14
@@ -217,18 +210,18 @@ define dso_local ptr @strcpy(ptr noundef %0, ptr noundef %1) local_unnamed_addr 
   %8 = phi ptr [ %9, %6 ], [ %0, %2 ]
   %9 = getelementptr inbounds i8, ptr %8, i32 1
   %10 = getelementptr inbounds i8, ptr %7, i32 1
-  %11 = load i8, ptr %10, align 1, !tbaa !4
-  store i8 %11, ptr %9, align 1, !tbaa !4
+  %11 = load i8, ptr %10, align 1, !tbaa !7
+  store i8 %11, ptr %9, align 1, !tbaa !7
   %12 = sext i8 %11 to i32
   %13 = icmp ne i32 %12, 0
-  br i1 %13, label %6, label %14, !llvm.loop !12
+  br i1 %13, label %6, label %14, !llvm.loop !15
 
 14:                                               ; preds = %6, %2
   ret ptr %0
 }
 
 ; Function Attrs: nounwind
-define dso_local ptr @strncpy(ptr noundef %0, ptr noundef %1, i64 noundef %2) local_unnamed_addr #2 {
+define dso_local ptr @strncpy(ptr noundef %0, ptr noundef %1, i64 noundef %2) local_unnamed_addr #3 {
   %4 = icmp ugt i64 %2, 0
   br i1 %4, label %5, label %17
 
@@ -236,8 +229,8 @@ define dso_local ptr @strncpy(ptr noundef %0, ptr noundef %1, i64 noundef %2) lo
   %6 = phi ptr [ %14, %12 ], [ %1, %3 ]
   %7 = phi ptr [ %13, %12 ], [ %0, %3 ]
   %8 = phi i64 [ %15, %12 ], [ %2, %3 ]
-  %9 = load i8, ptr %6, align 1, !tbaa !4
-  store i8 %9, ptr %7, align 1, !tbaa !4
+  %9 = load i8, ptr %6, align 1, !tbaa !7
+  store i8 %9, ptr %7, align 1, !tbaa !7
   %10 = sext i8 %9 to i32
   %11 = icmp ne i32 %10, 0
   br i1 %11, label %12, label %17
@@ -247,7 +240,7 @@ define dso_local ptr @strncpy(ptr noundef %0, ptr noundef %1, i64 noundef %2) lo
   %14 = getelementptr inbounds i8, ptr %6, i32 1
   %15 = add i64 %8, -1
   %16 = icmp ugt i64 %15, 0
-  br i1 %16, label %5, label %17, !llvm.loop !13
+  br i1 %16, label %5, label %17, !llvm.loop !16
 
 17:                                               ; preds = %12, %5, %3
   %18 = phi i64 [ %2, %3 ], [ %8, %5 ], [ %15, %12 ]
@@ -258,18 +251,18 @@ define dso_local ptr @strncpy(ptr noundef %0, ptr noundef %1, i64 noundef %2) lo
 21:                                               ; preds = %21, %17
   %22 = phi ptr [ %24, %21 ], [ %19, %17 ]
   %23 = phi i64 [ %25, %21 ], [ %18, %17 ]
-  store i8 0, ptr %22, align 1, !tbaa !4
+  store i8 0, ptr %22, align 1, !tbaa !7
   %24 = getelementptr inbounds i8, ptr %22, i32 1
   %25 = add i64 %23, -1
   %26 = icmp ugt i64 %25, 0
-  br i1 %26, label %21, label %27, !llvm.loop !14
+  br i1 %26, label %21, label %27, !llvm.loop !17
 
 27:                                               ; preds = %21, %17
   ret ptr %0
 }
 
 ; Function Attrs: mustprogress nobuiltin allocsize(0)
-define weak dso_local noundef nonnull ptr @_Znwm(i64 noundef %0) local_unnamed_addr #5 {
+define weak dso_local noundef nonnull ptr @_Znwm(i64 noundef %0) local_unnamed_addr #6 {
   %2 = icmp eq i64 %0, 0
   %3 = select i1 %2, i64 1, i64 %0
   %4 = tail call ptr @llvm.assigner.malloc(i64 %3)
@@ -277,8 +270,8 @@ define weak dso_local noundef nonnull ptr @_Znwm(i64 noundef %0) local_unnamed_a
 }
 
 ; Function Attrs: mustprogress nobuiltin nounwind allocsize(0)
-define weak dso_local noalias noundef ptr @_ZnwmRKSt9nothrow_t(i64 noundef %0, ptr noundef nonnull align 1 dereferenceable(1) %1) local_unnamed_addr #6 personality ptr @__gxx_personality_v0 {
-  %3 = invoke noalias noundef nonnull ptr @_Znwm(i64 noundef %0) #9
+define weak dso_local noalias noundef ptr @_ZnwmRKSt9nothrow_t(i64 noundef %0, ptr noundef nonnull align 1 dereferenceable(1) %1) local_unnamed_addr #7 personality ptr @__gxx_personality_v0 {
+  %3 = invoke noalias noundef nonnull ptr @_Znwm(i64 noundef %0) #10
           to label %4 unwind label %5
 
 4:                                                ; preds = %2
@@ -288,16 +281,16 @@ define weak dso_local noalias noundef ptr @_ZnwmRKSt9nothrow_t(i64 noundef %0, p
   %6 = landingpad { ptr, i32 }
           catch ptr null
   %7 = extractvalue { ptr, i32 } %6, 0
-  tail call void @__clang_call_terminate(ptr %7) #10
+  tail call void @__clang_call_terminate(ptr %7) #11
   unreachable
 }
 
 declare dso_local i32 @__gxx_personality_v0(...)
 
 ; Function Attrs: noinline noreturn nounwind
-define linkonce_odr hidden void @__clang_call_terminate(ptr noundef %0) local_unnamed_addr #7 comdat {
-  %2 = tail call ptr @__cxa_begin_catch(ptr %0) #3
-  tail call void @_ZSt9terminatev() #10
+define linkonce_odr hidden void @__clang_call_terminate(ptr noundef %0) local_unnamed_addr #8 comdat {
+  %2 = tail call ptr @__cxa_begin_catch(ptr %0) #4
+  tail call void @_ZSt9terminatev() #11
   unreachable
 }
 
@@ -306,14 +299,14 @@ declare dso_local ptr @__cxa_begin_catch(ptr) local_unnamed_addr
 declare dso_local void @_ZSt9terminatev() local_unnamed_addr
 
 ; Function Attrs: mustprogress nobuiltin allocsize(0)
-define weak dso_local noundef nonnull ptr @_Znam(i64 noundef %0) local_unnamed_addr #5 {
-  %2 = tail call noalias noundef nonnull ptr @_Znwm(i64 noundef %0) #9
+define weak dso_local noundef nonnull ptr @_Znam(i64 noundef %0) local_unnamed_addr #6 {
+  %2 = tail call noalias noundef nonnull ptr @_Znwm(i64 noundef %0) #10
   ret ptr %2
 }
 
 ; Function Attrs: mustprogress nobuiltin nounwind allocsize(0)
-define weak dso_local noalias noundef ptr @_ZnamRKSt9nothrow_t(i64 noundef %0, ptr noundef nonnull align 1 dereferenceable(1) %1) local_unnamed_addr #6 personality ptr @__gxx_personality_v0 {
-  %3 = invoke noalias noundef nonnull ptr @_Znwm(i64 noundef %0) #9
+define weak dso_local noalias noundef ptr @_ZnamRKSt9nothrow_t(i64 noundef %0, ptr noundef nonnull align 1 dereferenceable(1) %1) local_unnamed_addr #7 personality ptr @__gxx_personality_v0 {
+  %3 = invoke noalias noundef nonnull ptr @_Znwm(i64 noundef %0) #10
           to label %4 unwind label %5
 
 4:                                                ; preds = %2
@@ -323,76 +316,80 @@ define weak dso_local noalias noundef ptr @_ZnamRKSt9nothrow_t(i64 noundef %0, p
   %6 = landingpad { ptr, i32 }
           catch ptr null
   %7 = extractvalue { ptr, i32 } %6, 0
-  tail call void @__clang_call_terminate(ptr %7) #10
+  tail call void @__clang_call_terminate(ptr %7) #11
   unreachable
 }
 
 ; Function Attrs: mustprogress nobuiltin nounwind
-define weak dso_local void @_ZdlPv(ptr noundef %0) local_unnamed_addr #8 {
+define weak dso_local void @_ZdlPv(ptr noundef %0) local_unnamed_addr #9 {
   tail call void @llvm.assigner.free(ptr %0)
   ret void
 }
 
 ; Function Attrs: mustprogress nobuiltin nounwind
-define weak dso_local void @_ZdlPvRKSt9nothrow_t(ptr noundef %0, ptr noundef nonnull align 1 dereferenceable(1) %1) local_unnamed_addr #8 {
-  tail call void @_ZdlPv(ptr noundef %0) #3
+define weak dso_local void @_ZdlPvRKSt9nothrow_t(ptr noundef %0, ptr noundef nonnull align 1 dereferenceable(1) %1) local_unnamed_addr #9 {
+  tail call void @_ZdlPv(ptr noundef %0) #4
   ret void
 }
 
 ; Function Attrs: mustprogress nounwind
-define weak dso_local void @_ZdlPvm(ptr noundef %0, i64 noundef %1) local_unnamed_addr #0 {
-  tail call void @_ZdlPv(ptr noundef %0) #3
+define weak dso_local void @_ZdlPvm(ptr noundef %0, i64 noundef %1) local_unnamed_addr #2 {
+  tail call void @_ZdlPv(ptr noundef %0) #4
   ret void
 }
 
 ; Function Attrs: mustprogress nobuiltin nounwind
-define weak dso_local void @_ZdaPv(ptr noundef %0) local_unnamed_addr #8 {
-  tail call void @_ZdlPv(ptr noundef %0) #3
+define weak dso_local void @_ZdaPv(ptr noundef %0) local_unnamed_addr #9 {
+  tail call void @_ZdlPv(ptr noundef %0) #4
   ret void
 }
 
 ; Function Attrs: mustprogress nobuiltin nounwind
-define weak dso_local void @_ZdaPvRKSt9nothrow_t(ptr noundef %0, ptr noundef nonnull align 1 dereferenceable(1) %1) local_unnamed_addr #8 {
-  tail call void @_ZdaPv(ptr noundef %0) #3
+define weak dso_local void @_ZdaPvRKSt9nothrow_t(ptr noundef %0, ptr noundef nonnull align 1 dereferenceable(1) %1) local_unnamed_addr #9 {
+  tail call void @_ZdaPv(ptr noundef %0) #4
   ret void
 }
 
 ; Function Attrs: mustprogress nounwind
-define weak dso_local void @_ZdaPvm(ptr noundef %0, i64 noundef %1) local_unnamed_addr #0 {
-  tail call void @_ZdaPv(ptr noundef %0) #3
+define weak dso_local void @_ZdaPvm(ptr noundef %0, i64 noundef %1) local_unnamed_addr #2 {
+  tail call void @_ZdaPv(ptr noundef %0) #4
   ret void
 }
 
-attributes #0 = { mustprogress nounwind "frame-pointer"="all" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-attributes #1 = { circuit mustprogress nounwind "frame-pointer"="all" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-attributes #2 = { nounwind "frame-pointer"="all" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-attributes #3 = { nounwind }
-attributes #4 = { nounwind allocsize(0) "frame-pointer"="all" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-attributes #5 = { mustprogress nobuiltin allocsize(0) "frame-pointer"="all" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-attributes #6 = { mustprogress nobuiltin nounwind allocsize(0) "frame-pointer"="all" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-attributes #7 = { noinline noreturn nounwind "frame-pointer"="all" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-attributes #8 = { mustprogress nobuiltin nounwind "frame-pointer"="all" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-attributes #9 = { allocsize(0) }
-attributes #10 = { noreturn nounwind }
+attributes #0 = { circuit mustprogress "frame-pointer"="all" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+attributes #1 = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+attributes #2 = { mustprogress nounwind "frame-pointer"="all" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+attributes #3 = { nounwind "frame-pointer"="all" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+attributes #4 = { nounwind }
+attributes #5 = { nounwind allocsize(0) "frame-pointer"="all" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+attributes #6 = { mustprogress nobuiltin allocsize(0) "frame-pointer"="all" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+attributes #7 = { mustprogress nobuiltin nounwind allocsize(0) "frame-pointer"="all" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+attributes #8 = { noinline noreturn nounwind "frame-pointer"="all" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+attributes #9 = { mustprogress nobuiltin nounwind "frame-pointer"="all" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+attributes #10 = { allocsize(0) }
+attributes #11 = { noreturn nounwind }
 
-!llvm.ident = !{!0, !1, !1, !1, !1, !1, !1, !1}
-!llvm.module.flags = !{!2, !3}
+!llvm.ident = !{!0, !0, !0, !0, !0, !0, !0, !0, !0}
+!llvm.module.flags = !{!1, !2}
 
-!0 = !{!"clang version 17.0.4 (git@github.com:NilFoundation/zkllvm-circifier.git 1213f543302b18e4294e3d7dec76ddc5cc1d10dc)"}
-!1 = !{!"clang version 17.0.4 (git@github.com:GeniusVentures/zkllvm-circifier.git 1213f543302b18e4294e3d7dec76ddc5cc1d10dc)"}
-!2 = !{i32 1, !"wchar_size", i32 4}
-!3 = !{i32 7, !"frame-pointer", i32 2}
+!0 = !{!"clang version 17.0.4 (git@github.com:NilFoundation/zkllvm-circifier.git 18a771d9553d24808b3d9b1638ef1e2d8fe81d00)"}
+!1 = !{i32 1, !"wchar_size", i32 4}
+!2 = !{i32 7, !"frame-pointer", i32 2}
+!3 = !{i64 0, i64 128, !4}
 !4 = !{!5, !5, i64 0}
 !5 = !{!"omnipotent char", !6, i64 0}
-!6 = !{!"Simple C/C++ TBAA"}
-!7 = distinct !{!7, !8, !9}
-!8 = !{!"llvm.loop.mustprogress"}
-!9 = !{!"llvm.loop.unroll.full"}
-!10 = distinct !{!10, !8, !9}
-!11 = distinct !{!11, !8, !9}
-!12 = distinct !{!12, !8, !9}
-!13 = distinct !{!13, !8, !9}
-!14 = distinct !{!14, !8, !9}
+!6 = !{!"Simple C++ TBAA"}
+!7 = !{!8, !8, i64 0}
+!8 = !{!"omnipotent char", !9, i64 0}
+!9 = !{!"Simple C/C++ TBAA"}
+!10 = distinct !{!10, !11, !12}
+!11 = !{!"llvm.loop.mustprogress"}
+!12 = !{!"llvm.loop.unroll.full"}
+!13 = distinct !{!13, !11, !12}
+!14 = distinct !{!14, !11, !12}
+!15 = distinct !{!15, !11, !12}
+!16 = distinct !{!16, !11, !12}
+!17 = distinct !{!17, !11, !12}
 
 )TRANSACTION";
 
