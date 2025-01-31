@@ -203,8 +203,7 @@ namespace sgns::processing
                            processingQueuelId,
                            std::placeholders::_1 ),
                 std::bind( &ProcessingServiceImpl::OnProcessingError, this, processingQueuelId, std::placeholders::_1 ),
-                node_address_,
-                "" );
+                node_address_);
             m_logger->debug( "Attach to processing Queue" );
             node->AttachTo( processingQueuelId );
             m_processingNodes[processingQueuelId] = node;
@@ -282,8 +281,7 @@ namespace sgns::processing
                                    this,
                                    subTaskQueueId,
                                    std::placeholders::_1 ),
-                        node_address_,
-                        maybe_task.value().escrow_path() );
+                        node_address_ );
 
                     // @todo Figure out if the task is still available for other peers
                     // @todo Check if it is better to call EnqueueSubTasks within host

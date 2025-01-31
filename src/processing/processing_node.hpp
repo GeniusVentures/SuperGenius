@@ -32,8 +32,7 @@ namespace sgns::processing
                         std::shared_ptr<ProcessingCore>                         processingCore,
                         std::function<void( const SGProcessing::TaskResult & )> taskResultProcessingSink,
                         std::function<void( const std::string & )>              processingErrorSink,
-                        std::string                                             node_id,
-                        std::string                                             escrow_path );
+                        std::string                                             node_id );
 
         ~ProcessingNode();
 
