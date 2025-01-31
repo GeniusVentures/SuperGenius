@@ -4,14 +4,14 @@
 #include "base/fixed_point.hpp"
 
 // ======================== FixedPointParamTest ========================
-struct FixedPointParamTestCase
+struct FromStrParam_s
 {
-    std::string input;
-    uint64_t    precision;
-    uint64_t    expected_value;
+    std::string                       input;
+    uint64_t                          precision;
+    std::variant<uint64_t, std::errc> expected;
 };
 
-class FixedPointParamTest : public ::testing::TestWithParam<FixedPointParamTestCase>
+class FixedPointParamTest : public ::testing::TestWithParam<FromStrParam_s>
 {
 };
 
@@ -19,202 +19,156 @@ TEST_P( FixedPointParamTest, FromString )
 {
     auto test_case = GetParam();
     auto result    = sgns::fixed_point::fromString( test_case.input, test_case.precision );
-    ASSERT_TRUE( result.has_value() );
-    EXPECT_EQ( result.value(), test_case.expected_value );
+
+    if ( std::holds_alternative<uint64_t>( test_case.expected ) )
+    {
+        uint64_t expected_val = std::get<uint64_t>( test_case.expected );
+        ASSERT_TRUE( result.has_value() );
+        EXPECT_EQ( result.value(), expected_val );
+    }
+    else if ( std::holds_alternative<std::errc>( test_case.expected ) )
+    {
+        std::errc expected_err = std::get<std::errc>( test_case.expected );
+        ASSERT_FALSE( result.has_value() );
+        EXPECT_EQ( result.error(), std::make_error_code( expected_err ) );
+    }
+    else
+    {
+        FAIL() << "Unknown test case type.";
+    }
 }
 
-INSTANTIATE_TEST_SUITE_P(
-    ValidInputs,
-    FixedPointParamTest,
-    ::testing::Values(
-        FixedPointParamTestCase{ .input = "123.456", .precision = 9ULL, .expected_value = 123456000000ULL },
-        FixedPointParamTestCase{ .input = "000123.00456000", .precision = 9ULL, .expected_value = 123004560000ULL },
-        FixedPointParamTestCase{ .input = "123", .precision = 9ULL, .expected_value = 123000000000ULL },
-        FixedPointParamTestCase{ .input = "123.45", .precision = 9ULL, .expected_value = 123450000000ULL },
-        FixedPointParamTestCase{ .input = "1.123456789", .precision = 9ULL, .expected_value = 1123456789ULL } ) );
-
-// ======================== FixedPointInvalidParamTest ========================
-struct FixedPointInvalidParamTestCase
-{
-    std::string input;
-    uint64_t    precision;
-    std::errc   expected_error;
-};
-
-class FixedPointInvalidParamTest : public ::testing::TestWithParam<FixedPointInvalidParamTestCase>
-{
-};
-
-TEST_P( FixedPointInvalidParamTest, FromString_InvalidInputs )
-{
-    auto test_case = GetParam();
-    auto result    = sgns::fixed_point::fromString( test_case.input, test_case.precision );
-    ASSERT_FALSE( result.has_value() );
-    EXPECT_EQ( result.error(), std::make_error_code( test_case.expected_error ) );
-}
-
-INSTANTIATE_TEST_SUITE_P( InvalidInputs,
-                          FixedPointInvalidParamTest,
+INSTANTIATE_TEST_SUITE_P( FixedPointFromStringTests,
+                          FixedPointParamTest,
                           ::testing::Values(
-                              FixedPointInvalidParamTestCase{
-                                  .input          = "abc",                      //
-                                  .precision      = 9ULL,                       //
-                                  .expected_error = std::errc::invalid_argument //
-                              },
-                              FixedPointInvalidParamTestCase{
-                                  .input          = "",                         //
-                                  .precision      = 9ULL,                       //
-                                  .expected_error = std::errc::invalid_argument //
-                              },
-                              FixedPointInvalidParamTestCase{
-                                  .input          = "1.1234567890",            //
-                                  .precision      = 9ULL,                      //
-                                  .expected_error = std::errc::value_too_large //
-                              } ) );
+                              // Success Cases
+                              FromStrParam_s{ "123.456", 9ULL, 123456000000ULL },
+                              FromStrParam_s{ "000123.00456000", 9ULL, 123004560000ULL },
+                              FromStrParam_s{ "123", 9ULL, 123000000000ULL },
+                              FromStrParam_s{ "123.45", 9ULL, 123450000000ULL },
+                              FromStrParam_s{ "1.123456789", 9ULL, 1123456789ULL },
+                              FromStrParam_s{ "0.000000001", 9ULL, 1ULL },
+                              FromStrParam_s{ "999999999.999999999", 9ULL, 999999999999999999ULL },
+                              FromStrParam_s{ "123.4", 1ULL, 1234ULL },
+                              FromStrParam_s{ "123", 0ULL, 123ULL },
+                              FromStrParam_s{ "0", 0ULL, 0ULL },
+                              FromStrParam_s{ "1.1", 1ULL, 11ULL },
+                              FromStrParam_s{ "1.123", 3ULL, 1123ULL },
+                              // Error Cases
+                              FromStrParam_s{ "abc", 9ULL, std::errc::invalid_argument },
+                              FromStrParam_s{ "", 9ULL, std::errc::invalid_argument },
+                              FromStrParam_s{ "1.1234567890", 9ULL, std::errc::value_too_large },
+                              FromStrParam_s{ "-123.456", 9ULL, std::errc::invalid_argument },
+                              FromStrParam_s{ "123..456", 9ULL, std::errc::invalid_argument },
+                              FromStrParam_s{ "123.45.67", 9ULL, std::errc::invalid_argument },
+                              FromStrParam_s{ "1.123456789", 8ULL, std::errc::value_too_large },
+                              FromStrParam_s{ " 123.456", 9ULL, std::errc::invalid_argument },
+                              FromStrParam_s{ "A123.456", 9ULL, std::errc::invalid_argument },
+                              FromStrParam_s{ "123.456 ", 9ULL, std::errc::invalid_argument },
+                              FromStrParam_s{ "123.456A", 9ULL, std::errc::invalid_argument },
+                              FromStrParam_s{ ".", 9ULL, std::errc::invalid_argument },
+                              FromStrParam_s{ "0.0000000001", 9ULL, std::errc::value_too_large } ) );
 
 // ======================== FixedPointMultiplySuccessTest ========================
-struct FixedPointMultiplySuccessTestCase
+
+struct MultiplyParam_s
 {
-    uint64_t a;
-    uint64_t b;
-    uint64_t precision;
-    uint64_t expected_value;
+    uint64_t                          a;
+    uint64_t                          b;
+    uint64_t                          precision;
+    std::variant<uint64_t, std::errc> expected;
 };
 
-class FixedPointMultiplySuccessTest : public ::testing::TestWithParam<FixedPointMultiplySuccessTestCase>
+class FixedPointMultiplyParamTest : public ::testing::TestWithParam<MultiplyParam_s>
 {
 };
 
-TEST_P( FixedPointMultiplySuccessTest, Multiply )
+TEST_P( FixedPointMultiplyParamTest, Multiply )
 {
     auto test_case = GetParam();
     auto result    = sgns::fixed_point::multiply( test_case.a, test_case.b, test_case.precision );
-    ASSERT_TRUE( result.has_value() );
-    EXPECT_EQ( result.value(), test_case.expected_value );
+
+    if ( std::holds_alternative<uint64_t>( test_case.expected ) )
+    {
+        uint64_t expected_val = std::get<uint64_t>( test_case.expected );
+        ASSERT_TRUE( result.has_value() );
+        EXPECT_EQ( result.value(), expected_val );
+    }
+    else if ( std::holds_alternative<std::errc>( test_case.expected ) )
+    {
+        std::errc expected_err = std::get<std::errc>( test_case.expected );
+        ASSERT_FALSE( result.has_value() );
+        EXPECT_EQ( result.error(), std::make_error_code( expected_err ) );
+    }
+    else
+    {
+        FAIL() << "Unknown test case type.";
+    }
 }
 
-INSTANTIATE_TEST_SUITE_P( MultiplySuccessTests,
-                          FixedPointMultiplySuccessTest,
+INSTANTIATE_TEST_SUITE_P( FixedPointMultiplyTests,
+                          FixedPointMultiplyParamTest,
                           ::testing::Values(
-                              FixedPointMultiplySuccessTestCase{
-                                  .a              = 4000000000ULL, //
-                                  .b              = 2000000000ULL, //
-                                  .precision      = 9ULL,          //
-                                  .expected_value = 8000000000ULL  //
-                              },
-                              FixedPointMultiplySuccessTestCase{
-                                  .a              = 9223372036854775807ULL, //
-                                  .b              = 2000000000ULL,          //
-                                  .precision      = 9ULL,                   //
-                                  .expected_value = 18446744073709551614ULL //
-                              } ) );
+                              // Success Cases
+                              MultiplyParam_s{ 4000000000ULL, 2000000000ULL, 9ULL, 8000000000ULL },
+                              MultiplyParam_s{ 9223372036854775807ULL, 2000000000ULL, 9ULL, 18446744073709551614ULL },
+                              MultiplyParam_s{ 0ULL, 1234567890ULL, 9ULL, 0ULL },
+                              MultiplyParam_s{ 1234567890ULL, 0ULL, 9ULL, 0ULL },
+                              MultiplyParam_s{ 1000000000ULL, 999999999ULL, 9ULL, 999999999ULL },
+                              MultiplyParam_s{ 1000000000ULL, 1000000000ULL, 9ULL, 1000000000ULL },
+                              MultiplyParam_s{ 1ULL, 1ULL, 0ULL, 1ULL },
+                              MultiplyParam_s{ 20ULL, 30ULL, 1ULL, 60ULL },
 
-// ======================== FixedPointMultiplyErrorTest ========================
-struct FixedPointMultiplyErrorTestCase
-{
-    uint64_t  a;
-    uint64_t  b;
-    uint64_t  precision;
-    std::errc expected_error;
-};
-
-class FixedPointMultiplyErrorTest : public ::testing::TestWithParam<FixedPointMultiplyErrorTestCase>
-{
-};
-
-TEST_P( FixedPointMultiplyErrorTest, Multiply )
-{
-    auto test_case = GetParam();
-    auto result    = sgns::fixed_point::multiply( test_case.a, test_case.b, test_case.precision );
-    ASSERT_FALSE( result.has_value() );
-    EXPECT_EQ( result.error(), std::make_error_code( test_case.expected_error ) );
-}
-
-INSTANTIATE_TEST_SUITE_P( MultiplyErrorTests,
-                          FixedPointMultiplyErrorTest,
-                          ::testing::Values( FixedPointMultiplyErrorTestCase{
-                              .a              = UINT64_MAX,                //
-                              .b              = 1000000001ULL,             //
-                              .precision      = 9ULL,                      //
-                              .expected_error = std::errc::value_too_large //
-                          } ) );
+                              // Error Cases
+                              MultiplyParam_s{ UINT64_MAX, 1000000001ULL, 9ULL, std::errc::value_too_large } ) );
 
 // ======================== FixedPointDivideSuccessTest ========================
-struct FixedPointDivideSuccessTestCase
+
+struct DivideParam_s
 {
-    uint64_t numerator;
-    uint64_t denominator;
-    uint64_t precision;
-    uint64_t expected_value;
+    uint64_t                          num;
+    uint64_t                          den;
+    uint64_t                          precision;
+    std::variant<uint64_t, std::errc> expected;
 };
 
-class FixedPointDivideSuccessTest : public ::testing::TestWithParam<FixedPointDivideSuccessTestCase>
+class FixedPointDivideParamTest : public ::testing::TestWithParam<DivideParam_s>
 {
 };
 
-TEST_P( FixedPointDivideSuccessTest, Divide )
+TEST_P( FixedPointDivideParamTest, Divide )
 {
     auto test_case = GetParam();
-    auto result    = sgns::fixed_point::divide( test_case.numerator, test_case.denominator, test_case.precision );
-    ASSERT_TRUE( result.has_value() );
-    EXPECT_EQ( result.value(), test_case.expected_value );
+    auto result    = sgns::fixed_point::divide( test_case.num, test_case.den, test_case.precision );
+
+    if ( std::holds_alternative<uint64_t>( test_case.expected ) )
+    {
+        uint64_t expected_val = std::get<uint64_t>( test_case.expected );
+        ASSERT_TRUE( result.has_value() );
+        EXPECT_EQ( result.value(), expected_val );
+    }
+    else if ( std::holds_alternative<std::errc>( test_case.expected ) )
+    {
+        std::errc expected_err = std::get<std::errc>( test_case.expected );
+        ASSERT_FALSE( result.has_value() );
+        EXPECT_EQ( result.error(), std::make_error_code( expected_err ) );
+    }
+    else
+    {
+        FAIL() << "Unknown test case type.";
+    }
 }
 
-INSTANTIATE_TEST_SUITE_P( DivideSuccessTests,
-                          FixedPointDivideSuccessTest,
+INSTANTIATE_TEST_SUITE_P( FixedPointDivideTests,
+                          FixedPointDivideParamTest,
                           ::testing::Values(
-                              FixedPointDivideSuccessTestCase{
-                                  .numerator      = 2000000000ULL, //
-                                  .denominator    = 2000000000ULL, //
-                                  .precision      = 9ULL,          //
-                                  .expected_value = 1000000000ULL  //
-                              },
-                              FixedPointDivideSuccessTestCase{
-                                  .numerator      = 10000000000ULL, //
-                                  .denominator    = 2000000000ULL,  //
-                                  .precision      = 9ULL,           //
-                                  .expected_value = 5000000000ULL   //
-                              },
-                              FixedPointDivideSuccessTestCase{
-                                  .numerator      = UINT64_MAX,            //
-                                  .denominator    = 2000000000ULL,         //
-                                  .precision      = 9ULL,                  //
-                                  .expected_value = 9223372036854775807ULL //
-                              } ) );
+                              // Success Cases
+                              DivideParam_s{ 0ULL, 1234567890ULL, 9ULL, 0ULL },
+                              DivideParam_s{ 2000000000ULL, 2000000000ULL, 9ULL, 1000000000ULL },
+                              DivideParam_s{ 10000000000ULL, 2000000000ULL, 9ULL, 5000000000ULL },
+                              DivideParam_s{ UINT64_MAX, 2000000000ULL, 9ULL, 9223372036854775807ULL },
 
-// ======================== FixedPointDivideErrorTest ========================
-struct FixedPointDivideErrorTestCase
-{
-    uint64_t  numerator;
-    uint64_t  denominator;
-    uint64_t  precision;
-    std::errc expected_error;
-};
-
-class FixedPointDivideErrorTest : public ::testing::TestWithParam<FixedPointDivideErrorTestCase>
-{
-};
-
-TEST_P( FixedPointDivideErrorTest, Divide )
-{
-    auto test_case = GetParam();
-    auto result    = sgns::fixed_point::divide( test_case.numerator, test_case.denominator, test_case.precision );
-    ASSERT_FALSE( result.has_value() );
-    EXPECT_EQ( result.error(), std::make_error_code( test_case.expected_error ) );
-}
-
-INSTANTIATE_TEST_SUITE_P( DivideErrorTests,
-                          FixedPointDivideErrorTest,
-                          ::testing::Values(
-                              FixedPointDivideErrorTestCase{
-                                  .numerator      = 1000000000ULL,                 //
-                                  .denominator    = 0ULL,                          //
-                                  .precision      = 9ULL,                          //
-                                  .expected_error = std::errc::result_out_of_range //
-                              },
-                              FixedPointDivideErrorTestCase{
-                                  .numerator      = UINT64_MAX,                //
-                                  .denominator    = 999999999ULL,              //
-                                  .precision      = 9ULL,                      //
-                                  .expected_error = std::errc::value_too_large //
-                              } ) );
+                              // Error Cases
+                              DivideParam_s{ 0ULL, 0ULL, 9ULL, std::errc::result_out_of_range },
+                              DivideParam_s{ 1000000000ULL, 0ULL, 9ULL, std::errc::result_out_of_range },
+                              DivideParam_s{ UINT64_MAX, 999999999ULL, 9ULL, std::errc::value_too_large } ) );
