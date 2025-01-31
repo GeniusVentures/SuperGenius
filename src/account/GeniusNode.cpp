@@ -142,9 +142,12 @@ namespace sgns
             graphsyncport,
             std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_, std::string( PROCESSING_CHANNEL ) ) );
 
-        if ( !globaldb_->Init( crdt::CrdtOptions::DefaultOptions() ).has_value() )
+        auto global_db_init_result = globaldb_->Init( crdt::CrdtOptions::DefaultOptions() );
+        if ( global_db_init_result.has_error() )
         {
-            throw std::runtime_error( "Could not start GlobalDB" );
+            auto error = global_db_init_result.error();
+            throw std::runtime_error( error.message() );
+            return;
         }
 
         task_queue_      = std::make_shared<processing::ProcessingTaskQueueImpl>( globaldb_ );
