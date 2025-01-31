@@ -202,26 +202,17 @@ namespace sgns
         return "0x" + hash_data.toReadableString();
     }
 
-    outcome::result<void> TransactionManager::ProcessingDone( const std::string              &task_id,
-                                                              const SGProcessing::TaskResult &taskresult )
+    outcome::result<void> TransactionManager::PayEscrow( const std::string              &escrow_path,
+                                                         const SGProcessing::TaskResult &taskresult )
     {
         if ( taskresult.subtask_results().size() == 0 )
         {
-            m_logger->debug( "No result on " + task_id );
+            m_logger->debug( "No result found on escrow " + escrow_path );
             return outcome::failure( boost::system::error_code{} );
-        }
-        std::string escrow_path;
-        for ( auto &subtask : taskresult.subtask_results() )
-        {
-            if ( !subtask.escrow_path().empty() )
-            {
-                escrow_path = subtask.escrow_path();
-                break;
-            }
         }
         if ( escrow_path.empty() )
         {
-            m_logger->debug( "Escrow NOT FOUND on " + task_id );
+            m_logger->debug( "Escrow path empty " );
             return outcome::failure( boost::system::error_code{} );
         }
         m_logger->debug( "Fetching escrow from processing DB at " + escrow_path );
