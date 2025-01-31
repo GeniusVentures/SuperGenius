@@ -245,7 +245,7 @@ namespace sgns
     }
 
     GeniusProver::FriParams GeniusProver::MakeFRIParams( std::size_t rows_amount,
-                                                         const int   max_step,
+                                                         const unsigned int max_step,
                                                          std::size_t expand_factor )
     {
         std::size_t table_rows_log = std::ceil( std::log2( rows_amount ) );
@@ -285,7 +285,7 @@ namespace sgns
                 commitment_params ) ) );
     }
 
-    std::vector<std::size_t> GeniusProver::GenerateRandomStepList( const std::size_t r, const int max_step )
+    std::vector<std::size_t> GeniusProver::GenerateRandomStepList( const std::size_t r, const unsigned int max_step )
     {
         using Distribution = std::uniform_int_distribution<int>;
         static std::random_device random_engine;

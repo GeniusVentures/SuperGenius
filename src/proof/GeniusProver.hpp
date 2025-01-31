@@ -152,10 +152,10 @@ namespace sgns
         static PlonkTablePair MakePlonkTableDescription( const GeniusAssigner::PlonkAssignTableType &table );
 
         static FriParams MakeFRIParams( std::size_t rows_amount,
-                                        const int   max_step      = 1,
+                                        const unsigned int max_step = 1,
                                         std::size_t expand_factor = 0 );
 
-        static std::vector<std::size_t> GenerateRandomStepList( const std::size_t r, const int max_step );
+        static std::vector<std::size_t> GenerateRandomStepList( const std::size_t r, const unsigned int max_step );
 
         ProofType FillPlaceholderProof( const ProofSnarkType &proof, const FriParams &commitment_params ) const;
     };
