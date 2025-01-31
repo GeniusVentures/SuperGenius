@@ -65,7 +65,7 @@ namespace sgns
                                                  const uint256_t   &dev_addr,
                                                  float              peers_cut,
                                                  const std::string &job_id );
-        outcome::result<void> ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult );
+        outcome::result<void> PayEscrow( const std::string &escrow_path, const SGProcessing::TaskResult &taskresult );
         double                GetBalance();
 
     private:

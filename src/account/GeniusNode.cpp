@@ -171,7 +171,8 @@ namespace sgns
             io_,
             account_,
             std::make_shared<crypto::HasherImpl>(),
-            ( boost::format( write_base_path_ + "SuperGNUSNode.TestNet.1a.03.%s" ) % account_->GetAddress<std::string>() )
+            ( boost::format( write_base_path_ + "SuperGNUSNode.TestNet.1a.03.%s" ) %
+              account_->GetAddress<std::string>() )
                 .str(),
             pubsub_,
             upnp,
@@ -435,21 +436,30 @@ namespace sgns
     void GeniusNode::ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult )
     {
         std::cout << "[" << account_->GetAddress<std::string>() << "] SUCCESS PROCESSING TASK " << task_id << std::endl;
-        if ( !task_queue_->IsTaskCompleted( task_id ) )
+        do
         {
-            if ( transaction_manager_->ProcessingDone( task_id, taskresult ) )
+            if ( task_queue_->IsTaskCompleted( task_id ) )
             {
-                task_queue_->CompleteTask( task_id, taskresult );
+                std::cout << "Task Already completed!" << std::endl;
+                break;
             }
-            else
+
+            auto maybe_escrow_path = task_queue_->GetTaskEscrow( task_id );
+            if ( maybe_escrow_path.has_failure() )
+            {
+                std::cout << "No associated Escrow with the task " << std::endl;
+                break;
+            }
+            if ( !transaction_manager_->PayEscrow( maybe_escrow_path.value(), taskresult ) )
             {
                 std::cout << "Invalid results!" << std::endl;
+                break;
+                //throw std::runtime_error( "Invalid results!" );
             }
-        }
-        else
-        {
-            std::cout << "Task Already completed!" << std::endl;
-        }
+            task_queue_->CompleteTask( task_id, taskresult );
+
+        } while ( 0 );
+
     }
 
     void GeniusNode::ProcessingError( const std::string &task_id )
