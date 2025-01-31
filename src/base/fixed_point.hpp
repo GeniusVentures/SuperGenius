@@ -85,9 +85,10 @@ namespace sgns
             auto [ptr_int, ec_int] = std::from_chars( integer_str.data(),
                                                       integer_str.data() + integer_str.size(),
                                                       integer_part );
-            if ( ec_int != std::errc() )
+
+            if ( ec_int != std::errc() || ( ptr_int != integer_str.data() + integer_str.size() ) )
             {
-                return outcome::failure( std::make_error_code( ec_int ) );
+                return outcome::failure( std::make_error_code( std::errc::invalid_argument ) );
             }
 
             if ( !fractional_str.empty() )
@@ -95,9 +96,9 @@ namespace sgns
                 auto [ptr_frac, ec_frac] = std::from_chars( fractional_str.data(),
                                                             fractional_str.data() + fractional_str.size(),
                                                             fractional_part );
-                if ( ec_frac != std::errc() )
+                if ( ec_frac != std::errc() || ptr_frac != fractional_str.data() + fractional_str.size() )
                 {
-                    return outcome::failure( std::make_error_code( ec_frac ) );
+                    return outcome::failure( std::make_error_code( std::errc::invalid_argument ) );
                 }
             }
 
