@@ -24,11 +24,11 @@ namespace sgns::processing
         {
             m_logger->debug( "[{}] placed to GlobalDB ", taskKey );
         }
-        for (auto& subTask : subTasks)
+        for ( auto &subTask : subTasks )
         {
             valueBuffer.clear();
-            auto subTaskKey =
-                ( boost::format( "subtasks/TASK_%s/%s" ) % task.ipfs_block_id() % subTask.subtaskid() ).str();
+            auto subTaskKey = ( boost::format( "subtasks/TASK_%s/%s" ) % task.ipfs_block_id() % subTask.subtaskid() )
+                                  .str();
             valueBuffer.put( subTask.SerializeAsString() );
             auto setKeyResult = m_db->Put( sgns::crdt::HierarchicalKey( subTaskKey ), valueBuffer );
             if ( setKeyResult.has_failure() )
@@ -75,7 +75,7 @@ namespace sgns::processing
                 SGProcessing::SubTask subTask;
                 if ( subTask.ParseFromArray( element.second.data(), element.second.size() ) )
                 {
-                    m_logger->debug("Subtask check {}", subTask.chunkstoprocess_size());
+                    m_logger->debug( "Subtask check {}", subTask.chunkstoprocess_size() );
                     subTasks.push_back( std::move( subTask ) );
                 }
                 else
@@ -185,6 +185,20 @@ namespace sgns::processing
             ret = true;
         }
         return ret;
+    }
+
+    outcome::result<std::string> ProcessingTaskQueueImpl::GetTaskEscrow( const std::string &taskId )
+    {
+        OUTCOME_TRY( ( auto &&, task_buffer ), m_db->Get( { "tasks/TASK_" + taskId } ) );
+
+        SGProcessing::Task task;
+
+        if ( !task.ParseFromArray( task_buffer.data(), task_buffer.size() ) )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
+
+        return task.escrow_path();
     }
 
     bool ProcessingTaskQueueImpl::IsTaskLocked( const std::string &taskKey )
