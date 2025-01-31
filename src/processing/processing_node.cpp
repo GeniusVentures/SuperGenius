@@ -14,11 +14,9 @@ namespace sgns::processing
                                     std::shared_ptr<ProcessingCore>                         processingCore,
                                     std::function<void( const SGProcessing::TaskResult & )> taskResultProcessingSink,
                                     std::function<void( const std::string & )>              processingErrorSink,
-                                    std::string                                             node_id,
-                                    std::string                                             escrow_path ) :
+                                    std::string                                             node_id ) :
         m_gossipPubSub( std::move( gossipPubSub ) ),
         m_nodeId( std::move( node_id ) ),
-        m_escrowId( std::move( escrow_path ) ),
         m_processingCore( std::move( processingCore ) ),
         m_subTaskStateStorage( std::move( subTaskStateStorage ) ),
         m_subTaskResultStorage( std::move( subTaskResultStorage ) ),
@@ -71,7 +69,7 @@ namespace sgns::processing
                 return false;
             } );
 
-        m_processingEngine = std::make_shared<ProcessingEngine>( m_nodeId, m_escrowId, m_processingCore );
+        m_processingEngine = std::make_shared<ProcessingEngine>( m_nodeId, m_processingCore );
 
         m_processingEngine->SetProcessingErrorSink( m_processingErrorSink );
 
