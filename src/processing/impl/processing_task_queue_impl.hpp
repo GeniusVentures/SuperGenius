@@ -60,6 +60,13 @@ namespace sgns::processing
          */
         bool IsTaskCompleted( const std::string &taskId ) override;
 
+        /**
+         * @brief       Fetches the task and returns the associated escrow path
+         * @param[in]   taskId The task ID
+         * @return      If successful, it returns a escrow path string
+         */
+        outcome::result<std::string> GetTaskEscrow( const std::string &taskId );
+
         /** Find if a task is locked
         * @param taskKey - id to look for task
         */
