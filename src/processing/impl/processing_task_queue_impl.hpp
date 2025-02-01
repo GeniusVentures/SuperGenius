@@ -32,7 +32,7 @@ namespace sgns::processing
         * @param task - Task to add
         * @param subTasks - List of subtasks
         */
-        void EnqueueTask( const SGProcessing::Task &task, const std::list<SGProcessing::SubTask> &subTasks ) override;
+        outcome::result<void> EnqueueTask( const SGProcessing::Task &task, const std::list<SGProcessing::SubTask> &subTasks ) override;
 
         /** Get subtasks by task id, returns true if we got subtasks
         * @param taskId - id to look for subtasks of
