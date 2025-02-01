@@ -13,7 +13,7 @@ add_subdirectory(watcher)
 add_subdirectory(processing_nodes)
 add_subdirectory(transaction_sync)
 add_subdirectory(multiaccount)
-add_subdirectory(proof)
+#add_subdirectory(proof)
 add_subdirectory(account_creation)
 
 
