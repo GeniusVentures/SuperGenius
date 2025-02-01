@@ -3,7 +3,7 @@
 
 #include "base/buffer.hpp"
 #include "crdt/hierarchical_key.hpp"
-#include "../../build/OSX/Release/generated/crdt/proto/delta.pb.h"
+#include "crdt/proto/delta.pb.h"
 #include "outcome/outcome.hpp"
 
 #include <memory>
@@ -61,7 +61,7 @@ namespace sgns::crdt
         enum class Operation 
         {
             PUT,
-            DELETE
+            REMOVE
         };
 
         struct PendingOperation 

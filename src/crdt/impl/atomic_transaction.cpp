@@ -34,7 +34,7 @@ namespace sgns::crdt
         {
             return outcome::failure(boost::system::error_code{});
         }
-        operations_.push_back({Operation::DELETE, key, Buffer()});
+        operations_.push_back({Operation::REMOVE, key, Buffer()});
         return outcome::success();
     }
 
