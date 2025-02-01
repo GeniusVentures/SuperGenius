@@ -70,7 +70,7 @@ namespace sgns::crdt
     /** Get current number of heads
     * @return lenght, current number of heads or outcome::failure on error
     */
-    outcome::result<int> GetLenght();
+    outcome::result<int> GetLength();
 
     /** Add head CID to datastore with full namespace
     * @param aCid Content identifier

@@ -117,12 +117,14 @@ namespace sgns::crdt
   {
     std::lock_guard lg(this->mutex_);
 
-    auto isHeadResult = this->IsHead(aCid);
-
+    if (!this->IsHead(aCid))
+    {
+        return 0;
+    }
     return this->cache_[aCid];
   }
 
-  outcome::result<int> CrdtHeads::GetLenght()
+  outcome::result<int> CrdtHeads::GetLength()
   {
     std::lock_guard lg(this->mutex_);
     return this->cache_.size();

@@ -61,17 +61,17 @@ namespace sgns::crdt
     
     // Check cid height
     EXPECT_OUTCOME_EQ(crdtHeads.GetHeadHeight(cid1), height1);
-    EXPECT_OUTCOME_FALSE_1(crdtHeads.GetHeadHeight(cid2));
+    EXPECT_OUTCOME_EQ(crdtHeads.GetHeadHeight(cid2), 0);
 
-    EXPECT_OUTCOME_EQ(crdtHeads.GetLenght(), 1);
+    EXPECT_OUTCOME_EQ(crdtHeads.GetLength(), 1);
 
     // Add same cid again, should remain the same length
     EXPECT_OUTCOME_TRUE_1(crdtHeads.Add(cid1, height1));
-    EXPECT_OUTCOME_EQ(crdtHeads.GetLenght(), 1);
+    EXPECT_OUTCOME_EQ(crdtHeads.GetLength(), 1);
 
     // Add more cid
     EXPECT_OUTCOME_TRUE_1(crdtHeads.Add(cid2, height2));
-    EXPECT_OUTCOME_EQ(crdtHeads.GetLenght(), 2);
+    EXPECT_OUTCOME_EQ(crdtHeads.GetLength(), 2);
 
     // Test getting heads 
     std::vector<CID> heads; 
@@ -112,16 +112,16 @@ namespace sgns::crdt
     auto addResult1 = crdtHeads.Add(cid1, height1);
     auto addResult2 = crdtHeads.Add(cid2, height2);
 
-    EXPECT_OUTCOME_EQ(crdtHeads.GetLenght(), 2);
+    EXPECT_OUTCOME_EQ(crdtHeads.GetLength(), 2);
     EXPECT_OUTCOME_TRUE_1(crdtHeads.Replace(cid2, cid3, height2));
     EXPECT_EQ(crdtHeads.IsHead(cid2), false);
     EXPECT_EQ(crdtHeads.IsHead(cid3), true);
     EXPECT_OUTCOME_EQ(crdtHeads.GetHeadHeight(cid3), height2);
-    EXPECT_OUTCOME_EQ(crdtHeads.GetLenght(), 2);
+    EXPECT_OUTCOME_EQ(crdtHeads.GetLength(), 2);
 
     EXPECT_OUTCOME_TRUE_1(crdtHeads.Replace(cid3, cid3, height1));
     EXPECT_OUTCOME_EQ(crdtHeads.GetHeadHeight(cid3), height1);
-    EXPECT_OUTCOME_EQ(crdtHeads.GetLenght(), 2);
+    EXPECT_OUTCOME_EQ(crdtHeads.GetLength(), 2);
 
     // Test getting heads 
     std::vector<CID> heads;
