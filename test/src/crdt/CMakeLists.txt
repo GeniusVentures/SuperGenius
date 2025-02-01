@@ -3,7 +3,15 @@ addtest(crdt_test
     crdt_set_test.cpp
     crdt_heads_test.cpp
     crdt_datastore_test.cpp
+    crdt_atomic_transaction_test.cpp
+    crdt_custom_broadcaster.cpp
+    crdt_custom_dagsyncer.cpp
 )
+
+include_directories(
+        ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
 target_link_libraries(crdt_test
     crdt_datastore
     rocksdb

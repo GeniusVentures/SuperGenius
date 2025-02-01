@@ -47,6 +47,7 @@ supergenius_install(crdt_graphsync_dagsyncer)
 
 add_library(crdt_datastore
     impl/crdt_datastore.cpp
+    impl/atomic_transaction.cpp
 )
 target_link_libraries(crdt_datastore
     PUBLIC
