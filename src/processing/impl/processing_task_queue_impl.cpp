@@ -15,16 +15,18 @@ namespace sgns::processing
                                   .str();
             valueBuffer.put( subTask.SerializeAsString() );
             BOOST_OUTCOME_TRYV2( auto &&, m_db->Put( sgns::crdt::HierarchicalKey( subTaskKey ), valueBuffer ) );
-            BOOST_OUTCOME_TRYV2( auto &&, m_db->Get( sgns::crdt::HierarchicalKey( subTaskKey ) );
+            BOOST_OUTCOME_TRYV2( auto &&, m_db->Get( sgns::crdt::HierarchicalKey( subTaskKey ) ) );
 
             m_logger->debug( "[{}] placed to GlobalDB ", subTaskKey );
-            }
         }
+
         valueBuffer.clear();
         valueBuffer.put( task.SerializeAsString() );
         BOOST_OUTCOME_TRYV2( auto &&, m_db->Put( sgns::crdt::HierarchicalKey( taskKey ), valueBuffer ) );
         BOOST_OUTCOME_TRYV2( auto &&, m_db->Get( sgns::crdt::HierarchicalKey( taskKey ) ) );
         m_logger->debug( "[{}] placed to GlobalDB ", taskKey );
+
+        return outcome::success();
     }
 
     bool ProcessingTaskQueueImpl::GetSubTasks( const std::string &taskId, std::list<SGProcessing::SubTask> &subTasks )

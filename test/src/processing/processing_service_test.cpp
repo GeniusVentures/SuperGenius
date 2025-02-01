@@ -54,7 +54,7 @@ public:
 class ProcessingTaskQueueImpl : public ProcessingTaskQueue
 {
 public:
-    void EnqueueTask(
+    outcome::result<void> EnqueueTask(
         const SGProcessing::Task& task,
         const std::list<SGProcessing::SubTask>& subTasks) override {}
 
