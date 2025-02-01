@@ -21,7 +21,7 @@ public:
     * @param task - task to enqueue
     * @param subTasks - list of subtasks that the task has been split to
     */
-    virtual void EnqueueTask( const SGProcessing::Task &task, const std::list<SGProcessing::SubTask> &subTasks ) = 0;
+    virtual outcome::result<void> EnqueueTask( const SGProcessing::Task &task, const std::list<SGProcessing::SubTask> &subTasks ) = 0;
 
     /** Returns a list of subtasks linked to taskId
     * @param taskId - task id

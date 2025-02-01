@@ -2,51 +2,29 @@
 
 namespace sgns::processing
 {
-    void ProcessingTaskQueueImpl::EnqueueTask( const SGProcessing::Task               &task,
-                                               const std::list<SGProcessing::SubTask> &subTasks )
+    outcome::result<void> ProcessingTaskQueueImpl::EnqueueTask( const SGProcessing::Task               &task,
+                                                                const std::list<SGProcessing::SubTask> &subTasks )
     {
         auto               taskKey = ( boost::format( "tasks/TASK_%d" ) % task.ipfs_block_id() ).str();
         sgns::base::Buffer valueBuffer;
-        valueBuffer.put( task.SerializeAsString() );
-        auto setKeyResult = m_db->Put( sgns::crdt::HierarchicalKey( taskKey ), valueBuffer );
-        if ( setKeyResult.has_failure() )
-        {
-            m_logger->debug( "Unable to put key-value to CRDT datastore." );
-        }
 
-        // Check if data put
-        auto getKeyResult = m_db->Get( sgns::crdt::HierarchicalKey( taskKey ) );
-        if ( getKeyResult.has_failure() )
-        {
-            m_logger->debug( "Unable to find key in CRDT datastore" );
-        }
-        else
-        {
-            m_logger->debug( "[{}] placed to GlobalDB ", taskKey );
-        }
         for ( auto &subTask : subTasks )
         {
             valueBuffer.clear();
             auto subTaskKey = ( boost::format( "subtasks/TASK_%s/%s" ) % task.ipfs_block_id() % subTask.subtaskid() )
                                   .str();
             valueBuffer.put( subTask.SerializeAsString() );
-            auto setKeyResult = m_db->Put( sgns::crdt::HierarchicalKey( subTaskKey ), valueBuffer );
-            if ( setKeyResult.has_failure() )
-            {
-                m_logger->debug( "Unable to put key-value to CRDT datastore." );
-            }
+            BOOST_OUTCOME_TRYV2( auto &&, m_db->Put( sgns::crdt::HierarchicalKey( subTaskKey ), valueBuffer ) );
+            BOOST_OUTCOME_TRYV2( auto &&, m_db->Get( sgns::crdt::HierarchicalKey( subTaskKey ) );
 
-            // Check if data put
-            auto getKeyResult = m_db->Get( sgns::crdt::HierarchicalKey( taskKey ) );
-            if ( getKeyResult.has_failure() )
-            {
-                m_logger->debug( "Unable to find key in CRDT datastore" );
-            }
-            else
-            {
-                m_logger->debug( "[{}] placed to GlobalDB ", subTaskKey );
+            m_logger->debug( "[{}] placed to GlobalDB ", subTaskKey );
             }
         }
+        valueBuffer.clear();
+        valueBuffer.put( task.SerializeAsString() );
+        BOOST_OUTCOME_TRYV2( auto &&, m_db->Put( sgns::crdt::HierarchicalKey( taskKey ), valueBuffer ) );
+        BOOST_OUTCOME_TRYV2( auto &&, m_db->Get( sgns::crdt::HierarchicalKey( taskKey ) ) );
+        m_logger->debug( "[{}] placed to GlobalDB ", taskKey );
     }
 
     bool ProcessingTaskQueueImpl::GetSubTasks( const std::string &taskId, std::list<SGProcessing::SubTask> &subTasks )
