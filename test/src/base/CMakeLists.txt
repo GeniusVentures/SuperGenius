@@ -33,5 +33,5 @@ addtest(fixed_point_test
     fixed_point_test.cpp
     )
 target_link_libraries(fixed_point_test
-    outcome
+    fixed_point
 )

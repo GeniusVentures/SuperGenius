@@ -47,6 +47,7 @@ target_link_libraries(sgns_account
     Boost::Boost.DI
     SGTransactionProto
     logger
+    fixed_point
     gnus_upnp
     AsyncIOManager
     ${WIN_API_LIBRARY}
