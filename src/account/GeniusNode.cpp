@@ -394,8 +394,7 @@ namespace sgns
 
             if ( !cut )
             {
-                //TODO: return outcome::failure( cut.error() );
-                return;
+                return outcome::failure( cut.error() );
             }
 
 
