@@ -418,9 +418,9 @@ namespace sgns::crdt
         return sKey.substr( keyPos, suffixPos - keyPos );
     }
 
-    std::shared_ptr<CrdtDataStoreTransaction> GlobalDB::BeginTransaction()
+    std::shared_ptr<AtomicTransaction> GlobalDB::BeginTransaction()
     {
-        return m_crdtDatastore->BeginTransaction();
+        return std::make_shared<AtomicTransaction>(m_crdtDatastore);
     }
 
 }

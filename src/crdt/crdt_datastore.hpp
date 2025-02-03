@@ -20,68 +20,6 @@
 namespace sgns::crdt
 {
   class CrdtSet;
-  class CrdtDatastore;
-  /** @brief CrdtDataStoreTransaction incapsulated transaction functionality
-  * of CRDT datastore
-  */
-  class CrdtDataStoreTransaction
-  {
-  public:
-      using Buffer = base::Buffer;
-      using Logger = base::Logger;
-      using Delta = pb::Delta;
-      using Element = pb::Element;
-      //using Node = ipfs_lite::ipld::IPLDNode;
-
-      CrdtDataStoreTransaction() = delete;
-
-      /** Constructor
-      * @param datastore pointer to data storage
-      */
-      CrdtDataStoreTransaction(std::shared_ptr<CrdtDatastore> datastore);
-
-      /** AddToDelta creates delta with key and value pair and merges it into current delta,
-      * caller is responsible for calling PublishDelta()
-      * @param aKey HierarchicalKey to add to delta
-      * @param aValue Buffer value to add to delta
-      * @return returns size of current delta or outcome::failure on error
-      */
-      outcome::result<int> AddToDelta(const HierarchicalKey& aKey, const Buffer& aValue);
-
-      /** RemoveFromDelta creates delta to remove and merges it into current delta as tombstone,
-      * caller is responsible for calling PublishDelta()
-      * @param aKey HierarchicalKey to remove from delta
-      * @return returns size of current delta or outcome::failure on error
-      */
-      outcome::result<int> RemoveFromDelta(const HierarchicalKey& aKey);
-
-      /** PublishDelta publishes current delta constructed and broadcast it
-      * @return returns outcome::success on success or outcome::failure otherwise
-      */
-      outcome::result<void> PublishDelta();
-
-  private:
-      /** UpdateDeltaWithRemove updates current delta with tomstones
-      * To satisfy datastore semantics, we need to remove elements from the current
-      * batch if they were added.
-      * @param aKey HierarchicalKey for delta
-      * @param aDelta pointer to delta to merge
-      */
-      int UpdateDeltaWithRemove(const HierarchicalKey& aKey, const std::shared_ptr<Delta>& aDelta);
-
-      /** UpdateDelta updates current delta by merging input delta
-      * @param aDelta pointer to Delta to merge
-      * @return the size of current delta just merged
-      *
-      */
-      int UpdateDelta(const std::shared_ptr<Delta>& aDelta);
-
-      std::shared_ptr<CrdtDatastore> datastore_;
-
-      std::mutex currentDeltaMutex_;
-      std::shared_ptr<Delta> currentDelta_;
-  };
-
   /** @brief CrdtDatastore provides a replicated go-datastore (key-value store)
   * implementation using Merkle-CRDTs built with IPLD nodes.
   *
@@ -191,11 +129,6 @@ namespace sgns::crdt
     * @return vector of CIDs or outcome::failure on error
     */
     outcome::result<std::vector<CID>> DecodeBroadcast(const Buffer& buff);
-
-    /** Create a transaction object
-    * @return new transaction
-    */
-    std::shared_ptr<CrdtDataStoreTransaction> BeginTransaction();
 
     /** Returns a new delta-set adding the given key/value.
     * @param key - delta key to add to datastore 

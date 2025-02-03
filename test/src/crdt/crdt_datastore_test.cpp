@@ -1,4 +1,5 @@
 #include "crdt/crdt_datastore.hpp"
+#include "crdt/atomic_transaction.hpp"
 #include <gtest/gtest.h>
 #include <storage/rocksdb/rocksdb.hpp>
 #include "outcome/outcome.hpp"
@@ -92,12 +93,12 @@ namespace sgns::crdt
     CrdtBuffer buffer3;
     buffer3.put("Data3");
 
-    auto transaction = crdtDatastore_->BeginTransaction();
-    EXPECT_OUTCOME_TRUE_1(transaction->AddToDelta(newKey1, buffer1));
-    EXPECT_OUTCOME_TRUE_1(transaction->AddToDelta(newKey2, buffer2));
-    EXPECT_OUTCOME_TRUE_1(transaction->AddToDelta(newKey3, buffer3));
-    EXPECT_OUTCOME_TRUE(deltaSize, transaction->RemoveFromDelta(newKey2));
-    EXPECT_OUTCOME_TRUE_1(transaction->PublishDelta());
+    AtomicTransaction transaction = AtomicTransaction(crdtDatastore_);
+    EXPECT_OUTCOME_TRUE_1(transaction.Put(newKey1, buffer1));
+    EXPECT_OUTCOME_TRUE_1(transaction.Put(newKey2, buffer2));
+    EXPECT_OUTCOME_TRUE_1(transaction.Put(newKey3, buffer3));
+    EXPECT_OUTCOME_TRUE_1(transaction.Remove(newKey2));
+    EXPECT_OUTCOME_TRUE_1(transaction.Commit());
     EXPECT_OUTCOME_EQ(crdtDatastore_->HasKey(newKey1), true);
     EXPECT_OUTCOME_EQ(crdtDatastore_->HasKey(newKey2), false);
 
