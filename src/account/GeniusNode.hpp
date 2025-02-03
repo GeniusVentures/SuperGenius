@@ -54,13 +54,25 @@ namespace sgns
                     bool                autodht     = true,
                     bool                isprocessor = true,
                     uint16_t            base_port   = 40001 );
-        // static GeniusNode &GetInstance()
-        // {
-        //     return instance;
-        // }
+
         ~GeniusNode() override;
 
-        void ProcessImage( const std::string &image_path );
+        /**
+         * @brief      GeniusNode Error class
+         */
+        enum class Error
+        {
+            INSUFFICIENT_FUNDS       = 1, ///<Insufficient funds for a transaction
+            DATABASE_WRITE_ERROR     = 2, ///<Error writing data into the database
+            INVALID_TRANSACTION_HASH = 3, ///<Input transaction hash is invalid
+            INVALID_CHAIN_ID         = 4, ///<Chain ID is invalid
+            INVALID_TOKEN_ID         = 5, ///<Token ID is invalid
+            TOKEN_ID_MISMATCH        = 6, ///<Informed Token ID doesn't match initialized ID
+            PROCESS_COST_ERROR       = 7, ///<The calculated Processing cost was negative
+            PROCESS_INFO_MISSING     = 8, ///<Processing information missing on JSON file
+        };
+
+        outcome::result<void> ProcessImage( const std::string &image_path );
 
         double GetProcessCost( const std::string &json_data );
 
@@ -69,11 +81,14 @@ namespace sgns
             return "GeniusNode";
         }
 
-        void     DHTInit();
-        void     MintTokens( double amount, std::string transaction_hash, std::string chainid, std::string tokenid );
-        void     AddPeer( const std::string &peer );
-        void     RefreshUPNP( int pubsubport, int graphsyncport );
-        double GetBalance();
+        void                  DHTInit();
+        outcome::result<void> MintTokens( double      amount,
+                                          std::string transaction_hash,
+                                          std::string chainid,
+                                          std::string tokenid );
+        void                  AddPeer( const std::string &peer );
+        void                  RefreshUPNP( int pubsubport, int graphsyncport );
+        double                GetBalance();
 
         [[nodiscard]] const std::vector<std::vector<uint8_t>> GetInTransactions() const
         {
@@ -179,9 +194,10 @@ namespace sgns
             return logger_config;
         }
 
-        //static GeniusNode instance;
     };
 
 }
+
+OUTCOME_HPP_DECLARE_ERROR_2( sgns, GeniusNode::Error );
 
 #endif
