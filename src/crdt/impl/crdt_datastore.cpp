@@ -169,7 +169,7 @@ namespace sgns::crdt
 
         handleNextThreadRunning_ = true;
 
-        LogDebug( "HandleNext thread started" );
+        //LogDebug( "HandleNext thread started" );
         while ( handleNextThreadRunning_ )
         {
             std::this_thread::sleep_for( threadSleepTimeInMilliseconds_ );
@@ -220,7 +220,7 @@ namespace sgns::crdt
 
     void CrdtDatastore::Rebroadcast()
     {
-        LogDebug( "Rebroadcast thread started" );
+        //LogDebug( "Rebroadcast thread started" );
         auto rebroadcastIntervalMilliseconds = std::chrono::milliseconds( threadSleepTimeInMilliseconds_ );
         if ( options_ != nullptr )
         {
@@ -599,7 +599,7 @@ namespace sgns::crdt
             return outcome::failure( boost::system::error_code{} );
         }
 
-        auto deltaResult = this->set_->CreateDeltaToAdd( aKey.GetKey(), std::string( aValue.toString() ) );
+        auto deltaResult = CreateDeltaToAdd( aKey.GetKey(), std::string( aValue.toString() ) );
         if ( deltaResult.has_failure() )
         {
             return outcome::failure( deltaResult.error() );
@@ -614,7 +614,7 @@ namespace sgns::crdt
             return outcome::failure( boost::system::error_code{} );
         }
 
-        auto deltaResult = this->set_->CreateDeltaToRemove( aKey.GetKey() );
+        auto deltaResult = CreateDeltaToRemove( aKey.GetKey() );
         if ( deltaResult.has_failure() )
         {
             return outcome::failure( deltaResult.error() );

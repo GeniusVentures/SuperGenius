@@ -5,6 +5,7 @@
 
 #include "crdt/crdt_datastore.hpp"
 #include "crdt/graphsync_dagsyncer.hpp"
+#include "crdt/atomic_transaction.hpp"
 
 #include <ipfs_lite/ipfs/merkledag/impl/merkledag_service_impl.hpp>
 #include <ipfs_lite/ipfs/impl/datastore_rocksdb.hpp>
@@ -273,8 +274,7 @@ namespace sgns::crdt
             m_logger->warn( "DAG syncer failed to listen " + std::string( listen_to.getStringAddress() ) );
             // @todo Check if the error is not fatal
             return Error::DAG_SYNCHER_NOT_LISTENING;
-
-    }
+        }
 
         //dht_->Start();
         //dht_->bootstrap();
@@ -347,10 +347,27 @@ namespace sgns::crdt
         if ( !m_crdtDatastore )
         {
             m_logger->error( "CRDT datastore is not initialized yet" );
-            return outcome::failure( boost::system::error_code{} );
+            return outcome::failure( Error::CRDT_DATASTORE_NOT_CREATED );
         }
 
         return m_crdtDatastore->PutKey( key, value );
+    }
+
+    outcome::result<void> GlobalDB::Put( const std::vector<DataPair> &data_vector )
+    {
+        if ( !m_crdtDatastore )
+        {
+            m_logger->error( "CRDT datastore is not initialized yet" );
+            return outcome::failure( Error::CRDT_DATASTORE_NOT_CREATED );
+        }
+        AtomicTransaction batch( m_crdtDatastore );
+
+        for ( auto &data : data_vector )
+        {
+            BOOST_OUTCOME_TRYV2( auto &&, batch.Put( std::get<0>( data ), std::get<1>( data ) ) );
+        }
+
+        return batch.Commit();
     }
 
     outcome::result<GlobalDB::Buffer> GlobalDB::Get( const HierarchicalKey &key )

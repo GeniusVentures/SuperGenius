@@ -26,6 +26,9 @@ namespace sgns::crdt
                   std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> broadcastChannel,
                   std::string                                           gsaddresses = {} );
 
+        /// Pair of key and value to be stored in CRDT
+        using DataPair = std::pair<HierarchicalKey, Buffer>;
+
         /**
          * @enum        Error
          * @brief       Enumeration of error codes used in the proof classes.
@@ -41,11 +44,18 @@ namespace sgns::crdt
         outcome::result<void> Init( std::shared_ptr<CrdtOptions> crdtOptions );
 
         /** Puts key-value pair to storage
-    * @param key
-    * @param value
-    * @return outcome::failure on error or success otherwise
-    */
+        * @param key The path in which the data will be stored
+        * @param value The data to be stored
+        * @return outcome::failure on error or success otherwise
+        */
         outcome::result<void> Put( const HierarchicalKey &key, const Buffer &value );
+
+        /**
+         * @brief       Writes a batch of CRDT data all at once
+         * @param[in]   data_vector A set of crdt to be written in a single transaction
+         * @return      outcome::failure on error or success otherwise
+         */
+        outcome::result<void> Put( const std::vector<DataPair> &data_vector );
 
         /** Gets a value that corresponds to specified key.
     * @param key - value key
