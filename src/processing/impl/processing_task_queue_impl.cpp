@@ -8,22 +8,28 @@ namespace sgns::processing
         auto               taskKey = ( boost::format( "tasks/TASK_%d" ) % task.ipfs_block_id() ).str();
         sgns::base::Buffer valueBuffer;
 
+        std::vector<crdt::GlobalDB::DataPair> data_vector;
+
         for ( auto &subTask : subTasks )
         {
             valueBuffer.clear();
             auto subTaskKey = ( boost::format( "subtasks/TASK_%s/%s" ) % task.ipfs_block_id() % subTask.subtaskid() )
                                   .str();
             valueBuffer.put( subTask.SerializeAsString() );
-            BOOST_OUTCOME_TRYV2( auto &&, m_db->Put( sgns::crdt::HierarchicalKey( subTaskKey ), valueBuffer ) );
-            BOOST_OUTCOME_TRYV2( auto &&, m_db->Get( sgns::crdt::HierarchicalKey( subTaskKey ) ) );
+            //BOOST_OUTCOME_TRYV2( auto &&, m_db->Put( sgns::crdt::HierarchicalKey( subTaskKey ), valueBuffer ) );
+            //BOOST_OUTCOME_TRYV2( auto &&, m_db->Get( sgns::crdt::HierarchicalKey( subTaskKey ) ) );
+            data_vector.push_back( std::make_pair( sgns::crdt::HierarchicalKey( subTaskKey ), valueBuffer ) );
 
             m_logger->debug( "[{}] placed to GlobalDB ", subTaskKey );
         }
 
         valueBuffer.clear();
         valueBuffer.put( task.SerializeAsString() );
-        BOOST_OUTCOME_TRYV2( auto &&, m_db->Put( sgns::crdt::HierarchicalKey( taskKey ), valueBuffer ) );
-        BOOST_OUTCOME_TRYV2( auto &&, m_db->Get( sgns::crdt::HierarchicalKey( taskKey ) ) );
+        //BOOST_OUTCOME_TRYV2( auto &&, m_db->Put( sgns::crdt::HierarchicalKey( taskKey ), valueBuffer ) );
+        //BOOST_OUTCOME_TRYV2( auto &&, m_db->Get( sgns::crdt::HierarchicalKey( taskKey ) ) );
+        data_vector.push_back( std::make_pair( sgns::crdt::HierarchicalKey( taskKey ), valueBuffer ) );
+
+        BOOST_OUTCOME_TRYV2( auto &&, m_db->Put( data_vector) );
         m_logger->debug( "[{}] placed to GlobalDB ", taskKey );
 
         return outcome::success();

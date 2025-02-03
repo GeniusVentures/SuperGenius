@@ -7,6 +7,7 @@
 #include <ipfs_pubsub/gossip_pubsub_topic.hpp>
 #include "crdt/crdt_options.hpp"
 #include "crdt/crdt_datastore.hpp"
+#include "crdt/atomic_transaction.hpp"
 #include <libp2p/protocol/identify/identify.hpp>
 #include <libp2p/protocol/autonat/autonat.hpp>
 #include <libp2p/protocol/holepunch/holepunch_server.hpp>
@@ -84,7 +85,7 @@ namespace sgns::crdt
         /** Create a transaction object
     * @return new transaction
     */
-        std::shared_ptr<CrdtDataStoreTransaction> BeginTransaction();
+        std::shared_ptr<AtomicTransaction> BeginTransaction();
 
         auto GetDB()
         {

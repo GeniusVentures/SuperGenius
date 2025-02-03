@@ -628,90 +628,6 @@ namespace sgns::crdt
         return this->Publish( deltaResult.value() );
     }
 
-    CrdtDataStoreTransaction::CrdtDataStoreTransaction( std::shared_ptr<CrdtDatastore> datastore ) :
-        datastore_( std::move( datastore ) )
-    {
-    }
-
-    outcome::result<int> CrdtDataStoreTransaction::AddToDelta( const HierarchicalKey &aKey, const Buffer &aValue )
-    {
-        auto deltaResult = datastore_->CreateDeltaToAdd( aKey.GetKey(), std::string( aValue.toString() ) );
-        if ( deltaResult.has_failure() )
-        {
-            return outcome::failure( deltaResult.error() );
-        }
-
-        return UpdateDelta( deltaResult.value() );
-    }
-
-    outcome::result<int> CrdtDataStoreTransaction::RemoveFromDelta( const HierarchicalKey &aKey )
-    {
-        auto deltaResult = datastore_->CreateDeltaToRemove( aKey.GetKey() );
-        if ( deltaResult.has_failure() )
-        {
-            return outcome::failure( deltaResult.error() );
-        }
-        return this->UpdateDeltaWithRemove( aKey, deltaResult.value() );
-    }
-
-    int CrdtDataStoreTransaction::UpdateDeltaWithRemove( const HierarchicalKey        &aKey,
-                                                         const std::shared_ptr<Delta> &aDelta )
-    {
-        int                    deltaSize = 0;
-        std::vector<Element>   elems;
-        std::lock_guard        lg( this->currentDeltaMutex_ );
-        std::shared_ptr<Delta> deltaToMerge = std::make_shared<Delta>();
-        if ( this->currentDelta_ != nullptr )
-        {
-            for ( const auto &elem : this->currentDelta_->elements() )
-            {
-                if ( elem.key() != aKey.GetKey() )
-                {
-                    elems.push_back( elem );
-                }
-            }
-
-            auto tombs    = this->currentDelta_->tombstones();
-            auto priority = this->currentDelta_->priority();
-            for ( const auto &elem : elems )
-            {
-                auto newElem = deltaToMerge->add_elements();
-                newElem->CopyFrom( elem );
-            }
-            for ( const auto &tomb : tombs )
-            {
-                auto newTomb = deltaToMerge->add_tombstones();
-                newTomb->CopyFrom( tomb );
-            }
-            deltaToMerge->set_priority( priority );
-        }
-
-        currentDelta_ = CrdtDatastore::DeltaMerge( deltaToMerge, aDelta );
-        deltaSize     = this->currentDelta_->ByteSizeLong();
-        return deltaSize;
-    }
-
-    int CrdtDataStoreTransaction::UpdateDelta( const std::shared_ptr<Delta> &aDelta )
-    {
-        int             deltaSize = 0;
-        std::lock_guard lg( this->currentDeltaMutex_ );
-        currentDelta_ = CrdtDatastore::DeltaMerge( this->currentDelta_, aDelta );
-        deltaSize     = this->currentDelta_->ByteSizeLong();
-        return deltaSize;
-    }
-
-    outcome::result<void> CrdtDataStoreTransaction::PublishDelta()
-    {
-        std::lock_guard lg( this->currentDeltaMutex_ );
-        auto            publishResult = datastore_->Publish( currentDelta_ );
-        if ( publishResult.has_failure() )
-        {
-            return outcome::failure( publishResult.error() );
-        }
-        this->currentDelta_ = nullptr;
-        return outcome::success();
-    }
-
     outcome::result<void> CrdtDatastore::Publish( const std::shared_ptr<Delta> &aDelta )
     {
         auto addResult = this->AddDAGNode( aDelta );
@@ -1100,12 +1016,6 @@ namespace sgns::crdt
         // Call the crdt set sync. We don't need to
         // Because a store is shared with SET. Only
         return this->set_->DataStoreSync( aKeyList );
-    }
-
-    std::shared_ptr<CrdtDataStoreTransaction> CrdtDatastore::BeginTransaction()
-    {
-        auto transaction = std::make_shared<CrdtDataStoreTransaction>( shared_from_this() );
-        return transaction;
     }
 
     outcome::result<std::shared_ptr<CrdtDatastore::Delta>> CrdtDatastore::CreateDeltaToAdd( const std::string &key,
