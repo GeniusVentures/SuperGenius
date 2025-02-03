@@ -26,6 +26,30 @@
 #include <boost/uuid/uuid_io.hpp>
 #include <thread>
 
+OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, GeniusNode::Error, e )
+{
+    switch ( e )
+    {
+        case sgns::GeniusNode::Error::INSUFFICIENT_FUNDS:
+            return "Insufficient funds for the transaction";
+        case sgns::GeniusNode::Error::DATABASE_WRITE_ERROR:
+            return "Error writing data into the database";
+        case sgns::GeniusNode::Error::INVALID_TRANSACTION_HASH:
+            return "Input transaction hash is invalid";
+        case sgns::GeniusNode::Error::INVALID_CHAIN_ID:
+            return "Chain ID is invalid";
+        case sgns::GeniusNode::Error::INVALID_TOKEN_ID:
+            return "Token ID is invalid";
+        case sgns::GeniusNode::Error::TOKEN_ID_MISMATCH:
+            return "Informed Token ID doesn't match initialized ID";
+        case sgns::GeniusNode::Error::PROCESS_COST_ERROR:
+            return "The calculated Processing cost was negative";
+        case sgns::GeniusNode::Error::PROCESS_INFO_MISSING:
+            return "Processing information missing on JSON file";
+    }
+    return "Unknown error";
+}
+
 using namespace boost::multiprecision;
 
 namespace sgns
@@ -319,74 +343,64 @@ namespace sgns
         return boost::uuids::to_string( uuid );
     }
 
-    void GeniusNode::ProcessImage( const std::string &image_path )
+    outcome::result<void> GeniusNode::ProcessImage( const std::string &image_path )
     {
-        // std::cout << "---------------------------------------------------------------" << std::endl;
-        // std::cout << "Process Image?" << transaction_manager_->GetBalance() << std::endl;
-        // std::cout << "---------------------------------------------------------------" << std::endl;
         auto funds = GetProcessCost( image_path );
         if ( funds <= 0 )
         {
-            return;
+            return outcome::failure( Error::PROCESS_COST_ERROR );
         }
 
-        if ( transaction_manager_->GetBalance() >= funds )
+        if ( transaction_manager_->GetBalance() < funds )
         {
-            //processing_service_->StopProcessing();
-
-            SGProcessing::Task task;
-            //boost::uuids::uuid uuid = boost::uuids::random_generator()();
-            //boost::uuids::random_generator_pure gen;
-            //boost::uuids::uuid uuid = gen();
-            auto uuidstring = generate_uuid_with_ipfs_id( pubsub_->GetHost()->getId().toBase58() );
-            //std::cout << "CID STRING:    " << libp2p::multi::ContentIdentifierCodec::toString(imagesplit.GetPartCID(taskIdx)).value() << std::endl;
-            //task.set_ipfs_block_id(libp2p::multi::ContentIdentifierCodec::toString(imagesplit.GetPartCID(taskIdx)).value());
-            task.set_ipfs_block_id( uuidstring );
-
-            task.set_json_data( image_path );
-
-            task.set_random_seed( 0 );
-            task.set_results_channel( ( boost::format( "RESULT_CHANNEL_ID_%1%" ) % ( 1 ) ).str() );
-
-            rapidjson::Document document;
-            document.Parse( image_path.c_str() );
-            size_t           nSubTasks = 1;
-            rapidjson::Value inputArray;
-            if ( document.HasMember( "input" ) && document["input"].IsArray() )
-            {
-                inputArray = document["input"];
-                nSubTasks  = inputArray.Size();
-            }
-            else
-            {
-                std::cout << "This json lacks information" << std::endl;
-                return;
-            }
-            processing::ProcessTaskSplitter  taskSplitter;
-            std::list<SGProcessing::SubTask> subTasks;
-            for ( const auto &input : inputArray.GetArray() )
-            {
-                size_t                                     nChunks = input["chunk_count"].GetInt();
-                rapidjson::StringBuffer                    buffer;
-                rapidjson::Writer<rapidjson::StringBuffer> writer( buffer );
-
-                input.Accept( writer );
-                std::string inputAsString = buffer.GetString();
-                taskSplitter
-                    .SplitTask( task, subTasks, inputAsString, nChunks, false, pubsub_->GetHost()->getId().toBase58() );
-
-                //}
-                //imageindex++;
-            }
-
-            auto maybe_escrow_path = transaction_manager_->HoldEscrow( funds,
-                                                                       uint256_t{ std::string( dev_config_.Addr ) },
-                                                                       dev_config_.Cut,
-                                                                       uuidstring );
-
-            task.set_escrow_path( maybe_escrow_path.value() );
-            task_queue_->EnqueueTask( task, subTasks );
+            return outcome::failure( Error::INSUFFICIENT_FUNDS );
         }
+
+        SGProcessing::Task task;
+        auto               uuidstring = generate_uuid_with_ipfs_id( pubsub_->GetHost()->getId().toBase58() );
+
+        task.set_ipfs_block_id( uuidstring );
+        task.set_json_data( image_path );
+        task.set_random_seed( 0 );
+        task.set_results_channel( ( boost::format( "RESULT_CHANNEL_ID_%1%" ) % ( 1 ) ).str() );
+
+        rapidjson::Document document;
+        document.Parse( image_path.c_str() );
+        size_t           nSubTasks = 1;
+        rapidjson::Value inputArray;
+        if ( !document.HasMember( "input" ) && document["input"].IsArray() )
+        {
+            return outcome::failure( Error::PROCESS_INFO_MISSING );
+        }
+        inputArray = document["input"];
+        nSubTasks  = inputArray.Size();
+
+        processing::ProcessTaskSplitter  taskSplitter;
+        std::list<SGProcessing::SubTask> subTasks;
+        for ( const auto &input : inputArray.GetArray() )
+        {
+            size_t                                     nChunks = input["chunk_count"].GetInt();
+            rapidjson::StringBuffer                    buffer;
+            rapidjson::Writer<rapidjson::StringBuffer> writer( buffer );
+
+            input.Accept( writer );
+            std::string inputAsString = buffer.GetString();
+            taskSplitter
+                .SplitTask( task, subTasks, inputAsString, nChunks, false, pubsub_->GetHost()->getId().toBase58() );
+
+            //}
+            //imageindex++;
+        }
+
+        OUTCOME_TRY( ( auto &&, escrow_path ),
+                     transaction_manager_->HoldEscrow( funds,
+                                                       uint256_t{ std::string( dev_config_.Addr ) },
+                                                       dev_config_.Cut,
+                                                       uuidstring ) );
+
+        task.set_escrow_path( escrow_path );
+
+        return task_queue_->EnqueueTask( task, subTasks );
     }
 
     double GeniusNode::GetProcessCost( const std::string &json_data )
@@ -429,9 +443,13 @@ namespace sgns
         return std::max( cost, static_cast<double>( 1 ) );
     }
 
-    void GeniusNode::MintTokens( double amount, std::string transaction_hash, std::string chainid, std::string tokenid )
+    outcome::result<void> GeniusNode::MintTokens( double      amount,
+                                                  std::string transaction_hash,
+                                                  std::string chainid,
+                                                  std::string tokenid )
     {
         transaction_manager_->MintFunds( amount, transaction_hash, chainid, tokenid );
+        return outcome::success();
     }
 
     double GeniusNode::GetBalance()
@@ -465,12 +483,10 @@ namespace sgns
             task_queue_->CompleteTask( task_id, taskresult );
 
         } while ( 0 );
-
     }
 
     void GeniusNode::ProcessingError( const std::string &task_id )
     {
         //std::cout << "[" << account_->GetAddress<std::string>() << "] ERROR PROCESSING SUBTASK" << task_id << std::endl;
     }
-
 }
