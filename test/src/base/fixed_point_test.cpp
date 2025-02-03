@@ -3,18 +3,28 @@
 #include <vector>
 #include "base/fixed_point.hpp"
 
-// ======================== FixedPointParamTest ========================
+// ======================== FixedPointFromStringTests ========================
+
+/**
+ * @brief Struct to hold test parameters for FixedPointParamTest.
+ */
 struct FromStrParam_s
 {
-    std::string                       input;
-    uint64_t                          precision;
-    std::variant<uint64_t, std::errc> expected;
+    std::string                       input;     ///< Input string representing a fixed-point number.
+    uint64_t                          precision; ///< Precision level for conversion.
+    std::variant<uint64_t, std::errc> expected;  ///< Expected output, either a valid result or an error code.
 };
 
+/**
+ * @brief Parameterized test fixture for testing `fromString` function.
+ */
 class FixedPointParamTest : public ::testing::TestWithParam<FromStrParam_s>
 {
 };
 
+/**
+ * @test Tests the conversion of string to fixed-point representation.
+ */
 TEST_P( FixedPointParamTest, FromString )
 {
     auto test_case = GetParam();
@@ -38,10 +48,13 @@ TEST_P( FixedPointParamTest, FromString )
     }
 }
 
+/**
+ * @test Test suite for `fromString` function.
+ */
 INSTANTIATE_TEST_SUITE_P( FixedPointFromStringTests,
                           FixedPointParamTest,
                           ::testing::Values(
-                              // Success Cases
+                              // Valid cases
                               FromStrParam_s{ "123.456", 9ULL, 123456000000ULL },
                               FromStrParam_s{ "000123.00456000", 9ULL, 123004560000ULL },
                               FromStrParam_s{ "123", 9ULL, 123000000000ULL },
@@ -69,20 +82,29 @@ INSTANTIATE_TEST_SUITE_P( FixedPointFromStringTests,
                               FromStrParam_s{ ".", 9ULL, std::errc::invalid_argument },
                               FromStrParam_s{ "0.0000000001", 9ULL, std::errc::value_too_large } ) );
 
-// ======================== FixedPointMultiplySuccessTest ========================
+// ======================== FixedPointMultiplyTests ========================
 
+/**
+ * @brief Struct to hold test parameters for FixedPointMultiplyParamTest.
+ */
 struct MultiplyParam_s
 {
-    uint64_t                          a;
-    uint64_t                          b;
-    uint64_t                          precision;
-    std::variant<uint64_t, std::errc> expected;
+    uint64_t                          a;         ///< First operand.
+    uint64_t                          b;         ///< Second operand.
+    uint64_t                          precision; ///< Precision for multiplication.
+    std::variant<uint64_t, std::errc> expected;  ///< Expected result or error code.
 };
 
+/**
+ * @brief Parameterized test fixture for testing `multiply` function.
+ */
 class FixedPointMultiplyParamTest : public ::testing::TestWithParam<MultiplyParam_s>
 {
 };
 
+/**
+ * @test Tests multiplication of fixed-point numbers.
+ */
 TEST_P( FixedPointMultiplyParamTest, Multiply )
 {
     auto test_case = GetParam();
@@ -106,10 +128,13 @@ TEST_P( FixedPointMultiplyParamTest, Multiply )
     }
 }
 
+/**
+ * @test Test suite for `multiply` function.
+ */
 INSTANTIATE_TEST_SUITE_P( FixedPointMultiplyTests,
                           FixedPointMultiplyParamTest,
                           ::testing::Values(
-                              // Success Cases
+                              // Valid cases
                               MultiplyParam_s{ 4000000000ULL, 2000000000ULL, 9ULL, 8000000000ULL },
                               MultiplyParam_s{ 9223372036854775807ULL, 2000000000ULL, 9ULL, 18446744073709551614ULL },
                               MultiplyParam_s{ 0ULL, 1234567890ULL, 9ULL, 0ULL },
@@ -132,10 +157,16 @@ struct DivideParam_s
     std::variant<uint64_t, std::errc> expected;
 };
 
+/**
+ * @brief Parameterized test fixture for testing `divide` function.
+ */
 class FixedPointDivideParamTest : public ::testing::TestWithParam<DivideParam_s>
 {
 };
 
+/**
+ * @test Tests division of fixed-point numbers.
+ */
 TEST_P( FixedPointDivideParamTest, Divide )
 {
     auto test_case = GetParam();
@@ -159,6 +190,9 @@ TEST_P( FixedPointDivideParamTest, Divide )
     }
 }
 
+/**
+ * @test Test suite for `divide` function.
+ */
 INSTANTIATE_TEST_SUITE_P( FixedPointDivideTests,
                           FixedPointDivideParamTest,
                           ::testing::Values(
