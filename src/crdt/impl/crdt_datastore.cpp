@@ -340,7 +340,10 @@ namespace sgns::crdt
                 LOG_ERROR( "DecodeBroadcast: Failed to convert CID from string (error code "
                            << cidResult.error().value() << ")" )
             }
-            bCastHeads.push_back( cidResult.value() );
+            else {
+                bCastHeads.push_back(cidResult.value());
+            }
+            
         }
         return bCastHeads;
     }

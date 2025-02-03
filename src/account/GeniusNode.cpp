@@ -80,7 +80,7 @@ namespace sgns
         }
         std::cout << "Log Result: " << result.message << std::endl;
         libp2p::log::setLoggingSystem( logging_system );
-        libp2p::log::setLevelOfGroup( "SuperGeniusDemo", soralog::Level::TRACE );
+        libp2p::log::setLevelOfGroup( "SuperGeniusDemo", soralog::Level::ERROR_ );
 
         auto loggerGlobalDB = base::createLogger( "GlobalDB" );
         loggerGlobalDB->set_level( spdlog::level::off );
@@ -103,8 +103,6 @@ namespace sgns
         auto loggerRocksDB = base::createLogger( "rocksdb" );
         loggerRocksDB->set_level( spdlog::level::off );
 
-        auto loggerTM = base::createLogger( "TransactionManager" );
-        loggerTM->set_level( spdlog::level::off );
 
         auto logkad = base::createLogger( "Kademlia" );
         logkad->set_level( spdlog::level::off );
@@ -150,9 +148,8 @@ namespace sgns
             }
         }
 
-        auto pubsubKeyPath = ( boost::format( "SuperGNUSNode.TestNet.1a.02.%s/pubs_processor" ) %
-                               account_->GetAddress<std::string>() )
-                                 .str();
+        auto pubsubKeyPath =
+            ( boost::format( "SuperGNUSNode.TestNet.1a.03.%s/pubs_processor" ) % account_->GetAddress<std::string>() ).str();
 
         pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
             crdt::KeyPairFileStorage( write_base_path_ + pubsubKeyPath ).GetKeyPair().value() );
@@ -164,8 +161,8 @@ namespace sgns
 
         globaldb_ = std::make_shared<crdt::GlobalDB>(
             io_,
-            write_base_path_ +
-                ( boost::format( "SuperGNUSNode.TestNet.1a.02.%s" ) % account_->GetAddress<std::string>() ).str(),
+            ( boost::format( write_base_path_ + "SuperGNUSNode.TestNet.1a.03.%s" ) % account_->GetAddress<std::string>() )
+                .str(),
             graphsyncport,
             std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_, std::string( PROCESSING_CHANNEL ) ) );
 
@@ -201,7 +198,7 @@ namespace sgns
             io_,
             account_,
             std::make_shared<crypto::HasherImpl>(),
-            ( boost::format( write_base_path_ + "SuperGNUSNode.TestNet.1a.02.%s" ) %
+            ( boost::format( write_base_path_ + "SuperGNUSNode.TestNet.1a.03.%s" ) %
               account_->GetAddress<std::string>() )
                 .str(),
             pubsub_,
