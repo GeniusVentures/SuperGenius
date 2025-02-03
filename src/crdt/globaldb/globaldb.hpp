@@ -27,14 +27,36 @@ public:
         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> broadcastChannel,
         std::string gsaddresses = {});
 
-    outcome::result<void> Init(std::shared_ptr<CrdtOptions> crdtOptions);
+        /// Pair of key and value to be stored in CRDT
+        using DataPair = std::pair<HierarchicalKey, Buffer>;
 
-    /** Puts key-value pair to storage
-    * @param key
-    * @param value
-    * @return outcome::failure on error or success otherwise
-    */
-    outcome::result<void> Put(const HierarchicalKey& key, const Buffer& value);
+        /**
+         * @enum        Error
+         * @brief       Enumeration of error codes used in the proof classes.
+         */
+        enum class Error
+        {
+            ROCKSDB_IO = 0,             ///< RocksDB wasn't opened
+            IPFS_DB_NOT_CREATED,        ///< IPFS datastore not created
+            DAG_SYNCHER_NOT_LISTENING,  ///< DAG Syncher listen error
+            CRDT_DATASTORE_NOT_CREATED, ///< CRDT DataStore not created
+        };
+
+        outcome::result<void> Init( std::shared_ptr<CrdtOptions> crdtOptions );
+
+        /** Puts key-value pair to storage
+        * @param key The path in which the data will be stored
+        * @param value The data to be stored
+        * @return outcome::failure on error or success otherwise
+        */
+        outcome::result<void> Put( const HierarchicalKey &key, const Buffer &value );
+
+        /**
+         * @brief       Writes a batch of CRDT data all at once
+         * @param[in]   data_vector A set of crdt to be written in a single transaction
+         * @return      outcome::failure on error or success otherwise
+         */
+        outcome::result<void> Put( const std::vector<DataPair> &data_vector );
 
     /** Gets a value that corresponds to specified key.
     * @param key - value key
