@@ -12,6 +12,10 @@ target_link_libraries(prover_test
     Boost::unit_test_framework
 )
 
+if (MSVC)
+    target_compile_options(prover_test PUBLIC /GR-)
+endif()
+
 addtest(genius_proofs
     GeniusProofsTest.cpp
 )
