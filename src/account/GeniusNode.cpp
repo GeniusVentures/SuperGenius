@@ -450,7 +450,7 @@ namespace sgns
         auto result = sgns::fixed_point::divide( block_total_len, 2100000ULL );
         if ( !result )
         {
-            std::cout << "Error in division: " << result.error().message() << std::endl;
+            return 0;
         }
         else
         {
