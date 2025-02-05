@@ -34,6 +34,9 @@ jobs:
           - target: Android
             host: ubuntu-latest
             abi: arm64-v8a
+          - target: Android
+            host: ubuntu-latest
+            abi: armeabi-v7a
           - target: iOS
             host: macos-latest
     steps:
@@ -87,8 +90,12 @@ jobs:
         run: |
           mkdir thirdparty
           cd thirdparty
-
-          tag_name=${{matrix.target}}-${{steps.branch-name.outputs.THIRDPARTY_BRANCH}}-Release
+          
+          if [ '${{matrix.abi}}' ]; then
+              tag_name=${{matrix.target}}-${{matrix.abi}}-${{steps.branch-name.outputs.THIRDPARTY_BRANCH}}-Release
+          else
+              tag_name=${{matrix.target}}-${{steps.branch-name.outputs.THIRDPARTY_BRANCH}}-Release
+          fi
 
           gh release download ${tag_name} --repo GeniusVentures/thirdparty -p "*-lib.tar.gz"
 
@@ -105,8 +112,12 @@ jobs:
         run: |
           mkdir zkLLVM
           cd zkLLVM
-
-          tag_name=${{matrix.target}}-${{steps.zkllvm-branch-name.outputs.zkLLVM_BRANCH}}-Release
+          
+          if [ '${{matrix.abi}}' ]; then
+              tag_name=${{matrix.target}}-${{matrix.abi}}-${{steps.zkllvm-branch-name.outputs.zkLLVM_BRANCH}}-Release
+          else
+              tag_name=${{matrix.target}}-${{steps.zkllvm-branch-name.outputs.zkLLVM_BRANCH}}-Release
+          fi
 
           latest_tag=$(gh release list --repo GeniusVentures/zkLLVM --json tagName,publishedAt \
             --jq "[.[] | select(.tagName | test(\"${tag_name}-[a-f0-9]{7}\"))] | sort_by(.publishedAt) | reverse | .[0].tagName")
@@ -171,7 +182,7 @@ jobs:
 
       - name: Set build directory
         run: |
-          if ${{matrix.target == 'Android'}}; then
+          if [ '${{matrix.abi}}' ]; then
             BUILD_DIRECTORY=build/${{matrix.target}}/${{matrix.build-type}}/${{matrix.abi}}
           else
             BUILD_DIRECTORY=build/${{matrix.target}}/${{matrix.build-type}}
@@ -237,7 +248,7 @@ jobs:
         id: vars
         if: ${{ github.event_name == 'workflow_dispatch' }}
         run: |
-          if ${{matrix.target == 'Android'}}; then
+          if [ '${{matrix.abi}}' ]; then
             OS_NAME=${{matrix.target}}-${{matrix.abi}}
           else
             OS_NAME=${{matrix.target}}
