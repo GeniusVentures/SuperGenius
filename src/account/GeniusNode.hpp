@@ -70,10 +70,10 @@ namespace sgns
         void DHTInit();
         /**
          * @brief       Mints tokens by converting a string amount to fixed-point representation
-         * @param[in]   amount_str         Numeric string with up to 9 decimal places
+         * @param[in]   amount: Numeric value with amount in Minion Tokens (1e-9 GNUS Token)
          * @return      Outcome of mint token operation
          */
-        outcome::result<void> MintTokens( const std::string &amount_str,
+        outcome::result<void> MintTokens( uint64_t          amount,
                                           const std::string &transaction_hash,
                                           const std::string &chainid,
                                           const std::string &tokenid );
