@@ -28,7 +28,9 @@
 #include "account/GeniusAccount.hpp"
 #include "base/logger.hpp"
 #include "crypto/hasher.hpp"
+#ifdef _PROOF_ENABLED
 #include "proof/proto/SGProof.pb.h"
+#endif
 #include "processing/proto/SGProcessing.pb.h"
 #include "outcome/outcome.hpp"
 #include "primitives/common.hpp"

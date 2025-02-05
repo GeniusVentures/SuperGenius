@@ -48,8 +48,6 @@ target_link_libraries(sgns_account
     SGTransactionProto
     logger
     gnus_upnp
-    transfer_proof
-    processing_proof
     AsyncIOManager
     ${WIN_API_LIBRARY}
     ${USER_ENV_LIBRARY}
@@ -60,6 +58,14 @@ target_link_libraries(sgns_account
     rapidjson
     ${WIN_CRYPT_LIBRARY}
 )
+
+if (BUILD_WITH_PROOFS)
+    target_link_libraries(sgns_account
+    PRIVATE
+    transfer_proof
+    processing_proof
+    )
+endif()
 
 target_include_directories(
     sgns_account

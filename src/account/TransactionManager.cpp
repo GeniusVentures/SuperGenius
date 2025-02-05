@@ -18,8 +18,10 @@
 #include "crdt/globaldb/globaldb.hpp"
 #include "outcome/outcome.hpp"
 #include "primitives/block.hpp"
+#ifdef _PROOF_ENABLED
 #include "proof/TransferProof.hpp"
 #include "proof/ProcessingProof.hpp"
+#endif
 
 namespace sgns
 {
@@ -410,6 +412,7 @@ namespace sgns
 
     outcome::result<bool> TransactionManager::CheckProof( const std::shared_ptr<IGeniusTransactions> &tx )
     {
+        #ifdef _PROOF_ENABLED
         m_logger->debug(
             "Checking the proof in {}",
             GetNotificationPath( account_m->GetAddress<std::string>() ) + "proof/" + GetTransactionProofPath( tx ) );
@@ -421,6 +424,9 @@ namespace sgns
 
         //std::cout << " it has value with size  " << proof_data.size() << std::endl;
         return IBasicProof::VerifyFullProof( proof_data_vector );
+        #else
+        return true;
+        #endif
     }
 
     outcome::result<void> TransactionManager::CheckIncoming()

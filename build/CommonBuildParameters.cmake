@@ -321,11 +321,13 @@ set_target_properties(marshalling::crypto3_zk PROPERTIES
 set(zkLLVM_INCLUDE_DIR "${ZKLLVM_DIR}/zkLLVM/include")
 include_directories(${zkLLVM_INCLUDE_DIR})
 
-# circifier
-# set(LLVM_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/circifier/include")
-# set(LLVM_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/circifier/lib")
-set(LLVM_DIR "${ZKLLVM_DIR}/zkLLVM/lib/cmake/llvm")
-find_package(LLVM CONFIG REQUIRED)
+if (BUILD_WITH_PROOFS)
+    # circifier
+    # set(LLVM_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/circifier/include")
+    # set(LLVM_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/circifier/lib")
+    set(LLVM_DIR "${ZKLLVM_DIR}/zkLLVM/lib/cmake/llvm")
+    find_package(LLVM CONFIG REQUIRED)
+endif()
 
 # gnus_upnp
 set(gnus_upnp_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/gnus_upnp/include")
