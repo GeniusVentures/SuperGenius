@@ -24,6 +24,7 @@ jobs:
       matrix:
         target: [Android, iOS, OSX, Linux, Windows]
         build-type: [Release]
+        abi: [""]
         include:
           - target: Linux
             host: ubuntu-latest
@@ -34,11 +35,16 @@ jobs:
           - target: Android
             host: ubuntu-latest
             abi: arm64-v8a
+            build-type: Release
           - target: Android
             host: ubuntu-latest
             abi: armeabi-v7a
+            build-type: Release
           - target: iOS
             host: macos-latest
+        exclude:
+            - target: Android
+              abi: ""
     steps:
       - name: Checkout SuperGenius repository
         uses: actions/checkout@v4
@@ -134,6 +140,8 @@ jobs:
           for library in *.tar.gz; do
               tar  --exclude='*bin/assigner' --exclude='*bin/clang-zkllvm' --exclude='*bin/llvm-link-zkllvm' --exclude='*bin/transpiler' -xzf "${library}"
           done
+          echo "Checking zkLLVM directory structure..."
+          ls -R
         shell: bash
 
       - name: Configure Linux host
@@ -193,7 +201,7 @@ jobs:
       - name: Configure CMake for Android
         if: ${{ matrix.target == 'Android'}}
         working-directory: ${{github.workspace}}/SuperGenius
-        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DANDROID_ABI=${{matrix.abi}} -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty -DZKLLVM_DIR=${{github.workspace}}/zkLLVM
+        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DANDROID_ABI=${{matrix.abi}} -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty -DZKLLVM_DIR=${{github.workspace}}/zkLLVM/zkLLVM/${BUILD_DIRECTORY}
 
       - name: Configure CMake for Mac x86
         if: ${{ matrix.target == 'OSX'}}
@@ -229,17 +237,14 @@ jobs:
         if: ${{ github.event_name == 'workflow_dispatch' }}
         run: |
           shopt -s extglob
-          rm -rf !(build) .[!.]* ..?*
-          cd build
-          rm -rf !(${{matrix.target}}) .[!.]* ..?*
-          cd ${{matrix.target}}
-          rm -rf !(Release) .[!.]* ..?*
-          cd Release
-          if ${{matrix.target == 'Android'}}; then
-            rm -rf !(${{matrix.abi}}) .[!.]* ..?*
-            cd ${{matrix.abi}}
-          fi
-          rm -rf !(SuperGenius) .[!.]* ..?*
+
+          IFS='/' read -ra dirs <<< "$BUILD_DIRECTORY"
+
+          for dir in "${dirs[@]}"; do
+            rm -rf !($dir) .[!.]* ..?*
+            cd $dir
+          done
+
           cd $GITHUB_WORKSPACE
           tar -czvf SuperGenius.tar.gz SuperGenius/
         shell: bash
