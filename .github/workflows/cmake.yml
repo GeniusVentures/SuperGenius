@@ -24,6 +24,7 @@ jobs:
       matrix:
         target: [Android, iOS, OSX, Linux, Windows]
         build-type: [Release]
+        abi: [""]
         include:
           - target: Linux
             host: ubuntu-latest
@@ -39,6 +40,9 @@ jobs:
             abi: armeabi-v7a
           - target: iOS
             host: macos-latest
+        exclude:
+            - target: Android
+              abi: ""
     steps:
       - name: Checkout SuperGenius repository
         uses: actions/checkout@v4
@@ -229,17 +233,14 @@ jobs:
         if: ${{ github.event_name == 'workflow_dispatch' }}
         run: |
           shopt -s extglob
-          rm -rf !(build) .[!.]* ..?*
-          cd build
-          rm -rf !(${{matrix.target}}) .[!.]* ..?*
-          cd ${{matrix.target}}
-          rm -rf !(Release) .[!.]* ..?*
-          cd Release
-          if ${{matrix.target == 'Android'}}; then
-            rm -rf !(${{matrix.abi}}) .[!.]* ..?*
-            cd ${{matrix.abi}}
-          fi
-          rm -rf !(SuperGenius) .[!.]* ..?*
+
+          IFS='/' read -ra dirs <<< "$BUILD_DIRECTORY"
+
+          for dir in "${dirs[@]}"; do
+            rm -rf !($dir) .[!.]* ..?*
+            cd $dir
+          done
+
           cd $GITHUB_WORKSPACE
           tar -czvf SuperGenius.tar.gz SuperGenius/
         shell: bash
