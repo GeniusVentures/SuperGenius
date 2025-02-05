@@ -329,7 +329,7 @@ namespace sgns::crdt
         if ( !m_crdtDatastore )
         {
             m_logger->error( "CRDT datastore is not initialized yet" );
-            return outcome::failure( Error::CRDT_DATASTORE_NOT_CREATED );
+            return outcome::failure( boost::system::error_code{}  );
         }
 
         return m_crdtDatastore->PutKey( key, value );
@@ -340,7 +340,7 @@ namespace sgns::crdt
         if ( !m_crdtDatastore )
         {
             m_logger->error( "CRDT datastore is not initialized yet" );
-            return outcome::failure( Error::CRDT_DATASTORE_NOT_CREATED );
+            return outcome::failure( boost::system::error_code{} );
         }
         AtomicTransaction batch( m_crdtDatastore );
 
