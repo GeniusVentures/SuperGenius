@@ -1,8 +1,6 @@
 
 add_proto_library(SGTransactionProto proto/SGTransaction.proto)
 
-set(BUILD_WITH_PROOFS OFF CACHE BOOL "Whether proofs are being generated/verified or not")
-
 if (BUILD_WITH_PROOFS)
     add_compile_definitions(_PROOF_ENABLED)
 endif()
