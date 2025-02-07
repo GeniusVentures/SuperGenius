@@ -284,6 +284,9 @@ namespace sgns::crdt
     * @return outcome::success on success or outcome::failure otherwise
     */
    outcome::result<void> DataStoreSync(const std::vector<HierarchicalKey>& aKeyList);
+
+   void PrintDataStore();
+
   private:
     CrdtSet() = default;
 
