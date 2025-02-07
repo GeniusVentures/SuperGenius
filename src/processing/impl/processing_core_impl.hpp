@@ -83,7 +83,7 @@ namespace sgns::processing
         * @param url - ipfs gateway url to get from
         * @param results - reference to data pair to insert into.
         */
-        void GetSubCidForProc(std::shared_ptr<boost::asio::io_context> ioc, std::string url, std::vector<char>& results) override;
+        void GetSubCidForProc( std::string url, std::vector<char>& results) override;
 
         std::vector<size_t> m_chunkResulHashes;
         std::vector<size_t> m_validationChunkHashes;

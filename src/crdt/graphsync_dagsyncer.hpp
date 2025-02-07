@@ -37,6 +37,10 @@ namespace sgns::crdt
     GraphsyncDAGSyncer( std::shared_ptr<IpfsDatastore> service,
                         std::shared_ptr<Graphsync>     graphsync,
                         std::shared_ptr<libp2p::Host>  host );
+    ~GraphsyncDAGSyncer()
+    {
+        graphsync_->stop();
+    }
 
     outcome::result<void> Listen(const Multiaddress& listen_to);
 
