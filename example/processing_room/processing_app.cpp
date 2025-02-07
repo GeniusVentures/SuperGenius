@@ -105,6 +105,7 @@ namespace
         {
             m_tasks.push_back( task );
             m_subTasks.emplace( task.ipfs_block_id(), subTasks );
+            return outcome::failure(boost::system::error_code{});
         }
 
         bool GetSubTasks( const std::string &taskId, std::list<SGProcessing::SubTask> &subTasks ) override
