@@ -1,6 +1,9 @@
+#include <cstdint>      
+#include <system_error> 
 #include <gtest/gtest.h>
 #include <string>
 #include <vector>
+#include <variant>
 #include "base/fixed_point.hpp"
 
 // ======================== FixedPointFromStringTests ========================
