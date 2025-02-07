@@ -19,7 +19,7 @@ namespace sgns::processing
 {
     /** Distributed subtask queue implementation
 */
-    class ProcessingSubTaskQueueManager
+    class ProcessingSubTaskQueueManager : public std::enable_shared_from_this<ProcessingSubTaskQueueManager> 
     {
     public:
         using SubTaskGrabbedCallback = std::function<void( boost::optional<const SGProcessing::SubTask &> )>;
