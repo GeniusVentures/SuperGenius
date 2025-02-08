@@ -147,7 +147,7 @@ void CreateProcessingTransaction( const std::vector<std::string> &args, sgns::Ge
         boost::asio::io_context::executor_type                                   executor = ioc->get_executor();
         boost::asio::executor_work_guard<boost::asio::io_context::executor_type> workGuard(executor);
         FileManager::GetInstance().InitializeSingletons();
-        auto data = FileManager::GetInstance().LoadASync(procxml_loc, false, false,  [ioc](const sgns::AsyncError::CustomResult& status) {
+        auto data = FileManager::GetInstance().LoadASync(procxml_loc, false, false, ioc, [ioc](const sgns::AsyncError::CustomResult& status) {
             if (status.has_value())
             {
                 std::cout << "Success: " << status.value().message << std::endl;
@@ -330,9 +330,9 @@ int main( int argc, char *argv[] )
     
     //Inputs
 
-    sgns::GeniusNode node_instance( DEV_CONFIG, "deadcafedeadcafedeadcafedeadcafedeadcafedeadcafedeadcafedeadcafe", true, true );
+    sgns::GeniusNode node_instance( DEV_CONFIG, "deadbeefdeadbeefdeadbeefdeadbeefcafecafedeadbeefdeadbeefdeadbeef", true, true );
 
-    //std::thread processing_thread(periodic_processing, std::ref(node_instance));
+    std::thread processing_thread(periodic_processing, std::ref(node_instance));
     std::cout << "Insert \"process\", the image and the number of tokens to be" << std::endl;
     redraw_prompt();
     //while ( !finished )
@@ -343,8 +343,8 @@ int main( int argc, char *argv[] )
     {
         input_thread.join();
     }
-    //if (processing_thread.joinable()) {
-    //    processing_thread.join();
-    //}
+    if (processing_thread.joinable()) {
+        processing_thread.join();
+    }
     return 0;
 }

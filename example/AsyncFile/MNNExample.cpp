@@ -97,17 +97,17 @@ int main(int argc, char **argv)
 
     //auto ioc = std::make_shared<boost::asio::io_context>();
     
+
+    libp2p::protocol::kademlia::Config kademlia_config;
+    kademlia_config.randomWalk.enabled = true;
+    kademlia_config.randomWalk.interval = std::chrono::seconds(300);
+    kademlia_config.requestConcurency = 20;
     //auto injector = libp2p::injector::makeHostInjector();
-    //libp2p::protocol::kademlia::Config kademlia_config;
-    //kademlia_config.randomWalk.enabled = true;
-    //kademlia_config.randomWalk.interval = std::chrono::seconds(300);
-    //kademlia_config.requestConcurency = 20;
-    ////auto injector = libp2p::injector::makeHostInjector();
-    //auto injector = libp2p::injector::makeHostInjector(
-    //    // libp2p::injector::useKeyPair(kp), // Use predefined keypair
-    //    libp2p::injector::makeKademliaInjector(
-    //        libp2p::injector::useKademliaConfig(kademlia_config)));
-    //auto ioc = injector.create<std::shared_ptr<boost::asio::io_context>>();
+    auto injector = libp2p::injector::makeHostInjector(
+       // libp2p::injector::useKeyPair(kp), // Use predefined keypair
+       libp2p::injector::makeKademliaInjector(
+           libp2p::injector::useKademliaConfig(kademlia_config)));
+    auto ioc = injector.create<std::shared_ptr<boost::asio::io_context>>();
 
     //// Create a work guard to keep the io_context alive
     //boost::asio::io_context::executor_type executor = ioc->get_executor();
@@ -120,7 +120,7 @@ int main(int argc, char **argv)
     for (size_t i = 0; i < file_names.size(); i++)
     {
         std::cout << "LoadASync: " << file_names[i] << std::endl;
-        auto data = FileManager::GetInstance().LoadASync(file_names[i], false, true, [](const sgns::AsyncError::CustomResult& status)
+        auto data = FileManager::GetInstance().LoadASync(file_names[i], false, true, ioc,[ioc](const sgns::AsyncError::CustomResult& status)
         {
                 if (status.has_value())
                 {
@@ -150,7 +150,7 @@ int main(int argc, char **argv)
     //std::thread([ioc]() {
     //    ioc->run();
     //    }).detach();
-    FileManager::GetInstance().Start();
+
 
     return 0;
 }

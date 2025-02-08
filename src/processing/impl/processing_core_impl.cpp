@@ -84,31 +84,46 @@ namespace sgns::processing
         return result;
     }
 
-#include <condition_variable>
-#include <mutex>
-
     std::shared_ptr<std::pair<std::vector<char>, std::vector<char>>> ProcessingCoreImpl::GetCidForProc(
-        std::string json_data, std::string base_json)
+        std::string json_data,
+        std::string base_json )
     {
+        //ASIO for Async, should probably be made to use the main IO but this class doesn't have it
+        libp2p::protocol::kademlia::Config kademlia_config;
+        kademlia_config.randomWalk.enabled  = true;
+        kademlia_config.randomWalk.interval = std::chrono::seconds( 300 );
+        kademlia_config.requestConcurency   = 20;
+        auto injector                       = libp2p::injector::makeHostInjector(
+            libp2p::injector::makeKademliaInjector( libp2p::injector::useKademliaConfig( kademlia_config ) ) );
+        auto ioc = injector.create<std::shared_ptr<boost::asio::io_context>>();
+
+        boost::asio::io_context::executor_type                                   executor = ioc->get_executor();
+        boost::asio::executor_work_guard<boost::asio::io_context::executor_type> workGuard( executor );
+
         auto mainbuffers = std::make_shared<std::pair<std::vector<char>, std::vector<char>>>();
 
-        if (!this->SetProcessingTypeFromJson(base_json))
+        //Set processor or fail.
+        if ( !this->SetProcessingTypeFromJson( base_json ) )
         {
-            std::cerr << "No processor available for this type: " << base_json << std::endl;
+            std::cerr << "No processor available for this type:" << base_json << std::endl;
             return mainbuffers;
         }
 
-        // Parse JSON to extract URLs
-        rapidjson::Document base_document;
-        base_document.Parse(base_json.c_str());
+        //Parse json to look for model/image
+        rapidjson::Document document;
+        document.Parse( json_data.c_str() );
 
-        std::string baseUrl;
-        if (base_document.HasMember("data") && base_document["data"].IsObject())
+        rapidjson::Document base_document;
+        base_document.Parse( base_json.c_str() );
+
+        std::string baseUrl = "";
+        if ( base_document.HasMember( "data" ) && base_document["data"].IsObject() )
         {
-            const auto& input = base_document["data"];
-            if (input.HasMember("URL") && input["URL"].IsString())
+            const auto &input = base_document["data"];
+            if ( input.HasMember( "URL" ) && input["URL"].IsString() )
             {
                 baseUrl = input["URL"].GetString();
+                std::cout << "Base URL: " << baseUrl << std::endl;
             }
             else
             {
@@ -116,14 +131,16 @@ namespace sgns::processing
                 return mainbuffers;
             }
         }
+        std::string modelFile = "";
 
-        std::string modelFile;
-        if (base_document.HasMember("model") && base_document["model"].IsObject())
+        // Extract model name
+        if ( base_document.HasMember( "model" ) && base_document["model"].IsObject() )
         {
-            const auto& model = base_document["model"];
-            if (model.HasMember("file") && model["file"].IsString())
+            const auto &model = base_document["model"];
+            if ( model.HasMember( "file" ) && model["file"].IsString() )
             {
                 modelFile = model["file"].GetString();
+                std::cout << "Model File: " << modelFile << std::endl;
             }
             else
             {
@@ -132,13 +149,12 @@ namespace sgns::processing
             }
         }
 
-        rapidjson::Document document;
-        document.Parse(json_data.c_str());
-
-        std::string image;
-        if (document.HasMember("image") && document["image"].IsString())
+        //std::vector<std::pair<std::string, std::string>> imageresults;
+        std::string image = "";
+        if ( document.HasMember( "image" ) && document["image"].IsString() )
         {
             image = document["image"].GetString();
+            std::cout << "Image File: " << image << std::endl;
         }
         else
         {
@@ -146,88 +162,30 @@ namespace sgns::processing
             return mainbuffers;
         }
 
+        //Init Loaders
         FileManager::GetInstance().InitializeSingletons();
+        //Get Model
+        string modelURL = baseUrl + modelFile;
+        GetSubCidForProc( ioc, modelURL, mainbuffers->first );
 
-        // Synchronization variables
-        std::mutex mutex;
-        std::condition_variable cv;
-        bool modelLoaded = false;
-        bool imageLoaded = false;
+        //Get Image, TODO: Update to grab multiple files if needed
+        //string imageUrl = "https://ipfs.filebase.io/ipfs/" + cid + "/" + inputImage;
+        //for (const auto& result : imageresults) {
+        //    const auto& [url, image] = result;
+        //    std::string fullUrl = url + image;
+        //    GetSubCidForProc(ioc, fullUrl, mainbuffers);
+        //}
+        string imageUrl = baseUrl + image;
+        GetSubCidForProc( ioc, imageUrl, mainbuffers->second );
+        //Run IO
+        ioc->reset();
+        ioc->run();
 
-        // Load Model File Asynchronously
-        std::string modelURL = baseUrl + modelFile;
-        FileManager::GetInstance().LoadASync(
-            modelURL, false, false,
-            [](const sgns::AsyncError::CustomResult& status)
-            {
-                if (status.has_value())
-                {
-                    std::cout << "Model load success: " << status.value().message << std::endl;
-                }
-                else
-                {
-                    std::cout << "Model load error: " << status.error() << std::endl;
-                }
-            },
-            [&mainbuffers, &mutex, &cv, &modelLoaded](std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers)
-            {
-                if (!buffers->second.empty())
-                {
-                    mainbuffers->first = buffers->second[0]; // Store model data
-                }
-
-                // Mark model as loaded and notify waiting thread
-                {
-                    std::lock_guard<std::mutex> lock(mutex);
-                    modelLoaded = true;
-                }
-                cv.notify_one();
-            },
-            "file");
-
-        // Load Image File Asynchronously
-        std::string imageUrl = baseUrl + image;
-        FileManager::GetInstance().LoadASync(
-            imageUrl, false, false,
-            [](const sgns::AsyncError::CustomResult& status)
-            {
-                if (status.has_value())
-                {
-                    std::cout << "Image load success: " << status.value().message << std::endl;
-                }
-                else
-                {
-                    std::cout << "Image load error: " << status.error() << std::endl;
-                }
-            },
-            [&mainbuffers, &mutex, &cv, &imageLoaded](std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers)
-            {
-                if (!buffers->second.empty())
-                {
-                    mainbuffers->second = buffers->second[0]; // Store image data
-                }
-
-                // Mark image as loaded and notify waiting thread
-                {
-                    std::lock_guard<std::mutex> lock(mutex);
-                    imageLoaded = true;
-                }
-                cv.notify_one();
-            },
-            "file");
-        FileManager::GetInstance().Start();
-        // Wait until both operations complete
-        {
-            std::unique_lock<std::mutex> lock(mutex);
-            cv.wait(lock, [&] { return modelLoaded && imageLoaded; });
-        }
-
-        // Both model and image data are now loaded
         return mainbuffers;
     }
 
-
-    void ProcessingCoreImpl::GetSubCidForProc( std::string                              url,
+    void ProcessingCoreImpl::GetSubCidForProc( std::shared_ptr<boost::asio::io_context> ioc,
+                                               std::string                              url,
                                                std::vector<char>                       &results )
     {
         //std::pair<std::vector<std::string>, std::vector<std::vector<char>>> results;
@@ -235,6 +193,7 @@ namespace sgns::processing
             url,
             false,
             false,
+            ioc,
             []( const sgns::AsyncError::CustomResult &status )
             {
                 if ( status.has_value() )

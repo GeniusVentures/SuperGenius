@@ -43,7 +43,7 @@ public:
     * @param url - ipfs gateway url to get from
     * @param results - reference to data pair to insert into.
     */
-    virtual void GetSubCidForProc(std::string url, std::vector<char>& results) = 0;
+    virtual void GetSubCidForProc(std::shared_ptr<boost::asio::io_context> ioc, std::string url, std::vector<char>& results) = 0;
 };
 
 } // namespace sgns::processing

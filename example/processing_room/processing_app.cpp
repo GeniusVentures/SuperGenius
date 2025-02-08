@@ -73,7 +73,7 @@ namespace
             return nullptr;
         }
 
-        void GetSubCidForProc( std::string                              url,
+        void GetSubCidForProc( std::shared_ptr<boost::asio::io_context> ioc, std::string                              url,
                                std::vector<char>                       &results ) override
         {
             return;
