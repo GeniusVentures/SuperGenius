@@ -61,10 +61,10 @@ namespace sgns
         std::vector<std::vector<uint8_t>> GetOutTransactions() const;
         std::vector<std::vector<uint8_t>> GetInTransactions() const;
 
-        bool TransferFunds( double amount, const uint256_t &destination );
+        bool TransferFunds( double amount, const std::string &destination );
         void MintFunds( double amount, std::string transaction_hash, std::string chainid, std::string tokenid );
         outcome::result<std::string> HoldEscrow( double             amount,
-                                                 const uint256_t   &dev_addr,
+                                                 const std::string &dev_addr,
                                                  float              peers_cut,
                                                  const std::string &job_id );
         outcome::result<void> PayEscrow( const std::string &escrow_path, const SGProcessing::TaskResult &taskresult );
@@ -82,7 +82,7 @@ namespace sgns
         SGTransaction::DAGStruct FillDAGStruct( std::string transaction_hash = "" ) const;
         outcome::result<void>    SendTransaction();
         std::string              GetTransactionPath( IGeniusTransactions &element );
-        std::string              GetTransactionProofPath( IGeniusTransactions& element );
+        std::string              GetTransactionProofPath( IGeniusTransactions &element );
         std::string              GetNotificationPath( const std::string &destination );
 
         outcome::result<std::shared_ptr<IGeniusTransactions>> FetchTransaction(

@@ -18,7 +18,7 @@ namespace sgns
     public:
         static EscrowTransaction New( UTXOTxParameters         params,
                                       double                   amount,
-                                      uint256_t                dev_addr,
+                                      std::string              dev_addr,
                                       float                    peers_cut,
                                       SGTransaction::DAGStruct dag );
 
@@ -26,8 +26,8 @@ namespace sgns
 
         ~EscrowTransaction() override = default;
 
-        std::vector<uint8_t>                      SerializeByteVector() override;
-        uint64_t                                  GetNumChunks() const;
+        std::vector<uint8_t> SerializeByteVector() override;
+        uint64_t             GetNumChunks() const;
 
         std::string GetTransactionSpecificPath() override
         {
@@ -39,7 +39,7 @@ namespace sgns
             return utxo_params_;
         }
 
-        uint256_t GetDevAddress() const
+        std::string GetDevAddress() const
         {
             return dev_addr_;
         }
@@ -57,13 +57,13 @@ namespace sgns
     private:
         EscrowTransaction( UTXOTxParameters         params,
                            double                   amount,
-                           uint256_t                dev_addr,
+                           std::string              dev_addr,
                            float                    peers_cut,
                            SGTransaction::DAGStruct dag );
 
         UTXOTxParameters utxo_params_;
-        double         amount_;
-        uint256_t        dev_addr_;
+        double           amount_;
+        std::string      dev_addr_;
         float            peers_cut_;
 
         /**

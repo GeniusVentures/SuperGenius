@@ -103,7 +103,6 @@ namespace sgns
         auto loggerRocksDB = base::createLogger( "rocksdb" );
         loggerRocksDB->set_level( spdlog::level::off );
 
-
         auto logkad = base::createLogger( "Kademlia" );
         logkad->set_level( spdlog::level::off );
 
@@ -122,7 +121,7 @@ namespace sgns
         auto tokenid = dev_config_.TokenID;
 
         auto pubsubport    = GenerateRandomPort( base_port,
-                                              account_->GetAddress<std::string>() + std::to_string( tokenid ) );
+                                              account_->GetAddress() + std::to_string( tokenid ) );
         auto graphsyncport = pubsubport + 10;
 
         std::vector<std::string> addresses;
@@ -148,8 +147,9 @@ namespace sgns
             }
         }
 
-        auto pubsubKeyPath =
-            ( boost::format( "SuperGNUSNode.TestNet.1a.03.%s/pubs_processor" ) % account_->GetAddress<std::string>() ).str();
+        auto pubsubKeyPath = ( boost::format( "SuperGNUSNode.TestNet.1a.03.%s/pubs_processor" ) %
+                               account_->GetAddress() )
+                                 .str();
 
         pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
             crdt::KeyPairFileStorage( write_base_path_ + pubsubKeyPath ).GetKeyPair().value() );
@@ -161,7 +161,8 @@ namespace sgns
 
         globaldb_ = std::make_shared<crdt::GlobalDB>(
             io_,
-            ( boost::format( write_base_path_ + "SuperGNUSNode.TestNet.1a.03.%s" ) % account_->GetAddress<std::string>() )
+            ( boost::format( write_base_path_ + "SuperGNUSNode.TestNet.1a.03.%s" ) %
+              account_->GetAddress() )
                 .str(),
             graphsyncport,
             std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_, std::string( PROCESSING_CHANNEL ) ) );
@@ -190,7 +191,7 @@ namespace sgns
             [this]( const std::string &var, const SGProcessing::TaskResult &taskresult )
             { ProcessingDone( var, taskresult ); }, //
             [this]( const std::string &var ) { ProcessingError( var ); },
-            account_->GetAddress<std::string>() );
+            account_->GetAddress() );
         processing_service_->SetChannelListRequestTimeout( boost::posix_time::milliseconds( 3000 ) );
 
         transaction_manager_ = std::make_shared<TransactionManager>(
@@ -199,7 +200,7 @@ namespace sgns
             account_,
             std::make_shared<crypto::HasherImpl>(),
             ( boost::format( write_base_path_ + "SuperGNUSNode.TestNet.1a.03.%s" ) %
-              account_->GetAddress<std::string>() )
+              account_->GetAddress() )
                 .str(),
             pubsub_,
             upnp,
@@ -389,11 +390,9 @@ namespace sgns
             //imageindex++;
         }
 
-        OUTCOME_TRY( ( auto &&, escrow_path ),
-                     transaction_manager_->HoldEscrow( funds,
-                                                       uint256_t{ std::string( dev_config_.Addr ) },
-                                                       dev_config_.Cut,
-                                                       uuidstring ) );
+        OUTCOME_TRY(
+            ( auto &&, escrow_path ),
+            transaction_manager_->HoldEscrow( funds, std::string( dev_config_.Addr ), dev_config_.Cut, uuidstring ) );
 
         task.set_escrow_path( escrow_path );
 
@@ -456,7 +455,7 @@ namespace sgns
 
     void GeniusNode::ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult )
     {
-        std::cout << "[" << account_->GetAddress<std::string>() << "] SUCCESS PROCESSING TASK " << task_id << std::endl;
+        std::cout << "[" << account_->GetAddress() << "] SUCCESS PROCESSING TASK " << task_id << std::endl;
         do
         {
             if ( task_queue_->IsTaskCompleted( task_id ) )
@@ -484,6 +483,6 @@ namespace sgns
 
     void GeniusNode::ProcessingError( const std::string &task_id )
     {
-        //std::cout << "[" << account_->GetAddress<std::string>() << "] ERROR PROCESSING SUBTASK" << task_id << std::endl;
+        //std::cout << "[" << account_->GetAddress() << "] ERROR PROCESSING SUBTASK" << task_id << std::endl;
     }
 }

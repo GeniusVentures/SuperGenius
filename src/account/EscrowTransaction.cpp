@@ -15,7 +15,7 @@ namespace sgns
 {
     EscrowTransaction::EscrowTransaction( UTXOTxParameters         params,
                                           double                   amount,
-                                          uint256_t                dev_addr,
+                                          std::string              dev_addr,
                                           float                    peers_cut,
                                           SGTransaction::DAGStruct dag ) :
         IGeniusTransactions( "escrow", SetDAGWithType( std::move( dag ), "escrow" ) ),
@@ -28,7 +28,7 @@ namespace sgns
 
     EscrowTransaction EscrowTransaction::New( UTXOTxParameters         params,
                                               double                   amount,
-                                              uint256_t                dev_addr,
+                                              std::string                dev_addr,
                                               float                    peers_cut,
                                               SGTransaction::DAGStruct dag )
     {
@@ -54,10 +54,10 @@ namespace sgns
         {
             SGTransaction::TransferOutput *output_proto = utxo_proto_params->add_outputs();
             output_proto->set_encrypted_amount( output.encrypted_amount );
-            output_proto->set_dest_addr( output.dest_address.str() );
+            output_proto->set_dest_addr( output.dest_address );
         }
         tx_struct.set_amount( amount_ );
-        tx_struct.set_dev_addr( dev_addr_.str() );
+        tx_struct.set_dev_addr( dev_addr_ );
         tx_struct.set_peers_cut( peers_cut_ );
         size_t               size = tx_struct.ByteSizeLong();
         std::vector<uint8_t> serialized_proto( size );
@@ -91,15 +91,14 @@ namespace sgns
         {
             const SGTransaction::TransferOutput &output_proto = utxo_proto_params->outputs( i );
 
-            OutputDestInfo curr{ output_proto.encrypted_amount(), uint256_t{ output_proto.dest_addr() } };
+            OutputDestInfo curr{ output_proto.encrypted_amount(),  output_proto.dest_addr()  };
             outputs.push_back( curr );
         }
         double    amount    = tx_struct.amount();
         float     peers_cut = tx_struct.peers_cut();
-        uint256_t dev_addr( tx_struct.dev_addr() );
         return std::make_shared<EscrowTransaction>( EscrowTransaction( UTXOTxParameters{ inputs, outputs },
                                                                        amount,
-                                                                       dev_addr,
+                                                                       tx_struct.dev_addr(),
                                                                        peers_cut,
                                                                        tx_struct.dag_struct() ) );
     }

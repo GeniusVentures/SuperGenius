@@ -60,7 +60,7 @@ namespace sgns
 
         std::string GetTransactionFullPath()
         {
-            boost::format full_path( GetSrcAddress<std::string>() + "/tx/" + GetTransactionSpecificPath() + "/%llu" );
+            boost::format full_path( GetSrcAddress() + "/tx/" + GetTransactionSpecificPath() + "/%llu" );
             full_path % dag_st.nonce();
 
             return full_path.str();
@@ -68,29 +68,19 @@ namespace sgns
 
         std::string GetProofFullPath()
         {
-            boost::format full_path( GetSrcAddress<std::string>() + "/proof" + "/%llu" );
+            boost::format full_path( GetSrcAddress() + "/proof" + "/%llu" );
             full_path % dag_st.nonce();
 
             return full_path.str();
         }
 
-        template <typename T>
-        T GetSrcAddress() const;
-
-        template <>
-        std::string GetSrcAddress<std::string>() const
+        std::string GetSrcAddress() const
         {
             //std::string address(bytes_data.begin(), bytes_data.end());
             //std::ostringstream oss;
             //oss << std::hex << src_address;
 
             return dag_st.source_addr();
-        }
-
-        template <>
-        uint256_t GetSrcAddress<uint256_t>() const
-        {
-            return uint256_t{ dag_st.source_addr() };
         }
 
         /**

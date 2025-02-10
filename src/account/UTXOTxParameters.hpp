@@ -30,8 +30,8 @@ namespace sgns
 
     struct OutputDestInfo
     {
-        double    encrypted_amount; ///< El Gamal encrypted amount
-        uint256_t dest_address;     ///< Destination node address
+        double      encrypted_amount; ///< El Gamal encrypted amount
+        std::string dest_address;     ///< Destination node address
     };
 
     struct UTXOTxParameters
@@ -47,13 +47,13 @@ namespace sgns
         static outcome::result<UTXOTxParameters> create( const std::vector<GeniusUTXO>          &utxo_pool,
                                                          const KeyGenerator::ElGamal::PublicKey &src_address,
                                                          double                                  amount,
-                                                         const uint256_t                        &dest_address,
+                                                         std::string                             dest_address,
                                                          std::string                             signature = "" )
         {
             UTXOTxParameters instance( utxo_pool,
                                        src_address,
                                        RoundTo5Digits( amount ),
-                                       dest_address,
+                                       std::move( dest_address ),
                                        std::move( signature ) );
 
             if ( !instance.inputs_.empty() )
@@ -101,11 +101,11 @@ namespace sgns
         UTXOTxParameters( const std::vector<GeniusUTXO>          &utxo_pool,
                           const KeyGenerator::ElGamal::PublicKey &src_address,
                           double                                  amount,
-                          const uint256_t                        &dest_address,
+                          std::string                             dest_address,
                           std::string                             signature ) :
             UTXOTxParameters( utxo_pool,
                               src_address,
-                              { OutputDestInfo{ RoundTo5Digits( amount ), dest_address } },
+                              { OutputDestInfo{ RoundTo5Digits( amount ), std::move( dest_address ) } },
                               std::move( signature ) )
         {
         }

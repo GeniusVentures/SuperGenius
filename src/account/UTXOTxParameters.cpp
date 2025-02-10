@@ -46,7 +46,6 @@ sgns::UTXOTxParameters::UTXOTxParameters( const std::vector<GeniusUTXO>         
     if ( remain < epsilon )
     {
         double change( std::abs( remain ) );
-        auto   str_address = src_address.public_key_value.str();
-        outputs_.push_back( { change, uint256_t( str_address ) } );
+        outputs_.push_back( { change,  src_address.public_key_value.str()  } );
     }
 }

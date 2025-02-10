@@ -57,8 +57,7 @@ namespace sgns
             ctx_m,
             ( boost::format( base_path_m + "_out" ) ).str(),
             base_port_m,
-            std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_m,
-                                                              account_m->GetAddress<std::string>() + "out" ) );
+            std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_m, account_m->GetAddress() + "out" ) );
 
         used_ports_m.insert( base_port_m );
         base_port_m++;
@@ -71,7 +70,7 @@ namespace sgns
             ctx_m,
             ( boost::format( base_path_m + "_in" ) ).str(),
             base_port_m,
-            std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_m, account_m->GetAddress<std::string>() + "in" ) );
+            std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_m, account_m->GetAddress() + "in" ) );
 
         if ( !incoming_db_m->Init( crdt::CrdtOptions::DefaultOptions() ).has_value() )
         {
@@ -102,7 +101,7 @@ namespace sgns
 
     void TransactionManager::PrintAccountInfo()
     {
-        std::cout << "Account Address: " << account_m->GetAddress<std::string>() << std::endl;
+        std::cout << "Account Address: " << account_m->GetAddress() << std::endl;
         std::cout << "Balance: " << account_m->GetBalance<std::string>() << std::endl;
         std::cout << "Token Type: " << account_m->GetToken() << std::endl;
         std::cout << "Nonce: " << account_m->GetNonce() << std::endl;
@@ -113,11 +112,11 @@ namespace sgns
         return *account_m;
     }
 
-    bool TransactionManager::TransferFunds( double amount, const uint256_t &destination )
+    bool TransactionManager::TransferFunds( double amount, const std::string &destination )
     {
         bool ret          = false;
         auto maybe_params = UTXOTxParameters::create( account_m->utxos,
-                                                      account_m->elgamal_address.GetPublicKey(),
+                                                      account_m->elgamal_address->GetPublicKey(),
                                                       amount,
                                                       destination );
 
@@ -174,7 +173,7 @@ namespace sgns
     }
 
     outcome::result<std::string> TransactionManager::HoldEscrow( double             amount,
-                                                                 const uint256_t   &dev_addr,
+                                                                 const std::string &dev_addr,
                                                                  float              peers_cut,
                                                                  const std::string &job_id )
     {
@@ -183,9 +182,9 @@ namespace sgns
 
         OUTCOME_TRY( ( auto &&, params ),
                      UTXOTxParameters::create( account_m->utxos,
-                                               account_m->elgamal_address.GetPublicKey(),
+                                               account_m->elgamal_address->GetPublicKey(),
                                                amount,
-                                               uint256_t{ "0x" + hash_data.toReadableString() } ) );
+                                               "0x" + hash_data.toReadableString() ) );
 
         account_m->utxos        = UTXOTxParameters::UpdateUTXOList( account_m->utxos, params );
         auto escrow_transaction = std::make_shared<EscrowTransaction>(
@@ -236,7 +235,7 @@ namespace sgns
             std::cout << "Subtask Result " << subtask.subtaskid() << "from " << subtask.node_address() << std::endl;
             m_logger->debug( "Paying out {} ", peers_amount );
             subtask_ids.push_back( subtask.subtaskid() );
-            payout_peers.push_back( { peers_amount, uint256_t{ subtask.node_address() } } );
+            payout_peers.push_back( { peers_amount, subtask.node_address() } );
             remainder -= peers_amount;
         }
         m_logger->debug( "Sending to dev {}", remainder );
@@ -298,7 +297,7 @@ namespace sgns
 
         dag.set_previous_hash( transaction_hash );
         dag.set_nonce( ++account_m->nonce );
-        dag.set_source_addr( account_m->GetAddress<std::string>() );
+        dag.set_source_addr( account_m->GetAddress() );
         dag.set_timestamp( timestamp.time_since_epoch().count() );
         dag.set_uncle_hash( "" );
         dag.set_data_hash( "" ); //filled by transaction class
@@ -394,12 +393,6 @@ namespace sgns
 
     outcome::result<void> TransactionManager::ParseTransaction( const std::shared_ptr<IGeniusTransactions> &tx )
     {
-        if ( !CheckDAGStructSignature( tx->dag_st ) )
-        {
-            m_logger->error( "Could not validate signature of transaction {}", tx->dag_st.data_hash() );
-            return std::errc::invalid_argument;
-        }
-
         auto it = transaction_parsers.find( tx->GetType() );
         if ( it == transaction_parsers.end() )
         {
@@ -433,26 +426,25 @@ namespace sgns
 
     outcome::result<bool> TransactionManager::CheckProof( const std::shared_ptr<IGeniusTransactions> &tx )
     {
-        #ifdef _PROOF_ENABLED
-        m_logger->debug(
-            "Checking the proof in {}",
-            GetNotificationPath( account_m->GetAddress<std::string>() ) + "proof/" + GetTransactionProofPath( *tx ) );
+#ifdef _PROOF_ENABLED
+        m_logger->debug( "Checking the proof in {}",
+                         GetNotificationPath( account_m->GetAddress() ) + "proof/" + GetTransactionProofPath( *tx ) );
         OUTCOME_TRY( ( auto &&, proof_data ),
-                     incoming_db_m->Get( { GetNotificationPath( account_m->GetAddress<std::string>() ) + "proof/" +
+                     incoming_db_m->Get( { GetNotificationPath( account_m->GetAddress() ) + "proof/" +
                                            GetTransactionProofPath( *tx ) } ) );
 
         auto proof_data_vector = proof_data.toVector();
 
         //std::cout << " it has value with size  " << proof_data.size() << std::endl;
         return IBasicProof::VerifyFullProof( proof_data_vector );
-        #else
+#else
         return true;
-        #endif
+#endif
     }
 
     outcome::result<void> TransactionManager::CheckIncoming()
     {
-        auto transaction_paths = GetNotificationPath( account_m->GetAddress<std::string>() ) + "tx/";
+        auto transaction_paths = GetNotificationPath( account_m->GetAddress() ) + "tx/";
         m_logger->trace( "Probing incoming transactions on " + transaction_paths );
         OUTCOME_TRY( ( auto &&, transaction_list ), incoming_db_m->QueryKeyValues( transaction_paths ) );
 
@@ -488,6 +480,12 @@ namespace sgns
                 continue;
             }
 #endif
+            if ( !CheckDAGStructSignature( maybe_transaction.value()->dag_st ) )
+            {
+                m_logger->error( "Could not validate signature of transaction from {}",
+                                 maybe_transaction.value()->dag_st.source_addr() );
+                continue;
+            }
             auto maybe_parsed = ParseTransaction( maybe_transaction.value() );
             if ( maybe_parsed.has_error() )
             {
@@ -505,7 +503,7 @@ namespace sgns
 
         tx_key % TEST_NET_ID;
 
-        auto transaction_paths = tx_key.str() + account_m->GetAddress<std::string>() + "/tx";
+        auto transaction_paths = tx_key.str() + account_m->GetAddress() + "/tx";
         m_logger->trace( "Probing transactions on " + transaction_paths );
         OUTCOME_TRY( ( auto &&, transaction_list ), outgoing_db_m->QueryKeyValues( transaction_paths ) );
 
@@ -540,7 +538,7 @@ namespace sgns
                 continue;
             }
             m_logger->debug( "Transaction parsed " + transaction_key.value() );
-            //if ( maybe_transaction.value()->GetSrcAddress<uint256_t>() == account_m->GetAddress<uint256_t>() )
+
             account_m->nonce = std::max( account_m->nonce, maybe_transaction.value()->dag_st.nonce() );
 
             outgoing_tx_processed_m[{ transaction_key.value() }] = maybe_transaction.value()->SerializeByteVector();
@@ -555,7 +553,7 @@ namespace sgns
 
         for ( std::uint32_t i = 0; i < dest_infos.size(); ++i )
         {
-            if ( dest_infos[i].dest_address == account_m->GetAddress<uint256_t>() )
+            if ( dest_infos[i].dest_address == account_m->GetAddress() )
             {
                 auto       hash = ( base::Hash256::fromReadableString( transfer_tx->dag_st.data_hash() ) ).value();
                 GeniusUTXO new_utxo( hash, i, dest_infos[i].encrypted_amount );
@@ -576,7 +574,7 @@ namespace sgns
     outcome::result<void> TransactionManager::ParseMintTransaction( const std::shared_ptr<IGeniusTransactions> &tx )
     {
         auto mint_tx = std::dynamic_pointer_cast<MintTransaction>( tx );
-        if ( mint_tx->GetSrcAddress<uint256_t>() == account_m->GetAddress<uint256_t>() )
+        if ( mint_tx->GetSrcAddress() == account_m->GetAddress() )
         {
             auto       hash = ( base::Hash256::fromReadableString( mint_tx->dag_st.data_hash() ) ).value();
             GeniusUTXO new_utxo( hash, 0, mint_tx->GetAmount() );
@@ -590,7 +588,7 @@ namespace sgns
     {
         auto escrow_tx = std::dynamic_pointer_cast<EscrowTransaction>( tx );
 
-        if ( escrow_tx->GetSrcAddress<uint256_t>() == account_m->GetAddress<uint256_t>() )
+        if ( escrow_tx->GetSrcAddress() == account_m->GetAddress() )
         {
             auto dest_infos = escrow_tx->GetUTXOParameters();
 
@@ -600,7 +598,7 @@ namespace sgns
                 auto hash = ( base::Hash256::fromReadableString( escrow_tx->dag_st.data_hash() ) ).value();
                 if ( dest_infos.outputs_.size() > 1 )
                 {
-                    if ( dest_infos.outputs_[1].dest_address == account_m->GetAddress<uint256_t>() )
+                    if ( dest_infos.outputs_[1].dest_address == account_m->GetAddress() )
                     {
                         GeniusUTXO new_utxo( hash, 1, dest_infos.outputs_[1].encrypted_amount );
                         account_m->PutUTXO( new_utxo );
@@ -621,29 +619,28 @@ namespace sgns
 
         for ( const auto &dest_info : dest_infos )
         {
-            if ( dest_info.dest_address == account_m->GetAddress<uint256_t>() )
+            if ( dest_info.dest_address == account_m->GetAddress() )
             {
                 continue;
             }
 
-            std::string peer_address = Uint256ToString( dest_info.dest_address );
-            m_logger->debug( "Sending notification to " + peer_address );
+            m_logger->debug( "Sending notification to " + dest_info.dest_address );
             std::shared_ptr<crdt::GlobalDB> destination_db;
-            auto                            destination_db_it = destination_dbs_m.find( peer_address );
+            auto                            destination_db_it = destination_dbs_m.find( dest_info.dest_address );
             if ( destination_db_it == destination_dbs_m.end() )
             {
                 m_logger->debug( "Port to sync  " + std::to_string( base_port_m ) );
 
                 destination_db = std::make_shared<crdt::GlobalDB>(
                     ctx_m,
-                    ( boost::format( base_path_m + "_out/" + peer_address ) ).str(),
+                    ( boost::format( base_path_m + "_out/" + dest_info.dest_address ) ).str(),
                     base_port_m,
-                    std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_m, peer_address + "in" ) );
+                    std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_m, dest_info.dest_address + "in" ) );
                 if ( !destination_db->Init( crdt::CrdtOptions::DefaultOptions() ).has_value() )
                 {
                     throw std::runtime_error( "Could not start Destination GlobalDB" );
                 }
-                destination_dbs_m[peer_address] = destination_db;
+                destination_dbs_m[dest_info.dest_address] = destination_db;
                 used_ports_m.insert( base_port_m );
                 base_port_m++;
                 RefreshPorts();
@@ -657,25 +654,26 @@ namespace sgns
 
             tx_key % TEST_NET_ID;
 
-            auto transaction_paths = tx_key.str() + "in" + peer_address + GetTransactionPath( *tx );
+            auto transaction_paths = tx_key.str() + "in" + dest_info.dest_address + GetTransactionPath( *tx );
 
             sgns::crdt::GlobalDB::Buffer data_transaction;
             data_transaction.put( tx->SerializeByteVector() );
 
             m_logger->debug( "Putting replicate transaction in {}",
-                             GetNotificationPath( peer_address ) + "tx/" + GetTransactionPath( *tx ) );
-            BOOST_OUTCOME_TRYV2(
-                auto &&,
-                destination_db->Put( { GetNotificationPath( peer_address ) + "tx/" + GetTransactionPath( *tx ) },
-                                     data_transaction ) );
+                             GetNotificationPath( dest_info.dest_address ) + "tx/" + GetTransactionPath( *tx ) );
+            BOOST_OUTCOME_TRYV2( auto &&,
+                                 destination_db->Put( { GetNotificationPath( dest_info.dest_address ) + "tx/" +
+                                                        GetTransactionPath( *tx ) },
+                                                      data_transaction ) );
             if ( proof )
             {
-                m_logger->debug( "Putting replicate PROOF in {}",
-                                 GetNotificationPath( peer_address ) + "proof/" + GetTransactionProofPath( *tx ) );
+                m_logger->debug(
+                    "Putting replicate PROOF in {}",
+                    GetNotificationPath( dest_info.dest_address ) + "proof/" + GetTransactionProofPath( *tx ) );
                 sgns::crdt::GlobalDB::Buffer proof_data;
                 proof_data.put( proof.value() );
                 BOOST_OUTCOME_TRYV2( auto &&,
-                                     destination_db->Put( { GetNotificationPath( peer_address ) + "proof/" +
+                                     destination_db->Put( { GetNotificationPath( dest_info.dest_address ) + "proof/" +
                                                             GetTransactionProofPath( *tx ) },
                                                           proof_data ) );
             }
@@ -692,14 +690,13 @@ namespace sgns
 
         if ( !dest_infos.outputs_.empty() )
         {
-            std::string job_id_hash = Uint256ToString( dest_infos.outputs_[0].dest_address );
-
             sgns::crdt::GlobalDB::Buffer data_transaction;
             data_transaction.put( tx->SerializeByteVector() );
 
-            m_logger->debug( "Escrow sent to processing db on path " + job_id_hash );
+            m_logger->debug( "Escrow sent to processing db on path " + dest_infos.outputs_[0].dest_address );
 
-            BOOST_OUTCOME_TRYV2( auto &&, processing_db_m->Put( { job_id_hash }, data_transaction ) );
+            BOOST_OUTCOME_TRYV2( auto &&,
+                                 processing_db_m->Put( { dest_infos.outputs_[0].dest_address }, data_transaction ) );
         }
 
         return outcome::success();
@@ -748,7 +745,7 @@ namespace sgns
         std::array<uint8_t, 32> hashed = nil::crypto3::hash<nil::crypto3::hashes::sha2<256>>( serialized );
 
         ethereum::signature_type  signature = nil::crypto3::sign( hashed,
-                                                                 this->account_m->eth_address.get_private_key() );
+                                                                 this->account_m->eth_address->get_private_key() );
         std::vector<std::uint8_t> signed_vector( 64 );
 
         nil::marshalling::bincode::field<ecdsa_t::scalar_field_type>::field_element_to_bytes<
@@ -801,6 +798,6 @@ namespace sgns
 
         ethereum::signature_type sig( r, s );
 
-        return nil::crypto3::verify( hashed, sig, this->account_m->eth_address.get_public_key() );
+        return nil::crypto3::verify( hashed, sig, this->account_m->eth_address->get_public_key() );
     }
 }
