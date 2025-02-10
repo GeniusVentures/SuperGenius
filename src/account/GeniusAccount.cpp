@@ -30,7 +30,10 @@ namespace sgns
     {
         if ( auto maybe_address = GenerateGeniusAddress( base_path, eth_private_key ); maybe_address.has_value() )
         {
-            auto [elgamal_address, eth_address] = maybe_address.value();
+            auto [temp_elgamal_address, temp_eth_address] = maybe_address.value();
+
+            eth_address = std::make_shared<ethereum::EthereumKeyGenerator>(std::move(temp_eth_address));
+            elgamal_address = std::make_shared<KeyGenerator::ElGamal>(std::move(temp_elgamal_address));
         }
         else
         {

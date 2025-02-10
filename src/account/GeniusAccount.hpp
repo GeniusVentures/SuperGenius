@@ -35,24 +35,16 @@ namespace sgns
             utxos.clear();
         }
 
-        template <typename T>
-        T GetAddress() const;
-
-        template <>
         [[nodiscard]] std::string GetAddress() const
         {
-            std::ostringstream oss;
-            oss << "0x";
-            oss << std::hex << elgamal_address.GetPublicKey().public_key_value;
-
-            return oss.str();
+            return eth_address->GetEntirePubValue();
         }
 
-        template <>
-        [[nodiscard]] uint256_t GetAddress() const
-        {
-            return uint256_t( elgamal_address.GetPublicKey().public_key_value.str() );
-        }
+        //template <>
+        //[[nodiscard]] uint256_t GetAddress() const
+        //{
+        //    return uint256_t( eth_address.GetPublicKey().public_key_value.str() );
+        //}
 
         template <typename T>
         [[nodiscard]] T GetBalance() const;
@@ -131,8 +123,8 @@ namespace sgns
             return true;
         }
 
-        KeyGenerator::ElGamal          elgamal_address;
-        ethereum::EthereumKeyGenerator eth_address;
+        std::shared_ptr<KeyGenerator::ElGamal>          elgamal_address;
+        std::shared_ptr<ethereum::EthereumKeyGenerator> eth_address;
 
         uint8_t                 token; //GNUS SGNUS ETC...
         uint64_t                nonce;
