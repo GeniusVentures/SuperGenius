@@ -114,6 +114,16 @@ void PrintAccountInfo( const std::vector<std::string> &args, sgns::GeniusNode &g
     std::cout << "Balance: " << genius_node.GetBalance() << std::endl;
 }
 
+void PrintDataStore(const std::vector<std::string>& args, sgns::GeniusNode& genius_node)
+{
+    if (args.size() != 1)
+    {
+        std::cerr << "Invalid info command format.\n";
+        return;
+    }
+    genius_node.PrintDataStore();
+}
+
 void MintTokens( const std::vector<std::string> &args, sgns::GeniusNode &genius_node )
 {
     if ( args.size() != 2 )
@@ -253,6 +263,9 @@ void process_events(sgns::GeniusNode& genius_node) {
             else if (arguments[0] == "info") {
                 PrintAccountInfo(arguments, genius_node);
             }
+            else if (arguments[0] == "ds") {
+                PrintDataStore(arguments, genius_node);
+            }
             else if (arguments[0] == "peer") {
                 if (arguments.size() > 1) {
                     genius_node.AddPeer(arguments[1]);
@@ -330,9 +343,9 @@ int main( int argc, char *argv[] )
     
     //Inputs
 
-    sgns::GeniusNode node_instance( DEV_CONFIG, "deadbeefdeadbeefdeadbeefdeadbeefcafecafedeadbeefdeadbeefdeadbeef", true, true );
+    sgns::GeniusNode node_instance( DEV_CONFIG, "cafebeefdeadbeefdeadbeefdeadbeefcafecafedeadbeefdeadbeefdeadbeef", true, true );
 
-    std::thread processing_thread(periodic_processing, std::ref(node_instance));
+    //std::thread processing_thread(periodic_processing, std::ref(node_instance));
     std::cout << "Insert \"process\", the image and the number of tokens to be" << std::endl;
     redraw_prompt();
     //while ( !finished )
@@ -343,8 +356,8 @@ int main( int argc, char *argv[] )
     {
         input_thread.join();
     }
-    if (processing_thread.joinable()) {
-        processing_thread.join();
-    }
+    //if (processing_thread.joinable()) {
+    //    processing_thread.join();
+    //}
     return 0;
 }

@@ -88,6 +88,8 @@ public:
     */
         std::shared_ptr<AtomicTransaction> BeginTransaction();
 
+    void PrintDataStore();
+
     auto GetDB()
     {
         return m_crdtDatastore->GetDB();

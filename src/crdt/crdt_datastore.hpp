@@ -143,6 +143,8 @@ namespace sgns::crdt
     */
     outcome::result<std::shared_ptr<Delta>> CreateDeltaToRemove(const std::string& key);
 
+    void PrintDataStore();
+
     auto GetDB()
     {
         return dataStore_->getDB();

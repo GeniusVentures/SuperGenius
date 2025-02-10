@@ -4,6 +4,7 @@
 #include <boost/system/error_code.hpp>
 #include <boost/lexical_cast.hpp>
 #include <utility>
+#include <fstream>
 
 namespace sgns::crdt
 {
@@ -674,13 +675,24 @@ namespace sgns::crdt
 
     void CrdtSet::PrintDataStore()
     {
-        if ( dataStore_ )
+        if (dataStore_)
         {
-            auto key_values = dataStore_->GetAll();
-            for ( auto &[key, value] : key_values )
+            std::ofstream logFile("crdt_data.log", std::ios::out | std::ios::trunc); // Overwrites the file each time
+
+            if (!logFile)
             {
-                std::cout << "[" << key << "] " << value << std::endl;
+                std::cerr << "Failed to open log file for writing!" << std::endl;
+                return;
             }
+
+            auto key_values = dataStore_->GetAll();
+            for (const auto& [key, value] : key_values)
+            {
+                logFile << "[" << key << "] " << value << std::endl;
+            }
+
+            logFile.close();
+            std::cout << "Data successfully written to crdt_data.log" << std::endl;
         }
     }
 }

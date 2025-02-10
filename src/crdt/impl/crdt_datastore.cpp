@@ -1063,4 +1063,8 @@ namespace sgns::crdt
 
         return all_deleted;
     }
+    void CrdtDatastore::PrintDataStore()
+    {
+        set_->PrintDataStore();
+    }
 }
