@@ -403,7 +403,7 @@ namespace sgns
             //}
             //imageindex++;
         }
-        auto cut = sgns::fixed_point::fromString( dev_config_.Cut );
+            auto cut = sgns::fixed_point::fromString( dev_config_.Cut );
 
         if ( !cut )
         {
@@ -614,5 +614,15 @@ namespace sgns
     void GeniusNode::PrintDataStore()
     {
         globaldb_->PrintDataStore();
+    }
+    
+    std::string FormatTokens( uint64_t amount )
+    {
+        return sgns::fixed_point::toString( amount );
+    }
+
+    outcome::result<uint64_t> ParseTokens( const std::string &str )
+    {
+        return sgns::fixed_point::fromString( str );
     }
 }
