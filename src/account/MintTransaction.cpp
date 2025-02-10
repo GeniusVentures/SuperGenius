@@ -44,15 +44,12 @@ namespace sgns
             std::cerr << "Failed to parse TransferTx from array\n";
             return nullptr;
         }
-        uint64_t    v64     = tx_struct.amount();
+        uint64_t    amount     = tx_struct.amount();
         std::string chainid = tx_struct.chain_id();
         std::string tokenid = tx_struct.token_id();
         //std::memcpy( &v64, &( *data.begin() ), sizeof( v64 ) );
 
-        return std::make_shared<MintTransaction>( v64,
-                                                  chainid,
-                                                  tokenid,
-                                                  tx_struct.dag_struct() ); // Return new instance
+        return std::make_shared<MintTransaction>( MintTransaction( amount, chainid, chainid, tx_struct.dag_struct() ) ); // Return new instance
     }
 
     uint64_t MintTransaction::GetAmount() const
