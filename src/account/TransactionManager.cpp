@@ -115,10 +115,7 @@ namespace sgns
     bool TransactionManager::TransferFunds( double amount, const std::string &destination )
     {
         bool ret          = false;
-        auto maybe_params = UTXOTxParameters::create( account_m->utxos,
-                                                      account_m->elgamal_address->GetPublicKey(),
-                                                      amount,
-                                                      destination );
+        auto maybe_params = UTXOTxParameters::create( account_m->utxos, account_m->GetAddress(), amount, destination );
 
         if ( maybe_params )
         {
@@ -182,7 +179,7 @@ namespace sgns
 
         OUTCOME_TRY( ( auto &&, params ),
                      UTXOTxParameters::create( account_m->utxos,
-                                               account_m->elgamal_address->GetPublicKey(),
+                                               account_m->GetAddress(),
                                                amount,
                                                "0x" + hash_data.toReadableString() ) );
 
@@ -798,6 +795,8 @@ namespace sgns
 
         ethereum::signature_type sig( r, s );
 
-        return nil::crypto3::verify( hashed, sig, this->account_m->eth_address->get_public_key() );
+        auto eth_pubkey = ethereum::EthereumKeyGenerator::BuildPublicKey( dag_st.source_addr() );
+
+        return nil::crypto3::verify( hashed, sig, eth_pubkey );
     }
 }

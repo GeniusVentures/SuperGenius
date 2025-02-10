@@ -76,10 +76,6 @@ namespace sgns
 
         std::string GetSrcAddress() const
         {
-            //std::string address(bytes_data.begin(), bytes_data.end());
-            //std::ostringstream oss;
-            //oss << std::hex << src_address;
-
             return dag_st.source_addr();
         }
 
