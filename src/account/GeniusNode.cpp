@@ -11,6 +11,7 @@
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 #include "base/util.hpp"
+#include "base/fixed_point.hpp"
 #include "account/GeniusNode.hpp"
 #include "crdt/globaldb/keypair_file_storage.hpp"
 #include "FileManager.hpp"
@@ -385,14 +386,22 @@ namespace sgns
             taskSplitter
                 .SplitTask( task, subTasks, inputAsString, nChunks, false, pubsub_->GetHost()->getId().toBase58() );
 
-            //}
-            //imageindex++;
-        }
+                //}
+                //imageindex++;
+            }
+
+            auto cut = sgns::fixed_point::fromString( dev_config_.Cut );
+
+            if ( !cut )
+            {
+                return outcome::failure( cut.error() );
+            }
+
 
         OUTCOME_TRY( ( auto &&, escrow_path ),
                      transaction_manager_->HoldEscrow( funds,
                                                        uint256_t{ std::string( dev_config_.Addr ) },
-                                                       dev_config_.Cut,
+                                                       cut.value(),
                                                        uuidstring ) );
 
         task.set_escrow_path( escrow_path );
@@ -400,9 +409,9 @@ namespace sgns
         return task_queue_->EnqueueTask( task, subTasks );
     }
 
-    double GeniusNode::GetProcessCost( const std::string &json_data )
+    uint64_t GeniusNode::GetProcessCost( const std::string &json_data )
     {
-        double cost = 0;
+        uint64_t cost = 0;
         std::cout << "Received JSON data: " << json_data << std::endl;
         //Parse Json
         rapidjson::Document document;
@@ -423,12 +432,13 @@ namespace sgns
             std::cout << "This json lacks inputs" << std::endl;
             return 0;
         }
+        uint64_t block_total_len = 0;
         for ( const auto &input : inputArray.GetArray() )
         {
             if ( input.HasMember( "block_len" ) && input["block_len"].IsUint64() )
             {
-                double block_len  = static_cast<double>( input["block_len"].GetUint64() );
-                cost             += ( block_len / 2100000 );
+                auto block_len   = static_cast<uint64_t>( input["block_len"].GetUint64() );
+                block_total_len += block_len;
                 std::cout << "Block length: " << block_len << std::endl;
             }
             else
@@ -437,19 +447,30 @@ namespace sgns
                 return 0;
             }
         }
-        return std::max( cost, static_cast<double>( 1 ) );
+        auto result = sgns::fixed_point::divide( block_total_len, 2100000ULL );
+        if ( !result )
+        {
+            return 0;
+        }
+        else
+        {
+            cost = result.value();
+        }
+
+        return std::max( cost, static_cast<uint64_t>( 1 ) );
     }
 
-    outcome::result<void> GeniusNode::MintTokens( double      amount,
-                                                  std::string transaction_hash,
-                                                  std::string chainid,
-                                                  std::string tokenid )
+    outcome::result<void> GeniusNode::MintTokens( uint64_t          amount,
+                                                  const std::string &transaction_hash,
+                                                  const std::string &chainid,
+                                                  const std::string &tokenid )
     {
         transaction_manager_->MintFunds( amount, transaction_hash, chainid, tokenid );
+
         return outcome::success();
     }
 
-    double GeniusNode::GetBalance()
+    uint64_t GeniusNode::GetBalance()
     {
         return transaction_manager_->GetBalance();
     }

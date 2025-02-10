@@ -19,30 +19,16 @@
 #include "singleton/IComponent.hpp"
 #include "processing/impl/processing_task_queue_impl.hpp"
 
-#ifndef __cplusplus
-extern "C"
+typedef struct DevConfig
 {
-#endif
-    typedef struct DevConfig
-    {
-        char   Addr[255];
-        double Cut;
-        double TokenValueInGNUS;
-        int    TokenID;
-        char   BaseWritePath[1024];
-    } DevConfig_st;
-#ifndef __cplusplus
-}
-#endif
+    char        Addr[255];
+    std::string Cut;
+    double      TokenValueInGNUS;
+    int         TokenID;
+    char        BaseWritePath[1024];
+} DevConfig_st;
 
-#ifndef __cplusplus
-extern "C"
-{
-#endif
-    extern DevConfig_st DEV_CONFIG;
-#ifndef __cplusplus
-}
-#endif
+extern DevConfig_st DEV_CONFIG;
 
 namespace sgns
 {
@@ -74,21 +60,26 @@ namespace sgns
 
         outcome::result<void> ProcessImage( const std::string &image_path );
 
-        double GetProcessCost( const std::string &json_data );
+        uint64_t GetProcessCost( const std::string &json_data );
 
         std::string GetName() override
         {
             return "GeniusNode";
         }
 
-        void                  DHTInit();
-        outcome::result<void> MintTokens( double      amount,
-                                          std::string transaction_hash,
-                                          std::string chainid,
-                                          std::string tokenid );
+        void DHTInit();
+        /**
+         * @brief       Mints tokens by converting a string amount to fixed-point representation
+         * @param[in]   amount: Numeric value with amount in Minion Tokens (1e-9 GNUS Token)
+         * @return      Outcome of mint token operation
+         */
+        outcome::result<void> MintTokens( uint64_t          amount,
+                                          const std::string &transaction_hash,
+                                          const std::string &chainid,
+                                          const std::string &tokenid );
         void                  AddPeer( const std::string &peer );
         void                  RefreshUPNP( int pubsubport, int graphsyncport );
-        double                GetBalance();
+        uint64_t              GetBalance();
 
         [[nodiscard]] const std::vector<std::vector<uint8_t>> GetInTransactions() const
         {
@@ -115,7 +106,7 @@ namespace sgns
             return account_->GetAddress<uint256_t>();
         }
 
-        bool TransferFunds( double amount, const uint256_t &destination )
+        bool TransferFunds( uint64_t amount, const uint256_t &destination )
         {
             return transaction_manager_->TransferFunds( amount, destination );
         }

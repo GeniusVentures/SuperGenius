@@ -15,6 +15,7 @@
 #include "account/EscrowTransaction.hpp"
 #include "account/UTXOTxParameters.hpp"
 #include "base/util.hpp"
+#include "base/fixed_point.hpp"
 #include "crdt/globaldb/globaldb.hpp"
 #include "outcome/outcome.hpp"
 #include "primitives/block.hpp"
@@ -107,7 +108,7 @@ namespace sgns
         return *account_m;
     }
 
-    bool TransactionManager::TransferFunds( double amount, const uint256_t &destination )
+    bool TransactionManager::TransferFunds( uint64_t amount, const uint256_t &destination )
     {
         bool ret          = false;
         auto maybe_params = UTXOTxParameters::create( account_m->utxos,
@@ -122,7 +123,7 @@ namespace sgns
                                                                                FillDAGStruct() );
             std::optional<std::vector<uint8_t>> maybe_proof;
 #ifdef _PROOF_ENABLED
-            TransferProof prover( static_cast<uint64_t>( account_m->GetBalance<double>() ),
+            TransferProof prover( static_cast<uint64_t>( account_m->GetBalance<uint64_t>() ),
                                   static_cast<uint64_t>( amount ) );
             auto          proof_result = prover.GenerateFullProof();
             if ( proof_result.has_value() )
@@ -143,12 +144,12 @@ namespace sgns
         return ret;
     }
 
-    void TransactionManager::MintFunds( double      amount,
+    void TransactionManager::MintFunds( uint64_t    amount,
                                         std::string transaction_hash,
                                         std::string chainid,
                                         std::string tokenid )
     {
-        auto mint_transaction = std::make_shared<MintTransaction>( RoundTo5Digits( amount ),
+        auto mint_transaction = std::make_shared<MintTransaction>( amount,
                                                                    chainid,
                                                                    tokenid,
                                                                    FillDAGStruct( transaction_hash ) );
@@ -165,9 +166,9 @@ namespace sgns
         this->EnqueueTransaction( std::make_pair( std::move( mint_transaction ), maybe_proof ) );
     }
 
-    outcome::result<std::string> TransactionManager::HoldEscrow( double             amount,
+    outcome::result<std::string> TransactionManager::HoldEscrow( uint64_t           amount,
                                                                  const uint256_t   &dev_addr,
-                                                                 float              peers_cut,
+                                                                 uint64_t           peers_cut,
                                                                  const std::string &job_id )
     {
         bool ret       = false;
@@ -181,7 +182,7 @@ namespace sgns
 
         account_m->utxos        = UTXOTxParameters::UpdateUTXOList( account_m->utxos, params );
         auto escrow_transaction = std::make_shared<EscrowTransaction>( params,
-                                                                       RoundTo5Digits( amount ),
+                                                                       amount,
                                                                        dev_addr,
                                                                        peers_cut,
                                                                        FillDAGStruct() );
@@ -189,7 +190,7 @@ namespace sgns
         std::optional<std::vector<uint8_t>> maybe_proof;
 #ifdef _PROOF_ENABLED
 
-        TransferProof prover( static_cast<uint64_t>( account_m->GetBalance<double>() ),
+        TransferProof prover( static_cast<uint64_t>( account_m->GetBalance<uint64_t>() ),
                               static_cast<uint64_t>( amount ) );
         OUTCOME_TRY( ( auto &&, proof_result ), prover.GenerateFullProof() );
         maybe_proof = proof_result;
@@ -199,7 +200,7 @@ namespace sgns
         this->EnqueueTransaction( std::make_pair( escrow_transaction, maybe_proof ) );
         m_logger->debug( "Holding escrow to 0x{} wih the amount {}",
                          hash_data.toReadableString(),
-                         RoundTo5Digits( amount ) );
+                         amount);
 
         return "0x" + hash_data.toReadableString();
     }
@@ -223,9 +224,11 @@ namespace sgns
         std::shared_ptr<EscrowTransaction> escrow_tx = std::dynamic_pointer_cast<EscrowTransaction>( transaction );
         std::vector<std::string>           subtask_ids;
         std::vector<OutputDestInfo>        payout_peers;
-        double peers_amount = RoundTo5Digits( ( escrow_tx->GetPeersCut() * escrow_tx->GetAmount() ) /
-                                              static_cast<double>( taskresult.subtask_results().size() ) );
-        auto   remainder    = escrow_tx->GetAmount();
+
+        auto     mult_result  = sgns::fixed_point::multiply( escrow_tx->GetAmount(), escrow_tx->GetPeersCut() );
+        //TODO: check fail here, maybe if peer cut is greater than one to...
+        uint64_t peers_amount = mult_result.value() / static_cast<uint64_t>( taskresult.subtask_results().size() );
+        auto     remainder    = escrow_tx->GetAmount();
         for ( auto &subtask : taskresult.subtask_results() )
         {
             std::cout << "Subtask Result " << subtask.subtaskid() << "from " << subtask.node_address() << std::endl;
@@ -235,7 +238,7 @@ namespace sgns
             remainder -= peers_amount;
         }
         m_logger->debug( "Sending to dev {}", remainder );
-        payout_peers.push_back( { RoundTo5Digits( remainder ), escrow_tx->GetDevAddress() } );
+        payout_peers.push_back( { remainder, escrow_tx->GetDevAddress() } );
         InputUTXOInfo escrow_utxo_input;
 
         escrow_utxo_input.txid_hash_  = ( base::Hash256::fromReadableString( escrow_tx->dag_st.data_hash() ) ).value();
@@ -261,9 +264,9 @@ namespace sgns
         return outcome::success();
     }
 
-    double TransactionManager::GetBalance()
+    uint64_t TransactionManager::GetBalance()
     {
-        return account_m->GetBalance<double>();
+        return account_m->GetBalance<uint64_t>();
     }
 
     void TransactionManager::Update()

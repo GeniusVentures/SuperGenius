@@ -8,15 +8,9 @@
 #include <rapidjson/document.h>
 #include "AccountHelper.hpp"
 
-#ifndef __cplusplus
-extern "C"
-{
-#endif
-    extern AccountKey2   ACCOUNT_KEY;
-    extern DevConfig_st2 DEV_CONFIG;
-#ifndef __cplusplus
-}
-#endif
+extern AccountKey2   ACCOUNT_KEY;
+extern DevConfig_st2 DEV_CONFIG;
+
 static const std::string logger_config( R"(
             # ----------------
             sinks:

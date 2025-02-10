@@ -17,9 +17,9 @@ namespace sgns
     {
     public:
         EscrowTransaction( UTXOTxParameters                params,
-                           double                        amount,
+                           uint64_t                        amount,
                            uint256_t                       dev_addr,
-                           float                           peers_cut,
+                           uint64_t                        peers_cut,
                            const SGTransaction::DAGStruct &dag );
         ~EscrowTransaction() override = default;
 
@@ -42,21 +42,21 @@ namespace sgns
             return dev_addr_;
         }
 
-        double GetAmount() const
+        uint64_t GetAmount() const
         {
             return amount_;
         }
 
-        float GetPeersCut() const
+        uint64_t GetPeersCut() const
         {
             return peers_cut_;
         }
 
     private:
         UTXOTxParameters utxo_params_;
-        double         amount_;
+        uint64_t         amount_;
         uint256_t        dev_addr_;
-        float            peers_cut_;
+        uint64_t         peers_cut_;
 
         /**
          * @brief       Registers the deserializer for the transfer transaction type.
