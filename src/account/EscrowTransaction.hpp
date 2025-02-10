@@ -17,9 +17,9 @@ namespace sgns
     {
     public:
         static EscrowTransaction New( UTXOTxParameters         params,
-                                      double                   amount,
+                                      uint64_t                 amount,
                                       std::string              dev_addr,
-                                      float                    peers_cut,
+                                      uint64_t                 peers_cut,
                                       SGTransaction::DAGStruct dag );
 
         static std::shared_ptr<EscrowTransaction> DeSerializeByteVector( const std::vector<uint8_t> &data );
@@ -44,27 +44,27 @@ namespace sgns
             return dev_addr_;
         }
 
-        double GetAmount() const
+        uint64_t GetAmount() const
         {
             return amount_;
         }
 
-        float GetPeersCut() const
+        uint64_t GetPeersCut() const
         {
             return peers_cut_;
         }
 
     private:
         EscrowTransaction( UTXOTxParameters         params,
-                           double                   amount,
+                           uint64_t                 amount,
                            std::string              dev_addr,
-                           float                    peers_cut,
+                           uint64_t                 peers_cut,
                            SGTransaction::DAGStruct dag );
 
         UTXOTxParameters utxo_params_;
-        double           amount_;
+        uint64_t         amount_;
         std::string      dev_addr_;
-        float            peers_cut_;
+        uint64_t         peers_cut_;
 
         /**
          * @brief       Registers the deserializer for the transfer transaction type.

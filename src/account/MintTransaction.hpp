@@ -21,14 +21,14 @@ namespace sgns
 
         static std::shared_ptr<MintTransaction> DeSerializeByteVector( const std::vector<uint8_t> &data );
 
-        static MintTransaction New( double                   new_amount,
+        static MintTransaction New( uint64_t                 new_amount,
                                     std::string              chain_id,
                                     std::string              token_id,
                                     SGTransaction::DAGStruct dag );
 
         std::vector<uint8_t> SerializeByteVector() override;
 
-        double                                GetAmount() const;
+        uint64_t GetAmount() const;
 
         std::string GetTransactionSpecificPath() override
         {
@@ -36,9 +36,12 @@ namespace sgns
         }
 
     private:
-        MintTransaction( double new_amount, std::string chain_id, std::string token_id, SGTransaction::DAGStruct dag );
+        MintTransaction( uint64_t                 new_amount,
+                         std::string              chain_id,
+                         std::string              token_id,
+                         SGTransaction::DAGStruct dag );
 
-        double amount;
+        uint64_t    amount;
         std::string chain_id;
         std::string token_id;
 

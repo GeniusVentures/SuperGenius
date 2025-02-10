@@ -45,12 +45,6 @@ target_link_libraries(mnn_chunkprocess PUBLIC
     Vulkan::Vulkan
 )
 
-#Since we link directly to MNN here we need to wholearchive the lib path, this is fine
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    get_target_property(MNN_LIB_PATH MNN::MNN IMPORTED_LOCATION_DEBUG)
-elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
-    get_target_property(MNN_LIB_PATH MNN::MNN IMPORTED_LOCATION_RELEASE)
-endif()
 
 #Wholearchive MNN
 if(WIN32)

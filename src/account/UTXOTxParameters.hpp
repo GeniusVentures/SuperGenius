@@ -30,7 +30,7 @@ namespace sgns
 
     struct OutputDestInfo
     {
-        double      encrypted_amount; ///< El Gamal encrypted amount
+        uint64_t    encrypted_amount; ///< El Gamal encrypted amount
         std::string dest_address;     ///< Destination node address
     };
 
@@ -46,13 +46,13 @@ namespace sgns
 
         static outcome::result<UTXOTxParameters> create( const std::vector<GeniusUTXO> &utxo_pool,
                                                          const std::string             &src_address,
-                                                         double                         amount,
+                                                         uint64_t                       amount,
                                                          std::string                    dest_address,
                                                          std::string                    signature = "" )
         {
             UTXOTxParameters instance( utxo_pool,
                                        src_address,
-                                       RoundTo5Digits( amount ),
+                                       amount,
                                        std::move( dest_address ),
                                        std::move( signature ) );
 
@@ -100,12 +100,12 @@ namespace sgns
     private:
         UTXOTxParameters( const std::vector<GeniusUTXO> &utxo_pool,
                           const std::string             &src_address,
-                          double                         amount,
+                          uint64_t                       amount,
                           std::string                    dest_address,
                           std::string                    signature ) :
             UTXOTxParameters( utxo_pool,
                               src_address,
-                              { OutputDestInfo{ RoundTo5Digits( amount ), std::move( dest_address ) } },
+                              { OutputDestInfo{ amount, std::move( dest_address ) } },
                               std::move( signature ) )
         {
         }

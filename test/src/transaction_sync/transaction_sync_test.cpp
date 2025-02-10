@@ -32,8 +32,8 @@ protected:
     static inline sgns::GeniusNode *node_proc1 = nullptr;
     static inline sgns::GeniusNode *node_proc2 = nullptr;
 
-    static inline DevConfig_st DEV_CONFIG  = { "0xcafe", 0.65, 1.0, 0, "./node10" };
-    static inline DevConfig_st DEV_CONFIG2 = { "0xcafe", 0.65, 1.0, 0, "./node20" };
+    static inline DevConfig_st DEV_CONFIG  = { "0xcafe", "0.65", 1.0, 0, "./node10" };
+    static inline DevConfig_st DEV_CONFIG2 = { "0xcafe", "0.65", 1.0, 0, "./node20" };
 
     static inline std::string binary_path = "";
 
@@ -73,25 +73,25 @@ TEST_F( TransactionSyncTest, TransactionMintSync )
 {
     auto balance_1_before = node_proc1->GetBalance();
     auto balance_2_before = node_proc2->GetBalance();
-    node_proc1->MintTokens( 10, "", "", "" );
-    node_proc1->MintTokens( 20, "", "", "" );
-    node_proc1->MintTokens( 30, "", "", "" );
-    node_proc1->MintTokens( 40, "", "", "" );
-    node_proc1->MintTokens( 50, "", "", "" );
-    node_proc1->MintTokens( 60, "", "", "" );
+    node_proc1->MintTokens( 10000000000, "", "", "" );
+    node_proc1->MintTokens( 20000000000, "", "", "" );
+    node_proc1->MintTokens( 30000000000, "", "", "" );
+    node_proc1->MintTokens( 40000000000, "", "", "" );
+    node_proc1->MintTokens( 50000000000, "", "", "" );
+    node_proc1->MintTokens( 60000000000, "", "", "" );
     node_proc1->GetPubSub()->AddPeers( { node_proc2->GetPubSub()->GetLocalAddress() } );
     node_proc2->GetPubSub()->AddPeers( { node_proc1->GetPubSub()->GetLocalAddress() } );
-    node_proc2->MintTokens( 10, "", "", "" );
-    node_proc2->MintTokens( 20, "", "", "" );
+    node_proc2->MintTokens( 10000000000, "", "", "" );
+    node_proc2->MintTokens( 20000000000, "", "", "" );
 
     std::this_thread::sleep_for( std::chrono::milliseconds( 5000 ) );
 
-    EXPECT_EQ( node_proc1->GetBalance(), balance_1_before + 210 ) << "Correct Balance of outgoing transactions";
-    EXPECT_EQ( node_proc2->GetBalance(), balance_2_before + 30 ) << "Correct Balance of outgoing transactions";
+    EXPECT_EQ( node_proc1->GetBalance(), balance_1_before + 210000000000 ) << "Correct Balance of outgoing transactions";
+    EXPECT_EQ( node_proc2->GetBalance(), balance_2_before + 30000000000 ) << "Correct Balance of outgoing transactions";
 
-    node_proc1->TransferFunds( 10, node_proc2->GetAddress());
-    node_proc1->TransferFunds( 20, node_proc2->GetAddress());
+    node_proc1->TransferFunds( 10000000000, node_proc2->GetAddress());
+    node_proc1->TransferFunds( 20000000000, node_proc2->GetAddress());
     std::this_thread::sleep_for( std::chrono::milliseconds( 5000 ) );
-    EXPECT_EQ( node_proc1->GetBalance(), balance_1_before + 180 ) << "Correct Balance of outgoing transactions";
-    EXPECT_EQ( node_proc2->GetBalance(), balance_2_before + 60 ) << "Correct Balance of outgoing transactions";
+    EXPECT_EQ( node_proc1->GetBalance(), balance_1_before + 180000000000 ) << "Correct Balance of outgoing transactions";
+    EXPECT_EQ( node_proc2->GetBalance(), balance_2_before + 60000000000 ) << "Correct Balance of outgoing transactions";
 }

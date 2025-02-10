@@ -1,25 +1,21 @@
 #include "UTXOTxParameters.hpp"
 #include <boost/multiprecision/fwd.hpp>
 #include <cmath>
-
 sgns::UTXOTxParameters::UTXOTxParameters( const std::vector<GeniusUTXO>     &utxo_pool,
                                           const std::string                 &src_address,
                                           const std::vector<OutputDestInfo> &destinations,
                                           std::string                        signature )
 {
-    double total_amount = 0.0;
-
-    for ( auto &dest_info : destinations )
+    uint64_t total_amount = 0;
+    for ( const auto &dest_info : destinations )
     {
         total_amount += dest_info.encrypted_amount;
     }
 
-    double remain  = total_amount;
-    double epsilon = 1e-9; // Define a tolerance
-
-    for ( auto &utxo : utxo_pool )
+    uint64_t used_amount = 0;
+    for ( const auto &utxo : utxo_pool )
     {
-        if ( remain <= epsilon )
+        if ( used_amount >= total_amount )
         {
             break;
         }
@@ -28,11 +24,12 @@ sgns::UTXOTxParameters::UTXOTxParameters( const std::vector<GeniusUTXO>     &utx
             continue;
         }
         InputUTXOInfo curr_input{ utxo.GetTxID(), utxo.GetOutputIdx(), signature };
-        remain -= utxo.GetAmount();
 
+        used_amount += utxo.GetAmount();
         inputs_.push_back( curr_input );
     }
-    if ( remain > epsilon )
+
+    if ( used_amount < total_amount )
     {
         inputs_.clear();
         outputs_.clear();
@@ -42,9 +39,9 @@ sgns::UTXOTxParameters::UTXOTxParameters( const std::vector<GeniusUTXO>     &utx
         outputs_ = destinations;
     }
 
-    if ( remain < epsilon )
+    if ( used_amount > total_amount )
     {
-        double change( std::abs( remain ) );
+        uint64_t change      = used_amount - total_amount;
         outputs_.push_back( { change, src_address } );
     }
 }

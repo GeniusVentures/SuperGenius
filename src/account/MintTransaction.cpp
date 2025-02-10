@@ -10,7 +10,7 @@
 
 namespace sgns
 {
-    MintTransaction::MintTransaction( double                   new_amount,
+    MintTransaction::MintTransaction( uint64_t                 new_amount,
                                       std::string              chain_id,
                                       std::string              token_id,
                                       SGTransaction::DAGStruct dag ) :
@@ -44,21 +44,23 @@ namespace sgns
             std::cerr << "Failed to parse TransferTx from array\n";
             return nullptr;
         }
+        uint64_t    v64     = tx_struct.amount();
+        std::string chainid = tx_struct.chain_id();
+        std::string tokenid = tx_struct.token_id();
+        //std::memcpy( &v64, &( *data.begin() ), sizeof( v64 ) );
 
-        double      amount   = tx_struct.amount();
-        std::string chain_id = tx_struct.chain_id();
-        std::string token_id = tx_struct.token_id();
-
-        return std::make_shared<MintTransaction>(
-            MintTransaction( amount, chain_id, token_id, tx_struct.dag_struct() ) );
+        return std::make_shared<MintTransaction>( v64,
+                                                  chainid,
+                                                  tokenid,
+                                                  tx_struct.dag_struct() ); // Return new instance
     }
 
-    double MintTransaction::GetAmount() const
+    uint64_t MintTransaction::GetAmount() const
     {
         return amount;
     }
 
-    MintTransaction MintTransaction::New( double                   new_amount,
+    MintTransaction MintTransaction::New( uint64_t                 new_amount,
                                           std::string              chain_id,
                                           std::string              token_id,
                                           SGTransaction::DAGStruct dag )

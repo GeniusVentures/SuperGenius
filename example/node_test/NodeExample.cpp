@@ -354,7 +354,7 @@ void periodic_processing( sgns::GeniusNode &genius_node )
     }
 }
 
-DevConfig_st DEV_CONFIG{ "0xcafe", 0.65, 1.0, 0, "./" };
+DevConfig_st DEV_CONFIG{ "0xcafe", "0.65", 1.0, 0 , "./"};
 
 int main( int argc, char *argv[] )
 {

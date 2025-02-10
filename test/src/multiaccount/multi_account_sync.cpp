@@ -112,16 +112,16 @@ sgns::GeniusNode *MultiAccountTest::node_main  = nullptr;
 sgns::GeniusNode *MultiAccountTest::node_proc1 = nullptr;
 sgns::GeniusNode *MultiAccountTest::node_proc2 = nullptr;
 
-DevConfig_st MultiAccountTest::DEV_CONFIG  = { "0xcafe", 0.65, 1.0, 0, "./node1" };
-DevConfig_st MultiAccountTest::DEV_CONFIG2 = { "0xcafe", 0.65, 1.0, 1, "./node2" };
-DevConfig_st MultiAccountTest::DEV_CONFIG3 = { "0xcafe", 0.65, 1.0, 0, "./node3" };
+DevConfig_st MultiAccountTest::DEV_CONFIG  = { "0xcafe", "0.65", 1.0, 0, "./node1" };
+DevConfig_st MultiAccountTest::DEV_CONFIG2 = { "0xcafe", "0.65", 1.0, 1, "./node2" };
+DevConfig_st MultiAccountTest::DEV_CONFIG3 = { "0xcafe", "0.65", 1.0, 0, "./node3" };
 
 std::string MultiAccountTest::binary_path = "";
 
 
 TEST_F( MultiAccountTest, SyncThroughThirdNode )
 {
-    node_main->MintTokens( 50, "", "", "" );
+    node_main->MintTokens( 50000000000 , "", "", "" );
     std::this_thread::sleep_for( std::chrono::milliseconds( 20000 ) );
     int transcount_main  = node_main->GetOutTransactions().size();
     int transcount_node1 = node_proc1->GetOutTransactions().size();
@@ -152,9 +152,9 @@ TEST_F( MultiAccountTest, SyncThroughEachOther )
     //Just making sure they connect
     std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
     //Mint On each
-    node_main->MintTokens( 50, "", "", "" );
+    node_main->MintTokens( 50000000000 , "", "", "" );
     std::this_thread::sleep_for( std::chrono::milliseconds( 5000 ) );
-    node_proc1->MintTokens( 50, "", "", "" );
+    node_proc1->MintTokens( 50000000000 , "", "", "" );
     std::this_thread::sleep_for( std::chrono::milliseconds( 10000 ) );
     int transcount_main  = node_main->GetOutTransactions().size();
     int transcount_node1 = node_proc1->GetOutTransactions().size();
