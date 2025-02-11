@@ -7,6 +7,8 @@
 #ifndef _TRANSACTION_VERIFIER_CIRCUIT_HPP_
 #define _TRANSACTION_VERIFIER_CIRCUIT_HPP_
 
+#include <string_view>
+
 static constexpr const std::string_view TransactionCircuit = R"TRANSACTION(
 ; ModuleID = 'llvm-link'
 source_filename = "llvm-link"
@@ -550,7 +552,8 @@ for.inc:                                          ; preds = %for.body
 cleanup:                                          ; preds = %if.then, %lor.rhs
   %retval.0 = phi i32 [ %sub, %if.then ], [ 0, %lor.rhs ]
   ret i32 %retval.0
-}
+})TRANSACTION"
+R"TRANSACTION(
 
 ; Function Attrs: nounwind
 define dso_local i32 @strncmp(ptr noundef %s1, ptr noundef %s2, i64 noundef %n) local_unnamed_addr #2 {

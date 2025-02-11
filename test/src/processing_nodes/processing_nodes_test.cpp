@@ -123,9 +123,9 @@ std::string ProcessingNodesTest::binary_path = "";
 
 TEST_F( ProcessingNodesTest, DISABLED_ProcessNodesAddress )
 {
-    std::string address_main  = node_main->GetAddress<std::string>();
-    std::string address_proc1 = node_proc1->GetAddress<std::string>();
-    std::string address_proc2 = node_proc2->GetAddress<std::string>();
+    std::string address_main  = node_main->GetAddress();
+    std::string address_proc1 = node_proc1->GetAddress();
+    std::string address_proc2 = node_proc2->GetAddress();
     std::cout << "Addresses " << std::endl;
     std::cout << "Main Node: " << address_main << std::endl;
     std::cout << "Proc Node 1: " << address_proc1 << std::endl;

@@ -12,6 +12,8 @@ set(BOOST_VERSION_2U "${BOOST_MAJOR_VERSION}_${BOOST_MINOR_VERSION}")
 # Set config of GTest
 set(BUILD_TESTING "ON" CACHE BOOL "Build tests")
 
+set(BUILD_WITH_PROOFS ON CACHE BOOL "Whether proofs are being generated/verified or not")
+
 add_definitions(-D_USE_INSTALLED_BOOST_JSON_=TRUE)
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")

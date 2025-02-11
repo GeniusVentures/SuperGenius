@@ -89,8 +89,8 @@ TEST_F( TransactionSyncTest, TransactionMintSync )
     EXPECT_EQ( node_proc1->GetBalance(), balance_1_before + 210000000000 ) << "Correct Balance of outgoing transactions";
     EXPECT_EQ( node_proc2->GetBalance(), balance_2_before + 30000000000 ) << "Correct Balance of outgoing transactions";
 
-    node_proc1->TransferFunds( 10000000000, node_proc2->GetAddress<boost::multiprecision::uint256_t>());
-    node_proc1->TransferFunds( 20000000000, node_proc2->GetAddress<boost::multiprecision::uint256_t>());
+    node_proc1->TransferFunds( 10000000000, node_proc2->GetAddress());
+    node_proc1->TransferFunds( 20000000000, node_proc2->GetAddress());
     std::this_thread::sleep_for( std::chrono::milliseconds( 5000 ) );
     EXPECT_EQ( node_proc1->GetBalance(), balance_1_before + 180000000000 ) << "Correct Balance of outgoing transactions";
     EXPECT_EQ( node_proc2->GetBalance(), balance_2_before + 60000000000 ) << "Correct Balance of outgoing transactions";

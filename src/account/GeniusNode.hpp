@@ -91,22 +91,12 @@ namespace sgns
             return transaction_manager_->GetOutTransactions();
         }
 
-        template <typename T>
-        T GetAddress() const;
-
-        template <>
         std::string GetAddress() const
         {
-            return account_->GetAddress<std::string>();
+            return account_->GetAddress();
         }
 
-        template <>
-        uint256_t GetAddress() const
-        {
-            return account_->GetAddress<uint256_t>();
-        }
-
-        bool TransferFunds( uint64_t amount, const uint256_t &destination )
+        bool TransferFunds( uint64_t amount, const std::string &destination )
         {
             return transaction_manager_->TransferFunds( amount, destination );
         }

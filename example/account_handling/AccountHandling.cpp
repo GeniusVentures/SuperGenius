@@ -47,7 +47,7 @@ void CreateTransferTransaction( const std::vector<std::string> &args, sgns::Tran
         return;
     }
     uint64_t amount = std::stoull( args[1] );
-    if ( !transaction_manager.TransferFunds( amount, uint256_t{ args[2] } ) )
+    if ( !transaction_manager.TransferFunds( amount, { args[2] } ) )
     {
         std::cout << "Insufficient funds.\n";
     }

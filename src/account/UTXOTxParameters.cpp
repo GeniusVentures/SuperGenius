@@ -1,11 +1,10 @@
 #include "UTXOTxParameters.hpp"
 #include <boost/multiprecision/fwd.hpp>
 #include <cmath>
-
-sgns::UTXOTxParameters::UTXOTxParameters( const std::vector<GeniusUTXO>          &utxo_pool,
-                                          const KeyGenerator::ElGamal::PublicKey &src_address,
-                                          const std::vector<OutputDestInfo>      &destinations,
-                                          std::string                             signature )
+sgns::UTXOTxParameters::UTXOTxParameters( const std::vector<GeniusUTXO>     &utxo_pool,
+                                          const std::string                 &src_address,
+                                          const std::vector<OutputDestInfo> &destinations,
+                                          std::string                        signature )
 {
     uint64_t total_amount = 0;
     for ( const auto &dest_info : destinations )
@@ -43,7 +42,6 @@ sgns::UTXOTxParameters::UTXOTxParameters( const std::vector<GeniusUTXO>         
     if ( used_amount > total_amount )
     {
         uint64_t change      = used_amount - total_amount;
-        auto     str_address = src_address.public_key_value.str();
-        outputs_.push_back( { change, uint256_t( str_address ) } );
+        outputs_.push_back( { change, src_address } );
     }
 }

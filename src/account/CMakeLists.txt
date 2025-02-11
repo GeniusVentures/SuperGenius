@@ -1,8 +1,6 @@
 
 add_proto_library(SGTransactionProto proto/SGTransaction.proto)
 
-set(BUILD_WITH_PROOFS OFF CACHE BOOL "Whether proofs are being generated/verified or not")
-
 if (BUILD_WITH_PROOFS)
     add_compile_definitions(_PROOF_ENABLED)
 endif()
@@ -17,6 +15,7 @@ add_library(sgns_account
     GeniusAccount.cpp
     GeniusNode.cpp
     UTXOTxParameters.cpp
+    IGeniusTransactions.cpp
 )
 
 target_link_libraries(sgns_account
@@ -77,7 +76,7 @@ target_include_directories(
 
 set_target_properties(sgns_account PROPERTIES PUBLIC_HEADER "GeniusNode.hpp")
 if (MSVC)
-    target_compile_options(sgns_account PRIVATE /constexpr:steps10000000)
+    target_compile_options(sgns_account PUBLIC /constexpr:steps1500000)
 endif()
 if(ANDROID_ABI STREQUAL "armeabi-v7a")
     target_compile_options(sgns_account PRIVATE -fconstexpr-steps=1000000000 -fconstexpr-depth=1000000000)

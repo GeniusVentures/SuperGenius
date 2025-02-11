@@ -30,8 +30,8 @@ namespace sgns
 
     struct OutputDestInfo
     {
-        uint64_t  encrypted_amount; ///< El Gamal encrypted amount
-        uint256_t dest_address;     ///< Destination node address
+        uint64_t    encrypted_amount; ///< El Gamal encrypted amount
+        std::string dest_address;     ///< Destination node address
     };
 
     struct UTXOTxParameters
@@ -44,16 +44,16 @@ namespace sgns
         {
         }
 
-        static outcome::result<UTXOTxParameters> create( const std::vector<GeniusUTXO>          &utxo_pool,
-                                                         const KeyGenerator::ElGamal::PublicKey &src_address,
-                                                         uint64_t                                amount,
-                                                         const uint256_t                        &dest_address,
-                                                         std::string                             signature = "" )
+        static outcome::result<UTXOTxParameters> create( const std::vector<GeniusUTXO> &utxo_pool,
+                                                         const std::string             &src_address,
+                                                         uint64_t                       amount,
+                                                         std::string                    dest_address,
+                                                         std::string                    signature = "" )
         {
             UTXOTxParameters instance( utxo_pool,
                                        src_address,
                                        amount,
-                                       dest_address,
+                                       std::move( dest_address ),
                                        std::move( signature ) );
 
             if ( !instance.inputs_.empty() )
@@ -64,10 +64,10 @@ namespace sgns
             return outcome::failure( boost::system::error_code{} );
         }
 
-        static outcome::result<UTXOTxParameters> create( const std::vector<GeniusUTXO>          &utxo_pool,
-                                                         const KeyGenerator::ElGamal::PublicKey &src_address,
-                                                         const std::vector<OutputDestInfo>      &destinations,
-                                                         std::string                             signature = "" )
+        static outcome::result<UTXOTxParameters> create( const std::vector<GeniusUTXO>     &utxo_pool,
+                                                         const std::string                 &src_address,
+                                                         const std::vector<OutputDestInfo> &destinations,
+                                                         std::string                        signature = "" )
         {
             UTXOTxParameters instance( utxo_pool, src_address, destinations, std::move( signature ) );
 
@@ -98,22 +98,22 @@ namespace sgns
         }
 
     private:
-        UTXOTxParameters( const std::vector<GeniusUTXO>          &utxo_pool,
-                          const KeyGenerator::ElGamal::PublicKey &src_address,
-                          uint64_t                                amount,
-                          const uint256_t                        &dest_address,
-                          std::string                             signature ) :
+        UTXOTxParameters( const std::vector<GeniusUTXO> &utxo_pool,
+                          const std::string             &src_address,
+                          uint64_t                       amount,
+                          std::string                    dest_address,
+                          std::string                    signature ) :
             UTXOTxParameters( utxo_pool,
                               src_address,
-                              { OutputDestInfo{ amount, dest_address } },
+                              { OutputDestInfo{ amount, std::move( dest_address ) } },
                               std::move( signature ) )
         {
         }
 
-        UTXOTxParameters( const std::vector<GeniusUTXO>          &utxo_pool,
-                          const KeyGenerator::ElGamal::PublicKey &src_address,
-                          const std::vector<OutputDestInfo>      &destinations,
-                          std::string                             signature );
+        UTXOTxParameters( const std::vector<GeniusUTXO>     &utxo_pool,
+                          const std::string                 &src_address,
+                          const std::vector<OutputDestInfo> &destinations,
+                          std::string                        signature );
     };
 }
 

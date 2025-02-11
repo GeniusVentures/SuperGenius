@@ -12,7 +12,9 @@
 #include <boost/multiprecision/cpp_int.hpp>
 #include <boost/multiprecision/fwd.hpp>
 
-#include "ProofSystem/ElGamalKeyGenerator.hpp"
+#include <ProofSystem/ElGamalKeyGenerator.hpp>
+#include <ProofSystem/EthereumKeyGenerator.hpp>
+
 #include "account/GeniusUTXO.hpp"
 #include "account/UTXOTxParameters.hpp"
 #include "outcome/outcome.hpp"
@@ -33,24 +35,16 @@ namespace sgns
             utxos.clear();
         }
 
-        template <typename T>
-        T GetAddress() const;
-
-        template <>
         [[nodiscard]] std::string GetAddress() const
         {
-            std::ostringstream oss;
-            oss << "0x";
-            oss << std::hex << address.GetPublicKey().public_key_value;
-
-            return oss.str();
+            return eth_address->GetEntirePubValue();
         }
 
-        template <>
-        [[nodiscard]] uint256_t GetAddress() const
-        {
-            return uint256_t( address.GetPublicKey().public_key_value.str() );
-        }
+        //template <>
+        //[[nodiscard]] uint256_t GetAddress() const
+        //{
+        //    return uint256_t( eth_address.GetPublicKey().public_key_value.str() );
+        //}
 
         template <typename T>
         [[nodiscard]] T GetBalance() const;
@@ -129,7 +123,9 @@ namespace sgns
             return true;
         }
 
-        KeyGenerator::ElGamal   address;
+        std::shared_ptr<KeyGenerator::ElGamal>          elgamal_address;
+        std::shared_ptr<ethereum::EthereumKeyGenerator> eth_address;
+
         uint8_t                 token; //GNUS SGNUS ETC...
         uint64_t                nonce;
         std::vector<GeniusUTXO> utxos;
@@ -137,8 +133,9 @@ namespace sgns
     private:
         //uint64_t balance;
 
-        static outcome::result<KeyGenerator::ElGamal> GenerateGeniusAddress( std::string_view base_path,
-                                                                             const char      *eth_private_key );
+        static outcome::result<std::pair<KeyGenerator::ElGamal, ethereum::EthereumKeyGenerator>> GenerateGeniusAddress(
+            std::string_view base_path,
+            const char      *eth_private_key );
     };
 }
 
