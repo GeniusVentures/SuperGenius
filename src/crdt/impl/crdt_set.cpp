@@ -509,7 +509,10 @@ namespace sgns::crdt
       // /namespace/s/<key>/<id>
       auto kNamespace = this->ElemsPrefix(key).ChildString(aID);
 
-      auto putResult = batchDatastore->put(std::move(Buffer{}.put(kNamespace.GetKey())), std::move(Buffer()));  
+      Buffer keyBuffer;
+      keyBuffer.put(kNamespace.GetKey());
+
+      auto putResult = batchDatastore->put(std::move(keyBuffer), Buffer());  
       if (putResult.has_error())
       {
         return outcome::failure(putResult.error());
@@ -517,7 +520,9 @@ namespace sgns::crdt
       // update the value if applicable:
       // * higher priority than we currently have.
       // * not tombstoned before.
-      auto setValueResult = this->SetValue(batchDatastore, key, aID, std::move(Buffer{}.put(elem.value())), aPriority);
+      Buffer valueBuffer;
+      valueBuffer.put(elem.value());
+      auto setValueResult = this->SetValue(batchDatastore, key, aID, std::move(valueBuffer), aPriority);
       if (setValueResult.has_failure())
       {
         return outcome::failure(setValueResult.error());
@@ -546,22 +551,21 @@ namespace sgns::crdt
 
         auto batchDatastore = this->dataStore_->batch();
 
-        std::vector<std::string> deletedKeys;
-        Buffer                   keyBuffer;
-        for ( const auto &tomb : aTombs )
-        {
-            // /namespace/tombs/<key>/<id>
-            const auto &key        = tomb.key();
-            auto        kNamespace = this->TombsPrefix( key ).ChildString( tomb.id() );
+    std::vector<std::string> deletedKeys;
+    for (const auto& tomb : aTombs)
+    {
+      // /namespace/tombs/<key>/<id>
+      const auto &key        = tomb.key();
+      auto kNamespace = this->TombsPrefix(key).ChildString(tomb.id());
 
-            keyBuffer.clear();
-            keyBuffer.put( kNamespace.GetKey() );
+      Buffer keyBuffer;
+      keyBuffer.put(kNamespace.GetKey());
 
-            auto putResult = batchDatastore->put( keyBuffer, Buffer() );
-            if ( putResult.has_error() )
-            {
-                return outcome::failure( putResult.error() );
-            }
+      auto putResult = batchDatastore->put(std::move(keyBuffer), Buffer());
+      if (putResult.has_error())
+      {
+        return outcome::failure(putResult.error());
+      }
 
             // run delete hook only once for all
             // versions of the same element tombstoned
