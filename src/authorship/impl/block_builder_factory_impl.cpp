@@ -1,3 +1,4 @@
+
 #include "authorship/impl/block_builder_factory_impl.hpp"
 
 #include "authorship/impl/block_builder_impl.hpp"
@@ -5,15 +6,15 @@
 namespace sgns::authorship {
 
   BlockBuilderFactoryImpl::BlockBuilderFactoryImpl(
-      //std::shared_ptr<runtime::Core> r_core,
-      //std::shared_ptr<runtime::BlockBuilder> r_block_builder,
+      std::shared_ptr<runtime::Core> r_core,
+      std::shared_ptr<runtime::BlockBuilder> r_block_builder,
       std::shared_ptr<blockchain::BlockHeaderRepository> header_backend)
-      : //r_core_(std::move(r_core)),
-        //r_block_builder_(std::move(r_block_builder)),
+      : r_core_(std::move(r_core)),
+        r_block_builder_(std::move(r_block_builder)),
         header_backend_(std::move(header_backend)),
         logger_{base::createLogger("BlockBuilderFactory")} {
-    //BOOST_ASSERT(r_core_ != nullptr);
-    //BOOST_ASSERT(r_block_builder_ != nullptr);
+    BOOST_ASSERT(r_core_ != nullptr);
+    BOOST_ASSERT(r_block_builder_ != nullptr);
     BOOST_ASSERT(header_backend_ != nullptr);
   }
 
@@ -32,12 +33,12 @@ namespace sgns::authorship {
     header.parent_hash = parent_hash;
     header.digest = std::move(inherent_digest);
 
-    /*if (auto res = r_core_->initialise_block(header); ! res) {
+    if (auto res = r_core_->initialise_block(header); ! res) {
       logger_->error("Core->initialise_block failed: {}",
                      res.error().message());
       return res.error();
-    }*/
-    return std::make_unique<BlockBuilderImpl>(header/*, r_block_builder_*/);
+    }
+    return std::make_unique<BlockBuilderImpl>(header, r_block_builder_);
   }
 
 }  // namespace sgns::authorship
