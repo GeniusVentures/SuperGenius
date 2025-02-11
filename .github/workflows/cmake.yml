@@ -1,7 +1,5 @@
 name: Release Build CI
 
-# Controls when the workflow will run
-# Triggers the workflow on push or pull request events and manually from the Actions tab
 on:
   push:
     branches:
@@ -43,8 +41,8 @@ jobs:
           - target: iOS
             host: macos-latest
         exclude:
-            - target: Android
-              abi: ""
+          - target: Android
+            abi: ""
     steps:
       - name: Checkout SuperGenius repository
         uses: actions/checkout@v4
@@ -62,7 +60,7 @@ jobs:
           fi
 
           echo "Identified current branch as ${current_branch}"
-          
+
           echo "CURRENT_BRANCH=${current_branch}" >>$GITHUB_ENV
 
           if git ls-remote --heads https://github.com/GeniusVentures/thirdparty.git $current_branch | grep -q $current_branch; then
@@ -76,7 +74,7 @@ jobs:
           echo "THIRDPARTY_BRANCH=$thirdparty_branch" >>$GITHUB_OUTPUT
           echo "SGNS_BRANCH=$current_branch" >>$GITHUB_OUTPUT
         shell: bash
-      
+
       - name: Set branch name for zkLLVM download
         id: zkllvm-branch-name
         run: |
@@ -96,7 +94,7 @@ jobs:
         run: |
           mkdir thirdparty
           cd thirdparty
-          
+
           if [ '${{matrix.abi}}' ]; then
               tag_name=${{matrix.target}}-${{matrix.abi}}-${{steps.branch-name.outputs.THIRDPARTY_BRANCH}}-Release
           else
@@ -118,7 +116,7 @@ jobs:
         run: |
           mkdir zkLLVM
           cd zkLLVM
-          
+
           if [ '${{matrix.abi}}' ]; then
               tag_name=${{matrix.target}}-${{matrix.abi}}-${{steps.zkllvm-branch-name.outputs.zkLLVM_BRANCH}}-Release
           else
@@ -232,7 +230,7 @@ jobs:
         working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
         run: cmake --install .
 
-      - name: Compressing Build Artifacts
+      - name: Compressing build Artifacts
         working-directory: ${{github.workspace}}/SuperGenius
         if: ${{ github.event_name == 'workflow_dispatch' }}
         run: |
@@ -249,7 +247,7 @@ jobs:
           tar -czvf SuperGenius.tar.gz SuperGenius/
         shell: bash
 
-      - name: Set Release Variables
+      - name: Set release variables
         id: vars
         if: ${{ github.event_name == 'workflow_dispatch' }}
         run: |
@@ -263,14 +261,11 @@ jobs:
           build_type=Release
           file_name="${OS_NAME}-${branch_name}-${build_type}.tar.gz"
 
-          echo "RELEASE_TAG=${OS_NAME}-${branch_name}-${build_type}-${GITHUB_SHA::7}" >> $GITHUB_ENV
-          echo "RELEASE_NAME=${OS_NAME} ${branch_name} ${build_type} (${GITHUB_SHA::7})" >> $GITHUB_ENV
+          echo "RELEASE_TAG=${OS_NAME}-${branch_name}-${build_type}" >> $GITHUB_ENV
+          echo "RELEASE_NAME=${OS_NAME} ${branch_name} ${build_type}" >> $GITHUB_ENV
           echo "FILE_NAME=$file_name" >> $GITHUB_ENV
-        shell: bash
 
-      - name: Rename Artifact
-        if: ${{ github.event_name == 'workflow_dispatch' }}
-        run: mv SuperGenius.tar.gz ${{ env.FILE_NAME }}
+          mv SuperGenius.tar.gz $file_name
         shell: bash
 
       - name: Create GitHub Release
