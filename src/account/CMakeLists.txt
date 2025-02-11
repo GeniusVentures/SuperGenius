@@ -77,9 +77,8 @@ target_include_directories(
 set_target_properties(sgns_account PROPERTIES PUBLIC_HEADER "GeniusNode.hpp")
 if (MSVC)
     target_compile_options(sgns_account PUBLIC /constexpr:steps1500000)
-endif()
-if(ANDROID_ABI STREQUAL "armeabi-v7a")
-    target_compile_options(sgns_account PRIVATE -fconstexpr-steps=1000000000 -fconstexpr-depth=1000000000)
+elseif(ANDROID_ABI STREQUAL "armeabi-v7a")
+    target_compile_options(sgns_account PUBLIC -fconstexpr-steps=10000000)
 endif()
 
 supergenius_install(sgns_account)
