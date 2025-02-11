@@ -500,41 +500,34 @@ namespace sgns::crdt
 
         auto batchDatastore = this->dataStore_->batch();
 
-        Buffer keyBuffer;
-        Buffer valueBuffer;
-        for ( auto &elem : aElems )
-        {
-            // overwrite the identifier as it would come unset
-            elem.set_id( aID );
-            auto key = elem.key();
+    for(auto& elem : aElems)
+    {
+      // overwrite the identifier as it would come unset
+      elem.set_id(aID);
+      auto key = elem.key();
 
-            // /namespace/s/<key>/<id>
-            auto kNamespace = this->ElemsPrefix( key ).ChildString( aID );
-            keyBuffer.clear();
-            keyBuffer.put( kNamespace.GetKey() );
+      // /namespace/s/<key>/<id>
+      auto kNamespace = this->ElemsPrefix(key).ChildString(aID);
 
-            auto putResult = batchDatastore->put( keyBuffer, Buffer() );
-            if ( putResult.has_error() )
-            {
-                return outcome::failure( putResult.error() );
-            }
-
-            valueBuffer.clear();
-            valueBuffer.put( elem.value() );
-            // update the value if applicable:
-            // * higher priority than we currently have.
-            // * not tombstoned before.
-            auto setValueResult = this->SetValue( batchDatastore, key, aID, valueBuffer, aPriority );
-            if ( setValueResult.has_failure() )
-            {
-                return outcome::failure( setValueResult.error() );
-            }
-        }
-        auto commitResult = batchDatastore->commit();
-        if ( commitResult.has_failure() )
-        {
-            return outcome::failure( commitResult.error() );
-        }
+      auto putResult = batchDatastore->put(std::move(Buffer{}.put(kNamespace.GetKey())), std::move(Buffer()));  
+      if (putResult.has_error())
+      {
+        return outcome::failure(putResult.error());
+      }
+      // update the value if applicable:
+      // * higher priority than we currently have.
+      // * not tombstoned before.
+      auto setValueResult = this->SetValue(batchDatastore, key, aID, std::move(Buffer{}.put(elem.value())), aPriority);
+      if (setValueResult.has_failure())
+      {
+        return outcome::failure(setValueResult.error());
+      }
+    }
+    auto commitResult = batchDatastore->commit();
+    if (commitResult.has_failure())
+    {
+      return outcome::failure(commitResult.error());
+    }
 
         return outcome::success();
     }
