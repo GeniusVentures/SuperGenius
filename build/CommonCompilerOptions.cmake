@@ -19,6 +19,11 @@ set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY BOTH)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+if (DEFINED SANITIZE_CODE AND "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+    add_compile_options("-fsanitize=${SANITIZE_CODE}")
+    add_link_options("-fsanitize=${SANITIZE_CODE}")
+endif()
+
 include(GNUInstallDirs)
 include(GenerateExportHeader)
 include(CMakePackageConfigHelpers)
