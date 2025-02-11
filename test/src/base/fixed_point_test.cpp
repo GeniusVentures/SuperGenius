@@ -1,5 +1,5 @@
-#include <cstdint>      
-#include <system_error> 
+#include <cstdint>
+#include <system_error>
 #include <gtest/gtest.h>
 #include <string>
 #include <vector>
@@ -84,6 +84,52 @@ INSTANTIATE_TEST_SUITE_P( FixedPointFromStringTests,
                               FromStrParam_s{ "123.456A", 9ULL, std::errc::invalid_argument },
                               FromStrParam_s{ ".", 9ULL, std::errc::invalid_argument },
                               FromStrParam_s{ "0.0000000001", 9ULL, std::errc::value_too_large } ) );
+
+/**
+ * @brief Struct to hold test parameters for FixedPointToStringParamTest.
+ */
+struct ToStringParam_s
+{
+    uint64_t    value;     ///< The numeric value that represents fixed-point data.
+    uint64_t    precision; ///< The desired precision for the string output.
+    std::string expected;  ///< The expected string result.
+};
+
+/**
+ * @brief Parameterized test fixture for testing `toString` function.
+ */
+class FixedPointToStringParamTest : public ::testing::TestWithParam<ToStringParam_s>
+{
+};
+
+/**
+ * @test Tests the conversion of fixed-point numbers to string representation.
+ */
+TEST_P( FixedPointToStringParamTest, ToString )
+{
+    auto test_case = GetParam();
+
+    auto result = sgns::fixed_point::toString( test_case.value, test_case.precision );
+
+    EXPECT_EQ( result, test_case.expected );
+}
+
+/**
+ * @test Test suite for `toString` function.
+ */
+INSTANTIATE_TEST_SUITE_P( FixedPointToStringTests,
+                          FixedPointToStringParamTest,
+                          ::testing::Values( ToStringParam_s{ 0ULL, 0ULL, "0" },
+                                             ToStringParam_s{ 123ULL, 0ULL, "123" },
+                                             ToStringParam_s{ 24ULL, 9ULL, "0.000000024" },
+                                             ToStringParam_s{ 12345ULL, 3ULL, "12.345" },
+                                             ToStringParam_s{ 12345ULL, 4ULL, "1.2345" },
+                                             ToStringParam_s{ 999999999ULL, 9ULL, "0.999999999" },
+                                             ToStringParam_s{ 999999999999999999ULL, 9ULL, "999999999.999999999" },
+                                             ToStringParam_s{ 123ULL, 5ULL, "0.00123" },
+                                             ToStringParam_s{ 1000000ULL, 6ULL, "1.000000" },
+                                             ToStringParam_s{ 1ULL, 9ULL, "0.000000001" },
+                                             ToStringParam_s{ 0ULL, 9ULL, "0.000000000" } ) );
 
 // ======================== FixedPointMultiplyTests ========================
 
