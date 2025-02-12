@@ -143,7 +143,7 @@ jobs:
         shell: bash
 
       - name: Configure Linux host
-        if: ${{ matrix.host == 'ubuntu-latest'}}
+        if: ${{ runner.os == 'Linux'}}
         run: |
           sudo update-alternatives --install /usr/bin/cc cc $(which clang) 100
           sudo update-alternatives --install /usr/bin/c++ c++ $(which clang++) 100
@@ -154,12 +154,12 @@ jobs:
           echo "CMAKE_GENERATOR=Ninja" >> $GITHUB_ENV
 
       - name: Configure Windows host
-        if: ${{ matrix.host == 'windows-latest'}}
+        if: ${{ runner.os == 'Windows'}}
         run: |
           choco install ccache -A
 
       - name: Configure macOS host
-        if: ${{ matrix.host == 'macos-latest'}}
+        if: ${{ runner.os == 'macOS'}}
         run: |
           brew install ccache ninja bash
           echo "CMAKE_GENERATOR=Ninja" >> $GITHUB_ENV
@@ -236,7 +236,7 @@ jobs:
         run: |
           shopt -s extglob
 
-          IFS='/' read -ra dirs <<< "$BUILD_DIRECTORY"
+          IFS='/' read -ra dirs <<< "${BUILD_DIRECTORY}/SuperGenius"
 
           for dir in "${dirs[@]}"; do
             rm -rf !($dir) .[!.]* ..?*
