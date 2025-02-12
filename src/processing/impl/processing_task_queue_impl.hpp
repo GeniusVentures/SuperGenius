@@ -85,6 +85,7 @@ namespace sgns::processing
         bool MoveExpiredTaskLock( const std::string &taskKey, SGProcessing::Task &task );
 
         outcome::result<void> SendEscrow( std::string path, sgns::base::Buffer value );
+        void                  ResetAtomicTransaction();
 
     private:
         std::shared_ptr<sgns::crdt::GlobalDB>          m_db;
