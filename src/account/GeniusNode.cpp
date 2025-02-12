@@ -399,7 +399,19 @@ namespace sgns
 
         task.set_escrow_path( escrow_path );
 
-        return task_queue_->EnqueueTask( task, subTasks );
+        auto enqueue_task_return = task_queue_->EnqueueTask( task, subTasks );
+        
+        if (enqueue_task_return.has_failure())
+        {
+            task_queue_->ResetAtomicTransaction();
+        }
+        auto send_escrow_return = task_queue_->SendEscrow( task, subTasks );
+        
+        if (enqueue_task_return.has_failure())
+        {
+            task_queue_->ResetAtomicTransaction();
+        }
+        return send_escrow_return;
     }
 
     double GeniusNode::GetProcessCost( const std::string &json_data )
