@@ -136,10 +136,10 @@ namespace sgns
         this->EnqueueTransaction( std::move( mint_transaction ) );
     }
 
-    outcome::result<std::string> TransactionManager::HoldEscrow( double             amount,
-                                                                 const uint256_t   &dev_addr,
-                                                                 float              peers_cut,
-                                                                 const std::string &job_id )
+    outcome::result<EscrowDataPair> TransactionManager::HoldEscrow( double             amount,
+                                                                    const uint256_t   &dev_addr,
+                                                                    float              peers_cut,
+                                                                    const std::string &job_id )
     {
         bool ret       = false;
         auto hash_data = hasher_m->blake2b_256( std::vector<uint8_t>{ job_id.begin(), job_id.end() } );
@@ -161,7 +161,9 @@ namespace sgns
                          hash_data.toReadableString(),
                          RoundTo5Digits( amount ) );
 
-        return "0x" + hash_data.toReadableString();
+        sgns::crdt::GlobalDB::Buffer data_transaction;
+        data_transaction.put( escrow_transaction->SerializeByteVector() );
+        return std::make_pair( "0x" + hash_data.toReadableString(), std::move( data_transaction ) );
     }
 
     outcome::result<void> TransactionManager::PayEscrow( const std::string              &escrow_path,
@@ -276,11 +278,6 @@ namespace sgns
         {
             m_logger->debug( "Notifying receiving peers of transfers" );
             NotifyDestinationOfTransfer( transaction );
-        }
-        else if ( transaction->GetType() == "escrow" )
-        {
-            m_logger->debug( "Posting Escrow transaction into processing db" );
-            PostEscrowOnProcessingDB( transaction );
         }
 
         return outcome::success();
@@ -535,27 +532,6 @@ namespace sgns
 
                 BOOST_OUTCOME_TRYV2( auto &&, destination_db->Put( { transaction_paths }, data_transaction ) );
             }
-        }
-
-        return outcome::success();
-    }
-
-    outcome::result<void> TransactionManager::PostEscrowOnProcessingDB( const std::shared_ptr<IGeniusTransactions> &tx )
-    {
-        auto escrow_tx = std::dynamic_pointer_cast<EscrowTransaction>( tx );
-
-        auto dest_infos = escrow_tx->GetUTXOParameters();
-
-        if ( !dest_infos.outputs_.empty() )
-        {
-            std::string job_id_hash = Uint256ToString( dest_infos.outputs_[0].dest_address );
-
-            sgns::crdt::GlobalDB::Buffer data_transaction;
-            data_transaction.put( tx->SerializeByteVector() );
-
-            m_logger->debug( "Escrow sent to processing db on path " + job_id_hash );
-
-            BOOST_OUTCOME_TRYV2( auto &&, processing_db_m->Put( { job_id_hash }, data_transaction ) );
         }
 
         return outcome::success();

@@ -108,7 +108,6 @@ namespace sgns
         auto loggerRocksDB = base::createLogger( "rocksdb" );
         loggerRocksDB->set_level( spdlog::level::off );
 
-
         auto logkad = base::createLogger( "Kademlia" );
         logkad->set_level( spdlog::level::off );
 
@@ -153,8 +152,9 @@ namespace sgns
             }
         }
 
-        auto pubsubKeyPath =
-            ( boost::format( "SuperGNUSNode.TestNet.1a.03.%s/pubs_processor" ) % account_->GetAddress<std::string>() ).str();
+        auto pubsubKeyPath = ( boost::format( "SuperGNUSNode.TestNet.1a.03.%s/pubs_processor" ) %
+                               account_->GetAddress<std::string>() )
+                                 .str();
 
         pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
             crdt::KeyPairFileStorage( write_base_path_ + pubsubKeyPath ).GetKeyPair().value() );
@@ -166,7 +166,8 @@ namespace sgns
 
         globaldb_ = std::make_shared<crdt::GlobalDB>(
             io_,
-            ( boost::format( write_base_path_ + "SuperGNUSNode.TestNet.1a.03.%s" ) % account_->GetAddress<std::string>() )
+            ( boost::format( write_base_path_ + "SuperGNUSNode.TestNet.1a.03.%s" ) %
+              account_->GetAddress<std::string>() )
                 .str(),
             graphsyncport,
             std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_, std::string( PROCESSING_CHANNEL ) ) );
@@ -391,25 +392,27 @@ namespace sgns
             //imageindex++;
         }
 
-        OUTCOME_TRY( ( auto &&, escrow_path ),
+        OUTCOME_TRY( ( auto &&, escrow_data_pair ),
                      transaction_manager_->HoldEscrow( funds,
                                                        uint256_t{ std::string( dev_config_.Addr ) },
                                                        dev_config_.Cut,
                                                        uuidstring ) );
-
+        auto [escrow_path, escrow_data] = escrow_data_pair;
         task.set_escrow_path( escrow_path );
 
         auto enqueue_task_return = task_queue_->EnqueueTask( task, subTasks );
-        
-        if (enqueue_task_return.has_failure())
+
+        if ( enqueue_task_return.has_failure() )
         {
             task_queue_->ResetAtomicTransaction();
+            return outcome::failure( Error::DATABASE_WRITE_ERROR );
         }
-        auto send_escrow_return = task_queue_->SendEscrow( task, subTasks );
-        
-        if (enqueue_task_return.has_failure())
+        auto send_escrow_return = task_queue_->SendEscrow( escrow_path, std::move( escrow_data ) );
+
+        if ( send_escrow_return.has_failure() )
         {
             task_queue_->ResetAtomicTransaction();
+            return outcome::failure( Error::DATABASE_WRITE_ERROR );
         }
         return send_escrow_return;
     }
