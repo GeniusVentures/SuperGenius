@@ -675,18 +675,18 @@ namespace sgns::crdt
 
     void CrdtSet::PrintDataStore()
     {
-        if (dataStore_)
+        if ( dataStore_ )
         {
-            std::ofstream logFile("crdt_data.log", std::ios::out | std::ios::trunc); // Overwrites the file each time
+            std::ofstream logFile( "crdt_data.log", std::ios::out | std::ios::trunc ); // Overwrites the file each time
 
-            if (!logFile)
+            if ( !logFile )
             {
                 std::cerr << "Failed to open log file for writing!" << std::endl;
                 return;
             }
 
             auto key_values = dataStore_->GetAll();
-            for (const auto& [key, value] : key_values)
+            for ( const auto &[key, value] : key_values )
             {
                 logFile << "[" << key.toString() << "] " << value << std::endl;
             }

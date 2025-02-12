@@ -27,6 +27,7 @@
 #include "account/ProcessingTransaction.hpp"
 #include "account/GeniusAccount.hpp"
 #include "base/logger.hpp"
+#include "base/buffer.hpp"
 #include "crypto/hasher.hpp"
 #include "processing/proto/SGProcessing.pb.h"
 #include "outcome/outcome.hpp"
@@ -36,6 +37,7 @@
 namespace sgns
 {
     using namespace boost::multiprecision;
+    using EscrowDataPair = std::pair<std::string, base::Buffer>;
 
     class TransactionManager
     {
@@ -61,10 +63,10 @@ namespace sgns
 
         bool TransferFunds( double amount, const uint256_t &destination );
         void MintFunds( double amount, std::string transaction_hash, std::string chainid, std::string tokenid );
-        outcome::result<std::string> HoldEscrow( double             amount,
-                                                 const uint256_t   &dev_addr,
-                                                 float              peers_cut,
-                                                 const std::string &job_id );
+        outcome::result<EscrowDataPair> HoldEscrow( double             amount,
+                                                    const uint256_t   &dev_addr,
+                                                    float              peers_cut,
+                                                    const std::string &job_id );
         outcome::result<void> PayEscrow( const std::string &escrow_path, const SGProcessing::TaskResult &taskresult );
         double                GetBalance();
 
@@ -92,7 +94,7 @@ namespace sgns
 
         void RefreshPorts();
 
-        std::shared_ptr<crdt::GlobalDB>                  processing_db_m;
+        std::shared_ptr<crdt::GlobalDB>                  processing_db_m; //TODO - remove this as it's only needed on the PayEscrow
         std::shared_ptr<crdt::GlobalDB>                  outgoing_db_m;
         std::shared_ptr<crdt::GlobalDB>                  incoming_db_m;
         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub_m;
@@ -116,7 +118,6 @@ namespace sgns
         outcome::result<void> ParseEscrowTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
 
         outcome::result<void> NotifyDestinationOfTransfer( const std::shared_ptr<IGeniusTransactions> &tx );
-        outcome::result<void> PostEscrowOnProcessingDB( const std::shared_ptr<IGeniusTransactions> &tx );
 
         static inline const std::unordered_map<std::string, TransactionParserFn> transaction_parsers = {
             { "transfer", &TransactionManager::ParseTransferTransaction },
