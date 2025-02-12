@@ -70,9 +70,13 @@ namespace sgns
             TOKEN_ID_MISMATCH        = 6, ///<Informed Token ID doesn't match initialized ID
             PROCESS_COST_ERROR       = 7, ///<The calculated Processing cost was negative
             PROCESS_INFO_MISSING     = 8, ///<Processing information missing on JSON file
+            INVALID_JSON             = 9, ///<JSON cannot be parsed>
+            INVALID_BLOCK_PARAMETERS =10, ///<JSON params for blocks incorrect or missing>
+            NO_PROCESSOR             =11, ///<No processor for this type>
         };
 
-        outcome::result<void> ProcessImage( const std::string &image_path );
+        outcome::result<void> ProcessImage( const std::string &jsondata );
+        outcome::result<void> CheckProcessValidity( const std::string& jsondata );
 
         double GetProcessCost( const std::string &json_data );
 

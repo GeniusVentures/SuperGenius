@@ -688,7 +688,7 @@ namespace sgns::crdt
             auto key_values = dataStore_->GetAll();
             for (const auto& [key, value] : key_values)
             {
-                logFile << "[" << key << "] " << value << std::endl;
+                logFile << "[" << key.toString() << "] " << value << std::endl;
             }
 
             logFile.close();

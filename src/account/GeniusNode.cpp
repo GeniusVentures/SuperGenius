@@ -48,6 +48,12 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, GeniusNode::Error, e )
             return "The calculated Processing cost was negative";
         case sgns::GeniusNode::Error::PROCESS_INFO_MISSING:
             return "Processing information missing on JSON file";
+        case sgns::GeniusNode::Error::INVALID_JSON:
+            return "Json cannot be parsed";
+        case sgns::GeniusNode::Error::INVALID_BLOCK_PARAMETERS:
+            return "Json missing block params";
+        case sgns::GeniusNode::Error::NO_PROCESSOR:
+            return "Json missing block params";
     }
     return "Unknown error";
 }
@@ -342,9 +348,14 @@ namespace sgns
         return boost::uuids::to_string( uuid );
     }
 
-    outcome::result<void> GeniusNode::ProcessImage( const std::string &image_path )
+    outcome::result<void> GeniusNode::ProcessImage( const std::string &jsondata )
     {
-        auto funds = GetProcessCost( image_path );
+        auto isjsonvalid = CheckProcessValidity(jsondata);
+        if (!isjsonvalid)
+        {
+            return isjsonvalid;
+        }
+        auto funds = GetProcessCost(jsondata);
         if ( funds <= 0 )
         {
             return outcome::failure( Error::PROCESS_COST_ERROR );
@@ -359,18 +370,15 @@ namespace sgns
         auto               uuidstring = generate_uuid_with_ipfs_id( pubsub_->GetHost()->getId().toBase58() );
 
         task.set_ipfs_block_id( uuidstring );
-        task.set_json_data( image_path );
+        task.set_json_data(jsondata);
         task.set_random_seed( 0 );
         task.set_results_channel( ( boost::format( "RESULT_CHANNEL_ID_%1%" ) % ( 1 ) ).str() );
 
         rapidjson::Document document;
-        document.Parse( image_path.c_str() );
+        document.Parse(jsondata.c_str());
         size_t           nSubTasks = 1;
         rapidjson::Value inputArray;
-        if ( !document.HasMember( "input" ) && document["input"].IsArray() )
-        {
-            return outcome::failure( Error::PROCESS_INFO_MISSING );
-        }
+
         inputArray = document["input"];
         nSubTasks  = inputArray.Size();
 
@@ -401,6 +409,85 @@ namespace sgns
 
         return task_queue_->EnqueueTask( task, subTasks );
     }
+
+    outcome::result<void> GeniusNode::CheckProcessValidity(const std::string& jsondata)
+    {
+        rapidjson::Document document;
+        document.Parse(jsondata.c_str());
+
+        if (document.HasParseError())
+        {
+            return outcome::failure(Error::INVALID_JSON);
+        }
+
+        // Check for required fields
+        if (!document.HasMember("data") || !document["data"].IsObject())
+        {
+            return outcome::failure(Error::PROCESS_INFO_MISSING);
+        }
+
+        if (!document.HasMember("model") || !document["model"].IsObject())
+        {
+            return outcome::failure(Error::PROCESS_INFO_MISSING);
+        }
+
+        if (!document.HasMember("input") || !document["input"].IsArray())
+        {
+            return outcome::failure(Error::PROCESS_INFO_MISSING);
+        }
+
+        // Extract and validate the model
+        const auto& model = document["model"];
+        if (!model.HasMember("name") || !model["name"].IsString())
+        {
+            return outcome::failure(Error::PROCESS_INFO_MISSING);
+        }
+
+        std::string model_name = model["name"].GetString();
+        auto processor_check = processing_core_->CheckRegisteredProcessor(model_name);
+        if (!processor_check)
+        {
+            return outcome::failure(Error::NO_PROCESSOR); // Return the error if the processor is not registered
+        }
+
+        // Extract input array
+        const auto& inputArray = document["input"];
+        if (inputArray.Size() == 0)
+        {
+            return outcome::failure(Error::PROCESS_INFO_MISSING);
+        }
+
+        // Validate each input entry
+        for (auto& input : inputArray.GetArray())
+        {
+            if (!input.IsObject())
+            {
+                return outcome::failure(Error::PROCESS_INFO_MISSING);
+            }
+
+            if (!input.HasMember("block_len") || !input["block_len"].IsUint64())
+            {
+                return outcome::failure(Error::PROCESS_INFO_MISSING);
+            }
+
+            if (!input.HasMember("block_line_stride") || !input["block_line_stride"].IsUint64())
+            {
+                return outcome::failure(Error::PROCESS_INFO_MISSING);
+            }
+
+            uint64_t block_len = input["block_len"].GetUint64();
+            uint64_t block_line_stride = input["block_line_stride"].GetUint64();
+
+            // Ensure block_len is evenly divisible by block_line_stride
+            if (block_line_stride == 0 || (block_len % block_line_stride) != 0)
+            {
+                return outcome::failure(Error::INVALID_BLOCK_PARAMETERS);
+            }
+        }
+
+        return outcome::success();
+    }
+
 
     double GeniusNode::GetProcessCost( const std::string &json_data )
     {
