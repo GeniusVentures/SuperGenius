@@ -1,7 +1,7 @@
-#include "crdt/atomic_transaction.hpp"
-#include "crdt/crdt_datastore.hpp"
 #include <algorithm>
 #include <utility>
+#include "crdt/atomic_transaction.hpp"
+#include "crdt/crdt_datastore.hpp"
 
 namespace sgns::crdt
 {
@@ -56,21 +56,14 @@ namespace sgns::crdt
 
             if ( op.type == Operation::PUT )
             {
-                auto result = datastore_->CreateDeltaToAdd( op.key.GetKey(), std::string( op.value.toString() ) );
-                if ( result.has_failure() )
-                {
-                    return result.error();
-                }
-                delta = result.value();
+                OUTCOME_TRY( ( auto &&, result ),
+                             datastore_->CreateDeltaToAdd( op.key.GetKey(), std::string( op.value.toString() ) ) );
+                delta = result;
             }
             else // DELETE
             {
-                auto result = datastore_->CreateDeltaToRemove( op.key.GetKey() );
-                if ( result.has_failure() )
-                {
-                    return result.error();
-                }
-                delta = result.value();
+                OUTCOME_TRY( ( auto &&, result ), datastore_->CreateDeltaToRemove( op.key.GetKey() ) );
+                delta = result;
             }
 
             // Merge delta into combined_delta

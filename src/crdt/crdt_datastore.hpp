@@ -243,12 +243,10 @@ namespace sgns::crdt
 
     /** PutBlock add block node to DAGSyncer
     * @param aHeads list of CIDs to add to node as IPLD links
-    * @param aHeight priority set to Delta
     * @param aDelta Delta to serialize into IPLD node
     * @return IPLD node or outcome::failure on error
     */
     outcome::result<std::shared_ptr<IPLDNode>> PutBlock( const std::vector<CID>       &aHeads,
-                                                     uint64_t                      aHeight,
                                                      const std::shared_ptr<Delta> &aDelta );
 
     /** AddDAGNode adds node to DAGSyncer and processes new blocks.
