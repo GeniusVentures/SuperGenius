@@ -59,30 +59,6 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, GeniusNode::Error, e )
     return "Unknown error";
 }
 
-OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, GeniusNode::Error, e )
-{
-    switch ( e )
-    {
-        case sgns::GeniusNode::Error::INSUFFICIENT_FUNDS:
-            return "Insufficient funds for the transaction";
-        case sgns::GeniusNode::Error::DATABASE_WRITE_ERROR:
-            return "Error writing data into the database";
-        case sgns::GeniusNode::Error::INVALID_TRANSACTION_HASH:
-            return "Input transaction hash is invalid";
-        case sgns::GeniusNode::Error::INVALID_CHAIN_ID:
-            return "Chain ID is invalid";
-        case sgns::GeniusNode::Error::INVALID_TOKEN_ID:
-            return "Token ID is invalid";
-        case sgns::GeniusNode::Error::TOKEN_ID_MISMATCH:
-            return "Informed Token ID doesn't match initialized ID";
-        case sgns::GeniusNode::Error::PROCESS_COST_ERROR:
-            return "The calculated Processing cost was negative";
-        case sgns::GeniusNode::Error::PROCESS_INFO_MISSING:
-            return "Processing information missing on JSON file";
-    }
-    return "Unknown error";
-}
-
 using namespace boost::multiprecision;
 
 namespace sgns
@@ -184,7 +160,7 @@ namespace sgns
         }
 
         auto pubsubKeyPath = ( boost::format( "SuperGNUSNode.TestNet.1a.03.%s/pubs_processor" ) %
-                               account_->GetAddress<std::string>() )
+                               account_->GetAddress() )
                                  .str();
 
         pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
@@ -198,7 +174,7 @@ namespace sgns
         globaldb_ = std::make_shared<crdt::GlobalDB>(
             io_,
             ( boost::format( write_base_path_ + "SuperGNUSNode.TestNet.1a.03.%s" ) %
-              account_->GetAddress<std::string>() )
+              account_->GetAddress() )
                 .str(),
             graphsyncport,
             std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_, std::string( PROCESSING_CHANNEL ) ) );
@@ -427,13 +403,19 @@ namespace sgns
             //}
             //imageindex++;
         }
+        auto cut = sgns::fixed_point::fromString( dev_config_.Cut );
 
-        OUTCOME_TRY( ( auto &&, escrow_data_pair ),
-                     transaction_manager_->HoldEscrow( funds,
-                                                       uint256_t{ std::string( dev_config_.Addr ) },
-                                                       dev_config_.Cut,
-                                                       uuidstring ) );
+        if ( !cut )
+        {
+            return outcome::failure( cut.error() );
+        }
+
+        OUTCOME_TRY(
+            ( auto &&, escrow_data_pair ),
+            transaction_manager_->HoldEscrow( funds, std::string( dev_config_.Addr ), cut.value(), uuidstring ) );
+
         auto [escrow_path, escrow_data] = escrow_data_pair;
+
         task.set_escrow_path( escrow_path );
 
         auto enqueue_task_return = task_queue_->EnqueueTask( task, subTasks );

@@ -65,7 +65,7 @@ namespace sgns
 
         bool TransferFunds( uint64_t amount, const std::string &destination );
         void MintFunds( uint64_t amount, std::string transaction_hash, std::string chainid, std::string tokenid );
-        outcome::result<std::string> HoldEscrow( uint64_t           amount,
+        outcome::result<EscrowDataPair> HoldEscrow( uint64_t           amount,
                                                  const std::string &dev_addr,
                                                  uint64_t           peers_cut,
                                                  const std::string &job_id );
@@ -112,13 +112,9 @@ namespace sgns
         std::shared_ptr<boost::asio::io_context>         ctx_m;
         std::shared_ptr<GeniusAccount>                   account_m;
         std::shared_ptr<crypto::Hasher>                  hasher_m;
-        std::string                                      base_path_m;
-        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub_m;
         std::shared_ptr<upnp::UPNP>                      upnp_m;
         uint16_t                                         base_port_m;
         std::shared_ptr<boost::asio::steady_timer>       timer_m;
-        std::shared_ptr<crdt::GlobalDB>                  outgoing_db_m;
-        std::shared_ptr<crdt::GlobalDB>                  incoming_db_m;
         std::deque<TransactionPair>                      tx_queue_m;
         mutable std::mutex                               mutex_m;
 

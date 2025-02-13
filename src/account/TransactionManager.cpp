@@ -170,9 +170,9 @@ namespace sgns
         this->EnqueueTransaction( std::make_pair( std::move( mint_transaction ), maybe_proof ) );
     }
 
-    outcome::result<EscrowDataPair> TransactionManager::HoldEscrow( double             amount,
-                                                                    const uint256_t   &dev_addr,
-                                                                    float              peers_cut,
+    outcome::result<EscrowDataPair> TransactionManager::HoldEscrow( uint64_t           amount,
+                                                                    const std::string &dev_addr,
+                                                                    uint64_t           peers_cut,
                                                                     const std::string &job_id )
     {
         bool ret       = false;
