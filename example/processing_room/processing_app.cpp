@@ -73,8 +73,8 @@ namespace
             return nullptr;
         }
 
-        void GetSubCidForProc( std::shared_ptr<boost::asio::io_context> ioc,
-                               std::string                              url,
+
+        void GetSubCidForProc( std::shared_ptr<boost::asio::io_context> ioc, std::string                              url,
                                std::vector<char>                       &results ) override
         {
             return;
@@ -105,6 +105,7 @@ namespace
         {
             m_tasks.push_back( task );
             m_subTasks.emplace( task.ipfs_block_id(), subTasks );
+            return outcome::failure(boost::system::error_code{});
         }
 
         bool GetSubTasks( const std::string &taskId, std::list<SGProcessing::SubTask> &subTasks ) override

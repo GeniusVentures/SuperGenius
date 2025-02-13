@@ -170,10 +170,10 @@ namespace sgns
         this->EnqueueTransaction( std::make_pair( std::move( mint_transaction ), maybe_proof ) );
     }
 
-    outcome::result<std::string> TransactionManager::HoldEscrow( uint64_t           amount,
-                                                                 const std::string &dev_addr,
-                                                                 uint64_t           peers_cut,
-                                                                 const std::string &job_id )
+    outcome::result<EscrowDataPair> TransactionManager::HoldEscrow( uint64_t           amount,
+                                                                    const std::string &dev_addr,
+                                                                    uint64_t           peers_cut,
+                                                                    const std::string &job_id )
     {
         bool ret       = false;
         auto hash_data = hasher_m->blake2b_256( std::vector<uint8_t>{ job_id.begin(), job_id.end() } );
@@ -203,7 +203,9 @@ namespace sgns
                          hash_data.toReadableString(),
                          amount);
 
-        return "0x" + hash_data.toReadableString();
+        sgns::crdt::GlobalDB::Buffer data_transaction;
+        data_transaction.put( escrow_transaction->SerializeByteVector() );
+        return std::make_pair( "0x" + hash_data.toReadableString(), std::move( data_transaction ) );
     }
 
     outcome::result<void> TransactionManager::PayEscrow( const std::string              &escrow_path,
@@ -348,11 +350,6 @@ namespace sgns
         {
             m_logger->debug( "Notifying receiving peers of transfers" );
             NotifyDestinationOfTransfer( transaction, maybe_proof );
-        }
-        else if ( transaction->GetType() == "escrow" )
-        {
-            m_logger->debug( "Posting Escrow transaction into processing db" );
-            PostEscrowOnProcessingDB( transaction );
         }
 
         return outcome::success();

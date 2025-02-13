@@ -25,6 +25,7 @@
 #include "account/ProcessingTransaction.hpp"
 #include "account/GeniusAccount.hpp"
 #include "base/logger.hpp"
+#include "base/buffer.hpp"
 #include "crypto/hasher.hpp"
 #ifdef _PROOF_ENABLED
 #include "proof/proto/SGProof.pb.h"
@@ -36,6 +37,7 @@
 namespace sgns
 {
     using namespace boost::multiprecision;
+    using EscrowDataPair = std::pair<std::string, base::Buffer>;
 
     class TransactionManager
     {
@@ -63,7 +65,7 @@ namespace sgns
 
         bool TransferFunds( uint64_t amount, const std::string &destination );
         void MintFunds( uint64_t amount, std::string transaction_hash, std::string chainid, std::string tokenid );
-        outcome::result<std::string> HoldEscrow( uint64_t           amount,
+        outcome::result<EscrowDataPair> HoldEscrow( uint64_t           amount,
                                                  const std::string &dev_addr,
                                                  uint64_t           peers_cut,
                                                  const std::string &job_id );
@@ -97,20 +99,22 @@ namespace sgns
 
         void RefreshPorts();
 
+
+        std::shared_ptr<crdt::GlobalDB>                  processing_db_m; //TODO - remove this as it's only needed on the PayEscrow
+        std::shared_ptr<crdt::GlobalDB>                  outgoing_db_m;
+        std::shared_ptr<crdt::GlobalDB>                  incoming_db_m;
+        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub_m;
+        std::string                                      base_path_m;
+
         std::vector<uint8_t> MakeSignature( SGTransaction::DAGStruct dag_st ) const;
         bool                 CheckDAGStructSignature( SGTransaction::DAGStruct dag_st ) const;
 
-        std::shared_ptr<crdt::GlobalDB>                  processing_db_m;
         std::shared_ptr<boost::asio::io_context>         ctx_m;
         std::shared_ptr<GeniusAccount>                   account_m;
         std::shared_ptr<crypto::Hasher>                  hasher_m;
-        std::string                                      base_path_m;
-        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub_m;
         std::shared_ptr<upnp::UPNP>                      upnp_m;
         uint16_t                                         base_port_m;
         std::shared_ptr<boost::asio::steady_timer>       timer_m;
-        std::shared_ptr<crdt::GlobalDB>                  outgoing_db_m;
-        std::shared_ptr<crdt::GlobalDB>                  incoming_db_m;
         std::deque<TransactionPair>                      tx_queue_m;
         mutable std::mutex                               mutex_m;
 
@@ -122,6 +126,7 @@ namespace sgns
         outcome::result<void> ParseTransferTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
         outcome::result<void> ParseMintTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
         outcome::result<void> ParseEscrowTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
+
 
         outcome::result<void> NotifyDestinationOfTransfer( const std::shared_ptr<IGeniusTransactions> &tx,
                                                            std::optional<std::vector<uint8_t>>         proof );

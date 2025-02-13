@@ -436,6 +436,12 @@ namespace sgns::crdt
         return sKey.substr( keyPos, suffixPos - keyPos );
     }
 
+
+    void GlobalDB::PrintDataStore()
+    {
+        m_crdtDatastore->PrintDataStore();
+    }
+  
     std::shared_ptr<AtomicTransaction> GlobalDB::BeginTransaction()
     {
         return std::make_shared<AtomicTransaction>(m_crdtDatastore);

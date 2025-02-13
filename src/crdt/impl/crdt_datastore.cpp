@@ -340,10 +340,10 @@ namespace sgns::crdt
                 LOG_ERROR( "DecodeBroadcast: Failed to convert CID from string (error code "
                            << cidResult.error().value() << ")" )
             }
-            else {
-                bCastHeads.push_back(cidResult.value());
+            else
+            {
+                bCastHeads.push_back( cidResult.value() );
             }
-            
         }
         return bCastHeads;
     }
@@ -675,15 +675,12 @@ namespace sgns::crdt
 
     outcome::result<std::shared_ptr<CrdtDatastore::IPLDNode>> CrdtDatastore::PutBlock(
         const std::vector<CID>       &aHeads,
-        uint64_t                      aHeight,
         const std::shared_ptr<Delta> &aDelta )
     {
         if ( aDelta == nullptr )
         {
             return outcome::failure( boost::system::error_code{} );
         }
-
-        aDelta->set_priority( aHeight );
 
         auto node = ipfs_lite::ipld::IPLDNodeImpl::createFromString( aDelta->SerializeAsString() );
         if ( node == nullptr )
@@ -835,7 +832,7 @@ namespace sgns::crdt
         height = height + 1; // This implies our minimum height is 1
         aDelta->set_priority( height );
 
-        auto putBlockResult = this->PutBlock( heads, height, aDelta );
+        auto putBlockResult = this->PutBlock( heads, aDelta );
         if ( putBlockResult.has_failure() )
         {
             return outcome::failure( putBlockResult.error() );
@@ -1032,8 +1029,6 @@ namespace sgns::crdt
         return set_->CreateDeltaToRemove( key );
     }
 
-
-
     void CrdtDatastore::AddProcessedCID( const CID &cid )
     {
         std::lock_guard<std::mutex> lock( mutex_processed_cids );
@@ -1062,5 +1057,9 @@ namespace sgns::crdt
         }
 
         return all_deleted;
+    }
+    void CrdtDatastore::PrintDataStore()
+    {
+        set_->PrintDataStore();
     }
 }

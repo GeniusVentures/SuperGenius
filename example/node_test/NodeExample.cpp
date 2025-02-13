@@ -124,6 +124,16 @@ void PrintAccountInfo( const std::vector<std::string> &args, sgns::GeniusNode &g
     std::cout << "Balance: " << genius_node.GetBalance() << std::endl;
 }
 
+void PrintDataStore(const std::vector<std::string>& args, sgns::GeniusNode& genius_node)
+{
+    if (args.size() != 1)
+    {
+        std::cerr << "Invalid info command format.\n";
+        return;
+    }
+    genius_node.PrintDataStore();
+}
+
 void MintTokens( const std::vector<std::string> &args, sgns::GeniusNode &genius_node )
 {
     if ( args.size() != 2 )
@@ -278,11 +288,12 @@ void process_events( sgns::GeniusNode &genius_node )
             {
                 PrintAccountInfo( arguments, genius_node );
             }
-            else if ( arguments[0] == "peer" )
-            {
-                if ( arguments.size() > 1 )
-                {
-                    genius_node.AddPeer( arguments[1] );
+            else if (arguments[0] == "ds") {
+                PrintDataStore(arguments, genius_node);
+            }
+            else if (arguments[0] == "peer") {
+                if (arguments.size() > 1) {
+                    genius_node.AddPeer(arguments[1]);
                 }
                 else
                 {
@@ -362,12 +373,10 @@ int main( int argc, char *argv[] )
 
     //Inputs
 
-    sgns::GeniusNode node_instance( DEV_CONFIG,
-                                    "0xee0ecb044f2147a105fc3e89e0080dd2fbf60672d54d32f914423cba2964dcbc",
-                                    true,
-                                    false );
 
-    std::thread processing_thread( periodic_processing, std::ref( node_instance ) );
+    sgns::GeniusNode node_instance( DEV_CONFIG, "cafebeefdeadbeefdeadbeefdeadbeefcafecafedeadbeefdeadbeefdeadbeef", true, true );
+
+    //std::thread processing_thread(periodic_processing, std::ref(node_instance));
     std::cout << "Insert \"process\", the image and the number of tokens to be" << std::endl;
     redraw_prompt();
     //while ( !finished )
@@ -378,9 +387,8 @@ int main( int argc, char *argv[] )
     {
         input_thread.join();
     }
-    if ( processing_thread.joinable() )
-    {
-        processing_thread.join();
-    }
+    //if (processing_thread.joinable()) {
+    //    processing_thread.join();
+    //}
     return 0;
 }

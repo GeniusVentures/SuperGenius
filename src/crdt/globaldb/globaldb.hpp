@@ -57,7 +57,7 @@ namespace sgns::crdt
          * @return      outcome::failure on error or success otherwise
          */
         outcome::result<void> Put( const std::vector<DataPair> &data_vector );
-
+        
         /** Gets a value that corresponds to specified key.
     * @param key - value key
     * @return value as a Buffer
@@ -86,6 +86,8 @@ namespace sgns::crdt
     * @return new transaction
     */
         std::shared_ptr<AtomicTransaction> BeginTransaction();
+
+    void PrintDataStore();
 
         auto GetDB()
         {

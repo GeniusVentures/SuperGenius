@@ -26,7 +26,7 @@ namespace sgns::processing
         enum class Error {
             MAX_NUMBER_SUBTASKS = 1,
             GLOBALDB_READ_ERROR,
-            NO_BUFFER_FROM_JOB_DATA
+            NO_BUFFER_FROM_JOB_DATA,
         };
         ProcessingCoreImpl(
             std::shared_ptr<sgns::crdt::GlobalDB> db,
@@ -67,6 +67,19 @@ namespace sgns::processing
             }
             std::cerr << "Unknown processor name: " << name << std::endl;
             return false;
+        }
+
+       bool CheckRegisteredProcessor(const std::string& name)
+        {
+            auto factoryFunction = m_processorFactories.find(name);
+            if (factoryFunction == m_processorFactories.end())
+            {
+                return false;
+            }
+            else
+            {
+                return true;
+            }
         }
 
         /** Get processing type from json data to set processor

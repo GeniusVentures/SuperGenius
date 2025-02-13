@@ -160,9 +160,9 @@ namespace sgns::processing
                 m_dltGrabSubTaskTimeout.expires_from_now(
                     boost::posix_time::milliseconds( grabSubTaskTimeout.count() ) );
 
-                m_dltGrabSubTaskTimeout.async_wait( std::bind( &ProcessingSubTaskQueueManager::HandleGrabSubTaskTimeout,
-                                                               this,
-                                                               std::placeholders::_1 ) );
+                m_dltGrabSubTaskTimeout.async_wait(
+                    [instance = shared_from_this()]( const boost::system::error_code &ec )
+                    { instance->HandleGrabSubTaskTimeout( ec ); } );
             }
             else
             {
@@ -285,8 +285,8 @@ namespace sgns::processing
 
         m_logger->debug( "QUEUE_REQUEST_RECEIVED" );
         m_dltQueueResponseTimeout.expires_from_now( m_queueResponseTimeout );
-        m_dltQueueResponseTimeout.async_wait(
-            std::bind( &ProcessingSubTaskQueueManager::HandleQueueRequestTimeout, this, std::placeholders::_1 ) );
+        m_dltQueueResponseTimeout.async_wait( [instance = shared_from_this()]( const boost::system::error_code &ec )
+                                              { instance->HandleQueueRequestTimeout( ec ); } );
 
         return false;
     }

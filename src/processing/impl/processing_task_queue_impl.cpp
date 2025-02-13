@@ -5,31 +5,33 @@ namespace sgns::processing
     outcome::result<void> ProcessingTaskQueueImpl::EnqueueTask( const SGProcessing::Task               &task,
                                                                 const std::list<SGProcessing::SubTask> &subTasks )
     {
-        auto               taskKey = ( boost::format( "tasks/TASK_%d" ) % task.ipfs_block_id() ).str();
-        sgns::base::Buffer valueBuffer;
+        if ( job_crdt_transaction_ )
+        {
+            //escrow needs to be sent/commited
+            return outcome::failure( boost::system::error_code{} );
+        }
 
+        job_crdt_transaction_ = m_db->BeginTransaction();
         std::vector<crdt::GlobalDB::DataPair> data_vector;
 
         for ( auto &subTask : subTasks )
         {
-            valueBuffer.clear();
             auto subTaskKey = ( boost::format( "subtasks/TASK_%s/%s" ) % task.ipfs_block_id() % subTask.subtaskid() )
                                   .str();
-            valueBuffer.put( subTask.SerializeAsString() );
-            //BOOST_OUTCOME_TRYV2( auto &&, m_db->Put( sgns::crdt::HierarchicalKey( subTaskKey ), valueBuffer ) );
-            //BOOST_OUTCOME_TRYV2( auto &&, m_db->Get( sgns::crdt::HierarchicalKey( subTaskKey ) ) );
-            data_vector.push_back( std::make_pair( sgns::crdt::HierarchicalKey( subTaskKey ), valueBuffer ) );
+            sgns::crdt::HierarchicalKey key( subTaskKey );
+            sgns::base::Buffer          value;
+            value.put( subTask.SerializeAsString() );
+            BOOST_OUTCOME_TRYV2( auto &&, job_crdt_transaction_->Put( std::move( key ), std::move( value ) ) );
 
             m_logger->debug( "[{}] placed to GlobalDB ", subTaskKey );
         }
+        auto taskKey = ( boost::format( "tasks/TASK_%d" ) % task.ipfs_block_id() ).str();
 
-        valueBuffer.clear();
-        valueBuffer.put( task.SerializeAsString() );
-        //BOOST_OUTCOME_TRYV2( auto &&, m_db->Put( sgns::crdt::HierarchicalKey( taskKey ), valueBuffer ) );
-        //BOOST_OUTCOME_TRYV2( auto &&, m_db->Get( sgns::crdt::HierarchicalKey( taskKey ) ) );
-        data_vector.push_back( std::make_pair( sgns::crdt::HierarchicalKey( taskKey ), valueBuffer ) );
+        sgns::crdt::HierarchicalKey key( taskKey );
+        sgns::base::Buffer          value;
+        value.put( task.SerializeAsString() );
 
-        BOOST_OUTCOME_TRYV2( auto &&, m_db->Put( data_vector) );
+        BOOST_OUTCOME_TRYV2( auto &&, job_crdt_transaction_->Put( std::move( key ), std::move( value ) ) );
         m_logger->debug( "[{}] placed to GlobalDB ", taskKey );
 
         return outcome::success();
@@ -246,4 +248,28 @@ namespace sgns::processing
         }
         return false;
     }
+
+    outcome::result<void> ProcessingTaskQueueImpl::SendEscrow( std::string path, sgns::base::Buffer value )
+    {
+        if ( !job_crdt_transaction_ )
+        {
+            //task and subtasks need to be enqueued
+            return outcome::failure( boost::system::error_code{} );
+        }
+
+        sgns::crdt::HierarchicalKey key( path );
+
+        BOOST_OUTCOME_TRYV2( auto &&, job_crdt_transaction_->Put( std::move( key ), std::move( value ) ) );
+        BOOST_OUTCOME_TRYV2( auto &&, job_crdt_transaction_->Commit() );
+
+        ResetAtomicTransaction();
+
+        return outcome::success();
+    }
+
+    void ProcessingTaskQueueImpl::ResetAtomicTransaction()
+    {
+        job_crdt_transaction_.reset();
+    }
+
 }

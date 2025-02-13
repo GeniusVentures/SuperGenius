@@ -37,8 +37,8 @@ std::vector<uint8_t> GetImageByCID(std::string cid)
     kademlia_config.randomWalk.interval = std::chrono::seconds(300);
     kademlia_config.requestConcurency = 20;
     auto injector = libp2p::injector::makeHostInjector(
-        libp2p::injector::makeKademliaInjector(
-            libp2p::injector::useKademliaConfig(kademlia_config)));
+       libp2p::injector::makeKademliaInjector(
+           libp2p::injector::useKademliaConfig(kademlia_config)));
     auto ioc = injector.create<std::shared_ptr<boost::asio::io_context>>();
 
     boost::asio::io_context::executor_type executor = ioc->get_executor();
@@ -50,7 +50,7 @@ std::vector<uint8_t> GetImageByCID(std::string cid)
     FileManager::GetInstance().InitializeSingletons();
     string fileURL = "https://ipfs.filebase.io/ipfs/" + cid + "/settings.json";
     std::cout << "FILE URLL: " << fileURL << std::endl;
-    auto data = FileManager::GetInstance().LoadASync(fileURL, false, false, ioc, [ioc](const sgns::AsyncError::CustomResult& status)
+    auto data = FileManager::GetInstance().LoadASync(fileURL, false, false, ioc,[ioc](const sgns::AsyncError::CustomResult& status)
         {
             if (status.has_value())
             {
@@ -59,7 +59,7 @@ std::vector<uint8_t> GetImageByCID(std::string cid)
             else {
                 std::cout << "Error: " << status.error() << std::endl;
             }
-        }, [ioc, &mainbuffers](std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers)
+        }, [&mainbuffers](std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers)
             {
                 std::cout << "Final Callback" << std::endl;
 
@@ -76,8 +76,6 @@ std::vector<uint8_t> GetImageByCID(std::string cid)
                     mainbuffers->second.insert(mainbuffers->second.end(), buffers->second.begin(), buffers->second.end());
                 }
             }, "file");
-    ioc->reset();
-    ioc->run();
 
 
     //Parse json
@@ -115,7 +113,7 @@ std::vector<uint8_t> GetImageByCID(std::string cid)
     //Get Actual Image
     string imageUrl = "https://ipfs.filebase.io/ipfs/" + cid + "/" + inputImage;
     std::vector<char> imageData;
-    auto data2 = FileManager::GetInstance().LoadASync(imageUrl, false, false, ioc, [ioc](const sgns::AsyncError::CustomResult& status)
+    auto data2 = FileManager::GetInstance().LoadASync(imageUrl, false, false, ioc,[ioc](const sgns::AsyncError::CustomResult& status)
         {
             if (status.has_value())
             {
@@ -124,7 +122,7 @@ std::vector<uint8_t> GetImageByCID(std::string cid)
             else {
                 std::cout << "Error: " << status.error() << std::endl;
             }
-        }, [ioc, &imageData](std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers)
+        }, [&imageData](std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers)
             {
                 std::cout << "Final Callback" << std::endl;
 
@@ -139,8 +137,7 @@ std::vector<uint8_t> GetImageByCID(std::string cid)
                     imageData.assign(buffers->second[0].begin(), buffers->second[0].end());
                 }
             }, "file");
-    ioc->reset();
-    ioc->run();
+
     std::vector<uint8_t> output(imageData.size());
     std::transform(imageData.begin(), imageData.end(), output.begin(),
         [](char c) { return static_cast<uint8_t>(c); });
