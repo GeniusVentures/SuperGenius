@@ -138,8 +138,6 @@ jobs:
           for library in *.tar.gz; do
               tar  --exclude='*bin/assigner' --exclude='*bin/clang-zkllvm' --exclude='*bin/llvm-link-zkllvm' --exclude='*bin/transpiler' -xzf "${library}"
           done
-          echo "Checking zkLLVM directory structure..."
-          ls -R
         shell: bash
 
       - name: Configure Linux host
@@ -161,7 +159,9 @@ jobs:
       - name: Configure macOS host
         if: ${{ runner.os == 'macOS'}}
         run: |
-          brew install ccache ninja bash
+          brew install ccache ninja bash gnu-tar
+          PATH="$HOMEBREW_PREFIX/opt/gnu-tar/libexec/gnubin:$PATH"
+          echo "PATH=$PATH" >> $GITHUB_ENV
           echo "CMAKE_GENERATOR=Ninja" >> $GITHUB_ENV
 
       - name: Add Darwin toolchain
@@ -233,7 +233,7 @@ jobs:
         working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
         if: ${{ github.event_name == 'workflow_dispatch' }}
         run: |
-          tar --exclude=.git -czvf SuperGenius.tar.gz --transform 's|^|${{env.BUILD_DIRECTORY}}|' SuperGenius/
+          tar --exclude=.git -czvf SuperGenius.tar.gz --transform 's|^|${{env.BUILD_DIRECTORY}}/|' SuperGenius/
         shell: bash
 
       - name: Release file
@@ -248,10 +248,9 @@ jobs:
           fi
 
           branch_name=${{steps.branch-name.outputs.SGNS_BRANCH}}
-          build_type=Release
-          file_name="${OS_NAME}-${branch_name}-${build_type}.tar.gz"
+          file_name="${OS_NAME}-${branch_name}-${{matrix.build-type}}.tar.gz"
 
-          RELEASE_TAG=${OS_NAME}-${branch_name}-${build_type}
+          RELEASE_TAG=${OS_NAME}-${branch_name}-${{matrix.build-type}}
 
           mv SuperGenius.tar.gz ${file_name}
 
