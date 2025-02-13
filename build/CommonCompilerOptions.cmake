@@ -19,6 +19,11 @@ set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY BOTH)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+if (DEFINED SANITIZE_CODE AND "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+    add_compile_options("-fsanitize=${SANITIZE_CODE}")
+    add_link_options("-fsanitize=${SANITIZE_CODE}")
+endif()
+
 include(GNUInstallDirs)
 include(GenerateExportHeader)
 include(CMakePackageConfigHelpers)
@@ -37,14 +42,6 @@ if(EXISTS "${PROJECT_ROOT}/cmake/compile_option_by_platform/${CMAKE_SYSTEM_NAME}
 endif()
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${EXTRA_CXX_FLAGS}")
-
-if(NOT EXISTS "${CMAKE_TOOLCHAIN_FILE}")
-    # https://cgold.readthedocs.io/en/latest/tutorials/toolchain/globals/cxx-standard.html#summary
-    print("CMAKE_TOOLCHAIN_FILE not found, setting CMAKE_POSITION_INDEPENDENT_CODE ON")
-    set(CMAKE_POSITION_INDEPENDENT_CODE TRUE)
-else()
-    print("Using toolchain file: ${CMAKE_TOOLCHAIN_FILE}")
-endif()
 
 #define zkllvm directory
 cmake_minimum_required(VERSION 3.19)
@@ -165,9 +162,6 @@ endif()
 
 set(_THIRDPARTY_BUILD_DIR "${THIRDPARTY_BUILD_DIR}")
 print("THIRDPARTY BUILD DIR: ${_THIRDPARTY_BUILD_DIR}")
-
-set(_THIRDPARTY_DIR "${THIRDPARTY_DIR}")
-print("THIRDPARTY SRC DIR: ${_THIRDPARTY_DIR}")
 
 option(TESTING "Build tests" ON)
 option(BUILD_EXAMPLES "Build examples" ON)

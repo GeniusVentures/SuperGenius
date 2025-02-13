@@ -11,6 +11,7 @@
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 #include "base/util.hpp"
+#include "base/fixed_point.hpp"
 #include "account/GeniusNode.hpp"
 #include "crdt/globaldb/keypair_file_storage.hpp"
 #include "FileManager.hpp"
@@ -54,6 +55,30 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, GeniusNode::Error, e )
             return "Json missing block params";
         case sgns::GeniusNode::Error::NO_PROCESSOR:
             return "Json missing block params";
+    }
+    return "Unknown error";
+}
+
+OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, GeniusNode::Error, e )
+{
+    switch ( e )
+    {
+        case sgns::GeniusNode::Error::INSUFFICIENT_FUNDS:
+            return "Insufficient funds for the transaction";
+        case sgns::GeniusNode::Error::DATABASE_WRITE_ERROR:
+            return "Error writing data into the database";
+        case sgns::GeniusNode::Error::INVALID_TRANSACTION_HASH:
+            return "Input transaction hash is invalid";
+        case sgns::GeniusNode::Error::INVALID_CHAIN_ID:
+            return "Chain ID is invalid";
+        case sgns::GeniusNode::Error::INVALID_TOKEN_ID:
+            return "Token ID is invalid";
+        case sgns::GeniusNode::Error::TOKEN_ID_MISMATCH:
+            return "Informed Token ID doesn't match initialized ID";
+        case sgns::GeniusNode::Error::PROCESS_COST_ERROR:
+            return "The calculated Processing cost was negative";
+        case sgns::GeniusNode::Error::PROCESS_INFO_MISSING:
+            return "Processing information missing on JSON file";
     }
     return "Unknown error";
 }
@@ -132,7 +157,7 @@ namespace sgns
         auto tokenid = dev_config_.TokenID;
 
         auto pubsubport    = GenerateRandomPort( base_port,
-                                              account_->GetAddress<std::string>() + std::to_string( tokenid ) );
+                                              account_->GetAddress() + std::to_string( tokenid ) );
         auto graphsyncport = pubsubport + 10;
 
         std::vector<std::string> addresses;
@@ -178,9 +203,12 @@ namespace sgns
             graphsyncport,
             std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_, std::string( PROCESSING_CHANNEL ) ) );
 
-        if ( !globaldb_->Init( crdt::CrdtOptions::DefaultOptions() ).has_value() )
+        auto global_db_init_result = globaldb_->Init( crdt::CrdtOptions::DefaultOptions() );
+        if ( global_db_init_result.has_error() )
         {
-            throw std::runtime_error( "Could not start GlobalDB" );
+            auto error = global_db_init_result.error();
+            throw std::runtime_error( error.message() );
+            return;
         }
 
         task_queue_      = std::make_shared<processing::ProcessingTaskQueueImpl>( globaldb_ );
@@ -199,7 +227,7 @@ namespace sgns
             [this]( const std::string &var, const SGProcessing::TaskResult &taskresult )
             { ProcessingDone( var, taskresult ); }, //
             [this]( const std::string &var ) { ProcessingError( var ); },
-            account_->GetAddress<std::string>() );
+            account_->GetAddress() );
         processing_service_->SetChannelListRequestTimeout( boost::posix_time::milliseconds( 3000 ) );
 
         transaction_manager_ = std::make_shared<TransactionManager>(
@@ -208,7 +236,7 @@ namespace sgns
             account_,
             std::make_shared<crypto::HasherImpl>(),
             ( boost::format( write_base_path_ + "SuperGNUSNode.TestNet.1a.03.%s" ) %
-              account_->GetAddress<std::string>() )
+              account_->GetAddress() )
                 .str(),
             pubsub_,
             upnp,
@@ -503,10 +531,9 @@ namespace sgns
         return outcome::success();
     }
 
-
-    double GeniusNode::GetProcessCost( const std::string &json_data )
+    uint64_t GeniusNode::GetProcessCost( const std::string &json_data )
     {
-        double cost = 0;
+        uint64_t cost = 0;
         std::cout << "Received JSON data: " << json_data << std::endl;
         //Parse Json
         rapidjson::Document document;
@@ -527,12 +554,13 @@ namespace sgns
             std::cout << "This json lacks inputs" << std::endl;
             return 0;
         }
+        uint64_t block_total_len = 0;
         for ( const auto &input : inputArray.GetArray() )
         {
             if ( input.HasMember( "block_len" ) && input["block_len"].IsUint64() )
             {
-                double block_len  = static_cast<double>( input["block_len"].GetUint64() );
-                cost             += ( block_len / 2100000 );
+                auto block_len   = static_cast<uint64_t>( input["block_len"].GetUint64() );
+                block_total_len += block_len;
                 std::cout << "Block length: " << block_len << std::endl;
             }
             else
@@ -541,26 +569,36 @@ namespace sgns
                 return 0;
             }
         }
-        return std::max( cost, static_cast<double>( 1 ) );
+        auto result = sgns::fixed_point::divide( block_total_len, 2100000ULL );
+        if ( !result )
+        {
+            return 0;
+        }
+        else
+        {
+            cost = result.value();
+        }
+
+        return std::max( cost, static_cast<uint64_t>( 1 ) );
     }
 
-    outcome::result<void> GeniusNode::MintTokens( double      amount,
-                                                  std::string transaction_hash,
-                                                  std::string chainid,
-                                                  std::string tokenid )
+    outcome::result<void> GeniusNode::MintTokens( uint64_t          amount,
+                                                  const std::string &transaction_hash,
+                                                  const std::string &chainid,
+                                                  const std::string &tokenid )
     {
         transaction_manager_->MintFunds( amount, transaction_hash, chainid, tokenid );
         return outcome::success();
     }
 
-    double GeniusNode::GetBalance()
+    uint64_t GeniusNode::GetBalance()
     {
         return transaction_manager_->GetBalance();
     }
 
     void GeniusNode::ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult )
     {
-        std::cout << "[" << account_->GetAddress<std::string>() << "] SUCCESS PROCESSING TASK " << task_id << std::endl;
+        std::cout << "[" << account_->GetAddress() << "] SUCCESS PROCESSING TASK " << task_id << std::endl;
         do
         {
             if ( task_queue_->IsTaskCompleted( task_id ) )
@@ -588,7 +626,7 @@ namespace sgns
 
     void GeniusNode::ProcessingError( const std::string &task_id )
     {
-        //std::cout << "[" << account_->GetAddress<std::string>() << "] ERROR PROCESSING SUBTASK" << task_id << std::endl;
+        //std::cout << "[" << account_->GetAddress() << "] ERROR PROCESSING SUBTASK" << task_id << std::endl;
     }
 
     void GeniusNode::PrintDataStore()

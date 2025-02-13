@@ -47,7 +47,7 @@ void CreateTransferTransaction( const std::vector<std::string> &args, sgns::Tran
         return;
     }
     uint64_t amount = std::stoull( args[1] );
-    if ( !transaction_manager.TransferFunds( amount, uint256_t{ args[2] } ) )
+    if ( !transaction_manager.TransferFunds( amount, { args[2] } ) )
     {
         std::cout << "Insufficient funds.\n";
     }
@@ -140,7 +140,7 @@ int main( int argc, char *argv[] )
     std::string own_wallet_address( argv[2] );
 
     AccountKey2   key;
-    DevConfig_st2 local_config{ "0xbeefbeef", 0.65f };
+    DevConfig_st2 local_config{ "0xbeefbeef", "0.65" };
 
     strncpy( key, argv[2], sizeof( key ) );
 

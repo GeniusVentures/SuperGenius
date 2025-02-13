@@ -1,6 +1,10 @@
 
 add_proto_library(SGTransactionProto proto/SGTransaction.proto)
 
+if (BUILD_WITH_PROOFS)
+    add_compile_definitions(_PROOF_ENABLED)
+endif()
+
 
 add_library(sgns_account
     TransactionManager.cpp
@@ -11,6 +15,7 @@ add_library(sgns_account
     GeniusAccount.cpp
     GeniusNode.cpp
     UTXOTxParameters.cpp
+    IGeniusTransactions.cpp
 )
 
 target_link_libraries(sgns_account
@@ -41,6 +46,7 @@ target_link_libraries(sgns_account
     Boost::Boost.DI
     SGTransactionProto
     logger
+    fixed_point
     gnus_upnp
     AsyncIOManager
     ${WIN_API_LIBRARY}
@@ -53,6 +59,14 @@ target_link_libraries(sgns_account
     ${WIN_CRYPT_LIBRARY}
 )
 
+if (BUILD_WITH_PROOFS)
+    target_link_libraries(sgns_account
+    PRIVATE
+    transfer_proof
+    processing_proof
+    )
+endif()
+
 target_include_directories(
     sgns_account
     PRIVATE
@@ -62,10 +76,9 @@ target_include_directories(
 
 set_target_properties(sgns_account PROPERTIES PUBLIC_HEADER "GeniusNode.hpp")
 if (MSVC)
-    target_compile_options(sgns_account PRIVATE /constexpr:steps10000000)
-endif()
-if(ANDROID_ABI STREQUAL "armeabi-v7a")
-    target_compile_options(sgns_account PRIVATE -fconstexpr-steps=1000000000 -fconstexpr-depth=1000000000)
+    target_compile_options(sgns_account PUBLIC /constexpr:steps1500000)
+elseif(ANDROID_ABI STREQUAL "armeabi-v7a")
+    target_compile_options(sgns_account PUBLIC -fconstexpr-steps=10000000)
 endif()
 
 supergenius_install(sgns_account)

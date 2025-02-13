@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package SGProof;
+
+message BaseProofData
+{
+    bytes snark = 1;// 
+    string type = 2; //
+}
+message BaseProofProto
+{
+    BaseProofData proof_data = 1;//
+}
+
+message TransferProofPublicInputs
+{
+    bytes balance_commitment = 1; //
+    bytes amount_commitment = 2; //
+    bytes new_balance_commitment = 3; //
+    bytes generator = 4; //
+    repeated uint64 ranges = 5; //
+}
+message TransferProofProto 
+{
+    BaseProofData proof_data = 1;// 
+    TransferProofPublicInputs public_input = 2;
+}

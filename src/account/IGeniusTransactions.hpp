@@ -17,6 +17,8 @@
 #include "outcome/outcome.hpp"
 #include "account/proto/SGTransaction.pb.h"
 
+#include <gsl/span>
+
 namespace sgns
 {
     using namespace boost::multiprecision;
@@ -44,24 +46,12 @@ namespace sgns
             return transaction_type;
         }
 
-        static outcome::result<SGTransaction::DAGStruct> DeSerializeDAGStruct( std::vector<uint8_t> &data )
-        {
-            SGTransaction::DAGWrapper dag_wrap;
-            if ( !dag_wrap.ParseFromArray( data.data(), data.size() ) )
-            {
-                std::cerr << "Failed to parse DAGStruct from array." << std::endl;
-                return outcome::failure(boost::system::error_code{});
-            }
-            SGTransaction::DAGStruct dag;
-            dag.CopyFrom( *dag_wrap.mutable_dag_struct() );
-            return dag;
-        }
+        static outcome::result<SGTransaction::DAGStruct> DeSerializeDAGStruct( const std::vector<uint8_t> &data );
 
-        static SGTransaction::DAGStruct SetDAGWithType( const SGTransaction::DAGStruct &dag, const std::string &type )
+        static SGTransaction::DAGStruct SetDAGWithType( SGTransaction::DAGStruct dag, const std::string &type )
         {
-            SGTransaction::DAGStruct dag_with_type = dag;
-            dag_with_type.set_type( type );
-            return dag_with_type;
+            dag.set_type( type );
+            return dag;
         }
 
         virtual std::vector<uint8_t> SerializeByteVector() = 0;
@@ -70,33 +60,24 @@ namespace sgns
 
         std::string GetTransactionFullPath()
         {
-            boost::format full_path( GetSrcAddress<std::string>() + "/tx/" + GetTransactionSpecificPath() + "/%llu" );
+            boost::format full_path( GetSrcAddress() + "/tx/" + GetTransactionSpecificPath() + "/%llu" );
             full_path % dag_st.nonce();
 
             return full_path.str();
         }
 
-        template <typename T>
-        T GetSrcAddress() const;
-
-        template <>
-        std::string GetSrcAddress<std::string>() const
+        std::string GetProofFullPath()
         {
-            //std::string address(bytes_data.begin(), bytes_data.end());
-            //std::ostringstream oss;
-            //oss << std::hex << src_address;
+            boost::format full_path( GetSrcAddress() + "/proof" + "/%llu" );
+            full_path % dag_st.nonce();
 
+            return full_path.str();
+        }
+
+        std::string GetSrcAddress() const
+        {
             return dag_st.source_addr();
         }
-
-        template <>
-        uint256_t GetSrcAddress<uint256_t>() const
-        {
-            return uint256_t{ dag_st.source_addr() };
-        }
-
-        SGTransaction::DAGStruct                                                dag_st;
-        static inline std::unordered_map<std::string, TransactionDeserializeFn> deserializers_map;
 
         /**
          * @brief       Registers a deserializer function for a specific transaction type.
@@ -105,13 +86,18 @@ namespace sgns
          */
         static void RegisterDeserializer( const std::string &transaction_type, TransactionDeserializeFn fn )
         {
-            deserializers_map[transaction_type] = fn;
+            deserializers_map[transaction_type] = std::move( fn );
         }
 
         static std::unordered_map<std::string, TransactionDeserializeFn> &GetDeSerializers()
         {
             return deserializers_map;
         }
+
+        void FillHash();
+
+        SGTransaction::DAGStruct                                                dag_st;
+        static inline std::unordered_map<std::string, TransactionDeserializeFn> deserializers_map;
 
     private:
         const std::string transaction_type;

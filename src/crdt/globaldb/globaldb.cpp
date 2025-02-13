@@ -31,6 +31,23 @@
 #include <netinet/in.h>
 #endif
 
+OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::crdt, GlobalDB::Error, e )
+{
+    using ProofError = sgns::crdt::GlobalDB::Error;
+    switch ( e )
+    {
+        case ProofError::ROCKSDB_IO:
+            return "RocksDB I/O error";
+        case ProofError::IPFS_DB_NOT_CREATED:
+            return "IPFS Database creation error";
+        case ProofError::DAG_SYNCHER_NOT_LISTENING:
+            return "DAG Syncher listen error";
+        case ProofError::CRDT_DATASTORE_NOT_CREATED:
+            return "CRDT DataStore creation error";
+    }
+    return "Unknown error";
+}
+
 namespace sgns::crdt
 {
     using RocksDB            = storage::rocksdb;
@@ -173,7 +190,7 @@ namespace sgns::crdt
         catch ( std::exception &e )
         {
             m_logger->error( "Unable to open database: " + std::string( e.what() ) );
-            return outcome::failure( boost::system::error_code{} );
+            return Error::ROCKSDB_IO;
         }
 
         boost::filesystem::path keyPath = databasePathAbsolute + "/key";
@@ -200,7 +217,7 @@ namespace sgns::crdt
         if ( ipfsDBResult.has_error() )
         {
             m_logger->error( "Unable to create database for IPFS datastore" );
-            return outcome::failure( boost::system::error_code{} );
+            return Error::IPFS_DB_NOT_CREATED;
         }
 
         auto ipfsDataStore = std::make_shared<RocksdbDatastore>( ipfsDBResult.value() );
@@ -256,6 +273,7 @@ namespace sgns::crdt
         {
             m_logger->warn( "DAG syncer failed to listen " + std::string( listen_to.getStringAddress() ) );
             // @todo Check if the error is not fatal
+            return Error::DAG_SYNCHER_NOT_LISTENING;
         }
 
         //dht_->Start();
@@ -283,7 +301,7 @@ namespace sgns::crdt
         if ( m_crdtDatastore == nullptr )
         {
             m_logger->error( "Unable to create CRDT datastore" );
-            return outcome::failure( boost::system::error_code{} );
+            return Error::CRDT_DATASTORE_NOT_CREATED;
         }
 
         // TODO: bootstrapping
@@ -329,7 +347,7 @@ namespace sgns::crdt
         if ( !m_crdtDatastore )
         {
             m_logger->error( "CRDT datastore is not initialized yet" );
-            return outcome::failure( boost::system::error_code{}  );
+            return outcome::failure( Error::CRDT_DATASTORE_NOT_CREATED );
         }
 
         return m_crdtDatastore->PutKey( key, value );
@@ -340,7 +358,7 @@ namespace sgns::crdt
         if ( !m_crdtDatastore )
         {
             m_logger->error( "CRDT datastore is not initialized yet" );
-            return outcome::failure( boost::system::error_code{} );
+            return outcome::failure( Error::CRDT_DATASTORE_NOT_CREATED );
         }
         AtomicTransaction batch( m_crdtDatastore );
 
@@ -418,11 +436,12 @@ namespace sgns::crdt
         return sKey.substr( keyPos, suffixPos - keyPos );
     }
 
+
     void GlobalDB::PrintDataStore()
     {
         m_crdtDatastore->PrintDataStore();
     }
-
+  
     std::shared_ptr<AtomicTransaction> GlobalDB::BeginTransaction()
     {
         return std::make_shared<AtomicTransaction>(m_crdtDatastore);

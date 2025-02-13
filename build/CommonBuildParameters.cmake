@@ -12,6 +12,16 @@ set(BOOST_VERSION_2U "${BOOST_MAJOR_VERSION}_${BOOST_MINOR_VERSION}")
 # Set config of GTest
 set(BUILD_TESTING "ON" CACHE BOOL "Build tests")
 
+set(BUILD_WITH_PROOFS ON CACHE BOOL "Whether proofs are being generated/verified or not")
+
+add_definitions(-D_USE_INSTALLED_BOOST_JSON_=TRUE)
+
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_definitions(-DDEBUG_BYTECODE_CIRCUITS)
+else()
+    add_definitions(-DRELEASE_BYTECODE_CIRCUITS)
+endif()
+
 if(BUILD_TESTING)
     set(GTest_DIR "${_THIRDPARTY_BUILD_DIR}/GTest/lib/cmake/GTest")
     set(GTest_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/GTest/include")
@@ -148,6 +158,7 @@ set(boost_chrono_DIR "${Boost_LIB_DIR}/cmake/boost_chrono-${BOOST_VERSION}")
 set(boost_log_DIR "${Boost_LIB_DIR}/cmake/boost_log-${BOOST_VERSION}")
 set(boost_log_setup_DIR "${Boost_LIB_DIR}/cmake/boost_log_setup-${BOOST_VERSION}")
 set(boost_thread_DIR "${Boost_LIB_DIR}/cmake/boost_thread-${BOOST_VERSION}")
+set(boost_unit_test_framework_DIR "${Boost_LIB_DIR}/cmake/boost_unit_test_framework-${BOOST_VERSION}")
 set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_NO_SYSTEM_PATHS ON)
@@ -164,7 +175,8 @@ if(SGNS_STACKTRACE_BACKTRACE)
 endif()
 
 # header only libraries must not be added here
-find_package(Boost REQUIRED COMPONENTS date_time filesystem random regex system thread log log_setup program_options)
+find_package(Boost REQUIRED COMPONENTS date_time filesystem random regex system thread log log_setup program_options unit_test_framework)
+include_directories(${Boost_INCLUDE_DIRS})
 
 # SQLiteModernCpp project
 set(SQLiteModernCpp_ROOT_DIR "${_THIRDPARTY_BUILD_DIR}/SQLiteModernCpp")
@@ -254,14 +266,75 @@ find_package(AsyncIOManager CONFIG REQUIRED)
 
 # --------------------------------------------------------
 # Set config of crypto3
-# set(crypto3_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/crypto3/include")
-# set(crypto3_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/crypto3/lib")
-# set(crypto3_DIR "${_THIRDPARTY_BUILD_DIR}/crypto3/lib/cmake/crypto3")
-# find_package(crypto3 CONFIG REQUIRED)
-# include_directories(${crypto3_INCLUDE_DIR})
-include_directories(
-    "${ZKLLVM_DIR}/zkLLVM/include"
+add_library(crypto3::algebra INTERFACE IMPORTED)
+add_library(crypto3::block INTERFACE IMPORTED)
+add_library(crypto3::blueprint INTERFACE IMPORTED)
+add_library(crypto3::codec INTERFACE IMPORTED)
+add_library(crypto3::math INTERFACE IMPORTED)
+add_library(crypto3::multiprecision INTERFACE IMPORTED)
+add_library(crypto3::pkpad INTERFACE IMPORTED)
+add_library(crypto3::pubkey INTERFACE IMPORTED)
+add_library(crypto3::random INTERFACE IMPORTED)
+add_library(crypto3::zk INTERFACE IMPORTED)
+add_library(marshalling::core INTERFACE IMPORTED)
+add_library(marshalling::crypto3_algebra INTERFACE IMPORTED)
+add_library(marshalling::crypto3_multiprecision INTERFACE IMPORTED)
+add_library(marshalling::crypto3_zk INTERFACE IMPORTED)
+
+set_target_properties(crypto3::algebra PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${ZKLLVM_DIR}/zkLLVM/include"
 )
+set_target_properties(crypto3::block PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${ZKLLVM_DIR}/zkLLVM/include"
+)
+set_target_properties(crypto3::blueprint PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${ZKLLVM_DIR}/zkLLVM/include"
+)
+set_target_properties(crypto3::codec PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${ZKLLVM_DIR}/zkLLVM/include"
+)
+set_target_properties(crypto3::math PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${ZKLLVM_DIR}/zkLLVM/include"
+)
+set_target_properties(crypto3::multiprecision PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${ZKLLVM_DIR}/zkLLVM/include"
+)
+set_target_properties(crypto3::pkpad PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${ZKLLVM_DIR}/zkLLVM/include"
+)
+set_target_properties(crypto3::pubkey PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${ZKLLVM_DIR}/zkLLVM/include"
+)
+set_target_properties(crypto3::random PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${ZKLLVM_DIR}/zkLLVM/include"
+)
+set_target_properties(crypto3::zk PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${ZKLLVM_DIR}/zkLLVM/include"
+)
+set_target_properties(marshalling::core PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${ZKLLVM_DIR}/zkLLVM/include"
+)
+set_target_properties(marshalling::crypto3_algebra PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${ZKLLVM_DIR}/zkLLVM/include"
+)
+set_target_properties(marshalling::crypto3_multiprecision PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${ZKLLVM_DIR}/zkLLVM/include"
+)
+set_target_properties(marshalling::crypto3_zk PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${ZKLLVM_DIR}/zkLLVM/include"
+)
+
+# zkLLVM
+set(zkLLVM_INCLUDE_DIR "${ZKLLVM_DIR}/zkLLVM/include")
+include_directories(${zkLLVM_INCLUDE_DIR})
+
+if (BUILD_WITH_PROOFS)
+    # circifier
+    # set(LLVM_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/circifier/include")
+    # set(LLVM_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/circifier/lib")
+    set(LLVM_DIR "${ZKLLVM_DIR}/zkLLVM/lib/cmake/llvm")
+    find_package(LLVM CONFIG REQUIRED)
+endif()
 
 # gnus_upnp
 set(gnus_upnp_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/gnus_upnp/include")
@@ -377,6 +450,7 @@ install_hfile(${CMAKE_CURRENT_BINARY_DIR}/generated/crdt)
 install_hfile(${CMAKE_CURRENT_BINARY_DIR}/generated/processing)
 install_hfile(${CMAKE_CURRENT_BINARY_DIR}/generated/account)
 install_hfile(${CMAKE_CURRENT_BINARY_DIR}/generated/blockchain)
+install_hfile(${CMAKE_CURRENT_BINARY_DIR}/generated/proof)
 
 # install the configuration file
 install(FILES

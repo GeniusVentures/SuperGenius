@@ -18,7 +18,6 @@ namespace sgns::processing
         {
             auto subTaskKey = ( boost::format( "subtasks/TASK_%s/%s" ) % task.ipfs_block_id() % subTask.subtaskid() )
                                   .str();
-
             sgns::crdt::HierarchicalKey key( subTaskKey );
             sgns::base::Buffer          value;
             value.put( subTask.SerializeAsString() );

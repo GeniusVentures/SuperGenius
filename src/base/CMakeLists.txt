@@ -51,3 +51,14 @@ target_link_libraries(mp_utils
     Boost::headers
 )
 supergenius_install(mp_utils)
+
+add_library(fixed_point
+    fixed_point.cpp
+    fixed_point.hpp
+)
+target_link_libraries(fixed_point
+    PUBLIC
+    Boost::headers
+    outcome
+)
+supergenius_install(fixed_point)

@@ -8,15 +8,9 @@
 #include <rapidjson/document.h>
 #include "AccountHelper.hpp"
 
-#ifndef __cplusplus
-extern "C"
-{
-#endif
-    extern AccountKey2   ACCOUNT_KEY;
-    extern DevConfig_st2 DEV_CONFIG;
-#ifndef __cplusplus
-}
-#endif
+extern AccountKey2   ACCOUNT_KEY;
+extern DevConfig_st2 DEV_CONFIG;
+
 static const std::string logger_config( R"(
             # ----------------
             sinks:
@@ -64,7 +58,7 @@ namespace sgns
         logNoise->set_level( spdlog::level::trace );
 
         auto pubsubKeyPath =
-            ( boost::format( "SuperGNUSNode.TestNet.%s/pubs_processor" ) % account_->GetAddress<std::string>() ).str();
+            ( boost::format( "SuperGNUSNode.TestNet.%s/pubs_processor" ) % account_->GetAddress() ).str();
 
         pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
             crdt::KeyPairFileStorage( pubsubKeyPath ).GetKeyPair().value() );
@@ -72,7 +66,7 @@ namespace sgns
 
         globaldb_ = std::make_shared<crdt::GlobalDB>(
             io_,
-            ( boost::format( "SuperGNUSNode.TestNet.%s" ) % account_->GetAddress<std::string>() ).str(),
+            ( boost::format( "SuperGNUSNode.TestNet.%s" ) % account_->GetAddress() ).str(),
             40010,
             std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_, std::string( PROCESSING_CHANNEL ) ) );
 
@@ -103,7 +97,7 @@ namespace sgns
             io_,
             account_,
             hasher_,
-            ( boost::format( "SuperGNUSNode.TestNet.%s" ) % account_->GetAddress<std::string>() ).str(),
+            ( boost::format( "SuperGNUSNode.TestNet.%s" ) % account_->GetAddress() ).str(),
             pubsub_,
             nullptr,
             40010 );
