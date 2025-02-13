@@ -51,9 +51,9 @@ target_link_libraries(sgns_account
     AsyncIOManager
     ${WIN_API_LIBRARY}
     ${USER_ENV_LIBRARY}
-    ${TrustWalletCore}
-    ${wallet_core_rs}
-    ${TrezorCrypto}
+    TrustWalletCore
+    wallet_core_rs
+    TrezorCrypto
     protobuf::libprotobuf
     rapidjson
     ${WIN_CRYPT_LIBRARY}
@@ -71,7 +71,6 @@ target_include_directories(
     sgns_account
     PRIVATE
     ${AsyncIOManager_INCLUDE_DIR}
-    ${TrustWalletCore_INCLUDE_DIR}
 )
 
 set_target_properties(sgns_account PROPERTIES PUBLIC_HEADER "GeniusNode.hpp")

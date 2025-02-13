@@ -346,9 +346,20 @@ include_directories(${gnus_upnp_INCLUDE_DIR})
 # wallet-core
 set(TrustWalletCore_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/wallet-core/lib")
 set(TrustWalletCore_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/wallet-core/include")
-find_library(TrezorCrypto TrezorCrypto PATHS ${TrustWalletCore_LIBRARY_DIR} REQUIRED)
-find_library(wallet_core_rs wallet_core_rs PATHS ${TrustWalletCore_LIBRARY_DIR} REQUIRED)
-find_library(TrustWalletCore TrustWalletCore PATHS ${TrustWalletCore_LIBRARY_DIR} REQUIRED)
+
+find_library(TrezorCrypto_PATH TrezorCrypto PATHS ${TrustWalletCore_LIBRARY_DIR} REQUIRED)
+find_library(wallet_core_rs_PATH wallet_core_rs PATHS ${TrustWalletCore_LIBRARY_DIR} REQUIRED)
+find_library(TrustWalletCore_PATH TrustWalletCore PATHS ${TrustWalletCore_LIBRARY_DIR} REQUIRED)
+
+add_library(TrezorCrypto STATIC IMPORTED)
+add_library(wallet_core_rs STATIC IMPORTED)
+add_library(TrustWalletCore STATIC IMPORTED)
+
+set_target_properties(TrezorCrypto PROPERTIES IMPORTED_LOCATION "${TrezorCrypto_PATH}")
+set_target_properties(wallet_core_rs PROPERTIES IMPORTED_LOCATION "${wallet_core_rs_PATH}")
+set_target_properties(TrustWalletCore PROPERTIES IMPORTED_LOCATION "${TrustWalletCore_PATH}")
+
+target_include_directories(TrustWalletCore INTERFACE "${TrustWalletCore_INCLUDE_DIR}")
 
 include_directories(
     ${PROJECT_ROOT}/src
