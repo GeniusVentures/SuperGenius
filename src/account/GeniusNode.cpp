@@ -54,7 +54,7 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, GeniusNode::Error, e )
         case sgns::GeniusNode::Error::INVALID_BLOCK_PARAMETERS:
             return "Json missing block params";
         case sgns::GeniusNode::Error::NO_PROCESSOR:
-            return "Json missing block params";
+            return "Json missing processor";
     }
     return "Unknown error";
 }
@@ -132,8 +132,7 @@ namespace sgns
         loggerProcqm->set_level( spdlog::level::off );
         auto tokenid = dev_config_.TokenID;
 
-        auto pubsubport    = GenerateRandomPort( base_port,
-                                              account_->GetAddress() + std::to_string( tokenid ) );
+        auto pubsubport    = GenerateRandomPort( base_port, account_->GetAddress() + std::to_string( tokenid ) );
         auto graphsyncport = pubsubport + 10;
 
         std::vector<std::string> addresses;
@@ -159,9 +158,8 @@ namespace sgns
             }
         }
 
-        auto pubsubKeyPath = ( boost::format( "SuperGNUSNode.TestNet.1a.03.%s/pubs_processor" ) %
-                               account_->GetAddress() )
-                                 .str();
+        auto pubsubKeyPath =
+            ( boost::format( "SuperGNUSNode.TestNet.1a.03.%s/pubs_processor" ) % account_->GetAddress() ).str();
 
         pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
             crdt::KeyPairFileStorage( write_base_path_ + pubsubKeyPath ).GetKeyPair().value() );
@@ -173,9 +171,7 @@ namespace sgns
 
         globaldb_ = std::make_shared<crdt::GlobalDB>(
             io_,
-            ( boost::format( write_base_path_ + "SuperGNUSNode.TestNet.1a.03.%s" ) %
-              account_->GetAddress() )
-                .str(),
+            ( boost::format( write_base_path_ + "SuperGNUSNode.TestNet.1a.03.%s" ) % account_->GetAddress() ).str(),
             graphsyncport,
             std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_, std::string( PROCESSING_CHANNEL ) ) );
 
@@ -211,9 +207,7 @@ namespace sgns
             io_,
             account_,
             std::make_shared<crypto::HasherImpl>(),
-            ( boost::format( write_base_path_ + "SuperGNUSNode.TestNet.1a.03.%s" ) %
-              account_->GetAddress() )
-                .str(),
+            ( boost::format( write_base_path_ + "SuperGNUSNode.TestNet.1a.03.%s" ) % account_->GetAddress() ).str(),
             pubsub_,
             upnp,
             graphsyncport );
@@ -355,12 +349,9 @@ namespace sgns
 
     outcome::result<void> GeniusNode::ProcessImage( const std::string &jsondata )
     {
-        auto isjsonvalid = CheckProcessValidity(jsondata);
-        if (!isjsonvalid)
-        {
-            return isjsonvalid;
-        }
-        auto funds = GetProcessCost(jsondata);
+        BOOST_OUTCOME_TRYV2( auto &&, CheckProcessValidity( jsondata ) );
+
+        auto funds = GetProcessCost( jsondata );
         if ( funds <= 0 )
         {
             return outcome::failure( Error::PROCESS_COST_ERROR );
@@ -375,12 +366,12 @@ namespace sgns
         auto               uuidstring = generate_uuid_with_ipfs_id( pubsub_->GetHost()->getId().toBase58() );
 
         task.set_ipfs_block_id( uuidstring );
-        task.set_json_data(jsondata);
+        task.set_json_data( jsondata );
         task.set_random_seed( 0 );
         task.set_results_channel( ( boost::format( "RESULT_CHANNEL_ID_%1%" ) % ( 1 ) ).str() );
 
         rapidjson::Document document;
-        document.Parse(jsondata.c_str());
+        document.Parse( jsondata.c_str() );
         size_t           nSubTasks = 1;
         rapidjson::Value inputArray;
 
@@ -435,78 +426,78 @@ namespace sgns
         return send_escrow_return;
     }
 
-    outcome::result<void> GeniusNode::CheckProcessValidity(const std::string& jsondata)
+    outcome::result<void> GeniusNode::CheckProcessValidity( const std::string &jsondata )
     {
         rapidjson::Document document;
-        document.Parse(jsondata.c_str());
+        document.Parse( jsondata.c_str() );
 
-        if (document.HasParseError())
+        if ( document.HasParseError() )
         {
-            return outcome::failure(Error::INVALID_JSON);
+            return outcome::failure( Error::INVALID_JSON );
         }
 
         // Check for required fields
-        if (!document.HasMember("data") || !document["data"].IsObject())
+        if ( !document.HasMember( "data" ) || !document["data"].IsObject() )
         {
-            return outcome::failure(Error::PROCESS_INFO_MISSING);
+            return outcome::failure( Error::PROCESS_INFO_MISSING );
         }
 
-        if (!document.HasMember("model") || !document["model"].IsObject())
+        if ( !document.HasMember( "model" ) || !document["model"].IsObject() )
         {
-            return outcome::failure(Error::PROCESS_INFO_MISSING);
+            return outcome::failure( Error::PROCESS_INFO_MISSING );
         }
 
-        if (!document.HasMember("input") || !document["input"].IsArray())
+        if ( !document.HasMember( "input" ) || !document["input"].IsArray() )
         {
-            return outcome::failure(Error::PROCESS_INFO_MISSING);
+            return outcome::failure( Error::PROCESS_INFO_MISSING );
         }
 
         // Extract and validate the model
-        const auto& model = document["model"];
-        if (!model.HasMember("name") || !model["name"].IsString())
+        const auto &model = document["model"];
+        if ( !model.HasMember( "name" ) || !model["name"].IsString() )
         {
-            return outcome::failure(Error::PROCESS_INFO_MISSING);
+            return outcome::failure( Error::PROCESS_INFO_MISSING );
         }
 
-        std::string model_name = model["name"].GetString();
-        auto processor_check = processing_core_->CheckRegisteredProcessor(model_name);
-        if (!processor_check)
+        std::string model_name      = model["name"].GetString();
+        auto        processor_check = processing_core_->CheckRegisteredProcessor( model_name );
+        if ( !processor_check )
         {
-            return outcome::failure(Error::NO_PROCESSOR); // Return the error if the processor is not registered
+            return outcome::failure( Error::NO_PROCESSOR ); // Return the error if the processor is not registered
         }
 
         // Extract input array
-        const auto& inputArray = document["input"];
-        if (inputArray.Size() == 0)
+        const auto &inputArray = document["input"];
+        if ( inputArray.Size() == 0 )
         {
-            return outcome::failure(Error::PROCESS_INFO_MISSING);
+            return outcome::failure( Error::PROCESS_INFO_MISSING );
         }
 
         // Validate each input entry
-        for (auto& input : inputArray.GetArray())
+        for ( auto &input : inputArray.GetArray() )
         {
-            if (!input.IsObject())
+            if ( !input.IsObject() )
             {
-                return outcome::failure(Error::PROCESS_INFO_MISSING);
+                return outcome::failure( Error::PROCESS_INFO_MISSING );
             }
 
-            if (!input.HasMember("block_len") || !input["block_len"].IsUint64())
+            if ( !input.HasMember( "block_len" ) || !input["block_len"].IsUint64() )
             {
-                return outcome::failure(Error::PROCESS_INFO_MISSING);
+                return outcome::failure( Error::PROCESS_INFO_MISSING );
             }
 
-            if (!input.HasMember("block_line_stride") || !input["block_line_stride"].IsUint64())
+            if ( !input.HasMember( "block_line_stride" ) || !input["block_line_stride"].IsUint64() )
             {
-                return outcome::failure(Error::PROCESS_INFO_MISSING);
+                return outcome::failure( Error::PROCESS_INFO_MISSING );
             }
 
-            uint64_t block_len = input["block_len"].GetUint64();
+            uint64_t block_len         = input["block_len"].GetUint64();
             uint64_t block_line_stride = input["block_line_stride"].GetUint64();
 
             // Ensure block_len is evenly divisible by block_line_stride
-            if (block_line_stride == 0 || (block_len % block_line_stride) != 0)
+            if ( block_line_stride == 0 || ( block_len % block_line_stride ) != 0 )
             {
-                return outcome::failure(Error::INVALID_BLOCK_PARAMETERS);
+                return outcome::failure( Error::INVALID_BLOCK_PARAMETERS );
             }
         }
 
@@ -564,7 +555,7 @@ namespace sgns
         return std::max( cost, static_cast<uint64_t>( 1 ) );
     }
 
-    outcome::result<void> GeniusNode::MintTokens( uint64_t          amount,
+    outcome::result<void> GeniusNode::MintTokens( uint64_t           amount,
                                                   const std::string &transaction_hash,
                                                   const std::string &chainid,
                                                   const std::string &tokenid )

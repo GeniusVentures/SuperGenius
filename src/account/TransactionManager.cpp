@@ -679,26 +679,6 @@ namespace sgns
         return outcome::success();
     }
 
-    outcome::result<void> TransactionManager::PostEscrowOnProcessingDB( const std::shared_ptr<IGeniusTransactions> &tx )
-    {
-        auto escrow_tx = std::dynamic_pointer_cast<EscrowTransaction>( tx );
-
-        auto dest_infos = escrow_tx->GetUTXOParameters();
-
-        if ( !dest_infos.outputs_.empty() )
-        {
-            sgns::crdt::GlobalDB::Buffer data_transaction;
-            data_transaction.put( tx->SerializeByteVector() );
-
-            m_logger->debug( "Escrow sent to processing db on path " + dest_infos.outputs_[0].dest_address );
-
-            BOOST_OUTCOME_TRYV2( auto &&,
-                                 processing_db_m->Put( { dest_infos.outputs_[0].dest_address }, data_transaction ) );
-        }
-
-        return outcome::success();
-    }
-
     std::vector<std::vector<uint8_t>> TransactionManager::GetOutTransactions() const
     {
         std::vector<std::vector<std::uint8_t>> result;
