@@ -109,7 +109,7 @@ namespace sgns
 #ifdef RELEASE_BYTECODE_CIRCUITS
             RegisterBytecode( std::string( TRANSFER_TYPE_NAME ), std::string( TransactionCircuit ) );
 #else
-            RegisterBytecode( std::string( TRANSFER_TYPE_NAME ), std::string( TransactionCircuitDebug ) );
+            RegisterBytecode( std::string( TRANSFER_TYPE_NAME ), std::string( TransactionCircuit ) );
 #endif
 
             return true;

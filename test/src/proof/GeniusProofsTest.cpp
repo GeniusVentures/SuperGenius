@@ -91,7 +91,7 @@ TEST( GeniusProofsTest, InvalidTransferProof )
 #ifdef RELEASE_BYTECODE_CIRCUITS
     std::string TransactionBytecode{ std::string( TransactionCircuit ) };
 #else
-    std::string TransactionBytecode{ std::string( TransactionCircuitDebug ) };
+    std::string TransactionBytecode{ std::string( TransactionCircuit ) };
 #endif
 
     auto wrong_parameters = AnotherTxProof.GenerateJsonParameters();
