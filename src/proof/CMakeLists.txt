@@ -34,7 +34,8 @@ target_link_libraries(genius_prover
     Boost::boost
 )
 if(MSVC)
-    target_compile_options(genius_prover PUBLIC /constexpr:steps1500000)
+    target_compile_options(genius_prover PUBLIC /constexpr:steps1500000 /bigobj)
+    target_compile_options(genius_assigner PUBLIC /constexpr:steps1500000 /bigobj)
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     target_compile_options(genius_prover PUBLIC -fconstexpr-steps=10000000)
 endif()

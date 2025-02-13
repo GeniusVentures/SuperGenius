@@ -70,36 +70,36 @@ if(NOT DEFINED ZKLLVM_DIR)
         set(TARGET_BRANCH "develop")
 
         # Fetch release information from GitHub
-        set(RELEASE_INFO_FILE "${CMAKE_BINARY_DIR}/release_info.json")
-        execute_process(
-            COMMAND curl -s -H "Accept: application/vnd.github.v3+json" ${GITHUB_API_URL} -o ${RELEASE_INFO_FILE}
-            RESULT_VARIABLE CURL_RESULT
-        )
+        # set(RELEASE_INFO_FILE "${CMAKE_BINARY_DIR}/release_info.json")
+        # execute_process(
+        #     COMMAND curl -s -H "Accept: application/vnd.github.v3+json" ${GITHUB_API_URL} -o ${RELEASE_INFO_FILE}
+        #     RESULT_VARIABLE CURL_RESULT
+        # )
 
-        if(NOT CURL_RESULT EQUAL 0)
-            message(FATAL_ERROR "Failed to fetch release info from GitHub")
-        endif()
+        # if(NOT CURL_RESULT EQUAL 0)
+        #     message(FATAL_ERROR "Failed to fetch release info from GitHub")
+        # endif()
 
         # Parse the latest release tag matching the pattern
-        find_program(JQ_EXECUTABLE jq)
-        if(NOT JQ_EXECUTABLE)
-            message(FATAL_ERROR "jq is required to parse JSON, please install jq")
-        endif()
+        # find_program(JQ_EXECUTABLE jq)
+        # if(NOT JQ_EXECUTABLE)
+        #     message(FATAL_ERROR "jq is required to parse JSON, please install jq")
+        # endif()
 
-        execute_process(
-            COMMAND ${JQ_EXECUTABLE} -r "[.[] | select(.tag_name | test(\"${BUILD_PLATFORM_NAME}-${TARGET_BRANCH}-Release-.*\"))] | sort_by(.created_at) | last | .tag_name"
-            INPUT_FILE ${RELEASE_INFO_FILE}
-            OUTPUT_VARIABLE LATEST_RELEASE_TAG
-            OUTPUT_STRIP_TRAILING_WHITESPACE
-        )
+        # execute_process(
+        #     COMMAND ${JQ_EXECUTABLE} -r "[.[] | select(.tag_name | test(\"${BUILD_PLATFORM_NAME}-${TARGET_BRANCH}-Release-.*\"))] | sort_by(.created_at) | last | .tag_name"
+        #     INPUT_FILE ${RELEASE_INFO_FILE}
+        #     OUTPUT_VARIABLE LATEST_RELEASE_TAG
+        #     OUTPUT_STRIP_TRAILING_WHITESPACE
+        # )
 
-        if(NOT LATEST_RELEASE_TAG)
-            message(FATAL_ERROR "No matching release found for ${BUILD_PLATFORM_NAME}-${TARGET_BRANCH}")
-        endif()
+        # if(NOT LATEST_RELEASE_TAG)
+        #     message(FATAL_ERROR "No matching release found for ${BUILD_PLATFORM_NAME}-${TARGET_BRANCH}")
+        # endif()
 
         # Construct the release download URL
         set(ZKLLVM_ARCHIVE_NAME "${BUILD_PLATFORM_NAME}-${TARGET_BRANCH}-Release.tar.gz")
-        set(ZKLLVM_RELEASE_URL "https://github.com/${GITHUB_REPO}/releases/download/${LATEST_RELEASE_TAG}/${ZKLLVM_ARCHIVE_NAME}")
+        set(ZKLLVM_RELEASE_URL "https://github.com/${GITHUB_REPO}/releases/download/${BUILD_PLATFORM_NAME}-${TARGET_BRANCH}-Release/${ZKLLVM_ARCHIVE_NAME}")
 
         set(ZKLLVM_ARCHIVE "${CMAKE_BINARY_DIR}/${ZKLLVM_ARCHIVE_NAME}")
         set(ZKLLVM_EXTRACT_DIR "${CMAKE_CURRENT_LIST_DIR}/../../zkLLVM")
