@@ -606,4 +606,14 @@ namespace sgns
     {
         globaldb_->PrintDataStore();
     }
+    
+    std::string GeniusNode::FormatTokens( uint64_t amount )
+    {
+        return sgns::fixed_point::toString( amount );
+    }
+
+    outcome::result<uint64_t> GeniusNode::ParseTokens( const std::string &str )
+    {
+        return sgns::fixed_point::fromString( str );
+    }
 }

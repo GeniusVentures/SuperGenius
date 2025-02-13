@@ -93,13 +93,22 @@ namespace sgns
 
         std::string toString( uint64_t value, uint64_t precision )
         {
-            if ( precision > MAX_PRECISION )
-            {
-                return "Error: Precision too large";
-            }
             uint64_t integer_part    = value / scale_table[precision];
             uint64_t fractional_part = value % scale_table[precision];
-            return std::to_string( integer_part ) + "." + std::to_string( fractional_part );
+
+            if ( precision == 0 )
+            {
+                return std::to_string( integer_part );
+            }
+
+            std::string fractional_str = std::to_string( fractional_part );
+
+            if ( fractional_str.size() < precision )
+            {
+                fractional_str.insert( 0, precision - fractional_str.size(), '0' );
+            }
+
+            return std::to_string( integer_part ) + "." + fractional_str;
         }
 
         outcome::result<uint64_t> multiply( uint64_t a, uint64_t b, uint64_t precision )

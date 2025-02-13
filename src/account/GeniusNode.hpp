@@ -110,6 +110,20 @@ namespace sgns
             return pubsub_;
         }
 
+        /**
+         * @brief       Formats a fixed-point amount into a human-readable string.
+         * @param[in]   amount Amount in Minion Tokens (1e-9 GNUS).
+         * @return      Formatted string representation in GNUS.
+         */
+        static std::string FormatTokens( uint64_t amount );
+
+        /**
+         * @brief       Parses a human-readable string into a fixed-point amount.
+         * @param[in]   str String representation of an amount in GNUS.
+         * @return      Outcome result with the parsed amount in Minion Tokens (1e-9 GNUS) or error.
+         */
+        static outcome::result<uint64_t> ParseTokens( const std::string &str );
+
         static std::vector<uint8_t> GetImageByCID( const std::string &cid );
 
         void PrintDataStore();
@@ -180,7 +194,6 @@ namespace sgns
             )";
             return logger_config;
         }
-
     };
 
 }
