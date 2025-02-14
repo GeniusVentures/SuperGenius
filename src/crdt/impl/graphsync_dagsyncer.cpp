@@ -60,15 +60,14 @@ namespace sgns::crdt
         std::vector<CID> cids;
         Extension        do_not_send_cids_extension = ipfs_lite::ipfs::graphsync::encodeDontSendCids( cids );
         extensions.push_back( do_not_send_cids_extension );
-        auto subscription = graphsync_->makeRequest( peer,
-                                                     std::move( address ),
-                                                     root_cid,
-                                                     {},
-                                                     extensions,
-                                                     std::bind( &GraphsyncDAGSyncer::RequestProgressCallback,
-                                                                this,
-                                                                std::placeholders::_1,
-                                                                std::placeholders::_2 ) );
+        auto subscription = graphsync_->makeRequest(
+            peer,
+            std::move( address ),
+            root_cid,
+            {},
+            extensions,
+            [instance = shared_from_this()]( ResponseStatusCode code, const std::vector<Extension> &extensions )
+            { instance->RequestProgressCallback( code, extensions ); } );
 
         // keeping subscriptions alive, otherwise they cancel themselves
         logger_->debug( "Requesting Node {} ", root_cid.toString().value() );
@@ -102,15 +101,14 @@ namespace sgns::crdt
         std::vector<CID> cids;
         Extension        do_not_send_cids_extension = ipfs_lite::ipfs::graphsync::encodeDontSendCids( cids );
         extensions.push_back( do_not_send_cids_extension );
-        auto subscription = graphsync_->makeRequest( peer,
-                                                     std::move( address ),
-                                                     root_cid,
-                                                     {},
-                                                     extensions,
-                                                     std::bind( &GraphsyncDAGSyncer::RequestProgressCallback,
-                                                                this,
-                                                                std::placeholders::_1,
-                                                                std::placeholders::_2 ) );
+        auto subscription = graphsync_->makeRequest(
+            peer,
+            std::move( address ),
+            root_cid,
+            {},
+            extensions,
+            [instance = shared_from_this()]( ResponseStatusCode code, const std::vector<Extension> &extensions )
+            { instance->RequestProgressCallback( code, extensions ); } );
 
         // keeping subscriptions alive, otherwise they cancel themselves
         logger_->debug( "Requesting Node {} ", root_cid.toString().value() );
@@ -242,10 +240,8 @@ namespace sgns::crdt
 
         auto dagService = std::make_shared<MerkleDagBridgeImpl>( shared_from_this() );
 
-        BlockCallback blockCallback = std::bind( &GraphsyncDAGSyncer::BlockReceivedCallback,
-                                                 this,
-                                                 std::placeholders::_1,
-                                                 std::placeholders::_2 );
+        BlockCallback blockCallback = [instance = shared_from_this()]( const CID &cid, sgns::common::Buffer buffer )
+        { instance->BlockReceivedCallback( cid, buffer ); };
         graphsync_->start( dagService, blockCallback );
 
         if ( host_ == nullptr )
