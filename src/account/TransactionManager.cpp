@@ -94,8 +94,9 @@ namespace sgns
             this->Update();
             this->timer_m->expires_after( boost::asio::chrono::milliseconds( 300 ) );
 
-            this->timer_m->async_wait( [this, task]( const boost::system::error_code & )
-                                       { this->ctx_m->post( *task ); } );
+
+            this->timer_m->async_wait( [instance = shared_from_this(), task]( const boost::system::error_code & )
+                                       { instance->ctx_m->post( *task ); } );
         };
         ctx_m->post( *task );
     }
