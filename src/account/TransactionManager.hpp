@@ -39,7 +39,7 @@ namespace sgns
     using namespace boost::multiprecision;
     using EscrowDataPair = std::pair<std::string, base::Buffer>;
 
-    class TransactionManager
+    class TransactionManager : public std::enable_shared_from_this<TransactionManager>
     {
     public:
         using TransactionPair = std::pair<std::shared_ptr<IGeniusTransactions>, std::optional<std::vector<uint8_t>>>;

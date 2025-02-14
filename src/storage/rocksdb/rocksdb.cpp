@@ -104,25 +104,21 @@ namespace sgns::storage
         ReadOptions read_options      = ro_;
         read_options.auto_prefix_mode = true; //Adaptive Prefix Mode
 
-        auto strKeyPrefix = std::string( keyPrefix.toString() );
+    auto strKeyPrefix = std::string(keyPrefix.toString());
 
-        Buffer key;
-        Buffer value;
-
-        QueryResult results;
-        auto        iter        = std::unique_ptr<rocksdb::Iterator>( db_->NewIterator( read_options ) );
-        auto        slicePrefix = make_slice( keyPrefix );
-        for ( iter->Seek( slicePrefix ); iter->Valid() && iter->key().starts_with( slicePrefix ); iter->Next() )
-        {
-            key.clear();
-            key.put( iter->key().ToString() );
-
-            value.clear();
-            value.put( iter->value().ToString() );
-            results[key] = value;
-        }
-        return results;
+    QueryResult results;
+    auto iter = std::unique_ptr<rocksdb::Iterator>(db_->NewIterator(read_options));
+    auto slicePrefix = make_slice(keyPrefix);
+    for (iter->Seek(slicePrefix); iter->Valid() && iter->key().starts_with(slicePrefix); iter->Next())
+    {
+      Buffer key;
+      key.put(iter->key().ToString());
+      Buffer value;
+      value.put(iter->value().ToString());
+      results.emplace(std::move(key), std::move(value));
     }
+    return results;
+  }
 
     bool rocksdb::contains( const Buffer &key ) const
     {

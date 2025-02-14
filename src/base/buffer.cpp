@@ -123,6 +123,9 @@ namespace sgns::base {
   }
 
   bool Buffer::operator<(const Buffer &b) const noexcept {
+    if (data_.empty() || b.data_.empty()) {
+      return data_.size() < b.data_.size();
+    }
     return std::lexicographical_compare(begin(), end(), b.begin(), b.end());
   }
 

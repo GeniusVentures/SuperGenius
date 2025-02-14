@@ -23,7 +23,7 @@ namespace sgns
 #ifdef RELEASE_BYTECODE_CIRCUITS
         IBasicProof( bytecode.value_or( std::string( TransactionCircuit ) ) ), //
 #else
-        IBasicProof( bytecode.value_or( std::string( TransactionCircuitDebug ) ) ), //
+        IBasicProof( bytecode.value_or( std::string( TransactionCircuit ) ) ), //
 #endif
         balance_( std::move( balance ) ), //
         amount_( std::move( amount ) )    //

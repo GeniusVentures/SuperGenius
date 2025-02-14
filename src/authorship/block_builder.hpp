@@ -1,3 +1,4 @@
+
 #ifndef SUPERGENIUS_SRC_AUTHORSHIP_BLOCK_BUILDER_HPP
 #define SUPERGENIUS_SRC_AUTHORSHIP_BLOCK_BUILDER_HPP
 
@@ -24,7 +25,7 @@ namespace sgns::authorship {
     /**
      * Create a block from extrinsics and header
      */
-    [[nodiscard]] virtual outcome::result<primitives::Block> bake() const = 0;
+    virtual outcome::result<primitives::Block> bake() const = 0;
   };
 
 }  // namespace sgns::authorship
