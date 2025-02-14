@@ -126,7 +126,7 @@ namespace sgns
         auto loggerSubQueue = base::createLogger( "ProcessingSubTaskQueueAccessorImpl" );
         loggerSubQueue->set_level( spdlog::level::off );
         auto loggerProcServ = base::createLogger( "ProcessingService" );
-        loggerProcServ->set_level( spdlog::level::debug );
+        loggerProcServ->set_level( spdlog::level::off );
 
         auto loggerProcqm = base::createLogger( "ProcessingSubTaskQueueManager" );
         loggerProcqm->set_level( spdlog::level::off );
