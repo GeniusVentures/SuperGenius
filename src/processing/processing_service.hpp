@@ -8,7 +8,7 @@
 
 namespace sgns::processing
 {
-    class ProcessingServiceImpl
+    class ProcessingServiceImpl : public std::enable_shared_from_this<ProcessingServiceImpl>
     {
     public:
         /** Constructs a processing service.

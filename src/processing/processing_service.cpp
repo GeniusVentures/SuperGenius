@@ -89,7 +89,14 @@ namespace sgns::processing
     {
         using GossipPubSubTopic = sgns::ipfs_pubsub::GossipPubSubTopic;
         m_gridChannel           = std::make_unique<GossipPubSubTopic>( m_gossipPubSub, processingGridChannelId );
-        m_gridChannel->Subscribe( std::bind( &ProcessingServiceImpl::OnMessage, this, std::placeholders::_1 ) );
+        m_gridChannel->Subscribe(
+            [weakSelf = weak_from_this()]( boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message &> message )
+            {
+                if ( auto self = weakSelf.lock() ) // Check if object still exists
+                {
+                    self->OnMessage( message );
+                }
+            } );
     }
 
     void ProcessingServiceImpl::SendChannelListRequest()
@@ -106,7 +113,9 @@ namespace sgns::processing
         m_gridChannel->Publish( gridMessage.SerializeAsString() );
         m_logger->debug( "List of processing channels requested" );
         m_timerChannelListRequestTimeout.expires_from_now( m_channelListRequestTimeout );
-        m_timerChannelListRequestTimeout.async_wait( std::bind( &ProcessingServiceImpl::HandleRequestTimeout, this ) );
+        m_timerChannelListRequestTimeout.async_wait(
+            [instance = shared_from_this()]( const boost::system::error_code & )
+            { instance->HandleRequestTimeout(); } );
     }
 
     void ProcessingServiceImpl::OnMessage( boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message &> message )
@@ -114,6 +123,7 @@ namespace sgns::processing
         m_logger->debug( "[{}] On Message.", node_address_ );
         if ( message )
         {
+            m_logger->debug( "[{}] Valid message.", node_address_ );
             SGProcessing::GridChannelMessage gridMessage;
             if ( gridMessage.ParseFromArray( message->data.data(), static_cast<int>( message->data.size() ) ) )
             {
@@ -127,6 +137,7 @@ namespace sgns::processing
                 }
                 else if ( gridMessage.has_processing_channel_request() )
                 {
+                    m_logger->debug( "[{}] PUBLISH.", node_address_ );
                     // @todo chenk environment requirements
                     PublishLocalChannelList();
                 }
@@ -203,7 +214,7 @@ namespace sgns::processing
                            processingQueuelId,
                            std::placeholders::_1 ),
                 std::bind( &ProcessingServiceImpl::OnProcessingError, this, processingQueuelId, std::placeholders::_1 ),
-                node_address_);
+                node_address_ );
             m_logger->debug( "Attach to processing Queue" );
             node->AttachTo( processingQueuelId );
             m_processingNodes[processingQueuelId] = node;
@@ -259,6 +270,8 @@ namespace sgns::processing
         }
         bool node_dispatched = false;
         {
+            m_logger->debug( "[{}] [Trying to create node]", node_address_ );
+            
             std::scoped_lock lock( m_mutexNodes );
             while ( m_processingNodes.size() < m_maximalNodesCount )
             {
