@@ -53,9 +53,10 @@ cmake_minimum_required(VERSION 3.19)
 cmake_minimum_required(VERSION 3.19)
 
 if(NOT DEFINED ZKLLVM_DIR)
+    get_filename_component(BUILD_PLATFORM_NAME ${CMAKE_CURRENT_SOURCE_DIR} NAME)
     if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../../zkLLVM/build/${BUILD_PLATFORM_NAME}/Release/${ANDROID_ABI}")
         message(STATUS "Setting default zkLLVM directory")
-        get_filename_component(BUILD_PLATFORM_NAME ${CMAKE_CURRENT_SOURCE_DIR} NAME)
+
         set(ZKLLVM_DIR "${CMAKE_CURRENT_LIST_DIR}/../../zkLLVM/build/${BUILD_PLATFORM_NAME}/Release/${ANDROID_ABI}" CACHE STRING "Default zkLLVM Library")
 
         # Get absolute path
@@ -66,9 +67,6 @@ if(NOT DEFINED ZKLLVM_DIR)
         # Define GitHub repository information
         set(GITHUB_REPO "GeniusVentures/zkLLVM")
         set(GITHUB_API_URL "https://api.github.com/repos/${GITHUB_REPO}/releases")
-
-        # Detect platform
-        get_filename_component(BUILD_PLATFORM_NAME ${CMAKE_CURRENT_SOURCE_DIR} NAME)
 
         # Define the target branch
         set(TARGET_BRANCH "develop")
