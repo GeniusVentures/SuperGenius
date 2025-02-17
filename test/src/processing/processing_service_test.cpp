@@ -61,7 +61,7 @@ public:
 
     bool GetSubTasks(
         const std::string& taskId,
-        std::list<SGProcessing::SubTask>& subTasks) override 
+        std::list<SGProcessing::SubTask>& subTasks) override
     {
         return false;
     }
@@ -70,12 +70,12 @@ public:
     {
         return outcome::failure(boost::system::error_code{});
     }
-    
+
     bool IsTaskCompleted( const std::string &taskId ) override
     {
         return true;
     }
-    
+
     bool CompleteTask(const std::string& taskKey, const SGProcessing::TaskResult& task) override
     {
         return false;
@@ -131,7 +131,7 @@ TEST_F(ProcessingServiceTest, ProcessingSlotsAreAvailable)
     auto taskQueue = std::make_shared<ProcessingTaskQueueImpl>();
     auto enqueuer = std::make_shared<SubTaskEnqueuerImpl>(taskQueue);
 
-    ProcessingServiceImpl processingService(
+    auto processingService = std::make_shared<ProcessingServiceImpl>(
         pubs,
         1,
         enqueuer,
@@ -144,7 +144,7 @@ TEST_F(ProcessingServiceTest, ProcessingSlotsAreAvailable)
     gridChannel.Subscribe([](boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message&> message) {});
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
-    processingService.StartProcessing("GRID_CHANNEL_ID");
+    processingService->StartProcessing("GRID_CHANNEL_ID");
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
     SGProcessing::GridChannelMessage gridMessage;
@@ -155,7 +155,7 @@ TEST_F(ProcessingServiceTest, ProcessingSlotsAreAvailable)
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     pubs->Stop();
 
-    EXPECT_EQ(processingService.GetProcessingNodesCount(), 1);
+    EXPECT_EQ(processingService->GetProcessingNodesCount(), 1);
 }
 
 /**
@@ -174,7 +174,7 @@ TEST_F(ProcessingServiceTest, DISABLED_NoProcessingSlotsAvailable)
     auto taskQueue = std::make_shared<ProcessingTaskQueueImpl>();
     auto enqueuer = std::make_shared<SubTaskEnqueuerImpl>(taskQueue);
 
-    ProcessingServiceImpl processingService(
+    auto processingService = std::make_shared<ProcessingServiceImpl>(
         pubs,
         1,
         enqueuer,
@@ -187,7 +187,7 @@ TEST_F(ProcessingServiceTest, DISABLED_NoProcessingSlotsAvailable)
     gridChannel.Subscribe([](boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message&> message) {});
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
-    processingService.StartProcessing("GRID_CHANNEL_ID");
+    processingService->StartProcessing("GRID_CHANNEL_ID");
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
     // No queue channel message sent
@@ -195,5 +195,5 @@ TEST_F(ProcessingServiceTest, DISABLED_NoProcessingSlotsAvailable)
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     pubs->Stop();
 
-    EXPECT_EQ(processingService.GetProcessingNodesCount(), 0);
+    EXPECT_EQ(processingService->GetProcessingNodesCount(), 0);
 }
