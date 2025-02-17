@@ -29,8 +29,13 @@ SubTaskQueueAccessorImpl::~SubTaskQueueAccessorImpl()
 void SubTaskQueueAccessorImpl::ConnectToSubTaskQueue(std::function<void()> onSubTaskQueueConnectedEventSink)
 {
     m_subTaskQueueManager->SetSubTaskQueueAssignmentEventSink(
-        std::bind(&SubTaskQueueAccessorImpl::OnSubTaskQueueAssigned, 
-            this, std::placeholders::_1, onSubTaskQueueConnectedEventSink));
+        [weakptr = weak_from_this(),onSubTaskQueueConnectedEventSink]( const std::vector<std::string>& subTaskIds)
+        {
+            if (auto self = weakptr.lock())
+            {
+                self->OnSubTaskQueueAssigned(subTaskIds, onSubTaskQueueConnectedEventSink);
+            }
+        });
 
     // It cannot be called in class constructor because shared_from_this doesn't work for the case
     // The weak_from_this() is required to prevent a case when the message processing callback
