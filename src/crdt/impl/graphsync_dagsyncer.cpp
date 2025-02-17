@@ -66,8 +66,13 @@ namespace sgns::crdt
             root_cid,
             {},
             extensions,
-            [instance = shared_from_this()]( ResponseStatusCode code, const std::vector<Extension> &extensions )
-            { instance->RequestProgressCallback( code, extensions ); } );
+            [weakptr = weak_from_this()]( ResponseStatusCode code, const std::vector<Extension> &extensions )
+            {
+                if ( auto self = weakptr.lock() )
+                {
+                    self->RequestProgressCallback( code, extensions );
+                }
+            } );
 
         // keeping subscriptions alive, otherwise they cancel themselves
         logger_->debug( "Requesting Node {} ", root_cid.toString().value() );
@@ -107,8 +112,13 @@ namespace sgns::crdt
             root_cid,
             {},
             extensions,
-            [instance = shared_from_this()]( ResponseStatusCode code, const std::vector<Extension> &extensions )
-            { instance->RequestProgressCallback( code, extensions ); } );
+            [weakptr = weak_from_this()]( ResponseStatusCode code, const std::vector<Extension> &extensions )
+            {
+                if ( auto self = weakptr.lock() )
+                {
+                    self->RequestProgressCallback( code, extensions );
+                }
+            } );
 
         // keeping subscriptions alive, otherwise they cancel themselves
         logger_->debug( "Requesting Node {} ", root_cid.toString().value() );
@@ -205,7 +215,14 @@ namespace sgns::crdt
         const CID &cid ) const
     {
         return ipfs_lite::ipfs::merkledag::MerkleDagServiceImpl::fetchGraphOnDepth(
-            std::bind( &MerkleDagService::getNode, this, std::placeholders::_1 ),
+            [weakptr = weak_from_this()]( const CID &cid ) -> outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>>
+            {
+                if ( auto self = weakptr.lock() )
+                {
+                    return self->getNode( cid );
+                }
+                return outcome::failure( boost::system::error_code{} );
+            },
             cid,
             {} );
     }
@@ -215,7 +232,14 @@ namespace sgns::crdt
         uint64_t   depth ) const
     {
         return ipfs_lite::ipfs::merkledag::MerkleDagServiceImpl::fetchGraphOnDepth(
-            std::bind( &MerkleDagService::getNode, this, std::placeholders::_1 ),
+            [weakptr = weak_from_this()]( const CID &cid ) -> outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>>
+            {
+                if ( auto self = weakptr.lock() )
+                {
+                    return self->getNode( cid );
+                }
+                return outcome::failure( boost::system::error_code{} );
+            },
             cid,
             depth );
     }
@@ -240,8 +264,14 @@ namespace sgns::crdt
 
         auto dagService = std::make_shared<MerkleDagBridgeImpl>( shared_from_this() );
 
-        BlockCallback blockCallback = [instance = shared_from_this()]( const CID &cid, sgns::common::Buffer buffer )
-        { instance->BlockReceivedCallback( cid, buffer ); };
+        BlockCallback blockCallback = [weakptr = weak_from_this()]( const CID &cid, sgns::common::Buffer buffer )
+        {
+            if ( auto self = weakptr.lock() )
+            {
+                self->BlockReceivedCallback( cid, buffer );
+            }
+        };
+
         graphsync_->start( dagService, blockCallback );
 
         if ( host_ == nullptr )

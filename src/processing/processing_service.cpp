@@ -271,7 +271,7 @@ namespace sgns::processing
         bool node_dispatched = false;
         {
             m_logger->debug( "[{}] [Trying to create node]", node_address_ );
-            
+
             std::scoped_lock lock( m_mutexNodes );
             while ( m_processingNodes.size() < m_maximalNodesCount )
             {
