@@ -50,7 +50,7 @@ namespace sgns::crdt {
             HierarchicalKey namespaceKey(strNamespace);
 
             // Create crdtDatastore
-            crdtDatastore_ = std::make_shared<CrdtDatastore>(
+            crdtDatastore_ = CrdtDatastore::New(
                 dataStore,
                 namespaceKey,
                 dagSyncer,
