@@ -41,11 +41,11 @@ namespace sgns
                                             std::shared_ptr<upnp::UPNP>                      upnp,
                                             uint16_t                                         base_port ) :
         processing_db_m( std::move( processing_db ) ),
+        pubsub_m( std::move( pubsub ) ),
+        base_path_m( std::move( base_path ) ),
         ctx_m( std::move( ctx ) ),
         account_m( std::move( account ) ),
         hasher_m( std::move( hasher ) ),
-        base_path_m( std::move( base_path ) ),
-        pubsub_m( std::move( pubsub ) ),
         upnp_m( std::move( upnp ) ),
         base_port_m( base_port + 1 ),
         timer_m( std::make_shared<boost::asio::steady_timer>( *ctx_m, boost::asio::chrono::milliseconds( 300 ) ) )
