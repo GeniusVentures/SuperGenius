@@ -34,6 +34,58 @@ namespace sgns::crdt
 
     using CRDTBroadcast = pb::CRDTBroadcast;
 
+    std::shared_ptr<CrdtDatastore> CrdtDatastore::New( std::shared_ptr<DataStore>          aDatastore,
+                                                       const HierarchicalKey              &aKey,
+                                                       std::shared_ptr<DAGSyncer>          aDagSyncer,
+                                                       std::shared_ptr<Broadcaster>        aBroadcaster,
+                                                       const std::shared_ptr<CrdtOptions> &aOptions )
+    {
+        auto crdt_instance = std::shared_ptr<CrdtDatastore>( new CrdtDatastore( std::move( aDatastore ),
+                                                                                aKey,
+                                                                                std::move( aDagSyncer ),
+                                                                                std::move( aBroadcaster ),
+                                                                                aOptions ) );
+
+        // Starting HandleNext worker thread
+        crdt_instance->handleNextFuture_ = std::async(
+            [weakptr = std::weak_ptr<CrdtDatastore>( crdt_instance )]()
+            {
+                if ( auto self = weakptr.lock() )
+                {
+                    self->HandleNext();
+                }
+            } );
+
+        // Starting Rebroadcast worker thread
+        crdt_instance->rebroadcastFuture_ = std::async(
+            [weakptr = std::weak_ptr<CrdtDatastore>( crdt_instance )]()
+            {
+                if ( auto self = weakptr.lock() )
+                {
+                    self->Rebroadcast();
+                }
+            } );
+
+        // Starting DAG worker threads
+        for ( int i = 0; i < crdt_instance->numberOfDagWorkers; ++i )
+        {
+            auto dagWorker = std::make_shared<DagWorker>();
+
+            dagWorker->dagWorkerFuture_ = std::async(
+                [weakptr = std::weak_ptr<CrdtDatastore>( crdt_instance ), dagWorker]()
+                {
+                    if ( auto self = weakptr.lock() )
+                    {
+                        self->SendJobWorker( dagWorker );
+                    }
+                } );
+
+            crdt_instance->dagWorkers_.push_back( dagWorker );
+        }
+
+        return crdt_instance;
+    }
+
     CrdtDatastore::CrdtDatastore( std::shared_ptr<DataStore>          aDatastore,
                                   const HierarchicalKey              &aKey,
                                   std::shared_ptr<DAGSyncer>          aDagSyncer,
@@ -49,15 +101,14 @@ namespace sgns::crdt
         // <namespace>/h
         auto fullHeadsNs = aKey.ChildString( std::string( headsNamespace_ ) );
 
-        int numberOfDagWorkers = 5;
         if ( aOptions != nullptr && !aOptions->Verify().has_failure() &&
              aOptions->Verify().value() == CrdtOptions::VerifyErrorCode::Success )
         {
-            this->options_        = aOptions;
-            this->putHookFunc_    = options_->putHookFunc;
-            this->deleteHookFunc_ = options_->deleteHookFunc;
-            this->logger_         = options_->logger;
-            numberOfDagWorkers    = options_->numWorkers;
+            this->options_           = aOptions;
+            this->putHookFunc_       = options_->putHookFunc;
+            this->deleteHookFunc_    = options_->deleteHookFunc;
+            this->logger_            = options_->logger;
+            this->numberOfDagWorkers = options_->numWorkers;
         }
 
         this->set_   = std::make_shared<CrdtSet>( dataStore_, fullSetNs, this->putHookFunc_, this->deleteHookFunc_ );
@@ -77,20 +128,6 @@ namespace sgns::crdt
 
         LOG_INFO( "crdt Datastore created. Number of heads: " << numberOfHeads
                                                               << " Current max-height: " << maxHeight );
-
-        // Starting HandleNext worker thread
-        this->handleNextFuture_ = std::async( std::bind( &CrdtDatastore::HandleNext, this ) );
-
-        // Starting Rebroadcast worker thread
-        this->rebroadcastFuture_ = std::async( std::bind( &CrdtDatastore::Rebroadcast, this ) );
-
-        // Starting DAG worker threads
-        for ( int i = 0; i < numberOfDagWorkers; ++i )
-        {
-            auto dagWorker              = std::make_shared<DagWorker>();
-            dagWorker->dagWorkerFuture_ = std::async( std::bind( &CrdtDatastore::SendJobWorker, this, dagWorker ) );
-            this->dagWorkers_.push_back( dagWorker );
-        }
     }
 
     CrdtDatastore::~CrdtDatastore()
@@ -1058,6 +1095,7 @@ namespace sgns::crdt
 
         return all_deleted;
     }
+
     void CrdtDatastore::PrintDataStore()
     {
         set_->PrintDataStore();
