@@ -284,12 +284,12 @@ namespace sgns::crdt
         std::shared_ptr<PubSubBroadcasterExt> broadcaster;
         if ( m_graphSyncAddrs.empty() )
         {
-            broadcaster = std::make_shared<PubSubBroadcasterExt>( m_broadcastChannel, dagSyncer, listen_to );
+            broadcaster = PubSubBroadcasterExt::New( m_broadcastChannel, dagSyncer, listen_to );
         }
         else
         {
             //auto listen_towan = libp2p::multi::Multiaddress::create(wanaddress).value();
-            broadcaster = std::make_shared<PubSubBroadcasterExt>( m_broadcastChannel, dagSyncer, listen_to );
+            broadcaster = PubSubBroadcasterExt::New( m_broadcastChannel, dagSyncer, listen_to );
         }
         //broadcaster->SetLogger(m_logger);
 

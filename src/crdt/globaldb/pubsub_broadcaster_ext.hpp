@@ -9,45 +9,48 @@
 
 namespace sgns::crdt
 {
-class CrdtDatastore;
-class PubSubBroadcasterExt : public Broadcaster
-{
-public:
-    using GossipPubSub = sgns::ipfs_pubsub::GossipPubSub;
-    using GossipPubSubTopic = sgns::ipfs_pubsub::GossipPubSubTopic;
+    class CrdtDatastore;
 
-    PubSubBroadcasterExt(
-        std::shared_ptr<GossipPubSubTopic> pubSubTopic,
-        std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer,
-        libp2p::multi::Multiaddress dagSyncerMultiaddress);
+    class PubSubBroadcasterExt : public Broadcaster, public std::enable_shared_from_this<PubSubBroadcasterExt>
+    {
+    public:
+        using GossipPubSub      = sgns::ipfs_pubsub::GossipPubSub;
+        using GossipPubSubTopic = sgns::ipfs_pubsub::GossipPubSubTopic;
 
-    //void SetLogger(const sgns::base::Logger& logger);
-    void SetCrdtDataStore(CrdtDatastore* dataStore);
+        static std::shared_ptr<PubSubBroadcasterExt> New( std::shared_ptr<GossipPubSubTopic>              pubSubTopic,
+                                                          std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer,
+                                                          libp2p::multi::Multiaddress dagSyncerMultiaddress );
 
-    /**
-    * Send {@param buff} payload to other replicas.
-    * @return outcome::success on success or outcome::failure on error
-    */
-    outcome::result<void> Broadcast(const base::Buffer& buff) override;
-    /**
-    * Obtain the next {@return} payload received from the network.
-    * @return buffer value or outcome::failure on error
-    */
-    outcome::result<base::Buffer> Next() override;
-private:
-    void OnMessage(boost::optional<const GossipPubSub::Message&> message);
+        
+        void SetCrdtDataStore( CrdtDatastore *dataStore );
 
-    std::shared_ptr<GossipPubSubTopic> gossipPubSubTopic_;
-    std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer_;
-    CrdtDatastore* dataStore_;
-    libp2p::multi::Multiaddress dagSyncerMultiaddress_;
-    std::queue<std::tuple<libp2p::peer::PeerId, std::string>> messageQueue_;
-    //sgns::base::Logger logger_ = nullptr;
-    std::mutex mutex_;
+        /**
+     * Send {@param buff} payload to other replicas.
+     * @return outcome::success on success or outcome::failure on error
+     */
+        outcome::result<void> Broadcast( const base::Buffer &buff ) override;
+        /**
+     * Obtain the next {@return} payload received from the network.
+     * @return buffer value or outcome::failure on error
+     */
+        outcome::result<base::Buffer> Next() override;
 
-    sgns::base::Logger m_logger = sgns::base::createLogger("PubSubBroadcasterExt");
-};
+    private:
+        PubSubBroadcasterExt( std::shared_ptr<GossipPubSubTopic>              pubSubTopic,
+                              std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer,
+                              libp2p::multi::Multiaddress                     dagSyncerMultiaddress );
+        void OnMessage( boost::optional<const GossipPubSub::Message &> message );
+
+        std::shared_ptr<GossipPubSubTopic>                        gossipPubSubTopic_;
+        std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer>           dagSyncer_;
+        CrdtDatastore                                            *dataStore_;
+        libp2p::multi::Multiaddress                               dagSyncerMultiaddress_;
+        std::queue<std::tuple<libp2p::peer::PeerId, std::string>> messageQueue_;
+        //sgns::base::Logger logger_ = nullptr;
+        std::mutex mutex_;
+
+        sgns::base::Logger m_logger = sgns::base::createLogger( "PubSubBroadcasterExt" );
+    };
 }
-
 
 #endif // SUPERGENIUS_CRDT_PUBSUB_BROADCASTER_EXT_HPP
