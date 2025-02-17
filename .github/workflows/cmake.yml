@@ -142,6 +142,8 @@ jobs:
           sudo update-alternatives --install /usr/bin/c++ c++ $(which clang++) 100
           sudo update-alternatives --set cc $(which clang)
           sudo update-alternatives --set c++ $(which clang++)
+          sudo apt-get install libstdc++6
+          sudo strings /usr/lib64/libstdc++.so.6 | grep GLIBCXX_
 
       - name: Install Linux host dependencies
         run: |
