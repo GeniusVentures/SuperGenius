@@ -55,11 +55,12 @@ namespace sgns::crdt
     * \sa CrdtOptions
     *
     */
-    CrdtDatastore( std::shared_ptr<DataStore>          aDatastore,
+    static std::shared_ptr<CrdtDatastore> New( std::shared_ptr<DataStore>          aDatastore,
                    const HierarchicalKey              &aKey,
                    std::shared_ptr<DAGSyncer>          aDagSyncer,
                    std::shared_ptr<Broadcaster>        aBroadcaster,
                    const std::shared_ptr<CrdtOptions> &aOptions );
+
 
     /** Destructor
     */
@@ -269,6 +270,12 @@ namespace sgns::crdt
   private:
     CrdtDatastore() = default;
 
+    CrdtDatastore( std::shared_ptr<DataStore>          aDatastore,
+      const HierarchicalKey              &aKey,
+      std::shared_ptr<DAGSyncer>          aDagSyncer,
+      std::shared_ptr<Broadcaster>        aBroadcaster,
+      const std::shared_ptr<CrdtOptions> &aOptions );
+
     /** Helper function to log Error messages from threads
     */
     void LogError(std::string message);
@@ -302,6 +309,7 @@ namespace sgns::crdt
 
     PutHookPtr putHookFunc_ = nullptr;
     DeleteHookPtr deleteHookFunc_ = nullptr;
+    int numberOfDagWorkers = 5;
 
     std::future<void> handleNextFuture_;
     std::atomic<bool> handleNextThreadRunning_ = false;
