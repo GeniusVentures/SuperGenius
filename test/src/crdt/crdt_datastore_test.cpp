@@ -52,7 +52,7 @@ namespace sgns::crdt
       HierarchicalKey namespaceKey(strNamespace);
 
       // Create crdtDatastore
-      crdtDatastore_ = std::make_shared<CrdtDatastore>(dataStore, namespaceKey, dagSyncer, broadcaster, CrdtOptions::DefaultOptions());
+      crdtDatastore_ = CrdtDatastore::New(dataStore, namespaceKey, dagSyncer, broadcaster, CrdtOptions::DefaultOptions());
     }
 
     void TearDown() override

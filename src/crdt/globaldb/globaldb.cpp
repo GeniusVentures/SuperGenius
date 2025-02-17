@@ -293,11 +293,11 @@ namespace sgns::crdt
         }
         //broadcaster->SetLogger(m_logger);
 
-        m_crdtDatastore = std::make_shared<CrdtDatastore>( dataStore,
-                                                           HierarchicalKey( "crdt" ),
-                                                           dagSyncer,
-                                                           broadcaster,
-                                                           crdtOptions );
+        m_crdtDatastore = CrdtDatastore::New( dataStore,
+                                              HierarchicalKey( "crdt" ),
+                                              dagSyncer,
+                                              broadcaster,
+                                              crdtOptions );
         if ( m_crdtDatastore == nullptr )
         {
             m_logger->error( "Unable to create CRDT datastore" );
@@ -436,15 +436,14 @@ namespace sgns::crdt
         return sKey.substr( keyPos, suffixPos - keyPos );
     }
 
-
     void GlobalDB::PrintDataStore()
     {
         m_crdtDatastore->PrintDataStore();
     }
-  
+
     std::shared_ptr<AtomicTransaction> GlobalDB::BeginTransaction()
     {
-        return std::make_shared<AtomicTransaction>(m_crdtDatastore);
+        return std::make_shared<AtomicTransaction>( m_crdtDatastore );
     }
 
 }
