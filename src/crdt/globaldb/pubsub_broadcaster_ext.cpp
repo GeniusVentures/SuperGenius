@@ -162,9 +162,13 @@ namespace sgns::crdt
     //    logger_ = logger;
     //}
 
-    void PubSubBroadcasterExt::SetCrdtDataStore( CrdtDatastore *dataStore )
+    void PubSubBroadcasterExt::SetCrdtDataStore(CrdtDatastore *dataStore)
     {
-        dataStore_ = dataStore;
+        if (dataStore_ && dataStore_.get() == dataStore) {
+            return;  // ✅ Avoid resetting if it's already the same instance
+        }
+
+        dataStore_ = std::shared_ptr<CrdtDatastore>(dataStore, [](CrdtDatastore *) {});  // ✅ Keeps reference, no ownership transfer
     }
 
     outcome::result<void> PubSubBroadcasterExt::Broadcast( const base::Buffer &buff )
