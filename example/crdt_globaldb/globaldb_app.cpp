@@ -129,7 +129,7 @@ int main(int argc, char** argv)
   // Bind DeleteHook function pointer for notification purposes
   crdtOptions->deleteHookFunc = std::bind(&DeleteHook, std::placeholders::_1, logger);
 
-  globalDB.Init(crdtOptions);
+  globalDB->Init(crdtOptions);
 
   std::ostringstream streamDisplayDetails;
   // @todo fix commented output
@@ -176,7 +176,7 @@ int main(int argc, char** argv)
       }
       else if (command == "list")
       {
-        auto queryResult = globalDB.QueryKeyValues("");
+        auto queryResult = globalDB->QueryKeyValues("");
         if (queryResult.has_failure())
         {
           std::cout << "Unable list keys from CRDT datastore" << std::endl;
@@ -201,7 +201,7 @@ int main(int argc, char** argv)
         }
         else
         {
-          auto getKeyResult = globalDB.Get(HierarchicalKey(key));
+          auto getKeyResult = globalDB->Get(HierarchicalKey(key));
           if (getKeyResult.has_failure())
           {
             std::cout << "Unable to find key in CRDT datastore: " << key << std::endl;
@@ -244,7 +244,7 @@ int main(int argc, char** argv)
           }
           Buffer valueBuffer;
           valueBuffer.put(value);
-          auto setKeyResult = globalDB.Put(HierarchicalKey(key), valueBuffer);
+          auto setKeyResult = globalDB->Put(HierarchicalKey(key), valueBuffer);
           if (setKeyResult.has_failure())
           {
             std::cout << "Unable to put key-value to CRDT datastore: " << key << " " << value << std::endl;
