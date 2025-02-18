@@ -43,7 +43,7 @@ namespace sgns::storage
      * @param options rocksdb options, such as caching, logging, etc.
      * @return instance of rocksdb
      */
-        static outcome::result<std::shared_ptr<rocksdb>> create( std::string_view path, Options options = Options() );
+        static outcome::result<std::shared_ptr<rocksdb>> create( std::string_view path, const Options& options = Options() );
 
         /**
     * @brief Factory method to create an instance of rocksdb class.
@@ -102,6 +102,7 @@ namespace sgns::storage
         ReadOptions         ro_;
         WriteOptions        wo_;
         base::Logger        logger_;
+        std::shared_ptr<Options> options_;
     };
 
 } // namespace sgns::storage

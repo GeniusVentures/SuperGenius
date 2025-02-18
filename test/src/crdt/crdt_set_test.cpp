@@ -56,7 +56,7 @@ namespace sgns::crdt
     const std::string newValueLexicographicallySmaller = "V455";
     const std::string originalTombstoneID = "ID123";
 
-    // Remove leftover database 
+    // Remove leftover database
     std::string databasePath = "supergenius_crdt_set_test_set_value";
     fs::remove_all(databasePath);
 
@@ -75,7 +75,7 @@ namespace sgns::crdt
 
     EXPECT_OUTCOME_EQ(crdtSet.IsValueInSet(strKey), false);
 
-    // Test SetValue 
+    // Test SetValue
     Buffer valueBuffer;
     valueBuffer.put(originalValue);
     EXPECT_OUTCOME_TRUE_1(crdtSet.SetValue(strKey, originalTombstoneID, valueBuffer, lowerPriority));
@@ -83,7 +83,7 @@ namespace sgns::crdt
     EXPECT_OUTCOME_TRUE(bufferGetValue, crdtSet.GetElement(strKey));
     EXPECT_STRCASEEQ(std::string(bufferGetValue.toString()).c_str(), originalValue.c_str());
 
-    // Change priority 
+    // Change priority
     EXPECT_OUTCOME_EQ(crdtSet.GetPriority(strKey), lowerPriority);
     EXPECT_OUTCOME_TRUE_1(crdtSet.SetPriority(strKey, higherPriority));
     EXPECT_OUTCOME_EQ(crdtSet.GetPriority(strKey), higherPriority);
@@ -96,7 +96,7 @@ namespace sgns::crdt
     EXPECT_OUTCOME_TRUE(bufferGetNewValueLowerPriority, crdtSet.GetElement(strKey));
     EXPECT_STRCASEEQ(std::string(bufferGetNewValueLowerPriority.toString()).c_str(), originalValue.c_str());
 
-    // Try to set value with same priority, lexicographically smaller => value should NOT change  
+    // Try to set value with same priority, lexicographically smaller => value should NOT change
     // comparing two data lexicographically,  currentValue >= newValue, no need to store value
     Buffer newValueLexicographicallySmallerSamePriorityBuffer;
     newValueLexicographicallySmallerSamePriorityBuffer.put(newValueLexicographicallySmaller);
@@ -106,7 +106,7 @@ namespace sgns::crdt
     EXPECT_OUTCOME_TRUE(bufferGetNewValueLexicographicallySmallerSamePriority, crdtSet.GetElement(strKey));
     EXPECT_STRCASEEQ(std::string(bufferGetNewValueLexicographicallySmallerSamePriority.toString()).c_str(), originalValue.c_str());
 
-    // Try to set value with same priority, lexicographically larger => value should change  
+    // Try to set value with same priority, lexicographically larger => value should change
     Buffer newValueLexicographicallyLargerSamePriorityBuffer;
     newValueLexicographicallyLargerSamePriorityBuffer.put(newValueLexicographicallyLarger);
     EXPECT_OUTCOME_TRUE_1(crdtSet.SetValue(strKey, originalTombstoneID, newValueLexicographicallyLargerSamePriorityBuffer, samePriority));
@@ -123,17 +123,18 @@ namespace sgns::crdt
     const uint64_t higherPriority = 12;
     const std::string id = "ID123";
 
-    // Remove leftover database 
+    // Remove leftover database
     std::string databasePath = "supergenius_crdt_set_test_delta";
     fs::remove_all(databasePath);
 
     // Create new database
     rocksdb::Options options;
     options.create_if_missing = true;  // intentionally
+
     auto dataStoreResult = rocksdb::create(databasePath, options);
     auto dataStore = dataStoreResult.value();
 
-    // Create CrdtSet 
+    // Create CrdtSet
     auto crdtSet = CrdtSet(dataStore, HierarchicalKey(strNamespace));
 
     // Testing CreateDelta function
@@ -155,12 +156,12 @@ namespace sgns::crdt
 
       // /namespace/s/<key>/<id>
       auto kNamespace = crdtSet.ElemsPrefix(key).ChildString(id);
-      
+
       Buffer keyBuffer;
       keyBuffer.put(kNamespace.GetKey());
       EXPECT_TRUE(dataStore->contains(keyBuffer));
 
-      // See if we get the same value from the buffer 
+      // See if we get the same value from the buffer
       EXPECT_OUTCOME_TRUE(getElementResult, crdtSet.GetElement(key));
       EXPECT_STRCASEEQ(std::string(getElementResult.toString()).c_str(), value.c_str());
 
@@ -178,17 +179,18 @@ namespace sgns::crdt
     const uint64_t lowerPriority = 11;
     const std::string id = "ID123";
 
-    // Remove leftover database 
+    // Remove leftover database
     std::string databasePath = "supergenius_crdt_set_test_tombstone";
     fs::remove_all(databasePath);
 
     // Create new database
     rocksdb::Options options;
     options.create_if_missing = true;  // intentionally
+
     auto dataStoreResult = rocksdb::create(databasePath, options);
     auto dataStore = dataStoreResult.value();
 
-    // Create CrdtSet 
+    // Create CrdtSet
     auto crdtSet = CrdtSet(dataStore, HierarchicalKey(strNamespace));
 
     // Create delta to add
@@ -219,17 +221,18 @@ namespace sgns::crdt
     const uint64_t higherPriority = 12;
     const std::string id = "ID123";
 
-    // Remove leftover database 
+    // Remove leftover database
     std::string databasePath = "supergenius_crdt_set_test_merge";
     fs::remove_all(databasePath);
 
     // Create new database
     rocksdb::Options options;
     options.create_if_missing = true;  // intentionally
+
     auto dataStoreResult = rocksdb::create(databasePath, options);
     auto dataStore = dataStoreResult.value();
 
-    // Create CrdtSet 
+    // Create CrdtSet
     auto crdtSet = CrdtSet(dataStore, HierarchicalKey(strNamespace));
 
     // Create delta to add

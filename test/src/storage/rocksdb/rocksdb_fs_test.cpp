@@ -57,7 +57,6 @@ namespace sgns::storage
   TEST_F(rocksdb_Open, QueryDB) {
     rocksdb::Options options;
     options.create_if_missing = true;  // intentionally
-
     EXPECT_OUTCOME_TRUE_2(db, rocksdb::create(getPathString(), options));
     EXPECT_TRUE(db) << "db is nullptr";
 
@@ -72,7 +71,7 @@ namespace sgns::storage
     strDataList.push_back("ab");
     strDataList.push_back("bdw");
     strDataList.push_back("bqc");
-  
+
     // Fill data
     const int numberOfDataset = 1000;
     Buffer key, value;
@@ -91,7 +90,7 @@ namespace sgns::storage
     Buffer prefix;
     prefix.put(strNamespacePrefix + strDataToSearch);
     EXPECT_OUTCOME_TRUE(queryResult, db->query(prefix));
-    
+
     EXPECT_TRUE(queryResult.size() == numberOfDataset);
 
   }

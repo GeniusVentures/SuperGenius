@@ -21,7 +21,7 @@ namespace sgns::crdt
                                                           std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer,
                                                           libp2p::multi::Multiaddress dagSyncerMultiaddress );
 
-        
+
         void SetCrdtDataStore( CrdtDatastore *dataStore );
 
         /**
@@ -43,7 +43,7 @@ namespace sgns::crdt
 
         std::shared_ptr<GossipPubSubTopic>                        gossipPubSubTopic_;
         std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer>           dagSyncer_;
-        CrdtDatastore                                            *dataStore_;
+        std::shared_ptr<CrdtDatastore>                            dataStore_;
         libp2p::multi::Multiaddress                               dagSyncerMultiaddress_;
         std::queue<std::tuple<libp2p::peer::PeerId, std::string>> messageQueue_;
         //sgns::base::Logger logger_ = nullptr;
