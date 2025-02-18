@@ -123,17 +123,7 @@ jobs:
               tag_name=${{matrix.target}}-${{steps.zkllvm-branch-name.outputs.zkLLVM_BRANCH}}-Release
           fi
 
-          latest_tag=$(gh release list --repo GeniusVentures/zkLLVM --json tagName,publishedAt \
-            --jq "[.[] | select(.tagName | test(\"${tag_name}-[a-f0-9]{7}\"))] | sort_by(.publishedAt) | reverse | .[0].tagName")
-
-          if [ -z "$latest_tag" ]; then
-              echo "No matching release found for $tag_name"
-              exit 1
-          fi
-
-          echo "Found latest release: $latest_tag"
-
-          gh release download "$latest_tag" --repo GeniusVentures/zkLLVM -p "*.tar.gz"
+          gh release download ${tag_name} --repo GeniusVentures/zkLLVM -p "*.tar.gz"
 
           for library in *.tar.gz; do
               tar  --exclude='*bin/assigner' --exclude='*bin/clang-zkllvm' --exclude='*bin/llvm-link-zkllvm' --exclude='*bin/transpiler' -xzf "${library}"
