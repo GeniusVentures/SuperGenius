@@ -361,6 +361,11 @@ set_target_properties(TrustWalletCore PROPERTIES IMPORTED_LOCATION "${TrustWalle
 
 target_include_directories(TrustWalletCore INTERFACE "${TrustWalletCore_INCLUDE_DIR}")
 
+if(${IOS})
+    find_library(SECURITY_FRAMEWORK Security)
+    target_link_libraries(TrustWalletCore INTERFACE ${SECURITY_FRAMEWORK})
+endif()
+
 include_directories(
     ${PROJECT_ROOT}/src
 )
