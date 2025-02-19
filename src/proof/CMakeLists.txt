@@ -23,7 +23,7 @@ target_link_libraries(genius_assigner
     outcome
     Boost::boost
     Boost::log
-    #Boost::json
+    Boost::json
     LLVMIRReader
     LLVMCore
     LLVMSupport
