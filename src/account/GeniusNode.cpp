@@ -372,11 +372,11 @@ namespace sgns
 
         rapidjson::Document document;
         document.Parse( jsondata.c_str() );
-        size_t           nSubTasks = 1;
+        //size_t           nSubTasks = 1;
         rapidjson::Value inputArray;
 
         inputArray = document["input"];
-        nSubTasks  = inputArray.Size();
+        //nSubTasks  = inputArray.Size();
 
         processing::ProcessTaskSplitter  taskSplitter;
         std::list<SGProcessing::SubTask> subTasks;
@@ -515,12 +515,12 @@ namespace sgns
             std::cout << "Invalid JSON data provided" << std::endl;
             return 0;
         }
-        size_t           nSubTasks = 1;
+        //size_t           nSubTasks = 1;
         rapidjson::Value inputArray;
         if ( document.HasMember( "input" ) && document["input"].IsArray() )
         {
             inputArray = document["input"];
-            nSubTasks  = inputArray.Size();
+            //nSubTasks  = inputArray.Size();
         }
         else
         {

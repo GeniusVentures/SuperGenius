@@ -70,7 +70,8 @@ namespace sgns::verification::finality {
     auto sign = voteSignature(vote);
     return {/*.message =*/ std::move(vote),
             /*.signature =*/ sign,
-            /*.id =*/ keypair_.public_key};
+            /*.id =*/ keypair_.public_key,
+            0};
   }
 
   SignedMessage VoteCryptoProviderImpl::signPrevote(
@@ -79,7 +80,8 @@ namespace sgns::verification::finality {
     auto sign = voteSignature(vote);
     return {/*.message =*/ std::move(vote),
             /*.signature =*/ sign,
-            /*.id =*/ keypair_.public_key};
+            /*.id =*/ keypair_.public_key,
+          0};
   }
 
   SignedMessage VoteCryptoProviderImpl::signPrecommit(
@@ -88,6 +90,7 @@ namespace sgns::verification::finality {
     auto sign = voteSignature(vote);
     return {/*.message =*/ std::move(vote),
             /*.signature =*/ sign,
-            /*.id =*/ keypair_.public_key};
+            /*.id =*/ keypair_.public_key,
+            0};
   }
 }  // namespace sgns::verification::finality

@@ -179,7 +179,7 @@ namespace sgns
         }
 
         std::vector<AssignerOutput> outputs;
-        for ( auto i = 0; i < AssignmentTableVector.size(); ++i )
+        for ( size_t i = 0; i < AssignmentTableVector.size(); ++i )
         {
             outputs.push_back( AssignerOutput{ PlonkCircuitVector.at( i ), AssignmentTableVector.at( i ) } );
         }
@@ -216,7 +216,7 @@ namespace sgns
                                                                 const std::string                 &table_path,
                                                                 const std::string                 &circuit_path )
     {
-        for ( auto i = 0; i < assigner_outputs.size(); ++i )
+        for ( size_t i = 0; i < assigner_outputs.size(); ++i )
         {
             std::ofstream otable;
             otable.open( table_path + std::to_string( i ), std::ios_base::binary | std::ios_base::out );
@@ -244,6 +244,8 @@ namespace sgns
 
             ocircuit.close();
         }
+
+        return outcome::success();
     }
 
     GeniusAssigner::PlonkAssignTableType GeniusAssigner::BuildPlonkAssignmentTable(
@@ -565,14 +567,14 @@ namespace sgns
                     const auto second_var = constraint.second;
                     if ( ( first_var.type == variable_type::column_type::witness ||
                            first_var.type == variable_type::column_type::constant ) &&
-                         first_var.rotation == row )
+                         first_var.rotation == static_cast<int32_t>(row) )
                     {
                         constraint.first =
                             variable_type( first_var.index, local_row, first_var.relative, first_var.type );
                     }
                     if ( ( second_var.type == variable_type::column_type::witness ||
                            second_var.type == variable_type::column_type::constant ) &&
-                         second_var.rotation == row )
+                         second_var.rotation == static_cast<int32_t>(row) )
                     {
                         constraint.second =
                             variable_type( second_var.index, local_row, second_var.relative, second_var.type );
