@@ -10,28 +10,6 @@
 namespace sgns::crdt
 {
 
-#define LOG_INFO( msg )                                                                                                \
-    if ( this->logger_ != nullptr )                                                                                    \
-    {                                                                                                                  \
-        std::ostringstream msgStream;                                                                                  \
-        msgStream << msg << std::ends;                                                                                 \
-        this->logger_->info( msgStream.str() );                                                                        \
-    }
-#define LOG_ERROR( msg )                                                                                               \
-    if ( this->logger_ != nullptr )                                                                                    \
-    {                                                                                                                  \
-        std::ostringstream msgStream;                                                                                  \
-        msgStream << msg << std::ends;                                                                                 \
-        this->logger_->error( msgStream.str() );                                                                       \
-    }
-#define LOG_DEBUG( msg )                                                                                               \
-    if ( this->logger_ != nullptr )                                                                                    \
-    {                                                                                                                  \
-        std::ostringstream msgStream;                                                                                  \
-        msgStream << msg << std::ends;                                                                                 \
-        this->logger_->debug( msgStream.str() );                                                                       \
-    }
-
     using CRDTBroadcast = pb::CRDTBroadcast;
 
     std::shared_ptr<CrdtDatastore> CrdtDatastore::New( std::shared_ptr<DataStore>          aDatastore,
@@ -126,8 +104,7 @@ namespace sgns::crdt
             }
         }
 
-        LOG_INFO( "crdt Datastore created. Number of heads: " << numberOfHeads
-                                                              << " Current max-height: " << maxHeight );
+        logger_->info( "crdt Datastore created. Number of heads: {} Current max-height: {}", numberOfHeads, maxHeight );
     }
 
     CrdtDatastore::~CrdtDatastore()
@@ -206,7 +183,7 @@ namespace sgns::crdt
 
         handleNextThreadRunning_ = true;
 
-        //LogDebug( "HandleNext thread started" );
+        logger_->debug( "HandleNext thread started" );
         while ( handleNextThreadRunning_ )
         {
             std::this_thread::sleep_for( threadSleepTimeInMilliseconds_ );
@@ -217,7 +194,7 @@ namespace sgns::crdt
                 if ( broadcasterNextResult.error().value() !=
                      static_cast<int>( Broadcaster::ErrorCode::ErrNoMoreBroadcast ) )
                 {
-                    //LogDebug( "Failed to get next broadcaster (error code " +
+                    //logger_->debug( "Failed to get next broadcaster (error code " +
                     //          std::to_string( broadcasterNextResult.error().value() ) + ")" );
                 }
                 continue;
@@ -226,8 +203,8 @@ namespace sgns::crdt
             auto decodeResult = DecodeBroadcast( broadcasterNextResult.value() );
             if ( decodeResult.has_failure() )
             {
-                LogError( "Broadcaster: Unable to decode broadcast (error code " +
-                          std::to_string( broadcasterNextResult.error().value() ) + ")" );
+                logger_->error( "Broadcaster: Unable to decode broadcast (error code {})",
+                                std::to_string( broadcasterNextResult.error().value() ) );
                 continue;
             }
 
@@ -237,8 +214,8 @@ namespace sgns::crdt
                 auto handleBlockResult = HandleBlock( bCastHeadCID );
                 if ( handleBlockResult.has_failure() )
                 {
-                    LogError( "Broadcaster: Unable to handle block (error code " +
-                              std::to_string( handleBlockResult.error().value() ) + ")" );
+                    logger_->error( "Broadcaster: Unable to handle block (error code {})",
+                                    std::to_string( handleBlockResult.error().value() ) );
                     continue;
                 }
                 std::unique_lock lock( seenHeadsMutex_ );
@@ -252,12 +229,12 @@ namespace sgns::crdt
             // received CIDs have been issued by a trusted peer.
         }
 
-        LogDebug( "HandleNext thread finished" );
+        logger_->debug( "HandleNext thread finished" );
     }
 
     void CrdtDatastore::Rebroadcast()
     {
-        //LogDebug( "Rebroadcast thread started" );
+        //logger_->debug( "Rebroadcast thread started" );
         auto rebroadcastIntervalMilliseconds = std::chrono::milliseconds( threadSleepTimeInMilliseconds_ );
         if ( options_ != nullptr )
         {
@@ -276,7 +253,7 @@ namespace sgns::crdt
             std::this_thread::sleep_for( threadSleepTimeInMilliseconds_ );
             elapsedTimeMilliseconds += threadSleepTimeInMilliseconds_;
         }
-        LogDebug( "Rebroadcast thread finished" );
+        logger_->debug( "Rebroadcast thread finished" );
     }
 
     void CrdtDatastore::SendJobWorker( std::shared_ptr<DagWorker> dagWorker )
@@ -286,7 +263,7 @@ namespace sgns::crdt
             return;
         }
 
-        LogDebug( "SendJobWorker thread started" );
+        logger_->debug( "SendJobWorker thread started" );
         DagJob dagJob;
         dagWorker->dagWorkerThreadRunning_ = true;
         while ( dagWorker->dagWorkerThreadRunning_ )
@@ -302,35 +279,21 @@ namespace sgns::crdt
                 dagJob = dagWorkerJobList.front();
                 dagWorkerJobList.pop();
             }
-            LogInfo( "SendJobWorker CID=" + dagJob.rootCid_.toString().value() +
-                     " priority=" + std::to_string( dagJob.rootPriority_ ) );
+            logger_->info( "SendJobWorker CID={} priority={}",
+                           dagJob.rootCid_.toString().value(),
+                           std::to_string( dagJob.rootPriority_ ) );
 
             auto childrenResult = ProcessNode( dagJob.rootCid_, dagJob.rootPriority_, dagJob.delta_, dagJob.node_ );
             if ( childrenResult.has_failure() )
             {
-                LogError( "SendNewJobs: failed to process node:" + dagJob.rootCid_.toString().value() );
+                logger_->error( "SendNewJobs: failed to process node:{}", dagJob.rootCid_.toString().value() );
             }
             else
             {
                 SendNewJobs( dagJob.rootCid_, dagJob.rootPriority_, childrenResult.value() );
             }
         }
-        LogDebug( "SendJobWorker thread finished" );
-    }
-
-    void CrdtDatastore::LogError( std::string message )
-    {
-        LOG_ERROR( message );
-    }
-
-    void CrdtDatastore::LogInfo( std::string message )
-    {
-        LOG_INFO( message );
-    }
-
-    void CrdtDatastore::LogDebug( std::string message )
-    {
-        LOG_DEBUG( message );
+        logger_->debug( "SendJobWorker thread finished" );
     }
 
     outcome::result<std::vector<CID>> CrdtDatastore::DecodeBroadcast( const Buffer &buff )
@@ -374,8 +337,8 @@ namespace sgns::crdt
             auto cidResult = CID::fromString( head.cid() );
             if ( cidResult.has_failure() )
             {
-                LOG_ERROR( "DecodeBroadcast: Failed to convert CID from string (error code "
-                           << cidResult.error().value() << ")" )
+                logger_->error( "DecodeBroadcast: Failed to convert CID from string (error code {})",
+                                cidResult.error().value() );
             }
             else
             {
@@ -412,8 +375,8 @@ namespace sgns::crdt
             auto getListResult = this->heads_->GetList( heads, maxHeight );
             if ( getListResult.has_failure() )
             {
-                LOG_ERROR( "RebroadcastHeads: Failed to get list of heads (error code " << getListResult.error()
-                                                                                        << ")" );
+                logger_->error( "RebroadcastHeads: Failed to get list of heads (error code {})",
+                                getListResult.error() );
                 return;
             }
         }
@@ -433,7 +396,7 @@ namespace sgns::crdt
         auto broadcastResult = this->Broadcast( headsToBroadcast );
         if ( broadcastResult.has_failure() )
         {
-            LOG_ERROR( "Broadcast failed" );
+            logger_->error( "Broadcast failed" );
         }
 
         // Reset the map
@@ -454,7 +417,7 @@ namespace sgns::crdt
         //auto dagSyncerResult = dagSyncer_->HasBlock( aCid );
         //if ( dagSyncerResult.has_failure() )
         //{
-        //    LOG_ERROR( "HandleBlock: error checking for known block" );
+        //    logger_->error( "HandleBlock: error checking for known block" );
         //    return outcome::failure( dagSyncerResult.error() );
         //}
 
@@ -501,6 +464,9 @@ namespace sgns::crdt
             {
                 return;
             }
+
+            logger_->debug( "Getting Node: TRYING TO FETCH NODE {}", reinterpret_cast<uint64_t>( this ) );
+
             auto node       = getNodeResult.value();
             auto nodeBuffer = node->content();
 
@@ -526,7 +492,9 @@ namespace sgns::crdt
 
             std::shared_ptr<ipfs_lite::ipfs::merkledag::Leaf> leaf;
             common::Buffer                                    nodeBuffer;
-            LOG_DEBUG( "SendNewJobs: TRYING TO FETCH NODE : " << cid.toString().value() );
+            logger_->debug( "SendNewJobs: TRYING TO FETCH NODE : {} from {}",
+                            cid.toString().value(),
+                            reinterpret_cast<uint64_t>( this ) );
 
             // Retry loop for fetching the graph
             while ( retryCount < maxRetries )
@@ -537,8 +505,10 @@ namespace sgns::crdt
 
                 if ( graphResult.has_failure() )
                 {
-                    LOG_ERROR( "SendNewJobs: error fetching graph for CID:" << cid.toString().value() << " Retry "
-                                                                            << retryCount + 1 << "/" << maxRetries );
+                    logger_->error( "SendNewJobs: error fetching graph for CID:{} Retry {}/{}",
+                                    cid.toString().value(),
+                                    retryCount + 1,
+                                    maxRetries );
                     retryCount++;
                     continue;
                 }
@@ -551,8 +521,9 @@ namespace sgns::crdt
             }
             if ( !success )
             {
-                LOG_ERROR( "SendNewJobs: failed to fetch graph for CID:" << cid.toString().value() << " after "
-                                                                         << maxRetries << " retries." );
+                logger_->error( "SendNewJobs: failed to fetch graph for CID:{} after {} retries.",
+                                cid.toString().value(),
+                                maxRetries );
                 continue;
             }
 
@@ -560,7 +531,7 @@ namespace sgns::crdt
             auto nodeResult = ipfs_lite::ipld::IPLDNodeImpl::createFromRawBytes( nodeBuffer );
             if ( nodeResult.has_failure() )
             {
-                LOG_ERROR( "SendNewJobs: Can't create IPLDNodeImpl with leaf content " << nodeBuffer.size() );
+                logger_->error( "SendNewJobs: Can't create IPLDNodeImpl with leaf content {}", nodeBuffer.size() );
                 continue;
             }
             auto node = nodeResult.value();
@@ -568,7 +539,7 @@ namespace sgns::crdt
             auto delta = std::make_shared<Delta>();
             if ( !delta->ParseFromArray( nodeBuffer.data(), nodeBuffer.size() ) )
             {
-                LOG_ERROR( "SendNewJobs: Can't parse data with size " << nodeBuffer.size() );
+                logger_->error( "SendNewJobs: Can't parse data with size {}", nodeBuffer.size() );
                 continue;
             }
 
@@ -577,8 +548,9 @@ namespace sgns::crdt
             dagJob.rootPriority_ = rootPriority;
             dagJob.delta_        = delta;
             dagJob.node_         = node;
-            LogInfo( "SendNewJobs PUSHING CID=" + dagJob.rootCid_.toString().value() +
-                     " priority=" + std::to_string( dagJob.rootPriority_ ) );
+            logger_->info( "SendNewJobs PUSHING CID={} priority={} ",
+                           dagJob.rootCid_.toString().value(),
+                           std::to_string( dagJob.rootPriority_ ) );
             {
                 std::unique_lock lock( dagWorkerMutex_ );
 
@@ -742,7 +714,7 @@ namespace sgns::crdt
             auto dagSyncerResult = this->dagSyncer_->addNode( node );
             if ( dagSyncerResult.has_failure() )
             {
-                LOG_ERROR( "DAGSyncer: error writing new block " << node->getCID().toString().value() )
+                logger_->error( "DAGSyncer: error writing new block {}", node->getCID().toString().value() );
                 return outcome::failure( dagSyncerResult.error() );
             }
         }
@@ -775,7 +747,7 @@ namespace sgns::crdt
             auto             mergeResult = this->set_->Merge( aDelta, hKey.GetKey() );
             if ( mergeResult.has_failure() )
             {
-                LOG_ERROR( "ProcessNode: error merging delta from " << hKey.GetKey() );
+                logger_->error( "ProcessNode: error merging delta from {}", hKey.GetKey() );
                 return outcome::failure( mergeResult.error() );
             }
         }
@@ -783,7 +755,7 @@ namespace sgns::crdt
         auto priority = aDelta->priority();
         if ( priority % 10 == 0 )
         {
-            LOG_INFO( "ProcessNode: merged delta from " << strCidResult.value() << " (priority: " << priority << ")" );
+            logger_->info( "ProcessNode: merged delta from {} (priority: {})", strCidResult.value(), priority );
         }
 
         std::vector<CID> children;
@@ -795,7 +767,7 @@ namespace sgns::crdt
             auto addHeadResult = this->heads_->Add( aRoot, aRootPrio );
             if ( addHeadResult.has_failure() )
             {
-                LOG_ERROR( "ProcessNode: error adding head " << aRoot.toString().value() );
+                logger_->error( "ProcessNode: error adding head {}", aRoot.toString().value() );
                 return outcome::failure( addHeadResult.error() );
             }
         }
@@ -814,8 +786,9 @@ namespace sgns::crdt
                     auto replaceResult = this->heads_->Replace( child, aRoot, aRootPrio );
                     if ( replaceResult.has_failure() )
                     {
-                        LOG_ERROR( "ProcessNode: error replacing head " << child.toString().value() << " -> "
-                                                                        << aRoot.toString().value() );
+                        logger_->error( "ProcessNode: error replacing head {} -> {}",
+                                        child.toString().value(),
+                                        aRoot.toString().value() );
                         return outcome::failure( replaceResult.error() );
                     }
 
@@ -826,7 +799,7 @@ namespace sgns::crdt
                 auto             knowBlockResult = this->dagSyncer_->HasBlock( child );
                 if ( knowBlockResult.has_failure() )
                 {
-                    LOG_ERROR( "ProcessNode: error checking for known block " << child.toString().value() );
+                    logger_->error( "ProcessNode: error checking for known block {}", child.toString().value() );
                     return outcome::failure( knowBlockResult.error() );
                 }
 
@@ -838,7 +811,7 @@ namespace sgns::crdt
                     if ( addHeadResult.has_failure() )
                     {
                         // Don't let this failure prevent us from processing the other links.
-                        LOG_ERROR( "ProcessNode: error adding head " << aRoot.toString().value() );
+                        logger_->error( "ProcessNode: error adding head {}", aRoot.toString().value() );
                     }
                     continue;
                 }
@@ -881,18 +854,20 @@ namespace sgns::crdt
         // to this store take effect (delta is merged) before
         // returning. Since our block references current heads, children
         // should be empty
-        LOG_INFO( "AddDAGNode: Processing generated block " << node->getCID().toString().value() );
+        logger_->info( "AddDAGNode: Processing generated block {} from {}",
+                       node->getCID().toString().value(),
+                       reinterpret_cast<uint64_t>( this ) );
 
         auto processNodeResult = this->ProcessNode( node->getCID(), height, aDelta, node );
         if ( processNodeResult.has_failure() )
         {
-            LOG_ERROR( "AddDAGNode: error processing new block" );
+            logger_->error( "AddDAGNode: error processing new block" );
             return outcome::failure( processNodeResult.error() );
         }
 
         if ( !processNodeResult.value().empty() )
         {
-            LOG_ERROR( "AddDAGNode: bug - created a block to unknown children" );
+            logger_->error( "AddDAGNode: bug - created a block to unknown children" );
         }
 
         return node->getCID();
@@ -960,7 +935,7 @@ namespace sgns::crdt
         auto nodeBuffer = node->content();
         if ( !delta->ParseFromArray( nodeBuffer.data(), nodeBuffer.size() ) )
         {
-            LOG_ERROR( "PrintDAGRec: failed to parse delta from node" );
+            logger_->error( "PrintDAGRec: failed to parse delta from node" );
             return outcome::failure( boost::system::error_code{} );
         }
 

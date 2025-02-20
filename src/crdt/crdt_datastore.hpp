@@ -276,17 +276,6 @@ namespace sgns::crdt
       std::shared_ptr<Broadcaster>        aBroadcaster,
       const std::shared_ptr<CrdtOptions> &aOptions );
 
-    /** Helper function to log Error messages from threads
-    */
-    void LogError(std::string message);
-
-    /** Helper function to log Info messages from threads
-    */
-    void LogInfo(std::string message);
-
-    /** Helper function to log Debug messages from threads
-    */
-    void LogDebug(std::string message);
 
     std::shared_ptr<DataStore> dataStore_ = nullptr;
     std::shared_ptr<CrdtOptions> options_ = nullptr;
@@ -301,7 +290,7 @@ namespace sgns::crdt
 
     std::shared_ptr<Broadcaster> broadcaster_ = nullptr;
     std::shared_ptr<DAGSyncer> dagSyncer_ = nullptr;
-    Logger logger_;
+    Logger logger_ = base::createLogger("CrdtDatastore");
 
     static constexpr std::chrono::milliseconds threadSleepTimeInMilliseconds_ = std::chrono::milliseconds(100);
     static constexpr std::string_view headsNamespace_ = "h";
