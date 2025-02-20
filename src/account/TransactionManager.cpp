@@ -651,7 +651,7 @@ namespace sgns
                 destination_dbs_m[dest_info.dest_address] = destination_db;
                 used_ports_m.insert( base_port_m );
                 base_port_m++;
-                //RefreshPorts();
+                RefreshPorts();
             }
             else
             {
