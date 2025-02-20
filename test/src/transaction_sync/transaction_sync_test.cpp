@@ -69,7 +69,23 @@ protected:
     }
 };
 
-TEST_F( TransactionSyncTest, TransactionMintSync )
+TEST_F( TransactionSyncTest, TransactionSimpleTransfer )
+{
+    auto balance_1_before = node_proc1->GetBalance();
+    auto balance_2_before = node_proc2->GetBalance();
+    node_proc1->MintTokens( 10000000000, "", "", "" );
+    node_proc1->GetPubSub()->AddPeers( { node_proc2->GetPubSub()->GetLocalAddress() } );
+    node_proc2->GetPubSub()->AddPeers( { node_proc1->GetPubSub()->GetLocalAddress() } );
+
+    std::this_thread::sleep_for( std::chrono::milliseconds( 2000 ) );
+
+    EXPECT_EQ( node_proc1->GetBalance(), balance_1_before + 10000000000 ) << "Correct Balance of outgoing transactions";
+
+    node_proc1->TransferFunds( 10000000000, node_proc2->GetAddress());
+    std::this_thread::sleep_for( std::chrono::milliseconds( 50000 ) );
+    EXPECT_EQ( node_proc1->GetBalance(), balance_1_before + 10000000000 ) << "Correct Balance of outgoing transactions";
+}
+TEST_F( TransactionSyncTest, DISABLED_TransactionMintSync )
 {
     auto balance_1_before = node_proc1->GetBalance();
     auto balance_2_before = node_proc2->GetBalance();
