@@ -87,18 +87,23 @@ namespace sgns
     {
         CheckIncoming();
         CheckOutgoing();
-        auto task = std::make_shared<std::function<void()>>();
 
-        *task = [this, task]()
+        task_m = [this]()
         {
             this->Update();
             this->timer_m->expires_after( boost::asio::chrono::milliseconds( 300 ) );
 
-
-            this->timer_m->async_wait( [instance = shared_from_this(), task]( const boost::system::error_code & )
-                                       { instance->ctx_m->post( *task ); } );
+            this->timer_m->async_wait(
+                [weak_instance = weak_from_this()]( const boost::system::error_code & )
+                {
+                    if ( auto instance = weak_instance.lock() ) // Ensure instance is still alive
+                    {
+                        instance->ctx_m->post( instance->task_m );
+                    }
+                } );
         };
-        ctx_m->post( *task );
+
+        ctx_m->post( task_m );
     }
 
     void TransactionManager::PrintAccountInfo()
@@ -200,9 +205,7 @@ namespace sgns
 #endif
         account_m->utxos = UTXOTxParameters::UpdateUTXOList( account_m->utxos, params );
         this->EnqueueTransaction( std::make_pair( escrow_transaction, maybe_proof ) );
-        m_logger->debug( "Holding escrow to 0x{} wih the amount {}",
-                         hash_data.toReadableString(),
-                         amount);
+        m_logger->debug( "Holding escrow to 0x{} wih the amount {}", hash_data.toReadableString(), amount );
 
         sgns::crdt::GlobalDB::Buffer data_transaction;
         data_transaction.put( escrow_transaction->SerializeByteVector() );
@@ -229,7 +232,7 @@ namespace sgns
         std::vector<std::string>           subtask_ids;
         std::vector<OutputDestInfo>        payout_peers;
 
-        auto     mult_result  = sgns::fixed_point::multiply( escrow_tx->GetAmount(), escrow_tx->GetPeersCut() );
+        auto mult_result = sgns::fixed_point::multiply( escrow_tx->GetAmount(), escrow_tx->GetPeersCut() );
         //TODO: check fail here, maybe if peer cut is greater than one to...
         uint64_t peers_amount = mult_result.value() / static_cast<uint64_t>( taskresult.subtask_results().size() );
         auto     remainder    = escrow_tx->GetAmount();
@@ -317,9 +320,6 @@ namespace sgns
         }
 
         auto [transaction, maybe_proof] = tx_queue_m.front();
-        tx_queue_m.pop_front();
-
-        m_logger->debug( "Recording the transaction on " + GetTransactionPath( *transaction ) );
 
         transaction->dag_st.set_nonce( account_m->nonce );
         transaction->dag_st.clear_signature();
@@ -328,30 +328,39 @@ namespace sgns
 
         transaction->dag_st.set_signature( signature.data(), signature.size() );
 
-        auto transaction_path = GetTransactionPath( *transaction );
-
+        sgns::crdt::HierarchicalKey  tx_key( GetTransactionPath( *transaction ) );
         sgns::crdt::GlobalDB::Buffer data_transaction;
+
+        m_logger->debug( "Recording the transaction on " + tx_key.GetKey() );
+
+        auto crdt_transaction = outgoing_db_m->BeginTransaction();
+
         data_transaction.put( transaction->SerializeByteVector() );
-        BOOST_OUTCOME_TRYV2( auto &&, outgoing_db_m->Put( { GetTransactionPath( *transaction ) }, data_transaction ) );
+        BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Put( std::move( tx_key ), std::move( data_transaction ) ) );
 
         if ( maybe_proof )
         {
-            auto proof = maybe_proof.value();
-            //std::cout << " creating with proof with size  " <<  proof_vector.size() << std::endl;
-            m_logger->debug( "Recording the proof on " + GetTransactionProofPath( *transaction ) );
+            sgns::crdt::HierarchicalKey  proof_key( GetTransactionProofPath( *transaction ) );
             sgns::crdt::GlobalDB::Buffer proof_transaction;
+
+            auto proof = maybe_proof.value();
+            m_logger->debug( "Recording the proof on " + proof_key.GetKey() );
+
             proof_transaction.put( proof );
             BOOST_OUTCOME_TRYV2( auto &&,
-                                 outgoing_db_m->Put( { GetTransactionProofPath( *transaction ) }, proof_transaction ) );
+                                 crdt_transaction->Put( std::move( proof_key ), std::move( proof_transaction ) ) );
         }
-
-        BOOST_OUTCOME_TRYV2( auto &&, ParseTransaction( transaction ) );
 
         if ( transaction->GetType() == "transfer" )
         {
             m_logger->debug( "Notifying receiving peers of transfers" );
-            NotifyDestinationOfTransfer( transaction, maybe_proof );
+            BOOST_OUTCOME_TRYV2( auto &&, NotifyDestinationOfTransfer( transaction, maybe_proof ) );
         }
+        BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Commit() );
+
+        tx_queue_m.pop_front();
+
+        BOOST_OUTCOME_TRYV2( auto &&, ParseTransaction( transaction ) );
 
         return outcome::success();
     }
@@ -433,6 +442,7 @@ namespace sgns
 
         auto proof_data_vector = proof_data.toVector();
 
+        m_logger->debug( "Proof data acquired. Verifying..." );
         //std::cout << " it has value with size  " << proof_data.size() << std::endl;
         return IBasicProof::VerifyFullProof( proof_data_vector );
 #else
@@ -641,40 +651,34 @@ namespace sgns
                 destination_dbs_m[dest_info.dest_address] = destination_db;
                 used_ports_m.insert( base_port_m );
                 base_port_m++;
-                RefreshPorts();
+                //RefreshPorts();
             }
             else
             {
                 destination_db = destination_db_it->second;
             }
 
-            boost::format tx_key{ std::string( TRANSACTION_BASE_FORMAT ) };
-
-            tx_key % TEST_NET_ID;
-
-            auto transaction_paths = tx_key.str() + "in" + dest_info.dest_address + GetTransactionPath( *tx );
-
+            auto                         crdt_transaction = destination_db->BeginTransaction();
             sgns::crdt::GlobalDB::Buffer data_transaction;
+            sgns::crdt::HierarchicalKey  tx_key( GetNotificationPath( dest_info.dest_address ) + "tx/" +
+                                                GetTransactionPath( *tx ) );
+
             data_transaction.put( tx->SerializeByteVector() );
 
-            m_logger->debug( "Putting replicate transaction in {}",
-                             GetNotificationPath( dest_info.dest_address ) + "tx/" + GetTransactionPath( *tx ) );
-            BOOST_OUTCOME_TRYV2( auto &&,
-                                 destination_db->Put( { GetNotificationPath( dest_info.dest_address ) + "tx/" +
-                                                        GetTransactionPath( *tx ) },
-                                                      data_transaction ) );
+            m_logger->debug( "Putting replicate transaction in {}", tx_key.GetKey() );
+            BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Put( std::move( tx_key ), std::move( data_transaction ) ) );
             if ( proof )
             {
-                m_logger->debug(
-                    "Putting replicate PROOF in {}",
-                    GetNotificationPath( dest_info.dest_address ) + "proof/" + GetTransactionProofPath( *tx ) );
+                sgns::crdt::HierarchicalKey  proof_key( GetNotificationPath( dest_info.dest_address ) + "proof/" +
+                                                       GetTransactionProofPath( *tx ) );
                 sgns::crdt::GlobalDB::Buffer proof_data;
+
                 proof_data.put( proof.value() );
+                m_logger->debug( "Putting replicate PROOF in {}", proof_key.GetKey() );
                 BOOST_OUTCOME_TRYV2( auto &&,
-                                     destination_db->Put( { GetNotificationPath( dest_info.dest_address ) + "proof/" +
-                                                            GetTransactionProofPath( *tx ) },
-                                                          proof_data ) );
+                                     crdt_transaction->Put( std::move( proof_key ), std::move( proof_data ) ) );
             }
+            BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Commit() );
         }
 
         return outcome::success();

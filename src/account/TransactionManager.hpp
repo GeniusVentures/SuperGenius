@@ -122,6 +122,8 @@ namespace sgns
         std::map<std::string, std::vector<std::uint8_t>>                 incoming_tx_processed_m;
         std::unordered_map<std::string, std::shared_ptr<crdt::GlobalDB>> destination_dbs_m;
         std::set<uint16_t>                                               used_ports_m;
+        std::function<void()> task_m; 
+
 
         outcome::result<void> ParseTransferTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
         outcome::result<void> ParseMintTransaction( const std::shared_ptr<IGeniusTransactions> &tx );

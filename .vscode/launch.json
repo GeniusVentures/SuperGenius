@@ -58,6 +58,25 @@
         {
             "type": "cppdbg",
             "request": "launch",
+            "name": "Transaction Sync Unit Test (macOS)",
+            "program": "${workspaceFolder}/build/OSX/Debug/test_bin/transaction_sync_test",
+            "args": ["-R", "transaction"],
+            "cwd": "${workspaceFolder}",
+            "stopAtEntry": false,
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "lldb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "type": "cppdbg",
+            "request": "launch",
             "name": "Node Example (macOS)",
             "program": "${workspaceFolder}/build/OSX/Debug/example/node_test/node_example",
             "args": [],
