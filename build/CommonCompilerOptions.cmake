@@ -54,8 +54,15 @@ cmake_minimum_required(VERSION 3.19)
 
 if(NOT DEFINED ZKLLVM_DIR)
     get_filename_component(BUILD_PLATFORM_NAME ${CMAKE_CURRENT_SOURCE_DIR} NAME)
-    if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../../zkLLVM/build/${BUILD_PLATFORM_NAME}/Release/${ANDROID_ABI}")
-        message(STATUS "Setting default zkLLVM directory")
+    if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../../zkLLVM/build/${BUILD_PLATFORM_NAME}/${CMAKE_BUILD_TYPE}/${ANDROID_ABI}")
+        message(STATUS "Setting default zkLLVM directory to same as build type")
+
+        set(ZKLLVM_DIR "${CMAKE_CURRENT_LIST_DIR}/../../zkLLVM/build/${BUILD_PLATFORM_NAME}/${CMAKE_BUILD_TYPE}/${ANDROID_ABI}" CACHE STRING "Default zkLLVM Library")
+
+        # Get absolute path
+        cmake_path(SET ZKLLVM_DIR NORMALIZE "${ZKLLVM_DIR}")
+    elseif(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../../zkLLVM/build/${BUILD_PLATFORM_NAME}/Release/${ANDROID_ABI}")
+        message(STATUS "Setting default zkLLVM directory to release as a fallback")
 
         set(ZKLLVM_DIR "${CMAKE_CURRENT_LIST_DIR}/../../zkLLVM/build/${BUILD_PLATFORM_NAME}/Release/${ANDROID_ABI}" CACHE STRING "Default zkLLVM Library")
 
