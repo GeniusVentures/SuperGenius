@@ -130,6 +130,10 @@ namespace sgns
 
         auto loggerProcqm = base::createLogger( "ProcessingSubTaskQueueManager" );
         loggerProcqm->set_level( spdlog::level::off );
+
+        auto loggerUPNP = base::createLogger("UPNP");
+        loggerUPNP->set_level(spdlog::level::off);
+
         auto tokenid = dev_config_.TokenID;
 
         auto pubsubport    = GenerateRandomPort( base_port, account_->GetAddress() + std::to_string( tokenid ) );
