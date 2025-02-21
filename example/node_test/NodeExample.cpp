@@ -314,7 +314,7 @@ void periodic_processing( sgns::GeniusNode &genius_node )
 {
     while ( !finished )
     {
-        std::this_thread::sleep_for( std::chrono::minutes( 30 ) ); // Wait for 30 minutes
+        std::this_thread::sleep_for( std::chrono::minutes( 1 ) ); // Wait for 30 minutes
         if ( finished )
         {
             break; // Exit if the application is shutting down
@@ -360,8 +360,12 @@ void periodic_processing( sgns::GeniusNode &genius_node )
                 ]
                 }
                )";
-        genius_node.ProcessImage( json_data /*args[1]*/
+        auto jobpost = genius_node.ProcessImage( json_data /*args[1]*/
         );
+        if(!jobpost)
+        {
+            std::cout << "Job post error: " << jobpost.error().message() << std::endl;
+        }
     }
 }
 
@@ -374,9 +378,9 @@ int main( int argc, char *argv[] )
     //Inputs
 
 
-    sgns::GeniusNode node_instance( DEV_CONFIG, "cafebeefdeadbeefdeadbeefdeadbeefcafecafedeadbeefdeadbeefdeadbeef", true, true );
+    sgns::GeniusNode node_instance( DEV_CONFIG, "cafebeefdeadbeefdeadbeefdeadbeefcafecafedeadbeefdeadbeefdeaddead", true, false );
 
-    //std::thread processing_thread(periodic_processing, std::ref(node_instance));
+    std::thread processing_thread(periodic_processing, std::ref(node_instance));
     std::cout << "Insert \"process\", the image and the number of tokens to be" << std::endl;
     redraw_prompt();
     //while ( !finished )
@@ -387,8 +391,8 @@ int main( int argc, char *argv[] )
     {
         input_thread.join();
     }
-    //if (processing_thread.joinable()) {
-    //    processing_thread.join();
-    //}
+    if (processing_thread.joinable()) {
+        processing_thread.join();
+    }
     return 0;
 }
