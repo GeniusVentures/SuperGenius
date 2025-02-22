@@ -66,6 +66,8 @@ namespace sgns
 
         uint64_t GetProcessCost( const std::string &json_data );
 
+        double GetGNUSPrice();
+
         std::string GetName() override
         {
             return "GeniusNode";

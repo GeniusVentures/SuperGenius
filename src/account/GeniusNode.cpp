@@ -508,37 +508,39 @@ namespace sgns
         return outcome::success();
     }
 
-    uint64_t GeniusNode::GetProcessCost( const std::string &json_data )
+    uint64_t GeniusNode::GetProcessCost(const std::string& json_data)
     {
-        uint64_t cost = 0;
+        uint64_t costMinions = 0;
         std::cout << "Received JSON data: " << json_data << std::endl;
-        //Parse Json
+
+        // Parse JSON using RapidJSON
         rapidjson::Document document;
-        if ( document.Parse( json_data.c_str() ).HasParseError() )
+        if (document.Parse(json_data.c_str()).HasParseError())
         {
             std::cout << "Invalid JSON data provided" << std::endl;
             return 0;
         }
-        //size_t           nSubTasks = 1;
+
+        // "block_len" represents the number of bytes processed.
         rapidjson::Value inputArray;
-        if ( document.HasMember( "input" ) && document["input"].IsArray() )
+        if (document.HasMember("input") && document["input"].IsArray())
         {
             inputArray = document["input"];
-            //nSubTasks  = inputArray.Size();
         }
         else
         {
-            std::cout << "This json lacks inputs" << std::endl;
+            std::cout << "This JSON lacks inputs" << std::endl;
             return 0;
         }
+
         uint64_t block_total_len = 0;
-        for ( const auto &input : inputArray.GetArray() )
+        for (const auto& input : inputArray.GetArray())
         {
-            if ( input.HasMember( "block_len" ) && input["block_len"].IsUint64() )
+            if (input.HasMember("block_len") && input["block_len"].IsUint64())
             {
-                auto block_len   = static_cast<uint64_t>( input["block_len"].GetUint64() );
+                uint64_t block_len = input["block_len"].GetUint64();
                 block_total_len += block_len;
-                std::cout << "Block length: " << block_len << std::endl;
+                std::cout << "Block length (bytes): " << block_len << std::endl;
             }
             else
             {
@@ -546,17 +548,44 @@ namespace sgns
                 return 0;
             }
         }
-        auto result = sgns::fixed_point::divide( block_total_len, 2100000ULL );
-        if ( !result )
+
+        // Using the assumption: 20 FLOPs per byte and each FLOP costs 5e-15 USD,
+        // the cost per byte in USD is: 20 * 5e-15 = 1e-13 USD.
+        // Converting this to a fixed-point constant with 9 decimals:
+        //    1e-13 USD/byte * 1e9 = 1e-4, i.e., 0.0001, and in fixed point with 9 decimals, that's 100000.
+        uint64_t fixed_cost_per_byte = 100000ULL;  // represents 0.0001 in fixed point (precision 9)
+
+        // Calculate the raw cost in minions in fixed point: (block_total_len * fixed_cost_per_byte)
+        auto raw_cost_result = sgns::fixed_point::multiply(block_total_len, fixed_cost_per_byte, 9);
+        if (!raw_cost_result)
         {
+            std::cout << "Fixed-point multiplication error" << std::endl;
             return 0;
         }
-        else
-        {
-            cost = result.value();
-        }
+        uint64_t raw_cost = raw_cost_result.value();
 
-        return std::max( cost, static_cast<uint64_t>( 1 ) );
+        // Get current GNUS price (USD per GNUS token)
+        double gnusPrice = GetGNUSPrice(); // e.g., 3.65463 USD per GNUS
+        // Convert GNUS price to fixed-point representation with precision 9:
+        uint64_t gnus_price_fixed = static_cast<uint64_t>(std::round(gnusPrice * 1e9));
+
+        // Now, the cost in minions (in fixed point) is raw_cost divided by gnus_price_fixed:
+        auto cost_result = sgns::fixed_point::divide(raw_cost, gnus_price_fixed, 9);
+        if (!cost_result)
+        {
+            std::cout << "Fixed-point division error" << std::endl;
+            return 0;
+        }
+        costMinions = cost_result.value();
+
+        // Ensure at least one minion is charged.
+        return std::max(costMinions, static_cast<uint64_t>(1));
+    }
+
+
+    double GeniusNode::GetGNUSPrice()
+    {
+        return 3.65463;
     }
 
     outcome::result<void> GeniusNode::MintTokens( uint64_t           amount,
