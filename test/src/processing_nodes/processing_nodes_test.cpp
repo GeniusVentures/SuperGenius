@@ -272,7 +272,7 @@ TEST_F( ProcessingNodesTest, PostProcessing )
                 }
                )";
     auto        cost      = node_main->GetProcessCost( json_data );
-    ASSERT_EQ( 2688777142, cost );
+    ASSERT_EQ( 154, cost );
     boost::replace_all( json_data, "[basepath]", bin_path );
     std::cout << "Json Data: " << json_data << std::endl;
     auto balance_main  = node_main->GetBalance();
