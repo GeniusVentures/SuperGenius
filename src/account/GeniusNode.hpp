@@ -129,6 +129,8 @@ namespace sgns
         static std::vector<uint8_t> GetImageByCID( const std::string &cid );
 
         void PrintDataStore();
+        void StopProcessing();
+        void StartProcessing();
 
     private:
         std::shared_ptr<GeniusAccount>                        account_;

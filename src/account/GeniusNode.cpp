@@ -639,6 +639,16 @@ namespace sgns
     {
         globaldb_->PrintDataStore();
     }
+
+    void GeniusNode::StopProcessing()
+    {
+        processing_service_->StopProcessing();
+    }
+
+    void GeniusNode::StartProcessing()
+    {
+        processing_service_->StartProcessing( std::string( PROCESSING_GRID_CHANNEL ) );
+    }
     
     std::string GeniusNode::FormatTokens( uint64_t amount )
     {
