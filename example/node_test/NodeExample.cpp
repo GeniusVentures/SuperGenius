@@ -300,6 +300,10 @@ void process_events( sgns::GeniusNode &genius_node )
                     std::cerr << "Invalid peer command\n";
                 }
             }
+            else if (arguments[0] == "quit")
+            {
+                finished = true;
+            }
             else
             {
                 std::cerr << "Unknown command: " << arguments[0] << "\n";
@@ -314,7 +318,7 @@ void periodic_processing( sgns::GeniusNode &genius_node )
 {
     while ( !finished )
     {
-        std::this_thread::sleep_for( std::chrono::minutes( 1 ) ); // Wait for 30 minutes
+        std::this_thread::sleep_for( std::chrono::minutes( 1 ) ); // Wait for 1 minute
         if ( finished )
         {
             break; // Exit if the application is shutting down
