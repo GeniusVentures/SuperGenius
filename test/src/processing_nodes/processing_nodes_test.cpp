@@ -273,12 +273,21 @@ TEST_F( ProcessingNodesTest, PostProcessing )
                )";
     auto        cost      = node_main->GetProcessCost( json_data );
     ASSERT_EQ( 154, cost );
+    std::replace(bin_path.begin(), bin_path.end(), '\\', '/');
     boost::replace_all( json_data, "[basepath]", bin_path );
     std::cout << "Json Data: " << json_data << std::endl;
     auto balance_main  = node_main->GetBalance();
+    std::cout << "Here" << std::endl;
     auto balance_node1 = node_proc1->GetBalance();
+    std::cout << "Here2" << std::endl;
     auto balance_node2 = node_proc2->GetBalance();
-    node_main->ProcessImage( json_data );
+    std::cout << "Here3" << std::endl;
+    auto postjob = node_main->ProcessImage( json_data );
+    if (!postjob)
+    {
+        std::cout << "post job error: " << postjob.error().message() << std::endl;
+    }
+    std::cout << "Here4" << std::endl;
     //node_main->ProcessImage(json_data);
 
     std::this_thread::sleep_for( std::chrono::milliseconds( 40000 ) );
