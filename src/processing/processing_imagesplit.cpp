@@ -1,6 +1,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "processing/processing_imagesplit.hpp"
+#include <openssl/sha.h> // For SHA256_DIGEST_LENGTH
 
 namespace sgns::processing
 {
@@ -114,14 +115,18 @@ namespace sgns::processing
             chunkHeightActual_.push_back(blocklen_ / blockstride_);
             gsl::span<const uint8_t> byte_span(chunkBuffer);
             std::vector<uint8_t> shahash(SHA256_DIGEST_LENGTH);
-            SHA256_CTX sha256;
-            SHA256_Init(&sha256);
-            SHA256_Update(&sha256, chunkBuffer.data(), chunkBuffer.size());
-            SHA256_Final(shahash.data(), &sha256);
+            unsigned int digest_len = 0;
+
+            EVP_MD_CTX *ctx = EVP_MD_CTX_new();
+            EVP_DigestInit_ex(ctx, EVP_sha256(), NULL);
+            EVP_DigestUpdate(ctx, chunkBuffer.data(), chunkBuffer.size());
+            EVP_DigestFinal_ex(ctx, shahash.data(), &digest_len);
+            EVP_MD_CTX_free(ctx);
+
             auto hash = libp2p::multi::Multihash::create(libp2p::multi::HashType::sha256, shahash);
-            cids_.emplace_back( libp2p::multi::ContentIdentifier::Version::V0,
-                                libp2p::multi::MulticodecType::Code::DAG_PB,
-                                hash.value() );
+            cids_.emplace_back(libp2p::multi::ContentIdentifier::Version::V0,
+                              libp2p::multi::MulticodecType::Code::DAG_PB,
+                              hash.value());
         }
     }
 

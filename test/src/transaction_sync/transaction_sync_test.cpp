@@ -83,8 +83,15 @@ TEST_F( TransactionSyncTest, TransactionSimpleTransfer )
 
     node_proc1->TransferFunds( 10000000000, node_proc2->GetAddress());
     std::this_thread::sleep_for( std::chrono::milliseconds( 50000 ) );
-    EXPECT_EQ( node_proc1->GetBalance(), balance_1_before + 10000000000 ) << "Correct Balance of outgoing transactions";
+    // Verify node_proc1's balance decreased
+    EXPECT_EQ(node_proc1->GetBalance(), balance_1_before)
+        << "Transfer should decrease node_proc1's balance";
+
+    // Verify node_proc2's balance increased
+    EXPECT_EQ(node_proc2->GetBalance(), balance_2_before + 10000000000)
+        << "Transfer should increase node_proc2's balance";
 }
+
 TEST_F( TransactionSyncTest, DISABLED_TransactionMintSync )
 {
     auto balance_1_before = node_proc1->GetBalance();

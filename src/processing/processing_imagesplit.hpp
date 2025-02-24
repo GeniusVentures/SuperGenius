@@ -4,12 +4,10 @@
 */
 #ifndef PROCESSING_IMAGESPLIT_HPP
 #define PROCESSING_IMAGESPLIT_HPP
-#include <cmath>
 #include <vector>
-#include <openssl/sha.h>
+#include <openssl/evp.h>
 #include <libp2p/multi/content_identifier_codec.hpp>
-//#include <stb_image.h>
-//#include <stb_image_write.h>
+
 
 namespace sgns::processing
 {

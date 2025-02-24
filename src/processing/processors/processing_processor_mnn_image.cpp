@@ -4,6 +4,8 @@
 #include <functional>
 #include <thread>
 #include <openssl/evp.h>
+#include <openssl/sha.h> // For SHA256_DIGEST_LENGTH
+
 //#define STB_IMAGE_IMPLEMENTATION
 //#define STB_IMAGE_WRITE_IMPLEMENTATION
 //#include "stb_image.h"
