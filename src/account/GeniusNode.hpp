@@ -127,6 +127,8 @@ namespace sgns
         static std::vector<uint8_t> GetImageByCID( const std::string &cid );
 
         void PrintDataStore();
+        void StopProcessing();
+        void StartProcessing();
 
         // Wait for a transaction to be processed with a timeout
         bool WaitForTransaction( const std::string &txId, std::chrono::milliseconds timeout );
