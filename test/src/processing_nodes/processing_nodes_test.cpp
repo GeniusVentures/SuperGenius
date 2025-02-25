@@ -26,7 +26,6 @@
 #include <boost/algorithm/string/replace.hpp>
 #include "base/util.hpp"
 
-
 class ProcessingNodesTest : public ::testing::Test
 {
 protected:
@@ -231,6 +230,9 @@ TEST_F( ProcessingNodesTest, DISABLED_CalculateProcessingCostFail )
 TEST_F( ProcessingNodesTest, PostProcessing )
 {
     std::string bin_path  = boost::dll::program_location().parent_path().string() + "/";
+#ifdef _WIN32
+    bin_path += "../";
+#endif
     std::string json_data = R"(
                 {
                 "data": {
