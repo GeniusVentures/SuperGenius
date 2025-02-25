@@ -79,10 +79,11 @@ namespace sgns
          * @param[in]   amount: Numeric value with amount in Minion Tokens (1e-9 GNUS Token)
          * @return      Outcome of mint token operation
          */
-        outcome::result<void> MintTokens( uint64_t          amount,
-                                          const std::string &transaction_hash,
-                                          const std::string &chainid,
-                                          const std::string &tokenid );
+        outcome::result<std::pair<std::string, uint64_t>> MintTokens(uint64_t amount,
+                                                                         const std::string &transaction_hash,
+                                                                         const std::string &chainid,
+                                                                         const std::string &tokenid,
+                                                                         std::chrono::milliseconds timeout = std::chrono::milliseconds(2000));
         void                  AddPeer( const std::string &peer );
         void                  RefreshUPNP( int pubsubport, int graphsyncport );
         uint64_t              GetBalance();
@@ -102,10 +103,7 @@ namespace sgns
             return account_->GetAddress();
         }
 
-        bool TransferFunds( uint64_t amount, const std::string &destination )
-        {
-            return transaction_manager_->TransferFunds( amount, destination );
-        }
+        outcome::result<std::pair<std::string, uint64_t>> TransferFunds(uint64_t amount, const std::string &destination, std::chrono::milliseconds timeout = std::chrono::milliseconds(50000));
 
         std::shared_ptr<ipfs_pubsub::GossipPubSub> GetPubSub()
         {
@@ -130,6 +128,9 @@ namespace sgns
 
         void PrintDataStore();
 
+        // Wait for a transaction to be processed with a timeout
+        bool WaitForTransaction( const std::string &txId, std::chrono::milliseconds timeout );
+
     private:
         std::shared_ptr<GeniusAccount>                        account_;
         std::shared_ptr<ipfs_pubsub::GossipPubSub>            pubsub_;
@@ -144,6 +145,7 @@ namespace sgns
         std::string                                           write_base_path_;
         bool                                                  autodht_;
         bool                                                  isprocessor_;
+        base::Logger                                          node_logger;
 
         std::thread       io_thread;
         std::thread       upnp_thread;

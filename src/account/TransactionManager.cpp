@@ -119,97 +119,103 @@ namespace sgns
         return *account_m;
     }
 
-    bool TransactionManager::TransferFunds( uint64_t amount, const std::string &destination )
+    outcome::result<std::string> TransactionManager::TransferFunds(uint64_t amount, const std::string &destination)
     {
-        bool ret          = false;
-        auto maybe_params = UTXOTxParameters::create( account_m->utxos, account_m->GetAddress(), amount, destination );
+        auto maybe_params = UTXOTxParameters::create(account_m->utxos, account_m->GetAddress(), amount, destination);
 
-        if ( maybe_params )
+        if (!maybe_params)
         {
-            auto transfer_transaction = std::make_shared<TransferTransaction>(
-                TransferTransaction::New( maybe_params.value().outputs_,
-                                          maybe_params.value().inputs_,
-                                          FillDAGStruct() ) );
-            std::optional<std::vector<uint8_t>> maybe_proof;
-#ifdef _PROOF_ENABLED
-            TransferProof prover( static_cast<uint64_t>( account_m->GetBalance<uint64_t>() ),
-                                  static_cast<uint64_t>( amount ) );
-            auto          proof_result = prover.GenerateFullProof();
-            if ( proof_result.has_value() )
-            {
-                maybe_proof = proof_result.value();
-                ret         = true;
-            }
-#else
-            ret = true;
-#endif
-            if ( ret == true )
-            {
-                account_m->utxos = UTXOTxParameters::UpdateUTXOList( account_m->utxos, maybe_params.value() );
-                this->EnqueueTransaction( std::make_pair( transfer_transaction, maybe_proof ) );
-            }
+            return outcome::failure(boost::system::errc::make_error_code(boost::system::errc::invalid_argument));
         }
 
-        return ret;
+        auto transfer_transaction = std::make_shared<TransferTransaction>(
+            TransferTransaction::New(maybe_params.value().outputs_,
+                                   maybe_params.value().inputs_,
+                                   FillDAGStruct()));
+        std::optional<std::vector<uint8_t>> maybe_proof;
+#ifdef _PROOF_ENABLED
+        TransferProof prover(static_cast<uint64_t>(account_m->GetBalance<uint64_t>()),
+                            static_cast<uint64_t>(amount));
+        auto proof_result = prover.GenerateFullProof();
+        if (!proof_result.has_value())
+        {
+            return outcome::failure(boost::system::errc::make_error_code(boost::system::errc::operation_canceled));
+        }
+        maybe_proof = proof_result.value();
+#endif
+
+        account_m->utxos = UTXOTxParameters::UpdateUTXOList(account_m->utxos, maybe_params.value());
+        this->EnqueueTransaction(std::make_pair(transfer_transaction, maybe_proof));
+
+        return transfer_transaction->dag_st.data_hash();
     }
 
-    void TransactionManager::MintFunds( uint64_t    amount,
-                                        std::string transaction_hash,
-                                        std::string chainid,
-                                        std::string tokenid )
+    outcome::result<std::string> TransactionManager::MintFunds(uint64_t amount,
+                                                            std::string transaction_hash,
+                                                            std::string chainid,
+                                                            std::string tokenid)
     {
         auto mint_transaction = std::make_shared<MintTransaction>(
-            MintTransaction::New( amount,
-                                  std::move( chainid ),
-                                  std::move( tokenid ),
-                                  FillDAGStruct( std::move( transaction_hash ) ) ) );
+            MintTransaction::New(amount,
+                               std::move(chainid),
+                               std::move(tokenid),
+                               FillDAGStruct(std::move(transaction_hash))));
         std::optional<std::vector<uint8_t>> maybe_proof;
 #ifdef _PROOF_ENABLED
-        TransferProof prover( 1000000000000000,
-                              static_cast<uint64_t>( amount ) ); //Mint max 1000000 gnus per transaction
-        auto          proof_result = prover.GenerateFullProof();
-        if ( proof_result.has_value() )
+        TransferProof prover(1000000000000000,
+                            static_cast<uint64_t>(amount)); //Mint max 1000000 gnus per transaction
+        auto proof_result = prover.GenerateFullProof();
+        if (!proof_result.has_value())
         {
-            maybe_proof = proof_result.value();
+            return outcome::failure(boost::system::errc::make_error_code(boost::system::errc::protocol_error));
         }
+        maybe_proof = proof_result.value();
 #endif
-        this->EnqueueTransaction( std::make_pair( std::move( mint_transaction ), maybe_proof ) );
+        // Store the transaction ID before moving the transaction
+        std::string txId = mint_transaction->dag_st.data_hash();
+
+        this->EnqueueTransaction(std::make_pair(std::move(mint_transaction), maybe_proof));
+
+        return outcome::success(txId);
     }
 
-    outcome::result<EscrowDataPair> TransactionManager::HoldEscrow( uint64_t           amount,
-                                                                    const std::string &dev_addr,
-                                                                    uint64_t           peers_cut,
-                                                                    const std::string &job_id )
+    outcome::result<std::pair<std::string, EscrowDataPair>> TransactionManager::HoldEscrow(uint64_t amount,
+                                                                                        const std::string &dev_addr,
+                                                                                        uint64_t peers_cut,
+                                                                                        const std::string &job_id)
     {
-        bool ret       = false;
-        auto hash_data = hasher_m->blake2b_256( std::vector<uint8_t>{ job_id.begin(), job_id.end() } );
+        auto hash_data = hasher_m->blake2b_256(std::vector<uint8_t>{ job_id.begin(), job_id.end() });
 
-        OUTCOME_TRY( ( auto &&, params ),
-                     UTXOTxParameters::create( account_m->utxos,
-                                               account_m->GetAddress(),
-                                               amount,
-                                               "0x" + hash_data.toReadableString() ) );
+        OUTCOME_TRY((auto &&, params),
+                   UTXOTxParameters::create(account_m->utxos,
+                                          account_m->GetAddress(),
+                                          amount,
+                                          "0x" + hash_data.toReadableString()));
 
-        account_m->utxos        = UTXOTxParameters::UpdateUTXOList( account_m->utxos, params );
+        account_m->utxos = UTXOTxParameters::UpdateUTXOList(account_m->utxos, params);
         auto escrow_transaction = std::make_shared<EscrowTransaction>(
-            EscrowTransaction::New( params, amount, dev_addr, peers_cut, FillDAGStruct() ) );
+            EscrowTransaction::New(params, amount, dev_addr, peers_cut, FillDAGStruct()));
+
+        // Get the transaction ID for tracking
+        std::string txId = escrow_transaction->dag_st.data_hash();
 
         std::optional<std::vector<uint8_t>> maybe_proof;
 #ifdef _PROOF_ENABLED
-
-        TransferProof prover( static_cast<uint64_t>( account_m->GetBalance<uint64_t>() ),
-                              static_cast<uint64_t>( amount ) );
-        OUTCOME_TRY( ( auto &&, proof_result ), prover.GenerateFullProof() );
+        TransferProof prover(static_cast<uint64_t>(account_m->GetBalance<uint64_t>()),
+                            static_cast<uint64_t>(amount));
+        OUTCOME_TRY((auto &&, proof_result), prover.GenerateFullProof());
         maybe_proof = proof_result;
-
 #endif
-        account_m->utxos = UTXOTxParameters::UpdateUTXOList( account_m->utxos, params );
-        this->EnqueueTransaction( std::make_pair( escrow_transaction, maybe_proof ) );
-        m_logger->debug( "Holding escrow to 0x{} wih the amount {}", hash_data.toReadableString(), amount );
+
+        this->EnqueueTransaction(std::make_pair(escrow_transaction, maybe_proof));
 
         sgns::crdt::GlobalDB::Buffer data_transaction;
-        data_transaction.put( escrow_transaction->SerializeByteVector() );
-        return std::make_pair( "0x" + hash_data.toReadableString(), std::move( data_transaction ) );
+        data_transaction.put(escrow_transaction->SerializeByteVector());
+
+        // Return both the transaction ID and the original EscrowDataPair
+        return std::make_pair(txId,
+                             std::make_pair("0x" + hash_data.toReadableString(),
+                                           std::move(data_transaction)));
     }
 
     outcome::result<void> TransactionManager::PayEscrow( const std::string              &escrow_path,
@@ -361,6 +367,15 @@ namespace sgns
         tx_queue_m.pop_front();
 
         BOOST_OUTCOME_TRYV2( auto &&, ParseTransaction( transaction ) );
+
+        std::unique_lock<std::shared_mutex> recent_lock(recent_tx_mutex_m);
+        // Remove oldest entry if at capacity before adding new entry
+        if (recently_processed_tx_m.size() >= RECENT_TX_BUFFER_SIZE) {
+            recently_processed_tx_m.erase(recently_processed_tx_m.begin());
+        }
+
+        recently_processed_tx_m.push_back(transaction->dag_st.data_hash());
+
 
         return outcome::success();
     }
@@ -783,5 +798,24 @@ namespace sgns
         auto eth_pubkey = ethereum::EthereumKeyGenerator::BuildPublicKey( dag_st.source_addr() );
 
         return nil::crypto3::verify( hashed, sig, eth_pubkey );
+    }
+
+    bool TransactionManager::WaitForTransaction(const std::string &txId, std::chrono::milliseconds timeout) const
+    {
+        auto start = std::chrono::steady_clock::now();
+
+        do
+        {
+            {
+                std::shared_lock<std::shared_mutex> lock(recent_tx_mutex_m);
+                if (std::find(recently_processed_tx_m.begin(), recently_processed_tx_m.end(), txId) != recently_processed_tx_m.end())
+                {
+                    return true;
+                }
+            }
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        } while (std::chrono::steady_clock::now() - start < timeout);
+        return false; // Timed out
     }
 }

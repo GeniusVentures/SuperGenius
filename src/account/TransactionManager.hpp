@@ -63,14 +63,17 @@ namespace sgns
         std::vector<std::vector<uint8_t>> GetOutTransactions() const;
         std::vector<std::vector<uint8_t>> GetInTransactions() const;
 
-        bool TransferFunds( uint64_t amount, const std::string &destination );
-        void MintFunds( uint64_t amount, std::string transaction_hash, std::string chainid, std::string tokenid );
-        outcome::result<EscrowDataPair> HoldEscrow( uint64_t           amount,
+        outcome::result<std::string> TransferFunds( uint64_t amount, const std::string &destination );
+        outcome::result<std::string> MintFunds( uint64_t amount, std::string transaction_hash, std::string chainid, std::string tokenid );
+        outcome::result<std::pair<std::string, EscrowDataPair>> HoldEscrow( uint64_t           amount,
                                                  const std::string &dev_addr,
                                                  uint64_t           peers_cut,
                                                  const std::string &job_id );
         outcome::result<void> PayEscrow( const std::string &escrow_path, const SGProcessing::TaskResult &taskresult );
         uint64_t              GetBalance();
+
+        // Wait for a transaction to be processed with a timeout
+        bool WaitForTransaction(const std::string& txId, std::chrono::milliseconds timeout) const;
 
     private:
         static constexpr std::uint16_t    MAIN_NET_ID             = 369;
@@ -141,6 +144,14 @@ namespace sgns
         };
 
         base::Logger m_logger = sgns::base::createLogger( "TransactionManager" );
+
+        // Check if a transaction has been processed
+        bool IsTransactionProcessed(const std::string& txId) const;
+
+        static constexpr size_t RECENT_TX_BUFFER_SIZE = 1000;
+        std::vector<std::string> recently_processed_tx_m;
+        size_t recent_tx_index_m = 0;
+        mutable std::shared_mutex recent_tx_mutex_m;
     };
 }
 
