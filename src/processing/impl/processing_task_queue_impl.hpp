@@ -51,7 +51,7 @@ namespace sgns::processing
         * @param taskKey - id to look for task
         * @param taskResult - Reference of a task result
         */
-        bool CompleteTask( const std::string &taskKey, const SGProcessing::TaskResult &taskResult ) override;
+       outcome::result<void> CompleteTask( const std::string &taskKey, const SGProcessing::TaskResult &taskResult ) override;
 
         /**
          * @brief       

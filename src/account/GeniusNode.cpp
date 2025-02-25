@@ -672,7 +672,13 @@ namespace sgns
                 node_logger->error( "Invalid results for task: {} ", task_id );
                 break;
             }
-            task_queue_->CompleteTask( task_id, taskresult );
+            if ( !task_queue_->CompleteTask( task_id, taskresult ) )
+            {
+                std::cout << "Unable to complete task!" << std::endl;
+                break;
+                //throw std::runtime_error( "Invalid results!" );
+            }
+            
 
         } while ( 0 );
     }

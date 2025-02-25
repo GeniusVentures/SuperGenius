@@ -140,9 +140,9 @@ namespace
             return true;
         }
 
-        bool CompleteTask( const std::string &taskKey, const SGProcessing::TaskResult &task ) override
+        outcome::result<void> CompleteTask( const std::string &taskKey, const SGProcessing::TaskResult &task ) override
         {
-            return false;
+            return outcome::success();
         }
 
     private:

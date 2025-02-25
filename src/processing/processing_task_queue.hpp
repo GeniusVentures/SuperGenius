@@ -40,7 +40,7 @@ public:
     * @param taskId - task id
     * @param task result
     */
-    virtual bool CompleteTask( const std::string &taskId, const SGProcessing::TaskResult &result ) = 0;
+    virtual outcome::result<void> CompleteTask( const std::string &taskId, const SGProcessing::TaskResult &result ) = 0;
 
     /**
      * @brief       

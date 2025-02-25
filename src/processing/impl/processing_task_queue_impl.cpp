@@ -147,22 +147,23 @@ namespace sgns::processing
         return outcome::failure( boost::system::error_code{} );
     }
 
-    bool ProcessingTaskQueueImpl::CompleteTask( const std::string &taskKey, const SGProcessing::TaskResult &taskResult )
+    outcome::result<void> ProcessingTaskQueueImpl::CompleteTask( const std::string              &taskKey,
+                                                                 const SGProcessing::TaskResult &taskResult )
     {
-        sgns::base::Buffer data;
-        data.put( taskResult.SerializeAsString() );
+        sgns::base::Buffer          data;
+        sgns::crdt::HierarchicalKey result_key( { "task_results/tasks/TASK_" + taskKey } );
+        sgns::crdt::HierarchicalKey lock_key( { "lock_tasks/TASK_" + taskKey } );
 
-        std::cout << "Completing the task and storing results on " << "task_results/" + taskKey << std::endl;
-        m_db->Put( { "task_results/tasks/TASK_" + taskKey }, data );
-        m_db->Remove( { "lock_tasks/TASK_" + taskKey } );
-        //auto transaction = m_db->BeginTransaction();
-        //transaction->AddToDelta( sgns::crdt::HierarchicalKey( "task_results/" + taskKey ), data );
-        //transaction->RemoveFromDelta( sgns::crdt::HierarchicalKey( "lock_" + taskKey ) );
-        //transaction->RemoveFromDelta( sgns::crdt::HierarchicalKey( taskKey ) );
-        //
-        //auto res = transaction->PublishDelta();
-        m_logger->debug( "TASK_COMPLETED: {}", taskKey );
-        return true;
+        auto job_completion_transaction = m_db->BeginTransaction();
+        data.put( taskResult.SerializeAsString() );
+        BOOST_OUTCOME_TRYV2( auto &&, job_completion_transaction->Put( std::move( result_key ), std::move( data ) ) );
+        BOOST_OUTCOME_TRYV2( auto &&, job_completion_transaction->Remove( std::move( lock_key ) ) );
+
+        BOOST_OUTCOME_TRYV2( auto &&, job_completion_transaction->Commit() );
+
+
+        m_logger->debug( "TASK_COMPLETED: {}, results stored", taskKey );
+        return outcome::success();
     }
 
     bool ProcessingTaskQueueImpl::IsTaskCompleted( const std::string &taskId )
@@ -271,5 +272,4 @@ namespace sgns::processing
     {
         job_crdt_transaction_.reset();
     }
-
 }
