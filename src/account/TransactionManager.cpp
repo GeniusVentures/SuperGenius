@@ -119,7 +119,7 @@ namespace sgns
         return *account_m;
     }
 
-    outcome::result<std::string> TransactionManager::TransferFunds(uint64_t amount, const std::string &destination)
+    outcome::result<std::uint64_t> TransactionManager::TransferFunds(uint64_t amount, const std::string &destination)
     {
         auto maybe_params = UTXOTxParameters::create(account_m->utxos, account_m->GetAddress(), amount, destination);
 
@@ -147,10 +147,10 @@ namespace sgns
         account_m->utxos = UTXOTxParameters::UpdateUTXOList(account_m->utxos, maybe_params.value());
         this->EnqueueTransaction(std::make_pair(transfer_transaction, maybe_proof));
 
-        return transfer_transaction->dag_st.data_hash();
+        return transfer_transaction->dag_st.nonce();
     }
 
-    outcome::result<std::string> TransactionManager::MintFunds(uint64_t amount,
+    outcome::result<std::uint64_t> TransactionManager::MintFunds(uint64_t amount,
                                                             std::string transaction_hash,
                                                             std::string chainid,
                                                             std::string tokenid)
@@ -172,14 +172,14 @@ namespace sgns
         maybe_proof = proof_result.value();
 #endif
         // Store the transaction ID before moving the transaction
-        std::string txId = mint_transaction->dag_st.data_hash();
+        std::uint64_t txId = mint_transaction->dag_st.nonce();
 
         this->EnqueueTransaction(std::make_pair(std::move(mint_transaction), maybe_proof));
 
         return outcome::success(txId);
     }
 
-    outcome::result<std::pair<std::string, EscrowDataPair>> TransactionManager::HoldEscrow(uint64_t amount,
+    outcome::result<std::pair<std::uint64_t, EscrowDataPair>> TransactionManager::HoldEscrow(uint64_t amount,
                                                                                         const std::string &dev_addr,
                                                                                         uint64_t peers_cut,
                                                                                         const std::string &job_id)
@@ -197,7 +197,7 @@ namespace sgns
             EscrowTransaction::New(params, amount, dev_addr, peers_cut, FillDAGStruct()));
 
         // Get the transaction ID for tracking
-        std::string txId = escrow_transaction->dag_st.data_hash();
+        std::uint64_t txId = escrow_transaction->dag_st.nonce();
 
         std::optional<std::vector<uint8_t>> maybe_proof;
 #ifdef _PROOF_ENABLED
@@ -284,9 +284,16 @@ namespace sgns
 
     void TransactionManager::Update()
     {
-        SendTransaction();
-        CheckIncoming();
-        //CheckOutgoing();
+        auto send_result =  SendTransaction();
+        if ( send_result.has_error() )
+        {
+            m_logger->error( "Unknown SendTranscation error in SendTransaction::Update()");
+        }
+        auto check_result = CheckIncoming();
+        if ( check_result.has_error() )
+        {
+            m_logger->error( "Unknown CheckIncoming error in SendTransaction::Update()");
+        }
         static auto start_time = std::chrono::steady_clock::now();
         if ( std::chrono::steady_clock::now() - start_time > std::chrono::minutes( 60 ) )
         {
@@ -322,19 +329,21 @@ namespace sgns
         std::unique_lock lock( mutex_m );
         if ( tx_queue_m.empty() )
         {
-            return std::errc::invalid_argument;
+            return outcome::success();
         }
 
         auto [transaction, maybe_proof] = tx_queue_m.front();
 
-        transaction->dag_st.set_nonce( account_m->nonce );
+        // this was set prior and needed for the proof to match when the proof was generated
+        //transaction->dag_st.set_nonce( account_m->nonce );
         transaction->dag_st.clear_signature();
 
         auto signature = MakeSignature( transaction->dag_st );
 
         transaction->dag_st.set_signature( signature.data(), signature.size() );
 
-        sgns::crdt::HierarchicalKey  tx_key( GetTransactionPath( *transaction ) );
+        auto transaction_path = GetTransactionPath( *transaction );
+        sgns::crdt::HierarchicalKey  tx_key( transaction_path );
         sgns::crdt::GlobalDB::Buffer data_transaction;
 
         m_logger->debug( "Recording the transaction on " + tx_key.GetKey() );
@@ -368,14 +377,10 @@ namespace sgns
 
         BOOST_OUTCOME_TRYV2( auto &&, ParseTransaction( transaction ) );
 
-        std::unique_lock<std::shared_mutex> recent_lock(recent_tx_mutex_m);
-        // Remove oldest entry if at capacity before adding new entry
-        if (recently_processed_tx_m.size() >= RECENT_TX_BUFFER_SIZE) {
-            recently_processed_tx_m.erase(recently_processed_tx_m.begin());
+        {
+            std::unique_lock<std::shared_mutex> out_lock(outgoing_tx_mutex_m);
+            outgoing_tx_processed_m[ transaction_path ] = transaction->SerializeByteVector();
         }
-
-        recently_processed_tx_m.push_back(transaction->dag_st.data_hash());
-
 
         return outcome::success();
     }
@@ -489,7 +494,7 @@ namespace sgns
             }
 
             m_logger->debug( "Finding incoming transaction: " + transaction_key.value() );
-            auto maybe_transaction = FetchTransaction( incoming_db_m, { transaction_key.value() } );
+            auto maybe_transaction = FetchTransaction( incoming_db_m, transaction_key.value() );
             if ( !maybe_transaction.has_value() )
             {
                 m_logger->debug( "Can't fetch transaction" );
@@ -515,7 +520,10 @@ namespace sgns
                 m_logger->debug( "Can't parse the transaction" );
                 continue;
             }
-            incoming_tx_processed_m[{ transaction_key.value() }] = maybe_transaction.value()->SerializeByteVector();
+            {
+                std::unique_lock<std::shared_mutex> out_lock(outgoing_tx_mutex_m);
+                incoming_tx_processed_m[transaction_key.value()] = maybe_transaction.value()->SerializeByteVector();
+            }
         }
         return outcome::success();
     }
@@ -547,7 +555,7 @@ namespace sgns
                 continue;
             }
 
-            auto maybe_transaction = FetchTransaction( outgoing_db_m, { transaction_key.value() } );
+            auto maybe_transaction = FetchTransaction( outgoing_db_m, transaction_key.value()  );
             if ( !maybe_transaction.has_value() )
             {
                 m_logger->debug( "Can't fetch transaction" );
@@ -563,8 +571,10 @@ namespace sgns
             m_logger->debug( "Transaction parsed " + transaction_key.value() );
 
             account_m->nonce = std::max( account_m->nonce, maybe_transaction.value()->dag_st.nonce() );
-
-            outgoing_tx_processed_m[{ transaction_key.value() }] = maybe_transaction.value()->SerializeByteVector();
+            {
+                std::unique_lock<std::shared_mutex> out_lock(outgoing_tx_mutex_m);
+                outgoing_tx_processed_m[ transaction_key.value() ] = maybe_transaction.value()->SerializeByteVector();
+            }
         }
         return outcome::success();
     }
@@ -702,10 +712,13 @@ namespace sgns
     std::vector<std::vector<uint8_t>> TransactionManager::GetOutTransactions() const
     {
         std::vector<std::vector<std::uint8_t>> result;
-        result.reserve( outgoing_tx_processed_m.size() );
-        for ( const auto &[key, value] : outgoing_tx_processed_m )
         {
-            result.push_back( value );
+            std::shared_lock<std::shared_mutex> out_lock(outgoing_tx_mutex_m);
+            result.reserve(outgoing_tx_processed_m.size());
+            for (const auto &[key, value] : outgoing_tx_processed_m)
+            {
+                result.push_back(value);
+            }
         }
         return result;
     }
@@ -713,10 +726,13 @@ namespace sgns
     std::vector<std::vector<uint8_t>> TransactionManager::GetInTransactions() const
     {
         std::vector<std::vector<std::uint8_t>> result;
-        result.reserve( incoming_tx_processed_m.size() );
-        for ( const auto &[key, value] : incoming_tx_processed_m )
         {
-            result.push_back( value );
+            std::shared_lock<std::shared_mutex> in_lock(incoming_tx_mutex_m);
+            result.reserve(incoming_tx_processed_m.size());
+            for (const auto &[key, value] : incoming_tx_processed_m)
+            {
+                result.push_back(value);
+            }
         }
         return result;
     }
@@ -800,15 +816,23 @@ namespace sgns
         return nil::crypto3::verify( hashed, sig, eth_pubkey );
     }
 
-    bool TransactionManager::WaitForTransaction(const std::string &txId, std::chrono::milliseconds timeout) const
+    bool TransactionManager::WaitForTransactionIncoming(const std::uint64_t &txId, const std::string& txType, std::chrono::milliseconds timeout) const
     {
         auto start = std::chrono::steady_clock::now();
 
+        // Construct the transaction paths once outside the loop
+        boost::format tx_key{std::string(TRANSACTION_BASE_FORMAT)};
+        tx_key % TEST_NET_ID;
+
+        // Construct incoming notification path
+        std::string incoming_path = tx_key.str() + account_m->GetAddress() + "/tx/" + txType + "/" + std::to_string(txId);
+
         do
         {
+            // Check in incoming transactions with the exact path
             {
-                std::shared_lock<std::shared_mutex> lock(recent_tx_mutex_m);
-                if (std::find(recently_processed_tx_m.begin(), recently_processed_tx_m.end(), txId) != recently_processed_tx_m.end())
+                std::shared_lock<std::shared_mutex> in_lock(incoming_tx_mutex_m);
+                if (incoming_tx_processed_m.find(incoming_path) != incoming_tx_processed_m.end())
                 {
                     return true;
                 }
@@ -816,6 +840,36 @@ namespace sgns
 
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         } while (std::chrono::steady_clock::now() - start < timeout);
-        return false; // Timed out
+
+        return false;
     }
+
+    bool TransactionManager::WaitForTransactionOutgoing(const std::uint64_t &txId, const std::string& txType, std::chrono::milliseconds timeout) const
+    {
+        auto start = std::chrono::steady_clock::now();
+
+        // Construct the transaction paths once outside the loop
+        boost::format tx_key{std::string(TRANSACTION_BASE_FORMAT)};
+        tx_key % TEST_NET_ID;
+
+        // Construct outgoing path
+        std::string outgoing_path = tx_key.str() + account_m->GetAddress() + "/tx/" + txType + "/" + std::to_string(txId);
+
+        do
+        {
+            // Check in outgoing transactions with the exact path
+            {
+                std::shared_lock<std::shared_mutex> out_lock(outgoing_tx_mutex_m);
+                if (outgoing_tx_processed_m.find(outgoing_path) != outgoing_tx_processed_m.end())
+                {
+                    return true;
+                }
+            }
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        } while (std::chrono::steady_clock::now() - start < timeout);
+
+        return false;
+    }
+
 }
