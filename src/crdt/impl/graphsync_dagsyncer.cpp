@@ -13,10 +13,16 @@ namespace sgns::crdt
                                             std::shared_ptr<libp2p::Host>  host ) :
         dagService_( std::move( service ) ), graphsync_( std::move( graphsync ) ), host_( std::move( host ) )
     {
+
+        logger_->debug( "GraphSyncher created{} ", reinterpret_cast<size_t>(this));
+
     }
 
     outcome::result<void> GraphsyncDAGSyncer::Listen( const Multiaddress &listen_to )
     {
+
+        logger_->debug( "Starting to listen {} ", reinterpret_cast<size_t>(this));
+
         if ( this->host_ == nullptr )
         {
             return outcome::failure( boost::system::error_code{} );
@@ -121,7 +127,7 @@ namespace sgns::crdt
             } );
 
         // keeping subscriptions alive, otherwise they cancel themselves
-        logger_->debug( "Requesting Node {} ", root_cid.toString().value() );
+        logger_->debug( "Requesting Node {} on this {}", root_cid.toString().value(), reinterpret_cast<size_t>(this) );
         return std::make_shared<Subscription>( std::move( subscription ) );
     }
 
