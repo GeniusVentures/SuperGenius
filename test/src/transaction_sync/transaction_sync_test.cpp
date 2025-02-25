@@ -25,6 +25,7 @@
 #include "FileManager.hpp"
 #include <boost/dll.hpp>
 #include <boost/algorithm/string/replace.hpp>
+#include "base/sgns_version.hpp"
 
 class TransactionSyncTest : public ::testing::Test
 {
@@ -39,6 +40,8 @@ protected:
 
     static void SetUpTestSuite()
     {
+        std::cout << "SuperGeniusVersion: " << sgns::version::SuperGeniusVersionText() <<std::endl;
+
         std::string binary_path = boost::dll::program_location().parent_path().string();
         std::strncpy( DEV_CONFIG.BaseWritePath,
                       ( binary_path + "/node10/" ).c_str(),

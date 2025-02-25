@@ -38,3 +38,7 @@ const char *sgns::version::SuperGeniusVersionBuildMetadata()
 {
     return SUPERGENIUS_VERSION_BUILD_METADATA;
 }
+const char *sgns::version::SuperGeniusVersionText()
+{
+    return SUPERGENIUS_VERSION_TEXT;
+}

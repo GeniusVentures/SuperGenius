@@ -90,7 +90,7 @@
   */
  #define SUPERGENIUS_FULL_VERSION_STR                                                                                   \
      "@SUPERGENIUS_VERSION_MAJOR@.@SUPERGENIUS_VERSION_MINOR@.@SUPERGENIUS_VERSION_PATCH@"                              \
-     "@SUPERGENIUS_VERSION_PRE_RELEASE@@SUPERGENIUS_VERSION_BUILD_METADATA@"
+     "-@SUPERGENIUS_VERSION_PRE_RELEASE@+@SUPERGENIUS_VERSION_BUILD_METADATA@"
  
  /**
   * Version text for display purposes.

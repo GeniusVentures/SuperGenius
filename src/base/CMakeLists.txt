@@ -121,12 +121,14 @@ set(SUPERGENIUS_VERSION_PATCH ${PROJECT_VERSION_PATCH})
 # Pre-release: if a Git tag exists, assume a release build; otherwise, use branch name.
 if(GIT_TAG)
     set(SUPERGENIUS_VERSION_PRE_RELEASE "")
+    set(SUPERGENIUS_VERSION_BUILD_METADATA "${GIT_TAG}.${GIT_COMMIT_HASH}")
 else()
-    set(SUPERGENIUS_VERSION_PRE_RELEASE "${GIT_BRANCH}")
+    set(SUPERGENIUS_VERSION_PRE_RELEASE "alpha")
+    set(SUPERGENIUS_VERSION_BUILD_METADATA "${GIT_BRANCH}.${GIT_COMMIT_HASH}")
 endif()
 
 # Build metadata: combine build date and commit hash.
-set(SUPERGENIUS_VERSION_BUILD_METADATA "${BUILD_DATE}-${GIT_COMMIT_HASH}")
+set(SUPERGENIUS_RELEASE_DATE "${BUILD_DATE}")
 
 # --- Output the detected values ---
 message(STATUS "SUPERGENIUS_VERSION_MAJOR: ${SUPERGENIUS_VERSION_MAJOR}")

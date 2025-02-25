@@ -46,5 +46,8 @@ namespace sgns
          * @return const char* pointing to the build metadata string.
          */
         const char *SuperGeniusVersionBuildMetadata();
+
+        
+        const char *SuperGeniusVersionText();
     }
 }
