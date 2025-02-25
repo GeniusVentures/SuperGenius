@@ -71,25 +71,18 @@ namespace sgns::crdt
             new PubSubBroadcasterExt( std::move( pubSubTopic ),
                                       std::move( dagSyncer ),
                                       std::move( dagSyncerMultiaddress ) ) );
-
         if ( pubsub_broadcaster_instance->gossipPubSubTopic_ != nullptr )
         {
-            auto weak_instance = std::weak_ptr<PubSubBroadcasterExt>( pubsub_broadcaster_instance );
             pubsub_broadcaster_instance->gossipPubSubTopic_->Subscribe(
-                [weak_instance]( boost::optional<const GossipPubSub::Message &> message )
+                [weakptr = std::weak_ptr<PubSubBroadcasterExt>( pubsub_broadcaster_instance )](
+                    boost::optional<const GossipPubSub::Message &> message )
                 {
-                    if ( auto instance = weak_instance.lock() )
+                    if ( auto self = weakptr.lock() )
                     {
-                        // Post the message handling to the strand to ensure sequential processing
-                        boost::asio::post( instance->strand_,
-                                           [instance, message = message]() { instance->OnMessage( message ); } );
-                    }
+                        self->OnMessage( message );
+                    };
                 } );
-
-            // Start the io_context in a separate thread
-            std::thread( [instance = pubsub_broadcaster_instance]() { instance->io_context_->run(); } ).detach();
         }
-
         return pubsub_broadcaster_instance;
     }
 
@@ -99,87 +92,72 @@ namespace sgns::crdt
         gossipPubSubTopic_( std::move( pubSubTopic ) ),
         dagSyncer_( std::move( dagSyncer ) ),
         dataStore_( nullptr ),
-        dagSyncerMultiaddress_( std::move( dagSyncerMultiaddress ) ),
-        io_context_( std::make_shared<boost::asio::io_context>() ),
-        strand_( boost::asio::make_strand( *io_context_ ) )
+        dagSyncerMultiaddress_( std::move( dagSyncerMultiaddress ) )
     {
         m_logger->trace( "Initializing Pubsub Broadcaster" );
     }
 
     void PubSubBroadcasterExt::OnMessage( boost::optional<const GossipPubSub::Message &> message )
     {
-        // This now runs in the strand context, so we're thread-safe
         m_logger->trace( "Got a message" );
-        if ( !message )
+        if ( message )
         {
-            return;
-        }
-
-        sgns::crdt::broadcasting::BroadcastMessage bmsg;
-        if ( !bmsg.ParseFromArray( message->data.data(), message->data.size() ) )
-        {
-            return;
-        }
-
-        auto peer_id_res = libp2p::peer::PeerId::fromBytes(
-            gsl::span<const uint8_t>( reinterpret_cast<const uint8_t *>( bmsg.peer().id().data() ),
-                                      bmsg.peer().id().size() ) );
-
-        if ( !peer_id_res )
-        {
-            return;
-        }
-
-        auto peerId = peer_id_res.value();
-        m_logger->trace( "Message from peer {}", peerId.toBase58() );
-
-        {
-            std::unique_lock<std::mutex> lock( mutex_ );
-            base::Buffer                 buf;
-            buf.put( bmsg.data() );
-            auto cids = dataStore_->DecodeBroadcast( buf );
-
-            if ( !cids.has_failure() )
+            sgns::crdt::broadcasting::BroadcastMessage bmsg;
+            if ( bmsg.ParseFromArray( message->data.data(), message->data.size() ) )
             {
-                // Process addresses and routes...
-                auto                                     addresses = bmsg.peer().addrs();
-                std::vector<libp2p::multi::Multiaddress> addrvector;
-                for ( auto &addr : addresses )
+                auto peer_id_res = libp2p::peer::PeerId::fromBytes(
+                    gsl::span<const uint8_t>( reinterpret_cast<const uint8_t *>( bmsg.peer().id().data() ),
+                                              bmsg.peer().id().size() ) );
+                //auto peerId = libp2p::peer::PeerId::fromBytes(message->from);
+                if ( peer_id_res )
                 {
-                    auto addr_res = libp2p::multi::Multiaddress::create( addr );
-                    if ( addr_res )
+                    auto peerId = peer_id_res.value();
+                    m_logger->trace( "Message from peer {}", peerId.toBase58() );
+                    std::scoped_lock lock( mutex_ );
+                    base::Buffer     buf;
+                    buf.put( bmsg.data() );
+                    auto cids = dataStore_->DecodeBroadcast( buf );
+                    if ( !cids.has_failure() )
                     {
-                        addrvector.push_back( addr_res.value() );
-                        m_logger->debug( "Added Address: {}", addr_res.value().getStringAddress() );
-                    }
-                }
-                //auto pi = PeerInfoFromString(bmsg.multiaddress());
-                for ( const auto &cid : cids.value() )
-                {
-                    if ( addrvector.size() > 0 )
-                    {
-                        auto hb = dagSyncer_->HasBlock( cid );
-                        if ( hb.has_value() && !hb.value() )
+                        auto                                     addresses = bmsg.peer().addrs();
+                        std::vector<libp2p::multi::Multiaddress> addrvector;
+                        for ( auto &addr : addresses )
                         {
-                            m_logger->debug( "Request node {} from {} {}",
-                                             cid.toString().value(),
-                                             addrvector[0].getStringAddress(),
-                                             peerId.toBase58() );
-                            dagSyncer_->AddRoute( cid, peerId, addrvector );
+                            auto addr_res = libp2p::multi::Multiaddress::create( addr );
+                            if ( addr_res )
+                            {
+                                addrvector.push_back( addr_res.value() );
+                                m_logger->debug( "Added Address: {}", addr_res.value().getStringAddress() );
+                            }
                         }
-                        else
+                        //auto pi = PeerInfoFromString(bmsg.multiaddress());
+                        for ( const auto &cid : cids.value() )
                         {
-                            m_logger->trace( "Not adding route node {} from {} {} {}",
-                                             cid.toString().value(),
-                                             addrvector[0].getStringAddress(),
-                                             hb.has_value(),
-                                             hb.value() );
+                            if ( addrvector.size() > 0 )
+                            {
+                                auto hb = dagSyncer_->HasBlock( cid );
+                                if ( hb.has_value() && !hb.value() )
+                                {
+                                    m_logger->debug( "Request node {} from {} {}",
+                                                     cid.toString().value(),
+                                                     addrvector[0].getStringAddress(),
+                                                     peerId.toBase58() );
+                                    dagSyncer_->AddRoute( cid, peerId, addrvector );
+                                }
+                                else
+                                {
+                                    m_logger->trace( "Not adding route node {} from {} {} {}",
+                                                     cid.toString().value(),
+                                                     addrvector[0].getStringAddress(),
+                                                     hb.has_value(),
+                                                     hb.value() );
+                                }
+                            }
                         }
                     }
+                    messageQueue_.emplace( std::move( peerId ), bmsg.data() );
                 }
             }
-
-            messageQueue_.emplace( std::move( peerId ), bmsg.data() );
         }
     }
 
@@ -188,16 +166,13 @@ namespace sgns::crdt
     //    logger_ = logger;
     //}
 
-    void PubSubBroadcasterExt::SetCrdtDataStore( CrdtDatastore *dataStore )
+    void PubSubBroadcasterExt::SetCrdtDataStore(CrdtDatastore *dataStore)
     {
-        if ( dataStore_ && dataStore_.get() == dataStore )
-        {
-            return; // Avoid resetting if it's already the same instance
+        if (dataStore_ && dataStore_.get() == dataStore) {
+            return;  //  Avoid resetting if it's already the same instance
         }
 
-        dataStore_ = std::shared_ptr<CrdtDatastore>(
-            dataStore,
-            []( CrdtDatastore * ) {} ); // Keeps reference, no ownership transfer
+        dataStore_ = std::shared_ptr<CrdtDatastore>(dataStore, [](CrdtDatastore *) {});  // Keeps reference, no ownership transfer
     }
 
     outcome::result<void> PubSubBroadcasterExt::Broadcast( const base::Buffer &buff )
