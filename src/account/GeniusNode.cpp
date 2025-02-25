@@ -415,7 +415,6 @@ namespace sgns
             ( auto &&, result_pair ),
             transaction_manager_->HoldEscrow( funds, std::string( dev_config_.Addr ), cut.value(), uuidstring ) );
 
-        // Extract both the transaction ID and the escrow data pair
         std::uint64_t tx_id = result_pair.first;
         auto escrow_data_pair = result_pair.second;
 
