@@ -13,10 +13,16 @@ namespace sgns::crdt
                                             std::shared_ptr<libp2p::Host>  host ) :
         dagService_( std::move( service ) ), graphsync_( std::move( graphsync ) ), host_( std::move( host ) )
     {
+
+        logger_->debug( "GraphSyncher created{} ", reinterpret_cast<size_t>(this));
+
     }
 
     outcome::result<void> GraphsyncDAGSyncer::Listen( const Multiaddress &listen_to )
     {
+
+        logger_->debug( "Starting to listen {} ", reinterpret_cast<size_t>(this));
+
         if ( this->host_ == nullptr )
         {
             return outcome::failure( boost::system::error_code{} );
@@ -37,52 +43,7 @@ namespace sgns::crdt
         return outcome::success();
     }
 
-    outcome::result<std::future<std::shared_ptr<ipfs_lite::ipld::IPLDNode>>> GraphsyncDAGSyncer::RequestNode(
-        const PeerId                              &peer,
-        boost::optional<std::vector<Multiaddress>> address,
-        const CID                                 &root_cid ) const
-    {
-        if ( !started_ )
-        {
-            return outcome::failure( boost::system::error_code{} );
-        }
-
-        if ( graphsync_ == nullptr )
-        {
-            return outcome::failure( boost::system::error_code{} );
-        }
-        auto                   result = std::make_shared<std::promise<std::shared_ptr<ipfs_lite::ipld::IPLDNode>>>();
-        std::vector<Extension> extensions;
-        ResponseMetadata       response_metadata{};
-        Extension response_metadata_extension = ipfs_lite::ipfs::graphsync::encodeResponseMetadata( response_metadata );
-        extensions.push_back( response_metadata_extension );
-
-        std::vector<CID> cids;
-        Extension        do_not_send_cids_extension = ipfs_lite::ipfs::graphsync::encodeDontSendCids( cids );
-        extensions.push_back( do_not_send_cids_extension );
-        auto subscription = graphsync_->makeRequest(
-            peer,
-            std::move( address ),
-            root_cid,
-            {},
-            extensions,
-            [weakptr = weak_from_this()]( ResponseStatusCode code, const std::vector<Extension> &extensions )
-            {
-                if ( auto self = weakptr.lock() )
-                {
-                    self->RequestProgressCallback( code, extensions );
-                }
-            } );
-
-        // keeping subscriptions alive, otherwise they cancel themselves
-        logger_->debug( "Requesting Node {} ", root_cid.toString().value() );
-        requests_.insert(
-            std::make_pair( root_cid,
-                            std::make_tuple( std::make_shared<Subscription>( std::move( subscription ) ), result ) ) );
-
-        return result->get_future();
-    }
-
+   
     outcome::result<std::shared_ptr<ipfs_lite::ipfs::graphsync::Subscription>> GraphsyncDAGSyncer::NewRequestNode(
         const PeerId                              &peer,
         boost::optional<std::vector<Multiaddress>> address,
@@ -97,7 +58,6 @@ namespace sgns::crdt
         {
             return outcome::failure( boost::system::error_code{} );
         }
-        auto                   result = std::make_shared<std::promise<std::shared_ptr<ipfs_lite::ipld::IPLDNode>>>();
         std::vector<Extension> extensions;
         ResponseMetadata       response_metadata{};
         Extension response_metadata_extension = ipfs_lite::ipfs::graphsync::encodeResponseMetadata( response_metadata );
@@ -121,7 +81,7 @@ namespace sgns::crdt
             } );
 
         // keeping subscriptions alive, otherwise they cancel themselves
-        logger_->debug( "Requesting Node {} ", root_cid.toString().value() );
+        logger_->debug( "Requesting Node {} on this {}", root_cid.toString().value(), reinterpret_cast<size_t>(this) );
         return std::make_shared<Subscription>( std::move( subscription ) );
     }
 
@@ -170,29 +130,6 @@ namespace sgns::crdt
                     logger_->error( "Timeout while waiting for node fetch: {}", cid.toString().value() );
                     return outcome::failure( boost::system::errc::timed_out );
                 }
-                //if ( std::find( unexpected_blocks.begin(), unexpected_blocks.end(), it->first ) !=
-                //     unexpected_blocks.end() )
-                //{
-                //    logger_->debug( "getNode: Someone requested a unexpected block {}",
-                //                    it->first.toString().value(),
-                //                    cid.toString().value() );
-                //}
-                //auto res = RequestNode( std::get<0>( it->second ), std::get<1>( it->second ), it->first );
-                //if ( res.has_failure() )
-                //{
-                //    return res.as_failure();
-                //}
-                ////res.value().wait();
-                //if ( res.value().wait_for( std::chrono::seconds( 5 ) ) == std::future_status::ready )
-                //{
-                //    node = res.value().get();
-                //}
-                //else
-                //{
-                //    logger_->error( "Timeout while waiting for node fetch: {}", cid.toString().value() );
-                //    return outcome::failure( boost::system::errc::timed_out );
-                //}
-                //node = res.value().get();
             }
         }
         return node;

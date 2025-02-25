@@ -3,8 +3,8 @@
 #include "processing/processing_imagesplit.hpp"
 #include <functional>
 #include <thread>
-#include <openssl/evp.h>
 #include <openssl/sha.h> // For SHA256_DIGEST_LENGTH
+#include "crypto/sha/sha256.hpp"
 
 //#define STB_IMAGE_IMPLEMENTATION
 //#define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -14,19 +14,7 @@
 namespace sgns::processing
 {
     using namespace MNN;
-    std::vector<uint8_t> calculateSHA256(const void* data, size_t dataSize) {
-        std::vector<uint8_t> hash(EVP_MAX_MD_SIZE);
-        unsigned int hashLen;
 
-        EVP_MD_CTX* ctx = EVP_MD_CTX_new();
-        EVP_DigestInit_ex(ctx, EVP_sha256(), nullptr);
-        EVP_DigestUpdate(ctx, data, dataSize);
-        EVP_DigestFinal_ex(ctx, hash.data(), &hashLen);
-        EVP_MD_CTX_free(ctx);
-
-        hash.resize(hashLen);
-        return hash;
-    }
     std::vector<uint8_t> MNN_Image::StartProcessing( SGProcessing::SubTaskResult &result,
                                                        const SGProcessing::Task    &task,
                                                        const SGProcessing::SubTask &subTask, 
@@ -86,14 +74,14 @@ namespace sgns::processing
 
                     const float *data     = procresults->host<float>();
                     size_t       dataSize = procresults->elementSize() * sizeof( float );
-                    std::vector<uint8_t> shahash = calculateSHA256(data, dataSize);
+                    shahash = sgns::crypto::sha256(data, dataSize);
 
                 }
                 std::string hashString( shahash.begin(), shahash.end() );
                 result.add_chunk_hashes( hashString );
 
                 std::string combinedHash = std::string(subTaskResultHash.begin(), subTaskResultHash.end()) + hashString;
-                subTaskResultHash = calculateSHA256(combinedHash.c_str(), combinedHash.length());
+                subTaskResultHash = sgns::crypto::sha256(combinedHash.c_str(), combinedHash.length());
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
             return subTaskResultHash;

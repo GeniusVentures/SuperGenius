@@ -48,8 +48,6 @@ namespace sgns::crdt
         std::queue<std::tuple<libp2p::peer::PeerId, std::string>> messageQueue_;
         //sgns::base::Logger logger_ = nullptr;
         std::mutex mutex_;
-        std::shared_ptr<boost::asio::io_context> io_context_;
-        boost::asio::strand<boost::asio::io_context::executor_type> strand_;
         sgns::base::Logger m_logger = sgns::base::createLogger( "PubSubBroadcasterExt" );
     };
 }
