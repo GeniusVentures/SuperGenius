@@ -63,49 +63,109 @@ target_link_libraries(fixed_point
 )
 supergenius_install(fixed_point)
 
+
+
+# Detect Git tag if available (exact match). If not on a tag, leave empty.
+if(NOT DEFINED GIT_TAG OR "${GIT_TAG}" STREQUAL "")
+    execute_process(
+      COMMAND git describe --tags --exact-match
+      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+      RESULT_VARIABLE _git_tag_result
+      OUTPUT_VARIABLE _git_tag
+      ERROR_QUIET
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    if(_git_tag_result EQUAL 0)
+        set(GIT_TAG "${_git_tag}")
+    else()
+        set(GIT_TAG "")
+    endif()
+endif()
+
+# Detect current Git branch if not already set.
+if(NOT DEFINED GIT_BRANCH OR "${GIT_BRANCH}" STREQUAL "")
+    execute_process(
+      COMMAND git rev-parse --abbrev-ref HEAD
+      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+      OUTPUT_VARIABLE _git_branch
+      ERROR_QUIET
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    set(GIT_BRANCH "${_git_branch}")
+endif()
+
+# Generate build date if not provided.
+if(NOT DEFINED BUILD_DATE OR "${BUILD_DATE}" STREQUAL "")
+    string(TIMESTAMP BUILD_DATE "%Y%m%d")
+endif()
+
+# Get short Git commit hash if not provided.
+if(NOT DEFINED GIT_COMMIT_HASH OR "${GIT_COMMIT_HASH}" STREQUAL "")
+    execute_process(
+      COMMAND git rev-parse --short HEAD
+      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+      OUTPUT_VARIABLE _git_commit_hash
+      ERROR_QUIET
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    set(GIT_COMMIT_HASH "${_git_commit_hash}")
+endif()
+
+# --- Version Component Setup ---
+
+# Set the version components (assumed to be defined from your project)
 set(SUPERGENIUS_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
 set(SUPERGENIUS_VERSION_MINOR ${PROJECT_VERSION_MINOR})
 set(SUPERGENIUS_VERSION_PATCH ${PROJECT_VERSION_PATCH})
-set(SUPERGENIUS_VERSION_PRE_RELEASE "alpha")  
-set(SUPERGENIUS_VERSION_BUILD_METADATA "2025-02-25") 
-set(SUPERGENIUS_VERSION_NUMBER "0x${SUPERGENIUS_VERSION_MAJOR}${SUPERGENIUS_VERSION_MINOR}${SUPERGENIUS_VERSION_PATCH}00")
 
+# Pre-release: if a Git tag exists, assume a release build; otherwise, use branch name.
+if(GIT_TAG)
+    set(SUPERGENIUS_VERSION_PRE_RELEASE "")
+else()
+    set(SUPERGENIUS_VERSION_PRE_RELEASE "${GIT_BRANCH}")
+endif()
+
+# Build metadata: combine build date and commit hash.
+set(SUPERGENIUS_VERSION_BUILD_METADATA "${BUILD_DATE}-${GIT_COMMIT_HASH}")
+
+# --- Output the detected values ---
 message(STATUS "SUPERGENIUS_VERSION_MAJOR: ${SUPERGENIUS_VERSION_MAJOR}")
 message(STATUS "SUPERGENIUS_VERSION_MINOR: ${SUPERGENIUS_VERSION_MINOR}")
 message(STATUS "SUPERGENIUS_VERSION_PATCH: ${SUPERGENIUS_VERSION_PATCH}")
+message(STATUS "GIT_TAG: ${GIT_TAG}")
+message(STATUS "GIT_BRANCH: ${GIT_BRANCH}")
+message(STATUS "BUILD_DATE: ${BUILD_DATE}")
+message(STATUS "GIT_COMMIT_HASH: ${GIT_COMMIT_HASH}")
 message(STATUS "SUPERGENIUS_VERSION_PRE_RELEASE: ${SUPERGENIUS_VERSION_PRE_RELEASE}")
 message(STATUS "SUPERGENIUS_VERSION_BUILD_METADATA: ${SUPERGENIUS_VERSION_BUILD_METADATA}")
-message(STATUS "SUPERGENIUS_VERSION_NUMBER: ${SUPERGENIUS_VERSION_NUMBER}")
 
-message(STATUS "Generationg sgns_version.hpp from sgns_version.hpp.in")
 
-cmake_policy(SET CMP0115 NEW)
+message(STATUS "Generating sgnsv.h from sgnsv.h.in")
 
-set_source_files_properties(sgns_version.hpp.in PROPERTIES HEADER_FILE_ONLY TRUE)
+if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/sgnsv.h.in")
+    message(FATAL_ERROR "sgnsv.h.in is missing in ${CMAKE_CURRENT_SOURCE_DIR}")
+endif()
 
 
 configure_file(
-    sgns_version.hpp.in
-    ${CMAKE_CURRENT_BINARY_DIR}/../../../../../src/base/sgns_version.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/sgnsv.h.in
+    ${CMAKE_CURRENT_SOURCE_DIR}/sgnsv.h
     @ONLY
 )
 
-# install_hfile( ${CMAKE_CURRENT_BINARY_DIR}/../../generated/base)
-
-if(EXISTS "${CMAKE_CURRENT_BINARY_DIR}/sgns_version.hpp")
-    message(STATUS "sgns_version.hpp generated")
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/sgnsv.h")
+    message(STATUS "sgnsv.h generated")
 else()
-    message(WARNING "Arquivo sgns_version.hpp NÃO foi gerado!")
+    message(WARNING "Arquivo sgnsv.h NOT generated!")
 endif()
 
 add_library(sgns_version
 sgns_version.cpp
-${CMAKE_CURRENT_BINARY_DIR}/../../generated/base/sgns_version.hpp
+sgns_version.hpp
+sgnsv.h
 )
 target_link_libraries(sgns_version
     PUBLIC
-    Boost::headers
-    outcome
 )
 supergenius_install(sgns_version)
 
