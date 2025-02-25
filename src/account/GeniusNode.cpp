@@ -26,7 +26,8 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 
-namespace {
+namespace
+{
     uint16_t GenerateRandomPort( uint16_t base, const std::string &seed )
     {
         uint32_t seed_hash = 0;
@@ -41,7 +42,6 @@ namespace {
         return base + dist( rng );
     }
 }
-
 
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, GeniusNode::Error, e )
 {
@@ -92,7 +92,7 @@ namespace sgns
         autodht_( autodht ),
         isprocessor_( isprocessor ),
         dev_config_( dev_config )
-        //coinprices_(std::make_shared<CoinGeckoPriceRetriever>(io_))
+    //coinprices_(std::make_shared<CoinGeckoPriceRetriever>(io_))
     {
         SSL_library_init();
         SSL_load_error_strings();
@@ -114,64 +114,63 @@ namespace sgns
 #ifndef SGNS_DEBUGLOGS
         logdir = write_base_path_ + "/sgnslog2.log";
 #endif
-        node_logger = base::createLogger( "SuperGeniusDemo", logdir );
-        auto loggerGlobalDB = base::createLogger("GlobalDB", logdir);
-        auto loggerDAGSyncer = base::createLogger("GraphsyncDAGSyncer", logdir);
-        auto loggerGraphsync = base::createLogger("graphsync", logdir);
-        auto loggerBroadcaster = base::createLogger("PubSubBroadcasterExt", logdir);
-        auto loggerDataStore = base::createLogger("CrdtDatastore", logdir);
-        auto loggerTransactions = base::createLogger("TransactionManager", logdir);
-        auto loggerQueue = base::createLogger("ProcessingTaskQueueImpl", logdir);
-        auto loggerRocksDB = base::createLogger("rocksdb", logdir);
-        auto logkad = base::createLogger("Kademlia", logdir);
-        auto logNoise = base::createLogger("Noise", logdir);
-        auto logProcessingEngine = base::createLogger("ProcessingEngine", logdir);
-        auto loggerSubQueue = base::createLogger("ProcessingSubTaskQueueAccessorImpl", logdir);
-        auto loggerProcServ = base::createLogger("ProcessingService", logdir);
-        auto loggerProcqm = base::createLogger("ProcessingSubTaskQueueManager", logdir);
-        auto loggerUPNP = base::createLogger("UPNP", logdir);
-        auto loggerProcessingNode = base::createLogger("ProcessingNode", logdir);
-        auto loggerGossipPubsub = base::createLogger("GossipPubSub", logdir);
+        node_logger               = base::createLogger( "SuperGeniusDemo", logdir );
+        auto loggerGlobalDB       = base::createLogger( "GlobalDB", logdir );
+        auto loggerDAGSyncer      = base::createLogger( "GraphsyncDAGSyncer", logdir );
+        auto loggerGraphsync      = base::createLogger( "graphsync", logdir );
+        auto loggerBroadcaster    = base::createLogger( "PubSubBroadcasterExt", logdir );
+        auto loggerDataStore      = base::createLogger( "CrdtDatastore", logdir );
+        auto loggerTransactions   = base::createLogger( "TransactionManager", logdir );
+        auto loggerQueue          = base::createLogger( "ProcessingTaskQueueImpl", logdir );
+        auto loggerRocksDB        = base::createLogger( "rocksdb", logdir );
+        auto logkad               = base::createLogger( "Kademlia", logdir );
+        auto logNoise             = base::createLogger( "Noise", logdir );
+        auto logProcessingEngine  = base::createLogger( "ProcessingEngine", logdir );
+        auto loggerSubQueue       = base::createLogger( "ProcessingSubTaskQueueAccessorImpl", logdir );
+        auto loggerProcServ       = base::createLogger( "ProcessingService", logdir );
+        auto loggerProcqm         = base::createLogger( "ProcessingSubTaskQueueManager", logdir );
+        auto loggerUPNP           = base::createLogger( "UPNP", logdir );
+        auto loggerProcessingNode = base::createLogger( "ProcessingNode", logdir );
+        auto loggerGossipPubsub   = base::createLogger( "GossipPubSub", logdir );
 #ifdef SGNS_DEBUGLOGS
         node_logger->set_level( spdlog::level::debug );
-        loggerGlobalDB->set_level(spdlog::level::off);
-        loggerDAGSyncer->set_level(spdlog::level::off);
-        loggerGraphsync->set_level(spdlog::level::off);
-        loggerBroadcaster->set_level(spdlog::level::off);
-        loggerDataStore->set_level(spdlog::level::off);
-        loggerTransactions->set_level(spdlog::level::debug);
-        loggerQueue->set_level(spdlog::level::off);
-        loggerRocksDB->set_level(spdlog::level::off);
-        logkad->set_level(spdlog::level::off);
-        logNoise->set_level(spdlog::level::off);
-        logProcessingEngine->set_level(spdlog::level::debug);
-        loggerSubQueue->set_level(spdlog::level::off);
-        loggerProcServ->set_level(spdlog::level::debug);
-        loggerProcqm->set_level(spdlog::level::off);
-        loggerUPNP->set_level(spdlog::level::off);
-        loggerProcessingNode->set_level(spdlog::level::debug);
-        loggerGossipPubsub->set_level(spdlog::level::debug);
+        loggerGlobalDB->set_level( spdlog::level::off );
+        loggerDAGSyncer->set_level( spdlog::level::off );
+        loggerGraphsync->set_level( spdlog::level::off );
+        loggerBroadcaster->set_level( spdlog::level::off );
+        loggerDataStore->set_level( spdlog::level::off );
+        loggerTransactions->set_level( spdlog::level::debug );
+        loggerQueue->set_level( spdlog::level::off );
+        loggerRocksDB->set_level( spdlog::level::off );
+        logkad->set_level( spdlog::level::off );
+        logNoise->set_level( spdlog::level::off );
+        logProcessingEngine->set_level( spdlog::level::debug );
+        loggerSubQueue->set_level( spdlog::level::off );
+        loggerProcServ->set_level( spdlog::level::debug );
+        loggerProcqm->set_level( spdlog::level::off );
+        loggerUPNP->set_level( spdlog::level::off );
+        loggerProcessingNode->set_level( spdlog::level::debug );
+        loggerGossipPubsub->set_level( spdlog::level::debug );
 #else
-        node_logger->set_level( spdlog::level::err);
-        loggerGlobalDB->set_level(spdlog::level::err);
-        loggerDAGSyncer->set_level(spdlog::level::err);
-        loggerGraphsync->set_level(spdlog::level::err);
-        loggerBroadcaster->set_level(spdlog::level::err);
-        loggerDataStore->set_level(spdlog::level::err);
-        loggerTransactions->set_level(spdlog::level::err);
-        loggerQueue->set_level(spdlog::level::err);
-        loggerRocksDB->set_level(spdlog::level::err);
-        logkad->set_level(spdlog::level::err);
-        logNoise->set_level(spdlog::level::err);
-        logProcessingEngine->set_level(spdlog::level::err);
-        loggerSubQueue->set_level(spdlog::level::err);
-        loggerProcServ->set_level(spdlog::level::err);
-        loggerProcqm->set_level(spdlog::level::err);
-        loggerUPNP->set_level(spdlog::level::err);
-        loggerProcessingNode->set_level(spdlog::level::err);
-        loggerGossipPubsub->set_level(spdlog::level::err);
+        node_logger->set_level( spdlog::level::err );
+        loggerGlobalDB->set_level( spdlog::level::err );
+        loggerDAGSyncer->set_level( spdlog::level::err );
+        loggerGraphsync->set_level( spdlog::level::err );
+        loggerBroadcaster->set_level( spdlog::level::err );
+        loggerDataStore->set_level( spdlog::level::err );
+        loggerTransactions->set_level( spdlog::level::err );
+        loggerQueue->set_level( spdlog::level::err );
+        loggerRocksDB->set_level( spdlog::level::err );
+        logkad->set_level( spdlog::level::err );
+        logNoise->set_level( spdlog::level::err );
+        logProcessingEngine->set_level( spdlog::level::err );
+        loggerSubQueue->set_level( spdlog::level::err );
+        loggerProcServ->set_level( spdlog::level::err );
+        loggerProcqm->set_level( spdlog::level::err );
+        loggerUPNP->set_level( spdlog::level::err );
+        loggerProcessingNode->set_level( spdlog::level::err );
+        loggerGossipPubsub->set_level( spdlog::level::err );
 #endif
-
 
         auto tokenid = dev_config_.TokenID;
 
@@ -186,7 +185,7 @@ namespace sgns
         {
             auto openedPort  = upnp->OpenPort( pubsubport, pubsubport, "TCP", 3600 );
             auto openedPort2 = upnp->OpenPort( graphsyncport, graphsyncport, "TCP", 3600 );
-            auto wanip = upnp->GetWanIP();
+            auto wanip       = upnp->GetWanIP();
             lanip            = upnp->GetLocalIP();
             node_logger->info( "Wan IP: {}", wanip );
             node_logger->info( "Lan IP: {}", lanip );
@@ -201,22 +200,21 @@ namespace sgns
             }
         }
         //Make a base58 out of our address
-        std::string tempaddress = account_->GetAddress();
-        std::vector<unsigned char> inputBytes(tempaddress.begin(), tempaddress.end());
-        std::vector<unsigned char> hash(SHA256_DIGEST_LENGTH);
-        SHA256(inputBytes.data(), inputBytes.size(), hash.data());
+        std::string                tempaddress = account_->GetAddress();
+        std::vector<unsigned char> inputBytes( tempaddress.begin(), tempaddress.end() );
+        std::vector<unsigned char> hash( SHA256_DIGEST_LENGTH );
+        SHA256( inputBytes.data(), inputBytes.size(), hash.data() );
 
-        libp2p::protocol::kademlia::ContentId key(hash);
-        auto acc_cid = libp2p::multi::ContentIdentifierCodec::decode(key.data);
-        auto maybe_base58 = libp2p::multi::ContentIdentifierCodec::toString(acc_cid.value());
-        if (!maybe_base58)
+        libp2p::protocol::kademlia::ContentId key( hash );
+        auto                                  acc_cid = libp2p::multi::ContentIdentifierCodec::decode( key.data );
+        auto maybe_base58 = libp2p::multi::ContentIdentifierCodec::toString( acc_cid.value() );
+        if ( !maybe_base58 )
         {
-            std::runtime_error("We couldn't convert the account to base58");
+            std::runtime_error( "We couldn't convert the account to base58" );
         }
         std::string base58key = maybe_base58.value();
 
-        auto pubsubKeyPath =
-            ( boost::format( "SuperGNUSNode.TestNet.1a.03.%s/pubs_processor" ) % base58key ).str();
+        auto pubsubKeyPath = ( boost::format( "SuperGNUSNode.TestNet.1a.03.%s/pubs_processor" ) % base58key ).str();
 
         pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
             crdt::KeyPairFileStorage( write_base_path_ + pubsubKeyPath ).GetKeyPair().value() );
@@ -307,7 +305,7 @@ namespace sgns
 
     void GeniusNode::RefreshUPNP( int pubsubport, int graphsyncport )
     {
-        if (upnp_thread.joinable())
+        if ( upnp_thread.joinable() )
         {
             stop_upnp = true;   // Signal the existing thread to stop
             upnp_thread.join(); // Wait for it to finish
@@ -321,19 +319,19 @@ namespace sgns
                 auto next_refresh_time = std::chrono::steady_clock::now() + std::chrono::minutes( 60 );
                 auto upnp_shared       = std::make_shared<upnp::UPNP>();
 
-                while (!stop_upnp)
+                while ( !stop_upnp )
                 {
-                    if (std::chrono::steady_clock::now() >= next_refresh_time)
+                    if ( std::chrono::steady_clock::now() >= next_refresh_time )
                     {
                         std::weak_ptr<upnp::UPNP> upnp_weak = upnp_shared;
 
-                        if (auto upnp = upnp_weak.lock())
+                        if ( auto upnp = upnp_weak.lock() )
                         {
-                            if (upnp->GetIGD())
+                            if ( upnp->GetIGD() )
                             {
                                 auto openedPort  = upnp->OpenPort( pubsubport, pubsubport, "TCP", 3600 );
                                 auto openedPort2 = upnp->OpenPort( graphsyncport, graphsyncport, "TCP", 3600 );
-                                if (!openedPort || !openedPort2)
+                                if ( !openedPort || !openedPort2 )
                                 {
                                     node_logger->error( "Failed to open port" );
                                 }
@@ -614,12 +612,12 @@ namespace sgns
         }
         // Get current GNUS price (USD per GNUS token)
         auto maybe_gnusPrice = GetGNUSPrice(); // e.g., 3.65463 USD per GNUS
-        if(!maybe_gnusPrice)
+        if ( !maybe_gnusPrice )
         {
             return 0;
         }
         auto gnusPrice = maybe_gnusPrice.value();
-        
+
         // Using the assumption: 20 FLOPs per byte and each FLOP costs 5e-15 USD,
         // the cost per byte in USD is: 20 * 5e-15 = 1e-13 USD.
         // Converting this to a fixed-point constant with 9 decimals:
@@ -653,8 +651,8 @@ namespace sgns
 
     outcome::result<double> GeniusNode::GetGNUSPrice()
     {
-        auto price = GetCoinprice({"genius-ai"});
-        if(!price)
+        auto price = GetCoinprice( { "genius-ai" } );
+        if ( !price )
         {
             return outcome::failure( Error::NO_PRICE );
         }
@@ -766,7 +764,6 @@ namespace sgns
                 node_logger->error( "Unable to complete task: {} ", task_id );
                 break;
             }
-            
 
         } while ( 0 );
     }
@@ -791,30 +788,30 @@ namespace sgns
         processing_service_->StartProcessing( std::string( PROCESSING_GRID_CHANNEL ) );
     }
 
-    outcome::result<std::map<std::string, double>> GeniusNode::GetCoinprice(const std::vector<std::string>& tokenIds)
+    outcome::result<std::map<std::string, double>> GeniusNode::GetCoinprice( const std::vector<std::string> &tokenIds )
     {
         sgns::CoinGeckoPriceRetriever retriever;
-        auto prices = retriever.getCurrentPrices(tokenIds);
+        auto                          prices = retriever.getCurrentPrices( tokenIds );
         return prices;
     }
 
     outcome::result<std::map<std::string, std::map<int64_t, double>>> GeniusNode::GetCoinPriceByDate(
-        const std::vector<std::string>& tokenIds,
-        const std::vector<int64_t>& timestamps)
+        const std::vector<std::string> &tokenIds,
+        const std::vector<int64_t>     &timestamps )
     {
         sgns::CoinGeckoPriceRetriever retriever;
-        return retriever.getHistoricalPrices(tokenIds, timestamps);
+        return retriever.getHistoricalPrices( tokenIds, timestamps );
     }
 
     outcome::result<std::map<std::string, std::map<int64_t, double>>> GeniusNode::GetCoinPricesByDateRange(
-        const std::vector<std::string>& tokenIds,
-        int64_t from,
-        int64_t to)
+        const std::vector<std::string> &tokenIds,
+        int64_t                         from,
+        int64_t                         to )
     {
         sgns::CoinGeckoPriceRetriever retriever;
-        return retriever.getHistoricalPriceRange(tokenIds, from, to);
+        return retriever.getHistoricalPriceRange( tokenIds, from, to );
     }
-    
+
     std::string GeniusNode::FormatTokens( uint64_t amount )
     {
         return sgns::fixed_point::toString( amount );

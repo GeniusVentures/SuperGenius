@@ -6,7 +6,11 @@ if(NOT ${CMAKE_HOST_SYSTEM_NAME} MATCHES "Linux")
 endif()
 
 # Project
-project(SuperGenius C CXX)
+project(
+  SuperGenius
+  VERSION 0.1.0
+  LANGUAGES C CXX
+)
 
 # include common compiler options
 include(../CommonCompilerOptions.cmake)
