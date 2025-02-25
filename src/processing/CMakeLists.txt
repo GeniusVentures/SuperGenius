@@ -87,6 +87,7 @@ target_link_libraries(processing_service
     AsyncIOManager
     Vulkan::Vulkan
     rapidjson
+    sha
 )
 TARGET_LINK_LIBRARIES_WHOLE_ARCHIVE_W_TYPE(processing_service PUBLIC
     MNN::MNN
