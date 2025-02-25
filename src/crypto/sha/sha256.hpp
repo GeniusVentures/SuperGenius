@@ -20,6 +20,8 @@ namespace sgns::crypto {
    * @return hashed bytes
    */
   base::Hash256 sha256(gsl::span<const uint8_t> input);
+
+  std::vector<uint8_t> sha256(const void* data, size_t dataSize);
 }
 
 #endif
