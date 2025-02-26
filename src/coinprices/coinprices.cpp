@@ -62,7 +62,7 @@ namespace sgns
                     tokenIdsList += ",";
                 }
             }
-
+            std::cout << "Token IDS: " << tokenIdsList << std::endl;
             // Create HTTP request
             http::response<http::string_body> res = makeHttpRequest(
                 "api.coingecko.com",
@@ -251,6 +251,7 @@ namespace sgns
     http::response<http::string_body> CoinGeckoPriceRetriever::makeHttpRequest(
         const std::string& host, const std::string& target)
     {
+        std::cout << "HTTP Request: " << target << std::endl;
         try {
             // Set up the SSL context
             ssl::context ctx(ssl::context::tlsv12_client);

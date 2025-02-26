@@ -7,4 +7,5 @@ addtest(price_retrieval_test
 target_link_libraries(price_retrieval_test
     rapidjson
     OpenSSL::SSL
+    coinprices
 )
