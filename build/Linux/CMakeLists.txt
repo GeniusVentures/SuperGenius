@@ -5,10 +5,11 @@ if(NOT ${CMAKE_HOST_SYSTEM_NAME} MATCHES "Linux")
     message(FATAL_ERROR "${CMAKE_HOST_SYSTEM_NAME} host system name does not match Linux - Please select the correct folder for configuring project")
 endif()
 
+include(../version.cmake)
 # Project
 project(
   SuperGenius
-  VERSION 0.1.0
+  VERSION ${PROJECT_VERSION}
   LANGUAGES C CXX
 )
 
