@@ -53,7 +53,7 @@ TEST_F(PriceRetrievalTest, GetCurrentPrice)
 }
     
 
-TEST_F(PriceRetrievalTest, DISABLED_GetHistoricalPrices) 
+TEST_F(PriceRetrievalTest, GetHistoricalPrices) 
 {
     auto ioc = std::make_shared<boost::asio::io_context>();
     sgns::CoinGeckoPriceRetriever retriever;
@@ -79,15 +79,15 @@ TEST_F(PriceRetrievalTest, DISABLED_GetHistoricalPrices)
     auto prices = retriever.getHistoricalPrices(tokenIds, timestamps);
     
     // We expect all timestamps to be within the allowed range
-    EXPECT_EQ(prices.size(), timestamps.size());
+    EXPECT_EQ(prices["genius-ai"].size(), timestamps.size());
     
-    // for (const auto& [timestamp, price] : prices) {
-    //     std::cout << "Price on " << retriever.formatDate(timestamp) << ": $" << price << std::endl;
-    //     EXPECT_GT(price, 0.0);
-    // }
+    for (const auto& [timestamp, price] : prices["genius-ai"]) {
+        std::cout << "Price on " << retriever.formatDate(timestamp) << ": $" << price << std::endl;
+        EXPECT_GT(price, 0.0);
+    }
 }
 
-TEST_F(PriceRetrievalTest, DISABLED_GetHistoricalPriceRange) 
+TEST_F(PriceRetrievalTest, GetHistoricalPriceRange) 
 {
     auto ioc = std::make_shared<boost::asio::io_context>();
     sgns::CoinGeckoPriceRetriever retriever;
@@ -104,19 +104,19 @@ TEST_F(PriceRetrievalTest, DISABLED_GetHistoricalPriceRange)
     // Convert to milliseconds for the API function
     auto prices = retriever.getHistoricalPriceRange(tokenIds, thirtyDaysAgo * 1000, now * 1000);
     
-    EXPECT_GT(prices.size(), 0);
+    EXPECT_GT(prices["genius-ai"].size(), 0);
     
     std::cout << "Price range from " << retriever.formatDate(thirtyDaysAgo * 1000) 
               << " to " << retriever.formatDate(now * 1000) << ":" << std::endl;
     
-    // Just print the first few and last few prices to avoid flooding the output
-    // int count = 0;
-    // for (const auto& [timestamp, price] : prices) {
-    //     if (count < 5 || count > prices.size() - 5) {
-    //         std::cout << "  " << retriever.formatDate(timestamp, true) << ": $" << price << std::endl;
-    //     } else if (count == 5) {
-    //         std::cout << "  ... (" << (prices.size() - 10) << " more entries) ..." << std::endl;
-    //     }
-    //     count++;
-    // }
+    //Just print the first few and last few prices to avoid flooding the output
+    int count = 0;
+    for (const auto& [timestamp, price] : prices["genius-ai"]) {
+        if (count < 5 || count > prices.size() - 5) {
+            std::cout << "  " << retriever.formatDate(timestamp, true) << ": $" << price << std::endl;
+        } else if (count == 5) {
+            std::cout << "  ... (" << (prices["genius-ai"].size() - 10) << " more entries) ..." << std::endl;
+        }
+        count++;
+    }
 }

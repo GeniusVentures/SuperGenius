@@ -7,7 +7,51 @@ namespace sgns
     CoinGeckoPriceRetriever::CoinGeckoPriceRetriever() 
     {
     }
-    
+    std::string decodeChunkedTransfer(const std::string& chunkedData) {
+        std::string result;
+        std::istringstream iss(chunkedData);
+        std::string line;
+        
+        while (std::getline(iss, line)) {
+            // Trim carriage returns if present
+            if (!line.empty() && line.back() == '\r') {
+                line.pop_back();
+            }
+            
+            // Skip empty lines
+            if (line.empty()) {
+                continue;
+            }
+            
+            // Try to parse as a hex chunk length
+            std::istringstream hexStream(line);
+            unsigned int chunkSize;
+            if (hexStream >> std::hex >> chunkSize) {
+                // If chunk size is 0, we're done
+                if (chunkSize == 0) {
+                    break;
+                }
+                
+                // Read exactly chunkSize bytes
+                char* buffer = new char[chunkSize + 1];
+                iss.read(buffer, chunkSize);
+                buffer[chunkSize] = '\0';
+                
+                // Append to result
+                result.append(buffer, chunkSize);
+                delete[] buffer;
+                
+                // Skip the trailing CRLF after the chunk
+                iss.ignore(2);
+            }
+            else {
+                // Not a valid hex chunk size, maybe part of the actual data
+                result += line + "\n";
+            }
+        }
+        
+        return result;
+    }
     // Helper method to format Unix timestamp to DD-MM-YYYY for CoinGecko API
     std::string CoinGeckoPriceRetriever::formatDate(int64_t timestamp, bool includeTime)
     {
@@ -97,7 +141,7 @@ namespace sgns
                 "file" );
             ioc->run();
             std::cout << "Res Is: " << res << "END" << std::endl;
-            std::string json_str = res.substr(res.find('{'), res.rfind('}') - res.find('{') + 1);
+            std::string json_str = decodeChunkedTransfer(res);
 
             // Parse the JSON response
             rapidjson::Document document;
@@ -190,7 +234,7 @@ namespace sgns
                         "file" );
                     ioc->run();
                     std::cout << "Res Is: " << res << "END" << std::endl;
-                    std::string json_str = res.substr(res.find('{'), res.rfind('}') - res.find('{') + 1);
+                    std::string json_str = decodeChunkedTransfer(res);
                     // Parse the JSON response
                     rapidjson::Document document;
                     document.Parse(json_str.c_str());
@@ -303,12 +347,31 @@ namespace sgns
                     },
                     "file" );
                 ioc->run();
-                std::cout << "Res Is: " << res << "END" << std::endl;
-                std::string json_str = res.substr(res.find('{'), res.rfind('}') - res.find('{') + 1);
+                
+                std::string json_str = decodeChunkedTransfer(res);
+                std::cout << "Res Is: " << json_str << "END" << std::endl;
                 // Parse the JSON response
                 rapidjson::Document document;
                 document.Parse(json_str.c_str());
-
+                if (document.HasParseError()) {
+                    std::cerr << "JSON Parse Error: " << document.GetParseError() << std::endl;
+                    //return;
+                }
+            
+                if (!document.IsObject()) {
+                    std::cerr << "JSON is not an object!" << std::endl;
+                    //return;
+                }
+            
+                if (document.HasMember("prices")) {
+                    if (document["prices"].IsArray()) {
+                        std::cout << "Prices array found!" << std::endl;
+                    } else {
+                        std::cerr << "\"prices\" is not an array!" << std::endl;
+                    }
+                } else {
+                    std::cerr << "\"prices\" key is missing!" << std::endl;
+                }
                 // Extract the prices array
                 if (document.HasMember("prices") && document["prices"].IsArray()) {
                     const auto& pricesArray = document["prices"];
