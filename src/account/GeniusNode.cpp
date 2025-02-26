@@ -94,7 +94,7 @@ namespace sgns
         libp2p::log::setLoggingSystem( logging_system );
         libp2p::log::setLevelOfGroup( "SuperGeniusDemo", soralog::Level::ERROR_ );
 
-        node_logger = base::createLogger("SuperGeniusDemo");
+        node_logger = base::createLogger( "SuperGeniusDemo" );
 #ifdef DEBUG
         node_logger->set_level( spdlog::level::debug );
 #else
@@ -137,8 +137,8 @@ namespace sgns
         auto loggerProcqm = base::createLogger( "ProcessingSubTaskQueueManager" );
         loggerProcqm->set_level( spdlog::level::off );
 
-        auto loggerUPNP = base::createLogger("UPNP");
-        loggerUPNP->set_level(spdlog::level::off);
+        auto loggerUPNP = base::createLogger( "UPNP" );
+        loggerUPNP->set_level( spdlog::level::off );
 
         auto tokenid = dev_config_.TokenID;
 
@@ -155,16 +155,16 @@ namespace sgns
             auto openedPort2 = upnp->OpenPort( graphsyncport, graphsyncport, "TCP", 3600 );
             auto wanip       = upnp->GetWanIP();
             lanip            = upnp->GetLocalIP();
-            node_logger->info("Wan IP: {}", wanip);
-            node_logger->info("Lan IP: {}", lanip);
+            node_logger->info( "Wan IP: {}", wanip );
+            node_logger->info( "Lan IP: {}", lanip );
             addresses.push_back( wanip );
             if ( !openedPort || !openedPort2 )
             {
-                node_logger->error("Failed to open port");
+                node_logger->error( "Failed to open port" );
             }
             else
             {
-                node_logger->info("Open Port Success");
+                node_logger->info( "Open Port Success" );
             }
         }
 
@@ -285,16 +285,18 @@ namespace sgns
                             auto openedPort2 = upnp->OpenPort( graphsyncport, graphsyncport, "TCP", 3600 );
                             if ( !openedPort || !openedPort2 )
                             {
-                               node_logger->error("Failed to open port");
+                                node_logger->error( "Failed to open port" );
                             }
                             else
                             {
-                                node_logger->info("Open Ports Success pubsub: {} graphsync:{}", pubsubport, graphsyncport);
+                                node_logger->info( "Open Ports Success pubsub: {} graphsync:{}",
+                                                   pubsubport,
+                                                   graphsyncport );
                             }
                         }
                         else
                         {
-                            node_logger->info("No IGD");
+                            node_logger->info( "No IGD" );
                         }
 
                         // Update the next refresh time
@@ -329,7 +331,7 @@ namespace sgns
         auto cidtest = libp2p::multi::ContentIdentifierCodec::decode( key.data );
 
         auto cidstring = libp2p::multi::ContentIdentifierCodec::toString( cidtest.value() );
-        node_logger->info("CID Test:: {}", cidstring.value());
+        node_logger->info( "CID Test:: {}", cidstring.value() );
 
         //Also Find providers
         pubsub_->StartFindingPeers( key );
@@ -415,8 +417,8 @@ namespace sgns
             ( auto &&, result_pair ),
             transaction_manager_->HoldEscrow( funds, std::string( dev_config_.Addr ), cut.value(), uuidstring ) );
 
-        std::uint64_t tx_id = result_pair.first;
-        auto escrow_data_pair = result_pair.second;
+        std::uint64_t tx_id            = result_pair.first;
+        auto          escrow_data_pair = result_pair.second;
 
         auto [escrow_path, escrow_data] = escrow_data_pair;
 
@@ -517,43 +519,44 @@ namespace sgns
         return outcome::success();
     }
 
-    uint64_t GeniusNode::GetProcessCost(const std::string& json_data)
+    uint64_t GeniusNode::GetProcessCost( const std::string &json_data )
     {
         uint64_t costMinions = 0;
-        node_logger->info("Received JSON data: {}", json_data);
+        node_logger->info( "Received JSON data: {}", json_data );
 
         // Parse JSON using RapidJSON
         rapidjson::Document document;
-        if (document.Parse(json_data.c_str()).HasParseError())
+        if ( document.Parse( json_data.c_str() ).HasParseError() )
         {
-            node_logger->error("Invalid JSON data provided");
+            node_logger->error( "Invalid JSON data provided" );
             return 0;
         }
 
         // "block_len" represents the number of bytes processed.
         rapidjson::Value inputArray;
-        if (document.HasMember("input") && document["input"].IsArray())
+        if ( document.HasMember( "input" ) && document["input"].IsArray() )
         {
             inputArray = document["input"];
         }
         else
         {
-            node_logger->error("This JSON lacks inputs");
+            node_logger->error( "This JSON lacks inputs" );
             return 0;
         }
 
         uint64_t block_total_len = 0;
-        for (const auto& input : inputArray.GetArray())
+        for ( const auto &input : inputArray.GetArray() )
         {
-            if (input.HasMember("block_len") && input["block_len"].IsUint64())
+            if ( input.HasMember( "block_len" ) && input["block_len"].IsUint64() )
             {
-                uint64_t block_len = input["block_len"].GetUint64();
-                block_total_len += block_len;
-                node_logger->info("Block length (bytes): {}", block_len);
+                uint64_t block_len  = input["block_len"].GetUint64();
+                block_total_len    += block_len;
+                node_logger->info( "Block length (bytes): {}", block_len );
             }
             else
             {
-                node_logger->error("Missing or invalid block_len in input");;
+                node_logger->error( "Missing or invalid block_len in input" );
+                ;
                 return 0;
             }
         }
@@ -562,13 +565,14 @@ namespace sgns
         // the cost per byte in USD is: 20 * 5e-15 = 1e-13 USD.
         // Converting this to a fixed-point constant with 9 decimals:
         //    1e-13 USD/byte * 1e9 = 1e-4, i.e., 0.0001, and in fixed point with 9 decimals, that's 100000.
-        uint64_t fixed_cost_per_byte = 100000ULL;  // represents 0.0001 in fixed point (precision 9)
+        uint64_t fixed_cost_per_byte = 100000ULL; // represents 0.0001 in fixed point (precision 9)
 
         // Calculate the raw cost in minions in fixed point: (block_total_len * fixed_cost_per_byte)
-        auto raw_cost_result = sgns::fixed_point::multiply(block_total_len, fixed_cost_per_byte, 9);
-        if (!raw_cost_result)
+        auto raw_cost_result = sgns::fixed_point::multiply( block_total_len, fixed_cost_per_byte, 9 );
+        if ( !raw_cost_result )
         {
-            node_logger->error("Fixed-point multiplication error");;
+            node_logger->error( "Fixed-point multiplication error" );
+            ;
             return 0;
         }
         uint64_t raw_cost = raw_cost_result.value();
@@ -576,71 +580,72 @@ namespace sgns
         // Get current GNUS price (USD per GNUS token)
         double gnusPrice = GetGNUSPrice(); // e.g., 3.65463 USD per GNUS
         // Convert GNUS price to fixed-point representation with precision 9:
-        uint64_t gnus_price_fixed = static_cast<uint64_t>(std::round(gnusPrice * 1e9));
+        uint64_t gnus_price_fixed = static_cast<uint64_t>( std::round( gnusPrice * 1e9 ) );
 
         // Now, the cost in minions (in fixed point) is raw_cost divided by gnus_price_fixed:
-        auto cost_result = sgns::fixed_point::divide(raw_cost, gnus_price_fixed, 9);
-        if (!cost_result)
+        auto cost_result = sgns::fixed_point::divide( raw_cost, gnus_price_fixed, 9 );
+        if ( !cost_result )
         {
-            node_logger->info("Fixed-point division error");
+            node_logger->info( "Fixed-point division error" );
             return 0;
         }
         costMinions = cost_result.value();
 
         // Ensure at least one minion is charged.
-        return std::max(costMinions, static_cast<uint64_t>(1));
+        return std::max( costMinions, static_cast<uint64_t>( 1 ) );
     }
-
 
     double GeniusNode::GetGNUSPrice()
     {
         return 3.65463;
     }
 
-    outcome::result<std::pair<std::uint64_t, uint64_t>> GeniusNode::MintTokens(uint64_t amount,
-                                                                          const std::string &transaction_hash,
-                                                                          const std::string &chainid,
-                                                                          const std::string &tokenid,
-                                                                          std::chrono::milliseconds timeout)
+    outcome::result<std::pair<std::uint64_t, uint64_t>> GeniusNode::MintTokens( uint64_t           amount,
+                                                                                const std::string &transaction_hash,
+                                                                                const std::string &chainid,
+                                                                                const std::string &tokenid,
+                                                                                std::chrono::milliseconds timeout )
     {
         auto start_time = std::chrono::steady_clock::now();
 
-        OUTCOME_TRY(auto&& tx_id, transaction_manager_->MintFunds(amount, transaction_hash, chainid, tokenid));
+        OUTCOME_TRY( auto &&tx_id, transaction_manager_->MintFunds( amount, transaction_hash, chainid, tokenid ) );
 
-        bool success = transaction_manager_->WaitForTransactionOutgoing(tx_id, "mint", timeout);
+        bool success = transaction_manager_->WaitForTransactionOutgoing( tx_id, "mint", timeout );
 
         auto end_time = std::chrono::steady_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( end_time - start_time ).count();
 
-        if (!success)
+        if ( !success )
         {
-            node_logger->error("Mint transaction {} timed out after {} ms", tx_id, duration);
-            return outcome::failure(boost::system::errc::make_error_code(boost::system::errc::timed_out));
+            node_logger->error( "Mint transaction {} timed out after {} ms", tx_id, duration );
+            return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::timed_out ) );
         }
 
-        node_logger->debug("Mint transaction {} completed in {} ms", tx_id, duration);
-        return std::make_pair(tx_id, duration);
+        node_logger->debug( "Mint transaction {} completed in {} ms", tx_id, duration );
+        return std::make_pair( tx_id, duration );
     }
 
-    outcome::result<std::pair<std::uint64_t, uint64_t>> GeniusNode::TransferFunds(uint64_t amount, const std::string &destination, std::chrono::milliseconds timeout)
+    outcome::result<std::pair<std::uint64_t, uint64_t>> GeniusNode::TransferFunds( uint64_t           amount,
+                                                                                   const std::string &destination,
+                                                                                   std::chrono::milliseconds timeout )
     {
         auto start_time = std::chrono::steady_clock::now();
 
-        OUTCOME_TRY(auto&& tx_id, transaction_manager_->TransferFunds(amount, destination));
+        OUTCOME_TRY( auto &&tx_id, transaction_manager_->TransferFunds( amount, destination ) );
 
-        bool success = transaction_manager_->WaitForTransactionOutgoing(tx_id, "transfer", timeout);
+        bool success = transaction_manager_->WaitForTransactionOutgoing( tx_id, "transfer", timeout );
 
         auto end_time = std::chrono::steady_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( end_time - start_time ).count();
 
-        if (!success)
+        if ( !success )
         {
-            node_logger->error("TransferFunds transaction {} timed out after {} ms", tx_id, duration);
-            return outcome::failure(boost::system::errc::make_error_code(boost::system::errc::timed_out));
+            node_logger->error( "TransferFunds transaction {} timed out after {} ms", tx_id, duration );
+            return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::timed_out ) );
         }
 
-        node_logger->debug("TransferFunds transaction {} completed in {} ms", tx_id, duration);
-        return std::make_pair(tx_id, duration);
+        node_logger->debug( "TransferFunds transaction {} completed in {} ms", tx_id, duration );
+        return std::make_pair( tx_id, duration );
     }
 
     uint64_t GeniusNode::GetBalance()
@@ -650,24 +655,24 @@ namespace sgns
 
     void GeniusNode::ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult )
     {
-        node_logger->info("[ {} ] SUCCESS PROCESSING TASK {}", account_->GetAddress(), task_id);
+        node_logger->info( "[ {} ] SUCCESS PROCESSING TASK {}", account_->GetAddress(), task_id );
         do
         {
             if ( task_queue_->IsTaskCompleted( task_id ) )
             {
-                node_logger->info("Task Already completed!");
+                node_logger->info( "Task Already completed!" );
                 break;
             }
 
             auto maybe_escrow_path = task_queue_->GetTaskEscrow( task_id );
             if ( maybe_escrow_path.has_failure() )
             {
-                node_logger->info("No associated Escrow with the task id: {} ", task_id);
+                node_logger->info( "No associated Escrow with the task id: {} ", task_id );
                 break;
             }
             if ( !transaction_manager_->PayEscrow( maybe_escrow_path.value(), taskresult ) )
             {
-                node_logger->error("Invalid results for task: {} ", task_id);
+                node_logger->error( "Invalid results for task: {} ", task_id );
                 break;
             }
             task_queue_->CompleteTask( task_id, taskresult );
@@ -677,7 +682,7 @@ namespace sgns
 
     void GeniusNode::ProcessingError( const std::string &task_id )
     {
-        node_logger->error("[ {} ] ERROR PROCESSING SUBTASK ", account_->GetAddress(), task_id);
+        node_logger->error( "[ {} ] ERROR PROCESSING SUBTASK ", account_->GetAddress(), task_id );
     }
 
     void GeniusNode::PrintDataStore()
@@ -694,7 +699,7 @@ namespace sgns
     {
         processing_service_->StartProcessing( std::string( PROCESSING_GRID_CHANNEL ) );
     }
-    
+
     std::string GeniusNode::FormatTokens( uint64_t amount )
     {
         return sgns::fixed_point::toString( amount );
@@ -706,15 +711,19 @@ namespace sgns
     }
 
     // Wait for a transaction to be processed with a timeout
-    bool GeniusNode::WaitForTransactionOutgoing( const std::uint64_t &txId, const std::string& txType, std::chrono::milliseconds timeout )
+    bool GeniusNode::WaitForTransactionOutgoing( const std::uint64_t      &txId,
+                                                 const std::string        &txType,
+                                                 std::chrono::milliseconds timeout )
     {
-        return transaction_manager_->WaitForTransactionOutgoing(txId, txType, timeout);
-    };
+        return transaction_manager_->WaitForTransactionOutgoing( txId, txType, timeout );
+    }
 
     // Wait for a transaction to be processed with a timeout
-    bool GeniusNode::WaitForTransactionIncoming( const std::uint64_t &txId, const std::string& txType, std::chrono::milliseconds timeout )
+    bool GeniusNode::WaitForTransactionIncoming( const std::uint64_t      &txId,
+                                                 const std::string        &txType,
+                                                 std::chrono::milliseconds timeout )
     {
-        return transaction_manager_->WaitForTransactionIncoming(txId, txType, timeout);
-    };
+        return transaction_manager_->WaitForTransactionIncoming( txId, txType, timeout );
+    }
 
 }
