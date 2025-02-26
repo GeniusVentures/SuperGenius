@@ -66,16 +66,6 @@ namespace sgns
             }
             std::cout << "Token IDS: " << tokenIdsList << std::endl;
             // Create HTTP request
-            // http::response<http::string_body> res = makeHttpRequest(
-            //     "api.coingecko.com",
-            //     "/api/v3/simple/price?ids=" + tokenIdsList + "&vs_currencies=usd");
-            // libp2p::protocol::kademlia::Config kademlia_config;
-            // kademlia_config.randomWalk.enabled  = true;
-            // kademlia_config.randomWalk.interval = std::chrono::seconds( 300 );
-            // kademlia_config.requestConcurency   = 20;
-            // auto injector                       = libp2p::injector::makeHostInjector(
-            //     libp2p::injector::makeKademliaInjector( libp2p::injector::useKademliaConfig( kademlia_config ) ) );
-            // auto ioc = injector.create<std::shared_ptr<boost::asio::io_context>>();
             auto ioc = std::make_shared<boost::asio::io_context>();
             boost::asio::io_context::executor_type                                   executor = ioc->get_executor();
             boost::asio::executor_work_guard<boost::asio::io_context::executor_type> workGuard( executor );
@@ -165,13 +155,45 @@ namespace sgns
                 // Process each token for this timestamp
                 for (const auto& tokenId : tokenIds) {
                     // Create HTTP request for this specific date and token
-                    http::response<http::string_body> res = makeHttpRequest(
-                        "api.coingecko.com",
-                        "/api/v3/coins/" + tokenId + "/history?date=" + formattedDate);
-
+                    // http::response<http::string_body> res = makeHttpRequest(
+                    //     "api.coingecko.com",
+                    //     "/api/v3/coins/" + tokenId + "/history?date=" + formattedDate);
+                    // Create HTTP request
+                    auto ioc = std::make_shared<boost::asio::io_context>();
+                    boost::asio::io_context::executor_type                                   executor = ioc->get_executor();
+                    boost::asio::executor_work_guard<boost::asio::io_context::executor_type> workGuard( executor );
+                    std::string url = "https://api.coingecko.com/api/v3/coins/" + tokenId + "/history?date=" + formattedDate;
+                    FileManager::GetInstance().InitializeSingletons();
+                    std::string res;
+                    auto result = FileManager::GetInstance().LoadASync(
+                        url,
+                        false,
+                        false,
+                        ioc,
+                        []( const sgns::AsyncError::CustomResult &status )
+                        {
+                            if ( status.has_value() )
+                            {
+                                std::cout << "Success: " << status.value().message << std::endl;
+                            }
+                            else
+                            {
+                                std::cout << "Error: " << status.error() << std::endl;
+                            }
+                        },
+                        [&res]( std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers )
+                        {
+                            if (!buffers->second.empty()) {
+                                res = std::string(buffers->second[0].begin(), buffers->second[0].end());
+                            }                    
+                        },
+                        "file" );
+                    ioc->run();
+                    std::cout << "Res Is: " << res << "END" << std::endl;
+                    std::string json_str = res.substr(res.find('{'), res.rfind('}') - res.find('{') + 1);
                     // Parse the JSON response
                     rapidjson::Document document;
-                    document.Parse(res.body().c_str());
+                    document.Parse(json_str.c_str());
 
                     // Extract the price
                     if (document.HasMember("market_data") &&
@@ -241,19 +263,51 @@ namespace sgns
 
             // Process each token
             for (const auto& tokenId : tokenIds) {
-                std::string endpoint = "/api/v3/coins/" + tokenId +
-                    "/market_chart/range?vs_currency=usd&from=" +
-                    std::to_string(fromUnix) + "&to=" + std::to_string(toUnix);
+                // std::string endpoint = "/api/v3/coins/" + tokenId +
+                //     "/market_chart/range?vs_currency=usd&from=" +
+                //     std::to_string(fromUnix) + "&to=" + std::to_string(toUnix);
 
-                std::cout << "CoinGecko request for " << tokenId << ": " << endpoint << std::endl;
+                std::cout << "CoinGecko request for " << tokenId << std::endl;
 
                 // Create HTTP request for the range
-                http::response<http::string_body> res = makeHttpRequest(
-                    "api.coingecko.com", endpoint);
-
+                // http::response<http::string_body> res = makeHttpRequest(
+                //     "api.coingecko.com", endpoint);
+                // Create HTTP request
+                auto ioc = std::make_shared<boost::asio::io_context>();
+                boost::asio::io_context::executor_type                                   executor = ioc->get_executor();
+                boost::asio::executor_work_guard<boost::asio::io_context::executor_type> workGuard( executor );
+                std::string url = "https://api.coingecko.com/api/v3/coins/" + tokenId + "/market_chart/range?vs_currency=usd&from=" + std::to_string(fromUnix) + "&to=" + std::to_string(toUnix);
+                FileManager::GetInstance().InitializeSingletons();
+                std::string res;
+                auto result = FileManager::GetInstance().LoadASync(
+                    url,
+                    false,
+                    false,
+                    ioc,
+                    []( const sgns::AsyncError::CustomResult &status )
+                    {
+                        if ( status.has_value() )
+                        {
+                            std::cout << "Success: " << status.value().message << std::endl;
+                        }
+                        else
+                        {
+                            std::cout << "Error: " << status.error() << std::endl;
+                        }
+                    },
+                    [&res]( std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers )
+                    {
+                        if (!buffers->second.empty()) {
+                            res = std::string(buffers->second[0].begin(), buffers->second[0].end());
+                        }                    
+                    },
+                    "file" );
+                ioc->run();
+                std::cout << "Res Is: " << res << "END" << std::endl;
+                std::string json_str = res.substr(res.find('{'), res.rfind('}') - res.find('{') + 1);
                 // Parse the JSON response
                 rapidjson::Document document;
-                document.Parse(res.body().c_str());
+                document.Parse(json_str.c_str());
 
                 // Extract the prices array
                 if (document.HasMember("prices") && document["prices"].IsArray()) {
@@ -287,115 +341,4 @@ namespace sgns
 
         return allPrices;
     }
-    
-    // Helper method to make HTTP requests
-    http::response<http::string_body> CoinGeckoPriceRetriever::makeHttpRequest(
-        const std::string& host, const std::string& target)
-    {
-        std::cout << "HTTP Request: " << target << std::endl;
-        try {
-            // Receive the HTTP response
-            beast::flat_buffer buffer;
-            http::response<http::string_body> res;
-
-            // Set up the SSL context
-            ssl::context ctx(ssl::context::tlsv12_client);
-            ctx.set_default_verify_paths();
-
-            // Set up the IO context and resolver
-            net::io_context ioc;
-            tcp::resolver resolver(ioc);
-            boost::asio::executor_work_guard<boost::asio::io_context::executor_type> work_guard = boost::asio::make_work_guard(ioc);
-
-            // std::thread io_thread([&] { ioc.run(); });
-            // io_thread.detach();
-            // Resolve the host
-            auto const results = resolver.resolve(host, "443");
-
-            if (results.empty()) {
-                throw std::runtime_error("Failed to resolve host: " + host);
-            }
-            if (results.begin() == results.end()) {
-                throw std::runtime_error("Host resolution failed.");
-            }
-            for (const auto& entry : results) {
-                std::cout << "Resolved: " << entry.endpoint() << std::endl;
-            }
-
-            // Set up the SSL stream
-            //beast::ssl_stream<beast::tcp_stream> stream(ioc, ctx);
-            beast::tcp_stream tcp_stream(ioc);
-            tcp_stream.expires_after(std::chrono::seconds(30));
-            beast::ssl_stream<beast::tcp_stream> stream(std::move(tcp_stream), ctx);
-            // Set SNI Hostname
-            if(!SSL_set_tlsext_host_name(stream.native_handle(), host.c_str()))
-            {
-                beast::error_code ec{static_cast<int>(::ERR_get_error()), 
-                                    net::error::get_ssl_category()};
-                throw beast::system_error{ec};
-            }
-            std::cout << "Stream native handle: " << stream.native_handle() << std::endl;
-            std::cout << "Socket before connect: " << &beast::get_lowest_layer(stream) << std::endl;
-            std::cout << "Socket native handle before connect: "
-            << beast::get_lowest_layer(stream).socket().native_handle() << std::endl;
-            std::cout << "Before connect, io_context.stopped(): " << ioc.stopped() << std::endl;
-
-            beast::error_code ec2;
-            auto& socket = beast::get_lowest_layer(stream).socket();
-            socket.open(results->endpoint().protocol(), ec2);
-            if (ec2) {
-                std::cerr << "Socket open failed: " << ec2.message() << std::endl;
-                return res;
-            }
-
-            // Connect to the host
-
-            beast::get_lowest_layer(stream).connect(results, ec2);
-            if (ec2) {
-                throw std::runtime_error("Connect failed: " + ec2.message());
-                return res;
-            }
-            
-            
-            // Perform the SSL handshake
-            stream.handshake(ssl::stream_base::client);
-
-            // Set up the HTTP request
-            http::request<http::string_body> req{http::verb::get, target, 11};
-            req.set(http::field::host, host);
-            req.set(http::field::user_agent, BOOST_BEAST_VERSION_STRING);
-            
-            // Send the HTTP request
-            http::write(stream, req);
-
-
-            
-            http::read(stream, buffer, res);
-
-            // Check response status
-            if (res.result_int() != 200) {
-                std::cerr << "HTTP error: " << res.result_int() << " " 
-                        << res.reason() << std::endl;
-                std::cerr << "Target: " << target << std::endl;
-                std::cerr << "Response body: " << res.body() << std::endl;
-                throw std::runtime_error("HTTP request failed with status " + 
-                                        std::to_string(res.result_int()));
-            }
-
-            // Gracefully close the socket - important to avoid "stream truncated" errors
-            beast::error_code ec;
-            beast::get_lowest_layer(stream).socket().shutdown(tcp::socket::shutdown_both, ec);
-            ioc.run();
-            return res;
-        }
-        catch (const beast::error_code& ec) {
-            std::cerr << "Beast error: " << ec.message() << std::endl;
-            throw;
-        }
-        catch (const std::exception& e) {
-            std::cerr << "Exception in makeHttpRequest: " << e.what() << std::endl;
-            throw;
-        }
-    }
-
 }
