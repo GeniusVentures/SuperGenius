@@ -11,6 +11,7 @@
 #include <stdexcept>
 #include <utility>
 #include <algorithm>
+#include <thread>
 
 #include <ProofSystem/EthereumKeyPairParams.hpp>
 
