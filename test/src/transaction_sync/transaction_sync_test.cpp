@@ -98,7 +98,6 @@ TEST_F( TransactionSyncTest, TransactionSimpleTransfer )
 
     auto start_time        = std::chrono::steady_clock::now();
     auto transfer_received = node_proc2->WaitForTransactionIncoming( transfer_tx_id,
-                                                                     "transfer",
                                                                      std::chrono::milliseconds( 50000 ) );
     ASSERT_TRUE( transfer_received );
     auto duration =
@@ -163,7 +162,6 @@ TEST_F( TransactionSyncTest, DISABLED_TransactionMintSync )
     // wait for both transfers to happen or timeout.
     auto start_time        = std::chrono::steady_clock::now();
     auto transfer_received = node_proc2->WaitForTransactionIncoming( transfer_tx_id1,
-                                                                     "transfer",
                                                                      std::chrono::milliseconds( 50000 ) );
     ASSERT_TRUE( transfer_received );
     auto duration =
@@ -173,7 +171,6 @@ TEST_F( TransactionSyncTest, DISABLED_TransactionMintSync )
     // wait for both transfers to happen or timeout.
     start_time        = std::chrono::steady_clock::now();
     transfer_received = node_proc1->WaitForTransactionIncoming( transfer_tx_id2,
-                                                                "transfer",
                                                                 std::chrono::milliseconds( 50000 ) );
     ASSERT_TRUE( transfer_received );
     duration = std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::steady_clock::now() - start_time )

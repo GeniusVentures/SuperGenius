@@ -417,8 +417,7 @@ namespace sgns
             ( auto &&, result_pair ),
             transaction_manager_->HoldEscrow( funds, std::string( dev_config_.Addr ), cut.value(), uuidstring ) );
 
-        std::uint64_t tx_id            = result_pair.first;
-        auto          escrow_data_pair = result_pair.second;
+        auto [tx_id, escrow_data_pair] = result_pair;
 
         auto [escrow_path, escrow_data] = escrow_data_pair;
 
@@ -600,17 +599,17 @@ namespace sgns
         return 3.65463;
     }
 
-    outcome::result<std::pair<std::uint64_t, uint64_t>> GeniusNode::MintTokens( uint64_t           amount,
-                                                                                const std::string &transaction_hash,
-                                                                                const std::string &chainid,
-                                                                                const std::string &tokenid,
-                                                                                std::chrono::milliseconds timeout )
+    outcome::result<std::pair<std::string, uint64_t>> GeniusNode::MintTokens( uint64_t           amount,
+                                                                              const std::string &transaction_hash,
+                                                                              const std::string &chainid,
+                                                                              const std::string &tokenid,
+                                                                              std::chrono::milliseconds timeout )
     {
         auto start_time = std::chrono::steady_clock::now();
 
         OUTCOME_TRY( auto &&tx_id, transaction_manager_->MintFunds( amount, transaction_hash, chainid, tokenid ) );
 
-        bool success = transaction_manager_->WaitForTransactionOutgoing( tx_id, "mint", timeout );
+        bool success = transaction_manager_->WaitForTransactionOutgoing( tx_id, timeout );
 
         auto end_time = std::chrono::steady_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( end_time - start_time ).count();
@@ -625,15 +624,15 @@ namespace sgns
         return std::make_pair( tx_id, duration );
     }
 
-    outcome::result<std::pair<std::uint64_t, uint64_t>> GeniusNode::TransferFunds( uint64_t           amount,
-                                                                                   const std::string &destination,
-                                                                                   std::chrono::milliseconds timeout )
+    outcome::result<std::pair<std::string, uint64_t>> GeniusNode::TransferFunds( uint64_t                  amount,
+                                                                                 const std::string        &destination,
+                                                                                 std::chrono::milliseconds timeout )
     {
         auto start_time = std::chrono::steady_clock::now();
 
         OUTCOME_TRY( auto &&tx_id, transaction_manager_->TransferFunds( amount, destination ) );
 
-        bool success = transaction_manager_->WaitForTransactionOutgoing( tx_id, "transfer", timeout );
+        bool success = transaction_manager_->WaitForTransactionOutgoing( tx_id, timeout );
 
         auto end_time = std::chrono::steady_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( end_time - start_time ).count();
@@ -711,19 +710,15 @@ namespace sgns
     }
 
     // Wait for a transaction to be processed with a timeout
-    bool GeniusNode::WaitForTransactionOutgoing( const std::uint64_t      &txId,
-                                                 const std::string        &txType,
-                                                 std::chrono::milliseconds timeout )
+    bool GeniusNode::WaitForTransactionOutgoing( const std::string &txId, std::chrono::milliseconds timeout )
     {
-        return transaction_manager_->WaitForTransactionOutgoing( txId, txType, timeout );
+        return transaction_manager_->WaitForTransactionOutgoing( txId, timeout );
     }
 
     // Wait for a transaction to be processed with a timeout
-    bool GeniusNode::WaitForTransactionIncoming( const std::uint64_t      &txId,
-                                                 const std::string        &txType,
-                                                 std::chrono::milliseconds timeout )
+    bool GeniusNode::WaitForTransactionIncoming( const std::string &txId, std::chrono::milliseconds timeout )
     {
-        return transaction_manager_->WaitForTransactionIncoming( txId, txType, timeout );
+        return transaction_manager_->WaitForTransactionIncoming( txId, timeout );
     }
 
 }

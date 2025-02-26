@@ -79,7 +79,7 @@ namespace sgns
          * @param[in]   amount: Numeric value with amount in Minion Tokens (1e-9 GNUS Token)
          * @return      Outcome of mint token operation
          */
-        outcome::result<std::pair<std::uint64_t, uint64_t>> MintTokens(
+        outcome::result<std::pair<std::string, uint64_t>> MintTokens(
             uint64_t                  amount,
             const std::string        &transaction_hash,
             const std::string        &chainid,
@@ -104,7 +104,7 @@ namespace sgns
             return account_->GetAddress();
         }
 
-        outcome::result<std::pair<std::uint64_t, uint64_t>> TransferFunds(
+        outcome::result<std::pair<std::string, uint64_t>> TransferFunds(
             uint64_t                  amount,
             const std::string        &destination,
             std::chrono::milliseconds timeout = std::chrono::milliseconds( 50000 ) );
@@ -135,13 +135,9 @@ namespace sgns
         void StartProcessing();
 
         // Wait for an incoming transaction to be processed with a timeout
-        bool WaitForTransactionIncoming( const std::uint64_t      &txId,
-                                         const std::string        &txType,
-                                         std::chrono::milliseconds timeout );
+        bool WaitForTransactionIncoming( const std::string &txId, std::chrono::milliseconds timeout );
         // Wait for a outgoing transaction to be processed with a timeout
-        bool WaitForTransactionOutgoing( const std::uint64_t      &txId,
-                                         const std::string        &txType,
-                                         std::chrono::milliseconds timeout );
+        bool WaitForTransactionOutgoing( const std::string &txId, std::chrono::milliseconds timeout );
 
     private:
         std::shared_ptr<GeniusAccount>                        account_;

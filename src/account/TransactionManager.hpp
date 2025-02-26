@@ -63,26 +63,22 @@ namespace sgns
         std::vector<std::vector<uint8_t>> GetOutTransactions() const;
         std::vector<std::vector<uint8_t>> GetInTransactions() const;
 
-        outcome::result<std::uint64_t> TransferFunds( uint64_t amount, const std::string &destination );
-        outcome::result<std::uint64_t> MintFunds( uint64_t    amount,
-                                                  std::string transaction_hash,
-                                                  std::string chainid,
-                                                  std::string tokenid );
-        outcome::result<std::pair<std::uint64_t, EscrowDataPair>> HoldEscrow( uint64_t           amount,
-                                                                              const std::string &dev_addr,
-                                                                              uint64_t           peers_cut,
-                                                                              const std::string &job_id );
+        outcome::result<std::string> TransferFunds( uint64_t amount, const std::string &destination );
+        outcome::result<std::string> MintFunds( uint64_t    amount,
+                                                std::string transaction_hash,
+                                                std::string chainid,
+                                                std::string tokenid );
+        outcome::result<std::pair<std::string, EscrowDataPair>> HoldEscrow( uint64_t           amount,
+                                                                            const std::string &dev_addr,
+                                                                            uint64_t           peers_cut,
+                                                                            const std::string &job_id );
         outcome::result<void> PayEscrow( const std::string &escrow_path, const SGProcessing::TaskResult &taskresult );
         uint64_t              GetBalance();
 
         // Wait for an incoming transaction to be processed with a timeout
-        bool WaitForTransactionIncoming( const std::uint64_t      &txId,
-                                         const std::string        &txType,
-                                         std::chrono::milliseconds timeout ) const;
+        bool WaitForTransactionIncoming( const std::string &txId, std::chrono::milliseconds timeout ) const;
         // Wait for an outgoing transaction to be processed with a timeout
-        bool WaitForTransactionOutgoing( const std::uint64_t      &txId,
-                                         const std::string        &txType,
-                                         std::chrono::milliseconds timeout ) const;
+        bool WaitForTransactionOutgoing( const std::string &txId, std::chrono::milliseconds timeout ) const;
 
     private:
         static constexpr std::uint16_t    MAIN_NET_ID             = 369;
@@ -97,7 +93,8 @@ namespace sgns
         outcome::result<void>    SendTransaction();
         std::string              GetTransactionPath( IGeniusTransactions &element );
         std::string              GetTransactionProofPath( IGeniusTransactions &element );
-        std::string              GetNotificationPath( const std::string &destination );
+        static std::string       GetNotificationPath( const std::string &destination );
+        static std::string       GetTransactionBasePath( const std::string &address );
 
         outcome::result<std::shared_ptr<IGeniusTransactions>> FetchTransaction(
             const std::shared_ptr<crdt::GlobalDB> &db,
@@ -131,9 +128,9 @@ namespace sgns
         std::deque<TransactionPair> tx_queue_m;
 
         mutable std::shared_mutex                                        outgoing_tx_mutex_m;
-        std::map<std::string, std::vector<std::uint8_t>>                 outgoing_tx_processed_m;
+        std::map<std::string, std::shared_ptr<IGeniusTransactions>>      outgoing_tx_processed_m;
         mutable std::shared_mutex                                        incoming_tx_mutex_m;
-        std::map<std::string, std::vector<std::uint8_t>>                 incoming_tx_processed_m;
+        std::map<std::string, std::shared_ptr<IGeniusTransactions>>      incoming_tx_processed_m;
         std::unordered_map<std::string, std::shared_ptr<crdt::GlobalDB>> destination_dbs_m;
         std::set<uint16_t>                                               used_ports_m;
         std::function<void()>                                            task_m;
