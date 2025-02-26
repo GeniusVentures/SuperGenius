@@ -5,8 +5,13 @@ if(NOT ${CMAKE_HOST_SYSTEM_NAME} MATCHES "Windows")
     message(FATAL_ERROR "${CMAKE_HOST_SYSTEM_NAME} host system name does not match Windows - Please select the correct folder for configuring project")
 endif()
 
+include(../version.cmake)
 # Project
-project(SuperGenius LANGUAGES C CXX)
+project(
+    SuperGenius
+    VERSION ${PROJECT_VERSION}
+    LANGUAGES C CXX
+)
 
 if(CMAKE_GENERATOR MATCHES "Visual Studio")
     if(NOT CMAKE_VS_GLOBALS MATCHES "(^|;)UseMultiToolTask=")

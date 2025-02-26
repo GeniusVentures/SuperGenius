@@ -14,7 +14,13 @@ if(NOT DEFINED CMAKE_TOOLCHAIN_FILE)
     set(CMAKE_TOOLCHAIN_FILE "${CMAKE_CURRENT_SOURCE_DIR}/../apple.toolchain.cmake" CACHE STRING "Toolchain file")
 endif()
 
-project(SuperGenius LANGUAGES C CXX)
+include(../version.cmake)
+# Project
+project(
+    SuperGenius
+    VERSION ${PROJECT_VERSION}
+    LANGUAGES C CXX
+)
 
 # include common compiler options
 include(../CommonCompilerOptions.cmake)

@@ -8,9 +8,9 @@ endif()
 include(../version.cmake)
 # Project
 project(
-  SuperGenius
-  VERSION ${PROJECT_VERSION}
-  LANGUAGES C CXX
+    SuperGenius
+    VERSION ${PROJECT_VERSION}
+    LANGUAGES C CXX
 )
 
 # include common compiler options
