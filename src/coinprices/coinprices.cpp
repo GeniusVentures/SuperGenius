@@ -263,7 +263,9 @@ namespace sgns
             
             // Resolve the host
             auto const results = resolver.resolve(host, "443");
-
+            if (results.begin() == results.end()) {
+                throw std::runtime_error("Host resolution failed.");
+            }
             // Set up the SSL stream
             beast::ssl_stream<beast::tcp_stream> stream(ioc, ctx);
             
@@ -274,9 +276,6 @@ namespace sgns
                                     net::error::get_ssl_category()};
                 throw beast::system_error{ec};
             }
-
-            // Set a timeout on the operation
-            beast::get_lowest_layer(stream).expires_after(std::chrono::seconds(30));
 
             // Connect to the host
             beast::get_lowest_layer(stream).connect(results);
@@ -291,9 +290,6 @@ namespace sgns
             http::request<http::string_body> req{http::verb::get, target, 11};
             req.set(http::field::host, host);
             req.set(http::field::user_agent, BOOST_BEAST_VERSION_STRING);
-
-            // Set a timeout on the operation
-            beast::get_lowest_layer(stream).expires_after(std::chrono::seconds(30));
             
             // Send the HTTP request
             http::write(stream, req);
@@ -301,9 +297,6 @@ namespace sgns
             // Receive the HTTP response
             beast::flat_buffer buffer;
             http::response<http::string_body> res;
-            
-            // Set a timeout on the operation
-            beast::get_lowest_layer(stream).expires_after(std::chrono::seconds(30));
             
             http::read(stream, buffer, res);
 
