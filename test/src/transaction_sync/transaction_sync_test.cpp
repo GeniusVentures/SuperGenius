@@ -79,7 +79,7 @@ TEST_F(TransactionSyncTest, TransactionSimpleTransfer)
     node_proc2->GetPubSub()->AddPeers({node_proc1->GetPubSub()->GetLocalAddress()});
 
     // Mint tokens with timeout
-    auto mint_result = node_proc1->MintTokens(10000000000, "", "", "", std::chrono::milliseconds(500000));
+    auto mint_result = node_proc1->MintTokens(10000000000, "", "", "", std::chrono::milliseconds(50000));
     ASSERT_TRUE(mint_result.has_value()) << "Mint transaction failed or timed out";
 
     auto [mint_tx_id, mint_duration] = mint_result.value();
@@ -91,13 +91,13 @@ TEST_F(TransactionSyncTest, TransactionSimpleTransfer)
 
     // Transfer funds with timeout
     auto transfer_result = node_proc1->TransferFunds(10000000000, node_proc2->GetAddress(),
-                                                  std::chrono::milliseconds(500000));
+                                                  std::chrono::milliseconds(50000));
     ASSERT_TRUE(transfer_result.has_value()) << "Transfer transaction failed or timed out";
     auto [transfer_tx_id, transfer_duration] = transfer_result.value();
     std::cout << "Transfer transaction completed in " << transfer_duration << " ms" << std::endl;
 
     auto start_time = std::chrono::steady_clock::now();
-    auto transfer_received = node_proc2->WaitForTransactionIncoming(transfer_tx_id, "transfer", std::chrono::milliseconds(500000));
+    auto transfer_received = node_proc2->WaitForTransactionIncoming(transfer_tx_id, "transfer", std::chrono::milliseconds(50000));
     ASSERT_TRUE(transfer_received);
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count();
     std::cout << "Transfer Received transaction completed in " << duration << " ms" << std::endl;
@@ -127,7 +127,7 @@ TEST_F( TransactionSyncTest, DISABLED_TransactionMintSync )
     for ( auto amount : mint_amounts )
     {
         auto mint_result = node_proc1->MintTokens( amount, "", "", "",
-                                                 std::chrono::milliseconds( 500000 ) );
+                                                 std::chrono::milliseconds( 50000 ) );
         ASSERT_TRUE( mint_result.has_value() )
             << "Mint transaction of " << amount << " failed or timed out";
 
@@ -137,11 +137,11 @@ TEST_F( TransactionSyncTest, DISABLED_TransactionMintSync )
 
     // Mint tokens on node_proc2
     auto mint_result1 = node_proc2->MintTokens( 10000000000, "", "", "",
-                                              std::chrono::milliseconds( 500000 ) );
+                                              std::chrono::milliseconds( 50000 ) );
     ASSERT_TRUE( mint_result1.has_value() ) << "Mint transaction failed or timed out";
 
     auto mint_result2 = node_proc2->MintTokens( 20000000000, "", "", "",
-                                              std::chrono::milliseconds( 500000 ) );
+                                              std::chrono::milliseconds( 50000 ) );
     ASSERT_TRUE( mint_result2.has_value() ) << "Mint transaction failed or timed out";
 
     // Verify balances after minting
@@ -152,25 +152,25 @@ TEST_F( TransactionSyncTest, DISABLED_TransactionMintSync )
 
     // Transfer funds
     auto transfer_result1 = node_proc1->TransferFunds( 10000000000, node_proc2->GetAddress(),
-                                                    std::chrono::milliseconds( 500000 ) );
+                                                    std::chrono::milliseconds( 50000 ) );
     ASSERT_TRUE( transfer_result1.has_value() ) << "Transfer transaction failed or timed out";
     auto [transfer_tx_id1, transfer_duration1] = transfer_result1.value();
 
     auto transfer_result2 = node_proc1->TransferFunds( 20000000000, node_proc2->GetAddress(),
-                                                    std::chrono::milliseconds( 500000 ) );
+                                                    std::chrono::milliseconds( 50000 ) );
     ASSERT_TRUE( transfer_result2.has_value() ) << "Transfer transaction failed or timed out";
     auto [transfer_tx_id2, transfer_duration2] = transfer_result2.value();
 
     // wait for both transfers to happen or timeout.
     auto start_time = std::chrono::steady_clock::now();
-    auto transfer_received = node_proc2->WaitForTransactionIncoming(transfer_tx_id1, "transfer", std::chrono::milliseconds(500000));
+    auto transfer_received = node_proc2->WaitForTransactionIncoming(transfer_tx_id1, "transfer", std::chrono::milliseconds(50000));
     ASSERT_TRUE(transfer_received);
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count();
     std::cout << "node2 Transfer Received transaction completed in " << duration << " ms" << std::endl;
 
     // wait for both transfers to happen or timeout.
     start_time = std::chrono::steady_clock::now();
-    transfer_received = node_proc1->WaitForTransactionIncoming(transfer_tx_id2, "transfer", std::chrono::milliseconds(500000));
+    transfer_received = node_proc1->WaitForTransactionIncoming(transfer_tx_id2, "transfer", std::chrono::milliseconds(50000));
     ASSERT_TRUE(transfer_received);
     duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count();
     std::cout << "node1 Transfer Received transaction completed in " << duration << " ms" << std::endl;

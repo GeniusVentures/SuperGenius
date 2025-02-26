@@ -487,7 +487,7 @@ namespace sgns
                 m_logger->debug( "Unable to convert a key to string" );
                 continue;
             }
-            if ( incoming_tx_processed_m.find( { transaction_key.value() } ) != incoming_tx_processed_m.end() )
+            if ( incoming_tx_processed_m.find(  transaction_key.value()  ) != incoming_tx_processed_m.end() )
             {
                 m_logger->trace( "Transaction already processed: " + transaction_key.value() );
                 continue;
@@ -521,7 +521,7 @@ namespace sgns
                 continue;
             }
             {
-                std::unique_lock<std::shared_mutex> out_lock(outgoing_tx_mutex_m);
+                std::unique_lock<std::shared_mutex> out_lock(incoming_tx_mutex_m);
                 incoming_tx_processed_m[transaction_key.value()] = maybe_transaction.value()->SerializeByteVector();
             }
         }
@@ -549,7 +549,7 @@ namespace sgns
                 m_logger->debug( "Unable to convert a key to string" );
                 continue;
             }
-            if ( outgoing_tx_processed_m.find( { transaction_key.value() } ) != outgoing_tx_processed_m.end() )
+            if ( outgoing_tx_processed_m.find( transaction_key.value() ) != outgoing_tx_processed_m.end() )
             {
                 m_logger->trace( "Transaction already processed: " + transaction_key.value() );
                 continue;
