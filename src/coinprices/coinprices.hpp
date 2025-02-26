@@ -7,18 +7,12 @@
 #include <boost/asio/connect.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/ssl/stream.hpp>
-#include <rapidjson/document.h>
-#include <rapidjson/error/en.h>
-#include <rapidjson/stringbuffer.h>
-#include <rapidjson/writer.h>
 #include <iostream>
 #include <string>
-#include <memory>
 #include <vector>
 #include <map>
 #include <chrono>
 #include <thread>
-#include <mutex>
 #include <iomanip>
 #include <sstream>
 
@@ -33,21 +27,24 @@ namespace sgns
     class CoinGeckoPriceRetriever
     {
     public:
-        CoinGeckoPriceRetriever(const std::string& tokenId);
+        CoinGeckoPriceRetriever();
         
         // Helper method to format Unix timestamp to DD-MM-YYYY for CoinGecko API
         std::string formatDate(int64_t timestamp, bool includeTime = false);
 
-        // Get current price
-        double getCurrentPrice();
+        // Get current prices for the specified tokens
+        std::map<std::string, double> getCurrentPrices(const std::vector<std::string>& tokenIds);
 
-        // Get historical prices for a list of timestamps
-        std::map<int64_t, double> getHistoricalPrices(const std::vector<int64_t>& timestamps);
+        // Get historical prices for the specified tokens at the given timestamps
+        std::map<std::string, std::map<int64_t, double>> getHistoricalPrices(
+            const std::vector<std::string>& tokenIds,
+            const std::vector<int64_t>& timestamps);
 
-        // Get historical price range (daily prices within a date range)
-        std::map<int64_t, double> getHistoricalPriceRange(int64_t from, int64_t to);
-
-        std::string getTokenSymbol();
+        // Get historical price range for the specified tokens within the date range
+        std::map<std::string, std::map<int64_t, double>> getHistoricalPriceRange(
+            const std::vector<std::string>& tokenIds,
+            int64_t from,
+            int64_t to);
 
     private:
         std::string tokenId_;

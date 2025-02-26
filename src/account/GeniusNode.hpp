@@ -1,7 +1,7 @@
 #ifndef _ACCOUNT_MANAGER_HPP_
 #define _ACCOUNT_MANAGER_HPP_
 #include <memory>
-
+#include <cstdint>
 #include <boost/asio.hpp>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <libp2p/log/logger.hpp>
@@ -18,6 +18,7 @@
 #include "processing/processing_service.hpp"
 #include "singleton/IComponent.hpp"
 #include "processing/impl/processing_task_queue_impl.hpp"
+#include "coinprices/coinprices.hpp"
 
 typedef struct DevConfig
 {
@@ -132,6 +133,15 @@ namespace sgns
         void StopProcessing();
         void StartProcessing();
 
+        std::map<std::string, double> GetCoinprice(const std::vector<std::string>& tokenIds);
+        std::map<std::string, std::map<int64_t, double>> GetCoinPriceByDate(
+            const std::vector<std::string>& tokenIds,
+            const std::vector<int64_t>& timestamps);
+        std::map<std::string, std::map<int64_t, double>> GetCoinPricesByDateRange(
+            const std::vector<std::string>& tokenIds,
+            int64_t from,
+            int64_t to);
+
     private:
         std::shared_ptr<GeniusAccount>                        account_;
         std::shared_ptr<ipfs_pubsub::GossipPubSub>            pubsub_;
@@ -146,6 +156,7 @@ namespace sgns
         std::string                                           write_base_path_;
         bool                                                  autodht_;
         bool                                                  isprocessor_;
+        std::shared_ptr<CoinGeckoPriceRetriever>              coinprices_;
 
         std::thread       io_thread;
         std::thread       upnp_thread;

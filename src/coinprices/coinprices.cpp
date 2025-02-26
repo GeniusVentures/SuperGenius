@@ -1,9 +1,8 @@
 #include "coinprices.hpp"
-
+#include <rapidjson/document.h>
 namespace sgns
 {
-    CoinGeckoPriceRetriever::CoinGeckoPriceRetriever(const std::string& tokenId) 
-        : tokenId_(tokenId)
+    CoinGeckoPriceRetriever::CoinGeckoPriceRetriever() 
     {
     }
     
@@ -45,183 +44,207 @@ namespace sgns
     }
 
     // Get current price
-    double CoinGeckoPriceRetriever::getCurrentPrice()
+    std::map<std::string, double> CoinGeckoPriceRetriever::getCurrentPrices(
+        const std::vector<std::string>& tokenIds)
     {
+        std::map<std::string, double> prices;
+
+        if (tokenIds.empty()) {
+            return prices;
+        }
+
         try {
+            // Join the token IDs with commas for the API request
+            std::string tokenIdsList;
+            for (size_t i = 0; i < tokenIds.size(); i++) {
+                tokenIdsList += tokenIds[i];
+                if (i < tokenIds.size() - 1) {
+                    tokenIdsList += ",";
+                }
+            }
+
             // Create HTTP request
             http::response<http::string_body> res = makeHttpRequest(
                 "api.coingecko.com",
-                "/api/v3/simple/price?ids=" + tokenId_ + "&vs_currencies=usd");
+                "/api/v3/simple/price?ids=" + tokenIdsList + "&vs_currencies=usd");
 
             // Parse the JSON response
             rapidjson::Document document;
             document.Parse(res.body().c_str());
 
-            // Extract the price
-            if (document.HasMember(tokenId_.c_str()) && 
-                document[tokenId_.c_str()].HasMember("usd")) {
-                return document[tokenId_.c_str()]["usd"].GetDouble();
+            // Extract the prices for each token
+            for (const auto& tokenId : tokenIds) {
+                if (document.HasMember(tokenId.c_str()) &&
+                    document[tokenId.c_str()].HasMember("usd")) {
+                    prices[tokenId] = document[tokenId.c_str()]["usd"].GetDouble();
+                }
             }
         }
         catch (const std::exception& e) {
-            std::cerr << "Error getting current price: " << e.what() << std::endl;
+            std::cerr << "Error getting current prices: " << e.what() << std::endl;
         }
 
-        return 0.0;
+        return prices;
     }
 
+
     // Get historical prices for a list of timestamps
-    std::map<int64_t, double> CoinGeckoPriceRetriever::getHistoricalPrices(const std::vector<int64_t>& timestamps)
+    std::map<std::string, std::map<int64_t, double>> CoinGeckoPriceRetriever::getHistoricalPrices(
+        const std::vector<std::string>& tokenIds,
+        const std::vector<int64_t>& timestamps)
     {
-        std::map<int64_t, double> prices;
-        
+        std::map<std::string, std::map<int64_t, double>> allPrices;
+
+        if (tokenIds.empty() || timestamps.empty()) {
+            return allPrices;
+        }
+
         try {
             // Get current timestamp for 365-day limit checking
             time_t now = std::time(nullptr);
             time_t oneYearAgo = now - (365 * 24 * 60 * 60);
-            
+
             std::cout << "Current date: " << formatDate(now * 1000) << std::endl;
             std::cout << "One year ago: " << formatDate(oneYearAgo * 1000) << std::endl;
-            
-            // CoinGecko provides historical data in the format: /coins/{id}/history?date={date}
-            // where date is DD-MM-YYYY
+
+            // Process each timestamp for all tokens
             for (int64_t timestamp : timestamps) {
                 // Convert to seconds if in milliseconds
                 time_t timestampSec = (timestamp > 9999999999) ? timestamp / 1000 : timestamp;
-                
+
                 // Skip timestamps older than 1 year due to CoinGecko restrictions
                 if (timestampSec < oneYearAgo) {
-                    std::cout << "Skipping " << formatDate(timestamp) 
-                                << " - Beyond 365-day limit for CoinGecko free tier" << std::endl;
+                    std::cout << "Skipping " << formatDate(timestamp)
+                        << " - Beyond 365-day limit for CoinGecko free tier" << std::endl;
                     continue;
                 }
-                
+
                 std::string formattedDate = formatDate(timestamp);
-                
-                // Create HTTP request for this specific date
-                http::response<http::string_body> res = makeHttpRequest(
-                    "api.coingecko.com",
-                    "/api/v3/coins/" + tokenId_ + "/history?date=" + formattedDate);
 
-                // Parse the JSON response
-                rapidjson::Document document;
-                document.Parse(res.body().c_str());
+                // Process each token for this timestamp
+                for (const auto& tokenId : tokenIds) {
+                    // Create HTTP request for this specific date and token
+                    http::response<http::string_body> res = makeHttpRequest(
+                        "api.coingecko.com",
+                        "/api/v3/coins/" + tokenId + "/history?date=" + formattedDate);
 
-                // Extract the price
-                if (document.HasMember("market_data") && 
-                    document["market_data"].HasMember("current_price") &&
-                    document["market_data"]["current_price"].HasMember("usd")) {
-                    
-                    double price = document["market_data"]["current_price"]["usd"].GetDouble();
-                    prices[timestamp] = price;
-                    
-                    std::cout << "Historical price for " << formattedDate << ": $" << price << std::endl;
-                } else {
-                    std::cerr << "No price data found for " << formattedDate << std::endl;
+                    // Parse the JSON response
+                    rapidjson::Document document;
+                    document.Parse(res.body().c_str());
+
+                    // Extract the price
+                    if (document.HasMember("market_data") &&
+                        document["market_data"].HasMember("current_price") &&
+                        document["market_data"]["current_price"].HasMember("usd")) {
+
+                        double price = document["market_data"]["current_price"]["usd"].GetDouble();
+                        allPrices[tokenId][timestamp] = price;
+
+                        std::cout << "Historical price for " << tokenId << " on " << formattedDate
+                            << ": $" << price << std::endl;
+                    }
+                    else {
+                        std::cerr << "No price data found for " << tokenId << " on "
+                            << formattedDate << std::endl;
+                    }
+
+                    // Respect rate limits - sleep between requests
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1100));
                 }
-                
-                // Respect rate limits - sleep between requests
-                std::this_thread::sleep_for(std::chrono::milliseconds(1100));
             }
         }
         catch (const std::exception& e) {
             std::cerr << "Error getting historical prices: " << e.what() << std::endl;
         }
 
-        return prices;
+        return allPrices;
     }
 
     // Get historical price range (daily prices within a date range)
-    std::map<int64_t, double> CoinGeckoPriceRetriever::getHistoricalPriceRange(int64_t from, int64_t to)
+    std::map<std::string, std::map<int64_t, double>> CoinGeckoPriceRetriever::getHistoricalPriceRange(
+        const std::vector<std::string>& tokenIds,
+        int64_t from,
+        int64_t to)
     {
-        std::map<int64_t, double> prices;
-        
+        std::map<std::string, std::map<int64_t, double>> allPrices;
+
+        if (tokenIds.empty()) {
+            return allPrices;
+        }
+
         try {
             // Make sure we don't exceed the 365-day limit for free tier
             time_t now = std::time(nullptr);
             time_t oneYearAgo = now - (365 * 24 * 60 * 60);
-            
+
             // Convert from milliseconds to seconds if needed
             time_t fromSec = (from > 9999999999) ? from / 1000 : from;
-            
+
             if (fromSec < oneYearAgo) {
                 std::cout << "Limiting historical request to past 365 days due to CoinGecko free tier restrictions" << std::endl;
                 std::cout << "Adjusted from " << formatDate(from) << " to " << formatDate(oneYearAgo * 1000) << std::endl;
                 fromSec = oneYearAgo;
             }
-            
+
             // Convert timestamps to Unix timestamps in seconds
             int fromUnix = static_cast<int>(fromSec);
             int toUnix = static_cast<int>((to > 9999999999) ? to / 1000 : to);
-            
+
             // Make sure from is before to (could happen with timestamp conversion issues)
             if (fromUnix >= toUnix) {
                 std::cerr << "Error: 'from' date must be before 'to' date" << std::endl;
                 std::cerr << "From: " << formatDate(from) << " (" << fromUnix << ")" << std::endl;
                 std::cerr << "To: " << formatDate(to) << " (" << toUnix << ")" << std::endl;
-                return prices;
+                return allPrices;
             }
-            
-            std::string endpoint = "/api/v3/coins/" + tokenId_ + 
-                                    "/market_chart/range?vs_currency=usd&from=" + 
-                                    std::to_string(fromUnix) + "&to=" + std::to_string(toUnix);
-            
-            std::cout << "CoinGecko request: " << endpoint << std::endl;
-            
-            // Create HTTP request for the range
-            http::response<http::string_body> res = makeHttpRequest(
-                "api.coingecko.com", endpoint);
 
-            // Parse the JSON response
-            rapidjson::Document document;
-            document.Parse(res.body().c_str());
+            // Process each token
+            for (const auto& tokenId : tokenIds) {
+                std::string endpoint = "/api/v3/coins/" + tokenId +
+                    "/market_chart/range?vs_currency=usd&from=" +
+                    std::to_string(fromUnix) + "&to=" + std::to_string(toUnix);
 
-            // Extract the prices array
-            if (document.HasMember("prices") && document["prices"].IsArray()) {
-                const auto& pricesArray = document["prices"];
-                
-                for (rapidjson::SizeType i = 0; i < pricesArray.Size(); i++) {
-                    if (pricesArray[i].IsArray() && pricesArray[i].Size() >= 2) {
-                        int64_t timestamp = static_cast<int64_t>(pricesArray[i][0].GetDouble());
-                        double price = pricesArray[i][1].GetDouble();
-                        prices[timestamp] = price;
+                std::cout << "CoinGecko request for " << tokenId << ": " << endpoint << std::endl;
+
+                // Create HTTP request for the range
+                http::response<http::string_body> res = makeHttpRequest(
+                    "api.coingecko.com", endpoint);
+
+                // Parse the JSON response
+                rapidjson::Document document;
+                document.Parse(res.body().c_str());
+
+                // Extract the prices array
+                if (document.HasMember("prices") && document["prices"].IsArray()) {
+                    const auto& pricesArray = document["prices"];
+
+                    for (rapidjson::SizeType i = 0; i < pricesArray.Size(); i++) {
+                        if (pricesArray[i].IsArray() && pricesArray[i].Size() >= 2) {
+                            int64_t timestamp = static_cast<int64_t>(pricesArray[i][0].GetDouble());
+                            double price = pricesArray[i][1].GetDouble();
+                            allPrices[tokenId][timestamp] = price;
+                        }
                     }
+
+                    std::cout << "Retrieved " << allPrices[tokenId].size()
+                        << " historical price points for " << tokenId << std::endl;
                 }
-                
-                std::cout << "Retrieved " << prices.size() << " historical price points" << std::endl;
-            } else {
-                std::cerr << "No price data found for the specified range" << std::endl;
+                else {
+                    std::cerr << "No price data found for " << tokenId
+                        << " in the specified range" << std::endl;
+                }
+
+                // Respect rate limits between tokens
+                if (&tokenId != &tokenIds.back()) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1100));
+                }
             }
         }
         catch (const std::exception& e) {
             std::cerr << "Error getting historical price range: " << e.what() << std::endl;
         }
 
-        return prices;
-    }
-
-    std::string CoinGeckoPriceRetriever::getTokenSymbol()
-    {
-        try {
-            // Create HTTP request
-            http::response<http::string_body> res = makeHttpRequest(
-                "api.coingecko.com",
-                "/api/v3/coins/" + tokenId_);
-
-            // Parse the JSON response
-            rapidjson::Document document;
-            document.Parse(res.body().c_str());
-
-            // Extract the symbol
-            if (document.HasMember("symbol")) {
-                return document["symbol"].GetString();
-            }
-        }
-        catch (const std::exception& e) {
-            std::cerr << "Error getting token symbol: " << e.what() << std::endl;
-        }
-
-        return tokenId_;
+        return allPrices;
     }
     
     // Helper method to make HTTP requests

@@ -3,6 +3,7 @@ add_library(coinprices
     coinprices.hpp
 )
 
+target_include_directories(coinprices PRIVATE )
 target_link_libraries(coinprices
     PUBLIC
     rapidjson

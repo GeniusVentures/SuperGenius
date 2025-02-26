@@ -29,6 +29,7 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 
+
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, GeniusNode::Error, e )
 {
     switch ( e )
@@ -75,7 +76,8 @@ namespace sgns
         write_base_path_( dev_config.BaseWritePath ),
         autodht_( autodht ),
         isprocessor_( isprocessor ),
-        dev_config_( dev_config )
+        dev_config_( dev_config ),
+        coinprices_()
     {
         SSL_library_init();
         SSL_load_error_strings();
@@ -648,6 +650,26 @@ namespace sgns
     void GeniusNode::StartProcessing()
     {
         processing_service_->StartProcessing( std::string( PROCESSING_GRID_CHANNEL ) );
+    }
+
+    std::map<std::string, double> GeniusNode::GetCoinprice(const std::vector<std::string>& tokenIds)
+    {
+        coinprices_->getCurrentPrices(tokenIds);
+    }
+
+    std::map<std::string, std::map<int64_t, double>> GeniusNode::GetCoinPriceByDate(
+        const std::vector<std::string>& tokenIds,
+        const std::vector<int64_t>& timestamps)
+    {
+        coinprices_->getHistoricalPrices(tokenIds, timestamps);
+    }
+
+    std::map<std::string, std::map<int64_t, double>> GeniusNode::GetCoinPricesByDateRange(
+        const std::vector<std::string>& tokenIds,
+        int64_t from,
+        int64_t to)
+    {
+        coinprices_->getHistoricalPriceRange(tokenIds, from, to);
     }
     
     std::string GeniusNode::FormatTokens( uint64_t amount )
