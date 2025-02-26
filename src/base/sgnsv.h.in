@@ -38,13 +38,13 @@
  #endif
  
  /// Major version number.
- #define SUPERGENIUS_VERSION_MAJOR @SUPERGENIUS_VERSION_MAJOR@
+ #define SUPERGENIUS_VERSION_MAJOR @PROJECT_VERSION_MAJOR@
  
  /// Minor version number.
- #define SUPERGENIUS_VERSION_MINOR @SUPERGENIUS_VERSION_MINOR@
+ #define SUPERGENIUS_VERSION_MINOR @PROJECT_VERSION_MINOR@
  
  /// Patch version number.
- #define SUPERGENIUS_VERSION_PATCH @SUPERGENIUS_VERSION_PATCH@
+ #define SUPERGENIUS_VERSION_PATCH @PROJECT_VERSION_PATCH@
  
  /**
   * Pre-release identifier.
@@ -80,7 +80,7 @@
  /**
   * Short version string: "MAJOR.MINOR.PATCH".
   */
- #define SUPERGENIUS_VERSION_STR "@SUPERGENIUS_VERSION_MAJOR@.@SUPERGENIUS_VERSION_MINOR@.@SUPERGENIUS_VERSION_PATCH@@SUPERGENIUS_VERSION_PRE_RELEASE@"
+ #define SUPERGENIUS_VERSION_STR "@PROJECT_VERSION_MAJOR@.@PROJECT_VERSION_MINOR@.@PROJECT_VERSION_PATCH@@SUPERGENIUS_VERSION_PRE_RELEASE@"
  
  /**
   * Full version string.
@@ -89,7 +89,7 @@
   * The final format is: "MAJOR.MINOR.PATCH[PRE_RELEASE][BUILD_METADATA]".
   */
  #define SUPERGENIUS_FULL_VERSION_STR                                                                                   \
-     "@SUPERGENIUS_VERSION_MAJOR@.@SUPERGENIUS_VERSION_MINOR@.@SUPERGENIUS_VERSION_PATCH@"                              \
+     "@PROJECT_VERSION_MAJOR@.@PROJECT_VERSION_MINOR@.@PROJECT_VERSION_PATCH@"                              \
      "@SUPERGENIUS_VERSION_PRE_RELEASE@@SUPERGENIUS_VERSION_BUILD_METADATA@"
  
  /**
@@ -98,7 +98,7 @@
   * Combines the full version string with the release date.
   */
  #define SUPERGENIUS_VERSION_TEXT                                                                                   \
-     "SuperGenius @SUPERGENIUS_VERSION_MAJOR@.@SUPERGENIUS_VERSION_MINOR@.@SUPERGENIUS_VERSION_PATCH@"                              \
+     "SuperGenius @PROJECT_VERSION_MAJOR@.@PROJECT_VERSION_MINOR@.@PROJECT_VERSION_PATCH@"                              \
      "@SUPERGENIUS_VERSION_PRE_RELEASE@@SUPERGENIUS_VERSION_BUILD_METADATA@ (@SUPERGENIUS_RELEASE_DATE@)"
  
  /*

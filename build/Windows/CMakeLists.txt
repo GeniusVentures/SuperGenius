@@ -5,7 +5,7 @@ if(NOT ${CMAKE_HOST_SYSTEM_NAME} MATCHES "Windows")
     message(FATAL_ERROR "${CMAKE_HOST_SYSTEM_NAME} host system name does not match Windows - Please select the correct folder for configuring project")
 endif()
 
-include(../version.cmake)
+include(../../cmake/version.cmake)
 # Project
 project(
     SuperGenius
