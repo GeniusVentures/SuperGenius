@@ -58,6 +58,14 @@ namespace sgns
 
         virtual std::string GetTransactionSpecificPath() = 0;
 
+        static std::string GetTransactionFullPath(const std::string &address, const std::string &type, const uint64_t &nonce)
+        {
+            boost::format full_path( address + "/tx/" + type + "/%llu" );
+            full_path % nonce;
+
+            return full_path.str();
+        }
+
         std::string GetTransactionFullPath()
         {
             boost::format full_path( GetSrcAddress() + "/tx/" + GetTransactionSpecificPath() + "/%llu" );

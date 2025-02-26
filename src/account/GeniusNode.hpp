@@ -1,5 +1,5 @@
-#ifndef _ACCOUNT_MANAGER_HPP_
-#define _ACCOUNT_MANAGER_HPP_
+#ifndef _GENIUS_NODE_HPP_
+#define _GENIUS_NODE_HPP_
 #include <memory>
 
 #include <boost/asio.hpp>
@@ -48,21 +48,21 @@ namespace sgns
          */
         enum class Error
         {
-            INSUFFICIENT_FUNDS       = 1, ///<Insufficient funds for a transaction
-            DATABASE_WRITE_ERROR     = 2, ///<Error writing data into the database
-            INVALID_TRANSACTION_HASH = 3, ///<Input transaction hash is invalid
-            INVALID_CHAIN_ID         = 4, ///<Chain ID is invalid
-            INVALID_TOKEN_ID         = 5, ///<Token ID is invalid
-            TOKEN_ID_MISMATCH        = 6, ///<Informed Token ID doesn't match initialized ID
-            PROCESS_COST_ERROR       = 7, ///<The calculated Processing cost was negative
-            PROCESS_INFO_MISSING     = 8, ///<Processing information missing on JSON file
-            INVALID_JSON             = 9, ///<JSON cannot be parsed>
-            INVALID_BLOCK_PARAMETERS =10, ///<JSON params for blocks incorrect or missing>
-            NO_PROCESSOR             =11, ///<No processor for this type>
+            INSUFFICIENT_FUNDS       = 1,  ///<Insufficient funds for a transaction
+            DATABASE_WRITE_ERROR     = 2,  ///<Error writing data into the database
+            INVALID_TRANSACTION_HASH = 3,  ///<Input transaction hash is invalid
+            INVALID_CHAIN_ID         = 4,  ///<Chain ID is invalid
+            INVALID_TOKEN_ID         = 5,  ///<Token ID is invalid
+            TOKEN_ID_MISMATCH        = 6,  ///<Informed Token ID doesn't match initialized ID
+            PROCESS_COST_ERROR       = 7,  ///<The calculated Processing cost was negative
+            PROCESS_INFO_MISSING     = 8,  ///<Processing information missing on JSON file
+            INVALID_JSON             = 9,  ///<JSON cannot be parsed>
+            INVALID_BLOCK_PARAMETERS = 10, ///<JSON params for blocks incorrect or missing>
+            NO_PROCESSOR             = 11, ///<No processor for this type>
         };
 
         outcome::result<void> ProcessImage( const std::string &jsondata );
-        outcome::result<void> CheckProcessValidity( const std::string& jsondata );
+        outcome::result<void> CheckProcessValidity( const std::string &jsondata );
 
         uint64_t GetProcessCost( const std::string &json_data );
 
@@ -79,13 +79,15 @@ namespace sgns
          * @param[in]   amount: Numeric value with amount in Minion Tokens (1e-9 GNUS Token)
          * @return      Outcome of mint token operation
          */
-        outcome::result<void> MintTokens( uint64_t          amount,
-                                          const std::string &transaction_hash,
-                                          const std::string &chainid,
-                                          const std::string &tokenid );
-        void                  AddPeer( const std::string &peer );
-        void                  RefreshUPNP( int pubsubport, int graphsyncport );
-        uint64_t              GetBalance();
+        outcome::result<std::pair<std::string, uint64_t>> MintTokens(
+            uint64_t                  amount,
+            const std::string        &transaction_hash,
+            const std::string        &chainid,
+            const std::string        &tokenid,
+            std::chrono::milliseconds timeout = std::chrono::milliseconds( 2000 ) );
+        void     AddPeer( const std::string &peer );
+        void     RefreshUPNP( int pubsubport, int graphsyncport );
+        uint64_t GetBalance();
 
         [[nodiscard]] const std::vector<std::vector<uint8_t>> GetInTransactions() const
         {
@@ -102,10 +104,10 @@ namespace sgns
             return account_->GetAddress();
         }
 
-        bool TransferFunds( uint64_t amount, const std::string &destination )
-        {
-            return transaction_manager_->TransferFunds( amount, destination );
-        }
+        outcome::result<std::pair<std::string, uint64_t>> TransferFunds(
+            uint64_t                  amount,
+            const std::string        &destination,
+            std::chrono::milliseconds timeout = std::chrono::milliseconds( 50000 ) );
 
         std::shared_ptr<ipfs_pubsub::GossipPubSub> GetPubSub()
         {
@@ -132,6 +134,11 @@ namespace sgns
         void StopProcessing();
         void StartProcessing();
 
+        // Wait for an incoming transaction to be processed with a timeout
+        bool WaitForTransactionIncoming( const std::string &txId, std::chrono::milliseconds timeout );
+        // Wait for a outgoing transaction to be processed with a timeout
+        bool WaitForTransactionOutgoing( const std::string &txId, std::chrono::milliseconds timeout );
+
     private:
         std::shared_ptr<GeniusAccount>                        account_;
         std::shared_ptr<ipfs_pubsub::GossipPubSub>            pubsub_;
@@ -146,6 +153,7 @@ namespace sgns
         std::string                                           write_base_path_;
         bool                                                  autodht_;
         bool                                                  isprocessor_;
+        base::Logger                                          node_logger;
 
         std::thread       io_thread;
         std::thread       upnp_thread;
