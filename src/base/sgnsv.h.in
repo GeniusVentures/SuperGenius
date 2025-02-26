@@ -80,7 +80,7 @@
  /**
   * Short version string: "MAJOR.MINOR.PATCH".
   */
- #define SUPERGENIUS_VERSION_STR "@SUPERGENIUS_VERSION_MAJOR@.@SUPERGENIUS_VERSION_MINOR@.@SUPERGENIUS_VERSION_PATCH@"
+ #define SUPERGENIUS_VERSION_STR "@SUPERGENIUS_VERSION_MAJOR@.@SUPERGENIUS_VERSION_MINOR@.@SUPERGENIUS_VERSION_PATCH@@SUPERGENIUS_VERSION_PRE_RELEASE@"
  
  /**
   * Full version string.
@@ -97,7 +97,9 @@
   *
   * Combines the full version string with the release date.
   */
- #define SUPERGENIUS_VERSION_TEXT "SuperGenius " SUPERGENIUS_FULL_VERSION_STR " (" SUPERGENIUS_RELEASE_DATE ")"
+ #define SUPERGENIUS_VERSION_TEXT                                                                                   \
+     "SuperGenius @SUPERGENIUS_VERSION_MAJOR@.@SUPERGENIUS_VERSION_MINOR@.@SUPERGENIUS_VERSION_PATCH@"                              \
+     "@SUPERGENIUS_VERSION_PRE_RELEASE@@SUPERGENIUS_VERSION_BUILD_METADATA@ (@SUPERGENIUS_RELEASE_DATE@)"
  
  /*
   * Numeric version identifier synthesized as follows:
