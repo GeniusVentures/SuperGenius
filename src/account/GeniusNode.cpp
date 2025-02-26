@@ -555,7 +555,6 @@ namespace sgns
             else
             {
                 node_logger->error( "Missing or invalid block_len in input" );
-                ;
                 return 0;
             }
         }
@@ -571,7 +570,6 @@ namespace sgns
         if ( !raw_cost_result )
         {
             node_logger->error( "Fixed-point multiplication error" );
-            ;
             return 0;
         }
         uint64_t raw_cost = raw_cost_result.value();
