@@ -3,11 +3,13 @@ add_library(coinprices
     coinprices.hpp
 )
 
-target_include_directories(coinprices PRIVATE )
+target_include_directories(coinprices PRIVATE ${AsyncIOManager_INCLUDE_DIR})
 target_link_libraries(coinprices
     PUBLIC
     rapidjson
     OpenSSL::SSL
+    AsyncIOManager
+    
 )
 
 supergenius_install(coinprices)

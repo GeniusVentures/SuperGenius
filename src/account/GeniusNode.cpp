@@ -76,8 +76,8 @@ namespace sgns
         write_base_path_( dev_config.BaseWritePath ),
         autodht_( autodht ),
         isprocessor_( isprocessor ),
-        dev_config_( dev_config ),
-        coinprices_(std::make_shared<CoinGeckoPriceRetriever>())
+        dev_config_( dev_config )
+        //coinprices_(std::make_shared<CoinGeckoPriceRetriever>(io_))
     {
         SSL_library_init();
         SSL_load_error_strings();
@@ -654,22 +654,17 @@ namespace sgns
 
     std::map<std::string, double> GeniusNode::GetCoinprice(const std::vector<std::string>& tokenIds)
     {
-        if (!coinprices_) {
-            std::cerr << "Error: coinprices_ is null\n";
-            return {};
-        }
-        return coinprices_->getCurrentPrices(tokenIds);
+        sgns::CoinGeckoPriceRetriever retriever;
+        auto prices = retriever.getCurrentPrices(tokenIds);
+        return prices;
     }
 
     std::map<std::string, std::map<int64_t, double>> GeniusNode::GetCoinPriceByDate(
         const std::vector<std::string>& tokenIds,
         const std::vector<int64_t>& timestamps)
     {
-        if (!coinprices_) {
-            std::cerr << "Error: coinprices_ is null\n";
-            return {};
-        }
-        return coinprices_->getHistoricalPrices(tokenIds, timestamps);
+        sgns::CoinGeckoPriceRetriever retriever;
+        return retriever.getHistoricalPrices(tokenIds, timestamps);
     }
 
     std::map<std::string, std::map<int64_t, double>> GeniusNode::GetCoinPricesByDateRange(
@@ -677,7 +672,8 @@ namespace sgns
         int64_t from,
         int64_t to)
     {
-        return coinprices_->getHistoricalPriceRange(tokenIds, from, to);
+        sgns::CoinGeckoPriceRetriever retriever;
+        return retriever.getHistoricalPriceRange(tokenIds, from, to);
     }
     
     std::string GeniusNode::FormatTokens( uint64_t amount )

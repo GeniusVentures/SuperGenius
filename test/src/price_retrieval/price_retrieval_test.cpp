@@ -38,10 +38,11 @@ protected:
 
 TEST_F(PriceRetrievalTest, GetCurrentPrice) 
 {
+    auto ioc = std::make_shared<boost::asio::io_context>();
     sgns::CoinGeckoPriceRetriever retriever; // Genius token ID on CoinGecko
     std::vector<std::string> tokenIds;
     tokenIds.push_back("genius-ai");
-    tokenIds.push_back("bitcoin");
+    //tokenIds.push_back("bitcoin");
     auto prices = retriever.getCurrentPrices(tokenIds);
     //std::string symbol = retriever.getTokenSymbol();
     for (const auto& [token, price] : prices)
@@ -54,6 +55,7 @@ TEST_F(PriceRetrievalTest, GetCurrentPrice)
 
 TEST_F(PriceRetrievalTest, DISABLED_GetHistoricalPrices) 
 {
+    auto ioc = std::make_shared<boost::asio::io_context>();
     sgns::CoinGeckoPriceRetriever retriever;
 
     // Get current time
@@ -87,6 +89,7 @@ TEST_F(PriceRetrievalTest, DISABLED_GetHistoricalPrices)
 
 TEST_F(PriceRetrievalTest, DISABLED_GetHistoricalPriceRange) 
 {
+    auto ioc = std::make_shared<boost::asio::io_context>();
     sgns::CoinGeckoPriceRetriever retriever;
     
     // Get now and 30 days ago in seconds

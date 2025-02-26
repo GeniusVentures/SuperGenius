@@ -47,8 +47,7 @@ namespace sgns
             int64_t to);
 
     private:
-        std::string tokenId_;
-        
+       
         // Helper method to make HTTP requests
         http::response<http::string_body> makeHttpRequest(
             const std::string& host, const std::string& target);

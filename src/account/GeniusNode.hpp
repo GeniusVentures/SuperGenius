@@ -156,7 +156,6 @@ namespace sgns
         std::string                                           write_base_path_;
         bool                                                  autodht_;
         bool                                                  isprocessor_;
-        std::shared_ptr<CoinGeckoPriceRetriever>              coinprices_;
 
         std::thread       io_thread;
         std::thread       upnp_thread;
