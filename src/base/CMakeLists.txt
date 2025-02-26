@@ -141,8 +141,9 @@ message(STATUS "GIT_COMMIT_HASH: ${GIT_COMMIT_HASH}")
 message(STATUS "SUPERGENIUS_VERSION_PRE_RELEASE: ${SUPERGENIUS_VERSION_PRE_RELEASE}")
 message(STATUS "SUPERGENIUS_VERSION_BUILD_METADATA: ${SUPERGENIUS_VERSION_BUILD_METADATA}")
 
-
 message(STATUS "Generating sgnsv.h from sgnsv.h.in")
+
+cmake_policy(SET CMP0115 NEW)
 
 if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/sgnsv.h.in")
     message(FATAL_ERROR "sgnsv.h.in is missing in ${CMAKE_CURRENT_SOURCE_DIR}")
@@ -151,21 +152,22 @@ endif()
 
 configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/sgnsv.h.in
-    ${CMAKE_CURRENT_SOURCE_DIR}/sgnsv.h
+    ${CMAKE_BINARY_DIR}/generated/base/sgnsv.h
     @ONLY
 )
-
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/sgnsv.h")
-    message(STATUS "sgnsv.h generated")
-else()
-    message(WARNING "Arquivo sgnsv.h NOT generated!")
-endif()
 
 add_library(sgns_version
 sgns_version.cpp
 sgns_version.hpp
-sgnsv.h
+${CMAKE_BINARY_DIR}/generated/base/sgnsv.h
 )
+
+target_include_directories(sgns_version
+  PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/generated/>
+    $<INSTALL_INTERFACE:include>
+)
+
 target_link_libraries(sgns_version
     PUBLIC
 )

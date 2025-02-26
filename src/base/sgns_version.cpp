@@ -6,7 +6,7 @@
  * All version-related macros (e.g. SUPERGENIUS_VERSION_NUMBER) are defined via CMake.
  *
  */
-#include "sgnsv.h"
+#include "base/sgnsv.h"
 #include "sgns_version.hpp"
 
 uint64_t sgns::version::SuperGeniusVersionNum()
