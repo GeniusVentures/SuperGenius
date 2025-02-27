@@ -159,7 +159,7 @@ void GetCoinPrice(const std::vector<std::string>& args, sgns::GeniusNode& genius
     auto prices = genius_node.GetCoinprice(tokenIds);
 
     // Display the results
-    for (const auto& [token, price] : prices)
+    for (const auto& [token, price] : prices.value())
     {
         std::cout << token << ": $" << std::fixed << std::setprecision(4) << price << std::endl;
     }

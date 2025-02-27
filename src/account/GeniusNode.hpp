@@ -133,11 +133,11 @@ namespace sgns
         void StopProcessing();
         void StartProcessing();
 
-        std::map<std::string, double> GetCoinprice(const std::vector<std::string>& tokenIds);
-        std::map<std::string, std::map<int64_t, double>> GetCoinPriceByDate(
+        outcome::result<std::map<std::string, double>> GetCoinprice(const std::vector<std::string>& tokenIds);
+        outcome::result<std::map<std::string, std::map<int64_t, double>>> GetCoinPriceByDate(
             const std::vector<std::string>& tokenIds,
             const std::vector<int64_t>& timestamps);
-        std::map<std::string, std::map<int64_t, double>> GetCoinPricesByDateRange(
+        outcome::result<std::map<std::string, std::map<int64_t, double>>> GetCoinPricesByDateRange(
             const std::vector<std::string>& tokenIds,
             int64_t from,
             int64_t to);

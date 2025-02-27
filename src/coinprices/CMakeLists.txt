@@ -10,6 +10,7 @@ target_link_libraries(coinprices
     OpenSSL::SSL
     AsyncIOManager
     logger
+    outcome
 )
 
 supergenius_install(coinprices)

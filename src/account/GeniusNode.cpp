@@ -652,14 +652,14 @@ namespace sgns
         processing_service_->StartProcessing( std::string( PROCESSING_GRID_CHANNEL ) );
     }
 
-    std::map<std::string, double> GeniusNode::GetCoinprice(const std::vector<std::string>& tokenIds)
+    outcome::result<std::map<std::string, double>> GeniusNode::GetCoinprice(const std::vector<std::string>& tokenIds)
     {
         sgns::CoinGeckoPriceRetriever retriever;
         auto prices = retriever.getCurrentPrices(tokenIds);
         return prices;
     }
 
-    std::map<std::string, std::map<int64_t, double>> GeniusNode::GetCoinPriceByDate(
+    outcome::result<std::map<std::string, std::map<int64_t, double>>> GeniusNode::GetCoinPriceByDate(
         const std::vector<std::string>& tokenIds,
         const std::vector<int64_t>& timestamps)
     {
@@ -667,7 +667,7 @@ namespace sgns
         return retriever.getHistoricalPrices(tokenIds, timestamps);
     }
 
-    std::map<std::string, std::map<int64_t, double>> GeniusNode::GetCoinPricesByDateRange(
+    outcome::result<std::map<std::string, std::map<int64_t, double>>> GeniusNode::GetCoinPricesByDateRange(
         const std::vector<std::string>& tokenIds,
         int64_t from,
         int64_t to)
