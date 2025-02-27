@@ -1,5 +1,5 @@
-#ifndef _ACCOUNT_MANAGER_HPP_
-#define _ACCOUNT_MANAGER_HPP_
+#ifndef _GENIUS_NODE_HPP_
+#define _GENIUS_NODE_HPP_
 #include <memory>
 #include <cstdint>
 #include <boost/asio.hpp>
@@ -64,7 +64,7 @@ namespace sgns
         };
 
         outcome::result<void> ProcessImage( const std::string &jsondata );
-        outcome::result<void> CheckProcessValidity( const std::string& jsondata );
+        outcome::result<void> CheckProcessValidity( const std::string &jsondata );
 
         uint64_t GetProcessCost( const std::string &json_data );
 
@@ -81,13 +81,15 @@ namespace sgns
          * @param[in]   amount: Numeric value with amount in Minion Tokens (1e-9 GNUS Token)
          * @return      Outcome of mint token operation
          */
-        outcome::result<void> MintTokens( uint64_t          amount,
-                                          const std::string &transaction_hash,
-                                          const std::string &chainid,
-                                          const std::string &tokenid );
-        void                  AddPeer( const std::string &peer );
-        void                  RefreshUPNP( int pubsubport, int graphsyncport );
-        uint64_t              GetBalance();
+        outcome::result<std::pair<std::string, uint64_t>> MintTokens(
+            uint64_t                  amount,
+            const std::string        &transaction_hash,
+            const std::string        &chainid,
+            const std::string        &tokenid,
+            std::chrono::milliseconds timeout = std::chrono::milliseconds( 2000 ) );
+        void     AddPeer( const std::string &peer );
+        void     RefreshUPNP( int pubsubport, int graphsyncport );
+        uint64_t GetBalance();
 
         [[nodiscard]] const std::vector<std::vector<uint8_t>> GetInTransactions() const
         {
@@ -104,10 +106,10 @@ namespace sgns
             return account_->GetAddress();
         }
 
-        bool TransferFunds( uint64_t amount, const std::string &destination )
-        {
-            return transaction_manager_->TransferFunds( amount, destination );
-        }
+        outcome::result<std::pair<std::string, uint64_t>> TransferFunds(
+            uint64_t                  amount,
+            const std::string        &destination,
+            std::chrono::milliseconds timeout = std::chrono::milliseconds( 50000 ) );
 
         std::shared_ptr<ipfs_pubsub::GossipPubSub> GetPubSub()
         {
@@ -142,6 +144,10 @@ namespace sgns
             const std::vector<std::string>& tokenIds,
             int64_t from,
             int64_t to);
+        // Wait for an incoming transaction to be processed with a timeout
+        bool WaitForTransactionIncoming( const std::string &txId, std::chrono::milliseconds timeout );
+        // Wait for a outgoing transaction to be processed with a timeout
+        bool WaitForTransactionOutgoing( const std::string &txId, std::chrono::milliseconds timeout );
 
     private:
         std::shared_ptr<GeniusAccount>                        account_;
@@ -157,6 +163,7 @@ namespace sgns
         std::string                                           write_base_path_;
         bool                                                  autodht_;
         bool                                                  isprocessor_;
+        base::Logger                                          node_logger;
 
         std::thread       io_thread;
         std::thread       upnp_thread;
