@@ -1,12 +1,5 @@
 #ifndef _COIN_PRICES_HPP_
 #define _COIN_PRICES_HPP_
-#include <boost/beast/core.hpp>
-#include <boost/beast/http.hpp>
-#include <boost/beast/ssl.hpp>
-#include <boost/beast/version.hpp>
-#include <boost/asio/connect.hpp>
-#include <boost/asio/ip/tcp.hpp>
-#include <boost/asio/ssl/stream.hpp>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -15,12 +8,8 @@
 #include <thread>
 #include <iomanip>
 #include <sstream>
-
-namespace beast = boost::beast;
-namespace http = beast::http;
-namespace net = boost::asio;
-namespace ssl = boost::asio::ssl;
-using tcp = net::ip::tcp;
+#include "boost/asio.hpp"
+#include "base/logger.hpp"
 
 namespace sgns
 {
@@ -47,6 +36,7 @@ namespace sgns
             int64_t to);
 
     private:
+        base::Logger m_logger = sgns::base::createLogger( "CoinPrices" );
     };
 }
 

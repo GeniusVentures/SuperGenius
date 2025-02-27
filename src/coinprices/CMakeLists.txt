@@ -9,7 +9,7 @@ target_link_libraries(coinprices
     rapidjson
     OpenSSL::SSL
     AsyncIOManager
-    
+    logger
 )
 
 supergenius_install(coinprices)

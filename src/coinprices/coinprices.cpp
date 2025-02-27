@@ -108,7 +108,7 @@ namespace sgns
                     tokenIdsList += ",";
                 }
             }
-            std::cout << "Token IDS: " << tokenIdsList << std::endl;
+            m_logger->debug("Token IDS: {}", tokenIdsList);
             // Create HTTP request
             auto ioc = std::make_shared<boost::asio::io_context>();
             boost::asio::io_context::executor_type                                   executor = ioc->get_executor();
@@ -140,7 +140,7 @@ namespace sgns
                 },
                 "file" );
             ioc->run();
-            std::cout << "Res Is: " << res << "END" << std::endl;
+            m_logger->debug("Res Is: {}", res);
             std::string json_str = decodeChunkedTransfer(res);
 
             // Parse the JSON response
@@ -156,7 +156,7 @@ namespace sgns
             }
         }
         catch (const std::exception& e) {
-            std::cerr << "Error getting current prices: " << e.what() << std::endl;
+            m_logger->error("Error getting current prices: {}", e.what());
         }
 
         return prices;
@@ -179,8 +179,6 @@ namespace sgns
             time_t now = std::time(nullptr);
             time_t oneYearAgo = now - (365 * 24 * 60 * 60);
 
-            std::cout << "Current date: " << formatDate(now * 1000) << std::endl;
-            std::cout << "One year ago: " << formatDate(oneYearAgo * 1000) << std::endl;
 
             // Process each timestamp for all tokens
             for (int64_t timestamp : timestamps) {
@@ -189,8 +187,7 @@ namespace sgns
 
                 // Skip timestamps older than 1 year due to CoinGecko restrictions
                 if (timestampSec < oneYearAgo) {
-                    std::cout << "Skipping " << formatDate(timestamp)
-                        << " - Beyond 365-day limit for CoinGecko free tier" << std::endl;
+                    m_logger->error("Skipping {}", formatDate(timestamp));
                     continue;
                 }
 
@@ -233,7 +230,7 @@ namespace sgns
                         },
                         "file" );
                     ioc->run();
-                    std::cout << "Res Is: " << res << "END" << std::endl;
+                    m_logger->debug("Res Is: {}", res);
                     std::string json_str = decodeChunkedTransfer(res);
                     // Parse the JSON response
                     rapidjson::Document document;
@@ -246,22 +243,15 @@ namespace sgns
 
                         double price = document["market_data"]["current_price"]["usd"].GetDouble();
                         allPrices[tokenId][timestamp] = price;
-
-                        std::cout << "Historical price for " << tokenId << " on " << formattedDate
-                            << ": $" << price << std::endl;
                     }
                     else {
-                        std::cerr << "No price data found for " << tokenId << " on "
-                            << formattedDate << std::endl;
+                        m_logger->error("No price data found for {} on {}", tokenId, formattedDate);
                     }
-
-                    // Respect rate limits - sleep between requests
-                    std::this_thread::sleep_for(std::chrono::milliseconds(1100));
                 }
             }
         }
         catch (const std::exception& e) {
-            std::cerr << "Error getting historical prices: " << e.what() << std::endl;
+            m_logger->error("Error getting historical prices: {}", e.what());
         }
 
         return allPrices;
@@ -288,8 +278,6 @@ namespace sgns
             time_t fromSec = (from > 9999999999) ? from / 1000 : from;
 
             if (fromSec < oneYearAgo) {
-                std::cout << "Limiting historical request to past 365 days due to CoinGecko free tier restrictions" << std::endl;
-                std::cout << "Adjusted from " << formatDate(from) << " to " << formatDate(oneYearAgo * 1000) << std::endl;
                 fromSec = oneYearAgo;
             }
 
@@ -299,9 +287,7 @@ namespace sgns
 
             // Make sure from is before to (could happen with timestamp conversion issues)
             if (fromUnix >= toUnix) {
-                std::cerr << "Error: 'from' date must be before 'to' date" << std::endl;
-                std::cerr << "From: " << formatDate(from) << " (" << fromUnix << ")" << std::endl;
-                std::cerr << "To: " << formatDate(to) << " (" << toUnix << ")" << std::endl;
+                m_logger->error("Error: 'from' date must be before 'to' date");
                 return allPrices;
             }
 
@@ -311,7 +297,7 @@ namespace sgns
                 //     "/market_chart/range?vs_currency=usd&from=" +
                 //     std::to_string(fromUnix) + "&to=" + std::to_string(toUnix);
 
-                std::cout << "CoinGecko request for " << tokenId << std::endl;
+                m_logger->debug("CoinGecko request for {}", tokenId);
 
                 // Create HTTP request for the range
                 // http::response<http::string_body> res = makeHttpRequest(
@@ -347,31 +333,21 @@ namespace sgns
                     },
                     "file" );
                 ioc->run();
-                
+                m_logger->debug("Res Is: {}", res);
                 std::string json_str = decodeChunkedTransfer(res);
-                std::cout << "Res Is: " << json_str << "END" << std::endl;
                 // Parse the JSON response
                 rapidjson::Document document;
                 document.Parse(json_str.c_str());
                 if (document.HasParseError()) {
-                    std::cerr << "JSON Parse Error: " << document.GetParseError() << std::endl;
-                    //return;
+                    m_logger->error("JSON Parse Error: {}", document.GetParseError());
+                    return allPrices;
                 }
             
                 if (!document.IsObject()) {
-                    std::cerr << "JSON is not an object!" << std::endl;
-                    //return;
+                    m_logger->error("JSON is not an object!");
+                    return allPrices;
                 }
             
-                if (document.HasMember("prices")) {
-                    if (document["prices"].IsArray()) {
-                        std::cout << "Prices array found!" << std::endl;
-                    } else {
-                        std::cerr << "\"prices\" is not an array!" << std::endl;
-                    }
-                } else {
-                    std::cerr << "\"prices\" key is missing!" << std::endl;
-                }
                 // Extract the prices array
                 if (document.HasMember("prices") && document["prices"].IsArray()) {
                     const auto& pricesArray = document["prices"];
@@ -384,12 +360,9 @@ namespace sgns
                         }
                     }
 
-                    std::cout << "Retrieved " << allPrices[tokenId].size()
-                        << " historical price points for " << tokenId << std::endl;
                 }
                 else {
-                    std::cerr << "No price data found for " << tokenId
-                        << " in the specified range" << std::endl;
+                    m_logger->error("No price data found for {} in the specified range", tokenId);
                 }
 
                 // Respect rate limits between tokens
@@ -399,7 +372,7 @@ namespace sgns
             }
         }
         catch (const std::exception& e) {
-            std::cerr << "Error getting historical price range: " << e.what() << std::endl;
+            m_logger->error("Error getting historical price range: {}", e.what());
         }
 
         return allPrices;
