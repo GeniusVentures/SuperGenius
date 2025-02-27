@@ -48,6 +48,7 @@ target_link_libraries(sgns_account
     SGTransactionProto
     logger
     fixed_point
+    sgns_version
     gnus_upnp
     AsyncIOManager
     ${WIN_API_LIBRARY}

@@ -11,6 +11,7 @@
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 #include "base/fixed_point.hpp"
+#include "base/sgns_version.hpp"
 #include "account/GeniusNode.hpp"
 #include "crdt/globaldb/keypair_file_storage.hpp"
 #include "upnp.hpp"
@@ -134,6 +135,7 @@ namespace sgns
         auto loggerGossipPubsub   = base::createLogger( "GossipPubSub", logdir );
 #ifdef SGNS_DEBUGLOGS
         node_logger->set_level( spdlog::level::debug );
+        node_logger->info( sgns::version::SuperGeniusVersionText() );
         loggerGlobalDB->set_level( spdlog::level::off );
         loggerDAGSyncer->set_level( spdlog::level::off );
         loggerGraphsync->set_level( spdlog::level::off );
@@ -657,6 +659,11 @@ namespace sgns
             return outcome::failure( Error::NO_PRICE );
         }
         return price.value()["genius-ai"];
+    }
+
+    std::string GetVersion( void )
+    {
+        return sgns::version::SuperGeniusVersionFullString();
     }
 
     outcome::result<std::pair<std::string, uint64_t>> GeniusNode::MintTokens( uint64_t           amount,

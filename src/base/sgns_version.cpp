@@ -6,6 +6,7 @@
  * All version-related macros (e.g. SUPERGENIUS_VERSION_NUMBER) are defined via CMake.
  *
  */
+#include <string>
 #include "base/sgnsv.h"
 #include "sgns_version.hpp"
 
@@ -29,16 +30,17 @@ uint32_t sgns::version::SuperGeniusVersionPatch()
     return SUPERGENIUS_VERSION_PATCH;
 }
 
-const char *sgns::version::SuperGeniusVersionPreRelease()
+std::string sgns::version::SuperGeniusVersionString()
 {
-    return SUPERGENIUS_VERSION_PRE_RELEASE;
+    return SUPERGENIUS_VERSION_STR;
 }
 
-const char *sgns::version::SuperGeniusVersionBuildMetadata()
+std::string sgns::version::SuperGeniusVersionFullString()
 {
-    return SUPERGENIUS_VERSION_BUILD_METADATA;
+    return SUPERGENIUS_FULL_VERSION_STR;
 }
-const char *sgns::version::SuperGeniusVersionText()
+
+std::string sgns::version::SuperGeniusVersionText()
 {
     return SUPERGENIUS_VERSION_TEXT;
 }

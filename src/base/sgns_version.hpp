@@ -1,6 +1,8 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
+
 namespace sgns
 {
     namespace version
@@ -34,20 +36,24 @@ namespace sgns
         uint32_t SuperGeniusVersionPatch();
 
         /**
-         * @brief Retrieves the pre-release identifier of SuperGenius.
+         * @brief Retrieves the short version string of SuperGenius.
          *
-         * @return const char* pointing to the pre-release string.
+         * @return std::string representing the short version.
          */
-        const char *SuperGeniusVersionPreRelease();
+        std::string SuperGeniusVersionString();
 
         /**
-         * @brief Retrieves the build metadata of SuperGenius.
+         * @brief Retrieves the full version string of SuperGenius.
          *
-         * @return const char* pointing to the build metadata string.
+         * @return std::string representing the full version.
          */
-        const char *SuperGeniusVersionBuildMetadata();
+        std::string SuperGeniusVersionFullString();
 
-        
-        const char *SuperGeniusVersionText();
+        /**
+         * @brief Retrieves the display version text of SuperGenius.
+         *
+         * @return std::string representing the version text.
+         */
+        std::string SuperGeniusVersionText();
     }
 }
