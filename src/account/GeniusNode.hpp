@@ -60,6 +60,7 @@ namespace sgns
             INVALID_JSON             = 9, ///<JSON cannot be parsed>
             INVALID_BLOCK_PARAMETERS =10, ///<JSON params for blocks incorrect or missing>
             NO_PROCESSOR             =11, ///<No processor for this type>
+            NO_PRICE                 =12, ///<Couldn't get price of gnus>
         };
 
         outcome::result<void> ProcessImage( const std::string &jsondata );
@@ -67,7 +68,7 @@ namespace sgns
 
         uint64_t GetProcessCost( const std::string &json_data );
 
-        double GetGNUSPrice();
+        outcome::result<double> GetGNUSPrice();
 
         std::string GetName() override
         {

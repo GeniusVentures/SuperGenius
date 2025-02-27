@@ -56,6 +56,8 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, GeniusNode::Error, e )
             return "Json missing block params";
         case sgns::GeniusNode::Error::NO_PROCESSOR:
             return "Json missing processor";
+        case sgns::GeniusNode::Error::NO_PRICE:
+            return "Could not get a price";
     }
     return "Unknown error";
 }
@@ -550,7 +552,14 @@ namespace sgns
                 return 0;
             }
         }
-
+        // Get current GNUS price (USD per GNUS token)
+        auto maybe_gnusPrice = GetGNUSPrice(); // e.g., 3.65463 USD per GNUS
+        if(!maybe_gnusPrice)
+        {
+            return 0;
+        }
+        auto gnusPrice = maybe_gnusPrice.value();
+        
         // Using the assumption: 20 FLOPs per byte and each FLOP costs 5e-15 USD,
         // the cost per byte in USD is: 20 * 5e-15 = 1e-13 USD.
         // Converting this to a fixed-point constant with 9 decimals:
@@ -566,8 +575,6 @@ namespace sgns
         }
         uint64_t raw_cost = raw_cost_result.value();
 
-        // Get current GNUS price (USD per GNUS token)
-        double gnusPrice = GetGNUSPrice(); // e.g., 3.65463 USD per GNUS
         // Convert GNUS price to fixed-point representation with precision 9:
         uint64_t gnus_price_fixed = static_cast<uint64_t>(std::round(gnusPrice * 1e9));
 
@@ -585,9 +592,14 @@ namespace sgns
     }
 
 
-    double GeniusNode::GetGNUSPrice()
+    outcome::result<double> GeniusNode::GetGNUSPrice()
     {
-        return 3.65463;
+        auto price = GetCoinprice({"genius-ai"});
+        if(!price)
+        {
+            return outcome::failure( Error::NO_PRICE );
+        }
+        return price.value()["genius-ai"];
     }
 
     outcome::result<void> GeniusNode::MintTokens( uint64_t           amount,
