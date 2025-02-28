@@ -182,7 +182,7 @@ namespace sgns::crdt
             return outcome::failure( boost::system::error_code{} );
         }
 
-        auto bmsg = new sgns::crdt::broadcasting::BroadcastMessage;
+        sgns::crdt::broadcasting::BroadcastMessage bmsg;
 
         auto bpi = new sgns::crdt::broadcasting::BroadcastMessage_PeerInfo;
 
@@ -190,6 +190,7 @@ namespace sgns::crdt
         auto port_opt = dagSyncerMultiaddress_.getFirstValueForProtocol( libp2p::multi::Protocol::Code::TCP );
         if ( !port_opt )
         {
+            delete bpi;
             return outcome::failure( boost::system::error_code{} );
         }
         auto port = port_opt.value();
@@ -209,6 +210,7 @@ namespace sgns::crdt
         auto peer_info_res = dagSyncer_->GetPeerInfo();
         if ( !peer_info_res )
         {
+            delete bpi;
             m_logger->error( "Dag syncer has no peer info" );
             return outcome::failure( boost::system::error_code{} );
         }
@@ -248,13 +250,14 @@ namespace sgns::crdt
         //If no addresses existed, we don't have anything to broadcast that is not otherwise a local address.
         if ( bpi->addrs_size() <= 0 )
         {
+            delete bpi;
             return outcome::success();
         }
-        bmsg->set_allocated_peer( bpi );
+        bmsg.set_allocated_peer( bpi );
         //bmsg.set_multiaddress(std::string(multiaddress.begin(), multiaddress.end()));
         std::string data( buff.toString() );
-        bmsg->set_data( data );
-        gossipPubSubTopic_->Publish( bmsg->SerializeAsString() );
+        bmsg.set_data( data );
+        gossipPubSubTopic_->Publish( bmsg.SerializeAsString() );
         //std::vector<std::string> address_vector(bmsg.multiaddress().begin(), bmsg.multiaddress().end());
         m_logger->debug( "CIDs broadcasted by {}", peer_info.id.toBase58() );
 
