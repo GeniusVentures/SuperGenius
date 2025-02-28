@@ -26,9 +26,6 @@
 #include <boost/dll.hpp>
 #include <boost/algorithm/string/replace.hpp>
 
-const uint64_t OUTGOING_TIMEOUT_MILLISECONDS = 50000;    // just communication time
-const uint64_t INCOMING_TIMEOUT_MILLISECONDS = 150000;   // communication + verify proof
-
 class TransactionSyncTest : public ::testing::Test
 {
 protected:

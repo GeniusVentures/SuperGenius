@@ -30,6 +30,9 @@ typedef struct DevConfig
 
 extern DevConfig_st DEV_CONFIG;
 
+#define OUTGOING_TIMEOUT_MILLISECONDS 50000    // just communication time
+#define INCOMING_TIMEOUT_MILLISECONDS 150000   // communication + verify proof
+
 namespace sgns
 {
     class GeniusNode : public IComponent
