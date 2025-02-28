@@ -18,5 +18,6 @@ else()
     target_link_options(multi_account_test PUBLIC
         "-Wl,--whole-archive"
         "$<TARGET_FILE:sgns_account>"
+        "-Wl,--no-whole-archive"
     )
 endif()
