@@ -688,9 +688,8 @@ namespace sgns
             }
             if ( !task_queue_->CompleteTask( task_id, taskresult ) )
             {
-                std::cout << "Unable to complete task!" << std::endl;
+                node_logger->error( "Unable to complete task: {} ", task_id );
                 break;
-                //throw std::runtime_error( "Invalid results!" );
             }
             
 
