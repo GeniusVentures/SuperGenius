@@ -48,7 +48,7 @@ namespace sgns::processing
         if ( cidData_.find( subTask.subtaskid() ) == cidData_.end() )
         {
             auto buffers = GetCidForProc( subTask.json_data(), task.json_data() );
-            if ( buffers->first.size() <= 0 )
+            if ( buffers->first->size() <= 0 )
             {
                 return outcome::failure( Error::NO_BUFFER_FROM_JOB_DATA );
             }
@@ -59,15 +59,15 @@ namespace sgns::processing
             auto        tempresult = this->m_processor->StartProcessing( result,
                                                                   task,
                                                                   subTask,
-                                                                  buffers->second,
-                                                                  buffers->first );
+                                                                  *buffers->second,
+                                                                  *buffers->first );
             std::string hashString( tempresult.begin(), tempresult.end() );
             result.set_result_hash( hashString );
         }
         else
         {
             auto buffers = cidData_.at( subTask.subtaskid() );
-            if ( buffers->first.size() <= 0 )
+            if ( buffers->first->size() <= 0 )
             {
                 return outcome::failure( Error::NO_BUFFER_FROM_JOB_DATA );
             }
@@ -76,17 +76,16 @@ namespace sgns::processing
             auto        tempresult = this->m_processor->StartProcessing( result,
                                                                   task,
                                                                   subTask,
-                                                                  buffers->second,
-                                                                  buffers->first );
+                                                                  *buffers->second,
+                                                                  *buffers->first );
             std::string hashString( tempresult.begin(), tempresult.end() );
             result.set_result_hash( hashString );
         }
         return result;
     }
 
-    std::shared_ptr<std::pair<std::vector<char>, std::vector<char>>> ProcessingCoreImpl::GetCidForProc(
-        std::string json_data,
-        std::string base_json )
+    std::shared_ptr<std::pair<std::shared_ptr<std::vector<char>>, std::shared_ptr<std::vector<char>>>>
+    ProcessingCoreImpl::GetCidForProc( std::string json_data, std::string base_json )
     {
         //ASIO for Async, should probably be made to use the main IO but this class doesn't have it
         libp2p::protocol::kademlia::Config kademlia_config;
@@ -100,7 +99,10 @@ namespace sgns::processing
         boost::asio::io_context::executor_type                                   executor = ioc->get_executor();
         boost::asio::executor_work_guard<boost::asio::io_context::executor_type> workGuard( executor );
 
-        auto mainbuffers = std::make_shared<std::pair<std::vector<char>, std::vector<char>>>();
+        auto mainbuffers =
+            std::make_shared<std::pair<std::shared_ptr<std::vector<char>>, std::shared_ptr<std::vector<char>>>>(
+                std::make_shared<std::vector<char>>(),
+                std::make_shared<std::vector<char>>() );
 
         //Set processor or fail.
         if ( !this->SetProcessingTypeFromJson( base_json ) )
@@ -186,7 +188,7 @@ namespace sgns::processing
 
     void ProcessingCoreImpl::GetSubCidForProc( std::shared_ptr<boost::asio::io_context> ioc,
                                                std::string                              url,
-                                               std::vector<char>                       &results )
+                                               std::shared_ptr<std::vector<char>>       results )
     {
         //std::pair<std::vector<std::string>, std::vector<std::vector<char>>> results;
         auto modeldata = FileManager::GetInstance().LoadASync(
@@ -205,11 +207,11 @@ namespace sgns::processing
                     std::cout << "Error: " << status.error() << std::endl;
                 }
             },
-            [&results]( std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers )
+            [results]( std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers )
             {
                 //results->first.insert(results->first.end(), buffers->first.begin(), buffers->first.end());
                 //results->second.insert(results->second.end(), buffers->second.begin(), buffers->second.end());
-                results.insert( results.end(), buffers->second[0].begin(), buffers->second[0].end() );
+                results->insert( results->end(), buffers->second[0].begin(), buffers->second[0].end() );
             },
             "file" );
     }

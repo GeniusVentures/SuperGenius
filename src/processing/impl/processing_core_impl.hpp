@@ -90,13 +90,13 @@ namespace sgns::processing
         /** Get settings.json and then get data we need for processing based on parsing
         * @param CID - CID of directory to get settings.json from
         */
-        std::shared_ptr<std::pair<std::vector<char>, std::vector<char>>> GetCidForProc(std::string json_data, std::string base_json) override;
+        std::shared_ptr<std::pair<std::shared_ptr<std::vector<char>>, std::shared_ptr<std::vector<char>>>>  GetCidForProc(std::string json_data, std::string base_json) override;
         /** Get files from a set URL and insert them into pair reference 
         * @param ioc - IO context to run on
         * @param url - ipfs gateway url to get from
         * @param results - reference to data pair to insert into.
         */
-        void GetSubCidForProc(std::shared_ptr<boost::asio::io_context> ioc, std::string url, std::vector<char>& results) override;
+        void GetSubCidForProc(std::shared_ptr<boost::asio::io_context> ioc, std::string url, std::shared_ptr<std::vector<char>> results) override;
 
         std::vector<size_t> m_chunkResulHashes;
         std::vector<size_t> m_validationChunkHashes;
@@ -111,7 +111,7 @@ namespace sgns::processing
         std::mutex m_subTaskCountMutex;
         size_t m_processingSubTaskCount;
 
-        std::map<std::string, std::shared_ptr<std::pair<std::vector<char>, std::vector<char>>>> cidData_;
+        std::map<std::string, std::shared_ptr<std::pair<std::shared_ptr<std::vector<char>>, std::shared_ptr<std::vector<char>>>>> cidData_;
         
     };
 }

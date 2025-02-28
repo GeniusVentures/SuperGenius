@@ -87,12 +87,12 @@ namespace
         {
             return true; //TODO - This is wrong - Update this tests to the actual ProcessingCoreImpl on src/processing/impl
         }
-        std::shared_ptr<std::pair<std::vector<char>, std::vector<char>>> GetCidForProc(std::string json_data, std::string base_json) override
+        std::shared_ptr<std::pair<std::shared_ptr<std::vector<char>>, std::shared_ptr<std::vector<char>>>>  GetCidForProc(std::string json_data, std::string base_json) override
         {
             return nullptr;
         }
 
-        void GetSubCidForProc(std::shared_ptr<boost::asio::io_context> ioc,std::string url, std::vector<char>& results) override
+        void GetSubCidForProc(std::shared_ptr<boost::asio::io_context> ioc,std::string url,std::shared_ptr<std::vector<char>> resultss) override
         {
             return;
         }
