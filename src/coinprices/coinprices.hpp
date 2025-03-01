@@ -1,61 +1,53 @@
 #ifndef _COIN_PRICES_HPP_
 #define _COIN_PRICES_HPP_
-#include <boost/beast/core.hpp>
-#include <boost/beast/http.hpp>
-#include <boost/beast/ssl.hpp>
-#include <boost/beast/version.hpp>
-#include <boost/asio/connect.hpp>
-#include <boost/asio/ip/tcp.hpp>
-#include <boost/asio/ssl/stream.hpp>
-#include <rapidjson/document.h>
-#include <rapidjson/error/en.h>
-#include <rapidjson/stringbuffer.h>
-#include <rapidjson/writer.h>
 #include <iostream>
 #include <string>
-#include <memory>
 #include <vector>
 #include <map>
 #include <chrono>
 #include <thread>
-#include <mutex>
 #include <iomanip>
 #include <sstream>
+#include "boost/asio.hpp"
+#include "base/logger.hpp"
+#include <outcome/outcome.hpp>
 
-namespace beast = boost::beast;
-namespace http = beast::http;
-namespace net = boost::asio;
-namespace ssl = boost::asio::ssl;
-using tcp = net::ip::tcp;
 
 namespace sgns
 {
     class CoinGeckoPriceRetriever
     {
     public:
-        CoinGeckoPriceRetriever(const std::string& tokenId);
+        // Define error types for specific failures
+        enum class PriceError {
+            EmptyInput = 1,
+            NetworkError,
+            JsonParseError,
+            NoDataFound,
+            RateLimitExceeded,
+            DateTooOld
+        };
+        CoinGeckoPriceRetriever();
         
         // Helper method to format Unix timestamp to DD-MM-YYYY for CoinGecko API
         std::string formatDate(int64_t timestamp, bool includeTime = false);
 
-        // Get current price
-        double getCurrentPrice();
+        // Get current prices for the specified tokens
+        outcome::result<std::map<std::string, double>> getCurrentPrices(const std::vector<std::string>& tokenIds);
 
-        // Get historical prices for a list of timestamps
-        std::map<int64_t, double> getHistoricalPrices(const std::vector<int64_t>& timestamps);
+        // Get historical prices for the specified tokens at the given timestamps
+        outcome::result<std::map<std::string, std::map<int64_t, double>>> getHistoricalPrices(
+            const std::vector<std::string>& tokenIds,
+            const std::vector<int64_t>& timestamps);
 
-        // Get historical price range (daily prices within a date range)
-        std::map<int64_t, double> getHistoricalPriceRange(int64_t from, int64_t to);
-
-        std::string getTokenSymbol();
+        // Get historical price range for the specified tokens within the date range
+        outcome::result<std::map<std::string, std::map<int64_t, double>>> getHistoricalPriceRange(
+            const std::vector<std::string>& tokenIds,
+            int64_t from,
+            int64_t to);
 
     private:
-        std::string tokenId_;
-        
-        // Helper method to make HTTP requests
-        http::response<http::string_body> makeHttpRequest(
-            const std::string& host, const std::string& target);
-
+        base::Logger m_logger = sgns::base::createLogger( "CoinPrices" );
     };
 }
 

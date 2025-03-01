@@ -1,10 +1,75 @@
 #include "coinprices.hpp"
-
+#include <rapidjson/document.h>
+#include "FileManager.hpp"
+OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, CoinGeckoPriceRetriever::PriceError, e )
+{
+    switch ( e )
+    {
+        case sgns::CoinGeckoPriceRetriever::PriceError::EmptyInput:
+            return "Empty Input";
+        case sgns::CoinGeckoPriceRetriever::PriceError::NetworkError:
+            return "Network Error";
+        case sgns::CoinGeckoPriceRetriever::PriceError::JsonParseError:
+            return "Json Parse Error";
+        case sgns::CoinGeckoPriceRetriever::PriceError::NoDataFound:
+            return "No Data";
+        case sgns::CoinGeckoPriceRetriever::PriceError::RateLimitExceeded:
+            return "Rate limit exceeded";
+        case sgns::CoinGeckoPriceRetriever::PriceError::DateTooOld:
+            return "Date exceeds year limit";
+    }
+    return "Unknown error";
+}
 namespace sgns
 {
-    CoinGeckoPriceRetriever::CoinGeckoPriceRetriever(const std::string& tokenId) 
-        : tokenId_(tokenId)
+    CoinGeckoPriceRetriever::CoinGeckoPriceRetriever() 
     {
+    }
+    
+    std::string decodeChunkedTransfer(const std::string& chunkedData) {
+        std::string result;
+        std::istringstream iss(chunkedData);
+        std::string line;
+        
+        while (std::getline(iss, line)) {
+            // Trim carriage returns if present
+            if (!line.empty() && line.back() == '\r') {
+                line.pop_back();
+            }
+            
+            // Skip empty lines
+            if (line.empty()) {
+                continue;
+            }
+            
+            // Try to parse as a hex chunk length
+            std::istringstream hexStream(line);
+            unsigned int chunkSize;
+            if (hexStream >> std::hex >> chunkSize) {
+                // If chunk size is 0, we're done
+                if (chunkSize == 0) {
+                    break;
+                }
+                
+                // Read exactly chunkSize bytes
+                char* buffer = new char[chunkSize + 1];
+                iss.read(buffer, chunkSize);
+                buffer[chunkSize] = '\0';
+                
+                // Append to result
+                result.append(buffer, chunkSize);
+                delete[] buffer;
+                
+                // Skip the trailing CRLF after the chunk
+                iss.ignore(2);
+            }
+            else {
+                // Not a valid hex chunk size, maybe part of the actual data
+                result += line + "\n";
+            }
+        }
+        
+        return result;
     }
     
     // Helper method to format Unix timestamp to DD-MM-YYYY for CoinGecko API
@@ -44,269 +109,376 @@ namespace sgns
         return ss.str();
     }
 
-    // Get current price
-    double CoinGeckoPriceRetriever::getCurrentPrice()
+    // Get current price with boost::outcome
+    outcome::result<std::map<std::string, double>> CoinGeckoPriceRetriever::getCurrentPrices(
+        const std::vector<std::string>& tokenIds)
     {
+        std::map<std::string, double> prices;
+
+        if (tokenIds.empty()) {
+            return outcome::failure(PriceError::EmptyInput);
+        }
+
         try {
+            // Join the token IDs with commas for the API request
+            std::string tokenIdsList;
+            for (size_t i = 0; i < tokenIds.size(); i++) {
+                tokenIdsList += tokenIds[i];
+                if (i < tokenIds.size() - 1) {
+                    tokenIdsList += ",";
+                }
+            }
+            m_logger->debug("Token IDS: {}", tokenIdsList);
+            
             // Create HTTP request
-            http::response<http::string_body> res = makeHttpRequest(
-                "api.coingecko.com",
-                "/api/v3/simple/price?ids=" + tokenId_ + "&vs_currencies=usd");
+            auto ioc = std::make_shared<boost::asio::io_context>();
+            boost::asio::io_context::executor_type executor = ioc->get_executor();
+            boost::asio::executor_work_guard<boost::asio::io_context::executor_type> workGuard(executor);
+            std::string url = "https://api.coingecko.com/api/v3/simple/price?ids=" + tokenIdsList + "&vs_currencies=usd";
+            FileManager::GetInstance().InitializeSingletons();
+            std::string res;
+            bool requestSucceeded = true;
+
+            auto result = FileManager::GetInstance().LoadASync(
+                url,
+                false,
+                false,
+                ioc,
+                [&requestSucceeded](const sgns::AsyncError::CustomResult &status)
+                {
+                    if (status.has_value()) {
+                        std::cout << "Success: " << status.value().message << std::endl;
+                    } else {
+                        std::cout << "Error: " << status.error() << std::endl;
+                        requestSucceeded = false;
+                    }
+                },
+                [&res](std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers)
+                {
+                    if (!buffers->second.empty()) {
+                        res = std::string(buffers->second[0].begin(), buffers->second[0].end());
+                    }                    
+                },
+                "file");
+            
+            ioc->run();
+            
+            if (!requestSucceeded) {
+                return outcome::failure(PriceError::NetworkError);
+            }
+            
+            m_logger->debug("Res Is: {}", res);
+            std::string json_str = decodeChunkedTransfer(res);
 
             // Parse the JSON response
             rapidjson::Document document;
-            document.Parse(res.body().c_str());
+            document.Parse(json_str.c_str());
+            
+            if (document.HasParseError()) {
+                m_logger->error("JSON Parse Error: {}", document.GetParseError());
+                return outcome::failure(PriceError::JsonParseError);
+            }
 
-            // Extract the price
-            if (document.HasMember(tokenId_.c_str()) && 
-                document[tokenId_.c_str()].HasMember("usd")) {
-                return document[tokenId_.c_str()]["usd"].GetDouble();
+            // Check if the response contains an error message about rate limits
+            if (document.IsObject() && document.HasMember("status") && 
+                document["status"].IsObject() && document["status"].HasMember("error_code")) {
+                int error_code = document["status"]["error_code"].GetInt();
+                if (error_code == 429) {
+                    return outcome::failure(PriceError::RateLimitExceeded);
+                }
+            }
+
+            // Extract the prices for each token
+            bool foundAnyPrice = false;
+            for (const auto& tokenId : tokenIds) {
+                if (document.HasMember(tokenId.c_str()) &&
+                    document[tokenId.c_str()].HasMember("usd")) {
+                    prices[tokenId] = document[tokenId.c_str()]["usd"].GetDouble();
+                    foundAnyPrice = true;
+                }
+            }
+            
+            if (!foundAnyPrice) {
+                return outcome::failure(PriceError::NoDataFound);
             }
         }
         catch (const std::exception& e) {
-            std::cerr << "Error getting current price: " << e.what() << std::endl;
+            m_logger->error("Error getting current prices: {}", e.what());
+            return outcome::failure(PriceError::NetworkError);
         }
 
-        return 0.0;
+        return outcome::success(prices);
     }
 
-    // Get historical prices for a list of timestamps
-    std::map<int64_t, double> CoinGeckoPriceRetriever::getHistoricalPrices(const std::vector<int64_t>& timestamps)
+
+    // Get historical prices for a list of timestamps with boost::outcome
+    outcome::result<std::map<std::string, std::map<int64_t, double>>> CoinGeckoPriceRetriever::getHistoricalPrices(
+        const std::vector<std::string>& tokenIds,
+        const std::vector<int64_t>& timestamps)
     {
-        std::map<int64_t, double> prices;
-        
+        std::map<std::string, std::map<int64_t, double>> allPrices;
+
+        if (tokenIds.empty() || timestamps.empty()) {
+            return outcome::failure(PriceError::EmptyInput);
+        }
+
         try {
             // Get current timestamp for 365-day limit checking
             time_t now = std::time(nullptr);
             time_t oneYearAgo = now - (365 * 24 * 60 * 60);
+
+            bool allTooOld = true;
             
-            std::cout << "Current date: " << formatDate(now * 1000) << std::endl;
-            std::cout << "One year ago: " << formatDate(oneYearAgo * 1000) << std::endl;
-            
-            // CoinGecko provides historical data in the format: /coins/{id}/history?date={date}
-            // where date is DD-MM-YYYY
+            // Process each timestamp for all tokens
             for (int64_t timestamp : timestamps) {
                 // Convert to seconds if in milliseconds
                 time_t timestampSec = (timestamp > 9999999999) ? timestamp / 1000 : timestamp;
-                
+
                 // Skip timestamps older than 1 year due to CoinGecko restrictions
                 if (timestampSec < oneYearAgo) {
-                    std::cout << "Skipping " << formatDate(timestamp) 
-                                << " - Beyond 365-day limit for CoinGecko free tier" << std::endl;
+                    m_logger->error("Skipping {}", formatDate(timestamp));
                     continue;
                 }
                 
+                allTooOld = false;
                 std::string formattedDate = formatDate(timestamp);
-                
-                // Create HTTP request for this specific date
-                http::response<http::string_body> res = makeHttpRequest(
-                    "api.coingecko.com",
-                    "/api/v3/coins/" + tokenId_ + "/history?date=" + formattedDate);
 
-                // Parse the JSON response
-                rapidjson::Document document;
-                document.Parse(res.body().c_str());
+                // Process each token for this timestamp
+                for (const auto& tokenId : tokenIds) {
+                    // Create HTTP request
+                    auto ioc = std::make_shared<boost::asio::io_context>();
+                    boost::asio::io_context::executor_type executor = ioc->get_executor();
+                    boost::asio::executor_work_guard<boost::asio::io_context::executor_type> workGuard(executor);
+                    std::string url = "https://api.coingecko.com/api/v3/coins/" + tokenId + "/history?date=" + formattedDate;
+                    FileManager::GetInstance().InitializeSingletons();
+                    std::string res;
+                    bool requestSucceeded = true;
+                    
+                    auto result = FileManager::GetInstance().LoadASync(
+                        url,
+                        false,
+                        false,
+                        ioc,
+                        [&requestSucceeded](const sgns::AsyncError::CustomResult &status)
+                        {
+                            if (status.has_value()) {
+                                std::cout << "Success: " << status.value().message << std::endl;
+                            } else {
+                                std::cout << "Error: " << status.error() << std::endl;
+                                requestSucceeded = false;
+                            }
+                        },
+                        [&res](std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers)
+                        {
+                            if (!buffers->second.empty()) {
+                                res = std::string(buffers->second[0].begin(), buffers->second[0].end());
+                            }                    
+                        },
+                        "file");
+                        
+                    ioc->run();
+                    
+                    if (!requestSucceeded) {
+                        continue; // Try the next token instead of failing completely
+                    }
+                    
+                    m_logger->debug("Res Is: {}", res);
+                    std::string json_str = decodeChunkedTransfer(res);
+                    
+                    // Parse the JSON response
+                    rapidjson::Document document;
+                    document.Parse(json_str.c_str());
+                    
+                    if (document.HasParseError()) {
+                        m_logger->error("JSON Parse Error: {}", document.GetParseError());
+                        continue; // Try the next token
+                    }
+                    
+                    // Check if the response contains an error message about rate limits
+                    if (document.IsObject() && document.HasMember("status") && 
+                        document["status"].IsObject() && document["status"].HasMember("error_code")) {
+                        int error_code = document["status"]["error_code"].GetInt();
+                        if (error_code == 429) {
+                            return outcome::failure(PriceError::RateLimitExceeded);
+                        }
+                    }
 
-                // Extract the price
-                if (document.HasMember("market_data") && 
-                    document["market_data"].HasMember("current_price") &&
-                    document["market_data"]["current_price"].HasMember("usd")) {
+                    // Extract the price
+                    if (document.HasMember("market_data") &&
+                        document["market_data"].HasMember("current_price") &&
+                        document["market_data"]["current_price"].HasMember("usd")) {
+
+                        double price = document["market_data"]["current_price"]["usd"].GetDouble();
+                        allPrices[tokenId][timestamp] = price;
+                    }
+                    else {
+                        m_logger->error("No price data found for {} on {}", tokenId, formattedDate);
+                    }
                     
-                    double price = document["market_data"]["current_price"]["usd"].GetDouble();
-                    prices[timestamp] = price;
-                    
-                    std::cout << "Historical price for " << formattedDate << ": $" << price << std::endl;
-                } else {
-                    std::cerr << "No price data found for " << formattedDate << std::endl;
+                    // Respect rate limits between tokens
+                    if (&tokenId != &tokenIds.back()) {
+                        std::this_thread::sleep_for(std::chrono::milliseconds(1100));
+                    }
                 }
-                
-                // Respect rate limits - sleep between requests
-                std::this_thread::sleep_for(std::chrono::milliseconds(1100));
+            }
+            
+            if (allTooOld) {
+                return outcome::failure(PriceError::DateTooOld);
+            }
+            
+            if (allPrices.empty()) {
+                return outcome::failure(PriceError::NoDataFound);
             }
         }
         catch (const std::exception& e) {
-            std::cerr << "Error getting historical prices: " << e.what() << std::endl;
+            m_logger->error("Error getting historical prices: {}", e.what());
+            return outcome::failure(PriceError::NetworkError);
         }
 
-        return prices;
+        return outcome::success(allPrices);
     }
 
-    // Get historical price range (daily prices within a date range)
-    std::map<int64_t, double> CoinGeckoPriceRetriever::getHistoricalPriceRange(int64_t from, int64_t to)
+    // Get historical price range with boost::outcome
+    outcome::result<std::map<std::string, std::map<int64_t, double>>> CoinGeckoPriceRetriever::getHistoricalPriceRange(
+        const std::vector<std::string>& tokenIds,
+        int64_t from,
+        int64_t to)
     {
-        std::map<int64_t, double> prices;
-        
+        std::map<std::string, std::map<int64_t, double>> allPrices;
+
+        if (tokenIds.empty()) {
+            return outcome::failure(PriceError::EmptyInput);
+        }
+
         try {
             // Make sure we don't exceed the 365-day limit for free tier
             time_t now = std::time(nullptr);
             time_t oneYearAgo = now - (365 * 24 * 60 * 60);
-            
+
             // Convert from milliseconds to seconds if needed
             time_t fromSec = (from > 9999999999) ? from / 1000 : from;
-            
+
+            bool dateTooOld = false;
             if (fromSec < oneYearAgo) {
-                std::cout << "Limiting historical request to past 365 days due to CoinGecko free tier restrictions" << std::endl;
-                std::cout << "Adjusted from " << formatDate(from) << " to " << formatDate(oneYearAgo * 1000) << std::endl;
                 fromSec = oneYearAgo;
+                dateTooOld = true;
             }
-            
+
             // Convert timestamps to Unix timestamps in seconds
             int fromUnix = static_cast<int>(fromSec);
             int toUnix = static_cast<int>((to > 9999999999) ? to / 1000 : to);
-            
+
             // Make sure from is before to (could happen with timestamp conversion issues)
             if (fromUnix >= toUnix) {
-                std::cerr << "Error: 'from' date must be before 'to' date" << std::endl;
-                std::cerr << "From: " << formatDate(from) << " (" << fromUnix << ")" << std::endl;
-                std::cerr << "To: " << formatDate(to) << " (" << toUnix << ")" << std::endl;
-                return prices;
+                m_logger->error("Error: 'from' date must be before 'to' date");
+                return outcome::failure(PriceError::EmptyInput); // Using EmptyInput for invalid date range
             }
-            
-            std::string endpoint = "/api/v3/coins/" + tokenId_ + 
-                                    "/market_chart/range?vs_currency=usd&from=" + 
-                                    std::to_string(fromUnix) + "&to=" + std::to_string(toUnix);
-            
-            std::cout << "CoinGecko request: " << endpoint << std::endl;
-            
-            // Create HTTP request for the range
-            http::response<http::string_body> res = makeHttpRequest(
-                "api.coingecko.com", endpoint);
 
-            // Parse the JSON response
-            rapidjson::Document document;
-            document.Parse(res.body().c_str());
+            // Process each token
+            for (const auto& tokenId : tokenIds) {
+                m_logger->debug("CoinGecko request for {}", tokenId);
 
-            // Extract the prices array
-            if (document.HasMember("prices") && document["prices"].IsArray()) {
-                const auto& pricesArray = document["prices"];
+                // Create HTTP request
+                auto ioc = std::make_shared<boost::asio::io_context>();
+                boost::asio::io_context::executor_type executor = ioc->get_executor();
+                boost::asio::executor_work_guard<boost::asio::io_context::executor_type> workGuard(executor);
+                std::string url = "https://api.coingecko.com/api/v3/coins/" + tokenId + "/market_chart/range?vs_currency=usd&from=" + std::to_string(fromUnix) + "&to=" + std::to_string(toUnix);
+                FileManager::GetInstance().InitializeSingletons();
+                std::string res;
+                bool requestSucceeded = true;
                 
-                for (rapidjson::SizeType i = 0; i < pricesArray.Size(); i++) {
-                    if (pricesArray[i].IsArray() && pricesArray[i].Size() >= 2) {
-                        int64_t timestamp = static_cast<int64_t>(pricesArray[i][0].GetDouble());
-                        double price = pricesArray[i][1].GetDouble();
-                        prices[timestamp] = price;
-                    }
+                auto result = FileManager::GetInstance().LoadASync(
+                    url,
+                    false,
+                    false,
+                    ioc,
+                    [&requestSucceeded](const sgns::AsyncError::CustomResult &status)
+                    {
+                        if (status.has_value()) {
+                            std::cout << "Success: " << status.value().message << std::endl;
+                        } else {
+                            std::cout << "Error: " << status.error() << std::endl;
+                            requestSucceeded = false;
+                        }
+                    },
+                    [&res](std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers)
+                    {
+                        if (!buffers->second.empty()) {
+                            res = std::string(buffers->second[0].begin(), buffers->second[0].end());
+                        }                    
+                    },
+                    "file");
+                    
+                ioc->run();
+                
+                if (!requestSucceeded) {
+                    continue; // Try the next token instead of failing completely
                 }
                 
-                std::cout << "Retrieved " << prices.size() << " historical price points" << std::endl;
-            } else {
-                std::cerr << "No price data found for the specified range" << std::endl;
+                m_logger->debug("Res Is: {}", res);
+                std::string json_str = decodeChunkedTransfer(res);
+                
+                // Parse the JSON response
+                rapidjson::Document document;
+                document.Parse(json_str.c_str());
+                
+                if (document.HasParseError()) {
+                    m_logger->error("JSON Parse Error: {}", document.GetParseError());
+                    continue; // Try the next token
+                }
+                
+                if (!document.IsObject()) {
+                    m_logger->error("JSON is not an object!");
+                    continue; // Try the next token
+                }
+                
+                // Check if the response contains an error message about rate limits
+                if (document.HasMember("status") && 
+                    document["status"].IsObject() && document["status"].HasMember("error_code")) {
+                    int error_code = document["status"]["error_code"].GetInt();
+                    if (error_code == 429) {
+                        return outcome::failure(PriceError::RateLimitExceeded);
+                    }
+                }
+            
+                // Extract the prices array
+                if (document.HasMember("prices") && document["prices"].IsArray()) {
+                    const auto& pricesArray = document["prices"];
+
+                    for (rapidjson::SizeType i = 0; i < pricesArray.Size(); i++) {
+                        if (pricesArray[i].IsArray() && pricesArray[i].Size() >= 2) {
+                            int64_t timestamp = static_cast<int64_t>(pricesArray[i][0].GetDouble());
+                            double price = pricesArray[i][1].GetDouble();
+                            allPrices[tokenId][timestamp] = price;
+                        }
+                    }
+                }
+                else {
+                    m_logger->error("No price data found for {} in the specified range", tokenId);
+                }
+
+                // Respect rate limits between tokens
+                if (&tokenId != &tokenIds.back()) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1100));
+                }
+            }
+            
+            if (allPrices.empty()) {
+                return outcome::failure(PriceError::NoDataFound);
+            }
+            
+            // If date was too old and we adjusted it, we should indicate this to the caller
+            if (dateTooOld) {
+                // We still return the data, but with a warning via the PriceError
+                // Ideally this would be implemented as a custom "success with info" type in outcome
+                m_logger->warn("Some dates were too old and were adjusted to one year ago limit");
             }
         }
         catch (const std::exception& e) {
-            std::cerr << "Error getting historical price range: " << e.what() << std::endl;
+            m_logger->error("Error getting historical price range: {}", e.what());
+            return outcome::failure(PriceError::NetworkError);
         }
 
-        return prices;
+        return outcome::success(allPrices);
     }
-
-    std::string CoinGeckoPriceRetriever::getTokenSymbol()
-    {
-        try {
-            // Create HTTP request
-            http::response<http::string_body> res = makeHttpRequest(
-                "api.coingecko.com",
-                "/api/v3/coins/" + tokenId_);
-
-            // Parse the JSON response
-            rapidjson::Document document;
-            document.Parse(res.body().c_str());
-
-            // Extract the symbol
-            if (document.HasMember("symbol")) {
-                return document["symbol"].GetString();
-            }
-        }
-        catch (const std::exception& e) {
-            std::cerr << "Error getting token symbol: " << e.what() << std::endl;
-        }
-
-        return tokenId_;
-    }
-    
-    // Helper method to make HTTP requests
-    http::response<http::string_body> CoinGeckoPriceRetriever::makeHttpRequest(
-        const std::string& host, const std::string& target)
-    {
-        try {
-            // Set up the SSL context
-            ssl::context ctx(ssl::context::tlsv12_client);
-            ctx.set_default_verify_paths();
-
-            // Set up the IO context and resolver
-            net::io_context ioc;
-            tcp::resolver resolver(ioc);
-            
-            // Resolve the host
-            auto const results = resolver.resolve(host, "443");
-
-            // Set up the SSL stream
-            beast::ssl_stream<beast::tcp_stream> stream(ioc, ctx);
-            
-            // Set SNI Hostname
-            if(!SSL_set_tlsext_host_name(stream.native_handle(), host.c_str()))
-            {
-                beast::error_code ec{static_cast<int>(::ERR_get_error()), 
-                                    net::error::get_ssl_category()};
-                throw beast::system_error{ec};
-            }
-
-            // Set a timeout on the operation
-            beast::get_lowest_layer(stream).expires_after(std::chrono::seconds(30));
-
-            // Connect to the host
-            beast::get_lowest_layer(stream).connect(results);
-            
-            // Set a timeout on the operation
-            beast::get_lowest_layer(stream).expires_after(std::chrono::seconds(30));
-            
-            // Perform the SSL handshake
-            stream.handshake(ssl::stream_base::client);
-
-            // Set up the HTTP request
-            http::request<http::string_body> req{http::verb::get, target, 11};
-            req.set(http::field::host, host);
-            req.set(http::field::user_agent, BOOST_BEAST_VERSION_STRING);
-
-            // Set a timeout on the operation
-            beast::get_lowest_layer(stream).expires_after(std::chrono::seconds(30));
-            
-            // Send the HTTP request
-            http::write(stream, req);
-
-            // Receive the HTTP response
-            beast::flat_buffer buffer;
-            http::response<http::string_body> res;
-            
-            // Set a timeout on the operation
-            beast::get_lowest_layer(stream).expires_after(std::chrono::seconds(30));
-            
-            http::read(stream, buffer, res);
-
-            // Check response status
-            if (res.result_int() != 200) {
-                std::cerr << "HTTP error: " << res.result_int() << " " 
-                        << res.reason() << std::endl;
-                std::cerr << "Target: " << target << std::endl;
-                std::cerr << "Response body: " << res.body() << std::endl;
-                throw std::runtime_error("HTTP request failed with status " + 
-                                        std::to_string(res.result_int()));
-            }
-
-            // Gracefully close the socket - important to avoid "stream truncated" errors
-            beast::error_code ec;
-            beast::get_lowest_layer(stream).socket().shutdown(tcp::socket::shutdown_both, ec);
-            
-            return res;
-        }
-        catch (const beast::error_code& ec) {
-            std::cerr << "Beast error: " << ec.message() << std::endl;
-            throw;
-        }
-        catch (const std::exception& e) {
-            std::cerr << "Exception in makeHttpRequest: " << e.what() << std::endl;
-            throw;
-        }
-    }
-
 }

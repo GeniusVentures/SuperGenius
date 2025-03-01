@@ -29,6 +29,7 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 
+
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, GeniusNode::Error, e )
 {
     switch ( e )
@@ -55,6 +56,8 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, GeniusNode::Error, e )
             return "Json missing block params";
         case sgns::GeniusNode::Error::NO_PROCESSOR:
             return "Json missing processor";
+        case sgns::GeniusNode::Error::NO_PRICE:
+            return "Could not get a price";
     }
     return "Unknown error";
 }
@@ -76,6 +79,7 @@ namespace sgns
         autodht_( autodht ),
         isprocessor_( isprocessor ),
         dev_config_( dev_config )
+        //coinprices_(std::make_shared<CoinGeckoPriceRetriever>(io_))
     {
         SSL_library_init();
         SSL_load_error_strings();
@@ -558,7 +562,14 @@ namespace sgns
                 return 0;
             }
         }
-
+        // Get current GNUS price (USD per GNUS token)
+        auto maybe_gnusPrice = GetGNUSPrice(); // e.g., 3.65463 USD per GNUS
+        if(!maybe_gnusPrice)
+        {
+            return 0;
+        }
+        auto gnusPrice = maybe_gnusPrice.value();
+        
         // Using the assumption: 20 FLOPs per byte and each FLOP costs 5e-15 USD,
         // the cost per byte in USD is: 20 * 5e-15 = 1e-13 USD.
         // Converting this to a fixed-point constant with 9 decimals:
@@ -574,8 +585,6 @@ namespace sgns
         }
         uint64_t raw_cost = raw_cost_result.value();
 
-        // Get current GNUS price (USD per GNUS token)
-        double gnusPrice = GetGNUSPrice(); // e.g., 3.65463 USD per GNUS
         // Convert GNUS price to fixed-point representation with precision 9:
         uint64_t gnus_price_fixed = static_cast<uint64_t>( std::round( gnusPrice * 1e9 ) );
 
@@ -592,9 +601,14 @@ namespace sgns
         return std::max( costMinions, static_cast<uint64_t>( 1 ) );
     }
 
-    double GeniusNode::GetGNUSPrice()
+    outcome::result<double> GeniusNode::GetGNUSPrice()
     {
-        return 3.65463;
+        auto price = GetCoinprice({"genius-ai"});
+        if(!price)
+        {
+            return outcome::failure( Error::NO_PRICE );
+        }
+        return price.value()["genius-ai"];
     }
 
     outcome::result<std::pair<std::string, uint64_t>> GeniusNode::MintTokens( uint64_t           amount,
@@ -703,6 +717,30 @@ namespace sgns
         processing_service_->StartProcessing( std::string( PROCESSING_GRID_CHANNEL ) );
     }
 
+    outcome::result<std::map<std::string, double>> GeniusNode::GetCoinprice(const std::vector<std::string>& tokenIds)
+    {
+        sgns::CoinGeckoPriceRetriever retriever;
+        auto prices = retriever.getCurrentPrices(tokenIds);
+        return prices;
+    }
+
+    outcome::result<std::map<std::string, std::map<int64_t, double>>> GeniusNode::GetCoinPriceByDate(
+        const std::vector<std::string>& tokenIds,
+        const std::vector<int64_t>& timestamps)
+    {
+        sgns::CoinGeckoPriceRetriever retriever;
+        return retriever.getHistoricalPrices(tokenIds, timestamps);
+    }
+
+    outcome::result<std::map<std::string, std::map<int64_t, double>>> GeniusNode::GetCoinPricesByDateRange(
+        const std::vector<std::string>& tokenIds,
+        int64_t from,
+        int64_t to)
+    {
+        sgns::CoinGeckoPriceRetriever retriever;
+        return retriever.getHistoricalPriceRange(tokenIds, from, to);
+    }
+    
     std::string GeniusNode::FormatTokens( uint64_t amount )
     {
         return sgns::fixed_point::toString( amount );

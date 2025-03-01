@@ -56,6 +56,7 @@ target_link_libraries(sgns_account
     TrezorCrypto
     protobuf::libprotobuf
     rapidjson
+    coinprices
     ${WIN_CRYPT_LIBRARY}
 )
 

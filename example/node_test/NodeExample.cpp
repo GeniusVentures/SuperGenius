@@ -144,6 +144,27 @@ void MintTokens( const std::vector<std::string> &args, sgns::GeniusNode &genius_
     genius_node.MintTokens( std::stoull( args[1] ), "", "", "" );
 }
 
+void GetCoinPrice(const std::vector<std::string>& args, sgns::GeniusNode& genius_node)
+{
+    if (args.size() < 2)  // Check if there's at least one token ID (args[0] is "price")
+    {
+        std::cerr << "Invalid price command format. Usage: price <token_id1> [token_id2] [token_id3] ...\n";
+        return;
+    }
+
+    // Create a vector of token IDs (skipping args[0] which is "price")
+    std::vector<std::string> tokenIds(args.begin() + 1, args.end());
+
+    // Call the GetCoinprice function with the token IDs
+    auto prices = genius_node.GetCoinprice(tokenIds);
+
+    // Display the results
+    for (const auto& [token, price] : prices.value())
+    {
+        std::cout << token << ": $" << std::fixed << std::setprecision(4) << price << std::endl;
+    }
+}
+
 void CreateProcessingTransaction( const std::vector<std::string> &args, sgns::GeniusNode &genius_node )
 {
     if ( args.size() != 4 )
@@ -290,6 +311,9 @@ void process_events( sgns::GeniusNode &genius_node )
             }
             else if (arguments[0] == "ds") {
                 PrintDataStore(arguments, genius_node);
+            }
+            else if (arguments[0] == "price") {
+                GetCoinPrice(arguments, genius_node);
             }
             else if (arguments[0] == "peer") {
                 if (arguments.size() > 1) {

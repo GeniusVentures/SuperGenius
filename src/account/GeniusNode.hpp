@@ -1,7 +1,7 @@
 #ifndef _GENIUS_NODE_HPP_
 #define _GENIUS_NODE_HPP_
 #include <memory>
-
+#include <cstdint>
 #include <boost/asio.hpp>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <libp2p/log/logger.hpp>
@@ -18,6 +18,7 @@
 #include "processing/processing_service.hpp"
 #include "singleton/IComponent.hpp"
 #include "processing/impl/processing_task_queue_impl.hpp"
+#include "coinprices/coinprices.hpp"
 
 typedef struct DevConfig
 {
@@ -51,17 +52,18 @@ namespace sgns
          */
         enum class Error
         {
-            INSUFFICIENT_FUNDS       = 1,  ///<Insufficient funds for a transaction
-            DATABASE_WRITE_ERROR     = 2,  ///<Error writing data into the database
-            INVALID_TRANSACTION_HASH = 3,  ///<Input transaction hash is invalid
-            INVALID_CHAIN_ID         = 4,  ///<Chain ID is invalid
-            INVALID_TOKEN_ID         = 5,  ///<Token ID is invalid
-            TOKEN_ID_MISMATCH        = 6,  ///<Informed Token ID doesn't match initialized ID
-            PROCESS_COST_ERROR       = 7,  ///<The calculated Processing cost was negative
-            PROCESS_INFO_MISSING     = 8,  ///<Processing information missing on JSON file
-            INVALID_JSON             = 9,  ///<JSON cannot be parsed>
-            INVALID_BLOCK_PARAMETERS = 10, ///<JSON params for blocks incorrect or missing>
-            NO_PROCESSOR             = 11, ///<No processor for this type>
+            INSUFFICIENT_FUNDS       = 1, ///<Insufficient funds for a transaction
+            DATABASE_WRITE_ERROR     = 2, ///<Error writing data into the database
+            INVALID_TRANSACTION_HASH = 3, ///<Input transaction hash is invalid
+            INVALID_CHAIN_ID         = 4, ///<Chain ID is invalid
+            INVALID_TOKEN_ID         = 5, ///<Token ID is invalid
+            TOKEN_ID_MISMATCH        = 6, ///<Informed Token ID doesn't match initialized ID
+            PROCESS_COST_ERROR       = 7, ///<The calculated Processing cost was negative
+            PROCESS_INFO_MISSING     = 8, ///<Processing information missing on JSON file
+            INVALID_JSON             = 9, ///<JSON cannot be parsed>
+            INVALID_BLOCK_PARAMETERS =10, ///<JSON params for blocks incorrect or missing>
+            NO_PROCESSOR             =11, ///<No processor for this type>
+            NO_PRICE                 =12, ///<Couldn't get price of gnus>
         };
 
         outcome::result<void> ProcessImage( const std::string &jsondata );
@@ -69,7 +71,7 @@ namespace sgns
 
         uint64_t GetProcessCost( const std::string &json_data );
 
-        double GetGNUSPrice();
+        outcome::result<double> GetGNUSPrice();
 
         std::string GetName() override
         {
@@ -137,6 +139,14 @@ namespace sgns
         void StopProcessing();
         void StartProcessing();
 
+        outcome::result<std::map<std::string, double>> GetCoinprice(const std::vector<std::string>& tokenIds);
+        outcome::result<std::map<std::string, std::map<int64_t, double>>> GetCoinPriceByDate(
+            const std::vector<std::string>& tokenIds,
+            const std::vector<int64_t>& timestamps);
+        outcome::result<std::map<std::string, std::map<int64_t, double>>> GetCoinPricesByDateRange(
+            const std::vector<std::string>& tokenIds,
+            int64_t from,
+            int64_t to);
         // Wait for an incoming transaction to be processed with a timeout
         bool WaitForTransactionIncoming( const std::string &txId, std::chrono::milliseconds timeout );
         // Wait for a outgoing transaction to be processed with a timeout
