@@ -18,7 +18,10 @@ namespace sgns::storage
 
     rocksdb::~rocksdb()
     {
-        db_->Close();
+        if (db_)
+        {
+            db_->Close();
+        }
     }
 
     outcome::result<std::shared_ptr<rocksdb>> rocksdb::create(std::string_view path, const Options& options)
