@@ -21,6 +21,9 @@
 #include "UTXOTxParameters.hpp"
 #include "account/proto/SGTransaction.pb.h"
 #include "base/fixed_point.hpp"
+#include "crdt/crdt_options.hpp"
+#include "crdt/globaldb/globaldb.hpp"
+#include "crdt/hierarchical_key.hpp"
 
 #include <nil/crypto3/pubkey/algorithm/sign.hpp>
 #include <nil/crypto3/pubkey/algorithm/verify.hpp>
@@ -218,16 +221,18 @@ namespace sgns
     outcome::result<void> TransactionManager::PayEscrow( const std::string              &escrow_path,
                                                          const SGProcessing::TaskResult &taskresult )
     {
-        if ( taskresult.subtask_results().size() == 0 )
+        if ( taskresult.subtask_results().empty() )
         {
             m_logger->debug( "No result found on escrow " + escrow_path );
             return outcome::failure( boost::system::error_code{} );
         }
+
         if ( escrow_path.empty() )
         {
             m_logger->debug( "Escrow path empty " );
             return outcome::failure( boost::system::error_code{} );
         }
+
         m_logger->debug( "Fetching escrow from processing DB at " + escrow_path );
         OUTCOME_TRY( ( auto &&, transaction ), FetchTransaction( processing_db_m, escrow_path ) );
 
@@ -271,7 +276,47 @@ namespace sgns
 
         this->EnqueueTransaction( std::make_pair( transfer_transaction, maybe_proof ) );
 
-        return outcome::success();
+        auto &source_address = escrow_tx->dag_st.source_addr();
+
+        m_logger->debug( "Sending notification to " + source_address );
+
+        std::shared_ptr<crdt::GlobalDB> destination_db;
+        auto                            destination_db_it = destination_dbs_m.find( source_address );
+
+        if ( destination_db_it == destination_dbs_m.end() )
+        {
+            m_logger->debug( "Port to sync " + std::to_string( base_port_m ) );
+            destination_db = std::make_shared<crdt::GlobalDB>(
+                ctx_m,
+                ( boost::format( base_path_m + "_in/" + source_address ) ).str(),
+                base_port_m,
+                std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_m, source_address + "in" ) );
+
+            if ( !destination_db->Init( crdt::CrdtOptions::DefaultOptions() ).has_value() )
+            {
+                throw std::runtime_error( "Could not start source GlobalDB" );
+            }
+
+            destination_dbs_m[source_address] = destination_db;
+            used_ports_m.insert( base_port_m );
+            base_port_m++;
+            RefreshPorts();
+        }
+        else
+        {
+            destination_db = destination_db_it->second;
+        }
+
+        auto                   crdt_transaction = destination_db->BeginTransaction();
+        crdt::GlobalDB::Buffer data_transaction;
+        crdt::HierarchicalKey  tx_key( GetNotificationPath( source_address ) + "tx/" + escrow_tx->dag_st.data_hash() );
+        data_transaction.put( escrow_tx->SerializeByteVector() );
+
+        m_logger->debug( "Putting replicate transaction in {}", tx_key.GetKey() );
+
+        BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Put( tx_key, data_transaction ) );
+
+        return crdt_transaction->Commit();
     }
 
     uint64_t TransactionManager::GetBalance()

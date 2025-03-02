@@ -66,7 +66,7 @@ namespace sgns
             NO_PRICE                 =12, ///<Couldn't get price of gnus>
         };
 
-        outcome::result<void> ProcessImage( const std::string &jsondata );
+        outcome::result<std::string> ProcessImage( const std::string &jsondata );
         outcome::result<void> CheckProcessValidity( const std::string &jsondata );
 
         uint64_t GetProcessCost( const std::string &json_data );

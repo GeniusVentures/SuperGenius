@@ -379,7 +379,7 @@ namespace sgns
         return boost::uuids::to_string( uuid );
     }
 
-    outcome::result<void> GeniusNode::ProcessImage( const std::string &jsondata )
+    outcome::result<std::string> GeniusNode::ProcessImage( const std::string &jsondata )
     {
         BOOST_OUTCOME_TRYV2( auto &&, CheckProcessValidity( jsondata ) );
 
@@ -457,7 +457,8 @@ namespace sgns
             task_queue_->ResetAtomicTransaction();
             return outcome::failure( Error::DATABASE_WRITE_ERROR );
         }
-        return send_escrow_return;
+
+        return tx_id;
     }
 
     outcome::result<void> GeniusNode::CheckProcessValidity( const std::string &jsondata )

@@ -281,14 +281,18 @@ TEST_F( ProcessingNodesTest, PostProcessing )
     auto balance_node1 = node_proc1->GetBalance();
     auto balance_node2 = node_proc2->GetBalance();
     auto postjob = node_main->ProcessImage( json_data );
-    if (!postjob)
+    if (!postjob.has_value())
     {
-        std::cout << "post job error: " << postjob.error().message() << std::endl;
+        std::cerr << "post job error: " << postjob.error().message() << std::endl;
     }
+    else
+    {
+        node_main->WaitForTransactionIncoming(postjob.value(), std::chrono::seconds(100));
+    }
+
     std::cout << "Here4" << std::endl;
     //node_main->ProcessImage(json_data);
 
-    std::this_thread::sleep_for( std::chrono::milliseconds( 40000 ) );
     std::cout << "Balance main (Before):  " << balance_main << std::endl;
     std::cout << "Balance node1 (Before): " << balance_node1 << std::endl;
     std::cout << "Balance node2 (Before): " << balance_node2 << std::endl;
