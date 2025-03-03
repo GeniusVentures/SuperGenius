@@ -28,38 +28,52 @@ namespace sgns::crdt
   class CrdtDatastoreTest : public ::testing::Test
   {
   public:
+    // Remove leftover database if any
+    const std::string databasePath = "supergenius_crdt_datastore_test";
+
+    CrdtDatastoreTest()
+    {
+        fs::remove_all(databasePath);
+    }
+
     void SetUp() override
     {
-      // Remove leftover database 
-      std::string databasePath = "supergenius_crdt_datastore_test";
-      fs::remove_all(databasePath);
 
-      // Create new database
-      rocksdb::Options options;
-      options.create_if_missing = true;  // intentionally
-      auto dataStoreResult = rocksdb::create(databasePath, options);
-      auto dataStore = dataStoreResult.value();
+        // Create new database
+        rocksdb::Options options;
+        options.create_if_missing = true;  // intentionally
+        auto result = rocksdb::create(databasePath, options);
+        if ( !result )
+        {
+            throw std::invalid_argument( result.error().message() );
+        }
+        db_  = std::move( result.value() );
 
-      // Create new DAGSyncer
-      auto ipfsDataStore = std::make_shared<InMemoryDatastore>();
-      auto dagSyncer = std::make_shared<CustomDagSyncer>(ipfsDataStore);
+        // Create new DAGSyncer
+        auto ipfsDataStore = std::make_shared<InMemoryDatastore>();
+        auto dagSyncer = std::make_shared<CustomDagSyncer>(ipfsDataStore);
 
-      // Create new Broadcaster
-      auto broadcaster = std::make_shared<CustomBroadcaster>();
+        // Create new Broadcaster
+        auto broadcaster = std::make_shared<CustomBroadcaster>();
 
-      // Define test values
-      const std::string strNamespace = "/namespace";
-      HierarchicalKey namespaceKey(strNamespace);
+        // Define test values
+        const std::string strNamespace = "/namespace";
+        HierarchicalKey namespaceKey(strNamespace);
 
-      // Create crdtDatastore
-      crdtDatastore_ = CrdtDatastore::New(dataStore, namespaceKey, dagSyncer, broadcaster, CrdtOptions::DefaultOptions());
+        // Create crdtDatastore
+        crdtDatastore_ = CrdtDatastore::New(db_, namespaceKey, dagSyncer, broadcaster, CrdtOptions::DefaultOptions());
     }
 
     void TearDown() override
     {
       crdtDatastore_ = nullptr;
+      db_ = nullptr;
+      // Remove leftover database
+      fs::remove_all(databasePath);
+
     }
 
+    std::shared_ptr<rocksdb> db_;
     std::shared_ptr<CrdtDatastore> crdtDatastore_ = nullptr;
   };
 
@@ -142,5 +156,6 @@ namespace sgns::crdt
     EXPECT_OUTCOME_EQ(crdtDatastore_->HasKey(newKey4), true);
     EXPECT_OUTCOME_EQ(crdtDatastore_->HasKey(newKey5), false);
   }
-  
+
+
 }

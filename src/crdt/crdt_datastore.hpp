@@ -171,21 +171,21 @@ namespace sgns::crdt
       std::atomic<bool> dagWorkerThreadRunning_ = false; /*> Flag used for keep track of thread cycle */
     };
 
-    /** Worker thread to handle jobs broadcasted from the network.
+    /** one iteration to handle jobs broadcasted from the network.
     * @param aCrdtDatastore pointer to CRDT datastore
     */
-    void HandleNext();
+    void HandleNextIteration();
 
-    /** Worker thread to rebroadcast heads
+    /** one iteration of Worker thread to rebroadcast heads
     * @param aCrdtDatastore pointer to CRDT datastore
     */
-    void Rebroadcast();
+    void RebroadcastIteration(std::chrono::milliseconds& elapsedTimeMilliseconds);
 
-    /** Worker thread to send jobs
+    /** one iteration of Worker thread to send jobs
     * @param aCrdtDatastore pointer to CRDT datastore
     * @param dagWorker pointer to DAG worker structure
     */
-    void SendJobWorker(std::shared_ptr<DagWorker> dagWorker);
+    void SendJobWorkerIteration(std::shared_ptr<DagWorker> dagWorker, DagJob& dagJob);
 
     /** SendNewJobs calls getDeltas with the given children and sends each response to the workers.
     * @param aRootCID root CID

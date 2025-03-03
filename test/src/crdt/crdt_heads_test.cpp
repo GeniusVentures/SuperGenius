@@ -31,7 +31,7 @@ namespace sgns::crdt
       Multihash::create(HashType::sha256, "1123456789ABCDEF0123456789ABCDEF"_unhex).value());
 
     // Remove leftover database
-    std::string databasePath = "supergenius_crdt_heads_test_set_value";
+    std::string databasePath = "supergenius_crdt_heads_test_set_value_add";
     fs::remove_all(databasePath);
 
     // Create new database
@@ -99,7 +99,7 @@ namespace sgns::crdt
       Multihash::create(HashType::sha256, "2123456789ABCDEF0123456789ABCDEF"_unhex).value());
 
     // Remove leftover database
-    std::string databasePath = "supergenius_crdt_heads_test_set_value";
+    std::string databasePath = "supergenius_crdt_heads_test_set_value_replace";
     fs::remove_all(databasePath);
 
     // Create new database
