@@ -1,6 +1,5 @@
 add_library(coinprices
     coinprices.cpp 
-    coinprices.hpp
 )
 
 target_include_directories(coinprices PRIVATE ${AsyncIOManager_INCLUDE_DIR})
