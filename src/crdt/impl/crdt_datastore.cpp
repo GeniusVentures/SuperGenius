@@ -34,12 +34,12 @@ namespace sgns::crdt
                 {
                     if (auto self = weakptr.lock())
                     {
+                        self->HandleNextIteration();
                         if (!self->handleNextThreadRunning_)
                         {
                             self->logger_->debug("HandleNext thread finished");
                             break;
                         }
-                        self->HandleNextIteration();
                     }
                     else
                     {
@@ -57,12 +57,12 @@ namespace sgns::crdt
                 {
                     if (auto self = weakptr.lock())
                     {
+                        self->RebroadcastIteration(elapsedTimeMilliseconds);
                         if (!self->rebroadcastThreadRunning_)
                         {
                             self->logger_->debug("Rebroadcast thread finished");
                             break;
                         }
-                        self->RebroadcastIteration(elapsedTimeMilliseconds);
                     }
                     else
                     {
@@ -83,12 +83,12 @@ namespace sgns::crdt
                     {
                         if (auto self = weakptr.lock())
                         {
+                            self->SendJobWorkerIteration(dagWorker, dagJob);
                             if (!dagWorker->dagWorkerThreadRunning_)
                             {
                                 self->logger_->debug("SendJobWorker thread finished");
                                 break;
                             }
-                            self->SendJobWorkerIteration(dagWorker, dagJob);
                         }
                         else
                         {
