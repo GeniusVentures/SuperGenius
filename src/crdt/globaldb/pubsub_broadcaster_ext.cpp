@@ -65,36 +65,54 @@ namespace sgns::crdt
     std::shared_ptr<PubSubBroadcasterExt> PubSubBroadcasterExt::New(
         std::shared_ptr<GossipPubSubTopic>              pubSubTopic,
         std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer,
-        libp2p::multi::Multiaddress                     dagSyncerMultiaddress )
+        libp2p::multi::Multiaddress                     dagSyncerMultiaddress
+        )
     {
         auto pubsub_broadcaster_instance = std::shared_ptr<PubSubBroadcasterExt>(
             new PubSubBroadcasterExt( std::move( pubSubTopic ),
                                       std::move( dagSyncer ),
-                                      std::move( dagSyncerMultiaddress ) ) );
-        if ( pubsub_broadcaster_instance->gossipPubSubTopic_ != nullptr )
-        {
-            pubsub_broadcaster_instance->gossipPubSubTopic_->Subscribe(
-                [weakptr = std::weak_ptr<PubSubBroadcasterExt>( pubsub_broadcaster_instance )](
-                    boost::optional<const GossipPubSub::Message &> message )
-                {
-                    if ( auto self = weakptr.lock() )
-                    {
-                        self->OnMessage( message );
-                    };
-                } );
-        }
+                                      std::move( dagSyncerMultiaddress )
+                                      )
+        );
+
         return pubsub_broadcaster_instance;
     }
 
     PubSubBroadcasterExt::PubSubBroadcasterExt( std::shared_ptr<GossipPubSubTopic>              pubSubTopic,
                                                 std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer,
-                                                libp2p::multi::Multiaddress dagSyncerMultiaddress ) :
+                                                libp2p::multi::Multiaddress dagSyncerMultiaddress
+                                                ) :
         gossipPubSubTopic_( std::move( pubSubTopic ) ),
         dagSyncer_( std::move( dagSyncer ) ),
-        dataStore_( nullptr ),
+        dataStore_(nullptr),
         dagSyncerMultiaddress_( std::move( dagSyncerMultiaddress ) )
     {
         m_logger->trace( "Initializing Pubsub Broadcaster" );
+    }
+
+    void PubSubBroadcasterExt::Start()
+    {
+        if (gossipPubSubTopic_ != nullptr)
+        {
+            subscriptionFuture_ = std::async(std::launch::async,
+                [weakptr = std::weak_ptr<PubSubBroadcasterExt>(weak_from_this())]() {
+                    if (auto self = weakptr.lock())
+                    {
+                        self->gossipPubSubTopic_->Subscribe(
+                            [weakptr](boost::optional<const GossipPubSub::Message &> message)
+                            {
+                                if (auto self = weakptr.lock())
+                                {
+                                    self->OnMessage(message);
+                                    std::this_thread::sleep_for(std::chrono::milliseconds(100)); // 100ms sleep as requested
+                                }
+                            });
+                        self->m_logger->debug("Subscription request sent to GossipPubSubTopic");
+                    }
+                });
+
+            m_logger->debug("Start() initiated async subscription");
+        }
     }
 
     void PubSubBroadcasterExt::OnMessage( boost::optional<const GossipPubSub::Message &> message )
@@ -116,6 +134,8 @@ namespace sgns::crdt
                     std::scoped_lock lock( mutex_ );
                     base::Buffer     buf;
                     buf.put( bmsg.data() );
+                    // if CIDs don't work or can't map the broadcast the dataStore might try to call logger_ which will be called with nullptr of dataStore.
+                    BOOST_ASSERT_MSG( dataStore_ != nullptr, "Data store is not set" );
                     auto cids = dataStore_->DecodeBroadcast( buf );
                     if ( !cids.has_failure() )
                     {
@@ -166,13 +186,13 @@ namespace sgns::crdt
     //    logger_ = logger;
     //}
 
-    void PubSubBroadcasterExt::SetCrdtDataStore(CrdtDatastore *dataStore)
+    void PubSubBroadcasterExt::SetCrdtDataStore(std::shared_ptr<CrdtDatastore> dataStore)
     {
-        if (dataStore_ && dataStore_.get() == dataStore) {
+        if (dataStore_ && dataStore_ == dataStore) {
             return;  //  Avoid resetting if it's already the same instance
         }
 
-        dataStore_ = std::shared_ptr<CrdtDatastore>(dataStore, [](CrdtDatastore *) {});  // Keeps reference, no ownership transfer
+        dataStore_ = dataStore;  // Keeps reference, no ownership transfer
     }
 
     outcome::result<void> PubSubBroadcasterExt::Broadcast( const base::Buffer &buff )

@@ -284,12 +284,12 @@ namespace sgns::crdt
         std::shared_ptr<PubSubBroadcasterExt> broadcaster;
         if ( m_graphSyncAddrs.empty() )
         {
-            broadcaster = PubSubBroadcasterExt::New( m_broadcastChannel, dagSyncer, listen_to );
+            broadcaster = PubSubBroadcasterExt::New( m_broadcastChannel, dagSyncer, listen_to);
         }
         else
         {
             //auto listen_towan = libp2p::multi::Multiaddress::create(wanaddress).value();
-            broadcaster = PubSubBroadcasterExt::New( m_broadcastChannel, dagSyncer, listen_to );
+            broadcaster = PubSubBroadcasterExt::New( m_broadcastChannel, dagSyncer, listen_to);
         }
         //broadcaster->SetLogger(m_logger);
 
@@ -303,6 +303,11 @@ namespace sgns::crdt
             m_logger->error( "Unable to create CRDT datastore" );
             return Error::CRDT_DATASTORE_NOT_CREATED;
         }
+
+        broadcaster->SetCrdtDataStore(m_crdtDatastore);
+
+        // have to set the dataStore before starting the broadcasting
+        broadcaster->Start();
 
         // TODO: bootstrapping
         //m_logger->info("Bootstrapping...");

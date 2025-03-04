@@ -309,6 +309,7 @@ namespace sgns::crdt
     std::vector<std::shared_ptr<DagWorker>> dagWorkers_;
     std::shared_mutex dagWorkerMutex_;
     std::queue<DagJob> dagWorkerJobList;
+    std::atomic<bool> dagWorkerJobListThreadRunning_ = false;
 
     std::mutex mutex_processed_cids;
     std::set<CID> processed_cids;

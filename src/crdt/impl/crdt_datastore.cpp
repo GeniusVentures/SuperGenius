@@ -99,6 +99,8 @@ namespace sgns::crdt
             crdtInstance->dagWorkers_.push_back(dagWorker);
         }
 
+        crdtInstance->dagWorkerJobListThreadRunning_ = true;
+
         return crdtInstance;
     }
 
@@ -209,6 +211,8 @@ namespace sgns::crdt
             dagWorker->dagWorkerThreadRunning_ = false;
             dagWorker->dagWorkerFuture_.wait();
         }
+
+        this->dagWorkerJobListThreadRunning_ = false;
     }
 
     void CrdtDatastore::HandleNextIteration()

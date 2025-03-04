@@ -19,26 +19,34 @@ namespace sgns::crdt
 
         static std::shared_ptr<PubSubBroadcasterExt> New( std::shared_ptr<GossipPubSubTopic>              pubSubTopic,
                                                           std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer,
-                                                          libp2p::multi::Multiaddress dagSyncerMultiaddress );
+                                                          libp2p::multi::Multiaddress dagSyncerMultiaddress);
 
 
-        void SetCrdtDataStore( CrdtDatastore *dataStore );
+        void SetCrdtDataStore( std::shared_ptr<CrdtDatastore> dataStore );
 
         /**
-     * Send {@param buff} payload to other replicas.
-     * @return outcome::success on success or outcome::failure on error
-     */
+         * Send {@param buff} payload to other replicas.
+         * @return outcome::success on success or outcome::failure on error
+         */
         outcome::result<void> Broadcast( const base::Buffer &buff ) override;
         /**
-     * Obtain the next {@return} payload received from the network.
-     * @return buffer value or outcome::failure on error
-     */
+         * Obtain the next {@return} payload received from the network.
+         * @return buffer value or outcome::failure on error
+        */
         outcome::result<base::Buffer> Next() override;
+
+        /**
+         * Initializes the PubSubBroadcasterExt by subscribing to the associated gossip topic
+         * to handle incoming messages. Ensures that message processing is set up before
+         * CRDT-related operations are invoked.
+         */
+        void Start();
 
     private:
         PubSubBroadcasterExt( std::shared_ptr<GossipPubSubTopic>              pubSubTopic,
                               std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer,
-                              libp2p::multi::Multiaddress                     dagSyncerMultiaddress );
+                              libp2p::multi::Multiaddress                     dagSyncerMultiaddress
+                              );
         void OnMessage( boost::optional<const GossipPubSub::Message &> message );
 
         std::shared_ptr<GossipPubSubTopic>                        gossipPubSubTopic_;
@@ -49,6 +57,8 @@ namespace sgns::crdt
         //sgns::base::Logger logger_ = nullptr;
         std::mutex mutex_;
         sgns::base::Logger m_logger = sgns::base::createLogger( "PubSubBroadcasterExt" );
+        // For async subscription thread control
+        std::future<void> subscriptionFuture_;
     };
 }
 
