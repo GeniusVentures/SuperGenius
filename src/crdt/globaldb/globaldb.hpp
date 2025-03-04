@@ -27,6 +27,9 @@ namespace sgns::crdt
                   std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> broadcastChannel,
                   std::string                                           gsaddresses = {} );
 
+
+        ~GlobalDB();
+
         /// Pair of key and value to be stored in CRDT
         using DataPair = std::pair<HierarchicalKey, Buffer>;
 

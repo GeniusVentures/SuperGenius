@@ -151,6 +151,11 @@ namespace sgns::crdt
         return dataStore_->getDB();
     }
 
+    /** Close shuts down the CRDT datastore and worker threads. It should not be used afterwards.
+    */
+    void Close();
+
+
   protected:
 
     /** DAG jobs structure used by DAG worker threads to send new jobs
@@ -256,10 +261,6 @@ namespace sgns::crdt
     * \sa PutBlock, ProcessNode
     */
     outcome::result<CID> AddDAGNode(const std::shared_ptr<Delta>& aDelta);
-
-    /** Close shuts down the CRDT datastore and worker threads. It should not be used afterwards.
-    */
-    void Close();
 
     /** SyncDatastore sync heads and set datastore
     * @param: aKeyList all heads and the set entries related to the given prefix

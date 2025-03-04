@@ -26,11 +26,13 @@ namespace sgns::crdt
             std::move(aBroadcaster),
             aOptions));
 
+        crdtInstance->handleNextThreadRunning_ = true;
         // Starting HandleNext worker thread
         crdtInstance->handleNextFuture_ = std::async(
             [weakptr = std::weak_ptr<CrdtDatastore>(crdtInstance)]()
             {
-                while (true)
+                auto threadRunning = true;
+                while (threadRunning)
                 {
                     if (auto self = weakptr.lock())
                     {
@@ -38,22 +40,29 @@ namespace sgns::crdt
                         if (!self->handleNextThreadRunning_)
                         {
                             self->logger_->debug("HandleNext thread finished");
-                            break;
+                            threadRunning = false;
                         }
-                    }
+                        }
                     else
                     {
-                        break; // Object destroyed
+                        threadRunning = false;
+                    }
+
+                    if (threadRunning)
+                    {
+                        std::this_thread::sleep_for(threadSleepTimeInMilliseconds_);
                     }
                 }
             });
 
+        crdtInstance->rebroadcastThreadRunning_ = true;
         // Starting Rebroadcast worker thread
         crdtInstance->rebroadcastFuture_ = std::async(
             [weakptr = std::weak_ptr<CrdtDatastore>(crdtInstance)]()
             {
                 std::chrono::milliseconds elapsedTimeMilliseconds = std::chrono::milliseconds(0);
-                while (true)
+                auto threadRunning = true;
+                while (threadRunning)
                 {
                     if (auto self = weakptr.lock())
                     {
@@ -61,25 +70,34 @@ namespace sgns::crdt
                         if (!self->rebroadcastThreadRunning_)
                         {
                             self->logger_->debug("Rebroadcast thread finished");
-                            break;
+                            threadRunning = false;
                         }
                     }
                     else
                     {
-                        break; // Object destroyed
+                        threadRunning = false; // Object destroyed
+                    }
+                    if (threadRunning)
+                    {
+                        // move this outside weakptr.lock() scope to release temporary strong reference to CrdtDatastore
+                        std::this_thread::sleep_for(threadSleepTimeInMilliseconds_);
                     }
                 }
             });
+
+        crdtInstance->dagWorkerJobListThreadRunning_ = true;
 
         // Starting DAG worker threads
         for (int i = 0; i < crdtInstance->numberOfDagWorkers; ++i)
         {
             auto dagWorker = std::make_shared<DagWorker>();
+            dagWorker->dagWorkerThreadRunning_ = true;
             dagWorker->dagWorkerFuture_ = std::async(
                 [weakptr = std::weak_ptr<CrdtDatastore>(crdtInstance), dagWorker]()
                 {
                     DagJob dagJob;
-                    while (true)
+                    auto dagThreadRunning = true;
+                    while (dagThreadRunning)
                     {
                         if (auto self = weakptr.lock())
                         {
@@ -87,19 +105,25 @@ namespace sgns::crdt
                             if (!dagWorker->dagWorkerThreadRunning_)
                             {
                                 self->logger_->debug("SendJobWorker thread finished");
-                                break;
+                                dagThreadRunning = false;
                             }
                         }
                         else
                         {
-                            break; // Object destroyed
+                            dagThreadRunning = false; // Object destroyed
                         }
+
+                        if (dagThreadRunning)
+                        {
+                            // move this outside weakptr.lock() scope to release temporary strong reference to CrdtDatastore
+                            // while the thread is sleeping
+                            std::this_thread::sleep_for(threadSleepTimeInMilliseconds_);
+                        }
+
                     }
                 });
             crdtInstance->dagWorkers_.push_back(dagWorker);
         }
-
-        crdtInstance->dagWorkerJobListThreadRunning_ = true;
 
         return crdtInstance;
     }
@@ -196,23 +220,26 @@ namespace sgns::crdt
     {
         if ( handleNextThreadRunning_ )
         {
-            this->handleNextThreadRunning_ = false;
-            this->handleNextFuture_.wait();
+            handleNextThreadRunning_ = false;
+            handleNextFuture_.wait();
         }
 
-        if ( this->rebroadcastThreadRunning_ )
+        if ( rebroadcastThreadRunning_ )
         {
-            this->rebroadcastThreadRunning_ = false;
-            this->rebroadcastFuture_.wait();
+            rebroadcastThreadRunning_ = false;
+            rebroadcastFuture_.wait();
         }
 
-        for ( const auto &dagWorker : this->dagWorkers_ )
+        if (dagWorkerJobListThreadRunning_)
         {
-            dagWorker->dagWorkerThreadRunning_ = false;
-            dagWorker->dagWorkerFuture_.wait();
+            for ( const auto &dagWorker : dagWorkers_ )
+            {
+                dagWorker->dagWorkerThreadRunning_ = false;
+                dagWorker->dagWorkerFuture_.wait();
+            }
+            dagWorkers_.clear();
+            dagWorkerJobListThreadRunning_ = false;
         }
-
-        this->dagWorkerJobListThreadRunning_ = false;
     }
 
     void CrdtDatastore::HandleNextIteration()
@@ -223,12 +250,6 @@ namespace sgns::crdt
             return;
         }
 
-        if (!handleNextThreadRunning_)
-        {
-            handleNextThreadRunning_ = true;
-            logger_->debug("HandleNext thread started");
-        }
-
         auto broadcasterNextResult = broadcaster_->Next();
         if (broadcasterNextResult.has_failure())
         {
@@ -237,7 +258,6 @@ namespace sgns::crdt
                 // logger_->debug("Failed to get next broadcaster (error code " +
                 //                std::to_string(broadcasterNextResult.error().value()) + ")");
             }
-            std::this_thread::sleep_for(threadSleepTimeInMilliseconds_);
             return;
         }
 
@@ -262,18 +282,10 @@ namespace sgns::crdt
             std::unique_lock lock(seenHeadsMutex_);
             seenHeads_.push_back(bCastHeadCID);
         }
-
-        std::this_thread::sleep_for(threadSleepTimeInMilliseconds_);
     }
 
     void CrdtDatastore::RebroadcastIteration(std::chrono::milliseconds& elapsedTimeMilliseconds)
     {
-        if (!rebroadcastThreadRunning_)
-        {
-            rebroadcastThreadRunning_ = true;
-            // logger_->debug("Rebroadcast thread started");
-        }
-
         auto rebroadcastIntervalMilliseconds = std::chrono::milliseconds(threadSleepTimeInMilliseconds_);
         if (options_ != nullptr)
         {
@@ -287,7 +299,6 @@ namespace sgns::crdt
         }
         elapsedTimeMilliseconds += threadSleepTimeInMilliseconds_;
 
-        std::this_thread::sleep_for(threadSleepTimeInMilliseconds_);
     }
 
     void CrdtDatastore::SendJobWorkerIteration(std::shared_ptr<DagWorker> dagWorker, DagJob& dagJob)
@@ -295,12 +306,6 @@ namespace sgns::crdt
         if (dagWorker == nullptr)
         {
             return;
-        }
-
-        if (!dagWorker->dagWorkerThreadRunning_)
-        {
-            logger_->debug("SendJobWorker thread started");
-            dagWorker->dagWorkerThreadRunning_ = true;
         }
 
         {
@@ -326,8 +331,6 @@ namespace sgns::crdt
         {
             SendNewJobs(dagJob.rootCid_, dagJob.rootPriority_, childrenResult.value());
         }
-
-        std::this_thread::sleep_for(threadSleepTimeInMilliseconds_);
     }
 
     outcome::result<std::vector<CID>> CrdtDatastore::DecodeBroadcast( const Buffer &buff )

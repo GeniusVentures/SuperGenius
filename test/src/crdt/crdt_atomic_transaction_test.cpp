@@ -59,6 +59,7 @@ namespace sgns::crdt {
         }
 
         void TearDown() override {
+            crdtDatastore_->Close();
             crdtDatastore_ = nullptr;
         }
 

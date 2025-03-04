@@ -94,24 +94,16 @@ namespace sgns::crdt
     {
         if (gossipPubSubTopic_ != nullptr)
         {
-            subscriptionFuture_ = std::async(std::launch::async,
-                [weakptr = std::weak_ptr<PubSubBroadcasterExt>(weak_from_this())]() {
-                    if (auto self = weakptr.lock())
-                    {
-                        self->gossipPubSubTopic_->Subscribe(
-                            [weakptr](boost::optional<const GossipPubSub::Message &> message)
-                            {
-                                if (auto self = weakptr.lock())
-                                {
-                                    self->OnMessage(message);
-                                    std::this_thread::sleep_for(std::chrono::milliseconds(100)); // 100ms sleep as requested
-                                }
-                            });
-                        self->m_logger->debug("Subscription request sent to GossipPubSubTopic");
-                    }
-                });
-
-            m_logger->debug("Start() initiated async subscription");
+            gossipPubSubTopic_->Subscribe(
+               [weakptr = std::weak_ptr<PubSubBroadcasterExt>( shared_from_this() )](
+                   boost::optional<const GossipPubSub::Message &> message )
+               {
+                   if ( auto self = weakptr.lock() )
+                   {
+                       self->OnMessage( message );
+                   };
+               } );
+            m_logger->debug("Subscription request sent to GossipPubSubTopic");
         }
     }
 

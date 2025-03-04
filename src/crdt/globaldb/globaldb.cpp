@@ -75,6 +75,13 @@ namespace sgns::crdt
     {
     }
 
+    GlobalDB::~GlobalDB() {
+        m_crdtDatastore->Close();
+        m_crdtDatastore = nullptr;
+        m_broadcastChannel = nullptr;
+        m_context = nullptr;
+    }
+
     std::string GetLocalIP( boost::asio::io_context &io )
     {
 #if defined( _WIN32 )

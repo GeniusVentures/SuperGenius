@@ -66,6 +66,8 @@ namespace sgns::crdt
 
     void TearDown() override
     {
+
+      crdtDatastore_->Close();
       crdtDatastore_ = nullptr;
       db_ = nullptr;
       // Remove leftover database
