@@ -65,26 +65,22 @@ namespace sgns::crdt
     std::shared_ptr<PubSubBroadcasterExt> PubSubBroadcasterExt::New(
         std::shared_ptr<GossipPubSubTopic>              pubSubTopic,
         std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer,
-        libp2p::multi::Multiaddress                     dagSyncerMultiaddress
-        )
+        libp2p::multi::Multiaddress                     dagSyncerMultiaddress )
     {
         auto pubsub_broadcaster_instance = std::shared_ptr<PubSubBroadcasterExt>(
             new PubSubBroadcasterExt( std::move( pubSubTopic ),
                                       std::move( dagSyncer ),
-                                      std::move( dagSyncerMultiaddress )
-                                      )
-        );
+                                      std::move( dagSyncerMultiaddress ) ) );
 
         return pubsub_broadcaster_instance;
     }
 
     PubSubBroadcasterExt::PubSubBroadcasterExt( std::shared_ptr<GossipPubSubTopic>              pubSubTopic,
                                                 std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer,
-                                                libp2p::multi::Multiaddress dagSyncerMultiaddress
-                                                ) :
+                                                libp2p::multi::Multiaddress dagSyncerMultiaddress ) :
         gossipPubSubTopic_( std::move( pubSubTopic ) ),
         dagSyncer_( std::move( dagSyncer ) ),
-        dataStore_(nullptr),
+        dataStore_( nullptr ),
         dagSyncerMultiaddress_( std::move( dagSyncerMultiaddress ) )
     {
         m_logger->trace( "Initializing Pubsub Broadcaster" );
@@ -92,18 +88,18 @@ namespace sgns::crdt
 
     void PubSubBroadcasterExt::Start()
     {
-        if (gossipPubSubTopic_ != nullptr)
+        if ( gossipPubSubTopic_ != nullptr )
         {
             gossipPubSubTopic_->Subscribe(
-               [weakptr = std::weak_ptr<PubSubBroadcasterExt>( shared_from_this() )](
-                   boost::optional<const GossipPubSub::Message &> message )
-               {
-                   if ( auto self = weakptr.lock() )
-                   {
-                       self->OnMessage( message );
-                   };
-               } );
-            m_logger->debug("Subscription request sent to GossipPubSubTopic");
+                [weakptr = std::weak_ptr<PubSubBroadcasterExt>( shared_from_this() )](
+                    boost::optional<const GossipPubSub::Message &> message )
+                {
+                    if ( auto self = weakptr.lock() )
+                    {
+                        self->OnMessage( message );
+                    };
+                } );
+            m_logger->debug( "Subscription request sent to GossipPubSubTopic" );
         }
     }
 
@@ -178,13 +174,14 @@ namespace sgns::crdt
     //    logger_ = logger;
     //}
 
-    void PubSubBroadcasterExt::SetCrdtDataStore(std::shared_ptr<CrdtDatastore> dataStore)
+    void PubSubBroadcasterExt::SetCrdtDataStore( std::shared_ptr<CrdtDatastore> dataStore )
     {
-        if (dataStore_ && dataStore_ == dataStore) {
-            return;  //  Avoid resetting if it's already the same instance
+        if ( dataStore_ && dataStore_ == dataStore )
+        {
+            return; //  Avoid resetting if it's already the same instance
         }
 
-        dataStore_ = dataStore;  // Keeps reference, no ownership transfer
+        dataStore_ = dataStore; // Keeps reference, no ownership transfer
     }
 
     outcome::result<void> PubSubBroadcasterExt::Broadcast( const base::Buffer &buff )

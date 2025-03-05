@@ -19,8 +19,7 @@ namespace sgns::crdt
 
         static std::shared_ptr<PubSubBroadcasterExt> New( std::shared_ptr<GossipPubSubTopic>              pubSubTopic,
                                                           std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer,
-                                                          libp2p::multi::Multiaddress dagSyncerMultiaddress);
-
+                                                          libp2p::multi::Multiaddress dagSyncerMultiaddress );
 
         void SetCrdtDataStore( std::shared_ptr<CrdtDatastore> dataStore );
 
@@ -45,8 +44,7 @@ namespace sgns::crdt
     private:
         PubSubBroadcasterExt( std::shared_ptr<GossipPubSubTopic>              pubSubTopic,
                               std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer,
-                              libp2p::multi::Multiaddress                     dagSyncerMultiaddress
-                              );
+                              libp2p::multi::Multiaddress                     dagSyncerMultiaddress );
         void OnMessage( boost::optional<const GossipPubSub::Message &> message );
 
         std::shared_ptr<GossipPubSubTopic>                        gossipPubSubTopic_;
@@ -55,7 +53,7 @@ namespace sgns::crdt
         libp2p::multi::Multiaddress                               dagSyncerMultiaddress_;
         std::queue<std::tuple<libp2p::peer::PeerId, std::string>> messageQueue_;
         //sgns::base::Logger logger_ = nullptr;
-        std::mutex mutex_;
+        std::mutex         mutex_;
         sgns::base::Logger m_logger = sgns::base::createLogger( "PubSubBroadcasterExt" );
         // For async subscription thread control
         std::future<void> subscriptionFuture_;
