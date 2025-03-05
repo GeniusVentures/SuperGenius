@@ -91,8 +91,7 @@ namespace sgns::crdt
         if ( gossipPubSubTopic_ != nullptr )
         {
             gossipPubSubTopic_->Subscribe(
-                [weakptr = std::weak_ptr<PubSubBroadcasterExt>( shared_from_this() )](
-                    boost::optional<const GossipPubSub::Message &> message )
+                [weakptr = weak_from_this()]( boost::optional<const GossipPubSub::Message &> message )
                 {
                     if ( auto self = weakptr.lock() )
                     {
@@ -100,6 +99,10 @@ namespace sgns::crdt
                     };
                 } );
             m_logger->debug( "Subscription request sent to GossipPubSubTopic" );
+        }
+        else
+        {
+            m_logger->error( "No GossipPubSubTopic to subscribe" );
         }
     }
 
@@ -181,7 +184,7 @@ namespace sgns::crdt
             return; //  Avoid resetting if it's already the same instance
         }
 
-        dataStore_ = dataStore; // Keeps reference, no ownership transfer
+        dataStore_ = std::move( dataStore ); // Keeps reference, no ownership transfer
     }
 
     outcome::result<void> PubSubBroadcasterExt::Broadcast( const base::Buffer &buff )

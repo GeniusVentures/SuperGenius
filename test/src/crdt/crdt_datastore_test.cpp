@@ -118,7 +118,12 @@ namespace sgns::crdt
     //EXPECT_OUTCOME_TRUE_1(transaction.Remove(newKey2));
     EXPECT_OUTCOME_TRUE_1(transaction.Commit());
     EXPECT_OUTCOME_EQ(crdtDatastore_->HasKey(newKey1), true);
-    //EXPECT_OUTCOME_EQ(crdtDatastore_->HasKey(newKey2), false);
+    AtomicTransaction transactionRemoveKey2 = AtomicTransaction(crdtDatastore_);
+    EXPECT_OUTCOME_TRUE_1(transactionRemoveKey2.Remove(newKey2));
+    EXPECT_OUTCOME_TRUE_1(transactionRemoveKey2.Commit());
+    EXPECT_OUTCOME_EQ(crdtDatastore_->HasKey(newKey1), true);
+    EXPECT_OUTCOME_EQ(crdtDatastore_->HasKey(newKey2), false);
+    EXPECT_OUTCOME_EQ(crdtDatastore_->HasKey(newKey3), true);
 
     auto newKey4 = HierarchicalKey("NewKey4");
     CrdtBuffer buffer4;
