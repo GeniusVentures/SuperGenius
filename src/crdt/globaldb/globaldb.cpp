@@ -75,6 +75,14 @@ namespace sgns::crdt
     {
     }
 
+    GlobalDB::~GlobalDB()
+    {
+        m_crdtDatastore->Close();
+        m_crdtDatastore    = nullptr;
+        m_broadcastChannel = nullptr;
+        m_context          = nullptr;
+    }
+
     std::string GetLocalIP( boost::asio::io_context &io )
     {
 #if defined( _WIN32 )
@@ -303,6 +311,11 @@ namespace sgns::crdt
             m_logger->error( "Unable to create CRDT datastore" );
             return Error::CRDT_DATASTORE_NOT_CREATED;
         }
+
+        broadcaster->SetCrdtDataStore( m_crdtDatastore );
+
+        // have to set the dataStore before starting the broadcasting
+        broadcaster->Start();
 
         // TODO: bootstrapping
         //m_logger->info("Bootstrapping...");

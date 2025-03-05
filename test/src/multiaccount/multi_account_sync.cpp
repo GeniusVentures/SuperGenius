@@ -147,9 +147,10 @@ TEST_F( MultiAccountTest, SyncThroughEachOther )
     std::cout << "Balance 1" << balance_main << std::endl;
     std::cout << "Balance 2" << balance_node1 << std::endl;  
 
-    ASSERT_EQ( transcount_main, transcount_main_start + 2);
-    ASSERT_EQ( transcount_node1, transcount_node1_start + 2);
-    ASSERT_EQ( balance_main, main_balance_start + (50000000000 * 2));
-    ASSERT_EQ( balance_node1, node1_balance_start + (50000000000 * 2));
+    // TODO: in reality, one of the mint function should get rejected with same nonce.
+    ASSERT_EQ( transcount_main, transcount_main_start + 1);
+    ASSERT_EQ( transcount_node1, transcount_node1_start + 1);
+    ASSERT_EQ( balance_main, main_balance_start + 50000000000);
+    ASSERT_EQ( balance_node1, node1_balance_start + 50000000000);
 
 }

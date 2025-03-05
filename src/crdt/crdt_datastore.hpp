@@ -151,6 +151,11 @@ namespace sgns::crdt
         return dataStore_->getDB();
     }
 
+    /** Close shuts down the CRDT datastore and worker threads. It should not be used afterwards.
+    */
+    void Close();
+
+
   protected:
 
     /** DAG jobs structure used by DAG worker threads to send new jobs
@@ -171,21 +176,21 @@ namespace sgns::crdt
       std::atomic<bool> dagWorkerThreadRunning_ = false; /*> Flag used for keep track of thread cycle */
     };
 
-    /** Worker thread to handle jobs broadcasted from the network.
+    /** one iteration to handle jobs broadcasted from the network.
     * @param aCrdtDatastore pointer to CRDT datastore
     */
-    void HandleNext();
+    void HandleNextIteration();
 
-    /** Worker thread to rebroadcast heads
+    /** one iteration of Worker thread to rebroadcast heads
     * @param aCrdtDatastore pointer to CRDT datastore
     */
-    void Rebroadcast();
+    void RebroadcastIteration(std::chrono::milliseconds& elapsedTimeMilliseconds);
 
-    /** Worker thread to send jobs
+    /** one iteration of Worker thread to send jobs
     * @param aCrdtDatastore pointer to CRDT datastore
     * @param dagWorker pointer to DAG worker structure
     */
-    void SendJobWorker(std::shared_ptr<DagWorker> dagWorker);
+    void SendJobWorkerIteration(std::shared_ptr<DagWorker> dagWorker, DagJob& dagJob);
 
     /** SendNewJobs calls getDeltas with the given children and sends each response to the workers.
     * @param aRootCID root CID
@@ -257,10 +262,6 @@ namespace sgns::crdt
     */
     outcome::result<CID> AddDAGNode(const std::shared_ptr<Delta>& aDelta);
 
-    /** Close shuts down the CRDT datastore and worker threads. It should not be used afterwards.
-    */
-    void Close();
-
     /** SyncDatastore sync heads and set datastore
     * @param: aKeyList all heads and the set entries related to the given prefix
     * @return returns outcome::success on success or outcome::failure otherwise
@@ -309,6 +310,7 @@ namespace sgns::crdt
     std::vector<std::shared_ptr<DagWorker>> dagWorkers_;
     std::shared_mutex dagWorkerMutex_;
     std::queue<DagJob> dagWorkerJobList;
+    std::atomic<bool> dagWorkerJobListThreadRunning_ = false;
 
     std::mutex mutex_processed_cids;
     std::set<CID> processed_cids;

@@ -53,13 +53,9 @@ namespace test
 
     CRDTFixture::~CRDTFixture()
     {
-        auto it = std::unique_ptr<rocksdb::Iterator>( db_->GetDB()->NewIterator( rocksdb::ReadOptions() ) );
+        fs::remove_all(basePath);
+        fs::remove_all(basePath + ".unit");
 
-        // @todo Use DeleteRange once rocksdb gers and update
-        for ( it->SeekToFirst(); it->Valid(); it->Next() )
-        {
-            BOOST_ASSERT( db_->GetDB()->Delete( rocksdb::WriteOptions(), it->key() ).ok() );
-        }
     }
 
     void CRDTFixture::SetUpTestSuite()
@@ -89,15 +85,22 @@ namespace test
             pubs_ =
                 std::make_shared<GossipPubSub>( KeyPairFileStorage( basePath + "/unit_test" ).GetKeyPair().value() );
 
+            BOOST_ASSERT_MSG( pubs_ != nullptr, "could not create GossibPubSub for some reason");
+
             db_ = std::make_shared<GlobalDB>(
                 io_, basePath + ".unit", 40010,
                 std::make_shared<GossipPubSubTopic>( pubs_, "CRDT.Datastore.TEST.Channel" ) );
 
-            pubs_->Start( 40001, { pubs_->GetLocalAddress() } );
+            BOOST_ASSERT_MSG( db_ != nullptr, "could not create GlobalDB for some reason");
 
             auto crdtOptions = sgns::crdt::CrdtOptions::DefaultOptions();
 
             BOOST_ASSERT( db_->Init( crdtOptions ).has_value() );
+
+            // Start GossipPubSub after Init
+            auto future = pubs_->Start(40001, {pubs_->GetLocalAddress()});
+            auto result = future.get();
+            BOOST_ASSERT_MSG(!result, ("GossipPubSub::Start failed: " + result.message()).c_str());
 
             initializedDb = true;
         }

@@ -60,7 +60,7 @@ namespace sgns::crdt
                              datastore_->CreateDeltaToAdd( op.key.GetKey(), std::string( op.value.toString() ) ) );
                 delta = result;
             }
-            else // DELETE
+            else // REMOVE
             {
                 OUTCOME_TRY( ( auto &&, result ), datastore_->CreateDeltaToRemove( op.key.GetKey() ) );
                 delta = result;

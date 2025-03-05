@@ -122,6 +122,9 @@ namespace sgns
 
         auto loggerDAGSyncer = base::createLogger( "GraphsyncDAGSyncer" );
         loggerDAGSyncer->set_level( spdlog::level::off );
+        
+        auto loggerGraphsync = base::createLogger( "graphsync" );
+        loggerGraphsync->set_level( spdlog::level::info );
 
         auto loggerBroadcaster = base::createLogger( "PubSubBroadcasterExt" );
         loggerBroadcaster->set_level( spdlog::level::off );

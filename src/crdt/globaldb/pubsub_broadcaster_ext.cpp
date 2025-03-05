@@ -71,18 +71,7 @@ namespace sgns::crdt
             new PubSubBroadcasterExt( std::move( pubSubTopic ),
                                       std::move( dagSyncer ),
                                       std::move( dagSyncerMultiaddress ) ) );
-        if ( pubsub_broadcaster_instance->gossipPubSubTopic_ != nullptr )
-        {
-            pubsub_broadcaster_instance->gossipPubSubTopic_->Subscribe(
-                [weakptr = std::weak_ptr<PubSubBroadcasterExt>( pubsub_broadcaster_instance )](
-                    boost::optional<const GossipPubSub::Message &> message )
-                {
-                    if ( auto self = weakptr.lock() )
-                    {
-                        self->OnMessage( message );
-                    };
-                } );
-        }
+
         return pubsub_broadcaster_instance;
     }
 
@@ -95,6 +84,26 @@ namespace sgns::crdt
         dagSyncerMultiaddress_( std::move( dagSyncerMultiaddress ) )
     {
         m_logger->trace( "Initializing Pubsub Broadcaster" );
+    }
+
+    void PubSubBroadcasterExt::Start()
+    {
+        if ( gossipPubSubTopic_ != nullptr )
+        {
+            gossipPubSubTopic_->Subscribe(
+                [weakptr = weak_from_this()]( boost::optional<const GossipPubSub::Message &> message )
+                {
+                    if ( auto self = weakptr.lock() )
+                    {
+                        self->OnMessage( message );
+                    };
+                } );
+            m_logger->debug( "Subscription request sent to GossipPubSubTopic" );
+        }
+        else
+        {
+            m_logger->error( "No GossipPubSubTopic to subscribe" );
+        }
     }
 
     void PubSubBroadcasterExt::OnMessage( boost::optional<const GossipPubSub::Message &> message )
@@ -116,6 +125,8 @@ namespace sgns::crdt
                     std::scoped_lock lock( mutex_ );
                     base::Buffer     buf;
                     buf.put( bmsg.data() );
+                    // if CIDs don't work or can't map the broadcast the dataStore might try to call logger_ which will be called with nullptr of dataStore.
+                    BOOST_ASSERT_MSG( dataStore_ != nullptr, "Data store is not set" );
                     auto cids = dataStore_->DecodeBroadcast( buf );
                     if ( !cids.has_failure() )
                     {
@@ -166,13 +177,14 @@ namespace sgns::crdt
     //    logger_ = logger;
     //}
 
-    void PubSubBroadcasterExt::SetCrdtDataStore(CrdtDatastore *dataStore)
+    void PubSubBroadcasterExt::SetCrdtDataStore( std::shared_ptr<CrdtDatastore> dataStore )
     {
-        if (dataStore_ && dataStore_.get() == dataStore) {
-            return;  //  Avoid resetting if it's already the same instance
+        if ( dataStore_ && dataStore_ == dataStore )
+        {
+            return; //  Avoid resetting if it's already the same instance
         }
 
-        dataStore_ = std::shared_ptr<CrdtDatastore>(dataStore, [](CrdtDatastore *) {});  // Keeps reference, no ownership transfer
+        dataStore_ = std::move( dataStore ); // Keeps reference, no ownership transfer
     }
 
     outcome::result<void> PubSubBroadcasterExt::Broadcast( const base::Buffer &buff )

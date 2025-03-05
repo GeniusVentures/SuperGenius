@@ -21,19 +21,25 @@ namespace sgns::crdt
                                                           std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer,
                                                           libp2p::multi::Multiaddress dagSyncerMultiaddress );
 
-
-        void SetCrdtDataStore( CrdtDatastore *dataStore );
+        void SetCrdtDataStore( std::shared_ptr<CrdtDatastore> dataStore );
 
         /**
-     * Send {@param buff} payload to other replicas.
-     * @return outcome::success on success or outcome::failure on error
-     */
+         * Send {@param buff} payload to other replicas.
+         * @return outcome::success on success or outcome::failure on error
+         */
         outcome::result<void> Broadcast( const base::Buffer &buff ) override;
         /**
-     * Obtain the next {@return} payload received from the network.
-     * @return buffer value or outcome::failure on error
-     */
+         * Obtain the next {@return} payload received from the network.
+         * @return buffer value or outcome::failure on error
+        */
         outcome::result<base::Buffer> Next() override;
+
+        /**
+         * Initializes the PubSubBroadcasterExt by subscribing to the associated gossip topic
+         * to handle incoming messages. Ensures that message processing is set up before
+         * CRDT-related operations are invoked.
+         */
+        void Start();
 
     private:
         PubSubBroadcasterExt( std::shared_ptr<GossipPubSubTopic>              pubSubTopic,
@@ -47,8 +53,10 @@ namespace sgns::crdt
         libp2p::multi::Multiaddress                               dagSyncerMultiaddress_;
         std::queue<std::tuple<libp2p::peer::PeerId, std::string>> messageQueue_;
         //sgns::base::Logger logger_ = nullptr;
-        std::mutex mutex_;
+        std::mutex         mutex_;
         sgns::base::Logger m_logger = sgns::base::createLogger( "PubSubBroadcasterExt" );
+        // For async subscription thread control
+        std::future<void> subscriptionFuture_;
     };
 }
 
