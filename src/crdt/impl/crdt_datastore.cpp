@@ -266,7 +266,7 @@ namespace sgns::crdt
         {
             logger_->error("Broadcaster: Unable to decode broadcast (error code {})",
                            std::to_string(broadcasterNextResult.error().value()));
-            std::this_thread::sleep_for(threadSleepTimeInMilliseconds_);
+
             return;
         }
 
@@ -312,7 +312,7 @@ namespace sgns::crdt
             std::unique_lock lock(dagWorkerMutex_);
             if (dagWorkerJobList.empty())
             {
-                std::this_thread::sleep_for(threadSleepTimeInMilliseconds_);
+
                 return;
             }
             dagJob = dagWorkerJobList.front();
