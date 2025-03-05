@@ -24,8 +24,6 @@
 #include "FileManager.hpp"
 #include <boost/dll.hpp>
 #include <boost/algorithm/string/replace.hpp>
-#include "base/util.hpp"
-
 
 class ProcessingMultiTest : public ::testing::Test
 {

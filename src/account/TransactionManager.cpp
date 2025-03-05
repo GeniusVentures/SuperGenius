@@ -17,15 +17,14 @@
 
 #include "TransferTransaction.hpp"
 #include "MintTransaction.hpp"
-#include "ProcessingTransaction.hpp"
 #include "EscrowTransaction.hpp"
 #include "UTXOTxParameters.hpp"
 #include "account/proto/SGTransaction.pb.h"
-#include "base/util.hpp"
 #include "base/fixed_point.hpp"
 
 #include <nil/crypto3/pubkey/algorithm/sign.hpp>
 #include <nil/crypto3/pubkey/algorithm/verify.hpp>
+
 #ifdef _PROOF_ENABLED
 #include "proof/TransferProof.hpp"
 #include "proof/ProcessingProof.hpp"

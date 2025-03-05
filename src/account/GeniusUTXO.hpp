@@ -8,7 +8,6 @@
 #define _GENIUS_UTXO_HPP
 
 #include "base/blob.hpp"
-#include "base/util.hpp"
 
 namespace sgns
 {

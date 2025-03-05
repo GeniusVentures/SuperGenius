@@ -215,21 +215,6 @@ namespace sgns
         }
     }
 
-    static uint16_t GenerateRandomPort( uint16_t base, const std::string &seed )
-    {
-        uint32_t seed_hash = 0;
-        for ( char c : seed )
-        {
-            seed_hash = seed_hash * 31 + static_cast<uint8_t>( c );
-        }
-
-        br::mt19937                    rng( seed_hash );
-        br::uniform_int_distribution<> dist( 0, 300 );
-
-        // Generate a random port and add to the base
-        return base + dist( rng );
-    }
-
     static std::string Uint256ToString( const uint256_t &value )
     {
         std::ostringstream oss;

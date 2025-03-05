@@ -10,11 +10,8 @@
 #include <rapidjson/document.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
-#include "base/util.hpp"
 #include "base/fixed_point.hpp"
 #include "account/GeniusNode.hpp"
-#include "crdt/globaldb/keypair_file_storage.hpp"
-#include "FileManager.hpp"
 #include "crdt/globaldb/keypair_file_storage.hpp"
 #include "upnp.hpp"
 #include "processing/processing_imagesplit.hpp"
@@ -28,6 +25,22 @@
 #include <thread>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
+
+namespace {
+    uint16_t GenerateRandomPort( uint16_t base, const std::string &seed )
+    {
+        uint32_t seed_hash = 0;
+        for ( char c : seed )
+        {
+            seed_hash = seed_hash * 31 + static_cast<uint8_t>( c );
+        }
+
+        std::mt19937                            rng( seed_hash );
+        std::uniform_int_distribution<uint16_t> dist( 0, 300 );
+
+        return base + dist( rng );
+    }
+}
 
 
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, GeniusNode::Error, e )

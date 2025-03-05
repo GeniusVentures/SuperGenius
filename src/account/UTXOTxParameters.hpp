@@ -12,10 +12,8 @@
 
 #include <boost/multiprecision/cpp_int.hpp>
 
-#include "ProofSystem/ElGamalKeyGenerator.hpp"
 #include "account/GeniusUTXO.hpp"
 #include "outcome/outcome.hpp"
-#include "base/util.hpp"
 
 namespace sgns
 {

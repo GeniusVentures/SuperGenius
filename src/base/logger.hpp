@@ -3,6 +3,7 @@
 
 #include <spdlog/fmt/ostr.h>
 #include <spdlog/spdlog.h>
+
 #if defined( ANDROID )
 #include <spdlog/sinks/android_sink.h>
 #endif
