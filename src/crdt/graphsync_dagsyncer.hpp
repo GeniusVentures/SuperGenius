@@ -89,8 +89,8 @@ namespace sgns::crdt
         bool IsOnBlackList( const PeerId &peer ) const;
 
     protected:
-        static constexpr uint64_t TIMEOUT_SECONDS = 300;
-        static constexpr uint64_t MAX_FAILURES    = 5;
+        static constexpr uint64_t TIMEOUT_SECONDS = 1200;
+        static constexpr uint64_t MAX_FAILURES    = 3;
 
         outcome::result<std::shared_ptr<ipfs_lite::ipfs::graphsync::Subscription>> RequestNode(
             const PeerId                              &peer,

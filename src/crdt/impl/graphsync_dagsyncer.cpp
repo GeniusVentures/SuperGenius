@@ -142,7 +142,7 @@ namespace sgns::crdt
             std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) ); // Retry after a short delay
         }
         BlackListPeer( cid, peerID );
-        logger_->error( "Timeout while waiting for node fetch: {}, adding peer {} to blacklist ",
+        logger_->error( "Timeout while waiting for node fetch: {}, penalizing peer {} ",
                         cid.toString().value(),
                         peerID.toBase58() );
         return outcome::failure( boost::system::errc::timed_out );
@@ -301,35 +301,36 @@ namespace sgns::crdt
         }
         logger_->debug( "HasBlock: {}, cid: {}", hb.value(), cid.toString().value() );
 
-        if ( hb.value() )
-        {
-            logger_->error( "We already had this {}", cid.toString().value() );
-            return;
-        }
-
         auto node = ipfs_lite::ipld::IPLDNodeImpl::createFromRawBytes( buffer );
-        if ( node.has_failure() )
+        if ( !hb.value() )
         {
-            logger_->error( "Cannot create node from received block data for CID {}", cid.toString().value() );
-            return;
-        }
+            if ( node.has_failure() )
+            {
+                logger_->error( "Cannot create node from received block data for CID {}", cid.toString().value() );
+                return;
+            }
 
-        auto res = AddNodeToMerkleDAG( node.value() );
-        if ( !res )
-        {
-            logger_->error( "Error adding node to dagservice {}", res.error().message() );
+            auto res = AddNodeToMerkleDAG( node.value() );
+            if ( !res )
+            {
+                logger_->error( "Error adding node to dagservice {}", res.error().message() );
+            }
+            std::stringstream sslinks;
+            for ( const auto &link : node.value()->getLinks() )
+            {
+                sslinks << "[";
+                sslinks << link.get().getCID().toString().value();
+                sslinks << link.get().getName();
+                sslinks << "], ";
+            }
+            logger_->error( "Node added to dagService. CID: {}, links: [{}]",
+                            node.value()->getCID().toString().value(),
+                            sslinks.str() );
         }
-        std::stringstream sslinks;
-        for ( const auto &link : node.value()->getLinks() )
+        else
         {
-            sslinks << "[";
-            sslinks << link.get().getCID().toString().value();
-            sslinks << link.get().getName();
-            sslinks << "], ";
+            logger_->error( "We already had this {}, trying to reinsert it", cid.toString().value() );
         }
-        logger_->error( "Node added to dagService. CID: {}, links: [{}]",
-                        node.value()->getCID().toString().value(),
-                        sslinks.str() );
 
         // @todo performance optimization is required
 
@@ -395,13 +396,15 @@ namespace sgns::crdt
     {
         std::lock_guard<std::mutex> lock( blacklist_mutex_ );
 
-        uint64_t now       = GetCurrentTimestamp();
+        uint64_t now        = GetCurrentTimestamp();
         auto [it, inserted] = blacklist_.emplace( peer, std::make_pair( now, 1 ) );
 
         if ( !inserted )
         {
             if ( now - it->second.first > TIMEOUT_SECONDS )
             {
+                logger_->error( "Peer {} timed-out {}", peer.toBase58() );
+
                 it->second.second = 1;
             }
             else if ( it->second.second < MAX_FAILURES )
@@ -450,7 +453,10 @@ namespace sgns::crdt
     outcome::result<void> GraphsyncDAGSyncer::BlackListPeer( const CID &cid, const PeerId &peer ) const
     {
         AddToBlackList( peer );
-        EraseRoute( cid );
+        if ( IsOnBlackList( peer ) )
+        {
+            EraseRoute( cid );
+        }
         return outcome::success();
     }
 
