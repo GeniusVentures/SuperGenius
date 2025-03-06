@@ -70,6 +70,9 @@ namespace sgns::crdt
 
     outcome::result<libp2p::peer::PeerInfo> GetPeerInfo() const;
 
+    void AddToBlackList( const PeerId &peer )const;
+    bool IsOnBlackList( const PeerId &peer ) const ;
+
   protected:
     outcome::result<std::shared_ptr<ipfs_lite::ipfs::graphsync::Subscription>> NewRequestNode(
         const PeerId& peer, boost::optional<std::vector<Multiaddress>> address, const CID& root_cid) const;
@@ -98,14 +101,16 @@ namespace sgns::crdt
     // std::vector<Subscription> requests_;
     mutable std::map<CID, std::tuple<std::shared_ptr<Subscription>, 
         std::shared_ptr<std::promise<std::shared_ptr<ipfs_lite::ipld::IPLDNode>>>>> requests_;
-    std::map<CID, std::tuple<PeerId, std::vector<Multiaddress>>> routing_;
+    mutable std::map<CID, std::tuple<PeerId, std::vector<Multiaddress>>> routing_;
+    mutable std::set<PeerId> blacklist_;
+    mutable std::mutex  blacklist_mutex_;
     mutable std::mutex                               mutex_;
     mutable std::map<CID, std::shared_ptr<ipfs_lite::ipld::IPLDNode>> received_blocks_;
     
     void AddCIDBlock(const CID &cid, const std::shared_ptr<ipfs_lite::ipld::IPLDNode> &block);
     outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> GrabCIDBlock(const CID &cid) const ;
     outcome::result<void> DeleteCIDBlock(const CID &cid)const ;
-
+    outcome::result<void> BlackListPeer( const CID &cid, const PeerId &peer ) const;
   };
 }
 #endif

@@ -13,15 +13,12 @@ namespace sgns::crdt
                                             std::shared_ptr<libp2p::Host>  host ) :
         dagService_( std::move( service ) ), graphsync_( std::move( graphsync ) ), host_( std::move( host ) )
     {
-
-        logger_->debug( "GraphSyncher created{} ", reinterpret_cast<size_t>(this));
-
+        logger_->debug( "GraphSyncher created{} ", reinterpret_cast<size_t>( this ) );
     }
 
     outcome::result<void> GraphsyncDAGSyncer::Listen( const Multiaddress &listen_to )
     {
-
-        logger_->debug( "Starting to listen {} ", reinterpret_cast<size_t>(this));
+        logger_->debug( "Starting to listen {} ", reinterpret_cast<size_t>( this ) );
 
         if ( this->host_ == nullptr )
         {
@@ -43,7 +40,6 @@ namespace sgns::crdt
         return outcome::success();
     }
 
-   
     outcome::result<std::shared_ptr<ipfs_lite::ipfs::graphsync::Subscription>> GraphsyncDAGSyncer::NewRequestNode(
         const PeerId                              &peer,
         boost::optional<std::vector<Multiaddress>> address,
@@ -81,13 +77,28 @@ namespace sgns::crdt
             } );
 
         // keeping subscriptions alive, otherwise they cancel themselves
-        logger_->debug( "Requesting Node {} on this {}", root_cid.toString().value(), reinterpret_cast<size_t>(this) );
+        logger_->debug( "Requesting Node {} on this {}",
+                        root_cid.toString().value(),
+                        reinterpret_cast<size_t>( this ) );
         return std::make_shared<Subscription>( std::move( subscription ) );
     }
 
     void GraphsyncDAGSyncer::AddRoute( const CID &cid, const PeerId &peer, std::vector<Multiaddress> &address )
     {
         routing_.insert( std::make_pair( cid, std::make_tuple( peer, address ) ) );
+    }
+
+    void GraphsyncDAGSyncer::AddToBlackList( const PeerId &peer ) const
+    {
+        std::lock_guard<std::mutex> lock( blacklist_mutex_ );
+        blacklist_.insert( peer );
+    }
+
+    bool GraphsyncDAGSyncer::IsOnBlackList( const PeerId &peer ) const
+    {
+        std::lock_guard<std::mutex> lock( blacklist_mutex_ );
+        bool                        ret = ( blacklist_.find( peer ) != blacklist_.end() );
+        return ret;
     }
 
     outcome::result<void> GraphsyncDAGSyncer::addNode( std::shared_ptr<const ipfs_lite::ipld::IPLDNode> node )
@@ -127,7 +138,10 @@ namespace sgns::crdt
                         }
                         std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) ); // Retry after a short delay
                     }
-                    logger_->error( "Timeout while waiting for node fetch: {}", cid.toString().value() );
+                    BlackListPeer(cid,std::get<0>( it->second )  );
+                    logger_->error( "Timeout while waiting for node fetch: {}, adding peer {} to blacklist ",
+                                    cid.toString().value(),
+                                    (std::get<0>( it->second )).toBase58() );
                     return outcome::failure( boost::system::errc::timed_out );
                 }
             }
@@ -152,7 +166,8 @@ namespace sgns::crdt
         const CID &cid ) const
     {
         return ipfs_lite::ipfs::merkledag::MerkleDagServiceImpl::fetchGraphOnDepth(
-            [weakptr = weak_from_this()]( const CID &cid ) -> outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>>
+            [weakptr = weak_from_this()](
+                const CID &cid ) -> outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>>
             {
                 if ( auto self = weakptr.lock() )
                 {
@@ -169,7 +184,8 @@ namespace sgns::crdt
         uint64_t   depth ) const
     {
         return ipfs_lite::ipfs::merkledag::MerkleDagServiceImpl::fetchGraphOnDepth(
-            [weakptr = weak_from_this()]( const CID &cid ) -> outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>>
+            [weakptr = weak_from_this()](
+                const CID &cid ) -> outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>>
             {
                 if ( auto self = weakptr.lock() )
                 {
@@ -372,5 +388,12 @@ namespace sgns::crdt
             return outcome::success();
         }
         return outcome::failure( boost::system::error_code{} ); // Return an appropriate failure result
+    }
+
+    outcome::result<void> GraphsyncDAGSyncer::BlackListPeer( const CID &cid, const PeerId &peer ) const
+    {
+        AddToBlackList( peer );
+        routing_.erase( routing_.find( cid ) );
+        return outcome::success();
     }
 }

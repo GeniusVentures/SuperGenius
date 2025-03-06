@@ -149,11 +149,20 @@ namespace sgns::crdt
                                 auto hb = dagSyncer_->HasBlock( cid );
                                 if ( hb.has_value() && !hb.value() )
                                 {
-                                    m_logger->debug( "Request node {} from {} {}",
-                                                     cid.toString().value(),
-                                                     addrvector[0].getStringAddress(),
-                                                     peerId.toBase58() );
-                                    dagSyncer_->AddRoute( cid, peerId, addrvector );
+                                    if ( !dagSyncer_->IsOnBlackList( peerId ) )
+                                    {
+                                        m_logger->debug( "Request node {} from {} {}",
+                                                         cid.toString().value(),
+                                                         addrvector[0].getStringAddress(),
+                                                         peerId.toBase58() );
+                                        dagSyncer_->AddRoute( cid, peerId, addrvector );
+                                    }
+                                    else
+                                    {
+                                        m_logger->debug( "The peer {} that has CID {} is blacklisted",
+                                                         peerId.toBase58(),
+                                                         cid.toString().value() );
+                                    }
                                 }
                                 else
                                 {
