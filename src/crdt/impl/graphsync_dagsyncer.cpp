@@ -424,7 +424,7 @@ namespace sgns::crdt
             auto it = blacklist_.find( peer );
             if ( it == blacklist_.end() )
             {
-                logger_->error( "Peer {} in NOT blacklisted", peer.toBase58() );
+                logger_->trace( "Peer {} in NOT blacklisted", peer.toBase58() );
 
                 break;
             }
@@ -432,7 +432,7 @@ namespace sgns::crdt
             if ( now - it->second.first > TIMEOUT_SECONDS )
             {
                 it->second.second = 0;
-                logger_->error( "Peer {} was blacklisted, now releasing it", peer.toBase58() );
+                logger_->debug( "Peer {} was blacklisted, now releasing it", peer.toBase58() );
 
                 break;
             }
