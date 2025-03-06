@@ -40,7 +40,7 @@ namespace sgns::crdt
         return outcome::success();
     }
 
-    outcome::result<std::shared_ptr<ipfs_lite::ipfs::graphsync::Subscription>> GraphsyncDAGSyncer::NewRequestNode(
+    outcome::result<std::shared_ptr<ipfs_lite::ipfs::graphsync::Subscription>> GraphsyncDAGSyncer::RequestNode(
         const PeerId                              &peer,
         boost::optional<std::vector<Multiaddress>> address,
         const CID                                 &root_cid ) const
@@ -85,73 +85,55 @@ namespace sgns::crdt
 
     void GraphsyncDAGSyncer::AddRoute( const CID &cid, const PeerId &peer, std::vector<Multiaddress> &address )
     {
+        std::lock_guard<std::mutex> lock( routing_mutex_ );
         routing_.insert( std::make_pair( cid, std::make_tuple( peer, address ) ) );
-    }
-
-    void GraphsyncDAGSyncer::AddToBlackList( const PeerId &peer ) const
-    {
-        std::lock_guard<std::mutex> lock( blacklist_mutex_ );
-        blacklist_.insert( peer );
-    }
-
-    bool GraphsyncDAGSyncer::IsOnBlackList( const PeerId &peer ) const
-    {
-        std::lock_guard<std::mutex> lock( blacklist_mutex_ );
-        bool                        ret = ( blacklist_.find( peer ) != blacklist_.end() );
-        return ret;
     }
 
     outcome::result<void> GraphsyncDAGSyncer::addNode( std::shared_ptr<const ipfs_lite::ipld::IPLDNode> node )
     {
-        return dagService_.addNode( std::move( node ) );
+        return AddNodeToMerkleDAG( std::move( node ) );
     }
 
     outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> GraphsyncDAGSyncer::getNode( const CID &cid ) const
     {
-        auto node = dagService_.getNode( cid );
-        if ( node.has_error() )
-        {
-            auto it = routing_.find( cid );
-            if ( it != routing_.end() )
-            {
-                if ( auto maybe_cid_block = GrabCIDBlock( it->first ); maybe_cid_block )
-                {
-                    DeleteCIDBlock( it->first );
-                    return maybe_cid_block;
-                }
-                else
-                {
-                    auto res = NewRequestNode( std::get<0>( it->second ), std::get<1>( it->second ), it->first );
-                    if ( res.has_error() )
-                    {
-                        return res.as_failure();
-                    }
-                    auto start_time = std::chrono::steady_clock::now();
-                    while ( std::chrono::steady_clock::now() - start_time < std::chrono::seconds( 60 ) )
-                    {
-                        auto result = GrabCIDBlock( it->first ); // Call the internal GrabCIDBlock
-                        if ( result )
-                        {
-                            DeleteCIDBlock( it->first );
+        auto node = GetNodeFromMerkleDAG( cid );
 
-                            return result; // Return the block if successfully grabbed
-                        }
-                        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) ); // Retry after a short delay
-                    }
-                    BlackListPeer(cid,std::get<0>( it->second )  );
-                    logger_->error( "Timeout while waiting for node fetch: {}, adding peer {} to blacklist ",
-                                    cid.toString().value(),
-                                    (std::get<0>( it->second )).toBase58() );
-                    return outcome::failure( boost::system::errc::timed_out );
-                }
-            }
+        if ( !node.has_error() )
+        {
+            return node;
         }
-        return node;
+
+        auto it = GetRoute( cid );
+        if ( it == routing_.end() )
+        {
+            return node;
+        }
+
+        auto res = RequestNode( std::get<0>( it->second ), std::get<1>( it->second ), it->first );
+        if ( res.has_error() )
+        {
+            return node;
+        }
+        auto start_time = std::chrono::steady_clock::now();
+        while ( std::chrono::steady_clock::now() - start_time < std::chrono::seconds( 20 ) )
+        {
+            auto result = GetNodeFromMerkleDAG( it->first ); // Call the internal GrabCIDBlock
+            if ( result )
+            {
+                return result; // Return the block if successfully grabbed
+            }
+            std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) ); // Retry after a short delay
+        }
+        BlackListPeer( cid, std::get<0>( it->second ) );
+        logger_->error( "Timeout while waiting for node fetch: {}, adding peer {} to blacklist ",
+                        cid.toString().value(),
+                        ( std::get<0>( it->second ) ).toBase58() );
+        return outcome::failure( boost::system::errc::timed_out );
     }
 
     outcome::result<void> GraphsyncDAGSyncer::removeNode( const CID &cid )
     {
-        return dagService_.removeNode( cid );
+        return RemoveNodeFromMerkleDAG( cid );
     }
 
     outcome::result<size_t> GraphsyncDAGSyncer::select(
@@ -159,7 +141,7 @@ namespace sgns::crdt
         gsl::span<const uint8_t>                                                     selector,
         std::function<bool( std::shared_ptr<const ipfs_lite::ipld::IPLDNode> node )> handler ) const
     {
-        return dagService_.select( root_cid, selector, handler );
+        return SelectFromMerkleDAG( std::move( root_cid ), std::move( selector ), std::move( handler ) );
     }
 
     outcome::result<std::shared_ptr<ipfs_lite::ipfs::merkledag::Leaf>> GraphsyncDAGSyncer::fetchGraph(
@@ -199,7 +181,7 @@ namespace sgns::crdt
 
     outcome::result<bool> GraphsyncDAGSyncer::HasBlock( const CID &cid ) const
     {
-        auto getNodeResult = dagService_.getNode( cid );
+        auto getNodeResult = GetNodeFromMerkleDAG( cid );
         return getNodeResult.has_value();
     }
 
@@ -322,7 +304,7 @@ namespace sgns::crdt
         //    return;
         //}
 
-        auto res = dagService_.addNode( node.value() );
+        auto res = AddNodeToMerkleDAG( node.value() );
         if ( !res )
         {
             logger_->error( "Error adding node to dagservice {}", res.error().message() );
@@ -343,7 +325,7 @@ namespace sgns::crdt
 
         logger_->debug( "Request found {}", cid.toString().value() );
 
-        auto it = routing_.find( cid );
+        auto it = GetRoute( cid );
         if ( it != routing_.end() )
         {
             for ( auto link : node.value()->getLinks() )
@@ -356,7 +338,7 @@ namespace sgns::crdt
             }
         }
         // @todo check if multiple requests of the same CID works as expected.
-        AddCIDBlock( cid, node.value() );
+        //AddCIDBlock( cid, node.value() );
 
         //std::get<1>( itSubscription->second )->set_value( node.value() );
     }
@@ -390,10 +372,78 @@ namespace sgns::crdt
         return outcome::failure( boost::system::error_code{} ); // Return an appropriate failure result
     }
 
+    void GraphsyncDAGSyncer::AddToBlackList( const PeerId &peer ) const
+    {
+        std::lock_guard<std::mutex> lock( blacklist_mutex_ );
+        blacklist_.insert( peer );
+    }
+
+    bool GraphsyncDAGSyncer::IsOnBlackList( const PeerId &peer ) const
+    {
+        std::lock_guard<std::mutex> lock( blacklist_mutex_ );
+        bool                        ret = ( blacklist_.find( peer ) != blacklist_.end() );
+        return ret;
+    }
+
     outcome::result<void> GraphsyncDAGSyncer::BlackListPeer( const CID &cid, const PeerId &peer ) const
     {
         AddToBlackList( peer );
-        routing_.erase( routing_.find( cid ) );
+        EraseRoute( cid );
         return outcome::success();
+    }
+
+    outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> GraphsyncDAGSyncer::GetNodeFromMerkleDAG(
+        const CID &cid ) const
+    {
+        std::lock_guard<std::mutex> lock( mutex_ );
+        //std::shared_lock<std::shared_mutex> in_lock( incoming_tx_mutex_m );
+
+        return dagService_.getNode( cid );
+    }
+
+    outcome::result<void> GraphsyncDAGSyncer::AddNodeToMerkleDAG(
+        std::shared_ptr<const ipfs_lite::ipld::IPLDNode> node )
+    {
+        std::lock_guard<std::mutex> lock( mutex_ );
+        return dagService_.addNode( std::move( node ) );
+    }
+
+    outcome::result<void> GraphsyncDAGSyncer::RemoveNodeFromMerkleDAG( const CID &cid )
+    {
+        std::lock_guard<std::mutex> lock( mutex_ );
+        return dagService_.removeNode( cid );
+    }
+
+    outcome::result<size_t> GraphsyncDAGSyncer::SelectFromMerkleDAG(
+        gsl::span<const uint8_t>                                                     root_cid,
+        gsl::span<const uint8_t>                                                     selector,
+        std::function<bool( std::shared_ptr<const ipfs_lite::ipld::IPLDNode> node )> handler ) const
+    {
+        std::lock_guard<std::mutex> lock( mutex_ );
+        return dagService_.select( root_cid, selector, handler );
+    }
+
+    GraphsyncDAGSyncer::RouteMapType::iterator GraphsyncDAGSyncer::GetRoute( const CID &cid )
+    {
+        std::lock_guard<std::mutex> lock( routing_mutex_ );
+
+        return routing_.find( cid );
+    }
+    GraphsyncDAGSyncer::RouteMapType::const_iterator GraphsyncDAGSyncer::GetRoute( const CID &cid ) const
+    {
+        std::lock_guard<std::mutex> lock( routing_mutex_ );
+
+        return routing_.find( cid );
+    }
+
+    void GraphsyncDAGSyncer::EraseRoute( const CID &cid ) const
+    {
+        std::lock_guard<std::mutex> lock( routing_mutex_ );
+
+        auto it = routing_.find( cid );
+        if ( it != routing_.end() )
+        {
+            routing_.erase( it );
+        }
     }
 }
