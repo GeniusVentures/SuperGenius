@@ -280,7 +280,7 @@ namespace sgns
 
     void GeniusNode::RefreshUPNP( int pubsubport, int graphsyncport )
     {
-        if ( upnp_thread.joinable() )
+        if (upnp_thread.joinable())
         {
             stop_upnp = true;   // Signal the existing thread to stop
             upnp_thread.join(); // Wait for it to finish
@@ -292,38 +292,45 @@ namespace sgns
             [this, pubsubport, graphsyncport]()
             {
                 auto next_refresh_time = std::chrono::steady_clock::now() + std::chrono::minutes( 60 );
+                auto upnp_shared       = std::make_shared<upnp::UPNP>();
 
-                while ( !stop_upnp )
+                while (!stop_upnp)
                 {
-                    if ( std::chrono::steady_clock::now() >= next_refresh_time )
+                    if (std::chrono::steady_clock::now() >= next_refresh_time)
                     {
-                        // Refresh UPnP mappings
-                        auto upnp = std::make_shared<upnp::UPNP>();
-                        if ( upnp->GetIGD() )
+                        std::weak_ptr<upnp::UPNP> upnp_weak = upnp_shared;
+
+                        if (auto upnp = upnp_weak.lock())
                         {
-                            auto openedPort  = upnp->OpenPort( pubsubport, pubsubport, "TCP", 3600 );
-                            auto openedPort2 = upnp->OpenPort( graphsyncport, graphsyncport, "TCP", 3600 );
-                            if ( !openedPort || !openedPort2 )
+                            if (upnp->GetIGD())
                             {
-                                node_logger->error( "Failed to open port" );
+                                auto openedPort  = upnp->OpenPort( pubsubport, pubsubport, "TCP", 3600 );
+                                auto openedPort2 = upnp->OpenPort( graphsyncport, graphsyncport, "TCP", 3600 );
+                                if (!openedPort || !openedPort2)
+                                {
+                                    node_logger->error( "Failed to open port" );
+                                }
+                                else
+                                {
+                                    node_logger->info( "Open Ports Success pubsub: {} graphsync:{}",
+                                                       pubsubport,
+                                                       graphsyncport );
+                                }
                             }
                             else
                             {
-                                node_logger->info( "Open Ports Success pubsub: {} graphsync:{}",
-                                                   pubsubport,
-                                                   graphsyncport );
+                                node_logger->info( "No IGD" );
                             }
                         }
                         else
                         {
-                            node_logger->info( "No IGD" );
+                            node_logger->info( "UPNP weak_ptr expired" );
+                            stop_upnp = true; // Signal thread to stop gracefully
                         }
 
-                        // Update the next refresh time
                         next_refresh_time = std::chrono::steady_clock::now() + std::chrono::minutes( 60 );
                     }
 
-                    // Sleep briefly to avoid busy-waiting
                     std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
                 }
             } );
