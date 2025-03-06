@@ -141,7 +141,7 @@ namespace sgns::crdt
             }
             std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) ); // Retry after a short delay
         }
-        BlackListPeer( cid, peerID );
+        BlackListPeer( peerID );
         logger_->error( "Timeout while waiting for node fetch: {}, penalizing peer {} ",
                         cid.toString().value(),
                         peerID.toBase58() );
@@ -450,12 +450,12 @@ namespace sgns::crdt
         return ret;
     }
 
-    outcome::result<void> GraphsyncDAGSyncer::BlackListPeer( const CID &cid, const PeerId &peer ) const
+    outcome::result<void> GraphsyncDAGSyncer::BlackListPeer( const PeerId &peer ) const
     {
         AddToBlackList( peer );
         if ( IsOnBlackList( peer ) )
         {
-            EraseRoute( cid );
+            EraseRoutesFromPeerID( peer );
         }
         return outcome::success();
     }
@@ -498,6 +498,23 @@ namespace sgns::crdt
             return outcome::failure( Error::ROUTE_NOT_FOUND );
         }
         return it->second;
+    }
+
+    void GraphsyncDAGSyncer::EraseRoutesFromPeerID( const PeerId &peer ) const
+    {
+        std::lock_guard<std::mutex> lock( routing_mutex_ );
+
+        for ( auto it = routing_.begin(); it != routing_.end(); )
+        {
+            if ( std::get<0>( it->second ) == peer )
+            {
+                it = routing_.erase( it );
+            }
+            else
+            {
+                ++it;
+            }
+        }
     }
 
     void GraphsyncDAGSyncer::EraseRoute( const CID &cid ) const

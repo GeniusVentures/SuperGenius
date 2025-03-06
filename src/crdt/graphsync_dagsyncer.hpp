@@ -133,7 +133,7 @@ namespace sgns::crdt
         void AddCIDBlock( const CID &cid, const std::shared_ptr<ipfs_lite::ipld::IPLDNode> &block );
         outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> GrabCIDBlock( const CID &cid ) const;
         outcome::result<void>                                       DeleteCIDBlock( const CID &cid ) const;
-        outcome::result<void> BlackListPeer( const CID &cid, const PeerId &peer ) const;
+        outcome::result<void>                                       BlackListPeer( const PeerId &peer ) const;
 
         outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> GetNodeFromMerkleDAG( const CID &cid ) const;
         outcome::result<void>   AddNodeToMerkleDAG( std::shared_ptr<const ipfs_lite::ipld::IPLDNode> node );
@@ -144,6 +144,7 @@ namespace sgns::crdt
             std::function<bool( std::shared_ptr<const ipfs_lite::ipld::IPLDNode> node )> handler ) const;
 
         outcome::result<RouterInfo> GetRoute( const CID &cid ) const;
+        void                        EraseRoutesFromPeerID( const PeerId &peer ) const;
         void                        EraseRoute( const CID &cid ) const;
 
         uint64_t GetCurrentTimestamp() const;
