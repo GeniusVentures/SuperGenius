@@ -10,6 +10,7 @@
 #include <libp2p/host/host.hpp>
 
 #include <memory>
+#include <chrono>
 
 namespace sgns::crdt
 {
@@ -88,6 +89,9 @@ namespace sgns::crdt
         bool IsOnBlackList( const PeerId &peer ) const;
 
     protected:
+        static constexpr uint64_t TIMEOUT_SECONDS = 300;
+        static constexpr uint64_t MAX_FAILURES    = 5;
+
         outcome::result<std::shared_ptr<ipfs_lite::ipfs::graphsync::Subscription>> RequestNode(
             const PeerId                              &peer,
             boost::optional<std::vector<Multiaddress>> address,
@@ -120,7 +124,7 @@ namespace sgns::crdt
                                     std::shared_ptr<std::promise<std::shared_ptr<ipfs_lite::ipld::IPLDNode>>>>>
                                                                           requests_;
         mutable RouteMapType                                              routing_;
-        mutable std::set<PeerId>                                          blacklist_;
+        mutable std::map<PeerId, std::pair<uint64_t, uint64_t>>           blacklist_;
         mutable std::mutex                                                blacklist_mutex_;
         mutable std::mutex                                                mutex_;
         mutable std::mutex                                                routing_mutex_;
@@ -139,8 +143,10 @@ namespace sgns::crdt
             gsl::span<const uint8_t>                                                     selector,
             std::function<bool( std::shared_ptr<const ipfs_lite::ipld::IPLDNode> node )> handler ) const;
 
-        outcome::result<RouterInfo>  GetRoute( const CID &cid ) const;
-        void                         EraseRoute( const CID &cid ) const;
+        outcome::result<RouterInfo> GetRoute( const CID &cid ) const;
+        void                        EraseRoute( const CID &cid ) const;
+
+        uint64_t GetCurrentTimestamp() const;
     };
 }
 

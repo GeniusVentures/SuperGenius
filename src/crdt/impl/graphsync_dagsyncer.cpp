@@ -394,13 +394,50 @@ namespace sgns::crdt
     void GraphsyncDAGSyncer::AddToBlackList( const PeerId &peer ) const
     {
         std::lock_guard<std::mutex> lock( blacklist_mutex_ );
-        blacklist_.insert( peer );
+
+        uint64_t now       = GetCurrentTimestamp();
+        auto [it, inserted] = blacklist_.emplace( peer, std::make_pair( now, 1 ) );
+
+        if ( !inserted )
+        {
+            if ( now - it->second.first > TIMEOUT_SECONDS )
+            {
+                it->second.second = 1;
+            }
+            else if ( it->second.second < MAX_FAILURES )
+            {
+                it->second.second++;
+            }
+            it->second.first = now;
+        }
     }
 
     bool GraphsyncDAGSyncer::IsOnBlackList( const PeerId &peer ) const
     {
         std::lock_guard<std::mutex> lock( blacklist_mutex_ );
-        bool                        ret = ( blacklist_.find( peer ) != blacklist_.end() );
+        bool                        ret = false;
+        do
+        {
+            auto it = blacklist_.find( peer );
+            if ( it == blacklist_.end() )
+            {
+                break;
+            }
+            uint64_t now = GetCurrentTimestamp();
+            if ( now - it->second.first > TIMEOUT_SECONDS )
+            {
+                it->second.second = 0;
+                break;
+            }
+
+            if ( it->second.second > MAX_FAILURES )
+            {
+                ret = true;
+                break;
+            }
+            it->second.second = 0;
+        } while ( 0 );
+
         return ret;
     }
 
@@ -460,5 +497,12 @@ namespace sgns::crdt
         {
             routing_.erase( it );
         }
+    }
+
+    uint64_t GraphsyncDAGSyncer::GetCurrentTimestamp() const
+    {
+        return static_cast<uint64_t>(
+            std::chrono::duration_cast<std::chrono::seconds>( std::chrono::system_clock::now().time_since_epoch() )
+                .count() );
     }
 }
