@@ -6,6 +6,28 @@
 #include <utility>
 #include <thread>
 
+OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::crdt, GraphsyncDAGSyncer::Error, e )
+{
+    switch ( e )
+    {
+        case sgns::crdt::GraphsyncDAGSyncer::Error::CID_NOT_FOUND:
+            return "The Requested CID was not found";
+        case sgns::crdt::GraphsyncDAGSyncer::Error::ROUTE_NOT_FOUND:
+            return "No route to find the CID";
+        case sgns::crdt::GraphsyncDAGSyncer::Error::PEER_BLACKLISTED:
+            return "The peer who has the CID is blacklisted";
+        case sgns::crdt::GraphsyncDAGSyncer::Error::TIMED_OUT:
+            return "The request has timed out";
+        case sgns::crdt::GraphsyncDAGSyncer::Error::DAGSYNCHER_NOT_STARTED:
+            return "The Start method was never called, or StopSync was called";
+        case sgns::crdt::GraphsyncDAGSyncer::Error::GRAPHSYNC_IS_NULL:
+            return "The graphsync member is null";
+        case sgns::crdt::GraphsyncDAGSyncer::Error::HOST_IS_NULL:
+            return "The host member is null";
+    }
+    return "Unknown error";
+}
+
 namespace sgns::crdt
 {
     GraphsyncDAGSyncer::GraphsyncDAGSyncer( std::shared_ptr<IpfsDatastore> service,
@@ -22,7 +44,7 @@ namespace sgns::crdt
 
         if ( this->host_ == nullptr )
         {
-            return outcome::failure( boost::system::error_code{} );
+            return outcome::failure( Error::HOST_IS_NULL );
         }
 
         auto listen_res = host_->listen( listen_to );
@@ -47,12 +69,12 @@ namespace sgns::crdt
     {
         if ( !started_ )
         {
-            return outcome::failure( boost::system::error_code{} );
+            return outcome::failure( Error::DAGSYNCHER_NOT_STARTED );
         }
 
         if ( graphsync_ == nullptr )
         {
-            return outcome::failure( boost::system::error_code{} );
+            return outcome::failure( Error::GRAPHSYNC_IS_NULL );
         }
         std::vector<Extension> extensions;
         ResponseMetadata       response_metadata{};
@@ -103,31 +125,26 @@ namespace sgns::crdt
             return node;
         }
 
-        auto it = GetRoute( cid );
-        if ( it == routing_.end() )
-        {
-            return node;
-        }
+        OUTCOME_TRY( ( auto &&, route_info ), GetRoute( cid ) );
 
-        auto res = RequestNode( std::get<0>( it->second ), std::get<1>( it->second ), it->first );
-        if ( res.has_error() )
-        {
-            return node;
-        }
+        auto [peerID, address] = route_info;
+
+        OUTCOME_TRY( ( auto &&, subscription ), RequestNode( peerID, address, cid ) );
+
         auto start_time = std::chrono::steady_clock::now();
         while ( std::chrono::steady_clock::now() - start_time < std::chrono::seconds( 20 ) )
         {
-            auto result = GetNodeFromMerkleDAG( it->first ); // Call the internal GrabCIDBlock
+            auto result = GetNodeFromMerkleDAG( cid ); // Call the internal GrabCIDBlock
             if ( result )
             {
                 return result; // Return the block if successfully grabbed
             }
             std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) ); // Retry after a short delay
         }
-        BlackListPeer( cid, std::get<0>( it->second ) );
+        BlackListPeer( cid, peerID );
         logger_->error( "Timeout while waiting for node fetch: {}, adding peer {} to blacklist ",
                         cid.toString().value(),
-                        ( std::get<0>( it->second ) ).toBase58() );
+                        peerID.toBase58() );
         return outcome::failure( boost::system::errc::timed_out );
     }
 
@@ -297,13 +314,6 @@ namespace sgns::crdt
             return;
         }
 
-        //auto itSubscription = requests_.find( cid );
-        //if ( itSubscription == requests_.end() )
-        //{
-        //    logger_->debug( "Unexpected block received {}", cid.toString().value() );
-        //    return;
-        //}
-
         auto res = AddNodeToMerkleDAG( node.value() );
         if ( !res )
         {
@@ -325,22 +335,31 @@ namespace sgns::crdt
 
         logger_->debug( "Request found {}", cid.toString().value() );
 
-        auto it = GetRoute( cid );
-        if ( it != routing_.end() )
+        auto maybe_router_info = GetRoute( cid );
+        if ( maybe_router_info )
         {
-            for ( auto link : node.value()->getLinks() )
+            auto [peerID, address] = maybe_router_info.value();
+            logger_->debug( "Seeing if peer {} has links to AddRoute", peerID.toBase58() );
+            if ( !IsOnBlackList( peerID ) )
             {
-                auto linkhb = HasBlock( link.get().getCID() );
-                if ( linkhb.has_value() && !linkhb.value() )
+                for ( auto link : node.value()->getLinks() )
                 {
-                    AddRoute( link.get().getCID(), std::get<0>( it->second ), std::get<1>( it->second ) );
+                    auto linkhb = HasBlock( link.get().getCID() );
+                    if ( linkhb.has_value() && !linkhb.value() )
+                    {
+                        logger_->trace( "Adding route for peer {} and CID {}",
+                                        peerID.toBase58(),
+                                        link.get().getCID().toString().value() );
+                        AddRoute( link.get().getCID(), peerID, address );
+                    }
                 }
             }
+            else
+            {
+                //I don't think it should ever land here
+                logger_->error( "Peer {} was blacklisted", peerID.toBase58() );
+            }
         }
-        // @todo check if multiple requests of the same CID works as expected.
-        //AddCIDBlock( cid, node.value() );
-
-        //std::get<1>( itSubscription->second )->set_value( node.value() );
     }
 
     void GraphsyncDAGSyncer::AddCIDBlock( const CID &cid, const std::shared_ptr<ipfs_lite::ipld::IPLDNode> &block )
@@ -396,8 +415,6 @@ namespace sgns::crdt
         const CID &cid ) const
     {
         std::lock_guard<std::mutex> lock( mutex_ );
-        //std::shared_lock<std::shared_mutex> in_lock( incoming_tx_mutex_m );
-
         return dagService_.getNode( cid );
     }
 
@@ -423,17 +440,15 @@ namespace sgns::crdt
         return dagService_.select( root_cid, selector, handler );
     }
 
-    GraphsyncDAGSyncer::RouteMapType::iterator GraphsyncDAGSyncer::GetRoute( const CID &cid )
+    outcome::result<GraphsyncDAGSyncer::RouterInfo> GraphsyncDAGSyncer::GetRoute( const CID &cid ) const
     {
         std::lock_guard<std::mutex> lock( routing_mutex_ );
-
-        return routing_.find( cid );
-    }
-    GraphsyncDAGSyncer::RouteMapType::const_iterator GraphsyncDAGSyncer::GetRoute( const CID &cid ) const
-    {
-        std::lock_guard<std::mutex> lock( routing_mutex_ );
-
-        return routing_.find( cid );
+        auto                        it = routing_.find( cid );
+        if ( it == routing_.end() )
+        {
+            return outcome::failure( Error::ROUTE_NOT_FOUND );
+        }
+        return it->second;
     }
 
     void GraphsyncDAGSyncer::EraseRoute( const CID &cid ) const

@@ -32,7 +32,19 @@ namespace sgns::crdt
         using Subscription        = libp2p::protocol::Subscription;
         using Logger              = base::Logger;
         using BlockCallback       = Graphsync::BlockCallback;
-        using RouteMapType        = std::map<CID, std::tuple<PeerId, std::vector<Multiaddress>>>;
+        using RouterInfo          = std::tuple<PeerId, std::vector<Multiaddress>>;
+        using RouteMapType        = std::map<CID, RouterInfo>;
+
+        enum class Error
+        {
+            CID_NOT_FOUND = 0,      ///< The requested CID wasn't found
+            ROUTE_NOT_FOUND,        ///< Route for the CID wasn't found
+            PEER_BLACKLISTED,       ///< The peer that has the CID is blacklisted
+            TIMED_OUT,              ///< The request has timed out
+            DAGSYNCHER_NOT_STARTED, ///< Start wasn't called, or StopSync was called
+            GRAPHSYNC_IS_NULL,      ///< Graphsync member is nullptr
+            HOST_IS_NULL,           ///< Graphsync member is nullptr
+        };
 
         GraphsyncDAGSyncer( std::shared_ptr<IpfsDatastore> service,
                             std::shared_ptr<Graphsync>     graphsync,
@@ -127,9 +139,14 @@ namespace sgns::crdt
             gsl::span<const uint8_t>                                                     selector,
             std::function<bool( std::shared_ptr<const ipfs_lite::ipld::IPLDNode> node )> handler ) const;
 
-        RouteMapType::iterator       GetRoute( const CID &cid );
-        RouteMapType::const_iterator GetRoute( const CID &cid ) const;
+        outcome::result<RouterInfo>  GetRoute( const CID &cid ) const;
         void                         EraseRoute( const CID &cid ) const;
     };
 }
+
+/**
+ * @brief       Macro for declaring error handling in the IBasicProof class.
+ */
+OUTCOME_HPP_DECLARE_ERROR_2( sgns::crdt, GraphsyncDAGSyncer::Error );
+
 #endif
