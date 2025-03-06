@@ -400,11 +400,12 @@ void periodic_processing( sgns::GeniusNode &genius_node )
 std::string generate_eth_private_key() {
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::uniform_int_distribution<uint8_t> dist(0, 255);
+    std::uniform_int_distribution<int> dist(0, 255); 
 
     std::ostringstream oss;
     for (int i = 0; i < 32; ++i) {
-        oss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(dist(gen));
+        oss << std::hex << std::setw(2) << std::setfill('0')
+            << (dist(gen) & 0xFF); // Mask to ensure only lower 8 bits are used
     }
     return oss.str();
 }
