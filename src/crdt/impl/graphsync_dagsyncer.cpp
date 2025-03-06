@@ -421,18 +421,24 @@ namespace sgns::crdt
             auto it = blacklist_.find( peer );
             if ( it == blacklist_.end() )
             {
+                logger_->error( "Peer {} in NOT blacklisted", peer.toBase58() );
+
                 break;
             }
             uint64_t now = GetCurrentTimestamp();
             if ( now - it->second.first > TIMEOUT_SECONDS )
             {
                 it->second.second = 0;
+                logger_->error( "Peer {} was blacklisted, now releasing it", peer.toBase58() );
+
                 break;
             }
 
-            if ( it->second.second > MAX_FAILURES )
+            if ( it->second.second >= MAX_FAILURES )
             {
                 ret = true;
+                logger_->error( "Peer {} BLACKLISTED", peer.toBase58() );
+
                 break;
             }
             it->second.second = 0;
