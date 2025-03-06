@@ -397,30 +397,67 @@ void periodic_processing( sgns::GeniusNode &genius_node )
     }
 }
 
+std::string generate_eth_private_key() {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<uint8_t> dist(0, 255);
+
+    std::ostringstream oss;
+    for (int i = 0; i < 32; ++i) {
+        oss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(dist(gen));
+    }
+    return oss.str();
+}
+
 DevConfig_st DEV_CONFIG{ "0xcafe", "0.65", 1.0, 0 , "./"};
 
-int main( int argc, char *argv[] )
+int main(int argc, char *argv[])
 {
-    std::thread input_thread( keyboard_input_thread );
+    bool start_processing = false; // Default behavior for "process"
+    bool last_param = true;        // Default value for the last parameter
 
-    //Inputs
+    // Parse command-line arguments
+    if (argc > 1)
+    {
+        std::string arg = argv[1];
+        if (arg == "server")
+        {
+            start_processing = true;
+            last_param = false;
+        }
+    }
 
+    // Generate a random Ethereum-compatible private key
+    std::string eth_private_key = generate_eth_private_key();
+    std::cout << "Generated Ethereum Private Key: " << eth_private_key << std::endl;
 
-    sgns::GeniusNode node_instance( DEV_CONFIG, "cafebeefdeadbeefdeadbeefdeadbeefcafecafedeadbeefdeadbeefdeaddead", true, false );
+    std::thread input_thread(keyboard_input_thread);
 
-    std::thread processing_thread(periodic_processing, std::ref(node_instance));
+    sgns::GeniusNode node_instance(DEV_CONFIG, eth_private_key.c_str(), true, last_param);
+
     std::cout << "Insert \"process\", the image and the number of tokens to be" << std::endl;
     redraw_prompt();
-    //while ( !finished )
-    //{
-    process_events( node_instance );
-    //}
-    if ( input_thread.joinable() )
+
+    if (start_processing)
+    {
+        std::thread processing_thread(periodic_processing, std::ref(node_instance));
+
+        process_events(node_instance);
+
+        if (processing_thread.joinable())
+        {
+            processing_thread.join();
+        }
+    }
+    else
+    {
+        process_events(node_instance);
+    }
+
+    if (input_thread.joinable())
     {
         input_thread.join();
     }
-    if (processing_thread.joinable()) {
-        processing_thread.join();
-    }
+
     return 0;
 }
