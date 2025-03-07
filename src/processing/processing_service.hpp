@@ -60,6 +60,13 @@ namespace sgns::processing
 
         void HandleRequestTimeout();
 
+        void BroadcastNodeCreationIntent( const std::string &subTaskQueueId );
+        void HandleNodeCreationTimeout();
+        void OnNodeCreationIntent( const std::string &peerAddress, const std::string &subTaskQueueId );
+        bool HasLowestAddress( const std::string &subTaskQueueId );
+        void CancelPendingCreation(const std::string& subTaskQueueId, const std::string& reason);
+
+
         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>       m_gossipPubSub;
         std::shared_ptr<boost::asio::io_context>               m_context;
         size_t                                                 m_maximalNodesCount;
@@ -78,6 +85,14 @@ namespace sgns::processing
                                                                  userCallbackSuccess_;
         std::function<void( const std::string &subTaskQueueId )> userCallbackError_;
         std::string                                              node_address_;
+
+        std::map<std::string, std::set<std::string>> m_pendingNodeCreations;
+        boost::asio::deadline_timer                  m_nodeCreationTimer;
+        boost::posix_time::time_duration             m_nodeCreationTimeout;
+        std::string                                  m_pendingSubTaskQueueId;
+        std::list<SGProcessing::SubTask>             m_pendingSubTasks;
+        boost::optional<SGProcessing::Task>          m_pendingTask;
+        std::mutex                                   m_mutexPendingCreation;
 
         base::Logger m_logger = base::createLogger( "ProcessingService" );
     };

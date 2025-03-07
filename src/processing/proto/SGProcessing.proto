@@ -116,12 +116,18 @@ message ProcessingChannelResponse
     string channel_id = 1; // Processing channel Id
 }
 
+message NodeCreationIntent {
+    string peer_address = 1;
+    string subtask_queue_id = 2;
+}
+
 message GridChannelMessage
 {
     oneof data 
     {
         ProcessingChannelRequest processing_channel_request = 1;
         ProcessingChannelResponse processing_channel_response = 2;
+        NodeCreationIntent node_creation_intent = 3;
     }
 }
 

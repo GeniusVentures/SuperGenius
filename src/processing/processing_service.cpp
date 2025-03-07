@@ -20,7 +20,10 @@ namespace sgns::processing
         m_timerChannelListRequestTimeout( *m_context ),
         m_channelListRequestTimeout( boost::posix_time::seconds( 5 ) ),
         m_isStopped( true ),
-        node_address_( m_gossipPubSub->GetLocalAddress() )
+        node_address_( m_gossipPubSub->GetLocalAddress() ),
+        m_nodeCreationTimer( *m_context ),
+        m_nodeCreationTimeout( boost::posix_time::milliseconds( 500 ) )
+
     {
     }
 
@@ -47,7 +50,9 @@ namespace sgns::processing
         m_isStopped( true ),
         userCallbackSuccess_( std::move( userCallbackSuccess ) ),
         userCallbackError_( std::move( userCallbackError ) ),
-        node_address_( std::move( node_address ) )
+        node_address_( std::move( node_address ) ),
+        m_nodeCreationTimer( *m_context ),
+        m_nodeCreationTimeout( boost::posix_time::milliseconds( 500 ) )
     {
     }
 
@@ -130,16 +135,19 @@ namespace sgns::processing
                 if ( gridMessage.has_processing_channel_response() )
                 {
                     auto response = gridMessage.processing_channel_response();
-
                     m_logger->debug( "[{}] Processing channel received. id:{}", node_address_, response.channel_id() );
-
                     AcceptProcessingChannel( response.channel_id() );
                 }
                 else if ( gridMessage.has_processing_channel_request() )
                 {
                     m_logger->debug( "[{}] PUBLISH.", node_address_ );
-                    // @todo chenk environment requirements
                     PublishLocalChannelList();
+                }
+                else if ( gridMessage.has_node_creation_intent() )
+                {
+                    // Handle intent from another peer
+                    auto intent = gridMessage.node_creation_intent();
+                    OnNodeCreationIntent( intent.peer_address(), intent.subtask_queue_id() );
                 }
             }
         }
@@ -268,56 +276,243 @@ namespace sgns::processing
         {
             return;
         }
-        bool node_dispatched = false;
         {
-            m_logger->debug( "[{}] [Trying to create node]", node_address_ );
-
-            std::scoped_lock lock( m_mutexNodes );
-            while ( m_processingNodes.size() < m_maximalNodesCount )
+            std::lock_guard<std::mutex> lockCreation( m_mutexPendingCreation );
+            if ( !m_pendingSubTaskQueueId.empty() )
             {
-                std::string                      subTaskQueueId;
-                std::list<SGProcessing::SubTask> subTasks;
-                auto maybe_task = m_subTaskEnqueuer->EnqueueSubTasks( subTaskQueueId, subTasks );
-                if ( maybe_task )
-                {
-                    m_logger->debug( "[{}] Grabbed task, creating first node", node_address_ );
-                    auto node = std::make_shared<ProcessingNode>(
-                        m_gossipPubSub,
-                        m_subTaskStateStorage,
-                        m_subTaskResultStorage,
-                        m_processingCore,
-                        std::bind( &ProcessingServiceImpl::OnQueueProcessingCompleted,
-                                   this,
-                                   subTaskQueueId,
-                                   std::placeholders::_1 ),
-                        std::bind( &ProcessingServiceImpl::OnProcessingError,
-                                   this,
-                                   subTaskQueueId,
-                                   std::placeholders::_1 ),
-                        node_address_ );
+                m_logger->debug( "[{}] Already waiting for node creation to resolve for queue {}",
+                                 node_address_,
+                                 m_pendingSubTaskQueueId );
+                return;
+            }
+        }
+        m_logger->debug( "[{}] [Trying to create node]", node_address_ );
 
-                    // @todo Figure out if the task is still available for other peers
-                    // @todo Check if it is better to call EnqueueSubTasks within host
-                    // and return subTaskQueueId from processing host?
-                    node->CreateProcessingHost( subTaskQueueId, subTasks );
+        {
+            std::scoped_lock lock( m_mutexNodes );
+            if ( m_processingNodes.size() >= m_maximalNodesCount )
+            {
+                m_logger->debug( "[{}] Maximum number of nodes ({}) reached", node_address_, m_maximalNodesCount );
+                return;
+            }
+        }
+        std::string                      subTaskQueueId;
+        std::list<SGProcessing::SubTask> subTasks;
+        auto                             maybe_task = m_subTaskEnqueuer->EnqueueSubTasks( subTaskQueueId, subTasks );
 
-                    m_processingNodes[subTaskQueueId] = node;
+        if ( maybe_task )
+        {
+            m_logger->debug( "[{}] Grabbed task, broadcasting intent to create node for queue {}",
+                             node_address_,
+                             subTaskQueueId );
 
-                    m_logger->debug( "New processing channel created. {}", subTaskQueueId );
-                    node_dispatched = true;
-                    //PublishLocalChannelList();
+            {
+                std::lock_guard<std::mutex> lockCreation( m_mutexPendingCreation );
+                m_pendingSubTaskQueueId = subTaskQueueId;
+                m_pendingSubTasks       = subTasks;
+                m_pendingTask           = maybe_task.value();
+            }
+
+            BroadcastNodeCreationIntent( subTaskQueueId );
+        }
+        else
+        {
+            m_logger->debug( "[{}] No tasks available, requesting channel list", node_address_ );
+            SendChannelListRequest();
+        }
+    }
+
+    void ProcessingServiceImpl::BroadcastNodeCreationIntent( const std::string &subTaskQueueId )
+    {
+        SGProcessing::GridChannelMessage gridMessage;
+        auto                             intent = gridMessage.mutable_node_creation_intent();
+        intent->set_peer_address( node_address_ );
+        intent->set_subtask_queue_id( subTaskQueueId );
+
+        // Add this peer to pending creations
+        {
+            std::lock_guard<std::mutex> lockCreation( m_mutexPendingCreation );
+            m_pendingNodeCreations[subTaskQueueId].insert( node_address_ );
+        }
+
+        m_gridChannel->Publish( gridMessage.SerializeAsString() );
+        m_logger->debug( "[{}] Broadcasting intent to create node for queue {}", node_address_, subTaskQueueId );
+
+        // Set timer to wait for other peers' responses
+        m_nodeCreationTimer.expires_from_now( m_nodeCreationTimeout );
+        m_nodeCreationTimer.async_wait(
+            [instance = shared_from_this()]( const boost::system::error_code &error )
+            {
+                if ( !error )
+                { // Only proceed if not cancelled
+                    instance->HandleNodeCreationTimeout();
                 }
-                else
+            } );
+    }
+
+    void ProcessingServiceImpl::OnNodeCreationIntent( const std::string &peerAddress,
+                                                      const std::string &subTaskQueueId )
+    {
+        if ( peerAddress == node_address_ )
+        {
+            // Ignore our own message
+            return;
+        }
+
+        m_logger->debug( "[{}] Received node creation intent from {} for queue {}",
+                         node_address_,
+                         peerAddress,
+                         subTaskQueueId );
+
+        bool        shouldCancel = false;
+        std::string lowestPeer;
+
+        {
+            std::lock_guard<std::mutex> lockCreation( m_mutexPendingCreation );
+            m_pendingNodeCreations[subTaskQueueId].insert( peerAddress );
+
+            // If we have a pending creation for this queue, check if we should cancel it
+            if ( m_pendingSubTaskQueueId == subTaskQueueId )
+            {
+                if ( !HasLowestAddress( subTaskQueueId ) )
                 {
-                    // If no tasks enquued, try to get available slots in existent queues
-                    SendChannelListRequest();
-                    break;
+                    shouldCancel = true;
+                    lowestPeer   = *m_pendingNodeCreations[subTaskQueueId].begin();
                 }
             }
         }
-        if ( node_dispatched )
+
+        if ( shouldCancel )
         {
-            PublishLocalChannelList();
+            // Cancel our timer (do this outside the lock to avoid potential deadlocks)
+            m_nodeCreationTimer.cancel();
+
+            std::string reason = "peer " + lowestPeer + " has lower address";
+            CancelPendingCreation( subTaskQueueId, reason );
         }
     }
+
+    void ProcessingServiceImpl::CancelPendingCreation( const std::string &subTaskQueueId, const std::string &reason )
+    {
+        std::lock_guard<std::mutex> lockCreation( m_mutexPendingCreation );
+
+        if ( m_pendingSubTaskQueueId == subTaskQueueId )
+        {
+            m_logger->debug( "[{}] Cancelling node creation for queue {} because {}",
+                             node_address_,
+                             subTaskQueueId,
+                             reason );
+
+            m_pendingSubTaskQueueId.clear();
+            m_pendingSubTasks.clear();
+            m_pendingTask.reset();
+        }
+    }
+
+    bool ProcessingServiceImpl::HasLowestAddress( const std::string &subTaskQueueId )
+    {
+        auto it = m_pendingNodeCreations.find( subTaskQueueId );
+        if ( it != m_pendingNodeCreations.end() && !it->second.empty() )
+        {
+            // Check if our address is the lowest
+            return *it->second.begin() == node_address_;
+        }
+        return true; // If no competitors, we have the lowest address
+    }
+
+    void ProcessingServiceImpl::HandleNodeCreationTimeout()
+    {
+        std::string                         subTaskQueueId;
+        std::list<SGProcessing::SubTask>    subTasks;
+        boost::optional<SGProcessing::Task> task;
+        bool                                shouldCreate = false;
+
+        {
+            std::lock_guard<std::mutex> lockCreation( m_mutexPendingCreation );
+
+            if ( m_pendingSubTaskQueueId.empty() )
+            {
+                // Creation was already cancelled
+                m_logger->debug( "[{}] Node creation attempt was already cancelled", node_address_ );
+                return;
+            }
+
+            subTaskQueueId = m_pendingSubTaskQueueId;
+            subTasks       = m_pendingSubTasks;
+            task           = m_pendingTask;
+
+            // Check if we still have the lowest address
+            if ( !HasLowestAddress( subTaskQueueId ) )
+            {
+                auto lowestPeer = *m_pendingNodeCreations[subTaskQueueId].begin();
+                m_logger->debug( "[{}] Not creating node for queue {} as peer {} has lower address",
+                                 node_address_,
+                                 subTaskQueueId,
+                                 lowestPeer );
+
+                // Clear pending data
+                m_pendingSubTaskQueueId.clear();
+                m_pendingSubTasks.clear();
+                m_pendingTask.reset();
+                return;
+            }
+
+            // Clear pending data since we're going to use it now
+            m_pendingSubTaskQueueId.clear();
+            m_pendingSubTasks.clear();
+            m_pendingTask.reset();
+            shouldCreate = true;
+        }
+
+        if ( shouldCreate )
+        {
+            m_logger->debug( "[{}] Timeout elapsed, creating node for queue {} as we have lowest address",
+                             node_address_,
+                             subTaskQueueId );
+
+            // Check if we can still add more nodes
+            std::unique_lock<std::recursive_mutex> lock( m_mutexNodes );
+            if ( m_processingNodes.size() >= m_maximalNodesCount )
+            {
+                m_logger->debug( "[{}] Cannot create node for queue {} as maximum nodes limit reached",
+                                 node_address_,
+                                 subTaskQueueId );
+
+                // Clean up the pending creation
+                std::lock_guard<std::mutex> lockCreation( m_mutexPendingCreation );
+                m_pendingNodeCreations.erase( subTaskQueueId );
+                return;
+            }
+
+            // Create the ProcessingNode
+            auto node = std::make_shared<ProcessingNode>(
+                m_gossipPubSub,
+                m_subTaskStateStorage,
+                m_subTaskResultStorage,
+                m_processingCore,
+                std::bind( &ProcessingServiceImpl::OnQueueProcessingCompleted,
+                           this,
+                           subTaskQueueId,
+                           std::placeholders::_1 ),
+                std::bind( &ProcessingServiceImpl::OnProcessingError, this, subTaskQueueId, std::placeholders::_1 ),
+                node_address_ );
+
+            node->CreateProcessingHost( subTaskQueueId, subTasks );
+            m_processingNodes[subTaskQueueId] = node;
+            lock.unlock(); // Release the mutex before potentially long operations
+
+            m_logger->debug( "[{}] New processing channel created: {}", node_address_, subTaskQueueId );
+
+            // Clean up the pending creations
+            {
+                std::lock_guard<std::mutex> lockCreation( m_mutexPendingCreation );
+                m_pendingNodeCreations.erase( subTaskQueueId );
+            }
+
+            // Notify other peers that this channel is now available
+            PublishLocalChannelList();
+
+        }
+    }
+
 }
