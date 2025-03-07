@@ -134,6 +134,9 @@ namespace sgns::processing
         std::chrono::system_clock::duration        m_processingTimeout;
         std::function<void( const std::string & )> m_processingErrorSink;
 
+        uint64_t m_queue_timestamp_{0};        // Aggregate time counter for the queue
+        uint64_t m_ownership_acquired_at_{0};  // When this node acquired ownership (in ms)
+
         base::Logger m_logger = base::createLogger( "ProcessingSubTaskQueueManager" );
     };
 }

@@ -18,7 +18,9 @@ namespace sgns::processing
         m_dltGrabSubTaskTimeout( *m_context ),
         m_processingQueue( localNodeId ),
         m_processingTimeout( std::chrono::seconds( 10 ) ),
-        m_processingErrorSink( std::move( processingErrorSink ) )
+        m_processingErrorSink( std::move( processingErrorSink ) ),
+        m_queue_timestamp_( 0 ),
+        m_ownership_acquired_at_( 0 )
     {
     }
 
@@ -66,6 +68,10 @@ namespace sgns::processing
         }
 
         m_processingQueue.CreateQueue( processingQueue, unprocessedSubTaskIndices );
+
+        // Record ownership acquisition time when creating a queue
+        m_ownership_acquired_at_ = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now().time_since_epoch()).count();
 
         m_logger->debug( "QUEUE_CREATED" );
         LogQueue();
@@ -124,6 +130,13 @@ namespace sgns::processing
             size_t itemIdx = 0;
             if ( m_processingQueue.GrabItem( itemIdx ) )
             {
+                // Use the queue timestamp for processing timestamp instead of system clock
+                if ( m_queue->subtasks().items_size() > itemIdx )
+                {
+                    auto *item = m_queue->mutable_subtasks()->mutable_items( itemIdx );
+                    item->set_processing_timestamp( m_queue_timestamp_ );
+                }
+
                 LogQueue();
                 PublishSubTaskQueue();
 
@@ -221,6 +234,15 @@ namespace sgns::processing
     bool ProcessingSubTaskQueueManager::MoveOwnershipTo( const std::string &nodeId )
     {
         std::lock_guard<std::mutex> guard( m_queueMutex );
+
+        // Calculate how long we've owned the queue
+        auto current_time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now().time_since_epoch()).count();
+        auto ownership_duration_ms = current_time_ms - m_ownership_acquired_at_;
+
+        // Update the queue's total time counter
+        m_queue_timestamp_ += ownership_duration_ms;
+
         if ( m_processingQueue.MoveOwnershipTo( nodeId ) )
         {
             LogQueue();
@@ -244,14 +266,28 @@ namespace sgns::processing
 
     bool ProcessingSubTaskQueueManager::ProcessSubTaskQueueMessage( SGProcessing::SubTaskQueue *queue )
     {
+        bool hadOwnership = HasOwnership();
+
         std::unique_lock<std::mutex> guard( m_queueMutex );
         m_dltQueueResponseTimeout.expires_at( boost::posix_time::pos_infin );
 
         bool queueInitilalized = ( m_queue != nullptr );
         bool queueChanged      = UpdateQueue( queue );
-        if ( queueChanged && m_processingQueue.HasOwnership() )
+
+        if ( queueChanged )
         {
-            ProcessPendingSubTaskGrabbing();
+            bool hasOwnershipNow = m_processingQueue.HasOwnership();
+            if ( !hadOwnership && hasOwnershipNow )
+            {
+                // We just acquired ownership - record the time
+                m_ownership_acquired_at_ = std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::steady_clock::now().time_since_epoch()).count();
+            }
+
+            if ( hasOwnershipNow )
+            {
+                ProcessPendingSubTaskGrabbing();
+            }
         }
 
         if ( m_subTaskQueueAssignmentEventSink )
@@ -278,6 +314,14 @@ namespace sgns::processing
         std::lock_guard<std::mutex> guard( m_queueMutex );
         if ( m_processingQueue.MoveOwnershipTo( request.node_id() ) )
         {
+            // Calculate how long we've owned the queue before transferring ownership
+            auto current_time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now().time_since_epoch()).count();
+            auto ownership_duration_ms = current_time_ms - m_ownership_acquired_at_;
+
+            // Update the queue's total time counter
+            m_queue_timestamp_ += ownership_duration_ms;
+
             LogQueue();
             PublishSubTaskQueue();
             return true;
@@ -300,6 +344,10 @@ namespace sgns::processing
             m_dltQueueResponseTimeout.expires_at( boost::posix_time::pos_infin );
             if ( m_processingQueue.RollbackOwnership() )
             {
+                // Record ownership acquisition time when rolling back ownership
+                m_ownership_acquired_at_ = std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::steady_clock::now().time_since_epoch()).count();
+
                 LogQueue();
                 PublishSubTaskQueue();
 
@@ -409,5 +457,3 @@ namespace sgns::processing
     }
 
 }
-
-////////////////////////////////////////////////////////////////////////////////
