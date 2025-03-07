@@ -186,7 +186,8 @@ TEST_F(SubTaskQueueAccessorImplTest, DISABLED_SubscribtionToResultChannel)
         processingQueueManager,
         std::make_shared<SubTaskStateStorageMock>(),
         std::make_shared<SubTaskResultStorageMock>(),
-        [](const SGProcessing::TaskResult&) {});
+        [](const SGProcessing::TaskResult&) {},
+        [](const std::string &) {});
 
     subTaskQueueAccessor->ConnectToSubTaskQueue([&]() {
         engine->StartQueueProcessing(subTaskQueueAccessor);
@@ -268,7 +269,8 @@ TEST_F(SubTaskQueueAccessorImplTest, DISABLED_TaskFinalization)
         processingQueueManager1,
         std::make_shared<SubTaskStateStorageMock>(),
         std::make_shared<SubTaskResultStorageMock>(),
-        [&isTaskFinalized](const SGProcessing::TaskResult&) { isTaskFinalized = true; });
+        [&isTaskFinalized](const SGProcessing::TaskResult&) { isTaskFinalized = true; },
+        [](const std::string &) {});
 
     subTaskQueueAccessor1->ConnectToSubTaskQueue([&]() {
         engine1->StartQueueProcessing(subTaskQueueAccessor1);
@@ -351,7 +353,8 @@ TEST_F(SubTaskQueueAccessorImplTest, DISABLED_InvalidSubTasksRestart)
         processingQueueManager1,
         std::make_shared<SubTaskStateStorageMock>(),
         std::make_shared<SubTaskResultStorageMock>(),
-        [&isTaskFinalized1](const SGProcessing::TaskResult&) { isTaskFinalized1 = true; });
+        [&isTaskFinalized1](const SGProcessing::TaskResult&) { isTaskFinalized1 = true; },
+        [](const std::string &) {});
 
     subTaskQueueAccessor1->ConnectToSubTaskQueue([&]() {
         engine1->StartQueueProcessing(subTaskQueueAccessor1);
@@ -386,7 +389,9 @@ TEST_F(SubTaskQueueAccessorImplTest, DISABLED_InvalidSubTasksRestart)
         processingQueueManager2,
         std::make_shared<SubTaskStateStorageMock>(),
         std::make_shared<SubTaskResultStorageMock>(),
-        [&isTaskFinalized2](const SGProcessing::TaskResult&) { isTaskFinalized2 = true; });
+        [&isTaskFinalized2](const SGProcessing::TaskResult&) { isTaskFinalized2 = true; },
+        [](const std::string &) {}
+    );
 
     subTaskQueueAccessor2->ConnectToSubTaskQueue([&]() {
         engine2->StartQueueProcessing(subTaskQueueAccessor2);
