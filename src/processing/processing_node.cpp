@@ -43,7 +43,8 @@ namespace sgns::processing
                                                                              m_subtaskQueueManager,
                                                                              m_subTaskStateStorage,
                                                                              m_subTaskResultStorage,
-                                                                             m_taskResultProcessingSink );
+                                                                             m_taskResultProcessingSink,
+                                                                             m_processingErrorSink );
 
         processingQueueChannel->SetQueueRequestSink(
             [qmWeak( std::weak_ptr<ProcessingSubTaskQueueManager>( m_subtaskQueueManager ) )](

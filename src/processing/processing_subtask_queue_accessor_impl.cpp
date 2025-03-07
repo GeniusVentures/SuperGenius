@@ -9,12 +9,14 @@ namespace sgns::processing
         std::shared_ptr<ProcessingSubTaskQueueManager>          subTaskQueueManager,
         std::shared_ptr<SubTaskStateStorage>                    subTaskStateStorage,
         std::shared_ptr<SubTaskResultStorage>                   subTaskResultStorage,
-        std::function<void( const SGProcessing::TaskResult & )> taskResultProcessingSink ) :
+        std::function<void( const SGProcessing::TaskResult & )> taskResultProcessingSink,
+        std::function<void( const std::string & )>              processingErrorSink  ) :
         m_gossipPubSub( std::move( gossipPubSub ) ),
         m_subTaskQueueManager( std::move( subTaskQueueManager ) ),
         m_subTaskStateStorage( std::move( subTaskStateStorage ) ),
         m_subTaskResultStorage( std::move( subTaskResultStorage ) ),
-        m_taskResultProcessingSink( std::move( taskResultProcessingSink ) )
+        m_taskResultProcessingSink( std::move( taskResultProcessingSink ) ),
+        m_processingErrorSink( std::move( processingErrorSink ) )
     {
         // @todo replace hardcoded channel identified with an input value
     m_resultChannel = std::make_shared<ipfs_pubsub::GossipPubSubTopic>( m_gossipPubSub, "RESULT_CHANNEL_ID" );
@@ -74,6 +76,7 @@ void SubTaskQueueAccessorImpl::UpdateResultsFromStorage(const std::set<std::stri
             else
             {
                 m_logger->error("INVALID_RESULT_FOUND subtaskid: '{}'", subTaskId);
+                m_processingErrorSink("INVALID_RESULT_FOUND for subtasks");
             }
         }
     }
@@ -194,6 +197,8 @@ bool SubTaskQueueAccessorImpl::FinalizeQueueProcessing(
         {
             m_results.erase(subTaskId);
         }
+        m_processingErrorSink("Invalid results for the entire task");
+
     }
     return isFinalized;
 }
