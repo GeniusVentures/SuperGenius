@@ -1,4 +1,3 @@
-
 add_proto_library(SGTransactionProto proto/SGTransaction.proto)
 
 if (BUILD_WITH_PROOFS)
@@ -17,6 +16,8 @@ add_library(sgns_account
     UTXOTxParameters.cpp
     IGeniusTransactions.cpp
 )
+
+set_target_properties(sgns_account PROPERTIES UNITY_BUILD ON)
 
 target_link_libraries(sgns_account
     PUBLIC

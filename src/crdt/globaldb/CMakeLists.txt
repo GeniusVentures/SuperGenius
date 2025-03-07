@@ -7,6 +7,8 @@ add_library(crdt_globaldb
     keypair_file_storage.cpp
 )
 
+set_target_properties(crdt_globaldb PROPERTIES UNITY_BUILD ON)
+
 target_link_libraries(crdt_globaldb
     PUBLIC
     Boost::headers

@@ -1,12 +1,15 @@
 add_executable(account_handling
     AccountHandling.cpp
     AccountHelper.cpp
-    )
-    include_directories(
-        ${PROJECT_SOURCE_DIR}/src
-        )
-    target_include_directories(account_handling PRIVATE ${GSL_INCLUDE_DIR} ${TrustWalletCore_INCLUDE_DIR}) 
-    target_link_libraries(account_handling PRIVATE
+)
+set_target_properties(account_handling PROPERTIES UNITY_BUILD ON)
+
+include_directories(
+    ${PROJECT_SOURCE_DIR}/src
+)
+
+target_include_directories(account_handling PRIVATE ${GSL_INCLUDE_DIR} ${TrustWalletCore_INCLUDE_DIR})
+target_link_libraries(account_handling PRIVATE
 #    ipfs-lite-cpp::ipfs_datastore_rocksdb
 #    ipfs-lite-cpp::buffer
 #    ipfs-lite-cpp::ipld_node
@@ -17,7 +20,7 @@ add_executable(account_handling
     block_header_repository
     block_storage
     logger
-	crdt_globaldb
+    crdt_globaldb
     p2p::p2p_basic_host
     p2p::p2p_default_network
     p2p::p2p_peer_repository
@@ -31,7 +34,7 @@ add_executable(account_handling
     Boost::Boost.DI
     Boost::program_options
     ipfs-bitswap-cpp
-	ipfs-pubsub
+    ipfs-pubsub
     rapidjson
     ${WIN_CRYPT_LIBRARY}
-    )
+)

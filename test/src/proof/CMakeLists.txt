@@ -3,7 +3,6 @@ addtest(prover_test
     ProverTest.cpp
 )
 target_link_libraries(prover_test
-    genius_assigner
     genius_prover
     Boost::boost
     Boost::log
@@ -19,7 +18,6 @@ target_link_libraries(genius_proofs
     transfer_proof
     processing_proof
     basic_proof
-    genius_assigner
     genius_prover
     Boost::boost
     Boost::log

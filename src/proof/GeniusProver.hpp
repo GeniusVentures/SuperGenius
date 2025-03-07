@@ -42,7 +42,6 @@
 
 #include <nil/crypto3/marshalling/zk/types/commitments/lpc.hpp>
 
-#include <nil/crypto3/algebra/curves/pallas.hpp>
 #include <nil/crypto3/hash/keccak.hpp>
 
 #include "outcome/outcome.hpp"
