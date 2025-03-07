@@ -187,9 +187,23 @@ namespace sgns
                 node_logger->info( "Open Port Success" );
             }
         }
+        //Make a base58 out of our address
+        std::string tempaddress = account_->GetAddress();
+        std::vector<unsigned char> inputBytes(tempaddress.begin(), tempaddress.end());
+        std::vector<unsigned char> hash(SHA256_DIGEST_LENGTH);
+        SHA256(inputBytes.data(), inputBytes.size(), hash.data());
+
+        libp2p::protocol::kademlia::ContentId key(hash);
+        auto acc_cid = libp2p::multi::ContentIdentifierCodec::decode(key.data);
+        auto maybe_base58 = libp2p::multi::ContentIdentifierCodec::toString(acc_cid.value());
+        if (!maybe_base58)
+        {
+            std::runtime_error("We couldn't convert the account to base58");
+        }
+        std::string base58key = maybe_base58.value();
 
         auto pubsubKeyPath =
-            ( boost::format( "SuperGNUSNode.TestNet.1a.03.%s/pubs_processor" ) % account_->GetAddress() ).str();
+            ( boost::format( "SuperGNUSNode.TestNet.1a.03.%s/pubs_processor" ) % base58key ).str();
 
         pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
             crdt::KeyPairFileStorage( write_base_path_ + pubsubKeyPath ).GetKeyPair().value() );
@@ -201,7 +215,7 @@ namespace sgns
 
         globaldb_ = std::make_shared<crdt::GlobalDB>(
             io_,
-            ( boost::format( write_base_path_ + "SuperGNUSNode.TestNet.1a.03.%s" ) % account_->GetAddress() ).str(),
+            ( boost::format( write_base_path_ + "SuperGNUSNode.TestNet.1a.03.%s" ) % base58key ).str(),
             graphsyncport,
             std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_, std::string( PROCESSING_CHANNEL ) ) );
 
@@ -237,7 +251,7 @@ namespace sgns
             io_,
             account_,
             std::make_shared<crypto::HasherImpl>(),
-            ( boost::format( write_base_path_ + "SuperGNUSNode.TestNet.1a.03.%s" ) % account_->GetAddress() ).str(),
+            ( boost::format( write_base_path_ + "SuperGNUSNode.TestNet.1a.03.%s" ) % base58key ).str(),
             pubsub_,
             upnp,
             graphsyncport );

@@ -15,6 +15,9 @@
 
 #include <ProofSystem/EthereumKeyPairParams.hpp>
 
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+
 #include "TransferTransaction.hpp"
 #include "MintTransaction.hpp"
 #include "EscrowTransaction.hpp"
@@ -663,10 +666,23 @@ namespace sgns
             if ( destination_db_it == destination_dbs_m.end() )
             {
                 m_logger->debug( "Port to sync  " + std::to_string( base_port_m ) );
+                std::string tempaddress = dest_info.dest_address;
+                std::vector<unsigned char> inputBytes(tempaddress.begin(), tempaddress.end());
+                std::vector<unsigned char> hash(SHA256_DIGEST_LENGTH);
+                SHA256(inputBytes.data(), inputBytes.size(), hash.data());
+
+                libp2p::protocol::kademlia::ContentId key(hash);
+                auto acc_cid = libp2p::multi::ContentIdentifierCodec::decode(key.data);
+                auto maybe_base58 = libp2p::multi::ContentIdentifierCodec::toString(acc_cid.value());
+                if (!maybe_base58)
+                {
+                    std::runtime_error("We couldn't convert the account to base58");
+                }
+                std::string base58key = maybe_base58.value();
 
                 destination_db = std::make_shared<crdt::GlobalDB>(
                     ctx_m,
-                    ( boost::format( base_path_m + "_out/" + dest_info.dest_address ) ).str(),
+                    ( boost::format( base_path_m + "_out/" + base58key ) ).str(),
                     base_port_m,
                     std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_m, dest_info.dest_address + "in" ) );
                 if ( !destination_db->Init( crdt::CrdtOptions::DefaultOptions() ).has_value() )
