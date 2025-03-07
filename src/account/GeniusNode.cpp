@@ -155,7 +155,7 @@ namespace sgns
         loggerProcServ->set_level( spdlog::level::debug );
 
         auto loggerProcqm = base::createLogger( "ProcessingSubTaskQueueManager" );
-        loggerProcqm->set_level( spdlog::level::off );
+        loggerProcqm->set_level( spdlog::level::debug );
 
         auto loggerUPNP = base::createLogger( "UPNP" );
         loggerUPNP->set_level( spdlog::level::off );

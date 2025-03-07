@@ -51,7 +51,6 @@ namespace sgns
         timer_m( std::make_shared<boost::asio::steady_timer>( *ctx_m, boost::asio::chrono::milliseconds( 300 ) ) )
 
     {
-        m_logger->set_level( spdlog::level::debug );
         m_logger->info( "Initializing values by reading whole blockchain" );
 
         outgoing_db_m = std::make_shared<crdt::GlobalDB>(
