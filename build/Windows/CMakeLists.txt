@@ -20,6 +20,10 @@ endif()
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded$<$<CONFIG:Debug>:Debug>)
 
+# This is so that the SDK knows which version of Windows to target.
+# Current set to Windows 10
+add_compile_definitions(_WIN32_WINNT=0x0A00)
+
 include(../CommonCompilerOptions.cmake)
 
 set(Protobuf_DIR "${_THIRDPARTY_BUILD_DIR}/grpc/cmake")

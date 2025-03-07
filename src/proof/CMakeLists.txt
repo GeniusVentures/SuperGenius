@@ -13,7 +13,6 @@ target_link_libraries(genius_prover
     LLVMCore
     LLVMSupport
 )
-set_target_properties(genius_prover PROPERTIES UNITY_BUILD ON)
 
 add_library(basic_proof
     IBasicProof.cpp
