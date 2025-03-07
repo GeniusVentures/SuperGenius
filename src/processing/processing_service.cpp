@@ -203,7 +203,7 @@ namespace sgns::processing
         {
             return;
         }
-        m_logger->debug( "[{}] AcceptProcessingChannel", node_address_ );
+        m_logger->debug( "[{}] AcceptProcessingChannel from queue {}", node_address_, processingQueuelId );
         std::scoped_lock lock( m_mutexNodes );
         m_logger->debug( "[{}] Number of nodes: {}, Max nodes:  {}",
                          node_address_,

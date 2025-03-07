@@ -6,8 +6,7 @@
 
 namespace sgns::processing
 {
-    ProcessingEngine::ProcessingEngine( std::string                     nodeId,
-                                        std::shared_ptr<ProcessingCore> processingCore ) :
+    ProcessingEngine::ProcessingEngine( std::string nodeId, std::shared_ptr<ProcessingCore> processingCore ) :
         m_nodeId( std::move( nodeId ) ),
         m_processingCore( std::move( processingCore ) ),
         m_lastProcessedTime( std::chrono::steady_clock::now() - std::chrono::minutes( 2 ) )
@@ -22,6 +21,7 @@ namespace sgns::processing
     void ProcessingEngine::StartQueueProcessing( std::shared_ptr<SubTaskQueueAccessor> subTaskQueueAccessor )
     {
         std::lock_guard<std::mutex> queueGuard( m_mutexSubTaskQueue );
+        m_logger->debug( "[START QUEUE PROCESSING] m_nodeId: {},", m_nodeId );
         m_subTaskQueueAccessor = std::move( subTaskQueueAccessor );
 
         m_subTaskQueueAccessor->GrabSubTask(
