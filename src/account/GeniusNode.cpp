@@ -133,7 +133,7 @@ namespace sgns
         loggerDataStore->set_level( spdlog::level::off );
 
         auto loggerTransactions = base::createLogger( "TransactionManager" );
-        loggerTransactions->set_level( spdlog::level::off );
+        loggerTransactions->set_level( spdlog::level::debug );
 
         auto loggerQueue = base::createLogger( "ProcessingTaskQueueImpl" );
         loggerQueue->set_level( spdlog::level::off );
@@ -155,7 +155,7 @@ namespace sgns
         loggerProcServ->set_level( spdlog::level::debug );
 
         auto loggerProcqm = base::createLogger( "ProcessingSubTaskQueueManager" );
-        loggerProcqm->set_level( spdlog::level::debug );
+        loggerProcqm->set_level( spdlog::level::off );
 
         auto loggerUPNP = base::createLogger( "UPNP" );
         loggerUPNP->set_level( spdlog::level::off );
