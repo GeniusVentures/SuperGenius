@@ -152,12 +152,10 @@ namespace sgns::processing
     {
         sgns::base::Buffer          data;
         sgns::crdt::HierarchicalKey result_key( { "task_results/tasks/TASK_" + taskKey } );
-        sgns::crdt::HierarchicalKey lock_key( { "lock_tasks/TASK_" + taskKey } );
 
         auto job_completion_transaction = m_db->BeginTransaction();
         data.put( taskResult.SerializeAsString() );
         BOOST_OUTCOME_TRYV2( auto &&, job_completion_transaction->Put( std::move( result_key ), std::move( data ) ) );
-        BOOST_OUTCOME_TRYV2( auto &&, job_completion_transaction->Remove( std::move( lock_key ) ) );
 
         BOOST_OUTCOME_TRYV2( auto &&, job_completion_transaction->Commit() );
 
