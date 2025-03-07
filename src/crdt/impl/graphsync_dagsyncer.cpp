@@ -343,6 +343,8 @@ namespace sgns::crdt
             logger_->debug( "Seeing if peer {} has links to AddRoute", peerID.toBase58() );
             if ( !IsOnBlackList( peerID ) )
             {
+                // Record successful data reception
+                RecordSuccessfulConnection( peerID );
                 for ( auto link : node.value()->getLinks() )
                 {
                     auto linkhb = HasBlock( link.get().getCID() );
@@ -396,58 +398,113 @@ namespace sgns::crdt
     {
         std::lock_guard<std::mutex> lock( blacklist_mutex_ );
 
-        uint64_t now        = GetCurrentTimestamp();
-        auto [it, inserted] = blacklist_.emplace( peer, std::make_pair( now, 1 ) );
+        uint64_t now = GetCurrentTimestamp();
+        auto [it, inserted] = blacklist_.emplace(peer.toMultihash(), BlacklistEntry(now, 1));
 
         if ( !inserted )
         {
-            if ( now - it->second.first > TIMEOUT_SECONDS )
-            {
-                logger_->error( "Peer {} timed-out {}", peer.toBase58() );
+            BlacklistEntry& entry = it->second;
+            uint64_t timeout = getBackoffTimeout(entry.failures, entry.ever_connected);
 
-                it->second.second = 1;
-            }
-            else if ( it->second.second < MAX_FAILURES )
+            if (now - entry.timestamp > timeout)
             {
-                it->second.second++;
+                logger_->debug("Peer {} blacklist timeout expired", peer.toBase58());
             }
-            it->second.first = now;
+
+            entry.failures++;
+            logger_->debug("Peer {} failures incremented to {}", peer.toBase58(), entry.failures);
+
+            entry.timestamp = now;
+        }
+    }
+
+    uint64_t GraphsyncDAGSyncer::getBackoffTimeout( uint64_t failures, bool ever_connected ) const
+    {
+        if ( ever_connected )
+        {
+            // For previously connected peers:
+            // - Start with 5 seconds
+            // - Cap at 30 seconds
+            uint64_t base_seconds = 5;
+            uint64_t max_seconds = 30;
+
+            // Calculate exponential backoff
+            uint64_t timeout = base_seconds * (1ULL << failures);
+            return std::min(timeout, max_seconds);
+        }
+        else
+        {
+            // For never-connected peers:
+            // - Start with 10 seconds
+            // - Cap at 1800 seconds (30 minutes)
+            uint64_t base_seconds = 10;
+            uint64_t max_seconds = 1800;
+
+            // Calculate exponential backoff
+            uint64_t timeout = base_seconds * (1ULL << failures);
+            return std::min(timeout, max_seconds);
         }
     }
 
     bool GraphsyncDAGSyncer::IsOnBlackList( const PeerId &peer ) const
     {
         std::lock_guard<std::mutex> lock( blacklist_mutex_ );
-        bool                        ret = false;
+        bool ret = false;
         do
         {
-            auto it = blacklist_.find( peer );
+            auto it = blacklist_.find( peer.toMultihash() );
             if ( it == blacklist_.end() )
             {
                 logger_->trace( "Peer {} in NOT blacklisted", peer.toBase58() );
-
                 break;
             }
+
             uint64_t now = GetCurrentTimestamp();
-            if ( now - it->second.first > TIMEOUT_SECONDS )
-            {
-                it->second.second = 0;
-                logger_->debug( "Peer {} was blacklisted, now releasing it", peer.toBase58() );
+            BlacklistEntry& entry = it->second;
 
+            // If no failures yet, not blacklisted
+            if ( entry.failures == 0 )
+            {
                 break;
             }
 
-            if ( it->second.second >= MAX_FAILURES )
-            {
-                ret = true;
-                logger_->error( "Peer {} BLACKLISTED", peer.toBase58() );
+            // Calculate timeout based on connection history and failure count
+            uint64_t timeout = getBackoffTimeout( entry.failures - 1, entry.ever_connected );
 
+            if ( now - entry.timestamp > timeout )
+            {
+                // Timeout expired, so peer is NOT currently blacklisted
+                // We don't reset failures, but we do allow this peer to be tried again
+                entry.backoff_attempts++; // Track the number of times we've retried this peer
+                entry.timestamp = now;
+                logger_->trace( "Peer {} blacklist timeout expired, allowing retry (attempt {}, failures {})",
+                                peer.toBase58(), entry.backoff_attempts, entry.failures );
+                // ret remains false - peer is NOT on blacklist
                 break;
             }
-            it->second.second = 0;
-        } while ( 0 );
+
+            // Still within blacklist timeout and has failures
+            ret = true; // This peer IS on the blacklist
+            logger_->trace( "Peer {} BLACKLISTED (failures: {}, timeout: {}s)",
+                            peer.toBase58(), entry.failures, timeout );
+        } while ( false );
 
         return ret;
+    }
+
+    // Add this new method to record successful connections
+    void GraphsyncDAGSyncer::RecordSuccessfulConnection( const PeerId &peer ) const
+    {
+        std::lock_guard<std::mutex> lock( blacklist_mutex_ );
+        auto it = blacklist_.find( peer.toMultihash() );
+        if ( it != blacklist_.end() )
+        {
+            BlacklistEntry& entry = it->second;
+            entry.ever_connected = true;
+            entry.failures = 0;
+            entry.backoff_attempts = 0;  // Reset backoff on successful connection
+            logger_->debug( "Recorded successful connection for peer {}", peer.toBase58() );
+        }
     }
 
     outcome::result<void> GraphsyncDAGSyncer::BlackListPeer( const PeerId &peer ) const

@@ -173,7 +173,7 @@ namespace sgns
         {
             auto openedPort  = upnp->OpenPort( pubsubport, pubsubport, "TCP", 3600 );
             auto openedPort2 = upnp->OpenPort( graphsyncport, graphsyncport, "TCP", 3600 );
-            auto wanip       = upnp->GetWanIP();
+            auto wanip = upnp->GetWanIP();
             lanip            = upnp->GetLocalIP();
             node_logger->info( "Wan IP: {}", wanip );
             node_logger->info( "Lan IP: {}", lanip );

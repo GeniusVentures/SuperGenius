@@ -29,6 +29,7 @@ namespace sgns::crdt
         using MerkleDagBridgeImpl = ipfs_lite::ipfs::graphsync::MerkleDagBridgeImpl;
         using ResponseStatusCode  = ipfs_lite::ipfs::graphsync::ResponseStatusCode;
         using Multiaddress        = libp2p::multi::Multiaddress;
+        using Multihash           = libp2p::multi::Multihash;
         using PeerId              = libp2p::peer::PeerId;
         using Subscription        = libp2p::protocol::Subscription;
         using Logger              = base::Logger;
@@ -45,6 +46,19 @@ namespace sgns::crdt
             DAGSYNCHER_NOT_STARTED, ///< Start wasn't called, or StopSync was called
             GRAPHSYNC_IS_NULL,      ///< Graphsync member is nullptr
             HOST_IS_NULL,           ///< Graphsync member is nullptr
+        };
+
+        struct BlacklistEntry {
+            uint64_t timestamp;        // When the peer was last updated
+            uint64_t failures;         // Number of consecutive failures
+            bool ever_connected;       // Flag indicating if we've ever successfully connected
+            uint64_t backoff_attempts; // Count of backoff attempts (for exponential calculation)
+
+            BlacklistEntry(uint64_t time, uint64_t count, bool connected = false)
+                : timestamp(time),
+                  failures(count),
+                  ever_connected(connected),
+                  backoff_attempts(0) {}
         };
 
         GraphsyncDAGSyncer( std::shared_ptr<IpfsDatastore> service,
@@ -124,7 +138,7 @@ namespace sgns::crdt
                                     std::shared_ptr<std::promise<std::shared_ptr<ipfs_lite::ipld::IPLDNode>>>>>
                                                                           requests_;
         mutable RouteMapType                                              routing_;
-        mutable std::map<PeerId, std::pair<uint64_t, uint64_t>>           blacklist_;
+        mutable std::map<Multihash, BlacklistEntry>                       blacklist_;
         mutable std::mutex                                                blacklist_mutex_;
         mutable std::mutex                                                mutex_;
         mutable std::mutex                                                routing_mutex_;
@@ -148,6 +162,12 @@ namespace sgns::crdt
         void                        EraseRoute( const CID &cid ) const;
 
         uint64_t GetCurrentTimestamp() const;
+
+        /// Using exponential backoff for both cases but with different base values
+        uint64_t getBackoffTimeout(uint64_t attempts, bool ever_connected) const;
+
+        /// record successful connections
+        void RecordSuccessfulConnection(const PeerId &peer) const;
     };
 }
 
