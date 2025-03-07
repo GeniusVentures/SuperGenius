@@ -125,22 +125,22 @@ namespace sgns::processing
 
     void ProcessingServiceImpl::OnMessage( boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message &> message )
     {
-        m_logger->debug( "[{}] On Message.", node_address_ );
+        m_logger->trace( "[{}] On Message.", node_address_ );
         if ( message )
         {
-            m_logger->debug( "[{}] Valid message.", node_address_ );
+            m_logger->trace( "[{}] Valid message.", node_address_ );
             SGProcessing::GridChannelMessage gridMessage;
             if ( gridMessage.ParseFromArray( message->data.data(), static_cast<int>( message->data.size() ) ) )
             {
                 if ( gridMessage.has_processing_channel_response() )
                 {
                     auto response = gridMessage.processing_channel_response();
-                    m_logger->debug( "[{}] Processing channel received. id:{}", node_address_, response.channel_id() );
+                    m_logger->trace( "[{}] Processing channel received. id:{}", node_address_, response.channel_id() );
                     AcceptProcessingChannel( response.channel_id() );
                 }
                 else if ( gridMessage.has_processing_channel_request() )
                 {
-                    m_logger->debug( "[{}] PUBLISH.", node_address_ );
+                    m_logger->trace( "[{}] PUBLISH.", node_address_ );
                     PublishLocalChannelList();
                 }
                 else if ( gridMessage.has_node_creation_intent() )
@@ -236,11 +236,11 @@ namespace sgns::processing
 
     void ProcessingServiceImpl::PublishLocalChannelList()
     {
-        m_logger->debug( "Publish Local Channels." );
+        m_logger->trace( "Publish Local Channels." );
         std::scoped_lock lock( m_mutexNodes );
         for ( auto &itNode : m_processingNodes )
         {
-            m_logger->debug( "Owns Channel? {}.", itNode.second->HasQueueOwnership() );
+            m_logger->trace( "Owns Channel? {}.", itNode.second->HasQueueOwnership() );
             // Only channel host answers to reduce a number of published messages
             if ( itNode.second->HasQueueOwnership() )
             {
@@ -249,7 +249,7 @@ namespace sgns::processing
                 channelResponse->set_channel_id( itNode.first );
 
                 m_gridChannel->Publish( gridMessage.SerializeAsString() );
-                m_logger->debug( "Channel published. {}", channelResponse->channel_id() );
+                m_logger->trace( "Channel published. {}", channelResponse->channel_id() );
             }
         }
     }
@@ -286,7 +286,7 @@ namespace sgns::processing
                 return;
             }
         }
-        m_logger->debug( "[{}] [Trying to create node]", node_address_ );
+        m_logger->trace( "[{}] [Trying to create node]", node_address_ );
 
         {
             std::scoped_lock lock( m_mutexNodes );
@@ -317,7 +317,7 @@ namespace sgns::processing
         }
         else
         {
-            m_logger->debug( "[{}] No tasks available, requesting channel list", node_address_ );
+            m_logger->trace( "[{}] No tasks available, requesting channel list", node_address_ );
             SendChannelListRequest();
         }
     }
