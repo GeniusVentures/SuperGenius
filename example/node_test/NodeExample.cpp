@@ -400,7 +400,7 @@ void periodic_processing( sgns::GeniusNode &genius_node )
 std::string generate_eth_private_key() {
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::uniform_int_distribution<int> dist(0, 255); 
+    std::uniform_int_distribution<uint16_t> dist(0, 255);
 
     std::ostringstream oss;
     for (int i = 0; i < 32; ++i) {
