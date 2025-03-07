@@ -142,7 +142,7 @@ namespace sgns::crdt
             std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) ); // Retry after a short delay
         }
         BlackListPeer( peerID );
-        logger_->error( "Timeout while waiting for node fetch: {}, penalizing peer {} ",
+        logger_->debug( "Timeout while waiting for node fetch: {}, penalizing peer {} ",
                         cid.toString().value(),
                         peerID.toBase58() );
         return outcome::failure( boost::system::errc::timed_out );
@@ -329,7 +329,7 @@ namespace sgns::crdt
         }
         else
         {
-            logger_->error( "We already had this {}, trying to reinsert it", cid.toString().value() );
+            logger_->debug( "We already had this {}, trying to reinsert it", cid.toString().value() );
         }
 
         // @todo performance optimization is required
@@ -360,7 +360,7 @@ namespace sgns::crdt
             else
             {
                 //I don't think it should ever land here
-                logger_->error( "Peer {} was blacklisted", peerID.toBase58() );
+                logger_->debug( "Peer {} was blacklisted", peerID.toBase58() );
             }
         }
     }
