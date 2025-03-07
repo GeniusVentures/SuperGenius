@@ -71,9 +71,10 @@ namespace sgns::processing
 
         // Record ownership acquisition time when creating a queue
         m_ownership_acquired_at_ = std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::steady_clock::now().time_since_epoch()).count();
+                                       std::chrono::steady_clock::now().time_since_epoch() )
+                                       .count();
 
-        m_logger->debug( "QUEUE_CREATED" );
+        m_logger->debug( "Subtask Queue created in timestamp {}",m_ownership_acquired_at_ );
         LogQueue();
 
         PublishSubTaskQueue();
@@ -234,7 +235,8 @@ namespace sgns::processing
 
         // Calculate how long we've owned the queue
         auto current_time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::steady_clock::now().time_since_epoch()).count();
+                                   std::chrono::steady_clock::now().time_since_epoch() )
+                                   .count();
         auto ownership_duration_ms = current_time_ms - m_ownership_acquired_at_;
 
         // Update the queue's total time counter
@@ -278,7 +280,8 @@ namespace sgns::processing
             {
                 // We just acquired ownership - record the time
                 m_ownership_acquired_at_ = std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::steady_clock::now().time_since_epoch()).count();
+                                               std::chrono::steady_clock::now().time_since_epoch() )
+                                               .count();
             }
 
             if ( hasOwnershipNow )
@@ -313,7 +316,8 @@ namespace sgns::processing
         {
             // Calculate how long we've owned the queue before transferring ownership
             auto current_time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                std::chrono::steady_clock::now().time_since_epoch()).count();
+                                       std::chrono::steady_clock::now().time_since_epoch() )
+                                       .count();
             auto ownership_duration_ms = current_time_ms - m_ownership_acquired_at_;
 
             // Update the queue's total time counter
@@ -343,7 +347,8 @@ namespace sgns::processing
             {
                 // Record ownership acquisition time when rolling back ownership
                 m_ownership_acquired_at_ = std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::steady_clock::now().time_since_epoch()).count();
+                                               std::chrono::steady_clock::now().time_since_epoch() )
+                                               .count();
 
                 LogQueue();
                 PublishSubTaskQueue();
