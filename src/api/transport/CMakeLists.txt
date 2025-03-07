@@ -1,19 +1,14 @@
 add_library(api_transport
-    impl/http/http_session.hpp
     impl/http/http_session.cpp
-    impl/ws/ws_session.hpp
     impl/ws/ws_session.cpp
-    error.hpp
     error.cpp
-    listener.hpp
-    session.hpp
-    impl/http/http_listener_impl.hpp
     impl/http/http_listener_impl.cpp
-    impl/ws/ws_listener_impl.hpp
     impl/ws/ws_listener_impl.cpp
-    impl/ws/ws_client_impl.hpp
     impl/ws/ws_client_impl.cpp
 )
+
+set_target_properties(api_transport PROPERTIES UNITY_BUILD ON)
+
 target_link_libraries(api_transport
     PUBLIC
     Boost::headers

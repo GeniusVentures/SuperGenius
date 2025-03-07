@@ -1,4 +1,3 @@
-
 addtest(account_creation_test
     account_creation_test.cpp
 )

@@ -1,15 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
 
-if(POLICY CMP0025)
-    # NEW: report OS X version of Clang as "AppleClang"
-    cmake_policy(SET CMP0025 NEW)
-endif()
-
-if(POLICY CMP0042)
-    # NEW: set TARGET PROPERTY MACOSX_RPATH to on by default
-    cmake_policy(SET CMP0042 NEW)
-endif()
-
 if(NOT DEFINED CMAKE_TOOLCHAIN_FILE)
     set(NAMED_LANGUAGE_SUPPORT OFF CACHE BOOL "Toolchain named language support parameter")
     set(ENABLE_BITCODE OFF CACHE BOOL "Toolchain bitcode enable parameter")
@@ -37,13 +27,6 @@ set(PROTOC_EXECUTABLE "${_THIRDPARTY_BUILD_DIR}/protobuf_host/bin/protoc${CMAKE_
 set(iOS_Protobuf_DIR "${THIRDPARTY_BUILD_DIR}/protobuf/lib/cmake/protobuf")
 set(iOS_Protobuf_INCLUDE_DIR "${THIRDPARTY_BUILD_DIR}/protobuf/include/google/protobuf")
 set(iOS_Protobuf_LIBRARIES "${THIRDPARTY_BUILD_DIR}/protobuf/lib")
-
-# Set OS threading settings
-set(CMAKE_THREAD_LIBS_INIT "-lpthread")
-set(CMAKE_HAVE_THREADS_LIBRARY ON)
-set(CMAKE_USE_WIN32_THREADS_INIT OFF)
-set(CMAKE_USE_PTHREADS_INIT ON)
-set(THREADS_PREFER_PTHREAD_FLAG ON)
 
 # Set custom subfolder for ABI
 set(ABI_SUBFOLDER_NAME "/aarch64")
