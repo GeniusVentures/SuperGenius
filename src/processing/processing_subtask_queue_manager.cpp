@@ -130,12 +130,9 @@ namespace sgns::processing
             size_t itemIdx = 0;
             if ( m_processingQueue.GrabItem( itemIdx ) )
             {
-                // Use the queue timestamp for processing timestamp instead of system clock
-                if ( m_queue->subtasks().items_size() > itemIdx )
-                {
-                    auto *item = m_queue->mutable_subtasks()->mutable_items( itemIdx );
-                    item->set_processing_timestamp( m_queue_timestamp_ );
-                }
+                // Track that we're using queue timestamp for this item
+                // Actual timestamp is managed by ProcessingQueue via lock_timestamp
+                // This will be checked when calculating task expiration
 
                 LogQueue();
                 PublishSubTaskQueue();
