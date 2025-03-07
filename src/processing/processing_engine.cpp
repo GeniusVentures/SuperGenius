@@ -101,7 +101,7 @@ namespace sgns::processing
                     if ( _this->m_subTaskQueueAccessor )
                     {
                         _this->m_subTaskQueueAccessor->CompleteSubTask( subTask.subtaskid(), result );
-                        // @todo Should a new subtask be grabbed once the perivious one is processed?
+                        // @todo Should a new subtask be grabbed once the previous one is processed?
                         _this->m_subTaskQueueAccessor->GrabSubTask(
                             [weakThis( std::weak_ptr<sgns::processing::ProcessingEngine>( _this ) )](
                                 boost::optional<const SGProcessing::SubTask &> subTask )
