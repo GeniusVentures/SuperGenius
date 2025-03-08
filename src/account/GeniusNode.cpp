@@ -121,10 +121,10 @@ namespace sgns
         loggerGlobalDB->set_level( spdlog::level::off );
 
         auto loggerDAGSyncer = base::createLogger( "GraphsyncDAGSyncer" );
-        loggerDAGSyncer->set_level( spdlog::level::debug );
+        loggerDAGSyncer->set_level( spdlog::level::off );
         
         auto loggerGraphsync = base::createLogger( "graphsync" );
-        loggerGraphsync->set_level( spdlog::level::trace );
+        loggerGraphsync->set_level( spdlog::level::info );
 
         auto loggerBroadcaster = base::createLogger( "PubSubBroadcasterExt" );
         loggerBroadcaster->set_level( spdlog::level::off );
@@ -159,7 +159,10 @@ namespace sgns
 
         auto loggerUPNP = base::createLogger( "UPNP" );
         loggerUPNP->set_level( spdlog::level::off );
-
+        
+        auto loggerProcessingNode = base::createLogger( "ProcessingNode" );
+        loggerProcessingNode->set_level( spdlog::level::debug );
+        
         auto tokenid = dev_config_.TokenID;
 
         auto pubsubport    = GenerateRandomPort( base_port, account_->GetAddress() + std::to_string( tokenid ) );

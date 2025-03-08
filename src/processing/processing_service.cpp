@@ -212,7 +212,7 @@ namespace sgns::processing
         if ( m_processingNodes.size() < m_maximalNodesCount )
         {
             m_logger->debug( "[{}] Accept Channel Create Node", node_address_ );
-            auto node = std::make_shared<ProcessingNode>(
+            auto node = ProcessingNode::New(
                 m_gossipPubSub,
                 m_subTaskStateStorage,
                 m_subTaskResultStorage,
@@ -485,7 +485,7 @@ namespace sgns::processing
             }
 
             // Create the ProcessingNode
-            auto node = std::make_shared<ProcessingNode>(
+            auto node = ProcessingNode::New(
                 m_gossipPubSub,
                 m_subTaskStateStorage,
                 m_subTaskResultStorage,

@@ -6,6 +6,7 @@
 #ifndef GRPC_FOR_SUPERGENIUS_PROCESSING_NODE
 #define GRPC_FOR_SUPERGENIUS_PROCESSING_NODE
 
+#include <chrono>
 #include <ipfs_pubsub/gossip_pubsub_topic.hpp>
 
 #include "processing/processing_engine.hpp"
@@ -20,20 +21,18 @@ namespace sgns::processing
 * A node for distributed computation.
 * Allows to conduct a computation processing by multiple workers 
 */
-    class ProcessingNode
+    class ProcessingNode : public std::enable_shared_from_this<ProcessingNode>
     {
     public:
-        /** Constructs a processing node
-    * @param gossipPubSub - pubsub service
-    */
-        ProcessingNode( std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>        gossipPubSub,
-                        std::shared_ptr<SubTaskStateStorage>                    subTaskStateStorage,
-                        std::shared_ptr<SubTaskResultStorage>                   subTaskResultStorage,
-                        std::shared_ptr<ProcessingCore>                         processingCore,
-                        std::function<void( const SGProcessing::TaskResult & )> taskResultProcessingSink,
-                        std::function<void( const std::string & )>              processingErrorSink,
-                        std::string                                             node_id );
-
+        static std::shared_ptr<ProcessingNode> New(
+            std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>        gossipPubSub,
+            std::shared_ptr<SubTaskStateStorage>                    subTaskStateStorage,
+            std::shared_ptr<SubTaskResultStorage>                   subTaskResultStorage,
+            std::shared_ptr<ProcessingCore>                         processingCore,
+            std::function<void( const SGProcessing::TaskResult & )> taskResultProcessingSink,
+            std::function<void( const std::string & )>              processingErrorSink,
+            std::string                                             node_id,
+            std::chrono::seconds                                    ttl = std::chrono::minutes( 10 ) );
         ~ProcessingNode();
 
         /** Attaches the node to the processing channel
@@ -48,7 +47,22 @@ namespace sgns::processing
         bool HasQueueOwnership() const;
 
     private:
+        /** Constructs a processing node
+    * @param gossipPubSub - pubsub service
+    */
+        ProcessingNode( std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>        gossipPubSub,
+                        std::shared_ptr<SubTaskStateStorage>                    subTaskStateStorage,
+                        std::shared_ptr<SubTaskResultStorage>                   subTaskResultStorage,
+                        std::shared_ptr<ProcessingCore>                         processingCore,
+                        std::function<void( const SGProcessing::TaskResult & )> taskResultProcessingSink,
+                        std::function<void( const std::string & )>              processingErrorSink,
+                        std::string                                             node_id,
+                        std::chrono::seconds                                    ttl );
         void Initialize( const std::string &processingQueueChannelId, size_t msSubscriptionWaitingDuration );
+        void InitializeTTLTimer();
+        void StartTTLTimer();
+        void CheckTTL( const std::error_code &ec );
+        void ResetTTL();
 
         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> m_gossipPubSub;
 
@@ -64,6 +78,13 @@ namespace sgns::processing
         std::shared_ptr<SubTaskQueueAccessor>                   m_subTaskQueueAccessor;
         std::function<void( const SGProcessing::TaskResult & )> m_taskResultProcessingSink;
         std::function<void( const std::string & )>              m_processingErrorSink;
+
+        std::chrono::steady_clock::time_point                  m_creationTime;
+        std::chrono::seconds                                   m_ttl;
+        std::unique_ptr<boost::asio::steady_timer>             m_ttlTimer;
+        std::function<void( std::shared_ptr<ProcessingNode> )> m_selfDestructCallback;
+
+        base::Logger m_logger = base::createLogger( "ProcessingNode" );
     };
 }
 
