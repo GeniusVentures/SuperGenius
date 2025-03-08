@@ -514,15 +514,20 @@ namespace sgns
             if ( !maybe_proof.has_value() )
             {
                 m_logger->info( "Invalid PROOF" );
-                continue;
+                // TODO: kill repuation point of the node.
+            }
+            else
+            {
+#endif
+                auto maybe_parsed = ParseTransaction( maybe_transaction.value() );
+                if (maybe_parsed.has_error())
+                {
+                    m_logger->debug( "Can't parse the transaction" );
+                    continue;
+                }
+#ifdef _PROOF_ENABLED
             }
 #endif
-            auto maybe_parsed = ParseTransaction( maybe_transaction.value() );
-            if ( maybe_parsed.has_error() )
-            {
-                m_logger->debug( "Can't parse the transaction" );
-                continue;
-            }
             {
                 std::unique_lock<std::shared_mutex> out_lock( incoming_tx_mutex_m );
                 incoming_tx_processed_m[transaction_key.value()] = maybe_transaction.value();

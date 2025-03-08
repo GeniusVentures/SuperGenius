@@ -48,14 +48,14 @@ void SubTaskQueueAccessorImpl::ConnectToSubTaskQueue(std::function<void()> onSub
             weak_from_this(), std::placeholders::_1));
 }
 
-void SubTaskQueueAccessorImpl::AssignSubTasks(std::list<SGProcessing::SubTask>& subTasks)
+bool SubTaskQueueAccessorImpl::AssignSubTasks(std::list<SGProcessing::SubTask>& subTasks)
 {
     for (const auto& subTask : subTasks)
     {
         m_subTaskStateStorage->ChangeSubTaskState(
             subTask.subtaskid(), SGProcessing::SubTaskState::ENQUEUED);
     }
-    m_subTaskQueueManager->CreateQueue(subTasks);
+    return m_subTaskQueueManager->CreateQueue(subTasks);
 }
 
 void SubTaskQueueAccessorImpl::UpdateResultsFromStorage(const std::set<std::string>& subTaskIds)

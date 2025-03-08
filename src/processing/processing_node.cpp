@@ -8,25 +8,74 @@
 namespace sgns::processing
 {
     ////////////////////////////////////////////////////////////////////////////////
+    std::shared_ptr<ProcessingNode> ProcessingNode::New(
+        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>        gossipPubSub,
+        std::shared_ptr<SubTaskStateStorage>                    subTaskStateStorage,
+        std::shared_ptr<SubTaskResultStorage>                   subTaskResultStorage,
+        std::shared_ptr<ProcessingCore>                         processingCore,
+        std::function<void( const SGProcessing::TaskResult & )> taskResultProcessingSink,
+        std::function<void( const std::string & )>              processingErrorSink,
+        std::string                                             node_id,
+        const std::string                                      &processingQueueChannelId,
+        std::list<SGProcessing::SubTask>                        subTasks,
+        size_t                                                  msSubscriptionWaitingDuration,
+        std::chrono::seconds                                    ttl )
+    {
+        // Create the shared_ptr using the protected constructor
+        auto node = std::shared_ptr<ProcessingNode>( new ProcessingNode( std::move( gossipPubSub ),
+                                                                         std::move( subTaskStateStorage ),
+                                                                         std::move( subTaskResultStorage ),
+                                                                         std::move( processingCore ),
+                                                                         std::move( taskResultProcessingSink ),
+                                                                         std::move( processingErrorSink ),
+                                                                         std::move( node_id ),
+                                                                         std::move( ttl ) ) );
+
+        node->Initialize( processingQueueChannelId, msSubscriptionWaitingDuration );
+        node->AttachTo( processingQueueChannelId );
+        node->InitTTL();
+
+        if ( !subTasks.empty() )
+        {
+            if ( !node->CreateSubTaskQueue( std::move( subTasks ) ) )
+            {
+                node = nullptr;
+            }
+        }
+
+        return node;
+    }
+
     ProcessingNode::ProcessingNode( std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>        gossipPubSub,
                                     std::shared_ptr<SubTaskStateStorage>                    subTaskStateStorage,
                                     std::shared_ptr<SubTaskResultStorage>                   subTaskResultStorage,
                                     std::shared_ptr<ProcessingCore>                         processingCore,
                                     std::function<void( const SGProcessing::TaskResult & )> taskResultProcessingSink,
                                     std::function<void( const std::string & )>              processingErrorSink,
-                                    std::string                                             node_id ) :
+                                    std::string                                             node_id,
+                                    std::chrono::seconds                                    ttl ) :
+
         m_gossipPubSub( std::move( gossipPubSub ) ),
         m_nodeId( std::move( node_id ) ),
         m_processingCore( std::move( processingCore ) ),
         m_subTaskStateStorage( std::move( subTaskStateStorage ) ),
         m_subTaskResultStorage( std::move( subTaskResultStorage ) ),
         m_taskResultProcessingSink( std::move( taskResultProcessingSink ) ),
-        m_processingErrorSink( std::move( processingErrorSink ) )
+        m_processingErrorSink( std::move( processingErrorSink ) ),
+        m_creationTime( std::chrono::steady_clock::now() ),
+        m_ttl( ttl )
     {
-        std::cout << "Processing node created with address " << m_nodeId << std::endl;
+        m_logger->debug( "[{}] Processing node CREATED", m_nodeId );
+        if ( m_gossipPubSub )
+        {
+            m_ttlTimer = std::make_unique<boost::asio::steady_timer>( *m_gossipPubSub->GetAsioContext() );
+        }
     }
 
-    ProcessingNode::~ProcessingNode() {}
+    ProcessingNode::~ProcessingNode()
+    {
+        m_logger->debug( "[{}] Processing node DELETED ", m_nodeId );
+    }
 
     void ProcessingNode::Initialize( const std::string &processingQueueChannelId, size_t msSubscriptionWaitingDuration )
     {
@@ -79,11 +128,12 @@ namespace sgns::processing
 
         // Keep the channel
         m_queueChannel = processingQueueChannel;
+        m_logger->debug( "[{}] Processing node INITIALIZED", m_nodeId );
     }
 
     void ProcessingNode::AttachTo( const std::string &processingQueueChannelId, size_t msSubscriptionWaitingDuration )
     {
-        Initialize( processingQueueChannelId, msSubscriptionWaitingDuration );
+        m_logger->debug( "[{}] Processing node AttachTo {} ", m_nodeId, processingQueueChannelId );
 
         m_subTaskQueueAccessor->ConnectToSubTaskQueue(
             [engineWeak( std::weak_ptr<ProcessingEngine>( m_processingEngine ) ),
@@ -100,30 +150,95 @@ namespace sgns::processing
         // @todo Set timer to handle queue request timeout
     }
 
-    void ProcessingNode::CreateProcessingHost( const std::string                &processingQueueChannelId,
-                                               std::list<SGProcessing::SubTask> &subTasks,
-                                               size_t                            msSubscriptionWaitingDuration )
+    bool ProcessingNode::CreateSubTaskQueue( std::list<SGProcessing::SubTask> subTasks )
     {
-        Initialize( processingQueueChannelId, msSubscriptionWaitingDuration );
-
-        m_subTaskQueueAccessor->ConnectToSubTaskQueue(
-            [engineWeak( std::weak_ptr<ProcessingEngine>( m_processingEngine ) ),
-             accessorWeak( std::weak_ptr<SubTaskQueueAccessor>( m_subTaskQueueAccessor ) )]()
-            {
-                auto engine   = engineWeak.lock();
-                auto accessor = accessorWeak.lock();
-                if ( engine && accessor )
-                {
-                    engine->StartQueueProcessing( accessor );
-                }
-            } );
-
-        m_subTaskQueueAccessor->AssignSubTasks( subTasks );
+        m_logger->debug( "[{}] First ProcessingNode of Task. Creating SubTask Queue", m_nodeId );
+        return m_subTaskQueueAccessor->AssignSubTasks( subTasks );
     }
 
     bool ProcessingNode::HasQueueOwnership() const
     {
         return m_subtaskQueueManager && m_subtaskQueueManager->HasOwnership();
+    }
+
+    void ProcessingNode::InitTTL()
+    {
+        m_creationTime = std::chrono::steady_clock::now();
+
+        if ( m_ttlTimer )
+        {
+            StartTTLTimer();
+        }
+    }
+
+    void ProcessingNode::StartTTLTimer()
+    {
+        if ( !m_ttlTimer )
+        {
+            return;
+        }
+
+        m_ttlTimer->cancel();
+        m_ttlTimer->expires_after( m_ttl );
+
+        m_logger->debug( "Starting the TTL timer for node {}", m_nodeId );
+
+        // Use weak_ptr to avoid circular reference
+        std::weak_ptr<ProcessingNode> weakThis = shared_from_this();
+
+        m_ttlTimer->async_wait(
+            [weakThis]( const std::error_code &ec )
+            {
+                if ( auto self = weakThis.lock() )
+                {
+                    self->CheckTTL( ec );
+                }
+            } );
+    }
+
+    void ProcessingNode::CheckTTL( const std::error_code &ec )
+    {
+        // If canceled or error, don't do anything
+        if ( ec )
+        {
+            return;
+        }
+
+        // Calculate elapsed time
+        auto now     = std::chrono::steady_clock::now();
+        auto elapsed = std::chrono::duration_cast<std::chrono::seconds>( now - m_creationTime );
+
+        // If TTL exceeded, self-destruct
+        if ( elapsed >= m_ttl )
+        {
+            m_logger->error( "Processing node {} TTL expired after {} seconds. Self-destructing...",
+                             m_nodeId,
+                             elapsed.count() );
+
+            // Cancel the timer to prevent any further callbacks
+            m_ttlTimer->cancel();
+
+            // Clean up resources before self-destruction
+            m_processingErrorSink( "Node timed out" );
+
+            // Let shared_ptr ownership mechanism handle the actual deletion
+            // The object will be deleted when the last shared_ptr reference is released
+        }
+        else
+        {
+            // Not yet time to destruct, schedule another check
+            m_ttlTimer->expires_after( std::chrono::seconds( 10 ) );
+
+            std::weak_ptr<ProcessingNode> weakThis = weak_from_this();
+            m_ttlTimer->async_wait(
+                [weakThis]( const std::error_code &ec )
+                {
+                    if ( auto self = weakThis.lock() )
+                    {
+                        self->CheckTTL( ec );
+                    }
+                } );
+        }
     }
 
     ////////////////////////////////////////////////////////////////////////////////

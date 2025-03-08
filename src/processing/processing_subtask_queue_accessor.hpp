@@ -29,7 +29,7 @@ public:
     /** Assigns a subtask list to processing queue
     * @param subTasks - a list of enqueued subtasks
     */
-    virtual void AssignSubTasks(std::list<SGProcessing::SubTask>& subTasks) = 0;
+    virtual bool AssignSubTasks(std::list<SGProcessing::SubTask>& subTasks) = 0;
 
     /** Asynchronous getting of a subtask from the queue
     * @param onSubTaskGrabbedCallback a callback that is called when a subtask is grabbed by the local node
