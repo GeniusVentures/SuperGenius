@@ -28,15 +28,6 @@ if (DEFINED SANITIZE_CODE AND "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
     add_link_options("-fsanitize=${SANITIZE_CODE}")
 endif()
 
-if(TESTING)
-    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-        message(STATUS "TESTING enabled: Adding code coverage flags")
-        add_compile_options(--coverage)
-        add_link_options(--coverage)
-    endif()
-endif()
-
-
 include(GNUInstallDirs)
 include(GenerateExportHeader)
 include(CMakePackageConfigHelpers)

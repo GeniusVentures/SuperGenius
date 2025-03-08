@@ -7,7 +7,6 @@ target_include_directories(transaction_sync_test PRIVATE ${AsyncIOManager_INCLUD
 
 target_link_libraries(transaction_sync_test
     sgns_account
-    sgns_version
 )
 
 if(WIN32)
