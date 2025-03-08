@@ -299,6 +299,24 @@ namespace sgns
         tx_queue_m.emplace_back( std::move( element ) );
     }
 
+    outcome::result<void> TransactionManager::CancelTransaction( const std::string &txId )
+    {
+        std::lock_guard<std::mutex> lock( mutex_m );
+
+        auto it = std::find_if( tx_queue_m.begin(),
+                                tx_queue_m.end(),
+                                [&]( const TransactionPair &pair ) { return pair.first->dag_st.data_hash() == txId; } );
+
+        if ( it != tx_queue_m.end() )
+        {
+            m_logger->info( "Removind transaction from queue: " + txId );
+            tx_queue_m.erase( it );
+            return outcome::success();
+        }
+        return outcome::failure(
+            boost::system::errc::make_error_code( boost::system::errc::no_such_file_or_directory ) );
+    }
+
     //TODO - Fill hash stuff on DAGStruct
     SGTransaction::DAGStruct TransactionManager::FillDAGStruct( std::string transaction_hash ) const
     {

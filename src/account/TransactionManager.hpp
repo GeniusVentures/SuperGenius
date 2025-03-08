@@ -81,6 +81,7 @@ namespace sgns
         // Wait for an outgoing transaction to be processed with a timeout
         bool WaitForTransactionOutgoing( const std::string &txId, std::chrono::milliseconds timeout ) const;
 
+        outcome::result<void>    CancelTransaction(const std::string &txId);
     private:
         static constexpr std::uint16_t    MAIN_NET_ID             = 369;
         static constexpr std::uint16_t    TEST_NET_ID             = 963;

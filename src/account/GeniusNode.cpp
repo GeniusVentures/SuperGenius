@@ -679,6 +679,24 @@ namespace sgns
         if ( !success )
         {
             node_logger->error( "Mint transaction {} timed out after {} ms", tx_id, duration );
+
+            auto cancel_result = transaction_manager_->CancelTransaction( tx_id );
+            if ( !cancel_result.has_value() )
+            {
+                node_logger->error( "Failed to cancel mint transaction {}: {}",
+                                    tx_id,
+                                    cancel_result.error().message() );
+
+                if ( transaction_manager_->WaitForTransactionOutgoing( tx_id, std::chrono::milliseconds( 10 ) ) )
+                {
+                    auto final_end_time = std::chrono::steady_clock::now();
+                    auto final_duration =
+                        std::chrono::duration_cast<std::chrono::milliseconds>( final_end_time - start_time ).count();
+
+                    node_logger->debug( "Mint transaction {} completed in {} ms", tx_id, final_duration );
+                    return std::make_pair( tx_id, final_duration );
+                }
+            }
             return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::timed_out ) );
         }
 
