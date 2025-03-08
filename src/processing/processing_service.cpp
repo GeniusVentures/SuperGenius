@@ -222,10 +222,12 @@ namespace sgns::processing
                            processingQueuelId,
                            std::placeholders::_1 ),
                 std::bind( &ProcessingServiceImpl::OnProcessingError, this, processingQueuelId, std::placeholders::_1 ),
-                node_address_ );
-            m_logger->debug( "Attach to processing Queue" );
-            node->AttachTo( processingQueuelId );
-            m_processingNodes[processingQueuelId] = node;
+                node_address_,
+                processingQueuelId );
+            if ( node != nullptr )
+            {
+                m_processingNodes[processingQueuelId] = node;
+            }
         }
 
         if ( m_processingNodes.size() == m_maximalNodesCount )
@@ -495,10 +497,14 @@ namespace sgns::processing
                            subTaskQueueId,
                            std::placeholders::_1 ),
                 std::bind( &ProcessingServiceImpl::OnProcessingError, this, subTaskQueueId, std::placeholders::_1 ),
-                node_address_ );
+                node_address_,
+                subTaskQueueId,
+                subTasks );
+            if ( node != nullptr )
+            {
+                m_processingNodes[subTaskQueueId] = node;
+            }
 
-            node->CreateProcessingHost( subTaskQueueId, subTasks );
-            m_processingNodes[subTaskQueueId] = node;
             lock.unlock(); // Release the mutex before potentially long operations
 
             m_logger->debug( "[{}] New processing channel created: {}", node_address_, subTaskQueueId );
@@ -511,7 +517,6 @@ namespace sgns::processing
 
             // Notify other peers that this channel is now available
             PublishLocalChannelList();
-
         }
     }
 

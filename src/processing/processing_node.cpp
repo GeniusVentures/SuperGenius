@@ -16,6 +16,9 @@ namespace sgns::processing
         std::function<void( const SGProcessing::TaskResult & )> taskResultProcessingSink,
         std::function<void( const std::string & )>              processingErrorSink,
         std::string                                             node_id,
+        const std::string                                      &processingQueueChannelId,
+        std::list<SGProcessing::SubTask>                        subTasks,
+        size_t                                                  msSubscriptionWaitingDuration,
         std::chrono::seconds                                    ttl )
     {
         // Create the shared_ptr using the protected constructor
@@ -28,8 +31,18 @@ namespace sgns::processing
                                                                          std::move( node_id ),
                                                                          std::move( ttl ) ) );
 
-        // Now that we have a valid shared_ptr, start the TTL timer
-        node->InitializeTTLTimer();
+        node->Initialize( processingQueueChannelId, msSubscriptionWaitingDuration );
+        node->AttachTo( processingQueueChannelId );
+        node->InitTTL();
+
+        if ( !subTasks.empty() )
+        {
+            if (!node->CreateSubTaskQueue( std::move( subTasks ) ))
+            {
+                node = nullptr;
+            }
+        }
+
         return node;
     }
 
@@ -117,7 +130,6 @@ namespace sgns::processing
     void ProcessingNode::AttachTo( const std::string &processingQueueChannelId, size_t msSubscriptionWaitingDuration )
     {
         m_logger->debug( "[{}] Processing node AttachTo {} ", m_nodeId, processingQueueChannelId );
-        Initialize( processingQueueChannelId, msSubscriptionWaitingDuration );
 
         m_subTaskQueueAccessor->ConnectToSubTaskQueue(
             [engineWeak( std::weak_ptr<ProcessingEngine>( m_processingEngine ) ),
@@ -132,32 +144,12 @@ namespace sgns::processing
             } );
 
         // @todo Set timer to handle queue request timeout
-        ResetTTL();
     }
 
-    void ProcessingNode::CreateProcessingHost( const std::string                &processingQueueChannelId,
-                                               std::list<SGProcessing::SubTask> &subTasks,
-                                               size_t                            msSubscriptionWaitingDuration )
+    bool ProcessingNode::CreateSubTaskQueue( std::list<SGProcessing::SubTask> subTasks )
     {
-        m_logger->debug( "[{}] Processing node Create the processing for {} ", m_nodeId, processingQueueChannelId );
-
-        Initialize( processingQueueChannelId, msSubscriptionWaitingDuration );
-
-        m_subTaskQueueAccessor->ConnectToSubTaskQueue(
-            [engineWeak( std::weak_ptr<ProcessingEngine>( m_processingEngine ) ),
-             accessorWeak( std::weak_ptr<SubTaskQueueAccessor>( m_subTaskQueueAccessor ) )]()
-            {
-                auto engine   = engineWeak.lock();
-                auto accessor = accessorWeak.lock();
-                if ( engine && accessor )
-                {
-                    engine->StartQueueProcessing( accessor );
-                }
-            } );
-
-        m_subTaskQueueAccessor->AssignSubTasks( subTasks );
-
-        ResetTTL();
+        m_logger->debug( "[{}] First ProcessingNode of Task. Creating SubTask Queue", m_nodeId );
+        return m_subTaskQueueAccessor->AssignSubTasks( subTasks );
     }
 
     bool ProcessingNode::HasQueueOwnership() const
@@ -165,20 +157,10 @@ namespace sgns::processing
         return m_subtaskQueueManager && m_subtaskQueueManager->HasOwnership();
     }
 
-    void ProcessingNode::ResetTTL()
+    void ProcessingNode::InitTTL()
     {
-        // Reset creation time to now
         m_creationTime = std::chrono::steady_clock::now();
 
-        // Restart the timer
-        if ( m_ttlTimer )
-        {
-            StartTTLTimer();
-        }
-    }
-
-    void ProcessingNode::InitializeTTLTimer()
-    {
         if ( m_ttlTimer )
         {
             StartTTLTimer();

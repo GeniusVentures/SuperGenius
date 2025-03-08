@@ -35,13 +35,14 @@ namespace
             m_onSubTaskQueueConnectedEventSink = onSubTaskQueueConnectedEventSink;
         }
 
-        void AssignSubTasks(std::list<SGProcessing::SubTask>& subTasks) override
+        bool AssignSubTasks(std::list<SGProcessing::SubTask>& subTasks) override
         {
             m_subTasks.swap(subTasks);
             if (m_onSubTaskQueueConnectedEventSink)
             {
                 m_onSubTaskQueueConnectedEventSink();
             }
+            return true;
         }
 
         void GrabSubTask(SubTaskGrabbedCallback onSubTaskGrabbedCallback) override

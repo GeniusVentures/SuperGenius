@@ -32,6 +32,9 @@ namespace sgns::processing
             std::function<void( const SGProcessing::TaskResult & )> taskResultProcessingSink,
             std::function<void( const std::string & )>              processingErrorSink,
             std::string                                             node_id,
+            const std::string                                      &processingQueueChannelId,
+            std::list<SGProcessing::SubTask>                        subTasks                      = {},
+            size_t                                                  msSubscriptionWaitingDuration = 0,
             std::chrono::seconds                                    ttl = std::chrono::minutes( 10 ) );
         ~ProcessingNode();
 
@@ -39,10 +42,6 @@ namespace sgns::processing
     * @param processingQueueChannelId - identifier of a processing queue channel
     * @return flag indicating if the room is joined for block data processing
     */
-        void AttachTo( const std::string &processingQueueChannelId, size_t msSubscriptionWaitingDuration = 0 );
-        void CreateProcessingHost( const std::string                &processingQueueChannelId,
-                                   std::list<SGProcessing::SubTask> &subTasks,
-                                   size_t                            msSubscriptionWaitingDuration = 0 );
 
         bool HasQueueOwnership() const;
 
@@ -58,11 +57,14 @@ namespace sgns::processing
                         std::function<void( const std::string & )>              processingErrorSink,
                         std::string                                             node_id,
                         std::chrono::seconds                                    ttl );
+
+        void AttachTo( const std::string &processingQueueChannelId, size_t msSubscriptionWaitingDuration = 0 );
+        bool CreateSubTaskQueue( std::list<SGProcessing::SubTask> subTasks);
         void Initialize( const std::string &processingQueueChannelId, size_t msSubscriptionWaitingDuration );
-        void InitializeTTLTimer();
+       
+        void InitTTL();
         void StartTTLTimer();
         void CheckTTL( const std::error_code &ec );
-        void ResetTTL();
 
         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> m_gossipPubSub;
 
