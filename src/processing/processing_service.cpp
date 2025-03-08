@@ -22,7 +22,7 @@ namespace sgns::processing
         m_isStopped( true ),
         node_address_( m_gossipPubSub->GetLocalAddress() ),
         m_nodeCreationTimer( *m_context ),
-        m_nodeCreationTimeout( boost::posix_time::milliseconds( 500 ) )
+        m_nodeCreationTimeout( boost::posix_time::milliseconds( 1000 ) )
 
     {
     }
@@ -52,7 +52,7 @@ namespace sgns::processing
         userCallbackError_( std::move( userCallbackError ) ),
         node_address_( std::move( node_address ) ),
         m_nodeCreationTimer( *m_context ),
-        m_nodeCreationTimeout( boost::posix_time::milliseconds( 500 ) )
+        m_nodeCreationTimeout( boost::posix_time::milliseconds( 1000 ) )
     {
     }
 
