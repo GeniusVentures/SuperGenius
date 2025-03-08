@@ -71,11 +71,16 @@ if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/sgnsv.h.in")
     message(FATAL_ERROR "sgnsv.h.in is missing in ${CMAKE_CURRENT_SOURCE_DIR}")
 endif()
 
+file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/generated/base)
 configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/sgnsv.h.in
     ${CMAKE_BINARY_DIR}/generated/base/sgnsv.h
     @ONLY
 )
+
+if(NOT EXISTS "${CMAKE_BINARY_DIR}/generated/base/sgnsv.h")
+    message(FATAL_ERROR "Error: Generated file ${CMAKE_BINARY_DIR}/generated/base/sgnsv.h not found!")
+endif()
 
 add_library(sgns_version
 sgns_version.cpp
