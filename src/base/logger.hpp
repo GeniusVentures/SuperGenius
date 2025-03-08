@@ -17,7 +17,7 @@ namespace sgns::base
    * @param tag - tagging name for identifying logger
    * @return logger object
    */
-    Logger createLogger( const std::string &tag );
+    Logger createLogger( const std::string &tag, const std::string &basepath = "" );
 } // namespace sgns::base
 
 #endif // SUPERGENIUS_LOGGER_HPP

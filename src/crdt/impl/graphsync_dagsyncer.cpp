@@ -323,7 +323,7 @@ namespace sgns::crdt
                 sslinks << link.get().getName();
                 sslinks << "], ";
             }
-            logger_->error( "Node added to dagService. CID: {}, links: [{}]",
+            logger_->debug( "Node added to dagService. CID: {}, links: [{}]",
                             node.value()->getCID().toString().value(),
                             sslinks.str() );
         }

@@ -538,7 +538,7 @@ namespace sgns::crdt
 
                 if ( graphResult.has_failure() )
                 {
-                    logger_->error( "SendNewJobs: error fetching graph for CID:{} Retry {}/{}",
+                    logger_->debug( "SendNewJobs: error fetching graph for CID:{} Retry {}/{}",
                                     cid.toString().value(),
                                     retryCount + 1,
                                     maxRetries );

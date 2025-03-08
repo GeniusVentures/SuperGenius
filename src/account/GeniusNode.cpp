@@ -110,55 +110,62 @@ namespace sgns
         std::cout << "Log Result: " << result.message << std::endl;
         libp2p::log::setLoggingSystem( logging_system );
         libp2p::log::setLevelOfGroup( "SuperGeniusDemo", soralog::Level::ERROR_ );
-
-        node_logger = base::createLogger( "SuperGeniusDemo" );
+        std::string logdir = "";
+#ifndef DEBUG
+        //logdir = write_base_path_ + "/sgnslog2.log";
+#endif
+        node_logger = base::createLogger( "SuperGeniusDemo", logdir );
+        auto loggerGlobalDB = base::createLogger("GlobalDB", logdir);
+        auto loggerDAGSyncer = base::createLogger("GraphsyncDAGSyncer", logdir);
+        auto loggerGraphsync = base::createLogger("graphsync", logdir);
+        auto loggerBroadcaster = base::createLogger("PubSubBroadcasterExt", logdir);
+        auto loggerDataStore = base::createLogger("CrdtDatastore", logdir);
+        auto loggerTransactions = base::createLogger("TransactionManager", logdir);
+        auto loggerQueue = base::createLogger("ProcessingTaskQueueImpl", logdir);
+        auto loggerRocksDB = base::createLogger("rocksdb", logdir);
+        auto logkad = base::createLogger("Kademlia", logdir);
+        auto logNoise = base::createLogger("Noise", logdir);
+        auto logProcessingEngine = base::createLogger("ProcessingEngine", logdir);
+        auto loggerSubQueue = base::createLogger("ProcessingSubTaskQueueAccessorImpl", logdir);
+        auto loggerProcServ = base::createLogger("ProcessingService", logdir);
+        auto loggerProcqm = base::createLogger("ProcessingSubTaskQueueManager", logdir);
+        auto loggerUPNP = base::createLogger("UPNP", logdir);
 #ifdef DEBUG
         node_logger->set_level( spdlog::level::debug );
+        loggerGlobalDB->set_level(spdlog::level::off);
+        loggerDAGSyncer->set_level(spdlog::level::debug);
+        loggerGraphsync->set_level(spdlog::level::trace);
+        loggerBroadcaster->set_level(spdlog::level::off);
+        loggerDataStore->set_level(spdlog::level::off);
+        loggerTransactions->set_level(spdlog::level::debug);
+        loggerQueue->set_level(spdlog::level::off);
+        loggerRocksDB->set_level(spdlog::level::off);
+        logkad->set_level(spdlog::level::off);
+        logNoise->set_level(spdlog::level::off);
+        logProcessingEngine->set_level(spdlog::level::debug);
+        loggerSubQueue->set_level(spdlog::level::off);
+        loggerProcServ->set_level(spdlog::level::debug);
+        loggerProcqm->set_level(spdlog::level::off);
+        loggerUPNP->set_level(spdlog::level::off);
 #else
-        node_logger->set_level( spdlog::level::err );
+        node_logger->set_level( spdlog::level::err);
+        loggerGlobalDB->set_level(spdlog::level::err);
+        loggerDAGSyncer->set_level(spdlog::level::err);
+        loggerGraphsync->set_level(spdlog::level::err);
+        loggerBroadcaster->set_level(spdlog::level::err);
+        loggerDataStore->set_level(spdlog::level::err);
+        loggerTransactions->set_level(spdlog::level::err);
+        loggerQueue->set_level(spdlog::level::err);
+        loggerRocksDB->set_level(spdlog::level::err);
+        logkad->set_level(spdlog::level::err);
+        logNoise->set_level(spdlog::level::err);
+        logProcessingEngine->set_level(spdlog::level::err);
+        loggerSubQueue->set_level(spdlog::level::err);
+        loggerProcServ->set_level(spdlog::level::trace);
+        loggerProcqm->set_level(spdlog::level::err);
+        loggerUPNP->set_level(spdlog::level::err);
 #endif
-        auto loggerGlobalDB = base::createLogger( "GlobalDB" );
-        loggerGlobalDB->set_level( spdlog::level::off );
 
-        auto loggerDAGSyncer = base::createLogger( "GraphsyncDAGSyncer" );
-        loggerDAGSyncer->set_level( spdlog::level::debug );
-        
-        auto loggerGraphsync = base::createLogger( "graphsync" );
-        loggerGraphsync->set_level( spdlog::level::trace );
-
-        auto loggerBroadcaster = base::createLogger( "PubSubBroadcasterExt" );
-        loggerBroadcaster->set_level( spdlog::level::off );
-
-        auto loggerDataStore = base::createLogger( "CrdtDatastore" );
-        loggerDataStore->set_level( spdlog::level::off );
-
-        auto loggerTransactions = base::createLogger( "TransactionManager" );
-        loggerTransactions->set_level( spdlog::level::debug );
-
-        auto loggerQueue = base::createLogger( "ProcessingTaskQueueImpl" );
-        loggerQueue->set_level( spdlog::level::off );
-
-        auto loggerRocksDB = base::createLogger( "rocksdb" );
-        loggerRocksDB->set_level( spdlog::level::off );
-
-        auto logkad = base::createLogger( "Kademlia" );
-        logkad->set_level( spdlog::level::off );
-
-        auto logNoise = base::createLogger( "Noise" );
-        logNoise->set_level( spdlog::level::off );
-        auto logProcessingEngine = base::createLogger( "ProcessingEngine" );
-        logProcessingEngine->set_level( spdlog::level::debug );
-
-        auto loggerSubQueue = base::createLogger( "ProcessingSubTaskQueueAccessorImpl" );
-        loggerSubQueue->set_level( spdlog::level::off );
-        auto loggerProcServ = base::createLogger( "ProcessingService" );
-        loggerProcServ->set_level( spdlog::level::debug );
-
-        auto loggerProcqm = base::createLogger( "ProcessingSubTaskQueueManager" );
-        loggerProcqm->set_level( spdlog::level::off );
-
-        auto loggerUPNP = base::createLogger( "UPNP" );
-        loggerUPNP->set_level( spdlog::level::off );
 
         auto tokenid = dev_config_.TokenID;
 
