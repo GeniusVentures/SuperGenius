@@ -37,7 +37,7 @@ namespace sgns::processing
 
         if ( !subTasks.empty() )
         {
-            if (!node->CreateSubTaskQueue( std::move( subTasks ) ))
+            if ( !node->CreateSubTaskQueue( std::move( subTasks ) ) )
             {
                 node = nullptr;
             }
@@ -66,6 +66,10 @@ namespace sgns::processing
         m_ttl( ttl )
     {
         m_logger->debug( "[{}] Processing node CREATED", m_nodeId );
+        if ( m_gossipPubSub )
+        {
+            m_ttlTimer = std::make_unique<boost::asio::steady_timer>( *m_gossipPubSub->GetAsioContext() );
+        }
     }
 
     ProcessingNode::~ProcessingNode()
@@ -177,6 +181,8 @@ namespace sgns::processing
         m_ttlTimer->cancel();
         m_ttlTimer->expires_after( m_ttl );
 
+        m_logger->debug( "Starting the TTL timer for node {}", m_nodeId );
+
         // Use weak_ptr to avoid circular reference
         std::weak_ptr<ProcessingNode> weakThis = shared_from_this();
 
@@ -213,10 +219,7 @@ namespace sgns::processing
             m_ttlTimer->cancel();
 
             // Clean up resources before self-destruction
-            m_processingEngine.reset();
-            m_subtaskQueueManager.reset();
-            m_subTaskQueueAccessor.reset();
-            m_queueChannel.reset();
+            m_processingErrorSink( "Node timed out" );
 
             // Let shared_ptr ownership mechanism handle the actual deletion
             // The object will be deleted when the last shared_ptr reference is released
