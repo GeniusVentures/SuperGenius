@@ -110,3 +110,53 @@ TEST_F( TransactionRecoveryTest, MintTransactionLowTimeout )
     EXPECT_EQ( node_proc1->GetOutTransactions().size(), out_txs_count_before )
         << "Outgoing transactions changed despite mint call with very low timeout";
 }
+
+TEST_F( TransactionRecoveryTest, TransferTransactionLowTimeout )
+{
+    node_proc1 = new sgns::GeniusNode( DEV_CONFIG,
+                                       "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+                                       false,
+                                       false );
+    node_proc2 = new sgns::GeniusNode( DEV_CONFIG2,
+                                       "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+                                       false,
+                                       false );
+
+    std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
+    auto mint_result = node_proc1->MintTokens( 1000, "", "", "", std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+    ASSERT_TRUE( mint_result.has_value() );
+
+    auto node1_balance_before = node_proc1->GetBalance();
+    auto node2_balance_before = node_proc2->GetBalance();
+    auto node1_out_txs_before = node_proc1->GetOutTransactions().size();
+
+    auto transfer_result = node_proc1->TransferFunds( 1000, node_proc2->GetAddress(), std::chrono::milliseconds( 1 ) );
+    ASSERT_FALSE( transfer_result.has_value() );
+
+    auto start_time = std::chrono::steady_clock::now();
+    auto end_time   = start_time + std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS );
+
+    while ( std::chrono::steady_clock::now() < end_time )
+    {
+        std::this_thread::sleep_for( std::chrono::milliseconds( 500 ) );
+        auto current_node1_out_txs = node_proc1->GetOutTransactions().size();
+        auto current_node1_balance = node_proc1->GetBalance();
+        auto current_node2_balance = node_proc2->GetBalance();
+        if ( current_node1_out_txs > node1_out_txs_before )
+        {
+            break;
+        }
+        if ( current_node2_balance >= node2_balance_before + 1000 )
+        {
+            break;
+        }
+        if ( current_node1_balance <= node1_balance_before - 1000 )
+        {
+            break;
+        }
+    }
+
+    EXPECT_EQ( node_proc1->GetBalance(), node1_balance_before );
+    EXPECT_EQ( node_proc2->GetBalance(), node2_balance_before );
+    EXPECT_EQ( node_proc1->GetOutTransactions().size(), node1_out_txs_before );
+}
