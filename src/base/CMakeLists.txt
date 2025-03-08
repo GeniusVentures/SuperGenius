@@ -63,9 +63,6 @@ target_link_libraries(fixed_point
 )
 supergenius_install(fixed_point)
 
-
-
-
 message(STATUS "Generating sgnsv.h from sgnsv.h.in")
 
 cmake_policy(SET CMP0115 NEW)
@@ -73,7 +70,6 @@ cmake_policy(SET CMP0115 NEW)
 if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/sgnsv.h.in")
     message(FATAL_ERROR "sgnsv.h.in is missing in ${CMAKE_CURRENT_SOURCE_DIR}")
 endif()
-
 
 configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/sgnsv.h.in
