@@ -203,12 +203,47 @@ namespace sgns::processing
         {
             return;
         }
-        m_logger->debug( "[{}] AcceptProcessingChannel from queue {}", node_address_, processingQueuelId );
+
+        m_logger->debug( "[{}] AcceptProcessingChannel for queue {}", node_address_, processingQueuelId );
+
+        // Check if we're currently in the process of creating any node
+        // This prevents accepting a channel while we're negotiating for another one
+        {
+            std::lock_guard<std::mutex> lockCreation( m_mutexPendingCreation );
+            if ( !m_pendingSubTaskQueueId.empty() )
+            {
+                m_logger->debug( "[{}] Not accepting channel {} as we're negotiating for queue {}",
+                                 node_address_,
+                                 processingQueuelId,
+                                 m_pendingSubTaskQueueId );
+                return;
+            }
+
+            // Also check if this specific queue is in active negotiation by others
+            if ( m_pendingNodeCreations.find( processingQueuelId ) != m_pendingNodeCreations.end() )
+            {
+                m_logger->debug( "[{}] Not accepting channel {} as it's in active negotiation by others",
+                                 node_address_,
+                                 processingQueuelId );
+                return;
+            }
+        }
+
+        // Also check if we already have this queue or any other queue
         std::scoped_lock lock( m_mutexNodes );
-        m_logger->debug( "[{}] Number of nodes: {}, Max nodes:  {}",
+        if ( m_processingNodes.find( processingQueuelId ) != m_processingNodes.end() )
+        {
+            m_logger->debug( "[{}] Not accepting channel {} as we already have a node for it",
+                             node_address_,
+                             processingQueuelId );
+            return;
+        }
+
+        m_logger->debug( "[{}] Number of nodes: {}, Max nodes: {}",
                          node_address_,
                          m_processingNodes.size(),
                          m_maximalNodesCount );
+
         if ( m_processingNodes.size() < m_maximalNodesCount )
         {
             m_logger->debug( "[{}] Accept Channel Create Node", node_address_ );
@@ -238,20 +273,36 @@ namespace sgns::processing
 
     void ProcessingServiceImpl::PublishLocalChannelList()
     {
-        m_logger->trace( "Publish Local Channels." );
+        m_logger->trace( "[{}] Publishing local channels", node_address_ );
         std::scoped_lock lock( m_mutexNodes );
         for ( auto &itNode : m_processingNodes )
         {
-            m_logger->trace( "Owns Channel? {}.", itNode.second->HasQueueOwnership() );
+            m_logger->trace( "[{}] Channel {}: Owns Channel? {}",
+                             node_address_,
+                             itNode.first,
+                             itNode.second->HasQueueOwnership() );
+
             // Only channel host answers to reduce a number of published messages
             if ( itNode.second->HasQueueOwnership() )
             {
+                // Check if this channel is in the pending node creations
+                {
+                    std::lock_guard<std::mutex> lockCreation( m_mutexPendingCreation );
+                    if ( m_pendingNodeCreations.find( itNode.first ) != m_pendingNodeCreations.end() )
+                    {
+                        m_logger->debug( "[{}] Not publishing channel {} as it's still in contention",
+                                         node_address_,
+                                         itNode.first );
+                        continue;
+                    }
+                }
+
                 SGProcessing::GridChannelMessage gridMessage;
                 auto                             channelResponse = gridMessage.mutable_processing_channel_response();
                 channelResponse->set_channel_id( itNode.first );
 
                 m_gridChannel->Publish( gridMessage.SerializeAsString() );
-                m_logger->trace( "Channel published. {}", channelResponse->channel_id() );
+                m_logger->trace( "[{}] Channel published: {}", node_address_, channelResponse->channel_id() );
             }
         }
     }
@@ -294,7 +345,9 @@ namespace sgns::processing
             std::scoped_lock lock( m_mutexNodes );
             if ( m_processingNodes.size() >= m_maximalNodesCount )
             {
-                m_logger->debug( "[{}] Maximum number of nodes ({}) reached", node_address_, m_maximalNodesCount );
+                m_logger->debug( "[{}] At maximum node capacity ({}) - not attempting to grab tasks",
+                                 node_address_,
+                                 m_maximalNodesCount );
                 return;
             }
         }
@@ -304,16 +357,28 @@ namespace sgns::processing
 
         if ( maybe_task )
         {
-            m_logger->debug( "[{}] Grabbed task, broadcasting intent to create node for queue {}",
-                             node_address_,
-                             subTaskQueueId );
-
+            // Mark ourselves as busy with this potential node creation
+            // This will prevent accepting other channels while we're negotiating this one
             {
-                std::lock_guard<std::mutex> lockCreation( m_mutexPendingCreation );
+                std::scoped_lock lock( m_mutexNodes, m_mutexPendingCreation );
+
+                // Double-check we're still under the limit
+                if ( m_processingNodes.size() >= m_maximalNodesCount )
+                {
+                    m_logger->debug( "[{}] Maximum nodes reached while grabbing task - abandoning", node_address_ );
+                    return;
+                }
+
                 m_pendingSubTaskQueueId = subTaskQueueId;
                 m_pendingSubTasks       = subTasks;
                 m_pendingTask           = maybe_task.value();
             }
+
+            // Instead of immediately creating a ProcessingNode, we'll broadcast our intent
+            // and wait for responses from other peers
+            m_logger->debug( "[{}] Grabbed task, broadcasting intent to create node for queue {}",
+                             node_address_,
+                             subTaskQueueId );
 
             BroadcastNodeCreationIntent( subTaskQueueId );
         }
@@ -517,6 +582,9 @@ namespace sgns::processing
 
             // Notify other peers that this channel is now available
             PublishLocalChannelList();
+
+            // Send a new channel list request to continue processing
+            SendChannelListRequest();
         }
     }
 
