@@ -44,7 +44,7 @@ namespace sgns::processing
                 return outcome::failure( Error::NO_BUFFER_FROM_JOB_DATA );
             }
 
-            this->cidData_.insert( { subTask.subtaskid(), buffers } );
+            //this->cidData_.insert( { subTask.subtaskid(), buffers } );
             //this->ProcessSubTask2(subTask, result, initialHashCode, buffers->second.at(0));
             //this->m_processor->SetData(buffers);
             auto        tempresult = this->m_processor->StartProcessing( result,

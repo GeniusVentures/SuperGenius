@@ -35,7 +35,7 @@ namespace sgns::processing
             const std::string                                      &processingQueueChannelId,
             std::list<SGProcessing::SubTask>                        subTasks                      = {},
             size_t                                                  msSubscriptionWaitingDuration = 0,
-            std::chrono::seconds                                    ttl = std::chrono::minutes( 10 ) );
+            std::chrono::seconds                                    ttl = std::chrono::minutes( 2 ) );
         ~ProcessingNode();
 
         /** Attaches the node to the processing channel
