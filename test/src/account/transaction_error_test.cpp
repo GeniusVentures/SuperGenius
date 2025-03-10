@@ -92,6 +92,26 @@ TEST_F( TransactionRecoveryTest, MintTransactionLowTimeout )
 
     EXPECT_EQ( node_proc1->GetOutTransactions().size(), out_txs_count_before );
     EXPECT_EQ( node_proc1->GetBalance(), balance_before );
+
+    std::this_thread::sleep_for( std::chrono::milliseconds( 2000 ) );
+}
+
+TEST_F( TransactionRecoveryTest, MintAfterTimeoutFailure )
+{
+    auto balance_before       = node_proc1->GetBalance();
+    auto out_txs_before       = node_proc1->GetOutTransactions();
+    auto out_txs_count_before = out_txs_before.size();
+
+    auto mint_result = node_proc1->MintTokens( 100000000000, "", "", "", std::chrono::milliseconds( 1 ) );
+    ASSERT_FALSE( mint_result.has_value() );
+
+    mint_result = node_proc1->MintTokens( 1, "", "", "", std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+    ASSERT_TRUE( mint_result.has_value() );
+
+    EXPECT_EQ( node_proc1->GetOutTransactions().size(), out_txs_count_before + 1 );
+    EXPECT_EQ( node_proc1->GetBalance(), balance_before + 1 );
+
+    std::this_thread::sleep_for( std::chrono::milliseconds( 2000 ) );
 }
 
 TEST_F( TransactionRecoveryTest, TransferTransactionLowTimeout )
@@ -117,4 +137,38 @@ TEST_F( TransactionRecoveryTest, TransferTransactionLowTimeout )
     EXPECT_EQ( node_proc2->GetBalance(), node2_balance_before );
     EXPECT_EQ( node_proc1->GetBalance(), node1_balance_before );
     EXPECT_EQ( node_proc1->GetOutTransactions().size(), node1_out_txs_before );
+
+    std::this_thread::sleep_for( std::chrono::milliseconds( 2000 ) );
+}
+
+TEST_F( TransactionRecoveryTest, TransferAfterTimeoutFailure )
+{
+    auto mint_result = node_proc1->MintTokens( 1500000000,
+                                               "",
+                                               "",
+                                               "",
+                                               std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+    ASSERT_TRUE( mint_result.has_value() );
+
+    auto node1_balance_before = node_proc1->GetBalance();
+    auto node2_balance_before = node_proc2->GetBalance();
+    auto node1_out_txs_before = node_proc1->GetOutTransactions().size();
+    auto node2_in_txs_before  = node_proc2->GetInTransactions().size();
+
+    auto transfer_result = node_proc1->TransferFunds( 1000000000,
+                                                      node_proc2->GetAddress(),
+                                                      std::chrono::milliseconds( 1 ) );
+    ASSERT_FALSE( transfer_result.has_value() );
+
+    transfer_result = node_proc1->TransferFunds( 1,
+                                                 node_proc2->GetAddress(),
+                                                 std::chrono::milliseconds( 30000 ) );
+    ASSERT_TRUE( transfer_result.has_value() );
+
+    EXPECT_EQ( node_proc1->GetBalance(), node1_balance_before - 1 );
+    EXPECT_EQ( node_proc2->GetBalance(), node2_balance_before + 1 );
+    EXPECT_EQ( node_proc1->GetOutTransactions().size(), node1_out_txs_before + 1 );
+    EXPECT_EQ( node_proc2->GetInTransactions().size(), node2_in_txs_before + 1 );
+
+    std::this_thread::sleep_for( std::chrono::milliseconds( 2000 ) );
 }
