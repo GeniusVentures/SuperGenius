@@ -40,10 +40,11 @@ namespace sgns::processing
 
         /** SubTaskQueueAccessor overrides
     */
-        void ConnectToSubTaskQueue( std::function<void()> onSubTaskQueueConnectedEventSink ) override;
+        bool ConnectToSubTaskQueue( std::function<void()> onSubTaskQueueConnectedEventSink ) override;
         bool AssignSubTasks( std::list<SGProcessing::SubTask> &subTasks ) override;
         void GrabSubTask( SubTaskGrabbedCallback onSubTaskGrabbedCallback ) override;
         void CompleteSubTask( const std::string &subTaskId, const SGProcessing::SubTaskResult &subTaskResult ) override;
+        bool CreateResultsChannel( const std::string &task_id ) override;
 
         /** Returns available results of subtask queue
     * @return a vector of subtask id->results pairs
