@@ -309,7 +309,7 @@ namespace sgns
 
         if ( it != tx_queue_m.end() )
         {
-            m_logger->info( "Removind transaction from queue: " + txId );
+            m_logger->info( "Removing transaction from queue: " + txId );
             tx_queue_m.erase( it );
             return outcome::success();
         }
