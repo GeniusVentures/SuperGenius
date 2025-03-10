@@ -14,8 +14,7 @@ namespace sgns::processing
         sgns::crdt::GlobalDB::Buffer data;
         data.put( result.SerializeAsString() );
 
-        auto taskId = m_db->Put(
-            sgns::crdt::HierarchicalKey( ( boost::format( "results/%s" ) % result.subtaskid() ).str() ), data );
+        m_db->Put( sgns::crdt::HierarchicalKey( ( boost::format( "results/%s" ) % result.subtaskid() ).str() ), data );
     }
 
     void SubTaskResultStorageImpl::RemoveSubTaskResult( const std::string &subTaskId )

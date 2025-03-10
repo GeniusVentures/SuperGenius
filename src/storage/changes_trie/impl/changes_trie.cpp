@@ -11,7 +11,7 @@ namespace sgns::storage::changes_trie {
       const std::shared_ptr<storage::trie::SuperGeniusTrieFactory> &trie_factory,
       std::shared_ptr<storage::trie::Codec> codec,
       const ExtrinsicsChanges &extinsics_changes,
-      const ChangesTrieConfig &config) {
+      const ChangesTrieConfig &/*config*/) {
     BOOST_ASSERT(trie_factory != nullptr);
     auto changes_storage = trie_factory->createEmpty();
 

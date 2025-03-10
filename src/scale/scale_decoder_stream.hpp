@@ -252,7 +252,7 @@ namespace sgns::scale {
      * @param i value to decode
      * @return reference to stream
      */
-    ScaleDecoderStream &operator>>(boost::multiprecision::uint256_t &i) {
+    ScaleDecoderStream &operator>>(boost::multiprecision::uint256_t & /*i*/) {
       // TODO(akvinikym) PRE-285: maybe move to another file and implement it
       return *this;
     }

@@ -23,7 +23,7 @@ namespace sgns::verification {
       return ! operator==(rhs);
     }
     //added to fix link error
-    friend std::ostream &operator<<(std::ostream &out, const NextEpochDescriptor &test_struct)
+    friend std::ostream &operator<<(std::ostream &out, const NextEpochDescriptor & /*test_struct*/)
     {
       return out;
     }

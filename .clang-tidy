@@ -1,6 +1,7 @@
 ---
 Checks: >
   boost-*,
+  -boost-use-ranges,
 
   bugprone-*,
   -bugprone-easily-swappable-parameters,

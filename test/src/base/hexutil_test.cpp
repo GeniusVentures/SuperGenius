@@ -60,8 +60,3 @@ TEST(Common, Hexutil_UnhexInvalid) {
 struct UnhexNumber32Test
     : public ::testing::TestWithParam<std::pair<std::string, size_t>> {};
 
-namespace {
-  std::pair<std::string, size_t> makePair(std::string s, size_t v) {
-    return std::make_pair(std::move(s), v);
-  }
-}  // namespace

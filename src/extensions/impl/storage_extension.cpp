@@ -330,7 +330,6 @@ namespace sgns::extensions {
 
   runtime::WasmSpan StorageExtension::ext_storage_changes_root_version_1(
       runtime::WasmSpan parent_hash_data) {
-    auto hash_size = base::Hash256::size();
     auto parent_hash_span = runtime::WasmResult(parent_hash_data);
     auto parent_hash_bytes =
         memory_->loadN(parent_hash_span.address, parent_hash_span.length);

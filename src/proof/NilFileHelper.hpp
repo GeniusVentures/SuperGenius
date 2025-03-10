@@ -29,7 +29,7 @@ namespace sgns
             std::vector<std::uint8_t> cv;
             cv.resize( output.length(), 0x00 );
             auto                          write_iter = cv.begin();
-            nil::marshalling::status_type status     = output.write( write_iter, cv.size() );
+            output.write( write_iter, cv.size() );
 
             return binary ? WriteAsBin( cv, out ) : WriteAsHex( cv, out );
         }
@@ -40,7 +40,7 @@ namespace sgns
             std::vector<std::uint8_t> cv;
             cv.resize( output.length(), 0x00 );
             auto                          write_iter = cv.begin();
-            nil::marshalling::status_type status     = output.write( write_iter, cv.size() );
+            output.write( write_iter, cv.size() );
 
             return cv;
         }

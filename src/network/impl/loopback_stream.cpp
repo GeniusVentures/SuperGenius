@@ -46,8 +46,8 @@ namespace sgns::network {
     is_reset_ = true;
   };
 
-  void LoopbackStream::adjustWindowSize(uint32_t new_size,
-                                        VoidResultHandlerFunc cb){};
+  void LoopbackStream::adjustWindowSize(uint32_t /*new_size*/,
+                                        VoidResultHandlerFunc /*cb*/){};
 
   outcome::result<bool> LoopbackStream::isInitiator() const {
     return outcome::success(false);

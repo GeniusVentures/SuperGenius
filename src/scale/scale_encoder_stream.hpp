@@ -1,5 +1,3 @@
-
-
 #ifndef SUPERGENIUS_SRC_SCALE_SCALE_ENCODER_STREAM_HPP
 #define SUPERGENIUS_SRC_SCALE_SCALE_ENCODER_STREAM_HPP
 
@@ -166,7 +164,7 @@ namespace sgns::scale {
      * @param i value to decode
      * @return reference to stream
      */
-    ScaleEncoderStream &operator<<(const boost::multiprecision::uint256_t &i) {
+    ScaleEncoderStream &operator<<(const boost::multiprecision::uint256_t & /*i*/) {
       // TODO(akvinikym) PRE-285: maybe move to another file and implement it
       return *this;
     }

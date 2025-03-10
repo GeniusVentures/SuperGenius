@@ -324,14 +324,14 @@ TEST_F(SubTaskQueueAccessorImplTest, DISABLED_InvalidSubTasksRestart)
     // Local queue wrapper owns the queue
     queue->mutable_processing_queue()->set_owner_node_id(nodeId1);
     {
-        auto item = queue->mutable_processing_queue()->add_items();
+        queue->mutable_processing_queue()->add_items();
         auto subTask = queue->mutable_subtasks()->add_items();
         subTask->set_subtaskid("SUBTASK_ID1");
         auto chunk = subTask->add_chunkstoprocess();
         chunk->CopyFrom(chunk1);
     }
     {
-        auto item = queue->mutable_processing_queue()->add_items();
+        queue->mutable_processing_queue()->add_items();
         auto subTask = queue->mutable_subtasks()->add_items();
         subTask->set_subtaskid("SUBTASK_ID2");
         auto chunk = subTask->add_chunkstoprocess();

@@ -29,11 +29,6 @@ static BlockHeader defaultHeader( BlockNumber number )
     return header;
 }
 
-static BlockHeader defaultHeader()
-{
-    return defaultHeader( 42 );
-}
-
 class BlockHeaderRepositoryFixture : public test::CRDTFixture
 {
 public:

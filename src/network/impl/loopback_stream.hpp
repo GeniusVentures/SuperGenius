@@ -1,4 +1,3 @@
-
 #ifndef SUPERGENIUS_SRC_NETWORK_IMPL_LOOPBACKSTREAM
 #define SUPERGENIUS_SRC_NETWORK_IMPL_LOOPBACKSTREAM
 
@@ -80,7 +79,7 @@ namespace sgns::network
         /// was the stream reset?
         bool is_reset_ = false;
 
-        void setIncomingRelay( bool isincrelay ) override
+        void setIncomingRelay( bool /*isincrelay*/ ) override
         {
         }
 
