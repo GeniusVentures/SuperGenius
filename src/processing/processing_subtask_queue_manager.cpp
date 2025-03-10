@@ -412,7 +412,7 @@ namespace sgns::processing
                          m_processedSubTaskIds.size(),
                          m_queue->subtasks().items_size(),
                          (size_t)this );
-        return m_processedSubTaskIds.size() == (size_t)m_queue->subtasks().items_size();
+        return m_processedSubTaskIds.size() >= (size_t)m_queue->subtasks().items_size();
     }
 
     void ProcessingSubTaskQueueManager::SetSubTaskQueueAssignmentEventSink(
