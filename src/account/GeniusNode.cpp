@@ -111,8 +111,8 @@ namespace sgns
         libp2p::log::setLoggingSystem( logging_system );
         libp2p::log::setLevelOfGroup( "SuperGeniusDemo", soralog::Level::ERROR_ );
         std::string logdir = "";
-#ifndef DEBUG
-        //logdir = write_base_path_ + "/sgnslog2.log";
+#ifndef SGNS_DEBUGLOGS
+        logdir = write_base_path_ + "/sgnslog2.log";
 #endif
         node_logger = base::createLogger( "SuperGeniusDemo", logdir );
         auto loggerGlobalDB = base::createLogger("GlobalDB", logdir);
@@ -131,7 +131,7 @@ namespace sgns
         auto loggerProcqm = base::createLogger("ProcessingSubTaskQueueManager", logdir);
         auto loggerUPNP = base::createLogger("UPNP", logdir);
         auto loggerProcessingNode = base::createLogger("ProcessingNode", logdir);
-#ifdef DEBUG
+#ifdef SGNS_DEBUGLOGS
         node_logger->set_level( spdlog::level::debug );
         loggerGlobalDB->set_level(spdlog::level::off);
         loggerDAGSyncer->set_level(spdlog::level::debug);
@@ -163,10 +163,10 @@ namespace sgns
         logNoise->set_level(spdlog::level::err);
         logProcessingEngine->set_level(spdlog::level::err);
         loggerSubQueue->set_level(spdlog::level::err);
-        loggerProcServ->set_level(spdlog::level::trace);
+        loggerProcServ->set_level(spdlog::level::err);
         loggerProcqm->set_level(spdlog::level::err);
         loggerUPNP->set_level(spdlog::level::err);
-        loggerProcessingNode->set_level(spdlog::level::trace);
+        loggerProcessingNode->set_level(spdlog::level::err);
 #endif
 
 
