@@ -30,9 +30,10 @@ namespace
                 std::bind(&SubTaskQueueAccessorMock::OnTimerEvent, this, std::placeholders::_1));
         }
 
-        void ConnectToSubTaskQueue(std::function<void()> onSubTaskQueueConnectedEventSink) override
+        bool ConnectToSubTaskQueue(std::function<void()> onSubTaskQueueConnectedEventSink) override
         {
             m_onSubTaskQueueConnectedEventSink = onSubTaskQueueConnectedEventSink;
+            return true;
         }
 
         bool AssignSubTasks(std::list<SGProcessing::SubTask>& subTasks) override
@@ -59,6 +60,10 @@ namespace
         void CompleteSubTask(const std::string& subTaskId, const SGProcessing::SubTaskResult& subTaskResult) override
         {
             // Do nothing
+        }
+        bool CreateResultsChannel( const std::string &task_id ) override
+        {
+            return true;
         }
 
     private:
