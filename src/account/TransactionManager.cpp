@@ -309,7 +309,26 @@ namespace sgns
 
         if ( it != tx_queue_m.end() )
         {
-            m_logger->info( "Removing transaction from queue: " + txId );
+            m_logger->info( "Cancelling transaction: " + txId );
+
+            if ( it->first->GetType() == "transfer" )
+            {
+                auto transfer_tx = std::dynamic_pointer_cast<TransferTransaction>( it->first );
+                if ( transfer_tx )
+                {
+                    auto inputInfos = transfer_tx->GetInputInfos();
+                    for ( auto &input : inputInfos )
+                    {
+                        for ( auto &utxo : account_m->utxos )
+                        {
+                            if ( utxo.GetTxID() == input.txid_hash_ )
+                            {
+                                utxo.ToggleLock( false );
+                            }
+                        }
+                    }
+                }
+            }
             tx_queue_m.erase( it );
             return outcome::success();
         }

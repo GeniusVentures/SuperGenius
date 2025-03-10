@@ -92,7 +92,7 @@ namespace sgns
         autodht_( autodht ),
         isprocessor_( isprocessor ),
         dev_config_( dev_config )
-        //coinprices_(std::make_shared<CoinGeckoPriceRetriever>(io_))
+    //coinprices_(std::make_shared<CoinGeckoPriceRetriever>(io_))
     {
         SSL_library_init();
         SSL_load_error_strings();
@@ -179,7 +179,7 @@ namespace sgns
 
         auto loggerDAGSyncer = base::createLogger( "GraphsyncDAGSyncer" );
         loggerDAGSyncer->set_level( spdlog::level::off );
-        
+
         auto loggerGraphsync = base::createLogger( "graphsync" );
         loggerGraphsync->set_level( spdlog::level::off );
 
@@ -664,7 +664,7 @@ namespace sgns
             return 0;
         }
         auto gnusPrice = maybe_gnusPrice.value();
-        
+
         // Using the assumption: 20 FLOPs per byte and each FLOP costs 5e-15 USD,
         // the cost per byte in USD is: 20 * 5e-15 = 1e-13 USD.
         // Converting this to a fixed-point constant with 9 decimals:
@@ -765,15 +765,12 @@ namespace sgns
         if ( !success )
         {
             node_logger->error( "TransferFunds transaction {} timed out after {} ms", tx_id, duration );
-
             auto cancel_result = transaction_manager_->CancelTransaction( tx_id );
             if ( !cancel_result.has_value() )
             {
                 node_logger->error( "Failed to cancel transfer transaction {}: {}",
                                     tx_id,
                                     cancel_result.error().message() );
-
-                std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
                 if ( transaction_manager_->WaitForTransactionOutgoing( tx_id, std::chrono::milliseconds( 10 ) ) )
                 {
                     auto final_end_time = std::chrono::steady_clock::now();
@@ -895,7 +892,7 @@ namespace sgns
         sgns::CoinGeckoPriceRetriever retriever;
         return retriever.getHistoricalPriceRange(tokenIds, from, to);
     }
-    
+
     std::string GeniusNode::FormatTokens( uint64_t amount )
     {
         return sgns::fixed_point::toString( amount );

@@ -90,10 +90,8 @@ TEST_F( TransactionRecoveryTest, MintTransactionLowTimeout )
 
     std::this_thread::sleep_for( std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
 
-    EXPECT_EQ( node_proc1->GetBalance(), balance_before ) << "Balance changed despite mint call with very low timeout";
-
-    EXPECT_EQ( node_proc1->GetOutTransactions().size(), out_txs_count_before )
-        << "Outgoing transactions changed despite mint call with very low timeout";
+    EXPECT_EQ( node_proc1->GetOutTransactions().size(), out_txs_count_before );
+    EXPECT_EQ( node_proc1->GetBalance(), balance_before );
 }
 
 TEST_F( TransactionRecoveryTest, TransferTransactionLowTimeout )
