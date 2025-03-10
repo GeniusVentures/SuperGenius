@@ -49,6 +49,19 @@ protected:
                       sizeof( DEV_CONFIG2.BaseWritePath ) );
         DEV_CONFIG.BaseWritePath[sizeof( DEV_CONFIG.BaseWritePath ) - 1]   = '\0';
         DEV_CONFIG2.BaseWritePath[sizeof( DEV_CONFIG2.BaseWritePath ) - 1] = '\0';
+
+        node_proc1 = new sgns::GeniusNode( DEV_CONFIG,
+                                           "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+                                           false,
+                                           false );
+        node_proc2 = new sgns::GeniusNode( DEV_CONFIG2,
+                                           "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+                                           false,
+                                           false );
+        std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
+
+        node_proc1->GetPubSub()->AddPeers( { node_proc2->GetPubSub()->GetLocalAddress() } );
+        node_proc2->GetPubSub()->AddPeers( { node_proc1->GetPubSub()->GetLocalAddress() } );
     }
 
     static void TearDownTestSuite()
@@ -68,42 +81,14 @@ protected:
 
 TEST_F( TransactionRecoveryTest, MintTransactionLowTimeout )
 {
-    node_proc1 = new sgns::GeniusNode( DEV_CONFIG,
-                                       "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                       false,
-                                       false );
-    node_proc2 = new sgns::GeniusNode( DEV_CONFIG2,
-                                       "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                       false,
-                                       false );
-
-    std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
-
     auto balance_before       = node_proc1->GetBalance();
     auto out_txs_before       = node_proc1->GetOutTransactions();
     auto out_txs_count_before = out_txs_before.size();
 
-    auto mint_result = node_proc1->MintTokens( 10000000000, "", "", "", std::chrono::milliseconds( 1 ) );
+    auto mint_result = node_proc1->MintTokens( 100000000000, "", "", "", std::chrono::milliseconds( 1 ) );
     ASSERT_FALSE( mint_result.has_value() );
 
-    auto start_time = std::chrono::steady_clock::now();
-    auto end_time   = start_time + std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS );
-
-    while ( std::chrono::steady_clock::now() < end_time )
-    {
-        std::this_thread::sleep_for( std::chrono::milliseconds( 500 ) );
-        auto current_out_txs = node_proc1->GetOutTransactions();
-        auto current_balance = node_proc1->GetBalance();
-
-        if ( current_out_txs.size() > out_txs_count_before )
-        {
-            break;
-        }
-        if ( current_balance >= balance_before + 10000000000 )
-        {
-            break;
-        }
-    }
+    std::this_thread::sleep_for( std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
 
     EXPECT_EQ( node_proc1->GetBalance(), balance_before ) << "Balance changed despite mint call with very low timeout";
 
@@ -113,50 +98,25 @@ TEST_F( TransactionRecoveryTest, MintTransactionLowTimeout )
 
 TEST_F( TransactionRecoveryTest, TransferTransactionLowTimeout )
 {
-    node_proc1 = new sgns::GeniusNode( DEV_CONFIG,
-                                       "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                       false,
-                                       false );
-    node_proc2 = new sgns::GeniusNode( DEV_CONFIG2,
-                                       "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                       false,
-                                       false );
-
-    std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
-    auto mint_result = node_proc1->MintTokens( 1000, "", "", "", std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+    auto mint_result = node_proc1->MintTokens( 1500000000,
+                                               "",
+                                               "",
+                                               "",
+                                               std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
     ASSERT_TRUE( mint_result.has_value() );
 
     auto node1_balance_before = node_proc1->GetBalance();
     auto node2_balance_before = node_proc2->GetBalance();
     auto node1_out_txs_before = node_proc1->GetOutTransactions().size();
 
-    auto transfer_result = node_proc1->TransferFunds( 1000, node_proc2->GetAddress(), std::chrono::milliseconds( 1 ) );
+    auto transfer_result = node_proc1->TransferFunds( 1000000000,
+                                                      node_proc2->GetAddress(),
+                                                      std::chrono::milliseconds( 1 ) );
     ASSERT_FALSE( transfer_result.has_value() );
 
-    auto start_time = std::chrono::steady_clock::now();
-    auto end_time   = start_time + std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS );
+    std::this_thread::sleep_for( std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) );
 
-    while ( std::chrono::steady_clock::now() < end_time )
-    {
-        std::this_thread::sleep_for( std::chrono::milliseconds( 500 ) );
-        auto current_node1_out_txs = node_proc1->GetOutTransactions().size();
-        auto current_node1_balance = node_proc1->GetBalance();
-        auto current_node2_balance = node_proc2->GetBalance();
-        if ( current_node1_out_txs > node1_out_txs_before )
-        {
-            break;
-        }
-        if ( current_node2_balance >= node2_balance_before + 1000 )
-        {
-            break;
-        }
-        if ( current_node1_balance <= node1_balance_before - 1000 )
-        {
-            break;
-        }
-    }
-
-    EXPECT_EQ( node_proc1->GetBalance(), node1_balance_before );
     EXPECT_EQ( node_proc2->GetBalance(), node2_balance_before );
+    EXPECT_EQ( node_proc1->GetBalance(), node1_balance_before );
     EXPECT_EQ( node_proc1->GetOutTransactions().size(), node1_out_txs_before );
 }

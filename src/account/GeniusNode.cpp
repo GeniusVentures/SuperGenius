@@ -171,7 +171,52 @@ namespace sgns
         loggerProcessingNode->set_level(spdlog::level::err);
         loggerGossipPubsub->set_level(spdlog::level::err);
 #endif
+<<<<<<< HEAD
 
+=======
+        auto loggerGlobalDB = base::createLogger( "GlobalDB" );
+        loggerGlobalDB->set_level( spdlog::level::trace );
+
+        auto loggerDAGSyncer = base::createLogger( "GraphsyncDAGSyncer" );
+        loggerDAGSyncer->set_level( spdlog::level::off );
+        
+        auto loggerGraphsync = base::createLogger( "graphsync" );
+        loggerGraphsync->set_level( spdlog::level::off );
+
+        auto loggerBroadcaster = base::createLogger( "PubSubBroadcasterExt" );
+        loggerBroadcaster->set_level( spdlog::level::off );
+
+        auto loggerDataStore = base::createLogger( "CrdtDatastore" );
+        loggerDataStore->set_level( spdlog::level::off );
+
+        auto loggerTransactions = base::createLogger( "TransactionManager" );
+        loggerTransactions->set_level( spdlog::level::debug );
+
+        auto loggerQueue = base::createLogger( "ProcessingTaskQueueImpl" );
+        loggerQueue->set_level( spdlog::level::off );
+
+        auto loggerRocksDB = base::createLogger( "rocksdb" );
+        loggerRocksDB->set_level( spdlog::level::off );
+
+        auto logkad = base::createLogger( "Kademlia" );
+        logkad->set_level( spdlog::level::off );
+
+        auto logNoise = base::createLogger( "Noise" );
+        logNoise->set_level( spdlog::level::off );
+        auto logProcessingEngine = base::createLogger( "ProcessingEngine" );
+        logProcessingEngine->set_level( spdlog::level::off );
+
+        auto loggerSubQueue = base::createLogger( "ProcessingSubTaskQueueAccessorImpl" );
+        loggerSubQueue->set_level( spdlog::level::off );
+        auto loggerProcServ = base::createLogger( "ProcessingService" );
+        loggerProcServ->set_level( spdlog::level::off );
+
+        auto loggerProcqm = base::createLogger( "ProcessingSubTaskQueueManager" );
+        loggerProcqm->set_level( spdlog::level::off );
+
+        auto loggerUPNP = base::createLogger( "UPNP" );
+        loggerUPNP->set_level( spdlog::level::off );
+>>>>>>> b9f33499 (fix: cancel transation on transfer timeout)
 
         auto tokenid = dev_config_.TokenID;
 
@@ -720,6 +765,24 @@ namespace sgns
         if ( !success )
         {
             node_logger->error( "TransferFunds transaction {} timed out after {} ms", tx_id, duration );
+
+            auto cancel_result = transaction_manager_->CancelTransaction( tx_id );
+            if ( !cancel_result.has_value() )
+            {
+                node_logger->error( "Failed to cancel transfer transaction {}: {}",
+                                    tx_id,
+                                    cancel_result.error().message() );
+
+                std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
+                if ( transaction_manager_->WaitForTransactionOutgoing( tx_id, std::chrono::milliseconds( 10 ) ) )
+                {
+                    auto final_end_time = std::chrono::steady_clock::now();
+                    auto final_duration =
+                        std::chrono::duration_cast<std::chrono::milliseconds>( final_end_time - start_time ).count();
+                    node_logger->debug( "TransferFunds transaction {} completed in {} ms", tx_id, final_duration );
+                    return std::make_pair( tx_id, final_duration );
+                }
+            }
             return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::timed_out ) );
         }
 
