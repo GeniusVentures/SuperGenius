@@ -43,6 +43,8 @@ namespace sgns::processing
         virtual void CompleteSubTask( const std::string                 &subTaskId,
                                       const SGProcessing::SubTaskResult &subTaskResult ) = 0;
 
+        virtual bool CreateResultsChannel( const std::string &task_id ) = 0;
+
         // @todo Add SetErrorsHandler method
     };
 }
