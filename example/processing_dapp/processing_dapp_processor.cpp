@@ -5,14 +5,11 @@
 #include <libp2p/log/configurator.hpp>
 #include <libp2p/log/logger.hpp>
 #include "processing/impl/processing_task_queue_impl.hpp"
-#include "processing_subtask_result_storage_impl.hpp"
+#include "processing/impl/processing_subtask_result_storage_impl.hpp"
 #include "processing/processing_service.hpp"
 #include "processing/processing_subtask_enqueuer_impl.hpp"
 #include "crdt/globaldb/keypair_file_storage.hpp"
 #include "crdt/globaldb/globaldb.hpp"
-
-
-
 
 using namespace sgns::processing;
 
