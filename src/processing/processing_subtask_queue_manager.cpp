@@ -74,7 +74,7 @@ namespace sgns::processing
                                        std::chrono::steady_clock::now().time_since_epoch() )
                                        .count();
 
-        m_logger->debug( "Subtask Queue created in timestamp {}",m_ownership_acquired_at_ );
+        m_logger->debug( "Subtask Queue created in timestamp {}", m_ownership_acquired_at_ );
         LogQueue();
 
         PublishSubTaskQueue();
@@ -382,10 +382,12 @@ namespace sgns::processing
             if ( isProcessed )
             {
                 m_processedSubTaskIds.insert( subTaskId );
+                m_logger->debug( "Subtask flagged as processed {}", subTaskId );
             }
             else
             {
                 m_processedSubTaskIds.erase( subTaskId );
+                m_logger->debug( "Subtask flagged as UNPROCESSED {}", subTaskId );
             }
         }
 
