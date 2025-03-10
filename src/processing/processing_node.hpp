@@ -58,7 +58,7 @@ namespace sgns::processing
                         std::string                                             node_id,
                         std::chrono::seconds                                    ttl );
 
-        void AttachTo( const std::string &processingQueueChannelId, size_t msSubscriptionWaitingDuration = 0 );
+        bool AttachTo( const std::string &processingQueueChannelId, size_t msSubscriptionWaitingDuration = 0 );
         bool CreateSubTaskQueue( std::list<SGProcessing::SubTask> subTasks);
         void Initialize( const std::string &processingQueueChannelId, size_t msSubscriptionWaitingDuration );
        

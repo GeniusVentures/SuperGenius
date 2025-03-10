@@ -32,14 +32,19 @@ namespace sgns::processing
                                                                          std::move( ttl ) ) );
 
         node->Initialize( processingQueueChannelId, msSubscriptionWaitingDuration );
-        node->AttachTo( processingQueueChannelId );
         node->InitTTL();
-
-        if ( !subTasks.empty() )
+        if ( !node->AttachTo( processingQueueChannelId ) )
         {
-            if ( !node->CreateSubTaskQueue( std::move( subTasks ) ) )
+            node = nullptr;
+        }
+        else
+        {
+            if ( !subTasks.empty() )
             {
-                node = nullptr;
+                if ( !node->CreateSubTaskQueue( std::move( subTasks ) ) )
+                {
+                    node = nullptr;
+                }
             }
         }
 
@@ -131,23 +136,28 @@ namespace sgns::processing
         m_logger->debug( "[{}] Processing node INITIALIZED", m_nodeId );
     }
 
-    void ProcessingNode::AttachTo( const std::string &processingQueueChannelId, size_t msSubscriptionWaitingDuration )
+    bool ProcessingNode::AttachTo( const std::string &processingQueueChannelId, size_t msSubscriptionWaitingDuration )
     {
         m_logger->debug( "[{}] Processing node AttachTo {} ", m_nodeId, processingQueueChannelId );
+        bool ret = false;
 
-        m_subTaskQueueAccessor->ConnectToSubTaskQueue(
-            [engineWeak( std::weak_ptr<ProcessingEngine>( m_processingEngine ) ),
-             accessorWeak( std::weak_ptr<SubTaskQueueAccessor>( m_subTaskQueueAccessor ) )]()
-            {
-                auto engine   = engineWeak.lock();
-                auto accessor = accessorWeak.lock();
-                if ( engine && accessor )
+        if ( m_subTaskQueueAccessor->CreateResultsChannel( processingQueueChannelId ) )
+        {
+            ret = m_subTaskQueueAccessor->ConnectToSubTaskQueue(
+                [engineWeak( std::weak_ptr<ProcessingEngine>( m_processingEngine ) ),
+                 accessorWeak( std::weak_ptr<SubTaskQueueAccessor>( m_subTaskQueueAccessor ) )]()
                 {
-                    engine->StartQueueProcessing( accessor );
-                }
-            } );
+                    auto engine   = engineWeak.lock();
+                    auto accessor = accessorWeak.lock();
+                    if ( engine && accessor )
+                    {
+                        engine->StartQueueProcessing( accessor );
+                    }
+                } );
+        }
 
         // @todo Set timer to handle queue request timeout
+        return ret;
     }
 
     bool ProcessingNode::CreateSubTaskQueue( std::list<SGProcessing::SubTask> subTasks )
