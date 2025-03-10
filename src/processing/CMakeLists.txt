@@ -20,6 +20,8 @@ add_library(processing_service
     processing_validation_core.hpp
 )
 
+set_target_properties(processing_service PROPERTIES UNITY_BUILD ON)
+
 add_proto_library(SGProcessingProto proto/SGProcessing.proto)
 
 target_include_directories(processing_service PRIVATE ${GSL_INCLUDE_DIR})
