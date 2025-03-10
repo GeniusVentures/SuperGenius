@@ -27,6 +27,16 @@ namespace sgns::processing
     {
         SGProcessing::SubTaskResult result;
 
+        //Check if we're processing too much.
+        std::scoped_lock<std::mutex> subTaskCountLock( m_subTaskCountMutex );
+        ++m_processingSubTaskCount;
+        if ( ( m_maximalProcessingSubTaskCount > 0 ) && ( m_processingSubTaskCount > m_maximalProcessingSubTaskCount ) )
+        {
+            // Reset the counter to allow processing restart
+            m_processingSubTaskCount = 0;
+            return outcome::failure( Error::MAX_NUMBER_SUBTASKS );
+        }
+
         auto queryTasks = m_db->Get( "tasks/TASK_" + subTask.ipfsblock() );
         if ( !queryTasks.has_value() )
         {
@@ -55,7 +65,6 @@ namespace sgns::processing
             std::string hashString( tempresult.begin(), tempresult.end() );
             result.set_result_hash( hashString );
             --m_processingSubTaskCount;
-
         }
         else
         {

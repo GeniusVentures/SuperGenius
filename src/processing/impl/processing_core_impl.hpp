@@ -35,6 +35,8 @@ namespace sgns::processing
             : m_db(std::move(db))
             //, m_subTaskProcessingTime(subTaskProcessingTime)
             , m_processor(nullptr)
+            , m_maximalProcessingSubTaskCount(maximalProcessingSubTaskCount)
+            , m_processingSubTaskCount(0)
         {
         }
 
@@ -104,6 +106,10 @@ namespace sgns::processing
         std::unique_ptr<ProcessingProcessor> m_processor;
         std::unordered_map<std::string, std::function<std::unique_ptr<ProcessingProcessor>()>> m_processorFactories;
         //size_t m_subTaskProcessingTime;
+        size_t m_maximalProcessingSubTaskCount;
+
+        std::mutex m_subTaskCountMutex;
+        size_t m_processingSubTaskCount;
 
 
 
