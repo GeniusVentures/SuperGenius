@@ -27,4 +27,9 @@ namespace sgns::processing
         return task;
     }
 
+    bool SubTaskEnqueuerImpl::IsTaskFinalized( const std::string &task_id )
+    {
+        return m_taskQueue->IsTaskCompleted( task_id );
+    }
+
 }
