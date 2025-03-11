@@ -313,7 +313,7 @@ int main(int argc, char* argv[])
     
     auto enqueuer = std::make_shared<SubTaskEnqueuerImpl>(taskQueue);
 
-    ProcessingServiceImpl processingService(
+    auto processingService = std::make_shared<ProcessingServiceImpl>(
         pubs,
         maximalNodesCount,
         enqueuer,
@@ -321,9 +321,9 @@ int main(int argc, char* argv[])
         std::make_shared<SubTaskResultStorageImpl>(globalDB),
         processingCore);
 
-    processingService.SetChannelListRequestTimeout(boost::posix_time::milliseconds(options->channelListRequestTimeout));
+    processingService->SetChannelListRequestTimeout(boost::posix_time::milliseconds(options->channelListRequestTimeout));
 
-    processingService.StartProcessing(processingGridChannel);
+    processingService->StartProcessing(processingGridChannel);
 
     // Gracefully shutdown on signal
     boost::asio::signal_set signals(*pubs->GetAsioContext(), SIGINT, SIGTERM);

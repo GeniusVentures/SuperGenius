@@ -336,17 +336,17 @@ int main( int argc, char *argv[] )
 
     auto                  processingCore = std::make_shared<ProcessingCoreImpl>( options->subTaskProcessingTime );
     auto                  enqueuer       = std::make_shared<SubTaskEnqueuerImpl>( taskQueue );
-    ProcessingServiceImpl processingService( pubs,
+    auto processingService = std::make_shared<ProcessingServiceImpl>( pubs,
                                              maximalNodesCount,
                                              enqueuer,
                                              std::make_shared<SubTaskStateStorageImpl>(),
                                              std::make_shared<SubTaskResultStorageImpl>(),
                                              processingCore );
 
-    processingService.SetChannelListRequestTimeout(
+    processingService->SetChannelListRequestTimeout(
         boost::posix_time::milliseconds( options->channelListRequestTimeout ) );
 
-    processingService.StartProcessing( processingGridChannel );
+    processingService->StartProcessing( processingGridChannel );
 
     // Gracefully shutdown on signal
     boost::asio::signal_set signals( *pubs->GetAsioContext(), SIGINT, SIGTERM );

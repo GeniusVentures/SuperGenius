@@ -113,7 +113,7 @@ int main(int argc, char* argv[])
     //processingCore2->setImageSplitter(imagesplit);
     //processingCore2->setModelFile(poseModel);
 
-    ProcessingServiceImpl processingService(
+    auto processingService = std::make_shared<ProcessingServiceImpl>(
         pubs2,
         maximalNodesCount,
         enqueuer2,
@@ -121,10 +121,10 @@ int main(int argc, char* argv[])
         std::make_shared<SubTaskResultStorageImpl>(globalDB2),
         processingCore2);
     
-    processingService.SetChannelListRequestTimeout(boost::posix_time::milliseconds(10000));
+    processingService->SetChannelListRequestTimeout(boost::posix_time::milliseconds(10000));
 
 
-    processingService.StartProcessing(processingGridChannel);
+    processingService->StartProcessing(processingGridChannel);
 
     
     
