@@ -171,13 +171,19 @@ TEST_F( TransactionRecoveryTest, TransferAfterTimeoutFailure )
     node_proc1->ResumeTransactionProcessing();
     transfer_result = node_proc1->TransferFunds( 1,
                                                  node_proc2->GetAddress(),
-                                                 std::chrono::milliseconds( 30000 ) );
+                                                 std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+
     ASSERT_TRUE( transfer_result.has_value() );
+    auto [transfer_tx_id, transfer_duration] = transfer_result.value();
+
+    auto transfer_received = node_proc2->WaitForTransactionIncoming(
+        transfer_tx_id,
+        std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) );
+
+    ASSERT_TRUE( transfer_received );
 
     EXPECT_EQ( node_proc1->GetBalance(), node1_balance_before - 1 );
     EXPECT_EQ( node_proc2->GetBalance(), node2_balance_before + 1 );
     EXPECT_EQ( node_proc1->GetOutTransactions().size(), node1_out_txs_before + 1 );
     EXPECT_EQ( node_proc2->GetInTransactions().size(), node2_in_txs_before + 1 );
-
-    std::this_thread::sleep_for( std::chrono::milliseconds( 2000 ) );
 }
