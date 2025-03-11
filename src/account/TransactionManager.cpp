@@ -329,6 +329,25 @@ namespace sgns
                     }
                 }
             }
+            else if ( it->first->GetType() == "escrow" )
+            {
+                auto escrow_tx = std::dynamic_pointer_cast<EscrowTransaction>( it->first );
+                if ( escrow_tx )
+                {
+                    auto utxoParams = escrow_tx->GetUTXOParameters();
+                    for ( auto &input : utxoParams.inputs_ )
+                    {
+                        for ( auto &utxo : account_m->utxos )
+                        {
+                            if ( utxo.GetTxID() == input.txid_hash_ )
+                            {
+                                utxo.ToggleLock( false );
+                            }
+                        }
+                    }
+                }
+            }
+
             tx_queue_m.erase( it );
             return outcome::success();
         }
