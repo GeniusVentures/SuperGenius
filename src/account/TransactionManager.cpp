@@ -354,6 +354,12 @@ namespace sgns
 
     outcome::result<void> TransactionManager::SendTransaction()
     {
+#if 1
+        {
+            std::unique_lock<std::mutex> lock( pause_mutex_ );
+            pause_cv_.wait( lock, [this] { return !paused_; } );
+        }
+#endif
         std::unique_lock lock( mutex_m );
         if ( tx_queue_m.empty() )
         {
@@ -918,5 +924,22 @@ namespace sgns
 
         return false;
     }
+
+#if 1
+    void TransactionManager::PauseSendTransaction()
+    {
+        std::unique_lock<std::mutex> lock( pause_mutex_ );
+        paused_ = true;
+    }
+
+    void TransactionManager::ResumeSendTransaction()
+    {
+        {
+            std::unique_lock<std::mutex> lock( pause_mutex_ );
+            paused_ = false;
+        }
+        pause_cv_.notify_all();
+    }
+#endif
 
 }

@@ -234,8 +234,19 @@ namespace sgns
             )";
             return logger_config;
         }
+        #if 1
+        public:
+            void PauseTransactionProcessing()
+            {
+                transaction_manager_->PauseSendTransaction();
+            }
+        
+            void ResumeTransactionProcessing()
+            {
+                transaction_manager_->ResumeSendTransaction();
+            }
+        #endif
     };
-
 }
 
 OUTCOME_HPP_DECLARE_ERROR_2( sgns, GeniusNode::Error );

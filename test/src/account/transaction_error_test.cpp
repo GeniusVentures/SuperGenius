@@ -81,6 +81,8 @@ protected:
 
 TEST_F( TransactionRecoveryTest, MintTransactionLowTimeout )
 {
+    node_proc1->PauseTransactionProcessing();
+
     auto balance_before       = node_proc1->GetBalance();
     auto out_txs_before       = node_proc1->GetOutTransactions();
     auto out_txs_count_before = out_txs_before.size();
@@ -92,12 +94,14 @@ TEST_F( TransactionRecoveryTest, MintTransactionLowTimeout )
 
     EXPECT_EQ( node_proc1->GetOutTransactions().size(), out_txs_count_before );
     EXPECT_EQ( node_proc1->GetBalance(), balance_before );
+    node_proc1->ResumeTransactionProcessing();
 
     std::this_thread::sleep_for( std::chrono::milliseconds( 2000 ) );
 }
 
 TEST_F( TransactionRecoveryTest, MintAfterTimeoutFailure )
 {
+    node_proc1->PauseTransactionProcessing();
     auto balance_before       = node_proc1->GetBalance();
     auto out_txs_before       = node_proc1->GetOutTransactions();
     auto out_txs_count_before = out_txs_before.size();
@@ -105,6 +109,7 @@ TEST_F( TransactionRecoveryTest, MintAfterTimeoutFailure )
     auto mint_result = node_proc1->MintTokens( 100000000000, "", "", "", std::chrono::milliseconds( 1 ) );
     ASSERT_FALSE( mint_result.has_value() );
 
+    node_proc1->ResumeTransactionProcessing();
     mint_result = node_proc1->MintTokens( 1, "", "", "", std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
     ASSERT_TRUE( mint_result.has_value() );
 
@@ -123,6 +128,7 @@ TEST_F( TransactionRecoveryTest, TransferTransactionLowTimeout )
                                                std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
     ASSERT_TRUE( mint_result.has_value() );
 
+    node_proc1->PauseTransactionProcessing();
     auto node1_balance_before = node_proc1->GetBalance();
     auto node2_balance_before = node_proc2->GetBalance();
     auto node1_out_txs_before = node_proc1->GetOutTransactions().size();
@@ -139,6 +145,7 @@ TEST_F( TransactionRecoveryTest, TransferTransactionLowTimeout )
     EXPECT_EQ( node_proc1->GetOutTransactions().size(), node1_out_txs_before );
 
     std::this_thread::sleep_for( std::chrono::milliseconds( 2000 ) );
+    node_proc1->ResumeTransactionProcessing();
 }
 
 TEST_F( TransactionRecoveryTest, TransferAfterTimeoutFailure )
@@ -150,6 +157,7 @@ TEST_F( TransactionRecoveryTest, TransferAfterTimeoutFailure )
                                                std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
     ASSERT_TRUE( mint_result.has_value() );
 
+    node_proc1->PauseTransactionProcessing();
     auto node1_balance_before = node_proc1->GetBalance();
     auto node2_balance_before = node_proc2->GetBalance();
     auto node1_out_txs_before = node_proc1->GetOutTransactions().size();
@@ -160,6 +168,7 @@ TEST_F( TransactionRecoveryTest, TransferAfterTimeoutFailure )
                                                       std::chrono::milliseconds( 1 ) );
     ASSERT_FALSE( transfer_result.has_value() );
 
+    node_proc1->ResumeTransactionProcessing();
     transfer_result = node_proc1->TransferFunds( 1,
                                                  node_proc2->GetAddress(),
                                                  std::chrono::milliseconds( 30000 ) );

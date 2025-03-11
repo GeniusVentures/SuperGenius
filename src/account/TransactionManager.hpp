@@ -152,6 +152,17 @@ namespace sgns
         };
 
         base::Logger m_logger = sgns::base::createLogger( "TransactionManager" );
+
+#if 1
+    public:
+        void PauseSendTransaction();
+        void ResumeSendTransaction();
+
+    private:
+        std::mutex              pause_mutex_;
+        std::condition_variable pause_cv_;
+        bool                    paused_{ false };
+#endif
     };
 }
 
