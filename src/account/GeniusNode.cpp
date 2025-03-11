@@ -915,4 +915,11 @@ namespace sgns
         return transaction_manager_->WaitForTransactionIncoming( txId, timeout );
     }
 
+    void GeniusNode::setTransactionCallbacks( std::shared_ptr<sgns::TransactionManagerCallbacks> callbacks )
+    {
+        if ( transaction_manager_ )
+        {
+            transaction_manager_->setCallbacks( callbacks );
+        }
+    }
 }

@@ -39,6 +39,13 @@ namespace sgns
     using namespace boost::multiprecision;
     using EscrowDataPair = std::pair<std::string, base::Buffer>;
 
+    class TransactionManagerCallbacks
+    {
+    public:
+        virtual ~TransactionManagerCallbacks() = default;
+        virtual void onEnterSendTransaction() = 0;
+    };
+
     class TransactionManager : public std::enable_shared_from_this<TransactionManager>
     {
     public:
@@ -82,6 +89,12 @@ namespace sgns
         bool WaitForTransactionOutgoing( const std::string &txId, std::chrono::milliseconds timeout ) const;
 
         outcome::result<void>    CancelTransaction(const std::string &txId);
+
+        void setCallbacks( std::shared_ptr<TransactionManagerCallbacks> callbacks )
+        {
+            m_callbacks = std::move(callbacks);
+        }
+
     private:
         static constexpr std::uint16_t    MAIN_NET_ID             = 369;
         static constexpr std::uint16_t    TEST_NET_ID             = 963;
@@ -153,16 +166,7 @@ namespace sgns
 
         base::Logger m_logger = sgns::base::createLogger( "TransactionManager" );
 
-#if 1
-    public:
-        void PauseSendTransaction();
-        void ResumeSendTransaction();
-
-    private:
-        std::mutex              pause_mutex_;
-        std::condition_variable pause_cv_;
-        bool                    paused_{ false };
-#endif
+        std::shared_ptr<TransactionManagerCallbacks> m_callbacks;
     };
 }
 

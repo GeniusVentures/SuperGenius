@@ -162,6 +162,8 @@ namespace sgns
         // Wait for a outgoing transaction to be processed with a timeout
         bool WaitForTransactionOutgoing( const std::string &txId, std::chrono::milliseconds timeout );
 
+        void setTransactionCallbacks(std::shared_ptr<sgns::TransactionManagerCallbacks> callbacks);
+
     private:
         std::shared_ptr<GeniusAccount>                        account_;
         std::shared_ptr<ipfs_pubsub::GossipPubSub>            pubsub_;
@@ -234,18 +236,6 @@ namespace sgns
             )";
             return logger_config;
         }
-        #if 1
-        public:
-            void PauseTransactionProcessing()
-            {
-                transaction_manager_->PauseSendTransaction();
-            }
-        
-            void ResumeTransactionProcessing()
-            {
-                transaction_manager_->ResumeSendTransaction();
-            }
-        #endif
     };
 }
 
