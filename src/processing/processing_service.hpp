@@ -27,7 +27,7 @@ namespace sgns::processing
                                std::shared_ptr<SubTaskStateStorage>                              subTaskStateStorage,
                                std::shared_ptr<SubTaskResultStorage>                             subTaskResultStorage,
                                std::shared_ptr<ProcessingCore>                                   processingCore,
-                               std::function<void( const std::string              &subTaskQueueId,
+                               std::function<bool( const std::string              &subTaskQueueId,
                                                    const SGProcessing::TaskResult &taskresult )> userCallbackSuccess,
                                std::function<void( const std::string &subTaskQueueId )>          userCallbackError,
                                std::string                                                       node_address );
@@ -40,6 +40,24 @@ namespace sgns::processing
         void SetChannelListRequestTimeout( boost::posix_time::time_duration channelListRequestTimeout );
 
     private:
+        struct TaskFinalizationState
+        {
+            std::chrono::steady_clock::time_point timestamp; // Using steady_clock consistently
+            std::set<std::string>                 competingPeers;
+            bool                                  finalizationInProgress = false;
+            bool                                  locked                 = false; // Indicates task is being finalized
+            std::string                           lockOwner;                      // Address of peer who has the lock
+            std::chrono::steady_clock::time_point lockAcquisitionTime;            // When the lock was acquired
+            SGProcessing::TaskResult              taskResult;
+            boost::asio::deadline_timer           timer;
+            boost::asio::deadline_timer           lockRebroadcastTimer;
+
+            TaskFinalizationState( boost::asio::io_context &context ) :
+                timer( context ), lockRebroadcastTimer( context )
+            {
+            }
+        };
+
         /** Listen to data feed channel.
     * @param dataChannelId - identifier of a data feed channel
     */
@@ -67,6 +85,22 @@ namespace sgns::processing
         bool IsPendingCreationStale() const;
         void CancelPendingCreation( const std::string &reason );
 
+        void BroadcastFinalizationIntent( const std::string              &taskId,
+                                          const SGProcessing::TaskResult &taskResult,
+                                          bool                            isLocking = false );
+        void HandleFinalizationTimeout( const std::string &taskId );
+        void OnFinalizationIntent( const std::string &peerAddress,
+                                   const std::string &taskId,
+                                   uint64_t           timestampMs,
+                                   bool               isLocking );
+        bool HasLowestAddressForFinalization( const std::string &taskId );
+        void FinalizeTask( const std::string &taskId, const SGProcessing::TaskResult &taskResult );
+        void CleanupFinalization( const std::string &taskId );
+        void StartLockRebroadcasting( const std::string &taskId );
+        void StopLockRebroadcasting( const std::string &taskId );
+        void CheckStalledLocks();
+        void ScheduleStalledLockCheck();
+
         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>       m_gossipPubSub;
         std::shared_ptr<boost::asio::io_context>               m_context;
         size_t                                                 m_maximalNodesCount;
@@ -81,7 +115,7 @@ namespace sgns::processing
         bool                                                   m_waitingCHannelRequest = false;
         std::atomic<bool>                                      m_isStopped;
         mutable std::recursive_mutex                           m_mutexNodes;
-        std::function<void( const std::string &subTaskQueueId, const SGProcessing::TaskResult &taskresult )>
+        std::function<bool( const std::string &subTaskQueueId, const SGProcessing::TaskResult &taskresult )>
                                                                  userCallbackSuccess_;
         std::function<void( const std::string &subTaskQueueId )> userCallbackError_;
         std::string                                              node_address_;
@@ -96,6 +130,15 @@ namespace sgns::processing
         std::list<SGProcessing::SubTask>    m_pendingSubTasks;
         boost::optional<SGProcessing::Task> m_pendingTask;
         std::mutex                          m_mutexPendingCreation;
+
+        std::map<std::string, TaskFinalizationState> m_taskFinalizationStates;
+        std::set<std::string>                        m_tasksBeingFinalized;
+        std::chrono::seconds        m_finalizationTimeout{ 3 };       // 3 seconds timeout for finalization coordination
+        std::chrono::seconds        m_finalizationHoldTime{ 5 };      // 5 seconds hold time after finalization
+        std::chrono::milliseconds   m_lockRebroadcastInterval{ 500 }; // Re-broadcast lock every 500ms
+        std::chrono::seconds        m_lockTimeout{ 30 };              // Timeout for stalled locks (30 seconds)
+        boost::asio::deadline_timer m_stalledLockCheckTimer;
+        std::mutex                  m_mutexTaskFinalization;
 
         base::Logger m_logger = base::createLogger( "ProcessingService" );
     };
