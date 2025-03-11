@@ -174,7 +174,7 @@ namespace sgns
 
         DevConfig_st dev_config_;
 
-        void ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult );
+        bool ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult );
         void ProcessingError( const std::string &task_id );
 
         static constexpr std::string_view db_path_                = "bc-%d/";
