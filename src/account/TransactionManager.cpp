@@ -129,19 +129,15 @@ namespace sgns
         {
             return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::invalid_argument ) );
         }
-
+            
         auto transfer_transaction = std::make_shared<TransferTransaction>(
             TransferTransaction::New( maybe_params.value().outputs_, maybe_params.value().inputs_, FillDAGStruct() ) );
         std::optional<std::vector<uint8_t>> maybe_proof;
 #ifdef _PROOF_ENABLED
         TransferProof prover( static_cast<uint64_t>( account_m->GetBalance<uint64_t>() ),
                               static_cast<uint64_t>( amount ) );
-        auto          proof_result = prover.GenerateFullProof();
-        if ( !proof_result.has_value() )
-        {
-            return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::operation_canceled ) );
-        }
-        maybe_proof = proof_result.value();
+        OUTCOME_TRY((auto&&, proof_result), prover.GenerateFullProof());
+        maybe_proof = std::move(proof_result);
 #endif
 
         account_m->utxos = UTXOTxParameters::UpdateUTXOList( account_m->utxos, maybe_params.value() );
@@ -164,12 +160,8 @@ namespace sgns
 #ifdef _PROOF_ENABLED
         TransferProof prover( 1000000000000000,
                               static_cast<uint64_t>( amount ) ); //Mint max 1000000 gnus per transaction
-        auto          proof_result = prover.GenerateFullProof();
-        if ( !proof_result.has_value() )
-        {
-            return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::protocol_error ) );
-        }
-        maybe_proof = proof_result.value();
+        OUTCOME_TRY((auto&&, proof_result), prover.GenerateFullProof());
+        maybe_proof = std::move(proof_result);
 #endif
         // Store the transaction ID before moving the transaction
         auto txId = mint_transaction->dag_st.data_hash();
@@ -204,7 +196,7 @@ namespace sgns
         TransferProof prover( static_cast<uint64_t>( account_m->GetBalance<uint64_t>() ),
                               static_cast<uint64_t>( amount ) );
         OUTCOME_TRY( ( auto &&, proof_result ), prover.GenerateFullProof() );
-        maybe_proof = proof_result;
+        maybe_proof = std::move(proof_result);
 #endif
 
         this->EnqueueTransaction( std::make_pair( escrow_transaction, maybe_proof ) );
@@ -268,7 +260,7 @@ namespace sgns
         TransferProof prover( 1, 1 );
 
         OUTCOME_TRY( ( auto &&, proof_result ), prover.GenerateFullProof() );
-        maybe_proof = proof_result;
+        maybe_proof = std::move(proof_result);
 #endif
 
         this->EnqueueTransaction( std::make_pair( transfer_transaction, maybe_proof ) );
@@ -331,7 +323,7 @@ namespace sgns
             return outcome::success();
         }
 
-        auto [transaction, maybe_proof] = tx_queue_m.front();
+        auto& [transaction, maybe_proof] = tx_queue_m.front();
 
         // this was set prior and needed for the proof to match when the proof was generated
         //transaction->dag_st.set_nonce( account_m->nonce );
@@ -357,7 +349,7 @@ namespace sgns
             sgns::crdt::HierarchicalKey  proof_key( GetTransactionProofPath( *transaction ) );
             sgns::crdt::GlobalDB::Buffer proof_transaction;
 
-            auto proof = maybe_proof.value();
+            auto& proof = maybe_proof.value();
             m_logger->debug( "Recording the proof on " + proof_key.GetKey() );
 
             proof_transaction.put( proof );
@@ -372,7 +364,6 @@ namespace sgns
         }
         BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Commit() );
 
-        tx_queue_m.pop_front();
 
         BOOST_OUTCOME_TRYV2( auto &&, ParseTransaction( transaction ) );
 
@@ -380,6 +371,9 @@ namespace sgns
             std::unique_lock<std::shared_mutex> out_lock( outgoing_tx_mutex_m );
             outgoing_tx_processed_m[transaction_path] = transaction;
         }
+
+        //Move this down since we are referencing it.
+        tx_queue_m.pop_front();
 
         return outcome::success();
     }
@@ -653,7 +647,7 @@ namespace sgns
 
     outcome::result<void> TransactionManager::NotifyDestinationOfTransfer(
         const std::shared_ptr<IGeniusTransactions> &tx,
-        std::optional<std::vector<uint8_t>>         proof )
+        const std::optional<std::vector<uint8_t>>& proof )
     {
         auto transfer_tx = std::dynamic_pointer_cast<TransferTransaction>( tx );
         auto dest_infos  = transfer_tx->GetDstInfos();
@@ -719,7 +713,8 @@ namespace sgns
                                                        tx->dag_st.data_hash() );
                 sgns::crdt::GlobalDB::Buffer proof_data;
 
-                proof_data.put( proof.value() );
+                const auto& proof_value = proof.value();
+                proof_data.put( proof_value );
                 m_logger->debug( "Putting replicate PROOF in {}", proof_key.GetKey() );
                 BOOST_OUTCOME_TRYV2( auto &&,
                                      crdt_transaction->Put( std::move( proof_key ), std::move( proof_data ) ) );

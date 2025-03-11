@@ -131,6 +131,7 @@ namespace sgns
         auto loggerProcqm = base::createLogger("ProcessingSubTaskQueueManager", logdir);
         auto loggerUPNP = base::createLogger("UPNP", logdir);
         auto loggerProcessingNode = base::createLogger("ProcessingNode", logdir);
+        auto loggerGossipPubsub = base::createLogger("GossipPubSub", logdir);
 #ifdef SGNS_DEBUGLOGS
         node_logger->set_level( spdlog::level::debug );
         loggerGlobalDB->set_level(spdlog::level::off);
@@ -149,6 +150,7 @@ namespace sgns
         loggerProcqm->set_level(spdlog::level::off);
         loggerUPNP->set_level(spdlog::level::off);
         loggerProcessingNode->set_level(spdlog::level::off);
+        loggerGossipPubsub->set_level(spdlog::level::debug);
 #else
         node_logger->set_level( spdlog::level::err);
         loggerGlobalDB->set_level(spdlog::level::err);
@@ -167,6 +169,7 @@ namespace sgns
         loggerProcqm->set_level(spdlog::level::err);
         loggerUPNP->set_level(spdlog::level::err);
         loggerProcessingNode->set_level(spdlog::level::err);
+        loggerGossipPubsub->set_level(spdlog::level::err);
 #endif
 
 

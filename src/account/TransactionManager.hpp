@@ -140,7 +140,7 @@ namespace sgns
         outcome::result<void> ParseEscrowTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
 
         outcome::result<void> NotifyDestinationOfTransfer( const std::shared_ptr<IGeniusTransactions> &tx,
-                                                           std::optional<std::vector<uint8_t>>         proof );
+                                                            const std::optional<std::vector<uint8_t>>& proof);
         outcome::result<void> PostEscrowOnProcessingDB( const std::shared_ptr<IGeniusTransactions> &tx );
 
         static inline const std::unordered_map<std::string, TransactionParserFn> transaction_parsers = {
