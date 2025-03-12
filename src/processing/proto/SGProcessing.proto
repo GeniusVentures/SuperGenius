@@ -121,6 +121,13 @@ message NodeCreationIntent {
     string subtask_queue_id = 2;
 }
 
+message FinalizationIntent {
+    string peer_address = 1;
+    string task_id = 2;
+    int64 timestamp_ms = 3;
+    bool is_locking = 4;
+}
+
 message GridChannelMessage
 {
     oneof data 
@@ -128,6 +135,7 @@ message GridChannelMessage
         ProcessingChannelRequest processing_channel_request = 1;
         ProcessingChannelResponse processing_channel_response = 2;
         NodeCreationIntent node_creation_intent = 3;
+        FinalizationIntent finalization_intent = 4;
     }
 }
 
