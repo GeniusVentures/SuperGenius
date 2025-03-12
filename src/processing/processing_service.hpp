@@ -71,6 +71,7 @@ namespace sgns::processing
         void OnQueueProcessingCompleted( const std::string              &subTaskQueueId,
                                          const SGProcessing::TaskResult &taskResult );
         void OnProcessingError( const std::string &subTaskQueueId, const std::string &errorMessage );
+        void OnProcessingDone( const std::string &taskId );
 
         void AcceptProcessingChannel( const std::string &channelId );
 
