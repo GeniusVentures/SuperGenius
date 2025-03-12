@@ -198,7 +198,7 @@ TEST_F(ProcessingEngineTest, DISABLED_SubTaskProcessing)
     auto processingCore = std::make_shared<ProcessingCoreImpl>(0);
 
     auto nodeId = "NODE_1";
-    auto engine = std::make_shared<ProcessingEngine>(nodeId, processingCore);
+    auto engine = std::make_shared<ProcessingEngine>(nodeId, processingCore, [](const std::string &){},[]{});
 
     std::list<SGProcessing::SubTask> subTasks;
     auto subTaskQueueAccessor = std::make_shared<SubTaskQueueAccessorMock>(context);
@@ -242,8 +242,8 @@ TEST_F(ProcessingEngineTest, DISABLED_SharedSubTaskProcessing)
     auto nodeId1 = "NODE_1";
     auto nodeId2 = "NODE_2";
 
-    auto engine1 = std::make_shared<ProcessingEngine>(nodeId1, processingCore);
-    auto engine2 = std::make_shared<ProcessingEngine>(nodeId2, processingCore);
+    auto engine1 = std::make_shared<ProcessingEngine>(nodeId1, processingCore, [](const std::string &){},[]{});
+    auto engine2 = std::make_shared<ProcessingEngine>(nodeId2, processingCore, [](const std::string &){},[]{});
 
     auto subTaskQueueAccessor1 = std::make_shared<SubTaskQueueAccessorMock>(context);
     {
