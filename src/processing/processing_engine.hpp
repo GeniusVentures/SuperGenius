@@ -21,7 +21,10 @@ namespace sgns::processing
     * @param nodeId - current processing node ID
     * @param processingCore specific processing core that process a subtask using specific algorithm
     */
-        ProcessingEngine( std::string nodeId, std::shared_ptr<ProcessingCore> processingCore );
+        ProcessingEngine( std::string                                nodeId,
+                          std::shared_ptr<ProcessingCore>            processingCore,
+                          std::function<void( const std::string & )> processingErrorSink,
+                          std::function<void( void )>                processingDoneSink );
         ~ProcessingEngine();
 
         // @todo rename to StartProcessing
@@ -29,8 +32,6 @@ namespace sgns::processing
 
         void StopQueueProcessing();
         bool IsQueueProcessingStarted() const;
-
-        void SetProcessingErrorSink( std::function<void( const std::string & )> processingErrorSink );
 
     private:
         void OnSubTaskGrabbed( boost::optional<const SGProcessing::SubTask &> subTask );
@@ -43,11 +44,11 @@ namespace sgns::processing
         std::string                                m_nodeId;
         std::shared_ptr<ProcessingCore>            m_processingCore;
         std::function<void( const std::string & )> m_processingErrorSink;
+        std::function<void( void )>                m_processingDoneSink;
 
         std::shared_ptr<SubTaskQueueAccessor> m_subTaskQueueAccessor;
 
-        mutable std::mutex                    m_mutexSubTaskQueue;
-        std::chrono::steady_clock::time_point m_lastProcessedTime;
+        mutable std::mutex m_mutexSubTaskQueue;
 
         base::Logger m_logger = base::createLogger( "ProcessingEngine" );
     };

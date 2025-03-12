@@ -6,10 +6,14 @@
 
 namespace sgns::processing
 {
-    ProcessingEngine::ProcessingEngine( std::string nodeId, std::shared_ptr<ProcessingCore> processingCore ) :
+    ProcessingEngine::ProcessingEngine( std::string                                nodeId,
+                                        std::shared_ptr<ProcessingCore>            processingCore,
+                                        std::function<void( const std::string & )> processingErrorSink,
+                                        std::function<void( void )>                processingDoneSink ) :
         m_nodeId( std::move( nodeId ) ),
         m_processingCore( std::move( processingCore ) ),
-        m_lastProcessedTime( std::chrono::steady_clock::now() - std::chrono::minutes( 2 ) )
+        m_processingErrorSink( std::move( processingErrorSink ) ),
+        m_processingDoneSink( std::move( processingDoneSink ) )
     {
     }
 
@@ -59,27 +63,13 @@ namespace sgns::processing
         else
         {
             m_logger->debug( "ALL SUBTASKS ARE GRABBED. ({}).", m_nodeId );
+            m_processingDoneSink();
         }
         // When results for all subtasks are available, no subtask is received (optnull).
     }
 
-    void ProcessingEngine::SetProcessingErrorSink( std::function<void( const std::string & )> processingErrorSink )
-    {
-        m_processingErrorSink = std::move( processingErrorSink );
-    }
-
     void ProcessingEngine::ProcessSubTask( SGProcessing::SubTask subTask )
     {
-        //         // Cooldown check
-        // auto now = std::chrono::steady_clock::now();
-        // auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - m_lastProcessedTime);
-        // if (elapsed < std::chrono::minutes(2))
-        // {
-        //     std::cout << "Cooldown active. Skipping processing of subtask." << std::endl;
-        //     return;
-        // }
-
-        // m_lastProcessedTime = now;
         m_logger->debug( "[PROCESSING_STARTED]. m_nodeId ({}), subtask ({}).", m_nodeId, subTask.subtaskid() );
         std::thread thread(
             [subTask( std::move( subTask ) ), _this( shared_from_this() )]()
@@ -117,10 +107,7 @@ namespace sgns::processing
                 }
                 else
                 {
-                    if ( _this->m_processingErrorSink )
-                    {
-                        _this->m_processingErrorSink( maybe_result.error().message() );
-                    }
+                    _this->m_processingErrorSink( maybe_result.error().message() );
                 }
             } );
         thread.detach();
