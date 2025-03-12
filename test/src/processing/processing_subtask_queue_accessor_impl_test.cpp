@@ -9,11 +9,13 @@
 #include <libp2p/log/configurator.hpp>
 #include <libp2p/log/logger.hpp>
 
-#include <iostream>
 #include <boost/functional/hash.hpp>
 #include <thread>
 
+#include "testutil/wait_condition.hpp"
+
 using namespace sgns::processing;
+using namespace sgns::test;
 
 namespace
 {
@@ -147,22 +149,34 @@ public:
  * @when A result is published to the channel
  * @then The node receives the result
  */
-TEST_F(SubTaskQueueAccessorImplTest, DISABLED_SubscribtionToResultChannel)
+TEST_F(SubTaskQueueAccessorImplTest, SubscriptionToResultChannel)
 {
     auto pubs1 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();;
-    pubs1->Start(40001, {});
+    auto start1Future = pubs1->Start(40001, {});
 
     auto pubs2 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();;
-    pubs2->Start(40001, { pubs1->GetLocalAddress() });
+    auto start2Future = pubs2->Start(40001, { pubs1->GetLocalAddress() });
 
-    sgns::ipfs_pubsub::GossipPubSubTopic resultChannel(pubs1, "RESULT_CHANNEL_ID");
+    std::chrono::milliseconds resultTime;
+    assertWaitForCondition(
+        [&start1Future, &start2Future]() {
+            start1Future.get();
+            start2Future.get();
+            return true;
+        },
+        std::chrono::milliseconds(2000),
+        "Pubsub nodes initialization failed",
+        &resultTime
+    );
+
+    Color::PrintInfo("Waited ", resultTime.count(),  " ms for pubsub nodes initialization");
+
+    sgns::ipfs_pubsub::GossipPubSubTopic resultChannel(pubs1, "RESULT_CHANNEL_ID_test");
     resultChannel.Subscribe([](boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message&> message)
         {
         });
 
     auto queueChannel = std::make_shared<ProcessingSubTaskQueueChannelPubSub>(pubs1, "QUEUE_CHANNEL_ID");
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
     auto processingCore = std::make_shared<ProcessingCoreImpl>(0);
 
@@ -189,18 +203,40 @@ TEST_F(SubTaskQueueAccessorImplTest, DISABLED_SubscribtionToResultChannel)
         [](const SGProcessing::TaskResult&) {},
         [](const std::string &) {});
 
+    subTaskQueueAccessor->CreateResultsChannel("test");
+
+    // Create a flag to track when the connection callback has been executed
+    std::atomic<bool> connectionEstablished = false;
+
     subTaskQueueAccessor->ConnectToSubTaskQueue([&]() {
         engine->StartQueueProcessing(subTaskQueueAccessor);
-        });
+        connectionEstablished = true;
+    });
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    // Wait for connection to be established
+   assertWaitForCondition(
+        [&connectionEstablished]() { return connectionEstablished.load(); },
+        std::chrono::milliseconds(2000),
+        "Connection to subtask queue was not established",
+        &resultTime
+    );
+
+    Color::PrintInfo("Waited ", resultTime.count(),  " ms for connection");
 
     // Publish result to the results channel
     SGProcessing::SubTaskResult result;
     result.set_subtaskid("SUBTASK_ID");
     resultChannel.Publish(result.SerializeAsString());
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    // Wait for the result to be received
+    assertWaitForCondition(
+        [&subTaskQueueAccessor]() { return subTaskQueueAccessor->GetResults().size() > 0; },
+        std::chrono::milliseconds(2000),
+        "Result was not received by SubTaskQueueAccessor",
+        &resultTime
+    );
+
+    Color::PrintInfo("Waited ", resultTime.count(),  " ms for results to be received");
 
     pubs1->Stop();
     pubs2->Stop();
@@ -215,20 +251,31 @@ TEST_F(SubTaskQueueAccessorImplTest, DISABLED_SubscribtionToResultChannel)
  * @when Subtasks are finished and chunk hashes are valid
  * @then Task finalization sink is called.
  */
-TEST_F(SubTaskQueueAccessorImplTest, DISABLED_TaskFinalization)
+TEST_F(SubTaskQueueAccessorImplTest, TaskFinalization)
 {
     auto pubs1 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();;
-    pubs1->Start(40001, {});
+    auto start1Future = pubs1->Start(40001, {});
+
+    std::chrono::milliseconds resultTime;
+    assertWaitForCondition(
+        [&start1Future]() {
+            start1Future.get();
+            return true;
+        },
+        std::chrono::milliseconds(2000),
+        "Pubsub node initialization failed",
+        &resultTime
+    );
+
+    Color::PrintInfo("Waited ", resultTime.count(),  " ms for pubsub node initialization");
 
     auto queueChannel = std::make_shared<ProcessingSubTaskQueueChannelPubSub>(pubs1, "QUEUE_CHANNEL_ID");
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
     auto processingCore = std::make_shared<ProcessingCoreImpl>(100);
 
     auto nodeId1 = "NODE_1";
 
-    bool isTaskFinalized = false;
+    std::atomic<bool> isTaskFinalized = false;
     auto engine1 = std::make_shared<ProcessingEngine>(nodeId1, processingCore);
     processingCore->m_chunkResultHashes["SUBTASK_ID1"] = { 0 };
     processingCore->m_chunkResultHashes["SUBTASK_ID2"] = { 0 };
@@ -236,11 +283,6 @@ TEST_F(SubTaskQueueAccessorImplTest, DISABLED_TaskFinalization)
     SGProcessing::ProcessingChunk chunk1;
     chunk1.set_chunkid("CHUNK_1");
     chunk1.set_n_subchunks(1);
-    //chunk1.set_line_stride(1);
-    //chunk1.set_offset(0);
-    //chunk1.set_stride(1);
-    //chunk1.set_subchunk_height(10);
-    //chunk1.set_subchunk_width(10);
 
     auto queue = std::make_unique<SGProcessing::SubTaskQueue>();
     // Local queue wrapped owns the queue
@@ -269,14 +311,21 @@ TEST_F(SubTaskQueueAccessorImplTest, DISABLED_TaskFinalization)
         processingQueueManager1,
         std::make_shared<SubTaskStateStorageMock>(),
         std::make_shared<SubTaskResultStorageMock>(),
-        [&isTaskFinalized](const SGProcessing::TaskResult&) { isTaskFinalized = true; },
+        [&isTaskFinalized](const SGProcessing::TaskResult&) { isTaskFinalized.store(true); },
         [](const std::string &) {});
 
     subTaskQueueAccessor1->ConnectToSubTaskQueue([&]() {
         engine1->StartQueueProcessing(subTaskQueueAccessor1);
         });
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    assertWaitForCondition(
+        [&isTaskFinalized]() { return isTaskFinalized.load(); },
+        std::chrono::milliseconds(2000),
+        "Task not finalized",
+        &resultTime
+    );
+
+    Color::PrintInfo("Waited ", resultTime.count(), " ms for task finalization");
 
     pubs1->Stop();
 
@@ -288,14 +337,25 @@ TEST_F(SubTaskQueueAccessorImplTest, DISABLED_TaskFinalization)
  * @when Subtasks contains invalid chunk hashes
  * @then The subtasks processing is restarted.
  */
-TEST_F(SubTaskQueueAccessorImplTest, DISABLED_InvalidSubTasksRestart)
+TEST_F(SubTaskQueueAccessorImplTest, InvalidSubTasksRestart)
 {
     auto pubs1 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();;
-    pubs1->Start(40001, {});
+    auto start1Future = pubs1->Start(40001, {});
+
+    std::chrono::milliseconds resultTime;
+    assertWaitForCondition(
+        [&start1Future]() {
+            start1Future.get();
+            return true;
+        },
+        std::chrono::milliseconds(2000),
+        "Pubsub node initialization failed",
+        &resultTime
+    );
+
+    Color::PrintInfo("Waited ", resultTime.count(),  " ms for pubsub node initialization");
 
     auto queueChannel = std::make_shared<ProcessingSubTaskQueueChannelPubSub>(pubs1, "QUEUE_CHANNEL_ID");
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
     // The processing core 1 has invalid chunk result hashes
     auto processingCore1 = std::make_shared<ProcessingCoreImpl>(500);
@@ -314,11 +374,6 @@ TEST_F(SubTaskQueueAccessorImplTest, DISABLED_InvalidSubTasksRestart)
     SGProcessing::ProcessingChunk chunk1;
     chunk1.set_chunkid("CHUNK_1");
     chunk1.set_n_subchunks(1);
-    //chunk1.set_line_stride(1);
-    //chunk1.set_offset(0);
-    //chunk1.set_stride(1);
-    //chunk1.set_subchunk_height(10);
-    //chunk1.set_subchunk_width(10);
 
     auto queue = std::make_unique<SGProcessing::SubTaskQueue>();
     // Local queue wrapper owns the queue

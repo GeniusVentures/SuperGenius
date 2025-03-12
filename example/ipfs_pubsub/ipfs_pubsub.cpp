@@ -45,8 +45,6 @@ int main(int argc, char* argv[])
     config.echo_forward_mode = true;
     std::vector<std::string> receivedMessages;
 
-	//GossipPubSub pubs;
-    //GossipPubSub pubs2;
     auto pubs = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>(
         sgns::crdt::KeyPairFileStorage("CRDT.Datastore.TEST/pubs_dapp").GetKeyPair().value());
     auto pubs2 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>(

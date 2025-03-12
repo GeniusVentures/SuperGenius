@@ -191,7 +191,7 @@ public:
  * @when Processing is started
  * @then ProcessingCore::ProcessSubTask is called for each subtask.
  */
-TEST_F(ProcessingEngineTest, DISABLED_SubTaskProcessing)
+TEST_F(ProcessingEngineTest, SubTaskProcessing)
 {
     boost::asio::io_context context;
 
@@ -233,7 +233,7 @@ TEST_F(ProcessingEngineTest, DISABLED_SubTaskProcessing)
  * @when 2 engines sequentually start the queue processing
  * @then Each of them processes only 1 subtask from the queue.
  */
-TEST_F(ProcessingEngineTest, DISABLED_SharedSubTaskProcessing)
+TEST_F(ProcessingEngineTest, SharedSubTaskProcessing)
 {
     boost::asio::io_context context;
 

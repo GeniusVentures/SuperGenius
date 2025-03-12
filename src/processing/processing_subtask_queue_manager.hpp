@@ -113,6 +113,8 @@ namespace sgns::processing
         void GrabSubTasks();
         void HandleGrabSubTaskTimeout( const boost::system::error_code &ec );
         void LogQueue() const;
+        // Updates m_queue_timestamp_ based on current ownership duration
+        void UpdateQueueTimestamp();
 
         std::shared_ptr<ProcessingSubTaskQueueChannel> m_queueChannel;
         std::shared_ptr<boost::asio::io_context>       m_context;
@@ -134,8 +136,9 @@ namespace sgns::processing
         std::chrono::system_clock::duration        m_processingTimeout;
         std::function<void( const std::string & )> m_processingErrorSink;
 
-        uint64_t m_queue_timestamp_;       // Aggregate time counter for the queue
-        uint64_t m_ownership_acquired_at_; // When this node acquired ownership (in ms)
+        uint64_t m_queue_timestamp_;            // Aggregate time counter for the queue
+        uint64_t m_ownership_acquired_at_;      // When this node acquired ownership (in ms)
+        uint64_t m_ownership_last_delta_time_;  // When this node last updated the queue timestamp
 
         base::Logger m_logger = base::createLogger( "ProcessingSubTaskQueueManager" );
     };

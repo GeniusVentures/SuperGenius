@@ -126,6 +126,10 @@ namespace sgns::processing
     {
         // The method has to be called in scoped lock of queue mutex
         m_dltGrabSubTaskTimeout.expires_at( boost::posix_time::pos_infin );
+
+        // Update queue timestamp based on current ownership duration
+        UpdateQueueTimestamp();
+
         while ( !m_onSubTaskGrabbedCallbacks.empty() )
         {
             size_t itemIdx = 0;
@@ -460,4 +464,23 @@ namespace sgns::processing
         }
     }
 
+    void ProcessingSubTaskQueueManager::UpdateQueueTimestamp()
+    {
+        if (m_processingQueue.HasOwnership())
+        {
+            auto current_time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now().time_since_epoch()).count();
+            auto ownership_duration_delta_ms = current_time_ms - m_ownership_last_delta_time_;
+
+            // Update the queue's total time counter
+            m_queue_timestamp_ += ownership_duration_delta_ms;
+
+            // Reset ownership acquisition time to now
+            m_ownership_last_delta_time_ = current_time_ms;
+        }
+        else
+        {
+
+        }
+    }
 }
