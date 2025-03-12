@@ -31,6 +31,7 @@ namespace sgns::processing
             std::shared_ptr<ProcessingCore>                         processingCore,
             std::function<void( const SGProcessing::TaskResult & )> taskResultProcessingSink,
             std::function<void( const std::string & )>              processingErrorSink,
+            std::function<void( void )>                             processingDoneSink,
             std::string                                             node_id,
             const std::string                                      &processingQueueChannelId,
             std::list<SGProcessing::SubTask>                        subTasks                      = {},
@@ -55,13 +56,14 @@ namespace sgns::processing
                         std::shared_ptr<ProcessingCore>                         processingCore,
                         std::function<void( const SGProcessing::TaskResult & )> taskResultProcessingSink,
                         std::function<void( const std::string & )>              processingErrorSink,
+                        std::function<void( void )>                             processingDoneSink,
                         std::string                                             node_id,
                         std::chrono::seconds                                    ttl );
 
         bool AttachTo( const std::string &processingQueueChannelId, size_t msSubscriptionWaitingDuration = 0 );
-        bool CreateSubTaskQueue( std::list<SGProcessing::SubTask> subTasks);
+        bool CreateSubTaskQueue( std::list<SGProcessing::SubTask> subTasks );
         void Initialize( const std::string &processingQueueChannelId, size_t msSubscriptionWaitingDuration );
-       
+
         void InitTTL();
         void StartTTLTimer();
         void CheckTTL( const std::error_code &ec );
@@ -80,6 +82,7 @@ namespace sgns::processing
         std::shared_ptr<SubTaskQueueAccessor>                   m_subTaskQueueAccessor;
         std::function<void( const SGProcessing::TaskResult & )> m_taskResultProcessingSink;
         std::function<void( const std::string & )>              m_processingErrorSink;
+        std::function<void( void )>                             m_processingDoneSink;
 
         std::chrono::steady_clock::time_point                  m_creationTime;
         std::chrono::seconds                                   m_ttl;

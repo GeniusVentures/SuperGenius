@@ -15,6 +15,7 @@ namespace sgns::processing
         std::shared_ptr<ProcessingCore>                         processingCore,
         std::function<void( const SGProcessing::TaskResult & )> taskResultProcessingSink,
         std::function<void( const std::string & )>              processingErrorSink,
+        std::function<void( void )>                             processingDoneSink,
         std::string                                             node_id,
         const std::string                                      &processingQueueChannelId,
         std::list<SGProcessing::SubTask>                        subTasks,
@@ -28,6 +29,7 @@ namespace sgns::processing
                                                                          std::move( processingCore ),
                                                                          std::move( taskResultProcessingSink ),
                                                                          std::move( processingErrorSink ),
+                                                                         std::move( processingDoneSink ),
                                                                          std::move( node_id ),
                                                                          std::move( ttl ) ) );
 
@@ -57,6 +59,7 @@ namespace sgns::processing
                                     std::shared_ptr<ProcessingCore>                         processingCore,
                                     std::function<void( const SGProcessing::TaskResult & )> taskResultProcessingSink,
                                     std::function<void( const std::string & )>              processingErrorSink,
+                                    std::function<void( void )>                             processingDoneSink,
                                     std::string                                             node_id,
                                     std::chrono::seconds                                    ttl ) :
 
@@ -67,6 +70,7 @@ namespace sgns::processing
         m_subTaskResultStorage( std::move( subTaskResultStorage ) ),
         m_taskResultProcessingSink( std::move( taskResultProcessingSink ) ),
         m_processingErrorSink( std::move( processingErrorSink ) ),
+        m_processingDoneSink( std::move( processingDoneSink ) ),
         m_creationTime( std::chrono::steady_clock::now() ),
         m_ttl( ttl )
     {
@@ -124,9 +128,10 @@ namespace sgns::processing
                 return false;
             } );
 
-        m_processingEngine = std::make_shared<ProcessingEngine>( m_nodeId, m_processingCore );
-
-        m_processingEngine->SetProcessingErrorSink( m_processingErrorSink );
+        m_processingEngine = std::make_shared<ProcessingEngine>( m_nodeId,
+                                                                 m_processingCore,
+                                                                 m_processingErrorSink,
+                                                                 m_processingDoneSink );
 
         // Run messages processing once all dependent object are created
         processingQueueChannel->Listen( msSubscriptionWaitingDuration );

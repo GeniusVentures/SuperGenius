@@ -181,19 +181,15 @@ namespace sgns::processing
             }
             else
             {
-                bool no_more_subtasks = false;
+
                 while ( !m_onSubTaskGrabbedCallbacks.empty() )
                 {
-                    no_more_subtasks = true;
                     // Let the requester know that there are no available subtasks
                     m_onSubTaskGrabbedCallbacks.front()( {} );
                     // Reset the callback
                     m_onSubTaskGrabbedCallbacks.pop_front();
                 }
-                if ( no_more_subtasks )
-                {
-                    m_processingErrorSink( "deleting process node, no more subtasks" );
-                }
+
             }
         }
     }
