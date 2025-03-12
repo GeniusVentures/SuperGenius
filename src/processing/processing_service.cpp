@@ -1,6 +1,8 @@
 #include "processing_service.hpp"
 
 #include <utility>
+#include <thread>
+
 
 namespace sgns::processing
 {
