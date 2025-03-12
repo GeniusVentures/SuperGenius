@@ -114,7 +114,8 @@ if(NOT DEFINED ZKLLVM_DIR)
 
         # Set extracted directory as ZKLLVM_DIR
         set(ZKLLVM_DIR "${ZKLLVM_EXTRACT_DIR}/build/${BUILD_PLATFORM_NAME}/Release/${ANDROID_ABI}" CACHE STRING "Downloaded zkLLVM Library")
-
+        # Get absolute path
+        cmake_path(SET ZKLLVM_DIR NORMALIZE "${ZKLLVM_DIR}")
         message(STATUS "zkLLVM downloaded and extracted to ${ZKLLVM_DIR}")
     endif()
 endif()
