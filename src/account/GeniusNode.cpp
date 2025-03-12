@@ -739,6 +739,7 @@ namespace sgns
             }
             ret = true;
         } while ( 0 );
+        return ret;
     }
 
     void GeniusNode::ProcessingError( const std::string &task_id )
