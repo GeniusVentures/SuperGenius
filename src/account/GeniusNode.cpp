@@ -143,7 +143,7 @@ namespace sgns
         loggerRocksDB->set_level( spdlog::level::off );
         logkad->set_level( spdlog::level::off );
         logNoise->set_level( spdlog::level::off );
-        logProcessingEngine->set_level( spdlog::level::off );
+        logProcessingEngine->set_level( spdlog::level::debug );
         loggerSubQueue->set_level( spdlog::level::off );
         loggerProcServ->set_level( spdlog::level::debug );
         loggerProcqm->set_level( spdlog::level::debug );

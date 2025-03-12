@@ -861,6 +861,8 @@ namespace sgns::processing
                                      node_address_,
                                      taskId,
                                      peerAddress );
+                    std::scoped_lock nodeLock( m_mutexNodes );
+                    m_processingNodes.erase( taskId );
                 }
             }
 
@@ -1084,6 +1086,11 @@ namespace sgns::processing
             std::lock_guard<std::mutex> finalizationLock( m_mutexTaskFinalization );
             m_taskFinalizationStates.erase( taskId );
             m_tasksBeingFinalized.erase( taskId ); // Remove from the set of tasks being finalized
+        }
+        // Continue processing if service is still running
+        if ( !m_isStopped )
+        {
+            SendChannelListRequest();
         }
     }
 
