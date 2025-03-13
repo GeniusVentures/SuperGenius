@@ -48,19 +48,18 @@ namespace sgns
                                                                 AssignmentTableType>;
 
         GeniusAssigner() :
-            gen_mode_( nil::blueprint::generation_mode::assignments() | nil::blueprint::generation_mode::circuit() )
+            gen_mode_( nil::blueprint::generation_mode::assignments() | nil::blueprint::generation_mode::circuit() ),
+            assigner_instance_( GetPlonkTableDescription(),
+                                STACK_SIZE,
+                                LOG_LEVEL,
+                                MAX_NUM_PROVERS,
+                                TARGET_PROVER,
+                                gen_mode_,
+                                std::string( POLICY ),
+                                nil::blueprint::print_format::no_print,
+                                std::string( CHECK_VALIDITY ) == "check" )
 
         {
-            assigner_instance_ = std::make_shared<nil::blueprint::assigner<BlueprintFieldType>>(
-                GetPlonkTableDescription(),
-                STACK_SIZE,
-                LOG_LEVEL,
-                MAX_NUM_PROVERS,
-                TARGET_PROVER,
-                gen_mode_,
-                std::string( POLICY ),
-                nil::blueprint::print_format::no_print,
-                std::string( CHECK_VALIDITY ) == "check" );
         }
 
         ~GeniusAssigner() = default;
@@ -127,8 +126,8 @@ namespace sgns
         constexpr static const std::string_view POLICY         = "default";
         constexpr static const std::string_view CHECK_VALIDITY = "";
 
-        std::shared_ptr<nil::blueprint::assigner<BlueprintFieldType>> assigner_instance_;
         nil::blueprint::generation_mode                               gen_mode_;
+        nil::blueprint::assigner<BlueprintFieldType>                  assigner_instance_;
 
         enum class PrintTableKind
         {
