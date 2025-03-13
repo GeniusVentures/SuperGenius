@@ -413,6 +413,7 @@ namespace sgns::crdt
                 logger_->debug( "Peer {} was blacklisted", peerID.toBase58() );
             }
         }
+        EraseRoute(cid);
     }
 
     void GraphsyncDAGSyncer::AddCIDBlock( const CID &cid, const std::shared_ptr<ipfs_lite::ipld::IPLDNode> &block )
