@@ -118,65 +118,66 @@ namespace sgns::crdt
                     gsl::span<const uint8_t>( reinterpret_cast<const uint8_t *>( bmsg.peer().id().data() ),
                                               bmsg.peer().id().size() ) );
                 //auto peerId = libp2p::peer::PeerId::fromBytes(message->from);
-                if ( peer_id_res )
+                if (!peer_id_res)
                 {
-                    auto peerId = peer_id_res.value();
-                    m_logger->trace( "Message from peer {}", peerId.toBase58() );
-                    std::scoped_lock lock( mutex_ );
-                    base::Buffer     buf;
-                    buf.put( bmsg.data() );
-                    // if CIDs don't work or can't map the broadcast the dataStore might try to call logger_ which will be called with nullptr of dataStore.
-                    BOOST_ASSERT_MSG( dataStore_ != nullptr, "Data store is not set" );
-                    auto cids = dataStore_->DecodeBroadcast( buf );
-                    if ( !cids.has_failure() )
+                    m_logger->error("No Peer ID for CID broadcast");
+                    return;
+                }
+                auto peerId = peer_id_res.value();
+                m_logger->trace( "Message from peer {}", peerId.toBase58() );
+                std::scoped_lock lock( mutex_ );
+                base::Buffer     buf;
+                buf.put( bmsg.data() );
+                // if CIDs don't work or can't map the broadcast the dataStore might try to call logger_ which will be called with nullptr of dataStore.
+                BOOST_ASSERT_MSG( dataStore_ != nullptr, "Data store is not set" );
+                auto cids = dataStore_->DecodeBroadcast( buf );
+                if ( !cids.has_failure() )
+                {
+                    auto                                     addresses = bmsg.peer().addrs();
+                    std::vector<libp2p::multi::Multiaddress> addrvector;
+                    for ( auto &addr : addresses )
                     {
-                        auto                                     addresses = bmsg.peer().addrs();
-                        std::vector<libp2p::multi::Multiaddress> addrvector;
-                        for ( auto &addr : addresses )
+                        auto addr_res = libp2p::multi::Multiaddress::create( addr );
+                        if ( addr_res )
                         {
-                            auto addr_res = libp2p::multi::Multiaddress::create( addr );
-                            if ( addr_res )
-                            {
-                                addrvector.push_back( addr_res.value() );
-                                m_logger->debug( "Added Address: {}", addr_res.value().getStringAddress() );
-                            }
-                        }
-                        //auto pi = PeerInfoFromString(bmsg.multiaddress());
-                        for ( const auto &cid : cids.value() )
-                        {
-                            if ( addrvector.size() > 0 )
-                            {
-                                auto hb = dagSyncer_->HasBlock( cid );
-                                if ( hb.has_value() && !hb.value() )
-                                {
-                                    if ( !dagSyncer_->IsOnBlackList( peerId ) )
-                                    {
-                                        m_logger->debug( "Request node {} from {} {}",
-                                                         cid.toString().value(),
-                                                         addrvector[0].getStringAddress(),
-                                                         peerId.toBase58() );
-                                        dagSyncer_->AddRoute( cid, peerId, addrvector );
-                                    }
-                                    else
-                                    {
-                                        m_logger->debug( "The peer {} that has CID {} is blacklisted",
-                                                         peerId.toBase58(),
-                                                         cid.toString().value() );
-                                    }
-                                }
-                                else
-                                {
-                                    m_logger->trace( "Not adding route node {} from {} {} {}",
-                                                     cid.toString().value(),
-                                                     addrvector[0].getStringAddress(),
-                                                     hb.has_value(),
-                                                     hb.value() );
-                                }
-                            }
+                            addrvector.push_back( addr_res.value() );
+                            m_logger->debug( "Added Address: {}", addr_res.value().getStringAddress() );
                         }
                     }
-                    messageQueue_.emplace( std::move( peerId ), bmsg.data() );
+                    if (addrvector.size() <= 0)
+                    {
+                        m_logger->error("No Addresses for CID broadcast");
+                        return;
+                    }
+                    if (dagSyncer_->IsOnBlackList(peerId))
+                    {
+                        m_logger->debug("The peer {} is blacklisted",
+                            peerId.toBase58());
+                        return;
+                    }
+                    //auto pi = PeerInfoFromString(bmsg.multiaddress());
+                    for ( const auto &cid : cids.value() )
+                    {
+                        auto hb = dagSyncer_->HasBlock( cid );
+                        if ( hb.has_value() && !hb.value() )
+                        {
+                            m_logger->debug( "Request node {} from {} {}",
+                                                cid.toString().value(),
+                                                addrvector[0].getStringAddress(),
+                                                peerId.toBase58() );
+                            dagSyncer_->AddRoute( cid, peerId, addrvector );
+                        }
+                        else
+                        {
+                            m_logger->trace( "Not adding route node {} from {} {} {}",
+                                                cid.toString().value(),
+                                                addrvector[0].getStringAddress(),
+                                                hb.has_value(),
+                                                hb.value() );
+                        }
+                    }
                 }
+                messageQueue_.emplace( std::move( peerId ), bmsg.data() );
             }
         }
     }
