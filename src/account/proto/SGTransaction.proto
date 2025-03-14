@@ -72,6 +72,7 @@ message EscrowReleaseTx {
   uint64 release_amount = 3;
   string release_address = 4;
   string escrow_source = 5; 
+  string original_escrow_hash = 6; 
 }
 
 

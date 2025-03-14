@@ -1,3 +1,8 @@
+/**
+ * @file EscrowReleaseTransaction.cpp
+ * @brief Implementation of the EscrowReleaseTransaction class.
+ */
+
 #include "account/EscrowReleaseTransaction.hpp"
 #include "account/proto/SGTransaction.pb.h"
 #include "crypto/hasher/hasher_impl.hpp"
@@ -6,49 +11,43 @@
 
 namespace sgns
 {
-    // Updated private constructor.
+
     EscrowReleaseTransaction::EscrowReleaseTransaction( UTXOTxParameters         params,
                                                         uint64_t                 release_amount,
                                                         std::string              release_address,
-                                                        std::string              escrow_source, // new parameter
+                                                        std::string              escrow_source,
+                                                        std::string              original_escrow_hash,
                                                         SGTransaction::DAGStruct dag ) :
         IGeniusTransactions( "escrowrelease", SetDAGWithType( std::move( dag ), "escrowrelease" ) ),
         utxo_params_( std::move( params ) ),
         release_amount_( release_amount ),
         release_address_( std::move( release_address ) ),
-        escrow_source_( std::move( escrow_source ) )
+        escrow_source_( std::move( escrow_source ) ),
+        original_escrow_hash_( std::move( original_escrow_hash ) )
     {
     }
 
-    // Updated factory method.
     EscrowReleaseTransaction EscrowReleaseTransaction::New( UTXOTxParameters         params,
                                                             uint64_t                 release_amount,
                                                             std::string              release_address,
-                                                            std::string              escrow_source, // new parameter
+                                                            std::string              escrow_source,
+                                                            std::string              original_escrow_hash,
                                                             SGTransaction::DAGStruct dag )
     {
         EscrowReleaseTransaction instance( std::move( params ),
                                            release_amount,
                                            std::move( release_address ),
-                                           std::move( escrow_source ), // store the escrow source separately
+                                           std::move( escrow_source ),
+                                           std::move( original_escrow_hash ),
                                            std::move( dag ) );
-
         instance.FillHash();
         return instance;
     }
 
-    // The SerializeByteVector() and DeSerializeByteVector() methods
-    // should be updated to include escrow_source_.
-    // (For brevity, you may add escrow_source_ as an additional field in the proto message
-    // or append it to the serialized data, ensuring symmetry in deserialization.)
-    // Here is an illustrative example for serialization:
-
     std::vector<uint8_t> EscrowReleaseTransaction::SerializeByteVector()
     {
         SGTransaction::EscrowReleaseTx tx_struct;
-        // Copy the DAG structure.
         tx_struct.mutable_dag_struct()->CopyFrom( this->dag_st );
-        // Copy UTXO parameters.
         auto *utxo_proto_params = tx_struct.mutable_utxo_params();
         for ( const auto &input : utxo_params_.inputs_ )
         {
@@ -63,13 +62,9 @@ namespace sgns
             out_proto->set_encrypted_amount( out.encrypted_amount );
             out_proto->set_dest_addr( out.dest_address );
         }
-
-        // Copy release amount and address.
         tx_struct.set_release_amount( release_amount_ );
         tx_struct.set_release_address( release_address_ );
-        // New: copy escrow source.
         tx_struct.set_escrow_source( escrow_source_ );
-
         size_t               size = tx_struct.ByteSizeLong();
         std::vector<uint8_t> serialized_proto( size );
         tx_struct.SerializeToArray( serialized_proto.data(), static_cast<int>( size ) );
@@ -85,7 +80,6 @@ namespace sgns
             std::cerr << "Failed to parse EscrowReleaseTx from array." << std::endl;
             return nullptr;
         }
-
         std::vector<InputUTXOInfo> inputs;
         auto                      *utxo_proto_params = tx_struct.mutable_utxo_params();
         for ( int i = 0; i < utxo_proto_params->inputs_size(); ++i )
@@ -103,26 +97,51 @@ namespace sgns
             curr.signature_  = input_proto.signature();
             inputs.push_back( curr );
         }
-
         std::vector<OutputDestInfo> outputs;
         for ( int i = 0; i < utxo_proto_params->outputs_size(); ++i )
         {
             const auto &out_proto = utxo_proto_params->outputs( i );
             outputs.push_back( { out_proto.encrypted_amount(), out_proto.dest_addr() } );
         }
-
         UTXOTxParameters utxo_params( inputs, outputs );
-
-        // Retrieve escrow_source from the proto.
-        std::string escrow_source = tx_struct.escrow_source();
-
-        auto releaseTx = std::make_shared<EscrowReleaseTransaction>(
+        auto             releaseTx = std::make_shared<EscrowReleaseTransaction>(
             EscrowReleaseTransaction( std::move( utxo_params ),
                                       tx_struct.release_amount(),
                                       tx_struct.release_address(),
-                                      escrow_source, // new field
+                                      tx_struct.escrow_source(),
+                                      tx_struct.original_escrow_hash(),
                                       tx_struct.dag_struct() ) );
-
         return releaseTx;
     }
-}
+
+    UTXOTxParameters EscrowReleaseTransaction::GetUTXOParameters() const
+    {
+        return utxo_params_;
+    }
+
+    uint64_t EscrowReleaseTransaction::GetReleaseAmount() const
+    {
+        return release_amount_;
+    }
+
+    std::string EscrowReleaseTransaction::GetReleaseAddress() const
+    {
+        return release_address_;
+    }
+
+    std::string EscrowReleaseTransaction::GetEscrowSource() const
+    {
+        return escrow_source_;
+    }
+
+    std::string EscrowReleaseTransaction::GetOriginalEscrowHash() const
+    {
+        return original_escrow_hash_;
+    }
+
+    std::string EscrowReleaseTransaction::GetTransactionSpecificPath()
+    {
+        return GetType();
+    }
+
+} // namespace sgns

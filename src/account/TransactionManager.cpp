@@ -267,17 +267,26 @@ namespace sgns
 
         this->EnqueueTransaction( std::make_pair( transfer_transaction, maybe_proof ) );
 
-        auto escrow_release_dag = FillDAGStruct( escrow_tx->dag_st.data_hash() );
+        auto escrow_release_dag = FillDAGStruct( );
         auto escrow_release_tx = std::make_shared<EscrowReleaseTransaction>(
             EscrowReleaseTransaction::New(
                 escrow_tx->GetUTXOParameters(),
                 escrow_tx->GetAmount(),
                 escrow_tx->GetDevAddress(),
                 escrow_tx->dag_st.source_addr(),
+                escrow_tx->dag_st.data_hash(),
                 escrow_release_dag
             )
         );
-        this->EnqueueTransaction( std::make_pair( escrow_release_tx, std::nullopt ) );
+        std::optional<std::vector<uint8_t>> maybe_proof2;
+        m_logger->debug( "Creating release proof ");
+        // #ifdef _PROOF_ENABLED
+        //     TransferProof prover2( static_cast<uint64_t>( account_m->GetBalance<uint64_t>() ),
+        //                         static_cast<uint64_t>( escrow_tx->GetAmount() ) );
+        //     OUTCOME_TRY((auto&&, proof_result2), prover2.GenerateFullProof());
+        //     maybe_proof2 = std::move(proof_result2);
+        // #endif
+        this->EnqueueTransaction( std::make_pair( escrow_release_tx, maybe_proof2 ) );
         m_logger->debug( "Enqueued escrow release transaction with hash: " + escrow_release_tx->dag_st.data_hash() );
 
         return transfer_transaction->dag_st.data_hash();
@@ -668,29 +677,28 @@ namespace sgns
     outcome::result<void> TransactionManager::ParseEscrowReleaseTransaction(
         const std::shared_ptr<IGeniusTransactions> &tx )
     {
-        m_logger->debug("Parsing escrow release transaction: " + tx->dag_st.data_hash());
-    
-        auto escrowReleaseTx = std::dynamic_pointer_cast<EscrowReleaseTransaction>(tx);
-        if (!escrowReleaseTx)
+        m_logger->debug( "Parsing escrow release transaction: " + tx->dag_st.data_hash() );
+
+        auto escrowReleaseTx = std::dynamic_pointer_cast<EscrowReleaseTransaction>( tx );
+        if ( !escrowReleaseTx )
         {
-            m_logger->error("Failed to cast transaction to EscrowReleaseTransaction");
+            m_logger->error( "Failed to cast transaction to EscrowReleaseTransaction" );
             return std::errc::invalid_argument;
         }
-    
-        uint64_t releaseAmount    = escrowReleaseTx->GetReleaseAmount();
-        std::string releaseAddr   = escrowReleaseTx->GetReleaseAddress();
-        std::string escrowSource  = escrowReleaseTx->GetEscrowSource();
-        std::string originalEscrowHash = tx->dag_st.previous_hash();
-    
+
+        uint64_t    releaseAmount      = escrowReleaseTx->GetReleaseAmount();
+        std::string releaseAddr        = escrowReleaseTx->GetReleaseAddress();
+        std::string escrowSource       = escrowReleaseTx->GetEscrowSource();
+        std::string originalEscrowHash = escrowReleaseTx->GetOriginalEscrowHash();
+
         // Print the parsed values.
-        m_logger->debug("EscrowReleaseTx parsed: release_amount = " + std::to_string(releaseAmount) +
-                        ", release_address = " + releaseAddr +
-                        ", escrow_source = " + escrowSource +
-                        ", original escrow id = " + originalEscrowHash);
-    
-        if (originalEscrowHash.empty())
+        m_logger->debug( "EscrowReleaseTx parsed: release_amount = " + std::to_string( releaseAmount ) +
+                         ", release_address = " + releaseAddr + ", escrow_source = " + escrowSource +
+                         ", originalHash = " + originalEscrowHash );
+
+        if ( originalEscrowHash.empty() )
         {
-            m_logger->error("Escrow release transaction missing original escrow hash.");
+            m_logger->error( "Escrow release transaction missing original escrow hash." );
             return std::errc::invalid_argument;
         }
         // auto maybeEscrowTx = FetchTransaction(processing_db_m, originalEscrowHash);
@@ -699,8 +707,8 @@ namespace sgns
         //     m_logger->error("Could not fetch original escrow transaction for id: " + originalEscrowHash);
         //     return std::errc::invalid_argument;
         // }
-        m_logger->debug("Successfully fetched original escrow transaction for escrow: " + originalEscrowHash);
-    
+        m_logger->debug( "Successfully fetched original escrow transaction for escrow: " + originalEscrowHash );
+
         return outcome::success();
     }
 
@@ -1013,7 +1021,8 @@ namespace sgns
                     auto tx = entry.second;
                     if ( tx->GetType() == "escrowrelease" )
                     {
-                        if ( tx->dag_st.previous_hash() == originalEscrowId )
+                        auto escrowReleaseTx = std::dynamic_pointer_cast<EscrowReleaseTransaction>( tx );
+                        if ( escrowReleaseTx && escrowReleaseTx->GetOriginalEscrowHash() == originalEscrowId )
                         {
                             m_logger->debug( "Found matching escrow release transaction with tx id: " +
                                              tx->dag_st.data_hash() );
