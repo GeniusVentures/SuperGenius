@@ -158,14 +158,14 @@ namespace sgns::processing
     {
         m_logger->debug( "[{}] SUBTASK_QUEUE_PROCESSING_COMPLETED: {}", node_address_, subTaskQueueId );
 
-        {
-            std::scoped_lock lock( m_mutexNodes );
-            m_processingNodes.erase( subTaskQueueId );
-        }
-
         if ( userCallbackSuccess_ )
         {
             userCallbackSuccess_( subTaskQueueId, taskResult );
+        }
+
+        {
+            std::scoped_lock lock( m_mutexNodes );
+            m_processingNodes.erase( subTaskQueueId );
         }
 
         if ( !m_isStopped )
@@ -180,13 +180,14 @@ namespace sgns::processing
     {
         m_logger->error( "[{}] PROCESSING_ERROR reason: {}", node_address_, errorMessage );
 
-        {
-            std::scoped_lock lock( m_mutexNodes );
-            m_processingNodes.erase( subTaskQueueId );
-        }
         if ( userCallbackError_ )
         {
             userCallbackError_( subTaskQueueId );
+        }
+
+        {
+            std::scoped_lock lock( m_mutexNodes );
+            m_processingNodes.erase( subTaskQueueId );
         }
 
         // @todo Stop processing?
@@ -199,52 +200,13 @@ namespace sgns::processing
 
     void ProcessingServiceImpl::OnProcessingDone( const std::string &taskId )
     {
-        m_logger->debug( "[{}] PROCESSING_DONE for task {}", node_address_, taskId );
+        m_logger->debug( "[{}] PROCESSING_DONE: for task {}", node_address_, taskId );
 
-        // Check if finalization is already in progress on this peer
-        bool isFinalizingLocally = false;
-        {
-            std::lock_guard<std::mutex> lock( m_mutexTaskFinalization );
-
-            auto it = m_taskFinalizationStates.find( taskId );
-            if ( it != m_taskFinalizationStates.end() &&
-                 ( it->second.finalizationInProgress ||
-                   ( it->second.locked && it->second.lockOwner == node_address_ ) ) )
-            {
-                isFinalizingLocally = true;
-            }
-        }
-
-        // If finalization is already in progress on this peer, do nothing
-        if ( isFinalizingLocally )
-        {
-            m_logger->debug( "[{}] Ignoring OnProcessingDone for task {} as finalization is already in progress",
-                             node_address_,
-                             taskId );
-            return;
-        }
-
-        // Otherwise, perform similar cleanup as OnProcessingError without calling the error callback
         {
             std::scoped_lock lock( m_mutexNodes );
             m_processingNodes.erase( taskId );
         }
 
-        {
-            std::lock_guard<std::mutex> lock( m_mutexTaskFinalization );
-            m_tasksBeingFinalized.erase( taskId );
-
-            // Clean up any finalization state for this task
-            auto it = m_taskFinalizationStates.find( taskId );
-            if ( it != m_taskFinalizationStates.end() )
-            {
-                it->second.lockRebroadcastTimer.cancel();
-                it->second.timer.cancel();
-                m_taskFinalizationStates.erase( it );
-            }
-        }
-
-        // Continue processing if service is still running
         if ( !m_isStopped )
         {
             SendChannelListRequest();
