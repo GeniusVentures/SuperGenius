@@ -217,8 +217,8 @@ namespace sgns
                                std::make_pair( "0x" + hash_data.toReadableString(), std::move( data_transaction ) ) );
     }
 
-    outcome::result<void> TransactionManager::PayEscrow( const std::string              &escrow_path,
-                                                         const SGProcessing::TaskResult &taskresult )
+    outcome::result<std::string> TransactionManager::PayEscrow( const std::string              &escrow_path,
+                                                                const SGProcessing::TaskResult &taskresult )
     {
         if ( taskresult.subtask_results().size() == 0 )
         {
@@ -273,7 +273,7 @@ namespace sgns
 
         this->EnqueueTransaction( std::make_pair( transfer_transaction, maybe_proof ) );
 
-        return outcome::success();
+        return transfer_transaction->dag_st.data_hash();
     }
 
     uint64_t TransactionManager::GetBalance()
@@ -520,7 +520,7 @@ namespace sgns
             {
 #endif
                 auto maybe_parsed = ParseTransaction( maybe_transaction.value() );
-                if (maybe_parsed.has_error())
+                if ( maybe_parsed.has_error() )
                 {
                     m_logger->debug( "Can't parse the transaction" );
                     continue;
@@ -671,17 +671,17 @@ namespace sgns
             if ( destination_db_it == destination_dbs_m.end() )
             {
                 m_logger->debug( "Port to sync  " + std::to_string( base_port_m ) );
-                std::string tempaddress = dest_info.dest_address;
-                std::vector<unsigned char> inputBytes(tempaddress.begin(), tempaddress.end());
-                std::vector<unsigned char> hash(SHA256_DIGEST_LENGTH);
-                SHA256(inputBytes.data(), inputBytes.size(), hash.data());
+                std::string                tempaddress = dest_info.dest_address;
+                std::vector<unsigned char> inputBytes( tempaddress.begin(), tempaddress.end() );
+                std::vector<unsigned char> hash( SHA256_DIGEST_LENGTH );
+                SHA256( inputBytes.data(), inputBytes.size(), hash.data() );
 
-                libp2p::protocol::kademlia::ContentId key(hash);
-                auto acc_cid = libp2p::multi::ContentIdentifierCodec::decode(key.data);
-                auto maybe_base58 = libp2p::multi::ContentIdentifierCodec::toString(acc_cid.value());
-                if (!maybe_base58)
+                libp2p::protocol::kademlia::ContentId key( hash );
+                auto acc_cid      = libp2p::multi::ContentIdentifierCodec::decode( key.data );
+                auto maybe_base58 = libp2p::multi::ContentIdentifierCodec::toString( acc_cid.value() );
+                if ( !maybe_base58 )
                 {
-                    std::runtime_error("We couldn't convert the account to base58");
+                    std::runtime_error( "We couldn't convert the account to base58" );
                 }
                 std::string base58key = maybe_base58.value();
 

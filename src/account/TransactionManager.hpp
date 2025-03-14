@@ -72,8 +72,9 @@ namespace sgns
                                                                             const std::string &dev_addr,
                                                                             uint64_t           peers_cut,
                                                                             const std::string &job_id );
-        outcome::result<void> PayEscrow( const std::string &escrow_path, const SGProcessing::TaskResult &taskresult );
-        uint64_t              GetBalance();
+        outcome::result<std::string>                            PayEscrow( const std::string              &escrow_path,
+                                                                           const SGProcessing::TaskResult &taskresult );
+        uint64_t                                                GetBalance();
 
         // Wait for an incoming transaction to be processed with a timeout
         bool WaitForTransactionIncoming( const std::string &txId, std::chrono::milliseconds timeout ) const;

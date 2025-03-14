@@ -704,6 +704,29 @@ namespace sgns
         return std::make_pair( tx_id, duration );
     }
 
+    outcome::result<std::pair<std::string, uint64_t>> GeniusNode::PayEscrow( const std::string &escrow_path,
+                                                                             const SGProcessing::TaskResult &taskresult,
+                                                                             std::chrono::milliseconds       timeout )
+    {
+        auto start_time = std::chrono::steady_clock::now();
+
+        OUTCOME_TRY( auto &&tx_id, transaction_manager_->PayEscrow( escrow_path, taskresult ) );
+
+        bool success = WaitForTransactionOutgoing( tx_id, timeout );
+
+        auto end_time = std::chrono::steady_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( end_time - start_time ).count();
+
+        if ( !success )
+        {
+            node_logger->error( "Pay escrow transaction {} timed out after {} ms", tx_id, duration );
+            return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::timed_out ) );
+        }
+
+        node_logger->debug( "Pay escrow transaction {} completed in {} ms", tx_id, duration );
+        return std::make_pair( tx_id, duration );
+    }
+
     uint64_t GeniusNode::GetBalance()
     {
         return transaction_manager_->GetBalance();
@@ -727,11 +750,13 @@ namespace sgns
                 node_logger->info( "No associated Escrow with the task id: {} ", task_id );
                 break;
             }
-            if ( !transaction_manager_->PayEscrow( maybe_escrow_path.value(), taskresult ) )
+            auto pay_result = PayEscrow( maybe_escrow_path.value(), taskresult );
+            if ( pay_result.has_failure() )
             {
                 node_logger->error( "Invalid results for task: {} ", task_id );
                 break;
             }
+
             if ( !task_queue_->CompleteTask( task_id, taskresult ) )
             {
                 node_logger->error( "Unable to complete task: {} ", task_id );
