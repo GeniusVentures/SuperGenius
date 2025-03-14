@@ -1,6 +1,7 @@
 #include "processing_service.hpp"
 
 #include <utility>
+#include <thread>
 
 namespace sgns::processing
 {
@@ -11,7 +12,7 @@ namespace sgns::processing
                                                   std::shared_ptr<SubTaskResultStorage>            subTaskResultStorage,
                                                   std::shared_ptr<ProcessingCore>                  processingCore ) :
         m_gossipPubSub( std::move( gossipPubSub ) ),
-        m_context( m_gossipPubSub->GetAsioContext() ),
+        m_context( std::make_shared<boost::asio::io_context>() ),
         m_maximalNodesCount( maximalNodesCount ),
         m_subTaskEnqueuer( std::move( subTaskEnqueuer ) ),
         m_subTaskStateStorage( std::move( subTaskStateStorage ) ),
@@ -25,6 +26,8 @@ namespace sgns::processing
         m_nodeCreationTimeout( boost::posix_time::milliseconds( 1000 ) )
 
     {
+        m_context_work = std::make_unique<boost::asio::io_context::work>( *m_context );
+        io_thread = std::thread( [this]() { m_context->run(); } );
     }
 
     ProcessingServiceImpl::ProcessingServiceImpl(
@@ -39,7 +42,7 @@ namespace sgns::processing
         std::function<void( const std::string &subTaskQueueId )> userCallbackError,
         std::string                                              node_address ) :
         m_gossipPubSub( std::move( gossipPubSub ) ),
-        m_context( m_gossipPubSub->GetAsioContext() ),
+        m_context( std::make_shared<boost::asio::io_context>() ),
         m_maximalNodesCount( maximalNodesCount ),
         m_subTaskEnqueuer( std::move( subTaskEnqueuer ) ),
         m_subTaskStateStorage( std::move( subTaskStateStorage ) ),
@@ -54,6 +57,8 @@ namespace sgns::processing
         m_nodeCreationTimer( *m_context ),
         m_nodeCreationTimeout( boost::posix_time::milliseconds( 1000 ) )
     {
+        m_context_work = std::make_unique<boost::asio::io_context::work>( *m_context );
+        io_thread      = std::thread( [this]() { m_context->run(); } );
     }
 
     void ProcessingServiceImpl::StartProcessing( const std::string &processingGridChannelId )
@@ -81,6 +86,15 @@ namespace sgns::processing
         m_isStopped = true;
 
         m_gridChannel->Unsubscribe();
+
+        m_context_work.reset();
+
+        m_context->stop();
+
+        if ( io_thread.joinable() )
+        {
+            io_thread.join();
+        }
 
         {
             std::scoped_lock lock( m_mutexNodes );
