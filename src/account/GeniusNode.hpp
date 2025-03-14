@@ -76,7 +76,7 @@ namespace sgns
         static constexpr uint64_t TIMEOUT_MINT       = 10000;
 #endif
 
-        outcome::result<void> ProcessImage( const std::string &jsondata );
+        outcome::result<std::string> ProcessImage( const std::string &jsondata );
         outcome::result<void> CheckProcessValidity( const std::string &jsondata );
 
         uint64_t GetProcessCost( const std::string &json_data );

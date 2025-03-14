@@ -137,6 +137,8 @@ namespace sgns
         loggerGlobalDB->set_level(spdlog::level::off);
         loggerDAGSyncer->set_level(spdlog::level::off);
         loggerGraphsync->set_level(spdlog::level::off);
+        loggerDAGSyncer->set_level(spdlog::level::off);
+        loggerGraphsync->set_level(spdlog::level::off);
         loggerBroadcaster->set_level(spdlog::level::off);
         loggerDataStore->set_level(spdlog::level::off);
         loggerTransactions->set_level(spdlog::level::debug);
@@ -144,13 +146,13 @@ namespace sgns
         loggerRocksDB->set_level(spdlog::level::off);
         logkad->set_level(spdlog::level::off);
         logNoise->set_level(spdlog::level::off);
-        logProcessingEngine->set_level(spdlog::level::debug);
+        logProcessingEngine->set_level(spdlog::level::off);
         loggerSubQueue->set_level(spdlog::level::off);
-        loggerProcServ->set_level(spdlog::level::debug);
+        loggerProcServ->set_level(spdlog::level::off);
         loggerProcqm->set_level(spdlog::level::off);
         loggerUPNP->set_level(spdlog::level::off);
         loggerProcessingNode->set_level(spdlog::level::debug);
-        loggerGossipPubsub->set_level(spdlog::level::debug);
+        loggerGossipPubsub->set_level(spdlog::level::off);
 #else
         node_logger->set_level( spdlog::level::err);
         loggerGlobalDB->set_level(spdlog::level::err);
@@ -413,7 +415,7 @@ namespace sgns
         return boost::uuids::to_string( uuid );
     }
 
-    outcome::result<void> GeniusNode::ProcessImage( const std::string &jsondata )
+    outcome::result<std::string> GeniusNode::ProcessImage( const std::string &jsondata )
     {
         BOOST_OUTCOME_TRYV2( auto &&, CheckProcessValidity( jsondata ) );
 
@@ -461,7 +463,6 @@ namespace sgns
             //imageindex++;
         }
         auto cut = sgns::fixed_point::fromString( dev_config_.Cut );
-
         if ( !cut )
         {
             return outcome::failure( cut.error() );
@@ -475,23 +476,23 @@ namespace sgns
 
         auto [escrow_path, escrow_data] = escrow_data_pair;
 
+
         task.set_escrow_path( escrow_path );
 
         auto enqueue_task_return = task_queue_->EnqueueTask( task, subTasks );
-
         if ( enqueue_task_return.has_failure() )
         {
             task_queue_->ResetAtomicTransaction();
             return outcome::failure( Error::DATABASE_WRITE_ERROR );
         }
         auto send_escrow_return = task_queue_->SendEscrow( escrow_path, std::move( escrow_data ) );
-
         if ( send_escrow_return.has_failure() )
         {
             task_queue_->ResetAtomicTransaction();
             return outcome::failure( Error::DATABASE_WRITE_ERROR );
         }
-        return send_escrow_return;
+
+        return tx_id;
     }
 
     outcome::result<void> GeniusNode::CheckProcessValidity( const std::string &jsondata )

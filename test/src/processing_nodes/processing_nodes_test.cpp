@@ -273,7 +273,7 @@ TEST_F( ProcessingNodesTest, PostProcessing )
                 }
                )";
     auto        cost      = node_main->GetProcessCost( json_data );
-    //ASSERT_EQ( 154, cost );
+    //EXPECT_EQ( 154, cost );
     std::replace(bin_path.begin(), bin_path.end(), '\\', '/');
     boost::replace_all( json_data, "[basepath]", bin_path );
     std::cout << "Json Data: " << json_data << std::endl;
@@ -286,9 +286,12 @@ TEST_F( ProcessingNodesTest, PostProcessing )
         std::cout << "post job error: " << postjob.error().message() << std::endl;
     }
     std::cout << "Here4" << std::endl;
+    
+    std::string escrow_txid = postjob.value();
+    std::cout << "ProcessImage returned escrow txid: " << escrow_txid << std::endl;
     //node_main->ProcessImage(json_data);
 
-    std::this_thread::sleep_for( std::chrono::milliseconds( 40000 ) );
+    std::this_thread::sleep_for( std::chrono::milliseconds( 80000 ) );
     std::cout << "Balance main (Before):  " << balance_main << std::endl;
     std::cout << "Balance node1 (Before): " << balance_node1 << std::endl;
     std::cout << "Balance node2 (Before): " << balance_node2 << std::endl;
@@ -307,4 +310,11 @@ TEST_F( ProcessingNodesTest, PostProcessing )
     auto gameDeveloperPayment = cost - 2 * expected_peer_gain;
     ASSERT_EQ( balance_main + balance_node1 + balance_node2,
                node_main->GetBalance() + node_proc1->GetBalance() + node_proc2->GetBalance() + gameDeveloperPayment );
+
+    EXPECT_EQ(4,node_main->GetInTransactions().size());
+
+    
+    auto escrow_received = node_main->WaitForTransactionIncoming(
+        escrow_txid, std::chrono::milliseconds(INCOMING_TIMEOUT_MILLISECONDS));
+    ASSERT_TRUE(escrow_received);
 }
