@@ -12,6 +12,7 @@ add_library(sgns_account
     MintTransaction.cpp
     ProcessingTransaction.cpp
     EscrowTransaction.cpp
+    EscrowReleaseTransaction.cpp
     GeniusAccount.cpp
     GeniusNode.cpp
     UTXOTxParameters.cpp

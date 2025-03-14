@@ -109,6 +109,9 @@ namespace sgns
 
         void RefreshPorts();
 
+        outcome::result<void> NotifyEscrowRelease( const std::shared_ptr<IGeniusTransactions> &tx,
+                                                   const std::optional<std::vector<uint8_t>>  &proof );
+
         std::shared_ptr<crdt::GlobalDB> processing_db_m; //TODO - remove this as it's only needed on the PayEscrow
         std::shared_ptr<crdt::GlobalDB> outgoing_db_m;
         std::shared_ptr<crdt::GlobalDB> incoming_db_m;
@@ -139,6 +142,7 @@ namespace sgns
         outcome::result<void> ParseTransferTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
         outcome::result<void> ParseMintTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
         outcome::result<void> ParseEscrowTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
+        outcome::result<void> ParseEscrowReleaseTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
 
         outcome::result<void> NotifyDestinationOfTransfer( const std::shared_ptr<IGeniusTransactions> &tx,
                                                             const std::optional<std::vector<uint8_t>>& proof);
@@ -148,6 +152,7 @@ namespace sgns
             { "transfer", &TransactionManager::ParseTransferTransaction },
             { "mint", &TransactionManager::ParseMintTransaction },
             { "escrow", &TransactionManager::ParseEscrowTransaction },
+            { "escrowrelease", &TransactionManager::ParseEscrowReleaseTransaction } 
         };
 
         base::Logger m_logger = sgns::base::createLogger( "TransactionManager" );
