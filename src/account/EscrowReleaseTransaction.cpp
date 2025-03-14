@@ -65,6 +65,7 @@ namespace sgns
         tx_struct.set_release_amount( release_amount_ );
         tx_struct.set_release_address( release_address_ );
         tx_struct.set_escrow_source( escrow_source_ );
+        tx_struct.set_original_escrow_hash( original_escrow_hash_ );
         size_t               size = tx_struct.ByteSizeLong();
         std::vector<uint8_t> serialized_proto( size );
         tx_struct.SerializeToArray( serialized_proto.data(), static_cast<int>( size ) );
