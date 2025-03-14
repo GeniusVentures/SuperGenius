@@ -71,9 +71,9 @@ namespace sgns
         static constexpr uint64_t TIMEOUT_TRANSFER   = 50000;
         static constexpr uint64_t TIMEOUT_MINT       = 50000;
 #else
-        static constexpr uint64_t TIMEOUT_ESCROW_PAY = 5000;
-        static constexpr uint64_t TIMEOUT_TRANSFER   = 5000;
-        static constexpr uint64_t TIMEOUT_MINT       = 5000;
+        static constexpr uint64_t TIMEOUT_ESCROW_PAY = 10000;
+        static constexpr uint64_t TIMEOUT_TRANSFER   = 10000;
+        static constexpr uint64_t TIMEOUT_MINT       = 10000;
 #endif
 
         outcome::result<void> ProcessImage( const std::string &jsondata );

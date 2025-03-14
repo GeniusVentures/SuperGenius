@@ -135,8 +135,8 @@ namespace sgns
 #ifdef SGNS_DEBUGLOGS
         node_logger->set_level( spdlog::level::debug );
         loggerGlobalDB->set_level(spdlog::level::off);
-        loggerDAGSyncer->set_level(spdlog::level::debug);
-        loggerGraphsync->set_level(spdlog::level::trace);
+        loggerDAGSyncer->set_level(spdlog::level::off);
+        loggerGraphsync->set_level(spdlog::level::off);
         loggerBroadcaster->set_level(spdlog::level::off);
         loggerDataStore->set_level(spdlog::level::off);
         loggerTransactions->set_level(spdlog::level::debug);
@@ -149,7 +149,7 @@ namespace sgns
         loggerProcServ->set_level(spdlog::level::debug);
         loggerProcqm->set_level(spdlog::level::off);
         loggerUPNP->set_level(spdlog::level::off);
-        loggerProcessingNode->set_level(spdlog::level::off);
+        loggerProcessingNode->set_level(spdlog::level::debug);
         loggerGossipPubsub->set_level(spdlog::level::debug);
 #else
         node_logger->set_level( spdlog::level::err);
