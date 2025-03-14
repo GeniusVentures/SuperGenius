@@ -31,8 +31,8 @@ typedef struct DevConfig
 
 extern DevConfig_st DEV_CONFIG;
 
-#define OUTGOING_TIMEOUT_MILLISECONDS 50000    // just communication time
-#define INCOMING_TIMEOUT_MILLISECONDS 150000   // communication + verify proof
+#define OUTGOING_TIMEOUT_MILLISECONDS 50000  // just communication time
+#define INCOMING_TIMEOUT_MILLISECONDS 150000 // communication + verify proof
 
 namespace sgns
 {
@@ -52,19 +52,29 @@ namespace sgns
          */
         enum class Error
         {
-            INSUFFICIENT_FUNDS       = 1, ///<Insufficient funds for a transaction
-            DATABASE_WRITE_ERROR     = 2, ///<Error writing data into the database
-            INVALID_TRANSACTION_HASH = 3, ///<Input transaction hash is invalid
-            INVALID_CHAIN_ID         = 4, ///<Chain ID is invalid
-            INVALID_TOKEN_ID         = 5, ///<Token ID is invalid
-            TOKEN_ID_MISMATCH        = 6, ///<Informed Token ID doesn't match initialized ID
-            PROCESS_COST_ERROR       = 7, ///<The calculated Processing cost was negative
-            PROCESS_INFO_MISSING     = 8, ///<Processing information missing on JSON file
-            INVALID_JSON             = 9, ///<JSON cannot be parsed>
-            INVALID_BLOCK_PARAMETERS =10, ///<JSON params for blocks incorrect or missing>
-            NO_PROCESSOR             =11, ///<No processor for this type>
-            NO_PRICE                 =12, ///<Couldn't get price of gnus>
+            INSUFFICIENT_FUNDS       = 1,  ///<Insufficient funds for a transaction
+            DATABASE_WRITE_ERROR     = 2,  ///<Error writing data into the database
+            INVALID_TRANSACTION_HASH = 3,  ///<Input transaction hash is invalid
+            INVALID_CHAIN_ID         = 4,  ///<Chain ID is invalid
+            INVALID_TOKEN_ID         = 5,  ///<Token ID is invalid
+            TOKEN_ID_MISMATCH        = 6,  ///<Informed Token ID doesn't match initialized ID
+            PROCESS_COST_ERROR       = 7,  ///<The calculated Processing cost was negative
+            PROCESS_INFO_MISSING     = 8,  ///<Processing information missing on JSON file
+            INVALID_JSON             = 9,  ///<JSON cannot be parsed>
+            INVALID_BLOCK_PARAMETERS = 10, ///<JSON params for blocks incorrect or missing>
+            NO_PROCESSOR             = 11, ///<No processor for this type>
+            NO_PRICE                 = 12, ///<Couldn't get price of gnus>
         };
+
+#ifdef SGNS_DEBUG
+        static constexpr uint64_t TIMEOUT_ESCROW_PAY = 50000;
+        static constexpr uint64_t TIMEOUT_TRANSFER   = 50000;
+        static constexpr uint64_t TIMEOUT_MINT       = 50000;
+#else
+        static constexpr uint64_t TIMEOUT_ESCROW_PAY = 5000;
+        static constexpr uint64_t TIMEOUT_TRANSFER   = 5000;
+        static constexpr uint64_t TIMEOUT_MINT       = 5000;
+#endif
 
         outcome::result<void> ProcessImage( const std::string &jsondata );
         outcome::result<void> CheckProcessValidity( const std::string &jsondata );
@@ -89,7 +99,7 @@ namespace sgns
             const std::string        &transaction_hash,
             const std::string        &chainid,
             const std::string        &tokenid,
-            std::chrono::milliseconds timeout = std::chrono::milliseconds( 2000 ) );
+            std::chrono::milliseconds timeout = std::chrono::milliseconds( TIMEOUT_MINT ) );
         void     AddPeer( const std::string &peer );
         void     RefreshUPNP( int pubsubport, int graphsyncport );
         uint64_t GetBalance();
@@ -112,7 +122,7 @@ namespace sgns
         outcome::result<std::pair<std::string, uint64_t>> TransferFunds(
             uint64_t                  amount,
             const std::string        &destination,
-            std::chrono::milliseconds timeout = std::chrono::milliseconds( 50000 ) );
+            std::chrono::milliseconds timeout = std::chrono::milliseconds( TIMEOUT_TRANSFER ) );
 
         std::shared_ptr<ipfs_pubsub::GossipPubSub> GetPubSub()
         {
@@ -139,14 +149,14 @@ namespace sgns
         void StopProcessing();
         void StartProcessing();
 
-        outcome::result<std::map<std::string, double>> GetCoinprice(const std::vector<std::string>& tokenIds);
+        outcome::result<std::map<std::string, double>> GetCoinprice( const std::vector<std::string> &tokenIds );
         outcome::result<std::map<std::string, std::map<int64_t, double>>> GetCoinPriceByDate(
-            const std::vector<std::string>& tokenIds,
-            const std::vector<int64_t>& timestamps);
+            const std::vector<std::string> &tokenIds,
+            const std::vector<int64_t>     &timestamps );
         outcome::result<std::map<std::string, std::map<int64_t, double>>> GetCoinPricesByDateRange(
-            const std::vector<std::string>& tokenIds,
-            int64_t from,
-            int64_t to);
+            const std::vector<std::string> &tokenIds,
+            int64_t                         from,
+            int64_t                         to );
         // Wait for an incoming transaction to be processed with a timeout
         bool WaitForTransactionIncoming( const std::string &txId, std::chrono::milliseconds timeout );
         // Wait for a outgoing transaction to be processed with a timeout
@@ -173,6 +183,11 @@ namespace sgns
         std::atomic<bool> stop_upnp{ false };
 
         DevConfig_st dev_config_;
+
+        outcome::result<std::pair<std::string, uint64_t>> PayEscrow(
+            const std::string              &escrow_path,
+            const SGProcessing::TaskResult &taskresult,
+            std::chrono::milliseconds       timeout = std::chrono::milliseconds( TIMEOUT_ESCROW_PAY ) );
 
         void ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult );
         void ProcessingError( const std::string &task_id );
