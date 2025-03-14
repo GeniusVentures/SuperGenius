@@ -80,6 +80,8 @@ namespace sgns
         bool WaitForTransactionIncoming( const std::string &txId, std::chrono::milliseconds timeout ) const;
         // Wait for an outgoing transaction to be processed with a timeout
         bool WaitForTransactionOutgoing( const std::string &txId, std::chrono::milliseconds timeout ) const;
+        bool WaitForEscrowRelease(const std::string &originalEscrowId, std::chrono::milliseconds timeout) const;
+
 
     private:
         static constexpr std::uint16_t    MAIN_NET_ID             = 369;

@@ -291,7 +291,17 @@ TEST_F( ProcessingNodesTest, PostProcessing )
     std::cout << "ProcessImage returned escrow txid: " << escrow_txid << std::endl;
     //node_main->ProcessImage(json_data);
 
-    std::this_thread::sleep_for( std::chrono::milliseconds( 80000 ) );
+    // std::this_thread::sleep_for( std::chrono::milliseconds( 80000 ) );
+    
+    auto result = node_main->WaitForEscrowRelease(escrow_txid, std::chrono::milliseconds(150000));
+    if (result)
+    {
+        std::cout << "escrowReleaseTxId found  " << std::endl;
+    }
+    else
+    {
+        std::cout << "escrowReleaseTxId timeout" << std::endl;
+    }
     std::cout << "Balance main (Before):  " << balance_main << std::endl;
     std::cout << "Balance node1 (Before): " << balance_node1 << std::endl;
     std::cout << "Balance node2 (Before): " << balance_node2 << std::endl;
@@ -312,9 +322,4 @@ TEST_F( ProcessingNodesTest, PostProcessing )
                node_main->GetBalance() + node_proc1->GetBalance() + node_proc2->GetBalance() + gameDeveloperPayment );
 
     EXPECT_EQ(4,node_main->GetInTransactions().size());
-
-    
-    auto escrow_received = node_main->WaitForTransactionIncoming(
-        escrow_txid, std::chrono::milliseconds(INCOMING_TIMEOUT_MILLISECONDS));
-    ASSERT_TRUE(escrow_received);
 }

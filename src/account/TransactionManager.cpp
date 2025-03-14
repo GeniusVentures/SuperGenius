@@ -1000,4 +1000,31 @@ namespace sgns
         return false;
     }
 
+    bool TransactionManager::WaitForEscrowRelease( const std::string        &originalEscrowId,
+                                                   std::chrono::milliseconds timeout ) const
+    {
+        auto start = std::chrono::steady_clock::now();
+        while ( std::chrono::steady_clock::now() - start < timeout )
+        {
+            {
+                std::shared_lock<std::shared_mutex> lock( incoming_tx_mutex_m );
+                for ( const auto &entry : incoming_tx_processed_m )
+                {
+                    auto tx = entry.second;
+                    if ( tx->GetType() == "escrowrelease" )
+                    {
+                        if ( tx->dag_st.previous_hash() == originalEscrowId )
+                        {
+                            m_logger->debug( "Found matching escrow release transaction with tx id: " +
+                                             tx->dag_st.data_hash() );
+                            return true;
+                        }
+                    }
+                }
+            }
+            std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+        }
+        m_logger->debug( "Timed out waiting for escrow release transaction for escrow id: " + originalEscrowId );
+        return false;
+    }
 }

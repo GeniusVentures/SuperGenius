@@ -838,4 +838,9 @@ namespace sgns
         return transaction_manager_->WaitForTransactionIncoming( txId, timeout );
     }
 
+    bool GeniusNode::WaitForEscrowRelease( const std::string        &originalEscrowId,
+                                                                   std::chrono::milliseconds timeout )
+    {
+        return transaction_manager_->WaitForEscrowRelease( originalEscrowId, timeout );
+    }
 }
