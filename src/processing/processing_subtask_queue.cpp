@@ -238,7 +238,57 @@ void ProcessingSubTaskQueue::LogQueue() const
 
         m_logger->trace(ss.str());
     }
+
 }
+    bool ProcessingSubTaskQueue::AddOwnershipRequest(const std::string& nodeId, int64_t timestamp)
+    {
+        if (m_queue != nullptr)
+        {
+            // Check if the request already exists
+            for (int i = 0; i < m_queue->ownership_requests_size(); i++)
+            {
+                if (m_queue->ownership_requests(i).node_id() == nodeId)
+                {
+                    return false;  // Request already exists
+                }
+            }
+
+            auto request = m_queue->add_ownership_requests();
+            request->set_node_id(nodeId);
+            request->set_request_timestamp(timestamp);
+
+            // Update the queue timestamp
+            auto current_time = std::chrono::system_clock::now();
+            m_queue->set_last_update_timestamp(current_time.time_since_epoch().count());
+
+            LogQueue();
+            return true;
+        }
+        return false;
+    }
+
+    bool ProcessingSubTaskQueue::ProcessNextOwnershipRequest()
+    {
+        if (HasOwnership() && m_queue != nullptr && m_queue->ownership_requests_size() > 0)
+        {
+            // Get the first request
+            auto request = m_queue->ownership_requests(0);
+
+            // Remove it from the queue (by moving all others up)
+            for (int i = 0; i < m_queue->ownership_requests_size() - 1; i++)
+            {
+                m_queue->mutable_ownership_requests(i)->CopyFrom(m_queue->ownership_requests(i + 1));
+            }
+            m_queue->mutable_ownership_requests()->RemoveLast();
+
+            // Transfer ownership
+            ChangeOwnershipTo(request.node_id());
+            LogQueue();
+            return true;
+        }
+        return false;
+    }
+
 }
 
 ////////////////////////////////////////////////////////////////////////////////

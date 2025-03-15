@@ -110,7 +110,7 @@ TEST_F(PriceRetrievalTest, GetHistoricalPriceRange)
               << " to " << retriever.formatDate(now * 1000) << ":" << std::endl;
     
     //Just print the first few and last few prices to avoid flooding the output
-    int count = 0;
+    size_t count = 0;
     for (const auto& [timestamp, price] : prices.value()["genius-ai"]) {
         if (count < 5 || count > prices.value().size() - 5) {
             std::cout << "  " << retriever.formatDate(timestamp, true) << ": $" << price << std::endl;

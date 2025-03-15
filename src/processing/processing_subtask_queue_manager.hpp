@@ -140,6 +140,13 @@ namespace sgns::processing
         uint64_t m_ownership_acquired_at_;      // When this node acquired ownership (in ms)
         uint64_t m_ownership_last_delta_time_;  // When this node last updated the queue timestamp
 
+        // Add to private section of ProcessingSubTaskQueueManager
+        struct OwnershipRequest {
+            std::string node_id;
+            uint64_t timestamp;  // Timestamp when request was received
+        };
+        std::queue<OwnershipRequest> m_ownershipRequestQueue;
+
         base::Logger m_logger = base::createLogger( "ProcessingSubTaskQueueManager" );
     };
 }

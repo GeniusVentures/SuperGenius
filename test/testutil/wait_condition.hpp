@@ -6,6 +6,7 @@
 #include <string>
 #include <gtest/gtest.h>
 #include "testutil/color_support.hpp"
+#include "base/util.hpp"
 
 namespace sgns::test {
 
@@ -64,38 +65,6 @@ namespace sgns::test {
     }
 
 /**
- * Wait for a condition to become true with timeout
- * @param condition a callable that returns bool, true when condition is met
- * @param timeout maximum time to wait
- * @param actualDuration optional pointer to store the actual wait duration
- * @param check_interval time to wait between condition checks
- * @return true if condition became true before timeout, false if timeout occurred
- */
-template <typename Condition>
-bool waitForCondition(Condition condition,
-                     std::chrono::milliseconds timeout,
-                     std::chrono::milliseconds* actualDuration = nullptr,
-                     std::chrono::milliseconds check_interval = std::chrono::milliseconds(10)) {
-    auto startTime = std::chrono::steady_clock::now();
-    while (!condition()) {
-        if (std::chrono::steady_clock::now() - startTime > timeout) {
-            if (actualDuration) {
-                *actualDuration = std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::steady_clock::now() - startTime);
-            }
-            return false; // Timeout occurred
-        }
-        std::this_thread::sleep_for(check_interval);
-    }
-
-    if (actualDuration) {
-        *actualDuration = std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::steady_clock::now() - startTime);
-    }
-    return true; // Condition met within timeout
-}
-
-/**
  * Assert that a condition becomes true within the timeout (fatal assertion)
  * @param condition a callable that returns bool, true when condition is met
  * @param timeout maximum time to wait
@@ -103,24 +72,38 @@ bool waitForCondition(Condition condition,
  * @param actualDuration optional pointer to store the actual wait duration
  * @param check_interval time to wait between condition checks
  */
-template <typename Condition>
-void assertWaitForCondition(Condition condition,
-                           std::chrono::milliseconds timeout,
-                           const std::string& description = "",
-                           std::chrono::milliseconds* actualDuration = nullptr,
-                           std::chrono::milliseconds check_interval = std::chrono::milliseconds(10)) {
-    bool result = waitForCondition(condition, timeout, actualDuration, check_interval);
+    template <typename Condition>
+    void assertWaitForCondition(Condition condition,
+                               std::chrono::milliseconds timeout,
+                               const std::string& description = "",
+                               std::chrono::milliseconds* actualDuration = nullptr,
+                               std::chrono::milliseconds check_interval = std::chrono::milliseconds(10),
+                               const char* file_name = __FILE__,
+                               int line_number = __LINE__)
+    {
+        bool result = waitForCondition(condition, timeout, actualDuration, check_interval);
 
-    if (!result) {
-        std::string message = "Timed out waiting for condition";
-        if (!description.empty()) {
-            message += ": " + description;
+        if (!result)
+        {
+            std::string message = "Timed out waiting for condition";
+            if (!description.empty())
+            {
+                message += ": " + description;
+            }
+            message += " (timeout: " + std::to_string(timeout.count()) + "ms)";
+
+            // This will report the failure at the caller's source location
+            // Report the failure with the correct source location and terminate the test
+            GTEST_MESSAGE_AT_(file_name, line_number, message.c_str(), ::testing::TestPartResult::kFatalFailure);
         }
-        message += " (timeout: " + std::to_string(timeout.count()) + "ms)";
-
-        GTEST_FATAL_FAILURE_(message.c_str());
     }
-}
+
+#define ASSERT_WAIT_FOR_CONDITION(condition, timeout, description, actual_duration) \
+sgns::test::assertWaitForCondition(condition, timeout, description, actual_duration, std::chrono::milliseconds(10), __FILE__, __LINE__)
+
+#define ASSERT_WAIT_FOR_CONDITION_INTERVAL(condition, timeout, description, actual_duration) \
+sgns::test::assertWaitForCondition(condition, timeout, description, actual_duration, check_interval, __FILE__, __LINE__)
+
 
 /**
  * Expect that a condition becomes true within the timeout (non-fatal assertion)
@@ -130,24 +113,36 @@ void assertWaitForCondition(Condition condition,
  * @param actualDuration optional pointer to store the actual wait duration
  * @param check_interval time to wait between condition checks
  */
-template <typename Condition>
-void expectWaitForCondition(Condition condition,
-                           std::chrono::milliseconds timeout,
-                           const std::string& description = "",
-                           std::chrono::milliseconds* actualDuration = nullptr,
-                           std::chrono::milliseconds check_interval = std::chrono::milliseconds(10)) {
-    bool result = waitForCondition(condition, timeout, actualDuration, check_interval);
+    template <typename Condition>
+    void expectWaitForCondition(Condition condition,
+                               std::chrono::milliseconds timeout,
+                               const std::string& description = "",
+                               std::chrono::milliseconds* actualDuration = nullptr,
+                               std::chrono::milliseconds check_interval = std::chrono::milliseconds(10),
+                               const char* file_name = __FILE__,
+                               int line_number = __LINE__)
+    {
+        bool result = waitForCondition(condition, timeout, actualDuration, check_interval);
 
-    if (!result) {
-        std::string message = "Timed out waiting for condition";
-        if (!description.empty()) {
-            message += ": " + description;
+        if (!result)
+        {
+            std::string message = "Timed out waiting for condition";
+            if (!description.empty())
+            {
+                message += ": " + description;
+            }
+            message += " (timeout: " + std::to_string(timeout.count()) + "ms)";
+
+            // Report the failure with the correct source location and terminate the test
+            GTEST_MESSAGE_AT_(file_name, line_number, message.c_str(), ::testing::TestPartResult::kFatalFailure);
         }
-        message += " (timeout: " + std::to_string(timeout.count()) + "ms)";
-
-        GTEST_NONFATAL_FAILURE_(message.c_str());
     }
-}
+
+#define EXPECT_WAIT_FOR_CONDITION(condition, timeout, description, actual_duration) \
+sgns::test::expectWaitForCondition(condition, timeout, description, actual_duration, std::chrono::milliseconds(10), __FILE__, __LINE__)
+
+#define EXPECT_WAIT_FOR_CONDITION_INTERVAL(condition, timeout, description, actual_duration, check_interval) \
+sgns::test::expectWaitForCondition(condition, timeout, description, actual_duration, check_interval, __FILE__, __LINE__)
 
 } // namespace sgns::test
 
