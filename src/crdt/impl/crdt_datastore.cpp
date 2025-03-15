@@ -278,7 +278,7 @@ namespace sgns::crdt
                 continue;
             }
             std::unique_lock lock( seenHeadsMutex_ );
-            seenHeads_.push_back( bCastHeadCID );
+            seenHeads_.insert( bCastHeadCID );
         }
     }
 
@@ -304,7 +304,7 @@ namespace sgns::crdt
         {
             return;
         }
-
+        //std::cout << "Dag Worker QUant: " << dagWorkerJobList.size() << std::endl;
         {
             std::unique_lock lock( dagWorkerMutex_ );
             if ( dagWorkerJobList.empty() )
@@ -451,7 +451,13 @@ namespace sgns::crdt
         //if ( dagSyncerResult.has_failure() )
         //{
         //    logger_->error( "HandleBlock: error checking for known block" );
-        //    return outcome::failure( dagSyncerResult.error() );
+        //}
+        //else {
+        //if (dagSyncerResult.value())
+        //{
+        //    AddProcessedCID(aCid);
+        //}
+            
         //}
 
         //if ( dagSyncerResult.value() )
@@ -466,6 +472,10 @@ namespace sgns::crdt
             children.push_back( aCid );
             SendNewJobs( aCid, 0, children );
         }
+        //if (dagSyncerResult.has_failure())
+        //{
+        //    return outcome::failure(dagSyncerResult.error());
+        //}
 
         return outcome::success();
     }
@@ -538,10 +548,10 @@ namespace sgns::crdt
 
                 if ( graphResult.has_failure() )
                 {
-                    logger_->debug( "SendNewJobs: error fetching graph for CID:{} Retry {}/{}",
+                    logger_->error( "SendNewJobs: error fetching graph for CID:{} Retry {}/{} because {}",
                                     cid.toString().value(),
                                     retryCount + 1,
-                                    maxRetries );
+                                    maxRetries, graphResult.error().message() );
                     retryCount++;
                     continue;
                 }
@@ -581,7 +591,7 @@ namespace sgns::crdt
             dagJob.rootPriority_ = rootPriority;
             dagJob.delta_        = delta;
             dagJob.node_         = node;
-            logger_->info( "SendNewJobs PUSHING CID={} priority={} ",
+            logger_->debug( "SendNewJobs PUSHING CID={} priority={} ",
                            dagJob.rootCid_.toString().value(),
                            std::to_string( dagJob.rootPriority_ ) );
             {
@@ -824,7 +834,7 @@ namespace sgns::crdt
                                         aRoot.toString().value() );
                         return outcome::failure( replaceResult.error() );
                     }
-
+                    AddProcessedCID(child);
                     continue;
                 }
 
@@ -846,10 +856,12 @@ namespace sgns::crdt
                         // Don't let this failure prevent us from processing the other links.
                         logger_->error( "ProcessNode: error adding head {}", aRoot.toString().value() );
                     }
+                    AddProcessedCID(child);
                     continue;
                 }
 
                 children.push_back( child );
+                AddProcessedCID( child );
             }
         }
 
