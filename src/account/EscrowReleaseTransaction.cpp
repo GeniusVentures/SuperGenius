@@ -18,7 +18,7 @@ namespace sgns
                                                         std::string              escrow_source,
                                                         std::string              original_escrow_hash,
                                                         SGTransaction::DAGStruct dag ) :
-        IGeniusTransactions( "escrowrelease", SetDAGWithType( std::move( dag ), "escrowrelease" ) ),
+        IGeniusTransactions( "escrow-release", SetDAGWithType( std::move( dag ), "escrow-release" ) ),
         utxo_params_( std::move( params ) ),
         release_amount_( release_amount ),
         release_address_( std::move( release_address ) ),

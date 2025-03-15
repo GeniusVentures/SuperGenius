@@ -131,7 +131,7 @@ namespace sgns
           */
         static bool Register()
         {
-            RegisterDeserializer( "escrowrelease", &EscrowReleaseTransaction::DeSerializeByteVector );
+            RegisterDeserializer( "escrow-release", &EscrowReleaseTransaction::DeSerializeByteVector );
             return true;
         }
 

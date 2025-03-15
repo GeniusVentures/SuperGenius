@@ -379,7 +379,7 @@ namespace sgns
             m_logger->debug("Notifying receiving peers of transfers");
             BOOST_OUTCOME_TRYV2(auto &&, NotifyDestinationOfTransfer(transaction, maybe_proof));
         }
-        else if (transaction->GetType() == "escrowrelease")
+        else if (transaction->GetType() == "escrow-release")
         {
             m_logger->debug("Notifying escrow source of escrow release");
             BOOST_OUTCOME_TRYV2(auto &&, NotifyEscrowRelease(transaction, maybe_proof));
@@ -1012,7 +1012,7 @@ namespace sgns
                 for ( const auto &entry : incoming_tx_processed_m )
                 {
                     auto tx = entry.second;
-                    if ( tx->GetType() == "escrowrelease" )
+                    if ( tx->GetType() == "escrow-release" )
                     {
                         auto escrowReleaseTx = std::dynamic_pointer_cast<EscrowReleaseTransaction>( tx );
                         if ( escrowReleaseTx && escrowReleaseTx->GetOriginalEscrowHash() == originalEscrowId )

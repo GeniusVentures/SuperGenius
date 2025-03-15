@@ -153,8 +153,8 @@ namespace sgns
         static inline const std::unordered_map<std::string, TransactionParserFn> transaction_parsers = {
             { "transfer", &TransactionManager::ParseTransferTransaction },
             { "mint", &TransactionManager::ParseMintTransaction },
-            { "escrow", &TransactionManager::ParseEscrowTransaction },
-            { "escrowrelease", &TransactionManager::ParseEscrowReleaseTransaction } 
+            { "escrow-hold", &TransactionManager::ParseEscrowTransaction },
+            { "escrow-release", &TransactionManager::ParseEscrowReleaseTransaction } 
         };
 
         base::Logger m_logger = sgns::base::createLogger( "TransactionManager" );
