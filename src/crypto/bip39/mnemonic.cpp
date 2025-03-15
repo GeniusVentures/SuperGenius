@@ -16,19 +16,59 @@ namespace sgns::crypto::bip39 {
     /**
      * @return true if string s is a valid utf-8, false otherwise
      */
-    bool isValidUtf8(const std::string &s) {
-      // cannot replace for std::string_view for security reasons
-      //std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>
-      //---------- fixed by ruymaster --- need to check on ubuntu --- //
-      std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t>
-          utf16conv;
-      try {
-        auto utf16 = utf16conv.from_bytes(s.data());
-      } catch (...) {
-        return false;
+      bool isValidUtf8(const std::string &s) {
+          const unsigned char* bytes = reinterpret_cast<const unsigned char*>(s.data());
+          size_t len = s.length();
+
+          for (size_t i = 0; i < len; i++) {
+              // Single byte character (0xxxxxxx)
+              if (bytes[i] <= 0x7F) {
+                  continue;
+              }
+
+              // Start of a 2-byte character (110xxxxx)
+              else if ((bytes[i] & 0xE0) == 0xC0) {
+                  // Check if we have at least one more byte
+                  if (i + 1 >= len) return false;
+
+                  // Check if the next byte is a continuation byte (10xxxxxx)
+                  if ((bytes[i + 1] & 0xC0) != 0x80) return false;
+
+                  i += 1;
+              }
+
+              // Start of a 3-byte character (1110xxxx)
+              else if ((bytes[i] & 0xF0) == 0xE0) {
+                  // Check if we have at least two more bytes
+                  if (i + 2 >= len) return false;
+
+                  // Check if the next two bytes are continuation bytes (10xxxxxx)
+                  if ((bytes[i + 1] & 0xC0) != 0x80 || (bytes[i + 2] & 0xC0) != 0x80) return false;
+
+                  i += 2;
+              }
+
+              // Start of a 4-byte character (11110xxx)
+              else if ((bytes[i] & 0xF8) == 0xF0) {
+                  // Check if we have at least three more bytes
+                  if (i + 3 >= len) return false;
+
+                  // Check if the next three bytes are continuation bytes (10xxxxxx)
+                  if ((bytes[i + 1] & 0xC0) != 0x80 ||
+                      (bytes[i + 2] & 0xC0) != 0x80 ||
+                      (bytes[i + 3] & 0xC0) != 0x80) return false;
+
+                  i += 3;
+              }
+
+              // Invalid start byte
+              else {
+                  return false;
+              }
+          }
+
+          return true;
       }
-      return true;
-    }
   }  // namespace
 
   outcome::result<Mnemonic> Mnemonic::parse(std::string_view phrase) {

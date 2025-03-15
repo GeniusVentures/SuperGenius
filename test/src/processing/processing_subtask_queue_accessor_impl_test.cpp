@@ -7,15 +7,17 @@
 #include <gtest/gtest.h>
 
 #include <libp2p/log/configurator.hpp>
-#include <libp2p/log/logger.hpp>
 
 #include <boost/functional/hash.hpp>
 #include <thread>
 
 #include "testutil/wait_condition.hpp"
 
+#include "base/logger.hpp"
+
 using namespace sgns::processing;
 using namespace sgns::test;
+using namespace sgns::base;
 
 namespace
 {
@@ -32,7 +34,10 @@ namespace
     class SubTaskResultStorageMock : public SubTaskResultStorage
     {
     public:
-        void AddSubTaskResult(const SGProcessing::SubTaskResult& subTaskResult) override {}
+        void AddSubTaskResult(const SGProcessing::SubTaskResult& subTaskResult) override
+        {
+            Color::PrintInfo("AddSubTaskResult ", subTaskResult.subtaskid(), " ", subTaskResult.node_address());
+        }
         void RemoveSubTaskResult(const std::string& subTaskId) override {}
         std::vector<SGProcessing::SubTaskResult> GetSubTaskResults(
             const std::set<std::string>& subTaskIds) override { return {};}
@@ -60,7 +65,7 @@ namespace
             return;
         }
 
-        outcome::result<SGProcessing::SubTaskResult> ProcessSubTask(
+        libp2p::outcome::result<SGProcessing::SubTaskResult> ProcessSubTask(
         const SGProcessing::SubTask& subTask, uint32_t initialHashCode) override 
         {
             SGProcessing::SubTaskResult result;
@@ -130,6 +135,7 @@ class SubTaskQueueAccessorImplTest : public ::testing::Test
 public:
     virtual void SetUp() override
     {
+#ifdef SGNS_DEBUGLOGS
         // prepare log system
         auto logging_system = std::make_shared<soralog::LoggingSystem>(
             std::make_shared<soralog::ConfiguratorFromYAML>(
@@ -141,6 +147,11 @@ public:
 
         libp2p::log::setLoggingSystem(logging_system);
         libp2p::log::setLevelOfGroup("processing_engine_test", soralog::Level::DEBUG);
+
+        auto loggerProcQM  = sgns::base::createLogger( "ProcessingSubTaskQueueManager" );
+
+        loggerProcQM->set_level( spdlog::level::debug );
+#endif
     }
 };
 
@@ -155,15 +166,15 @@ TEST_F(SubTaskQueueAccessorImplTest, SubscriptionToResultChannel)
     auto start1Future = pubs1->Start(40001, {});
 
     auto pubs2 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();;
-    auto start2Future = pubs2->Start(40001, { pubs1->GetLocalAddress() });
+    auto start2Future = pubs2->Start(40002, { pubs1->GetLocalAddress() });
 
     std::chrono::milliseconds resultTime;
-    assertWaitForCondition(
-        [&start1Future, &start2Future]() {
+    ASSERT_WAIT_FOR_CONDITION(
+        ([&start1Future, &start2Future]() {
             start1Future.get();
             start2Future.get();
             return true;
-        },
+        }),
         std::chrono::milliseconds(2000),
         "Pubsub nodes initialization failed",
         &resultTime
@@ -214,7 +225,7 @@ TEST_F(SubTaskQueueAccessorImplTest, SubscriptionToResultChannel)
     });
 
     // Wait for connection to be established
-   assertWaitForCondition(
+   ASSERT_WAIT_FOR_CONDITION(
         [&connectionEstablished]() { return connectionEstablished.load(); },
         std::chrono::milliseconds(2000),
         "Connection to subtask queue was not established",
@@ -229,7 +240,7 @@ TEST_F(SubTaskQueueAccessorImplTest, SubscriptionToResultChannel)
     resultChannel.Publish(result.SerializeAsString());
 
     // Wait for the result to be received
-    assertWaitForCondition(
+    ASSERT_WAIT_FOR_CONDITION(
         [&subTaskQueueAccessor]() { return subTaskQueueAccessor->GetResults().size() > 0; },
         std::chrono::milliseconds(2000),
         "Result was not received by SubTaskQueueAccessor",
@@ -257,7 +268,7 @@ TEST_F(SubTaskQueueAccessorImplTest, TaskFinalization)
     auto start1Future = pubs1->Start(40001, {});
 
     std::chrono::milliseconds resultTime;
-    assertWaitForCondition(
+    ASSERT_WAIT_FOR_CONDITION(
         [&start1Future]() {
             start1Future.get();
             return true;
@@ -320,7 +331,7 @@ TEST_F(SubTaskQueueAccessorImplTest, TaskFinalization)
         engine1->StartQueueProcessing(subTaskQueueAccessor1);
         });
 
-    assertWaitForCondition(
+    ASSERT_WAIT_FOR_CONDITION(
         [&isTaskFinalized]() { return isTaskFinalized.load(); },
         std::chrono::milliseconds(2000),
         "Task not finalized",
@@ -345,7 +356,7 @@ TEST_F(SubTaskQueueAccessorImplTest, SubtaskTimeoutAndReprocessing)
     auto start1Future = pubs1->Start(40001, {});
 
     std::chrono::milliseconds resultTime;
-    assertWaitForCondition(
+    ASSERT_WAIT_FOR_CONDITION(
         [&start1Future]() {
             start1Future.get();
             return true;
@@ -426,7 +437,7 @@ TEST_F(SubTaskQueueAccessorImplTest, SubtaskTimeoutAndReprocessing)
     });
 
     // Wait for connection to be established
-    assertWaitForCondition(
+    ASSERT_WAIT_FOR_CONDITION(
         [&connectionEstablished1]() { return connectionEstablished1.load(); },
         std::chrono::milliseconds(2000),
         "Connection to subtask queue 1 was not established",
@@ -434,7 +445,7 @@ TEST_F(SubTaskQueueAccessorImplTest, SubtaskTimeoutAndReprocessing)
     );
 
     // Wait for processing attempt and timeout
-    assertWaitForCondition(
+    ASSERT_WAIT_FOR_CONDITION(
         [&processingCore1]() { return !processingCore1->m_processedSubTasks.empty(); },
         std::chrono::milliseconds(2000),
         "First node did not start processing any subtasks",
@@ -475,7 +486,7 @@ TEST_F(SubTaskQueueAccessorImplTest, SubtaskTimeoutAndReprocessing)
     engine1->StopQueueProcessing();
 
     // Wait for the queue manager to handle expired tasks
-    assertWaitForCondition(
+    ASSERT_WAIT_FOR_CONDITION(
         [&processingQueueManager2]() { return processingQueueManager2->HasOwnership(); },
         std::chrono::milliseconds(1000),
         "Second node did not acquire queue ownership",
@@ -501,7 +512,7 @@ TEST_F(SubTaskQueueAccessorImplTest, SubtaskTimeoutAndReprocessing)
     });
 
     // Wait for connection to be established
-    assertWaitForCondition(
+    ASSERT_WAIT_FOR_CONDITION(
         [&connectionEstablished2]() { return connectionEstablished2.load(); },
         std::chrono::milliseconds(2000),
         "Connection to subtask queue 2 was not established",
@@ -509,7 +520,7 @@ TEST_F(SubTaskQueueAccessorImplTest, SubtaskTimeoutAndReprocessing)
     );
 
     // Wait for second node to process subtasks and finalize
-    assertWaitForCondition(
+    ASSERT_WAIT_FOR_CONDITION(
         [&isTaskFinalized2]() { return isTaskFinalized2; },
         std::chrono::milliseconds(3000),
         "Task was not finalized by second node",

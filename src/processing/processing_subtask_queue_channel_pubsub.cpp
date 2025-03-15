@@ -1,7 +1,9 @@
 #include "processing_subtask_queue_channel_pubsub.hpp"
 #include <thread>
-#include <utility>
+#include <base/util.hpp>
+#include <outcome/outcome.hpp>
 
+using namespace libp2p;
 namespace sgns::processing
 {
     ProcessingSubTaskQueueChannelPubSub::ProcessingSubTaskQueueChannelPubSub(
@@ -18,22 +20,45 @@ namespace sgns::processing
     m_logger->debug("[RELEASED] this: {}", reinterpret_cast<size_t>(this));
     }
 
-    void ProcessingSubTaskQueueChannelPubSub::Listen( size_t msSubscriptionWaitingDuration )
+    ::outcome::result<std::variant<std::chrono::milliseconds, std::future<GossipPubSubTopic::Subscription>>>
+    ProcessingSubTaskQueueChannelPubSub::Listen(std::chrono::milliseconds msSubscriptionWaitingDuration)
     {
-        // Run messages processing once all dependent object are created
-
-        m_processingQueueChannel->Subscribe(
-            [weakSelf = weak_from_this()]( boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message &> message )
+        // Subscribe to the processing queue channel
+        auto& subscription_future = m_processingQueueChannel->Subscribe(
+            [weakSelf = weak_from_this()](boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message &> message)
             {
-                if ( auto self = weakSelf.lock() ) // Check if object still exists
+                if (auto self = weakSelf.lock())
                 {
-                    self->OnProcessingChannelMessage( message );
+                    self->OnProcessingChannelMessage(message);
                 }
-            } );
-        if ( msSubscriptionWaitingDuration > 0 )
+            },
+            msSubscriptionWaitingDuration.count() == 0  // If waiting duration is 0, subscribe now
+        );
+
+        if (msSubscriptionWaitingDuration.count() > 0)
         {
-            std::this_thread::sleep_for( std::chrono::milliseconds( msSubscriptionWaitingDuration ) );
+            // If a waiting duration is provided, wait for the subscription to complete
+            std::chrono::milliseconds resultTime;
+            bool success = waitForCondition(
+                [&subscription_future]() {
+                    return subscription_future.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
+                },
+                msSubscriptionWaitingDuration,
+                &resultTime
+            );
+
+            if (success) {
+                m_logger->debug("Subscription established after {} ms", resultTime.count());
+                return std::variant<std::chrono::milliseconds, std::future<GossipPubSub::Subscription>>(resultTime);
+            } else {
+                m_logger->error("Subscription not established within the specified time ({} ms)",
+                             msSubscriptionWaitingDuration.count());
+                return failure(boost::system::errc::timed_out);
+            }
         }
+
+        // If no waiting requested, return the future
+        return std::variant<std::chrono::milliseconds, std::future<GossipPubSubTopic::Subscription>>(std::move(subscription_future));
     }
 
     void ProcessingSubTaskQueueChannelPubSub::RequestQueueOwnership( const std::string &nodeId )

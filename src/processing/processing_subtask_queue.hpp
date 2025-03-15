@@ -63,7 +63,20 @@ public:
     */
     std::chrono::system_clock::time_point GetLastLockTimestamp() const;
 
+    /** Adds a new ownership request to the queue
+    * @param nodeId - ID of the node requesting ownership
+    * @param timestamp - timestamp when the request was created
+    * @return true if the request was successfully added, false if it already exists
+    */
+    bool AddOwnershipRequest(const std::string& nodeId, int64_t timestamp);
+
+    /** Processes the next ownership request in the queue
+    * @return true if an ownership request was processed, false if the queue is empty or the node doesn't have ownership
+    */
+    bool ProcessNextOwnershipRequest();
+
 private:
+
     void ChangeOwnershipTo(const std::string& nodeId);
 
     bool LockItem(size_t& lockedItemIndex);
@@ -76,6 +89,7 @@ private:
     std::vector<int> m_enabledItemIndices;
 
     base::Logger m_logger = base::createLogger("ProcessingSubTaskQueue");
+
 };
 }
 

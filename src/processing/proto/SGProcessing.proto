@@ -51,12 +51,17 @@ message ProcessingQueueItem
     string lock_node_id = 2;
 }
 
+message OwnershipRequest {
+    string node_id = 1;
+    int64 request_timestamp = 2;  // Timestamp when request was created
+}
 
 message ProcessingQueue
 {
     repeated ProcessingQueueItem items = 1;
     int64 last_update_timestamp = 2;
     string owner_node_id = 3;
+    repeated OwnershipRequest ownership_requests = 4;
 }
 
 message SubTaskCollection
@@ -73,6 +78,7 @@ message SubTaskQueue
 message SubTaskQueueRequest
 {
     string node_id = 1;
+    int64 request_timestamp = 2;
 }
 
 // SubTask results are published to result_channel

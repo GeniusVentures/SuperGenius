@@ -223,4 +223,38 @@ namespace sgns
         return oss.str();
     }
 }
+
+/**
+ * Wait for a condition to become true with timeout
+ * @param condition a callable that returns bool, true when condition is met
+ * @param timeout maximum time to wait
+ * @param actualDuration optional pointer to store the actual wait duration
+ * @param check_interval time to wait between condition checks
+ * @return true if condition became true before timeout, false if timeout occurred
+ */
+template <typename Condition>
+bool waitForCondition(Condition condition,
+                     std::chrono::milliseconds timeout,
+                     std::chrono::milliseconds* actualDuration = nullptr,
+                     std::chrono::milliseconds check_interval = std::chrono::milliseconds(10)) {
+    auto startTime = std::chrono::steady_clock::now();
+    while (!condition()) {
+        if (std::chrono::steady_clock::now() - startTime > timeout) {
+            if (actualDuration) {
+                *actualDuration = std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::steady_clock::now() - startTime);
+            }
+            return false; // Timeout occurred
+        }
+        std::this_thread::sleep_for(check_interval);
+    }
+
+    if (actualDuration) {
+        *actualDuration = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - startTime);
+    }
+    return true; // Condition met within timeout
+}
+
+
 #endif //_UTIL_HPP

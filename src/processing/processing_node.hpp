@@ -34,9 +34,9 @@ namespace sgns::processing
             std::function<void( void )>                             processingDoneSink,
             std::string                                             node_id,
             const std::string                                      &processingQueueChannelId,
-            std::list<SGProcessing::SubTask>                        subTasks                      = {},
-            size_t                                                  msSubscriptionWaitingDuration = 0,
-            std::chrono::seconds                                    ttl = std::chrono::minutes( 2 ) );
+            std::list<SGProcessing::SubTask>                        subTasks = {},
+            std::chrono::milliseconds msSubscriptionWaitingDuration          = std::chrono::milliseconds( 2000 ),
+            std::chrono::seconds      ttl                                    = std::chrono::minutes( 2 ) );
         ~ProcessingNode();
 
         /** Attaches the node to the processing channel
@@ -62,7 +62,8 @@ namespace sgns::processing
 
         bool AttachTo( const std::string &processingQueueChannelId, size_t msSubscriptionWaitingDuration = 0 );
         bool CreateSubTaskQueue( std::list<SGProcessing::SubTask> subTasks );
-        void Initialize( const std::string &processingQueueChannelId, size_t msSubscriptionWaitingDuration );
+        void Initialize( const std::string        &processingQueueChannelId,
+                         std::chrono::milliseconds msSubscriptionWaitingDuration );
 
         void InitTTL();
         void StartTTLTimer();

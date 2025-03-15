@@ -37,9 +37,21 @@ namespace sgns::processing
 
     bool ProcessingSubTaskQueueManager::CreateQueue( std::list<SGProcessing::SubTask> &subTasks )
     {
-        auto timestamp = std::chrono::system_clock::now();
+        // Check if all subtasks have at least one chunk to process
+        bool hasValidChunks = true;
+        for (const auto& subtask : subTasks) {
+            if (subtask.chunkstoprocess_size() == 0) {
+                hasValidChunks = false;
+                break;
+            }
+        }
 
-        bool hasChunksDuplicates = false;
+        if (!hasValidChunks) {
+            m_logger->error("Failed to create queue: subtasks must have at least one chunk to process");
+            return false;
+        }
+
+        auto timestamp = std::chrono::system_clock::now();
 
         auto queue           = std::make_shared<SGProcessing::SubTaskQueue>();
         auto queueSubTasks   = queue->mutable_subtasks();
@@ -129,6 +141,7 @@ namespace sgns::processing
 
         // Update queue timestamp based on current ownership duration
         UpdateQueueTimestamp();
+        bool losingOwnership = false;
 
         while ( !m_onSubTaskGrabbedCallbacks.empty() )
         {
@@ -144,6 +157,14 @@ namespace sgns::processing
 
                 m_onSubTaskGrabbedCallbacks.front()( { m_queue->subtasks().items( itemIdx ) } );
                 m_onSubTaskGrabbedCallbacks.pop_front();
+
+                // Check for pending ownership requests AFTER processing a subtask
+                if ( m_queue->processing_queue().ownership_requests_size() > 0 )
+                {
+                    m_logger->debug("Pending ownership requests detected. Stopping further subtask processing for node {}.", m_localNodeId);
+                    losingOwnership = true;
+                    break;
+                }
             }
             else
             {
@@ -154,6 +175,18 @@ namespace sgns::processing
                     break;
                 }
             }
+        }
+
+        if ( losingOwnership &&
+            m_processedSubTaskIds.size() < (size_t)m_queue->subtasks().items_size() )
+        {
+            // Add current node's ownership request
+            m_processingQueue.AddOwnershipRequest(m_localNodeId,
+                std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::steady_clock::now().time_since_epoch()).count());
+
+            m_logger->debug("Re-adding local node ", m_localNodeId, " to ownership request queue");
+            PublishSubTaskQueue();
         }
 
         if ( !m_onSubTaskGrabbedCallbacks.empty() )
@@ -312,20 +345,31 @@ namespace sgns::processing
         const SGProcessing::SubTaskQueueRequest &request )
     {
         std::lock_guard<std::mutex> guard( m_queueMutex );
-        if ( m_processingQueue.MoveOwnershipTo( request.node_id() ) )
+        // If we are the owner and can immediately transfer ownership, do so
+        if ( m_processingQueue.HasOwnership() )
         {
-            // Calculate how long we've owned the queue before transferring ownership
-            auto current_time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                                       std::chrono::steady_clock::now().time_since_epoch() )
-                                       .count();
-            auto ownership_duration_ms = current_time_ms - m_ownership_acquired_at_;
+            if ( m_processingQueue.MoveOwnershipTo( request.node_id() ) )
+            {
+                // Calculate how long we've owned the queue before transferring ownership
+                auto current_time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                           std::chrono::steady_clock::now().time_since_epoch() )
+                                           .count();
+                auto ownership_duration_ms = current_time_ms - m_ownership_acquired_at_;
 
-            // Update the queue's total time counter
-            m_queue_timestamp_ += ownership_duration_ms;
+                // Update the queue's total time counter
+                m_queue_timestamp_ += ownership_duration_ms;
 
-            LogQueue();
-            PublishSubTaskQueue();
-            return true;
+                LogQueue();
+                PublishSubTaskQueue();
+                return true;
+            }
+        }
+
+        // Otherwise, add to the shared ownership request queue
+        bool added = m_processingQueue.AddOwnershipRequest(request.node_id(), request.request_timestamp());
+        if (added) {
+            m_logger->debug("Added ownership request from node {} to queue", request.node_id());
+            PublishSubTaskQueue();  // Publish updated queue with new request
         }
 
         m_logger->debug( "QUEUE_REQUEST_RECEIVED" );
@@ -343,7 +387,19 @@ namespace sgns::processing
             std::lock_guard<std::mutex> guard( m_queueMutex );
             m_logger->debug( "QUEUE_REQUEST_TIMEOUT" );
             m_dltQueueResponseTimeout.expires_at( boost::posix_time::pos_infin );
-            if ( m_processingQueue.RollbackOwnership() )
+
+            // If we're the owner, process the next request in the queue
+            if (m_processingQueue.HasOwnership() && m_processingQueue.ProcessNextOwnershipRequest()) {
+                // Ownership has been transferred
+                auto current_time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                           std::chrono::steady_clock::now().time_since_epoch() )
+                                           .count();
+                auto ownership_duration_ms = current_time_ms - m_ownership_acquired_at_;
+                m_queue_timestamp_ += ownership_duration_ms;
+
+                LogQueue();
+                PublishSubTaskQueue();
+            } else if ( m_processingQueue.RollbackOwnership() )
             {
                 // Record ownership acquisition time when rolling back ownership
                 m_ownership_acquired_at_ = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -355,6 +411,18 @@ namespace sgns::processing
 
                 if ( m_processingQueue.HasOwnership() )
                 {
+
+                    // Check if there are any pending ownership requests
+                    if ( m_queue->processing_queue().ownership_requests_size() > 0 )
+                        {
+                        // If there are requests, try to process the next request instead of grabbing subtasks
+                        if ( m_processingQueue.ProcessNextOwnershipRequest() )
+                         {
+                            LogQueue();
+                            PublishSubTaskQueue();
+                            return;  // Exit without processing subtasks
+                        }
+                    }
                     ProcessPendingSubTaskGrabbing();
                 }
             }
