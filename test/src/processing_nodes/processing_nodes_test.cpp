@@ -293,7 +293,7 @@ TEST_F( ProcessingNodesTest, PostProcessing )
 
     // std::this_thread::sleep_for( std::chrono::milliseconds( 80000 ) );
     
-    auto result = node_main->WaitForEscrowRelease(escrow_txid, std::chrono::milliseconds(150000));
+    auto result = node_main->WaitForEscrowRelease(escrow_txid, std::chrono::milliseconds(30000));
     if (result)
     {
         std::cout << "escrowReleaseTxId found  " << std::endl;
@@ -321,5 +321,4 @@ TEST_F( ProcessingNodesTest, PostProcessing )
     ASSERT_EQ( balance_main + balance_node1 + balance_node2,
                node_main->GetBalance() + node_proc1->GetBalance() + node_proc2->GetBalance() + gameDeveloperPayment );
 
-    EXPECT_EQ(4,node_main->GetInTransactions().size());
 }

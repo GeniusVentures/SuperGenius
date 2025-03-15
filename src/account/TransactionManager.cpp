@@ -255,40 +255,33 @@ namespace sgns
             TransferTransaction::New( payout_peers,
                                       std::vector<InputUTXOInfo>{ escrow_utxo_input },
                                       FillDAGStruct() ) );
-
-        std::optional<std::vector<uint8_t>> maybe_proof;
+        
+        std::optional<std::vector<uint8_t>> transfer_proof;
 #ifdef _PROOF_ENABLED
         //TODO - Create with the real balance and amount
-        TransferProof prover( 1, 1 );
+        TransferProof transfer_prover( 1, 1 );
+        OUTCOME_TRY( ( auto &&, transfer_proof_result ), transfer_prover.GenerateFullProof() );
+        transfer_proof = std::move( transfer_proof_result );
+#endif
+        auto escrow_release_tx = std::make_shared<EscrowReleaseTransaction>(
+            EscrowReleaseTransaction::New( escrow_tx->GetUTXOParameters(),
+                                           escrow_tx->GetAmount(),
+                                           escrow_tx->GetDevAddress(),
+                                           escrow_tx->dag_st.source_addr(),
+                                           escrow_tx->dag_st.data_hash(),
+                                           FillDAGStruct() ) );
 
-        OUTCOME_TRY( ( auto &&, proof_result ), prover.GenerateFullProof() );
-        maybe_proof = std::move(proof_result);
+        std::optional<std::vector<uint8_t>> escrow_release_proof;
+#ifdef _PROOF_ENABLED
+        //TODO - Create with the real balance and amount
+        TransferProof escrow_release_prover( 1, 1 );
+        OUTCOME_TRY( ( auto &&, escrow_release_proof_result ), escrow_release_prover.GenerateFullProof() );
+        escrow_release_proof = std::move( escrow_release_proof_result );
 #endif
 
-        this->EnqueueTransaction( std::make_pair( transfer_transaction, maybe_proof ) );
-
-        auto escrow_release_dag = FillDAGStruct( );
-        auto escrow_release_tx = std::make_shared<EscrowReleaseTransaction>(
-            EscrowReleaseTransaction::New(
-                escrow_tx->GetUTXOParameters(),
-                escrow_tx->GetAmount(),
-                escrow_tx->GetDevAddress(),
-                escrow_tx->dag_st.source_addr(),
-                escrow_tx->dag_st.data_hash(),
-                escrow_release_dag
-            )
-        );
-        std::optional<std::vector<uint8_t>> maybe_proof2;
-        m_logger->debug( "Creating release proof ");
-        // #ifdef _PROOF_ENABLED
-        //     TransferProof prover2( static_cast<uint64_t>( account_m->GetBalance<uint64_t>() ),
-        //                         static_cast<uint64_t>( escrow_tx->GetAmount() ) );
-        //     OUTCOME_TRY((auto&&, proof_result2), prover2.GenerateFullProof());
-        //     maybe_proof2 = std::move(proof_result2);
-        // #endif
-        this->EnqueueTransaction( std::make_pair( escrow_release_tx, maybe_proof2 ) );
+        this->EnqueueTransaction( std::make_pair( escrow_release_tx, escrow_release_proof ) );
         m_logger->debug( "Enqueued escrow release transaction with hash: " + escrow_release_tx->dag_st.data_hash() );
-
+        this->EnqueueTransaction( std::make_pair( transfer_transaction, transfer_proof ) );
         return transfer_transaction->dag_st.data_hash();
     }
 
