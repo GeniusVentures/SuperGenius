@@ -206,7 +206,7 @@ namespace sgns
             sinks:
               - name: file
                 type: file
-                capacity: 40480
+                capacity: 1000
                 path: sgnslog.log
             groups:
               - name: SuperGeniusDemo
