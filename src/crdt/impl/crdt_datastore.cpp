@@ -480,7 +480,7 @@ namespace sgns::crdt
         return outcome::success();
     }
 
-    void CrdtDatastore::SendNewJobs( const CID &aRootCID, uint64_t aRootPriority, const std::vector<CID> &aChildren )
+void CrdtDatastore::SendNewJobs( const CID &aRootCID, uint64_t aRootPriority, const std::vector<CID> &aChildren )
     {
         // sendNewJobs calls getDeltas with the given
         // children and sends each response to the workers.
@@ -528,47 +528,25 @@ namespace sgns::crdt
 
         for ( const auto &cid : aChildren )
         {
-            //Fetch only root node with all children, but without children of their children
-            constexpr int maxRetries = 3;
-            int           retryCount = 0;
-            bool          success    = false;
-
-            std::shared_ptr<ipfs_lite::ipfs::merkledag::Leaf> leaf;
-            common::Buffer                                    nodeBuffer;
             logger_->debug( "SendNewJobs: TRYING TO FETCH NODE : {} from {}",
                             cid.toString().value(),
                             reinterpret_cast<uint64_t>( this ) );
 
-            // Retry loop for fetching the graph
-            while ( retryCount < maxRetries )
-            {
-                std::unique_lock lock( dagWorkerMutex_ );
-                auto             graphResult = dagSyncer_->fetchGraphOnDepth( cid, 1 );
-                lock.unlock();
+            // Single attempt to fetch the graph - getNode internally already has retry logic
+            std::unique_lock lock( dagWorkerMutex_ );
+            auto             graphResult = dagSyncer_->fetchGraphOnDepth( cid, 1 );
+            lock.unlock();
 
-                if ( graphResult.has_failure() )
-                {
-                    logger_->error( "SendNewJobs: error fetching graph for CID:{} Retry {}/{} because {}",
-                                    cid.toString().value(),
-                                    retryCount + 1,
-                                    maxRetries, graphResult.error().message() );
-                    retryCount++;
-                    continue;
-                }
-
-                // Fetch successful
-                leaf       = graphResult.value();
-                nodeBuffer = leaf->content();
-                success    = true;
-                break;
-            }
-            if ( !success )
+            if ( graphResult.has_failure() )
             {
-                logger_->error( "SendNewJobs: failed to fetch graph for CID:{} after {} retries.",
+                logger_->error( "SendNewJobs: error fetching graph for CID:{} - {}",
                                 cid.toString().value(),
-                                maxRetries );
+                                graphResult.error().message() );
                 continue;
             }
+
+            auto leaf       = graphResult.value();
+            auto nodeBuffer = leaf->content();
 
             // @todo Check if it is OK that the node has only content and doesn't have links
             auto nodeResult = ipfs_lite::ipld::IPLDNodeImpl::createFromRawBytes( nodeBuffer );
@@ -592,11 +570,10 @@ namespace sgns::crdt
             dagJob.delta_        = delta;
             dagJob.node_         = node;
             logger_->debug( "SendNewJobs PUSHING CID={} priority={} ",
-                           dagJob.rootCid_.toString().value(),
-                           std::to_string( dagJob.rootPriority_ ) );
+                            dagJob.rootCid_.toString().value(),
+                            std::to_string( dagJob.rootPriority_ ) );
             {
                 std::unique_lock lock( dagWorkerMutex_ );
-
                 dagWorkerJobList.push( dagJob );
             }
         }
