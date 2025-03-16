@@ -59,6 +59,8 @@ namespace sgns::processing
         ::outcome::result<std::variant<std::chrono::milliseconds, std::future<GossipPubSub::Subscription>>> Listen(
             std::chrono::milliseconds msSubscriptionWaitingDuration = std::chrono::milliseconds(2000));
 
+        size_t GetActiveNodesCount() const;
+
     private:
         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> m_processingQueueChannel;
 

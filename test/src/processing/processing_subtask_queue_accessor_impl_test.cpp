@@ -135,7 +135,6 @@ class SubTaskQueueAccessorImplTest : public ::testing::Test
 public:
     virtual void SetUp() override
     {
-#ifdef SGNS_DEBUGLOGS
         // prepare log system
         auto logging_system = std::make_shared<soralog::LoggingSystem>(
             std::make_shared<soralog::ConfiguratorFromYAML>(
@@ -146,12 +145,16 @@ public:
         logging_system->configure();
 
         libp2p::log::setLoggingSystem(logging_system);
+#ifdef SGNS_DEBUGLOGS
         libp2p::log::setLevelOfGroup("processing_engine_test", soralog::Level::DEBUG);
 
         auto loggerProcQM  = sgns::base::createLogger( "ProcessingSubTaskQueueManager" );
 
         loggerProcQM->set_level( spdlog::level::debug );
+#else
+        libp2p::log::setLevelOfGroup("processing_engine_test", soralog::Level::OFF);
 #endif
+
     }
 };
 

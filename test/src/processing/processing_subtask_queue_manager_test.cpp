@@ -164,7 +164,6 @@ class ProcessingSubTaskQueueManagerTest : public ::testing::Test
 public:
     virtual void SetUp() override
     {
-#ifdef SGNS_DEBUGLOGS
         // prepare log system
         auto logging_system = std::make_shared<soralog::LoggingSystem>(
             std::make_shared<soralog::ConfiguratorFromYAML>(
@@ -175,11 +174,14 @@ public:
         logging_system->configure();
 
         libp2p::log::setLoggingSystem(logging_system);
+#ifdef SGNS_DEBUGLOGS
         libp2p::log::setLevelOfGroup("processing_engine_test", soralog::Level::DEBUG);
 
         auto loggerProcQM  = sgns::base::createLogger( "ProcessingSubTaskQueueManager" );
 
         loggerProcQM->set_level( spdlog::level::debug );
+#else
+       libp2p::log::setLevelOfGroup("processing_engine_test", soralog::Level::OFF);
 #endif
     }
 };
@@ -618,8 +620,8 @@ TEST_F(ProcessingSubTaskQueueManagerTest, TwoNodesProcessingAndFinalizing)
     resultChannel.Subscribe([](boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message&> message) {});
 
     // Both nodes process at the same speed
-    auto processingCore1 = std::make_shared<ProcessingCoreImpl>(50);  // 50ms per subtask
-    auto processingCore2 = std::make_shared<ProcessingCoreImpl>(50);  // 50ms per subtask
+    auto processingCore1 = std::make_shared<ProcessingCoreImpl>( 50 );  // 50ms per subtask
+    auto processingCore2 = std::make_shared<ProcessingCoreImpl>( 50 );  // 50ms per subtask
 
     auto nodeId1 = "NODE_1";
     auto nodeId2 = "NODE_2";
@@ -651,14 +653,14 @@ TEST_F(ProcessingSubTaskQueueManagerTest, TwoNodesProcessingAndFinalizing)
     }
 
     auto queueChannel1 = std::make_shared<ProcessingSubTaskQueueChannelPubSub>(pubs1, "QUEUE_CHANNEL_ID");
-    auto queueChannel2 = std::make_shared<ProcessingSubTaskQueueChannelPubSub>(pubs1, "QUEUE_CHANNEL_ID");
+    auto queueChannel2 = std::make_shared<ProcessingSubTaskQueueChannelPubSub>(pubs2, "QUEUE_CHANNEL_ID");
 
     // Setup queue managers
     auto processingQueueManager1 = std::make_shared<ProcessingSubTaskQueueManager>(
         queueChannel1, pubs1->GetAsioContext(), nodeId1, [](const std::string &){});
 
     auto processingQueueManager2 = std::make_shared<ProcessingSubTaskQueueManager>(
-        queueChannel2, pubs1->GetAsioContext(), nodeId2, [](const std::string &){});
+        queueChannel2, pubs2->GetAsioContext(), nodeId2, [](const std::string &){});
 
     queueChannel1->SetQueueRequestSink(
       [qmWeak( std::weak_ptr<ProcessingSubTaskQueueManager>( processingQueueManager1 ) )](
@@ -667,7 +669,8 @@ TEST_F(ProcessingSubTaskQueueManagerTest, TwoNodesProcessingAndFinalizing)
           auto qm = qmWeak.lock();
           if ( qm )
           {
-              return qm->ProcessSubTaskQueueRequestMessage( request );
+              qm->ProcessSubTaskQueueRequestMessage( request );
+              return true;
           }
           return false;
       } );
@@ -679,7 +682,8 @@ TEST_F(ProcessingSubTaskQueueManagerTest, TwoNodesProcessingAndFinalizing)
         auto qm = qmWeak.lock();
         if (qm)
         {
-            return qm->ProcessSubTaskQueueMessage(queue);
+            qm->ProcessSubTaskQueueMessage(queue);
+            return true;
         }
         return false;
     });
@@ -691,7 +695,8 @@ TEST_F(ProcessingSubTaskQueueManagerTest, TwoNodesProcessingAndFinalizing)
           auto qm = qmWeak.lock();
           if ( qm )
           {
-              return qm->ProcessSubTaskQueueRequestMessage( request );
+              qm->ProcessSubTaskQueueRequestMessage( request );
+              return true;
           }
           return false;
       } );
@@ -703,7 +708,8 @@ TEST_F(ProcessingSubTaskQueueManagerTest, TwoNodesProcessingAndFinalizing)
         auto qm = qmWeak.lock();
         if (qm)
         {
-            return qm->ProcessSubTaskQueueMessage(queue);
+            qm->ProcessSubTaskQueueMessage(queue);
+            return true;
         }
         return false;
     });
@@ -746,7 +752,7 @@ TEST_F(ProcessingSubTaskQueueManagerTest, TwoNodesProcessingAndFinalizing)
         [](const std::string &) {});
 
     auto subTaskQueueAccessor2 = std::make_shared<SubTaskQueueAccessorImpl>(
-        pubs1,
+        pubs2,
         processingQueueManager2,
         std::make_shared<SubTaskStateStorageMock>(),
         std::make_shared<SubTaskResultStorageMock>(),
@@ -772,8 +778,10 @@ TEST_F(ProcessingSubTaskQueueManagerTest, TwoNodesProcessingAndFinalizing)
     // Node2 creates the same queue but isn't the owner
     processingQueueManager2->ProcessSubTaskQueueMessage(processingQueueManager1->GetQueueSnapshot().release());
 
-    engine1->StartQueueProcessing(subTaskQueueAccessor1);
+    // start engine2 first, so that it will send a message for queue ownership before engine1 can process all the
     engine2->StartQueueProcessing(subTaskQueueAccessor2);
+
+    engine1->StartQueueProcessing(subTaskQueueAccessor1);
 
     // Wait for all subtasks to be processed by both nodes
     ASSERT_WAIT_FOR_CONDITION(
@@ -802,24 +810,25 @@ TEST_F(ProcessingSubTaskQueueManagerTest, TwoNodesProcessingAndFinalizing)
 
     // Cleanup
     pubs1->Stop();
+    pubs2->Stop();
 
     // Verify results
     size_t totalProcessed = processingCore1->m_processedSubTasks.size() +
                             processingCore2->m_processedSubTasks.size();
     ASSERT_EQ(10, totalProcessed);
+    ASSERT_EQ(5, processingCore1->m_processedSubTasks.size());
+    ASSERT_EQ(5, processingCore2->m_processedSubTasks.size());
 
     // Only one node should finalize the task
     ASSERT_TRUE(isTaskFinalized1.load() || isTaskFinalized2.load());
 
     // The node that processed the last subtask should be the one that finalized
-    bool node1ProcessedLast = false;
     bool node2ProcessedLast = false;
 
     // Determine which node processed the last subtask based on timestamps
     // (We can't easily determine this without timestamps, but we know one of them did)
     if (isTaskFinalized1.load()) {
         ASSERT_TRUE(processingQueueManager1->HasOwnership());
-        node1ProcessedLast = true;
     } else {
         ASSERT_TRUE(processingQueueManager2->HasOwnership());
         node2ProcessedLast = true;

@@ -110,18 +110,28 @@ namespace sgns::processing
     void ProcessingSubTaskQueueChannelPubSub::HandleSubTaskQueueRequest(
         SGProcessing::ProcessingChannelMessage &channelMesssage )
     {
-        if ( m_queueRequestSink && !m_queueRequestSink( channelMesssage.subtask_queue_request() ) )
+        if ( m_queueRequestSink )
         {
-            m_logger->error( "Could not queue request sink" );
+            auto message = channelMesssage.subtask_queue_request();
+            if ( !m_queueRequestSink( message ))
+            {
+                m_logger->debug( "Queue request is pending for node {}", message.node_id()  );
+            } else
+            {
+                m_logger->debug( "Queue request was immediately fulfilled for node {}", message.node_id()  );
+            }
         }
     }
 
     void ProcessingSubTaskQueueChannelPubSub::HandleSubTaskQueue(
         SGProcessing::ProcessingChannelMessage &channelMesssage )
     {
-        if ( m_queueUpdateSink && !m_queueUpdateSink( channelMesssage.release_subtask_queue() ) )
+        auto message = channelMesssage.release_subtask_queue();
+        if ( m_queueUpdateSink )
         {
-            m_logger->error( "Could not update sink" );
+            auto queueChanged = m_queueUpdateSink( message );
+            m_logger->debug( "Queue changed = {} during release for node",  queueChanged);
         }
     }
+
 }
