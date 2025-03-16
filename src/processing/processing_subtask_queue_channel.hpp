@@ -29,6 +29,18 @@ public:
     * queue = subtask queue
     */
     virtual void PublishQueue(std::shared_ptr<SGProcessing::SubTaskQueue> queue) = 0;
+
+    /**
+     * Returns the number of active nodes in the channel
+     * @return number of nodes in the channel
+     */
+    virtual size_t GetActiveNodeCount() { return 2; };
+
+    /**
+     * Get the number of active nodes in the channel
+     * @return vector of nodes in the channel
+     */
+    virtual std::vector<std::string> GetActiveNodes() { return {"node1", "node2"}; };
 };
 }
 #endif // SUPERGENIUS_PROCESSING_SUBTASK_QUEUE_CHANNEL_HPP

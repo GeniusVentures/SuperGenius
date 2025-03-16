@@ -111,7 +111,8 @@ namespace sgns::processing
                 auto qm = qmWeak.lock();
                 if ( qm )
                 {
-                    return qm->ProcessSubTaskQueueRequestMessage( request );
+                    qm->ProcessSubTaskQueueRequestMessage( request );
+                    return true;
                 }
                 return false;
             } );
@@ -123,7 +124,8 @@ namespace sgns::processing
                 auto qm = qmWeak.lock();
                 if ( qm )
                 {
-                    return qm->ProcessSubTaskQueueMessage( queue );
+                    qm->ProcessSubTaskQueueMessage( queue );
+                    return true;
                 }
                 return false;
             } );
