@@ -94,8 +94,5 @@ target_include_directories(sgns_version
     $<INSTALL_INTERFACE:include>
 )
 
-target_link_libraries(sgns_version
-    PUBLIC
-)
 supergenius_install(sgns_version)
 
