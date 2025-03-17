@@ -66,7 +66,8 @@ message EscrowTx
     bytes dev_addr = 4; // 
     uint64 peers_cut = 5; // 
 }
-message EscrowReleaseTx {
+message EscrowReleaseTx 
+{
   SGTransaction.DAGStruct dag_struct = 1;
   UTXOTxParams utxo_params = 2;
   uint64 release_amount = 3;

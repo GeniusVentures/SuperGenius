@@ -282,10 +282,9 @@ TEST_F( ProcessingNodesTest, PostProcessing )
     auto balance_node2 = node_proc2->GetBalance();
     auto postjob       = node_main->ProcessImage( json_data );
 
-    EXPECT_TRUE( postjob );
+    EXPECT_TRUE( postjob ) << "post job error: " << postjob.error().message();
 
     EXPECT_TRUE( node_main->WaitForEscrowRelease( postjob.value(), std::chrono::milliseconds( 60000 ) ) );
-
     std::this_thread::sleep_for( std::chrono::milliseconds( 2000 ) );
 
     std::cout << "Balance main (Before):  " << balance_main << std::endl;

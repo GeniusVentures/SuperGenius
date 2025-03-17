@@ -667,7 +667,6 @@ namespace sgns
     outcome::result<void> TransactionManager::ParseEscrowReleaseTransaction(
         const std::shared_ptr<IGeniusTransactions> &tx )
     {
-        m_logger->debug( "Parsing escrow release transaction: " + tx->dag_st.data_hash() );
 
         auto escrowReleaseTx = std::dynamic_pointer_cast<EscrowReleaseTransaction>( tx );
         if ( !escrowReleaseTx )
@@ -676,14 +675,8 @@ namespace sgns
             return std::errc::invalid_argument;
         }
 
-        auto maybeEscrowTx = FetchTransaction(processing_db_m, escrowReleaseTx->GetOriginalEscrowHash());
-        if (!maybeEscrowTx.has_value())
-        {
-            m_logger->error("Could not fetch original escrow transaction for id: " + escrowReleaseTx->GetOriginalEscrowHash());
-            return std::errc::invalid_argument;
-        }
-
-        m_logger->debug( "Successfully fetched original escrow transaction for escrow: " + escrowReleaseTx->GetOriginalEscrowHash() );
+        std::string originalEscrowHash = escrowReleaseTx->GetOriginalEscrowHash();
+        m_logger->debug( "Successfully fetched release for escrow: " + originalEscrowHash );
 
         return outcome::success();
     }
