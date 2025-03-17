@@ -57,8 +57,8 @@ namespace
     {
         auto pubs1 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();
 
-        pubs1->Start( 40001, {} );
-
+        auto future = pubs1->Start( 40081, {} );
+        future.wait();
         auto pubs2 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();
         pubs2->Start( 40002, {} );
 
@@ -66,21 +66,22 @@ namespace
         std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
         pubs2->AddPeers( { pubs1->GetLocalAddress() } );
         std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
+
         sgns::ipfs_pubsub::GossipPubSubTopic resultChannel( pubs1, "CountTest" );
-        resultChannel.Subscribe( []( boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message &> message ) {},true );
-        resultChannel.Publish( "Wow" );
-        std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
+        resultChannel.Subscribe( []( boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message &> message ) {}, true );
         sgns::ipfs_pubsub::GossipPubSubTopic resultChannel2( pubs2, "CountTest" );
         resultChannel2.Subscribe( []( boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message &> message ) {},true );
-        resultChannel2.Publish( "Wow2" );
+        //resultChannel2.Publish( "Wow2" );
         std::this_thread::sleep_for( std::chrono::milliseconds( 3000 ) );
-        std::string test = "CountTest";
+        //std::string test = "CountTest";
         std::cout << "Count Of peers: " << resultChannel.getPeerCount() << std::endl;
         std::cout << "Count Of peers: " << resultChannel2.getPeerCount() << std::endl;
         ASSERT_EQ( resultChannel.getPeerCount(), resultChannel2.getPeerCount() );
         ASSERT_EQ( resultChannel.getAllPeers().size(), resultChannel2.getAllPeers().size() );
-        resultChannel.Unsubscribe();
-        resultChannel2.Unsubscribe();
+
+        std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
+
+        // Explicitly call Stop() and give time for cleanup before destruction
         pubs1->Stop();
         pubs2->Stop();
     }
