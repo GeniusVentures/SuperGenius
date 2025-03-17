@@ -191,7 +191,6 @@ namespace sgns
 
         // Get the transaction ID for tracking
         auto txId = escrow_transaction->dag_st.data_hash();
-        m_logger->debug("HoldEscrow: original escrow txid = " + txId);
 
         std::optional<std::vector<uint8_t>> maybe_proof;
 #ifdef _PROOF_ENABLED
@@ -280,7 +279,6 @@ namespace sgns
 #endif
 
         this->EnqueueTransaction( std::make_pair( escrow_release_tx, escrow_release_proof ) );
-        m_logger->debug( "Enqueued escrow release transaction with hash: " + escrow_release_tx->dag_st.data_hash() );
         this->EnqueueTransaction( std::make_pair( transfer_transaction, transfer_proof ) );
         return transfer_transaction->dag_st.data_hash();
     }
@@ -374,18 +372,17 @@ namespace sgns
                                  crdt_transaction->Put( std::move( proof_key ), std::move( proof_transaction ) ) );
         }
 
-        if (transaction->GetType() == "transfer")
+        if ( transaction->GetType() == "transfer" )
         {
-            m_logger->debug("Notifying receiving peers of transfers");
-            BOOST_OUTCOME_TRYV2(auto &&, NotifyDestinationOfTransfer(transaction, maybe_proof));
+            m_logger->debug( "Notifying receiving peers of transfers" );
+            BOOST_OUTCOME_TRYV2( auto &&, NotifyDestinationOfTransfer( transaction, maybe_proof ) );
         }
-        else if (transaction->GetType() == "escrow-release")
+        else if ( transaction->GetType() == "escrow-release" )
         {
-            m_logger->debug("Notifying escrow source of escrow release");
-            BOOST_OUTCOME_TRYV2(auto &&, NotifyEscrowRelease(transaction, maybe_proof));
+            m_logger->debug( "Notifying escrow source of escrow release" );
+            BOOST_OUTCOME_TRYV2( auto &&, NotifyEscrowRelease( transaction, maybe_proof ) );
         }
         BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Commit() );
-
 
         BOOST_OUTCOME_TRYV2( auto &&, ParseTransaction( transaction ) );
 
@@ -679,28 +676,14 @@ namespace sgns
             return std::errc::invalid_argument;
         }
 
-        uint64_t    releaseAmount      = escrowReleaseTx->GetReleaseAmount();
-        std::string releaseAddr        = escrowReleaseTx->GetReleaseAddress();
-        std::string escrowSource       = escrowReleaseTx->GetEscrowSource();
-        std::string originalEscrowHash = escrowReleaseTx->GetOriginalEscrowHash();
-
-        // Print the parsed values.
-        m_logger->debug( "EscrowReleaseTx parsed: release_amount = " + std::to_string( releaseAmount ) +
-                         ", release_address = " + releaseAddr + ", escrow_source = " + escrowSource +
-                         ", originalHash = " + originalEscrowHash );
-
-        if ( originalEscrowHash.empty() )
+        auto maybeEscrowTx = FetchTransaction(processing_db_m, escrowReleaseTx->GetOriginalEscrowHash());
+        if (!maybeEscrowTx.has_value())
         {
-            m_logger->error( "Escrow release transaction missing original escrow hash." );
+            m_logger->error("Could not fetch original escrow transaction for id: " + escrowReleaseTx->GetOriginalEscrowHash());
             return std::errc::invalid_argument;
         }
-        // auto maybeEscrowTx = FetchTransaction(processing_db_m, originalEscrowHash);
-        // if (!maybeEscrowTx.has_value())
-        // {
-        //     m_logger->error("Could not fetch original escrow transaction for id: " + originalEscrowHash);
-        //     return std::errc::invalid_argument;
-        // }
-        m_logger->debug( "Successfully fetched original escrow transaction for escrow: " + originalEscrowHash );
+
+        m_logger->debug( "Successfully fetched original escrow transaction for escrow: " + escrowReleaseTx->GetOriginalEscrowHash() );
 
         return outcome::success();
     }
@@ -773,7 +756,7 @@ namespace sgns
                                                        tx->dag_st.data_hash() );
                 sgns::crdt::GlobalDB::Buffer proof_data;
 
-                const auto& proof_value = proof.value();
+                const auto &proof_value = proof.value();
                 proof_data.put( proof_value );
                 m_logger->debug( "Putting replicate PROOF in {}", proof_key.GetKey() );
                 BOOST_OUTCOME_TRYV2( auto &&,
@@ -784,37 +767,36 @@ namespace sgns
 
         return outcome::success();
     }
-    outcome::result<void> TransactionManager::NotifyEscrowRelease(
-        const std::shared_ptr<IGeniusTransactions> &tx,
-        const std::optional<std::vector<uint8_t>> &proof)
+
+    outcome::result<void> TransactionManager::NotifyEscrowRelease( const std::shared_ptr<IGeniusTransactions> &tx,
+                                                                   const std::optional<std::vector<uint8_t>>  &proof )
     {
-        auto escrow_release_tx = std::dynamic_pointer_cast<EscrowReleaseTransaction>(tx);
-        if (!escrow_release_tx)
+        auto escrow_release_tx = std::dynamic_pointer_cast<EscrowReleaseTransaction>( tx );
+        if ( !escrow_release_tx )
         {
-            m_logger->error("Failed to cast transaction to EscrowReleaseTransaction");
-            return outcome::failure(boost::system::errc::make_error_code(boost::system::errc::invalid_argument));
+            m_logger->error( "Failed to cast transaction to EscrowReleaseTransaction" );
+            return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::invalid_argument ) );
         }
-    
+
         std::string escrow_source = escrow_release_tx->GetEscrowSource();
-        m_logger->debug("Notifying escrow source: " + escrow_source);
-    
+        m_logger->debug( "Notifying escrow source: " + escrow_source );
+
         std::shared_ptr<crdt::GlobalDB> destination_db;
-        auto destination_db_it = destination_dbs_m.find(escrow_source);
-        if (destination_db_it == destination_dbs_m.end())
+        auto                            destination_db_it = destination_dbs_m.find( escrow_source );
+        if ( destination_db_it == destination_dbs_m.end() )
         {
-            m_logger->debug("Port to sync " + std::to_string(base_port_m) + " for escrow source: " + escrow_source);
+            m_logger->debug( "Port to sync " + std::to_string( base_port_m ) + " for escrow source: " + escrow_source );
             destination_db = std::make_shared<crdt::GlobalDB>(
                 ctx_m,
-                (boost::format(base_path_m + "_out/" + escrow_source)).str(),
+                ( boost::format( base_path_m + "_out/" + escrow_source ) ).str(),
                 base_port_m,
-                std::make_shared<ipfs_pubsub::GossipPubSubTopic>(pubsub_m, escrow_source + "in")
-            );
-            if (!destination_db->Init(crdt::CrdtOptions::DefaultOptions()).has_value())
+                std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_m, escrow_source + "in" ) );
+            if ( !destination_db->Init( crdt::CrdtOptions::DefaultOptions() ).has_value() )
             {
-                return outcome::failure(boost::system::errc::make_error_code(boost::system::errc::io_error));
+                return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::io_error ) );
             }
             destination_dbs_m[escrow_source] = destination_db;
-            used_ports_m.insert(base_port_m);
+            used_ports_m.insert( base_port_m );
             base_port_m++;
             RefreshPorts();
         }
@@ -822,28 +804,28 @@ namespace sgns
         {
             destination_db = destination_db_it->second;
         }
-    
-        auto crdt_transaction = destination_db->BeginTransaction();
-        sgns::crdt::HierarchicalKey tx_key(GetNotificationPath(escrow_source) + "tx/" + tx->dag_st.data_hash());
+
+        auto                         crdt_transaction = destination_db->BeginTransaction();
+        sgns::crdt::HierarchicalKey  tx_key( GetNotificationPath( escrow_source ) + "tx/" + tx->dag_st.data_hash() );
         sgns::crdt::GlobalDB::Buffer data_transaction;
-        data_transaction.put(tx->SerializeByteVector());
-        m_logger->debug("Putting replicate escrow release transaction in " + tx_key.GetKey());
-        BOOST_OUTCOME_TRYV2(auto &&, crdt_transaction->Put(std::move(tx_key), std::move(data_transaction)));
-    
-        if (proof)
+        data_transaction.put( tx->SerializeByteVector() );
+        m_logger->debug( "Putting replicate escrow release transaction in " + tx_key.GetKey() );
+        BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Put( std::move( tx_key ), std::move( data_transaction ) ) );
+
+        if ( proof )
         {
-            sgns::crdt::HierarchicalKey proof_key(GetNotificationPath(escrow_source) + "proof/" + tx->dag_st.data_hash());
+            sgns::crdt::HierarchicalKey  proof_key( GetNotificationPath( escrow_source ) + "proof/" +
+                                                   tx->dag_st.data_hash() );
             sgns::crdt::GlobalDB::Buffer proof_data;
-            proof_data.put(proof.value());
-            m_logger->debug("Putting replicate escrow release PROOF in " + proof_key.GetKey());
-            BOOST_OUTCOME_TRYV2(auto &&, crdt_transaction->Put(std::move(proof_key), std::move(proof_data)));
+            proof_data.put( proof.value() );
+            m_logger->debug( "Putting replicate escrow release PROOF in " + proof_key.GetKey() );
+            BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Put( std::move( proof_key ), std::move( proof_data ) ) );
         }
-    
-        BOOST_OUTCOME_TRYV2(auto &&, crdt_transaction->Commit());
+
+        BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Commit() );
         return outcome::success();
     }
-    
-    
+
     std::vector<std::vector<uint8_t>> TransactionManager::GetOutTransactions() const
     {
         std::vector<std::vector<std::uint8_t>> result;
