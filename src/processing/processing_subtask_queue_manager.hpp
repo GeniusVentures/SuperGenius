@@ -104,6 +104,11 @@ namespace sgns::processing
          */
         void SetSubTaskQueueAssignmentEventSink(
             std::function<void( const std::vector<std::string> & )> subTaskQueueAssignmentEventSink );
+        /**
+         * Retrieves the current timestamp associated with the queue.
+         * @return The current queue timestamp as a 64-bit unsigned integer.
+         */
+        uint64_t GetCurrentQueueTimestamp();
 
     private:
         /** Updates the local queue with a snapshot that have the most recent timestamp
@@ -122,7 +127,7 @@ namespace sgns::processing
          * Check if the queue has any current work to do
          * @return bool if there is work to be done
          */
-        bool HasAvailableWork() const;
+        bool HasAvailableWork(bool checkOwnershipQuota = true) const;
         /**
          * Updates m_queue_timestamp_ based on current ownership duration
          */
@@ -130,12 +135,24 @@ namespace sgns::processing
 
         void CheckActiveCount();
 
+        /**
+         * Calculates the timeout for grabbing a subtask in milliseconds.
+         *
+         * This method determines the remaining time until the current lock on the subtask
+         * expires in the queue's time base. If the lock is already expired, a minimal timeout
+         * value is returned. The calculated timeout is capped at a maximum threshold to
+         * ensure a reasonable upper limit.
+         *
+         * @return The timeout duration in milliseconds for grabbing a subtask.
+         */
+        uint64_t CalculateGrabSubTaskTimeout() const;
+
         std::shared_ptr<ProcessingSubTaskQueueChannel> m_queueChannel;
         std::shared_ptr<boost::asio::io_context>       m_context;
         std::string                                    m_localNodeId;
 
         std::shared_ptr<SGProcessing::SubTaskQueue> m_queue;
-        mutable std::mutex                          m_queueMutex;
+        mutable std::recursive_mutex                m_queueMutex;
         std::list<SubTaskGrabbedCallback>           m_onSubTaskGrabbedCallbacks;
 
         std::function<void( const std::vector<std::string> & )> m_subTaskQueueAssignmentEventSink;
@@ -150,9 +167,9 @@ namespace sgns::processing
         std::chrono::system_clock::duration        m_processingTimeout;
         std::function<void( const std::string & )> m_processingErrorSink;
 
-        uint64_t m_queue_timestamp_ = 0;            // Aggregate time counter for the queue
+        uint64_t m_queue_timestamp_ =  0;            // Aggregate time counter for the queue
         uint64_t m_ownership_acquired_at_ = 0;      // When this node acquired ownership (in ms)
-        uint64_t m_ownership_last_delta_time_= 0;   // When this node last updated the queue timestamp
+        uint64_t m_ownership_last_delta_time_ = 0;   // When this node last updated the queue timestamp
 
         // Add to private section of ProcessingSubTaskQueueManager
         struct OwnershipRequest {
@@ -162,13 +179,14 @@ namespace sgns::processing
         std::queue<OwnershipRequest> m_ownershipRequestQueue;
 
         base::Logger m_logger = base::createLogger( "ProcessingSubTaskQueueManager" );
-        std::chrono::steady_clock::time_point m_lastQueueUpdateTime;
+        std::chrono::steady_clock::time_point m_lastQueueUpdateTime =  std::chrono::steady_clock::now();
 
         size_t m_processedSubtasksInCurrentOwnership = 0;
-        size_t m_maxSubtasksPerOwnership = std::numeric_limits<size_t>::max();
+        size_t m_defaultMaxSubtasksPerOwnership = 1;
+        size_t m_maxSubtasksPerOwnership;
 
         std::chrono::steady_clock::time_point m_lastActiveCountCheck = std::chrono::steady_clock::now();
-        int64_t m_waitTimeBeforeReset = 3000; // Initial wait time of 3000ms
+        uint64_t m_waitTimeBeforeReset = 3000; // Initial wait time of 3000ms
         bool m_initialDelayPassed = false;    // Track if initial delay has passed
     };
 }

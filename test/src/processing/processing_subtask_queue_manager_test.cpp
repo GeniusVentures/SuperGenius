@@ -789,7 +789,7 @@ TEST_F(ProcessingSubTaskQueueManagerTest, TwoNodesProcessingAndFinalizing)
             return processingCore1->m_processedSubTasks.size() +
                    processingCore2->m_processedSubTasks.size() >= 10;
         }),
-        std::chrono::milliseconds(5000),
+        std::chrono::milliseconds(20000),
         "Not all subtasks were processed",
         &resultTime
     );

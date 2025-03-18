@@ -16,10 +16,14 @@ namespace sgns::processing
 class ProcessingSubTaskQueue
 {
 public:
+
+    using TimestampProvider = std::function<uint64_t()>;
+
     /** Construct an empty queue
     * @param localNodeId local processing node ID
+    * @param timestampProvider get the current timestamp from the manager function
     */
-    ProcessingSubTaskQueue( std::string localNodeId );
+    ProcessingSubTaskQueue(std::string localNodeId, TimestampProvider timestampProvider = nullptr);
 
     /** Create a subtask queue by splitting the task to subtasks using the processing code
     * @param task - task that should be split into subtasks
@@ -61,7 +65,7 @@ public:
 
     /** Returns the most recent item lock timestamp
     */
-    std::chrono::system_clock::time_point GetLastLockTimestamp() const;
+    [[nodiscard]] uint64_t GetLastLockTimestamp() const;
 
     /** Adds a new ownership request to the queue
     * @param nodeId - ID of the node requesting ownership
@@ -90,6 +94,7 @@ private:
 
     base::Logger m_logger = base::createLogger("ProcessingSubTaskQueue");
 
+    TimestampProvider m_timestampProvider;
 };
 }
 

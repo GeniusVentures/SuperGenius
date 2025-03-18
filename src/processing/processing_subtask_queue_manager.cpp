@@ -16,13 +16,11 @@ namespace sgns::processing
         m_dltQueueResponseTimeout( *m_context ),
         m_queueResponseTimeout( boost::posix_time::seconds( 5 ) ),
         m_dltGrabSubTaskTimeout( *m_context ),
-        m_processingQueue( localNodeId ),
+        m_processingQueue(localNodeId, [this]() { return this->GetCurrentQueueTimestamp(); }),
         m_processingTimeout( std::chrono::seconds( 15 ) ),
-        m_processingErrorSink( std::move( processingErrorSink ) ),
-        m_queue_timestamp_( 0 ),
-        m_ownership_acquired_at_( 0 ),
-        m_lastQueueUpdateTime( std::chrono::steady_clock::now() )
+        m_processingErrorSink( std::move( processingErrorSink ) )
     {
+        m_maxSubtasksPerOwnership = m_defaultMaxSubtasksPerOwnership;
     }
 
     void ProcessingSubTaskQueueManager::SetProcessingTimeout(
@@ -63,7 +61,7 @@ namespace sgns::processing
             processingQueue->add_items();
         }
 
-        std::unique_lock<std::mutex> guard( m_queueMutex );
+        std::unique_lock guard( m_queueMutex );
         m_queue = std::move( queue );
 
         m_processedSubTaskIds = {};
@@ -112,9 +110,9 @@ namespace sgns::processing
             std::shared_ptr<SGProcessing::SubTaskQueue> queue(pQueue);
 
             // First, decide whether to update our local set or the queue's set
-            if (!m_processingQueue.HasOwnership()) {
-                // If we're not the owner, update our local set from the queue
-                m_processedSubTaskIds.clear();
+            if (!HasOwnership()) {
+                // merged processed subtasks just in case we caught some messages the owner didn't
+                // when we get ownership we will update the processed_subtask_ids
                 for (int i = 0; i < queue->processing_queue().processed_subtask_ids_size(); ++i) {
                     m_processedSubTaskIds.insert(queue->processing_queue().processed_subtask_ids(i));
                 }
@@ -149,30 +147,42 @@ namespace sgns::processing
 
     void ProcessingSubTaskQueueManager::ProcessPendingSubTaskGrabbing()
     {
-        // The method has to be called in scoped lock of queue mutex
         m_dltGrabSubTaskTimeout.expires_at( boost::posix_time::pos_infin );
+
+        // Update queue timestamp based on current ownership duration
+        UpdateQueueTimestamp();
 
         CheckActiveCount();
 
         bool losingOwnership = false;
+        bool lockReleased = false;
 
         while ( !losingOwnership &&
                 !m_onSubTaskGrabbedCallbacks.empty() &&
                 m_processedSubtasksInCurrentOwnership < m_maxSubtasksPerOwnership )
         {
+            // If the lock was released in the previous iteration, reacquire it
+            std::unique_lock guard(m_queueMutex, std::defer_lock);
+            if (lockReleased || !guard.owns_lock())
+            {
+                guard.lock();
+                lockReleased = false;
+            }
+
             size_t itemIdx = 0;
             if ( m_processingQueue.GrabItem( itemIdx ) )
             {
                 // Track that we're using queue timestamp for this item
                 // Actual timestamp is managed by ProcessingQueue via lock_timestamp
                 // This will be checked when calculating task expiration
-
                 LogQueue();
                 PublishSubTaskQueue();
 
                 m_processedSubtasksInCurrentOwnership++;
 
-                m_onSubTaskGrabbedCallbacks.front()( { m_queue->subtasks().items( itemIdx ) } );
+                // Make a copy of the subtask and callback
+                auto subtaskCopy = m_queue->subtasks().items(itemIdx);
+                auto callback = m_onSubTaskGrabbedCallbacks.front();
                 m_onSubTaskGrabbedCallbacks.pop_front();
 
                 // Check for pending ownership requests AFTER processing a subtask
@@ -180,8 +190,18 @@ namespace sgns::processing
                 {
                     m_logger->debug("Pending ownership requests detected. Stopping further subtask processing for node {}.", m_localNodeId);
                     losingOwnership = true;
+                }
+                // Release the lock before calling the callback
+                guard.unlock();
+                lockReleased = true;
+
+                // Call the callback without holding the lock
+                callback({subtaskCopy});
+                if (losingOwnership)
+                {
                     break;
                 }
+
             }
             else
             {
@@ -192,6 +212,15 @@ namespace sgns::processing
                     break;
                 }
             }
+        }
+
+        // After the while loop, ensure we have the lock
+        // After the while loop, ensure we have the lock for the remaining operations
+        std::unique_lock finalGuard(m_queueMutex, std::defer_lock);
+        if (lockReleased)
+        {
+            finalGuard.lock();
+            lockReleased = false;
         }
 
         if ( losingOwnership && !HasOwnership() )
@@ -209,24 +238,18 @@ namespace sgns::processing
         {
             if ( m_processedSubTaskIds.size() < static_cast<size_t>( m_queue->processing_queue().items_size() ) )
             {
-                // Wait for subtasks are processed
-                auto timestamp          = std::chrono::system_clock::now();
-                auto lastLockTimestamp  = m_processingQueue.GetLastLockTimestamp();
-                auto lastExpirationTime = lastLockTimestamp + m_processingTimeout;
+                // Calculate time until expiration in queue time
+                uint64_t grabSubTaskTimeoutMs = CalculateGrabSubTaskTimeout();
 
-                std::chrono::milliseconds grabSubTaskTimeout =
-                    ( lastExpirationTime > timestamp )
-                        ? std::chrono::duration_cast<std::chrono::milliseconds>( lastExpirationTime - timestamp )
-                        : std::chrono::milliseconds( 1 );
-
-                m_logger->debug( "GRAB_TIMEOUT {}ms", grabSubTaskTimeout.count() );
+                m_logger->debug("GRAB_TIMEOUT set to {}ms for node {}", grabSubTaskTimeoutMs, m_localNodeId);
 
                 m_dltGrabSubTaskTimeout.expires_from_now(
-                    boost::posix_time::milliseconds( grabSubTaskTimeout.count() ) );
+                    boost::posix_time::milliseconds( grabSubTaskTimeoutMs ) );
 
                 m_dltGrabSubTaskTimeout.async_wait(
-                    [instance = shared_from_this()]( const boost::system::error_code &ec )
-                    { instance->HandleGrabSubTaskTimeout( ec ); } );
+                [instance = shared_from_this()](const boost::system::error_code &ec)
+                { instance->HandleGrabSubTaskTimeout(ec); });
+
             }
             else
             {
@@ -247,9 +270,9 @@ namespace sgns::processing
     {
         if ( ec != boost::asio::error::operation_aborted )
         {
-            std::lock_guard<std::mutex> guard( m_queueMutex );
+            std::lock_guard guard( m_queueMutex );
             m_dltGrabSubTaskTimeout.expires_at( boost::posix_time::pos_infin );
-            m_logger->debug( "HANDLE_GRAB_TIMEOUT" );
+            m_logger->debug( "HANDLE_GRAB_TIMEOUT at {}ms from node {}", m_queue_timestamp_, m_localNodeId );
             if ( !m_onSubTaskGrabbedCallbacks.empty() &&
                  ( m_processedSubTaskIds.size() < static_cast<size_t>( m_queue->processing_queue().items_size() ) ) )
             {
@@ -260,14 +283,16 @@ namespace sgns::processing
 
     void ProcessingSubTaskQueueManager::GrabSubTask( SubTaskGrabbedCallback onSubTaskGrabbedCallback )
     {
-        std::lock_guard<std::mutex> guard( m_queueMutex );
-        m_onSubTaskGrabbedCallbacks.push_back( std::move( onSubTaskGrabbedCallback ) );
+        {
+            std::lock_guard guard( m_queueMutex );
+            m_onSubTaskGrabbedCallbacks.push_back( std::move( onSubTaskGrabbedCallback ) );
+        }
         GrabSubTasks();
     }
 
     void ProcessingSubTaskQueueManager::GrabSubTasks()
     {
-        if ( m_processingQueue.HasOwnership() )
+        if ( HasOwnership() )
         {
             ProcessPendingSubTaskGrabbing();
         }
@@ -275,17 +300,16 @@ namespace sgns::processing
         {
             // Since we're not the owner, we must use the pubsub channel
             // to request ownership from the current owner
-            m_queueChannel->RequestQueueOwnership(m_localNodeId);
+            m_queueChannel->RequestQueueOwnership( m_localNodeId );
         }
     }
 
     bool ProcessingSubTaskQueueManager::MoveOwnershipTo( const std::string &nodeId )
     {
-        std::lock_guard<std::mutex> guard( m_queueMutex );
+        std::lock_guard guard( m_queueMutex );
 
         if ( m_processingQueue.MoveOwnershipTo( nodeId ) )
         {
-            LogQueue();
             PublishSubTaskQueue();
             return true;
         }
@@ -294,7 +318,8 @@ namespace sgns::processing
 
     bool ProcessingSubTaskQueueManager::HasOwnership() const
     {
-        std::lock_guard<std::mutex> guard( m_queueMutex );
+        // Always locks for this thread
+        std::lock_guard tempLock(m_queueMutex);
         return m_processingQueue.HasOwnership();
     }
 
@@ -309,7 +334,18 @@ namespace sgns::processing
     {
         bool hadOwnership = HasOwnership();
 
-        std::unique_lock<std::mutex> guard( m_queueMutex );
+        std::unique_lock guard( m_queueMutex );
+
+        // If we own the queue and this message is for a queue we own, discard it
+        // as it's likely our own published message coming back
+        if (m_queue != nullptr &&
+            m_queue->processing_queue().owner_node_id() == m_localNodeId &&
+            queue->processing_queue().owner_node_id() == m_localNodeId)
+        {
+            m_logger->debug("Discarding queue message as we already own this queue");
+            return false;
+        }
+
         m_dltQueueResponseTimeout.expires_at( boost::posix_time::pos_infin );
 
         bool queueInitilalized = ( m_queue != nullptr );
@@ -317,17 +353,26 @@ namespace sgns::processing
 
         if ( queueChanged )
         {
-            bool hasOwnershipNow = m_processingQueue.HasOwnership();
+            bool hasOwnershipNow = HasOwnership();
             if ( !hadOwnership && hasOwnershipNow )
             {
                 // We just acquired ownership - record the time
                 m_ownership_acquired_at_ = std::chrono::duration_cast<std::chrono::milliseconds>(
                                                std::chrono::steady_clock::now().time_since_epoch() )
                                                .count();
-
+                m_queue_timestamp_ = queue->processing_queue().last_update_timestamp();
+                m_ownership_last_delta_time_ = m_ownership_acquired_at_;
                 m_processedSubtasksInCurrentOwnership = 0;  // Reset processed subtasks on new ownership
 
-                m_logger->debug( "QUEUE_OWNERSHIP_ACQUIRED by {} at {}ms", m_localNodeId, m_ownership_acquired_at_ );
+                m_logger->debug( "QUEUE_OWNERSHIP_ACQUIRED by {} at {}ms", m_localNodeId, m_queue_timestamp_ );
+
+                // If we have both available work and callbacks waiting to process it,
+                // cancel both timers to enable immediate processing
+                if (HasAvailableWork() && !m_onSubTaskGrabbedCallbacks.empty()) {
+                    m_dltGrabSubTaskTimeout.cancel();
+                    m_dltQueueResponseTimeout.cancel();
+                    m_logger->debug("{} is Canceling timers due to ownership acquisition and available work at {}ms", m_localNodeId,m_queue_timestamp_);
+                }
 
                 PublishSubTaskQueue();
             }
@@ -335,6 +380,7 @@ namespace sgns::processing
 
             if ( hasOwnershipNow )
             {
+                guard.unlock();
                 ProcessPendingSubTaskGrabbing();
             }
         }
@@ -360,33 +406,43 @@ namespace sgns::processing
     bool ProcessingSubTaskQueueManager::ProcessSubTaskQueueRequestMessage(
         const SGProcessing::SubTaskQueueRequest &request )
     {
-        std::lock_guard<std::mutex> guard( m_queueMutex );
+        std::lock_guard guard( m_queueMutex );
+
+        auto requstingNodeId = request.node_id();
+        m_logger->debug( "node {} QUEUE_REQUEST_RECEIVED from node {} at {}ms", m_localNodeId, requstingNodeId, m_queue_timestamp_ );
 
         // If we are the owner and there are still subtasks to be processed, we
         // can immediately transfer ownership, do so
-        if ( m_processingQueue.HasOwnership()  && !HasAvailableWork() )
+        if (HasOwnership()  && !HasAvailableWork() )
         {
-            if ( m_processingQueue.MoveOwnershipTo( request.node_id() ) )
+            if ( m_processingQueue.MoveOwnershipTo( requstingNodeId ) )
             {
-                LogQueue();
                 PublishSubTaskQueue();
                 m_logger->debug( "QUEUE_OWNERSHIP_TRANSFERRED from {} to {} at queue timestamp of {}ms",
-                    m_localNodeId, request.node_id(), m_queue_timestamp_ );
+                    m_localNodeId, requstingNodeId, m_queue_timestamp_ );
                 return true;
             }
         }
 
         // Otherwise, add to the shared ownership request queue
-        bool added = m_processingQueue.AddOwnershipRequest(request.node_id(), request.request_timestamp());
-        if (added) {
-            m_logger->debug("Added ownership request from node {} to queue", request.node_id());
-            PublishSubTaskQueue();  // Publish updated queue with new request
-        }
+        if (HasAvailableWork(false))
+        {
+            bool added = m_processingQueue.AddOwnershipRequest(requstingNodeId, request.request_timestamp());
+            if (added) {
+                m_logger->debug("Added ownership request from node {} to queue", requstingNodeId);
+                PublishSubTaskQueue();  // Publish updated queue with new request
 
-        m_logger->debug( "QUEUE_REQUEST_RECEIVED" );
-        m_dltQueueResponseTimeout.expires_from_now( m_queueResponseTimeout );
-        m_dltQueueResponseTimeout.async_wait( [instance = shared_from_this()]( const boost::system::error_code &ec )
-                                              { instance->HandleQueueRequestTimeout( ec ); } );
+                // Only start the timer if this is the first request in the queue
+                int requestCount = m_queue->processing_queue().ownership_requests_size();
+                if (requestCount == 1) {
+                    m_dltQueueResponseTimeout.expires_from_now( m_queueResponseTimeout );
+                    HandleQueueRequestTimeout( boost::system::error_code{} );;
+                }
+            }
+        } else
+        {
+            m_logger->debug("No available work to process, not adding ownership request from node {}", requstingNodeId);
+        }
 
         return true;
     }
@@ -395,61 +451,71 @@ namespace sgns::processing
     {
         if ( ec != boost::asio::error::operation_aborted )
         {
-            std::lock_guard<std::mutex> guard( m_queueMutex );
+            std::unique_lock guard( m_queueMutex );
             m_logger->debug( "QUEUE_REQUEST_TIMEOUT" );
             m_dltQueueResponseTimeout.expires_at( boost::posix_time::pos_infin );
 
-            // If we're the owner, process the next request in the queue
-            if ( m_processingQueue.HasOwnership() && m_processingQueue.ProcessNextOwnershipRequest() )
-            {
+            // If there's no available work, clear the ownership requests and exit
+            if ( !HasAvailableWork(false) ) {
+                // Clear ownership requests but remain the owner
+                m_queue->mutable_processing_queue()->mutable_ownership_requests()->Clear();
                 LogQueue();
                 PublishSubTaskQueue();
+                return;
             }
-            else
+
+            // If we're the owner and there are pending requests, process immediately
+            if (HasOwnership() && m_queue->processing_queue().ownership_requests_size() > 0) {
+                if (m_processingQueue.ProcessNextOwnershipRequest()) {
+                    LogQueue();
+                    PublishSubTaskQueue();
+                    return;  // Successfully processed a request, exit
+                }
+            }
+
+            // Before attempting rollback, check if the current owner is responsive
+            auto current_time = std::chrono::steady_clock::now();
+            auto time_since_last_update = std::chrono::duration_cast<std::chrono::milliseconds>(
+                current_time - m_lastQueueUpdateTime ).count();
+
+            // Only attempt rollback if we haven't received updates for a while
+            if ( time_since_last_update > m_queueResponseTimeout.total_milliseconds() &&
+                m_processingQueue.RollbackOwnership() )
             {
-                // Before attempting rollback, check if the current owner is responsive
-                auto current_time = std::chrono::steady_clock::now();
-                auto time_since_last_update = std::chrono::duration_cast<std::chrono::milliseconds>(
-                    current_time - m_lastQueueUpdateTime ).count();
+                // Record ownership acquisition time when rolling back ownership
+                m_ownership_acquired_at_ = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                               std::chrono::steady_clock::now().time_since_epoch() )
+                                               .count();
+                m_queue_timestamp_ = m_queue->processing_queue().last_update_timestamp();
+                m_ownership_last_delta_time_ = m_ownership_acquired_at_;
+                m_processedSubtasksInCurrentOwnership = 0;  // Reset processed subtasks on new ownership
+                LogQueue();
+                PublishSubTaskQueue();
 
-                // Only attempt rollback if we haven't received updates for a while
-                if ( time_since_last_update > m_queueResponseTimeout.total_milliseconds())
+                if (HasOwnership() )
                 {
-                    if ( m_processingQueue.RollbackOwnership() )
+                    // Check if there are any pending ownership requests
+                    if ( m_queue->processing_queue().ownership_requests_size() > 0 )
                     {
-                        // Record ownership acquisition time when rolling back ownership
-                        m_ownership_acquired_at_ = std::chrono::duration_cast<std::chrono::milliseconds>(
-                                                       std::chrono::steady_clock::now().time_since_epoch() )
-                                                       .count();
-
-                        LogQueue();
-                        PublishSubTaskQueue();
-
-                        if ( m_processingQueue.HasOwnership() )
+                        // If there are requests, try to process the next request instead of grabbing subtasks
+                        if ( m_processingQueue.ProcessNextOwnershipRequest() )
                         {
-                            // Check if there are any pending ownership requests
-                            if ( m_queue->processing_queue().ownership_requests_size() > 0 )
-                            {
-                                // If there are requests, try to process the next request instead of grabbing subtasks
-                                if ( m_processingQueue.ProcessNextOwnershipRequest() )
-                                {
-                                    LogQueue();
-                                    PublishSubTaskQueue();
-                                    return;  // Exit without processing subtasks
-                                }
-                            }
-                            ProcessPendingSubTaskGrabbing();
+                            LogQueue();
+                            PublishSubTaskQueue();
+                            return;  // Exit without processing subtasks
                         }
                     }
-                }
-                else
-                {
-                    // If it hasn't been long enough, schedule another timeout check
-                    m_dltQueueResponseTimeout.expires_from_now( m_queueResponseTimeout );
-                    m_dltQueueResponseTimeout.async_wait( [instance = shared_from_this()]( const boost::system::error_code &ec )
-                                                         { instance->HandleQueueRequestTimeout( ec ); } );
+                    guard.unlock();
+                    ProcessPendingSubTaskGrabbing();
+                    return;
                 }
             }
+
+            m_dltQueueResponseTimeout.async_wait( [instance = shared_from_this()]( const boost::system::error_code &ec )
+                                                 { instance->HandleQueueRequestTimeout( ec ); } );
+            // If it hasn't been long enough, schedule another timeout check, with shorter subsequent checks.
+            m_dltQueueResponseTimeout.expires_from_now( boost::posix_time::milliseconds(100) );
+
         }
     }
 
@@ -457,7 +523,7 @@ namespace sgns::processing
     {
         auto queue = std::make_unique<SGProcessing::SubTaskQueue>();
 
-        std::lock_guard<std::mutex> guard( m_queueMutex );
+        std::lock_guard guard( m_queueMutex );
         if ( m_queue )
         {
             queue->CopyFrom( *m_queue.get() );
@@ -468,7 +534,7 @@ namespace sgns::processing
     void ProcessingSubTaskQueueManager::ChangeSubTaskProcessingStates( const std::set<std::string> &subTaskIds,
                                                                        bool                         isProcessed )
     {
-        std::lock_guard<std::mutex> guard( m_queueMutex );
+        std::lock_guard guard( m_queueMutex );
         for ( const auto &subTaskId : subTaskIds )
         {
             if ( isProcessed )
@@ -498,12 +564,12 @@ namespace sgns::processing
 
     bool ProcessingSubTaskQueueManager::IsProcessed() const
     {
-        std::lock_guard<std::mutex> guard( m_queueMutex );
+        std::lock_guard guard( m_queueMutex );
         // The queue can contain only valid results
-        m_logger->debug( "IS_PROCESSED: {} {} {}",
+        m_logger->debug( "IS_PROCESSED: {} {} for node {}",
                          m_processedSubTaskIds.size(),
                          m_queue->subtasks().items_size(),
-                         (size_t)this );
+                         m_localNodeId );
         return m_processedSubTaskIds.size() >= (size_t)m_queue->subtasks().items_size();
     }
 
@@ -513,7 +579,7 @@ namespace sgns::processing
         m_subTaskQueueAssignmentEventSink = std::move( subTaskQueueAssignmentEventSink );
         if ( m_subTaskQueueAssignmentEventSink )
         {
-            std::unique_lock<std::mutex> guard( m_queueMutex );
+            std::unique_lock guard( m_queueMutex );
             bool                         isQueueInitialized = ( m_queue != nullptr );
 
             if ( isQueueInitialized )
@@ -552,15 +618,16 @@ namespace sgns::processing
         }
     }
 
-    bool ProcessingSubTaskQueueManager::HasAvailableWork() const
+    bool ProcessingSubTaskQueueManager::HasAvailableWork(bool checkOwnershipQuota) const
     {
         // Check if we've already processed the maximum allowed subtasks per ownership
-        if (m_processedSubtasksInCurrentOwnership >= m_maxSubtasksPerOwnership) {
+        if ( checkOwnershipQuota && m_processedSubtasksInCurrentOwnership >= m_maxSubtasksPerOwnership)
+        {
             return false;
         }
 
         // Check if there are any unprocessed subtasks
-        for (int itemIdx = 0; itemIdx < m_queue->subtasks().items_size(); ++itemIdx)
+        for ( int itemIdx = 0; itemIdx < m_queue->subtasks().items_size(); ++itemIdx )
         {
             const auto& subtask = m_queue->subtasks().items(itemIdx);
             const auto& processingItem = m_queue->processing_queue().items(itemIdx);
@@ -577,7 +644,7 @@ namespace sgns::processing
 
     void ProcessingSubTaskQueueManager::UpdateQueueTimestamp()
     {
-        if ( m_processingQueue.HasOwnership() )
+        if (HasOwnership() )
         {
             auto current_time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
                                        std::chrono::steady_clock::now().time_since_epoch() )
@@ -601,16 +668,16 @@ namespace sgns::processing
     void ProcessingSubTaskQueueManager::CheckActiveCount()
     {
         auto now = std::chrono::steady_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
+        auto duration = static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
             now - m_lastActiveCountCheck
-        ).count();
+        ).count());
         auto activeNodeCount = m_queueChannel->GetActiveNodeCount();
 
         if (activeNodeCount > 1 ||
             m_queue->processing_queue().ownership_requests_size() > 0)
         {
             // Limit processing to just one subtask
-            m_maxSubtasksPerOwnership = 1;
+            m_maxSubtasksPerOwnership = m_defaultMaxSubtasksPerOwnership;
             m_waitTimeBeforeReset = 100; // Short wait if other nodes are active
             m_initialDelayPassed = true; // Consider initial delay passed when other nodes appear
         }
@@ -621,7 +688,7 @@ namespace sgns::processing
             {
                 // Reset processed subtasks and prepare for more processing
                 m_processedSubtasksInCurrentOwnership = 0;
-                m_maxSubtasksPerOwnership = std::numeric_limits<size_t>::max();
+                m_maxSubtasksPerOwnership = m_defaultMaxSubtasksPerOwnership;
 
                 // After initial delay, use shorter wait time
                 if (!m_initialDelayPassed) {
@@ -632,6 +699,34 @@ namespace sgns::processing
         }
         // Update last check time
         m_lastActiveCountCheck = now;
+    }
+
+    uint64_t ProcessingSubTaskQueueManager::GetCurrentQueueTimestamp()
+    {
+        // Update and return the current queue timestamp
+        UpdateQueueTimestamp();
+        return m_queue_timestamp_;
+    }
+
+    uint64_t ProcessingSubTaskQueueManager::CalculateGrabSubTaskTimeout() const
+    {
+        auto lastLockTimestamp = m_processingQueue.GetLastLockTimestamp();  // Queue time base
+        auto currentQueueTime = m_queue_timestamp_;  // Queue time base
+        auto timeoutMs = std::chrono::duration_cast<std::chrono::milliseconds>(m_processingTimeout).count();
+
+        // Calculate when the lock expires in queue time
+        uint64_t lockExpirationTime = lastLockTimestamp + timeoutMs;
+
+        // Calculate time until expiration in queue time
+        uint64_t grabSubTaskTimeoutMs = 1;
+        if (lockExpirationTime > currentQueueTime) {
+            grabSubTaskTimeoutMs = lockExpirationTime - currentQueueTime;
+            // Cap at a reasonable maximum (e.g., 15 seconds)
+            grabSubTaskTimeoutMs = std::min(grabSubTaskTimeoutMs, static_cast<uint64_t>(m_waitTimeBeforeReset));
+        }
+
+        m_logger->debug("GRAB_TIMEOUT {}ms", grabSubTaskTimeoutMs);
+        return grabSubTaskTimeoutMs;
     }
 
 }
