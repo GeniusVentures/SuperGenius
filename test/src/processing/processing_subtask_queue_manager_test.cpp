@@ -7,6 +7,8 @@
 #include <libp2p/log/logger.hpp>
 
 #include <gtest/gtest.h>
+#include <boost/functional/hash.hpp>
+
 #include <ipfs_pubsub/gossip_pubsub.hpp>
 #include <ipfs_pubsub/gossip_pubsub_topic.hpp>
 
@@ -736,8 +738,8 @@ TEST_F(ProcessingSubTaskQueueManagerTest, TwoNodesProcessingAndFinalizing)
     std::atomic<bool> isTaskFinalized2 = false;
 
     // Set up engines
-    auto engine1 = std::make_shared<ProcessingEngine>(nodeId1, processingCore1);
-    auto engine2 = std::make_shared<ProcessingEngine>(nodeId2, processingCore2);
+    auto engine1 = std::make_shared<ProcessingEngine>(nodeId1, processingCore1, [](const std::string &){},[]{});
+    auto engine2 = std::make_shared<ProcessingEngine>(nodeId2, processingCore2, [](const std::string &){},[]{});
 
     // Set up queue accessors
     auto subTaskQueueAccessor1 = std::make_shared<SubTaskQueueAccessorImpl>(
