@@ -48,6 +48,29 @@ namespace
 
         QueueOwnershipRequestSink queueOwnershipRequestSink;
         QueuePublishingSink queuePublishingSink;
+
+        size_t GetActiveNodesCount() const override
+        {
+            return 2;
+        }
+
+        std::vector<libp2p::peer::PeerId> GetActiveNodes() const override
+        {
+            const char* node1String = "Node_1";
+            const char* node2String = "Node_2";
+            gsl::span<const uint8_t> node1(
+                reinterpret_cast<const uint8_t*>(node1String),
+                std::strlen(node1String)
+            );
+            gsl::span<const uint8_t> node2(
+                reinterpret_cast<const uint8_t*>(node2String),
+                std::strlen(node2String)
+            );
+
+            static libp2p::peer::PeerId peer1 = libp2p::peer::PeerId::fromBytes(node1).value();
+            static libp2p::peer::PeerId peer2 = libp2p::peer::PeerId::fromBytes(node2).value();
+            return { peer1, peer2 };
+        }
     };
 
     class SubTaskStateStorageMock: public SubTaskStateStorage
