@@ -241,7 +241,7 @@ namespace sgns::processing
                 // Calculate time until expiration in queue time
                 uint64_t grabSubTaskTimeoutMs = CalculateGrabSubTaskTimeout();
 
-                m_logger->debug("GRAB_TIMEOUT set to {}ms for node {}", grabSubTaskTimeoutMs, m_localNodeId);
+                m_logger->trace("GRAB_TIMEOUT set to {}ms for node {}", grabSubTaskTimeoutMs, m_localNodeId);
 
                 m_dltGrabSubTaskTimeout.expires_from_now(
                     boost::posix_time::milliseconds( grabSubTaskTimeoutMs ) );
@@ -272,7 +272,7 @@ namespace sgns::processing
         {
             std::lock_guard guard( m_queueMutex );
             m_dltGrabSubTaskTimeout.expires_at( boost::posix_time::pos_infin );
-            m_logger->debug( "HANDLE_GRAB_TIMEOUT at {}ms from node {}", m_queue_timestamp_, m_localNodeId );
+            m_logger->trace( "HANDLE_GRAB_TIMEOUT at {}ms from node {}", m_queue_timestamp_, m_localNodeId );
             if ( !m_onSubTaskGrabbedCallbacks.empty() &&
                  ( m_processedSubTaskIds.size() < static_cast<size_t>( m_queue->processing_queue().items_size() ) ) )
             {
@@ -540,12 +540,12 @@ namespace sgns::processing
             if ( isProcessed )
             {
                 m_processedSubTaskIds.insert( subTaskId );
-                m_logger->debug( "Subtask flagged as processed {}", subTaskId );
+                m_logger->trace( "Subtask flagged as processed {}", subTaskId );
             }
             else
             {
                 m_processedSubTaskIds.erase( subTaskId );
-                m_logger->debug( "Subtask flagged as UNPROCESSED {}", subTaskId );
+                m_logger->trace( "Subtask flagged as UNPROCESSED {}", subTaskId );
             }
         }
 
@@ -725,7 +725,7 @@ namespace sgns::processing
             grabSubTaskTimeoutMs = std::min(grabSubTaskTimeoutMs, static_cast<uint64_t>(m_waitTimeBeforeReset));
         }
 
-        m_logger->debug("GRAB_TIMEOUT {}ms", grabSubTaskTimeoutMs);
+        m_logger->trace("calculated GRAB_TIMEOUT {}ms", grabSubTaskTimeoutMs);
         return grabSubTaskTimeoutMs;
     }
 
