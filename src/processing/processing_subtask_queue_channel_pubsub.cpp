@@ -1,9 +1,9 @@
 #include "processing_subtask_queue_channel_pubsub.hpp"
 #include <thread>
 #include <base/util.hpp>
-#include <outcome/outcome.hpp>
+#include "outcome/outcome.hpp"
 
-using namespace libp2p;
+
 namespace sgns::processing
 {
     ProcessingSubTaskQueueChannelPubSub::ProcessingSubTaskQueueChannelPubSub(
@@ -20,7 +20,7 @@ namespace sgns::processing
     m_logger->debug("[RELEASED] this: {}", reinterpret_cast<size_t>(this));
     }
 
-    ::outcome::result<std::variant<std::chrono::milliseconds, std::future<GossipPubSubTopic::Subscription>>>
+    outcome::result<std::variant<std::chrono::milliseconds, std::future<GossipPubSubTopic::Subscription>>>
     ProcessingSubTaskQueueChannelPubSub::Listen(std::chrono::milliseconds msSubscriptionWaitingDuration)
     {
         // Subscribe to the processing queue channel
