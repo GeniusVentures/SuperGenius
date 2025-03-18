@@ -134,4 +134,14 @@ namespace sgns::processing
         }
     }
 
+    size_t ProcessingSubTaskQueueChannelPubSub::GetActiveNodesCount() const
+    {
+        return m_processingQueueChannel->getPeerCount();
+    }
+
+    std::vector<libp2p::peer::PeerId>  ProcessingSubTaskQueueChannelPubSub::GetActiveNodes() const
+    {
+        return m_processingQueueChannel->getAllPeers();
+    }
+
 }

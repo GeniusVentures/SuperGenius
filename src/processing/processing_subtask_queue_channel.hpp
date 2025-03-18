@@ -34,13 +34,13 @@ public:
      * Returns the number of active nodes in the channel
      * @return number of nodes in the channel
      */
-    virtual size_t GetActiveNodeCount() { return 2; };
+    virtual size_t GetActiveNodesCount()= 0;
 
     /**
      * Get the number of active nodes in the channel
      * @return vector of nodes in the channel
      */
-    virtual std::vector<std::string> GetActiveNodes() { return {"node1", "node2"}; };
+    virtual std::vector<std::string> GetActiveNodes() = 0;
 };
 }
 #endif // SUPERGENIUS_PROCESSING_SUBTASK_QUEUE_CHANNEL_HPP
