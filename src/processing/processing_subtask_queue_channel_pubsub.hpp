@@ -59,7 +59,17 @@ namespace sgns::processing
         ::outcome::result<std::variant<std::chrono::milliseconds, std::future<GossipPubSub::Subscription>>> Listen(
             std::chrono::milliseconds msSubscriptionWaitingDuration = std::chrono::milliseconds(2000));
 
+        /** Retrieves the count of active nodes in the subtask queue channel.
+         * @return The number of active nodes currently participating in the channel.
+         */
         size_t GetActiveNodesCount() const;
+
+        /**
+         * Retrieves the list of active node IDs currently participating in the subtask queue channel.
+         * @return A vector of strings containing the IDs of active nodes in the channel.
+         */
+        std::vector<libp2p::peer::PeerId>  GetActiveNodes() const;
+
 
     private:
         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> m_processingQueueChannel;
@@ -76,6 +86,8 @@ namespace sgns::processing
         std::function<bool( SGProcessing::SubTaskQueue * )>              m_queueUpdateSink;
 
         base::Logger m_logger = base::createLogger( "ProcessingSubTaskQueueChannelPubSub" );
+
+
     };
 }
 #endif // SUPERGENIUS_PROCESSING_SUBTASK_QUEUE_CHANNEL_PUBSUB_HPP

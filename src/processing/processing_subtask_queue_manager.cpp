@@ -681,7 +681,7 @@ namespace sgns::processing
         auto duration = static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
             now - m_lastActiveCountCheck
         ).count());
-        auto activeNodeCount = m_queueChannel->GetActiveNodeCount();
+        auto activeNodeCount = m_queueChannel->GetActiveNodesCount();
 
         if (activeNodeCount > 1 ||
             m_queue->processing_queue().ownership_requests_size() > 0)
