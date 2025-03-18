@@ -6,8 +6,10 @@
 namespace sgns::processing
 {
 ////////////////////////////////////////////////////////////////////////////////
-ProcessingSubTaskQueue::ProcessingSubTaskQueue( std::string localNodeId ) :
-    m_localNodeId( std::move( localNodeId ) ), m_queue( nullptr )
+ProcessingSubTaskQueue::ProcessingSubTaskQueue( std::string localNodeId, TimestampProvider timestampProvider ) :
+    m_localNodeId( std::move( localNodeId ) ),
+    m_queue( nullptr ),
+    m_timestampProvider(timestampProvider)
 {
 }
 
@@ -42,12 +44,9 @@ bool ProcessingSubTaskQueue::LockItem(size_t& lockedItemIndex)
             auto timestamp = std::chrono::system_clock::now();
 
             m_queue->mutable_items(itemIdx)->set_lock_node_id(m_localNodeId);
-            m_queue->mutable_items(itemIdx)->set_lock_timestamp(timestamp.time_since_epoch().count());
-
-            m_queue->set_last_update_timestamp(timestamp.time_since_epoch().count());
+            m_queue->mutable_items(itemIdx)->set_lock_timestamp( m_queue->last_update_timestamp() );
 
             LogQueue();
-
             lockedItemIndex = itemIdx;
             return true;
         }
@@ -78,9 +77,12 @@ bool ProcessingSubTaskQueue::MoveOwnershipTo(const std::string& nodeId)
 
 void ProcessingSubTaskQueue::ChangeOwnershipTo(const std::string& nodeId)
 {
-    auto timestamp = std::chrono::system_clock::now();
     m_queue->set_owner_node_id(nodeId);
-    m_queue->set_last_update_timestamp(timestamp.time_since_epoch().count());
+
+    if (m_timestampProvider) {
+        // Use the manager's timestamp if provider is available
+        m_queue->set_last_update_timestamp(m_timestampProvider());
+    }
     LogQueue();
 }
 
@@ -166,7 +168,6 @@ bool ProcessingSubTaskQueue::HasOwnership() const
 
 bool ProcessingSubTaskQueue::UnlockExpiredItems(std::chrono::system_clock::duration expirationTimeout)
 {
-
     bool unlocked = false;
 
     if (HasOwnership())
@@ -201,23 +202,17 @@ bool ProcessingSubTaskQueue::UnlockExpiredItems(std::chrono::system_clock::durat
     return unlocked;
 }
 
-std::chrono::system_clock::time_point ProcessingSubTaskQueue::GetLastLockTimestamp() const
-{
-    std::chrono::system_clock::time_point lastLockTimestamp;
-
-    for (auto itemIdx : m_enabledItemIndices)
+    uint64_t ProcessingSubTaskQueue::GetLastLockTimestamp() const
     {
-        // Check if an item is locked and no result was obtained for it
-        if (!m_queue->items(itemIdx).lock_node_id().empty())
-        {
-            lastLockTimestamp = std::max(lastLockTimestamp,
-                std::chrono::system_clock::time_point(
-                    std::chrono::system_clock::duration(m_queue->items(itemIdx).lock_timestamp())));
+        uint64_t lastLockTimestamp = 0;
+        for (auto itemIdx : m_enabledItemIndices) {
+            if (!m_queue->items(itemIdx).lock_node_id().empty()) {
+                lastLockTimestamp = std::max(lastLockTimestamp,
+                                             static_cast<uint64_t>(m_queue->items(itemIdx).lock_timestamp()));
+            }
         }
+        return lastLockTimestamp;
     }
-
-    return lastLockTimestamp;
-}
 
 void ProcessingSubTaskQueue::LogQueue() const
 {
