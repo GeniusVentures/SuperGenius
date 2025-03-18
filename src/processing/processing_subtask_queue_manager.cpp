@@ -117,6 +117,10 @@ namespace sgns::processing
                     m_processedSubTaskIds.insert(queue->processing_queue().processed_subtask_ids(i));
                 }
             } else {
+                // Merge incoming processed IDs into local set before updating queue
+                for (int i = 0; i < queue->processing_queue().processed_subtask_ids_size(); ++i) {
+                    m_processedSubTaskIds.insert(queue->processing_queue().processed_subtask_ids(i));
+                }
                 // If we're the owner, update the processed IDs in the queue from our local set
                 queue->mutable_processing_queue()->clear_processed_subtask_ids();
                 for (const auto& processedId : m_processedSubTaskIds) {
@@ -137,6 +141,7 @@ namespace sgns::processing
 
             if (m_processingQueue.UpdateQueue(queue->mutable_processing_queue(), unprocessedSubTaskIndices))
             {
+                m_logger->debug("QUEUE_LOCAL_UPDATE: on {} at {}ms", m_localNodeId, m_queue_timestamp_);
                 m_queue.swap(queue);
                 LogQueue();
                 return true;
@@ -148,6 +153,8 @@ namespace sgns::processing
     void ProcessingSubTaskQueueManager::ProcessPendingSubTaskGrabbing()
     {
         m_dltGrabSubTaskTimeout.expires_at( boost::posix_time::pos_infin );
+
+        m_logger->debug("QUEUE_PROCESS_PENDING: for node {} at {}ms.", m_localNodeId, m_queue_timestamp_);
 
         // Update queue timestamp based on current ownership duration
         UpdateQueueTimestamp();
@@ -188,7 +195,8 @@ namespace sgns::processing
                 // Check for pending ownership requests AFTER processing a subtask
                 if ( m_queue->processing_queue().ownership_requests_size() > 0 )
                 {
-                    m_logger->debug("Pending ownership requests detected. Stopping further subtask processing for node {}.", m_localNodeId);
+                    m_logger->debug("QUEUE_PROCESSING_PAUSED: Pending ownership requests detected. Stopping further subtask processing for node {} at {}ms.",
+                        m_localNodeId, m_queue_timestamp_);
                     losingOwnership = true;
                 }
                 // Release the lock before calling the callback
@@ -327,7 +335,7 @@ namespace sgns::processing
     {
         UpdateQueueTimestamp();
         m_queueChannel->PublishQueue( m_queue );
-        m_logger->debug( "QUEUE_PUBLISHED by {} at {}ms", m_localNodeId, m_queue_timestamp_ );
+        m_logger->debug( "QUEUE_PUBLISHED: by {} at {}ms", m_localNodeId, m_queue_timestamp_ );
     }
 
     bool ProcessingSubTaskQueueManager::ProcessSubTaskQueueMessage( SGProcessing::SubTaskQueue *queue )
@@ -364,19 +372,21 @@ namespace sgns::processing
                 m_ownership_last_delta_time_ = m_ownership_acquired_at_;
                 m_processedSubtasksInCurrentOwnership = 0;  // Reset processed subtasks on new ownership
 
-                m_logger->debug( "QUEUE_OWNERSHIP_ACQUIRED by {} at {}ms", m_localNodeId, m_queue_timestamp_ );
+                m_logger->debug( "QUEUE_OWNERSHIP_ACQUIRED: by {} at {}ms", m_localNodeId, m_queue_timestamp_ );
 
                 // If we have both available work and callbacks waiting to process it,
                 // cancel both timers to enable immediate processing
                 if (HasAvailableWork() && !m_onSubTaskGrabbedCallbacks.empty()) {
                     m_dltGrabSubTaskTimeout.cancel();
                     m_dltQueueResponseTimeout.cancel();
-                    m_logger->debug("{} is Canceling timers due to ownership acquisition and available work at {}ms", m_localNodeId,m_queue_timestamp_);
+                    m_logger->debug("CANCEL_ASYNC_TIMERS: {} is Canceling timers due to ownership acquisition and available work at {}ms", m_localNodeId,m_queue_timestamp_);
+                    guard.unlock(); // Unlock before processing
+                    ProcessPendingSubTaskGrabbing(); // Start processing immediately
+                    guard.lock(); // Re-lock for publishing
                 }
 
                 PublishSubTaskQueue();
             }
-
 
             if ( hasOwnershipNow )
             {
@@ -409,7 +419,7 @@ namespace sgns::processing
         std::lock_guard guard( m_queueMutex );
 
         auto requstingNodeId = request.node_id();
-        m_logger->debug( "node {} QUEUE_REQUEST_RECEIVED from node {} at {}ms", m_localNodeId, requstingNodeId, m_queue_timestamp_ );
+        m_logger->debug( "QUEUE_REQUEST_RECEIVED: node {} from node {} at {}ms", m_localNodeId, requstingNodeId, m_queue_timestamp_ );
 
         // If we are the owner and there are still subtasks to be processed, we
         // can immediately transfer ownership, do so
@@ -418,7 +428,7 @@ namespace sgns::processing
             if ( m_processingQueue.MoveOwnershipTo( requstingNodeId ) )
             {
                 PublishSubTaskQueue();
-                m_logger->debug( "QUEUE_OWNERSHIP_TRANSFERRED from {} to {} at queue timestamp of {}ms",
+                m_logger->debug( "QUEUE_OWNERSHIP_TRANSFERRED: from {} to {} at queue timestamp of {}ms",
                     m_localNodeId, requstingNodeId, m_queue_timestamp_ );
                 return true;
             }
@@ -566,7 +576,7 @@ namespace sgns::processing
     {
         std::lock_guard guard( m_queueMutex );
         // The queue can contain only valid results
-        m_logger->debug( "IS_PROCESSED: {} {} for node {}",
+        m_logger->debug( "CHECK_IS_PROCESSED: {} {} for node {}",
                          m_processedSubTaskIds.size(),
                          m_queue->subtasks().items_size(),
                          m_localNodeId );
