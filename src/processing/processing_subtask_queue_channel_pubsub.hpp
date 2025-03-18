@@ -62,13 +62,13 @@ namespace sgns::processing
         /** Retrieves the count of active nodes in the subtask queue channel.
          * @return The number of active nodes currently participating in the channel.
          */
-        size_t GetActiveNodesCount() const;
+        size_t GetActiveNodesCount() const override;
 
         /**
          * Retrieves the list of active node IDs currently participating in the subtask queue channel.
          * @return A vector of strings containing the IDs of active nodes in the channel.
          */
-        std::vector<libp2p::peer::PeerId>  GetActiveNodes() const;
+        std::vector<libp2p::peer::PeerId> GetActiveNodes() const override;
 
 
     private:
