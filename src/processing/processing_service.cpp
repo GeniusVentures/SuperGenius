@@ -27,16 +27,15 @@ namespace sgns::processing
 
     {
         m_context_work = std::make_unique<boost::asio::io_context::work>( *m_context );
-        io_thread = std::thread( [this]() { m_context->run(); } );
     }
 
     ProcessingServiceImpl::ProcessingServiceImpl(
-        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> gossipPubSub,
-        size_t                                           maximalNodesCount,
-        std::shared_ptr<SubTaskEnqueuer>                 subTaskEnqueuer,
-        std::shared_ptr<SubTaskStateStorage>             subTaskStateStorage,
-        std::shared_ptr<SubTaskResultStorage>            subTaskResultStorage,
-        std::shared_ptr<ProcessingCore>                  processingCore,
+        std::shared_ptr<ipfs_pubsub::GossipPubSub> gossipPubSub,
+        size_t                                     maximalNodesCount,
+        std::shared_ptr<SubTaskEnqueuer>           subTaskEnqueuer,
+        std::shared_ptr<SubTaskStateStorage>       subTaskStateStorage,
+        std::shared_ptr<SubTaskResultStorage>      subTaskResultStorage,
+        std::shared_ptr<ProcessingCore>            processingCore,
         std::function<void( const std::string &subTaskQueueId, const SGProcessing::TaskResult &taskresult )>
                                                                  userCallbackSuccess,
         std::function<void( const std::string &subTaskQueueId )> userCallbackError,
@@ -58,7 +57,6 @@ namespace sgns::processing
         m_nodeCreationTimeout( boost::posix_time::milliseconds( 1000 ) )
     {
         m_context_work = std::make_unique<boost::asio::io_context::work>( *m_context );
-        io_thread      = std::thread( [this]() { m_context->run(); } );
     }
 
     void ProcessingServiceImpl::StartProcessing( const std::string &processingGridChannelId )
@@ -70,6 +68,8 @@ namespace sgns::processing
         }
 
         m_isStopped = false;
+
+        io_thread = std::thread( [this] { m_context->run(); } );
 
         Listen( processingGridChannelId );
         SendChannelListRequest();
@@ -106,7 +106,7 @@ namespace sgns::processing
 
     void ProcessingServiceImpl::Listen( const std::string &processingGridChannelId )
     {
-        using GossipPubSubTopic = sgns::ipfs_pubsub::GossipPubSubTopic;
+        using GossipPubSubTopic = ipfs_pubsub::GossipPubSubTopic;
         m_gridChannel           = std::make_unique<GossipPubSubTopic>( m_gossipPubSub, processingGridChannelId );
         m_gridChannel->Subscribe(
             [weakSelf = weak_from_this()]( boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message &> message )
