@@ -1,47 +1,26 @@
 add_library(processing_service
-    processing_core.hpp
-    impl/processing_core_impl.hpp
     impl/processing_core_impl.cpp
-    processing_imagesplit.hpp
     processing_imagesplit.cpp
-    processing_tasksplit.hpp
     processing_tasksplit.cpp
-    processing_processor.hpp
-    processors/processing_processor_mnn_image.hpp
     processors/processing_processor_mnn_image.cpp
-    processors/processing_processor_mnn_audio.hpp
     processors/processing_processor_mnn_audio.cpp
-    processors/processing_processor_mnn_ml.hpp
     processors/processing_processor_mnn_ml.cpp
-    processing_engine.hpp
     processing_engine.cpp
-    processing_node.hpp
     processing_node.cpp
-    processing_service.hpp
     processing_service.cpp
-    processing_subtask_enqueuer.hpp
-    processing_subtask_enqueuer_impl.hpp
     processing_subtask_enqueuer_impl.cpp
-    processing_subtask_queue.hpp
     processing_subtask_queue.cpp
-    processing_subtask_queue_accessor.hpp
-    processing_subtask_queue_accessor_impl.hpp
     processing_subtask_queue_accessor_impl.cpp
-    processing_subtask_queue_channel.hpp
-    processing_subtask_queue_channel_pubsub.hpp
     processing_subtask_queue_channel_pubsub.cpp
-    processing_subtask_queue_manager.hpp
     processing_subtask_queue_manager.cpp
     processing_subtask_result_storage.hpp
-    impl/processing_subtask_result_storage_impl.hpp
     impl/processing_subtask_result_storage_impl.cpp
-    processing_subtask_state_storage.hpp
-    processing_task_queue.hpp
-    impl/processing_task_queue_impl.hpp
     impl/processing_task_queue_impl.cpp
     processing_validation_core.cpp
     processing_validation_core.hpp
 )
+
+set_target_properties(processing_service PROPERTIES UNITY_BUILD ON)
 
 add_proto_library(SGProcessingProto proto/SGProcessing.proto)
 
