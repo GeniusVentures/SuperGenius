@@ -49,6 +49,10 @@ namespace sgns::processing
         if ( cidData_.find( subTask.subtaskid() ) == cidData_.end() )
         {
             auto buffers = GetCidForProc( subTask.json_data(), task.json_data() );
+            if (buffers == nullptr)
+            {
+                return outcome::failure( Error::NO_BUFFER_FROM_JOB_DATA );
+            }
             if ( buffers->first->size() <= 0 || buffers->second->size() <= 0 )
             {
                 return outcome::failure( Error::NO_BUFFER_FROM_JOB_DATA );
@@ -69,6 +73,10 @@ namespace sgns::processing
         else
         {
             auto buffers = cidData_.at( subTask.subtaskid() );
+            if (buffers == nullptr)
+            {
+                return outcome::failure( Error::NO_BUFFER_FROM_JOB_DATA );
+            }
             if ( buffers->first->size() <= 0 || buffers->second->size() <= 0 )
             {
                 return outcome::failure( Error::NO_BUFFER_FROM_JOB_DATA );
@@ -215,7 +223,10 @@ namespace sgns::processing
             {
                 //results->first.insert(results->first.end(), buffers->first.begin(), buffers->first.end());
                 //results->second.insert(results->second.end(), buffers->second.begin(), buffers->second.end());
-                results->insert( results->end(), buffers->second[0].begin(), buffers->second[0].end() );
+                if (results && buffers)
+                {
+                    results->insert( results->end(), buffers->second[0].begin(), buffers->second[0].end() );
+                }
             },
             "file" );
     }
