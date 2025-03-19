@@ -134,25 +134,24 @@ namespace sgns
         auto loggerProcessingNode = base::createLogger( "ProcessingNode", logdir );
         auto loggerGossipPubsub   = base::createLogger( "GossipPubSub", logdir );
 #ifdef SGNS_DEBUGLOGS
-        node_logger->set_level( spdlog::level::debug );
-        node_logger->info( sgns::version::SuperGeniusVersionText() );
-        loggerGlobalDB->set_level( spdlog::level::off );
-        loggerDAGSyncer->set_level( spdlog::level::off );
-        loggerGraphsync->set_level( spdlog::level::off );
-        loggerBroadcaster->set_level( spdlog::level::off );
-        loggerDataStore->set_level( spdlog::level::off );
-        loggerTransactions->set_level( spdlog::level::debug );
-        loggerQueue->set_level( spdlog::level::off );
-        loggerRocksDB->set_level( spdlog::level::off );
-        logkad->set_level( spdlog::level::off );
-        logNoise->set_level( spdlog::level::off );
-        logProcessingEngine->set_level( spdlog::level::debug );
-        loggerSubQueue->set_level( spdlog::level::off );
-        loggerProcServ->set_level( spdlog::level::debug );
-        loggerProcqm->set_level( spdlog::level::off );
-        loggerUPNP->set_level( spdlog::level::off );
-        loggerProcessingNode->set_level( spdlog::level::debug );
-        loggerGossipPubsub->set_level( spdlog::level::debug );
+        node_logger->set_level(spdlog::level::err);
+        loggerGlobalDB->set_level(spdlog::level::err);
+        loggerDAGSyncer->set_level(spdlog::level::err);
+        loggerGraphsync->set_level(spdlog::level::err);
+        loggerBroadcaster->set_level(spdlog::level::err);
+        loggerDataStore->set_level(spdlog::level::err);
+        loggerTransactions->set_level(spdlog::level::err);
+        loggerQueue->set_level(spdlog::level::err);
+        loggerRocksDB->set_level(spdlog::level::err);
+        logkad->set_level(spdlog::level::err);
+        logNoise->set_level(spdlog::level::err);
+        logProcessingEngine->set_level(spdlog::level::err);
+        loggerSubQueue->set_level(spdlog::level::err);
+        loggerProcServ->set_level(spdlog::level::err);
+        loggerProcqm->set_level(spdlog::level::err);
+        loggerUPNP->set_level(spdlog::level::err);
+        loggerProcessingNode->set_level(spdlog::level::err);
+        loggerGossipPubsub->set_level(spdlog::level::err);
 #else
         node_logger->set_level( spdlog::level::err );
         loggerGlobalDB->set_level( spdlog::level::err );
@@ -173,6 +172,7 @@ namespace sgns
         loggerProcessingNode->set_level( spdlog::level::err );
         loggerGossipPubsub->set_level( spdlog::level::err );
 #endif
+        node_logger->info( sgns::version::SuperGeniusVersionText() );
 
         auto tokenid = dev_config_.TokenID;
 
@@ -216,7 +216,8 @@ namespace sgns
         }
         std::string base58key = maybe_base58.value();
 
-        auto pubsubKeyPath = ( boost::format( "SuperGNUSNode.TestNet.1a.03.%s/pubs_processor" ) % base58key ).str();
+        auto pubsubKeyPath =
+            ( boost::format( "SuperGNUSNode.TestNet.1a.05.%s/pubs_processor" ) % base58key ).str();
 
         pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
             crdt::KeyPairFileStorage( write_base_path_ + pubsubKeyPath ).GetKeyPair().value() );
@@ -228,7 +229,7 @@ namespace sgns
 
         globaldb_ = std::make_shared<crdt::GlobalDB>(
             io_,
-            ( boost::format( write_base_path_ + "SuperGNUSNode.TestNet.1a.03.%s" ) % base58key ).str(),
+            ( boost::format( write_base_path_ + "SuperGNUSNode.TestNet.1a.05.%s" ) % base58key ).str(),
             graphsyncport,
             std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_, std::string( PROCESSING_CHANNEL ) ) );
 
@@ -264,7 +265,7 @@ namespace sgns
             io_,
             account_,
             std::make_shared<crypto::HasherImpl>(),
-            ( boost::format( write_base_path_ + "SuperGNUSNode.TestNet.1a.03.%s" ) % base58key ).str(),
+            ( boost::format( write_base_path_ + "SuperGNUSNode.TestNet.1a.05.%s" ) % base58key ).str(),
             pubsub_,
             upnp,
             graphsyncport );
