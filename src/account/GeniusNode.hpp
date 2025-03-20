@@ -176,6 +176,7 @@ namespace sgns
 
         void ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult );
         void ProcessingError( const std::string &task_id );
+        void periodic_processing();
 
         static constexpr std::string_view db_path_                = "bc-%d/";
         static constexpr std::uint16_t    MAIN_NET                = 369;

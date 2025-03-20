@@ -66,12 +66,14 @@ namespace sgns::crdt
                         std::string                                           databasePath,
                         int                                                   dagSyncPort,
                         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> broadcastChannel,
-                        std::string                                           gsaddresses ) :
+                        std::string                                           gsaddresses,
+                        std::string                                           writhpath) :
         m_context( std::move( context ) ),
         m_databasePath( std::move( databasePath ) ),
         m_dagSyncPort( dagSyncPort ),
         m_graphSyncAddrs( gsaddresses ),
-        m_broadcastChannel( std::move( broadcastChannel ) )
+        m_broadcastChannel( std::move( broadcastChannel ) ),
+        write_base_path_( writhpath )
     {
     }
 

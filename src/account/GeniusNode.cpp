@@ -25,6 +25,7 @@
 #include <thread>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
+//#include <boost/algorithm/string/replace.hpp>
 
 namespace {
     uint16_t GenerateRandomPort( uint16_t base, const std::string &seed )
@@ -79,6 +80,69 @@ using namespace boost::multiprecision;
 
 namespace sgns
 {
+    std::atomic<bool> finished( false );
+    std::thread       processing_thread;
+
+    void GeniusNode::periodic_processing()
+    {
+        while ( !finished )
+        {
+            std::this_thread::sleep_for( std::chrono::minutes( 5 ) ); // Wait for 1 minute
+            if ( finished )
+            {
+                break; // Exit if the application is shutting down
+            }
+
+            std::string json_data = R"(
+                {
+                "data": {
+                    "type": "https",
+                    "URL": "https://ipfs.filebase.io/ipfs/QmdHvvEXRUgmyn1q3nkQwf9yE412Vzy5gSuGAukHRLicXA/"
+                },
+                "model": {
+                    "name": "mnnimage",
+                    "file": "model.mnn"
+                },
+                "input": [
+                    {
+                        "image": "data/ballet.data",
+                        "block_len": 4860000 ,
+                        "block_line_stride": 5400,
+                        "block_stride": 0,
+                        "chunk_line_stride": 1080,
+                        "chunk_offset": 0,
+                        "chunk_stride": 4320,
+                        "chunk_subchunk_height": 5,
+                        "chunk_subchunk_width": 5,
+                        "chunk_count": 25,
+                        "channels": 4
+                    },
+                    {
+                        "image": "data/frisbee3.data",
+                        "block_len": 786432 ,
+                        "block_line_stride": 1536,
+                        "block_stride": 0,
+                        "chunk_line_stride": 384,
+                        "chunk_offset": 0,
+                        "chunk_stride": 1152,
+                        "chunk_subchunk_height": 4,
+                        "chunk_subchunk_width": 4,
+                        "chunk_count": 16,
+                        "channels": 3
+                    }
+                ]
+                }
+               )";
+            //boost::replace_all( json_data, "[basepath]", base_path );
+            auto        jobpost   = ProcessImage( json_data /*args[1]*/
+            );
+            if ( !jobpost )
+            {
+                std::cout << "Job post error: " << jobpost.error().message() << std::endl;
+            }
+        }
+    }
+
     GeniusNode::GeniusNode( const DevConfig_st &dev_config,
                             const char         *eth_private_key,
                             bool                autodht,
@@ -112,7 +176,7 @@ namespace sgns
         libp2p::log::setLevelOfGroup( "SuperGeniusDemo", soralog::Level::ERROR_ );
         std::string logdir = "";
 #ifndef SGNS_DEBUGLOGS
-        logdir = write_base_path_ + "/sgnslog2.log";
+        //logdir = write_base_path_ + "/sgnslog2.log";
 #endif
         node_logger = base::createLogger( "SuperGeniusDemo", logdir );
         auto loggerGlobalDB = base::createLogger("GlobalDB", logdir);
@@ -230,12 +294,15 @@ namespace sgns
             io_,
             ( boost::format( write_base_path_ + "SuperGNUSNode.TestNet.1a.05.%s" ) % base58key ).str(),
             graphsyncport,
-            std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_, std::string( PROCESSING_CHANNEL ) ) );
+            std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_, std::string( PROCESSING_CHANNEL ) ),
+            "",
+            write_base_path_ );
 
         auto global_db_init_result = globaldb_->Init( crdt::CrdtOptions::DefaultOptions() );
         if ( global_db_init_result.has_error() )
         {
             auto error = global_db_init_result.error();
+            std::cout << "Error message: " << error.message() << std::endl;
             throw std::runtime_error( error.message() );
             return;
         }
@@ -280,12 +347,18 @@ namespace sgns
             DHTInit();
         }
         RefreshUPNP( pubsubport, graphsyncport );
+        processing_thread = std::thread( &GeniusNode::periodic_processing, this );
 
         io_thread = std::thread( [this]() { io_->run(); } );
     }
 
     GeniusNode::~GeniusNode()
     {
+        finished = true;
+        if ( processing_thread.joinable() )
+        {
+            processing_thread.join();
+        }
         if ( io_ )
         {
             io_->stop(); // Stop our io_context

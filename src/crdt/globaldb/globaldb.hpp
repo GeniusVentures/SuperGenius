@@ -25,7 +25,8 @@ namespace sgns::crdt
                   std::string                                           databasePath,
                   int                                                   dagSyncPort,
                   std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> broadcastChannel,
-                  std::string                                           gsaddresses = {} );
+                  std::string                                           gsaddresses = {},
+                  std::string                                           write_path  = "" );
 
 
         ~GlobalDB();
@@ -97,6 +98,11 @@ namespace sgns::crdt
             return m_crdtDatastore->GetDB();
         }
 
+        auto GetWritePath()
+        {
+            return write_base_path_;
+        }
+
     private:
         void scheduleBootstrap( std::shared_ptr<boost::asio::io_context> io_context,
                                 std::shared_ptr<libp2p::Host>            host );
@@ -106,6 +112,7 @@ namespace sgns::crdt
         int                                                   m_dagSyncPort;
         std::string                                           m_graphSyncAddrs;
         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> m_broadcastChannel;
+        std::string                                           write_base_path_;
 
         //std::shared_ptr<sgns::ipfs_lite::ipfs::dht::IpfsDHT> dht_;
         //std::shared_ptr<libp2p::protocol::Identify> identify_;

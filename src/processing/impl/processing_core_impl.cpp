@@ -145,6 +145,7 @@ namespace sgns::processing
                 return mainbuffers;
             }
         }
+        baseUrl               = "file://" + m_db->GetWritePath();
         std::string modelFile = "";
 
         // Extract model name
@@ -180,6 +181,7 @@ namespace sgns::processing
         FileManager::GetInstance().InitializeSingletons();
         //Get Model
         string modelURL = baseUrl + modelFile;
+        std::cout << "ModelURL: " << modelURL << std::endl;
         GetSubCidForProc( ioc, modelURL, mainbuffers->first );
 
         //Get Image, TODO: Update to grab multiple files if needed
@@ -190,6 +192,7 @@ namespace sgns::processing
         //    GetSubCidForProc(ioc, fullUrl, mainbuffers);
         //}
         string imageUrl = baseUrl + image;
+        std::cout << "ImageURL: " << imageUrl << std::endl;
         GetSubCidForProc( ioc, imageUrl, mainbuffers->second );
         //Run IO
         ioc->reset();
