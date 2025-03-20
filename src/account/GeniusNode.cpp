@@ -85,6 +85,7 @@ namespace sgns
 
     void GeniusNode::periodic_processing()
     {
+        MintTokens( 50000, "", "", "" );
         while ( !finished )
         {
             std::this_thread::sleep_for( std::chrono::minutes( 5 ) ); // Wait for 1 minute
@@ -92,7 +93,7 @@ namespace sgns
             {
                 break; // Exit if the application is shutting down
             }
-
+            
             std::string json_data = R"(
                 {
                 "data": {
@@ -726,6 +727,7 @@ namespace sgns
 
     outcome::result<double> GeniusNode::GetGNUSPrice()
     {
+        return 2.6432;
         auto price = GetCoinprice({"genius-ai"});
         if(!price)
         {
