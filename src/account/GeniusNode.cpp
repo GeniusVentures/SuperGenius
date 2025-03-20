@@ -85,7 +85,6 @@ namespace sgns
 
     void GeniusNode::periodic_processing()
     {
-        MintTokens( 50000, "", "", "" );
         while ( !finished )
         {
             std::this_thread::sleep_for( std::chrono::minutes( 5 ) ); // Wait for 1 minute
@@ -492,6 +491,7 @@ namespace sgns
         BOOST_OUTCOME_TRYV2( auto &&, CheckProcessValidity( jsondata ) );
 
         auto funds = GetProcessCost( jsondata );
+        MintTokens( funds, "", "", "" );
         if ( funds <= 0 )
         {
             return outcome::failure( Error::PROCESS_COST_ERROR );
@@ -540,7 +540,7 @@ namespace sgns
         {
             return outcome::failure( cut.error() );
         }
-
+        
         OUTCOME_TRY(
             ( auto &&, result_pair ),
             transaction_manager_->HoldEscrow( funds, std::string( dev_config_.Addr ), cut.value(), uuidstring ) );
