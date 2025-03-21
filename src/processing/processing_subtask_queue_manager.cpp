@@ -544,6 +544,11 @@ namespace sgns::processing
     void ProcessingSubTaskQueueManager::ChangeSubTaskProcessingStates( const std::set<std::string> &subTaskIds,
                                                                        bool                         isProcessed )
     {
+        if (!m_queue)
+        {
+            m_logger->error( "No queue for task");
+            return;
+        }
         std::lock_guard guard( m_queueMutex );
         for ( const auto &subTaskId : subTaskIds )
         {
@@ -635,7 +640,11 @@ namespace sgns::processing
         {
             return false;
         }
-
+        if (!m_queue)
+        {
+            m_logger->error( "No queue for check of available work" );
+            return false;
+        }
         // Check if there are any unprocessed subtasks
         for ( int itemIdx = 0; itemIdx < m_queue->subtasks().items_size(); ++itemIdx )
         {
