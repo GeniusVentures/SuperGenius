@@ -67,7 +67,17 @@ public:
 TEST_F(ProcessingSubTaskChannelPubSubTest, RequestTransmittingOnSinglePubSubHost)
 {
     auto pubs1 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();;
-    pubs1->Start(40001, {});
+    auto start1Future = pubs1->Start(40001, {});
+    std::chrono::milliseconds resultTime;
+    ASSERT_WAIT_FOR_CONDITION( (
+                                   [&start1Future]()
+                                   {
+                                       start1Future.get();
+                                       return true;
+                                   } ),
+                               std::chrono::milliseconds( 2000 ),
+                               "Pubsub nodes initialization failed",
+                               &resultTime );
 
     auto queueChannel1 = std::make_shared<ProcessingSubTaskQueueChannelPubSub>(pubs1, "PROCESSING_CHANNEL_ID");
     auto queueChannel2 = std::make_shared<ProcessingSubTaskQueueChannelPubSub>(pubs1, "PROCESSING_CHANNEL_ID");
@@ -153,13 +163,27 @@ TEST_F(ProcessingSubTaskChannelPubSubTest, RequestTransmittingOnSinglePubSubHost
 TEST_F(ProcessingSubTaskChannelPubSubTest, RequestTransmittingOnDifferentPubSubHosts)
 {
     auto pubs1 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();;
-    pubs1->Start(40001, {});
+    auto start1Future = pubs1->Start( 40001, {} );
 
     auto pubs2 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();;
-    pubs2->Start(40002, { pubs1->GetLocalAddress() });
+    auto start2Future = pubs2->Start( 40002, { pubs1->GetLocalAddress() } );
+    std::chrono::milliseconds resultTime;
+    ASSERT_WAIT_FOR_CONDITION( (
+                                   [&start1Future, &start2Future]()
+                                   {
+                                       start1Future.get();
+                                       start2Future.get();
+                                       return true;
+                                   } ),
+                               std::chrono::milliseconds( 2000 ),
+                               "Pubsub nodes initialization failed",
+                               &resultTime );
 
     auto queueChannel1 = std::make_shared<ProcessingSubTaskQueueChannelPubSub>(pubs1, "PROCESSING_CHANNEL_ID");
     auto queueChannel2 = std::make_shared<ProcessingSubTaskQueueChannelPubSub>(pubs2, "PROCESSING_CHANNEL_ID");
+
+    auto listen_result = queueChannel1->Listen();
+    ASSERT_TRUE( listen_result ) << "Channel subscription failed to establish within 2000ms";
 
     // if there are multiple threads sending the QueueRequest, the counter should be wrapped in a mutex
     std::atomic<size_t> requestCount1{0};
@@ -180,22 +204,21 @@ TEST_F(ProcessingSubTaskChannelPubSubTest, RequestTransmittingOnDifferentPubSubH
         return true;
     });
 
-    auto listen_result = queueChannel1->Listen();
-    ASSERT_TRUE(listen_result) << "Channel subscription failed to establish within 2000ms";
-
-    // Log the actual time if interested
-    if (listen_result && std::holds_alternative<std::chrono::milliseconds>(listen_result.value())) {
-        auto wait_time = std::get<std::chrono::milliseconds>(listen_result.value());
-        Color::PrintInfo("Channel 1 Subscription established after ", wait_time.count(), " ms");
+        // Log the actual time if interested
+    if ( listen_result && std::holds_alternative<std::chrono::milliseconds>( listen_result.value() ) )
+    {
+        auto wait_time = std::get<std::chrono::milliseconds>( listen_result.value() );
+        Color::PrintInfo( "Channel 1 Subscription established after ", wait_time.count(), " ms" );
     }
 
     listen_result = queueChannel2->Listen();
-    ASSERT_TRUE(listen_result) << "Channel subscription failed to establish within 2000ms";
+    ASSERT_TRUE( listen_result ) << "Channel subscription failed to establish within 2000ms";
 
     // Log the actual time if interested
-    if (listen_result && std::holds_alternative<std::chrono::milliseconds>(listen_result.value())) {
-        auto wait_time = std::get<std::chrono::milliseconds>(listen_result.value());
-        Color::PrintInfo("Channel 2 Subscription established after ", wait_time.count(), " ms");
+    if ( listen_result && std::holds_alternative<std::chrono::milliseconds>( listen_result.value() ) )
+    {
+        auto wait_time = std::get<std::chrono::milliseconds>( listen_result.value() );
+        Color::PrintInfo( "Channel 2 Subscription established after ", wait_time.count(), " ms" );
     }
 
     std::string nodeId1 = "NODE1_ID";
@@ -238,7 +261,17 @@ TEST_F(ProcessingSubTaskChannelPubSubTest, RequestTransmittingOnDifferentPubSubH
 TEST_F(ProcessingSubTaskChannelPubSubTest, QueueTransmittingOnSinglePubSubHost)
 {
     auto pubs1 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();;
-    pubs1->Start(40001, {});
+    auto start1Future = pubs1->Start(40001, {});
+    std::chrono::milliseconds resultTime;
+    ASSERT_WAIT_FOR_CONDITION( (
+                                   [&start1Future]()
+                                   {
+                                       start1Future.get();
+                                       return true;
+                                   } ),
+                               std::chrono::milliseconds( 2000 ),
+                               "Pubsub nodes initialization failed",
+                               &resultTime );
 
     auto queueChannel1 = std::make_shared<ProcessingSubTaskQueueChannelPubSub>(pubs1, "PROCESSING_CHANNEL_ID");
     auto queueChannel2 = std::make_shared<ProcessingSubTaskQueueChannelPubSub>(pubs1, "PROCESSING_CHANNEL_ID");
