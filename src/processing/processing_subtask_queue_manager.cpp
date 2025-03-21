@@ -580,6 +580,13 @@ namespace sgns::processing
     bool ProcessingSubTaskQueueManager::IsProcessed() const
     {
         std::lock_guard guard( m_queueMutex );
+        if (!m_queue)
+        {
+            m_logger->error( "CHECK_IS_PROCESSED Queue is null: {} for node {}",
+                             m_processedSubTaskIds.size(),
+                             m_localNodeId );
+            return false;
+        }
         // The queue can contain only valid results
         m_logger->debug( "CHECK_IS_PROCESSED: {} {} for node {}",
                          m_processedSubTaskIds.size(),
