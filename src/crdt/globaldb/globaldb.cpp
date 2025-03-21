@@ -62,25 +62,80 @@ namespace sgns::crdt
     using GraphsyncImpl      = ipfs_lite::ipfs::graphsync::GraphsyncImpl;
     using GossipPubSubTopic  = ipfs_pubsub::GossipPubSubTopic;
 
-    GlobalDB::GlobalDB( std::shared_ptr<boost::asio::io_context>              context,
-                        std::string                                           databasePath,
-                        int                                                   dagSyncPort,
-                        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> broadcastChannel,
-                        std::string                                           gsaddresses ) :
+    // Composite broadcaster to support multiple topics.
+    class MultiTopicBroadcaster : public Broadcaster
+    {
+    public:
+        MultiTopicBroadcaster( const std::vector<std::shared_ptr<Broadcaster>> &broadcasters ) :
+            broadcasters_( broadcasters )
+        {
+        }
+
+        outcome::result<void> Broadcast( const base::Buffer &buff ) override
+        {
+            outcome::result<void> lastResult = outcome::success();
+            for ( auto &b : broadcasters_ )
+            {
+                auto res = b->Broadcast( buff );
+                if ( res.has_failure() )
+                {
+                    lastResult = res;
+                }
+            }
+            return lastResult;
+        }
+
+        outcome::result<base::Buffer> Next() override
+        {
+            for ( auto &b : broadcasters_ )
+            {
+                auto res = b->Next();
+                if ( res.has_value() )
+                {
+                    return res;
+                }
+            }
+            return outcome::failure( boost::system::error_code{} );
+        }
+
+    private:
+        std::vector<std::shared_ptr<Broadcaster>> broadcasters_;
+    };
+
+    // Single-topic constructor: forward to multi-topic constructor.
+    GlobalDB::GlobalDB( std::shared_ptr<boost::asio::io_context> context,
+                        std::string                              databasePath,
+                        int                                      dagSyncPort,
+                        std::shared_ptr<GossipPubSubTopic>       broadcastChannel,
+                        std::string                              gsaddresses ) :
+        GlobalDB( context,
+                  databasePath,
+                  dagSyncPort,
+                  std::vector<std::shared_ptr<GossipPubSubTopic>>{ broadcastChannel },
+                  gsaddresses )
+    {
+    }
+
+    // Multi-topic constructor.
+    GlobalDB::GlobalDB( std::shared_ptr<boost::asio::io_context>               context,
+                        std::string                                            databasePath,
+                        int                                                    dagSyncPort,
+                        const std::vector<std::shared_ptr<GossipPubSubTopic>> &broadcastChannels,
+                        std::string                                            gsaddresses ) :
         m_context( std::move( context ) ),
         m_databasePath( std::move( databasePath ) ),
         m_dagSyncPort( dagSyncPort ),
-        m_graphSyncAddrs( gsaddresses ),
-        m_broadcastChannel( std::move( broadcastChannel ) )
+        m_graphSyncAddrs( std::move( gsaddresses ) ),
+        m_broadcastChannels( std::move( broadcastChannels ) )
     {
     }
 
     GlobalDB::~GlobalDB()
     {
         m_crdtDatastore->Close();
-        m_crdtDatastore    = nullptr;
-        m_broadcastChannel = nullptr;
-        m_context          = nullptr;
+        m_crdtDatastore = nullptr;
+        m_context       = nullptr;
+        m_broadcastChannels.clear();
     }
 
 std::string GetLocalIP( boost::asio::io_context &io )
@@ -182,7 +237,11 @@ std::string GetLocalIP( boost::asio::io_context &io )
     {
         std::shared_ptr<RocksDB> dataStore            = nullptr;
         auto                     databasePathAbsolute = boost::filesystem::absolute( m_databasePath ).string();
-
+        boost::filesystem::path  dbPath( databasePathAbsolute );
+        if ( !boost::filesystem::exists( dbPath.parent_path() ) )
+        {
+            boost::filesystem::create_directories( dbPath.parent_path() );
+        }
         // Create new database
         m_logger->info( "Opening database " + databasePathAbsolute );
         RocksDB::Options options;
@@ -293,17 +352,23 @@ std::string GetLocalIP( boost::asio::io_context &io )
         //scheduleBootstrap(io, dagSyncerHost);
         // Create pubsub broadcaster
         //auto broadcaster = std::make_shared<PubSubBroadcaster>(m_broadcastChannel);
-        std::shared_ptr<PubSubBroadcasterExt> broadcaster;
-        if ( m_graphSyncAddrs.empty() )
+
+        // Create a broadcaster for each topic
+        std::vector<std::shared_ptr<Broadcaster>> broadcasters;
+        for ( auto &topic : m_broadcastChannels )
         {
-            broadcaster = PubSubBroadcasterExt::New( m_broadcastChannel, dagSyncer, listen_to );
+            auto b = PubSubBroadcasterExt::New( topic, dagSyncer, listen_to );
+            broadcasters.push_back( b );
+        }
+        std::shared_ptr<Broadcaster> broadcaster;
+        if ( broadcasters.size() == 1 )
+        {
+            broadcaster = broadcasters[0];
         }
         else
         {
-            //auto listen_towan = libp2p::multi::Multiaddress::create(wanaddress).value();
-            broadcaster = PubSubBroadcasterExt::New( m_broadcastChannel, dagSyncer, listen_to );
+            broadcaster = std::make_shared<MultiTopicBroadcaster>( broadcasters );
         }
-        //broadcaster->SetLogger(m_logger);
 
         m_crdtDatastore = CrdtDatastore::New( dataStore,
                                               HierarchicalKey( "crdt" ),
@@ -316,10 +381,15 @@ std::string GetLocalIP( boost::asio::io_context &io )
             return Error::CRDT_DATASTORE_NOT_CREATED;
         }
 
-        broadcaster->SetCrdtDataStore( m_crdtDatastore );
-
-        // have to set the dataStore before starting the broadcasting
-        broadcaster->Start();
+        // Set the datastore for each PubSubBroadcasterExt and start them.
+        for ( auto &b : broadcasters )
+        {
+            if ( auto extB = std::dynamic_pointer_cast<PubSubBroadcasterExt>( b ) )
+            {
+                extB->SetCrdtDataStore( m_crdtDatastore );
+                extB->Start();
+            }
+        }
 
         // TODO: bootstrapping
         //m_logger->info("Bootstrapping...");
