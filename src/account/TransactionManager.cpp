@@ -57,31 +57,25 @@ namespace sgns
     {
         m_logger->info( "Initializing values by reading whole blockchain" );
 
-        outgoing_db_m = std::make_shared<crdt::GlobalDB>(
-            ctx_m,
-            ( boost::format( base_path_m + "_out" ) ).str(),
-            base_port_m,
-            std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_m, account_m->GetAddress() + "out" ) );
+        auto outgoing_topic = std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_m,
+                                                                                account_m->GetAddress() + "out" );
+        auto incoming_topic = std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_m,
+                                                                                account_m->GetAddress() + "in" );
+        std::vector<std::shared_ptr<ipfs_pubsub::GossipPubSubTopic>> topics = { outgoing_topic, incoming_topic };
 
+        std::string mergedPath = base_path_m + "_tx";
+
+        auto merged_db = std::make_shared<crdt::GlobalDB>( ctx_m, mergedPath, base_port_m, topics );
         used_ports_m.insert( base_port_m );
         base_port_m++;
-        if ( !outgoing_db_m->Init( crdt::CrdtOptions::DefaultOptions() ).has_value() )
+
+        if ( !merged_db->Init( crdt::CrdtOptions::DefaultOptions() ).has_value() )
         {
-            throw std::runtime_error( "Could not start Outgoing GlobalDB" );
+            throw std::runtime_error( "Could not start merged GlobalDB" );
         }
 
-        incoming_db_m = std::make_shared<crdt::GlobalDB>(
-            ctx_m,
-            ( boost::format( base_path_m + "_in" ) ).str(),
-            base_port_m,
-            std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_m, account_m->GetAddress() + "in" ) );
-
-        if ( !incoming_db_m->Init( crdt::CrdtOptions::DefaultOptions() ).has_value() )
-        {
-            throw std::runtime_error( "Could not start Incoming GlobalDB" );
-        }
-        used_ports_m.insert( base_port_m );
-        base_port_m++;
+        outgoing_db_m = merged_db;
+        incoming_db_m = merged_db;
 
         RefreshPorts();
     }
