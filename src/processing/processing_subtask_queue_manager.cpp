@@ -111,6 +111,8 @@ namespace sgns::processing
 
             // First, decide whether to update our local set or the queue's set
             if (!HasOwnership()) {
+                m_queue_timestamp_ = queue->processing_queue().last_update_timestamp();
+                UpdateQueueTimestamp();
                 // merged processed subtasks just in case we caught some messages the owner didn't
                 // when we get ownership we will update the processed_subtask_ids
                 for (int i = 0; i < queue->processing_queue().processed_subtask_ids_size(); ++i) {
@@ -133,7 +135,22 @@ namespace sgns::processing
             for (int subTaskIdx = 0; subTaskIdx < queue->subtasks().items_size(); ++subTaskIdx)
             {
                 const auto &subTaskId = queue->subtasks().items(subTaskIdx).subtaskid();
-                if (m_processedSubTaskIds.find(subTaskId) == m_processedSubTaskIds.end())
+                const auto &processingItem = queue->processing_queue().items(subTaskIdx);
+
+                // Check if subtask is not processed
+                bool isUnprocessed = m_processedSubTaskIds.find(subTaskId) == m_processedSubTaskIds.end();
+
+                // Check if subtask is not locked or its lock has expired
+                bool isUnlocked = processingItem.lock_node_id().empty();
+                bool isLockExpired = false;
+
+                if (!isUnlocked) {
+                    // Lock has expired if current queue timestamp is greater than or equal to lock timestamp
+                    isLockExpired = m_queue_timestamp_ >= processingItem.lock_timestamp();
+                }
+
+                // Add to unprocessed list if not processed AND (not locked OR lock expired)
+                if (isUnprocessed && (isUnlocked || isLockExpired))
                 {
                     unprocessedSubTaskIndices.push_back(subTaskIdx);
                 }
@@ -272,6 +289,9 @@ namespace sgns::processing
 
             }
         }
+        // if we are here, we have processed all the subtasks we can or are waiting for ownership to grab more.
+        // Small delay to allow pubsub and other threads to process
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
     }
 
     void ProcessingSubTaskQueueManager::HandleGrabSubTaskTimeout( const boost::system::error_code &ec )
