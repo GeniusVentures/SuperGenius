@@ -713,7 +713,7 @@ namespace sgns
 
                 destination_db = std::make_shared<crdt::GlobalDB>(
                     ctx_m,
-                    ( boost::format( base_path_m + "_out/" + base58key ) ).str(),
+                    ( boost::format( base_path_m + "_tx/" + base58key ) ).str(),
                     base_port_m,
                     std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_m, dest_info.dest_address + "in" ) );
                 if ( !destination_db->Init( crdt::CrdtOptions::DefaultOptions() ).has_value() )

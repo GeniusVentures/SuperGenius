@@ -237,11 +237,6 @@ std::string GetLocalIP( boost::asio::io_context &io )
     {
         std::shared_ptr<RocksDB> dataStore            = nullptr;
         auto                     databasePathAbsolute = boost::filesystem::absolute( m_databasePath ).string();
-        boost::filesystem::path  dbPath( databasePathAbsolute );
-        if ( !boost::filesystem::exists( dbPath.parent_path() ) )
-        {
-            boost::filesystem::create_directories( dbPath.parent_path() );
-        }
         // Create new database
         m_logger->info( "Opening database " + databasePathAbsolute );
         RocksDB::Options options;
