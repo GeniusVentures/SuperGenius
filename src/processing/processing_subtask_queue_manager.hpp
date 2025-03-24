@@ -148,6 +148,13 @@ namespace sgns::processing
          */
         uint64_t CalculateGrabSubTaskTimeout() const;
 
+        /**
+         * Updates the list of unprocessed subtask indices and
+         * @return if any unprocessed subtasks are available
+         */
+        bool UpdateUnprocessedSubTaskIndices(const SGProcessing::SubTaskQueue* queue,
+                                              std::vector<int>& unprocessedSubTaskIndices) const;
+
         std::shared_ptr<ProcessingSubTaskQueueChannel> m_queueChannel;
         std::shared_ptr<boost::asio::io_context>       m_context;
         std::string                                    m_localNodeId;

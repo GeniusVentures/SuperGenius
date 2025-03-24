@@ -153,12 +153,15 @@ namespace
             std::string hashString(reinterpret_cast<const char*>(&subTaskResultHash), sizeof(subTaskResultHash));
             result.set_result_hash(hashString);
 
-            m_processedSubTasks.push_back(subTask);
+            auto [_, success] = m_processedSubTasks.insert(subTask.subtaskid());
+            if (!success) {
+                Color::PrintError("SubTask ", subTask.subtaskid(), " already processed");
+            }
             m_initialHashes.push_back(initialHashCode);
             return result;
         };
 
-        std::vector<SGProcessing::SubTask> m_processedSubTasks;
+        std::set<std::string> m_processedSubTasks;
         std::vector<uint32_t> m_initialHashes;
 
         std::map<std::string, std::vector<size_t>> m_chunkResultHashes;

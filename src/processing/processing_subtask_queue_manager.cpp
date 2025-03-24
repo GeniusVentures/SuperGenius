@@ -132,29 +132,7 @@ namespace sgns::processing
 
             // Now map subtask IDs to subtask indices based on the updated m_processedSubTaskIds
             std::vector<int> unprocessedSubTaskIndices;
-            for (int subTaskIdx = 0; subTaskIdx < queue->subtasks().items_size(); ++subTaskIdx)
-            {
-                const auto &subTaskId = queue->subtasks().items(subTaskIdx).subtaskid();
-                const auto &processingItem = queue->processing_queue().items(subTaskIdx);
-
-                // Check if subtask is not processed
-                bool isUnprocessed = m_processedSubTaskIds.find(subTaskId) == m_processedSubTaskIds.end();
-
-                // Check if subtask is not locked or its lock has expired
-                bool isUnlocked = processingItem.lock_node_id().empty();
-                bool isLockExpired = false;
-
-                if (!isUnlocked) {
-                    // Lock has expired if current queue timestamp is greater than or equal to lock timestamp
-                    isLockExpired = m_queue_timestamp_ >= processingItem.lock_timestamp();
-                }
-
-                // Add to unprocessed list if not processed AND (not locked OR lock expired)
-                if (isUnprocessed && (isUnlocked || isLockExpired))
-                {
-                    unprocessedSubTaskIndices.push_back(subTaskIdx);
-                }
-            }
+            UpdateUnprocessedSubTaskIndices(queue.get(), unprocessedSubTaskIndices);
 
             if (m_processingQueue.UpdateQueue(queue->mutable_processing_queue(), unprocessedSubTaskIndices))
             {
@@ -586,14 +564,8 @@ namespace sgns::processing
 
         // Map subtask IDs to subtask indices
         std::vector<int> unprocessedSubTaskIndices;
-        for ( int subTaskIdx = 0; subTaskIdx < m_queue->subtasks().items_size(); ++subTaskIdx )
-        {
-            const auto &subTaskId = m_queue->subtasks().items( subTaskIdx ).subtaskid();
-            if ( m_processedSubTaskIds.find( subTaskId ) == m_processedSubTaskIds.end() )
-            {
-                unprocessedSubTaskIndices.push_back( subTaskIdx );
-            }
-        }
+        UpdateUnprocessedSubTaskIndices(m_queue.get(), unprocessedSubTaskIndices);
+
         m_processingQueue.UpdateQueue( m_queue->mutable_processing_queue(), unprocessedSubTaskIndices );
     }
 
@@ -603,6 +575,7 @@ namespace sgns::processing
         if (!m_queue)
         {
             m_logger->error( "CHECK_IS_PROCESSED Queue is null: {} for node {}",
+                             m_processedSubTaskIds.size(),
                              m_processedSubTaskIds.size(),
                              m_localNodeId );
             return false;
@@ -667,25 +640,17 @@ namespace sgns::processing
         {
             return false;
         }
+
         if (!m_queue)
         {
             m_logger->error( "No queue for check of available work" );
             return false;
         }
-        // Check if there are any unprocessed subtasks
-        for ( int itemIdx = 0; itemIdx < m_queue->subtasks().items_size(); ++itemIdx )
-        {
-            const auto& subtask = m_queue->subtasks().items(itemIdx);
-            const auto& processingItem = m_queue->processing_queue().items(itemIdx);
 
-            // Check if subtask is not processed and not locked
-            if (m_processedSubTaskIds.find(subtask.subtaskid()) == m_processedSubTaskIds.end() &&
-                processingItem.lock_node_id().empty())
-            {
-                return true;
-            }
-        }
-        return false;
+        // Use the helper method to check if any subtasks are available
+        std::vector<int> unprocessedSubTaskIndices;
+        return UpdateUnprocessedSubTaskIndices(m_queue.get(), unprocessedSubTaskIndices);
+
     }
 
     void ProcessingSubTaskQueueManager::UpdateQueueTimestamp()
@@ -773,6 +738,39 @@ namespace sgns::processing
 
         m_logger->trace("calculated GRAB_TIMEOUT {}ms", grabSubTaskTimeoutMs);
         return grabSubTaskTimeoutMs;
+    }
+
+    bool ProcessingSubTaskQueueManager::UpdateUnprocessedSubTaskIndices(
+        const SGProcessing::SubTaskQueue* queue,
+        std::vector<int>& unprocessedSubTaskIndices) const
+    {
+        unprocessedSubTaskIndices.clear();
+
+        for (int subTaskIdx = 0; subTaskIdx < queue->subtasks().items_size(); ++subTaskIdx)
+        {
+            const auto &subTaskId = queue->subtasks().items(subTaskIdx).subtaskid();
+            const auto &processingItem = queue->processing_queue().items(subTaskIdx);
+
+            // Check if subtask is not processed
+            bool isUnprocessed = m_processedSubTaskIds.find(subTaskId) == m_processedSubTaskIds.end();
+
+            // Check if subtask is not locked or its lock has expired
+            bool isUnlocked = processingItem.lock_node_id().empty();
+            bool isLockExpired = false;
+
+            if (!isUnlocked) {
+                // Lock has expired if current queue timestamp is greater than or equal to lock timestamp
+                isLockExpired = m_queue_timestamp_ >= processingItem.lock_timestamp();
+            }
+
+            // Subtask is available if it's not processed AND (not locked OR lock has expired)
+            if (isUnprocessed && (isUnlocked || isLockExpired))
+            {
+                unprocessedSubTaskIndices.push_back(subTaskIdx);
+            }
+        }
+
+        return !unprocessedSubTaskIndices.empty();
     }
 
 }
