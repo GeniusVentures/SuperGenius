@@ -43,7 +43,7 @@ bool ProcessingValidationCore::ValidateResults(
         else
         {
             // Since all subtasks are processed a result should be found for all of them
-            m_logger->error("NO_RESULTS_FOUND {}", subTask.subtaskid());
+            m_logger->error("NO_RESULTS_FOUND {} on ", subTask.subtaskid());
             invalidSubTaskIds.insert(subTask.subtaskid());
         }
     }

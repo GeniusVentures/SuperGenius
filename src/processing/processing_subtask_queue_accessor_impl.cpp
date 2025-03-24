@@ -160,6 +160,8 @@ namespace sgns::processing
     {
         m_subTaskResultStorage->AddSubTaskResult( subTaskResult );
         m_subTaskStateStorage->ChangeSubTaskState( subTaskId, SGProcessing::SubTaskState::PROCESSED );
+        // tell local queue manager we completed this task as well.
+        m_subTaskQueueManager->ChangeSubTaskProcessingStates({subTaskId}, true);
 
         if ( m_resultChannel )
         {
