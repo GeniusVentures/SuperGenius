@@ -41,5 +41,6 @@ SeparateDefinitionBlocks: Always
 SortIncludes: Never
 SpacesInParens: Custom
 SpacesInParensOptions:
+  InConditionalStatements: true
   Other: true
 Standard: c++17

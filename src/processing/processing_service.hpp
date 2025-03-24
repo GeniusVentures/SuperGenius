@@ -32,6 +32,11 @@ namespace sgns::processing
                                std::function<void( const std::string &subTaskQueueId )>          userCallbackError,
                                std::string                                                       node_address );
 
+        ~ProcessingServiceImpl()
+        {
+            StopProcessing();
+        }
+
         void StartProcessing( const std::string &processingGridChannelId );
         void StopProcessing();
 
@@ -53,6 +58,7 @@ namespace sgns::processing
         void OnQueueProcessingCompleted( const std::string              &subTaskQueueId,
                                          const SGProcessing::TaskResult &taskResult );
         void OnProcessingError( const std::string &subTaskQueueId, const std::string &errorMessage );
+        void OnProcessingDone( const std::string &taskId );
 
         void AcceptProcessingChannel( const std::string &channelId );
 
@@ -69,6 +75,8 @@ namespace sgns::processing
 
         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>       m_gossipPubSub;
         std::shared_ptr<boost::asio::io_context>               m_context;
+        std::unique_ptr<boost::asio::io_context::work>         m_context_work; // Keep context alive
+        std::thread                                            io_thread;
         size_t                                                 m_maximalNodesCount;
         std::shared_ptr<SubTaskEnqueuer>                       m_subTaskEnqueuer;
         std::shared_ptr<SubTaskStateStorage>                   m_subTaskStateStorage;

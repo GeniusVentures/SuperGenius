@@ -165,7 +165,7 @@ TEST_F(ProcessingServiceTest, ProcessingSlotsAreAvailable)
  */
 // The test disabled due to processing room handling removed
 // No room capacity is checked
-TEST_F(ProcessingServiceTest, DISABLED_NoProcessingSlotsAvailable)
+TEST_F(ProcessingServiceTest, NoProcessingSlotsAvailable)
 {
     auto pubs = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();
     pubs->Start(40001, {});

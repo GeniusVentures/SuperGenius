@@ -298,11 +298,13 @@ TEST_F( ProcessingNodesTest, PostProcessing )
     std::cout << "Balance node2 (After):  " << node_proc2->GetBalance() << std::endl;
 
     ASSERT_EQ( balance_main - cost, node_main->GetBalance() );
+
     //TODO: convert DEV_CONFIG.Cut from string to fixed and use below
-    ASSERT_EQ( balance_node1 + balance_node2 + ( cost * 65 ) / 100,
+    auto expected_peer_gain = ( ( cost * 65 ) / 100 ) / 2;
+    ASSERT_EQ( balance_node1 + balance_node2 + 2 * expected_peer_gain,
                node_proc1->GetBalance() + node_proc2->GetBalance() );
 
-    auto gameDeveloperPayment = cost - (( cost * 65 ) / 100);
+    auto gameDeveloperPayment = cost - 2 * expected_peer_gain;
     ASSERT_EQ( balance_main + balance_node1 + balance_node2,
                node_main->GetBalance() + node_proc1->GetBalance() + node_proc2->GetBalance() + gameDeveloperPayment );
 }

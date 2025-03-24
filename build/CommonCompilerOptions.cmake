@@ -34,24 +34,9 @@ include(CMakePackageConfigHelpers)
 include(CheckCXXCompilerFlag)
 include(${PROJECT_ROOT}/cmake/functions.cmake)
 include(${PROJECT_ROOT}/cmake/install.cmake)
-include(${PROJECT_ROOT}/cmake/definition.cmake)
 include(${PROJECT_ROOT}/build/CompilationFlags.cmake)
 
-# Common compile options
-
-# OS specific compile options
-if(EXISTS "${PROJECT_ROOT}/cmake/compile_option_by_platform/${CMAKE_SYSTEM_NAME}.cmake")
-    print("add compile option: ${PROJECT_ROOT}/cmake/compile_option_by_platform/${CMAKE_SYSTEM_NAME}.cmake")
-    include("${PROJECT_ROOT}/cmake/compile_option_by_platform/${CMAKE_SYSTEM_NAME}.cmake")
-endif()
-
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${EXTRA_CXX_FLAGS}")
-
-#define zkllvm directory
-cmake_minimum_required(VERSION 3.19)
-
-cmake_minimum_required(VERSION 3.19)
-
+# Define zkllvm directory
 if(NOT DEFINED ZKLLVM_DIR)
     get_filename_component(BUILD_PLATFORM_NAME ${CMAKE_CURRENT_SOURCE_DIR} NAME)
     if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../../zkLLVM/build/${BUILD_PLATFORM_NAME}/${CMAKE_BUILD_TYPE}/${ANDROID_ABI}")
@@ -120,10 +105,10 @@ if(NOT DEFINED ZKLLVM_DIR)
     endif()
 endif()
 
-# define third party directory
+# Define third party directory
 if(NOT DEFINED THIRDPARTY_DIR)
     if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../../thirdparty/README.md")
-        print("Setting default third party directory")
+        message(STATUS "Setting default third party directory")
         set(THIRDPARTY_DIR "${CMAKE_CURRENT_LIST_DIR}/../../thirdparty")
 
         # # get absolute path
@@ -139,7 +124,7 @@ if(NOT DEFINED CMAKE_BUILD_TYPE)
 endif()
 
 if(NOT DEFINED THIRDPARTY_BUILD_DIR)
-    print("Setting third party build directory default")
+    message(STATUS "Setting third party build directory default")
     get_filename_component(BUILD_PLATFORM_NAME ${CMAKE_CURRENT_SOURCE_DIR} NAME)
     set(THIRDPARTY_BUILD_DIR "${THIRDPARTY_DIR}/build/${BUILD_PLATFORM_NAME}/${CMAKE_BUILD_TYPE}")
 
@@ -149,7 +134,7 @@ if(NOT DEFINED THIRDPARTY_BUILD_DIR)
 endif()
 
 set(_THIRDPARTY_BUILD_DIR "${THIRDPARTY_BUILD_DIR}")
-print("THIRDPARTY BUILD DIR: ${_THIRDPARTY_BUILD_DIR}")
+message(STATUS "THIRDPARTY BUILD DIR: ${_THIRDPARTY_BUILD_DIR}")
 
 option(TESTING "Build tests" ON)
 option(BUILD_EXAMPLES "Build examples" ON)

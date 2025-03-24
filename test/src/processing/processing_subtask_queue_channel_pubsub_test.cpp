@@ -48,7 +48,7 @@ public:
  * @when A queue ownership request sent
  * @then Both channels receive the request.
  */
-TEST_F(ProcessingSubTaskChannelPubSubTest, DISABLED_RequestTransmittingOnSinglePubSubHost)
+TEST_F(ProcessingSubTaskChannelPubSubTest, RequestTransmittingOnSinglePubSubHost)
 {
     auto pubs1 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();;
     pubs1->Start(40001, {});
@@ -95,7 +95,7 @@ TEST_F(ProcessingSubTaskChannelPubSubTest, DISABLED_RequestTransmittingOnSingleP
  * @when A queue ownership request sent
  * @then Both channels receive the request.
  */
-TEST_F(ProcessingSubTaskChannelPubSubTest, DISABLED_RequestTransmittingOnDifferentPubSubHosts)
+TEST_F(ProcessingSubTaskChannelPubSubTest, RequestTransmittingOnDifferentPubSubHosts)
 {
     auto pubs1 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();;
     pubs1->Start(40001, {});
@@ -141,7 +141,7 @@ TEST_F(ProcessingSubTaskChannelPubSubTest, DISABLED_RequestTransmittingOnDiffere
  * @when A queue published to a channel
  * @then Both channels receive the queue.
  */
-TEST_F(ProcessingSubTaskChannelPubSubTest, DISABLED_QueueTransmittingOnSinglePubSubHost)
+TEST_F(ProcessingSubTaskChannelPubSubTest, QueueTransmittingOnSinglePubSubHost)
 {
     auto pubs1 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();;
     pubs1->Start(40001, {});
