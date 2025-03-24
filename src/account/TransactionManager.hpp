@@ -115,8 +115,7 @@ namespace sgns
                                                    const std::optional<std::vector<uint8_t>>  &proof );
 
         std::shared_ptr<crdt::GlobalDB> processing_db_m; //TODO - remove this as it's only needed on the PayEscrow
-        std::shared_ptr<crdt::GlobalDB> outgoing_db_m;
-        std::shared_ptr<crdt::GlobalDB> incoming_db_m;
+        std::shared_ptr<crdt::GlobalDB> combined_db_m;
         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub_m;
         std::string                                      base_path_m;
 

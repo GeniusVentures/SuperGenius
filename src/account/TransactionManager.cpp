@@ -61,21 +61,22 @@ namespace sgns
                                                                                 account_m->GetAddress() + "out" );
         auto incoming_topic = std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_m,
                                                                                 account_m->GetAddress() + "in" );
-        std::vector<std::shared_ptr<ipfs_pubsub::GossipPubSubTopic>> topics = { outgoing_topic, incoming_topic };
 
-        std::string mergedPath = base_path_m + "_tx";
+        std::vector<std::shared_ptr<ipfs_pubsub::GossipPubSubTopic>> topics;
+        topics.push_back( outgoing_topic );
+        topics.push_back( incoming_topic );
 
-        auto merged_db = std::make_shared<crdt::GlobalDB>( ctx_m, mergedPath, base_port_m, topics );
+        combined_db_m = std::make_shared<crdt::GlobalDB>( ctx_m,
+                                                          ( boost::format( base_path_m + "_tx" ) ).str(),
+                                                          base_port_m,
+                                                          topics );
         used_ports_m.insert( base_port_m );
         base_port_m++;
 
-        if ( !merged_db->Init( crdt::CrdtOptions::DefaultOptions() ).has_value() )
+        if ( !combined_db_m->Init( crdt::CrdtOptions::DefaultOptions() ).has_value() )
         {
-            throw std::runtime_error( "Could not start merged GlobalDB" );
+            throw std::runtime_error( "Could not start Combined GlobalDB" );
         }
-
-        outgoing_db_m = merged_db;
-        incoming_db_m = merged_db;
 
         RefreshPorts();
     }
@@ -348,7 +349,7 @@ namespace sgns
 
         m_logger->debug( "Recording the transaction on " + tx_key.GetKey() );
 
-        auto crdt_transaction = outgoing_db_m->BeginTransaction();
+        auto crdt_transaction = combined_db_m->BeginTransaction();
 
         data_transaction.put( transaction->SerializeByteVector() );
         BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Put( std::move( tx_key ), std::move( data_transaction ) ) );
@@ -467,7 +468,7 @@ namespace sgns
 #ifdef _PROOF_ENABLED
         auto proof_path = GetNotificationPath( account_m->GetAddress() ) + "proof/" + tx->dag_st.data_hash();
         m_logger->debug( "Checking the proof in {}", proof_path );
-        OUTCOME_TRY( ( auto &&, proof_data ), incoming_db_m->Get( { proof_path } ) );
+        OUTCOME_TRY( ( auto &&, proof_data ), combined_db_m->Get( { proof_path } ) );
 
         auto proof_data_vector = proof_data.toVector();
 
@@ -483,14 +484,14 @@ namespace sgns
     {
         auto transaction_paths = GetNotificationPath( account_m->GetAddress() ) + "tx/";
         m_logger->trace( "Probing incoming transactions on " + transaction_paths );
-        OUTCOME_TRY( ( auto &&, transaction_list ), incoming_db_m->QueryKeyValues( transaction_paths ) );
+        OUTCOME_TRY( ( auto &&, transaction_list ), combined_db_m->QueryKeyValues( transaction_paths ) );
 
         m_logger->trace( "Incoming transaction list grabbed from CRDT with Size {}", transaction_paths.size() );
 
         //m_logger->info( "Number of tasks in Queue: {}", queryTasks.size() );
         for ( const auto &element : transaction_list )
         {
-            auto transaction_key = incoming_db_m->KeyToString( element.first );
+            auto transaction_key = combined_db_m->KeyToString( element.first );
             if ( !transaction_key.has_value() )
             {
                 m_logger->debug( "Unable to convert a key to string" );
@@ -503,7 +504,7 @@ namespace sgns
             }
 
             m_logger->debug( "Finding incoming transaction: " + transaction_key.value() );
-            auto maybe_transaction = FetchTransaction( incoming_db_m, transaction_key.value() );
+            auto maybe_transaction = FetchTransaction( combined_db_m, transaction_key.value() );
             if ( !maybe_transaction.has_value() )
             {
                 m_logger->debug( "Can't fetch transaction" );
@@ -554,14 +555,14 @@ namespace sgns
 
         auto transaction_paths = tx_key.str() + account_m->GetAddress() + "/tx";
         m_logger->trace( "Probing transactions on " + transaction_paths );
-        OUTCOME_TRY( ( auto &&, transaction_list ), outgoing_db_m->QueryKeyValues( transaction_paths ) );
+        OUTCOME_TRY( ( auto &&, transaction_list ), combined_db_m->QueryKeyValues( transaction_paths ) );
 
         m_logger->trace( "Transaction list grabbed from CRDT" );
 
         //m_logger->info( "Number of tasks in Queue: {}", queryTasks.size() );
         for ( const auto &element : transaction_list )
         {
-            auto transaction_key = outgoing_db_m->KeyToString( element.first );
+            auto transaction_key = combined_db_m->KeyToString( element.first );
             if ( !transaction_key.has_value() )
             {
                 m_logger->debug( "Unable to convert a key to string" );
@@ -573,7 +574,7 @@ namespace sgns
                 continue;
             }
 
-            auto maybe_transaction = FetchTransaction( outgoing_db_m, transaction_key.value() );
+            auto maybe_transaction = FetchTransaction( combined_db_m, transaction_key.value() );
             if ( !maybe_transaction.has_value() )
             {
                 m_logger->debug( "Can't fetch transaction" );
