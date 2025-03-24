@@ -149,7 +149,7 @@ namespace sgns::processing
     {
         m_dltGrabSubTaskTimeout.expires_at( boost::posix_time::pos_infin );
 
-        m_logger->debug("QUEUE_PROCESS_PENDING: for node {} at {}ms.", m_localNodeId, m_queue_timestamp_);
+        m_logger->trace("QUEUE_PROCESS_PENDING: for node {} at {}ms.", m_localNodeId, m_queue_timestamp_);
 
         // Update queue timestamp based on current ownership duration
         UpdateQueueTimestamp();
@@ -547,17 +547,27 @@ namespace sgns::processing
             m_logger->error( "No queue for task");
             return;
         }
+
         std::lock_guard guard( m_queueMutex );
         for ( const auto &subTaskId : subTaskIds )
         {
             if ( isProcessed )
             {
                 m_processedSubTaskIds.insert( subTaskId );
+                // Add to queue's processed subtask IDs
+                m_queue->mutable_processing_queue()->add_processed_subtask_ids(subTaskId);
                 m_logger->trace( "Subtask flagged as processed {}", subTaskId );
             }
             else
             {
                 m_processedSubTaskIds.erase( subTaskId );
+
+                // For removal, clear and rebuild from our updated set
+                auto* processed_ids = m_queue->mutable_processing_queue();
+                processed_ids->clear_processed_subtask_ids();
+                for (const auto& id : m_processedSubTaskIds) {
+                    processed_ids->add_processed_subtask_ids(id);
+                }
                 m_logger->trace( "Subtask flagged as UNPROCESSED {}", subTaskId );
             }
         }
@@ -567,6 +577,11 @@ namespace sgns::processing
         UpdateUnprocessedSubTaskIndices(m_queue.get(), unprocessedSubTaskIndices);
 
         m_processingQueue.UpdateQueue( m_queue->mutable_processing_queue(), unprocessedSubTaskIndices );
+
+        // Add this at the end of the method
+        if (HasOwnership()) {
+            PublishSubTaskQueue();
+        }
     }
 
     bool ProcessingSubTaskQueueManager::IsProcessed() const

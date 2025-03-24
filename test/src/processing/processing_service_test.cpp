@@ -24,10 +24,23 @@ public:
 class SubTaskResultStorageMock : public SubTaskResultStorage
 {
 public:
-    void AddSubTaskResult(const SGProcessing::SubTaskResult& subTaskResult) override {}
-    void RemoveSubTaskResult(const std::string& subTaskId) override {}
-    std::vector<SGProcessing::SubTaskResult> GetSubTaskResults(
-        const std::set<std::string>& subTaskIds) override { return {};}
+    void AddSubTaskResult(const SGProcessing::SubTaskResult& subTaskResult) override {
+        results[subTaskResult.subtaskid()] = subTaskResult;
+    }
+
+    void RemoveSubTaskResult(const std::string& subTaskId) override {
+        results.erase(subTaskId);
+    }
+
+    std::vector<SGProcessing::SubTaskResult> GetSubTaskResults(const std::set<std::string>& subTaskIds) override {
+        std::vector<SGProcessing::SubTaskResult> ret;
+        for (const auto& id : subTaskIds) {
+            if (results.count(id)) ret.push_back(results[id]);
+        }
+        return ret;
+    }
+private:
+    std::map<std::string, SGProcessing::SubTaskResult> results;
 };
 
 class ProcessingCoreImpl : public ProcessingCore
