@@ -12,9 +12,6 @@
 #include <libp2p/protocol/autonat/autonat.hpp>
 #include <libp2p/protocol/holepunch/holepunch_server.hpp>
 #include <libp2p/protocol/holepunch/holepunch_client.hpp>
-#include <vector>
-#include <memory>
-#include <string>
 
 namespace sgns::crdt
 {
@@ -24,19 +21,18 @@ namespace sgns::crdt
         using Buffer      = base::Buffer;
         using QueryResult = CrdtDatastore::QueryResult;
 
-        // Constructor with a single topic (backward compatibility)
         GlobalDB( std::shared_ptr<boost::asio::io_context>              context,
                   std::string                                           databasePath,
                   int                                                   dagSyncPort,
                   std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> broadcastChannel,
                   std::string                                           gsaddresses = {} );
-
-        // Constructor with multiple topics
-        GlobalDB( std::shared_ptr<boost::asio::io_context>                                  context,
-                  std::string                                                               databasePath,
-                  int                                                                       dagSyncPort,
+                  
+        GlobalDB( std::shared_ptr<boost::asio::io_context> context,
+                  std::string databasePath,
+                  int dagSyncPort,
                   const std::vector<std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic>> &broadcastChannels,
-                  std::string                                                               gsaddresses = {} );
+                  std::string gsaddresses = {} );
+
 
         ~GlobalDB();
 
@@ -100,7 +96,7 @@ namespace sgns::crdt
     */
         std::shared_ptr<AtomicTransaction> BeginTransaction();
 
-        void PrintDataStore();
+    void PrintDataStore();
 
         auto GetDB()
         {
@@ -111,13 +107,13 @@ namespace sgns::crdt
         void scheduleBootstrap( std::shared_ptr<boost::asio::io_context> io_context,
                                 std::shared_ptr<libp2p::Host>            host );
 
-        std::shared_ptr<boost::asio::io_context> m_context;
-        std::string                              m_databasePath;
-        int                                      m_dagSyncPort;
-        std::string                              m_graphSyncAddrs;
+        std::shared_ptr<boost::asio::io_context>              m_context;
+        std::string                                           m_databasePath;
+        int                                                   m_dagSyncPort;
+        std::string                                           m_graphSyncAddrs;
 
-        // Now support multiple topics
         std::vector<std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic>> m_broadcastChannels;
+
 
         //std::shared_ptr<sgns::ipfs_lite::ipfs::dht::IpfsDHT> dht_;
         //std::shared_ptr<libp2p::protocol::Identify> identify_;
