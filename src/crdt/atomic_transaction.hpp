@@ -56,6 +56,12 @@ namespace sgns::crdt
          * @return outcome::success if committed successfully, failure otherwise
          */
         outcome::result<void> Commit();
+        /**
+         * @brief Commits all operations atomically to a single topic, rather than all topics.
+         * @param topicName The single topic name to which we broadcast the combined delta
+         * @return outcome::success if committed successfully, failure otherwise
+         */
+        outcome::result<void> CommitToTopic( const std::string &topicName );
 
     private:
         enum class Operation 

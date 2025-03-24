@@ -281,6 +281,90 @@ namespace sgns::crdt
         return outcome::success();
     }
 
+    outcome::result<void> PubSubBroadcasterExt::Broadcast( const base::Buffer &buff, const std::string &topic_name )
+    {
+        if ( topics_.empty() )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
+
+        sgns::crdt::broadcasting::BroadcastMessage bmsg;
+        auto                                       bpi = new sgns::crdt::broadcasting::BroadcastMessage_PeerInfo;
+
+        auto port_opt = dagSyncerMultiaddress_.getFirstValueForProtocol( libp2p::multi::Protocol::Code::TCP );
+        if ( !port_opt )
+        {
+            delete bpi;
+            return outcome::failure( boost::system::error_code{} );
+        }
+        auto port = port_opt.value();
+
+        auto peer_info_res = dagSyncer_->GetPeerInfo();
+        if ( !peer_info_res )
+        {
+            delete bpi;
+            m_logger->error( "Dag syncer has no peer info" );
+            return outcome::failure( boost::system::error_code{} );
+        }
+        auto peer_info = peer_info_res.value();
+        bpi->set_id( std::string( peer_info.id.toVector().begin(), peer_info.id.toVector().end() ) );
+
+        // Observed addresses from the first topic's host (or any consistent approach).
+        auto pubsubObserved = topics_.front()->GetPubsub()->GetHost()->getObservedAddressesReal();
+        for ( auto &address : pubsubObserved )
+        {
+            auto ip_address_opt = address.getFirstValueForProtocol( libp2p::multi::Protocol::Code::IP4 );
+            if ( ip_address_opt )
+            {
+                auto new_address = libp2p::multi::Multiaddress::create(
+                    fmt::format( "/ip4/{}/tcp/{}/p2p/{}", ip_address_opt.value(), port, peer_info.id.toBase58() ) );
+                if ( new_address )
+                {
+                    m_logger->info( "Address Broadcast Converted {}", new_address.value().getStringAddress() );
+                    bpi->add_addrs( new_address.value().getStringAddress() );
+                }
+            }
+        }
+
+        auto mas = peer_info.addresses;
+        for ( auto &address : mas )
+        {
+            bpi->add_addrs( address.getStringAddress() );
+            m_logger->info( "Address Broadcast {}", address.getStringAddress() );
+        }
+
+        if ( bpi->addrs_size() <= 0 )
+        {
+            delete bpi;
+            return outcome::success();
+        }
+
+        bmsg.set_allocated_peer( bpi );
+        std::string data( buff.toString() );
+        bmsg.set_data( data );
+
+        bool found = false;
+        // Publish to only the matching topic.
+        for ( auto &topic : topics_ )
+        {
+            if ( topic->GetTopic() == topic_name )
+            {
+                topic->Publish( bmsg.SerializeAsString() );
+                found = true;
+                break;
+            }
+        }
+
+        if ( !found )
+        {
+            m_logger->warn( "Broadcast: no topic matching '{}' was found", topic_name );
+        }
+        else
+        {
+            m_logger->debug( "CIDs broadcasted by {} to SINGLE topic {}", peer_info.id.toBase58(), topic_name );
+        }
+        return outcome::success();
+    }
     outcome::result<base::Buffer> PubSubBroadcasterExt::Next()
     {
         std::scoped_lock lock( mutex_ );
