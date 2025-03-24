@@ -185,17 +185,21 @@ TEST_F(SubTaskQueueAccessorImplTest, SubscriptionToResultChannel)
 
     Color::PrintInfo("Waited ", resultTime.count(),  " ms for pubsub nodes initialization");
 
-    sgns::ipfs_pubsub::GossipPubSubTopic resultChannel(pubs1, "RESULT_CHANNEL_ID_test");
-    resultChannel.Subscribe([](boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message&> message)
+    sgns::ipfs_pubsub::GossipPubSubTopic resultChannel1(pubs1, "RESULT_CHANNEL_ID_test");
+    sgns::ipfs_pubsub::GossipPubSubTopic resultChannel2(pubs2, "RESULT_CHANNEL_ID_test");
+    resultChannel2.Subscribe([](boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message&> message)
         {
         });
 
-    auto queueChannel = std::make_shared<ProcessingSubTaskQueueChannelPubSub>(pubs1, "QUEUE_CHANNEL_ID");
+    auto queueChannel1 = std::make_shared<ProcessingSubTaskQueueChannelPubSub>(pubs1, "QUEUE_CHANNEL_ID");
+    auto queueChannel2 = std::make_shared<ProcessingSubTaskQueueChannelPubSub>(pubs2, "QUEUE_CHANNEL_ID");
 
     auto processingCore = std::make_shared<ProcessingCoreImpl>(0);
 
-    auto nodeId = "NODE_1";
-    auto engine = std::make_shared<ProcessingEngine>(nodeId, processingCore, [](const std::string &){},[]{});
+    auto nodeId1 = "NODE_1";
+    auto engine1 = std::make_shared<ProcessingEngine>(nodeId1, processingCore, [](const std::string &){},[]{});
+    auto nodeId1 = "NODE_2";
+    auto engine1 = std::make_shared<ProcessingEngine>(nodeId2, processingCore, [](const std::string &){},[]{});
 
     auto queue = std::make_unique<SGProcessing::SubTaskQueue>();
     queue->mutable_processing_queue()->set_owner_node_id("DIFFERENT_NODE_ID");
@@ -209,22 +213,29 @@ TEST_F(SubTaskQueueAccessorImplTest, SubscriptionToResultChannel)
     // The local queue wrapper doesn't own the queue
     processingQueueManager->ProcessSubTaskQueueMessage(queue.release());
 
-    auto subTaskQueueAccessor = std::make_shared<SubTaskQueueAccessorImpl>(
+    auto subTaskQueueAccessor1 = std::make_shared<SubTaskQueueAccessorImpl>(
         pubs1, 
-        processingQueueManager,
+        processingQueueManager1,
         std::make_shared<SubTaskStateStorageMock>(),
         std::make_shared<SubTaskResultStorageMock>(),
         [](const SGProcessing::TaskResult&) {},
         [](const std::string &) {});
 
-    subTaskQueueAccessor->CreateResultsChannel("test");
+    subTaskQueueAccesso1r->CreateResultsChannel("test");
 
     // Create a flag to track when the connection callback has been executed
     std::atomic<bool> connectionEstablished = false;
 
-    subTaskQueueAccessor->ConnectToSubTaskQueue([&]() {
-        engine->StartQueueProcessing(subTaskQueueAccessor);
-        connectionEstablished = true;
+    subTaskQueueAccessor1->ConnectToSubTaskQueue([&]()
+    {
+        engine1->StartQueueProcessing(subTaskQueueAccessor1);
+        connectionEstablished1 = true;
+    });
+
+    subTaskQueueAccessor2->ConnectToSubTaskQueue([&]()
+    {
+        engine2->StartQueueProcessing(subTaskQueueAccessor1);
+        connectionEstablished2 = true;
     });
 
     // Wait for connection to be established

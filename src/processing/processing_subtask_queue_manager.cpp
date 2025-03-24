@@ -105,6 +105,7 @@ namespace sgns::processing
 
     bool ProcessingSubTaskQueueManager::UpdateQueue(SGProcessing::SubTaskQueue *pQueue)
     {
+        auto queueChanged = false;
         if (pQueue != nullptr)
         {
             std::shared_ptr<SGProcessing::SubTaskQueue> queue(pQueue);
@@ -119,14 +120,28 @@ namespace sgns::processing
                     m_processedSubTaskIds.insert(queue->processing_queue().processed_subtask_ids(i));
                 }
             } else {
+
                 // Merge incoming processed IDs into local set before updating queue
                 for (int i = 0; i < queue->processing_queue().processed_subtask_ids_size(); ++i) {
-                    m_processedSubTaskIds.insert(queue->processing_queue().processed_subtask_ids(i));
+                    auto [_, success] = m_processedSubTaskIds.insert(queue->processing_queue().processed_subtask_ids(i));
+                    if (success)
+                    {
+                        queueChanged = true;
+                    }
                 }
                 // If we're the owner, update the processed IDs in the queue from our local set
                 queue->mutable_processing_queue()->clear_processed_subtask_ids();
                 for (const auto& processedId : m_processedSubTaskIds) {
                     queue->mutable_processing_queue()->add_processed_subtask_ids(processedId);
+                }
+
+                if (queueChanged)
+                {
+                    m_queue_timestamp_ = queue->processing_queue().last_update_timestamp();
+                    UpdateQueueTimestamp();
+                    m_logger->debug("QUEUE_PUBLISH_SUBTASK_PROCESSED_UPDATE: on {} at {}ms", m_localNodeId, m_queue_timestamp_);
+                    LogQueue();
+                    PublishSubTaskQueue();
                 }
             }
 
@@ -139,10 +154,10 @@ namespace sgns::processing
                 m_logger->debug("QUEUE_LOCAL_UPDATE: on {} at {}ms", m_localNodeId, m_queue_timestamp_);
                 m_queue.swap(queue);
                 LogQueue();
-                return true;
+                queueChanged = true;
             }
         }
-        return false;
+        return queueChanged;
     }
 
     void ProcessingSubTaskQueueManager::ProcessPendingSubTaskGrabbing()
