@@ -26,6 +26,7 @@ namespace sgns::crdt
     * @return outcome::success on success or outcome::failure on error 
     */
     virtual outcome::result<void> Broadcast(const base::Buffer& buff) = 0;
+    virtual outcome::result<void> Broadcast( const base::Buffer &buff, const std::string &topic_name ) = 0;
 
     /**
     * Obtain the next {@return} payload received from the network.

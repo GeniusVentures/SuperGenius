@@ -672,6 +672,23 @@ void CrdtDatastore::SendNewJobs( const CID &aRootCID, uint64_t aRootPriority, co
         return this->Broadcast( cids );
     }
 
+    outcome::result<void> CrdtDatastore::PublishToTopic( const std::shared_ptr<Delta> &aDelta,
+                                                         const std::string            &topicName )
+    {
+        // 1. Create a new block with the CRDT Delta
+        auto addResult = this->AddDAGNode( aDelta );
+        if ( addResult.has_failure() )
+        {
+            return outcome::failure( addResult.error() );
+        }
+
+        // 2. Now broadcast the resulting new head to the single topic
+        std::vector<CID> cids;
+        cids.push_back( addResult.value() );
+
+        return this->BroadcastToTopic( cids, topicName );
+    }
+
     outcome::result<void> CrdtDatastore::Broadcast( const std::vector<CID> &cids )
     {
         if ( this->broadcaster_ == nullptr )
@@ -699,6 +716,35 @@ void CrdtDatastore::SendNewJobs( const CID &aRootCID, uint64_t aRootPriority, co
                 return outcome::failure( bcastResult.error() );
             }
         }
+        return outcome::success();
+    }
+
+    outcome::result<void> CrdtDatastore::BroadcastToTopic( const std::vector<CID> &cids, const std::string &topicName )
+    {
+        if ( !broadcaster_ )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
+
+        if ( cids.empty() )
+        {
+            return outcome::success(); // Nothing to broadcast
+        }
+
+        // Encode the CIDs into a buffer for broadcasting
+        auto encodedBufferResult = EncodeBroadcast( cids );
+        if ( encodedBufferResult.has_failure() )
+        {
+            return outcome::failure( encodedBufferResult.error() );
+        }
+
+        // Use the new single-topic overload
+        auto bcastResult = broadcaster_->Broadcast( encodedBufferResult.value(), topicName );
+        if ( bcastResult.has_failure() )
+        {
+            return outcome::failure( bcastResult.error() );
+        }
+
         return outcome::success();
     }
 

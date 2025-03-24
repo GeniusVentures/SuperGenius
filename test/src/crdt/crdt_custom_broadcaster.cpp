@@ -11,7 +11,15 @@ namespace sgns::crdt
         }
         return outcome::success();
     }
-
+    outcome::result<void> CustomBroadcaster::Broadcast(const base::Buffer& buff, const std::string &topic_name)
+    {
+        if (!buff.empty())
+        {
+            const std::string bCastData(buff.toString());
+            listOfBroadcasts_.push(bCastData);
+        }
+        return outcome::success();
+    }
     outcome::result<base::Buffer> CustomBroadcaster::Next()
     {
         if (listOfBroadcasts_.empty())
