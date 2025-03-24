@@ -119,6 +119,14 @@ namespace sgns::crdt
     * @return returns outcome::success on success or outcome::failure otherwise
     */
     outcome::result<void> Publish(const std::shared_ptr<Delta>& aDelta);
+    /**
+     * Publishes a Delta to a single, specified topic by name.
+     * Creates a DAG node, merges it into the CRDT, and broadcasts only to that topic.
+     * @param aDelta The Delta to publish
+     * @param topicName The single topic name to which we broadcast
+     * @return outcome::success on success or outcome::failure on error
+     */
+    outcome::result<void> PublishToTopic( const std::shared_ptr<Delta> &aDelta, const std::string &topicName );
 
     /** PrintDAG pretty prints the current Merkle-DAG using the given printFunc
     * @return returns outcome::success on success or outcome::failure otherwise
@@ -221,6 +229,13 @@ namespace sgns::crdt
     * @return returns outcome::success on success or outcome::failure otherwise
     */
     outcome::result<void> Broadcast(const std::vector<CID>& cids);
+    /**
+     * Broadcasts a set of CIDs to a single, specified topic by name.
+     * @param cids list of CIDs to broadcast
+     * @param topicName name of the single topic to which we broadcast
+     * @return outcome::success on success or outcome::failure on error
+     */
+    outcome::result<void> BroadcastToTopic( const std::vector<CID> &cids, const std::string &topicName );
 
     /** EncodeBroadcast encodes list of CIDs to CRDT broadcast data
     * @param heads list of CIDs
