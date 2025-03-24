@@ -201,6 +201,7 @@ namespace sgns::crdt
     {
         if ( topics_.empty() )
         {
+            m_logger->error( "No topics available for broadcasting." );
             return outcome::failure( boost::system::error_code{} );
         }
 
@@ -211,6 +212,7 @@ namespace sgns::crdt
         auto port_opt = dagSyncerMultiaddress_.getFirstValueForProtocol( libp2p::multi::Protocol::Code::TCP );
         if ( !port_opt )
         {
+            m_logger->error( "TCP port not found in dagSyncerMultiaddress." );
             delete bpi;
             return outcome::failure( boost::system::error_code{} );
         }
@@ -231,14 +233,14 @@ namespace sgns::crdt
         auto peer_info_res = dagSyncer_->GetPeerInfo();
         if ( !peer_info_res )
         {
+            m_logger->error( "Dag syncer has no peer info." );
             delete bpi;
-            m_logger->error( "Dag syncer has no peer info" );
             return outcome::failure( boost::system::error_code{} );
         }
         auto peer_info = peer_info_res.value();
         bpi->set_id( std::string( peer_info.id.toVector().begin(), peer_info.id.toVector().end() ) );
 
-        // Use observed addresses from the first topic (for compatibility)
+        // Convert observed addresses from the first topic's host.
         auto pubsubObserved = topics_.front()->GetPubsub()->GetHost()->getObservedAddressesReal();
         for ( auto &address : pubsubObserved )
         {
@@ -249,8 +251,12 @@ namespace sgns::crdt
                     fmt::format( "/ip4/{}/tcp/{}/p2p/{}", ip_address_opt.value(), port, peer_info.id.toBase58() ) );
                 if ( new_address )
                 {
-                    m_logger->info( "Address Broadcast Converted {}", new_address.value().getStringAddress() );
+                    m_logger->info( "Address Broadcast Converted: {}", new_address.value().getStringAddress() );
                     bpi->add_addrs( new_address.value().getStringAddress() );
+                }
+                else
+                {
+                    m_logger->warn( "Failed to convert observed address: {}", address.getStringAddress() );
                 }
             }
         }
@@ -259,24 +265,24 @@ namespace sgns::crdt
         for ( auto &address : mas )
         {
             bpi->add_addrs( address.getStringAddress() );
-            m_logger->info( "Address Broadcast {}", address.getStringAddress() );
+            m_logger->info( "Address Broadcast: {}", address.getStringAddress() );
         }
 
-        // If no addresses exist, nothing to broadcast.
         if ( bpi->addrs_size() <= 0 )
         {
+            m_logger->warn( "No addresses found for broadcasting." );
             delete bpi;
             return outcome::success();
         }
+
         bmsg.set_allocated_peer( bpi );
         std::string data( buff.toString() );
         bmsg.set_data( data );
-        // Publish the message to all topics.
-        for ( auto &topic : topics_ )
-        {
-            topic->Publish( bmsg.SerializeAsString() );
-        }
-        m_logger->debug( "CIDs broadcasted by {}", peer_info.id.toBase58() );
+
+        topics_.front()->Publish( bmsg.SerializeAsString() );
+
+        std::string frontTopic = topics_.front()->GetTopic();
+        m_logger->debug( "CIDs broadcasted by {} to the first topic ({})", peer_info.id.toBase58(), frontTopic );
 
         return outcome::success();
     }
@@ -285,8 +291,10 @@ namespace sgns::crdt
     {
         if ( topics_.empty() )
         {
+            m_logger->error( "No topics available for broadcasting." );
             return outcome::failure( boost::system::error_code{} );
         }
+
 
         sgns::crdt::broadcasting::BroadcastMessage bmsg;
         auto                                       bpi = new sgns::crdt::broadcasting::BroadcastMessage_PeerInfo;
@@ -294,6 +302,7 @@ namespace sgns::crdt
         auto port_opt = dagSyncerMultiaddress_.getFirstValueForProtocol( libp2p::multi::Protocol::Code::TCP );
         if ( !port_opt )
         {
+            m_logger->error( "TCP port not found in dagSyncerMultiaddress." );
             delete bpi;
             return outcome::failure( boost::system::error_code{} );
         }
@@ -302,14 +311,14 @@ namespace sgns::crdt
         auto peer_info_res = dagSyncer_->GetPeerInfo();
         if ( !peer_info_res )
         {
+            m_logger->error( "Dag syncer has no peer info." );
             delete bpi;
-            m_logger->error( "Dag syncer has no peer info" );
             return outcome::failure( boost::system::error_code{} );
         }
         auto peer_info = peer_info_res.value();
         bpi->set_id( std::string( peer_info.id.toVector().begin(), peer_info.id.toVector().end() ) );
 
-        // Observed addresses from the first topic's host (or any consistent approach).
+        // Use observed addresses from the first topic's host.
         auto pubsubObserved = topics_.front()->GetPubsub()->GetHost()->getObservedAddressesReal();
         for ( auto &address : pubsubObserved )
         {
@@ -320,8 +329,12 @@ namespace sgns::crdt
                     fmt::format( "/ip4/{}/tcp/{}/p2p/{}", ip_address_opt.value(), port, peer_info.id.toBase58() ) );
                 if ( new_address )
                 {
-                    m_logger->info( "Address Broadcast Converted {}", new_address.value().getStringAddress() );
+                    m_logger->info( "Address Broadcast Converted: {}", new_address.value().getStringAddress() );
                     bpi->add_addrs( new_address.value().getStringAddress() );
+                }
+                else
+                {
+                    m_logger->warn( "Failed to convert observed address: {}", address.getStringAddress() );
                 }
             }
         }
@@ -330,11 +343,12 @@ namespace sgns::crdt
         for ( auto &address : mas )
         {
             bpi->add_addrs( address.getStringAddress() );
-            m_logger->info( "Address Broadcast {}", address.getStringAddress() );
+            m_logger->info( "Address Broadcast: {}", address.getStringAddress() );
         }
 
         if ( bpi->addrs_size() <= 0 )
         {
+            m_logger->warn( "No addresses found for broadcasting." );
             delete bpi;
             return outcome::success();
         }
@@ -365,6 +379,7 @@ namespace sgns::crdt
         }
         return outcome::success();
     }
+
     outcome::result<base::Buffer> PubSubBroadcasterExt::Next()
     {
         std::scoped_lock lock( mutex_ );
