@@ -83,21 +83,18 @@ namespace sgns::crdt
         m_context          = nullptr;
     }
 
-    std::string GetLocalIP( boost::asio::io_context &io )
+std::string GetLocalIP( boost::asio::io_context &io )
     {
 #if defined( _WIN32 )
         // Windows implementation using GetAdaptersAddresses
         ULONG                 bufferSize       = 15000;
         IP_ADAPTER_ADDRESSES *adapterAddresses = (IP_ADAPTER_ADDRESSES *)malloc( bufferSize );
-
         if ( GetAdaptersAddresses( AF_INET, 0, nullptr, adapterAddresses, &bufferSize ) == ERROR_BUFFER_OVERFLOW )
         {
             free( adapterAddresses );
             adapterAddresses = (IP_ADAPTER_ADDRESSES *)malloc( bufferSize );
         }
-
         std::string addr = "127.0.0.1"; // Default to localhost
-
         if ( GetAdaptersAddresses( AF_INET, 0, nullptr, adapterAddresses, &bufferSize ) == NO_ERROR )
         {
             for ( IP_ADAPTER_ADDRESSES *adapter = adapterAddresses; adapter; adapter = adapter->Next )
@@ -115,6 +112,13 @@ namespace sgns::crdt
                                        &( ( (struct sockaddr_in *)addrStruct )->sin_addr ),
                                        buffer,
                                        INET_ADDRSTRLEN );
+
+                            // Skip APIPA/link-local addresses (169.254.x.x)
+                            if ( strncmp( buffer, "169.254.", 8 ) == 0 )
+                            {
+                                continue;
+                            }
+
                             addr = buffer;
                             break;
                         }
@@ -126,22 +130,18 @@ namespace sgns::crdt
                 }
             }
         }
-
         free( adapterAddresses );
         return addr;
-
 #else
         // Unix-like implementation using getifaddrs
         struct ifaddrs *ifaddr, *ifa;
         int             family;
         std::string     addr = "127.0.0.1"; // Default to localhost
-
         if ( getifaddrs( &ifaddr ) == -1 )
         {
             perror( "getifaddrs" );
             return addr;
         }
-
         for ( ifa = ifaddr; ifa != nullptr; ifa = ifa->ifa_next )
         {
             if ( ifa->ifa_addr == nullptr )
@@ -149,7 +149,6 @@ namespace sgns::crdt
                 continue;
             }
             family = ifa->ifa_addr->sa_family;
-
             // We only want IPv4 addresses
             if ( family == AF_INET && !( ifa->ifa_flags & IFF_LOOPBACK ) )
             {
@@ -163,12 +162,17 @@ namespace sgns::crdt
                                      NI_NUMERICHOST );
                 if ( s == 0 )
                 {
+                    // Skip APIPA/link-local addresses (169.254.x.x)
+                    if ( strncmp( host, "169.254.", 8 ) == 0 )
+                    {
+                        continue;
+                    }
+
                     addr = host;
                     break;
                 }
             }
         }
-
         freeifaddrs( ifaddr );
         return addr;
 #endif
