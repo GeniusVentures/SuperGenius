@@ -21,6 +21,7 @@
 #include "TransferTransaction.hpp"
 #include "MintTransaction.hpp"
 #include "EscrowTransaction.hpp"
+#include "EscrowReleaseTransaction.hpp"
 #include "UTXOTxParameters.hpp"
 #include "account/proto/SGTransaction.pb.h"
 #include "base/fixed_point.hpp"
@@ -129,15 +130,15 @@ namespace sgns
         {
             return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::invalid_argument ) );
         }
-            
+
         auto transfer_transaction = std::make_shared<TransferTransaction>(
             TransferTransaction::New( maybe_params.value().outputs_, maybe_params.value().inputs_, FillDAGStruct() ) );
         std::optional<std::vector<uint8_t>> maybe_proof;
 #ifdef _PROOF_ENABLED
         TransferProof prover( static_cast<uint64_t>( account_m->GetBalance<uint64_t>() ),
                               static_cast<uint64_t>( amount ) );
-        OUTCOME_TRY((auto&&, proof_result), prover.GenerateFullProof());
-        maybe_proof = std::move(proof_result);
+        OUTCOME_TRY( ( auto &&, proof_result ), prover.GenerateFullProof() );
+        maybe_proof = std::move( proof_result );
 #endif
 
         account_m->utxos = UTXOTxParameters::UpdateUTXOList( account_m->utxos, maybe_params.value() );
@@ -160,8 +161,8 @@ namespace sgns
 #ifdef _PROOF_ENABLED
         TransferProof prover( 1000000000000000,
                               static_cast<uint64_t>( amount ) ); //Mint max 1000000 gnus per transaction
-        OUTCOME_TRY((auto&&, proof_result), prover.GenerateFullProof());
-        maybe_proof = std::move(proof_result);
+        OUTCOME_TRY( ( auto &&, proof_result ), prover.GenerateFullProof() );
+        maybe_proof = std::move( proof_result );
 #endif
         // Store the transaction ID before moving the transaction
         auto txId = mint_transaction->dag_st.data_hash();
@@ -196,7 +197,7 @@ namespace sgns
         TransferProof prover( static_cast<uint64_t>( account_m->GetBalance<uint64_t>() ),
                               static_cast<uint64_t>( amount ) );
         OUTCOME_TRY( ( auto &&, proof_result ), prover.GenerateFullProof() );
-        maybe_proof = std::move(proof_result);
+        maybe_proof = std::move( proof_result );
 #endif
 
         this->EnqueueTransaction( std::make_pair( escrow_transaction, maybe_proof ) );
@@ -254,17 +255,31 @@ namespace sgns
                                       std::vector<InputUTXOInfo>{ escrow_utxo_input },
                                       FillDAGStruct() ) );
 
-        std::optional<std::vector<uint8_t>> maybe_proof;
+        std::optional<std::vector<uint8_t>> transfer_proof;
 #ifdef _PROOF_ENABLED
         //TODO - Create with the real balance and amount
-        TransferProof prover( 1, 1 );
+        TransferProof transfer_prover( 1, 1 );
+        OUTCOME_TRY( ( auto &&, transfer_proof_result ), transfer_prover.GenerateFullProof() );
+        transfer_proof = std::move( transfer_proof_result );
+#endif
+        auto escrow_release_tx = std::make_shared<EscrowReleaseTransaction>(
+            EscrowReleaseTransaction::New( escrow_tx->GetUTXOParameters(),
+                                           escrow_tx->GetAmount(),
+                                           escrow_tx->GetDevAddress(),
+                                           escrow_tx->dag_st.source_addr(),
+                                           escrow_tx->dag_st.data_hash(),
+                                           FillDAGStruct() ) );
 
-        OUTCOME_TRY( ( auto &&, proof_result ), prover.GenerateFullProof() );
-        maybe_proof = std::move(proof_result);
+        std::optional<std::vector<uint8_t>> escrow_release_proof;
+#ifdef _PROOF_ENABLED
+        //TODO - Create with the real balance and amount
+        TransferProof escrow_release_prover( 1, 1 );
+        OUTCOME_TRY( ( auto &&, escrow_release_proof_result ), escrow_release_prover.GenerateFullProof() );
+        escrow_release_proof = std::move( escrow_release_proof_result );
 #endif
 
-        this->EnqueueTransaction( std::make_pair( transfer_transaction, maybe_proof ) );
-
+        this->EnqueueTransaction( std::make_pair( escrow_release_tx, escrow_release_proof ) );
+        this->EnqueueTransaction( std::make_pair( transfer_transaction, transfer_proof ) );
         return transfer_transaction->dag_st.data_hash();
     }
 
@@ -323,7 +338,7 @@ namespace sgns
             return outcome::success();
         }
 
-        auto& [transaction, maybe_proof] = tx_queue_m.front();
+        auto &[transaction, maybe_proof] = tx_queue_m.front();
 
         // this was set prior and needed for the proof to match when the proof was generated
         //transaction->dag_st.set_nonce( account_m->nonce );
@@ -349,7 +364,7 @@ namespace sgns
             sgns::crdt::HierarchicalKey  proof_key( GetTransactionProofPath( *transaction ) );
             sgns::crdt::GlobalDB::Buffer proof_transaction;
 
-            auto& proof = maybe_proof.value();
+            auto &proof = maybe_proof.value();
             m_logger->debug( "Recording the proof on " + proof_key.GetKey() );
 
             proof_transaction.put( proof );
@@ -362,8 +377,12 @@ namespace sgns
             m_logger->debug( "Notifying receiving peers of transfers" );
             BOOST_OUTCOME_TRYV2( auto &&, NotifyDestinationOfTransfer( transaction, maybe_proof ) );
         }
+        else if ( transaction->GetType() == "escrow-release" )
+        {
+            m_logger->debug( "Notifying escrow source of escrow release" );
+            BOOST_OUTCOME_TRYV2( auto &&, NotifyEscrowRelease( transaction, maybe_proof ) );
+        }
         BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Commit() );
-
 
         BOOST_OUTCOME_TRYV2( auto &&, ParseTransaction( transaction ) );
 
@@ -645,9 +664,25 @@ namespace sgns
         return outcome::success();
     }
 
+    outcome::result<void> TransactionManager::ParseEscrowReleaseTransaction(
+        const std::shared_ptr<IGeniusTransactions> &tx )
+    {
+        auto escrowReleaseTx = std::dynamic_pointer_cast<EscrowReleaseTransaction>( tx );
+        if ( !escrowReleaseTx )
+        {
+            m_logger->error( "Failed to cast transaction to EscrowReleaseTransaction" );
+            return std::errc::invalid_argument;
+        }
+
+        std::string originalEscrowHash = escrowReleaseTx->GetOriginalEscrowHash();
+        m_logger->debug( "Successfully fetched release for escrow: " + originalEscrowHash );
+
+        return outcome::success();
+    }
+
     outcome::result<void> TransactionManager::NotifyDestinationOfTransfer(
         const std::shared_ptr<IGeniusTransactions> &tx,
-        const std::optional<std::vector<uint8_t>>& proof )
+        const std::optional<std::vector<uint8_t>>  &proof )
     {
         auto transfer_tx = std::dynamic_pointer_cast<TransferTransaction>( tx );
         auto dest_infos  = transfer_tx->GetDstInfos();
@@ -713,7 +748,7 @@ namespace sgns
                                                        tx->dag_st.data_hash() );
                 sgns::crdt::GlobalDB::Buffer proof_data;
 
-                const auto& proof_value = proof.value();
+                const auto &proof_value = proof.value();
                 proof_data.put( proof_value );
                 m_logger->debug( "Putting replicate PROOF in {}", proof_key.GetKey() );
                 BOOST_OUTCOME_TRYV2( auto &&,
@@ -722,6 +757,78 @@ namespace sgns
             BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Commit() );
         }
 
+        return outcome::success();
+    }
+
+    outcome::result<void> TransactionManager::NotifyEscrowRelease( const std::shared_ptr<IGeniusTransactions> &tx,
+                                                                   const std::optional<std::vector<uint8_t>>  &proof )
+    {
+        auto escrow_release_tx = std::dynamic_pointer_cast<EscrowReleaseTransaction>( tx );
+        if ( !escrow_release_tx )
+        {
+            m_logger->error( "Failed to cast transaction to EscrowReleaseTransaction" );
+            return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::invalid_argument ) );
+        }
+
+        std::string escrow_source = escrow_release_tx->GetEscrowSource();
+        m_logger->debug( "Notifying escrow source: " + escrow_source );
+
+        std::shared_ptr<crdt::GlobalDB> destination_db;
+        auto                            destination_db_it = destination_dbs_m.find( escrow_source );
+        if ( destination_db_it == destination_dbs_m.end() )
+        {
+            m_logger->debug( "Port to sync " + std::to_string( base_port_m ) + " for escrow source: " + escrow_source );
+            std::string                tempaddress = escrow_source;
+            std::vector<unsigned char> inputBytes( tempaddress.begin(), tempaddress.end() );
+            std::vector<unsigned char> hash( SHA256_DIGEST_LENGTH );
+            SHA256( inputBytes.data(), inputBytes.size(), hash.data() );
+
+            libp2p::protocol::kademlia::ContentId key( hash );
+            auto                                  acc_cid = libp2p::multi::ContentIdentifierCodec::decode( key.data );
+            auto maybe_base58 = libp2p::multi::ContentIdentifierCodec::toString( acc_cid.value() );
+            if ( !maybe_base58 )
+            {
+                std::runtime_error( "We couldn't convert the account to base58" );
+            }
+            std::string base58key = maybe_base58.value();
+
+            destination_db = std::make_shared<crdt::GlobalDB>(
+                ctx_m,
+                ( boost::format( base_path_m + "_out/" + base58key ) ).str(),
+                base_port_m,
+                std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_m, escrow_source + "in" ) );
+            if ( !destination_db->Init( crdt::CrdtOptions::DefaultOptions() ).has_value() )
+            {
+                return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::io_error ) );
+            }
+            destination_dbs_m[escrow_source] = destination_db;
+            used_ports_m.insert( base_port_m );
+            base_port_m++;
+            RefreshPorts();
+        }
+        else
+        {
+            destination_db = destination_db_it->second;
+        }
+
+        auto                         crdt_transaction = destination_db->BeginTransaction();
+        sgns::crdt::HierarchicalKey  tx_key( GetNotificationPath( escrow_source ) + "tx/" + tx->dag_st.data_hash() );
+        sgns::crdt::GlobalDB::Buffer data_transaction;
+        data_transaction.put( tx->SerializeByteVector() );
+        m_logger->debug( "Putting replicate escrow release transaction in " + tx_key.GetKey() );
+        BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Put( std::move( tx_key ), std::move( data_transaction ) ) );
+
+        if ( proof )
+        {
+            sgns::crdt::HierarchicalKey  proof_key( GetNotificationPath( escrow_source ) + "proof/" +
+                                                   tx->dag_st.data_hash() );
+            sgns::crdt::GlobalDB::Buffer proof_data;
+            proof_data.put( proof.value() );
+            m_logger->debug( "Putting replicate escrow release PROOF in " + proof_key.GetKey() );
+            BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Put( std::move( proof_key ), std::move( proof_data ) ) );
+        }
+
+        BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Commit() );
         return outcome::success();
     }
 
@@ -882,4 +989,32 @@ namespace sgns
         return false;
     }
 
+    bool TransactionManager::WaitForEscrowRelease( const std::string        &originalEscrowId,
+                                                   std::chrono::milliseconds timeout ) const
+    {
+        auto start = std::chrono::steady_clock::now();
+        while ( std::chrono::steady_clock::now() - start < timeout )
+        {
+            {
+                std::shared_lock<std::shared_mutex> lock( incoming_tx_mutex_m );
+                for ( const auto &entry : incoming_tx_processed_m )
+                {
+                    auto tx = entry.second;
+                    if ( tx->GetType() == "escrow-release" )
+                    {
+                        auto escrowReleaseTx = std::dynamic_pointer_cast<EscrowReleaseTransaction>( tx );
+                        if ( escrowReleaseTx && escrowReleaseTx->GetOriginalEscrowHash() == originalEscrowId )
+                        {
+                            m_logger->debug( "Found matching escrow release transaction with tx id: " +
+                                             tx->dag_st.data_hash() );
+                            return true;
+                        }
+                    }
+                }
+            }
+            std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+        }
+        m_logger->debug( "Timed out waiting for escrow release transaction for escrow id: " + originalEscrowId );
+        return false;
+    }
 }

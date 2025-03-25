@@ -150,8 +150,8 @@ TEST_F( ProcessingNodesTest, DISABLED_ProcessNodesPubsubs )
 
 TEST_F( ProcessingNodesTest, ProcessNodesTransactionsCount )
 {
-    node_main->MintTokens( 50000000000 , "", "", "" );
-    node_main->MintTokens( 50000000000 , "", "", "" );
+    node_main->MintTokens( 50000000000, "", "", "" );
+    node_main->MintTokens( 50000000000, "", "", "" );
     std::this_thread::sleep_for( std::chrono::milliseconds( 10000 ) );
     int transcount_main  = node_main->GetOutTransactions().size();
     int transcount_node1 = node_proc1->GetOutTransactions().size();
@@ -228,7 +228,7 @@ TEST_F( ProcessingNodesTest, DISABLED_CalculateProcessingCostFail )
 
 TEST_F( ProcessingNodesTest, PostProcessing )
 {
-    std::string bin_path  = boost::dll::program_location().parent_path().string() + "/";
+    std::string bin_path = boost::dll::program_location().parent_path().string() + "/";
 #ifdef _WIN32
     bin_path += "../";
 #endif
@@ -273,22 +273,20 @@ TEST_F( ProcessingNodesTest, PostProcessing )
                 }
                )";
     auto        cost      = node_main->GetProcessCost( json_data );
-    //ASSERT_EQ( 154, cost );
-    std::replace(bin_path.begin(), bin_path.end(), '\\', '/');
+
+    std::replace( bin_path.begin(), bin_path.end(), '\\', '/' );
     boost::replace_all( json_data, "[basepath]", bin_path );
     std::cout << "Json Data: " << json_data << std::endl;
     auto balance_main  = node_main->GetBalance();
     auto balance_node1 = node_proc1->GetBalance();
     auto balance_node2 = node_proc2->GetBalance();
-    auto postjob = node_main->ProcessImage( json_data );
-    if (!postjob)
-    {
-        std::cout << "post job error: " << postjob.error().message() << std::endl;
-    }
-    std::cout << "Here4" << std::endl;
-    //node_main->ProcessImage(json_data);
+    auto postjob       = node_main->ProcessImage( json_data );
 
-    std::this_thread::sleep_for( std::chrono::milliseconds( 40000 ) );
+    EXPECT_TRUE( postjob ) << "post job error: " << postjob.error().message();
+
+    EXPECT_TRUE( node_main->WaitForEscrowRelease( postjob.value(), std::chrono::milliseconds( 60000 ) ) );
+    std::this_thread::sleep_for( std::chrono::milliseconds( 2000 ) );
+
     std::cout << "Balance main (Before):  " << balance_main << std::endl;
     std::cout << "Balance node1 (Before): " << balance_node1 << std::endl;
     std::cout << "Balance node2 (Before): " << balance_node2 << std::endl;

@@ -18,7 +18,7 @@ namespace sgns
                                           std::string              dev_addr,
                                           uint64_t                 peers_cut,
                                           SGTransaction::DAGStruct dag ) :
-        IGeniusTransactions( "escrow", SetDAGWithType( std::move( dag ), "escrow" ) ),
+        IGeniusTransactions( "escrow-hold", SetDAGWithType( std::move( dag ), "escrow-hold" ) ),
         utxo_params_( std::move( params ) ),
         amount_( std::move( amount ) ),
         dev_addr_( std::move( dev_addr ) ),

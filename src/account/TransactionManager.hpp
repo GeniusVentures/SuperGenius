@@ -80,6 +80,8 @@ namespace sgns
         bool WaitForTransactionIncoming( const std::string &txId, std::chrono::milliseconds timeout ) const;
         // Wait for an outgoing transaction to be processed with a timeout
         bool WaitForTransactionOutgoing( const std::string &txId, std::chrono::milliseconds timeout ) const;
+        bool WaitForEscrowRelease(const std::string &originalEscrowId, std::chrono::milliseconds timeout) const;
+
 
     private:
         static constexpr std::uint16_t    MAIN_NET_ID             = 369;
@@ -108,6 +110,9 @@ namespace sgns
         outcome::result<void> CheckOutgoing();
 
         void RefreshPorts();
+
+        outcome::result<void> NotifyEscrowRelease( const std::shared_ptr<IGeniusTransactions> &tx,
+                                                   const std::optional<std::vector<uint8_t>>  &proof );
 
         std::shared_ptr<crdt::GlobalDB> processing_db_m; //TODO - remove this as it's only needed on the PayEscrow
         std::shared_ptr<crdt::GlobalDB> outgoing_db_m;
@@ -139,6 +144,7 @@ namespace sgns
         outcome::result<void> ParseTransferTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
         outcome::result<void> ParseMintTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
         outcome::result<void> ParseEscrowTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
+        outcome::result<void> ParseEscrowReleaseTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
 
         outcome::result<void> NotifyDestinationOfTransfer( const std::shared_ptr<IGeniusTransactions> &tx,
                                                             const std::optional<std::vector<uint8_t>>& proof);
@@ -147,7 +153,8 @@ namespace sgns
         static inline const std::unordered_map<std::string, TransactionParserFn> transaction_parsers = {
             { "transfer", &TransactionManager::ParseTransferTransaction },
             { "mint", &TransactionManager::ParseMintTransaction },
-            { "escrow", &TransactionManager::ParseEscrowTransaction },
+            { "escrow-hold", &TransactionManager::ParseEscrowTransaction },
+            { "escrow-release", &TransactionManager::ParseEscrowReleaseTransaction } 
         };
 
         base::Logger m_logger = sgns::base::createLogger( "TransactionManager" );

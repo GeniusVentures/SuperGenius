@@ -72,7 +72,7 @@ namespace sgns
          */
         static bool Register()
         {
-            RegisterDeserializer( "escrow", &EscrowTransaction::DeSerializeByteVector );
+            RegisterDeserializer( "escrow-hold", &EscrowTransaction::DeSerializeByteVector );
             return true;
         }
 

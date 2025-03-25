@@ -76,7 +76,7 @@ namespace sgns
         static constexpr uint64_t TIMEOUT_MINT       = 10000;
 #endif
 
-        outcome::result<void> ProcessImage( const std::string &jsondata );
+        outcome::result<std::string> ProcessImage( const std::string &jsondata );
         outcome::result<void> CheckProcessValidity( const std::string &jsondata );
 
         uint64_t GetProcessCost( const std::string &json_data );
@@ -162,6 +162,9 @@ namespace sgns
         bool WaitForTransactionIncoming( const std::string &txId, std::chrono::milliseconds timeout );
         // Wait for a outgoing transaction to be processed with a timeout
         bool WaitForTransactionOutgoing( const std::string &txId, std::chrono::milliseconds timeout );
+
+        bool WaitForEscrowRelease(const std::string &originalEscrowId, std::chrono::milliseconds timeout);
+
 
     private:
         std::shared_ptr<GeniusAccount>                        account_;
