@@ -54,6 +54,7 @@ namespace sgns::crdt
          * Initializes the PubSubBroadcasterExt by subscribing to all topics.
          */
         void Start();
+        void AddTopic(const std::shared_ptr<GossipPubSubTopic> &newTopic);
 
     private:
         // Constructor now accepts a vector of topics.

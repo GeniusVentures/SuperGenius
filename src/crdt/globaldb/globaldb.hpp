@@ -3,6 +3,7 @@
 
 #include <boost/asio/io_context.hpp>
 #include <boost/filesystem/path.hpp>
+#include "pubsub_broadcaster_ext.hpp"
 #include "outcome/outcome.hpp"
 #include <ipfs_pubsub/gossip_pubsub_topic.hpp>
 #include "crdt/crdt_options.hpp"
@@ -96,6 +97,8 @@ namespace sgns::crdt
     */
         std::shared_ptr<AtomicTransaction> BeginTransaction();
 
+    void AddBroadcastTopic(const std::string &topicName);
+
     void PrintDataStore();
 
         auto GetDB()
@@ -115,6 +118,8 @@ namespace sgns::crdt
         std::vector<std::string> m_broadcastTopicNames;
         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> m_pubsub;
         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> m_broadcastChannel;
+        std::shared_ptr<sgns::crdt::PubSubBroadcasterExt> m_broadcaster;
+
 
 
         //std::shared_ptr<sgns::ipfs_lite::ipfs::dht::IpfsDHT> dht_;

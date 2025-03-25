@@ -295,6 +295,21 @@ namespace sgns::crdt
             return outcome::failure( boost::system::error_code{} );
         }
 
+        // Find the target topic that matches the provided topic_name.
+        std::shared_ptr<GossipPubSubTopic> targetTopic = nullptr;
+        for ( auto &topic : topics_ )
+        {
+            if ( topic->GetTopic() == topic_name )
+            {
+                targetTopic = topic;
+                break;
+            }
+        }
+        if ( !targetTopic )
+        {
+            m_logger->warn( "Broadcast: no topic matching '" + topic_name + "' was found" );
+            return outcome::failure( boost::system::error_code{} );
+        }
 
         sgns::crdt::broadcasting::BroadcastMessage bmsg;
         auto                                       bpi = new sgns::crdt::broadcasting::BroadcastMessage_PeerInfo;
@@ -318,8 +333,8 @@ namespace sgns::crdt
         auto peer_info = peer_info_res.value();
         bpi->set_id( std::string( peer_info.id.toVector().begin(), peer_info.id.toVector().end() ) );
 
-        // Use observed addresses from the first topic's host.
-        auto pubsubObserved = topics_.front()->GetPubsub()->GetHost()->getObservedAddressesReal();
+        // Use observed addresses from the target topic's pubsub host.
+        auto pubsubObserved = targetTopic->GetPubsub()->GetHost()->getObservedAddressesReal();
         for ( auto &address : pubsubObserved )
         {
             auto ip_address_opt = address.getFirstValueForProtocol( libp2p::multi::Protocol::Code::IP4 );
@@ -339,6 +354,7 @@ namespace sgns::crdt
             }
         }
 
+        // Also add the peer's own addresses.
         auto mas = peer_info.addresses;
         for ( auto &address : mas )
         {
@@ -357,26 +373,10 @@ namespace sgns::crdt
         std::string data( buff.toString() );
         bmsg.set_data( data );
 
-        bool found = false;
-        // Publish to only the matching topic.
-        for ( auto &topic : topics_ )
-        {
-            if ( topic->GetTopic() == topic_name )
-            {
-                topic->Publish( bmsg.SerializeAsString() );
-                found = true;
-                break;
-            }
-        }
+        // Publish to the target topic.
+        targetTopic->Publish( bmsg.SerializeAsString() );
+        m_logger->debug( "CIDs broadcasted by {} to SINGLE topic {}", peer_info.id.toBase58(), topic_name );
 
-        if ( !found )
-        {
-            m_logger->warn( "Broadcast: no topic matching '{}' was found", topic_name );
-        }
-        else
-        {
-            m_logger->debug( "CIDs broadcasted by {} to SINGLE topic {}", peer_info.id.toBase58(), topic_name );
-        }
         return outcome::success();
     }
 
@@ -396,4 +396,24 @@ namespace sgns::crdt
         buffer.put( strBuffer );
         return buffer;
     }
+
+    void PubSubBroadcasterExt::AddTopic( const std::shared_ptr<GossipPubSubTopic> &newTopic )
+    {
+        topics_.push_back( newTopic );
+        std::string topicName = newTopic->GetTopic();
+        m_logger->debug( "Subscription request sent to new topic: " + topicName );
+
+        // Subscribe to the new topic (using a lambda similar to what is used in Start())
+        std::future<libp2p::protocol::Subscription> future = std::move( newTopic->Subscribe(
+            [weakptr = weak_from_this(), topicName]( boost::optional<const GossipPubSub::Message &> message )
+            {
+                if ( auto self = weakptr.lock() )
+                {
+                    self->m_logger->debug( "Message received from topic: " + topicName );
+                    self->OnMessage( message );
+                }
+            } ) );
+        subscriptionFutures_.push_back( std::move( future ) );
+    }
+
 }
