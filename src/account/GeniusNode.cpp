@@ -216,7 +216,7 @@ namespace sgns
         std::string base58key = maybe_base58.value();
 
         auto pubsubKeyPath =
-            ( boost::format( "SuperGNUSNode.TestNet.1a.05.%s/pubs_processor" ) % base58key ).str();
+            ( boost::format( "SuperGNUSNode.TestNet.1a.06.%s/pubs_processor" ) % base58key ).str();
 
         pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
             crdt::KeyPairFileStorage( write_base_path_ + pubsubKeyPath ).GetKeyPair().value() );
@@ -228,7 +228,7 @@ namespace sgns
 
         globaldb_ = std::make_shared<crdt::GlobalDB>(
             io_,
-            ( boost::format( write_base_path_ + "SuperGNUSNode.TestNet.1a.05.%s" ) % base58key ).str(),
+            ( boost::format( write_base_path_ + "SuperGNUSNode.TestNet.1a.06.%s" ) % base58key ).str(),
             graphsyncport,
             std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_, std::string( PROCESSING_CHANNEL ) ) );
 
@@ -264,7 +264,7 @@ namespace sgns
             io_,
             account_,
             std::make_shared<crypto::HasherImpl>(),
-            ( boost::format( write_base_path_ + "SuperGNUSNode.TestNet.1a.05.%s" ) % base58key ).str(),
+            ( boost::format( write_base_path_ + "SuperGNUSNode.TestNet.1a.06.%s" ) % base58key ).str(),
             pubsub_,
             upnp,
             graphsyncport );
