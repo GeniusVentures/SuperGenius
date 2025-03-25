@@ -159,21 +159,21 @@ namespace sgns::processing
         std::shared_ptr<boost::asio::io_context>       m_context;
         std::string                                    m_localNodeId;
 
-        std::shared_ptr<SGProcessing::SubTaskQueue> m_queue;
-        mutable std::recursive_mutex                m_queueMutex;
-        std::list<SubTaskGrabbedCallback>           m_onSubTaskGrabbedCallbacks;
+        std::shared_ptr<SGProcessing::SubTaskQueue>    m_queue;
+        mutable std::recursive_mutex                   m_queueMutex;
+        std::list<SubTaskGrabbedCallback>              m_onSubTaskGrabbedCallbacks;
 
         std::function<void( const std::vector<std::string> & )> m_subTaskQueueAssignmentEventSink;
-        std::set<std::string>                                   m_processedSubTaskIds;
+        std::set<std::string>                          m_processedSubTaskIds;
 
-        boost::asio::deadline_timer      m_dltQueueResponseTimeout;
-        boost::posix_time::time_duration m_queueResponseTimeout;
+        boost::asio::deadline_timer                    m_dltQueueResponseTimeout;
+        boost::posix_time::time_duration               m_queueResponseTimeout;
 
-        boost::asio::deadline_timer m_dltGrabSubTaskTimeout;
+        boost::asio::deadline_timer                    m_dltGrabSubTaskTimeout;
 
-        ProcessingSubTaskQueue                     m_processingQueue;
-        std::chrono::system_clock::duration        m_processingTimeout;
-        std::function<void( const std::string & )> m_processingErrorSink;
+        ProcessingSubTaskQueue                         m_processingQueue;
+        std::chrono::system_clock::duration            m_processingTimeout;
+        std::function<void( const std::string & )>     m_processingErrorSink;
 
         uint64_t m_queue_timestamp_ =  0;            // Aggregate time counter for the queue
         uint64_t m_ownership_acquired_at_ = 0;      // When this node acquired ownership (in ms)

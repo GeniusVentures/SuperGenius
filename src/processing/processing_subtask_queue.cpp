@@ -34,17 +34,20 @@ bool ProcessingSubTaskQueue::UpdateQueue(
     return false;
 }
 
-bool ProcessingSubTaskQueue::LockItem(size_t& lockedItemIndex)
+bool ProcessingSubTaskQueue::LockItem(size_t& lockedItemIndex, uint64_t now)
 {
     // The method has to be called in scoped lock of queue mutex
+    m_queue->set_last_update_timestamp(now);
     for (auto itemIdx : m_enabledItemIndices)
     {
-        if (m_queue->items(itemIdx).lock_node_id().empty())
+        auto item = m_queue->items(itemIdx);
+        if (item.lock_node_id().empty())
         {
-            auto timestamp = std::chrono::system_clock::now();
+            auto mItem = m_queue->mutable_items(itemIdx);
 
-            m_queue->mutable_items(itemIdx)->set_lock_node_id(m_localNodeId);
-            m_queue->mutable_items(itemIdx)->set_lock_timestamp( m_queue->last_update_timestamp() );
+            mItem->set_lock_node_id(m_localNodeId);
+            mItem->set_lock_timestamp( now );
+            mItem->set_lock_expiration_timestamp( now + m_queue->processing_timeout_length());
 
             LogQueue();
             lockedItemIndex = itemIdx;
@@ -55,11 +58,11 @@ bool ProcessingSubTaskQueue::LockItem(size_t& lockedItemIndex)
     return false;
 }
 
-bool ProcessingSubTaskQueue::GrabItem(size_t& grabbedItemIndex)
+bool ProcessingSubTaskQueue::GrabItem(size_t& grabbedItemIndex, uint64_t now)
 {
     if (HasOwnership())
     {
-        return LockItem(grabbedItemIndex);
+        return LockItem(grabbedItemIndex, now);
     }
 
     return false;
@@ -78,11 +81,6 @@ bool ProcessingSubTaskQueue::MoveOwnershipTo(const std::string& nodeId)
 void ProcessingSubTaskQueue::ChangeOwnershipTo(const std::string& nodeId)
 {
     m_queue->set_owner_node_id(nodeId);
-
-    if (m_timestampProvider) {
-        // Use the manager's timestamp if provider is available
-        m_queue->set_last_update_timestamp(m_timestampProvider());
-    }
     LogQueue();
 }
 
@@ -166,36 +164,30 @@ bool ProcessingSubTaskQueue::HasOwnership() const
     return ( m_queue != nullptr ) && m_queue->owner_node_id() == m_localNodeId;
 }
 
-bool ProcessingSubTaskQueue::UnlockExpiredItems(std::chrono::system_clock::duration expirationTimeout)
+bool ProcessingSubTaskQueue::UnlockExpiredItems(uint64_t now)
 {
     bool unlocked = false;
 
+    m_queue->set_last_update_timestamp(now);
     if (HasOwnership())
     {
-        auto timestamp = std::chrono::system_clock::now();
         for (auto itemIdx : m_enabledItemIndices)
         {
+            auto item = m_queue->items(itemIdx);
             // Check if a subtask is locked, expired and no result was obtained for it
-            // @todo replace the result channel with subtask id to identify a subtask that should be unlocked
-            if (!m_queue->items(itemIdx).lock_node_id().empty())
+            if (!item.lock_node_id().empty())
             {
-                auto expirationTime =
-                    std::chrono::system_clock::time_point(
-                        std::chrono::system_clock::duration(m_queue->items(itemIdx).lock_timestamp())) + expirationTimeout;
-                if (timestamp > expirationTime)
+                if (now > item.lock_expiration_timestamp())
                 {
+                    auto mItem = m_queue->mutable_items(itemIdx);
+                    m_logger->debug("EXPIRED_SUBTASK_UNLOCKED: index {} for {} expired at {}ms", itemIdx, item.lock_node_id(), item.lock_expiration_timestamp());
                     // Unlock the item
-                    m_queue->mutable_items(itemIdx)->set_lock_node_id("");
-                    m_queue->mutable_items(itemIdx)->set_lock_timestamp(0);
+                    mItem->set_lock_node_id("");
+                    mItem->set_lock_timestamp(0);
+                    mItem->set_lock_expiration_timestamp(0);
                     unlocked = true;
-                    m_logger->debug("EXPIRED_SUBTASK_UNLOCKED {}", itemIdx);
                 }
             }
-        }
-
-        if (unlocked)
-        {
-            m_queue->set_last_update_timestamp(timestamp.time_since_epoch().count());
         }
     }
 
@@ -227,6 +219,7 @@ void ProcessingSubTaskQueue::LogQueue() const
         {
             ss << "{\"lock_node_id\":\"" << m_queue->items(itemIdx).lock_node_id() << "\"";
             ss << ",\"lock_timestamp\":" << m_queue->items(itemIdx).lock_timestamp();
+            ss << ",\"lock_expiration_timestamp\":" << m_queue->items(itemIdx).lock_expiration_timestamp();
             ss << "},";
         }
         ss << "]}";
@@ -235,26 +228,16 @@ void ProcessingSubTaskQueue::LogQueue() const
     }
 
 }
-    bool ProcessingSubTaskQueue::AddOwnershipRequest(const std::string& nodeId, int64_t timestamp)
+    bool ProcessingSubTaskQueue::AddOwnershipRequest(const std::string& nodeId, uint64_t timestamp)
     {
         if (m_queue != nullptr)
         {
-            // Check if the request already exists
-            for (int i = 0; i < m_queue->ownership_requests_size(); i++)
-            {
-                if (m_queue->ownership_requests(i).node_id() == nodeId)
-                {
-                    return false;  // Request already exists
-                }
-            }
-
             auto request = m_queue->add_ownership_requests();
             request->set_node_id(nodeId);
             request->set_request_timestamp(timestamp);
 
             // Update the queue timestamp
-            auto current_time = std::chrono::system_clock::now();
-            m_queue->set_last_update_timestamp(current_time.time_since_epoch().count());
+            m_queue->set_last_update_timestamp(timestamp);
 
             LogQueue();
             return true;

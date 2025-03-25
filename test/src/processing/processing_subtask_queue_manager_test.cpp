@@ -87,8 +87,15 @@ namespace
     {
     public:
         void AddSubTaskResult(const SGProcessing::SubTaskResult& subTaskResult) override {
-            results[subTaskResult.subtaskid()] = subTaskResult;
-            Color::PrintInfo("AddSubTaskResult ", subTaskResult.subtaskid(), " ", subTaskResult.node_address());
+            auto [_, success] = results.insert({subTaskResult.subtaskid(), subTaskResult});
+            if (!success)
+            {
+                Color::PrintError("SubTaskResult ", subTaskResult.subtaskid(), " already added", " on node ", subTaskResult.node_address());
+            }
+            else
+            {
+                Color::PrintInfo("AddSubTaskResult ", subTaskResult.subtaskid(), " ", subTaskResult.node_address());
+            }
         }
 
         void RemoveSubTaskResult(const std::string& subTaskId) override {
@@ -216,7 +223,9 @@ public:
         libp2p::log::setLevelOfGroup("processing_engine_test", soralog::Level::DEBUG);
 
         auto loggerProcQM  = sgns::base::createLogger( "ProcessingSubTaskQueueManager" );
+        loggerProcQM->set_level( spdlog::level::debug );
 
+        loggerProcQM  = sgns::base::createLogger( "ProcessingSubTaskQueue");
         loggerProcQM->set_level( spdlog::level::debug );
 #else
        libp2p::log::setLevelOfGroup("processing_engine_test", soralog::Level::OFF);
@@ -856,6 +865,6 @@ TEST_F(ProcessingSubTaskQueueManagerTest, TwoNodesProcessingAndFinalizing)
     ASSERT_EQ(10, totalProcessed);
     ASSERT_EQ(5, processingCore1->m_processedSubTasks.size());
     ASSERT_EQ(5, processingCore2->m_processedSubTasks.size());
-    
+
 
 }

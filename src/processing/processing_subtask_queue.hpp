@@ -33,8 +33,9 @@ public:
 
     /** Asynchronous getting of a subtask from the queue
     * @param onSubTaskGrabbedCallback a callback that is called when a grapped iosubtask is locked by the local node
+    * @param timestamp the current timestamp for the queue
     */
-    bool GrabItem(size_t& grabbedItemIndex);
+    bool GrabItem(size_t& grabbedItemIndex, uint64_t timestamp);
 
     /** Transfer the queue ownership to another processing node
     * @param nodeId - processing node ID that the ownership should be transferred
@@ -58,10 +59,10 @@ public:
     bool UpdateQueue(SGProcessing::ProcessingQueue* queue, const std::vector<int>& enabledItemIndices);
 
     /** Unlocks expired queue items
-    * @param expirationTimeout - timeout applied to detect expired items
+    * @param currentTime - the current queue time
     * @return true if at least one item was unlocked
     */
-    bool UnlockExpiredItems(std::chrono::system_clock::duration expirationTimeout);
+    bool UnlockExpiredItems(uint64_t currentTime);
 
     /** Returns the most recent item lock timestamp
     */
@@ -72,7 +73,7 @@ public:
     * @param timestamp - timestamp when the request was created
     * @return true if the request was successfully added, false if it already exists
     */
-    bool AddOwnershipRequest(const std::string& nodeId, int64_t timestamp);
+    bool AddOwnershipRequest(const std::string& nodeId, uint64_t timestamp);
 
     /** Processes the next ownership request in the queue
     * @return true if an ownership request was processed, false if the queue is empty or the node doesn't have ownership
@@ -83,7 +84,7 @@ private:
 
     void ChangeOwnershipTo(const std::string& nodeId);
 
-    bool LockItem(size_t& lockedItemIndex);
+    bool LockItem(size_t& lockedItemIndex, uint64_t timestamp);
 
     void LogQueue() const;
 
