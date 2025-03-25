@@ -227,6 +227,9 @@ public:
 
         loggerProcQM  = sgns::base::createLogger( "ProcessingSubTaskQueue");
         loggerProcQM->set_level( spdlog::level::debug );
+
+        loggerProcQM  = sgns::base::createLogger( "ProcessingSubTaskQueueAccessorImpl");
+        loggerProcQM->set_level( spdlog::level::debug );
 #else
        libp2p::log::setLevelOfGroup("processing_engine_test", soralog::Level::OFF);
 #endif

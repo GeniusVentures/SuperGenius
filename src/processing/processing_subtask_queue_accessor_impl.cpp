@@ -229,12 +229,13 @@ namespace sgns::processing
                     result->CopyFrom( r.second );
                 }
                 m_taskResultProcessingSink( taskResult );
+                isFinalized = true;
             }
             else
             {
+                m_logger->debug( "NOT_THE_OWNER: Can't finalize if not the owner" );
                 // @todo Process task finalization expiration
             }
-            isFinalized = true;
         }
         else
         {
