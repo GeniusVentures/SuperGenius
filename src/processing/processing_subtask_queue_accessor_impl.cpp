@@ -143,16 +143,22 @@ namespace sgns::processing
         }
 
         m_subTaskQueueManager->ChangeSubTaskProcessingStates( processedSubTaskIds, true );
-        if ( m_subTaskQueueManager->IsProcessed() )
+        auto isFullyProcessed = m_subTaskQueueManager->IsProcessed();
+        if ( isFullyProcessed )
         {
             std::set<std::string> invalidSubTaskIds;
             if ( !FinalizeQueueProcessing( queue->subtasks(), invalidSubTaskIds ) )
             {
                 m_subTaskQueueManager->ChangeSubTaskProcessingStates( processedSubTaskIds, false );
+                isFullyProcessed = false;
             }
         }
 
-        m_subTaskQueueManager->GrabSubTask( onSubTaskGrabbedCallback );
+        // no need to try to keep grabbing
+        if (!isFullyProcessed)
+        {
+            m_subTaskQueueManager->GrabSubTask( onSubTaskGrabbedCallback );
+        }
     }
 
     void SubTaskQueueAccessorImpl::CompleteSubTask( const std::string                 &subTaskId,

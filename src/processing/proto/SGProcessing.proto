@@ -22,13 +22,15 @@ message TaskLock
 {
     string task_id = 1;
     uint64 lock_timestamp = 2;
+    uint64 lock_expiration_timestamp = 3;
+
 }
 
 // Subtask is pubished by host into ipfs_block_id channel
 message SubTask 
 {
     string ipfsblock = 1; // source block data to be processed
-	string json_data = 2; //json data of the specific inputs for this subtask
+	  string json_data = 2; //json data of the specific inputs for this subtask
     repeated ProcessingChunk chunksToProcess = 3; // array of chunks to process
     uint32 datalen = 4; // length of ipfsBlock?
     string subtaskid = 5; // unique subtask ID
@@ -49,6 +51,7 @@ message ProcessingQueueItem
 {
     uint64 lock_timestamp = 1;
     string lock_node_id = 2;
+    uint64 lock_expiration_timestamp = 3;
 }
 
 message OwnershipRequest {
@@ -60,9 +63,10 @@ message ProcessingQueue
 {
     repeated ProcessingQueueItem items = 1;
     uint64 last_update_timestamp = 2;
-    string owner_node_id = 3;
-    repeated OwnershipRequest ownership_requests = 4;
-    repeated string processed_subtask_ids = 5;
+    uint64 processing_timeout_length = 3;
+    string owner_node_id = 4;
+    repeated OwnershipRequest ownership_requests = 5;
+    repeated string processed_subtask_ids = 6;
 }
 
 message SubTaskCollection

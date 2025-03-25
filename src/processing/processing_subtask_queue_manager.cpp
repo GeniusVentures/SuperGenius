@@ -61,6 +61,15 @@ namespace sgns::processing
             processingQueue->add_items();
         }
 
+        // Record ownership acquisition time when creating a queue
+        m_ownership_acquired_at_ = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                       std::chrono::steady_clock::now().time_since_epoch() )
+                                       .count();
+        m_queue_timestamp_ = m_ownership_acquired_at_;
+        m_ownership_last_delta_time_ = m_ownership_acquired_at_;
+
+        processingQueue->set_processing_timeout_length( m_processingTimeout.count() );
+        processingQueue->set_last_update_timestamp( m_queue_timestamp_ );
         std::unique_lock guard( m_queueMutex );
         m_queue = std::move( queue );
 
@@ -77,11 +86,6 @@ namespace sgns::processing
         }
 
         m_processingQueue.CreateQueue( processingQueue, unprocessedSubTaskIndices );
-
-        // Record ownership acquisition time when creating a queue
-        m_ownership_acquired_at_ = std::chrono::duration_cast<std::chrono::milliseconds>(
-                                       std::chrono::steady_clock::now().time_since_epoch() )
-                                       .count();
 
         m_logger->debug( "Subtask Queue created in timestamp {}", m_ownership_acquired_at_ );
         LogQueue();
@@ -187,7 +191,7 @@ namespace sgns::processing
             }
 
             size_t itemIdx = 0;
-            if ( m_processingQueue.GrabItem( itemIdx ) )
+            if ( m_processingQueue.GrabItem( itemIdx, m_queue_timestamp_ ) )
             {
                 // Track that we're using queue timestamp for this item
                 // Actual timestamp is managed by ProcessingQueue via lock_timestamp
@@ -201,6 +205,8 @@ namespace sgns::processing
                 auto subtaskCopy = m_queue->subtasks().items(itemIdx);
                 auto callback = m_onSubTaskGrabbedCallbacks.front();
                 m_onSubTaskGrabbedCallbacks.pop_front();
+
+                m_logger->debug("GRAB_SUBTASK_TO_PROCESS: Subtask {} grabbed for node {} at {}ms.", subtaskCopy.subtaskid(), m_localNodeId, m_queue_timestamp_);
 
                 // Check for pending ownership requests AFTER processing a subtask
                 if ( m_queue->processing_queue().ownership_requests_size() > 0 )
@@ -224,7 +230,7 @@ namespace sgns::processing
             else
             {
                 // No available subtasks found
-                auto unlocked = m_processingQueue.UnlockExpiredItems( m_processingTimeout );
+                auto unlocked = m_processingQueue.UnlockExpiredItems( m_queue_timestamp_ );
                 if ( !unlocked )
                 {
                     break;
@@ -241,14 +247,14 @@ namespace sgns::processing
             lockReleased = false;
         }
 
-        if ( losingOwnership && !HasOwnership() )
+        if ( losingOwnership && !HasOwnership() && !IsProcessed() )
         {
+            UpdateQueueTimestamp();
             // Add current node's ownership request before publishing
             m_processingQueue.AddOwnershipRequest( m_localNodeId,
-                std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::steady_clock::now().time_since_epoch()).count() );
+                m_queue_timestamp_ );
 
-            m_logger->debug( "Re-adding local node ", m_localNodeId, " to ownership request queue" );
+            m_logger->debug( "READD_QUEUE_OWNDERSHIP_REQUEST: node {} at {}ms", m_localNodeId, m_queue_timestamp_ );
             PublishSubTaskQueue();
         }
 
@@ -432,7 +438,7 @@ namespace sgns::processing
         std::lock_guard guard( m_queueMutex );
 
         auto requstingNodeId = request.node_id();
-        m_logger->debug( "QUEUE_REQUEST_RECEIVED: node {} from node {} at {}ms", m_localNodeId, requstingNodeId, m_queue_timestamp_ );
+        m_logger->debug( "QUEUE_OWNERSHIP_REQUEST: node {} from node {} at {}ms", m_localNodeId, requstingNodeId, m_queue_timestamp_ );
 
         // If we are the owner and there are still subtasks to be processed, we
         // can immediately transfer ownership, do so
@@ -611,7 +617,7 @@ namespace sgns::processing
             return false;
         }
         // The queue can contain only valid results
-        m_logger->debug( "CHECK_IS_PROCESSED: {} {} for node {}",
+        m_logger->debug( "CHECK_IS_PROCESSED: {} of {} for node {}",
                          m_processedSubTaskIds.size(),
                          m_queue->subtasks().items_size(),
                          m_localNodeId );
