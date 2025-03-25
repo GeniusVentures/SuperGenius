@@ -309,49 +309,29 @@ std::string GetLocalIP( boost::asio::io_context &io )
         // Create pubsub broadcaster
         //auto broadcaster = std::make_shared<PubSubBroadcaster>(m_broadcastChannel);
         
-        std::shared_ptr<PubSubBroadcasterExt> broadcaster;
+        std::shared_ptr<PubSubBroadcasterExt>                              broadcaster;
+        std::vector<std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic>> topics;
 
         if ( !m_broadcastTopicNames.empty() )
         {
-            std::vector<std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic>> topics;
             for ( const auto &topicName : m_broadcastTopicNames )
             {
-                topics.push_back(std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>( m_pubsub, topicName ));
+                topics.push_back( std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>( m_pubsub, topicName ) );
             }
-            broadcaster = PubSubBroadcasterExt::New( topics, dagSyncer, listen_to );
         }
-        else
+        else if ( m_broadcastChannel != nullptr )
         {
-            std::vector<std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic>> topics{ m_broadcastChannel };
-            broadcaster = PubSubBroadcasterExt::New( topics, dagSyncer, listen_to );
+            topics.push_back( m_broadcastChannel );
         }
+        // Otherwise, topics remains empty.
 
-        if ( m_graphSyncAddrs.empty() )
-        {
-            // broadcaster = PubSubBroadcasterExt::New( m_broadcastChannel, dagSyncer, listen_to );
-        }
-        else
-        {
-            //auto listen_towan = libp2p::multi::Multiaddress::create(wanaddress).value();
-            // broadcaster = PubSubBroadcasterExt::New( m_broadcastChannel, dagSyncer, listen_to );
-        }
+        broadcaster = PubSubBroadcasterExt::New( topics, dagSyncer, listen_to );
 
-        //broadcaster->SetLogger(m_logger);
+        // Save the broadcaster pointer for future additions.
+        m_broadcaster = broadcaster;
 
-        m_crdtDatastore = CrdtDatastore::New( dataStore,
-                                              HierarchicalKey( "crdt" ),
-                                              dagSyncer,
-                                              broadcaster,
-                                              crdtOptions );
-        if ( m_crdtDatastore == nullptr )
-        {
-            m_logger->error( "Unable to create CRDT datastore" );
-            return Error::CRDT_DATASTORE_NOT_CREATED;
-        }
-
+        // Set the CRDT datastore pointer and start the broadcaster.
         broadcaster->SetCrdtDataStore( m_crdtDatastore );
-
-        // have to set the dataStore before starting the broadcasting
         broadcaster->Start();
 
         // TODO: bootstrapping
@@ -495,5 +475,24 @@ std::string GetLocalIP( boost::asio::io_context &io )
     {
         return std::make_shared<AtomicTransaction>( m_crdtDatastore );
     }
-
+    
+    void GlobalDB::AddBroadcastTopic(const std::string &topicName)
+    {
+        if (!m_pubsub)
+        {
+            m_logger->error("PubSub instance is not available to create new topic.");
+            return;
+        }
+        auto newTopic = std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>(m_pubsub, topicName);
+        if (m_broadcaster)
+        {
+             m_broadcaster->AddTopic(newTopic);
+             m_logger->info("New broadcast topic added: " + topicName);
+        }
+        else
+        {
+             m_logger->error("Broadcaster is not initialized.");
+        }
+    }
+    
 }
