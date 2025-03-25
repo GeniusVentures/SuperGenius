@@ -111,10 +111,15 @@ namespace sgns::processing
         const void* buffer = static_cast<const void*>( modelFile.data() );
         auto mnnNet = std::shared_ptr<MNN::Interpreter>( MNN::Interpreter::createFromBuffer( buffer, modelFile.size() ) );
 
+        //auto backendConfig           = new MNN::BackendConfig();
+        //backendConfig->power         = MNN::BackendConfig::Power_Low;
+        //backendConfig->queuePriority = 0.1f;
+
         MNN::ScheduleConfig netConfig;
         netConfig.type      = MNN_FORWARD_VULKAN;
         netConfig.numThread = 4;
         netConfig.mode = 0;
+        //netConfig.backendConfig = backendConfig;
         auto session        = mnnNet->createSession( netConfig );
 
         auto input = mnnNet->getSessionInput( session, nullptr );
