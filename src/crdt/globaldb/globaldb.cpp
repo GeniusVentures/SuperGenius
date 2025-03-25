@@ -62,31 +62,33 @@ namespace sgns::crdt
     using GraphsyncImpl      = ipfs_lite::ipfs::graphsync::GraphsyncImpl;
     using GossipPubSubTopic  = ipfs_pubsub::GossipPubSubTopic;
 
-    GlobalDB::GlobalDB( std::shared_ptr<boost::asio::io_context> context,
-                        std::string databasePath,
-                        int dagSyncPort,
-                        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> broadcastChannel,
-                        std::string gsaddresses )
-        : m_context( std::move(context) ),
-          m_databasePath( std::move(databasePath) ),
-          m_dagSyncPort( dagSyncPort ),
-          m_graphSyncAddrs( gsaddresses )
-    {
-        // Wrap the single topic in a vector.
-        m_broadcastChannels.push_back( broadcastChannel );
-    }
-    // Multiple-topics constructor definition
-    GlobalDB::GlobalDB( std::shared_ptr<boost::asio::io_context> context,
-                        std::string databasePath,
-                        int dagSyncPort,
-                        const std::vector<std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic>> &broadcastChannels,
-                        std::string gsaddresses ): 
+    GlobalDB::GlobalDB( std::shared_ptr<boost::asio::io_context>         context,
+                        std::string                                      databasePath,
+                        int                                              dagSyncPort,
+                        const std::vector<std::string>                  &broadcastTopicNames,
+                        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub,
+                        std::string                                      gsaddresses ) :
         m_context( std::move( context ) ),
         m_databasePath( std::move( databasePath ) ),
         m_dagSyncPort( dagSyncPort ),
         m_graphSyncAddrs( std::move( gsaddresses ) ),
-        m_broadcastChannels( std::move( broadcastChannels ) )
-    {}
+        m_broadcastTopicNames( broadcastTopicNames ),
+        m_pubsub( pubsub )
+    {
+    }
+    // Multiple-topics constructor definition
+    GlobalDB::GlobalDB( std::shared_ptr<boost::asio::io_context> context,
+                        std::string                              databasePath,
+                        int                                      dagSyncPort,
+                        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> broadcastChannel,
+                        std::string                              gsaddresses ) :
+        m_context( std::move( context ) ),
+        m_databasePath( std::move( databasePath ) ),
+        m_dagSyncPort( dagSyncPort ),
+        m_graphSyncAddrs( std::move( gsaddresses ) ),
+        m_broadcastChannel( std::move (broadcastChannel) )
+    {
+    }
 
     GlobalDB::~GlobalDB()
     {
@@ -306,16 +308,31 @@ std::string GetLocalIP( boost::asio::io_context &io )
         //scheduleBootstrap(io, dagSyncerHost);
         // Create pubsub broadcaster
         //auto broadcaster = std::make_shared<PubSubBroadcaster>(m_broadcastChannel);
+        
         std::shared_ptr<PubSubBroadcasterExt> broadcaster;
+
+        if ( !m_broadcastTopicNames.empty() )
+        {
+            std::vector<std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic>> topics;
+            for ( const auto &topicName : m_broadcastTopicNames )
+            {
+                topics.push_back(std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>( m_pubsub, topicName ));
+            }
+            broadcaster = PubSubBroadcasterExt::New( topics, dagSyncer, listen_to );
+        }
+        else
+        {
+            std::vector<std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic>> topics{ m_broadcastChannel };
+            broadcaster = PubSubBroadcasterExt::New( topics, dagSyncer, listen_to );
+        }
+
         if ( m_graphSyncAddrs.empty() )
         {
-            broadcaster = PubSubBroadcasterExt::New( m_broadcastChannels, dagSyncer, listen_to );
             // broadcaster = PubSubBroadcasterExt::New( m_broadcastChannel, dagSyncer, listen_to );
         }
         else
         {
             //auto listen_towan = libp2p::multi::Multiaddress::create(wanaddress).value();
-            broadcaster = PubSubBroadcasterExt::New( m_broadcastChannels, dagSyncer, listen_to );
             // broadcaster = PubSubBroadcasterExt::New( m_broadcastChannel, dagSyncer, listen_to );
         }
 
