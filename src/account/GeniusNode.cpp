@@ -102,7 +102,7 @@ namespace sgns
             // Original LibP2P logging config
             std::make_shared<libp2p::log::Configurator>(),
             // Additional logging config for application
-            GetLoggingSystem() ) );
+            GetLoggingSystem( write_base_path_ ) ) );
         auto result    = logging_system->configure();
         if ( result.has_error )
         {
