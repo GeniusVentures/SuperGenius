@@ -57,19 +57,15 @@ namespace sgns
     {
         m_logger->info( "Initializing values by reading whole blockchain" );
 
-        auto outgoing_topic = std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_m,
-                                                                                account_m->GetAddress() + "out" );
-        auto incoming_topic = std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_m,
-                                                                                account_m->GetAddress() + "in" );
-
-        std::vector<std::shared_ptr<ipfs_pubsub::GossipPubSubTopic>> topics;
-        topics.push_back( outgoing_topic );
-        topics.push_back( incoming_topic );
+        std::vector<std::string> topicNames;
+        topicNames.push_back( account_m->GetAddress() + "out" );
+        topicNames.push_back( account_m->GetAddress() + "in" );
 
         combined_db_m = std::make_shared<crdt::GlobalDB>( ctx_m,
                                                           ( boost::format( base_path_m + "_tx" ) ).str(),
                                                           base_port_m,
-                                                          topics );
+                                                          topicNames,
+                                                          pubsub_m );
         used_ports_m.insert( base_port_m );
         base_port_m++;
 

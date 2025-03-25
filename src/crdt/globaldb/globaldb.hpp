@@ -26,13 +26,13 @@ namespace sgns::crdt
                   int                                                   dagSyncPort,
                   std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> broadcastChannel,
                   std::string                                           gsaddresses = {} );
-                  
-        GlobalDB( std::shared_ptr<boost::asio::io_context> context,
-                  std::string databasePath,
-                  int dagSyncPort,
-                  const std::vector<std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic>> &broadcastChannels,
-                  std::string gsaddresses = {} );
 
+        GlobalDB( std::shared_ptr<boost::asio::io_context>         context,
+                  std::string                                      databasePath,
+                  int                                              dagSyncPort,
+                  const std::vector<std::string>                  &broadcastTopicNames,
+                  std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub,
+                  std::string                                      gsaddresses = {} );
 
         ~GlobalDB();
 
@@ -112,7 +112,9 @@ namespace sgns::crdt
         int                                                   m_dagSyncPort;
         std::string                                           m_graphSyncAddrs;
 
-        std::vector<std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic>> m_broadcastChannels;
+        std::vector<std::string> m_broadcastTopicNames;
+        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> m_pubsub;
+        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> m_broadcastChannel;
 
 
         //std::shared_ptr<sgns::ipfs_lite::ipfs::dht::IpfsDHT> dht_;
