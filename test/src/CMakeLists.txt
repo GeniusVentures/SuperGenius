@@ -19,5 +19,5 @@ if (BUILD_WITH_PROOFS)
     add_subdirectory(proof)
 endif()
 add_subdirectory(account_creation)
-
+add_subdirectory(pubsub_counts)
 

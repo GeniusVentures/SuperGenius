@@ -33,16 +33,24 @@ std::queue<std::string> events;
 std::string             current_input;
 std::atomic<bool>       finished( false );
 
+#ifdef _WIN32
+// Add a global variable to store the original console mode
+DWORD original_console_mode;
+#else
+// Store the original terminal attributes
+termios original_term;
+#endif
+
 void enable_raw_mode()
 {
 #ifdef _WIN32
-    DWORD  mode;
     HANDLE hInput = GetStdHandle( STD_INPUT_HANDLE );
-    GetConsoleMode( hInput, &mode );
-    SetConsoleMode( hInput, mode & ~( ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT ) );
+    // Save the original console mode to the global variable
+    GetConsoleMode( hInput, &original_console_mode );
+    SetConsoleMode( hInput, original_console_mode & ~( ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT ) );
 #else
-    termios term;
-    tcgetattr( STDIN_FILENO, &term );
+    tcgetattr( STDIN_FILENO, &original_term );
+    termios term  = original_term;
     term.c_lflag &= ~( ICANON | ECHO );
     tcsetattr( STDIN_FILENO, TCSANOW, &term );
 #endif
@@ -51,14 +59,12 @@ void enable_raw_mode()
 void disable_raw_mode()
 {
 #ifdef _WIN32
-    DWORD  mode;
     HANDLE hInput = GetStdHandle( STD_INPUT_HANDLE );
-    SetConsoleMode( hInput, mode | ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT );
+    // Restore the original console mode from the global variable
+    SetConsoleMode( hInput, original_console_mode );
 #else
-    termios term;
-    tcgetattr( STDIN_FILENO, &term );
-    term.c_lflag |= ICANON | ECHO;
-    tcsetattr( STDIN_FILENO, TCSANOW, &term );
+    // Restore the original terminal attributes
+    tcsetattr( STDIN_FILENO, TCSANOW, &original_term );
 #endif
 }
 
@@ -167,106 +173,51 @@ void GetCoinPrice(const std::vector<std::string>& args, sgns::GeniusNode& genius
 
 void CreateProcessingTransaction( const std::vector<std::string> &args, sgns::GeniusNode &genius_node )
 {
-    if ( args.size() != 4 )
-    {
-        std::cerr << "Invalid process command format.\n";
-        return;
-    }
-    uint64_t    price       = std::stoull( args[2] );
-    std::string procxml_loc = args[3];
-    std::string json_data   = "";
-    if ( procxml_loc.size() > 0 )
-    {
-        libp2p::protocol::kademlia::Config kademlia_config;
-        kademlia_config.randomWalk.enabled  = true;
-        kademlia_config.randomWalk.interval = std::chrono::seconds( 300 );
-        kademlia_config.requestConcurency   = 20;
-        auto injector                       = libp2p::injector::makeHostInjector(
-            libp2p::injector::makeKademliaInjector( libp2p::injector::useKademliaConfig( kademlia_config ) ) );
-        auto ioc = injector.create<std::shared_ptr<boost::asio::io_context>>();
-
-        boost::asio::io_context::executor_type                                   executor = ioc->get_executor();
-        boost::asio::executor_work_guard<boost::asio::io_context::executor_type> workGuard( executor );
-        FileManager::GetInstance().InitializeSingletons();
-        auto data = FileManager::GetInstance().LoadASync(
-            procxml_loc,
-            false,
-            false,
-            ioc,
-            [ioc]( const sgns::AsyncError::CustomResult &status )
-            {
-                if ( status.has_value() )
-                {
-                    std::cout << "Success: " << status.value().message << std::endl;
-                }
-                else
-                {
-                    std::cout << "Error: " << status.error() << std::endl;
-                };
-            },
-            [ioc,
-             &json_data]( std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers )
-            { json_data = std::string( buffers->second[0].begin(), buffers->second[0].end() ); },
-            "file" );
-        ioc->run();
-        ioc->stop();
-        ioc->reset();
-    }
-
-    if ( genius_node.GetBalance() >= price )
-    {
-        if ( json_data.empty() )
+    std::string json_data = R"(
         {
-            std::cerr << "No input XML obtained" << std::endl;
-            ;
-            return;
+        "data": {
+            "type": "https",
+            "URL": "https://ipfs.filebase.io/ipfs/QmdHvvEXRUgmyn1q3nkQwf9yE412Vzy5gSuGAukHRLicXA/"
+        },
+        "model": {
+            "name": "mnnimage",
+            "file": "model.mnn"
+        },
+        "input": [
+            {
+                "image": "data/ballet.data",
+                "block_len": 4860000 ,
+                "block_line_stride": 5400,
+                "block_stride": 0,
+                "chunk_line_stride": 1080,
+                "chunk_offset": 0,
+                "chunk_stride": 4320,
+                "chunk_subchunk_height": 5,
+                "chunk_subchunk_width": 5,
+                "chunk_count": 25,
+                "channels": 4
+            },
+            {
+                "image": "data/frisbee3.data",
+                "block_len": 786432 ,
+                "block_line_stride": 1536,
+                "block_stride": 0,
+                "chunk_line_stride": 384,
+                "chunk_offset": 0,
+                "chunk_stride": 1152,
+                "chunk_subchunk_height": 4,
+                "chunk_subchunk_width": 4,
+                "chunk_count": 16,
+                "channels": 3
+            }
+        ]
         }
-        // std::string json_data = R"(
-        //         {
-        //         "data": {
-        //             "type": "https",
-        //             "URL": "https://ipfs.filebase.io/ipfs/QmdHvvEXRUgmyn1q3nkQwf9yE412Vzy5gSuGAukHRLicXA/"
-        //         },
-        //         "model": {
-        //             "name": "mnnimage",
-        //             "file": "model.mnn"
-        //         },
-        //         "input": [
-        //             {
-        //                 "image": "data/ballet.data",
-        //                 "block_len": 4860000 ,
-        //                 "block_line_stride": 5400,
-        //                 "block_stride": 0,
-        //                 "chunk_line_stride": 1080,
-        //                 "chunk_offset": 0,
-        //                 "chunk_stride": 4320,
-        //                 "chunk_subchunk_height": 5,
-        //                 "chunk_subchunk_width": 5,
-        //                 "chunk_count": 25,
-        //                 "channels": 4
-        //             },
-        //             {
-        //                 "image": "data/frisbee3.data",
-        //                 "block_len": 786432 ,
-        //                 "block_line_stride": 1536,
-        //                 "block_stride": 0,
-        //                 "chunk_line_stride": 384,
-        //                 "chunk_offset": 0,
-        //                 "chunk_stride": 1152,
-        //                 "chunk_subchunk_height": 4,
-        //                 "chunk_subchunk_width": 4,
-        //                 "chunk_count": 16,
-        //                 "channels": 3
-        //             }
-        //         ]
-        //         }
-        //        )";
-        genius_node.ProcessImage( json_data /*args[1]*/
-        );
-    }
-    else
+       )";
+    auto jobpost = genius_node.ProcessImage( json_data /*args[1]*/
+    );
+    if(!jobpost)
     {
-        std::cout << "Insufficient funds to process image " << std::endl;
+        std::cout << "Job post error: " << jobpost.error().message() << std::endl;
     }
 }
 
@@ -324,6 +275,11 @@ void process_events( sgns::GeniusNode &genius_node )
                     std::cerr << "Invalid peer command\n";
                 }
             }
+            else if (arguments[0] == "stopprocessing")
+            {
+                genius_node.StopProcessing();
+                std::cout << "Stopping processing" << std::endl;
+            }
             else if (arguments[0] == "quit")
             {
                 finished = true;
@@ -342,7 +298,7 @@ void periodic_processing( sgns::GeniusNode &genius_node )
 {
     while ( !finished )
     {
-        std::this_thread::sleep_for( std::chrono::minutes( 1 ) ); // Wait for 1 minute
+        std::this_thread::sleep_for( std::chrono::minutes( 30 ) ); // Wait for 1 minute
         if ( finished )
         {
             break; // Exit if the application is shutting down

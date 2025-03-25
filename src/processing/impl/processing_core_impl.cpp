@@ -49,11 +49,15 @@ namespace sgns::processing
         if ( cidData_.find( subTask.subtaskid() ) == cidData_.end() )
         {
             auto buffers = GetCidForProc( subTask.json_data(), task.json_data() );
-            if ( buffers->first->size() <= 0 )
+            if (buffers == nullptr)
             {
                 return outcome::failure( Error::NO_BUFFER_FROM_JOB_DATA );
             }
-
+            if ( buffers->first->size() <= 0 || buffers->second->size() <= 0 )
+            {
+                return outcome::failure( Error::NO_BUFFER_FROM_JOB_DATA );
+            }
+           
             //this->cidData_.insert( { subTask.subtaskid(), buffers } );
             //this->ProcessSubTask2(subTask, result, initialHashCode, buffers->second.at(0));
             //this->m_processor->SetData(buffers);
@@ -69,10 +73,15 @@ namespace sgns::processing
         else
         {
             auto buffers = cidData_.at( subTask.subtaskid() );
-            if ( buffers->first->size() <= 0 )
+            if (buffers == nullptr)
             {
                 return outcome::failure( Error::NO_BUFFER_FROM_JOB_DATA );
             }
+            if ( buffers->first->size() <= 0 || buffers->second->size() <= 0 )
+            {
+                return outcome::failure( Error::NO_BUFFER_FROM_JOB_DATA );
+            }
+
             // Set data and process
             //this->m_processor->SetData(buffers);
             auto        tempresult = this->m_processor->StartProcessing( result,
@@ -214,7 +223,10 @@ namespace sgns::processing
             {
                 //results->first.insert(results->first.end(), buffers->first.begin(), buffers->first.end());
                 //results->second.insert(results->second.end(), buffers->second.begin(), buffers->second.end());
-                results->insert( results->end(), buffers->second[0].begin(), buffers->second[0].end() );
+                if (results && buffers)
+                {
+                    results->insert( results->end(), buffers->second[0].begin(), buffers->second[0].end() );
+                }
             },
             "file" );
     }
