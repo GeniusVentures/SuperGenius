@@ -77,7 +77,7 @@ namespace sgns::processing
         {
             m_logger->error( "Attempting to subscribe OnResultChannelMessage to missing Results Channel " );
         }
-        
+
         return ret;
     }
 
@@ -147,7 +147,8 @@ namespace sgns::processing
         if ( isFullyProcessed )
         {
             std::set<std::string> invalidSubTaskIds;
-            if ( !FinalizeQueueProcessing( queue->subtasks(), invalidSubTaskIds ) )
+            auto                  finalized_ret = FinalizeQueueProcessing( queue->subtasks(), invalidSubTaskIds );
+            if ( finalized_ret == FinalizationRetVal::NOT_FINALIZED )
             {
                 m_subTaskQueueManager->ChangeSubTaskProcessingStates( processedSubTaskIds, false );
                 isFullyProcessed = false;
@@ -155,7 +156,7 @@ namespace sgns::processing
         }
 
         // no need to try to keep grabbing
-        if (!isFullyProcessed)
+        if ( !isFullyProcessed )
         {
             m_subTaskQueueManager->GrabSubTask( onSubTaskGrabbedCallback );
         }
@@ -167,7 +168,7 @@ namespace sgns::processing
         m_subTaskResultStorage->AddSubTaskResult( subTaskResult );
         m_subTaskStateStorage->ChangeSubTaskState( subTaskId, SGProcessing::SubTaskState::PROCESSED );
         // tell local queue manager we completed this task as well.
-        m_subTaskQueueManager->ChangeSubTaskProcessingStates({subTaskId}, true);
+        m_subTaskQueueManager->ChangeSubTaskProcessingStates( { subTaskId }, true );
 
         if ( m_resultChannel )
         {
@@ -181,11 +182,12 @@ namespace sgns::processing
         }
     }
 
-    void SubTaskQueueAccessorImpl::OnResultReceived( SGProcessing::SubTaskResult &&subTaskResult )
+    bool SubTaskQueueAccessorImpl::OnResultReceived( SGProcessing::SubTaskResult &&subTaskResult )
     {
+        bool should_have_finalized = false;
         if ( !m_subTaskQueueManager->IsQueueInit() )
         {
-            return;
+            return should_have_finalized;
         }
         std::string subTaskId = subTaskResult.subtaskid();
 
@@ -201,19 +203,26 @@ namespace sgns::processing
             std::set<std::string> invalidSubTaskIds;
             auto                  queue = m_subTaskQueueManager->GetQueueSnapshot();
 
-            if ( !FinalizeQueueProcessing( queue->subtasks(), invalidSubTaskIds ) )
+            auto finalized_ret = FinalizeQueueProcessing( queue->subtasks(), invalidSubTaskIds );
+            if ( finalized_ret == FinalizationRetVal::NOT_FINALIZED )
             {
                 m_subTaskQueueManager->ChangeSubTaskProcessingStates( invalidSubTaskIds, false );
             }
+            else if ( finalized_ret == FinalizationRetVal::FINALIZED_BUT_NOT_OWNER )
+            {
+                should_have_finalized = true;
+            }
         }
+        return should_have_finalized;
     }
 
-    bool SubTaskQueueAccessorImpl::FinalizeQueueProcessing( const SGProcessing::SubTaskCollection &subTasks,
-                                                            std::set<std::string>                 &invalidSubTaskIds )
+    SubTaskQueueAccessorImpl::FinalizationRetVal SubTaskQueueAccessorImpl::FinalizeQueueProcessing(
+        const SGProcessing::SubTaskCollection &subTasks,
+        std::set<std::string>                 &invalidSubTaskIds )
     {
         bool valid = m_validationCore.ValidateResults( subTasks, m_results, invalidSubTaskIds );
 
-        bool isFinalized = false;
+        FinalizationRetVal finalization_ret = FinalizationRetVal::NOT_FINALIZED;
         m_logger->debug( "RESULTS_VALIDATED: {}", valid ? "VALID" : "INVALID" );
         if ( valid )
         {
@@ -229,11 +238,13 @@ namespace sgns::processing
                     result->CopyFrom( r.second );
                 }
                 m_taskResultProcessingSink( taskResult );
-                isFinalized = true;
+                finalization_ret = FinalizationRetVal::FINALIZED;
             }
             else
             {
                 m_logger->debug( "NOT_THE_OWNER: Can't finalize if not the owner" );
+                finalization_ret = FinalizationRetVal::FINALIZED_BUT_NOT_OWNER;
+
                 // @todo Process task finalization expiration
             }
         }
@@ -245,7 +256,7 @@ namespace sgns::processing
             }
             m_processingErrorSink( "Invalid results for the entire task" );
         }
-        return isFinalized;
+        return finalization_ret;
     }
 
     std::vector<std::tuple<std::string, SGProcessing::SubTaskResult>> SubTaskQueueAccessorImpl::GetResults() const
@@ -276,6 +287,8 @@ namespace sgns::processing
             return;
         }
 
+        bool rebroadcast_results = false;
+
         if ( message )
         {
             SGProcessing::SubTaskResult result;
@@ -283,7 +296,12 @@ namespace sgns::processing
             {
                 _this->m_logger->debug( "[RESULT_RECEIVED]. ({}).", result.subtaskid() );
 
-                _this->OnResultReceived( std::move( result ) );
+                rebroadcast_results = _this->OnResultReceived( std::move( result ) );
+
+                if ( rebroadcast_results )
+                {
+                    _this->m_resultChannel->Publish( message->data);
+                }
             }
         }
     }
