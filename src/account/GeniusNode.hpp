@@ -19,6 +19,7 @@
 #include "singleton/IComponent.hpp"
 #include "processing/impl/processing_task_queue_impl.hpp"
 #include "coinprices/coinprices.hpp"
+#include <boost/algorithm/string/replace.hpp>
 
 typedef struct DevConfig
 {
@@ -199,30 +200,15 @@ namespace sgns
         static constexpr std::string_view PROCESSING_GRID_CHANNEL = "SGNUS.Jobs.1a.06";
         static constexpr std::string_view PROCESSING_CHANNEL      = "SGNUS.TestNet.Channel.1a.06";
 
-        static const std::string &GetLoggingSystem()
+        static std::string GetLoggingSystem( const std::string &base_path )
         {
-            //static const std::string logger_config = R"(
-            //# ----------------
-            //sinks:
-            //  - name: console
-            //    type: console
-            //    color: true
-            //groups:
-            //  - name: SuperGeniusDemo
-            //    sink: console
-            //    level: info
-            //    children:
-            //      - name: libp2p
-            //      - name: Gossip
-            //# ----------------
-            //)";
-            static const std::string logger_config = R"(
+            std::string config = R"(
             # ----------------
             sinks:
               - name: file
                 type: file
                 capacity: 1000
-                path: sgnslog.log
+                path: [basepath]/sgnslog.log
             groups:
               - name: SuperGeniusDemo
                 sink: file
@@ -232,8 +218,11 @@ namespace sgns
                   - name: Gossip
             # ----------------
             )";
-            return logger_config;
+
+            boost::replace_all( config, "[basepath]", base_path );
+            return config;
         }
+
     };
 
 }
