@@ -1,0 +1,140 @@
+/**
+ * @file sgnsv.h
+ * @brief Contains version information for the SuperGenius project.
+ *
+ * This header file defines version components and related macros for the
+ * SuperGenius project. The project adheres to semantic versioning:
+ * - **Major**: Incompatible API changes.
+ * - **Minor**: New features implemented in a backwards-compatible manner.
+ * - **Patch**: Backwards-compatible bug fixes.
+ *
+ * Additional fields include:
+ * - **Pre-release Identifier**: Automatically determined from Git state. If an exact
+ *   Git tag is present, this is empty (indicating a stable release). Otherwise, it
+ *   contains the current Git branch name.
+ * - **Build Metadata**: Composed of the build date (formatted as YYYYMMDD, with no
+ *   separators) and the short Git commit hash, joined by a hyphen (e.g., "20250225-1b72fba4").
+ * - **Release Date**: The date when the release was built, typically in YYYYMMDD format.
+ *
+ * Both string and numeric representations of the version are provided:
+ * - **String Representations:**
+ *   - A short version string (e.g., "1.2.3").
+ *   - A full version string that concatenates the short version, the pre-release identifier,
+ *     and the build metadata.
+ *   - A display text that combines the full version string with the release date.
+ * - **Numeric Representation:**
+ *   - A synthesized value combining major, minor, patch, and a pre-release flag, which
+ *     can be used for compile-time version comparisons.
+ *
+ * @note This file is auto-generated. Do not edit manually.
+ */
+
+#pragma once
+
+#include <cstdint>
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
+/// Major version number.
+#define SUPERGENIUS_VERSION_MAJOR @PROJECT_VERSION_MAJOR@
+
+/// Minor version number.
+#define SUPERGENIUS_VERSION_MINOR @PROJECT_VERSION_MINOR@
+
+/// Patch version number.
+#define SUPERGENIUS_VERSION_PATCH @PROJECT_VERSION_PATCH@
+
+/**
+  * @brief Pre-release identifier.
+  *
+  * Determined automatically from Git state. When an exact Git tag is found,
+  * this is set to an empty string (indicating a stable release). Otherwise,
+  * it is set to the current Git branch name.
+  */
+#define SUPERGENIUS_VERSION_PRE_RELEASE "@SUPERGENIUS_VERSION_PRE_RELEASE@"
+
+/**
+  * @brief Build metadata.
+  *
+  * Contains additional build information including the build date (formatted as
+  * YYYYMMDD with no separators) and the short Git commit hash, separated by a hyphen.
+  */
+#define SUPERGENIUS_VERSION_BUILD_METADATA "@SUPERGENIUS_VERSION_BUILD_METADATA@"
+
+/**
+  * @brief Release date.
+  *
+  * The date when the release was built, typically formatted as YYYYMMDD.
+  */
+#define SUPERGENIUS_RELEASE_DATE "@SUPERGENIUS_RELEASE_DATE@"
+
+/**
+  * @brief Shared library (ABI) version.
+  *
+  * Usually aligned with the major version number.
+  */
+#define SUPERGENIUS_SHLIB_VERSION SUPERGENIUS_VERSION_MAJOR
+
+/**
+  * @brief Short version string: "MAJOR.MINOR.PATCH".
+  */
+#define SUPERGENIUS_VERSION_STR                                                                                        \
+    "@PROJECT_VERSION_MAJOR@.@PROJECT_VERSION_MINOR@.@PROJECT_VERSION_PATCH@@SUPERGENIUS_VERSION_PRE_RELEASE@"
+
+/**
+  * @brief Full version string.
+  *
+  * Concatenates the short version string with the pre-release identifier and build metadata.
+  * The final format is: "MAJOR.MINOR.PATCH[PRE_RELEASE][BUILD_METADATA]".
+  */
+#define SUPERGENIUS_FULL_VERSION_STR                                                                                   \
+    "@PROJECT_VERSION_MAJOR@.@PROJECT_VERSION_MINOR@.@PROJECT_VERSION_PATCH@@SUPERGENIUS_VERSION_PRE_RELEASE@@SUPERGENIUS_VERSION_BUILD_METADATA@"
+
+/**
+  * @brief Version text for display purposes.
+  *
+  * Combines the full version string with the release date.
+  */
+#define SUPERGENIUS_VERSION_TEXT                                                                                       \
+    "SuperGenius @PROJECT_VERSION_MAJOR@.@PROJECT_VERSION_MINOR@.@PROJECT_VERSION_PATCH@@SUPERGENIUS_VERSION_PRE_RELEASE@@SUPERGENIUS_VERSION_BUILD_METADATA@ (@SUPERGENIUS_RELEASE_DATE@)"
+
+//TODO: TAG MAY NOT WORK YET
+/*
+  * Numeric version identifier synthesized as follows:
+  * 0xMNN00PPS, where:
+  *  - M (4 bits) is the major version.
+  *  - NN (8 bits) is the minor version.
+  *  - PP (8 bits) is the patch version.
+  *  - S (4 bits) is the pre-release flag: 0x0 for a pre-release build and 0xF for a stable release.
+  *
+  * This format enables compile-time version comparisons.
+  */
+#ifdef SUPERGENIUS_VERSION_PRE_RELEASE
+// An empty pre-release string indicates a stable release.
+#define _SUPERGENIUS_VERSION_PRERELEASE_FLAG 0xFL
+#else
+// A non-empty pre-release string indicates a pre-release build.
+#define _SUPERGENIUS_VERSION_PRERELEASE_FLAG 0x0L
+#endif
+
+#define SUPERGENIUS_VERSION_NUMBER                                                                                     \
+    ( ( SUPERGENIUS_VERSION_MAJOR << 28 ) | ( SUPERGENIUS_VERSION_MINOR << 20 ) | ( SUPERGENIUS_VERSION_PATCH << 4 ) | \
+      _SUPERGENIUS_VERSION_PRERELEASE_FLAG )
+
+/**
+  * @brief Check for minimum version requirement.
+  *
+  * Evaluates to true if the current version is greater than or equal to the
+  * specified major and minor version.
+  *
+  * @param maj Required major version.
+  * @param min Required minor version.
+  */
+#define SUPERGENIUS_VERSION_PREREQ( maj, min )                                                                         \
+    ( ( ( SUPERGENIUS_VERSION_MAJOR << 16 ) | SUPERGENIUS_VERSION_MINOR ) >= ( ( ( maj ) << 16 ) | ( min ) ) )
+
+#ifdef __cplusplus
+}
+#endif

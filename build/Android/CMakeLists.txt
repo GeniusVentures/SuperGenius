@@ -27,7 +27,13 @@ set(Boost_COMPILER "clang")
 # Android Needs this for find_library with HINTS
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY BOTH)
 
-project(SuperGenius C CXX)
+include(../../cmake/version.cmake)
+
+project(
+    SuperGenius
+    VERSION ${PROJECT_VERSION}
+    LANGUAGES C CXX
+)
 
 # include common compiler options
 include(../CommonCompilerOptions.cmake)

@@ -62,3 +62,37 @@ target_link_libraries(fixed_point
     outcome
 )
 supergenius_install(fixed_point)
+
+message(STATUS "Generating sgnsv.h from sgnsv.h.in")
+
+cmake_policy(SET CMP0115 NEW)
+
+if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/sgnsv.h.in")
+    message(FATAL_ERROR "sgnsv.h.in is missing in ${CMAKE_CURRENT_SOURCE_DIR}")
+endif()
+
+file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/generated/base)
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/sgnsv.h.in
+    ${CMAKE_BINARY_DIR}/generated/base/sgnsv.h
+    @ONLY
+)
+
+if(NOT EXISTS "${CMAKE_BINARY_DIR}/generated/base/sgnsv.h")
+    message(FATAL_ERROR "Error: Generated file ${CMAKE_BINARY_DIR}/generated/base/sgnsv.h not found!")
+endif()
+
+add_library(sgns_version
+sgns_version.cpp
+sgns_version.hpp
+${CMAKE_BINARY_DIR}/generated/base/sgnsv.h
+)
+
+target_include_directories(sgns_version
+  PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/generated/>
+    $<INSTALL_INTERFACE:include>
+)
+
+supergenius_install(sgns_version)
+

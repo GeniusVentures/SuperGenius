@@ -87,6 +87,7 @@ namespace sgns
         {
             return "GeniusNode";
         }
+        std::string GetVersion(void);
 
         void DHTInit();
         /**

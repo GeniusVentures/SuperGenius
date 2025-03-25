@@ -11,8 +11,14 @@ if(NOT DEFINED CMAKE_TOOLCHAIN_FILE)
     set(CMAKE_TOOLCHAIN_FILE "${CMAKE_CURRENT_SOURCE_DIR}/../apple.toolchain.cmake" CACHE STRING "Toolchain file")
 endif()
 
+include(../../cmake/version.cmake)
+
 # Project
-project(SuperGenius LANGUAGES C CXX)
+project(
+    SuperGenius
+    VERSION ${PROJECT_VERSION}
+    LANGUAGES C CXX
+)
 
 # include common compiler options
 include(../CommonCompilerOptions.cmake)
@@ -33,7 +39,7 @@ set(ABI_SUBFOLDER_NAME "/aarch64")
 
 set(TESTING OFF)
 
-#MoltenVK 
+# MoltenVK
 set(Vulkan_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/moltenvk/build/include")
 set(Vulkan_LIBRARY "${_THIRDPARTY_BUILD_DIR}/moltenvk/build/lib/MoltenVK.xcframework")
 
