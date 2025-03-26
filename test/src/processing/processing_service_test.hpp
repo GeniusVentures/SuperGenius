@@ -15,7 +15,7 @@ class ProcessingServiceTest : public ::testing::Test
 public:
     void SetUp() override;
     void TearDown() override;
-    virtual void Initialize(uint numNodes, size_t processingTime);
+    virtual void Initialize(uint64_t numNodes, size_t processingTime);
     virtual void SetUp(std::string name, std::string loggerConfig);
 
     /**
