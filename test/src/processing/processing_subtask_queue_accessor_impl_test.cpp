@@ -129,9 +129,6 @@ TEST_F(SubTaskQueueAccessorImplTest, SubscriptionToResultChannel)
 
     Color::PrintInfo("Waited ", resultTime.count(),  " ms for results to be received");
 
-    pubs1->Stop();
-    pubs2->Stop();
-
     // No duplicates should be received
     ASSERT_EQ(1, subTaskQueueAccessor->GetResults().size());
     EXPECT_EQ("SUBTASK_ID", std::get<0>(subTaskQueueAccessor->GetResults()[0]));
@@ -208,7 +205,7 @@ TEST_F(SubTaskQueueAccessorImplTest, TaskFinalization)
 
     Color::PrintInfo("Waited ", resultTime.count(), " ms for task finalization");
 
-    pubs1->Stop();
+
 
     ASSERT_TRUE(isTaskFinalized);
 }
@@ -384,7 +381,6 @@ TEST_F(SubTaskQueueAccessorImplTest, SubtaskTimeoutAndReprocessing)
         &resultTime
     );
 
-    pubs1->Stop();
 
     // Verify that node2 has ownership
     ASSERT_TRUE(processingQueueManager2->HasOwnership());
@@ -532,8 +528,6 @@ TEST_F(SubTaskQueueAccessorImplTest, TwoNodesProcessingAndFinalizing)
 
     Color::PrintInfo("Waited ", resultTime.count(), " ms for task finalization");
 
-    // Cleanup
-    pubs1->Stop();
 
     // Verify results
     size_t totalProcessed = processingCore1->m_processedSubTasks.size() +
