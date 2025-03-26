@@ -247,7 +247,7 @@ void ProcessingSubTaskQueue::LogQueue() const
 
     bool ProcessingSubTaskQueue::ProcessNextOwnershipRequest()
     {
-        if (HasOwnership() && m_queue != nullptr && m_queue->ownership_requests_size() > 0)
+        if (HasOwnership() && (m_queue != nullptr) && (m_queue->ownership_requests_size() > 0))
         {
             // Get the first request
             auto request = m_queue->ownership_requests(0);
