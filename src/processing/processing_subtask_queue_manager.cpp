@@ -721,7 +721,7 @@ namespace sgns::processing
         auto activeNodeCount = m_queueChannel->GetActiveNodesCount();
 
         if (activeNodeCount > 1 ||
-            m_queue->processing_queue().ownership_requests_size() > 0)
+            (m_queue->processing_queue().ownership_requests_size() > 0))
         {
             // Limit processing to just one subtask
             m_maxSubtasksPerOwnership = m_defaultMaxSubtasksPerOwnership;
