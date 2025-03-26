@@ -111,6 +111,16 @@ namespace sgns::processing
          */
         uint64_t GetCurrentQueueTimestamp();
 
+        /**
+         * Sets the maximum number of subtasks that can be owned at one time.
+         *
+         * @param maxSubtasksPerOwnership The maximum number of subtasks that can be assigned to a single ownership instance.
+         */
+        void SetMaxSubtasksPerOwnership(size_t maxSubtasksPerOwnership)
+        {
+           m_defaultMaxSubtasksPerOwnership = maxSubtasksPerOwnership;
+        }
+
     private:
         /** Updates the local queue with a snapshot that have the most recent timestamp
         * @param queue - the queue snapshot

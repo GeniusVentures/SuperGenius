@@ -230,6 +230,7 @@ void ProcessingSubTaskQueue::LogQueue() const
 }
     bool ProcessingSubTaskQueue::AddOwnershipRequest(const std::string& nodeId, uint64_t timestamp)
     {
+        bool requestAdded = false;
         if (m_queue != nullptr)
         {
             auto request = m_queue->add_ownership_requests();
@@ -240,13 +241,14 @@ void ProcessingSubTaskQueue::LogQueue() const
             m_queue->set_last_update_timestamp(timestamp);
 
             LogQueue();
-            return true;
+            requestAdded = true;
         }
-        return false;
+        return requestAdded;
     }
 
     bool ProcessingSubTaskQueue::ProcessNextOwnershipRequest()
     {
+        bool proccessedNextRequest = false;
         if (HasOwnership() && (m_queue != nullptr) && (m_queue->ownership_requests_size() > 0))
         {
             // Get the first request
@@ -262,9 +264,9 @@ void ProcessingSubTaskQueue::LogQueue() const
             // Transfer ownership
             ChangeOwnershipTo(request.node_id());
             LogQueue();
-            return true;
+            proccessedNextRequest = true;
         }
-        return false;
+        return proccessedNextRequest;
     }
 
 }
