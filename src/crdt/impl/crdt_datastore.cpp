@@ -278,7 +278,7 @@ namespace sgns::crdt
                 continue;
             }
             std::unique_lock lock( seenHeadsMutex_ );
-            seenHeads_.insert( bCastHeadCID );
+            seenHeads_.push_back( bCastHeadCID );
         }
     }
 
@@ -304,7 +304,7 @@ namespace sgns::crdt
         {
             return;
         }
-        //std::cout << "Dag Worker QUant: " << dagWorkerJobList.size() << std::endl;
+
         {
             std::unique_lock lock( dagWorkerMutex_ );
             if ( dagWorkerJobList.empty() )
@@ -451,13 +451,7 @@ namespace sgns::crdt
         //if ( dagSyncerResult.has_failure() )
         //{
         //    logger_->error( "HandleBlock: error checking for known block" );
-        //}
-        //else {
-        //if (dagSyncerResult.value())
-        //{
-        //    AddProcessedCID(aCid);
-        //}
-            
+        //    return outcome::failure( dagSyncerResult.error() );
         //}
 
         //if ( dagSyncerResult.value() )
@@ -472,15 +466,11 @@ namespace sgns::crdt
             children.push_back( aCid );
             SendNewJobs( aCid, 0, children );
         }
-        //if (dagSyncerResult.has_failure())
-        //{
-        //    return outcome::failure(dagSyncerResult.error());
-        //}
 
         return outcome::success();
     }
 
-void CrdtDatastore::SendNewJobs( const CID &aRootCID, uint64_t aRootPriority, const std::vector<CID> &aChildren )
+    void CrdtDatastore::SendNewJobs( const CID &aRootCID, uint64_t aRootPriority, const std::vector<CID> &aChildren )
     {
         // sendNewJobs calls getDeltas with the given
         // children and sends each response to the workers.
@@ -528,25 +518,47 @@ void CrdtDatastore::SendNewJobs( const CID &aRootCID, uint64_t aRootPriority, co
 
         for ( const auto &cid : aChildren )
         {
+            //Fetch only root node with all children, but without children of their children
+            constexpr int maxRetries = 3;
+            int           retryCount = 0;
+            bool          success    = false;
+
+            std::shared_ptr<ipfs_lite::ipfs::merkledag::Leaf> leaf;
+            common::Buffer                                    nodeBuffer;
             logger_->debug( "SendNewJobs: TRYING TO FETCH NODE : {} from {}",
                             cid.toString().value(),
                             reinterpret_cast<uint64_t>( this ) );
 
-            // Single attempt to fetch the graph - getNode internally already has retry logic
-            std::unique_lock lock( dagWorkerMutex_ );
-            auto             graphResult = dagSyncer_->fetchGraphOnDepth( cid, 1 );
-            lock.unlock();
-
-            if ( graphResult.has_failure() )
+            // Retry loop for fetching the graph
+            while ( retryCount < maxRetries )
             {
-                logger_->error( "SendNewJobs: error fetching graph for CID:{} - {}",
+                std::unique_lock lock( dagWorkerMutex_ );
+                auto             graphResult = dagSyncer_->fetchGraphOnDepth( cid, 1 );
+                lock.unlock();
+
+                if ( graphResult.has_failure() )
+                {
+                    logger_->debug( "SendNewJobs: error fetching graph for CID:{} Retry {}/{}",
+                                    cid.toString().value(),
+                                    retryCount + 1,
+                                    maxRetries );
+                    retryCount++;
+                    continue;
+                }
+
+                // Fetch successful
+                leaf       = graphResult.value();
+                nodeBuffer = leaf->content();
+                success    = true;
+                break;
+            }
+            if ( !success )
+            {
+                logger_->error( "SendNewJobs: failed to fetch graph for CID:{} after {} retries.",
                                 cid.toString().value(),
-                                graphResult.error().message() );
+                                maxRetries );
                 continue;
             }
-
-            auto leaf       = graphResult.value();
-            auto nodeBuffer = leaf->content();
 
             // @todo Check if it is OK that the node has only content and doesn't have links
             auto nodeResult = ipfs_lite::ipld::IPLDNodeImpl::createFromRawBytes( nodeBuffer );
@@ -569,11 +581,12 @@ void CrdtDatastore::SendNewJobs( const CID &aRootCID, uint64_t aRootPriority, co
             dagJob.rootPriority_ = rootPriority;
             dagJob.delta_        = delta;
             dagJob.node_         = node;
-            logger_->debug( "SendNewJobs PUSHING CID={} priority={} ",
-                            dagJob.rootCid_.toString().value(),
-                            std::to_string( dagJob.rootPriority_ ) );
+            logger_->info( "SendNewJobs PUSHING CID={} priority={} ",
+                           dagJob.rootCid_.toString().value(),
+                           std::to_string( dagJob.rootPriority_ ) );
             {
                 std::unique_lock lock( dagWorkerMutex_ );
+
                 dagWorkerJobList.push( dagJob );
             }
         }
@@ -672,23 +685,6 @@ void CrdtDatastore::SendNewJobs( const CID &aRootCID, uint64_t aRootPriority, co
         return this->Broadcast( cids );
     }
 
-    outcome::result<void> CrdtDatastore::PublishToTopic( const std::shared_ptr<Delta> &aDelta,
-                                                         const std::string            &topicName )
-    {
-        // 1. Create a new block with the CRDT Delta
-        auto addResult = this->AddDAGNode( aDelta );
-        if ( addResult.has_failure() )
-        {
-            return outcome::failure( addResult.error() );
-        }
-
-        // 2. Now broadcast the resulting new head to the single topic
-        std::vector<CID> cids;
-        cids.push_back( addResult.value() );
-
-        return this->BroadcastToTopic( cids, topicName );
-    }
-
     outcome::result<void> CrdtDatastore::Broadcast( const std::vector<CID> &cids )
     {
         if ( this->broadcaster_ == nullptr )
@@ -716,35 +712,6 @@ void CrdtDatastore::SendNewJobs( const CID &aRootCID, uint64_t aRootPriority, co
                 return outcome::failure( bcastResult.error() );
             }
         }
-        return outcome::success();
-    }
-
-    outcome::result<void> CrdtDatastore::BroadcastToTopic( const std::vector<CID> &cids, const std::string &topicName )
-    {
-        if ( !broadcaster_ )
-        {
-            return outcome::failure( boost::system::error_code{} );
-        }
-
-        if ( cids.empty() )
-        {
-            return outcome::success(); // Nothing to broadcast
-        }
-
-        // Encode the CIDs into a buffer for broadcasting
-        auto encodedBufferResult = EncodeBroadcast( cids );
-        if ( encodedBufferResult.has_failure() )
-        {
-            return outcome::failure( encodedBufferResult.error() );
-        }
-
-        // Use the new single-topic overload
-        auto bcastResult = broadcaster_->Broadcast( encodedBufferResult.value(), topicName );
-        if ( bcastResult.has_failure() )
-        {
-            return outcome::failure( bcastResult.error() );
-        }
-
         return outcome::success();
     }
 
@@ -857,7 +824,7 @@ void CrdtDatastore::SendNewJobs( const CID &aRootCID, uint64_t aRootPriority, co
                                         aRoot.toString().value() );
                         return outcome::failure( replaceResult.error() );
                     }
-                    AddProcessedCID(child);
+
                     continue;
                 }
 
@@ -879,12 +846,10 @@ void CrdtDatastore::SendNewJobs( const CID &aRootCID, uint64_t aRootPriority, co
                         // Don't let this failure prevent us from processing the other links.
                         logger_->error( "ProcessNode: error adding head {}", aRoot.toString().value() );
                     }
-                    AddProcessedCID(child);
                     continue;
                 }
 
                 children.push_back( child );
-                AddProcessedCID( child );
             }
         }
 
