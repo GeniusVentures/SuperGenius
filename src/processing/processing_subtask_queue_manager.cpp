@@ -180,7 +180,7 @@ namespace sgns::processing
 
         while ( !losingOwnership &&
                 !m_onSubTaskGrabbedCallbacks.empty() &&
-                m_processedSubtasksInCurrentOwnership < m_maxSubtasksPerOwnership )
+                (m_processedSubtasksInCurrentOwnership < m_maxSubtasksPerOwnership) )
         {
             // If the lock was released in the previous iteration, reacquire it
             std::unique_lock guard(m_queueMutex, std::defer_lock);
