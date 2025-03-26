@@ -4,7 +4,7 @@
 #include "processing/processing_subtask_state_storage.hpp"
 #include "processing/processing_subtask_result_storage.hpp"
 #include "processing_service_test.hpp"
-#include "processing/processing_service.hpp"
+#include "processing_mock.hpp"
 
 #include <gtest/gtest.h>
 
