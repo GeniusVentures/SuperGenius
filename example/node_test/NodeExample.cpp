@@ -33,24 +33,16 @@ std::queue<std::string> events;
 std::string             current_input;
 std::atomic<bool>       finished( false );
 
-#ifdef _WIN32
-// Add a global variable to store the original console mode
-DWORD original_console_mode;
-#else
-// Store the original terminal attributes
-termios original_term;
-#endif
-
 void enable_raw_mode()
 {
 #ifdef _WIN32
+    DWORD  mode;
     HANDLE hInput = GetStdHandle( STD_INPUT_HANDLE );
-    // Save the original console mode to the global variable
-    GetConsoleMode( hInput, &original_console_mode );
-    SetConsoleMode( hInput, original_console_mode & ~( ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT ) );
+    GetConsoleMode( hInput, &mode );
+    SetConsoleMode( hInput, mode & ~( ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT ) );
 #else
-    tcgetattr( STDIN_FILENO, &original_term );
-    termios term  = original_term;
+    termios term;
+    tcgetattr( STDIN_FILENO, &term );
     term.c_lflag &= ~( ICANON | ECHO );
     tcsetattr( STDIN_FILENO, TCSANOW, &term );
 #endif
@@ -59,12 +51,14 @@ void enable_raw_mode()
 void disable_raw_mode()
 {
 #ifdef _WIN32
+    DWORD  mode;
     HANDLE hInput = GetStdHandle( STD_INPUT_HANDLE );
-    // Restore the original console mode from the global variable
-    SetConsoleMode( hInput, original_console_mode );
+    SetConsoleMode( hInput, mode | ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT );
 #else
-    // Restore the original terminal attributes
-    tcsetattr( STDIN_FILENO, TCSANOW, &original_term );
+    termios term;
+    tcgetattr( STDIN_FILENO, &term );
+    term.c_lflag |= ICANON | ECHO;
+    tcsetattr( STDIN_FILENO, TCSANOW, &term );
 #endif
 }
 
@@ -274,11 +268,6 @@ void process_events( sgns::GeniusNode &genius_node )
                 {
                     std::cerr << "Invalid peer command\n";
                 }
-            }
-            else if (arguments[0] == "stopprocessing")
-            {
-                genius_node.StopProcessing();
-                std::cout << "Stopping processing" << std::endl;
             }
             else if (arguments[0] == "quit")
             {
