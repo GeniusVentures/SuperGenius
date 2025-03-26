@@ -51,7 +51,9 @@ namespace sgns::crdt
         outcome::result<base::Buffer> Next() override;
 
         /**
-         * Initializes the PubSubBroadcasterExt by subscribing to all topics.
+         * Initializes the PubSubBroadcasterExt by subscribing to the associated gossip topic
+         * to handle incoming messages. Ensures that message processing is set up before
+         * CRDT-related operations are invoked.
          */
         void Start();
         void AddTopic(const std::shared_ptr<GossipPubSubTopic> &newTopic);
@@ -64,15 +66,15 @@ namespace sgns::crdt
 
         void OnMessage( boost::optional<const GossipPubSub::Message &> message );
 
-        // Vector of topics for supporting multiple PubSub topics.
         std::vector<std::shared_ptr<GossipPubSubTopic>>           topics_;
+        std::shared_ptr<GossipPubSubTopic>                        gossipPubSubTopic_;
         std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer>           dagSyncer_;
         std::shared_ptr<CrdtDatastore>                            dataStore_;
         libp2p::multi::Multiaddress                               dagSyncerMultiaddress_;
         std::queue<std::tuple<libp2p::peer::PeerId, std::string>> messageQueue_;
-        std::mutex                                                mutex_;
+        std::mutex         mutex_;
         sgns::base::Logger m_logger = sgns::base::createLogger( "PubSubBroadcasterExt" );
-        // Updated: storing the actual future type returned by Subscribe.
+        std::future<void> subscriptionFuture_;
         std::vector<std::future<libp2p::protocol::Subscription>> subscriptionFutures_;
     };
 }
