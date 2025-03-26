@@ -1,10 +1,4 @@
-#include "processing/processing_engine.hpp"
-#include "processing/processing_subtask_queue_accessor_impl.hpp"
-#include "processing/processing_subtask_queue_channel_pubsub.hpp"
-#include "processing/processing_subtask_state_storage.hpp"
-#include "processing/processing_subtask_result_storage.hpp"
 #include "processing_service_test.hpp"
-#include "processing_mock.hpp"
 
 #include <gtest/gtest.h>
 
