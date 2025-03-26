@@ -92,7 +92,12 @@ namespace sgns
         write_base_path_( dev_config.BaseWritePath ),
         autodht_( autodht ),
         isprocessor_( isprocessor ),
-        dev_config_( dev_config )
+        dev_config_( dev_config ),
+        processing_channel_topic_( (boost::format( std::string( PROCESSING_CHANNEL ) ) %
+                                   sgns::version::SuperGeniusVersionMajor()).str() ),
+        processing_grid_chanel_topic_( (boost::format( std::string( PROCESSING_GRID_CHANNEL ) ) %
+                                       sgns::version::SuperGeniusVersionMajor()).str() )
+
     //coinprices_(std::make_shared<CoinGeckoPriceRetriever>(io_))
     {
         SSL_library_init();
@@ -134,24 +139,24 @@ namespace sgns
         auto loggerProcessingNode = base::createLogger( "ProcessingNode", logdir );
         auto loggerGossipPubsub   = base::createLogger( "GossipPubSub", logdir );
 #ifdef SGNS_DEBUGLOGS
-        node_logger->set_level(spdlog::level::err);
-        loggerGlobalDB->set_level(spdlog::level::err);
-        loggerDAGSyncer->set_level(spdlog::level::err);
-        loggerGraphsync->set_level(spdlog::level::err);
-        loggerBroadcaster->set_level(spdlog::level::err);
-        loggerDataStore->set_level(spdlog::level::err);
-        loggerTransactions->set_level(spdlog::level::err);
-        loggerQueue->set_level(spdlog::level::err);
-        loggerRocksDB->set_level(spdlog::level::err);
-        logkad->set_level(spdlog::level::err);
-        logNoise->set_level(spdlog::level::err);
-        logProcessingEngine->set_level(spdlog::level::err);
-        loggerSubQueue->set_level(spdlog::level::err);
-        loggerProcServ->set_level(spdlog::level::err);
-        loggerProcqm->set_level(spdlog::level::err);
-        loggerUPNP->set_level(spdlog::level::err);
-        loggerProcessingNode->set_level(spdlog::level::err);
-        loggerGossipPubsub->set_level(spdlog::level::err);
+        node_logger->set_level( spdlog::level::err );
+        loggerGlobalDB->set_level( spdlog::level::err );
+        loggerDAGSyncer->set_level( spdlog::level::err );
+        loggerGraphsync->set_level( spdlog::level::err );
+        loggerBroadcaster->set_level( spdlog::level::err );
+        loggerDataStore->set_level( spdlog::level::err );
+        loggerTransactions->set_level( spdlog::level::err );
+        loggerQueue->set_level( spdlog::level::err );
+        loggerRocksDB->set_level( spdlog::level::err );
+        logkad->set_level( spdlog::level::err );
+        logNoise->set_level( spdlog::level::err );
+        logProcessingEngine->set_level( spdlog::level::err );
+        loggerSubQueue->set_level( spdlog::level::err );
+        loggerProcServ->set_level( spdlog::level::err );
+        loggerProcqm->set_level( spdlog::level::err );
+        loggerUPNP->set_level( spdlog::level::err );
+        loggerProcessingNode->set_level( spdlog::level::err );
+        loggerGossipPubsub->set_level( spdlog::level::err );
 #else
         node_logger->set_level( spdlog::level::err );
         loggerGlobalDB->set_level( spdlog::level::err );
@@ -216,8 +221,11 @@ namespace sgns
         }
         std::string base58key = maybe_base58.value();
 
-        auto pubsubKeyPath =
-            ( boost::format( "SuperGNUSNode.TestNet.1a.06.%s/pubs_processor" ) % base58key ).str();
+        gnus_network_full_path_ = ( boost::format( std::string( GNUS_NETWORK_PATH ) ) %
+                                   sgns::version::SuperGeniusVersionMajor() % base58key )
+                                     .str();
+
+        auto pubsubKeyPath = gnus_network_full_path_ + "/pubs_processor";
 
         pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
             crdt::KeyPairFileStorage( write_base_path_ + pubsubKeyPath ).GetKeyPair().value() );
@@ -229,9 +237,9 @@ namespace sgns
 
         globaldb_ = std::make_shared<crdt::GlobalDB>(
             io_,
-            ( boost::format( write_base_path_ + "SuperGNUSNode.TestNet.1a.06.%s" ) % base58key ).str(),
+            write_base_path_ + gnus_network_full_path_,
             graphsyncport,
-            std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_, std::string( PROCESSING_CHANNEL ) ) );
+            std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_, processing_channel_topic_ ) );
 
         auto global_db_init_result = globaldb_->Init( crdt::CrdtOptions::DefaultOptions() );
         if ( global_db_init_result.has_error() )
@@ -260,20 +268,19 @@ namespace sgns
             account_->GetAddress() );
         processing_service_->SetChannelListRequestTimeout( boost::posix_time::milliseconds( 3000 ) );
 
-        transaction_manager_ = std::make_shared<TransactionManager>(
-            globaldb_,
-            io_,
-            account_,
-            std::make_shared<crypto::HasherImpl>(),
-            ( boost::format( write_base_path_ + "SuperGNUSNode.TestNet.1a.06.%s" ) % base58key ).str(),
-            pubsub_,
-            upnp,
-            graphsyncport );
+        transaction_manager_ = std::make_shared<TransactionManager>( globaldb_,
+                                                                     io_,
+                                                                     account_,
+                                                                     std::make_shared<crypto::HasherImpl>(),
+                                                                     write_base_path_ + gnus_network_full_path_,
+                                                                     pubsub_,
+                                                                     upnp,
+                                                                     graphsyncport );
 
         transaction_manager_->Start();
         if ( isprocessor_ )
         {
-            processing_service_->StartProcessing( std::string( PROCESSING_GRID_CHANNEL ) );
+            processing_service_->StartProcessing( processing_grid_chanel_topic_ );
         }
 
         if ( autodht_ )
@@ -372,7 +379,7 @@ namespace sgns
     void GeniusNode::DHTInit()
     {
         // Encode the string to UTF-8 bytes
-        std::string                temp = std::string( PROCESSING_CHANNEL );
+        std::string                temp = processing_grid_chanel_topic_;
         std::vector<unsigned char> inputBytes( temp.begin(), temp.end() );
 
         // Compute the SHA-256 hash of the input bytes
@@ -792,7 +799,7 @@ namespace sgns
 
     void GeniusNode::StartProcessing()
     {
-        processing_service_->StartProcessing( std::string( PROCESSING_GRID_CHANNEL ) );
+        processing_service_->StartProcessing( processing_grid_chanel_topic_ );
     }
 
     outcome::result<std::map<std::string, double>> GeniusNode::GetCoinprice( const std::vector<std::string> &tokenIds )

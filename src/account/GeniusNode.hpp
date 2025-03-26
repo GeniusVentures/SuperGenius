@@ -88,7 +88,8 @@ namespace sgns
         {
             return "GeniusNode";
         }
-        std::string GetVersion(void);
+
+        std::string GetVersion( void );
 
         void DHTInit();
         /**
@@ -182,12 +183,14 @@ namespace sgns
         bool                                                  autodht_;
         bool                                                  isprocessor_;
         base::Logger                                          node_logger;
+        DevConfig_st                                          dev_config_;
+        std::string                                           gnus_network_full_path_;
+        std::string                                           processing_channel_topic_;
+        std::string                                           processing_grid_chanel_topic_;
 
         std::thread       io_thread;
         std::thread       upnp_thread;
         std::atomic<bool> stop_upnp{ false };
-
-        DevConfig_st dev_config_;
 
         outcome::result<std::pair<std::string, uint64_t>> PayEscrow(
             const std::string              &escrow_path,
@@ -201,8 +204,9 @@ namespace sgns
         static constexpr std::uint16_t    MAIN_NET                = 369;
         static constexpr std::uint16_t    TEST_NET                = 963;
         static constexpr std::size_t      MAX_NODES_COUNT         = 1;
-        static constexpr std::string_view PROCESSING_GRID_CHANNEL = "SGNUS.Jobs.1a.06";
-        static constexpr std::string_view PROCESSING_CHANNEL      = "SGNUS.TestNet.Channel.1a.06";
+        static constexpr std::string_view PROCESSING_GRID_CHANNEL = "SGNUS.Jobs.2a.%02d";
+        static constexpr std::string_view PROCESSING_CHANNEL      = "SGNUS.TestNet.Channel.2a.%02d";
+        static constexpr std::string_view GNUS_NETWORK_PATH       = "SuperGNUSNode.TestNet.2a.%02d.%s";
 
         static std::string GetLoggingSystem( const std::string &base_path )
         {
@@ -226,7 +230,6 @@ namespace sgns
             boost::replace_all( config, "[basepath]", base_path );
             return config;
         }
-
     };
 
 }
