@@ -672,7 +672,7 @@ namespace sgns::processing
     bool ProcessingSubTaskQueueManager::HasAvailableWork(bool checkOwnershipQuota) const
     {
         // Check if we've already processed the maximum allowed subtasks per ownership
-        if ( checkOwnershipQuota && m_processedSubtasksInCurrentOwnership >= m_maxSubtasksPerOwnership)
+        if ( checkOwnershipQuota && (m_processedSubtasksInCurrentOwnership >= m_maxSubtasksPerOwnership) )
         {
             return false;
         }
