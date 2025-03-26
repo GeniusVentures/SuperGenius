@@ -76,17 +76,17 @@ namespace sgns::crdt
         m_pubsub( pubsub )
     {
     }
-    // Multiple-topics constructor definition
-    GlobalDB::GlobalDB( std::shared_ptr<boost::asio::io_context> context,
-                        std::string                              databasePath,
-                        int                                      dagSyncPort,
+
+    GlobalDB::GlobalDB( std::shared_ptr<boost::asio::io_context>              context,
+                        std::string                                           databasePath,
+                        int                                                   dagSyncPort,
                         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> broadcastChannel,
-                        std::string                              gsaddresses ) :
+                        std::string                                           gsaddresses ) :
         m_context( std::move( context ) ),
         m_databasePath( std::move( databasePath ) ),
         m_dagSyncPort( dagSyncPort ),
         m_graphSyncAddrs( std::move( gsaddresses ) ),
-        m_broadcastChannel( std::move (broadcastChannel) )
+        m_broadcastChannel( std::move( broadcastChannel ) )
     {
     }
 
@@ -94,7 +94,7 @@ namespace sgns::crdt
     {
         m_crdtDatastore->Close();
         m_crdtDatastore    = nullptr;
-        // m_broadcastChannel = nullptr;
+        m_broadcastChannel = nullptr;
         m_context          = nullptr;
     }
 
@@ -308,10 +308,8 @@ std::string GetLocalIP( boost::asio::io_context &io )
         //scheduleBootstrap(io, dagSyncerHost);
         // Create pubsub broadcaster
         //auto broadcaster = std::make_shared<PubSubBroadcaster>(m_broadcastChannel);
-        
         std::shared_ptr<PubSubBroadcasterExt>                              broadcaster;
         std::vector<std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic>> topics;
-
         if ( !m_broadcastTopicNames.empty() )
         {
             for ( const auto &topicName : m_broadcastTopicNames )
@@ -328,10 +326,21 @@ std::string GetLocalIP( boost::asio::io_context &io )
         broadcaster = PubSubBroadcasterExt::New( topics, dagSyncer, listen_to );
 
         // Save the broadcaster pointer for future additions.
-        m_broadcaster = broadcaster;
+        // m_broadcaster = broadcaster;
+        m_crdtDatastore = CrdtDatastore::New( dataStore,
+                                              HierarchicalKey( "crdt" ),
+                                              dagSyncer,
+                                              broadcaster,
+                                              crdtOptions );
+        if ( m_crdtDatastore == nullptr )
+        {
+            m_logger->error( "Unable to create CRDT datastore" );
+            return Error::CRDT_DATASTORE_NOT_CREATED;
+        }
 
-        // Set the CRDT datastore pointer and start the broadcaster.
         broadcaster->SetCrdtDataStore( m_crdtDatastore );
+
+        // have to set the dataStore before starting the broadcasting
         broadcaster->Start();
 
         // TODO: bootstrapping
@@ -475,24 +484,24 @@ std::string GetLocalIP( boost::asio::io_context &io )
     {
         return std::make_shared<AtomicTransaction>( m_crdtDatastore );
     }
-    
-    void GlobalDB::AddBroadcastTopic(const std::string &topicName)
+
+    void GlobalDB::AddBroadcastTopic( const std::string &topicName )
     {
-        if (!m_pubsub)
+        if ( !m_pubsub )
         {
-            m_logger->error("PubSub instance is not available to create new topic.");
+            m_logger->error( "PubSub instance is not available to create new topic." );
             return;
         }
-        auto newTopic = std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>(m_pubsub, topicName);
-        if (m_broadcaster)
+        auto newTopic = std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>( m_pubsub, topicName );
+        if ( m_broadcaster )
         {
-             m_broadcaster->AddTopic(newTopic);
-             m_logger->info("New broadcast topic added: " + topicName);
+            m_broadcaster->AddTopic( newTopic );
+            m_logger->info( "New broadcast topic added: " + topicName );
         }
         else
         {
-             m_logger->error("Broadcaster is not initialized.");
+            m_logger->error( "Broadcaster is not initialized." );
         }
     }
-    
+
 }
