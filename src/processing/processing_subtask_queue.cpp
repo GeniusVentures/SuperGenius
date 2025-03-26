@@ -40,8 +40,7 @@ bool ProcessingSubTaskQueue::LockItem(size_t& lockedItemIndex, uint64_t now)
     m_queue->set_last_update_timestamp(now);
     for (auto itemIdx : m_enabledItemIndices)
     {
-        auto item = m_queue->items(itemIdx);
-        if (item.lock_node_id().empty())
+        if (m_queue->items(itemIdx).lock_node_id().empty())
         {
             auto mItem = m_queue->mutable_items(itemIdx);
 

@@ -1,7 +1,6 @@
 #include "processing_subtask_queue_channel_pubsub.hpp"
 #include <thread>
 #include <base/util.hpp>
-#include "outcome/outcome.hpp"
 
 
 namespace sgns::processing
@@ -53,7 +52,7 @@ namespace sgns::processing
             } else {
                 m_logger->error("Subscription not established within the specified time ({} ms)",
                              msSubscriptionWaitingDuration.count());
-                return failure(boost::system::errc::timed_out);
+                return outcome::failure(boost::system::errc::timed_out);
             }
         }
 

@@ -9,7 +9,9 @@ namespace sgns::processing
         std::shared_ptr<ProcessingSubTaskQueueChannel> queueChannel,
         std::shared_ptr<boost::asio::io_context>       context,
         const std::string                             &localNodeId,
-        std::function<void( const std::string & )>     processingErrorSink ) :
+        std::function<void( const std::string & )>     processingErrorSink,
+        uint64_t delayBetweenProcessingMs
+    ) :
         m_queueChannel( std::move( queueChannel ) ),
         m_context( std::move( context ) ),
         m_localNodeId( localNodeId ),
@@ -18,7 +20,8 @@ namespace sgns::processing
         m_dltGrabSubTaskTimeout( *m_context ),
         m_processingQueue(localNodeId, [this]() { return this->GetCurrentQueueTimestamp(); }),
         m_processingTimeout( std::chrono::seconds( 15 ) ),
-        m_processingErrorSink( std::move( processingErrorSink ) )
+        m_processingErrorSink( std::move( processingErrorSink ) ),
+        m_delayBetweenProcessingMs( std::move( delayBetweenProcessingMs ) )
     {
         m_maxSubtasksPerOwnership = m_defaultMaxSubtasksPerOwnership;
     }
@@ -290,7 +293,7 @@ namespace sgns::processing
         }
         // if we are here, we have processed all the subtasks we can or are waiting for ownership to grab more.
         // Small delay to allow pubsub and other threads to process
-        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+        std::this_thread::sleep_for(std::chrono::milliseconds(m_delayBetweenProcessingMs));
     }
 
     void ProcessingSubTaskQueueManager::HandleGrabSubTaskTimeout( const boost::system::error_code &ec )

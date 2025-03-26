@@ -14,7 +14,6 @@
 #include <ipfs_pubsub/gossip_pubsub_topic.hpp>
 #include "base/logger.hpp"
 
-using namespace boost::outcome_v2;
 using namespace sgns::ipfs_pubsub;
 
 namespace sgns::processing
@@ -56,7 +55,7 @@ namespace sgns::processing
          * @return If msSubscriptionWaitingDuration > 0: outcome with success/failure and actual wait time
          *         If msSubscriptionWaitingDuration = 0: outcome with future that completes when subscription is established
          */
-        ::outcome::result<std::variant<std::chrono::milliseconds, std::future<GossipPubSub::Subscription>>> Listen(
+        outcome::result<std::variant<std::chrono::milliseconds, std::future<GossipPubSub::Subscription>>> Listen(
             std::chrono::milliseconds msSubscriptionWaitingDuration = std::chrono::milliseconds(2000));
 
         /** Retrieves the count of active nodes in the subtask queue channel.

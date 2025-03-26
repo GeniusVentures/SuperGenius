@@ -33,7 +33,8 @@ namespace sgns::processing
         ProcessingSubTaskQueueManager( std::shared_ptr<ProcessingSubTaskQueueChannel> queueChannel,
                                        std::shared_ptr<boost::asio::io_context>       context,
                                        const std::string                             &localNodeId,
-                                       std::function<void( const std::string & )>     processingErrorSink );
+                                       std::function<void( const std::string & )>     processingErrorSink,
+                                       uint64_t delayBetweenProcessingMs = 20);
         ~ProcessingSubTaskQueueManager();
 
         /** Set a timeout for subtask processing
@@ -202,6 +203,7 @@ namespace sgns::processing
         size_t m_processedSubtasksInCurrentOwnership = 0;
         size_t m_defaultMaxSubtasksPerOwnership = 1;
         size_t m_maxSubtasksPerOwnership;
+        const uint64_t m_delayBetweenProcessingMs;
 
         std::chrono::steady_clock::time_point m_lastActiveCountCheck = std::chrono::steady_clock::now();
         uint64_t m_waitTimeBeforeReset = 3000; // Initial wait time of 3000ms
