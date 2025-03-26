@@ -66,20 +66,28 @@ TEST_F(ProcessingSubTaskQueueManagerTest, QueueCreating)
             queueSnapshotSet.push_back(*queue);
     };
 
+    SGProcessing::ProcessingChunk chunk1;
+    chunk1.set_chunkid("CHUNK_1");
+    chunk1.set_n_subchunks(1);
+
     std::list<SGProcessing::SubTask> subTasks;
     {
         SGProcessing::SubTask subtask;
         subtask.set_subtaskid("SUBTASK_1");
+        auto chunk = subtask.add_chunkstoprocess();
+        chunk->CopyFrom(chunk1);
         subTasks.push_back(std::move(subtask));
     }
     {
         SGProcessing::SubTask subtask;
         subtask.set_subtaskid("SUBTASK_2");
+        auto chunk = subtask.add_chunkstoprocess();
+        chunk->CopyFrom(chunk1);
         subTasks.push_back(std::move(subtask));
     }
 
+    // this uses mocks, so all good recreating this.
     ProcessingSubTaskQueueManager queueManager(queueSubTaskChannel, context, nodeId1,[](const std::string &){});
-
     queueManager.CreateQueue(subTasks);
 
     ASSERT_EQ(0, requestedOwnerIds.size());
@@ -108,16 +116,24 @@ TEST_F(ProcessingSubTaskQueueManagerTest, QueueOwnershipTransfer)
         queueSnapshotSet.push_back(*queue);
     };
 
+    SGProcessing::ProcessingChunk chunk1;
+    chunk1.set_chunkid("CHUNK_1");
+    chunk1.set_n_subchunks(1);
+
     std::list<SGProcessing::SubTask> subTasks;
     {
         SGProcessing::SubTask subtask;
         subtask.set_subtaskid("SUBTASK_1");
+        auto chunk = subtask.add_chunkstoprocess();
+        chunk->CopyFrom(chunk1);
         subTasks.push_back(std::move(subtask));
     }
 
     {
         SGProcessing::SubTask subtask;
         subtask.set_subtaskid("SUBTASK_2");
+        auto chunk = subtask.add_chunkstoprocess();
+        chunk->CopyFrom(chunk1);
         subTasks.push_back(std::move(subtask));
     }
 
@@ -153,22 +169,33 @@ TEST_F(ProcessingSubTaskQueueManagerTest, GrabSubTaskWithoutOwnershipTransferrin
         queueSnapshotSet.push_back(*queue);
     };
 
+    // A single chunk is added to 2 subtasks
+    SGProcessing::ProcessingChunk chunk1;
+    chunk1.set_chunkid("CHUNK_1");
+    chunk1.set_n_subchunks(1);
+
     std::list<SGProcessing::SubTask> subTasks;
     {
         SGProcessing::SubTask subtask;
         subtask.set_subtaskid("SUBTASK_1");
+        auto chunk = subtask.add_chunkstoprocess();
+        chunk->CopyFrom(chunk1);
         subTasks.push_back(std::move(subtask));
     }
 
     {
         SGProcessing::SubTask subtask;
         subtask.set_subtaskid("SUBTASK_2");
+        auto chunk = subtask.add_chunkstoprocess();
+        chunk->CopyFrom(chunk1);
         subTasks.push_back(std::move(subtask));
     }
 
     ProcessingSubTaskQueueManager queueManager(queueSubTaskChannel, context, nodeId1,[](const std::string &){});
 
     queueManager.CreateQueue(subTasks);
+
+    queueManager.SetMaxSubtasksPerOwnership(2);
 
     queueManager.GrabSubTask([](boost::optional<const SGProcessing::SubTask&> subtask) {
         if (subtask)
@@ -198,15 +225,24 @@ TEST_F(ProcessingSubTaskQueueManagerTest, GrabSubTaskWithOwnershipTransferring)
     auto context = std::make_shared<boost::asio::io_context>();
     auto queueSubTaskChannel = std::make_shared<ProcessingSubTaskQueueChannelImpl>();
 
+    // A single chunk is added to 2 subtasks
+    SGProcessing::ProcessingChunk chunk1;
+    chunk1.set_chunkid("CHUNK_1");
+    chunk1.set_n_subchunks(1);
+
     std::list<SGProcessing::SubTask> subTasks;
     {
         SGProcessing::SubTask subtask;
         subtask.set_subtaskid("SUBTASK_1");
+        auto chunk = subtask.add_chunkstoprocess();
+        chunk->CopyFrom(chunk1);
         subTasks.push_back(std::move(subtask));
     }
     {
         SGProcessing::SubTask subtask;
         subtask.set_subtaskid("SUBTASK_2");
+        auto chunk = subtask.add_chunkstoprocess();
+        chunk->CopyFrom(chunk1);
         subTasks.push_back(std::move(subtask));
     }
 
@@ -289,15 +325,24 @@ TEST_F(ProcessingSubTaskQueueManagerTest, CheckProcessedQueue)
 {
     auto context = std::make_shared<boost::asio::io_context>();
 
+    // A single chunk is added to 2 subtasks
+    SGProcessing::ProcessingChunk chunk1;
+    chunk1.set_chunkid("CHUNK_1");
+    chunk1.set_n_subchunks(1);
+
     std::list<SGProcessing::SubTask> subTasks;
     {
         SGProcessing::SubTask subtask;
         subtask.set_subtaskid("SUBTASK_1");
+        auto chunk = subtask.add_chunkstoprocess();
+        chunk->CopyFrom(chunk1);
         subTasks.push_back(std::move(subtask));
     }
     {
         SGProcessing::SubTask subtask;
         subtask.set_subtaskid("SUBTASK_2");
+        auto chunk = subtask.add_chunkstoprocess();
+        chunk->CopyFrom(chunk1);
         subTasks.push_back(std::move(subtask));
     }
 
