@@ -72,7 +72,7 @@ void ProcessingServiceTest::TearDown()
     }
 }
 
-void ProcessingServiceTest::Initialize(uint numNodes, size_t processingTime)
+void ProcessingServiceTest::Initialize(uint64_t numNodes, size_t processingTime)
 {
     // create 2 nodes default
     std::vector<std::string> bootstrap_nodes = {};
