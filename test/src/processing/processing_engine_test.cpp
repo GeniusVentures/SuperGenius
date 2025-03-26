@@ -183,7 +183,21 @@ public:
         logging_system->configure();
 
         libp2p::log::setLoggingSystem(logging_system);
-        libp2p::log::setLevelOfGroup("processing_engine_test", soralog::Level::DEBUG);
+#ifdef SGNS_DEBUGLOGS
+        libp2p::log::setLevelOfGroup("processing_service_test", soralog::Level::DEBUG);
+
+        auto loggerProcQM  = sgns::base::createLogger( "ProcessingSubTaskQueueManager" );
+        loggerProcQM->set_level( spdlog::level::debug );
+
+        loggerProcQM  = sgns::base::createLogger( "ProcessingSubTaskQueue");
+        loggerProcQM->set_level( spdlog::level::debug );
+
+        loggerProcQM  = sgns::base::createLogger( "ProcessingSubTaskQueueAccessorImpl");
+        loggerProcQM->set_level( spdlog::level::debug );
+#else
+        libp2p::log::setLevelOfGroup("processing_engine_test", soralog::Level::OFF);
+#endif
+
     }
 };
 /**

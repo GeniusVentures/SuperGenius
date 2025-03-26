@@ -19,6 +19,7 @@
 #include "singleton/IComponent.hpp"
 #include "processing/impl/processing_task_queue_impl.hpp"
 #include "coinprices/coinprices.hpp"
+#include <boost/algorithm/string/replace.hpp>
 
 typedef struct DevConfig
 {
@@ -200,33 +201,18 @@ namespace sgns
         static constexpr std::uint16_t    MAIN_NET                = 369;
         static constexpr std::uint16_t    TEST_NET                = 963;
         static constexpr std::size_t      MAX_NODES_COUNT         = 1;
-        static constexpr std::string_view PROCESSING_GRID_CHANNEL = "SGNUS.Jobs.1a.04";
-        static constexpr std::string_view PROCESSING_CHANNEL      = "SGNUS.TestNet.Channel.1a.04";
+        static constexpr std::string_view PROCESSING_GRID_CHANNEL = "SGNUS.Jobs.1a.06";
+        static constexpr std::string_view PROCESSING_CHANNEL      = "SGNUS.TestNet.Channel.1a.06";
 
-        static const std::string &GetLoggingSystem()
+        static std::string GetLoggingSystem( const std::string &base_path )
         {
-            //static const std::string logger_config = R"(
-            //# ----------------
-            //sinks:
-            //  - name: console
-            //    type: console
-            //    color: true
-            //groups:
-            //  - name: SuperGeniusDemo
-            //    sink: console
-            //    level: info
-            //    children:
-            //      - name: libp2p
-            //      - name: Gossip
-            //# ----------------
-            //)";
-            static const std::string logger_config = R"(
+            std::string config = R"(
             # ----------------
             sinks:
               - name: file
                 type: file
-                capacity: 40480
-                path: sgnslog.log
+                capacity: 1000
+                path: [basepath]/sgnslog.log
             groups:
               - name: SuperGeniusDemo
                 sink: file
@@ -236,8 +222,11 @@ namespace sgns
                   - name: Gossip
             # ----------------
             )";
-            return logger_config;
+
+            boost::replace_all( config, "[basepath]", base_path );
+            return config;
         }
+
     };
 
 }

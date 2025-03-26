@@ -81,7 +81,6 @@ namespace sgns::processing
                 if ( maybe_result.has_value() )
                 {
                     SGProcessing::SubTaskResult result = maybe_result.value();
-                    // @todo replace results_channel with subtaskid
                     result.set_subtaskid( subTask.subtaskid() );
                     result.set_node_address( _this->m_nodeId );
                     _this->m_logger->debug( "[PROCESSED]. m_nodeId ({}), subtask ({}).",
@@ -91,7 +90,6 @@ namespace sgns::processing
                     if ( _this->m_subTaskQueueAccessor )
                     {
                         _this->m_subTaskQueueAccessor->CompleteSubTask( subTask.subtaskid(), result );
-                        // @todo Should a new subtask be grabbed once the previous one is processed?
                         _this->m_subTaskQueueAccessor->GrabSubTask(
                             [weakThis( std::weak_ptr<sgns::processing::ProcessingEngine>( _this ) )](
                                 boost::optional<const SGProcessing::SubTask &> subTask )

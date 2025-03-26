@@ -16,10 +16,14 @@ namespace sgns::processing
 class ProcessingSubTaskQueue
 {
 public:
+
+    using TimestampProvider = std::function<uint64_t()>;
+
     /** Construct an empty queue
     * @param localNodeId local processing node ID
+    * @param timestampProvider get the current timestamp from the manager function
     */
-    ProcessingSubTaskQueue( std::string localNodeId );
+    ProcessingSubTaskQueue(std::string localNodeId, TimestampProvider timestampProvider = nullptr);
 
     /** Create a subtask queue by splitting the task to subtasks using the processing code
     * @param task - task that should be split into subtasks
@@ -29,8 +33,9 @@ public:
 
     /** Asynchronous getting of a subtask from the queue
     * @param onSubTaskGrabbedCallback a callback that is called when a grapped iosubtask is locked by the local node
+    * @param timestamp the current timestamp for the queue
     */
-    bool GrabItem(size_t& grabbedItemIndex);
+    bool GrabItem(size_t& grabbedItemIndex, uint64_t timestamp);
 
     /** Transfer the queue ownership to another processing node
     * @param nodeId - processing node ID that the ownership should be transferred
@@ -54,19 +59,32 @@ public:
     bool UpdateQueue(SGProcessing::ProcessingQueue* queue, const std::vector<int>& enabledItemIndices);
 
     /** Unlocks expired queue items
-    * @param expirationTimeout - timeout applied to detect expired items
+    * @param currentTime - the current queue time
     * @return true if at least one item was unlocked
     */
-    bool UnlockExpiredItems(std::chrono::system_clock::duration expirationTimeout);
+    bool UnlockExpiredItems(uint64_t currentTime);
 
     /** Returns the most recent item lock timestamp
     */
-    std::chrono::system_clock::time_point GetLastLockTimestamp() const;
+    [[nodiscard]] uint64_t GetLastLockTimestamp() const;
+
+    /** Adds a new ownership request to the queue
+    * @param nodeId - ID of the node requesting ownership
+    * @param timestamp - timestamp when the request was created
+    * @return true if the request was successfully added, false if it already exists
+    */
+    bool AddOwnershipRequest(const std::string& nodeId, uint64_t timestamp);
+
+    /** Processes the next ownership request in the queue
+    * @return true if an ownership request was processed, false if the queue is empty or the node doesn't have ownership
+    */
+    bool ProcessNextOwnershipRequest();
 
 private:
+
     void ChangeOwnershipTo(const std::string& nodeId);
 
-    bool LockItem(size_t& lockedItemIndex);
+    bool LockItem(size_t& lockedItemIndex, uint64_t timestamp);
 
     void LogQueue() const;
 
@@ -76,6 +94,8 @@ private:
     std::vector<int> m_enabledItemIndices;
 
     base::Logger m_logger = base::createLogger("ProcessingSubTaskQueue");
+
+    TimestampProvider m_timestampProvider;
 };
 }
 

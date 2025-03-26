@@ -7,7 +7,6 @@
 
 #include "processing/proto/SGProcessing.pb.h"
 #include "outcome/outcome.hpp"
-#include <list>
 #include <boost/asio/io_context.hpp>
 
 namespace sgns::processing

@@ -28,6 +28,7 @@ if(NOT CMAKE_BUILD_TYPE STREQUAL "Release")
 elseif (DEFINED SGNS_PRINT_LOGS)
 	add_definitions(-DSGNS_DEBUGLOGS)
 endif()
+
 if(BUILD_TESTING)
     set(GTest_DIR "${_THIRDPARTY_BUILD_DIR}/GTest/lib/cmake/GTest")
     set(GTest_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/GTest/include")

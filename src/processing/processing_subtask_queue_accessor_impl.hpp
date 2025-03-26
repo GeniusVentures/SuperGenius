@@ -51,13 +51,20 @@ namespace sgns::processing
     */
         std::vector<std::tuple<std::string, SGProcessing::SubTaskResult>> GetResults() const;
 
+        enum class FinalizationRetVal
+        {
+            NOT_FINALIZED           = 0,
+            FINALIZED               = 1,
+            FINALIZED_BUT_NOT_OWNER = 2,
+        };
+
     private:
-        void OnResultReceived( SGProcessing::SubTaskResult &&subTaskResult );
-        void OnSubTaskQueueAssigned( const std::vector<std::string> &subTaskIds,
-                                     std::function<void()>           onSubTaskQueueConnectedEventSink );
-        void UpdateResultsFromStorage( const std::set<std::string> &subTaskIds );
-        bool FinalizeQueueProcessing( const SGProcessing::SubTaskCollection &subTasks,
-                                      std::set<std::string>                 &invalidSubTaskIds );
+        bool               OnResultReceived( SGProcessing::SubTaskResult &&subTaskResult );
+        void               OnSubTaskQueueAssigned( const std::vector<std::string> &subTaskIds,
+                                                   std::function<void()>           onSubTaskQueueConnectedEventSink );
+        void               UpdateResultsFromStorage( const std::set<std::string> &subTaskIds );
+        FinalizationRetVal FinalizeQueueProcessing( const SGProcessing::SubTaskCollection &subTasks,
+                                                    std::set<std::string>                 &invalidSubTaskIds );
 
         static void OnResultChannelMessage( std::weak_ptr<SubTaskQueueAccessorImpl>                           weakThis,
                                             boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message &> message );

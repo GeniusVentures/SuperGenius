@@ -19,7 +19,7 @@ namespace sgns::processing
         std::string                                             node_id,
         const std::string                                      &processingQueueChannelId,
         std::list<SGProcessing::SubTask>                        subTasks,
-        size_t                                                  msSubscriptionWaitingDuration,
+        std::chrono::milliseconds                               msSubscriptionWaitingDuration,
         std::chrono::seconds                                    ttl )
     {
         // Create the shared_ptr using the protected constructor
@@ -86,7 +86,7 @@ namespace sgns::processing
         m_logger->debug( "[{}] Processing node DELETED ", m_nodeId );
     }
 
-    void ProcessingNode::Initialize( const std::string &processingQueueChannelId, size_t msSubscriptionWaitingDuration )
+    void ProcessingNode::Initialize( const std::string &processingQueueChannelId, std::chrono::milliseconds msSubscriptionWaitingDuration )
     {
         // Subscribe to subtask queue channel
         auto processingQueueChannel = std::make_shared<ProcessingSubTaskQueueChannelPubSub>( m_gossipPubSub,
@@ -111,7 +111,8 @@ namespace sgns::processing
                 auto qm = qmWeak.lock();
                 if ( qm )
                 {
-                    return qm->ProcessSubTaskQueueRequestMessage( request );
+                    qm->ProcessSubTaskQueueRequestMessage( request );
+                    return true;
                 }
                 return false;
             } );
@@ -123,7 +124,8 @@ namespace sgns::processing
                 auto qm = qmWeak.lock();
                 if ( qm )
                 {
-                    return qm->ProcessSubTaskQueueMessage( queue );
+                    qm->ProcessSubTaskQueueMessage( queue );
+                    return true;
                 }
                 return false;
             } );
