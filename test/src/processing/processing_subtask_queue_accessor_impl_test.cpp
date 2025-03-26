@@ -47,6 +47,9 @@ public:
         ProcessingServiceTest::SetUp( "processing_subtask_queue_manager_test", logger_config );
         ProcessingServiceTest::Initialize( 2, 50 );
     }
+
+    const std::string nodeId1 = "NODE_1";
+    const std::string nodeId2 = "NODE_2";
 };
 
 
@@ -71,8 +74,7 @@ TEST_F(SubTaskQueueAccessorImplTest, SubscriptionToResultChannel)
 
     auto processingCore = std::make_shared<ProcessingCoreImpl>(0);
 
-    auto nodeId = "NODE_1";
-    auto engine = std::make_shared<ProcessingEngine>(nodeId, processingCore, [](const std::string &){},[]{});
+    auto engine = std::make_shared<ProcessingEngine>( nodeId1, processingCore, []( const std::string & ) {}, [] {} );
 
     auto queue = std::make_unique<SGProcessing::SubTaskQueue>();
     queue->mutable_processing_queue()->set_owner_node_id("DIFFERENT_NODE_ID");
@@ -81,8 +83,10 @@ TEST_F(SubTaskQueueAccessorImplTest, SubscriptionToResultChannel)
     auto subTask = queue->mutable_subtasks()->add_items();
     subTask->set_subtaskid("SUBTASK_ID");
 
-    auto processingQueueManager = std::make_shared<ProcessingSubTaskQueueManager>(
-        queueChannel, pubs1->GetAsioContext(), nodeId, [](const std::string &){});
+    auto processingQueueManager = std::make_shared<ProcessingSubTaskQueueManager>( queueChannel,
+                                                                                   pubs1->GetAsioContext(),
+                                                                                   nodeId1,
+                                                                                   []( const std::string & ) {} );
     // The local queue wrapper doesn't own the queue
     processingQueueManager->ProcessSubTaskQueueMessage(queue.release());
 
@@ -148,8 +152,6 @@ TEST_F(SubTaskQueueAccessorImplTest, TaskFinalization)
     auto queueChannel = std::make_shared<ProcessingSubTaskQueueChannelPubSub>(pubs1, "QUEUE_CHANNEL_ID");
 
     auto processingCore = std::make_shared<ProcessingCoreImpl>(100);
-
-    auto nodeId1 = "NODE_1";
 
     std::atomic<bool> isTaskFinalized = false;
     auto engine1 = std::make_shared<ProcessingEngine>(nodeId1, processingCore, [](const std::string &){},[]{});
@@ -234,8 +236,6 @@ TEST_F(SubTaskQueueAccessorImplTest, SubtaskTimeoutAndReprocessing)
     // The second node processes subtasks quickly
     auto processingCore2 = std::make_shared<ProcessingCoreImpl>(100);   // 100ms processing time
 
-    auto nodeId1 = "NODE_1";
-    auto nodeId2 = "NODE_2";
 
     SGProcessing::ProcessingChunk chunk1;
     chunk1.set_chunkid("CHUNK_1");
@@ -416,8 +416,6 @@ TEST_F(SubTaskQueueAccessorImplTest, TwoNodesProcessingAndFinalizing)
     auto processingCore1 = std::make_shared<ProcessingCoreImpl>(50);  // 50ms per subtask
     auto processingCore2 = std::make_shared<ProcessingCoreImpl>(50);  // 50ms per subtask
 
-    auto nodeId1 = "NODE_1";
-    auto nodeId2 = "NODE_2";
 
     // Create a queue with 10 subtasks
     auto queue = std::make_unique<SGProcessing::SubTaskQueue>();
