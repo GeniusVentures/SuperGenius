@@ -1,3 +1,6 @@
+
+#include "processing_mock.hpp"
+#include "processing_service_test.hpp"
 #include "processing/processing_subtask_queue_channel_pubsub.hpp"
 
 #include <libp2p/log/configurator.hpp>
@@ -31,31 +34,12 @@ groups:
 # ----------------
   )");
 
-class ProcessingSubTaskChannelPubSubTest : public ::testing::Test
+class ProcessingSubTaskChannelPubSubTest : public ProcessingServiceTest
 {
 public:
-    virtual void SetUp() override
+    void SetUp() override
     {
-        // prepare log system
-        auto logging_system = std::make_shared<soralog::LoggingSystem>(
-            std::make_shared<soralog::ConfiguratorFromYAML>(
-                // Original LibP2P logging config
-                std::make_shared<libp2p::log::Configurator>(),
-                // Additional logging config for application
-                logger_config));
-        logging_system->configure();
-
-        libp2p::log::setLoggingSystem(logging_system);
-#ifdef SGNS_DEBUGLOGS
-        libp2p::log::setLevelOfGroup("processing_engine_test", soralog::Level::DEBUG);
-
-        auto loggerProcQM  = sgns::base::createLogger( "ProcessingSubTaskQueueManager" );
-
-        loggerProcQM->set_level( spdlog::level::debug );
-#else
-        libp2p::log::setLevelOfGroup("processing_engine_test", soralog::Level::OFF);
-#endif
-
+        ProcessingServiceTest::SetUp();
     }
 };
 
