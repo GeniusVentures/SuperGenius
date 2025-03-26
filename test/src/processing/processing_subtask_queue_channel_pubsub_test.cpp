@@ -1,5 +1,4 @@
 
-#include "processing_mock.hpp"
 #include "processing_service_test.hpp"
 #include "processing/processing_subtask_queue_channel_pubsub.hpp"
 
@@ -37,10 +36,14 @@ groups:
 class ProcessingSubTaskChannelPubSubTest : public ProcessingServiceTest
 {
 public:
-    void SetUp() override
+    virtual void SetUp() override
     {
-        ProcessingServiceTest::SetUp();
+        ProcessingServiceTest::SetUp( "processing_subtask_queue_manager_test", logger_config );
+        ProcessingServiceTest::Initialize( 2, 50 );
     }
+
+    const std::string nodeId1 = "NODE_1";
+    const std::string nodeId2 = "NODE_2";
 };
 
 /**
@@ -50,18 +53,9 @@ public:
  */
 TEST_F(ProcessingSubTaskChannelPubSubTest, RequestTransmittingOnSinglePubSubHost)
 {
-    auto pubs1 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();;
-    auto start1Future = pubs1->Start(40001, {});
+    auto                      pubs1 = m_pubsub_nodes[0];
     std::chrono::milliseconds resultTime;
-    ASSERT_WAIT_FOR_CONDITION( (
-                                   [&start1Future]()
-                                   {
-                                       start1Future.get();
-                                       return true;
-                                   } ),
-                               std::chrono::milliseconds( 2000 ),
-                               "Pubsub nodes initialization failed",
-                               &resultTime );
+
 
     auto queueChannel1 = std::make_shared<ProcessingSubTaskQueueChannelPubSub>(pubs1, "PROCESSING_CHANNEL_ID");
     auto queueChannel2 = std::make_shared<ProcessingSubTaskQueueChannelPubSub>(pubs1, "PROCESSING_CHANNEL_ID");
@@ -128,7 +122,6 @@ TEST_F(ProcessingSubTaskChannelPubSubTest, RequestTransmittingOnSinglePubSubHost
         &waitTime2
     );
 
-    pubs1->Stop();
 
     ASSERT_EQ(2, requestedNodeIds1.size());
     EXPECT_EQ(nodeId1, requestedNodeIds1[0]);
@@ -146,22 +139,9 @@ TEST_F(ProcessingSubTaskChannelPubSubTest, RequestTransmittingOnSinglePubSubHost
  */
 TEST_F(ProcessingSubTaskChannelPubSubTest, RequestTransmittingOnDifferentPubSubHosts)
 {
-    auto pubs1 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();;
-    auto start1Future = pubs1->Start( 40001, {} );
-
-    auto pubs2 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();;
-    auto start2Future = pubs2->Start( 40002, { pubs1->GetLocalAddress() } );
+    auto                      pubs1 = m_pubsub_nodes[0];
+    auto                      pubs2 = m_pubsub_nodes[1];
     std::chrono::milliseconds resultTime;
-    ASSERT_WAIT_FOR_CONDITION( (
-                                   [&start1Future, &start2Future]()
-                                   {
-                                       start1Future.get();
-                                       start2Future.get();
-                                       return true;
-                                   } ),
-                               std::chrono::milliseconds( 2000 ),
-                               "Pubsub nodes initialization failed",
-                               &resultTime );
 
     auto queueChannel1 = std::make_shared<ProcessingSubTaskQueueChannelPubSub>(pubs1, "PROCESSING_CHANNEL_ID");
     auto queueChannel2 = std::make_shared<ProcessingSubTaskQueueChannelPubSub>(pubs2, "PROCESSING_CHANNEL_ID");
@@ -230,7 +210,6 @@ TEST_F(ProcessingSubTaskChannelPubSubTest, RequestTransmittingOnDifferentPubSubH
         &waitTime2
     );
 
-    pubs1->Stop();
 
     // Requests are received by both channel endpoints.
     ASSERT_EQ(2, requestedNodeIds1.size());
@@ -244,18 +223,9 @@ TEST_F(ProcessingSubTaskChannelPubSubTest, RequestTransmittingOnDifferentPubSubH
  */
 TEST_F(ProcessingSubTaskChannelPubSubTest, QueueTransmittingOnSinglePubSubHost)
 {
-    auto pubs1 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();;
-    auto start1Future = pubs1->Start(40001, {});
+    auto                      pubs1 = m_pubsub_nodes[0];
     std::chrono::milliseconds resultTime;
-    ASSERT_WAIT_FOR_CONDITION( (
-                                   [&start1Future]()
-                                   {
-                                       start1Future.get();
-                                       return true;
-                                   } ),
-                               std::chrono::milliseconds( 2000 ),
-                               "Pubsub nodes initialization failed",
-                               &resultTime );
+
 
     auto queueChannel1 = std::make_shared<ProcessingSubTaskQueueChannelPubSub>(pubs1, "PROCESSING_CHANNEL_ID");
     auto queueChannel2 = std::make_shared<ProcessingSubTaskQueueChannelPubSub>(pubs1, "PROCESSING_CHANNEL_ID");
@@ -337,8 +307,6 @@ TEST_F(ProcessingSubTaskChannelPubSubTest, QueueTransmittingOnSinglePubSubHost)
         "Second queue not received by both channels",
         &waitTime2
     );
-
-    pubs1->Stop();
 
     ASSERT_EQ(2, queueCount1.load());
     EXPECT_EQ(nodeId1, queueSnapshotSet1[0]->processing_queue().owner_node_id());
