@@ -70,12 +70,6 @@ TEST_F(SubTaskQueueAccessorImplTest, SubscriptionToResultChannel)
         {
         });
 
-    auto queueChannel = std::make_shared<ProcessingSubTaskQueueChannelPubSub>(pubs1, "QUEUE_CHANNEL_ID");
-
-    auto processingCore = std::make_shared<ProcessingCoreImpl>(0);
-
-    auto engine = std::make_shared<ProcessingEngine>( nodeId1, processingCore, []( const std::string & ) {}, [] {} );
-
     auto queue = std::make_unique<SGProcessing::SubTaskQueue>();
     queue->mutable_processing_queue()->set_owner_node_id("DIFFERENT_NODE_ID");
 
@@ -83,30 +77,25 @@ TEST_F(SubTaskQueueAccessorImplTest, SubscriptionToResultChannel)
     auto subTask = queue->mutable_subtasks()->add_items();
     subTask->set_subtaskid("SUBTASK_ID");
 
-    auto processingQueueManager = std::make_shared<ProcessingSubTaskQueueManager>( queueChannel,
-                                                                                   pubs1->GetAsioContext(),
-                                                                                   nodeId1,
-                                                                                   []( const std::string & ) {} );
     // The local queue wrapper doesn't own the queue
-    processingQueueManager->ProcessSubTaskQueueMessage(queue.release());
-
-    auto subTaskQueueAccessor = std::make_shared<SubTaskQueueAccessorImpl>(
-        pubs1, 
-        processingQueueManager,
-        std::make_shared<SubTaskStateStorageMock>(),
-        std::make_shared<SubTaskResultStorageMock>(),
-        [](const SGProcessing::TaskResult&) {},
-        [](const std::string &) {});
-
-    subTaskQueueAccessor->CreateResultsChannel("test");
+    m_processing_queues_managers[0]->ProcessSubTaskQueueMessage( queue.release() );
 
     // Create a flag to track when the connection callback has been executed
     std::atomic<bool> connectionEstablished = false;
+    std::atomic<bool> connectionEstablished2 = false;
 
-    subTaskQueueAccessor->ConnectToSubTaskQueue([&]() {
-        engine->StartQueueProcessing(subTaskQueueAccessor);
+    m_processing_queues_accessors[0]->ConnectToSubTaskQueue(
+        [&]()
+        {
+            m_processing_engines[0]->StartQueueProcessing( m_processing_queues_accessors[0] );
         connectionEstablished = true;
     });
+    m_processing_queues_accessors[0]->ConnectToSubTaskQueue(
+        [&]()
+        {
+            m_processing_engines[1]->StartQueueProcessing( m_processing_queues_accessors[1] );
+            connectionEstablished2 = true;
+        } );
 
     // Wait for connection to be established
    ASSERT_WAIT_FOR_CONDITION(
@@ -124,8 +113,8 @@ TEST_F(SubTaskQueueAccessorImplTest, SubscriptionToResultChannel)
     resultChannel.Publish(result.SerializeAsString());
 
     // Wait for the result to be received
-    ASSERT_WAIT_FOR_CONDITION(
-        [&subTaskQueueAccessor]() { return subTaskQueueAccessor->GetResults().size() > 0; },
+    ASSERT_WAIT_FOR_CONDITION( [this]()
+                               { return m_processing_queues_accessors[0]->GetResults().size() > 0; },
         std::chrono::milliseconds(2000),
         "Result was not received by SubTaskQueueAccessor",
         &resultTime
@@ -134,8 +123,8 @@ TEST_F(SubTaskQueueAccessorImplTest, SubscriptionToResultChannel)
     Color::PrintInfo("Waited ", resultTime.count(),  " ms for results to be received");
 
     // No duplicates should be received
-    ASSERT_EQ(1, subTaskQueueAccessor->GetResults().size());
-    EXPECT_EQ("SUBTASK_ID", std::get<0>(subTaskQueueAccessor->GetResults()[0]));
+    ASSERT_EQ( 1, m_processing_queues_accessors[0]->GetResults().size() );
+    EXPECT_EQ( "SUBTASK_ID", std::get<0>( m_processing_queues_accessors[0]->GetResults()[0] ) );
 }
 
 /**
