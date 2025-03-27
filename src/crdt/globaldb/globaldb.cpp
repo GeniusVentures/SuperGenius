@@ -73,7 +73,7 @@ namespace sgns::crdt
         m_dagSyncPort( dagSyncPort ),
         m_graphSyncAddrs( std::move( gsaddresses ) ),
         m_broadcastTopicNames( broadcastTopicNames ),
-        m_pubsub( pubsub )
+        m_pubsub( std::move (pubsub)  )
     {
     }
 
@@ -101,7 +101,7 @@ namespace sgns::crdt
         m_dagSyncPort( dagSyncPort ),
         m_graphSyncAddrs( std::move( gsaddresses ) ),
         m_broadcastChannel( std::move( broadcastChannel ) ),
-        m_pubsub( pubsub )
+        m_pubsub( std::move (pubsub) )
     {
     }
     GlobalDB::~GlobalDB()

@@ -102,7 +102,9 @@
         "cinttypes": "cpp",
         "typeindex": "cpp",
         "valarray": "cpp",
-        "*.ipp": "cpp"
+        "*.ipp": "cpp",
+        "format": "cpp",
+        "__threading_support": "cpp"
     }
   }
   
