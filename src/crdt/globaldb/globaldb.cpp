@@ -90,6 +90,20 @@ namespace sgns::crdt
     {
     }
 
+    GlobalDB::GlobalDB( std::shared_ptr<boost::asio::io_context>              context,
+                        std::string                                           databasePath,
+                        int                                                   dagSyncPort,
+                        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> broadcastChannel,
+                        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>      pubsub,
+                        std::string                                           gsaddresses ) :
+        m_context( std::move( context ) ),
+        m_databasePath( std::move( databasePath ) ),
+        m_dagSyncPort( dagSyncPort ),
+        m_graphSyncAddrs( std::move( gsaddresses ) ),
+        m_broadcastChannel( std::move( broadcastChannel ) ),
+        m_pubsub( pubsub )
+    {
+    }
     GlobalDB::~GlobalDB()
     {
         m_crdtDatastore->Close();
@@ -326,7 +340,7 @@ std::string GetLocalIP( boost::asio::io_context &io )
         broadcaster = PubSubBroadcasterExt::New( topics, dagSyncer, listen_to );
 
         // Save the broadcaster pointer for future additions.
-        // m_broadcaster = broadcaster;
+        m_broadcaster = broadcaster;
         m_crdtDatastore = CrdtDatastore::New( dataStore,
                                               HierarchicalKey( "crdt" ),
                                               dagSyncer,
