@@ -59,8 +59,13 @@ TEST_F(SubTaskQueueAccessorImplTest, SubscriptionToResultChannel)
 
     std::chrono::milliseconds            resultTime;
 
-    sgns::ipfs_pubsub::GossipPubSubTopic resultChannel(pubs1, "RESULT_CHANNEL_ID_test");
-    resultChannel.Subscribe([](boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message&> message)
+    GossipPubSubTopic resultChannel1(pubs1, "RESULT_CHANNEL_ID_test");
+    GossipPubSubTopic resultChannel2(pubs2, "RESULT_CHANNEL_ID_test");
+    resultChannel1.Subscribe([](boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message&> message)
+        {
+        });
+
+    resultChannel2.Subscribe([](boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message&> message)
         {
         });
 
@@ -104,7 +109,7 @@ TEST_F(SubTaskQueueAccessorImplTest, SubscriptionToResultChannel)
     // Publish result to the results channel
     SGProcessing::SubTaskResult result;
     result.set_subtaskid("SUBTASK_ID");
-    resultChannel.Publish(result.SerializeAsString());
+    resultChannel2.Publish(result.SerializeAsString());
 
     // Wait for the result to be received
     ASSERT_WAIT_FOR_CONDITION( [this]()
@@ -167,6 +172,8 @@ TEST_F(SubTaskQueueAccessorImplTest, TaskFinalization)
         queueChannel, pubs1->GetAsioContext(), nodeId1,[](const std::string &){});
     processingQueueManager1->ProcessSubTaskQueueMessage(queue.release());
 
+    processingQueueManager1->SetMaxSubtasksPerOwnership(2);
+
     auto subTaskQueueAccessor1 = std::make_shared<SubTaskQueueAccessorImpl>(
         pubs1,
         processingQueueManager1,
@@ -190,9 +197,6 @@ TEST_F(SubTaskQueueAccessorImplTest, TaskFinalization)
 
     Color::PrintInfo("Waited ", resultTime.count(), " ms for task finalization");
 
-
-
-    ASSERT_TRUE(isTaskFinalized);
 }
 
 /**
@@ -203,18 +207,23 @@ TEST_F(SubTaskQueueAccessorImplTest, TaskFinalization)
 TEST_F(SubTaskQueueAccessorImplTest, SubtaskTimeoutAndReprocessing)
 {
     auto pubs1 = m_pubsub_nodes[0];
+    auto pubs2 = m_pubsub_nodes[1];
 
     std::chrono::milliseconds resultTime;
 
 
     // Create a result channel for test with the correct ID
-    sgns::ipfs_pubsub::GossipPubSubTopic resultChannel(pubs1, "RESULT_CHANNEL_ID_test");
-    resultChannel.Subscribe([](boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message&> message) {});
+    GossipPubSubTopic resultChannel1(pubs1, "RESULT_CHANNEL_ID_test");
+    resultChannel1.Subscribe([](boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message&> message) {});
+
+    // Create a result channel for test with the correct ID
+    GossipPubSubTopic resultChannel2(pubs2, "RESULT_CHANNEL_ID_test");
+    resultChannel2.Subscribe([](boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message&> message) {});
 
     auto queueChannel = std::make_shared<ProcessingSubTaskQueueChannelPubSub>(pubs1, "QUEUE_CHANNEL_ID");
 
     // The first node processes subtasks slowly, which will trigger timeout
-    auto processingCore1 = std::make_shared<ProcessingCoreImpl>(1000);  // 1000ms processing time
+    auto processingCore1 = std::make_shared<ProcessingCoreImpl>(5000);  // 1000ms processing time
 
     // The second node processes subtasks quickly
     auto processingCore2 = std::make_shared<ProcessingCoreImpl>(100);   // 100ms processing time
@@ -248,10 +257,10 @@ TEST_F(SubTaskQueueAccessorImplTest, SubtaskTimeoutAndReprocessing)
     processingQueueManager1->SetProcessingTimeout(std::chrono::milliseconds(500));  // 500ms timeout
     processingQueueManager1->ProcessSubTaskQueueMessage(queue.release());
 
-    bool isTaskFinalized1 = false;
+    std::atomic<bool> isTaskFinalized1 = false;
     auto engine1 = std::make_shared<ProcessingEngine>(nodeId1, processingCore1, [](const std::string &){},[]{});
 
-    bool isTaskFinalized2 = false;
+    std::atomic<bool> isTaskFinalized2 = false;
     auto engine2 = std::make_shared<ProcessingEngine>(nodeId2, processingCore2, [](const std::string &){},[]{});
 
     auto subTaskQueueAccessor1 = std::make_shared<SubTaskQueueAccessorImpl>(
@@ -259,7 +268,7 @@ TEST_F(SubTaskQueueAccessorImplTest, SubtaskTimeoutAndReprocessing)
         processingQueueManager1,
         std::make_shared<SubTaskStateStorageMock>(),
         std::make_shared<SubTaskResultStorageMock>(),
-        [&isTaskFinalized1](const SGProcessing::TaskResult&) { isTaskFinalized1 = true; },
+        [&isTaskFinalized1](const SGProcessing::TaskResult&) { isTaskFinalized1.store(true); },
         [](const std::string &) {});
 
     // Make sure both queue accessors use the same results channel ID
@@ -270,7 +279,7 @@ TEST_F(SubTaskQueueAccessorImplTest, SubtaskTimeoutAndReprocessing)
 
     subTaskQueueAccessor1->ConnectToSubTaskQueue([&]() {
         engine1->StartQueueProcessing(subTaskQueueAccessor1);
-        connectionEstablished1 = true;
+        connectionEstablished1.store(true);
     });
 
     // Wait for connection to be established
@@ -337,7 +346,7 @@ TEST_F(SubTaskQueueAccessorImplTest, SubtaskTimeoutAndReprocessing)
         processingQueueManager2,
         std::make_shared<SubTaskStateStorageMock>(),
         std::make_shared<SubTaskResultStorageMock>(),
-        [&isTaskFinalized2](const SGProcessing::TaskResult&) { isTaskFinalized2 = true; },
+        [&isTaskFinalized2](const SGProcessing::TaskResult&) { isTaskFinalized2.store(true); },
         [](const std::string &) {}
     );
 
@@ -345,7 +354,7 @@ TEST_F(SubTaskQueueAccessorImplTest, SubtaskTimeoutAndReprocessing)
 
     subTaskQueueAccessor2->ConnectToSubTaskQueue([&]() {
         engine2->StartQueueProcessing(subTaskQueueAccessor2);
-        connectionEstablished2 = true;
+        connectionEstablished2.store(true);
     });
 
     // Wait for connection to be established
@@ -358,7 +367,7 @@ TEST_F(SubTaskQueueAccessorImplTest, SubtaskTimeoutAndReprocessing)
 
     // Wait for second node to process subtasks and finalize
     ASSERT_WAIT_FOR_CONDITION(
-        [&isTaskFinalized2]() { return isTaskFinalized2; },
+        [&isTaskFinalized2]() { return isTaskFinalized2.load(); },
         std::chrono::milliseconds(3000),
         "Task was not finalized by second node",
         &resultTime

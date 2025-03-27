@@ -59,7 +59,10 @@ void ProcessingServiceTest::SetUp(std::string name, std::string loggerConfig)
     loggerProcQM  = sgns::base::createLogger( "ProcessingSubTaskQueueAccessorImpl");
     loggerProcQM->set_level( spdlog::level::debug );
 #else
-    libp2p::log::setLevelOfGroup(name, soralog::Level::OFF);
+    libp2p::log::setLevelOfGroup(name, soralog::Level::ERROR_);
+
+    auto loggerGS  = sgns::base::createLogger( "GossipPubsub");
+    loggerGS->set_level( spdlog::level::err );
 #endif
 
 }
@@ -69,7 +72,17 @@ void ProcessingServiceTest::TearDown()
     for (auto& pubs : m_pubsub_nodes)
     {
         pubs->Stop();
+        pubs->Wait();
     }
+
+    m_processing_queues_accessors.clear();
+    m_IsTaskFinalized.clear();
+    m_processing_engines.clear();
+    m_processing_queues_managers.clear();
+    m_processing_queues_channel_pub_subs.clear();
+    m_processing_cores.clear();
+    m_pubsub_futures.clear();
+    m_pubsub_nodes.clear();
 }
 
 void ProcessingServiceTest::Initialize(uint64_t numNodes, size_t processingTime)

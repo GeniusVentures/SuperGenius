@@ -17,7 +17,8 @@ namespace sgns::processing
 
     ProcessingSubTaskQueueChannelPubSub::~ProcessingSubTaskQueueChannelPubSub()
     {
-    m_logger->debug("[RELEASED] this: {}", reinterpret_cast<size_t>(this));
+        m_processingQueueChannel->Unsubscribe();
+        m_logger->debug("[RELEASED] this: {}", reinterpret_cast<size_t>(this));
     }
 
     outcome::result<std::variant<std::chrono::milliseconds, std::future<GossipPubSubTopic::Subscription>>>

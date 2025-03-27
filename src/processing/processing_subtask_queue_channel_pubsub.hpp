@@ -29,16 +29,16 @@ namespace sgns::processing
         using QueueUpdateSink  = std::function<bool( SGProcessing::SubTaskQueue * )>;
 
         /** Constructs subtask queue channel object
-    * @param gossipPubSub - ipfs pubsub
-    * @param processingQueueChannelId - a unique id of queue data channel
-    */
+         * @param gossipPubSub - ipfs pubsub
+         * @param processingQueueChannelId - a unique id of queue data channel
+        */
         ProcessingSubTaskQueueChannelPubSub( std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> gossipPubSub,
                                              const std::string &processingQueueChannelId );
 
         ~ProcessingSubTaskQueueChannelPubSub() override;
 
         /** ProcessingSubTaskQueueChannel overrides
-    */
+        */
         void RequestQueueOwnership( const std::string &nodeId ) override;
         void PublishQueue( std::shared_ptr<SGProcessing::SubTaskQueue> queue ) override;
 
