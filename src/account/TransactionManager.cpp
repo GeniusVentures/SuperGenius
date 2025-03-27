@@ -57,22 +57,28 @@ namespace sgns
     {
         m_logger->info( "Initializing values by reading whole blockchain" );
 
-        std::vector<std::string> topicNames;
-        topicNames.push_back( account_m->GetAddress() + "out" );
-        topicNames.push_back( account_m->GetAddress() + "in" );
 
-        combined_db_m = std::make_shared<crdt::GlobalDB>( ctx_m,
-                                                          ( boost::format( base_path_m + "_tx" ) ).str(),
-                                                          base_port_m,
-                                                          topicNames,
-                                                          pubsub_m );
-        used_ports_m.insert( base_port_m );
-        base_port_m++;
+        // combined_db_m = std::make_shared<crdt::GlobalDB>( ctx_m,
+        //                                                   ( boost::format( base_path_m + "_tx" ) ).str(),
+        //                                                   base_port_m,
+        //                                                   std::vector<std::string>{},
+        //                                                   pubsub_m );
+        // used_ports_m.insert( base_port_m );
+        // base_port_m++;
 
-        if ( !combined_db_m->Init( crdt::CrdtOptions::DefaultOptions() ).has_value() )
-        {
-            throw std::runtime_error( "Could not start Combined GlobalDB" );
-        }
+        // if ( !combined_db_m->Init( crdt::CrdtOptions::DefaultOptions() ).has_value() )
+        // {
+        //     throw std::runtime_error( "Could not start Combined GlobalDB" );
+        // }
+        
+        // m_logger->info( "Add in topic to combined_db_m" );
+        // combined_db_m->AddBroadcastTopic( account_m->GetAddress() + "in" );
+        // m_logger->info( "Add out topic to combined_db_m" );
+        // combined_db_m->AddBroadcastTopic( account_m->GetAddress() + "out" );
+        
+        // m_logger->info( "Add in topic to processing_db" );
+        processing_db_m->AddBroadcastTopic( account_m->GetAddress() + "in" );
+        processing_db_m->AddBroadcastTopic( account_m->GetAddress() + "out" );
 
         RefreshPorts();
     }
@@ -478,7 +484,7 @@ namespace sgns
 
     outcome::result<void> TransactionManager::CheckIncoming(bool checkProofs)
     {
-        auto transaction_paths = GetNotificationPath( account_m->GetAddress() ) + "tx/";
+        auto transaction_paths = GetNotificationPath( account_m->GetAddress() );
         m_logger->trace( "Probing incoming transactions on " + transaction_paths );
         OUTCOME_TRY( ( auto &&, transaction_list ), combined_db_m->QueryKeyValues( transaction_paths ) );
 
@@ -710,7 +716,7 @@ namespace sgns
 
                 destination_db = std::make_shared<crdt::GlobalDB>(
                     ctx_m,
-                    ( boost::format( base_path_m + "_tx/" + base58key ) ).str(),
+                    ( boost::format( base_path_m + base58key ) ).str(),
                     base_port_m,
                     std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_m, dest_info.dest_address + "in" ) );
                 if ( !destination_db->Init( crdt::CrdtOptions::DefaultOptions() ).has_value() )
@@ -729,7 +735,7 @@ namespace sgns
 
             auto                         crdt_transaction = destination_db->BeginTransaction();
             sgns::crdt::GlobalDB::Buffer data_transaction;
-            sgns::crdt::HierarchicalKey  tx_key( GetNotificationPath( dest_info.dest_address ) + "tx/" +
+            sgns::crdt::HierarchicalKey  tx_key( GetNotificationPath( dest_info.dest_address ) +
                                                 tx->dag_st.data_hash() );
 
             data_transaction.put( tx->SerializeByteVector() );
@@ -788,7 +794,7 @@ namespace sgns
 
             destination_db = std::make_shared<crdt::GlobalDB>(
                 ctx_m,
-                ( boost::format( base_path_m + "_tx/" + base58key ) ).str(),
+                ( boost::format( base_path_m + base58key ) ).str(),
                 base_port_m,
                 std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_m, escrow_source + "in" ) );
             if ( !destination_db->Init( crdt::CrdtOptions::DefaultOptions() ).has_value() )
@@ -806,7 +812,7 @@ namespace sgns
         }
 
         auto                         crdt_transaction = destination_db->BeginTransaction();
-        sgns::crdt::HierarchicalKey  tx_key( GetNotificationPath( escrow_source ) + "tx/" + tx->dag_st.data_hash() );
+        sgns::crdt::HierarchicalKey  tx_key( GetNotificationPath( escrow_source ) + tx->dag_st.data_hash() );
         sgns::crdt::GlobalDB::Buffer data_transaction;
         data_transaction.put( tx->SerializeByteVector() );
         m_logger->debug( "Putting replicate escrow release transaction in " + tx_key.GetKey() );
@@ -939,7 +945,7 @@ namespace sgns
         auto start = std::chrono::steady_clock::now();
 
         // Construct incoming notification path
-        std::string incoming_path = GetNotificationPath( account_m->GetAddress() ) + "tx/" + txId;
+        std::string incoming_path = GetNotificationPath( account_m->GetAddress() ) + txId;
 
         do
         {

@@ -139,13 +139,13 @@ namespace sgns
         auto loggerProcessingNode = base::createLogger( "ProcessingNode", logdir );
         auto loggerGossipPubsub   = base::createLogger( "GossipPubSub", logdir );
 #ifdef SGNS_DEBUGLOGS
-        node_logger->set_level( spdlog::level::err );
-        loggerGlobalDB->set_level( spdlog::level::err );
+        node_logger->set_level( spdlog::level::debug );
+        loggerGlobalDB->set_level( spdlog::level::debug );
         loggerDAGSyncer->set_level( spdlog::level::err );
         loggerGraphsync->set_level( spdlog::level::err );
-        loggerBroadcaster->set_level( spdlog::level::err );
-        loggerDataStore->set_level( spdlog::level::err );
-        loggerTransactions->set_level( spdlog::level::err );
+        loggerBroadcaster->set_level( spdlog::level::debug );
+        loggerDataStore->set_level( spdlog::level::debug );
+        loggerTransactions->set_level( spdlog::level::debug );
         loggerQueue->set_level( spdlog::level::err );
         loggerRocksDB->set_level( spdlog::level::err );
         logkad->set_level( spdlog::level::err );
@@ -158,13 +158,13 @@ namespace sgns
         loggerProcessingNode->set_level( spdlog::level::err );
         loggerGossipPubsub->set_level( spdlog::level::err );
 #else
-        node_logger->set_level( spdlog::level::err );
-        loggerGlobalDB->set_level( spdlog::level::err );
+        node_logger->set_level( spdlog::level::debug );
+        loggerGlobalDB->set_level( spdlog::level::debug );
         loggerDAGSyncer->set_level( spdlog::level::err );
         loggerGraphsync->set_level( spdlog::level::err );
-        loggerBroadcaster->set_level( spdlog::level::err );
-        loggerDataStore->set_level( spdlog::level::err );
-        loggerTransactions->set_level( spdlog::level::err );
+        loggerBroadcaster->set_level( spdlog::level::debug );
+        loggerDataStore->set_level( spdlog::level::debug );
+        loggerTransactions->set_level( spdlog::level::debug );
         loggerQueue->set_level( spdlog::level::err );
         loggerRocksDB->set_level( spdlog::level::err );
         logkad->set_level( spdlog::level::err );
@@ -234,12 +234,12 @@ namespace sgns
             { "/dns4/sg-fullnode-1.gnus.ai/tcp/40052/p2p/12D3KooWBqcxStdb4f9s4zT3bQiTDXYB56VJ77Rt7eEdjw4kXTwi" },
             lanip,
             addresses );
-
         globaldb_ = std::make_shared<crdt::GlobalDB>(
             io_,
             write_base_path_ + gnus_network_full_path_,
             graphsyncport,
-            std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_, processing_channel_topic_ ) );
+            std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_, processing_channel_topic_ ),
+            pubsub_ );
 
         auto global_db_init_result = globaldb_->Init( crdt::CrdtOptions::DefaultOptions() );
         if ( global_db_init_result.has_error() )
