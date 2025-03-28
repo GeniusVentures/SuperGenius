@@ -55,25 +55,7 @@ namespace sgns
         timer_m( std::make_shared<boost::asio::steady_timer>( *ctx_m, boost::asio::chrono::milliseconds( 300 ) ) )
 
     {
-        m_logger->info( "Initializing values by reading whole blockchain" );
-
-        std::vector<std::string> topicNames;
-
-        globaldb_m = std::make_shared<crdt::GlobalDB>( ctx_m,
-                                                          ( boost::format( base_path_m + "_tx" ) ).str(),
-                                                          base_port_m,
-                                                          topicNames,
-                                                          pubsub_m );
-        used_ports_m.insert( base_port_m );
-        base_port_m++;
-
-        if ( !globaldb_m->Init( crdt::CrdtOptions::DefaultOptions() ).has_value() )
-        {
-            throw std::runtime_error( "Could not start Combined GlobalDB" );
-        }
-
-        RefreshPorts();
-
+        globaldb_m = processing_db_m;
         globaldb_m->AddBroadcastTopic( account_m->GetAddress() + "in" );
         globaldb_m->AddBroadcastTopic( account_m->GetAddress() + "out" );
 
@@ -712,7 +694,7 @@ namespace sgns
 
                 destination_db = std::make_shared<crdt::GlobalDB>(
                     ctx_m,
-                    ( boost::format( base_path_m + "_tx/" + base58key ) ).str(),
+                    ( boost::format( base_path_m + base58key ) ).str(),
                     base_port_m,
                     std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_m, dest_info.dest_address + "in" ) );
                 if ( !destination_db->Init( crdt::CrdtOptions::DefaultOptions() ).has_value() )
@@ -790,7 +772,7 @@ namespace sgns
 
             destination_db = std::make_shared<crdt::GlobalDB>(
                 ctx_m,
-                ( boost::format( base_path_m + "_tx/" + base58key ) ).str(),
+                ( boost::format( base_path_m + base58key ) ).str(),
                 base_port_m,
                 std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_m, escrow_source + "in" ) );
             if ( !destination_db->Init( crdt::CrdtOptions::DefaultOptions() ).has_value() )
