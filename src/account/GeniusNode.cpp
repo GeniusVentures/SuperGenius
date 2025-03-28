@@ -237,12 +237,13 @@ namespace sgns
             { "/dns4/sg-fullnode-1.gnus.ai/tcp/40052/p2p/12D3KooWBqcxStdb4f9s4zT3bQiTDXYB56VJ77Rt7eEdjw4kXTwi" },
             lanip,
             addresses );
-        globaldb_ = std::make_shared<crdt::GlobalDB>(
-            io_,
-            write_base_path_ + gnus_network_full_path_,
-            graphsyncport,
-            std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_, processing_channel_topic_ ),
-            pubsub_ );
+
+        globaldb_ = std::make_shared<crdt::GlobalDB>( io_,
+                                                      write_base_path_ + gnus_network_full_path_,
+                                                      graphsyncport,
+                                                      std::vector<std::string>{},
+                                                      pubsub_ );
+        globaldb_->AddBroadcastTopic( processing_channel_topic_ );
 
         auto global_db_init_result = globaldb_->Init( crdt::CrdtOptions::DefaultOptions() );
         if ( global_db_init_result.has_error() )
