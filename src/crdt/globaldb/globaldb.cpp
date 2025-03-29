@@ -65,15 +65,13 @@ namespace sgns::crdt
     GlobalDB::GlobalDB( std::shared_ptr<boost::asio::io_context>         context,
                         std::string                                      databasePath,
                         int                                              dagSyncPort,
-                        const std::vector<std::string>                  &broadcastTopicNames,
                         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub,
                         std::string                                      gsaddresses ) :
         m_context( std::move( context ) ),
         m_databasePath( std::move( databasePath ) ),
         m_dagSyncPort( dagSyncPort ),
         m_graphSyncAddrs( std::move( gsaddresses ) ),
-        m_broadcastTopicNames( broadcastTopicNames ),
-        m_pubsub( std::move (pubsub)  )
+        m_pubsub( std::move( pubsub ) )
     {
     }
 
