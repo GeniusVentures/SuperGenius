@@ -238,9 +238,8 @@ namespace sgns
         globaldb_ = std::make_shared<crdt::GlobalDB>( io_,
                                                       write_base_path_ + gnus_network_full_path_,
                                                       graphsyncport,
-                                                      std::vector<std::string>{},
+                                                      std::vector<std::string>{ processing_channel_topic_ },
                                                       pubsub_ );
-        globaldb_->AddBroadcastTopic( processing_channel_topic_ );
 
         auto global_db_init_result = globaldb_->Init( crdt::CrdtOptions::DefaultOptions() );
         if ( global_db_init_result.has_error() )
