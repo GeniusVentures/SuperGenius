@@ -692,15 +692,17 @@ namespace sgns
                 }
                 std::string base58key = maybe_base58.value();
 
-                destination_db = std::make_shared<crdt::GlobalDB>(
-                    ctx_m,
-                    ( boost::format( base_path_m + base58key ) ).str(),
-                    base_port_m,
-                    std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_m, dest_info.dest_address + "in" ) );
+                destination_db = std::make_shared<crdt::GlobalDB>( ctx_m,
+                                                                   ( boost::format( base_path_m + base58key ) ).str(),
+                                                                   base_port_m,
+                                                                   pubsub_m );
+
+
                 if ( !destination_db->Init( crdt::CrdtOptions::DefaultOptions() ).has_value() )
                 {
                     throw std::runtime_error( "Could not start Destination GlobalDB" );
                 }
+                destination_db->AddBroadcastTopic( dest_info.dest_address + "in" );
                 destination_dbs_m[dest_info.dest_address] = destination_db;
                 used_ports_m.insert( base_port_m );
                 base_port_m++;
@@ -770,15 +772,16 @@ namespace sgns
             }
             std::string base58key = maybe_base58.value();
 
-            destination_db = std::make_shared<crdt::GlobalDB>(
-                ctx_m,
-                ( boost::format( base_path_m + base58key ) ).str(),
-                base_port_m,
-                std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_m, escrow_source + "in" ) );
+            destination_db = std::make_shared<crdt::GlobalDB>( ctx_m,
+                                                               ( boost::format( base_path_m + base58key ) ).str(),
+                                                               base_port_m,
+                                                               pubsub_m );
+
             if ( !destination_db->Init( crdt::CrdtOptions::DefaultOptions() ).has_value() )
             {
                 return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::io_error ) );
             }
+            destination_db->AddBroadcastTopic( escrow_source + "in" );
             destination_dbs_m[escrow_source] = destination_db;
             used_ports_m.insert( base_port_m );
             base_port_m++;

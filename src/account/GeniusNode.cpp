@@ -238,17 +238,16 @@ namespace sgns
         globaldb_ = std::make_shared<crdt::GlobalDB>( io_,
                                                       write_base_path_ + gnus_network_full_path_,
                                                       graphsyncport,
-                                                      std::vector<std::string>{ processing_channel_topic_ },
                                                       pubsub_ );
 
         auto global_db_init_result = globaldb_->Init( crdt::CrdtOptions::DefaultOptions() );
+        globaldb_->AddBroadcastTopic( processing_channel_topic_ );
         if ( global_db_init_result.has_error() )
         {
             auto error = global_db_init_result.error();
             throw std::runtime_error( error.message() );
             return;
         }
-
         task_queue_      = std::make_shared<processing::ProcessingTaskQueueImpl>( globaldb_ );
         processing_core_ = std::make_shared<processing::ProcessingCoreImpl>( globaldb_, 1000000, 1 );
         processing_core_->RegisterProcessorFactory( "mnnimage",
