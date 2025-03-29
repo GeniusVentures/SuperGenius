@@ -85,6 +85,11 @@ namespace sgns::crdt
 
     void PubSubBroadcasterExt::Start()
     {
+        if ( topics_.empty() )
+        {
+            m_logger->debug( "No topics available at start. Waiting for topics to be added." );
+            return;
+        }
         // Subscribe to each topic.
         for ( auto &topic : topics_ )
         {
