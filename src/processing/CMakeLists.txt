@@ -58,21 +58,19 @@ if(APPLE)
 endif()
 
 target_link_libraries(processing_service
+    PUBLIC
+    MNN::MNN
+    Vulkan::Vulkan
     PRIVATE
     crdt_globaldb
     ipfs-pubsub
     SGProcessingProto
     ${WIN_CRYPT_LIBRARY}
     AsyncIOManager
-    Vulkan::Vulkan
     rapidjson
     sha
 )
-TARGET_LINK_LIBRARIES_WHOLE_ARCHIVE_W_TYPE(processing_service PUBLIC
-    MNN::MNN
 
-    # Vulkan::Vulkan
-)
 target_include_directories(processing_service PRIVATE ${AsyncIOManager_INCLUDE_DIR})
 
 supergenius_install(processing_service)

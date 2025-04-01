@@ -46,17 +46,5 @@ target_link_libraries(mnn_chunkprocess PUBLIC
 )
 
 
-#Wholearchive MNN
-if(WIN32)
-    target_link_options(mnn_chunkprocess PUBLIC /WHOLEARCHIVE:${MNN_LIB_PATH})
-elseif(APPLE)
-    target_link_options(mnn_chunkprocess PUBLIC -force_load ${MNN_LIB_PATH})
-else()
-    target_link_options(mnn_chunkprocess PUBLIC
-        "-Wl,--whole-archive"
-        ${MNN_LIB_PATH}
-        "-Wl,--no-whole-archive"
-    )
-endif()
 include_directories(../include)
 include_directories(./imageHelper)

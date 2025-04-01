@@ -1,6 +1,7 @@
 #include "processing_subtask_queue_manager.hpp"
 
 #include <utility>
+#include <thread>
 
 namespace sgns::processing
 {
