@@ -38,6 +38,42 @@ namespace sgns::crdt
         logger_->debug( "GraphSyncher created{} ", reinterpret_cast<size_t>( this ) );
     }
 
+    GraphsyncDAGSyncer::PeerKey GraphsyncDAGSyncer::RegisterPeer( const PeerId                    &peer,
+                                                                  const std::vector<Multiaddress> &address ) const
+    {
+        std::lock_guard<std::mutex> lock( registry_mutex_ );
+
+        // Check if peer already exists in the registry
+        auto it = peer_index_.find( peer );
+        if ( it != peer_index_.end() )
+        {
+            // Peer already registered, update addresses if needed
+            PeerKey key                = it->second;
+            peer_registry_[key].second = address; // Update the addresses
+            return key;
+        }
+
+        // Register new peer
+        PeerKey key = peer_registry_.size();
+        peer_registry_.emplace_back( peer, address );
+        peer_index_.emplace( peer, key );
+
+        logger_->debug( "Registered new peer {} with key {}", peer.toBase58(), key );
+        return key;
+    }
+
+    outcome::result<GraphsyncDAGSyncer::PeerEntry> GraphsyncDAGSyncer::GetPeerById( PeerKey id ) const
+    {
+        std::lock_guard<std::mutex> lock( registry_mutex_ );
+
+        if ( id >= peer_registry_.size() )
+        {
+            return outcome::failure( Error::ROUTE_NOT_FOUND );
+        }
+
+        return peer_registry_[id];
+    }
+
     outcome::result<void> GraphsyncDAGSyncer::Listen( const Multiaddress &listen_to )
     {
         logger_->debug( "Starting to listen {} ", reinterpret_cast<size_t>( this ) );
@@ -107,8 +143,17 @@ namespace sgns::crdt
 
     void GraphsyncDAGSyncer::AddRoute( const CID &cid, const PeerId &peer, std::vector<Multiaddress> &address )
     {
+        // Register the peer (or get existing key if already registered)
+        PeerKey peerKey = RegisterPeer( peer, address );
+
+        // Add the CID route to the routing table
         std::lock_guard<std::mutex> lock( routing_mutex_ );
-        routing_.insert( std::make_pair( cid, std::make_tuple( peer, address ) ) );
+        routing_[cid] = peerKey;
+
+        logger_->debug( "Added route for CID {} to peer {} (key {})",
+                        cid.toString().value(),
+                        peer.toBase58(),
+                        peerKey );
     }
 
     outcome::result<void> GraphsyncDAGSyncer::addNode( std::shared_ptr<const ipfs_lite::ipld::IPLDNode> node )
@@ -125,9 +170,11 @@ namespace sgns::crdt
             return node;
         }
 
-        OUTCOME_TRY( ( auto &&, route_info ), GetRoute( cid ) );
+        // Get the peer info from our routing system
+        OUTCOME_TRY( auto peerEntry, GetRoute( cid ) );
 
-        auto [peerID, address] = route_info;
+        auto &peerID  = peerEntry.first;
+        auto &address = peerEntry.second;
 
         OUTCOME_TRY( ( auto &&, subscription ), RequestNode( peerID, address, cid ) );
 
@@ -336,10 +383,10 @@ namespace sgns::crdt
 
         logger_->debug( "Request found {}", cid.toString().value() );
 
-        auto maybe_router_info = GetRoute( cid );
-        if ( maybe_router_info )
+        auto maybe_route_info = GetRoute( cid );
+        if ( maybe_route_info )
         {
-            auto [peerID, address] = maybe_router_info.value();
+            auto &[peerID, address] = maybe_route_info.value();
             logger_->debug( "Seeing if peer {} has links to AddRoute", peerID.toBase58() );
             if ( !IsOnBlackList( peerID ) )
             {
@@ -353,7 +400,10 @@ namespace sgns::crdt
                         logger_->trace( "Adding route for peer {} and CID {}",
                                         peerID.toBase58(),
                                         link.get().getCID().toString().value() );
-                        AddRoute( link.get().getCID(), peerID, address );
+
+                        // Use a non-const copy of the address for AddRoute
+                        std::vector<Multiaddress> addr_copy = address;
+                        AddRoute( link.get().getCID(), peerID, addr_copy );
                     }
                 }
             }
@@ -363,6 +413,7 @@ namespace sgns::crdt
                 logger_->debug( "Peer {} was blacklisted", peerID.toBase58() );
             }
         }
+        EraseRoute(cid);
     }
 
     void GraphsyncDAGSyncer::AddCIDBlock( const CID &cid, const std::shared_ptr<ipfs_lite::ipld::IPLDNode> &block )
@@ -398,21 +449,21 @@ namespace sgns::crdt
     {
         std::lock_guard<std::mutex> lock( blacklist_mutex_ );
 
-        uint64_t now = GetCurrentTimestamp();
-        auto [it, inserted] = blacklist_.emplace(peer.toMultihash(), BlacklistEntry(now, 1));
+        uint64_t now        = GetCurrentTimestamp();
+        auto [it, inserted] = blacklist_.emplace( peer.toMultihash(), BlacklistEntry( now, 1 ) );
 
         if ( !inserted )
         {
-            BlacklistEntry& entry = it->second;
-            uint64_t timeout = getBackoffTimeout(entry.failures, entry.ever_connected);
+            BlacklistEntry &entry   = it->second;
+            uint64_t        timeout = getBackoffTimeout( entry.failures, entry.ever_connected );
 
-            if (now - entry.timestamp > timeout)
+            if ( now - entry.timestamp > timeout )
             {
-                logger_->debug("Peer {} blacklist timeout expired", peer.toBase58());
+                logger_->debug( "Peer {} blacklist timeout expired", peer.toBase58() );
             }
 
             entry.failures++;
-            logger_->debug("Peer {} failures incremented to {}", peer.toBase58(), entry.failures);
+            logger_->debug( "Peer {} failures incremented to {}", peer.toBase58(), entry.failures );
 
             entry.timestamp = now;
         }
@@ -426,11 +477,11 @@ namespace sgns::crdt
             // - Start with 5 seconds
             // - Cap at 30 seconds
             uint64_t base_seconds = 5;
-            uint64_t max_seconds = 30;
+            uint64_t max_seconds  = 30;
 
             // Calculate exponential backoff
-            uint64_t timeout = base_seconds * (1ULL << failures);
-            return std::min(timeout, max_seconds);
+            uint64_t timeout = base_seconds * ( 1ULL << failures );
+            return std::min( timeout, max_seconds );
         }
         else
         {
@@ -438,18 +489,18 @@ namespace sgns::crdt
             // - Start with 10 seconds
             // - Cap at 1800 seconds (30 minutes)
             uint64_t base_seconds = 10;
-            uint64_t max_seconds = 1800;
+            uint64_t max_seconds  = 1800;
 
             // Calculate exponential backoff
-            uint64_t timeout = base_seconds * (1ULL << failures);
-            return std::min(timeout, max_seconds);
+            uint64_t timeout = base_seconds * ( 1ULL << failures );
+            return std::min( timeout, max_seconds );
         }
     }
 
     bool GraphsyncDAGSyncer::IsOnBlackList( const PeerId &peer ) const
     {
         std::lock_guard<std::mutex> lock( blacklist_mutex_ );
-        bool ret = false;
+        bool                        ret = false;
         do
         {
             auto it = blacklist_.find( peer.toMultihash() );
@@ -459,8 +510,8 @@ namespace sgns::crdt
                 break;
             }
 
-            uint64_t now = GetCurrentTimestamp();
-            BlacklistEntry& entry = it->second;
+            uint64_t        now   = GetCurrentTimestamp();
+            BlacklistEntry &entry = it->second;
 
             // If no failures yet, not blacklisted
             if ( entry.failures == 0 )
@@ -478,7 +529,9 @@ namespace sgns::crdt
                 entry.backoff_attempts++; // Track the number of times we've retried this peer
                 entry.timestamp = now;
                 logger_->trace( "Peer {} blacklist timeout expired, allowing retry (attempt {}, failures {})",
-                                peer.toBase58(), entry.backoff_attempts, entry.failures );
+                                peer.toBase58(),
+                                entry.backoff_attempts,
+                                entry.failures );
                 // ret remains false - peer is NOT on blacklist
                 break;
             }
@@ -486,23 +539,25 @@ namespace sgns::crdt
             // Still within blacklist timeout and has failures
             ret = true; // This peer IS on the blacklist
             logger_->trace( "Peer {} BLACKLISTED (failures: {}, timeout: {}s)",
-                            peer.toBase58(), entry.failures, timeout );
+                            peer.toBase58(),
+                            entry.failures,
+                            timeout );
         } while ( false );
 
         return ret;
     }
 
-    // Add this new method to record successful connections
+    // Record successful connections
     void GraphsyncDAGSyncer::RecordSuccessfulConnection( const PeerId &peer ) const
     {
         std::lock_guard<std::mutex> lock( blacklist_mutex_ );
-        auto it = blacklist_.find( peer.toMultihash() );
+        auto                        it = blacklist_.find( peer.toMultihash() );
         if ( it != blacklist_.end() )
         {
-            BlacklistEntry& entry = it->second;
-            entry.ever_connected = true;
-            entry.failures = 0;
-            entry.backoff_attempts = 0;  // Reset backoff on successful connection
+            BlacklistEntry &entry  = it->second;
+            entry.ever_connected   = true;
+            entry.failures         = 0;
+            entry.backoff_attempts = 0; // Reset backoff on successful connection
             logger_->debug( "Recorded successful connection for peer {}", peer.toBase58() );
         }
     }
@@ -546,30 +601,57 @@ namespace sgns::crdt
         return dagService_.select( root_cid, selector, handler );
     }
 
-    outcome::result<GraphsyncDAGSyncer::RouterInfo> GraphsyncDAGSyncer::GetRoute( const CID &cid ) const
+    outcome::result<GraphsyncDAGSyncer::PeerEntry> GraphsyncDAGSyncer::GetRoute( const CID &cid ) const
     {
-        std::lock_guard<std::mutex> lock( routing_mutex_ );
-        auto                        it = routing_.find( cid );
-        if ( it == routing_.end() )
+        // First find the peer key in the routing table
         {
-            return outcome::failure( Error::ROUTE_NOT_FOUND );
+            std::lock_guard<std::mutex> lock( routing_mutex_ );
+            auto                        it = routing_.find( cid );
+            if ( it == routing_.end() )
+            {
+                return outcome::failure( Error::ROUTE_NOT_FOUND );
+            }
+
+            PeerKey peerKey = it->second;
+
+            // Now get the actual peer entry from the registry
+            return GetPeerById( peerKey );
         }
-        return it->second;
     }
 
     void GraphsyncDAGSyncer::EraseRoutesFromPeerID( const PeerId &peer ) const
     {
-        std::lock_guard<std::mutex> lock( routing_mutex_ );
+        // First find the peer key in the peer index
+        PeerKey peerKeyToRemove;
+        bool    peerFound = false;
 
-        for ( auto it = routing_.begin(); it != routing_.end(); )
         {
-            if ( std::get<0>( it->second ) == peer )
+            std::lock_guard<std::mutex> registry_lock( registry_mutex_ );
+            auto                        it = peer_index_.find( peer );
+            if ( it == peer_index_.end() )
             {
-                it = routing_.erase( it );
+                // Peer not found in registry, nothing to erase
+                return;
             }
-            else
+            peerKeyToRemove = it->second;
+            peerFound       = true;
+        }
+
+        if ( peerFound )
+        {
+            // Remove all routes that point to this peer
+            std::lock_guard<std::mutex> routing_lock( routing_mutex_ );
+            for ( auto it = routing_.begin(); it != routing_.end(); )
             {
-                ++it;
+                if ( it->second == peerKeyToRemove )
+                {
+                    logger_->debug( "Erasing route for CID {} to blacklisted peer", it->first.toString().value() );
+                    it = routing_.erase( it );
+                }
+                else
+                {
+                    ++it;
+                }
             }
         }
     }
@@ -577,8 +659,7 @@ namespace sgns::crdt
     void GraphsyncDAGSyncer::EraseRoute( const CID &cid ) const
     {
         std::lock_guard<std::mutex> lock( routing_mutex_ );
-
-        auto it = routing_.find( cid );
+        auto                        it = routing_.find( cid );
         if ( it != routing_.end() )
         {
             routing_.erase( it );
