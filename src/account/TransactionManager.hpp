@@ -115,7 +115,6 @@ namespace sgns
                                                    const std::optional<std::vector<uint8_t>>  &proof );
 
         std::shared_ptr<crdt::GlobalDB> globaldb_m;
-        std::shared_ptr<crdt::GlobalDB> processing_db_m;
         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub_m;
         std::string                                      base_path_m;
 

@@ -44,7 +44,7 @@ namespace sgns
                                             std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub,
                                             std::shared_ptr<upnp::UPNP>                      upnp,
                                             uint16_t                                         base_port ) :
-        processing_db_m( std::move( processing_db ) ),
+        globaldb_m( std::move( processing_db ) ),
         pubsub_m( std::move( pubsub ) ),
         base_path_m( std::move( base_path ) ),
         ctx_m( std::move( ctx ) ),
@@ -55,7 +55,6 @@ namespace sgns
         timer_m( std::make_shared<boost::asio::steady_timer>( *ctx_m, boost::asio::chrono::milliseconds( 300 ) ) )
 
     {
-        globaldb_m = processing_db_m;
         globaldb_m->AddBroadcastTopic( account_m->GetAddress() + "in" );
         globaldb_m->AddBroadcastTopic( account_m->GetAddress() + "out" );
 
@@ -199,7 +198,7 @@ namespace sgns
             return outcome::failure( boost::system::error_code{} );
         }
         m_logger->debug( "Fetching escrow from processing DB at " + escrow_path );
-        OUTCOME_TRY( ( auto &&, transaction ), FetchTransaction( processing_db_m, escrow_path ) );
+        OUTCOME_TRY( ( auto &&, transaction ), FetchTransaction( globaldb_m, escrow_path ) );
 
         std::shared_ptr<EscrowTransaction> escrow_tx = std::dynamic_pointer_cast<EscrowTransaction>( transaction );
         std::vector<std::string>           subtask_ids;
@@ -674,12 +673,16 @@ namespace sgns
 
             m_logger->debug( "Sending notification to " + dest_info.dest_address );
 
-            std::shared_ptr<crdt::GlobalDB> destination_db = globaldb_m;
-            destination_db->AddBroadcastTopic( dest_info.dest_address + "in" );
+            const std::string topic            = dest_info.dest_address + "in";
+            const std::string notificationPath = GetNotificationPath( dest_info.dest_address );
+            const std::string txPath           = notificationPath + "tx/" + tx->dag_st.data_hash();
+            const std::string proofPath        = notificationPath + "proof/" + tx->dag_st.data_hash();
 
-            auto                         crdt_transaction = destination_db->BeginTransaction();
-            sgns::crdt::HierarchicalKey  tx_key( GetNotificationPath( dest_info.dest_address ) + "tx/" +
-                                                tx->dag_st.data_hash() );
+            globaldb_m->AddBroadcastTopic( topic );
+
+            auto crdt_transaction = globaldb_m->BeginTransaction();
+
+            sgns::crdt::HierarchicalKey  tx_key( txPath );
             sgns::crdt::GlobalDB::Buffer data_transaction;
             data_transaction.put( tx->SerializeByteVector() );
 
@@ -688,8 +691,7 @@ namespace sgns
 
             if ( proof )
             {
-                sgns::crdt::HierarchicalKey  proof_key( GetNotificationPath( dest_info.dest_address ) + "proof/" +
-                                                       tx->dag_st.data_hash() );
+                sgns::crdt::HierarchicalKey  proof_key( proofPath );
                 sgns::crdt::GlobalDB::Buffer proof_data;
                 proof_data.put( proof.value() );
                 m_logger->debug( "Putting replicate PROOF in " + proof_key.GetKey() );
@@ -697,7 +699,7 @@ namespace sgns
                                      crdt_transaction->Put( std::move( proof_key ), std::move( proof_data ) ) );
             }
 
-            BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->CommitToTopic( dest_info.dest_address + "in" ) );
+            BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->CommitToTopic( topic ) );
         }
 
         return outcome::success();
@@ -716,11 +718,16 @@ namespace sgns
         std::string escrow_source = escrow_release_tx->GetEscrowSource();
         m_logger->debug( "Notifying escrow source: " + escrow_source );
 
-        std::shared_ptr<crdt::GlobalDB> destination_db = globaldb_m;
-        destination_db->AddBroadcastTopic( escrow_source + "in" );
+        const std::string topic            = escrow_source + "in";
+        const std::string notificationPath = GetNotificationPath( escrow_source );
+        const std::string txPath           = notificationPath + "tx/" + tx->dag_st.data_hash();
+        const std::string proofPath        = notificationPath + "proof/" + tx->dag_st.data_hash();
 
-        auto                         crdt_transaction = destination_db->BeginTransaction();
-        sgns::crdt::HierarchicalKey  tx_key( GetNotificationPath( escrow_source ) + "tx/" + tx->dag_st.data_hash() );
+        globaldb_m->AddBroadcastTopic( topic );
+
+        auto crdt_transaction = globaldb_m->BeginTransaction();
+
+        sgns::crdt::HierarchicalKey  tx_key( txPath );
         sgns::crdt::GlobalDB::Buffer data_transaction;
         data_transaction.put( tx->SerializeByteVector() );
 
@@ -729,8 +736,7 @@ namespace sgns
 
         if ( proof )
         {
-            sgns::crdt::HierarchicalKey  proof_key( GetNotificationPath( escrow_source ) + "proof/" +
-                                                   tx->dag_st.data_hash() );
+            sgns::crdt::HierarchicalKey  proof_key( proofPath );
             sgns::crdt::GlobalDB::Buffer proof_data;
             proof_data.put( proof.value() );
             m_logger->debug( "Putting replicate escrow release PROOF in " + proof_key.GetKey() );
