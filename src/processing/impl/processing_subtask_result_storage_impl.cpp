@@ -4,8 +4,9 @@
 
 namespace sgns::processing
 {
-    SubTaskResultStorageImpl::SubTaskResultStorageImpl( std::shared_ptr<sgns::crdt::GlobalDB> db ) :
-        m_db( std::move( db ) )
+    SubTaskResultStorageImpl::SubTaskResultStorageImpl( std::shared_ptr<sgns::crdt::GlobalDB> db,
+                                                        const std::string                    &storageTopic ) :
+        m_db( std::move( db ) ), m_storageTopic( storageTopic )
     {
     }
 
