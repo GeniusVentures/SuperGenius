@@ -402,23 +402,33 @@ namespace sgns::crdt
         return buffer;
     }
 
-    void PubSubBroadcasterExt::AddTopic( const std::shared_ptr<GossipPubSubTopic> &newTopic )
+    void PubSubBroadcasterExt::AddTopic(const std::shared_ptr<GossipPubSubTopic>& newTopic)
     {
-        topics_.push_back( newTopic );
         std::string topicName = newTopic->GetTopic();
-        m_logger->debug( "Subscription request sent to new topic: " + topicName );
-
-        // Subscribe to the new topic (using a lambda similar to what is used in Start())
-        std::future<libp2p::protocol::Subscription> future = std::move( newTopic->Subscribe(
-            [weakptr = weak_from_this(), topicName]( boost::optional<const GossipPubSub::Message &> message )
+    
+        for (const auto& topic : topics_)
+        {
+            if (topic->GetTopic() == topicName)
             {
-                if ( auto self = weakptr.lock() )
+                m_logger->debug("Topic '" + topicName + "' already exists. Not adding duplicate.");
+                return;
+            }
+        }
+    
+        topics_.push_back(newTopic);
+        m_logger->debug("Subscription request sent to new topic: " + topicName);
+    
+        std::future<libp2p::protocol::Subscription> future = std::move(newTopic->Subscribe(
+            [weakptr = weak_from_this(), topicName](boost::optional<const GossipPubSub::Message &> message)
+            {
+                if (auto self = weakptr.lock())
                 {
-                    self->m_logger->debug( "Message received from topic: " + topicName );
-                    self->OnMessage( message );
+                    self->m_logger->debug("Message received from topic: " + topicName);
+                    self->OnMessage(message);
                 }
-            } ) );
-        subscriptionFutures_.push_back( std::move( future ) );
+            }));
+        subscriptionFutures_.push_back(std::move(future));
     }
+    
 
 }
