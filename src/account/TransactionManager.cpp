@@ -673,68 +673,31 @@ namespace sgns
             }
 
             m_logger->debug( "Sending notification to " + dest_info.dest_address );
-            std::shared_ptr<crdt::GlobalDB> destination_db;
-            auto                            destination_db_it = destination_dbs_m.find( dest_info.dest_address );
-            if ( destination_db_it == destination_dbs_m.end() )
-            {
-                m_logger->debug( "Port to sync  " + std::to_string( base_port_m ) );
-                std::string                tempaddress = dest_info.dest_address;
-                std::vector<unsigned char> inputBytes( tempaddress.begin(), tempaddress.end() );
-                std::vector<unsigned char> hash( SHA256_DIGEST_LENGTH );
-                SHA256( inputBytes.data(), inputBytes.size(), hash.data() );
 
-                libp2p::protocol::kademlia::ContentId key( hash );
-                auto acc_cid      = libp2p::multi::ContentIdentifierCodec::decode( key.data );
-                auto maybe_base58 = libp2p::multi::ContentIdentifierCodec::toString( acc_cid.value() );
-                if ( !maybe_base58 )
-                {
-                    std::runtime_error( "We couldn't convert the account to base58" );
-                }
-                std::string base58key = maybe_base58.value();
-
-                destination_db = std::make_shared<crdt::GlobalDB>( ctx_m,
-                                                                   ( boost::format( base_path_m + base58key ) ).str(),
-                                                                   base_port_m,
-                                                                   pubsub_m );
-
-
-                if ( !destination_db->Init( crdt::CrdtOptions::DefaultOptions() ).has_value() )
-                {
-                    throw std::runtime_error( "Could not start Destination GlobalDB" );
-                }
-                destination_db->AddBroadcastTopic( dest_info.dest_address + "in" );
-                destination_dbs_m[dest_info.dest_address] = destination_db;
-                used_ports_m.insert( base_port_m );
-                base_port_m++;
-                RefreshPorts();
-            }
-            else
-            {
-                destination_db = destination_db_it->second;
-            }
+            std::shared_ptr<crdt::GlobalDB> destination_db = globaldb_m;
+            destination_db->AddBroadcastTopic( dest_info.dest_address + "in" );
 
             auto                         crdt_transaction = destination_db->BeginTransaction();
-            sgns::crdt::GlobalDB::Buffer data_transaction;
             sgns::crdt::HierarchicalKey  tx_key( GetNotificationPath( dest_info.dest_address ) + "tx/" +
                                                 tx->dag_st.data_hash() );
-
+            sgns::crdt::GlobalDB::Buffer data_transaction;
             data_transaction.put( tx->SerializeByteVector() );
 
-            m_logger->debug( "Putting replicate transaction in {}", tx_key.GetKey() );
+            m_logger->debug( "Putting replicate transaction in " + tx_key.GetKey() );
             BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Put( std::move( tx_key ), std::move( data_transaction ) ) );
+
             if ( proof )
             {
                 sgns::crdt::HierarchicalKey  proof_key( GetNotificationPath( dest_info.dest_address ) + "proof/" +
                                                        tx->dag_st.data_hash() );
                 sgns::crdt::GlobalDB::Buffer proof_data;
-
-                const auto &proof_value = proof.value();
-                proof_data.put( proof_value );
-                m_logger->debug( "Putting replicate PROOF in {}", proof_key.GetKey() );
+                proof_data.put( proof.value() );
+                m_logger->debug( "Putting replicate PROOF in " + proof_key.GetKey() );
                 BOOST_OUTCOME_TRYV2( auto &&,
                                      crdt_transaction->Put( std::move( proof_key ), std::move( proof_data ) ) );
             }
-            BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->CommitToTopic(dest_info.dest_address + "in") );
+
+            BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->CommitToTopic( dest_info.dest_address + "in" ) );
         }
 
         return outcome::success();
@@ -753,49 +716,14 @@ namespace sgns
         std::string escrow_source = escrow_release_tx->GetEscrowSource();
         m_logger->debug( "Notifying escrow source: " + escrow_source );
 
-        std::shared_ptr<crdt::GlobalDB> destination_db;
-        auto                            destination_db_it = destination_dbs_m.find( escrow_source );
-        if ( destination_db_it == destination_dbs_m.end() )
-        {
-            m_logger->debug( "Port to sync " + std::to_string( base_port_m ) + " for escrow source: " + escrow_source );
-            std::string                tempaddress = escrow_source;
-            std::vector<unsigned char> inputBytes( tempaddress.begin(), tempaddress.end() );
-            std::vector<unsigned char> hash( SHA256_DIGEST_LENGTH );
-            SHA256( inputBytes.data(), inputBytes.size(), hash.data() );
-
-            libp2p::protocol::kademlia::ContentId key( hash );
-            auto                                  acc_cid = libp2p::multi::ContentIdentifierCodec::decode( key.data );
-            auto maybe_base58 = libp2p::multi::ContentIdentifierCodec::toString( acc_cid.value() );
-            if ( !maybe_base58 )
-            {
-                std::runtime_error( "We couldn't convert the account to base58" );
-            }
-            std::string base58key = maybe_base58.value();
-
-            destination_db = std::make_shared<crdt::GlobalDB>( ctx_m,
-                                                               ( boost::format( base_path_m + base58key ) ).str(),
-                                                               base_port_m,
-                                                               pubsub_m );
-
-            if ( !destination_db->Init( crdt::CrdtOptions::DefaultOptions() ).has_value() )
-            {
-                return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::io_error ) );
-            }
-            destination_db->AddBroadcastTopic( escrow_source + "in" );
-            destination_dbs_m[escrow_source] = destination_db;
-            used_ports_m.insert( base_port_m );
-            base_port_m++;
-            RefreshPorts();
-        }
-        else
-        {
-            destination_db = destination_db_it->second;
-        }
+        std::shared_ptr<crdt::GlobalDB> destination_db = globaldb_m;
+        destination_db->AddBroadcastTopic( escrow_source + "in" );
 
         auto                         crdt_transaction = destination_db->BeginTransaction();
         sgns::crdt::HierarchicalKey  tx_key( GetNotificationPath( escrow_source ) + "tx/" + tx->dag_st.data_hash() );
         sgns::crdt::GlobalDB::Buffer data_transaction;
         data_transaction.put( tx->SerializeByteVector() );
+
         m_logger->debug( "Putting replicate escrow release transaction in " + tx_key.GetKey() );
         BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Put( std::move( tx_key ), std::move( data_transaction ) ) );
 
