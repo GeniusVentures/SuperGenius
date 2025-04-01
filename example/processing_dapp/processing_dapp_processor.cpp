@@ -299,7 +299,7 @@ int main(int argc, char* argv[])
 
     std::thread iothread([io]() { io->run(); });
 
-    auto taskQueue = std::make_shared<ProcessingTaskQueueImpl>(globalDB);
+    auto taskQueue = std::make_shared<ProcessingTaskQueueImpl>(globalDB, "CRDT.Datastore.TEST.Channel");
 
     auto processingCore = std::make_shared<ProcessingCoreImpl>(
         globalDB,
@@ -315,7 +315,7 @@ int main(int argc, char* argv[])
         maximalNodesCount,
         enqueuer,
         std::make_shared<SubTaskStateStorageImpl>(),
-        std::make_shared<SubTaskResultStorageImpl>(globalDB),
+        std::make_shared<SubTaskResultStorageImpl>(globalDB, "CRDT.Datastore.TEST.Channel"),
         processingCore);
 
     processingService.SetChannelListRequestTimeout(boost::posix_time::milliseconds(options->channelListRequestTimeout));

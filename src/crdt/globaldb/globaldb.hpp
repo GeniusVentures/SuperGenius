@@ -59,6 +59,7 @@ namespace sgns::crdt
         * @return outcome::failure on error or success otherwise
         */
         outcome::result<void> Put( const HierarchicalKey &key, const Buffer &value );
+        outcome::result<void> Put( const HierarchicalKey &key, const Buffer &value, const std::string &topic );
 
         /**
          * @brief       Writes a batch of CRDT data all at once

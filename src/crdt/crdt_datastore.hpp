@@ -101,6 +101,7 @@ namespace sgns::crdt
     * @return outcome::failure on error or success otherwise
     */
     outcome::result<void> PutKey(const HierarchicalKey& aKey, const Buffer& aValue);
+    outcome::result<void> PutKeyToTopic( const HierarchicalKey &aKey, const Buffer &aValue, const std::string &topic );
 
     /** HasKey returns whether the `key` is mapped to a `value` in set
     * @param aKey HierarchicalKey to look for in set
