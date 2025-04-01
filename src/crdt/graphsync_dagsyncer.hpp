@@ -11,6 +11,7 @@
 
 #include <memory>
 #include <chrono>
+#include <unordered_map>
 
 namespace sgns::crdt
 {
@@ -34,8 +35,11 @@ namespace sgns::crdt
         using Subscription        = libp2p::protocol::Subscription;
         using Logger              = base::Logger;
         using BlockCallback       = Graphsync::BlockCallback;
-        using RouterInfo          = std::tuple<PeerId, std::vector<Multiaddress>>;
-        using RouteMapType        = std::map<CID, RouterInfo>;
+
+        // New peer registry types
+        using PeerKey      = size_t; // Unique identifier for a peer in our registry
+        using PeerEntry    = std::pair<PeerId, std::vector<Multiaddress>>;
+        using RouteMapType = std::map<CID, PeerKey>; // Maps CIDs to peer registry keys
 
         enum class Error
         {
@@ -48,17 +52,17 @@ namespace sgns::crdt
             HOST_IS_NULL,           ///< Graphsync member is nullptr
         };
 
-        struct BlacklistEntry {
+        struct BlacklistEntry
+        {
             uint64_t timestamp;        // When the peer was last updated
             uint64_t failures;         // Number of consecutive failures
-            bool ever_connected;       // Flag indicating if we've ever successfully connected
+            bool     ever_connected;   // Flag indicating if we've ever successfully connected
             uint64_t backoff_attempts; // Count of backoff attempts (for exponential calculation)
 
-            BlacklistEntry(uint64_t time, uint64_t count, bool connected = false)
-                : timestamp(time),
-                  failures(count),
-                  ever_connected(connected),
-                  backoff_attempts(0) {}
+            BlacklistEntry( uint64_t time, uint64_t count, bool connected = false ) :
+                timestamp( time ), failures( count ), ever_connected( connected ), backoff_attempts( 0 )
+            {
+            }
         };
 
         GraphsyncDAGSyncer( std::shared_ptr<IpfsDatastore> service,
@@ -136,13 +140,25 @@ namespace sgns::crdt
         mutable std::map<CID,
                          std::tuple<std::shared_ptr<Subscription>,
                                     std::shared_ptr<std::promise<std::shared_ptr<ipfs_lite::ipld::IPLDNode>>>>>
-                                                                          requests_;
-        mutable RouteMapType                                              routing_;
+            requests_;
+
+        // New peer registry - stores unique peers and their addresses
+        mutable std::vector<PeerEntry>    peer_registry_;
+        mutable std::map<PeerId, PeerKey> peer_index_; // Maps PeerIds to registry indices
+        mutable std::mutex                registry_mutex_;
+
+        // Routing table that references peers in the registry
+        mutable RouteMapType routing_;
+        mutable std::mutex   routing_mutex_;
+
         mutable std::map<Multihash, BlacklistEntry>                       blacklist_;
         mutable std::mutex                                                blacklist_mutex_;
         mutable std::mutex                                                mutex_;
-        mutable std::mutex                                                routing_mutex_;
         mutable std::map<CID, std::shared_ptr<ipfs_lite::ipld::IPLDNode>> received_blocks_;
+
+        // Helper methods for the peer registry
+        PeerKey                    RegisterPeer( const PeerId &peer, const std::vector<Multiaddress> &address ) const;
+        outcome::result<PeerEntry> GetPeerById( PeerKey id ) const;
 
         void AddCIDBlock( const CID &cid, const std::shared_ptr<ipfs_lite::ipld::IPLDNode> &block );
         outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> GrabCIDBlock( const CID &cid ) const;
@@ -157,17 +173,17 @@ namespace sgns::crdt
             gsl::span<const uint8_t>                                                     selector,
             std::function<bool( std::shared_ptr<const ipfs_lite::ipld::IPLDNode> node )> handler ) const;
 
-        outcome::result<RouterInfo> GetRoute( const CID &cid ) const;
-        void                        EraseRoutesFromPeerID( const PeerId &peer ) const;
-        void                        EraseRoute( const CID &cid ) const;
+        outcome::result<PeerEntry> GetRoute( const CID &cid ) const;
+        void                       EraseRoutesFromPeerID( const PeerId &peer ) const;
+        void                       EraseRoute( const CID &cid ) const;
 
         uint64_t GetCurrentTimestamp() const;
 
         /// Using exponential backoff for both cases but with different base values
-        uint64_t getBackoffTimeout(uint64_t attempts, bool ever_connected) const;
+        uint64_t getBackoffTimeout( uint64_t attempts, bool ever_connected ) const;
 
         /// record successful connections
-        void RecordSuccessfulConnection(const PeerId &peer) const;
+        void RecordSuccessfulConnection( const PeerId &peer ) const;
     };
 }
 
