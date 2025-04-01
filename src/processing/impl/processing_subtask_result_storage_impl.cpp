@@ -16,7 +16,7 @@ namespace sgns::processing
         data.put( result.SerializeAsString() );
 
         auto taskId = m_db->Put(
-            sgns::crdt::HierarchicalKey( ( boost::format( "results/%s" ) % result.subtaskid() ).str() ), data );
+            sgns::crdt::HierarchicalKey( ( boost::format( "results/%s" ) % result.subtaskid() ).str() ), data , m_storageTopic);
     }
 
     void SubTaskResultStorageImpl::RemoveSubTaskResult( const std::string &subTaskId )
