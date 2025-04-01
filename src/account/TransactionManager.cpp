@@ -88,7 +88,7 @@ namespace sgns
 
     void TransactionManager::Start()
     {
-        CheckIncoming();
+        CheckIncoming(false);
         CheckOutgoing();
 
         task_m = [this]()
@@ -485,13 +485,13 @@ namespace sgns
 #endif
     }
 
-    outcome::result<void> TransactionManager::CheckIncoming()
+    outcome::result<void> TransactionManager::CheckIncoming(bool checkProofs)
     {
         auto transaction_paths = GetNotificationPath( account_m->GetAddress() ) + "tx/";
         m_logger->trace( "Probing incoming transactions on " + transaction_paths );
         OUTCOME_TRY( ( auto &&, transaction_list ), incoming_db_m->QueryKeyValues( transaction_paths ) );
 
-        m_logger->trace( "Incoming transaction list grabbed from CRDT" );
+        m_logger->trace( "Incoming transaction list grabbed from CRDT with Size {}", transaction_paths.size() );
 
         //m_logger->info( "Number of tasks in Queue: {}", queryTasks.size() );
         for ( const auto &element : transaction_list )
@@ -523,22 +523,25 @@ namespace sgns
                 continue;
             }
 #ifdef _PROOF_ENABLED
-            auto maybe_proof = CheckProof( maybe_transaction.value() );
-            if ( !maybe_proof.has_value() )
+            if ( checkProofs )
             {
-                m_logger->info( "Invalid PROOF" );
-                // TODO: kill repuation point of the node.
-            }
-            else
-            {
-#endif
-                auto maybe_parsed = ParseTransaction( maybe_transaction.value() );
-                if ( maybe_parsed.has_error() )
+                auto maybe_proof = CheckProof( maybe_transaction.value() );
+                if ( !maybe_proof.has_value() )
                 {
-                    m_logger->debug( "Can't parse the transaction" );
-                    continue;
+                    m_logger->info( "Invalid PROOF" );
+                    // TODO: kill repuation point of the node.
                 }
+                else
+                {
+#endif
+                    auto maybe_parsed = ParseTransaction( maybe_transaction.value() );
+                    if ( maybe_parsed.has_error() )
+                    {
+                        m_logger->debug( "Can't parse the transaction" );
+                        continue;
+                    }
 #ifdef _PROOF_ENABLED
+                }
             }
 #endif
             {
