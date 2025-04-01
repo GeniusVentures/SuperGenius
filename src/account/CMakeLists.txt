@@ -27,13 +27,12 @@ target_link_libraries(sgns_account
     outcome
     logger
     crdt_globaldb
+    processing_service
     PRIVATE
     json_secure_storage
     component_factory
-    processing_service
     block_header_repository
-    block_storage
-    crdt_globaldb
+    block_storage    
     crdt_graphsync_dagsyncer
     p2p::p2p_basic_host
     p2p::p2p_default_network
@@ -46,8 +45,7 @@ target_link_libraries(sgns_account
     p2p::p2p_identify
     p2p::p2p_ping
     Boost::Boost.DI
-    SGTransactionProto
-    logger
+    SGTransactionProto    
     fixed_point
     sgns_version
     gnus_upnp
