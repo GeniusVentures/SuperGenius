@@ -390,6 +390,15 @@ std::string GetLocalIP( boost::asio::io_context &io )
 
         return m_crdtDatastore->PutKey( key, value );
     }
+    outcome::result<void> GlobalDB::Put( const HierarchicalKey &key, const Buffer &value, const std::string &topic )
+    {
+        if ( !m_crdtDatastore )
+        {
+            m_logger->error( "CRDT datastore is not initialized yet" );
+            return outcome::failure( Error::CRDT_DATASTORE_NOT_CREATED );
+        }
+        return m_crdtDatastore->PutKeyToTopic( key, value, topic );
+    }
 
     outcome::result<void> GlobalDB::Put( const std::vector<DataPair> &data_vector )
     {
@@ -407,7 +416,7 @@ std::string GetLocalIP( boost::asio::io_context &io )
 
         return batch.Commit();
     }
-
+    
     outcome::result<GlobalDB::Buffer> GlobalDB::Get( const HierarchicalKey &key )
     {
         if ( !m_crdtDatastore )

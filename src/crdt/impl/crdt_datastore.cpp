@@ -652,7 +652,20 @@ namespace sgns::crdt
         }
         return this->Publish( deltaResult.value() );
     }
-
+    outcome::result<void> CrdtDatastore::PutKeyToTopic( const HierarchicalKey &aKey, const Buffer &aValue, const std::string &topic )
+    {
+        if ( this->set_ == nullptr )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
+        auto deltaResult = CreateDeltaToAdd( aKey.GetKey(), std::string( aValue.toString() ) );
+        if ( deltaResult.has_failure() )
+        {
+            return outcome::failure( deltaResult.error() );
+        }
+        return this->PublishToTopic( deltaResult.value(), topic );
+    }
+    
     outcome::result<void> CrdtDatastore::DeleteKey( const HierarchicalKey &aKey )
     {
         if ( this->set_ == nullptr )
