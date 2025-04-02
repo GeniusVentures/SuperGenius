@@ -95,13 +95,16 @@ namespace sgns::crdt
     */
     outcome::result<std::string> GetValueSuffix();
 
-    /** Put stores the object `value` named by `key` as delta and broadcast it
-    * @param aKey Hierarchical key to put
-    * @param aValue value buffer to publish
-    * @return outcome::failure on error or success otherwise
-    */
-    outcome::result<void> PutKey(const HierarchicalKey& aKey, const Buffer& aValue);
-    outcome::result<void> PutKeyToTopic( const HierarchicalKey &aKey, const Buffer &aValue, const std::string &topic );
+    /**
+     * @brief Stores the given value in the CRDT store and optionally broadcasts using a specific topic.
+     * @param aKey Hierarchical key for the value.
+     * @param aValue Value to be stored.
+     * @param topic Optional topic for broadcasting the update. If not set, default broadcasting is used.
+     * @return outcome::success if stored and broadcasted successfully, or outcome::failure otherwise.
+     */
+    outcome::result<void> PutKey( const HierarchicalKey     &aKey,
+                                  const Buffer              &aValue,
+                                  std::optional<std::string> topic = std::nullopt );
 
     /** HasKey returns whether the `key` is mapped to a `value` in set
     * @param aKey HierarchicalKey to look for in set

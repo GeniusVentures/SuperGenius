@@ -91,7 +91,10 @@ namespace sgns::crdt
 
     GlobalDB::~GlobalDB()
     {
-        m_crdtDatastore->Close();
+        if (m_crdtDatastore)
+        {
+            m_crdtDatastore->Close();
+        }
         m_crdtDatastore    = nullptr;
         m_broadcastChannel = nullptr;
         m_context          = nullptr;
@@ -380,7 +383,9 @@ std::string GetLocalIP( boost::asio::io_context &io )
     //        });
     //}
 
-    outcome::result<void> GlobalDB::Put( const HierarchicalKey &key, const Buffer &value )
+    outcome::result<void> GlobalDB::Put( const HierarchicalKey     &key,
+                                         const Buffer              &value,
+                                         std::optional<std::string> topic )
     {
         if ( !m_crdtDatastore )
         {
@@ -388,16 +393,7 @@ std::string GetLocalIP( boost::asio::io_context &io )
             return outcome::failure( Error::CRDT_DATASTORE_NOT_CREATED );
         }
 
-        return m_crdtDatastore->PutKey( key, value );
-    }
-    outcome::result<void> GlobalDB::Put( const HierarchicalKey &key, const Buffer &value, const std::string &topic )
-    {
-        if ( !m_crdtDatastore )
-        {
-            m_logger->error( "CRDT datastore is not initialized yet" );
-            return outcome::failure( Error::CRDT_DATASTORE_NOT_CREATED );
-        }
-        return m_crdtDatastore->PutKeyToTopic( key, value, topic );
+        return m_crdtDatastore->PutKey( key, value, topic );
     }
 
     outcome::result<void> GlobalDB::Put( const std::vector<DataPair> &data_vector )
