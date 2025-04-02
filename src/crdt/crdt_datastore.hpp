@@ -115,19 +115,16 @@ namespace sgns::crdt
     */
     outcome::result<void> DeleteKey(const HierarchicalKey& aKey);
 
-    /** Publish publishes delta and broadcast it
-    * @param aDelta Delta to publish
-    * @return returns outcome::success on success or outcome::failure otherwise
-    */
-    outcome::result<void> Publish(const std::shared_ptr<Delta>& aDelta);
     /**
-     * Publishes a Delta to a single, specified topic by name.
-     * Creates a DAG node, merges it into the CRDT, and broadcasts only to that topic.
-     * @param aDelta The Delta to publish
-     * @param topicName The single topic name to which we broadcast
-     * @return outcome::success on success or outcome::failure on error
+     * @brief Publishes a Delta.
+     * Creates a DAG node from the given Delta, merges it into the CRDT, and broadcasts the node.
+     * An optional topic can be provided to target a specific broadcast channel.
+     * @param[in] aDelta The Delta to publish.
+     * @param[in] topic Optional topic name for targeted publishing. If not provided, the default broadcast behavior is used.
+     * @return outcome::success on success, or outcome::failure if an error occurs.
      */
-    outcome::result<void> PublishToTopic( const std::shared_ptr<Delta> &aDelta, const std::string &topicName );
+    outcome::result<void> Publish( const std::shared_ptr<Delta> &aDelta,
+                                   std::optional<std::string>    topic = std::nullopt );
 
     /** PrintDAG pretty prints the current Merkle-DAG using the given printFunc
     * @return returns outcome::success on success or outcome::failure otherwise
@@ -226,19 +223,16 @@ namespace sgns::crdt
     */
     void RebroadcastHeads();
 
-    /** Broadcast CIDs
-    * @return returns outcome::success on success or outcome::failure otherwise
-    */
-    outcome::result<void> Broadcast(const std::vector<CID>& cids);
-
     /**
-     * Broadcasts a set of CIDs to a single, specified topic by name.
-     * @param cids list of CIDs to broadcast
-     * @param topicName name of the single topic to which we broadcast
-     * @return outcome::success on success or outcome::failure on error
+     * @brief Broadcasts a set of CIDs.
+     * Encodes and broadcasts the provided list of CIDs. An optional topic can be specified
+     * to target a specific broadcast channel.
+     * @param[in] cids The list of CIDs to broadcast.
+     * @param[in] topic Optional topic name for targeted broadcasting. If not provided, the default broadcast channel is used.
+     * @return outcome::success on success, or outcome::failure if an error occurs.
      */
-    outcome::result<void> BroadcastToTopic( const std::vector<CID> &cids, const std::string &topicName );
-    
+    outcome::result<void> Broadcast( const std::vector<CID> &cids, std::optional<std::string> topic = std::nullopt );
+
     /** EncodeBroadcast encodes list of CIDs to CRDT broadcast data
     * @param heads list of CIDs
     * @return data encoded into Buffer data or outcome::failure on error
