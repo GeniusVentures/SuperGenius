@@ -127,6 +127,10 @@ namespace sgns
             const std::string        &destination,
             std::chrono::milliseconds timeout = std::chrono::milliseconds( TIMEOUT_TRANSFER ) );
 
+        outcome::result<std::pair<std::string, uint64_t>> PayDev(
+            uint64_t                  amount,
+            std::chrono::milliseconds timeout = std::chrono::milliseconds( TIMEOUT_TRANSFER ) );
+
         std::shared_ptr<ipfs_pubsub::GossipPubSub> GetPubSub()
         {
             return pubsub_;

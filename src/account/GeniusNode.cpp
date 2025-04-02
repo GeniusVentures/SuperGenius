@@ -721,6 +721,27 @@ namespace sgns
         return std::make_pair( tx_id, duration );
     }
 
+    outcome::result<std::pair<std::string, uint64_t>> GeniusNode::PayDev( uint64_t                  amount,
+                                                                                 std::chrono::milliseconds timeout )
+    {
+        auto start_time = std::chrono::steady_clock::now();
+        OUTCOME_TRY( auto &&tx_id, transaction_manager_->TransferFunds( amount, dev_config_.Addr ) );
+
+        bool success = transaction_manager_->WaitForTransactionOutgoing( tx_id, timeout );
+
+        auto end_time = std::chrono::steady_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( end_time - start_time ).count();
+
+        if ( !success )
+        {
+            node_logger->error( "TransferFunds transaction {} timed out after {} ms", tx_id, duration );
+            return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::timed_out ) );
+        }
+
+        node_logger->debug( "TransferFunds transaction {} completed in {} ms", tx_id, duration );
+        return std::make_pair( tx_id, duration );
+    }
+
     outcome::result<std::pair<std::string, uint64_t>> GeniusNode::PayEscrow( const std::string &escrow_path,
                                                                              const SGProcessing::TaskResult &taskresult,
                                                                              std::chrono::milliseconds       timeout )
