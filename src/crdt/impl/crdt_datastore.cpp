@@ -784,6 +784,10 @@ namespace sgns::crdt
                             strCidResult.value(),
                             aDelta->priority() );
         }
+        else
+        {
+            logger_->debug("ProcessNode: DELTA UNMERGED, filter removed the Delta");
+        }
 
         std::vector<CID> children;
         auto             links = aNode->getLinks();

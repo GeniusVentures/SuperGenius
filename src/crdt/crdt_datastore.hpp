@@ -46,7 +46,7 @@ namespace sgns::crdt
 
         using PutHookPtr    = std::function<void( const std::string &k, const Buffer &v )>;
         using DeleteHookPtr = std::function<void( const std::string &k )>;
-        using FilterCB      = std::function<bool( const Delta &delta )>;
+        using FilterCB      = std::function<bool( Delta delta )>;
 
         /** Constructor
     * @param aDatastore pointer to data storage
