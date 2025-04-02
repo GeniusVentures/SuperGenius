@@ -140,13 +140,13 @@ namespace sgns
         auto loggerProcessingNode = base::createLogger( "ProcessingNode", logdir );
         auto loggerGossipPubsub   = base::createLogger( "GossipPubSub", logdir );
 #ifdef SGNS_DEBUGLOGS
-        node_logger->set_level( spdlog::level::debug );
-        loggerGlobalDB->set_level( spdlog::level::debug );
+        node_logger->set_level( spdlog::level::err );
+        loggerGlobalDB->set_level( spdlog::level::err );
         loggerDAGSyncer->set_level( spdlog::level::err );
         loggerGraphsync->set_level( spdlog::level::err );
-        loggerBroadcaster->set_level( spdlog::level::debug );
-        loggerDataStore->set_level( spdlog::level::debug );
-        loggerTransactions->set_level( spdlog::level::debug );
+        loggerBroadcaster->set_level( spdlog::level::err );
+        loggerDataStore->set_level( spdlog::level::err );
+        loggerTransactions->set_level( spdlog::level::err );
         loggerQueue->set_level( spdlog::level::err );
         loggerRocksDB->set_level( spdlog::level::err );
         logkad->set_level( spdlog::level::err );
@@ -159,13 +159,13 @@ namespace sgns
         loggerProcessingNode->set_level( spdlog::level::err );
         loggerGossipPubsub->set_level( spdlog::level::err );
 #else
-        node_logger->set_level( spdlog::level::debug );
-        loggerGlobalDB->set_level( spdlog::level::debug );
+        node_logger->set_level( spdlog::level::err );
+        loggerGlobalDB->set_level( spdlog::level::err );
         loggerDAGSyncer->set_level( spdlog::level::err );
         loggerGraphsync->set_level( spdlog::level::err );
-        loggerBroadcaster->set_level( spdlog::level::debug );
-        loggerDataStore->set_level( spdlog::level::debug );
-        loggerTransactions->set_level( spdlog::level::debug );
+        loggerBroadcaster->set_level( spdlog::level::err );
+        loggerDataStore->set_level( spdlog::level::err );
+        loggerTransactions->set_level( spdlog::level::err );
         loggerQueue->set_level( spdlog::level::err );
         loggerRocksDB->set_level( spdlog::level::err );
         logkad->set_level( spdlog::level::err );
