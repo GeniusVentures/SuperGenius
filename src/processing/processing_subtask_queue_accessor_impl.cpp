@@ -1,3 +1,4 @@
+#include <fmt/std.h>
 #include "processing_subtask_queue_accessor_impl.hpp"
 #include <thread>
 #include <utility>

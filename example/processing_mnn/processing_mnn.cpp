@@ -157,7 +157,7 @@ int main(int argc, char* argv[])
     logging_system->configure();
 
     libp2p::log::setLoggingSystem(logging_system);
-    libp2p::log::setLevelOfGroup("gossip_pubsub_test", soralog::Level::ERROR_);
+    libp2p::log::setLevelOfGroup( "gossip_pubsub_test", soralog::Level::ERROR );
     auto loggerProcessingEngine = sgns::base::createLogger("ProcessingEngine");
     loggerProcessingEngine->set_level(spdlog::level::trace);
 

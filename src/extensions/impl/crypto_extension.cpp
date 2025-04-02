@@ -1,3 +1,4 @@
+#include <fmt/ranges.h>
 #include "extensions/impl/crypto_extension.hpp"
 
 #include <algorithm>
@@ -159,8 +160,7 @@ namespace sgns::extensions {
     const auto &buf = memory_->loadN(data, len);
 
     auto hash = hasher_->twox_64(buf);
-    logger_->trace("twox64. Data: {}, Data hex: {}, hash: {}",
-                   buf.data(),
+    logger_->trace("twox64. Data hex: {}, hash: {}",
                    buf.toHex(),
                    hash.toHex());
 
@@ -173,8 +173,7 @@ namespace sgns::extensions {
     const auto &buf = memory_->loadN(data, len);
 
     auto hash = hasher_->twox_128(buf);
-    logger_->trace("twox128. Data: {}, Data hex: {}, hash: {}",
-                   buf.data(),
+    logger_->trace("twox128. Data hex: {}, hash: {}",
                    buf.toHex(),
                    hash.toHex());
 

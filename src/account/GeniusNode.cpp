@@ -115,7 +115,7 @@ namespace sgns
         }
         std::cout << "Log Result: " << result.message << std::endl;
         libp2p::log::setLoggingSystem( logging_system );
-        libp2p::log::setLevelOfGroup( "SuperGeniusDemo", soralog::Level::ERROR_ );
+        libp2p::log::setLevelOfGroup( "SuperGeniusDemo", soralog::Level::ERROR );
         std::string logdir = "";
 #ifndef SGNS_DEBUGLOGS
         logdir = write_base_path_ + "/sgnslog2.log";

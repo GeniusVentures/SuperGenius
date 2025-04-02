@@ -40,7 +40,7 @@ int main(int argc, char* argv[])
 
 
     libp2p::log::setLoggingSystem(logging_system);
-    libp2p::log::setLevelOfGroup("gossip_pubsub_test", soralog::Level::ERROR_);
+    libp2p::log::setLevelOfGroup( "gossip_pubsub_test", soralog::Level::ERROR );
     libp2p::protocol::gossip::Config config;
     config.echo_forward_mode = true;
     std::vector<std::string> receivedMessages;

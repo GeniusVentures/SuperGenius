@@ -161,7 +161,7 @@ int main(int argc, char* argv[])
     libp2p::log::setLoggingSystem(logging_system);
 
     auto loggerIdentifyMsgProcessor = libp2p::log::createLogger("IdentifyMsgProcessor");
-    loggerIdentifyMsgProcessor->setLevel(soralog::Level::ERROR_);
+    loggerIdentifyMsgProcessor->setLevel( soralog::Level::ERROR );
 
     auto loggerBitswap = sgns::ipfs_bitswap::createLogger("Bitswap");
     loggerBitswap->set_level(spdlog::level::debug);
