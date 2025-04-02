@@ -301,7 +301,7 @@ namespace sgns::crdt
     std::shared_ptr<CrdtHeads> heads_ = nullptr;
 
     std::shared_mutex seenHeadsMutex_;
-    std::vector<CID> seenHeads_;
+    std::set<CID> seenHeads_;
 
     std::shared_ptr<Broadcaster> broadcaster_ = nullptr;
     std::shared_ptr<DAGSyncer> dagSyncer_ = nullptr;

@@ -278,7 +278,7 @@ namespace sgns::crdt
                 continue;
             }
             std::unique_lock lock( seenHeadsMutex_ );
-            seenHeads_.push_back( bCastHeadCID );
+            seenHeads_.insert( bCastHeadCID );
         }
     }
 
