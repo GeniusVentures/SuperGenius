@@ -457,7 +457,7 @@ namespace sgns::crdt
         //{
         //    AddProcessedCID(aCid);
         //}
-            
+
         //}
 
         //if ( dagSyncerResult.value() )
@@ -480,7 +480,7 @@ namespace sgns::crdt
         return outcome::success();
     }
 
-void CrdtDatastore::SendNewJobs( const CID &aRootCID, uint64_t aRootPriority, const std::vector<CID> &aChildren )
+    void CrdtDatastore::SendNewJobs( const CID &aRootCID, uint64_t aRootPriority, const std::vector<CID> &aChildren )
     {
         // sendNewJobs calls getDeltas with the given
         // children and sends each response to the workers.
@@ -811,7 +811,7 @@ void CrdtDatastore::SendNewJobs( const CID &aRootCID, uint64_t aRootPriority, co
                                         aRoot.toString().value() );
                         return outcome::failure( replaceResult.error() );
                     }
-                    AddProcessedCID(child);
+                    AddProcessedCID( child );
                     continue;
                 }
 
@@ -833,7 +833,7 @@ void CrdtDatastore::SendNewJobs( const CID &aRootCID, uint64_t aRootPriority, co
                         // Don't let this failure prevent us from processing the other links.
                         logger_->error( "ProcessNode: error adding head {}", aRoot.toString().value() );
                     }
-                    AddProcessedCID(child);
+                    AddProcessedCID( child );
                     continue;
                 }
 
