@@ -52,17 +52,12 @@ namespace sgns::crdt
         outcome::result<void> Remove(const HierarchicalKey& key);
 
         /**
-         * @brief Commit all operations atomically
-         * @param topic Optional topic name for targeted publishing.
-         * @return outcome::success if committed successfully, failure otherwise
+         * @brief    Commits all pending operations atomically.
+         *            Combines all pending operations into a single Delta and publishes it.
+         * @param[in] topic Optional topic name for targeted publishing. If not provided, the default broadcast behavior is used.
+         * @return outcome::success on successful commit, or outcome::failure if an error occurs.
          */
-        outcome::result<void> Commit(const std::optional<std::string> &topic = std::nullopt);
-        /**
-         * @brief Commits all operations atomically to a single topic, rather than all topics.
-         * @param topicName The single topic name to which we broadcast the combined delta
-         * @return outcome::success if committed successfully, failure otherwise
-         */
-        outcome::result<void> CommitToTopic( const std::string &topicName );
+        outcome::result<void> Commit( const std::optional<std::string> &topic = std::nullopt );
 
     private:
         enum class Operation 

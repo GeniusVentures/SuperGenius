@@ -662,7 +662,7 @@ namespace sgns::crdt
         {
             return outcome::failure( deltaResult.error() );
         }
-        return this->PublishToTopic( deltaResult.value(), topic );
+        return this->Publish( deltaResult.value(), topic );
     }
     
     outcome::result<void> CrdtDatastore::DeleteKey( const HierarchicalKey &aKey )
@@ -686,87 +686,40 @@ namespace sgns::crdt
         return this->Publish( deltaResult.value() );
     }
 
-    outcome::result<void> CrdtDatastore::Publish( const std::shared_ptr<Delta> &aDelta )
+    outcome::result<void> CrdtDatastore::Publish( const std::shared_ptr<Delta> &aDelta,
+                                                  std::optional<std::string>    topic )
     {
         auto addResult = this->AddDAGNode( aDelta );
         if ( addResult.has_failure() )
         {
             return outcome::failure( addResult.error() );
         }
-        std::vector<CID> cids;
-        cids.push_back( addResult.value() );
-        return this->Broadcast( cids );
+        std::vector<CID> cids{ addResult.value() };
+        return this->Broadcast( cids, topic );
     }
 
-    outcome::result<void> CrdtDatastore::PublishToTopic( const std::shared_ptr<Delta> &aDelta,
-                                                         const std::string            &topicName )
-    {
-        auto addResult = this->AddDAGNode( aDelta );
-        if ( addResult.has_failure() )
-        {
-            return outcome::failure( addResult.error() );
-        }
-
-        std::vector<CID> cids;
-        cids.push_back( addResult.value() );
-
-        return this->BroadcastToTopic( cids, topicName );
-    }
-
-    outcome::result<void> CrdtDatastore::Broadcast( const std::vector<CID> &cids )
-    {
-        if ( this->broadcaster_ == nullptr )
-        {
-            return outcome::failure( boost::system::error_code{} );
-        }
-
-        if ( !cids.empty() )
-        {
-            auto encodedBufferResult = this->EncodeBroadcast( cids );
-            if ( encodedBufferResult.has_failure() )
-            {
-                return outcome::failure( encodedBufferResult.error() );
-            }
-
-            //LOG_DEBUG( "Sending CIDs: " );
-            //for ( auto id : cids )
-            //{
-            //    LOG_DEBUG( id.toString().value() );
-            //}
-
-            auto bcastResult = this->broadcaster_->Broadcast( encodedBufferResult.value() );
-            if ( bcastResult.has_failure() )
-            {
-                return outcome::failure( bcastResult.error() );
-            }
-        }
-        return outcome::success();
-    }
-    
-    outcome::result<void> CrdtDatastore::BroadcastToTopic( const std::vector<CID> &cids, const std::string &topicName )
+    outcome::result<void> CrdtDatastore::Broadcast( const std::vector<CID> &cids, std::optional<std::string> topic )
     {
         if ( !broadcaster_ )
         {
             return outcome::failure( boost::system::error_code{} );
         }
-
         if ( cids.empty() )
         {
-            return outcome::success(); // TODO: change to error - Nothing to broadcast
+            return outcome::success();
         }
-
-        auto encodedBufferResult = EncodeBroadcast( cids );
+        auto encodedBufferResult = this->EncodeBroadcast( cids );
         if ( encodedBufferResult.has_failure() )
         {
             return outcome::failure( encodedBufferResult.error() );
         }
 
-        auto bcastResult = broadcaster_->Broadcast( encodedBufferResult.value(), topicName );
+        auto bcastResult = broadcaster_->Broadcast(encodedBufferResult.value(), topic);
+
         if ( bcastResult.has_failure() )
         {
             return outcome::failure( bcastResult.error() );
         }
-
         return outcome::success();
     }
 
