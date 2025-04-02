@@ -157,7 +157,7 @@ namespace sgns::processing
         data.put( taskResult.SerializeAsString() );
         BOOST_OUTCOME_TRYV2( auto &&, job_completion_transaction->Put( std::move( result_key ), std::move( data ) ) );
 
-        BOOST_OUTCOME_TRYV2( auto &&, job_completion_transaction->CommitToTopic( m_processingTopic ) );
+        BOOST_OUTCOME_TRYV2( auto &&, job_completion_transaction->Commit( m_processingTopic ) );
 
 
         m_logger->debug( "TASK_COMPLETED: {}, results stored", taskKey );
@@ -259,7 +259,7 @@ namespace sgns::processing
         sgns::crdt::HierarchicalKey key( path );
 
         BOOST_OUTCOME_TRYV2( auto &&, job_crdt_transaction_->Put( std::move( key ), std::move( value ) ) );
-        BOOST_OUTCOME_TRYV2( auto &&, job_crdt_transaction_->CommitToTopic( m_processingTopic ) );
+        BOOST_OUTCOME_TRYV2( auto &&, job_crdt_transaction_->Commit( m_processingTopic ) );
 
         ResetAtomicTransaction();
 

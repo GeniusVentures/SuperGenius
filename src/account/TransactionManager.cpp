@@ -55,9 +55,9 @@ namespace sgns
         timer_m( std::make_shared<boost::asio::steady_timer>( *ctx_m, boost::asio::chrono::milliseconds( 300 ) ) )
 
     {
+        m_logger->info( "Initializing values by reading whole blockchain" );
         globaldb_m->AddBroadcastTopic( account_m->GetAddress() + "in" );
         globaldb_m->AddBroadcastTopic( account_m->GetAddress() + "out" );
-
     }
 
     void TransactionManager::Start()
@@ -356,7 +356,7 @@ namespace sgns
             m_logger->debug( "Notifying escrow source of escrow release" );
             BOOST_OUTCOME_TRYV2( auto &&, NotifyEscrowRelease( transaction, maybe_proof ) );
         }
-        BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->CommitToTopic(account_m->GetAddress() + "out") );
+        BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Commit(account_m->GetAddress() + "out") );
 
         BOOST_OUTCOME_TRYV2( auto &&, ParseTransaction( transaction ) );
 
@@ -699,7 +699,7 @@ namespace sgns
                                      crdt_transaction->Put( std::move( proof_key ), std::move( proof_data ) ) );
             }
 
-            BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->CommitToTopic( topic ) );
+            BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Commit( topic ) );
         }
 
         return outcome::success();
