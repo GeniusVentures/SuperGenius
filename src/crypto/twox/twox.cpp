@@ -1,6 +1,6 @@
 #include "crypto/twox/twox.hpp"
 
-#include <xxhash/xxhash.h>
+#include <xxhash.h>
 
 namespace sgns::crypto {
   void make_twox64(const uint8_t *in, uint32_t len, uint8_t *out) {
