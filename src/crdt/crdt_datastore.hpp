@@ -46,6 +46,7 @@ namespace sgns::crdt
 
         using PutHookPtr    = std::function<void( const std::string &k, const Buffer &v )>;
         using DeleteHookPtr = std::function<void( const std::string &k )>;
+        using FilterCB      = std::function<bool( const Delta &delta )>;
 
         /** Constructor
     * @param aDatastore pointer to data storage
@@ -60,17 +61,18 @@ namespace sgns::crdt
                                                    const HierarchicalKey              &aKey,
                                                    std::shared_ptr<DAGSyncer>          aDagSyncer,
                                                    std::shared_ptr<Broadcaster>        aBroadcaster,
-                                                   const std::shared_ptr<CrdtOptions> &aOptions );
+                                                   const std::shared_ptr<CrdtOptions> &aOptions,
+                                                   std::shared_ptr<FilterCB>           filter_cb = nullptr );
 
         /** Destructor
-    */
+        */
         virtual ~CrdtDatastore();
 
         /** Static function to merge delta elements and tombstones, use highest priority for the result delta
-    * @param aDelta1 Delta to merge
-    * @param aDelta2 Delta to merge
-    * @return pointer to merged delta
-    */
+        * @param aDelta1 Delta to merge
+        * @param aDelta2 Delta to merge
+        * @return pointer to merged delta
+        */
         static std::shared_ptr<Delta> DeltaMerge( const std::shared_ptr<Delta> &aDelta1,
                                                   const std::shared_ptr<Delta> &aDelta2 );
 
@@ -274,7 +276,8 @@ namespace sgns::crdt
                        const HierarchicalKey              &aKey,
                        std::shared_ptr<DAGSyncer>          aDagSyncer,
                        std::shared_ptr<Broadcaster>        aBroadcaster,
-                       const std::shared_ptr<CrdtOptions> &aOptions );
+                       const std::shared_ptr<CrdtOptions> &aOptions,
+                       std::shared_ptr<FilterCB>           filter_cb  );
 
         std::shared_ptr<DataStore>   dataStore_ = nullptr;
         std::shared_ptr<CrdtOptions> options_   = nullptr;
@@ -310,8 +313,9 @@ namespace sgns::crdt
         std::queue<DagJob>                      dagWorkerJobList;
         std::atomic<bool>                       dagWorkerJobListThreadRunning_ = false;
 
-        std::mutex    mutex_processed_cids;
-        std::set<CID> processed_cids;
+        std::mutex                mutex_processed_cids;
+        std::set<CID>             processed_cids;
+        std::shared_ptr<FilterCB> filter_cb_;
 
         void AddProcessedCID( const CID &cid );
         bool ContainsCID( const CID &cid );
