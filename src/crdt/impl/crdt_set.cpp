@@ -500,39 +500,39 @@ namespace sgns::crdt
 
         auto batchDatastore = this->dataStore_->batch();
 
-    for(auto& elem : aElems)
-    {
-      // overwrite the identifier as it would come unset
-      elem.set_id(aID);
-      auto key = elem.key();
+        for ( auto &elem : aElems )
+        {
+            // overwrite the identifier as it would come unset
+            elem.set_id( aID );
+            auto key = elem.key();
 
-      // /namespace/s/<key>/<id>
-      auto kNamespace = this->ElemsPrefix(key).ChildString(aID);
+            // /namespace/s/<key>/<id>
+            auto kNamespace = this->ElemsPrefix( key ).ChildString( aID );
 
-      Buffer keyBuffer;
-      keyBuffer.put(kNamespace.GetKey());
+            Buffer keyBuffer;
+            keyBuffer.put( kNamespace.GetKey() );
 
-      auto putResult = batchDatastore->put(std::move(keyBuffer), Buffer());  
-      if (putResult.has_error())
-      {
-        return outcome::failure(putResult.error());
-      }
-      // update the value if applicable:
-      // * higher priority than we currently have.
-      // * not tombstoned before.
-      Buffer valueBuffer;
-      valueBuffer.put(elem.value());
-      auto setValueResult = this->SetValue(batchDatastore, key, aID, std::move(valueBuffer), aPriority);
-      if (setValueResult.has_failure())
-      {
-        return outcome::failure(setValueResult.error());
-      }
-    }
-    auto commitResult = batchDatastore->commit();
-    if (commitResult.has_failure())
-    {
-      return outcome::failure(commitResult.error());
-    }
+            auto putResult = batchDatastore->put( std::move( keyBuffer ), Buffer() );
+            if ( putResult.has_error() )
+            {
+                return outcome::failure( putResult.error() );
+            }
+            // update the value if applicable:
+            // * higher priority than we currently have.
+            // * not tombstoned before.
+            Buffer valueBuffer;
+            valueBuffer.put( elem.value() );
+            auto setValueResult = this->SetValue( batchDatastore, key, aID, std::move( valueBuffer ), aPriority );
+            if ( setValueResult.has_failure() )
+            {
+                return outcome::failure( setValueResult.error() );
+            }
+        }
+        auto commitResult = batchDatastore->commit();
+        if ( commitResult.has_failure() )
+        {
+            return outcome::failure( commitResult.error() );
+        }
 
         return outcome::success();
     }
@@ -551,21 +551,21 @@ namespace sgns::crdt
 
         auto batchDatastore = this->dataStore_->batch();
 
-    std::vector<std::string> deletedKeys;
-    for (const auto& tomb : aTombs)
-    {
-      // /namespace/tombs/<key>/<id>
-      const auto &key        = tomb.key();
-      auto kNamespace = this->TombsPrefix(key).ChildString(tomb.id());
+        std::vector<std::string> deletedKeys;
+        for ( const auto &tomb : aTombs )
+        {
+            // /namespace/tombs/<key>/<id>
+            const auto &key        = tomb.key();
+            auto        kNamespace = this->TombsPrefix( key ).ChildString( tomb.id() );
 
-      Buffer keyBuffer;
-      keyBuffer.put(kNamespace.GetKey());
+            Buffer keyBuffer;
+            keyBuffer.put( kNamespace.GetKey() );
 
-      auto putResult = batchDatastore->put(std::move(keyBuffer), Buffer());
-      if (putResult.has_error())
-      {
-        return outcome::failure(putResult.error());
-      }
+            auto putResult = batchDatastore->put( std::move( keyBuffer ), Buffer() );
+            if ( putResult.has_error() )
+            {
+                return outcome::failure( putResult.error() );
+            }
 
             // run delete hook only once for all
             // versions of the same element tombstoned
