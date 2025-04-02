@@ -202,12 +202,38 @@ namespace sgns::crdt
         dataStore_ = std::move( dataStore ); // Keeps reference, no ownership transfer
     }
 
-    outcome::result<void> PubSubBroadcasterExt::Broadcast( const base::Buffer &buff )
+    outcome::result<void> PubSubBroadcasterExt::Broadcast( const base::Buffer          &buff,
+                                                           std::optional<std::string> topic_name )
     {
         if ( topics_.empty() )
         {
             m_logger->error( "No topics available for broadcasting." );
             return outcome::failure( boost::system::error_code{} );
+        }
+
+        // Determine the target topic.
+        std::shared_ptr<GossipPubSubTopic> targetTopic = nullptr;
+        if ( topic_name )
+        {
+            // Search for the topic that matches the provided topic_name.
+            for ( auto &topic : topics_ )
+            {
+                if ( topic->GetTopic() == topic_name.value() )
+                {
+                    targetTopic = topic;
+                    break;
+                }
+            }
+            if ( !targetTopic )
+            {
+                m_logger->warn( "Broadcast: no topic matching '" + topic_name.value() + "' was found" );
+                return outcome::failure( boost::system::error_code{} );
+            }
+        }
+        else
+        {
+            // Use the first topic if no topic_name is provided.
+            targetTopic = topics_.front();
         }
 
         sgns::crdt::broadcasting::BroadcastMessage bmsg;
@@ -245,8 +271,8 @@ namespace sgns::crdt
         auto peer_info = peer_info_res.value();
         bpi->set_id( std::string( peer_info.id.toVector().begin(), peer_info.id.toVector().end() ) );
 
-        // Convert observed addresses from the first topic's host.
-        auto pubsubObserved = topics_.front()->GetPubsub()->GetHost()->getObservedAddressesReal();
+        // Use observed addresses from the target topic's pubsub host.
+        auto pubsubObserved = targetTopic->GetPubsub()->GetHost()->getObservedAddressesReal();
         for ( auto &address : pubsubObserved )
         {
             auto ip_address_opt = address.getFirstValueForProtocol( libp2p::multi::Protocol::Code::IP4 );
@@ -266,6 +292,7 @@ namespace sgns::crdt
             }
         }
 
+        // Also add the peer's own addresses.
         auto mas = peer_info.addresses;
         for ( auto &address : mas )
         {
@@ -284,14 +311,22 @@ namespace sgns::crdt
         std::string data( buff.toString() );
         bmsg.set_data( data );
 
-        topics_.front()->Publish( bmsg.SerializeAsString() );
+        // Publish to the determined target topic.
+        targetTopic->Publish( bmsg.SerializeAsString() );
 
-        std::string frontTopic = topics_.front()->GetTopic();
-        m_logger->debug( "CIDs broadcasted by {} to the first topic ({})", peer_info.id.toBase58(), frontTopic );
+        if ( topic_name )
+        {
+            m_logger->debug( "CIDs broadcasted by {} to SINGLE topic {}", peer_info.id.toBase58(), topic_name.value() );
+        }
+        else
+        {
+            std::string frontTopic = targetTopic->GetTopic();
+            m_logger->debug( "CIDs broadcasted by {} to the first topic ({})", peer_info.id.toBase58(), frontTopic );
+        }
 
         return outcome::success();
     }
-
+/*
     outcome::result<void> PubSubBroadcasterExt::Broadcast( const base::Buffer &buff, const std::string &topic_name )
     {
         if ( topics_.empty() )
@@ -384,7 +419,7 @@ namespace sgns::crdt
 
         return outcome::success();
     }
-
+*/
     outcome::result<base::Buffer> PubSubBroadcasterExt::Next()
     {
         std::scoped_lock lock( mutex_ );
