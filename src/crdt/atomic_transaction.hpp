@@ -53,9 +53,10 @@ namespace sgns::crdt
 
         /**
          * @brief Commit all operations atomically
+         * @param topic Optional topic name for targeted publishing.
          * @return outcome::success if committed successfully, failure otherwise
          */
-        outcome::result<void> Commit();
+        outcome::result<void> Commit(const std::optional<std::string> &topic = std::nullopt);
         /**
          * @brief Commits all operations atomically to a single topic, rather than all topics.
          * @param topicName The single topic name to which we broadcast the combined delta

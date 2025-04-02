@@ -38,7 +38,7 @@ namespace sgns::crdt
         return outcome::success();
     }
 
-    outcome::result<void> AtomicTransaction::Commit()
+    outcome::result<void> AtomicTransaction::Commit( const std::optional<std::string> &topic )
     {
         if ( is_committed_ )
         {
@@ -79,11 +79,12 @@ namespace sgns::crdt
             }
             max_priority = std::max( max_priority, delta->priority() );
         }
-
         combined_delta->set_priority( max_priority );
 
         // Publish the combined delta
-        auto result = datastore_->Publish( combined_delta );
+        auto result = topic ? datastore_->PublishToTopic(combined_delta, *topic)
+                    : datastore_->Publish(combined_delta);
+
         if ( result.has_failure() )
         {
             return result.error();
