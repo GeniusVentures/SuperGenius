@@ -1,9 +1,11 @@
-
-
 add_library(vote_graph
     vote_graph_impl.cpp
-    )
+)
 target_link_libraries(vote_graph
-    Boost::boost
+    PUBLIC
+    Boost::headers
+    ed25519_types
+    outcome
+    PRIVATE
     vote_weight
-    )
+)

@@ -131,7 +131,7 @@ namespace sgns::injector {
     initialized = std::make_shared<network::PeerList>(cfg.getBootNodes());
     return initialized.value();
   }
-    
+
   template <typename Injector>
   sptr<api::ApiService> get_jrpc_api_service(const Injector &injector) {
     static auto initialized =
@@ -462,6 +462,7 @@ namespace sgns::injector {
     }
     auto options = rocksdb::Options{};
     options.create_if_missing = true;
+
     auto db = storage::rocksdb::create(rocksdb_path, options);
     if (!db) {
       base::raise(db.error());
@@ -702,7 +703,7 @@ namespace sgns::injector {
         di::bind<network::SyncProtocolObserver>.template to<network::SyncProtocolObserverImpl>(),
         di::bind<runtime::binaryen::WasmModule>.template to<runtime::binaryen::WasmModuleImpl>(),
         di::bind<runtime::binaryen::WasmModuleFactory>.template to<runtime::binaryen::WasmModuleFactoryImpl>(),
-        di::bind<runtime::CoreFactory>.template to<runtime::binaryen::CoreFactoryImpl>(),       
+        di::bind<runtime::CoreFactory>.template to<runtime::binaryen::CoreFactoryImpl>(),
         di::bind<runtime::TaggedTransactionQueue>.template to<runtime::binaryen::TaggedTransactionQueueImpl>(),
         di::bind<runtime::ParachainHost>.template to<runtime::binaryen::ParachainHostImpl>(),
         di::bind<runtime::OffchainWorker>.template to<runtime::binaryen::OffchainWorkerImpl>(),

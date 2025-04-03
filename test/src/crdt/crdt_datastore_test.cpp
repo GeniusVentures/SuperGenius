@@ -1,21 +1,22 @@
 #include "crdt/crdt_datastore.hpp"
+#include "crdt/atomic_transaction.hpp"
 #include <gtest/gtest.h>
 #include <storage/rocksdb/rocksdb.hpp>
 #include "outcome/outcome.hpp"
 #include <testutil/outcome.hpp>
 #include <boost/filesystem.hpp>
-#include <ipfs_lite/ipfs/merkledag/impl/merkledag_service_impl.hpp>
 #include <ipfs_lite/ipfs/impl/in_memory_datastore.hpp>
 #include <queue>
 #include <string>
-#include <boost/asio/error.hpp>
 #include <thread>
 #include "crdt/proto/bcast.pb.h"
+#include "crdt_custom_broadcaster.hpp"
+#include "crdt_custom_dagsyncer.hpp"
 
 namespace sgns::crdt
 {
-  using sgns::storage::rocksdb;
-  using sgns::base::Buffer;
+  using storage::rocksdb;
+  using base::Buffer;
   using ipfs_lite::ipld::IPLDNode;
   using ipfs_lite::ipfs::IpfsDatastore;
   using ipfs_lite::ipfs::InMemoryDatastore;
@@ -24,135 +25,57 @@ namespace sgns::crdt
 
   namespace fs = boost::filesystem;
 
-  class CustomDagSyncer : public DAGSyncer
-  {
-  public:
-    using IpfsDatastore = ipfs_lite::ipfs::IpfsDatastore;
-    using MerkleDagServiceImpl = ipfs_lite::ipfs::merkledag::MerkleDagServiceImpl;
-    using Leaf = ipfs_lite::ipfs::merkledag::Leaf;
-
-    CustomDagSyncer(std::shared_ptr<IpfsDatastore> service)
-      : dagService_(service)
-    {
-    }
-
-    outcome::result<bool> HasBlock(const CID& cid) const override
-    {
-      auto getNodeResult = dagService_.getNode(cid);
-      return getNodeResult.has_value();
-    }
-
-    outcome::result<void> addNode(std::shared_ptr<const IPLDNode> node) override
-    {
-        return dagService_.addNode(node);
-    }
-
-    outcome::result<std::shared_ptr<IPLDNode>> getNode(const CID& cid) const override
-    {
-        return dagService_.getNode(cid);
-    }
-
-    outcome::result<void> removeNode(const CID& cid) override
-    {
-        return dagService_.removeNode(cid);
-    }
-
-    outcome::result<size_t> select(
-        gsl::span<const uint8_t> root_cid,
-        gsl::span<const uint8_t> selector,
-        std::function<bool(std::shared_ptr<const IPLDNode> node)> handler) const override
-    {
-        return dagService_.select(root_cid, selector, handler);
-    }
-
-    outcome::result<std::shared_ptr<Leaf>> fetchGraph(const CID& cid) const override
-    {
-        return dagService_.fetchGraph(cid);
-    }
-
-    outcome::result<std::shared_ptr<Leaf>> fetchGraphOnDepth(const CID& cid, uint64_t depth) const override
-    {
-        return dagService_.fetchGraphOnDepth(cid, depth);
-    }
-
-    MerkleDagServiceImpl dagService_;
-  };
-
-  class CustomBroadcaster : public Broadcaster
-  {
-  public:
-    /**
-    * Send {@param buff} payload to other replicas.
-    * @return outcome::success on success or outcome::failure on error
-    */
-    virtual outcome::result<void> Broadcast(const base::Buffer& buff) override
-    {
-      if (!buff.empty())
-      {
-        const std::string bCastData(buff.toString());
-        listOfBroadcasts_.push(bCastData);
-      }
-      return outcome::success();
-    }
-
-    /**
-    * Obtain the next {@return} payload received from the network.
-    * @return buffer value or outcome::failure on error
-    */
-    virtual outcome::result<base::Buffer> Next() override
-    {
-      if (listOfBroadcasts_.empty())
-      {
-        //Broadcaster::ErrorCode::ErrNoMoreBroadcast
-        return outcome::failure(boost::system::error_code{});
-      }
-
-      std::string strBuffer = listOfBroadcasts_.front();
-      listOfBroadcasts_.pop();
-
-      base::Buffer buffer;
-      buffer.put(strBuffer);
-      return buffer;
-    }
-
-    std::queue<std::string> listOfBroadcasts_;
-  };
-
   class CrdtDatastoreTest : public ::testing::Test
   {
   public:
+    // Remove leftover database if any
+    const std::string databasePath = "supergenius_crdt_datastore_test";
+
+    CrdtDatastoreTest()
+    {
+        fs::remove_all(databasePath);
+    }
+
     void SetUp() override
     {
-      // Remove leftover database 
-      std::string databasePath = "supergenius_crdt_datastore_test";
-      fs::remove_all(databasePath);
 
-      // Create new database
-      rocksdb::Options options;
-      options.create_if_missing = true;  // intentionally
-      auto dataStoreResult = rocksdb::create(databasePath, options);
-      auto dataStore = dataStoreResult.value();
+        // Create new database
+        rocksdb::Options options;
+        options.create_if_missing = true;  // intentionally
+        auto result = rocksdb::create(databasePath, options);
+        if ( !result )
+        {
+            throw std::invalid_argument( result.error().message() );
+        }
+        db_  = std::move( result.value() );
 
-      // Create new DAGSyncer
-      auto ipfsDataStore = std::make_shared<InMemoryDatastore>();
-      auto dagSyncer = std::make_shared<CustomDagSyncer>(ipfsDataStore);
+        // Create new DAGSyncer
+        auto ipfsDataStore = std::make_shared<InMemoryDatastore>();
+        auto dagSyncer = std::make_shared<CustomDagSyncer>(ipfsDataStore);
 
-      // Create new Broadcaster
-      auto broadcaster = std::make_shared<CustomBroadcaster>();
+        // Create new Broadcaster
+        auto broadcaster = std::make_shared<CustomBroadcaster>();
 
-      // Define test values
-      const std::string strNamespace = "/namespace";
-      HierarchicalKey namespaceKey(strNamespace);
+        // Define test values
+        const std::string strNamespace = "/namespace";
+        HierarchicalKey namespaceKey(strNamespace);
 
-      // Create crdtDatastore
-      crdtDatastore_ = std::make_shared<CrdtDatastore>(dataStore, namespaceKey, dagSyncer, broadcaster, CrdtOptions::DefaultOptions());
+        // Create crdtDatastore
+        crdtDatastore_ = CrdtDatastore::New(db_, namespaceKey, dagSyncer, broadcaster, CrdtOptions::DefaultOptions());
     }
 
     void TearDown() override
     {
+
+      crdtDatastore_->Close();
       crdtDatastore_ = nullptr;
+      db_ = nullptr;
+      // Remove leftover database
+      fs::remove_all(databasePath);
+
     }
 
+    std::shared_ptr<rocksdb> db_;
     std::shared_ptr<CrdtDatastore> crdtDatastore_ = nullptr;
   };
 
@@ -186,14 +109,21 @@ namespace sgns::crdt
     CrdtBuffer buffer3;
     buffer3.put("Data3");
 
-    auto transaction = crdtDatastore_->BeginTransaction();
-    EXPECT_OUTCOME_TRUE_1(transaction->AddToDelta(newKey1, buffer1));
-    EXPECT_OUTCOME_TRUE_1(transaction->AddToDelta(newKey2, buffer2));
-    EXPECT_OUTCOME_TRUE_1(transaction->AddToDelta(newKey3, buffer3));
-    EXPECT_OUTCOME_TRUE(deltaSize, transaction->RemoveFromDelta(newKey2));
-    EXPECT_OUTCOME_TRUE_1(transaction->PublishDelta());
+    AtomicTransaction transaction = AtomicTransaction(crdtDatastore_);
+    EXPECT_OUTCOME_TRUE_1(transaction.Put(newKey1, buffer1));
+    EXPECT_OUTCOME_TRUE_1(transaction.Put(newKey2, buffer2));
+    EXPECT_OUTCOME_TRUE_1(transaction.Put(newKey3, buffer3));
+    // this won't work as part of the same atomic transaction, because the Remove looks for the existing key
+    // to create the delta, and since it's queued in the atomic transaction, it doesn't find key2
+    //EXPECT_OUTCOME_TRUE_1(transaction.Remove(newKey2));
+    EXPECT_OUTCOME_TRUE_1(transaction.Commit());
+    EXPECT_OUTCOME_EQ(crdtDatastore_->HasKey(newKey1), true);
+    AtomicTransaction transactionRemoveKey2 = AtomicTransaction(crdtDatastore_);
+    EXPECT_OUTCOME_TRUE_1(transactionRemoveKey2.Remove(newKey2));
+    EXPECT_OUTCOME_TRUE_1(transactionRemoveKey2.Commit());
     EXPECT_OUTCOME_EQ(crdtDatastore_->HasKey(newKey1), true);
     EXPECT_OUTCOME_EQ(crdtDatastore_->HasKey(newKey2), false);
+    EXPECT_OUTCOME_EQ(crdtDatastore_->HasKey(newKey3), true);
 
     auto newKey4 = HierarchicalKey("NewKey4");
     CrdtBuffer buffer4;
@@ -235,5 +165,6 @@ namespace sgns::crdt
     EXPECT_OUTCOME_EQ(crdtDatastore_->HasKey(newKey4), true);
     EXPECT_OUTCOME_EQ(crdtDatastore_->HasKey(newKey5), false);
   }
-  
+
+
 }

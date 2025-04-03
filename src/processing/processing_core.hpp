@@ -6,7 +6,7 @@
 #define GRPC_FOR_SUPERGENIUS_PROCESSING_CORE_HPP
 
 #include "processing/proto/SGProcessing.pb.h"
-#include <list>
+#include "outcome/outcome.hpp"
 #include <boost/asio/io_context.hpp>
 
 namespace sgns::processing
@@ -25,9 +25,8 @@ public:
     * @param result - subtask result
     * @param initialHashCode - an initial hash code which is used to calculate result hash
     */
-    virtual void ProcessSubTask(
-        const SGProcessing::SubTask& subTask, SGProcessing::SubTaskResult& result,
-        uint32_t initialHashCode) = 0;
+    virtual outcome::result<SGProcessing::SubTaskResult> ProcessSubTask(
+        const SGProcessing::SubTask& subTask, uint32_t initialHashCode) = 0;
 
     /** Get processing type from json data to set processor
     * @param jsondata - jsondata that needs to be parsed
@@ -37,13 +36,13 @@ public:
     /** Get settings.json and then get data we need for processing based on parsing
     * @param CID - CID of directory to get settings.json from
     */
-    virtual std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> GetCidForProc(std::string cid) = 0;
+    virtual std::shared_ptr<std::pair<std::shared_ptr<std::vector<char>>, std::shared_ptr<std::vector<char>>>>  GetCidForProc(std::string json_data, std::string base_json) = 0;
     /** Get files from a set URL and insert them into pair reference
     * @param ioc - IO context to run on
     * @param url - ipfs gateway url to get from
     * @param results - reference to data pair to insert into.
     */
-    virtual void GetSubCidForProc(std::shared_ptr<boost::asio::io_context> ioc, std::string url, std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>& results) = 0;
+    virtual void GetSubCidForProc(std::shared_ptr<boost::asio::io_context> ioc, std::string url, std::shared_ptr<std::vector<char>> results) = 0;
 };
 
 } // namespace sgns::processing

@@ -106,7 +106,7 @@ namespace sgns::crdt
     return aDataStore->remove(keyBuffer);
   }
 
-  outcome::result<bool> CrdtHeads::IsHead(const CID& aCid)
+  bool CrdtHeads::IsHead(const CID& aCid)
   {
     // IsHead returns if a given cid is among the current heads.
     std::lock_guard lg(this->mutex_);
@@ -117,17 +117,14 @@ namespace sgns::crdt
   {
     std::lock_guard lg(this->mutex_);
 
-    auto isHeadResult = this->IsHead(aCid);
-    if ( isHeadResult.has_failure() || !isHeadResult.value() )
+    if (!this->IsHead(aCid))
     {
-      // Not a head
-      return outcome::failure(boost::system::error_code{});
+        return 0;
     }
-
     return this->cache_[aCid];
   }
 
-  outcome::result<int> CrdtHeads::GetLenght()
+  outcome::result<int> CrdtHeads::GetLength()
   {
     std::lock_guard lg(this->mutex_);
     return this->cache_.size();

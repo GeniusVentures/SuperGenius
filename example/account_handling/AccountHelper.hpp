@@ -8,6 +8,7 @@
 #ifndef _ACCOUNT_HELPER_HPP_
 #define _ACCOUNT_HELPER_HPP_
 #include <memory>
+#include <string_view>
 #include <boost/asio.hpp>
 #include <spdlog/sinks/basic_file_sink.h>
 #include "account/GeniusAccount.hpp"
@@ -30,20 +31,13 @@
 #include "processing/processing_service.hpp"
 #include <libp2p/crypto/sha/sha256.hpp>
 
-#ifndef __cplusplus
-extern "C"
+typedef struct DevConfig
 {
-#endif
-    typedef struct DevConfig
-    {
-        char  Addr[255];
-        float Cut;
-    } DevConfig_st2;
+    char        Addr[255];
+    std::string Cut;
+} DevConfig_st2;
 
-    typedef char AccountKey2[255];
-#ifndef __cplusplus
-}
-#endif
+typedef char AccountKey2[255];
 
 namespace sgns
 {
@@ -51,7 +45,7 @@ namespace sgns
     class AccountHelper : public IComponent
     {
     public:
-        AccountHelper( const AccountKey2 &priv_key_data, const DevConfig_st2 &dev_config );
+        AccountHelper( const AccountKey2 &priv_key_data, const DevConfig_st2 &dev_config, const char *eth_private_key );
         ~AccountHelper();
 
         std::string GetName() override
@@ -60,7 +54,6 @@ namespace sgns
         }
 
         std::shared_ptr<TransactionManager> GetManager();
-
 
     private:
         std::shared_ptr<GeniusAccount>                             account_;

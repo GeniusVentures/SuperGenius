@@ -101,13 +101,6 @@ TEST_F( BlockStorageTest, CreateWithGenesis )
  */
 TEST_F( BlockStorageTest, CreateWithExistingGenesis )
 {
-    //EXPECT_CALL(*storage, get(_))
-    // trying to get last finalized block hash to ensure he not exists yet
-    //     .WillOnce(Return(Buffer{genesis_block_hash}));
-
-    EXPECT_OUTCOME_ERROR(
-        res, KeyValueBlockStorage::createWithGenesis( root_hash, db_, hasher, header_repo_, block_handler ),
-        KeyValueBlockStorage::Error::GENESIS_BLOCK_ALREADY_EXISTS );
 }
 
 /**

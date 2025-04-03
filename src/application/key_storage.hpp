@@ -1,7 +1,6 @@
 #ifndef SUPERGENIUS_APPLICATION_KEY_STORAGE_HPP
 #define SUPERGENIUS_APPLICATION_KEY_STORAGE_HPP
 
-#include <libp2p/peer/peer_info.hpp>
 #include <libp2p/crypto/key.hpp>
 
 #include "crypto/ed25519_types.hpp"

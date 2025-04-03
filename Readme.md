@@ -22,7 +22,7 @@ git checkout develop
 git submodule update --init --recursive
 ```
 
-Ideally the folder structure should be as follows
+Ideally the folder structure should be as follows, this way cmake will use relative directory for thirdparty automatically
 
 ```bash
 .

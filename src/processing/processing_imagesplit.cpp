@@ -1,6 +1,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "processing/processing_imagesplit.hpp"
+#include <openssl/sha.h> // For SHA256_DIGEST_LENGTH
 
 namespace sgns::processing
 {
@@ -36,16 +37,21 @@ namespace sgns::processing
     //    SplitImageData();
     //}
 
-    ImageSplitter::ImageSplitter( const std::vector<uint8_t> &buffer,
-                                  uint32_t                    blockstride,
-                                  uint32_t                    blocklinestride,
-                                  uint32_t                    blocklen ) :
-        blockstride_( blockstride ),
-        blocklinestride_( blocklinestride ),
-        blocklen_( blocklen ),
-        inputImage( reinterpret_cast<const unsigned char *>( buffer.data() ) ),
-        imageSize( buffer.size() )
-    {
+
+    ImageSplitter::ImageSplitter(const std::vector<uint8_t>& buffer,
+        uint64_t blockstride,
+        uint64_t blocklinestride,
+        uint64_t blocklen,
+        int channels)
+        : blockstride_(blockstride), 
+        blocklinestride_(blocklinestride), 
+        blocklen_(blocklen), 
+        channels_(channels) {
+        // Set inputImage and imageSize from the provided buffer
+        //inputImage = reinterpret_cast<const unsigned char*>(buffer.data());
+
+        inputImage = reinterpret_cast<const unsigned char*>(buffer.data());
+        imageSize = buffer.size();
         SplitImageData();
     }
 
@@ -81,7 +87,7 @@ namespace sgns::processing
             throw std::invalid_argument("Image size is not evenly divisible by block length");
         }
 
-        for (uint32_t i = 0; i < imageSize; i += blocklen_)
+        for (uint64_t i = 0; i < imageSize; i += blocklen_)
         {
             std::vector<uint8_t> chunkBuffer(blocklen_);
             int rowsdone = (i / (blocklen_ *
@@ -93,7 +99,7 @@ namespace sgns::processing
                 * (blocklen_ *
                     ((blockstride_ + blocklinestride_) / blockstride_));
             //std::cout << "buffer offset:  " << bufferoffset << std::endl;
-            for (uint32_t size = 0; size < blocklen_; size += blockstride_)
+            for (uint64_t size = 0; size < blocklen_; size += blockstride_)
             {
                 auto chunkData = inputImage + bufferoffset;
                 std::memcpy(chunkBuffer.data() + (size), chunkData, blockstride_);
@@ -105,18 +111,22 @@ namespace sgns::processing
             //    std::cerr << "Error writing PNG file: " << filename << "\n";
             //}
             splitparts_.push_back(chunkBuffer);
-            chunkWidthActual_.push_back(blockstride_ / 4);
+            chunkWidthActual_.push_back(blockstride_ / channels_);
             chunkHeightActual_.push_back(blocklen_ / blockstride_);
             gsl::span<const uint8_t> byte_span(chunkBuffer);
             std::vector<uint8_t> shahash(SHA256_DIGEST_LENGTH);
-            SHA256_CTX sha256;
-            SHA256_Init(&sha256);
-            SHA256_Update(&sha256, chunkBuffer.data(), chunkBuffer.size());
-            SHA256_Final(shahash.data(), &sha256);
+            unsigned int digest_len = 0;
+
+            EVP_MD_CTX *ctx = EVP_MD_CTX_new();
+            EVP_DigestInit_ex(ctx, EVP_sha256(), NULL);
+            EVP_DigestUpdate(ctx, chunkBuffer.data(), chunkBuffer.size());
+            EVP_DigestFinal_ex(ctx, shahash.data(), &digest_len);
+            EVP_MD_CTX_free(ctx);
+
             auto hash = libp2p::multi::Multihash::create(libp2p::multi::HashType::sha256, shahash);
-            cids_.emplace_back( libp2p::multi::ContentIdentifier::Version::V0,
-                                libp2p::multi::MulticodecType::Code::DAG_PB,
-                                hash.value() );
+            cids_.emplace_back(libp2p::multi::ContentIdentifier::Version::V0,
+                              libp2p::multi::MulticodecType::Code::DAG_PB,
+                              hash.value());
         }
     }
 

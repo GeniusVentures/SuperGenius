@@ -5,14 +5,11 @@
 #include <libp2p/log/configurator.hpp>
 #include <libp2p/log/logger.hpp>
 #include "processing/impl/processing_task_queue_impl.hpp"
-#include "processing_subtask_result_storage_impl.hpp"
+#include "processing/impl/processing_subtask_result_storage_impl.hpp"
 #include "processing/processing_service.hpp"
 #include "processing/processing_subtask_enqueuer_impl.hpp"
 #include "crdt/globaldb/keypair_file_storage.hpp"
 #include "crdt/globaldb/globaldb.hpp"
-
-
-
 
 using namespace sgns::processing;
 
@@ -42,20 +39,20 @@ namespace
             return true; //TODO - This is wrong - Update this tests to the actual ProcessingCoreImpl on src/processing/impl
         }
 
-        std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> GetCidForProc(std::string cid) override
+        std::shared_ptr<std::pair<std::shared_ptr<std::vector<char>>, std::shared_ptr<std::vector<char>>>>  GetCidForProc(std::string json_data, std::string base_json) override
         {
             return nullptr;
         }
 
-        void GetSubCidForProc(std::shared_ptr<boost::asio::io_context> ioc, std::string url, std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>& results) override
+        void GetSubCidForProc(std::shared_ptr<boost::asio::io_context> ioc,std::string url, std::shared_ptr<std::vector<char>> results) override
         {
-
+            return;
         }
 
-        void  ProcessSubTask(
-            const SGProcessing::SubTask& subTask, SGProcessing::SubTaskResult& result,
-            uint32_t initialHashCode) override 
+        outcome::result<SGProcessing::SubTaskResult> ProcessSubTask(
+        const SGProcessing::SubTask& subTask, uint32_t initialHashCode) override 
         {
+            SGProcessing::SubTaskResult result;
             {
                 std::scoped_lock<std::mutex> subTaskCountLock(m_subTaskCountMutex);
                 ++m_processingSubTaskCount;
@@ -64,7 +61,8 @@ namespace
                 {
                     // Reset the counter to allow processing restart
                     m_processingSubTaskCount = 0;
-                    throw std::runtime_error("Maximal number of processed subtasks exceeded");
+                    //throw std::runtime_error("Maximal number of processed subtasks exceeded");
+                    return outcome::failure( boost::system::error_code{} );
                 }
             }
 
@@ -97,6 +95,7 @@ namespace
             }
             std::string hashString(reinterpret_cast<const char*>(&subTaskResultHash), sizeof(subTaskResultHash));
             result.set_result_hash(hashString);
+            return result;
         }
 
         std::vector<size_t> m_chunkResulHashes;

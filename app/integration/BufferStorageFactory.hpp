@@ -1,6 +1,6 @@
 /**
  * @file       BufferStorageFactory.hpp
- * @brief      
+ * @brief
  * @date       2024-02-22
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
@@ -18,6 +18,7 @@ public:
         {
             auto options              = sgns::storage::rocksdb::Options{};
             options.create_if_missing = true;
+
             auto result               = sgns::storage::rocksdb::create( path, options );
             if ( result )
             {

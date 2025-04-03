@@ -13,7 +13,7 @@
 #include "outcome/outcome.hpp"
 #include "processing/processing_task_queue.hpp"
 #include "crdt/globaldb/globaldb.hpp"
-
+#include "crdt/atomic_transaction.hpp"
 
 namespace sgns::processing
 {
@@ -32,7 +32,8 @@ namespace sgns::processing
         * @param task - Task to add
         * @param subTasks - List of subtasks
         */
-        void EnqueueTask( const SGProcessing::Task &task, const std::list<SGProcessing::SubTask> &subTasks ) override;
+        outcome::result<void> EnqueueTask( const SGProcessing::Task               &task,
+                                           const std::list<SGProcessing::SubTask> &subTasks ) override;
 
         /** Get subtasks by task id, returns true if we got subtasks
         * @param taskId - id to look for subtasks of
@@ -50,7 +51,7 @@ namespace sgns::processing
         * @param taskKey - id to look for task
         * @param taskResult - Reference of a task result
         */
-        bool CompleteTask( const std::string &taskKey, const SGProcessing::TaskResult &taskResult ) override;
+       outcome::result<void> CompleteTask( const std::string &taskKey, const SGProcessing::TaskResult &taskResult ) override;
 
         /**
          * @brief       
@@ -59,6 +60,13 @@ namespace sgns::processing
          * @return      A @ref false 
          */
         bool IsTaskCompleted( const std::string &taskId ) override;
+
+        /**
+         * @brief       Fetches the task and returns the associated escrow path
+         * @param[in]   taskId The task ID
+         * @return      If successful, it returns a escrow path string
+         */
+        outcome::result<std::string> GetTaskEscrow( const std::string &taskId );
 
         /** Find if a task is locked
         * @param taskKey - id to look for task
@@ -76,10 +84,14 @@ namespace sgns::processing
         */
         bool MoveExpiredTaskLock( const std::string &taskKey, SGProcessing::Task &task );
 
+        outcome::result<void> SendEscrow( std::string path, sgns::base::Buffer value );
+        void                  ResetAtomicTransaction();
+
     private:
-        std::shared_ptr<sgns::crdt::GlobalDB> m_db;
-        std::chrono::system_clock::duration   m_processingTimeout;
-        sgns::base::Logger                    m_logger = sgns::base::createLogger( "ProcessingTaskQueueImpl" );
+        std::shared_ptr<sgns::crdt::GlobalDB>          m_db;
+        std::chrono::system_clock::duration            m_processingTimeout;
+        sgns::base::Logger                             m_logger = sgns::base::createLogger( "ProcessingTaskQueueImpl" );
+        std::shared_ptr<sgns::crdt::AtomicTransaction> job_crdt_transaction_;
     };
 
 }

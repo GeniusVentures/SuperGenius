@@ -4,12 +4,10 @@
 */
 #ifndef PROCESSING_IMAGESPLIT_HPP
 #define PROCESSING_IMAGESPLIT_HPP
-#include <cmath>
 #include <vector>
-#include <openssl/sha.h>
+#include <openssl/evp.h>
 #include <libp2p/multi/content_identifier_codec.hpp>
-//#include <stb_image.h>
-//#include <stb_image_write.h>
+
 
 namespace sgns::processing
 {
@@ -25,9 +23,10 @@ namespace sgns::processing
         */
         ImageSplitter(
             const char* filename,
-            uint32_t blockstride,
-            uint32_t blocklinestride,
-            uint32_t blocklen
+            uint64_t blockstride,
+            uint64_t blocklinestride,
+            uint64_t blocklen,
+            int channels
         );
 
         /** Split an image loaded from raw data of a file loaded elsewhere, i.e. asynciomanager
@@ -37,9 +36,10 @@ namespace sgns::processing
         * @param blocklen - Block Length in bytes
         */
         ImageSplitter(const std::vector<char>& buffer,
-            uint32_t blockstride,
-            uint32_t blocklinestride,
-            uint32_t blocklen);
+            uint64_t blockstride,
+            uint64_t blocklinestride,
+            uint64_t blocklen,
+            int channels);
         
         /** Split an image loaded from raw RGBA bytes
         * @param buffer - Raw RGBA
@@ -48,9 +48,10 @@ namespace sgns::processing
         * @param blocklen - Block Length in bytes
         */
         ImageSplitter(const std::vector<uint8_t>& buffer,
-            uint32_t blockstride,
-            uint32_t blocklinestride,
-            uint32_t blocklen);
+            uint64_t blockstride,
+            uint64_t blocklinestride,
+            uint64_t blocklen,
+            int channels);
 
         ~ImageSplitter()
         {
@@ -105,11 +106,12 @@ namespace sgns::processing
         std::vector<std::vector<uint8_t>> splitparts_;
         int partwidth_ = 32;
         int partheight_ = 32;
-        uint32_t blockstride_;
-        uint32_t blocklinestride_;
-        uint32_t blocklen_;
+        uint64_t blockstride_;
+        uint64_t blocklinestride_;
+        uint64_t blocklen_;
+        int channels_;
         const unsigned char* inputImage;
-        size_t imageSize;
+        uint64_t imageSize;
         std::vector<int> chunkWidthActual_;
         std::vector<int> chunkHeightActual_;
         std::vector<libp2p::multi::ContentIdentifier> cids_;

@@ -12,11 +12,27 @@ set(BOOST_VERSION_2U "${BOOST_MAJOR_VERSION}_${BOOST_MINOR_VERSION}")
 # Set config of GTest
 set(BUILD_TESTING "ON" CACHE BOOL "Build tests")
 
+set(BUILD_WITH_PROOFS ON CACHE BOOL "Whether proofs are being generated/verified or not")
+
+add_definitions(-D_USE_INSTALLED_BOOST_JSON_=TRUE)
+
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_definitions(-DDEBUG_BYTECODE_CIRCUITS)
+    add_definitions(-DSGNS_DEBUG)
+else()
+    add_definitions(-DRELEASE_BYTECODE_CIRCUITS)
+endif()
+
+if(NOT CMAKE_BUILD_TYPE STREQUAL "Release")
+	add_definitions(-DSGNS_DEBUGLOGS)
+elseif (DEFINED SGNS_PRINT_LOGS)
+	add_definitions(-DSGNS_DEBUGLOGS)
+endif()
+
 if(BUILD_TESTING)
     set(GTest_DIR "${_THIRDPARTY_BUILD_DIR}/GTest/lib/cmake/GTest")
     set(GTest_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/GTest/include")
     find_package(GTest CONFIG REQUIRED)
-    include_directories(${GTest_INCLUDE_DIR})
 endif()
 
 # absl
@@ -70,7 +86,21 @@ endif()
 
 include(${PROJECT_ROOT}/cmake/functions.cmake)
 
-# openssl project
+# MNN
+set(MNN_DIR "${_THIRDPARTY_BUILD_DIR}/MNN/lib/cmake/MNN")
+find_package(MNN CONFIG REQUIRED)
+set(MNN_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/MNN/include")
+message(STATIS "INCLUDE DIR ${MNN_INCLUDE_DIR}")
+include_directories(${MNN_INCLUDE_DIR})
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    get_target_property(MNN_LIB_PATH MNN::MNN IMPORTED_LOCATION_DEBUG)
+elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
+    get_target_property(MNN_LIB_PATH MNN::MNN IMPORTED_LOCATION_RELEASE)
+elseif(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
+    get_target_property(MNN_LIB_PATH MNN::MNN IMPORTED_LOCATION_RELWITHDEBINFO)
+endif()
+
+# OpenSSL
 set(OPENSSL_DIR "${_THIRDPARTY_BUILD_DIR}/openssl/build/${CMAKE_SYSTEM_NAME}${ABI_SUBFOLDER_NAME}" CACHE PATH "Path to OpenSSL install folder")
 set(OPENSSL_USE_STATIC_LIBS ON CACHE BOOL "OpenSSL use static libs")
 set(OPENSSL_MSVC_STATIC_RT ON CACHE BOOL "OpenSSL use static RT")
@@ -80,13 +110,10 @@ set(OPENSSL_LIBRARIES "${OPENSSL_DIR}/lib" CACHE PATH "Path to OpenSSL lib folde
 set(OPENSSL_CRYPTO_LIBRARY ${OPENSSL_LIBRARIES}/libcrypto${CMAKE_STATIC_LIBRARY_SUFFIX} CACHE PATH "Path to OpenSSL crypto lib")
 set(OPENSSL_SSL_LIBRARY ${OPENSSL_LIBRARIES}/libssl${CMAKE_STATIC_LIBRARY_SUFFIX} CACHE PATH "Path to OpenSSL ssl lib")
 find_package(OpenSSL REQUIRED)
-include_directories(${OPENSSL_INCLUDE_DIR})
 
 # rocksdb
 set(RocksDB_DIR "${_THIRDPARTY_BUILD_DIR}/rocksdb/lib/cmake/rocksdb")
-set(RocksDB_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/rocksdb/include")
 find_package(RocksDB CONFIG REQUIRED)
-include_directories(${RocksDB_INCLUDE_DIR})
 
 # stb
 include_directories(${_THIRDPARTY_BUILD_DIR}/stb/include)
@@ -97,40 +124,28 @@ include_directories(${GSL_INCLUDE_DIR})
 
 # fmt
 set(fmt_DIR "${_THIRDPARTY_BUILD_DIR}/fmt/lib/cmake/fmt")
-set(fmt_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/fmt/include")
 find_package(fmt CONFIG REQUIRED)
-include_directories(${fmt_INCLUDE_DIR})
 
 # spdlog v1.4.2
 set(spdlog_DIR "${_THIRDPARTY_BUILD_DIR}/spdlog/lib/cmake/spdlog")
-set(spdlog_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/spdlog/include")
 find_package(spdlog CONFIG REQUIRED)
-include_directories(${spdlog_INCLUDE_DIR})
 add_compile_definitions("SPDLOG_FMT_EXTERNAL")
 
 # soralog
 set(soralog_DIR "${_THIRDPARTY_BUILD_DIR}/soralog/lib/cmake/soralog")
-set(soralog_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/soralog/include")
 find_package(soralog CONFIG REQUIRED)
-include_directories(${soralog_INCLUDE_DIR})
 
 # yaml-cpp
 set(yaml-cpp_DIR "${_THIRDPARTY_BUILD_DIR}/yaml-cpp/lib/cmake/yaml-cpp")
-set(yaml-cpp_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/yaml-cpp/include")
 find_package(yaml-cpp CONFIG REQUIRED)
-include_directories(${yaml-cpp_INCLUDE_DIR})
 
 # tsl_hat_trie
 set(tsl_hat_trie_DIR "${_THIRDPARTY_BUILD_DIR}/tsl_hat_trie/lib/cmake/tsl_hat_trie")
-set(tsl_hat_trie_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/tsl_hat_trie/include")
 find_package(tsl_hat_trie CONFIG REQUIRED)
-include_directories(${tsl_hat_trie_INCLUDE_DIR})
 
 # Boost.DI
-set(Boost.DI_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/Boost.DI/include")
 set(Boost.DI_DIR "${_THIRDPARTY_BUILD_DIR}/Boost.DI/lib/cmake/Boost.DI")
 find_package(Boost.DI CONFIG REQUIRED)
-include_directories(${Boost.DI_INCLUDE_DIR})
 
 # Boost should be loaded before libp2p v0.1.2
 # Boost project
@@ -138,18 +153,21 @@ set(_BOOST_ROOT "${_THIRDPARTY_BUILD_DIR}/boost/build/${CMAKE_SYSTEM_NAME}${ABI_
 set(Boost_LIB_DIR "${_BOOST_ROOT}/lib")
 set(Boost_INCLUDE_DIR "${_BOOST_ROOT}/include/boost-${BOOST_VERSION_2U}")
 set(Boost_DIR "${Boost_LIB_DIR}/cmake/Boost-${BOOST_VERSION}")
-set(boost_headers_DIR "${Boost_LIB_DIR}/cmake/boost_headers-${BOOST_VERSION}")
-set(boost_random_DIR "${Boost_LIB_DIR}/cmake/boost_random-${BOOST_VERSION}")
-set(boost_system_DIR "${Boost_LIB_DIR}/cmake/boost_system-${BOOST_VERSION}")
-set(boost_filesystem_DIR "${Boost_LIB_DIR}/cmake/boost_filesystem-${BOOST_VERSION}")
-set(boost_program_options_DIR "${Boost_LIB_DIR}/cmake/boost_program_options-${BOOST_VERSION}")
-set(boost_date_time_DIR "${Boost_LIB_DIR}/cmake/boost_date_time-${BOOST_VERSION}")
-set(boost_regex_DIR "${Boost_LIB_DIR}/cmake/boost_regex-${BOOST_VERSION}")
 set(boost_atomic_DIR "${Boost_LIB_DIR}/cmake/boost_atomic-${BOOST_VERSION}")
 set(boost_chrono_DIR "${Boost_LIB_DIR}/cmake/boost_chrono-${BOOST_VERSION}")
+set(boost_container_DIR "${Boost_LIB_DIR}/cmake/boost_container-${BOOST_VERSION}")
+set(boost_date_time_DIR "${Boost_LIB_DIR}/cmake/boost_date_time-${BOOST_VERSION}")
+set(boost_filesystem_DIR "${Boost_LIB_DIR}/cmake/boost_filesystem-${BOOST_VERSION}")
+set(boost_headers_DIR "${Boost_LIB_DIR}/cmake/boost_headers-${BOOST_VERSION}")
+set(boost_json_DIR "${Boost_LIB_DIR}/cmake/boost_json-${BOOST_VERSION}")
 set(boost_log_DIR "${Boost_LIB_DIR}/cmake/boost_log-${BOOST_VERSION}")
 set(boost_log_setup_DIR "${Boost_LIB_DIR}/cmake/boost_log_setup-${BOOST_VERSION}")
+set(boost_program_options_DIR "${Boost_LIB_DIR}/cmake/boost_program_options-${BOOST_VERSION}")
+set(boost_random_DIR "${Boost_LIB_DIR}/cmake/boost_random-${BOOST_VERSION}")
+set(boost_regex_DIR "${Boost_LIB_DIR}/cmake/boost_regex-${BOOST_VERSION}")
+set(boost_system_DIR "${Boost_LIB_DIR}/cmake/boost_system-${BOOST_VERSION}")
 set(boost_thread_DIR "${Boost_LIB_DIR}/cmake/boost_thread-${BOOST_VERSION}")
+set(boost_unit_test_framework_DIR "${Boost_LIB_DIR}/cmake/boost_unit_test_framework-${BOOST_VERSION}")
 set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_NO_SYSTEM_PATHS ON)
@@ -166,7 +184,7 @@ if(SGNS_STACKTRACE_BACKTRACE)
 endif()
 
 # header only libraries must not be added here
-find_package(Boost REQUIRED COMPONENTS date_time filesystem random regex system thread log log_setup program_options)
+find_package(Boost REQUIRED COMPONENTS container date_time filesystem random regex system thread log log_setup program_options unit_test_framework json)
 include_directories(${Boost_INCLUDE_DIRS})
 
 # SQLiteModernCpp project
@@ -187,10 +205,7 @@ set(c-ares_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/cares/include" CACHE PATH "Path
 
 # libp2p
 set(libp2p_DIR "${_THIRDPARTY_BUILD_DIR}/libp2p/lib/cmake/libp2p")
-set(libp2p_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/libp2p/lib")
-set(libp2p_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/libp2p/include")
 find_package(libp2p CONFIG REQUIRED)
-include_directories(${libp2p_INCLUDE_DIR})
 
 # Find and include cares if libp2p have not included it
 if(NOT TARGET c-ares::cares_static)
@@ -199,47 +214,40 @@ endif()
 
 include_directories(${c-ares_INCLUDE_DIR})
 
+# Vulkan
+find_package(Vulkan)
+
+if(NOT TARGET Vulkan::Vulkan)
+    if(NOT DEFINED $ENV{VULKAN_SDK})
+        set(ENV{VULKAN_SDK} "${_THIRDPARTY_BUILD_DIR}/Vulkan-Loader")
+    endif()
+
+    find_package(Vulkan REQUIRED)
+endif()
+
 # ipfs-lite-cpp
 set(ipfs-lite-cpp_DIR "${_THIRDPARTY_BUILD_DIR}/ipfs-lite-cpp/lib/cmake/ipfs-lite-cpp")
-set(ipfs-lite-cpp_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/ipfs-lite-cpp/include")
-set(ipfs-lite-cpp_LIB_DIR "${_THIRDPARTY_BUILD_DIR}/ipfs-lite-cpp/lib")
-set(CBOR_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/ipfs-lite-cpp/include/deps/tinycbor/src")
 find_package(ipfs-lite-cpp CONFIG REQUIRED)
-include_directories(${ipfs-lite-cpp_INCLUDE_DIR} ${CBOR_INCLUDE_DIR})
 
 # ipfs-pubsub
-set(ipfs-pubsub_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/ipfs-pubsub/include")
 set(ipfs-pubsub_DIR "${_THIRDPARTY_BUILD_DIR}/ipfs-pubsub/lib/cmake/ipfs-pubsub")
 find_package(ipfs-pubsub CONFIG REQUIRED)
-include_directories(${ipfs-pubsub_INCLUDE_DIR})
 
 # ipfs-bitswap-cpp
-set(ipfs-bitswap-cpp_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/ipfs-bitswap-cpp/include")
 set(ipfs-bitswap-cpp_DIR "${_THIRDPARTY_BUILD_DIR}/ipfs-bitswap-cpp/lib/cmake/ipfs-bitswap-cpp")
 find_package(ipfs-bitswap-cpp CONFIG REQUIRED)
-include_directories(${ipfs-bitswap-cpp_INCLUDE_DIR})
 
 # ed25519
 set(ed25519_DIR "${_THIRDPARTY_BUILD_DIR}/ed25519/lib/cmake/ed25519")
-set(ed25519_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/ed25519/include")
 find_package(ed25519 CONFIG REQUIRED)
-include_directories(${ed25519_INCLUDE_DIR})
 
 # sr25519-donna
 set(sr25519-donna_DIR "${_THIRDPARTY_BUILD_DIR}/sr25519-donna/lib/cmake/sr25519-donna")
-set(sr25519-donna_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/sr25519-donna/include")
 find_package(sr25519-donna CONFIG REQUIRED)
-include_directories(${sr25519-donna_INCLUDE_DIR})
 
 # RapidJSON
 set(RapidJSON_DIR "${_THIRDPARTY_BUILD_DIR}/rapidjson/lib/cmake/RapidJSON")
-set(RapidJSON_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/rapidjson/include")
 find_package(RapidJSON CONFIG REQUIRED)
-include_directories(${RapidJSON_INCLUDE_DIR})
-
-# jsonrpc-lean
-set(jsonrpc_lean_INCLUDE_DIR "${_THIRDPARTY_DIR}/jsonrpc-lean/include")
-include_directories(${jsonrpc_lean_INCLUDE_DIR})
 
 # binaryen
 # set(binaryen_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/binaryen/include")
@@ -249,65 +257,93 @@ include_directories(${jsonrpc_lean_INCLUDE_DIR})
 # include_directories(${binaryen_INCLUDE_DIR} ${binaryen_INCLUDE_DIR}/binaryen)
 
 # secp256k1
-set(libsecp256k1_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/libsecp256k1/include")
-set(libsecp256k1_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/libsecp256k1/lib")
 set(libsecp256k1_DIR "${_THIRDPARTY_BUILD_DIR}/libsecp256k1/lib/cmake/libsecp256k1")
 find_package(libsecp256k1 CONFIG REQUIRED)
-include_directories(${libsecp256k1_INCLUDE_DIR})
 
 # xxhash
-set(xxhash_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/xxhash/include")
-set(xxhash_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/xxhash/lib")
 set(xxhash_DIR "${_THIRDPARTY_BUILD_DIR}/xxhash/lib/cmake/xxhash")
 find_package(xxhash CONFIG REQUIRED)
-include_directories(${xxhash_INCLUDE_DIR})
 
 # libssh2
 set(Libssh2_DIR "${_THIRDPARTY_BUILD_DIR}/libssh2/lib/cmake/libssh2")
-set(Libssh2_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/libssh2/lib")
-set(Libssh2_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/libssh2/include")
 find_package(Libssh2 CONFIG REQUIRED)
-include_directories(${LIBSSH2_INCLUDE_DIR})
 
 # AsyncIOManager
 set(AsyncIOManager_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/AsyncIOManager/include")
-set(AsyncIOManager_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/AsyncIOManager/lib")
 set(AsyncIOManager_DIR "${_THIRDPARTY_BUILD_DIR}/AsyncIOManager/lib/cmake/AsyncIOManager")
 find_package(AsyncIOManager CONFIG REQUIRED)
-include_directories(${AsyncIOManager_INCLUDE_DIR})
 
 # --------------------------------------------------------
 # Set config of crypto3
-#set(crypto3_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/crypto3/include")
-#set(crypto3_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/crypto3/lib")
-#set(crypto3_DIR "${_THIRDPARTY_BUILD_DIR}/crypto3/lib/cmake/crypto3")
-#find_package(crypto3 CONFIG REQUIRED)
-#include_directories(${crypto3_INCLUDE_DIR})
-include_directories(
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/algebra/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/block/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/codec/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/containers/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/hash/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/kdf/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/mac/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/math/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/marshalling/algebra/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/marshalling/core/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/marshalling/multiprecision/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/marshalling/zk/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/modes/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/multiprecision/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/passhash/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/pbkdf/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/pkpad/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/pubkey/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/random/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/stream/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/threshold/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/vdf/include"
-    "${THIRDPARTY_DIR}/zkLLVM/libs/crypto3/libs/zk/include"
+add_library(crypto3::algebra INTERFACE IMPORTED)
+add_library(crypto3::block INTERFACE IMPORTED)
+add_library(crypto3::blueprint INTERFACE IMPORTED)
+add_library(crypto3::codec INTERFACE IMPORTED)
+add_library(crypto3::math INTERFACE IMPORTED)
+add_library(crypto3::multiprecision INTERFACE IMPORTED)
+add_library(crypto3::pkpad INTERFACE IMPORTED)
+add_library(crypto3::pubkey INTERFACE IMPORTED)
+add_library(crypto3::random INTERFACE IMPORTED)
+add_library(crypto3::zk INTERFACE IMPORTED)
+add_library(marshalling::core INTERFACE IMPORTED)
+add_library(marshalling::crypto3_algebra INTERFACE IMPORTED)
+add_library(marshalling::crypto3_multiprecision INTERFACE IMPORTED)
+add_library(marshalling::crypto3_zk INTERFACE IMPORTED)
+
+set_target_properties(crypto3::algebra PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${ZKLLVM_DIR}/zkLLVM/include"
 )
+set_target_properties(crypto3::block PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${ZKLLVM_DIR}/zkLLVM/include"
+)
+set_target_properties(crypto3::blueprint PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${ZKLLVM_DIR}/zkLLVM/include"
+)
+set_target_properties(crypto3::codec PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${ZKLLVM_DIR}/zkLLVM/include"
+)
+set_target_properties(crypto3::math PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${ZKLLVM_DIR}/zkLLVM/include"
+)
+set_target_properties(crypto3::multiprecision PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${ZKLLVM_DIR}/zkLLVM/include"
+)
+set_target_properties(crypto3::pkpad PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${ZKLLVM_DIR}/zkLLVM/include"
+)
+set_target_properties(crypto3::pubkey PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${ZKLLVM_DIR}/zkLLVM/include"
+)
+set_target_properties(crypto3::random PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${ZKLLVM_DIR}/zkLLVM/include"
+)
+set_target_properties(crypto3::zk PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${ZKLLVM_DIR}/zkLLVM/include"
+)
+set_target_properties(marshalling::core PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${ZKLLVM_DIR}/zkLLVM/include"
+)
+set_target_properties(marshalling::crypto3_algebra PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${ZKLLVM_DIR}/zkLLVM/include"
+)
+set_target_properties(marshalling::crypto3_multiprecision PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${ZKLLVM_DIR}/zkLLVM/include"
+)
+set_target_properties(marshalling::crypto3_zk PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${ZKLLVM_DIR}/zkLLVM/include"
+)
+
+# zkLLVM
+set(zkLLVM_INCLUDE_DIR "${ZKLLVM_DIR}/zkLLVM/include")
+include_directories(${zkLLVM_INCLUDE_DIR})
+
+if (BUILD_WITH_PROOFS)
+    # circifier
+    # set(LLVM_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/circifier/include")
+    # set(LLVM_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/circifier/lib")
+    set(LLVM_DIR "${ZKLLVM_DIR}/zkLLVM/lib/cmake/llvm")
+    find_package(LLVM CONFIG REQUIRED)
+endif()
 
 # gnus_upnp
 set(gnus_upnp_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/gnus_upnp/include")
@@ -316,11 +352,37 @@ set(gnus_upnp_DIR "${_THIRDPARTY_BUILD_DIR}/gnus_upnp/lib/cmake/gnus_upnp")
 find_package(gnus_upnp CONFIG REQUIRED)
 include_directories(${gnus_upnp_INCLUDE_DIR})
 
+# wallet-core
+set(TrustWalletCore_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/wallet-core/lib")
+set(TrustWalletCore_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/wallet-core/include")
+
+find_library(TrezorCrypto_PATH TrezorCrypto PATHS ${TrustWalletCore_LIBRARY_DIR} REQUIRED)
+find_library(wallet_core_rs_PATH wallet_core_rs PATHS ${TrustWalletCore_LIBRARY_DIR} REQUIRED)
+find_library(TrustWalletCore_PATH TrustWalletCore PATHS ${TrustWalletCore_LIBRARY_DIR} REQUIRED)
+
+add_library(TrezorCrypto STATIC IMPORTED)
+add_library(wallet_core_rs STATIC IMPORTED)
+add_library(TrustWalletCore STATIC IMPORTED)
+
+set_target_properties(TrezorCrypto PROPERTIES IMPORTED_LOCATION "${TrezorCrypto_PATH}")
+set_target_properties(wallet_core_rs PROPERTIES IMPORTED_LOCATION "${wallet_core_rs_PATH}")
+set_target_properties(TrustWalletCore PROPERTIES IMPORTED_LOCATION "${TrustWalletCore_PATH}")
+
+target_include_directories(TrustWalletCore INTERFACE "${TrustWalletCore_INCLUDE_DIR}")
+
+if(${IOS})
+    find_library(SECURITY_FRAMEWORK Security)
+    target_link_libraries(TrustWalletCore INTERFACE ${SECURITY_FRAMEWORK})
+endif()
+
 include_directories(
     ${PROJECT_ROOT}/src
 )
 include_directories(
     ${PROJECT_ROOT}/GeniusKDF
+)
+include_directories(
+    ${PROJECT_ROOT}/ProofSystem
 )
 include_directories(
     ${PROJECT_ROOT}/app
@@ -346,7 +408,9 @@ link_directories(
 
 add_subdirectory(${PROJECT_ROOT}/src ${CMAKE_BINARY_DIR}/src)
 
-add_subdirectory(${PROJECT_ROOT}/GeniusKDF ${CMAKE_BINARY_DIR}/GeniusKDF)
+#add_subdirectory(${PROJECT_ROOT}/GeniusKDF ${CMAKE_BINARY_DIR}/GeniusKDF)
+
+add_subdirectory(${PROJECT_ROOT}/ProofSystem ${CMAKE_BINARY_DIR}/ProofSystem)
 
 # add_subdirectory(${PROJECT_ROOT}/app ${CMAKE_BINARY_DIR}/app)
 if(BUILD_TESTING)
@@ -405,12 +469,14 @@ install_hfile(${PROJECT_ROOT}/src/account)
 install_hfile(${PROJECT_ROOT}/app/integration)
 install_hfile(${PROJECT_ROOT}/src/local_secure_storage)
 install_hfile(${PROJECT_ROOT}/src/singleton)
+install_hfile(${PROJECT_ROOT}/src/coinprices)
 
 # install proto header files
 install_hfile(${CMAKE_CURRENT_BINARY_DIR}/generated/crdt)
 install_hfile(${CMAKE_CURRENT_BINARY_DIR}/generated/processing)
 install_hfile(${CMAKE_CURRENT_BINARY_DIR}/generated/account)
 install_hfile(${CMAKE_CURRENT_BINARY_DIR}/generated/blockchain)
+install_hfile(${CMAKE_CURRENT_BINARY_DIR}/generated/proof)
 
 # install the configuration file
 install(FILES

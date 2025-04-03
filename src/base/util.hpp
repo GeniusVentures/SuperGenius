@@ -14,14 +14,19 @@
 #include <type_traits>
 #include <optional>
 #include <algorithm>
-
+#include <cmath>
+#include <charconv>
 #include <boost/random.hpp>
+#include <boost/random/mersenne_twister.hpp>
+#include <boost/random/uniform_int_distribution.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
-
-using namespace boost::multiprecision;
+#include "outcome/outcome.hpp"
 
 namespace sgns
 {
+    using namespace boost::multiprecision;
+    namespace br = boost::random;
+
     /**
      * @brief       Convert a byte array to a hexadecimal string.
      * @param[in]   bytes A vector of bytes to be converted.
@@ -174,7 +179,6 @@ namespace sgns
             }
 
             return out_vect.end();
-           
         };
 
         for ( std::size_t i = 0; i < char_ptr_size; i += num_nibbles_resolution )
@@ -211,14 +215,46 @@ namespace sgns
         }
     }
 
-    static uint256_t GenerateRandomNumber()
+    static std::string Uint256ToString( const uint256_t &value )
     {
-        boost::random::mt19937                             gen( clock() );
-        boost::random::uniform_int_distribution<uint256_t> dist( std::numeric_limits<uint256_t>::min(),
-                                                                 std::numeric_limits<uint256_t>::max() );
-        return dist( gen );
+        std::ostringstream oss;
+        oss << "0x";
+        oss << std::hex << std::setw( 64 ) << std::setfill( '0' ) << value;
+        return oss.str();
+    }
+}
+
+/**
+ * Wait for a condition to become true with timeout
+ * @param condition a callable that returns bool, true when condition is met
+ * @param timeout maximum time to wait
+ * @param actualDuration optional pointer to store the actual wait duration
+ * @param check_interval time to wait between condition checks
+ * @return true if condition became true before timeout, false if timeout occurred
+ */
+template <typename Condition>
+bool waitForCondition(Condition condition,
+                     std::chrono::milliseconds timeout,
+                     std::chrono::milliseconds* actualDuration = nullptr,
+                     std::chrono::milliseconds check_interval = std::chrono::milliseconds(10)) {
+    auto startTime = std::chrono::steady_clock::now();
+    while (!condition()) {
+        if (std::chrono::steady_clock::now() - startTime > timeout) {
+            if (actualDuration) {
+                *actualDuration = std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::steady_clock::now() - startTime);
+            }
+            return false; // Timeout occurred
+        }
+        std::this_thread::sleep_for(check_interval);
     }
 
+    if (actualDuration) {
+        *actualDuration = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - startTime);
+    }
+    return true; // Condition met within timeout
 }
+
 
 #endif //_UTIL_HPP

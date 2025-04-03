@@ -12,46 +12,46 @@
 
 namespace sgns::processing
 {
-/** Handles subtask processing and processing results accumulation
-*/
-class ProcessingEngine : public std::enable_shared_from_this<ProcessingEngine>
-{
-public:
-    /** Create a processing engine object
+    /** Handles subtask processing and processing results accumulation
+    */
+    class ProcessingEngine : public std::enable_shared_from_this<ProcessingEngine>
+    {
+    public:
+        /** Create a processing engine object
     * @param nodeId - current processing node ID
     * @param processingCore specific processing core that process a subtask using specific algorithm
     */
-    ProcessingEngine(
-        std::string nodeId,
-        std::shared_ptr<ProcessingCore> processingCore);
-    ~ProcessingEngine();
+        ProcessingEngine( std::string                                nodeId,
+                          std::shared_ptr<ProcessingCore>            processingCore,
+                          std::function<void( const std::string & )> processingErrorSink,
+                          std::function<void( void )>                processingDoneSink );
+        ~ProcessingEngine();
 
-    // @todo rename to StartProcessing
-    void StartQueueProcessing(std::shared_ptr<SubTaskQueueAccessor> subTaskQueueAccessor);
+        // @todo rename to StartProcessing
+        void StartQueueProcessing( std::shared_ptr<SubTaskQueueAccessor> subTaskQueueAccessor );
 
-    void StopQueueProcessing();
-    bool IsQueueProcessingStarted() const;
+        void StopQueueProcessing();
+        bool IsQueueProcessingStarted() const;
 
-    void SetProcessingErrorSink(std::function<void(const std::string&)> processingErrorSink);
+    private:
+        void OnSubTaskGrabbed( boost::optional<const SGProcessing::SubTask &> subTask );
 
-private:
-    void OnSubTaskGrabbed(boost::optional<const SGProcessing::SubTask&> subTask);
-
-    /** Processes a subtask and send the processing result to corresponding result channel
+        /** Processes a subtask and send the processing result to corresponding result channel
     * @param subTask - subtask that should be processed
     */
-    void ProcessSubTask(SGProcessing::SubTask subTask);
+        void ProcessSubTask( SGProcessing::SubTask subTask );
 
-    std::string m_nodeId;
-    std::shared_ptr<ProcessingCore> m_processingCore;
-    std::function<void(const std::string&)> m_processingErrorSink;
+        std::string                                m_nodeId;
+        std::shared_ptr<ProcessingCore>            m_processingCore;
+        std::function<void( const std::string & )> m_processingErrorSink;
+        std::function<void( void )>                m_processingDoneSink;
 
-    std::shared_ptr<SubTaskQueueAccessor> m_subTaskQueueAccessor;
+        std::shared_ptr<SubTaskQueueAccessor> m_subTaskQueueAccessor;
 
-    mutable std::mutex m_mutexSubTaskQueue;
-    
-    base::Logger m_logger = base::createLogger("ProcessingEngine");
-};
+        mutable std::mutex m_mutexSubTaskQueue;
+
+        base::Logger m_logger = base::createLogger( "ProcessingEngine" );
+    };
 }
 
 #endif // GRPC_FOR_SUPERGENIUS_PROCESSING_ENGINE_HPP

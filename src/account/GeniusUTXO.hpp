@@ -22,22 +22,26 @@ namespace sgns
         {
         }
 
-        void ToggleLock(bool lock)
+        void ToggleLock( bool lock )
         {
             locked_ = lock;
         }
+
         base::Hash256 GetTxID() const
         {
             return txid_hash_;
         }
+
         uint32_t GetOutputIdx() const
         {
             return output_idx_;
         }
+
         uint64_t GetAmount() const
         {
             return amount_;
         }
+
         bool GetLock() const
         {
             return locked_;

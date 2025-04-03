@@ -5,7 +5,8 @@ target_link_libraries(rocksdb_fs_test
     base_fs_test
     database_error
     )
-if(FORCE_MULTILE)
+
+if(FORCE_MULTIPLE)
   set_target_properties(rocksdb_fs_test PROPERTIES LINK_FLAGS "${MULTIPLE_OPTION}")
 endif()
 
@@ -17,6 +18,7 @@ target_link_libraries(rocksdb_integration_test
     base_rocksdb_test
     Boost::filesystem
     )
-if(FORCE_MULTILE)
+
+if(FORCE_MULTIPLE)
   set_target_properties(rocksdb_integration_test PROPERTIES LINK_FLAGS "${MULTIPLE_OPTION}")
 endif()

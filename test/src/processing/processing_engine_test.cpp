@@ -30,18 +30,20 @@ namespace
                 std::bind(&SubTaskQueueAccessorMock::OnTimerEvent, this, std::placeholders::_1));
         }
 
-        void ConnectToSubTaskQueue(std::function<void()> onSubTaskQueueConnectedEventSink) override
+        bool ConnectToSubTaskQueue(std::function<void()> onSubTaskQueueConnectedEventSink) override
         {
             m_onSubTaskQueueConnectedEventSink = onSubTaskQueueConnectedEventSink;
+            return true;
         }
 
-        void AssignSubTasks(std::list<SGProcessing::SubTask>& subTasks) override
+        bool AssignSubTasks(std::list<SGProcessing::SubTask>& subTasks) override
         {
             m_subTasks.swap(subTasks);
             if (m_onSubTaskQueueConnectedEventSink)
             {
                 m_onSubTaskQueueConnectedEventSink();
             }
+            return true;
         }
 
         void GrabSubTask(SubTaskGrabbedCallback onSubTaskGrabbedCallback) override
@@ -58,6 +60,10 @@ namespace
         void CompleteSubTask(const std::string& subTaskId, const SGProcessing::SubTaskResult& subTaskResult) override
         {
             // Do nothing
+        }
+        bool CreateResultsChannel( const std::string &task_id ) override
+        {
+            return true;
         }
 
     private:
@@ -87,20 +93,20 @@ namespace
         {
             return true; //TODO - This is wrong - Update this tests to the actual ProcessingCoreImpl on src/processing/impl
         }
-        std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> GetCidForProc(std::string cid) override
+        std::shared_ptr<std::pair<std::shared_ptr<std::vector<char>>, std::shared_ptr<std::vector<char>>>>  GetCidForProc(std::string json_data, std::string base_json) override
         {
             return nullptr;
         }
 
-        void GetSubCidForProc(std::shared_ptr<boost::asio::io_context> ioc, std::string url, std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>& results) override
+        void GetSubCidForProc(std::shared_ptr<boost::asio::io_context> ioc,std::string url,std::shared_ptr<std::vector<char>> resultss) override
         {
-            
+            return;
         }
 
-        void ProcessSubTask(
-            const SGProcessing::SubTask& subTask, SGProcessing::SubTaskResult& result,
-            uint32_t initialHashCode) override 
+        outcome::result<SGProcessing::SubTaskResult> ProcessSubTask(
+        const SGProcessing::SubTask& subTask, uint32_t initialHashCode) override 
         {
+            SGProcessing::SubTaskResult result;
             if (m_processingMillisec > 0)
             {
                 std::this_thread::sleep_for(std::chrono::milliseconds(m_processingMillisec));
@@ -134,6 +140,7 @@ namespace
 
             m_processedSubTasks.push_back(subTask);
             m_initialHashes.push_back(initialHashCode);
+            return result;
         };
 
         std::vector<SGProcessing::SubTask> m_processedSubTasks;
@@ -176,7 +183,21 @@ public:
         logging_system->configure();
 
         libp2p::log::setLoggingSystem(logging_system);
-        libp2p::log::setLevelOfGroup("processing_engine_test", soralog::Level::DEBUG);
+#ifdef SGNS_DEBUGLOGS
+        libp2p::log::setLevelOfGroup("processing_service_test", soralog::Level::DEBUG);
+
+        auto loggerProcQM  = sgns::base::createLogger( "ProcessingSubTaskQueueManager" );
+        loggerProcQM->set_level( spdlog::level::debug );
+
+        loggerProcQM  = sgns::base::createLogger( "ProcessingSubTaskQueue");
+        loggerProcQM->set_level( spdlog::level::debug );
+
+        loggerProcQM  = sgns::base::createLogger( "ProcessingSubTaskQueueAccessorImpl");
+        loggerProcQM->set_level( spdlog::level::debug );
+#else
+        libp2p::log::setLevelOfGroup("processing_engine_test", soralog::Level::OFF);
+#endif
+
     }
 };
 /**
@@ -191,7 +212,7 @@ TEST_F(ProcessingEngineTest, SubTaskProcessing)
     auto processingCore = std::make_shared<ProcessingCoreImpl>(0);
 
     auto nodeId = "NODE_1";
-    auto engine = std::make_shared<ProcessingEngine>(nodeId, processingCore);
+    auto engine = std::make_shared<ProcessingEngine>(nodeId, processingCore, [](const std::string &){},[]{});
 
     std::list<SGProcessing::SubTask> subTasks;
     auto subTaskQueueAccessor = std::make_shared<SubTaskQueueAccessorMock>(context);
@@ -235,8 +256,8 @@ TEST_F(ProcessingEngineTest, SharedSubTaskProcessing)
     auto nodeId1 = "NODE_1";
     auto nodeId2 = "NODE_2";
 
-    auto engine1 = std::make_shared<ProcessingEngine>(nodeId1, processingCore);
-    auto engine2 = std::make_shared<ProcessingEngine>(nodeId2, processingCore);
+    auto engine1 = std::make_shared<ProcessingEngine>(nodeId1, processingCore, [](const std::string &){},[]{});
+    auto engine2 = std::make_shared<ProcessingEngine>(nodeId2, processingCore, [](const std::string &){},[]{});
 
     auto subTaskQueueAccessor1 = std::make_shared<SubTaskQueueAccessorMock>(context);
     {

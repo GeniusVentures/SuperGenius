@@ -3,7 +3,9 @@ add_library(component_factory
 )
 
 target_link_libraries(component_factory
+    PUBLIC
     outcome
-    Boost::boost)
+    Boost::headers
+)
 
 supergenius_install(component_factory)

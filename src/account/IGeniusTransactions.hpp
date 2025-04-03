@@ -11,21 +11,29 @@
 #include <vector>
 #include <string>
 
-#include <boost/optional.hpp>
 #include <boost/format.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
 
+#include "outcome/outcome.hpp"
 #include "account/proto/SGTransaction.pb.h"
 
-using namespace boost::multiprecision;
+#include <gsl/span>
 
 namespace sgns
 {
+    using namespace boost::multiprecision;
+
     //class GeniusBlockHeader; //TODO - Design new header or rework old one
 
     class IGeniusTransactions
     {
     public:
+        /**
+         * @brief   Alias for the de-serializer method type to be implemented in derived classes
+         */
+        using TransactionDeserializeFn =
+            std::function<std::shared_ptr<IGeniusTransactions>( const std::vector<uint8_t> & )>;
+
         IGeniusTransactions( std::string type, SGTransaction::DAGStruct dag ) :
             dag_st( std::move( dag ) ), transaction_type( std::move( type ) )
         {
@@ -38,55 +46,66 @@ namespace sgns
             return transaction_type;
         }
 
-        static boost::optional<SGTransaction::DAGStruct> DeSerializeDAGStruct( std::vector<uint8_t> &data )
-        {
-            SGTransaction::DAGWrapper dag_wrap;
-            if ( !dag_wrap.ParseFromArray( data.data(), data.size() ) )
-            {
-                std::cerr << "Failed to parse DAGStruct from array." << std::endl;
-                return boost::none;
-            }
-            SGTransaction::DAGStruct dag;
-            dag.CopyFrom( *dag_wrap.mutable_dag_struct() );
-            return dag;
-        }
+        static outcome::result<SGTransaction::DAGStruct> DeSerializeDAGStruct( const std::vector<uint8_t> &data );
 
-        static SGTransaction::DAGStruct SetDAGWithType( const SGTransaction::DAGStruct &dag, const std::string &type )
+        static SGTransaction::DAGStruct SetDAGWithType( SGTransaction::DAGStruct dag, const std::string &type )
         {
-            SGTransaction::DAGStruct dag_with_type = dag;
-            dag_with_type.set_type( type );
-            return dag_with_type;
+            dag.set_type( type );
+            return dag;
         }
 
         virtual std::vector<uint8_t> SerializeByteVector() = 0;
 
         virtual std::string GetTransactionSpecificPath() = 0;
 
+        static std::string GetTransactionFullPath(const std::string &address, const std::string &type, const uint64_t &nonce)
+        {
+            boost::format full_path( address + "/tx/" + type + "/%llu" );
+            full_path % nonce;
+
+            return full_path.str();
+        }
+
         std::string GetTransactionFullPath()
         {
-            boost::format full_path( GetSrcAddress<std::string>() + "/tx/" + GetTransactionSpecificPath() + "/%llu" );
+            boost::format full_path( GetSrcAddress() + "/tx/" + GetTransactionSpecificPath() + "/%llu" );
             full_path % dag_st.nonce();
 
             return full_path.str();
         }
 
-        template <typename T> const T GetSrcAddress() const;
-
-        template <> const std::string GetSrcAddress<std::string>() const
+        std::string GetProofFullPath()
         {
-            //std::string address(bytes_data.begin(), bytes_data.end());
-            //std::ostringstream oss;
-            //oss << std::hex << src_address;
+            boost::format full_path( GetSrcAddress() + "/proof" + "/%llu" );
+            full_path % dag_st.nonce();
 
+            return full_path.str();
+        }
+
+        std::string GetSrcAddress() const
+        {
             return dag_st.source_addr();
         }
 
-        template <> const uint256_t GetSrcAddress<uint256_t>() const
+        /**
+         * @brief       Registers a deserializer function for a specific transaction type.
+         * @param[in]   transaction_type The transaction type for which the deserializer is registered.
+         * @param[in]   fn The deserializer function to be registered.
+         */
+        static void RegisterDeserializer( const std::string &transaction_type, TransactionDeserializeFn fn )
         {
-            return uint256_t{ dag_st.source_addr() };
+            deserializers_map[transaction_type] = std::move( fn );
         }
 
-        SGTransaction::DAGStruct dag_st;
+        static std::unordered_map<std::string, TransactionDeserializeFn> &GetDeSerializers()
+        {
+            return deserializers_map;
+        }
+
+        void FillHash();
+
+        SGTransaction::DAGStruct                                                dag_st;
+        static inline std::unordered_map<std::string, TransactionDeserializeFn> deserializers_map;
 
     private:
         const std::string transaction_type;

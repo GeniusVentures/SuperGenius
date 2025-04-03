@@ -7,21 +7,10 @@
 #include <boost/format.hpp>
 #include <rapidjson/document.h>
 #include "AccountHelper.hpp"
-#include "processing/processing_imagesplit.hpp"
-#include "processing/processing_tasksplit.hpp"
-#include "processing/processing_subtask_enqueuer_impl.hpp"
-#include "processing/processing_subtask_result_storage.hpp"
-#include "processing/processors/processing_processor_mnn_posenet.hpp"
-#include "processing/impl/processing_subtask_result_storage_impl.hpp"
-#ifndef __cplusplus
-extern "C"
-{
-#endif
-    extern AccountKey2   ACCOUNT_KEY;
-    extern DevConfig_st2 DEV_CONFIG;
-#ifndef __cplusplus
-}
-#endif
+
+extern AccountKey2   ACCOUNT_KEY;
+extern DevConfig_st2 DEV_CONFIG;
+
 static const std::string logger_config( R"(
             # ----------------
             sinks:
@@ -40,10 +29,12 @@ static const std::string logger_config( R"(
 
 namespace sgns
 {
-    AccountHelper::AccountHelper( const AccountKey2 &priv_key_data, const DevConfig_st2 &dev_config ) :
-        account_( std::make_shared<GeniusAccount>( 0 ,"")), //
-        io_( std::make_shared<boost::asio::io_context>() ),   //
-        dev_config_( dev_config )                             //
+    AccountHelper::AccountHelper( const AccountKey2   &priv_key_data,
+                                  const DevConfig_st2 &dev_config,
+                                  const char          *eth_private_key ) :
+        account_( std::make_shared<GeniusAccount>( 0, "", eth_private_key ) ),
+        io_( std::make_shared<boost::asio::io_context>() ),
+        dev_config_( dev_config )
     {
         logging_system = std::make_shared<soralog::LoggingSystem>( std::make_shared<soralog::ConfiguratorFromYAML>(
             // Original LibP2P logging config
@@ -67,7 +58,7 @@ namespace sgns
         logNoise->set_level( spdlog::level::trace );
 
         auto pubsubKeyPath =
-            ( boost::format( "SuperGNUSNode.TestNet.%s/pubs_processor" ) % account_->GetAddress<std::string>() ).str();
+            ( boost::format( "SuperGNUSNode.TestNet.%s/pubs_processor" ) % account_->GetAddress() ).str();
 
         pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
             crdt::KeyPairFileStorage( pubsubKeyPath ).GetKeyPair().value() );
@@ -75,7 +66,7 @@ namespace sgns
 
         globaldb_ = std::make_shared<crdt::GlobalDB>(
             io_,
-            ( boost::format( "SuperGNUSNode.TestNet.%s" ) % account_->GetAddress<std::string>() ).str(),
+            ( boost::format( "SuperGNUSNode.TestNet.%s" ) % account_->GetAddress() ).str(),
             40010,
             std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_, std::string( PROCESSING_CHANNEL ) ) );
 
@@ -86,18 +77,30 @@ namespace sgns
         hasher_ = std::make_shared<crypto::HasherImpl>();
 
         header_repo_ = std::make_shared<blockchain::KeyValueBlockHeaderRepository>(
-            globaldb_, hasher_, ( boost::format( std::string( db_path_ ) ) % TEST_NET ).str() );
-        auto maybe_block_storage =
-            blockchain::KeyValueBlockStorage::create( root_hash, globaldb_, hasher_, header_repo_, []( auto & ) {} );
+            globaldb_,
+            hasher_,
+            ( boost::format( std::string( db_path_ ) ) % TEST_NET ).str() );
+        auto maybe_block_storage = blockchain::KeyValueBlockStorage::create( root_hash,
+                                                                             globaldb_,
+                                                                             hasher_,
+                                                                             header_repo_,
+                                                                             []( auto & ) {} );
 
         if ( !maybe_block_storage )
         {
             std::cout << "Error initializing blockchain" << std::endl;
             throw std::runtime_error( "Error initializing blockchain" );
         }
-        block_storage_ = std::move( maybe_block_storage.value() );
-        transaction_manager_ =
-            std::make_shared<TransactionManager>( globaldb_, io_, account_, hasher_, block_storage_ );
+        block_storage_       = std::move( maybe_block_storage.value() );
+        transaction_manager_ = std::make_shared<TransactionManager>(
+            globaldb_,
+            io_,
+            account_,
+            hasher_,
+            ( boost::format( "SuperGNUSNode.TestNet.%s" ) % account_->GetAddress() ).str(),
+            pubsub_,
+            nullptr,
+            40010 );
         transaction_manager_->Start();
 
         // Encode the string to UTF-8 bytes

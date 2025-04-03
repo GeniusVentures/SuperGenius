@@ -35,7 +35,7 @@ namespace sgns::network {
       return Error::DUPLICATE_REQUEST_ID;
     }
 
-    BlocksResponse response{request.id};
+    BlocksResponse response{request.id, {}};
 
     // firstly, check if we have both "from" & "to" blocks (if set)
     auto from_hash_res = blocks_headers_->getHashById(request.from);

@@ -1,10 +1,9 @@
-
-
 add_library(scale_message_read_writer
     scale_message_read_writer.hpp
     scale_message_read_writer.cpp
-    )
+)
 target_link_libraries(scale_message_read_writer
+    PUBLIC
     p2p::p2p_message_read_writer
     scale
-    )
+)

@@ -1,50 +1,98 @@
 add_library(hexutil
     hexutil.hpp
     hexutil.cpp
-    )
-set_target_properties(hexutil PROPERTIES PUBLIC_HEADER "hexutil.hpp")
+)
 target_link_libraries(hexutil
-    Boost::boost
+    PUBLIC
     outcome
-    )
+)
 supergenius_install(hexutil)
 
 add_library(buffer
     buffer.hpp
     buffer.cpp
-    )
-set_target_properties(buffer PROPERTIES PUBLIC_HEADER "buffer.hpp")
+)
 target_link_libraries(buffer
+    PUBLIC
+    Boost::headers
+    outcome
+    PRIVATE
     hexutil
-    )
+)
 supergenius_install(buffer)
 
 add_library(blob
     blob.hpp
     blob.cpp
-    )
-set_target_properties(blob PROPERTIES PUBLIC_HEADER "blob.hpp")
+)
 target_link_libraries(blob
+    PUBLIC
     hexutil
-    )
+    Boost::headers
+)
 supergenius_install(blob)
 
-
 add_library(logger
+    logger.hpp
     logger.cpp
-    )
-set_target_properties(logger PROPERTIES PUBLIC_HEADER "logger.hpp")
+)
 target_link_libraries(logger
+    PUBLIC
     spdlog::spdlog
-    )
+)
 supergenius_install(logger)
 
 add_library(mp_utils
     mp_utils.cpp
     mp_utils.hpp
-    )
-set_target_properties(mp_utils PROPERTIES PUBLIC_HEADER "mp_utils.hpp")
+)
 target_link_libraries(mp_utils
-    Boost::boost
-    )
+    PUBLIC
+    Boost::headers
+)
 supergenius_install(mp_utils)
+
+add_library(fixed_point
+    fixed_point.cpp
+    fixed_point.hpp
+)
+target_link_libraries(fixed_point
+    PUBLIC
+    Boost::headers
+    outcome
+)
+supergenius_install(fixed_point)
+
+message(STATUS "Generating sgnsv.h from sgnsv.h.in")
+
+cmake_policy(SET CMP0115 NEW)
+
+if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/sgnsv.h.in")
+    message(FATAL_ERROR "sgnsv.h.in is missing in ${CMAKE_CURRENT_SOURCE_DIR}")
+endif()
+
+file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/generated/base)
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/sgnsv.h.in
+    ${CMAKE_BINARY_DIR}/generated/base/sgnsv.h
+    @ONLY
+)
+
+if(NOT EXISTS "${CMAKE_BINARY_DIR}/generated/base/sgnsv.h")
+    message(FATAL_ERROR "Error: Generated file ${CMAKE_BINARY_DIR}/generated/base/sgnsv.h not found!")
+endif()
+
+add_library(sgns_version
+sgns_version.cpp
+sgns_version.hpp
+${CMAKE_BINARY_DIR}/generated/base/sgnsv.h
+)
+
+target_include_directories(sgns_version
+  PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/generated/>
+    $<INSTALL_INTERFACE:include>
+)
+
+supergenius_install(sgns_version)
+

@@ -11,6 +11,88 @@
             "program": "${workspaceFolder}/build/Linux/Debug/example/node_test/node_example",
             "args": [],
             "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Processing Nodes Unit Test (Linux)",
+            "program": "${workspaceFolder}/build/Linux/Debug/test_bin/processing_nodes_test",
+            "args": ["-R processing_nodes"],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Transaction Sync Unit Test (Linux)",
+            "program": "${workspaceFolder}/build/Linux/Debug/test_bin/transaction_sync_test",
+            "args": ["-R transaction_sync"],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Multi Account Access Test (Linux)",
+            "program": "${workspaceFolder}/build/Linux/Debug/test_bin/multi_account_test",
+            "args": ["-R transaction_sync"],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "cppdbg",
+            "request": "launch",
+            "name": "Processing Nodes Unit Test (macOS)",
+            "program": "${workspaceFolder}/build/OSX/Debug/test_bin/processing_nodes_test",
+            "args": ["-R", "processing_nodes"],
+            "cwd": "${workspaceFolder}",
+            "stopAtEntry": false,
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "lldb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "type": "cppdbg",
+            "request": "launch",
+            "name": "Transaction Sync Unit Test (macOS)",
+            "program": "${workspaceFolder}/build/OSX/Debug/test_bin/transaction_sync_test",
+            "args": ["-R", "transaction"],
+            "cwd": "${workspaceFolder}",
+            "stopAtEntry": false,
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "lldb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "type": "cppdbg",
+            "request": "launch",
+            "name": "Node Example (macOS)",
+            "program": "${workspaceFolder}/build/OSX/Debug/example/node_test/node_example",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "stopAtEntry": false,
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "lldb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
         }
     ]
+    
 }

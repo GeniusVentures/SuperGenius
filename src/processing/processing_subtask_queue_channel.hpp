@@ -11,6 +11,8 @@
 #include <string>
 #include <memory>
 
+#include <ipfs_pubsub/gossip_pubsub_topic.hpp>
+
 namespace sgns::processing
 {
 /** Subtask queue channel interface which is used for in-memory queue synchronization
@@ -29,6 +31,18 @@ public:
     * queue = subtask queue
     */
     virtual void PublishQueue(std::shared_ptr<SGProcessing::SubTaskQueue> queue) = 0;
+
+    /**
+     * Returns the number of active nodes in the channel
+     * @return number of nodes in the channel
+     */
+    virtual size_t GetActiveNodesCount() const = 0;
+
+    /**
+     * Get the number of active nodes in the channel
+     * @return vector of nodes in the channel
+     */
+    virtual std::vector<libp2p::peer::PeerId> GetActiveNodes() const = 0;
 };
 }
 #endif // SUPERGENIUS_PROCESSING_SUBTASK_QUEUE_CHANNEL_HPP

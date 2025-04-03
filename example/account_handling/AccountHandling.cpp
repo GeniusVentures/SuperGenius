@@ -4,9 +4,7 @@
  * @date       2024-03-12
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
-#include <math.h>
-#include <fstream>
-#include <memory>
+#include <cmath>
 #include <iostream>
 #include <cstdlib>
 #include <cstdint>
@@ -15,11 +13,9 @@
 #include <boost/format.hpp>
 #include <boost/asio.hpp>
 #include "account/TransactionManager.hpp"
-#include "blockchain/impl/common.hpp"
-#include "blockchain/impl/key_value_block_header_repository.hpp"
-#include "blockchain/impl/key_value_block_storage.hpp"
-#include "crypto/hasher/hasher_impl.hpp"
 #include "AccountHelper.hpp"
+
+using namespace boost::multiprecision;
 
 std::vector<std::string> wallet_addr{ "0x4E8794BE4831C45D0699865028C8BE23D608C19C1E24371E3089614A50514262",
                                       "0x06DDC80283462181C02917CC3E99C7BC4BDB2856E19A392300A62DBA6262212C" };
@@ -51,7 +47,7 @@ void CreateTransferTransaction( const std::vector<std::string> &args, sgns::Tran
         return;
     }
     uint64_t amount = std::stoull( args[1] );
-    if ( !transaction_manager.TransferFunds( uint256_t{ args[1] }, uint256_t{ args[2] } ) )
+    if ( !transaction_manager.TransferFunds( amount, { args[2] } ) )
     {
         std::cout << "Insufficient funds.\n";
     }
@@ -75,7 +71,7 @@ void MintTokens( const std::vector<std::string> &args, sgns::TransactionManager 
         std::cerr << "Invalid process command format.\n";
         return;
     }
-    transaction_manager.MintFunds( std::stoull( args[1] ) );
+    transaction_manager.MintFunds( std::stoull( args[1] ), "", "", "" );
 }
 
 void PrintAccountInfo( const std::vector<std::string> &args, sgns::TransactionManager &transaction_manager )
@@ -144,11 +140,11 @@ int main( int argc, char *argv[] )
     std::string own_wallet_address( argv[2] );
 
     AccountKey2   key;
-    DevConfig_st2 local_config{ "0xbeefbeef", 0.65f };
+    DevConfig_st2 local_config{ "0xbeefbeef", "0.65" };
 
     strncpy( key, argv[2], sizeof( key ) );
 
-    sgns::AccountHelper helper( key, local_config );
+    sgns::AccountHelper helper( key, local_config, "deadbeef" );
 
     while ( true )
     {

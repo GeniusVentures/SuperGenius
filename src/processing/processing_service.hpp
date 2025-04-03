@@ -8,7 +8,7 @@
 
 namespace sgns::processing
 {
-    class ProcessingServiceImpl
+    class ProcessingServiceImpl : public std::enable_shared_from_this<ProcessingServiceImpl>
     {
     public:
         /** Constructs a processing service.
@@ -21,14 +21,21 @@ namespace sgns::processing
                                std::shared_ptr<SubTaskStateStorage>             subTaskStateStorage,
                                std::shared_ptr<SubTaskResultStorage>            subTaskResultStorage,
                                std::shared_ptr<ProcessingCore>                  processingCore );
-        ProcessingServiceImpl( std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>         gossipPubSub,
-                               size_t                                                   maximalNodesCount,
-                               std::shared_ptr<SubTaskEnqueuer>                         subTaskEnqueuer,
-                               std::shared_ptr<SubTaskStateStorage>                     subTaskStateStorage,
-                               std::shared_ptr<SubTaskResultStorage>                    subTaskResultStorage,
-                               std::shared_ptr<ProcessingCore>                          processingCore,
-                               std::function<void( const std::string &subTaskQueueId )> userCallbackSuccess,
-                               std::function<void( const std::string &subTaskQueueId )> userCallbackError );
+        ProcessingServiceImpl( std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>                  gossipPubSub,
+                               size_t                                                            maximalNodesCount,
+                               std::shared_ptr<SubTaskEnqueuer>                                  subTaskEnqueuer,
+                               std::shared_ptr<SubTaskStateStorage>                              subTaskStateStorage,
+                               std::shared_ptr<SubTaskResultStorage>                             subTaskResultStorage,
+                               std::shared_ptr<ProcessingCore>                                   processingCore,
+                               std::function<void( const std::string              &subTaskQueueId,
+                                                   const SGProcessing::TaskResult &taskresult )> userCallbackSuccess,
+                               std::function<void( const std::string &subTaskQueueId )>          userCallbackError,
+                               std::string                                                       node_address );
+
+        ~ProcessingServiceImpl()
+        {
+            StopProcessing();
+        }
 
         void StartProcessing( const std::string &processingGridChannelId );
         void StopProcessing();
@@ -51,6 +58,7 @@ namespace sgns::processing
         void OnQueueProcessingCompleted( const std::string              &subTaskQueueId,
                                          const SGProcessing::TaskResult &taskResult );
         void OnProcessingError( const std::string &subTaskQueueId, const std::string &errorMessage );
+        void OnProcessingDone( const std::string &taskId );
 
         void AcceptProcessingChannel( const std::string &channelId );
 
@@ -58,22 +66,44 @@ namespace sgns::processing
 
         void HandleRequestTimeout();
 
-        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>         m_gossipPubSub;
-        std::shared_ptr<boost::asio::io_context>                 m_context;
-        size_t                                                   m_maximalNodesCount;
-        std::shared_ptr<SubTaskEnqueuer>                         m_subTaskEnqueuer;
-        std::shared_ptr<SubTaskStateStorage>                     m_subTaskStateStorage;
-        std::shared_ptr<SubTaskResultStorage>                    m_subTaskResultStorage;
-        std::shared_ptr<ProcessingCore>                          m_processingCore;
-        std::unique_ptr<sgns::ipfs_pubsub::GossipPubSubTopic>    m_gridChannel;
-        std::map<std::string, std::shared_ptr<ProcessingNode>>   m_processingNodes;
-        boost::asio::deadline_timer                              m_timerChannelListRequestTimeout;
-        boost::posix_time::time_duration                         m_channelListRequestTimeout;
-        bool                                                     m_waitingCHannelRequest = false;
-        std::atomic<bool>                                        m_isStopped;
-        mutable std::mutex                                       m_mutexNodes;
-        std::function<void( const std::string &subTaskQueueId )> userCallbackSuccess_;
+        void BroadcastNodeCreationIntent( const std::string &subTaskQueueId );
+        void HandleNodeCreationTimeout();
+        void OnNodeCreationIntent( const std::string &peerAddress, const std::string &subTaskQueueId );
+        bool HasLowestAddress() const;
+        bool IsPendingCreationStale() const;
+        void CancelPendingCreation( const std::string &reason );
+
+        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>       m_gossipPubSub;
+        std::shared_ptr<boost::asio::io_context>               m_context;
+        std::unique_ptr<boost::asio::io_context::work>         m_context_work; // Keep context alive
+        std::thread                                            io_thread;
+        size_t                                                 m_maximalNodesCount;
+        std::shared_ptr<SubTaskEnqueuer>                       m_subTaskEnqueuer;
+        std::shared_ptr<SubTaskStateStorage>                   m_subTaskStateStorage;
+        std::shared_ptr<SubTaskResultStorage>                  m_subTaskResultStorage;
+        std::shared_ptr<ProcessingCore>                        m_processingCore;
+        std::unique_ptr<sgns::ipfs_pubsub::GossipPubSubTopic>  m_gridChannel;
+        std::map<std::string, std::shared_ptr<ProcessingNode>> m_processingNodes;
+        boost::asio::deadline_timer                            m_timerChannelListRequestTimeout;
+        boost::posix_time::time_duration                       m_channelListRequestTimeout;
+        bool                                                   m_waitingCHannelRequest = false;
+        std::atomic<bool>                                      m_isStopped;
+        mutable std::recursive_mutex                           m_mutexNodes;
+        std::function<void( const std::string &subTaskQueueId, const SGProcessing::TaskResult &taskresult )>
+                                                                 userCallbackSuccess_;
         std::function<void( const std::string &subTaskQueueId )> userCallbackError_;
+        std::string                                              node_address_;
+
+        std::set<std::string>                 m_competingPeers;
+        std::chrono::steady_clock::time_point m_pendingCreationTimestamp;
+        std::chrono::seconds                  m_pendingCreationTimeout{ 10 };
+
+        boost::asio::deadline_timer         m_nodeCreationTimer;
+        boost::posix_time::time_duration    m_nodeCreationTimeout;
+        std::string                         m_pendingSubTaskQueueId;
+        std::list<SGProcessing::SubTask>    m_pendingSubTasks;
+        boost::optional<SGProcessing::Task> m_pendingTask;
+        std::mutex                          m_mutexPendingCreation;
 
         base::Logger m_logger = base::createLogger( "ProcessingService" );
     };

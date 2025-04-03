@@ -25,7 +25,7 @@ bool ProcessingValidationCore::ValidateResults(
         {
             if (itResult->second.chunk_hashes_size() != subTask.chunkstoprocess_size())
             {
-                m_logger->error("WRONG_RESULT_HASHES_LENGTH {}", subTask.subtaskid());
+                m_logger->error("WRONG_RESULT_HASHES_LENGTH {}: {} {}", subTask.subtaskid(), itResult->second.chunk_hashes_size(), subTask.chunkstoprocess_size());
                 invalidSubTaskIds.insert(subTask.subtaskid());
             }
             else
@@ -43,7 +43,7 @@ bool ProcessingValidationCore::ValidateResults(
         else
         {
             // Since all subtasks are processed a result should be found for all of them
-            m_logger->error("NO_RESULTS_FOUND {}", subTask.subtaskid());
+            m_logger->error("NO_RESULTS_FOUND {} on ", subTask.subtaskid());
             invalidSubTaskIds.insert(subTask.subtaskid());
         }
     }

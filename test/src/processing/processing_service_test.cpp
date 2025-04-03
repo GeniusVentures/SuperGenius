@@ -1,87 +1,14 @@
 
+#include "processing_service_test.hpp"
 #include "processing/processing_service.hpp"
-#include "processing/processing_subtask_enqueuer_impl.hpp"
 
 #include <libp2p/log/configurator.hpp>
 #include <libp2p/log/logger.hpp>
-
 #include <gtest/gtest.h>
-#include <thread>
+#include "testutil/wait_condition.hpp"
 
 using namespace sgns::processing;
-
-namespace
-{
-class SubTaskStateStorageMock: public SubTaskStateStorage
-{
-public:
-    void ChangeSubTaskState(const std::string& subTaskId, SGProcessing::SubTaskState::Type state) override {}
-    std::optional<SGProcessing::SubTaskState> GetSubTaskState(const std::string& subTaskId) override
-    {
-        return std::nullopt;
-    }
-};
-
-class SubTaskResultStorageMock : public SubTaskResultStorage
-{
-public:
-    void AddSubTaskResult(const SGProcessing::SubTaskResult& subTaskResult) override {}
-    void RemoveSubTaskResult(const std::string& subTaskId) override {}
-    std::vector<SGProcessing::SubTaskResult> GetSubTaskResults(
-        const std::set<std::string>& subTaskIds) override { return {};}
-};
-
-class ProcessingCoreImpl : public ProcessingCore
-{
-public:
-    void  ProcessSubTask(
-        const SGProcessing::SubTask& subTask, SGProcessing::SubTaskResult& result,
-        uint32_t initialHashCode) override {};
-    bool SetProcessingTypeFromJson(std::string jsondata) override
-    {
-        return true; //TODO - This is wrong - Update this tests to the actual ProcessingCoreImpl on src/processing/impl
-    }
-    std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> GetCidForProc(std::string cid) override
-    {
-        return nullptr;
-    }
-
-    void GetSubCidForProc(std::shared_ptr<boost::asio::io_context> ioc, std::string url, std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>& results) override
-    {
-        
-    }
-};
-
-class ProcessingTaskQueueImpl : public ProcessingTaskQueue
-{
-public:
-    void EnqueueTask(
-        const SGProcessing::Task& task,
-        const std::list<SGProcessing::SubTask>& subTasks) override {}
-
-    bool GetSubTasks(
-        const std::string& taskId,
-        std::list<SGProcessing::SubTask>& subTasks) override 
-    {
-        return false;
-    }
-
-    outcome::result<std::pair<std::string, SGProcessing::Task>> GrabTask() override
-    {
-        return outcome::failure(boost::system::error_code{});
-    }
-    
-    bool IsTaskCompleted( const std::string &taskId ) override
-    {
-        return true;
-    }
-    
-    bool CompleteTask(const std::string& taskKey, const SGProcessing::TaskResult& task) override
-    {
-        return false;
-    }
-};
-}
+using namespace sgns::test;
 
 const std::string logger_config(R"(
 # ----------------
@@ -92,31 +19,133 @@ sinks:
 groups:
   - name: processing_service_test
     sink: console
-    level: info
+    level: off
     children:
       - name: libp2p
       - name: Gossip
 # ----------------
   )");
 
-class ProcessingServiceTest : public ::testing::Test
+void ProcessingServiceTest::SetUp()
 {
-public:
-    virtual void SetUp() override
-    {
-        // prepare log system
-        auto logging_system = std::make_shared<soralog::LoggingSystem>(
-            std::make_shared<soralog::ConfiguratorFromYAML>(
-                // Original LibP2P logging config
-                std::make_shared<libp2p::log::Configurator>(),
-                // Additional logging config for application
-                logger_config));
-        logging_system->configure();
+    SetUp("processing_service_test", logger_config);
+    Initialize(2, 50);
+}
 
-        libp2p::log::setLoggingSystem(logging_system);
-        libp2p::log::setLevelOfGroup("processing_service_test", soralog::Level::DEBUG);
+void ProcessingServiceTest::SetUp(std::string name, std::string loggerConfig)
+{
+    // prepare log system
+    auto logSystem = std::make_shared<soralog::LoggingSystem>(
+        std::make_shared<soralog::ConfiguratorFromYAML>(
+            // Original LibP2P logging config
+            std::make_shared<libp2p::log::Configurator>(),
+            // Additional logging config for application
+            loggerConfig));
+    auto result = logSystem->configure();
+
+    libp2p::log::setLoggingSystem(logSystem);
+
+    m_Logger = logSystem->getLogger("console", name);
+
+#ifdef SGNS_DEBUGLOGS
+    libp2p::log::setLevelOfGroup(name, soralog::Level::DEBUG);
+
+    auto loggerProcQM  = sgns::base::createLogger( "ProcessingSubTaskQueueManager" );
+    loggerProcQM->set_level( spdlog::level::debug );
+
+    loggerProcQM  = sgns::base::createLogger( "ProcessingSubTaskQueue");
+    loggerProcQM->set_level( spdlog::level::debug );
+
+    loggerProcQM  = sgns::base::createLogger( "ProcessingSubTaskQueueAccessorImpl");
+    loggerProcQM->set_level( spdlog::level::debug );
+#else
+    libp2p::log::setLevelOfGroup(name, soralog::Level::OFF);
+#endif
+
+}
+
+void ProcessingServiceTest::TearDown()
+{
+    for (auto& pubs : m_pubsub_nodes)
+    {
+        pubs->Stop();
     }
-};
+}
+
+void ProcessingServiceTest::Initialize(uint64_t numNodes, size_t processingTime)
+{
+    // create 2 nodes default
+    std::vector<std::string> bootstrap_nodes = {};
+    for (size_t i = 0; i < numNodes; ++i)
+    {
+        auto pubsub_node = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();
+        m_pubsub_nodes.push_back(pubsub_node);
+        m_pubsub_futures.push_back(m_pubsub_nodes[i]->Start(40001 + i, bootstrap_nodes));
+        if (i == 0)
+        {
+            bootstrap_nodes = { pubsub_node->GetLocalAddress() };
+        }
+    }
+
+    std::chrono::milliseconds resultTime;
+    ASSERT_WAIT_FOR_CONDITION(
+        ([this]() {
+            for (auto& pubs_future : m_pubsub_futures)
+            {
+                try
+                {
+                   pubs_future.get();
+                } catch (const std::exception& e) {
+                    m_Logger->error("Pubsub node start failed: {}", e.what());
+                }
+            }
+            return true;
+        }),
+        std::chrono::milliseconds(2000),
+        "Pubsub nodes start during initialization failed",
+        &resultTime
+    );
+
+    Color::PrintInfo("Waited ", resultTime.count(), " ms for pubsub node initialization");
+
+    for (size_t i = 0; i < numNodes; ++i)
+    {
+        std::string nodeId = "NODE_" + std::to_string(i+1);
+        auto pubsub_node = m_pubsub_nodes[i];
+        // Both nodes process at the same speed
+        auto proccessingCore =
+            std::make_shared<sgns::test::ProcessingCoreImpl>( processingTime );
+        m_processing_cores.push_back(proccessingCore);
+        auto queuePubSubChannel =
+            std::make_shared<ProcessingSubTaskQueueChannelPubSub>(pubsub_node, "QUEUE_CHANNEL_ID");
+        m_processing_queues_channel_pub_subs.push_back(queuePubSubChannel);
+        auto processingQueueManager =
+            std::make_shared<ProcessingSubTaskQueueManager>(
+                queuePubSubChannel, pubsub_node->GetAsioContext(), nodeId, [](const std::string &){});
+        m_processing_queues_managers.push_back(processingQueueManager);
+        auto processingEngine =
+            std::make_shared<ProcessingEngine>(nodeId, proccessingCore, [](const std::string &){},[]{});
+        m_processing_engines.push_back(processingEngine);
+        m_IsTaskFinalized.push_back(std::make_unique<std::atomic<bool>>(false));
+        auto queueAccessor =
+            std::make_shared<SubTaskQueueAccessorImpl>(
+            pubsub_node,
+            processingQueueManager,
+            std::make_shared<SubTaskStateStorageMock>(),
+            std::make_shared<SubTaskResultStorageMock>(),
+            [this, i, nodeId](const SGProcessing::TaskResult&)
+            {
+                m_IsTaskFinalized[i]->store(true);
+                Color::PrintInfo("Task finalized by ", nodeId);
+            },
+            [](const std::string &) {});
+
+        m_processing_queues_accessors.push_back(queueAccessor);
+        queueAccessor->CreateResultsChannel("test");
+    }
+
+}
+
 /**
  * @given Empty queue list
  * @when A queue channel received
@@ -124,15 +153,15 @@ public:
  */
 TEST_F(ProcessingServiceTest, ProcessingSlotsAreAvailable)
 {
-    auto pubs = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();
-    pubs->Start(40001, {});
+    auto pubs1 = m_pubsub_nodes[0];
+    auto pubs2 = m_pubsub_nodes[1];
 
     auto processingCore = std::make_shared<ProcessingCoreImpl>();
     auto taskQueue = std::make_shared<ProcessingTaskQueueImpl>();
     auto enqueuer = std::make_shared<SubTaskEnqueuerImpl>(taskQueue);
 
-    ProcessingServiceImpl processingService(
-        pubs,
+    auto processingService = std::make_shared<ProcessingServiceImpl>(
+        pubs1,
         1,
         enqueuer,
         std::make_shared<SubTaskStateStorageMock>(),
@@ -140,22 +169,23 @@ TEST_F(ProcessingServiceTest, ProcessingSlotsAreAvailable)
         processingCore);
 
 
-    sgns::ipfs_pubsub::GossipPubSubTopic gridChannel(pubs, "GRID_CHANNEL_ID");
-    gridChannel.Subscribe([](boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message&> message) {});
+    sgns::ipfs_pubsub::GossipPubSubTopic gridChannel1(pubs1, "GRID_CHANNEL_ID");
+    sgns::ipfs_pubsub::GossipPubSubTopic gridChannel2(pubs2, "GRID_CHANNEL_ID");
+    gridChannel1.Subscribe([](boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message&> message) {});
+    gridChannel2.Subscribe([](boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message&> message) {});
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
-    processingService.StartProcessing("GRID_CHANNEL_ID");
+    processingService->StartProcessing("GRID_CHANNEL_ID");
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
     SGProcessing::GridChannelMessage gridMessage;
     auto channelResponse = gridMessage.mutable_processing_channel_response();
     channelResponse->set_channel_id("PROCESSING_QUEUE_ID");
-    gridChannel.Publish(gridMessage.SerializeAsString());
+    gridChannel2.Publish(gridMessage.SerializeAsString());
 
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-    pubs->Stop();
 
-    EXPECT_EQ(processingService.GetProcessingNodesCount(), 1);
+    EXPECT_EQ(processingService->GetProcessingNodesCount(), 1);
 }
 
 /**
@@ -165,17 +195,17 @@ TEST_F(ProcessingServiceTest, ProcessingSlotsAreAvailable)
  */
 // The test disabled due to processing room handling removed
 // No room capacity is checked
-TEST_F(ProcessingServiceTest, DISABLED_NoProcessingSlotsAvailable)
+TEST_F(ProcessingServiceTest, NoProcessingSlotsAvailable)
 {
-    auto pubs = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();
-    pubs->Start(40001, {});
+    auto pubs1 = m_pubsub_nodes[0];
+    auto pubs2 = m_pubsub_nodes[1];
 
     auto processingCore = std::make_shared<ProcessingCoreImpl>();
     auto taskQueue = std::make_shared<ProcessingTaskQueueImpl>();
     auto enqueuer = std::make_shared<SubTaskEnqueuerImpl>(taskQueue);
 
-    ProcessingServiceImpl processingService(
-        pubs,
+    auto processingService = std::make_shared<ProcessingServiceImpl>(
+        pubs1,
         1,
         enqueuer,
         std::make_shared<SubTaskStateStorageMock>(),
@@ -183,17 +213,18 @@ TEST_F(ProcessingServiceTest, DISABLED_NoProcessingSlotsAvailable)
         processingCore);
 
 
-    sgns::ipfs_pubsub::GossipPubSubTopic gridChannel(pubs, "GRID_CHANNEL_ID");
-    gridChannel.Subscribe([](boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message&> message) {});
+    sgns::ipfs_pubsub::GossipPubSubTopic gridChannel1(pubs1, "GRID_CHANNEL_ID");
+    sgns::ipfs_pubsub::GossipPubSubTopic gridChannel2(pubs2, "GRID_CHANNEL_ID");
+    gridChannel1.Subscribe([](boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message&> message) {});
+    gridChannel2.Subscribe([](boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message&> message) {});
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
-    processingService.StartProcessing("GRID_CHANNEL_ID");
+    processingService->StartProcessing("GRID_CHANNEL_ID");
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
     // No queue channel message sent
 
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-    pubs->Stop();
 
-    EXPECT_EQ(processingService.GetProcessingNodesCount(), 0);
+    EXPECT_EQ(processingService->GetProcessingNodesCount(), 0);
 }

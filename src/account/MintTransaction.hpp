@@ -17,12 +17,18 @@ namespace sgns
     class MintTransaction : public IGeniusTransactions
     {
     public:
-        MintTransaction( uint64_t new_amount, const SGTransaction::DAGStruct &dag );
         ~MintTransaction() override = default;
 
-        std::vector<uint8_t>   SerializeByteVector() override;
-        static MintTransaction DeSerializeByteVector( const std::vector<uint8_t> &data );
-        uint64_t               GetAmount() const;
+        static std::shared_ptr<MintTransaction> DeSerializeByteVector( const std::vector<uint8_t> &data );
+
+        static MintTransaction New( uint64_t                 new_amount,
+                                    std::string              chain_id,
+                                    std::string              token_id,
+                                    SGTransaction::DAGStruct dag );
+
+        std::vector<uint8_t> SerializeByteVector() override;
+
+        uint64_t GetAmount() const;
 
         std::string GetTransactionSpecificPath() override
         {
@@ -30,7 +36,29 @@ namespace sgns
         }
 
     private:
-        uint64_t amount;
+        MintTransaction( uint64_t                 new_amount,
+                         std::string              chain_id,
+                         std::string              token_id,
+                         SGTransaction::DAGStruct dag );
+
+        uint64_t    amount;
+        std::string chain_id;
+        std::string token_id;
+
+        /**
+         * @brief       Registers the deserializer for the transfer transaction type.
+         * @return      A boolean indicating successful registration.
+         */
+        static inline bool Register()
+        {
+            RegisterDeserializer( "mint", &MintTransaction::DeSerializeByteVector );
+            return true;
+        }
+
+        /** 
+         * @brief       Static variable to ensure registration happens on inclusion of header file.
+         */
+        static inline bool registered = Register();
     };
 }
 

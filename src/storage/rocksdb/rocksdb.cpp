@@ -1,5 +1,3 @@
-
-
 #include <memory>
 #include <utility>
 
@@ -14,158 +12,192 @@
 #include "storage/rocksdb/rocksdb_batch.hpp"
 #include "storage/rocksdb/rocksdb_util.hpp"
 
-namespace sgns::storage 
+namespace sgns::storage
 {
-  using BlockBasedTableOptions = ::ROCKSDB_NAMESPACE::BlockBasedTableOptions;
+    using BlockBasedTableOptions = ::ROCKSDB_NAMESPACE::BlockBasedTableOptions;
 
-  rocksdb::~rocksdb()
-  {
-      db_->Close();
-  }
-
-  outcome::result<std::shared_ptr<rocksdb>> rocksdb::create(
-      std::string_view path, Options options) 
-  {
-    // Set up bloom filter
-    BlockBasedTableOptions table_options;
-    table_options.filter_policy.reset(::ROCKSDB_NAMESPACE::NewBloomFilterPolicy(10, false));
-    table_options.whole_key_filtering = true;  // If you also need Get() to use whole key filters, leave it to true.
-    // For multiple column family setting, set up specific column family's ColumnFamilyOptions.table_factory instead.
-    options.table_factory.reset(NewBlockBasedTableFactory(table_options));  
-
-    // Define a prefix. In this way, a fixed length prefix extractor. A recommended one to use.
-    options.prefix_extractor.reset(::ROCKSDB_NAMESPACE::NewCappedPrefixTransform(3));
-
-    DB *db = nullptr;
-    auto status = DB::Open(options, std::string(path), &db);
-    if (status.ok()) 
+    rocksdb::~rocksdb()
     {
-      auto l = std::make_unique<rocksdb>();
-      l->db_ = std::shared_ptr<DB>(db);
-      l->logger_ = base::createLogger("rocksdb");
-      return std::move(l); // clang 6.0.1 issue
     }
 
-    return error_as_result<std::shared_ptr<rocksdb>>(status);
-  }
-
-  outcome::result<std::shared_ptr<rocksdb>> rocksdb::create(const std::shared_ptr<DB>& db)
-  {
-    if (db == nullptr)
+    outcome::result<std::shared_ptr<rocksdb>> rocksdb::create(std::string_view path, const Options& options)
     {
-      return error_as_result<std::shared_ptr<rocksdb>>(rocksdb::Status(rocksdb::Status::PathNotFound()));
+        // Create a shared_ptr immediately to avoid manual memory management
+        auto l = std::make_shared<rocksdb>();
+
+        // Store a deep copy of options
+        l->options_ = std::make_shared<Options>(options);
+
+        // Set up bloom filter
+        BlockBasedTableOptions table_options;
+        table_options.filter_policy.reset(::ROCKSDB_NAMESPACE::NewBloomFilterPolicy(10, false));
+        table_options.whole_key_filtering = true;
+        l->options_->table_factory.reset(NewBlockBasedTableFactory(table_options));
+
+        // Define a prefix extractor
+        l->options_->prefix_extractor.reset(::ROCKSDB_NAMESPACE::NewCappedPrefixTransform(3));
+
+        l->options_->info_log_level = ::ROCKSDB_NAMESPACE::InfoLogLevel::ERROR_LEVEL;
+        // Configure threading environment
+        l->options_->env = ::rocksdb::Env::Default();
+        l->options_->env->SetBackgroundThreads(4, ::rocksdb::Env::Priority::HIGH);
+
+
+        // Open the RocksDB database
+        DB* db = nullptr;
+        auto status = DB::Open(*(l->options_), std::string(path), &db);
+
+        if (status.ok())
+        {
+            // Wrap DB* into a shared_ptr with a custom deleter to ensure cleanup
+            l->db_ = std::shared_ptr<DB>(db);
+            // Create logger
+            l->logger_ = base::createLogger("rocksdb");
+            return l;  // Return the shared_ptr
+        }
+
+        // Clean up manually allocated DB if Open() succeeded but logic fails
+        if (db)
+        {
+            delete db;
+        }
+
+        // Return an error result
+        return error_as_result<std::shared_ptr<rocksdb>>(status);
     }
 
-    auto l = std::make_unique<rocksdb>();
-    l->db_ = db;
-    l->logger_ = base::createLogger("rocksdb");
-    return std::move(l); // clang 6.0.1 issue
-  }
 
-  std::unique_ptr<BufferMapCursor> rocksdb::cursor() 
-  {
-    auto it = std::unique_ptr<Iterator>(db_->NewIterator(ro_));
-    return std::make_unique<Cursor>(std::move(it));
-  }
-
-  std::unique_ptr<BufferBatch> rocksdb::batch() 
-  {
-    return std::make_unique<Batch>(*this);
-  }
-
-  void rocksdb::setReadOptions(ReadOptions ro) 
-  {
-    ro_ = std::move(ro);
-  }
-
-  void rocksdb::setWriteOptions(WriteOptions wo) 
-  {
-    wo_ = wo;
-  }
-
-  outcome::result<Buffer> rocksdb::get(const Buffer &key) const 
-  {
-    std::string value;
-    auto status = db_->Get(ro_, make_slice(key), &value);
-    if (status.ok()) 
+    outcome::result<std::shared_ptr<rocksdb>> rocksdb::create( const std::shared_ptr<DB> &db )
     {
-      // FIXME: is it possible to avoid copying string -> Buffer?
-      return Buffer{}.put(value);
+        if ( db == nullptr )
+        {
+            return error_as_result<std::shared_ptr<rocksdb>>( rocksdb::Status( rocksdb::Status::PathNotFound() ) );
+        }
+
+        auto l     = std::make_unique<rocksdb>();
+        l->db_     = db;
+        l->logger_ = base::createLogger( "rocksdb" );
+        return l;
     }
 
-    // not always an actual error so don't log it
-    if(status.IsNotFound()) 
+    std::unique_ptr<BufferMapCursor> rocksdb::cursor()
     {
-      return error_as_result<Buffer>(status);
+        auto it = std::unique_ptr<Iterator>( db_->NewIterator( ro_ ) );
+        return std::make_unique<Cursor>( std::move( it ) );
     }
 
-    return error_as_result<Buffer>(status, logger_);
-  }
+    std::unique_ptr<BufferBatch> rocksdb::batch()
+    {
+        return std::make_unique<Batch>( *this );
+    }
 
-  outcome::result<rocksdb::QueryResult> rocksdb::query(const Buffer& keyPrefix) const
-  {
-    ReadOptions read_options = ro_;
-    read_options.auto_prefix_mode = true; //Adaptive Prefix Mode
+    void rocksdb::setReadOptions( ReadOptions ro )
+    {
+        ro_ = std::move( ro );
+    }
+
+    void rocksdb::setWriteOptions( WriteOptions wo )
+    {
+        wo_ = wo;
+    }
+
+    outcome::result<Buffer> rocksdb::get( const Buffer &key ) const
+    {
+        std::string value;
+        auto        status = db_->Get( ro_, make_slice( key ), &value );
+        if ( status.ok() )
+        {
+            // FIXME: is it possible to avoid copying string -> Buffer?
+            return Buffer{}.put( value );
+        }
+
+        // not always an actual error so don't log it
+        if ( status.IsNotFound() )
+        {
+            return error_as_result<Buffer>( status );
+        }
+
+        return error_as_result<Buffer>( status, logger_ );
+    }
+
+    outcome::result<rocksdb::QueryResult> rocksdb::query( const Buffer &keyPrefix ) const
+    {
+        ReadOptions read_options      = ro_;
+        read_options.auto_prefix_mode = true; //Adaptive Prefix Mode
 
     auto strKeyPrefix = std::string(keyPrefix.toString());
-
-    Buffer key;
-    Buffer value;
 
     QueryResult results;
     auto iter = std::unique_ptr<rocksdb::Iterator>(db_->NewIterator(read_options));
     auto slicePrefix = make_slice(keyPrefix);
     for (iter->Seek(slicePrefix); iter->Valid() && iter->key().starts_with(slicePrefix); iter->Next())
     {
-      key.clear();
+      Buffer key;
       key.put(iter->key().ToString());
-
-      value.clear();
+      Buffer value;
       value.put(iter->value().ToString());
-      results[key] = value;
+      results.emplace(std::move(key), std::move(value));
     }
     return results;
   }
 
-  bool rocksdb::contains(const Buffer &key) const 
-  {
-    // here we interpret all kinds of errors as "not found".
-    // is there a better way?
-    return get(key).has_value();
-  }
-
-  bool rocksdb::empty() const 
-  {
-    auto it = std::unique_ptr<Iterator>(db_->NewIterator(ro_));
-    it->SeekToFirst();
-    return it->Valid();
-  }
-
-  outcome::result<void> rocksdb::put(const Buffer &key, const Buffer &value) 
-  {
-    auto status = db_->Put(wo_, make_slice(key), make_slice(value));
-    if (status.ok()) 
+    bool rocksdb::contains( const Buffer &key ) const
     {
-      return outcome::success();
+        // here we interpret all kinds of errors as "not found".
+        // is there a better way?
+        return get( key ).has_value();
     }
 
-    return error_as_result<void>(status, logger_);
-  }
-
-  outcome::result<void> rocksdb::put(const Buffer &key, Buffer &&value) 
-  {
-    Buffer copy(std::move(value));
-    return put(key, copy);
-  }
-
-  outcome::result<void> rocksdb::remove(const Buffer &key) 
-  {
-    auto status = db_->Delete(wo_, make_slice(key));
-    if (status.ok()) {
-      return outcome::success();
+    bool rocksdb::empty() const
+    {
+        auto it = std::unique_ptr<Iterator>( db_->NewIterator( ro_ ) );
+        it->SeekToFirst();
+        return it->Valid();
     }
 
-    return error_as_result<void>(status, logger_);
-  }
+    outcome::result<void> rocksdb::put( const Buffer &key, const Buffer &value )
+    {
+        auto status = db_->Put( wo_, make_slice( key ), make_slice( value ) );
+        if ( status.ok() )
+        {
+            return outcome::success();
+        }
 
-}  // namespace sgns::storage
+        return error_as_result<void>( status, logger_ );
+    }
+
+    outcome::result<void> rocksdb::put( const Buffer &key, Buffer &&value )
+    {
+        Buffer copy( std::move( value ) );
+        return put( key, copy );
+    }
+
+    outcome::result<void> rocksdb::remove( const Buffer &key )
+    {
+        auto status = db_->Delete( wo_, make_slice( key ) );
+        if ( status.ok() )
+        {
+            return outcome::success();
+        }
+
+        return error_as_result<void>( status, logger_ );
+    }
+
+    std::vector<rocksdb::KeyValuePair> rocksdb::GetAll() const
+    {
+        std::vector<KeyValuePair> ret_val;
+        auto iter = std::unique_ptr<rocksdb::Iterator>( db_->NewIterator( rocksdb::ReadOptions() ) );
+
+        for ( iter->SeekToFirst(); iter->Valid(); iter->Next() )
+        {
+            Buffer key;
+            Buffer value;
+            key.put( iter->key().ToString() );
+
+            value.put( iter->value().ToString() );
+            ret_val.push_back( std::make_pair( key, value ) );
+        }
+        return ret_val;
+    }
+
+} // namespace sgns::storage

@@ -1,635 +1,264 @@
 name: Release Build CI
 
-# Controls when the workflow will run
-# Triggers the workflow on push or pull request events and manually from the Actions tab
-on: 
+on:
   push:
-    branches: 
+    branches:
       - develop
       - main
   pull_request:
-    branches: 
+    branches:
       - develop
       - main
   workflow_dispatch:
 
-jobs:        
-  Windows:
-    runs-on: windows-latest      
+jobs:
+  build:
+    env:
+      GRPC_BUILD_ENABLE_CCACHE: "ON"
+      GH_TOKEN: ${{ secrets.GNUS_TOKEN_1 }}
+    runs-on: ${{matrix.host}}
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [Android, iOS, OSX, Linux, Windows]
+        build-type: [Release]
+        abi: [""]
+        include:
+          - target: Linux
+            host: ubuntu-22.04
+          - target: Windows
+            host: windows-latest
+          - target: OSX
+            host: macos-latest
+          - target: Android
+            host: ubuntu-22.04
+            abi: arm64-v8a
+            build-type: Release
+          - target: Android
+            host: ubuntu-22.04
+            abi: armeabi-v7a
+            build-type: Release
+          - target: iOS
+            host: macos-latest
+        exclude:
+          - target: Android
+            abi: ""
     steps:
-      - name: Get branch name
-        id: branch-name
-        uses: tj-actions/branch-names@v8
-
-      - name: Install Windows host dependencies
-        run: |
-          choco install ccache -A
-
-      - name: Install bindgen
-        run: cargo install cbindgen
-
-      - name: Add Rust wasm target
-        run: rustup target add wasm32-unknown-emscripten
-
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - name: Checkout SuperGenius repository 
-        uses: actions/checkout@v3
+      - name: Checkout SuperGenius repository
+        uses: actions/checkout@v4
         with:
-          path: 'SuperGenius'
+          path: "SuperGenius"
           submodules: "recursive"
-      
-      - name: Check out thirdparty repository
-        uses: actions/checkout@v3
-        with:
-          repository: 'GeniusVentures/thirdparty'
-          path: 'thirdparty'
-          submodules: 'recursive' 
-          ref: develop
-          
-      - name: Thirdparty Create Build Directory
-        run: cmake -E make_directory ${{github.workspace}}/thirdparty/build/Windows/Release          
 
-      - name: Thirdparty Configure CMake
-        working-directory: ${{github.workspace}}/thirdparty/build/Windows/Release 
-        run: cmake -S .. -DCMAKE_BUILD_TYPE=Release
-
-      - name: Thirdparty Compile
-        working-directory: ${{github.workspace}}/thirdparty/build/Windows/Release
-        run: cmake --build . --config Release -j
-        
-      - name: Create Build Directory
-        run: cmake -E make_directory ${{github.workspace}}/SuperGenius/build/Windows/Release         
-
-      - name: Configure CMake
-        working-directory: ${{github.workspace}}/SuperGenius/build/Windows/Release
-        run: cmake -S .. -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty/
-
-      - name: Compile
-        working-directory: ${{github.workspace}}/SuperGenius/build/Windows/Release
-        run: cmake --build . --config Release -j
-
-      - name: Create install directory
-        working-directory: ${{github.workspace}}/SuperGenius/build/Windows/Release
-        run: cmake --install .
-
-      - name: Compressing Build Artifacts
-        working-directory: ${{github.workspace}}/SuperGenius
-        if: ${{ github.event_name == 'workflow_dispatch' }}
-        run: |
-          shopt -s extglob
-          rm -rf !(build) .[!.]* ..?*
-          cd build
-          rm -rf !(Windows) .[!.]* ..?*
-          cd Windows
-          rm -rf !(Release) .[!.]* ..?*
-          cd Release
-          rm -rf !(SuperGenius) .[!.]* ..?*
-          cd $GITHUB_WORKSPACE
-          tar -czvf SuperGenius.tar.gz SuperGenius/
-        shell: bash
-      
-      - name: Set Release Variables
-        id: vars
-        if: ${{ github.event_name == 'workflow_dispatch' }}
-        run: |
-          OS_NAME=Windows
-          BRANCH_NAME=${GITHUB_REF#refs/heads/}
-          BUILD_TYPE=Release
-          FILE_NAME="${OS_NAME}-${BRANCH_NAME}-${BUILD_TYPE}.tar.gz"
-          echo "RELEASE_TAG=${OS_NAME}-${BRANCH_NAME}-${BUILD_TYPE}-${GITHUB_SHA::7}" >> $GITHUB_ENV
-          echo "RELEASE_NAME=${OS_NAME} ${BRANCH_NAME} ${BUILD_TYPE} (${GITHUB_SHA::7})" >> $GITHUB_ENV
-          echo "FILE_NAME=$FILE_NAME" >> $GITHUB_ENV
-        shell: bash
-
-      - name: Rename Artifact
-        if: ${{ github.event_name == 'workflow_dispatch' }}
-        run: mv SuperGenius.tar.gz ${{ env.FILE_NAME }}
-        shell: bash
-
-      - name: Create GitHub Release
-        if: ${{ github.event_name == 'workflow_dispatch' }}
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GNUS_TOKEN_1 }}
-        with:
-          tag_name: ${{ env.RELEASE_TAG }}
-          release_name: ${{ env.RELEASE_NAME }}
-          draft: false
-          prerelease: false
-
-      - name: Upload Release Asset
-        if: ${{ github.event_name == 'workflow_dispatch' }}
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GNUS_TOKEN_1 }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ env.FILE_NAME }}
-          asset_name: ${{ env.FILE_NAME }}
-          asset_content_type: application/gzip
-
-  Linux:
-    runs-on: ubuntu-latest        
-    steps:
-      - name: Get branch name
+      - name: Set branch name for thirdparty download
         id: branch-name
-        uses: tj-actions/branch-names@v8
+        run: |
+          if ${{github.event_name == 'pull_request'}}; then
+              current_branch=${{ github.event.pull_request.head.ref }}
+          else
+              current_branch=$GITHUB_REF_NAME
+          fi
 
-      - name: Set clang as the default compiler
+          echo "Identified current branch as ${current_branch}"
+
+          echo "CURRENT_BRANCH=${current_branch}" >>$GITHUB_ENV
+
+          if git ls-remote --heads https://github.com/GeniusVentures/thirdparty.git $current_branch | grep -q $current_branch; then
+              echo "Using same branch for thirdparty"
+              thirdparty_branch=${current_branch}
+          else
+              echo "Using develop branch from thirdparty"
+              thirdparty_branch=develop
+          fi
+
+          echo "THIRDPARTY_BRANCH=$thirdparty_branch" >>$GITHUB_OUTPUT
+          echo "SGNS_BRANCH=$current_branch" >>$GITHUB_OUTPUT
+        shell: bash
+
+      - name: Set branch name for zkLLVM download
+        id: zkllvm-branch-name
+        run: |
+          if git ls-remote --heads https://github.com/GeniusVentures/zkLLVM.git $CURRENT_BRANCH | grep -q $CURRENT_BRANCH; then
+              echo "Using same branch for zkLLVM"
+              zkLLVM_branch=${CURRENT_BRANCH}
+          else
+              echo "Using develop branch from zkLLVM"
+              zkLLVM_branch=develop
+          fi
+
+          echo "zkLLVM_BRANCH=$zkLLVM_branch" >>$GITHUB_OUTPUT
+        shell: bash
+
+      - name: Download thirdparty release
+        working-directory: ${{github.workspace}}
+        run: |
+          mkdir thirdparty
+          cd thirdparty
+
+          if [ '${{matrix.abi}}' ]; then
+              tag_name=${{matrix.target}}-${{matrix.abi}}-${{steps.branch-name.outputs.THIRDPARTY_BRANCH}}-Release
+          else
+              tag_name=${{matrix.target}}-${{steps.branch-name.outputs.THIRDPARTY_BRANCH}}-Release
+          fi
+
+          gh release download ${tag_name} --repo GeniusVentures/thirdparty -p "*-lib.tar.gz"
+
+          echo "Found libraries:"
+
+          for library in *-lib.tar.gz; do
+              echo "${library}"
+              tar  --exclude='*bin/assigner' --exclude='*bin/clang-zkllvm' --exclude='*bin/llvm-link-zkllvm' --exclude='*bin/transpiler' -xzf "${library}"
+          done
+        shell: bash
+
+      - name: Download zkLLVM release
+        working-directory: ${{github.workspace}}
+        run: |
+          mkdir zkLLVM
+          cd zkLLVM
+
+          if [ '${{matrix.abi}}' ]; then
+              tag_name=${{matrix.target}}-${{matrix.abi}}-${{steps.zkllvm-branch-name.outputs.zkLLVM_BRANCH}}-Release
+          else
+              tag_name=${{matrix.target}}-${{steps.zkllvm-branch-name.outputs.zkLLVM_BRANCH}}-Release
+          fi
+
+          gh release download ${tag_name} --repo GeniusVentures/zkLLVM -p "*.tar.gz"
+
+          for library in *.tar.gz; do
+              tar  --exclude='*bin/assigner' --exclude='*bin/clang-zkllvm' --exclude='*bin/llvm-link-zkllvm' --exclude='*bin/transpiler' -xzf "${library}"
+          done
+        shell: bash
+
+      - name: Configure Linux host
+        if: ${{ runner.os == 'Linux'}}
         run: |
           sudo update-alternatives --install /usr/bin/cc cc $(which clang) 100
           sudo update-alternatives --install /usr/bin/c++ c++ $(which clang++) 100
           sudo update-alternatives --set cc $(which clang)
           sudo update-alternatives --set c++ $(which clang++)
-
-      - name: Install Linux host dependencies
-        run: |
-          sudo apt install ccache ninja-build -y
-          sudo apt install vulkan-tools vulkan-validationlayers-dev libvulkan-dev -y
+           
+          sudo apt install ccache ninja-build libvulkan-dev -y
           echo "CMAKE_GENERATOR=Ninja" >> $GITHUB_ENV
 
-      - name: Install bindgen
-        run: cargo install cbindgen
-
-      - name: Add Rust wasm target
-        run: rustup target add wasm32-unknown-emscripten
-    
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v3
-        with:
-          path: 'SuperGenius'
-          submodules: "recursive"    
-      
-      - name: Check out thirdparty repository
-        uses: actions/checkout@v3
-        with:
-          repository: 'GeniusVentures/thirdparty'
-          path: 'thirdparty'
-          submodules: 'recursive' 
-          ref: develop
-          
-      - name: Thirdparty Create Build Directory
-        run: cmake -E make_directory ${{github.workspace}}/thirdparty/build/Linux/Release        
-
-      - name: Thirdparty Configure CMake
-        working-directory: ${{github.workspace}}/thirdparty/build/Linux/Release 
-        run: cmake -S .. -DCMAKE_BUILD_TYPE=Release
-
-      - name: Thirdparty Compile
-        working-directory: ${{github.workspace}}/thirdparty/build/Linux/Release 
-        run: cmake --build . --config Release -j
-      
-      - name: Create Build Directory
-        run: cmake -E make_directory ${{github.workspace}}/SuperGenius/build/Linux/Release         
-
-      - name: Configure CMake
-        working-directory: ${{github.workspace}}/SuperGenius/build/Linux/Release   
-        run: cmake -S .. -DCMAKE_BUILD_TYPE=Release -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty/
-
-      - name: Compile
-        working-directory: ${{github.workspace}}/SuperGenius/build/Linux/Release  
-        run: cmake --build . --config Release -j
-
-      - name: Install
-        working-directory: ${{github.workspace}}/SuperGenius/build/Linux/Release  
-        run: cmake --install .
-        
-      - name: Compressing Build Artifacts
-        working-directory: ${{github.workspace}}/SuperGenius
-        if: ${{ github.event_name == 'workflow_dispatch' }}
+      - name: Configure Windows host
+        if: ${{ runner.os == 'Windows'}}
         run: |
-          shopt -s extglob
-          rm -rf !(build) .[!.]* ..?*
-          cd build
-          rm -rf !(Linux) .[!.]* ..?*
-          cd Linux
-          rm -rf !(Release) .[!.]* ..?*
-          cd Release
-          rm -rf !(SuperGenius) .[!.]* ..?*
-          cd ${{github.workspace}}
-          tar -czvf SuperGenius.tar.gz SuperGenius/
-      
-      - name: Set Release Variables
-        id: vars
-        if: ${{ github.event_name == 'workflow_dispatch' }}
+          choco install ccache -A
+
+      - name: Configure macOS host
+        if: ${{ runner.os == 'macOS'}}
         run: |
-          OS_NAME=Linux
-          BRANCH_NAME=${GITHUB_REF#refs/heads/}
-          BUILD_TYPE=Release
-          FILE_NAME="${OS_NAME}-${BRANCH_NAME}-${BUILD_TYPE}.tar.gz"
-          echo "RELEASE_TAG=${OS_NAME}-${BRANCH_NAME}-${BUILD_TYPE}-${GITHUB_SHA::7}" >> $GITHUB_ENV
-          echo "RELEASE_NAME=${OS_NAME} ${BRANCH_NAME} ${BUILD_TYPE} (${GITHUB_SHA::7})" >> $GITHUB_ENV
-          echo "FILE_NAME=$FILE_NAME" >> $GITHUB_ENV
+          brew install ccache ninja bash
+          PATH="$HOMEBREW_PREFIX/opt/gnu-tar/libexec/gnubin:$PATH"
+          echo "PATH=$PATH" >> $GITHUB_ENV
+          echo "CMAKE_GENERATOR=Ninja" >> $GITHUB_ENV
 
-      - name: Rename Artifact
-        if: ${{ github.event_name == 'workflow_dispatch' }}
-        run: mv SuperGenius.tar.gz ${{ env.FILE_NAME }}
-
-      - name: Create GitHub Release
-        if: ${{ github.event_name == 'workflow_dispatch' }}
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GNUS_TOKEN_1 }}
-        with:
-          tag_name: ${{ env.RELEASE_TAG }}
-          release_name: ${{ env.RELEASE_NAME }}
-          draft: false
-          prerelease: false
-
-      - name: Upload Release Asset
-        if: ${{ github.event_name == 'workflow_dispatch' }}
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GNUS_TOKEN_1 }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ env.FILE_NAME }}
-          asset_name: ${{ env.FILE_NAME }}
-          asset_content_type: application/gzip
-        
-  Android:
-    runs-on: ubuntu-latest
-    env:
-      ANDROID_NDK_HOME: ${{github.workspace}}/android-ndk/android-ndk-r25b
-      ANDROID_TOOLCHAIN: ${{github.workspace}}/android-ndk/android-ndk-r25b/toolchains/llvm/prebuilt/linux-x86_64/bin
-      NDK_URL: "https://dl.google.com/android/repository/android-ndk-r25b-linux.zip"      
-      CC: clang
-      
-    steps:
-      - name: Get branch name
-        id: branch-name
-        uses: tj-actions/branch-names@v8
-    
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v3
-        with:
-          path: 'SuperGenius'
-          submodules: "recursive"
-          
-      - name: Download Android NDK
-        run: |
-          mkdir "${{github.workspace}}/android-ndk" 
-          cd "${{github.workspace}}/android-ndk" 
-          curl -o ndk.zip ${{ env.NDK_URL }} 
-          unzip ndk.zip 
-          rm ndk.zip
-
-      - name: Install bindgen
-        run: cargo install cbindgen
-
-      - name: Add Rust wasm target
-        run: rustup target add wasm32-unknown-emscripten
-      
-      - name: Add Android toolchain
-        run: |
-          rustup target add aarch64-linux-android
-          
-      - name: Check out thirdparty repository
-        uses: actions/checkout@v3
-        with:
-          repository: 'GeniusVentures/thirdparty'
-          path: 'thirdparty'
-          submodules: 'recursive' 
-          ref: develop
-          
-      - name: Thirdparty Create Build Directory
-        run: cmake -E make_directory ${{github.workspace}}/thirdparty/build/Android/Release/arm64-v8a      
-
-      - name: Thirdparty Configure CMake
-        working-directory: ${{github.workspace}}/thirdparty/build/Android/Release/arm64-v8a    
-        run: |
-          export ANDROID_NDK=${{env.ANDROID_NDK_HOME}}
-          export ANDROID_NDK_HOME=${{env.ANDROID_NDK_HOME}}
-          export ANDROID_TOOLCHAIN=${{env.ANDROID_TOOLCHAIN}}
-          export PATH=${{env.ANDROID_TOOLCHAIN}}:$PATH 
-          echo $PATH
-          echo $CC
-          ls -la $ANDROID_TOOLCHAIN
-          echo "Check clang path:"
-          which clang
-          env
-          cmake -S ../../ -DANDROID_ABI="arm64-v8a" -DCMAKE_ANDROID_NDK=$ANDROID_NDK -DANDROID_TOOLCHAIN=clang -DCMAKE_BUILD_TYPE=Release
-      
-      - name: Thirdparty Compile
-        working-directory: ${{github.workspace}}/thirdparty/build/Android/Release/arm64-v8a    
-        run: make -j8
-      
-      - name: Create Build Directory
-        run: cmake -E make_directory ${{github.workspace}}/SuperGenius/build/Android/Release/arm64-v8a           
-
-      - name: Configure CMake
-        working-directory: ${{github.workspace}}/SuperGenius/build/Android/Release/arm64-v8a    
-        run: |
-          export ANDROID_NDK=${{env.ANDROID_NDK_HOME}}
-          export ANDROID_NDK_HOME=${{env.ANDROID_NDK_HOME}}
-          export ANDROID_TOOLCHAIN=${{env.ANDROID_TOOLCHAIN}}
-          export PATH=${{env.ANDROID_TOOLCHAIN}}:$PATH 
-          echo $PATH
-          echo $CC
-          ls -la $ANDROID_TOOLCHAIN
-          echo "Check clang path:"
-          which clang
-          env
-          cmake -S ../../ -DANDROID_ABI="arm64-v8a" -DCMAKE_BUILD_TYPE=Release -DCMAKE_ANDROID_NDK=$ANDROID_NDK -DANDROID_TOOLCHAIN=clang -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty/
-      
-      - name: Compile
-        working-directory: ${{github.workspace}}/SuperGenius/build/Android/Release/arm64-v8a 
-        run: make -j8
-      
-      - name: Install
-        working-directory: ${{github.workspace}}/SuperGenius/build/Android/Release/arm64-v8a 
-        run: cmake --install .
-        
-      - name: Compressing Build Artifacts
-        working-directory: ${{github.workspace}}/SuperGenius
-        if: ${{ github.event_name == 'workflow_dispatch' }}
-        run: |
-          shopt -s extglob
-          rm -rf !(build) .[!.]* ..?*
-          cd build
-          rm -rf !(Android) .[!.]* ..?*
-          cd Android
-          rm -rf !(Release) .[!.]* ..?*
-          cd Release
-          rm -rf !(arm64-v8a) .[!.]* ..?*
-          cd arm64-v8a
-          rm -rf !(SuperGenius) .[!.]* ..?*
-          cd ${{github.workspace}}
-          tar -czvf SuperGenius.tar.gz SuperGenius/
-      
-      - name: Set Release Variables
-        id: vars
-        if: ${{ github.event_name == 'workflow_dispatch' }}
-        run: |
-          OS_NAME=Android-arm64-v8a
-          BRANCH_NAME=${GITHUB_REF#refs/heads/}
-          BUILD_TYPE=Release
-          FILE_NAME="${OS_NAME}-${BRANCH_NAME}-${BUILD_TYPE}.tar.gz"
-          echo "RELEASE_TAG=${OS_NAME}-${BRANCH_NAME}-${BUILD_TYPE}-${GITHUB_SHA::7}" >> $GITHUB_ENV
-          echo "RELEASE_NAME=${OS_NAME} ${BRANCH_NAME} ${BUILD_TYPE} (${GITHUB_SHA::7})" >> $GITHUB_ENV
-          echo "FILE_NAME=$FILE_NAME" >> $GITHUB_ENV
-
-      - name: Rename Artifact
-        if: ${{ github.event_name == 'workflow_dispatch' }}
-        run: mv SuperGenius.tar.gz ${{ env.FILE_NAME }}
-
-      - name: Create GitHub Release
-        if: ${{ github.event_name == 'workflow_dispatch' }}
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GNUS_TOKEN_1 }}
-        with:
-          tag_name: ${{ env.RELEASE_TAG }}
-          release_name: ${{ env.RELEASE_NAME }}
-          draft: false
-          prerelease: false
-
-      - name: Upload Release Asset
-        if: ${{ github.event_name == 'workflow_dispatch' }}
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GNUS_TOKEN_1 }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ env.FILE_NAME }}
-          asset_name: ${{ env.FILE_NAME }}
-          asset_content_type: application/gzip
-
-
-  MacOS:
-    runs-on: macos-latest        
-    steps:
-      - name: Get branch name
-        id: branch-name
-        uses: tj-actions/branch-names@v8
-        
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v3
-        with:
-          path: 'SuperGenius'
-          submodules: "recursive"
-      
-      # Workaround for arm64 build 
-      - name: Ensure latest macOS SDK is used
-        run: |
-          sudo xcode-select --switch "$(find /Applications -mindepth 1 -maxdepth 1 ! -type l | grep "Xcode_[\.0-9]*app" | sort -V | tail -1)/Contents/Developer"
-          sudo rm -Rf /Library/Developer/CommandLineTools/SDKs/*
-      
-      - name: Install bindgen
-        run: cargo install cbindgen
-
-      - name: Add Rust wasm target
-        run: rustup target add wasm32-unknown-emscripten
-
-      - name: Add Darwin rust toolchain
+      - name: Add Darwin toolchain
+        if: ${{ matrix.target == 'OSX'}}
         run: rustup target add x86_64-apple-darwin
-      
-      - name: Check out thirdparty repository
-        uses: actions/checkout@v3
-        with:
-          repository: 'GeniusVentures/thirdparty'
-          path: 'thirdparty'
-          submodules: 'recursive' 
-          ref: develop
-          
-      - name: Thirdparty Create Build Directory
-        run: cmake -E make_directory ${{github.workspace}}/thirdparty/build/OSX/Release      
 
-      - name: Thirdparty Configure CMake
-        working-directory: ${{github.workspace}}/thirdparty/build/OSX/Release 
-        run: cmake -S .. -DCMAKE_BUILD_TYPE=Release
-
-      - name: Thirdparty Compile
-        working-directory: ${{github.workspace}}/thirdparty/build/OSX/Release 
-        run: make -j8
-        
-      - name: Create Build Directory
-        run: cmake -E make_directory ${{github.workspace}}/SuperGenius/build/OSX/Release         
-
-      - name: Configure CMake
-        working-directory: ${{github.workspace}}/SuperGenius/build/OSX/Release 
-        run: cmake -S .. -DCMAKE_BUILD_TYPE=Release -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty/
-
-      - name: Compile
-        working-directory: ${{github.workspace}}/SuperGenius/build/OSX/Release 
-        run: make -j8
-
-      - name: Install
-        working-directory: ${{github.workspace}}/SuperGenius/build/OSX/Release 
-        run: cmake --install .
-        
-      - name: Compressing Build Artifacts
-        working-directory: ${{github.workspace}}/SuperGenius
-        if: ${{ github.event_name == 'workflow_dispatch' }}
-        run: |
-          shopt -s extglob
-          rm -rf !(build) .[!.]* ..?*
-          cd build
-          rm -rf !(OSX) .[!.]* ..?*
-          cd OSX
-          rm -rf !(Release) .[!.]* ..?*
-          cd Release
-          rm -rf !(SuperGenius) .[!.]* ..?*
-          cd ${{github.workspace}}
-          tar -czvf SuperGenius.tar.gz SuperGenius/
-      
-      - name: Set Release Variables
-        id: vars
-        if: ${{ github.event_name == 'workflow_dispatch' }}
-        run: |
-          OS_NAME=OSX
-          BRANCH_NAME=${GITHUB_REF#refs/heads/}
-          BUILD_TYPE=Release
-          FILE_NAME="${OS_NAME}-${BRANCH_NAME}-${BUILD_TYPE}.tar.gz"
-          echo "RELEASE_TAG=${OS_NAME}-${BRANCH_NAME}-${BUILD_TYPE}-${GITHUB_SHA::7}" >> $GITHUB_ENV
-          echo "RELEASE_NAME=${OS_NAME} ${BRANCH_NAME} ${BUILD_TYPE} (${GITHUB_SHA::7})" >> $GITHUB_ENV
-          echo "FILE_NAME=$FILE_NAME" >> $GITHUB_ENV
-
-      - name: Rename Artifact
-        if: ${{ github.event_name == 'workflow_dispatch' }}
-        run: mv SuperGenius.tar.gz ${{ env.FILE_NAME }}
-
-      - name: Create GitHub Release
-        if: ${{ github.event_name == 'workflow_dispatch' }}
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GNUS_TOKEN_1 }}
-        with:
-          tag_name: ${{ env.RELEASE_TAG }}
-          release_name: ${{ env.RELEASE_NAME }}
-          draft: false
-          prerelease: false
-
-      - name: Upload Release Asset
-        if: ${{ github.event_name == 'workflow_dispatch' }}
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GNUS_TOKEN_1 }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ env.FILE_NAME }}
-          asset_name: ${{ env.FILE_NAME }}
-          asset_content_type: application/gzip
-  
-  iOS:
-    runs-on: macos-latest        
-    steps:
-      - name: Get branch name
-        id: branch-name
-        uses: tj-actions/branch-names@v8
-        
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v3
-        with:
-          path: 'SuperGenius'
-          submodules: "recursive"    
-
-      - name: Install Ninja
-        run: |
-          brew install ccache ninja
-          echo "CMAKE_GENERATOR=Ninja" >> $GITHUB_ENV
-
-      - name: Install bindgen
-        run: cargo install cbindgen
-
-      - name: Add Rust wasm target
-        run: rustup target add wasm32-unknown-emscripten    
-      
       - name: Add iOS toolchain
+        if: ${{ matrix.target == 'iOS' }}
         run: |
           rustup toolchain install nightly-aarch64-apple-darwin
           rustup component add rust-src --toolchain nightly-aarch64-apple-darwin
           rustup target add aarch64-apple-ios
 
-      - name: Check out thirdparty repository
-        uses: actions/checkout@v3
-        with:
-          repository: 'GeniusVentures/thirdparty'
-          path: 'thirdparty'
-          submodules: 'recursive' 
-          ref: develop
-          
-      - name: Thirdparty Create Build Directory
-        run: cmake -E make_directory ${{github.workspace}}/thirdparty/build/iOS/Release     
+      - name: Add Android toolchain
+        if: ${{ matrix.target == 'Android' }}
+        run: |
+          rustup target add aarch64-linux-android
 
-      - name: Thirdparty Configure CMake
-        working-directory: ${{github.workspace}}/thirdparty/build/iOS/Release 
-        run: cmake -S .. -DCMAKE_BUILD_TYPE=Release -DPLATFORM=OS64
+      - name: Install bindgen
+        run: cargo install cbindgen
 
-      - name: Thirdparty Compile
-        working-directory: ${{github.workspace}}/thirdparty/build/iOS/Release 
-        run: cmake --build . -j --config Release
-        
-      - name: Create Build Directory
-        run: cmake -E make_directory ${{github.workspace}}/SuperGenius/build/iOS/Release          
+      - name: Add wasm Rust target
+        run: rustup target add wasm32-unknown-emscripten
 
-      - name: Configure CMake
-        working-directory: ${{github.workspace}}/SuperGenius/build/iOS/Release 
-        run: cmake -S .. -DCMAKE_BUILD_TYPE=Release -DPLATFORM=OS64 -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty/
+      - name: Set build directory
+        run: |
+          if [ '${{matrix.abi}}' ]; then
+            BUILD_DIRECTORY=build/${{matrix.target}}/${{matrix.build-type}}/${{matrix.abi}}
+          else
+            BUILD_DIRECTORY=build/${{matrix.target}}/${{matrix.build-type}}
+          fi
+          echo "BUILD_DIRECTORY=$BUILD_DIRECTORY" >> $GITHUB_ENV
+        shell: bash
 
-      - name: Compile
-        working-directory: ${{github.workspace}}/SuperGenius/build/iOS/Release 
-        run: cmake --build . -j --config Release
-      
-      - name: Install
-        working-directory: ${{github.workspace}}/SuperGenius/build/iOS/Release 
-        run: cmake --install .
-        
-      - name: Compressing Build Artifacts
+      - name: Configure CMake for Android
+        if: ${{ matrix.target == 'Android'}}
         working-directory: ${{github.workspace}}/SuperGenius
+        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DANDROID_ABI=${{matrix.abi}} -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty -DZKLLVM_DIR=${{github.workspace}}/zkLLVM/${BUILD_DIRECTORY}
+
+      - name: Configure CMake for Mac
+        if: ${{ matrix.target == 'OSX'}}
+        working-directory: ${{github.workspace}}/SuperGenius
+        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DPLATFORM=MAC_UNIVERSAL -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty -DZKLLVM_DIR=${{github.workspace}}/zkLLVM/${BUILD_DIRECTORY}
+
+      - name: Configure CMake for iOS
+        if: ${{ matrix.target == 'iOS'}}
+        working-directory: ${{github.workspace}}/SuperGenius
+        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DPLATFORM=OS64 -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty -DZKLLVM_DIR=${{github.workspace}}/zkLLVM/${BUILD_DIRECTORY}
+
+      - name: Configure CMake for Linux
+        if: ${{matrix.target == 'Linux'}}
+        working-directory: ${{github.workspace}}/SuperGenius
+        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty -DZKLLVM_DIR=${{github.workspace}}/zkLLVM/${BUILD_DIRECTORY}
+
+      - name: Configure CMake for Windows
+        if: ${{matrix.target == 'Windows'}}
+        working-directory: ${{github.workspace}}/SuperGenius
+        run: cmake -S build/${{matrix.target}} -B $env:BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty -DZKLLVM_DIR=${{github.workspace}}/zkLLVM/$env:BUILD_DIRECTORY
+
+      - name: Build SuperGenius
+        working-directory: ${{github.workspace}}/SuperGenius
+        run: cmake --build ${{env.BUILD_DIRECTORY}} --config ${{matrix.build-type}} -j
+
+      - name: Install SuperGenius
+        working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
+        run: cmake --install .
+
+      - name: Compress build artifacts
+        working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
         if: ${{ github.event_name == 'workflow_dispatch' }}
         run: |
-          shopt -s extglob
-          rm -rf !(build) .[!.]* ..?*
-          cd build
-          rm -rf !(iOS) .[!.]* ..?*
-          cd iOS
-          rm -rf !(Release) .[!.]* ..?*
-          cd Release
-          rm -rf !(SuperGenius) .[!.]* ..?*
-          cd ${{github.workspace}}
-          tar -czvf SuperGenius.tar.gz SuperGenius/
-      
-      - name: Set Release Variables
-        id: vars
+          tar --exclude=.git -czvf SuperGenius.tar.gz --transform 's|^|${{env.BUILD_DIRECTORY}}/|' SuperGenius/
+        shell: bash
+
+      - name: Release file
         if: ${{ github.event_name == 'workflow_dispatch' }}
+        working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
+        shell: bash
         run: |
-          OS_NAME=iOS
-          BRANCH_NAME=${GITHUB_REF#refs/heads/}
-          BUILD_TYPE=Release
-          FILE_NAME="${OS_NAME}-${BRANCH_NAME}-${BUILD_TYPE}.tar.gz"
-          echo "RELEASE_TAG=${OS_NAME}-${BRANCH_NAME}-${BUILD_TYPE}-${GITHUB_SHA::7}" >> $GITHUB_ENV
-          echo "RELEASE_NAME=${OS_NAME} ${BRANCH_NAME} ${BUILD_TYPE} (${GITHUB_SHA::7})" >> $GITHUB_ENV
-          echo "FILE_NAME=$FILE_NAME" >> $GITHUB_ENV
+          if [ '${{matrix.abi}}' ]; then
+            OS_NAME=${{matrix.target}}-${{matrix.abi}}
+          else
+            OS_NAME=${{matrix.target}}
+          fi
 
-      - name: Rename Artifact
-        if: ${{ github.event_name == 'workflow_dispatch' }}
-        run: mv SuperGenius.tar.gz ${{ env.FILE_NAME }}
+          branch_name=${{steps.branch-name.outputs.SGNS_BRANCH}}
+          file_name="${OS_NAME}-${branch_name}-${{matrix.build-type}}.tar.gz"
 
-      - name: Create GitHub Release
-        if: ${{ github.event_name == 'workflow_dispatch' }}
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GNUS_TOKEN_1 }}
-        with:
-          tag_name: ${{ env.RELEASE_TAG }}
-          release_name: ${{ env.RELEASE_NAME }}
-          draft: false
-          prerelease: false
+          RELEASE_TAG=${OS_NAME}-${branch_name}-${{matrix.build-type}}
 
-      - name: Upload Release Asset
-        if: ${{ github.event_name == 'workflow_dispatch' }}
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GNUS_TOKEN_1 }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ env.FILE_NAME }}
-          asset_name: ${{ env.FILE_NAME }}
-          asset_content_type: application/gzip
-        
+          mv SuperGenius.tar.gz ${file_name}
+
+          if ! gh release view $RELEASE_TAG; then
+              echo "Release not found, creating tag ${RELEASE_TAG}"
+              
+              if [ '${{ matrix.build-type }}' != 'Release' ]; then
+                  RELEASE_TYPE="--prerelease"
+              else
+                  RELEASE_TYPE="--latest"
+              fi
+
+              gh release create ${RELEASE_TAG} \
+                  -n "${CURRENT_BRANCH} branch" \
+                  --target "${CURRENT_BRANCH}" \
+                  ${RELEASE_TYPE} \
+                  -t "${{ matrix.target }} ${{ matrix.abi && format('({0}) ', matrix.abi) || ''}}${CURRENT_BRANCH} branch ${{ matrix.build-type }} build"
+          fi
+
+          echo -e "Uploading ${file_name}"
+          gh release upload --clobber ${RELEASE_TAG} ${file_name}

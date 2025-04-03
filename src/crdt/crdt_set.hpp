@@ -284,8 +284,15 @@ namespace sgns::crdt
     * @return outcome::success on success or outcome::failure otherwise
     */
    outcome::result<void> DataStoreSync(const std::vector<HierarchicalKey>& aKeyList);
+
+   void PrintDataStore();
+
   private:
     CrdtSet() = default;
+
+
+    static void PrintTombs(const std::vector<Element>& aTombs);
+    static void PrintElements(const std::vector<Element>& aElems);
 
     std::shared_ptr<DataStore> dataStore_ = nullptr;
     HierarchicalKey namespaceKey_;

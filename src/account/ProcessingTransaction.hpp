@@ -12,44 +12,78 @@
 
 #include "account/IGeniusTransactions.hpp"
 
-using namespace boost::multiprecision;
-
 namespace sgns
 {
+    using namespace boost::multiprecision;
 
     class ProcessingTransaction : public IGeniusTransactions
     {
     public:
-        ProcessingTransaction( const std::string &job_id, std::string subtask_id, const SGTransaction::DAGStruct &dag );
+        static std::shared_ptr<ProcessingTransaction> DeSerializeByteVector( const std::vector<uint8_t> &data );
+
+        static ProcessingTransaction New( std::string              job_id,
+                                          std::vector<std::string> subtask_ids,
+                                          std::vector<std::string> node_addresses,
+                                          SGTransaction::DAGStruct dag );
+
         ~ProcessingTransaction() override = default;
 
-        std::vector<uint8_t>         SerializeByteVector() override;
-        static ProcessingTransaction DeSerializeByteVector( const std::vector<uint8_t> &data );
+        std::vector<uint8_t> SerializeByteVector() override;
 
         uint256_t GetJobHash() const
         {
             return job_hash_;
         }
-        std::string GetSubtaskID() const
+
+        std::vector<std::string> GetSubtaskIDs() const
         {
-            return subtask_id_;
+            return subtask_ids_;
+        }
+        std::vector<std::string> GetNodeAddresses() const
+        {
+            return node_addresses_;
+        }
+
+        std::string GetTaskID() const
+        {
+            return job_id_;
         }
 
         std::string GetTransactionSpecificPath() override
         {
-            boost::format processing_fmt( GetType() + "/%s/%s" );
+            boost::format processing_fmt( GetType() + "/%s" );
 
-            processing_fmt % job_id_ % subtask_id_;
+            processing_fmt % job_id_;
             return processing_fmt.str();
         }
 
     private:
-        std::string job_id_;            ///< Job ID
-        uint256_t   job_hash_;          ///< Job ID
-        std::string subtask_id_;        ///< SubTask ID
-        std::string chunk_id_;        ///< SubTask ID
+        ProcessingTransaction( std::string              job_id,
+                               std::vector<std::string> subtask_ids,
+                               std::vector<std::string> node_addresses,
+                               SGTransaction::DAGStruct dag );
+
+        std::string              job_id_;         ///< Job ID
+        uint256_t                job_hash_;       ///< Job ID
+        std::vector<std::string> subtask_ids_;    ///< SubTask ID
+        std::vector<std::string> node_addresses_; ///< Addresses/ID of processors
         //uint256_t   hash_process_data; ///< Hash of the process data
         //std::vector<uint8_t> raw_data;          ///<The data being processed
+
+        /**
+         * @brief       Registers the deserializer for the transfer transaction type.
+         * @return      A boolean indicating successful registration.
+         */
+        static inline bool Register()
+        {
+            RegisterDeserializer( "process", &ProcessingTransaction::DeSerializeByteVector );
+            return true;
+        }
+
+        /** 
+         * @brief       Static variable to ensure registration happens on inclusion of header file.
+         */
+        static inline bool registered = Register();
     };
 }
 

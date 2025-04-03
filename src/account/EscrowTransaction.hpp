@@ -10,21 +10,24 @@
 #include <string>
 #include "account/IGeniusTransactions.hpp"
 #include "account/UTXOTxParameters.hpp"
+
 namespace sgns
 {
     class EscrowTransaction : public IGeniusTransactions
     {
     public:
-        EscrowTransaction( UTXOTxParameters                params,
-                           uint64_t                        num_chunks,
-                           uint256_t                       dest_addr,
-                           float                           cut,
-                           const SGTransaction::DAGStruct &dag );
+        static EscrowTransaction New( UTXOTxParameters         params,
+                                      uint64_t                 amount,
+                                      std::string              dev_addr,
+                                      uint64_t                 peers_cut,
+                                      SGTransaction::DAGStruct dag );
+
+        static std::shared_ptr<EscrowTransaction> DeSerializeByteVector( const std::vector<uint8_t> &data );
+
         ~EscrowTransaction() override = default;
 
-        std::vector<uint8_t>     SerializeByteVector() override;
-        static EscrowTransaction DeSerializeByteVector( const std::vector<uint8_t> &data );
-        uint64_t                 GetNumChunks() const;
+        std::vector<uint8_t> SerializeByteVector() override;
+        uint64_t             GetNumChunks() const;
 
         std::string GetTransactionSpecificPath() override
         {
@@ -36,20 +39,47 @@ namespace sgns
             return utxo_params_;
         }
 
-        uint256_t GetDestAddress() const
+        std::string GetDevAddress() const
         {
-            return dev_addr;
+            return dev_addr_;
         }
-        float GetDestCut() const
+
+        uint64_t GetAmount() const
         {
-            return dev_cut;
+            return amount_;
+        }
+
+        uint64_t GetPeersCut() const
+        {
+            return peers_cut_;
         }
 
     private:
-        uint64_t         num_chunks_;
-        uint256_t        dev_addr;
-        float            dev_cut;
+        EscrowTransaction( UTXOTxParameters         params,
+                           uint64_t                 amount,
+                           std::string              dev_addr,
+                           uint64_t                 peers_cut,
+                           SGTransaction::DAGStruct dag );
+
         UTXOTxParameters utxo_params_;
+        uint64_t         amount_;
+        std::string      dev_addr_;
+        uint64_t         peers_cut_;
+
+        /**
+         * @brief       Registers the deserializer for the transfer transaction type.
+         * @return      A boolean indicating successful registration.
+         */
+        static bool Register()
+        {
+            RegisterDeserializer( "escrow-hold", &EscrowTransaction::DeSerializeByteVector );
+            return true;
+        }
+
+        /** 
+         * @brief       Static variable to ensure registration happens on inclusion of header file.
+         */
+        static inline bool registered = Register();
     };
 }
 

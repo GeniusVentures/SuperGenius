@@ -34,11 +34,11 @@ namespace sgns::storage
   TEST(TriePersistencyTest, CreateDestroyCreate) {
     Buffer root;
     auto factory = std::make_shared<SuperGeniusTrieFactoryImpl>();
+    rocksdb::Options options;
+    options.create_if_missing = true;  // intentionally
     auto codec = std::make_shared<SuperGeniusCodec>();
     {
-      rocksdb::Options options;
-      options.create_if_missing = true;  // intentionally
-      EXPECT_OUTCOME_TRUE(
+        EXPECT_OUTCOME_TRUE(
         rocks_db,
         rocksdb::create("supergenius_rocksdb_persistency_test", options));
       auto serializer = std::make_shared<TrieSerializerImpl>(
@@ -58,7 +58,7 @@ namespace sgns::storage
       root = root_;
     }
     EXPECT_OUTCOME_TRUE(new_rocks_db,
-      rocksdb::create("supergenius_rocksdb_persistency_test"));
+      rocksdb::create("supergenius_rocksdb_persistency_test", options));
     auto serializer = std::make_shared<TrieSerializerImpl>(
       factory,
       codec,

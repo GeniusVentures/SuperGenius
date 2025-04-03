@@ -15,7 +15,7 @@ namespace sgns::crdt
   using libp2p::multi::HashType;
   using libp2p::multi::Multihash;
   namespace fs = boost::filesystem;
-  
+
 
   TEST(CrdtHeadsTest, TestHeadsAdd)
   {
@@ -30,13 +30,14 @@ namespace sgns::crdt
     const CID cid2 = CID(CID::Version::V1, CID::Multicodec::SHA2_256,
       Multihash::create(HashType::sha256, "1123456789ABCDEF0123456789ABCDEF"_unhex).value());
 
-    // Remove leftover database 
-    std::string databasePath = "supergenius_crdt_heads_test_set_value";
+    // Remove leftover database
+    std::string databasePath = "supergenius_crdt_heads_test_set_value_add";
     fs::remove_all(databasePath);
 
     // Create new database
     rocksdb::Options options;
     options.create_if_missing = true;  // intentionally
+
     auto dataStoreResult = rocksdb::create(databasePath, options);
     auto dataStore = dataStoreResult.value();
 
@@ -55,26 +56,26 @@ namespace sgns::crdt
     // Test Add cid function
     EXPECT_OUTCOME_TRUE_1(crdtHeads.Add(cid1, height1));
 
-    // Test if cis is head 
-    EXPECT_OUTCOME_EQ(crdtHeads.IsHead(cid1), true);
-    EXPECT_OUTCOME_EQ(crdtHeads.IsHead(cid2), false);
-    
+    // Test if cis is head
+    EXPECT_EQ(crdtHeads.IsHead(cid1), true);
+    EXPECT_EQ(crdtHeads.IsHead(cid2), false);
+
     // Check cid height
     EXPECT_OUTCOME_EQ(crdtHeads.GetHeadHeight(cid1), height1);
-    EXPECT_OUTCOME_FALSE_1(crdtHeads.GetHeadHeight(cid2));
+    EXPECT_OUTCOME_EQ(crdtHeads.GetHeadHeight(cid2), 0);
 
-    EXPECT_OUTCOME_EQ(crdtHeads.GetLenght(), 1);
+    EXPECT_OUTCOME_EQ(crdtHeads.GetLength(), 1);
 
     // Add same cid again, should remain the same length
     EXPECT_OUTCOME_TRUE_1(crdtHeads.Add(cid1, height1));
-    EXPECT_OUTCOME_EQ(crdtHeads.GetLenght(), 1);
+    EXPECT_OUTCOME_EQ(crdtHeads.GetLength(), 1);
 
     // Add more cid
     EXPECT_OUTCOME_TRUE_1(crdtHeads.Add(cid2, height2));
-    EXPECT_OUTCOME_EQ(crdtHeads.GetLenght(), 2);
+    EXPECT_OUTCOME_EQ(crdtHeads.GetLength(), 2);
 
-    // Test getting heads 
-    std::vector<CID> heads; 
+    // Test getting heads
+    std::vector<CID> heads;
     uint64_t maxHeight = 0;
     EXPECT_OUTCOME_TRUE_1(crdtHeads.GetList(heads, maxHeight));
     EXPECT_TRUE(heads.size() == 2);
@@ -97,13 +98,14 @@ namespace sgns::crdt
     const CID cid3 = CID(CID::Version::V1, CID::Multicodec::SHA2_256,
       Multihash::create(HashType::sha256, "2123456789ABCDEF0123456789ABCDEF"_unhex).value());
 
-    // Remove leftover database 
-    std::string databasePath = "supergenius_crdt_heads_test_set_value";
+    // Remove leftover database
+    std::string databasePath = "supergenius_crdt_heads_test_set_value_replace";
     fs::remove_all(databasePath);
 
     // Create new database
     rocksdb::Options options;
     options.create_if_missing = true;  // intentionally
+
     auto dataStoreResult = rocksdb::create(databasePath, options);
     auto dataStore = dataStoreResult.value();
 
@@ -112,18 +114,18 @@ namespace sgns::crdt
     auto addResult1 = crdtHeads.Add(cid1, height1);
     auto addResult2 = crdtHeads.Add(cid2, height2);
 
-    EXPECT_OUTCOME_EQ(crdtHeads.GetLenght(), 2);
+    EXPECT_OUTCOME_EQ(crdtHeads.GetLength(), 2);
     EXPECT_OUTCOME_TRUE_1(crdtHeads.Replace(cid2, cid3, height2));
-    EXPECT_OUTCOME_EQ(crdtHeads.IsHead(cid2), false);
-    EXPECT_OUTCOME_EQ(crdtHeads.IsHead(cid3), true);
+    EXPECT_EQ(crdtHeads.IsHead(cid2), false);
+    EXPECT_EQ(crdtHeads.IsHead(cid3), true);
     EXPECT_OUTCOME_EQ(crdtHeads.GetHeadHeight(cid3), height2);
-    EXPECT_OUTCOME_EQ(crdtHeads.GetLenght(), 2);
+    EXPECT_OUTCOME_EQ(crdtHeads.GetLength(), 2);
 
     EXPECT_OUTCOME_TRUE_1(crdtHeads.Replace(cid3, cid3, height1));
     EXPECT_OUTCOME_EQ(crdtHeads.GetHeadHeight(cid3), height1);
-    EXPECT_OUTCOME_EQ(crdtHeads.GetLenght(), 2);
+    EXPECT_OUTCOME_EQ(crdtHeads.GetLength(), 2);
 
-    // Test getting heads 
+    // Test getting heads
     std::vector<CID> heads;
     uint64_t maxHeight = 0;
     EXPECT_OUTCOME_TRUE_1(crdtHeads.GetList(heads, maxHeight));

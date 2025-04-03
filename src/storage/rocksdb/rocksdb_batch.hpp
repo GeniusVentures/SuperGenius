@@ -1,5 +1,3 @@
-
-
 #ifndef SUPERGENIUS_rocksdb_BATCH_HPP
 #define SUPERGENIUS_rocksdb_BATCH_HPP
 
@@ -8,7 +6,6 @@
 
 namespace sgns::storage 
 {
-
   /**
    * @brief Class that is used to implement efficient bulk (batch) modifications
    * of the Map.
@@ -32,6 +29,6 @@ namespace sgns::storage
     ::ROCKSDB_NAMESPACE::WriteBatch batch_;
   };
 
-}  // namespace sgns::storage
+}
 
-#endif  // SUPERGENIUS_rocksdb_BATCH_HPP
+#endif

@@ -50,11 +50,11 @@ namespace
                     SGProcessing::ProcessingChunk chunk;
                     chunk.set_chunkid((boost::format("CHUNK_%d_%d") % i % chunkId).str());
                     chunk.set_n_subchunks(1);
-                    chunk.set_line_stride(1);
-                    chunk.set_offset(0);
-                    chunk.set_stride(1);
-                    chunk.set_subchunk_height(10);
-                    chunk.set_subchunk_width(10);
+                    //chunk.set_line_stride(1);
+                    //chunk.set_offset(0);
+                    //chunk.set_stride(1);
+                    //chunk.set_subchunk_height(10);
+                    //chunk.set_subchunk_width(10);
 
                     auto chunkToProcess = subtask.add_chunkstoprocess();
                     chunkToProcess->CopyFrom(chunk);
@@ -220,9 +220,9 @@ int main(int argc, char* argv[])
     // And wait for its processing
         SGProcessing::Task task;
         task.set_ipfs_block_id((boost::format("IPFS_BLOCK_ID_%1%") % (taskIdx + 1)).str());
-        task.set_block_len(1000);
-        task.set_block_line_stride(2);
-        task.set_block_stride(4);
+        //task.set_block_len(1000);
+        //task.set_block_line_stride(2);
+        //task.set_block_stride(4);
         task.set_random_seed(0);
         task.set_results_channel((boost::format("RESULT_CHANNEL_ID_%1%") % (taskIdx + 1)).str());
         tasks.push_back(std::move(task));

@@ -15,72 +15,11 @@
 #include <future>
 #include <chrono>
 #include <queue>
+#include <set>
 
 namespace sgns::crdt
 {
   class CrdtSet;
-  class CrdtDatastore;
-  /** @brief CrdtDataStoreTransaction incapsulated transaction functionality
-  * of CRDT datastore
-  */
-  class CrdtDataStoreTransaction
-  {
-  public:
-      using Buffer = base::Buffer;
-      using Logger = base::Logger;
-      using Delta = pb::Delta;
-      using Element = pb::Element;
-      //using Node = ipfs_lite::ipld::IPLDNode;
-
-      CrdtDataStoreTransaction() = delete;
-
-      /** Constructor
-      * @param datastore pointer to data storage
-      */
-      CrdtDataStoreTransaction(std::shared_ptr<CrdtDatastore> datastore);
-
-      /** AddToDelta creates delta with key and value pair and merges it into current delta,
-      * caller is responsible for calling PublishDelta()
-      * @param aKey HierarchicalKey to add to delta
-      * @param aValue Buffer value to add to delta
-      * @return returns size of current delta or outcome::failure on error
-      */
-      outcome::result<int> AddToDelta(const HierarchicalKey& aKey, const Buffer& aValue);
-
-      /** RemoveFromDelta creates delta to remove and merges it into current delta as tombstone,
-      * caller is responsible for calling PublishDelta()
-      * @param aKey HierarchicalKey to remove from delta
-      * @return returns size of current delta or outcome::failure on error
-      */
-      outcome::result<int> RemoveFromDelta(const HierarchicalKey& aKey);
-
-      /** PublishDelta publishes current delta constructed and broadcast it
-      * @return returns outcome::success on success or outcome::failure otherwise
-      */
-      outcome::result<void> PublishDelta();
-
-  private:
-      /** UpdateDeltaWithRemove updates current delta with tomstones
-      * To satisfy datastore semantics, we need to remove elements from the current
-      * batch if they were added.
-      * @param aKey HierarchicalKey for delta
-      * @param aDelta pointer to delta to merge
-      */
-      int UpdateDeltaWithRemove(const HierarchicalKey& aKey, const std::shared_ptr<Delta>& aDelta);
-
-      /** UpdateDelta updates current delta by merging input delta
-      * @param aDelta pointer to Delta to merge
-      * @return the size of current delta just merged
-      *
-      */
-      int UpdateDelta(const std::shared_ptr<Delta>& aDelta);
-
-      std::shared_ptr<CrdtDatastore> datastore_;
-
-      std::mutex currentDeltaMutex_;
-      std::shared_ptr<Delta> currentDelta_;
-  };
-
   /** @brief CrdtDatastore provides a replicated go-datastore (key-value store)
   * implementation using Merkle-CRDTs built with IPLD nodes.
   *
@@ -102,7 +41,7 @@ namespace sgns::crdt
     using QueryResult = DataStore::QueryResult;
     using Delta = pb::Delta;
     using Element = pb::Element;
-    using Node = ipfs_lite::ipld::IPLDNode;
+    using IPLDNode = ipfs_lite::ipld::IPLDNode;
 
     using PutHookPtr = std::function<void(const std::string& k, const Buffer& v)>;
     using DeleteHookPtr = std::function<void(const std::string& k)>;
@@ -116,11 +55,12 @@ namespace sgns::crdt
     * \sa CrdtOptions
     *
     */
-    CrdtDatastore( std::shared_ptr<DataStore>          aDatastore,
+    static std::shared_ptr<CrdtDatastore> New( std::shared_ptr<DataStore>          aDatastore,
                    const HierarchicalKey              &aKey,
                    std::shared_ptr<DAGSyncer>          aDagSyncer,
                    std::shared_ptr<Broadcaster>        aBroadcaster,
                    const std::shared_ptr<CrdtOptions> &aOptions );
+
 
     /** Destructor
     */
@@ -191,11 +131,6 @@ namespace sgns::crdt
     */
     outcome::result<std::vector<CID>> DecodeBroadcast(const Buffer& buff);
 
-    /** Create a transaction object
-    * @return new transaction
-    */
-    std::shared_ptr<CrdtDataStoreTransaction> BeginTransaction();
-
     /** Returns a new delta-set adding the given key/value.
     * @param key - delta key to add to datastore 
     * @param value - delta value to add to datastore 
@@ -209,10 +144,17 @@ namespace sgns::crdt
     */
     outcome::result<std::shared_ptr<Delta>> CreateDeltaToRemove(const std::string& key);
 
+    void PrintDataStore();
+
     auto GetDB()
     {
         return dataStore_->getDB();
     }
+
+    /** Close shuts down the CRDT datastore and worker threads. It should not be used afterwards.
+    */
+    void Close();
+
 
   protected:
 
@@ -223,7 +165,7 @@ namespace sgns::crdt
       CID rootCid_; /*> Root CID */
       uint64_t rootPriority_; /*> root priority */
       std::shared_ptr<Delta> delta_; /*> pointer to delta */
-      std::shared_ptr<Node> node_; /*> pointer to node */
+      std::shared_ptr<IPLDNode> node_; /*> pointer to node */
     };
 
     /** DAG worker structure to keep track of worker threads
@@ -234,21 +176,21 @@ namespace sgns::crdt
       std::atomic<bool> dagWorkerThreadRunning_ = false; /*> Flag used for keep track of thread cycle */
     };
 
-    /** Worker thread to handle jobs broadcasted from the network.
+    /** one iteration to handle jobs broadcasted from the network.
     * @param aCrdtDatastore pointer to CRDT datastore
     */
-    void HandleNext();
+    void HandleNextIteration();
 
-    /** Worker thread to rebroadcast heads
+    /** one iteration of Worker thread to rebroadcast heads
     * @param aCrdtDatastore pointer to CRDT datastore
     */
-    void Rebroadcast();
+    void RebroadcastIteration(std::chrono::milliseconds& elapsedTimeMilliseconds);
 
-    /** Worker thread to send jobs
+    /** one iteration of Worker thread to send jobs
     * @param aCrdtDatastore pointer to CRDT datastore
     * @param dagWorker pointer to DAG worker structure
     */
-    void SendJobWorker(std::shared_ptr<DagWorker> dagWorker);
+    void SendJobWorkerIteration(std::shared_ptr<DagWorker> dagWorker, DagJob& dagJob);
 
     /** SendNewJobs calls getDeltas with the given children and sends each response to the workers.
     * @param aRootCID root CID
@@ -303,16 +245,14 @@ namespace sgns::crdt
     outcome::result<std::vector<CID>> ProcessNode( const CID                    &aRoot,
                                                    uint64_t                      aRootPrio,
                                                    const std::shared_ptr<Delta> &aDelta,
-                                                   const std::shared_ptr<Node>  &aNode );
+                                                   const std::shared_ptr<IPLDNode>  &aNode );
 
     /** PutBlock add block node to DAGSyncer
     * @param aHeads list of CIDs to add to node as IPLD links
-    * @param aHeight priority set to Delta
     * @param aDelta Delta to serialize into IPLD node
     * @return IPLD node or outcome::failure on error
     */
-    outcome::result<std::shared_ptr<Node>> PutBlock( const std::vector<CID>       &aHeads,
-                                                     uint64_t                      aHeight,
+    outcome::result<std::shared_ptr<IPLDNode>> PutBlock( const std::vector<CID>       &aHeads,
                                                      const std::shared_ptr<Delta> &aDelta );
 
     /** AddDAGNode adds node to DAGSyncer and processes new blocks.
@@ -321,10 +261,6 @@ namespace sgns::crdt
     * \sa PutBlock, ProcessNode
     */
     outcome::result<CID> AddDAGNode(const std::shared_ptr<Delta>& aDelta);
-
-    /** Close shuts down the CRDT datastore and worker threads. It should not be used afterwards.
-    */
-    void Close();
 
     /** SyncDatastore sync heads and set datastore
     * @param: aKeyList all heads and the set entries related to the given prefix
@@ -335,17 +271,12 @@ namespace sgns::crdt
   private:
     CrdtDatastore() = default;
 
-    /** Helper function to log Error messages from threads
-    */
-    void LogError(std::string message);
+    CrdtDatastore( std::shared_ptr<DataStore>          aDatastore,
+      const HierarchicalKey              &aKey,
+      std::shared_ptr<DAGSyncer>          aDagSyncer,
+      std::shared_ptr<Broadcaster>        aBroadcaster,
+      const std::shared_ptr<CrdtOptions> &aOptions );
 
-    /** Helper function to log Info messages from threads
-    */
-    void LogInfo(std::string message);
-
-    /** Helper function to log Debug messages from threads
-    */
-    void LogDebug(std::string message);
 
     std::shared_ptr<DataStore> dataStore_ = nullptr;
     std::shared_ptr<CrdtOptions> options_ = nullptr;
@@ -356,11 +287,11 @@ namespace sgns::crdt
     std::shared_ptr<CrdtHeads> heads_ = nullptr;
 
     std::shared_mutex seenHeadsMutex_;
-    std::vector<CID> seenHeads_;
+    std::set<CID> seenHeads_;
 
     std::shared_ptr<Broadcaster> broadcaster_ = nullptr;
     std::shared_ptr<DAGSyncer> dagSyncer_ = nullptr;
-    Logger logger_;
+    Logger logger_ = base::createLogger("CrdtDatastore");
 
     static constexpr std::chrono::milliseconds threadSleepTimeInMilliseconds_ = std::chrono::milliseconds(100);
     static constexpr std::string_view headsNamespace_ = "h";
@@ -368,6 +299,7 @@ namespace sgns::crdt
 
     PutHookPtr putHookFunc_ = nullptr;
     DeleteHookPtr deleteHookFunc_ = nullptr;
+    int numberOfDagWorkers = 5;
 
     std::future<void> handleNextFuture_;
     std::atomic<bool> handleNextThreadRunning_ = false;
@@ -378,6 +310,14 @@ namespace sgns::crdt
     std::vector<std::shared_ptr<DagWorker>> dagWorkers_;
     std::shared_mutex dagWorkerMutex_;
     std::queue<DagJob> dagWorkerJobList;
+    std::atomic<bool> dagWorkerJobListThreadRunning_ = false;
+
+    std::mutex mutex_processed_cids;
+    std::set<CID> processed_cids;
+
+    void AddProcessedCID(const CID &cid);
+    bool ContainsCID(const CID &cid);
+    bool DeleteCIDS(const std::vector<CID> &cid);
   };
 
 } // namespace sgns::crdt

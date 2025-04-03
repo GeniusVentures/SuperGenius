@@ -28,8 +28,8 @@ namespace sgns
 
     struct OutputDestInfo
     {
-        uint256_t encrypted_amount; ///< El Gamal encrypted amount
-        uint256_t dest_address;     ///< Destination node address
+        uint64_t    encrypted_amount; ///< El Gamal encrypted amount
+        std::string dest_address;     ///< Destination node address
     };
 
     struct UTXOTxParameters
@@ -43,12 +43,16 @@ namespace sgns
         }
 
         static outcome::result<UTXOTxParameters> create( const std::vector<GeniusUTXO> &utxo_pool,
-                                                         const uint256_t               &src_address,
+                                                         const std::string             &src_address,
                                                          uint64_t                       amount,
-                                                         const uint256_t               &dest_address,
+                                                         std::string                    dest_address,
                                                          std::string                    signature = "" )
         {
-            UTXOTxParameters instance( utxo_pool, src_address, amount, dest_address, std::move( signature ) );
+            UTXOTxParameters instance( utxo_pool,
+                                       src_address,
+                                       amount,
+                                       std::move( dest_address ),
+                                       std::move( signature ) );
 
             if ( !instance.inputs_.empty() )
             {
@@ -59,7 +63,7 @@ namespace sgns
         }
 
         static outcome::result<UTXOTxParameters> create( const std::vector<GeniusUTXO>     &utxo_pool,
-                                                         const uint256_t                   &src_address,
+                                                         const std::string                 &src_address,
                                                          const std::vector<OutputDestInfo> &destinations,
                                                          std::string                        signature = "" )
         {
@@ -93,58 +97,21 @@ namespace sgns
 
     private:
         UTXOTxParameters( const std::vector<GeniusUTXO> &utxo_pool,
-                          const uint256_t               &src_address,
+                          const std::string             &src_address,
                           uint64_t                       amount,
-                          const uint256_t               &dest_address,
+                          std::string                    dest_address,
                           std::string                    signature ) :
             UTXOTxParameters( utxo_pool,
                               src_address,
-                              { OutputDestInfo{ uint256_t{ amount }, dest_address } },
+                              { OutputDestInfo{ amount, std::move( dest_address ) } },
                               std::move( signature ) )
         {
         }
 
         UTXOTxParameters( const std::vector<GeniusUTXO>     &utxo_pool,
-                          const uint256_t                   &src_address,
+                          const std::string                 &src_address,
                           const std::vector<OutputDestInfo> &destinations,
-                          std::string                        signature )
-        {
-            int64_t total_amount = 0;
-
-            for ( auto &dest_info : destinations )
-            {
-                total_amount += static_cast<int64_t>( dest_info.encrypted_amount );
-            }
-
-            int64_t remain = total_amount;
-
-            for ( auto &utxo : utxo_pool )
-            {
-                if ( remain <= 0 )
-                {
-                    break;
-                }
-                InputUTXOInfo curr_input{ utxo.GetTxID(), utxo.GetOutputIdx(), signature };
-                remain -= static_cast<int64_t>( utxo.GetAmount() );
-
-                inputs_.push_back( curr_input );
-            }
-            if ( remain > 0 )
-            {
-                inputs_.clear();
-                outputs_.clear();
-            }
-            else
-            {
-                outputs_ = destinations;
-            }
-
-            if ( remain < 0 )
-            {
-                uint256_t change( std::abs( remain ) );
-                outputs_.push_back( { change, src_address } );
-            }
-        }
+                          std::string                        signature );
     };
 }
 

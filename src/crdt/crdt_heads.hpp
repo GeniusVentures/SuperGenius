@@ -57,9 +57,9 @@ namespace sgns::crdt
 
     /** Check if CID is among the current heads.
     * @param aCid Content identifier
-    * @return true is CID is head, false otherwise or outcome::failure on error
+    * @return true is CID is head, false otherwise
     */
-    outcome::result<bool> IsHead(const CID& aCid);
+    bool IsHead(const CID& aCid);
 
     /** Check if CID is head and return it height if it is
     * @param aCid Content identifier
@@ -70,7 +70,7 @@ namespace sgns::crdt
     /** Get current number of heads
     * @return lenght, current number of heads or outcome::failure on error
     */
-    outcome::result<int> GetLenght();
+    outcome::result<int> GetLength();
 
     /** Add head CID to datastore with full namespace
     * @param aCid Content identifier

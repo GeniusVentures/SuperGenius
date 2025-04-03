@@ -9,51 +9,64 @@ package SGProcessing;
 message Task 
 {
     string ipfs_block_id = 1;// source block data to be processed
-    uint32 block_len = 2; // and ipfs block's length in bytes
-    uint32 block_stride = 3; // Stride to use for access pattern
-    uint32 block_line_stride = 4; // Line stride in bytes to get to next block start
-    float random_seed = 5; // used to randomly choose verifier block
-    string results_channel = 6; // which channel to publish results to.
+	  bytes json_data = 2; // Job information json
+    //uint32 block_len = 3; // and ipfs block's length in bytes
+    //uint32 block_stride = 4; // Stride to use for access pattern
+    //uint32 block_line_stride = 5; // Line stride in bytes to get to next block start
+    float random_seed = 3; // used to randomly choose verifier block
+    string results_channel = 4; // which channel to publish results to.
+    string escrow_path = 5; //the path of the escrow transaction
 }
 
 message TaskLock
 {
     string task_id = 1;
-    int64 lock_timestamp = 2;
+    uint64 lock_timestamp = 2;
+    uint64 lock_expiration_timestamp = 3;
+
 }
 
 // Subtask is pubished by host into ipfs_block_id channel
 message SubTask 
 {
     string ipfsblock = 1; // source block data to be processed
-    repeated ProcessingChunk chunksToProcess = 2; // array of chunks to process
-    uint32 datalen = 3; // length of ipfsBlock?
-    string subtaskid = 4; // unique subtask ID
+	  string json_data = 2; //json data of the specific inputs for this subtask
+    repeated ProcessingChunk chunksToProcess = 3; // array of chunks to process
+    uint32 datalen = 4; // length of ipfsBlock?
+    string subtaskid = 5; // unique subtask ID
 }
 
 message ProcessingChunk 
 {
     string chunkid = 1; // unique process chunk ID
-    uint32 offset = 2; // offset into data
-    uint32 subchunk_width = 3; // width of subchunk/subblock
-    uint32 subchunk_height = 4; // height of chunk/block
-    uint32 stride = 5; // stride to use for overall data chunk
-    uint32 line_stride = 6; // stride of one line of data
-    uint32 n_subchunks = 7; // number of chunks to process  
+    //uint32 offset = 2; // offset into data
+    //uint32 subchunk_width = 3; // width of subchunk/subblock
+    //uint32 subchunk_height = 4; // height of chunk/block
+    //uint32 stride = 5; // stride to use for overall data chunk
+    //uint32 line_stride = 6; // stride of one line of data
+    uint32 n_subchunks = 2; // number of chunks to process  
 }
 
 message ProcessingQueueItem
 {
-    int64 lock_timestamp = 1;
+    uint64 lock_timestamp = 1;
     string lock_node_id = 2;
+    uint64 lock_expiration_timestamp = 3;
 }
 
+message OwnershipRequest {
+    string node_id = 1;
+    uint64 request_timestamp = 2;  // Timestamp when request was created
+}
 
 message ProcessingQueue
 {
     repeated ProcessingQueueItem items = 1;
-    int64 last_update_timestamp = 2;
-    string owner_node_id = 3;
+    uint64 last_update_timestamp = 2;
+    uint64 processing_timeout_length = 3;
+    string owner_node_id = 4;
+    repeated OwnershipRequest ownership_requests = 5;
+    repeated string processed_subtask_ids = 6;
 }
 
 message SubTaskCollection
@@ -70,6 +83,7 @@ message SubTaskQueue
 message SubTaskQueueRequest
 {
     string node_id = 1;
+    uint64 request_timestamp = 2;
 }
 
 // SubTask results are published to result_channel
@@ -79,6 +93,7 @@ message SubTaskResult
     repeated bytes chunk_hashes = 2; // the hashes for each chunk
     string ipfs_results_data_id = 3; // UUID of the results data on ipfs
     string subtaskid = 4; // linked subtask id
+    string node_address = 5; // The processor node ID/address
 }
 
 message SubTaskState
@@ -92,7 +107,7 @@ message SubTaskState
         COMPLETE = 4;
     }
     Type state = 1;
-    int64 timestamp = 2;
+    uint64 timestamp = 2;
 }
 
 message TaskResult
@@ -112,12 +127,18 @@ message ProcessingChannelResponse
     string channel_id = 1; // Processing channel Id
 }
 
+message NodeCreationIntent {
+    string peer_address = 1;
+    string subtask_queue_id = 2;
+}
+
 message GridChannelMessage
 {
     oneof data 
     {
         ProcessingChannelRequest processing_channel_request = 1;
         ProcessingChannelResponse processing_channel_response = 2;
+        NodeCreationIntent node_creation_intent = 3;
     }
 }
 
