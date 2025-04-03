@@ -177,6 +177,35 @@ namespace sgns::crdt
         Close();
     }
 
+    bool CrdtDatastore::SetFilterCallback( std::shared_ptr<FilterCB> filter_cb )
+    {
+        bool ret = false;
+
+        if ( !filter_cb_ )
+        {
+            filter_cb_ = std::move( filter_cb );
+            ret        = true;
+        }
+        return ret;
+    }
+
+    /**
+     * @brief       Clear the CRDT Merge Filter Callback
+     * @return      true if not filter is cleared, false otherwise
+     * @warning     This method is used only for testing, so we don't care about race conditions here
+     */
+    bool CrdtDatastore::ClearFilterCallback()
+    {
+        bool ret = false;
+
+        if ( filter_cb_ )
+        {
+            filter_cb_ = nullptr;
+            ret        = true;
+        }
+        return ret;
+    }
+
     //static
     std::shared_ptr<CrdtDatastore::Delta> CrdtDatastore::DeltaMerge( const std::shared_ptr<Delta> &aDelta1,
                                                                      const std::shared_ptr<Delta> &aDelta2 )
@@ -768,7 +797,7 @@ namespace sgns::crdt
 
         if ( filter_cb_ )
         {
-            filter_ret = (*filter_cb_)( *aDelta );
+            filter_ret = ( *filter_cb_ )( *aDelta );
         }
 
         if ( filter_ret )
@@ -786,7 +815,7 @@ namespace sgns::crdt
         }
         else
         {
-            logger_->debug("ProcessNode: DELTA UNMERGED, filter removed the Delta");
+            logger_->debug( "ProcessNode: DELTA UNMERGED, filter removed the Delta" );
         }
 
         std::vector<CID> children;

@@ -68,6 +68,21 @@ namespace sgns::crdt
         */
         virtual ~CrdtDatastore();
 
+        /**
+         * @brief       Set the CRDT Merge Filter Callback
+         * @param[in]   filter_cb: The filter callback to add or not the delta
+         * @return      true if not filter is set, false otherwise
+         * @warning     This method is used only for testing, so we don't care about race conditions here
+         */
+        bool SetFilterCallback( std::shared_ptr<FilterCB> filter_cb );
+
+        /**
+         * @brief       Clear the CRDT Merge Filter Callback
+         * @return      true if not filter is cleared, false otherwise
+         * @warning     This method is used only for testing, so we don't care about race conditions here
+         */
+        bool ClearFilterCallback();
+
         /** Static function to merge delta elements and tombstones, use highest priority for the result delta
         * @param aDelta1 Delta to merge
         * @param aDelta2 Delta to merge
@@ -277,7 +292,7 @@ namespace sgns::crdt
                        std::shared_ptr<DAGSyncer>          aDagSyncer,
                        std::shared_ptr<Broadcaster>        aBroadcaster,
                        const std::shared_ptr<CrdtOptions> &aOptions,
-                       std::shared_ptr<FilterCB>           filter_cb  );
+                       std::shared_ptr<FilterCB>           filter_cb );
 
         std::shared_ptr<DataStore>   dataStore_ = nullptr;
         std::shared_ptr<CrdtOptions> options_   = nullptr;
