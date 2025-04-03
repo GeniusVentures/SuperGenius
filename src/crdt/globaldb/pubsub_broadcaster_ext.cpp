@@ -75,12 +75,19 @@ namespace sgns::crdt
     PubSubBroadcasterExt::PubSubBroadcasterExt( const std::vector<std::shared_ptr<GossipPubSubTopic>> &pubSubTopics,
                                                 std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer>        dagSyncer,
                                                 libp2p::multi::Multiaddress dagSyncerMultiaddress ) :
-        topics_( pubSubTopics ),
         dagSyncer_( std::move( dagSyncer ) ),
         dataStore_( nullptr ),
         dagSyncerMultiaddress_( std::move( dagSyncerMultiaddress ) )
     {
         m_logger->trace( "Initializing PubSubBroadcasterExt" );
+        if (!pubSubTopics.empty())
+        {
+            firstTopic_ = pubSubTopics.front()->GetTopic();
+        }
+        for (const auto& topic : pubSubTopics)
+        {
+            topics_.insert({topic->GetTopic(), topic});
+        }
     }
 
     void PubSubBroadcasterExt::Start()
@@ -91,9 +98,9 @@ namespace sgns::crdt
             return;
         }
         // Subscribe to each topic.
-        for ( auto &topic : topics_ )
+        for ( auto &pair : topics_ )
         {
-            // Get the topic name via the existing GetTopic() method.
+            auto &topic = pair.second;
             std::string topicName = topic->GetTopic();
             m_logger->debug( "Subscription request sent to topic: " + topicName );
 
@@ -114,7 +121,7 @@ namespace sgns::crdt
 
     void PubSubBroadcasterExt::OnMessage( boost::optional<const GossipPubSub::Message &> message )
     {
-        m_logger->trace( "Got a message" );
+        m_logger->trace( "Received a message" );
         if ( message )
         {
             sgns::crdt::broadcasting::BroadcastMessage bmsg;
@@ -215,14 +222,10 @@ namespace sgns::crdt
         std::shared_ptr<GossipPubSubTopic> targetTopic = nullptr;
         if ( topic_name )
         {
-            // Search for the topic that matches the provided topic_name.
-            for ( auto &topic : topics_ )
+            auto it = topics_.find(topic_name.value());
+            if (it != topics_.end())
             {
-                if ( topic->GetTopic() == topic_name.value() )
-                {
-                    targetTopic = topic;
-                    break;
-                }
+                targetTopic = it->second;
             }
             if ( !targetTopic )
             {
@@ -232,12 +235,17 @@ namespace sgns::crdt
         }
         else
         {
-            // Use the first topic if no topic_name is provided.
-            targetTopic = topics_.front();
+            // Use the first topic added if no topic_name is provided.
+            if ( firstTopic_.empty() || topics_.find(firstTopic_) == topics_.end() )
+            {
+                m_logger->error( "First topic is not available." );
+                return outcome::failure( boost::system::error_code{} );
+            }
+            targetTopic = topics_.at(firstTopic_);
         }
 
         sgns::crdt::broadcasting::BroadcastMessage bmsg;
-        auto                                       bpi = new sgns::crdt::broadcasting::BroadcastMessage_PeerInfo;
+        auto bpi = new sgns::crdt::broadcasting::BroadcastMessage_PeerInfo;
 
         // Get the TCP port from dagSyncerMultiaddress_
         auto port_opt = dagSyncerMultiaddress_.getFirstValueForProtocol( libp2p::multi::Protocol::Code::TCP );
@@ -348,16 +356,18 @@ namespace sgns::crdt
     {
         std::string topicName = newTopic->GetTopic();
     
-        for (const auto& topic : topics_)
+        if ( topics_.find(topicName) != topics_.end() )
         {
-            if (topic->GetTopic() == topicName)
-            {
-                m_logger->debug("Topic '" + topicName + "' already exists. Not adding duplicate.");
-                return;
-            }
+            m_logger->debug("Topic '" + topicName + "' already exists. Not adding duplicate.");
+            return;
         }
     
-        topics_.push_back(newTopic);
+        topics_.insert({topicName, newTopic});
+        if ( firstTopic_.empty() )
+        {
+            firstTopic_ = topicName;
+        }
+    
         m_logger->debug("Subscription request sent to new topic: " + topicName);
     
         std::future<libp2p::protocol::Subscription> future = std::move(newTopic->Subscribe(
@@ -372,5 +382,4 @@ namespace sgns::crdt
         subscriptionFutures_.push_back(std::move(future));
     }
     
-
-}
+} // namespace sgns::crdt

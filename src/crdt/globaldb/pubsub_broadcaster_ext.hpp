@@ -8,6 +8,8 @@
 #include <queue>
 #include <vector>
 #include <future>
+#include <unordered_map>
+#include <string>
 
 namespace sgns::crdt
 {
@@ -50,7 +52,7 @@ namespace sgns::crdt
         outcome::result<base::Buffer> Next() override;
 
         /**
-         * Initializes the PubSubBroadcasterExt by subscribing to the associated gossip topic
+         * Initializes the PubSubBroadcasterExt by subscribing to the associated gossip topics
          * to handle incoming messages. Ensures that message processing is set up before
          * CRDT-related operations are invoked.
          */
@@ -65,15 +67,16 @@ namespace sgns::crdt
 
         void OnMessage( boost::optional<const GossipPubSub::Message &> message );
 
-        std::vector<std::shared_ptr<GossipPubSubTopic>>           topics_;
-        std::shared_ptr<GossipPubSubTopic>                        gossipPubSubTopic_;
-        std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer>           dagSyncer_;
-        std::shared_ptr<CrdtDatastore>                            dataStore_;
-        libp2p::multi::Multiaddress                               dagSyncerMultiaddress_;
-        std::queue<std::tuple<libp2p::peer::PeerId, std::string>> messageQueue_;
-        std::mutex         mutex_;
+        std::unordered_map<std::string, std::shared_ptr<GossipPubSubTopic>> topics_;
+        std::string                                                         firstTopic_;
+        std::shared_ptr<GossipPubSubTopic>                                  gossipPubSubTopic_;
+        std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer>                     dagSyncer_;
+        std::shared_ptr<CrdtDatastore>                                      dataStore_;
+        libp2p::multi::Multiaddress                                         dagSyncerMultiaddress_;
+        std::queue<std::tuple<libp2p::peer::PeerId, std::string>>           messageQueue_;
+        std::mutex                                                          mutex_;
         sgns::base::Logger m_logger = sgns::base::createLogger( "PubSubBroadcasterExt" );
-        std::future<void> subscriptionFuture_;
+        std::future<void>  subscriptionFuture_;
         std::vector<std::future<libp2p::protocol::Subscription>> subscriptionFutures_;
     };
 }
