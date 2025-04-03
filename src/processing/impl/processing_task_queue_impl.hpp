@@ -23,8 +23,10 @@ namespace sgns::processing
         /** Create a task queue
         * @param db - CRDT globaldb to use
         */
-        ProcessingTaskQueueImpl( std::shared_ptr<sgns::crdt::GlobalDB> db ) :
-            m_db( std::move( db ) ), m_processingTimeout( std::chrono::seconds( 10 ) )
+        ProcessingTaskQueueImpl( std::shared_ptr<sgns::crdt::GlobalDB> db, const std::string &processingTopic ) :
+            m_db( std::move( db ) ),
+            m_processingTimeout( std::chrono::seconds( 10 ) ),
+            m_processingTopic( processingTopic )
         {
         }
 
@@ -92,6 +94,8 @@ namespace sgns::processing
         std::chrono::system_clock::duration            m_processingTimeout;
         sgns::base::Logger                             m_logger = sgns::base::createLogger( "ProcessingTaskQueueImpl" );
         std::shared_ptr<sgns::crdt::AtomicTransaction> job_crdt_transaction_;
+        std::string m_processingTopic;
+
     };
 
 }

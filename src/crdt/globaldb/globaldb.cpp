@@ -62,6 +62,19 @@ namespace sgns::crdt
     using GraphsyncImpl      = ipfs_lite::ipfs::graphsync::GraphsyncImpl;
     using GossipPubSubTopic  = ipfs_pubsub::GossipPubSubTopic;
 
+    GlobalDB::GlobalDB( std::shared_ptr<boost::asio::io_context>         context,
+                        std::string                                      databasePath,
+                        int                                              dagSyncPort,
+                        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub,
+                        std::string                                      gsaddresses ) :
+        m_context( std::move( context ) ),
+        m_databasePath( std::move( databasePath ) ),
+        m_dagSyncPort( dagSyncPort ),
+        m_graphSyncAddrs( std::move( gsaddresses ) ),
+        m_pubsub( std::move( pubsub ) )
+    {
+    }
+
     GlobalDB::GlobalDB( std::shared_ptr<boost::asio::io_context>              context,
                         std::string                                           databasePath,
                         int                                                   dagSyncPort,
@@ -70,14 +83,18 @@ namespace sgns::crdt
         m_context( std::move( context ) ),
         m_databasePath( std::move( databasePath ) ),
         m_dagSyncPort( dagSyncPort ),
-        m_graphSyncAddrs( gsaddresses ),
+        m_graphSyncAddrs( std::move( gsaddresses ) ),
         m_broadcastChannel( std::move( broadcastChannel ) )
     {
     }
 
+
     GlobalDB::~GlobalDB()
     {
-        m_crdtDatastore->Close();
+        if (m_crdtDatastore)
+        {
+            m_crdtDatastore->Close();
+        }
         m_crdtDatastore    = nullptr;
         m_broadcastChannel = nullptr;
         m_context          = nullptr;
@@ -293,18 +310,25 @@ std::string GetLocalIP( boost::asio::io_context &io )
         //scheduleBootstrap(io, dagSyncerHost);
         // Create pubsub broadcaster
         //auto broadcaster = std::make_shared<PubSubBroadcaster>(m_broadcastChannel);
-        std::shared_ptr<PubSubBroadcasterExt> broadcaster;
-        if ( m_graphSyncAddrs.empty() )
+        std::shared_ptr<PubSubBroadcasterExt>                              broadcaster;
+        std::vector<std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic>> topics;
+        if ( !m_broadcastTopicNames.empty() )
         {
-            broadcaster = PubSubBroadcasterExt::New( m_broadcastChannel, dagSyncer, listen_to );
+            for ( const auto &topicName : m_broadcastTopicNames )
+            {
+                topics.push_back( std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>( m_pubsub, topicName ) );
+            }
         }
-        else
+        else if ( m_broadcastChannel != nullptr )
         {
-            //auto listen_towan = libp2p::multi::Multiaddress::create(wanaddress).value();
-            broadcaster = PubSubBroadcasterExt::New( m_broadcastChannel, dagSyncer, listen_to );
+            topics.push_back( m_broadcastChannel );
         }
-        //broadcaster->SetLogger(m_logger);
+        // Otherwise, topics remains empty.
 
+        broadcaster = PubSubBroadcasterExt::New( topics, dagSyncer, listen_to );
+
+        // Save the broadcaster pointer for future additions.
+        m_broadcaster = broadcaster;
         m_crdtDatastore = CrdtDatastore::New( dataStore,
                                               HierarchicalKey( "crdt" ),
                                               dagSyncer,
@@ -359,7 +383,9 @@ std::string GetLocalIP( boost::asio::io_context &io )
     //        });
     //}
 
-    outcome::result<void> GlobalDB::Put( const HierarchicalKey &key, const Buffer &value )
+    outcome::result<void> GlobalDB::Put( const HierarchicalKey     &key,
+                                         const Buffer              &value,
+                                         std::optional<std::string> topic )
     {
         if ( !m_crdtDatastore )
         {
@@ -367,7 +393,7 @@ std::string GetLocalIP( boost::asio::io_context &io )
             return outcome::failure( Error::CRDT_DATASTORE_NOT_CREATED );
         }
 
-        return m_crdtDatastore->PutKey( key, value );
+        return m_crdtDatastore->PutKey( key, value, topic );
     }
 
     outcome::result<void> GlobalDB::Put( const std::vector<DataPair> &data_vector )
@@ -386,7 +412,7 @@ std::string GetLocalIP( boost::asio::io_context &io )
 
         return batch.Commit();
     }
-
+    
     outcome::result<GlobalDB::Buffer> GlobalDB::Get( const HierarchicalKey &key )
     {
         if ( !m_crdtDatastore )
@@ -461,6 +487,25 @@ std::string GetLocalIP( boost::asio::io_context &io )
     std::shared_ptr<AtomicTransaction> GlobalDB::BeginTransaction()
     {
         return std::make_shared<AtomicTransaction>( m_crdtDatastore );
+    }
+
+    void GlobalDB::AddBroadcastTopic( const std::string &topicName )
+    {
+        if ( !m_pubsub )
+        {
+            m_logger->error( "PubSub instance is not available to create new topic." );
+            return;
+        }
+        auto newTopic = std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>( m_pubsub, topicName );
+        if ( m_broadcaster )
+        {
+            m_broadcaster->AddTopic( newTopic );
+            m_logger->info( "New broadcast topic added: " + topicName );
+        }
+        else
+        {
+            m_logger->error( "Broadcaster is not initialized." );
+        }
     }
 
 }
