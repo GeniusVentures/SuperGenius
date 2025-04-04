@@ -195,8 +195,7 @@ namespace sgns::crdt
     EXPECT_OUTCOME_EQ(crdtDatastore_->HasKey(newKey5), false);
   }
 
-  // NEW TEST: Test filter callback functionality
-  TEST_F(CrdtDatastoreTest, FilterCallback)
+  TEST_F(CrdtDatastoreTest, FilterCallbackOneInvalid)
   {
     // Create a filter that rejects Deltas containing a specific key
     const std::string rejectedKey = "RejectMe";
@@ -221,21 +220,6 @@ namespace sgns::crdt
     auto filter_cb = std::make_shared<CrdtDatastore::FilterCB>(filter_func);
 
     EXPECT_TRUE(crdtDatastore_->SetFilterCallback(filter_cb));
-
-    //const CID cid1 = CID(CID::Version::V1, CID::Multicodec::SHA2_256,
-    //  Multihash::create(HashType::sha256, "1123456789ABCDEF0123456789ABCADE"_unhex).value());
-    //const CID cid2 = CID(CID::Version::V1, CID::Multicodec::SHA2_256,
-    //  Multihash::create(HashType::sha256, "1123456789ABCDEF0123456789ABCAFE"_unhex).value());
-    //const CID cid3 = CID(CID::Version::V1, CID::Multicodec::SHA2_256,
-    //  Multihash::create(HashType::sha256, "1123456789ABCDEF0123456789ABDECA"_unhex).value());
-    //const CID cid4 = CID(CID::Version::V1, CID::Multicodec::SHA2_256,
-    //  Multihash::create(HashType::sha256, "1123456789ABCDEF0123456789ABDEAD"_unhex).value());
-//
-    //std::vector<CID> cids;
-    //cids.push_back(cid1);
-    //cids.push_back(cid2);
-    //cids.push_back(cid3);
-    //cids.push_back(cid4);
 
     std::shared_ptr<Delta> delta = std::make_shared<Delta>();
     auto element1 = delta->add_elements();
@@ -278,248 +262,147 @@ namespace sgns::crdt
     EXPECT_GE(filter_called_count, 1);
   }
 
-  // NEW TEST: Test atomic transactions with filter
-//  TEST_F(CrdtDatastoreTest, AtomicTransactionWithFilter_DISABLE)
-//  {
-//    // Create a filter that rejects Deltas with specific content
-//    const std::string rejectedValue = "RejectThisValue";
-//    
-//    // Track filter calls
-//    std::atomic<int> filter_called_count{0};
-//    
-//    auto filter_func = [&](Delta delta) {
-//      filter_called_count++;
-//      
-//      // Check each element's value
-//      for (const auto& elem : delta.elements())
-//      {
-//        if (elem.value() == rejectedValue)
-//        {
-//          return false; // Reject this delta
-//        }
-//      }
-//      return true; // Accept this delta
-//    };
-//    
-//    // Create filter callback
-//    auto filter_cb = std::make_shared<CrdtDatastore::FilterCB>(filter_func);
-//    
-//    // Create a filtered datastore using existing test class members
-//    auto filtered_datastore = CrdtDatastore::New(db_, namespaceKey_, dagSyncer_, broadcaster_, 
-//                                                CrdtOptions::DefaultOptions(), filter_cb);
-//    additional_datastores_.push_back(filtered_datastore); // For cleanup
-//    
-//    // Create keys and values for transaction
-//    auto key1 = HierarchicalKey("TransKey1");
-//    CrdtBuffer value1;
-//    value1.put("GoodValue");
-//    
-//    auto key2 = HierarchicalKey("TransKey2");
-//    CrdtBuffer value2;
-//    value2.put(rejectedValue);
-//    
-//    auto key3 = HierarchicalKey("TransKey3");
-//    CrdtBuffer value3;
-//    value3.put("AnotherGoodValue");
-//    
-//    // Create and execute an atomic transaction with mixed values
-//    {
-//      AtomicTransaction transaction(filtered_datastore);
-//      EXPECT_OUTCOME_TRUE_1(transaction.Put(key1, value1));
-//      EXPECT_OUTCOME_TRUE_1(transaction.Put(key2, value2));
-//      EXPECT_OUTCOME_TRUE_1(transaction.Put(key3, value3));
-//      EXPECT_OUTCOME_TRUE_1(transaction.Commit());
-//    }
-//    
-//    // The filter should reject the entire transaction
-//    EXPECT_OUTCOME_EQ(filtered_datastore->HasKey(key1), false);
-//    EXPECT_OUTCOME_EQ(filtered_datastore->HasKey(key2), false);
-//    EXPECT_OUTCOME_EQ(filtered_datastore->HasKey(key3), false);
-//    
-//    // Verify filter was called
-//    EXPECT_GE(filter_called_count, 1);
-//    
-//    // Now try a transaction with only acceptable values
-//    {
-//      AtomicTransaction transaction(filtered_datastore);
-//      EXPECT_OUTCOME_TRUE_1(transaction.Put(key1, value1));
-//      EXPECT_OUTCOME_TRUE_1(transaction.Put(key3, value3));
-//      EXPECT_OUTCOME_TRUE_1(transaction.Commit());
-//    }
-//    
-//    // This transaction should succeed
-//    EXPECT_OUTCOME_EQ(filtered_datastore->HasKey(key1), true);
-//    EXPECT_OUTCOME_EQ(filtered_datastore->HasKey(key3), true);
-//  }
-//
-//  // NEW TEST: Test worker thread behavior
-//  TEST_F(CrdtDatastoreTest, WorkerThreads_DISABLE)
-//  {
-//    // Configure options for faster testing
-//    auto options = CrdtOptions::DefaultOptions();
-//    options->rebroadcastIntervalMilliseconds = 100;  // 100ms rebroadcast
-//    options->numWorkers = 3;  // Use multiple workers
-//    
-//    // Create two datastores sharing the same infrastructure
-//    auto ds1 = CrdtDatastore::New(db_, namespaceKey_, dagSyncer_, broadcaster_, options);
-//    auto ds2 = CrdtDatastore::New(db_, namespaceKey_, dagSyncer_, broadcaster_, options);
-//    additional_datastores_.push_back(ds1);
-//    additional_datastores_.push_back(ds2);
-//    
-//    // Add data to the first datastore
-//    const int numKeys = 5;
-//    std::vector<HierarchicalKey> keys;
-//    
-//    for (int i = 0; i < numKeys; ++i)
-//    {
-//      auto key = HierarchicalKey("WorkerKey" + std::to_string(i));
-//      keys.push_back(key);
-//      CrdtBuffer value;
-//      value.put("WorkerValue" + std::to_string(i));
-//      
-//      EXPECT_OUTCOME_TRUE_1(ds1->PutKey(key, value));
-//    }
-//    
-//    // Wait for the worker threads in the second datastore to process the data
-//    bool allSynced = WaitForCondition([&]() {
-//      for (const auto& key : keys)
-//      {
-//        auto result = ds2->HasKey(key);
-//        if (!result.has_value() || !result.value())
-//        {
-//          return false;
-//        }
-//      }
-//      return true;
-//    });
-//    
-//    EXPECT_TRUE(allSynced);
-//    
-//    // Verify all keys exist in both datastores
-//    for (const auto& key : keys)
-//    {
-//      EXPECT_OUTCOME_EQ(ds1->HasKey(key), true);
-//      EXPECT_OUTCOME_EQ(ds2->HasKey(key), true);
-//    }
-//  }
-//
-//  // NEW TEST: Test concurrent operations with worker threads
-//  TEST_F(CrdtDatastoreTest, ConcurrentOperations_DISABLE)
-//  {
-//    // Configure options
-//    auto options = CrdtOptions::DefaultOptions();
-//    options->numWorkers = 4;
-//    
-//    // Create datastore
-//    auto datastore = CrdtDatastore::New(db_, namespaceKey_, dagSyncer_, broadcaster_, options);
-//    additional_datastores_.push_back(datastore);
-//    
-//    // Number of threads and operations per thread
-//    const int numThreads = 4;
-//    const int opsPerThread = 5;
-//    std::atomic<int> successCount{0};
-//    
-//    // Run concurrent operations
-//    std::vector<std::thread> threads;
-//    for (int t = 0; t < numThreads; ++t)
-//    {
-//      threads.emplace_back([&, t]() {
-//        for (int i = 0; i < opsPerThread; ++i)
-//        {
-//          auto key = HierarchicalKey(
-//            "ConcurrentKey_" + std::to_string(t) + "_" + std::to_string(i));
-//          CrdtBuffer value;
-//          value.put("ConcurrentValue_" + std::to_string(t) + "_" + std::to_string(i));
-//          
-//          auto result = datastore->PutKey(key, value);
-//          if (!result.has_failure())
-//          {
-//            successCount++;
-//          }
-//        }
-//      });
-//    }
-//    
-//    // Wait for all threads to complete
-//    for (auto& t : threads)
-//    {
-//      t.join();
-//    }
-//    
-//    // All operations should have succeeded
-//    EXPECT_EQ(successCount, numThreads * opsPerThread);
-//    
-//    // Check that all keys exist
-//    int foundCount = 0;
-//    for (int t = 0; t < numThreads; ++t)
-//    {
-//      for (int i = 0; i < opsPerThread; ++i)
-//      {
-//        auto key = HierarchicalKey(
-//          "ConcurrentKey_" + std::to_string(t) + "_" + std::to_string(i));
-//        auto result = datastore->HasKey(key);
-//        if (result.has_value() && result.value())
-//        {
-//          foundCount++;
-//        }
-//      }
-//    }
-//    
-//    EXPECT_EQ(foundCount, numThreads * opsPerThread);
-//  }
-//
-//  // NEW TEST: Test combined filter and worker thread behavior
-//  TEST_F(CrdtDatastoreTest, FilteredReplication_DISABLE)
-//  {
-//    // Create a filter that rejects deltas with priority > 5
-//    std::atomic<int> filter_called_count{0};
-//    
-//    auto filter_func = [&](Delta delta) {
-//      filter_called_count++;
-//      return delta.priority() <= 5; // Accept only low-priority deltas
-//    };
-//    
-//    // Create filter callback
-//    auto filter_cb = std::make_shared<CrdtDatastore::FilterCB>(filter_func);
-//    
-//    // Configure options
-//    auto options = CrdtOptions::DefaultOptions();
-//    options->rebroadcastIntervalMilliseconds = 100;
-//    
-//    // Create two datastores - one filtered, one unfiltered
-//    auto unfiltered = CrdtDatastore::New(db_, namespaceKey_, dagSyncer_, broadcaster_, options);
-//    auto filtered = CrdtDatastore::New(db_, namespaceKey_, dagSyncer_, broadcaster_, options, filter_cb);
-//    additional_datastores_.push_back(unfiltered);
-//    additional_datastores_.push_back(filtered);
-//    
-//    // Create low-priority delta (should be accepted by filter)
-//    auto lowPrioKey = HierarchicalKey("LowPrioKey");
-//    CrdtBuffer lowPrioValue;
-//    lowPrioValue.put("LowPrioValue");
-//    auto lowPrioDelta = CreateTestDelta(lowPrioKey.GetKey(), std::string(lowPrioValue.toString()), 3);
-//    
-//    // Create high-priority delta (should be rejected by filter)
-//    auto highPrioKey = HierarchicalKey("HighPrioKey");
-//    CrdtBuffer highPrioValue;
-//    highPrioValue.put("HighPrioValue");
-//    auto highPrioDelta = CreateTestDelta(highPrioKey.GetKey(), std::string(highPrioValue.toString()), 10);
-//    
-//    // Add both deltas to the unfiltered datastore
-//    EXPECT_OUTCOME_TRUE_1(unfiltered->Publish(lowPrioDelta));
-//    EXPECT_OUTCOME_TRUE_1(unfiltered->Publish(highPrioDelta));
-//    
-//    // Wait for processing to complete
-//    std::this_thread::sleep_for(std::chrono::milliseconds(200));
-//    
-//    // The unfiltered datastore should have both keys
-//    EXPECT_OUTCOME_EQ(unfiltered->HasKey(lowPrioKey), true);
-//    EXPECT_OUTCOME_EQ(unfiltered->HasKey(highPrioKey), true);
-//    
-//    // The filtered datastore should only have the low-priority key
-//    EXPECT_OUTCOME_EQ(filtered->HasKey(lowPrioKey), true);
-//    EXPECT_OUTCOME_EQ(filtered->HasKey(highPrioKey), false);
-//    
-//    // Verify filter was called
-//    EXPECT_GE(filter_called_count, 2);
-//  }
+  TEST_F(CrdtDatastoreTest, FilterCallbackAllInvalid)
+  {
+    // Create a filter that rejects Deltas containing a specific key
+    const std::string rejectedKey = "RejectMe";
+    const std::string acceptedKey = "AcceptMe";
+    
+    // Track filter calls
+    std::atomic<int> filter_called_count{0};
+    
+    auto filter_func = [&](Element element) {
+      filter_called_count++;
+      
+      // Check if any element has the rejected key
+
+        if (element.value() == rejectedKey)
+        {
+          return false; // Reject this delta
+        }
+      return true; // Accept this delta
+    };
+    
+    // Create filter callback
+    auto filter_cb = std::make_shared<CrdtDatastore::FilterCB>(filter_func);
+
+    EXPECT_TRUE(crdtDatastore_->SetFilterCallback(filter_cb));
+
+    std::shared_ptr<Delta> delta = std::make_shared<Delta>();
+    auto element1 = delta->add_elements();
+    element1->set_key( "Key1" );
+    element1->set_value( rejectedKey );
+    auto element2 = delta->add_elements();
+    element2->set_key( "Key2" );
+    element2->set_value( rejectedKey );
+    auto element3 = delta->add_elements();
+    element3->set_key( "Key3");
+    element3->set_value( rejectedKey );
+    auto element4 = delta->add_elements();
+    element4->set_key( "Key4");
+    element4->set_value( rejectedKey );
+
+    delta->set_priority(1);
+
+
+    EXPECT_OUTCOME_TRUE_1(crdtDatastore_->Publish(delta));
+
+    std::chrono::milliseconds resultTime;
+
+    test::assertWaitForCondition(
+      [&filter_called_count]() {
+          return filter_called_count == 4;
+      },
+      std::chrono::milliseconds(15000),
+      "NO FILTER RAN",
+      &resultTime
+  );
+
+    
+    // Test with accepted key (should be stored)
+    EXPECT_OUTCOME_EQ(crdtDatastore_->HasKey({"Key1"}), false);
+    EXPECT_OUTCOME_EQ(crdtDatastore_->HasKey({"Key2"}), false);
+    EXPECT_OUTCOME_EQ(crdtDatastore_->HasKey({"Key3"}), false);
+    EXPECT_OUTCOME_EQ(crdtDatastore_->HasKey({"Key4"}), false);
+    
+    // Verify filter was called
+    EXPECT_GE(filter_called_count, 1);
+  }
+
+  TEST_F(CrdtDatastoreTest, FilterCallbackMultipleDeltas)
+  {
+    // Create a filter that rejects Deltas containing a specific key
+    const std::string rejectedKey = "RejectMe";
+    const std::string acceptedKey = "AcceptMe";
+    
+    // Track filter calls
+    std::atomic<int> filter_called_count{0};
+    
+    auto filter_func = [&](Element element) {
+      filter_called_count++;
+      
+      // Check if any element has the rejected key
+
+        if (element.value() == rejectedKey)
+        {
+          return false; // Reject this delta
+        }
+      return true; // Accept this delta
+    };
+    
+    // Create filter callback
+    auto filter_cb = std::make_shared<CrdtDatastore::FilterCB>(filter_func);
+
+    EXPECT_TRUE(crdtDatastore_->SetFilterCallback(filter_cb));
+
+    std::shared_ptr<Delta> delta1 = std::make_shared<Delta>();
+    auto element1 = delta1->add_elements();
+    element1->set_key( "Key1" );
+    element1->set_value( acceptedKey );
+    std::shared_ptr<Delta> delta2 = std::make_shared<Delta>();
+    auto element2 = delta2->add_elements();
+    element2->set_key( "Key2" );
+    element2->set_value( rejectedKey );
+    std::shared_ptr<Delta> delta3 = std::make_shared<Delta>();
+    auto element3 = delta3->add_elements();
+    element3->set_key( "Key3");
+    element3->set_value( acceptedKey );
+    std::shared_ptr<Delta> delta4 = std::make_shared<Delta>();
+    auto element4 = delta4->add_elements();
+    element4->set_key( "Key4");
+    element4->set_value( acceptedKey );
+
+    delta1->set_priority(1);
+    delta2->set_priority(2);
+    delta3->set_priority(3);
+    delta4->set_priority(4);
+
+
+    EXPECT_OUTCOME_TRUE_1(crdtDatastore_->Publish(delta1));
+    EXPECT_OUTCOME_TRUE_1(crdtDatastore_->Publish(delta2));
+    EXPECT_OUTCOME_TRUE_1(crdtDatastore_->Publish(delta3));
+    EXPECT_OUTCOME_TRUE_1(crdtDatastore_->Publish(delta4));
+
+    std::chrono::milliseconds resultTime;
+
+    test::assertWaitForCondition(
+      [&filter_called_count]() {
+          return filter_called_count == 4;
+      },
+      std::chrono::milliseconds(15000),
+      "NO FILTER RAN",
+      &resultTime
+  );
+
+    
+    // Test with accepted key (should be stored)
+    EXPECT_OUTCOME_EQ(crdtDatastore_->HasKey({"Key1"}), true);
+    EXPECT_OUTCOME_EQ(crdtDatastore_->HasKey({"Key2"}), false);
+    EXPECT_OUTCOME_EQ(crdtDatastore_->HasKey({"Key3"}), true);
+    EXPECT_OUTCOME_EQ(crdtDatastore_->HasKey({"Key4"}), true);
+    
+    // Verify filter was called
+    EXPECT_GE(filter_called_count, 1);
+  }
+  
 }
