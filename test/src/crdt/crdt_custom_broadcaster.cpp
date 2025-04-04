@@ -1,4 +1,5 @@
 #include "crdt_custom_broadcaster.hpp"
+#include <iostream>
 
 namespace sgns::crdt
 {
@@ -6,6 +7,7 @@ namespace sgns::crdt
     {
         if (!buff.empty())
         {
+            std::lock_guard<std::mutex> lock( mutex_ );
             const std::string bCastData(buff.toString());
             listOfBroadcasts_.push(bCastData);
         }
@@ -14,6 +16,7 @@ namespace sgns::crdt
 
     outcome::result<base::Buffer> CustomBroadcaster::Next()
     {
+        std::lock_guard<std::mutex> lock( mutex_ );
         if (listOfBroadcasts_.empty())
         {
             //Broadcaster::ErrorCode::ErrNoMoreBroadcast

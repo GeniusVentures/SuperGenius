@@ -29,6 +29,9 @@ namespace sgns::crdt
 
         /** Queue of broadcast messages */
         std::queue<std::string> listOfBroadcasts_;
+    private:
+        std::mutex               mutex_;
+
     };
 
 } // namespace sgns::crdt
