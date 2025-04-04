@@ -12,19 +12,21 @@ namespace sgns::crdt
 
     using CRDTBroadcast = pb::CRDTBroadcast;
 
-    std::shared_ptr<CrdtDatastore> CrdtDatastore::New( std::shared_ptr<DataStore>          aDatastore,
+    std::shared_ptr<CrdtDatastore> CrdtDatastore::New( std::shared_ptr<RocksDB>            aDatastore,
                                                        const HierarchicalKey              &aKey,
                                                        std::shared_ptr<DAGSyncer>          aDagSyncer,
                                                        std::shared_ptr<Broadcaster>        aBroadcaster,
                                                        const std::shared_ptr<CrdtOptions> &aOptions,
-                                                       std::shared_ptr<FilterCB>           filter_cb )
+                                                       std::shared_ptr<ElementFilterCB>    elem_filter_cb,
+                                                       std::shared_ptr<ElementFilterCB>    tomb_filter_cb )
     {
         auto crdtInstance = std::shared_ptr<CrdtDatastore>( new CrdtDatastore( std::move( aDatastore ),
                                                                                aKey,
                                                                                std::move( aDagSyncer ),
                                                                                std::move( aBroadcaster ),
                                                                                aOptions,
-                                                                               std::move( filter_cb ) ) );
+                                                                               std::move( elem_filter_cb ),
+                                                                               std::move( tomb_filter_cb ) ) );
 
         crdtInstance->handleNextThreadRunning_ = true;
         // Starting HandleNext worker thread
@@ -127,17 +129,19 @@ namespace sgns::crdt
         return crdtInstance;
     }
 
-    CrdtDatastore::CrdtDatastore( std::shared_ptr<DataStore>          aDatastore,
+    CrdtDatastore::CrdtDatastore( std::shared_ptr<RocksDB>            aDatastore,
                                   const HierarchicalKey              &aKey,
                                   std::shared_ptr<DAGSyncer>          aDagSyncer,
                                   std::shared_ptr<Broadcaster>        aBroadcaster,
                                   const std::shared_ptr<CrdtOptions> &aOptions,
-                                  std::shared_ptr<FilterCB>           filter_cb ) :
+                                  std::shared_ptr<ElementFilterCB>    elem_filter_cb,
+                                  std::shared_ptr<ElementFilterCB>    tomb_filter_cb ) :
         dataStore_( std::move( aDatastore ) ),
         namespaceKey_( aKey ),
         broadcaster_( std::move( aBroadcaster ) ),
         dagSyncer_( std::move( aDagSyncer ) ),
-        filter_cb_( std::move( filter_cb ) )
+        elem_filter_cb_( std::move( elem_filter_cb ) ),
+        tomb_filter_cb_( std::move( tomb_filter_cb ) )
     {
         // <namespace>/s
         auto fullSetNs = aKey.ChildString( std::string( setsNamespace_ ) );
@@ -177,14 +181,14 @@ namespace sgns::crdt
         Close();
     }
 
-    bool CrdtDatastore::SetFilterCallback( std::shared_ptr<FilterCB> filter_cb )
+    bool CrdtDatastore::SetFilterCallback( std::shared_ptr<ElementFilterCB> elem_filter_cb )
     {
         bool ret = false;
 
-        if ( !filter_cb_ )
+        if ( !elem_filter_cb_ )
         {
-            filter_cb_ = std::move( filter_cb );
-            ret        = true;
+            elem_filter_cb_ = std::move( elem_filter_cb );
+            ret             = true;
         }
         return ret;
     }
@@ -198,10 +202,10 @@ namespace sgns::crdt
     {
         bool ret = false;
 
-        if ( filter_cb_ )
+        if ( elem_filter_cb_ )
         {
-            filter_cb_ = nullptr;
-            ret        = true;
+            elem_filter_cb_ = nullptr;
+            ret             = true;
         }
         return ret;
     }
@@ -795,8 +799,8 @@ namespace sgns::crdt
         HierarchicalKey hKey( strCidResult.value() );
         bool            filter_ret = true;
 
-        FilterElementsOnDelta(aDelta);
-        FilterTombstonesOnDelta(aDelta);
+        FilterElementsOnDelta( aDelta );
+        FilterTombstonesOnDelta( aDelta );
 
         {
             std::unique_lock lock( dagWorkerMutex_ );
@@ -1133,22 +1137,22 @@ namespace sgns::crdt
 
     void CrdtDatastore::FilterElementsOnDelta( std::shared_ptr<Delta> &delta )
     {
-        if ( filter_cb_ )
+        if ( elem_filter_cb_ )
         {
             logger_->info( "Checking if filter this delta or not" );
             std::vector<int> indices_to_keep;
-            indices_to_keep.reserve( delta->elements_size());
+            indices_to_keep.reserve( delta->elements_size() );
 
             for ( int i = 0; i < delta->elements_size(); i++ )
             {
-                if ( ( *filter_cb_ )( delta->elements( i ) ) )
+                if ( ( *elem_filter_cb_ )( delta->elements( i ) ) )
                 {
                     indices_to_keep.push_back( i );
                 }
             }
 
             // If some elements need to be removed or all were filtered out, rebuild the delta
-            if ( static_cast<int>(indices_to_keep.size()) < delta->elements_size() )
+            if ( static_cast<int>( indices_to_keep.size() ) < delta->elements_size() )
             {
                 std::vector<Element> kept_elements;
                 kept_elements.reserve( indices_to_keep.size() );
@@ -1172,6 +1176,40 @@ namespace sgns::crdt
 
     void CrdtDatastore::FilterTombstonesOnDelta( std::shared_ptr<Delta> &delta )
     {
-        //TODO - Do we filter the erasing of data?
+        if ( tomb_filter_cb_ )
+        {
+            logger_->info( "Checking if filter this delta or not" );
+            std::vector<int> indices_to_keep;
+            indices_to_keep.reserve( delta->elements_size() );
+
+            for ( int i = 0; i < delta->elements_size(); i++ )
+            {
+                if ( ( *tomb_filter_cb_ )( delta->elements( i ) ) )
+                {
+                    indices_to_keep.push_back( i );
+                }
+            }
+
+            // If some elements need to be removed or all were filtered out, rebuild the delta
+            if ( static_cast<int>( indices_to_keep.size() ) < delta->elements_size() )
+            {
+                std::vector<Element> kept_elements;
+                kept_elements.reserve( indices_to_keep.size() );
+
+                // Collect all kept elements
+                for ( int idx : indices_to_keep )
+                {
+                    kept_elements.push_back( delta->elements( idx ) );
+                }
+
+                // Rebuild the delta with only the kept elements (might be empty)
+                delta->clear_elements();
+                for ( const auto &element : kept_elements )
+                {
+                    auto *new_element = delta->add_elements();
+                    *new_element      = element;
+                }
+            }
+        }
     }
 }

@@ -1,3 +1,11 @@
+/**
+ * @file       crdt_datastore.hpp
+ * @brief      CRDT datastore class source file 
+ * @date       2025-04-04
+ * @author     devcareer0
+ * @author     Henrique A. Klein (hklein@gnus.ai)
+ */
+
 #ifndef SUPERGENIUS_CRDT_DATASTORE_HPP
 #define SUPERGENIUS_CRDT_DATASTORE_HPP
 
@@ -19,62 +27,55 @@
 
 namespace sgns::crdt
 {
-    class CrdtSet;
+    class CrdtSet; ///< Forward declaration of CRDT Set class
 
-    /** @brief CrdtDatastore provides a replicated go-datastore (key-value store)
-  * implementation using Merkle-CRDTs built with IPLD nodes.
-  *
-  * This Datastore is agnostic to how new MerkleDAG roots are broadcasted to
-  * the rest of replicas (`Broadcaster` component) and to how the IPLD nodes
-  * are made discoverable and retrievable to by other replicas (`DAGSyncer`
-  * component).
-  *
-  * The implementation is based on the "Merkle-CRDTs: Merkle-DAGs meet CRDTs"
-  * paper by H�ctor Sanju�n, Samuli P�yht�ri and Pedro Teixeira.
-  *
-  */
+    /**
+     * @brief       CRDT datastore class based on https://github.com/ipfs/go-ds-crdt
+     */
     class CrdtDatastore : public std::enable_shared_from_this<CrdtDatastore>
     {
     public:
         using Buffer      = base::Buffer;
         using Logger      = base::Logger;
-        using DataStore   = storage::rocksdb;
-        using QueryResult = DataStore::QueryResult;
+        using RocksDB     = storage::rocksdb;
+        using QueryResult = RocksDB::QueryResult;
         using Delta       = pb::Delta;
         using Element     = pb::Element;
         using IPLDNode    = ipfs_lite::ipld::IPLDNode;
 
-        using PutHookPtr    = std::function<void( const std::string &k, const Buffer &v )>;
-        using DeleteHookPtr = std::function<void( const std::string &k )>;
-        using FilterCB      = std::function<bool( Element element )>;
-
-        /** Constructor
-    * @param aDatastore pointer to data storage
-    * @param aKey namespace key
-    * @param aDagSyncer pointer to MerkleDAG syncer
-    * @param aBroadcaster pointer to broacaster
-    * @param aOptions option to construct CrdtDatastore
-    * \sa CrdtOptions
-    *
-    */
-        static std::shared_ptr<CrdtDatastore> New( std::shared_ptr<DataStore>          aDatastore,
+        using PutHookPtr      = std::function<void( const std::string &k, const Buffer &v )>;
+        using DeleteHookPtr   = std::function<void( const std::string &k )>;
+        using ElementFilterCB = std::function<bool( Element element )>;
+        /**
+         * @brief       Factory method to create a shared_ptr to a CrdtDatastore
+         * @param[in]   aDatastore The underlying database where CRDT is stored
+         * @param[in]   aKey The namespace key on the database where CRDT's variables will be stored
+         * @param[in]   aDagSyncer The MerkleDAG syncer to request content of CIDs
+         * @param[in]   aBroadcaster The broadcaster to publish CIDs
+         * @param[in]   aOptions Options to construct the object
+         * @param[in]   elem_filter_cb Filter callback to remove or not an element from a Delta
+         * @return      A new instance of @ref CrdtDatastore
+         */
+        static std::shared_ptr<CrdtDatastore> New( std::shared_ptr<RocksDB>            aDatastore,
                                                    const HierarchicalKey              &aKey,
                                                    std::shared_ptr<DAGSyncer>          aDagSyncer,
                                                    std::shared_ptr<Broadcaster>        aBroadcaster,
                                                    const std::shared_ptr<CrdtOptions> &aOptions,
-                                                   std::shared_ptr<FilterCB>           filter_cb = nullptr );
+                                                   std::shared_ptr<ElementFilterCB>    elem_filter_cb = nullptr,
+                                                   std::shared_ptr<ElementFilterCB>    tomb_filter_cb = nullptr );
 
-        /** Destructor
-        */
+        /**
+         * @brief      Destructor of the CRDT datastore
+         */
         virtual ~CrdtDatastore();
 
         /**
-         * @brief       Set the CRDT Merge Filter Callback
-         * @param[in]   filter_cb: The filter callback to add or not the delta
+         * @brief       Sets the CRDT Merge Element Filter Callback
+         * @param[in]   elem_filter_cb: The filter callback to remove or not an element from a Delta
          * @return      true if not filter is set, false otherwise
          * @warning     This method is used only for testing, so we don't care about race conditions here
          */
-        bool SetFilterCallback( std::shared_ptr<FilterCB> filter_cb );
+        bool SetFilterCallback( std::shared_ptr<ElementFilterCB> elem_filter_cb );
 
         /**
          * @brief       Clear the CRDT Merge Filter Callback
@@ -299,14 +300,15 @@ namespace sgns::crdt
     private:
         CrdtDatastore() = default;
 
-        CrdtDatastore( std::shared_ptr<DataStore>          aDatastore,
+        CrdtDatastore( std::shared_ptr<RocksDB>            aDatastore,
                        const HierarchicalKey              &aKey,
                        std::shared_ptr<DAGSyncer>          aDagSyncer,
                        std::shared_ptr<Broadcaster>        aBroadcaster,
                        const std::shared_ptr<CrdtOptions> &aOptions,
-                       std::shared_ptr<FilterCB>           filter_cb );
+                       std::shared_ptr<ElementFilterCB>    elem_filter_cb,
+                       std::shared_ptr<ElementFilterCB>    tomb_filter_cb );
 
-        std::shared_ptr<DataStore>   dataStore_ = nullptr;
+        std::shared_ptr<RocksDB>     dataStore_ = nullptr;
         std::shared_ptr<CrdtOptions> options_   = nullptr;
 
         HierarchicalKey namespaceKey_;
@@ -340,9 +342,13 @@ namespace sgns::crdt
         std::queue<DagJob>                      dagWorkerJobList;
         std::atomic<bool>                       dagWorkerJobListThreadRunning_ = false;
 
-        std::mutex                mutex_processed_cids;
-        std::set<CID>             processed_cids;
-        std::shared_ptr<FilterCB> filter_cb_;
+        std::mutex    mutex_processed_cids;
+        std::set<CID> processed_cids;
+        
+        /// Element filter callback. If defined it decides which elements are kept in a delta
+        std::shared_ptr<ElementFilterCB> elem_filter_cb_;
+        /// Tombstone filter callback. If defined it decides which tombstones are kept in a delta
+        std::shared_ptr<ElementFilterCB> tomb_filter_cb_;
 
         void AddProcessedCID( const CID &cid );
         bool ContainsCID( const CID &cid );

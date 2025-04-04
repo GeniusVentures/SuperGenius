@@ -217,9 +217,9 @@ namespace sgns::crdt
     };
     
     // Create filter callback
-    auto filter_cb = std::make_shared<CrdtDatastore::FilterCB>(filter_func);
+    auto elem_filter_cb = std::make_shared<CrdtDatastore::ElementFilterCB>(filter_func);
 
-    EXPECT_TRUE(crdtDatastore_->SetFilterCallback(filter_cb));
+    EXPECT_TRUE(crdtDatastore_->SetFilterCallback(elem_filter_cb));
 
     std::shared_ptr<Delta> delta = std::make_shared<Delta>();
     auto element1 = delta->add_elements();
@@ -284,9 +284,9 @@ namespace sgns::crdt
     };
     
     // Create filter callback
-    auto filter_cb = std::make_shared<CrdtDatastore::FilterCB>(filter_func);
+    auto elem_filter_cb = std::make_shared<CrdtDatastore::ElementFilterCB>(filter_func);
 
-    EXPECT_TRUE(crdtDatastore_->SetFilterCallback(filter_cb));
+    EXPECT_TRUE(crdtDatastore_->SetFilterCallback(elem_filter_cb));
 
     std::shared_ptr<Delta> delta = std::make_shared<Delta>();
     auto element1 = delta->add_elements();
@@ -351,9 +351,9 @@ namespace sgns::crdt
     };
     
     // Create filter callback
-    auto filter_cb = std::make_shared<CrdtDatastore::FilterCB>(filter_func);
+    auto elem_filter_cb = std::make_shared<CrdtDatastore::ElementFilterCB>(filter_func);
 
-    EXPECT_TRUE(crdtDatastore_->SetFilterCallback(filter_cb));
+    EXPECT_TRUE(crdtDatastore_->SetFilterCallback(elem_filter_cb));
 
     std::shared_ptr<Delta> delta1 = std::make_shared<Delta>();
     auto element1 = delta1->add_elements();
@@ -404,5 +404,5 @@ namespace sgns::crdt
     // Verify filter was called
     EXPECT_GE(filter_called_count, 1);
   }
-  
+
 }
