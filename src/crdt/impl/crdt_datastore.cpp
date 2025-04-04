@@ -1148,7 +1148,7 @@ namespace sgns::crdt
             }
 
             // If some elements need to be removed or all were filtered out, rebuild the delta
-            if ( indices_to_keep.size() < delta->elements_size() )
+            if ( static_cast<int>(indices_to_keep.size()) < delta->elements_size() )
             {
                 std::vector<Element> kept_elements;
                 kept_elements.reserve( indices_to_keep.size() );
@@ -1170,7 +1170,7 @@ namespace sgns::crdt
         }
     }
 
-    void CrdtDatastore::FilterTombStonesOnDelta( std::shared_ptr<Delta> &delta )
+    void CrdtDatastore::FilterTombstonesOnDelta( std::shared_ptr<Delta> &delta )
     {
         //TODO - Do we filter the erasing of data?
     }

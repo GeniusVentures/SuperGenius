@@ -294,7 +294,7 @@ namespace sgns::crdt
          * @brief           Filter tombstones on Delta
          * @param[in,out]   delta: The delta to be merged
          */
-        void FilterTombStonesOnDelta( std::shared_ptr<Delta> &delta );
+        void FilterTombstonesOnDelta( std::shared_ptr<Delta> &delta );
 
     private:
         CrdtDatastore() = default;

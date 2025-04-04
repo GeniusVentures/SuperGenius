@@ -29,6 +29,7 @@ namespace sgns::crdt
   using ipfs_lite::ipfs::InMemoryDatastore;
   using CrdtBuffer = CrdtDatastore::Buffer;
   using Delta = CrdtDatastore::Delta;
+  using Element = CrdtDatastore::Element;
   using libp2p::multi::HashType;
   using libp2p::multi::Multihash;
 
@@ -88,17 +89,6 @@ namespace sgns::crdt
       // Remove leftover database
       fs::remove_all(databasePath);
     }
-
-    static auto PutBlock(CrdtDatastore &ds,
-      const std::vector<CID> &cids,
-      std::shared_ptr<Delta> delta) {
-return ds.PutBlock(cids, std::move(delta));
-}
-
-static auto Broadcast(CrdtDatastore &ds,
-       const std::vector<CID> &cids) {
-return ds.Broadcast(cids);
-}
 
     // Helper to create a test delta
     std::shared_ptr<Delta> CreateTestDelta(const std::string& key, const std::string& value, uint64_t priority = 1)
@@ -215,17 +205,15 @@ return ds.Broadcast(cids);
     // Track filter calls
     std::atomic<int> filter_called_count{0};
     
-    auto filter_func = [&](Delta delta) {
+    auto filter_func = [&](Element element) {
       filter_called_count++;
       
       // Check if any element has the rejected key
-      for (const auto& elem : delta.elements())
-      {
-        if (elem.key() == rejectedKey)
+
+        if (element.value() == rejectedKey)
         {
           return false; // Reject this delta
         }
-      }
       return true; // Accept this delta
     };
     
@@ -267,15 +255,12 @@ return ds.Broadcast(cids);
 
 
     EXPECT_OUTCOME_TRUE_1(crdtDatastore_->Publish(delta));
-    //(*crdtDatastore_).PutBlock(cids, delta);
-
-    //(*crdtDatastore_).Broadcast(cids);
 
     std::chrono::milliseconds resultTime;
 
     test::assertWaitForCondition(
       [&filter_called_count]() {
-          return filter_called_count == 1;
+          return filter_called_count == 4;
       },
       std::chrono::milliseconds(15000),
       "NO FILTER RAN",
