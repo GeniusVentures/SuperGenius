@@ -777,7 +777,7 @@ namespace sgns::crdt
 
     outcome::result<std::vector<CID>> CrdtDatastore::ProcessNode( const CID                       &aRoot,
                                                                   uint64_t                         aRootPrio,
-                                                                  const std::shared_ptr<Delta>    &aDelta,
+                                                                  std::shared_ptr<Delta>           aDelta,
                                                                   const std::shared_ptr<IPLDNode> &aNode )
     {
         if ( set_ == nullptr || heads_ == nullptr || dagSyncer_ == nullptr || aDelta == nullptr || aNode == nullptr )
@@ -795,12 +795,9 @@ namespace sgns::crdt
         HierarchicalKey hKey( strCidResult.value() );
         bool            filter_ret = true;
 
-        if ( filter_cb_ )
-        {
-            filter_ret = ( *filter_cb_ )( *aDelta );
-        }
+        FilterElementsOnDelta(aDelta);
+        FilterTombstonesOnDelta(aDelta);
 
-        if ( filter_ret )
         {
             std::unique_lock lock( dagWorkerMutex_ );
             auto             mergeResult = set_->Merge( aDelta, hKey.GetKey() );
@@ -812,10 +809,6 @@ namespace sgns::crdt
             logger_->trace( "ProcessNode: merged delta from {} (priority: {})",
                             strCidResult.value(),
                             aDelta->priority() );
-        }
-        else
-        {
-            logger_->debug( "ProcessNode: DELTA UNMERGED, filter removed the Delta" );
         }
 
         std::vector<CID> children;
@@ -1136,5 +1129,49 @@ namespace sgns::crdt
     void CrdtDatastore::PrintDataStore()
     {
         set_->PrintDataStore();
+    }
+
+    void CrdtDatastore::FilterElementsOnDelta( std::shared_ptr<Delta> &delta )
+    {
+        if ( filter_cb_ )
+        {
+            logger_->info( "Checking if filter this delta or not" );
+            std::vector<int> indices_to_keep;
+            indices_to_keep.reserve( delta->elements_size());
+
+            for ( int i = 0; i < delta->elements_size(); i++ )
+            {
+                if ( ( *filter_cb_ )( delta->elements( i ) ) )
+                {
+                    indices_to_keep.push_back( i );
+                }
+            }
+
+            // If some elements need to be removed or all were filtered out, rebuild the delta
+            if ( indices_to_keep.size() < delta->elements_size() )
+            {
+                std::vector<Element> kept_elements;
+                kept_elements.reserve( indices_to_keep.size() );
+
+                // Collect all kept elements
+                for ( int idx : indices_to_keep )
+                {
+                    kept_elements.push_back( delta->elements( idx ) );
+                }
+
+                // Rebuild the delta with only the kept elements (might be empty)
+                delta->clear_elements();
+                for ( const auto &element : kept_elements )
+                {
+                    auto *new_element = delta->add_elements();
+                    *new_element      = element;
+                }
+            }
+        }
+    }
+
+    void CrdtDatastore::FilterTombStonesOnDelta( std::shared_ptr<Delta> &delta )
+    {
+        //TODO - Do we filter the erasing of data?
     }
 }

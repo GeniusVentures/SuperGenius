@@ -46,7 +46,7 @@ namespace sgns::crdt
 
         using PutHookPtr    = std::function<void( const std::string &k, const Buffer &v )>;
         using DeleteHookPtr = std::function<void( const std::string &k )>;
-        using FilterCB      = std::function<bool( Delta delta )>;
+        using FilterCB      = std::function<bool( Element element )>;
 
         /** Constructor
     * @param aDatastore pointer to data storage
@@ -260,7 +260,7 @@ namespace sgns::crdt
     */
         outcome::result<std::vector<CID>> ProcessNode( const CID                       &aRoot,
                                                        uint64_t                         aRootPrio,
-                                                       const std::shared_ptr<Delta>    &aDelta,
+                                                       std::shared_ptr<Delta>           aDelta,
                                                        const std::shared_ptr<IPLDNode> &aNode );
 
         /** PutBlock add block node to DAGSyncer
@@ -283,6 +283,18 @@ namespace sgns::crdt
     * @return returns outcome::success on success or outcome::failure otherwise
     */
         outcome::result<void> SyncDatastore( const std::vector<HierarchicalKey> &aKeyList );
+
+        /**
+         * @brief           Filter elements on Delta
+         * @param[in,out]   delta: The delta to be merged
+         */
+        void FilterElementsOnDelta( std::shared_ptr<Delta> &delta );
+
+        /**
+         * @brief           Filter tombstones on Delta
+         * @param[in,out]   delta: The delta to be merged
+         */
+        void FilterTombStonesOnDelta( std::shared_ptr<Delta> &delta );
 
     private:
         CrdtDatastore() = default;
