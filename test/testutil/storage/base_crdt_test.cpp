@@ -69,7 +69,7 @@ namespace test
             BOOST_ASSERT( !logging_system->configure().has_error );
 
             libp2p::log::setLoggingSystem( std::move( logging_system ) );
-            libp2p::log::setLevelOfGroup( "account_handling_test", soralog::Level::ERROR_ );
+            libp2p::log::setLevelOfGroup( "account_handling_test", soralog::Level::ERROR );
 
             auto loggerGlobalDB = sgns::base::createLogger( "GlobalDB" );
             loggerGlobalDB->set_level( spdlog::level::debug );

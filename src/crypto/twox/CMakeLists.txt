@@ -3,6 +3,6 @@ target_link_libraries(twox
     PUBLIC
     blob
     PRIVATE
-    xxhash
+    xxHash::xxhash
 )
 supergenius_install(twox)

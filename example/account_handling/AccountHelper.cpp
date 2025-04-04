@@ -43,7 +43,7 @@ namespace sgns
             logger_config ) );
         logging_system->configure();
         libp2p::log::setLoggingSystem( logging_system );
-        libp2p::log::setLevelOfGroup( "SuperGNUSNode", soralog::Level::ERROR_ );
+        libp2p::log::setLevelOfGroup( "SuperGNUSNode", soralog::Level::ERROR );
 
         auto loggerGlobalDB = base::createLogger( "GlobalDB" );
         loggerGlobalDB->set_level( spdlog::level::debug );

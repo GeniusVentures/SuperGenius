@@ -260,9 +260,9 @@ find_package(RapidJSON CONFIG REQUIRED)
 set(libsecp256k1_DIR "${_THIRDPARTY_BUILD_DIR}/libsecp256k1/lib/cmake/libsecp256k1")
 find_package(libsecp256k1 CONFIG REQUIRED)
 
-# xxhash
-set(xxhash_DIR "${_THIRDPARTY_BUILD_DIR}/xxhash/lib/cmake/xxhash")
-find_package(xxhash CONFIG REQUIRED)
+# xxHash
+set(xxHash_DIR "${_THIRDPARTY_BUILD_DIR}/xxhash/lib/cmake/xxHash")
+find_package(xxHash CONFIG REQUIRED)
 
 # libssh2
 set(Libssh2_DIR "${_THIRDPARTY_BUILD_DIR}/libssh2/lib/cmake/libssh2")

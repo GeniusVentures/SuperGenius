@@ -175,7 +175,7 @@ namespace sgns
             document.Parse(json_str.c_str());
             
             if (document.HasParseError()) {
-                m_logger->error("JSON Parse Error: {}", document.GetParseError());
+                m_logger->error("JSON Parse Error: {}", fmt::underlying(document.GetParseError()));
                 return outcome::failure(PriceError::JsonParseError);
             }
 
@@ -290,7 +290,7 @@ namespace sgns
                     document.Parse(json_str.c_str());
                     
                     if (document.HasParseError()) {
-                        m_logger->error("JSON Parse Error: {}", document.GetParseError());
+                        m_logger->error("JSON Parse Error: {}", fmt::underlying(document.GetParseError()));
                         continue; // Try the next token
                     }
                     
@@ -423,7 +423,7 @@ namespace sgns
                 document.Parse(json_str.c_str());
                 
                 if (document.HasParseError()) {
-                    m_logger->error("JSON Parse Error: {}", document.GetParseError());
+                    m_logger->error("JSON Parse Error: {}", fmt::underlying(document.GetParseError()));
                     continue; // Try the next token
                 }
                 
