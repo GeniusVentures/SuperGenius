@@ -1,4 +1,5 @@
 #include "crdt/crdt_datastore.hpp"
+#include "crdt/impl/crdt_data_filter.hpp"
 #include <storage/rocksdb/rocksdb.hpp>
 #include <iostream>
 #include "crdt/proto/bcast.pb.h"
@@ -799,8 +800,8 @@ namespace sgns::crdt
         HierarchicalKey hKey( strCidResult.value() );
         bool            filter_ret = true;
 
-        FilterElementsOnDelta( aDelta );
-        FilterTombstonesOnDelta( aDelta );
+        CRDTDataFilter::FilterElementsOnDelta( aDelta );
+        CRDTDataFilter::FilterTombstonesOnDelta( aDelta );
 
         {
             std::unique_lock lock( dagWorkerMutex_ );
@@ -1137,79 +1138,11 @@ namespace sgns::crdt
 
     void CrdtDatastore::FilterElementsOnDelta( std::shared_ptr<Delta> &delta )
     {
-        if ( elem_filter_cb_ )
-        {
-            logger_->info( "Checking if filter this delta or not" );
-            std::vector<int> indices_to_keep;
-            indices_to_keep.reserve( delta->elements_size() );
 
-            for ( int i = 0; i < delta->elements_size(); i++ )
-            {
-                if ( ( *elem_filter_cb_ )( delta->elements( i ) ) )
-                {
-                    indices_to_keep.push_back( i );
-                }
-            }
-
-            // If some elements need to be removed or all were filtered out, rebuild the delta
-            if ( static_cast<int>( indices_to_keep.size() ) < delta->elements_size() )
-            {
-                std::vector<Element> kept_elements;
-                kept_elements.reserve( indices_to_keep.size() );
-
-                // Collect all kept elements
-                for ( int idx : indices_to_keep )
-                {
-                    kept_elements.push_back( delta->elements( idx ) );
-                }
-
-                // Rebuild the delta with only the kept elements (might be empty)
-                delta->clear_elements();
-                for ( const auto &element : kept_elements )
-                {
-                    auto *new_element = delta->add_elements();
-                    *new_element      = element;
-                }
-            }
-        }
     }
 
     void CrdtDatastore::FilterTombstonesOnDelta( std::shared_ptr<Delta> &delta )
     {
-        if ( tomb_filter_cb_ )
-        {
-            logger_->info( "Checking if filter this delta or not" );
-            std::vector<int> indices_to_keep;
-            indices_to_keep.reserve( delta->elements_size() );
 
-            for ( int i = 0; i < delta->elements_size(); i++ )
-            {
-                if ( ( *tomb_filter_cb_ )( delta->elements( i ) ) )
-                {
-                    indices_to_keep.push_back( i );
-                }
-            }
-
-            // If some elements need to be removed or all were filtered out, rebuild the delta
-            if ( static_cast<int>( indices_to_keep.size() ) < delta->elements_size() )
-            {
-                std::vector<Element> kept_elements;
-                kept_elements.reserve( indices_to_keep.size() );
-
-                // Collect all kept elements
-                for ( int idx : indices_to_keep )
-                {
-                    kept_elements.push_back( delta->elements( idx ) );
-                }
-
-                // Rebuild the delta with only the kept elements (might be empty)
-                delta->clear_elements();
-                for ( const auto &element : kept_elements )
-                {
-                    auto *new_element = delta->add_elements();
-                    *new_element      = element;
-                }
-            }
-        }
     }
 }
