@@ -192,6 +192,18 @@ namespace sgns
         std::string                                           processing_channel_topic_;
         std::string                                           processing_grid_chanel_topic_;
 
+        struct PriceInfo
+        {
+            double                                             price;
+            std::chrono::time_point<std::chrono::system_clock> lastUpdate;
+        };
+
+        std::map<std::string, PriceInfo> m_tokenPriceCache;
+        const std::chrono::minutes       m_cacheValidityDuration{ 1 };
+        std::chrono::time_point<std::chrono::system_clock> m_lastApiCall;
+        const std::chrono::seconds                         m_minApiCallInterval{ 5 };
+
+
         std::thread       io_thread;
         std::thread       upnp_thread;
         std::atomic<bool> stop_upnp{ false };
