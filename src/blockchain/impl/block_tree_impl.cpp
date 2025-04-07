@@ -1,3 +1,4 @@
+#include <fmt/ranges.h>
 #include "blockchain/impl/block_tree_impl.hpp"
 
 #include <algorithm>

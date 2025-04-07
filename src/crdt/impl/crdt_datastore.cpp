@@ -1,3 +1,4 @@
+#include <fmt/std.h>
 #include "crdt/crdt_datastore.hpp"
 #include <storage/rocksdb/rocksdb.hpp>
 #include <iostream>
