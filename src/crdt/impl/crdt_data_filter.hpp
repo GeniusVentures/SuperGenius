@@ -18,21 +18,24 @@ namespace sgns::crdt
 {
     class CRDTDataFilter
     {
+    public:
         using ElementFilterCallback = std::function<bool( const pb::Element & )>;
 
-    public:
         static void RegisterElementFilter( const std::string &pattern, ElementFilterCallback filter )
         {
             GetElementFilterRegistry()[pattern] = std::move( filter );
         }
+
         static void RegisterTombstoneFilter( const std::string &pattern, ElementFilterCallback filter )
         {
             GetTombstoneFilterRegistry()[pattern] = std::move( filter );
         }
+
         static void UnregisterElementFilter( const std::string &pattern )
         {
             GetElementFilterRegistry().erase( pattern );
         }
+
         static void UnregisterTombstoneFilter( const std::string &pattern )
         {
             GetTombstoneFilterRegistry().erase( pattern );
@@ -139,7 +142,7 @@ namespace sgns::crdt
         }
 
     private:
-        CRDTDataFilter();
+        CRDTDataFilter()  = default;
         ~CRDTDataFilter() = default;
 
         static std::unordered_map<std::string, ElementFilterCallback> &GetElementFilterRegistry()
@@ -153,11 +156,9 @@ namespace sgns::crdt
             static std::unordered_map<std::string, ElementFilterCallback> tombstone_registry;
             return tombstone_registry;
         }
+
         //Logger                       logger_      = base::createLogger( "CrdtDatastore" );
-
     };
-
-    CRDTDataFilter::CRDTDataFilter() {}
 
 }
 

@@ -17,17 +17,13 @@ namespace sgns::crdt
                                                        const HierarchicalKey              &aKey,
                                                        std::shared_ptr<DAGSyncer>          aDagSyncer,
                                                        std::shared_ptr<Broadcaster>        aBroadcaster,
-                                                       const std::shared_ptr<CrdtOptions> &aOptions,
-                                                       std::shared_ptr<ElementFilterCB>    elem_filter_cb,
-                                                       std::shared_ptr<ElementFilterCB>    tomb_filter_cb )
+                                                       const std::shared_ptr<CrdtOptions> &aOptions )
     {
         auto crdtInstance = std::shared_ptr<CrdtDatastore>( new CrdtDatastore( std::move( aDatastore ),
                                                                                aKey,
                                                                                std::move( aDagSyncer ),
                                                                                std::move( aBroadcaster ),
-                                                                               aOptions,
-                                                                               std::move( elem_filter_cb ),
-                                                                               std::move( tomb_filter_cb ) ) );
+                                                                               aOptions ) );
 
         crdtInstance->handleNextThreadRunning_ = true;
         // Starting HandleNext worker thread
@@ -134,15 +130,11 @@ namespace sgns::crdt
                                   const HierarchicalKey              &aKey,
                                   std::shared_ptr<DAGSyncer>          aDagSyncer,
                                   std::shared_ptr<Broadcaster>        aBroadcaster,
-                                  const std::shared_ptr<CrdtOptions> &aOptions,
-                                  std::shared_ptr<ElementFilterCB>    elem_filter_cb,
-                                  std::shared_ptr<ElementFilterCB>    tomb_filter_cb ) :
+                                  const std::shared_ptr<CrdtOptions> &aOptions ) :
         dataStore_( std::move( aDatastore ) ),
         namespaceKey_( aKey ),
         broadcaster_( std::move( aBroadcaster ) ),
-        dagSyncer_( std::move( aDagSyncer ) ),
-        elem_filter_cb_( std::move( elem_filter_cb ) ),
-        tomb_filter_cb_( std::move( tomb_filter_cb ) )
+        dagSyncer_( std::move( aDagSyncer ) )
     {
         // <namespace>/s
         auto fullSetNs = aKey.ChildString( std::string( setsNamespace_ ) );
@@ -182,36 +174,7 @@ namespace sgns::crdt
         Close();
     }
 
-    bool CrdtDatastore::SetFilterCallback( std::shared_ptr<ElementFilterCB> elem_filter_cb )
-    {
-        bool ret = false;
 
-        if ( !elem_filter_cb_ )
-        {
-            elem_filter_cb_ = std::move( elem_filter_cb );
-            ret             = true;
-        }
-        return ret;
-    }
-
-    /**
-     * @brief       Clear the CRDT Merge Filter Callback
-     * @return      true if not filter is cleared, false otherwise
-     * @warning     This method is used only for testing, so we don't care about race conditions here
-     */
-    bool CrdtDatastore::ClearFilterCallback()
-    {
-        bool ret = false;
-
-        if ( elem_filter_cb_ )
-        {
-            elem_filter_cb_ = nullptr;
-            ret             = true;
-        }
-        return ret;
-    }
-
-    //static
     std::shared_ptr<CrdtDatastore::Delta> CrdtDatastore::DeltaMerge( const std::shared_ptr<Delta> &aDelta1,
                                                                      const std::shared_ptr<Delta> &aDelta2 )
     {
@@ -1136,13 +1099,4 @@ namespace sgns::crdt
         set_->PrintDataStore();
     }
 
-    void CrdtDatastore::FilterElementsOnDelta( std::shared_ptr<Delta> &delta )
-    {
-
-    }
-
-    void CrdtDatastore::FilterTombstonesOnDelta( std::shared_ptr<Delta> &delta )
-    {
-
-    }
 }

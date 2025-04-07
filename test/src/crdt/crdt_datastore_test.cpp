@@ -1,4 +1,5 @@
 #include "crdt/crdt_datastore.hpp"
+#include "crdt/impl/crdt_data_filter.hpp"
 #include "crdt/atomic_transaction.hpp"
 #include <gtest/gtest.h>
 #include <storage/rocksdb/rocksdb.hpp>
@@ -204,7 +205,7 @@ namespace sgns::crdt
     // Track filter calls
     std::atomic<int> filter_called_count{0};
     
-    auto filter_func = [&](Element element) {
+    auto filter_func = [&](const Element &element) {
       filter_called_count++;
       
       // Check if any element has the rejected key
@@ -217,9 +218,9 @@ namespace sgns::crdt
     };
     
     // Create filter callback
-    auto elem_filter_cb = std::make_shared<CrdtDatastore::ElementFilterCB>(filter_func);
+    auto elem_filter_cb = std::make_shared<CRDTDataFilter::ElementFilterCallback>(filter_func);
 
-    EXPECT_TRUE(crdtDatastore_->SetFilterCallback(elem_filter_cb));
+    CRDTDataFilter::RegisterElementFilter("Key.*", filter_func);
 
     std::shared_ptr<Delta> delta = std::make_shared<Delta>();
     auto element1 = delta->add_elements();
@@ -271,7 +272,7 @@ namespace sgns::crdt
     // Track filter calls
     std::atomic<int> filter_called_count{0};
     
-    auto filter_func = [&](Element element) {
+    auto filter_func = [&](const Element &element) {
       filter_called_count++;
       
       // Check if any element has the rejected key
@@ -284,9 +285,9 @@ namespace sgns::crdt
     };
     
     // Create filter callback
-    auto elem_filter_cb = std::make_shared<CrdtDatastore::ElementFilterCB>(filter_func);
+    auto elem_filter_cb = std::make_shared<CRDTDataFilter::ElementFilterCallback>(filter_func);
 
-    EXPECT_TRUE(crdtDatastore_->SetFilterCallback(elem_filter_cb));
+    CRDTDataFilter::RegisterElementFilter("Key.*", filter_func);
 
     std::shared_ptr<Delta> delta = std::make_shared<Delta>();
     auto element1 = delta->add_elements();
@@ -338,7 +339,7 @@ namespace sgns::crdt
     // Track filter calls
     std::atomic<int> filter_called_count{0};
     
-    auto filter_func = [&](Element element) {
+    auto filter_func = [&](const Element &element) {
       filter_called_count++;
       
       // Check if any element has the rejected key
@@ -351,9 +352,9 @@ namespace sgns::crdt
     };
     
     // Create filter callback
-    auto elem_filter_cb = std::make_shared<CrdtDatastore::ElementFilterCB>(filter_func);
+    auto elem_filter_cb = std::make_shared<CRDTDataFilter::ElementFilterCallback>(filter_func);
 
-    EXPECT_TRUE(crdtDatastore_->SetFilterCallback(elem_filter_cb));
+    CRDTDataFilter::RegisterElementFilter("Key.*", filter_func);
 
     std::shared_ptr<Delta> delta1 = std::make_shared<Delta>();
     auto element1 = delta1->add_elements();

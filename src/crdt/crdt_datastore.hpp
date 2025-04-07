@@ -43,9 +43,8 @@ namespace sgns::crdt
         using Element     = pb::Element;
         using IPLDNode    = ipfs_lite::ipld::IPLDNode;
 
-        using PutHookPtr      = std::function<void( const std::string &k, const Buffer &v )>;
-        using DeleteHookPtr   = std::function<void( const std::string &k )>;
-        using ElementFilterCB = std::function<bool( Element element )>;
+        using PutHookPtr    = std::function<void( const std::string &k, const Buffer &v )>;
+        using DeleteHookPtr = std::function<void( const std::string &k )>;
         /**
          * @brief       Factory method to create a shared_ptr to a CrdtDatastore
          * @param[in]   aDatastore The underlying database where CRDT is stored
@@ -60,29 +59,12 @@ namespace sgns::crdt
                                                    const HierarchicalKey              &aKey,
                                                    std::shared_ptr<DAGSyncer>          aDagSyncer,
                                                    std::shared_ptr<Broadcaster>        aBroadcaster,
-                                                   const std::shared_ptr<CrdtOptions> &aOptions,
-                                                   std::shared_ptr<ElementFilterCB>    elem_filter_cb = nullptr,
-                                                   std::shared_ptr<ElementFilterCB>    tomb_filter_cb = nullptr );
+                                                   const std::shared_ptr<CrdtOptions> &aOptions );
 
         /**
          * @brief      Destructor of the CRDT datastore
          */
         virtual ~CrdtDatastore();
-
-        /**
-         * @brief       Sets the CRDT Merge Element Filter Callback
-         * @param[in]   elem_filter_cb: The filter callback to remove or not an element from a Delta
-         * @return      true if not filter is set, false otherwise
-         * @warning     This method is used only for testing, so we don't care about race conditions here
-         */
-        bool SetFilterCallback( std::shared_ptr<ElementFilterCB> elem_filter_cb );
-
-        /**
-         * @brief       Clear the CRDT Merge Filter Callback
-         * @return      true if not filter is cleared, false otherwise
-         * @warning     This method is used only for testing, so we don't care about race conditions here
-         */
-        bool ClearFilterCallback();
 
         /** Static function to merge delta elements and tombstones, use highest priority for the result delta
         * @param aDelta1 Delta to merge
@@ -304,9 +286,7 @@ namespace sgns::crdt
                        const HierarchicalKey              &aKey,
                        std::shared_ptr<DAGSyncer>          aDagSyncer,
                        std::shared_ptr<Broadcaster>        aBroadcaster,
-                       const std::shared_ptr<CrdtOptions> &aOptions,
-                       std::shared_ptr<ElementFilterCB>    elem_filter_cb,
-                       std::shared_ptr<ElementFilterCB>    tomb_filter_cb );
+                       const std::shared_ptr<CrdtOptions> &aOptions );
 
         std::shared_ptr<RocksDB>     dataStore_ = nullptr;
         std::shared_ptr<CrdtOptions> options_   = nullptr;
@@ -344,11 +324,6 @@ namespace sgns::crdt
 
         std::mutex    mutex_processed_cids;
         std::set<CID> processed_cids;
-        
-        /// Element filter callback. If defined it decides which elements are kept in a delta
-        std::shared_ptr<ElementFilterCB> elem_filter_cb_;
-        /// Tombstone filter callback. If defined it decides which tombstones are kept in a delta
-        std::shared_ptr<ElementFilterCB> tomb_filter_cb_;
 
         void AddProcessedCID( const CID &cid );
         bool ContainsCID( const CID &cid );
