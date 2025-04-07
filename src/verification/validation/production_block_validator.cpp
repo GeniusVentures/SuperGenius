@@ -1,4 +1,4 @@
-
+#include <fmt/std.h>
 
 #include "verification/validation/production_block_validator.hpp"
 
