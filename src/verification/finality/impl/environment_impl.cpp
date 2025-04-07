@@ -1,5 +1,4 @@
-
-
+#include <fmt/ranges.h>
 #include "verification/finality/impl/environment_impl.hpp"
 
 #include <utility>
