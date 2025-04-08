@@ -2,8 +2,8 @@
  * @file       globaldb_integration_gtest.cpp
  * @brief      Integration tests for GlobalDB.
  *
- * Three GlobalDB instances are set up without initial broadcast topics.
- * Topics are added dynamically and then used during transaction commit.
+ * This file sets up three GlobalDB instances, uses dynamic broadcast topics,
+ * and verifies replication and transaction behavior.
  */
 
 #include <gtest/gtest.h>
@@ -30,6 +30,7 @@
 #include <libp2p/log/configurator.hpp>
 #include <libp2p/log/logger.hpp>
 
+// Generate a random port using a seed.
 uint16_t GenerateRandomPort( uint16_t base, const std::string &seed )
 {
     uint32_t seed_hash = 0;
@@ -42,23 +43,25 @@ uint16_t GenerateRandomPort( uint16_t base, const std::string &seed )
     return base + dist( rng );
 }
 
-std::string GetLoggingSystem( const std::string &base_path )
+// Return a YAML string used to configure logging.
+// This configuration is similar to your attached configuration.
+std::string GetLoggingSystem( const std::string & /*unused*/ )
 {
     std::string config = R"(
+ # ----------------
  sinks:
-   - name: file
-     type: file
-     capacity: 1000
-     path: [basepath]/sgnslog.log
+   - name: console
+     type: console
+     color: true
  groups:
-   - name: SuperGeniusDemo
-     sink: file
-     level: debug
+   - name: gossip_pubsub_test
+     sink: console
+     level: error
      children:
        - name: libp2p
        - name: Gossip
- )";
-    boost::algorithm::replace_all( config, "[basepath]", base_path );
+ # ----------------
+     )";
     return config;
 }
 
@@ -82,22 +85,37 @@ class GlobalDBIntegrationTest : public ::testing::Test
 protected:
     static GlobalContext context;
 
-    static TestNode CreateTestNode( const std::string &basePath, uint16_t pubsubPort, uint16_t graphsyncPort )
+    // Standard function to create a GlobalDB instance using the provided dbName.
+    // PubSub and Graphsync ports are assigned via static counters and incremented with each call.
+    static TestNode CreateTestNode( const std::string &dbName )
     {
+        std::string binaryPath = boost::dll::program_location().parent_path().string();
+        std::string basePath   = binaryPath + "/" + dbName;
         boost::filesystem::create_directories( basePath );
+
+        // Create key store and generate the key pair.
         sgns::crdt::KeyPairFileStorage keyStore( basePath + "/key" );
-        auto                           keyPair  = keyStore.GetKeyPair().value();
-        auto                           pubsub   = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>( keyPair );
-        std::string                    listenIp = "127.0.0.1";
-        pubsub->Start( pubsubPort, {}, listenIp, {} );
-        auto io      = std::make_shared<boost::asio::io_context>();
-        auto db      = std::make_shared<sgns::crdt::GlobalDB>( io, basePath + "/CommonKey", graphsyncPort, pubsub );
+        auto                           keyPair = keyStore.GetKeyPair().value();
+        auto                           pubsub  = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>( keyPair );
+
+        // Use static counters to allocate ports.
+        static uint16_t currentPubsubPort    = 50501;
+        static uint16_t currentGraphsyncPort = 50511;
+        std::string     listenIp             = "127.0.0.1";
+        pubsub->Start( currentPubsubPort, {}, listenIp, {} );
+
+        auto io = std::make_shared<boost::asio::io_context>();
+        auto db = std::make_shared<sgns::crdt::GlobalDB>( io, basePath + "/CommonKey", currentGraphsyncPort, pubsub );
+
+        // Increment ports for the next instance.
+        currentPubsubPort++;
+        currentGraphsyncPort++;
+
         auto initRes = db->Init( sgns::crdt::CrdtOptions::DefaultOptions() );
         if ( !initRes.has_value() )
         {
             return TestNode{};
         }
-        db->AddBroadcastTopic( "firstTopic" );
         std::thread t( [io]() { io->run(); } );
         return TestNode{ basePath, io, pubsub, db, std::move( t ) };
     }
@@ -118,19 +136,24 @@ protected:
         libp2p::log::setLoggingSystem( loggingSystem );
         auto nodeLogger = sgns::base::createLogger( "SuperGeniusDemo", binaryPath + "/sgnslog2.log" );
         nodeLogger->set_level( spdlog::level::err );
+        auto loggerGlobalDB    = sgns::base::createLogger( "GlobalDB" );
+        auto loggerBroadcaster = sgns::base::createLogger( "PubSubBroadcasterExt" );
+        auto loggerDataStore   = sgns::base::createLogger( "CrdtDatastore" );
+        loggerGlobalDB->set_level( spdlog::level::debug );
+        loggerBroadcaster->set_level( spdlog::level::debug );
+        loggerDataStore->set_level( spdlog::level::debug );
 
-        uint16_t    pubsubPorts[3]    = { 50501, 50502, 50503 };
-        uint16_t    graphsyncPorts[3] = { 50511, 50512, 50513 };
-        std::string basePaths[3]      = { binaryPath + "/globaldb_node1",
-                                          binaryPath + "/globaldb_node2",
-                                          binaryPath + "/globaldb_node3" };
+        // Create three GlobalDB instances using only the db name.
+        context.nodes.push_back( CreateTestNode( "globaldb_node1" ) );
+        context.nodes.push_back( CreateTestNode( "globaldb_node2" ) );
+        context.nodes.push_back( CreateTestNode( "globaldb_node3" ) );
 
-        for ( int i = 0; i < 3; i++ )
+        for ( auto &node : context.nodes )
         {
-            TestNode node = CreateTestNode( basePaths[i], pubsubPorts[i], graphsyncPorts[i] );
-            context.nodes.push_back( std::move( node ) );
+            node.db->AddBroadcastTopic( "firstTopic" );
         }
 
+        // Connect the nodes by adding peers.
         for ( size_t i = 0; i < context.nodes.size(); i++ )
         {
             std::vector<std::string> peers;
@@ -173,6 +196,7 @@ protected:
 
 GlobalContext GlobalDBIntegrationTest::context;
 
+// Test basic replication without a broadcast of first topic.
 TEST_F( GlobalDBIntegrationTest, BasicReplicationTest )
 {
     using sgns::crdt::HierarchicalKey;
@@ -197,6 +221,7 @@ TEST_F( GlobalDBIntegrationTest, BasicReplicationTest )
     }
 }
 
+// Test replication using a specific broadcast topic.
 TEST_F( GlobalDBIntegrationTest, TopicBroadcastReplicationTest )
 {
     using sgns::crdt::HierarchicalKey;
@@ -225,6 +250,7 @@ TEST_F( GlobalDBIntegrationTest, TopicBroadcastReplicationTest )
     }
 }
 
+// Test replication with two different broadcast topics.
 TEST_F( GlobalDBIntegrationTest, MultipleTopicsTest )
 {
     using sgns::crdt::HierarchicalKey;
@@ -268,7 +294,7 @@ TEST_F( GlobalDBIntegrationTest, MultipleTopicsTest )
     }
 }
 
-// Attempt to commit the same transaction twice.
+// Test that committing a transaction twice fails.
 TEST_F( GlobalDBIntegrationTest, DoubleCommitTest )
 {
     using sgns::crdt::HierarchicalKey;
@@ -282,47 +308,82 @@ TEST_F( GlobalDBIntegrationTest, DoubleCommitTest )
     ASSERT_TRUE( putRes.has_value() );
     auto commitRes = tx->Commit( "firstTopic" );
     ASSERT_TRUE( commitRes.has_value() );
-    // The second commit attempt should fail.
     auto secondCommit = tx->Commit( "firstTopic" );
     EXPECT_FALSE( secondCommit.has_value() );
 }
 
-// Create a GlobalDB instance without adding any broadcast topic and attempt a Put with a non-existent topic.
+// Disabled test: Attempt a Put with a non-existent topic.
 TEST_F( GlobalDBIntegrationTest, DISABLED_PutWithoutTopicTest )
 {
-    std::string binaryPath  = boost::dll::program_location().parent_path().string();
-    std::string tmpBasePath = binaryPath + "/globaldb_no_topic";
-    boost::filesystem::create_directories( tmpBasePath );
+    // Create a GlobalDB instance without adding any default topics.
+    TestNode node = CreateTestNode( "globaldb_no_topic" );
     {
+        sgns::crdt::HierarchicalKey key( "/error/test" );
+        sgns::base::Buffer          value;
+        value.put( "Test value without topic" );
+
+        auto tx = node.db->BeginTransaction();
+        ASSERT_NE( tx, nullptr );
+        auto putRes = tx->Put( key, value );
+        ASSERT_TRUE( putRes.has_value() );
+        auto commitRes = tx->Commit( "nonexistent_topic" );
+        EXPECT_FALSE( commitRes.has_value() );
+    }
+    std::this_thread::sleep_for( std::chrono::seconds( 5 ) );
+}
+
+// Test operations without initializing GlobalDB.
+TEST_F( GlobalDBIntegrationTest, OperationsWithoutInitTest )
+{
+    std::string binaryPath  = boost::dll::program_location().parent_path().string();
+    std::string tmpBasePath = binaryPath + "/globaldb_no_init_ops";
+    boost::filesystem::create_directories( tmpBasePath );
 
     sgns::crdt::KeyPairFileStorage keyStore( tmpBasePath + "/key" );
     auto                           keyPair = keyStore.GetKeyPair().value();
     auto                           pubsub  = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>( keyPair );
-    pubsub->Start( 50510, {}, "127.0.0.1", {} );
+    pubsub->Start( 50800, {}, "127.0.0.1", {} );
 
     auto io = std::make_shared<boost::asio::io_context>();
-    auto db      = std::make_shared<sgns::crdt::GlobalDB>( io, tmpBasePath + "/CommonKey", 50520, pubsub );
-    auto initRes = db->Init( sgns::crdt::CrdtOptions::DefaultOptions() );
-    ASSERT_TRUE( initRes.has_value() );
+    // Create GlobalDB without calling Init().
+    auto db = std::make_shared<sgns::crdt::GlobalDB>( io, tmpBasePath + "/CommonKey", 50810, pubsub );
 
-    std::thread t( [io]() { io->run(); } );
+    sgns::crdt::HierarchicalKey queryKey( "/nonexistent/query" );
+    auto                        queryResult = db->QueryKeyValues( queryKey.GetKey() );
+    EXPECT_FALSE( queryResult.has_value() );
 
-    sgns::crdt::HierarchicalKey key( "/error/test" );
-    sgns::base::Buffer          value;
-    value.put( "Test value without topic" );
+    sgns::crdt::HierarchicalKey getKey( "/nonexistent/get" );
+    auto                        getResult = db->Get( getKey );
+    EXPECT_FALSE( getResult.has_value() );
 
-    auto tx = db->BeginTransaction();
-    ASSERT_NE( tx, nullptr );
-    auto putRes = tx->Put( key, value );
-    ASSERT_TRUE( putRes.has_value() );
-    auto commitRes = tx->Commit( "nonexistent_topic" );
-    EXPECT_FALSE( commitRes.has_value() );
+    sgns::crdt::HierarchicalKey removeKey( "/nonexistent/remove" );
+    auto                        removeResult = db->Remove( removeKey );
+    EXPECT_FALSE( removeResult.has_value() );
 
-    // io->stop();
-    // t.join();
-        
+    boost::filesystem::remove_all( tmpBasePath );
+}
+
+// Test Put operation when no extra topics are added.
+TEST_F( GlobalDBIntegrationTest, PutWithoutTopicTest )
+{
+    // Create a GlobalDB instance without any default topics.
+    TestNode node = CreateTestNode( "globaldb_no_topic" );
+    {
+        sgns::crdt::HierarchicalKey key( "/error/put_without_topic" );
+        sgns::base::Buffer          value;
+        value.put( "Test value without topic" );
+
+        auto tx = node.db->BeginTransaction();
+        ASSERT_NE( tx, nullptr );
+        auto putRes = tx->Put( key, value );
+        ASSERT_TRUE( putRes.has_value() );
+        auto commitRes = tx->Commit( "nonexistent_topic" );
+        EXPECT_FALSE( commitRes.has_value() );
     }
-        std::this_thread::sleep_for( std::chrono::seconds( 5 ) );
-    // boost::filesystem::remove_all( tmpBasePath );
-    
+    node.io->stop();
+    if ( node.ioThread.joinable() )
+    {
+        node.ioThread.join();
+    }
+    boost::filesystem::remove_all( node.basePath );
 }
