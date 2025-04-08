@@ -30,6 +30,27 @@
 #include <libp2p/log/configurator.hpp>
 #include <libp2p/log/logger.hpp>
 
+// Helper function to wait for a condition until a timeout.
+namespace
+{
+    template <typename Predicate>
+    bool waitForCondition( Predicate                 pred,
+                           std::chrono::milliseconds timeout,
+                           std::chrono::milliseconds pollInterval = std::chrono::milliseconds( 100 ) )
+    {
+        auto start = std::chrono::steady_clock::now();
+        while ( std::chrono::steady_clock::now() - start < timeout )
+        {
+            if ( pred() )
+            {
+                return true;
+            }
+            std::this_thread::sleep_for( pollInterval );
+        }
+        return false;
+    }
+}
+
 // Generate a random port using a seed.
 uint16_t GenerateRandomPort( uint16_t base, const std::string &seed )
 {
@@ -86,28 +107,25 @@ protected:
     static GlobalContext context;
 
     // Standard function to create a GlobalDB instance using the provided dbName.
-    // PubSub and Graphsync ports are assigned via static counters and incremented with each call.
+    // PubSub and Graphsync ports are allocated via static counters.
     static TestNode CreateTestNode( const std::string &dbName )
     {
         std::string binaryPath = boost::dll::program_location().parent_path().string();
         std::string basePath   = binaryPath + "/" + dbName;
         boost::filesystem::create_directories( basePath );
 
-        // Create key store and generate the key pair.
         sgns::crdt::KeyPairFileStorage keyStore( basePath + "/key" );
         auto                           keyPair = keyStore.GetKeyPair().value();
         auto                           pubsub  = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>( keyPair );
 
-        // Use static counters to allocate ports.
         static uint16_t currentPubsubPort    = 50501;
-        static uint16_t currentGraphsyncPort = 50511;
+        static uint16_t currentGraphsyncPort = 50521;
         std::string     listenIp             = "127.0.0.1";
         pubsub->Start( currentPubsubPort, {}, listenIp, {} );
 
         auto io = std::make_shared<boost::asio::io_context>();
         auto db = std::make_shared<sgns::crdt::GlobalDB>( io, basePath + "/CommonKey", currentGraphsyncPort, pubsub );
 
-        // Increment ports for the next instance.
         currentPubsubPort++;
         currentGraphsyncPort++;
 
@@ -148,12 +166,13 @@ protected:
         context.nodes.push_back( CreateTestNode( "globaldb_node2" ) );
         context.nodes.push_back( CreateTestNode( "globaldb_node3" ) );
 
+        // Add broadcast topic externally.
         for ( auto &node : context.nodes )
         {
             node.db->AddBroadcastTopic( "firstTopic" );
         }
 
-        // Connect the nodes by adding peers.
+        // Connect the nodes.
         for ( size_t i = 0; i < context.nodes.size(); i++ )
         {
             std::vector<std::string> peers;
@@ -196,7 +215,7 @@ protected:
 
 GlobalContext GlobalDBIntegrationTest::context;
 
-// Test basic replication without a broadcast of first topic.
+// Test basic replication without a broadcast topic.
 TEST_F( GlobalDBIntegrationTest, BasicReplicationTest )
 {
     using sgns::crdt::HierarchicalKey;
@@ -209,16 +228,23 @@ TEST_F( GlobalDBIntegrationTest, BasicReplicationTest )
     ASSERT_TRUE( putRes.has_value() );
     auto commitRes = tx->Commit();
     ASSERT_TRUE( commitRes.has_value() );
-    std::this_thread::sleep_for( std::chrono::seconds( 5 ) );
+
+    bool replicated = waitForCondition(
+        [&]() -> bool
+        {
+            auto res_node2 = context.nodes[1].db->Get( key );
+            auto res_node3 = context.nodes[2].db->Get( key );
+            return res_node2.has_value() && res_node3.has_value();
+        },
+        std::chrono::seconds( 5 ) );
+    EXPECT_TRUE( replicated );
+
     auto res_node2 = context.nodes[1].db->Get( key );
     auto res_node3 = context.nodes[2].db->Get( key );
-    EXPECT_TRUE( res_node2.has_value() );
-    EXPECT_TRUE( res_node3.has_value() );
-    if ( res_node2.has_value() && res_node3.has_value() )
-    {
-        EXPECT_EQ( res_node2.value().toString(), "Replication Value without topic" );
-        EXPECT_EQ( res_node3.value().toString(), "Replication Value without topic" );
-    }
+    ASSERT_TRUE( res_node2.has_value() );
+    ASSERT_TRUE( res_node3.has_value() );
+    EXPECT_EQ( res_node2.value().toString(), "Replication Value without topic" );
+    EXPECT_EQ( res_node3.value().toString(), "Replication Value without topic" );
 }
 
 // Test replication using a specific broadcast topic.
@@ -238,16 +264,23 @@ TEST_F( GlobalDBIntegrationTest, TopicBroadcastReplicationTest )
     ASSERT_TRUE( putRes.has_value() );
     auto commitRes = tx->Commit( "test_topic" );
     ASSERT_TRUE( commitRes.has_value() );
-    std::this_thread::sleep_for( std::chrono::seconds( 5 ) );
+
+    bool replicated = waitForCondition(
+        [&]() -> bool
+        {
+            auto res_node2 = context.nodes[1].db->Get( key );
+            auto res_node3 = context.nodes[2].db->Get( key );
+            return res_node2.has_value() && res_node3.has_value();
+        },
+        std::chrono::seconds( 5 ) );
+    EXPECT_TRUE( replicated );
+
     auto res_node2 = context.nodes[1].db->Get( key );
     auto res_node3 = context.nodes[2].db->Get( key );
-    EXPECT_TRUE( res_node2.has_value() );
-    EXPECT_TRUE( res_node3.has_value() );
-    if ( res_node2.has_value() && res_node3.has_value() )
-    {
-        EXPECT_EQ( res_node2.value().toString(), "Value via test_topic" );
-        EXPECT_EQ( res_node3.value().toString(), "Value via test_topic" );
-    }
+    ASSERT_TRUE( res_node2.has_value() );
+    ASSERT_TRUE( res_node3.has_value() );
+    EXPECT_EQ( res_node2.value().toString(), "Value via test_topic" );
+    EXPECT_EQ( res_node3.value().toString(), "Value via test_topic" );
 }
 
 // Test replication with two different broadcast topics.
@@ -279,19 +312,22 @@ TEST_F( GlobalDBIntegrationTest, MultipleTopicsTest )
     auto commitResB = txB->Commit( "topic_B" );
     ASSERT_TRUE( commitResB.has_value() );
 
-    std::this_thread::sleep_for( std::chrono::seconds( 5 ) );
-    auto resA_node2 = context.nodes[2].db->Get( keyA );
-    auto resB_node2 = context.nodes[2].db->Get( keyB );
-    EXPECT_TRUE( resA_node2.has_value() );
-    EXPECT_TRUE( resB_node2.has_value() );
-    if ( resA_node2.has_value() )
-    {
-        EXPECT_EQ( resA_node2.value().toString(), "Data from topic A" );
-    }
-    if ( resB_node2.has_value() )
-    {
-        EXPECT_EQ( resB_node2.value().toString(), "Data from topic B" );
-    }
+    bool replicated = waitForCondition(
+        [&]() -> bool
+        {
+            auto resA = context.nodes[2].db->Get( keyA );
+            auto resB = context.nodes[2].db->Get( keyB );
+            return resA.has_value() && resB.has_value();
+        },
+        std::chrono::seconds( 5 ) );
+    EXPECT_TRUE( replicated );
+
+    auto resA = context.nodes[2].db->Get( keyA );
+    auto resB = context.nodes[2].db->Get( keyB );
+    ASSERT_TRUE( resA.has_value() );
+    ASSERT_TRUE( resB.has_value() );
+    EXPECT_EQ( resA.value().toString(), "Data from topic A" );
+    EXPECT_EQ( resB.value().toString(), "Data from topic B" );
 }
 
 // Test that committing a transaction twice fails.
@@ -310,26 +346,6 @@ TEST_F( GlobalDBIntegrationTest, DoubleCommitTest )
     ASSERT_TRUE( commitRes.has_value() );
     auto secondCommit = tx->Commit( "firstTopic" );
     EXPECT_FALSE( secondCommit.has_value() );
-}
-
-// Disabled test: Attempt a Put with a non-existent topic.
-TEST_F( GlobalDBIntegrationTest, DISABLED_PutWithoutTopicTest )
-{
-    // Create a GlobalDB instance without adding any default topics.
-    TestNode node = CreateTestNode( "globaldb_no_topic" );
-    {
-        sgns::crdt::HierarchicalKey key( "/error/test" );
-        sgns::base::Buffer          value;
-        value.put( "Test value without topic" );
-
-        auto tx = node.db->BeginTransaction();
-        ASSERT_NE( tx, nullptr );
-        auto putRes = tx->Put( key, value );
-        ASSERT_TRUE( putRes.has_value() );
-        auto commitRes = tx->Commit( "nonexistent_topic" );
-        EXPECT_FALSE( commitRes.has_value() );
-    }
-    std::this_thread::sleep_for( std::chrono::seconds( 5 ) );
 }
 
 // Test operations without initializing GlobalDB.
@@ -366,7 +382,6 @@ TEST_F( GlobalDBIntegrationTest, OperationsWithoutInitTest )
 // Test Put operation when no extra topics are added.
 TEST_F( GlobalDBIntegrationTest, PutWithoutTopicTest )
 {
-    // Create a GlobalDB instance without any default topics.
     TestNode node = CreateTestNode( "globaldb_no_topic" );
     {
         sgns::crdt::HierarchicalKey key( "/error/put_without_topic" );
@@ -386,4 +401,70 @@ TEST_F( GlobalDBIntegrationTest, PutWithoutTopicTest )
         node.ioThread.join();
     }
     boost::filesystem::remove_all( node.basePath );
+}
+
+// Test direct Put with a topic (without using transaction Commit).
+TEST_F( GlobalDBIntegrationTest, DirectPutWithTopicTest )
+{
+    using sgns::crdt::HierarchicalKey;
+
+    for ( auto &node : context.nodes )
+    {
+        node.db->AddBroadcastTopic( "direct_topic" );
+    }
+
+    sgns::base::Buffer value;
+    value.put( "Direct put with topic value" );
+    HierarchicalKey key( "/direct/with_topic" );
+
+    auto putRes = context.nodes[0].db->Put( key, value, "direct_topic" );
+    ASSERT_TRUE( putRes.has_value() );
+
+    bool replicated = waitForCondition(
+        [&]() -> bool
+        {
+            auto res_node2 = context.nodes[1].db->Get( key );
+            auto res_node3 = context.nodes[2].db->Get( key );
+            return res_node2.has_value() && res_node3.has_value();
+        },
+        std::chrono::seconds( 5 ) );
+    EXPECT_TRUE( replicated );
+
+    // Verify that keys exist and the inserted values match.
+    auto res_node2 = context.nodes[1].db->Get( key );
+    auto res_node3 = context.nodes[2].db->Get( key );
+    ASSERT_TRUE( res_node2.has_value() );
+    ASSERT_TRUE( res_node3.has_value() );
+    EXPECT_EQ( res_node2.value().toString(), "Direct put with topic value" );
+    EXPECT_EQ( res_node3.value().toString(), "Direct put with topic value" );
+}
+
+// Test direct Put without a topic.
+TEST_F( GlobalDBIntegrationTest, DirectPutWithoutTopicTest )
+{
+    using sgns::crdt::HierarchicalKey;
+
+    sgns::base::Buffer value;
+    value.put( "Direct put without topic value" );
+    HierarchicalKey key( "/direct/without_topic" );
+
+    auto putRes = context.nodes[0].db->Put( key, value );
+    ASSERT_TRUE( putRes.has_value() );
+
+    bool replicated = waitForCondition(
+        [&]() -> bool
+        {
+            auto res_node2 = context.nodes[1].db->Get( key );
+            auto res_node3 = context.nodes[2].db->Get( key );
+            return res_node2.has_value() && res_node3.has_value();
+        },
+        std::chrono::seconds( 5 ) );
+    EXPECT_TRUE( replicated );
+
+    auto res_node2 = context.nodes[1].db->Get( key );
+    auto res_node3 = context.nodes[2].db->Get( key );
+    ASSERT_TRUE( res_node2.has_value() );
+    ASSERT_TRUE( res_node3.has_value() );
+    EXPECT_EQ( res_node2.value().toString(), "Direct put without topic value" );
+    EXPECT_EQ( res_node3.value().toString(), "Direct put without topic value" );
 }
