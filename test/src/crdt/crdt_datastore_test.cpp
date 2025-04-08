@@ -219,9 +219,10 @@ namespace sgns::crdt
 
             if ( element.value() == rejectedKey )
             {
-                return false; // Reject this delta
+                Element tombstone = element;
+                return tombstone; // Reject this delta
             }
-            return true; // Accept this delta
+            return std::nullopt; // Accept this delta
         };
 
         CRDTDataFilter::RegisterElementFilter( "Key.*", filter_func );
@@ -278,9 +279,10 @@ namespace sgns::crdt
 
             if ( element.value() == rejectedKey )
             {
-                return false; // Reject this delta
+              Element tombstone = element;
+              return tombstone; // Reject this delta
             }
-            return true; // Accept this delta
+            return std::nullopt; // Accept this delta
         };
 
         CRDTDataFilter::RegisterElementFilter( "Key.*", filter_func );
@@ -337,9 +339,10 @@ namespace sgns::crdt
 
             if ( element.value() == rejectedKey )
             {
-                return false; // Reject this delta
+              Element tombstone = element;
+              return tombstone; // Reject this delta
             }
-            return true; // Accept this delta
+            return std::nullopt; // Accept this delta
         };
 
         CRDTDataFilter::RegisterElementFilter( "Key.*", filter_func );
@@ -404,7 +407,7 @@ namespace sgns::crdt
                                                    filter_called_count++;
 
                                                    // Check if any element has the rejected key
-                                                   return true; // Accept this delta
+                                                   return std::nullopt; // Accept this delta
                                                } );
 
         //This Filter checks the "RejectMe"
@@ -415,10 +418,10 @@ namespace sgns::crdt
 
                                                    if ( element.value() == rejectedKey )
                                                    {
-                                                       return false;
-                                                   }
-                                                   // Check if any element has the rejected key
-                                                   return true; // Accept this delta
+                                                    Element tombstone = element;
+                                                    return tombstone; // Reject this delta
+                                                  }
+                                                  return std::nullopt; // Accept this delta
                                                } );
 
         std::shared_ptr<Delta> delta1   = std::make_shared<Delta>();
