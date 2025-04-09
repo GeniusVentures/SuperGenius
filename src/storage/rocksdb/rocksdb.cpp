@@ -53,6 +53,9 @@ namespace sgns::storage
             l->db_ = std::shared_ptr<DB>(db);
             // Create logger
             l->logger_ = base::createLogger("rocksdb");
+            rocksdb::WriteOptions write_options;
+            write_options.sync = true; 
+            l->setWriteOptions(write_options);
             return l;  // Return the shared_ptr
         }
 
