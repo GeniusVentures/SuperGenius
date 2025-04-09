@@ -64,24 +64,20 @@ namespace sgns::crdt
 
     std::shared_ptr<PubSubBroadcasterExt> PubSubBroadcasterExt::New(
         std::shared_ptr<GossipPubSubTopic>              pubSubTopic,
-        std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer,
-        libp2p::multi::Multiaddress                     dagSyncerMultiaddress )
+        std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer)
     {
         auto pubsub_broadcaster_instance = std::shared_ptr<PubSubBroadcasterExt>(
             new PubSubBroadcasterExt( std::move( pubSubTopic ),
-                                      std::move( dagSyncer ),
-                                      std::move( dagSyncerMultiaddress ) ) );
+                                      std::move( dagSyncer ) ) );
 
         return pubsub_broadcaster_instance;
     }
 
     PubSubBroadcasterExt::PubSubBroadcasterExt( std::shared_ptr<GossipPubSubTopic>              pubSubTopic,
-                                                std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer,
-                                                libp2p::multi::Multiaddress dagSyncerMultiaddress ) :
+                                                std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer ) :
         gossipPubSubTopic_( std::move( pubSubTopic ) ),
         dagSyncer_( std::move( dagSyncer ) ),
-        dataStore_( nullptr ),
-        dagSyncerMultiaddress_( std::move( dagSyncerMultiaddress ) )
+        dataStore_( nullptr )
     {
         m_logger->trace( "Initializing Pubsub Broadcaster" );
     }
@@ -209,13 +205,13 @@ namespace sgns::crdt
         auto bpi = new sgns::crdt::broadcasting::BroadcastMessage_PeerInfo;
 
         //Get the port from the dagsyncer
-        auto port_opt = dagSyncerMultiaddress_.getFirstValueForProtocol( libp2p::multi::Protocol::Code::TCP );
-        if ( !port_opt )
-        {
-            delete bpi;
-            return outcome::failure( boost::system::error_code{} );
-        }
-        auto port = port_opt.value();
+        //auto port_opt = dagSyncerMultiaddress_.getFirstValueForProtocol( libp2p::multi::Protocol::Code::TCP );
+        //if ( !port_opt )
+        //{
+        //    delete bpi;
+        //    return outcome::failure( boost::system::error_code{} );
+        //}
+        //auto port = port_opt.value();
 
         //Get peer ID from dagsyncer
         //auto peer_id_opt = dagSyncerMultiaddress_.getPeerId();
@@ -242,18 +238,19 @@ namespace sgns::crdt
         auto pubsubObserved = gossipPubSubTopic_->GetPubsub()->GetHost()->getObservedAddressesReal();
         for ( auto &address : pubsubObserved )
         {
-            auto ip_address_opt = address.getFirstValueForProtocol( libp2p::multi::Protocol::Code::IP4 );
-            if ( ip_address_opt )
-            {
-                auto new_address = libp2p::multi::Multiaddress::create(
-                    fmt::format( "/ip4/{}/tcp/{}/p2p/{}", ip_address_opt.value(), port, peer_info.id.toBase58() ) );
-                auto addrstr = new_address.value().getStringAddress();
-                if ( new_address )
-                {
-                    m_logger->info( "Address Broadcast Converted {}", new_address.value().getStringAddress() );
-                    bpi->add_addrs( new_address.value().getStringAddress() );
-                }
-            }
+            bpi->add_addrs( address.getStringAddress() );
+        //    auto ip_address_opt = address.getFirstValueForProtocol( libp2p::multi::Protocol::Code::IP4 );
+        //    if ( ip_address_opt )
+        //    {
+        //        auto new_address = libp2p::multi::Multiaddress::create(
+        //            fmt::format( "/ip4/{}/tcp/{}/p2p/{}", ip_address_opt.value(), port, peer_info.id.toBase58() ) );
+        //        auto addrstr = new_address.value().getStringAddress();
+        //        if ( new_address )
+        //        {
+        //            m_logger->info( "Address Broadcast Converted {}", new_address.value().getStringAddress() );
+        //            bpi->add_addrs( new_address.value().getStringAddress() );
+        //        }
+        //    }
         }
 
         auto mas = peer_info.addresses;

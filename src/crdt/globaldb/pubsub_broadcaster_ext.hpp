@@ -18,8 +18,7 @@ namespace sgns::crdt
         using GossipPubSubTopic = sgns::ipfs_pubsub::GossipPubSubTopic;
 
         static std::shared_ptr<PubSubBroadcasterExt> New( std::shared_ptr<GossipPubSubTopic>              pubSubTopic,
-                                                          std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer,
-                                                          libp2p::multi::Multiaddress dagSyncerMultiaddress );
+                                                          std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer);
 
         void SetCrdtDataStore( std::shared_ptr<CrdtDatastore> dataStore );
 
@@ -43,14 +42,12 @@ namespace sgns::crdt
 
     private:
         PubSubBroadcasterExt( std::shared_ptr<GossipPubSubTopic>              pubSubTopic,
-                              std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer,
-                              libp2p::multi::Multiaddress                     dagSyncerMultiaddress );
+                              std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer );
         void OnMessage( boost::optional<const GossipPubSub::Message &> message );
 
         std::shared_ptr<GossipPubSubTopic>                        gossipPubSubTopic_;
         std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer>           dagSyncer_;
         std::shared_ptr<CrdtDatastore>                            dataStore_;
-        libp2p::multi::Multiaddress                               dagSyncerMultiaddress_;
         std::queue<std::tuple<libp2p::peer::PeerId, std::string>> messageQueue_;
         //sgns::base::Logger logger_ = nullptr;
         std::mutex         mutex_;
