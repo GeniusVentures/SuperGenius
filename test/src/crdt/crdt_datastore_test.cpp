@@ -211,7 +211,7 @@ namespace sgns::crdt
         // Track filter calls
         std::atomic<int> filter_called_count{ 0 };
 
-        auto filter_func = [&]( const Element &element )
+        auto filter_func = [&]( const Element &element ) -> std::optional<std::vector<Element>>
         {
             filter_called_count++;
 
@@ -220,7 +220,7 @@ namespace sgns::crdt
             if ( element.value() == rejectedKey )
             {
                 Element tombstone = element;
-                return tombstone; // Reject this delta
+                return std::vector<Element>{ tombstone }; // Reject this delta
             }
             return std::nullopt; // Accept this delta
         };
@@ -271,7 +271,7 @@ namespace sgns::crdt
         // Track filter calls
         std::atomic<int> filter_called_count{ 0 };
 
-        auto filter_func = [&]( const Element &element )
+        auto filter_func = [&]( const Element &element ) -> std::optional<std::vector<Element>>
         {
             filter_called_count++;
 
@@ -279,8 +279,8 @@ namespace sgns::crdt
 
             if ( element.value() == rejectedKey )
             {
-              Element tombstone = element;
-              return tombstone; // Reject this delta
+                Element tombstone = element;
+                return std::vector<Element>{ tombstone }; // Reject this delta
             }
             return std::nullopt; // Accept this delta
         };
@@ -331,7 +331,7 @@ namespace sgns::crdt
         // Track filter calls
         std::atomic<int> filter_called_count{ 0 };
 
-        auto filter_func = [&]( const Element &element )
+        auto filter_func = [&]( const Element &element ) -> std::optional<std::vector<Element>>
         {
             filter_called_count++;
 
@@ -339,8 +339,8 @@ namespace sgns::crdt
 
             if ( element.value() == rejectedKey )
             {
-              Element tombstone = element;
-              return tombstone; // Reject this delta
+                Element tombstone = element;
+                return std::vector<Element>{ tombstone }; // Reject this delta
             }
             return std::nullopt; // Accept this delta
         };
@@ -402,7 +402,7 @@ namespace sgns::crdt
 
         //This Filter always accepts all values
         CRDTDataFilter::RegisterElementFilter( "Key.*",
-                                               [&]( const Element &element )
+                                               [&]( const Element &element ) -> std::optional<std::vector<Element>>
                                                {
                                                    filter_called_count++;
 
@@ -412,16 +412,16 @@ namespace sgns::crdt
 
         //This Filter checks the "RejectMe"
         CRDTDataFilter::RegisterElementFilter( "OtherKey.*",
-                                               [&]( const Element &element )
+                                               [&]( const Element &element ) -> std::optional<std::vector<Element>>
                                                {
                                                    filter_called_count++;
 
                                                    if ( element.value() == rejectedKey )
                                                    {
-                                                    Element tombstone = element;
-                                                    return tombstone; // Reject this delta
-                                                  }
-                                                  return std::nullopt; // Accept this delta
+                                                       Element tombstone = element;
+                                                       return std::vector<Element>{ tombstone }; // Reject this delta
+                                                   }
+                                                   return std::nullopt; // Accept this delta
                                                } );
 
         std::shared_ptr<Delta> delta1   = std::make_shared<Delta>();
