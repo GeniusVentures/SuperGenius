@@ -423,9 +423,14 @@ namespace sgns::crdt
 
         // If this key was tombstoned already, do not store/update the value at all.
         auto isDeletedResult = this->InTombsKeyID( aKey, aID );
-        if ( isDeletedResult.has_failure() || isDeletedResult.value() )
+        if ( isDeletedResult.has_failure() )
         {
             return outcome::failure( boost::system::error_code{} );
+        }
+        if ( isDeletedResult.value() )
+        {
+            //if it's tombstone we just don't add it
+            return outcome::success();
         }
 
         auto priorityResult = this->GetPriority( aKey );
@@ -537,7 +542,7 @@ namespace sgns::crdt
         return outcome::success();
     }
 
-    outcome::result<void> CrdtSet::PutTombs( const std::vector<Element> &aTombs )
+    outcome::result<void> CrdtSet::PutTombs( const std::vector<Element> &aTombs, const std::string &aID )
     {
         if ( aTombs.empty() )
         {
@@ -552,9 +557,13 @@ namespace sgns::crdt
         auto batchDatastore = this->dataStore_->batch();
 
         std::vector<std::string> deletedKeys;
-        for ( const auto &tomb : aTombs )
+        for ( auto tomb : aTombs )
         {
             // /namespace/tombs/<key>/<id>
+            if ( tomb.id().empty() )
+            {
+                tomb.set_id( aID );
+            }
             const auto &key        = tomb.key();
             auto        kNamespace = this->TombsPrefix( key ).ChildString( tomb.id() );
 
@@ -597,7 +606,8 @@ namespace sgns::crdt
             return outcome::failure( boost::system::error_code{} );
         }
 
-        auto putTombsResult = this->PutTombs( std::vector( aDelta->tombstones().begin(), aDelta->tombstones().end() ) );
+        auto putTombsResult = this->PutTombs( std::vector( aDelta->tombstones().begin(), aDelta->tombstones().end() ),
+                                              aID );
         if ( putTombsResult.has_failure() )
         {
             return outcome::failure( putTombsResult.error() );

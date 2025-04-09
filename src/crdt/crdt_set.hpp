@@ -244,7 +244,7 @@ namespace sgns::crdt
         * @param aElems list of elems to to into datastore
         * @return outcome::success on success or outcome::failure otherwise
         */
-        outcome::result<void> PutTombs( const std::vector<Element> &aTombs );
+        outcome::result<void> PutTombs( const std::vector<Element> &aTombs, const std::string &aID );
 
         /** Merge elems and tombs from delta into datastore
         * @param aDelta delta with elems and tombs to save into datastore
