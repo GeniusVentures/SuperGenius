@@ -25,6 +25,9 @@
 #include "UTXOTxParameters.hpp"
 #include "account/proto/SGTransaction.pb.h"
 #include "base/fixed_point.hpp"
+#include "crdt/impl/crdt_data_filter.hpp"
+#include "crdt/proto/delta.pb.h"
+
 
 #include <nil/crypto3/pubkey/algorithm/sign.hpp>
 #include <nil/crypto3/pubkey/algorithm/verify.hpp>
@@ -84,6 +87,57 @@ namespace sgns
         base_port_m++;
 
         RefreshPorts();
+
+        bool crdt_tx_filter_initialized = crdt::CRDTDataFilter::RegisterElementFilter(
+            GetBlockChainBase() + "/[^/]*/tx/[^/]*/[0-9]+",
+            [&]( const crdt::pb::Element &element ) -> std::optional<std::vector<crdt::pb::Element>>
+            {
+                std::optional<std::vector<crdt::pb::Element>> maybe_tombstones;
+                bool                                valid_tx = false;
+                do
+                {
+                    auto maybe_tx = DeSerializeTransaction( element.value() );
+                    if ( maybe_tx.has_error() )
+                    {
+                        break;
+                    }
+
+                    if ( !CheckDAGStructSignature( maybe_tx.value()->dag_st ) )
+                    {
+                        m_logger->error( "Could not validate signature of transaction from {}",
+                            maybe_tx.value()->dag_st.source_addr() );
+                        break;
+                    }
+
+                    valid_tx = true;
+
+                } while ( 0 );
+                if ( !valid_tx )
+                {
+                    std::vector<crdt::pb::Element> tombstones;
+                    tombstones.push_back( element );
+                }
+
+                return maybe_tombstones;
+            } );
+        bool crdt_proof_filter_initialized = crdt::CRDTDataFilter::RegisterElementFilter(
+            GetBlockChainBase() + "/[^/]*/proof/[0-9]+",
+            []( const crdt::pb::Element &element ) -> std::optional<std::vector<crdt::pb::Element>>
+            {
+                std::optional<std::vector<crdt::pb::Element>> maybe_tombstones;
+
+                std::vector<uint8_t> proof_data_vector( element.value().begin(), element.value().end() );
+
+                auto maybe_valid_proof = IBasicProof::VerifyFullProof( proof_data_vector );
+
+                if ( maybe_valid_proof.has_error() || ( !maybe_valid_proof.value() ) )
+                {
+                    std::vector<crdt::pb::Element> tombstones;
+                    tombstones.push_back( element );
+                }
+
+                return maybe_tombstones;
+            } );
     }
 
     void TransactionManager::Start()
@@ -399,22 +453,14 @@ namespace sgns
 
     std::string TransactionManager::GetTransactionPath( IGeniusTransactions &element )
     {
-        boost::format tx_key{ std::string( TRANSACTION_BASE_FORMAT ) };
-
-        tx_key % TEST_NET_ID;
-
-        auto transaction_path = tx_key.str() + element.GetTransactionFullPath();
+        auto transaction_path = GetBlockChainBase() + element.GetTransactionFullPath();
 
         return transaction_path;
     }
 
     std::string TransactionManager::GetTransactionProofPath( IGeniusTransactions &element )
     {
-        boost::format tx_key{ std::string( TRANSACTION_BASE_FORMAT ) };
-
-        tx_key % TEST_NET_ID;
-
-        auto proof_path = tx_key.str() + element.GetProofFullPath();
+        auto proof_path = GetBlockChainBase() + element.GetProofFullPath();
 
         return proof_path;
     }
@@ -426,13 +472,30 @@ namespace sgns
 
     std::string TransactionManager::GetTransactionBasePath( const std::string &address )
     {
+        auto tx_base_path = GetBlockChainBase() + address;
+
+        return tx_base_path;
+    }
+
+    std::string TransactionManager::GetBlockChainBase()
+    {
         boost::format tx_key{ std::string( TRANSACTION_BASE_FORMAT ) };
 
         tx_key % TEST_NET_ID;
+        return tx_key.str();
+    }
 
-        auto tx_base_path = tx_key.str() + address;
+    outcome::result<std::shared_ptr<IGeniusTransactions>> TransactionManager::DeSerializeTransaction( std::string tx_data )
+    {
+        OUTCOME_TRY( ( auto &&, dag ), IGeniusTransactions::DeSerializeDAGStruct( tx_data ) );
 
-        return tx_base_path;
+
+        auto it = IGeniusTransactions::GetDeSerializers().find( dag.type() );
+        if ( it == IGeniusTransactions::GetDeSerializers().end() )
+        {
+            return std::errc::invalid_argument;
+        }
+        return it->second( std::vector<uint8_t>(tx_data.begin(), tx_data.end()) );
     }
 
     outcome::result<void> TransactionManager::ParseTransaction( const std::shared_ptr<IGeniusTransactions> &tx )
@@ -522,25 +585,23 @@ namespace sgns
                                  maybe_transaction.value()->dag_st.source_addr() );
                 continue;
             }
-#ifdef _PROOF_ENABLED
+
             auto maybe_proof = CheckProof( maybe_transaction.value() );
             if ( !maybe_proof.has_value() )
             {
                 m_logger->info( "Invalid PROOF" );
-                // TODO: kill repuation point of the node.
+                // TODO: kill reputation point of the node.
             }
             else
             {
-#endif
                 auto maybe_parsed = ParseTransaction( maybe_transaction.value() );
                 if ( maybe_parsed.has_error() )
                 {
                     m_logger->debug( "Can't parse the transaction" );
                     continue;
                 }
-#ifdef _PROOF_ENABLED
             }
-#endif
+
             {
                 std::unique_lock<std::shared_mutex> out_lock( incoming_tx_mutex_m );
                 incoming_tx_processed_m[transaction_key.value()] = maybe_transaction.value();
@@ -551,11 +612,7 @@ namespace sgns
 
     outcome::result<void> TransactionManager::CheckOutgoing()
     {
-        boost::format tx_key{ std::string( TRANSACTION_BASE_FORMAT ) };
-
-        tx_key % TEST_NET_ID;
-
-        auto transaction_paths = tx_key.str() + account_m->GetAddress() + "/tx";
+        auto transaction_paths = GetBlockChainBase() + account_m->GetAddress() + "/tx";
         m_logger->trace( "Probing transactions on " + transaction_paths );
         OUTCOME_TRY( ( auto &&, transaction_list ), outgoing_db_m->QueryKeyValues( transaction_paths ) );
 
