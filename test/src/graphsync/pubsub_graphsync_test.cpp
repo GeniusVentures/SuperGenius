@@ -62,12 +62,12 @@ protected:
         libp2p::log::setLevelOfGroup( "gossip_pubsub_test", soralog::Level::DEBUG );
         auto loggerGlobalDB    = sgns::base::createLogger( "GlobalDB", "" );
         auto loggerDAGSyncer   = sgns::base::createLogger( "GraphsyncDAGSyncer", "" );
-        auto loggerGraphsync   = sgns::base::createLogger( "graphsync", "" );
+       
         auto loggerBroadcaster = sgns::base::createLogger( "PubSubBroadcasterExt", "" );
         auto loggerDataStore   = sgns::base::createLogger( "CrdtDatastore", "" );
         loggerGlobalDB->set_level( spdlog::level::trace );
         loggerDAGSyncer->set_level( spdlog::level::trace );
-        loggerGraphsync->set_level( spdlog::level::trace );
+        
         loggerBroadcaster->set_level( spdlog::level::trace );
         loggerDataStore->set_level( spdlog::level::trace );
     }
@@ -90,7 +90,7 @@ TEST_F(PubsubGraphsyncTest, MultiGlobalDBTest )
     auto pubs2 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();
     pubs2->Start( 40002, {} );
     std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
-    pubs1->AddPeers( { pubs2->GetLocalAddress() } );
+
     //pubs2->AddPeers( { pubs1->GetLocalAddress() } );
     std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
     auto gdb1 = std::make_shared<sgns::crdt::GlobalDB>(
@@ -103,9 +103,14 @@ TEST_F(PubsubGraphsyncTest, MultiGlobalDBTest )
         basePath2,
         40002,
         std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>( pubs2, "test" ) );
-    std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
+
     gdb1->Init( sgns::crdt::CrdtOptions::DefaultOptions() );
     gdb2->Init( sgns::crdt::CrdtOptions::DefaultOptions() );
+    std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
+    pubs1->AddPeers( { pubs2->GetLocalAddress() } );
+    std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
+    auto loggerGraphsync = sgns::base::createLogger( "graphsync", "" );
+    loggerGraphsync->set_level( spdlog::level::trace );
     //Dummy Transaction Data
     auto transaction = gdb1->BeginTransaction();
     sgns::crdt::HierarchicalKey  tx_key( "/test/test" );

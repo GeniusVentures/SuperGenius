@@ -284,6 +284,11 @@ std::string GetLocalIP( boost::asio::io_context &io )
                                                                m_broadcastChannel->GetPubsub()->GetHost() );
 
         //// Start DagSyner listener
+        auto startResult = dagSyncer->StartSync();
+        if ( startResult.has_failure() )
+        {
+            return startResult.error();
+        }
         //auto listenResult = dagSyncer->Listen( listen_to );
         //if ( listenResult.has_failure() )
         //{
