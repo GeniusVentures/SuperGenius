@@ -49,8 +49,7 @@ namespace sgns
                             std::shared_ptr<GeniusAccount>                   account,
                             std::shared_ptr<crypto::Hasher>                  hasher,
                             std::string                                      base_path,
-                            std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub,
-                            std::shared_ptr<upnp::UPNP>                      upnp );
+                            std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub );
 
         ~TransactionManager() = default;
 

@@ -41,15 +41,13 @@ namespace sgns
                                             std::shared_ptr<GeniusAccount>                   account,
                                             std::shared_ptr<crypto::Hasher>                  hasher,
                                             std::string                                      base_path,
-                                            std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub,
-                                            std::shared_ptr<upnp::UPNP>                      upnp ) :
+                                            std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub ) :
         processing_db_m( std::move( processing_db ) ),
         pubsub_m( std::move( pubsub ) ),
         base_path_m( std::move( base_path ) ),
         ctx_m( std::move( ctx ) ),
         account_m( std::move( account ) ),
         hasher_m( std::move( hasher ) ),
-        upnp_m( std::move( upnp ) ),
         timer_m( std::make_shared<boost::asio::steady_timer>( *ctx_m, boost::asio::chrono::milliseconds( 300 ) ) )
 
     {
