@@ -50,8 +50,7 @@ namespace sgns
                             std::shared_ptr<crypto::Hasher>                  hasher,
                             std::string                                      base_path,
                             std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub,
-                            std::shared_ptr<upnp::UPNP>                      upnp,
-                            uint16_t                                         base_port );
+                            std::shared_ptr<upnp::UPNP>                      upnp );
 
         ~TransactionManager() = default;
 
@@ -109,8 +108,6 @@ namespace sgns
 
         outcome::result<void> CheckOutgoing();
 
-        void RefreshPorts();
-
         outcome::result<void> NotifyEscrowRelease( const std::shared_ptr<IGeniusTransactions> &tx,
                                                    const std::optional<std::vector<uint8_t>>  &proof );
 
@@ -127,7 +124,6 @@ namespace sgns
         std::shared_ptr<GeniusAccount>             account_m;
         std::shared_ptr<crypto::Hasher>            hasher_m;
         std::shared_ptr<upnp::UPNP>                upnp_m;
-        uint16_t                                   base_port_m;
         std::shared_ptr<boost::asio::steady_timer> timer_m;
         // for the SendTransaction thread support
         mutable std::mutex          mutex_m;

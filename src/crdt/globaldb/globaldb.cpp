@@ -64,13 +64,9 @@ namespace sgns::crdt
 
     GlobalDB::GlobalDB( std::shared_ptr<boost::asio::io_context>              context,
                         std::string                                           databasePath,
-                        int                                                   dagSyncPort,
-                        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> broadcastChannel,
-                        std::string                                           gsaddresses ) :
+                        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> broadcastChannel ) :
         m_context( std::move( context ) ),
         m_databasePath( std::move( databasePath ) ),
-        m_dagSyncPort( dagSyncPort ),
-        m_graphSyncAddrs( gsaddresses ),
         m_broadcastChannel( std::move( broadcastChannel ) )
     {
     }
@@ -205,23 +201,6 @@ std::string GetLocalIP( boost::asio::io_context &io )
             return Error::ROCKSDB_IO;
         }
 
-        //boost::filesystem::path keyPath = databasePathAbsolute + "/key";
-        //KeyPairFileStorage      keyPairStorage( keyPath );
-        //auto                    keyPair = keyPairStorage.GetKeyPair();
-        ////Kademlia Config
-        //libp2p::protocol::kademlia::Config kademlia_config;
-        //kademlia_config.randomWalk.enabled  = true;
-        //kademlia_config.randomWalk.interval = std::chrono::seconds( 300 );
-        //kademlia_config.requestConcurency   = 3;
-        //kademlia_config.maxProvidersPerKey  = 300;
-        //// injector creates and ties dependent objects
-        //auto injector = libp2p::injector::makeHostInjector<boost::di::extension::shared_config>(
-        //    boost::di::bind<boost::asio::io_context>.to( m_context )[boost::di::override],
-        //    boost::di::bind<libp2p::crypto::KeyPair>.to( keyPair.value() )[boost::di::override] );
-
-        //// create asio context
-        //auto io = injector.create<std::shared_ptr<boost::asio::io_context>>();
-
         // Create new DAGSyncer
         IpfsRocksDb::Options rdbOptions;
         rdbOptions.create_if_missing = true; // intentionally
@@ -233,47 +212,6 @@ std::string GetLocalIP( boost::asio::io_context &io )
         }
 
         auto ipfsDataStore = std::make_shared<RocksdbDatastore>( ipfsDBResult.value() );
-
-        //auto dagSyncerHost = injector.create<std::shared_ptr<libp2p::Host>>();
-
-        //Make a DHT
-        //auto kademlia =
-        //    injector
-        //    .create<std::shared_ptr<libp2p::protocol::kademlia::Kademlia>>();
-        //dht_ = std::make_shared<sgns::ipfs_lite::ipfs::dht::IpfsDHT>(kademlia, bootstrapAddresses_, m_context);
-        ////Make Holepunch Client
-        //holepunchmsgproc_ = std::make_shared<libp2p::protocol::HolepunchClientMsgProc>(*dagSyncerHost, dagSyncerHost->getNetwork().getConnectionManager());
-        //holepunch_ = std::make_shared<libp2p::protocol::HolepunchClient>(*dagSyncerHost, holepunchmsgproc_, dagSyncerHost->getBus());
-        //holepunch_->start();
-        ////Make Identify
-        //identifymsgproc_ = std::make_shared<libp2p::protocol::IdentifyMessageProcessor>(
-        //    *dagSyncerHost, dagSyncerHost->getNetwork().getConnectionManager(), *injector.create<std::shared_ptr<libp2p::peer::IdentityManager>>(), injector.create<std::shared_ptr<libp2p::crypto::marshaller::KeyMarshaller>>());
-        //identify_ = std::make_shared<libp2p::protocol::Identify>(*dagSyncerHost, identifymsgproc_, dagSyncerHost->getBus(), injector.create<std::shared_ptr<libp2p::transport::Upgrader>>(), [self{ shared_from_this() }]() {
-        //    });
-        //identify_->start();
-
-        //If we used upnp we should have an address list, if not just get local ip
-        //std::string localaddress;
-        //std::string wanaddress;
-        //if ( m_graphSyncAddrs.empty() )
-        //{
-        //    localaddress = ( boost::format( "/ip4/%s/tcp/%d/p2p/%s" ) % GetLocalIP( *io ) % m_dagSyncPort %
-        //                     dagSyncerHost->getId().toBase58() )
-        //                       .str();
-        //}
-        //else
-        //{
-        //    //use the first address, which should be the lan address for listening
-        //    localaddress = ( boost::format( "/ip4/%s/tcp/%d/p2p/%s" ) % m_graphSyncAddrs % m_dagSyncPort %
-        //                     dagSyncerHost->getId().toBase58() )
-        //                       .str();
-        //    //wanaddress = (boost::format("/ip4/%s/tcp/%d/p2p/%s") % m_graphSyncAddrs[1] % m_dagSyncPort % dagSyncerHost->getId().toBase58()).str();
-        //}
-        //m_broadcastChannel->GetPubsub()->GetHost()->getObservedAddresses()
-        //auto listen_to = libp2p::multi::Multiaddress::create(
-        //    (boost::format("/ip4/192.168.46.18/tcp/%d/ipfs/%s") % m_dagSyncPort % dagSyncerHost->getId().toBase58()).str()).value();
-        //auto listen_to = libp2p::multi::Multiaddress::create( localaddress ).value();
-        //m_logger->debug( listen_to.getStringAddress() );
         
         auto scheduler = std::make_shared<libp2p::protocol::AsioScheduler>( m_context,
                                                                             libp2p::protocol::SchedulerConfig{} );
@@ -289,30 +227,10 @@ std::string GetLocalIP( boost::asio::io_context &io )
         {
             return startResult.error();
         }
-        //auto listenResult = dagSyncer->Listen( listen_to );
-        //if ( listenResult.has_failure() )
-        //{
-        //    m_logger->warn( "DAG syncer failed to listen " + std::string( listen_to.getStringAddress() ) );
-        //    // @todo Check if the error is not fatal
-        //    return Error::DAG_SYNCHER_NOT_LISTENING;
-        //}
 
-        //dht_->Start();
-        //dht_->bootstrap();
-        //scheduleBootstrap(io, dagSyncerHost);
         // Create pubsub broadcaster
-        //auto broadcaster = std::make_shared<PubSubBroadcaster>(m_broadcastChannel);
         std::shared_ptr<PubSubBroadcasterExt> broadcaster;
-        if ( m_graphSyncAddrs.empty() )
-        {
-            broadcaster = PubSubBroadcasterExt::New( m_broadcastChannel, dagSyncer );
-        }
-        else
-        {
-            //auto listen_towan = libp2p::multi::Multiaddress::create(wanaddress).value();
-            broadcaster = PubSubBroadcasterExt::New( m_broadcastChannel, dagSyncer );
-        }
-        //broadcaster->SetLogger(m_logger);
+        broadcaster = PubSubBroadcasterExt::New( m_broadcastChannel, dagSyncer );
 
         m_crdtDatastore = CrdtDatastore::New( dataStore,
                                               HierarchicalKey( "crdt" ),

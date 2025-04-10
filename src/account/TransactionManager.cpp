@@ -42,8 +42,7 @@ namespace sgns
                                             std::shared_ptr<crypto::Hasher>                  hasher,
                                             std::string                                      base_path,
                                             std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub,
-                                            std::shared_ptr<upnp::UPNP>                      upnp,
-                                            uint16_t                                         base_port ) :
+                                            std::shared_ptr<upnp::UPNP>                      upnp ) :
         processing_db_m( std::move( processing_db ) ),
         pubsub_m( std::move( pubsub ) ),
         base_path_m( std::move( base_path ) ),
@@ -51,7 +50,6 @@ namespace sgns
         account_m( std::move( account ) ),
         hasher_m( std::move( hasher ) ),
         upnp_m( std::move( upnp ) ),
-        base_port_m( base_port + 1 ),
         timer_m( std::make_shared<boost::asio::steady_timer>( *ctx_m, boost::asio::chrono::milliseconds( 300 ) ) )
 
     {
@@ -60,11 +58,8 @@ namespace sgns
         outgoing_db_m = std::make_shared<crdt::GlobalDB>(
             ctx_m,
             ( boost::format( base_path_m + "_out" ) ).str(),
-            base_port_m,
             std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_m, account_m->GetAddress() + "out" ) );
 
-        used_ports_m.insert( base_port_m );
-        base_port_m++;
         if ( !outgoing_db_m->Init( crdt::CrdtOptions::DefaultOptions() ).has_value() )
         {
             throw std::runtime_error( "Could not start Outgoing GlobalDB" );
@@ -73,17 +68,12 @@ namespace sgns
         incoming_db_m = std::make_shared<crdt::GlobalDB>(
             ctx_m,
             ( boost::format( base_path_m + "_in" ) ).str(),
-            base_port_m,
             std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_m, account_m->GetAddress() + "in" ) );
 
         if ( !incoming_db_m->Init( crdt::CrdtOptions::DefaultOptions() ).has_value() )
         {
             throw std::runtime_error( "Could not start Incoming GlobalDB" );
         }
-        used_ports_m.insert( base_port_m );
-        base_port_m++;
-
-        RefreshPorts();
     }
 
     void TransactionManager::Start()
@@ -304,7 +294,6 @@ namespace sgns
         if ( std::chrono::steady_clock::now() - start_time > std::chrono::minutes( 60 ) )
         {
             start_time = std::chrono::steady_clock::now();
-            RefreshPorts();
         }
     }
 
@@ -702,7 +691,6 @@ namespace sgns
             auto                            destination_db_it = destination_dbs_m.find( dest_info.dest_address );
             if ( destination_db_it == destination_dbs_m.end() )
             {
-                m_logger->debug( "Port to sync  " + std::to_string( base_port_m ) );
                 std::string                tempaddress = dest_info.dest_address;
                 std::vector<unsigned char> inputBytes( tempaddress.begin(), tempaddress.end() );
                 std::vector<unsigned char> hash( SHA256_DIGEST_LENGTH );
@@ -720,16 +708,12 @@ namespace sgns
                 destination_db = std::make_shared<crdt::GlobalDB>(
                     ctx_m,
                     ( boost::format( base_path_m + "_out/" + base58key ) ).str(),
-                    base_port_m,
                     std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_m, dest_info.dest_address + "in" ) );
                 if ( !destination_db->Init( crdt::CrdtOptions::DefaultOptions() ).has_value() )
                 {
                     throw std::runtime_error( "Could not start Destination GlobalDB" );
                 }
                 destination_dbs_m[dest_info.dest_address] = destination_db;
-                used_ports_m.insert( base_port_m );
-                base_port_m++;
-                RefreshPorts();
             }
             else
             {
@@ -780,7 +764,7 @@ namespace sgns
         auto                            destination_db_it = destination_dbs_m.find( escrow_source );
         if ( destination_db_it == destination_dbs_m.end() )
         {
-            m_logger->debug( "Port to sync " + std::to_string( base_port_m ) + " for escrow source: " + escrow_source );
+            m_logger->debug( " Sync for escrow source: " + escrow_source );
             std::string                tempaddress = escrow_source;
             std::vector<unsigned char> inputBytes( tempaddress.begin(), tempaddress.end() );
             std::vector<unsigned char> hash( SHA256_DIGEST_LENGTH );
@@ -798,16 +782,12 @@ namespace sgns
             destination_db = std::make_shared<crdt::GlobalDB>(
                 ctx_m,
                 ( boost::format( base_path_m + "_out/" + base58key ) ).str(),
-                base_port_m,
                 std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_m, escrow_source + "in" ) );
             if ( !destination_db->Init( crdt::CrdtOptions::DefaultOptions() ).has_value() )
             {
                 return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::io_error ) );
             }
             destination_dbs_m[escrow_source] = destination_db;
-            used_ports_m.insert( base_port_m );
-            base_port_m++;
-            RefreshPorts();
         }
         else
         {
@@ -861,17 +841,6 @@ namespace sgns
             }
         }
         return result;
-    }
-
-    void TransactionManager::RefreshPorts()
-    {
-        if ( upnp_m->GetIGD() )
-        {
-            for ( auto &port : used_ports_m )
-            {
-                upnp_m->OpenPort( port, port, "TCP", 3600 );
-            }
-        }
     }
 
     std::vector<uint8_t> TransactionManager::MakeSignature( SGTransaction::DAGStruct dag_st ) const

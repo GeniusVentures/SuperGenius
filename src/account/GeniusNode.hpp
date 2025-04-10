@@ -104,7 +104,7 @@ namespace sgns
             const std::string        &tokenid,
             std::chrono::milliseconds timeout = std::chrono::milliseconds( TIMEOUT_MINT ) );
         void     AddPeer( const std::string &peer );
-        void     RefreshUPNP( int pubsubport, int graphsyncport );
+        void     RefreshUPNP( int pubsubport );
         uint64_t GetBalance();
 
         [[nodiscard]] const std::vector<std::vector<uint8_t>> GetInTransactions() const

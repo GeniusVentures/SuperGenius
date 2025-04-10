@@ -118,12 +118,10 @@ TEST_F(PubsubGraphsyncTest, MultiGlobalDBTest )
     auto gdb1 = std::make_shared<sgns::crdt::GlobalDB>(
         io_context,
         basePath1,
-        40001,
         std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>( pubs1, "test" ) );
     auto gdb2 = std::make_shared<sgns::crdt::GlobalDB>(
         io_context,
         basePath2,
-        40002,
         std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>( pubs2, "test" ) );
 
     gdb1->Init( sgns::crdt::CrdtOptions::DefaultOptions() );
