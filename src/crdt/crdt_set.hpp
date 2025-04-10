@@ -124,6 +124,19 @@ namespace sgns::crdt
         outcome::result<QueryResult> QueryElements( const std::string &aPrefix,
                                                     const QuerySuffix &aSuffix = QuerySuffix::QUERY_ALL );
 
+        /**
+         * @brief       Queries with a middle part that can be a wildcard, negated string or normal string
+         * @param[in]   prefix_base: The base prefix to query
+         * @param[in]   middle_part: Either a string (normal query), '*' or !string
+         * @param[in]   remainder_prefix: The remainder part of the query prefix
+         * @param[in]   aSuffix: The suffix to search
+         * @return      List of query results
+         */
+        outcome::result<QueryResult> QueryElements( const std::string &prefix_base,
+                                                    const std::string &middle_part,
+                                                    const std::string &remainder_prefix,
+                                                    const QuerySuffix &aSuffix = QuerySuffix::QUERY_ALL );
+
         // TODO: Need to implement query with prefix from datastore
         //func (s *set) Elements(q query.Query) (query.Results, error) {
 

@@ -231,6 +231,71 @@ namespace sgns::crdt
         return elements;
     }
 
+    outcome::result<CrdtSet::QueryResult> CrdtSet::QueryElements( const std::string &prefix_base,
+                                                                  const std::string &middle_part,
+                                                                  const std::string &remainder_prefix,
+                                                                  const QuerySuffix &aSuffix )
+    {
+        if ( this->dataStore_ == nullptr )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
+
+        // We can only GET an element if it's part of the Set (in
+        // "elements" and not in "tombstones").
+
+        // As an optimization:
+        // * If the key has a value in the store it means:
+        //   -> It occurs at least once in "elems"
+        //   -> It may or not be tombstoned
+        // * If the key does not have a value in the store:
+        //   -> It was either never added
+
+        // /namespace/k/<prefix>
+        auto prefixKeysKey = this->KeysKey( prefix_base );
+
+        auto queryResult = this->dataStore_->query( prefixKeysKey.GetKey(), middle_part, remainder_prefix );
+        if ( queryResult.has_failure() )
+        {
+            return outcome::failure( queryResult.error() );
+        }
+
+        QueryResult elements;
+        // Check if elements tombstoned.
+        for ( const auto &element : queryResult.value() )
+        {
+            auto inSetResult = this->InElemsNotTombstoned( std::string( element.first.toString() ) );
+            if ( inSetResult.has_failure() || !inSetResult.value() )
+            {
+                continue;
+            }
+
+            std::string key = std::string( element.first.toString() );
+            switch ( aSuffix )
+            {
+                case QuerySuffix::QUERY_ALL:
+                    elements.insert( element );
+                    break;
+                case QuerySuffix::QUERY_PRIORITYSUFFIX:
+                    if ( boost::algorithm::ends_with( key, "/" + GetPrioritySuffix() ) )
+                    {
+                        elements.insert( element );
+                    }
+                    break;
+                case QuerySuffix::QUERY_VALUESUFFIX:
+                    if ( boost::algorithm::ends_with( key, "/" + GetValueSuffix() ) )
+                    {
+                        elements.insert( element );
+                    }
+                    break;
+                default:
+                    return outcome::failure( queryResult.error() );
+            }
+        }
+
+        return elements;
+    }
+
     outcome::result<bool> CrdtSet::IsValueInSet( const std::string &aKey )
     {
         if ( this->dataStore_ == nullptr )
