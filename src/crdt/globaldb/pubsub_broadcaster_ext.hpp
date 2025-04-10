@@ -24,16 +24,14 @@ namespace sgns::crdt
         // Static factory method that accepts a vector of topics.
         static std::shared_ptr<PubSubBroadcasterExt> New(
             const std::vector<std::shared_ptr<GossipPubSubTopic>> &pubSubTopics,
-            std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer>        dagSyncer,
-            libp2p::multi::Multiaddress                            dagSyncerMultiaddress );
+            std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer>        dagSyncer );
 
         // Overload for backward compatibility that accepts a single topic.
         static std::shared_ptr<PubSubBroadcasterExt> New( std::shared_ptr<GossipPubSubTopic>              pubSubTopic,
                                                           std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer )
         {
             return New( std::vector<std::shared_ptr<GossipPubSubTopic>>{ pubSubTopic },
-                        dagSyncer,
-                        dagSyncerMultiaddress );
+                        dagSyncer );
         }
 
         void SetCrdtDataStore( std::shared_ptr<CrdtDatastore> dataStore );
@@ -70,7 +68,6 @@ namespace sgns::crdt
         std::shared_ptr<GossipPubSubTopic>                                  gossipPubSubTopic_;
         std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer>                     dagSyncer_;
         std::shared_ptr<CrdtDatastore>                                      dataStore_;
-        libp2p::multi::Multiaddress                                         dagSyncerMultiaddress_;
         std::queue<std::tuple<libp2p::peer::PeerId, std::string>>           messageQueue_;
         std::mutex                                                          mutex_;
         sgns::base::Logger m_logger = sgns::base::createLogger( "PubSubBroadcasterExt" );

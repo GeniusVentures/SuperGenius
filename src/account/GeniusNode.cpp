@@ -270,8 +270,7 @@ namespace sgns
                                                                      account_,
                                                                      std::make_shared<crypto::HasherImpl>(),
                                                                      write_base_path_ + gnus_network_full_path_,
-                                                                     pubsub_,
-                                                                     upnp );
+                                                                     pubsub_ );
 
         transaction_manager_->Start();
         if ( isprocessor_ )

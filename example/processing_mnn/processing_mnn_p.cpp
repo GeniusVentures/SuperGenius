@@ -93,7 +93,6 @@ int main(int argc, char* argv[])
     auto globalDB2 = std::make_shared<sgns::crdt::GlobalDB>(
         io,
         (boost::format("CRDT.Datastore.TEST.%d") % serviceindex).str(),
-        40010 + serviceindex,
         std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>(pubs2, "CRDT.Datastore.TEST.Channel"));
     auto crdtOptions2 = sgns::crdt::CrdtOptions::DefaultOptions();
     auto initRes = globalDB2->Init(crdtOptions2);

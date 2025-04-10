@@ -67,7 +67,7 @@ namespace sgns::crdt
         std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer>        dagSyncer )
     {
         auto instance = std::shared_ptr<PubSubBroadcasterExt>(
-            new PubSubBroadcasterExt( pubSubTopics, std::move( dagSyncer ), std::move( dagSyncerMultiaddress ) ) );
+            new PubSubBroadcasterExt( pubSubTopics, std::move( dagSyncer ) ) );
         return instance;
     }
 
@@ -244,27 +244,6 @@ namespace sgns::crdt
         sgns::crdt::broadcasting::BroadcastMessage bmsg;
         auto bpi = new sgns::crdt::broadcasting::BroadcastMessage_PeerInfo;
 
-        //Get the port from the dagsyncer
-        //auto port_opt = dagSyncerMultiaddress_.getFirstValueForProtocol( libp2p::multi::Protocol::Code::TCP );
-        //if ( !port_opt )
-        //{
-        //    delete bpi;
-        //    return outcome::failure( boost::system::error_code{} );
-        //}
-        //auto port = port_opt.value();
-
-        //Get peer ID from dagsyncer
-        //auto peer_id_opt = dagSyncerMultiaddress_.getPeerId();
-        //if (!peer_id_opt)
-        //{
-        //    return outcome::failure(boost::system::error_code{});
-        //}
-        //auto peer_id = peer_id_opt.value();
-
-        //Get observed addresses from pubsub and use them with this port and peer id.
-        // We are trusting that observed addresses from pubsub are correct to avoid doing this twice.
-        // We still probably need autonat/circuit relay/holepunching on the dagsyncer, which may remove this code.
-        // Add them to the broadcast message
         auto peer_info_res = dagSyncer_->GetPeerInfo();
         if ( !peer_info_res )
         {
@@ -280,18 +259,6 @@ namespace sgns::crdt
         for ( auto &address : pubsubObserved )
         {
             bpi->add_addrs( address.getStringAddress() );
-        //    auto ip_address_opt = address.getFirstValueForProtocol( libp2p::multi::Protocol::Code::IP4 );
-        //    if ( ip_address_opt )
-        //    {
-        //        auto new_address = libp2p::multi::Multiaddress::create(
-        //            fmt::format( "/ip4/{}/tcp/{}/p2p/{}", ip_address_opt.value(), port, peer_info.id.toBase58() ) );
-        //        auto addrstr = new_address.value().getStringAddress();
-        //        if ( new_address )
-        //        {
-        //            m_logger->info( "Address Broadcast Converted {}", new_address.value().getStringAddress() );
-        //            bpi->add_addrs( new_address.value().getStringAddress() );
-        //        }
-        //    }
         }
 
         // Also add the peer's own addresses.

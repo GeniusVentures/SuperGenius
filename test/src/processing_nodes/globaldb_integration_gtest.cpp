@@ -70,7 +70,7 @@ namespace
      )";
     }
 
-    constexpr auto WAIT_TIMEOUT = std::chrono::seconds( 10 );
+    #define WAIT_TIMEOUT ( std::chrono::milliseconds( 10000 ) )
 
 } // namespace
 
@@ -118,7 +118,6 @@ public:
             auto io = std::make_shared<boost::asio::io_context>();
             auto db = std::make_shared<sgns::crdt::GlobalDB>( io,
                                                               basePath + "/CommonKey",
-                                                              currentGraphsyncPort,
                                                               pubsub );
 
             ++currentPubsubPort;
@@ -398,7 +397,7 @@ TEST_F( GlobalDBIntegrationTest, OperationsWithoutInitTest )
     pubsub->Start( 50800, {}, "127.0.0.1", {} );
 
     auto io = std::make_shared<boost::asio::io_context>();
-    auto db = std::make_shared<sgns::crdt::GlobalDB>( io, tmpBasePath + "/CommonKey", 50810, pubsub );
+    auto db = std::make_shared<sgns::crdt::GlobalDB>( io, tmpBasePath + "/CommonKey", pubsub );
 
     using sgns::crdt::HierarchicalKey;
     const HierarchicalKey queryKey( "/nonexistent/query" );
