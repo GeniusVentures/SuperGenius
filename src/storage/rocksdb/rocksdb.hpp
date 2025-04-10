@@ -43,7 +43,8 @@ namespace sgns::storage
      * @param options rocksdb options, such as caching, logging, etc.
      * @return instance of rocksdb
      */
-        static outcome::result<std::shared_ptr<rocksdb>> create( std::string_view path, const Options& options = Options() );
+        static outcome::result<std::shared_ptr<rocksdb>> create( std::string_view path,
+                                                                 const Options   &options = Options() );
 
         /**
     * @brief Factory method to create an instance of rocksdb class.
@@ -70,6 +71,17 @@ namespace sgns::storage
         outcome::result<Buffer> get( const Buffer &key ) const override;
 
         outcome::result<QueryResult> query( const Buffer &keyPrefix ) const;
+
+        /**
+         * @brief       Queries with a middle part that can be a wildcard, negated string or normal string
+         * @param[in]   prefix_base: The base prefix to query
+         * @param[in]   middle_part: Either a string (normal query), '*' or !string
+         * @param[in]   remainder_prefix: The remainder part of the query prefix
+         * @return      List of query results
+         */
+        outcome::result<QueryResult> query( const std::string &prefix_base,
+                                            const std::string &middle_part,
+                                            const std::string &remainder_prefix ) const;
 
         [[nodiscard]] bool contains( const Buffer &key ) const override;
 
@@ -98,10 +110,10 @@ namespace sgns::storage
         std::vector<KeyValuePair> GetAll() const;
 
     private:
-        std::shared_ptr<DB> db_;
-        ReadOptions         ro_;
-        WriteOptions        wo_;
-        base::Logger        logger_;
+        std::shared_ptr<DB>      db_;
+        ReadOptions              ro_;
+        WriteOptions             wo_;
+        base::Logger             logger_;
         std::shared_ptr<Options> options_;
     };
 
