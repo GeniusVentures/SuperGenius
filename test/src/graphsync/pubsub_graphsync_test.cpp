@@ -25,6 +25,7 @@
 #include <crdt/dagsyncer.hpp>
 #include <libp2p/log/logger.hpp>
 #include <libp2p/log/configurator.hpp>
+#include "testutil/wait_condition.hpp"
 
 std::string GetLoggingSystem( const std::string &  )
 {
@@ -45,6 +46,7 @@ std::string GetLoggingSystem( const std::string &  )
      )";
     return config;
 }
+using namespace sgns::test;
 
 class PubsubGraphsyncTest : public ::testing::Test
 {
@@ -90,13 +92,29 @@ TEST_F(PubsubGraphsyncTest, MultiGlobalDBTest )
     std::filesystem::remove_all( basePath2 );
     auto io_context = std::make_shared<boost::asio::io_context>();
     auto pubs1 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();
-    pubs1->Start( 40001, {} );
+    auto start1Future = pubs1->Start( 40001, {} );
     auto pubs2 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();
-    pubs2->Start( 40002, {} );
-    std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
+    auto start2Future = pubs2->Start( 40002, {} );
 
-    //pubs2->AddPeers( { pubs1->GetLocalAddress() } );
-    std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
+    std::chrono::milliseconds resultTime;
+    assertWaitForCondition(
+
+        [&start1Future, &start2Future]()
+        {
+            start1Future.get();
+
+            start2Future.get();
+
+            return true;
+        },
+
+        std::chrono::milliseconds( 2000 ),
+
+        "Pubsub nodes initialization failed",
+
+        &resultTime
+
+    );
     auto gdb1 = std::make_shared<sgns::crdt::GlobalDB>(
         io_context,
         basePath1,
@@ -110,7 +128,6 @@ TEST_F(PubsubGraphsyncTest, MultiGlobalDBTest )
 
     gdb1->Init( sgns::crdt::CrdtOptions::DefaultOptions() );
     gdb2->Init( sgns::crdt::CrdtOptions::DefaultOptions() );
-    std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
     pubs1->AddPeers( { pubs2->GetLocalAddress() } );
     std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
 
@@ -123,7 +140,23 @@ TEST_F(PubsubGraphsyncTest, MultiGlobalDBTest )
 
     transaction->Put( tx_key, data_transaction );
     transaction->Commit();
-    std::this_thread::sleep_for( std::chrono::milliseconds( 20000 ) );
-    auto haskey = gdb2->Get( tx_key );
-    EXPECT_TRUE( haskey );
+    bool                         getConfirmed = false;
+    sgns::crdt::GlobalDB::Buffer retrieved_data;
+
+    assertWaitForCondition(
+        [&]()
+        {
+            auto result = gdb2->Get( tx_key );
+            if ( result )
+            {
+                retrieved_data = std::move( result.value() );
+                getConfirmed   = true;
+                return true;
+            }
+            return false;
+        },
+        std::chrono::milliseconds( 20000 ),
+        "Replication to gdb2 did not complete in time" );
+
+    EXPECT_TRUE( getConfirmed );
 }
