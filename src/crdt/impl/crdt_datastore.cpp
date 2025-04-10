@@ -174,7 +174,6 @@ namespace sgns::crdt
         Close();
     }
 
-
     std::shared_ptr<CrdtDatastore::Delta> CrdtDatastore::DeltaMerge( const std::shared_ptr<Delta> &aDelta1,
                                                                      const std::shared_ptr<Delta> &aDelta2 )
     {
@@ -614,6 +613,20 @@ namespace sgns::crdt
             return outcome::failure( boost::system::error_code{} );
         }
         return set_->QueryElements( aPrefix, CrdtSet::QuerySuffix::QUERY_VALUESUFFIX );
+    }
+
+    outcome::result<CrdtDatastore::QueryResult> CrdtDatastore::QueryKeyValues( const std::string &prefix_base,
+                                                                               const std::string &middle_part,
+                                                                               const std::string &remainder_prefix )
+    {
+        if ( set_ == nullptr )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
+        return set_->QueryElements( prefix_base,
+                                    middle_part,
+                                    remainder_prefix,
+                                    CrdtSet::QuerySuffix::QUERY_VALUESUFFIX );
     }
 
     outcome::result<bool> CrdtDatastore::HasKey( const HierarchicalKey &aKey )

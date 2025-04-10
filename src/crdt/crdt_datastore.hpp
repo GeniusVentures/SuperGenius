@@ -86,6 +86,17 @@ namespace sgns::crdt
     */
         outcome::result<QueryResult> QueryKeyValues( const std::string &aPrefix );
 
+        /**
+         * @brief       Queries with a middle part that can be a wildcard, negated string or normal string
+         * @param[in]   prefix_base: The base prefix to query
+         * @param[in]   middle_part: Either a string (normal query), '*' or !string
+         * @param[in]   remainder_prefix: The remainder part of the query prefix
+         * @return      A list of key value pairs
+         */
+        outcome::result<QueryResult> QueryKeyValues( const std::string &prefix_base,
+            const std::string &middle_part,
+            const std::string &remainder_prefix );
+
         /** Get key prefix used in set, e.g. /namespace/s/k/
     * @return key prefix
     */

@@ -27,7 +27,6 @@ namespace sgns::crdt
                   std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> broadcastChannel,
                   std::string                                           gsaddresses = {} );
 
-
         ~GlobalDB();
 
         /// Pair of key and value to be stored in CRDT
@@ -60,7 +59,7 @@ namespace sgns::crdt
          * @return      outcome::failure on error or success otherwise
          */
         outcome::result<void> Put( const std::vector<DataPair> &data_vector );
-        
+
         /** Gets a value that corresponds to specified key.
     * @param key - value key
     * @return value as a Buffer
@@ -79,6 +78,17 @@ namespace sgns::crdt
     */
         outcome::result<QueryResult> QueryKeyValues( const std::string &keyPrefix );
 
+        /**
+         * @brief       Queries with a middle part that can be a wildcard, negated string or normal string
+         * @param[in]   prefix_base: The base prefix to query
+         * @param[in]   middle_part: Either a string (normal query), '*' or !string
+         * @param[in]   remainder_prefix: The remainder part of the query prefix
+         * @return      A list of key value pairs
+         */
+        outcome::result<QueryResult> QueryKeyValues( const std::string &prefix_base,
+                                                     const std::string &middle_part,
+                                                     const std::string &remainder_prefix );
+
         /** Converts a unique key part to a string representation
     * @param key - binary key to convert
     * @return string represenation of a unique key part
@@ -90,7 +100,7 @@ namespace sgns::crdt
     */
         std::shared_ptr<AtomicTransaction> BeginTransaction();
 
-    void PrintDataStore();
+        void PrintDataStore();
 
         auto GetDB()
         {
