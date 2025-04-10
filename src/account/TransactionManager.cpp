@@ -88,7 +88,7 @@ namespace sgns
         RefreshPorts();
 
         bool crdt_tx_filter_initialized = crdt::CRDTDataFilter::RegisterElementFilter(
-            GetBlockChainBase() + "[^/]*/tx/[^/]*/[0-9]+",
+            "^/?" + GetBlockChainBase() + "[^/]*/tx/[^/]*/[0-9]+",
             [&]( const crdt::pb::Element &element ) -> std::optional<std::vector<crdt::pb::Element>>
             {
                 std::optional<std::vector<crdt::pb::Element>> maybe_tombstones;
@@ -115,12 +115,14 @@ namespace sgns
                 {
                     std::vector<crdt::pb::Element> tombstones;
                     tombstones.push_back( element );
+                    maybe_tombstones = tombstones;
                 }
 
                 return maybe_tombstones;
             } );
+
         bool crdt_proof_filter_initialized = crdt::CRDTDataFilter::RegisterElementFilter(
-            GetBlockChainBase() + "[^/]*/proof/[0-9]+",
+            "^/?" + GetBlockChainBase() + "[^/]*/proof/[0-9]+",
             []( const crdt::pb::Element &element ) -> std::optional<std::vector<crdt::pb::Element>>
             {
                 std::optional<std::vector<crdt::pb::Element>> maybe_tombstones;
@@ -133,6 +135,7 @@ namespace sgns
                 {
                     std::vector<crdt::pb::Element> tombstones;
                     tombstones.push_back( element );
+                    maybe_tombstones = tombstones;
                 }
 
                 return maybe_tombstones;
@@ -528,7 +531,7 @@ namespace sgns
     outcome::result<bool> TransactionManager::CheckProof( const std::shared_ptr<IGeniusTransactions> &tx )
     {
 #ifdef _PROOF_ENABLED
-        auto proof_path = GetTransactionProofPath(*tx);
+        auto proof_path = GetTransactionProofPath( *tx );
         m_logger->debug( "Checking the proof in {}", proof_path );
         OUTCOME_TRY( ( auto &&, proof_data ), incoming_db_m->Get( { proof_path } ) );
 
@@ -545,7 +548,8 @@ namespace sgns
     outcome::result<void> TransactionManager::CheckIncoming()
     {
         m_logger->trace( "Probing incoming transactions on " + GetBlockChainBase() );
-        OUTCOME_TRY( ( auto &&, transaction_list ), incoming_db_m->QueryKeyValues( GetBlockChainBase(), "!"+ account_m->GetAddress(), "/tx" ) );
+        OUTCOME_TRY( ( auto &&, transaction_list ),
+                     incoming_db_m->QueryKeyValues( GetBlockChainBase(), "!" + account_m->GetAddress(), "/tx" ) );
 
         m_logger->trace( "Incoming transaction list grabbed from CRDT" );
 
