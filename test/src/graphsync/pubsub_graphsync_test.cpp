@@ -59,6 +59,7 @@ protected:
         auto result    = logSystem->configure();
 
         libp2p::log::setLoggingSystem( logSystem );
+        libp2p::log::setLevelOfGroup( "gossip_pubsub_test", soralog::Level::DEBUG );
         auto loggerGlobalDB    = sgns::base::createLogger( "GlobalDB", "" );
         auto loggerDAGSyncer   = sgns::base::createLogger( "GraphsyncDAGSyncer", "" );
         auto loggerGraphsync   = sgns::base::createLogger( "graphsync", "" );
@@ -90,7 +91,7 @@ TEST_F(PubsubGraphsyncTest, MultiGlobalDBTest )
     pubs2->Start( 40002, {} );
     std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
     pubs1->AddPeers( { pubs2->GetLocalAddress() } );
-    pubs2->AddPeers( { pubs1->GetLocalAddress() } );
+    //pubs2->AddPeers( { pubs1->GetLocalAddress() } );
     std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
     auto gdb1 = std::make_shared<sgns::crdt::GlobalDB>(
         io_context,
@@ -114,6 +115,6 @@ TEST_F(PubsubGraphsyncTest, MultiGlobalDBTest )
 
     transaction->Put( tx_key, data_transaction );
     transaction->Commit();
-    std::this_thread::sleep_for( std::chrono::milliseconds( 10000 ) );
+    std::this_thread::sleep_for( std::chrono::milliseconds( 20000 ) );
     EXPECT_NE(1, 2) << "Addresses are equal even though they should not be";
 }
