@@ -65,6 +65,8 @@ protected:
        
         auto loggerBroadcaster = sgns::base::createLogger( "PubSubBroadcasterExt", "" );
         auto loggerDataStore   = sgns::base::createLogger( "CrdtDatastore", "" );
+        auto loggerGraphsync   = sgns::base::createLogger( "graphsync", "" );
+        loggerGraphsync->set_level( spdlog::level::trace );
         loggerGlobalDB->set_level( spdlog::level::trace );
         loggerDAGSyncer->set_level( spdlog::level::trace );
         
@@ -84,6 +86,8 @@ TEST_F(PubsubGraphsyncTest, MultiGlobalDBTest )
     std::string binaryPath = boost::dll::program_location().parent_path().string();
     std::string basePath1  = binaryPath + "/pubsub_graphsync_pubs1";
     std::string basePath2  = binaryPath + "/pubsub_graphsync_pubs2";
+    std::filesystem::remove_all( basePath1 );
+    std::filesystem::remove_all( basePath2 );
     auto io_context = std::make_shared<boost::asio::io_context>();
     auto pubs1 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();
     pubs1->Start( 40001, {} );
@@ -109,8 +113,7 @@ TEST_F(PubsubGraphsyncTest, MultiGlobalDBTest )
     std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
     pubs1->AddPeers( { pubs2->GetLocalAddress() } );
     std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
-    auto loggerGraphsync = sgns::base::createLogger( "graphsync", "" );
-    loggerGraphsync->set_level( spdlog::level::trace );
+
     //Dummy Transaction Data
     auto transaction = gdb1->BeginTransaction();
     sgns::crdt::HierarchicalKey  tx_key( "/test/test" );
@@ -121,5 +124,6 @@ TEST_F(PubsubGraphsyncTest, MultiGlobalDBTest )
     transaction->Put( tx_key, data_transaction );
     transaction->Commit();
     std::this_thread::sleep_for( std::chrono::milliseconds( 20000 ) );
-    EXPECT_NE(1, 2) << "Addresses are equal even though they should not be";
+    auto haskey = gdb2->Get( tx_key );
+    EXPECT_TRUE( haskey );
 }
