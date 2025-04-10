@@ -59,7 +59,16 @@ protected:
         auto result    = logSystem->configure();
 
         libp2p::log::setLoggingSystem( logSystem );
-
+        auto loggerGlobalDB    = sgns::base::createLogger( "GlobalDB", "" );
+        auto loggerDAGSyncer   = sgns::base::createLogger( "GraphsyncDAGSyncer", "" );
+        auto loggerGraphsync   = sgns::base::createLogger( "graphsync", "" );
+        auto loggerBroadcaster = sgns::base::createLogger( "PubSubBroadcasterExt", "" );
+        auto loggerDataStore   = sgns::base::createLogger( "CrdtDatastore", "" );
+        loggerGlobalDB->set_level( spdlog::level::trace );
+        loggerDAGSyncer->set_level( spdlog::level::trace );
+        loggerGraphsync->set_level( spdlog::level::trace );
+        loggerBroadcaster->set_level( spdlog::level::trace );
+        loggerDataStore->set_level( spdlog::level::trace );
     }
 
     static void TearDownTestSuite()
@@ -104,5 +113,7 @@ TEST_F(PubsubGraphsyncTest, MultiGlobalDBTest )
     data_transaction.put( gsl::span<const uint8_t>( dummy_data ) );
 
     transaction->Put( tx_key, data_transaction );
+    transaction->Commit();
+    std::this_thread::sleep_for( std::chrono::milliseconds( 10000 ) );
     EXPECT_NE(1, 2) << "Addresses are equal even though they should not be";
 }
