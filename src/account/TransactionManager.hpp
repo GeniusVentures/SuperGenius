@@ -95,7 +95,6 @@ namespace sgns
         outcome::result<void>    SendTransaction();
         std::string              GetTransactionPath( IGeniusTransactions &element );
         std::string              GetTransactionProofPath( IGeniusTransactions &element );
-        static std::string       GetNotificationPath( const std::string &destination );
         static std::string       GetTransactionBasePath( const std::string &address );
         static std::string       GetBlockChainBase();
         static outcome::result<std::shared_ptr<IGeniusTransactions>> DeSerializeTransaction(

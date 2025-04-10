@@ -28,7 +28,6 @@
 #include "crdt/impl/crdt_data_filter.hpp"
 #include "crdt/proto/delta.pb.h"
 
-
 #include <nil/crypto3/pubkey/algorithm/sign.hpp>
 #include <nil/crypto3/pubkey/algorithm/verify.hpp>
 
@@ -89,11 +88,11 @@ namespace sgns
         RefreshPorts();
 
         bool crdt_tx_filter_initialized = crdt::CRDTDataFilter::RegisterElementFilter(
-            GetBlockChainBase() + "/[^/]*/tx/[^/]*/[0-9]+",
+            GetBlockChainBase() + "[^/]*/tx/[^/]*/[0-9]+",
             [&]( const crdt::pb::Element &element ) -> std::optional<std::vector<crdt::pb::Element>>
             {
                 std::optional<std::vector<crdt::pb::Element>> maybe_tombstones;
-                bool                                valid_tx = false;
+                bool                                          valid_tx = false;
                 do
                 {
                     auto maybe_tx = DeSerializeTransaction( element.value() );
@@ -105,7 +104,7 @@ namespace sgns
                     if ( !CheckDAGStructSignature( maybe_tx.value()->dag_st ) )
                     {
                         m_logger->error( "Could not validate signature of transaction from {}",
-                            maybe_tx.value()->dag_st.source_addr() );
+                                         maybe_tx.value()->dag_st.source_addr() );
                         break;
                     }
 
@@ -121,7 +120,7 @@ namespace sgns
                 return maybe_tombstones;
             } );
         bool crdt_proof_filter_initialized = crdt::CRDTDataFilter::RegisterElementFilter(
-            GetBlockChainBase() + "/[^/]*/proof/[0-9]+",
+            GetBlockChainBase() + "[^/]*/proof/[0-9]+",
             []( const crdt::pb::Element &element ) -> std::optional<std::vector<crdt::pb::Element>>
             {
                 std::optional<std::vector<crdt::pb::Element>> maybe_tombstones;
@@ -465,11 +464,6 @@ namespace sgns
         return proof_path;
     }
 
-    std::string TransactionManager::GetNotificationPath( const std::string &destination )
-    {
-        return GetTransactionBasePath( destination ) + "/notify/";
-    }
-
     std::string TransactionManager::GetTransactionBasePath( const std::string &address )
     {
         auto tx_base_path = GetBlockChainBase() + address;
@@ -485,17 +479,17 @@ namespace sgns
         return tx_key.str();
     }
 
-    outcome::result<std::shared_ptr<IGeniusTransactions>> TransactionManager::DeSerializeTransaction( std::string tx_data )
+    outcome::result<std::shared_ptr<IGeniusTransactions>> TransactionManager::DeSerializeTransaction(
+        std::string tx_data )
     {
         OUTCOME_TRY( ( auto &&, dag ), IGeniusTransactions::DeSerializeDAGStruct( tx_data ) );
-
 
         auto it = IGeniusTransactions::GetDeSerializers().find( dag.type() );
         if ( it == IGeniusTransactions::GetDeSerializers().end() )
         {
             return std::errc::invalid_argument;
         }
-        return it->second( std::vector<uint8_t>(tx_data.begin(), tx_data.end()) );
+        return it->second( std::vector<uint8_t>( tx_data.begin(), tx_data.end() ) );
     }
 
     outcome::result<void> TransactionManager::ParseTransaction( const std::shared_ptr<IGeniusTransactions> &tx )
@@ -534,7 +528,7 @@ namespace sgns
     outcome::result<bool> TransactionManager::CheckProof( const std::shared_ptr<IGeniusTransactions> &tx )
     {
 #ifdef _PROOF_ENABLED
-        auto proof_path = GetNotificationPath( account_m->GetAddress() ) + "proof/" + tx->dag_st.data_hash();
+        auto proof_path = GetTransactionProofPath(*tx);
         m_logger->debug( "Checking the proof in {}", proof_path );
         OUTCOME_TRY( ( auto &&, proof_data ), incoming_db_m->Get( { proof_path } ) );
 
@@ -550,9 +544,8 @@ namespace sgns
 
     outcome::result<void> TransactionManager::CheckIncoming()
     {
-        auto transaction_paths = GetNotificationPath( account_m->GetAddress() ) + "tx/";
-        m_logger->trace( "Probing incoming transactions on " + transaction_paths );
-        OUTCOME_TRY( ( auto &&, transaction_list ), incoming_db_m->QueryKeyValues( transaction_paths ) );
+        m_logger->trace( "Probing incoming transactions on " + GetBlockChainBase() );
+        OUTCOME_TRY( ( auto &&, transaction_list ), incoming_db_m->QueryKeyValues( GetBlockChainBase(), "!"+ account_m->GetAddress(), "/tx" ) );
 
         m_logger->trace( "Incoming transaction list grabbed from CRDT" );
 
@@ -612,9 +605,9 @@ namespace sgns
 
     outcome::result<void> TransactionManager::CheckOutgoing()
     {
-        auto transaction_paths = GetBlockChainBase() + account_m->GetAddress() + "/tx";
-        m_logger->trace( "Probing transactions on " + transaction_paths );
-        OUTCOME_TRY( ( auto &&, transaction_list ), outgoing_db_m->QueryKeyValues( transaction_paths ) );
+        m_logger->trace( "Probing transactions on " + GetBlockChainBase() );
+        OUTCOME_TRY( ( auto &&, transaction_list ),
+                     outgoing_db_m->QueryKeyValues( GetBlockChainBase(), account_m->GetAddress(), "/tx" ) );
 
         m_logger->trace( "Transaction list grabbed from CRDT" );
 
@@ -792,8 +785,7 @@ namespace sgns
 
             auto                         crdt_transaction = destination_db->BeginTransaction();
             sgns::crdt::GlobalDB::Buffer data_transaction;
-            sgns::crdt::HierarchicalKey  tx_key( GetNotificationPath( dest_info.dest_address ) + "tx/" +
-                                                tx->dag_st.data_hash() );
+            sgns::crdt::HierarchicalKey  tx_key( GetTransactionPath( *tx ) );
 
             data_transaction.put( tx->SerializeByteVector() );
 
@@ -801,8 +793,7 @@ namespace sgns
             BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Put( std::move( tx_key ), std::move( data_transaction ) ) );
             if ( proof )
             {
-                sgns::crdt::HierarchicalKey  proof_key( GetNotificationPath( dest_info.dest_address ) + "proof/" +
-                                                       tx->dag_st.data_hash() );
+                sgns::crdt::HierarchicalKey  proof_key( GetTransactionProofPath( *tx ) );
                 sgns::crdt::GlobalDB::Buffer proof_data;
 
                 const auto &proof_value = proof.value();
@@ -869,7 +860,7 @@ namespace sgns
         }
 
         auto                         crdt_transaction = destination_db->BeginTransaction();
-        sgns::crdt::HierarchicalKey  tx_key( GetNotificationPath( escrow_source ) + "tx/" + tx->dag_st.data_hash() );
+        sgns::crdt::HierarchicalKey  tx_key( GetTransactionPath( *tx ) );
         sgns::crdt::GlobalDB::Buffer data_transaction;
         data_transaction.put( tx->SerializeByteVector() );
         m_logger->debug( "Putting replicate escrow release transaction in " + tx_key.GetKey() );
@@ -877,8 +868,7 @@ namespace sgns
 
         if ( proof )
         {
-            sgns::crdt::HierarchicalKey  proof_key( GetNotificationPath( escrow_source ) + "proof/" +
-                                                   tx->dag_st.data_hash() );
+            sgns::crdt::HierarchicalKey  proof_key( GetTransactionProofPath( *tx ) );
             sgns::crdt::GlobalDB::Buffer proof_data;
             proof_data.put( proof.value() );
             m_logger->debug( "Putting replicate escrow release PROOF in " + proof_key.GetKey() );
@@ -1002,16 +992,19 @@ namespace sgns
         auto start = std::chrono::steady_clock::now();
 
         // Construct incoming notification path
-        std::string incoming_path = GetNotificationPath( account_m->GetAddress() ) + "tx/" + txId;
+        std::string incoming_path = GetBlockChainBase();
 
         do
         {
             // Check in incoming transactions with the exact path
             {
                 std::shared_lock<std::shared_mutex> in_lock( incoming_tx_mutex_m );
-                if ( incoming_tx_processed_m.find( incoming_path ) != incoming_tx_processed_m.end() )
+                for ( auto tx : incoming_tx_processed_m )
                 {
-                    return true;
+                    if ( tx.second->dag_st.data_hash() == txId )
+                    {
+                        return true;
+                    }
                 }
             }
 
