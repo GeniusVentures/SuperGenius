@@ -25,7 +25,7 @@ public:
     * Send {@param buff} payload to other replicas.
     * @return outcome::success on success or outcome::failure on error
     */
-        outcome::result<void> Broadcast(const base::Buffer& buff) override;
+        outcome::result<void> Broadcast(const base::Buffer &buff, std::optional<std::string> topic_name) override;
     /**
     * Obtain the next {@return} payload received from the network.
     * @return buffer value or outcome::failure on error
