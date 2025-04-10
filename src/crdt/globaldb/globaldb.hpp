@@ -3,6 +3,7 @@
 
 #include <boost/asio/io_context.hpp>
 #include <boost/filesystem/path.hpp>
+#include "pubsub_broadcaster_ext.hpp"
 #include "outcome/outcome.hpp"
 #include <ipfs_pubsub/gossip_pubsub_topic.hpp>
 #include "crdt/crdt_options.hpp"
@@ -25,6 +26,11 @@ namespace sgns::crdt
                   std::string                                           databasePath,
                   std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> broadcastChannel );
 
+        GlobalDB( std::shared_ptr<boost::asio::io_context>         context,
+                  std::string                                      databasePath,
+                  int                                              dagSyncPort,
+                  std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub,
+                  std::string                                      gsaddresses = {} );
 
         ~GlobalDB();
 
@@ -45,12 +51,16 @@ namespace sgns::crdt
 
         outcome::result<void> Init( std::shared_ptr<CrdtOptions> crdtOptions );
 
-        /** Puts key-value pair to storage
-        * @param key The path in which the data will be stored
-        * @param value The data to be stored
-        * @return outcome::failure on error or success otherwise
-        */
-        outcome::result<void> Put( const HierarchicalKey &key, const Buffer &value );
+        /**
+         * @brief Puts key-value pair to the CRDT store, optionally specifying a broadcast topic.
+         * @param[in] key The hierarchical key where the value should be stored.
+         * @param[in] value The value to store.
+         * @param[in] topic Optional topic for broadcasting the update.
+         * @return outcome::success on success, or outcome::failure otherwise.
+         */
+        outcome::result<void> Put( const HierarchicalKey     &key,
+                                   const Buffer              &value,
+                                   std::optional<std::string> topic = std::nullopt );
 
         /**
          * @brief       Writes a batch of CRDT data all at once
@@ -88,6 +98,8 @@ namespace sgns::crdt
     */
         std::shared_ptr<AtomicTransaction> BeginTransaction();
 
+    void AddBroadcastTopic(const std::string &topicName);
+
     void PrintDataStore();
 
         auto GetDB()
@@ -103,7 +115,13 @@ namespace sgns::crdt
         std::string                                           m_databasePath;
         int                                                   m_dagSyncPort;
         std::string                                           m_graphSyncAddrs;
+
+        std::vector<std::string> m_broadcastTopicNames;
+        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> m_pubsub;
         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> m_broadcastChannel;
+        std::shared_ptr<sgns::crdt::PubSubBroadcasterExt> m_broadcaster;
+
+
 
         //std::shared_ptr<sgns::ipfs_lite::ipfs::dht::IpfsDHT> dht_;
         //std::shared_ptr<libp2p::protocol::Identify> identify_;

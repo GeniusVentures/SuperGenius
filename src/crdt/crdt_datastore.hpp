@@ -95,12 +95,16 @@ namespace sgns::crdt
     */
     outcome::result<std::string> GetValueSuffix();
 
-    /** Put stores the object `value` named by `key` as delta and broadcast it
-    * @param aKey Hierarchical key to put
-    * @param aValue value buffer to publish
-    * @return outcome::failure on error or success otherwise
-    */
-    outcome::result<void> PutKey(const HierarchicalKey& aKey, const Buffer& aValue);
+    /**
+     * @brief Stores the given value in the CRDT store and optionally broadcasts using a specific topic.
+     * @param aKey Hierarchical key for the value.
+     * @param aValue Value to be stored.
+     * @param topic Optional topic for broadcasting the update. If not set, default broadcasting is used.
+     * @return outcome::success if stored and broadcasted successfully, or outcome::failure otherwise.
+     */
+    outcome::result<void> PutKey( const HierarchicalKey     &aKey,
+                                  const Buffer              &aValue,
+                                  std::optional<std::string> topic = std::nullopt );
 
     /** HasKey returns whether the `key` is mapped to a `value` in set
     * @param aKey HierarchicalKey to look for in set
@@ -114,11 +118,16 @@ namespace sgns::crdt
     */
     outcome::result<void> DeleteKey(const HierarchicalKey& aKey);
 
-    /** Publish publishes delta and broadcast it
-    * @param aDelta Delta to publish
-    * @return returns outcome::success on success or outcome::failure otherwise
-    */
-    outcome::result<void> Publish(const std::shared_ptr<Delta>& aDelta);
+    /**
+     * @brief Publishes a Delta.
+     * Creates a DAG node from the given Delta, merges it into the CRDT, and broadcasts the node.
+     * An optional topic can be provided to target a specific broadcast channel.
+     * @param[in] aDelta The Delta to publish.
+     * @param[in] topic Optional topic name for targeted publishing. If not provided, the default broadcast behavior is used.
+     * @return outcome::success on success, or outcome::failure if an error occurs.
+     */
+    outcome::result<void> Publish( const std::shared_ptr<Delta> &aDelta,
+                                   std::optional<std::string>    topic = std::nullopt );
 
     /** PrintDAG pretty prints the current Merkle-DAG using the given printFunc
     * @return returns outcome::success on success or outcome::failure otherwise
@@ -217,10 +226,15 @@ namespace sgns::crdt
     */
     void RebroadcastHeads();
 
-    /** Broadcast CIDs
-    * @return returns outcome::success on success or outcome::failure otherwise
-    */
-    outcome::result<void> Broadcast(const std::vector<CID>& cids);
+    /**
+     * @brief Broadcasts a set of CIDs.
+     * Encodes and broadcasts the provided list of CIDs. An optional topic can be specified
+     * to target a specific broadcast channel.
+     * @param[in] cids The list of CIDs to broadcast.
+     * @param[in] topic Optional topic name for targeted broadcasting. If not provided, the default broadcast channel is used.
+     * @return outcome::success on success, or outcome::failure if an error occurs.
+     */
+    outcome::result<void> Broadcast( const std::vector<CID> &cids, std::optional<std::string> topic = std::nullopt );
 
     /** EncodeBroadcast encodes list of CIDs to CRDT broadcast data
     * @param heads list of CIDs
