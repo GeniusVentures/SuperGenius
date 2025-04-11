@@ -547,7 +547,7 @@ namespace sgns
 
     outcome::result<void> TransactionManager::CheckIncoming()
     {
-        m_logger->trace( "Probing incoming transactions on " + GetBlockChainBase() );
+        m_logger->trace( "Probing incoming transactions on " + GetBlockChainBase() + "!" + account_m->GetAddress() + "/tx"  );
         OUTCOME_TRY( ( auto &&, transaction_list ),
                      incoming_db_m->QueryKeyValues( GetBlockChainBase(), "!" + account_m->GetAddress(), "/tx" ) );
 
@@ -600,6 +600,7 @@ namespace sgns
             }
 
             {
+                m_logger->trace( "Inserting into incoming {}", transaction_key.value());
                 std::unique_lock<std::shared_mutex> out_lock( incoming_tx_mutex_m );
                 incoming_tx_processed_m[transaction_key.value()] = maybe_transaction.value();
             }
@@ -609,7 +610,7 @@ namespace sgns
 
     outcome::result<void> TransactionManager::CheckOutgoing()
     {
-        m_logger->trace( "Probing transactions on " + GetBlockChainBase() );
+        m_logger->trace( "Probing outgoing transactions on " + GetBlockChainBase() );
         OUTCOME_TRY( ( auto &&, transaction_list ),
                      outgoing_db_m->QueryKeyValues( GetBlockChainBase(), account_m->GetAddress(), "/tx" ) );
 
@@ -647,6 +648,7 @@ namespace sgns
 
             account_m->nonce = std::max( account_m->nonce, maybe_transaction.value()->dag_st.nonce() );
             {
+                m_logger->trace( "Inserting into outgoing {}", transaction_key.value());
                 std::unique_lock<std::shared_mutex> out_lock( outgoing_tx_mutex_m );
                 outgoing_tx_processed_m[transaction_key.value()] = maybe_transaction.value();
             }

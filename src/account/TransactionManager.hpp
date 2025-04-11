@@ -85,7 +85,7 @@ namespace sgns
     private:
         static constexpr std::uint16_t    MAIN_NET_ID             = 369;
         static constexpr std::uint16_t    TEST_NET_ID             = 963;
-        static constexpr std::string_view TRANSACTION_BASE_FORMAT = "bc-%hu/";
+        static constexpr std::string_view TRANSACTION_BASE_FORMAT = "/bc-%hu/";
         using TransactionParserFn =
             outcome::result<void> ( TransactionManager::* )( const std::shared_ptr<IGeniusTransactions> & );
 
