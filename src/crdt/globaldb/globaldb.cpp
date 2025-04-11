@@ -225,14 +225,28 @@ std::string GetLocalIP( boost::asio::io_context &io )
         }
 
         auto ipfsDataStore = std::make_shared<RocksdbDatastore>( ipfsDBResult.value() );
-        
         auto scheduler = std::make_shared<libp2p::protocol::AsioScheduler>( m_context,
                                                                             libp2p::protocol::SchedulerConfig{} );
-        auto graphsync = std::make_shared<GraphsyncImpl>( m_broadcastChannel->GetPubsub()->GetHost(),
-                                                          std::move( scheduler ) );
+
+        std::shared_ptr<libp2p::Host> host;
+        if ( m_broadcastChannel )
+        {
+            host = m_broadcastChannel->GetPubsub()->GetHost();
+        }
+        else if ( m_pubsub )
+        {
+            host = m_pubsub->GetHost();
+        }
+        else
+        {
+            m_logger->error( "Neither broadcast channel nor pubsub is initialized." );
+            return outcome::failure( Error::DAG_SYNCHER_NOT_LISTENING );
+        }
+
+        auto graphsync = std::make_shared<GraphsyncImpl>( host, std::move( scheduler ) );
         auto dagSyncer = std::make_shared<GraphsyncDAGSyncer>( ipfsDataStore,
                                                                graphsync,
-                                                               m_broadcastChannel->GetPubsub()->GetHost() );
+                                                               host );
 
         //// Start DagSyner listener
         auto startResult = dagSyncer->StartSync();
