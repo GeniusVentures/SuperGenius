@@ -94,8 +94,8 @@ namespace sgns::crdt
          * @return      A list of key value pairs
          */
         outcome::result<QueryResult> QueryKeyValues( const std::string &prefix_base,
-            const std::string &middle_part,
-            const std::string &remainder_prefix );
+                                                     const std::string &middle_part,
+                                                     const std::string &remainder_prefix );
 
         /** Get key prefix used in set, e.g. /namespace/s/k/
     * @return key prefix
@@ -245,17 +245,18 @@ namespace sgns::crdt
         outcome::result<void> HandleBlock( const CID &aCid );
 
         /** ProcessNode processes new block. This makes that every operation applied
-    * to this store take effect (delta is merged) before returning.
-    * @param aRoot Root CID
-    * @param aRootPrio Root priority
-    * @param aDelta Pointer to Delta
-    * @param aNode Pointer to IPLD node
-    * @return list of CIDs or outcome::failure on error
-    */
+        * to this store take effect (delta is merged) before returning.
+        * @param aRoot Root CID
+        * @param aRootPrio Root priority
+        * @param aDelta Pointer to Delta
+        * @param aNode Pointer to IPLD node
+        * @return list of CIDs or outcome::failure on error
+        */
         outcome::result<std::vector<CID>> ProcessNode( const CID                       &aRoot,
                                                        uint64_t                         aRootPrio,
                                                        std::shared_ptr<Delta>           aDelta,
-                                                       const std::shared_ptr<IPLDNode> &aNode );
+                                                       const std::shared_ptr<IPLDNode> &aNode,
+                                                       bool                             filter_crdt = false );
 
         /** PutBlock add block node to DAGSyncer
     * @param aHeads list of CIDs to add to node as IPLD links

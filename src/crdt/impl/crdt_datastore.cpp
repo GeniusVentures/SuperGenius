@@ -318,7 +318,7 @@ namespace sgns::crdt
                        dagJob.rootCid_.toString().value(),
                        std::to_string( dagJob.rootPriority_ ) );
 
-        auto childrenResult = ProcessNode( dagJob.rootCid_, dagJob.rootPriority_, dagJob.delta_, dagJob.node_ );
+        auto childrenResult = ProcessNode( dagJob.rootCid_, dagJob.rootPriority_, dagJob.delta_, dagJob.node_, true );
         if ( childrenResult.has_failure() )
         {
             logger_->error( "SendNewJobs: failed to process node:{}", dagJob.rootCid_.toString().value() );
@@ -759,7 +759,8 @@ namespace sgns::crdt
     outcome::result<std::vector<CID>> CrdtDatastore::ProcessNode( const CID                       &aRoot,
                                                                   uint64_t                         aRootPrio,
                                                                   std::shared_ptr<Delta>           aDelta,
-                                                                  const std::shared_ptr<IPLDNode> &aNode )
+                                                                  const std::shared_ptr<IPLDNode> &aNode,
+                                                                  bool                             filter_crdt )
     {
         if ( set_ == nullptr || heads_ == nullptr || dagSyncer_ == nullptr || aDelta == nullptr || aNode == nullptr )
         {
@@ -774,10 +775,12 @@ namespace sgns::crdt
             return outcome::failure( strCidResult.error() );
         }
         HierarchicalKey hKey( strCidResult.value() );
-        bool            filter_ret = true;
 
-        CRDTDataFilter::FilterElementsOnDelta( aDelta );
-        CRDTDataFilter::FilterTombstonesOnDelta( aDelta );
+        if ( filter_crdt )
+        {
+            CRDTDataFilter::FilterElementsOnDelta( aDelta );
+            CRDTDataFilter::FilterTombstonesOnDelta( aDelta );
+        }
 
         {
             std::unique_lock lock( dagWorkerMutex_ );
