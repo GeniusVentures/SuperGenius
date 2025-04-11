@@ -93,6 +93,7 @@ namespace sgns
             {
                 std::optional<std::vector<crdt::pb::Element>> maybe_tombstones;
                 bool                                          valid_tx = false;
+                std::shared_ptr<IGeniusTransactions>          tx;
                 do
                 {
                     auto maybe_tx = DeSerializeTransaction( element.value() );
@@ -100,11 +101,11 @@ namespace sgns
                     {
                         break;
                     }
-
-                    if ( !CheckDAGStructSignature( maybe_tx.value()->dag_st ) )
+                    tx = maybe_tx.value();
+                    if ( !CheckDAGStructSignature( tx->dag_st ) )
                     {
                         m_logger->error( "Could not validate signature of transaction from {}",
-                                         maybe_tx.value()->dag_st.source_addr() );
+                                         tx->dag_st.source_addr() );
                         break;
                     }
 
@@ -115,6 +116,14 @@ namespace sgns
                 {
                     std::vector<crdt::pb::Element> tombstones;
                     tombstones.push_back( element );
+                    auto maybe_proof_key = GetExpectedProofKey( element.key(), tx );
+                    if ( maybe_proof_key.has_value() )
+                    {
+                        crdt::pb::Element proof_tombstone;
+                        proof_tombstone.set_key( maybe_proof_key.value() );
+                        tombstones.push_back( proof_tombstone );
+                    }
+
                     maybe_tombstones = tombstones;
                 }
 
@@ -122,7 +131,7 @@ namespace sgns
             } );
 
         bool crdt_proof_filter_initialized = crdt::CRDTDataFilter::RegisterElementFilter(
-            "^/?" + GetBlockChainBase() + "[^/]*/proof/[0-9]+",
+            "^/?" + GetBlockChainBase() + "[^/]*/proof/[^/]*/[0-9]+",
             []( const crdt::pb::Element &element ) -> std::optional<std::vector<crdt::pb::Element>>
             {
                 std::optional<std::vector<crdt::pb::Element>> maybe_tombstones;
@@ -135,6 +144,13 @@ namespace sgns
                 {
                     std::vector<crdt::pb::Element> tombstones;
                     tombstones.push_back( element );
+                    auto maybe_tx_key = GetExpectedTxKey( element.key() );
+                    if ( maybe_tx_key.has_value() )
+                    {
+                        crdt::pb::Element tx_tombstone;
+                        tx_tombstone.set_key( maybe_tx_key.value() );
+                        tombstones.push_back( tx_tombstone );
+                    }
                     maybe_tombstones = tombstones;
                 }
 
@@ -482,6 +498,85 @@ namespace sgns
         return tx_key.str();
     }
 
+    outcome::result<std::string> TransactionManager::GetExpectedProofKey(
+        const std::string                          &tx_key,
+        const std::shared_ptr<IGeniusTransactions> &tx )
+    {
+        std::string ret;
+        do
+        {
+            if ( tx )
+            {
+                ret = GetTransactionProofPath( *tx );
+                break;
+            }
+
+            static const std::regex txRegex( "^/?" + GetBlockChainBase() + "/[^/]*/tx/([^/]*)/([0-9]+)$" );
+            std::smatch             matches;
+
+            if ( !std::regex_match( tx_key, matches, txRegex ) || matches.size() < 2 )
+            {
+                // Not a valid transaction key
+                return outcome::failure(
+                    boost::system::errc::make_error_code( boost::system::errc::invalid_argument ) );
+            }
+            std::string txType = matches[1]; // The transaction type
+            std::string txId   = matches[2]; // The ID part
+
+            // Find the position of "/tx/" to extract the address part
+            size_t txPos = tx_key.find( "/tx/" );
+            if ( txPos == std::string::npos )
+            {
+                return outcome::failure(
+                    boost::system::errc::make_error_code( boost::system::errc::invalid_argument ) );
+            }
+
+            // Extract the address part (everything before "/tx/")
+            std::string addressPart = tx_key.substr( 0, txPos );
+
+            // Construct the proof key
+            ret = addressPart + "/proof/" + txType + txId;
+
+        } while ( 0 );
+
+        return ret;
+    }
+
+    outcome::result<std::string> TransactionManager::GetExpectedTxKey( const std::string &proof_key )
+    {
+        std::string ret;
+        do
+        {
+            static const std::regex proofRegex( "^/?" + GetBlockChainBase() + "/[^/]*/proof/([^/]*)/([0-9]+)$" );
+            std::smatch             matches;
+
+            if ( !std::regex_match( proof_key, matches, proofRegex ) || matches.size() < 2 )
+            {
+                // Not a valid transaction key
+                return outcome::failure(
+                    boost::system::errc::make_error_code( boost::system::errc::invalid_argument ) );
+            }
+            std::string proofType = matches[1]; // The proof type (e.g., "transfer")
+            std::string proofId   = matches[2]; // The ID part
+
+            // Find the position of "/tx/" to extract the address part
+            size_t proofPos = proof_key.find( "/proof/" );
+            if ( proofPos == std::string::npos )
+            {
+                return outcome::failure(
+                    boost::system::errc::make_error_code( boost::system::errc::invalid_argument ) );
+            }
+
+            std::string addressPart = proof_key.substr( 0, proofPos );
+
+            // Construct the proof key
+            ret = addressPart + "/tx/" + proofType + "/" + proofId;
+
+        } while ( 0 );
+
+        return ret;
+    }
+
     outcome::result<std::shared_ptr<IGeniusTransactions>> TransactionManager::DeSerializeTransaction(
         std::string tx_data )
     {
@@ -547,7 +642,8 @@ namespace sgns
 
     outcome::result<void> TransactionManager::CheckIncoming()
     {
-        m_logger->trace( "Probing incoming transactions on " + GetBlockChainBase() + "!" + account_m->GetAddress() + "/tx"  );
+        m_logger->trace( "Probing incoming transactions on " + GetBlockChainBase() + "!" + account_m->GetAddress() +
+                         "/tx" );
         OUTCOME_TRY( ( auto &&, transaction_list ),
                      incoming_db_m->QueryKeyValues( GetBlockChainBase(), "!" + account_m->GetAddress(), "/tx" ) );
 
@@ -600,7 +696,7 @@ namespace sgns
             }
 
             {
-                m_logger->trace( "Inserting into incoming {}", transaction_key.value());
+                m_logger->trace( "Inserting into incoming {}", transaction_key.value() );
                 std::unique_lock<std::shared_mutex> out_lock( incoming_tx_mutex_m );
                 incoming_tx_processed_m[transaction_key.value()] = maybe_transaction.value();
             }
@@ -648,7 +744,7 @@ namespace sgns
 
             account_m->nonce = std::max( account_m->nonce, maybe_transaction.value()->dag_st.nonce() );
             {
-                m_logger->trace( "Inserting into outgoing {}", transaction_key.value());
+                m_logger->trace( "Inserting into outgoing {}", transaction_key.value() );
                 std::unique_lock<std::shared_mutex> out_lock( outgoing_tx_mutex_m );
                 outgoing_tx_processed_m[transaction_key.value()] = maybe_transaction.value();
             }

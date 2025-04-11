@@ -94,11 +94,13 @@ namespace sgns
         SGTransaction::DAGStruct FillDAGStruct( std::string transaction_hash = "" ) const;
         outcome::result<void>    SendTransaction();
         std::string              GetTransactionPath( IGeniusTransactions &element );
-        std::string              GetTransactionProofPath( IGeniusTransactions &element );
+        static std::string              GetTransactionProofPath( IGeniusTransactions &element );
         static std::string       GetTransactionBasePath( const std::string &address );
         static std::string       GetBlockChainBase();
-        static outcome::result<std::shared_ptr<IGeniusTransactions>> DeSerializeTransaction(
-            std::string tx_data );
+        static outcome::result<std::shared_ptr<IGeniusTransactions>> DeSerializeTransaction( std::string tx_data );
+        static outcome::result<std::string>                          GetExpectedProofKey( const std::string                          &tx_key,
+                                                                                          const std::shared_ptr<IGeniusTransactions> &tx );
+        static outcome::result<std::string>                          GetExpectedTxKey( const std::string &proof_key );
 
         outcome::result<std::shared_ptr<IGeniusTransactions>> FetchTransaction(
             const std::shared_ptr<crdt::GlobalDB> &db,
