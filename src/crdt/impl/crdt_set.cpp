@@ -254,7 +254,8 @@ namespace sgns::crdt
         // /namespace/k/<prefix>
         auto prefixKeysKey = this->KeysKey( prefix_base );
 
-        auto queryResult = this->dataStore_->query( prefixKeysKey.GetKey(), middle_part, remainder_prefix );
+
+        auto queryResult = this->dataStore_->query( prefixKeysKey.GetKey()+ "/", middle_part, remainder_prefix );
         if ( queryResult.has_failure() )
         {
             return outcome::failure( queryResult.error() );
