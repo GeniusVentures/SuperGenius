@@ -33,7 +33,6 @@
 
 namespace
 {
-
     template <typename Predicate>
     bool waitForCondition( Predicate                 pred,
                            std::chrono::milliseconds timeout,
@@ -54,34 +53,31 @@ namespace
     std::string GetLoggingSystem( const std::string & )
     {
         return R"(
-   # ----------------
-   sinks:
-     - name: console
-       type: console
-       color: true
-   groups:
-     - name: gossip_pubsub_test
-       sink: console
-       level: error
-       children:
-         - name: libp2p
-         - name: Gossip
-   # ----------------
-     )";
+     # ----------------
+     sinks:
+       - name: console
+         type: console
+         color: true
+     groups:
+       - name: gossip_pubsub_test
+         sink: console
+         level: error
+         children:
+           - name: libp2p
+           - name: Gossip
+     # ----------------
+       )";
     }
 
-    constexpr auto WAIT_TIMEOUT = std::chrono::seconds( 10 );
-
+#define WAIT_TIMEOUT ( std::chrono::milliseconds( 10000 ) )
 } // namespace
 
 class GlobalDBIntegrationTest : public ::testing::Test
 {
 public:
-    // TestNodeCollection encapsulates a collection of test nodes.
     class TestNodeCollection
     {
     public:
-        // Nested type representing a single test node.
         struct TestNode
         {
             std::string                                      basePath;
@@ -97,11 +93,9 @@ public:
             TestNode &operator=( TestNode && ) noexcept = default;
         };
 
-        // Static port counters (separate for PubSub and GlobalDB).
         static uint16_t currentPubsubPort;
         static uint16_t currentGraphsyncPort;
 
-        // Adds a new node with the given dbName.
         void addNode( const std::string &dbName )
         {
             const std::string testName   = ::testing::UnitTest::GetInstance()->current_test_info()->name();
@@ -116,10 +110,7 @@ public:
             pubsub->Start( currentPubsubPort, {}, listenIp, {} );
 
             auto io = std::make_shared<boost::asio::io_context>();
-            auto db = std::make_shared<sgns::crdt::GlobalDB>( io,
-                                                              basePath + "/CommonKey",
-                                                              currentGraphsyncPort,
-                                                              pubsub );
+            auto db = std::make_shared<sgns::crdt::GlobalDB>( io, basePath + "/CommonKey", pubsub );
 
             ++currentPubsubPort;
             ++currentGraphsyncPort;
@@ -134,8 +125,7 @@ public:
             nodes_.push_back( std::move( node ) );
         }
 
-        // Connects all nodes in the collection.
-        void connectNodes()
+        void connectNodes( std::chrono::milliseconds delay = std::chrono::seconds( 3 ) )
         {
             for ( size_t i = 0; i < nodes_.size(); ++i )
             {
@@ -149,9 +139,9 @@ public:
                 }
                 nodes_[i].pubsub->AddPeers( peers );
             }
+            std::this_thread::sleep_for( delay );
         }
 
-        // Returns a const reference to the underlying vector.
         const std::vector<TestNode> &getNodes() const
         {
             return nodes_;
@@ -186,7 +176,6 @@ public:
         std::vector<TestNode> nodes_;
     };
 
-    // SetUpTestSuite is used only for logger initialization.
     static void SetUpTestSuite()
     {
         const std::string binaryPath         = boost::dll::program_location().parent_path().string();
@@ -214,11 +203,7 @@ public:
 uint16_t GlobalDBIntegrationTest::TestNodeCollection::currentPubsubPort    = 50501;
 uint16_t GlobalDBIntegrationTest::TestNodeCollection::currentGraphsyncPort = 50541;
 
-//
-// TESTS
-//
-
-TEST_F( GlobalDBIntegrationTest, BasicReplicationTest )
+TEST_F( GlobalDBIntegrationTest, ReplicationWithoutTopicSuccessfulTest )
 {
     auto testNodes = std::make_unique<TestNodeCollection>();
     testNodes->addNode( "globaldb_node1" );
@@ -231,8 +216,6 @@ TEST_F( GlobalDBIntegrationTest, BasicReplicationTest )
     }
 
     testNodes->connectNodes();
-    std::this_thread::sleep_for( std::chrono::seconds( 3 ) );
-
     using sgns::crdt::HierarchicalKey;
     sgns::base::Buffer value;
     value.put( "Replication Value without topic" );
@@ -263,7 +246,7 @@ TEST_F( GlobalDBIntegrationTest, BasicReplicationTest )
     }
 }
 
-TEST_F( GlobalDBIntegrationTest, TopicBroadcastReplicationTest )
+TEST_F( GlobalDBIntegrationTest, ReplicationViaTopicBroadcastTest )
 {
     auto testNodes = std::make_unique<TestNodeCollection>();
     testNodes->addNode( "globaldb_node1" );
@@ -275,9 +258,7 @@ TEST_F( GlobalDBIntegrationTest, TopicBroadcastReplicationTest )
         node.db->AddBroadcastTopic( "test_topic" );
     }
 
-    testNodes->connectNodes();
-    std::this_thread::sleep_for( std::chrono::seconds( 5 ) );
-
+    testNodes->connectNodes( std::chrono::seconds( 5 ) );
     using sgns::crdt::HierarchicalKey;
     sgns::base::Buffer value;
     value.put( "Value via test_topic" );
@@ -308,7 +289,7 @@ TEST_F( GlobalDBIntegrationTest, TopicBroadcastReplicationTest )
     }
 }
 
-TEST_F( GlobalDBIntegrationTest, MultipleTopicsTest )
+TEST_F( GlobalDBIntegrationTest, ReplicationAcrossMultipleTopicsTest )
 {
     auto testNodes = std::make_unique<TestNodeCollection>();
     testNodes->addNode( "globaldb_node1" );
@@ -321,9 +302,8 @@ TEST_F( GlobalDBIntegrationTest, MultipleTopicsTest )
         node.db->AddBroadcastTopic( "topic_A" );
         node.db->AddBroadcastTopic( "topic_B" );
     }
-    testNodes->connectNodes();
-    std::this_thread::sleep_for( std::chrono::seconds( 5 ) );
 
+    testNodes->connectNodes( std::chrono::seconds( 5 ) );
     using sgns::crdt::HierarchicalKey;
     sgns::base::Buffer valueA, valueB;
     valueA.put( "Data from topic A" );
@@ -364,14 +344,12 @@ TEST_F( GlobalDBIntegrationTest, MultipleTopicsTest )
     }
 }
 
-TEST_F( GlobalDBIntegrationTest, DoubleCommitTest )
+TEST_F( GlobalDBIntegrationTest, PreventDoubleCommitTest )
 {
     auto testNodes = std::make_unique<TestNodeCollection>();
     testNodes->addNode( "globaldb_node1" );
     testNodes->getNodes()[0].db->AddBroadcastTopic( "firstTopic" );
-    testNodes->connectNodes();
-    std::this_thread::sleep_for( std::chrono::seconds( 1 ) );
-
+    testNodes->connectNodes( std::chrono::seconds( 1 ) );
     using sgns::crdt::HierarchicalKey;
     sgns::base::Buffer value;
     value.put( "Double commit test value" );
@@ -386,7 +364,7 @@ TEST_F( GlobalDBIntegrationTest, DoubleCommitTest )
     EXPECT_FALSE( secondCommit.has_value() );
 }
 
-TEST_F( GlobalDBIntegrationTest, OperationsWithoutInitTest )
+TEST_F( GlobalDBIntegrationTest, OperationsWithoutInitializationTest )
 {
     const std::string binaryPath  = boost::dll::program_location().parent_path().string();
     const std::string tmpBasePath = binaryPath + "/globaldb_no_init_ops";
@@ -416,7 +394,7 @@ TEST_F( GlobalDBIntegrationTest, OperationsWithoutInitTest )
     boost::filesystem::remove_all( tmpBasePath );
 }
 
-TEST_F( GlobalDBIntegrationTest, PutWithoutTopicTest )
+TEST_F( GlobalDBIntegrationTest, CommitFailsForNonexistentTopicTest )
 {
     auto testNodes = std::make_unique<TestNodeCollection>();
     testNodes->addNode( "globaldb_no_topic" );
@@ -434,7 +412,7 @@ TEST_F( GlobalDBIntegrationTest, PutWithoutTopicTest )
     EXPECT_FALSE( commitRes.has_value() );
 }
 
-TEST_F( GlobalDBIntegrationTest, DirectPutWithTopicTest )
+TEST_F( GlobalDBIntegrationTest, DirectPutWithTopicBroadcastTest )
 {
     auto testNodes = std::make_unique<TestNodeCollection>();
     testNodes->addNode( "globaldb_node1" );
@@ -446,9 +424,7 @@ TEST_F( GlobalDBIntegrationTest, DirectPutWithTopicTest )
         node.db->AddBroadcastTopic( "firstTopic" );
         node.db->AddBroadcastTopic( "direct_topic" );
     }
-    testNodes->connectNodes();
-    std::this_thread::sleep_for( std::chrono::seconds( 3 ) );
-
+    testNodes->connectNodes( std::chrono::seconds( 3 ) );
     using sgns::crdt::HierarchicalKey;
     sgns::base::Buffer value;
     value.put( "Direct put with topic value" );
@@ -476,7 +452,7 @@ TEST_F( GlobalDBIntegrationTest, DirectPutWithTopicTest )
     }
 }
 
-TEST_F( GlobalDBIntegrationTest, DirectPutWithoutTopicTest )
+TEST_F( GlobalDBIntegrationTest, DirectPutWithoutTopicBroadcastTest )
 {
     auto testNodes = std::make_unique<TestNodeCollection>();
     testNodes->addNode( "globaldb_node1" );
@@ -487,10 +463,7 @@ TEST_F( GlobalDBIntegrationTest, DirectPutWithoutTopicTest )
     {
         node.db->AddBroadcastTopic( "firstTopic" );
     }
-
-    testNodes->connectNodes();
-    std::this_thread::sleep_for( std::chrono::seconds( 3 ) );
-
+    testNodes->connectNodes( std::chrono::seconds( 3 ) );
     using sgns::crdt::HierarchicalKey;
     sgns::base::Buffer value;
     value.put( "Direct put without topic value" );
@@ -516,4 +489,84 @@ TEST_F( GlobalDBIntegrationTest, DirectPutWithoutTopicTest )
         EXPECT_EQ( res2.value().toString(), "Direct put without topic value" );
         EXPECT_EQ( res3.value().toString(), "Direct put without topic value" );
     }
+}
+
+TEST_F( GlobalDBIntegrationTest, NonSubscriberDoesNotReceiveTopicMessageTest )
+{
+    auto testNodes = std::make_unique<TestNodeCollection>();
+    testNodes->addNode( "globaldb_node1" );
+    testNodes->addNode( "globaldb_node2" );
+    testNodes->addNode( "globaldb_node3" );
+
+    for ( auto &node : testNodes->getNodes() )
+    {
+        node.db->AddBroadcastTopic( "first_topic" );
+    }
+    testNodes->getNodes()[0].db->AddBroadcastTopic( "test_topic" );
+    testNodes->getNodes()[1].db->AddBroadcastTopic( "test_topic" );
+    testNodes->connectNodes( std::chrono::seconds( 3 ) );
+    using sgns::crdt::HierarchicalKey;
+    sgns::base::Buffer value;
+    value.put( "Message for test_topic" );
+    const HierarchicalKey key( "/nonsubscriber/test" );
+    const auto            tx = testNodes->getNodes()[0].db->BeginTransaction();
+    ASSERT_NE( tx, nullptr );
+    const auto putRes = tx->Put( key, value );
+    ASSERT_TRUE( putRes.has_value() );
+    const auto commitRes = tx->Commit( "test_topic" );
+    ASSERT_TRUE( commitRes.has_value() );
+
+    bool node0Received = waitForCondition( [&]() -> bool
+                                           { return testNodes->getNodes()[0].db->Get( key ).has_value(); },
+                                           WAIT_TIMEOUT );
+    EXPECT_TRUE( node0Received );
+
+    bool node1Received = waitForCondition( [&]() -> bool
+                                           { return testNodes->getNodes()[1].db->Get( key ).has_value(); },
+                                           WAIT_TIMEOUT );
+    EXPECT_TRUE( node1Received );
+
+    bool node2Received = waitForCondition( [&]() -> bool
+                                           { return testNodes->getNodes()[2].db->Get( key ).has_value(); },
+                                           WAIT_TIMEOUT );
+    EXPECT_FALSE( node2Received );
+}
+
+TEST_F( GlobalDBIntegrationTest, UnconnectedNodeDoesNotReplicateBroadcastMessageTest )
+{
+    auto testNodes = std::make_unique<TestNodeCollection>();
+    testNodes->addNode( "globaldb_node1" );
+    testNodes->addNode( "globaldb_node2" );
+    testNodes->addNode( "globaldb_node3" );
+
+    for ( auto &node : testNodes->getNodes() )
+    {
+        node.db->AddBroadcastTopic( "isolated_topic" );
+    }
+    {
+        std::vector<std::string> peersForNode0 = { testNodes->getNodes()[1].pubsub->GetLocalAddress() };
+        testNodes->getNodes()[0].pubsub->AddPeers( peersForNode0 );
+        std::vector<std::string> peersForNode1 = { testNodes->getNodes()[0].pubsub->GetLocalAddress() };
+        testNodes->getNodes()[1].pubsub->AddPeers( peersForNode1 );
+    }
+    using sgns::crdt::HierarchicalKey;
+    sgns::base::Buffer value;
+    value.put( "Test message for isolated node" );
+    const HierarchicalKey key( "/isolated/test" );
+    const auto            tx = testNodes->getNodes()[0].db->BeginTransaction();
+    ASSERT_NE( tx, nullptr );
+    const auto putRes = tx->Put( key, value );
+    ASSERT_TRUE( putRes.has_value() );
+    const auto commitRes = tx->Commit( "isolated_topic" );
+    ASSERT_TRUE( commitRes.has_value() );
+
+    bool node1Replicated = waitForCondition( [&]() -> bool
+                                             { return testNodes->getNodes()[1].db->Get( key ).has_value(); },
+                                             WAIT_TIMEOUT );
+    EXPECT_TRUE( node1Replicated );
+
+    bool node3Replicated = waitForCondition( [&]() -> bool
+                                             { return testNodes->getNodes()[2].db->Get( key ).has_value(); },
+                                             WAIT_TIMEOUT );
+    EXPECT_FALSE( node3Replicated );
 }
