@@ -58,6 +58,8 @@ namespace sgns::crdt
          */
         void Start();
         void AddTopic(const std::shared_ptr<GossipPubSubTopic> &newTopic);
+        bool hasTopic(const std::string &topic) override;
+
 
     private:
         // Constructor now accepts a vector of topics.
@@ -65,7 +67,7 @@ namespace sgns::crdt
                               std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer>        dagSyncer,
                               libp2p::multi::Multiaddress                            dagSyncerMultiaddress );
 
-        void OnMessage( boost::optional<const GossipPubSub::Message &> message );
+        void OnMessage( boost::optional<const GossipPubSub::Message &> message, const std::string &incomingTopic );
 
         std::unordered_map<std::string, std::shared_ptr<GossipPubSubTopic>> topics_;
         std::string                                                         firstTopic_;

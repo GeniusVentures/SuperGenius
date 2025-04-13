@@ -32,6 +32,14 @@ namespace sgns::crdt
     * @return buffer value or outcome::failure on error 
     */
     virtual outcome::result<base::Buffer> Next() = 0;
+
+    /**
+     * @brief Checks whether the broadcaster is subscribed to the specified topic.
+     *
+     * @param topic The topic string to check.
+     * @return true if the broadcaster is subscribed to the topic, false otherwise.
+     */
+    virtual bool hasTopic( const std::string &topic ) = 0;
   };
 }  // namespace sgns::crdt 
 
