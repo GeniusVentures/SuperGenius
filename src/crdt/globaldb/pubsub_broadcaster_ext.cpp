@@ -91,13 +91,14 @@ namespace sgns::crdt
     {
         if ( topics_.empty() )
         {
-            m_logger->debug( "No topics available at start. Waiting for topics to be added." );
+            m_logger->debug( "No topics available for broadcasting. Waiting for topics to be added." );
             return;
         }
+
         // Subscribe to each topic.
         for ( auto &pair : topics_ )
         {
-            auto &topic = pair.second;
+            auto       &topic     = pair.second;
             std::string topicName = topic->GetTopic();
             m_logger->debug( "Subscription request sent to topic: " + topicName );
 
@@ -107,18 +108,29 @@ namespace sgns::crdt
                 {
                     if ( auto self = weakptr.lock() )
                     {
-                        // Log the topic from which the message is received.
-                        self->m_logger->debug( "Message received from topic: " + topicName );
-                        self->OnMessage( message );
+                        self->m_logger->debug( "Message received on topic: {}", topicName );
+                        self->OnMessage( message, topicName );
                     }
                 } ) );
             subscriptionFutures_.push_back( std::move( future ) );
         }
     }
 
-    void PubSubBroadcasterExt::OnMessage( boost::optional<const GossipPubSub::Message &> message )
+    void PubSubBroadcasterExt::OnMessage( boost::optional<const GossipPubSub::Message &> message,
+                                          const std::string                             &incomingTopic )
     {
-        m_logger->trace( "Received a message" );
+        m_logger->trace(  "Received a message on topic: "  + incomingTopic );
+
+        {
+            std::scoped_lock lock( mutex_ );
+            if ( topics_.find( incomingTopic ) == topics_.end() )
+            {
+                m_logger->debug( std::string( "Ignoring message from topic " ) + incomingTopic +
+                                 std::string( " as not subscribed." ) );
+                return;
+            }
+        }
+
         if ( message )
         {
             sgns::crdt::broadcasting::BroadcastMessage bmsg;
@@ -127,7 +139,6 @@ namespace sgns::crdt
                 auto peer_id_res = libp2p::peer::PeerId::fromBytes(
                     gsl::span<const uint8_t>( reinterpret_cast<const uint8_t *>( bmsg.peer().id().data() ),
                                               bmsg.peer().id().size() ) );
-                //auto peerId = libp2p::peer::PeerId::fromBytes(message->from);
                 if ( peer_id_res )
                 {
                     auto peerId = peer_id_res.value();
@@ -337,10 +348,16 @@ namespace sgns::crdt
                 if (auto self = weakptr.lock())
                 {
                     self->m_logger->debug("Message received from topic: " + topicName);
-                    self->OnMessage(message);
+                    self->OnMessage(message, topicName);
                 }
             }));
         subscriptionFutures_.push_back(std::move(future));
     }
-    
+
+    bool PubSubBroadcasterExt::hasTopic( const std::string &topic )
+    {
+        std::scoped_lock lock( mutex_ );
+        return topics_.find( topic ) != topics_.end();
+    }
+
 } // namespace sgns::crdt

@@ -26,5 +26,9 @@ namespace sgns::crdt
         buffer.put(strBuffer);
         return buffer;
     }
+    bool CustomBroadcaster::hasTopic(const std::string &topic)
+    {
+        return true;
+    }
 
 } // namespace sgns::crdt
