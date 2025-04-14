@@ -13,6 +13,7 @@
 
 #include <boost/format.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
+#include <ProofSystem/EthereumKeyGenerator.hpp>
 
 #include "outcome/outcome.hpp"
 #include "account/proto/SGTransaction.pb.h"
@@ -106,6 +107,9 @@ namespace sgns
         }
 
         void FillHash();
+
+        std::vector<uint8_t> MakeSignature( std::shared_ptr<ethereum::EthereumKeyGenerator> eth_key );
+        static bool          CheckDAGStructSignature( SGTransaction::DAGStruct dag_st );
 
         SGTransaction::DAGStruct                                                dag_st;
         static inline std::unordered_map<std::string, TransactionDeserializeFn> deserializers_map;

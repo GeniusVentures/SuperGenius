@@ -5,7 +5,7 @@
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
 #include <boost/range/concepts.hpp>
-#include <nil/crypto3/algebra/marshalling.hpp>
+
 #include "account/TransactionManager.hpp"
 
 #include <stdexcept>
@@ -28,8 +28,7 @@
 #include "crdt/impl/crdt_data_filter.hpp"
 #include "crdt/proto/delta.pb.h"
 
-#include <nil/crypto3/pubkey/algorithm/sign.hpp>
-#include <nil/crypto3/pubkey/algorithm/verify.hpp>
+
 
 #ifdef _PROOF_ENABLED
 #include "proof/TransferProof.hpp"
@@ -102,7 +101,7 @@ namespace sgns
                         break;
                     }
                     tx = maybe_tx.value();
-                    if ( !CheckDAGStructSignature( tx->dag_st ) )
+                    if ( !IGeniusTransactions::CheckDAGStructSignature( tx->dag_st ) )
                     {
                         m_logger->error( "Could not validate signature of transaction from {}",
                                          tx->dag_st.source_addr() );
@@ -413,12 +412,6 @@ namespace sgns
         auto &[transaction, maybe_proof] = tx_queue_m.front();
 
         // this was set prior and needed for the proof to match when the proof was generated
-        //transaction->dag_st.set_nonce( account_m->nonce );
-        transaction->dag_st.clear_signature();
-
-        auto signature = MakeSignature( transaction->dag_st );
-
-        transaction->dag_st.set_signature( signature.data(), signature.size() );
 
         auto                         transaction_path = GetTransactionPath( *transaction );
         sgns::crdt::HierarchicalKey  tx_key( transaction_path );
@@ -672,7 +665,7 @@ namespace sgns
                 continue;
             }
 
-            if ( !CheckDAGStructSignature( maybe_transaction.value()->dag_st ) )
+            if ( !IGeniusTransactions::CheckDAGStructSignature( maybe_transaction.value()->dag_st ) )
             {
                 m_logger->error( "Could not validate signature of transaction from {}",
                                  maybe_transaction.value()->dag_st.source_addr() );
@@ -1018,74 +1011,6 @@ namespace sgns
                 upnp_m->OpenPort( port, port, "TCP", 3600 );
             }
         }
-    }
-
-    std::vector<uint8_t> TransactionManager::MakeSignature( SGTransaction::DAGStruct dag_st ) const
-    {
-        dag_st.clear_signature();
-        auto                 size = dag_st.ByteSizeLong();
-        std::vector<uint8_t> serialized( size );
-        dag_st.SerializeToArray( serialized.data(), size );
-
-        std::array<uint8_t, 32> hashed = nil::crypto3::hash<nil::crypto3::hashes::sha2<256>>( serialized );
-
-        ethereum::signature_type  signature = nil::crypto3::sign( hashed,
-                                                                 this->account_m->eth_address->get_private_key() );
-        std::vector<std::uint8_t> signed_vector( 64 );
-
-        nil::marshalling::bincode::field<ecdsa_t::scalar_field_type>::field_element_to_bytes<
-            std::vector<std::uint8_t>::iterator>( std::get<0>( signature ),
-                                                  signed_vector.begin(),
-                                                  signed_vector.begin() + 32 );
-        nil::marshalling::bincode::field<ecdsa_t::scalar_field_type>::field_element_to_bytes<
-            std::vector<std::uint8_t>::iterator>( std::get<1>( signature ),
-                                                  signed_vector.begin() + 32,
-                                                  signed_vector.end() );
-
-        nil::crypto3::multiprecision::cpp_int r;
-        nil::crypto3::multiprecision::cpp_int s;
-
-        import_bits( r, signed_vector.cbegin(), signed_vector.cbegin() + 32 );
-        import_bits( s, signed_vector.cbegin() + 32, signed_vector.cbegin() + 64 );
-
-        return signed_vector;
-    }
-
-    bool TransactionManager::CheckDAGStructSignature( SGTransaction::DAGStruct dag_st ) const
-    {
-        auto                 str_signature = dag_st.signature();
-        std::vector<uint8_t> vec_sig( str_signature.cbegin(), str_signature.cend() );
-
-        dag_st.clear_signature();
-        auto                 size = dag_st.ByteSizeLong();
-        std::vector<uint8_t> serialized( size );
-        dag_st.SerializeToArray( serialized.data(), size );
-
-        std::array<uint8_t, 32> hashed = nil::crypto3::hash<nil::crypto3::hashes::sha2<256>>( serialized );
-
-        auto [r_success, r] = nil::marshalling::bincode::field<ecdsa_t::scalar_field_type>::field_element_from_bytes(
-            vec_sig.cbegin(),
-            vec_sig.cbegin() + 32 );
-
-        if ( !r_success )
-        {
-            return false;
-        }
-
-        auto [s_success, s] = nil::marshalling::bincode::field<ecdsa_t::scalar_field_type>::field_element_from_bytes(
-            vec_sig.cbegin() + 32,
-            vec_sig.cbegin() + 64 );
-
-        if ( !s_success )
-        {
-            return false;
-        }
-
-        ethereum::signature_type sig( r, s );
-
-        auto eth_pubkey = ethereum::EthereumKeyGenerator::BuildPublicKey( dag_st.source_addr() );
-
-        return nil::crypto3::verify( hashed, sig, eth_pubkey );
     }
 
     bool TransactionManager::WaitForTransactionIncoming( const std::string        &txId,

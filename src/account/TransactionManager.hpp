@@ -94,7 +94,7 @@ namespace sgns
         SGTransaction::DAGStruct FillDAGStruct( std::string transaction_hash = "" ) const;
         outcome::result<void>    SendTransaction();
         std::string              GetTransactionPath( IGeniusTransactions &element );
-        static std::string              GetTransactionProofPath( IGeniusTransactions &element );
+        static std::string       GetTransactionProofPath( IGeniusTransactions &element );
         static std::string       GetTransactionBasePath( const std::string &address );
         static std::string       GetBlockChainBase();
         static outcome::result<std::shared_ptr<IGeniusTransactions>> DeSerializeTransaction( std::string tx_data );
@@ -122,9 +122,6 @@ namespace sgns
         std::shared_ptr<crdt::GlobalDB> incoming_db_m;
         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub_m;
         std::string                                      base_path_m;
-
-        std::vector<uint8_t> MakeSignature( SGTransaction::DAGStruct dag_st ) const;
-        bool                 CheckDAGStructSignature( SGTransaction::DAGStruct dag_st ) const;
 
         std::shared_ptr<boost::asio::io_context>   ctx_m;
         std::shared_ptr<GeniusAccount>             account_m;
