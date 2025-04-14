@@ -28,8 +28,6 @@
 #include "crdt/impl/crdt_data_filter.hpp"
 #include "crdt/proto/delta.pb.h"
 
-
-
 #ifdef _PROOF_ENABLED
 #include "proof/TransferProof.hpp"
 #include "proof/ProcessingProof.hpp"
@@ -203,7 +201,10 @@ namespace sgns
         }
 
         auto transfer_transaction = std::make_shared<TransferTransaction>(
-            TransferTransaction::New( maybe_params.value().outputs_, maybe_params.value().inputs_, FillDAGStruct() ) );
+            TransferTransaction::New( maybe_params.value().outputs_,
+                                      maybe_params.value().inputs_,
+                                      FillDAGStruct(),
+                                      account_m->eth_address ) );
         std::optional<std::vector<uint8_t>> maybe_proof;
 #ifdef _PROOF_ENABLED
         TransferProof prover( static_cast<uint64_t>( account_m->GetBalance<uint64_t>() ),
@@ -227,7 +228,8 @@ namespace sgns
             MintTransaction::New( amount,
                                   std::move( chainid ),
                                   std::move( tokenid ),
-                                  FillDAGStruct( std::move( transaction_hash ) ) ) );
+                                  FillDAGStruct( std::move( transaction_hash ) ),
+                                  account_m->eth_address ) );
         std::optional<std::vector<uint8_t>> maybe_proof;
 #ifdef _PROOF_ENABLED
         TransferProof prover( 1000000000000000,
@@ -258,7 +260,7 @@ namespace sgns
 
         account_m->utxos        = UTXOTxParameters::UpdateUTXOList( account_m->utxos, params );
         auto escrow_transaction = std::make_shared<EscrowTransaction>(
-            EscrowTransaction::New( params, amount, dev_addr, peers_cut, FillDAGStruct() ) );
+            EscrowTransaction::New( params, amount, dev_addr, peers_cut, FillDAGStruct(), account_m->eth_address ) );
 
         // Get the transaction ID for tracking
         auto txId = escrow_transaction->dag_st.data_hash();
@@ -324,7 +326,8 @@ namespace sgns
         auto transfer_transaction = std::make_shared<TransferTransaction>(
             TransferTransaction::New( payout_peers,
                                       std::vector<InputUTXOInfo>{ escrow_utxo_input },
-                                      FillDAGStruct() ) );
+                                      FillDAGStruct(),
+                                      account_m->eth_address ) );
 
         std::optional<std::vector<uint8_t>> transfer_proof;
 #ifdef _PROOF_ENABLED
@@ -339,7 +342,8 @@ namespace sgns
                                            escrow_tx->GetDevAddress(),
                                            escrow_tx->dag_st.source_addr(),
                                            escrow_tx->dag_st.data_hash(),
-                                           FillDAGStruct() ) );
+                                           FillDAGStruct(),
+                                           account_m->eth_address ) );
 
         std::optional<std::vector<uint8_t>> escrow_release_proof;
 #ifdef _PROOF_ENABLED
