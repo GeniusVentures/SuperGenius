@@ -427,15 +427,70 @@ namespace sgns::crdt
             }
         }
 
-        auto broadcastResult = this->Broadcast( headsToBroadcast );
-        if ( broadcastResult.has_failure() )
+        logger_->trace( "RebroadcastHeads: Preparing to rebroadcast {} heads", headsToBroadcast.size() );
+
+        for ( const auto &cid : headsToBroadcast )
         {
-            logger_->error( "Broadcast failed" );
+            std::optional<std::string> topic = std::nullopt;
+            {
+                std::shared_lock lock( cidTopicMapMutex_ );
+                auto             it = cidTopicMap_.find( cid );
+                if ( it != cidTopicMap_.end() )
+                {
+                    topic = it->second;
+                    logger_->trace( "RebroadcastHeads: Using topic '{}' for CID {}",
+                                    topic.value(),
+                                    cid.toString().value() );
+                }
+                else
+                {
+                    logger_->warn( "RebroadcastHeads: No topic found for CID {}, using default (may be unsafe)",
+                                   cid.toString().value() );
+                }
+            }
+
+            auto result = this->Broadcast( { cid }, topic );
+            if ( result.has_failure() )
+            {
+                logger_->error( "RebroadcastHeads: Broadcast failed for CID {}", cid.toString().value() );
+            }
+            else
+            {
+                logger_->debug( "RebroadcastHeads: Successfully rebroadcasted CID {} to topic {}",
+                                cid.toString().value(),
+                                topic ? topic.value() : "<default>" );
+
+                std::unique_lock seenLock( seenHeadsMutex_ );
+                seenHeads_.insert( cid );
+            }
         }
 
-        // Reset the map
-        std::unique_lock lock( this->seenHeadsMutex_ );
-        this->seenHeads_.clear();
+        {
+            std::unique_lock lock( cidTopicMapMutex_ );
+            for ( auto it = cidTopicMap_.begin(); it != cidTopicMap_.end(); )
+            {
+                bool isStillHead = std::find( heads.begin(), heads.end(), it->first ) != heads.end();
+                bool isSeen      = false;
+
+                {
+                    std::shared_lock seenLock( seenHeadsMutex_ );
+                    isSeen = seenHeads_.find( it->first ) != seenHeads_.end();
+                }
+
+                if ( !isStillHead && isSeen )
+                {
+                    logger_->trace( "RebroadcastHeads: Removing CID {} from topic map (not head and seen)",
+                                    it->first.toString().value() );
+                    it = cidTopicMap_.erase( it );
+                }
+                else
+                {
+                    ++it;
+                }
+            }
+        }
+
+        logger_->trace( "RebroadcastHeads: seenHeads_ updated with rebroadcasted CIDs" );
     }
 
     outcome::result<void> CrdtDatastore::HandleBlock( const CID &aCid )
@@ -683,9 +738,26 @@ namespace sgns::crdt
         auto addResult = this->AddDAGNode( aDelta );
         if ( addResult.has_failure() )
         {
+            logger_->error( "Publish: Failed to add DAG node" );
             return outcome::failure( addResult.error() );
         }
+
         std::vector<CID> cids{ addResult.value() };
+
+        if ( topic )
+        {
+            std::unique_lock lock( cidTopicMapMutex_ );
+            for ( const auto &cid : cids )
+            {
+                cidTopicMap_[cid] = topic.value();
+                logger_->trace( "Publish: Mapped CID {} to topic '{}'", cid.toString().value(), topic.value() );
+            }
+        }
+        else
+        {
+            logger_->trace( "Publish: No topic provided, using default for CID {}", cids.front().toString().value() );
+        }
+
         return this->Broadcast( cids, topic );
     }
 

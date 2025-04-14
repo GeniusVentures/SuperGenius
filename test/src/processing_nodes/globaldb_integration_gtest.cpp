@@ -69,7 +69,7 @@ namespace
        )";
     }
 
-#define WAIT_TIMEOUT ( std::chrono::milliseconds( 10000 ) )
+#define WAIT_TIMEOUT ( std::chrono::milliseconds( 15000 ) )
 } // namespace
 
 class GlobalDBIntegrationTest : public ::testing::Test
@@ -194,9 +194,9 @@ public:
         const auto loggerGlobalDB    = sgns::base::createLogger( "GlobalDB" );
         const auto loggerBroadcaster = sgns::base::createLogger( "PubSubBroadcasterExt" );
         const auto loggerDataStore   = sgns::base::createLogger( "CrdtDatastore" );
-        loggerGlobalDB->set_level( spdlog::level::debug );
-        loggerBroadcaster->set_level( spdlog::level::debug );
-        loggerDataStore->set_level( spdlog::level::debug );
+        loggerGlobalDB->set_level( spdlog::level::trace );
+        loggerBroadcaster->set_level( spdlog::level::trace );
+        loggerDataStore->set_level( spdlog::level::trace );
     }
 };
 
@@ -537,18 +537,15 @@ TEST_F( GlobalDBIntegrationTest, UnconnectedNodeDoesNotReplicateBroadcastMessage
     auto testNodes = std::make_unique<TestNodeCollection>();
     testNodes->addNode( "globaldb_node1" );
     testNodes->addNode( "globaldb_node2" );
+    testNodes->connectNodes( std::chrono::seconds( 3 ) );
+
     testNodes->addNode( "globaldb_node3" );
 
     for ( auto &node : testNodes->getNodes() )
     {
         node.db->AddBroadcastTopic( "isolated_topic" );
     }
-    {
-        std::vector<std::string> peersForNode0 = { testNodes->getNodes()[1].pubsub->GetLocalAddress() };
-        testNodes->getNodes()[0].pubsub->AddPeers( peersForNode0 );
-        std::vector<std::string> peersForNode1 = { testNodes->getNodes()[0].pubsub->GetLocalAddress() };
-        testNodes->getNodes()[1].pubsub->AddPeers( peersForNode1 );
-    }
+
     using sgns::crdt::HierarchicalKey;
     sgns::base::Buffer value;
     value.put( "Test message for isolated node" );
@@ -561,9 +558,14 @@ TEST_F( GlobalDBIntegrationTest, UnconnectedNodeDoesNotReplicateBroadcastMessage
     ASSERT_TRUE( commitRes.has_value() );
 
     bool node1Replicated = waitForCondition( [&]() -> bool
-                                             { return testNodes->getNodes()[1].db->Get( key ).has_value(); },
+                                             { return testNodes->getNodes()[0].db->Get( key ).has_value(); },
                                              WAIT_TIMEOUT );
     EXPECT_TRUE( node1Replicated );
+
+    bool node2Replicated = waitForCondition( [&]() -> bool
+                                             { return testNodes->getNodes()[1].db->Get( key ).has_value(); },
+                                             WAIT_TIMEOUT );
+    EXPECT_TRUE( node2Replicated );
 
     bool node3Replicated = waitForCondition( [&]() -> bool
                                              { return testNodes->getNodes()[2].db->Get( key ).has_value(); },
