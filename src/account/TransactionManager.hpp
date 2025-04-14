@@ -82,6 +82,10 @@ namespace sgns
         bool WaitForTransactionOutgoing( const std::string &txId, std::chrono::milliseconds timeout ) const;
         bool WaitForEscrowRelease( const std::string &originalEscrowId, std::chrono::milliseconds timeout ) const;
 
+    protected:
+        friend class GeniusNode;
+        void EnqueueTransaction( TransactionPair element );
+
     private:
         static constexpr std::uint16_t    MAIN_NET_ID             = 369;
         static constexpr std::uint16_t    TEST_NET_ID             = 963;
@@ -90,7 +94,6 @@ namespace sgns
             outcome::result<void> ( TransactionManager::* )( const std::shared_ptr<IGeniusTransactions> & );
 
         void                     Update();
-        void                     EnqueueTransaction( TransactionPair element );
         SGTransaction::DAGStruct FillDAGStruct( std::string transaction_hash = "" ) const;
         outcome::result<void>    SendTransaction();
         std::string              GetTransactionPath( IGeniusTransactions &element );

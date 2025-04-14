@@ -78,7 +78,7 @@ namespace sgns
 #endif
 
         outcome::result<std::string> ProcessImage( const std::string &jsondata );
-        outcome::result<void> CheckProcessValidity( const std::string &jsondata );
+        outcome::result<void>        CheckProcessValidity( const std::string &jsondata );
 
         uint64_t GetProcessCost( const std::string &json_data );
 
@@ -165,9 +165,12 @@ namespace sgns
         // Wait for a outgoing transaction to be processed with a timeout
         bool WaitForTransactionOutgoing( const std::string &txId, std::chrono::milliseconds timeout );
 
-        bool WaitForEscrowRelease(const std::string &originalEscrowId, std::chrono::milliseconds timeout);
+        bool WaitForEscrowRelease( const std::string &originalEscrowId, std::chrono::milliseconds timeout );
 
+    protected:
+        friend class TransactionSyncTest;
 
+        void SendTransactionAndProof(std::shared_ptr<IGeniusTransactions> tx, std::vector<uint8_t> proof);
     private:
         std::shared_ptr<GeniusAccount>                        account_;
         std::shared_ptr<ipfs_pubsub::GossipPubSub>            pubsub_;
