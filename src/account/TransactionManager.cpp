@@ -93,6 +93,12 @@ namespace sgns
                 std::shared_ptr<IGeniusTransactions>          tx;
                 do
                 {
+                    auto maybe_has_value = incoming_db_m->Get( element.key() );
+                    if ( maybe_has_value.has_value() )
+                    {
+                        m_logger->debug( "Already have the transaction {}", element.key() );
+                        break;
+                    }
                     auto maybe_tx = DeSerializeTransaction( element.value() );
                     if ( maybe_tx.has_error() )
                     {
@@ -101,11 +107,11 @@ namespace sgns
                     tx = maybe_tx.value();
                     if ( !IGeniusTransactions::CheckDAGStructSignature( tx->dag_st ) )
                     {
-                        m_logger->error( "Could not validate signature of transaction from {}",
-                                         tx->dag_st.source_addr() );
+                        m_logger->error( "Could not validate signature of transaction {}", element.key() );
                         break;
                     }
 
+                    m_logger->trace( "Valid signature of {}", element.key() );
                     valid_tx = true;
 
                 } while ( 0 );
@@ -129,15 +135,31 @@ namespace sgns
 
         bool crdt_proof_filter_initialized = crdt::CRDTDataFilter::RegisterElementFilter(
             "^/?" + GetBlockChainBase() + "[^/]*/proof/[^/]*/[0-9]+",
-            []( const crdt::pb::Element &element ) -> std::optional<std::vector<crdt::pb::Element>>
+            [&]( const crdt::pb::Element &element ) -> std::optional<std::vector<crdt::pb::Element>>
             {
                 std::optional<std::vector<crdt::pb::Element>> maybe_tombstones;
+                bool                                          valid_proof = false;
+                do
+                {
+                    auto maybe_has_value = incoming_db_m->Get( element.key() );
+                    if ( maybe_has_value.has_value() )
+                    {
+                        m_logger->debug( "Already have the proof {}", element.key() );
+                        break;
+                    }
+                    std::vector<uint8_t> proof_data_vector( element.value().begin(), element.value().end() );
+                    auto                 maybe_valid_proof = IBasicProof::VerifyFullProof( proof_data_vector );
+                    if ( maybe_valid_proof.has_error() || ( !maybe_valid_proof.value() ) )
+                    {
+                        m_logger->error( "Could not verify proof {}", element.key() );
+                        break;
+                    }
+                    m_logger->trace( "Valid proof of {}", element.key() );
 
-                std::vector<uint8_t> proof_data_vector( element.value().begin(), element.value().end() );
+                    valid_proof = true;
+                } while ( 0 );
 
-                auto maybe_valid_proof = IBasicProof::VerifyFullProof( proof_data_vector );
-
-                if ( maybe_valid_proof.has_error() || ( !maybe_valid_proof.value() ) )
+                if ( valid_proof == false)
                 {
                     std::vector<crdt::pb::Element> tombstones;
                     tombstones.push_back( element );

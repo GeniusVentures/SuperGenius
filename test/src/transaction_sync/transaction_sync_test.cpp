@@ -124,7 +124,7 @@ namespace sgns
         }
     };
 
-    TEST_F( TransactionSyncTest, DISABLED_TransactionSimpleTransfer )
+    TEST_F( TransactionSyncTest, TransactionSimpleTransfer )
     {
         auto balance_1_before = node_proc1->GetBalance();
         auto balance_2_before = node_proc2->GetBalance();
