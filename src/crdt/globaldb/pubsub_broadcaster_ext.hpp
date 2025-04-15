@@ -6,10 +6,12 @@
 #include "base/logger.hpp"
 #include <ipfs_pubsub/gossip_pubsub_topic.hpp>
 #include <queue>
+#include <tuple>
 #include <vector>
 #include <future>
 #include <unordered_map>
 #include <string>
+#include <optional>
 
 namespace sgns::crdt
 {
@@ -32,9 +34,7 @@ namespace sgns::crdt
                                                           std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer,
                                                           libp2p::multi::Multiaddress dagSyncerMultiaddress )
         {
-            return New( std::vector<std::shared_ptr<GossipPubSubTopic>>{ pubSubTopic },
-                        dagSyncer,
-                        dagSyncerMultiaddress );
+            return New( std::vector<std::shared_ptr<GossipPubSubTopic>>{ pubSubTopic }, dagSyncer );
         }
 
         void SetCrdtDataStore( std::shared_ptr<CrdtDatastore> dataStore );
@@ -49,7 +49,7 @@ namespace sgns::crdt
          * Obtains the next payload received from the network.
          * @return buffer value or outcome::failure on error.
          */
-        outcome::result<base::Buffer> Next() override;
+        outcome::result<std::tuple<base::Buffer, std::string>> Next() override;
 
         /**
          * Initializes the PubSubBroadcasterExt by subscribing to the associated gossip topics
@@ -57,9 +57,8 @@ namespace sgns::crdt
          * CRDT-related operations are invoked.
          */
         void Start();
-        void AddTopic(const std::shared_ptr<GossipPubSubTopic> &newTopic);
-        bool hasTopic(const std::string &topic) override;
-
+        void AddTopic( const std::shared_ptr<GossipPubSubTopic> &newTopic );
+        bool hasTopic( const std::string &topic ) override;
 
     private:
         // Constructor now accepts a vector of topics.
@@ -69,14 +68,13 @@ namespace sgns::crdt
 
         void OnMessage( boost::optional<const GossipPubSub::Message &> message, const std::string &incomingTopic );
 
-        std::unordered_map<std::string, std::shared_ptr<GossipPubSubTopic>> topics_;
-        std::string                                                         firstTopic_;
-        std::shared_ptr<GossipPubSubTopic>                                  gossipPubSubTopic_;
-        std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer>                     dagSyncer_;
-        std::shared_ptr<CrdtDatastore>                                      dataStore_;
-        libp2p::multi::Multiaddress                                         dagSyncerMultiaddress_;
-        std::queue<std::tuple<libp2p::peer::PeerId, std::string>>           messageQueue_;
-        std::mutex                                                          mutex_;
+        std::unordered_map<std::string, std::shared_ptr<GossipPubSubTopic>>    topics_;
+        std::string                                                            firstTopic_;
+        std::shared_ptr<GossipPubSubTopic>                                     gossipPubSubTopic_;
+        std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer>                        dagSyncer_;
+        std::shared_ptr<CrdtDatastore>                                         dataStore_;
+        std::queue<std::tuple<libp2p::peer::PeerId, std::string, std::string>> messageQueue_;
+        std::mutex                                                             mutex_;
         sgns::base::Logger m_logger = sgns::base::createLogger( "PubSubBroadcasterExt" );
         std::future<void>  subscriptionFuture_;
         std::vector<std::future<libp2p::protocol::Subscription>> subscriptionFutures_;
