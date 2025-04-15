@@ -170,9 +170,10 @@ namespace sgns
     protected:
         friend class TransactionSyncTest;
 
-        void SendTransactionAndProof(std::shared_ptr<IGeniusTransactions> tx, std::vector<uint8_t> proof);
+        void SendTransactionAndProof( std::shared_ptr<IGeniusTransactions> tx, std::vector<uint8_t> proof );
+        std::shared_ptr<GeniusAccount> account_;
+
     private:
-        std::shared_ptr<GeniusAccount>                        account_;
         std::shared_ptr<ipfs_pubsub::GossipPubSub>            pubsub_;
         std::shared_ptr<boost::asio::io_context>              io_;
         std::shared_ptr<crdt::GlobalDB>                       globaldb_;

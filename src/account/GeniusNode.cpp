@@ -853,7 +853,9 @@ namespace sgns
         return transaction_manager_->WaitForEscrowRelease( originalEscrowId, timeout );
     }
 
-    void GeniusNode::SendTransactionAndProof( std::shared_ptr<IGeniusTransactions> tx, std::vector<uint8_t> proof )
+    void GeniusNode::SendTransactionAndProof(
+        std::shared_ptr<IGeniusTransactions> tx,
+        std::vector<uint8_t>                 proof )
     {
         transaction_manager_->EnqueueTransaction( std::make_pair( tx, proof ) );
     }
