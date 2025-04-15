@@ -54,7 +54,6 @@ namespace sgns::crdt
     using CrdtOptions        = crdt::CrdtOptions;
     using CrdtDatastore      = crdt::CrdtDatastore;
     using HierarchicalKey    = crdt::HierarchicalKey;
-    using PubSubBroadcaster  = crdt::PubSubBroadcaster;
     using GraphsyncDAGSyncer = crdt::GraphsyncDAGSyncer;
     using RocksdbDatastore   = ipfs_lite::ipfs::RocksdbDatastore;
     using IpfsRocksDb        = ipfs_lite::rocksdb;
@@ -256,7 +255,6 @@ std::string GetLocalIP( boost::asio::io_context &io )
         }
 
         // Create pubsub broadcaster
-        //auto broadcaster = std::make_shared<PubSubBroadcaster>(m_broadcastChannel);
         std::shared_ptr<PubSubBroadcasterExt>                              broadcaster;
         std::vector<std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic>> topics;
         if ( !m_broadcastTopicNames.empty() )

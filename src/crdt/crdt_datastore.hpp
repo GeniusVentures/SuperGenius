@@ -175,6 +175,7 @@ namespace sgns::crdt
       uint64_t rootPriority_; /*> root priority */
       std::shared_ptr<Delta> delta_; /*> pointer to delta */
       std::shared_ptr<IPLDNode> node_; /*> pointer to node */
+      std::optional<std::string> topic_;
     };
 
     /** DAG worker structure to keep track of worker threads
@@ -206,7 +207,7 @@ namespace sgns::crdt
     * @param aRootPriority root priority
     * @param aChildren vector of children CIDs
     */
-    void SendNewJobs( const CID &aRootCID, uint64_t aRootPriority, const std::vector<CID> &aChildren );
+    void SendNewJobs( const CID &aRootCID, uint64_t aRootPriority, const std::vector<CID> &aChildren, std::optional<std::string> topic );
 
     /** Sync ensures that all the data under the given prefix is flushed to disk in
     * the underlying datastore
@@ -259,7 +260,8 @@ namespace sgns::crdt
     outcome::result<std::vector<CID>> ProcessNode( const CID                    &aRoot,
                                                    uint64_t                      aRootPrio,
                                                    const std::shared_ptr<Delta> &aDelta,
-                                                   const std::shared_ptr<IPLDNode>  &aNode );
+                                                   const std::shared_ptr<IPLDNode>  &aNode,
+                                                   std::optional<std::string> topic );
 
     /** PutBlock add block node to DAGSyncer
     * @param aHeads list of CIDs to add to node as IPLD links
@@ -274,7 +276,7 @@ namespace sgns::crdt
     * @return CID or outcome::failure on error
     * \sa PutBlock, ProcessNode
     */
-    outcome::result<CID> AddDAGNode(const std::shared_ptr<Delta>& aDelta);
+    outcome::result<CID> AddDAGNode(const std::shared_ptr<Delta>& aDelta, std::optional<std::string> topic = std::nullopt);
 
     /** SyncDatastore sync heads and set datastore
     * @param: aKeyList all heads and the set entries related to the given prefix

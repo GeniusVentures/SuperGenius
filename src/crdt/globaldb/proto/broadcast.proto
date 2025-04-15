@@ -8,4 +8,5 @@ message BroadcastMessage {
 	}
 	PeerInfo peer = 1;
     bytes data = 2;
+    string topic = 3;
 }
