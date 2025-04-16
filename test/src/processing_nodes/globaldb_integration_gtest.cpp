@@ -203,7 +203,7 @@ public:
 uint16_t GlobalDBIntegrationTest::TestNodeCollection::currentPubsubPort    = 50501;
 uint16_t GlobalDBIntegrationTest::TestNodeCollection::currentGraphsyncPort = 50541;
 
-TEST_F( GlobalDBIntegrationTest, DISABLED_ReplicationWithoutTopicSuccessfulTest )
+TEST_F( GlobalDBIntegrationTest, ReplicationWithoutTopicSuccessfulTest )
 {
     auto testNodes = std::make_unique<TestNodeCollection>();
     testNodes->addNode( "globaldb_node1" );
@@ -281,13 +281,13 @@ TEST_F( GlobalDBIntegrationTest, ReplicationViaTopicBroadcastTest )
     {
         const auto res2 = testNodes->getNodes()[1].db->Get( key );
         const auto res3 = testNodes->getNodes()[2].db->Get( key );
-        ASSERT_TRUE( res2.has_value() );
-        ASSERT_TRUE( res3.has_value() );
+        EXPECT_TRUE( res2.has_value() );
+        EXPECT_TRUE( res3.has_value() );
         EXPECT_EQ( res2.value().toString(), "Value via test_topic" );
         EXPECT_EQ( res3.value().toString(), "Value via test_topic" );
     }
 }
-TEST_F( GlobalDBIntegrationTest, DISABLED_ReplicationAcrossMultipleTopicsTest )
+TEST_F( GlobalDBIntegrationTest, ReplicationAcrossMultipleTopicsTest )
 {
     auto testNodes = std::make_unique<TestNodeCollection>();
     testNodes->addNode( "globaldb_node1" );
@@ -341,7 +341,7 @@ TEST_F( GlobalDBIntegrationTest, DISABLED_ReplicationAcrossMultipleTopicsTest )
         EXPECT_EQ( resB.value().toString(), "Data from topic B" );
     }
 }
-TEST_F( GlobalDBIntegrationTest, DISABLED_PreventDoubleCommitTest )
+TEST_F( GlobalDBIntegrationTest, PreventDoubleCommitTest )
 {
     auto testNodes = std::make_unique<TestNodeCollection>();
     testNodes->addNode( "globaldb_node1" );
@@ -360,7 +360,7 @@ TEST_F( GlobalDBIntegrationTest, DISABLED_PreventDoubleCommitTest )
     const auto secondCommit = tx->Commit( "firstTopic" );
     EXPECT_FALSE( secondCommit.has_value() );
 }
-TEST_F( GlobalDBIntegrationTest, DISABLED_OperationsWithoutInitializationTest )
+TEST_F( GlobalDBIntegrationTest, OperationsWithoutInitializationTest )
 {
     const std::string binaryPath  = boost::dll::program_location().parent_path().string();
     const std::string tmpBasePath = binaryPath + "/globaldb_no_init_ops";
@@ -389,7 +389,7 @@ TEST_F( GlobalDBIntegrationTest, DISABLED_OperationsWithoutInitializationTest )
 
     boost::filesystem::remove_all( tmpBasePath );
 }
-TEST_F( GlobalDBIntegrationTest, DISABLED_CommitFailsForNonexistentTopicTest )
+TEST_F( GlobalDBIntegrationTest, CommitFailsForNonexistentTopicTest )
 {
     auto testNodes = std::make_unique<TestNodeCollection>();
     testNodes->addNode( "globaldb_no_topic" );
@@ -406,7 +406,7 @@ TEST_F( GlobalDBIntegrationTest, DISABLED_CommitFailsForNonexistentTopicTest )
     const auto commitRes = tx->Commit( "nonexistent_topic" );
     EXPECT_FALSE( commitRes.has_value() );
 }
-TEST_F( GlobalDBIntegrationTest, DISABLED_DirectPutWithTopicBroadcastTest )
+TEST_F( GlobalDBIntegrationTest, DirectPutWithTopicBroadcastTest )
 {
     auto testNodes = std::make_unique<TestNodeCollection>();
     testNodes->addNode( "globaldb_node1" );
@@ -445,7 +445,7 @@ TEST_F( GlobalDBIntegrationTest, DISABLED_DirectPutWithTopicBroadcastTest )
         EXPECT_EQ( res3.value().toString(), "Direct put with topic value" );
     }
 }
-TEST_F( GlobalDBIntegrationTest, DISABLED_DirectPutWithoutTopicBroadcastTest )
+TEST_F( GlobalDBIntegrationTest, DirectPutWithoutTopicBroadcastTest )
 {
     auto testNodes = std::make_unique<TestNodeCollection>();
     testNodes->addNode( "globaldb_node1" );
@@ -523,8 +523,7 @@ TEST_F( GlobalDBIntegrationTest, NonSubscriberDoesNotReceiveTopicMessageTest )
                                            WAIT_TIMEOUT );
     EXPECT_FALSE( node2Received );
 }
-
-TEST_F( GlobalDBIntegrationTest, DISABLED_UnconnectedNodeDoesNotReplicateBroadcastMessageTest )
+TEST_F( GlobalDBIntegrationTest, UnconnectedNodeDoesNotReplicateBroadcastMessageTest )
 {
     auto testNodes = std::make_unique<TestNodeCollection>();
     testNodes->addNode( "globaldb_node1" );
