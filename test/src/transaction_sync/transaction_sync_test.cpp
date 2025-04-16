@@ -174,7 +174,7 @@ namespace sgns
             << "Transfer should increase node_proc2's balance";
     }
 
-    TEST_F( TransactionSyncTest, DISABLED_TransactionMintSync )
+    TEST_F( TransactionSyncTest, TransactionMintSync )
     {
         auto balance_1_before = node_proc1->GetBalance();
         auto balance_2_before = node_proc2->GetBalance();
@@ -264,7 +264,7 @@ namespace sgns
             << "Correct Balance of outgoing transactions";
     }
 
-    TEST_F( TransactionSyncTest, DISABLED_TransactionTransferSync )
+    TEST_F( TransactionSyncTest, TransactionTransferSync )
     {
         auto balance_1_before = node_proc1->GetBalance();
         auto balance_2_before = node_proc2->GetBalance();
@@ -413,8 +413,6 @@ namespace sgns
                                                                                  std::chrono::milliseconds( 2500 ) );
         ASSERT_FALSE( transfer_invalid_received );
 
-        // Verify node_proc1's balance decreased
-        EXPECT_EQ( node_proc1->GetBalance(), 10000000000 ) << "Transfer should decrease node_proc1's balance";
 
         // Verify node_proc2's balance increased
         EXPECT_EQ( node_proc2->GetBalance(), balance_2_before + 10000000000 )

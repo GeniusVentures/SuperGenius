@@ -93,10 +93,13 @@ namespace sgns
                 std::shared_ptr<IGeniusTransactions>          tx;
                 do
                 {
+                    //TODO - This verification is only needed because CRDT resyncs every boot up
+                    // Remove once we remove the in memory processed_cids on crdt_datastore and use dagsyncher again
                     auto maybe_has_value = incoming_db_m->Get( element.key() );
                     if ( maybe_has_value.has_value() )
                     {
                         m_logger->debug( "Already have the transaction {}", element.key() );
+                        valid_tx = true;
                         break;
                     }
                     auto maybe_tx = DeSerializeTransaction( element.value() );
@@ -141,16 +144,20 @@ namespace sgns
                 bool                                          valid_proof = false;
                 do
                 {
+                    //TODO - This verification is only needed because CRDT resyncs every boot up
+                    // Remove once we remove the in memory processed_cids on crdt_datastore and use dagsyncher again
                     auto maybe_has_value = incoming_db_m->Get( element.key() );
                     if ( maybe_has_value.has_value() )
                     {
                         m_logger->debug( "Already have the proof {}", element.key() );
+                        valid_proof = true;
                         break;
                     }
                     std::vector<uint8_t> proof_data_vector( element.value().begin(), element.value().end() );
                     auto                 maybe_valid_proof = IBasicProof::VerifyFullProof( proof_data_vector );
                     if ( maybe_valid_proof.has_error() || ( !maybe_valid_proof.value() ) )
                     {
+                        // TODO: kill reputation point of the node.
                         m_logger->error( "Could not verify proof {}", element.key() );
                         break;
                     }
@@ -159,7 +166,7 @@ namespace sgns
                     valid_proof = true;
                 } while ( 0 );
 
-                if ( valid_proof == false)
+                if ( valid_proof == false )
                 {
                     std::vector<crdt::pb::Element> tombstones;
                     tombstones.push_back( element );
@@ -691,27 +698,11 @@ namespace sgns
                 continue;
             }
 
-            if ( !IGeniusTransactions::CheckDAGStructSignature( maybe_transaction.value()->dag_st ) )
+            auto maybe_parsed = ParseTransaction( maybe_transaction.value() );
+            if ( maybe_parsed.has_error() )
             {
-                m_logger->error( "Could not validate signature of transaction from {}",
-                                 maybe_transaction.value()->dag_st.source_addr() );
+                m_logger->debug( "Can't parse the transaction" );
                 continue;
-            }
-
-            auto maybe_proof = CheckProof( maybe_transaction.value() );
-            if ( !maybe_proof.has_value() )
-            {
-                m_logger->info( "Invalid PROOF" );
-                // TODO: kill reputation point of the node.
-            }
-            else
-            {
-                auto maybe_parsed = ParseTransaction( maybe_transaction.value() );
-                if ( maybe_parsed.has_error() )
-                {
-                    m_logger->debug( "Can't parse the transaction" );
-                    continue;
-                }
             }
 
             {
