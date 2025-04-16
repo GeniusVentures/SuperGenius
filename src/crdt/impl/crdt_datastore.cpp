@@ -305,7 +305,7 @@ namespace sgns::crdt
         {
             return;
         }
-
+        //std::cout << "Dag Worker QUant: " << dagWorkerJobList.size() << std::endl;
         {
             std::unique_lock lock( dagWorkerMutex_ );
             if ( dagWorkerJobList.empty() )
@@ -452,7 +452,13 @@ namespace sgns::crdt
         //if ( dagSyncerResult.has_failure() )
         //{
         //    logger_->error( "HandleBlock: error checking for known block" );
-        //    return outcome::failure( dagSyncerResult.error() );
+        //}
+        //else {
+        //if (dagSyncerResult.value())
+        //{
+        //    AddProcessedCID(aCid);
+        //}
+            
         //}
 
         //if ( dagSyncerResult.value() )
@@ -467,6 +473,10 @@ namespace sgns::crdt
             children.push_back( aCid );
             SendNewJobs( aCid, 0, children );
         }
+        //if (dagSyncerResult.has_failure())
+        //{
+        //    return outcome::failure(dagSyncerResult.error());
+        //}
 
         return outcome::success();
     }
@@ -519,47 +529,25 @@ namespace sgns::crdt
 
         for ( const auto &cid : aChildren )
         {
-            //Fetch only root node with all children, but without children of their children
-            constexpr int maxRetries = 3;
-            int           retryCount = 0;
-            bool          success    = false;
-
-            std::shared_ptr<ipfs_lite::ipfs::merkledag::Leaf> leaf;
-            common::Buffer                                    nodeBuffer;
             logger_->debug( "SendNewJobs: TRYING TO FETCH NODE : {} from {}",
                             cid.toString().value(),
                             reinterpret_cast<uint64_t>( this ) );
 
-            // Retry loop for fetching the graph
-            while ( retryCount < maxRetries )
-            {
-                std::unique_lock lock( dagWorkerMutex_ );
-                auto             graphResult = dagSyncer_->fetchGraphOnDepth( cid, 1 );
-                lock.unlock();
+            // Single attempt to fetch the graph - getNode internally already has retry logic
+            std::unique_lock lock( dagWorkerMutex_ );
+            auto             graphResult = dagSyncer_->fetchGraphOnDepth( cid, 1 );
+            lock.unlock();
 
-                if ( graphResult.has_failure() )
-                {
-                    logger_->debug( "SendNewJobs: error fetching graph for CID:{} Retry {}/{}",
-                                    cid.toString().value(),
-                                    retryCount + 1,
-                                    maxRetries );
-                    retryCount++;
-                    continue;
-                }
-
-                // Fetch successful
-                leaf       = graphResult.value();
-                nodeBuffer = leaf->content();
-                success    = true;
-                break;
-            }
-            if ( !success )
+            if ( graphResult.has_failure() )
             {
-                logger_->error( "SendNewJobs: failed to fetch graph for CID:{} after {} retries.",
+                logger_->error( "SendNewJobs: error fetching graph for CID:{} - {}",
                                 cid.toString().value(),
-                                maxRetries );
+                                graphResult.error().message() );
                 continue;
             }
+
+            auto leaf       = graphResult.value();
+            auto nodeBuffer = leaf->content();
 
             // @todo Check if it is OK that the node has only content and doesn't have links
             auto nodeResult = ipfs_lite::ipld::IPLDNodeImpl::createFromRawBytes( nodeBuffer );
@@ -582,12 +570,11 @@ namespace sgns::crdt
             dagJob.rootPriority_ = rootPriority;
             dagJob.delta_        = delta;
             dagJob.node_         = node;
-            logger_->info( "SendNewJobs PUSHING CID={} priority={} ",
-                           dagJob.rootCid_.toString().value(),
-                           std::to_string( dagJob.rootPriority_ ) );
+            logger_->debug( "SendNewJobs PUSHING CID={} priority={} ",
+                            dagJob.rootCid_.toString().value(),
+                            std::to_string( dagJob.rootPriority_ ) );
             {
                 std::unique_lock lock( dagWorkerMutex_ );
-
                 dagWorkerJobList.push( dagJob );
             }
         }
@@ -705,7 +692,7 @@ namespace sgns::crdt
             return outcome::failure( encodedBufferResult.error() );
         }
 
-        auto bcastResult = broadcaster_->Broadcast(encodedBufferResult.value(), topic);
+        auto bcastResult = this->broadcaster_->Broadcast(encodedBufferResult.value(), topic);
 
         if ( bcastResult.has_failure() )
         {
@@ -823,7 +810,7 @@ namespace sgns::crdt
                                         aRoot.toString().value() );
                         return outcome::failure( replaceResult.error() );
                     }
-
+                    AddProcessedCID(child);
                     continue;
                 }
 
@@ -845,10 +832,12 @@ namespace sgns::crdt
                         // Don't let this failure prevent us from processing the other links.
                         logger_->error( "ProcessNode: error adding head {}", aRoot.toString().value() );
                     }
+                    AddProcessedCID(child);
                     continue;
                 }
 
                 children.push_back( child );
+                AddProcessedCID( child );
             }
         }
 

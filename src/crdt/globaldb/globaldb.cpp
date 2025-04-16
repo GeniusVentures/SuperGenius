@@ -310,7 +310,6 @@ std::string GetLocalIP( boost::asio::io_context &io )
         //scheduleBootstrap(io, dagSyncerHost);
         // Create pubsub broadcaster
         //auto broadcaster = std::make_shared<PubSubBroadcaster>(m_broadcastChannel);
-        std::shared_ptr<PubSubBroadcasterExt>                              broadcaster;
         std::vector<std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic>> topics;
         if ( !m_broadcastTopicNames.empty() )
         {
@@ -325,14 +324,11 @@ std::string GetLocalIP( boost::asio::io_context &io )
         }
         // Otherwise, topics remains empty.
 
-        broadcaster = PubSubBroadcasterExt::New( topics, dagSyncer, listen_to );
-
-        // Save the broadcaster pointer for future additions.
-        m_broadcaster = broadcaster;
+        m_broadcaster   = PubSubBroadcasterExt::New( topics, dagSyncer, listen_to );
         m_crdtDatastore = CrdtDatastore::New( dataStore,
                                               HierarchicalKey( "crdt" ),
                                               dagSyncer,
-                                              broadcaster,
+                                              m_broadcaster,
                                               crdtOptions );
         if ( m_crdtDatastore == nullptr )
         {
@@ -340,10 +336,10 @@ std::string GetLocalIP( boost::asio::io_context &io )
             return Error::CRDT_DATASTORE_NOT_CREATED;
         }
 
-        broadcaster->SetCrdtDataStore( m_crdtDatastore );
+        m_broadcaster->SetCrdtDataStore( m_crdtDatastore );
 
         // have to set the dataStore before starting the broadcasting
-        broadcaster->Start();
+        m_broadcaster->Start();
 
         // TODO: bootstrapping
         //m_logger->info("Bootstrapping...");
