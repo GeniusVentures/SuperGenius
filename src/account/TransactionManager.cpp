@@ -36,22 +36,14 @@
 
 namespace sgns
 {
-    TransactionManager::TransactionManager( std::shared_ptr<crdt::GlobalDB>                  processing_db,
-                                            std::shared_ptr<boost::asio::io_context>         ctx,
-                                            std::shared_ptr<GeniusAccount>                   account,
-                                            std::shared_ptr<crypto::Hasher>                  hasher,
-                                            std::string                                      base_path,
-                                            std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub,
-                                            std::shared_ptr<upnp::UPNP>                      upnp,
-                                            uint16_t                                         base_port ) :
+    TransactionManager::TransactionManager( std::shared_ptr<crdt::GlobalDB>          processing_db,
+                                            std::shared_ptr<boost::asio::io_context> ctx,
+                                            std::shared_ptr<GeniusAccount>           account,
+                                            std::shared_ptr<crypto::Hasher>          hasher ) :
         globaldb_m( std::move( processing_db ) ),
-        pubsub_m( std::move( pubsub ) ),
-        base_path_m( std::move( base_path ) ),
         ctx_m( std::move( ctx ) ),
         account_m( std::move( account ) ),
         hasher_m( std::move( hasher ) ),
-        upnp_m( std::move( upnp ) ),
-        base_port_m( base_port + 1 ),
         timer_m( std::make_shared<boost::asio::steady_timer>( *ctx_m, boost::asio::chrono::milliseconds( 300 ) ) )
 
     {
@@ -62,7 +54,7 @@ namespace sgns
 
     void TransactionManager::Start()
     {
-        CheckIncoming(false);
+        CheckIncoming( false );
         CheckOutgoing();
 
         task_m = [this]()
@@ -274,12 +266,6 @@ namespace sgns
         {
             m_logger->error( "Unknown CheckIncoming error in SendTransaction::Update()" );
         }
-        static auto start_time = std::chrono::steady_clock::now();
-        if ( std::chrono::steady_clock::now() - start_time > std::chrono::minutes( 60 ) )
-        {
-            start_time = std::chrono::steady_clock::now();
-            RefreshPorts();
-        }
     }
 
     void TransactionManager::EnqueueTransaction( TransactionPair element )
@@ -459,7 +445,7 @@ namespace sgns
 #endif
     }
 
-    outcome::result<void> TransactionManager::CheckIncoming(bool checkProofs)
+    outcome::result<void> TransactionManager::CheckIncoming( bool checkProofs )
     {
         auto transaction_paths = GetNotificationPath( account_m->GetAddress() ) + "tx/";
         m_logger->trace( "Probing incoming transactions on " + transaction_paths );
@@ -773,17 +759,6 @@ namespace sgns
             }
         }
         return result;
-    }
-
-    void TransactionManager::RefreshPorts()
-    {
-        if ( upnp_m->GetIGD() )
-        {
-            for ( auto &port : used_ports_m )
-            {
-                upnp_m->OpenPort( port, port, "TCP", 3600 );
-            }
-        }
     }
 
     std::vector<uint8_t> TransactionManager::MakeSignature( SGTransaction::DAGStruct dag_st ) const

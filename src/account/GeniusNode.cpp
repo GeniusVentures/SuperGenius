@@ -223,8 +223,8 @@ namespace sgns
         std::string base58key = maybe_base58.value();
 
         gnus_network_full_path_ = ( boost::format( std::string( GNUS_NETWORK_PATH ) ) %
-                                   sgns::version::SuperGeniusVersionMajor() % base58key )
-                                     .str();
+                                    sgns::version::SuperGeniusVersionMajor() % base58key )
+                                      .str();
 
         auto pubsubKeyPath = gnus_network_full_path_ + "/pubs_processor";
 
@@ -249,12 +249,13 @@ namespace sgns
             throw std::runtime_error( error.message() );
             return;
         }
-        task_queue_ = std::make_shared<processing::ProcessingTaskQueueImpl>(globaldb_, processing_channel_topic_);
+        task_queue_ = std::make_shared<processing::ProcessingTaskQueueImpl>( globaldb_, processing_channel_topic_ );
         processing_core_ = std::make_shared<processing::ProcessingCoreImpl>( globaldb_, 1000000, 1 );
         processing_core_->RegisterProcessorFactory( "mnnimage",
                                                     [] { return std::make_unique<processing::MNN_Image>(); } );
 
-        task_result_storage_ = std::make_shared<processing::SubTaskResultStorageImpl>( globaldb_ , processing_channel_topic_);
+        task_result_storage_ = std::make_shared<processing::SubTaskResultStorageImpl>( globaldb_,
+                                                                                       processing_channel_topic_ );
         processing_service_  = std::make_shared<processing::ProcessingServiceImpl>(
             pubsub_,                                                          //
             MAX_NODES_COUNT,                                                  //
@@ -271,11 +272,7 @@ namespace sgns
         transaction_manager_ = std::make_shared<TransactionManager>( globaldb_,
                                                                      io_,
                                                                      account_,
-                                                                     std::make_shared<crypto::HasherImpl>(),
-                                                                     write_base_path_ + gnus_network_full_path_,
-                                                                     pubsub_,
-                                                                     upnp,
-                                                                     graphsyncport );
+                                                                     std::make_shared<crypto::HasherImpl>() );
 
         transaction_manager_->Start();
         if ( isprocessor_ )
@@ -481,7 +478,6 @@ namespace sgns
         auto [tx_id, escrow_data_pair] = result_pair;
 
         auto [escrow_path, escrow_data] = escrow_data_pair;
-
 
         task.set_escrow_path( escrow_path );
 
@@ -920,8 +916,7 @@ outcome::result<std::map<std::string, double>> GeniusNode::GetCoinprice( const s
         return transaction_manager_->WaitForTransactionIncoming( txId, timeout );
     }
 
-    bool GeniusNode::WaitForEscrowRelease( const std::string        &originalEscrowId,
-                                                                   std::chrono::milliseconds timeout )
+    bool GeniusNode::WaitForEscrowRelease( const std::string &originalEscrowId, std::chrono::milliseconds timeout )
     {
         return transaction_manager_->WaitForEscrowRelease( originalEscrowId, timeout );
     }
