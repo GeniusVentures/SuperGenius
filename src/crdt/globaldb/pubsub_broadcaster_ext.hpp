@@ -67,9 +67,8 @@ namespace sgns::crdt
 
         void OnMessage( boost::optional<const GossipPubSub::Message &> message );
 
-        std::unordered_map<std::string, std::shared_ptr<GossipPubSubTopic>> topics_;
-        std::string                                                         firstTopic_;
-        std::shared_ptr<GossipPubSubTopic>                                  gossipPubSubTopic_;
+        std::unordered_map<std::string, std::shared_ptr<GossipPubSubTopic>> topicMap_;
+        std::string                                                         defaultTopicString_;
         std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer>                     dagSyncer_;
         std::shared_ptr<CrdtDatastore>                                      dataStore_;
         libp2p::multi::Multiaddress                                         dagSyncerMultiaddress_;
