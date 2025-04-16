@@ -279,7 +279,7 @@ namespace sgns::crdt
 
         for ( const auto &bCastHeadCID : decodeResult.value() )
         {
-            auto handleBlockResult = HandleBlock( bCastHeadCID );
+            auto handleBlockResult = HandleBlock( bCastHeadCID, messageTopic );
             if ( handleBlockResult.has_failure() )
             {
                 logger_->error( "Broadcaster: Unable to handle block (error code {})",
@@ -465,8 +465,10 @@ namespace sgns::crdt
         // Rebroadcast for each group using its topic (an empty topic will use the default in the broadcaster)
         for ( const auto &group : groups )
         {
-            if (group.first.empty()) {
-                logger_->debug("RebroadcastHeads: Skipping empty topic group to avoid rebroadcast on default channel.");
+            if ( group.first.empty() )
+            {
+                logger_->debug(
+                    "RebroadcastHeads: Skipping empty topic group to avoid rebroadcast on default channel." );
                 continue;
             }
             std::optional<std::string> topicOpt = group.first;
@@ -485,7 +487,7 @@ namespace sgns::crdt
         }
     }
 
-    outcome::result<void> CrdtDatastore::HandleBlock( const CID &aCid )
+    outcome::result<void> CrdtDatastore::HandleBlock( const CID &aCid, const std::string &topic )
     {
         // Ignore already known blocks.
         // This includes the case when the block is a current
@@ -512,16 +514,16 @@ namespace sgns::crdt
         {
             std::vector<CID> children;
             children.push_back( aCid );
-            SendNewJobs( aCid, 0, children, std::nullopt );
+            SendNewJobs( aCid, 0, children, topic );
         }
 
         return outcome::success();
     }
 
-    void CrdtDatastore::SendNewJobs( const CID                 &aRootCID,
-                                     uint64_t                   aRootPriority,
-                                     const std::vector<CID>    &aChildren,
-                                     std::optional<std::string> topic )
+    void CrdtDatastore::SendNewJobs( const CID              &aRootCID,
+                                     uint64_t                aRootPriority,
+                                     const std::vector<CID> &aChildren,
+                                     const std::string      &topic )
     {
         // sendNewJobs calls getDeltas with the given
         // children and sends each response to the workers.
@@ -879,7 +881,7 @@ namespace sgns::crdt
 
                 if ( knowBlockResult.value() )
                 {
-                    auto addHeadResult = this->heads_->Add( aRoot, aRootPrio );
+                    auto addHeadResult = this->heads_->Add( aRoot, aRootPrio, topic );
                     if ( addHeadResult.has_failure() )
                     {
                         logger_->error( "ProcessNode: error adding head {}", aRoot.toString().value() );

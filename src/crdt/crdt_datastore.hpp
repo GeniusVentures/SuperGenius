@@ -175,7 +175,7 @@ namespace sgns::crdt
       uint64_t rootPriority_; /*> root priority */
       std::shared_ptr<Delta> delta_; /*> pointer to delta */
       std::shared_ptr<IPLDNode> node_; /*> pointer to node */
-      std::optional<std::string> topic_;
+      std::string topic_;
     };
 
     /** DAG worker structure to keep track of worker threads
@@ -207,7 +207,7 @@ namespace sgns::crdt
     * @param aRootPriority root priority
     * @param aChildren vector of children CIDs
     */
-    void SendNewJobs( const CID &aRootCID, uint64_t aRootPriority, const std::vector<CID> &aChildren, std::optional<std::string> topic );
+    void SendNewJobs( const CID &aRootCID, uint64_t aRootPriority, const std::vector<CID> &aChildren, const std::string &topic );
 
     /** Sync ensures that all the data under the given prefix is flushed to disk in
     * the underlying datastore
@@ -247,7 +247,7 @@ namespace sgns::crdt
     * CRDT blocks to the Datastore.
     * @return returns outcome::success on success or outcome::failure otherwise
     */
-    outcome::result<void> HandleBlock(const CID& aCid);
+    outcome::result<void> HandleBlock(const CID& aCid, const std::string &topic);
 
     /** ProcessNode processes new block. This makes that every operation applied
     * to this store take effect (delta is merged) before returning.
