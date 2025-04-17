@@ -176,37 +176,42 @@ namespace sgns::crdt
                     m_logger->debug( "Added Address: {}", addr_res.value().getStringAddress() );
                 }
             }
+            if ( addrvector.empty() )
+            {
+                m_logger->trace( "No addresses available for CID {}, skipping", cid.toString().value() );
+                break;
+            }
+            if ( dagSyncer_->IsOnBlackList( peerId ) )
+            {
+                m_logger->debug( "The peer {} that has CID {} is blacklisted",
+                                 peerId.toBase58(),
+                                 cid.toString().value() );
+                break;
+            }
+            //auto pi = PeerInfoFromString(bmsg.multiaddress());
             for ( const auto &cid : cids.value() )
             {
-                if ( !addrvector.empty() )
+                auto hb = dagSyncer_->HasBlock( cid );
+                if ( !hb.has_value() )
                 {
-                    auto hb = dagSyncer_->HasBlock( cid );
-                    if ( hb.has_value() && !hb.value() )
-                    {
-                        if ( !dagSyncer_->IsOnBlackList( peerId ) )
-                        {
-                            m_logger->debug( "Request node {} from {} {}",
-                                             cid.toString().value(),
-                                             addrvector[0].getStringAddress(),
-                                             peerId.toBase58() );
-                            dagSyncer_->AddRoute( cid, peerId, addrvector );
-                        }
-                        else
-                        {
-                            m_logger->debug( "The peer {} that has CID {} is blacklisted",
-                                             peerId.toBase58(),
-                                             cid.toString().value() );
-                        }
-                    }
-                    else
-                    {
-                        m_logger->trace( "Not adding route node {} from {} {} {}",
-                                         cid.toString().value(),
-                                         addrvector[0].getStringAddress(),
-                                         hb.has_value(),
-                                         hb.value() );
-                    }
+                    m_logger->warn( "HasBlock query failed for CID {}", cid.toString().value() );
+                    continue;
                 }
+
+                if ( hb.value() )
+                {
+                    m_logger->trace( "Not adding route node {} from {}",
+                                     cid.toString().value(),
+                                     addrvector[0].getStringAddress() );
+                    continue;
+                }
+                m_logger->debug( "Request node {} from {} {}",
+                                 cid.toString().value(),
+                                 addrvector[0].getStringAddress(),
+                                 peerId.toBase58() );
+                dagSyncer_->AddRoute( cid, peerId, addrvector );
+
+                messageQueue_.emplace( std::move( peerId ), bmsg.data(), incomingTopic );
             }
         }
         // Enqueue the message using the original topic from the payload.
