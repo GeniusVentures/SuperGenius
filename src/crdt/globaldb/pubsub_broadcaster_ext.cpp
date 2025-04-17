@@ -64,7 +64,7 @@ namespace sgns::crdt
     // Static factory method that accepts a vector of topics.
     std::shared_ptr<PubSubBroadcasterExt> PubSubBroadcasterExt::New(
         const std::vector<std::shared_ptr<GossipPubSubTopic>> &pubSubTopics,
-        std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer>        dagSyncer)
+        std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer>        dagSyncer )
     {
         auto instance = std::shared_ptr<PubSubBroadcasterExt>(
             new PubSubBroadcasterExt( pubSubTopics, std::move( dagSyncer ) ) );
@@ -73,8 +73,7 @@ namespace sgns::crdt
 
     PubSubBroadcasterExt::PubSubBroadcasterExt( const std::vector<std::shared_ptr<GossipPubSubTopic>> &pubSubTopics,
                                                 std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer>        dagSyncer ) :
-        dagSyncer_( std::move( dagSyncer ) ),
-        dataStore_( nullptr )
+        dagSyncer_( std::move( dagSyncer ) ), dataStore_( nullptr )
     {
         m_logger->trace( "Initializing PubSubBroadcasterExt" );
         if ( !pubSubTopics.empty() )
@@ -83,7 +82,7 @@ namespace sgns::crdt
         }
         for ( const auto &topic : pubSubTopics )
         {
-            topicMap_.insert({topic->GetTopic(), topic});
+            topicMap_.insert( { topic->GetTopic(), topic } );
         }
     }
 
@@ -117,7 +116,7 @@ namespace sgns::crdt
     }
 
     void PubSubBroadcasterExt::OnMessage( boost::optional<const GossipPubSub::Message &> message,
-                                          const std::string &incomingTopic )
+                                          const std::string                             &incomingTopic )
     {
         // Log that a message has been received (the incoming parameter is not used for filtering).
         m_logger->trace( "Received a message from topic {}", incomingTopic );
@@ -174,14 +173,12 @@ namespace sgns::crdt
             }
             if ( addrvector.empty() )
             {
-                m_logger->trace( "No addresses available for CID {}, skipping", cid.toString().value() );
+                m_logger->trace( "No addresses available for CIDs broadcast" );
                 break;
             }
             if ( dagSyncer_->IsOnBlackList( peerId ) )
             {
-                m_logger->debug( "The peer {} that has CID {} is blacklisted",
-                                 peerId.toBase58(),
-                                 cid.toString().value() );
+                m_logger->debug( "The peer {} is blacklisted", peerId.toBase58() );
                 break;
             }
             //auto pi = PeerInfoFromString(bmsg.multiaddress());
@@ -206,7 +203,6 @@ namespace sgns::crdt
                                  addrvector[0].getStringAddress(),
                                  peerId.toBase58() );
                 dagSyncer_->AddRoute( cid, peerId, addrvector );
-
             }
             messageQueue_.emplace( std::move( peerId ), bmsg.data(), incomingTopic );
         } while ( 0 );
@@ -240,8 +236,8 @@ namespace sgns::crdt
         std::shared_ptr<GossipPubSubTopic> targetTopic = nullptr;
         if ( topic_name )
         {
-            auto it = topicMap_.find(topic_name.value());
-            if (it != topicMap_.end())
+            auto it = topicMap_.find( topic_name.value() );
+            if ( it != topicMap_.end() )
             {
                 targetTopic = it->second;
             }
@@ -254,12 +250,12 @@ namespace sgns::crdt
         else
         {
             // Use the first topic added if no topic_name is provided.
-            if ( defaultTopicString_.empty() || topicMap_.find(defaultTopicString_) == topicMap_.end() )
+            if ( defaultTopicString_.empty() || topicMap_.find( defaultTopicString_ ) == topicMap_.end() )
             {
                 m_logger->error( "First topic is not available." );
                 return outcome::failure( boost::system::error_code{} );
             }
-            targetTopic = topicMap_.at(defaultTopicString_);
+            targetTopic = topicMap_.at( defaultTopicString_ );
         }
 
         // Create and fill the broadcast message.
@@ -336,14 +332,14 @@ namespace sgns::crdt
     void PubSubBroadcasterExt::AddTopic( const std::shared_ptr<GossipPubSubTopic> &newTopic )
     {
         std::string topicName = newTopic->GetTopic();
-    
-        if ( topicMap_.find(topicName) != topicMap_.end() )
+
+        if ( topicMap_.find( topicName ) != topicMap_.end() )
         {
             m_logger->debug( "Topic '" + topicName + "' already exists. Not adding duplicate." );
             return;
         }
-    
-        topicMap_.insert({topicName, newTopic});
+
+        topicMap_.insert( { topicName, newTopic } );
         if ( defaultTopicString_.empty() )
         {
             defaultTopicString_ = topicName;
