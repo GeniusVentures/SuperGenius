@@ -200,7 +200,7 @@ namespace sgns
 
         std::map<std::string, PriceInfo> m_tokenPriceCache;
         const std::chrono::minutes       m_cacheValidityDuration{ 1 };
-        std::chrono::time_point<std::chrono::system_clock> m_lastApiCall;
+        std::chrono::time_point<std::chrono::system_clock> m_lastApiCall{};
         const std::chrono::seconds                         m_minApiCallInterval{ 5 };
 
 

@@ -101,6 +101,8 @@ namespace sgns
 
     //coinprices_(std::make_shared<CoinGeckoPriceRetriever>(io_))
     {
+        //For some reason if this isn't initialized like this, it ends up completely wrong. 
+        m_lastApiCall = std::chrono::system_clock::now() - m_minApiCallInterval;
         SSL_library_init();
         SSL_load_error_strings();
         OpenSSL_add_all_algorithms();
@@ -819,7 +821,6 @@ outcome::result<std::map<std::string, double>> GeniusNode::GetCoinprice( const s
         auto                          currentTime = std::chrono::system_clock::now();
         std::map<std::string, double> result;
         std::vector<std::string>      tokensToFetch;
-
         // Determine which tokens need to be fetched
         for ( const auto &tokenId : tokenIds )
         {
