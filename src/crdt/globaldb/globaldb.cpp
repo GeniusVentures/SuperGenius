@@ -241,10 +241,6 @@ std::string GetLocalIP( boost::asio::io_context &io )
             return outcome::failure( Error::DAG_SYNCHER_NOT_LISTENING );
         }
 
-
-
-       
-
         auto graphsync = std::make_shared<GraphsyncImpl>( host, std::move( scheduler ) );
         auto dagSyncer = std::make_shared<GraphsyncDAGSyncer>( ipfsDataStore, graphsync, host );
 
@@ -259,21 +255,13 @@ std::string GetLocalIP( boost::asio::io_context &io )
         //dht_->bootstrap();
         //scheduleBootstrap(io, dagSyncerHost);
         // Create pubsub broadcaster
-        std::vector<std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic>> topics;
-        if ( !m_broadcastTopicNames.empty() )
+        std::vector<std::shared_ptr<GossipPubSubTopic>> topicStringVector;
+        if ( m_broadcastChannel )
         {
-            for ( const auto &topicName : m_broadcastTopicNames )
-            {
-                topics.push_back( std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>( m_pubsub, topicName ) );
-            }
+            topicStringVector.push_back( m_broadcastChannel );
         }
-        else if ( m_broadcastChannel != nullptr )
-        {
-            topics.push_back( m_broadcastChannel );
-        }
-        // Otherwise, topics remains empty.
 
-        m_broadcaster   = PubSubBroadcasterExt::New( topics, dagSyncer );
+        m_broadcaster   = PubSubBroadcasterExt::New( topicStringVector, dagSyncer );
         m_crdtDatastore = CrdtDatastore::New( dataStore,
                                               HierarchicalKey( "crdt" ),
                                               dagSyncer,

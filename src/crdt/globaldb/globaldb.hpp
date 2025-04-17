@@ -114,7 +114,6 @@ namespace sgns::crdt
         int                                                   m_dagSyncPort;
         std::string                                           m_graphSyncAddrs;
 
-        std::vector<std::string> m_broadcastTopicNames;
         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> m_pubsub;
         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> m_broadcastChannel;
         std::shared_ptr<sgns::crdt::PubSubBroadcasterExt> m_broadcaster;
