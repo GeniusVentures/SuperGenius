@@ -172,14 +172,21 @@ namespace sgns::crdt
                     m_logger->debug( "Added Address: {}", addr_res.value().getStringAddress() );
                 }
             }
+            if ( addrvector.empty() )
+            {
+                m_logger->trace( "No addresses available for CID {}, skipping", cid.toString().value() );
+                break;
+            }
+            if ( dagSyncer_->IsOnBlackList( peerId ) )
+            {
+                m_logger->debug( "The peer {} that has CID {} is blacklisted",
+                                 peerId.toBase58(),
+                                 cid.toString().value() );
+                break;
+            }
             //auto pi = PeerInfoFromString(bmsg.multiaddress());
             for ( const auto &cid : cids.value() )
             {
-                if ( addrvector.empty() )
-                {
-                    m_logger->trace( "No addresses available for CID {}, skipping", cid.toString().value() );
-                    continue;
-                }
                 auto hb = dagSyncer_->HasBlock( cid );
                 if ( !hb.has_value() )
                 {
@@ -192,13 +199,6 @@ namespace sgns::crdt
                     m_logger->trace( "Not adding route node {} from {}",
                                      cid.toString().value(),
                                      addrvector[0].getStringAddress() );
-                    continue;
-                }
-                if ( dagSyncer_->IsOnBlackList( peerId ) )
-                {
-                    m_logger->debug( "The peer {} that has CID {} is blacklisted",
-                                     peerId.toBase58(),
-                                     cid.toString().value() );
                     continue;
                 }
                 m_logger->debug( "Request node {} from {} {}",
