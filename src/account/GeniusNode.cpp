@@ -185,7 +185,6 @@ namespace sgns
         auto tokenid = dev_config_.TokenID;
 
         auto pubsubport    = GenerateRandomPort( base_port, account_->GetAddress() + std::to_string( tokenid ) );
-        auto graphsyncport = pubsubport + 10;
 
         std::vector<std::string> addresses;
         //UPNP
@@ -194,13 +193,12 @@ namespace sgns
         if ( upnp->GetIGD() )
         {
             auto openedPort  = upnp->OpenPort( pubsubport, pubsubport, "TCP", 3600 );
-            auto openedPort2 = upnp->OpenPort( graphsyncport, graphsyncport, "TCP", 3600 );
             auto wanip       = upnp->GetWanIP();
             lanip            = upnp->GetLocalIP();
             node_logger->info( "Wan IP: {}", wanip );
             node_logger->info( "Lan IP: {}", lanip );
             addresses.push_back( wanip );
-            if ( !openedPort || !openedPort2 )
+            if ( !openedPort )
             {
                 node_logger->error( "Failed to open port" );
             }
@@ -225,8 +223,8 @@ namespace sgns
         std::string base58key = maybe_base58.value();
 
         gnus_network_full_path_ = ( boost::format( std::string( GNUS_NETWORK_PATH ) ) %
-                                   sgns::version::SuperGeniusVersionMajor() % base58key )
-                                     .str();
+                                    sgns::version::SuperGeniusVersionMajor() % base58key )
+                                      .str();
 
         auto pubsubKeyPath = gnus_network_full_path_ + "/pubs_processor";
 
@@ -238,26 +236,25 @@ namespace sgns
             lanip,
             addresses );
 
-        globaldb_ = std::make_shared<crdt::GlobalDB>(
-            io_,
-            write_base_path_ + gnus_network_full_path_,
-            graphsyncport,
-            std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_, processing_channel_topic_ ) );
+        globaldb_ = std::make_shared<crdt::GlobalDB>( io_,
+                                                      write_base_path_ + gnus_network_full_path_,
+                                                      pubsub_ );
 
         auto global_db_init_result = globaldb_->Init( crdt::CrdtOptions::DefaultOptions() );
+        globaldb_->AddBroadcastTopic( processing_channel_topic_ );
         if ( global_db_init_result.has_error() )
         {
             auto error = global_db_init_result.error();
             throw std::runtime_error( error.message() );
             return;
         }
-
-        task_queue_      = std::make_shared<processing::ProcessingTaskQueueImpl>( globaldb_ );
+        task_queue_ = std::make_shared<processing::ProcessingTaskQueueImpl>( globaldb_, processing_channel_topic_ );
         processing_core_ = std::make_shared<processing::ProcessingCoreImpl>( globaldb_, 1000000, 1 );
         processing_core_->RegisterProcessorFactory( "mnnimage",
                                                     [] { return std::make_unique<processing::MNN_Image>(); } );
 
-        task_result_storage_ = std::make_shared<processing::SubTaskResultStorageImpl>( globaldb_ );
+        task_result_storage_ = std::make_shared<processing::SubTaskResultStorageImpl>( globaldb_,
+                                                                                       processing_channel_topic_ );
         processing_service_  = std::make_shared<processing::ProcessingServiceImpl>(
             pubsub_,                                                          //
             MAX_NODES_COUNT,                                                  //
@@ -274,11 +271,7 @@ namespace sgns
         transaction_manager_ = std::make_shared<TransactionManager>( globaldb_,
                                                                      io_,
                                                                      account_,
-                                                                     std::make_shared<crypto::HasherImpl>(),
-                                                                     write_base_path_ + gnus_network_full_path_,
-                                                                     pubsub_,
-                                                                     upnp,
-                                                                     graphsyncport );
+                                                                     std::make_shared<crypto::HasherImpl>() );
 
         transaction_manager_->Start();
         if ( isprocessor_ )
@@ -290,7 +283,7 @@ namespace sgns
         {
             DHTInit();
         }
-        RefreshUPNP( pubsubport, graphsyncport );
+        RefreshUPNP( pubsubport );
 
         io_thread = std::thread( [this]() { io_->run(); } );
     }
@@ -316,7 +309,7 @@ namespace sgns
         }
     }
 
-    void GeniusNode::RefreshUPNP( int pubsubport, int graphsyncport )
+    void GeniusNode::RefreshUPNP( int pubsubport )
     {
         if ( upnp_thread.joinable() )
         {
@@ -327,7 +320,7 @@ namespace sgns
         stop_upnp = false; // Reset the stop flag for the new thread
 
         upnp_thread = std::thread(
-            [this, pubsubport, graphsyncport]()
+            [this, pubsubport]()
             {
                 auto next_refresh_time = std::chrono::steady_clock::now() + std::chrono::minutes( 60 );
                 auto upnp_shared       = std::make_shared<upnp::UPNP>();
@@ -343,16 +336,14 @@ namespace sgns
                             if ( upnp->GetIGD() )
                             {
                                 auto openedPort  = upnp->OpenPort( pubsubport, pubsubport, "TCP", 3600 );
-                                auto openedPort2 = upnp->OpenPort( graphsyncport, graphsyncport, "TCP", 3600 );
-                                if ( !openedPort || !openedPort2 )
+                                if ( !openedPort )
                                 {
                                     node_logger->error( "Failed to open port" );
                                 }
                                 else
                                 {
-                                    node_logger->info( "Open Ports Success pubsub: {} graphsync:{}",
-                                                       pubsubport,
-                                                       graphsyncport );
+                                    node_logger->info( "Open Ports Success pubsub: {} ",
+                                                       pubsubport );
                                 }
                             }
                             else
@@ -484,7 +475,6 @@ namespace sgns
         auto [tx_id, escrow_data_pair] = result_pair;
 
         auto [escrow_path, escrow_data] = escrow_data_pair;
-
 
         task.set_escrow_path( escrow_path );
 
@@ -922,8 +912,7 @@ outcome::result<std::map<std::string, double>> GeniusNode::GetCoinprice( const s
         return transaction_manager_->WaitForTransactionIncoming( txId, timeout );
     }
 
-    bool GeniusNode::WaitForEscrowRelease( const std::string        &originalEscrowId,
-                                                                   std::chrono::milliseconds timeout )
+    bool GeniusNode::WaitForEscrowRelease( const std::string &originalEscrowId, std::chrono::milliseconds timeout )
     {
         return transaction_manager_->WaitForEscrowRelease( originalEscrowId, timeout );
     }

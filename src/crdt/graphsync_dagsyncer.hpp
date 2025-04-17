@@ -76,6 +76,9 @@ namespace sgns::crdt
 
         outcome::result<void> Listen( const Multiaddress &listen_to );
 
+        /** Starts instance and subscribes to blocks */
+        outcome::result<void> StartSync();
+
         void AddRoute( const CID &cid, const PeerId &peer, std::vector<Multiaddress> &address );
 
         // DAGService interface implementation
@@ -121,8 +124,7 @@ namespace sgns::crdt
         bool             started_ = false;
         std::vector<CID> unexpected_blocks;
 
-        /** Starts instance and subscribes to blocks */
-        outcome::result<void> StartSync();
+
 
         /** Stops instance */
         void StopSync();

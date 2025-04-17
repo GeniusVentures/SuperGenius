@@ -118,7 +118,7 @@ int main(int argc, char** argv)
   pubsub->Start(pubsubListeningPort, pubsubBootstrapPeers);
 
   auto globalDB = std::make_shared<sgns::crdt::GlobalDB>(
-      io, strDatabasePath, 40000,
+      io, strDatabasePath,
       std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>(pubsub, broadcastChannel));
 
 

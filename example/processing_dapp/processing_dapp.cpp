@@ -230,7 +230,7 @@ int main(int argc, char* argv[])
     
     auto io = std::make_shared<boost::asio::io_context>();
     auto globalDB = std::make_shared<sgns::crdt::GlobalDB>(
-        io, "CRDT.Datastore.TEST", 40000,
+        io, "CRDT.Datastore.TEST",
         std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>(pubs, "CRDT.Datastore.TEST.Channel"));
 
 
@@ -239,7 +239,7 @@ int main(int argc, char* argv[])
 
     std::thread iothread([io]() { io->run(); });
 
-    auto taskQueue = std::make_shared<ProcessingTaskQueueImpl>(globalDB);
+    auto taskQueue = std::make_shared<ProcessingTaskQueueImpl>(globalDB,"CRDT.Datastore.TEST.Channel");
 
     TaskSplitter taskSplitter(
         options->nSubTasks,

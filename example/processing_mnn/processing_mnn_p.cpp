@@ -93,13 +93,12 @@ int main(int argc, char* argv[])
     auto globalDB2 = std::make_shared<sgns::crdt::GlobalDB>(
         io,
         (boost::format("CRDT.Datastore.TEST.%d") % serviceindex).str(),
-        40010 + serviceindex,
         std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>(pubs2, "CRDT.Datastore.TEST.Channel"));
     auto crdtOptions2 = sgns::crdt::CrdtOptions::DefaultOptions();
     auto initRes = globalDB2->Init(crdtOptions2);
 
     //Processing Service Values
-    auto taskQueue2 = std::make_shared<sgns::processing::ProcessingTaskQueueImpl>(globalDB2);
+    auto taskQueue2 = std::make_shared<sgns::processing::ProcessingTaskQueueImpl>(globalDB2, "CRDT.Datastore.TEST.Channel");
     auto enqueuer2 = std::make_shared<SubTaskEnqueuerImpl>(taskQueue2);
 
     //Processing Core
@@ -118,7 +117,7 @@ int main(int argc, char* argv[])
         maximalNodesCount,
         enqueuer2,
         std::make_shared<SubTaskStateStorageImpl>(),
-        std::make_shared<SubTaskResultStorageImpl>(globalDB2),
+        std::make_shared<SubTaskResultStorageImpl>(globalDB2, "CRDT.Datastore.TEST.Channel"),
         processingCore2);
     
     processingService.SetChannelListRequestTimeout(boost::posix_time::milliseconds(10000));

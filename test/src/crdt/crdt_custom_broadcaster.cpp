@@ -2,7 +2,7 @@
 
 namespace sgns::crdt
 {
-    outcome::result<void> CustomBroadcaster::Broadcast(const base::Buffer& buff)
+    outcome::result<void> CustomBroadcaster::Broadcast(const base::Buffer& buff, std::optional<std::string> topic_name)
     {
         if (!buff.empty())
         {
@@ -11,8 +11,7 @@ namespace sgns::crdt
         }
         return outcome::success();
     }
-
-    outcome::result<base::Buffer> CustomBroadcaster::Next()
+    outcome::result<std::tuple<base::Buffer, std::string>> CustomBroadcaster::Next()
     {
         if (listOfBroadcasts_.empty())
         {
@@ -25,7 +24,11 @@ namespace sgns::crdt
 
         base::Buffer buffer;
         buffer.put(strBuffer);
-        return buffer;
+        return std::make_tuple(buffer, std::string(""));
+    }
+    bool CustomBroadcaster::hasTopic(const std::string &topic)
+    {
+        return true;
     }
 
 } // namespace sgns::crdt
