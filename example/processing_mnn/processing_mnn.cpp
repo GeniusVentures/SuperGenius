@@ -239,7 +239,7 @@ int main(int argc, char* argv[])
 
     //Add to GlobalDB
     auto globalDB = std::make_shared<sgns::crdt::GlobalDB>(
-        io, "CRDT.Datastore.TEST", 40000,
+        io, "CRDT.Datastore.TEST",
         std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>(pubs, "CRDT.Datastore.TEST.Channel"));
     
     auto crdtOptions = sgns::crdt::CrdtOptions::DefaultOptions();

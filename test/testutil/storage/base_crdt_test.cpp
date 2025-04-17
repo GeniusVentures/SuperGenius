@@ -88,7 +88,7 @@ namespace test
             BOOST_ASSERT_MSG( pubs_ != nullptr, "could not create GossibPubSub for some reason");
 
             db_ = std::make_shared<GlobalDB>(
-                io_, basePath + ".unit", 40010,
+                io_, basePath + ".unit",
                 std::make_shared<GossipPubSubTopic>( pubs_, "CRDT.Datastore.TEST.Channel" ) );
 
             BOOST_ASSERT_MSG( db_ != nullptr, "could not create GlobalDB for some reason");

@@ -342,7 +342,7 @@ namespace sgns
             m_logger->debug( "Notifying escrow source of escrow release" );
             BOOST_OUTCOME_TRYV2( auto &&, NotifyEscrowRelease( transaction, maybe_proof ) );
         }
-        BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Commit(account_m->GetAddress() + "out") );
+        BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Commit( account_m->GetAddress() + "out" ) );
 
         BOOST_OUTCOME_TRYV2( auto &&, ParseTransaction( transaction ) );
 
@@ -729,7 +729,7 @@ namespace sgns
             BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Put( std::move( proof_key ), std::move( proof_data ) ) );
         }
 
-        BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Commit() );
+        BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Commit( topic ) );
         return outcome::success();
     }
 

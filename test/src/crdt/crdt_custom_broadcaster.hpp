@@ -25,7 +25,9 @@ namespace sgns::crdt
          * Obtain the next {@return} payload received from the network.
          * @return buffer value or outcome::failure on error
          */
-        outcome::result<base::Buffer> Next() override;
+        outcome::result<std::tuple<base::Buffer, std::string>> Next() override;
+        
+        bool hasTopic(const std::string &topic) override;
 
 
         /** Queue of broadcast messages */
