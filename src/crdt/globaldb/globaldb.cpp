@@ -63,13 +63,11 @@ namespace sgns::crdt
 
     GlobalDB::GlobalDB( std::shared_ptr<boost::asio::io_context>         context,
                         std::string                                      databasePath,
-                        int                                              dagSyncPort,
-                        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub,
-                        std::string                                      gsaddresses ) :
+                        int                                                   dagSyncPort,
+                        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub ) :
         m_context( std::move( context ) ),
         m_databasePath( std::move( databasePath ) ),
         m_dagSyncPort( dagSyncPort ),
-        m_graphSyncAddrs( std::move( gsaddresses ) ),
         m_pubsub( std::move( pubsub ) )
     {
     }
@@ -77,12 +75,10 @@ namespace sgns::crdt
     GlobalDB::GlobalDB( std::shared_ptr<boost::asio::io_context>              context,
                         std::string                                           databasePath,
                         int                                                   dagSyncPort,
-                        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> broadcastChannel,
-                        std::string                                           gsaddresses ) :
+                        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> broadcastChannel ) :
         m_context( std::move( context ) ),
         m_databasePath( std::move( databasePath ) ),
         m_dagSyncPort( dagSyncPort ),
-        m_graphSyncAddrs( std::move( gsaddresses ) ),
         m_broadcastChannel( std::move( broadcastChannel ) )
     {
     }
@@ -249,28 +245,6 @@ std::string GetLocalIP( boost::asio::io_context &io )
         }
 
         auto ipfsDataStore = std::make_shared<RocksdbDatastore>( ipfsDBResult.value() );
-        auto scheduler = std::make_shared<libp2p::protocol::AsioScheduler>( m_context,
-                                                                            libp2p::protocol::SchedulerConfig{} );
-
-        std::shared_ptr<libp2p::Host> host;
-        if ( m_broadcastChannel )
-        {
-            host = m_broadcastChannel->GetPubsub()->GetHost();
-        }
-        else if ( m_pubsub )
-        {
-            host = m_pubsub->GetHost();
-        }
-        else
-        {
-            m_logger->error( "Neither broadcast channel nor pubsub is initialized." );
-            return outcome::failure( Error::DAG_SYNCHER_NOT_LISTENING );
-        }
-
-        auto graphsync = std::make_shared<GraphsyncImpl>( host, std::move( scheduler ) );
-        auto dagSyncer = std::make_shared<GraphsyncDAGSyncer>( ipfsDataStore,
-                                                               graphsync,
-                                                               host );
 
         auto dagSyncerHost = injector.create<std::shared_ptr<libp2p::Host>>();
 
