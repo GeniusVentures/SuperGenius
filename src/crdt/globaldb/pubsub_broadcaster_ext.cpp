@@ -211,14 +211,9 @@ namespace sgns::crdt
                                  peerId.toBase58() );
                 dagSyncer_->AddRoute( cid, peerId, addrvector );
 
-                messageQueue_.emplace( std::move( peerId ), bmsg.data(), incomingTopic );
             }
-        }
-        // Enqueue the message using the original topic from the payload.
-        {
-            std::scoped_lock lock( mutex_ );
-            messageQueue_.emplace( std::move( peerId ), bmsg.data(), originalTopic );
-        }
+            messageQueue_.emplace( std::move( peerId ), bmsg.data(), incomingTopic );
+        } while ( 0 );
     }
 
     // void PubSubBroadcasterExt::SetLogger(const sgns::base::Logger& logger)
