@@ -207,8 +207,8 @@ namespace sgns::crdt
                                  peerId.toBase58() );
                 dagSyncer_->AddRoute( cid, peerId, addrvector );
 
-                messageQueue_.emplace( std::move( peerId ), bmsg.data(), incomingTopic );
             }
+            messageQueue_.emplace( std::move( peerId ), bmsg.data(), incomingTopic );
         } while ( 0 );
     }
 
