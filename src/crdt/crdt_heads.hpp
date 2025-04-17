@@ -80,6 +80,7 @@ namespace sgns::crdt
     /** Add head CID to datastore with full namespace
     * @param aCid Content identifier
     * @param aHeight height of head
+    * @param topic Optional string indicating the topic name associated with this head
     * @return outcome::failure on error
     */
         outcome::result<void> Add( const CID &aCid, uint64_t aHeight, std::optional<std::string> topic = std::nullopt );
@@ -89,6 +90,7 @@ namespace sgns::crdt
     * @param aCidHead Content identifier of head to replace
     * @param aNewHeadCid Content identifier of new head
     * @param aHeight height of head
+    * @param topic Optional string indicating the topic name associated with the new head
     * @return outcome::failure on error
     */
    outcome::result<void> Replace( const CID                 &aCidHead,
@@ -109,6 +111,7 @@ namespace sgns::crdt
     * @param aDataStore Pointer to datastore batch
     * @param aCid Content identifier to add
     * @param aHeight height of CID head
+    * @param topic Optional topic string to associate with this head
     * @return outcome::failure on error
     */
         outcome::result<void> Write( const std::unique_ptr<storage::BufferBatch> &aDataStore,

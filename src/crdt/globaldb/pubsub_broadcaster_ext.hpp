@@ -42,6 +42,7 @@ namespace sgns::crdt
         /**
          * Sends the payload to other replicas.
          * @return outcome::success on success or outcome::failure on error.
+         * @param topic_name Optional name of the topic to publish the broadcast to. If not provided, the default topic will be used.
          */
         outcome::result<void> Broadcast( const base::Buffer &buff, std::optional<std::string> topic_name ) override;
 
