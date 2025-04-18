@@ -110,7 +110,7 @@ public:
             pubsub->Start( currentPubsubPort, {}, listenIp, {} );
 
             auto io = std::make_shared<boost::asio::io_context>();
-            auto db = std::make_shared<sgns::crdt::GlobalDB>( io, basePath + "/CommonKey",40000, pubsub );
+            auto db = std::make_shared<sgns::crdt::GlobalDB>( io, basePath + "/CommonKey",currentGraphsyncPort, pubsub );
 
             ++currentPubsubPort;
             ++currentGraphsyncPort;
@@ -372,7 +372,8 @@ TEST_F( GlobalDBIntegrationTest, OperationsWithoutInitializationTest )
     pubsub->Start( 50800, {}, "127.0.0.1", {} );
 
     auto io = std::make_shared<boost::asio::io_context>();
-    auto db = std::make_shared<sgns::crdt::GlobalDB>( io, tmpBasePath + "/CommonKey", 40000, pubsub );
+    auto db = std::make_shared<sgns::crdt::GlobalDB>( io, tmpBasePath + "/CommonKey", GlobalDBIntegrationTest::TestNodeCollection::currentGraphsyncPort, pubsub );
+    ++GlobalDBIntegrationTest::TestNodeCollection::currentGraphsyncPort;
 
     using sgns::crdt::HierarchicalKey;
     const HierarchicalKey queryKey( "/nonexistent/query" );
