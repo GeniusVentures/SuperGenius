@@ -34,7 +34,7 @@ namespace sgns::crdt
                                                           std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer,
                                                           libp2p::multi::Multiaddress dagSyncerMultiaddress )
         {
-            return New( std::vector<std::shared_ptr<GossipPubSubTopic>>{ pubSubTopic }, dagSyncer );
+            return New( std::vector<std::shared_ptr<GossipPubSubTopic>>{ pubSubTopic }, dagSyncer, std::move (dagSyncerMultiaddress) );
         }
 
         void SetCrdtDataStore( std::shared_ptr<CrdtDatastore> dataStore );
@@ -69,11 +69,11 @@ namespace sgns::crdt
 
         void OnMessage( boost::optional<const GossipPubSub::Message &> message, const std::string &incomingTopic );
 
-        std::unordered_map<std::string, std::shared_ptr<GossipPubSubTopic>>    topics_;
-        std::string                                                            firstTopic_;
-        std::shared_ptr<GossipPubSubTopic>                                     gossipPubSubTopic_;
+        std::unordered_map<std::string, std::shared_ptr<GossipPubSubTopic>>    topicMap_;
+        std::string                                                            defaultTopicString_;
         std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer>                        dagSyncer_;
         std::shared_ptr<CrdtDatastore>                                         dataStore_;
+        libp2p::multi::Multiaddress                                            dagSyncerMultiaddress_;
         std::queue<std::tuple<libp2p::peer::PeerId, std::string, std::string>> messageQueue_;
         std::mutex                                                             mutex_;
         sgns::base::Logger m_logger = sgns::base::createLogger( "PubSubBroadcasterExt" );

@@ -310,7 +310,7 @@ std::string GetLocalIP( boost::asio::io_context &io )
             topicStringVector.push_back( m_broadcastChannel );
         }
 
-        m_broadcaster   = PubSubBroadcasterExt::New( topicStringVector, dagSyncer );
+        m_broadcaster   = PubSubBroadcasterExt::New( topicStringVector, dagSyncer, listen_to );
         m_crdtDatastore = CrdtDatastore::New( dataStore,
                                               HierarchicalKey( "crdt" ),
                                               dagSyncer,

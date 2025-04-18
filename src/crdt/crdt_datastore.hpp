@@ -330,9 +330,6 @@ namespace sgns::crdt
 
     std::mutex mutex_processed_cids;
     std::set<CID> processed_cids;
-    
-    std::map<CID, std::string> cidTopicMap_;
-    std::shared_mutex cidTopicMapMutex_;
 
     void AddProcessedCID(const CID &cid);
     bool ContainsCID(const CID &cid);

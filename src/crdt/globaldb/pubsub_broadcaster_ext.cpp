@@ -64,7 +64,8 @@ namespace sgns::crdt
     // Static factory method that accepts a vector of topics.
     std::shared_ptr<PubSubBroadcasterExt> PubSubBroadcasterExt::New(
         const std::vector<std::shared_ptr<GossipPubSubTopic>> &pubSubTopics,
-        std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer>        dagSyncer )
+        std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer>        dagSyncer,
+        libp2p::multi::Multiaddress                            dagSyncerMultiaddress )
     {
         auto instance = std::shared_ptr<PubSubBroadcasterExt>(
             new PubSubBroadcasterExt( pubSubTopics, std::move( dagSyncer ), std::move( dagSyncerMultiaddress ) ) );
@@ -72,8 +73,11 @@ namespace sgns::crdt
     }
 
     PubSubBroadcasterExt::PubSubBroadcasterExt( const std::vector<std::shared_ptr<GossipPubSubTopic>> &pubSubTopics,
-                                                std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer>        dagSyncer ) :
-        dagSyncer_( std::move( dagSyncer ) ), dataStore_( nullptr )
+                                                std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer>        dagSyncer,
+                                                libp2p::multi::Multiaddress dagSyncerMultiaddress ) :
+        dagSyncer_( std::move( dagSyncer ) ),
+        dataStore_( nullptr ),
+        dagSyncerMultiaddress_( std::move( dagSyncerMultiaddress ) )
     {
         m_logger->trace( "Initializing PubSubBroadcasterExt" );
         if ( !pubSubTopics.empty() )
@@ -119,51 +123,47 @@ namespace sgns::crdt
                                           const std::string                             &incomingTopic )
     {
         // Log that a message has been received (the incoming parameter is not used for filtering).
-        m_logger->trace( "Received a message" );
-
-        if ( !message )
+        m_logger->trace( "Received a message from topic {}", incomingTopic );
+        do
         {
-            return;
-        }
-
-        sgns::crdt::broadcasting::BroadcastMessage bmsg;
-        if ( !bmsg.ParseFromArray( message->data.data(), message->data.size() ) )
-        {
-            m_logger->error( "Failed to parse broadcast message." );
-            return;
-        }
-
-        // Retrieve the original topic from the broadcast message payload.
-        std::string originalTopic = bmsg.topic();
-        m_logger->trace( "Original topic from broadcast message: " + originalTopic );
-
-        // Filter based on the original topic.
-        {
-            std::scoped_lock lock( mutex_ );
-            if ( topics_.find( originalTopic ) == topics_.end() )
+            if ( !message )
             {
-                m_logger->debug( "Ignoring message with topic " + originalTopic + " as not subscribed." );
-                return;
+                m_logger->error( "No message to process" );
+                break;
             }
-        }
+            sgns::crdt::broadcasting::BroadcastMessage bmsg;
+            if ( !bmsg.ParseFromArray( message->data.data(), message->data.size() ) )
+            {
+                m_logger->error( "Failed to parse BroadcastMessage" );
+                break;
+            }
 
-        auto peer_id_res = libp2p::peer::PeerId::fromBytes(
-            gsl::span<const uint8_t>( reinterpret_cast<const uint8_t *>( bmsg.peer().id().data() ),
-                                      bmsg.peer().id().size() ) );
-        if ( !peer_id_res )
-        {
-            m_logger->error( "Failed to parse peer ID from broadcast message." );
-            return;
-        }
-        auto peerId = peer_id_res.value();
-        m_logger->trace( "Message from peer {}", peerId.toBase58() );
+            auto peer_id_res = libp2p::peer::PeerId::fromBytes(
+                gsl::span<const uint8_t>( reinterpret_cast<const uint8_t *>( bmsg.peer().id().data() ),
+                                          bmsg.peer().id().size() ) );
 
-        base::Buffer buf;
-        buf.put( bmsg.data() );
-        BOOST_ASSERT_MSG( dataStore_ != nullptr, "Data store is not set" );
-        auto cids = dataStore_->DecodeBroadcast( buf );
-        if ( !cids.has_failure() )
-        {
+            if ( !peer_id_res )
+            {
+                m_logger->error( "Failed to construct PeerId from bytes" );
+                break;
+            }
+
+            auto peerId = peer_id_res.value();
+            m_logger->trace( "Message from peer {}", peerId.toBase58() );
+
+            std::scoped_lock lock( mutex_ );
+
+            base::Buffer buf;
+            buf.put( bmsg.data() );
+
+            // if CIDs don't work or can't map the broadcast the dataStore might try to call logger_ which will be called with nullptr of dataStore.
+            BOOST_ASSERT_MSG( dataStore_ != nullptr, "Data store is not set" );
+            auto cids = dataStore_->DecodeBroadcast( buf );
+            if ( cids.has_failure() )
+            {
+                m_logger->error( "Failed to decode broadcast payload" );
+                break;
+            }
             auto                                     addresses = bmsg.peer().addrs();
             std::vector<libp2p::multi::Multiaddress> addrvector;
             for ( auto &addr : addresses )
@@ -336,17 +336,6 @@ namespace sgns::crdt
         std::string data( buff.toString() );
         bmsg.set_data( data );
 
-        // *** New Code: Attach the original topic with the update ***
-        // If a topic is provided use it; otherwise, use the default firstTopic.
-        if ( topic_name )
-        {
-            bmsg.set_topic( topic_name.value() );
-        }
-        else
-        {
-            bmsg.set_topic( firstTopic_ );
-        }
-
         // Publish the message on the selected target topic.
         targetTopic->Publish( bmsg.SerializeAsString() );
 
@@ -413,7 +402,7 @@ namespace sgns::crdt
     bool PubSubBroadcasterExt::hasTopic( const std::string &topic )
     {
         std::scoped_lock lock( mutex_ );
-        return topics_.find( topic ) != topics_.end();
+        return topicMap_.find( topic ) != topicMap_.end();
     }
 
 } // namespace sgns::crdt

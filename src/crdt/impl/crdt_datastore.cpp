@@ -597,6 +597,10 @@ namespace sgns::crdt
                 continue;
             }
 
+            auto leaf       = graphResult.value();
+            auto nodeBuffer = leaf->content();
+
+            // @todo Check if it is OK that the node has only content and doesn't have links
             auto nodeResult = ipfs_lite::ipld::IPLDNodeImpl::createFromRawBytes( nodeBuffer );
             if ( nodeResult.has_failure() )
             {
@@ -853,6 +857,7 @@ namespace sgns::crdt
                                         aRoot.toString().value() );
                         return outcome::failure( replaceResult.error() );
                     }
+                    AddProcessedCID(child);
                     continue;
                 }
 

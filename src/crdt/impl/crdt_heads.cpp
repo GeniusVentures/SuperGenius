@@ -78,7 +78,6 @@ outcome::result<void> CrdtHeads::Write(
         return outcome::failure(getKeyResult.error());
     }
 
-    // Formata como "<height>" ou "<height>:<topic>"
     std::ostringstream oss;
     oss << aHeight;
     if (topic.has_value() && !topic->empty())
@@ -142,7 +141,7 @@ outcome::result<std::string> CrdtHeads::GetHeadTopic( const CID &aCid )
     {
         return outcome::failure( boost::system::error_code{} );
     }
-    return it->second.second; // Return the topic part.
+    return it->second.second;
 }
 
   outcome::result<int> CrdtHeads::GetLength()
