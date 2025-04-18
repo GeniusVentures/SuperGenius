@@ -88,8 +88,17 @@ TEST_F(PubsubGraphsyncTest, MultiGlobalDBTest )
     std::string binaryPath = boost::dll::program_location().parent_path().string();
     std::string basePath1  = binaryPath + "/pubsub_graphsync_pubs1";
     std::string basePath2  = binaryPath + "/pubsub_graphsync_pubs2";
+    std::string basePath3  = binaryPath + "/pubsub_graphsync_add1";
+    std::string basePath4  = binaryPath + "/pubsub_graphsync_add2";
+    std::string basePath5  = binaryPath + "/pubsub_graphsync_add3";
+    std::string basePath6  = binaryPath + "/pubsub_graphsync_add4";
     std::filesystem::remove_all( basePath1 );
     std::filesystem::remove_all( basePath2 );
+    std::filesystem::remove_all( basePath3 );
+    std::filesystem::remove_all( basePath4 );
+    std::filesystem::remove_all( basePath5 );
+    std::filesystem::remove_all( basePath6 );
+
     auto io_context = std::make_shared<boost::asio::io_context>();
     auto pubs1 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();
     auto start1Future = pubs1->Start( 40001, {} );
@@ -124,8 +133,30 @@ TEST_F(PubsubGraphsyncTest, MultiGlobalDBTest )
         basePath2,
         std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>( pubs2, "test" ) );
 
+    auto gdb3 = std::make_shared<sgns::crdt::GlobalDB>(
+        io_context,
+        basePath3,
+        std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>( pubs1, "test2" ) );
+    auto gdb4 = std::make_shared<sgns::crdt::GlobalDB>(
+        io_context,
+        basePath4,
+        std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>( pubs2, "test2" ) );
+
+    auto gdb5 = std::make_shared<sgns::crdt::GlobalDB>(
+        io_context,
+        basePath5,
+        std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>( pubs1, "test3" ) );
+    auto gdb6 = std::make_shared<sgns::crdt::GlobalDB>(
+        io_context,
+        basePath6,
+        std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>( pubs2, "test3" ) );
+
     gdb1->Init( sgns::crdt::CrdtOptions::DefaultOptions() );
     gdb2->Init( sgns::crdt::CrdtOptions::DefaultOptions() );
+    gdb3->Init( sgns::crdt::CrdtOptions::DefaultOptions() );
+    gdb4->Init( sgns::crdt::CrdtOptions::DefaultOptions() );
+    gdb5->Init( sgns::crdt::CrdtOptions::DefaultOptions() );
+    gdb6->Init( sgns::crdt::CrdtOptions::DefaultOptions() );
     pubs1->AddPeers( { pubs2->GetLocalAddress() } );
     std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
 
@@ -138,6 +169,16 @@ TEST_F(PubsubGraphsyncTest, MultiGlobalDBTest )
 
     transaction->Put( tx_key, data_transaction );
     transaction->Commit();
+
+    auto                         transaction2 = gdb3->BeginTransaction();
+    sgns::crdt::HierarchicalKey  tx_key2( "/test/test2" );
+    sgns::crdt::GlobalDB::Buffer data_transaction2;
+    std::vector<uint8_t>         dummy_data2 = { 0xde, 0xad, 0xbe, 0xef };
+    data_transaction2.put( gsl::span<const uint8_t>( dummy_data2 ) );
+
+    transaction2->Put( tx_key2, data_transaction2 );
+    transaction2->Commit();
+
     bool                         getConfirmed = false;
     sgns::crdt::GlobalDB::Buffer retrieved_data;
 
@@ -156,5 +197,38 @@ TEST_F(PubsubGraphsyncTest, MultiGlobalDBTest )
         std::chrono::milliseconds( 20000 ),
         "Replication to gdb2 did not complete in time" );
 
+    bool                         getConfirmed2 = false;
+    sgns::crdt::GlobalDB::Buffer retrieved_data2;
+    assertWaitForCondition(
+        [&]()
+        {
+            auto result = gdb4->Get( tx_key2 );
+            if ( result )
+            {
+                retrieved_data2 = std::move( result.value() );
+                getConfirmed2   = true;
+                return true;
+            }
+            return false;
+        },
+        std::chrono::milliseconds( 20000 ),
+        "Replication to gdb4 did not complete in time" );
+    auto result2 = gdb3->Get( tx_key );
+    auto result3 = gdb4->Get( tx_key );
+    auto result4 = gdb5->Get( tx_key );
+    auto result5 = gdb6->Get( tx_key );
+    auto result6 = gdb1->Get( tx_key2 );
+    auto result7 = gdb2->Get( tx_key2 );
+    auto result8 = gdb5->Get( tx_key2 );
+    auto result9 = gdb6->Get( tx_key2 );
+    EXPECT_FALSE( result2 );
+    EXPECT_FALSE( result3 );
+    EXPECT_FALSE( result4 );
+    EXPECT_FALSE( result5 );
+    EXPECT_FALSE( result6 );
+    EXPECT_FALSE( result7 );
+    EXPECT_FALSE( result8 );
+    EXPECT_FALSE( result9 );
     EXPECT_TRUE( getConfirmed );
+    EXPECT_TRUE( getConfirmed2 );
 }
