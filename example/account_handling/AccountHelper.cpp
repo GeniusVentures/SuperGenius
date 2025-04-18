@@ -57,8 +57,8 @@ namespace sgns
         auto logNoise = sgns::base::createLogger( "Noise" );
         logNoise->set_level( spdlog::level::trace );
 
-        auto pubsubKeyPath =
-            ( boost::format( "SuperGNUSNode.TestNet.%s/pubs_processor" ) % account_->GetAddress() ).str();
+        auto pubsubKeyPath = ( boost::format( "SuperGNUSNode.TestNet.%s/pubs_processor" ) % account_->GetAddress() )
+                                 .str();
 
         pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
             crdt::KeyPairFileStorage( pubsubKeyPath ).GetKeyPair().value() );
@@ -92,15 +92,7 @@ namespace sgns
             throw std::runtime_error( "Error initializing blockchain" );
         }
         block_storage_       = std::move( maybe_block_storage.value() );
-        transaction_manager_ = std::make_shared<TransactionManager>(
-            globaldb_,
-            io_,
-            account_,
-            hasher_,
-            ( boost::format( "SuperGNUSNode.TestNet.%s" ) % account_->GetAddress() ).str(),
-            pubsub_,
-            nullptr,
-            40010 );
+        transaction_manager_ = std::make_shared<TransactionManager>( globaldb_, io_, account_, hasher_ );
         transaction_manager_->Start();
 
         // Encode the string to UTF-8 bytes
