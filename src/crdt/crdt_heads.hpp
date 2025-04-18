@@ -69,8 +69,11 @@ namespace sgns::crdt
     */
     outcome::result<uint64_t> GetHeadHeight(const CID& aCid);
 
-        /// Returns the topic associated with the head. If no topic was provided, returns an empty string.
-        outcome::result<std::string> GetHeadTopic( const CID &aCid );
+    /** Returns the topic associated with the head. If no topic was provided, returns an empty string.
+    * @param aCid Content identifier
+    * @return Topic string or outcome::failure on error
+    */
+    outcome::result<std::string> GetHeadTopic( const CID &aCid );
 
     /** Get current number of heads
     * @return lenght, current number of heads or outcome::failure on error
@@ -83,7 +86,7 @@ namespace sgns::crdt
     * @param topic Optional string indicating the topic name associated with this head
     * @return outcome::failure on error
     */
-        outcome::result<void> Add( const CID &aCid, uint64_t aHeight, std::optional<std::string> topic = std::nullopt );
+    outcome::result<void> Add( const CID &aCid, uint64_t aHeight, std::optional<std::string> topic = std::nullopt );
         
 
     /** Replace a head with a new cid.
@@ -93,10 +96,10 @@ namespace sgns::crdt
     * @param topic Optional string indicating the topic name associated with the new head
     * @return outcome::failure on error
     */
-   outcome::result<void> Replace( const CID                 &aCidHead,
-                                       const CID                 &aNewHeadCid,
-                                       uint64_t                   aHeight,
-                                       std::optional<std::string> topic = std::nullopt );
+    outcome::result<void> Replace( const CID                 &aCidHead,
+                                        const CID                 &aNewHeadCid,
+                                        uint64_t                   aHeight,
+                                        std::optional<std::string> topic = std::nullopt );
 
     /** Returns the list of current heads plus the max height.
     * @param aHeads output reference to list of CIDs
@@ -114,10 +117,10 @@ namespace sgns::crdt
     * @param topic Optional topic string to associate with this head
     * @return outcome::failure on error
     */
-        outcome::result<void> Write( const std::unique_ptr<storage::BufferBatch> &aDataStore,
-                                     const CID                                   &aCid,
-                                     uint64_t                                     aHeight,
-                                     std::optional<std::string>                   topic );
+    outcome::result<void> Write( const std::unique_ptr<storage::BufferBatch> &aDataStore,
+                                  const CID                                   &aCid,
+                                  uint64_t                                     aHeight,
+                                  std::optional<std::string>                   topic );
 
 
       /** Delete data from datastore in batch mode

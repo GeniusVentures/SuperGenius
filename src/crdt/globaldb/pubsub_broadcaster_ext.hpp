@@ -59,7 +59,7 @@ namespace sgns::crdt
          */
         void Start();
         void AddTopic( const std::shared_ptr<GossipPubSubTopic> &newTopic );
-        bool hasTopic( const std::string &topic ) override;
+        bool HasTopic( const std::string &topic ) override;
 
     private:
         // Constructor now accepts a vector of topics.

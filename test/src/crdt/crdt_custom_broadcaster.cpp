@@ -26,7 +26,7 @@ namespace sgns::crdt
         buffer.put(strBuffer);
         return std::make_tuple(buffer, std::string(""));
     }
-    bool CustomBroadcaster::hasTopic(const std::string &topic)
+    bool CustomBroadcaster::HasTopic(const std::string &topic)
     {
         return true;
     }

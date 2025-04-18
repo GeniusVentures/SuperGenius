@@ -399,7 +399,7 @@ namespace sgns::crdt
         subscriptionFutures_.push_back( std::move( future ) );
     }
 
-    bool PubSubBroadcasterExt::hasTopic( const std::string &topic )
+    bool PubSubBroadcasterExt::HasTopic( const std::string &topic )
     {
         std::scoped_lock lock( mutex_ );
         return topicMap_.find( topic ) != topicMap_.end();

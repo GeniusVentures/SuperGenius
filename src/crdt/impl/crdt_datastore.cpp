@@ -240,8 +240,6 @@ namespace sgns::crdt
         }
     }
 
-    // UPDATED: HandleNextIteration now unpacks the topic from the broadcast message and ignores messages
-    // for topics that are not subscribed.
     void CrdtDatastore::HandleNextIteration()
     {
         if ( broadcaster_ == nullptr )
@@ -263,7 +261,7 @@ namespace sgns::crdt
         std::tie( broadcastBuffer, messageTopic ) = nextResult.value();
 
         // Check if the message topic is subscribed.
-        if ( !broadcaster_->hasTopic( messageTopic ) )
+        if ( !broadcaster_->HasTopic( messageTopic ) )
         {
             logger_->debug( "Ignoring broadcast message with unsubscribed topic: {}", messageTopic );
             return;

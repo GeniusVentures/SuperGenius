@@ -42,7 +42,7 @@ namespace sgns::crdt
          * @param topic The topic string to check.
          * @return true if the broadcaster is subscribed to the topic, false otherwise.
          */
-        virtual bool hasTopic( const std::string &topic ) = 0;
+        virtual bool HasTopic( const std::string &topic ) = 0;
     };
 } // namespace sgns::crdt
 

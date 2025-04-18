@@ -27,7 +27,7 @@ namespace sgns::crdt
          */
         outcome::result<std::tuple<base::Buffer, std::string>> Next() override;
         
-        bool hasTopic(const std::string &topic) override;
+        bool HasTopic(const std::string &topic) override;
 
 
         /** Queue of broadcast messages */
