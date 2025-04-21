@@ -847,7 +847,7 @@ namespace sgns::crdt
 
                 if ( isHeadResult )
                 {
-                    auto replaceResult = this->heads_->Replace( child, aRoot, aRootPrio );
+                    auto replaceResult = this->heads_->Replace( child, aRoot, aRootPrio, topic );
                     if ( replaceResult.has_failure() )
                     {
                         logger_->error( "ProcessNode: error replacing head {} -> {}",
