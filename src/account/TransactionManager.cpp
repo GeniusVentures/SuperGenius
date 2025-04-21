@@ -298,7 +298,9 @@ namespace sgns
             return outcome::success();
         }
 
-        auto &[transaction, maybe_proof] = tx_queue_m.front();
+        auto [transaction, maybe_proof] = tx_queue_m.front();
+        tx_queue_m.pop_front();
+        lock.unlock();
 
         // this was set prior and needed for the proof to match when the proof was generated
         //transaction->dag_st.set_nonce( account_m->nonce );
@@ -351,8 +353,6 @@ namespace sgns
             outgoing_tx_processed_m[transaction_path] = transaction;
         }
 
-        //Move this down since we are referencing it.
-        tx_queue_m.pop_front();
 
         return outcome::success();
     }
