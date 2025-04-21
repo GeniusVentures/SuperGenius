@@ -550,9 +550,9 @@ namespace sgns::crdt
         uint64_t rootPriority = aRootPriority;
         if ( rootPriority == 0 )
         {
-            std::unique_lock lock( dagWorkerMutex_ );
+            std::unique_lock lock( dagSyncherMutex_ );
             auto             getNodeResult = dagSyncer_->getNode( aChildren[0] );
-
+            lock.unlock();
             if ( getNodeResult.has_failure() )
             {
                 return;
@@ -583,7 +583,7 @@ namespace sgns::crdt
                             reinterpret_cast<uint64_t>( this ) );
 
             // Single attempt to fetch the graph - getNode internally already has retry logic
-            std::unique_lock lock( dagWorkerMutex_ );
+            std::unique_lock lock( dagSyncherMutex_ );
             auto             graphResult = dagSyncer_->fetchGraphOnDepth( cid, 1 );
             lock.unlock();
 
@@ -811,7 +811,7 @@ namespace sgns::crdt
         HierarchicalKey hKey( strCidResult.value() );
 
         {
-            std::unique_lock lock( dagWorkerMutex_ );
+            std::unique_lock lock( dagSetMutex_ );
             auto             mergeResult = this->set_->Merge( aDelta, hKey.GetKey() );
             if ( mergeResult.has_failure() )
             {
@@ -855,11 +855,11 @@ namespace sgns::crdt
                                         aRoot.toString().value() );
                         return outcome::failure( replaceResult.error() );
                     }
-                    AddProcessedCID(child);
+                    AddProcessedCID( child );
                     continue;
                 }
 
-                std::unique_lock lock( dagWorkerMutex_ );
+                std::unique_lock lock( dagSyncherMutex_ );
                 auto             knowBlockResult = this->dagSyncer_->HasBlock( child );
                 if ( knowBlockResult.has_failure() )
                 {
@@ -874,7 +874,7 @@ namespace sgns::crdt
                     {
                         logger_->error( "ProcessNode: error adding head {}", aRoot.toString().value() );
                     }
-                    AddProcessedCID(child);
+                    AddProcessedCID( child );
                     continue;
                 }
 
