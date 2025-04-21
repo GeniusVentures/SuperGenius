@@ -434,12 +434,12 @@ namespace sgns::crdt
             if ( topicResult.has_failure() )
             {
                 topic = "";
-                logger_->debug( "RebroadcastHeads: Head {} returns no topic", cid.toString().value() );
+                logger_->trace( "RebroadcastHeads: Head {} returns no topic", cid.toString().value() );
             }
             else
             {
                 topic = topicResult.value();
-                logger_->debug( "RebroadcastHeads: Head {} has topic '{}'", cid.toString().value(), topic );
+                logger_->trace( "RebroadcastHeads: Head {} has topic '{}'", cid.toString().value(), topic );
             }
             groups[topic].push_back( cid );
         }
@@ -449,12 +449,12 @@ namespace sgns::crdt
         {
             if ( group.first.empty() )
             {
-                logger_->debug( "RebroadcastHeads: Group with default topic (empty) has {} heads",
+                logger_->trace( "RebroadcastHeads: Group with default topic (empty) has {} heads",
                                 group.second.size() );
             }
             else
             {
-                logger_->debug( "RebroadcastHeads: Group with topic '{}' has {} heads",
+                logger_->trace( "RebroadcastHeads: Group with topic '{}' has {} heads",
                                 group.first,
                                 group.second.size() );
             }
@@ -470,7 +470,7 @@ namespace sgns::crdt
                 continue;
             }
             std::optional<std::string> topicOpt = group.first;
-            logger_->info( "RebroadcastHeads: Broadcasting {} heads with topic '{}'",
+            logger_->trace( "RebroadcastHeads: Broadcasting {} heads with topic '{}'",
                            group.second.size(),
                            group.first.empty() ? "[default]" : group.first );
             auto bcastResult = this->Broadcast( group.second, topicOpt );
