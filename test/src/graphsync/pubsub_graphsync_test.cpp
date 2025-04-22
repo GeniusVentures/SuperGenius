@@ -131,7 +131,7 @@ TEST_F(PubsubGraphsyncTest, MultiGlobalDBTest )
     auto graphsyncnetwork = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubs1->GetHost(), scheduler );
     auto scheduler2        = std::make_shared<libp2p::protocol::AsioScheduler>( io_context,
                                                                          libp2p::protocol::SchedulerConfig{} );
-    auto graphsyncnetwork2 = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubs1->GetHost(), scheduler );
+    auto graphsyncnetwork2 = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubs2->GetHost(), scheduler2 );
     auto gdb1 = std::make_shared<sgns::crdt::GlobalDB>(
         io_context,
         basePath1,
