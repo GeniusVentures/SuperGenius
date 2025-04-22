@@ -273,7 +273,7 @@ namespace sgns::crdt
     */
         outcome::result<std::vector<CID>> ProcessNode( const CID                       &aRoot,
                                                        uint64_t                         aRootPrio,
-                                                       const std::shared_ptr<Delta>    &aDelta,
+                                                       std::shared_ptr<Delta>           aDelta,
                                                        const std::shared_ptr<IPLDNode> &aNode,
                                                        std::optional<std::string>       topic,
                                                        bool                             filter_crdt = false );

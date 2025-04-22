@@ -329,7 +329,8 @@ namespace sgns::crdt
                                            dagJob.rootPriority_,
                                            dagJob.delta_,
                                            dagJob.node_,
-                                           dagJob.topic_, true );
+                                           dagJob.topic_,
+                                           true );
         if ( childrenResult.has_failure() )
         {
             logger_->error( "SendNewJobs: failed to process node:{}", dagJob.rootCid_.toString().value() );
@@ -471,8 +472,8 @@ namespace sgns::crdt
             }
             std::optional<std::string> topicOpt = group.first;
             logger_->trace( "RebroadcastHeads: Broadcasting {} heads with topic '{}'",
-                           group.second.size(),
-                           group.first.empty() ? "[default]" : group.first );
+                            group.second.size(),
+                            group.first.empty() ? "[default]" : group.first );
             auto bcastResult = this->Broadcast( group.second, topicOpt );
             if ( bcastResult.has_failure() )
             {
@@ -806,7 +807,7 @@ namespace sgns::crdt
 
     outcome::result<std::vector<CID>> CrdtDatastore::ProcessNode( const CID                       &aRoot,
                                                                   uint64_t                         aRootPrio,
-                                                                  const std::shared_ptr<Delta>    &aDelta,
+                                                                  std::shared_ptr<Delta>           aDelta,
                                                                   const std::shared_ptr<IPLDNode> &aNode,
                                                                   std::optional<std::string>       topic,
                                                                   bool                             filter_crdt )

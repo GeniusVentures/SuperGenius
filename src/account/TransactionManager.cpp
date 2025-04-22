@@ -61,7 +61,7 @@ namespace sgns
                 {
                     //TODO - This verification is only needed because CRDT resyncs every boot up
                     // Remove once we remove the in memory processed_cids on crdt_datastore and use dagsyncher again
-                    auto maybe_has_value = incoming_db_m->Get( element.key() );
+                    auto maybe_has_value = globaldb_m->Get( element.key() );
                     if ( maybe_has_value.has_value() )
                     {
                         m_logger->debug( "Already have the transaction {}", element.key() );
@@ -112,7 +112,7 @@ namespace sgns
                 {
                     //TODO - This verification is only needed because CRDT resyncs every boot up
                     // Remove once we remove the in memory processed_cids on crdt_datastore and use dagsyncher again
-                    auto maybe_has_value = incoming_db_m->Get( element.key() );
+                    auto maybe_has_value = globaldb_m->Get( element.key() );
                     if ( maybe_has_value.has_value() )
                     {
                         m_logger->debug( "Already have the proof {}", element.key() );
@@ -633,7 +633,7 @@ namespace sgns
         OUTCOME_TRY( ( auto &&, transaction_list ),
                      globaldb_m->QueryKeyValues( GetBlockChainBase(), "!" + account_m->GetAddress(), "/tx" ) );
 
-        m_logger->trace( "Incoming transaction list grabbed from CRDT with Size {}", transaction_paths.size() );
+        m_logger->trace( "Incoming transaction list grabbed from CRDT with Size {}", transaction_list.size() );
 
         //m_logger->info( "Number of tasks in Queue: {}", queryTasks.size() );
         for ( const auto &element : transaction_list )
