@@ -14,7 +14,7 @@
 #include <libp2p/protocol/holepunch/holepunch_server.hpp>
 #include <libp2p/protocol/holepunch/holepunch_client.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/graphsync_impl.hpp>
-
+#include <ipfs_lite/ipfs/graphsync/impl/local_requests.hpp>
 namespace sgns::crdt
 {
     class GlobalDB : public std::enable_shared_from_this<GlobalDB>
@@ -50,7 +50,8 @@ namespace sgns::crdt
 
         outcome::result<void> Init( std::shared_ptr<CrdtOptions> crdtOptions,
                                     std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::Network> graphsyncnetwork,
-                                    std::shared_ptr<libp2p::protocol::Scheduler>               scheduler );
+                                    std::shared_ptr<libp2p::protocol::Scheduler>               scheduler,
+                                    std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator );
 
         /**
          * @brief Puts key-value pair to the CRDT store, optionally specifying a broadcast topic.
