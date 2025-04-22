@@ -13,6 +13,7 @@
 #include <libp2p/protocol/autonat/autonat.hpp>
 #include <libp2p/protocol/holepunch/holepunch_server.hpp>
 #include <libp2p/protocol/holepunch/holepunch_client.hpp>
+#include <ipfs_lite/ipfs/graphsync/impl/graphsync_impl.hpp>
 
 namespace sgns::crdt
 {
@@ -47,7 +48,9 @@ namespace sgns::crdt
             CRDT_DATASTORE_NOT_CREATED, ///< CRDT DataStore not created
         };
 
-        outcome::result<void> Init( std::shared_ptr<CrdtOptions> crdtOptions );
+        outcome::result<void> Init( std::shared_ptr<CrdtOptions> crdtOptions,
+                                    std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::Network> graphsyncnetwork,
+                                    std::shared_ptr<libp2p::protocol::Scheduler>               scheduler );
 
         /**
          * @brief Puts key-value pair to the CRDT store, optionally specifying a broadcast topic.

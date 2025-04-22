@@ -20,6 +20,7 @@
 #include "processing/impl/processing_task_queue_impl.hpp"
 #include "coinprices/coinprices.hpp"
 #include <boost/algorithm/string/replace.hpp>
+#include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
 
 typedef struct DevConfig
 {
@@ -203,6 +204,7 @@ namespace sgns
         std::chrono::time_point<std::chrono::system_clock> m_lastApiCall{};
         const std::chrono::seconds                         m_minApiCallInterval{ 5 };
 
+        std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::Network> graphsyncnetwork_;
 
         std::thread       io_thread;
         std::thread       upnp_thread;

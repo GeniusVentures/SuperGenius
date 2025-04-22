@@ -122,6 +122,7 @@ namespace sgns
         std::string logdir = "";
 #ifndef SGNS_DEBUGLOGS
         logdir = write_base_path_ + "/sgnslog2.log";
+        std::filesystem::remove_all( logdir );
 #endif
         node_logger               = base::createLogger( "SuperGeniusDemo", logdir );
         auto loggerGlobalDB       = base::createLogger( "GlobalDB", logdir );
@@ -146,7 +147,7 @@ namespace sgns
         loggerGlobalDB->set_level( spdlog::level::err );
         loggerDAGSyncer->set_level( spdlog::level::err );
         loggerGraphsync->set_level( spdlog::level::err );
-        loggerBroadcaster->set_level( spdlog::level::err );
+        loggerBroadcaster->set_level( spdlog::level::trace );
         loggerDataStore->set_level( spdlog::level::err );
         loggerTransactions->set_level( spdlog::level::err );
         loggerQueue->set_level( spdlog::level::err );
@@ -162,12 +163,12 @@ namespace sgns
         loggerGossipPubsub->set_level( spdlog::level::err );
 #else
         node_logger->set_level( spdlog::level::err );
-        loggerGlobalDB->set_level( spdlog::level::err );
-        loggerDAGSyncer->set_level( spdlog::level::err );
-        loggerGraphsync->set_level( spdlog::level::err );
-        loggerBroadcaster->set_level( spdlog::level::err );
-        loggerDataStore->set_level( spdlog::level::err );
-        loggerTransactions->set_level( spdlog::level::err );
+        loggerGlobalDB->set_level( spdlog::level::trace );
+        loggerDAGSyncer->set_level( spdlog::level::trace );
+        loggerGraphsync->set_level( spdlog::level::trace );
+        loggerBroadcaster->set_level( spdlog::level::trace );
+        loggerDataStore->set_level( spdlog::level::trace );
+        loggerTransactions->set_level( spdlog::level::trace );
         loggerQueue->set_level( spdlog::level::err );
         loggerRocksDB->set_level( spdlog::level::err );
         logkad->set_level( spdlog::level::err );
@@ -232,15 +233,19 @@ namespace sgns
             crdt::KeyPairFileStorage( write_base_path_ + pubsubKeyPath ).GetKeyPair().value() );
         pubsub_->Start(
             pubsubport,
-            { "/dns4/sg-fullnode-1.gnus.ai/tcp/40052/p2p/12D3KooWBqcxStdb4f9s4zT3bQiTDXYB56VJ77Rt7eEdjw4kXTwi" },
+            { },
             lanip,
             addresses );
 
+        auto scheduler = std::make_shared<libp2p::protocol::AsioScheduler>( io_,
+                                                                            libp2p::protocol::SchedulerConfig{} );
+        graphsyncnetwork_ = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubsub_->GetHost(),
+                                                                                         scheduler );
         globaldb_ = std::make_shared<crdt::GlobalDB>( io_,
                                                       write_base_path_ + gnus_network_full_path_,
                                                       pubsub_ );
 
-        auto global_db_init_result = globaldb_->Init( crdt::CrdtOptions::DefaultOptions() );
+        auto global_db_init_result = globaldb_->Init( crdt::CrdtOptions::DefaultOptions(), graphsyncnetwork_, scheduler );
         globaldb_->AddBroadcastTopic( processing_channel_topic_ );
         if ( global_db_init_result.has_error() )
         {

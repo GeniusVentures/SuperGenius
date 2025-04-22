@@ -186,7 +186,9 @@ std::string GetLocalIP( boost::asio::io_context &io )
 #endif
     }
 
-    outcome::result<void> GlobalDB::Init( std::shared_ptr<CrdtOptions> crdtOptions )
+    outcome::result<void> GlobalDB::Init( std::shared_ptr<CrdtOptions> crdtOptions,
+                                          std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::Network> graphsyncnetwork,
+                                          std::shared_ptr<libp2p::protocol::Scheduler>               scheduler )
     {
         std::shared_ptr<RocksDB> dataStore            = nullptr;
         auto                     databasePathAbsolute = boost::filesystem::absolute( m_databasePath ).string();
@@ -224,8 +226,8 @@ std::string GetLocalIP( boost::asio::io_context &io )
         }
 
         auto ipfsDataStore = std::make_shared<RocksdbDatastore>( ipfsDBResult.value() );
-        auto scheduler = std::make_shared<libp2p::protocol::AsioScheduler>( m_context,
-                                                                            libp2p::protocol::SchedulerConfig{} );
+        //auto scheduler = std::make_shared<libp2p::protocol::AsioScheduler>( m_context,
+        //                                                                    libp2p::protocol::SchedulerConfig{} );
                                                                                     std::shared_ptr<libp2p::Host> host;
         if ( m_broadcastChannel )
         {
@@ -241,7 +243,7 @@ std::string GetLocalIP( boost::asio::io_context &io )
             return outcome::failure( Error::DAG_SYNCHER_NOT_LISTENING );
         }
 
-        auto graphsync = std::make_shared<GraphsyncImpl>( host, std::move( scheduler ) );
+        auto graphsync = std::make_shared<GraphsyncImpl>( host, std::move( scheduler ), graphsyncnetwork );
         auto dagSyncer = std::make_shared<GraphsyncDAGSyncer>( ipfsDataStore, graphsync, host );
 
         // Start DagSyner listener

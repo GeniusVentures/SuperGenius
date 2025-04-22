@@ -26,6 +26,8 @@
 #include <libp2p/log/logger.hpp>
 #include <libp2p/log/configurator.hpp>
 #include "testutil/wait_condition.hpp"
+#include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
+#include "libp2p/protocol/common/asio/asio_scheduler.hpp"
 
 std::string GetLoggingSystem( const std::string &  )
 {
@@ -124,6 +126,12 @@ TEST_F(PubsubGraphsyncTest, MultiGlobalDBTest )
         &resultTime
 
     );
+    auto scheduler        = std::make_shared<libp2p::protocol::AsioScheduler>( io_context,
+                                                                        libp2p::protocol::SchedulerConfig{} );
+    auto graphsyncnetwork = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubs1->GetHost(), scheduler );
+    auto scheduler2        = std::make_shared<libp2p::protocol::AsioScheduler>( io_context,
+                                                                         libp2p::protocol::SchedulerConfig{} );
+    auto graphsyncnetwork2 = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubs1->GetHost(), scheduler );
     auto gdb1 = std::make_shared<sgns::crdt::GlobalDB>(
         io_context,
         basePath1,
@@ -151,12 +159,12 @@ TEST_F(PubsubGraphsyncTest, MultiGlobalDBTest )
         basePath6,
         std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>( pubs2, "test3" ) );
 
-    gdb1->Init( sgns::crdt::CrdtOptions::DefaultOptions() );
-    gdb2->Init( sgns::crdt::CrdtOptions::DefaultOptions() );
-    gdb3->Init( sgns::crdt::CrdtOptions::DefaultOptions() );
-    gdb4->Init( sgns::crdt::CrdtOptions::DefaultOptions() );
-    gdb5->Init( sgns::crdt::CrdtOptions::DefaultOptions() );
-    gdb6->Init( sgns::crdt::CrdtOptions::DefaultOptions() );
+    gdb1->Init( sgns::crdt::CrdtOptions::DefaultOptions(), graphsyncnetwork, scheduler );
+    gdb2->Init( sgns::crdt::CrdtOptions::DefaultOptions(), graphsyncnetwork2, scheduler2 );
+    gdb3->Init( sgns::crdt::CrdtOptions::DefaultOptions(), graphsyncnetwork, scheduler );
+    gdb4->Init( sgns::crdt::CrdtOptions::DefaultOptions(), graphsyncnetwork2, scheduler2 );
+    gdb5->Init( sgns::crdt::CrdtOptions::DefaultOptions(), graphsyncnetwork, scheduler );
+    gdb6->Init( sgns::crdt::CrdtOptions::DefaultOptions(), graphsyncnetwork2, scheduler2 );
     pubs1->AddPeers( { pubs2->GetLocalAddress() } );
     std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
 
