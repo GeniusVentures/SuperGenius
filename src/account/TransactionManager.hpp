@@ -32,7 +32,6 @@
 #endif
 #include "processing/proto/SGProcessing.pb.h"
 #include "outcome/outcome.hpp"
-#include "upnp.hpp"
 
 namespace sgns
 {
@@ -44,14 +43,10 @@ namespace sgns
     public:
         using TransactionPair = std::pair<std::shared_ptr<IGeniusTransactions>, std::optional<std::vector<uint8_t>>>;
 
-        TransactionManager( std::shared_ptr<crdt::GlobalDB>                  processing_db,
-                            std::shared_ptr<boost::asio::io_context>         ctx,
-                            std::shared_ptr<GeniusAccount>                   account,
-                            std::shared_ptr<crypto::Hasher>                  hasher,
-                            std::string                                      base_path,
-                            std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub,
-                            std::shared_ptr<upnp::UPNP>                      upnp,
-                            uint16_t                                         base_port );
+        TransactionManager( std::shared_ptr<crdt::GlobalDB>          processing_db,
+                            std::shared_ptr<boost::asio::io_context> ctx,
+                            std::shared_ptr<GeniusAccount>           account,
+                            std::shared_ptr<crypto::Hasher>          hasher );
 
         ~TransactionManager() = default;
 
@@ -111,38 +106,28 @@ namespace sgns
         outcome::result<bool> CheckProof( const std::shared_ptr<IGeniusTransactions> &tx );
         outcome::result<void> ParseTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
 
-        outcome::result<void> CheckIncoming();
+        outcome::result<void> CheckIncoming( bool checkProofs = true );
 
         outcome::result<void> CheckOutgoing();
-
-        void RefreshPorts();
 
         outcome::result<void> NotifyEscrowRelease( const std::shared_ptr<IGeniusTransactions> &tx,
                                                    const std::optional<std::vector<uint8_t>>  &proof );
 
-        std::shared_ptr<crdt::GlobalDB> processing_db_m; //TODO - remove this as it's only needed on the PayEscrow
-        std::shared_ptr<crdt::GlobalDB> outgoing_db_m;
-        std::shared_ptr<crdt::GlobalDB> incoming_db_m;
-        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub_m;
-        std::string                                      base_path_m;
+        std::shared_ptr<crdt::GlobalDB> globaldb_m;
 
         std::shared_ptr<boost::asio::io_context>   ctx_m;
         std::shared_ptr<GeniusAccount>             account_m;
         std::shared_ptr<crypto::Hasher>            hasher_m;
-        std::shared_ptr<upnp::UPNP>                upnp_m;
-        uint16_t                                   base_port_m;
         std::shared_ptr<boost::asio::steady_timer> timer_m;
         // for the SendTransaction thread support
         mutable std::mutex          mutex_m;
         std::deque<TransactionPair> tx_queue_m;
 
-        mutable std::shared_mutex                                        outgoing_tx_mutex_m;
-        std::map<std::string, std::shared_ptr<IGeniusTransactions>>      outgoing_tx_processed_m;
-        mutable std::shared_mutex                                        incoming_tx_mutex_m;
-        std::map<std::string, std::shared_ptr<IGeniusTransactions>>      incoming_tx_processed_m;
-        std::unordered_map<std::string, std::shared_ptr<crdt::GlobalDB>> destination_dbs_m;
-        std::set<uint16_t>                                               used_ports_m;
-        std::function<void()>                                            task_m;
+        mutable std::shared_mutex                                   outgoing_tx_mutex_m;
+        std::map<std::string, std::shared_ptr<IGeniusTransactions>> outgoing_tx_processed_m;
+        mutable std::shared_mutex                                   incoming_tx_mutex_m;
+        std::map<std::string, std::shared_ptr<IGeniusTransactions>> incoming_tx_processed_m;
+        std::function<void()>                                       task_m;
 
         outcome::result<void> ParseTransferTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
         outcome::result<void> ParseMintTransaction( const std::shared_ptr<IGeniusTransactions> &tx );

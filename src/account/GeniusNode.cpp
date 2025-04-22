@@ -93,14 +93,16 @@ namespace sgns
         autodht_( autodht ),
         isprocessor_( isprocessor ),
         dev_config_( dev_config ),
-        processing_channel_topic_(
-            ( boost::format( std::string( PROCESSING_CHANNEL ) ) % sgns::version::SuperGeniusVersionMajor() ).str() ),
-        processing_grid_chanel_topic_(
-            ( boost::format( std::string( PROCESSING_GRID_CHANNEL ) ) % sgns::version::SuperGeniusVersionMajor() )
-                .str() )
+        processing_channel_topic_( (boost::format( std::string( PROCESSING_CHANNEL ) ) %
+                                   sgns::version::SuperGeniusVersionMajor()).str() ),
+        processing_grid_chanel_topic_( (boost::format( std::string( PROCESSING_GRID_CHANNEL ) ) %
+                                       sgns::version::SuperGeniusVersionMajor()).str() ),
+        m_lastApiCall( std::chrono::system_clock::now() - m_minApiCallInterval )
 
     //coinprices_(std::make_shared<CoinGeckoPriceRetriever>(io_))
     {
+        //For some reason if this isn't initialized like this, it ends up completely wrong. 
+        m_lastApiCall = std::chrono::system_clock::now() - m_minApiCallInterval;
         SSL_library_init();
         SSL_load_error_strings();
         OpenSSL_add_all_algorithms();
@@ -236,26 +238,26 @@ namespace sgns
             lanip,
             addresses );
 
-        globaldb_ = std::make_shared<crdt::GlobalDB>(
-            io_,
-            write_base_path_ + gnus_network_full_path_,
-            graphsyncport,
-            std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_, processing_channel_topic_ ) );
+        globaldb_ = std::make_shared<crdt::GlobalDB>( io_,
+                                                      write_base_path_ + gnus_network_full_path_,
+                                                      graphsyncport,
+                                                      pubsub_ );
 
         auto global_db_init_result = globaldb_->Init( crdt::CrdtOptions::DefaultOptions() );
+        globaldb_->AddBroadcastTopic( processing_channel_topic_ );
         if ( global_db_init_result.has_error() )
         {
             auto error = global_db_init_result.error();
             throw std::runtime_error( error.message() );
             return;
         }
-
-        task_queue_      = std::make_shared<processing::ProcessingTaskQueueImpl>( globaldb_ );
+        task_queue_ = std::make_shared<processing::ProcessingTaskQueueImpl>( globaldb_, processing_channel_topic_ );
         processing_core_ = std::make_shared<processing::ProcessingCoreImpl>( globaldb_, 1000000, 1 );
         processing_core_->RegisterProcessorFactory( "mnnimage",
                                                     [] { return std::make_unique<processing::MNN_Image>(); } );
 
-        task_result_storage_ = std::make_shared<processing::SubTaskResultStorageImpl>( globaldb_ );
+        task_result_storage_ = std::make_shared<processing::SubTaskResultStorageImpl>( globaldb_,
+                                                                                       processing_channel_topic_ );
         processing_service_  = std::make_shared<processing::ProcessingServiceImpl>(
             pubsub_,                                                          //
             MAX_NODES_COUNT,                                                  //
@@ -272,11 +274,7 @@ namespace sgns
         transaction_manager_ = std::make_shared<TransactionManager>( globaldb_,
                                                                      io_,
                                                                      account_,
-                                                                     std::make_shared<crypto::HasherImpl>(),
-                                                                     write_base_path_ + gnus_network_full_path_,
-                                                                     pubsub_,
-                                                                     upnp,
-                                                                     graphsyncport );
+                                                                     std::make_shared<crypto::HasherImpl>() );
 
         transaction_manager_->Start();
         if ( isprocessor_ )
@@ -721,6 +719,27 @@ namespace sgns
         return std::make_pair( tx_id, duration );
     }
 
+    outcome::result<std::pair<std::string, uint64_t>> GeniusNode::PayDev( uint64_t                  amount,
+                                                                                 std::chrono::milliseconds timeout )
+    {
+        auto start_time = std::chrono::steady_clock::now();
+        OUTCOME_TRY( auto &&tx_id, transaction_manager_->TransferFunds( amount, dev_config_.Addr ) );
+
+        bool success = transaction_manager_->WaitForTransactionOutgoing( tx_id, timeout );
+
+        auto end_time = std::chrono::steady_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( end_time - start_time ).count();
+
+        if ( !success )
+        {
+            node_logger->error( "TransferFunds transaction {} timed out after {} ms", tx_id, duration );
+            return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::timed_out ) );
+        }
+
+        node_logger->debug( "TransferFunds transaction {} completed in {} ms", tx_id, duration );
+        return std::make_pair( tx_id, duration );
+    }
+
     outcome::result<std::pair<std::string, uint64_t>> GeniusNode::PayEscrow( const std::string &escrow_path,
                                                                              const SGProcessing::TaskResult &taskresult,
                                                                              std::chrono::milliseconds       timeout )
@@ -802,11 +821,61 @@ namespace sgns
         processing_service_->StartProcessing( processing_grid_chanel_topic_ );
     }
 
-    outcome::result<std::map<std::string, double>> GeniusNode::GetCoinprice( const std::vector<std::string> &tokenIds )
+outcome::result<std::map<std::string, double>> GeniusNode::GetCoinprice( const std::vector<std::string> &tokenIds )
     {
-        sgns::CoinGeckoPriceRetriever retriever;
-        auto                          prices = retriever.getCurrentPrices( tokenIds );
-        return prices;
+        auto                          currentTime = std::chrono::system_clock::now();
+        std::map<std::string, double> result;
+        std::vector<std::string>      tokensToFetch;
+        // Determine which tokens need to be fetched
+        for ( const auto &tokenId : tokenIds )
+        {
+            auto it = m_tokenPriceCache.find( tokenId );
+
+            if ( it != m_tokenPriceCache.end() && ( currentTime - it->second.lastUpdate ) < m_cacheValidityDuration )
+            {
+                // Use cached price if it's still valid
+                result[tokenId] = it->second.price;
+            }
+            else
+            {
+                // Add to the list of tokens that need fresh data
+                tokensToFetch.push_back( tokenId );
+            }
+        }
+
+        // If we have tokens to fetch and we're not rate limited
+        if ( !tokensToFetch.empty() && ( currentTime - m_lastApiCall ) >= m_minApiCallInterval )
+        {
+            sgns::CoinGeckoPriceRetriever retriever;
+            auto                          newPricesResult = retriever.getCurrentPrices( tokensToFetch );
+
+            if ( newPricesResult )
+            {
+                auto &newPrices = newPricesResult.value();
+                m_lastApiCall   = currentTime;
+
+                // Update the cache and result with new prices
+                for ( const auto &[token, price] : newPrices )
+                {
+                    m_tokenPriceCache[token] = { price, currentTime };
+                    result[token]            = price;
+                }
+            }
+            else
+            {
+                // Handle the error case
+                // If we have some cached data, continue with what we have
+                if ( result.empty() )
+                {
+                    // Only return error if we have no data at all
+                    return newPricesResult.error();
+                }
+                // Otherwise, continue with partial data and log the error
+                // log("Failed to fetch prices for some tokens: " + newPricesResult.error().message());
+            }
+        }
+
+        return result;
     }
 
     outcome::result<std::map<std::string, std::map<int64_t, double>>> GeniusNode::GetCoinPriceByDate(

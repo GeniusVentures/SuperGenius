@@ -35,54 +35,20 @@
 
 namespace sgns
 {
-    TransactionManager::TransactionManager( std::shared_ptr<crdt::GlobalDB>                  processing_db,
-                                            std::shared_ptr<boost::asio::io_context>         ctx,
-                                            std::shared_ptr<GeniusAccount>                   account,
-                                            std::shared_ptr<crypto::Hasher>                  hasher,
-                                            std::string                                      base_path,
-                                            std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub,
-                                            std::shared_ptr<upnp::UPNP>                      upnp,
-                                            uint16_t                                         base_port ) :
-        processing_db_m( std::move( processing_db ) ),
-        pubsub_m( std::move( pubsub ) ),
-        base_path_m( std::move( base_path ) ),
+    TransactionManager::TransactionManager( std::shared_ptr<crdt::GlobalDB>          processing_db,
+                                            std::shared_ptr<boost::asio::io_context> ctx,
+                                            std::shared_ptr<GeniusAccount>           account,
+                                            std::shared_ptr<crypto::Hasher>          hasher ) :
+        globaldb_m( std::move( processing_db ) ),
         ctx_m( std::move( ctx ) ),
         account_m( std::move( account ) ),
         hasher_m( std::move( hasher ) ),
-        upnp_m( std::move( upnp ) ),
-        base_port_m( base_port + 1 ),
         timer_m( std::make_shared<boost::asio::steady_timer>( *ctx_m, boost::asio::chrono::milliseconds( 300 ) ) )
 
     {
         m_logger->info( "Initializing values by reading whole blockchain" );
-
-        outgoing_db_m = std::make_shared<crdt::GlobalDB>(
-            ctx_m,
-            ( boost::format( base_path_m + "_out" ) ).str(),
-            base_port_m,
-            std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_m, account_m->GetAddress() + "out" ) );
-
-        used_ports_m.insert( base_port_m );
-        base_port_m++;
-        if ( !outgoing_db_m->Init( crdt::CrdtOptions::DefaultOptions() ).has_value() )
-        {
-            throw std::runtime_error( "Could not start Outgoing GlobalDB" );
-        }
-
-        incoming_db_m = std::make_shared<crdt::GlobalDB>(
-            ctx_m,
-            ( boost::format( base_path_m + "_in" ) ).str(),
-            base_port_m,
-            std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_m, account_m->GetAddress() + "in" ) );
-
-        if ( !incoming_db_m->Init( crdt::CrdtOptions::DefaultOptions() ).has_value() )
-        {
-            throw std::runtime_error( "Could not start Incoming GlobalDB" );
-        }
-        used_ports_m.insert( base_port_m );
-        base_port_m++;
-
-        RefreshPorts();
+        globaldb_m->AddBroadcastTopic( account_m->GetAddress() + "in" );
+        globaldb_m->AddBroadcastTopic( account_m->GetAddress() + "out" );
 
         bool crdt_tx_filter_initialized = crdt::CRDTDataFilter::RegisterElementFilter(
             "^/?" + GetBlockChainBase() + "[^/]*/tx/[^/]*/[0-9]+",
@@ -186,7 +152,7 @@ namespace sgns
 
     void TransactionManager::Start()
     {
-        CheckIncoming();
+        CheckIncoming( false );
         CheckOutgoing();
 
         task_m = [this]()
@@ -326,7 +292,7 @@ namespace sgns
             return outcome::failure( boost::system::error_code{} );
         }
         m_logger->debug( "Fetching escrow from processing DB at " + escrow_path );
-        OUTCOME_TRY( ( auto &&, transaction ), FetchTransaction( processing_db_m, escrow_path ) );
+        OUTCOME_TRY( ( auto &&, transaction ), FetchTransaction( globaldb_m, escrow_path ) );
 
         std::shared_ptr<EscrowTransaction> escrow_tx = std::dynamic_pointer_cast<EscrowTransaction>( transaction );
         std::vector<std::string>           subtask_ids;
@@ -404,12 +370,6 @@ namespace sgns
         {
             m_logger->error( "Unknown CheckIncoming error in SendTransaction::Update()" );
         }
-        static auto start_time = std::chrono::steady_clock::now();
-        if ( std::chrono::steady_clock::now() - start_time > std::chrono::minutes( 60 ) )
-        {
-            start_time = std::chrono::steady_clock::now();
-            RefreshPorts();
-        }
     }
 
     void TransactionManager::EnqueueTransaction( TransactionPair element )
@@ -442,7 +402,9 @@ namespace sgns
             return outcome::success();
         }
 
-        auto &[transaction, maybe_proof] = tx_queue_m.front();
+        auto [transaction, maybe_proof] = tx_queue_m.front();
+        tx_queue_m.pop_front();
+        lock.unlock();
 
         // this was set prior and needed for the proof to match when the proof was generated
 
@@ -452,7 +414,7 @@ namespace sgns
 
         m_logger->debug( "Recording the transaction on " + tx_key.GetKey() );
 
-        auto crdt_transaction = outgoing_db_m->BeginTransaction();
+        auto crdt_transaction = globaldb_m->BeginTransaction();
 
         data_transaction.put( transaction->SerializeByteVector() );
         BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Put( std::move( tx_key ), std::move( data_transaction ) ) );
@@ -480,7 +442,7 @@ namespace sgns
             m_logger->debug( "Notifying escrow source of escrow release" );
             BOOST_OUTCOME_TRYV2( auto &&, NotifyEscrowRelease( transaction, maybe_proof ) );
         }
-        BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Commit() );
+        BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Commit( account_m->GetAddress() + "out" ) );
 
         BOOST_OUTCOME_TRYV2( auto &&, ParseTransaction( transaction ) );
 
@@ -489,8 +451,6 @@ namespace sgns
             outgoing_tx_processed_m[transaction_path] = transaction;
         }
 
-        //Move this down since we are referencing it.
-        tx_queue_m.pop_front();
 
         return outcome::success();
     }
@@ -654,7 +614,7 @@ namespace sgns
 #ifdef _PROOF_ENABLED
         auto proof_path = GetTransactionProofPath( *tx );
         m_logger->debug( "Checking the proof in {}", proof_path );
-        OUTCOME_TRY( ( auto &&, proof_data ), incoming_db_m->Get( { proof_path } ) );
+        OUTCOME_TRY( ( auto &&, proof_data ), globaldb_m->Get( { proof_path } ) );
 
         auto proof_data_vector = proof_data.toVector();
 
@@ -666,19 +626,19 @@ namespace sgns
 #endif
     }
 
-    outcome::result<void> TransactionManager::CheckIncoming()
+    outcome::result<void> TransactionManager::CheckIncoming( bool checkProofs )
     {
         m_logger->trace( "Probing incoming transactions on " + GetBlockChainBase() + "!" + account_m->GetAddress() +
                          "/tx" );
         OUTCOME_TRY( ( auto &&, transaction_list ),
-                     incoming_db_m->QueryKeyValues( GetBlockChainBase(), "!" + account_m->GetAddress(), "/tx" ) );
+                     globaldb_m->QueryKeyValues( GetBlockChainBase(), "!" + account_m->GetAddress(), "/tx" ) );
 
-        m_logger->trace( "Incoming transaction list grabbed from CRDT" );
+        m_logger->trace( "Incoming transaction list grabbed from CRDT with Size {}", transaction_paths.size() );
 
         //m_logger->info( "Number of tasks in Queue: {}", queryTasks.size() );
         for ( const auto &element : transaction_list )
         {
-            auto transaction_key = incoming_db_m->KeyToString( element.first );
+            auto transaction_key = globaldb_m->KeyToString( element.first );
             if ( !transaction_key.has_value() )
             {
                 m_logger->debug( "Unable to convert a key to string" );
@@ -691,7 +651,7 @@ namespace sgns
             }
 
             m_logger->debug( "Finding incoming transaction: " + transaction_key.value() );
-            auto maybe_transaction = FetchTransaction( incoming_db_m, transaction_key.value() );
+            auto maybe_transaction = FetchTransaction( globaldb_m, transaction_key.value() );
             if ( !maybe_transaction.has_value() )
             {
                 m_logger->debug( "Can't fetch transaction" );
@@ -718,14 +678,14 @@ namespace sgns
     {
         m_logger->trace( "Probing outgoing transactions on " + GetBlockChainBase() );
         OUTCOME_TRY( ( auto &&, transaction_list ),
-                     outgoing_db_m->QueryKeyValues( GetBlockChainBase(), account_m->GetAddress(), "/tx" ) );
+                     globaldb_m->QueryKeyValues( GetBlockChainBase(), account_m->GetAddress(), "/tx" ) );
 
         m_logger->trace( "Transaction list grabbed from CRDT" );
 
         //m_logger->info( "Number of tasks in Queue: {}", queryTasks.size() );
         for ( const auto &element : transaction_list )
         {
-            auto transaction_key = outgoing_db_m->KeyToString( element.first );
+            auto transaction_key = globaldb_m->KeyToString( element.first );
             if ( !transaction_key.has_value() )
             {
                 m_logger->debug( "Unable to convert a key to string" );
@@ -737,7 +697,7 @@ namespace sgns
                 continue;
             }
 
-            auto maybe_transaction = FetchTransaction( outgoing_db_m, transaction_key.value() );
+            auto maybe_transaction = FetchTransaction( globaldb_m, transaction_key.value() );
             if ( !maybe_transaction.has_value() )
             {
                 m_logger->debug( "Can't fetch transaction" );
@@ -857,64 +817,33 @@ namespace sgns
             }
 
             m_logger->debug( "Sending notification to " + dest_info.dest_address );
-            std::shared_ptr<crdt::GlobalDB> destination_db;
-            auto                            destination_db_it = destination_dbs_m.find( dest_info.dest_address );
-            if ( destination_db_it == destination_dbs_m.end() )
-            {
-                m_logger->debug( "Port to sync  " + std::to_string( base_port_m ) );
-                std::string                tempaddress = dest_info.dest_address;
-                std::vector<unsigned char> inputBytes( tempaddress.begin(), tempaddress.end() );
-                std::vector<unsigned char> hash( SHA256_DIGEST_LENGTH );
-                SHA256( inputBytes.data(), inputBytes.size(), hash.data() );
 
-                libp2p::protocol::kademlia::ContentId key( hash );
-                auto acc_cid      = libp2p::multi::ContentIdentifierCodec::decode( key.data );
-                auto maybe_base58 = libp2p::multi::ContentIdentifierCodec::toString( acc_cid.value() );
-                if ( !maybe_base58 )
-                {
-                    std::runtime_error( "We couldn't convert the account to base58" );
-                }
-                std::string base58key = maybe_base58.value();
+            const std::string topic            = dest_info.dest_address + "in";
+            const std::string txPath           = GetTransactionPath( *tx );
+            const std::string proofPath        = GetTransactionProofPath( *tx ) ;
 
-                destination_db = std::make_shared<crdt::GlobalDB>(
-                    ctx_m,
-                    ( boost::format( base_path_m + "_out/" + base58key ) ).str(),
-                    base_port_m,
-                    std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_m, dest_info.dest_address + "in" ) );
-                if ( !destination_db->Init( crdt::CrdtOptions::DefaultOptions() ).has_value() )
-                {
-                    throw std::runtime_error( "Could not start Destination GlobalDB" );
-                }
-                destination_dbs_m[dest_info.dest_address] = destination_db;
-                used_ports_m.insert( base_port_m );
-                base_port_m++;
-                RefreshPorts();
-            }
-            else
-            {
-                destination_db = destination_db_it->second;
-            }
+            globaldb_m->AddBroadcastTopic( topic );
 
-            auto                         crdt_transaction = destination_db->BeginTransaction();
+            auto crdt_transaction = globaldb_m->BeginTransaction();
+
+            sgns::crdt::HierarchicalKey  tx_key( txPath );
             sgns::crdt::GlobalDB::Buffer data_transaction;
-            sgns::crdt::HierarchicalKey  tx_key( GetTransactionPath( *tx ) );
-
             data_transaction.put( tx->SerializeByteVector() );
 
-            m_logger->debug( "Putting replicate transaction in {}", tx_key.GetKey() );
+            m_logger->debug( "Putting replicate transaction in " + tx_key.GetKey() );
             BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Put( std::move( tx_key ), std::move( data_transaction ) ) );
+
             if ( proof )
             {
-                sgns::crdt::HierarchicalKey  proof_key( GetTransactionProofPath( *tx ) );
+                sgns::crdt::HierarchicalKey  proof_key( proofPath );
                 sgns::crdt::GlobalDB::Buffer proof_data;
-
-                const auto &proof_value = proof.value();
-                proof_data.put( proof_value );
-                m_logger->debug( "Putting replicate PROOF in {}", proof_key.GetKey() );
+                proof_data.put( proof.value() );
+                m_logger->debug( "Putting replicate PROOF in " + proof_key.GetKey() );
                 BOOST_OUTCOME_TRYV2( auto &&,
                                      crdt_transaction->Put( std::move( proof_key ), std::move( proof_data ) ) );
             }
-            BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Commit() );
+
+            BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Commit( topic ) );
         }
 
         return outcome::success();
@@ -933,61 +862,31 @@ namespace sgns
         std::string escrow_source = escrow_release_tx->GetEscrowSource();
         m_logger->debug( "Notifying escrow source: " + escrow_source );
 
-        std::shared_ptr<crdt::GlobalDB> destination_db;
-        auto                            destination_db_it = destination_dbs_m.find( escrow_source );
-        if ( destination_db_it == destination_dbs_m.end() )
-        {
-            m_logger->debug( "Port to sync " + std::to_string( base_port_m ) + " for escrow source: " + escrow_source );
-            std::string                tempaddress = escrow_source;
-            std::vector<unsigned char> inputBytes( tempaddress.begin(), tempaddress.end() );
-            std::vector<unsigned char> hash( SHA256_DIGEST_LENGTH );
-            SHA256( inputBytes.data(), inputBytes.size(), hash.data() );
+        const std::string topic            = escrow_source + "in";
+        const std::string txPath           = GetTransactionPath( *tx );
+        const std::string proofPath        = GetTransactionProofPath( *tx );
 
-            libp2p::protocol::kademlia::ContentId key( hash );
-            auto                                  acc_cid = libp2p::multi::ContentIdentifierCodec::decode( key.data );
-            auto maybe_base58 = libp2p::multi::ContentIdentifierCodec::toString( acc_cid.value() );
-            if ( !maybe_base58 )
-            {
-                std::runtime_error( "We couldn't convert the account to base58" );
-            }
-            std::string base58key = maybe_base58.value();
+        globaldb_m->AddBroadcastTopic( topic );
 
-            destination_db = std::make_shared<crdt::GlobalDB>(
-                ctx_m,
-                ( boost::format( base_path_m + "_out/" + base58key ) ).str(),
-                base_port_m,
-                std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_m, escrow_source + "in" ) );
-            if ( !destination_db->Init( crdt::CrdtOptions::DefaultOptions() ).has_value() )
-            {
-                return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::io_error ) );
-            }
-            destination_dbs_m[escrow_source] = destination_db;
-            used_ports_m.insert( base_port_m );
-            base_port_m++;
-            RefreshPorts();
-        }
-        else
-        {
-            destination_db = destination_db_it->second;
-        }
+        auto crdt_transaction = globaldb_m->BeginTransaction();
 
-        auto                         crdt_transaction = destination_db->BeginTransaction();
-        sgns::crdt::HierarchicalKey  tx_key( GetTransactionPath( *tx ) );
+        sgns::crdt::HierarchicalKey  tx_key( txPath );
         sgns::crdt::GlobalDB::Buffer data_transaction;
         data_transaction.put( tx->SerializeByteVector() );
+
         m_logger->debug( "Putting replicate escrow release transaction in " + tx_key.GetKey() );
         BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Put( std::move( tx_key ), std::move( data_transaction ) ) );
 
         if ( proof )
         {
-            sgns::crdt::HierarchicalKey  proof_key( GetTransactionProofPath( *tx ) );
+            sgns::crdt::HierarchicalKey  proof_key( proofPath );
             sgns::crdt::GlobalDB::Buffer proof_data;
             proof_data.put( proof.value() );
             m_logger->debug( "Putting replicate escrow release PROOF in " + proof_key.GetKey() );
             BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Put( std::move( proof_key ), std::move( proof_data ) ) );
         }
 
-        BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Commit() );
+        BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Commit( topic ) );
         return outcome::success();
     }
 
@@ -1017,17 +916,6 @@ namespace sgns
             }
         }
         return result;
-    }
-
-    void TransactionManager::RefreshPorts()
-    {
-        if ( upnp_m->GetIGD() )
-        {
-            for ( auto &port : used_ports_m )
-            {
-                upnp_m->OpenPort( port, port, "TCP", 3600 );
-            }
-        }
     }
 
     bool TransactionManager::WaitForTransactionIncoming( const std::string        &txId,

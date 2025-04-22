@@ -127,6 +127,10 @@ namespace sgns
             const std::string        &destination,
             std::chrono::milliseconds timeout = std::chrono::milliseconds( TIMEOUT_TRANSFER ) );
 
+        outcome::result<std::pair<std::string, uint64_t>> PayDev(
+            uint64_t                  amount,
+            std::chrono::milliseconds timeout = std::chrono::milliseconds( TIMEOUT_TRANSFER ) );
+
         std::shared_ptr<ipfs_pubsub::GossipPubSub> GetPubSub()
         {
             return pubsub_;
@@ -191,6 +195,18 @@ namespace sgns
         std::string                                           gnus_network_full_path_;
         std::string                                           processing_channel_topic_;
         std::string                                           processing_grid_chanel_topic_;
+
+        struct PriceInfo
+        {
+            double                                             price;
+            std::chrono::time_point<std::chrono::system_clock> lastUpdate;
+        };
+
+        std::map<std::string, PriceInfo> m_tokenPriceCache;
+        const std::chrono::minutes       m_cacheValidityDuration{ 1 };
+        std::chrono::time_point<std::chrono::system_clock> m_lastApiCall{};
+        const std::chrono::seconds                         m_minApiCallInterval{ 5 };
+
 
         std::thread       io_thread;
         std::thread       upnp_thread;

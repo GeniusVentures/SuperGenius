@@ -1,4 +1,3 @@
-
 #include "api/transport/impl/http/http_session.hpp"
 
 #include <boost/config.hpp>
@@ -122,6 +121,6 @@ namespace sgns::api {
 
   void HttpSession::reportError(boost::system::error_code ec,
                                 std::string_view message) {
-    logger_->error("error occured:{}, code: {}", message, ec);
+    logger_->error("error occured:{}, code: {}", message, ec.message());
   }
 }  // namespace sgns::api

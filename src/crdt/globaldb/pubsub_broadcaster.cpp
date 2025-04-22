@@ -26,7 +26,7 @@ namespace sgns::crdt
         }
     }
 
-outcome::result<void> PubSubBroadcaster::Broadcast(const base::Buffer& buff)
+outcome::result<void> PubSubBroadcaster::Broadcast(const base::Buffer &buff, std::optional<std::string> topic_name)
 {
     if (this->gossipPubSubTopic_ == nullptr)
     {
@@ -36,12 +36,11 @@ outcome::result<void> PubSubBroadcaster::Broadcast(const base::Buffer& buff)
     return outcome::success();
 }
 
-outcome::result<base::Buffer> PubSubBroadcaster::Next()
+outcome::result<std::tuple<base::Buffer, std::string>> PubSubBroadcaster::Next()
 {
     std::scoped_lock lock(mutex_);
     if (listOfMessages_.empty())
     {
-        //Broadcaster::ErrorCode::ErrNoMoreBroadcast
         return outcome::failure(boost::system::error_code{});
     }
 
@@ -50,6 +49,7 @@ outcome::result<base::Buffer> PubSubBroadcaster::Next()
 
     base::Buffer buffer;
     buffer.put(strBuffer);
-    return buffer;
+    return std::make_tuple(buffer, std::string(""));
 }
+
 }

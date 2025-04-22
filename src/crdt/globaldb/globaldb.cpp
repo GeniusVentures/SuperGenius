@@ -54,7 +54,6 @@ namespace sgns::crdt
     using CrdtOptions        = crdt::CrdtOptions;
     using CrdtDatastore      = crdt::CrdtDatastore;
     using HierarchicalKey    = crdt::HierarchicalKey;
-    using PubSubBroadcaster  = crdt::PubSubBroadcaster;
     using GraphsyncDAGSyncer = crdt::GraphsyncDAGSyncer;
     using RocksdbDatastore   = ipfs_lite::ipfs::RocksdbDatastore;
     using IpfsRocksDb        = ipfs_lite::rocksdb;
@@ -62,22 +61,35 @@ namespace sgns::crdt
     using GraphsyncImpl      = ipfs_lite::ipfs::graphsync::GraphsyncImpl;
     using GossipPubSubTopic  = ipfs_pubsub::GossipPubSubTopic;
 
-    GlobalDB::GlobalDB( std::shared_ptr<boost::asio::io_context>              context,
-                        std::string                                           databasePath,
+    GlobalDB::GlobalDB( std::shared_ptr<boost::asio::io_context>         context,
+                        std::string                                      databasePath,
                         int                                                   dagSyncPort,
-                        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> broadcastChannel,
-                        std::string                                           gsaddresses ) :
+                        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub ) :
         m_context( std::move( context ) ),
         m_databasePath( std::move( databasePath ) ),
         m_dagSyncPort( dagSyncPort ),
-        m_graphSyncAddrs( gsaddresses ),
+        m_pubsub( std::move( pubsub ) )
+    {
+    }
+
+    GlobalDB::GlobalDB( std::shared_ptr<boost::asio::io_context>              context,
+                        std::string                                           databasePath,
+                        int                                                   dagSyncPort,
+                        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> broadcastChannel ) :
+        m_context( std::move( context ) ),
+        m_databasePath( std::move( databasePath ) ),
+        m_dagSyncPort( dagSyncPort ),
         m_broadcastChannel( std::move( broadcastChannel ) )
     {
     }
 
+
     GlobalDB::~GlobalDB()
     {
-        m_crdtDatastore->Close();
+        if (m_crdtDatastore)
+        {
+            m_crdtDatastore->Close();
+        }
         m_crdtDatastore    = nullptr;
         m_broadcastChannel = nullptr;
         m_context          = nullptr;
@@ -292,23 +304,17 @@ namespace sgns::crdt
         //dht_->bootstrap();
         //scheduleBootstrap(io, dagSyncerHost);
         // Create pubsub broadcaster
-        //auto broadcaster = std::make_shared<PubSubBroadcaster>(m_broadcastChannel);
-        std::shared_ptr<PubSubBroadcasterExt> broadcaster;
-        if ( m_graphSyncAddrs.empty() )
+        std::vector<std::shared_ptr<GossipPubSubTopic>> topicStringVector;
+        if ( m_broadcastChannel )
         {
-            broadcaster = PubSubBroadcasterExt::New( m_broadcastChannel, dagSyncer, listen_to );
+            topicStringVector.push_back( m_broadcastChannel );
         }
-        else
-        {
-            //auto listen_towan = libp2p::multi::Multiaddress::create(wanaddress).value();
-            broadcaster = PubSubBroadcasterExt::New( m_broadcastChannel, dagSyncer, listen_to );
-        }
-        //broadcaster->SetLogger(m_logger);
 
+        m_broadcaster   = PubSubBroadcasterExt::New( topicStringVector, dagSyncer, listen_to );
         m_crdtDatastore = CrdtDatastore::New( dataStore,
                                               HierarchicalKey( "crdt" ),
                                               dagSyncer,
-                                              broadcaster,
+                                              m_broadcaster,
                                               crdtOptions );
         if ( m_crdtDatastore == nullptr )
         {
@@ -316,10 +322,10 @@ namespace sgns::crdt
             return Error::CRDT_DATASTORE_NOT_CREATED;
         }
 
-        broadcaster->SetCrdtDataStore( m_crdtDatastore );
+        m_broadcaster->SetCrdtDataStore( m_crdtDatastore );
 
         // have to set the dataStore before starting the broadcasting
-        broadcaster->Start();
+        m_broadcaster->Start();
 
         // TODO: bootstrapping
         //m_logger->info("Bootstrapping...");
@@ -359,7 +365,9 @@ namespace sgns::crdt
     //        });
     //}
 
-    outcome::result<void> GlobalDB::Put( const HierarchicalKey &key, const Buffer &value )
+    outcome::result<void> GlobalDB::Put( const HierarchicalKey     &key,
+                                         const Buffer              &value,
+                                         std::optional<std::string> topic )
     {
         if ( !m_crdtDatastore )
         {
@@ -367,7 +375,7 @@ namespace sgns::crdt
             return outcome::failure( Error::CRDT_DATASTORE_NOT_CREATED );
         }
 
-        return m_crdtDatastore->PutKey( key, value );
+        return m_crdtDatastore->PutKey( key, value, topic );
     }
 
     outcome::result<void> GlobalDB::Put( const std::vector<DataPair> &data_vector )
@@ -386,7 +394,7 @@ namespace sgns::crdt
 
         return batch.Commit();
     }
-
+    
     outcome::result<GlobalDB::Buffer> GlobalDB::Get( const HierarchicalKey &key )
     {
         if ( !m_crdtDatastore )
@@ -474,6 +482,25 @@ namespace sgns::crdt
     std::shared_ptr<AtomicTransaction> GlobalDB::BeginTransaction()
     {
         return std::make_shared<AtomicTransaction>( m_crdtDatastore );
+    }
+
+    void GlobalDB::AddBroadcastTopic( const std::string &topicName )
+    {
+        if ( !m_pubsub )
+        {
+            m_logger->error( "PubSub instance is not available to create new topic." );
+            return;
+        }
+        auto newTopic = std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>( m_pubsub, topicName );
+        if ( m_broadcaster )
+        {
+            m_broadcaster->AddTopic( newTopic );
+            m_logger->info( "New broadcast topic added: " + topicName );
+        }
+        else
+        {
+            m_logger->error( "Broadcaster is not initialized." );
+        }
     }
 
 }

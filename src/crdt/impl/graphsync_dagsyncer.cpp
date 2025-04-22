@@ -167,6 +167,7 @@ namespace sgns::crdt
 
         if ( !node.has_error() )
         {
+            logger_->debug( "Return node for CID {} instance={}", cid.toString().value(), reinterpret_cast<size_t> (this));
             return node;
         }
 
