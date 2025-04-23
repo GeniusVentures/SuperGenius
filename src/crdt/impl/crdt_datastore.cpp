@@ -888,7 +888,8 @@ namespace sgns::crdt
                 }
 
                 std::unique_lock lock( dagSyncherMutex_ );
-                auto             knowBlockResult = dagSyncer_->HasBlock( child );
+                auto             knowBlockResult = this->dagSyncer_->HasBlock( child );
+                lock.unlock();
                 if ( knowBlockResult.has_failure() )
                 {
                     logger_->error( "ProcessNode: error checking for known block {}", child.toString().value() );
