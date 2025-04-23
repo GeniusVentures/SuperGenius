@@ -996,7 +996,7 @@ namespace sgns
             }
             std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
         }
-        m_logger->debug( "Timed out waiting for escrow release transaction for escrow id: " + originalEscrowId );
+        m_logger->error( "Timed out waiting for escrow release transaction for escrow id: " + originalEscrowId );
         return false;
     }
 }

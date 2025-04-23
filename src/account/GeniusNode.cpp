@@ -164,9 +164,9 @@ namespace sgns
 #else
         node_logger->set_level( spdlog::level::err );
         loggerGlobalDB->set_level( spdlog::level::trace );
-        loggerDAGSyncer->set_level( spdlog::level::trace );
+        loggerDAGSyncer->set_level( spdlog::level::err );
         loggerGraphsync->set_level( spdlog::level::trace );
-        loggerBroadcaster->set_level( spdlog::level::trace );
+        loggerBroadcaster->set_level( spdlog::level::err );
         loggerDataStore->set_level( spdlog::level::err );
         loggerTransactions->set_level( spdlog::level::err );
         loggerQueue->set_level( spdlog::level::err );
@@ -191,23 +191,57 @@ namespace sgns
         //UPNP
         auto        upnp = std::make_shared<upnp::UPNP>();
         std::string lanip;
+
         if ( upnp->GetIGD() )
         {
-            auto openedPort  = upnp->OpenPort( pubsubport, pubsubport, "TCP", 3600 );
-            auto wanip       = upnp->GetWanIP();
-            lanip            = upnp->GetLocalIP();
+            std::string wanip = upnp->GetWanIP();
+            lanip             = upnp->GetLocalIP();
             node_logger->info( "Wan IP: {}", wanip );
             node_logger->info( "Lan IP: {}", lanip );
-            addresses.push_back( wanip );
-            if ( !openedPort )
+
+            const int   max_attempts = 10;
+            bool        success      = false;
+            std::string owner;
+
+            for ( int i = 0; i < max_attempts; ++i )
             {
-                node_logger->error( "Failed to open port" );
+                int candidate_port = pubsubport + i;
+                if ( upnp->CheckIfPortInUse( candidate_port, "TCP", owner ) )
+                {
+                    if ( owner == lanip )
+                    {
+                        node_logger->info( "Port {} is already mapped by this device. Using it.", candidate_port );
+                        addresses.push_back( wanip );
+                        success = true;
+                        break;
+                    }
+                    else
+                    {
+                        node_logger->warn( "Port {} already in use by {}", candidate_port, owner );
+                        continue;
+                    }
+                }
+
+                if ( upnp->OpenPort( candidate_port, candidate_port, "TCP", 3600 ) )
+                {
+                    node_logger->info( "Successfully opened port {}", candidate_port );
+                    addresses.push_back( wanip );
+                    success = true;
+                    pubsubport = candidate_port;
+                    break;
+                }
+                else
+                {
+                    node_logger->warn( "Failed to open port {}", candidate_port );
+                }
             }
-            else
+
+            if ( !success )
             {
-                node_logger->info( "Open Port Success" );
+                node_logger->error( "Unable to open a usable UPnP port after {} attempts", max_attempts );
             }
         }
+
         //Make a base58 out of our address
         std::string                tempaddress = account_->GetAddress();
         std::vector<unsigned char> inputBytes( tempaddress.begin(), tempaddress.end() );
