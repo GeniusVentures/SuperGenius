@@ -12,6 +12,7 @@
 #include <unordered_map>
 #include <string>
 #include <optional>
+#include <mutex>
 
 namespace sgns::crdt
 {
@@ -34,7 +35,9 @@ namespace sgns::crdt
                                                           std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer,
                                                           libp2p::multi::Multiaddress dagSyncerMultiaddress )
         {
-            return New( std::vector<std::shared_ptr<GossipPubSubTopic>>{ pubSubTopic }, dagSyncer, std::move (dagSyncerMultiaddress) );
+            return New( std::vector<std::shared_ptr<GossipPubSubTopic>>{ pubSubTopic },
+                        dagSyncer,
+                        std::move( dagSyncerMultiaddress ) );
         }
 
         void SetCrdtDataStore( std::shared_ptr<CrdtDatastore> dataStore );
@@ -62,7 +65,6 @@ namespace sgns::crdt
         bool HasTopic( const std::string &topic ) override;
 
     private:
-        // Constructor now accepts a vector of topics.
         PubSubBroadcasterExt( const std::vector<std::shared_ptr<GossipPubSubTopic>> &pubSubTopics,
                               std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer>        dagSyncer,
                               libp2p::multi::Multiaddress                            dagSyncerMultiaddress );
@@ -75,7 +77,10 @@ namespace sgns::crdt
         std::shared_ptr<CrdtDatastore>                                         dataStore_;
         libp2p::multi::Multiaddress                                            dagSyncerMultiaddress_;
         std::queue<std::tuple<libp2p::peer::PeerId, std::string, std::string>> messageQueue_;
-        std::mutex                                                             mutex_;
+
+        std::mutex queueMutex_; ///< protects messageQueue_
+        std::mutex mapMutex_;   ///< protects topicMap_, defaultTopicString_, subscriptionFutures_
+
         sgns::base::Logger m_logger = sgns::base::createLogger( "PubSubBroadcasterExt" );
         std::future<void>  subscriptionFuture_;
         std::vector<std::future<libp2p::protocol::Subscription>> subscriptionFutures_;
