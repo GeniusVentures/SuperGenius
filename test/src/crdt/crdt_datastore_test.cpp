@@ -18,7 +18,7 @@
 #include <atomic>
 #include <chrono>
 #include "crdt/proto/bcast.pb.h"
-#include "crdt_custom_broadcaster.hpp"
+#include "crdt_mirror_broadcaster.hpp"
 #include "crdt_custom_dagsyncer.hpp"
 
 namespace sgns::crdt
@@ -60,11 +60,11 @@ namespace sgns::crdt
             db_ = std::move( result.value() );
 
             // Create new DAGSyncer
-            auto ipfsDataStore = std::make_shared<InMemoryDatastore>();
-            dagSyncer_         = std::make_shared<CustomDagSyncer>( ipfsDataStore );
+            ipfsDataStore_ = std::make_shared<InMemoryDatastore>();
+            dagSyncer_     = std::make_shared<CustomDagSyncer>( ipfsDataStore_ );
 
             // Create new Broadcaster
-            broadcaster_ = std::make_shared<CustomBroadcaster>();
+            broadcaster_ = std::make_shared<CRDTMirrorBroadcaster>();
 
             // Define test values
             const std::string strNamespace = "/namespace";
@@ -78,6 +78,36 @@ namespace sgns::crdt
                                                  CrdtOptions::DefaultOptions() );
         }
 
+        static std::pair<std::shared_ptr<CrdtDatastore>, std::shared_ptr<CRDTMirrorBroadcaster>>
+        CreateLoopBackCRDTInstance( const std::string                        &base_path,
+                                    const std::shared_ptr<InMemoryDatastore> &ipfsDataStore )
+        {
+            // Create new database
+            rocksdb::Options options;
+            options.create_if_missing = true; // intentionally
+            auto result               = rocksdb::create( base_path, options );
+            if ( !result )
+            {
+                throw std::invalid_argument( result.error().message() );
+            }
+            auto db = std::move( result.value() );
+
+            // Create new DAGSyncer
+            auto dagSyncer = std::make_shared<CustomDagSyncer>( ipfsDataStore );
+
+            // Create new Broadcaster
+            auto broadcaster = std::make_shared<CRDTMirrorBroadcaster>();
+
+            // Define test values
+            const std::string strNamespace = "/namespace";
+            auto              namespaceKey = HierarchicalKey( strNamespace );
+
+            // Create crdtDatastore
+            return std::make_pair(
+                CrdtDatastore::New( db, namespaceKey, dagSyncer, broadcaster, CrdtOptions::DefaultOptions() ),
+                broadcaster );
+        }
+
         void TearDown() override
         {
             if ( crdtDatastore_ )
@@ -88,7 +118,6 @@ namespace sgns::crdt
 
             // Clean up any additional datastores
 
-            db_          = nullptr;
             dagSyncer_   = nullptr;
             broadcaster_ = nullptr;
 
@@ -109,11 +138,12 @@ namespace sgns::crdt
             return delta;
         }
 
-        std::shared_ptr<rocksdb>           db_;
-        std::shared_ptr<CustomDagSyncer>   dagSyncer_;
-        std::shared_ptr<CustomBroadcaster> broadcaster_;
-        std::shared_ptr<CrdtDatastore>     crdtDatastore_ = nullptr;
-        HierarchicalKey                    namespaceKey_;
+        std::shared_ptr<rocksdb>               db_;
+        std::shared_ptr<CustomDagSyncer>       dagSyncer_;
+        std::shared_ptr<CRDTMirrorBroadcaster> broadcaster_;
+        std::shared_ptr<CrdtDatastore>         crdtDatastore_ = nullptr;
+        std::shared_ptr<InMemoryDatastore>     ipfsDataStore_;
+        HierarchicalKey                        namespaceKey_;
     };
 
     TEST_F( CrdtDatastoreTest, TestKeyFunctions )
@@ -123,7 +153,7 @@ namespace sgns::crdt
         buffer.put( "Data" );
 
         EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( newKey ), false );
-        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->PutKey( newKey, buffer ) );
+        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->PutKey( newKey, buffer, "test" ) );
         EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( newKey ), true );
         EXPECT_OUTCOME_TRUE( valueBuffer, crdtDatastore_->GetKey( newKey ) );
         EXPECT_TRUE( buffer.toString() == valueBuffer.toString() );
@@ -152,11 +182,11 @@ namespace sgns::crdt
         // this won't work as part of the same atomic transaction, because the Remove looks for the existing key
         // to create the delta, and since it's queued in the atomic transaction, it doesn't find key2
         //EXPECT_OUTCOME_TRUE_1(transaction.Remove(newKey2));
-        EXPECT_OUTCOME_TRUE_1( transaction.Commit() );
+        EXPECT_OUTCOME_TRUE_1( transaction.Commit( "test" ) );
         EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( newKey1 ), true );
         AtomicTransaction transactionRemoveKey2 = AtomicTransaction( crdtDatastore_ );
         EXPECT_OUTCOME_TRUE_1( transactionRemoveKey2.Remove( newKey2 ) );
-        EXPECT_OUTCOME_TRUE_1( transactionRemoveKey2.Commit() );
+        EXPECT_OUTCOME_TRUE_1( transactionRemoveKey2.Commit( "test" ) );
         EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( newKey1 ), true );
         EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( newKey2 ), false );
         EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( newKey3 ), true );
@@ -196,7 +226,7 @@ namespace sgns::crdt
         auto e = mergedDelta->elements();
         ASSERT_TRUE( e.size() == 2 );
 
-        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( mergedDelta ) );
+        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( mergedDelta, "test" ) );
         EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( newKey3 ), true );
         EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( newKey4 ), true );
         EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( newKey5 ), false );
@@ -225,6 +255,13 @@ namespace sgns::crdt
             return std::nullopt; // Accept this delta
         };
 
+        auto crdt_pair = CreateLoopBackCRDTInstance( databasePath + "aux1", ipfsDataStore_ );
+
+        auto second_crdt        = crdt_pair.first;
+        auto second_broadcaster = crdt_pair.second;
+        broadcaster_->SetMirrorCounterPart( second_broadcaster );
+        second_broadcaster->SetMirrorCounterPart( broadcaster_ );
+
         CRDTDataFilter::RegisterElementFilter( "Key.*", filter_func );
 
         std::shared_ptr<Delta> delta    = std::make_shared<Delta>();
@@ -243,7 +280,7 @@ namespace sgns::crdt
 
         delta->set_priority( 1 );
 
-        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta ) );
+        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta, "test" ) );
 
         std::chrono::milliseconds resultTime;
 
@@ -252,17 +289,39 @@ namespace sgns::crdt
                                       "NO FILTER RAN",
                                       &resultTime );
 
+        auto wait_key_lambda = [&]( const std::string key ) -> bool
+        {
+            auto ret_has_key = second_crdt->HasKey( { key } );
+            if ( ret_has_key.has_value() && ret_has_key.value() )
+            {
+                return true;
+            }
+            return false;
+        };
+        test::assertWaitForCondition( [&]() { return wait_key_lambda( "Key1" ); },
+                                      std::chrono::milliseconds( 10000 ),
+                                      "No Key1",
+                                      &resultTime );
+        test::assertWaitForCondition( [&]() { return wait_key_lambda( "Key3" ); },
+                                      std::chrono::milliseconds( 10000 ),
+                                      "No Key3",
+                                      &resultTime );
+        test::assertWaitForCondition( [&]() { return wait_key_lambda( "Key4" ); },
+                                      std::chrono::milliseconds( 10000 ),
+                                      "No Key4",
+                                      &resultTime );
+
         // Test with accepted key (should be stored)
-        EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( { "Key1" } ), true );
-        EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( { "Key2" } ), false );
-        EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( { "Key3" } ), true );
-        EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( { "Key4" } ), true );
+        EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( { "Key2" } ), true );
+        EXPECT_OUTCOME_EQ( second_crdt->HasKey( { "Key2" } ), false );
 
         // Verify filter was called
         EXPECT_GE( filter_called_count, 1 );
+        broadcaster_->SetMirrorCounterPart( nullptr );
+        second_broadcaster->SetMirrorCounterPart( nullptr );
     }
 
-    TEST_F( CrdtDatastoreTest, FilterCallbackAllInvalid )
+    TEST_F( CrdtDatastoreTest, FilterCallbackOneValid )
     {
         // Create a filter that rejects Deltas containing a specific key
         const std::string rejectedKey = "RejectMe";
@@ -285,6 +344,13 @@ namespace sgns::crdt
             return std::nullopt; // Accept this delta
         };
 
+        auto crdt_pair = CreateLoopBackCRDTInstance( databasePath + "aux2", ipfsDataStore_ );
+
+        auto second_crdt        = crdt_pair.first;
+        auto second_broadcaster = crdt_pair.second;
+        broadcaster_->SetMirrorCounterPart( second_broadcaster );
+        second_broadcaster->SetMirrorCounterPart( broadcaster_ );
+
         CRDTDataFilter::RegisterElementFilter( "Key.*", filter_func );
 
         std::shared_ptr<Delta> delta    = std::make_shared<Delta>();
@@ -299,11 +365,11 @@ namespace sgns::crdt
         element3->set_value( rejectedKey );
         auto element4 = delta->add_elements();
         element4->set_key( "Key4" );
-        element4->set_value( rejectedKey );
+        element4->set_value( acceptedKey );
 
         delta->set_priority( 1 );
 
-        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta ) );
+        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta, "test" ) );
 
         std::chrono::milliseconds resultTime;
 
@@ -312,11 +378,24 @@ namespace sgns::crdt
                                       "NO FILTER RAN",
                                       &resultTime );
 
+        auto wait_key_lambda = [&]( const std::string key ) -> bool
+        {
+            auto ret_has_key = second_crdt->HasKey( { key } );
+            if ( ret_has_key.has_value() && ret_has_key.value() )
+            {
+                return true;
+            }
+            return false;
+        };
+        test::assertWaitForCondition( [&]() { return wait_key_lambda( "Key4" ); },
+                                      std::chrono::milliseconds( 10000 ),
+                                      "No Key4",
+                                      &resultTime );
+
         // Test with accepted key (should be stored)
-        EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( { "Key1" } ), false );
-        EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( { "Key2" } ), false );
-        EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( { "Key3" } ), false );
-        EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( { "Key4" } ), false );
+        EXPECT_OUTCOME_EQ( second_crdt->HasKey( { "Key1" } ), false );
+        EXPECT_OUTCOME_EQ( second_crdt->HasKey( { "Key2" } ), false );
+        EXPECT_OUTCOME_EQ( second_crdt->HasKey( { "Key3" } ), false );
 
         // Verify filter was called
         EXPECT_GE( filter_called_count, 1 );
@@ -345,6 +424,14 @@ namespace sgns::crdt
             return std::nullopt; // Accept this delta
         };
 
+        auto crdt_pair = CreateLoopBackCRDTInstance( databasePath + "aux3", ipfsDataStore_ );
+
+        auto second_crdt        = crdt_pair.first;
+        auto second_broadcaster = crdt_pair.second;
+
+        broadcaster_->SetMirrorCounterPart( second_broadcaster );
+        second_broadcaster->SetMirrorCounterPart( broadcaster_ );
+
         CRDTDataFilter::RegisterElementFilter( "Key.*", filter_func );
 
         std::shared_ptr<Delta> delta1   = std::make_shared<Delta>();
@@ -369,10 +456,10 @@ namespace sgns::crdt
         delta3->set_priority( 3 );
         delta4->set_priority( 4 );
 
-        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta1 ) );
-        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta2 ) );
-        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta3 ) );
-        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta4 ) );
+        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta1, "test" ) );
+        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta2, "test" ) );
+        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta3, "test" ) );
+        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta4, "test" ) );
 
         std::chrono::milliseconds resultTime;
 
@@ -381,11 +468,31 @@ namespace sgns::crdt
                                       "NO FILTER RAN",
                                       &resultTime );
 
+        auto wait_key_lambda = [&]( const std::string key ) -> bool
+        {
+            auto ret_has_key = second_crdt->HasKey( { key } );
+            if ( ret_has_key.has_value() && ret_has_key.value() )
+            {
+                return true;
+            }
+            return false;
+        };
+        test::assertWaitForCondition( [&]() { return wait_key_lambda( "Key1" ); },
+                                      std::chrono::milliseconds( 10000 ),
+                                      "No Key1",
+                                      &resultTime );
+        test::assertWaitForCondition( [&]() { return wait_key_lambda( "Key3" ); },
+                                      std::chrono::milliseconds( 10000 ),
+                                      "No Key3",
+                                      &resultTime );
+        test::assertWaitForCondition( [&]() { return wait_key_lambda( "Key4" ); },
+                                      std::chrono::milliseconds( 10000 ),
+                                      "No Key4",
+                                      &resultTime );
+
         // Test with accepted key (should be stored)
-        EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( { "Key1" } ), true );
-        EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( { "Key2" } ), false );
-        EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( { "Key3" } ), true );
-        EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( { "Key4" } ), true );
+        EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( { "Key2" } ), true );
+        EXPECT_OUTCOME_EQ( second_crdt->HasKey( { "Key2" } ), false );
 
         // Verify filter was called
         EXPECT_GE( filter_called_count, 1 );
@@ -424,6 +531,16 @@ namespace sgns::crdt
                                                    return std::nullopt; // Accept this delta
                                                } );
 
+
+
+        auto crdt_pair = CreateLoopBackCRDTInstance( databasePath + "aux4", ipfsDataStore_ );
+
+        auto second_crdt        = crdt_pair.first;
+        auto second_broadcaster = crdt_pair.second;
+
+        broadcaster_->SetMirrorCounterPart( second_broadcaster );
+        second_broadcaster->SetMirrorCounterPart( broadcaster_ );
+
         std::shared_ptr<Delta> delta1   = std::make_shared<Delta>();
         auto                   element1 = delta1->add_elements();
         element1->set_key( "Key1" );
@@ -432,24 +549,24 @@ namespace sgns::crdt
         auto                   element2 = delta2->add_elements();
         element2->set_key( "Key2" );
         element2->set_value( rejectedKey );
-        std::shared_ptr<Delta> delta3   = std::make_shared<Delta>();
-        auto                   element3 = delta3->add_elements();
-        element3->set_key( "OtherKeySomething" );
-        element3->set_value( acceptedKey );
         std::shared_ptr<Delta> delta4   = std::make_shared<Delta>();
         auto                   element4 = delta4->add_elements();
         element4->set_key( "OtherKey1" );
         element4->set_value( rejectedKey );
+        std::shared_ptr<Delta> delta3   = std::make_shared<Delta>();
+        auto                   element3 = delta3->add_elements();
+        element3->set_key( "OtherKeySomething" );
+        element3->set_value( acceptedKey );
 
         delta1->set_priority( 1 );
         delta2->set_priority( 2 );
         delta3->set_priority( 3 );
         delta4->set_priority( 4 );
 
-        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta1 ) );
-        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta2 ) );
-        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta3 ) );
-        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta4 ) );
+        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta1, "test" ) );
+        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta2, "test" ) );
+        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta3, "test" ) );
+        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta4, "test" ) );
 
         std::chrono::milliseconds resultTime;
 
@@ -458,10 +575,30 @@ namespace sgns::crdt
                                       "NO FILTER RAN",
                                       &resultTime );
 
-        EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( { "Key1" } ), true );
-        EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( { "Key2" } ), true );
-        EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( { "OtherKeySomething" } ), true );
-        EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( { "OtherKey1" } ), false );
+        auto wait_key_lambda = [&]( const std::string key ) -> bool
+        {
+            auto ret_has_key = second_crdt->HasKey( { key } );
+            if ( ret_has_key.has_value() && ret_has_key.value() )
+            {
+                return true;
+            }
+            return false;
+        };
+        test::assertWaitForCondition( [&]() { return wait_key_lambda( "Key1" ); },
+                                      std::chrono::milliseconds( 10000 ),
+                                      "No Key1",
+                                      &resultTime );
+        test::assertWaitForCondition( [&]() { return wait_key_lambda( "Key2" ); },
+                                      std::chrono::milliseconds( 10000 ),
+                                      "No Key2",
+                                      &resultTime );
+        test::assertWaitForCondition( [&]() { return wait_key_lambda( "OtherKeySomething" ); },
+                                      std::chrono::milliseconds( 10000 ),
+                                      "No OtherKeySomething",
+                                      &resultTime );
+
+        EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( { "OtherKey1" } ), true );
+        EXPECT_OUTCOME_EQ( second_crdt->HasKey( { "OtherKey1" } ), false );
 
         // Verify filter was called
         EXPECT_GE( filter_called_count, 1 );
