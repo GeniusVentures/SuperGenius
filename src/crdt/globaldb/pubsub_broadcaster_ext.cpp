@@ -64,20 +64,17 @@ namespace sgns::crdt
     // Static factory method that accepts a vector of topics.
     std::shared_ptr<PubSubBroadcasterExt> PubSubBroadcasterExt::New(
         const std::vector<std::shared_ptr<GossipPubSubTopic>> &pubSubTopics,
-        std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer>        dagSyncer,
-        libp2p::multi::Multiaddress                            dagSyncerMultiaddress )
+        std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer>        dagSyncer )
     {
         auto instance = std::shared_ptr<PubSubBroadcasterExt>(
-            new PubSubBroadcasterExt( pubSubTopics, std::move( dagSyncer ), std::move( dagSyncerMultiaddress ) ) );
+            new PubSubBroadcasterExt( pubSubTopics, std::move( dagSyncer ) ) );
         return instance;
     }
 
     PubSubBroadcasterExt::PubSubBroadcasterExt( const std::vector<std::shared_ptr<GossipPubSubTopic>> &pubSubTopics,
-                                                std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer>        dagSyncer,
-                                                libp2p::multi::Multiaddress dagSyncerMultiaddress ) :
+                                                std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer>        dagSyncer ) :
         dagSyncer_( std::move( dagSyncer ) ),
-        dataStore_( nullptr ),
-        dagSyncerMultiaddress_( std::move( dagSyncerMultiaddress ) )
+        dataStore_( nullptr )
     {
         m_logger->trace( "Initializing PubSubBroadcasterExt" );
         if ( !pubSubTopics.empty() )
@@ -266,28 +263,6 @@ namespace sgns::crdt
         sgns::crdt::broadcasting::BroadcastMessage bmsg;
         auto                                       bpi = new sgns::crdt::broadcasting::BroadcastMessage_PeerInfo;
 
-        // Get the TCP port from dagSyncerMultiaddress_
-        auto port_opt = dagSyncerMultiaddress_.getFirstValueForProtocol( libp2p::multi::Protocol::Code::TCP );
-        if ( !port_opt )
-        {
-            m_logger->error( "TCP port not found in dagSyncerMultiaddress." );
-            delete bpi;
-            return outcome::failure( boost::system::error_code{} );
-        }
-        auto port = port_opt.value();
-
-        //Get peer ID from dagsyncer
-        //auto peer_id_opt = dagSyncerMultiaddress_.getPeerId();
-        //if (!peer_id_opt)
-        //{
-        //    return outcome::failure(boost::system::error_code{});
-        //}
-        //auto peer_id = peer_id_opt.value();
-
-        //Get observed addresses from pubsub and use them with this port and peer id.
-        // We are trusting that observed addresses from pubsub are correct to avoid doing this twice.
-        // We still probably need autonat/circuit relay/holepunching on the dagsyncer, which may remove this code.
-        // Add them to the broadcast message
         auto peer_info_res = dagSyncer_->GetPeerInfo();
         if ( !peer_info_res )
         {
@@ -302,21 +277,7 @@ namespace sgns::crdt
         auto pubsubObserved = targetTopic->GetPubsub()->GetHost()->getObservedAddressesReal();
         for ( auto &address : pubsubObserved )
         {
-            auto ip_address_opt = address.getFirstValueForProtocol( libp2p::multi::Protocol::Code::IP4 );
-            if ( ip_address_opt )
-            {
-                auto new_address = libp2p::multi::Multiaddress::create(
-                    fmt::format( "/ip4/{}/tcp/{}/p2p/{}", ip_address_opt.value(), port, peer_info.id.toBase58() ) );
-                if ( new_address )
-                {
-                    m_logger->info( "Address Broadcast Converted: {}", new_address.value().getStringAddress() );
-                    bpi->add_addrs( new_address.value().getStringAddress() );
-                }
-                else
-                {
-                    m_logger->warn( "Failed to convert observed address: {}", address.getStringAddress() );
-                }
-            }
+            bpi->add_addrs( address.getStringAddress() );
         }
         auto mas = peer_info.addresses;
         for ( auto &address : mas )

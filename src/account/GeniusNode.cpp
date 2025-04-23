@@ -246,7 +246,7 @@ namespace sgns
                                                       write_base_path_ + gnus_network_full_path_,
                                                       pubsub_ );
 
-        auto global_db_init_result = globaldb_->Init( crdt::CrdtOptions::DefaultOptions() );
+        auto global_db_init_result = globaldb_->Init( crdt::CrdtOptions::DefaultOptions(), graphsyncnetwork_, scheduler, generator );
         globaldb_->AddBroadcastTopic( processing_channel_topic_ );
         if ( global_db_init_result.has_error() )
         {
