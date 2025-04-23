@@ -61,19 +61,20 @@ namespace sgns::crdt
         }
     }
 
-    // Static factory method that accepts a vector of topics.
     std::shared_ptr<PubSubBroadcasterExt> PubSubBroadcasterExt::New(
-        const std::vector<std::shared_ptr<GossipPubSubTopic>> &pubSubTopics,
-        std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer>        dagSyncer,
-        libp2p::multi::Multiaddress                            dagSyncerMultiaddress )
+        std::vector<std::shared_ptr<GossipPubSubTopic>> pubSubTopics,
+        std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer,
+        libp2p::multi::Multiaddress                     dagSyncerMultiaddress )
     {
         auto instance = std::shared_ptr<PubSubBroadcasterExt>(
-            new PubSubBroadcasterExt( pubSubTopics, std::move( dagSyncer ), std::move( dagSyncerMultiaddress ) ) );
+            new PubSubBroadcasterExt( std::move( pubSubTopics ),
+                                      std::move( dagSyncer ),
+                                      std::move( dagSyncerMultiaddress ) ) );
         return instance;
     }
 
-    PubSubBroadcasterExt::PubSubBroadcasterExt( const std::vector<std::shared_ptr<GossipPubSubTopic>> &pubSubTopics,
-                                                std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer>        dagSyncer,
+    PubSubBroadcasterExt::PubSubBroadcasterExt( std::vector<std::shared_ptr<GossipPubSubTopic>> pubSubTopics,
+                                                std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer,
                                                 libp2p::multi::Multiaddress dagSyncerMultiaddress ) :
         dagSyncer_( std::move( dagSyncer ) ),
         dataStore_( nullptr ),
@@ -84,9 +85,10 @@ namespace sgns::crdt
         {
             defaultTopicString_ = pubSubTopics.front()->GetTopic();
         }
-        for ( const auto &topic : pubSubTopics )
+
+        for ( auto &topicPtr : pubSubTopics )
         {
-            topicMap_.insert( { topic->GetTopic(), topic } );
+            topicMap_.emplace( topicPtr->GetTopic(), std::move( topicPtr ) );
         }
     }
 
@@ -349,8 +351,7 @@ namespace sgns::crdt
         }
         else
         {
-            std::string frontTopic = targetTopic->GetTopic();
-            m_logger->debug( "CIDs broadcasted by {} to the first topic ({})", peer_info.id.toBase58(), frontTopic );
+            m_logger->debug( "CIDs broadcasted by {} to the first topic ({})", peer_info.id.toBase58(), targetTopic->GetTopic() );
         }
 
         return outcome::success();
