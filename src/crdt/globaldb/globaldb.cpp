@@ -482,7 +482,6 @@ std::string GetLocalIP( boost::asio::io_context &io )
         if ( m_broadcaster )
         {
             m_broadcaster->AddTopic( newTopic );
-            m_logger->info( "New broadcast topic added: " + topicName );
         }
         else
         {
