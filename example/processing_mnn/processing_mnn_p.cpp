@@ -11,6 +11,8 @@
 #include "processing/processing_subtask_enqueuer_impl.hpp"
 #include "processing/processors/processing_processor_mnn_image.hpp"
 #include "processing_mnn.hpp"
+#include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
+#include <ipfs_lite/ipfs/graphsync/impl/local_requests.hpp>
 
 using GossipPubSub = sgns::ipfs_pubsub::GossipPubSub;
 const std::string logger_config(R"(
@@ -95,7 +97,10 @@ int main(int argc, char* argv[])
         (boost::format("CRDT.Datastore.TEST.%d") % serviceindex).str(),
         std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>(pubs2, "CRDT.Datastore.TEST.Channel"));
     auto crdtOptions2 = sgns::crdt::CrdtOptions::DefaultOptions();
-    auto initRes = globalDB2->Init(crdtOptions2);
+    auto scheduler    = std::make_shared<libp2p::protocol::AsioScheduler>( io, libp2p::protocol::SchedulerConfig{} );
+    auto graphsyncnetwork = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubs2->GetHost(), scheduler );
+    auto generator        = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
+    auto initRes          = globalDB2->Init( crdtOptions2, graphsyncnetwork, scheduler, generator );
 
     //Processing Service Values
     auto taskQueue2 = std::make_shared<sgns::processing::ProcessingTaskQueueImpl>(globalDB2, "CRDT.Datastore.TEST.Channel");

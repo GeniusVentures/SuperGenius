@@ -10,6 +10,9 @@
 #include "processing/processing_subtask_enqueuer_impl.hpp"
 #include "crdt/globaldb/keypair_file_storage.hpp"
 #include "crdt/globaldb/globaldb.hpp"
+#include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
+#include <ipfs_lite/ipfs/graphsync/impl/local_requests.hpp>
+#include <libp2p/protocol/common/asio/asio_scheduler.hpp>
 
 using namespace sgns::processing;
 
@@ -294,7 +297,10 @@ int main(int argc, char* argv[])
         std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>(pubs, "CRDT.Datastore.TEST.Channel"));
 
     auto crdtOptions = sgns::crdt::CrdtOptions::DefaultOptions();
-    auto initRes = globalDB->Init(crdtOptions);
+    auto scheduler   = std::make_shared<libp2p::protocol::AsioScheduler>( io, libp2p::protocol::SchedulerConfig{} );
+    auto graphsyncnetwork = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubs->GetHost(), scheduler );
+    auto generator        = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
+    auto initRes          = globalDB->Init( crdtOptions, graphsyncnetwork, scheduler, generator );
 
     std::thread iothread([io]() { io->run(); });
 

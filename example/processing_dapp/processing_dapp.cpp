@@ -11,6 +11,9 @@
 #include <boost/format.hpp>
 
 #include <iostream>
+#include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
+#include <ipfs_lite/ipfs/graphsync/impl/local_requests.hpp>
+#include <libp2p/protocol/common/asio/asio_scheduler.hpp>
 
 using namespace sgns::processing;
 
@@ -235,7 +238,10 @@ int main(int argc, char* argv[])
 
 
     auto crdtOptions = sgns::crdt::CrdtOptions::DefaultOptions();
-    globalDB->Init(crdtOptions);
+    auto scheduler   = std::make_shared<libp2p::protocol::AsioScheduler>( io, libp2p::protocol::SchedulerConfig{} );
+    auto graphsyncnetwork = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubs->GetHost(), scheduler );
+    auto generator        = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
+    globalDB->Init( crdtOptions, graphsyncnetwork, scheduler, generator );
 
     std::thread iothread([io]() { io->run(); });
 

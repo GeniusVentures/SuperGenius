@@ -30,6 +30,9 @@
 #include <ipfs_pubsub/gossip_pubsub.hpp>
 #include <libp2p/log/configurator.hpp>
 #include <libp2p/log/logger.hpp>
+#include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
+#include <ipfs_lite/ipfs/graphsync/impl/local_requests.hpp>
+#include <libp2p/protocol/common/asio/asio_scheduler.hpp>
 
 namespace
 {
@@ -114,8 +117,15 @@ public:
 
             ++currentPubsubPort;
             ++currentGraphsyncPort;
-
-            auto initRes = db->Init( sgns::crdt::CrdtOptions::DefaultOptions() );
+            auto scheduler        = std::make_shared<libp2p::protocol::AsioScheduler>( io,
+                                                                                libp2p::protocol::SchedulerConfig{} );
+            auto graphsyncnetwork = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubsub->GetHost(),
+                                                                                                 scheduler );
+            auto generator        = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
+            auto initRes          = db->Init( sgns::crdt::CrdtOptions::DefaultOptions(),
+                                     graphsyncnetwork,
+                                     scheduler,
+                                     generator );
             if ( !initRes.has_value() )
             {
                 return;

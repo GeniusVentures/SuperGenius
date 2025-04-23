@@ -7,7 +7,8 @@
 #include <boost/format.hpp>
 #include <rapidjson/document.h>
 #include "AccountHelper.hpp"
-
+#include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
+#include <ipfs_lite/ipfs/graphsync/impl/local_requests.hpp>
 extern AccountKey2   ACCOUNT_KEY;
 extern DevConfig_st2 DEV_CONFIG;
 
@@ -68,8 +69,12 @@ namespace sgns
             io_,
             ( boost::format( "SuperGNUSNode.TestNet.%s" ) % account_->GetAddress() ).str(),
             std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_, std::string( PROCESSING_CHANNEL ) ) );
-
-        globaldb_->Init( crdt::CrdtOptions::DefaultOptions() );
+        auto scheduler        = std::make_shared<libp2p::protocol::AsioScheduler>( io_,
+                                                                            libp2p::protocol::SchedulerConfig{} );
+        auto graphsyncnetwork = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubsub_->GetHost(),
+                                                                                             scheduler );
+        auto generator        = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
+        globaldb_->Init( crdt::CrdtOptions::DefaultOptions(), graphsyncnetwork, scheduler, generator );
 
         base::Buffer root_hash;
         root_hash.put( std::vector<uint8_t>( 32ul, 1 ) );
