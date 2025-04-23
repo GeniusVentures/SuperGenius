@@ -105,10 +105,6 @@ set(OPENSSL_DIR "${_THIRDPARTY_BUILD_DIR}/openssl/build/${ABI_SUBFOLDER_NAME}" C
 set(OPENSSL_USE_STATIC_LIBS ON CACHE BOOL "OpenSSL use static libs")
 set(OPENSSL_MSVC_STATIC_RT ON CACHE BOOL "OpenSSL use static RT")
 set(OPENSSL_ROOT_DIR "${OPENSSL_DIR}" CACHE PATH "Path to OpenSSL install root folder")
-set(OPENSSL_INCLUDE_DIR "${OPENSSL_DIR}/include" CACHE PATH "Path to OpenSSL include folder")
-set(OPENSSL_LIBRARIES "${OPENSSL_DIR}/lib" CACHE PATH "Path to OpenSSL lib folder")
-set(OPENSSL_CRYPTO_LIBRARY ${OPENSSL_LIBRARIES}/libcrypto${CMAKE_STATIC_LIBRARY_SUFFIX} CACHE PATH "Path to OpenSSL crypto lib")
-set(OPENSSL_SSL_LIBRARY ${OPENSSL_LIBRARIES}/libssl${CMAKE_STATIC_LIBRARY_SUFFIX} CACHE PATH "Path to OpenSSL ssl lib")
 find_package(OpenSSL REQUIRED)
 
 # rocksdb
@@ -149,7 +145,7 @@ find_package(Boost.DI CONFIG REQUIRED)
 
 # Boost should be loaded before libp2p v0.1.2
 # Boost project
-set(_BOOST_ROOT "${_THIRDPARTY_BUILD_DIR}/boost/build/${CMAKE_SYSTEM_NAME}${ABI_SUBFOLDER_NAME}")
+set(_BOOST_ROOT "${_THIRDPARTY_BUILD_DIR}/boost/build/${CMAKE_SYSTEM_NAME}")
 set(Boost_LIB_DIR "${_BOOST_ROOT}/lib")
 set(Boost_INCLUDE_DIR "${_BOOST_ROOT}/include/boost-${BOOST_VERSION_2U}")
 set(Boost_DIR "${Boost_LIB_DIR}/cmake/Boost-${BOOST_VERSION}")
