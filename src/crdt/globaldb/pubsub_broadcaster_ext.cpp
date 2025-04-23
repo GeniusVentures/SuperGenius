@@ -234,45 +234,42 @@ namespace sgns::crdt
     outcome::result<void> PubSubBroadcasterExt::Broadcast( const base::Buffer        &buff,
                                                            std::optional<std::string> topic_name )
     {
-        std::lock_guard<std::mutex> lock( mapMutex_ );
-
-        if ( topicMap_.empty() )
+        std::shared_ptr<GossipPubSubTopic> targetTopic;
         {
-            m_logger->error( "No topics available for broadcasting." );
-            return outcome::failure( boost::system::error_code{} );
-        }
-
-        // Determine the target topic.
-        std::shared_ptr<GossipPubSubTopic> targetTopic = nullptr;
-        if ( topic_name )
-        {
-            auto it = topicMap_.find( topic_name.value() );
-            if ( it != topicMap_.end() )
+            std::lock_guard<std::mutex> lock( mapMutex_ );
+            if ( topicMap_.empty() )
             {
+                m_logger->error( "No topics available for broadcasting." );
+                return outcome::failure( boost::system::error_code{} );
+            }
+            if ( topic_name )
+            {
+                auto it = topicMap_.find( topic_name.value() );
+                if ( it != topicMap_.end() )
+                {
+                    targetTopic = it->second;
+                }
+                if ( !targetTopic )
+                {
+                    m_logger->warn( "Broadcast: no topic matching '{}' was found", topic_name.value() );
+                    return outcome::failure( boost::system::error_code{} );
+                }
+            }
+            else
+            {
+                auto it = topicMap_.find( defaultTopicString_ );
+                if ( it == topicMap_.end() )
+                {
+                    m_logger->error( "First topic is not available." );
+                    return outcome::failure( boost::system::error_code{} );
+                }
                 targetTopic = it->second;
             }
-            if ( !targetTopic )
-            {
-                m_logger->warn( "Broadcast: no topic matching '" + topic_name.value() + "' was found" );
-                return outcome::failure( boost::system::error_code{} );
-            }
-        }
-        else
-        {
-            // Use the first topic added if no topic_name is provided.
-            if ( defaultTopicString_.empty() || topicMap_.find( defaultTopicString_ ) == topicMap_.end() )
-            {
-                m_logger->error( "First topic is not available." );
-                return outcome::failure( boost::system::error_code{} );
-            }
-            targetTopic = topicMap_.at( defaultTopicString_ );
         }
 
-        // Create and fill the broadcast message.
         sgns::crdt::broadcasting::BroadcastMessage bmsg;
         auto                                       bpi = new sgns::crdt::broadcasting::BroadcastMessage_PeerInfo;
 
-        // Get the TCP port from dagSyncerMultiaddress_
         auto port_opt = dagSyncerMultiaddress_.getFirstValueForProtocol( libp2p::multi::Protocol::Code::TCP );
         if ( !port_opt )
         {
@@ -342,7 +339,6 @@ namespace sgns::crdt
         std::string data( buff.toString() );
         bmsg.set_data( data );
 
-        // Publish the message on the selected target topic.
         targetTopic->Publish( bmsg.SerializeAsString() );
 
         if ( topic_name )
@@ -351,7 +347,9 @@ namespace sgns::crdt
         }
         else
         {
-            m_logger->debug( "CIDs broadcasted by {} to the first topic ({})", peer_info.id.toBase58(), targetTopic->GetTopic() );
+            m_logger->debug( "CIDs broadcasted by {} to the first topic ({})",
+                             peer_info.id.toBase58(),
+                             targetTopic->GetTopic() );
         }
 
         return outcome::success();
