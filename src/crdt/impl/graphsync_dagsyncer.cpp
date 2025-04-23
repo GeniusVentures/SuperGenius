@@ -604,6 +604,7 @@ namespace sgns::crdt
 
     outcome::result<GraphsyncDAGSyncer::PeerEntry> GraphsyncDAGSyncer::GetRoute( const CID &cid ) const
     {
+        PeerKey peerKey;
         // First find the peer key in the routing table
         {
             std::lock_guard<std::mutex> lock( routing_mutex_ );
@@ -613,11 +614,10 @@ namespace sgns::crdt
                 return outcome::failure( Error::ROUTE_NOT_FOUND );
             }
 
-            PeerKey peerKey = it->second;
-
-            // Now get the actual peer entry from the registry
-            return GetPeerById( peerKey );
+            peerKey = it->second;
         }
+        // Now get the actual peer entry from the registry
+        return GetPeerById( peerKey );
     }
 
     void GraphsyncDAGSyncer::EraseRoutesFromPeerID( const PeerId &peer ) const
