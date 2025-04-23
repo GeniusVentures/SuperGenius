@@ -251,7 +251,7 @@ namespace sgns::crdt
                 }
                 if ( !targetTopic )
                 {
-                    m_logger->warn( "Broadcast: no topic matching '{}' was found", topic_name.value() );
+                    m_logger->error( "Broadcast: no topic matching '{}' was found", topic_name.value() );
                     return outcome::failure( boost::system::error_code{} );
                 }
             }

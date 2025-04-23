@@ -318,7 +318,7 @@ namespace sgns::crdt
 
         PutHookPtr    putHookFunc_       = nullptr;
         DeleteHookPtr deleteHookFunc_    = nullptr;
-        int           numberOfDagWorkers = 5;
+        int           numberOfDagWorkers = 1;
 
         std::future<void> handleNextFuture_;
         std::atomic<bool> handleNextThreadRunning_ = false;

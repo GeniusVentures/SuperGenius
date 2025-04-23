@@ -730,15 +730,19 @@ namespace sgns::crdt
     {
         if ( !broadcaster_ )
         {
+            logger_->error( "Broadcast: No broadcaster, Failed to broadcast '{}'", topic );
             return outcome::failure( boost::system::error_code{} );
         }
         if ( cids.empty() )
         {
+            logger_->error( "Broadcast: Cids Empty, Failed to broadcast '{}'", topic );
             return outcome::success();
         }
         auto encodedBufferResult = this->EncodeBroadcast( cids );
         if ( encodedBufferResult.has_failure() )
         {
+            logger_->error( "Broadcast: Encoding failed, Failed to broadcast '{}'", topic );
+
             return outcome::failure( encodedBufferResult.error() );
         }
 
@@ -746,6 +750,8 @@ namespace sgns::crdt
 
         if ( bcastResult.has_failure() )
         {
+            logger_->error( "Broadcast: Broadcaster failed to broadcast '{}'", topic );
+
             return outcome::failure( bcastResult.error() );
         }
         return outcome::success();
