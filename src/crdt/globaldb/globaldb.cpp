@@ -91,7 +91,7 @@ namespace sgns::crdt
         m_context          = nullptr;
     }
 
-std::string GetLocalIP( boost::asio::io_context &io )
+    std::string GetLocalIP( boost::asio::io_context &io )
     {
 #if defined( _WIN32 )
         // Windows implementation using GetAdaptersAddresses
@@ -380,6 +380,19 @@ std::string GetLocalIP( boost::asio::io_context &io )
         }
 
         return m_crdtDatastore->QueryKeyValues( keyPrefix );
+    }
+
+    outcome::result<GlobalDB::QueryResult> GlobalDB::QueryKeyValues( const std::string &prefix_base,
+                                                                     const std::string &middle_part,
+                                                                     const std::string &remainder_prefix )
+    {
+        if ( !m_crdtDatastore )
+        {
+            m_logger->error( "CRDT datastore is not initialized yet" );
+            return outcome::failure( boost::system::error_code{} );
+        }
+
+        return m_crdtDatastore->QueryKeyValues( prefix_base, middle_part, remainder_prefix );
     }
 
     outcome::result<std::string> GlobalDB::KeyToString( const Buffer &key ) const

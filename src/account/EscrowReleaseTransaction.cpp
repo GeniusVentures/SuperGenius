@@ -32,7 +32,8 @@ namespace sgns
                                                             std::string              release_address,
                                                             std::string              escrow_source,
                                                             std::string              original_escrow_hash,
-                                                            SGTransaction::DAGStruct dag )
+                                                            SGTransaction::DAGStruct dag,
+                                                            std::shared_ptr<ethereum::EthereumKeyGenerator> eth_key )
     {
         EscrowReleaseTransaction instance( std::move( params ),
                                            release_amount,
@@ -41,6 +42,7 @@ namespace sgns
                                            std::move( original_escrow_hash ),
                                            std::move( dag ) );
         instance.FillHash();
+        instance.MakeSignature( std::move( eth_key ) );
         return instance;
     }
 

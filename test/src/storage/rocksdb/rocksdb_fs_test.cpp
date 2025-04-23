@@ -94,4 +94,63 @@ namespace sgns::storage
     EXPECT_TRUE(queryResult.size() == numberOfDataset);
 
   }
+  TEST_F(rocksdb_Open, QueryDBWildcard) {
+    rocksdb::Options options;
+    options.create_if_missing = true;  // intentionally
+    EXPECT_OUTCOME_TRUE_2(db, rocksdb::create(getPathString(), options));
+    EXPECT_TRUE(db) << "db is nullptr";
+
+    std::string strNamespacePrefix = "/namespace/k/";
+    std::string strDataToSearch = "abc";
+
+    std::vector<std::string> strDataList;
+    std::string remainder_suffix = "/tx/";
+    strDataList.push_back("aaa");
+    strDataList.push_back("aaa");
+    strDataList.push_back(strDataToSearch);
+    strDataList.push_back("abb");
+    strDataList.push_back("fgd");
+    strDataList.push_back("ab");
+    strDataList.push_back("bdw");
+    strDataList.push_back("bqc");
+
+    // Fill data
+    const int numberOfDataset = 10;
+    Buffer key, value;
+
+    int i= 0;
+    for (const auto& str : strDataList)
+    {
+      key.clear();
+      key.put(strNamespacePrefix + str + remainder_suffix + std::to_string(i));
+      value.clear();
+      value.put(str + std::to_string(i++));
+      EXPECT_OUTCOME_TRUE_1(db->put(key, value));
+    }
+
+    EXPECT_OUTCOME_TRUE(queryResult, db->query(strNamespacePrefix, "*", remainder_suffix));
+
+
+    EXPECT_EQ(queryResult.size(), strDataList.size());
+    
+    EXPECT_OUTCOME_TRUE(queryResult3, db->query(strNamespacePrefix, "aaa", remainder_suffix));
+
+
+    EXPECT_EQ(queryResult3.size(), 2);
+
+    EXPECT_OUTCOME_TRUE(queryResult4, db->query(strNamespacePrefix, "!aaa", remainder_suffix));
+
+
+    EXPECT_EQ(queryResult4.size(), 6);
+    remainder_suffix = "b/tx/";
+
+    EXPECT_OUTCOME_TRUE(queryResult2, db->query(strNamespacePrefix, "*", remainder_suffix));
+
+
+    EXPECT_EQ(queryResult2.size(), 2);
+
+
+
+
+  }
 }

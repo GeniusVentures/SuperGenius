@@ -1,4 +1,5 @@
 #include "crdt_custom_broadcaster.hpp"
+#include <iostream>
 
 namespace sgns::crdt
 {
@@ -6,6 +7,7 @@ namespace sgns::crdt
     {
         if (!buff.empty())
         {
+            std::lock_guard<std::mutex> lock( mutex_ );
             const std::string bCastData(buff.toString());
             listOfBroadcasts_.push(bCastData);
         }
@@ -13,6 +15,7 @@ namespace sgns::crdt
     }
     outcome::result<std::tuple<base::Buffer, std::string>> CustomBroadcaster::Next()
     {
+        std::lock_guard<std::mutex> lock( mutex_ );
         if (listOfBroadcasts_.empty())
         {
             //Broadcaster::ErrorCode::ErrNoMoreBroadcast
@@ -24,9 +27,9 @@ namespace sgns::crdt
 
         base::Buffer buffer;
         buffer.put(strBuffer);
-        return std::make_tuple(buffer, std::string(""));
+        return std::make_tuple(buffer, std::string("test"));
     }
-    bool CustomBroadcaster::hasTopic(const std::string &topic)
+    bool CustomBroadcaster::HasTopic(const std::string &topic)
     {
         return true;
     }

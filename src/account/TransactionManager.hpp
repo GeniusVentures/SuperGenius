@@ -77,21 +77,28 @@ namespace sgns
         bool WaitForTransactionOutgoing( const std::string &txId, std::chrono::milliseconds timeout ) const;
         bool WaitForEscrowRelease( const std::string &originalEscrowId, std::chrono::milliseconds timeout ) const;
 
+    protected:
+        friend class GeniusNode;
+        void EnqueueTransaction( TransactionPair element );
+
     private:
         static constexpr std::uint16_t    MAIN_NET_ID             = 369;
         static constexpr std::uint16_t    TEST_NET_ID             = 963;
-        static constexpr std::string_view TRANSACTION_BASE_FORMAT = "bc-%hu/";
+        static constexpr std::string_view TRANSACTION_BASE_FORMAT = "/bc-%hu/";
         using TransactionParserFn =
             outcome::result<void> ( TransactionManager::* )( const std::shared_ptr<IGeniusTransactions> & );
 
         void                     Update();
-        void                     EnqueueTransaction( TransactionPair element );
         SGTransaction::DAGStruct FillDAGStruct( std::string transaction_hash = "" ) const;
         outcome::result<void>    SendTransaction();
         std::string              GetTransactionPath( IGeniusTransactions &element );
-        std::string              GetTransactionProofPath( IGeniusTransactions &element );
-        static std::string       GetNotificationPath( const std::string &destination );
+        static std::string       GetTransactionProofPath( IGeniusTransactions &element );
         static std::string       GetTransactionBasePath( const std::string &address );
+        static std::string       GetBlockChainBase();
+        static outcome::result<std::shared_ptr<IGeniusTransactions>> DeSerializeTransaction( std::string tx_data );
+        static outcome::result<std::string>                          GetExpectedProofKey( const std::string                          &tx_key,
+                                                                                          const std::shared_ptr<IGeniusTransactions> &tx );
+        static outcome::result<std::string>                          GetExpectedTxKey( const std::string &proof_key );
 
         outcome::result<std::shared_ptr<IGeniusTransactions>> FetchTransaction(
             const std::shared_ptr<crdt::GlobalDB> &db,
@@ -107,9 +114,6 @@ namespace sgns
                                                    const std::optional<std::vector<uint8_t>>  &proof );
 
         std::shared_ptr<crdt::GlobalDB> globaldb_m;
-
-        std::vector<uint8_t> MakeSignature( SGTransaction::DAGStruct dag_st ) const;
-        bool                 CheckDAGStructSignature( SGTransaction::DAGStruct dag_st ) const;
 
         std::shared_ptr<boost::asio::io_context>   ctx_m;
         std::shared_ptr<GeniusAccount>             account_m;

@@ -149,7 +149,7 @@ namespace sgns
         loggerGraphsync->set_level( spdlog::level::err );
         loggerBroadcaster->set_level( spdlog::level::trace );
         loggerDataStore->set_level( spdlog::level::err );
-        loggerTransactions->set_level( spdlog::level::err );
+        loggerTransactions->set_level( spdlog::level::debug );
         loggerQueue->set_level( spdlog::level::err );
         loggerRocksDB->set_level( spdlog::level::err );
         logkad->set_level( spdlog::level::err );
@@ -224,8 +224,8 @@ namespace sgns
         std::string base58key = maybe_base58.value();
 
         gnus_network_full_path_ = ( boost::format( std::string( GNUS_NETWORK_PATH ) ) %
-                                    sgns::version::SuperGeniusVersionMajor() % base58key )
-                                      .str();
+                                     sgns::version::SuperGeniusVersionMajor() % base58key )
+                                       .str();
 
         auto pubsubKeyPath = gnus_network_full_path_ + "/pubs_processor";
 
@@ -246,10 +246,7 @@ namespace sgns
                                                       write_base_path_ + gnus_network_full_path_,
                                                       pubsub_ );
 
-        auto global_db_init_result = globaldb_->Init( crdt::CrdtOptions::DefaultOptions(),
-                                                      graphsyncnetwork_,
-                                                      scheduler,
-                                                      generator );
+        auto global_db_init_result = globaldb_->Init( crdt::CrdtOptions::DefaultOptions() );
         globaldb_->AddBroadcastTopic( processing_channel_topic_ );
         if ( global_db_init_result.has_error() )
         {
@@ -925,4 +922,12 @@ outcome::result<std::map<std::string, double>> GeniusNode::GetCoinprice( const s
     {
         return transaction_manager_->WaitForEscrowRelease( originalEscrowId, timeout );
     }
+
+    void GeniusNode::SendTransactionAndProof(
+        std::shared_ptr<IGeniusTransactions> tx,
+        std::vector<uint8_t>                 proof )
+    {
+        transaction_manager_->EnqueueTransaction( std::make_pair( tx, proof ) );
+    }
+
 }

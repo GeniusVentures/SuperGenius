@@ -231,6 +231,72 @@ namespace sgns::crdt
         return elements;
     }
 
+    outcome::result<CrdtSet::QueryResult> CrdtSet::QueryElements( const std::string &prefix_base,
+                                                                  const std::string &middle_part,
+                                                                  const std::string &remainder_prefix,
+                                                                  const QuerySuffix &aSuffix )
+    {
+        if ( this->dataStore_ == nullptr )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
+
+        // We can only GET an element if it's part of the Set (in
+        // "elements" and not in "tombstones").
+
+        // As an optimization:
+        // * If the key has a value in the store it means:
+        //   -> It occurs at least once in "elems"
+        //   -> It may or not be tombstoned
+        // * If the key does not have a value in the store:
+        //   -> It was either never added
+
+        // /namespace/k/<prefix>
+        auto prefixKeysKey = this->KeysKey( prefix_base );
+
+
+        auto queryResult = this->dataStore_->query( prefixKeysKey.GetKey()+ "/", middle_part, remainder_prefix );
+        if ( queryResult.has_failure() )
+        {
+            return outcome::failure( queryResult.error() );
+        }
+
+        QueryResult elements;
+        // Check if elements tombstoned.
+        for ( const auto &element : queryResult.value() )
+        {
+            auto inSetResult = this->InElemsNotTombstoned( std::string( element.first.toString() ) );
+            if ( inSetResult.has_failure() || !inSetResult.value() )
+            {
+                continue;
+            }
+
+            std::string key = std::string( element.first.toString() );
+            switch ( aSuffix )
+            {
+                case QuerySuffix::QUERY_ALL:
+                    elements.insert( element );
+                    break;
+                case QuerySuffix::QUERY_PRIORITYSUFFIX:
+                    if ( boost::algorithm::ends_with( key, "/" + GetPrioritySuffix() ) )
+                    {
+                        elements.insert( element );
+                    }
+                    break;
+                case QuerySuffix::QUERY_VALUESUFFIX:
+                    if ( boost::algorithm::ends_with( key, "/" + GetValueSuffix() ) )
+                    {
+                        elements.insert( element );
+                    }
+                    break;
+                default:
+                    return outcome::failure( queryResult.error() );
+            }
+        }
+
+        return elements;
+    }
+
     outcome::result<bool> CrdtSet::IsValueInSet( const std::string &aKey )
     {
         if ( this->dataStore_ == nullptr )
@@ -423,9 +489,14 @@ namespace sgns::crdt
 
         // If this key was tombstoned already, do not store/update the value at all.
         auto isDeletedResult = this->InTombsKeyID( aKey, aID );
-        if ( isDeletedResult.has_failure() || isDeletedResult.value() )
+        if ( isDeletedResult.has_failure() )
         {
             return outcome::failure( boost::system::error_code{} );
+        }
+        if ( isDeletedResult.value() )
+        {
+            //if it's tombstone we just don't add it
+            return outcome::success();
         }
 
         auto priorityResult = this->GetPriority( aKey );
@@ -500,44 +571,44 @@ namespace sgns::crdt
 
         auto batchDatastore = this->dataStore_->batch();
 
-    for(auto& elem : aElems)
-    {
-      // overwrite the identifier as it would come unset
-      elem.set_id(aID);
-      auto key = elem.key();
+        for ( auto &elem : aElems )
+        {
+            // overwrite the identifier as it would come unset
+            elem.set_id( aID );
+            auto key = elem.key();
 
-      // /namespace/s/<key>/<id>
-      auto kNamespace = this->ElemsPrefix(key).ChildString(aID);
+            // /namespace/s/<key>/<id>
+            auto kNamespace = this->ElemsPrefix( key ).ChildString( aID );
 
-      Buffer keyBuffer;
-      keyBuffer.put(kNamespace.GetKey());
+            Buffer keyBuffer;
+            keyBuffer.put( kNamespace.GetKey() );
 
-      auto putResult = batchDatastore->put(std::move(keyBuffer), Buffer());  
-      if (putResult.has_error())
-      {
-        return outcome::failure(putResult.error());
-      }
-      // update the value if applicable:
-      // * higher priority than we currently have.
-      // * not tombstoned before.
-      Buffer valueBuffer;
-      valueBuffer.put(elem.value());
-      auto setValueResult = this->SetValue(batchDatastore, key, aID, std::move(valueBuffer), aPriority);
-      if (setValueResult.has_failure())
-      {
-        return outcome::failure(setValueResult.error());
-      }
-    }
-    auto commitResult = batchDatastore->commit();
-    if (commitResult.has_failure())
-    {
-      return outcome::failure(commitResult.error());
-    }
+            auto putResult = batchDatastore->put( std::move( keyBuffer ), Buffer() );
+            if ( putResult.has_error() )
+            {
+                return outcome::failure( putResult.error() );
+            }
+            // update the value if applicable:
+            // * higher priority than we currently have.
+            // * not tombstoned before.
+            Buffer valueBuffer;
+            valueBuffer.put( elem.value() );
+            auto setValueResult = this->SetValue( batchDatastore, key, aID, std::move( valueBuffer ), aPriority );
+            if ( setValueResult.has_failure() )
+            {
+                return outcome::failure( setValueResult.error() );
+            }
+        }
+        auto commitResult = batchDatastore->commit();
+        if ( commitResult.has_failure() )
+        {
+            return outcome::failure( commitResult.error() );
+        }
 
         return outcome::success();
     }
 
-    outcome::result<void> CrdtSet::PutTombs( const std::vector<Element> &aTombs )
+    outcome::result<void> CrdtSet::PutTombs( const std::vector<Element> &aTombs, const std::string &aID )
     {
         if ( aTombs.empty() )
         {
@@ -551,21 +622,25 @@ namespace sgns::crdt
 
         auto batchDatastore = this->dataStore_->batch();
 
-    std::vector<std::string> deletedKeys;
-    for (const auto& tomb : aTombs)
-    {
-      // /namespace/tombs/<key>/<id>
-      const auto &key        = tomb.key();
-      auto kNamespace = this->TombsPrefix(key).ChildString(tomb.id());
+        std::vector<std::string> deletedKeys;
+        for ( auto tomb : aTombs )
+        {
+            // /namespace/tombs/<key>/<id>
+            if ( tomb.id().empty() )
+            {
+                tomb.set_id( aID );
+            }
+            const auto &key        = tomb.key();
+            auto        kNamespace = this->TombsPrefix( key ).ChildString( tomb.id() );
 
-      Buffer keyBuffer;
-      keyBuffer.put(kNamespace.GetKey());
+            Buffer keyBuffer;
+            keyBuffer.put( kNamespace.GetKey() );
 
-      auto putResult = batchDatastore->put(std::move(keyBuffer), Buffer());
-      if (putResult.has_error())
-      {
-        return outcome::failure(putResult.error());
-      }
+            auto putResult = batchDatastore->put( std::move( keyBuffer ), Buffer() );
+            if ( putResult.has_error() )
+            {
+                return outcome::failure( putResult.error() );
+            }
 
             // run delete hook only once for all
             // versions of the same element tombstoned
@@ -597,7 +672,8 @@ namespace sgns::crdt
             return outcome::failure( boost::system::error_code{} );
         }
 
-        auto putTombsResult = this->PutTombs( std::vector( aDelta->tombstones().begin(), aDelta->tombstones().end() ) );
+        auto putTombsResult = this->PutTombs( std::vector( aDelta->tombstones().begin(), aDelta->tombstones().end() ),
+                                              aID );
         if ( putTombsResult.has_failure() )
         {
             return outcome::failure( putTombsResult.error() );

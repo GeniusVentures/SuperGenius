@@ -70,7 +70,7 @@ namespace sgns::crdt
          * @return      outcome::failure on error or success otherwise
          */
         outcome::result<void> Put( const std::vector<DataPair> &data_vector );
-        
+
         /** Gets a value that corresponds to specified key.
     * @param key - value key
     * @return value as a Buffer
@@ -88,6 +88,17 @@ namespace sgns::crdt
     * @return list of key-value pairs matches prefix
     */
         outcome::result<QueryResult> QueryKeyValues( const std::string &keyPrefix );
+
+        /**
+         * @brief       Queries with a middle part that can be a wildcard, negated string or normal string
+         * @param[in]   prefix_base: The base prefix to query
+         * @param[in]   middle_part: Either a string (normal query), '*' or !string
+         * @param[in]   remainder_prefix: The remainder part of the query prefix
+         * @return      A list of key value pairs
+         */
+        outcome::result<QueryResult> QueryKeyValues( const std::string &prefix_base,
+                                                     const std::string &middle_part,
+                                                     const std::string &remainder_prefix );
 
         /** Converts a unique key part to a string representation
     * @param key - binary key to convert

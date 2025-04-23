@@ -20,12 +20,14 @@ namespace sgns
     {
     }
 
-    TransferTransaction TransferTransaction::New( std::vector<OutputDestInfo> destinations,
-                                                  std::vector<InputUTXOInfo>  inputs,
-                                                  SGTransaction::DAGStruct    dag )
+    TransferTransaction TransferTransaction::New( std::vector<OutputDestInfo>                     destinations,
+                                                  std::vector<InputUTXOInfo>                      inputs,
+                                                  SGTransaction::DAGStruct                        dag,
+                                                  std::shared_ptr<ethereum::EthereumKeyGenerator> eth_key )
     {
         TransferTransaction instance( std::move( destinations ), std::move( inputs ), std::move( dag ) );
         instance.FillHash();
+        instance.MakeSignature( std::move( eth_key ) );
         return instance;
     }
 

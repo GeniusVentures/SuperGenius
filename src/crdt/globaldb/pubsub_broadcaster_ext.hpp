@@ -26,13 +26,15 @@ namespace sgns::crdt
         // Static factory method that accepts a vector of topics.
         static std::shared_ptr<PubSubBroadcasterExt> New(
             const std::vector<std::shared_ptr<GossipPubSubTopic>> &pubSubTopics,
-            std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer>        dagSyncer );
+            std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer>        dagSyncer,
+            libp2p::multi::Multiaddress                            dagSyncerMultiaddress );
 
         // Overload for backward compatibility that accepts a single topic.
         static std::shared_ptr<PubSubBroadcasterExt> New( std::shared_ptr<GossipPubSubTopic>              pubSubTopic,
-                                                          std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer )
+                                                          std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer,
+                                                          libp2p::multi::Multiaddress dagSyncerMultiaddress )
         {
-            return New( std::vector<std::shared_ptr<GossipPubSubTopic>>{ pubSubTopic }, dagSyncer );
+            return New( std::vector<std::shared_ptr<GossipPubSubTopic>>{ pubSubTopic }, dagSyncer, std::move (dagSyncerMultiaddress) );
         }
 
         void SetCrdtDataStore( std::shared_ptr<CrdtDatastore> dataStore );
@@ -57,12 +59,13 @@ namespace sgns::crdt
          */
         void Start();
         void AddTopic( const std::shared_ptr<GossipPubSubTopic> &newTopic );
-        bool hasTopic( const std::string &topic ) override;
+        bool HasTopic( const std::string &topic ) override;
 
     private:
         // Constructor now accepts a vector of topics.
         PubSubBroadcasterExt( const std::vector<std::shared_ptr<GossipPubSubTopic>> &pubSubTopics,
-                              std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer>        dagSyncer );
+                              std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer>        dagSyncer,
+                              libp2p::multi::Multiaddress                            dagSyncerMultiaddress );
 
         void OnMessage( boost::optional<const GossipPubSub::Message &> message, const std::string &incomingTopic );
 
@@ -70,6 +73,7 @@ namespace sgns::crdt
         std::string                                                            defaultTopicString_;
         std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer>                        dagSyncer_;
         std::shared_ptr<CrdtDatastore>                                         dataStore_;
+        libp2p::multi::Multiaddress                                            dagSyncerMultiaddress_;
         std::queue<std::tuple<libp2p::peer::PeerId, std::string, std::string>> messageQueue_;
         std::mutex                                                             mutex_;
         sgns::base::Logger m_logger = sgns::base::createLogger( "PubSubBroadcasterExt" );
