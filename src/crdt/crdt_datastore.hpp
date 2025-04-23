@@ -138,7 +138,7 @@ namespace sgns::crdt
      * @param[in] topic Optional topic name for targeted publishing. If not provided, the default broadcast behavior is used.
      * @return outcome::success on success, or outcome::failure if an error occurs.
      */
-        outcome::result<void> Publish( const std::shared_ptr<Delta> &aDelta,
+        outcome::result<CID> Publish( const std::shared_ptr<Delta> &aDelta,
                                        std::optional<std::string>    topic = std::nullopt );
 
         /** PrintDAG pretty prints the current Merkle-DAG using the given printFunc

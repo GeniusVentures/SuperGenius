@@ -705,7 +705,13 @@ namespace sgns::crdt
             return outcome::failure( deltaResult.error() );
         }
 
-        return this->Publish( deltaResult.value(), topic );
+        auto publishResult = Publish( deltaResult.value(), topic );
+        if ( deltaResult.has_failure() )
+        {
+            return outcome::failure( publishResult.error() );
+        }
+
+        return outcome::success();
     }
 
     outcome::result<void> CrdtDatastore::DeleteKey( const HierarchicalKey &aKey )
@@ -726,19 +732,23 @@ namespace sgns::crdt
             return outcome::success();
         }
 
-        return Publish( deltaResult.value() );
+        auto publishResult = Publish( deltaResult.value() );
+        if ( deltaResult.has_failure() )
+        {
+            return outcome::failure( publishResult.error() );
+        }
+
+        return outcome::success();
     }
 
-    outcome::result<void> CrdtDatastore::Publish( const std::shared_ptr<Delta> &aDelta,
-                                                  std::optional<std::string>    topic )
+    outcome::result<CID> CrdtDatastore::Publish( const std::shared_ptr<Delta> &aDelta,
+                                                 std::optional<std::string>    topic )
     {
-        auto addResult = AddDAGNode( aDelta, topic );
-        if ( addResult.has_failure() )
-        {
-            return outcome::failure( addResult.error() );
-        }
-        std::vector<CID> cids{ addResult.value() };
-        return Broadcast( cids, topic );
+        OUTCOME_TRY(  auto &&newCID , AddDAGNode( aDelta, topic ) );
+
+        std::vector<CID> cids{ newCID };
+        BOOST_OUTCOME_TRYV2( auto &&, Broadcast( cids, topic ) );
+        return newCID;
     }
 
     outcome::result<void> CrdtDatastore::Broadcast( const std::vector<CID> &cids, std::optional<std::string> topic )
