@@ -121,8 +121,8 @@ namespace sgns
         libp2p::log::setLevelOfGroup( "SuperGeniusDemo", soralog::Level::ERROR_ );
         std::string logdir = "";
 #ifndef SGNS_DEBUGLOGS
-        logdir = write_base_path_ + "/sgnslog2.log";
-        std::filesystem::remove_all( logdir );
+        //logdir = write_base_path_ + "/sgnslog2.log";
+        //std::filesystem::remove_all( logdir );
 #endif
         node_logger               = base::createLogger( "SuperGeniusDemo", logdir );
         auto loggerGlobalDB       = base::createLogger( "GlobalDB", logdir );
@@ -167,8 +167,8 @@ namespace sgns
         loggerDAGSyncer->set_level( spdlog::level::trace );
         loggerGraphsync->set_level( spdlog::level::trace );
         loggerBroadcaster->set_level( spdlog::level::trace );
-        loggerDataStore->set_level( spdlog::level::trace );
-        loggerTransactions->set_level( spdlog::level::trace );
+        loggerDataStore->set_level( spdlog::level::err );
+        loggerTransactions->set_level( spdlog::level::err );
         loggerQueue->set_level( spdlog::level::err );
         loggerRocksDB->set_level( spdlog::level::err );
         logkad->set_level( spdlog::level::err );
