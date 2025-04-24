@@ -123,7 +123,10 @@ namespace sgns::crdt
                         self->OnMessage( message, topicName );
                     }
                 } ) );
-            subscriptionFutures_.push_back( std::move( future ) );
+            {
+                std::lock_guard lk( subscriptionMutex_ );
+                subscriptionFutures_.push_back( std::move( future ) );
+            }
         }
     }
 
@@ -236,54 +239,39 @@ namespace sgns::crdt
     }
 
     outcome::result<void> PubSubBroadcasterExt::Broadcast( const base::Buffer        &buff,
-                                                           std::optional<std::string> topic_name )
+                                                           std::optional<std::string> topicName )
     {
         std::shared_ptr<GossipPubSubTopic> targetTopic;
+        std::string                        targetTopicName;
         {
             std::lock_guard<std::mutex> lock( mapMutex_ );
-            if ( topicMap_.empty() )
+
+            targetTopicName = topicName.value_or( defaultTopicString_ );
+
+            if ( targetTopicName.empty() )
             {
-                m_logger->error( "No topics available for broadcasting." );
+                m_logger->error( "Broadcast failed: topic name is empty" );
                 return outcome::failure( boost::system::error_code{} );
             }
-            if ( topic_name )
+
+            auto it = topicMap_.find( targetTopicName );
+            if ( it != topicMap_.end() )
             {
-                auto it = topicMap_.find( topic_name.value() );
-                if ( it != topicMap_.end() )
-                {
-                    targetTopic = it->second;
-                }
-                if ( !targetTopic )
-                {
-                    std::string topicName = topic_name.value();
-                    m_logger->error( "Broadcast: no topic matching '{}' was found", topicName );
-                    auto newTopic = std::make_shared<GossipPubSubTopic>( pubSub_, topicName );
-                    topicMap_.insert( { topicName, newTopic } );
-                    targetTopic                                        = newTopic;
-                    std::future<libp2p::protocol::Subscription> future = std::move( newTopic->Subscribe(
-                        [weakptr = weak_from_this(),
-                         topicName]( boost::optional<const GossipPubSub::Message &> message )
-                        {
-                            if ( auto self = weakptr.lock() )
-                            {
-                                self->m_logger->debug( "Message received from topic: " + topicName );
-                                self->OnMessage( message, topicName );
-                            }
-                        } ) );
-                    subscriptionFutures_.push_back( std::move( future ) );
-                    //return outcome::failure( boost::system::error_code{} );
-                }
-            }
-            else
-            {
-                auto it = topicMap_.find( defaultTopicString_ );
-                if ( it == topicMap_.end() )
-                {
-                    m_logger->error( "First topic is not available." );
-                    return outcome::failure( boost::system::error_code{} );
-                }
                 targetTopic = it->second;
             }
+        }
+
+        if ( !targetTopic )
+        {
+            m_logger->error( "Broadcast: no topic matching '{}' was found", targetTopicName );
+
+            auto res = AddTopic( targetTopicName );
+            if ( !res )
+            {
+                return res;
+            }
+            std::lock_guard<std::mutex> lock( mapMutex_ );
+            targetTopic = topicMap_.at( targetTopicName );
         }
 
         sgns::crdt::broadcasting::BroadcastMessage bmsg;
@@ -360,16 +348,7 @@ namespace sgns::crdt
 
         targetTopic->Publish( bmsg.SerializeAsString() );
 
-        if ( topic_name )
-        {
-            m_logger->debug( "CIDs broadcasted by {} to SINGLE topic {}", peer_info.id.toBase58(), topic_name.value() );
-        }
-        else
-        {
-            m_logger->debug( "CIDs broadcasted by {} to the first topic ({})",
-                             peer_info.id.toBase58(),
-                             targetTopic->GetTopic() );
-        }
+        m_logger->debug( "CIDs broadcasted by {} to topic {}", peer_info.id.toBase58(), targetTopicName );
 
         return outcome::success();
     }
@@ -400,7 +379,7 @@ namespace sgns::crdt
             return outcome::failure( boost::system::error_code{} );
         }
 
-        std::shared_ptr<GossipPubSubTopic> newTopic;
+        std::shared_ptr<GossipPubSubTopic> topicPtr;
         {
             std::lock_guard<std::mutex> lock( mapMutex_ );
 
@@ -410,8 +389,8 @@ namespace sgns::crdt
                 return outcome::success();
             }
 
-            newTopic = std::make_shared<GossipPubSubTopic>( pubSub_, topicName );
-            topicMap_.emplace( topicName, newTopic );
+            topicPtr = std::make_shared<GossipPubSubTopic>( pubSub_, topicName );
+            topicMap_.emplace( topicName, topicPtr );
 
             if ( defaultTopicString_.empty() )
             {
@@ -419,8 +398,23 @@ namespace sgns::crdt
             }
         }
 
-        m_logger->trace( "Subscription request sent to new topic: '{}'", topicName );
-        std::future<libp2p::protocol::Subscription> future = std::move( newTopic->Subscribe(
+        SubscribeTopic( topicPtr );
+
+        return outcome::success();
+    }
+
+    bool PubSubBroadcasterExt::HasTopic( const std::string &topic )
+    {
+        std::lock_guard<std::mutex> lock( mapMutex_ );
+        return topicMap_.find( topic ) != topicMap_.end();
+    }
+
+    void PubSubBroadcasterExt::SubscribeTopic( const std::shared_ptr<GossipPubSubTopic> &topic )
+    {
+        const std::string topicName = topic->GetTopic();
+        m_logger->trace( "Subscription request sent to topic: '{}'", topicName );
+
+        std::future<libp2p::protocol::Subscription> future = std::move( topic->Subscribe(
             [weakptr = weak_from_this(), topicName]( boost::optional<const GossipPubSub::Message &> message )
             {
                 if ( auto self = weakptr.lock() )
@@ -431,17 +425,9 @@ namespace sgns::crdt
             } ) );
 
         {
-            std::lock_guard<std::mutex> lock( mapMutex_ );
+            std::lock_guard<std::mutex> lock( subscriptionMutex_ );
             subscriptionFutures_.push_back( std::move( future ) );
         }
-
-        return outcome::success();
-    }
-
-    bool PubSubBroadcasterExt::HasTopic( const std::string &topic )
-    {
-        std::lock_guard<std::mutex> lock( mapMutex_ );
-        return topicMap_.find( topic ) != topicMap_.end();
     }
 
 } // namespace sgns::crdt

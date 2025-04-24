@@ -68,10 +68,10 @@ namespace sgns::crdt
         /**
          * @brief Sends the given buffer as a broadcast to peers.
          * @param buff       Buffer containing the data to broadcast.
-         * @param topic_name Optional specific topic to broadcast on; uses default if not provided.
+         * @param topicName  Optional specific topic to broadcast on; uses default if not provided.
          * @return outcome::success on successful publish, or outcome::failure on error.
          */
-        outcome::result<void> Broadcast( const base::Buffer &buff, std::optional<std::string> topic_name ) override;
+        outcome::result<void> Broadcast( const base::Buffer &buff, std::optional<std::string> topicName ) override;
 
         /**
          * @brief Retrieves the next incoming broadcast payload.
@@ -121,6 +121,12 @@ namespace sgns::crdt
          */
         void OnMessage( boost::optional<const GossipPubSub::Message &> message, const std::string &incomingTopic );
 
+        /**
+         * @brief  Subscribe to a given topic and store its future.
+         * @param  topic  Shared pointer to the GossipPubSubTopic to subscribe.
+         */
+        void SubscribeTopic( const std::shared_ptr<GossipPubSubTopic> &topic );
+
         std::unordered_map<std::string, std::shared_ptr<GossipPubSubTopic>>    topicMap_;
         std::string                                                            defaultTopicString_;
         std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer>                        dagSyncer_;
@@ -128,9 +134,11 @@ namespace sgns::crdt
         libp2p::multi::Multiaddress                                            dagSyncerMultiaddress_;
         std::queue<std::tuple<libp2p::peer::PeerId, std::string, std::string>> messageQueue_;
 
-        std::mutex                    queueMutex_; ///< protects messageQueue_
-        std::mutex                    mapMutex_;   ///< protects topicMap_, defaultTopicString_, subscriptionFutures_
-        std::shared_ptr<GossipPubSub> pubSub_;     ///< Pubsub used to broadcast/receive messages
+        std::shared_ptr<GossipPubSub> pubSub_; ///< Pubsub used to broadcast/receive messages
+
+        std::mutex queueMutex_;        ///< protects messageQueue_
+        std::mutex mapMutex_;          ///< protects topicMap_ and defaultTopicString_
+        std::mutex subscriptionMutex_; ///< protects subscriptionFutures_
 
         sgns::base::Logger m_logger = sgns::base::createLogger( "PubSubBroadcasterExt" );
         std::vector<std::future<libp2p::protocol::Subscription>> subscriptionFutures_;
