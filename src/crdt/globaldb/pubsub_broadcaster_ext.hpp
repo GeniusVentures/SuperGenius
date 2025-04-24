@@ -87,10 +87,11 @@ namespace sgns::crdt
         void Start();
 
         /**
-         * @brief Adds a new topic and subscribes to its messages.
-         * @param newTopic Shared pointer to the new pubsub topic.
+         * @brief Adds a new topic by name, creating the GossipPubSubTopic internally and subscribing to it.
+         * @param topicName Name of the topic to add.
+         * @return outcome::success() on success (or if topic already existed), outcome::failure() on error.
          */
-        void AddTopic( const std::shared_ptr<GossipPubSubTopic> &newTopic );
+        outcome::result<void> AddTopic( const std::string &topicName );
 
         /**
          * @brief Checks whether the given topic is already registered.
@@ -127,8 +128,8 @@ namespace sgns::crdt
         libp2p::multi::Multiaddress                                            dagSyncerMultiaddress_;
         std::queue<std::tuple<libp2p::peer::PeerId, std::string, std::string>> messageQueue_;
 
-        std::mutex                     queueMutex_; ///< protects messageQueue_
-        std::mutex                     mapMutex_;   ///< protects topicMap_, defaultTopicString_, subscriptionFutures_
+        std::mutex                    queueMutex_; ///< protects messageQueue_
+        std::mutex                    mapMutex_;   ///< protects topicMap_, defaultTopicString_, subscriptionFutures_
         std::shared_ptr<GossipPubSub> pubSub_;     ///< Pubsub used to broadcast/receive messages
 
         sgns::base::Logger m_logger = sgns::base::createLogger( "PubSubBroadcasterExt" );

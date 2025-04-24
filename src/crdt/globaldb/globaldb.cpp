@@ -473,15 +473,9 @@ std::string GetLocalIP( boost::asio::io_context &io )
 
     void GlobalDB::AddBroadcastTopic( const std::string &topicName )
     {
-        if ( !m_pubsub )
-        {
-            m_logger->error( "PubSub instance is not available to create new topic." );
-            return;
-        }
-        auto newTopic = std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>( m_pubsub, topicName );
         if ( m_broadcaster )
         {
-            m_broadcaster->AddTopic( newTopic );
+            m_broadcaster->AddTopic( topicName );
         }
         else
         {

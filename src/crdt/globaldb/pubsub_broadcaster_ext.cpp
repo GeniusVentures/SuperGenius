@@ -392,25 +392,34 @@ namespace sgns::crdt
         return std::make_tuple( buffer, topic );
     }
 
-    void PubSubBroadcasterExt::AddTopic( const std::shared_ptr<GossipPubSubTopic> &newTopic )
+    outcome::result<void> PubSubBroadcasterExt::AddTopic( const std::string &topicName )
     {
-        std::lock_guard<std::mutex> lock( mapMutex_ );
-        std::string                 topicName = newTopic->GetTopic();
-
-        if ( topicMap_.find( topicName ) != topicMap_.end() )
+        if ( !pubSub_ )
         {
-            m_logger->debug( "Topic '" + topicName + "' already exists. Not adding duplicate." );
-            return;
+            m_logger->error( "PubSub instance is not available to create new topic '{}'", topicName );
+            return outcome::failure( boost::system::error_code{} );
         }
 
-        topicMap_.insert( { topicName, newTopic } );
-        if ( defaultTopicString_.empty() )
+        std::shared_ptr<GossipPubSubTopic> newTopic;
         {
-            defaultTopicString_ = topicName;
+            std::lock_guard<std::mutex> lock( mapMutex_ );
+
+            if ( topicMap_.find( topicName ) != topicMap_.end() )
+            {
+                m_logger->debug( "Topic '{}' already exists. Skipping.", topicName );
+                return outcome::success();
+            }
+
+            newTopic = std::make_shared<GossipPubSubTopic>( pubSub_, topicName );
+            topicMap_.emplace( topicName, newTopic );
+
+            if ( defaultTopicString_.empty() )
+            {
+                defaultTopicString_ = topicName;
+            }
         }
 
-        m_logger->trace( "Subscription request sent to new topic: " + topicName );
-
+        m_logger->trace( "Subscription request sent to new topic: '{}'", topicName );
         std::future<libp2p::protocol::Subscription> future = std::move( newTopic->Subscribe(
             [weakptr = weak_from_this(), topicName]( boost::optional<const GossipPubSub::Message &> message )
             {
@@ -420,7 +429,13 @@ namespace sgns::crdt
                     self->OnMessage( message, topicName );
                 }
             } ) );
-        subscriptionFutures_.push_back( std::move( future ) );
+
+        {
+            std::lock_guard<std::mutex> lock( mapMutex_ );
+            subscriptionFutures_.push_back( std::move( future ) );
+        }
+
+        return outcome::success();
     }
 
     bool PubSubBroadcasterExt::HasTopic( const std::string &topic )
