@@ -264,7 +264,7 @@ namespace sgns::crdt
             topicStringVector.push_back( m_broadcastChannel );
         }
 
-        m_broadcaster   = PubSubBroadcasterExt::New( topicStringVector, dagSyncer );
+        m_broadcaster   = PubSubBroadcasterExt::New( topicStringVector, dagSyncer, m_pubsub );
         m_crdtDatastore = CrdtDatastore::New( dataStore,
                                               HierarchicalKey( "crdt" ),
                                               dagSyncer,
@@ -449,7 +449,6 @@ namespace sgns::crdt
         if ( m_broadcaster )
         {
             m_broadcaster->AddTopic( newTopic );
-            m_logger->info( "New broadcast topic added: " + topicName );
         }
         else
         {
