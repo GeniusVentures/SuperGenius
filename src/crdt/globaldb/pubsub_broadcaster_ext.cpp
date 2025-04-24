@@ -64,21 +64,25 @@ namespace sgns::crdt
     std::shared_ptr<PubSubBroadcasterExt> PubSubBroadcasterExt::New(
         std::vector<std::shared_ptr<GossipPubSubTopic>> pubSubTopics,
         std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer,
-        libp2p::multi::Multiaddress                     dagSyncerMultiaddress )
+        libp2p::multi::Multiaddress                     dagSyncerMultiaddress,
+        std::shared_ptr<GossipPubSub>                   pubSub )
     {
         auto instance = std::shared_ptr<PubSubBroadcasterExt>(
             new PubSubBroadcasterExt( std::move( pubSubTopics ),
                                       std::move( dagSyncer ),
-                                      std::move( dagSyncerMultiaddress ) ) );
+                                      std::move( dagSyncerMultiaddress ),
+                                      std::move( pubSub ) ) );
         return instance;
     }
 
     PubSubBroadcasterExt::PubSubBroadcasterExt( std::vector<std::shared_ptr<GossipPubSubTopic>> pubSubTopics,
                                                 std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer,
-                                                libp2p::multi::Multiaddress dagSyncerMultiaddress ) :
+                                                libp2p::multi::Multiaddress                     dagSyncerMultiaddress,
+                                                std::shared_ptr<GossipPubSub>                   pubSub ) :
         dagSyncer_( std::move( dagSyncer ) ),
         dataStore_( nullptr ),
-        dagSyncerMultiaddress_( std::move( dagSyncerMultiaddress ) )
+        dagSyncerMultiaddress_( std::move( dagSyncerMultiaddress ) ),
+        pubSub_( std::move( pubSub ) )
     {
         m_logger->trace( "Initializing PubSubBroadcasterExt" );
         if ( !pubSubTopics.empty() )
@@ -251,8 +255,23 @@ namespace sgns::crdt
                 }
                 if ( !targetTopic )
                 {
-                    m_logger->error( "Broadcast: no topic matching '{}' was found", topic_name.value() );
-                    return outcome::failure( boost::system::error_code{} );
+                    std::string topicName = topic_name.value();
+                    m_logger->error( "Broadcast: no topic matching '{}' was found", topicName );
+                    auto newTopic = std::make_shared<GossipPubSubTopic>( pubSub_, topicName );
+                    topicMap_.insert( { topicName, newTopic } );
+                    targetTopic                                        = newTopic;
+                    std::future<libp2p::protocol::Subscription> future = std::move( newTopic->Subscribe(
+                        [weakptr = weak_from_this(),
+                         topicName]( boost::optional<const GossipPubSub::Message &> message )
+                        {
+                            if ( auto self = weakptr.lock() )
+                            {
+                                self->m_logger->debug( "Message received from topic: " + topicName );
+                                self->OnMessage( message, topicName );
+                            }
+                        } ) );
+                    subscriptionFutures_.push_back( std::move( future ) );
+                    //return outcome::failure( boost::system::error_code{} );
                 }
             }
             else

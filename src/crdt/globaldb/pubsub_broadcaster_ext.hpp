@@ -38,7 +38,8 @@ namespace sgns::crdt
          */
         static std::shared_ptr<PubSubBroadcasterExt> New( std::vector<std::shared_ptr<GossipPubSubTopic>> pubSubTopics,
                                                           std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer,
-                                                          libp2p::multi::Multiaddress dagSyncerMultiaddress );
+                                                          libp2p::multi::Multiaddress   dagSyncerMultiaddress,
+                                                          std::shared_ptr<GossipPubSub> pubSub );
 
         /**
          * @brief Factory method for a single topic
@@ -49,11 +50,13 @@ namespace sgns::crdt
          */
         static std::shared_ptr<PubSubBroadcasterExt> New( std::shared_ptr<GossipPubSubTopic>              pubSubTopic,
                                                           std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer,
-                                                          libp2p::multi::Multiaddress dagSyncerMultiaddress )
+                                                          libp2p::multi::Multiaddress   dagSyncerMultiaddress,
+                                                          std::shared_ptr<GossipPubSub> pubSub )
         {
             return New( std::vector<std::shared_ptr<GossipPubSubTopic>>{ pubSubTopic },
                         std::move( dagSyncer ),
-                        std::move( dagSyncerMultiaddress ) );
+                        std::move( dagSyncerMultiaddress ),
+                        std::move( pubSub ) );
         }
 
         /**
@@ -106,7 +109,8 @@ namespace sgns::crdt
          */
         PubSubBroadcasterExt( std::vector<std::shared_ptr<GossipPubSubTopic>> pubSubTopics,
                               std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer,
-                              libp2p::multi::Multiaddress                     dagSyncerMultiaddress );
+                              libp2p::multi::Multiaddress                     dagSyncerMultiaddress,
+                              std::shared_ptr<GossipPubSub>                   pubSub );
 
         /**
          * @brief Internal handler invoked on incoming pubsub messages.
@@ -123,8 +127,9 @@ namespace sgns::crdt
         libp2p::multi::Multiaddress                                            dagSyncerMultiaddress_;
         std::queue<std::tuple<libp2p::peer::PeerId, std::string, std::string>> messageQueue_;
 
-        std::mutex queueMutex_; ///< protects messageQueue_
-        std::mutex mapMutex_;   ///< protects topicMap_, defaultTopicString_, subscriptionFutures_
+        std::mutex                     queueMutex_; ///< protects messageQueue_
+        std::mutex                     mapMutex_;   ///< protects topicMap_, defaultTopicString_, subscriptionFutures_
+        std::shared_ptr<GossipPubSub> pubSub_;     ///< Pubsub used to broadcast/receive messages
 
         sgns::base::Logger m_logger = sgns::base::createLogger( "PubSubBroadcasterExt" );
         std::vector<std::future<libp2p::protocol::Subscription>> subscriptionFutures_;
