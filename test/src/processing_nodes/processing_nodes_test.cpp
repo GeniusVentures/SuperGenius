@@ -24,6 +24,9 @@
 #include "FileManager.hpp"
 #include <boost/dll.hpp>
 #include <boost/algorithm/string/replace.hpp>
+#include "testutil/wait_condition.hpp"
+
+using namespace sgns::test;
 
 class ProcessingNodesTest : public ::testing::Test
 {
@@ -285,18 +288,43 @@ TEST_F( ProcessingNodesTest, PostProcessing )
     EXPECT_TRUE( postjob ) << "post job error: " << postjob.error().message();
 
     EXPECT_TRUE( node_main->WaitForEscrowRelease( postjob.value(), std::chrono::milliseconds( 60000 ) ) );
-    std::this_thread::sleep_for( std::chrono::milliseconds( 2000 ) );
+
+    //std::this_thread::sleep_for( std::chrono::milliseconds( 2000 ) );
 
     std::cout << "Balance main (Before):  " << balance_main << std::endl;
     std::cout << "Balance node1 (Before): " << balance_node1 << std::endl;
     std::cout << "Balance node2 (Before): " << balance_node2 << std::endl;
     std::cout << "Cost:                   " << cost << std::endl;
+
+    assertWaitForCondition(
+        [&]()
+        {
+            auto result             = node_main->GetBalance();
+            if ( result == balance_main - cost )
+            {
+                return true;
+            }
+            return false;
+        },
+        std::chrono::milliseconds( 20000 ),
+        "Main Balance not updated in time" );
+    ASSERT_EQ( balance_main - cost, node_main->GetBalance() );
+    assertWaitForCondition(
+        [&]()
+        {
+            auto result = node_proc1->GetBalance() + node_proc2->GetBalance();
+            auto expected_peer_gain = ( ( cost * 65 ) / 100 ) / 2;
+            if ( result == balance_node1 + balance_node2 + 2 * expected_peer_gain )
+            {
+                return true;
+            }
+            return false;
+        },
+        std::chrono::milliseconds( 40000 ),
+        "Balances not updated in time" );
     std::cout << "Balance main (After):   " << node_main->GetBalance() << std::endl;
     std::cout << "Balance node1 (After):  " << node_proc1->GetBalance() << std::endl;
     std::cout << "Balance node2 (After):  " << node_proc2->GetBalance() << std::endl;
-
-    ASSERT_EQ( balance_main - cost, node_main->GetBalance() );
-
     //TODO: convert DEV_CONFIG.Cut from string to fixed and use below
     auto expected_peer_gain = ( ( cost * 65 ) / 100 ) / 2;
     ASSERT_EQ( balance_node1 + balance_node2 + 2 * expected_peer_gain,
