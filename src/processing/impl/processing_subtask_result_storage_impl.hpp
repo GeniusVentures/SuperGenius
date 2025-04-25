@@ -17,6 +17,8 @@ namespace sgns::processing
         */
         SubTaskResultStorageImpl( std::shared_ptr<sgns::crdt::GlobalDB> db, const std::string &storageTopic );
 
+        ~SubTaskResultStorageImpl();
+
         /** Add a subtask result
         * @param result - Result to add
         */

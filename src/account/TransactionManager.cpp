@@ -150,6 +150,10 @@ namespace sgns
             } );
     }
 
+    TransactionManager::~TransactionManager()
+    {
+        std::cout << ">>> ~TransactionManager CALLED at " << std::this_thread::get_id() << std::endl;
+    }
     void TransactionManager::Start()
     {
         CheckIncoming( false );

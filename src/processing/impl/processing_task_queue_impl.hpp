@@ -30,6 +30,10 @@ namespace sgns::processing
         {
         }
 
+        ~ProcessingTaskQueueImpl()
+        {
+            std::cout << ">>> ~ProcessingTaskQueueImpl CALLED at " << std::this_thread::get_id() << std::endl;
+        }
         /** Enqueue a task and subtasks
         * @param task - Task to add
         * @param subTasks - List of subtasks

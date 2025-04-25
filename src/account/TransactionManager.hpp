@@ -48,7 +48,7 @@ namespace sgns
                             std::shared_ptr<GeniusAccount>           account,
                             std::shared_ptr<crypto::Hasher>          hasher );
 
-        ~TransactionManager() = default;
+        ~TransactionManager();
 
         void Start();
         void PrintAccountInfo();

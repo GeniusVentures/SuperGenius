@@ -357,15 +357,17 @@ namespace sgns
             std::cout << "Stopping uphp thread" << std::endl;
             upnp_thread.join();
         }
-        account_.reset();
-        graphsyncnetwork_.reset();
+        std::cout << "processing_service_ use count: " << processing_service_.use_count() << std::endl;
+
+        //account_.reset();
+        //graphsyncnetwork_.reset();
         processing_service_->StopProcessing();
-        processing_service_.reset();
-        task_queue_.reset();
-        processing_core_.reset();
-        task_result_storage_.reset();
-        globaldb_.reset();
-        transaction_manager_.reset();
+        //processing_service_.reset();
+        //task_queue_.reset();
+        //processing_core_.reset();
+        //task_result_storage_.reset();
+        //globaldb_.reset();
+        //transaction_manager_.reset();
         std::cout << "GlobalDB use count2: " << globaldb_.use_count() << std::endl;
         std::cout << "Stopping Node End" << std::endl;
     }

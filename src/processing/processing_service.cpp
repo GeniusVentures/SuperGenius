@@ -59,6 +59,11 @@ namespace sgns::processing
         m_context_work = std::make_unique<boost::asio::io_context::work>( *m_context );
     }
 
+    ProcessingServiceImpl::~ProcessingServiceImpl()
+    {
+        std::cout << ">>> ~ProcessingServiceImpl CALLED at " << std::this_thread::get_id() << std::endl;
+        StopProcessing();
+    }
     void ProcessingServiceImpl::StartProcessing( const std::string &processingGridChannelId )
     {
         if ( !m_isStopped )
@@ -76,7 +81,7 @@ namespace sgns::processing
         m_logger->debug( "[{}] [SERVICE_STARTED]", node_address_ );
     }
 
-    void ProcessingServiceImpl::StopProcessing()
+void ProcessingServiceImpl::StopProcessing()
     {
         if ( m_isStopped )
         {
@@ -85,7 +90,15 @@ namespace sgns::processing
 
         m_isStopped = true;
 
-        m_gridChannel->Unsubscribe();
+        if ( m_gridChannel )
+        {
+            m_gridChannel->Unsubscribe();
+        }
+
+        //Cancel timers before stopping context!
+        boost::system::error_code ec;
+        m_timerChannelListRequestTimeout.cancel( ec );
+        m_nodeCreationTimer.cancel( ec );
 
         m_context_work.reset();
 
@@ -98,11 +111,12 @@ namespace sgns::processing
 
         {
             std::scoped_lock lock( m_mutexNodes );
-            m_processingNodes = {};
+            m_processingNodes.clear();
         }
 
         m_logger->debug( "[{}] [SERVICE_STOPPED]", node_address_ );
     }
+
 
     void ProcessingServiceImpl::Listen( const std::string &processingGridChannelId )
     {
@@ -294,19 +308,37 @@ namespace sgns::processing
         {
             m_logger->debug( "[{}] Accept Channel: Creating Node for queue {}", node_address_, processingQueuelId );
 
+            auto weakSelf = weak_from_this();
+
             auto node = ProcessingNode::New(
                 m_gossipPubSub,
                 m_subTaskStateStorage,
                 m_subTaskResultStorage,
                 m_processingCore,
-                std::bind( &ProcessingServiceImpl::OnQueueProcessingCompleted,
-                           this,
-                           processingQueuelId,
-                           std::placeholders::_1 ),
-                std::bind( &ProcessingServiceImpl::OnProcessingError, this, processingQueuelId, std::placeholders::_1 ),
-                [this, processingQueuelId]() { OnProcessingDone( processingQueuelId ); },
+                [weakSelf, processingQueuelId]( const SGProcessing::TaskResult &result )
+                {
+                    if ( auto self = weakSelf.lock() )
+                    {
+                        self->OnQueueProcessingCompleted( processingQueuelId, result );
+                    }
+                },
+                [weakSelf, processingQueuelId]( const std::string &error )
+                {
+                    if ( auto self = weakSelf.lock() )
+                    {
+                        self->OnProcessingError( processingQueuelId, error );
+                    }
+                },
+                [weakSelf, processingQueuelId]()
+                {
+                    if ( auto self = weakSelf.lock() )
+                    {
+                        self->OnProcessingDone( processingQueuelId );
+                    }
+                },
                 node_address_,
                 processingQueuelId );
+
             if ( node != nullptr )
             {
                 m_processingNodes[processingQueuelId] = node;
@@ -616,20 +648,52 @@ namespace sgns::processing
             }
 
             // Create the ProcessingNode
+            //auto node = ProcessingNode::New(
+            //    m_gossipPubSub,
+            //    m_subTaskStateStorage,
+            //    m_subTaskResultStorage,
+            //    m_processingCore,
+            //    std::bind( &ProcessingServiceImpl::OnQueueProcessingCompleted,
+            //               this,
+            //               subTaskQueueId,
+            //               std::placeholders::_1 ),
+            //    std::bind( &ProcessingServiceImpl::OnProcessingError, this, subTaskQueueId, std::placeholders::_1 ),
+            //    [this, subTaskQueueId]() { OnProcessingDone( subTaskQueueId ); },
+            //    node_address_,
+            //    subTaskQueueId,
+            //    subTasks );
+            auto weakSelf = weak_from_this();
+
             auto node = ProcessingNode::New(
                 m_gossipPubSub,
                 m_subTaskStateStorage,
                 m_subTaskResultStorage,
                 m_processingCore,
-                std::bind( &ProcessingServiceImpl::OnQueueProcessingCompleted,
-                           this,
-                           subTaskQueueId,
-                           std::placeholders::_1 ),
-                std::bind( &ProcessingServiceImpl::OnProcessingError, this, subTaskQueueId, std::placeholders::_1 ),
-                [this, subTaskQueueId]() { OnProcessingDone( subTaskQueueId ); },
+                [weakSelf, subTaskQueueId]( const SGProcessing::TaskResult &result )
+                {
+                    if ( auto self = weakSelf.lock() )
+                    {
+                        self->OnQueueProcessingCompleted( subTaskQueueId, result );
+                    }
+                },
+                [weakSelf, subTaskQueueId]( const std::string &error )
+                {
+                    if ( auto self = weakSelf.lock() )
+                    {
+                        self->OnProcessingError( subTaskQueueId, error );
+                    }
+                },
+                [weakSelf, subTaskQueueId]()
+                {
+                    if ( auto self = weakSelf.lock() )
+                    {
+                        self->OnProcessingDone( subTaskQueueId );
+                    }
+                },
                 node_address_,
                 subTaskQueueId,
                 subTasks );
+
             if ( node != nullptr )
             {
                 m_processingNodes[subTaskQueueId] = node;

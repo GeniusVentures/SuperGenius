@@ -40,6 +40,10 @@ namespace sgns::processing
         {
         }
 
+        ~ProcessingCoreImpl()
+        {
+            std::cout << ">>> ~ProcessingCoreImpl CALLED at " << std::this_thread::get_id() << std::endl;
+        }
         /** Process a single subtask
         * @param subTask - subtask that needs to be processed
         * @param result - subtask result
