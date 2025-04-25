@@ -180,7 +180,7 @@ namespace sgns::crdt
 
     CrdtDatastore::~CrdtDatastore()
     {
-        std::cout << ">>> ~CrdtDatastore CALLED at " << std::this_thread::get_id() << std::endl;
+        logger_->debug( "~CrdtDatastore CALLED at {} ", std::this_thread::get_id() );
         Close();
     }
 

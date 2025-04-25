@@ -330,46 +330,26 @@ namespace sgns
 
     GeniusNode::~GeniusNode()
     {
-        std::cout << "Stopping Node" << std::endl;
-        std::cout << "GlobalDB use count: " << globaldb_.use_count() << std::endl;
-        std::cout << "Main Thread: " << std::this_thread::get_id() << std::endl;
+        node_logger->debug( "~GeniusNode CALLED" );
 
         if ( pubsub_ )
         {
-            std::cout << "Stopping Pubsub" << std::endl;
             pubsub_->Stop(); // Stop activities of OtherClass
-            //pubsub_.reset();
         }
         if ( io_ )
         {
-            std::cout << "Stopping io" << std::endl;
             io_->stop(); // Stop our io_context
-            //io_.reset();
         }
         if ( io_thread.joinable() )
         {
-            std::cout << "Stopping io thread" << std::endl;
             io_thread.join();
         }
         stop_upnp = true;
         if ( upnp_thread.joinable() )
         {
-            std::cout << "Stopping uphp thread" << std::endl;
             upnp_thread.join();
         }
-        std::cout << "processing_service_ use count: " << processing_service_.use_count() << std::endl;
-
-        //account_.reset();
-        //graphsyncnetwork_.reset();
         processing_service_->StopProcessing();
-        //processing_service_.reset();
-        //task_queue_.reset();
-        //processing_core_.reset();
-        //task_result_storage_.reset();
-        //globaldb_.reset();
-        //transaction_manager_.reset();
-        std::cout << "GlobalDB use count2: " << globaldb_.use_count() << std::endl;
-        std::cout << "Stopping Node End" << std::endl;
     }
 
     void GeniusNode::RefreshUPNP( int pubsubport )

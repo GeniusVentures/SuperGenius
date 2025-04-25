@@ -152,7 +152,7 @@ namespace sgns
 
     TransactionManager::~TransactionManager()
     {
-        std::cout << ">>> ~TransactionManager CALLED at " << std::this_thread::get_id() << std::endl;
+        m_logger->debug( "~TransactionManager CALLED" );
     }
     void TransactionManager::Start()
     {

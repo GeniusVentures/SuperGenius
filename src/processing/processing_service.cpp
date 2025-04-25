@@ -61,7 +61,7 @@ namespace sgns::processing
 
     ProcessingServiceImpl::~ProcessingServiceImpl()
     {
-        std::cout << ">>> ~ProcessingServiceImpl CALLED at " << std::this_thread::get_id() << std::endl;
+        m_logger->debug( "~ProcessingServiceImpl CALLED" );
         StopProcessing();
     }
     void ProcessingServiceImpl::StartProcessing( const std::string &processingGridChannelId )

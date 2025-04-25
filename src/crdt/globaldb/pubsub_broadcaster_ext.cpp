@@ -92,10 +92,7 @@ namespace sgns::crdt
 
     PubSubBroadcasterExt ::~PubSubBroadcasterExt()
     {
-        std::cout << ">>> ~PubSubBroadcasterExt CALLED at " << std::this_thread::get_id() << std::endl;
-        //dataStore_.reset();
-        //dagSyncer_.reset();
-
+        m_logger->debug( "~PubSubBroadcasterExt CALLED" );
     }
 
     void PubSubBroadcasterExt::Start()
