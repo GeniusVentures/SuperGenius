@@ -92,17 +92,25 @@ namespace sgns::crdt
         {
             auto dagWorker                     = std::make_shared<DagWorker>();
             dagWorker->dagWorkerThreadRunning_ = true;
+            crdtInstance->dagWorkers_.push_back( dagWorker );
             dagWorker->dagWorkerFuture_        = std::async(
-                [weakptr = std::weak_ptr<CrdtDatastore>( crdtInstance ), dagWorker]()
+                [weakptr       = std::weak_ptr<CrdtDatastore>( crdtInstance ),
+                 weakDagWorker = std::weak_ptr<DagWorker>( dagWorker )]()
                 {
+
                     DagJob dagJob;
                     auto   dagThreadRunning = true;
                     while ( dagThreadRunning )
                     {
+                        auto dagWorkerShared = weakDagWorker.lock();
+                        if ( !dagWorkerShared )
+                        {
+                            break;
+                        }
                         if ( auto self = weakptr.lock() )
                         {
-                            self->SendJobWorkerIteration( dagWorker, dagJob );
-                            if ( !dagWorker->dagWorkerThreadRunning_ )
+                            self->SendJobWorkerIteration( dagWorkerShared, dagJob );
+                            if ( !dagWorkerShared->dagWorkerThreadRunning_ )
                             {
                                 self->logger_->debug( "SendJobWorker thread finished" );
                                 dagThreadRunning = false;
@@ -121,7 +129,7 @@ namespace sgns::crdt
                         }
                     }
                 } );
-            crdtInstance->dagWorkers_.push_back( dagWorker );
+
         }
 
         return crdtInstance;
@@ -172,6 +180,7 @@ namespace sgns::crdt
 
     CrdtDatastore::~CrdtDatastore()
     {
+        std::cout << ">>> ~CrdtDatastore CALLED at " << std::this_thread::get_id() << std::endl;
         Close();
     }
 
@@ -232,6 +241,7 @@ namespace sgns::crdt
         {
             for ( const auto &dagWorker : dagWorkers_ )
             {
+                std::cout << "dagWorker ptr: " << dagWorker.get() << std::endl;
                 dagWorker->dagWorkerThreadRunning_ = false;
                 dagWorker->dagWorkerFuture_.wait();
             }
@@ -313,6 +323,7 @@ namespace sgns::crdt
         {
             return;
         }
+        logger_->info( "In SendJobWorkerIteration. Jobs left: {}", dagWorkerJobList.size() );
         //std::cout << "Dag Worker QUant: " << dagWorkerJobList.size() << std::endl;
         {
             std::unique_lock lock( dagWorkerMutex_ );

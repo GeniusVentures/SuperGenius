@@ -82,13 +82,20 @@ namespace sgns::crdt
 
     GlobalDB::~GlobalDB()
     {
+        std::cout << ">>> ~GlobalDB CALLED at " << std::this_thread::get_id() << std::endl;
+        m_broadcaster->Stop();
         if (m_crdtDatastore)
         {
             m_crdtDatastore->Close();
         }
-        m_crdtDatastore    = nullptr;
-        m_broadcastChannel = nullptr;
-        m_context          = nullptr;
+        
+        //m_crdtDatastore.reset();
+        //m_broadcastChannel.reset();
+        //m_context.reset();
+        //m_broadcaster.reset();
+        //m_crdtDatastore    = nullptr;
+        //m_broadcastChannel = nullptr;
+        //m_context          = nullptr;
     }
 
     std::string GetLocalIP( boost::asio::io_context &io )

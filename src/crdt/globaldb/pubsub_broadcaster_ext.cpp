@@ -90,6 +90,14 @@ namespace sgns::crdt
         }
     }
 
+    PubSubBroadcasterExt ::~PubSubBroadcasterExt()
+    {
+        std::cout << ">>> ~PubSubBroadcasterExt CALLED at " << std::this_thread::get_id() << std::endl;
+        //dataStore_.reset();
+        //dagSyncer_.reset();
+
+    }
+
     void PubSubBroadcasterExt::Start()
     {
         std::lock_guard<std::mutex> lock( mapMutex_ );
@@ -387,5 +395,20 @@ namespace sgns::crdt
         std::lock_guard<std::mutex> lock( mapMutex_ );
         return topicMap_.find( topic ) != topicMap_.end();
     }
+
+    void PubSubBroadcasterExt::Stop()
+    {
+        std::lock_guard<std::mutex> lock( mapMutex_ );
+
+        for ( auto &topic : topicMap_ )
+        {
+            topic.second->Unsubscribe(); // You need to implement Unsubscribe in GossipPubSubTopic
+        }
+
+        topicMap_.clear();            // Clear all topics
+        subscriptionFutures_.clear(); // Clear all pending subscriptions
+        dataStore_.reset();           // Drop the reference to CrdtDatastore explicitly
+    }
+
 
 } // namespace sgns::crdt

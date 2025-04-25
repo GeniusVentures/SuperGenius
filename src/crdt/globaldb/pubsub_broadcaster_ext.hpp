@@ -28,6 +28,8 @@ namespace sgns::crdt
     public:
         using GossipPubSub      = sgns::ipfs_pubsub::GossipPubSub;
         using GossipPubSubTopic = sgns::ipfs_pubsub::GossipPubSubTopic;
+        
+        ~PubSubBroadcasterExt();
 
         // Static factory method that accepts a vector of topics.
         static std::shared_ptr<PubSubBroadcasterExt> New(
@@ -89,11 +91,15 @@ namespace sgns::crdt
          */
         bool HasTopic( const std::string &topic ) override;
 
+        void Stop();
+
     private:
         // Constructor now accepts a vector of topics.
         PubSubBroadcasterExt( const std::vector<std::shared_ptr<GossipPubSubTopic>> &pubSubTopics,
                               std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer>        dagSyncer,
                               std::shared_ptr<GossipPubSub>                   pubSub );
+
+        
 
         void OnMessage( boost::optional<const GossipPubSub::Message &> message, const std::string &incomingTopic );
 
