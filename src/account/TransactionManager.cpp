@@ -49,7 +49,9 @@ namespace sgns
     {
         m_logger->info( "Initializing values by reading whole blockchain" );
         globaldb_m->AddBroadcastTopic( account_m->GetAddress() + "in" );
+        globaldb_m->AddListenTopic( account_m->GetAddress() + "in" );
         globaldb_m->AddBroadcastTopic( account_m->GetAddress() + "out" );
+        globaldb_m->AddListenTopic( account_m->GetAddress() + "out" );
     }
 
     void TransactionManager::Start()

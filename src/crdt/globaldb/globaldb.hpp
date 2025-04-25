@@ -99,6 +99,7 @@ namespace sgns::crdt
         std::shared_ptr<AtomicTransaction> BeginTransaction();
 
     void AddBroadcastTopic(const std::string &topicName);
+    void AddListenTopic(const std::string &topicName);
 
     void PrintDataStore();
 

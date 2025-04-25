@@ -63,7 +63,7 @@ namespace sgns::crdt
 
     GlobalDB::GlobalDB( std::shared_ptr<boost::asio::io_context>         context,
                         std::string                                      databasePath,
-                        int                                                   dagSyncPort,
+                        int                                              dagSyncPort,
                         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub ) :
         m_context( std::move( context ) ),
         m_databasePath( std::move( databasePath ) ),
@@ -83,10 +83,9 @@ namespace sgns::crdt
     {
     }
 
-
     GlobalDB::~GlobalDB()
     {
-        if (m_crdtDatastore)
+        if ( m_crdtDatastore )
         {
             m_crdtDatastore->Close();
         }
@@ -95,7 +94,7 @@ namespace sgns::crdt
         m_context          = nullptr;
     }
 
-std::string GetLocalIP( boost::asio::io_context &io )
+    std::string GetLocalIP( boost::asio::io_context &io )
     {
 #if defined( _WIN32 )
         // Windows implementation using GetAdaptersAddresses
@@ -310,7 +309,7 @@ std::string GetLocalIP( boost::asio::io_context &io )
             topicStringVector.push_back( m_broadcastChannel );
         }
 
-        m_broadcaster   = PubSubBroadcasterExt::New( topicStringVector, dagSyncer, listen_to, m_pubsub );
+        m_broadcaster   = PubSubBroadcasterExt::New( { "default" }, {}, dagSyncer, listen_to, m_pubsub );
         m_crdtDatastore = CrdtDatastore::New( dataStore,
                                               HierarchicalKey( "crdt" ),
                                               dagSyncer,
@@ -394,7 +393,7 @@ std::string GetLocalIP( boost::asio::io_context &io )
 
         return batch.Commit();
     }
-    
+
     outcome::result<GlobalDB::Buffer> GlobalDB::Get( const HierarchicalKey &key )
     {
         if ( !m_crdtDatastore )
@@ -475,7 +474,18 @@ std::string GetLocalIP( boost::asio::io_context &io )
     {
         if ( m_broadcaster )
         {
-            m_broadcaster->AddTopic( topicName );
+            m_broadcaster->AddBroadcastTopic( topicName );
+        }
+        else
+        {
+            m_logger->error( "Broadcaster is not initialized." );
+        }
+    }
+    void GlobalDB::AddListenTopic( const std::string &topicName )
+    {
+        if ( m_broadcaster )
+        {
+            m_broadcaster->AddListenTopic( topicName );
         }
         else
         {

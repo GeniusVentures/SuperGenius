@@ -36,28 +36,11 @@ namespace sgns::crdt
          * @param dagSyncerMultiaddress Multiaddress of the DAG syncer node.
          * @return Shared pointer to the new PubSubBroadcasterExt.
          */
-        static std::shared_ptr<PubSubBroadcasterExt> New( std::vector<std::shared_ptr<GossipPubSubTopic>> pubSubTopics,
+        static std::shared_ptr<PubSubBroadcasterExt> New( std::vector<std::string> topicsToListen,
+                                                          std::vector<std::string> topicsToBroadcast,
                                                           std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer,
                                                           libp2p::multi::Multiaddress   dagSyncerMultiaddress,
                                                           std::shared_ptr<GossipPubSub> pubSub );
-
-        /**
-         * @brief Factory method for a single topic
-         * @param pubSubTopic Single pubsub topic instance.
-         * @param dagSyncer   Graphsync DAG syncer.
-         * @param dagSyncerMultiaddress Multiaddress of the DAG syncer.
-         * @return Shared pointer to the new PubSubBroadcasterExt.
-         */
-        static std::shared_ptr<PubSubBroadcasterExt> New( std::shared_ptr<GossipPubSubTopic>              pubSubTopic,
-                                                          std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer,
-                                                          libp2p::multi::Multiaddress   dagSyncerMultiaddress,
-                                                          std::shared_ptr<GossipPubSub> pubSub )
-        {
-            return New( std::vector<std::shared_ptr<GossipPubSubTopic>>{ pubSubTopic },
-                        std::move( dagSyncer ),
-                        std::move( dagSyncerMultiaddress ),
-                        std::move( pubSub ) );
-        }
 
         /**
          * @brief Sets the CRDT datastore used for decoding broadcasts.
@@ -91,7 +74,13 @@ namespace sgns::crdt
          * @param topicName Name of the topic to add.
          * @return outcome::success() on success (or if topic already existed), outcome::failure() on error.
          */
-        outcome::result<void> AddTopic( const std::string &topicName );
+        outcome::result<void> AddBroadcastTopic( const std::string &topicName );
+
+        /**
+         * @brief  Subscribe to a given topic and store its future.
+         * @param  topic  Shared pointer to the GossipPubSubTopic to subscribe.
+         */
+        void AddListenTopic( const std::string &topic );
 
         /**
          * @brief Checks whether the given topic is already registered.
@@ -108,7 +97,8 @@ namespace sgns::crdt
          * @param dagSyncer    Graphsync DAG syncer instance.
          * @param dagSyncerMultiaddress Multiaddress for DAG syncer node.
          */
-        PubSubBroadcasterExt( std::vector<std::shared_ptr<GossipPubSubTopic>> pubSubTopics,
+        PubSubBroadcasterExt( std::vector<std::string>                        topicsToListen,
+                              std::vector<std::string>                        topicsToBroadcast,
                               std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer,
                               libp2p::multi::Multiaddress                     dagSyncerMultiaddress,
                               std::shared_ptr<GossipPubSub>                   pubSub );
@@ -121,14 +111,8 @@ namespace sgns::crdt
          */
         void OnMessage( boost::optional<const GossipPubSub::Message &> message, const std::string &incomingTopic );
 
-        /**
-         * @brief  Subscribe to a given topic and store its future.
-         * @param  topic  Shared pointer to the GossipPubSubTopic to subscribe.
-         */
-        void SubscribeTopic( const std::shared_ptr<GossipPubSubTopic> &topic );
-
-        std::unordered_map<std::string, std::shared_ptr<GossipPubSubTopic>>    topicMap_;
-        std::string                                                            defaultTopicString_;
+        std::set<std::string>                                                  topicsToListen_;
+        std::set<std::string>                                                  topicsToBroadcast_;
         std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer>                        dagSyncer_;
         std::shared_ptr<CrdtDatastore>                                         dataStore_;
         libp2p::multi::Multiaddress                                            dagSyncerMultiaddress_;
@@ -136,9 +120,10 @@ namespace sgns::crdt
 
         std::shared_ptr<GossipPubSub> pubSub_; ///< Pubsub used to broadcast/receive messages
 
-        std::mutex queueMutex_;        ///< protects messageQueue_
-        std::mutex mapMutex_;          ///< protects topicMap_ and defaultTopicString_
-        std::mutex subscriptionMutex_; ///< protects subscriptionFutures_
+        std::mutex queueMutex_;           ///< protects messageQueue_
+        std::mutex listenTopicsMutex_;    ///< protects topicsToListen_
+        std::mutex broadcastTopicsMutex_; ///< protects topicsToListen_
+        std::mutex subscriptionMutex_;    ///< protects subscriptionFutures_
 
         sgns::base::Logger m_logger = sgns::base::createLogger( "PubSubBroadcasterExt" );
         std::vector<std::future<libp2p::protocol::Subscription>> subscriptionFutures_;
