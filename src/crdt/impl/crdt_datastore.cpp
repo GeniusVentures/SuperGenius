@@ -248,36 +248,30 @@ namespace sgns::crdt
             return;
         }
 
-        // Get the next broadcast message as a tuple: (buffer, topic)
-        auto nextResult = broadcaster_->Next();
-        if ( nextResult.has_failure() )
+        auto broadcasterNextResult = broadcaster_->Next();
+        if ( broadcasterNextResult.has_failure() )
         {
-            // Error retrieving broadcast; early return.
-            return;
-        }
-        // Unpack the tuple into broadcastBuffer and messageTopic.
-        base::Buffer broadcastBuffer;
-        std::string  messageTopic;
-        std::tie( broadcastBuffer, messageTopic ) = nextResult.value();
-
-        // Check if the message topic is subscribed.
-        if ( !broadcaster_->HasTopic( messageTopic ) )
-        {
-            logger_->debug( "Ignoring broadcast message with unsubscribed topic: {}", messageTopic );
+            if ( broadcasterNextResult.error().value() !=
+                 static_cast<int>( Broadcaster::ErrorCode::ErrNoMoreBroadcast ) )
+            {
+                // logger_->debug("Failed to get next broadcaster (error code " +
+                //                std::to_string(broadcasterNextResult.error().value()) + ")");
+            }
             return;
         }
 
-        auto decodeResult = DecodeBroadcast( broadcastBuffer );
+        auto decodeResult = DecodeBroadcast( broadcasterNextResult.value() );
         if ( decodeResult.has_failure() )
         {
             logger_->error( "Broadcaster: Unable to decode broadcast (error code {})",
-                            std::to_string( nextResult.error().value() ) );
+                            std::to_string( broadcasterNextResult.error().value() ) );
+
             return;
         }
 
         for ( const auto &bCastHeadCID : decodeResult.value() )
         {
-            auto handleBlockResult = HandleBlock( bCastHeadCID, messageTopic );
+            auto handleBlockResult = HandleBlock( bCastHeadCID );
             if ( handleBlockResult.has_failure() )
             {
                 logger_->error( "Broadcaster: Unable to handle block (error code {})",
@@ -325,18 +319,14 @@ namespace sgns::crdt
                        dagJob.rootCid_.toString().value(),
                        std::to_string( dagJob.rootPriority_ ) );
 
-        auto childrenResult = ProcessNode( dagJob.rootCid_,
-                                           dagJob.rootPriority_,
-                                           dagJob.delta_,
-                                           dagJob.node_,
-                                           dagJob.topic_ );
+        auto childrenResult = ProcessNode( dagJob.rootCid_, dagJob.rootPriority_, dagJob.delta_, dagJob.node_ );
         if ( childrenResult.has_failure() )
         {
             logger_->error( "SendNewJobs: failed to process node:{}", dagJob.rootCid_.toString().value() );
         }
         else
         {
-            SendNewJobs( dagJob.rootCid_, dagJob.rootPriority_, childrenResult.value(), dagJob.topic_ );
+            SendNewJobs( dagJob.rootCid_, dagJob.rootPriority_, childrenResult.value() );
         }
     }
 
@@ -425,67 +415,30 @@ namespace sgns::crdt
             }
         }
 
-        // Group heads by topic
-        std::unordered_map<std::string, std::vector<CID>> groups;
-        for ( const auto &cid : heads )
+        std::vector<CID> headsToBroadcast;
         {
-            auto        topicResult = this->heads_->GetHeadTopic( cid );
-            std::string topic;
-            if ( topicResult.has_failure() )
+            std::shared_lock lock( this->seenHeadsMutex_ );
+            for ( const auto &head : heads )
             {
-                topic = "";
-                logger_->trace( "RebroadcastHeads: Head {} returns no topic", cid.toString().value() );
-            }
-            else
-            {
-                topic = topicResult.value();
-                logger_->trace( "RebroadcastHeads: Head {} has topic '{}'", cid.toString().value(), topic );
-            }
-            groups[topic].push_back( cid );
-        }
-
-        // Log the grouping results
-        for ( const auto &group : groups )
-        {
-            if ( group.first.empty() )
-            {
-                logger_->trace( "RebroadcastHeads: Group with default topic (empty) has {} heads",
-                                group.second.size() );
-            }
-            else
-            {
-                logger_->trace( "RebroadcastHeads: Group with topic '{}' has {} heads",
-                                group.first,
-                                group.second.size() );
+                if ( std::find( seenHeads_.begin(), seenHeads_.end(), head ) == seenHeads_.end() )
+                {
+                    headsToBroadcast.push_back( head );
+                }
             }
         }
 
-        // Rebroadcast for each group using its topic (an empty topic will use the default in the broadcaster)
-        for ( const auto &group : groups )
+        auto broadcastResult = this->Broadcast( headsToBroadcast );
+        if ( broadcastResult.has_failure() )
         {
-            if ( group.first.empty() )
-            {
-                logger_->debug(
-                    "RebroadcastHeads: Skipping empty topic group to avoid rebroadcast on default channel." );
-                continue;
-            }
-            std::optional<std::string> topicOpt = group.first;
-            logger_->trace( "RebroadcastHeads: Broadcasting {} heads with topic '{}'",
-                           group.second.size(),
-                           group.first.empty() ? "[default]" : group.first );
-            auto bcastResult = this->Broadcast( group.second, topicOpt );
-            if ( bcastResult.has_failure() )
-            {
-                logger_->error( "RebroadcastHeads: Broadcast failed for topic '{}'", group.first );
-            }
+            logger_->error( "Broadcast failed" );
         }
-        {
-            std::unique_lock lock( this->seenHeadsMutex_ );
-            this->seenHeads_.clear();
-        }
+
+        // Reset the map
+        std::unique_lock lock( this->seenHeadsMutex_ );
+        this->seenHeads_.clear();
     }
 
-    outcome::result<void> CrdtDatastore::HandleBlock( const CID &aCid, const std::string &topic )
+    outcome::result<void> CrdtDatastore::HandleBlock( const CID &aCid )
     {
         // Ignore already known blocks.
         // This includes the case when the block is a current
@@ -518,7 +471,7 @@ namespace sgns::crdt
         {
             std::vector<CID> children;
             children.push_back( aCid );
-            SendNewJobs( aCid, 0, children, topic );
+            SendNewJobs( aCid, 0, children );
         }
         //if (dagSyncerResult.has_failure())
         //{
@@ -528,10 +481,7 @@ namespace sgns::crdt
         return outcome::success();
     }
 
-    void CrdtDatastore::SendNewJobs( const CID              &aRootCID,
-                                     uint64_t                aRootPriority,
-                                     const std::vector<CID> &aChildren,
-                                     const std::string      &topic )
+    void CrdtDatastore::SendNewJobs( const CID &aRootCID, uint64_t aRootPriority, const std::vector<CID> &aChildren )
     {
         // sendNewJobs calls getDeltas with the given
         // children and sends each response to the workers.
@@ -619,10 +569,9 @@ namespace sgns::crdt
             dagJob.rootPriority_ = rootPriority;
             dagJob.delta_        = delta;
             dagJob.node_         = node;
-            dagJob.topic_        = topic;
-            logger_->info( "SendNewJobs PUSHING CID={} priority={} ",
-                           dagJob.rootCid_.toString().value(),
-                           std::to_string( dagJob.rootPriority_ ) );
+            logger_->debug( "SendNewJobs PUSHING CID={} priority={} ",
+                            dagJob.rootCid_.toString().value(),
+                            std::to_string( dagJob.rootPriority_ ) );
             {
                 std::unique_lock lock( dagWorkerMutex_ );
                 dagWorkerJobList.push( dagJob );
@@ -675,9 +624,7 @@ namespace sgns::crdt
         return this->set_->IsValueInSet( aKey.GetKey() );
     }
 
-    outcome::result<void> CrdtDatastore::PutKey( const HierarchicalKey     &aKey,
-                                                 const Buffer              &aValue,
-                                                 std::optional<std::string> topic )
+    outcome::result<void> CrdtDatastore::PutKey( const HierarchicalKey &aKey, const Buffer &aValue )
     {
         if ( this->set_ == nullptr )
         {
@@ -689,8 +636,7 @@ namespace sgns::crdt
         {
             return outcome::failure( deltaResult.error() );
         }
-
-        return this->Publish( deltaResult.value(), topic );
+        return this->Publish( deltaResult.value() );
     }
 
     outcome::result<void> CrdtDatastore::DeleteKey( const HierarchicalKey &aKey )
@@ -714,44 +660,41 @@ namespace sgns::crdt
         return this->Publish( deltaResult.value() );
     }
 
-    outcome::result<void> CrdtDatastore::Publish( const std::shared_ptr<Delta> &aDelta,
-                                                  std::optional<std::string>    topic )
+    outcome::result<void> CrdtDatastore::Publish( const std::shared_ptr<Delta> &aDelta )
     {
-        auto addResult = this->AddDAGNode( aDelta, topic );
+        auto addResult = this->AddDAGNode( aDelta );
         if ( addResult.has_failure() )
         {
             return outcome::failure( addResult.error() );
         }
         std::vector<CID> cids{ addResult.value() };
-        return this->Broadcast( cids, topic );
+        return this->Broadcast( cids );
     }
 
-    outcome::result<void> CrdtDatastore::Broadcast( const std::vector<CID> &cids, std::optional<std::string> topic )
+    outcome::result<void> CrdtDatastore::Broadcast( const std::vector<CID> &cids )
     {
         if ( !broadcaster_ )
         {
-            logger_->error( "Broadcast: No broadcaster, Failed to broadcast '{}'", topic );
+            logger_->error( "Broadcast: No broadcaster, Failed to broadcast" );
             return outcome::failure( boost::system::error_code{} );
         }
         if ( cids.empty() )
         {
-            logger_->error( "Broadcast: Cids Empty, Failed to broadcast '{}'", topic );
+            logger_->error( "Broadcast: Cids Empty, Failed to broadcast" );
             return outcome::success();
         }
         auto encodedBufferResult = this->EncodeBroadcast( cids );
         if ( encodedBufferResult.has_failure() )
         {
-            logger_->error( "Broadcast: Encoding failed, Failed to broadcast '{}'", topic );
+            logger_->error( "Broadcast: Encoding failed, Failed to broadcast" );
 
             return outcome::failure( encodedBufferResult.error() );
         }
 
-        auto bcastResult = broadcaster_->Broadcast( encodedBufferResult.value(), topic );
-
+        auto bcastResult = this->broadcaster_->Broadcast( encodedBufferResult.value() );
         if ( bcastResult.has_failure() )
         {
-            logger_->error( "Broadcast: Broadcaster failed to broadcast '{}'", topic );
-
+            logger_->error( "Broadcast: Broadcaster failed to broadcast" );
             return outcome::failure( bcastResult.error() );
         }
         return outcome::success();
@@ -799,8 +742,7 @@ namespace sgns::crdt
     outcome::result<std::vector<CID>> CrdtDatastore::ProcessNode( const CID                       &aRoot,
                                                                   uint64_t                         aRootPrio,
                                                                   const std::shared_ptr<Delta>    &aDelta,
-                                                                  const std::shared_ptr<IPLDNode> &aNode,
-                                                                  std::optional<std::string>       topic )
+                                                                  const std::shared_ptr<IPLDNode> &aNode )
     {
         if ( this->set_ == nullptr || this->heads_ == nullptr || this->dagSyncer_ == nullptr || aDelta == nullptr ||
              aNode == nullptr )
@@ -837,7 +779,7 @@ namespace sgns::crdt
 
         if ( links.empty() )
         {
-            auto addHeadResult = this->heads_->Add( aRoot, aRootPrio, topic );
+            auto addHeadResult = this->heads_->Add( aRoot, aRootPrio );
             if ( addHeadResult.has_failure() )
             {
                 logger_->error( "ProcessNode: error adding head {}", aRoot.toString().value() );
@@ -853,7 +795,7 @@ namespace sgns::crdt
 
                 if ( isHeadResult )
                 {
-                    auto replaceResult = this->heads_->Replace( child, aRoot, aRootPrio, topic );
+                    auto replaceResult = this->heads_->Replace( child, aRoot, aRootPrio );
                     if ( replaceResult.has_failure() )
                     {
                         logger_->error( "ProcessNode: error replacing head {} -> {}",
@@ -876,7 +818,7 @@ namespace sgns::crdt
 
                 if ( knowBlockResult.value() )
                 {
-                    auto addHeadResult = this->heads_->Add( aRoot, aRootPrio, topic );
+                    auto addHeadResult = this->heads_->Add( aRoot, aRootPrio );
                     if ( addHeadResult.has_failure() )
                     {
                         logger_->error( "ProcessNode: error adding head {}", aRoot.toString().value() );
@@ -894,8 +836,7 @@ namespace sgns::crdt
         return children;
     }
 
-    outcome::result<CID> CrdtDatastore::AddDAGNode( const std::shared_ptr<Delta> &aDelta,
-                                                    std::optional<std::string>    topic )
+    outcome::result<CID> CrdtDatastore::AddDAGNode( const std::shared_ptr<Delta> &aDelta )
     {
         if ( this->heads_ == nullptr )
         {
@@ -929,7 +870,7 @@ namespace sgns::crdt
                        node->getCID().toString().value(),
                        reinterpret_cast<uint64_t>( this ) );
 
-        auto processNodeResult = this->ProcessNode( node->getCID(), height, aDelta, node, topic );
+        auto processNodeResult = this->ProcessNode( node->getCID(), height, aDelta, node );
         if ( processNodeResult.has_failure() )
         {
             logger_->error( "AddDAGNode: error processing new block" );

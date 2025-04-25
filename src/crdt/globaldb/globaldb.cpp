@@ -374,7 +374,7 @@ namespace sgns::crdt
             return outcome::failure( Error::CRDT_DATASTORE_NOT_CREATED );
         }
 
-        return m_crdtDatastore->PutKey( key, value, topic );
+        return m_crdtDatastore->PutKey( key, value );
     }
 
     outcome::result<void> GlobalDB::Put( const std::vector<DataPair> &data_vector )

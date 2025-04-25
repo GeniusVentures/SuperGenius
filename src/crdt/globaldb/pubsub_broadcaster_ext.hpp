@@ -58,9 +58,9 @@ namespace sgns::crdt
 
         /**
          * @brief Retrieves the next incoming broadcast payload.
-         * @return Tuple of buffer and topic string, or outcome::failure if none available.
+         * @return buffer value or outcome::failure on error
          */
-        outcome::result<std::tuple<base::Buffer, std::string>> Next() override;
+        outcome::result<base::Buffer> Next() override;
 
         /**
          * @brief Subscribes to all configured topics and starts message processing.
@@ -111,12 +111,12 @@ namespace sgns::crdt
          */
         void OnMessage( boost::optional<const GossipPubSub::Message &> message, const std::string &incomingTopic );
 
-        std::set<std::string>                                                  topicsToListen_;
-        std::set<std::string>                                                  topicsToBroadcast_;
-        std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer>                        dagSyncer_;
-        std::shared_ptr<CrdtDatastore>                                         dataStore_;
-        libp2p::multi::Multiaddress                                            dagSyncerMultiaddress_;
-        std::queue<std::tuple<libp2p::peer::PeerId, std::string, std::string>> messageQueue_;
+        std::set<std::string>                                     topicsToListen_;
+        std::set<std::string>                                     topicsToBroadcast_;
+        std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer>           dagSyncer_;
+        std::shared_ptr<CrdtDatastore>                            dataStore_;
+        libp2p::multi::Multiaddress                               dagSyncerMultiaddress_;
+        std::queue<std::tuple<libp2p::peer::PeerId, std::string>> messageQueue_;
 
         std::shared_ptr<GossipPubSub> pubSub_; ///< Pubsub used to broadcast/receive messages
 

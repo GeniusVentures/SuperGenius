@@ -216,7 +216,7 @@ namespace sgns::crdt
                                  peerId.toBase58() );
                 dagSyncer_->AddRoute( cid, peerId, addrvector );
             }
-            messageQueue_.emplace( std::move( peerId ), bmsg.data(), incomingTopic );
+            messageQueue_.emplace( std::move( peerId ), bmsg.data() );
         } while ( 0 );
     }
 
@@ -331,7 +331,7 @@ namespace sgns::crdt
         return outcome::success();
     }
 
-    outcome::result<std::tuple<base::Buffer, std::string>> PubSubBroadcasterExt::Next()
+    outcome::result<base::Buffer> PubSubBroadcasterExt::Next()
     {
         std::lock_guard<std::mutex> lock( queueMutex_ );
 
@@ -341,12 +341,12 @@ namespace sgns::crdt
             return outcome::failure( boost::system::error_code{} );
         }
 
-        auto [peerId, strBuffer, topic] = messageQueue_.front();
+        std::string strBuffer = std::get<1>( messageQueue_.front() );
         messageQueue_.pop();
 
         base::Buffer buffer;
         buffer.put( strBuffer );
-        return std::make_tuple( buffer, topic );
+        return buffer;
     }
 
     outcome::result<void> PubSubBroadcasterExt::AddBroadcastTopic( const std::string &topicName )
