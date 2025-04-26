@@ -312,11 +312,17 @@ namespace sgns::crdt
         std::atomic<bool> rebroadcastThreadRunning_ = false;
 
         std::vector<std::shared_ptr<DagWorker>> dagWorkers_;
-        std::mutex                              dagWorkerMutex_;
         std::mutex                              dagSyncherMutex_;
         std::mutex                              dagSetMutex_;
-        std::queue<DagJob>                      dagWorkerJobList;
-        std::atomic<bool>                       dagWorkerJobListThreadRunning_ = false;
+
+        std::atomic<bool>       dagWorkerJobListThreadRunning_ = false;
+        std::mutex              dagWorkerMutex_;
+        std::mutex              dagWorkerCvMutex_;
+        std::condition_variable dagWorkerCv_;
+        std::queue<DagJob>      dagWorkerJobList;
+
+        std::mutex                     rebroadcastMutex_;
+        std::condition_variable        rebroadcastCv_;
 
         std::mutex    mutex_processed_cids;
         std::set<CID> processed_cids;

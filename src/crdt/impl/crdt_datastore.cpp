@@ -59,34 +59,24 @@ namespace sgns::crdt
         crdtInstance->rebroadcastFuture_ = std::async(
             [weakptr = std::weak_ptr<CrdtDatastore>( crdtInstance )]()
             {
-                std::chrono::milliseconds elapsedTimeMilliseconds = std::chrono::milliseconds( 0 );
-                auto                      threadRunning           = true;
-                while ( threadRunning )
+                auto self = weakptr.lock();
+                if ( !self )
                 {
-                    if ( auto self = weakptr.lock() )
-                    {
-                        self->RebroadcastIteration( elapsedTimeMilliseconds );
-                        if ( !self->rebroadcastThreadRunning_ )
-                        {
-                            self->logger_->debug( "Rebroadcast thread finished" );
-                            threadRunning = false;
-                        }
-                    }
-                    else
-                    {
-                        threadRunning = false; // Object destroyed
-                    }
-                    if ( threadRunning )
-                    {
-                        // move this outside weakptr.lock() scope to release temporary strong reference to CrdtDatastore
-                        std::this_thread::sleep_for( threadSleepTimeInMilliseconds_ );
-                    }
+                    return;
+                }
+
+                const auto interval = std::chrono::milliseconds(
+                    self->options_ ? self->options_->rebroadcastIntervalMilliseconds : 100 );
+                std::unique_lock<std::mutex> lock( self->rebroadcastMutex_ );
+
+                while ( self->rebroadcastThreadRunning_ )
+                {
+                    self->rebroadcastCv_.wait_for( lock, interval );
+                    self->RebroadcastHeads();
                 }
             } );
 
         crdtInstance->dagWorkerJobListThreadRunning_ = true;
-
-        // Starting DAG worker threads
         for ( int i = 0; i < crdtInstance->numberOfDagWorkers; ++i )
         {
             auto dagWorker                     = std::make_shared<DagWorker>();
@@ -100,6 +90,13 @@ namespace sgns::crdt
                     {
                         if ( auto self = weakptr.lock() )
                         {
+                            std::unique_lock<std::mutex> cvlock( self->dagWorkerCvMutex_ );
+                            self->dagWorkerCv_.wait_for(
+                                cvlock,
+                                threadSleepTimeInMilliseconds_,
+                                [&]
+                                { return !self->dagWorkerJobList.empty() || !dagWorker->dagWorkerThreadRunning_; } );
+                            cvlock.unlock();
                             self->SendJobWorkerIteration( dagWorker, dagJob );
                             if ( !dagWorker->dagWorkerThreadRunning_ )
                             {
@@ -109,14 +106,7 @@ namespace sgns::crdt
                         }
                         else
                         {
-                            dagThreadRunning = false; // Object destroyed
-                        }
-
-                        if ( dagThreadRunning )
-                        {
-                            // move this outside weakptr.lock() scope to release temporary strong reference to CrdtDatastore
-                            // while the thread is sleeping
-                            std::this_thread::sleep_for( threadSleepTimeInMilliseconds_ );
+                            dagThreadRunning = false;
                         }
                     }
                 } );
@@ -278,8 +268,11 @@ namespace sgns::crdt
                                 std::to_string( handleBlockResult.error().value() ) );
                 continue;
             }
-            std::unique_lock lock( seenHeadsMutex_ );
-            seenHeads_.insert( bCastHeadCID );
+            {
+                std::unique_lock lock( seenHeadsMutex_ );
+                seenHeads_.insert( bCastHeadCID );
+            }
+            rebroadcastCv_.notify_one();
         }
     }
 
@@ -576,6 +569,7 @@ namespace sgns::crdt
                 std::unique_lock lock( dagWorkerMutex_ );
                 dagWorkerJobList.push( dagJob );
             }
+            this->dagWorkerCv_.notify_one();
         }
     }
 
@@ -669,6 +663,7 @@ namespace sgns::crdt
         }
         std::vector<CID> cids{ addResult.value() };
         return this->Broadcast( cids );
+        // return outcome::success();
     }
 
     outcome::result<void> CrdtDatastore::Broadcast( const std::vector<CID> &cids )
