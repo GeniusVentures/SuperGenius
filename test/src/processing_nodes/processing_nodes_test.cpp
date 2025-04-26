@@ -79,11 +79,11 @@ protected:
                                       node_proc2->GetPubSub()->GetLocalAddress() };
         node_main->GetPubSub()->AddPeers( bootstrappers );
 
-        bootstrappers = { node_main->GetPubSub()->GetLocalAddress(), node_proc2->GetPubSub()->GetLocalAddress() };
+        bootstrappers = { node_proc2->GetPubSub()->GetLocalAddress() };
         node_proc1->GetPubSub()->AddPeers( bootstrappers );
 
-        bootstrappers = { node_main->GetPubSub()->GetLocalAddress(), node_proc1->GetPubSub()->GetLocalAddress() };
-        node_proc2->GetPubSub()->AddPeers( bootstrappers );
+        //bootstrappers = { node_proc1->GetPubSub()->GetLocalAddress() };
+        //node_proc2->GetPubSub()->AddPeers( bootstrappers );
     }
 
     static void TearDownTestSuite()
