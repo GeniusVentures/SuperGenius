@@ -648,20 +648,6 @@ void ProcessingServiceImpl::StopProcessing()
             }
 
             // Create the ProcessingNode
-            //auto node = ProcessingNode::New(
-            //    m_gossipPubSub,
-            //    m_subTaskStateStorage,
-            //    m_subTaskResultStorage,
-            //    m_processingCore,
-            //    std::bind( &ProcessingServiceImpl::OnQueueProcessingCompleted,
-            //               this,
-            //               subTaskQueueId,
-            //               std::placeholders::_1 ),
-            //    std::bind( &ProcessingServiceImpl::OnProcessingError, this, subTaskQueueId, std::placeholders::_1 ),
-            //    [this, subTaskQueueId]() { OnProcessingDone( subTaskQueueId ); },
-            //    node_address_,
-            //    subTaskQueueId,
-            //    subTasks );
             auto weakSelf = weak_from_this();
 
             auto node = ProcessingNode::New(
