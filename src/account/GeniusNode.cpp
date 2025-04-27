@@ -163,9 +163,9 @@ namespace sgns
         loggerGossipPubsub->set_level( spdlog::level::err );
 #else
         node_logger->set_level( spdlog::level::err );
-        loggerGlobalDB->set_level( spdlog::level::trace );
+        loggerGlobalDB->set_level( spdlog::level::err );
         loggerDAGSyncer->set_level( spdlog::level::err );
-        loggerGraphsync->set_level( spdlog::level::trace );
+        loggerGraphsync->set_level( spdlog::level::err );
         loggerBroadcaster->set_level( spdlog::level::err );
         loggerDataStore->set_level( spdlog::level::err );
         loggerTransactions->set_level( spdlog::level::err );
@@ -265,12 +265,12 @@ namespace sgns
 
         pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
             crdt::KeyPairFileStorage( write_base_path_ + pubsubKeyPath ).GetKeyPair().value() );
-        pubsub_->Start(
+        auto pubs = pubsub_->Start(
             pubsubport,
             { },
             lanip,
             addresses );
-
+        pubs.wait();
         auto scheduler = std::make_shared<libp2p::protocol::AsioScheduler>( io_,
                                                                             libp2p::protocol::SchedulerConfig{} );
         auto generator = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
