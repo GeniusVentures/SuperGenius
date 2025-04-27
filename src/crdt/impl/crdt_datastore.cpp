@@ -395,40 +395,25 @@ namespace sgns::crdt
 
     void CrdtDatastore::RebroadcastHeads()
     {
-        uint64_t         maxHeight = 0;
-        std::vector<CID> heads;
-        if ( this->heads_ != nullptr )
+        std::vector<CID> toBroadcast;
         {
-            auto getListResult = this->heads_->GetList( heads, maxHeight );
-            if ( getListResult.has_failure() )
+            std::unique_lock lock( seenHeadsMutex_ );
+            if ( seenHeads_.empty() )
             {
-                logger_->error( "RebroadcastHeads: Failed to get list of heads (error code {})",
-                                getListResult.error() );
-                return;
+                return; 
             }
-        }
-
-        std::vector<CID> headsToBroadcast;
-        {
-            std::shared_lock lock( this->seenHeadsMutex_ );
-            for ( const auto &head : heads )
+            toBroadcast.reserve( seenHeads_.size() );
+            for ( auto const &h : seenHeads_ )
             {
-                if ( std::find( seenHeads_.begin(), seenHeads_.end(), head ) == seenHeads_.end() )
-                {
-                    headsToBroadcast.push_back( head );
-                }
+                toBroadcast.push_back( h );
             }
+            seenHeads_.clear();
         }
 
-        auto broadcastResult = this->Broadcast( headsToBroadcast );
-        if ( broadcastResult.has_failure() )
+        if ( auto res = Broadcast( toBroadcast ); res.has_failure() )
         {
-            logger_->error( "Broadcast failed" );
+            logger_->error( "RebroadcastHeads: broadcast failed (error {})", res.error().value() );
         }
-
-        // Reset the map
-        std::unique_lock lock( this->seenHeadsMutex_ );
-        this->seenHeads_.clear();
     }
 
     outcome::result<void> CrdtDatastore::HandleBlock( const CID &aCid )
@@ -451,7 +436,7 @@ namespace sgns::crdt
         //{
         //    AddProcessedCID(aCid);
         //}
-            
+
         //}
 
         //if ( dagSyncerResult.value() )
@@ -661,9 +646,17 @@ namespace sgns::crdt
         {
             return outcome::failure( addResult.error() );
         }
+
         std::vector<CID> cids{ addResult.value() };
-        return this->Broadcast( cids );
-        // return outcome::success();
+        {
+            std::unique_lock lock( this->seenHeadsMutex_ );
+            for ( auto &cid : cids )
+            {
+                seenHeads_.insert( cid );
+            }
+        }
+        rebroadcastCv_.notify_one();
+        return outcome::success();
     }
 
     outcome::result<void> CrdtDatastore::Broadcast( const std::vector<CID> &cids )
