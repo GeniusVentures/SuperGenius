@@ -13,7 +13,8 @@ namespace sgns::crdt
         }
         return outcome::success();
     }
-    outcome::result<std::tuple<base::Buffer, std::string>> CustomBroadcaster::Next()
+    
+    outcome::result<base::Buffer> CustomBroadcaster::Next()
     {
         std::lock_guard<std::mutex> lock( mutex_ );
         if (listOfBroadcasts_.empty())
@@ -27,7 +28,7 @@ namespace sgns::crdt
 
         base::Buffer buffer;
         buffer.put(strBuffer);
-        return std::make_tuple(buffer, std::string("test"));
+        return buffer;
     }
     bool CustomBroadcaster::HasTopic(const std::string &topic)
     {

@@ -32,9 +32,9 @@ namespace sgns::crdt
 
         /**
          * Obtain the next payload and its topic received from the network.
-         * @return tuple containing the buffer and topic string on success or outcome::failure on error.
+         * @return buffer value or outcome::failure on error 
          */
-        virtual outcome::result<std::tuple<base::Buffer, std::string>> Next() = 0;
+        virtual outcome::result<base::Buffer> Next() = 0;
 
         /**
          * @brief Checks whether the broadcaster is subscribed to the specified topic.

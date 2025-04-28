@@ -28,28 +28,19 @@ namespace sgns::crdt
     public:
         using GossipPubSub      = sgns::ipfs_pubsub::GossipPubSub;
         using GossipPubSubTopic = sgns::ipfs_pubsub::GossipPubSubTopic;
-        
         ~PubSubBroadcasterExt();
 
-        // Static factory method that accepts a vector of topics.
-        static std::shared_ptr<PubSubBroadcasterExt> New(
-            const std::vector<std::shared_ptr<GossipPubSubTopic>> &pubSubTopics,
-            std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer>        dagSyncer,
-            std::shared_ptr<GossipPubSub> pubSub );
-
         /**
-         * @brief Factory method for a single topic
-         * @param pubSubTopic Single pubsub topic instance.
-         * @param dagSyncer   Graphsync DAG syncer.
-         * @param dagSyncerMultiaddress Multiaddress of the DAG syncer.
+         * @brief Factory method to create a broadcaster for multiple topics.
+         * @param pubSubTopics Vector of pubsub topic instances to subscribe to.
+         * @param dagSyncer    Graphsync DAG syncer for block exchange.
+         * @param dagSyncerMultiaddress Multiaddress of the DAG syncer node.
          * @return Shared pointer to the new PubSubBroadcasterExt.
          */
-        static std::shared_ptr<PubSubBroadcasterExt> New( std::shared_ptr<GossipPubSubTopic>              pubSubTopic,
+        static std::shared_ptr<PubSubBroadcasterExt> New( std::vector<std::string> topicsToListen,
+                                                          std::vector<std::string> topicsToBroadcast,
                                                           std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer,
-                                                          std::shared_ptr<GossipPubSub> pubSub )
-        {
-            return New( std::vector<std::shared_ptr<GossipPubSubTopic>>{ pubSubTopic }, std::move(dagSyncer), std::move( pubSub ) );
-        }
+                                                          std::shared_ptr<GossipPubSub> pubSub );
 
         /**
          * @brief Sets the CRDT datastore used for decoding broadcasts.
@@ -60,16 +51,16 @@ namespace sgns::crdt
         /**
          * @brief Sends the given buffer as a broadcast to peers.
          * @param buff       Buffer containing the data to broadcast.
-         * @param topic_name Optional specific topic to broadcast on; uses default if not provided.
+         * @param topicName  Optional specific topic to broadcast on; uses default if not provided.
          * @return outcome::success on successful publish, or outcome::failure on error.
          */
-        outcome::result<void> Broadcast( const base::Buffer &buff, std::optional<std::string> topic_name ) override;
+        outcome::result<void> Broadcast( const base::Buffer &buff, std::optional<std::string> topicName ) override;
 
         /**
          * @brief Retrieves the next incoming broadcast payload.
-         * @return Tuple of buffer and topic string, or outcome::failure if none available.
+         * @return buffer value or outcome::failure on error
          */
-        outcome::result<std::tuple<base::Buffer, std::string>> Next() override;
+        outcome::result<base::Buffer> Next() override;
 
         /**
          * @brief Subscribes to all configured topics and starts message processing.
@@ -79,10 +70,17 @@ namespace sgns::crdt
         void Start();
 
         /**
-         * @brief Adds a new topic and subscribes to its messages.
-         * @param newTopic Shared pointer to the new pubsub topic.
+         * @brief Adds a new topic by name, creating the GossipPubSubTopic internally and subscribing to it.
+         * @param topicName Name of the topic to add.
+         * @return outcome::success() on success (or if topic already existed), outcome::failure() on error.
          */
-        void AddTopic( const std::shared_ptr<GossipPubSubTopic> &newTopic );
+        outcome::result<void> AddBroadcastTopic( const std::string &topicName );
+
+        /**
+         * @brief  Subscribe to a given topic and store its future.
+         * @param  topic  Shared pointer to the GossipPubSubTopic to subscribe.
+         */
+        void AddListenTopic( const std::string &topic );
 
         /**
          * @brief Checks whether the given topic is already registered.
@@ -94,24 +92,34 @@ namespace sgns::crdt
         void Stop();
 
     private:
-        // Constructor now accepts a vector of topics.
-        PubSubBroadcasterExt( const std::vector<std::shared_ptr<GossipPubSubTopic>> &pubSubTopics,
-                              std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer>        dagSyncer,
+        /**
+         * @brief Private constructor initializing members with provided topics and syncer.
+         *
+         * @param pubSubTopics Vector of pubsub topics to subscribe to.
+         * @param dagSyncer    Graphsync DAG syncer instance.
+         * @param dagSyncerMultiaddress Multiaddress for DAG syncer node.
+         */
+        PubSubBroadcasterExt( std::vector<std::string>                        topicsToListen,
+                              std::vector<std::string>                        topicsToBroadcast,
+                              std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer,
                               std::shared_ptr<GossipPubSub>                   pubSub );
 
         
 
         void OnMessage( boost::optional<const GossipPubSub::Message &> message, const std::string &incomingTopic );
 
-        std::unordered_map<std::string, std::shared_ptr<GossipPubSubTopic>>    topicMap_;
-        std::string                                                            defaultTopicString_;
-        std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer>                        dagSyncer_;
-        std::shared_ptr<CrdtDatastore>                                         dataStore_;
-        std::queue<std::tuple<libp2p::peer::PeerId, std::string, std::string>> messageQueue_;
+        std::set<std::string>                                     topicsToListen_;
+        std::set<std::string>                                     topicsToBroadcast_;
+        std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer>           dagSyncer_;
+        std::shared_ptr<CrdtDatastore>                            dataStore_;
+        std::queue<std::tuple<libp2p::peer::PeerId, std::string>> messageQueue_;
 
-        std::mutex                     queueMutex_; ///< protects messageQueue_
-        std::mutex                     mapMutex_;   ///< protects topicMap_, defaultTopicString_, subscriptionFutures_
-        std::shared_ptr<GossipPubSub> pubSub_;     ///< Pubsub used to broadcast/receive messages
+        std::shared_ptr<GossipPubSub> pubSub_; ///< Pubsub used to broadcast/receive messages
+
+        std::mutex queueMutex_;           ///< protects messageQueue_
+        std::mutex listenTopicsMutex_;    ///< protects topicsToListen_
+        std::mutex broadcastTopicsMutex_; ///< protects topicsToListen_
+        std::mutex subscriptionMutex_;    ///< protects subscriptionFutures_
 
         sgns::base::Logger m_logger = sgns::base::createLogger( "PubSubBroadcasterExt" );
         std::vector<std::future<libp2p::protocol::Subscription>> subscriptionFutures_;

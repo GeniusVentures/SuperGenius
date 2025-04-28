@@ -282,6 +282,7 @@ namespace sgns
 
         auto global_db_init_result = globaldb_->Init( crdt::CrdtOptions::DefaultOptions(), graphsyncnetwork_, scheduler, generator );
         globaldb_->AddBroadcastTopic( processing_channel_topic_ );
+        globaldb_->AddListenTopic( processing_channel_topic_ );
         if ( global_db_init_result.has_error() )
         {
             auto error = global_db_init_result.error();

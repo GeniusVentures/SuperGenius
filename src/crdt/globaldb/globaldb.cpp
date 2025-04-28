@@ -79,7 +79,6 @@ namespace sgns::crdt
     {
     }
 
-
     GlobalDB::~GlobalDB()
     {
         m_logger->debug( "~GlobalDB CALLED");
@@ -263,7 +262,7 @@ namespace sgns::crdt
             topicStringVector.push_back( m_broadcastChannel );
         }
 
-        m_broadcaster   = PubSubBroadcasterExt::New( topicStringVector, dagSyncer, m_pubsub );
+        m_broadcaster   = PubSubBroadcasterExt::New( { "default" }, {}, dagSyncer, m_pubsub );
         m_crdtDatastore = CrdtDatastore::New( dataStore,
                                               HierarchicalKey( "crdt" ),
                                               dagSyncer,
@@ -328,7 +327,7 @@ namespace sgns::crdt
             return outcome::failure( Error::CRDT_DATASTORE_NOT_CREATED );
         }
 
-        return m_crdtDatastore->PutKey( key, value, topic );
+        return m_crdtDatastore->PutKey( key, value );
     }
 
     outcome::result<void> GlobalDB::Put( const std::vector<DataPair> &data_vector )
@@ -347,7 +346,7 @@ namespace sgns::crdt
 
         return batch.Commit();
     }
-    
+
     outcome::result<GlobalDB::Buffer> GlobalDB::Get( const HierarchicalKey &key )
     {
         if ( !m_crdtDatastore )
@@ -439,15 +438,20 @@ namespace sgns::crdt
 
     void GlobalDB::AddBroadcastTopic( const std::string &topicName )
     {
-        if ( !m_pubsub )
-        {
-            m_logger->error( "PubSub instance is not available to create new topic." );
-            return;
-        }
-        auto newTopic = std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>( m_pubsub, topicName );
         if ( m_broadcaster )
         {
-            m_broadcaster->AddTopic( newTopic );
+            m_broadcaster->AddBroadcastTopic( topicName );
+        }
+        else
+        {
+            m_logger->error( "Broadcaster is not initialized." );
+        }
+    }
+    void GlobalDB::AddListenTopic( const std::string &topicName )
+    {
+        if ( m_broadcaster )
+        {
+            m_broadcaster->AddListenTopic( topicName );
         }
         else
         {
