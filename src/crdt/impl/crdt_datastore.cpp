@@ -411,24 +411,22 @@ namespace sgns::crdt
 
         std::vector<CID> headsToBroadcast;
         {
-            std::shared_lock lock( this->seenHeadsMutex_ );
+            std::unique_lock lock( this->seenHeadsMutex_ );
             for ( const auto &head : heads )
             {
-                if ( std::find( seenHeads_.begin(), seenHeads_.end(), head ) == seenHeads_.end() )
+                if ( seenHeads_.find( head ) == seenHeads_.end() )
                 {
                     headsToBroadcast.push_back( head );
                 }
             }
+            this->seenHeads_.clear();
         }
 
         auto broadcastResult = this->Broadcast( headsToBroadcast );
         if ( broadcastResult.has_failure() )
         {
-            logger_->error( "Broadcast failed" );
+            logger_->error( "RebroadcastHeads: Broadcast failed" );
         }
-
-        std::unique_lock lock( this->seenHeadsMutex_ );
-        this->seenHeads_.clear();
     }
 
     outcome::result<void> CrdtDatastore::HandleBlock( const CID &aCid )
@@ -683,17 +681,8 @@ namespace sgns::crdt
 
     outcome::result<CID> CrdtDatastore::Publish( const std::shared_ptr<Delta> &aDelta )
     {
-        OUTCOME_TRY(  auto &&newCID , AddDAGNode( aDelta ) );
+        OUTCOME_TRY( auto &&newCID, AddDAGNode( aDelta ) );
 
-        std::vector<CID> cids{ newCID };
-        {
-            std::unique_lock lock( this->seenHeadsMutex_ );
-            for ( auto &cid : cids )
-            {
-                seenHeads_.insert( cid );
-            }
-        }
-        rebroadcastCv_.notify_one();
         return newCID;
     }
 
