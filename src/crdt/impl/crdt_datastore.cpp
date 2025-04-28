@@ -396,25 +396,39 @@ namespace sgns::crdt
 
     void CrdtDatastore::RebroadcastHeads()
     {
-        std::vector<CID> toBroadcast;
+        uint64_t         maxHeight = 0;
+        std::vector<CID> heads;
+        if ( this->heads_ != nullptr )
         {
-            std::unique_lock lock( seenHeadsMutex_ );
-            if ( seenHeads_.empty() )
+            auto getListResult = this->heads_->GetList( heads, maxHeight );
+            if ( getListResult.has_failure() )
             {
+                logger_->error( "RebroadcastHeads: Failed to get list of heads (error code {})",
+                                getListResult.error() );
                 return;
             }
-            toBroadcast.reserve( seenHeads_.size() );
-            for ( auto const &h : seenHeads_ )
-            {
-                toBroadcast.push_back( h );
-            }
-            seenHeads_.clear();
         }
 
-        if ( auto res = Broadcast( toBroadcast ); res.has_failure() )
+        std::vector<CID> headsToBroadcast;
         {
-            logger_->error( "RebroadcastHeads: broadcast failed (error {})", res.error().value() );
+            std::shared_lock lock( this->seenHeadsMutex_ );
+            for ( const auto &head : heads )
+            {
+                if ( std::find( seenHeads_.begin(), seenHeads_.end(), head ) == seenHeads_.end() )
+                {
+                    headsToBroadcast.push_back( head );
+                }
+            }
         }
+
+        auto broadcastResult = this->Broadcast( headsToBroadcast );
+        if ( broadcastResult.has_failure() )
+        {
+            logger_->error( "Broadcast failed" );
+        }
+
+        std::unique_lock lock( this->seenHeadsMutex_ );
+        this->seenHeads_.clear();
     }
 
     outcome::result<void> CrdtDatastore::HandleBlock( const CID &aCid )
