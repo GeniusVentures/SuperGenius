@@ -53,6 +53,11 @@ namespace sgns
         globaldb_m->AddListenTopic( account_m->GetAddress() + "out" );
     }
 
+    TransactionManager::~TransactionManager()
+    {
+        m_logger->debug( "~TransactionManager CALLED" );
+    }
+
     void TransactionManager::Start()
     {
         CheckIncoming( false );

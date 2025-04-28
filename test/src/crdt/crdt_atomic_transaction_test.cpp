@@ -81,11 +81,11 @@ namespace sgns::crdt {
                 EXPECT_OUTCOME_TRUE_1(transaction.Commit("test"));
             } else {
                 // Non-atomic updates - vulnerable to interleaving
-                EXPECT_OUTCOME_TRUE_1(crdtDatastore_->PutKey(key1, value1, "test"));
+                EXPECT_OUTCOME_TRUE_1(crdtDatastore_->PutKey(key1, value1));
                 did_interrupt = true;  // Signal before delay to ensure interference
                 SimulateNetworkDelay();  // Longer delay to ensure t2 has time to interfere
                 SimulateNetworkDelay();  // Add extra delay
-                EXPECT_OUTCOME_TRUE_1(crdtDatastore_->PutKey(key2, value2, "test"));
+                EXPECT_OUTCOME_TRUE_1(crdtDatastore_->PutKey(key2, value2));
             }
         }
 
@@ -99,8 +99,8 @@ namespace sgns::crdt {
         Buffer initial_value;
         initial_value.put("100");
 
-        EXPECT_OUTCOME_TRUE_1(crdtDatastore_->PutKey(key1, initial_value, "test"));
-        EXPECT_OUTCOME_TRUE_1(crdtDatastore_->PutKey(key2, initial_value, "test"));
+        EXPECT_OUTCOME_TRUE_1(crdtDatastore_->PutKey(key1, initial_value));
+        EXPECT_OUTCOME_TRUE_1(crdtDatastore_->PutKey(key2, initial_value));
 
         Buffer transfer_from_value;
         transfer_from_value.put("50");
@@ -122,8 +122,8 @@ namespace sgns::crdt {
                     std::this_thread::sleep_for(std::chrono::milliseconds(1));
                 }
                 if (!use_atomic && !t1_finished) {
-                    EXPECT_OUTCOME_TRUE_1(crdtDatastore_->PutKey(key1, initial_value, "test"));
-                    EXPECT_OUTCOME_TRUE_1(crdtDatastore_->PutKey(key2, initial_value, "test"));
+                    EXPECT_OUTCOME_TRUE_1(crdtDatastore_->PutKey(key1, initial_value));
+                    EXPECT_OUTCOME_TRUE_1(crdtDatastore_->PutKey(key2, initial_value));
                 }
             });
 
@@ -143,8 +143,8 @@ namespace sgns::crdt {
                 EXPECT_TRUE(has_interference);
             }
 
-            EXPECT_OUTCOME_TRUE_1(crdtDatastore_->PutKey(key1, initial_value, "test"));
-            EXPECT_OUTCOME_TRUE_1(crdtDatastore_->PutKey(key2, initial_value, "test"));
+            EXPECT_OUTCOME_TRUE_1(crdtDatastore_->PutKey(key1, initial_value));
+            EXPECT_OUTCOME_TRUE_1(crdtDatastore_->PutKey(key2, initial_value));
         }
     }
 
@@ -161,8 +161,8 @@ namespace sgns::crdt {
         new_value2.put("new2");
 
         // Set initial values
-        EXPECT_OUTCOME_TRUE_1(crdtDatastore_->PutKey(key1, initial_value, "test"));
-        EXPECT_OUTCOME_TRUE_1(crdtDatastore_->PutKey(key2, initial_value, "test"));
+        EXPECT_OUTCOME_TRUE_1(crdtDatastore_->PutKey(key1, initial_value));
+        EXPECT_OUTCOME_TRUE_1(crdtDatastore_->PutKey(key2, initial_value));
 
         {
             // Create a transaction that will go out of scope without commit

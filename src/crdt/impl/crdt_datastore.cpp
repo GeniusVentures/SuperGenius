@@ -82,21 +82,13 @@ namespace sgns::crdt
         {
             auto dagWorker                     = std::make_shared<DagWorker>();
             dagWorker->dagWorkerThreadRunning_ = true;
-            crdtInstance->dagWorkers_.push_back( dagWorker );
             dagWorker->dagWorkerFuture_        = std::async(
-                [weakptr       = std::weak_ptr<CrdtDatastore>( crdtInstance ),
-                 weakDagWorker = std::weak_ptr<DagWorker>( dagWorker )]()
+                [weakptr = std::weak_ptr<CrdtDatastore>( crdtInstance ), dagWorker]()
                 {
-
                     DagJob dagJob;
                     auto   dagThreadRunning = true;
                     while ( dagThreadRunning )
                     {
-                        auto dagWorkerShared = weakDagWorker.lock();
-                        if ( !dagWorkerShared )
-                        {
-                            break;
-                        }
                         if ( auto self = weakptr.lock() )
                         {
                             std::unique_lock<std::mutex> cvlock( self->dagWorkerCvMutex_ );
@@ -119,7 +111,7 @@ namespace sgns::crdt
                         }
                     }
                 } );
-
+            crdtInstance->dagWorkers_.push_back( dagWorker );
         }
 
         return crdtInstance;
@@ -669,6 +661,7 @@ namespace sgns::crdt
         {
             return outcome::failure( publishResult.error() );
         }
+    }
 
     outcome::result<void> CrdtDatastore::Publish( const std::shared_ptr<Delta> &aDelta )
     {
@@ -763,7 +756,8 @@ namespace sgns::crdt
                                                                   const std::shared_ptr<Delta>    &aDelta,
                                                                   const std::shared_ptr<IPLDNode> &aNode )
     {
-        if ( set_ == nullptr || heads_ == nullptr || dagSyncer_ == nullptr || aDelta == nullptr || aNode == nullptr )
+        if ( this->set_ == nullptr || this->heads_ == nullptr || this->dagSyncer_ == nullptr || aDelta == nullptr ||
+             aNode == nullptr )
         {
             return outcome::failure( boost::system::error_code{} );
         }
@@ -776,23 +770,20 @@ namespace sgns::crdt
         }
         HierarchicalKey hKey( strCidResult.value() );
 
-        if ( filter_crdt )
-        {
-            CRDTDataFilter::FilterElementsOnDelta( aDelta );
-            CRDTDataFilter::FilterTombstonesOnDelta( aDelta );
-        }
-
         {
             std::unique_lock lock( dagSetMutex_ );
-            auto             mergeResult = set_->Merge( aDelta, hKey.GetKey() );
+            auto             mergeResult = this->set_->Merge( aDelta, hKey.GetKey() );
             if ( mergeResult.has_failure() )
             {
                 logger_->error( "ProcessNode: error merging delta from {}", hKey.GetKey() );
                 return outcome::failure( mergeResult.error() );
             }
-            logger_->trace( "ProcessNode: merged delta from {} (priority: {})",
-                            strCidResult.value(),
-                            aDelta->priority() );
+        }
+
+        auto priority = aDelta->priority();
+        if ( priority % 10 == 0 )
+        {
+            logger_->info( "ProcessNode: merged delta from {} (priority: {})", strCidResult.value(), priority );
         }
 
         std::vector<CID> children;
@@ -812,7 +803,7 @@ namespace sgns::crdt
             for ( const auto &link : links )
             {
                 auto child        = link.get().getCID();
-                auto isHeadResult = heads_->IsHead( child );
+                auto isHeadResult = this->heads_->IsHead( child );
 
                 if ( isHeadResult )
                 {
