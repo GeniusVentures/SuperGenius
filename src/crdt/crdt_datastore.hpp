@@ -133,7 +133,7 @@ namespace sgns::crdt
          * @param aDelta Delta to publish
          * @return returns outcome::success on success or outcome::failure otherwise
          */
-        outcome::result<void> Publish( const std::shared_ptr<Delta> &aDelta );
+        outcome::result<CID> Publish( const std::shared_ptr<Delta> &aDelta );
 
         /** PrintDAG pretty prints the current Merkle-DAG using the given printFunc
     * @return returns outcome::success on success or outcome::failure otherwise

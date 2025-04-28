@@ -631,7 +631,7 @@ namespace sgns::crdt
             return outcome::failure( deltaResult.error() );
         }
 
-        auto publishResult = Publish( deltaResult.value(), topic );
+        auto publishResult = Publish( deltaResult.value() );
         if ( deltaResult.has_failure() )
         {
             return outcome::failure( publishResult.error() );
@@ -667,10 +667,9 @@ namespace sgns::crdt
         return outcome::success();
     }
 
-    outcome::result<CID> CrdtDatastore::Publish( const std::shared_ptr<Delta> &aDelta,
-                                                 std::optional<std::string>    topic )
+    outcome::result<CID> CrdtDatastore::Publish( const std::shared_ptr<Delta> &aDelta )
     {
-        OUTCOME_TRY(  auto &&newCID , AddDAGNode( aDelta, topic ) );
+        OUTCOME_TRY(  auto &&newCID , AddDAGNode( aDelta ) );
 
         std::vector<CID> cids{ newCID };
         {

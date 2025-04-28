@@ -153,7 +153,7 @@ namespace sgns::crdt
         buffer.put( "Data" );
 
         EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( newKey ), false );
-        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->PutKey( newKey, buffer, "test" ) );
+        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->PutKey( newKey, buffer ) );
         EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( newKey ), true );
         EXPECT_OUTCOME_TRUE( valueBuffer, crdtDatastore_->GetKey( newKey ) );
         EXPECT_TRUE( buffer.toString() == valueBuffer.toString() );
@@ -226,7 +226,7 @@ namespace sgns::crdt
         auto e = mergedDelta->elements();
         ASSERT_TRUE( e.size() == 2 );
 
-        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( mergedDelta, "test" ) );
+        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( mergedDelta ) );
         EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( newKey3 ), true );
         EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( newKey4 ), true );
         EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( newKey5 ), false );
@@ -280,7 +280,7 @@ namespace sgns::crdt
 
         delta->set_priority( 1 );
 
-        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta, "test" ) );
+        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta ) );
 
         std::chrono::milliseconds resultTime;
 
@@ -369,7 +369,7 @@ namespace sgns::crdt
 
         delta->set_priority( 1 );
 
-        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta, "test" ) );
+        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta ) );
 
         std::chrono::milliseconds resultTime;
 
@@ -456,10 +456,10 @@ namespace sgns::crdt
         delta3->set_priority( 3 );
         delta4->set_priority( 4 );
 
-        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta1, "test" ) );
-        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta2, "test" ) );
-        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta3, "test" ) );
-        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta4, "test" ) );
+        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta1 ) );
+        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta2 ) );
+        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta3 ) );
+        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta4 ) );
 
         std::chrono::milliseconds resultTime;
 
@@ -563,10 +563,10 @@ namespace sgns::crdt
         delta3->set_priority( 3 );
         delta4->set_priority( 4 );
 
-        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta1, "test" ) );
-        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta2, "test" ) );
-        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta3, "test" ) );
-        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta4, "test" ) );
+        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta1 ) );
+        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta2 ) );
+        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta3 ) );
+        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta4 ) );
 
         std::chrono::milliseconds resultTime;
 

@@ -35,7 +35,7 @@ namespace sgns::crdt
         return outcome::success();
     }
 
-    outcome::result<std::tuple<base::Buffer, std::string>> CRDTMirrorBroadcaster::Next()
+    outcome::result<base::Buffer> CRDTMirrorBroadcaster::Next()
     {
         std::lock_guard<std::mutex> lock( mutex_ );
         if ( listOfBroadcasts_.empty() )
@@ -62,7 +62,7 @@ namespace sgns::crdt
 
         base::Buffer buffer;
         buffer.put( data_str );
-        return std::make_tuple( buffer, std::string( "test" ) );
+        return buffer;
     }
 
     bool CRDTMirrorBroadcaster::HasTopic( const std::string &topic )
