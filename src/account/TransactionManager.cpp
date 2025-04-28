@@ -47,15 +47,107 @@ namespace sgns
 
     {
         m_logger->info( "Initializing values by reading whole blockchain" );
-        globaldb_m->AddBroadcastTopic( account_m->GetAddress() + "in" );
-        globaldb_m->AddListenTopic( account_m->GetAddress() + "in" );
-        globaldb_m->AddBroadcastTopic( account_m->GetAddress() + "out" );
-        globaldb_m->AddListenTopic( account_m->GetAddress() + "out" );
-    }
+        globaldb_m->AddBroadcastTopic( account_m->GetAddress() );
+        globaldb_m->AddListenTopic( account_m->GetAddress() );
 
-    TransactionManager::~TransactionManager()
-    {
-        m_logger->debug( "~TransactionManager CALLED" );
+        bool crdt_tx_filter_initialized = crdt::CRDTDataFilter::RegisterElementFilter(
+            "^/?" + GetBlockChainBase() + "[^/]*/tx/[^/]*/[0-9]+",
+            [&]( const crdt::pb::Element &element ) -> std::optional<std::vector<crdt::pb::Element>>
+            {
+                std::optional<std::vector<crdt::pb::Element>> maybe_tombstones;
+                bool                                          valid_tx = false;
+                std::shared_ptr<IGeniusTransactions>          tx;
+                do
+                {
+                    //TODO - This verification is only needed because CRDT resyncs every boot up
+                    // Remove once we remove the in memory processed_cids on crdt_datastore and use dagsyncher again
+                    auto maybe_has_value = globaldb_m->Get( element.key() );
+                    if ( maybe_has_value.has_value() )
+                    {
+                        m_logger->debug( "Already have the transaction {}", element.key() );
+                        valid_tx = true;
+                        break;
+                    }
+                    auto maybe_tx = DeSerializeTransaction( element.value() );
+                    if ( maybe_tx.has_error() )
+                    {
+                        break;
+                    }
+                    tx = maybe_tx.value();
+                    if ( !IGeniusTransactions::CheckDAGStructSignature( tx->dag_st ) )
+                    {
+                        m_logger->error( "Could not validate signature of transaction {}", element.key() );
+                        break;
+                    }
+
+                    m_logger->trace( "Valid signature of {}", element.key() );
+                    valid_tx = true;
+
+                } while ( 0 );
+                if ( !valid_tx )
+                {
+                    std::vector<crdt::pb::Element> tombstones;
+                    tombstones.push_back( element );
+                    auto maybe_proof_key = GetExpectedProofKey( element.key(), tx );
+                    if ( maybe_proof_key.has_value() )
+                    {
+                        crdt::pb::Element proof_tombstone;
+                        proof_tombstone.set_key( maybe_proof_key.value() );
+                        tombstones.push_back( proof_tombstone );
+                    }
+
+                    maybe_tombstones = tombstones;
+                }
+
+                return maybe_tombstones;
+            } );
+
+        bool crdt_proof_filter_initialized = crdt::CRDTDataFilter::RegisterElementFilter(
+            "^/?" + GetBlockChainBase() + "[^/]*/proof/[^/]*/[0-9]+",
+            [&]( const crdt::pb::Element &element ) -> std::optional<std::vector<crdt::pb::Element>>
+            {
+                std::optional<std::vector<crdt::pb::Element>> maybe_tombstones;
+                bool                                          valid_proof = false;
+                do
+                {
+                    //TODO - This verification is only needed because CRDT resyncs every boot up
+                    // Remove once we remove the in memory processed_cids on crdt_datastore and use dagsyncher again
+                    auto maybe_has_value = globaldb_m->Get( element.key() );
+                    if ( maybe_has_value.has_value() )
+                    {
+                        m_logger->debug( "Already have the proof {}", element.key() );
+                        valid_proof = true;
+                        break;
+                    }
+                    std::vector<uint8_t> proof_data_vector( element.value().begin(), element.value().end() );
+                    auto                 maybe_valid_proof = IBasicProof::VerifyFullProof( proof_data_vector );
+                    if ( maybe_valid_proof.has_error() || ( !maybe_valid_proof.value() ) )
+                    {
+                        // TODO: kill reputation point of the node.
+                        m_logger->error( "Could not verify proof {}", element.key() );
+                        break;
+                    }
+                    m_logger->trace( "Valid proof of {}", element.key() );
+
+                    valid_proof = true;
+                } while ( 0 );
+
+                if ( valid_proof == false )
+                {
+                    std::vector<crdt::pb::Element> tombstones;
+                    tombstones.push_back( element );
+                    auto maybe_tx_key = GetExpectedTxKey( element.key() );
+                    if ( maybe_tx_key.has_value() )
+                    {
+                        crdt::pb::Element tx_tombstone;
+                        tx_tombstone.set_key( maybe_tx_key.value() );
+                        tombstones.push_back( tx_tombstone );
+                    }
+                    maybe_tombstones = tombstones;
+                }
+
+                return maybe_tombstones;
+            } );
     }
 
     void TransactionManager::Start()
@@ -343,12 +435,12 @@ namespace sgns
         if ( transaction->GetType() == "transfer" )
         {
             m_logger->debug( "Notifying receiving peers of transfers" );
-            BOOST_OUTCOME_TRYV2( auto &&, NotifyDestinationOfTransfer( transaction, maybe_proof ) );
+            BOOST_OUTCOME_TRYV2( auto &&, NotifyDestinationOfTransfer( transaction ) );
         }
         else if ( transaction->GetType() == "escrow-release" )
         {
             m_logger->debug( "Notifying escrow source of escrow release" );
-            BOOST_OUTCOME_TRYV2( auto &&, NotifyEscrowRelease( transaction, maybe_proof ) );
+            BOOST_OUTCOME_TRYV2( auto &&, NotifyEscrowRelease( transaction ) );
         }
         BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Commit( account_m->GetAddress() + "out" ) );
 
@@ -358,7 +450,6 @@ namespace sgns
             std::unique_lock<std::shared_mutex> out_lock( outgoing_tx_mutex_m );
             outgoing_tx_processed_m[transaction_path] = transaction;
         }
-
 
         return outcome::success();
     }
@@ -558,7 +649,7 @@ namespace sgns
                 continue;
             }
 
-            m_logger->debug( "Finding incoming transaction: " + transaction_key.value() );
+            m_logger->debug( "Finding incoming transaction: {}", transaction_key.value() );
             auto maybe_transaction = FetchTransaction( globaldb_m, transaction_key.value() );
             if ( !maybe_transaction.has_value() )
             {
@@ -711,11 +802,15 @@ namespace sgns
     }
 
     outcome::result<void> TransactionManager::NotifyDestinationOfTransfer(
-        const std::shared_ptr<IGeniusTransactions> &tx,
-        const std::optional<std::vector<uint8_t>>  &proof )
+        const std::shared_ptr<IGeniusTransactions> &tx )
     {
         auto transfer_tx = std::dynamic_pointer_cast<TransferTransaction>( tx );
-        auto dest_infos  = transfer_tx->GetDstInfos();
+        if ( !transfer_tx )
+        {
+            m_logger->error( "Failed to cast transaction to TransferTransaction" );
+            return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::invalid_argument ) );
+        }
+        auto dest_infos = transfer_tx->GetDstInfos();
 
         for ( const auto &dest_info : dest_infos )
         {
@@ -726,39 +821,13 @@ namespace sgns
 
             m_logger->debug( "Sending notification to " + dest_info.dest_address );
 
-            const std::string topic            = dest_info.dest_address + "in";
-            const std::string txPath           = GetTransactionPath( *tx );
-            const std::string proofPath        = GetTransactionProofPath( *tx ) ;
-
-            globaldb_m->AddBroadcastTopic( topic );
-
-            auto crdt_transaction = globaldb_m->BeginTransaction();
-
-            sgns::crdt::HierarchicalKey  tx_key( txPath );
-            sgns::crdt::GlobalDB::Buffer data_transaction;
-            data_transaction.put( tx->SerializeByteVector() );
-
-            m_logger->debug( "Putting replicate transaction in " + tx_key.GetKey() );
-            BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Put( std::move( tx_key ), std::move( data_transaction ) ) );
-
-            if ( proof )
-            {
-                sgns::crdt::HierarchicalKey  proof_key( proofPath );
-                sgns::crdt::GlobalDB::Buffer proof_data;
-                proof_data.put( proof.value() );
-                m_logger->debug( "Putting replicate PROOF in " + proof_key.GetKey() );
-                BOOST_OUTCOME_TRYV2( auto &&,
-                                     crdt_transaction->Put( std::move( proof_key ), std::move( proof_data ) ) );
-            }
-
-            BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Commit( topic ) );
+            globaldb_m->AddBroadcastTopic( dest_info.dest_address );
         }
 
         return outcome::success();
     }
 
-    outcome::result<void> TransactionManager::NotifyEscrowRelease( const std::shared_ptr<IGeniusTransactions> &tx,
-                                                                   const std::optional<std::vector<uint8_t>>  &proof )
+    outcome::result<void> TransactionManager::NotifyEscrowRelease( const std::shared_ptr<IGeniusTransactions> &tx )
     {
         auto escrow_release_tx = std::dynamic_pointer_cast<EscrowReleaseTransaction>( tx );
         if ( !escrow_release_tx )
@@ -767,34 +836,9 @@ namespace sgns
             return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::invalid_argument ) );
         }
 
-        std::string escrow_source = escrow_release_tx->GetEscrowSource();
-        m_logger->debug( "Notifying escrow source: " + escrow_source );
+        m_logger->debug( "Notifying escrow source: " + escrow_release_tx->GetEscrowSource() );
 
-        const std::string topic            = escrow_source + "in";
-        const std::string txPath           = GetTransactionPath( *tx );
-        const std::string proofPath        = GetTransactionProofPath( *tx );
-
-        globaldb_m->AddBroadcastTopic( topic );
-
-        auto crdt_transaction = globaldb_m->BeginTransaction();
-
-        sgns::crdt::HierarchicalKey  tx_key( txPath );
-        sgns::crdt::GlobalDB::Buffer data_transaction;
-        data_transaction.put( tx->SerializeByteVector() );
-
-        m_logger->debug( "Putting replicate escrow release transaction in " + tx_key.GetKey() );
-        BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Put( std::move( tx_key ), std::move( data_transaction ) ) );
-
-        if ( proof )
-        {
-            sgns::crdt::HierarchicalKey  proof_key( proofPath );
-            sgns::crdt::GlobalDB::Buffer proof_data;
-            proof_data.put( proof.value() );
-            m_logger->debug( "Putting replicate escrow release PROOF in " + proof_key.GetKey() );
-            BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Put( std::move( proof_key ), std::move( proof_data ) ) );
-        }
-
-        BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Commit( topic ) );
+        globaldb_m->AddBroadcastTopic( escrow_release_tx->GetEscrowSource() );
         return outcome::success();
     }
 

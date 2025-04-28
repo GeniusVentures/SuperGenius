@@ -318,7 +318,7 @@ namespace sgns::crdt
                        dagJob.rootCid_.toString().value(),
                        std::to_string( dagJob.rootPriority_ ) );
 
-        auto childrenResult = ProcessNode( dagJob.rootCid_, dagJob.rootPriority_, dagJob.delta_, dagJob.node_ );
+        auto childrenResult = ProcessNode( dagJob.rootCid_, dagJob.rootPriority_, dagJob.delta_, dagJob.node_, true );
         if ( childrenResult.has_failure() )
         {
             logger_->error( "SendNewJobs: failed to process node:{}", dagJob.rootCid_.toString().value() );
@@ -635,7 +635,14 @@ namespace sgns::crdt
         {
             return outcome::failure( deltaResult.error() );
         }
-        return this->Publish( deltaResult.value() );
+
+        auto publishResult = Publish( deltaResult.value() );
+        if ( deltaResult.has_failure() )
+        {
+            return outcome::failure( publishResult.error() );
+        }
+
+        return outcome::success();
     }
 
     outcome::result<void> CrdtDatastore::DeleteKey( const HierarchicalKey &aKey )
@@ -661,17 +668,15 @@ namespace sgns::crdt
         {
             return outcome::failure( publishResult.error() );
         }
+
+        return outcome::success();
     }
 
-    outcome::result<void> CrdtDatastore::Publish( const std::shared_ptr<Delta> &aDelta )
+    outcome::result<CID> CrdtDatastore::Publish( const std::shared_ptr<Delta> &aDelta )
     {
-        auto addResult = this->AddDAGNode( aDelta );
-        if ( addResult.has_failure() )
-        {
-            return outcome::failure( addResult.error() );
-        }
+        OUTCOME_TRY(  auto &&newCID , AddDAGNode( aDelta ) );
 
-        std::vector<CID> cids{ addResult.value() };
+        std::vector<CID> cids{ newCID };
         {
             std::unique_lock lock( this->seenHeadsMutex_ );
             for ( auto &cid : cids )
@@ -680,7 +685,7 @@ namespace sgns::crdt
             }
         }
         rebroadcastCv_.notify_one();
-        return outcome::success();
+        return newCID;
     }
 
     outcome::result<void> CrdtDatastore::Broadcast( const std::vector<CID> &cids )
@@ -753,8 +758,9 @@ namespace sgns::crdt
 
     outcome::result<std::vector<CID>> CrdtDatastore::ProcessNode( const CID                       &aRoot,
                                                                   uint64_t                         aRootPrio,
-                                                                  const std::shared_ptr<Delta>    &aDelta,
-                                                                  const std::shared_ptr<IPLDNode> &aNode )
+                                                                  std::shared_ptr<Delta>           aDelta,
+                                                                  const std::shared_ptr<IPLDNode> &aNode,
+                                                                  bool                             filter_crdt )
     {
         if ( this->set_ == nullptr || this->heads_ == nullptr || this->dagSyncer_ == nullptr || aDelta == nullptr ||
              aNode == nullptr )
@@ -791,7 +797,7 @@ namespace sgns::crdt
 
         if ( links.empty() )
         {
-            auto addHeadResult = this->heads_->Add( aRoot, aRootPrio );
+            auto addHeadResult = heads_->Add( aRoot, aRootPrio );
             if ( addHeadResult.has_failure() )
             {
                 logger_->error( "ProcessNode: error adding head {}", aRoot.toString().value() );
@@ -807,7 +813,7 @@ namespace sgns::crdt
 
                 if ( isHeadResult )
                 {
-                    auto replaceResult = this->heads_->Replace( child, aRoot, aRootPrio );
+                    auto replaceResult = heads_->Replace( child, aRoot, aRootPrio );
                     if ( replaceResult.has_failure() )
                     {
                         logger_->error( "ProcessNode: error replacing head {} -> {}",
@@ -830,7 +836,7 @@ namespace sgns::crdt
 
                 if ( knowBlockResult.value() )
                 {
-                    auto addHeadResult = this->heads_->Add( aRoot, aRootPrio );
+                    auto addHeadResult = heads_->Add( aRoot, aRootPrio );
                     if ( addHeadResult.has_failure() )
                     {
                         logger_->error( "ProcessNode: error adding head {}", aRoot.toString().value() );
@@ -882,7 +888,7 @@ namespace sgns::crdt
                        node->getCID().toString().value(),
                        reinterpret_cast<uint64_t>( this ) );
 
-        auto processNodeResult = this->ProcessNode( node->getCID(), height, aDelta, node );
+        auto processNodeResult = ProcessNode( node->getCID(), height, aDelta, node );
         if ( processNodeResult.has_failure() )
         {
             logger_->error( "AddDAGNode: error processing new block" );

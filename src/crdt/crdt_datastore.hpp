@@ -133,7 +133,7 @@ namespace sgns::crdt
          * @param aDelta Delta to publish
          * @return returns outcome::success on success or outcome::failure otherwise
          */
-        outcome::result<void> Publish( const std::shared_ptr<Delta> &aDelta );
+        outcome::result<CID> Publish( const std::shared_ptr<Delta> &aDelta );
 
         /** PrintDAG pretty prints the current Merkle-DAG using the given printFunc
     * @return returns outcome::success on success or outcome::failure otherwise
@@ -260,8 +260,9 @@ namespace sgns::crdt
     */
         outcome::result<std::vector<CID>> ProcessNode( const CID                       &aRoot,
                                                        uint64_t                         aRootPrio,
-                                                       const std::shared_ptr<Delta>    &aDelta,
-                                                       const std::shared_ptr<IPLDNode> &aNode );
+                                                       std::shared_ptr<Delta>           aDelta,
+                                                       const std::shared_ptr<IPLDNode> &aNode,
+                                                       bool                             filter_crdt = false );
 
         /** PutBlock add block node to DAGSyncer
     * @param aHeads list of CIDs to add to node as IPLD links
