@@ -108,15 +108,12 @@ namespace sgns::crdt
         outcome::result<std::string> GetValueSuffix();
 
         /**
-     * @brief Stores the given value in the CRDT store and optionally broadcasts using a specific topic.
-     * @param aKey Hierarchical key for the value.
-     * @param aValue Value to be stored.
-     * @param topic Optional topic for broadcasting the update. If not set, default broadcasting is used.
-     * @return outcome::success if stored and broadcasted successfully, or outcome::failure otherwise.
-     */
-        outcome::result<void> PutKey( const HierarchicalKey     &aKey,
-                                      const Buffer              &aValue,
-                                      std::optional<std::string> topic = std::nullopt );
+         * @brief Stores the given value in the CRDT store
+         * @param aKey Hierarchical key to put
+         * @param aValue Value to be stored
+         * @return outcome::success if stored and broadcasted successfully, or outcome::failure otherwise.
+         */
+        outcome::result<void> PutKey( const HierarchicalKey &aKey, const Buffer &aValue );
 
         /** HasKey returns whether the `key` is mapped to a `value` in set
     * @param aKey HierarchicalKey to look for in set
@@ -131,15 +128,12 @@ namespace sgns::crdt
         outcome::result<void> DeleteKey( const HierarchicalKey &aKey );
 
         /**
-     * @brief Publishes a Delta.
-     * Creates a DAG node from the given Delta, merges it into the CRDT, and broadcasts the node.
-     * An optional topic can be provided to target a specific broadcast channel.
-     * @param[in] aDelta The Delta to publish.
-     * @param[in] topic Optional topic name for targeted publishing. If not provided, the default broadcast behavior is used.
-     * @return outcome::success on success, or outcome::failure if an error occurs.
-     */
-        outcome::result<CID> Publish( const std::shared_ptr<Delta> &aDelta,
-                                       std::optional<std::string>    topic = std::nullopt );
+         * @brief Publishes a Delta.
+         * Creates a DAG node from the given Delta, merges it into the CRDT, and broadcasts the node.
+         * @param aDelta Delta to publish
+         * @return returns outcome::success on success or outcome::failure otherwise
+         */
+        outcome::result<void> Publish( const std::shared_ptr<Delta> &aDelta );
 
         /** PrintDAG pretty prints the current Merkle-DAG using the given printFunc
     * @return returns outcome::success on success or outcome::failure otherwise
@@ -185,7 +179,6 @@ namespace sgns::crdt
             uint64_t                  rootPriority_; /*> root priority */
             std::shared_ptr<Delta>    delta_;        /*> pointer to delta */
             std::shared_ptr<IPLDNode> node_;         /*> pointer to node */
-            std::string               topic_;
         };
 
         /** DAG worker structure to keep track of worker threads
@@ -217,10 +210,7 @@ namespace sgns::crdt
     * @param aRootPriority root priority
     * @param aChildren vector of children CIDs
     */
-        void SendNewJobs( const CID              &aRootCID,
-                          uint64_t                aRootPriority,
-                          const std::vector<CID> &aChildren,
-                          const std::string      &topic );
+        void SendNewJobs( const CID &aRootCID, uint64_t aRootPriority, const std::vector<CID> &aChildren );
 
         /** Sync ensures that all the data under the given prefix is flushed to disk in
     * the underlying datastore
@@ -241,15 +231,12 @@ namespace sgns::crdt
         void RebroadcastHeads();
 
         /**
-     * @brief Broadcasts a set of CIDs.
-     * Encodes and broadcasts the provided list of CIDs. An optional topic can be specified
-     * to target a specific broadcast channel.
-     * @param[in] cids The list of CIDs to broadcast.
-     * @param[in] topic Optional topic name for targeted broadcasting. If not provided, the default broadcast channel is used.
-     * @return outcome::success on success, or outcome::failure if an error occurs.
-     */
-        outcome::result<void> Broadcast( const std::vector<CID>    &cids,
-                                         std::optional<std::string> topic = std::nullopt );
+         * @brief Broadcasts a set of CIDs.
+         * Encodes and broadcasts the provided list of CIDs
+         * @param[in] cids The list of CIDs to broadcast.
+         * @return outcome::success on success, or outcome::failure if an error occurs.
+         */
+        outcome::result<void> Broadcast( const std::vector<CID> &cids );
 
         /** EncodeBroadcast encodes list of CIDs to CRDT broadcast data
     * @param heads list of CIDs
@@ -261,7 +248,7 @@ namespace sgns::crdt
     * CRDT blocks to the Datastore.
     * @return returns outcome::success on success or outcome::failure otherwise
     */
-        outcome::result<void> HandleBlock( const CID &aCid, const std::string &topic );
+        outcome::result<void> HandleBlock( const CID &aCid );
 
         /** ProcessNode processes new block. This makes that every operation applied
     * to this store take effect (delta is merged) before returning.
@@ -275,7 +262,6 @@ namespace sgns::crdt
                                                        uint64_t                         aRootPrio,
                                                        std::shared_ptr<Delta>           aDelta,
                                                        const std::shared_ptr<IPLDNode> &aNode,
-                                                       std::optional<std::string>       topic,
                                                        bool                             filter_crdt = false );
 
         /** PutBlock add block node to DAGSyncer
@@ -291,8 +277,7 @@ namespace sgns::crdt
     * @return CID or outcome::failure on error
     * \sa PutBlock, ProcessNode
     */
-        outcome::result<CID> AddDAGNode( const std::shared_ptr<Delta> &aDelta,
-                                         std::optional<std::string>    topic = std::nullopt );
+        outcome::result<CID> AddDAGNode( const std::shared_ptr<Delta> &aDelta );
 
         /** SyncDatastore sync heads and set datastore
     * @param: aKeyList all heads and the set entries related to the given prefix
@@ -351,11 +336,17 @@ namespace sgns::crdt
         std::atomic<bool> rebroadcastThreadRunning_ = false;
 
         std::vector<std::shared_ptr<DagWorker>> dagWorkers_;
-        std::mutex                              dagWorkerMutex_;
         std::mutex                              dagSyncherMutex_;
         std::mutex                              dagSetMutex_;
-        std::queue<DagJob>                      dagWorkerJobList;
-        std::atomic<bool>                       dagWorkerJobListThreadRunning_ = false;
+
+        std::atomic<bool>       dagWorkerJobListThreadRunning_ = false;
+        std::mutex              dagWorkerMutex_;
+        std::mutex              dagWorkerCvMutex_;
+        std::condition_variable dagWorkerCv_;
+        std::queue<DagJob>      dagWorkerJobList;
+
+        std::mutex                     rebroadcastMutex_;
+        std::condition_variable        rebroadcastCv_;
 
         std::mutex    mutex_processed_cids;
         std::set<CID> processed_cids;

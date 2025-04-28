@@ -30,7 +30,7 @@ public:
     * Obtain the next {@return} payload received from the network.
     * @return buffer value or outcome::failure on error
     */
-        outcome::result<std::tuple<base::Buffer, std::string>> Next() override;
+        outcome::result<base::Buffer> Next() override;
 private:
     std::shared_ptr<GossipPubSubTopic> gossipPubSubTopic_;
     std::queue<std::tuple<libp2p::peer::PeerId, std::string>> listOfMessages_;

@@ -61,52 +61,57 @@ namespace sgns::crdt
         }
     }
 
-    // Static factory method that accepts a vector of topics.
     std::shared_ptr<PubSubBroadcasterExt> PubSubBroadcasterExt::New(
-        const std::vector<std::shared_ptr<GossipPubSubTopic>> &pubSubTopics,
-        std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer>        dagSyncer,
-        libp2p::multi::Multiaddress                            dagSyncerMultiaddress )
+        std::vector<std::string>                        topicsToListen,
+        std::vector<std::string>                        topicsToBroadcast,
+        std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer,
+        libp2p::multi::Multiaddress                     dagSyncerMultiaddress,
+        std::shared_ptr<GossipPubSub>                   pubSub )
     {
+        if ( topicsToListen.empty() )
+        {
+            return nullptr;
+        }
+        if ( !pubSub )
+        {
+            return nullptr;
+        }
         auto instance = std::shared_ptr<PubSubBroadcasterExt>(
-            new PubSubBroadcasterExt( pubSubTopics, std::move( dagSyncer ), std::move( dagSyncerMultiaddress ) ) );
+            new PubSubBroadcasterExt( std::move( topicsToListen ),
+                                      std::move( topicsToBroadcast ),
+                                      std::move( dagSyncer ),
+                                      std::move( dagSyncerMultiaddress ),
+                                      std::move( pubSub ) ) );
         return instance;
     }
 
-    PubSubBroadcasterExt::PubSubBroadcasterExt( const std::vector<std::shared_ptr<GossipPubSubTopic>> &pubSubTopics,
-                                                std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer>        dagSyncer,
-                                                libp2p::multi::Multiaddress dagSyncerMultiaddress ) :
+    PubSubBroadcasterExt::PubSubBroadcasterExt( std::vector<std::string>                        topicsToListen,
+                                                std::vector<std::string>                        topicsToBroadcast,
+                                                std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer,
+                                                libp2p::multi::Multiaddress                     dagSyncerMultiaddress,
+                                                std::shared_ptr<GossipPubSub>                   pubSub ) :
+        topicsToListen_( topicsToListen.begin(), topicsToListen.end() ),
+        topicsToBroadcast_( topicsToBroadcast.begin(), topicsToBroadcast.end() ),
         dagSyncer_( std::move( dagSyncer ) ),
         dataStore_( nullptr ),
-        dagSyncerMultiaddress_( std::move( dagSyncerMultiaddress ) )
+        dagSyncerMultiaddress_( std::move( dagSyncerMultiaddress ) ),
+        pubSub_( std::move( pubSub ) )
     {
         m_logger->trace( "Initializing PubSubBroadcasterExt" );
-        if ( !pubSubTopics.empty() )
-        {
-            defaultTopicString_ = pubSubTopics.front()->GetTopic();
-        }
-        for ( const auto &topic : pubSubTopics )
-        {
-            topicMap_.insert( { topic->GetTopic(), topic } );
-        }
     }
 
     void PubSubBroadcasterExt::Start()
     {
-        if ( topicMap_.empty() )
-        {
-            m_logger->debug( "No topics available for broadcasting. Waiting for topics to be added." );
-            return;
-        }
+        std::lock_guard<std::mutex> lock( listenTopicsMutex_ );
 
         // Subscribe to each topic.
-        for ( auto &pair : topicMap_ )
+        for ( auto &topicName : topicsToListen_ )
         {
-            auto       &topic     = pair.second;
-            std::string topicName = topic->GetTopic();
             m_logger->debug( "Subscription request sent to topic: " + topicName );
 
             // Subscribe and capture the topic name in the lambda.
-            std::future<libp2p::protocol::Subscription> future = std::move( topic->Subscribe(
+            std::future<libp2p::protocol::Subscription> future = std::move( pubSub_->Subscribe(
+                topicName,
                 [weakptr = weak_from_this(), topicName]( boost::optional<const GossipPubSub::Message &> message )
                 {
                     if ( auto self = weakptr.lock() )
@@ -115,7 +120,10 @@ namespace sgns::crdt
                         self->OnMessage( message, topicName );
                     }
                 } ) );
-            subscriptionFutures_.push_back( std::move( future ) );
+            {
+                std::lock_guard lk( subscriptionMutex_ );
+                subscriptionFutures_.push_back( std::move( future ) );
+            }
         }
     }
 
@@ -151,7 +159,7 @@ namespace sgns::crdt
             auto peerId = peer_id_res.value();
             m_logger->trace( "Message from peer {}", peerId.toBase58() );
 
-            std::scoped_lock lock( mutex_ );
+            std::lock_guard<std::mutex> lock( queueMutex_ );
 
             base::Buffer buf;
             buf.put( bmsg.data() );
@@ -208,14 +216,9 @@ namespace sgns::crdt
                                  peerId.toBase58() );
                 dagSyncer_->AddRoute( cid, peerId, addrvector );
             }
-            messageQueue_.emplace( std::move( peerId ), bmsg.data(), incomingTopic );
+            messageQueue_.emplace( std::move( peerId ), bmsg.data() );
         } while ( 0 );
     }
-
-    // void PubSubBroadcasterExt::SetLogger(const sgns::base::Logger& logger)
-    //{
-    //     logger_ = logger;
-    // }
 
     void PubSubBroadcasterExt::SetCrdtDataStore( std::shared_ptr<CrdtDatastore> dataStore )
     {
@@ -228,45 +231,23 @@ namespace sgns::crdt
     }
 
     outcome::result<void> PubSubBroadcasterExt::Broadcast( const base::Buffer        &buff,
-                                                           std::optional<std::string> topic_name )
+                                                           std::optional<std::string> topicName )
     {
-        if ( topicMap_.empty() )
+        std::set<std::string> broadcastTopicsCopy;
         {
-            m_logger->error( "No topics available for broadcasting." );
+            std::lock_guard<std::mutex> lock( broadcastTopicsMutex_ );
+            broadcastTopicsCopy = topicsToBroadcast_;
+        }
+
+        if ( broadcastTopicsCopy.empty() )
+        {
+            m_logger->error( "Broadcast: no topic to broadcast" );
             return outcome::failure( boost::system::error_code{} );
         }
 
-        // Determine the target topic.
-        std::shared_ptr<GossipPubSubTopic> targetTopic = nullptr;
-        if ( topic_name )
-        {
-            auto it = topicMap_.find( topic_name.value() );
-            if ( it != topicMap_.end() )
-            {
-                targetTopic = it->second;
-            }
-            if ( !targetTopic )
-            {
-                m_logger->error( "Broadcast: no topic matching '" + topic_name.value() + "' was found" );
-                return outcome::failure( boost::system::error_code{} );
-            }
-        }
-        else
-        {
-            // Use the first topic added if no topic_name is provided.
-            if ( defaultTopicString_.empty() || topicMap_.find( defaultTopicString_ ) == topicMap_.end() )
-            {
-                m_logger->error( "First topic is not available." );
-                return outcome::failure( boost::system::error_code{} );
-            }
-            targetTopic = topicMap_.at( defaultTopicString_ );
-        }
-
-        // Create and fill the broadcast message.
         sgns::crdt::broadcasting::BroadcastMessage bmsg;
         auto                                       bpi = new sgns::crdt::broadcasting::BroadcastMessage_PeerInfo;
 
-        // Get the TCP port from dagSyncerMultiaddress_
         auto port_opt = dagSyncerMultiaddress_.getFirstValueForProtocol( libp2p::multi::Protocol::Code::TCP );
         if ( !port_opt )
         {
@@ -299,7 +280,7 @@ namespace sgns::crdt
         bpi->set_id( std::string( peer_info.id.toVector().begin(), peer_info.id.toVector().end() ) );
 
         // Add observed addresses and the peer’s own addresses.
-        auto pubsubObserved = targetTopic->GetPubsub()->GetHost()->getObservedAddressesReal();
+        auto pubsubObserved = pubSub_->GetHost()->getObservedAddressesReal();
         for ( auto &address : pubsubObserved )
         {
             auto ip_address_opt = address.getFirstValueForProtocol( libp2p::multi::Protocol::Code::IP4 );
@@ -336,73 +317,82 @@ namespace sgns::crdt
         std::string data( buff.toString() );
         bmsg.set_data( data );
 
-        // Publish the message on the selected target topic.
-        targetTopic->Publish( bmsg.SerializeAsString() );
+        size_t               size = bmsg.ByteSizeLong();
+        std::vector<uint8_t> serialized_proto( size );
 
-        if ( topic_name )
+        bmsg.SerializeToArray( serialized_proto.data(), serialized_proto.size() );
+
+        for ( auto &topic : broadcastTopicsCopy )
         {
-            m_logger->debug( "CIDs broadcasted by {} to SINGLE topic {}", peer_info.id.toBase58(), topic_name.value() );
-        }
-        else
-        {
-            std::string frontTopic = targetTopic->GetTopic();
-            m_logger->debug( "CIDs broadcasted by {} to the first topic ({})", peer_info.id.toBase58(), frontTopic );
+            pubSub_->Publish( topic, serialized_proto );
+            m_logger->debug( "CIDs broadcasted by {} to topic {}", peer_info.id.toBase58(), topic );
         }
 
         return outcome::success();
     }
 
-    outcome::result<std::tuple<base::Buffer, std::string>> PubSubBroadcasterExt::Next()
+    outcome::result<base::Buffer> PubSubBroadcasterExt::Next()
     {
-        std::scoped_lock lock( mutex_ );
+        std::lock_guard<std::mutex> lock( queueMutex_ );
+
         if ( messageQueue_.empty() )
         {
             // Broadcaster::ErrorCode::ErrNoMoreBroadcast
             return outcome::failure( boost::system::error_code{} );
         }
 
-        auto [peerId, strBuffer, topic] = messageQueue_.front();
+        std::string strBuffer = std::get<1>( messageQueue_.front() );
         messageQueue_.pop();
 
         base::Buffer buffer;
         buffer.put( strBuffer );
-        return std::make_tuple( buffer, topic );
+        return buffer;
     }
 
-    void PubSubBroadcasterExt::AddTopic( const std::shared_ptr<GossipPubSubTopic> &newTopic )
+    outcome::result<void> PubSubBroadcasterExt::AddBroadcastTopic( const std::string &topicName )
     {
-        std::string topicName = newTopic->GetTopic();
-
-        if ( topicMap_.find( topicName ) != topicMap_.end() )
         {
-            m_logger->debug( "Topic '" + topicName + "' already exists. Not adding duplicate." );
-            return;
-        }
+            std::lock_guard<std::mutex> lock( broadcastTopicsMutex_ );
 
-        topicMap_.insert( { topicName, newTopic } );
-        if ( defaultTopicString_.empty() )
-        {
-            defaultTopicString_ = topicName;
-        }
-
-        m_logger->debug( "Subscription request sent to new topic: " + topicName );
-
-        std::future<libp2p::protocol::Subscription> future = std::move( newTopic->Subscribe(
-            [weakptr = weak_from_this(), topicName]( boost::optional<const GossipPubSub::Message &> message )
+            if ( topicsToBroadcast_.find( topicName ) != topicsToBroadcast_.end() )
             {
-                if ( auto self = weakptr.lock() )
-                {
-                    self->m_logger->debug( "Message received from topic: " + topicName );
-                    self->OnMessage( message, topicName );
-                }
-            } ) );
-        subscriptionFutures_.push_back( std::move( future ) );
+                m_logger->debug( "Topic '{}' already exists. Skipping.", topicName );
+                return outcome::success();
+            }
+
+            topicsToBroadcast_.insert( topicName );
+        }
+
+        return outcome::success();
     }
 
     bool PubSubBroadcasterExt::HasTopic( const std::string &topic )
     {
-        std::scoped_lock lock( mutex_ );
-        return topicMap_.find( topic ) != topicMap_.end();
+        std::lock_guard<std::mutex> lock( broadcastTopicsMutex_ );
+        return topicsToBroadcast_.find( topic ) != topicsToBroadcast_.end();
+    }
+
+    void PubSubBroadcasterExt::AddListenTopic( const std::string &topic )
+    {
+        std::lock_guard<std::mutex> lock( listenTopicsMutex_ );
+
+        m_logger->trace( "Listen request on topic: '{}'", topic );
+
+        std::future<libp2p::protocol::Subscription> future = std::move( pubSub_->Subscribe(
+            topic,
+            [weakptr = weak_from_this(), topic]( boost::optional<const GossipPubSub::Message &> message )
+            {
+                if ( auto self = weakptr.lock() )
+                {
+                    self->m_logger->debug( "Message received from topic: " + topic );
+                    self->OnMessage( message, topic );
+                }
+            } ) );
+
+        {
+            std::lock_guard<std::mutex> lock( subscriptionMutex_ );
+            subscriptionFutures_.push_back( std::move( future ) );
+        }
     }
 
 } // namespace sgns::crdt

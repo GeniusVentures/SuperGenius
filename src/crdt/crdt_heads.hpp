@@ -6,8 +6,6 @@
 #include "crdt/hierarchical_key.hpp"
 #include <primitives/cid/cid.hpp>
 #include <map>
-#include <string>
-#include <optional>
 
 namespace sgns::crdt
 {
@@ -28,6 +26,7 @@ namespace sgns::crdt
     /** Copy constructor
     */
     CrdtHeads(const CrdtHeads&);
+
     /** Destructor
     */
     virtual ~CrdtHeads() = default;
@@ -69,12 +68,6 @@ namespace sgns::crdt
     */
     outcome::result<uint64_t> GetHeadHeight(const CID& aCid);
 
-    /** Returns the topic associated with the head. If no topic was provided, returns an empty string.
-    * @param aCid Content identifier
-    * @return Topic string or outcome::failure on error
-    */
-    outcome::result<std::string> GetHeadTopic( const CID &aCid );
-
     /** Get current number of heads
     * @return lenght, current number of heads or outcome::failure on error
     */
@@ -83,23 +76,17 @@ namespace sgns::crdt
     /** Add head CID to datastore with full namespace
     * @param aCid Content identifier
     * @param aHeight height of head
-    * @param topic Optional string indicating the topic name associated with this head
     * @return outcome::failure on error
     */
-    outcome::result<void> Add( const CID &aCid, uint64_t aHeight, std::optional<std::string> topic = std::nullopt );
-        
+    outcome::result<void> Add( const CID &aCid, uint64_t aHeight );
 
     /** Replace a head with a new cid.
     * @param aCidHead Content identifier of head to replace
     * @param aNewHeadCid Content identifier of new head
     * @param aHeight height of head
-    * @param topic Optional string indicating the topic name associated with the new head
     * @return outcome::failure on error
     */
-    outcome::result<void> Replace( const CID                 &aCidHead,
-                                        const CID                 &aNewHeadCid,
-                                        uint64_t                   aHeight,
-                                        std::optional<std::string> topic = std::nullopt );
+    outcome::result<void> Replace( const CID &aCidHead, const CID &aNewHeadCid, uint64_t aHeight );
 
     /** Returns the list of current heads plus the max height.
     * @param aHeads output reference to list of CIDs
@@ -114,14 +101,11 @@ namespace sgns::crdt
     * @param aDataStore Pointer to datastore batch
     * @param aCid Content identifier to add
     * @param aHeight height of CID head
-    * @param topic Optional topic string to associate with this head
     * @return outcome::failure on error
     */
-    outcome::result<void> Write( const std::unique_ptr<storage::BufferBatch> &aDataStore,
-                                  const CID                                   &aCid,
-                                  uint64_t                                     aHeight,
-                                  std::optional<std::string>                   topic );
-
+      outcome::result<void> Write( const std::unique_ptr<storage::BufferBatch> &aDataStore,
+                                   const CID                                   &aCid,
+                                   uint64_t                                     aHeight );
 
       /** Delete data from datastore in batch mode
     * @param aDataStore Pointer to datastore batch
@@ -138,10 +122,12 @@ namespace sgns::crdt
   private:
 
     CrdtHeads() = default;
+
     std::shared_ptr<DataStore> dataStore_;
-    std::map<CID, std::pair<uint64_t, std::string>> cache_;
+    std::map<CID, uint64_t> cache_;
     HierarchicalKey namespaceKey_;
     std::recursive_mutex mutex_;
+
   };
 
 } // namespace sgns::crdt

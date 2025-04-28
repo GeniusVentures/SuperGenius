@@ -36,11 +36,12 @@ outcome::result<void> PubSubBroadcaster::Broadcast(const base::Buffer &buff, std
     return outcome::success();
 }
 
-outcome::result<std::tuple<base::Buffer, std::string>> PubSubBroadcaster::Next()
+outcome::result<base::Buffer> PubSubBroadcaster::Next()
 {
     std::scoped_lock lock(mutex_);
     if (listOfMessages_.empty())
     {
+        //Broadcaster::ErrorCode::ErrNoMoreBroadcast
         return outcome::failure(boost::system::error_code{});
     }
 
@@ -49,7 +50,7 @@ outcome::result<std::tuple<base::Buffer, std::string>> PubSubBroadcaster::Next()
 
     base::Buffer buffer;
     buffer.put(strBuffer);
-    return std::make_tuple(buffer, std::string(""));
+    return buffer;
 }
 
 }

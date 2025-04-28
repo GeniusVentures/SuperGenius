@@ -78,8 +78,7 @@ namespace sgns::crdt
         }
         combined_delta->set_priority( max_priority );
 
-        // Publish the combined delta with the optional topic.
-        auto result = datastore_->Publish( combined_delta, topic );
+        auto result = datastore_->Publish( combined_delta );
         if ( result.has_failure() )
         {
             return result.error();
