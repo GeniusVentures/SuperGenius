@@ -775,6 +775,11 @@ namespace sgns::crdt
             return outcome::failure( strCidResult.error() );
         }
         HierarchicalKey hKey( strCidResult.value() );
+        if ( filter_crdt )
+        {
+            CRDTDataFilter::FilterElementsOnDelta( aDelta );
+            CRDTDataFilter::FilterTombstonesOnDelta( aDelta );
+        }
 
         {
             std::unique_lock lock( dagSetMutex_ );
