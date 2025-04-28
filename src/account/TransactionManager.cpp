@@ -150,6 +150,11 @@ namespace sgns
             } );
     }
 
+    TransactionManager::~TransactionManager()
+    {
+        m_logger->debug( "~TransactionManager CALLED" );
+    }
+
     void TransactionManager::Start()
     {
         CheckIncoming( false );
