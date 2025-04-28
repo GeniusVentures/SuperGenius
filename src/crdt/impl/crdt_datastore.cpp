@@ -98,10 +98,12 @@ namespace sgns::crdt
                                 [&]
                                 { return !self->dagWorkerJobList.empty() || !dagWorker->dagWorkerThreadRunning_; } );
                             cvlock.unlock();
-                            self->SendJobWorkerIteration( dagWorker, dagJob );
-                            if ( !dagWorker->dagWorkerThreadRunning_ )
+                            if ( dagWorker->dagWorkerThreadRunning_ )
                             {
-                                self->logger_->debug( "SendJobWorker thread finished" );
+                                self->SendJobWorkerIteration( dagWorker, dagJob );
+                            }
+                            else
+                            {
                                 dagThreadRunning = false;
                             }
                         }
@@ -224,6 +226,10 @@ namespace sgns::crdt
             for ( const auto &dagWorker : dagWorkers_ )
             {
                 dagWorker->dagWorkerThreadRunning_ = false;
+            }
+            dagWorkerCv_.notify_all();
+            for ( const auto &dagWorker : dagWorkers_ )
+            {
                 dagWorker->dagWorkerFuture_.wait();
             }
             dagWorkers_.clear();
