@@ -71,8 +71,8 @@ namespace sgns::crdt
 
                 while ( self->rebroadcastThreadRunning_ )
                 {
-                    self->rebroadcastCv_.wait_for( lock, interval );
                     self->RebroadcastHeads();
+                    self->rebroadcastCv_.wait_for( lock, interval );
                 }
             } );
 
@@ -215,6 +215,7 @@ namespace sgns::crdt
         if ( rebroadcastThreadRunning_ )
         {
             rebroadcastThreadRunning_ = false;
+            rebroadcastCv_.notify_one();
             rebroadcastFuture_.wait();
         }
 
@@ -400,7 +401,7 @@ namespace sgns::crdt
             std::unique_lock lock( seenHeadsMutex_ );
             if ( seenHeads_.empty() )
             {
-                return; 
+                return;
             }
             toBroadcast.reserve( seenHeads_.size() );
             for ( auto const &h : seenHeads_ )
