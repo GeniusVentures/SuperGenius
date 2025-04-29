@@ -165,7 +165,7 @@ namespace sgns
         node_logger->set_level( spdlog::level::err );
         loggerGlobalDB->set_level( spdlog::level::err );
         loggerDAGSyncer->set_level( spdlog::level::err );
-        loggerGraphsync->set_level( spdlog::level::err );
+        loggerGraphsync->set_level( spdlog::level::trace );
         loggerBroadcaster->set_level( spdlog::level::err );
         loggerDataStore->set_level( spdlog::level::err );
         loggerTransactions->set_level( spdlog::level::err );
@@ -274,13 +274,16 @@ namespace sgns
         auto scheduler = std::make_shared<libp2p::protocol::AsioScheduler>( io_,
                                                                             libp2p::protocol::SchedulerConfig{} );
         auto generator = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
-        graphsyncnetwork_ = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubsub_->GetHost(),
+        auto graphsyncnetwork = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubsub_->GetHost(),
                                                                                          scheduler );
         globaldb_ = std::make_shared<crdt::GlobalDB>( io_,
                                                       write_base_path_ + gnus_network_full_path_,
                                                       pubsub_ );
 
-        auto global_db_init_result = globaldb_->Init( crdt::CrdtOptions::DefaultOptions(), graphsyncnetwork_, scheduler, generator );
+        auto global_db_init_result = globaldb_->Init( crdt::CrdtOptions::DefaultOptions(),
+                                                      graphsyncnetwork,
+                                                      scheduler,
+                                                      generator );
         globaldb_->AddBroadcastTopic( processing_channel_topic_ );
         globaldb_->AddListenTopic( processing_channel_topic_ );
         if ( global_db_init_result.has_error() )

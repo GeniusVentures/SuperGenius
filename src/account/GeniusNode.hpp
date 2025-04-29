@@ -208,8 +208,6 @@ namespace sgns
         std::chrono::time_point<std::chrono::system_clock> m_lastApiCall{};
         const std::chrono::seconds                         m_minApiCallInterval{ 5 };
 
-        std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::Network> graphsyncnetwork_;
-
         std::thread       io_thread;
         std::thread       upnp_thread;
         std::atomic<bool> stop_upnp{ false };
