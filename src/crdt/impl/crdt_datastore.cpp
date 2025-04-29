@@ -432,7 +432,7 @@ namespace sgns::crdt
         //    }
         //    this->seenHeads_.clear();
         //}
-//
+        //
         //{
         //    std::unique_lock lock( publishHeadsMutex_ );
         //    for ( const auto &head : publishHeads_ )
@@ -711,7 +711,7 @@ namespace sgns::crdt
         //        publishHeads_.insert( cid );
         //    }
         //}
-        rebroadcastCv_.notify_one();
+        // rebroadcastCv_.notify_one();
         return newCID;
     }
 
@@ -835,6 +835,7 @@ namespace sgns::crdt
                 logger_->error( "ProcessNode: error adding head {}", aRoot.toString().value() );
                 return outcome::failure( addHeadResult.error() );
             }
+            this->rebroadcastCv_.notify_one();
         }
         else
         {
@@ -853,6 +854,7 @@ namespace sgns::crdt
                                         aRoot.toString().value() );
                         return outcome::failure( replaceResult.error() );
                     }
+                    this->rebroadcastCv_.notify_one();
                     AddProcessedCID( child );
                     continue;
                 }
@@ -873,6 +875,7 @@ namespace sgns::crdt
                     {
                         logger_->error( "ProcessNode: error adding head {}", aRoot.toString().value() );
                     }
+                    this->rebroadcastCv_.notify_one();
                     AddProcessedCID( child );
                     continue;
                 }
