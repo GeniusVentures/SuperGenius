@@ -17,6 +17,7 @@
 #include <boost/multiprecision/cpp_int.hpp>
 
 #include "crdt/globaldb/globaldb.hpp"
+#include "crdt/atomic_transaction.hpp"
 #include "account/proto/SGTransaction.pb.h"
 #include "account/IGeniusTransactions.hpp"
 #include "account/TransferTransaction.hpp"
@@ -41,7 +42,9 @@ namespace sgns
     class TransactionManager : public std::enable_shared_from_this<TransactionManager>
     {
     public:
-        using TransactionPair = std::pair<std::shared_ptr<IGeniusTransactions>, std::optional<std::vector<uint8_t>>>;
+        using TransactionPair  = std::pair<std::shared_ptr<IGeniusTransactions>, std::optional<std::vector<uint8_t>>>;
+        using TransactionBatch = std::vector<TransactionPair>;
+        using TransactionItem  = std::pair<TransactionBatch, std::optional<std::shared_ptr<crdt::AtomicTransaction>>>;
 
         TransactionManager( std::shared_ptr<crdt::GlobalDB>          processing_db,
                             std::shared_ptr<boost::asio::io_context> ctx,
@@ -67,8 +70,9 @@ namespace sgns
                                                                             const std::string &dev_addr,
                                                                             uint64_t           peers_cut,
                                                                             const std::string &job_id );
-        outcome::result<std::string>                            PayEscrow( const std::string              &escrow_path,
-                                                                           const SGProcessing::TaskResult &taskresult );
+        outcome::result<std::string>                            PayEscrow( const std::string                       &escrow_path,
+                                                                           const SGProcessing::TaskResult          &taskresult,
+                                                                           std::shared_ptr<crdt::AtomicTransaction> crdt_transaction );
         uint64_t                                                GetBalance();
 
         // Wait for an incoming transaction to be processed with a timeout
@@ -80,6 +84,7 @@ namespace sgns
     protected:
         friend class GeniusNode;
         void EnqueueTransaction( TransactionPair element );
+        void EnqueueTransaction( TransactionItem element );
 
     private:
         static constexpr std::uint16_t    MAIN_NET_ID             = 369;
@@ -120,7 +125,7 @@ namespace sgns
         std::shared_ptr<boost::asio::steady_timer> timer_m;
         // for the SendTransaction thread support
         mutable std::mutex          mutex_m;
-        std::deque<TransactionPair> tx_queue_m;
+        std::deque<TransactionItem> tx_queue_m;
 
         mutable std::shared_mutex                                   outgoing_tx_mutex_m;
         std::map<std::string, std::shared_ptr<IGeniusTransactions>> outgoing_tx_processed_m;

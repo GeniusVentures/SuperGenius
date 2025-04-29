@@ -182,11 +182,11 @@ namespace sgns::crdt
         // this won't work as part of the same atomic transaction, because the Remove looks for the existing key
         // to create the delta, and since it's queued in the atomic transaction, it doesn't find key2
         //EXPECT_OUTCOME_TRUE_1(transaction.Remove(newKey2));
-        EXPECT_OUTCOME_TRUE_1( transaction.Commit( "test" ) );
+        EXPECT_OUTCOME_TRUE_1( transaction.Commit() );
         EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( newKey1 ), true );
         AtomicTransaction transactionRemoveKey2 = AtomicTransaction( crdtDatastore_ );
         EXPECT_OUTCOME_TRUE_1( transactionRemoveKey2.Remove( newKey2 ) );
-        EXPECT_OUTCOME_TRUE_1( transactionRemoveKey2.Commit( "test" ) );
+        EXPECT_OUTCOME_TRUE_1( transactionRemoveKey2.Commit() );
         EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( newKey1 ), true );
         EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( newKey2 ), false );
         EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( newKey3 ), true );
@@ -530,8 +530,6 @@ namespace sgns::crdt
                                                    }
                                                    return std::nullopt; // Accept this delta
                                                } );
-
-
 
         auto crdt_pair = CreateLoopBackCRDTInstance( databasePath + "aux4", ipfsDataStore_ );
 

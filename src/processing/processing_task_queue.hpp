@@ -8,7 +8,10 @@
 
 #include "processing/proto/SGProcessing.pb.h"
 #include "outcome/outcome.hpp"
+#include "crdt/atomic_transaction.hpp"
 #include <list>
+
+using namespace sgns;
 
 class ProcessingTaskQueue
 {
@@ -21,7 +24,8 @@ public:
     * @param task - task to enqueue
     * @param subTasks - list of subtasks that the task has been split to
     */
-    virtual outcome::result<void> EnqueueTask( const SGProcessing::Task &task, const std::list<SGProcessing::SubTask> &subTasks ) = 0;
+    virtual outcome::result<void> EnqueueTask( const SGProcessing::Task               &task,
+                                               const std::list<SGProcessing::SubTask> &subTasks ) = 0;
 
     /** Returns a list of subtasks linked to taskId
     * @param taskId - task id
@@ -40,7 +44,9 @@ public:
     * @param taskId - task id
     * @param task result
     */
-    virtual outcome::result<void> CompleteTask( const std::string &taskId, const SGProcessing::TaskResult &result ) = 0;
+    virtual outcome::result<std::shared_ptr<crdt::AtomicTransaction>> CompleteTask(
+        const std::string              &taskId,
+        const SGProcessing::TaskResult &result ) = 0;
 
     /**
      * @brief       
