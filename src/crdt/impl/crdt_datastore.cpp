@@ -428,6 +428,15 @@ namespace sgns::crdt
             this->seenHeads_.clear();
         }
 
+        {
+            std::unique_lock lock( publishHeadsMutex_ );
+            for ( const auto &head : publishHeads_ )
+            {
+                headsToBroadcast.push_back( head );
+            }
+            this->publishHeads_.clear();
+        }
+
         auto broadcastResult = this->Broadcast( headsToBroadcast );
         if ( broadcastResult.has_failure() )
         {
@@ -689,6 +698,15 @@ namespace sgns::crdt
     {
         OUTCOME_TRY( auto &&newCID, AddDAGNode( aDelta ) );
 
+        std::vector<CID> cids{ newCID };
+        {
+            std::unique_lock lock( this->publishHeadsMutex_ );
+            for ( auto &cid : cids )
+            {
+                publishHeads_.insert( cid );
+            }
+        }
+        rebroadcastCv_.notify_one();
         return newCID;
     }
 
