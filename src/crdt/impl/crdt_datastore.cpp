@@ -415,29 +415,29 @@ namespace sgns::crdt
             }
         }
 
-        std::vector<CID> headsToBroadcast;
-        {
-            std::unique_lock lock( this->seenHeadsMutex_ );
-            for ( const auto &head : heads )
-            {
-                if ( seenHeads_.find( head ) == seenHeads_.end() )
-                {
-                    headsToBroadcast.push_back( head );
-                }
-            }
-            this->seenHeads_.clear();
-        }
+        //std::vector<CID> headsToBroadcast;
+        //{
+        //    std::unique_lock lock( this->seenHeadsMutex_ );
+        //    for ( const auto &head : heads )
+        //    {
+        //        if ( seenHeads_.find( head ) == seenHeads_.end() )
+        //        {
+        //            headsToBroadcast.push_back( head );
+        //        }
+        //    }
+        //    this->seenHeads_.clear();
+        //}
+//
+        //{
+        //    std::unique_lock lock( publishHeadsMutex_ );
+        //    for ( const auto &head : publishHeads_ )
+        //    {
+        //        headsToBroadcast.push_back( head );
+        //    }
+        //    this->publishHeads_.clear();
+        //}
 
-        {
-            std::unique_lock lock( publishHeadsMutex_ );
-            for ( const auto &head : publishHeads_ )
-            {
-                headsToBroadcast.push_back( head );
-            }
-            this->publishHeads_.clear();
-        }
-
-        auto broadcastResult = this->Broadcast( headsToBroadcast );
+        auto broadcastResult = this->Broadcast( heads );
         if ( broadcastResult.has_failure() )
         {
             logger_->error( "RebroadcastHeads: Broadcast failed" );
@@ -698,14 +698,14 @@ namespace sgns::crdt
     {
         OUTCOME_TRY( auto &&newCID, AddDAGNode( aDelta ) );
 
-        std::vector<CID> cids{ newCID };
-        {
-            std::unique_lock lock( this->publishHeadsMutex_ );
-            for ( auto &cid : cids )
-            {
-                publishHeads_.insert( cid );
-            }
-        }
+        //std::vector<CID> cids{ newCID };
+        //{
+        //    std::unique_lock lock( this->publishHeadsMutex_ );
+        //    for ( auto &cid : cids )
+        //    {
+        //        publishHeads_.insert( cid );
+        //    }
+        //}
         rebroadcastCv_.notify_one();
         return newCID;
     }
