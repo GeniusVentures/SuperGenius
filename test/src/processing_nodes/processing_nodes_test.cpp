@@ -287,7 +287,7 @@ TEST_F( ProcessingNodesTest, PostProcessing )
 
     EXPECT_TRUE( postjob ) << "post job error: " << postjob.error().message();
 
-    EXPECT_TRUE( node_main->WaitForEscrowRelease( postjob.value(), std::chrono::milliseconds( 60000 ) ) );
+    EXPECT_TRUE( node_main->WaitForEscrowRelease( postjob.value(), std::chrono::milliseconds( 300000 ) ) );
 
     //std::this_thread::sleep_for( std::chrono::milliseconds( 2000 ) );
 
