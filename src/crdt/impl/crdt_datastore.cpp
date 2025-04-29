@@ -98,10 +98,12 @@ namespace sgns::crdt
                                 [&]
                                 { return !self->dagWorkerJobList.empty() || !dagWorker->dagWorkerThreadRunning_; } );
                             cvlock.unlock();
-                            self->SendJobWorkerIteration( dagWorker, dagJob );
-                            if ( !dagWorker->dagWorkerThreadRunning_ )
+                            if ( dagWorker->dagWorkerThreadRunning_ )
                             {
-                                self->logger_->debug( "SendJobWorker thread finished" );
+                                self->SendJobWorkerIteration( dagWorker, dagJob );
+                            }
+                            else
+                            {
                                 dagThreadRunning = false;
                             }
                         }
@@ -226,6 +228,10 @@ namespace sgns::crdt
             {
                 std::cout << "dagWorker ptr: " << dagWorker.get() << std::endl;
                 dagWorker->dagWorkerThreadRunning_ = false;
+            }
+            dagWorkerCv_.notify_all();
+            for ( const auto &dagWorker : dagWorkers_ )
+            {
                 dagWorker->dagWorkerFuture_.wait();
             }
             dagWorkers_.clear();
@@ -401,24 +407,45 @@ namespace sgns::crdt
 
     void CrdtDatastore::RebroadcastHeads()
     {
-        std::vector<CID> toBroadcast;
+        uint64_t         maxHeight = 0;
+        std::vector<CID> heads;
+        if ( this->heads_ != nullptr )
         {
-            std::unique_lock lock( seenHeadsMutex_ );
-            if ( seenHeads_.empty() )
+            auto getListResult = this->heads_->GetList( heads, maxHeight );
+            if ( getListResult.has_failure() )
             {
+                logger_->error( "RebroadcastHeads: Failed to get list of heads (error code {})",
+                                getListResult.error() );
                 return;
             }
-            toBroadcast.reserve( seenHeads_.size() );
-            for ( auto const &h : seenHeads_ )
-            {
-                toBroadcast.push_back( h );
-            }
-            seenHeads_.clear();
         }
 
-        if ( auto res = Broadcast( toBroadcast ); res.has_failure() )
+        std::vector<CID> headsToBroadcast;
         {
-            logger_->error( "RebroadcastHeads: broadcast failed (error {})", res.error().value() );
+            std::unique_lock lock( this->seenHeadsMutex_ );
+            for ( const auto &head : heads )
+            {
+                if ( seenHeads_.find( head ) == seenHeads_.end() )
+                {
+                    headsToBroadcast.push_back( head );
+                }
+            }
+            this->seenHeads_.clear();
+        }
+
+        {
+            std::unique_lock lock( publishHeadsMutex_ );
+            for ( const auto &head : publishHeads_ )
+            {
+                headsToBroadcast.push_back( head );
+            }
+            this->publishHeads_.clear();
+        }
+
+        auto broadcastResult = this->Broadcast( headsToBroadcast );
+        if ( broadcastResult.has_failure() )
+        {
+            logger_->error( "RebroadcastHeads: Broadcast failed" );
         }
     }
 
@@ -674,14 +701,14 @@ namespace sgns::crdt
 
     outcome::result<CID> CrdtDatastore::Publish( const std::shared_ptr<Delta> &aDelta )
     {
-        OUTCOME_TRY(  auto &&newCID , AddDAGNode( aDelta ) );
+        OUTCOME_TRY( auto &&newCID, AddDAGNode( aDelta ) );
 
         std::vector<CID> cids{ newCID };
         {
-            std::unique_lock lock( this->seenHeadsMutex_ );
+            std::unique_lock lock( this->publishHeadsMutex_ );
             for ( auto &cid : cids )
             {
-                seenHeads_.insert( cid );
+                publishHeads_.insert( cid );
             }
         }
         rebroadcastCv_.notify_one();
