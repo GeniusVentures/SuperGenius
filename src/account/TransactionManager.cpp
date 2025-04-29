@@ -283,8 +283,10 @@ namespace sgns
                                std::make_pair( "0x" + hash_data.toReadableString(), std::move( data_transaction ) ) );
     }
 
-    outcome::result<std::string> TransactionManager::PayEscrow( const std::string              &escrow_path,
-                                                                const SGProcessing::TaskResult &taskresult )
+    outcome::result<std::string> TransactionManager::PayEscrow(
+        const std::string                       &escrow_path,
+        const SGProcessing::TaskResult          &taskresult,
+        std::shared_ptr<crdt::AtomicTransaction> crdt_transaction )
     {
         if ( taskresult.subtask_results().size() == 0 )
         {
@@ -353,8 +355,12 @@ namespace sgns
         escrow_release_proof = std::move( escrow_release_proof_result );
 #endif
 
-        this->EnqueueTransaction( std::make_pair( escrow_release_tx, escrow_release_proof ) );
-        this->EnqueueTransaction( std::make_pair( transfer_transaction, transfer_proof ) );
+        TransactionBatch tx_batch;
+
+        tx_batch.push_back( std::make_pair( transfer_transaction, transfer_proof ) );
+        tx_batch.push_back( std::make_pair( escrow_release_tx, escrow_release_proof ) );
+
+        EnqueueTransaction( std::make_pair( tx_batch, std::move( crdt_transaction ) ) );
         return transfer_transaction->dag_st.data_hash();
     }
 
@@ -377,10 +383,15 @@ namespace sgns
         }
     }
 
-    void TransactionManager::EnqueueTransaction( TransactionPair element )
+    void TransactionManager::EnqueueTransaction( TransactionItem element )
     {
         std::lock_guard<std::mutex> lock( mutex_m );
         tx_queue_m.emplace_back( std::move( element ) );
+    }
+
+    void TransactionManager::EnqueueTransaction( TransactionPair element )
+    {
+        EnqueueTransaction( { { std::move( element ) }, std::nullopt } );
     }
 
     //TODO - Fill hash stuff on DAGStruct
@@ -407,53 +418,68 @@ namespace sgns
             return outcome::success();
         }
 
-        auto [transaction, maybe_proof] = tx_queue_m.front();
+        auto [transaction_batch, maybe_crdt_transaction] = tx_queue_m.front();
         tx_queue_m.pop_front();
         lock.unlock();
+        std::shared_ptr<crdt::AtomicTransaction> crdt_transaction = nullptr;
 
-        // this was set prior and needed for the proof to match when the proof was generated
-
-        auto                         transaction_path = GetTransactionPath( *transaction );
-        sgns::crdt::HierarchicalKey  tx_key( transaction_path );
-        sgns::crdt::GlobalDB::Buffer data_transaction;
-
-        m_logger->debug( "Recording the transaction on " + tx_key.GetKey() );
-
-        auto crdt_transaction = globaldb_m->BeginTransaction();
-
-        data_transaction.put( transaction->SerializeByteVector() );
-        BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Put( std::move( tx_key ), std::move( data_transaction ) ) );
-
-        if ( maybe_proof )
+        if ( maybe_crdt_transaction.has_value() && maybe_crdt_transaction.value() )
         {
-            sgns::crdt::HierarchicalKey  proof_key( GetTransactionProofPath( *transaction ) );
-            sgns::crdt::GlobalDB::Buffer proof_transaction;
+            crdt_transaction = std::move( maybe_crdt_transaction.value() );
+        }
+        else
+        {
+            crdt_transaction = globaldb_m->BeginTransaction();
+        }
+        for ( auto &transaction_pair : transaction_batch )
+        {
+            auto [transaction, maybe_proof] = transaction_pair;
 
-            auto &proof = maybe_proof.value();
-            m_logger->debug( "Recording the proof on " + proof_key.GetKey() );
+            // this was set prior and needed for the proof to match when the proof was generated
 
-            proof_transaction.put( proof );
-            BOOST_OUTCOME_TRYV2( auto &&,
-                                 crdt_transaction->Put( std::move( proof_key ), std::move( proof_transaction ) ) );
+            auto                         transaction_path = GetTransactionPath( *transaction );
+            sgns::crdt::HierarchicalKey  tx_key( transaction_path );
+            sgns::crdt::GlobalDB::Buffer data_transaction;
+
+            m_logger->debug( "Recording the transaction on " + tx_key.GetKey() );
+
+            data_transaction.put( transaction->SerializeByteVector() );
+            BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Put( std::move( tx_key ), std::move( data_transaction ) ) );
+
+            if ( maybe_proof )
+            {
+                sgns::crdt::HierarchicalKey  proof_key( GetTransactionProofPath( *transaction ) );
+                sgns::crdt::GlobalDB::Buffer proof_transaction;
+
+                auto &proof = maybe_proof.value();
+                m_logger->debug( "Recording the proof on " + proof_key.GetKey() );
+
+                proof_transaction.put( proof );
+                BOOST_OUTCOME_TRYV2( auto &&,
+                                     crdt_transaction->Put( std::move( proof_key ), std::move( proof_transaction ) ) );
+            }
+
+            if ( transaction->GetType() == "transfer" )
+            {
+                m_logger->debug( "Notifying receiving peers of transfers" );
+                BOOST_OUTCOME_TRYV2( auto &&, NotifyDestinationOfTransfer( transaction ) );
+            }
+            else if ( transaction->GetType() == "escrow-release" )
+            {
+                m_logger->debug( "Notifying escrow source of escrow release" );
+                BOOST_OUTCOME_TRYV2( auto &&, NotifyEscrowRelease( transaction ) );
+            }
         }
 
-        if ( transaction->GetType() == "transfer" )
-        {
-            m_logger->debug( "Notifying receiving peers of transfers" );
-            BOOST_OUTCOME_TRYV2( auto &&, NotifyDestinationOfTransfer( transaction ) );
-        }
-        else if ( transaction->GetType() == "escrow-release" )
-        {
-            m_logger->debug( "Notifying escrow source of escrow release" );
-            BOOST_OUTCOME_TRYV2( auto &&, NotifyEscrowRelease( transaction ) );
-        }
-        BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Commit( account_m->GetAddress() + "out" ) );
+        BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Commit() );
 
-        BOOST_OUTCOME_TRYV2( auto &&, ParseTransaction( transaction ) );
-
+        for ( auto &transaction_pair : transaction_batch )
         {
-            std::unique_lock<std::shared_mutex> out_lock( outgoing_tx_mutex_m );
-            outgoing_tx_processed_m[transaction_path] = transaction;
+            BOOST_OUTCOME_TRYV2( auto &&, ParseTransaction( transaction_pair.first ) );
+            {
+                std::unique_lock<std::shared_mutex> out_lock( outgoing_tx_mutex_m );
+                outgoing_tx_processed_m[GetTransactionPath( *transaction_pair.first )] = transaction_pair.first;
+            }
         }
 
         return outcome::success();

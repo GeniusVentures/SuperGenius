@@ -157,9 +157,9 @@ namespace sgns::test
             return true;
         }
 
-        outcome::result<void> CompleteTask(const std::string& taskKey, const SGProcessing::TaskResult& task) override
+        outcome::result<std::shared_ptr<crdt::AtomicTransaction>> CompleteTask(const std::string& taskKey, const SGProcessing::TaskResult& task) override
         {
-            return outcome::success();
+            return nullptr;
         }
     };
 

@@ -57,7 +57,7 @@ namespace sgns::processing
         * @param taskKey - id to look for task
         * @param taskResult - Reference of a task result
         */
-       outcome::result<void> CompleteTask( const std::string &taskKey, const SGProcessing::TaskResult &taskResult ) override;
+       outcome::result<std::shared_ptr<crdt::AtomicTransaction>> CompleteTask( const std::string &taskKey, const SGProcessing::TaskResult &taskResult ) override;
 
         /**
          * @brief       

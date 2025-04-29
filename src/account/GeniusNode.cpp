@@ -93,15 +93,16 @@ namespace sgns
         autodht_( autodht ),
         isprocessor_( isprocessor ),
         dev_config_( dev_config ),
-        processing_channel_topic_( (boost::format( std::string( PROCESSING_CHANNEL ) ) %
-                                   sgns::version::SuperGeniusVersionMajor()).str() ),
-        processing_grid_chanel_topic_( (boost::format( std::string( PROCESSING_GRID_CHANNEL ) ) %
-                                       sgns::version::SuperGeniusVersionMajor()).str() ),
+        processing_channel_topic_(
+            ( boost::format( std::string( PROCESSING_CHANNEL ) ) % sgns::version::SuperGeniusVersionMajor() ).str() ),
+        processing_grid_chanel_topic_(
+            ( boost::format( std::string( PROCESSING_GRID_CHANNEL ) ) % sgns::version::SuperGeniusVersionMajor() )
+                .str() ),
         m_lastApiCall( std::chrono::system_clock::now() - m_minApiCallInterval )
 
     //coinprices_(std::make_shared<CoinGeckoPriceRetriever>(io_))
     {
-        //For some reason if this isn't initialized like this, it ends up completely wrong. 
+        //For some reason if this isn't initialized like this, it ends up completely wrong.
         m_lastApiCall = std::chrono::system_clock::now() - m_minApiCallInterval;
         SSL_library_init();
         SSL_load_error_strings();
@@ -762,7 +763,7 @@ namespace sgns
     }
 
     outcome::result<std::pair<std::string, uint64_t>> GeniusNode::PayDev( uint64_t                  amount,
-                                                                                 std::chrono::milliseconds timeout )
+                                                                          std::chrono::milliseconds timeout )
     {
         auto start_time = std::chrono::steady_clock::now();
         OUTCOME_TRY( auto &&tx_id, transaction_manager_->TransferFunds( amount, dev_config_.Addr ) );
@@ -782,13 +783,16 @@ namespace sgns
         return std::make_pair( tx_id, duration );
     }
 
-    outcome::result<std::pair<std::string, uint64_t>> GeniusNode::PayEscrow( const std::string &escrow_path,
-                                                                             const SGProcessing::TaskResult &taskresult,
-                                                                             std::chrono::milliseconds       timeout )
+    outcome::result<std::pair<std::string, uint64_t>> GeniusNode::PayEscrow(
+        const std::string                       &escrow_path,
+        const SGProcessing::TaskResult          &taskresult,
+        std::shared_ptr<crdt::AtomicTransaction> crdt_transaction,
+        std::chrono::milliseconds                timeout )
     {
         auto start_time = std::chrono::steady_clock::now();
 
-        OUTCOME_TRY( auto &&tx_id, transaction_manager_->PayEscrow( escrow_path, taskresult ) );
+        OUTCOME_TRY( auto &&tx_id,
+                     transaction_manager_->PayEscrow( escrow_path, taskresult, std::move( crdt_transaction ) ) );
 
         bool success = WaitForTransactionOutgoing( tx_id, timeout );
 
@@ -827,16 +831,16 @@ namespace sgns
                 node_logger->info( "No associated Escrow with the task id: {} ", task_id );
                 break;
             }
-            auto pay_result = PayEscrow( maybe_escrow_path.value(), taskresult );
+            auto complete_task_result = task_queue_->CompleteTask( task_id, taskresult );
+            if ( complete_task_result.has_failure() )
+            {
+                node_logger->error( "Unable to complete task: {} ", task_id );
+                break;
+            }
+            auto pay_result = PayEscrow( maybe_escrow_path.value(), taskresult, std::move(complete_task_result.value()) );
             if ( pay_result.has_failure() )
             {
                 node_logger->error( "Invalid results for task: {} ", task_id );
-                break;
-            }
-
-            if ( !task_queue_->CompleteTask( task_id, taskresult ) )
-            {
-                node_logger->error( "Unable to complete task: {} ", task_id );
                 break;
             }
 
@@ -863,7 +867,7 @@ namespace sgns
         processing_service_->StartProcessing( processing_grid_chanel_topic_ );
     }
 
-outcome::result<std::map<std::string, double>> GeniusNode::GetCoinprice( const std::vector<std::string> &tokenIds )
+    outcome::result<std::map<std::string, double>> GeniusNode::GetCoinprice( const std::vector<std::string> &tokenIds )
     {
         auto                          currentTime = std::chrono::system_clock::now();
         std::map<std::string, double> result;
@@ -964,9 +968,7 @@ outcome::result<std::map<std::string, double>> GeniusNode::GetCoinprice( const s
         return transaction_manager_->WaitForEscrowRelease( originalEscrowId, timeout );
     }
 
-    void GeniusNode::SendTransactionAndProof(
-        std::shared_ptr<IGeniusTransactions> tx,
-        std::vector<uint8_t>                 proof )
+    void GeniusNode::SendTransactionAndProof( std::shared_ptr<IGeniusTransactions> tx, std::vector<uint8_t> proof )
     {
         transaction_manager_->EnqueueTransaction( std::make_pair( tx, proof ) );
     }

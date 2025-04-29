@@ -281,7 +281,7 @@ TEST_F( GlobalDBIntegrationTest, ReplicationViaTopicBroadcastTest )
     ASSERT_NE( tx, nullptr );
     const auto putRes = tx->Put( key, value );
     ASSERT_TRUE( putRes.has_value() );
-    const auto commitRes = tx->Commit( "test_topic" );
+    const auto commitRes = tx->Commit();
     ASSERT_TRUE( commitRes.has_value() );
 
     const bool replicated = waitForCondition(
@@ -334,14 +334,14 @@ TEST_F( GlobalDBIntegrationTest, ReplicationAcrossMultipleTopicsTest )
     ASSERT_NE( txA, nullptr );
     const auto putResA = txA->Put( keyA, valueA );
     ASSERT_TRUE( putResA.has_value() );
-    const auto commitResA = txA->Commit( "topic_A" );
+    const auto commitResA = txA->Commit();
     ASSERT_TRUE( commitResA.has_value() );
 
     const auto txB = testNodes->getNodes()[1].db->BeginTransaction();
     ASSERT_NE( txB, nullptr );
     const auto putResB = txB->Put( keyB, valueB );
     ASSERT_TRUE( putResB.has_value() );
-    const auto commitResB = txB->Commit( "topic_B" );
+    const auto commitResB = txB->Commit();
     ASSERT_TRUE( commitResB.has_value() );
 
     const bool replicated = waitForCondition(
@@ -377,9 +377,9 @@ TEST_F( GlobalDBIntegrationTest, PreventDoubleCommitTest )
     ASSERT_NE( tx, nullptr );
     const auto putRes = tx->Put( key, value );
     ASSERT_TRUE( putRes.has_value() );
-    const auto commitRes = tx->Commit( "firstTopic" );
+    const auto commitRes = tx->Commit();
     ASSERT_TRUE( commitRes.has_value() );
-    const auto secondCommit = tx->Commit( "firstTopic" );
+    const auto secondCommit = tx->Commit();
     EXPECT_FALSE( secondCommit.has_value() );
 }
 
@@ -430,7 +430,7 @@ TEST_F( GlobalDBIntegrationTest, CommitFailsForNonexistentTopicTest )
     ASSERT_NE( tx, nullptr );
     const auto putRes = tx->Put( key, value );
     ASSERT_TRUE( putRes.has_value() );
-    const auto commitRes = tx->Commit( "nonexistent_topic" );
+    const auto commitRes = tx->Commit();
     EXPECT_FALSE( commitRes.has_value() );
 }
 
@@ -539,7 +539,7 @@ TEST_F( GlobalDBIntegrationTest, NonSubscriberDoesNotReceiveTopicMessageTest )
     ASSERT_NE( tx, nullptr );
     const auto putRes = tx->Put( key, value );
     ASSERT_TRUE( putRes.has_value() );
-    const auto commitRes = tx->Commit( "test_topic" );
+    const auto commitRes = tx->Commit();
     ASSERT_TRUE( commitRes.has_value() );
 
     bool node0Received = waitForCondition( [&]() -> bool
@@ -581,7 +581,7 @@ TEST_F( GlobalDBIntegrationTest, UnconnectedNodeDoesNotReplicateBroadcastMessage
     ASSERT_NE( tx, nullptr );
     const auto putRes = tx->Put( key, value );
     ASSERT_TRUE( putRes.has_value() );
-    const auto commitRes = tx->Commit( "isolated_topic" );
+    const auto commitRes = tx->Commit();
     ASSERT_TRUE( commitRes.has_value() );
 
     bool node1Replicated = waitForCondition( [&]() -> bool
@@ -599,4 +599,3 @@ TEST_F( GlobalDBIntegrationTest, UnconnectedNodeDoesNotReplicateBroadcastMessage
                                              WAIT_TIMEOUT );
     EXPECT_FALSE( node3Replicated );
 }
-

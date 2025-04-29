@@ -38,7 +38,7 @@ namespace sgns::crdt
         return outcome::success();
     }
 
-    outcome::result<void> AtomicTransaction::Commit( const std::optional<std::string> &topic )
+    outcome::result<void> AtomicTransaction::Commit()
     {
         if ( is_committed_ )
         {

@@ -203,8 +203,8 @@ namespace sgns
             std::chrono::time_point<std::chrono::system_clock> lastUpdate;
         };
 
-        std::map<std::string, PriceInfo> m_tokenPriceCache;
-        const std::chrono::minutes       m_cacheValidityDuration{ 1 };
+        std::map<std::string, PriceInfo>                   m_tokenPriceCache;
+        const std::chrono::minutes                         m_cacheValidityDuration{ 1 };
         std::chrono::time_point<std::chrono::system_clock> m_lastApiCall{};
         const std::chrono::seconds                         m_minApiCallInterval{ 5 };
 
@@ -213,9 +213,10 @@ namespace sgns
         std::atomic<bool> stop_upnp{ false };
 
         outcome::result<std::pair<std::string, uint64_t>> PayEscrow(
-            const std::string              &escrow_path,
-            const SGProcessing::TaskResult &taskresult,
-            std::chrono::milliseconds       timeout = std::chrono::milliseconds( TIMEOUT_ESCROW_PAY ) );
+            const std::string                       &escrow_path,
+            const SGProcessing::TaskResult          &taskresult,
+            std::shared_ptr<crdt::AtomicTransaction> crdt_transaction,
+            std::chrono::milliseconds                timeout = std::chrono::milliseconds( TIMEOUT_ESCROW_PAY ) );
 
         void ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult );
         void ProcessingError( const std::string &task_id );
