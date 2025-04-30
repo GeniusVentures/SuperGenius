@@ -57,12 +57,10 @@ namespace sgns::crdt
          * @brief Puts key-value pair to the CRDT store, optionally specifying a broadcast topic.
          * @param[in] key The hierarchical key where the value should be stored.
          * @param[in] value The value to store.
-         * @param[in] topic Optional topic for broadcasting the update.
          * @return outcome::success on success, or outcome::failure otherwise.
          */
         outcome::result<void> Put( const HierarchicalKey     &key,
-                                   const Buffer              &value,
-                                   std::optional<std::string> topic = std::nullopt );
+                                   const Buffer              &value);
 
         /**
          * @brief       Writes a batch of CRDT data all at once

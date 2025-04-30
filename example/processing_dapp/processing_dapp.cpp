@@ -245,7 +245,7 @@ int main(int argc, char* argv[])
 
     std::thread iothread([io]() { io->run(); });
 
-    auto taskQueue = std::make_shared<ProcessingTaskQueueImpl>(globalDB,"CRDT.Datastore.TEST.Channel");
+    auto taskQueue = std::make_shared<ProcessingTaskQueueImpl>(globalDB);
 
     TaskSplitter taskSplitter(
         options->nSubTasks,

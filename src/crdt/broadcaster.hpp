@@ -27,8 +27,7 @@ namespace sgns::crdt
          * Send {@param buff} payload to other replicas.
          * @return outcome::success on success or outcome::failure on error.
          */
-        virtual outcome::result<void> Broadcast( const base::Buffer        &buff,
-                                                 std::optional<std::string> topic_name = std::nullopt ) = 0;
+        virtual outcome::result<void> Broadcast( const base::Buffer &buff ) = 0;
 
         /**
          * Obtain the next payload and its topic received from the network.

@@ -231,8 +231,7 @@ namespace sgns::crdt
         dataStore_ = std::move( dataStore ); // Keeps reference, no ownership transfer
     }
 
-    outcome::result<void> PubSubBroadcasterExt::Broadcast( const base::Buffer        &buff,
-                                                           std::optional<std::string> topicName )
+    outcome::result<void> PubSubBroadcasterExt::Broadcast( const base::Buffer &buff )
     {
         std::set<std::string> broadcastTopicsCopy;
         {

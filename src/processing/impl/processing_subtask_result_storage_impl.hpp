@@ -13,9 +13,8 @@ namespace sgns::processing
     public:
         /** Create a subtask storage
         * @param db - CRDT globaldb to use
-        * @param storageTopic - The topic to use for atomic commits.
         */
-        SubTaskResultStorageImpl( std::shared_ptr<sgns::crdt::GlobalDB> db, const std::string &storageTopic );
+        SubTaskResultStorageImpl( std::shared_ptr<sgns::crdt::GlobalDB> db );
 
         ~SubTaskResultStorageImpl();
 
@@ -37,7 +36,6 @@ namespace sgns::processing
 
     private:
         std::shared_ptr<sgns::crdt::GlobalDB> m_db;
-        std::string m_storageTopic;
     };
 }
 

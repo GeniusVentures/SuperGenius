@@ -103,7 +103,7 @@ int main(int argc, char* argv[])
     auto initRes          = globalDB2->Init( crdtOptions2, graphsyncnetwork, scheduler, generator );
 
     //Processing Service Values
-    auto taskQueue2 = std::make_shared<sgns::processing::ProcessingTaskQueueImpl>(globalDB2, "CRDT.Datastore.TEST.Channel");
+    auto taskQueue2 = std::make_shared<sgns::processing::ProcessingTaskQueueImpl>(globalDB2);
     auto enqueuer2 = std::make_shared<SubTaskEnqueuerImpl>(taskQueue2);
 
     //Processing Core
@@ -122,7 +122,7 @@ int main(int argc, char* argv[])
         maximalNodesCount,
         enqueuer2,
         std::make_shared<SubTaskStateStorageImpl>(),
-        std::make_shared<SubTaskResultStorageImpl>(globalDB2, "CRDT.Datastore.TEST.Channel"),
+        std::make_shared<SubTaskResultStorageImpl>(globalDB2),
         processingCore2);
     
     processingService.SetChannelListRequestTimeout(boost::posix_time::milliseconds(10000));

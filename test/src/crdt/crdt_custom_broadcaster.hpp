@@ -19,7 +19,7 @@ namespace sgns::crdt
          * @param buff buffer to broadcast
          * @return outcome::success on success or outcome::failure on error
          */
-        outcome::result<void> Broadcast(const base::Buffer& buff, std::optional<std::string> topic_name) override;
+        outcome::result<void> Broadcast(const base::Buffer& buff) override;
 
         /**
          * Obtain the next {@return} payload received from the network.

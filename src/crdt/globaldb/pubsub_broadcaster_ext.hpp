@@ -51,10 +51,9 @@ namespace sgns::crdt
         /**
          * @brief Sends the given buffer as a broadcast to peers.
          * @param buff       Buffer containing the data to broadcast.
-         * @param topicName  Optional specific topic to broadcast on; uses default if not provided.
          * @return outcome::success on successful publish, or outcome::failure on error.
          */
-        outcome::result<void> Broadcast( const base::Buffer &buff, std::optional<std::string> topicName ) override;
+        outcome::result<void> Broadcast( const base::Buffer &buff ) override;
 
         /**
          * @brief Retrieves the next incoming broadcast payload.

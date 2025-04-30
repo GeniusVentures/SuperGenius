@@ -205,7 +205,7 @@ namespace sgns::processing
         sgns::base::Buffer lockData;
         lockData.put( lock.SerializeAsString() );
 
-        auto res = m_db->Put( sgns::crdt::HierarchicalKey( "lock_" + taskKey ), lockData, m_processingTopic );
+        auto res = m_db->Put( sgns::crdt::HierarchicalKey( "lock_" + taskKey ), lockData );
         return !res.has_failure();
     }
 

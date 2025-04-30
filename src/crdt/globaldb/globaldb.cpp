@@ -318,8 +318,7 @@ namespace sgns::crdt
     //}
 
     outcome::result<void> GlobalDB::Put( const HierarchicalKey     &key,
-                                         const Buffer              &value,
-                                         std::optional<std::string> topic )
+                                         const Buffer              &value )
     {
         if ( !m_crdtDatastore )
         {
