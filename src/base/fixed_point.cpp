@@ -16,21 +16,26 @@
 
 namespace sgns
 {
-    namespace fixed_point
+    /**
+     * @brief Generates a table of scaling factors for different precision levels.
+     * @return A constexpr array of scaling factors.
+     */
+    static constexpr std::array<uint64_t, MAX_PRECISION + 1> generateScaleTable()
     {
-        static constexpr std::array<uint64_t, MAX_PRECISION> generateScaleTable()
+        std::array<uint64_t, MAX_PRECISION + 1> table{};
+        uint64_t                                value = 1;
+        for ( size_t i = 0; i < MAX_PRECISION + 1; i++ )
         {
-            std::array<uint64_t, MAX_PRECISION> table{};
-            uint64_t                            value = 1;
-            for ( size_t i = 0; i < MAX_PRECISION; i++ )
-            {
-                table[i]  = value;
-                value    *= 10;
-            }
-            return table;
+            table[i]  = value;
+            value    *= 10;
         }
+        return table;
+    }
 
-        const std::array<uint64_t, MAX_PRECISION> scale_table = generateScaleTable();
+    /**
+     * @brief Precomputed table of scaling factors.
+     */
+    static constexpr std::array<uint64_t, MAX_PRECISION + 1> scale_table = generateScaleTable();
 
         outcome::result<uint64_t> fromString( const std::string &str_value, uint64_t precision )
         {
