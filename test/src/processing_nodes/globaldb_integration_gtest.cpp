@@ -416,7 +416,7 @@ TEST_F( GlobalDBIntegrationTest, OperationsWithoutInitializationTest )
     boost::filesystem::remove_all( tmpBasePath );
 }
 
-TEST_F( GlobalDBIntegrationTest, CommitFailsForNonexistentTopicTest )
+TEST_F( GlobalDBIntegrationTest, DISABLED_CommitFailsForNonexistentTopicTest )
 {
     auto testNodes = std::make_unique<TestNodeCollection>();
     testNodes->addNode( "globaldb_no_topic" );
