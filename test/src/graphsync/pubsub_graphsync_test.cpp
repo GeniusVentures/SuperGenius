@@ -76,7 +76,7 @@ protected:
         loggerDAGSyncer->set_level( spdlog::level::trace );
         
         loggerBroadcaster->set_level( spdlog::level::trace );
-        loggerDataStore->set_level( spdlog::level::trace );
+        loggerDataStore->set_level( spdlog::level::off );
     }
 
     static void TearDownTestSuite()
@@ -137,30 +137,30 @@ TEST_F(PubsubGraphsyncTest, MultiGlobalDBTest )
     auto generator2         = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
     auto gdb1 = std::make_shared<sgns::crdt::GlobalDB>(
         io_context,
-        basePath1,
-        std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>( pubs1, "test" ) );
+        basePath1, 
+        pubs1 );
     auto gdb2 = std::make_shared<sgns::crdt::GlobalDB>(
         io_context,
-        basePath2,
-        std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>( pubs2, "test" ) );
+        basePath2, 
+        pubs2 );
 
     auto gdb3 = std::make_shared<sgns::crdt::GlobalDB>(
         io_context,
-        basePath3,
-        std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>( pubs1, "test2" ) );
+        basePath3, 
+        pubs1 );
     auto gdb4 = std::make_shared<sgns::crdt::GlobalDB>(
         io_context,
-        basePath4,
-        std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>( pubs2, "test2" ) );
+        basePath4, 
+        pubs2 );
 
     auto gdb5 = std::make_shared<sgns::crdt::GlobalDB>(
         io_context,
-        basePath5,
-        std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>( pubs1, "test3" ) );
+        basePath5, 
+        pubs1 );
     auto gdb6 = std::make_shared<sgns::crdt::GlobalDB>(
         io_context,
-        basePath6,
-        std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>( pubs2, "test3" ) );
+        basePath6, 
+        pubs2 );
 
     gdb1->Init( sgns::crdt::CrdtOptions::DefaultOptions(), graphsyncnetwork, scheduler, generator );
     gdb2->Init( sgns::crdt::CrdtOptions::DefaultOptions(), graphsyncnetwork2, scheduler2, generator2 );
