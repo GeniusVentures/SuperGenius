@@ -84,10 +84,12 @@ namespace sgns::crdt
 
         void                  InitCIDBlock( const CID &cid ) override;
         bool                  IsCIDInCache( const CID &cid ) const override;
-        outcome::result<void> DeleteCIDBlock( const CID &cid ) const override;
+        outcome::result<void> DeleteCIDBlock( const CID &cid ) override;
 
         /** DAG service implementation */
         MerkleDagServiceImpl dagService_;
+
+        std::set<CID> cids_cache;
     };
 
 } // namespace sgns::crdt

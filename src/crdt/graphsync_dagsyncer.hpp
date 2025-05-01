@@ -111,7 +111,7 @@ namespace sgns::crdt
 
         void                  InitCIDBlock( const CID &cid ) override;
         bool                  IsCIDInCache( const CID &cid ) const override;
-        outcome::result<void> DeleteCIDBlock( const CID &cid ) const override;
+        outcome::result<void> DeleteCIDBlock( const CID &cid ) override;
 
     protected:
         static constexpr uint64_t TIMEOUT_SECONDS = 1200;

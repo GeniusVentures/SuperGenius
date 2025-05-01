@@ -6,8 +6,12 @@ namespace sgns::crdt
 
     outcome::result<bool> CustomDagSyncer::HasBlock( const CID &cid ) const
     {
-        auto getNodeResult = dagService_.getNode( cid );
-        return getNodeResult.has_value();
+        if ( IsCIDInCache( cid ) )
+        {
+            auto getNodeResult = dagService_.getNode( cid );
+            return getNodeResult.has_value();
+        }
+        return false;
     }
 
     outcome::result<void> CustomDagSyncer::addNode( std::shared_ptr<const IPLDNode> node )
@@ -44,15 +48,19 @@ namespace sgns::crdt
         return dagService_.fetchGraphOnDepth( cid, depth );
     }
 
-    void CustomDagSyncer::InitCIDBlock( const CID &cid ) {}
+    void CustomDagSyncer::InitCIDBlock( const CID &cid )
+    {
+        cids_cache.emplace( cid );
+    }
 
     bool CustomDagSyncer::IsCIDInCache( const CID &cid ) const
     {
-        return false;
+        return cids_cache.find( cid ) != cids_cache.end();
     }
 
-    outcome::result<void> CustomDagSyncer::DeleteCIDBlock( const CID &cid ) const
+    outcome::result<void> CustomDagSyncer::DeleteCIDBlock( const CID &cid )
     {
+        cids_cache.erase( cid );
         return outcome::success();
     }
 

@@ -486,7 +486,7 @@ namespace sgns::crdt
         return outcome::failure( Error::CID_NOT_FOUND );
     }
 
-    outcome::result<void> GraphsyncDAGSyncer::DeleteCIDBlock( const CID &cid ) const
+    outcome::result<void> GraphsyncDAGSyncer::DeleteCIDBlock( const CID &cid )
     {
         std::lock_guard<std::mutex> lock( cache_mutex_ );
         if ( lru_cid_cache_.remove( cid ) )

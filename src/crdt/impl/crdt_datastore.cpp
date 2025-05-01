@@ -452,19 +452,6 @@ namespace sgns::crdt
             }
         }
 
-        //std::vector<CID> headsToBroadcast;
-        //{
-        //    std::unique_lock lock( this->seenHeadsMutex_ );
-        //    for ( const auto &head : heads )
-        //    {
-        //        if ( seenHeads_.find( head ) == seenHeads_.end() )
-        //        {
-        //            headsToBroadcast.push_back( head );
-        //        }
-        //    }
-        //    this->seenHeads_.clear();
-        //}
-
         auto broadcastResult = this->Broadcast( heads );
         if ( broadcastResult.has_failure() )
         {
