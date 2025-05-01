@@ -453,7 +453,7 @@ TEST_F( GlobalDBIntegrationTest, DirectPutWithTopicBroadcastTest )
     value.put( "Direct put with topic value" );
     const HierarchicalKey key( "/direct/with_topic" );
 
-    const auto putRes = testNodes->getNodes()[0].db->Put( key, value, "direct_topic" );
+    const auto putRes = testNodes->getNodes()[0].db->Put( key, value );
     ASSERT_TRUE( putRes.has_value() );
 
     const bool replicated = waitForCondition(
