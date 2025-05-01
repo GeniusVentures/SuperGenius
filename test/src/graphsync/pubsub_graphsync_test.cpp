@@ -168,6 +168,18 @@ TEST_F(PubsubGraphsyncTest, MultiGlobalDBTest )
     gdb4->Init( sgns::crdt::CrdtOptions::DefaultOptions(), graphsyncnetwork2, scheduler2, generator2 );
     gdb5->Init( sgns::crdt::CrdtOptions::DefaultOptions(), graphsyncnetwork, scheduler, generator );
     gdb6->Init( sgns::crdt::CrdtOptions::DefaultOptions(), graphsyncnetwork2, scheduler2, generator2 );
+    gdb1->AddBroadcastTopic( "test1" );
+    gdb2->AddBroadcastTopic( "test1" );
+    gdb3->AddBroadcastTopic( "test2" );
+    gdb4->AddBroadcastTopic( "test2" );
+    gdb5->AddBroadcastTopic( "test3" );
+    gdb6->AddBroadcastTopic( "test3" );
+    gdb1->AddListenTopic( "test1" );
+    gdb2->AddListenTopic( "test1" );
+    gdb3->AddListenTopic( "test2" );
+    gdb4->AddListenTopic( "test2" );
+    gdb5->AddListenTopic( "test3" );
+    gdb6->AddListenTopic( "test3" );
     pubs1->AddPeers( { pubs2->GetLocalAddress() } );
     std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
 
