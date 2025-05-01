@@ -181,7 +181,7 @@ namespace sgns::crdt
                 if ( addr_res )
                 {
                     addrvector.push_back( addr_res.value() );
-                    m_logger->debug( "Added Address: {}", addr_res.value().getStringAddress() );
+                    m_logger->trace( "Added Address: {}", addr_res.value().getStringAddress() );
                 }
             }
             if ( addrvector.empty() )
@@ -195,6 +195,7 @@ namespace sgns::crdt
                 break;
             }
             //auto pi = PeerInfoFromString(bmsg.multiaddress());
+            bool new_content = false;
             for ( const auto &cid : cids.value() )
             {
                 auto hb = dagSyncer_->HasBlock( cid );
@@ -204,20 +205,28 @@ namespace sgns::crdt
                     continue;
                 }
 
-                if ( hb.value() )
+                if ( hb.value() || dagSyncer_->IsCIDInCache( cid ) )
                 {
                     m_logger->trace( "Not adding route node {} from {}",
                                      cid.toString().value(),
                                      addrvector[0].getStringAddress() );
                     continue;
                 }
+                new_content = true;
                 m_logger->debug( "Request node {} from {} {}",
                                  cid.toString().value(),
                                  addrvector[0].getStringAddress(),
                                  peerId.toBase58() );
                 dagSyncer_->AddRoute( cid, peerId, addrvector );
             }
-            messageQueue_.emplace( std::move( peerId ), bmsg.data() );
+            if ( new_content )
+            {
+                messageQueue_.emplace( std::move( peerId ), bmsg.data() );
+            }
+            else
+            {
+                m_logger->debug( "No new content from message" );
+            }
         } while ( 0 );
     }
 
