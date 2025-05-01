@@ -432,15 +432,6 @@ namespace sgns::crdt
         //    }
         //    this->seenHeads_.clear();
         //}
-        //
-        //{
-        //    std::unique_lock lock( publishHeadsMutex_ );
-        //    for ( const auto &head : publishHeads_ )
-        //    {
-        //        headsToBroadcast.push_back( head );
-        //    }
-        //    this->publishHeads_.clear();
-        //}
 
         auto broadcastResult = this->Broadcast( heads );
         if ( broadcastResult.has_failure() )
