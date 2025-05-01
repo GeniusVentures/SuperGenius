@@ -634,22 +634,24 @@ namespace sgns
         // the cost per byte in USD is: 20 * 5e-15 = 1e-13 USD.
         // Converting this to a fixed-point constant with 9 decimals:
         //    1e-13 USD/byte * 1e9 = 1e-4, i.e., 0.0001, and in fixed point with 9 decimals, that's 100000.
-        uint64_t fixed_cost_per_byte = 100000ULL; // represents 0.0001 in fixed point (precision 9)
+        uint64_t fixed_cost_per_byte = UINT64_C(100000); // represents 0.0001 in fixed point (precision 9)
 
         // Calculate the raw cost in minions in fixed point: (block_total_len * fixed_cost_per_byte)
-        auto raw_cost_result = sgns::fixed_point::multiply( block_total_len, fixed_cost_per_byte, 9 );
+        auto raw_cost_result = fixed_point::multiply( block_total_len, fixed_cost_per_byte, 9 );
         if ( !raw_cost_result )
         {
             node_logger->error( "Fixed-point multiplication error" );
             return 0;
         }
-        uint64_t raw_cost = raw_cost_result.value();
 
-        // Convert GNUS price to fixed-point representation with precision 9:
-        uint64_t gnus_price_fixed = static_cast<uint64_t>( std::round( gnusPrice * 1e9 ) );
+        // Divide by 10e3 to adjust for GNSU_PRECISION
+        uint64_t raw_cost = raw_cost_result.value() / 1000;
+
+        // Convert GNUS price to fixed-point representation with precision 6:
+        auto gnus_price_fixed = static_cast<uint64_t>( std::round( gnusPrice * 1e6 ) );
 
         // Now, the cost in minions (in fixed point) is raw_cost divided by gnus_price_fixed:
-        auto cost_result = sgns::fixed_point::divide( raw_cost, gnus_price_fixed, 9 );
+        auto cost_result = fixed_point::divide( raw_cost, gnus_price_fixed, 6 );
         if ( !cost_result )
         {
             node_logger->info( "Fixed-point division error" );
@@ -658,7 +660,7 @@ namespace sgns
         costMinions = cost_result.value();
 
         // Ensure at least one minion is charged.
-        return std::max( costMinions, static_cast<uint64_t>( 1 ) );
+        return std::max( costMinions, UINT64_C( 1 ) );
     }
 
     outcome::result<double> GeniusNode::GetGNUSPrice()
@@ -887,7 +889,7 @@ outcome::result<std::map<std::string, double>> GeniusNode::GetCoinprice( const s
         const std::vector<std::string> &tokenIds,
         const std::vector<int64_t>     &timestamps )
     {
-        sgns::CoinGeckoPriceRetriever retriever;
+        CoinGeckoPriceRetriever retriever;
         return retriever.getHistoricalPrices( tokenIds, timestamps );
     }
 
@@ -896,18 +898,18 @@ outcome::result<std::map<std::string, double>> GeniusNode::GetCoinprice( const s
         int64_t                         from,
         int64_t                         to )
     {
-        sgns::CoinGeckoPriceRetriever retriever;
+        CoinGeckoPriceRetriever retriever;
         return retriever.getHistoricalPriceRange( tokenIds, from, to );
     }
 
     std::string GeniusNode::FormatTokens( uint64_t amount )
     {
-        return sgns::fixed_point::toString( amount );
+        return fixed_point::toString( amount );
     }
 
     outcome::result<uint64_t> GeniusNode::ParseTokens( const std::string &str )
     {
-        return sgns::fixed_point::fromString( str );
+        return fixed_point::fromString( str );
     }
 
     // Wait for a transaction to be processed with a timeout

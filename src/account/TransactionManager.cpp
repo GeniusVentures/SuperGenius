@@ -88,7 +88,7 @@ namespace sgns
 
     void TransactionManager::Start()
     {
-        CheckIncoming(false);
+        CheckIncoming( false );
         CheckOutgoing();
 
         task_m = [this]()
@@ -135,8 +135,7 @@ namespace sgns
             TransferTransaction::New( maybe_params.value().outputs_, maybe_params.value().inputs_, FillDAGStruct() ) );
         std::optional<std::vector<uint8_t>> maybe_proof;
 #ifdef _PROOF_ENABLED
-        TransferProof prover( static_cast<uint64_t>( account_m->GetBalance<uint64_t>() ),
-                              static_cast<uint64_t>( amount ) );
+        TransferProof prover( account_m->GetBalance<uint64_t>(), amount );
         OUTCOME_TRY( ( auto &&, proof_result ), prover.GenerateFullProof() );
         maybe_proof = std::move( proof_result );
 #endif
@@ -159,7 +158,7 @@ namespace sgns
                                   FillDAGStruct( std::move( transaction_hash ) ) ) );
         std::optional<std::vector<uint8_t>> maybe_proof;
 #ifdef _PROOF_ENABLED
-        TransferProof prover( 1000000000000000,
+        TransferProof prover( 1000000000000,
                               static_cast<uint64_t>( amount ) ); //Mint max 1000000 gnus per transaction
         OUTCOME_TRY( ( auto &&, proof_result ), prover.GenerateFullProof() );
         maybe_proof = std::move( proof_result );
@@ -194,8 +193,7 @@ namespace sgns
 
         std::optional<std::vector<uint8_t>> maybe_proof;
 #ifdef _PROOF_ENABLED
-        TransferProof prover( static_cast<uint64_t>( account_m->GetBalance<uint64_t>() ),
-                              static_cast<uint64_t>( amount ) );
+        TransferProof prover( account_m->GetBalance<uint64_t>(), amount );
         OUTCOME_TRY( ( auto &&, proof_result ), prover.GenerateFullProof() );
         maybe_proof = std::move( proof_result );
 #endif
@@ -230,7 +228,7 @@ namespace sgns
         std::vector<std::string>           subtask_ids;
         std::vector<OutputDestInfo>        payout_peers;
 
-        auto mult_result = sgns::fixed_point::multiply( escrow_tx->GetAmount(), escrow_tx->GetPeersCut() );
+        auto mult_result = fixed_point::multiply( escrow_tx->GetAmount(), escrow_tx->GetPeersCut() );
         //TODO: check fail here, maybe if peer cut is greater than one to...
         uint64_t peers_amount = mult_result.value() / static_cast<uint64_t>( taskresult.subtask_results().size() );
         auto     remainder    = escrow_tx->GetAmount();
@@ -244,6 +242,7 @@ namespace sgns
         }
         m_logger->debug( "Sending to dev {}", remainder );
         payout_peers.push_back( { remainder, escrow_tx->GetDevAddress() } );
+
         InputUTXOInfo escrow_utxo_input;
 
         escrow_utxo_input.txid_hash_  = ( base::Hash256::fromReadableString( escrow_tx->dag_st.data_hash() ) ).value();
@@ -485,7 +484,7 @@ namespace sgns
 #endif
     }
 
-    outcome::result<void> TransactionManager::CheckIncoming(bool checkProofs)
+    outcome::result<void> TransactionManager::CheckIncoming( bool checkProofs )
     {
         auto transaction_paths = GetNotificationPath( account_m->GetAddress() ) + "tx/";
         m_logger->trace( "Probing incoming transactions on " + transaction_paths );

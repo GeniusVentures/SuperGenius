@@ -78,7 +78,7 @@ namespace sgns
 #endif
 
         outcome::result<std::string> ProcessImage( const std::string &jsondata );
-        outcome::result<void> CheckProcessValidity( const std::string &jsondata );
+        outcome::result<void>        CheckProcessValidity( const std::string &jsondata );
 
         uint64_t GetProcessCost( const std::string &json_data );
 
@@ -94,7 +94,7 @@ namespace sgns
         void DHTInit();
         /**
          * @brief       Mints tokens by converting a string amount to fixed-point representation
-         * @param[in]   amount: Numeric value with amount in Minion Tokens (1e-9 GNUS Token)
+         * @param[in]   amount: Numeric value with amount in Minion Tokens (1e-6 GNUS Token)
          * @return      Outcome of mint token operation
          */
         outcome::result<std::pair<std::string, uint64_t>> MintTokens(
@@ -103,6 +103,7 @@ namespace sgns
             const std::string        &chainid,
             const std::string        &tokenid,
             std::chrono::milliseconds timeout = std::chrono::milliseconds( TIMEOUT_MINT ) );
+
         void     AddPeer( const std::string &peer );
         void     RefreshUPNP( int pubsubport, int graphsyncport );
         uint64_t GetBalance();
@@ -138,7 +139,7 @@ namespace sgns
 
         /**
          * @brief       Formats a fixed-point amount into a human-readable string.
-         * @param[in]   amount Amount in Minion Tokens (1e-9 GNUS).
+         * @param[in]   amount Amount in Minion Tokens (1e-6 GNUS).
          * @return      Formatted string representation in GNUS.
          */
         static std::string FormatTokens( uint64_t amount );
@@ -146,7 +147,7 @@ namespace sgns
         /**
          * @brief       Parses a human-readable string into a fixed-point amount.
          * @param[in]   str String representation of an amount in GNUS.
-         * @return      Outcome result with the parsed amount in Minion Tokens (1e-9 GNUS) or error.
+         * @return      Outcome result with the parsed amount in Minion Tokens (1e-6 GNUS) or error.
          */
         static outcome::result<uint64_t> ParseTokens( const std::string &str );
 
@@ -169,8 +170,7 @@ namespace sgns
         // Wait for a outgoing transaction to be processed with a timeout
         bool WaitForTransactionOutgoing( const std::string &txId, std::chrono::milliseconds timeout );
 
-        bool WaitForEscrowRelease(const std::string &originalEscrowId, std::chrono::milliseconds timeout);
-
+        bool WaitForEscrowRelease( const std::string &originalEscrowId, std::chrono::milliseconds timeout );
 
     private:
         std::shared_ptr<GeniusAccount>                        account_;
@@ -198,11 +198,10 @@ namespace sgns
             std::chrono::time_point<std::chrono::system_clock> lastUpdate;
         };
 
-        std::map<std::string, PriceInfo> m_tokenPriceCache;
-        const std::chrono::minutes       m_cacheValidityDuration{ 1 };
+        std::map<std::string, PriceInfo>                   m_tokenPriceCache;
+        const std::chrono::minutes                         m_cacheValidityDuration{ 1 };
         std::chrono::time_point<std::chrono::system_clock> m_lastApiCall{};
         const std::chrono::seconds                         m_minApiCallInterval{ 5 };
-
 
         std::thread       io_thread;
         std::thread       upnp_thread;

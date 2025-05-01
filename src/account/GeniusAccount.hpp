@@ -54,16 +54,14 @@ namespace sgns
         {
             uint64_t retval = 0;
 
-            //std::cout << "utxo's ID: ";
             for ( auto &curr : utxos )
             {
-                //std::cout << curr.GetTxID() << "(" << curr.GetAmount() << "), ";
                 if ( !curr.GetLock() )
                 {
                     retval += curr.GetAmount();
                 }
             }
-            //std::cout << std::endl;
+
             return retval;
         }
 
