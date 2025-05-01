@@ -150,7 +150,7 @@ namespace sgns::crdt
         std::lock_guard<std::mutex> lock( routing_mutex_ );
         routing_[cid] = peerKey;
 
-        logger_->debug( "Added route for CID {} to peer {} (key {})",
+        logger_->trace( "Added route for CID {} to peer {} (key {})",
                         cid.toString().value(),
                         peer.toBase58(),
                         peerKey );
@@ -163,14 +163,27 @@ namespace sgns::crdt
 
     outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> GraphsyncDAGSyncer::getNode( const CID &cid ) const
     {
-        auto node = GetNodeFromMerkleDAG( cid );
+        auto node = GrabCIDBlock( cid );
 
         if ( !node.has_error() )
         {
-            logger_->debug( "Return node for CID {} instance={}", cid.toString().value(), reinterpret_cast<size_t> (this));
+            logger_->debug( "Return node for CID {} and {} instance={}",
+                            cid.toString().value(),
+                            node.value()->getCID().toString().value(),
+                            reinterpret_cast<size_t>( this ) );
             return node;
         }
 
+        node = GetNodeFromMerkleDAG( cid );
+
+        if ( !node.has_error() )
+        {
+            logger_->debug( "Return node for CID {} and {} instance={}",
+                            cid.toString().value(),
+                            node.value()->getCID().toString().value(),
+                            reinterpret_cast<size_t>( this ) );
+            return node;
+        }
         // Get the peer info from our routing system
         OUTCOME_TRY( auto peerEntry, GetRoute( cid ) );
 
@@ -182,9 +195,13 @@ namespace sgns::crdt
         auto start_time = std::chrono::steady_clock::now();
         while ( std::chrono::steady_clock::now() - start_time < std::chrono::seconds( 20 ) )
         {
-            auto result = GetNodeFromMerkleDAG( cid ); // Call the internal GrabCIDBlock
+            auto result = GrabCIDBlock( cid ); // Call the internal GrabCIDBlock
             if ( result )
             {
+                logger_->debug( "Return node for CID {} and {} instance={}",
+                                cid.toString().value(),
+                                result.value()->getCID().toString().value(),
+                                reinterpret_cast<size_t>( this ) );
                 return result; // Return the block if successfully grabbed
             }
             std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) ); // Retry after a short delay
@@ -246,8 +263,10 @@ namespace sgns::crdt
 
     outcome::result<bool> GraphsyncDAGSyncer::HasBlock( const CID &cid ) const
     {
-        auto getNodeResult = GetNodeFromMerkleDAG( cid );
-        return getNodeResult.has_value();
+        auto getNodeResult       = GetNodeFromMerkleDAG( cid );
+        auto getCachedNodeResult = GrabCIDBlock( cid );
+
+        return getNodeResult.has_value() || getCachedNodeResult.has_value();
     }
 
     outcome::result<void> GraphsyncDAGSyncer::StartSync()
@@ -358,10 +377,10 @@ namespace sgns::crdt
                 return;
             }
 
-            auto res = AddNodeToMerkleDAG( node.value() );
-            if ( !res )
+            auto ret = AddCIDBlock( cid, node.value() );
+            if ( ret )
             {
-                logger_->error( "Error adding node to dagservice {}", res.error().message() );
+                logger_->error( " Block received without CRDT asking for it explicitly " );
             }
             std::stringstream sslinks;
             for ( const auto &link : node.value()->getLinks() )
@@ -377,7 +396,8 @@ namespace sgns::crdt
         }
         else
         {
-            logger_->debug( "We already had this {}, trying to reinsert it", cid.toString().value() );
+            logger_->debug( "We already had this node {}", cid.toString().value() );
+            return;
         }
 
         // @todo performance optimization is required
@@ -414,36 +434,67 @@ namespace sgns::crdt
                 logger_->debug( "Peer {} was blacklisted", peerID.toBase58() );
             }
         }
-        EraseRoute(cid);
+        EraseRoute( cid );
     }
 
-    void GraphsyncDAGSyncer::AddCIDBlock( const CID &cid, const std::shared_ptr<ipfs_lite::ipld::IPLDNode> &block )
+    void GraphsyncDAGSyncer::InitCIDBlock( const CID &cid )
     {
-        std::lock_guard<std::mutex> lock( mutex_ );
-        received_blocks_[cid] = block; // Insert or update the block associated with the CID
+        std::lock_guard<std::mutex> lock( cache_mutex_ );
+        lru_cid_cache_.init( cid );
+        logger_->debug( "Block initialized without content to LRU cache: CID {}, cache size: {}",
+                        cid.toString().value(),
+                        lru_cid_cache_.size() );
+    }
+
+    bool GraphsyncDAGSyncer::AddCIDBlock( const CID &cid, const std::shared_ptr<ipfs_lite::ipld::IPLDNode> &block )
+    {
+        std::lock_guard<std::mutex> lock( cache_mutex_ );
+        bool                        was_created = lru_cid_cache_.add( cid, block );
+
+        if ( was_created )
+        {
+            logger_->debug( "New block added to LRU cache: CID {}, cache size: {}",
+                            cid.toString().value(),
+                            lru_cid_cache_.size() );
+        }
+        else
+        {
+            logger_->debug( "Existing block updated in LRU cache: CID {}", cid.toString().value() );
+        }
+
+        return was_created;
+    }
+
+    bool GraphsyncDAGSyncer::IsCIDInCache( const CID &cid ) const
+    {
+        std::lock_guard<std::mutex> lock( cache_mutex_ );
+        return lru_cid_cache_.contains( cid );
     }
 
     outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> GraphsyncDAGSyncer::GrabCIDBlock( const CID &cid ) const
     {
-        std::lock_guard<std::mutex> lock( mutex_ );
-        auto                        it = received_blocks_.find( cid );
-        if ( it != received_blocks_.end() )
+        std::lock_guard<std::mutex> lock( cache_mutex_ );
+        if ( lru_cid_cache_.hasContent( cid ) )
         {
-            return it->second;
+            auto node = lru_cid_cache_.get( cid );
+            if ( node )
+            {
+                logger_->trace( "Block retrieved from LRU cache: CID {}", cid.toString().value() );
+                return node;
+            }
         }
-        return outcome::failure( boost::system::error_code{} ); // Return an appropriate failure result
+        return outcome::failure( Error::CID_NOT_FOUND );
     }
 
     outcome::result<void> GraphsyncDAGSyncer::DeleteCIDBlock( const CID &cid ) const
     {
-        std::lock_guard<std::mutex> lock( mutex_ );
-        auto                        it = received_blocks_.find( cid );
-        if ( it != received_blocks_.end() )
+        std::lock_guard<std::mutex> lock( cache_mutex_ );
+        if ( lru_cid_cache_.remove( cid ) )
         {
-            received_blocks_.erase( it );
+            logger_->debug( "Block removed from LRU cache: CID {}", cid.toString().value() );
             return outcome::success();
         }
-        return outcome::failure( boost::system::error_code{} ); // Return an appropriate failure result
+        return outcome::failure( Error::CID_NOT_FOUND );
     }
 
     void GraphsyncDAGSyncer::AddToBlackList( const PeerId &peer ) const
@@ -672,5 +723,116 @@ namespace sgns::crdt
         return static_cast<uint64_t>(
             std::chrono::duration_cast<std::chrono::seconds>( std::chrono::system_clock::now().time_since_epoch() )
                 .count() );
+    }
+
+    void GraphsyncDAGSyncer::LRUCIDCache::init( const CID &cid )
+    {
+        // Check if the item already exists
+        auto it = cache_map_.find( cid );
+        if ( it != cache_map_.end() )
+        {
+            // Already exists, just update its position in LRU list
+            lru_list_.erase( it->second.second );
+            lru_list_.push_front( cid );
+            it->second.second = lru_list_.begin();
+            return;
+        }
+
+        // If cache is full, remove the least recently used item
+        if ( cache_map_.size() >= MAX_CACHE_SIZE )
+        {
+            // Get the least recently used CID
+            const CID &lru_cid = lru_list_.back();
+            // Remove it from the cache
+            cache_map_.erase( lru_cid );
+            // Remove it from the LRU list
+            lru_list_.pop_back();
+        }
+
+        // Add the new item to the front of the LRU list
+        lru_list_.push_front( cid );
+        // Add to the cache map with nullptr and reference to its position in the LRU list
+        cache_map_[cid] = std::make_pair( nullptr, lru_list_.begin() );
+    }
+
+    bool GraphsyncDAGSyncer::LRUCIDCache::add( const CID &cid, std::shared_ptr<ipfs_lite::ipld::IPLDNode> node )
+    {
+        // Check if the item already exists
+        auto it = cache_map_.find( cid );
+        if ( it != cache_map_.end() )
+        {
+            // Existing entry - update it
+            // Move the CID to the front of the LRU list
+            lru_list_.erase( it->second.second );
+            lru_list_.push_front( cid );
+            // Update the cache item with new node and new iterator
+            it->second = std::make_pair( node, lru_list_.begin() );
+            return false; // Entry was updated, not created
+        }
+
+        // If cache is full, remove the least recently used item
+        if ( cache_map_.size() >= MAX_CACHE_SIZE )
+        {
+            // Get the least recently used CID
+            const CID &lru_cid = lru_list_.back();
+            // Remove it from the cache
+            cache_map_.erase( lru_cid );
+            // Remove it from the LRU list
+            lru_list_.pop_back();
+        }
+
+        // Add the new item to the front of the LRU list
+        lru_list_.push_front( cid );
+        // Add to the cache map with a reference to its position in the LRU list
+        cache_map_[cid] = std::make_pair( std::move( node ), lru_list_.begin() );
+        return true; // New entry was created
+    }
+
+    std::shared_ptr<ipfs_lite::ipld::IPLDNode> GraphsyncDAGSyncer::LRUCIDCache::get( const CID &cid )
+    {
+        auto it = cache_map_.find( cid );
+        if ( it == cache_map_.end() )
+        {
+            return nullptr;
+        }
+
+        // Move this item to the front of the LRU list
+        lru_list_.erase( it->second.second );
+        lru_list_.push_front( cid );
+
+        // Update the iterator in the cache map
+        it->second.second = lru_list_.begin();
+
+        // Return the node
+        return it->second.first;
+    }
+
+    bool GraphsyncDAGSyncer::LRUCIDCache::remove( const CID &cid )
+    {
+        auto it = cache_map_.find( cid );
+        if ( it == cache_map_.end() )
+        {
+            return false;
+        }
+
+        // Remove from LRU list
+        lru_list_.erase( it->second.second );
+
+        // Remove from cache map
+        cache_map_.erase( it );
+
+        return true;
+    }
+
+    bool GraphsyncDAGSyncer::LRUCIDCache::contains( const CID &cid ) const
+    {
+        return cache_map_.find( cid ) != cache_map_.end();
+    }
+
+    // Check if CID exists and has content
+    bool GraphsyncDAGSyncer::LRUCIDCache::hasContent( const CID &cid ) const
+    {
+        auto it = cache_map_.find( cid );
+        return it != cache_map_.end() && it->second.first != nullptr;
     }
 }

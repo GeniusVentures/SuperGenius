@@ -82,6 +82,10 @@ namespace sgns::crdt
          */
         outcome::result<std::shared_ptr<Leaf>> fetchGraphOnDepth(const CID& cid, uint64_t depth) const override;
 
+        void                  InitCIDBlock( const CID &cid ) override;
+        bool                  IsCIDInCache( const CID &cid ) const override;
+        outcome::result<void> DeleteCIDBlock( const CID &cid ) const override;
+
         /** DAG service implementation */
         MerkleDagServiceImpl dagService_;
     };
