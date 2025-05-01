@@ -269,8 +269,36 @@ namespace sgns::crdt
 
             return;
         }
+        std::vector<CID> heads_to_process_cids;
+        heads_to_process_cids.reserve( decodeResult.value().size() );
 
         for ( const auto &bCastHeadCID : decodeResult.value() )
+        {
+            auto dagSyncerResult = dagSyncer_->HasBlock( bCastHeadCID );
+            if ( dagSyncerResult.has_failure() )
+            {
+                logger_->error( "HandleBlock: error checking for known block" );
+                continue;
+            }
+            if ( dagSyncerResult.value() )
+            {
+                // cid is known. Skip walking tree
+                logger_->trace( "HandleBlock: Already processed block {}", bCastHeadCID.toString().value() );
+                continue;
+            }
+
+            if ( dagSyncer_->IsCIDInCache( bCastHeadCID ) )
+            {
+                //If the CID request was already triggered but ProcessNode not ran
+                logger_->trace( "HandleBlock: Processing block {} on graphsync", bCastHeadCID.toString().value() );
+                continue;
+            }
+            logger_->debug( "HandleBlock: Starting processing block {}", bCastHeadCID.toString().value() );
+            dagSyncer_->InitCIDBlock( bCastHeadCID );
+
+            heads_to_process_cids.emplace_back( bCastHeadCID );
+        }
+        for ( const auto &bCastHeadCID : heads_to_process_cids )
         {
             auto handleBlockResult = HandleBlock( bCastHeadCID );
             if ( handleBlockResult.has_failure() )
@@ -279,11 +307,6 @@ namespace sgns::crdt
                                 std::to_string( handleBlockResult.error().value() ) );
                 continue;
             }
-            {
-                std::unique_lock lock( seenHeadsMutex_ );
-                seenHeads_.insert( bCastHeadCID );
-            }
-            rebroadcastCv_.notify_one();
         }
     }
 
@@ -320,8 +343,9 @@ namespace sgns::crdt
             dagJob = dagWorkerJobList.front();
             dagWorkerJobList.pop();
         }
-        logger_->info( "SendJobWorker CID={} priority={}",
+        logger_->info( "SendJobWorker CID={} nodeCID={} priority={}",
                        dagJob.rootCid_.toString().value(),
+                       dagJob.node_->getCID().toString().value(),
                        std::to_string( dagJob.rootPriority_ ) );
 
         auto childrenResult = ProcessNode( dagJob.rootCid_, dagJob.rootPriority_, dagJob.delta_, dagJob.node_, true );
@@ -331,6 +355,14 @@ namespace sgns::crdt
         }
         else
         {
+            auto dagSyncerResult = this->dagSyncer_->addNode( dagJob.node_ );
+            logger_->debug( "DAGSyncer: Adding new block {}", dagJob.node_->getCID().toString().value() );
+            if ( dagSyncerResult.has_failure() )
+            {
+                logger_->error( "DAGSyncer: error writing new block {}", dagJob.node_->getCID().toString().value() );
+                //return outcome::failure( dagSyncerResult.error() );
+            }
+            dagSyncer_->DeleteCIDBlock( dagJob.node_->getCID() );
             SendNewJobs( dagJob.rootCid_, dagJob.rootPriority_, childrenResult.value() );
         }
     }
@@ -442,43 +474,9 @@ namespace sgns::crdt
 
     outcome::result<void> CrdtDatastore::HandleBlock( const CID &aCid )
     {
-        // Ignore already known blocks.
-        // This includes the case when the block is a current
-        // head.
-
-        if ( dagSyncer_ == nullptr )
-        {
-            return outcome::failure( boost::system::error_code{} );
-        }
-        //auto dagSyncerResult = dagSyncer_->HasBlock( aCid );
-        //if ( dagSyncerResult.has_failure() )
-        //{
-        //    logger_->error( "HandleBlock: error checking for known block" );
-        //}
-        //else {
-        //if (dagSyncerResult.value())
-        //{
-        //    AddProcessedCID(aCid);
-        //}
-
-        //}
-
-        //if ( dagSyncerResult.value() )
-        //{
-        //    // cid is known. Skip walking tree
-        //    return outcome::success();
-        //}
-
-        if ( !ContainsCID( aCid ) )
-        {
-            std::vector<CID> children;
-            children.push_back( aCid );
-            SendNewJobs( aCid, 0, children );
-        }
-        //if (dagSyncerResult.has_failure())
-        //{
-        //    return outcome::failure(dagSyncerResult.error());
-        //}
+        std::vector<CID> children;
+        children.push_back( aCid );
+        SendNewJobs( aCid, 0, children );
 
         return outcome::success();
     }
@@ -521,11 +519,21 @@ namespace sgns::crdt
             {
                 return;
             }
-
-            if ( rootPriority == 0 )
             {
-                rootPriority = delta->priority();
+                std::unique_lock lock( dagSyncherMutex_ );
+                auto             dagSyncerResult = dagSyncer_->addNode( node );
+
+                logger_->debug( "DAGSyncer: Adding root block {}", node->getCID().toString().value() );
+                if ( dagSyncerResult.has_failure() )
+                {
+                    logger_->error( "DAGSyncer: error writing ROOT block {}", node->getCID().toString().value() );
+                    return;
+                }
+                dagSyncer_->DeleteCIDBlock( node->getCID() );
+                lock.unlock();
             }
+
+            rootPriority = delta->priority();
         }
 
         for ( const auto &cid : aChildren )
@@ -571,8 +579,9 @@ namespace sgns::crdt
             dagJob.rootPriority_ = rootPriority;
             dagJob.delta_        = delta;
             dagJob.node_         = node;
-            logger_->debug( "SendNewJobs PUSHING CID={} priority={} ",
+            logger_->debug( "SendNewJobs PUSHING CID={} nodeCID={} priority={} ",
                             dagJob.rootCid_.toString().value(),
+                            node->getCID().toString().value(),
                             std::to_string( dagJob.rootPriority_ ) );
             {
                 std::unique_lock lock( dagWorkerMutex_ );
@@ -761,16 +770,6 @@ namespace sgns::crdt
             node->addLink( link );
         }
 
-        if ( dagSyncer_ != nullptr )
-        {
-            auto dagSyncerResult = this->dagSyncer_->addNode( node );
-            if ( dagSyncerResult.has_failure() )
-            {
-                logger_->error( "DAGSyncer: error writing new block {}", node->getCID().toString().value() );
-                return outcome::failure( dagSyncerResult.error() );
-            }
-        }
-
         return node;
     }
 
@@ -820,6 +819,7 @@ namespace sgns::crdt
 
         if ( links.empty() )
         {
+            logger_->debug( "Adding: {} to heads", current.toString().value() );
             auto addHeadResult = heads_->Add( aRoot, aRootPrio );
             if ( addHeadResult.has_failure() )
             {
@@ -837,6 +837,7 @@ namespace sgns::crdt
 
                 if ( isHeadResult )
                 {
+                    logger_->debug( "Replacing: {} with {}", child.toString().value(), aRoot.toString().value() );
                     auto replaceResult = heads_->Replace( child, aRoot, aRootPrio );
                     if ( replaceResult.has_failure() )
                     {
@@ -846,12 +847,13 @@ namespace sgns::crdt
                         return outcome::failure( replaceResult.error() );
                     }
                     this->rebroadcastCv_.notify_one();
-                    AddProcessedCID( child );
+
                     continue;
                 }
 
                 std::unique_lock lock( dagSyncherMutex_ );
-                auto             knowBlockResult = this->dagSyncer_->HasBlock( child );
+                auto             knowBlockResult    = this->dagSyncer_->HasBlock( child );
+                auto             is_being_processed = dagSyncer_->IsCIDInCache( child );
                 lock.unlock();
                 if ( knowBlockResult.has_failure() )
                 {
@@ -861,22 +863,26 @@ namespace sgns::crdt
 
                 if ( knowBlockResult.value() )
                 {
+                    logger_->debug( "Process Node: Adding: {} to heads", aRoot.toString().value() );
                     auto addHeadResult = heads_->Add( aRoot, aRootPrio );
                     if ( addHeadResult.has_failure() )
                     {
                         logger_->error( "ProcessNode: error adding head {}", aRoot.toString().value() );
                     }
                     this->rebroadcastCv_.notify_one();
-                    AddProcessedCID( child );
+                    continue;
+                }
+                if ( is_being_processed )
+                {
+                    logger_->debug( "ProcessNode: Child being processed as well {}", child.toString().value() );
+                    //this->rebroadcastCv_.notify_one();
                     continue;
                 }
 
                 children.push_back( child );
-                AddProcessedCID( child );
             }
         }
 
-        AddProcessedCID( aRoot );
         return children;
     }
 
@@ -924,6 +930,17 @@ namespace sgns::crdt
         if ( !processNodeResult.value().empty() )
         {
             logger_->error( "AddDAGNode: bug - created a block to unknown children" );
+        }
+        else
+        {
+            auto dagSyncerResult = this->dagSyncer_->addNode( node );
+            logger_->debug( "DAGSyncer: Adding new block {}", node->getCID().toString().value() );
+            if ( dagSyncerResult.has_failure() )
+            {
+                logger_->error( "DAGSyncer: error writing new block {}", node->getCID().toString().value() );
+                return outcome::failure( dagSyncerResult.error() );
+            }
+            dagSyncer_->DeleteCIDBlock( node->getCID() );
         }
 
         return node->getCID();
