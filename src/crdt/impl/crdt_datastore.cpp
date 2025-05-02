@@ -226,7 +226,6 @@ namespace sgns::crdt
         {
             for ( const auto &dagWorker : dagWorkers_ )
             {
-                std::cout << "dagWorker ptr: " << dagWorker.get() << std::endl;
                 dagWorker->dagWorkerThreadRunning_ = false;
             }
             dagWorkerCv_.notify_all();
@@ -332,7 +331,7 @@ namespace sgns::crdt
         {
             return;
         }
-        logger_->info( "In SendJobWorkerIteration. Jobs left: {}", dagWorkerJobList.size() );
+        logger_->trace( "In SendJobWorkerIteration. Jobs left: {}", dagWorkerJobList.size() );
         //std::cout << "Dag Worker QUant: " << dagWorkerJobList.size() << std::endl;
         {
             std::unique_lock lock( dagWorkerMutex_ );

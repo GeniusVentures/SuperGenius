@@ -81,7 +81,7 @@ namespace sgns::processing
         m_logger->debug( "[{}] [SERVICE_STARTED]", node_address_ );
     }
 
-void ProcessingServiceImpl::StopProcessing()
+    void ProcessingServiceImpl::StopProcessing()
     {
         if ( m_isStopped )
         {

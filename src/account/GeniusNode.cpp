@@ -121,10 +121,7 @@ namespace sgns
         libp2p::log::setLoggingSystem( logging_system );
         libp2p::log::setLevelOfGroup( "SuperGeniusDemo", soralog::Level::ERROR_ );
         std::string logdir = "";
-#ifndef SGNS_DEBUGLOGS
-        //logdir = write_base_path_ + "/sgnslog2.log";
-        //std::filesystem::remove_all( logdir );
-#endif
+
         node_logger               = base::createLogger( "SuperGeniusDemo", logdir );
         auto loggerGlobalDB       = base::createLogger( "GlobalDB", logdir );
         auto loggerDAGSyncer      = base::createLogger( "GraphsyncDAGSyncer", logdir );
@@ -148,7 +145,7 @@ namespace sgns
         loggerGlobalDB->set_level( spdlog::level::err );
         loggerDAGSyncer->set_level( spdlog::level::err );
         loggerGraphsync->set_level( spdlog::level::err );
-        loggerBroadcaster->set_level( spdlog::level::trace );
+        loggerBroadcaster->set_level( spdlog::level::err );
         loggerDataStore->set_level( spdlog::level::err );
         loggerTransactions->set_level( spdlog::level::debug );
         loggerQueue->set_level( spdlog::level::err );
@@ -166,7 +163,7 @@ namespace sgns
         node_logger->set_level( spdlog::level::err );
         loggerGlobalDB->set_level( spdlog::level::err );
         loggerDAGSyncer->set_level( spdlog::level::err );
-        loggerGraphsync->set_level( spdlog::level::trace );
+        loggerGraphsync->set_level( spdlog::level::err );
         loggerBroadcaster->set_level( spdlog::level::err );
         loggerDataStore->set_level( spdlog::level::err );
         loggerTransactions->set_level( spdlog::level::err );
