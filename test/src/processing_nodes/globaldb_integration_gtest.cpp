@@ -104,6 +104,7 @@ public:
             const std::string testName   = ::testing::UnitTest::GetInstance()->current_test_info()->name();
             const std::string binaryPath = boost::dll::program_location().parent_path().string();
             const std::string basePath   = binaryPath + "/" + dbName + "_" + testName;
+            boost::filesystem::remove_all( basePath );
             boost::filesystem::create_directories( basePath );
 
             sgns::crdt::KeyPairFileStorage keyStore( basePath + "/key" );
@@ -141,18 +142,14 @@ public:
         {
             for ( size_t i = 0; i < nodes_.size(); ++i )
             {
-                std::vector<std::string> peers;
-                for ( size_t j = 0; j < nodes_.size(); ++j )
+                for ( size_t j = i + 1; j < nodes_.size(); ++j )
                 {
-                    if ( i != j )
-                    {
-                        peers.push_back( nodes_[j].pubsub->GetLocalAddress() );
-                    }
+                    nodes_[i].pubsub->AddPeers( { nodes_[j].pubsub->GetLocalAddress() } );
                 }
-                nodes_[i].pubsub->AddPeers( peers );
             }
             std::this_thread::sleep_for( delay );
         }
+
 
         const std::vector<TestNode> &getNodes() const
         {
@@ -176,11 +173,12 @@ public:
                 {
                     node.ioThread.join();
                 }
+                node.pubsub->Stop();
                 node.db.reset();
                 node.pubsub.reset();
                 node.io.reset();
-                boost::filesystem::remove_all( node.basePath );
             }
+
             nodes_.clear();
         }
 
@@ -208,7 +206,7 @@ public:
         const auto loggerDataStore   = sgns::base::createLogger( "CrdtDatastore" );
         loggerGlobalDB->set_level( spdlog::level::trace );
         loggerBroadcaster->set_level( spdlog::level::trace );
-        loggerDataStore->set_level( spdlog::level::trace );
+        loggerDataStore->set_level( spdlog::level::off );
     }
 };
 
