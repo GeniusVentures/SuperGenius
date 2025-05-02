@@ -79,9 +79,11 @@ namespace sgns::crdt
         }
 
         static std::pair<std::shared_ptr<CrdtDatastore>, std::shared_ptr<CRDTMirrorBroadcaster>>
-        CreateLoopBackCRDTInstance( const std::string                        &base_path )
+        CreateLoopBackCRDTInstance( const std::string                        &base_path,
+                                    const std::shared_ptr<InMemoryDatastore> &ipfsDataStore )
         {
             // Create new database
+            fs::remove_all( base_path );
             rocksdb::Options options;
             options.create_if_missing = true; // intentionally
             auto result               = rocksdb::create( base_path, options );
@@ -92,8 +94,7 @@ namespace sgns::crdt
             auto db = std::move( result.value() );
 
             // Create new DAGSyncer
-            auto new_ipfsDataStore = std::make_shared<InMemoryDatastore>();
-            auto dagSyncer = std::make_shared<CustomDagSyncer>( new_ipfsDataStore );
+            auto dagSyncer = std::make_shared<CustomDagSyncer>( ipfsDataStore );
 
             // Create new Broadcaster
             auto broadcaster = std::make_shared<CRDTMirrorBroadcaster>();
@@ -117,7 +118,7 @@ namespace sgns::crdt
             }
 
             // Clean up any additional datastores
-
+            db_          = nullptr;
             dagSyncer_   = nullptr;
             broadcaster_ = nullptr;
 
@@ -255,7 +256,7 @@ namespace sgns::crdt
             return std::nullopt; // Accept this delta
         };
 
-        auto crdt_pair         = CreateLoopBackCRDTInstance( databasePath + "aux1" );
+        auto crdt_pair = CreateLoopBackCRDTInstance( databasePath + "aux1", ipfsDataStore_ );
 
         auto second_crdt        = crdt_pair.first;
         auto second_broadcaster = crdt_pair.second;
@@ -344,7 +345,7 @@ namespace sgns::crdt
             return std::nullopt; // Accept this delta
         };
 
-        auto crdt_pair         = CreateLoopBackCRDTInstance( databasePath + "aux2" );
+        auto crdt_pair = CreateLoopBackCRDTInstance( databasePath + "aux2", ipfsDataStore_ );
 
         auto second_crdt        = crdt_pair.first;
         auto second_broadcaster = crdt_pair.second;
@@ -424,8 +425,7 @@ namespace sgns::crdt
             return std::nullopt; // Accept this delta
         };
 
-
-        auto crdt_pair         = CreateLoopBackCRDTInstance( databasePath + "aux3" );
+        auto crdt_pair = CreateLoopBackCRDTInstance( databasePath + "aux3", ipfsDataStore_ );
 
         auto second_crdt        = crdt_pair.first;
         auto second_broadcaster = crdt_pair.second;
@@ -532,7 +532,7 @@ namespace sgns::crdt
                                                    return std::nullopt; // Accept this delta
                                                } );
 
-        auto crdt_pair         = CreateLoopBackCRDTInstance( databasePath + "aux4" );
+        auto crdt_pair = CreateLoopBackCRDTInstance( databasePath + "aux4", ipfsDataStore_ );
 
         auto second_crdt        = crdt_pair.first;
         auto second_broadcaster = crdt_pair.second;
