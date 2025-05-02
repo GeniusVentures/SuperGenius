@@ -131,7 +131,6 @@ namespace sgns
 
         // Connect the nodes
         node_proc1->GetPubSub()->AddPeers( { node_proc2->GetPubSub()->GetLocalAddress() } );
-        node_proc2->GetPubSub()->AddPeers( { node_proc1->GetPubSub()->GetLocalAddress() } );
 
         // Mint tokens with timeout
         auto mint_result = node_proc1->MintTokens( 10000000000,
@@ -181,7 +180,6 @@ namespace sgns
 
         // Connect the nodes
         node_proc1->GetPubSub()->AddPeers( { node_proc2->GetPubSub()->GetLocalAddress() } );
-        node_proc2->GetPubSub()->AddPeers( { node_proc1->GetPubSub()->GetLocalAddress() } );
 
         // Mint tokens on node_proc1
         std::vector<uint64_t> mint_amounts =
@@ -271,7 +269,6 @@ namespace sgns
 
         // Connect the nodes
         node_proc1->GetPubSub()->AddPeers( { node_proc2->GetPubSub()->GetLocalAddress() } );
-        node_proc2->GetPubSub()->AddPeers( { node_proc1->GetPubSub()->GetLocalAddress() } );
 
         // Mint tokens on node_proc1
         std::vector<uint64_t> xfer_amounts[2] = {
@@ -352,7 +349,6 @@ namespace sgns
 
         // Connect the nodes
         node_proc1->GetPubSub()->AddPeers( { node_proc2->GetPubSub()->GetLocalAddress() } );
-        node_proc2->GetPubSub()->AddPeers( { node_proc1->GetPubSub()->GetLocalAddress() } );
 
         // Mint tokens with timeout
         node_proc1->MintTokens( 10000000000, "", "", "", std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
