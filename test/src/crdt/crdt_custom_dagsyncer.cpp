@@ -60,7 +60,6 @@ namespace sgns::crdt
 
     outcome::result<void> CustomDagSyncer::DeleteCIDBlock( const CID &cid )
     {
-        cids_cache.erase( cid );
         return outcome::success();
     }
 
