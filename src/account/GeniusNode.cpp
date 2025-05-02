@@ -96,10 +96,13 @@ namespace sgns
         processing_channel_topic_( (boost::format( std::string( PROCESSING_CHANNEL ) ) %
                                    sgns::version::SuperGeniusVersionMajor()).str() ),
         processing_grid_chanel_topic_( (boost::format( std::string( PROCESSING_GRID_CHANNEL ) ) %
-                                       sgns::version::SuperGeniusVersionMajor()).str() )
+                                       sgns::version::SuperGeniusVersionMajor()).str() ),
+        m_lastApiCall( std::chrono::system_clock::now() - m_minApiCallInterval )
 
     //coinprices_(std::make_shared<CoinGeckoPriceRetriever>(io_))
     {
+        //For some reason if this isn't initialized like this, it ends up completely wrong. 
+        m_lastApiCall = std::chrono::system_clock::now() - m_minApiCallInterval;
         SSL_library_init();
         SSL_load_error_strings();
         OpenSSL_add_all_algorithms();
@@ -823,11 +826,61 @@ namespace sgns
         processing_service_->StartProcessing( processing_grid_chanel_topic_ );
     }
 
-    outcome::result<std::map<std::string, double>> GeniusNode::GetCoinprice( const std::vector<std::string> &tokenIds )
+outcome::result<std::map<std::string, double>> GeniusNode::GetCoinprice( const std::vector<std::string> &tokenIds )
     {
-        sgns::CoinGeckoPriceRetriever retriever;
-        auto                          prices = retriever.getCurrentPrices( tokenIds );
-        return prices;
+        auto                          currentTime = std::chrono::system_clock::now();
+        std::map<std::string, double> result;
+        std::vector<std::string>      tokensToFetch;
+        // Determine which tokens need to be fetched
+        for ( const auto &tokenId : tokenIds )
+        {
+            auto it = m_tokenPriceCache.find( tokenId );
+
+            if ( it != m_tokenPriceCache.end() && ( currentTime - it->second.lastUpdate ) < m_cacheValidityDuration )
+            {
+                // Use cached price if it's still valid
+                result[tokenId] = it->second.price;
+            }
+            else
+            {
+                // Add to the list of tokens that need fresh data
+                tokensToFetch.push_back( tokenId );
+            }
+        }
+
+        // If we have tokens to fetch and we're not rate limited
+        if ( !tokensToFetch.empty() && ( currentTime - m_lastApiCall ) >= m_minApiCallInterval )
+        {
+            sgns::CoinGeckoPriceRetriever retriever;
+            auto                          newPricesResult = retriever.getCurrentPrices( tokensToFetch );
+
+            if ( newPricesResult )
+            {
+                auto &newPrices = newPricesResult.value();
+                m_lastApiCall   = currentTime;
+
+                // Update the cache and result with new prices
+                for ( const auto &[token, price] : newPrices )
+                {
+                    m_tokenPriceCache[token] = { price, currentTime };
+                    result[token]            = price;
+                }
+            }
+            else
+            {
+                // Handle the error case
+                // If we have some cached data, continue with what we have
+                if ( result.empty() )
+                {
+                    // Only return error if we have no data at all
+                    return newPricesResult.error();
+                }
+                // Otherwise, continue with partial data and log the error
+                // log("Failed to fetch prices for some tokens: " + newPricesResult.error().message());
+            }
+        }
+
+        return result;
     }
 
     outcome::result<std::map<std::string, std::map<int64_t, double>>> GeniusNode::GetCoinPriceByDate(

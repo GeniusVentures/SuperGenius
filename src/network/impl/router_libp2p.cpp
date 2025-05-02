@@ -1,3 +1,4 @@
+#include <fmt/ranges.h>
 #include "network/impl/router_libp2p.hpp"
 
 #include "verification/finality/structs.hpp"

@@ -1,4 +1,4 @@
-
+#include <fmt/ranges.h>
 #include "network/impl/sync_protocol_observer_impl.hpp"
 
 #include <boost/assert.hpp>
@@ -40,7 +40,7 @@ namespace sgns::network {
     // firstly, check if we have both "from" & "to" blocks (if set)
     auto from_hash_res = blocks_headers_->getHashById(request.from);
     if (!from_hash_res) {
-      log_->warn("cannot find a requested block with id {}", request.from);
+      log_->warn("cannot find requested block");
       requested_ids_.erase(request.id);
       return response;
     }
