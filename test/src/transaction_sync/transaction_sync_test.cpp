@@ -130,7 +130,7 @@ namespace sgns
         auto balance_2_before = node_proc2->GetBalance();
 
         // Connect the nodes
-        node_proc1->GetPubSub()->AddPeers( { node_proc2->GetPubSub()->GetLocalAddress() } );
+        node_proc1->GetPubSub()->AddPeers( { node_proc2->GetPubSub()->GetLocalAddress() } ); 
 
         // Mint tokens with timeout
         auto mint_result = node_proc1->MintTokens( 10000000000,

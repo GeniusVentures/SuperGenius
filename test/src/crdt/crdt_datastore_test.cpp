@@ -44,11 +44,12 @@ namespace sgns::crdt
 
         CrdtDatastoreTest()
         {
-            fs::remove_all( databasePath );
+            
         }
 
         void SetUp() override
         {
+            fs::remove_all( databasePath );
             // Create new database
             rocksdb::Options options;
             options.create_if_missing = true; // intentionally
@@ -76,6 +77,8 @@ namespace sgns::crdt
                                                  dagSyncer_,
                                                  broadcaster_,
                                                  CrdtOptions::DefaultOptions() );
+            auto loggerDataStore = sgns::base::createLogger( "CrdtDatastore", "" );
+            loggerDataStore->set_level( spdlog::level::debug );
         }
 
         static std::pair<std::shared_ptr<CrdtDatastore>, std::shared_ptr<CRDTMirrorBroadcaster>>
@@ -109,6 +112,21 @@ namespace sgns::crdt
                 broadcaster );
         }
 
+        void CloseAndResetCRDT( std::shared_ptr<CrdtDatastore>         &crdt,
+                                std::shared_ptr<CRDTMirrorBroadcaster> &broadcaster )
+        {
+            if ( broadcaster )
+            {
+                broadcaster->SetMirrorCounterPart( nullptr );
+                broadcaster.reset();
+            }
+            if ( crdt )
+            {
+                crdt->Close();
+                crdt.reset();
+            }
+        }
+
         void TearDown() override
         {
             if ( crdtDatastore_ )
@@ -122,8 +140,6 @@ namespace sgns::crdt
             dagSyncer_   = nullptr;
             broadcaster_ = nullptr;
 
-            // Remove leftover database
-            fs::remove_all( databasePath );
         }
 
         // Helper to create a test delta
@@ -318,8 +334,7 @@ namespace sgns::crdt
 
         // Verify filter was called
         EXPECT_GE( filter_called_count, 1 );
-        broadcaster_->SetMirrorCounterPart( nullptr );
-        second_broadcaster->SetMirrorCounterPart( nullptr );
+        CloseAndResetCRDT( second_crdt, second_broadcaster );
     }
 
     TEST_F( CrdtDatastoreTest, FilterCallbackOneValid )
@@ -400,6 +415,7 @@ namespace sgns::crdt
 
         // Verify filter was called
         EXPECT_GE( filter_called_count, 1 );
+        CloseAndResetCRDT( second_crdt, second_broadcaster );
     }
 
     TEST_F( CrdtDatastoreTest, FilterCallbackMultipleDeltas )
@@ -497,6 +513,7 @@ namespace sgns::crdt
 
         // Verify filter was called
         EXPECT_GE( filter_called_count, 1 );
+        CloseAndResetCRDT( second_crdt, second_broadcaster );
     }
 
     TEST_F( CrdtDatastoreTest, FilterCallbackMultipleFilters )
@@ -601,5 +618,6 @@ namespace sgns::crdt
 
         // Verify filter was called
         EXPECT_GE( filter_called_count, 1 );
+        CloseAndResetCRDT( second_crdt, second_broadcaster );
     }
 }
