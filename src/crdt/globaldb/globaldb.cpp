@@ -64,9 +64,7 @@ namespace sgns::crdt
     GlobalDB::GlobalDB( std::shared_ptr<boost::asio::io_context>         context,
                         std::string                                      databasePath,
                         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub ) :
-        m_context( std::move( context ) ),
-        m_databasePath( std::move( databasePath ) ),
-        m_pubsub( std::move( pubsub ) )
+        m_context( std::move( context ) ), m_databasePath( std::move( databasePath ) ), m_pubsub( std::move( pubsub ) )
     {
     }
 
@@ -81,9 +79,12 @@ namespace sgns::crdt
 
     GlobalDB::~GlobalDB()
     {
-        m_logger->debug( "~GlobalDB CALLED");
-        m_broadcaster->Stop();
-        if (m_crdtDatastore)
+        m_logger->debug( "~GlobalDB CALLED" );
+        if ( m_broadcaster )
+        {
+            m_broadcaster->Stop();
+        }
+        if ( m_crdtDatastore )
         {
             m_crdtDatastore->Close();
         }
@@ -184,10 +185,11 @@ namespace sgns::crdt
 #endif
     }
 
-    outcome::result<void> GlobalDB::Init( std::shared_ptr<CrdtOptions> crdtOptions,
-                                          std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::Network> graphsyncnetwork,
-                                          std::shared_ptr<libp2p::protocol::Scheduler>               scheduler,
-                                          std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator )
+    outcome::result<void> GlobalDB::Init(
+        std::shared_ptr<CrdtOptions>                                          crdtOptions,
+        std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::Network>            graphsyncnetwork,
+        std::shared_ptr<libp2p::protocol::Scheduler>                          scheduler,
+        std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator )
     {
         std::shared_ptr<RocksDB> dataStore            = nullptr;
         auto                     databasePathAbsolute = boost::filesystem::absolute( m_databasePath ).string();
@@ -227,7 +229,7 @@ namespace sgns::crdt
         auto ipfsDataStore = std::make_shared<RocksdbDatastore>( ipfsDBResult.value() );
         //auto scheduler = std::make_shared<libp2p::protocol::AsioScheduler>( m_context,
         //                                                                    libp2p::protocol::SchedulerConfig{} );
-                                                                                    std::shared_ptr<libp2p::Host> host;
+        std::shared_ptr<libp2p::Host> host;
         if ( m_broadcastChannel )
         {
             host = m_broadcastChannel->GetPubsub()->GetHost();
@@ -317,8 +319,7 @@ namespace sgns::crdt
     //        });
     //}
 
-    outcome::result<void> GlobalDB::Put( const HierarchicalKey     &key,
-                                         const Buffer              &value )
+    outcome::result<void> GlobalDB::Put( const HierarchicalKey &key, const Buffer &value )
     {
         if ( !m_crdtDatastore )
         {
@@ -446,6 +447,7 @@ namespace sgns::crdt
             m_logger->error( "Broadcaster is not initialized." );
         }
     }
+
     void GlobalDB::AddListenTopic( const std::string &topicName )
     {
         if ( m_broadcaster )
