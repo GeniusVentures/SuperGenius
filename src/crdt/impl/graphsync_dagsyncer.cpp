@@ -193,7 +193,7 @@ namespace sgns::crdt
         OUTCOME_TRY( ( auto &&, subscription ), RequestNode( peerID, address, cid ) );
 
         auto start_time = std::chrono::steady_clock::now();
-        while ( std::chrono::steady_clock::now() - start_time < std::chrono::seconds( 20 ) )
+        while ( std::chrono::steady_clock::now() - start_time < std::chrono::seconds( 61 ) )
         {
             auto result = GrabCIDBlock( cid ); // Call the internal GrabCIDBlock
             if ( result )
