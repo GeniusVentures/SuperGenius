@@ -238,8 +238,6 @@ namespace sgns::crdt
         }
     }
 
-    // UPDATED: HandleNextIteration now unpacks the topic from the broadcast message and ignores messages
-    // for topics that are not subscribed.
     void CrdtDatastore::HandleNextIteration()
     {
         if ( broadcaster_ == nullptr )
@@ -332,7 +330,6 @@ namespace sgns::crdt
             return;
         }
         logger_->trace( "In SendJobWorkerIteration. Jobs left: {}", dagWorkerJobList.size() );
-        //std::cout << "Dag Worker QUant: " << dagWorkerJobList.size() << std::endl;
         {
             std::unique_lock lock( dagWorkerMutex_ );
             if ( dagWorkerJobList.empty() )
@@ -688,16 +685,7 @@ namespace sgns::crdt
     outcome::result<CID> CrdtDatastore::Publish( const std::shared_ptr<Delta> &aDelta )
     {
         OUTCOME_TRY( auto &&newCID, AddDAGNode( aDelta ) );
-
-        //std::vector<CID> cids{ newCID };
-        //{
-        //    std::unique_lock lock( this->publishHeadsMutex_ );
-        //    for ( auto &cid : cids )
-        //    {
-        //        publishHeads_.insert( cid );
-        //    }
-        //}
-        // rebroadcastCv_.notify_one();
+ 
         return newCID;
     }
 
@@ -861,7 +849,6 @@ namespace sgns::crdt
                 if ( is_being_processed )
                 {
                     logger_->debug( "ProcessNode: Child being processed as well {}", child.toString().value() );
-                    //this->rebroadcastCv_.notify_one();
                     continue;
                 }
 
