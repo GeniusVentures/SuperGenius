@@ -32,3 +32,17 @@ target_link_libraries(crdt_test
 if(FORCE_MULTIPLE)
   set_target_properties(crdt_test PROPERTIES LINK_FLAGS "${MULTIPLE_OPTION}")
 endif()
+
+addtest(globaldb_integration_test
+    globaldb_integration.cpp
+)
+
+
+target_link_libraries(globaldb_integration_test
+    crdt_globaldb
+)
+
+if(FORCE_MULTIPLE)
+  set_target_properties(crdt_test PROPERTIES LINK_FLAGS "${MULTIPLE_OPTION}")
+endif()
+

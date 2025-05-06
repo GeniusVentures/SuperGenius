@@ -282,14 +282,13 @@ namespace sgns
                                                       graphsyncnetwork,
                                                       scheduler,
                                                       generator );
-        globaldb_->AddBroadcastTopic( processing_channel_topic_ );
-        globaldb_->AddListenTopic( processing_channel_topic_ );
         if ( global_db_init_result.has_error() )
         {
             auto error = global_db_init_result.error();
             throw std::runtime_error( error.message() );
-            return;
         }
+        globaldb_->AddBroadcastTopic( processing_channel_topic_ );
+        globaldb_->AddListenTopic( processing_channel_topic_ );
         task_queue_ = std::make_shared<processing::ProcessingTaskQueueImpl>( globaldb_ );
         processing_core_ = std::make_shared<processing::ProcessingCoreImpl>( globaldb_, 1000000, 1 );
         processing_core_->RegisterProcessorFactory( "mnnimage",
