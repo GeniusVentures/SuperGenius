@@ -203,6 +203,10 @@ namespace sgns::crdt
 
         while ( true )
         {
+            if ( is_destructing_ )
+            {
+                return outcome::failure( Error::DAGSYNCHER_NOT_STARTED );
+            }
             // Check request state
             auto state_result = graphsync_->getRequestState( cid );
             if ( !state_result )

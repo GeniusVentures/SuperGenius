@@ -71,6 +71,8 @@ namespace sgns::crdt
 
         ~GraphsyncDAGSyncer()
         {
+            is_destructing_ = true;
+            std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
             graphsync_->stop();
         }
 
@@ -219,6 +221,7 @@ namespace sgns::crdt
 
         mutable LRUCIDCache lru_cid_cache_;
         mutable std::mutex  cache_mutex_;
+        std::atomic<bool>   is_destructing_{ false };
     };
 
 }
