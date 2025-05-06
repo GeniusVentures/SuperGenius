@@ -184,6 +184,15 @@ namespace sgns::crdt
                             reinterpret_cast<size_t>( this ) );
             return node;
         }
+        auto initial_state = graphsync_->getRequestState( cid );
+        if (initial_state)
+        {
+            if ( initial_state.value() == Graphsync::RequestState::IN_PROGRESS )
+            {
+                logger_->error( "We already started trying to get this CID {}", cid.toString().value() );
+                return outcome::failure( Error::ROUTE_NOT_FOUND );
+            }
+        }
         // Get the peer info from our routing system
         OUTCOME_TRY( auto peerEntry, GetRoute( cid ) );
 
@@ -192,25 +201,54 @@ namespace sgns::crdt
 
         OUTCOME_TRY( ( auto &&, subscription ), RequestNode( peerID, address, cid ) );
 
-        auto start_time = std::chrono::steady_clock::now();
-        while ( std::chrono::steady_clock::now() - start_time < std::chrono::seconds( 61 ) )
+        while ( true )
         {
-            auto result = GrabCIDBlock( cid ); // Call the internal GrabCIDBlock
-            if ( result )
+            // Check request state
+            auto state_result = graphsync_->getRequestState( cid );
+            if ( !state_result )
             {
-                logger_->debug( "Return node for CID {} and {} instance={}",
-                                cid.toString().value(),
-                                result.value()->getCID().toString().value(),
-                                reinterpret_cast<size_t>( this ) );
-                return result; // Return the block if successfully grabbed
+                // Request not found - This could indicate a failure, but it's also possible it just got cleaned up, so check a GrabCIDBlock
+                auto result = GrabCIDBlock( cid );
+                if ( result )
+                {
+                    return result;
+                }
+                logger_->warn( "Request state not found for CID {}", cid.toString().value() );
+                BlackListPeer( peerID );
+                return outcome::failure( Error::ROUTE_NOT_FOUND );
             }
-            std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) ); // Retry after a short delay
+
+            Graphsync::RequestState state = state_result.value();
+            switch ( state )
+            {
+                case Graphsync::RequestState::COMPLETED:
+                {
+                    // Request completed but we don't have the block?
+                    // Try one more cache grab
+                    auto result = GrabCIDBlock( cid );
+                    if ( result )
+                    {
+                        return result;
+                    }
+                    // If still not found, this is strange but we'll fail
+                    logger_->warn( "Request marked COMPLETED but block not in cache: {}", cid.toString().value() );
+                    return outcome::failure( Error::CID_NOT_FOUND );
+                }
+                case Graphsync::RequestState::FAILED:
+                {
+                    // Request explicitly failed, don't keep waiting
+                    logger_->debug( "Request explicitly failed for CID {}", cid.toString().value() );
+                    BlackListPeer( peerID );
+                    return outcome::failure( Error::CID_NOT_FOUND );
+                }
+                case Graphsync::RequestState::IN_PROGRESS:
+                {
+                    // Still in progress, keep waiting
+                    std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+                    break;
+                }
+            }
         }
-        BlackListPeer( peerID );
-        logger_->debug( "Timeout while waiting for node fetch: {}, penalizing peer {} ",
-                        cid.toString().value(),
-                        peerID.toBase58() );
-        return outcome::failure( boost::system::errc::timed_out );
     }
 
     outcome::result<void> GraphsyncDAGSyncer::removeNode( const CID &cid )
