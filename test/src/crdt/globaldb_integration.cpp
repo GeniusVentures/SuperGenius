@@ -97,7 +97,6 @@ public:
         };
 
         static uint16_t currentPubsubPort;
-        static uint16_t currentGraphsyncPort;
 
         void addNode( const std::string &dbName )
         {
@@ -114,12 +113,9 @@ public:
             pubsub->Start( currentPubsubPort, {}, listenIp, {} );
 
             auto io = std::make_shared<boost::asio::io_context>();
-            auto db = std::make_shared<sgns::crdt::GlobalDB>( io,
-                                                              basePath + "/CommonKey",
-                                                              pubsub );
+            auto db = std::make_shared<sgns::crdt::GlobalDB>( io, basePath + "/CommonKey", pubsub );
 
             ++currentPubsubPort;
-            ++currentGraphsyncPort;
             auto scheduler        = std::make_shared<libp2p::protocol::AsioScheduler>( io,
                                                                                 libp2p::protocol::SchedulerConfig{} );
             auto graphsyncnetwork = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubsub->GetHost(),
@@ -138,7 +134,7 @@ public:
             nodes_.push_back( std::move( node ) );
         }
 
-        void connectNodes( std::chrono::milliseconds delay = std::chrono::seconds( 3 ) )
+        void connectNodes( std::chrono::milliseconds delay = std::chrono::seconds( 1 ) )
         {
             for ( size_t i = 0; i < nodes_.size(); ++i )
             {
@@ -149,7 +145,6 @@ public:
             }
             std::this_thread::sleep_for( delay );
         }
-
 
         const std::vector<TestNode> &getNodes() const
         {
@@ -211,7 +206,6 @@ public:
 };
 
 uint16_t GlobalDBIntegrationTest::TestNodeCollection::currentPubsubPort    = 50501;
-uint16_t GlobalDBIntegrationTest::TestNodeCollection::currentGraphsyncPort = 50541;
 
 TEST_F( GlobalDBIntegrationTest, ReplicationWithoutTopicSuccessfulTest )
 {
@@ -270,7 +264,7 @@ TEST_F( GlobalDBIntegrationTest, ReplicationViaTopicBroadcastTest )
         node.db->AddListenTopic( "test_topic" );
     }
 
-    testNodes->connectNodes( std::chrono::seconds( 5 ) );
+    testNodes->connectNodes();
     using sgns::crdt::HierarchicalKey;
     sgns::base::Buffer value;
     value.put( "Value via test_topic" );
@@ -320,7 +314,7 @@ TEST_F( GlobalDBIntegrationTest, ReplicationAcrossMultipleTopicsTest )
         node.db->AddListenTopic( "topic_B" );
     }
 
-    testNodes->connectNodes( std::chrono::seconds( 5 ) );
+    testNodes->connectNodes();
     using sgns::crdt::HierarchicalKey;
     sgns::base::Buffer valueA, valueB;
     valueA.put( "Data from topic A" );
@@ -366,7 +360,7 @@ TEST_F( GlobalDBIntegrationTest, PreventDoubleCommitTest )
     auto testNodes = std::make_unique<TestNodeCollection>();
     testNodes->addNode( "globaldb_node1" );
     testNodes->getNodes()[0].db->AddBroadcastTopic( "firstTopic" );
-    testNodes->connectNodes( std::chrono::seconds( 1 ) );
+    testNodes->connectNodes();
     using sgns::crdt::HierarchicalKey;
     sgns::base::Buffer value;
     value.put( "Double commit test value" );
@@ -393,10 +387,7 @@ TEST_F( GlobalDBIntegrationTest, OperationsWithoutInitializationTest )
     pubsub->Start( 50800, {}, "127.0.0.1", {} );
 
     auto io = std::make_shared<boost::asio::io_context>();
-    auto db = std::make_shared<sgns::crdt::GlobalDB>( io,
-                                                      tmpBasePath + "/CommonKey",
-                                                      pubsub );
-    ++GlobalDBIntegrationTest::TestNodeCollection::currentGraphsyncPort;
+    auto db = std::make_shared<sgns::crdt::GlobalDB>( io, tmpBasePath + "/CommonKey", pubsub );
 
     using sgns::crdt::HierarchicalKey;
     const HierarchicalKey queryKey( "/nonexistent/query" );
@@ -445,7 +436,7 @@ TEST_F( GlobalDBIntegrationTest, DirectPutWithTopicBroadcastTest )
         node.db->AddBroadcastTopic( "direct_topic" );
         node.db->AddListenTopic( "direct_topic" );
     }
-    testNodes->connectNodes( std::chrono::seconds( 3 ) );
+    testNodes->connectNodes();
     using sgns::crdt::HierarchicalKey;
     sgns::base::Buffer value;
     value.put( "Direct put with topic value" );
@@ -485,7 +476,7 @@ TEST_F( GlobalDBIntegrationTest, DirectPutWithoutTopicBroadcastTest )
         node.db->AddBroadcastTopic( "firstTopic" );
         node.db->AddListenTopic( "firstTopic" );
     }
-    testNodes->connectNodes( std::chrono::seconds( 3 ) );
+    testNodes->connectNodes();
     using sgns::crdt::HierarchicalKey;
     sgns::base::Buffer value;
     value.put( "Direct put without topic value" );
@@ -528,7 +519,7 @@ TEST_F( GlobalDBIntegrationTest, NonSubscriberDoesNotReceiveTopicMessageTest )
     testNodes->getNodes()[0].db->AddListenTopic( "test_topic" );
     testNodes->getNodes()[1].db->AddBroadcastTopic( "test_topic" );
     testNodes->getNodes()[1].db->AddListenTopic( "test_topic" );
-    testNodes->connectNodes( std::chrono::seconds( 3 ) );
+    testNodes->connectNodes();
     using sgns::crdt::HierarchicalKey;
     sgns::base::Buffer value;
     value.put( "Message for test_topic" );
@@ -561,7 +552,7 @@ TEST_F( GlobalDBIntegrationTest, UnconnectedNodeDoesNotReplicateBroadcastMessage
     auto testNodes = std::make_unique<TestNodeCollection>();
     testNodes->addNode( "globaldb_node1" );
     testNodes->addNode( "globaldb_node2" );
-    testNodes->connectNodes( std::chrono::seconds( 3 ) );
+    testNodes->connectNodes();
 
     testNodes->addNode( "globaldb_node3" );
 
