@@ -144,10 +144,10 @@ namespace sgns
         node_logger->set_level( spdlog::level::err );
         loggerGlobalDB->set_level( spdlog::level::err );
         loggerDAGSyncer->set_level( spdlog::level::err );
-        loggerGraphsync->set_level( spdlog::level::err );
+        loggerGraphsync->set_level( spdlog::level::trace );
         loggerBroadcaster->set_level( spdlog::level::err );
         loggerDataStore->set_level( spdlog::level::err );
-        loggerTransactions->set_level( spdlog::level::debug );
+        loggerTransactions->set_level( spdlog::level::err );
         loggerQueue->set_level( spdlog::level::err );
         loggerRocksDB->set_level( spdlog::level::err );
         logkad->set_level( spdlog::level::err );
@@ -208,10 +208,16 @@ namespace sgns
                 {
                     if ( owner == lanip )
                     {
-                        node_logger->info( "Port {} is already mapped by this device. Using it.", candidate_port );
-                        addresses.push_back( wanip );
-                        success = true;
-                        break;
+                        node_logger->info( "Port {} is already mapped by this device. Try using it.", candidate_port );
+                        if (upnp->OpenPort(candidate_port, candidate_port, "TCP", 3600))
+                        {
+                            addresses.push_back( wanip );
+                            success    = true;
+                            pubsubport = candidate_port;
+                            break;
+                        }
+                        node_logger->error( "Port {} is already mapped by this device. We tried using it, but could not. Will try other ports.", candidate_port );
+                        continue;
                     }
                     else
                     {
