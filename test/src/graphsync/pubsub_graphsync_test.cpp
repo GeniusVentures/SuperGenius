@@ -104,19 +104,6 @@ TEST_F(PubsubGraphsyncTest, MultiGlobalDBTest )
 
     auto io_context = std::make_shared<boost::asio::io_context>();
     auto io_context2 = std::make_shared<boost::asio::io_context>();
-    //boost::asio::executor_work_guard<boost::asio::io_context::executor_type> work_guard( io_context->get_executor() );
-    //boost::asio::executor_work_guard<boost::asio::io_context::executor_type> work_guard2( io_context2->get_executor() );
-
-    //// Create thread pool
-    //std::vector<std::thread> io_threads;
-    //for ( int i = 0; i < 6; ++i )
-    //{ // Use multiple threads
-    //    io_threads.emplace_back( [io_context]() { io_context->run(); } );
-    //}
-    //for ( int i = 0; i < 6; ++i )
-    //{ // Use multiple threads
-    //    io_threads.emplace_back( [io_context2]() { io_context2->run(); } );
-    //}
 
     auto pubs1 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();
     auto start1Future = pubs1->Start( 40001, {} );
@@ -157,41 +144,40 @@ TEST_F(PubsubGraphsyncTest, MultiGlobalDBTest )
     auto gdb2 = std::make_shared<sgns::crdt::GlobalDB>( io_context2,
         basePath2, 
         pubs2 );
+    auto gdb3 = std::make_shared<sgns::crdt::GlobalDB>(
+        io_context,
+        basePath3, 
+        pubs1 );
+    auto gdb4 = std::make_shared<sgns::crdt::GlobalDB>( io_context2,
+        basePath4, 
+        pubs2 );
 
-    //auto gdb3 = std::make_shared<sgns::crdt::GlobalDB>(
-    //    io_context,
-    //    basePath3, 
-    //    pubs1 );
-    //auto gdb4 = std::make_shared<sgns::crdt::GlobalDB>( io_context2,
-    //    basePath4, 
-    //    pubs2 );
-
-    //auto gdb5 = std::make_shared<sgns::crdt::GlobalDB>(
-    //    io_context,
-    //    basePath5, 
-    //    pubs1 );
-    //auto gdb6 = std::make_shared<sgns::crdt::GlobalDB>( io_context2,
-    //    basePath6, 
-    //    pubs2 );
+    auto gdb5 = std::make_shared<sgns::crdt::GlobalDB>(
+        io_context,
+        basePath5, 
+        pubs1 );
+    auto gdb6 = std::make_shared<sgns::crdt::GlobalDB>( io_context2,
+        basePath6, 
+        pubs2 );
 
     gdb1->Init( sgns::crdt::CrdtOptions::DefaultOptions(), graphsyncnetwork, scheduler, generator );
     gdb2->Init( sgns::crdt::CrdtOptions::DefaultOptions(), graphsyncnetwork2, scheduler2, generator2 );
-    //gdb3->Init( sgns::crdt::CrdtOptions::DefaultOptions(), graphsyncnetwork, scheduler, generator );
-    //gdb4->Init( sgns::crdt::CrdtOptions::DefaultOptions(), graphsyncnetwork2, scheduler2, generator2 );
-    //gdb5->Init( sgns::crdt::CrdtOptions::DefaultOptions(), graphsyncnetwork, scheduler, generator );
-    //gdb6->Init( sgns::crdt::CrdtOptions::DefaultOptions(), graphsyncnetwork2, scheduler2, generator2 );
+    gdb3->Init( sgns::crdt::CrdtOptions::DefaultOptions(), graphsyncnetwork, scheduler, generator );
+    gdb4->Init( sgns::crdt::CrdtOptions::DefaultOptions(), graphsyncnetwork2, scheduler2, generator2 );
+    gdb5->Init( sgns::crdt::CrdtOptions::DefaultOptions(), graphsyncnetwork, scheduler, generator );
+    gdb6->Init( sgns::crdt::CrdtOptions::DefaultOptions(), graphsyncnetwork2, scheduler2, generator2 );
     gdb1->AddBroadcastTopic( "test1" );
     gdb2->AddBroadcastTopic( "test1" );
-    //gdb3->AddBroadcastTopic( "test2" );
-    //gdb4->AddBroadcastTopic( "test2" );
-    //gdb5->AddBroadcastTopic( "test3" );
-    //gdb6->AddBroadcastTopic( "test3" );
+    gdb3->AddBroadcastTopic( "test2" );
+    gdb4->AddBroadcastTopic( "test2" );
+    gdb5->AddBroadcastTopic( "test3" );
+    gdb6->AddBroadcastTopic( "test3" );
     gdb1->AddListenTopic( "test1" );
     gdb2->AddListenTopic( "test1" );
-    //gdb3->AddListenTopic( "test2" );
-    //gdb4->AddListenTopic( "test2" );
-    //gdb5->AddListenTopic( "test3" );
-    //gdb6->AddListenTopic( "test3" );
+    gdb3->AddListenTopic( "test2" );
+    gdb4->AddListenTopic( "test2" );
+    gdb5->AddListenTopic( "test3" );
+    gdb6->AddListenTopic( "test3" );
     pubs1->AddPeers( { pubs2->GetLocalAddress() } );
     std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
     std::thread io_thread  = std::thread( [this, io_context]() { io_context->run(); } );
@@ -206,14 +192,14 @@ TEST_F(PubsubGraphsyncTest, MultiGlobalDBTest )
     transaction->Put( tx_key, data_transaction );
     transaction->Commit();
 
-    //auto                         transaction2 = gdb3->BeginTransaction();
-    //sgns::crdt::HierarchicalKey  tx_key2( "/test/test2" );
-    //sgns::crdt::GlobalDB::Buffer data_transaction2;
-    //std::vector<uint8_t>         dummy_data2 = { 0xde, 0xad, 0xbe, 0xef };
-    //data_transaction2.put( gsl::span<const uint8_t>( dummy_data2 ) );
+    auto                         transaction2 = gdb3->BeginTransaction();
+    sgns::crdt::HierarchicalKey  tx_key2( "/test/test2" );
+    sgns::crdt::GlobalDB::Buffer data_transaction2;
+    std::vector<uint8_t>         dummy_data2 = { 0xde, 0xad, 0xbe, 0xef };
+    data_transaction2.put( gsl::span<const uint8_t>( dummy_data2 ) );
 
-    //transaction2->Put( tx_key2, data_transaction2 );
-    //transaction2->Commit();
+    transaction2->Put( tx_key2, data_transaction2 );
+    transaction2->Commit();
 
     bool                         getConfirmed = false;
     sgns::crdt::GlobalDB::Buffer retrieved_data;
@@ -239,51 +225,40 @@ TEST_F(PubsubGraphsyncTest, MultiGlobalDBTest )
         std::chrono::milliseconds( 20000 ),
         "Replication to gdb2 did not complete in time" );
 
-    //bool                         getConfirmed2 = false;
-    //sgns::crdt::GlobalDB::Buffer retrieved_data2;
-    //assertWaitForCondition(
-    //    [&]()
-    //    {
-    //        auto result2 = gdb4->Get( tx_key2 );
-    //        if ( result2 )
-    //        {
-    //            retrieved_data2 = std::move( result2.value() );
-    //            getConfirmed2   = true;
-    //            return true;
-    //        }
-    //        return false;
-    //    },
-    //    std::chrono::milliseconds( 20000 ),
-    //    "Replication to gdb4 did not complete in time" );
-    //auto result2 = gdb3->Get( tx_key );
-    //auto result3 = gdb4->Get( tx_key );
-    //auto result4 = gdb5->Get( tx_key );
-    //auto result5 = gdb6->Get( tx_key );
-    //auto result6 = gdb1->Get( tx_key2 );
-    //auto result7 = gdb2->Get( tx_key2 );
-    //auto result8 = gdb5->Get( tx_key2 );
-    //auto result9 = gdb6->Get( tx_key2 );
-    //EXPECT_FALSE( result2 );
-    //EXPECT_FALSE( result3 );
-    //EXPECT_FALSE( result4 );
-    //EXPECT_FALSE( result5 );
-    //EXPECT_FALSE( result6 );
-    //EXPECT_FALSE( result7 );
-    //EXPECT_FALSE( result8 );
-    //EXPECT_FALSE( result9 );
+    bool                         getConfirmed2 = false;
+    sgns::crdt::GlobalDB::Buffer retrieved_data2;
+    assertWaitForCondition(
+        [&]()
+        {
+            auto result2 = gdb4->Get( tx_key2 );
+            if ( result2 )
+            {
+                retrieved_data2 = std::move( result2.value() );
+                getConfirmed2   = true;
+                return true;
+            }
+            return false;
+        },
+        std::chrono::milliseconds( 20000 ),
+        "Replication to gdb4 did not complete in time" );
+    auto result2 = gdb3->Get( tx_key );
+    auto result3 = gdb4->Get( tx_key );
+    auto result4 = gdb5->Get( tx_key );
+    auto result5 = gdb6->Get( tx_key );
+    auto result6 = gdb1->Get( tx_key2 );
+    auto result7 = gdb2->Get( tx_key2 );
+    auto result8 = gdb5->Get( tx_key2 );
+    auto result9 = gdb6->Get( tx_key2 );
+    EXPECT_FALSE( result2 );
+    EXPECT_FALSE( result3 );
+    EXPECT_FALSE( result4 );
+    EXPECT_FALSE( result5 );
+    EXPECT_FALSE( result6 );
+    EXPECT_FALSE( result7 );
+    EXPECT_FALSE( result8 );
+    EXPECT_FALSE( result9 );
     EXPECT_TRUE( getConfirmed );
-    //EXPECT_TRUE( getConfirmed2 );
-    //for ( auto &thread : io_threads )
-    //{
-    //    if ( thread.joinable() )
-    //    {
-    //        thread.join();
-    //    }
-    //}
-    //pubs1->Stop();
-    //pubs2->Stop();
-    //gdb1.reset();
-    //gdb2.reset();
+    EXPECT_TRUE( getConfirmed2 );
     io_context->stop();
     io_context2->stop();
     if (io_thread.joinable())
