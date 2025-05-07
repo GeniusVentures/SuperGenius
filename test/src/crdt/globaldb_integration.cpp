@@ -432,3 +432,99 @@ TEST_F( GlobalDBIntegrationTest, OperationsWithoutInitialization )
 
     boost::filesystem::remove_all( tmpBasePath );
 }
+
+TEST_F( GlobalDBIntegrationTest, DISABLED_QueryKeyValuesWithRegex )
+{
+    auto testNodes = std::make_unique<TestNodeCollection>();
+    // Node 0 = writer, Node 1 = reader
+    testNodes->addNode( "node_writer" );
+    testNodes->addNode( "node_reader" );
+
+    // Configure both to broadcast/listen on default topic
+    const std::string topic = "query_regex";
+    for ( auto &node : testNodes->getNodes() )
+    {
+        node.db->AddBroadcastTopic( topic );
+        node.db->AddListenTopic( topic );
+    }
+    testNodes->connectNodes();
+
+    // Writer inserts multiple keys under the same prefix
+    std::vector<std::pair<std::string, std::string>> entries = { { "/filter/alpha", "A" },
+                                                                 { "/filter/beta", "B" },
+                                                                 { "/filter/a123", "C" },
+                                                                 { "/filter/gamma", "D" } };
+    for ( auto &e : entries )
+    {
+        sgns::base::Buffer buf;
+        buf.put( e.second );
+        auto tx = testNodes->getNodes()[0].db->BeginTransaction();
+        ASSERT_TRUE( tx->Put( { e.first }, buf ).has_value() );
+        ASSERT_TRUE( tx->Commit().has_value() );
+    }
+
+    // Now wait on the reader node until it has the right regex query result
+    EXPECT_TRUE( waitForCondition(
+        [&]
+        {
+            auto res = testNodes->getNodes()[1].db->QueryKeyValues( "filter", "a[a-z]+", "" );
+            if ( !res.has_value() )
+            {
+                return false;
+            }
+            return res.value().size() == 1;
+        },
+        WAIT_TIMEOUT ) );
+
+    // Verify it really found only "/filter/alpha"
+    auto finalRes = testNodes->getNodes()[1].db->QueryKeyValues( "filter", "a[a-z]+", "" );
+    ASSERT_TRUE( finalRes.has_value() );
+    EXPECT_NE( finalRes.value().begin()->first.toString().find( "alpha" ), std::string::npos );
+}
+
+TEST_F( GlobalDBIntegrationTest, DISABLED_QueryKeyValuesWithPrefixAndSuffix )
+{
+    auto testNodes = std::make_unique<TestNodeCollection>();
+    testNodes->addNode( "node_writer_ps" );
+    testNodes->addNode( "node_reader_ps" );
+
+    const std::string topic = "query_ps";
+    for ( auto &node : testNodes->getNodes() )
+    {
+        node.db->AddBroadcastTopic( topic );
+        node.db->AddListenTopic( topic );
+    }
+    testNodes->connectNodes();
+
+    // Writer inserts keys with different structures
+    std::vector<std::pair<std::string, std::string>> entries = { { "/rx/one/end", "1" },
+                                                                 { "/rx/two/end", "2" },
+                                                                 { "/rx/one/foo", "3" },
+                                                                 { "/rx/three/bar", "4" } };
+    for ( auto &e : entries )
+    {
+        sgns::base::Buffer buf;
+        buf.put( e.second );
+        auto tx = testNodes->getNodes()[0].db->BeginTransaction();
+        ASSERT_TRUE( tx->Put( { e.first }, buf ).has_value() );
+        ASSERT_TRUE( tx->Commit().has_value() );
+    }
+
+    // Wait until reader returns exactly one entry for prefix="rx", middle="o.*", remainder="end"
+    EXPECT_TRUE( waitForCondition(
+        [&]
+        {
+            auto res = testNodes->getNodes()[1].db->QueryKeyValues( "rx", "o.*", "end" );
+            if ( !res.has_value() )
+            {
+                return false;
+            }
+            return res.value().size() == 1;
+        },
+        WAIT_TIMEOUT ) );
+
+    // Final sanity check
+    auto finalRes = testNodes->getNodes()[1].db->QueryKeyValues( "rx", "o.*", "end" );
+    ASSERT_TRUE( finalRes.has_value() );
+    EXPECT_NE( finalRes.value().begin()->first.toString().find( "/one/end" ), std::string::npos );
+}
