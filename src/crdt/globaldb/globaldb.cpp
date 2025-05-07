@@ -243,8 +243,11 @@ namespace sgns::crdt
             m_logger->error( "Neither broadcast channel nor pubsub is initialized." );
             return outcome::failure( Error::DAG_SYNCHER_NOT_LISTENING );
         }
-
-        auto graphsync = std::make_shared<GraphsyncImpl>( host, std::move( scheduler ), graphsyncnetwork, generator );
+        auto graphsync = std::make_shared<GraphsyncImpl>( host,
+                                                          std::move( scheduler ),
+                                                          graphsyncnetwork,
+                                                          generator,
+                                                          m_context );
         auto dagSyncer = std::make_shared<GraphsyncDAGSyncer>( ipfsDataStore, graphsync, host );
 
         // Start DagSyner listener
