@@ -45,7 +45,7 @@ createNodeObjects(std::shared_ptr<boost::asio::io_context> io)
     auto graphsyncnetwork = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( objects.second, scheduler );
     auto generator        = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
     objects.first =
-        std::make_shared<sgns::ipfs_lite::ipfs::graphsync::GraphsyncImpl>(objects.second, std::move(scheduler), graphsyncnetwork, generator );
+        std::make_shared<sgns::ipfs_lite::ipfs::graphsync::GraphsyncImpl>(objects.second, std::move(scheduler), graphsyncnetwork, generator,io );
     return objects;
 }
 
@@ -70,7 +70,7 @@ createNodeObjects(std::shared_ptr<boost::asio::io_context> io, libp2p::crypto::K
     objects.first = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::GraphsyncImpl>( objects.second,
                                                                                        std::move( scheduler ),
                                                                                        graphsyncnetwork,
-                                                                                       generator );
+                                                                                       generator,io );
     return objects;
 }
 
