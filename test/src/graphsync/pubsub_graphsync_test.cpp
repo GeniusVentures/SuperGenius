@@ -210,13 +210,7 @@ TEST_F(PubsubGraphsyncTest, MultiGlobalDBTest )
             {
                 retrieved_data = std::move( result.value() );
                 getConfirmed   = true;
-                std::cout << "Should be true" << std::endl;
                 return true;
-            }
-            if (!result)
-            {
-                std::cout << result.error().message() << std::endl;
-                
             }
             return false;
         },
@@ -258,7 +252,6 @@ TEST_F(PubsubGraphsyncTest, MultiGlobalDBTest )
     EXPECT_TRUE( getConfirmed );
     EXPECT_TRUE( getConfirmed2 );
     io_context->stop();
-    //io_context2->stop();
     if (io_thread.joinable())
     {
         io_thread.join();
