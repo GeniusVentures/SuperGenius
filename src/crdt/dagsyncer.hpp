@@ -27,6 +27,7 @@ namespace sgns::crdt
         virtual void                  InitCIDBlock( const CID &cid )         = 0;
         virtual bool                  IsCIDInCache( const CID &cid ) const   = 0;
         virtual outcome::result<void> DeleteCIDBlock( const CID &cid ) = 0;
+        virtual void                  Stop()                                 = 0;
     };
 } // namespace sgns::crdt
 

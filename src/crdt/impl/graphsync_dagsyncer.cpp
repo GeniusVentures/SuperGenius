@@ -203,8 +203,9 @@ namespace sgns::crdt
 
         while ( true )
         {
-            if ( is_destructing_ )
+            if ( is_stopped_ )
             {
+                logger_->warn( "We exited while trying to sync {} as it must have been still in progress.", cid.toString().value() );
                 return outcome::failure( Error::DAGSYNCHER_NOT_STARTED );
             }
             // Check request state
@@ -876,5 +877,11 @@ namespace sgns::crdt
     {
         auto it = cache_map_.find( cid );
         return it != cache_map_.end() && it->second.first != nullptr;
+    }
+
+    void GraphsyncDAGSyncer::Stop()
+    {
+        logger_->debug( "Stopping Dagsyncer" );
+        is_stopped_ = true;
     }
 }

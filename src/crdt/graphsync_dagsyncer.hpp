@@ -71,7 +71,8 @@ namespace sgns::crdt
 
         ~GraphsyncDAGSyncer()
         {
-            is_destructing_ = true;
+            logger_->debug( "~GraphsyncDAGSyncer CALLED" );
+            is_stopped_ = true;
             std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
             graphsync_->stop();
         }
@@ -114,6 +115,8 @@ namespace sgns::crdt
         void                  InitCIDBlock( const CID &cid ) override;
         bool                  IsCIDInCache( const CID &cid ) const override;
         outcome::result<void> DeleteCIDBlock( const CID &cid ) override;
+
+        void Stop() override;
 
     protected:
         static constexpr uint64_t TIMEOUT_SECONDS = 1200;
@@ -221,7 +224,7 @@ namespace sgns::crdt
 
         mutable LRUCIDCache lru_cid_cache_;
         mutable std::mutex  cache_mutex_;
-        std::atomic<bool>   is_destructing_{ false };
+        std::atomic<bool>   is_stopped_{ false };
     };
 
 }

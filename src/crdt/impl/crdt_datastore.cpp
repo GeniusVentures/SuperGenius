@@ -209,6 +209,7 @@ namespace sgns::crdt
 
     void CrdtDatastore::Close()
     {
+        dagSyncer_->Stop();
         if ( handleNextThreadRunning_ )
         {
             handleNextThreadRunning_ = false;
@@ -236,6 +237,7 @@ namespace sgns::crdt
             dagWorkers_.clear();
             dagWorkerJobListThreadRunning_ = false;
         }
+       
     }
 
     void CrdtDatastore::HandleNextIteration()
