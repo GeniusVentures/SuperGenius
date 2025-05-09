@@ -45,6 +45,7 @@ std::string GetLoggingSystem( const std::string &  )
      children:
        - name: libp2p
        - name: Gossip
+       - name: debug
  # ----------------
      )";
     return config;
@@ -64,7 +65,7 @@ protected:
         auto result    = logSystem->configure();
 
         libp2p::log::setLoggingSystem( logSystem );
-        libp2p::log::setLevelOfGroup( "gossip_pubsub_test", soralog::Level::OFF );
+        libp2p::log::setLevelOfGroup( "gossip_pubsub_test", soralog::Level::TRACE );
         auto loggerGlobalDB    = sgns::base::createLogger( "GlobalDB", "" );
         auto loggerDAGSyncer   = sgns::base::createLogger( "GraphsyncDAGSyncer", "" );
        
@@ -72,8 +73,8 @@ protected:
         auto loggerDataStore   = sgns::base::createLogger( "CrdtDatastore", "" );
         auto loggerGraphsync   = sgns::base::createLogger( "graphsync", "" );
         loggerGraphsync->set_level( spdlog::level::trace );
-        loggerGlobalDB->set_level( spdlog::level::trace );
-        loggerDAGSyncer->set_level( spdlog::level::trace );
+        loggerGlobalDB->set_level( spdlog::level::err );
+        loggerDAGSyncer->set_level( spdlog::level::err );
         
         loggerBroadcaster->set_level( spdlog::level::err );
         loggerDataStore->set_level( spdlog::level::err );
@@ -184,7 +185,20 @@ TEST_F(PubsubGraphsyncTest, MultiGlobalDBTest )
     auto transaction = gdb1->BeginTransaction();
     sgns::crdt::HierarchicalKey  tx_key( "/test/test" );
     sgns::crdt::GlobalDB::Buffer data_transaction;
-    std::vector<uint8_t>         dummy_data = { 0xde, 0xad, 0xbe, 0xef };
+    std::vector<uint8_t>         dummy_data;
+
+    // Reserve space to avoid reallocations
+    constexpr size_t target_size = 512 * 1024; // 512KB
+    dummy_data.reserve( target_size );
+
+    // Generate pattern: 0xde, 0xad, 0xbe, 0xef repeated
+    const uint8_t pattern[] = { 0xde, 0xad, 0xbe, 0xef };
+
+    while ( dummy_data.size() < target_size )
+    {
+        dummy_data.insert( dummy_data.end(), std::begin( pattern ), std::end( pattern ) );
+    }
+    
     data_transaction.put( gsl::span<const uint8_t>( dummy_data ) );
 
     transaction->Put( tx_key, data_transaction );
