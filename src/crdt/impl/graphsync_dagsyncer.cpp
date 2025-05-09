@@ -185,7 +185,7 @@ namespace sgns::crdt
             return node;
         }
         auto initial_state = graphsync_->getRequestState( cid );
-        if (initial_state)
+        if ( initial_state )
         {
             if ( initial_state.value() == Graphsync::RequestState::IN_PROGRESS )
             {
@@ -393,7 +393,7 @@ namespace sgns::crdt
     void GraphsyncDAGSyncer::RequestProgressCallback( ResponseStatusCode            code,
                                                       const std::vector<Extension> &extensions ) const
     {
-        logger_->trace( "request progress: code={}, extensions={}",
+        logger_->debug( "request progress: code={}, extensions={}",
                         statusCodeToString( code ),
                         formatExtensions( extensions ) );
     }

@@ -231,22 +231,23 @@ namespace sgns
 
         static std::string GetLoggingSystem( const std::string &base_path )
         {
-            std::string config = R"(
-            # ----------------
-            sinks:
-              - name: file
-                type: file
-                capacity: 1000
-                path: [basepath]/sgnslog.log
-            groups:
-              - name: SuperGeniusDemo
-                sink: file
-                level: debug
-                children:
-                  - name: libp2p
-                  - name: Gossip
-            # ----------------
-            )";
+            std::string config( R"(
+# ----------------
+sinks:
+    - name: file
+      type: file
+      capacity: 1000
+      path: [basepath]/sgnslog.log
+groups:
+    - name: SuperGeniusNode
+      sink: file
+      level: debug
+      children:
+        - name: libp2p
+        - name: Gossip
+        - name: yx-stream
+# ----------------
+  )" );
 
             boost::replace_all( config, "[basepath]", base_path );
             return config;

@@ -122,7 +122,7 @@ namespace sgns
         libp2p::log::setLevelOfGroup( "SuperGeniusDemo", soralog::Level::ERROR_ );
         std::string logdir = "";
 
-        node_logger               = base::createLogger( "SuperGeniusDemo", logdir );
+        node_logger               = base::createLogger( "SuperGeniusNode", logdir );
         auto loggerGlobalDB       = base::createLogger( "GlobalDB", logdir );
         auto loggerDAGSyncer      = base::createLogger( "GraphsyncDAGSyncer", logdir );
         auto loggerGraphsync      = base::createLogger( "graphsync", logdir );
@@ -143,8 +143,8 @@ namespace sgns
 #ifdef SGNS_DEBUGLOGS
         node_logger->set_level( spdlog::level::err );
         loggerGlobalDB->set_level( spdlog::level::err );
-        loggerDAGSyncer->set_level( spdlog::level::err );
-        loggerGraphsync->set_level( spdlog::level::trace );
+        loggerDAGSyncer->set_level( spdlog::level::debug );
+        loggerGraphsync->set_level( spdlog::level::debug );
         loggerBroadcaster->set_level( spdlog::level::err );
         loggerDataStore->set_level( spdlog::level::err );
         loggerTransactions->set_level( spdlog::level::err );
@@ -183,7 +183,7 @@ namespace sgns
 
         auto tokenid = dev_config_.TokenID;
 
-        auto pubsubport    = GenerateRandomPort( base_port, account_->GetAddress() + std::to_string( tokenid ) );
+        auto pubsubport = GenerateRandomPort( base_port, account_->GetAddress() + std::to_string( tokenid ) );
 
         std::vector<std::string> addresses;
         //UPNP
@@ -209,14 +209,16 @@ namespace sgns
                     if ( owner == lanip )
                     {
                         node_logger->info( "Port {} is already mapped by this device. Try using it.", candidate_port );
-                        if (upnp->OpenPort(candidate_port, candidate_port, "TCP", 3600))
+                        if ( upnp->OpenPort( candidate_port, candidate_port, "TCP", 3600 ) )
                         {
                             addresses.push_back( wanip );
                             success    = true;
                             pubsubport = candidate_port;
                             break;
                         }
-                        node_logger->error( "Port {} is already mapped by this device. We tried using it, but could not. Will try other ports.", candidate_port );
+                        node_logger->error(
+                            "Port {} is already mapped by this device. We tried using it, but could not. Will try other ports.",
+                            candidate_port );
                         continue;
                     }
                     else
@@ -230,7 +232,7 @@ namespace sgns
                 {
                     node_logger->info( "Successfully opened port {}", candidate_port );
                     addresses.push_back( wanip );
-                    success = true;
+                    success    = true;
                     pubsubport = candidate_port;
                     break;
                 }
@@ -262,27 +264,20 @@ namespace sgns
         std::string base58key = maybe_base58.value();
 
         gnus_network_full_path_ = ( boost::format( std::string( GNUS_NETWORK_PATH ) ) %
-                                     sgns::version::SuperGeniusVersionMajor() % base58key )
-                                       .str();
+                                    sgns::version::SuperGeniusVersionMajor() % base58key )
+                                      .str();
 
         auto pubsubKeyPath = gnus_network_full_path_ + "/pubs_processor";
 
         pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
             crdt::KeyPairFileStorage( write_base_path_ + pubsubKeyPath ).GetKeyPair().value() );
-        auto pubs = pubsub_->Start(
-            pubsubport,
-            { },
-            lanip,
-            addresses );
+        auto pubs = pubsub_->Start( pubsubport, {}, lanip, addresses );
         pubs.wait();
-        auto scheduler = std::make_shared<libp2p::protocol::AsioScheduler>( io_,
-                                                                            libp2p::protocol::SchedulerConfig{} );
+        auto scheduler = std::make_shared<libp2p::protocol::AsioScheduler>( io_, libp2p::protocol::SchedulerConfig{} );
         auto generator = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
         auto graphsyncnetwork = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubsub_->GetHost(),
-                                                                                         scheduler );
-        globaldb_ = std::make_shared<crdt::GlobalDB>( io_,
-                                                      write_base_path_ + gnus_network_full_path_,
-                                                      pubsub_ );
+                                                                                             scheduler );
+        globaldb_ = std::make_shared<crdt::GlobalDB>( io_, write_base_path_ + gnus_network_full_path_, pubsub_ );
 
         auto global_db_init_result = globaldb_->Init( crdt::CrdtOptions::DefaultOptions(),
                                                       graphsyncnetwork,
@@ -295,7 +290,7 @@ namespace sgns
         }
         globaldb_->AddBroadcastTopic( processing_channel_topic_ );
         globaldb_->AddListenTopic( processing_channel_topic_ );
-        task_queue_ = std::make_shared<processing::ProcessingTaskQueueImpl>( globaldb_ );
+        task_queue_      = std::make_shared<processing::ProcessingTaskQueueImpl>( globaldb_ );
         processing_core_ = std::make_shared<processing::ProcessingCoreImpl>( globaldb_, 1000000, 1 );
         processing_core_->RegisterProcessorFactory( "mnnimage",
                                                     [] { return std::make_unique<processing::MNN_Image>(); } );
@@ -384,15 +379,14 @@ namespace sgns
                         {
                             if ( upnp->GetIGD() )
                             {
-                                auto openedPort  = upnp->OpenPort( pubsubport, pubsubport, "TCP", 3600 );
+                                auto openedPort = upnp->OpenPort( pubsubport, pubsubport, "TCP", 3600 );
                                 if ( !openedPort )
                                 {
                                     node_logger->error( "Failed to open port" );
                                 }
                                 else
                                 {
-                                    node_logger->info( "Open Ports Success pubsub: {} ",
-                                                       pubsubport );
+                                    node_logger->info( "Open Ports Success pubsub: {} ", pubsubport );
                                 }
                             }
                             else
@@ -838,7 +832,9 @@ namespace sgns
                 node_logger->error( "Unable to complete task: {} ", task_id );
                 break;
             }
-            auto pay_result = PayEscrow( maybe_escrow_path.value(), taskresult, std::move(complete_task_result.value()) );
+            auto pay_result = PayEscrow( maybe_escrow_path.value(),
+                                         taskresult,
+                                         std::move( complete_task_result.value() ) );
             if ( pay_result.has_failure() )
             {
                 node_logger->error( "Invalid results for task: {} ", task_id );

@@ -42,10 +42,7 @@ namespace sgns::crdt
         // Remove leftover database if any
         const std::string databasePath = "supergenius_crdt_datastore_test";
 
-        CrdtDatastoreTest()
-        {
-            
-        }
+        CrdtDatastoreTest() {}
 
         void SetUp() override
         {
@@ -72,7 +69,7 @@ namespace sgns::crdt
             namespaceKey_                  = HierarchicalKey( strNamespace );
 
             // Create crdtDatastore
-            crdtDatastore_ = CrdtDatastore::New( db_,
+            crdtDatastore_       = CrdtDatastore::New( db_,
                                                  namespaceKey_,
                                                  dagSyncer_,
                                                  broadcaster_,
@@ -139,7 +136,6 @@ namespace sgns::crdt
             db_          = nullptr;
             dagSyncer_   = nullptr;
             broadcaster_ = nullptr;
-
         }
 
         // Helper to create a test delta
