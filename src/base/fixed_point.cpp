@@ -13,9 +13,9 @@
 #include <limits>
 #include <system_error>
 
-namespace sgns::fixed_point
+namespace sgns
 {
-    constexpr uint64_t scaleFactor( uint64_t precision )
+    constexpr uint64_t fixed_point::scaleFactor( uint64_t precision )
     {
         uint64_t result = 1;
         for ( uint64_t i = 0; i < precision; ++i )
@@ -25,7 +25,7 @@ namespace sgns::fixed_point
         return result;
     }
 
-    outcome::result<uint64_t> fromString( const std::string &str_value, uint64_t precision )
+    outcome::result<uint64_t> fixed_point::fromString( const std::string &str_value, uint64_t precision )
     {
         if ( precision > MAX_PRECISION )
         {
@@ -54,7 +54,7 @@ namespace sgns::fixed_point
 
         auto [ptr_int,
               ec_int] = std::from_chars( integer_str.data(), integer_str.data() + integer_str.size(), integer_part );
-        if ( ec_int != std::errc() || ( ptr_int != integer_str.data() + integer_str.size() ) )
+        if ( ec_int != std::errc() || ptr_int != integer_str.data() + integer_str.size() )
         {
             return outcome::failure( std::make_error_code( std::errc::invalid_argument ) );
         }
@@ -83,7 +83,7 @@ namespace sgns::fixed_point
         return outcome::success( ( integer_part * scaleFactor( precision ) ) + fractional_part );
     }
 
-    std::string toString( uint64_t value, uint64_t precision )
+    std::string fixed_point::toString( uint64_t value, uint64_t precision )
     {
         uint64_t integer_part    = value / scaleFactor( precision );
         uint64_t fractional_part = value % scaleFactor( precision );
@@ -94,7 +94,6 @@ namespace sgns::fixed_point
         }
 
         std::string fractional_str = std::to_string( fractional_part );
-
         if ( fractional_str.size() < precision )
         {
             fractional_str.insert( 0, precision - fractional_str.size(), '0' );
@@ -103,7 +102,7 @@ namespace sgns::fixed_point
         return std::to_string( integer_part ) + "." + fractional_str;
     }
 
-    outcome::result<uint64_t> multiply( uint64_t a, uint64_t b, uint64_t precision )
+    outcome::result<uint64_t> fixed_point::multiply( uint64_t a, uint64_t b, uint64_t precision )
     {
         using namespace boost::multiprecision;
         if ( precision > MAX_PRECISION )
@@ -120,7 +119,7 @@ namespace sgns::fixed_point
         return outcome::success( static_cast<uint64_t>( result ) );
     }
 
-    outcome::result<uint64_t> divide( uint64_t a, uint64_t b, uint64_t precision )
+    outcome::result<uint64_t> fixed_point::divide( uint64_t a, uint64_t b, uint64_t precision )
     {
         using namespace boost::multiprecision;
         if ( precision > MAX_PRECISION )
@@ -142,4 +141,4 @@ namespace sgns::fixed_point
 
         return outcome::success( static_cast<uint64_t>( result ) );
     }
-}
+} // namespace sgns
