@@ -53,6 +53,15 @@ namespace sgns
         static std::string toString( uint64_t value, uint64_t precision = GNUS_PRECISION );
 
         /**
+         * @brief       Convert a double to a raw fixed-point integer.
+         * @param[in]   raw_value Double-precision floating-point value.
+         * @param[in]   precision Number of decimal places.
+         * @return      Raw fixed-point integer.
+         * @throws      std::overflow_error if the converted value does not fit in uint64_t.
+         */
+        static uint64_t fromDouble( double raw_value, uint64_t precision );
+
+        /**
          * @brief       Multiply two fixed-point numbers with optional precision.
          * @param[in]   a         First number.
          * @param[in]   b         Second number.
@@ -75,7 +84,14 @@ namespace sgns
          * @param[in]   value     Raw fixed-point integer.
          * @param[in]   precision Number of decimal places.
          */
-        explicit fixed_point( uint64_t value, uint64_t precision = GNUS_PRECISION );
+        explicit fixed_point( uint64_t value, uint64_t precision );
+        /**
+         * @brief       Construct a fixed_point from a double value.
+         * @param[in]   raw_value Double-precision floating-point value.
+         * @param[in]   precision Number of decimal places.
+         * @throws      std::overflow_error if the converted value does not fit in uint64_t.
+         */
+        explicit fixed_point( double raw_value, uint64_t precision );
 
         /**
          * @brief       Convert a raw fixed-point integer from one precision to another.

@@ -16,6 +16,17 @@
 
 namespace sgns
 {
+
+    fixed_point::fixed_point( uint64_t value, uint64_t precision ) :
+        value_( std::move( value ) ), precision_( std::move( precision ) )
+    {
+    }
+
+    fixed_point::fixed_point( double raw_value, uint64_t precision ) :
+        value_( fromDouble( raw_value, precision ) ), precision_( precision )
+    {
+    }
+
     constexpr uint64_t fixed_point::scaleFactor( uint64_t precision )
     {
         uint64_t result = 1;
@@ -99,6 +110,19 @@ namespace sgns
         return std::to_string( integer_part ) + "." + fractional_str;
     }
 
+    uint64_t fixed_point::fromDouble( double raw_value, uint64_t precision )
+    {
+        double factor  = static_cast<double>( scaleFactor( precision ) );
+        double scaled  = raw_value * factor;
+        double rounded = std::round( scaled );
+
+        if ( rounded < 0.0 || rounded > static_cast<double>( std::numeric_limits<uint64_t>::max() ) )
+        {
+            throw std::overflow_error( "fixed_point: double to fixed conversion overflow" );
+        }
+        return static_cast<uint64_t>( rounded );
+    }
+
     outcome::result<uint64_t> fixed_point::multiply( uint64_t a, uint64_t b, uint64_t precision )
     {
         using namespace boost::multiprecision;
@@ -155,8 +179,6 @@ namespace sgns
         uint64_t converted = value / scaleFactor( delta );
         return outcome::success( converted );
     }
-
-    fixed_point::fixed_point( uint64_t value, uint64_t precision ) : value_( value ), precision_( precision ) {}
 
     uint64_t fixed_point::value() const noexcept
     {
