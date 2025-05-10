@@ -1,6 +1,6 @@
 /**
  * @file       GeniusNode.cpp
- * @brief      
+ * @brief
  * @date       2024-04-18
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
@@ -143,7 +143,7 @@ namespace sgns
         auto loggerProcessingNode = base::createLogger( "ProcessingNode", logdir );
         auto loggerGossipPubsub   = base::createLogger( "GossipPubSub", logdir );
 #ifdef SGNS_DEBUGLOGS
-        node_logger->set_level( spdlog::level::err );
+        node_logger->set_level( spdlog::level::trace );
         loggerGlobalDB->set_level( spdlog::level::err );
         loggerDAGSyncer->set_level( spdlog::level::debug );
         loggerGraphsync->set_level( spdlog::level::debug );
@@ -617,20 +617,15 @@ namespace sgns
         return outcome::success();
     }
 
-    uint64_t GeniusNode::GetProcessCost( const std::string &json_data )
+    outcome::result<uint64_t> GeniusNode::ParseBlockSize( const std::string &json_data )
     {
-        uint64_t costMinions = 0;
-        node_logger->info( "Received JSON data: {}", json_data );
-
-        // Parse JSON using RapidJSON
         rapidjson::Document document;
         if ( document.Parse( json_data.c_str() ).HasParseError() )
         {
             node_logger->error( "Invalid JSON data provided" );
-            return 0;
+            return outcome::failure( std::make_error_code( std::errc::invalid_argument ) );
         }
 
-        // "block_len" represents the number of bytes processed.
         rapidjson::Value inputArray;
         if ( document.HasMember( "input" ) && document["input"].IsArray() )
         {
@@ -639,7 +634,7 @@ namespace sgns
         else
         {
             node_logger->error( "This JSON lacks inputs" );
-            return 0;
+            return outcome::failure( std::make_error_code( std::errc::invalid_argument ) );
         }
 
         uint64_t block_total_len = 0;
@@ -654,48 +649,88 @@ namespace sgns
             else
             {
                 node_logger->error( "Missing or invalid block_len in input" );
-                return 0;
+                return outcome::failure( std::make_error_code( std::errc::invalid_argument ) );
             }
         }
-        // Get current GNUS price (USD per GNUS token)
-        auto maybe_gnusPrice = GetGNUSPrice(); // e.g., 3.65463 USD per GNUS
-        if ( !maybe_gnusPrice )
-        {
-            return 0;
-        }
-        auto gnusPrice = maybe_gnusPrice.value();
 
+        node_logger->trace( "Total block length: {}", block_total_len );
+        return block_total_len;
+    }
+
+    outcome::result<uint64_t> GeniusNode::CalculateCostMinions( uint64_t total_bytes, double price_usd_per_genius )
+    {
         // Using the assumption: 20 FLOPs per byte and each FLOP costs 5e-15 USD,
         // the cost per byte in USD is: 20 * 5e-15 = 1e-13 USD.
         // Converting this to a fixed-point constant with 9 decimals:
         //    1e-13 USD/byte * 1e9 = 1e-4, i.e., 0.0001, and in fixed point with 9 decimals, that's 100000.
-        uint64_t fixed_cost_per_byte = UINT64_C(100000); // represents 0.0001 in fixed point (precision 9)
 
-        // Calculate the raw cost in minions in fixed point: (block_total_len * fixed_cost_per_byte)
-        auto raw_cost_result = fixed_point::multiply( block_total_len, fixed_cost_per_byte, 9 );
-        if ( !raw_cost_result )
+        constexpr auto CALC_PRECISION    = UINT64_C( 15 ); // decimals for USD/FLOP fixed-point
+        constexpr auto MINION_PRECISION  = UINT64_C( 9 );  // decimals for minion (1e-6 Genius)
+        constexpr auto PRICE_PER_FLOP_FP = UINT64_C( 5 );  // 5e-15 USD/FLOP
+        constexpr auto FLOPS_PER_BYTE    = UINT64_C( 20 ); // FLOPs per byte
+        constexpr auto PRICE_PER_BYTE    = FLOPS_PER_BYTE * PRICE_PER_FLOP_FP;
+
+        constexpr uint64_t SCALE_15_TO_9 = 1000000ULL;
+
+        uint64_t total_usd_fp = total_bytes * PRICE_PER_BYTE;
+
+        node_logger->trace( "Total USD cost (FP x10^{}): {} (from {} bytes)",
+                            CALC_PRECISION,
+                            total_usd_fp,
+                            total_bytes );
+
+        uint64_t price_fp = static_cast<uint64_t>(
+            std::round( price_usd_per_genius * std::pow( 10.0, CALC_PRECISION ) ) );
+        node_logger->trace( "GNUS price fixed-point (x10^{}): {} (raw price: {})",
+                            CALC_PRECISION,
+                            price_fp,
+                            price_usd_per_genius );
+
+        auto genius_fp_r = sgns::fixed_point::divide( total_usd_fp, price_fp, CALC_PRECISION );
+        if ( !genius_fp_r )
         {
-            node_logger->error( "Fixed-point multiplication error" );
+            node_logger->error( "Fixed-point divide error (Genius tokens)" );
+            return outcome::failure( boost::system::error_code{} );
+        }
+        uint64_t genius_fp = genius_fp_r.value();
+        node_logger->trace( "Genius tokens (FP x10^{}): {}", CALC_PRECISION, genius_fp );
+
+        uint64_t minions = genius_fp / SCALE_15_TO_9;
+        node_logger->trace( "Minions before max(1): {} ", minions );
+
+        return minions;
+    }
+
+    uint64_t GeniusNode::GetProcessCost( const std::string &json_data )
+    {
+        node_logger->info( "Received JSON data: {}", json_data );
+
+        auto blockLen = ParseBlockSize( json_data );
+        if ( !blockLen )
+        {
+            node_logger->error( "ParseBlockSize failed" );
             return 0;
         }
+        node_logger->trace( "Parsed total_bytes: {}", blockLen.value() );
 
-        // Divide by 10e3 to adjust for GNSU_PRECISION
-        uint64_t raw_cost = raw_cost_result.value() / 1000;
-
-        // Convert GNUS price to fixed-point representation with precision 6:
-        auto gnus_price_fixed = static_cast<uint64_t>( std::round( gnusPrice * 1e6 ) );
-
-        // Now, the cost in minions (in fixed point) is raw_cost divided by gnus_price_fixed:
-        auto cost_result = fixed_point::divide( raw_cost, gnus_price_fixed, 6 );
-        if ( !cost_result )
+        auto maybe_gnusPrice = GetGNUSPrice();
+        if ( !maybe_gnusPrice )
         {
-            node_logger->info( "Fixed-point division error" );
+            node_logger->error( "GetGNUSPrice failed" );
             return 0;
         }
-        costMinions = cost_result.value();
+        double gnusPrice = maybe_gnusPrice.value();
+        node_logger->trace( "Fetched GNUS price: {}", gnusPrice );
 
-        // Ensure at least one minion is charged.
-        return std::max( costMinions, UINT64_C( 1 ) );
+        auto costMinions = CalculateCostMinions( blockLen.value(), gnusPrice );
+        if ( !costMinions )
+        {
+            node_logger->error( "CalculateCostMinions failed" );
+            return 0;
+        }
+        node_logger->trace( "CalculateCostMinions: {}", costMinions.value() );
+
+        return std::max( costMinions.value(), UINT64_C( 1 ) );
     }
 
     outcome::result<double> GeniusNode::GetGNUSPrice()

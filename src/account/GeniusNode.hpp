@@ -54,18 +54,18 @@ namespace sgns
          */
         enum class Error
         {
-            INSUFFICIENT_FUNDS       = 1,  ///<Insufficient funds for a transaction
-            DATABASE_WRITE_ERROR     = 2,  ///<Error writing data into the database
-            INVALID_TRANSACTION_HASH = 3,  ///<Input transaction hash is invalid
-            INVALID_CHAIN_ID         = 4,  ///<Chain ID is invalid
-            INVALID_TOKEN_ID         = 5,  ///<Token ID is invalid
-            TOKEN_ID_MISMATCH        = 6,  ///<Informed Token ID doesn't match initialized ID
-            PROCESS_COST_ERROR       = 7,  ///<The calculated Processing cost was negative
-            PROCESS_INFO_MISSING     = 8,  ///<Processing information missing on JSON file
-            INVALID_JSON             = 9,  ///<JSON cannot be parsed>
-            INVALID_BLOCK_PARAMETERS = 10, ///<JSON params for blocks incorrect or missing>
-            NO_PROCESSOR             = 11, ///<No processor for this type>
-            NO_PRICE                 = 12, ///<Couldn't get price of gnus>
+            INSUFFICIENT_FUNDS       = 1,  ///< Insufficient funds for a transaction
+            DATABASE_WRITE_ERROR     = 2,  ///< Error writing data into the database
+            INVALID_TRANSACTION_HASH = 3,  ///< Input transaction hash is invalid
+            INVALID_CHAIN_ID         = 4,  ///< Chain ID is invalid
+            INVALID_TOKEN_ID         = 5,  ///< Token ID is invalid
+            TOKEN_ID_MISMATCH        = 6,  ///< Informed Token ID doesn't match initialized ID
+            PROCESS_COST_ERROR       = 7,  ///< The calculated Processing cost was negative
+            PROCESS_INFO_MISSING     = 8,  ///< Processing information missing on JSON file
+            INVALID_JSON             = 9,  ///< JSON cannot be parsed>
+            INVALID_BLOCK_PARAMETERS = 10, ///< JSON params for blocks incorrect or missing>
+            NO_PROCESSOR             = 11, ///< No processor for this type>
+            NO_PRICE                 = 12, ///< Couldn't get price of gnus>
         };
 
 #ifdef SGNS_DEBUG
@@ -221,6 +221,21 @@ namespace sgns
 
         void ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult );
         void ProcessingError( const std::string &task_id );
+
+        /**
+         * @brief Parse and sum all "block_len" values from the JSON.
+         * @param json_data JSON string containing an "input" array.
+         * @return outcome::result<uint64_t> with total bytes, or an error code.
+         */
+        outcome::result<uint64_t> ParseBlockSize( const std::string &json_data );
+
+        /**
+         * @brief Calculate cost in minions from total bytes and GNUS price.
+         * @param total_bytes Total number of bytes to process.
+         * @param price_usd_per_genius Current price (USD per Genius token).
+         * @return outcome::result<uint64_t> with minion count, or an error code.
+         */
+        outcome::result<uint64_t> CalculateCostMinions( uint64_t total_bytes, double price_usd_per_genius );
 
         static constexpr std::string_view db_path_                = "bc-%d/";
         static constexpr std::uint16_t    MAIN_NET                = 369;
