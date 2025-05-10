@@ -39,15 +39,11 @@ TEST_P( FixedPointParamTest, FromString )
         ASSERT_TRUE( result.has_value() );
         EXPECT_EQ( result.value(), expected_val );
     }
-    else if ( std::holds_alternative<std::errc>( test_case.expected ) )
+    else
     {
         std::errc expected_err = std::get<std::errc>( test_case.expected );
         ASSERT_FALSE( result.has_value() );
         EXPECT_EQ( result.error(), std::make_error_code( expected_err ) );
-    }
-    else
-    {
-        FAIL() << "Unknown test case type.";
     }
 }
 
@@ -156,24 +152,38 @@ class FixedPointMultiplyParamTest : public ::testing::TestWithParam<MultiplyPara
  */
 TEST_P( FixedPointMultiplyParamTest, Multiply )
 {
-    auto test_case = GetParam();
-    auto result    = sgns::fixed_point::multiply( test_case.a, test_case.b, test_case.precision );
+    auto tc = GetParam();
 
-    if ( std::holds_alternative<uint64_t>( test_case.expected ) )
+    auto static_res = sgns::fixed_point::multiply( tc.a, tc.b, tc.precision );
+
+    if ( std::holds_alternative<uint64_t>( tc.expected ) )
     {
-        uint64_t expected_val = std::get<uint64_t>( test_case.expected );
-        ASSERT_TRUE( result.has_value() );
-        EXPECT_EQ( result.value(), expected_val );
-    }
-    else if ( std::holds_alternative<std::errc>( test_case.expected ) )
-    {
-        std::errc expected_err = std::get<std::errc>( test_case.expected );
-        ASSERT_FALSE( result.has_value() );
-        EXPECT_EQ( result.error(), std::make_error_code( expected_err ) );
+        uint64_t expect = std::get<uint64_t>( tc.expected );
+        ASSERT_TRUE( static_res.has_value() );
+        EXPECT_EQ( static_res.value(), expect );
     }
     else
     {
-        FAIL() << "Unknown test case type.";
+        std::errc expect_err = std::get<std::errc>( tc.expected );
+        ASSERT_FALSE( static_res.has_value() );
+        EXPECT_EQ( static_res.error(), std::make_error_code( expect_err ) );
+    }
+
+    sgns::fixed_point fa( tc.a, tc.precision ), fb( tc.b, tc.precision );
+    auto              obj_res = fa.multiply( fb );
+    if ( std::holds_alternative<uint64_t>( tc.expected ) )
+    {
+        uint64_t expect = std::get<uint64_t>( tc.expected );
+        ASSERT_TRUE( obj_res.has_value() );
+        auto fp = obj_res.value();
+        EXPECT_EQ( fp.value(), expect );
+        EXPECT_EQ( fp.precision(), tc.precision );
+    }
+    else
+    {
+        std::errc expect_err = std::get<std::errc>( tc.expected );
+        ASSERT_FALSE( obj_res.has_value() );
+        EXPECT_EQ( obj_res.error(), std::make_error_code( expect_err ) );
     }
 }
 
@@ -196,7 +206,7 @@ INSTANTIATE_TEST_SUITE_P( FixedPointMultiplyTests,
                               // Error Cases
                               MultiplyParam_s{ UINT64_MAX, 1000000001ULL, 9ULL, std::errc::value_too_large } ) );
 
-// ======================== FixedPointDivideSuccessTest ========================
+// ======================== FixedPointDivideTests ========================
 
 struct DivideParam_s
 {
@@ -218,24 +228,37 @@ class FixedPointDivideParamTest : public ::testing::TestWithParam<DivideParam_s>
  */
 TEST_P( FixedPointDivideParamTest, Divide )
 {
-    auto test_case = GetParam();
-    auto result    = sgns::fixed_point::divide( test_case.num, test_case.den, test_case.precision );
+    auto tc = GetParam();
 
-    if ( std::holds_alternative<uint64_t>( test_case.expected ) )
+    auto static_res = sgns::fixed_point::divide( tc.num, tc.den, tc.precision );
+    if ( std::holds_alternative<uint64_t>( tc.expected ) )
     {
-        uint64_t expected_val = std::get<uint64_t>( test_case.expected );
-        ASSERT_TRUE( result.has_value() );
-        EXPECT_EQ( result.value(), expected_val );
-    }
-    else if ( std::holds_alternative<std::errc>( test_case.expected ) )
-    {
-        std::errc expected_err = std::get<std::errc>( test_case.expected );
-        ASSERT_FALSE( result.has_value() );
-        EXPECT_EQ( result.error(), std::make_error_code( expected_err ) );
+        uint64_t expect = std::get<uint64_t>( tc.expected );
+        ASSERT_TRUE( static_res.has_value() );
+        EXPECT_EQ( static_res.value(), expect );
     }
     else
     {
-        FAIL() << "Unknown test case type.";
+        std::errc expect_err = std::get<std::errc>( tc.expected );
+        ASSERT_FALSE( static_res.has_value() );
+        EXPECT_EQ( static_res.error(), std::make_error_code( expect_err ) );
+    }
+
+    sgns::fixed_point fa( tc.num, tc.precision ), fb( tc.den, tc.precision );
+    auto              obj_res = fa.divide( fb );
+    if ( std::holds_alternative<uint64_t>( tc.expected ) )
+    {
+        uint64_t expect = std::get<uint64_t>( tc.expected );
+        ASSERT_TRUE( obj_res.has_value() );
+        auto fp = obj_res.value();
+        EXPECT_EQ( fp.value(), expect );
+        EXPECT_EQ( fp.precision(), tc.precision );
+    }
+    else
+    {
+        std::errc expect_err = std::get<std::errc>( tc.expected );
+        ASSERT_FALSE( obj_res.has_value() );
+        EXPECT_EQ( obj_res.error(), std::make_error_code( expect_err ) );
     }
 }
 

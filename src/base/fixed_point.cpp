@@ -12,6 +12,7 @@
 #include <cmath>
 #include <limits>
 #include <system_error>
+#include <boost/multiprecision/cpp_int.hpp>
 
 namespace sgns
 {
@@ -27,10 +28,6 @@ namespace sgns
 
     outcome::result<uint64_t> fixed_point::fromString( const std::string &str_value, uint64_t precision )
     {
-        if ( precision > MAX_PRECISION )
-        {
-            return outcome::failure( std::make_error_code( std::errc::value_too_large ) );
-        }
         if ( str_value.empty() )
         {
             return outcome::failure( std::make_error_code( std::errc::invalid_argument ) );
@@ -105,10 +102,6 @@ namespace sgns
     outcome::result<uint64_t> fixed_point::multiply( uint64_t a, uint64_t b, uint64_t precision )
     {
         using namespace boost::multiprecision;
-        if ( precision > MAX_PRECISION )
-        {
-            return outcome::failure( std::make_error_code( std::errc::value_too_large ) );
-        }
         uint128_t result = static_cast<uint128_t>( a ) * static_cast<uint128_t>( b );
         result           = result / static_cast<uint128_t>( scaleFactor( precision ) );
 
@@ -122,10 +115,6 @@ namespace sgns
     outcome::result<uint64_t> fixed_point::divide( uint64_t a, uint64_t b, uint64_t precision )
     {
         using namespace boost::multiprecision;
-        if ( precision > MAX_PRECISION )
-        {
-            return outcome::failure( std::make_error_code( std::errc::value_too_large ) );
-        }
         if ( b == 0 )
         {
             return outcome::failure( std::make_error_code( std::errc::result_out_of_range ) );
@@ -141,4 +130,73 @@ namespace sgns
 
         return outcome::success( static_cast<uint64_t>( result ) );
     }
+
+    fixed_point::fixed_point( uint64_t value, uint64_t precision ) : value_( value ), precision_( precision ) {}
+
+    uint64_t fixed_point::value() const noexcept
+    {
+        return value_;
+    }
+
+    uint64_t fixed_point::precision() const noexcept
+    {
+        return precision_;
+    }
+
+    outcome::result<fixed_point> fixed_point::add( const fixed_point &other ) const
+    {
+        if ( precision_ != other.precision_ )
+        {
+            return outcome::failure( std::make_error_code( std::errc::invalid_argument ) );
+        }
+        using namespace boost::multiprecision;
+        uint128_t sum = static_cast<uint128_t>( value_ ) + static_cast<uint128_t>( other.value_ );
+        if ( sum > std::numeric_limits<uint64_t>::max() )
+        {
+            return outcome::failure( std::make_error_code( std::errc::value_too_large ) );
+        }
+        return outcome::success( fixed_point( static_cast<uint64_t>( sum ), precision_ ) );
+    }
+
+    outcome::result<fixed_point> fixed_point::subtract( const fixed_point &other ) const
+    {
+        if ( precision_ != other.precision_ )
+        {
+            return outcome::failure( std::make_error_code( std::errc::invalid_argument ) );
+        }
+        if ( other.value_ > value_ )
+        {
+            return outcome::failure( std::make_error_code( std::errc::result_out_of_range ) );
+        }
+        return outcome::success( fixed_point( value_ - other.value_, precision_ ) );
+    }
+
+    outcome::result<fixed_point> fixed_point::multiply( const fixed_point &other ) const
+    {
+        if ( precision_ != other.precision_ )
+        {
+            return outcome::failure( std::make_error_code( std::errc::invalid_argument ) );
+        }
+        auto raw = fixed_point::multiply( value_, other.value_, precision_ );
+        if ( !raw )
+        {
+            return outcome::failure( raw.error() );
+        }
+        return outcome::success( fixed_point( raw.value(), precision_ ) );
+    }
+
+    outcome::result<fixed_point> fixed_point::divide( const fixed_point &other ) const
+    {
+        if ( precision_ != other.precision_ )
+        {
+            return outcome::failure( std::make_error_code( std::errc::invalid_argument ) );
+        }
+        auto raw = fixed_point::divide( value_, other.value_, precision_ );
+        if ( !raw )
+        {
+            return outcome::failure( raw.error() );
+        }
+        return outcome::success( fixed_point( raw.value(), precision_ ) );
+    }
+
 } // namespace sgns

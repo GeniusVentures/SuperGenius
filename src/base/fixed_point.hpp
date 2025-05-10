@@ -18,20 +18,15 @@ namespace sgns
 {
     /**
      * @class       fixed_point
-     * @brief       Provides fixed-point arithmetic utilities.
+     * @brief       Provides fixed-point arithmetic utilities and value-type support.
      */
     class fixed_point
     {
     public:
         /**
-         * @brief How many decimal places are needed to store one GNU (minion = 10^-GNUS_PRECISION).
+         * @brief Default precision (number of decimal places).
          */
         static constexpr uint64_t GNUS_PRECISION = 6;
-
-        /**
-         * @brief Maximum precision for fixed-point calculations.
-         */
-        static constexpr uint64_t MAX_PRECISION = 16;
 
         /**
          * @brief       Returns power-of-ten scaling factor for a given precision.
@@ -74,6 +69,57 @@ namespace sgns
          * @return      Outcome of division in fixed-point representation.
          */
         static outcome::result<uint64_t> divide( uint64_t a, uint64_t b, uint64_t precision = GNUS_PRECISION );
+
+        /**
+         * @brief       Construct a fixed_point value.
+         * @param[in]   value     Raw fixed-point integer.
+         * @param[in]   precision Number of decimal places.
+         */
+        explicit fixed_point( uint64_t value, uint64_t precision = GNUS_PRECISION );
+
+        /**
+         * @brief       Get the raw fixed-point value.
+         * @return      Raw fixed-point integer.
+         */
+        uint64_t value() const noexcept;
+
+        /**
+         * @brief       Get the precision of this fixed-point value.
+         * @return      Number of decimal places.
+         */
+        uint64_t precision() const noexcept;
+
+        /**
+         * @brief       Add another fixed_point with matching precision.
+         * @param[in]   other Other fixed_point to add.
+         * @return      Sum as fixed_point or failure if precision mismatch or overflow.
+         */
+        outcome::result<fixed_point> add( const fixed_point &other ) const;
+
+        /**
+         * @brief       Subtract another fixed_point with matching precision.
+         * @param[in]   other Other fixed_point to subtract.
+         * @return      Difference as fixed_point or failure if precision mismatch or underflow.
+         */
+        outcome::result<fixed_point> subtract( const fixed_point &other ) const;
+
+        /**
+         * @brief       Multiply by another fixed_point with matching precision.
+         * @param[in]   other Other fixed_point to multiply.
+         * @return      Product as fixed_point or failure if precision mismatch or overflow.
+         */
+        outcome::result<fixed_point> multiply( const fixed_point &other ) const;
+
+        /**
+         * @brief       Divide by another fixed_point with matching precision.
+         * @param[in]   other Other fixed_point to divide by.
+         * @return      Quotient as fixed_point or failure if precision mismatch or division by zero.
+         */
+        outcome::result<fixed_point> divide( const fixed_point &other ) const;
+
+    private:
+        uint64_t value_;
+        uint64_t precision_;
     };
 } // namespace sgns
 
