@@ -15,26 +15,15 @@
 
 namespace sgns::fixed_point
 {
-    /**
-     * @brief Generates a table of scaling factors for different precision levels.
-     * @return A constexpr array of scaling factors.
-     */
-    static constexpr std::array<uint64_t, MAX_PRECISION + 1> generateScaleTable()
+    constexpr uint64_t scaleFactor( uint64_t precision )
     {
-        std::array<uint64_t, MAX_PRECISION + 1> table{};
-        uint64_t                                value = 1;
-        for ( size_t i = 0; i < MAX_PRECISION + 1; i++ )
+        uint64_t result = 1;
+        for ( uint64_t i = 0; i < precision; ++i )
         {
-            table[i]  = value;
-            value    *= 10;
+            result *= 10;
         }
-        return table;
+        return result;
     }
-
-    /**
-     * @brief Precomputed table of scaling factors.
-     */
-    static constexpr std::array<uint64_t, MAX_PRECISION + 1> scale_table = generateScaleTable();
 
     outcome::result<uint64_t> fromString( const std::string &str_value, uint64_t precision )
     {
@@ -91,13 +80,13 @@ namespace sgns::fixed_point
             fractional_part *= 10;
         }
 
-        return outcome::success( ( integer_part * scale_table[precision] ) + fractional_part );
+        return outcome::success( ( integer_part * scaleFactor( precision ) ) + fractional_part );
     }
 
     std::string toString( uint64_t value, uint64_t precision )
     {
-        uint64_t integer_part    = value / scale_table[precision];
-        uint64_t fractional_part = value % scale_table[precision];
+        uint64_t integer_part    = value / scaleFactor( precision );
+        uint64_t fractional_part = value % scaleFactor( precision );
 
         if ( precision == 0 )
         {
@@ -122,7 +111,7 @@ namespace sgns::fixed_point
             return outcome::failure( std::make_error_code( std::errc::value_too_large ) );
         }
         uint128_t result = static_cast<uint128_t>( a ) * static_cast<uint128_t>( b );
-        result           = result / static_cast<uint128_t>( scale_table[precision] );
+        result           = result / static_cast<uint128_t>( scaleFactor( precision ) );
 
         if ( result > std::numeric_limits<uint64_t>::max() )
         {
@@ -143,8 +132,9 @@ namespace sgns::fixed_point
             return outcome::failure( std::make_error_code( std::errc::result_out_of_range ) );
         }
 
-        uint128_t result = ( static_cast<uint128_t>( a ) * static_cast<uint128_t>( scale_table[precision] ) ) /
+        uint128_t result = ( static_cast<uint128_t>( a ) * static_cast<uint128_t>( scaleFactor( precision ) ) ) /
                            static_cast<uint128_t>( b );
+
         if ( result > std::numeric_limits<uint64_t>::max() )
         {
             return outcome::failure( std::make_error_code( std::errc::value_too_large ) );

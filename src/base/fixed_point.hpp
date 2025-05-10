@@ -26,7 +26,12 @@ namespace sgns::fixed_point
      * @brief Maximum precision for fixed-point calculations.
      */
     static constexpr uint64_t MAX_PRECISION = 16;
-
+    /**
+     * @brief       Returns power-of-ten scaling factor for a given precision.
+     * @param[in]   precision Number of decimal places.
+     * @return      10 raised to the power of precision.
+     */
+    constexpr uint64_t scaleFactor( uint64_t precision = GNUS_PRECISION );
     /**
      * @brief       Convert a string to fixed-point representation
      * @param[in]   str_value Numeric string with integer and fractional parts
