@@ -78,6 +78,17 @@ namespace sgns
         explicit fixed_point( uint64_t value, uint64_t precision = GNUS_PRECISION );
 
         /**
+         * @brief       Convert a raw fixed-point integer from one precision to another.
+         * @param[in]   value           Fixed-point integer at original precision.
+         * @param[in]   from_precision  Original number of decimal places.
+         * @param[in]   to_precision    Target number of decimal places.
+         * @return      Outcome with converted raw value or error if overflow.
+         */
+        static outcome::result<uint64_t> convertPrecision( uint64_t value,
+                                                           uint64_t from_precision,
+                                                           uint64_t to_precision );
+
+        /**
          * @brief       Get the raw fixed-point value.
          * @return      Raw fixed-point integer.
          */
@@ -116,6 +127,13 @@ namespace sgns
          * @return      Quotient as fixed_point or failure if precision mismatch or division by zero.
          */
         outcome::result<fixed_point> divide( const fixed_point &other ) const;
+
+        /**
+         * @brief       Convert this fixed_point object to a different precision.
+         * @param[in]   to_precision    Target number of decimal places.
+         * @return      Outcome with new fixed_point or error if overflow.
+         */
+        outcome::result<fixed_point> convertPrecision( uint64_t to_precision ) const;
 
     private:
         uint64_t value_;

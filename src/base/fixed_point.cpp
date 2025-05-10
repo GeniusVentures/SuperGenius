@@ -131,6 +131,31 @@ namespace sgns
         return outcome::success( static_cast<uint64_t>( result ) );
     }
 
+    outcome::result<uint64_t> fixed_point::convertPrecision( uint64_t value,
+                                                             uint64_t from_precision,
+                                                             uint64_t to_precision )
+    {
+        using namespace boost::multiprecision;
+        if ( from_precision == to_precision )
+        {
+            return outcome::success( value );
+        }
+
+        if ( to_precision > from_precision )
+        {
+            uint64_t  delta  = to_precision - from_precision;
+            uint128_t result = static_cast<uint128_t>( value ) * static_cast<uint128_t>( scaleFactor( delta ) );
+            if ( result > std::numeric_limits<uint64_t>::max() )
+            {
+                return outcome::failure( std::make_error_code( std::errc::value_too_large ) );
+            }
+            return outcome::success( static_cast<uint64_t>( result ) );
+        }
+        uint64_t delta     = from_precision - to_precision;
+        uint64_t converted = value / scaleFactor( delta );
+        return outcome::success( converted );
+    }
+
     fixed_point::fixed_point( uint64_t value, uint64_t precision ) : value_( value ), precision_( precision ) {}
 
     uint64_t fixed_point::value() const noexcept
@@ -199,4 +224,13 @@ namespace sgns
         return outcome::success( fixed_point( raw.value(), precision_ ) );
     }
 
+    outcome::result<fixed_point> fixed_point::convertPrecision( uint64_t to_precision ) const
+    {
+        auto raw = fixed_point::convertPrecision( value_, precision_, to_precision );
+        if ( !raw )
+        {
+            return outcome::failure( raw.error() );
+        }
+        return outcome::success( fixed_point( raw.value(), to_precision ) );
+    }
 } // namespace sgns

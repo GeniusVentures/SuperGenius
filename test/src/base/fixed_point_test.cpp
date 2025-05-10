@@ -278,3 +278,87 @@ INSTANTIATE_TEST_SUITE_P( FixedPointDivideTests,
                               DivideParam_s{ 0ULL, 0ULL, 9ULL, std::errc::result_out_of_range },
                               DivideParam_s{ 1000000000ULL, 0ULL, 9ULL, std::errc::result_out_of_range },
                               DivideParam_s{ UINT64_MAX, 999999999ULL, 9ULL, std::errc::value_too_large } ) );
+
+/**
+ * @brief Struct to hold test parameters for FixedPointConvertPrecisionParamTest.
+ */
+struct ConvertPrecisionParam_s
+{
+    uint64_t                          value;          ///< Raw fixed-point integer input.
+    uint64_t                          from_precision; ///< Original number of decimal places.
+    uint64_t                          to_precision;   ///< Target number of decimal places.
+    std::variant<uint64_t, std::errc> expected;       ///< Expected converted value or error code.
+};
+
+/**
+ * @brief Parameterized test fixture for testing `convertPrecision` functions.
+ */
+class FixedPointConvertPrecisionParamTest : public ::testing::TestWithParam<ConvertPrecisionParam_s>
+{
+};
+
+/**
+ * @test Tests static and object `convertPrecision` functions.
+ */
+TEST_P( FixedPointConvertPrecisionParamTest, ConvertPrecision )
+{
+    auto test_case = GetParam();
+
+    // -- static convertPrecision --
+    auto static_res = sgns::fixed_point::convertPrecision( test_case.value,
+                                                           test_case.from_precision,
+                                                           test_case.to_precision );
+
+    if ( std::holds_alternative<uint64_t>( test_case.expected ) )
+    {
+        uint64_t expected_val = std::get<uint64_t>( test_case.expected );
+        ASSERT_TRUE( static_res.has_value() );
+        EXPECT_EQ( static_res.value(), expected_val );
+    }
+    else
+    {
+        std::errc expected_err = std::get<std::errc>( test_case.expected );
+        ASSERT_FALSE( static_res.has_value() );
+        EXPECT_EQ( static_res.error(), std::make_error_code( expected_err ) );
+    }
+
+    // -- object convertPrecision --
+    sgns::fixed_point fp( test_case.value, test_case.from_precision );
+    auto              obj_res = fp.convertPrecision( test_case.to_precision );
+
+    if ( std::holds_alternative<uint64_t>( test_case.expected ) )
+    {
+        uint64_t expected_val = std::get<uint64_t>( test_case.expected );
+        ASSERT_TRUE( obj_res.has_value() );
+        auto result_fp = obj_res.value();
+        EXPECT_EQ( result_fp.value(), expected_val );
+        EXPECT_EQ( result_fp.precision(), test_case.to_precision );
+    }
+    else
+    {
+        std::errc expected_err = std::get<std::errc>( test_case.expected );
+        ASSERT_FALSE( obj_res.has_value() );
+        EXPECT_EQ( obj_res.error(), std::make_error_code( expected_err ) );
+    }
+}
+
+/**
+ * @test Test suite for `convertPrecision` functions.
+ */
+INSTANTIATE_TEST_SUITE_P(
+    FixedPointConvertPrecisionTests,
+    FixedPointConvertPrecisionParamTest,
+    ::testing::Values(
+        // Success Cases
+        ConvertPrecisionParam_s{ 12345ULL, 3ULL, 3ULL, 12345ULL },
+        ConvertPrecisionParam_s{ 12345ULL, 3ULL, 6ULL, 12345000ULL },
+        ConvertPrecisionParam_s{ 123456000ULL, 6ULL, 3ULL, 123456ULL },
+        // Losing precision
+        ConvertPrecisionParam_s{ 123456789ULL, 9ULL, 6ULL, 123456ULL },
+        ConvertPrecisionParam_s{ 1ULL, 9ULL, 0ULL, 0ULL },
+        ConvertPrecisionParam_s{ 0ULL, 5ULL, 10ULL, 0ULL },
+        // Error Cases
+        ConvertPrecisionParam_s{ UINT64_MAX, 0ULL, 1ULL, std::errc::value_too_large },
+        ConvertPrecisionParam_s{ ( UINT64_MAX / 10 ) + 1, 1ULL, 2ULL, std::errc::value_too_large },
+        ConvertPrecisionParam_s{ 0xFFFFFFFFFFFFFFULL, 0ULL, 4ULL, std::errc::value_too_large },
+        ConvertPrecisionParam_s{ 1234567890123456789ULL, 9ULL, 19ULL, std::errc::value_too_large } ) );
