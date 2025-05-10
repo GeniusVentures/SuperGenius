@@ -659,46 +659,53 @@ namespace sgns
 
     outcome::result<uint64_t> GeniusNode::CalculateCostMinions( uint64_t total_bytes, double price_usd_per_genius )
     {
-        // Using the assumption: 20 FLOPs per byte and each FLOP costs 5e-15 USD,
-        // the cost per byte in USD is: 20 * 5e-15 = 1e-13 USD.
-        // Converting this to a fixed-point constant with 9 decimals:
-        //    1e-13 USD/byte * 1e9 = 1e-4, i.e., 0.0001, and in fixed point with 9 decimals, that's 100000.
+        // decimals for USD/FLOP fixed-point
+        constexpr auto CALC_PRECISION = UINT64_C( 15 );
+        // decimals for minion (1e-6 Genius)
+        constexpr auto MINION_PRECISION = UINT64_C( 9 );
+        // 5e-15 USD/FLOP at CALC_PRECISION decimals
+        constexpr auto PRICE_PER_FLOP_FP = UINT64_C( 5 );
+        // FLOPs per byte assumption
+        constexpr auto FLOPS_PER_BYTE = UINT64_C( 20 );
 
-        constexpr auto CALC_PRECISION    = UINT64_C( 15 ); // decimals for USD/FLOP fixed-point
-        constexpr auto MINION_PRECISION  = UINT64_C( 9 );  // decimals for minion (1e-6 Genius)
-        constexpr auto PRICE_PER_FLOP_FP = UINT64_C( 5 );  // 5e-15 USD/FLOP
-        constexpr auto FLOPS_PER_BYTE    = UINT64_C( 20 ); // FLOPs per byte
-        constexpr auto PRICE_PER_BYTE    = FLOPS_PER_BYTE * PRICE_PER_FLOP_FP;
+        // Raw per-byte cost in fixed-point: FLOPS_PER_BYTE × PRICE_PER_FLOP_FP
+        constexpr auto PRICE_PER_BYTE_FP = PRICE_PER_FLOP_FP * FLOPS_PER_BYTE;
 
-        constexpr uint64_t SCALE_15_TO_9 = 1000000ULL;
-
-        uint64_t total_usd_fp = total_bytes * PRICE_PER_BYTE;
-
+        // 1) total USD cost in fixed_point via double constructor
+        auto total_usd_fp = fixed_point( total_bytes * PRICE_PER_BYTE_FP, CALC_PRECISION );
         node_logger->trace( "Total USD cost (FP x10^{}): {} (from {} bytes)",
-                            CALC_PRECISION,
-                            total_usd_fp,
+                            total_usd_fp.precision(),
+                            total_usd_fp.value(),
                             total_bytes );
 
-        uint64_t price_fp = static_cast<uint64_t>(
-            std::round( price_usd_per_genius * std::pow( 10.0, CALC_PRECISION ) ) );
+        // 2) GNUS price per token as fixed_point via double constructor
+        auto price_fp = fixed_point( price_usd_per_genius, CALC_PRECISION );
         node_logger->trace( "GNUS price fixed-point (x10^{}): {} (raw price: {})",
-                            CALC_PRECISION,
-                            price_fp,
+                            price_fp.precision(),
+                            price_fp.value(),
                             price_usd_per_genius );
 
-        auto genius_fp_r = sgns::fixed_point::divide( total_usd_fp, price_fp, CALC_PRECISION );
+        // 3) Compute Genius tokens = total_usd_fp / price_fp
+        auto genius_fp_r = total_usd_fp.divide( price_fp );
         if ( !genius_fp_r )
         {
             node_logger->error( "Fixed-point divide error (Genius tokens)" );
-            return outcome::failure( boost::system::error_code{} );
+            return outcome::failure( genius_fp_r.error() );
         }
-        uint64_t genius_fp = genius_fp_r.value();
-        node_logger->trace( "Genius tokens (FP x10^{}): {}", CALC_PRECISION, genius_fp );
+        auto genius_fp = genius_fp_r.value();
+        node_logger->trace( "Genius tokens (FP x10^{}): {}", genius_fp.precision(), genius_fp.value() );
 
-        uint64_t minions = genius_fp / SCALE_15_TO_9;
-        node_logger->trace( "Minions before max(1): {} ", minions );
+        // 4) Convert to minion precision
+        auto minion_fp_r = genius_fp.convertPrecision( MINION_PRECISION );
+        if ( !minion_fp_r )
+        {
+            node_logger->error( "Fixed-point precision conversion error (Minion tokens)" );
+            return outcome::failure( minion_fp_r.error() );
+        }
+        auto minion_fp = minion_fp_r.value();
+        node_logger->trace( "Minions before max(1): {}", minion_fp.value() );
 
-        return minions;
+        return outcome::success( minion_fp.value() );
     }
 
     uint64_t GeniusNode::GetProcessCost( const std::string &json_data )
