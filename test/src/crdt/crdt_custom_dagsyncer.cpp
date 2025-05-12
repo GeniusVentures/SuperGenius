@@ -63,4 +63,5 @@ namespace sgns::crdt
         return outcome::success();
     }
 
+    void CustomDagSyncer::Stop() {}
 } // namespace sgns::crdt
