@@ -106,7 +106,7 @@ std::vector<int> BpeTokenizer::encode(const std::string& input) const {
             if (it != vocab.end()) {
                 result.push_back(it->second);
             } else {
-                result.push_back(vocab.at("<unk>")); // or 0 if unknown
+                result.push_back(0); // or 0 if unknown
             }
         }
     }

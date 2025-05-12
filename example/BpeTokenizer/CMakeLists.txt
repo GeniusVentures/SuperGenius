@@ -11,5 +11,7 @@ include_directories(
 
 target_link_libraries(BpeTokenizer PRIVATE
     rapidjson
+	MNN::MNN
+    Vulkan::Vulkan
     ${WIN_CRYPT_LIBRARY}
 )
