@@ -23,6 +23,7 @@
 #include "EscrowTransaction.hpp"
 #include "EscrowReleaseTransaction.hpp"
 #include "UTXOTxParameters.hpp"
+#include "account/TokenAmount.hpp"
 #include "account/proto/SGTransaction.pb.h"
 #include "base/fixed_point.hpp"
 #include "crdt/impl/crdt_data_filter.hpp"
@@ -303,7 +304,7 @@ namespace sgns
         std::vector<std::string>           subtask_ids;
         std::vector<OutputDestInfo>        payout_peers;
 
-        auto mult_result = fixed_point::multiply( escrow_tx->GetAmount(), escrow_tx->GetPeersCut() );
+        auto mult_result = fixed_point::multiply( escrow_tx->GetAmount(), escrow_tx->GetPeersCut(), TokenAmount::PRECISION );
         //TODO: check fail here, maybe if peer cut is greater than one to...
         uint64_t peers_amount = mult_result.value() / static_cast<uint64_t>( taskresult.subtask_results().size() );
         auto     remainder    = escrow_tx->GetAmount();

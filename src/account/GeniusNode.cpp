@@ -507,7 +507,7 @@ namespace sgns
             //}
             //imageindex++;
         }
-        auto cut = sgns::fixed_point::fromString( dev_config_.Cut );
+        auto cut = sgns::TokenAmount::ParseMinions( dev_config_.Cut );
         if ( !cut )
         {
             return outcome::failure( cut.error() );
@@ -657,57 +657,6 @@ namespace sgns
         return block_total_len;
     }
 
-    outcome::result<uint64_t> GeniusNode::CalculateCostMinions( uint64_t total_bytes, double price_usd_per_genius )
-    {
-        // decimals for USD/FLOP fixed-point
-        constexpr auto CALC_PRECISION = UINT64_C( 15 );
-        // decimals for minion (1e-6 Genius)
-        constexpr auto MINION_PRECISION = UINT64_C( 9 );
-        // 5e-15 USD/FLOP at CALC_PRECISION decimals
-        constexpr auto PRICE_PER_FLOP_FP = UINT64_C( 5 );
-        // FLOPs per byte assumption
-        constexpr auto FLOPS_PER_BYTE = UINT64_C( 20 );
-
-        // Raw per-byte cost in fixed-point: FLOPS_PER_BYTE × PRICE_PER_FLOP_FP
-        constexpr auto PRICE_PER_BYTE_FP = PRICE_PER_FLOP_FP * FLOPS_PER_BYTE;
-
-        // 1) total USD cost in fixed_point via double constructor
-        auto total_usd_fp = fixed_point( total_bytes * PRICE_PER_BYTE_FP, CALC_PRECISION );
-        node_logger->trace( "Total USD cost (FP x10^{}): {} (from {} bytes)",
-                            total_usd_fp.precision(),
-                            total_usd_fp.value(),
-                            total_bytes );
-
-        // 2) GNUS price per token as fixed_point via double constructor
-        auto price_fp = fixed_point( price_usd_per_genius, CALC_PRECISION );
-        node_logger->trace( "GNUS price fixed-point (x10^{}): {} (raw price: {})",
-                            price_fp.precision(),
-                            price_fp.value(),
-                            price_usd_per_genius );
-
-        // 3) Compute Genius tokens = total_usd_fp / price_fp
-        auto genius_fp_r = total_usd_fp.divide( price_fp );
-        if ( !genius_fp_r )
-        {
-            node_logger->error( "Fixed-point divide error (Genius tokens)" );
-            return outcome::failure( genius_fp_r.error() );
-        }
-        auto genius_fp = genius_fp_r.value();
-        node_logger->trace( "Genius tokens (FP x10^{}): {}", genius_fp.precision(), genius_fp.value() );
-
-        // 4) Convert to minion precision
-        auto minion_fp_r = genius_fp.convertPrecision( MINION_PRECISION );
-        if ( !minion_fp_r )
-        {
-            node_logger->error( "Fixed-point precision conversion error (Minion tokens)" );
-            return outcome::failure( minion_fp_r.error() );
-        }
-        auto minion_fp = minion_fp_r.value();
-        node_logger->trace( "Minions before max(1): {}", minion_fp.value() );
-
-        return outcome::success( minion_fp.value() );
-    }
-
     uint64_t GeniusNode::GetProcessCost( const std::string &json_data )
     {
         node_logger->info( "Received JSON data: {}", json_data );
@@ -718,26 +667,27 @@ namespace sgns
             node_logger->error( "ParseBlockSize failed" );
             return 0;
         }
-        node_logger->trace( "Parsed total_bytes: {}", blockLen.value() );
+        node_logger->trace( "Parsed totalBytes: {}", blockLen.value() );
 
-        auto maybe_gnusPrice = GetGNUSPrice();
-        if ( !maybe_gnusPrice )
+        auto maybeGnusPrice = GetGNUSPrice();
+        if ( !maybeGnusPrice )
         {
             node_logger->error( "GetGNUSPrice failed" );
             return 0;
         }
-        double gnusPrice = maybe_gnusPrice.value();
-        node_logger->trace( "Fetched GNUS price: {}", gnusPrice );
+        double gnusPrice = maybeGnusPrice.value();
+        node_logger->trace( "Retrieved GNUS price (USD/genius): {}", gnusPrice );
 
-        auto costMinions = CalculateCostMinions( blockLen.value(), gnusPrice );
-        if ( !costMinions )
+        auto rawMinionsRes = TokenAmount::CalculateCostMinions( blockLen.value(), gnusPrice );
+        if ( !rawMinionsRes )
         {
-            node_logger->error( "CalculateCostMinions failed" );
+            node_logger->error( "TokenAmount::CalculateCostMinions failed" );
             return 0;
         }
-        node_logger->trace( "CalculateCostMinions: {}", costMinions.value() );
+        uint64_t rawMinions = rawMinionsRes.value();
+        node_logger->trace( "Raw cost in minions: {}", rawMinions );
 
-        return std::max( costMinions.value(), UINT64_C( 1 ) );
+        return rawMinions;
     }
 
     outcome::result<double> GeniusNode::GetGNUSPrice()
@@ -986,12 +936,12 @@ namespace sgns
 
     std::string GeniusNode::FormatTokens( uint64_t amount )
     {
-        return fixed_point::toString( amount );
+        return TokenAmount::FormatMinions( amount );
     }
 
     outcome::result<uint64_t> GeniusNode::ParseTokens( const std::string &str )
     {
-        return fixed_point::fromString( str );
+        return TokenAmount::ParseMinions( str );
     }
 
     // Wait for a transaction to be processed with a timeout
@@ -1015,5 +965,4 @@ namespace sgns
     {
         transaction_manager_->EnqueueTransaction( std::make_pair( tx, proof ) );
     }
-
 }

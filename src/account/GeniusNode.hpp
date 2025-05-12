@@ -9,6 +9,7 @@
 #include <libp2p/multi/content_identifier_codec.hpp>
 
 #include "account/GeniusAccount.hpp"
+#include "account/TokenAmount.hpp"
 #include "base/buffer.hpp"
 #include "account/TransactionManager.hpp"
 #include <ipfs_lite/ipfs/graphsync/graphsync.hpp>
@@ -229,13 +230,6 @@ namespace sgns
          */
         outcome::result<uint64_t> ParseBlockSize( const std::string &json_data );
 
-        /**
-         * @brief Calculate cost in minions from total bytes and GNUS price.
-         * @param total_bytes Total number of bytes to process.
-         * @param price_usd_per_genius Current price (USD per Genius token).
-         * @return outcome::result<uint64_t> with minion count, or an error code.
-         */
-        outcome::result<uint64_t> CalculateCostMinions( uint64_t total_bytes, double price_usd_per_genius );
 
         static constexpr std::string_view db_path_                = "bc-%d/";
         static constexpr std::uint16_t    MAIN_NET                = 369;

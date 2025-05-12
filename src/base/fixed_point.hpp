@@ -23,17 +23,13 @@ namespace sgns
     class fixed_point
     {
     public:
-        /**
-         * @brief Default precision (number of decimal places).
-         */
-        static constexpr uint64_t GNUS_PRECISION = 6;
 
         /**
          * @brief       Returns power-of-ten scaling factor for a given precision.
          * @param[in]   precision Number of decimal places.
          * @return      10 raised to the power of precision.
          */
-        static constexpr uint64_t scaleFactor( uint64_t precision = GNUS_PRECISION );
+        static constexpr uint64_t scaleFactor( uint64_t precision  );
 
         /**
          * @brief       Convert a string to fixed-point representation.
@@ -42,7 +38,7 @@ namespace sgns
          * @return      Outcome of fixed-point representation or error.
          */
         static outcome::result<uint64_t> fromString( const std::string &str_value,
-                                                     uint64_t           precision = GNUS_PRECISION );
+                                                     uint64_t           precision  );
 
         /**
          * @brief       Convert fixed-point representation back to string.
@@ -50,7 +46,7 @@ namespace sgns
          * @param[in]   precision Number of decimal places.
          * @return      String representation.
          */
-        static std::string toString( uint64_t value, uint64_t precision = GNUS_PRECISION );
+        static std::string toString( uint64_t value, uint64_t precision  );
 
         /**
          * @brief       Convert a double to a raw fixed-point integer.
@@ -68,7 +64,7 @@ namespace sgns
          * @param[in]   precision Number of decimal places.
          * @return      Outcome of multiplication in fixed-point representation.
          */
-        static outcome::result<uint64_t> multiply( uint64_t a, uint64_t b, uint64_t precision = GNUS_PRECISION );
+        static outcome::result<uint64_t> multiply( uint64_t a, uint64_t b, uint64_t precision  );
 
         /**
          * @brief       Divide two fixed-point numbers with optional precision.
@@ -77,7 +73,7 @@ namespace sgns
          * @param[in]   precision Number of decimal places.
          * @return      Outcome of division in fixed-point representation.
          */
-        static outcome::result<uint64_t> divide( uint64_t a, uint64_t b, uint64_t precision = GNUS_PRECISION );
+        static outcome::result<uint64_t> divide( uint64_t a, uint64_t b, uint64_t precision  );
 
         /**
          * @brief       Construct a fixed_point value.
