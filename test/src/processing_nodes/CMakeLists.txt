@@ -1,6 +1,7 @@
 
 addtest(processing_nodes_test
     processing_nodes_test.cpp
+    token_amount_test.cpp
     )
 
 target_include_directories(processing_nodes_test PRIVATE ${AsyncIOManager_INCLUDE_DIR})

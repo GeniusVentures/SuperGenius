@@ -1,8 +1,9 @@
 #pragma once
-
+#include <iostream>
 #include <string>
 #include "base/fixed_point.hpp"
 #include "outcome/outcome.hpp"
+#include <boost/multiprecision/cpp_int.hpp>
 
 namespace sgns
 {
@@ -55,40 +56,83 @@ namespace sgns
          * @param priceUsdPerToken Price of one GNUS token in USD
          * @return Cost in minion units, at least MIN_MINION_UNITS
          */
+
         static outcome::result<uint64_t> CalculateCostMinions( uint64_t totalBytes, double priceUsdPerGenius )
         {
-            auto rateCoeff   = PRICE_PER_FLOP * FLOPS_PER_BYTE;
-            auto fpPrecision = PRICE_PER_FLOP_FRACTIONAL_DIGITS;
+            uint64_t rateCoeff   = PRICE_PER_FLOP * FLOPS_PER_BYTE;
+            int32_t  fpPrecision = PRICE_PER_FLOP_FRACTIONAL_DIGITS;
 
-            /// Total USD cost represented in fixed-point
-            auto totalUsdFp = fixed_point( totalBytes * rateCoeff, fpPrecision );
+            std::cout << "[DEBUG] rateCoeff: " << rateCoeff << "\n";
+            std::cout << "[DEBUG] totalBytes: " << totalBytes << "\n";
 
-            /// Price per GNUS token represented in the same fixed-point precision
+            uint64_t usdRaw = 0;
+
+            // Try to multiply safely, reducing precision if overflow might occur
+            while ( fpPrecision >= 6 )
+            {
+                // Check for overflow risk: totalBytes * rateCoeff must fit into uint64_t
+                if ( totalBytes <= UINT64_MAX / rateCoeff )
+                {
+                    usdRaw = totalBytes * rateCoeff;
+                    std::cout << "[DEBUG] Safe multiplication succeeded with fpPrecision = " << fpPrecision << "\n";
+                    break;
+                }
+                else
+                {
+                    // Reduce precision and adjust rateCoeff accordingly
+                    fpPrecision--;
+                    rateCoeff /= 10;
+
+                    std::cout << "[DEBUG] Reducing precision: " << fpPrecision << ", new rateCoeff: " << rateCoeff
+                              << "\n";
+
+                    if ( rateCoeff == 0 )
+                    {
+                        std::cout << "[ERROR] rateCoeff reduced to zero, aborting.\n";
+                        return outcome::failure( std::errc::invalid_argument );
+                    }
+                }
+            }
+
+            if ( fpPrecision < 6 )
+            {
+                std::cout << "[ERROR] Could not compute cost safely within uint64_t limits.\n";
+                return outcome::failure( std::errc::value_too_large );
+            }
+
+            auto totalUsdFp = fixed_point( usdRaw, fpPrecision );
+            std::cout << "[DEBUG] totalUsdFp: " << totalUsdFp.value() << " (fpPrecision: " << fpPrecision << ")\n";
+
             auto priceFp = fixed_point( priceUsdPerGenius, fpPrecision );
+            std::cout << "[DEBUG] priceFp: " << priceFp.value() << "\n";
 
-            /// Compute token cost: USD / (USD/GNUS)
             auto geniusFpRes = totalUsdFp.divide( priceFp );
             if ( !geniusFpRes )
             {
+                std::cout << "[ERROR] Division failed in geniusFpRes: " << geniusFpRes.error().message() << "\n";
                 return outcome::failure( geniusFpRes.error() );
             }
             auto geniusFp = geniusFpRes.value();
+            std::cout << "[DEBUG] geniusFp: " << geniusFp.value() << "\n";
 
-            /// Convert token cost to minion precision
             auto minionFpRes = geniusFp.convertPrecision( PRECISION );
             if ( !minionFpRes )
             {
+                std::cout << "[ERROR] Precision conversion failed in minionFpRes: " << minionFpRes.error().message()
+                          << "\n";
                 return outcome::failure( minionFpRes.error() );
             }
             auto minionFp = minionFpRes.value();
+            std::cout << "[DEBUG] minionFp: " << minionFp.value() << "\n";
 
-            /// Enforce minimum non-zero cost
             uint64_t rawMinions = minionFp.value();
             if ( rawMinions < MIN_MINION_UNITS )
             {
+                std::cout << "[INFO] rawMinions < MIN_MINION_UNITS, enforcing minimum: " << MIN_MINION_UNITS << "\n";
                 rawMinions = MIN_MINION_UNITS;
             }
 
+            std::cout << "[SUCCESS] rawMinions: " << rawMinions << "\n";
             return outcome::success( rawMinions );
         }
 
