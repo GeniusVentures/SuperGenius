@@ -121,7 +121,9 @@ namespace sgns
         libp2p::log::setLoggingSystem( logging_system );
         libp2p::log::setLevelOfGroup( "SuperGeniusDemo", soralog::Level::ERROR_ );
         std::string logdir = "";
-
+#ifndef SGNS_DEBUGLOGS
+        logdir = write_base_path_ + "/sgnslog2.log";
+#endif
         node_logger               = base::createLogger( "SuperGeniusNode", logdir );
         auto loggerGlobalDB       = base::createLogger( "GlobalDB", logdir );
         auto loggerDAGSyncer      = base::createLogger( "GraphsyncDAGSyncer", logdir );
