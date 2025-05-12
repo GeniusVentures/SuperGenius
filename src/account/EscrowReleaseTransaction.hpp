@@ -36,7 +36,8 @@ namespace sgns
                                              std::string              release_address,
                                              std::string              escrow_source,
                                              std::string              original_escrow_hash,
-                                             SGTransaction::DAGStruct dag );
+                                             SGTransaction::DAGStruct dag,
+                                             std::shared_ptr<ethereum::EthereumKeyGenerator> eth_key );
 
         /**
           * @brief Deserializes a byte vector into an EscrowReleaseTransaction.

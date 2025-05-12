@@ -40,6 +40,9 @@ namespace sgns::processing
         {
         }
 
+        ~ProcessingCoreImpl()
+        {
+        }
         /** Process a single subtask
         * @param subTask - subtask that needs to be processed
         * @param result - subtask result

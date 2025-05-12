@@ -13,6 +13,9 @@
 #include <libp2p/log/logger.hpp>
 #include <libp2p/multi/multibase_codec/multibase_codec_impl.hpp>
 #include <libp2p/multi/content_identifier_codec.hpp>
+#include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
+#include <ipfs_lite/ipfs/graphsync/impl/local_requests.hpp>
+#include "libp2p/protocol/common/asio/asio_scheduler.hpp"
 
 using boost::asio::io_context;
 using sgns::crdt::GlobalDB;
@@ -88,14 +91,18 @@ namespace test
             BOOST_ASSERT_MSG( pubs_ != nullptr, "could not create GossibPubSub for some reason");
 
             db_ = std::make_shared<GlobalDB>(
-                io_, basePath + ".unit", 40010,
+                io_, basePath + ".unit",
                 std::make_shared<GossipPubSubTopic>( pubs_, "CRDT.Datastore.TEST.Channel" ) );
 
             BOOST_ASSERT_MSG( db_ != nullptr, "could not create GlobalDB for some reason");
 
             auto crdtOptions = sgns::crdt::CrdtOptions::DefaultOptions();
-
-            BOOST_ASSERT( db_->Init( crdtOptions ).has_value() );
+            auto scheduler    = std::make_shared<libp2p::protocol::AsioScheduler>( io_,
+                                                                                libp2p::protocol::SchedulerConfig{} );
+            auto generator    = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
+            auto graphsyncnetwork = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubs_->GetHost(),
+                                                                                             scheduler );
+            BOOST_ASSERT( db_->Init( crdtOptions, graphsyncnetwork, scheduler, generator ).has_value() );
 
             // Start GossipPubSub after Init
             auto future = pubs_->Start(40001, {pubs_->GetLocalAddress()});

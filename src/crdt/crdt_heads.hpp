@@ -5,6 +5,7 @@
 #include <storage/rocksdb/rocksdb.hpp>
 #include "crdt/hierarchical_key.hpp"
 #include <primitives/cid/cid.hpp>
+#include <map>
 
 namespace sgns::crdt
 {

@@ -13,6 +13,7 @@
 
 #include <boost/format.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
+#include <ProofSystem/EthereumKeyGenerator.hpp>
 
 #include "outcome/outcome.hpp"
 #include "account/proto/SGTransaction.pb.h"
@@ -47,6 +48,7 @@ namespace sgns
         }
 
         static outcome::result<SGTransaction::DAGStruct> DeSerializeDAGStruct( const std::vector<uint8_t> &data );
+        static outcome::result<SGTransaction::DAGStruct> DeSerializeDAGStruct( const std::string &data );
 
         static SGTransaction::DAGStruct SetDAGWithType( SGTransaction::DAGStruct dag, const std::string &type )
         {
@@ -58,7 +60,9 @@ namespace sgns
 
         virtual std::string GetTransactionSpecificPath() = 0;
 
-        static std::string GetTransactionFullPath(const std::string &address, const std::string &type, const uint64_t &nonce)
+        static std::string GetTransactionFullPath( const std::string &address,
+                                                   const std::string &type,
+                                                   const uint64_t    &nonce )
         {
             boost::format full_path( address + "/tx/" + type + "/%llu" );
             full_path % nonce;
@@ -76,7 +80,7 @@ namespace sgns
 
         std::string GetProofFullPath()
         {
-            boost::format full_path( GetSrcAddress() + "/proof" + "/%llu" );
+            boost::format full_path( GetSrcAddress() + "/proof/" + GetTransactionSpecificPath() + "/%llu" );
             full_path % dag_st.nonce();
 
             return full_path.str();
@@ -103,6 +107,9 @@ namespace sgns
         }
 
         void FillHash();
+
+        std::vector<uint8_t> MakeSignature( std::shared_ptr<ethereum::EthereumKeyGenerator> eth_key );
+        static bool          CheckDAGStructSignature( SGTransaction::DAGStruct dag_st );
 
         SGTransaction::DAGStruct                                                dag_st;
         static inline std::unordered_map<std::string, TransactionDeserializeFn> deserializers_map;

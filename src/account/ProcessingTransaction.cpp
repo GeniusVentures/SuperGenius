@@ -29,16 +29,18 @@ namespace sgns
         job_hash_ = uint256_t{ "0x" + hash_data.toReadableString() };
     }
 
-    ProcessingTransaction ProcessingTransaction::New( std::string              job_id,
-                                                      std::vector<std::string> subtask_ids,
-                                                      std::vector<std::string> node_addresses,
-                                                      SGTransaction::DAGStruct dag )
+    ProcessingTransaction ProcessingTransaction::New( std::string                                     job_id,
+                                                      std::vector<std::string>                        subtask_ids,
+                                                      std::vector<std::string>                        node_addresses,
+                                                      SGTransaction::DAGStruct                        dag,
+                                                      std::shared_ptr<ethereum::EthereumKeyGenerator> eth_key )
     {
         ProcessingTransaction instance( std::move( job_id ),
                                         std::move( subtask_ids ),
                                         std::move( node_addresses ),
                                         std::move( dag ) );
         instance.FillHash();
+        instance.MakeSignature( std::move( eth_key ) );
         return instance;
     }
 

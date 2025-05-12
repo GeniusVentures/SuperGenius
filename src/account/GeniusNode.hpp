@@ -20,6 +20,7 @@
 #include "processing/impl/processing_task_queue_impl.hpp"
 #include "coinprices/coinprices.hpp"
 #include <boost/algorithm/string/replace.hpp>
+#include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
 
 typedef struct DevConfig
 {
@@ -78,7 +79,7 @@ namespace sgns
 #endif
 
         outcome::result<std::string> ProcessImage( const std::string &jsondata );
-        outcome::result<void> CheckProcessValidity( const std::string &jsondata );
+        outcome::result<void>        CheckProcessValidity( const std::string &jsondata );
 
         uint64_t GetProcessCost( const std::string &json_data );
 
@@ -104,7 +105,7 @@ namespace sgns
             const std::string        &tokenid,
             std::chrono::milliseconds timeout = std::chrono::milliseconds( TIMEOUT_MINT ) );
         void     AddPeer( const std::string &peer );
-        void     RefreshUPNP( int pubsubport, int graphsyncport );
+        void     RefreshUPNP( int pubsubport );
         uint64_t GetBalance();
 
         [[nodiscard]] const std::vector<std::vector<uint8_t>> GetInTransactions() const
@@ -169,11 +170,15 @@ namespace sgns
         // Wait for a outgoing transaction to be processed with a timeout
         bool WaitForTransactionOutgoing( const std::string &txId, std::chrono::milliseconds timeout );
 
-        bool WaitForEscrowRelease(const std::string &originalEscrowId, std::chrono::milliseconds timeout);
+        bool WaitForEscrowRelease( const std::string &originalEscrowId, std::chrono::milliseconds timeout );
 
+    protected:
+        friend class TransactionSyncTest;
+
+        void SendTransactionAndProof( std::shared_ptr<IGeniusTransactions> tx, std::vector<uint8_t> proof );
+        std::shared_ptr<GeniusAccount> account_;
 
     private:
-        std::shared_ptr<GeniusAccount>                        account_;
         std::shared_ptr<ipfs_pubsub::GossipPubSub>            pubsub_;
         std::shared_ptr<boost::asio::io_context>              io_;
         std::shared_ptr<crdt::GlobalDB>                       globaldb_;
@@ -198,20 +203,20 @@ namespace sgns
             std::chrono::time_point<std::chrono::system_clock> lastUpdate;
         };
 
-        std::map<std::string, PriceInfo> m_tokenPriceCache;
-        const std::chrono::minutes       m_cacheValidityDuration{ 1 };
+        std::map<std::string, PriceInfo>                   m_tokenPriceCache;
+        const std::chrono::minutes                         m_cacheValidityDuration{ 1 };
         std::chrono::time_point<std::chrono::system_clock> m_lastApiCall{};
         const std::chrono::seconds                         m_minApiCallInterval{ 5 };
-
 
         std::thread       io_thread;
         std::thread       upnp_thread;
         std::atomic<bool> stop_upnp{ false };
 
         outcome::result<std::pair<std::string, uint64_t>> PayEscrow(
-            const std::string              &escrow_path,
-            const SGProcessing::TaskResult &taskresult,
-            std::chrono::milliseconds       timeout = std::chrono::milliseconds( TIMEOUT_ESCROW_PAY ) );
+            const std::string                       &escrow_path,
+            const SGProcessing::TaskResult          &taskresult,
+            std::shared_ptr<crdt::AtomicTransaction> crdt_transaction,
+            std::chrono::milliseconds                timeout = std::chrono::milliseconds( TIMEOUT_ESCROW_PAY ) );
 
         void ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult );
         void ProcessingError( const std::string &task_id );
@@ -226,22 +231,23 @@ namespace sgns
 
         static std::string GetLoggingSystem( const std::string &base_path )
         {
-            std::string config = R"(
-            # ----------------
-            sinks:
-              - name: file
-                type: file
-                capacity: 1000
-                path: [basepath]/sgnslog.log
-            groups:
-              - name: SuperGeniusDemo
-                sink: file
-                level: debug
-                children:
-                  - name: libp2p
-                  - name: Gossip
-            # ----------------
-            )";
+            std::string config( R"(
+# ----------------
+sinks:
+    - name: file
+      type: file
+      capacity: 1000
+      path: [basepath]/sgnslog.log
+groups:
+    - name: SuperGeniusNode
+      sink: file
+      level: debug
+      children:
+        - name: libp2p
+        - name: Gossip
+        - name: yx-stream
+# ----------------
+  )" );
 
             boost::replace_all( config, "[basepath]", base_path );
             return config;

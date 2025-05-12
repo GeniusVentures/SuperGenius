@@ -32,10 +32,7 @@ namespace sgns::processing
                                std::function<void( const std::string &subTaskQueueId )>          userCallbackError,
                                std::string                                                       node_address );
 
-        ~ProcessingServiceImpl()
-        {
-            StopProcessing();
-        }
+        ~ProcessingServiceImpl();
 
         void StartProcessing( const std::string &processingGridChannelId );
         void StopProcessing();

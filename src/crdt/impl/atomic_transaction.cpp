@@ -49,11 +49,9 @@ namespace sgns::crdt
         auto     combined_delta = std::make_shared<Delta>();
         uint64_t max_priority   = 0;
 
-        // Process all operations and build combined delta
         for ( const auto &op : operations_ )
         {
             std::shared_ptr<Delta> delta;
-
             if ( op.type == Operation::PUT )
             {
                 OUTCOME_TRY( ( auto &&, result ),
@@ -66,7 +64,6 @@ namespace sgns::crdt
                 delta = result;
             }
 
-            // Merge delta into combined_delta
             for ( const auto &elem : delta->elements() )
             {
                 auto new_elem = combined_delta->add_elements();
@@ -79,10 +76,8 @@ namespace sgns::crdt
             }
             max_priority = std::max( max_priority, delta->priority() );
         }
-
         combined_delta->set_priority( max_priority );
 
-        // Publish the combined delta
         auto result = datastore_->Publish( combined_delta );
         if ( result.has_failure() )
         {

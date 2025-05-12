@@ -13,6 +13,9 @@
 
 #include <libp2p/log/configurator.hpp>
 #include <libp2p/log/logger.hpp>
+#include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
+#include <ipfs_lite/ipfs/graphsync/impl/local_requests.hpp>
+#include <libp2p/protocol/common/asio/asio_scheduler.hpp>
 
 using Buffer = sgns::base::Buffer;
 using HierarchicalKey = sgns::crdt::HierarchicalKey;
@@ -118,7 +121,7 @@ int main(int argc, char** argv)
   pubsub->Start(pubsubListeningPort, pubsubBootstrapPeers);
 
   auto globalDB = std::make_shared<sgns::crdt::GlobalDB>(
-      io, strDatabasePath, 40000,
+      io, strDatabasePath,
       std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>(pubsub, broadcastChannel));
 
 
@@ -128,8 +131,10 @@ int main(int argc, char** argv)
   crdtOptions->putHookFunc = std::bind(&PutHook, std::placeholders::_1, std::placeholders::_2, logger);
   // Bind DeleteHook function pointer for notification purposes
   crdtOptions->deleteHookFunc = std::bind(&DeleteHook, std::placeholders::_1, logger);
-
-  globalDB->Init(crdtOptions);
+  auto scheduler        = std::make_shared<libp2p::protocol::AsioScheduler>( io, libp2p::protocol::SchedulerConfig{} );
+  auto graphsyncnetwork = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubsub->GetHost(), scheduler );
+  auto generator        = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
+  globalDB->Init( crdtOptions, graphsyncnetwork, scheduler, generator );
 
   std::ostringstream streamDisplayDetails;
   // @todo fix commented output

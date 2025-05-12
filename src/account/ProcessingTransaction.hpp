@@ -24,7 +24,8 @@ namespace sgns
         static ProcessingTransaction New( std::string              job_id,
                                           std::vector<std::string> subtask_ids,
                                           std::vector<std::string> node_addresses,
-                                          SGTransaction::DAGStruct dag );
+                                          SGTransaction::DAGStruct dag,
+                                          std::shared_ptr<ethereum::EthereumKeyGenerator> eth_key );
 
         ~ProcessingTransaction() override = default;
 

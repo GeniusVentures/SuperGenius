@@ -9,6 +9,9 @@ namespace sgns::processing
     {
     }
 
+    SubTaskResultStorageImpl::~SubTaskResultStorageImpl()
+    {
+    }
     void SubTaskResultStorageImpl::AddSubTaskResult( const SGProcessing::SubTaskResult &result )
     {
         sgns::crdt::GlobalDB::Buffer data;
