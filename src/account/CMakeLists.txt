@@ -29,6 +29,7 @@ target_link_libraries(sgns_account
     logger
     crdt_globaldb
     processing_service
+    gnus_upnp
     PRIVATE
     json_secure_storage
     component_factory
@@ -49,7 +50,6 @@ target_link_libraries(sgns_account
     SGTransactionProto    
     ScaledInteger
     sgns_version
-    gnus_upnp
     AsyncIOManager
     ${WIN_API_LIBRARY}
     ${USER_ENV_LIBRARY}
