@@ -1,7 +1,6 @@
 #pragma once
 
 #include <string>
-#include "base/fixed_point.hpp"
 #include "outcome/outcome.hpp"
 
 namespace sgns

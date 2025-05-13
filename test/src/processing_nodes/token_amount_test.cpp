@@ -44,7 +44,7 @@ TEST( CalculateCostMinionsTest, CostIsMinimumWhenBelowThreshold )
 
 TEST( CalculateCostMinionsTest, CostScalesProportionallyAboveThreshold )
 {
-    for ( auto i = UINT64_C( 100000 ); i < std::numeric_limits<uint64_t>::max() / 10; i *= 10 )
+    for ( auto i = UINT64_C( 100000 ); i < (std::numeric_limits<uint64_t>::max() / 10); i *= 10 )
     {
         SCOPED_TRACE( ::testing::Message() << "totalBytes=" << i );
         auto r = TokenAmount::CalculateCostMinions( i, 1.0 );
