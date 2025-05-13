@@ -68,7 +68,7 @@ cmake --build [Debug | Release] --config [Debug | Release]
 
 ```bash
 cd build/Linux
-cmake -B [Debug | Release] -DCMAKE_BUILD_TYPE=[Debug | Release] -DTHIRDPARTY_DIR=[ABSOLUTE_PATH_TO_THIRDPARTY_PROJECT] -DTESTING=[ON | OFF]
+cmake -B [Debug | Release] -DCMAKE_BUILD_TYPE=[Debug | Release] -DTHIRDPARTY_DIR=[ABSOLUTE_PATH_TO_THIRDPARTY_PROJECT] -DTESTING=[ON | OFF] -DABI_SUBFOLDER_NAME=[x86_64 | aarch64]
 cmake --build . --config [Debug | Release]
 ```
 
@@ -102,7 +102,13 @@ cd build/Android
 cmake [Debug | Release]/arm64-v8a -DANDROID_ABI="arm64-v8a" -DTHIRDPARTY_DIR=[ABSOLUTE_PATH_TO_THIRDPARTY_PROJECT]
 cmake --build [Debug | Release]/arm64-v8a --config [Debug | Release]
 ```
+* x86_64
 
+```bash
+cd build/Android
+cmake [Debug | Release]/x86_64 -DANDROID_ABI="x86_64" -DTHIRDPARTY_DIR=[ABSOLUTE_PATH_TO_THIRDPARTY_PROJECT]
+cmake --build [Debug | Release]/arm64-v8a --config [Debug | Release]
+```
 ### macOS
 
 This builds a fat library for both `x86` and `ARM` architectures.
@@ -115,7 +121,7 @@ cmake --build [Debug | Release] --config [Debug | Release]
 
 ### iOS
 
-You should use a macOS system to cross-compile for iOS.
+You must use a macOS system to cross-compile for iOS.
 
 ```bash
 cd build/iOS
