@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <iostream>
 #include <algorithm>
+#include <stdexcept>
 
 using namespace MNN;
 
@@ -65,10 +66,45 @@ int main( int argc, char **argv )
     expertNet->resizeTensor( expertInput, { seq_len, hidden } );
     expertNet->resizeSession( expertSession );
 
+    std::cout << "embedOut shape: ";
+    for ( int s : embedOut->shape() )
+    {
+        std::cout << s << " ";
+    }
+    std::cout << "\nexpertInput shape: ";
+    for ( int s : expertInput->shape() )
+    {
+        std::cout << s << " ";
+    }
+    std::cout << "\n";
+
+    std::cout << "embedOut type code: " << embedOut->getType().code << "\n";
+    std::cout << "expertInput type code: " << expertInput->getType().code << "\n";
+
     Tensor hostEmbed( embedOut, Tensor::CAFFE );
-    Tensor expertHost( expertInput, Tensor::CAFFE );
-    std::memcpy( expertHost.host<float>(), hostEmbed.host<float>(), sizeof( float ) * seq_len * hidden );
-    expertInput->copyFromHostTensor( &expertHost );
+    Tensor flatEmbed( Tensor::create( { seq_len, hidden }, halide_type_of<float>(), nullptr, Tensor::CAFFE ) );
+    float *src = hostEmbed.host<float>();
+    float *dst = flatEmbed.host<float>();
+
+    size_t totalSize    = hostEmbed.size();
+    size_t expectedSize = static_cast<size_t>( seq_len * hidden * sizeof( float ) );
+    std::cout << "embedOut raw dimensions: ";
+    for ( int i = 0; i < embedOut->dimensions(); ++i )
+    {
+        std::cout << embedOut->length( i ) << " ";
+    }
+    std::cout << "\n";
+    int actual_hidden = hostEmbed.size() / ( seq_len * sizeof( float ) );
+    std::cout << "Actual hidden size from data: " << actual_hidden << "\n";
+
+    if ( totalSize < expectedSize )
+    {
+        std::cerr << "hostEmbed is smaller than expected: " << totalSize << " vs " << expectedSize << "\n";
+        return 1;
+    }
+
+    std::memcpy( dst, src + 0, expectedSize );
+    expertInput->copyFromHostTensor( &flatEmbed );
 
     expertNet->runSession( expertSession );
     auto expertOut = expertNet->getSessionOutput( expertSession, nullptr );
@@ -108,6 +144,10 @@ int main( int argc, char **argv )
     for ( int i = 0; i < 5; ++i )
     {
         std::cout << "Token ID " << scored[i].first << " (logit: " << scored[i].second << ")\n";
+        int              best_id        = scored[i].first;
+        std::vector<int> predicted      = { best_id };
+        std::string      predicted_text = tokenizer.decode( predicted );
+        std::cout << "Top prediction (decoded): " << predicted_text << "\n";
     }
 
     return 0;
