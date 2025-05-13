@@ -463,4 +463,9 @@ namespace sgns::crdt
         }
     }
 
+    bool GlobalDB::RegisterElementFilter( const std::string &pattern, GlobalDBFilterCallback filter )
+    {
+        m_crdtDatastore->RegisterElementFilter( pattern, std::move( filter ) );
+    }
+
 }

@@ -4,7 +4,7 @@
  * @date       2025-05-12
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
-#include "crdt_data_filter.hpp"
+#include "crdt/crdt_data_filter.hpp"
 
 namespace sgns::crdt
 {

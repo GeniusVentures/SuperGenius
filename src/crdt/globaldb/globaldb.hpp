@@ -36,6 +36,8 @@ namespace sgns::crdt
         /// Pair of key and value to be stored in CRDT
         using DataPair = std::pair<HierarchicalKey, Buffer>;
 
+        using GlobalDBFilterCallback = CrdtDatastore::CRDTElementFilterCallback;
+
         /**
          * @enum        Error
          * @brief       Enumeration of error codes used in the proof classes.
@@ -118,6 +120,8 @@ namespace sgns::crdt
         {
             return m_crdtDatastore->GetDB();
         }
+
+        bool RegisterElementFilter( const std::string &pattern, GlobalDBFilterCallback filter );
 
     private:
         void scheduleBootstrap( std::shared_ptr<boost::asio::io_context> io_context,

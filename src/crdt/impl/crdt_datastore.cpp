@@ -1,6 +1,5 @@
 #include <fmt/std.h>
 #include "crdt/crdt_datastore.hpp"
-#include "crdt/impl/crdt_data_filter.hpp"
 #include <storage/rocksdb/rocksdb.hpp>
 #include <iostream>
 #include "crdt/proto/bcast.pb.h"
@@ -127,7 +126,8 @@ namespace sgns::crdt
         dataStore_( std::move( aDatastore ) ),
         namespaceKey_( aKey ),
         broadcaster_( std::move( aBroadcaster ) ),
-        dagSyncer_( std::move( aDagSyncer ) )
+        dagSyncer_( std::move( aDagSyncer ) ),
+        crdt_filter_( true )
     {
         // <namespace>/s
         auto fullSetNs = aKey.ChildString( std::string( setsNamespace_ ) );
@@ -237,7 +237,6 @@ namespace sgns::crdt
             dagWorkers_.clear();
             dagWorkerJobListThreadRunning_ = false;
         }
-       
     }
 
     void CrdtDatastore::HandleNextIteration()
@@ -687,7 +686,7 @@ namespace sgns::crdt
     outcome::result<CID> CrdtDatastore::Publish( const std::shared_ptr<Delta> &aDelta )
     {
         OUTCOME_TRY( auto &&newCID, AddDAGNode( aDelta ) );
- 
+
         return newCID;
     }
 
@@ -770,8 +769,8 @@ namespace sgns::crdt
         HierarchicalKey hKey( strCidResult.value() );
         if ( filter_crdt )
         {
-            CRDTDataFilter::FilterElementsOnDelta( aDelta );
-            CRDTDataFilter::FilterTombstonesOnDelta( aDelta );
+            crdt_filter_.FilterElementsOnDelta( aDelta );
+            crdt_filter_.FilterTombstonesOnDelta( aDelta );
         }
 
         {
@@ -1122,6 +1121,11 @@ namespace sgns::crdt
     void CrdtDatastore::PrintDataStore()
     {
         set_->PrintDataStore();
+    }
+
+    bool CrdtDatastore::RegisterElementFilter( const std::string &pattern, CRDTElementFilterCallback filter )
+    {
+        return crdt_filter_.RegisterElementFilter( pattern, std::move( filter ) );
     }
 
 }

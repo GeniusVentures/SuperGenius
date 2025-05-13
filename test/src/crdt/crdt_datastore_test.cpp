@@ -1,5 +1,4 @@
 #include "crdt/crdt_datastore.hpp"
-#include "crdt/impl/crdt_data_filter.hpp"
 #include "crdt/atomic_transaction.hpp"
 #include <gtest/gtest.h>
 #include <storage/rocksdb/rocksdb.hpp>
@@ -275,7 +274,7 @@ namespace sgns::crdt
         broadcaster_->SetMirrorCounterPart( second_broadcaster );
         second_broadcaster->SetMirrorCounterPart( broadcaster_ );
 
-        CRDTDataFilter::RegisterElementFilter( "Key.*", filter_func );
+        second_crdt->RegisterElementFilter( "Key.*", filter_func );
 
         std::shared_ptr<Delta> delta    = std::make_shared<Delta>();
         auto                   element1 = delta->add_elements();
@@ -363,7 +362,7 @@ namespace sgns::crdt
         broadcaster_->SetMirrorCounterPart( second_broadcaster );
         second_broadcaster->SetMirrorCounterPart( broadcaster_ );
 
-        CRDTDataFilter::RegisterElementFilter( "Key.*", filter_func );
+        second_crdt->RegisterElementFilter( "Key.*", filter_func );
 
         std::shared_ptr<Delta> delta    = std::make_shared<Delta>();
         auto                   element1 = delta->add_elements();
@@ -445,7 +444,7 @@ namespace sgns::crdt
         broadcaster_->SetMirrorCounterPart( second_broadcaster );
         second_broadcaster->SetMirrorCounterPart( broadcaster_ );
 
-        CRDTDataFilter::RegisterElementFilter( "Key.*", filter_func );
+        second_crdt->RegisterElementFilter( "Key.*", filter_func );
 
         std::shared_ptr<Delta> delta1   = std::make_shared<Delta>();
         auto                   element1 = delta1->add_elements();
@@ -521,34 +520,34 @@ namespace sgns::crdt
         // Track filter calls
         std::atomic<int> filter_called_count{ 0 };
 
-        //This Filter always accepts all values
-        CRDTDataFilter::RegisterElementFilter( "Key.*",
-                                               [&]( const Element &element ) -> std::optional<std::vector<Element>>
-                                               {
-                                                   filter_called_count++;
-
-                                                   // Check if any element has the rejected key
-                                                   return std::nullopt; // Accept this delta
-                                               } );
-
-        //This Filter checks the "RejectMe"
-        CRDTDataFilter::RegisterElementFilter( "OtherKey.*",
-                                               [&]( const Element &element ) -> std::optional<std::vector<Element>>
-                                               {
-                                                   filter_called_count++;
-
-                                                   if ( element.value() == rejectedKey )
-                                                   {
-                                                       Element tombstone = element;
-                                                       return std::vector<Element>{ tombstone }; // Reject this delta
-                                                   }
-                                                   return std::nullopt; // Accept this delta
-                                               } );
-
         auto crdt_pair = CreateLoopBackCRDTInstance( databasePath + "aux4", ipfsDataStore_ );
 
         auto second_crdt        = crdt_pair.first;
         auto second_broadcaster = crdt_pair.second;
+
+        //This Filter always accepts all values
+        second_crdt->RegisterElementFilter( "Key.*",
+                                            [&]( const Element &element ) -> std::optional<std::vector<Element>>
+                                            {
+                                                filter_called_count++;
+
+                                                // Check if any element has the rejected key
+                                                return std::nullopt; // Accept this delta
+                                            } );
+
+        //This Filter checks the "RejectMe"
+        second_crdt->RegisterElementFilter( "OtherKey.*",
+                                            [&]( const Element &element ) -> std::optional<std::vector<Element>>
+                                            {
+                                                filter_called_count++;
+
+                                                if ( element.value() == rejectedKey )
+                                                {
+                                                    Element tombstone = element;
+                                                    return std::vector<Element>{ tombstone }; // Reject this delta
+                                                }
+                                                return std::nullopt; // Accept this delta
+                                            } );
 
         broadcaster_->SetMirrorCounterPart( second_broadcaster );
         second_broadcaster->SetMirrorCounterPart( broadcaster_ );

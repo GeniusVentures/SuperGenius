@@ -50,7 +50,7 @@ namespace sgns
         globaldb_m->AddBroadcastTopic( account_m->GetAddress() );
         globaldb_m->AddListenTopic( account_m->GetAddress() );
 
-        bool crdt_tx_filter_initialized = crdt::CRDTDataFilter::RegisterElementFilter(
+        bool crdt_tx_filter_initialized = globaldb_m->RegisterElementFilter(
             "^/?" + GetBlockChainBase() + "[^/]*/tx/[^/]*/[0-9]+",
             [&]( const crdt::pb::Element &element ) -> std::optional<std::vector<crdt::pb::Element>>
             {
@@ -102,7 +102,7 @@ namespace sgns
                 return maybe_tombstones;
             } );
 
-        bool crdt_proof_filter_initialized = crdt::CRDTDataFilter::RegisterElementFilter(
+        bool crdt_proof_filter_initialized = globaldb_m->RegisterElementFilter(
             "^/?" + GetBlockChainBase() + "[^/]*/proof/[^/]*/[0-9]+",
             [&]( const crdt::pb::Element &element ) -> std::optional<std::vector<crdt::pb::Element>>
             {
