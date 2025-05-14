@@ -12,15 +12,44 @@
 #include <cmath>
 #include <limits>
 #include <system_error>
+#include <memory>
 #include <boost/multiprecision/cpp_int.hpp>
 
 namespace sgns
 {
 
-    fixed_point::fixed_point( uint64_t value, uint64_t precision ) :
-        value_( std::move( value ) ), precision_( std::move( precision ) )
+    outcome::result<std::shared_ptr<fixed_point>> fixed_point::create( uint64_t raw_value, uint64_t precision )
     {
+        auto ptr = std::shared_ptr<fixed_point>( new fixed_point( raw_value, precision ) );
+        return outcome::success( ptr );
     }
+
+    outcome::result<std::shared_ptr<fixed_point>> fixed_point::create( double raw_value, uint64_t precision )
+    {
+        try
+        {
+            auto ptr = std::shared_ptr<fixed_point>( new fixed_point( raw_value, precision ) );
+            return outcome::success( ptr );
+        }
+        catch ( const std::overflow_error & /*e*/ )
+        {
+            return outcome::failure( std::make_error_code( std::errc::value_too_large ) );
+        }
+    }
+
+    outcome::result<std::shared_ptr<fixed_point>> fixed_point::create( const std::string &str_value,
+                                                                       uint64_t           precision )
+    {
+        auto raw = fromString( str_value, precision );
+        if ( !raw )
+        {
+            return outcome::failure( raw.error() );
+        }
+        auto ptr = std::shared_ptr<fixed_point>( new fixed_point( raw.value(), precision ) );
+        return outcome::success( ptr );
+    }
+
+    fixed_point::fixed_point( uint64_t value, uint64_t precision ) : value_( value ), precision_( precision ) {}
 
     fixed_point::fixed_point( double raw_value, uint64_t precision ) :
         value_( fromDouble( raw_value, precision ) ), precision_( precision )

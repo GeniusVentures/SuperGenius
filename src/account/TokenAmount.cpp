@@ -17,47 +17,56 @@ namespace sgns
 
     outcome::result<uint64_t> TokenAmount::CalculateCostMinions( uint64_t totalBytes, double priceUsdPerGenius )
     {
-        auto rateCoeff   = PRICE_PER_FLOP * FLOPS_PER_BYTE;
-        auto usdRaw      = UINT64_C( 0 );
-        auto fpPrecision = PRICE_PER_FLOP_FRACTIONAL_DIGITS;
+        uint128_t product = static_cast<uint128_t>( totalBytes ) * static_cast<uint128_t>( PRICE_PER_FLOP ) *
+                            static_cast<uint128_t>( FLOPS_PER_BYTE );
 
-        for ( ; fpPrecision >= 6; fpPrecision--, rateCoeff /= 10 )
+        std::shared_ptr<sgns::fixed_point> costFp;
+        uint128_t                          divisor = 1;
+
+        for ( uint64_t prec = PRICE_PER_FLOP_FRACTIONAL_DIGITS; prec >= PRECISION; prec-- )
         {
-            auto product = static_cast<int128_t>( totalBytes ) * static_cast<int128_t>( rateCoeff );
-            if ( product <= std::numeric_limits<uint64_t>::max() )
+            uint128_t scaled = product / divisor;
+            divisor          = divisor * 10;
+
+            if ( scaled > std::numeric_limits<uint64_t>::max() )
             {
-                usdRaw = static_cast<uint64_t>( product );
-                break;
+                continue;
             }
-            if ( rateCoeff % 10 )
+
+            auto totalRes = sgns::fixed_point::create( static_cast<uint64_t>( scaled ), prec );
+            if ( !totalRes )
             {
-                return outcome::failure( std::errc::invalid_argument );
+                continue;
             }
+
+            auto priceRes = sgns::fixed_point::create( priceUsdPerGenius, prec );
+            if ( !priceRes )
+            {
+                continue;
+            }
+
+            auto divRes = totalRes.value()->divide( *priceRes.value() );
+            if ( !divRes )
+            {
+                continue;
+            }
+
+            costFp = std::make_shared<sgns::fixed_point>( std::move( divRes.value() ) );
+            break;
         }
 
-        if ( fpPrecision < 6 )
+        if ( !costFp || costFp->precision() < PRECISION )
         {
             return outcome::failure( std::errc::value_too_large );
         }
 
-        fixed_point totalUsdFp( usdRaw, fpPrecision );
-        fixed_point priceFp( priceUsdPerGenius, fpPrecision );
-
-        auto geniusFpRes = totalUsdFp.divide( priceFp );
-        if ( !geniusFpRes )
+        auto minionRes = costFp->convertPrecision( PRECISION );
+        if ( !minionRes )
         {
-            return outcome::failure( geniusFpRes.error() );
+            return outcome::failure( minionRes.error() );
         }
 
-        auto geniusFp    = geniusFpRes.value();
-        auto minionFpRes = geniusFp.convertPrecision( PRECISION );
-        if ( !minionFpRes )
-        {
-            return outcome::failure( minionFpRes.error() );
-        }
-
-        auto minionFp   = minionFpRes.value();
-        auto rawMinions = minionFp.value();
+        uint64_t rawMinions = minionRes.value().value();
         if ( rawMinions < MIN_MINION_UNITS )
         {
             rawMinions = MIN_MINION_UNITS;

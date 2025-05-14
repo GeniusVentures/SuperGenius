@@ -169,8 +169,16 @@ TEST_P( FixedPointMultiplyParamTest, Multiply )
         EXPECT_EQ( static_res.error(), std::make_error_code( expect_err ) );
     }
 
-    sgns::fixed_point fa( tc.a, tc.precision ), fb( tc.b, tc.precision );
-    auto              obj_res = fa.multiply( fb );
+    auto faRes = sgns::fixed_point::create( tc.a, tc.precision );
+    ASSERT_TRUE( faRes.has_value() );
+    auto faPtr = faRes.value();
+
+    auto fbRes = sgns::fixed_point::create( tc.b, tc.precision );
+    ASSERT_TRUE( fbRes.has_value() );
+    auto fbPtr = fbRes.value();
+
+    auto obj_res = faPtr->multiply( *fbPtr );
+
     if ( std::holds_alternative<uint64_t>( tc.expected ) )
     {
         uint64_t expect = std::get<uint64_t>( tc.expected );
@@ -231,6 +239,7 @@ TEST_P( FixedPointDivideParamTest, Divide )
     auto tc = GetParam();
 
     auto static_res = sgns::fixed_point::divide( tc.num, tc.den, tc.precision );
+
     if ( std::holds_alternative<uint64_t>( tc.expected ) )
     {
         uint64_t expect = std::get<uint64_t>( tc.expected );
@@ -244,8 +253,16 @@ TEST_P( FixedPointDivideParamTest, Divide )
         EXPECT_EQ( static_res.error(), std::make_error_code( expect_err ) );
     }
 
-    sgns::fixed_point fa( tc.num, tc.precision ), fb( tc.den, tc.precision );
-    auto              obj_res = fa.divide( fb );
+    auto faRes = sgns::fixed_point::create( tc.num, tc.precision );
+    ASSERT_TRUE( faRes.has_value() );
+    auto faPtr = faRes.value();
+
+    auto fbRes = sgns::fixed_point::create( tc.den, tc.precision );
+    ASSERT_TRUE( fbRes.has_value() );
+    auto fbPtr = fbRes.value();
+
+    auto obj_res = faPtr->divide( *fbPtr );
+
     if ( std::holds_alternative<uint64_t>( tc.expected ) )
     {
         uint64_t expect = std::get<uint64_t>( tc.expected );
@@ -304,7 +321,6 @@ TEST_P( FixedPointConvertPrecisionParamTest, ConvertPrecision )
 {
     auto test_case = GetParam();
 
-    // -- static convertPrecision --
     auto static_res = sgns::fixed_point::convertPrecision( test_case.value,
                                                            test_case.from_precision,
                                                            test_case.to_precision );
@@ -322,9 +338,11 @@ TEST_P( FixedPointConvertPrecisionParamTest, ConvertPrecision )
         EXPECT_EQ( static_res.error(), std::make_error_code( expected_err ) );
     }
 
-    // -- object convertPrecision --
-    sgns::fixed_point fp( test_case.value, test_case.from_precision );
-    auto              obj_res = fp.convertPrecision( test_case.to_precision );
+    auto fpRes = sgns::fixed_point::create( test_case.value, test_case.from_precision );
+    ASSERT_TRUE( fpRes.has_value() );
+    auto fpPtr = fpRes.value();
+
+    auto obj_res = fpPtr->convertPrecision( test_case.to_precision );
 
     if ( std::holds_alternative<uint64_t>( test_case.expected ) )
     {
