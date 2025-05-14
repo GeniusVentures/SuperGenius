@@ -25,10 +25,19 @@ namespace sgns::crdt
                                                                                std::move( aBroadcaster ),
                                                                                aOptions ) );
 
-        crdtInstance->handleNextThreadRunning_ = true;
+        return crdtInstance;
+    }
+
+    void CrdtDatastore::Start()
+    {
+        if ( started_ == true )
+        {
+            return;
+        }
+        handleNextThreadRunning_ = true;
         // Starting HandleNext worker thread
-        crdtInstance->handleNextFuture_ = std::async(
-            [weakptr = std::weak_ptr<CrdtDatastore>( crdtInstance )]()
+        handleNextFuture_ = std::async(
+            [weakptr{ weak_from_this() }]()
             {
                 auto threadRunning = true;
                 while ( threadRunning )
@@ -54,10 +63,10 @@ namespace sgns::crdt
                 }
             } );
 
-        crdtInstance->rebroadcastThreadRunning_ = true;
+        rebroadcastThreadRunning_ = true;
         // Starting Rebroadcast worker thread
-        crdtInstance->rebroadcastFuture_ = std::async(
-            [weakptr = std::weak_ptr<CrdtDatastore>( crdtInstance )]()
+        rebroadcastFuture_ = std::async(
+            [weakptr{ weak_from_this() }]()
             {
                 auto self = weakptr.lock();
                 if ( !self )
@@ -76,13 +85,13 @@ namespace sgns::crdt
                 }
             } );
 
-        crdtInstance->dagWorkerJobListThreadRunning_ = true;
-        for ( int i = 0; i < crdtInstance->numberOfDagWorkers; ++i )
+        dagWorkerJobListThreadRunning_ = true;
+        for ( int i = 0; i < numberOfDagWorkers; ++i )
         {
             auto dagWorker                     = std::make_shared<DagWorker>();
             dagWorker->dagWorkerThreadRunning_ = true;
             dagWorker->dagWorkerFuture_        = std::async(
-                [weakptr = std::weak_ptr<CrdtDatastore>( crdtInstance ), dagWorker]()
+                [weakptr{ weak_from_this() }, dagWorker]()
                 {
                     DagJob dagJob;
                     auto   dagThreadRunning = true;
@@ -112,10 +121,9 @@ namespace sgns::crdt
                         }
                     }
                 } );
-            crdtInstance->dagWorkers_.push_back( dagWorker );
+            dagWorkers_.push_back( dagWorker );
         }
-
-        return crdtInstance;
+        started_ = true;
     }
 
     CrdtDatastore::CrdtDatastore( std::shared_ptr<RocksDB>            aDatastore,
@@ -308,22 +316,6 @@ namespace sgns::crdt
         }
     }
 
-    void CrdtDatastore::RebroadcastIteration( std::chrono::milliseconds &elapsedTimeMilliseconds )
-    {
-        auto rebroadcastIntervalMilliseconds = std::chrono::milliseconds( threadSleepTimeInMilliseconds_ );
-        if ( options_ != nullptr )
-        {
-            rebroadcastIntervalMilliseconds = std::chrono::milliseconds( options_->rebroadcastIntervalMilliseconds );
-        }
-
-        if ( elapsedTimeMilliseconds >= rebroadcastIntervalMilliseconds )
-        {
-            RebroadcastHeads();
-            elapsedTimeMilliseconds = std::chrono::milliseconds( 0 );
-        }
-        elapsedTimeMilliseconds += threadSleepTimeInMilliseconds_;
-    }
-
     void CrdtDatastore::SendJobWorkerIteration( std::shared_ptr<DagWorker> dagWorker, DagJob &dagJob )
     {
         if ( dagWorker == nullptr )
@@ -366,7 +358,6 @@ namespace sgns::crdt
 
     outcome::result<std::vector<CID>> CrdtDatastore::DecodeBroadcast( const Buffer &buff )
     {
-        // Make a list of heads we received
         CRDTBroadcast bcastData;
         auto          string_data = std::string( buff.toString() );
 
@@ -383,7 +374,6 @@ namespace sgns::crdt
             return outcome::failure( boost::system::error_code{} );
         }
 
-        // Compatibility: before we were publishing CIDs directly
         auto msgReflect = bcastData.GetReflection();
 
         if ( msgReflect == nullptr )
@@ -393,9 +383,6 @@ namespace sgns::crdt
 
         if ( !msgReflect->GetUnknownFields( bcastData ).empty() )
         {
-            // Backwards compatibility
-            //c, err := cid.Cast(msgReflect.GetUnknown())
-            //sgns::common::getCidOf(msgReflect->MutableUnknownFields(&bcastData)->);
             return outcome::failure( boost::system::error_code{} );
         }
 
@@ -405,8 +392,7 @@ namespace sgns::crdt
             auto cidResult = CID::fromString( head.cid() );
             if ( cidResult.has_failure() )
             {
-                logger_->error( "DecodeBroadcast: Failed to convert CID from string (error code {})",
-                                cidResult.error().value() );
+                return outcome::failure( boost::system::error_code{} );
             }
             else
             {

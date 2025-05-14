@@ -30,8 +30,6 @@ namespace sgns::crdt
 {
     class CrdtSet; ///< Forward declaration of CRDT Set class
 
-
-
     /**
      * @brief       CRDT datastore class based on https://github.com/ipfs/go-ds-crdt
      */
@@ -46,8 +44,8 @@ namespace sgns::crdt
         using Element     = pb::Element;
         using IPLDNode    = ipfs_lite::ipld::IPLDNode;
 
-        using PutHookPtr    = std::function<void( const std::string &k, const Buffer &v )>;
-        using DeleteHookPtr = std::function<void( const std::string &k )>;
+        using PutHookPtr                = std::function<void( const std::string &k, const Buffer &v )>;
+        using DeleteHookPtr             = std::function<void( const std::string &k )>;
         using CRDTElementFilterCallback = CRDTDataFilter::ElementFilterCallback;
         /**
          * @brief       Factory method to create a shared_ptr to a CrdtDatastore
@@ -65,6 +63,10 @@ namespace sgns::crdt
                                                    std::shared_ptr<Broadcaster>        aBroadcaster,
                                                    const std::shared_ptr<CrdtOptions> &aOptions );
 
+        /**
+         * @brief       Starts the datastore threads
+         */
+        void Start();
         /**
          * @brief      Destructor of the CRDT datastore
          */
@@ -148,7 +150,7 @@ namespace sgns::crdt
     * @param buff Buffer data to decode
     * @return vector of CIDs or outcome::failure on error
     */
-        outcome::result<std::vector<CID>> DecodeBroadcast( const Buffer &buff );
+        static outcome::result<std::vector<CID>> DecodeBroadcast( const Buffer &buff );
 
         /** Returns a new delta-set adding the given key/value.
     * @param key - delta key to add to datastore 
@@ -200,11 +202,6 @@ namespace sgns::crdt
     */
         void HandleNextIteration();
 
-        /** one iteration of Worker thread to rebroadcast heads
-    * @param aCrdtDatastore pointer to CRDT datastore
-    */
-        void RebroadcastIteration( std::chrono::milliseconds &elapsedTimeMilliseconds );
-
         /** one iteration of Worker thread to send jobs
     * @param aCrdtDatastore pointer to CRDT datastore
     * @param dagWorker pointer to DAG worker structure
@@ -248,7 +245,7 @@ namespace sgns::crdt
     * @param heads list of CIDs
     * @return data encoded into Buffer data or outcome::failure on error
     */
-        outcome::result<Buffer> EncodeBroadcast( const std::vector<CID> &heads );
+        static outcome::result<Buffer> EncodeBroadcast( const std::vector<CID> &heads );
 
         /** handleBlock takes care of vetting, retrieving and applying
     * CRDT blocks to the Datastore.
@@ -349,6 +346,7 @@ namespace sgns::crdt
         std::queue<DagJob>      dagWorkerJobList;
 
         CRDTDataFilter crdt_filter_;
+        bool           started_ = false;
 
         std::mutex              rebroadcastMutex_;
         std::condition_variable rebroadcastCv_;

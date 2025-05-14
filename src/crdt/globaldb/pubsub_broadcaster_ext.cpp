@@ -90,7 +90,6 @@ namespace sgns::crdt
         topicsToListen_( topicsToListen.begin(), topicsToListen.end() ),
         topicsToBroadcast_( topicsToBroadcast.begin(), topicsToBroadcast.end() ),
         dagSyncer_( std::move( dagSyncer ) ),
-        dataStore_( nullptr ),
         pubSub_( std::move( pubSub ) )
     {
         m_logger->trace( "Initializing PubSubBroadcasterExt" );
@@ -165,9 +164,7 @@ namespace sgns::crdt
             base::Buffer buf;
             buf.put( bmsg.data() );
 
-            // if CIDs don't work or can't map the broadcast the dataStore might try to call logger_ which will be called with nullptr of dataStore.
-            BOOST_ASSERT_MSG( dataStore_ != nullptr, "Data store is not set" );
-            auto cids = dataStore_->DecodeBroadcast( buf );
+            auto cids = CrdtDatastore::DecodeBroadcast( buf );
             if ( cids.has_failure() )
             {
                 m_logger->error( "Failed to decode broadcast payload" );
@@ -228,16 +225,6 @@ namespace sgns::crdt
                 m_logger->debug( "No new content from message" );
             }
         } while ( 0 );
-    }
-
-    void PubSubBroadcasterExt::SetCrdtDataStore( std::shared_ptr<CrdtDatastore> dataStore )
-    {
-        if ( dataStore_ && dataStore_ == dataStore )
-        {
-            return; // Avoid resetting if it's already the same instance
-        }
-
-        dataStore_ = std::move( dataStore ); // Keeps reference, no ownership transfer
     }
 
     outcome::result<void> PubSubBroadcasterExt::Broadcast( const base::Buffer &buff )
@@ -372,7 +359,6 @@ namespace sgns::crdt
     void PubSubBroadcasterExt::Stop()
     {
         subscriptionFutures_.clear(); // Clear all pending subscriptions
-        dataStore_.reset();           // Drop the reference to CrdtDatastore explicitly
     }
 
 

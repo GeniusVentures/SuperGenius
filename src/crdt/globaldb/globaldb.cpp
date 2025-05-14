@@ -279,9 +279,8 @@ namespace sgns::crdt
             return Error::CRDT_DATASTORE_NOT_CREATED;
         }
 
-        m_broadcaster->SetCrdtDataStore( m_crdtDatastore );
-
         // have to set the dataStore before starting the broadcasting
+        m_crdtDatastore->Start();
         m_broadcaster->Start();
 
         // TODO: bootstrapping
@@ -465,7 +464,7 @@ namespace sgns::crdt
 
     bool GlobalDB::RegisterElementFilter( const std::string &pattern, GlobalDBFilterCallback filter )
     {
-        m_crdtDatastore->RegisterElementFilter( pattern, std::move( filter ) );
+        return m_crdtDatastore->RegisterElementFilter( pattern, std::move( filter ) );
     }
 
 }

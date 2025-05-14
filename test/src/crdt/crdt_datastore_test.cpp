@@ -74,6 +74,7 @@ namespace sgns::crdt
                                                  broadcaster_,
                                                  CrdtOptions::DefaultOptions() );
             auto loggerDataStore = sgns::base::createLogger( "CrdtDatastore", "" );
+            crdtDatastore_->Start();
             loggerDataStore->set_level( spdlog::level::debug );
         }
 
@@ -275,6 +276,7 @@ namespace sgns::crdt
         second_broadcaster->SetMirrorCounterPart( broadcaster_ );
 
         second_crdt->RegisterElementFilter( "Key.*", filter_func );
+        second_crdt->Start();
 
         std::shared_ptr<Delta> delta    = std::make_shared<Delta>();
         auto                   element1 = delta->add_elements();
@@ -363,6 +365,7 @@ namespace sgns::crdt
         second_broadcaster->SetMirrorCounterPart( broadcaster_ );
 
         second_crdt->RegisterElementFilter( "Key.*", filter_func );
+        second_crdt->Start();
 
         std::shared_ptr<Delta> delta    = std::make_shared<Delta>();
         auto                   element1 = delta->add_elements();
@@ -445,6 +448,7 @@ namespace sgns::crdt
         second_broadcaster->SetMirrorCounterPart( broadcaster_ );
 
         second_crdt->RegisterElementFilter( "Key.*", filter_func );
+        second_crdt->Start();
 
         std::shared_ptr<Delta> delta1   = std::make_shared<Delta>();
         auto                   element1 = delta1->add_elements();
@@ -548,6 +552,7 @@ namespace sgns::crdt
                                                 }
                                                 return std::nullopt; // Accept this delta
                                             } );
+        second_crdt->Start();
 
         broadcaster_->SetMirrorCounterPart( second_broadcaster );
         second_broadcaster->SetMirrorCounterPart( broadcaster_ );

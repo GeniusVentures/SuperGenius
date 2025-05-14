@@ -42,11 +42,6 @@ namespace sgns::crdt
                                                           std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer,
                                                           std::shared_ptr<GossipPubSub> pubSub );
 
-        /**
-         * @brief Sets the CRDT datastore used for decoding broadcasts.
-         * @param dataStore Shared pointer to the CrdtDatastore instance.
-         */
-        void SetCrdtDataStore( std::shared_ptr<CrdtDatastore> dataStore );
 
         /**
          * @brief Sends the given buffer as a broadcast to peers.
@@ -110,7 +105,6 @@ namespace sgns::crdt
         std::set<std::string>                                     topicsToListen_;
         std::set<std::string>                                     topicsToBroadcast_;
         std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer>           dagSyncer_;
-        std::shared_ptr<CrdtDatastore>                            dataStore_;
         std::queue<std::tuple<libp2p::peer::PeerId, std::string>> messageQueue_;
 
         std::shared_ptr<GossipPubSub> pubSub_; ///< Pubsub used to broadcast/receive messages
