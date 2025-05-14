@@ -151,7 +151,7 @@ TEST_F( ProcessingNodesTest, DISABLED_ProcessNodesPubsubs )
     EXPECT_NE( address_proc1, address_proc2 ) << "node_proc1 and node_proc2 have the same address!";
 }
 
-TEST_F( ProcessingNodesTest, DISABLED_ProcessNodesTransactionsCount )
+TEST_F( ProcessingNodesTest, ProcessNodesTransactionsCount )
 {
     node_main->MintTokens( 50000000000, "", "", "" );
     node_main->MintTokens( 50000000000, "", "", "" );
@@ -167,7 +167,7 @@ TEST_F( ProcessingNodesTest, DISABLED_ProcessNodesTransactionsCount )
     //  ASSERT_EQ( transcount_node1, transcount_node2 );
 }
 
-TEST_F( ProcessingNodesTest, DISABLED_ProcessingNodeTransfer )
+TEST_F( ProcessingNodesTest, ProcessingNodeTransfer )
 {
     double balance_main  = node_main->GetBalance();
     double balance_node1 = node_proc1->GetBalance();
@@ -220,7 +220,7 @@ TEST_F( ProcessingNodesTest, CalculateProcessingCost )
     ASSERT_GT( cost, 10 );
 }
 
-TEST_F( ProcessingNodesTest, DISABLED_CalculateProcessingCostFail )
+TEST_F( ProcessingNodesTest, CalculateProcessingCostFail )
 {
     std::string json_data = R"(
                 garbage
@@ -229,7 +229,7 @@ TEST_F( ProcessingNodesTest, DISABLED_CalculateProcessingCostFail )
     ASSERT_EQ( 0, cost );
 }
 
-TEST_F( ProcessingNodesTest, DISABLED_PostProcessing )
+TEST_F( ProcessingNodesTest, PostProcessing )
 {
     std::string bin_path = boost::dll::program_location().parent_path().string() + "/";
 #ifdef _WIN32
