@@ -304,9 +304,13 @@ namespace sgns
         std::vector<std::string>           subtask_ids;
         std::vector<OutputDestInfo>        payout_peers;
 
-        auto mult_result = fixed_point::multiply( escrow_tx->GetAmount(), escrow_tx->GetPeersCut(), TokenAmount::PRECISION );
-        //TODO: check fail here, maybe if peer cut is greater than one to...
-        uint64_t peers_amount = mult_result.value() / static_cast<uint64_t>( taskresult.subtask_results().size() );
+        OUTCOME_TRY( ( auto &&, escrow_amount_ptr ), TokenAmount::New( escrow_tx->GetAmount() ) );
+
+        OUTCOME_TRY( ( auto &&, peers_cut_ptr ), TokenAmount::New( escrow_tx->GetPeersCut() ) );
+
+        OUTCOME_TRY( ( auto &&, peer_total ), escrow_amount_ptr->Multiply( *peers_cut_ptr ) );
+
+        uint64_t peers_amount = peer_total.Raw() / static_cast<uint64_t>( taskresult.subtask_results().size() );
         auto     remainder    = escrow_tx->GetAmount();
         for ( auto &subtask : taskresult.subtask_results() )
         {

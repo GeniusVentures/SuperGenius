@@ -1,16 +1,97 @@
+/**
+ * @file TokenAmount.cpp
+ * @brief Implementation of TokenAmount arithmetic helpers.
+ */
+
 #include "TokenAmount.hpp"
 #include "base/fixed_point.hpp"
-#include <iostream>
 #include <limits>
 
 namespace sgns
 {
-    outcome::result<uint64_t> TokenAmount::ParseMinions( const std::string &str ) noexcept
+    outcome::result<std::shared_ptr<TokenAmount>> TokenAmount::New( uint64_t raw_minions )
+    {
+        auto ptr = std::shared_ptr<TokenAmount>( new TokenAmount( raw_minions ) );
+        return outcome::success( ptr );
+    }
+
+    outcome::result<std::shared_ptr<TokenAmount>> TokenAmount::New( double value )
+    {
+        try
+        {
+            auto ptr = std::shared_ptr<TokenAmount>( new TokenAmount( value ) );
+            return outcome::success( ptr );
+        }
+        catch ( const std::overflow_error & /*e*/ )
+        {
+            return outcome::failure( std::make_error_code( std::errc::value_too_large ) );
+        }
+    }
+
+    outcome::result<std::shared_ptr<TokenAmount>> TokenAmount::New( const std::string &str )
+    {
+        auto raw = fixed_point::fromString( str, PRECISION );
+        if ( !raw )
+        {
+            return outcome::failure( raw.error() );
+        }
+        auto ptr = std::shared_ptr<TokenAmount>( new TokenAmount( raw.value() ) );
+        return outcome::success( ptr );
+    }
+
+    TokenAmount::TokenAmount( uint64_t minion_units ) : minions_( minion_units ) {}
+
+    TokenAmount::TokenAmount( double value )
+    {
+        minions_ = fixed_point::fromDouble( value, PRECISION );
+    }
+
+    outcome::result<TokenAmount> TokenAmount::FromString( const std::string &str )
+    {
+        auto raw = fixed_point::fromString( str, PRECISION );
+        if ( !raw )
+        {
+            return outcome::failure( raw.error() );
+        }
+        return outcome::success( TokenAmount( raw.value() ) );
+    }
+
+    std::string TokenAmount::ToString() const
+    {
+        return TokenAmount::FormatMinions( minions_ );
+    }
+
+    outcome::result<TokenAmount> TokenAmount::Multiply( const TokenAmount &other ) const
+    {
+        auto raw = fixed_point::multiply( minions_, other.minions_, PRECISION );
+        if ( !raw )
+        {
+            return outcome::failure( raw.error() );
+        }
+        return outcome::success( TokenAmount( raw.value() ) );
+    }
+
+    outcome::result<TokenAmount> TokenAmount::Divide( const TokenAmount &other ) const
+    {
+        auto raw = fixed_point::divide( minions_, other.minions_, PRECISION );
+        if ( !raw )
+        {
+            return outcome::failure( raw.error() );
+        }
+        return outcome::success( TokenAmount( raw.value() ) );
+    }
+
+    uint64_t TokenAmount::Raw() const
+    {
+        return minions_;
+    }
+
+    outcome::result<uint64_t> TokenAmount::ParseMinions( const std::string &str )
     {
         return fixed_point::fromString( str, PRECISION );
     }
 
-    std::string TokenAmount::FormatMinions( uint64_t minions ) noexcept
+    std::string TokenAmount::FormatMinions( uint64_t minions )
     {
         return fixed_point::toString( minions, PRECISION );
     }

@@ -24,11 +24,28 @@ namespace sgns
     class fixed_point
     {
     public:
-        // Public factory methods
+        /**
+         * @brief       Create a shared_ptr to a fixed_point from raw value and precision.
+         * @param[in]   raw_value Raw fixed-point value.
+         * @param[in]   precision Number of decimal places.
+         * @return      Shared pointer to new fixed_point or error.
+         */
         static outcome::result<std::shared_ptr<fixed_point>> create( uint64_t raw_value, uint64_t precision );
 
+        /**
+         * @brief       Create a shared_ptr to a fixed_point from double and precision.
+         * @param[in]   raw_value Double-precision floating-point value.
+         * @param[in]   precision Number of decimal places.
+         * @return      Shared pointer to new fixed_point or error.
+         */
         static outcome::result<std::shared_ptr<fixed_point>> create( double raw_value, uint64_t precision );
 
+        /**
+         * @brief       Create a shared_ptr to a fixed_point from string and precision.
+         * @param[in]   str_value String representing the decimal number.
+         * @param[in]   precision Number of decimal places.
+         * @return      Shared pointer to new fixed_point or error.
+         */
         static outcome::result<std::shared_ptr<fixed_point>> create( const std::string &str_value, uint64_t precision );
 
         /**
@@ -146,7 +163,7 @@ namespace sgns
          * @param[in]   precision Number of decimal places.
          */
         explicit fixed_point( uint64_t value, uint64_t precision );
-        
+
         /**
          * @brief       Construct a fixed_point from a double value.
          * @param[in]   raw_value Double-precision floating-point value.
