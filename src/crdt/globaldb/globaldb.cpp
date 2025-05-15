@@ -183,7 +183,7 @@ namespace sgns::crdt
         std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
         std::shared_ptr<RocksDB>                                              datastore )
     {
-        std::shared_ptr<RocksDB> dataStore = datastore;
+        std::shared_ptr<RocksDB> dataStore = std::move( datastore );
         if ( dataStore == nullptr )
         {
             auto databasePathAbsolute = boost::filesystem::absolute( m_databasePath ).string();
@@ -211,10 +211,11 @@ namespace sgns::crdt
                 return Error::ROCKSDB_IO;
             }
         }
+        m_datastore = std::move( dataStore );
 
         IpfsRocksDb::Options rdbOptions;
         rdbOptions.create_if_missing = true; // intentionally
-        auto ipfsDBResult            = IpfsRocksDb::create( dataStore->getDB() );
+        auto ipfsDBResult            = IpfsRocksDb::create( m_datastore->getDB() );
         if ( ipfsDBResult.has_error() )
         {
             m_logger->error( "Unable to create database for IPFS datastore" );
@@ -245,8 +246,8 @@ namespace sgns::crdt
             return startResult.error();
         }
 
-        m_broadcaster   = PubSubBroadcasterExt::New( { "default" }, {}, dagSyncer, m_pubsub );
-        m_crdtDatastore = CrdtDatastore::New( dataStore,
+        m_broadcaster   = PubSubBroadcasterExt::New( dagSyncer, m_pubsub );
+        m_crdtDatastore = CrdtDatastore::New( m_datastore,
                                               HierarchicalKey( "crdt" ),
                                               dagSyncer,
                                               m_broadcaster,
@@ -443,6 +444,11 @@ namespace sgns::crdt
     bool GlobalDB::RegisterElementFilter( const std::string &pattern, GlobalDBFilterCallback filter )
     {
         return m_crdtDatastore->RegisterElementFilter( pattern, std::move( filter ) );
+    }
+
+    std::shared_ptr<GlobalDB::RocksDB> GlobalDB::GetDataStore()
+    {
+        return m_datastore;
     }
 
 }

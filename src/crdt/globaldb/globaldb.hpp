@@ -118,6 +118,7 @@ namespace sgns::crdt
         {
             return m_crdtDatastore->GetDB();
         }
+        std::shared_ptr<RocksDB> GetDataStore();
 
         bool RegisterElementFilter( const std::string &pattern, GlobalDBFilterCallback filter );
 
