@@ -92,7 +92,7 @@ namespace test
 
             db_ = std::make_shared<GlobalDB>(
                 io_, basePath + ".unit",
-                std::make_shared<GossipPubSubTopic>( pubs_, "CRDT.Datastore.TEST.Channel" ) );
+                pubs_);
 
             BOOST_ASSERT_MSG( db_ != nullptr, "could not create GlobalDB for some reason");
 
@@ -103,6 +103,8 @@ namespace test
             auto graphsyncnetwork = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubs_->GetHost(),
                                                                                              scheduler );
             BOOST_ASSERT( db_->Init( crdtOptions, graphsyncnetwork, scheduler, generator ).has_value() );
+            db_->AddListenTopic( "CRDT.Datastore.TEST.Channel");
+            db_->AddBroadcastTopic( "CRDT.Datastore.TEST.Channel");
 
             // Start GossipPubSub after Init
             auto future = pubs_->Start(40001, {pubs_->GetLocalAddress()});

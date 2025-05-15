@@ -15,6 +15,7 @@
 #include <libp2p/protocol/holepunch/holepunch_client.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/graphsync_impl.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/local_requests.hpp>
+
 namespace sgns::crdt
 {
     class GlobalDB : public std::enable_shared_from_this<GlobalDB>
@@ -22,10 +23,7 @@ namespace sgns::crdt
     public:
         using Buffer      = base::Buffer;
         using QueryResult = CrdtDatastore::QueryResult;
-
-        GlobalDB( std::shared_ptr<boost::asio::io_context>              context,
-                  std::string                                           databasePath,
-                  std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> broadcastChannel );
+        using RocksDB     = storage::rocksdb;
 
         GlobalDB( std::shared_ptr<boost::asio::io_context>         context,
                   std::string                                      databasePath,
@@ -50,10 +48,11 @@ namespace sgns::crdt
             CRDT_DATASTORE_NOT_CREATED, ///< CRDT DataStore not created
         };
 
-        outcome::result<void> Init( std::shared_ptr<CrdtOptions> crdtOptions,
+        outcome::result<void> Init( std::shared_ptr<CrdtOptions>                               crdtOptions,
                                     std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::Network> graphsyncnetwork,
                                     std::shared_ptr<libp2p::protocol::Scheduler>               scheduler,
-                                    std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator );
+                                    std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
+                                    std::shared_ptr<RocksDB> datastore = nullptr );
 
         /**
          * @brief Puts key-value pair to the CRDT store, optionally specifying a broadcast topic.
@@ -61,8 +60,7 @@ namespace sgns::crdt
          * @param[in] value The value to store.
          * @return outcome::success on success, or outcome::failure otherwise.
          */
-        outcome::result<void> Put( const HierarchicalKey     &key,
-                                   const Buffer              &value);
+        outcome::result<void> Put( const HierarchicalKey &key, const Buffer &value );
 
         /**
          * @brief       Writes a batch of CRDT data all at once
@@ -111,10 +109,10 @@ namespace sgns::crdt
     */
         std::shared_ptr<AtomicTransaction> BeginTransaction();
 
-    void AddBroadcastTopic(const std::string &topicName);
-    void AddListenTopic(const std::string &topicName);
+        void AddBroadcastTopic( const std::string &topicName );
+        void AddListenTopic( const std::string &topicName );
 
-    void PrintDataStore();
+        void PrintDataStore();
 
         auto GetDB()
         {
@@ -127,16 +125,14 @@ namespace sgns::crdt
         void scheduleBootstrap( std::shared_ptr<boost::asio::io_context> io_context,
                                 std::shared_ptr<libp2p::Host>            host );
 
-        std::shared_ptr<boost::asio::io_context>              m_context;
-        std::string                                           m_databasePath;
-        int                                                   m_dagSyncPort;
-        std::string                                           m_graphSyncAddrs;
+        std::shared_ptr<boost::asio::io_context> m_context;
+        std::string                              m_databasePath;
+        int                                      m_dagSyncPort;
+        std::string                              m_graphSyncAddrs;
 
-        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> m_pubsub;
-        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> m_broadcastChannel;
+        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>  m_pubsub;
         std::shared_ptr<sgns::crdt::PubSubBroadcasterExt> m_broadcaster;
-
-
+        std::shared_ptr<RocksDB>                          m_datastore;
 
         //std::shared_ptr<sgns::ipfs_lite::ipfs::dht::IpfsDHT> dht_;
         //std::shared_ptr<libp2p::protocol::Identify> identify_;

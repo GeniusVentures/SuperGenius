@@ -50,7 +50,7 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::crdt, GlobalDB::Error, e )
 
 namespace sgns::crdt
 {
-    using RocksDB            = storage::rocksdb;
+
     using CrdtOptions        = crdt::CrdtOptions;
     using CrdtDatastore      = crdt::CrdtDatastore;
     using HierarchicalKey    = crdt::HierarchicalKey;
@@ -65,15 +65,6 @@ namespace sgns::crdt
                         std::string                                      databasePath,
                         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub ) :
         m_context( std::move( context ) ), m_databasePath( std::move( databasePath ) ), m_pubsub( std::move( pubsub ) )
-    {
-    }
-
-    GlobalDB::GlobalDB( std::shared_ptr<boost::asio::io_context>              context,
-                        std::string                                           databasePath,
-                        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> broadcastChannel ) :
-        m_context( std::move( context ) ),
-        m_databasePath( std::move( databasePath ) ),
-        m_broadcastChannel( std::move( broadcastChannel ) )
     {
     }
 
@@ -189,34 +180,38 @@ namespace sgns::crdt
         std::shared_ptr<CrdtOptions>                                          crdtOptions,
         std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::Network>            graphsyncnetwork,
         std::shared_ptr<libp2p::protocol::Scheduler>                          scheduler,
-        std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator )
+        std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
+        std::shared_ptr<RocksDB>                                              datastore )
     {
-        std::shared_ptr<RocksDB> dataStore            = nullptr;
-        auto                     databasePathAbsolute = boost::filesystem::absolute( m_databasePath ).string();
-
-        // Create new database
-        m_logger->info( "Opening database " + databasePathAbsolute );
-        RocksDB::Options options;
-        options.create_if_missing = true; // intentionally
-        try
+        std::shared_ptr<RocksDB> dataStore = datastore;
+        if ( dataStore == nullptr )
         {
-            if ( auto dataStoreResult = RocksDB::create( databasePathAbsolute, options ); dataStoreResult.has_value() )
+            auto databasePathAbsolute = boost::filesystem::absolute( m_databasePath ).string();
+
+            // Create new database
+            m_logger->info( "Opening database " + databasePathAbsolute );
+            RocksDB::Options options;
+            options.create_if_missing = true; // intentionally
+            try
             {
-                dataStore = dataStoreResult.value();
+                if ( auto dataStoreResult = RocksDB::create( databasePathAbsolute, options );
+                     dataStoreResult.has_value() )
+                {
+                    dataStore = dataStoreResult.value();
+                }
+                else
+                {
+                    m_logger->error( "Unable to open database: " + std::string( dataStoreResult.error().message() ) );
+                    return outcome::failure( boost::system::error_code{} );
+                }
             }
-            else
+            catch ( std::exception &e )
             {
-                m_logger->error( "Unable to open database: " + std::string( dataStoreResult.error().message() ) );
-                return outcome::failure( boost::system::error_code{} );
+                m_logger->error( "Unable to open database: " + std::string( e.what() ) );
+                return Error::ROCKSDB_IO;
             }
         }
-        catch ( std::exception &e )
-        {
-            m_logger->error( "Unable to open database: " + std::string( e.what() ) );
-            return Error::ROCKSDB_IO;
-        }
 
-        // Create new DAGSyncer
         IpfsRocksDb::Options rdbOptions;
         rdbOptions.create_if_missing = true; // intentionally
         auto ipfsDBResult            = IpfsRocksDb::create( dataStore->getDB() );
@@ -229,20 +224,13 @@ namespace sgns::crdt
         auto ipfsDataStore = std::make_shared<RocksdbDatastore>( ipfsDBResult.value() );
         //auto scheduler = std::make_shared<libp2p::protocol::AsioScheduler>( m_context,
         //                                                                    libp2p::protocol::SchedulerConfig{} );
-        std::shared_ptr<libp2p::Host> host;
-        if ( m_broadcastChannel )
+        if ( !m_pubsub )
         {
-            host = m_broadcastChannel->GetPubsub()->GetHost();
-        }
-        else if ( m_pubsub )
-        {
-            host = m_pubsub->GetHost();
-        }
-        else
-        {
-            m_logger->error( "Neither broadcast channel nor pubsub is initialized." );
+            m_logger->error( "pubsub not initialized." );
             return outcome::failure( Error::DAG_SYNCHER_NOT_LISTENING );
         }
+        std::shared_ptr<libp2p::Host> host = m_pubsub->GetHost();
+
         auto graphsync = std::make_shared<GraphsyncImpl>( host,
                                                           std::move( scheduler ),
                                                           graphsyncnetwork,
@@ -255,16 +243,6 @@ namespace sgns::crdt
         if ( startResult.has_failure() )
         {
             return startResult.error();
-        }
-
-        //dht_->Start();
-        //dht_->bootstrap();
-        //scheduleBootstrap(io, dagSyncerHost);
-        // Create pubsub broadcaster
-        std::vector<std::shared_ptr<GossipPubSubTopic>> topicStringVector;
-        if ( m_broadcastChannel )
-        {
-            topicStringVector.push_back( m_broadcastChannel );
         }
 
         m_broadcaster   = PubSubBroadcasterExt::New( { "default" }, {}, dagSyncer, m_pubsub );
