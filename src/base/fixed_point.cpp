@@ -18,13 +18,13 @@
 namespace sgns
 {
 
-    outcome::result<std::shared_ptr<fixed_point>> fixed_point::create( uint64_t raw_value, uint64_t precision )
+    outcome::result<std::shared_ptr<fixed_point>> fixed_point::New( uint64_t raw_value, uint64_t precision )
     {
         auto ptr = std::shared_ptr<fixed_point>( new fixed_point( raw_value, precision ) );
         return outcome::success( ptr );
     }
 
-    outcome::result<std::shared_ptr<fixed_point>> fixed_point::create( double raw_value, uint64_t precision )
+    outcome::result<std::shared_ptr<fixed_point>> fixed_point::New( double raw_value, uint64_t precision )
     {
         try
         {
@@ -37,10 +37,9 @@ namespace sgns
         }
     }
 
-    outcome::result<std::shared_ptr<fixed_point>> fixed_point::create( const std::string &str_value,
-                                                                       uint64_t           precision )
+    outcome::result<std::shared_ptr<fixed_point>> fixed_point::New( const std::string &str_value, uint64_t precision )
     {
-        auto raw = fromString( str_value, precision );
+        auto raw = FromString( str_value, precision );
         if ( !raw )
         {
             return outcome::failure( raw.error() );
@@ -52,11 +51,11 @@ namespace sgns
     fixed_point::fixed_point( uint64_t value, uint64_t precision ) : value_( value ), precision_( precision ) {}
 
     fixed_point::fixed_point( double raw_value, uint64_t precision ) :
-        value_( fromDouble( raw_value, precision ) ), precision_( precision )
+        value_( FromDouble( raw_value, precision ) ), precision_( precision )
     {
     }
 
-    constexpr uint64_t fixed_point::scaleFactor( uint64_t precision )
+    constexpr uint64_t fixed_point::ScaleFactor( uint64_t precision )
     {
         uint64_t result = 1;
         for ( uint64_t i = 0; i < precision; ++i )
@@ -66,7 +65,7 @@ namespace sgns
         return result;
     }
 
-    outcome::result<uint64_t> fixed_point::fromString( const std::string &str_value, uint64_t precision )
+    outcome::result<uint64_t> fixed_point::FromString( const std::string &str_value, uint64_t precision )
     {
         if ( str_value.empty() )
         {
@@ -117,13 +116,13 @@ namespace sgns
             fractional_part *= 10;
         }
 
-        return outcome::success( ( integer_part * scaleFactor( precision ) ) + fractional_part );
+        return outcome::success( ( integer_part * ScaleFactor( precision ) ) + fractional_part );
     }
 
-    std::string fixed_point::toString( uint64_t value, uint64_t precision )
+    std::string fixed_point::ToString( uint64_t value, uint64_t precision )
     {
-        uint64_t integer_part    = value / scaleFactor( precision );
-        uint64_t fractional_part = value % scaleFactor( precision );
+        uint64_t integer_part    = value / ScaleFactor( precision );
+        uint64_t fractional_part = value % ScaleFactor( precision );
 
         if ( precision == 0 )
         {
@@ -139,9 +138,9 @@ namespace sgns
         return std::to_string( integer_part ) + "." + fractional_str;
     }
 
-    uint64_t fixed_point::fromDouble( double raw_value, uint64_t precision )
+    uint64_t fixed_point::FromDouble( double raw_value, uint64_t precision )
     {
-        double factor  = static_cast<double>( scaleFactor( precision ) );
+        double factor  = static_cast<double>( ScaleFactor( precision ) );
         double scaled  = raw_value * factor;
         double rounded = std::round( scaled );
 
@@ -152,11 +151,11 @@ namespace sgns
         return static_cast<uint64_t>( rounded );
     }
 
-    outcome::result<uint64_t> fixed_point::multiply( uint64_t a, uint64_t b, uint64_t precision )
+    outcome::result<uint64_t> fixed_point::Multiply( uint64_t a, uint64_t b, uint64_t precision )
     {
         using namespace boost::multiprecision;
         uint128_t result = static_cast<uint128_t>( a ) * static_cast<uint128_t>( b );
-        result           = result / static_cast<uint128_t>( scaleFactor( precision ) );
+        result           = result / static_cast<uint128_t>( ScaleFactor( precision ) );
 
         if ( result > std::numeric_limits<uint64_t>::max() )
         {
@@ -165,7 +164,7 @@ namespace sgns
         return outcome::success( static_cast<uint64_t>( result ) );
     }
 
-    outcome::result<uint64_t> fixed_point::divide( uint64_t a, uint64_t b, uint64_t precision )
+    outcome::result<uint64_t> fixed_point::Divide( uint64_t a, uint64_t b, uint64_t precision )
     {
         using namespace boost::multiprecision;
         if ( b == 0 )
@@ -173,7 +172,7 @@ namespace sgns
             return outcome::failure( std::make_error_code( std::errc::result_out_of_range ) );
         }
 
-        uint128_t result = ( static_cast<uint128_t>( a ) * static_cast<uint128_t>( scaleFactor( precision ) ) ) /
+        uint128_t result = ( static_cast<uint128_t>( a ) * static_cast<uint128_t>( ScaleFactor( precision ) ) ) /
                            static_cast<uint128_t>( b );
 
         if ( result > std::numeric_limits<uint64_t>::max() )
@@ -184,42 +183,40 @@ namespace sgns
         return outcome::success( static_cast<uint64_t>( result ) );
     }
 
-    outcome::result<uint64_t> fixed_point::convertPrecision( uint64_t value,
-                                                             uint64_t from_precision,
-                                                             uint64_t to_precision )
+    outcome::result<uint64_t> fixed_point::ConvertPrecision( uint64_t value, uint64_t from, uint64_t to )
     {
         using namespace boost::multiprecision;
-        if ( from_precision == to_precision )
+        if ( from == to )
         {
             return outcome::success( value );
         }
 
-        if ( to_precision > from_precision )
+        if ( to > from )
         {
-            uint64_t  delta  = to_precision - from_precision;
-            uint128_t result = static_cast<uint128_t>( value ) * static_cast<uint128_t>( scaleFactor( delta ) );
+            uint64_t  delta  = to - from;
+            uint128_t result = static_cast<uint128_t>( value ) * static_cast<uint128_t>( ScaleFactor( delta ) );
             if ( result > std::numeric_limits<uint64_t>::max() )
             {
                 return outcome::failure( std::make_error_code( std::errc::value_too_large ) );
             }
             return outcome::success( static_cast<uint64_t>( result ) );
         }
-        uint64_t delta     = from_precision - to_precision;
-        uint64_t converted = value / scaleFactor( delta );
+        uint64_t delta     = from - to;
+        uint64_t converted = value / ScaleFactor( delta );
         return outcome::success( converted );
     }
 
-    uint64_t fixed_point::value() const noexcept
+    uint64_t fixed_point::Value() const noexcept
     {
         return value_;
     }
 
-    uint64_t fixed_point::precision() const noexcept
+    uint64_t fixed_point::Precision() const noexcept
     {
         return precision_;
     }
 
-    outcome::result<fixed_point> fixed_point::add( const fixed_point &other ) const
+    outcome::result<fixed_point> fixed_point::Add( const fixed_point &other ) const
     {
         if ( precision_ != other.precision_ )
         {
@@ -234,7 +231,7 @@ namespace sgns
         return outcome::success( fixed_point( static_cast<uint64_t>( sum ), precision_ ) );
     }
 
-    outcome::result<fixed_point> fixed_point::subtract( const fixed_point &other ) const
+    outcome::result<fixed_point> fixed_point::Subtract( const fixed_point &other ) const
     {
         if ( precision_ != other.precision_ )
         {
@@ -247,13 +244,13 @@ namespace sgns
         return outcome::success( fixed_point( value_ - other.value_, precision_ ) );
     }
 
-    outcome::result<fixed_point> fixed_point::multiply( const fixed_point &other ) const
+    outcome::result<fixed_point> fixed_point::Multiply( const fixed_point &other ) const
     {
         if ( precision_ != other.precision_ )
         {
             return outcome::failure( std::make_error_code( std::errc::invalid_argument ) );
         }
-        auto raw = fixed_point::multiply( value_, other.value_, precision_ );
+        auto raw = fixed_point::Multiply( value_, other.value_, precision_ );
         if ( !raw )
         {
             return outcome::failure( raw.error() );
@@ -261,13 +258,13 @@ namespace sgns
         return outcome::success( fixed_point( raw.value(), precision_ ) );
     }
 
-    outcome::result<fixed_point> fixed_point::divide( const fixed_point &other ) const
+    outcome::result<fixed_point> fixed_point::Divide( const fixed_point &other ) const
     {
         if ( precision_ != other.precision_ )
         {
             return outcome::failure( std::make_error_code( std::errc::invalid_argument ) );
         }
-        auto raw = fixed_point::divide( value_, other.value_, precision_ );
+        auto raw = fixed_point::Divide( value_, other.value_, precision_ );
         if ( !raw )
         {
             return outcome::failure( raw.error() );
@@ -275,13 +272,13 @@ namespace sgns
         return outcome::success( fixed_point( raw.value(), precision_ ) );
     }
 
-    outcome::result<fixed_point> fixed_point::convertPrecision( uint64_t to_precision ) const
+    outcome::result<fixed_point> fixed_point::ConvertPrecision( uint64_t to ) const
     {
-        auto raw = fixed_point::convertPrecision( value_, precision_, to_precision );
+        auto raw = fixed_point::ConvertPrecision( value_, precision_, to );
         if ( !raw )
         {
             return outcome::failure( raw.error() );
         }
-        return outcome::success( fixed_point( raw.value(), to_precision ) );
+        return outcome::success( fixed_point( raw.value(), to ) );
     }
 } // namespace sgns

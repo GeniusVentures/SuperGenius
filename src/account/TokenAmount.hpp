@@ -59,20 +59,6 @@ namespace sgns
         static outcome::result<std::shared_ptr<TokenAmount>> New( const std::string &str );
 
         /**
-         * @brief Parses a decimal string into a TokenAmount.
-         * @param str Token string in decimal format (e.g., "2.000123").
-         * @return A TokenAmount instance or an error.
-         */
-        static outcome::result<TokenAmount> FromString( const std::string &str );
-
-        /**
-         * @brief Converts this TokenAmount to a string with exactly 6 fractional digits.
-         *
-         * @return String representation of the token amount (e.g., "1.234567").
-         */
-        std::string ToString() const;
-
-        /**
          * @brief Multiplies this TokenAmount by another.
          *
          * Result is rounded back to fixed 6-digit precision.
@@ -95,7 +81,7 @@ namespace sgns
          *
          * @return Value in raw minion units (10^6 scaled).
          */
-        uint64_t Raw() const;
+        uint64_t Value() const;
 
         /**
          * @brief Parses a token amount string into raw minion units.

@@ -30,7 +30,7 @@ namespace sgns
 
     outcome::result<std::shared_ptr<TokenAmount>> TokenAmount::New( const std::string &str )
     {
-        auto raw = fixed_point::fromString( str, PRECISION );
+        auto raw = fixed_point::FromString( str, PRECISION );
         if ( !raw )
         {
             return outcome::failure( raw.error() );
@@ -43,27 +43,12 @@ namespace sgns
 
     TokenAmount::TokenAmount( double value )
     {
-        minions_ = fixed_point::fromDouble( value, PRECISION );
-    }
-
-    outcome::result<TokenAmount> TokenAmount::FromString( const std::string &str )
-    {
-        auto raw = fixed_point::fromString( str, PRECISION );
-        if ( !raw )
-        {
-            return outcome::failure( raw.error() );
-        }
-        return outcome::success( TokenAmount( raw.value() ) );
-    }
-
-    std::string TokenAmount::ToString() const
-    {
-        return TokenAmount::FormatMinions( minions_ );
+        minions_ = fixed_point::FromDouble( value, PRECISION );
     }
 
     outcome::result<TokenAmount> TokenAmount::Multiply( const TokenAmount &other ) const
     {
-        auto raw = fixed_point::multiply( minions_, other.minions_, PRECISION );
+        auto raw = fixed_point::Multiply( minions_, other.minions_, PRECISION );
         if ( !raw )
         {
             return outcome::failure( raw.error() );
@@ -73,7 +58,7 @@ namespace sgns
 
     outcome::result<TokenAmount> TokenAmount::Divide( const TokenAmount &other ) const
     {
-        auto raw = fixed_point::divide( minions_, other.minions_, PRECISION );
+        auto raw = fixed_point::Divide( minions_, other.minions_, PRECISION );
         if ( !raw )
         {
             return outcome::failure( raw.error() );
@@ -81,19 +66,19 @@ namespace sgns
         return outcome::success( TokenAmount( raw.value() ) );
     }
 
-    uint64_t TokenAmount::Raw() const
+    uint64_t TokenAmount::Value() const
     {
         return minions_;
     }
 
     outcome::result<uint64_t> TokenAmount::ParseMinions( const std::string &str )
     {
-        return fixed_point::fromString( str, PRECISION );
+        return fixed_point::FromString( str, PRECISION );
     }
 
     std::string TokenAmount::FormatMinions( uint64_t minions )
     {
-        return fixed_point::toString( minions, PRECISION );
+        return fixed_point::ToString( minions, PRECISION );
     }
 
     outcome::result<uint64_t> TokenAmount::CalculateCostMinions( uint64_t totalBytes, double priceUsdPerGenius )
@@ -114,19 +99,19 @@ namespace sgns
                 continue;
             }
 
-            auto totalRes = sgns::fixed_point::create( static_cast<uint64_t>( scaled ), prec );
+            auto totalRes = sgns::fixed_point::New( static_cast<uint64_t>( scaled ), prec );
             if ( !totalRes )
             {
                 continue;
             }
 
-            auto priceRes = sgns::fixed_point::create( priceUsdPerGenius, prec );
+            auto priceRes = sgns::fixed_point::New( priceUsdPerGenius, prec );
             if ( !priceRes )
             {
                 continue;
             }
 
-            auto divRes = totalRes.value()->divide( *priceRes.value() );
+            auto divRes = totalRes.value()->Divide( *priceRes.value() );
             if ( !divRes )
             {
                 continue;
@@ -136,18 +121,18 @@ namespace sgns
             break;
         }
 
-        if ( !costFp || costFp->precision() < PRECISION )
+        if ( !costFp || costFp->Precision() < PRECISION )
         {
             return outcome::failure( std::errc::value_too_large );
         }
 
-        auto minionRes = costFp->convertPrecision( PRECISION );
+        auto minionRes = costFp->ConvertPrecision( PRECISION );
         if ( !minionRes )
         {
             return outcome::failure( minionRes.error() );
         }
 
-        uint64_t rawMinions = minionRes.value().value();
+        uint64_t rawMinions = minionRes.value().Value();
         if ( rawMinions < MIN_MINION_UNITS )
         {
             rawMinions = MIN_MINION_UNITS;

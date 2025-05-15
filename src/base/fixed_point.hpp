@@ -30,7 +30,7 @@ namespace sgns
          * @param[in]   precision Number of decimal places.
          * @return      Shared pointer to new fixed_point or error.
          */
-        static outcome::result<std::shared_ptr<fixed_point>> create( uint64_t raw_value, uint64_t precision );
+        static outcome::result<std::shared_ptr<fixed_point>> New( uint64_t raw_value, uint64_t precision );
 
         /**
          * @brief       Create a shared_ptr to a fixed_point from double and precision.
@@ -38,7 +38,7 @@ namespace sgns
          * @param[in]   precision Number of decimal places.
          * @return      Shared pointer to new fixed_point or error.
          */
-        static outcome::result<std::shared_ptr<fixed_point>> create( double raw_value, uint64_t precision );
+        static outcome::result<std::shared_ptr<fixed_point>> New( double raw_value, uint64_t precision );
 
         /**
          * @brief       Create a shared_ptr to a fixed_point from string and precision.
@@ -46,14 +46,14 @@ namespace sgns
          * @param[in]   precision Number of decimal places.
          * @return      Shared pointer to new fixed_point or error.
          */
-        static outcome::result<std::shared_ptr<fixed_point>> create( const std::string &str_value, uint64_t precision );
+        static outcome::result<std::shared_ptr<fixed_point>> New( const std::string &str_value, uint64_t precision );
 
         /**
          * @brief       Returns power-of-ten scaling factor for a given precision.
          * @param[in]   precision Number of decimal places.
          * @return      10 raised to the power of precision.
          */
-        static constexpr uint64_t scaleFactor( uint64_t precision );
+        static constexpr uint64_t ScaleFactor( uint64_t precision );
 
         /**
          * @brief       Convert a string to fixed-point representation.
@@ -61,7 +61,7 @@ namespace sgns
          * @param[in]   precision Number of decimal places.
          * @return      Outcome of fixed-point representation or error.
          */
-        static outcome::result<uint64_t> fromString( const std::string &str_value, uint64_t precision );
+        static outcome::result<uint64_t> FromString( const std::string &str_value, uint64_t precision );
 
         /**
          * @brief       Convert fixed-point representation back to string.
@@ -69,7 +69,7 @@ namespace sgns
          * @param[in]   precision Number of decimal places.
          * @return      String representation.
          */
-        static std::string toString( uint64_t value, uint64_t precision );
+        static std::string ToString( uint64_t value, uint64_t precision );
 
         /**
          * @brief       Convert a double to a raw fixed-point integer.
@@ -78,7 +78,7 @@ namespace sgns
          * @return      Raw fixed-point integer.
          * @throws      std::overflow_error if the converted value does not fit in uint64_t.
          */
-        static uint64_t fromDouble( double raw_value, uint64_t precision );
+        static uint64_t FromDouble( double raw_value, uint64_t precision );
 
         /**
          * @brief       Multiply two fixed-point numbers with optional precision.
@@ -87,7 +87,7 @@ namespace sgns
          * @param[in]   precision Number of decimal places.
          * @return      Outcome of multiplication in fixed-point representation.
          */
-        static outcome::result<uint64_t> multiply( uint64_t a, uint64_t b, uint64_t precision );
+        static outcome::result<uint64_t> Multiply( uint64_t a, uint64_t b, uint64_t precision );
 
         /**
          * @brief       Divide two fixed-point numbers with optional precision.
@@ -96,65 +96,63 @@ namespace sgns
          * @param[in]   precision Number of decimal places.
          * @return      Outcome of division in fixed-point representation.
          */
-        static outcome::result<uint64_t> divide( uint64_t a, uint64_t b, uint64_t precision );
+        static outcome::result<uint64_t> Divide( uint64_t a, uint64_t b, uint64_t precision );
 
         /**
          * @brief       Convert a raw fixed-point integer from one precision to another.
-         * @param[in]   value           Fixed-point integer at original precision.
-         * @param[in]   from_precision  Original number of decimal places.
-         * @param[in]   to_precision    Target number of decimal places.
+         * @param[in]   value Fixed-point integer at original precision.
+         * @param[in]   from  Original number of decimal places.
+         * @param[in]   to    Target number of decimal places.
          * @return      Outcome with converted raw value or error if overflow.
          */
-        static outcome::result<uint64_t> convertPrecision( uint64_t value,
-                                                           uint64_t from_precision,
-                                                           uint64_t to_precision );
+        static outcome::result<uint64_t> ConvertPrecision( uint64_t value, uint64_t from, uint64_t to );
 
         /**
          * @brief       Get the raw fixed-point value.
          * @return      Raw fixed-point integer.
          */
-        uint64_t value() const noexcept;
+        uint64_t Value() const noexcept;
 
         /**
          * @brief       Get the precision of this fixed-point value.
          * @return      Number of decimal places.
          */
-        uint64_t precision() const noexcept;
+        uint64_t Precision() const noexcept;
 
         /**
          * @brief       Add another fixed_point with matching precision.
          * @param[in]   other Other fixed_point to add.
          * @return      Sum as fixed_point or failure if precision mismatch or overflow.
          */
-        outcome::result<fixed_point> add( const fixed_point &other ) const;
+        outcome::result<fixed_point> Add( const fixed_point &other ) const;
 
         /**
          * @brief       Subtract another fixed_point with matching precision.
          * @param[in]   other Other fixed_point to subtract.
          * @return      Difference as fixed_point or failure if precision mismatch or underflow.
          */
-        outcome::result<fixed_point> subtract( const fixed_point &other ) const;
+        outcome::result<fixed_point> Subtract( const fixed_point &other ) const;
 
         /**
          * @brief       Multiply by another fixed_point with matching precision.
-         * @param[in]   other Other fixed_point to multiply.
+         * @param[in]   other Other fixed_point to Multiply.
          * @return      Product as fixed_point or failure if precision mismatch or overflow.
          */
-        outcome::result<fixed_point> multiply( const fixed_point &other ) const;
+        outcome::result<fixed_point> Multiply( const fixed_point &other ) const;
 
         /**
          * @brief       Divide by another fixed_point with matching precision.
-         * @param[in]   other Other fixed_point to divide by.
+         * @param[in]   other Other fixed_point to Divide by.
          * @return      Quotient as fixed_point or failure if precision mismatch or division by zero.
          */
-        outcome::result<fixed_point> divide( const fixed_point &other ) const;
+        outcome::result<fixed_point> Divide( const fixed_point &other ) const;
 
         /**
          * @brief       Convert this fixed_point object to a different precision.
-         * @param[in]   to_precision    Target number of decimal places.
+         * @param[in]   to    Target number of decimal places.
          * @return      Outcome with new fixed_point or error if overflow.
          */
-        outcome::result<fixed_point> convertPrecision( uint64_t to_precision ) const;
+        outcome::result<fixed_point> ConvertPrecision( uint64_t to ) const;
 
     private:
         /**
