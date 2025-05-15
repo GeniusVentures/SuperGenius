@@ -103,6 +103,8 @@ int main(int argc, char* argv[])
     auto initRes          = globalDB2->Init( crdtOptions2, graphsyncnetwork, scheduler, generator );
     globalDB2->AddListenTopic( "CRDT.Datastore.TEST.Channel" );
     globalDB2->AddBroadcastTopic( "CRDT.Datastore.TEST.Channel" );
+    globalDB2->Start();
+
 
     //Processing Service Values
     auto taskQueue2 = std::make_shared<sgns::processing::ProcessingTaskQueueImpl>(globalDB2);

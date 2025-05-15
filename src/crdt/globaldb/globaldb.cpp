@@ -64,116 +64,27 @@ namespace sgns::crdt
     GlobalDB::GlobalDB( std::shared_ptr<boost::asio::io_context>         context,
                         std::string                                      databasePath,
                         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub ) :
-        m_context( std::move( context ) ), m_databasePath( std::move( databasePath ) ), m_pubsub( std::move( pubsub ) )
+        m_context( std::move( context ) ),
+        m_databasePath( std::move( databasePath ) ),
+        m_pubsub( std::move( pubsub ) ),
+        started_{ false }
     {
     }
 
     GlobalDB::~GlobalDB()
     {
         m_logger->debug( "~GlobalDB CALLED" );
-        if ( m_broadcaster )
+        if ( started_ )
         {
-            m_broadcaster->Stop();
-        }
-        if ( m_crdtDatastore )
-        {
-            m_crdtDatastore->Close();
-        }
-    }
-
-    std::string GetLocalIP( boost::asio::io_context &io )
-    {
-#if defined( _WIN32 )
-        // Windows implementation using GetAdaptersAddresses
-        ULONG                 bufferSize       = 15000;
-        IP_ADAPTER_ADDRESSES *adapterAddresses = (IP_ADAPTER_ADDRESSES *)malloc( bufferSize );
-        if ( GetAdaptersAddresses( AF_INET, 0, nullptr, adapterAddresses, &bufferSize ) == ERROR_BUFFER_OVERFLOW )
-        {
-            free( adapterAddresses );
-            adapterAddresses = (IP_ADAPTER_ADDRESSES *)malloc( bufferSize );
-        }
-        std::string addr = "127.0.0.1"; // Default to localhost
-        if ( GetAdaptersAddresses( AF_INET, 0, nullptr, adapterAddresses, &bufferSize ) == NO_ERROR )
-        {
-            for ( IP_ADAPTER_ADDRESSES *adapter = adapterAddresses; adapter; adapter = adapter->Next )
+            if ( m_broadcaster )
             {
-                if ( adapter->OperStatus == IfOperStatusUp && adapter->IfType != IF_TYPE_SOFTWARE_LOOPBACK )
-                {
-                    for ( IP_ADAPTER_UNICAST_ADDRESS *unicast = adapter->FirstUnicastAddress; unicast;
-                          unicast                             = unicast->Next )
-                    {
-                        SOCKADDR *addrStruct = unicast->Address.lpSockaddr;
-                        if ( addrStruct->sa_family == AF_INET )
-                        { // For IPv4
-                            char buffer[INET_ADDRSTRLEN];
-                            inet_ntop( AF_INET,
-                                       &( ( (struct sockaddr_in *)addrStruct )->sin_addr ),
-                                       buffer,
-                                       INET_ADDRSTRLEN );
-
-                            // Skip APIPA/link-local addresses (169.254.x.x)
-                            if ( strncmp( buffer, "169.254.", 8 ) == 0 )
-                            {
-                                continue;
-                            }
-
-                            addr = buffer;
-                            break;
-                        }
-                    }
-                }
-                if ( addr != "127.0.0.1" )
-                {
-                    break; // Stop if we found a non-loopback IP
-                }
+                m_broadcaster->Stop();
+            }
+            if ( m_crdtDatastore )
+            {
+                m_crdtDatastore->Close();
             }
         }
-        free( adapterAddresses );
-        return addr;
-#else
-        // Unix-like implementation using getifaddrs
-        struct ifaddrs *ifaddr, *ifa;
-        int             family;
-        std::string     addr = "127.0.0.1"; // Default to localhost
-        if ( getifaddrs( &ifaddr ) == -1 )
-        {
-            perror( "getifaddrs" );
-            return addr;
-        }
-        for ( ifa = ifaddr; ifa != nullptr; ifa = ifa->ifa_next )
-        {
-            if ( ifa->ifa_addr == nullptr )
-            {
-                continue;
-            }
-            family = ifa->ifa_addr->sa_family;
-            // We only want IPv4 addresses
-            if ( family == AF_INET && !( ifa->ifa_flags & IFF_LOOPBACK ) )
-            {
-                char host[NI_MAXHOST];
-                int  s = getnameinfo( ifa->ifa_addr,
-                                     sizeof( struct sockaddr_in ),
-                                     host,
-                                     NI_MAXHOST,
-                                     nullptr,
-                                     0,
-                                     NI_NUMERICHOST );
-                if ( s == 0 )
-                {
-                    // Skip APIPA/link-local addresses (169.254.x.x)
-                    if ( strncmp( host, "169.254.", 8 ) == 0 )
-                    {
-                        continue;
-                    }
-
-                    addr = host;
-                    break;
-                }
-            }
-        }
-        freeifaddrs( ifaddr );
-        return addr;
-#endif
     }
 
     outcome::result<void> GlobalDB::Init(
@@ -258,47 +169,18 @@ namespace sgns::crdt
             return Error::CRDT_DATASTORE_NOT_CREATED;
         }
 
-        // have to set the dataStore before starting the broadcasting
-        m_crdtDatastore->Start();
-        m_broadcaster->Start();
-
-        // TODO: bootstrapping
-        //m_logger->info("Bootstrapping...");
-        //bstr, _ : = multiaddr.NewMultiaddr("/ip4/94.130.135.167/tcp/33123/ipfs/12D3KooWFta2AE7oiK1ioqjVAKajUJauZWfeM7R413K7ARtHRDAu");
-        //inf, _ : = peer.AddrInfoFromP2pAddr(bstr);
-        //list: = append(ipfslite.DefaultBootstrapPeers(), *inf);
-        //ipfs.Bootstrap(list);
-        //h.ConnManager().TagPeer(inf.ID, "keep", 100);
-
-        //if (daemonMode && echoProtocol)
-        //{
-        //  // set a handler for Echo protocol
-        //  libp2p::protocol::Echo echo{ libp2p::protocol::EchoConfig{} };
-        //  host->setProtocolHandler(
-        //    echo.getProtocolId(),
-        //    [&echo](std::shared_ptr<libp2p::connection::Stream> received_stream) {
-        //      echo.handle(std::move(received_stream));
-        //    });
-        //}
         return outcome::success();
     }
 
-    //void GlobalDB::scheduleBootstrap(std::shared_ptr<boost::asio::io_context> io_context, std::shared_ptr<libp2p::Host> host)
-    //{
-    //    auto timer = std::make_shared<boost::asio::steady_timer>(*io_context);
-    //    timer->expires_after(std::chrono::seconds(30));
-    //
-    //    timer->async_wait([self{ shared_from_this() }, timer, io_context, host](const boost::system::error_code& ec) {
-    //        if (!ec && self->obsAddrRetries < 3) {
-    //            if (host->getObservedAddressesReal().size() <= 0)
-    //            {
-    //                self->dht_->bootstrap();
-    //                ++self->obsAddrRetries;
-    //                self->scheduleBootstrap(io_context, host);
-    //            }
-    //        }
-    //        });
-    //}
+    void GlobalDB::Start()
+    {
+        if ( !started_ )
+        {
+            started_ = true;
+            m_crdtDatastore->Start();
+            m_broadcaster->Start();
+        }
+    }
 
     outcome::result<void> GlobalDB::Put( const HierarchicalKey &key, const Buffer &value )
     {

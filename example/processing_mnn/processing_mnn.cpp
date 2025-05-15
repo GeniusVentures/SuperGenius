@@ -252,6 +252,8 @@ int main(int argc, char* argv[])
     globalDB->Init( crdtOptions, graphsyncnetwork, scheduler, generator );
     globalDB->AddListenTopic( "CRDT.Datastore.TEST.Channel" );
     globalDB->AddBroadcastTopic( "CRDT.Datastore.TEST.Channel" );
+    globalDB->Start();
+
     
     //Split tasks into subtasks
     auto taskQueue = std::make_shared<sgns::processing::ProcessingTaskQueueImpl>(globalDB);

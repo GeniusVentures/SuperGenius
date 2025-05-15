@@ -133,6 +133,8 @@ int main( int argc, char **argv )
     globalDB->Init( crdtOptions, graphsyncnetwork, scheduler, generator );
     globalDB->AddListenTopic( broadcastChannel );
     globalDB->AddBroadcastTopic( broadcastChannel );
+    globalDB->Start();
+
 
     std::ostringstream streamDisplayDetails;
     // @todo fix commented output

@@ -244,6 +244,8 @@ int main(int argc, char* argv[])
     globalDB->Init( crdtOptions, graphsyncnetwork, scheduler, generator );
     globalDB->AddListenTopic( "CRDT.Datastore.TEST.Channel" );
     globalDB->AddBroadcastTopic( "CRDT.Datastore.TEST.Channel" );
+    globalDB->Start();
+
 
     std::thread iothread([io]() { io->run(); });
 

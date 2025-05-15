@@ -100,10 +100,7 @@ namespace sgns
                 .str() ),
         m_lastApiCall( std::chrono::system_clock::now() - m_minApiCallInterval )
 
-    //coinprices_(std::make_shared<CoinGeckoPriceRetriever>(io_))
     {
-        //For some reason if this isn't initialized like this, it ends up completely wrong.
-        m_lastApiCall = std::chrono::system_clock::now() - m_minApiCallInterval;
         SSL_library_init();
         SSL_load_error_strings();
         OpenSSL_add_all_algorithms();
@@ -304,6 +301,8 @@ namespace sgns
         }
         job_globaldb_->AddBroadcastTopic( processing_channel_topic_ );
         job_globaldb_->AddListenTopic( processing_channel_topic_ );
+        job_globaldb_->Start();
+
         task_queue_      = std::make_shared<processing::ProcessingTaskQueueImpl>( job_globaldb_ );
         processing_core_ = std::make_shared<processing::ProcessingCoreImpl>( job_globaldb_, 1000000, 1 );
         processing_core_->RegisterProcessorFactory( "mnnimage",

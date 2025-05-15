@@ -76,6 +76,7 @@ namespace sgns
         globaldb_->Init( crdt::CrdtOptions::DefaultOptions(), graphsyncnetwork, scheduler, generator );
         globaldb_->AddListenTopic( std::string (PROCESSING_CHANNEL) );
         globaldb_->AddBroadcastTopic( std::string (PROCESSING_CHANNEL) );
+        globaldb_->Start();
 
         base::Buffer root_hash;
         root_hash.put( std::vector<uint8_t>( 32ul, 1 ) );

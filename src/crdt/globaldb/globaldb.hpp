@@ -118,9 +118,12 @@ namespace sgns::crdt
         {
             return m_crdtDatastore->GetDB();
         }
+
         std::shared_ptr<RocksDB> GetDataStore();
 
         bool RegisterElementFilter( const std::string &pattern, GlobalDBFilterCallback filter );
+
+        void Start();
 
     private:
         void scheduleBootstrap( std::shared_ptr<boost::asio::io_context> io_context,
@@ -134,6 +137,7 @@ namespace sgns::crdt
         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>  m_pubsub;
         std::shared_ptr<sgns::crdt::PubSubBroadcasterExt> m_broadcaster;
         std::shared_ptr<RocksDB>                          m_datastore;
+        std::atomic_bool                                  started_;
 
         //std::shared_ptr<sgns::ipfs_lite::ipfs::dht::IpfsDHT> dht_;
         //std::shared_ptr<libp2p::protocol::Identify> identify_;

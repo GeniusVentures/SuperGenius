@@ -148,6 +148,7 @@ namespace sgns
 
                 return maybe_tombstones;
             } );
+            globaldb_m->Start();
     }
 
     TransactionManager::~TransactionManager()
