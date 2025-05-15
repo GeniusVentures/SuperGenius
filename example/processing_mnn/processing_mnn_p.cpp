@@ -95,12 +95,14 @@ int main(int argc, char* argv[])
     auto globalDB2 = std::make_shared<sgns::crdt::GlobalDB>(
         io,
         (boost::format("CRDT.Datastore.TEST.%d") % serviceindex).str(),
-        std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>(pubs2, "CRDT.Datastore.TEST.Channel"));
+        pubs2);
     auto crdtOptions2 = sgns::crdt::CrdtOptions::DefaultOptions();
     auto scheduler    = std::make_shared<libp2p::protocol::AsioScheduler>( io, libp2p::protocol::SchedulerConfig{} );
     auto graphsyncnetwork = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubs2->GetHost(), scheduler );
     auto generator        = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
     auto initRes          = globalDB2->Init( crdtOptions2, graphsyncnetwork, scheduler, generator );
+    globalDB2->AddListenTopic( "CRDT.Datastore.TEST.Channel" );
+    globalDB2->AddBroadcastTopic( "CRDT.Datastore.TEST.Channel" );
 
     //Processing Service Values
     auto taskQueue2 = std::make_shared<sgns::processing::ProcessingTaskQueueImpl>(globalDB2);

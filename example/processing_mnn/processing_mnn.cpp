@@ -242,7 +242,7 @@ int main(int argc, char* argv[])
     //Add to GlobalDB
     auto globalDB = std::make_shared<sgns::crdt::GlobalDB>(
         io, "CRDT.Datastore.TEST",
-        std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>(pubs, "CRDT.Datastore.TEST.Channel"));
+        pubs);
     
     auto crdtOptions = sgns::crdt::CrdtOptions::DefaultOptions();
     auto scheduler        = std::make_shared<libp2p::protocol::AsioScheduler>( io,
@@ -250,6 +250,8 @@ int main(int argc, char* argv[])
     auto graphsyncnetwork = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubs->GetHost(), scheduler );
     auto generator        = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
     globalDB->Init( crdtOptions, graphsyncnetwork, scheduler, generator );
+    globalDB->AddListenTopic( "CRDT.Datastore.TEST.Channel" );
+    globalDB->AddBroadcastTopic( "CRDT.Datastore.TEST.Channel" );
     
     //Split tasks into subtasks
     auto taskQueue = std::make_shared<sgns::processing::ProcessingTaskQueueImpl>(globalDB);

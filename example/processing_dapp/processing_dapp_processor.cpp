@@ -294,13 +294,15 @@ int main(int argc, char* argv[])
     auto globalDB = std::make_shared<sgns::crdt::GlobalDB>(
         io, 
         (boost::format("CRDT.Datastore.TEST.%d") %  options->serviceIndex).str(), 
-        std::make_shared<sgns::ipfs_pubsub::GossipPubSubTopic>(pubs, "CRDT.Datastore.TEST.Channel"));
+        pubs);
 
     auto crdtOptions = sgns::crdt::CrdtOptions::DefaultOptions();
     auto scheduler   = std::make_shared<libp2p::protocol::AsioScheduler>( io, libp2p::protocol::SchedulerConfig{} );
     auto graphsyncnetwork = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubs->GetHost(), scheduler );
     auto generator        = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
     auto initRes          = globalDB->Init( crdtOptions, graphsyncnetwork, scheduler, generator );
+    globalDB->AddListenTopic( "CRDT.Datastore.TEST.Channel" );
+    globalDB->AddBroadcastTopic( "CRDT.Datastore.TEST.Channel" );
 
     std::thread iothread([io]() { io->run(); });
 
