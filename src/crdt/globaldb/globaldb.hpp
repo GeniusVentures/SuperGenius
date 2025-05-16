@@ -25,6 +25,18 @@ namespace sgns::crdt
         using QueryResult = CrdtDatastore::QueryResult;
         using RocksDB     = storage::rocksdb;
 
+        /**
+         * @brief       Factory method to create a GlobalDB instance
+         * @param[in]   context The io context used to run its inner methods
+         * @param[in]   databasePath Local system's path where data will be stored, not used if datastore is not nullptr
+         * @param[in]   pubsub The pubsub instance used to communicate
+         * @param[in]   crdtOptions CRDT options
+         * @param[in]   graphsyncnetwork The graphsync networks used
+         * @param[in]   scheduler libp2p scheduler
+         * @param[in]   generator The request ID generator from graphsync
+         * @param[in]   datastore datastore to be used. If not defined, created using databasePath
+         * @return      Instance of the GlobalDB initialized or Error
+         */
         static outcome::result<std::shared_ptr<GlobalDB>> New(
             std::shared_ptr<boost::asio::io_context>                              context,
             std::string                                                           databasePath,
@@ -35,15 +47,14 @@ namespace sgns::crdt
             std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
             std::shared_ptr<RocksDB>                                              datastore = nullptr );
 
-        GlobalDB( std::shared_ptr<boost::asio::io_context>         context,
-                  std::string                                      databasePath,
-                  std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub );
-
+        /**
+         * @brief      Destructor or GlobalDB
+         */
         ~GlobalDB();
 
         /// Pair of key and value to be stored in CRDT
         using DataPair = std::pair<HierarchicalKey, Buffer>;
-
+        /// CRDT Filter callback type
         using GlobalDBFilterCallback = CrdtDatastore::CRDTElementFilterCallback;
 
         /**
@@ -58,12 +69,6 @@ namespace sgns::crdt
             CRDT_DATASTORE_NOT_CREATED, ///< CRDT DataStore not created
             INVALID_PARAMETERS,         ///< Invalid parameters
         };
-
-        outcome::result<void> Init( std::shared_ptr<CrdtOptions>                               crdtOptions,
-                                    std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::Network> graphsyncnetwork,
-                                    std::shared_ptr<libp2p::protocol::Scheduler>               scheduler,
-                                    std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
-                                    std::shared_ptr<RocksDB> datastore = nullptr );
 
         /**
          * @brief Puts key-value pair to the CRDT store, optionally specifying a broadcast topic.
@@ -81,21 +86,21 @@ namespace sgns::crdt
         outcome::result<void> Put( const std::vector<DataPair> &data_vector );
 
         /** Gets a value that corresponds to specified key.
-    * @param key - value key
-    * @return value as a Buffer
-    */
+        * @param key - value key
+        * @return value as a Buffer
+        */
         outcome::result<Buffer> Get( const HierarchicalKey &key );
 
         /** Removes value for a given key.
-    * @param key to remove from storage
-    * @return outcome::failure on error or success otherwise
-    */
+        * @param key to remove from storage
+        * @return outcome::failure on error or success otherwise
+        */
         outcome::result<void> Remove( const HierarchicalKey &key );
 
         /** Queries CRDT key-value pairs by prefix. If the prefix is empty returns all elements that were not tombstoned
-    * @param prefix - keys prefix to match. An empty prefix matches any key.
-    * @return list of key-value pairs matches prefix
-    */
+        * @param prefix - keys prefix to match. An empty prefix matches any key.
+        * @return list of key-value pairs matches prefix
+        */
         outcome::result<QueryResult> QueryKeyValues( const std::string &keyPrefix );
 
         /**
@@ -110,14 +115,14 @@ namespace sgns::crdt
                                                      const std::string &remainder_prefix );
 
         /** Converts a unique key part to a string representation
-    * @param key - binary key to convert
-    * @return string represenation of a unique key part
-    */
+        * @param key - binary key to convert
+        * @return string represenation of a unique key part
+        */
         outcome::result<std::string> KeyToString( const Buffer &key ) const;
 
         /** Create a transaction object
-    * @return new transaction
-    */
+        * @return new transaction
+        */
         std::shared_ptr<AtomicTransaction> BeginTransaction();
 
         void AddBroadcastTopic( const std::string &topicName );
@@ -137,6 +142,22 @@ namespace sgns::crdt
         void Start();
 
     private:
+        /**
+         * @brief       Constructs a new Global D B object
+         * @param[in]   context the io context used to run inner methods
+         * @param[in]   databasePath the local path where the files are gonna be stored
+         * @param[in]   pubsub the pubsub instance used to communicate
+         */
+        GlobalDB( std::shared_ptr<boost::asio::io_context>         context,
+                  std::string                                      databasePath,
+                  std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub );
+
+        outcome::result<void> Init( std::shared_ptr<CrdtOptions>                               crdtOptions,
+                                    std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::Network> graphsyncnetwork,
+                                    std::shared_ptr<libp2p::protocol::Scheduler>               scheduler,
+                                    std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
+                                    std::shared_ptr<RocksDB> datastore = nullptr );
+
         void scheduleBootstrap( std::shared_ptr<boost::asio::io_context> io_context,
                                 std::shared_ptr<libp2p::Host>            host );
 
