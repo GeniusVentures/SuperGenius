@@ -9,7 +9,6 @@
 #include <libp2p/multi/content_identifier_codec.hpp>
 
 #include "account/GeniusAccount.hpp"
-#include "account/TokenAmount.hpp"
 #include "base/buffer.hpp"
 #include "account/TransactionManager.hpp"
 #include <ipfs_lite/ipfs/graphsync/graphsync.hpp>
@@ -55,18 +54,18 @@ namespace sgns
          */
         enum class Error
         {
-            INSUFFICIENT_FUNDS       = 1,  ///< Insufficient funds for a transaction
-            DATABASE_WRITE_ERROR     = 2,  ///< Error writing data into the database
-            INVALID_TRANSACTION_HASH = 3,  ///< Input transaction hash is invalid
-            INVALID_CHAIN_ID         = 4,  ///< Chain ID is invalid
-            INVALID_TOKEN_ID         = 5,  ///< Token ID is invalid
-            TOKEN_ID_MISMATCH        = 6,  ///< Informed Token ID doesn't match initialized ID
-            PROCESS_COST_ERROR       = 7,  ///< The calculated Processing cost was negative
-            PROCESS_INFO_MISSING     = 8,  ///< Processing information missing on JSON file
-            INVALID_JSON             = 9,  ///< JSON cannot be parsed>
-            INVALID_BLOCK_PARAMETERS = 10, ///< JSON params for blocks incorrect or missing>
-            NO_PROCESSOR             = 11, ///< No processor for this type>
-            NO_PRICE                 = 12, ///< Couldn't get price of gnus>
+            INSUFFICIENT_FUNDS       = 1,  ///<Insufficient funds for a transaction
+            DATABASE_WRITE_ERROR     = 2,  ///<Error writing data into the database
+            INVALID_TRANSACTION_HASH = 3,  ///<Input transaction hash is invalid
+            INVALID_CHAIN_ID         = 4,  ///<Chain ID is invalid
+            INVALID_TOKEN_ID         = 5,  ///<Token ID is invalid
+            TOKEN_ID_MISMATCH        = 6,  ///<Informed Token ID doesn't match initialized ID
+            PROCESS_COST_ERROR       = 7,  ///<The calculated Processing cost was negative
+            PROCESS_INFO_MISSING     = 8,  ///<Processing information missing on JSON file
+            INVALID_JSON             = 9,  ///<JSON cannot be parsed>
+            INVALID_BLOCK_PARAMETERS = 10, ///<JSON params for blocks incorrect or missing>
+            NO_PROCESSOR             = 11, ///<No processor for this type>
+            NO_PRICE                 = 12, ///<Couldn't get price of gnus>
         };
 
 #ifdef SGNS_DEBUG

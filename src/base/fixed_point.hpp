@@ -64,7 +64,7 @@ namespace sgns
         static outcome::result<uint64_t> FromString( const std::string &str_value, uint64_t precision );
 
         /**
-         * @brief       Convert fixed-point representation back to string.
+         * @brief       Convert fixed-point representation to string.
          * @param[in]   value     Fixed-point number.
          * @param[in]   precision Number of decimal places.
          * @return      String representation.
@@ -75,13 +75,12 @@ namespace sgns
          * @brief       Convert a double to a raw fixed-point integer.
          * @param[in]   raw_value Double-precision floating-point value.
          * @param[in]   precision Number of decimal places.
-         * @return      Raw fixed-point integer.
-         * @throws      std::overflow_error if the converted value does not fit in uint64_t.
+         * @return      Outcome of raw fixed-point integer.
          */
-        static uint64_t FromDouble( double raw_value, uint64_t precision );
+        static outcome::result<uint64_t> FromDouble( double raw_value, uint64_t precision );
 
         /**
-         * @brief       Multiply two fixed-point numbers with optional precision.
+         * @brief       Multiply two fixed-point numbers with precision.
          * @param[in]   a         First number.
          * @param[in]   b         Second number.
          * @param[in]   precision Number of decimal places.
@@ -90,7 +89,7 @@ namespace sgns
         static outcome::result<uint64_t> Multiply( uint64_t a, uint64_t b, uint64_t precision );
 
         /**
-         * @brief       Divide two fixed-point numbers with optional precision.
+         * @brief       Divide two fixed-point numbers with precision.
          * @param[in]   a         Dividend.
          * @param[in]   b         Divisor.
          * @param[in]   precision Number of decimal places.
@@ -161,14 +160,6 @@ namespace sgns
          * @param[in]   precision Number of decimal places.
          */
         explicit fixed_point( uint64_t value, uint64_t precision );
-
-        /**
-         * @brief       Construct a fixed_point from a double value.
-         * @param[in]   raw_value Double-precision floating-point value.
-         * @param[in]   precision Number of decimal places.
-         * @throws      std::overflow_error if the converted value does not fit in uint64_t.
-         */
-        explicit fixed_point( double raw_value, uint64_t precision );
 
         uint64_t value_;
         uint64_t precision_;

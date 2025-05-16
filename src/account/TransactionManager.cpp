@@ -1,6 +1,6 @@
 /**
  * @file       TransactionManager.cpp
- * @brief
+ * @brief      
  * @date       2024-04-12
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
@@ -25,7 +25,6 @@
 #include "UTXOTxParameters.hpp"
 #include "account/TokenAmount.hpp"
 #include "account/proto/SGTransaction.pb.h"
-#include "base/fixed_point.hpp"
 #include "crdt/impl/crdt_data_filter.hpp"
 #include "crdt/proto/delta.pb.h"
 
@@ -60,8 +59,8 @@ namespace sgns
                 std::shared_ptr<IGeniusTransactions>          tx;
                 do
                 {
-                    // TODO - This verification is only needed because CRDT resyncs every boot up
-                    //  Remove once we remove the in memory processed_cids on crdt_datastore and use dagsyncher again
+                    //TODO - This verification is only needed because CRDT resyncs every boot up
+                    // Remove once we remove the in memory processed_cids on crdt_datastore and use dagsyncher again
                     auto maybe_has_value = globaldb_m->Get( element.key() );
                     if ( maybe_has_value.has_value() )
                     {
@@ -111,8 +110,8 @@ namespace sgns
                 bool                                          valid_proof = false;
                 do
                 {
-                    // TODO - This verification is only needed because CRDT resyncs every boot up
-                    //  Remove once we remove the in memory processed_cids on crdt_datastore and use dagsyncher again
+                    //TODO - This verification is only needed because CRDT resyncs every boot up
+                    // Remove once we remove the in memory processed_cids on crdt_datastore and use dagsyncher again
                     auto maybe_has_value = globaldb_m->Get( element.key() );
                     if ( maybe_has_value.has_value() )
                     {
@@ -208,7 +207,8 @@ namespace sgns
                                       account_m->eth_address ) );
         std::optional<std::vector<uint8_t>> maybe_proof;
 #ifdef _PROOF_ENABLED
-        TransferProof prover( account_m->GetBalance<uint64_t>(), amount );
+        TransferProof prover( static_cast<uint64_t>( account_m->GetBalance<uint64_t>() ),
+                              static_cast<uint64_t>( amount ) );
         OUTCOME_TRY( ( auto &&, proof_result ), prover.GenerateFullProof() );
         maybe_proof = std::move( proof_result );
 #endif
@@ -267,7 +267,8 @@ namespace sgns
 
         std::optional<std::vector<uint8_t>> maybe_proof;
 #ifdef _PROOF_ENABLED
-        TransferProof prover( account_m->GetBalance<uint64_t>(), amount );
+        TransferProof prover( static_cast<uint64_t>( account_m->GetBalance<uint64_t>() ),
+                              static_cast<uint64_t>( amount ) );
         OUTCOME_TRY( ( auto &&, proof_result ), prover.GenerateFullProof() );
         maybe_proof = std::move( proof_result );
 #endif
@@ -322,12 +323,11 @@ namespace sgns
         }
         m_logger->debug( "Sending to dev {}", remainder );
         payout_peers.push_back( { remainder, escrow_tx->GetDevAddress() } );
-
         InputUTXOInfo escrow_utxo_input;
 
         escrow_utxo_input.txid_hash_  = ( base::Hash256::fromReadableString( escrow_tx->dag_st.data_hash() ) ).value();
         escrow_utxo_input.output_idx_ = 0;
-        escrow_utxo_input.signature_  = ""; // TODO - Signature
+        escrow_utxo_input.signature_  = ""; //TODO - Signature
 
         auto transfer_transaction = std::make_shared<TransferTransaction>(
             TransferTransaction::New( payout_peers,
@@ -337,7 +337,7 @@ namespace sgns
 
         std::optional<std::vector<uint8_t>> transfer_proof;
 #ifdef _PROOF_ENABLED
-        // TODO - Create with the real balance and amount
+        //TODO - Create with the real balance and amount
         TransferProof transfer_prover( 1, 1 );
         OUTCOME_TRY( ( auto &&, transfer_proof_result ), transfer_prover.GenerateFullProof() );
         transfer_proof = std::move( transfer_proof_result );
@@ -353,7 +353,7 @@ namespace sgns
 
         std::optional<std::vector<uint8_t>> escrow_release_proof;
 #ifdef _PROOF_ENABLED
-        // TODO - Create with the real balance and amount
+        //TODO - Create with the real balance and amount
         TransferProof escrow_release_prover( 1, 1 );
         OUTCOME_TRY( ( auto &&, escrow_release_proof_result ), escrow_release_prover.GenerateFullProof() );
         escrow_release_proof = std::move( escrow_release_proof_result );
@@ -398,7 +398,7 @@ namespace sgns
         EnqueueTransaction( { { std::move( element ) }, std::nullopt } );
     }
 
-    // TODO - Fill hash stuff on DAGStruct
+    //TODO - Fill hash stuff on DAGStruct
     SGTransaction::DAGStruct TransactionManager::FillDAGStruct( std::string transaction_hash ) const
     {
         SGTransaction::DAGStruct dag;
@@ -409,7 +409,7 @@ namespace sgns
         dag.set_source_addr( account_m->GetAddress() );
         dag.set_timestamp( timestamp.time_since_epoch().count() );
         dag.set_uncle_hash( "" );
-        dag.set_data_hash( "" ); // filled by transaction class
+        dag.set_data_hash( "" ); //filled by transaction class
 
         return dag;
     }
@@ -653,7 +653,7 @@ namespace sgns
         auto proof_data_vector = proof_data.toVector();
 
         m_logger->debug( "Proof data acquired. Verifying..." );
-        // std::cout << " it has value with size  " << proof_data.size() << std::endl;
+        //std::cout << " it has value with size  " << proof_data.size() << std::endl;
         return IBasicProof::VerifyFullProof( proof_data_vector );
 #else
         return true;
@@ -669,7 +669,7 @@ namespace sgns
 
         m_logger->trace( "Incoming transaction list grabbed from CRDT with Size {}", transaction_list.size() );
 
-        // m_logger->info( "Number of tasks in Queue: {}", queryTasks.size() );
+        //m_logger->info( "Number of tasks in Queue: {}", queryTasks.size() );
         for ( const auto &element : transaction_list )
         {
             auto transaction_key = globaldb_m->KeyToString( element.first );
@@ -716,7 +716,7 @@ namespace sgns
 
         m_logger->trace( "Transaction list grabbed from CRDT" );
 
-        // m_logger->info( "Number of tasks in Queue: {}", queryTasks.size() );
+        //m_logger->info( "Number of tasks in Queue: {}", queryTasks.size() );
         for ( const auto &element : transaction_list )
         {
             auto transaction_key = globaldb_m->KeyToString( element.first );
@@ -804,7 +804,7 @@ namespace sgns
 
             if ( !dest_infos.outputs_.empty() )
             {
-                // The first is the escrow, second is the change (might not happen)
+                //The first is the escrow, second is the change (might not happen)
                 auto hash = ( base::Hash256::fromReadableString( escrow_tx->dag_st.data_hash() ) ).value();
                 if ( dest_infos.outputs_.size() > 1 )
                 {

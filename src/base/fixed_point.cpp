@@ -26,15 +26,13 @@ namespace sgns
 
     outcome::result<std::shared_ptr<fixed_point>> fixed_point::New( double raw_value, uint64_t precision )
     {
-        try
+        auto res = FromDouble( raw_value, precision );
+        if ( !res )
         {
-            auto ptr = std::shared_ptr<fixed_point>( new fixed_point( raw_value, precision ) );
-            return outcome::success( ptr );
+            return outcome::failure( res.error() );
         }
-        catch ( const std::overflow_error & /*e*/ )
-        {
-            return outcome::failure( std::make_error_code( std::errc::value_too_large ) );
-        }
+        auto ptr = std::shared_ptr<fixed_point>( new fixed_point( res.value(), precision ) );
+        return outcome::success( ptr );
     }
 
     outcome::result<std::shared_ptr<fixed_point>> fixed_point::New( const std::string &str_value, uint64_t precision )
@@ -49,11 +47,6 @@ namespace sgns
     }
 
     fixed_point::fixed_point( uint64_t value, uint64_t precision ) : value_( value ), precision_( precision ) {}
-
-    fixed_point::fixed_point( double raw_value, uint64_t precision ) :
-        value_( FromDouble( raw_value, precision ) ), precision_( precision )
-    {
-    }
 
     constexpr uint64_t fixed_point::ScaleFactor( uint64_t precision )
     {
@@ -138,7 +131,7 @@ namespace sgns
         return std::to_string( integer_part ) + "." + fractional_str;
     }
 
-    uint64_t fixed_point::FromDouble( double raw_value, uint64_t precision )
+    outcome::result<uint64_t> fixed_point::FromDouble( double raw_value, uint64_t precision )
     {
         double factor  = static_cast<double>( ScaleFactor( precision ) );
         double scaled  = raw_value * factor;
@@ -146,9 +139,9 @@ namespace sgns
 
         if ( rounded < 0.0 || rounded > static_cast<double>( std::numeric_limits<uint64_t>::max() ) )
         {
-            throw std::overflow_error( "fixed_point: double to fixed conversion overflow" );
+            return outcome::failure( std::make_error_code( std::errc::value_too_large ) );
         }
-        return static_cast<uint64_t>( rounded );
+        return outcome::success( static_cast<uint64_t>( rounded ) );
     }
 
     outcome::result<uint64_t> fixed_point::Multiply( uint64_t a, uint64_t b, uint64_t precision )

@@ -1,10 +1,6 @@
 /**
  * @file token_amount_tests.cpp
  * @brief Parameterized unit tests for sgns::TokenAmount.
- *
- * Contains tests for:
- * - TokenAmount::ParseMinions and TokenAmount::FormatMinions
- * - TokenAmount::CalculateCostMinions (zero rate, fallback, proportional)
  */
 
 #include <cstdint>

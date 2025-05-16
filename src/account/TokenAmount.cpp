@@ -9,6 +9,7 @@
 
 namespace sgns
 {
+
     outcome::result<std::shared_ptr<TokenAmount>> TokenAmount::New( uint64_t raw_minions )
     {
         auto ptr = std::shared_ptr<TokenAmount>( new TokenAmount( raw_minions ) );
@@ -17,53 +18,46 @@ namespace sgns
 
     outcome::result<std::shared_ptr<TokenAmount>> TokenAmount::New( double value )
     {
-        try
+        auto res = fixed_point::FromDouble( value, PRECISION );
+        if ( !res )
         {
-            auto ptr = std::shared_ptr<TokenAmount>( new TokenAmount( value ) );
-            return outcome::success( ptr );
+            return outcome::failure( res.error() );
         }
-        catch ( const std::overflow_error & /*e*/ )
-        {
-            return outcome::failure( std::make_error_code( std::errc::value_too_large ) );
-        }
+        auto ptr = std::shared_ptr<TokenAmount>( new TokenAmount( res.value() ) );
+        return outcome::success( ptr );
     }
 
     outcome::result<std::shared_ptr<TokenAmount>> TokenAmount::New( const std::string &str )
     {
-        auto raw = fixed_point::FromString( str, PRECISION );
-        if ( !raw )
+        auto res = fixed_point::FromString( str, PRECISION );
+        if ( !res )
         {
-            return outcome::failure( raw.error() );
+            return outcome::failure( res.error() );
         }
-        auto ptr = std::shared_ptr<TokenAmount>( new TokenAmount( raw.value() ) );
+        auto ptr = std::shared_ptr<TokenAmount>( new TokenAmount( res.value() ) );
         return outcome::success( ptr );
     }
 
-    TokenAmount::TokenAmount( uint64_t minion_units ) : minions_( minion_units ) {}
-
-    TokenAmount::TokenAmount( double value )
-    {
-        minions_ = fixed_point::FromDouble( value, PRECISION );
-    }
+    TokenAmount::TokenAmount( uint64_t minions ) : minions_( minions ) {}
 
     outcome::result<TokenAmount> TokenAmount::Multiply( const TokenAmount &other ) const
     {
-        auto raw = fixed_point::Multiply( minions_, other.minions_, PRECISION );
-        if ( !raw )
+        auto res = fixed_point::Multiply( minions_, other.minions_, PRECISION );
+        if ( !res )
         {
-            return outcome::failure( raw.error() );
+            return outcome::failure( res.error() );
         }
-        return outcome::success( TokenAmount( raw.value() ) );
+        return outcome::success( TokenAmount( res.value() ) );
     }
 
     outcome::result<TokenAmount> TokenAmount::Divide( const TokenAmount &other ) const
     {
-        auto raw = fixed_point::Divide( minions_, other.minions_, PRECISION );
-        if ( !raw )
+        auto res = fixed_point::Divide( minions_, other.minions_, PRECISION );
+        if ( !res )
         {
-            return outcome::failure( raw.error() );
+            return outcome::failure( res.error() );
         }
-        return outcome::success( TokenAmount( raw.value() ) );
+        return outcome::success( TokenAmount( res.value() ) );
     }
 
     uint64_t TokenAmount::Value() const
@@ -81,64 +75,59 @@ namespace sgns
         return fixed_point::ToString( minions, PRECISION );
     }
 
-    outcome::result<uint64_t> TokenAmount::CalculateCostMinions( uint64_t totalBytes, double priceUsdPerGenius )
+    outcome::result<uint64_t> TokenAmount::CalculateCostMinions( uint64_t total_bytes, double price_usd_per_genius )
     {
-        uint128_t product = static_cast<uint128_t>( totalBytes ) * static_cast<uint128_t>( PRICE_PER_FLOP ) *
+        uint128_t product = static_cast<uint128_t>( total_bytes ) * static_cast<uint128_t>( PRICE_PER_FLOP ) *
                             static_cast<uint128_t>( FLOPS_PER_BYTE );
-
-        std::shared_ptr<sgns::fixed_point> costFp;
+        std::shared_ptr<sgns::fixed_point> cost_fp;
         uint128_t                          divisor = 1;
 
         for ( uint64_t prec = PRICE_PER_FLOP_FRACTIONAL_DIGITS; prec >= PRECISION; prec-- )
         {
             uint128_t scaled = product / divisor;
             divisor          = divisor * 10;
-
             if ( scaled > std::numeric_limits<uint64_t>::max() )
             {
                 continue;
             }
 
-            auto totalRes = sgns::fixed_point::New( static_cast<uint64_t>( scaled ), prec );
-            if ( !totalRes )
+            auto total_fp = fixed_point::New( static_cast<uint64_t>( scaled ), prec );
+            if ( !total_fp )
             {
                 continue;
             }
 
-            auto priceRes = sgns::fixed_point::New( priceUsdPerGenius, prec );
-            if ( !priceRes )
+            auto price_fp = fixed_point::New( price_usd_per_genius, prec );
+            if ( !price_fp )
             {
                 continue;
             }
 
-            auto divRes = totalRes.value()->Divide( *priceRes.value() );
-            if ( !divRes )
+            auto div_res = total_fp.value()->Divide( *price_fp.value() );
+            if ( !div_res )
             {
                 continue;
             }
 
-            costFp = std::make_shared<sgns::fixed_point>( std::move( divRes.value() ) );
+            cost_fp = std::make_shared<sgns::fixed_point>( std::move( div_res.value() ) );
             break;
         }
 
-        if ( !costFp || costFp->Precision() < PRECISION )
+        if ( !cost_fp || cost_fp->Precision() < PRECISION )
         {
             return outcome::failure( std::errc::value_too_large );
         }
 
-        auto minionRes = costFp->ConvertPrecision( PRECISION );
-        if ( !minionRes )
+        auto minions_res = cost_fp->ConvertPrecision( PRECISION );
+        if ( !minions_res )
         {
-            return outcome::failure( minionRes.error() );
+            return outcome::failure( minions_res.error() );
         }
 
-        uint64_t rawMinions = minionRes.value().Value();
-        if ( rawMinions < MIN_MINION_UNITS )
-        {
-            rawMinions = MIN_MINION_UNITS;
-        }
+        uint64_t raw_minions = minions_res.value().Value();
+        raw_minions          = std::max( raw_minions, MIN_MINION_UNITS );
 
-        return outcome::success( rawMinions );
+        return outcome::success( raw_minions );
     }
 
 } // namespace sgns

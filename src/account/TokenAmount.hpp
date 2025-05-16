@@ -107,11 +107,11 @@ namespace sgns
          * Internally estimates FLOPs based on bytes, applies the FLOP pricing and
          * converts to GNUS token units using the provided USD price.
          *
-         * @param totalBytes Total number of bytes processed.
-         * @param priceUsdPerGenius GNUS token price in USD.
+         * @param total_bytes Total number of bytes processed.
+         * @param price_usd_per_genius GNUS token price in USD.
          * @return Total cost in minion units, or error on overflow/underflow.
          */
-        static outcome::result<uint64_t> CalculateCostMinions( uint64_t totalBytes, double priceUsdPerGenius );
+        static outcome::result<uint64_t> CalculateCostMinions( uint64_t total_bytes, double price_usd_per_genius );
 
     private:
         /// Internal representation in minion units (GNUS * 10^6)
@@ -122,15 +122,8 @@ namespace sgns
          *
          * @param minion_units Scaled token value.
          */
-        explicit TokenAmount( uint64_t minion_units );
+        TokenAmount( uint64_t minion_units );
 
-        /**
-         * @brief Constructs a TokenAmount from a floating point value.
-         * Value is converted to fixed-point with rounding.
-         *
-         * @param value Floating-point token value.
-         */
-        explicit TokenAmount( double value );
     };
 
 } // namespace sgns

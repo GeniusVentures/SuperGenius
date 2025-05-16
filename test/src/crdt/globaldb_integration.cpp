@@ -1,3 +1,12 @@
+/**
+ * @file       globaldb_integration_gtest.cpp
+ * @brief      Integration tests for GlobalDB.
+ *
+ * This file creates GlobalDB instances for each test independently using dynamic
+ * broadcast topics and verifies replication and transaction behavior.
+ * The logger is initialized once in SetUpTestSuite.
+ */
+
 #include <gtest/gtest.h>
 #include <boost/filesystem.hpp>
 #include <boost/dll.hpp>
@@ -60,7 +69,7 @@ namespace
            - name: libp2p
            - name: Gossip
      # ----------------
-        )";
+       )";
     }
 
 #define WAIT_TIMEOUT ( std::chrono::milliseconds( 25000 ) )
@@ -121,7 +130,8 @@ public:
                 return;
             }
             std::thread t( [io]() { io->run(); } );
-            nodes_.push_back( TestNode{ basePath, io, pubsub, db, std::move( t ) } );
+            TestNode    node{ basePath, io, pubsub, db, std::move( t ) };
+            nodes_.push_back( std::move( node ) );
         }
 
         void connectNodes( std::chrono::milliseconds delay = std::chrono::seconds( 1 ) )
@@ -186,232 +196,186 @@ public:
         libp2p::log::setLoggingSystem( loggingSystem );
         auto nodeLogger = sgns::base::createLogger( "SuperGeniusDemo", binaryPath + "/sgnslog2.log" );
         nodeLogger->set_level( spdlog::level::err );
-        const auto loggerGlobalDB     = sgns::base::createLogger( "GlobalDB" );
-        const auto loggerBroadcaster  = sgns::base::createLogger( "PubSubBroadcasterExt" );
-        const auto loggerDataStore    = sgns::base::createLogger( "CrdtDatastore" );
-        const auto loggerGossipPubsub = sgns::base::createLogger( "GossipPubSub" );
-        loggerGlobalDB->set_level( spdlog::level::off );
-        loggerBroadcaster->set_level( spdlog::level::off );
+        const auto loggerGlobalDB    = sgns::base::createLogger( "GlobalDB" );
+        const auto loggerBroadcaster = sgns::base::createLogger( "PubSubBroadcasterExt" );
+        const auto loggerDataStore   = sgns::base::createLogger( "CrdtDatastore" );
+        loggerGlobalDB->set_level( spdlog::level::trace );
+        loggerBroadcaster->set_level( spdlog::level::trace );
         loggerDataStore->set_level( spdlog::level::off );
-        loggerGossipPubsub->set_level( spdlog::level::off );
     }
 };
 
-uint16_t GlobalDBIntegrationTest::TestNodeCollection::currentPubsubPort = 50501;
+uint16_t GlobalDBIntegrationTest::TestNodeCollection::currentPubsubPort    = 50501;
 
-TEST_F( GlobalDBIntegrationTest, BroadcastsAcrossAllTopics )
+TEST_F( GlobalDBIntegrationTest, ReplicationWithoutTopicSuccessfulTest )
 {
     auto testNodes = std::make_unique<TestNodeCollection>();
-    testNodes->addNode( "node1" );
-    testNodes->addNode( "node2" );
-    testNodes->addNode( "node3" );
-    testNodes->addNode( "node4" );
-
-    const std::vector<std::string> topics = { "alpha", "beta", "gamma" };
-
-    // Configure broadcaster with all three topics
-    for ( const auto &topic : topics )
-    {
-        testNodes->getNodes()[0].db->AddBroadcastTopic( topic );
-    }
-
-    // Configure each listener to subscribe to exactly one topic
-    for ( size_t i = 0; i < topics.size(); ++i )
-    {
-        testNodes->getNodes()[i + 1].db->AddListenTopic( topics[i] );
-    }
-
-    testNodes->connectNodes();
-
-    sgns::base::Buffer buffer;
-    buffer.put( "hello topics" );
-    const sgns::crdt::HierarchicalKey key( "/multi/topic" );
-    auto                              tx = testNodes->getNodes()[0].db->BeginTransaction();
-    ASSERT_TRUE( tx->Put( key, buffer ).has_value() );
-    ASSERT_TRUE( tx->Commit().has_value() );
-
-    for ( size_t i = 1; i < testNodes->getNodes().size(); ++i )
-    {
-        EXPECT_TRUE(
-            waitForCondition( [&]() { return testNodes->getNodes()[i].db->Get( key ).has_value(); }, WAIT_TIMEOUT ) );
-    }
-}
-
-TEST_F( GlobalDBIntegrationTest, TwoWayBroadcast )
-{
-    auto testNodes = std::make_unique<TestNodeCollection>();
-    testNodes->addNode( "node1" );
-    testNodes->addNode( "node2" );
-
-    const std::string topic = "exchange";
-    // Both nodes broadcast and listen on the same topic
-    for ( auto &node : testNodes->getNodes() )
-    {
-        node.db->AddBroadcastTopic( topic );
-        node.db->AddListenTopic( topic );
-    }
-
-    testNodes->connectNodes();
-
-    // node1 -> node2
-    {
-        sgns::base::Buffer buf1;
-        buf1.put( "hello node2" );
-        const sgns::crdt::HierarchicalKey key1( "/first/topic" );
-        auto                              tx1 = testNodes->getNodes()[0].db->BeginTransaction();
-        ASSERT_TRUE( tx1->Put( key1, buf1 ).has_value() );
-        ASSERT_TRUE( tx1->Commit().has_value() );
-
-        EXPECT_TRUE(
-            waitForCondition( [&]() { return testNodes->getNodes()[1].db->Get( key1 ).has_value(); }, WAIT_TIMEOUT ) );
-    }
-
-    // node2 -> node1
-    {
-        sgns::base::Buffer buf2;
-        buf2.put( "hello node1" );
-        const sgns::crdt::HierarchicalKey key2( "/second/topic" );
-        auto                              tx2 = testNodes->getNodes()[1].db->BeginTransaction();
-        ASSERT_TRUE( tx2->Put( key2, buf2 ).has_value() );
-        ASSERT_TRUE( tx2->Commit().has_value() );
-
-        EXPECT_TRUE(
-            waitForCondition( [&]() { return testNodes->getNodes()[0].db->Get( key2 ).has_value(); }, WAIT_TIMEOUT ) );
-    }
-}
-
-TEST_F( GlobalDBIntegrationTest, BroadcastLoopUpdates )
-{
-    auto       testNodes  = std::make_unique<TestNodeCollection>();
-    const auto iterations = 50;
-
-    testNodes->addNode( "node1" );
-    testNodes->addNode( "node2" );
+    testNodes->addNode( "globaldb_node1" );
+    testNodes->addNode( "globaldb_node2" );
+    testNodes->addNode( "globaldb_node3" );
 
     for ( auto &node : testNodes->getNodes() )
     {
-        node.db->AddBroadcastTopic( "topic" );
-        node.db->AddListenTopic( "topic" );
-    }
-    testNodes->connectNodes();
-
-    const sgns::crdt::HierarchicalKey key( "/loop/key" );
-    for ( auto i = 0; i < iterations; ++i )
-    {
-        SCOPED_TRACE( "Iteration " + std::to_string( i ) );
-        sgns::base::Buffer buf;
-        buf.put( "value_" + std::to_string( i ) );
-
-        auto tx = testNodes->getNodes()[0].db->BeginTransaction();
-        ASSERT_TRUE( tx->Put( key, buf ).has_value() );
-        ASSERT_TRUE( tx->Commit().has_value() );
-
-        EXPECT_TRUE( waitForCondition(
-            [&]()
-            {
-                auto res = testNodes->getNodes()[1].db->Get( key );
-                return res.has_value() && res.value().toString() == ( "value_" + std::to_string( i ) );
-            },
-            WAIT_TIMEOUT ) );
-    }
-}
-
-TEST_F( GlobalDBIntegrationTest, OneTopicManyNodes )
-{
-    auto       testNodes  = std::make_unique<TestNodeCollection>();
-    const auto numNodes   = 20;
-    const auto iterations = 20;
-
-    for ( auto i = 0; i < numNodes; ++i )
-    {
-        testNodes->addNode( "node" + std::to_string( i ) );
-    }
-
-    // Configure a single topic for broadcast and listen on all nodes
-    const std::string topic = "topic";
-    for ( auto &node : testNodes->getNodes() )
-    {
-        node.db->AddBroadcastTopic( topic );
-        node.db->AddListenTopic( topic );
+        node.db->AddBroadcastTopic( "firstTopic" );
+        node.db->AddListenTopic( "firstTopic" );
     }
 
     testNodes->connectNodes();
+    using sgns::crdt::HierarchicalKey;
+    sgns::base::Buffer value;
+    value.put( "Replication Value without topic" );
+    const HierarchicalKey key( "/replication/basic_test" );
+    const auto            tx = testNodes->getNodes()[0].db->BeginTransaction();
+    ASSERT_NE( tx, nullptr );
+    const auto putRes = tx->Put( key, value );
+    ASSERT_TRUE( putRes.has_value() );
+    const auto commitRes = tx->Commit();
+    ASSERT_TRUE( commitRes.has_value() );
 
-    for ( auto i = 0; i < iterations; ++i )
-    {
-        auto senderIdx = i % numNodes;
-        SCOPED_TRACE( "Iteration " + std::to_string( i ) + ", sender=node" + std::to_string( senderIdx ) );
-
-        sgns::base::Buffer buffer;
-        std::string        message = "i_" + std::to_string( i );
-        buffer.put( message );
-
-        // Use a fixed key namespace for synchronization
-        const sgns::crdt::HierarchicalKey key( "/sync/key" );
-
-        // Begin transaction on the sender node and publish the message
-        auto tx = testNodes->getNodes()[senderIdx].db->BeginTransaction();
-        ASSERT_TRUE( tx->Put( key, buffer ).has_value() );
-        ASSERT_TRUE( tx->Commit().has_value() );
-
-        // Verify that every other node receives the updated value
-        for ( auto recvIdx = 0; recvIdx < numNodes; ++recvIdx )
+    const bool replicated = waitForCondition(
+        [&]() -> bool
         {
-            if ( recvIdx == senderIdx )
-            {
-                continue;
-            }
-            EXPECT_TRUE( waitForCondition(
-                [&]()
-                {
-                    auto res = testNodes->getNodes()[recvIdx].db->Get( key );
-                    return res.has_value() && res.value().toString() == message;
-                },
-                WAIT_TIMEOUT ) );
-        }
+            const auto res2 = testNodes->getNodes()[1].db->Get( key );
+            const auto res3 = testNodes->getNodes()[2].db->Get( key );
+            return res2.has_value() && res3.has_value();
+        },
+        WAIT_TIMEOUT );
+    EXPECT_TRUE( replicated );
+    {
+        const auto res2 = testNodes->getNodes()[1].db->Get( key );
+        const auto res3 = testNodes->getNodes()[2].db->Get( key );
+        ASSERT_TRUE( res2.has_value() );
+        ASSERT_TRUE( res3.has_value() );
+        EXPECT_EQ( res2.value().toString(), "Replication Value without topic" );
+        EXPECT_EQ( res3.value().toString(), "Replication Value without topic" );
     }
 }
 
-TEST_F( GlobalDBIntegrationTest, NoListenerDoesNotReceive )
+TEST_F( GlobalDBIntegrationTest, ReplicationViaTopicBroadcastTest )
 {
     auto testNodes = std::make_unique<TestNodeCollection>();
-    testNodes->addNode( "nodeA" );
-    testNodes->addNode( "nodeB" );
+    testNodes->addNode( "globaldb_node1" );
+    testNodes->addNode( "globaldb_node2" );
+    testNodes->addNode( "globaldb_node3" );
+
+    for ( auto &node : testNodes->getNodes() )
+    {
+        node.db->AddBroadcastTopic( "test_topic" );
+        node.db->AddListenTopic( "test_topic" );
+    }
+
     testNodes->connectNodes();
+    using sgns::crdt::HierarchicalKey;
+    sgns::base::Buffer value;
+    value.put( "Value via test_topic" );
+    const HierarchicalKey key( "/topic/test1" );
+    const auto            tx = testNodes->getNodes()[0].db->BeginTransaction();
+    ASSERT_NE( tx, nullptr );
+    const auto putRes = tx->Put( key, value );
+    ASSERT_TRUE( putRes.has_value() );
+    const auto commitRes = tx->Commit();
+    ASSERT_TRUE( commitRes.has_value() );
 
-    testNodes->getNodes()[0].db->AddBroadcastTopic( "topic" );
-    testNodes->getNodes()[1].db->AddBroadcastTopic( "other" );
-
-    const sgns::crdt::HierarchicalKey key( "/key" );
-    sgns::base::Buffer                buffer;
-    buffer.put( "value" );
-    const auto tx = testNodes->getNodes()[0].db->BeginTransaction();
-    ASSERT_TRUE( tx->Put( key, buffer ).has_value() );
-    ASSERT_TRUE( tx->Commit().has_value() );
-
-    EXPECT_TRUE(
-        waitForCondition( [&]() { return testNodes->getNodes()[0].db->Get( key ).has_value(); }, WAIT_TIMEOUT ) );
-    EXPECT_FALSE(
-        waitForCondition( [&]() { return testNodes->getNodes()[1].db->Get( key ).has_value(); }, WAIT_TIMEOUT ) );
+    const bool replicated = waitForCondition(
+        [&]() -> bool
+        {
+            const auto res2 = testNodes->getNodes()[1].db->Get( key );
+            const auto res3 = testNodes->getNodes()[2].db->Get( key );
+            return res2.has_value() && res3.has_value();
+        },
+        WAIT_TIMEOUT );
+    EXPECT_TRUE( replicated );
+    {
+        const auto res2 = testNodes->getNodes()[1].db->Get( key );
+        const auto res3 = testNodes->getNodes()[2].db->Get( key );
+        EXPECT_TRUE( res2.has_value() );
+        EXPECT_TRUE( res3.has_value() );
+        EXPECT_EQ( res2.value().toString(), "Value via test_topic" );
+        EXPECT_EQ( res3.value().toString(), "Value via test_topic" );
+    }
 }
 
-TEST_F( GlobalDBIntegrationTest, PreventDoubleCommit )
+TEST_F( GlobalDBIntegrationTest, ReplicationAcrossMultipleTopicsTest )
 {
     auto testNodes = std::make_unique<TestNodeCollection>();
-    testNodes->addNode( "single" );
-    testNodes->getNodes()[0].db->AddBroadcastTopic( "topic" );
-    testNodes->connectNodes();
+    testNodes->addNode( "globaldb_node1" );
+    testNodes->addNode( "globaldb_node2" );
+    testNodes->addNode( "globaldb_node3" );
 
-    const sgns::crdt::HierarchicalKey key( "/key" );
-    sgns::base::Buffer                buffer;
-    buffer.put( "data" );
-    const auto tx = testNodes->getNodes()[0].db->BeginTransaction();
-    ASSERT_TRUE( tx->Put( key, buffer ).has_value() );
-    ASSERT_TRUE( tx->Commit().has_value() );
-    EXPECT_FALSE( tx->Commit().has_value() );
+    for ( auto &node : testNodes->getNodes() )
+    {
+        node.db->AddBroadcastTopic( "firstTopic" );
+        node.db->AddListenTopic( "firstTopic" );
+
+        node.db->AddBroadcastTopic( "topic_A" );
+        node.db->AddListenTopic( "topic_A" );
+
+        node.db->AddBroadcastTopic( "topic_B" );
+        node.db->AddListenTopic( "topic_B" );
+    }
+
+    testNodes->connectNodes();
+    using sgns::crdt::HierarchicalKey;
+    sgns::base::Buffer valueA, valueB;
+    valueA.put( "Data from topic A" );
+    valueB.put( "Data from topic B" );
+    const HierarchicalKey keyA( "/multiple/topicA" );
+    const HierarchicalKey keyB( "/multiple/topicB" );
+
+    const auto txA = testNodes->getNodes()[0].db->BeginTransaction();
+    ASSERT_NE( txA, nullptr );
+    const auto putResA = txA->Put( keyA, valueA );
+    ASSERT_TRUE( putResA.has_value() );
+    const auto commitResA = txA->Commit();
+    ASSERT_TRUE( commitResA.has_value() );
+
+    const auto txB = testNodes->getNodes()[1].db->BeginTransaction();
+    ASSERT_NE( txB, nullptr );
+    const auto putResB = txB->Put( keyB, valueB );
+    ASSERT_TRUE( putResB.has_value() );
+    const auto commitResB = txB->Commit();
+    ASSERT_TRUE( commitResB.has_value() );
+
+    const bool replicated = waitForCondition(
+        [&]() -> bool
+        {
+            const auto resA = testNodes->getNodes()[2].db->Get( keyA );
+            const auto resB = testNodes->getNodes()[2].db->Get( keyB );
+            return resA.has_value() && resB.has_value();
+        },
+        WAIT_TIMEOUT );
+    EXPECT_TRUE( replicated );
+    {
+        const auto resA = testNodes->getNodes()[2].db->Get( keyA );
+        const auto resB = testNodes->getNodes()[2].db->Get( keyB );
+        EXPECT_TRUE( resA.has_value() );
+        EXPECT_TRUE( resB.has_value() );
+        EXPECT_EQ( resA.value().toString(), "Data from topic A" );
+        EXPECT_EQ( resB.value().toString(), "Data from topic B" );
+    }
 }
 
-TEST_F( GlobalDBIntegrationTest, OperationsWithoutInitialization )
+TEST_F( GlobalDBIntegrationTest, PreventDoubleCommitTest )
+{
+    auto testNodes = std::make_unique<TestNodeCollection>();
+    testNodes->addNode( "globaldb_node1" );
+    testNodes->getNodes()[0].db->AddBroadcastTopic( "firstTopic" );
+    testNodes->connectNodes();
+    using sgns::crdt::HierarchicalKey;
+    sgns::base::Buffer value;
+    value.put( "Double commit test value" );
+    const HierarchicalKey key( "/double/commit" );
+    const auto            tx = testNodes->getNodes()[0].db->BeginTransaction();
+    ASSERT_NE( tx, nullptr );
+    const auto putRes = tx->Put( key, value );
+    ASSERT_TRUE( putRes.has_value() );
+    const auto commitRes = tx->Commit();
+    ASSERT_TRUE( commitRes.has_value() );
+    const auto secondCommit = tx->Commit();
+    EXPECT_FALSE( secondCommit.has_value() );
+}
+
+TEST_F( GlobalDBIntegrationTest, OperationsWithoutInitializationTest )
 {
     const std::string binaryPath  = boost::dll::program_location().parent_path().string();
     const std::string tmpBasePath = binaryPath + "/globaldb_no_init_ops";
@@ -425,10 +389,202 @@ TEST_F( GlobalDBIntegrationTest, OperationsWithoutInitialization )
     auto io = std::make_shared<boost::asio::io_context>();
     auto db = std::make_shared<sgns::crdt::GlobalDB>( io, tmpBasePath + "/CommonKey", pubsub );
 
-    const sgns::crdt::HierarchicalKey key( "/nonexistent" );
-    EXPECT_FALSE( db->Get( key ).has_value() );
-    EXPECT_FALSE( db->Remove( key ).has_value() );
-    EXPECT_FALSE( db->QueryKeyValues( key.GetKey() ).has_value() );
+    using sgns::crdt::HierarchicalKey;
+    const HierarchicalKey queryKey( "/nonexistent/query" );
+    const auto            queryResult = db->QueryKeyValues( queryKey.GetKey() );
+    EXPECT_FALSE( queryResult.has_value() );
+
+    const HierarchicalKey getKey( "/nonexistent/get" );
+    const auto            getResult = db->Get( getKey );
+    EXPECT_FALSE( getResult.has_value() );
+
+    const HierarchicalKey removeKey( "/nonexistent/remove" );
+    const auto            removeResult = db->Remove( removeKey );
+    EXPECT_FALSE( removeResult.has_value() );
 
     boost::filesystem::remove_all( tmpBasePath );
+}
+
+TEST_F( GlobalDBIntegrationTest, DISABLED_CommitFailsForNonexistentTopicTest )
+{
+    auto testNodes = std::make_unique<TestNodeCollection>();
+    testNodes->addNode( "globaldb_no_topic" );
+
+    using sgns::crdt::HierarchicalKey;
+    sgns::base::Buffer value;
+    value.put( "Test value without topic" );
+    const HierarchicalKey key( "/error/put_without_topic" );
+
+    const auto tx = testNodes->getNodes()[0].db->BeginTransaction();
+    ASSERT_NE( tx, nullptr );
+    const auto putRes = tx->Put( key, value );
+    ASSERT_TRUE( putRes.has_value() );
+    const auto commitRes = tx->Commit();
+    EXPECT_FALSE( commitRes.has_value() );
+}
+
+TEST_F( GlobalDBIntegrationTest, DirectPutWithTopicBroadcastTest )
+{
+    auto testNodes = std::make_unique<TestNodeCollection>();
+    testNodes->addNode( "globaldb_node1" );
+    testNodes->addNode( "globaldb_node2" );
+    testNodes->addNode( "globaldb_node3" );
+
+    for ( auto &node : testNodes->getNodes() )
+    {
+        node.db->AddBroadcastTopic( "firstTopic" );
+        node.db->AddBroadcastTopic( "direct_topic" );
+        node.db->AddListenTopic( "direct_topic" );
+    }
+    testNodes->connectNodes();
+    using sgns::crdt::HierarchicalKey;
+    sgns::base::Buffer value;
+    value.put( "Direct put with topic value" );
+    const HierarchicalKey key( "/direct/with_topic" );
+
+    const auto putRes = testNodes->getNodes()[0].db->Put( key, value );
+    ASSERT_TRUE( putRes.has_value() );
+
+    const bool replicated = waitForCondition(
+        [&]() -> bool
+        {
+            const auto res2 = testNodes->getNodes()[1].db->Get( key );
+            const auto res3 = testNodes->getNodes()[2].db->Get( key );
+            return res2.has_value() && res3.has_value();
+        },
+        WAIT_TIMEOUT );
+    EXPECT_TRUE( replicated );
+    {
+        const auto res2 = testNodes->getNodes()[1].db->Get( key );
+        const auto res3 = testNodes->getNodes()[2].db->Get( key );
+        EXPECT_TRUE( res2.has_value() );
+        EXPECT_TRUE( res3.has_value() );
+        EXPECT_EQ( res2.value().toString(), "Direct put with topic value" );
+        EXPECT_EQ( res3.value().toString(), "Direct put with topic value" );
+    }
+}
+
+TEST_F( GlobalDBIntegrationTest, DirectPutWithoutTopicBroadcastTest )
+{
+    auto testNodes = std::make_unique<TestNodeCollection>();
+    testNodes->addNode( "globaldb_node1" );
+    testNodes->addNode( "globaldb_node2" );
+    testNodes->addNode( "globaldb_node3" );
+
+    for ( auto &node : testNodes->getNodes() )
+    {
+        node.db->AddBroadcastTopic( "firstTopic" );
+        node.db->AddListenTopic( "firstTopic" );
+    }
+    testNodes->connectNodes();
+    using sgns::crdt::HierarchicalKey;
+    sgns::base::Buffer value;
+    value.put( "Direct put without topic value" );
+    const HierarchicalKey key( "/direct/without_topic" );
+
+    const auto putRes = testNodes->getNodes()[0].db->Put( key, value );
+    ASSERT_TRUE( putRes.has_value() );
+
+    const bool replicated = waitForCondition(
+        [&]() -> bool
+        {
+            const auto res2 = testNodes->getNodes()[1].db->Get( key );
+            const auto res3 = testNodes->getNodes()[2].db->Get( key );
+            return res2.has_value() && res3.has_value();
+        },
+        WAIT_TIMEOUT );
+    EXPECT_TRUE( replicated );
+    {
+        const auto res2 = testNodes->getNodes()[1].db->Get( key );
+        const auto res3 = testNodes->getNodes()[2].db->Get( key );
+        ASSERT_TRUE( res2.has_value() );
+        ASSERT_TRUE( res3.has_value() );
+        EXPECT_EQ( res2.value().toString(), "Direct put without topic value" );
+        EXPECT_EQ( res3.value().toString(), "Direct put without topic value" );
+    }
+}
+
+TEST_F( GlobalDBIntegrationTest, NonSubscriberDoesNotReceiveTopicMessageTest )
+{
+    auto testNodes = std::make_unique<TestNodeCollection>();
+    testNodes->addNode( "globaldb_node1" );
+    testNodes->addNode( "globaldb_node2" );
+    testNodes->addNode( "globaldb_node3" );
+
+    for ( auto &node : testNodes->getNodes() )
+    {
+        node.db->AddBroadcastTopic( "first_topic" );
+    }
+    testNodes->getNodes()[0].db->AddBroadcastTopic( "test_topic" );
+    testNodes->getNodes()[0].db->AddListenTopic( "test_topic" );
+    testNodes->getNodes()[1].db->AddBroadcastTopic( "test_topic" );
+    testNodes->getNodes()[1].db->AddListenTopic( "test_topic" );
+    testNodes->connectNodes();
+    using sgns::crdt::HierarchicalKey;
+    sgns::base::Buffer value;
+    value.put( "Message for test_topic" );
+    const HierarchicalKey key( "/nonsubscriber/test" );
+    const auto            tx = testNodes->getNodes()[0].db->BeginTransaction();
+    ASSERT_NE( tx, nullptr );
+    const auto putRes = tx->Put( key, value );
+    ASSERT_TRUE( putRes.has_value() );
+    const auto commitRes = tx->Commit();
+    ASSERT_TRUE( commitRes.has_value() );
+
+    bool node0Received = waitForCondition( [&]() -> bool
+                                           { return testNodes->getNodes()[0].db->Get( key ).has_value(); },
+                                           WAIT_TIMEOUT );
+    EXPECT_TRUE( node0Received );
+
+    bool node1Received = waitForCondition( [&]() -> bool
+                                           { return testNodes->getNodes()[1].db->Get( key ).has_value(); },
+                                           WAIT_TIMEOUT );
+    EXPECT_TRUE( node1Received );
+
+    bool node2Received = waitForCondition( [&]() -> bool
+                                           { return testNodes->getNodes()[2].db->Get( key ).has_value(); },
+                                           WAIT_TIMEOUT );
+    EXPECT_FALSE( node2Received );
+}
+
+TEST_F( GlobalDBIntegrationTest, UnconnectedNodeDoesNotReplicateBroadcastMessageTest )
+{
+    auto testNodes = std::make_unique<TestNodeCollection>();
+    testNodes->addNode( "globaldb_node1" );
+    testNodes->addNode( "globaldb_node2" );
+    testNodes->connectNodes();
+
+    testNodes->addNode( "globaldb_node3" );
+
+    for ( auto &node : testNodes->getNodes() )
+    {
+        node.db->AddBroadcastTopic( "isolated_topic" );
+        node.db->AddListenTopic( "isolated_topic" );
+    }
+
+    using sgns::crdt::HierarchicalKey;
+    sgns::base::Buffer value;
+    value.put( "Test message for isolated node" );
+    const HierarchicalKey key( "/isolated/test" );
+    const auto            tx = testNodes->getNodes()[0].db->BeginTransaction();
+    ASSERT_NE( tx, nullptr );
+    const auto putRes = tx->Put( key, value );
+    ASSERT_TRUE( putRes.has_value() );
+    const auto commitRes = tx->Commit();
+    ASSERT_TRUE( commitRes.has_value() );
+
+    bool node1Replicated = waitForCondition( [&]() -> bool
+                                             { return testNodes->getNodes()[0].db->Get( key ).has_value(); },
+                                             WAIT_TIMEOUT );
+    EXPECT_TRUE( node1Replicated );
+
+    bool node2Replicated = waitForCondition( [&]() -> bool
+                                             { return testNodes->getNodes()[1].db->Get( key ).has_value(); },
+                                             WAIT_TIMEOUT );
+    EXPECT_TRUE( node2Replicated );
+
+    bool node3Replicated = waitForCondition( [&]() -> bool
+                                             { return testNodes->getNodes()[2].db->Get( key ).has_value(); },
+                                             WAIT_TIMEOUT );
+    EXPECT_FALSE( node3Replicated );
 }

@@ -11,6 +11,7 @@
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 #include "base/sgns_version.hpp"
+#include "account/TokenAmount.hpp"
 #include "account/GeniusNode.hpp"
 #include "crdt/globaldb/keypair_file_storage.hpp"
 #include "upnp.hpp"
@@ -142,7 +143,7 @@ namespace sgns
         auto loggerProcessingNode = base::createLogger( "ProcessingNode", logdir );
         auto loggerGossipPubsub   = base::createLogger( "GossipPubSub", logdir );
 #ifdef SGNS_DEBUGLOGS
-        node_logger->set_level( spdlog::level::trace );
+        node_logger->set_level( spdlog::level::err );
         loggerGlobalDB->set_level( spdlog::level::err );
         loggerDAGSyncer->set_level( spdlog::level::debug );
         loggerGraphsync->set_level( spdlog::level::debug );
@@ -618,6 +619,7 @@ namespace sgns
 
     outcome::result<uint64_t> GeniusNode::ParseBlockSize( const std::string &json_data )
     {
+        node_logger->info( "Received JSON data: {}", json_data );
         rapidjson::Document document;
         if ( document.Parse( json_data.c_str() ).HasParseError() )
         {
@@ -658,7 +660,6 @@ namespace sgns
 
     uint64_t GeniusNode::GetProcessCost( const std::string &json_data )
     {
-        node_logger->info( "Received JSON data: {}", json_data );
 
         auto blockLen = ParseBlockSize( json_data );
         if ( !blockLen )
@@ -920,7 +921,7 @@ namespace sgns
         const std::vector<std::string> &tokenIds,
         const std::vector<int64_t>     &timestamps )
     {
-        CoinGeckoPriceRetriever retriever;
+        sgns::CoinGeckoPriceRetriever retriever;
         return retriever.getHistoricalPrices( tokenIds, timestamps );
     }
 
@@ -929,7 +930,7 @@ namespace sgns
         int64_t                         from,
         int64_t                         to )
     {
-        CoinGeckoPriceRetriever retriever;
+        sgns::CoinGeckoPriceRetriever retriever;
         return retriever.getHistoricalPriceRange( tokenIds, from, to );
     }
 
