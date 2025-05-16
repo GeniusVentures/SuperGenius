@@ -12,6 +12,7 @@
 #include <string>
 #include <memory>
 #include <regex>
+#include <mutex>
 #include "crdt/proto/delta.pb.h"
 
 namespace sgns::crdt
