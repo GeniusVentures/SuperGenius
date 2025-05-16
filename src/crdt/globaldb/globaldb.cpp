@@ -44,6 +44,8 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::crdt, GlobalDB::Error, e )
             return "DAG Syncher listen error";
         case ProofError::CRDT_DATASTORE_NOT_CREATED:
             return "CRDT DataStore creation error";
+        case ProofError::INVALID_PARAMETERS:
+            return "Invalid parameters provided";
     }
     return "Unknown error";
 }
@@ -60,6 +62,32 @@ namespace sgns::crdt
     using GossipPubSub       = ipfs_pubsub::GossipPubSub;
     using GraphsyncImpl      = ipfs_lite::ipfs::graphsync::GraphsyncImpl;
     using GossipPubSubTopic  = ipfs_pubsub::GossipPubSubTopic;
+
+    outcome::result<std::shared_ptr<GlobalDB>> GlobalDB::New(
+        std::shared_ptr<boost::asio::io_context>                              context,
+        std::string                                                           databasePath,
+        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>                      pubsub,
+        std::shared_ptr<CrdtOptions>                                          crdtOptions,
+        std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::Network>            graphsyncnetwork,
+        std::shared_ptr<libp2p::protocol::Scheduler>                          scheduler,
+        std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
+        std::shared_ptr<RocksDB>                                              datastore )
+    {
+        if ( ( !context ) || ( !generator ) || ( !pubsub ) || ( !graphsyncnetwork ) )
+        {
+            return outcome::failure( Error::INVALID_PARAMETERS );
+        }
+        auto new_instance = std::shared_ptr<GlobalDB>(
+            new GlobalDB( std::move( context ), std::move( databasePath ), std::move( pubsub ) ) );
+
+        BOOST_OUTCOME_TRYV2( auto &&,
+                             new_instance->Init( std::move( crdtOptions ),
+                                                 std::move( graphsyncnetwork ),
+                                                 std::move( scheduler ),
+                                                 std::move( generator ),
+                                                 std::move( datastore ) ) );
+        return new_instance;
+    }
 
     GlobalDB::GlobalDB( std::shared_ptr<boost::asio::io_context>         context,
                         std::string                                      databasePath,

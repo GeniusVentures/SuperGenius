@@ -65,17 +65,29 @@ namespace sgns
             crdt::KeyPairFileStorage( pubsubKeyPath ).GetKeyPair().value() );
         pubsub_->Start( 40001, {} );
 
-        globaldb_ = std::make_shared<crdt::GlobalDB>(
-            io_,
-            ( boost::format( "SuperGNUSNode.TestNet.%s" ) % account_->GetAddress() ).str(),
-            pubsub_ );
         auto scheduler = std::make_shared<libp2p::protocol::AsioScheduler>( io_, libp2p::protocol::SchedulerConfig{} );
         auto graphsyncnetwork = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubsub_->GetHost(),
                                                                                              scheduler );
         auto generator        = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
-        globaldb_->Init( crdt::CrdtOptions::DefaultOptions(), graphsyncnetwork, scheduler, generator );
-        globaldb_->AddListenTopic( std::string (PROCESSING_CHANNEL) );
-        globaldb_->AddBroadcastTopic( std::string (PROCESSING_CHANNEL) );
+
+        auto globaldc_ret = crdt::GlobalDB::New(
+            io_,
+            ( boost::format( "SuperGNUSNode.TestNet.%s" ) % account_->GetAddress() ).str(),
+            pubsub_,
+            crdt::CrdtOptions::DefaultOptions(),
+            graphsyncnetwork,
+            scheduler,
+            generator );
+
+        if ( globaldc_ret.has_error() )
+        {
+            throw std::runtime_error( globaldc_ret.error().message() );
+        }
+
+        globaldb_ = std::move( globaldc_ret.value() );
+        
+        globaldb_->AddListenTopic( std::string( PROCESSING_CHANNEL ) );
+        globaldb_->AddBroadcastTopic( std::string( PROCESSING_CHANNEL ) );
         globaldb_->Start();
 
         base::Buffer root_hash;

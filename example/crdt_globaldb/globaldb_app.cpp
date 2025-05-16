@@ -119,22 +119,28 @@ int main( int argc, char **argv )
         sgns::crdt::KeyPairFileStorage( strDatabasePath + "/pubsub" ).GetKeyPair().value() );
     pubsub->Start( pubsubListeningPort, pubsubBootstrapPeers );
 
-    auto globalDB = std::make_shared<sgns::crdt::GlobalDB>( io, strDatabasePath, pubsub );
-
-    auto crdtOptions    = sgns::crdt::CrdtOptions::DefaultOptions();
-    crdtOptions->logger = logger;
+    auto scheduler = std::make_shared<libp2p::protocol::AsioScheduler>( io, libp2p::protocol::SchedulerConfig{} );
+    auto graphsyncnetwork = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubsub->GetHost(), scheduler );
+    auto generator        = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
+    auto crdtOptions      = sgns::crdt::CrdtOptions::DefaultOptions();
+    crdtOptions->logger   = logger;
     // Bind PutHook function pointer for notification purposes
     crdtOptions->putHookFunc = std::bind( &PutHook, std::placeholders::_1, std::placeholders::_2, logger );
     // Bind DeleteHook function pointer for notification purposes
     crdtOptions->deleteHookFunc = std::bind( &DeleteHook, std::placeholders::_1, logger );
-    auto scheduler = std::make_shared<libp2p::protocol::AsioScheduler>( io, libp2p::protocol::SchedulerConfig{} );
-    auto graphsyncnetwork = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubsub->GetHost(), scheduler );
-    auto generator        = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
-    globalDB->Init( crdtOptions, graphsyncnetwork, scheduler, generator );
+
+    auto globaldb_ret =
+        sgns::crdt::GlobalDB::New( io, strDatabasePath, pubsub, crdtOptions, graphsyncnetwork, scheduler, generator );
+
+    if ( globaldb_ret.has_error() )
+    {
+        return -1;
+    }
+    auto globalDB = std::move( globaldb_ret.value() );
+
     globalDB->AddListenTopic( broadcastChannel );
     globalDB->AddBroadcastTopic( broadcastChannel );
     globalDB->Start();
-
 
     std::ostringstream streamDisplayDetails;
     // @todo fix commented output

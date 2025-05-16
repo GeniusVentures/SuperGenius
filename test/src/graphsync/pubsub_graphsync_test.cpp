@@ -30,7 +30,7 @@
 #include <ipfs_lite/ipfs/graphsync/impl/local_requests.hpp>
 #include "libp2p/protocol/common/asio/asio_scheduler.hpp"
 
-std::string GetLoggingSystem( const std::string &  )
+std::string GetLoggingSystem( const std::string & )
 {
     std::string config = R"(
  # ----------------
@@ -50,6 +50,7 @@ std::string GetLoggingSystem( const std::string &  )
      )";
     return config;
 }
+
 using namespace sgns::test;
 
 class PubsubGraphsyncTest : public ::testing::Test
@@ -66,28 +67,26 @@ protected:
 
         libp2p::log::setLoggingSystem( logSystem );
         libp2p::log::setLevelOfGroup( "gossip_pubsub_test", soralog::Level::TRACE );
-        auto loggerGlobalDB    = sgns::base::createLogger( "GlobalDB", "" );
-        auto loggerDAGSyncer   = sgns::base::createLogger( "GraphsyncDAGSyncer", "" );
-       
+        auto loggerGlobalDB  = sgns::base::createLogger( "GlobalDB", "" );
+        auto loggerDAGSyncer = sgns::base::createLogger( "GraphsyncDAGSyncer", "" );
+
         auto loggerBroadcaster = sgns::base::createLogger( "PubSubBroadcasterExt", "" );
         auto loggerDataStore   = sgns::base::createLogger( "CrdtDatastore", "" );
         auto loggerGraphsync   = sgns::base::createLogger( "graphsync", "" );
         loggerGraphsync->set_level( spdlog::level::trace );
         loggerGlobalDB->set_level( spdlog::level::err );
         loggerDAGSyncer->set_level( spdlog::level::err );
-        
+
         loggerBroadcaster->set_level( spdlog::level::err );
         loggerDataStore->set_level( spdlog::level::err );
     }
 
-    static void TearDownTestSuite()
-    {
-    }
+    static void TearDownTestSuite() {}
 };
 
 // Static member initialization
 
-TEST_F(PubsubGraphsyncTest, MultiGlobalDBTest )
+TEST_F( PubsubGraphsyncTest, MultiGlobalDBTest )
 {
     std::string binaryPath = boost::dll::program_location().parent_path().string();
     std::string basePath1  = binaryPath + "/pubsub_graphsync_pubs1";
@@ -105,9 +104,9 @@ TEST_F(PubsubGraphsyncTest, MultiGlobalDBTest )
 
     auto io_context = std::make_shared<boost::asio::io_context>();
 
-    auto pubs1 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();
+    auto pubs1        = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();
     auto start1Future = pubs1->Start( 40001, {} );
-    auto pubs2 = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();
+    auto pubs2        = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();
     auto start2Future = pubs2->Start( 40002, {} );
 
     std::chrono::milliseconds resultTime;
@@ -129,43 +128,74 @@ TEST_F(PubsubGraphsyncTest, MultiGlobalDBTest )
         &resultTime
 
     );
-    auto scheduler        = std::make_shared<libp2p::protocol::AsioScheduler>( io_context,
+    auto scheduler         = std::make_shared<libp2p::protocol::AsioScheduler>( io_context,
                                                                         libp2p::protocol::SchedulerConfig{} );
-    auto graphsyncnetwork = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubs1->GetHost(), scheduler );
+    auto graphsyncnetwork  = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubs1->GetHost(), scheduler );
     auto generator         = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
-    auto scheduler2         = std::make_shared<libp2p::protocol::AsioScheduler>( io_context,
+    auto scheduler2        = std::make_shared<libp2p::protocol::AsioScheduler>( io_context,
                                                                          libp2p::protocol::SchedulerConfig{} );
-    auto graphsyncnetwork2 = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubs2->GetHost(), scheduler2 );
-    auto generator2         = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
-    auto gdb1 = std::make_shared<sgns::crdt::GlobalDB>(
-        io_context,
-        basePath1, 
-        pubs1 );
-    auto gdb2 = std::make_shared<sgns::crdt::GlobalDB>( io_context,
-        basePath2, 
-        pubs2 );
-    auto gdb3 = std::make_shared<sgns::crdt::GlobalDB>(
-        io_context,
-        basePath3, 
-        pubs1 );
-    auto gdb4 = std::make_shared<sgns::crdt::GlobalDB>( io_context,
-        basePath4, 
-        pubs2 );
+    auto graphsyncnetwork2 = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubs2->GetHost(),
+                                                                                          scheduler2 );
 
-    auto gdb5 = std::make_shared<sgns::crdt::GlobalDB>(
-        io_context,
-        basePath5, 
-        pubs1 );
-    auto gdb6 = std::make_shared<sgns::crdt::GlobalDB>( io_context,
-        basePath6, 
-        pubs2 );
+    auto generator2 = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
 
-    gdb1->Init( sgns::crdt::CrdtOptions::DefaultOptions(), graphsyncnetwork, scheduler, generator );
-    gdb2->Init( sgns::crdt::CrdtOptions::DefaultOptions(), graphsyncnetwork2, scheduler2, generator2 );
-    gdb3->Init( sgns::crdt::CrdtOptions::DefaultOptions(), graphsyncnetwork, scheduler, generator );
-    gdb4->Init( sgns::crdt::CrdtOptions::DefaultOptions(), graphsyncnetwork2, scheduler2, generator2 );
-    gdb5->Init( sgns::crdt::CrdtOptions::DefaultOptions(), graphsyncnetwork, scheduler, generator );
-    gdb6->Init( sgns::crdt::CrdtOptions::DefaultOptions(), graphsyncnetwork2, scheduler2, generator2 );
+    auto globaldb_ret1 = sgns::crdt::GlobalDB::New( io_context,
+                                                    basePath1,
+                                                    pubs1,
+                                                    sgns::crdt::CrdtOptions::DefaultOptions(),
+                                                    graphsyncnetwork,
+                                                    scheduler,
+                                                    generator );
+    auto globaldb_ret2 = sgns::crdt::GlobalDB::New( io_context,
+                                                    basePath2,
+                                                    pubs2,
+                                                    sgns::crdt::CrdtOptions::DefaultOptions(),
+                                                    graphsyncnetwork2,
+                                                    scheduler2,
+                                                    generator2 );
+    auto globaldb_ret3 = sgns::crdt::GlobalDB::New( io_context,
+                                                    basePath3,
+                                                    pubs1,
+                                                    sgns::crdt::CrdtOptions::DefaultOptions(),
+                                                    graphsyncnetwork,
+                                                    scheduler,
+                                                    generator );
+    auto globaldb_ret4 = sgns::crdt::GlobalDB::New( io_context,
+                                                    basePath4,
+                                                    pubs2,
+                                                    sgns::crdt::CrdtOptions::DefaultOptions(),
+                                                    graphsyncnetwork2,
+                                                    scheduler2,
+                                                    generator2 );
+
+    auto globaldb_ret5 = sgns::crdt::GlobalDB::New( io_context,
+                                                    basePath5,
+                                                    pubs1,
+                                                    sgns::crdt::CrdtOptions::DefaultOptions(),
+                                                    graphsyncnetwork,
+                                                    scheduler,
+                                                    generator );
+    auto globaldb_ret6 = sgns::crdt::GlobalDB::New( io_context,
+                                                    basePath6,
+                                                    pubs2,
+                                                    sgns::crdt::CrdtOptions::DefaultOptions(),
+                                                    graphsyncnetwork2,
+                                                    scheduler2,
+                                                    generator2 );
+
+    EXPECT_TRUE( globaldb_ret1.has_value() );
+    EXPECT_TRUE( globaldb_ret2.has_value() );
+    EXPECT_TRUE( globaldb_ret3.has_value() );
+    EXPECT_TRUE( globaldb_ret4.has_value() );
+    EXPECT_TRUE( globaldb_ret5.has_value() );
+    EXPECT_TRUE( globaldb_ret6.has_value() );
+
+    auto gdb1 = std::move( globaldb_ret1.value() );
+    auto gdb2 = std::move( globaldb_ret2.value() );
+    auto gdb3 = std::move( globaldb_ret3.value() );
+    auto gdb4 = std::move( globaldb_ret4.value() );
+    auto gdb5 = std::move( globaldb_ret5.value() );
+    auto gdb6 = std::move( globaldb_ret6.value() );
     gdb1->AddBroadcastTopic( "test1" );
     gdb2->AddBroadcastTopic( "test1" );
     gdb3->AddBroadcastTopic( "test2" );
@@ -178,11 +208,17 @@ TEST_F(PubsubGraphsyncTest, MultiGlobalDBTest )
     gdb4->AddListenTopic( "test2" );
     gdb5->AddListenTopic( "test3" );
     gdb6->AddListenTopic( "test3" );
+    gdb1->Start();
+    gdb2->Start();
+    gdb3->Start();
+    gdb4->Start();
+    gdb5->Start();
+    gdb6->Start();
     pubs1->AddPeers( { pubs2->GetLocalAddress() } );
     std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
-    std::thread io_thread  = std::thread( [io_context]() { io_context->run(); } );
+    std::thread io_thread = std::thread( [io_context]() { io_context->run(); } );
     //Dummy Transaction Data
-    auto transaction = gdb1->BeginTransaction();
+    auto                         transaction = gdb1->BeginTransaction();
     sgns::crdt::HierarchicalKey  tx_key( "/test/test" );
     sgns::crdt::GlobalDB::Buffer data_transaction;
     std::vector<uint8_t>         dummy_data;
@@ -198,7 +234,7 @@ TEST_F(PubsubGraphsyncTest, MultiGlobalDBTest )
     {
         dummy_data.insert( dummy_data.end(), std::begin( pattern ), std::end( pattern ) );
     }
-    
+
     data_transaction.put( gsl::span<const uint8_t>( dummy_data ) );
 
     transaction->Put( tx_key, data_transaction );
@@ -266,7 +302,7 @@ TEST_F(PubsubGraphsyncTest, MultiGlobalDBTest )
     EXPECT_TRUE( getConfirmed );
     EXPECT_TRUE( getConfirmed2 );
     io_context->stop();
-    if (io_thread.joinable())
+    if ( io_thread.joinable() )
     {
         io_thread.join();
         std::cout << "Join thread 1 " << std::endl;

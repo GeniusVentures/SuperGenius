@@ -25,6 +25,16 @@ namespace sgns::crdt
         using QueryResult = CrdtDatastore::QueryResult;
         using RocksDB     = storage::rocksdb;
 
+        static outcome::result<std::shared_ptr<GlobalDB>> New(
+            std::shared_ptr<boost::asio::io_context>                              context,
+            std::string                                                           databasePath,
+            std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>                      pubsub,
+            std::shared_ptr<CrdtOptions>                                          crdtOptions,
+            std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::Network>            graphsyncnetwork,
+            std::shared_ptr<libp2p::protocol::Scheduler>                          scheduler,
+            std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
+            std::shared_ptr<RocksDB>                                              datastore = nullptr );
+
         GlobalDB( std::shared_ptr<boost::asio::io_context>         context,
                   std::string                                      databasePath,
                   std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub );
@@ -46,6 +56,7 @@ namespace sgns::crdt
             IPFS_DB_NOT_CREATED,        ///< IPFS datastore not created
             DAG_SYNCHER_NOT_LISTENING,  ///< DAG Syncher listen error
             CRDT_DATASTORE_NOT_CREATED, ///< CRDT DataStore not created
+            INVALID_PARAMETERS,         ///< Invalid parameters
         };
 
         outcome::result<void> Init( std::shared_ptr<CrdtOptions>                               crdtOptions,

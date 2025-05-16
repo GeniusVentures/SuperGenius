@@ -276,29 +276,37 @@ namespace sgns
         auto generator = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
         auto graphsyncnetwork = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubsub_->GetHost(),
                                                                                              scheduler );
-        tx_globaldb_ = std::make_shared<crdt::GlobalDB>( io_, write_base_path_ + gnus_network_full_path_, pubsub_ );
-        job_globaldb_ = std::make_shared<crdt::GlobalDB>( io_, write_base_path_ + gnus_network_full_path_, pubsub_ );
 
-        auto tx_global_db_init_result = tx_globaldb_->Init( crdt::CrdtOptions::DefaultOptions(),
-                                                      graphsyncnetwork,
-                                                      scheduler,
-                                                      generator );
-        if ( tx_global_db_init_result.has_error() )
+        auto global_db_ret = crdt::GlobalDB::New( io_,
+                                                  write_base_path_ + gnus_network_full_path_,
+                                                  pubsub_,
+                                                  crdt::CrdtOptions::DefaultOptions(),
+                                                  graphsyncnetwork,
+                                                  scheduler,
+                                                  generator );
+        if ( global_db_ret.has_error() )
         {
-            auto error = tx_global_db_init_result.error();
+            auto error = global_db_ret.error();
             throw std::runtime_error( error.message() );
         }
+        tx_globaldb_  = std::move( global_db_ret.value() );
 
-        auto job_global_db_init_result = job_globaldb_->Init( crdt::CrdtOptions::DefaultOptions(),
-                                                      graphsyncnetwork,
-                                                      scheduler,
-                                                      generator,
-                                                      tx_globaldb_->GetDataStore());
-        if ( job_global_db_init_result.has_error() )
+        global_db_ret = crdt::GlobalDB::New( io_,
+                                             write_base_path_ + gnus_network_full_path_,
+                                             pubsub_,
+                                             crdt::CrdtOptions::DefaultOptions(),
+                                             graphsyncnetwork,
+                                             scheduler,
+                                             generator,
+                                             tx_globaldb_->GetDataStore() );
+        
+        if ( global_db_ret.has_error() )
         {
-            auto error = job_global_db_init_result.error();
+            auto error = global_db_ret.error();
             throw std::runtime_error( error.message() );
         }
+        job_globaldb_ = std::move( global_db_ret.value() );
+
         job_globaldb_->AddBroadcastTopic( processing_channel_topic_ );
         job_globaldb_->AddListenTopic( processing_channel_topic_ );
         job_globaldb_->Start();
