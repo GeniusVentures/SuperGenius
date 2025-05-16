@@ -44,8 +44,12 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::crdt, GlobalDB::Error, e )
             return "DAG Syncher listen error";
         case ProofError::CRDT_DATASTORE_NOT_CREATED:
             return "CRDT DataStore creation error";
+        case ProofError::PUBSUB_BROADCASTER_NOT_CREATED:
+            return "Pubsub Broadcaster creation error";
         case ProofError::INVALID_PARAMETERS:
             return "Invalid parameters provided";
+        case ProofError::GLOBALDB_NOT_STARTED:
+            return "Start method wasn't called";
     }
     return "Unknown error";
 }
@@ -102,17 +106,8 @@ namespace sgns::crdt
     GlobalDB::~GlobalDB()
     {
         m_logger->debug( "~GlobalDB CALLED" );
-        if ( started_ )
-        {
-            if ( m_broadcaster )
-            {
-                m_broadcaster->Stop();
-            }
-            if ( m_crdtDatastore )
-            {
-                m_crdtDatastore->Close();
-            }
-        }
+        m_broadcaster->Stop();
+        m_crdtDatastore->Close();
     }
 
     outcome::result<void> GlobalDB::Init(
@@ -162,8 +157,7 @@ namespace sgns::crdt
         }
 
         auto ipfsDataStore = std::make_shared<RocksdbDatastore>( ipfsDBResult.value() );
-        //auto scheduler = std::make_shared<libp2p::protocol::AsioScheduler>( m_context,
-        //                                                                    libp2p::protocol::SchedulerConfig{} );
+
         if ( !m_pubsub )
         {
             m_logger->error( "pubsub not initialized." );
@@ -182,10 +176,16 @@ namespace sgns::crdt
         auto startResult = dagSyncer->StartSync();
         if ( startResult.has_failure() )
         {
+            m_logger->error( "DAG Syncher not listening" );
             return startResult.error();
         }
 
-        m_broadcaster   = PubSubBroadcasterExt::New( dagSyncer, m_pubsub );
+        m_broadcaster = PubSubBroadcasterExt::New( dagSyncer, m_pubsub );
+        if ( m_broadcaster == nullptr )
+        {
+            m_logger->error( "Unable to create PubSub broadcaster" );
+            return Error::PUBSUB_BROADCASTER_NOT_CREATED;
+        }
         m_crdtDatastore = CrdtDatastore::New( m_datastore,
                                               HierarchicalKey( "crdt" ),
                                               dagSyncer,
@@ -212,10 +212,10 @@ namespace sgns::crdt
 
     outcome::result<void> GlobalDB::Put( const HierarchicalKey &key, const Buffer &value )
     {
-        if ( !m_crdtDatastore )
+        if ( !started_ )
         {
-            m_logger->error( "CRDT datastore is not initialized yet" );
-            return outcome::failure( Error::CRDT_DATASTORE_NOT_CREATED );
+            m_logger->error( "GlobalDB Not Started" );
+            return outcome::failure( Error::GLOBALDB_NOT_STARTED );
         }
 
         return m_crdtDatastore->PutKey( key, value );
@@ -223,10 +223,10 @@ namespace sgns::crdt
 
     outcome::result<void> GlobalDB::Put( const std::vector<DataPair> &data_vector )
     {
-        if ( !m_crdtDatastore )
+        if ( !started_ )
         {
-            m_logger->error( "CRDT datastore is not initialized yet" );
-            return outcome::failure( Error::CRDT_DATASTORE_NOT_CREATED );
+            m_logger->error( "GlobalDB Not Started" );
+            return outcome::failure( Error::GLOBALDB_NOT_STARTED );
         }
         AtomicTransaction batch( m_crdtDatastore );
 
@@ -240,10 +240,10 @@ namespace sgns::crdt
 
     outcome::result<GlobalDB::Buffer> GlobalDB::Get( const HierarchicalKey &key )
     {
-        if ( !m_crdtDatastore )
+        if ( !started_ )
         {
-            m_logger->error( "CRDT datastore is not initialized yet" );
-            return outcome::failure( boost::system::error_code{} );
+            m_logger->error( "GlobalDB Not Started" );
+            return outcome::failure( Error::GLOBALDB_NOT_STARTED );
         }
 
         return m_crdtDatastore->GetKey( key );
@@ -251,10 +251,10 @@ namespace sgns::crdt
 
     outcome::result<void> GlobalDB::Remove( const HierarchicalKey &key )
     {
-        if ( !m_crdtDatastore )
+        if ( !started_ )
         {
-            m_logger->error( "CRDT datastore is not initialized yet" );
-            return outcome::failure( boost::system::error_code{} );
+            m_logger->error( "GlobalDB Not Started" );
+            return outcome::failure( Error::GLOBALDB_NOT_STARTED );
         }
 
         return m_crdtDatastore->DeleteKey( key );
@@ -262,10 +262,10 @@ namespace sgns::crdt
 
     outcome::result<GlobalDB::QueryResult> GlobalDB::QueryKeyValues( const std::string &keyPrefix )
     {
-        if ( !m_crdtDatastore )
+        if ( !started_ )
         {
-            m_logger->error( "CRDT datastore is not initialized yet" );
-            return outcome::failure( boost::system::error_code{} );
+            m_logger->error( "GlobalDB Not Started" );
+            return outcome::failure( Error::GLOBALDB_NOT_STARTED );
         }
 
         return m_crdtDatastore->QueryKeyValues( keyPrefix );
@@ -275,10 +275,10 @@ namespace sgns::crdt
                                                                      const std::string &middle_part,
                                                                      const std::string &remainder_prefix )
     {
-        if ( !m_crdtDatastore )
+        if ( !started_ )
         {
-            m_logger->error( "CRDT datastore is not initialized yet" );
-            return outcome::failure( boost::system::error_code{} );
+            m_logger->error( "GlobalDB Not Started" );
+            return outcome::failure( Error::GLOBALDB_NOT_STARTED );
         }
 
         return m_crdtDatastore->QueryKeyValues( prefix_base, middle_part, remainder_prefix );
@@ -329,26 +329,12 @@ namespace sgns::crdt
 
     void GlobalDB::AddBroadcastTopic( const std::string &topicName )
     {
-        if ( m_broadcaster )
-        {
-            m_broadcaster->AddBroadcastTopic( topicName );
-        }
-        else
-        {
-            m_logger->error( "Broadcaster is not initialized." );
-        }
+        m_broadcaster->AddBroadcastTopic( topicName );
     }
 
     void GlobalDB::AddListenTopic( const std::string &topicName )
     {
-        if ( m_broadcaster )
-        {
-            m_broadcaster->AddListenTopic( topicName );
-        }
-        else
-        {
-            m_logger->error( "Broadcaster is not initialized." );
-        }
+        m_broadcaster->AddListenTopic( topicName );
     }
 
     bool GlobalDB::RegisterElementFilter( const std::string &pattern, GlobalDBFilterCallback filter )

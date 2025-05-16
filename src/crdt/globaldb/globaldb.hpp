@@ -63,11 +63,13 @@ namespace sgns::crdt
          */
         enum class Error
         {
-            ROCKSDB_IO = 0,             ///< RocksDB wasn't opened
-            IPFS_DB_NOT_CREATED,        ///< IPFS datastore not created
-            DAG_SYNCHER_NOT_LISTENING,  ///< DAG Syncher listen error
-            CRDT_DATASTORE_NOT_CREATED, ///< CRDT DataStore not created
-            INVALID_PARAMETERS,         ///< Invalid parameters
+            ROCKSDB_IO = 0,                 ///< RocksDB wasn't opened
+            IPFS_DB_NOT_CREATED,            ///< IPFS datastore not created
+            DAG_SYNCHER_NOT_LISTENING,      ///< DAG Syncher listen error
+            CRDT_DATASTORE_NOT_CREATED,     ///< CRDT DataStore not created
+            PUBSUB_BROADCASTER_NOT_CREATED, ///< CRDT DataStore not created
+            INVALID_PARAMETERS,             ///< Invalid parameters
+            GLOBALDB_NOT_STARTED,           ///< Start wasn't called
         };
 
         /**
