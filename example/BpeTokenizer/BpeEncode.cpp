@@ -3,8 +3,10 @@
 #include <vector>
 #include <string>
 #include <algorithm>
-#include <random>
-#include <numeric> // For std::accumulate
+#include <numeric>
+#include <memory>
+#include <fstream>
+#include <random> // For std::mt19937 and std::uniform_real_distribution
 #include <MNN/Interpreter.hpp>
 #include <MNN/Tensor.hpp>
 
@@ -26,16 +28,16 @@ void printTensorInfo( MNN::Tensor *tensor, const std::string &name )
 }
 
 // Safe tensor copy function with checks
-bool safeCopyToTensor( float *destData, const float *sourceData, size_t copySize )
+bool safeCopyToTensor( float *destData, const std::vector<float> &sourceData )
 {
-    if ( !destData || !sourceData )
+    if ( !destData )
     {
-        std::cerr << "Error: Invalid source or destination data pointer" << std::endl;
+        std::cerr << "Error: Invalid destination data pointer" << std::endl;
         return false;
     }
 
     // Copy data with bounds checking
-    for ( size_t i = 0; i < copySize; i++ )
+    for ( size_t i = 0; i < sourceData.size(); i++ )
     {
         destData[i] = sourceData[i];
     }
@@ -43,7 +45,416 @@ bool safeCopyToTensor( float *destData, const float *sourceData, size_t copySize
     return true;
 }
 
-// Process and run inference on DeepSeek models
+// Function to save tensor data to a binary file for debugging
+void saveTensorToFile( MNN::Tensor *tensor, const std::string &filename )
+{
+    std::ofstream file( filename, std::ios::binary );
+    if ( !file.is_open() )
+    {
+        std::cerr << "Failed to open file: " << filename << std::endl;
+        return;
+    }
+
+    // Get tensor data
+    MNN::Tensor tensorHost( tensor, tensor->getDimensionType() );
+    tensor->copyToHostTensor( &tensorHost );
+    float *data = tensorHost.host<float>();
+
+    // Write dimensions first
+    int dim = tensor->dimensions();
+    file.write( reinterpret_cast<char *>( &dim ), sizeof( int ) );
+
+    // Write each dimension size
+    for ( int i = 0; i < dim; i++ )
+    {
+        int size = tensor->length( i );
+        file.write( reinterpret_cast<char *>( &size ), sizeof( int ) );
+    }
+
+    // Write tensor data
+    size_t dataSize = tensorHost.elementSize() * sizeof( float );
+    file.write( reinterpret_cast<char *>( data ), dataSize );
+
+    file.close();
+    std::cout << "Saved tensor to " << filename << std::endl;
+}
+
+// Function to load tensor data from a binary file
+std::vector<float> loadTensorFromFile( const std::string &filename, std::vector<int> &dimensions )
+{
+    std::ifstream file( filename, std::ios::binary );
+    if ( !file.is_open() )
+    {
+        std::cerr << "Failed to open file: " << filename << std::endl;
+        return {};
+    }
+
+    // Read dimensions
+    int dim;
+    file.read( reinterpret_cast<char *>( &dim ), sizeof( int ) );
+
+    dimensions.resize( dim );
+    size_t totalElements = 1;
+
+    // Read each dimension size
+    for ( int i = 0; i < dim; i++ )
+    {
+        file.read( reinterpret_cast<char *>( &dimensions[i] ), sizeof( int ) );
+        totalElements *= dimensions[i];
+    }
+
+    // Read tensor data
+    std::vector<float> data( totalElements );
+    file.read( reinterpret_cast<char *>( data.data() ), totalElements * sizeof( float ) );
+
+    file.close();
+    std::cout << "Loaded tensor from " << filename << std::endl;
+
+    return data;
+}
+
+// Generate synthetic embedding for a token
+std::vector<float> createSyntheticEmbedding( int tokenId, int hiddenSize )
+{
+    std::vector<float> embedding( hiddenSize, 0.0f );
+
+    // Create deterministic embedding based on token ID
+    std::mt19937                          rng( tokenId );
+    std::uniform_real_distribution<float> dist( -0.1f, 0.1f );
+
+    for ( int h = 0; h < hiddenSize; h++ )
+    {
+        embedding[h] = dist( rng );
+    }
+
+    return embedding;
+}
+
+// Embedding extraction that avoids running session directly
+std::vector<float> extractEmbedding( MNN::Interpreter *embeddingNet, int tokenId, int hiddenSize )
+{
+    try
+    {
+        // Configure inference
+        MNN::ScheduleConfig config;
+        config.type      = MNN_FORWARD_VULKAN;
+        config.numThread = 1;
+        MNN::BackendConfig backendConfig;
+        backendConfig.precision = MNN::BackendConfig::Precision_Normal; 
+        config.backendConfig    = &backendConfig;
+
+        // Create a clean session
+        MNN::Session *embeddingSession = embeddingNet->createSession( config );
+        if ( !embeddingSession )
+        {
+            throw std::runtime_error( "Failed to create embedding session" );
+        }
+
+        // Get input tensor
+        auto embeddingInput = embeddingNet->getSessionInput( embeddingSession, nullptr );
+        printTensorInfo( embeddingInput, "Embedding input" );
+
+        // Resize for a single token
+        embeddingNet->resizeTensor( embeddingInput, { 1, 1 } );
+        embeddingNet->resizeSession( embeddingSession );
+
+        // Copy token ID
+        MNN::Tensor embeddingInputHost( embeddingInput, MNN::Tensor::CAFFE );
+        int        *inputData = embeddingInputHost.host<int>();
+        inputData[0]          = tokenId;
+        embeddingInput->copyFromHostTensor( &embeddingInputHost );
+
+        // Run embedding model
+        std::cout << "Running embedding model for token " << tokenId << "..." << std::endl;
+        embeddingNet->runSession( embeddingSession );
+
+        // Get output
+        auto embeddingOutput = embeddingNet->getSessionOutput( embeddingSession, nullptr );
+        printTensorInfo( embeddingOutput, "Embedding output" );
+
+        // Save output tensor for debugging
+        saveTensorToFile( embeddingOutput, "embedding_output_" + std::to_string( tokenId ) + ".bin" );
+
+        // Copy to host
+        MNN::Tensor embeddingOutputHost( embeddingOutput, embeddingOutput->getDimensionType() );
+        embeddingOutput->copyToHostTensor( &embeddingOutputHost );
+        float *outputData = embeddingOutputHost.host<float>();
+
+        // Extract embedding based on dimensions
+        int                embeddingDim = embeddingOutput->length( embeddingOutput->dimensions() - 1 );
+        std::vector<float> embedding( embeddingDim );
+
+        if ( embeddingOutput->dimensions() == 3 )
+        {
+            // Shape [batch=1, seq=1, hidden_dim]
+            for ( int h = 0; h < embeddingDim; h++ )
+            {
+                embedding[h] = outputData[h];
+            }
+        }
+        else if ( embeddingOutput->dimensions() == 4 )
+        {
+            // Shape [?, batch=1, seq=1, hidden_dim]
+            for ( int h = 0; h < embeddingDim; h++ )
+            {
+                embedding[h] = outputData[h];
+            }
+        }
+
+        // Clean up
+        embeddingNet->releaseSession( embeddingSession );
+
+        return embedding;
+    }
+    catch ( const std::exception &e )
+    {
+        std::cerr << "Error: " << e.what() << std::endl;
+        std::cerr << "Using synthetic embedding as fallback" << std::endl;
+        return createSyntheticEmbedding( tokenId, hiddenSize );
+    }
+}
+
+// Function to run expert model
+std::vector<float> runExpertModel( MNN::Interpreter *expertNet, const std::vector<float> &embedding )
+{
+    try
+    {
+        // Configure inference
+        MNN::ScheduleConfig config;
+        config.type      = MNN_FORWARD_VULKAN;
+        config.numThread = 1;
+        MNN::BackendConfig backendConfig;
+        backendConfig.precision = MNN::BackendConfig::Precision_Normal;
+        config.backendConfig    = &backendConfig;
+        // Create session
+        MNN::Session *expertSession = expertNet->createSession( config );
+        if ( !expertSession )
+        {
+            throw std::runtime_error( "Failed to create expert session" );
+        }
+
+        // Get input tensor
+        auto expertInput = expertNet->getSessionInput( expertSession, nullptr );
+        printTensorInfo( expertInput, "Expert input" );
+
+        // Resize input tensor
+        expertNet->resizeTensor( expertInput, { 1, (int)embedding.size() } );
+        expertNet->resizeSession( expertSession );
+
+        // Copy embedding to input tensor
+        MNN::Tensor expertInputHost( expertInput, MNN::Tensor::CAFFE );
+        float      *expertInputData = expertInputHost.host<float>();
+        safeCopyToTensor( expertInputData, embedding );
+        expertInput->copyFromHostTensor( &expertInputHost );
+
+        // Run expert model
+        std::cout << "Running expert model..." << std::endl;
+        expertNet->runSession( expertSession );
+
+        // Get output
+        auto expertOutputTensor = expertNet->getSessionOutput( expertSession, nullptr );
+        printTensorInfo( expertOutputTensor, "Expert output" );
+
+        // Save output tensor for debugging - including iteration number
+        static int expertCallCount = 0;
+        saveTensorToFile( expertOutputTensor, "expert_output_" + std::to_string( expertCallCount++ ) + ".bin" );
+
+        // Copy to host
+        MNN::Tensor expertOutputHost( expertOutputTensor, MNN::Tensor::CAFFE );
+        expertOutputTensor->copyToHostTensor( &expertOutputHost );
+        float *expertOutputData = expertOutputHost.host<float>();
+
+        // Calculate output size
+        size_t expertOutputSize = 1;
+        for ( int d = 0; d < expertOutputTensor->dimensions(); d++ )
+        {
+            expertOutputSize *= expertOutputTensor->length( d );
+        }
+
+        // Create vector for expert output
+        std::vector<float> expertOutput( expertOutputSize );
+
+        // Check and copy values
+        for ( size_t i = 0; i < expertOutputSize; i++ )
+        {
+            float val = expertOutputData[i];
+            if ( std::isnan( val ) || std::isinf( val ) || std::abs( val ) > 1e6 )
+            {
+                expertOutput[i] = 0.0f; // Replace invalid values
+            }
+            else
+            {
+                expertOutput[i] = val;
+            }
+        }
+
+        // Clean up
+        expertNet->releaseSession( expertSession );
+
+        return expertOutput;
+    }
+    catch ( const std::exception &e )
+    {
+        std::cerr << "Error running expert model: " << e.what() << std::endl;
+        return {};
+    }
+}
+
+// Function to run LM head model
+int runLmHeadModel( MNN::Interpreter *lmHeadNet, const std::vector<float> &expertOutput, BpeTokenizer *tokenizer )
+{
+    try
+    {
+        // Configure inference
+        MNN::ScheduleConfig config;
+        config.type      = MNN_FORWARD_VULKAN;
+        config.numThread = 1;
+        MNN::BackendConfig backendConfig;
+        backendConfig.precision = MNN::BackendConfig::Precision_Normal;
+        config.backendConfig    = &backendConfig;
+        // Create session
+        MNN::Session *lmHeadSession = lmHeadNet->createSession( config );
+        if ( !lmHeadSession )
+        {
+            throw std::runtime_error( "Failed to create LM head session" );
+        }
+
+        // Get input tensor
+        auto lmHeadInput = lmHeadNet->getSessionInput( lmHeadSession, nullptr );
+        printTensorInfo( lmHeadInput, "LM head input" );
+
+        // Resize input tensor
+        lmHeadNet->resizeTensor( lmHeadInput, { 1, (int)expertOutput.size() } );
+        lmHeadNet->resizeSession( lmHeadSession );
+
+        // Copy expert output to input tensor
+        MNN::Tensor lmHeadInputHost( lmHeadInput, MNN::Tensor::CAFFE );
+        float      *lmHeadInputData = lmHeadInputHost.host<float>();
+        safeCopyToTensor( lmHeadInputData, expertOutput );
+        lmHeadInput->copyFromHostTensor( &lmHeadInputHost );
+
+        // Run LM head model
+        std::cout << "Running LM head model..." << std::endl;
+        lmHeadNet->runSession( lmHeadSession );
+
+        // Get logits
+        auto logitsTensor = lmHeadNet->getSessionOutput( lmHeadSession, nullptr );
+        printTensorInfo( logitsTensor, "Logits" );
+
+        // Save logits for debugging - including iteration number
+        static int lmHeadCallCount = 0;
+        saveTensorToFile( logitsTensor, "lm_head_output_" + std::to_string( lmHeadCallCount++ ) + ".bin" );
+
+        // Copy logits to host
+        MNN::Tensor logitsHost( logitsTensor, MNN::Tensor::CAFFE );
+        logitsTensor->copyToHostTensor( &logitsHost );
+        float *logitsData = logitsHost.host<float>();
+
+        // Get vocab size
+        size_t vocabSize = logitsTensor->length( logitsTensor->dimensions() - 1 );
+
+        // Find top tokens
+        std::vector<std::pair<int, float>> scores;
+        for ( size_t v = 0; v < vocabSize; v++ )
+        {
+            float val = logitsData[v];
+            // Skip invalid values
+            if ( std::isnan( val ) || std::isinf( val ) || std::abs( val ) > 1e6 )
+            {
+                continue;
+            }
+            scores.push_back( { (int)v, val } );
+        }
+
+        // Sort to find top token
+        std::sort( scores.begin(), scores.end(), []( const auto &a, const auto &b ) { return a.second > b.second; } );
+
+        // Print top tokens
+        std::cout << "\nTop tokens:" << std::endl;
+        int topCount = std::min( 5, (int)scores.size() );
+        for ( int j = 0; j < topCount; j++ )
+        {
+            int   tokenId = scores[j].first;
+            float score   = scores[j].second;
+
+            std::string tokenText;
+            try
+            {
+                tokenText = tokenizer->decode( { tokenId } );
+                // Replace non-printable chars with dots
+                for ( char &c : tokenText )
+                {
+                    if ( c < 32 || c > 126 )
+                    {
+                        c = '.';
+                    }
+                }
+            }
+            catch ( ... )
+            {
+                tokenText = "[invalid token]";
+            }
+
+            std::cout << "  " << ( j + 1 ) << ". Token ID " << tokenId << " (score: " << score << "): \"" << tokenText
+                      << "\"" << std::endl;
+        }
+
+        // Clean up
+        lmHeadNet->releaseSession( lmHeadSession );
+
+        // Return top token
+        return scores.empty() ? 0 : scores[0].first;
+    }
+    catch ( const std::exception &e )
+    {
+        std::cerr << "Error running LM head model: " << e.what() << std::endl;
+        return 0;
+    }
+}
+
+// Function to precompute embeddings for a set of tokens
+std::unordered_map<int, std::vector<float>> precomputeEmbeddings( const std::string      &modelDir,
+                                                                  const std::vector<int> &tokens,
+                                                                  int                     hiddenSize )
+{
+    std::unordered_map<int, std::vector<float>> embeddings;
+    std::string                                 embeddingPath = modelDir + "/embedding_f32.mnn";
+
+    // Create embedding model
+    std::unique_ptr<MNN::Interpreter> embeddingNet( MNN::Interpreter::createFromFile( embeddingPath.c_str() ) );
+    if ( !embeddingNet )
+    {
+        std::cerr << "Failed to load embedding model from " << embeddingPath << std::endl;
+        return embeddings;
+    }
+
+    // Process each token
+    std::set<int> uniqueTokens( tokens.begin(), tokens.end() );
+    std::cout << "Precomputing embeddings for " << uniqueTokens.size() << " unique tokens..." << std::endl;
+
+    for ( int tokenId : uniqueTokens )
+    {
+        std::cout << "Computing embedding for token ID " << tokenId << std::endl;
+
+        // Extract embedding for token
+        try
+        {
+            std::vector<float> embedding = extractEmbedding( embeddingNet.get(), tokenId, hiddenSize );
+            if ( !embedding.empty() )
+            {
+                embeddings[tokenId] = embedding;
+            }
+        }
+        catch ( const std::exception &e )
+        {
+            std::cerr << "Error computing embedding for token " << tokenId << ": " << e.what() << std::endl;
+        }
+    }
+
+    std::cout << "Precomputed " << embeddings.size() << " embeddings" << std::endl;
+    return embeddings;
+}
+
 int main( int argc, char **argv )
 {
     if ( argc < 4 )
@@ -78,9 +489,9 @@ int main( int argc, char **argv )
     }
 
     // Tokenize prompt
-    std::vector<int> tokens = tokenizer.encode( prompt );
+    std::vector<int> promptTokens = tokenizer.encode( prompt );
 
-    if ( tokens.empty() )
+    if ( promptTokens.empty() )
     {
         std::cerr << "Failed to tokenize prompt" << std::endl;
         return 1;
@@ -88,373 +499,107 @@ int main( int argc, char **argv )
 
     std::cout << "Prompt: \"" << prompt << "\"" << std::endl;
     std::cout << "Encoded tokens: ";
-    for ( int token : tokens )
+    for ( int token : promptTokens )
     {
         std::cout << token << " ";
     }
     std::cout << std::endl;
 
-    // Load DeepSeek MNN models
-    std::string embeddingPath = modelDir + "/embedding_f32.mnn";
-    std::string expertPath    = modelDir + "/expert_f32.mnn";
-    std::string lmHeadPath    = modelDir + "/lm_head_f32.mnn";
+    // Set hidden dimension
+    int hiddenSize = 7168;
 
-    auto embeddingNet = MNN::Interpreter::createFromFile( embeddingPath.c_str() );
-    if ( !embeddingNet )
-    {
-        std::cerr << "Failed to load embedding model from " << embeddingPath << std::endl;
-        std::cerr << "Using direct embeddings instead" << std::endl;
-    }
+    // Create a vector to hold generated tokens
+    std::vector<int> generatedTokens = promptTokens;
 
-    auto expertNet = MNN::Interpreter::createFromFile( expertPath.c_str() );
+    // Precompute embeddings for prompt tokens
+    auto embeddings = precomputeEmbeddings( modelDir, promptTokens, hiddenSize );
+
+    // Load expert model
+    std::string                       expertPath = modelDir + "/expert_f32.mnn";
+    std::unique_ptr<MNN::Interpreter> expertNet( MNN::Interpreter::createFromFile( expertPath.c_str() ) );
     if ( !expertNet )
     {
         std::cerr << "Failed to load expert model from " << expertPath << std::endl;
         return 1;
     }
 
-    auto lmHeadNet = MNN::Interpreter::createFromFile( lmHeadPath.c_str() );
+    // Load LM head model
+    std::string                       lmHeadPath = modelDir + "/lm_head_f32.mnn";
+    std::unique_ptr<MNN::Interpreter> lmHeadNet( MNN::Interpreter::createFromFile( lmHeadPath.c_str() ) );
     if ( !lmHeadNet )
     {
         std::cerr << "Failed to load LM head model from " << lmHeadPath << std::endl;
         return 1;
     }
 
-    // Configure inference
-    MNN::ScheduleConfig config;
-    config.type      = MNN_FORWARD_VULKAN;
-    config.numThread = 1; // Use single thread to avoid thread pool issues
-    MNN::BackendConfig backendConfig;
-    backendConfig.precision = MNN::BackendConfig::Precision_Low; // Request FP16
-    config.backendConfig    = &backendConfig;
-
-    // Create sessions
-    MNN::Session *embeddingSession = embeddingNet ? embeddingNet->createSession( config ) : nullptr;
-    MNN::Session *expertSession    = expertNet->createSession( config );
-    MNN::Session *lmHeadSession    = lmHeadNet->createSession( config );
-
-    // Get tensor info
-    auto expertInput = expertNet->getSessionInput( expertSession, nullptr );
-    auto lmHeadInput = lmHeadNet->getSessionInput( lmHeadSession, nullptr );
-
-    // Print info for debugging
-    printTensorInfo( expertInput, "Expert input" );
-    printTensorInfo( lmHeadInput, "LM head input" );
-
-    // Get dimensions
-    int expertInputDim = expertInput ? expertInput->length( 1 ) : 0;
-    int lmHeadInputDim = lmHeadInput ? lmHeadInput->length( 1 ) : 0;
-
-    std::cout << "Expert input dimension: " << expertInputDim << std::endl;
-    std::cout << "LM head input dimension: " << lmHeadInputDim << std::endl;
-
-    // Check for dimension mismatch
-    if ( expertInputDim != lmHeadInputDim && expertInputDim > 0 && lmHeadInputDim > 0 )
-    {
-        std::cerr << "Warning: Dimension mismatch between expert output and LM head input" << std::endl;
-        std::cerr << "Expert: " << expertInputDim << ", LM head: " << lmHeadInputDim << std::endl;
-        std::cerr << "Please export LM head with matching dimension (in_features=" << expertInputDim << ")"
-                  << std::endl;
-        return 1;
-    }
-
-    // Set hidden dimension based on expert input size
-    int hiddenSize = expertInputDim > 0 ? expertInputDim : 7168;
-    std::cout << "Using hidden size: " << hiddenSize << std::endl;
-
-    // Generate tokens
-    std::vector<int> generatedTokens = tokens;
-
-    for ( int i = 0; i < numTokens; i++ )
+    // Generate tokens one by one
+    for ( int i = 0; i < std::min( numTokens, 5 ); i++ )
     {
         std::cout << "\n--- Generating token " << ( i + 1 ) << "/" << numTokens << " ---" << std::endl;
-        int seqLength = generatedTokens.size();
 
-        // ===== EMBEDDING STAGE =====
-        std::vector<float> embeddings;
+        // Get last token
+        int lastToken = generatedTokens.back();
 
-        if ( embeddingNet && embeddingSession )
+        // Get embedding for last token
+        std::vector<float> embedding;
+        if ( embeddings.find( lastToken ) != embeddings.end() )
         {
-            auto embeddingInput = embeddingNet->getSessionInput( embeddingSession, nullptr );
-            printTensorInfo( embeddingInput, "Embedding input" );
-
-            // Prepare input tensor with token IDs
-            embeddingNet->resizeTensor( embeddingInput, { 1, (int)generatedTokens.size() } );
-            embeddingNet->resizeSession( embeddingSession );
-
-            // Copy token IDs to input tensor
-            MNN::Tensor embeddingInputHost( embeddingInput, MNN::Tensor::CAFFE );
-            int        *inputData = embeddingInputHost.host<int>();
-
-            for ( size_t t = 0; t < generatedTokens.size(); t++ )
-            {
-                inputData[t] = generatedTokens[t];
-            }
-
-            embeddingInput->copyFromHostTensor( &embeddingInputHost );
-
-            // Run embedding model
-            std::cout << "Running embedding model..." << std::endl;
-            embeddingNet->runSession( embeddingSession );
-
-            // Get output
-            auto embeddingOutput = embeddingNet->getSessionOutput( embeddingSession, nullptr );
-            printTensorInfo( embeddingOutput, "Embedding output" );
-
-            // Copy output to embeddings vector
-            MNN::Tensor embeddingOutputHost( embeddingOutput, MNN::Tensor::CAFFE );
-            embeddingOutput->copyToHostTensor( &embeddingOutputHost );
-            float *outputData = embeddingOutputHost.host<float>();
-
-            // Calculate total size based on dimensions
-            size_t totalSize = 1;
-            for ( int d = 0; d < embeddingOutput->dimensions(); d++ )
-            {
-                totalSize *= embeddingOutput->length( d );
-            }
-
-            // Get the actual embedding dimension from the output tensor
-            int embeddingDim = embeddingOutput->length( embeddingOutput->dimensions() - 1 );
-
-            // Last token's embedding offset: for a [1, seqLen, hiddenSize] tensor
-            size_t lastTokenOffset = ( seqLength - 1 ) * embeddingDim;
-
-            // Make sure we don't exceed the bounds
-            if ( lastTokenOffset + embeddingDim <= totalSize )
-            {
-                // Extract just the last token's embedding
-                embeddings.resize( embeddingDim );
-                for ( int h = 0; h < embeddingDim; h++ )
-                {
-                    embeddings[h] = outputData[lastTokenOffset + h];
-
-                    // Check for invalid values
-                    if ( std::isnan( embeddings[h] ) || std::isinf( embeddings[h] ) || std::abs( embeddings[h] ) > 1e6 )
-                    {
-                        embeddings[h] = 0.0f; // Replace with reasonable value
-                    }
-                }
-            }
-            else
-            {
-                std::cerr << "Error calculating last token offset. Using zero embeddings." << std::endl;
-                embeddings.resize( hiddenSize, 0.0f );
-            }
-
-            std::cout << "Successfully extracted last token embedding" << std::endl;
+            std::cout << "Using precomputed embedding for token ID " << lastToken << std::endl;
+            embedding = embeddings[lastToken];
         }
         else
         {
-            // Direct embedding creation as fallback
-            std::cout << "Creating direct embeddings (no model available)..." << std::endl;
-
-            // Create simple embedding vector
-            embeddings.resize( hiddenSize, 0.0f );
-
-            // Create deterministic but varied values based on last token
-            int                                   lastToken = generatedTokens.back();
-            std::mt19937                          rng( lastToken ); // Seed with token ID
-            std::uniform_real_distribution<float> dist( -0.1f, 0.1f );
-
-            for ( int h = 0; h < hiddenSize; h++ )
+            // Create embedding model (each time to reset state)
+            std::string                       embeddingPath = modelDir + "/embedding_f32.mnn";
+            std::unique_ptr<MNN::Interpreter> embeddingNet( MNN::Interpreter::createFromFile( embeddingPath.c_str() ) );
+            if ( !embeddingNet )
             {
-                embeddings[h] = dist( rng );
+                std::cerr << "Failed to load embedding model from " << embeddingPath << std::endl;
+                return 1;
             }
+
+            std::cout << "Computing new embedding for token ID " << lastToken << std::endl;
+            embedding             = extractEmbedding( embeddingNet.get(), lastToken, hiddenSize );
+            embeddings[lastToken] = embedding;
         }
 
-        // Print some embedding stats
-        if ( !embeddings.empty() )
+        // Print embedding stats
+        if ( !embedding.empty() )
         {
-            float minVal = *std::min_element( embeddings.begin(), embeddings.end() );
-            float maxVal = *std::max_element( embeddings.begin(), embeddings.end() );
-            float sum    = std::accumulate( embeddings.begin(), embeddings.end(), 0.0f );
-            float mean   = sum / embeddings.size();
+            float minVal = *std::min_element( embedding.begin(), embedding.end() );
+            float maxVal = *std::max_element( embedding.begin(), embedding.end() );
+            float sum    = std::accumulate( embedding.begin(), embedding.end(), 0.0f );
+            float mean   = sum / embedding.size();
 
-            std::cout << "Embedding stats - Size: " << embeddings.size() << ", Min: " << minVal << ", Max: " << maxVal
+            std::cout << "Embedding stats - Size: " << embedding.size() << ", Min: " << minVal << ", Max: " << maxVal
                       << ", Mean: " << mean << std::endl;
         }
 
-        // ===== EXPERT STAGE =====
-        std::cout << "\n== EXPERT STAGE ==" << std::endl;
-
-        // Resize expert input
-        expertNet->resizeTensor( expertInput, { 1, (int)embeddings.size() } );
-        expertNet->resizeSession( expertSession );
-
-        // Copy embeddings to expert input
-        MNN::Tensor expertInputHost( expertInput, MNN::Tensor::CAFFE );
-        float      *expertInputData = expertInputHost.host<float>();
-
-        // Print sample values
-        std::cout << "Embedding sample values: ";
-        for ( int h = 0; h < std::min( 5, (int)embeddings.size() ); h++ )
-        {
-            std::cout << embeddings[h] << " ";
-        }
-        std::cout << std::endl;
-
-        // Copy data
-        safeCopyToTensor( expertInputData, embeddings.data(), embeddings.size() );
-
-        // Print copied values
-        std::cout << "Expert input copied values: ";
-        for ( int h = 0; h < std::min( 5, (int)embeddings.size() ); h++ )
-        {
-            std::cout << expertInputData[h] << " ";
-        }
-        std::cout << std::endl;
-
-        expertInput->copyFromHostTensor( &expertInputHost );
-
         // Run expert model
-        std::cout << "Running expert model..." << std::endl;
-        expertNet->runSession( expertSession );
-
-        // Get expert output
-        auto expertOutput = expertNet->getSessionOutput( expertSession, nullptr );
-        printTensorInfo( expertOutput, "Expert output" );
-
-        // Copy output to host
-        MNN::Tensor expertOutputHost( expertOutput, MNN::Tensor::CAFFE );
-        expertOutput->copyToHostTensor( &expertOutputHost );
-        float *expertOutputData = expertOutputHost.host<float>();
-
-        // Calculate output size
-        size_t expertOutputSize = 1;
-        for ( int d = 0; d < expertOutput->dimensions(); d++ )
-        {
-            expertOutputSize *= expertOutput->length( d );
-        }
-
-        // Create vector for expert output
-        std::vector<float> expertOutputVec( expertOutputSize );
-
-        // Check and copy values
-        bool hasInvalidValues = false;
-        for ( size_t i = 0; i < expertOutputSize; i++ )
-        {
-            float val = expertOutputData[i];
-            if ( std::isnan( val ) || std::isinf( val ) || std::abs( val ) > 1e6 )
-            {
-                hasInvalidValues   = true;
-                expertOutputVec[i] = 0.0f; // Replace with zero
-            }
-            else
-            {
-                expertOutputVec[i] = val;
-            }
-        }
-
-        if ( hasInvalidValues )
-        {
-            std::cout << "Warning: Expert output contained invalid values that were replaced" << std::endl;
-        }
+        std::vector<float> expertOutput = runExpertModel( expertNet.get(), embedding );
 
         // Print expert output stats
-        if ( !expertOutputVec.empty() )
+        if ( !expertOutput.empty() )
         {
-            float minVal = *std::min_element( expertOutputVec.begin(), expertOutputVec.end() );
-            float maxVal = *std::max_element( expertOutputVec.begin(), expertOutputVec.end() );
-            float sum    = std::accumulate( expertOutputVec.begin(), expertOutputVec.end(), 0.0f );
-            float mean   = sum / expertOutputVec.size();
+            float minVal = *std::min_element( expertOutput.begin(), expertOutput.end() );
+            float maxVal = *std::max_element( expertOutput.begin(), expertOutput.end() );
+            float sum    = std::accumulate( expertOutput.begin(), expertOutput.end(), 0.0f );
+            float mean   = sum / expertOutput.size();
 
-            std::cout << "Expert output stats - Size: " << expertOutputVec.size() << ", Min: " << minVal
+            std::cout << "Expert output stats - Size: " << expertOutput.size() << ", Min: " << minVal
                       << ", Max: " << maxVal << ", Mean: " << mean << std::endl;
         }
 
-        // ===== LM HEAD STAGE =====
-        std::cout << "\n== LM HEAD STAGE ==" << std::endl;
-
-        // Check if dimensions match
-        if ( lmHeadInputDim != expertOutputVec.size() )
-        {
-            std::cerr << "Error: LM head input dimension (" << lmHeadInputDim << ") doesn't match expert output size ("
-                      << expertOutputVec.size() << ")" << std::endl;
-            return 1;
-        }
-
-        // Resize LM head input
-        lmHeadNet->resizeTensor( lmHeadInput, { 1, (int)expertOutputVec.size() } );
-        lmHeadNet->resizeSession( lmHeadSession );
-
-        // Copy expert output to LM head input
-        MNN::Tensor lmHeadInputHost( lmHeadInput, MNN::Tensor::CAFFE );
-        float      *lmHeadInputData = lmHeadInputHost.host<float>();
-
-        // Copy data
-        safeCopyToTensor( lmHeadInputData, expertOutputVec.data(), expertOutputVec.size() );
-        lmHeadInput->copyFromHostTensor( &lmHeadInputHost );
-
         // Run LM head model
-        std::cout << "Running LM head model..." << std::endl;
-        lmHeadNet->runSession( lmHeadSession );
+        int nextTokenId = runLmHeadModel( lmHeadNet.get(), expertOutput, &tokenizer );
 
-        // Get logits
-        auto logitsTensor = lmHeadNet->getSessionOutput( lmHeadSession, nullptr );
-        printTensorInfo( logitsTensor, "Logits" );
-
-        // Copy logits to host
-        MNN::Tensor logitsHost( logitsTensor, MNN::Tensor::CAFFE );
-        logitsTensor->copyToHostTensor( &logitsHost );
-        float *logitsData = logitsHost.host<float>();
-
-        // Get vocab size
-        size_t vocabSize = logitsTensor->length( logitsTensor->dimensions() - 1 );
-
-        // Find top tokens
-        std::vector<std::pair<int, float>> scores;
-        for ( size_t v = 0; v < vocabSize; v++ )
-        {
-            float val = logitsData[v];
-            // Skip invalid values
-            if ( std::isnan( val ) || std::isinf( val ) || std::abs( val ) > 1e6 )
-            {
-                continue;
-            }
-            scores.push_back( { (int)v, val } );
-        }
-
-        // Sort to find top tokens
-        std::sort( scores.begin(), scores.end(), []( const auto &a, const auto &b ) { return a.second > b.second; } );
-
-        // Print top tokens
-        std::cout << "\nTop tokens:" << std::endl;
-        int topCount = std::min( 5, (int)scores.size() );
-        for ( int j = 0; j < topCount; j++ )
-        {
-            int   tokenId = scores[j].first;
-            float score   = scores[j].second;
-
-            std::string tokenText;
-            try
-            {
-                tokenText = tokenizer.decode( { tokenId } );
-                // Replace non-printable chars with dots
-                for ( char &c : tokenText )
-                {
-                    if ( c < 32 || c > 126 )
-                    {
-                        c = '.';
-                    }
-                }
-            }
-            catch ( ... )
-            {
-                tokenText = "[invalid token]";
-            }
-
-            std::cout << "  " << ( j + 1 ) << ". Token ID " << tokenId << " (score: " << score << "): \"" << tokenText
-                      << "\"" << std::endl;
-        }
-
-        // Select next token (use top token)
-        int nextTokenId = scores.empty() ? 0 : scores[0].first;
+        // Add next token
         generatedTokens.push_back( nextTokenId );
 
         // Display current text
         std::string currentText = tokenizer.decode( generatedTokens );
 
-        // Clean up output
+        // Clean up output for display
         std::string displayText;
         for ( unsigned char c : currentText )
         {
@@ -469,71 +614,35 @@ int main( int argc, char **argv )
         }
 
         std::cout << "\nGenerated so far: " << displayText << std::endl;
-    }
 
-    // Final output
-    std::string finalText = tokenizer.decode( generatedTokens );
-
-    // Clean up output
-    std::string displayText;
-    for ( unsigned char c : finalText )
-    {
-        if ( c < 32 || c > 126 )
+        // Save the entire state after each token if we're approaching the problematic third token
+        if ( i >= 1 )
         {
-            displayText += '.';
-        }
-        else
-        {
-            displayText += c;
-        }
-    }
+            std::cout << "\nSaving detailed state for debugging..." << std::endl;
 
-    std::cout << "\nFinal generated text: " << displayText << std::endl;
-
-    // Token breakdown
-    std::cout << "\nToken-by-token breakdown:" << std::endl;
-    for ( size_t i = 0; i < generatedTokens.size(); i++ )
-    {
-        std::string tokenText;
-        std::string displayText;
-
-        try
-        {
-            tokenText = tokenizer.decode( { generatedTokens[i] } );
-
-            // Clean up for display
-            displayText = tokenText;
-            for ( char &c : displayText )
+            // Save current token info
+            std::ofstream tokenInfoFile( "token_info_" + std::to_string( i ) + ".txt" );
+            if ( tokenInfoFile.is_open() )
             {
-                if ( c < 32 || c > 126 )
+                tokenInfoFile << "Generated Tokens: ";
+                for ( int token : generatedTokens )
                 {
-                    c = '.';
+                    tokenInfoFile << token << " ";
                 }
+                tokenInfoFile << "\nCurrent text: " << displayText << std::endl;
+                tokenInfoFile.close();
             }
-        }
-        catch ( ... )
-        {
-            displayText = "[invalid token]";
-        }
 
-        std::cout << "Token " << i << " (ID: " << generatedTokens[i] << "): \"" << displayText << "\"" << std::endl;
+            // Try to get at least two tokens successfully before potentially crashing
+            //if ( i == 1 )
+            //{
+            //    std::cout << "\nCompleted processing two tokens." << std::endl;
+            //    std::cout << "You can now analyze the saved tensor data files with tensor_analyzer.py" << std::endl;
+            //    std::cout << "To try processing the third token (which may crash), set num_tokens >= 3" << std::endl;
+            //    break;
+            //}
+        }
     }
-
-    // Clean up
-    if ( embeddingNet )
-    {
-        if ( embeddingSession )
-        {
-            embeddingNet->releaseSession( embeddingSession );
-        }
-        delete embeddingNet;
-    }
-
-    expertNet->releaseSession( expertSession );
-    delete expertNet;
-
-    lmHeadNet->releaseSession( lmHeadSession );
-    delete lmHeadNet;
 
     return 0;
 }
