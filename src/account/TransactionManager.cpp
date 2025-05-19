@@ -23,8 +23,8 @@
 #include "EscrowTransaction.hpp"
 #include "EscrowReleaseTransaction.hpp"
 #include "UTXOTxParameters.hpp"
+#include "account/TokenAmount.hpp"
 #include "account/proto/SGTransaction.pb.h"
-#include "base/fixed_point.hpp"
 #include "crdt/impl/crdt_data_filter.hpp"
 #include "crdt/proto/delta.pb.h"
 
@@ -232,8 +232,8 @@ namespace sgns
                                   account_m->eth_address ) );
         std::optional<std::vector<uint8_t>> maybe_proof;
 #ifdef _PROOF_ENABLED
-        TransferProof prover( 1000000000000000,
-                              static_cast<uint64_t>( amount ) ); //Mint max 1000000 gnus per transaction
+        TransferProof prover( 1000000000000,
+                              static_cast<uint64_t>( amount ) ); // Mint max 1000000 gnus per transaction
         OUTCOME_TRY( ( auto &&, proof_result ), prover.GenerateFullProof() );
         maybe_proof = std::move( proof_result );
 #endif
@@ -305,9 +305,13 @@ namespace sgns
         std::vector<std::string>           subtask_ids;
         std::vector<OutputDestInfo>        payout_peers;
 
-        auto mult_result = sgns::fixed_point::multiply( escrow_tx->GetAmount(), escrow_tx->GetPeersCut() );
-        //TODO: check fail here, maybe if peer cut is greater than one to...
-        uint64_t peers_amount = mult_result.value() / static_cast<uint64_t>( taskresult.subtask_results().size() );
+        OUTCOME_TRY( ( auto &&, escrow_amount_ptr ), TokenAmount::New( escrow_tx->GetAmount() ) );
+
+        OUTCOME_TRY( ( auto &&, peers_cut_ptr ), TokenAmount::New( escrow_tx->GetPeersCut() ) );
+
+        OUTCOME_TRY( ( auto &&, peer_total ), escrow_amount_ptr->Multiply( *peers_cut_ptr ) );
+
+        uint64_t peers_amount = peer_total.Value() / static_cast<uint64_t>( taskresult.subtask_results().size() );
         auto     remainder    = escrow_tx->GetAmount();
         for ( auto &subtask : taskresult.subtask_results() )
         {

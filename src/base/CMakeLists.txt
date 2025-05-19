@@ -52,16 +52,16 @@ target_link_libraries(mp_utils
 )
 supergenius_install(mp_utils)
 
-add_library(fixed_point
-    fixed_point.cpp
-    fixed_point.hpp
+add_library(ScaledInteger
+    ScaledInteger.cpp
+    ScaledInteger.hpp
 )
-target_link_libraries(fixed_point
+target_link_libraries(ScaledInteger
     PUBLIC
     Boost::headers
     outcome
 )
-supergenius_install(fixed_point)
+supergenius_install(ScaledInteger)
 
 message(STATUS "Generating sgnsv.h from sgnsv.h.in")
 
@@ -83,13 +83,13 @@ if(NOT EXISTS "${CMAKE_BINARY_DIR}/generated/base/sgnsv.h")
 endif()
 
 add_library(sgns_version
-sgns_version.cpp
-sgns_version.hpp
-${CMAKE_BINARY_DIR}/generated/base/sgnsv.h
+    sgns_version.cpp
+    sgns_version.hpp
+    ${CMAKE_BINARY_DIR}/generated/base/sgnsv.h
 )
 
 target_include_directories(sgns_version
-  PUBLIC
+    PUBLIC
     $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/generated/>
     $<INSTALL_INTERFACE:include>
 )

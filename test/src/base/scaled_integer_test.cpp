@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 #include <variant>
-#include "base/fixed_point.hpp"
+#include "base/ScaledInteger.hpp"
 
 // ======================== FixedPointFromStringTests ========================
 
@@ -31,7 +31,7 @@ class FixedPointParamTest : public ::testing::TestWithParam<FromStrParam_s>
 TEST_P( FixedPointParamTest, FromString )
 {
     auto test_case = GetParam();
-    auto result    = sgns::fixed_point::fromString( test_case.input, test_case.precision );
+    auto result    = sgns::ScaledInteger::FromString( test_case.input, test_case.precision );
 
     if ( std::holds_alternative<uint64_t>( test_case.expected ) )
     {
@@ -39,15 +39,11 @@ TEST_P( FixedPointParamTest, FromString )
         ASSERT_TRUE( result.has_value() );
         EXPECT_EQ( result.value(), expected_val );
     }
-    else if ( std::holds_alternative<std::errc>( test_case.expected ) )
+    else
     {
         std::errc expected_err = std::get<std::errc>( test_case.expected );
         ASSERT_FALSE( result.has_value() );
         EXPECT_EQ( result.error(), std::make_error_code( expected_err ) );
-    }
-    else
-    {
-        FAIL() << "Unknown test case type.";
     }
 }
 
@@ -109,7 +105,7 @@ TEST_P( FixedPointToStringParamTest, ToString )
 {
     auto test_case = GetParam();
 
-    auto result = sgns::fixed_point::toString( test_case.value, test_case.precision );
+    auto result = sgns::ScaledInteger::ToString( test_case.value, test_case.precision );
 
     EXPECT_EQ( result, test_case.expected );
 }
@@ -156,24 +152,46 @@ class FixedPointMultiplyParamTest : public ::testing::TestWithParam<MultiplyPara
  */
 TEST_P( FixedPointMultiplyParamTest, Multiply )
 {
-    auto test_case = GetParam();
-    auto result    = sgns::fixed_point::multiply( test_case.a, test_case.b, test_case.precision );
+    auto tc = GetParam();
 
-    if ( std::holds_alternative<uint64_t>( test_case.expected ) )
+    auto static_res = sgns::ScaledInteger::Multiply( tc.a, tc.b, tc.precision );
+
+    if ( std::holds_alternative<uint64_t>( tc.expected ) )
     {
-        uint64_t expected_val = std::get<uint64_t>( test_case.expected );
-        ASSERT_TRUE( result.has_value() );
-        EXPECT_EQ( result.value(), expected_val );
-    }
-    else if ( std::holds_alternative<std::errc>( test_case.expected ) )
-    {
-        std::errc expected_err = std::get<std::errc>( test_case.expected );
-        ASSERT_FALSE( result.has_value() );
-        EXPECT_EQ( result.error(), std::make_error_code( expected_err ) );
+        uint64_t expect = std::get<uint64_t>( tc.expected );
+        ASSERT_TRUE( static_res.has_value() );
+        EXPECT_EQ( static_res.value(), expect );
     }
     else
     {
-        FAIL() << "Unknown test case type.";
+        std::errc expect_err = std::get<std::errc>( tc.expected );
+        ASSERT_FALSE( static_res.has_value() );
+        EXPECT_EQ( static_res.error(), std::make_error_code( expect_err ) );
+    }
+
+    auto faRes = sgns::ScaledInteger::New( tc.a, tc.precision );
+    ASSERT_TRUE( faRes.has_value() );
+    auto faPtr = faRes.value();
+
+    auto fbRes = sgns::ScaledInteger::New( tc.b, tc.precision );
+    ASSERT_TRUE( fbRes.has_value() );
+    auto fbPtr = fbRes.value();
+
+    auto obj_res = faPtr->Multiply( *fbPtr );
+
+    if ( std::holds_alternative<uint64_t>( tc.expected ) )
+    {
+        uint64_t expect = std::get<uint64_t>( tc.expected );
+        ASSERT_TRUE( obj_res.has_value() );
+        auto fp = obj_res.value();
+        EXPECT_EQ( fp.Value(), expect );
+        EXPECT_EQ( fp.Precision(), tc.precision );
+    }
+    else
+    {
+        std::errc expect_err = std::get<std::errc>( tc.expected );
+        ASSERT_FALSE( obj_res.has_value() );
+        EXPECT_EQ( obj_res.error(), std::make_error_code( expect_err ) );
     }
 }
 
@@ -196,7 +214,7 @@ INSTANTIATE_TEST_SUITE_P( FixedPointMultiplyTests,
                               // Error Cases
                               MultiplyParam_s{ UINT64_MAX, 1000000001ULL, 9ULL, std::errc::value_too_large } ) );
 
-// ======================== FixedPointDivideSuccessTest ========================
+// ======================== FixedPointDivideTests ========================
 
 struct DivideParam_s
 {
@@ -207,7 +225,7 @@ struct DivideParam_s
 };
 
 /**
- * @brief Parameterized test fixture for testing `divide` function.
+ * @brief Parameterized test fixture for testing `Divide` function.
  */
 class FixedPointDivideParamTest : public ::testing::TestWithParam<DivideParam_s>
 {
@@ -218,29 +236,51 @@ class FixedPointDivideParamTest : public ::testing::TestWithParam<DivideParam_s>
  */
 TEST_P( FixedPointDivideParamTest, Divide )
 {
-    auto test_case = GetParam();
-    auto result    = sgns::fixed_point::divide( test_case.num, test_case.den, test_case.precision );
+    auto tc = GetParam();
 
-    if ( std::holds_alternative<uint64_t>( test_case.expected ) )
+    auto static_res = sgns::ScaledInteger::Divide( tc.num, tc.den, tc.precision );
+
+    if ( std::holds_alternative<uint64_t>( tc.expected ) )
     {
-        uint64_t expected_val = std::get<uint64_t>( test_case.expected );
-        ASSERT_TRUE( result.has_value() );
-        EXPECT_EQ( result.value(), expected_val );
-    }
-    else if ( std::holds_alternative<std::errc>( test_case.expected ) )
-    {
-        std::errc expected_err = std::get<std::errc>( test_case.expected );
-        ASSERT_FALSE( result.has_value() );
-        EXPECT_EQ( result.error(), std::make_error_code( expected_err ) );
+        uint64_t expect = std::get<uint64_t>( tc.expected );
+        ASSERT_TRUE( static_res.has_value() );
+        EXPECT_EQ( static_res.value(), expect );
     }
     else
     {
-        FAIL() << "Unknown test case type.";
+        std::errc expect_err = std::get<std::errc>( tc.expected );
+        ASSERT_FALSE( static_res.has_value() );
+        EXPECT_EQ( static_res.error(), std::make_error_code( expect_err ) );
+    }
+
+    auto faRes = sgns::ScaledInteger::New( tc.num, tc.precision );
+    ASSERT_TRUE( faRes.has_value() );
+    auto faPtr = faRes.value();
+
+    auto fbRes = sgns::ScaledInteger::New( tc.den, tc.precision );
+    ASSERT_TRUE( fbRes.has_value() );
+    auto fbPtr = fbRes.value();
+
+    auto obj_res = faPtr->Divide( *fbPtr );
+
+    if ( std::holds_alternative<uint64_t>( tc.expected ) )
+    {
+        uint64_t expect = std::get<uint64_t>( tc.expected );
+        ASSERT_TRUE( obj_res.has_value() );
+        auto fp = obj_res.value();
+        EXPECT_EQ( fp.Value(), expect );
+        EXPECT_EQ( fp.Precision(), tc.precision );
+    }
+    else
+    {
+        std::errc expect_err = std::get<std::errc>( tc.expected );
+        ASSERT_FALSE( obj_res.has_value() );
+        EXPECT_EQ( obj_res.error(), std::make_error_code( expect_err ) );
     }
 }
 
 /**
- * @test Test suite for `divide` function.
+ * @test Test suite for `Divide` function.
  */
 INSTANTIATE_TEST_SUITE_P( FixedPointDivideTests,
                           FixedPointDivideParamTest,
@@ -255,3 +295,86 @@ INSTANTIATE_TEST_SUITE_P( FixedPointDivideTests,
                               DivideParam_s{ 0ULL, 0ULL, 9ULL, std::errc::result_out_of_range },
                               DivideParam_s{ 1000000000ULL, 0ULL, 9ULL, std::errc::result_out_of_range },
                               DivideParam_s{ UINT64_MAX, 999999999ULL, 9ULL, std::errc::value_too_large } ) );
+
+/**
+ * @brief Struct to hold test parameters for FixedPointConvertPrecisionParamTest.
+ */
+struct ConvertPrecisionParam_s
+{
+    uint64_t                          value;    ///< Raw fixed-point integer input.
+    uint64_t                          from;     ///< Original number of decimal places.
+    uint64_t                          to;       ///< Target number of decimal places.
+    std::variant<uint64_t, std::errc> expected; ///< Expected converted value or error code.
+};
+
+/**
+ * @brief Parameterized test fixture for testing `ConvertPrecision` functions.
+ */
+class FixedPointConvertPrecisionParamTest : public ::testing::TestWithParam<ConvertPrecisionParam_s>
+{
+};
+
+/**
+ * @test Tests static and object `ConvertPrecision` functions.
+ */
+TEST_P( FixedPointConvertPrecisionParamTest, ConvertPrecision )
+{
+    auto test_case = GetParam();
+
+    auto static_res = sgns::ScaledInteger::ConvertPrecision( test_case.value, test_case.from, test_case.to );
+
+    if ( std::holds_alternative<uint64_t>( test_case.expected ) )
+    {
+        uint64_t expected_val = std::get<uint64_t>( test_case.expected );
+        ASSERT_TRUE( static_res.has_value() );
+        EXPECT_EQ( static_res.value(), expected_val );
+    }
+    else
+    {
+        std::errc expected_err = std::get<std::errc>( test_case.expected );
+        ASSERT_FALSE( static_res.has_value() );
+        EXPECT_EQ( static_res.error(), std::make_error_code( expected_err ) );
+    }
+
+    auto fpRes = sgns::ScaledInteger::New( test_case.value, test_case.from );
+    ASSERT_TRUE( fpRes.has_value() );
+    auto fpPtr = fpRes.value();
+
+    auto obj_res = fpPtr->ConvertPrecision( test_case.to );
+
+    if ( std::holds_alternative<uint64_t>( test_case.expected ) )
+    {
+        uint64_t expected_val = std::get<uint64_t>( test_case.expected );
+        ASSERT_TRUE( obj_res.has_value() );
+        auto result_fp = obj_res.value();
+        EXPECT_EQ( result_fp.Value(), expected_val );
+        EXPECT_EQ( result_fp.Precision(), test_case.to );
+    }
+    else
+    {
+        std::errc expected_err = std::get<std::errc>( test_case.expected );
+        ASSERT_FALSE( obj_res.has_value() );
+        EXPECT_EQ( obj_res.error(), std::make_error_code( expected_err ) );
+    }
+}
+
+/**
+ * @test Test suite for `ConvertPrecision` functions.
+ */
+INSTANTIATE_TEST_SUITE_P(
+    FixedPointConvertPrecisionTests,
+    FixedPointConvertPrecisionParamTest,
+    ::testing::Values(
+        // Success Cases
+        ConvertPrecisionParam_s{ 12345ULL, 3ULL, 3ULL, 12345ULL },
+        ConvertPrecisionParam_s{ 12345ULL, 3ULL, 6ULL, 12345000ULL },
+        ConvertPrecisionParam_s{ 123456000ULL, 6ULL, 3ULL, 123456ULL },
+        // Losing precision
+        ConvertPrecisionParam_s{ 123456789ULL, 9ULL, 6ULL, 123456ULL },
+        ConvertPrecisionParam_s{ 1ULL, 9ULL, 0ULL, 0ULL },
+        ConvertPrecisionParam_s{ 0ULL, 5ULL, 10ULL, 0ULL },
+        // Error Cases
+        ConvertPrecisionParam_s{ UINT64_MAX, 0ULL, 1ULL, std::errc::value_too_large },
+        ConvertPrecisionParam_s{ ( UINT64_MAX / 10 ) + 1, 1ULL, 2ULL, std::errc::value_too_large },
+        ConvertPrecisionParam_s{ 0xFFFFFFFFFFFFFFULL, 0ULL, 4ULL, std::errc::value_too_large },
+        ConvertPrecisionParam_s{ 1234567890123456789ULL, 9ULL, 19ULL, std::errc::value_too_large } ) );
