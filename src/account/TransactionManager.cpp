@@ -25,7 +25,6 @@
 #include "UTXOTxParameters.hpp"
 #include "account/TokenAmount.hpp"
 #include "account/proto/SGTransaction.pb.h"
-#include "crdt/impl/crdt_data_filter.hpp"
 #include "crdt/proto/delta.pb.h"
 
 #ifdef _PROOF_ENABLED
