@@ -4,7 +4,7 @@
  */
 
 #include "TokenAmount.hpp"
-#include "base/fixed_point.hpp"
+#include "base/ScaledInteger.hpp"
 #include <limits>
 
 namespace sgns
@@ -18,7 +18,7 @@ namespace sgns
 
     outcome::result<std::shared_ptr<TokenAmount>> TokenAmount::New( double value )
     {
-        auto res = fixed_point::FromDouble( value, PRECISION );
+        auto res = ScaledInteger::FromDouble( value, PRECISION );
         if ( !res )
         {
             return outcome::failure( res.error() );
@@ -29,7 +29,7 @@ namespace sgns
 
     outcome::result<std::shared_ptr<TokenAmount>> TokenAmount::New( const std::string &str )
     {
-        auto res = fixed_point::FromString( str, PRECISION );
+        auto res = ScaledInteger::FromString( str, PRECISION );
         if ( !res )
         {
             return outcome::failure( res.error() );
@@ -42,7 +42,7 @@ namespace sgns
 
     outcome::result<TokenAmount> TokenAmount::Multiply( const TokenAmount &other ) const
     {
-        auto res = fixed_point::Multiply( minions_, other.minions_, PRECISION );
+        auto res = ScaledInteger::Multiply( minions_, other.minions_, PRECISION );
         if ( !res )
         {
             return outcome::failure( res.error() );
@@ -52,7 +52,7 @@ namespace sgns
 
     outcome::result<TokenAmount> TokenAmount::Divide( const TokenAmount &other ) const
     {
-        auto res = fixed_point::Divide( minions_, other.minions_, PRECISION );
+        auto res = ScaledInteger::Divide( minions_, other.minions_, PRECISION );
         if ( !res )
         {
             return outcome::failure( res.error() );
@@ -67,20 +67,20 @@ namespace sgns
 
     outcome::result<uint64_t> TokenAmount::ParseMinions( const std::string &str )
     {
-        return fixed_point::FromString( str, PRECISION );
+        return ScaledInteger::FromString( str, PRECISION );
     }
 
     std::string TokenAmount::FormatMinions( uint64_t minions )
     {
-        return fixed_point::ToString( minions, PRECISION );
+        return ScaledInteger::ToString( minions, PRECISION );
     }
 
     outcome::result<uint64_t> TokenAmount::CalculateCostMinions( uint64_t total_bytes, double price_usd_per_genius )
     {
         uint128_t product = static_cast<uint128_t>( total_bytes ) * static_cast<uint128_t>( PRICE_PER_FLOP ) *
                             static_cast<uint128_t>( FLOPS_PER_BYTE );
-        std::shared_ptr<sgns::fixed_point> cost_fp;
-        uint128_t                          divisor = 1;
+        std::shared_ptr<sgns::ScaledInteger> cost_fp;
+        uint128_t                            divisor = 1;
 
         for ( uint64_t prec = PRICE_PER_FLOP_FRACTIONAL_DIGITS; prec >= PRECISION; prec-- )
         {
@@ -91,13 +91,13 @@ namespace sgns
                 continue;
             }
 
-            auto total_fp = fixed_point::New( static_cast<uint64_t>( scaled ), prec );
+            auto total_fp = ScaledInteger::New( static_cast<uint64_t>( scaled ), prec );
             if ( !total_fp )
             {
                 continue;
             }
 
-            auto price_fp = fixed_point::New( price_usd_per_genius, prec );
+            auto price_fp = ScaledInteger::New( price_usd_per_genius, prec );
             if ( !price_fp )
             {
                 continue;
@@ -109,7 +109,7 @@ namespace sgns
                 continue;
             }
 
-            cost_fp = std::make_shared<sgns::fixed_point>( std::move( div_res.value() ) );
+            cost_fp = std::make_shared<sgns::ScaledInteger>( std::move( div_res.value() ) );
             break;
         }
 

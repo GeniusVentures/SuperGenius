@@ -47,7 +47,7 @@ target_link_libraries(sgns_account
     p2p::p2p_ping
     Boost::Boost.DI
     SGTransactionProto    
-    fixed_point
+    ScaledInteger
     sgns_version
     gnus_upnp
     AsyncIOManager
