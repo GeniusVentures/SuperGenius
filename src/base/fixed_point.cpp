@@ -26,23 +26,15 @@ namespace sgns
 
     outcome::result<std::shared_ptr<fixed_point>> fixed_point::New( double raw_value, uint64_t precision )
     {
-        auto res = FromDouble( raw_value, precision );
-        if ( !res )
-        {
-            return outcome::failure( res.error() );
-        }
-        auto ptr = std::shared_ptr<fixed_point>( new fixed_point( res.value(), precision ) );
+        OUTCOME_TRY( auto &&from_dbl_value, FromDouble( raw_value, precision ) );
+        auto ptr = std::shared_ptr<fixed_point>( new fixed_point( from_dbl_value, precision ) );
         return outcome::success( ptr );
     }
 
     outcome::result<std::shared_ptr<fixed_point>> fixed_point::New( const std::string &str_value, uint64_t precision )
     {
-        auto raw = FromString( str_value, precision );
-        if ( !raw )
-        {
-            return outcome::failure( raw.error() );
-        }
-        auto ptr = std::shared_ptr<fixed_point>( new fixed_point( raw.value(), precision ) );
+        OUTCOME_TRY( auto &&from_str_value, FromString( str_value, precision ) );
+        auto ptr = std::shared_ptr<fixed_point>( new fixed_point( from_str_value, precision ) );
         return outcome::success( ptr );
     }
 
@@ -243,12 +235,8 @@ namespace sgns
         {
             return outcome::failure( std::make_error_code( std::errc::invalid_argument ) );
         }
-        auto raw = fixed_point::Multiply( value_, other.value_, precision_ );
-        if ( !raw )
-        {
-            return outcome::failure( raw.error() );
-        }
-        return outcome::success( fixed_point( raw.value(), precision_ ) );
+        OUTCOME_TRY( auto &&multiply_res, fixed_point::Multiply( value_, other.value_, precision_ ) );
+        return outcome::success( fixed_point( multiply_res, precision_ ) );
     }
 
     outcome::result<fixed_point> fixed_point::Divide( const fixed_point &other ) const
@@ -257,21 +245,13 @@ namespace sgns
         {
             return outcome::failure( std::make_error_code( std::errc::invalid_argument ) );
         }
-        auto raw = fixed_point::Divide( value_, other.value_, precision_ );
-        if ( !raw )
-        {
-            return outcome::failure( raw.error() );
-        }
-        return outcome::success( fixed_point( raw.value(), precision_ ) );
+        OUTCOME_TRY( auto &&divide_res, fixed_point::Divide( value_, other.value_, precision_ ) );
+        return outcome::success( fixed_point( divide_res, precision_ ) );
     }
 
     outcome::result<fixed_point> fixed_point::ConvertPrecision( uint64_t to ) const
     {
-        auto raw = fixed_point::ConvertPrecision( value_, precision_, to );
-        if ( !raw )
-        {
-            return outcome::failure( raw.error() );
-        }
-        return outcome::success( fixed_point( raw.value(), to ) );
+        OUTCOME_TRY( auto &&convert_res, fixed_point::ConvertPrecision( value_, precision_, to ) );
+        return outcome::success( fixed_point( convert_res, to ) );
     }
 } // namespace sgns
