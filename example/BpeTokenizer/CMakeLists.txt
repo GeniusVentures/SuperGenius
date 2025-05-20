@@ -2,6 +2,16 @@ add_executable(BpeTokenizer
 	BpeTokenizer.hpp
     BpeEncode.cpp 
 	BpeTokenizer.cpp
+	jsonparser.hpp
+	SplitEmbedding.hpp
+	SplitLMHead.hpp
+	MultiExpert.hpp
+	jsonparser.cpp
+	SplitEmbedding.cpp
+	SplitLMHead.cpp
+	MultiExpert.cpp
+	Utility.hpp
+	Utility.cpp
 )
 add_executable(TestEmbedding
 	TestEmbedding.cpp
