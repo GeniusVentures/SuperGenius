@@ -5,10 +5,8 @@
 #include <gsl/span>
 
 #include <crypto/blake2/blake2b.h>
-#include <crypto/blake2/blake2s.h>
 #include "crypto/keccak/keccak.h"
 #include "crypto/sha/sha256.hpp"
-//-------------------
 #include "crypto/twox/twox.hpp"
 
 namespace sgns::crypto {
@@ -50,12 +48,6 @@ namespace sgns::crypto {
                     buffer.size(),
                     out.data(),
                     32);
-    return out;
-  }
-
-  Hash256 HasherImpl::blake2s_256(gsl::span<const uint8_t> buffer) const {
-    Hash256 out;
-    blake2s(out.data(), 32, nullptr, 0, buffer.data(), buffer.size());
     return out;
   }
 
