@@ -18,13 +18,18 @@ void testEmbedding(const std::string& modelPath) {
     
     // Create session
     MNN::ScheduleConfig config;
-    config.type = MNN_FORWARD_CPU;
+    config.type = MNN_FORWARD_VULKAN;
     config.numThread = 1;
+    MNN::BackendConfig backendConfig;
+    backendConfig.precision = MNN::BackendConfig::Precision_Low; // Request FP16
+    backendConfig.memory    = MNN::BackendConfig::Memory_Low;
+    config.backendConfig    = &backendConfig;
     auto session = embeddingNet->createSession(config);
+    
     
     // Get input tensor
     auto input = embeddingNet->getSessionInput(session, nullptr);
-    
+
     // Resize for single token
     embeddingNet->resizeTensor(input, {1, 1});
     embeddingNet->resizeSession(session);
