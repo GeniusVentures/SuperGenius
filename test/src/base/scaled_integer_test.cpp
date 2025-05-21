@@ -7,79 +7,132 @@
 #include "base/ScaledInteger.hpp"
 
 // ======================== FixedPointFromStringTests ========================
-
 /**
- * @brief Struct to hold test parameters for FixedPointParamTest.
+ * @brief Struct to hold test parameters for conversion with specified precision.
  */
-struct FromStrParam_s
+struct FixedPrecisionParam_s
 {
     std::string                       input;     ///< Input string representing a fixed-point number.
     uint64_t                          precision; ///< Precision level for conversion.
-    std::variant<uint64_t, std::errc> expected;  ///< Expected output, either a valid result or an error code.
+    std::variant<uint64_t, std::errc> expected;  ///< Expected result or error code.
 };
 
 /**
- * @brief Parameterized test fixture for testing `fromString` function.
+ * @brief Parameterized test fixture for testing `FromString` with specified precision.
  */
-class FixedPointParamTest : public ::testing::TestWithParam<FromStrParam_s>
+class FixedPrecisionTest : public ::testing::TestWithParam<FixedPrecisionParam_s>
 {
 };
 
 /**
- * @test Tests the conversion of string to fixed-point representation.
+ * @test Verifies string-to-fixed-point conversion when precision is provided.
  */
-TEST_P( FixedPointParamTest, FromString )
+TEST_P( FixedPrecisionTest, FromStringWithSpecifiedPrecision )
 {
-    auto test_case = GetParam();
-    auto result    = sgns::ScaledInteger::FromString( test_case.input, test_case.precision );
+    const auto &tc     = GetParam();
+    auto        result = sgns::ScaledInteger::FromString( tc.input, tc.precision );
 
-    if ( std::holds_alternative<uint64_t>( test_case.expected ) )
+    if ( std::holds_alternative<uint64_t>( tc.expected ) )
     {
-        uint64_t expected_val = std::get<uint64_t>( test_case.expected );
+        uint64_t expected_val = std::get<uint64_t>( tc.expected );
         ASSERT_TRUE( result.has_value() );
         EXPECT_EQ( result.value(), expected_val );
     }
     else
     {
-        std::errc expected_err = std::get<std::errc>( test_case.expected );
+        std::errc expected_err = std::get<std::errc>( tc.expected );
         ASSERT_FALSE( result.has_value() );
         EXPECT_EQ( result.error(), std::make_error_code( expected_err ) );
     }
 }
 
-/**
- * @test Test suite for `fromString` function.
- */
-INSTANTIATE_TEST_SUITE_P( FixedPointFromStringTests,
-                          FixedPointParamTest,
+INSTANTIATE_TEST_SUITE_P( FixedPrecisionFromStringTests,
+                          FixedPrecisionTest,
                           ::testing::Values(
                               // Valid cases
-                              FromStrParam_s{ "123.456", 9ULL, 123456000000ULL },
-                              FromStrParam_s{ "000123.00456000", 9ULL, 123004560000ULL },
-                              FromStrParam_s{ "123", 9ULL, 123000000000ULL },
-                              FromStrParam_s{ "123.45", 9ULL, 123450000000ULL },
-                              FromStrParam_s{ "1.123456789", 9ULL, 1123456789ULL },
-                              FromStrParam_s{ "0.000000001", 9ULL, 1ULL },
-                              FromStrParam_s{ "999999999.999999999", 9ULL, 999999999999999999ULL },
-                              FromStrParam_s{ "123.4", 1ULL, 1234ULL },
-                              FromStrParam_s{ "123", 0ULL, 123ULL },
-                              FromStrParam_s{ "0", 0ULL, 0ULL },
-                              FromStrParam_s{ "1.1", 1ULL, 11ULL },
-                              FromStrParam_s{ "1.123", 3ULL, 1123ULL },
-                              // Error Cases
-                              FromStrParam_s{ "abc", 9ULL, std::errc::invalid_argument },
-                              FromStrParam_s{ "", 9ULL, std::errc::invalid_argument },
-                              FromStrParam_s{ "1.1234567890", 9ULL, std::errc::value_too_large },
-                              FromStrParam_s{ "-123.456", 9ULL, std::errc::invalid_argument },
-                              FromStrParam_s{ "123..456", 9ULL, std::errc::invalid_argument },
-                              FromStrParam_s{ "123.45.67", 9ULL, std::errc::invalid_argument },
-                              FromStrParam_s{ "1.123456789", 8ULL, std::errc::value_too_large },
-                              FromStrParam_s{ " 123.456", 9ULL, std::errc::invalid_argument },
-                              FromStrParam_s{ "A123.456", 9ULL, std::errc::invalid_argument },
-                              FromStrParam_s{ "123.456 ", 9ULL, std::errc::invalid_argument },
-                              FromStrParam_s{ "123.456A", 9ULL, std::errc::invalid_argument },
-                              FromStrParam_s{ ".", 9ULL, std::errc::invalid_argument },
-                              FromStrParam_s{ "0.0000000001", 9ULL, std::errc::value_too_large } ) );
+                              FixedPrecisionParam_s{ "123.456", 9ULL, 123456000000ULL },
+                              FixedPrecisionParam_s{ "000123.00456000", 9ULL, 123004560000ULL },
+                              FixedPrecisionParam_s{ "123", 9ULL, 123000000000ULL },
+                              FixedPrecisionParam_s{ "123.45", 9ULL, 123450000000ULL },
+                              FixedPrecisionParam_s{ "1.123456789", 9ULL, 1123456789ULL },
+                              FixedPrecisionParam_s{ "0.000000001", 9ULL, 1ULL },
+                              FixedPrecisionParam_s{ "999999999.999999999", 9ULL, 999999999999999999ULL },
+                              FixedPrecisionParam_s{ "123.4", 1ULL, 1234ULL },
+                              FixedPrecisionParam_s{ "123", 0ULL, 123ULL },
+                              FixedPrecisionParam_s{ "0", 0ULL, 0ULL },
+                              FixedPrecisionParam_s{ "1.1", 1ULL, 11ULL },
+                              FixedPrecisionParam_s{ "1.123", 3ULL, 1123ULL },
+                              // Error cases
+                              FixedPrecisionParam_s{ "abc", 9ULL, std::errc::invalid_argument },
+                              FixedPrecisionParam_s{ "", 9ULL, std::errc::invalid_argument },
+                              FixedPrecisionParam_s{ "1.1234567890", 9ULL, std::errc::value_too_large },
+                              FixedPrecisionParam_s{ "-123.456", 9ULL, std::errc::invalid_argument },
+                              FixedPrecisionParam_s{ "123..456", 9ULL, std::errc::invalid_argument },
+                              FixedPrecisionParam_s{ "123.45.67", 9ULL, std::errc::invalid_argument },
+                              FixedPrecisionParam_s{ "1.123456789", 8ULL, std::errc::value_too_large },
+                              FixedPrecisionParam_s{ " 123.456", 9ULL, std::errc::invalid_argument },
+                              FixedPrecisionParam_s{ "A123.456", 9ULL, std::errc::invalid_argument },
+                              FixedPrecisionParam_s{ "123.456 ", 9ULL, std::errc::invalid_argument },
+                              FixedPrecisionParam_s{ "123.456A", 9ULL, std::errc::invalid_argument },
+                              FixedPrecisionParam_s{ ".", 9ULL, std::errc::invalid_argument },
+                              FixedPrecisionParam_s{ "0.0000000001", 9ULL, std::errc::value_too_large } ) );
+
+/**
+ * @brief Struct to hold test parameters for conversion with inferred precision.
+ */
+struct InferredPrecisionParam_s
+{
+    std::string                             input;              ///< Decimal string input.
+    uint64_t                                expected_value;     ///< Expected scaled integer value.
+    uint64_t                                expected_precision; ///< Expected precision inferred from input.
+    std::variant<std::monostate, std::errc> expected;           ///< Success (monostate) or error code.
+};
+
+/**
+ * @brief Parameterized test fixture for testing `New` which infers precision.
+ */
+class InferredPrecisionTest : public ::testing::TestWithParam<InferredPrecisionParam_s>
+{
+};
+
+/**
+ * @test Verifies string-to-fixed-point conversion where precision is inferred from the input.
+ */
+TEST_P( InferredPrecisionTest, NewFromStringInfersPrecision )
+{
+    const auto &tc  = GetParam();
+    auto        res = sgns::ScaledInteger::New( tc.input );
+
+    if ( std::holds_alternative<std::errc>( tc.expected ) )
+    {
+        EXPECT_FALSE( res.has_value() );
+        EXPECT_EQ( res.error(), std::make_error_code( std::get<std::errc>( tc.expected ) ) );
+    }
+    else
+    {
+        ASSERT_TRUE( res.has_value() );
+        auto ptr = res.value();
+        EXPECT_EQ( ptr->Value(), tc.expected_value );
+        EXPECT_EQ( ptr->Precision(), tc.expected_precision );
+    }
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    InferredPrecisionFromStringTests,
+    InferredPrecisionTest,
+    ::testing::Values(
+        // Valid cases
+        InferredPrecisionParam_s{ "42", 42ULL, 0ULL, std::monostate{} },
+        InferredPrecisionParam_s{ "123.456", 123456ULL, 3ULL, std::monostate{} },
+        InferredPrecisionParam_s{ "123.", 123ULL, 0ULL, std::monostate{} },
+        InferredPrecisionParam_s{ "123.0", 1230ULL, 1ULL, std::monostate{} },
+        InferredPrecisionParam_s{ "000123.00456000", 12300456000ULL, 8ULL, std::monostate{} },
+        // Error cases
+        InferredPrecisionParam_s{ "", 0ULL, 0ULL, std::errc::invalid_argument },
+        InferredPrecisionParam_s{ "abc", 0ULL, 0ULL, std::errc::invalid_argument },
+        InferredPrecisionParam_s{ "1.2.3", 0ULL, 0ULL, std::errc::invalid_argument },
+        InferredPrecisionParam_s{ "-1.23", 0ULL, 0ULL, std::errc::invalid_argument },
+        InferredPrecisionParam_s{ "18446744073709551616", 0ULL, 0ULL, std::errc::invalid_argument } ) );
 
 /**
  * @brief Struct to hold test parameters for FixedPointToStringParamTest.
