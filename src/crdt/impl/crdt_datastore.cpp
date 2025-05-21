@@ -720,7 +720,7 @@ namespace sgns::crdt
         if ( filter_crdt )
         {
             crdt_filter_.FilterElementsOnDelta( aDelta );
-            crdt_filter_.FilterTombstonesOnDelta( aDelta );
+            //crdt_filter_.FilterTombstonesOnDelta( aDelta );
         }
 
         {

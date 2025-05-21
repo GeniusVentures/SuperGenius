@@ -12,7 +12,7 @@
 #include <string>
 #include <memory>
 #include <regex>
-#include <mutex>
+#include <shared_mutex>
 #include "crdt/proto/delta.pb.h"
 
 namespace sgns::crdt
@@ -79,8 +79,8 @@ namespace sgns::crdt
 
     private:
         const bool             accept_by_default_;        ///< The default behavior for values not matching any filter
-        std::mutex             element_registry_mutex_;   ///< Mutex for the element registry
-        std::mutex             tombstone_registry_mutex_; ///< Mutex for the tombstone registry
+        std::shared_mutex      element_registry_mutex_;   ///< Mutex for the element registry
+        std::shared_mutex      tombstone_registry_mutex_; ///< Mutex for the tombstone registry
         FilterCallbackRegistry element_registry_;         ///< Element filter callback registry
         FilterCallbackRegistry tombstone_registry_;       ///< Tombstone filter callback registry
     };

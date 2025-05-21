@@ -41,7 +41,7 @@ namespace sgns::crdt
         std::vector<pb::Element>                               new_tombstones;
         std::unordered_map<std::string, ElementFilterCallback> registry_copy;
         {
-            std::lock_guard lock( element_registry_mutex_ );
+            std::shared_lock lock( element_registry_mutex_ );
             registry_copy = element_registry_;
         }
 
@@ -81,5 +81,6 @@ namespace sgns::crdt
     void CRDTDataFilter::FilterTombstonesOnDelta( std::shared_ptr<pb::Delta> &delta )
     {
         //TODO - Figure out how to remove tombstones even recorded ones
+        throw std::runtime_error("Not supported");
     }
 }
