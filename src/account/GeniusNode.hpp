@@ -26,7 +26,7 @@ typedef struct DevConfig
 {
     char        Addr[255];
     std::string Cut;
-    double      TokenValueInGNUS;
+    std::string TokenValueInGNUS;
     int         TokenID;
     char        BaseWritePath[1024];
 } DevConfig_st;

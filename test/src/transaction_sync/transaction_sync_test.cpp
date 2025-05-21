@@ -37,8 +37,8 @@ namespace sgns
         static inline sgns::GeniusNode *node_proc1 = nullptr;
         static inline sgns::GeniusNode *node_proc2 = nullptr;
 
-        static inline DevConfig_st DEV_CONFIG  = { "0xcafe", "0.65", 1.0, 0, "./node10" };
-        static inline DevConfig_st DEV_CONFIG2 = { "0xcafe", "0.65", 1.0, 0, "./node20" };
+        static inline DevConfig_st DEV_CONFIG  = { "0xcafe", "0.65", "1.0", 0, "./node10" };
+        static inline DevConfig_st DEV_CONFIG2 = { "0xcafe", "0.65", "1.0", 0, "./node20" };
 
         static inline std::string binary_path = "";
 

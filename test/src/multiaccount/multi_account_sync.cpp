@@ -86,8 +86,8 @@ protected:
 sgns::GeniusNode *MultiAccountTest::node_main  = nullptr;
 sgns::GeniusNode *MultiAccountTest::node_proc1 = nullptr;
 
-DevConfig_st MultiAccountTest::DEV_CONFIG  = { "0xcafe", "0.65", 1.0, 0, "./node1" };
-DevConfig_st MultiAccountTest::DEV_CONFIG2 = { "0xcafe", "0.65", 1.0, 1, "./node2" };
+DevConfig_st MultiAccountTest::DEV_CONFIG  = { "0xcafe", "0.65", "1.0", 0, "./node1" };
+DevConfig_st MultiAccountTest::DEV_CONFIG2 = { "0xcafe", "0.65", "1.0", 1, "./node2" };
 
 std::string MultiAccountTest::binary_path = "";
 

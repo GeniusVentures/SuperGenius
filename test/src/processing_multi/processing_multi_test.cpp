@@ -115,9 +115,9 @@ sgns::GeniusNode *ProcessingMultiTest::node_main  = nullptr;
 sgns::GeniusNode *ProcessingMultiTest::node_proc1 = nullptr;
 sgns::GeniusNode *ProcessingMultiTest::node_proc2 = nullptr;
 
-DevConfig_st ProcessingMultiTest::DEV_CONFIG  = { "0xcafe", "0.65", 1.0, 0, "./node1" };
-DevConfig_st ProcessingMultiTest::DEV_CONFIG2 = { "0xcafe", "0.65", 1.0, 0, "./node2" };
-DevConfig_st ProcessingMultiTest::DEV_CONFIG3 = { "0xcafe", "0.65", 1.0, 0, "./node3" };
+DevConfig_st ProcessingMultiTest::DEV_CONFIG  = { "0xcafe", "0.65", "1.0", 0, "./node1" };
+DevConfig_st ProcessingMultiTest::DEV_CONFIG2 = { "0xcafe", "0.65", "1.0", 0, "./node2" };
+DevConfig_st ProcessingMultiTest::DEV_CONFIG3 = { "0xcafe", "0.65", "1.0", 0, "./node3" };
 
 std::string ProcessingMultiTest::binary_path = "";
 
