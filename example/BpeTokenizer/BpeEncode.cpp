@@ -1,8 +1,9 @@
-﻿#include "BpeTokenizer.hpp"
+#include "BpeTokenizer.hpp"
 #include "jsonparser.hpp"
 #include "SplitEmbedding.hpp"
 #include "SplitLMHead.hpp"
 #include "MultiExpert.hpp"
+#include "GateWeights.hpp"  // Include the new header
 #include "Utility.hpp"
 #include <iostream>
 #include <vector>
@@ -19,15 +20,24 @@
 #include <filesystem>
 #include <regex> 
 
+// Function to run expert models with gate selection
+std::vector<float> runExpertWithGateSelection(
+    MultiExpertHandler &expertHandler,
+    GateWeightsHandler &gateHandler,
+    int tokenPosition,
+    const std::vector<float> &embedding,
+    int layerId = 10,
+    int numExperts = 2
+);
 
 // Main function
-int main( int argc, char **argv )
+int main(int argc, char **argv)
 {
-    if ( argc < 4 )
+    if (argc < 4)
     {
         std::cerr << "Usage: " << argv[0] << " <model_dir> <prompt> <num_tokens> [expert_strategy]" << std::endl;
         std::cerr << "Example: " << argv[0] << " . \"The cat sat on the chair\" 20 1" << std::endl;
-        std::cerr << "Expert strategies: 0 = round robin, 1 = average all (default: 0)" << std::endl;
+        std::cerr << "Expert strategies: 0 = round robin, 1 = average all, 2 = gate based (default: 0)" << std::endl;
         return 1;
     }
 
@@ -38,26 +48,26 @@ int main( int argc, char **argv )
 
     try
     {
-        numTokens = std::stoi( argv[3] );
+        numTokens = std::stoi(argv[3]);
     }
-    catch ( ... )
+    catch (...)
     {
         std::cerr << "Invalid number of tokens, using default: 1" << std::endl;
     }
 
     // Parse expert strategy if provided
-    if ( argc >= 5 )
+    if (argc >= 5)
     {
         try
         {
-            expertStrategy = std::stoi( argv[4] );
-            if ( expertStrategy < 0 || expertStrategy > 1 )
+            expertStrategy = std::stoi(argv[4]);
+            if (expertStrategy < 0 || expertStrategy > 2)
             {
                 std::cerr << "Invalid expert strategy, using default: 0 (round robin)" << std::endl;
                 expertStrategy = 0;
             }
         }
-        catch ( ... )
+        catch (...)
         {
             std::cerr << "Invalid expert strategy, using default: 0 (round robin)" << std::endl;
         }
@@ -68,16 +78,16 @@ int main( int argc, char **argv )
     std::string  vocabPath  = modelDir + "/vocab.json";
     std::string  mergesPath = modelDir + "/merges.txt";
 
-    if ( !tokenizer.load( vocabPath, mergesPath ) )
+    if (!tokenizer.load(vocabPath, mergesPath))
     {
         std::cerr << "Failed to load tokenizer" << std::endl;
         return 1;
     }
 
     // Tokenize prompt
-    std::vector<int> promptTokens = tokenizer.encode( prompt );
+    std::vector<int> promptTokens = tokenizer.encode(prompt);
 
-    if ( promptTokens.empty() )
+    if (promptTokens.empty())
     {
         std::cerr << "Failed to tokenize prompt" << std::endl;
         return 1;
@@ -85,7 +95,7 @@ int main( int argc, char **argv )
 
     std::cout << "Prompt: \"" << prompt << "\"" << std::endl;
     std::cout << "Encoded tokens: ";
-    for ( int token : promptTokens )
+    for (int token : promptTokens)
     {
         std::cout << token << " ";
     }
@@ -99,7 +109,7 @@ int main( int argc, char **argv )
 
     // Initialize the split embedding loader
     SplitEmbeddingLoader embeddingLoader;
-    if ( !embeddingLoader.initialize( modelDir ) )
+    if (!embeddingLoader.initialize(modelDir))
     {
         std::cerr << "Failed to initialize embedding loader" << std::endl;
         return 1;
@@ -108,8 +118,8 @@ int main( int argc, char **argv )
 
     // Initialize the split LM head loader
     SplitLmHeadLoader lmHeadLoader;
-    bool              useSplitLmHead = lmHeadLoader.initialize( modelDir );
-    if ( useSplitLmHead )
+    bool              useSplitLmHead = lmHeadLoader.initialize(modelDir);
+    if (useSplitLmHead)
     {
         lmHeadLoader.printChunkInfo();
     }
@@ -118,28 +128,55 @@ int main( int argc, char **argv )
         std::cerr << "Warning: Failed to initialize LM head loader. Will try legacy approach." << std::endl;
     }
 
-    // Initialize multi-expert handler (NEW)
+    // Initialize multi-expert handler
     MultiExpertHandler expertHandler;
-    if ( !expertHandler.initialize( modelDir ) )
+    if (!expertHandler.initialize(modelDir))
     {
         std::cerr << "Failed to initialize expert handler" << std::endl;
         return 1;
     }
 
-    // Set expert strategy
-    expertHandler.setStrategy( expertStrategy );
-    std::cout << "Using expert strategy: " << ( expertStrategy == 0 ? "Round Robin" : "Average All" ) << std::endl;
+    // If using gate-based strategy, initialize gate weights handler
+    GateWeightsHandler gateHandler;
+    bool useGateSelection = (expertStrategy == 2);
+    
+    if (useGateSelection)
+    {
+        if (!gateHandler.initialize(modelDir))
+        {
+            std::cerr << "Failed to initialize gate handler, falling back to round robin" << std::endl;
+            useGateSelection = false;
+            expertStrategy = 0;
+        }
+        else
+        {
+            std::cout << "Gate-based expert selection enabled" << std::endl;
+            gateHandler.printGateInfo();
+        }
+    }
+
+    // Set expert strategy for non-gate methods
+    if (!useGateSelection)
+    {
+        expertHandler.setStrategy(expertStrategy);
+        std::cout << "Using expert strategy: " 
+                  << (expertStrategy == 0 ? "Round Robin" : "Average All") << std::endl;
+    }
 
     // Enable debug mode for first few tokens
-    expertHandler.setDebugMode( true );
+    expertHandler.setDebugMode(true);
+    if (useGateSelection)
+    {
+        gateHandler.setDebugMode(true);
+    }
 
     // Optionally load legacy LM head model as fallback
     std::unique_ptr<MNN::Interpreter> legacyLmHeadNet;
-    if ( !useSplitLmHead )
+    if (!useSplitLmHead)
     {
         std::string lmHeadPath = modelDir + "/lm_head_f32.mnn";
-        legacyLmHeadNet.reset( MNN::Interpreter::createFromFile( lmHeadPath.c_str() ) );
-        if ( !legacyLmHeadNet )
+        legacyLmHeadNet.reset(MNN::Interpreter::createFromFile(lmHeadPath.c_str()));
+        if (!legacyLmHeadNet)
         {
             std::cerr << "Failed to load legacy LM head model from " << lmHeadPath << std::endl;
             return 1;
@@ -148,14 +185,18 @@ int main( int argc, char **argv )
     }
 
     // Generate tokens one by one
-    for ( int i = 0; i < numTokens; i++ )
+    for (int i = 0; i < numTokens; i++)
     {
-        std::cout << "\n--- Generating token " << ( i + 1 ) << "/" << numTokens << " ---" << std::endl;
+        std::cout << "\n--- Generating token " << (i + 1) << "/" << numTokens << " ---" << std::endl;
 
         // Disable debug mode after a few tokens
-        if ( i >= 3 )
+        if (i >= 3)
         {
-            expertHandler.setDebugMode( false );
+            expertHandler.setDebugMode(false);
+            if (useGateSelection)
+            {
+                gateHandler.setDebugMode(false);
+            }
         }
 
         // Get last token
@@ -163,14 +204,14 @@ int main( int argc, char **argv )
 
         // Get embedding using split loader
         std::cout << "Computing embedding for token ID " << lastToken << std::endl;
-        std::vector<float> embedding = embeddingLoader.extractEmbedding( lastToken );
+        std::vector<float> embedding = embeddingLoader.extractEmbedding(lastToken);
 
         // Print embedding stats
-        if ( !embedding.empty() )
+        if (!embedding.empty())
         {
-            float minVal = *std::min_element( embedding.begin(), embedding.end() );
-            float maxVal = *std::max_element( embedding.begin(), embedding.end() );
-            float sum    = std::accumulate( embedding.begin(), embedding.end(), 0.0f );
+            float minVal = *std::min_element(embedding.begin(), embedding.end());
+            float maxVal = *std::max_element(embedding.begin(), embedding.end());
+            float sum    = std::accumulate(embedding.begin(), embedding.end(), 0.0f);
             float mean   = sum / embedding.size();
 
             std::cout << "Embedding stats - Size: " << embedding.size() << ", Min: " << minVal << ", Max: " << maxVal
@@ -180,18 +221,31 @@ int main( int argc, char **argv )
         {
             std::cerr << "Failed to get embedding for token " << lastToken << std::endl;
             std::cout << "Using synthetic embedding as fallback" << std::endl;
-            embedding = LLMUtility::createSyntheticEmbedding( lastToken, hiddenSize );
+            embedding = LLMUtility::createSyntheticEmbedding(lastToken, hiddenSize);
         }
 
-        // Run expert models using the multi-expert handler (NEW)
-        std::vector<float> expertOutput = expertHandler.runExpertModel( i, embedding );
+        // Run expert models using the appropriate strategy
+        std::vector<float> expertOutput;
+        
+        if (useGateSelection && gateHandler.hasLayerGate(10))
+        {
+            // Use gate-based selection
+            std::cout << "Using gate-based expert selection for token " << i << std::endl;
+            expertOutput = runExpertWithGateSelection(
+                expertHandler, gateHandler, i, embedding, 10, 2);
+        }
+        else
+        {
+            // Use standard expert selection
+            expertOutput = expertHandler.runExpertModel(i, embedding);
+        }
 
         // Print expert output stats
-        if ( !expertOutput.empty() )
+        if (!expertOutput.empty())
         {
-            float minVal = *std::min_element( expertOutput.begin(), expertOutput.end() );
-            float maxVal = *std::max_element( expertOutput.begin(), expertOutput.end() );
-            float sum    = std::accumulate( expertOutput.begin(), expertOutput.end(), 0.0f );
+            float minVal = *std::min_element(expertOutput.begin(), expertOutput.end());
+            float maxVal = *std::max_element(expertOutput.begin(), expertOutput.end());
+            float sum    = std::accumulate(expertOutput.begin(), expertOutput.end(), 0.0f);
             float mean   = sum / expertOutput.size();
 
             std::cout << "Expert output stats - Size: " << expertOutput.size() << ", Min: " << minVal
@@ -206,20 +260,20 @@ int main( int argc, char **argv )
         // Run LM head model (using split or legacy approach)
         int nextTokenId = 0;
 
-        if ( useSplitLmHead )
+        if (useSplitLmHead)
         {
             // Run split LM head
             std::cout << "Running split LM head model..." << std::endl;
-            std::vector<float> logits = lmHeadLoader.runPrediction( expertOutput );
+            std::vector<float> logits = lmHeadLoader.runPrediction(expertOutput);
 
-            if ( !logits.empty() )
+            if (!logits.empty())
             {
                 // Get top tokens
-                std::vector<std::pair<int, float>> topTokens = lmHeadLoader.getTopK( logits, 5 );
+                std::vector<std::pair<int, float>> topTokens = lmHeadLoader.getTopK(logits, 5);
 
                 // Print top tokens
                 std::cout << "\nTop tokens:" << std::endl;
-                for ( size_t j = 0; j < topTokens.size(); j++ )
+                for (size_t j = 0; j < topTokens.size(); j++)
                 {
                     int   tokenId = topTokens[j].first;
                     float score   = topTokens[j].second;
@@ -227,22 +281,22 @@ int main( int argc, char **argv )
                     std::string tokenText;
                     try
                     {
-                        tokenText = tokenizer.decode( { tokenId } );
+                        tokenText = tokenizer.decode({tokenId});
                         // Replace non-printable chars with dots
-                        for ( char &c : tokenText )
+                        for (char &c : tokenText)
                         {
-                            if ( c < 32 || c > 126 )
+                            if (c < 32 || c > 126)
                             {
                                 c = '.';
                             }
                         }
                     }
-                    catch ( ... )
+                    catch (...)
                     {
                         tokenText = "[invalid token]";
                     }
 
-                    std::cout << "  " << ( j + 1 ) << ". Token ID " << tokenId << " (score: " << score << "): \""
+                    std::cout << "  " << (j + 1) << ". Token ID " << tokenId << " (score: " << score << "): \""
                               << tokenText << "\"" << std::endl;
                 }
 
@@ -252,33 +306,95 @@ int main( int argc, char **argv )
             else
             {
                 std::cerr << "Failed to get logits from split LM head" << std::endl;
-                if ( legacyLmHeadNet )
+                if (legacyLmHeadNet)
                 {
                     std::cout << "Falling back to legacy LM head" << std::endl;
-                    nextTokenId = LLMUtility::runLmHeadModelLegacy( legacyLmHeadNet.get(), expertOutput, &tokenizer );
+                    nextTokenId = LLMUtility::runLmHeadModelLegacy(legacyLmHeadNet.get(), expertOutput, &tokenizer);
                 }
             }
         }
         else
         {
             // Use legacy approach
-            nextTokenId = LLMUtility::runLmHeadModelLegacy( legacyLmHeadNet.get(), expertOutput, &tokenizer );
+            nextTokenId = LLMUtility::runLmHeadModelLegacy(legacyLmHeadNet.get(), expertOutput, &tokenizer);
         }
 
         // Add next token
-        generatedTokens.push_back( nextTokenId );
+        generatedTokens.push_back(nextTokenId);
 
         // Display current text
-        std::string currentText = tokenizer.decode( generatedTokens );
+        std::string currentText = tokenizer.decode(generatedTokens);
 
         // Clean up output for display
         std::string displayText;
-        for ( unsigned char c : currentText )
+        for (unsigned char c : currentText)
         {
-            displayText += ( c < 32 || c > 126 ) ? '.' : c; 
+            displayText += (c < 32 || c > 126) ? '.' : c; 
         }
         std::cout << "\nGenerated so far: " << displayText << std::endl;
     }
 
     return 0;
+}
+
+// Function to run expert models with gate selection
+std::vector<float> runExpertWithGateSelection(
+    MultiExpertHandler &expertHandler,
+    GateWeightsHandler &gateHandler,
+    int tokenPosition,
+    const std::vector<float> &embedding,
+    int layerId,
+    int numExperts
+) {
+    if (!gateHandler.hasLayerGate(layerId)) {
+        // Fallback to existing strategy if no gate model for this layer
+        std::cout << "No gate model available for layer " << layerId 
+                  << ", using standard expert selection" << std::endl;
+        return expertHandler.runExpertModel(tokenPosition, embedding);
+    }
+    
+    // Get expert selections from gate model
+    std::vector<int> selectedExperts = gateHandler.selectExperts(layerId, embedding, numExperts);
+    
+    if (selectedExperts.empty()) {
+        // Fallback if no experts were selected
+        std::cout << "No experts selected by gate model, using standard selection" << std::endl;
+        return expertHandler.runExpertModel(tokenPosition, embedding);
+    }
+    
+    // Run selected experts and average their outputs
+    std::vector<float> resultOutput;
+    int successfulExperts = 0;
+    
+    for (int expertId : selectedExperts) {
+        std::vector<float> expertOutput = expertHandler.runSingleExpert(expertId, embedding);
+        
+        if (!expertOutput.empty()) {
+            successfulExperts++;
+            
+            // Initialize result with first expert's output
+            if (resultOutput.empty()) {
+                resultOutput = expertOutput;
+            } else {
+                // Accumulate outputs (for averaging later)
+                for (size_t j = 0; j < resultOutput.size(); ++j) {
+                    resultOutput[j] += expertOutput[j];
+                }
+            }
+        }
+    }
+    
+    // Average the results
+    if (successfulExperts > 1) {
+        for (size_t j = 0; j < resultOutput.size(); ++j) {
+            resultOutput[j] /= successfulExperts;
+        }
+    }
+    
+    if (successfulExperts == 0) {
+        std::cerr << "Failed to run any selected experts, falling back to standard selection" << std::endl;
+        return expertHandler.runExpertModel(tokenPosition, embedding);
+    }
+    
+    return resultOutput;
 }

@@ -12,6 +12,8 @@ add_executable(BpeTokenizer
 	MultiExpert.cpp
 	Utility.hpp
 	Utility.cpp
+	GateWeights.hpp
+	GateWeights.cpp
 )
 add_executable(TestEmbedding
 	TestEmbedding.cpp
