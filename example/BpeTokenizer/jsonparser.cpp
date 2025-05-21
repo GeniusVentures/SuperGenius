@@ -1,177 +1,175 @@
 #include "jsonparser.hpp"
 
+    // Parse JSON string into a map
 std::unordered_map<std::string, std::string> SimpleJsonParser::parseJson( const std::string &jsonString )
 {
     std::unordered_map<std::string, std::string> result;
 
-    // Very simple parsing for key-value pairs in JSON
-    // This is not a full JSON parser, just enough for our metadata
-    std::string::size_type pos = 0;
-    while ( pos < jsonString.size() )
+    try
     {
-        // Find next key
-        pos = jsonString.find( "\"", pos );
-        if ( pos == std::string::npos )
+        rapidjson::Document doc;
+        doc.Parse( jsonString.c_str() );
+
+        if ( doc.HasParseError() || !doc.IsObject() )
         {
-            break;
+            std::cerr << "Error parsing JSON string" << std::endl;
+            return result;
         }
 
-        std::string::size_type keyStart = pos + 1;
-        pos                             = jsonString.find( "\"", keyStart );
-        if ( pos == std::string::npos )
+        // Convert Document to map
+        for ( rapidjson::Value::ConstMemberIterator itr = doc.MemberBegin(); itr != doc.MemberEnd(); ++itr )
         {
-            break;
-        }
-
-        std::string key = jsonString.substr( keyStart, pos - keyStart );
-        pos++;
-
-        // Find value
-        pos = jsonString.find( ":", pos );
-        if ( pos == std::string::npos )
-        {
-            break;
-        }
-        pos++;
-
-        // Skip whitespace
-        while ( pos < jsonString.size() && ( jsonString[pos] == ' ' || jsonString[pos] == '\t' ) )
-        {
-            pos++;
-        }
-
-        std::string value;
-        if ( pos < jsonString.size() )
-        {
-            if ( jsonString[pos] == '\"' )
+            if ( itr->name.IsString() )
             {
-                // String value
-                std::string::size_type valueStart = pos + 1;
-                pos                               = jsonString.find( "\"", valueStart );
-                if ( pos == std::string::npos )
+                std::string key = itr->name.GetString();
+
+                if ( itr->value.IsString() )
                 {
-                    break;
+                    result[key] = itr->value.GetString();
                 }
-                value = jsonString.substr( valueStart, pos - valueStart );
-                pos++;
-            }
-            else if ( jsonString[pos] == '{' || jsonString[pos] == '[' )
-            {
-                // Object or array - skip for now
-                int depth = 1;
-                pos++;
-                std::string::size_type valueStart = pos;
-                while ( pos < jsonString.size() && depth > 0 )
+                else if ( itr->value.IsNumber() )
                 {
-                    if ( jsonString[pos] == '{' || jsonString[pos] == '[' )
+                    if ( itr->value.IsInt() )
                     {
-                        depth++;
+                        result[key] = std::to_string( itr->value.GetInt() );
                     }
-                    else if ( jsonString[pos] == '}' || jsonString[pos] == ']' )
+                    else if ( itr->value.IsDouble() )
                     {
-                        depth--;
+                        result[key] = std::to_string( itr->value.GetDouble() );
                     }
-                    pos++;
                 }
-                value = jsonString.substr( valueStart, pos - valueStart - 1 );
-            }
-            else
-            {
-                // Number, boolean, or null
-                std::string::size_type valueStart = pos;
-                while ( pos < jsonString.size() && jsonString[pos] != ',' && jsonString[pos] != '}' &&
-                        jsonString[pos] != ']' )
+                else if ( itr->value.IsBool() )
                 {
-                    pos++;
+                    result[key] = itr->value.GetBool() ? "true" : "false";
                 }
-                value = jsonString.substr( valueStart, pos - valueStart );
-                value.erase( 0, value.find_first_not_of( " \t" ) );
-                value.erase( value.find_last_not_of( " \t," ) + 1 );
+                else if ( itr->value.IsObject() || itr->value.IsArray() )
+                {
+                    // Convert objects and arrays to JSON strings
+                    rapidjson::StringBuffer                    buffer;
+                    rapidjson::Writer<rapidjson::StringBuffer> writer( buffer );
+                    itr->value.Accept( writer );
+                    result[key] = buffer.GetString();
+                }
             }
         }
-
-        result[key] = value;
+    }
+    catch ( const std::exception &e )
+    {
+        std::cerr << "Exception while parsing JSON: " << e.what() << std::endl;
     }
 
     return result;
 }
 
+// Parse JSON array from string
 std::vector<std::unordered_map<std::string, std::string>> SimpleJsonParser::parseJsonArray(
-                                                                                 const std::string &jsonString,
+    const std::string &jsonString,
                                                                                  const std::string &arrayName )
 {
     std::vector<std::unordered_map<std::string, std::string>> result;
 
-    // Find array
-    std::string            searchStr = "\"" + arrayName + "\"";
-    std::string::size_type pos       = jsonString.find( searchStr );
-    if ( pos == std::string::npos )
+    try
     {
-        return result;
-    }
+        rapidjson::Document doc;
+        doc.Parse( jsonString.c_str() );
 
-    // Find array start
-    pos = jsonString.find( "[", pos );
-    if ( pos == std::string::npos )
-    {
-        return result;
-    }
-    pos++;
-
-    // Parse array elements
-    while ( pos < jsonString.size() )
-    {
-        // Skip whitespace
-        while ( pos < jsonString.size() && ( jsonString[pos] == ' ' || jsonString[pos] == '\t' ||
-                                             jsonString[pos] == '\n' || jsonString[pos] == ',' ) )
+        if ( doc.HasParseError() )
         {
-            pos++;
+            std::cerr << "Error parsing JSON string" << std::endl;
+            return result;
         }
 
-        if ( pos >= jsonString.size() || jsonString[pos] == ']' )
+        // Check if the document has the array we're looking for
+        if ( !doc.HasMember( arrayName.c_str() ) || !doc[arrayName.c_str()].IsArray() )
         {
-            break;
+            std::cerr << "JSON does not contain array named '" << arrayName << "'" << std::endl;
+            return result;
         }
 
-        if ( jsonString[pos] == '{' )
-        {
-            // Found object
-            std::string::size_type objectStart = pos;
-            int                    depth       = 1;
-            pos++;
+        // Get the array
+        const rapidjson::Value &array = doc[arrayName.c_str()];
 
-            while ( pos < jsonString.size() && depth > 0 )
+        // Process each element in the array
+        for ( rapidjson::SizeType i = 0; i < array.Size(); i++ )
+        {
+            if ( array[i].IsObject() )
             {
-                if ( jsonString[pos] == '{' )
+                std::unordered_map<std::string, std::string> item;
+
+                // Convert the object to a map
+                for ( rapidjson::Value::ConstMemberIterator itr = array[i].MemberBegin(); itr != array[i].MemberEnd();
+                      ++itr )
                 {
-                    depth++;
-                }
-                else if ( jsonString[pos] == '}' )
-                {
-                    depth--;
-                }
-                pos++;
-            }
+                    if ( itr->name.IsString() )
+                    {
+                        std::string key = itr->name.GetString();
 
-            if ( depth == 0 )
-            {
-                std::string objectStr = jsonString.substr( objectStart + 1, pos - objectStart - 2 );
-                std::unordered_map<std::string, std::string> obj = parseJson( "{" + objectStr + "}" );
-                result.push_back( obj );
+                        if ( itr->value.IsString() )
+                        {
+                            item[key] = itr->value.GetString();
+                        }
+                        else if ( itr->value.IsNumber() )
+                        {
+                            if ( itr->value.IsInt() )
+                            {
+                                item[key] = std::to_string( itr->value.GetInt() );
+                            }
+                            else if ( itr->value.IsDouble() )
+                            {
+                                item[key] = std::to_string( itr->value.GetDouble() );
+                            }
+                        }
+                        else if ( itr->value.IsBool() )
+                        {
+                            item[key] = itr->value.GetBool() ? "true" : "false";
+                        }
+                        else if ( itr->value.IsObject() || itr->value.IsArray() )
+                        {
+                            // Convert objects and arrays to JSON strings
+                            rapidjson::StringBuffer                    buffer;
+                            rapidjson::Writer<rapidjson::StringBuffer> writer( buffer );
+                            itr->value.Accept( writer );
+                            item[key] = buffer.GetString();
+                        }
+                    }
+                }
+
+                result.push_back( item );
             }
         }
-        else
-        {
-            // Skip non-object
-            while ( pos < jsonString.size() && jsonString[pos] != ',' && jsonString[pos] != ']' )
-            {
-                pos++;
-            }
-        }
+    }
+    catch ( const std::exception &e )
+    {
+        std::cerr << "Exception while parsing JSON array: " << e.what() << std::endl;
     }
 
     return result;
 }
+
+// Parse a JSON file into a map
+std::unordered_map<std::string, std::string> SimpleJsonParser::parseJsonFile( const std::string &filePath )
+{
+    try
+    {
+        std::ifstream file( filePath );
+        if ( !file.is_open() )
+        {
+            std::cerr << "Failed to open JSON file: " << filePath << std::endl;
+            return {};
+        }
+
+        std::stringstream buffer;
+        buffer << file.rdbuf();
+        return parseJson( buffer.str() );
+    }
+    catch ( const std::exception &e )
+    {
+        std::cerr << "Exception while parsing JSON file: " << e.what() << std::endl;
+        return {};
+    }
+}
+
+// Helper methods from the original SimpleJsonParser
 
 int SimpleJsonParser::getIntValue( const std::unordered_map<std::string, std::string> &json,
                         const std::string                                  &key,
@@ -217,4 +215,96 @@ bool SimpleJsonParser::getBoolValue( const std::unordered_map<std::string, std::
 
     std::string value = it->second;
     return value == "true" || value == "1";
+}
+
+// Extra utility methods for recommended experts
+
+// Get recommended experts from file - this is a new method
+std::vector<int> SimpleJsonParser::getRecommendedExperts( const std::string &filePath )
+{
+    std::vector<int> experts;
+
+    try
+    {
+        std::ifstream file( filePath );
+        if ( !file.is_open() )
+        {
+            std::cerr << "Failed to open JSON file: " << filePath << std::endl;
+            return experts;
+        }
+
+        std::stringstream buffer;
+        buffer << file.rdbuf();
+        std::string jsonContent = buffer.str();
+
+        rapidjson::Document doc;
+        doc.Parse( jsonContent.c_str() );
+
+        if ( doc.HasParseError() )
+        {
+            std::cerr << "Error parsing JSON file: " << filePath << std::endl;
+            return experts;
+        }
+
+        // Check for recommended_experts array
+        if ( doc.HasMember( "recommended_experts" ) && doc["recommended_experts"].IsArray() )
+        {
+            const rapidjson::Value &array = doc["recommended_experts"];
+            for ( rapidjson::SizeType i = 0; i < array.Size(); i++ )
+            {
+                if ( array[i].IsNumber() )
+                {
+                    experts.push_back( array[i].GetInt() );
+                }
+                else if ( array[i].IsObject() && array[i].HasMember( "expert_id" ) )
+                {
+                    // Handle case where experts are objects with expert_id field
+                    if ( array[i]["expert_id"].IsNumber() )
+                    {
+                        experts.push_back( array[i]["expert_id"].GetInt() );
+                    }
+                    else if ( array[i]["expert_id"].IsString() )
+                    {
+                        // Handle string expert_id
+                        experts.push_back( std::stoi( array[i]["expert_id"].GetString() ) );
+                    }
+                }
+            }
+        }
+        // If no direct recommended_experts array, try expert_stats
+        else if ( doc.HasMember( "expert_stats" ) && doc["expert_stats"].IsArray() )
+        {
+            // Create a vector of pairs (expert_id, weight_norm)
+            std::vector<std::pair<int, float>> expertScores;
+
+            const rapidjson::Value &array = doc["expert_stats"];
+            for ( rapidjson::SizeType i = 0; i < array.Size(); i++ )
+            {
+                if ( array[i].IsObject() && array[i].HasMember( "expert_id" ) && array[i].HasMember( "weight_norm" ) )
+                {
+                    int   expertId   = array[i]["expert_id"].GetInt();
+                    float weightNorm = array[i]["weight_norm"].GetFloat();
+                    expertScores.push_back( { expertId, weightNorm } );
+                }
+            }
+
+            // Sort by weight norm (descending)
+            std::sort( expertScores.begin(),
+                       expertScores.end(),
+                       []( const auto &a, const auto &b ) { return a.second > b.second; } );
+
+            // Take the top 20 experts
+            int count = std::min( 20, static_cast<int>( expertScores.size() ) );
+            for ( int i = 0; i < count; i++ )
+            {
+                experts.push_back( expertScores[i].first );
+            }
+        }
+    }
+    catch ( const std::exception &e )
+    {
+        std::cerr << "Exception while getting recommended experts: " << e.what() << std::endl;
+    }
+
+    return experts;
 }
