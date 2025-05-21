@@ -100,9 +100,9 @@ namespace sgns
                 .str() ),
         m_lastApiCall( std::chrono::system_clock::now() - m_minApiCallInterval )
 
-    //coinprices_(std::make_shared<CoinGeckoPriceRetriever>(io_))
+    // coinprices_(std::make_shared<CoinGeckoPriceRetriever>(io_))
     {
-        //For some reason if this isn't initialized like this, it ends up completely wrong.
+        // For some reason if this isn't initialized like this, it ends up completely wrong.
         m_lastApiCall = std::chrono::system_clock::now() - m_minApiCallInterval;
         SSL_library_init();
         SSL_load_error_strings();
@@ -188,7 +188,7 @@ namespace sgns
         auto pubsubport = GenerateRandomPort( base_port, account_->GetAddress() + std::to_string( tokenid ) );
 
         std::vector<std::string> addresses;
-        //UPNP
+        // UPNP
         auto        upnp = std::make_shared<upnp::UPNP>();
         std::string lanip;
 
@@ -250,7 +250,7 @@ namespace sgns
             }
         }
 
-        //Make a base58 out of our address
+        // Make a base58 out of our address
         std::string                tempaddress = account_->GetAddress();
         std::vector<unsigned char> inputBytes( tempaddress.begin(), tempaddress.end() );
         std::vector<unsigned char> hash( SHA256_DIGEST_LENGTH );
@@ -424,7 +424,7 @@ namespace sgns
         // Compute the SHA-256 hash of the input bytes
         std::vector<unsigned char> hash( SHA256_DIGEST_LENGTH );
         SHA256( inputBytes.data(), inputBytes.size(), hash.data() );
-        //Provide CID
+        // Provide CID
         libp2p::protocol::kademlia::ContentId key( hash );
         pubsub_->GetDHT()->Start();
         pubsub_->ProvideCID( key );
@@ -434,7 +434,7 @@ namespace sgns
         auto cidstring = libp2p::multi::ContentIdentifierCodec::toString( cidtest.value() );
         node_logger->info( "CID Test:: {}", cidstring.value() );
 
-        //Also Find providers
+        // Also Find providers
         pubsub_->StartFindingPeers( key );
     }
 
@@ -485,11 +485,11 @@ namespace sgns
 
         rapidjson::Document document;
         document.Parse( jsondata.c_str() );
-        //size_t           nSubTasks = 1;
+        // size_t           nSubTasks = 1;
         rapidjson::Value inputArray;
 
         inputArray = document["input"];
-        //nSubTasks  = inputArray.Size();
+        // nSubTasks  = inputArray.Size();
 
         processing::ProcessTaskSplitter  taskSplitter;
         std::list<SGProcessing::SubTask> subTasks;
@@ -505,7 +505,7 @@ namespace sgns
                 .SplitTask( task, subTasks, inputAsString, nChunks, false, pubsub_->GetHost()->getId().toBase58() );
 
             //}
-            //imageindex++;
+            // imageindex++;
         }
         auto cut = sgns::TokenAmount::ParseMinions( dev_config_.Cut );
         if ( !cut )
@@ -660,7 +660,6 @@ namespace sgns
 
     uint64_t GeniusNode::GetProcessCost( const std::string &json_data )
     {
-
         auto blockLen = ParseBlockSize( json_data );
         if ( !blockLen )
         {
@@ -803,6 +802,44 @@ namespace sgns
     uint64_t GeniusNode::GetBalance()
     {
         return transaction_manager_->GetBalance();
+    }
+
+    outcome::result<std::pair<std::string, uint64_t>> GeniusNode::MintChildTokens(
+        uint64_t /*amount*/,
+        const std::string & /*transaction_hash*/,
+        const std::string & /*chain_id*/,
+        const std::string & /*token_id*/,
+        std::chrono::milliseconds /*timeout*/ )
+    {
+        // TODO: implement child-token mint logic
+        return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::function_not_supported ) );
+    }
+
+    outcome::result<uint64_t> GeniusNode::GetChildBalance() const
+    {
+        // TODO: implement child-token balance retrieval
+        return outcome::success<uint64_t>( 0 );
+    }
+
+    outcome::result<std::pair<std::string, uint64_t>> GeniusNode::TransferChildTokens(
+        uint64_t /*amount*/,
+        const std::string & /*destination*/,
+        std::chrono::milliseconds /*timeout*/ )
+    {
+        // TODO: implement transfer child tokens
+        return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::function_not_supported ) );
+    }
+
+    std::string GeniusNode::FormatChildTokens( uint64_t /*amount*/ ) const
+    {
+        // TODO: implement formatting of child-token amounts
+        return std::string{};
+    }
+
+    outcome::result<uint64_t> GeniusNode::ParseChildTokens( const std::string & /*amount_str*/ ) const
+    {
+        // TODO: implement parsing of child-token amounts
+        return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::function_not_supported ) );
     }
 
     void GeniusNode::ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult )
