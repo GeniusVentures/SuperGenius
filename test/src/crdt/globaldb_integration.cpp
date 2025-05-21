@@ -112,23 +112,29 @@ public:
             const std::string              listenIp = "127.0.0.1";
             pubsub->Start( currentPubsubPort, {}, listenIp, {} );
 
-            auto io = std::make_shared<boost::asio::io_context>();
-            auto db = std::make_shared<sgns::crdt::GlobalDB>( io, basePath + "/CommonKey", pubsub );
-
-            ++currentPubsubPort;
+            auto io               = std::make_shared<boost::asio::io_context>();
             auto scheduler        = std::make_shared<libp2p::protocol::AsioScheduler>( io,
                                                                                 libp2p::protocol::SchedulerConfig{} );
             auto graphsyncnetwork = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubsub->GetHost(),
                                                                                                  scheduler );
             auto generator        = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
-            auto initRes          = db->Init( sgns::crdt::CrdtOptions::DefaultOptions(),
-                                     graphsyncnetwork,
-                                     scheduler,
-                                     generator );
-            if ( !initRes.has_value() )
+
+            auto globaldb_ret = sgns::crdt::GlobalDB::New( io,
+                                                           basePath + "/CommonKey",
+                                                           pubsub,
+                                                           sgns::crdt::CrdtOptions::DefaultOptions(),
+                                                           graphsyncnetwork,
+                                                           scheduler,
+                                                           generator );
+            if ( globaldb_ret.has_error() )
             {
                 return;
             }
+            auto db = std::move(globaldb_ret.value());
+
+            ++currentPubsubPort;
+
+            db->Start();
             std::thread t( [io]() { io->run(); } );
             TestNode    node{ basePath, io, pubsub, db, std::move( t ) };
             nodes_.push_back( std::move( node ) );
@@ -205,7 +211,7 @@ public:
     }
 };
 
-uint16_t GlobalDBIntegrationTest::TestNodeCollection::currentPubsubPort    = 50501;
+uint16_t GlobalDBIntegrationTest::TestNodeCollection::currentPubsubPort = 50501;
 
 TEST_F( GlobalDBIntegrationTest, ReplicationWithoutTopicSuccessfulTest )
 {
@@ -373,36 +379,6 @@ TEST_F( GlobalDBIntegrationTest, PreventDoubleCommitTest )
     ASSERT_TRUE( commitRes.has_value() );
     const auto secondCommit = tx->Commit();
     EXPECT_FALSE( secondCommit.has_value() );
-}
-
-TEST_F( GlobalDBIntegrationTest, OperationsWithoutInitializationTest )
-{
-    const std::string binaryPath  = boost::dll::program_location().parent_path().string();
-    const std::string tmpBasePath = binaryPath + "/globaldb_no_init_ops";
-    boost::filesystem::create_directories( tmpBasePath );
-
-    sgns::crdt::KeyPairFileStorage keyStore( tmpBasePath + "/key" );
-    const auto                     keyPair = keyStore.GetKeyPair().value();
-    auto                           pubsub  = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>( keyPair );
-    pubsub->Start( 50800, {}, "127.0.0.1", {} );
-
-    auto io = std::make_shared<boost::asio::io_context>();
-    auto db = std::make_shared<sgns::crdt::GlobalDB>( io, tmpBasePath + "/CommonKey", pubsub );
-
-    using sgns::crdt::HierarchicalKey;
-    const HierarchicalKey queryKey( "/nonexistent/query" );
-    const auto            queryResult = db->QueryKeyValues( queryKey.GetKey() );
-    EXPECT_FALSE( queryResult.has_value() );
-
-    const HierarchicalKey getKey( "/nonexistent/get" );
-    const auto            getResult = db->Get( getKey );
-    EXPECT_FALSE( getResult.has_value() );
-
-    const HierarchicalKey removeKey( "/nonexistent/remove" );
-    const auto            removeResult = db->Remove( removeKey );
-    EXPECT_FALSE( removeResult.has_value() );
-
-    boost::filesystem::remove_all( tmpBasePath );
 }
 
 TEST_F( GlobalDBIntegrationTest, DISABLED_CommitFailsForNonexistentTopicTest )

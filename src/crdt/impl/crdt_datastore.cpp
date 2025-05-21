@@ -1,6 +1,5 @@
 #include <fmt/std.h>
 #include "crdt/crdt_datastore.hpp"
-#include "crdt/impl/crdt_data_filter.hpp"
 #include <storage/rocksdb/rocksdb.hpp>
 #include <iostream>
 #include "crdt/proto/bcast.pb.h"
@@ -20,16 +19,29 @@ namespace sgns::crdt
                                                        std::shared_ptr<Broadcaster>        aBroadcaster,
                                                        const std::shared_ptr<CrdtOptions> &aOptions )
     {
+        if ( ( aDatastore == nullptr ) || ( aDagSyncer == nullptr ) || ( aBroadcaster == nullptr ) )
+        {
+            return nullptr;
+        }
         auto crdtInstance = std::shared_ptr<CrdtDatastore>( new CrdtDatastore( std::move( aDatastore ),
                                                                                aKey,
                                                                                std::move( aDagSyncer ),
                                                                                std::move( aBroadcaster ),
                                                                                aOptions ) );
 
-        crdtInstance->handleNextThreadRunning_ = true;
+        return crdtInstance;
+    }
+
+    void CrdtDatastore::Start()
+    {
+        if ( started_ == true )
+        {
+            return;
+        }
+        handleNextThreadRunning_ = true;
         // Starting HandleNext worker thread
-        crdtInstance->handleNextFuture_ = std::async(
-            [weakptr = std::weak_ptr<CrdtDatastore>( crdtInstance )]()
+        handleNextFuture_ = std::async(
+            [weakptr{ weak_from_this() }]()
             {
                 auto threadRunning = true;
                 while ( threadRunning )
@@ -55,10 +67,10 @@ namespace sgns::crdt
                 }
             } );
 
-        crdtInstance->rebroadcastThreadRunning_ = true;
+        rebroadcastThreadRunning_ = true;
         // Starting Rebroadcast worker thread
-        crdtInstance->rebroadcastFuture_ = std::async(
-            [weakptr = std::weak_ptr<CrdtDatastore>( crdtInstance )]()
+        rebroadcastFuture_ = std::async(
+            [weakptr{ weak_from_this() }]()
             {
                 auto self = weakptr.lock();
                 if ( !self )
@@ -77,13 +89,13 @@ namespace sgns::crdt
                 }
             } );
 
-        crdtInstance->dagWorkerJobListThreadRunning_ = true;
-        for ( int i = 0; i < crdtInstance->numberOfDagWorkers; ++i )
+        dagWorkerJobListThreadRunning_ = true;
+        for ( int i = 0; i < numberOfDagWorkers; ++i )
         {
             auto dagWorker                     = std::make_shared<DagWorker>();
             dagWorker->dagWorkerThreadRunning_ = true;
             dagWorker->dagWorkerFuture_        = std::async(
-                [weakptr = std::weak_ptr<CrdtDatastore>( crdtInstance ), dagWorker]()
+                [weakptr{ weak_from_this() }, dagWorker]()
                 {
                     DagJob dagJob;
                     auto   dagThreadRunning = true;
@@ -113,10 +125,9 @@ namespace sgns::crdt
                         }
                     }
                 } );
-            crdtInstance->dagWorkers_.push_back( dagWorker );
+            dagWorkers_.push_back( dagWorker );
         }
-
-        return crdtInstance;
+        started_ = true;
     }
 
     CrdtDatastore::CrdtDatastore( std::shared_ptr<RocksDB>            aDatastore,
@@ -127,7 +138,8 @@ namespace sgns::crdt
         dataStore_( std::move( aDatastore ) ),
         namespaceKey_( aKey ),
         broadcaster_( std::move( aBroadcaster ) ),
-        dagSyncer_( std::move( aDagSyncer ) )
+        dagSyncer_( std::move( aDagSyncer ) ),
+        crdt_filter_( true )
     {
         // <namespace>/s
         auto fullSetNs = aKey.ChildString( std::string( setsNamespace_ ) );
@@ -149,14 +161,12 @@ namespace sgns::crdt
 
         int      numberOfHeads = 0;
         uint64_t maxHeight     = 0;
-        if ( heads_ != nullptr )
+
+        std::vector<CID> heads;
+        auto             getListResult = heads_->GetList( heads, maxHeight );
+        if ( !getListResult.has_failure() )
         {
-            std::vector<CID> heads;
-            auto             getListResult = heads_->GetList( heads, maxHeight );
-            if ( !getListResult.has_failure() )
-            {
-                numberOfHeads = heads.size();
-            }
+            numberOfHeads = heads.size();
         }
 
         logger_->info( "crdt Datastore created. Number of heads: {} Current max-height: {}", numberOfHeads, maxHeight );
@@ -237,7 +247,6 @@ namespace sgns::crdt
             dagWorkers_.clear();
             dagWorkerJobListThreadRunning_ = false;
         }
-       
     }
 
     void CrdtDatastore::HandleNextIteration()
@@ -309,28 +318,8 @@ namespace sgns::crdt
         }
     }
 
-    void CrdtDatastore::RebroadcastIteration( std::chrono::milliseconds &elapsedTimeMilliseconds )
-    {
-        auto rebroadcastIntervalMilliseconds = std::chrono::milliseconds( threadSleepTimeInMilliseconds_ );
-        if ( options_ != nullptr )
-        {
-            rebroadcastIntervalMilliseconds = std::chrono::milliseconds( options_->rebroadcastIntervalMilliseconds );
-        }
-
-        if ( elapsedTimeMilliseconds >= rebroadcastIntervalMilliseconds )
-        {
-            RebroadcastHeads();
-            elapsedTimeMilliseconds = std::chrono::milliseconds( 0 );
-        }
-        elapsedTimeMilliseconds += threadSleepTimeInMilliseconds_;
-    }
-
     void CrdtDatastore::SendJobWorkerIteration( std::shared_ptr<DagWorker> dagWorker, DagJob &dagJob )
     {
-        if ( dagWorker == nullptr )
-        {
-            return;
-        }
         logger_->trace( "In SendJobWorkerIteration. Jobs left: {}", dagWorkerJobList.size() );
         {
             std::unique_lock lock( dagWorkerMutex_ );
@@ -353,7 +342,7 @@ namespace sgns::crdt
         }
         else
         {
-            auto dagSyncerResult = this->dagSyncer_->addNode( dagJob.node_ );
+            auto dagSyncerResult = dagSyncer_->addNode( dagJob.node_ );
             logger_->debug( "DAGSyncer: Adding new block {}", dagJob.node_->getCID().toString().value() );
             if ( dagSyncerResult.has_failure() )
             {
@@ -367,7 +356,6 @@ namespace sgns::crdt
 
     outcome::result<std::vector<CID>> CrdtDatastore::DecodeBroadcast( const Buffer &buff )
     {
-        // Make a list of heads we received
         CRDTBroadcast bcastData;
         auto          string_data = std::string( buff.toString() );
 
@@ -384,7 +372,6 @@ namespace sgns::crdt
             return outcome::failure( boost::system::error_code{} );
         }
 
-        // Compatibility: before we were publishing CIDs directly
         auto msgReflect = bcastData.GetReflection();
 
         if ( msgReflect == nullptr )
@@ -394,9 +381,6 @@ namespace sgns::crdt
 
         if ( !msgReflect->GetUnknownFields( bcastData ).empty() )
         {
-            // Backwards compatibility
-            //c, err := cid.Cast(msgReflect.GetUnknown())
-            //sgns::common::getCidOf(msgReflect->MutableUnknownFields(&bcastData)->);
             return outcome::failure( boost::system::error_code{} );
         }
 
@@ -406,8 +390,7 @@ namespace sgns::crdt
             auto cidResult = CID::fromString( head.cid() );
             if ( cidResult.has_failure() )
             {
-                logger_->error( "DecodeBroadcast: Failed to convert CID from string (error code {})",
-                                cidResult.error().value() );
+                return outcome::failure( boost::system::error_code{} );
             }
             else
             {
@@ -439,18 +422,15 @@ namespace sgns::crdt
     {
         uint64_t         maxHeight = 0;
         std::vector<CID> heads;
-        if ( this->heads_ != nullptr )
+
+        auto getListResult = heads_->GetList( heads, maxHeight );
+        if ( getListResult.has_failure() )
         {
-            auto getListResult = this->heads_->GetList( heads, maxHeight );
-            if ( getListResult.has_failure() )
-            {
-                logger_->error( "RebroadcastHeads: Failed to get list of heads (error code {})",
-                                getListResult.error() );
-                return;
-            }
+            logger_->error( "RebroadcastHeads: Failed to get list of heads (error code {})", getListResult.error() );
+            return;
         }
 
-        auto broadcastResult = this->Broadcast( heads );
+        auto broadcastResult = Broadcast( heads );
         if ( broadcastResult.has_failure() )
         {
             logger_->error( "RebroadcastHeads: Broadcast failed" );
@@ -471,7 +451,7 @@ namespace sgns::crdt
         // sendNewJobs calls getDeltas with the given
         // children and sends each response to the workers.
 
-        if ( dagSyncer_ == nullptr || aChildren.empty() )
+        if ( aChildren.empty() )
         {
             return;
         }
@@ -572,43 +552,27 @@ namespace sgns::crdt
                 std::unique_lock lock( dagWorkerMutex_ );
                 dagWorkerJobList.push( dagJob );
             }
-            this->dagWorkerCv_.notify_one();
+            dagWorkerCv_.notify_one();
         }
     }
 
     outcome::result<CrdtDatastore::Buffer> CrdtDatastore::GetKey( const HierarchicalKey &aKey )
     {
-        if ( set_ == nullptr )
-        {
-            return outcome::failure( boost::system::error_code{} );
-        }
         return set_->GetElement( aKey.GetKey() );
     }
 
     outcome::result<std::string> CrdtDatastore::GetKeysPrefix()
     {
-        if ( set_ == nullptr )
-        {
-            return outcome::failure( boost::system::error_code{} );
-        }
         return set_->KeysKey( "" ).GetKey() + "/";
     }
 
     outcome::result<std::string> CrdtDatastore::GetValueSuffix()
     {
-        if ( set_ == nullptr )
-        {
-            return outcome::failure( boost::system::error_code{} );
-        }
         return "/" + set_->GetValueSuffix();
     }
 
     outcome::result<CrdtDatastore::QueryResult> CrdtDatastore::QueryKeyValues( const std::string &aPrefix )
     {
-        if ( set_ == nullptr )
-        {
-            return outcome::failure( boost::system::error_code{} );
-        }
         return set_->QueryElements( aPrefix, CrdtSet::QuerySuffix::QUERY_VALUESUFFIX );
     }
 
@@ -628,20 +592,11 @@ namespace sgns::crdt
 
     outcome::result<bool> CrdtDatastore::HasKey( const HierarchicalKey &aKey )
     {
-        if ( set_ == nullptr )
-        {
-            return outcome::failure( boost::system::error_code{} );
-        }
         return set_->IsValueInSet( aKey.GetKey() );
     }
 
     outcome::result<void> CrdtDatastore::PutKey( const HierarchicalKey &aKey, const Buffer &aValue )
     {
-        if ( set_ == nullptr )
-        {
-            return outcome::failure( boost::system::error_code{} );
-        }
-
         auto deltaResult = CreateDeltaToAdd( aKey.GetKey(), std::string( aValue.toString() ) );
         if ( deltaResult.has_failure() )
         {
@@ -659,11 +614,6 @@ namespace sgns::crdt
 
     outcome::result<void> CrdtDatastore::DeleteKey( const HierarchicalKey &aKey )
     {
-        if ( set_ == nullptr )
-        {
-            return outcome::failure( boost::system::error_code{} );
-        }
-
         auto deltaResult = CreateDeltaToRemove( aKey.GetKey() );
         if ( deltaResult.has_failure() )
         {
@@ -687,7 +637,7 @@ namespace sgns::crdt
     outcome::result<CID> CrdtDatastore::Publish( const std::shared_ptr<Delta> &aDelta )
     {
         OUTCOME_TRY( auto &&newCID, AddDAGNode( aDelta ) );
- 
+
         return newCID;
     }
 
@@ -711,7 +661,7 @@ namespace sgns::crdt
             return outcome::failure( encodedBufferResult.error() );
         }
 
-        auto bcastResult = this->broadcaster_->Broadcast( encodedBufferResult.value() );
+        auto bcastResult = broadcaster_->Broadcast( encodedBufferResult.value() );
         if ( bcastResult.has_failure() )
         {
             logger_->error( "Broadcast: Broadcaster failed to broadcast" );
@@ -755,8 +705,7 @@ namespace sgns::crdt
                                                                   const std::shared_ptr<IPLDNode> &aNode,
                                                                   bool                             filter_crdt )
     {
-        if ( this->set_ == nullptr || this->heads_ == nullptr || this->dagSyncer_ == nullptr || aDelta == nullptr ||
-             aNode == nullptr )
+        if ( aDelta == nullptr || aNode == nullptr )
         {
             return outcome::failure( boost::system::error_code{} );
         }
@@ -770,13 +719,13 @@ namespace sgns::crdt
         HierarchicalKey hKey( strCidResult.value() );
         if ( filter_crdt )
         {
-            CRDTDataFilter::FilterElementsOnDelta( aDelta );
-            CRDTDataFilter::FilterTombstonesOnDelta( aDelta );
+            crdt_filter_.FilterElementsOnDelta( aDelta );
+            //crdt_filter_.FilterTombstonesOnDelta( aDelta );
         }
 
         {
             std::unique_lock lock( dagSetMutex_ );
-            auto             mergeResult = this->set_->Merge( aDelta, hKey.GetKey() );
+            auto             mergeResult = set_->Merge( aDelta, hKey.GetKey() );
             if ( mergeResult.has_failure() )
             {
                 logger_->error( "ProcessNode: error merging delta from {}", hKey.GetKey() );
@@ -802,14 +751,14 @@ namespace sgns::crdt
                 logger_->error( "ProcessNode: error adding head {}", aRoot.toString().value() );
                 return outcome::failure( addHeadResult.error() );
             }
-            this->rebroadcastCv_.notify_one();
+            rebroadcastCv_.notify_one();
         }
         else
         {
             for ( const auto &link : links )
             {
                 auto child        = link.get().getCID();
-                auto isHeadResult = this->heads_->IsHead( child );
+                auto isHeadResult = heads_->IsHead( child );
 
                 if ( isHeadResult )
                 {
@@ -822,13 +771,13 @@ namespace sgns::crdt
                                         aRoot.toString().value() );
                         return outcome::failure( replaceResult.error() );
                     }
-                    this->rebroadcastCv_.notify_one();
+                    rebroadcastCv_.notify_one();
 
                     continue;
                 }
 
                 std::unique_lock lock( dagSyncherMutex_ );
-                auto             knowBlockResult    = this->dagSyncer_->HasBlock( child );
+                auto             knowBlockResult    = dagSyncer_->HasBlock( child );
                 auto             is_being_processed = dagSyncer_->IsCIDInCache( child );
                 lock.unlock();
                 if ( knowBlockResult.has_failure() )
@@ -845,7 +794,7 @@ namespace sgns::crdt
                     {
                         logger_->error( "ProcessNode: error adding head {}", aRoot.toString().value() );
                     }
-                    this->rebroadcastCv_.notify_one();
+                    rebroadcastCv_.notify_one();
                     continue;
                 }
                 if ( is_being_processed )
@@ -863,11 +812,6 @@ namespace sgns::crdt
 
     outcome::result<CID> CrdtDatastore::AddDAGNode( const std::shared_ptr<Delta> &aDelta )
     {
-        if ( heads_ == nullptr )
-        {
-            return outcome::failure( boost::system::error_code{} );
-        }
-
         uint64_t         height = 0;
         std::vector<CID> heads;
         auto             getListResult = heads_->GetList( heads, height );
@@ -908,7 +852,7 @@ namespace sgns::crdt
         }
         else
         {
-            auto dagSyncerResult = this->dagSyncer_->addNode( node );
+            auto dagSyncerResult = dagSyncer_->addNode( node );
             logger_->debug( "DAGSyncer: Adding new block {}", node->getCID().toString().value() );
             if ( dagSyncerResult.has_failure() )
             {
@@ -923,11 +867,6 @@ namespace sgns::crdt
 
     outcome::result<void> CrdtDatastore::PrintDAG()
     {
-        if ( heads_ == nullptr )
-        {
-            return outcome::failure( boost::system::error_code{} );
-        }
-
         uint64_t         height = 0;
         std::vector<CID> heads;
         auto             getListResult = heads_->GetList( heads, height );
@@ -965,11 +904,6 @@ namespace sgns::crdt
             return outcome::success();
         }
         aSet.push_back( aCID );
-
-        if ( dagSyncer_ == nullptr )
-        {
-            return outcome::failure( boost::system::error_code{} );
-        }
 
         auto getNodeResult = dagSyncer_->getNode( aCID );
 
@@ -1068,11 +1002,6 @@ namespace sgns::crdt
 
     outcome::result<void> CrdtDatastore::SyncDatastore( const std::vector<HierarchicalKey> &aKeyList )
     {
-        if ( dataStore_ == nullptr )
-        {
-            return outcome::failure( boost::system::error_code{} );
-        }
-
         // Call the crdt set sync. We don't need to
         // Because a store is shared with SET. Only
         return set_->DataStoreSync( aKeyList );
@@ -1122,6 +1051,11 @@ namespace sgns::crdt
     void CrdtDatastore::PrintDataStore()
     {
         set_->PrintDataStore();
+    }
+
+    bool CrdtDatastore::RegisterElementFilter( const std::string &pattern, CRDTElementFilterCallback filter )
+    {
+        return crdt_filter_.RegisterElementFilter( pattern, std::move( filter ) );
     }
 
 }

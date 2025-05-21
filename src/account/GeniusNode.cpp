@@ -100,10 +100,7 @@ namespace sgns
                 .str() ),
         m_lastApiCall( std::chrono::system_clock::now() - m_minApiCallInterval )
 
-    //coinprices_(std::make_shared<CoinGeckoPriceRetriever>(io_))
     {
-        //For some reason if this isn't initialized like this, it ends up completely wrong.
-        m_lastApiCall = std::chrono::system_clock::now() - m_minApiCallInterval;
         SSL_library_init();
         SSL_load_error_strings();
         OpenSSL_add_all_algorithms();
@@ -279,25 +276,47 @@ namespace sgns
         auto generator = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
         auto graphsyncnetwork = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubsub_->GetHost(),
                                                                                              scheduler );
-        globaldb_ = std::make_shared<crdt::GlobalDB>( io_, write_base_path_ + gnus_network_full_path_, pubsub_ );
 
-        auto global_db_init_result = globaldb_->Init( crdt::CrdtOptions::DefaultOptions(),
-                                                      graphsyncnetwork,
-                                                      scheduler,
-                                                      generator );
-        if ( global_db_init_result.has_error() )
+        auto global_db_ret = crdt::GlobalDB::New( io_,
+                                                  write_base_path_ + gnus_network_full_path_,
+                                                  pubsub_,
+                                                  crdt::CrdtOptions::DefaultOptions(),
+                                                  graphsyncnetwork,
+                                                  scheduler,
+                                                  generator );
+        if ( global_db_ret.has_error() )
         {
-            auto error = global_db_init_result.error();
+            auto error = global_db_ret.error();
             throw std::runtime_error( error.message() );
         }
-        globaldb_->AddBroadcastTopic( processing_channel_topic_ );
-        globaldb_->AddListenTopic( processing_channel_topic_ );
-        task_queue_      = std::make_shared<processing::ProcessingTaskQueueImpl>( globaldb_ );
-        processing_core_ = std::make_shared<processing::ProcessingCoreImpl>( globaldb_, 1000000, 1 );
+        tx_globaldb_  = std::move( global_db_ret.value() );
+
+        global_db_ret = crdt::GlobalDB::New( io_,
+                                             write_base_path_ + gnus_network_full_path_,
+                                             pubsub_,
+                                             crdt::CrdtOptions::DefaultOptions(),
+                                             graphsyncnetwork,
+                                             scheduler,
+                                             generator,
+                                             tx_globaldb_->GetDataStore() );
+        
+        if ( global_db_ret.has_error() )
+        {
+            auto error = global_db_ret.error();
+            throw std::runtime_error( error.message() );
+        }
+        job_globaldb_ = std::move( global_db_ret.value() );
+
+        job_globaldb_->AddBroadcastTopic( processing_channel_topic_ );
+        job_globaldb_->AddListenTopic( processing_channel_topic_ );
+        job_globaldb_->Start();
+
+        task_queue_      = std::make_shared<processing::ProcessingTaskQueueImpl>( job_globaldb_ );
+        processing_core_ = std::make_shared<processing::ProcessingCoreImpl>( job_globaldb_, 1000000, 1 );
         processing_core_->RegisterProcessorFactory( "mnnimage",
                                                     [] { return std::make_unique<processing::MNN_Image>(); } );
 
-        task_result_storage_ = std::make_shared<processing::SubTaskResultStorageImpl>( globaldb_ );
+        task_result_storage_ = std::make_shared<processing::SubTaskResultStorageImpl>( job_globaldb_ );
         processing_service_  = std::make_shared<processing::ProcessingServiceImpl>(
             pubsub_,                                                          //
             MAX_NODES_COUNT,                                                  //
@@ -311,7 +330,7 @@ namespace sgns
             account_->GetAddress() );
         processing_service_->SetChannelListRequestTimeout( boost::posix_time::milliseconds( 3000 ) );
 
-        transaction_manager_ = std::make_shared<TransactionManager>( globaldb_,
+        transaction_manager_ = std::make_shared<TransactionManager>( tx_globaldb_,
                                                                      io_,
                                                                      account_,
                                                                      std::make_shared<crypto::HasherImpl>() );
@@ -847,7 +866,7 @@ namespace sgns
 
     void GeniusNode::PrintDataStore()
     {
-        globaldb_->PrintDataStore();
+        tx_globaldb_->PrintDataStore();
     }
 
     void GeniusNode::StopProcessing()

@@ -182,7 +182,8 @@ namespace sgns
     private:
         std::shared_ptr<ipfs_pubsub::GossipPubSub>            pubsub_;
         std::shared_ptr<boost::asio::io_context>              io_;
-        std::shared_ptr<crdt::GlobalDB>                       globaldb_;
+        std::shared_ptr<crdt::GlobalDB>                       tx_globaldb_;
+        std::shared_ptr<crdt::GlobalDB>                       job_globaldb_;
         std::shared_ptr<TransactionManager>                   transaction_manager_;
         std::shared_ptr<processing::ProcessingTaskQueueImpl>  task_queue_;
         std::shared_ptr<processing::ProcessingCoreImpl>       processing_core_;
@@ -207,7 +208,7 @@ namespace sgns
         std::map<std::string, PriceInfo>                   m_tokenPriceCache;
         const std::chrono::minutes                         m_cacheValidityDuration{ 1 };
         std::chrono::time_point<std::chrono::system_clock> m_lastApiCall{};
-        const std::chrono::seconds                         m_minApiCallInterval{ 5 };
+        static constexpr std::chrono::seconds              m_minApiCallInterval{ 5 };
 
         std::thread       io_thread;
         std::thread       upnp_thread;
