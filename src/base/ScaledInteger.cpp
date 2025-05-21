@@ -31,10 +31,28 @@ namespace sgns
         return outcome::success( ptr );
     }
 
-    outcome::result<std::shared_ptr<ScaledInteger>> ScaledInteger::New( const std::string &str_value, uint64_t precision )
+    outcome::result<std::shared_ptr<ScaledInteger>> ScaledInteger::New( const std::string &str_value,
+                                                                        uint64_t           precision )
     {
         OUTCOME_TRY( auto &&from_str_value, FromString( str_value, precision ) );
         auto ptr = std::shared_ptr<ScaledInteger>( new ScaledInteger( from_str_value, precision ) );
+        return outcome::success( ptr );
+    }
+
+    outcome::result<std::shared_ptr<ScaledInteger>> ScaledInteger::New( const std::string &str_value )
+    {
+        size_t   dot_pos = str_value.find( '.' );
+        uint64_t precision_calc;
+        if ( dot_pos == std::string::npos )
+        {
+            precision_calc = 0;
+        }
+        else
+        {
+            precision_calc = str_value.size() - dot_pos - 1;
+        }
+        OUTCOME_TRY( auto &&raw_value, FromString( str_value, precision_calc ) );
+        auto ptr = std::shared_ptr<ScaledInteger>( new ScaledInteger( raw_value, precision_calc ) );
         return outcome::success( ptr );
     }
 
