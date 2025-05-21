@@ -852,6 +852,44 @@ namespace sgns
         return transaction_manager_->GetBalance();
     }
 
+    outcome::result<std::pair<std::string, uint64_t>> GeniusNode::MintChildTokens(
+        uint64_t /*amount*/,
+        const std::string & /*transaction_hash*/,
+        const std::string & /*chain_id*/,
+        const std::string & /*token_id*/,
+        std::chrono::milliseconds /*timeout*/ )
+    {
+        // TODO: implement child-token mint logic
+        return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::function_not_supported ) );
+    }
+
+    outcome::result<uint64_t> GeniusNode::GetChildBalance() const
+    {
+        // TODO: implement child-token balance retrieval
+        return outcome::success<uint64_t>( 0 );
+    }
+
+    outcome::result<std::pair<std::string, uint64_t>> GeniusNode::TransferChildTokens(
+        uint64_t /*amount*/,
+        const std::string & /*destination*/,
+        std::chrono::milliseconds /*timeout*/ )
+    {
+        // TODO: implement transfer child tokens
+        return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::function_not_supported ) );
+    }
+
+    std::string GeniusNode::FormatChildTokens( uint64_t /*amount*/ ) const
+    {
+        // TODO: implement formatting of child-token amounts
+        return std::string{};
+    }
+
+    outcome::result<uint64_t> GeniusNode::ParseChildTokens( const std::string & /*amount_str*/ ) const
+    {
+        // TODO: implement parsing of child-token amounts
+        return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::function_not_supported ) );
+    }
+
     void GeniusNode::ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult )
     {
         node_logger->info( "[ {} ] SUCCESS PROCESSING TASK {}", account_->GetAddress(), task_id );
