@@ -69,3 +69,8 @@ cmake-build-*/
 # Testing residuals
 CRDT.Datastore.TEST.unit/
 CRDT.Datastore.TEST/
+
+#Data files for deepseek test
+example/BpeTokenizer/data/**/*.mnn
+example/BpeTokenizer/data/**/*.mnn.weight
+example/BpeTokenizer/data/**/*.json
