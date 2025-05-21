@@ -130,6 +130,15 @@ bool MultiExpertHandler::initialize( const std::string &modelDir )
             std::cout << "  Expert " << i << ": Layer " << experts[i].layerId << ", Expert " << experts[i].expertId
                       << " - " << experts[i].modelPath << std::endl;
         }
+        std::cout << "Loaded " << experts.size() << " expert models" << std::endl;
+        for ( size_t i = 0; i < experts.size(); ++i )
+        {
+            std::cout << "  Expert " << i << ": Layer " << experts[i].layerId << ", Expert " << experts[i].expertId
+                      << " - " << experts[i].modelPath << std::endl;
+        }
+
+        // Build expert ID mapping
+        buildExpertIdMapping();
 
         initialized = true;
         return true;
@@ -197,8 +206,23 @@ int MultiExpertHandler::getExpertCount() const
 }
 
 // Run single expert model
-std::vector<float> MultiExpertHandler::runSingleExpert( int expertIndex, const std::vector<float> &embedding )
+std::vector<float> MultiExpertHandler::runSingleExpert( int expertId, const std::vector<float> &embedding )
 {
+    // Convert expert ID to index if needed
+    int expertIndex = expertId;
+
+    // If the ID is greater than our expert count, it might be a global expert ID
+    if ( expertId >= (int)experts.size() )
+    {
+        expertIndex = expertIdToModelIndex( expertId );
+
+        if ( expertIndex == -1 )
+        {
+            std::cerr << "Invalid expert ID: " << expertId << std::endl;
+            return {};
+        }
+    }
+
     if ( !initialized || expertIndex < 0 || expertIndex >= (int)experts.size() )
     {
         std::cerr << "Invalid expert index: " << expertIndex << std::endl;
@@ -380,3 +404,50 @@ std::vector<float> MultiExpertHandler::runExpertModel( int tokenPosition, const 
         return runAverageAllExperts( embedding );
     }
 }
+
+void MultiExpertHandler::buildExpertIdMapping()
+{
+    // Clear existing mapping
+    expertIdToIndex.clear();
+
+    // Build mapping from expert ID to index
+    for ( int i = 0; i < (int)experts.size(); i++ )
+    {
+        // Extract expert ID from filename or use stored ID
+        int expertId              = experts[i].expertId;
+        expertIdToIndex[expertId] = i;
+
+        if ( debugMode )
+        {
+            std::cout << "Mapped expert ID " << expertId << " to index " << i << std::endl;
+        }
+    }
+
+    std::cout << "Built mapping for " << expertIdToIndex.size() << " experts" << std::endl;
+}
+
+bool MultiExpertHandler::isValidExpertId( int expertId ) const
+{
+    return expertIdToIndex.find( expertId ) != expertIdToIndex.end();
+}
+
+int MultiExpertHandler::expertIdToModelIndex( int expertId ) const
+{
+    auto it = expertIdToIndex.find( expertId );
+    if ( it != expertIdToIndex.end() )
+    {
+        return it->second;
+    }
+    return -1; // Invalid ID
+}
+
+int MultiExpertHandler::getExpertIdForIndex( int index ) const
+{
+    if ( index >= 0 && index < (int)experts.size() )
+    {
+        return experts[index].expertId;
+    }
+    return -1; // Invalid index
+}
+
+

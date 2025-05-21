@@ -337,64 +337,112 @@ int main(int argc, char **argv)
     return 0;
 }
 
-// Function to run expert models with gate selection
-std::vector<float> runExpertWithGateSelection(
-    MultiExpertHandler &expertHandler,
-    GateWeightsHandler &gateHandler,
-    int tokenPosition,
-    const std::vector<float> &embedding,
-    int layerId,
-    int numExperts
-) {
-    if (!gateHandler.hasLayerGate(layerId)) {
+std::vector<float> runExpertWithGateSelection( MultiExpertHandler       &expertHandler,
+                                               GateWeightsHandler       &gateHandler,
+                                               int                       tokenPosition,
+                                               const std::vector<float> &embedding,
+                                               int                       layerId,
+                                               int                       numExperts )
+{
+    if ( !gateHandler.hasLayerGate( layerId ) )
+    {
         // Fallback to existing strategy if no gate model for this layer
-        std::cout << "No gate model available for layer " << layerId 
-                  << ", using standard expert selection" << std::endl;
-        return expertHandler.runExpertModel(tokenPosition, embedding);
+        std::cout << "No gate model available for layer " << layerId << ", using standard expert selection"
+                  << std::endl;
+        return expertHandler.runExpertModel( tokenPosition, embedding );
     }
-    
+
     // Get expert selections from gate model
-    std::vector<int> selectedExperts = gateHandler.selectExperts(layerId, embedding, numExperts);
-    
-    if (selectedExperts.empty()) {
+    std::vector<int> selectedExperts = gateHandler.selectExperts( layerId, embedding, numExperts );
+
+    if ( selectedExperts.empty() )
+    {
         // Fallback if no experts were selected
         std::cout << "No experts selected by gate model, using standard selection" << std::endl;
-        return expertHandler.runExpertModel(tokenPosition, embedding);
+        return expertHandler.runExpertModel( tokenPosition, embedding );
     }
-    
+
+    // Convert selected expert IDs to valid model indices
+    std::vector<int> validExperts;
+    for ( int expertId : selectedExperts )
+    {
+        if ( expertHandler.isValidExpertId( expertId ) )
+        {
+            validExperts.push_back( expertId );
+        }
+        else
+        {
+            std::cout << "Skipping invalid expert ID " << expertId << std::endl;
+        }
+    }
+
+    // If no valid experts, fall back to recommended experts
+    if ( validExperts.empty() )
+    {
+        std::vector<int> recommendedExperts = gateHandler.getRecommendedExperts( layerId );
+        for ( int expertId : recommendedExperts )
+        {
+            if ( expertHandler.isValidExpertId( expertId ) )
+            {
+                validExperts.push_back( expertId );
+                if ( validExperts.size() >= 2 )
+                {
+                    break; // Get at least 2 valid experts
+                }
+            }
+        }
+    }
+
+    // If still no valid experts, fall back to standard selection
+    if ( validExperts.empty() )
+    {
+        std::cout << "No valid experts available, using standard selection" << std::endl;
+        return expertHandler.runExpertModel( tokenPosition, embedding );
+    }
+
     // Run selected experts and average their outputs
     std::vector<float> resultOutput;
-    int successfulExperts = 0;
-    
-    for (int expertId : selectedExperts) {
-        std::vector<float> expertOutput = expertHandler.runSingleExpert(expertId, embedding);
-        
-        if (!expertOutput.empty()) {
+    int                successfulExperts = 0;
+
+    for ( int expertId : validExperts )
+    {
+        std::vector<float> expertOutput = expertHandler.runSingleExpert( expertId, embedding );
+
+        if ( !expertOutput.empty() )
+        {
             successfulExperts++;
-            
+
             // Initialize result with first expert's output
-            if (resultOutput.empty()) {
+            if ( resultOutput.empty() )
+            {
                 resultOutput = expertOutput;
-            } else {
+            }
+            else
+            {
                 // Accumulate outputs (for averaging later)
-                for (size_t j = 0; j < resultOutput.size(); ++j) {
+                for ( size_t j = 0; j < resultOutput.size(); ++j )
+                {
                     resultOutput[j] += expertOutput[j];
                 }
             }
         }
     }
-    
+
     // Average the results
-    if (successfulExperts > 1) {
-        for (size_t j = 0; j < resultOutput.size(); ++j) {
+    if ( successfulExperts > 1 )
+    {
+        for ( size_t j = 0; j < resultOutput.size(); ++j )
+        {
             resultOutput[j] /= successfulExperts;
         }
     }
-    
-    if (successfulExperts == 0) {
+
+    if ( successfulExperts == 0 )
+    {
         std::cerr << "Failed to run any selected experts, falling back to standard selection" << std::endl;
-        return expertHandler.runExpertModel(tokenPosition, embedding);
+        return expertHandler.runExpertModel( tokenPosition, embedding );
     }
-    
+
+    std::cout << "Successfully used " << successfulExperts << " experts with gate-based selection" << std::endl;
     return resultOutput;
 }

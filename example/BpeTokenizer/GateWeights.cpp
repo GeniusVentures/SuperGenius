@@ -36,7 +36,7 @@ bool GateWeightsHandler::loadRecommendedExperts( int layerId, const std::string 
 
     try
     {
-        // Use the improved JSON parser to get recommended experts
+        // Use the improved method to get recommended experts
         std::vector<int> experts = SimpleJsonParser::getRecommendedExperts( analysisPath );
 
         if ( experts.empty() )
@@ -362,7 +362,7 @@ void GateWeightsHandler::printGateInfo() const
         std::cout << "  Layer " << pair.first << ": " << pair.second.modelPath << std::endl;
         std::cout << "    Recommended experts: " << pair.second.recommendedExperts.size() << std::endl;
 
-        if ( debugMode )
+        if ( debugMode || pair.second.recommendedExperts.size() < 10 )
         {
             std::cout << "    Expert IDs: ";
             for ( int expertId : pair.second.recommendedExperts )
@@ -370,6 +370,16 @@ void GateWeightsHandler::printGateInfo() const
                 std::cout << expertId << " ";
             }
             std::cout << std::endl;
+        }
+        else if ( !pair.second.recommendedExperts.empty() )
+        {
+            // Show first few experts even if debug mode is off
+            std::cout << "    First few expert IDs: ";
+            for ( size_t i = 0; i < std::min( size_t( 5 ), pair.second.recommendedExperts.size() ); i++ )
+            {
+                std::cout << pair.second.recommendedExperts[i] << " ";
+            }
+            std::cout << "... (" << pair.second.recommendedExperts.size() - 5 << " more)" << std::endl;
         }
     }
 }

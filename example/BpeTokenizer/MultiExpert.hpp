@@ -50,6 +50,11 @@ private:
         ExpertModel &operator=( const ExpertModel & ) = delete;
     };
 
+    // Function to build expert ID mapping
+    void buildExpertIdMapping();
+
+        // Map from expert ID to model index
+    std::unordered_map<int, int> expertIdToIndex;
     std::vector<ExpertModel> experts;
     std::string              modelDir;
     bool                     initialized;
@@ -76,8 +81,17 @@ public:
     // Get the number of experts
     int getExpertCount() const;
 
+    // Function to check if an expert ID is valid
+    bool isValidExpertId( int expertId ) const;
+
+    // Convert expert ID to index in our models
+    int expertIdToModelIndex( int expertId ) const;
+
+    // Get the expert ID for a model index
+    int getExpertIdForIndex( int index ) const;
+
     // Run single expert model
-    std::vector<float> runSingleExpert( int expertIndex, const std::vector<float> &embedding );
+    std::vector<float> runSingleExpert( int expertId, const std::vector<float> &embedding );
 
     // Run all experts and average their outputs
     std::vector<float> runAverageAllExperts( const std::vector<float> &embedding );
