@@ -12,7 +12,7 @@
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 
-// Improved SimpleJsonParser that maintains the same interface
+// Simple JSON parser for basic use cases
 class SimpleJsonParser
 {
 public:
@@ -26,7 +26,7 @@ public:
     // Parse a JSON file into a map
     static std::unordered_map<std::string, std::string> parseJsonFile( const std::string &filePath );
 
-    // Helper methods from the original SimpleJsonParser
+    // Helper methods for extracting typed values
 
     static int getIntValue( const std::unordered_map<std::string, std::string> &json,
                             const std::string                                  &key,
@@ -39,11 +39,6 @@ public:
     static bool getBoolValue( const std::unordered_map<std::string, std::string> &json,
                               const std::string                                  &key,
                               bool                                                defaultValue = false );
-
-    // Extra utility methods for recommended experts
-
-    // Get recommended experts from file - this is a new method
-    static std::vector<int> getRecommendedExperts( const std::string &filePath );
 };
 
 #endif

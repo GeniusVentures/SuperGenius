@@ -6,6 +6,7 @@
 #include <iostream>
 #include <filesystem>
 #include <regex> 
+#include <numeric>
 
 class MultiExpertHandler
 {
@@ -101,5 +102,14 @@ public:
 
     // Main run function that uses the selected strategy
     std::vector<float> runExpertModel( int tokenPosition, const std::vector<float> &embedding );
+
+    int getLayerIdForExpert( int expertId ) const;
+    bool expertExistsForLayer( int layerId, int expertId ) const;
+
+    std::vector<float> runExpertForLayer( int                       layerId,
+                                                              int                       expertId,
+                                                              const std::vector<float> &embedding );
+    std::vector<float> runSingleExpertWithDiagnostics( int                       expertId,
+                                                                           const std::vector<float> &embedding );
 };
 #endif

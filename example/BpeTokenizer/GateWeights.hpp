@@ -9,7 +9,8 @@
 #include <vector>
 #include <string>
 #include <unordered_map>
-#include "jsonparser.hpp"
+#include <regex>
+#include <algorithm>
 
 class GateWeightsHandler
 {
@@ -20,7 +21,6 @@ private:
         std::string                       modelPath;
         std::unique_ptr<MNN::Interpreter> interpreter;
         MNN::Session                     *session;
-        std::vector<int>                  recommendedExperts;
 
         GateModelInfo() : layerId( -1 ), session( nullptr ) {}
 
@@ -29,8 +29,7 @@ private:
             layerId( other.layerId ),
             modelPath( std::move( other.modelPath ) ),
             interpreter( std::move( other.interpreter ) ),
-            session( other.session ),
-            recommendedExperts( std::move( other.recommendedExperts ) )
+            session( other.session )
         {
             other.session = nullptr;
         }
@@ -39,12 +38,11 @@ private:
         {
             if ( this != &other )
             {
-                layerId            = other.layerId;
-                modelPath          = std::move( other.modelPath );
-                interpreter        = std::move( other.interpreter );
-                session            = other.session;
-                recommendedExperts = std::move( other.recommendedExperts );
-                other.session      = nullptr;
+                layerId       = other.layerId;
+                modelPath     = std::move( other.modelPath );
+                interpreter   = std::move( other.interpreter );
+                session       = other.session;
+                other.session = nullptr;
             }
             return *this;
         }
@@ -60,24 +58,24 @@ private:
     MNN::ScheduleConfig                    config;
     bool                                   debugMode;
 
-    // Load recommended experts from JSON analysis
-    bool loadRecommendedExperts( int layerId, const std::string &analysisPath );
-
 public:
     GateWeightsHandler();
     ~GateWeightsHandler();
 
-    // Initialize by loading gate models and recommendations
+    // Initialize by loading gate models
     bool initialize( const std::string &modelDir );
 
-    // Add a specific gate model
-    bool addGateModel( int layerId, const std::string &gatePath, const std::string &analysisPath );
+    // Add a specific gate model (no longer needs analysis file)
+    bool addGateModel( int layerId, const std::string &gatePath );
 
-    // Get recommended experts for a layer
-    std::vector<int> getRecommendedExperts( int layerId ) const;
+    // Run gate model to select experts dynamically (returns all experts ranked by score)
+    std::vector<int> selectExperts( int layerId, const std::vector<float> &embedding, int topK = -1 );
 
-    // Run gate model to select experts dynamically
-    std::vector<int> selectExperts( int layerId, const std::vector<float> &embedding, int topK = 2 );
+    // Run gate model and filter to only available experts (main method to use)
+    std::vector<int> selectAvailableExperts( int                       layerId,
+                                             const std::vector<float> &embedding,
+                                             const std::vector<int>   &availableExperts,
+                                             int                       topK = 2 );
 
     // Set/get debug mode
     void setDebugMode( bool debug );

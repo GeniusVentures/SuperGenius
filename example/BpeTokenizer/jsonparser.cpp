@@ -1,6 +1,6 @@
 #include "jsonparser.hpp"
 
-    // Parse JSON string into a map
+// Parse JSON string into a map
 std::unordered_map<std::string, std::string> SimpleJsonParser::parseJson( const std::string &jsonString )
 {
     std::unordered_map<std::string, std::string> result;
@@ -64,7 +64,7 @@ std::unordered_map<std::string, std::string> SimpleJsonParser::parseJson( const 
 // Parse JSON array from string
 std::vector<std::unordered_map<std::string, std::string>> SimpleJsonParser::parseJsonArray(
     const std::string &jsonString,
-                                                                                 const std::string &arrayName )
+    const std::string &arrayName )
 {
     std::vector<std::unordered_map<std::string, std::string>> result;
 
@@ -169,11 +169,11 @@ std::unordered_map<std::string, std::string> SimpleJsonParser::parseJsonFile( co
     }
 }
 
-// Helper methods from the original SimpleJsonParser
+// Helper methods
 
 int SimpleJsonParser::getIntValue( const std::unordered_map<std::string, std::string> &json,
-                        const std::string                                  &key,
-                        int                                                 defaultValue )
+                                   const std::string                                  &key,
+                                   int                                                 defaultValue )
 {
     auto it = json.find( key );
     if ( it == json.end() )
@@ -192,8 +192,8 @@ int SimpleJsonParser::getIntValue( const std::unordered_map<std::string, std::st
 }
 
 std::string SimpleJsonParser::getStringValue( const std::unordered_map<std::string, std::string> &json,
-                                   const std::string                                  &key,
-                                   const std::string                                  &defaultValue )
+                                              const std::string                                  &key,
+                                              const std::string                                  &defaultValue )
 {
     auto it = json.find( key );
     if ( it == json.end() )
@@ -204,8 +204,8 @@ std::string SimpleJsonParser::getStringValue( const std::unordered_map<std::stri
 }
 
 bool SimpleJsonParser::getBoolValue( const std::unordered_map<std::string, std::string> &json,
-                          const std::string                                  &key,
-                          bool                                                defaultValue )
+                                     const std::string                                  &key,
+                                     bool                                                defaultValue )
 {
     auto it = json.find( key );
     if ( it == json.end() )
@@ -215,96 +215,4 @@ bool SimpleJsonParser::getBoolValue( const std::unordered_map<std::string, std::
 
     std::string value = it->second;
     return value == "true" || value == "1";
-}
-
-// Extra utility methods for recommended experts
-
-// Get recommended experts from file - this is a new method
-std::vector<int> SimpleJsonParser::getRecommendedExperts( const std::string &filePath )
-{
-    std::vector<int> experts;
-
-    try
-    {
-        std::ifstream file( filePath );
-        if ( !file.is_open() )
-        {
-            std::cerr << "Failed to open JSON file: " << filePath << std::endl;
-            return experts;
-        }
-
-        std::stringstream buffer;
-        buffer << file.rdbuf();
-        std::string jsonContent = buffer.str();
-
-        rapidjson::Document doc;
-        doc.Parse( jsonContent.c_str() );
-
-        if ( doc.HasParseError() )
-        {
-            std::cerr << "Error parsing JSON file: " << filePath << std::endl;
-            return experts;
-        }
-
-        // Check for recommended_experts array
-        if ( doc.HasMember( "recommended_experts" ) && doc["recommended_experts"].IsArray() )
-        {
-            const rapidjson::Value &array = doc["recommended_experts"];
-            for ( rapidjson::SizeType i = 0; i < array.Size(); i++ )
-            {
-                if ( array[i].IsNumber() )
-                {
-                    experts.push_back( array[i].GetInt() );
-                }
-                else if ( array[i].IsObject() && array[i].HasMember( "expert_id" ) )
-                {
-                    // Handle case where experts are objects with expert_id field
-                    if ( array[i]["expert_id"].IsNumber() )
-                    {
-                        experts.push_back( array[i]["expert_id"].GetInt() );
-                    }
-                    else if ( array[i]["expert_id"].IsString() )
-                    {
-                        // Handle string expert_id
-                        experts.push_back( std::stoi( array[i]["expert_id"].GetString() ) );
-                    }
-                }
-            }
-        }
-        // If no direct recommended_experts array, try expert_stats
-        else if ( doc.HasMember( "expert_stats" ) && doc["expert_stats"].IsArray() )
-        {
-            // Create a vector of pairs (expert_id, weight_norm)
-            std::vector<std::pair<int, float>> expertScores;
-
-            const rapidjson::Value &array = doc["expert_stats"];
-            for ( rapidjson::SizeType i = 0; i < array.Size(); i++ )
-            {
-                if ( array[i].IsObject() && array[i].HasMember( "expert_id" ) && array[i].HasMember( "weight_norm" ) )
-                {
-                    int   expertId   = array[i]["expert_id"].GetInt();
-                    float weightNorm = array[i]["weight_norm"].GetFloat();
-                    expertScores.push_back( { expertId, weightNorm } );
-                }
-            }
-
-            // Sort by weight norm (descending)
-            std::sort( expertScores.begin(),
-                       expertScores.end(),
-                       []( const auto &a, const auto &b ) { return a.second > b.second; } );
-
-            // Take the top 20 experts
-            int count = std::min( 20, static_cast<int>( expertScores.size() ) );
-            for ( int i = 0; i < count; i++ )
-            {
-                experts.push_back( expertScores[i].first );
-            }
-        }
-    }
-    catch ( const std::exception &e )
-    {
-        std::cerr << "Exception while getting recommended experts: " << e.what() << std::endl;
-    }
-
-    return experts;
 }

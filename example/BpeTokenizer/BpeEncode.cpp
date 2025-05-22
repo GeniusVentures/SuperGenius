@@ -65,6 +65,9 @@ public:
     {
         return debugMode;
     }
+
+    void debugModelPipeline( const std::string &prompt );
+    void debugModelPipelineDetailed( const std::string &prompt );
 };
 
 // Class to handle processing of a single expert layer
@@ -83,8 +86,11 @@ private:
     static std::shared_ptr<MultiExpertHandler> sharedExpertHandler;
     static std::mutex                          expertHandlerMutex;
 
-    // List of available expert IDs for this layer
+    // List of available expert IDs for this layer (determined by filesystem scan)
     std::vector<int> availableExpertIds;
+
+    // Scan filesystem for available experts for this layer
+    std::vector<int> scanExpertsFromFilesystem() const;
 
     // Scan for available experts for this layer
     void scanAvailableExperts();
@@ -126,6 +132,70 @@ LayerProcessor::LayerProcessor( int layerId, const std::string &modelDir, bool d
 {
 }
 
+std::vector<int> LayerProcessor::scanExpertsFromFilesystem() const
+{
+    std::vector<int> availableExperts;
+
+    try
+    {
+        // Scan the model directory for expert files for this specific layer
+        std::string layerPattern = "expert_layer" + std::to_string( layerId ) + "_(\\d+)\\.mnn";
+        std::regex  expertRegex( layerPattern );
+
+        if ( std::filesystem::exists( modelDir ) )
+        {
+            for ( const auto &entry : std::filesystem::directory_iterator( modelDir ) )
+            {
+                if ( entry.is_regular_file() )
+                {
+                    std::string filename = entry.path().filename().string();
+                    std::smatch match;
+
+                    if ( std::regex_search( filename, match, expertRegex ) && match.size() > 1 )
+                    {
+                        int expertId = std::stoi( match[1].str() );
+                        availableExperts.push_back( expertId );
+
+                        if ( debugMode )
+                        {
+                            std::cout << "Found expert file for layer " << layerId << ", expert " << expertId << ": "
+                                      << filename << std::endl;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    catch ( const std::exception &e )
+    {
+        std::cerr << "Error scanning for expert files: " << e.what() << std::endl;
+    }
+
+    // Sort the expert IDs
+    std::sort( availableExperts.begin(), availableExperts.end() );
+
+    return availableExperts;
+}
+
+void LayerProcessor::scanAvailableExperts()
+{
+    // Use filesystem-based scanning instead of relying on the shared expert handler
+    availableExpertIds = scanExpertsFromFilesystem();
+
+    if ( debugMode )
+    {
+        std::cout << "Layer " << layerId << " filesystem scan found " << availableExpertIds.size() << " experts"
+                  << std::endl;
+    }
+
+    // If no experts found via filesystem, this might indicate a problem
+    if ( availableExpertIds.empty() )
+    {
+        std::cerr << "Warning: No expert files found for layer " << layerId << " in directory " << modelDir
+                  << std::endl;
+    }
+}
+
 bool LayerProcessor::initialize()
 {
     // Initialize shared gate handler once
@@ -152,23 +222,11 @@ bool LayerProcessor::initialize()
         {
             sharedExpertHandler = std::make_shared<MultiExpertHandler>();
 
-            // Try layer-specific expert directory first
-            std::string expertDir = modelDir + "/layer_" + std::to_string( layerId ) + "_experts";
-            if ( std::filesystem::exists( expertDir ) )
+            // Use the main model directory (experts are stored as expert_layerX_Y.mnn files)
+            if ( !sharedExpertHandler->initialize( modelDir ) )
             {
-                if ( !sharedExpertHandler->initialize( expertDir ) )
-                {
-                    std::cerr << "Warning: Failed to initialize experts from layer directory" << std::endl;
-                }
-            }
-            else
-            {
-                // Fall back to using the main model directory
-                if ( !sharedExpertHandler->initialize( modelDir ) )
-                {
-                    std::cerr << "Warning: Failed to initialize shared expert handler" << std::endl;
-                    return false;
-                }
+                std::cerr << "Warning: Failed to initialize shared expert handler" << std::endl;
+                return false;
             }
 
             std::cout << "Shared expert handler initialized" << std::endl;
@@ -185,7 +243,7 @@ bool LayerProcessor::initialize()
         sharedGateHandler->setDebugMode( debugMode );
     }
 
-    // Scan for available experts
+    // Scan for available experts using filesystem scan
     scanAvailableExperts();
 
     if ( debugMode )
@@ -206,38 +264,25 @@ bool LayerProcessor::initialize()
     return true;
 }
 
-void LayerProcessor::scanAvailableExperts()
-{
-    availableExpertIds.clear();
-
-    if ( !sharedExpertHandler )
-    {
-        return;
-    }
-
-    // Get total expert count from handler
-    int expertCount = sharedExpertHandler->getExpertCount();
-
-    // Check each potential expert ID
-    for ( int i = 0; i < expertCount; i++ )
-    {
-        int expertId = sharedExpertHandler->getExpertIdForIndex( i );
-        if ( expertId >= 0 )
-        {
-            availableExpertIds.push_back( expertId );
-        }
-    }
-
-    // Sort IDs for easier lookup
-    std::sort( availableExpertIds.begin(), availableExpertIds.end() );
-}
-
 std::vector<float> LayerProcessor::process( const std::vector<float> &input, int tokenPosition )
 {
-    if ( availableExpertIds.empty() || !sharedExpertHandler )
+    if ( !sharedExpertHandler )
     {
-        std::cerr << "No experts available for layer " << layerId << std::endl;
+        std::cerr << "No expert handler available for layer " << layerId << std::endl;
         return input; // Pass through input as fallback
+    }
+
+    // Use the pre-scanned available experts for this layer
+    if ( availableExpertIds.empty() )
+    {
+        std::cerr << "No experts available for layer " << layerId << "! Skipping layer." << std::endl;
+        return input; // Pass through unchanged
+    }
+
+    if ( debugMode )
+    {
+        std::cout << "Layer " << layerId << " processing with " << availableExpertIds.size() << " available experts"
+                  << std::endl;
     }
 
     std::vector<int> selectedExperts;
@@ -245,95 +290,97 @@ std::vector<float> LayerProcessor::process( const std::vector<float> &input, int
     // Use gate to select experts if available
     if ( sharedGateHandler && sharedGateHandler->hasLayerGate( layerId ) )
     {
-        selectedExperts = sharedGateHandler->selectExperts( layerId, input, 2 );
+        // Use the new method that handles availability filtering
+        selectedExperts = sharedGateHandler->selectAvailableExperts( layerId, input, availableExpertIds, 2 );
 
         if ( debugMode )
         {
-            std::cout << "Gate for layer " << layerId << " selected experts: ";
+            std::cout << "Gate for layer " << layerId << " selected available experts: ";
             for ( int id : selectedExperts )
             {
                 std::cout << id << " ";
             }
             std::cout << std::endl;
         }
-
-        // Filter to only use available experts
-        std::vector<int> filteredExperts;
-        for ( int expertId : selectedExperts )
-        {
-            if ( std::binary_search( availableExpertIds.begin(), availableExpertIds.end(), expertId ) )
-            {
-                filteredExperts.push_back( expertId );
-            }
-        }
-
-        // If none of the selected experts are available, use the first available expert
-        if ( filteredExperts.empty() && !availableExpertIds.empty() )
-        {
-            filteredExperts.push_back( availableExpertIds[0] );
-            if ( debugMode )
-            {
-                std::cout << "Falling back to available expert " << availableExpertIds[0] << " for layer " << layerId
-                          << std::endl;
-            }
-        }
-
-        selectedExperts = filteredExperts;
     }
     else
     {
-        // No gate, use round-robin from available experts
-        int expertIndex = tokenPosition % availableExpertIds.size();
-        selectedExperts.push_back( availableExpertIds[expertIndex] );
+        // No gate - use the first available expert (typically expert 0)
+        selectedExperts.push_back( availableExpertIds[0] );
 
         if ( debugMode )
         {
-            std::cout << "No gate for layer " << layerId << ", using expert " << availableExpertIds[expertIndex]
+            std::cout << "No gate for layer " << layerId << ", using first available expert " << availableExpertIds[0]
                       << std::endl;
         }
     }
 
-    // Process through selected experts and average their outputs
+    // Ensure we have at least one expert to run
+    if ( selectedExperts.empty() )
+    {
+        selectedExperts.push_back( availableExpertIds[0] );
+
+        if ( debugMode )
+        {
+            std::cout << "Fallback: using first available expert " << availableExpertIds[0] << " for layer " << layerId
+                      << std::endl;
+        }
+    }
+
+    // Run selected experts with proper layer context
     std::vector<float> resultOutput;
     int                successfulExperts = 0;
 
     for ( int expertId : selectedExperts )
     {
-        std::vector<float> expertOutput = sharedExpertHandler->runSingleExpert( expertId, input );
+        std::vector<float> expertOutput = sharedExpertHandler->runExpertForLayer( layerId, expertId, input );
 
         if ( !expertOutput.empty() )
         {
             successfulExperts++;
 
-            // Initialize result with first expert's output
             if ( resultOutput.empty() )
             {
                 resultOutput = expertOutput;
             }
             else
             {
-                // Accumulate outputs (for averaging later)
+                // Average with previous results
                 for ( size_t j = 0; j < resultOutput.size() && j < expertOutput.size(); ++j )
                 {
                     resultOutput[j] += expertOutput[j];
                 }
             }
+
+            if ( debugMode )
+            {
+                std::cout << "Successfully ran expert " << expertId << " for layer " << layerId << std::endl;
+            }
+        }
+        else if ( debugMode )
+        {
+            std::cout << "Failed to run expert " << expertId << " for layer " << layerId << std::endl;
         }
     }
 
-    // Average the results
+    // Average the results if we ran multiple experts
     if ( successfulExperts > 1 )
     {
         for ( size_t j = 0; j < resultOutput.size(); ++j )
         {
             resultOutput[j] /= successfulExperts;
         }
+
+        if ( debugMode )
+        {
+            std::cout << "Averaged results from " << successfulExperts << " experts for layer " << layerId << std::endl;
+        }
     }
 
     // If no experts ran successfully, return input as fallback
     if ( successfulExperts == 0 )
     {
-        std::cerr << "Failed to run any experts for layer " << layerId << std::endl;
+        std::cerr << "Failed to run any experts for layer " << layerId << ", passing through input" << std::endl;
         return input;
     }
 
@@ -746,19 +793,367 @@ std::string MoEModelRunner::generateText( const std::string &prompt, int numToke
     return tokenizer.decode( generatedTokens );
 }
 
+void MoEModelRunner::debugModelPipeline( const std::string &prompt )
+{
+    std::cout << "\n=== DEBUGGING MODEL PIPELINE ===\n" << std::endl;
+
+    // Test tokenizer
+    std::vector<int> tokens = tokenizer.encode( prompt );
+    std::cout << "1. TOKENIZER TEST:" << std::endl;
+    std::cout << "   Input: \"" << prompt << "\"" << std::endl;
+    std::cout << "   Tokens: ";
+    for ( int token : tokens )
+    {
+        std::cout << token << " ";
+    }
+    std::cout << std::endl;
+
+    // Test decode
+    std::string decoded = tokenizer.decode( tokens );
+    std::cout << "   Decoded back: \"" << decoded << "\"" << std::endl;
+
+    // Test a few individual tokens
+    std::cout << "\n2. INDIVIDUAL TOKEN DECODE TEST:" << std::endl;
+    for ( int i = 0; i < 10; i++ )
+    {
+        std::string tokenStr = tokenizer.decode( { i } );
+        std::cout << "   Token " << i << ": \"" << tokenStr << "\"" << std::endl;
+    }
+
+    if ( tokens.empty() )
+    {
+        return;
+    }
+
+    // Test embedding
+    int lastToken = tokens.back();
+    std::cout << "\n3. EMBEDDING TEST (Token " << lastToken << "):" << std::endl;
+    std::vector<float> embedding = embeddingLoader.extractEmbedding( lastToken );
+
+    if ( embedding.empty() )
+    {
+        std::cout << "   ERROR: Empty embedding!" << std::endl;
+        return;
+    }
+
+    // Print embedding stats
+    float minVal = *std::min_element( embedding.begin(), embedding.end() );
+    float maxVal = *std::max_element( embedding.begin(), embedding.end() );
+    float sum    = std::accumulate( embedding.begin(), embedding.end(), 0.0f );
+    float mean   = sum / embedding.size();
+
+    std::cout << "   Size: " << embedding.size() << std::endl;
+    std::cout << "   Range: [" << minVal << ", " << maxVal << "]" << std::endl;
+    std::cout << "   Mean: " << mean << std::endl;
+    std::cout << "   First 5 values: ";
+    for ( int i = 0; i < std::min( 5, (int)embedding.size() ); i++ )
+    {
+        std::cout << embedding[i] << " ";
+    }
+    std::cout << std::endl;
+
+    // Test standard layers
+    std::vector<float> layerOutput = embedding;
+    for ( int layerId = 0; layerId < 3; layerId++ )
+    {
+        std::vector<float> prevOutput = layerOutput;
+        layerOutput                   = runStandardLayer( layerId, layerOutput );
+
+        std::cout << "\n4." << ( layerId + 1 ) << " STANDARD LAYER " << layerId << " TEST:" << std::endl;
+
+        if ( layerOutput.empty() )
+        {
+            std::cout << "   ERROR: Empty output from layer " << layerId << "!" << std::endl;
+            layerOutput = prevOutput; // Fallback
+            continue;
+        }
+
+        float minVal = *std::min_element( layerOutput.begin(), layerOutput.end() );
+        float maxVal = *std::max_element( layerOutput.begin(), layerOutput.end() );
+        float sum    = std::accumulate( layerOutput.begin(), layerOutput.end(), 0.0f );
+        float mean   = sum / layerOutput.size();
+
+        std::cout << "   Size: " << layerOutput.size() << std::endl;
+        std::cout << "   Range: [" << minVal << ", " << maxVal << "]" << std::endl;
+        std::cout << "   Mean: " << mean << std::endl;
+
+        // Check if output changed from input
+        bool changed = false;
+        if ( prevOutput.size() == layerOutput.size() )
+        {
+            for ( size_t i = 0; i < layerOutput.size(); i++ )
+            {
+                if ( std::abs( prevOutput[i] - layerOutput[i] ) > 1e-6 )
+                {
+                    changed = true;
+                    break;
+                }
+            }
+        }
+        else
+        {
+            changed = true;
+        }
+        std::cout << "   Output changed from input: " << ( changed ? "YES" : "NO" ) << std::endl;
+    }
+
+    // Test ALL expert layers (or at least the first 10)
+    int maxLayersToTest = std::min( 10, (int)expertLayers.size() );
+    for ( int expertLayerIdx = 0; expertLayerIdx < maxLayersToTest; expertLayerIdx++ )
+    {
+        int                layerId    = expertLayers[expertLayerIdx]->getLayerId();
+        std::vector<float> prevOutput = layerOutput;
+        layerOutput                   = expertLayers[expertLayerIdx]->process( layerOutput, 0 );
+
+        std::cout << "\n" << ( 7 + expertLayerIdx ) << ". EXPERT LAYER " << layerId << " TEST:" << std::endl;
+
+        if ( layerOutput.empty() )
+        {
+            std::cout << "   ERROR: Empty output from expert layer " << layerId << "!" << std::endl;
+            layerOutput = prevOutput; // Fallback
+            continue;
+        }
+
+        float minVal = *std::min_element( layerOutput.begin(), layerOutput.end() );
+        float maxVal = *std::max_element( layerOutput.begin(), layerOutput.end() );
+        float sum    = std::accumulate( layerOutput.begin(), layerOutput.end(), 0.0f );
+        float mean   = sum / layerOutput.size();
+
+        std::cout << "   Size: " << layerOutput.size() << std::endl;
+        std::cout << "   Range: [" << minVal << ", " << maxVal << "]" << std::endl;
+        std::cout << "   Mean: " << mean << std::endl;
+
+        // Check if output changed from input
+        bool changed = false;
+        if ( prevOutput.size() == layerOutput.size() )
+        {
+            for ( size_t i = 0; i < layerOutput.size(); i++ )
+            {
+                if ( std::abs( prevOutput[i] - layerOutput[i] ) > 1e-6 )
+                {
+                    changed = true;
+                    break;
+                }
+            }
+        }
+        else
+        {
+            changed = true;
+        }
+        std::cout << "   Output changed from input: " << ( changed ? "YES" : "NO" ) << std::endl;
+
+        // Special diagnostic for layer 10 (where you have multiple experts)
+        if ( layerId == 10 )
+        {
+            std::cout << "   LAYER 10 SPECIAL: This layer has "
+                      << expertLayers[expertLayerIdx]->getAvailableExpertIds().size() << " available experts"
+                      << std::endl;
+        }
+
+        // Stop early if we hit very problematic outputs
+        if ( std::abs( maxVal ) < 1e-20 && std::abs( minVal ) < 1e-20 )
+        {
+            std::cout << "   WARNING: Output values extremely close to zero - possible model issue!" << std::endl;
+            std::cout << "   Stopping debug to prevent cascade of zero outputs..." << std::endl;
+            break;
+        }
+    }
+
+    // Test LM head
+    std::cout << "\n" << ( 7 + maxLayersToTest ) << ". LM HEAD TEST:" << std::endl;
+
+    if ( useSplitLmHead )
+    {
+        std::vector<float> logits = lmHeadLoader.runPrediction( layerOutput );
+
+        if ( logits.empty() )
+        {
+            std::cout << "   ERROR: Empty logits from LM head!" << std::endl;
+            return;
+        }
+
+        float minVal = *std::min_element( logits.begin(), logits.end() );
+        float maxVal = *std::max_element( logits.begin(), logits.end() );
+        float sum    = std::accumulate( logits.begin(), logits.end(), 0.0f );
+        float mean   = sum / logits.size();
+
+        std::cout << "   Logits size: " << logits.size() << std::endl;
+        std::cout << "   Logits range: [" << minVal << ", " << maxVal << "]" << std::endl;
+        std::cout << "   Logits mean: " << mean << std::endl;
+
+        // Check for all-zero logits
+        bool allZero = true;
+        for ( float val : logits )
+        {
+            if ( std::abs( val ) > 1e-6 )
+            {
+                allZero = false;
+                break;
+            }
+        }
+        std::cout << "   All logits are zero: " << ( allZero ? "YES (PROBLEM!)" : "NO" ) << std::endl;
+
+        // Check for identical values
+        bool allSame = true;
+        if ( !logits.empty() )
+        {
+            float firstVal = logits[0];
+            for ( float val : logits )
+            {
+                if ( std::abs( val - firstVal ) > 1e-6 )
+                {
+                    allSame = false;
+                    break;
+                }
+            }
+        }
+        std::cout << "   All logits identical: " << ( allSame ? "YES (PROBLEM!)" : "NO" ) << std::endl;
+
+        // Show top 10 logits
+        std::vector<std::pair<int, float>> indexedLogits;
+        for ( size_t i = 0; i < logits.size(); i++ )
+        {
+            indexedLogits.push_back( { (int)i, logits[i] } );
+        }
+        std::sort( indexedLogits.begin(),
+                   indexedLogits.end(),
+                   []( const auto &a, const auto &b ) { return a.second > b.second; } );
+
+        std::cout << "   Top 10 logits:" << std::endl;
+        for ( int i = 0; i < std::min( 10, (int)indexedLogits.size() ); i++ )
+        {
+            int         tokenId   = indexedLogits[i].first;
+            float       score     = indexedLogits[i].second;
+            std::string tokenText = tokenizer.decode( { tokenId } );
+            std::cout << "      " << ( i + 1 ) << ". Token " << tokenId << " (score: " << score << "): \"" << tokenText
+                      << "\"" << std::endl;
+        }
+    }
+
+    std::cout << "\n=== END DEBUG ===\n" << std::endl;
+}
+
+void MoEModelRunner::debugModelPipelineDetailed( const std::string &prompt )
+{
+    std::cout << "\n=== DETAILED DEBUGGING MODEL PIPELINE ===\n" << std::endl;
+
+    // Test tokenizer
+    std::vector<int> tokens = tokenizer.encode( prompt );
+    std::cout << "1. TOKENIZER TEST:" << std::endl;
+    std::cout << "   Input: \"" << prompt << "\"" << std::endl;
+    std::cout << "   Tokens: ";
+    for ( int token : tokens )
+    {
+        std::cout << token << " ";
+    }
+    std::cout << std::endl;
+
+    if ( tokens.empty() )
+    {
+        return;
+    }
+
+    // Test embedding
+    int lastToken = tokens.back();
+    std::cout << "\n2. EMBEDDING TEST (Token " << lastToken << "):" << std::endl;
+    std::vector<float> embedding = embeddingLoader.extractEmbedding( lastToken );
+
+    if ( embedding.empty() )
+    {
+        std::cout << "   ERROR: Empty embedding!" << std::endl;
+        return;
+    }
+
+    // Print embedding stats
+    float minVal = *std::min_element( embedding.begin(), embedding.end() );
+    float maxVal = *std::max_element( embedding.begin(), embedding.end() );
+    float sum    = std::accumulate( embedding.begin(), embedding.end(), 0.0f );
+    float mean   = sum / embedding.size();
+
+    std::cout << "   Size: " << embedding.size() << std::endl;
+    std::cout << "   Range: [" << minVal << ", " << maxVal << "]" << std::endl;
+    std::cout << "   Mean: " << mean << std::endl;
+
+    // Test standard layers
+    std::vector<float> layerOutput = embedding;
+    for ( int layerId = 0; layerId < 3; layerId++ )
+    {
+        std::vector<float> prevOutput = layerOutput;
+        layerOutput                   = runStandardLayer( layerId, layerOutput );
+
+        std::cout << "\n" << ( layerId + 3 ) << ". STANDARD LAYER " << layerId << " TEST:" << std::endl;
+
+        if ( layerOutput.empty() )
+        {
+            std::cout << "   ERROR: Empty output from layer " << layerId << "!" << std::endl;
+            layerOutput = prevOutput; // Fallback
+            continue;
+        }
+
+        float minVal = *std::min_element( layerOutput.begin(), layerOutput.end() );
+        float maxVal = *std::max_element( layerOutput.begin(), layerOutput.end() );
+        float sum    = std::accumulate( layerOutput.begin(), layerOutput.end(), 0.0f );
+        float mean   = sum / layerOutput.size();
+
+        std::cout << "   Size: " << layerOutput.size() << std::endl;
+        std::cout << "   Range: [" << minVal << ", " << maxVal << "]" << std::endl;
+        std::cout << "   Mean: " << mean << std::endl;
+    }
+
+    // Test ONLY the first expert layer with detailed diagnostics
+    if ( !expertLayers.empty() )
+    {
+        int layerId = expertLayers[0]->getLayerId();
+        std::cout << "\n6. DETAILED EXPERT LAYER " << layerId << " TEST:" << std::endl;
+
+        // Get the shared expert handler for detailed testing
+        // We need to add this diagnostic capability to LayerProcessor
+        // For now, let's test expert 0 for layer 3 directly
+
+        // This requires exposing the shared expert handler or adding diagnostic methods
+        std::cout << "   Running detailed expert diagnostics..." << std::endl;
+
+        // You'll need to modify LayerProcessor to expose diagnostic methods
+        // or provide access to the shared expert handler
+
+        std::vector<float> expertOutput = expertLayers[0]->process( layerOutput, 0 );
+
+        if ( expertOutput.empty() )
+        {
+            std::cout << "   ERROR: Empty expert output!" << std::endl;
+        }
+        else
+        {
+            float minVal = *std::min_element( expertOutput.begin(), expertOutput.end() );
+            float maxVal = *std::max_element( expertOutput.begin(), expertOutput.end() );
+            float sum    = std::accumulate( expertOutput.begin(), expertOutput.end(), 0.0f );
+            float mean   = sum / expertOutput.size();
+
+            std::cout << "   Expert Output Size: " << expertOutput.size() << std::endl;
+            std::cout << "   Expert Output Range: [" << minVal << ", " << maxVal << "]" << std::endl;
+            std::cout << "   Expert Output Mean: " << mean << std::endl;
+        }
+    }
+
+    std::cout << "\n=== END DETAILED DEBUG ===\n" << std::endl;
+}
+
+
 // Main function
 int main( int argc, char **argv )
 {
     if ( argc < 4 )
     {
-        std::cerr << "Usage: " << argv[0] << " <model_dir> <prompt> <num_tokens>" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " <model_dir> <prompt> <num_tokens> [debug]" << std::endl;
         std::cerr << "Example: " << argv[0] << " . \"The cat sat on the chair\" 20" << std::endl;
+        std::cerr << "Add 'debug' as 4th argument to run pipeline debugging" << std::endl;
         return 1;
     }
 
     std::string modelDir  = argv[1];
     std::string prompt    = argv[2];
-    int         numTokens = 1; // Default to 1 token
+    int         numTokens = 1;
+    bool        runDebug  = false;
 
     try
     {
@@ -769,8 +1164,14 @@ int main( int argc, char **argv )
         std::cerr << "Invalid number of tokens, using default: 1" << std::endl;
     }
 
+    // Check for debug flag
+    if ( argc >= 5 && std::string( argv[4] ) == "debug" )
+    {
+        runDebug = true;
+    }
+
     // Create and initialize the model runner
-    MoEModelRunner runner( modelDir, true ); // Start with debug mode on
+    MoEModelRunner runner( modelDir, true );
 
     if ( !runner.initialize() )
     {
@@ -778,7 +1179,14 @@ int main( int argc, char **argv )
         return 1;
     }
 
-    // Generate text
+    if ( runDebug )
+    {
+        // Run debugging instead of generation
+        runner.debugModelPipeline( prompt );
+        return 0;
+    }
+
+    // Generate text normally
     std::string generatedText = runner.generateText( prompt, numTokens );
 
     std::cout << "\n=== Final Generated Text ===\n" << generatedText << std::endl;

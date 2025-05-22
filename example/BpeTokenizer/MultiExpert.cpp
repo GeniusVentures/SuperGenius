@@ -43,40 +43,22 @@ bool MultiExpertHandler::initialize( const std::string &modelDir )
 
     try
     {
-        // Try to find expert models in the directory with regex pattern
         std::vector<std::string> expertFiles;
-        std::string              expertPattern = "expert_layer\\d+_(\\d+)\\.(mnn|onnx)";
-        std::regex               regex( expertPattern );
 
-        // Scan directory for files matching the pattern
+        // First, try to find layer-specific experts (expert_layer{N}_{ID}.mnn)
+        std::string layerSpecificPattern = "expert_layer(\\d+)_(\\d+)\\.mnn";
+        std::regex  layerRegex( layerSpecificPattern );
+
         for ( const auto &entry : std::filesystem::directory_iterator( modelDir ) )
         {
             if ( entry.is_regular_file() )
             {
                 std::string filename = entry.path().filename().string();
                 std::smatch match;
-                if ( std::regex_search( filename, match, regex ) )
+                if ( std::regex_search( filename, match, layerRegex ) )
                 {
                     expertFiles.push_back( filename );
-                }
-            }
-        }
-
-        if ( expertFiles.empty() )
-        {
-            // Try with simpler pattern if no matches
-            expertPattern = "expert.*\\.(mnn|onnx)";
-            std::regex simpleRegex( expertPattern );
-
-            for ( const auto &entry : std::filesystem::directory_iterator( modelDir ) )
-            {
-                if ( entry.is_regular_file() )
-                {
-                    std::string filename = entry.path().filename().string();
-                    if ( std::regex_search( filename, simpleRegex ) )
-                    {
-                        expertFiles.push_back( filename );
-                    }
+                    std::cout << "Found layer-specific expert: " << filename << std::endl;
                 }
             }
         }
@@ -89,57 +71,52 @@ bool MultiExpertHandler::initialize( const std::string &modelDir )
 
         std::cout << "Found " << expertFiles.size() << " expert model files" << std::endl;
 
-        // Extract expert info and load models
+        // Process each expert file
         for ( const auto &filename : expertFiles )
         {
             ExpertModel expert;
             expert.modelPath = modelDir + "/" + filename;
 
-            // Extract layer and expert IDs if possible
+            // Extract layer and expert IDs
             std::regex  idRegex( "expert_layer(\\d+)_(\\d+)" );
             std::smatch match;
             if ( std::regex_search( filename, match, idRegex ) && match.size() > 2 )
             {
                 expert.layerId  = std::stoi( match[1].str() );
                 expert.expertId = std::stoi( match[2].str() );
+
+                std::cout << "Parsed expert: Layer " << expert.layerId << ", Expert " << expert.expertId << " -> "
+                          << expert.modelPath << std::endl;
             }
             else
             {
-                // Default if pattern doesn't match
-                expert.layerId  = 10;             // Assume layer 10
-                expert.expertId = experts.size(); // Just use index
+                std::cerr << "Could not parse layer/expert ID from filename: " << filename << std::endl;
+                continue;
             }
 
-            // Replace .onnx with .mnn if needed
-            if ( expert.modelPath.size() > 5 && expert.modelPath.substr( expert.modelPath.size() - 5 ) == ".onnx" )
-            {
-                std::string mnnPath = expert.modelPath.substr( 0, expert.modelPath.size() - 5 ) + ".mnn";
-                if ( std::filesystem::exists( mnnPath ) )
-                {
-                    expert.modelPath = mnnPath;
-                }
-            }
-
-            // Add to collection
             experts.push_back( std::move( expert ) );
         }
 
-        std::cout << "Loaded " << experts.size() << " expert models" << std::endl;
+        // Sort by layer ID, then expert ID for consistent ordering
+        std::sort( experts.begin(),
+                   experts.end(),
+                   []( const ExpertModel &a, const ExpertModel &b )
+                   {
+                       if ( a.layerId != b.layerId )
+                       {
+                           return a.layerId < b.layerId;
+                       }
+                       return a.expertId < b.expertId;
+                   } );
+
+        std::cout << "Loaded " << experts.size() << " expert models:" << std::endl;
         for ( size_t i = 0; i < experts.size(); ++i )
         {
-            std::cout << "  Expert " << i << ": Layer " << experts[i].layerId << ", Expert " << experts[i].expertId
-                      << " - " << experts[i].modelPath << std::endl;
-        }
-        std::cout << "Loaded " << experts.size() << " expert models" << std::endl;
-        for ( size_t i = 0; i < experts.size(); ++i )
-        {
-            std::cout << "  Expert " << i << ": Layer " << experts[i].layerId << ", Expert " << experts[i].expertId
+            std::cout << "  Index " << i << ": Layer " << experts[i].layerId << ", Expert " << experts[i].expertId
                       << " - " << experts[i].modelPath << std::endl;
         }
 
-        // Build expert ID mapping
         buildExpertIdMapping();
-
         initialized = true;
         return true;
     }
@@ -315,6 +292,210 @@ std::vector<float> MultiExpertHandler::runSingleExpert( int expertId, const std:
     }
 }
 
+std::vector<float> MultiExpertHandler::runSingleExpertWithDiagnostics( int                       expertId,
+                                                                       const std::vector<float> &embedding )
+{
+    // Convert expert ID to index if needed
+    int expertIndex = expertId;
+
+    // If the ID is greater than our expert count, it might be a global expert ID
+    if ( expertId >= (int)experts.size() )
+    {
+        expertIndex = expertIdToModelIndex( expertId );
+
+        if ( expertIndex == -1 )
+        {
+            std::cerr << "Invalid expert ID: " << expertId << std::endl;
+            return {};
+        }
+    }
+
+    if ( !initialized || expertIndex < 0 || expertIndex >= (int)experts.size() )
+    {
+        std::cerr << "Invalid expert index: " << expertIndex << std::endl;
+        return {};
+    }
+
+    // Load the model if needed
+    if ( !loadExpertModel( expertIndex ) )
+    {
+        std::cerr << "Failed to load expert model " << expertIndex << std::endl;
+        return {};
+    }
+
+    try
+    {
+        std::cout << "\n=== EXPERT MODEL DIAGNOSTICS ===" << std::endl;
+        std::cout << "Expert Index: " << expertIndex << ", Expert ID: " << expertId << std::endl;
+        std::cout << "Layer: " << experts[expertIndex].layerId << std::endl;
+        std::cout << "Model Path: " << experts[expertIndex].modelPath << std::endl;
+
+        // Analyze input embedding
+        if ( !embedding.empty() )
+        {
+            float minVal = *std::min_element( embedding.begin(), embedding.end() );
+            float maxVal = *std::max_element( embedding.begin(), embedding.end() );
+            float sum    = std::accumulate( embedding.begin(), embedding.end(), 0.0f );
+            float mean   = sum / embedding.size();
+
+            std::cout << "Input Embedding Stats:" << std::endl;
+            std::cout << "  Size: " << embedding.size() << std::endl;
+            std::cout << "  Range: [" << minVal << ", " << maxVal << "]" << std::endl;
+            std::cout << "  Mean: " << mean << std::endl;
+            std::cout << "  First 5 values: ";
+            for ( int i = 0; i < std::min( 5, (int)embedding.size() ); i++ )
+            {
+                std::cout << embedding[i] << " ";
+            }
+            std::cout << std::endl;
+        }
+
+        // Get input tensor
+        auto expertInput = experts[expertIndex].interpreter->getSessionInput( experts[expertIndex].session, nullptr );
+        if ( !expertInput )
+        {
+            throw std::runtime_error( "Failed to get input tensor" );
+        }
+
+        std::cout << "Input Tensor Info:" << std::endl;
+        LLMUtility::printTensorInfo( expertInput, "  Expert Input" );
+
+        // Resize input tensor
+        experts[expertIndex].interpreter->resizeTensor( expertInput, { 1, (int)embedding.size() } );
+        experts[expertIndex].interpreter->resizeSession( experts[expertIndex].session );
+
+        std::cout << "After Resize:" << std::endl;
+        LLMUtility::printTensorInfo( expertInput, "  Expert Input" );
+
+        // Copy embedding to input tensor
+        MNN::Tensor expertInputHost( expertInput, MNN::Tensor::CAFFE );
+        float      *expertInputData = expertInputHost.host<float>();
+
+        std::cout << "Copying " << embedding.size() << " values to input tensor..." << std::endl;
+        LLMUtility::safeCopyToTensor( expertInputData, embedding );
+        expertInput->copyFromHostTensor( &expertInputHost );
+
+        // Verify the copy worked
+        std::cout << "Input tensor after copy - first 5 values: ";
+        for ( int i = 0; i < std::min( 5, (int)embedding.size() ); i++ )
+        {
+            std::cout << expertInputData[i] << " ";
+        }
+        std::cout << std::endl;
+
+        // Run expert model
+        std::cout << "Running expert model..." << std::endl;
+        experts[expertIndex].interpreter->runSession( experts[expertIndex].session );
+        std::cout << "Expert model execution completed." << std::endl;
+
+        // Get output
+        auto expertOutputTensor = experts[expertIndex].interpreter->getSessionOutput( experts[expertIndex].session,
+                                                                                      nullptr );
+        if ( !expertOutputTensor )
+        {
+            throw std::runtime_error( "Failed to get output tensor" );
+        }
+
+        std::cout << "Output Tensor Info:" << std::endl;
+        LLMUtility::printTensorInfo( expertOutputTensor, "  Expert Output" );
+
+        // Copy to host
+        MNN::Tensor expertOutputHost( expertOutputTensor, MNN::Tensor::CAFFE );
+        expertOutputTensor->copyToHostTensor( &expertOutputHost );
+        float *expertOutputData = expertOutputHost.host<float>();
+
+        // Calculate output size
+        size_t expertOutputSize = 1;
+        for ( int d = 0; d < expertOutputTensor->dimensions(); d++ )
+        {
+            expertOutputSize *= expertOutputTensor->length( d );
+        }
+
+        std::cout << "Raw output tensor data (first 10 values):" << std::endl;
+        for ( int i = 0; i < std::min( 10, (int)expertOutputSize ); i++ )
+        {
+            std::cout << "  [" << i << "]: " << expertOutputData[i] << std::endl;
+        }
+
+        // Analyze raw output before any processing
+        if ( expertOutputSize > 0 )
+        {
+            float minVal     = expertOutputData[0];
+            float maxVal     = expertOutputData[0];
+            float sum        = 0.0f;
+            int   validCount = 0;
+            int   nanCount   = 0;
+            int   infCount   = 0;
+            int   zeroCount  = 0;
+
+            for ( size_t i = 0; i < expertOutputSize; i++ )
+            {
+                float val = expertOutputData[i];
+
+                if ( std::isnan( val ) )
+                {
+                    nanCount++;
+                }
+                else if ( std::isinf( val ) )
+                {
+                    infCount++;
+                }
+                else if ( std::abs( val ) < 1e-30 )
+                {
+                    zeroCount++;
+                }
+                else
+                {
+                    validCount++;
+                    sum    += val;
+                    minVal  = std::min( minVal, val );
+                    maxVal  = std::max( maxVal, val );
+                }
+            }
+
+            std::cout << "Raw Output Analysis:" << std::endl;
+            std::cout << "  Total values: " << expertOutputSize << std::endl;
+            std::cout << "  Valid values: " << validCount << std::endl;
+            std::cout << "  Near-zero values: " << zeroCount << std::endl;
+            std::cout << "  NaN values: " << nanCount << std::endl;
+            std::cout << "  Inf values: " << infCount << std::endl;
+
+            if ( validCount > 0 )
+            {
+                std::cout << "  Valid range: [" << minVal << ", " << maxVal << "]" << std::endl;
+                std::cout << "  Valid mean: " << ( sum / validCount ) << std::endl;
+            }
+        }
+
+        // Create vector for expert output
+        std::vector<float> expertOutput( expertOutputSize );
+
+        // Check and copy values
+        for ( size_t i = 0; i < expertOutputSize; i++ )
+        {
+            float val = expertOutputData[i];
+            if ( std::isnan( val ) || std::isinf( val ) || std::abs( val ) > 1e6 )
+            {
+                expertOutput[i] = 0.0f; // Replace invalid values
+            }
+            else
+            {
+                expertOutput[i] = val;
+            }
+        }
+
+        std::cout << "=== END EXPERT DIAGNOSTICS ===\n" << std::endl;
+
+        return expertOutput;
+    }
+    catch ( const std::exception &e )
+    {
+        std::cerr << "Error running expert model " << expertIndex << ": " << e.what() << std::endl;
+        return {};
+    }
+}
+
+
 // Run all experts and average their outputs
 std::vector<float> MultiExpertHandler::runAverageAllExperts( const std::vector<float> &embedding )
 {
@@ -450,4 +631,59 @@ int MultiExpertHandler::getExpertIdForIndex( int index ) const
     return -1; // Invalid index
 }
 
+int MultiExpertHandler::getLayerIdForExpert( int expertId ) const
+{
+    for ( const auto &expert : experts )
+    {
+        if ( expert.expertId == expertId )
+        {
+            return expert.layerId;
+        }
+    }
+    return -1; // Not found
+}
 
+bool MultiExpertHandler::expertExistsForLayer( int layerId, int expertId ) const
+{
+    for ( const auto &expert : experts )
+    {
+        if ( expert.layerId == layerId && expert.expertId == expertId )
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+std::vector<float> MultiExpertHandler::runExpertForLayer( int                       layerId,
+                                                          int                       expertId,
+                                                          const std::vector<float> &embedding )
+{
+    // Find the specific expert model for this layer and expert ID
+    int expertIndex = -1;
+
+    for ( size_t i = 0; i < experts.size(); i++ )
+    {
+        if ( experts[i].layerId == layerId && experts[i].expertId == expertId )
+        {
+            expertIndex = i;
+            break;
+        }
+    }
+
+    if ( expertIndex == -1 )
+    {
+        std::cerr << "Expert " << expertId << " not found for layer " << layerId << std::endl;
+        return {};
+    }
+
+    if ( debugMode )
+    {
+        std::cout << "Running expert " << expertId << " for layer " << layerId << " (model index " << expertIndex << ")"
+                  << std::endl;
+        std::cout << "Model path: " << experts[expertIndex].modelPath << std::endl;
+    }
+
+    // Use the existing runSingleExpert but with the correct index
+    return runSingleExpert( expertIndex, embedding );
+}

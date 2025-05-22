@@ -8,7 +8,7 @@
 GateWeightsHandler::GateWeightsHandler() : initialized( false ), debugMode( false )
 {
     // Default config
-    config.type      = MNN_FORWARD_CPU; // Use VULKAN by default
+    config.type      = MNN_FORWARD_CPU; // Use CPU by default for gate models (they're smaller)
     config.numThread = 1;
 }
 
@@ -25,92 +25,16 @@ GateWeightsHandler::~GateWeightsHandler()
     }
 }
 
-bool GateWeightsHandler::loadRecommendedExperts( int layerId, const std::string &analysisPath )
-{
-    // Check if file exists
-    if ( !std::filesystem::exists( analysisPath ) )
-    {
-        std::cerr << "Analysis file not found: " << analysisPath << std::endl;
-        return false;
-    }
-
-    try
-    {
-        // Use the improved method to get recommended experts
-        std::vector<int> experts = SimpleJsonParser::getRecommendedExperts( analysisPath );
-
-        if ( experts.empty() )
-        {
-            std::cerr << "No recommended experts found in analysis file: " << analysisPath << std::endl;
-            return false;
-        }
-
-        // Store the recommended experts in the gate model info
-        gateModels[layerId].recommendedExperts = experts;
-
-        std::cout << "Loaded " << experts.size() << " recommended experts for layer " << layerId << std::endl;
-
-        if ( debugMode )
-        {
-            std::cout << "Recommended experts: ";
-            for ( int expertId : experts )
-            {
-                std::cout << expertId << " ";
-            }
-            std::cout << std::endl;
-        }
-
-        return true;
-    }
-    catch ( const std::exception &e )
-    {
-        std::cerr << "Error loading recommended experts: " << e.what() << std::endl;
-        return false;
-    }
-}
-
 bool GateWeightsHandler::initialize( const std::string &modelDir )
 {
     this->modelDir = modelDir;
 
     try
     {
-        // Look for gate models and analysis files
+        // Look for gate models
         bool foundAny = false;
 
-        // Check for layer 10 gate model (our initial focus)
-        std::string gateModelPath       = modelDir + "/layer_10_gate.mnn";
-        std::string analysisPath        = modelDir + "/layer_10_gate_analysis.json";
-        std::string recommendationsPath = modelDir + "/layer_10_recommended_experts.json";
-
-        // Try to add the gate model
-        if ( std::filesystem::exists( gateModelPath ) )
-        {
-            // Prefer recommendations file if it exists
-            if ( std::filesystem::exists( recommendationsPath ) )
-            {
-                if ( addGateModel( 10, gateModelPath, recommendationsPath ) )
-                {
-                    foundAny = true;
-                    std::cout << "Added gate model for layer 10 using recommendations file" << std::endl;
-                }
-            }
-            // Fall back to analysis file
-            else if ( std::filesystem::exists( analysisPath ) )
-            {
-                if ( addGateModel( 10, gateModelPath, analysisPath ) )
-                {
-                    foundAny = true;
-                    std::cout << "Added gate model for layer 10 using analysis file" << std::endl;
-                }
-            }
-            else
-            {
-                std::cerr << "Gate model found for layer 10, but no analysis or recommendations file" << std::endl;
-            }
-        }
-
-        // Look for other layers (for future extensibility)
+        // Look for all layers with gate models
         for ( const auto &entry : std::filesystem::directory_iterator( modelDir ) )
         {
             if ( entry.is_regular_file() )
@@ -125,41 +49,11 @@ bool GateWeightsHandler::initialize( const std::string &modelDir )
                 {
                     int layerId = std::stoi( match[1].str() );
 
-                    // Skip layer 10 as we've already handled it
-                    if ( layerId == 10 )
+                    // Add the gate model (no need for analysis files anymore)
+                    if ( addGateModel( layerId, entry.path().string() ) )
                     {
-                        continue;
-                    }
-
-                    // Look for corresponding analysis or recommendations files
-                    std::string layerGatePath     = entry.path().string();
-                    std::string layerAnalysisPath = modelDir + "/layer_" + std::to_string( layerId ) +
-                                                    "_gate_analysis.json";
-                    std::string layerRecommendationsPath = modelDir + "/layer_" + std::to_string( layerId ) +
-                                                           "_recommended_experts.json";
-
-                    if ( std::filesystem::exists( layerRecommendationsPath ) )
-                    {
-                        if ( addGateModel( layerId, layerGatePath, layerRecommendationsPath ) )
-                        {
-                            foundAny = true;
-                            std::cout << "Added gate model for layer " << layerId << " using recommendations file"
-                                      << std::endl;
-                        }
-                    }
-                    else if ( std::filesystem::exists( layerAnalysisPath ) )
-                    {
-                        if ( addGateModel( layerId, layerGatePath, layerAnalysisPath ) )
-                        {
-                            foundAny = true;
-                            std::cout << "Added gate model for layer " << layerId << " using analysis file"
-                                      << std::endl;
-                        }
-                    }
-                    else
-                    {
-                        std::cerr << "Gate model found for layer " << layerId
-                                  << ", but no analysis or recommendations file" << std::endl;
+                        foundAny = true;
+                        std::cout << "Added gate model for layer " << layerId << std::endl;
                     }
                 }
             }
@@ -181,7 +75,7 @@ bool GateWeightsHandler::initialize( const std::string &modelDir )
     }
 }
 
-bool GateWeightsHandler::addGateModel( int layerId, const std::string &gatePath, const std::string &analysisPath )
+bool GateWeightsHandler::addGateModel( int layerId, const std::string &gatePath )
 {
     try
     {
@@ -198,13 +92,6 @@ bool GateWeightsHandler::addGateModel( int layerId, const std::string &gatePath,
             return false;
         }
 
-        // Load recommended experts from analysis file
-        if ( !loadRecommendedExperts( layerId, analysisPath ) )
-        {
-            std::cerr << "Failed to load recommended experts for layer " << layerId << std::endl;
-            return false;
-        }
-
         // Add to map
         gateModels[layerId] = std::move( gateInfo );
 
@@ -217,29 +104,22 @@ bool GateWeightsHandler::addGateModel( int layerId, const std::string &gatePath,
     }
 }
 
-std::vector<int> GateWeightsHandler::getRecommendedExperts( int layerId ) const
-{
-    auto it = gateModels.find( layerId );
-    if ( it != gateModels.end() )
-    {
-        return it->second.recommendedExperts;
-    }
-    return {};
-}
-
 std::vector<int> GateWeightsHandler::selectExperts( int layerId, const std::vector<float> &embedding, int topK )
 {
     if ( !initialized )
     {
         std::cerr << "Gate weights handler not initialized" << std::endl;
-        return getRecommendedExperts( layerId );
+        return { 0 }; // Fallback to expert 0
     }
 
     auto it = gateModels.find( layerId );
     if ( it == gateModels.end() )
     {
-        std::cerr << "No gate model found for layer " << layerId << std::endl;
-        return getRecommendedExperts( layerId );
+        if ( debugMode )
+        {
+            std::cout << "No gate model found for layer " << layerId << ", using expert 0" << std::endl;
+        }
+        return { 0 }; // Fallback to expert 0
     }
 
     auto &gateInfo = it->second;
@@ -251,7 +131,7 @@ std::vector<int> GateWeightsHandler::selectExperts( int layerId, const std::vect
         if ( !gateInfo.session )
         {
             std::cerr << "Failed to create session for gate model layer " << layerId << std::endl;
-            return gateInfo.recommendedExperts;
+            return { 0 }; // Fallback to expert 0
         }
     }
 
@@ -306,31 +186,117 @@ std::vector<int> GateWeightsHandler::selectExperts( int layerId, const std::vect
                    expertScores.end(),
                    []( const auto &a, const auto &b ) { return a.second > b.second; } );
 
-        // Get top K experts
-        std::vector<int> selectedExperts;
-        selectedExperts.reserve( topK );
-
-        int count = std::min( topK, numExperts );
-        for ( int i = 0; i < count; i++ )
+        if ( debugMode )
         {
-            selectedExperts.push_back( expertScores[i].first );
-
-            if ( debugMode )
+            std::cout << "Gate model for layer " << layerId << " raw scores:" << std::endl;
+            for ( int i = 0; i < std::min( 10, (int)expertScores.size() ); i++ )
             {
-                std::cout << "Selected expert " << expertScores[i].first << " with score " << expertScores[i].second
-                          << std::endl;
+                std::cout << "  Expert " << expertScores[i].first << ": " << expertScores[i].second << std::endl;
             }
         }
 
-        return selectedExperts;
+        // Return all experts ranked by score (caller will handle availability filtering)
+        std::vector<int> rankedExperts;
+        rankedExperts.reserve( numExperts );
+        for ( const auto &pair : expertScores )
+        {
+            rankedExperts.push_back( pair.first );
+        }
+
+        return rankedExperts;
     }
     catch ( const std::exception &e )
     {
         std::cerr << "Error running gate model for layer " << layerId << ": " << e.what() << std::endl;
-
-        // Fallback to recommended experts
-        return gateInfo.recommendedExperts;
+        return { 0 }; // Fallback to expert 0
     }
+}
+
+std::vector<int> GateWeightsHandler::selectAvailableExperts( int                       layerId,
+                                                             const std::vector<float> &embedding,
+                                                             const std::vector<int>   &availableExperts,
+                                                             int                       topK )
+{
+    // Get all experts ranked by the gate model
+    std::vector<int> rankedExperts = selectExperts( layerId, embedding, -1 ); // Get all experts
+
+    if ( rankedExperts.empty() )
+    {
+        // If gate failed, try expert 0 if available
+        if ( std::find( availableExperts.begin(), availableExperts.end(), 0 ) != availableExperts.end() )
+        {
+            return { 0 };
+        }
+        // Otherwise return the first available expert
+        return availableExperts.empty() ? std::vector<int>{} : std::vector<int>{ availableExperts[0] };
+    }
+
+    // Filter to only include available experts, maintaining gate's ranking
+    std::vector<int> selectedExperts;
+    selectedExperts.reserve( topK );
+
+    for ( int expertId : rankedExperts )
+    {
+        // Check if this expert is available
+        if ( std::find( availableExperts.begin(), availableExperts.end(), expertId ) != availableExperts.end() )
+        {
+            selectedExperts.push_back( expertId );
+
+            if ( debugMode )
+            {
+                std::cout << "Selected available expert " << expertId << " for layer " << layerId << std::endl;
+            }
+
+            // Stop when we have enough experts
+            if ( selectedExperts.size() >= (size_t)topK )
+            {
+                break;
+            }
+        }
+        else if ( debugMode )
+        {
+            std::cout << "Expert " << expertId << " recommended by gate but not available for layer " << layerId
+                      << std::endl;
+        }
+    }
+
+    // If we didn't find enough available experts, add more if possible
+    if ( selectedExperts.size() < (size_t)topK )
+    {
+        for ( int expertId : availableExperts )
+        {
+            // Add if not already selected
+            if ( std::find( selectedExperts.begin(), selectedExperts.end(), expertId ) == selectedExperts.end() )
+            {
+                selectedExperts.push_back( expertId );
+
+                if ( debugMode )
+                {
+                    std::cout << "Added additional available expert " << expertId << " for layer " << layerId
+                              << std::endl;
+                }
+
+                if ( selectedExperts.size() >= (size_t)topK )
+                {
+                    break;
+                }
+            }
+        }
+    }
+
+    // If still no experts, ensure we return at least one if any are available
+    if ( selectedExperts.empty() && !availableExperts.empty() )
+    {
+        selectedExperts.push_back( availableExperts[0] );
+
+        if ( debugMode )
+        {
+            std::cout << "Fallback: using first available expert " << availableExperts[0] << " for layer " << layerId
+                      << std::endl;
+        }
+    }
+
+    return selectedExperts;
 }
 
 void GateWeightsHandler::setDebugMode( bool debug )
@@ -360,26 +326,5 @@ void GateWeightsHandler::printGateInfo() const
     for ( const auto &pair : gateModels )
     {
         std::cout << "  Layer " << pair.first << ": " << pair.second.modelPath << std::endl;
-        std::cout << "    Recommended experts: " << pair.second.recommendedExperts.size() << std::endl;
-
-        if ( debugMode || pair.second.recommendedExperts.size() < 10 )
-        {
-            std::cout << "    Expert IDs: ";
-            for ( int expertId : pair.second.recommendedExperts )
-            {
-                std::cout << expertId << " ";
-            }
-            std::cout << std::endl;
-        }
-        else if ( !pair.second.recommendedExperts.empty() )
-        {
-            // Show first few experts even if debug mode is off
-            std::cout << "    First few expert IDs: ";
-            for ( size_t i = 0; i < std::min( size_t( 5 ), pair.second.recommendedExperts.size() ); i++ )
-            {
-                std::cout << pair.second.recommendedExperts[i] << " ";
-            }
-            std::cout << "... (" << pair.second.recommendedExperts.size() - 5 << " more)" << std::endl;
-        }
     }
 }
