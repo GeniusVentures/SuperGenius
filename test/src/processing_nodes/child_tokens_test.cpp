@@ -39,19 +39,19 @@ namespace
 } // namespace
 
 // ------------------ Suite 1: Mint Main Tokens ------------------
-/// @brief Parameters for mint-main tests
+
+/// Parameters for minting main tokens
 struct MintMainCase_s
 {
-    std::string tokenValue;    ///< TokenValueInGNUS
-    uint64_t    mintMain;      ///< Amount to mint in main tokens
-    uint64_t    expectedMain;  ///< Expected delta of main balance
-    uint64_t    expectedChild; ///< Expected delta of child balance
+    std::string tokenValue;    // TokenValueInGNUS
+    uint64_t    mintMain;      // Amount to mint in main tokens
+    std::string expectedChild; // Expected delta of child balance (as string)
 };
 
 inline std::ostream &operator<<( std::ostream &os, MintMainCase_s const &c )
 {
-    return os << "MintMainCase_s{tokenValue='" << c.tokenValue << "', mintMain=" << c.mintMain
-              << ", expectedMain=" << c.expectedMain << ", expectedChild=" << c.expectedChild << "}";
+    return os << "MintMainCase_s{tokenValue='" << c.tokenValue << "', mintMain=" << c.mintMain << ", expectedChild='"
+              << c.expectedChild << "'}";
 }
 
 class GeniusNodeMintMainTest : public ::testing::TestWithParam<MintMainCase_s>
@@ -64,44 +64,53 @@ TEST_P( GeniusNodeMintMainTest, MintMainBalance )
     std::string basePath;
     auto        node = CreateNode( p.tokenValue, basePath );
 
-    uint64_t initialMain  = node->GetBalance();
-    uint64_t initialChild = node->GetChildBalance().value();
+    uint64_t    initialMain        = node->GetBalance();
+    std::string initialChildStr    = node->FormatChildTokens( initialMain );
+    auto        parsedInitialChild = node->ParseChildTokens( initialChildStr );
+    ASSERT_TRUE( parsedInitialChild.has_value() );
 
     auto res = node->MintTokens( p.mintMain, "", "", "" );
-    ASSERT_TRUE( res.has_value() ) << "MintTokens failed for " << p;
+    ASSERT_TRUE( res.has_value() );
 
-    assertWaitForCondition( [&]() { return node->GetBalance() - initialMain == p.expectedMain; },
+    assertWaitForCondition( [&]() { return node->GetBalance() - initialMain == p.mintMain; },
                             std::chrono::milliseconds( 20000 ),
                             "Main mint timeout for " + p.tokenValue );
 
-    uint64_t finalMain  = node->GetBalance();
-    uint64_t finalChild = node->GetChildBalance().value();
-    EXPECT_EQ( finalMain - initialMain, p.expectedMain ) << p;
-    EXPECT_EQ( finalChild - initialChild, p.expectedChild ) << p;
+    uint64_t    finalMain        = node->GetBalance();
+    std::string finalChildStr    = node->FormatChildTokens( finalMain );
+    auto        parsedFinalChild = node->ParseChildTokens( finalChildStr );
+    ASSERT_TRUE( parsedFinalChild.has_value() );
+
+    auto parsedExpectedDelta = node->ParseChildTokens( p.expectedChild );
+    ASSERT_TRUE( parsedExpectedDelta.has_value() );
+
+    EXPECT_EQ( finalMain - initialMain, p.mintMain );
+    EXPECT_EQ( parsedFinalChild.value() - parsedInitialChild.value(), parsedExpectedDelta.value() );
 
     boost::filesystem::remove_all( basePath );
 }
 
-INSTANTIATE_TEST_SUITE_P( MintMainVariations,
-                          GeniusNodeMintMainTest,
-                          ::testing::Values( MintMainCase_s{ "1.0", 1000, 1000, 1000 },
-                                             MintMainCase_s{ "0.5", 1000, 1000, 2000 },
-                                             MintMainCase_s{ "1.25", 1000, 1000, 800 } ) );
+INSTANTIATE_TEST_SUITE_P(
+    MintMainVariations,
+    GeniusNodeMintMainTest,
+    ::testing::Values( MintMainCase_s{ .tokenValue = "1.0", .mintMain = 1000, .expectedChild = "1000" },
+                       MintMainCase_s{ .tokenValue = "0.5", .mintMain = 1000, .expectedChild = "2000" },
+                       MintMainCase_s{ .tokenValue = "1.25", .mintMain = 1000, .expectedChild = "800" } ) );
 
 // ------------------ Suite 2: Mint Child Tokens ------------------
-/// @brief Parameters for mint-child tests
+
+/// Parameters for minting child tokens
 struct MintChildCase_s
 {
-    std::string tokenValue;    ///< TokenValueInGNUS
-    uint64_t    mintChild;     ///< Amount to mint in child tokens
-    uint64_t    expectedChild; ///< Expected delta of child balance
-    uint64_t    expectedMain;  ///< Expected delta of main balance
+    std::string tokenValue;   // TokenValueInGNUS
+    std::string mintChild;    // Amount to mint in child tokens (as string)
+    uint64_t    expectedMain; // Expected delta of main balance
 };
 
 inline std::ostream &operator<<( std::ostream &os, MintChildCase_s const &c )
 {
-    return os << "MintChildCase_s{tokenValue='" << c.tokenValue << "', mintChild=" << c.mintChild
-              << ", expectedChild=" << c.expectedChild << ", expectedMain=" << c.expectedMain << "}";
+    return os << "MintChildCase_s{tokenValue='" << c.tokenValue << "', mintChild='" << c.mintChild
+              << "', expectedMain=" << c.expectedMain << "}";
 }
 
 class GeniusNodeMintChildTest : public ::testing::TestWithParam<MintChildCase_s>
@@ -114,27 +123,49 @@ TEST_P( GeniusNodeMintChildTest, MintChildBalance )
     std::string basePath;
     auto        node = CreateNode( p.tokenValue, basePath );
 
-    uint64_t initialMain  = node->GetBalance();
-    uint64_t initialChild = node->GetChildBalance().value();
+    uint64_t    initialMain     = node->GetBalance();
+    std::string initialChildStr = node->FormatChildTokens( initialMain );
+    auto        parsedInitial   = node->ParseChildTokens( initialChildStr );
+    ASSERT_TRUE( parsedInitial.has_value() );
 
-    auto res = node->MintChildTokens( p.mintChild, "", "", "" );
-    ASSERT_TRUE( res.has_value() ) << "MintChildTokens failed for " << p;
+    auto parsedMint = node->ParseChildTokens( p.mintChild );
+    ASSERT_TRUE( parsedMint.has_value() );
 
-    assertWaitForCondition( [&]() { return node->GetChildBalance().value() - initialChild == p.expectedChild; },
-                            std::chrono::milliseconds( 20000 ),
-                            "Child mint timeout for " + p.tokenValue );
+    auto res = node->MintTokens( parsedMint.value(), "", "", "" );
+    ASSERT_TRUE( res.has_value() );
 
-    EXPECT_EQ( node->GetChildBalance().value() - initialChild, p.expectedChild ) << p;
-    EXPECT_EQ( node->GetBalance() - initialMain, p.expectedMain ) << p;
+    assertWaitForCondition(
+        [&]()
+        {
+            std::string currentChildStr = node->FormatChildTokens( node->GetBalance() );
+            auto        currentParsed   = node->ParseChildTokens( currentChildStr );
+            auto        expectedDelta   = node->ParseChildTokens( p.mintChild );
+            return currentParsed && expectedDelta &&
+                   ( currentParsed.value() - parsedInitial.value() == expectedDelta.value() );
+        },
+        std::chrono::milliseconds( 20000 ),
+        "Child mint timeout for " + p.tokenValue );
+
+    uint64_t    finalMain     = node->GetBalance();
+    std::string finalChildStr = node->FormatChildTokens( finalMain );
+    auto        parsedFinal   = node->ParseChildTokens( finalChildStr );
+    ASSERT_TRUE( parsedFinal.has_value() );
+
+    auto parsedExpectedDelta = node->ParseChildTokens( p.mintChild );
+    ASSERT_TRUE( parsedExpectedDelta.has_value() );
+
+    EXPECT_EQ( finalMain - initialMain, p.expectedMain );
+    EXPECT_EQ( parsedFinal.value() - parsedInitial.value(), parsedExpectedDelta.value() );
 
     boost::filesystem::remove_all( basePath );
 }
 
-INSTANTIATE_TEST_SUITE_P( MintChildVariations,
-                          GeniusNodeMintChildTest,
-                          ::testing::Values( MintChildCase_s{ "1.0", 500, 500, 500 },
-                                             MintChildCase_s{ "0.5", 1000, 1000, 500 },
-                                             MintChildCase_s{ "1.5", 2000, 2000, 3000 } ) );
+INSTANTIATE_TEST_SUITE_P(
+    MintChildVariations,
+    GeniusNodeMintChildTest,
+    ::testing::Values( MintChildCase_s{ .tokenValue = "1.0", .mintChild = "500", .expectedMain = 500 },
+                       MintChildCase_s{ .tokenValue = "0.5", .mintChild = "1000", .expectedMain = 500 },
+                       MintChildCase_s{ .tokenValue = "1.5", .mintChild = "2000", .expectedMain = 3000 } ) );
 
 // ------------------ Suite 3: Transfer Main Tokens ------------------
 /// @brief Parameters for transfer-main tests
