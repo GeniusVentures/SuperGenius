@@ -58,7 +58,7 @@ bool MultiExpertHandler::initialize( const std::string &modelDir )
                 if ( std::regex_search( filename, match, layerRegex ) )
                 {
                     expertFiles.push_back( filename );
-                    std::cout << "Found layer-specific expert: " << filename << std::endl;
+                    //std::cout << "Found layer-specific expert: " << filename << std::endl;
                 }
             }
         }
@@ -85,8 +85,8 @@ bool MultiExpertHandler::initialize( const std::string &modelDir )
                 expert.layerId  = std::stoi( match[1].str() );
                 expert.expertId = std::stoi( match[2].str() );
 
-                std::cout << "Parsed expert: Layer " << expert.layerId << ", Expert " << expert.expertId << " -> "
-                          << expert.modelPath << std::endl;
+                //std::cout << "Parsed expert: Layer " << expert.layerId << ", Expert " << expert.expertId << " -> "
+                //          << expert.modelPath << std::endl;
             }
             else
             {

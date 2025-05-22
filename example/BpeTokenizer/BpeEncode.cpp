@@ -68,6 +68,8 @@ public:
 
     void debugModelPipeline( const std::string &prompt );
     void debugModelPipelineDetailed( const std::string &prompt );
+    void testExpertModelDirectly( const std::string &expertPath, int layerId, int expertId );
+    void testStandardLayerDirectly( const std::string &layerPath, int layerId );
 };
 
 // Class to handle processing of a single expert layer
@@ -334,6 +336,15 @@ std::vector<float> LayerProcessor::process( const std::vector<float> &input, int
     for ( int expertId : selectedExperts )
     {
         std::vector<float> expertOutput = sharedExpertHandler->runExpertForLayer( layerId, expertId, input );
+
+        // Add residual connection
+        if ( !expertOutput.empty() && expertOutput.size() == input.size() )
+        {
+            for ( size_t i = 0; i < expertOutput.size(); i++ )
+            {
+                expertOutput[i] += input[i]; // Add input back (residual connection)
+            }
+        }
 
         if ( !expertOutput.empty() )
         {
@@ -1139,21 +1150,382 @@ void MoEModelRunner::debugModelPipelineDetailed( const std::string &prompt )
 }
 
 
+void MoEModelRunner::testExpertModelDirectly( const std::string &expertPath, int layerId, int expertId )
+{
+    std::cout << "\n=== DIRECT EXPERT MODEL TEST ===" << std::endl;
+    std::cout << "Testing: " << expertPath << std::endl;
+    std::cout << "Layer: " << layerId << ", Expert: " << expertId << std::endl;
+
+    try
+    {
+        // Load the expert model directly
+        std::unique_ptr<MNN::Interpreter> interpreter( MNN::Interpreter::createFromFile( expertPath.c_str() ) );
+        if ( !interpreter )
+        {
+            std::cerr << "ERROR: Failed to load expert model!" << std::endl;
+            return;
+        }
+
+        // Create session
+        MNN::ScheduleConfig config;
+        config.type      = MNN_FORWARD_VULKAN;
+        config.numThread = 1;
+
+        MNN::Session *session = interpreter->createSession( config );
+        if ( !session )
+        {
+            std::cerr << "ERROR: Failed to create session!" << std::endl;
+            return;
+        }
+
+        // Get input tensor info
+        auto input = interpreter->getSessionInput( session, nullptr );
+        if ( !input )
+        {
+            std::cerr << "ERROR: Failed to get input tensor!" << std::endl;
+            interpreter->releaseSession( session );
+            return;
+        }
+
+        std::cout << "Input tensor info:" << std::endl;
+        LLMUtility::printTensorInfo( input, "  Input" );
+
+        // Test with different input patterns
+        std::vector<std::vector<float>> testInputs = { // Test 1: All zeros
+                                                       std::vector<float>( hiddenSize, 0.0f ),
+
+                                                       // Test 2: All ones
+                                                       std::vector<float>( hiddenSize, 1.0f ),
+
+                                                       // Test 3: Small values (similar to what we see in embeddings)
+                                                       std::vector<float>( hiddenSize, 0.1f ),
+
+                                                       // Test 4: Range pattern
+                                                       []( int size )
+                                                       {
+                                                           std::vector<float> v( size );
+                                                           for ( int i = 0; i < size; i++ )
+                                                           {
+                                                               v[i] = (float)i / size - 0.5f; // Range from -0.5 to 0.5
+                                                           }
+                                                           return v;
+                                                       }( hiddenSize ),
+
+                                                       // Test 5: Random-like pattern (deterministic)
+                                                       []( int size )
+                                                       {
+                                                           std::vector<float> v( size );
+                                                           std::mt19937       rng( 12345 ); // Fixed seed
+                                                           std::uniform_real_distribution<float> dist( -0.2f, 0.2f );
+                                                           for ( int i = 0; i < size; i++ )
+                                                           {
+                                                               v[i] = dist( rng );
+                                                           }
+                                                           return v;
+                                                       }( hiddenSize ) };
+
+        std::vector<std::string> testNames = { "All Zeros", "All Ones", "All 0.1s", "Range Pattern", "Random Pattern" };
+
+        for ( size_t testIdx = 0; testIdx < testInputs.size(); testIdx++ )
+        {
+            std::cout << "\n--- Test " << ( testIdx + 1 ) << ": " << testNames[testIdx] << " ---" << std::endl;
+
+            const auto &testInput = testInputs[testIdx];
+
+            // Print input stats
+            float minIn  = *std::min_element( testInput.begin(), testInput.end() );
+            float maxIn  = *std::max_element( testInput.begin(), testInput.end() );
+            float sumIn  = std::accumulate( testInput.begin(), testInput.end(), 0.0f );
+            float meanIn = sumIn / testInput.size();
+
+            std::cout << "Input stats: Size=" << testInput.size() << ", Range=[" << minIn << ", " << maxIn << "]"
+                      << ", Mean=" << meanIn << std::endl;
+
+            // Resize tensor
+            interpreter->resizeTensor( input, { 1, (int)testInput.size() } );
+            interpreter->resizeSession( session );
+
+            // Copy input
+            MNN::Tensor inputHost( input, MNN::Tensor::CAFFE );
+            float      *inputData = inputHost.host<float>();
+            memcpy( inputData, testInput.data(), testInput.size() * sizeof( float ) );
+            input->copyFromHostTensor( &inputHost );
+
+            // Run model
+            interpreter->runSession( session );
+
+            // Get output
+            auto output = interpreter->getSessionOutput( session, nullptr );
+            if ( !output )
+            {
+                std::cerr << "ERROR: Failed to get output tensor!" << std::endl;
+                continue;
+            }
+
+            std::cout << "Output tensor info:" << std::endl;
+            LLMUtility::printTensorInfo( output, "  Output" );
+
+            // Copy output
+            MNN::Tensor outputHost( output, output->getDimensionType() );
+            output->copyToHostTensor( &outputHost );
+            float *outputData = outputHost.host<float>();
+
+            // Calculate output size
+            size_t outputSize = 1;
+            for ( int d = 0; d < output->dimensions(); d++ )
+            {
+                outputSize *= output->length( d );
+            }
+
+            // Analyze output
+            if ( outputSize > 0 )
+            {
+                float minOut        = outputData[0];
+                float maxOut        = outputData[0];
+                float sumOut        = 0.0f;
+                int   validCount    = 0;
+                int   nearZeroCount = 0;
+
+                for ( size_t i = 0; i < outputSize; i++ )
+                {
+                    float val = outputData[i];
+
+                    if ( std::isfinite( val ) )
+                    {
+                        validCount++;
+                        sumOut += val;
+                        minOut  = std::min( minOut, val );
+                        maxOut  = std::max( maxOut, val );
+
+                        if ( std::abs( val ) < 1e-10 )
+                        {
+                            nearZeroCount++;
+                        }
+                    }
+                }
+
+                std::cout << "Output analysis:" << std::endl;
+                std::cout << "  Total elements: " << outputSize << std::endl;
+                std::cout << "  Valid elements: " << validCount << std::endl;
+                std::cout << "  Near-zero elements: " << nearZeroCount << std::endl;
+
+                if ( validCount > 0 )
+                {
+                    std::cout << "  Range: [" << minOut << ", " << maxOut << "]" << std::endl;
+                    std::cout << "  Mean: " << ( sumOut / validCount ) << std::endl;
+
+                    // Show first few values
+                    std::cout << "  First 10 values: ";
+                    for ( int i = 0; i < std::min( 10, (int)outputSize ); i++ )
+                    {
+                        std::cout << outputData[i] << " ";
+                    }
+                    std::cout << std::endl;
+
+                    // Check if output is meaningful
+                    if ( std::abs( maxOut - minOut ) > 1e-6 )
+                    {
+                        std::cout << "  STATUS: Output has meaningful variation - MODEL WORKING!" << std::endl;
+                    }
+                    else if ( std::abs( maxOut ) > 1e-10 )
+                    {
+                        std::cout << "  STATUS: Output has small but non-zero values - might be precision issue"
+                                  << std::endl;
+                    }
+                    else
+                    {
+                        std::cout << "  STATUS: Output is essentially zero - MODEL PROBLEM!" << std::endl;
+                    }
+                }
+                else
+                {
+                    std::cout << "  STATUS: No valid output values - MODEL BROKEN!" << std::endl;
+                }
+            }
+        }
+
+        // Clean up
+        interpreter->releaseSession( session );
+    }
+    catch ( const std::exception &e )
+    {
+        std::cerr << "ERROR in expert test: " << e.what() << std::endl;
+    }
+
+    std::cout << "=== END DIRECT EXPERT TEST ===\n" << std::endl;
+}
+
+void MoEModelRunner::testStandardLayerDirectly( const std::string &layerPath, int layerId )
+{
+    std::cout << "\n=== DIRECT STANDARD LAYER TEST ===" << std::endl;
+    std::cout << "Testing: " << layerPath << std::endl;
+    std::cout << "Layer: " << layerId << std::endl;
+
+    try
+    {
+        // Load the layer model directly
+        std::unique_ptr<MNN::Interpreter> interpreter( MNN::Interpreter::createFromFile( layerPath.c_str() ) );
+        if ( !interpreter )
+        {
+            std::cerr << "ERROR: Failed to load standard layer model!" << std::endl;
+            return;
+        }
+
+        // Create session
+        MNN::ScheduleConfig config;
+        config.type      = MNN_FORWARD_VULKAN;
+        config.numThread = 1;
+
+        MNN::Session *session = interpreter->createSession( config );
+        if ( !session )
+        {
+            std::cerr << "ERROR: Failed to create session!" << std::endl;
+            return;
+        }
+
+        // Get input tensor info
+        auto input = interpreter->getSessionInput( session, nullptr );
+        if ( !input )
+        {
+            std::cerr << "ERROR: Failed to get input tensor!" << std::endl;
+            interpreter->releaseSession( session );
+            return;
+        }
+
+        std::cout << "Input tensor info:" << std::endl;
+        LLMUtility::printTensorInfo( input, "  Input" );
+
+        // Test with a simple pattern - all 0.1s (similar to embedding scale)
+        std::vector<float> testInput( hiddenSize, 0.1f );
+
+        std::cout << "Testing with input: size=" << testInput.size() << ", all values=0.1" << std::endl;
+
+        // Resize tensor
+        interpreter->resizeTensor( input, { 1, (int)testInput.size() } );
+        interpreter->resizeSession( session );
+
+        // Copy input
+        MNN::Tensor inputHost( input, MNN::Tensor::CAFFE );
+        float      *inputData = inputHost.host<float>();
+        memcpy( inputData, testInput.data(), testInput.size() * sizeof( float ) );
+        input->copyFromHostTensor( &inputHost );
+
+        // Run model
+        interpreter->runSession( session );
+
+        // Get output
+        auto output = interpreter->getSessionOutput( session, nullptr );
+        if ( !output )
+        {
+            std::cerr << "ERROR: Failed to get output tensor!" << std::endl;
+            interpreter->releaseSession( session );
+            return;
+        }
+
+        std::cout << "Output tensor info:" << std::endl;
+        LLMUtility::printTensorInfo( output, "  Output" );
+
+        // Copy output
+        MNN::Tensor outputHost( output, output->getDimensionType() );
+        output->copyToHostTensor( &outputHost );
+        float *outputData = outputHost.host<float>();
+
+        // Calculate output size
+        size_t outputSize = 1;
+        for ( int d = 0; d < output->dimensions(); d++ )
+        {
+            outputSize *= output->length( d );
+        }
+
+        // Analyze output
+        if ( outputSize > 0 )
+        {
+            float minOut        = outputData[0];
+            float maxOut        = outputData[0];
+            float sumOut        = 0.0f;
+            int   validCount    = 0;
+            int   nearZeroCount = 0;
+
+            for ( size_t i = 0; i < outputSize; i++ )
+            {
+                float val = outputData[i];
+
+                if ( std::isfinite( val ) )
+                {
+                    validCount++;
+                    sumOut += val;
+                    minOut  = std::min( minOut, val );
+                    maxOut  = std::max( maxOut, val );
+
+                    if ( std::abs( val ) < 1e-10 )
+                    {
+                        nearZeroCount++;
+                    }
+                }
+            }
+
+            std::cout << "Output analysis:" << std::endl;
+            std::cout << "  Total elements: " << outputSize << std::endl;
+            std::cout << "  Valid elements: " << validCount << std::endl;
+            std::cout << "  Near-zero elements: " << nearZeroCount << std::endl;
+
+            if ( validCount > 0 )
+            {
+                std::cout << "  Range: [" << minOut << ", " << maxOut << "]" << std::endl;
+                std::cout << "  Mean: " << ( sumOut / validCount ) << std::endl;
+
+                // Show first few values
+                std::cout << "  First 10 values: ";
+                for ( int i = 0; i < std::min( 10, (int)outputSize ); i++ )
+                {
+                    std::cout << outputData[i] << " ";
+                }
+                std::cout << std::endl;
+
+                // Check if output is meaningful
+                if ( std::abs( maxOut - minOut ) > 1e-6 )
+                {
+                    std::cout << "  STATUS: Standard layer working normally!" << std::endl;
+                }
+                else
+                {
+                    std::cout << "  STATUS: Standard layer output issue!" << std::endl;
+                }
+            }
+        }
+
+        // Clean up
+        interpreter->releaseSession( session );
+    }
+    catch ( const std::exception &e )
+    {
+        std::cerr << "ERROR in standard layer test: " << e.what() << std::endl;
+    }
+
+    std::cout << "=== END STANDARD LAYER TEST ===\n" << std::endl;
+}
+
 // Main function
+// Updated main function with expert testing capability
 int main( int argc, char **argv )
 {
     if ( argc < 4 )
     {
-        std::cerr << "Usage: " << argv[0] << " <model_dir> <prompt> <num_tokens> [debug]" << std::endl;
-        std::cerr << "Example: " << argv[0] << " . \"The cat sat on the chair\" 20" << std::endl;
-        std::cerr << "Add 'debug' as 4th argument to run pipeline debugging" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " <model_dir> <prompt> <num_tokens> [debug|test_expert <layer>]"
+                  << std::endl;
+        std::cerr << "Examples:" << std::endl;
+        std::cerr << "  " << argv[0] << " . \"Hello world\" 20" << std::endl;
+        std::cerr << "  " << argv[0] << " . \"Hello world\" 20 debug" << std::endl;
+        std::cerr << "  " << argv[0] << " . \"Hello world\" 20 test_expert 3" << std::endl;
         return 1;
     }
 
-    std::string modelDir  = argv[1];
-    std::string prompt    = argv[2];
-    int         numTokens = 1;
-    bool        runDebug  = false;
+    std::string modelDir    = argv[1];
+    std::string prompt      = argv[2];
+    int         numTokens   = 1;
+    bool        runDebug    = false;
+    bool        testExpert  = false;
+    int         expertLayer = 3;
 
     try
     {
@@ -1169,6 +1541,20 @@ int main( int argc, char **argv )
     {
         runDebug = true;
     }
+    // Check for expert testing flag
+    else if ( argc >= 6 && std::string( argv[4] ) == "test_expert" )
+    {
+        testExpert = true;
+        try
+        {
+            expertLayer = std::stoi( argv[5] );
+        }
+        catch ( ... )
+        {
+            std::cerr << "Invalid expert layer, using default: 3" << std::endl;
+            expertLayer = 3;
+        }
+    }
 
     // Create and initialize the model runner
     MoEModelRunner runner( modelDir, true );
@@ -1177,6 +1563,45 @@ int main( int argc, char **argv )
     {
         std::cerr << "Failed to initialize model runner" << std::endl;
         return 1;
+    }
+
+    if ( testExpert )
+    {
+        // Test specific expert models directly
+        std::cout << "=== EXPERT MODEL TESTING MODE ===" << std::endl;
+
+        // Test the requested layer
+        std::string expertPath = modelDir + "/expert_layer" + std::to_string( expertLayer ) + "_0.mnn";
+        if ( std::filesystem::exists( expertPath ) )
+        {
+            std::cout << "Testing expert for layer " << expertLayer << std::endl;
+            runner.testExpertModelDirectly( expertPath, expertLayer, 0 );
+        }
+        else
+        {
+            std::cerr << "Expert model not found: " << expertPath << std::endl;
+        }
+
+        // Also test a layer 10 expert for comparison (if different from requested)
+        if ( expertLayer != 10 )
+        {
+            std::string layer10ExpertPath = modelDir + "/expert_layer10_4.mnn";
+            if ( std::filesystem::exists( layer10ExpertPath ) )
+            {
+                std::cout << "Testing layer 10 expert for comparison:" << std::endl;
+                runner.testExpertModelDirectly( layer10ExpertPath, 10, 4 );
+            }
+        }
+
+        // Test a standard layer for comparison
+        std::string standardLayerPath = modelDir + "/layer_0_mlp.mnn";
+        if ( std::filesystem::exists( standardLayerPath ) )
+        {
+            std::cout << "Testing standard layer 0 for comparison:" << std::endl;
+            runner.testStandardLayerDirectly( standardLayerPath, 0 );
+        }
+
+        return 0;
     }
 
     if ( runDebug )

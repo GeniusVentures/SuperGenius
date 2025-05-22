@@ -53,7 +53,7 @@ bool GateWeightsHandler::initialize( const std::string &modelDir )
                     if ( addGateModel( layerId, entry.path().string() ) )
                     {
                         foundAny = true;
-                        std::cout << "Added gate model for layer " << layerId << std::endl;
+                        //std::cout << "Added gate model for layer " << layerId << std::endl;
                     }
                 }
             }
@@ -255,8 +255,8 @@ std::vector<int> GateWeightsHandler::selectAvailableExperts( int                
         }
         else if ( debugMode )
         {
-            std::cout << "Expert " << expertId << " recommended by gate but not available for layer " << layerId
-                      << std::endl;
+            //std::cout << "Expert " << expertId << " recommended by gate but not available for layer " << layerId
+            //          << std::endl;
         }
     }
 
