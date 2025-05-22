@@ -11,6 +11,7 @@
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 #include "base/sgns_version.hpp"
+#include "base/ScaledInteger.hpp"
 #include "account/TokenAmount.hpp"
 #include "account/GeniusNode.hpp"
 #include "account/MigrationManager.hpp"
@@ -852,21 +853,22 @@ namespace sgns
         return transaction_manager_->GetBalance();
     }
 
-    outcome::result<std::pair<std::string, uint64_t>> GeniusNode::MintChildTokens(
-        uint64_t /*amount*/,
-        const std::string & /*transaction_hash*/,
-        const std::string & /*chain_id*/,
-        const std::string & /*token_id*/,
-        std::chrono::milliseconds /*timeout*/ )
+    outcome::result<std::pair<std::string, uint64_t>> GeniusNode::MintChildTokens( uint64_t           amount,
+                                                                                   const std::string &transaction_hash,
+                                                                                   const std::string &chain_id,
+                                                                                   const std::string &token_id,
+                                                                                   std::chrono::milliseconds timeout )
     {
-        // TODO: implement child-token mint logic
-        return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::function_not_supported ) );
+        OUTCOME_TRY( auto mainAmount, TokenAmount::ConvertFromChildToken( amount, dev_config_.TokenValueInGNUS ) );
+
+        return MintTokens( mainAmount, transaction_hash, chain_id, token_id, timeout );
     }
 
     outcome::result<uint64_t> GeniusNode::GetChildBalance() const
     {
-        // TODO: implement child-token balance retrieval
-        return outcome::success<uint64_t>( 0 );
+        uint64_t mainRaw = const_cast<GeniusNode *>( this )->GetBalance();
+
+        return TokenAmount::ConvertToChildToken( mainRaw, dev_config_.TokenValueInGNUS );
     }
 
     outcome::result<std::pair<std::string, uint64_t>> GeniusNode::TransferChildTokens(
