@@ -9,7 +9,7 @@
 #include <memory>
 #include <vector>
 
-namespace sgns::crdt 
+namespace sgns::crdt
 {
     class CrdtDatastore;
     class AtomicTransaction;
@@ -19,17 +19,17 @@ namespace sgns::crdt
      * All operations within a transaction are combined into a single delta and published
      * atomically to ensure consistency.
      */
-    class AtomicTransaction 
+    class AtomicTransaction
     {
     public:
         using Buffer = base::Buffer;
-        using Delta = pb::Delta;
+        using Delta  = pb::Delta;
 
         /**
          * @brief Constructor for AtomicTransaction
          * @param datastore pointer to CRDT datastore
          */
-        explicit AtomicTransaction(std::shared_ptr<CrdtDatastore> datastore);
+        explicit AtomicTransaction( std::shared_ptr<CrdtDatastore> datastore );
 
         /**
          * @brief Destructor ensures rollback if not committed
@@ -42,33 +42,35 @@ namespace sgns::crdt
          * @param value buffer value to store
          * @return outcome::success or failure if already committed
          */
-        outcome::result<void> Put(const HierarchicalKey& key, const Buffer& value);
+        outcome::result<void> Put( const HierarchicalKey &key, const Buffer &value );
 
         /**
          * @brief Delete a key in the transaction
          * @param key hierarchical key to remove
          * @return outcome::success or failure if already committed
          */
-        outcome::result<void> Remove(const HierarchicalKey& key);
+        outcome::result<void> Remove( const HierarchicalKey &key );
 
         /**
-         * @brief Commit all operations atomically
-         * @return outcome::success if committed successfully, failure otherwise
+         * @brief    Commits all pending operations atomically.
+         *            Combines all pending operations into a single Delta and publishes it.
+         * @param[in] topic Optional topic name for targeted publishing. If not provided, the default broadcast behavior is used.
+         * @return outcome::success on successful commit, or outcome::failure if an error occurs.
          */
         outcome::result<void> Commit();
 
     private:
-        enum class Operation 
+        enum class Operation
         {
             PUT,
             REMOVE
         };
 
-        struct PendingOperation 
+        struct PendingOperation
         {
-            Operation type;
+            Operation       type;
             HierarchicalKey key;
-            Buffer value;
+            Buffer          value;
         };
 
         /**
@@ -77,8 +79,8 @@ namespace sgns::crdt
         void Rollback();
 
         std::shared_ptr<CrdtDatastore> datastore_;
-        std::vector<PendingOperation> operations_;
-        bool is_committed_;
+        std::vector<PendingOperation>  operations_;
+        bool                           is_committed_;
     };
 
 } // namespace sgns::crdt

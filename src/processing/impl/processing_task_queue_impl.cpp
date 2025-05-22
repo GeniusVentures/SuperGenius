@@ -147,8 +147,9 @@ namespace sgns::processing
         return outcome::failure( boost::system::error_code{} );
     }
 
-    outcome::result<void> ProcessingTaskQueueImpl::CompleteTask( const std::string              &taskKey,
-                                                                 const SGProcessing::TaskResult &taskResult )
+    outcome::result<std::shared_ptr<crdt::AtomicTransaction>> ProcessingTaskQueueImpl::CompleteTask(
+        const std::string              &taskKey,
+        const SGProcessing::TaskResult &taskResult )
     {
         sgns::base::Buffer          data;
         sgns::crdt::HierarchicalKey result_key( { "task_results/tasks/TASK_" + taskKey } );
@@ -157,11 +158,10 @@ namespace sgns::processing
         data.put( taskResult.SerializeAsString() );
         BOOST_OUTCOME_TRYV2( auto &&, job_completion_transaction->Put( std::move( result_key ), std::move( data ) ) );
 
-        BOOST_OUTCOME_TRYV2( auto &&, job_completion_transaction->Commit() );
-
+        //BOOST_OUTCOME_TRYV2( auto &&, job_completion_transaction->Commit() );
 
         m_logger->debug( "TASK_COMPLETED: {}, results stored", taskKey );
-        return outcome::success();
+        return job_completion_transaction;
     }
 
     bool ProcessingTaskQueueImpl::IsTaskCompleted( const std::string &taskId )

@@ -1,6 +1,6 @@
 /**
  * @file       GeniusNode.cpp
- * @brief      
+ * @brief
  * @date       2024-04-18
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
@@ -10,8 +10,8 @@
 #include <rapidjson/document.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
-#include "base/fixed_point.hpp"
 #include "base/sgns_version.hpp"
+#include "account/TokenAmount.hpp"
 #include "account/GeniusNode.hpp"
 #include "crdt/globaldb/keypair_file_storage.hpp"
 #include "upnp.hpp"
@@ -93,16 +93,14 @@ namespace sgns
         autodht_( autodht ),
         isprocessor_( isprocessor ),
         dev_config_( dev_config ),
-        processing_channel_topic_( (boost::format( std::string( PROCESSING_CHANNEL ) ) %
-                                   sgns::version::SuperGeniusVersionMajor()).str() ),
-        processing_grid_chanel_topic_( (boost::format( std::string( PROCESSING_GRID_CHANNEL ) ) %
-                                       sgns::version::SuperGeniusVersionMajor()).str() ),
+        processing_channel_topic_(
+            ( boost::format( std::string( PROCESSING_CHANNEL ) ) % sgns::version::SuperGeniusVersionMajor() ).str() ),
+        processing_grid_chanel_topic_(
+            ( boost::format( std::string( PROCESSING_GRID_CHANNEL ) ) % sgns::version::SuperGeniusVersionMajor() )
+                .str() ),
         m_lastApiCall( std::chrono::system_clock::now() - m_minApiCallInterval )
 
-    //coinprices_(std::make_shared<CoinGeckoPriceRetriever>(io_))
     {
-        //For some reason if this isn't initialized like this, it ends up completely wrong. 
-        m_lastApiCall = std::chrono::system_clock::now() - m_minApiCallInterval;
         SSL_library_init();
         SSL_load_error_strings();
         OpenSSL_add_all_algorithms();
@@ -123,7 +121,7 @@ namespace sgns
 #ifndef SGNS_DEBUGLOGS
         logdir = write_base_path_ + "/sgnslog2.log";
 #endif
-        node_logger               = base::createLogger( "SuperGeniusDemo", logdir );
+        node_logger               = base::createLogger( "SuperGeniusNode", logdir );
         auto loggerGlobalDB       = base::createLogger( "GlobalDB", logdir );
         auto loggerDAGSyncer      = base::createLogger( "GraphsyncDAGSyncer", logdir );
         auto loggerGraphsync      = base::createLogger( "graphsync", logdir );
@@ -144,8 +142,8 @@ namespace sgns
 #ifdef SGNS_DEBUGLOGS
         node_logger->set_level( spdlog::level::err );
         loggerGlobalDB->set_level( spdlog::level::err );
-        loggerDAGSyncer->set_level( spdlog::level::err );
-        loggerGraphsync->set_level( spdlog::level::err );
+        loggerDAGSyncer->set_level( spdlog::level::debug );
+        loggerGraphsync->set_level( spdlog::level::debug );
         loggerBroadcaster->set_level( spdlog::level::err );
         loggerDataStore->set_level( spdlog::level::err );
         loggerTransactions->set_level( spdlog::level::err );
@@ -184,31 +182,71 @@ namespace sgns
 
         auto tokenid = dev_config_.TokenID;
 
-        auto pubsubport    = GenerateRandomPort( base_port, account_->GetAddress() + std::to_string( tokenid ) );
-        auto graphsyncport = pubsubport + 10;
+        auto pubsubport = GenerateRandomPort( base_port, account_->GetAddress() + std::to_string( tokenid ) );
 
         std::vector<std::string> addresses;
         //UPNP
         auto        upnp = std::make_shared<upnp::UPNP>();
         std::string lanip;
+
         if ( upnp->GetIGD() )
         {
-            auto openedPort  = upnp->OpenPort( pubsubport, pubsubport, "TCP", 3600 );
-            auto openedPort2 = upnp->OpenPort( graphsyncport, graphsyncport, "TCP", 3600 );
-            auto wanip       = upnp->GetWanIP();
-            lanip            = upnp->GetLocalIP();
+            std::string wanip = upnp->GetWanIP();
+            lanip             = upnp->GetLocalIP();
             node_logger->info( "Wan IP: {}", wanip );
             node_logger->info( "Lan IP: {}", lanip );
-            addresses.push_back( wanip );
-            if ( !openedPort || !openedPort2 )
+
+            const int   max_attempts = 10;
+            bool        success      = false;
+            std::string owner;
+
+            for ( int i = 0; i < max_attempts; ++i )
             {
-                node_logger->error( "Failed to open port" );
+                int candidate_port = pubsubport + i;
+                if ( upnp->CheckIfPortInUse( candidate_port, "TCP", owner ) )
+                {
+                    if ( owner == lanip )
+                    {
+                        node_logger->info( "Port {} is already mapped by this device. Try using it.", candidate_port );
+                        if ( upnp->OpenPort( candidate_port, candidate_port, "TCP", 3600 ) )
+                        {
+                            addresses.push_back( wanip );
+                            success    = true;
+                            pubsubport = candidate_port;
+                            break;
+                        }
+                        node_logger->error(
+                            "Port {} is already mapped by this device. We tried using it, but could not. Will try other ports.",
+                            candidate_port );
+                        continue;
+                    }
+                    else
+                    {
+                        node_logger->warn( "Port {} already in use by {}", candidate_port, owner );
+                        continue;
+                    }
+                }
+
+                if ( upnp->OpenPort( candidate_port, candidate_port, "TCP", 3600 ) )
+                {
+                    node_logger->info( "Successfully opened port {}", candidate_port );
+                    addresses.push_back( wanip );
+                    success    = true;
+                    pubsubport = candidate_port;
+                    break;
+                }
+                else
+                {
+                    node_logger->warn( "Failed to open port {}", candidate_port );
+                }
             }
-            else
+
+            if ( !success )
             {
-                node_logger->info( "Open Port Success" );
+                node_logger->error( "Unable to open a usable UPnP port after {} attempts", max_attempts );
             }
         }
+
         //Make a base58 out of our address
         std::string                tempaddress = account_->GetAddress();
         std::vector<unsigned char> inputBytes( tempaddress.begin(), tempaddress.end() );
@@ -225,39 +263,60 @@ namespace sgns
         std::string base58key = maybe_base58.value();
 
         gnus_network_full_path_ = ( boost::format( std::string( GNUS_NETWORK_PATH ) ) %
-                                   sgns::version::SuperGeniusVersionMajor() % base58key )
-                                     .str();
+                                    sgns::version::SuperGeniusVersionMajor() % base58key )
+                                      .str();
 
         auto pubsubKeyPath = gnus_network_full_path_ + "/pubs_processor";
 
         pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
             crdt::KeyPairFileStorage( write_base_path_ + pubsubKeyPath ).GetKeyPair().value() );
-        pubsub_->Start(
-            pubsubport,
-            { "/dns4/sg-fullnode-1.gnus.ai/tcp/40052/p2p/12D3KooWBqcxStdb4f9s4zT3bQiTDXYB56VJ77Rt7eEdjw4kXTwi" },
-            lanip,
-            addresses );
+        auto pubs = pubsub_->Start( pubsubport, {}, lanip, addresses );
+        pubs.wait();
+        auto scheduler = std::make_shared<libp2p::protocol::AsioScheduler>( io_, libp2p::protocol::SchedulerConfig{} );
+        auto generator = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
+        auto graphsyncnetwork = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubsub_->GetHost(),
+                                                                                             scheduler );
 
-        globaldb_ = std::make_shared<crdt::GlobalDB>(
-            io_,
-            write_base_path_ + gnus_network_full_path_,
-            graphsyncport,
-            std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_, processing_channel_topic_ ) );
-
-        auto global_db_init_result = globaldb_->Init( crdt::CrdtOptions::DefaultOptions() );
-        if ( global_db_init_result.has_error() )
+        auto global_db_ret = crdt::GlobalDB::New( io_,
+                                                  write_base_path_ + gnus_network_full_path_,
+                                                  pubsub_,
+                                                  crdt::CrdtOptions::DefaultOptions(),
+                                                  graphsyncnetwork,
+                                                  scheduler,
+                                                  generator );
+        if ( global_db_ret.has_error() )
         {
-            auto error = global_db_init_result.error();
+            auto error = global_db_ret.error();
             throw std::runtime_error( error.message() );
-            return;
         }
+        tx_globaldb_  = std::move( global_db_ret.value() );
 
-        task_queue_      = std::make_shared<processing::ProcessingTaskQueueImpl>( globaldb_ );
-        processing_core_ = std::make_shared<processing::ProcessingCoreImpl>( globaldb_, 1000000, 1 );
+        global_db_ret = crdt::GlobalDB::New( io_,
+                                             write_base_path_ + gnus_network_full_path_,
+                                             pubsub_,
+                                             crdt::CrdtOptions::DefaultOptions(),
+                                             graphsyncnetwork,
+                                             scheduler,
+                                             generator,
+                                             tx_globaldb_->GetDataStore() );
+        
+        if ( global_db_ret.has_error() )
+        {
+            auto error = global_db_ret.error();
+            throw std::runtime_error( error.message() );
+        }
+        job_globaldb_ = std::move( global_db_ret.value() );
+
+        job_globaldb_->AddBroadcastTopic( processing_channel_topic_ );
+        job_globaldb_->AddListenTopic( processing_channel_topic_ );
+        job_globaldb_->Start();
+
+        task_queue_      = std::make_shared<processing::ProcessingTaskQueueImpl>( job_globaldb_ );
+        processing_core_ = std::make_shared<processing::ProcessingCoreImpl>( job_globaldb_, 1000000, 1 );
         processing_core_->RegisterProcessorFactory( "mnnimage",
                                                     [] { return std::make_unique<processing::MNN_Image>(); } );
 
-        task_result_storage_ = std::make_shared<processing::SubTaskResultStorageImpl>( globaldb_ );
+        task_result_storage_ = std::make_shared<processing::SubTaskResultStorageImpl>( job_globaldb_ );
         processing_service_  = std::make_shared<processing::ProcessingServiceImpl>(
             pubsub_,                                                          //
             MAX_NODES_COUNT,                                                  //
@@ -271,14 +330,10 @@ namespace sgns
             account_->GetAddress() );
         processing_service_->SetChannelListRequestTimeout( boost::posix_time::milliseconds( 3000 ) );
 
-        transaction_manager_ = std::make_shared<TransactionManager>( globaldb_,
+        transaction_manager_ = std::make_shared<TransactionManager>( tx_globaldb_,
                                                                      io_,
                                                                      account_,
-                                                                     std::make_shared<crypto::HasherImpl>(),
-                                                                     write_base_path_ + gnus_network_full_path_,
-                                                                     pubsub_,
-                                                                     upnp,
-                                                                     graphsyncport );
+                                                                     std::make_shared<crypto::HasherImpl>() );
 
         transaction_manager_->Start();
         if ( isprocessor_ )
@@ -290,20 +345,22 @@ namespace sgns
         {
             DHTInit();
         }
-        RefreshUPNP( pubsubport, graphsyncport );
+        RefreshUPNP( pubsubport );
 
         io_thread = std::thread( [this]() { io_->run(); } );
     }
 
     GeniusNode::~GeniusNode()
     {
-        if ( io_ )
-        {
-            io_->stop(); // Stop our io_context
-        }
+        node_logger->debug( "~GeniusNode CALLED" );
+
         if ( pubsub_ )
         {
             pubsub_->Stop(); // Stop activities of OtherClass
+        }
+        if ( io_ )
+        {
+            io_->stop(); // Stop our io_context
         }
         if ( io_thread.joinable() )
         {
@@ -314,9 +371,10 @@ namespace sgns
         {
             upnp_thread.join();
         }
+        processing_service_->StopProcessing();
     }
 
-    void GeniusNode::RefreshUPNP( int pubsubport, int graphsyncport )
+    void GeniusNode::RefreshUPNP( int pubsubport )
     {
         if ( upnp_thread.joinable() )
         {
@@ -327,7 +385,7 @@ namespace sgns
         stop_upnp = false; // Reset the stop flag for the new thread
 
         upnp_thread = std::thread(
-            [this, pubsubport, graphsyncport]()
+            [this, pubsubport]()
             {
                 auto next_refresh_time = std::chrono::steady_clock::now() + std::chrono::minutes( 60 );
                 auto upnp_shared       = std::make_shared<upnp::UPNP>();
@@ -342,17 +400,14 @@ namespace sgns
                         {
                             if ( upnp->GetIGD() )
                             {
-                                auto openedPort  = upnp->OpenPort( pubsubport, pubsubport, "TCP", 3600 );
-                                auto openedPort2 = upnp->OpenPort( graphsyncport, graphsyncport, "TCP", 3600 );
-                                if ( !openedPort || !openedPort2 )
+                                auto openedPort = upnp->OpenPort( pubsubport, pubsubport, "TCP", 3600 );
+                                if ( !openedPort )
                                 {
                                     node_logger->error( "Failed to open port" );
                                 }
                                 else
                                 {
-                                    node_logger->info( "Open Ports Success pubsub: {} graphsync:{}",
-                                                       pubsubport,
-                                                       graphsyncport );
+                                    node_logger->info( "Open Ports Success pubsub: {} ", pubsubport );
                                 }
                             }
                             else
@@ -471,7 +526,7 @@ namespace sgns
             //}
             //imageindex++;
         }
-        auto cut = sgns::fixed_point::fromString( dev_config_.Cut );
+        auto cut = sgns::TokenAmount::ParseMinions( dev_config_.Cut );
         if ( !cut )
         {
             return outcome::failure( cut.error() );
@@ -484,7 +539,6 @@ namespace sgns
         auto [tx_id, escrow_data_pair] = result_pair;
 
         auto [escrow_path, escrow_data] = escrow_data_pair;
-
 
         task.set_escrow_path( escrow_path );
 
@@ -582,20 +636,16 @@ namespace sgns
         return outcome::success();
     }
 
-    uint64_t GeniusNode::GetProcessCost( const std::string &json_data )
+    outcome::result<uint64_t> GeniusNode::ParseBlockSize( const std::string &json_data )
     {
-        uint64_t costMinions = 0;
         node_logger->info( "Received JSON data: {}", json_data );
-
-        // Parse JSON using RapidJSON
         rapidjson::Document document;
         if ( document.Parse( json_data.c_str() ).HasParseError() )
         {
             node_logger->error( "Invalid JSON data provided" );
-            return 0;
+            return outcome::failure( std::make_error_code( std::errc::invalid_argument ) );
         }
 
-        // "block_len" represents the number of bytes processed.
         rapidjson::Value inputArray;
         if ( document.HasMember( "input" ) && document["input"].IsArray() )
         {
@@ -604,7 +654,7 @@ namespace sgns
         else
         {
             node_logger->error( "This JSON lacks inputs" );
-            return 0;
+            return outcome::failure( std::make_error_code( std::errc::invalid_argument ) );
         }
 
         uint64_t block_total_len = 0;
@@ -619,46 +669,44 @@ namespace sgns
             else
             {
                 node_logger->error( "Missing or invalid block_len in input" );
-                return 0;
+                return outcome::failure( std::make_error_code( std::errc::invalid_argument ) );
             }
         }
-        // Get current GNUS price (USD per GNUS token)
-        auto maybe_gnusPrice = GetGNUSPrice(); // e.g., 3.65463 USD per GNUS
-        if ( !maybe_gnusPrice )
+
+        node_logger->trace( "Total block length: {}", block_total_len );
+        return block_total_len;
+    }
+
+    uint64_t GeniusNode::GetProcessCost( const std::string &json_data )
+    {
+
+        auto blockLen = ParseBlockSize( json_data );
+        if ( !blockLen )
         {
+            node_logger->error( "ParseBlockSize failed" );
             return 0;
         }
-        auto gnusPrice = maybe_gnusPrice.value();
+        node_logger->trace( "Parsed totalBytes: {}", blockLen.value() );
 
-        // Using the assumption: 20 FLOPs per byte and each FLOP costs 5e-15 USD,
-        // the cost per byte in USD is: 20 * 5e-15 = 1e-13 USD.
-        // Converting this to a fixed-point constant with 9 decimals:
-        //    1e-13 USD/byte * 1e9 = 1e-4, i.e., 0.0001, and in fixed point with 9 decimals, that's 100000.
-        uint64_t fixed_cost_per_byte = 100000ULL; // represents 0.0001 in fixed point (precision 9)
-
-        // Calculate the raw cost in minions in fixed point: (block_total_len * fixed_cost_per_byte)
-        auto raw_cost_result = sgns::fixed_point::multiply( block_total_len, fixed_cost_per_byte, 9 );
-        if ( !raw_cost_result )
+        auto maybeGnusPrice = GetGNUSPrice();
+        if ( !maybeGnusPrice )
         {
-            node_logger->error( "Fixed-point multiplication error" );
+            node_logger->error( "GetGNUSPrice failed" );
             return 0;
         }
-        uint64_t raw_cost = raw_cost_result.value();
+        double gnusPrice = maybeGnusPrice.value();
+        node_logger->trace( "Retrieved GNUS price (USD/genius): {}", gnusPrice );
 
-        // Convert GNUS price to fixed-point representation with precision 9:
-        uint64_t gnus_price_fixed = static_cast<uint64_t>( std::round( gnusPrice * 1e9 ) );
-
-        // Now, the cost in minions (in fixed point) is raw_cost divided by gnus_price_fixed:
-        auto cost_result = sgns::fixed_point::divide( raw_cost, gnus_price_fixed, 9 );
-        if ( !cost_result )
+        auto rawMinionsRes = TokenAmount::CalculateCostMinions( blockLen.value(), gnusPrice );
+        if ( !rawMinionsRes )
         {
-            node_logger->info( "Fixed-point division error" );
+            node_logger->error( "TokenAmount::CalculateCostMinions failed" );
             return 0;
         }
-        costMinions = cost_result.value();
+        uint64_t rawMinions = rawMinionsRes.value();
+        node_logger->trace( "Raw cost in minions: {}", rawMinions );
 
-        // Ensure at least one minion is charged.
-        return std::max( costMinions, static_cast<uint64_t>( 1 ) );
+        return rawMinions;
     }
 
     outcome::result<double> GeniusNode::GetGNUSPrice()
@@ -725,7 +773,7 @@ namespace sgns
     }
 
     outcome::result<std::pair<std::string, uint64_t>> GeniusNode::PayDev( uint64_t                  amount,
-                                                                                 std::chrono::milliseconds timeout )
+                                                                          std::chrono::milliseconds timeout )
     {
         auto start_time = std::chrono::steady_clock::now();
         OUTCOME_TRY( auto &&tx_id, transaction_manager_->TransferFunds( amount, dev_config_.Addr ) );
@@ -745,13 +793,16 @@ namespace sgns
         return std::make_pair( tx_id, duration );
     }
 
-    outcome::result<std::pair<std::string, uint64_t>> GeniusNode::PayEscrow( const std::string &escrow_path,
-                                                                             const SGProcessing::TaskResult &taskresult,
-                                                                             std::chrono::milliseconds       timeout )
+    outcome::result<std::pair<std::string, uint64_t>> GeniusNode::PayEscrow(
+        const std::string                       &escrow_path,
+        const SGProcessing::TaskResult          &taskresult,
+        std::shared_ptr<crdt::AtomicTransaction> crdt_transaction,
+        std::chrono::milliseconds                timeout )
     {
         auto start_time = std::chrono::steady_clock::now();
 
-        OUTCOME_TRY( auto &&tx_id, transaction_manager_->PayEscrow( escrow_path, taskresult ) );
+        OUTCOME_TRY( auto &&tx_id,
+                     transaction_manager_->PayEscrow( escrow_path, taskresult, std::move( crdt_transaction ) ) );
 
         bool success = WaitForTransactionOutgoing( tx_id, timeout );
 
@@ -790,16 +841,18 @@ namespace sgns
                 node_logger->info( "No associated Escrow with the task id: {} ", task_id );
                 break;
             }
-            auto pay_result = PayEscrow( maybe_escrow_path.value(), taskresult );
+            auto complete_task_result = task_queue_->CompleteTask( task_id, taskresult );
+            if ( complete_task_result.has_failure() )
+            {
+                node_logger->error( "Unable to complete task: {} ", task_id );
+                break;
+            }
+            auto pay_result = PayEscrow( maybe_escrow_path.value(),
+                                         taskresult,
+                                         std::move( complete_task_result.value() ) );
             if ( pay_result.has_failure() )
             {
                 node_logger->error( "Invalid results for task: {} ", task_id );
-                break;
-            }
-
-            if ( !task_queue_->CompleteTask( task_id, taskresult ) )
-            {
-                node_logger->error( "Unable to complete task: {} ", task_id );
                 break;
             }
 
@@ -813,7 +866,7 @@ namespace sgns
 
     void GeniusNode::PrintDataStore()
     {
-        globaldb_->PrintDataStore();
+        tx_globaldb_->PrintDataStore();
     }
 
     void GeniusNode::StopProcessing()
@@ -826,7 +879,7 @@ namespace sgns
         processing_service_->StartProcessing( processing_grid_chanel_topic_ );
     }
 
-outcome::result<std::map<std::string, double>> GeniusNode::GetCoinprice( const std::vector<std::string> &tokenIds )
+    outcome::result<std::map<std::string, double>> GeniusNode::GetCoinprice( const std::vector<std::string> &tokenIds )
     {
         auto                          currentTime = std::chrono::system_clock::now();
         std::map<std::string, double> result;
@@ -902,12 +955,12 @@ outcome::result<std::map<std::string, double>> GeniusNode::GetCoinprice( const s
 
     std::string GeniusNode::FormatTokens( uint64_t amount )
     {
-        return sgns::fixed_point::toString( amount );
+        return TokenAmount::FormatMinions( amount );
     }
 
     outcome::result<uint64_t> GeniusNode::ParseTokens( const std::string &str )
     {
-        return sgns::fixed_point::fromString( str );
+        return TokenAmount::ParseMinions( str );
     }
 
     // Wait for a transaction to be processed with a timeout
@@ -922,9 +975,13 @@ outcome::result<std::map<std::string, double>> GeniusNode::GetCoinprice( const s
         return transaction_manager_->WaitForTransactionIncoming( txId, timeout );
     }
 
-    bool GeniusNode::WaitForEscrowRelease( const std::string        &originalEscrowId,
-                                                                   std::chrono::milliseconds timeout )
+    bool GeniusNode::WaitForEscrowRelease( const std::string &originalEscrowId, std::chrono::milliseconds timeout )
     {
         return transaction_manager_->WaitForEscrowRelease( originalEscrowId, timeout );
+    }
+
+    void GeniusNode::SendTransactionAndProof( std::shared_ptr<IGeniusTransactions> tx, std::vector<uint8_t> proof )
+    {
+        transaction_manager_->EnqueueTransaction( std::make_pair( tx, proof ) );
     }
 }

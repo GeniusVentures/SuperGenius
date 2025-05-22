@@ -44,17 +44,22 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::crdt, GlobalDB::Error, e )
             return "DAG Syncher listen error";
         case ProofError::CRDT_DATASTORE_NOT_CREATED:
             return "CRDT DataStore creation error";
+        case ProofError::PUBSUB_BROADCASTER_NOT_CREATED:
+            return "Pubsub Broadcaster creation error";
+        case ProofError::INVALID_PARAMETERS:
+            return "Invalid parameters provided";
+        case ProofError::GLOBALDB_NOT_STARTED:
+            return "Start method wasn't called";
     }
     return "Unknown error";
 }
 
 namespace sgns::crdt
 {
-    using RocksDB            = storage::rocksdb;
+
     using CrdtOptions        = crdt::CrdtOptions;
     using CrdtDatastore      = crdt::CrdtDatastore;
     using HierarchicalKey    = crdt::HierarchicalKey;
-    using PubSubBroadcaster  = crdt::PubSubBroadcaster;
     using GraphsyncDAGSyncer = crdt::GraphsyncDAGSyncer;
     using RocksdbDatastore   = ipfs_lite::ipfs::RocksdbDatastore;
     using IpfsRocksDb        = ipfs_lite::rocksdb;
@@ -62,170 +67,89 @@ namespace sgns::crdt
     using GraphsyncImpl      = ipfs_lite::ipfs::graphsync::GraphsyncImpl;
     using GossipPubSubTopic  = ipfs_pubsub::GossipPubSubTopic;
 
-    GlobalDB::GlobalDB( std::shared_ptr<boost::asio::io_context>              context,
-                        std::string                                           databasePath,
-                        int                                                   dagSyncPort,
-                        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> broadcastChannel,
-                        std::string                                           gsaddresses ) :
+    outcome::result<std::shared_ptr<GlobalDB>> GlobalDB::New(
+        std::shared_ptr<boost::asio::io_context>                              context,
+        std::string                                                           databasePath,
+        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>                      pubsub,
+        std::shared_ptr<CrdtOptions>                                          crdtOptions,
+        std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::Network>            graphsyncnetwork,
+        std::shared_ptr<libp2p::protocol::Scheduler>                          scheduler,
+        std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
+        std::shared_ptr<RocksDB>                                              datastore )
+    {
+        if ( ( !context ) || ( !generator ) || ( !pubsub ) || ( !graphsyncnetwork ) )
+        {
+            return outcome::failure( Error::INVALID_PARAMETERS );
+        }
+        auto new_instance = std::shared_ptr<GlobalDB>(
+            new GlobalDB( std::move( context ), std::move( databasePath ), std::move( pubsub ) ) );
+
+        BOOST_OUTCOME_TRYV2( auto &&,
+                             new_instance->Init( std::move( crdtOptions ),
+                                                 std::move( graphsyncnetwork ),
+                                                 std::move( scheduler ),
+                                                 std::move( generator ),
+                                                 std::move( datastore ) ) );
+        return new_instance;
+    }
+
+    GlobalDB::GlobalDB( std::shared_ptr<boost::asio::io_context>         context,
+                        std::string                                      databasePath,
+                        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub ) :
         m_context( std::move( context ) ),
         m_databasePath( std::move( databasePath ) ),
-        m_dagSyncPort( dagSyncPort ),
-        m_graphSyncAddrs( gsaddresses ),
-        m_broadcastChannel( std::move( broadcastChannel ) )
+        m_pubsub( std::move( pubsub ) ),
+        started_{ false }
     {
     }
 
     GlobalDB::~GlobalDB()
     {
+        m_logger->debug( "~GlobalDB CALLED" );
+        m_broadcaster->Stop();
         m_crdtDatastore->Close();
-        m_crdtDatastore    = nullptr;
-        m_broadcastChannel = nullptr;
-        m_context          = nullptr;
     }
 
-std::string GetLocalIP( boost::asio::io_context &io )
+    outcome::result<void> GlobalDB::Init(
+        std::shared_ptr<CrdtOptions>                                          crdtOptions,
+        std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::Network>            graphsyncnetwork,
+        std::shared_ptr<libp2p::protocol::Scheduler>                          scheduler,
+        std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
+        std::shared_ptr<RocksDB>                                              datastore )
     {
-#if defined( _WIN32 )
-        // Windows implementation using GetAdaptersAddresses
-        ULONG                 bufferSize       = 15000;
-        IP_ADAPTER_ADDRESSES *adapterAddresses = (IP_ADAPTER_ADDRESSES *)malloc( bufferSize );
-        if ( GetAdaptersAddresses( AF_INET, 0, nullptr, adapterAddresses, &bufferSize ) == ERROR_BUFFER_OVERFLOW )
+        std::shared_ptr<RocksDB> dataStore = std::move( datastore );
+        if ( dataStore == nullptr )
         {
-            free( adapterAddresses );
-            adapterAddresses = (IP_ADAPTER_ADDRESSES *)malloc( bufferSize );
-        }
-        std::string addr = "127.0.0.1"; // Default to localhost
-        if ( GetAdaptersAddresses( AF_INET, 0, nullptr, adapterAddresses, &bufferSize ) == NO_ERROR )
-        {
-            for ( IP_ADAPTER_ADDRESSES *adapter = adapterAddresses; adapter; adapter = adapter->Next )
+            auto databasePathAbsolute = boost::filesystem::absolute( m_databasePath ).string();
+
+            // Create new database
+            m_logger->info( "Opening database " + databasePathAbsolute );
+            RocksDB::Options options;
+            options.create_if_missing = true; // intentionally
+            try
             {
-                if ( adapter->OperStatus == IfOperStatusUp && adapter->IfType != IF_TYPE_SOFTWARE_LOOPBACK )
+                if ( auto dataStoreResult = RocksDB::create( databasePathAbsolute, options );
+                     dataStoreResult.has_value() )
                 {
-                    for ( IP_ADAPTER_UNICAST_ADDRESS *unicast = adapter->FirstUnicastAddress; unicast;
-                          unicast                             = unicast->Next )
-                    {
-                        SOCKADDR *addrStruct = unicast->Address.lpSockaddr;
-                        if ( addrStruct->sa_family == AF_INET )
-                        { // For IPv4
-                            char buffer[INET_ADDRSTRLEN];
-                            inet_ntop( AF_INET,
-                                       &( ( (struct sockaddr_in *)addrStruct )->sin_addr ),
-                                       buffer,
-                                       INET_ADDRSTRLEN );
-
-                            // Skip APIPA/link-local addresses (169.254.x.x)
-                            if ( strncmp( buffer, "169.254.", 8 ) == 0 )
-                            {
-                                continue;
-                            }
-
-                            addr = buffer;
-                            break;
-                        }
-                    }
+                    dataStore = dataStoreResult.value();
                 }
-                if ( addr != "127.0.0.1" )
+                else
                 {
-                    break; // Stop if we found a non-loopback IP
+                    m_logger->error( "Unable to open database: " + std::string( dataStoreResult.error().message() ) );
+                    return outcome::failure( boost::system::error_code{} );
                 }
             }
-        }
-        free( adapterAddresses );
-        return addr;
-#else
-        // Unix-like implementation using getifaddrs
-        struct ifaddrs *ifaddr, *ifa;
-        int             family;
-        std::string     addr = "127.0.0.1"; // Default to localhost
-        if ( getifaddrs( &ifaddr ) == -1 )
-        {
-            perror( "getifaddrs" );
-            return addr;
-        }
-        for ( ifa = ifaddr; ifa != nullptr; ifa = ifa->ifa_next )
-        {
-            if ( ifa->ifa_addr == nullptr )
+            catch ( std::exception &e )
             {
-                continue;
-            }
-            family = ifa->ifa_addr->sa_family;
-            // We only want IPv4 addresses
-            if ( family == AF_INET && !( ifa->ifa_flags & IFF_LOOPBACK ) )
-            {
-                char host[NI_MAXHOST];
-                int  s = getnameinfo( ifa->ifa_addr,
-                                     sizeof( struct sockaddr_in ),
-                                     host,
-                                     NI_MAXHOST,
-                                     nullptr,
-                                     0,
-                                     NI_NUMERICHOST );
-                if ( s == 0 )
-                {
-                    // Skip APIPA/link-local addresses (169.254.x.x)
-                    if ( strncmp( host, "169.254.", 8 ) == 0 )
-                    {
-                        continue;
-                    }
-
-                    addr = host;
-                    break;
-                }
+                m_logger->error( "Unable to open database: " + std::string( e.what() ) );
+                return Error::ROCKSDB_IO;
             }
         }
-        freeifaddrs( ifaddr );
-        return addr;
-#endif
-    }
+        m_datastore = std::move( dataStore );
 
-    outcome::result<void> GlobalDB::Init( std::shared_ptr<CrdtOptions> crdtOptions )
-    {
-        std::shared_ptr<RocksDB> dataStore            = nullptr;
-        auto                     databasePathAbsolute = boost::filesystem::absolute( m_databasePath ).string();
-
-        // Create new database
-        m_logger->info( "Opening database " + databasePathAbsolute );
-        RocksDB::Options options;
-        options.create_if_missing = true; // intentionally
-        try
-        {
-            if ( auto dataStoreResult = RocksDB::create( databasePathAbsolute, options ); dataStoreResult.has_value() )
-            {
-                dataStore = dataStoreResult.value();
-            }
-            else
-            {
-                m_logger->error( "Unable to open database: " + std::string( dataStoreResult.error().message() ) );
-                return outcome::failure( boost::system::error_code{} );
-            }
-        }
-        catch ( std::exception &e )
-        {
-            m_logger->error( "Unable to open database: " + std::string( e.what() ) );
-            return Error::ROCKSDB_IO;
-        }
-
-        boost::filesystem::path keyPath = databasePathAbsolute + "/key";
-        KeyPairFileStorage      keyPairStorage( keyPath );
-        auto                    keyPair = keyPairStorage.GetKeyPair();
-        //Kademlia Config
-        libp2p::protocol::kademlia::Config kademlia_config;
-        kademlia_config.randomWalk.enabled  = true;
-        kademlia_config.randomWalk.interval = std::chrono::seconds( 300 );
-        kademlia_config.requestConcurency   = 3;
-        kademlia_config.maxProvidersPerKey  = 300;
-        // injector creates and ties dependent objects
-        auto injector = libp2p::injector::makeHostInjector<boost::di::extension::shared_config>(
-            boost::di::bind<boost::asio::io_context>.to( m_context )[boost::di::override],
-            boost::di::bind<libp2p::crypto::KeyPair>.to( keyPair.value() )[boost::di::override] );
-
-        // create asio context
-        auto io = injector.create<std::shared_ptr<boost::asio::io_context>>();
-
-        // Create new DAGSyncer
         IpfsRocksDb::Options rdbOptions;
         rdbOptions.create_if_missing = true; // intentionally
-        auto ipfsDBResult            = IpfsRocksDb::create( dataStore->getDB() );
+        auto ipfsDBResult            = IpfsRocksDb::create( m_datastore->getDB() );
         if ( ipfsDBResult.has_error() )
         {
             m_logger->error( "Unable to create database for IPFS datastore" );
@@ -234,81 +158,38 @@ std::string GetLocalIP( boost::asio::io_context &io )
 
         auto ipfsDataStore = std::make_shared<RocksdbDatastore>( ipfsDBResult.value() );
 
-        auto dagSyncerHost = injector.create<std::shared_ptr<libp2p::Host>>();
-
-        //Make a DHT
-        //auto kademlia =
-        //    injector
-        //    .create<std::shared_ptr<libp2p::protocol::kademlia::Kademlia>>();
-        //dht_ = std::make_shared<sgns::ipfs_lite::ipfs::dht::IpfsDHT>(kademlia, bootstrapAddresses_, m_context);
-        ////Make Holepunch Client
-        //holepunchmsgproc_ = std::make_shared<libp2p::protocol::HolepunchClientMsgProc>(*dagSyncerHost, dagSyncerHost->getNetwork().getConnectionManager());
-        //holepunch_ = std::make_shared<libp2p::protocol::HolepunchClient>(*dagSyncerHost, holepunchmsgproc_, dagSyncerHost->getBus());
-        //holepunch_->start();
-        ////Make Identify
-        //identifymsgproc_ = std::make_shared<libp2p::protocol::IdentifyMessageProcessor>(
-        //    *dagSyncerHost, dagSyncerHost->getNetwork().getConnectionManager(), *injector.create<std::shared_ptr<libp2p::peer::IdentityManager>>(), injector.create<std::shared_ptr<libp2p::crypto::marshaller::KeyMarshaller>>());
-        //identify_ = std::make_shared<libp2p::protocol::Identify>(*dagSyncerHost, identifymsgproc_, dagSyncerHost->getBus(), injector.create<std::shared_ptr<libp2p::transport::Upgrader>>(), [self{ shared_from_this() }]() {
-        //    });
-        //identify_->start();
-
-        //If we used upnp we should have an address list, if not just get local ip
-        std::string localaddress;
-        std::string wanaddress;
-        if ( m_graphSyncAddrs.empty() )
+        if ( !m_pubsub )
         {
-            localaddress = ( boost::format( "/ip4/%s/tcp/%d/p2p/%s" ) % GetLocalIP( *io ) % m_dagSyncPort %
-                             dagSyncerHost->getId().toBase58() )
-                               .str();
+            m_logger->error( "pubsub not initialized." );
+            return outcome::failure( Error::DAG_SYNCHER_NOT_LISTENING );
         }
-        else
-        {
-            //use the first address, which should be the lan address for listening
-            localaddress = ( boost::format( "/ip4/%s/tcp/%d/p2p/%s" ) % m_graphSyncAddrs % m_dagSyncPort %
-                             dagSyncerHost->getId().toBase58() )
-                               .str();
-            //wanaddress = (boost::format("/ip4/%s/tcp/%d/p2p/%s") % m_graphSyncAddrs[1] % m_dagSyncPort % dagSyncerHost->getId().toBase58()).str();
-        }
-        //m_broadcastChannel->GetPubsub()->GetHost()->getObservedAddresses()
-        //auto listen_to = libp2p::multi::Multiaddress::create(
-        //    (boost::format("/ip4/192.168.46.18/tcp/%d/ipfs/%s") % m_dagSyncPort % dagSyncerHost->getId().toBase58()).str()).value();
-        auto listen_to = libp2p::multi::Multiaddress::create( localaddress ).value();
-        m_logger->debug( listen_to.getStringAddress() );
+        std::shared_ptr<libp2p::Host> host = m_pubsub->GetHost();
 
-        auto scheduler = std::make_shared<libp2p::protocol::AsioScheduler>( io, libp2p::protocol::SchedulerConfig{} );
-        auto graphsync = std::make_shared<GraphsyncImpl>( dagSyncerHost, std::move( scheduler ) );
-        auto dagSyncer = std::make_shared<GraphsyncDAGSyncer>( ipfsDataStore, graphsync, dagSyncerHost );
+        auto graphsync = std::make_shared<GraphsyncImpl>( host,
+                                                          std::move( scheduler ),
+                                                          graphsyncnetwork,
+                                                          generator,
+                                                          m_context );
+        auto dagSyncer = std::make_shared<GraphsyncDAGSyncer>( ipfsDataStore, graphsync, host );
 
         // Start DagSyner listener
-        auto listenResult = dagSyncer->Listen( listen_to );
-        if ( listenResult.has_failure() )
+        auto startResult = dagSyncer->StartSync();
+        if ( startResult.has_failure() )
         {
-            m_logger->warn( "DAG syncer failed to listen " + std::string( listen_to.getStringAddress() ) );
-            // @todo Check if the error is not fatal
-            return Error::DAG_SYNCHER_NOT_LISTENING;
+            m_logger->error( "DAG Syncher not listening" );
+            return startResult.error();
         }
 
-        //dht_->Start();
-        //dht_->bootstrap();
-        //scheduleBootstrap(io, dagSyncerHost);
-        // Create pubsub broadcaster
-        //auto broadcaster = std::make_shared<PubSubBroadcaster>(m_broadcastChannel);
-        std::shared_ptr<PubSubBroadcasterExt> broadcaster;
-        if ( m_graphSyncAddrs.empty() )
+        m_broadcaster = PubSubBroadcasterExt::New( dagSyncer, m_pubsub );
+        if ( m_broadcaster == nullptr )
         {
-            broadcaster = PubSubBroadcasterExt::New( m_broadcastChannel, dagSyncer, listen_to );
+            m_logger->error( "Unable to create PubSub broadcaster" );
+            return Error::PUBSUB_BROADCASTER_NOT_CREATED;
         }
-        else
-        {
-            //auto listen_towan = libp2p::multi::Multiaddress::create(wanaddress).value();
-            broadcaster = PubSubBroadcasterExt::New( m_broadcastChannel, dagSyncer, listen_to );
-        }
-        //broadcaster->SetLogger(m_logger);
-
-        m_crdtDatastore = CrdtDatastore::New( dataStore,
+        m_crdtDatastore = CrdtDatastore::New( m_datastore,
                                               HierarchicalKey( "crdt" ),
                                               dagSyncer,
-                                              broadcaster,
+                                              m_broadcaster,
                                               crdtOptions );
         if ( m_crdtDatastore == nullptr )
         {
@@ -316,55 +197,25 @@ std::string GetLocalIP( boost::asio::io_context &io )
             return Error::CRDT_DATASTORE_NOT_CREATED;
         }
 
-        broadcaster->SetCrdtDataStore( m_crdtDatastore );
-
-        // have to set the dataStore before starting the broadcasting
-        broadcaster->Start();
-
-        // TODO: bootstrapping
-        //m_logger->info("Bootstrapping...");
-        //bstr, _ : = multiaddr.NewMultiaddr("/ip4/94.130.135.167/tcp/33123/ipfs/12D3KooWFta2AE7oiK1ioqjVAKajUJauZWfeM7R413K7ARtHRDAu");
-        //inf, _ : = peer.AddrInfoFromP2pAddr(bstr);
-        //list: = append(ipfslite.DefaultBootstrapPeers(), *inf);
-        //ipfs.Bootstrap(list);
-        //h.ConnManager().TagPeer(inf.ID, "keep", 100);
-
-        //if (daemonMode && echoProtocol)
-        //{
-        //  // set a handler for Echo protocol
-        //  libp2p::protocol::Echo echo{ libp2p::protocol::EchoConfig{} };
-        //  host->setProtocolHandler(
-        //    echo.getProtocolId(),
-        //    [&echo](std::shared_ptr<libp2p::connection::Stream> received_stream) {
-        //      echo.handle(std::move(received_stream));
-        //    });
-        //}
         return outcome::success();
     }
 
-    //void GlobalDB::scheduleBootstrap(std::shared_ptr<boost::asio::io_context> io_context, std::shared_ptr<libp2p::Host> host)
-    //{
-    //    auto timer = std::make_shared<boost::asio::steady_timer>(*io_context);
-    //    timer->expires_after(std::chrono::seconds(30));
-    //
-    //    timer->async_wait([self{ shared_from_this() }, timer, io_context, host](const boost::system::error_code& ec) {
-    //        if (!ec && self->obsAddrRetries < 3) {
-    //            if (host->getObservedAddressesReal().size() <= 0)
-    //            {
-    //                self->dht_->bootstrap();
-    //                ++self->obsAddrRetries;
-    //                self->scheduleBootstrap(io_context, host);
-    //            }
-    //        }
-    //        });
-    //}
+    void GlobalDB::Start()
+    {
+        if ( !started_ )
+        {
+            started_ = true;
+            m_crdtDatastore->Start();
+            m_broadcaster->Start();
+        }
+    }
 
     outcome::result<void> GlobalDB::Put( const HierarchicalKey &key, const Buffer &value )
     {
-        if ( !m_crdtDatastore )
+        if ( !started_ )
         {
-            m_logger->error( "CRDT datastore is not initialized yet" );
-            return outcome::failure( Error::CRDT_DATASTORE_NOT_CREATED );
+            m_logger->error( "GlobalDB Not Started" );
+            return outcome::failure( Error::GLOBALDB_NOT_STARTED );
         }
 
         return m_crdtDatastore->PutKey( key, value );
@@ -372,10 +223,10 @@ std::string GetLocalIP( boost::asio::io_context &io )
 
     outcome::result<void> GlobalDB::Put( const std::vector<DataPair> &data_vector )
     {
-        if ( !m_crdtDatastore )
+        if ( !started_ )
         {
-            m_logger->error( "CRDT datastore is not initialized yet" );
-            return outcome::failure( Error::CRDT_DATASTORE_NOT_CREATED );
+            m_logger->error( "GlobalDB Not Started" );
+            return outcome::failure( Error::GLOBALDB_NOT_STARTED );
         }
         AtomicTransaction batch( m_crdtDatastore );
 
@@ -389,10 +240,10 @@ std::string GetLocalIP( boost::asio::io_context &io )
 
     outcome::result<GlobalDB::Buffer> GlobalDB::Get( const HierarchicalKey &key )
     {
-        if ( !m_crdtDatastore )
+        if ( !started_ )
         {
-            m_logger->error( "CRDT datastore is not initialized yet" );
-            return outcome::failure( boost::system::error_code{} );
+            m_logger->error( "GlobalDB Not Started" );
+            return outcome::failure( Error::GLOBALDB_NOT_STARTED );
         }
 
         return m_crdtDatastore->GetKey( key );
@@ -400,10 +251,10 @@ std::string GetLocalIP( boost::asio::io_context &io )
 
     outcome::result<void> GlobalDB::Remove( const HierarchicalKey &key )
     {
-        if ( !m_crdtDatastore )
+        if ( !started_ )
         {
-            m_logger->error( "CRDT datastore is not initialized yet" );
-            return outcome::failure( boost::system::error_code{} );
+            m_logger->error( "GlobalDB Not Started" );
+            return outcome::failure( Error::GLOBALDB_NOT_STARTED );
         }
 
         return m_crdtDatastore->DeleteKey( key );
@@ -411,13 +262,26 @@ std::string GetLocalIP( boost::asio::io_context &io )
 
     outcome::result<GlobalDB::QueryResult> GlobalDB::QueryKeyValues( const std::string &keyPrefix )
     {
-        if ( !m_crdtDatastore )
+        if ( !started_ )
         {
-            m_logger->error( "CRDT datastore is not initialized yet" );
-            return outcome::failure( boost::system::error_code{} );
+            m_logger->error( "GlobalDB Not Started" );
+            return outcome::failure( Error::GLOBALDB_NOT_STARTED );
         }
 
         return m_crdtDatastore->QueryKeyValues( keyPrefix );
+    }
+
+    outcome::result<GlobalDB::QueryResult> GlobalDB::QueryKeyValues( const std::string &prefix_base,
+                                                                     const std::string &middle_part,
+                                                                     const std::string &remainder_prefix )
+    {
+        if ( !started_ )
+        {
+            m_logger->error( "GlobalDB Not Started" );
+            return outcome::failure( Error::GLOBALDB_NOT_STARTED );
+        }
+
+        return m_crdtDatastore->QueryKeyValues( prefix_base, middle_part, remainder_prefix );
     }
 
     outcome::result<std::string> GlobalDB::KeyToString( const Buffer &key ) const
@@ -461,6 +325,26 @@ std::string GetLocalIP( boost::asio::io_context &io )
     std::shared_ptr<AtomicTransaction> GlobalDB::BeginTransaction()
     {
         return std::make_shared<AtomicTransaction>( m_crdtDatastore );
+    }
+
+    void GlobalDB::AddBroadcastTopic( const std::string &topicName )
+    {
+        m_broadcaster->AddBroadcastTopic( topicName );
+    }
+
+    void GlobalDB::AddListenTopic( const std::string &topicName )
+    {
+        m_broadcaster->AddListenTopic( topicName );
+    }
+
+    bool GlobalDB::RegisterElementFilter( const std::string &pattern, GlobalDBFilterCallback filter )
+    {
+        return m_crdtDatastore->RegisterElementFilter( pattern, std::move( filter ) );
+    }
+
+    std::shared_ptr<GlobalDB::RocksDB> GlobalDB::GetDataStore()
+    {
+        return m_datastore;
     }
 
 }

@@ -7,7 +7,8 @@
 #include <boost/format.hpp>
 #include <rapidjson/document.h>
 #include "AccountHelper.hpp"
-
+#include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
+#include <ipfs_lite/ipfs/graphsync/impl/local_requests.hpp>
 extern AccountKey2   ACCOUNT_KEY;
 extern DevConfig_st2 DEV_CONFIG;
 
@@ -57,20 +58,37 @@ namespace sgns
         auto logNoise = sgns::base::createLogger( "Noise" );
         logNoise->set_level( spdlog::level::trace );
 
-        auto pubsubKeyPath =
-            ( boost::format( "SuperGNUSNode.TestNet.%s/pubs_processor" ) % account_->GetAddress() ).str();
+        auto pubsubKeyPath = ( boost::format( "SuperGNUSNode.TestNet.%s/pubs_processor" ) % account_->GetAddress() )
+                                 .str();
 
         pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
             crdt::KeyPairFileStorage( pubsubKeyPath ).GetKeyPair().value() );
         pubsub_->Start( 40001, {} );
 
-        globaldb_ = std::make_shared<crdt::GlobalDB>(
+        auto scheduler = std::make_shared<libp2p::protocol::AsioScheduler>( io_, libp2p::protocol::SchedulerConfig{} );
+        auto graphsyncnetwork = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubsub_->GetHost(),
+                                                                                             scheduler );
+        auto generator        = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
+
+        auto globaldc_ret = crdt::GlobalDB::New(
             io_,
             ( boost::format( "SuperGNUSNode.TestNet.%s" ) % account_->GetAddress() ).str(),
-            40010,
-            std::make_shared<ipfs_pubsub::GossipPubSubTopic>( pubsub_, std::string( PROCESSING_CHANNEL ) ) );
+            pubsub_,
+            crdt::CrdtOptions::DefaultOptions(),
+            graphsyncnetwork,
+            scheduler,
+            generator );
 
-        globaldb_->Init( crdt::CrdtOptions::DefaultOptions() );
+        if ( globaldc_ret.has_error() )
+        {
+            throw std::runtime_error( globaldc_ret.error().message() );
+        }
+
+        globaldb_ = std::move( globaldc_ret.value() );
+        
+        globaldb_->AddListenTopic( std::string( PROCESSING_CHANNEL ) );
+        globaldb_->AddBroadcastTopic( std::string( PROCESSING_CHANNEL ) );
+        globaldb_->Start();
 
         base::Buffer root_hash;
         root_hash.put( std::vector<uint8_t>( 32ul, 1 ) );
@@ -92,15 +110,7 @@ namespace sgns
             throw std::runtime_error( "Error initializing blockchain" );
         }
         block_storage_       = std::move( maybe_block_storage.value() );
-        transaction_manager_ = std::make_shared<TransactionManager>(
-            globaldb_,
-            io_,
-            account_,
-            hasher_,
-            ( boost::format( "SuperGNUSNode.TestNet.%s" ) % account_->GetAddress() ).str(),
-            pubsub_,
-            nullptr,
-            40010 );
+        transaction_manager_ = std::make_shared<TransactionManager>( globaldb_, io_, account_, hasher_ );
         transaction_manager_->Start();
 
         // Encode the string to UTF-8 bytes

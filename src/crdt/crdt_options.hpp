@@ -63,7 +63,7 @@ namespace sgns::crdt
       options->logger = base::createLogger("CrdtDatastore");
       options->rebroadcastIntervalMilliseconds = 10000; // 10s
       options->dagSyncerTimeoutSec = 300; // 5 mins
-      options->numWorkers = 5;
+      options->numWorkers = 1;
       return options;
     }
 

@@ -71,7 +71,7 @@ namespace
         resultChannel.Subscribe( []( boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message &> message ) {}, true );
         sgns::ipfs_pubsub::GossipPubSubTopic resultChannel2( pubs2, "CountTest" );
         resultChannel2.Subscribe( []( boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message &> message ) {},true );
-        //resultChannel2.Publish( "Wow2" );
+        //resultChannel2.Publish();
         std::this_thread::sleep_for( std::chrono::milliseconds( 3000 ) );
         //std::string test = "CountTest";
         std::cout << "Count Of peers: " << resultChannel.getPeerCount() << std::endl;

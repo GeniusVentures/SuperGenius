@@ -20,6 +20,7 @@
 #include "processing/impl/processing_task_queue_impl.hpp"
 #include "coinprices/coinprices.hpp"
 #include <boost/algorithm/string/replace.hpp>
+#include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
 
 typedef struct DevConfig
 {
@@ -78,7 +79,7 @@ namespace sgns
 #endif
 
         outcome::result<std::string> ProcessImage( const std::string &jsondata );
-        outcome::result<void> CheckProcessValidity( const std::string &jsondata );
+        outcome::result<void>        CheckProcessValidity( const std::string &jsondata );
 
         uint64_t GetProcessCost( const std::string &json_data );
 
@@ -94,7 +95,7 @@ namespace sgns
         void DHTInit();
         /**
          * @brief       Mints tokens by converting a string amount to fixed-point representation
-         * @param[in]   amount: Numeric value with amount in Minion Tokens (1e-9 GNUS Token)
+         * @param[in]   amount: Numeric value with amount in Minion Tokens (1e-6 GNUS Token)
          * @return      Outcome of mint token operation
          */
         outcome::result<std::pair<std::string, uint64_t>> MintTokens(
@@ -103,8 +104,9 @@ namespace sgns
             const std::string        &chainid,
             const std::string        &tokenid,
             std::chrono::milliseconds timeout = std::chrono::milliseconds( TIMEOUT_MINT ) );
+
         void     AddPeer( const std::string &peer );
-        void     RefreshUPNP( int pubsubport, int graphsyncport );
+        void     RefreshUPNP( int pubsubport );
         uint64_t GetBalance();
 
         [[nodiscard]] const std::vector<std::vector<uint8_t>> GetInTransactions() const
@@ -138,7 +140,7 @@ namespace sgns
 
         /**
          * @brief       Formats a fixed-point amount into a human-readable string.
-         * @param[in]   amount Amount in Minion Tokens (1e-9 GNUS).
+         * @param[in]   amount Amount in Minion Tokens (1e-6 GNUS).
          * @return      Formatted string representation in GNUS.
          */
         static std::string FormatTokens( uint64_t amount );
@@ -146,7 +148,7 @@ namespace sgns
         /**
          * @brief       Parses a human-readable string into a fixed-point amount.
          * @param[in]   str String representation of an amount in GNUS.
-         * @return      Outcome result with the parsed amount in Minion Tokens (1e-9 GNUS) or error.
+         * @return      Outcome result with the parsed amount in Minion Tokens (1e-6 GNUS) or error.
          */
         static outcome::result<uint64_t> ParseTokens( const std::string &str );
 
@@ -169,14 +171,19 @@ namespace sgns
         // Wait for a outgoing transaction to be processed with a timeout
         bool WaitForTransactionOutgoing( const std::string &txId, std::chrono::milliseconds timeout );
 
-        bool WaitForEscrowRelease(const std::string &originalEscrowId, std::chrono::milliseconds timeout);
+        bool WaitForEscrowRelease( const std::string &originalEscrowId, std::chrono::milliseconds timeout );
 
+    protected:
+        friend class TransactionSyncTest;
+
+        void SendTransactionAndProof( std::shared_ptr<IGeniusTransactions> tx, std::vector<uint8_t> proof );
+        std::shared_ptr<GeniusAccount> account_;
 
     private:
-        std::shared_ptr<GeniusAccount>                        account_;
         std::shared_ptr<ipfs_pubsub::GossipPubSub>            pubsub_;
         std::shared_ptr<boost::asio::io_context>              io_;
-        std::shared_ptr<crdt::GlobalDB>                       globaldb_;
+        std::shared_ptr<crdt::GlobalDB>                       tx_globaldb_;
+        std::shared_ptr<crdt::GlobalDB>                       job_globaldb_;
         std::shared_ptr<TransactionManager>                   transaction_manager_;
         std::shared_ptr<processing::ProcessingTaskQueueImpl>  task_queue_;
         std::shared_ptr<processing::ProcessingCoreImpl>       processing_core_;
@@ -198,23 +205,31 @@ namespace sgns
             std::chrono::time_point<std::chrono::system_clock> lastUpdate;
         };
 
-        std::map<std::string, PriceInfo> m_tokenPriceCache;
-        const std::chrono::minutes       m_cacheValidityDuration{ 1 };
+        std::map<std::string, PriceInfo>                   m_tokenPriceCache;
+        const std::chrono::minutes                         m_cacheValidityDuration{ 1 };
         std::chrono::time_point<std::chrono::system_clock> m_lastApiCall{};
-        const std::chrono::seconds                         m_minApiCallInterval{ 5 };
-
+        static constexpr std::chrono::seconds              m_minApiCallInterval{ 5 };
 
         std::thread       io_thread;
         std::thread       upnp_thread;
         std::atomic<bool> stop_upnp{ false };
 
         outcome::result<std::pair<std::string, uint64_t>> PayEscrow(
-            const std::string              &escrow_path,
-            const SGProcessing::TaskResult &taskresult,
-            std::chrono::milliseconds       timeout = std::chrono::milliseconds( TIMEOUT_ESCROW_PAY ) );
+            const std::string                       &escrow_path,
+            const SGProcessing::TaskResult          &taskresult,
+            std::shared_ptr<crdt::AtomicTransaction> crdt_transaction,
+            std::chrono::milliseconds                timeout = std::chrono::milliseconds( TIMEOUT_ESCROW_PAY ) );
 
         void ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult );
         void ProcessingError( const std::string &task_id );
+
+        /**
+         * @brief Parse and sum all "block_len" values from the JSON.
+         * @param json_data JSON string containing an "input" array.
+         * @return outcome::result<uint64_t> with total bytes, or an error code.
+         */
+        outcome::result<uint64_t> ParseBlockSize( const std::string &json_data );
+
 
         static constexpr std::string_view db_path_                = "bc-%d/";
         static constexpr std::uint16_t    MAIN_NET                = 369;
@@ -226,22 +241,23 @@ namespace sgns
 
         static std::string GetLoggingSystem( const std::string &base_path )
         {
-            std::string config = R"(
-            # ----------------
-            sinks:
-              - name: file
-                type: file
-                capacity: 1000
-                path: [basepath]/sgnslog.log
-            groups:
-              - name: SuperGeniusDemo
-                sink: file
-                level: debug
-                children:
-                  - name: libp2p
-                  - name: Gossip
-            # ----------------
-            )";
+            std::string config( R"(
+# ----------------
+sinks:
+    - name: file
+      type: file
+      capacity: 1000
+      path: [basepath]/sgnslog.log
+groups:
+    - name: SuperGeniusNode
+      sink: file
+      level: debug
+      children:
+        - name: libp2p
+        - name: Gossip
+        - name: yx-stream
+# ----------------
+  )" );
 
             boost::replace_all( config, "[basepath]", base_path );
             return config;

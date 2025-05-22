@@ -43,7 +43,18 @@ target_link_libraries(crdt_graphsync_dagsyncer
     ipfs-lite-cpp::graphsync
     logger
 )
+
 supergenius_install(crdt_graphsync_dagsyncer)
+
+add_library(crdt_data_filter
+    impl/crdt_data_filter.cpp
+)
+target_link_libraries(crdt_data_filter
+    PUBLIC
+    crdt_delta
+)
+
+supergenius_install(crdt_data_filter)
 
 add_library(crdt_datastore
     impl/crdt_datastore.cpp
@@ -55,6 +66,7 @@ target_link_libraries(crdt_datastore
     crdt_set
     crdt_heads
     crdt_graphsync_dagsyncer
+    crdt_data_filter
     logger
     PRIVATE
     crdt_bcast

@@ -26,14 +26,16 @@ namespace sgns
     {
     }
 
-    EscrowTransaction EscrowTransaction::New( UTXOTxParameters         params,
-                                              uint64_t                 amount,
-                                              std::string              dev_addr,
-                                              uint64_t                 peers_cut,
-                                              SGTransaction::DAGStruct dag )
+    EscrowTransaction EscrowTransaction::New( UTXOTxParameters                                params,
+                                              uint64_t                                        amount,
+                                              std::string                                     dev_addr,
+                                              uint64_t                                        peers_cut,
+                                              SGTransaction::DAGStruct                        dag,
+                                              std::shared_ptr<ethereum::EthereumKeyGenerator> eth_key )
     {
         EscrowTransaction instance( std::move( params ), amount, std::move( dev_addr ), peers_cut, std::move( dag ) );
         instance.FillHash();
+        instance.MakeSignature( std::move( eth_key ) );
         return instance;
     }
 
@@ -91,11 +93,11 @@ namespace sgns
         {
             const SGTransaction::TransferOutput &output_proto = utxo_proto_params->outputs( i );
 
-            OutputDestInfo curr{ output_proto.encrypted_amount(),  output_proto.dest_addr()  };
+            OutputDestInfo curr{ output_proto.encrypted_amount(), output_proto.dest_addr() };
             outputs.push_back( curr );
         }
-        uint64_t  amount    = tx_struct.amount();
-        uint64_t  peers_cut = tx_struct.peers_cut();
+        uint64_t amount    = tx_struct.amount();
+        uint64_t peers_cut = tx_struct.peers_cut();
         return std::make_shared<EscrowTransaction>( EscrowTransaction( UTXOTxParameters{ inputs, outputs },
                                                                        amount,
                                                                        tx_struct.dev_addr(),

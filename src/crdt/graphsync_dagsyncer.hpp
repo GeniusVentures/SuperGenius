@@ -71,10 +71,16 @@ namespace sgns::crdt
 
         ~GraphsyncDAGSyncer()
         {
+            logger_->debug( "~GraphsyncDAGSyncer CALLED" );
+            is_stopped_ = true;
+            std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
             graphsync_->stop();
         }
 
         outcome::result<void> Listen( const Multiaddress &listen_to );
+
+        /** Starts instance and subscribes to blocks */
+        outcome::result<void> StartSync();
 
         void AddRoute( const CID &cid, const PeerId &peer, std::vector<Multiaddress> &address );
 
@@ -106,6 +112,12 @@ namespace sgns::crdt
         void AddToBlackList( const PeerId &peer ) const;
         bool IsOnBlackList( const PeerId &peer ) const;
 
+        void                  InitCIDBlock( const CID &cid ) override;
+        bool                  IsCIDInCache( const CID &cid ) const override;
+        outcome::result<void> DeleteCIDBlock( const CID &cid ) override;
+
+        void Stop() override;
+
     protected:
         static constexpr uint64_t TIMEOUT_SECONDS = 1200;
         static constexpr uint64_t MAX_FAILURES    = 3;
@@ -121,8 +133,7 @@ namespace sgns::crdt
         bool             started_ = false;
         std::vector<CID> unexpected_blocks;
 
-        /** Starts instance and subscribes to blocks */
-        outcome::result<void> StartSync();
+
 
         /** Stops instance */
         void StopSync();
@@ -160,10 +171,10 @@ namespace sgns::crdt
         PeerKey                    RegisterPeer( const PeerId &peer, const std::vector<Multiaddress> &address ) const;
         outcome::result<PeerEntry> GetPeerById( PeerKey id ) const;
 
-        void AddCIDBlock( const CID &cid, const std::shared_ptr<ipfs_lite::ipld::IPLDNode> &block );
+        bool AddCIDBlock( const CID &cid, const std::shared_ptr<ipfs_lite::ipld::IPLDNode> &block );
         outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> GrabCIDBlock( const CID &cid ) const;
-        outcome::result<void>                                       DeleteCIDBlock( const CID &cid ) const;
-        outcome::result<void>                                       BlackListPeer( const PeerId &peer ) const;
+
+        outcome::result<void> BlackListPeer( const PeerId &peer ) const;
 
         outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> GetNodeFromMerkleDAG( const CID &cid ) const;
         outcome::result<void>   AddNodeToMerkleDAG( std::shared_ptr<const ipfs_lite::ipld::IPLDNode> node );
@@ -184,7 +195,38 @@ namespace sgns::crdt
 
         /// record successful connections
         void RecordSuccessfulConnection( const PeerId &peer ) const;
+
+    private:
+        struct LRUCIDCache
+        {
+            // Maximum number of blocks to store in the cache
+            static constexpr size_t MAX_CACHE_SIZE = 250;
+
+            // Main storage: CID -> (Node, list iterator)
+            std::map<CID, std::pair<std::shared_ptr<ipfs_lite::ipld::IPLDNode>, std::list<CID>::iterator>> cache_map_;
+
+            // LRU list: most recently used at front, least recently used at back
+            std::list<CID> lru_list_;
+
+            void init( const CID &cid );
+            bool add( const CID &cid, std::shared_ptr<ipfs_lite::ipld::IPLDNode> node );
+            std::shared_ptr<ipfs_lite::ipld::IPLDNode> get( const CID &cid );
+            bool                                       remove( const CID &cid );
+            bool                                       contains( const CID &cid ) const;
+
+            bool hasContent( const CID &cid ) const;
+
+            size_t size() const
+            {
+                return cache_map_.size();
+            }
+        };
+
+        mutable LRUCIDCache lru_cid_cache_;
+        mutable std::mutex  cache_mutex_;
+        std::atomic<bool>   is_stopped_{ false };
     };
+
 }
 
 /**

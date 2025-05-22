@@ -1,8 +1,3 @@
-/**
-* Header file for results data storage implementation over CRDT
-* @author creativeid00, Comments added by Justin Church
-*/
-
 #ifndef GRPC_FOR_SUPERGENIUS_PROCESSING_SUBTASK_RESULT_STORAGE_IMPL_HPP
 #define GRPC_FOR_SUPERGENIUS_PROCESSING_SUBTASK_RESULT_STORAGE_IMPL_HPP
 
@@ -20,6 +15,8 @@ namespace sgns::processing
         * @param db - CRDT globaldb to use
         */
         SubTaskResultStorageImpl( std::shared_ptr<sgns::crdt::GlobalDB> db );
+
+        ~SubTaskResultStorageImpl();
 
         /** Add a subtask result
         * @param result - Result to add

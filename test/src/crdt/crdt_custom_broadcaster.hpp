@@ -26,9 +26,15 @@ namespace sgns::crdt
          * @return buffer value or outcome::failure on error
          */
         outcome::result<base::Buffer> Next() override;
+        
+        bool HasTopic(const std::string &topic) override;
+
 
         /** Queue of broadcast messages */
         std::queue<std::string> listOfBroadcasts_;
+    private:
+        std::mutex               mutex_;
+
     };
 
 } // namespace sgns::crdt

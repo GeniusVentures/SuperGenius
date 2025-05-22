@@ -202,7 +202,7 @@ namespace sgns::crdt
     auto putElementsResult = crdtSet.PutElems(elements, id, lowerPriority);
     ASSERT_FALSE(putElementsResult.has_failure());
 
-    EXPECT_OUTCOME_TRUE_1(crdtSet.PutTombs(elements));
+    EXPECT_OUTCOME_TRUE_1(crdtSet.PutTombs(elements, ""));
 
     for (auto& elem : elements)
     {
@@ -265,7 +265,7 @@ namespace sgns::crdt
     for (auto& tomb : tombstones)
     {
       EXPECT_OUTCOME_EQ(crdtSet.IsValueInSet(tomb.key()), false);
-      EXPECT_OUTCOME_EQ(crdtSet.InTombsKeyID(tomb.key(), tomb.id()), true);
+      EXPECT_OUTCOME_EQ(crdtSet.InTombsKeyID(tomb.key(), id), true);
     }
 
   }

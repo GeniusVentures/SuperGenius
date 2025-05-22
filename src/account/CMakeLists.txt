@@ -16,6 +16,7 @@ add_library(sgns_account
     GeniusNode.cpp
     UTXOTxParameters.cpp
     IGeniusTransactions.cpp
+    TokenAmount.cpp
 )
 
 set_target_properties(sgns_account PROPERTIES UNITY_BUILD ON)
@@ -46,7 +47,7 @@ target_link_libraries(sgns_account
     p2p::p2p_ping
     Boost::Boost.DI
     SGTransactionProto    
-    fixed_point
+    ScaledInteger
     sgns_version
     gnus_upnp
     AsyncIOManager

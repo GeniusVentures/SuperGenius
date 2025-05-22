@@ -19,7 +19,8 @@ namespace sgns
     public:
         static TransferTransaction New( std::vector<OutputDestInfo> destinations,
                                         std::vector<InputUTXOInfo>  inputs,
-                                        SGTransaction::DAGStruct    dag );
+                                        SGTransaction::DAGStruct    dag,
+                                        std::shared_ptr<ethereum::EthereumKeyGenerator> eth_key );
         /**
          * @brief      Default Transfer Transaction destructor
          */
