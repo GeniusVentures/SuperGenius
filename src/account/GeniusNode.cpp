@@ -880,16 +880,26 @@ namespace sgns
         return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::function_not_supported ) );
     }
 
-    std::string GeniusNode::FormatChildTokens( uint64_t /*amount*/ ) const
+    std::string GeniusNode::FormatChildTokens( uint64_t amount ) const
     {
-        // TODO: implement formatting of child-token amounts
-        return std::string{};
+        auto maybe_child_token = TokenAmount::ConvertToChildToken( amount, dev_config_.TokenValueInGNUS );
+        if ( !maybe_child_token )
+        {
+            node_logger->error( "Failed to convert to child token: {}", maybe_child_token.error().message() );
+            return {};
+        }
+
+        return TokenAmount::FormatMinions( maybe_child_token.value() );
     }
 
-    outcome::result<uint64_t> GeniusNode::ParseChildTokens( const std::string & /*amount_str*/ ) const
+    outcome::result<uint64_t> GeniusNode::ParseChildTokens( const std::string &amount_str ) const
     {
-        // TODO: implement parsing of child-token amounts
-        return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::function_not_supported ) );
+        OUTCOME_TRY( auto &&child_token_amount, TokenAmount::ParseMinions( amount_str ) );
+
+        OUTCOME_TRY( auto &&minion_amount,
+                     TokenAmount::ConvertFromChildToken( child_token_amount, dev_config_.TokenValueInGNUS ) );
+
+        return minion_amount;
     }
 
     void GeniusNode::ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult )
