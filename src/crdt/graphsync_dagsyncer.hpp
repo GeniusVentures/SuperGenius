@@ -133,8 +133,6 @@ namespace sgns::crdt
         bool             started_ = false;
         std::vector<CID> unexpected_blocks;
 
-
-
         /** Stops instance */
         void StopSync();
 

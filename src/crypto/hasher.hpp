@@ -60,13 +60,6 @@ namespace sgns::crypto {
        [[nodiscard]] virtual Hash256 keccak_256( gsl::span<const uint8_t> buffer ) const = 0;
 
        /**
-     * @brief blake2s_256 function calculates 32-byte blake2s hash
-     * @param buffer source value
-     * @return 256-bit hash value
-     */
-       [[nodiscard]] virtual Hash256 blake2s_256( gsl::span<const uint8_t> buffer ) const = 0;
-
-       /**
      * @brief sha2_256 function calculates 32-byte sha2-256 hash
      * @param buffer source value
      * @return 256-bit hash value

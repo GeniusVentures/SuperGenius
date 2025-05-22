@@ -22,8 +22,6 @@ namespace sgns::crypto
 
         [[nodiscard]] Hash256 keccak_256( gsl::span<const uint8_t> buffer ) const override;
 
-        [[nodiscard]] Hash256 blake2s_256( gsl::span<const uint8_t> buffer ) const override;
-
         [[nodiscard]] Hash256 sha2_256( gsl::span<const uint8_t> buffer ) const override;
 
         std::string GetName() override
