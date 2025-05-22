@@ -8,7 +8,7 @@
 GateWeightsHandler::GateWeightsHandler() : initialized( false ), debugMode( false )
 {
     // Default config
-    config.type      = MNN_FORWARD_VULKAN; // Use VULKAN by default
+    config.type      = MNN_FORWARD_CPU; // Use VULKAN by default
     config.numThread = 1;
 }
 
