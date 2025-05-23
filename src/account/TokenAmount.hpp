@@ -113,8 +113,8 @@ namespace sgns
          */
         static outcome::result<uint64_t> CalculateCostMinions( uint64_t total_bytes, double price_usd_per_genius );
 
-        static outcome::result<uint64_t> ConvertToChildToken( uint64_t in, std::string ratio );
-        static outcome::result<uint64_t> ConvertFromChildToken( uint64_t in, std::string ratio );
+        static outcome::result<std::string> ConvertToChildToken( uint64_t in, std::string ratio );
+        static outcome::result<uint64_t>    ConvertFromChildToken( std::string in, std::string ratio );
 
     private:
         /// Internal representation in minion units (GNUS * 10^6)

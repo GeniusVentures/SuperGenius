@@ -128,6 +128,15 @@ namespace sgns
         uint64_t Precision() const noexcept;
 
         /**
+         * @brief  Return this value as a string.
+         * @param  fixedDecimals
+         *         - true: always show all fractional digits (pad with zeros up to precision())
+         *         - false: trim trailing '0's in the fractional part (and drop the '.' if no fraction remains)
+         * @return formatted string
+         */
+        std::string ToString( bool fixedDecimals = true ) const;
+
+        /**
          * @brief Add another ScaledInteger with matching precision.
          * @param[in] other      ScaledInteger to add.
          * @return Outcome containing sum ScaledInteger or error.

@@ -219,6 +219,30 @@ namespace sgns
         return precision_;
     }
 
+    std::string ScaledInteger::ToString( bool fixedDecimals ) const
+    {
+        std::string s = ToString( value_, precision_ );
+
+        if ( !fixedDecimals )
+        {
+            auto dotPos = s.find( '.' );
+            if ( dotPos != std::string::npos )
+            {
+                auto lastNonZero = s.find_last_not_of( '0' );
+                if ( lastNonZero != std::string::npos )
+                {
+                    s.erase( lastNonZero + 1 );
+                }
+                if ( !s.empty() && s.back() == '.' )
+                {
+                    s.pop_back();
+                }
+            }
+        }
+
+        return s;
+    }
+
     outcome::result<ScaledInteger> ScaledInteger::Add( const ScaledInteger &other ) const
     {
         if ( precision_ != other.precision_ )

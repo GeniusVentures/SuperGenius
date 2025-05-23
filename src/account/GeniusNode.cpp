@@ -853,22 +853,9 @@ namespace sgns
         return transaction_manager_->GetBalance();
     }
 
-    outcome::result<std::pair<std::string, uint64_t>> GeniusNode::MintChildTokens( uint64_t           amount,
-                                                                                   const std::string &transaction_hash,
-                                                                                   const std::string &chain_id,
-                                                                                   const std::string &token_id,
-                                                                                   std::chrono::milliseconds timeout )
-    {
-        OUTCOME_TRY( auto mainAmount, TokenAmount::ConvertFromChildToken( amount, dev_config_.TokenValueInGNUS ) );
-
-        return MintTokens( mainAmount, transaction_hash, chain_id, token_id, timeout );
-    }
 
     outcome::result<uint64_t> GeniusNode::GetChildBalance() const
     {
-        uint64_t mainRaw = const_cast<GeniusNode *>( this )->GetBalance();
-
-        return TokenAmount::ConvertToChildToken( mainRaw, dev_config_.TokenValueInGNUS );
     }
 
     outcome::result<std::pair<std::string, uint64_t>> GeniusNode::TransferChildTokens(
@@ -889,15 +876,13 @@ namespace sgns
             return {};
         }
 
-        return TokenAmount::FormatMinions( maybe_child_token.value() );
+        return maybe_child_token.value();
     }
 
     outcome::result<uint64_t> GeniusNode::ParseChildTokens( const std::string &amount_str ) const
     {
-        OUTCOME_TRY( auto &&child_token_amount, TokenAmount::ParseMinions( amount_str ) );
-
         OUTCOME_TRY( auto &&minion_amount,
-                     TokenAmount::ConvertFromChildToken( child_token_amount, dev_config_.TokenValueInGNUS ) );
+                     TokenAmount::ConvertFromChildToken( amount_str, dev_config_.TokenValueInGNUS ) );
 
         return minion_amount;
     }
