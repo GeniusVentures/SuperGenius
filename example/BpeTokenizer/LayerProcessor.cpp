@@ -1,9 +1,14 @@
 #include "LayerProcessor.hpp"
 
-
 LayerProcessor::LayerProcessor( int layerId, const std::string &modelDir, bool debug ) :
     layerId( layerId ), modelDir( modelDir ), debugMode( debug )
 {
+    // No longer store attention layer in memory
+}
+
+LayerProcessor::~LayerProcessor()
+{
+    // No cleanup needed since we're not storing sessions
 }
 
 std::vector<int> LayerProcessor::scanExpertsFromFilesystem() const
@@ -67,6 +72,130 @@ void LayerProcessor::scanAvailableExperts()
     {
         std::cerr << "Warning: No expert files found for layer " << layerId << " in directory " << modelDir
                   << std::endl;
+    }
+}
+
+std::vector<float> LayerProcessor::runAttentionLayerTemporary( const std::vector<float> &input )
+{
+    // Load attention layer temporarily
+    std::string attentionPath = modelDir + "/layer_" + std::to_string( layerId ) + "_attention.mnn";
+
+    if ( !std::filesystem::exists( attentionPath ) )
+    {
+        if ( debugMode )
+        {
+            std::cout << "No attention layer found for layer " << layerId << ", skipping attention" << std::endl;
+        }
+        return input; // Pass through if no attention layer
+    }
+
+    try
+    {
+        // Create temporary interpreter
+        std::unique_ptr<MNN::Interpreter> tempAttentionLayer(
+            MNN::Interpreter::createFromFile( attentionPath.c_str() ) );
+
+        if ( !tempAttentionLayer )
+        {
+            std::cerr << "Failed to load attention layer " << layerId << " from " << attentionPath << std::endl;
+            return input; // Pass through on failure
+        }
+
+        // Create temporary session with CPU to save Vulkan instances
+        MNN::ScheduleConfig config;
+        config.type      = MNN_FORWARD_CPU;
+        config.numThread = 1;
+
+        MNN::Session *tempSession = tempAttentionLayer->createSession( config );
+        if ( !tempSession )
+        {
+            std::cerr << "Failed to create session for attention layer " << layerId << std::endl;
+            return input; // Pass through on failure
+        }
+
+        // Get input tensor
+        auto layerInput = tempAttentionLayer->getSessionInput( tempSession, nullptr );
+        if ( !layerInput )
+        {
+            tempAttentionLayer->releaseSession( tempSession );
+            std::cerr << "Failed to get input tensor for attention layer " << layerId << std::endl;
+            return input;
+        }
+
+        // Resize input tensor
+        tempAttentionLayer->resizeTensor( layerInput, { 1, (int)input.size() } );
+        tempAttentionLayer->resizeSession( tempSession );
+
+        // Copy input data
+        MNN::Tensor inputHost( layerInput, MNN::Tensor::CAFFE );
+        float      *inputData = inputHost.host<float>();
+        LLMUtility::safeCopyToTensor( inputData, input );
+        layerInput->copyFromHostTensor( &inputHost );
+
+        // Run attention layer
+        tempAttentionLayer->runSession( tempSession );
+
+        // Get output
+        auto output = tempAttentionLayer->getSessionOutput( tempSession, nullptr );
+        if ( !output )
+        {
+            tempAttentionLayer->releaseSession( tempSession );
+            std::cerr << "Failed to get output tensor for attention layer " << layerId << std::endl;
+            return input;
+        }
+
+        // Copy to host
+        MNN::Tensor outputHost( output, output->getDimensionType() );
+        output->copyToHostTensor( &outputHost );
+        float *outputData = outputHost.host<float>();
+
+        // Get output size
+        size_t outputSize = 1;
+        for ( int d = 0; d < output->dimensions(); d++ )
+        {
+            outputSize *= output->length( d );
+        }
+
+        // Create vector for output
+        std::vector<float> layerOutput( outputSize );
+
+        // Copy output data with validation
+        for ( size_t i = 0; i < outputSize; i++ )
+        {
+            float val = outputData[i];
+            if ( std::isnan( val ) || std::isinf( val ) || std::abs( val ) > 1e6 )
+            {
+                layerOutput[i] = 0.0f; // Replace invalid values
+            }
+            else
+            {
+                layerOutput[i] = val;
+            }
+        }
+
+        // Add residual connection for attention
+        if ( layerOutput.size() == input.size() )
+        {
+            for ( size_t i = 0; i < layerOutput.size(); i++ )
+            {
+                layerOutput[i] += input[i]; // Add input back (residual connection)
+            }
+        }
+
+        // Clean up temporary session
+        tempAttentionLayer->releaseSession( tempSession );
+
+        if ( debugMode )
+        {
+            std::cout << "Temporary attention layer " << layerId << " processed successfully" << std::endl;
+        }
+
+        return layerOutput;
+    }
+    catch ( const std::exception &e )
+    {
+        std::cerr << "Error running temporary attention layer " << layerId << ": " << e.what() << std::endl;
+        return input; // Return input as fallback
     }
 }
 
@@ -140,22 +269,33 @@ bool LayerProcessor::initialize()
 
 std::vector<float> LayerProcessor::process( const std::vector<float> &input, int tokenPosition )
 {
+    std::vector<float> currentOutput = input;
+
+    // Step 1: Run attention layer temporarily (loads and unloads immediately)
+    currentOutput = runAttentionLayerTemporary( currentOutput );
+
+    if ( debugMode )
+    {
+        std::cout << "Layer " << layerId << " attention processed (temporary)" << std::endl;
+    }
+
+    // Step 2: Run MLP/Expert layer (using existing shared handlers)
     if ( !sharedExpertHandler )
     {
         std::cerr << "No expert handler available for layer " << layerId << std::endl;
-        return input; // Pass through input as fallback
+        return currentOutput; // Pass through current output as fallback
     }
 
     // Use the pre-scanned available experts for this layer
     if ( availableExpertIds.empty() )
     {
-        std::cerr << "No experts available for layer " << layerId << "! Skipping layer." << std::endl;
-        return input; // Pass through unchanged
+        std::cerr << "No experts available for layer " << layerId << "! Skipping MLP layer." << std::endl;
+        return currentOutput; // Pass through current output unchanged
     }
 
     if ( debugMode )
     {
-        std::cout << "Layer " << layerId << " processing with " << availableExpertIds.size() << " available experts"
+        std::cout << "Layer " << layerId << " MLP processing with " << availableExpertIds.size() << " available experts"
                   << std::endl;
     }
 
@@ -165,7 +305,7 @@ std::vector<float> LayerProcessor::process( const std::vector<float> &input, int
     if ( sharedGateHandler && sharedGateHandler->hasLayerGate( layerId ) )
     {
         // Use the new method that handles availability filtering
-        selectedExperts = sharedGateHandler->selectAvailableExperts( layerId, input, availableExpertIds, 2 );
+        selectedExperts = sharedGateHandler->selectAvailableExperts( layerId, currentOutput, availableExpertIds, 2 );
 
         if ( debugMode )
         {
@@ -202,36 +342,27 @@ std::vector<float> LayerProcessor::process( const std::vector<float> &input, int
     }
 
     // Run selected experts with proper layer context
-    std::vector<float> resultOutput;
+    std::vector<float> mlpOutput;
     int                successfulExperts = 0;
 
     for ( int expertId : selectedExperts )
     {
-        std::vector<float> expertOutput = sharedExpertHandler->runExpertForLayer( layerId, expertId, input );
-
-        // Add residual connection
-        if ( !expertOutput.empty() && expertOutput.size() == input.size() )
-        {
-            for ( size_t i = 0; i < expertOutput.size(); i++ )
-            {
-                expertOutput[i] += input[i]; // Add input back (residual connection)
-            }
-        }
+        std::vector<float> expertOutput = sharedExpertHandler->runExpertForLayer( layerId, expertId, currentOutput );
 
         if ( !expertOutput.empty() )
         {
             successfulExperts++;
 
-            if ( resultOutput.empty() )
+            if ( mlpOutput.empty() )
             {
-                resultOutput = expertOutput;
+                mlpOutput = expertOutput;
             }
             else
             {
                 // Average with previous results
-                for ( size_t j = 0; j < resultOutput.size() && j < expertOutput.size(); ++j )
+                for ( size_t j = 0; j < mlpOutput.size() && j < expertOutput.size(); ++j )
                 {
-                    resultOutput[j] += expertOutput[j];
+                    mlpOutput[j] += expertOutput[j];
                 }
             }
 
@@ -249,9 +380,9 @@ std::vector<float> LayerProcessor::process( const std::vector<float> &input, int
     // Average the results if we ran multiple experts
     if ( successfulExperts > 1 )
     {
-        for ( size_t j = 0; j < resultOutput.size(); ++j )
+        for ( size_t j = 0; j < mlpOutput.size(); ++j )
         {
-            resultOutput[j] /= successfulExperts;
+            mlpOutput[j] /= successfulExperts;
         }
 
         if ( debugMode )
@@ -260,14 +391,24 @@ std::vector<float> LayerProcessor::process( const std::vector<float> &input, int
         }
     }
 
-    // If no experts ran successfully, return input as fallback
+    // If no experts ran successfully, return current output as fallback
     if ( successfulExperts == 0 )
     {
-        std::cerr << "Failed to run any experts for layer " << layerId << ", passing through input" << std::endl;
-        return input;
+        std::cerr << "Failed to run any experts for layer " << layerId << ", passing through current output"
+                  << std::endl;
+        return currentOutput;
     }
 
-    return resultOutput;
+    // Add residual connection for MLP part
+    if ( mlpOutput.size() == currentOutput.size() )
+    {
+        for ( size_t i = 0; i < mlpOutput.size(); i++ )
+        {
+            mlpOutput[i] += currentOutput[i]; // Add post-attention output back (residual connection)
+        }
+    }
+
+    return mlpOutput;
 }
 
 void LayerProcessor::setDebugMode( bool debug )

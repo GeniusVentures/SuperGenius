@@ -2,8 +2,11 @@
 #define LAYERPROCESSOR_HPP
 #include <string>
 #include <mutex>
+#include <memory>
+#include <MNN/Interpreter.hpp>
 #include "GateWeights.hpp"
 #include "MultiExpert.hpp"
+#include "Utility.hpp"
 
 class LayerProcessor
 {
@@ -11,6 +14,10 @@ private:
     int         layerId;
     std::string modelDir;
     bool        debugMode;
+
+    // NO stored attention layer - load temporarily to save memory
+    // std::unique_ptr<MNN::Interpreter> attentionLayer;  // REMOVED
+    // MNN::Session                     *attentionSession; // REMOVED
 
     // Gate model - shared across all layers for resource efficiency
     static std::shared_ptr<GateWeightsHandler> sharedGateHandler;
@@ -29,9 +36,12 @@ private:
     // Scan for available experts for this layer
     void scanAvailableExperts();
 
+    // Run attention layer temporarily (load, run, cleanup)
+    std::vector<float> runAttentionLayerTemporary( const std::vector<float> &input );
+
 public:
     LayerProcessor( int layerId, const std::string &modelDir, bool debug = false );
-    ~LayerProcessor() = default;
+    ~LayerProcessor();
 
     bool               initialize();
     std::vector<float> process( const std::vector<float> &input, int tokenPosition );
@@ -51,6 +61,13 @@ public:
     const std::vector<int> &getAvailableExpertIds() const
     {
         return availableExpertIds;
+    }
+
+    // Check if attention layer exists (but don't load it)
+    bool hasAttentionLayer() const
+    {
+        std::string attentionPath = modelDir + "/layer_" + std::to_string( layerId ) + "_attention.mnn";
+        return std::filesystem::exists( attentionPath );
     }
 };
 
