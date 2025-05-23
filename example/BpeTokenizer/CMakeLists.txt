@@ -14,6 +14,10 @@ add_executable(BpeTokenizer
 	Utility.cpp
 	GateWeights.hpp
 	GateWeights.cpp
+	MoeModelRunner.cpp
+	MoeModelRunner.hpp
+	LayerProcessor.hpp
+	LayerProcessor.cpp
 )
 add_executable(TestEmbedding
 	TestEmbedding.cpp
