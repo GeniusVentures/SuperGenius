@@ -93,9 +93,10 @@ TEST_P( GeniusNodeMintMainTest, MintMainBalance )
 INSTANTIATE_TEST_SUITE_P(
     MintMainVariations,
     GeniusNodeMintMainTest,
-    ::testing::Values( MintMainCase_s{ .tokenValue = "1.0", .mintMain = 1000, .expectedChild = "1000" },
-                       MintMainCase_s{ .tokenValue = "0.5", .mintMain = 1000, .expectedChild = "2000" },
-                       MintMainCase_s{ .tokenValue = "1.25", .mintMain = 1000, .expectedChild = "800" } ) );
+    ::testing::Values( MintMainCase_s{ .tokenValue = "1", .mintMain = 1000000, .expectedChild = "1" },
+                       MintMainCase_s{ .tokenValue = "0.5", .mintMain = 1000000, .expectedChild = "2.0" },
+                       MintMainCase_s{ .tokenValue = "2", .mintMain = 1000000, .expectedChild = "0.5" },
+                       MintMainCase_s{ .tokenValue = "0.5", .mintMain = 2000000, .expectedChild = "4.0" } ) );
 
 // ------------------ Suite 2: Mint Child Tokens ------------------
 
@@ -163,9 +164,9 @@ TEST_P( GeniusNodeMintChildTest, MintChildBalance )
 INSTANTIATE_TEST_SUITE_P(
     MintChildVariations,
     GeniusNodeMintChildTest,
-    ::testing::Values( MintChildCase_s{ .tokenValue = "1.0", .mintChild = "500", .expectedMain = 500 },
-                       MintChildCase_s{ .tokenValue = "0.5", .mintChild = "1000", .expectedMain = 500 },
-                       MintChildCase_s{ .tokenValue = "1.5", .mintChild = "2000", .expectedMain = 3000 } ) );
+    ::testing::Values( MintChildCase_s{ .tokenValue = "1.0", .mintChild = "1.0", .expectedMain = 1000000 },
+                       MintChildCase_s{ .tokenValue = "0.5", .mintChild = "1.0", .expectedMain = 500000 },
+                       MintChildCase_s{ .tokenValue = "2.0", .mintChild = "1.0", .expectedMain = 2000000 } ) );
 
 // ------------------ Suite 3: Transfer Main Tokens ------------------
 /// @brief Parameters for transfer-main tests
@@ -267,8 +268,8 @@ TEST_P( GeniusNodeTransferChildTest, DISABLED_TransferChildBalance )
     uint64_t initB_main  = nodeB->GetBalance();
     uint64_t initB_child = nodeB->GetChildBalance().value();
 
-    auto r = nodeA->MintChildTokens( c.mintChild, "", "", "" );
-    ASSERT_TRUE( r.has_value() ) << "MintChildTokens failed for " << c;
+    // auto r = nodeA->MintChildTokens( c.mintChild, "", "", "" );
+    // ASSERT_TRUE( r.has_value() ) << "MintChildTokens failed for " << c;
 
     auto t = nodeA->TransferChildTokens( c.transferChild, nodeB->GetAddress(), std::chrono::milliseconds( 20000 ) );
     ASSERT_TRUE( t.has_value() ) << "TransferChildTokens failed for " << c;

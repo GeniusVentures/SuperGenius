@@ -109,7 +109,7 @@ namespace sgns
         return outcome::success( raw_minions );
     }
 
-    outcome::result<uint64_t> TokenAmount::ConvertToChildToken( uint64_t in, std::string ratio )
+    outcome::result<std::string> TokenAmount::ConvertToChildToken( uint64_t in, std::string ratio )
     {
         OUTCOME_TRY( auto ratio_fp, ScaledInteger::New( ratio, PRECISION ) );
 
@@ -117,10 +117,10 @@ namespace sgns
 
         OUTCOME_TRY( auto child_fp, minion_fp->Divide( *ratio_fp ) );
 
-        return outcome::success( child_fp.Value() );
+        return outcome::success( child_fp.ToString() );
     }
 
-    outcome::result<uint64_t> TokenAmount::ConvertFromChildToken( uint64_t in, std::string ratio )
+    outcome::result<uint64_t> TokenAmount::ConvertFromChildToken( std::string in, std::string ratio )
     {
         OUTCOME_TRY( auto ratio_fp, ScaledInteger::New( ratio, PRECISION ) );
 

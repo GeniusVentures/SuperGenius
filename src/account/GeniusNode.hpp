@@ -174,21 +174,6 @@ namespace sgns
         bool WaitForEscrowRelease( const std::string &originalEscrowId, std::chrono::milliseconds timeout );
 
         /**
-         * Mint in a child (fractional) token.
-         * @param amount Amount of child tokens to mint.
-         * @param transaction_hash Transaction identifier.
-         * @param chain_id Blockchain chain identifier.
-         * @param token_id Child token identifier.
-         * @param timeout Optional timeout for confirmation.
-         * @return outcome::result of (tx_hash, minted_amount) or error.
-         */
-        outcome::result<std::pair<std::string, uint64_t>> MintChildTokens(
-            uint64_t                  amount,
-            const std::string        &transaction_hash,
-            const std::string        &chain_id,
-            const std::string        &token_id,
-            std::chrono::milliseconds timeout = std::chrono::milliseconds{ 20000 } );
-        /**
          * @brief Transfer child (fractional) tokens to another address.
          * @param amount Amount of child tokens to transfer (in minions).
          * @param destination Address to receive the tokens.
