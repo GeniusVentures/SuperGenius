@@ -13,10 +13,12 @@ namespace sgns
 {
     TransferTransaction::TransferTransaction( std::vector<OutputDestInfo> destinations,
                                               std::vector<InputUTXOInfo>  inputs,
-                                              SGTransaction::DAGStruct    dag ) :
+                                              SGTransaction::DAGStruct    dag,
+                                              std::string                 token_id  ) :
         IGeniusTransactions( "transfer", SetDAGWithType( std::move( dag ), "transfer" ) ), //
         input_tx_( std::move( inputs ) ),                                                  //
-        outputs_( std::move( destinations ) )                                              //
+        outputs_( std::move( destinations ) ),                                             //
+        token_id_( std::move( token_id ) )
     {
     }
 
@@ -25,7 +27,9 @@ namespace sgns
                                                   SGTransaction::DAGStruct                        dag,
                                                   std::shared_ptr<ethereum::EthereumKeyGenerator> eth_key )
     {
-        TransferTransaction instance( std::move( destinations ), std::move( inputs ), std::move( dag ) );
+        std::string token_id = "GNUS";
+        TransferTransaction instance( std::move( destinations ), std::move( inputs ), std::move( dag ), token_id  );
+        
         instance.FillHash();
         instance.MakeSignature( std::move( eth_key ) );
         return instance;
@@ -35,7 +39,7 @@ namespace sgns
     {
         SGTransaction::TransferTx tx_struct;
         tx_struct.mutable_dag_struct()->CopyFrom( this->dag_st );
-        tx_struct.set_token_id( 0 );
+        tx_struct.set_token_id( token_id_ );
         SGTransaction::UTXOTxParams *utxo_proto_params = tx_struct.mutable_utxo_params();
 
         for ( const auto &input : input_tx_ )
@@ -85,8 +89,9 @@ namespace sgns
             OutputDestInfo curr{ output_proto.encrypted_amount(), output_proto.dest_addr() };
             outputs.push_back( curr );
         }
+        std::string token_id = tx_struct.token_id(); 
 
-        return std::make_shared<TransferTransaction>( TransferTransaction( outputs, inputs, tx_struct.dag_struct() ) );
+        return std::make_shared<TransferTransaction>( TransferTransaction( outputs, inputs, tx_struct.dag_struct(), token_id ));
     }
 
     std::vector<OutputDestInfo> TransferTransaction::GetDstInfos() const
@@ -99,4 +104,8 @@ namespace sgns
         return input_tx_;
     }
 
+    std::string TransferTransaction::GetTokenId() const
+    {
+        return token_id_;
+    }
 }
