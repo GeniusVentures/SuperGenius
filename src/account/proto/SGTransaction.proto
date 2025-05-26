@@ -38,7 +38,7 @@ message UTXOTxParams
 message TransferTx
 {
     DAGStruct dag_struct = 1;// 
-    uint64 token_id = 2; // 
+    bytes token_id = 2; // 
     UTXOTxParams utxo_params = 3; //
 
 }
