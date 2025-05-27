@@ -805,20 +805,6 @@ namespace sgns
         return transaction_manager_->GetBalance();
     }
 
-
-    outcome::result<uint64_t> GeniusNode::GetChildBalance() const
-    {
-    }
-
-    outcome::result<std::pair<std::string, uint64_t>> GeniusNode::TransferChildTokens(
-        uint64_t /*amount*/,
-        const std::string & /*destination*/,
-        std::chrono::milliseconds /*timeout*/ )
-    {
-        // TODO: implement transfer child tokens
-        return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::function_not_supported ) );
-    }
-
     std::string GeniusNode::FormatChildTokens( uint64_t amount ) const
     {
         auto maybe_child_token = TokenAmount::ConvertToChildToken( amount, dev_config_.TokenValueInGNUS );

@@ -174,23 +174,6 @@ namespace sgns
         bool WaitForEscrowRelease( const std::string &originalEscrowId, std::chrono::milliseconds timeout );
 
         /**
-         * @brief Transfer child (fractional) tokens to another address.
-         * @param amount Amount of child tokens to transfer (in minions).
-         * @param destination Address to receive the tokens.
-         * @param timeout Maximum time to wait for transaction confirmation.
-         * @return outcome::result of a pair(tx_hash, duration_ms), or an error code.
-         */
-        outcome::result<std::pair<std::string, uint64_t>> TransferChildTokens(
-            uint64_t                  amount,
-            const std::string        &destination,
-            std::chrono::milliseconds timeout = std::chrono::milliseconds{ 20000 } );
-        /**
-         * Query balance in child (fractional) tokens.
-         * @return outcome::result of the current child-token balance or error.
-         */
-        outcome::result<uint64_t> GetChildBalance() const;
-
-        /**
          * @brief Format a child-token amount into a human-readable string.
          * @param amount Amount of child tokens (in minions).
          * @return Formatted string, e.g. "1.234 GChild".
