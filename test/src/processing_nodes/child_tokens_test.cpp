@@ -7,69 +7,86 @@
 #include <atomic>
 #include "account/GeniusNode.hpp"
 #include "testutil/wait_condition.hpp"
+#include <boost/multiprecision/cpp_dec_float.hpp>
 
 using namespace sgns::test;
+using boost::multiprecision::cpp_dec_float_50;
 
 namespace
 {
     /**
      * @brief Helper to create a GeniusNode with its own directory and cleanup.
      * @param tokenValue TokenValueInGNUS to initialize DevConfig.
-     * @param outPath Receives the created base path for cleanup.
      * @return unique_ptr to the initialized GeniusNode.
      */
-    std::unique_ptr<sgns::GeniusNode> CreateNode( const std::string &tokenValue, std::string &outPath )
+    std::unique_ptr<sgns::GeniusNode> CreateNode( const std::string &tokenValue )
     {
         static std::atomic<int> node_counter{ 0 };
-        int                     id         = node_counter.fetch_add( 1 );
-        std::string             binaryPath = boost::dll::program_location().parent_path().string();
-        std::string             testName   = ::testing::UnitTest::GetInstance()->current_test_info()->name();
-        outPath                            = binaryPath + "/" + testName + "_" + std::to_string( id );
+        int                     id = node_counter.fetch_add( 1 );
+
+        std::string binaryPath = boost::dll::program_location().parent_path().string();
+        const char *filePath   = ::testing::UnitTest::GetInstance()->current_test_info()->file();
+        std::string fileStem   = std::filesystem::path( filePath ).stem().string();
+        auto        outPath    = binaryPath + "/" + fileStem + "/node" + std::to_string( id ) + "/";
 
         DevConfig_st devConfig = { "0xcafe", "0.65", tokenValue, 0, "" };
         std::strncpy( devConfig.BaseWritePath, outPath.c_str(), sizeof( devConfig.BaseWritePath ) - 1 );
         devConfig.BaseWritePath[sizeof( devConfig.BaseWritePath ) - 1] = '\0';
 
-        const char *key  = "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
-        auto        node = std::make_unique<sgns::GeniusNode>( devConfig, key, false, false );
+        std::string key;
+        key.reserve( 64 );
+
+        std::mt19937 rng( static_cast<uint32_t>( std::time( nullptr ) ) + static_cast<uint32_t>( id ) );
+        std::uniform_int_distribution<> dist( 0, 15 );
+
+        std::generate_n( std::back_inserter( key ),
+                         64,
+                         [&]()
+                         {
+                             static constexpr std::string_view hex_chars = "0123456789abcdef";
+                             return hex_chars[dist( rng )];
+                         } );
+
+        auto node = std::make_unique<sgns::GeniusNode>( devConfig, key.c_str(), false, false );
         std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
         return node;
     }
+
+    /**
+     * Adds two decimal numbers represented as strings.
+     * @param a Decimal string, e.g. "-0.4"
+     * @param b Decimal string, e.g. "0.6"
+     * @return std::string Result of the addition without unnecessary trailing zeros, e.g. "0.2"
+     */
+    std::string addDecimalStrings( const std::string &a, const std::string &b )
+    {
+        cpp_dec_float_50 da( a );
+        cpp_dec_float_50 db( b );
+        cpp_dec_float_50 sum = da + db;
+        std::string      s   = sum.convert_to<std::string>();
+        if ( s.find( '.' ) != std::string::npos )
+        {
+            while ( !s.empty() && s.back() == '0' )
+            {
+                s.pop_back();
+            }
+            if ( !s.empty() && s.back() == '.' )
+            {
+                s.pop_back();
+            }
+        }
+        return s;
+    }
+
 } // namespace
 
 /// Suite: Simple Three-Node Transfers
 
-TEST( SimpleThreeNodeTransferTest, Node51AndNode52ToNode50 )
+TEST( TransferTokenValue, ThreeNodeTransferTest )
 {
-    const std::string binary_path = boost::dll::program_location().parent_path().string();
-
-    DevConfig_st cfg50 = { "0xcafe", "0.65", "1.0", 0, {} };
-    DevConfig_st cfg51 = { "0xcafe", "0.65", "0.5", 0, {} };
-    DevConfig_st cfg52 = { "0xcafe", "0.65", "2.0", 0, {} };
-
-    std::strncpy( cfg50.BaseWritePath, ( binary_path + "/node50/" ).c_str(), sizeof( cfg50.BaseWritePath ) - 1 );
-    std::strncpy( cfg51.BaseWritePath, ( binary_path + "/node51/" ).c_str(), sizeof( cfg51.BaseWritePath ) - 1 );
-    std::strncpy( cfg52.BaseWritePath, ( binary_path + "/node52/" ).c_str(), sizeof( cfg52.BaseWritePath ) - 1 );
-
-    cfg50.BaseWritePath[sizeof( cfg50.BaseWritePath ) - 1] = '\0';
-    cfg51.BaseWritePath[sizeof( cfg51.BaseWritePath ) - 1] = '\0';
-    cfg52.BaseWritePath[sizeof( cfg52.BaseWritePath ) - 1] = '\0';
-
-    auto node50 = std::make_unique<sgns::GeniusNode>(
-        cfg50,
-        "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-        false,
-        false );
-    auto node51 = std::make_unique<sgns::GeniusNode>(
-        cfg51,
-        "eeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-        false,
-        false );
-    auto node52 = std::make_unique<sgns::GeniusNode>(
-        cfg52,
-        "feadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-        false,
-        false );
+    auto node50 = CreateNode( "1.0" );
+    auto node51 = CreateNode( "0.5" );
+    auto node52 = CreateNode( "2.0" );
 
     node51->GetPubSub()->AddPeers( { node50->GetPubSub()->GetLocalAddress() } );
     node52->GetPubSub()->AddPeers( { node50->GetPubSub()->GetLocalAddress() } );
@@ -156,11 +173,10 @@ class GeniusNodeMintMainTest : public ::testing::TestWithParam<MintMainCase_s>
 {
 };
 
-TEST_P( GeniusNodeMintMainTest, DISABLED_MintMainBalance )
+TEST_P( GeniusNodeMintMainTest, MintMainBalance )
 {
-    auto        p = GetParam();
-    std::string basePath;
-    auto        node = CreateNode( p.tokenValue, basePath );
+    auto p    = GetParam();
+    auto node = CreateNode( p.tokenValue );
 
     uint64_t    initialMain        = node->GetBalance();
     std::string initialChildStr    = node->FormatChildTokens( initialMain );
@@ -215,11 +231,10 @@ protected:
     }
 };
 
-TEST_P( GeniusNodeMintChildTest, DISABLED_MintChildBalance )
+TEST_P( GeniusNodeMintChildTest, MintChildBalance )
 {
-    auto        p = GetParam();
-    std::string basePath;
-    auto        node = CreateNode( p.tokenValue, basePath );
+    auto p    = GetParam();
+    auto node = CreateNode( p.tokenValue );
 
     uint64_t    initialMain     = node->GetBalance();
     std::string initialChildStr = node->FormatChildTokens( initialMain );
@@ -260,142 +275,88 @@ INSTANTIATE_TEST_SUITE_P(
 /// Parameters for transfer-main tests
 typedef struct
 {
-    std::string tokenValue;     ///< TokenValueInGNUS (used to mint child tokens)
-    uint64_t    mintValue;      ///< Amount to mint on child node
-    uint64_t    transferMain;   ///< Amount to transfer from child to base
-    std::string expBase_child;  ///< Expected delta on base child tokens
-    std::string expChild_child; ///< Expected delta on child child tokens
+    std::string tokenValue;    ///< TokenValueInGNUS of child node
+    uint64_t    transferValue; ///< Amount to transfer from main to child
+    std::string deltaMain;     ///< Expected delta on main tokens
+    std::string deltaChild;    ///< Expected delta on child tokens
 } TransferMainCase_s;
 
 inline std::ostream &operator<<( std::ostream &os, TransferMainCase_s const &c )
 {
-    return os << "TransferMainCase_s{tokenValue='" << c.tokenValue << "', mintValue=" << c.mintValue
-              << ", transferMain=" << c.transferMain << ", expBase_child='" << c.expBase_child << "', expChild_child='"
-              << c.expChild_child << "'}";
+    return os << "TransferMainCase_s{tokenValue='" << c.tokenValue << ", transferValue=" << c.transferValue
+              << ", deltaMain='" << c.deltaMain << "', deltaChild='" << c.deltaChild << "'}";
 }
 
 class GeniusNodeTransferMainTest : public ::testing::TestWithParam<TransferMainCase_s>
 {
 protected:
-    // Shared binary path & counter
-    static inline std::string      binary_path;
-    static inline std::atomic<int> dir_counter{ 30 };
+    static void SetUpTestSuite() {}
 
-    // Base node lives for entire suite
-    static inline sgns::GeniusNode *base_node = nullptr;
-    // All created nodes (base + children)
-    static inline std::vector<sgns::GeniusNode *> all_nodes;
+    static void TearDownTestSuite() {}
 
-    // Child node for each test
-    sgns::GeniusNode *child_node = nullptr;
-    DevConfig_st      dev_cfg_child{};
+    void SetUp() override {}
 
-    // Called once before any tests in this suite
-    static void SetUpTestSuite()
-    {
-        // Initialize binary path
-        binary_path = boost::dll::program_location().parent_path().string();
-
-        // Configure base node
-        DevConfig_st cfg_base  = { "0xcafe", "0.65", "1.0", 0, {} };
-        std::string  base_path = binary_path + "/node00/";
-        std::strncpy( cfg_base.BaseWritePath, base_path.c_str(), sizeof( cfg_base.BaseWritePath ) - 1 );
-
-        // Instantiate base node
-        base_node = new sgns::GeniusNode( cfg_base,
-                                          "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                          false,
-                                          false );
-        all_nodes.push_back( base_node );
-        std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
-    }
-
-    static void TearDownTestSuite()
-    {
-        for ( auto node : all_nodes )
-        {
-            delete node;
-        }
-        all_nodes.clear();
-    }
-
-    void SetUp() override
-    {
-        int         id         = dir_counter.fetch_add( 1 );
-        std::string child_path = binary_path + "/node" + std::to_string( id ) + "/";
-
-        dev_cfg_child = { "0xcafe", "0.65", "1.0", 0, {} };
-        std::strncpy( dev_cfg_child.BaseWritePath, child_path.c_str(), sizeof( dev_cfg_child.BaseWritePath ) - 1 );
-
-        child_node = new sgns::GeniusNode( dev_cfg_child,
-                                           "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                           false,
-                                           false );
-        all_nodes.push_back( child_node );
-        std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
-
-        auto base_addr  = base_node->GetPubSub()->GetLocalAddress();
-        auto child_addr = child_node->GetPubSub()->GetLocalAddress();
-        base_node->GetPubSub()->AddPeers( { child_addr } );
-        child_node->GetPubSub()->AddPeers( { base_addr } );
-        std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
-    }
-
-    // No per-test cleanup; nodes live until TearDownTestSuite
     void TearDown() override {}
 };
 
-TEST_P( GeniusNodeTransferMainTest, DISABLED_TransferMainBalance )
+TEST_P( GeniusNodeTransferMainTest, TransferMainBalance )
 {
     const auto c = GetParam();
 
-    // Record initial balances
-    auto initBase_main  = base_node->GetBalance();
-    auto parsedInitBase = base_node->ParseChildTokens( base_node->FormatChildTokens( initBase_main ) );
-    ASSERT_TRUE( parsedInitBase.has_value() );
+    auto nodeMain  = CreateNode( "1.0" );
+    auto nodeChild = CreateNode( c.tokenValue );
 
-    auto initChild_main  = child_node->GetBalance();
-    auto parsedInitChild = child_node->ParseChildTokens( child_node->FormatChildTokens( initChild_main ) );
-    ASSERT_TRUE( parsedInitChild.has_value() );
+    nodeMain->GetPubSub()->AddPeers( { nodeChild->GetPubSub()->GetLocalAddress() } );
+    nodeChild->GetPubSub()->AddPeers( { nodeMain->GetPubSub()->GetLocalAddress() } );
+    std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
 
-    // Mint on child and transfer to base
     ASSERT_TRUE(
-        child_node->MintTokens( c.mintValue, "", "", "", std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) )
+        nodeMain->MintTokens( c.transferValue, "", "", "", std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) )
             .has_value() );
-    auto [txId, _] = child_node
-                         ->TransferFunds( c.transferMain,
-                                          base_node->GetAddress(),
+
+    // Record initial balances
+    auto initMain     = nodeMain->GetBalance();
+    auto initMainStr  = nodeMain->FormatChildTokens( initMain );
+    auto initChild    = nodeChild->GetBalance();
+    auto initChildStr = nodeChild->FormatChildTokens( initMain );
+
+    std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
+    auto [txId, _] = nodeMain
+                         ->TransferFunds( c.transferValue,
+                                          nodeChild->GetAddress(),
                                           std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) )
                          .value();
     ASSERT_TRUE(
-        base_node->WaitForTransactionIncoming( txId, std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) ) );
+        nodeMain->WaitForTransactionIncoming( txId, std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) ) );
 
     // Verify final balances and child deltas
-    auto finalBase_main  = base_node->GetBalance();
-    auto parsedFinalBase = base_node->ParseChildTokens( base_node->FormatChildTokens( finalBase_main ) );
-    ASSERT_TRUE( parsedFinalBase.has_value() );
-
-    auto finalChild_main  = child_node->GetBalance();
-    auto parsedFinalChild = child_node->ParseChildTokens( child_node->FormatChildTokens( finalChild_main ) );
-    ASSERT_TRUE( parsedFinalChild.has_value() );
-
-    auto expBase_val  = base_node->ParseChildTokens( c.expBase_child );
-    auto expChild_val = child_node->ParseChildTokens( c.expChild_child );
-    ASSERT_TRUE( expBase_val.has_value() && expChild_val.has_value() );
+    auto finalMain  = nodeMain->GetBalance();
+    auto finalChild = nodeChild->GetBalance();
 
     // Child balance decreased by transfer; base balance increased by transfer
-    EXPECT_EQ( finalChild_main - initChild_main, c.mintValue - c.transferMain );
-    EXPECT_EQ( finalBase_main - initBase_main, c.transferMain );
+    EXPECT_EQ( finalMain - initMain, c.transferValue );
+    EXPECT_EQ( finalChild - initChild, c.transferValue );
+
     // Child and base child-token deltas
-    EXPECT_EQ( parsedFinalChild.value() - parsedInitChild.value(), expChild_val.value() );
-    EXPECT_EQ( parsedFinalBase.value() - parsedInitBase.value(), expBase_val.value() );
+    const auto finalMainString      = nodeMain->FormatChildTokens( finalMain );
+    const auto expectedFinalMainStr = addDecimalStrings( initMainStr, c.deltaMain );
+    EXPECT_EQ( finalMainString, expectedFinalMainStr );
+
+    auto       finalChildString      = nodeChild->FormatChildTokens( finalChild );
+    const auto expectedFinalChildStr = addDecimalStrings( initChildStr, c.deltaChild );
+    EXPECT_EQ( finalChildString, expectedFinalChildStr );
 }
 
 INSTANTIATE_TEST_SUITE_P( TransferMainVariations,
                           GeniusNodeTransferMainTest,
-                          ::testing::Values( TransferMainCase_s{ "1.0", 1000000, 400000, "0.4", "0.6" },
-                                             TransferMainCase_s{ "1.0", 1000000, 400000, "0.4", "0.6" },
-                                             TransferMainCase_s{ "0.5", 2000000, 500000, "0.25", "0.75" } ) );
+                          ::testing::Values( TransferMainCase_s{ .tokenValue    = "1.0",
+                                                                 .transferValue = 400000,
+                                                                 .deltaMain     = "-0.4",
+                                                                 .deltaChild    = "0.6" },
+                                             TransferMainCase_s{ .tokenValue    = "0.5",
+                                                                 .transferValue = 500000,
+                                                                 .deltaMain     = "-0.5",
+                                                                 .deltaChild    = "1.0" } ) );
 
 // ------------------ Suite 4: Transfer Child via Main Methods ------------------
 
@@ -418,12 +379,11 @@ class GeniusNodeTransferChildTest : public ::testing::TestWithParam<TransferChil
 {
 };
 
-TEST_P( GeniusNodeTransferChildTest, DISABLED_TransferChildBalance )
+TEST_P( GeniusNodeTransferChildTest, TransferChildBalance )
 {
-    auto        c = GetParam();
-    std::string baseA, baseB;
-    auto        nodeA = CreateNode( c.tokenValue, baseA );
-    auto        nodeB = CreateNode( c.tokenValue, baseB );
+    auto c     = GetParam();
+    auto nodeA = CreateNode( c.tokenValue );
+    auto nodeB = CreateNode( c.tokenValue );
 
     uint64_t initA_main     = nodeA->GetBalance();
     auto     initA_childStr = nodeA->FormatChildTokens( initA_main );
@@ -457,7 +417,7 @@ TEST_P( GeniusNodeTransferChildTest, DISABLED_TransferChildBalance )
     EXPECT_EQ( finalB.value() - parsedInitB.value(), expB_childVal.value() );
 }
 
-INSTANTIATE_TEST_SUITE_P( DISABLED_TransferChildVariations,
+INSTANTIATE_TEST_SUITE_P( TransferChildVariations,
                           GeniusNodeTransferChildTest,
                           ::testing::Values( TransferChildCase_s{ "1.0", "0.2", "-0.2", "0.2" },
                                              TransferChildCase_s{ "0.5", "0.25", "-0.25", "0.25" } ) );
