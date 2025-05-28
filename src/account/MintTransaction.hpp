@@ -31,6 +31,8 @@ namespace sgns
 
         uint64_t GetAmount() const;
 
+        std::string GetTokenID() const;
+
         std::string GetTransactionSpecificPath() override
         {
             return GetType();

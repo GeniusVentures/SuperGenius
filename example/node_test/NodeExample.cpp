@@ -366,7 +366,7 @@ std::string generate_eth_private_key() {
     return oss.str();
 }
 
-DevConfig_st DEV_CONFIG{ "0xcafe", "0.65", "1.0", 0 , "./"};
+DevConfig_st DEV_CONFIG{ "0xcafe", "0.65", "1.0", "GNUS Token" , "./"};
 
 int main(int argc, char *argv[])
 {

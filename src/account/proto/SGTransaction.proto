@@ -29,6 +29,7 @@ message TransferOutput
 {
     uint64 encrypted_amount = 1; // 
     bytes dest_addr = 2; // 
+    bytes token_id = 3; //
 }
 message UTXOTxParams
 {
