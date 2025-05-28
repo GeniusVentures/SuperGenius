@@ -32,8 +32,8 @@ namespace sgns
         {
             auto [temp_elgamal_address, temp_eth_address] = maybe_address.value();
 
-            eth_address = std::make_shared<ethereum::EthereumKeyGenerator>(std::move(temp_eth_address));
-            elgamal_address = std::make_shared<KeyGenerator::ElGamal>(std::move(temp_elgamal_address));
+            eth_address     = std::make_shared<ethereum::EthereumKeyGenerator>( std::move( temp_eth_address ) );
+            elgamal_address = std::make_shared<KeyGenerator::ElGamal>( std::move( temp_elgamal_address ) );
         }
         else
         {
@@ -93,4 +93,32 @@ namespace sgns
 
         return std::make_pair( std::move( elgamal_key ), std::move( eth_key ) );
     }
+
+    uint64_t GeniusAccount::GetBalance( const std::string &token_id ) const
+    {
+        uint64_t balance = 0;
+        for ( const auto &utxo : utxos )
+        {
+            if ( !utxo.GetLock() && utxo.GetTokenID() == token_id )
+            {
+                balance += utxo.GetAmount();
+            }
+        }
+        return balance;
+    }
+
+    uint64_t GeniusAccount::GetBalance( const std::vector<std::string> &token_ids ) const
+    {
+        std::unordered_set<std::string> token_set( token_ids.begin(), token_ids.end() );
+        uint64_t                        balance = 0;
+        for ( const auto &utxo : utxos )
+        {
+            if ( !utxo.GetLock() && token_set.count( utxo.GetTokenID() ) )
+            {
+                balance += utxo.GetAmount();
+            }
+        }
+        return balance;
+    }
+
 }

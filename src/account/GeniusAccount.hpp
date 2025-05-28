@@ -18,6 +18,8 @@
 #include "account/GeniusUTXO.hpp"
 #include "account/UTXOTxParameters.hpp"
 #include "outcome/outcome.hpp"
+#include <vector>
+#include <array>
 
 namespace sgns
 {
@@ -70,6 +72,10 @@ namespace sgns
         {
             return std::to_string( GetBalance<uint64_t>() );
         }
+
+        uint64_t GetBalance( const std::string &token_id ) const;
+
+        uint64_t GetBalance( const std::vector<std::string> &token_ids ) const;
 
         [[nodiscard]] std::string GetToken() const
         {
