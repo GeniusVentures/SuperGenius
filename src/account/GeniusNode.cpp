@@ -148,7 +148,7 @@ namespace sgns
         loggerGraphsync->set_level( spdlog::level::err );
         loggerBroadcaster->set_level( spdlog::level::err );
         loggerDataStore->set_level( spdlog::level::err );
-        loggerTransactions->set_level( spdlog::level::err );
+        loggerTransactions->set_level( spdlog::level::debug );
         loggerQueue->set_level( spdlog::level::err );
         loggerRocksDB->set_level( spdlog::level::err );
         logkad->set_level( spdlog::level::err );
