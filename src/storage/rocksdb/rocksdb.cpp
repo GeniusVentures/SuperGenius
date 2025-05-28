@@ -42,24 +42,21 @@ namespace sgns::storage
 
         // Open the RocksDB database
         DB  *db     = nullptr;
-        auto status = DB::Open( *( l->options_ ), std::string( path ), &db );
+        auto status = DB::Open( *l->options_, std::string( path ), &db );
 
         if ( status.ok() )
         {
             // Wrap DB* into a shared_ptr with a custom deleter to ensure cleanup
             l->db_ = std::shared_ptr<DB>( db );
             // Create logger
-            l->logger_ = base::createLogger( "rocksdb" );
+            l->logger_  = base::createLogger( "rocksdb" );
             l->wo_.sync = true;
             l->setWriteOptions( l->wo_ );
             return l; // Return the shared_ptr
         }
 
         // Clean up manually allocated DB if Open() succeeded but logic fails
-        if ( db )
-        {
-            delete db;
-        }
+        delete db;
 
         // Return an error result
         return error_as_result<std::shared_ptr<rocksdb>>( status );
@@ -123,10 +120,8 @@ namespace sgns::storage
         ReadOptions read_options      = ro_;
         read_options.auto_prefix_mode = true; //Adaptive Prefix Mode
 
-        auto strKeyPrefix = std::string( keyPrefix.toString() );
-
         QueryResult results;
-        auto        iter        = std::unique_ptr<rocksdb::Iterator>( db_->NewIterator( read_options ) );
+        auto        iter        = std::unique_ptr<Iterator>( db_->NewIterator( read_options ) );
         auto        slicePrefix = make_slice( keyPrefix );
         for ( iter->Seek( slicePrefix ); iter->Valid() && iter->key().starts_with( slicePrefix ); iter->Next() )
         {
@@ -145,8 +140,8 @@ namespace sgns::storage
     {
         ReadOptions read_options      = ro_;
         read_options.auto_prefix_mode = true; //Adaptive Prefix Mode
-        bool negated_query            = ( !middle_part.empty() && middle_part[0] == '!' );
-        bool simplified_query         = ( !( middle_part == "*" ) ) && ( !negated_query );
+        bool negated_query            = !middle_part.empty() && middle_part[0] == '!';
+        bool simplified_query         = middle_part != "*" && !negated_query;
 
         auto strKeyPrefix = prefix_base;
         if ( simplified_query )
@@ -155,7 +150,7 @@ namespace sgns::storage
         }
 
         QueryResult results;
-        auto        iter = std::unique_ptr<rocksdb::Iterator>( db_->NewIterator( read_options ) );
+        auto        iter = std::unique_ptr<Iterator>( db_->NewIterator( read_options ) );
         for ( iter->Seek( strKeyPrefix ); iter->Valid() && iter->key().starts_with( strKeyPrefix ); iter->Next() )
         {
             const std::string &key_string = iter->key().ToString();
@@ -239,7 +234,7 @@ namespace sgns::storage
             key.put( iter->key().ToString() );
 
             value.put( iter->value().ToString() );
-            ret_val.push_back( std::make_pair( key, value ) );
+            ret_val.emplace_back( key, value );
         }
         return ret_val;
     }

@@ -49,18 +49,18 @@ namespace sgns::crdt
         auto     combined_delta = std::make_shared<Delta>();
         uint64_t max_priority   = 0;
 
-        for ( const auto &op : operations_ )
+        for ( const auto &[type, key, value] : operations_ )
         {
             std::shared_ptr<Delta> delta;
-            if ( op.type == Operation::PUT )
+            if ( type == Operation::PUT )
             {
                 OUTCOME_TRY( ( auto &&, result ),
-                             datastore_->CreateDeltaToAdd( op.key.GetKey(), std::string( op.value.toString() ) ) );
+                             datastore_->CreateDeltaToAdd( key.GetKey(), std::string( value.toString() ) ) );
                 delta = result;
             }
             else // REMOVE
             {
-                OUTCOME_TRY( ( auto &&, result ), datastore_->CreateDeltaToRemove( op.key.GetKey() ) );
+                OUTCOME_TRY( ( auto &&, result ), datastore_->CreateDeltaToRemove( key.GetKey() ) );
                 delta = result;
             }
 

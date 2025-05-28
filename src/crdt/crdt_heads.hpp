@@ -3,9 +3,10 @@
 
 #include <mutex>
 #include <storage/rocksdb/rocksdb.hpp>
+#include <map>
+
 #include "crdt/hierarchical_key.hpp"
 #include <primitives/cid/cid.hpp>
-#include <map>
 
 namespace sgns::crdt
 {
@@ -19,7 +20,7 @@ namespace sgns::crdt
 
     /** Constructor
     * @param aDatastore Pointer to datastore
-    * @param aNamespace Namespce key (e.g "/namespace")
+    * @param aNamespace Namespace key (e.g "/namespace")
     */
     CrdtHeads( std::shared_ptr<DataStore> aDatastore, const HierarchicalKey &aNamespace );
 
@@ -34,12 +35,12 @@ namespace sgns::crdt
     /** Equality operator
     * @return true if equal otherwise, it returns false.
     */
-    bool operator==(const CrdtHeads&);
+    bool operator==(const CrdtHeads& ) const;
 
     /** Equality operator
     * @return true if NOT equal otherwise, it returns false.
     */
-    bool operator!=(const CrdtHeads&);
+    bool operator!=(const CrdtHeads&) const;
 
     /** Assignment operator
     */
@@ -54,7 +55,7 @@ namespace sgns::crdt
     * @param aCid Content identifier
     * @return full path to CID key as HierarchicalKey or outcome::failure on error
     */
-    outcome::result<HierarchicalKey> GetKey(const CID& aCid);
+    outcome::result<HierarchicalKey> GetKey(const CID& aCid ) const;
 
     /** Check if CID is among the current heads.
     * @param aCid Content identifier
@@ -69,7 +70,7 @@ namespace sgns::crdt
     outcome::result<uint64_t> GetHeadHeight(const CID& aCid);
 
     /** Get current number of heads
-    * @return lenght, current number of heads or outcome::failure on error
+    * @return length, current number of heads or outcome::failure on error
     */
     outcome::result<int> GetLength();
 
@@ -89,11 +90,8 @@ namespace sgns::crdt
     outcome::result<void> Replace( const CID &aCidHead, const CID &aNewHeadCid, uint64_t aHeight );
 
     /** Returns the list of current heads plus the max height.
-    * @param aHeads output reference to list of CIDs
-    * @param aMaxHeight output reference to maximum height
-    * @return outcome::failure on error
     */
-    outcome::result<void> GetList(std::vector<CID>& aHeads, uint64_t& aMaxHeight);
+    std::pair<std::vector<CID>, uint64_t> GetList();
 
   protected:
 

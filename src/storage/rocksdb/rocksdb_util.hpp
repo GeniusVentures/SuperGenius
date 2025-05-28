@@ -15,7 +15,7 @@ namespace sgns::storage
 {
 
   template <typename T>
-  inline outcome::result<T> error_as_result(const rocksdb::Status &s) 
+    outcome::result<T> error_as_result(const rocksdb::Status &s)
   {
     if (s.ok())
     {
@@ -51,7 +51,7 @@ namespace sgns::storage
   }
 
   template <typename T>
-  inline outcome::result<T> error_as_result(const rocksdb::Status &s,
+  outcome::result<T> error_as_result(const rocksdb::Status &s,
                                             const base::Logger &logger) 
   {
     logger->error(s.ToString());

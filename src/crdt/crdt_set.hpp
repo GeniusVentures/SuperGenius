@@ -44,12 +44,12 @@ namespace sgns::crdt
 
         /** Constructor
         * @param aDatastore Pointer to datastore
-        * @param aNamespace Namespce key (e.g "/namespace")
-        * @param aPutHookPtr Function pointer to nofify when key added to datastore, default nullptr
-        * @param aDeleteHookPtr Function pointer to nofify when key deleted from datastore, default nullptr
+        * @param aNamespace Namespace key (e.g "/namespace")
+        * @param aPutHookPtr Function pointer to notify when key added to datastore, default nullptr
+        * @param aDeleteHookPtr Function pointer to notify when key deleted from datastore, default nullptr
         */
         CrdtSet( std::shared_ptr<DataStore> aDatastore,
-                 const HierarchicalKey     &aNamespace,
+                 HierarchicalKey            aNamespace,
                  PutHookPtr                 aPutHookPtr    = nullptr,
                  DeleteHookPtr              aDeleteHookPtr = nullptr );
 
@@ -64,12 +64,12 @@ namespace sgns::crdt
         /** Equality operator
         * @return true if equal otherwise, it returns false.
         */
-        bool operator==( const CrdtSet & );
+        bool operator==( const CrdtSet & ) const;
 
         /** Equality operator
         * @return true if NOT equal otherwise, it returns false.
         */
-        bool operator!=( const CrdtSet & );
+        bool operator!=( const CrdtSet & ) const;
 
         /** Assignment operator
         */
@@ -93,7 +93,7 @@ namespace sgns::crdt
         * @param aKey HierarchicalKey to get value from datastore
         * @return buffer value as string or outcome::failure on error
         */
-        outcome::result<std::string> GetValueFromDatastore( const HierarchicalKey &aKey );
+        outcome::result<std::string> GetValueFromDatastore( const HierarchicalKey &aKey ) const;
 
         /** Returns a new delta-set adding the given key/value.
         * @param aKey delta key to add to datastore
@@ -159,7 +159,7 @@ namespace sgns::crdt
         * @param aKey key string
         * @return HierarchicalKey with key prefix
         */
-        HierarchicalKey KeyPrefix( const std::string &aKey );
+        HierarchicalKey KeyPrefix( const std::string &aKey ) const;
 
         /** Get elems full path prefix in namespace for a key
         * /namespace/s/<key>
@@ -299,7 +299,7 @@ namespace sgns::crdt
         */
         outcome::result<void> DataStoreSync( const std::vector<HierarchicalKey> &aKeyList );
 
-        void PrintDataStore();
+        void PrintDataStore() const;
 
     private:
         CrdtSet() = default;

@@ -435,17 +435,11 @@ namespace sgns::crdt
 
     void CrdtDatastore::RebroadcastHeads()
     {
-        uint64_t         maxHeight = 0;
         std::vector<CID> heads;
         if ( this->heads_ != nullptr )
         {
-            auto getListResult = this->heads_->GetList( heads, maxHeight );
-            if ( getListResult.has_failure() )
-            {
-                logger_->error( "RebroadcastHeads: Failed to get list of heads (error code {})",
-                                getListResult.error() );
-                return;
-            }
+            auto [heads_, _] = this->heads_->GetList();
+            heads            = heads_;
         }
 
         auto broadcastResult = this->Broadcast( heads );
@@ -866,13 +860,7 @@ namespace sgns::crdt
             return outcome::failure( boost::system::error_code{} );
         }
 
-        uint64_t         height = 0;
-        std::vector<CID> heads;
-        auto             getListResult = heads_->GetList( heads, height );
-        if ( getListResult.has_failure() )
-        {
-            return outcome::failure( getListResult.error() );
-        }
+        auto [heads, height] = heads_->GetList();
 
         height = height + 1; // This implies our minimum height is 1
         aDelta->set_priority( height );
@@ -926,13 +914,7 @@ namespace sgns::crdt
             return outcome::failure( boost::system::error_code{} );
         }
 
-        uint64_t         height = 0;
-        std::vector<CID> heads;
-        auto             getListResult = heads_->GetList( heads, height );
-        if ( getListResult.has_failure() )
-        {
-            return outcome::failure( getListResult.error() );
-        }
+        auto [heads, _] = heads_->GetList();
 
         std::vector<CID> set;
         for ( const auto &head : heads )

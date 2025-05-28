@@ -10,11 +10,11 @@ namespace sgns::crdt
 {
 
     CrdtSet::CrdtSet( std::shared_ptr<DataStore> aDatastore,
-                      const HierarchicalKey     &aNamespace,
+                      HierarchicalKey            aNamespace,
                       PutHookPtr                 aPutHookPtr,
                       DeleteHookPtr              aDeleteHookPtr ) :
         dataStore_( std::move( aDatastore ) ),
-        namespaceKey_( aNamespace ),
+        namespaceKey_( std::move( aNamespace ) ),
         putHookFunc_( std::move( aPutHookPtr ) ),
         deleteHookFunc_( std::move( aDeleteHookPtr ) )
     {
@@ -37,7 +37,7 @@ namespace sgns::crdt
         return *this;
     }
 
-    bool CrdtSet::operator==( const CrdtSet &aSet )
+    bool CrdtSet::operator==( const CrdtSet &aSet ) const
     {
         bool returnEqual  = true;
         returnEqual      &= this->dataStore_ == aSet.dataStore_;
@@ -45,12 +45,12 @@ namespace sgns::crdt
         return returnEqual;
     }
 
-    bool CrdtSet::operator!=( const CrdtSet &aSet )
+    bool CrdtSet::operator!=( const CrdtSet &aSet ) const
     {
         return !( *this == aSet );
     }
 
-    outcome::result<std::string> CrdtSet::GetValueFromDatastore( const HierarchicalKey &aKey )
+    outcome::result<std::string> CrdtSet::GetValueFromDatastore( const HierarchicalKey &aKey ) const
     {
         if ( this->dataStore_ == nullptr )
         {
@@ -60,20 +60,16 @@ namespace sgns::crdt
         Buffer bufferKey;
         bufferKey.put( aKey.GetKey() );
 
-        auto bufferValueResult = dataStore_->get( bufferKey );
-        if ( bufferValueResult.has_failure() )
-        {
-            return outcome::failure( bufferValueResult.error() );
-        }
+        BOOST_OUTCOME_TRY( auto &&bufferValue, dataStore_->get( bufferKey ) );
 
-        std::string strValue = std::string( bufferValueResult.value().toString() );
+        std::string strValue( bufferValue.toString() );
         return strValue;
     }
 
     outcome::result<std::shared_ptr<CrdtSet::Delta>> CrdtSet::CreateDeltaToAdd( const std::string &aKey,
                                                                                 const std::string &aValue )
     {
-        auto delta   = std::make_shared<CrdtSet::Delta>();
+        auto delta   = std::make_shared<Delta>();
         auto element = delta->add_elements();
         element->set_key( aKey );
         element->set_value( aValue );
@@ -83,23 +79,19 @@ namespace sgns::crdt
 
     outcome::result<std::shared_ptr<CrdtSet::Delta>> CrdtSet::CreateDeltaToRemove( const std::string &aKey )
     {
-        auto delta = std::make_shared<CrdtSet::Delta>();
+        auto delta = std::make_shared<Delta>();
         // /namespace/s/<key>
         auto prefix         = this->ElemsPrefix( aKey );
         auto strElemsPrefix = prefix.GetKey();
 
         Buffer keyPrefixBuffer;
         keyPrefixBuffer.put( strElemsPrefix );
-        auto queryResult = this->dataStore_->query( keyPrefixBuffer );
-        if ( queryResult.has_failure() )
-        {
-            return outcome::failure( queryResult.error() );
-        }
+        BOOST_OUTCOME_TRY( auto queryResult, this->dataStore_->query( keyPrefixBuffer ) );
 
-        for ( const auto &bufferKeyAndValue : queryResult.value() )
+        for ( const auto &[key, _] : queryResult )
         {
-            std::string keyWithPrefix = std::string( bufferKeyAndValue.first.toString() );
-            std::string id            = keyWithPrefix.erase( 0, strElemsPrefix.size() );
+            std::string keyWithPrefix( key.toString() );
+            std::string id = keyWithPrefix.erase( 0, strElemsPrefix.size() );
 
             auto hId = HierarchicalKey( id );
 
@@ -110,8 +102,8 @@ namespace sgns::crdt
 
             // check if its already tombed, which case don't add it to the
             // Remove delta set.
-            auto isDeletedResult = this->InTombsKeyID( aKey, hId.GetKey() );
-            if ( isDeletedResult.has_value() && !isDeletedResult.value() )
+            auto already_deleted = this->InTombsKeyID( aKey, hId.GetKey() );
+            if ( already_deleted.has_value() && !already_deleted.value() )
             {
                 auto tombstone = delta->add_tombstones();
                 tombstone->set_key( aKey );
@@ -134,23 +126,13 @@ namespace sgns::crdt
         // * If the key does not have a value in the store:
         //   -> It was either never added
 
-        auto valueK      = this->ValueKey( aKey );
-        auto valueResult = this->GetValueFromDatastore( valueK );
-
-        if ( valueResult.has_failure() )
-        {
-            // not found is fine, we just return it
-            return outcome::failure( valueResult.error() );
-        }
+        auto value_key = this->ValueKey( aKey );
+        BOOST_OUTCOME_TRY( auto &&value, this->GetValueFromDatastore( value_key ) );
 
         // We have an existing element. Check if tombstoned.
-        auto inSetResult = this->InElemsNotTombstoned( aKey );
-        if ( inSetResult.has_failure() )
-        {
-            return outcome::failure( inSetResult.error() );
-        }
+        BOOST_OUTCOME_TRY( auto &&in_set, this->InElemsNotTombstoned( aKey ) );
 
-        if ( !inSetResult.value() )
+        if ( !in_set )
         {
             // attempt to remove so next time we do not have to do this lookup.
             // In concurrency, this may delete a key that was just written
@@ -160,7 +142,7 @@ namespace sgns::crdt
 
         // otherwise return the value
         Buffer bufferValue;
-        bufferValue.put( valueResult.value() );
+        bufferValue.put( value );
 
         return bufferValue;
     }
@@ -189,15 +171,11 @@ namespace sgns::crdt
 
         Buffer keyPrefixBuffer;
         keyPrefixBuffer.put( prefixKeysKey.GetKey() );
-        auto queryResult = this->dataStore_->query( keyPrefixBuffer );
-        if ( queryResult.has_failure() )
-        {
-            return outcome::failure( queryResult.error() );
-        }
+        BOOST_OUTCOME_TRY( auto &&query, this->dataStore_->query( keyPrefixBuffer ) );
 
         QueryResult elements;
         // Check if elements tombstoned.
-        for ( const auto &element : queryResult.value() )
+        for ( const auto &element : query )
         {
             auto inSetResult = this->InElemsNotTombstoned( std::string( element.first.toString() ) );
             if ( inSetResult.has_failure() || !inSetResult.value() )
@@ -224,7 +202,7 @@ namespace sgns::crdt
                     }
                     break;
                 default:
-                    return outcome::failure( queryResult.error() );
+                    return outcome::failure( std::make_error_code( std::errc::address_not_available ) );
             }
         }
 
@@ -254,16 +232,12 @@ namespace sgns::crdt
         // /namespace/k/<prefix>
         auto prefixKeysKey = this->KeysKey( prefix_base );
 
-
-        auto queryResult = this->dataStore_->query( prefixKeysKey.GetKey()+ "/", middle_part, remainder_prefix );
-        if ( queryResult.has_failure() )
-        {
-            return outcome::failure( queryResult.error() );
-        }
+        BOOST_OUTCOME_TRY( auto &&queryResult,
+                           this->dataStore_->query( prefixKeysKey.GetKey() + "/", middle_part, remainder_prefix ) );
 
         QueryResult elements;
         // Check if elements tombstoned.
-        for ( const auto &element : queryResult.value() )
+        for ( const auto &element : queryResult )
         {
             auto inSetResult = this->InElemsNotTombstoned( std::string( element.first.toString() ) );
             if ( inSetResult.has_failure() || !inSetResult.value() )
@@ -271,7 +245,7 @@ namespace sgns::crdt
                 continue;
             }
 
-            std::string key = std::string( element.first.toString() );
+            std::string key( element.first.toString() );
             switch ( aSuffix )
             {
                 case QuerySuffix::QUERY_ALL:
@@ -290,7 +264,7 @@ namespace sgns::crdt
                     }
                     break;
                 default:
-                    return outcome::failure( queryResult.error() );
+                    return outcome::failure( std::make_error_code( std::errc::address_not_available ) );
             }
         }
 
@@ -317,13 +291,9 @@ namespace sgns::crdt
         }
 
         // Otherwise, do the long check.
-        auto inElemsNotTombstonedResult = this->InElemsNotTombstoned( aKey );
-        if ( inElemsNotTombstonedResult.has_error() )
-        {
-            return outcome::failure( inElemsNotTombstonedResult.error() );
-        }
+        BOOST_OUTCOME_TRY( auto &&inElemsNotTombstonedResult, this->InElemsNotTombstoned( aKey ) );
 
-        return inElemsNotTombstonedResult.value();
+        return inElemsNotTombstonedResult;
     }
 
     outcome::result<bool> CrdtSet::InElemsNotTombstoned( const std::string &aKey )
@@ -334,22 +304,19 @@ namespace sgns::crdt
 
         Buffer keyPrefixBuffer;
         keyPrefixBuffer.put( strElemsPrefix );
-        auto queryResult = this->dataStore_->query( keyPrefixBuffer );
-        if ( queryResult.has_failure() )
-        {
-            return outcome::failure( queryResult.error() );
-        }
 
-        if ( queryResult.value().empty() )
+        BOOST_OUTCOME_TRY( auto &&query, this->dataStore_->query( keyPrefixBuffer ) );
+
+        if ( query.empty() )
         {
             return true;
         }
 
-        for ( const auto &bufferKeyAndValue : queryResult.value() )
+        for ( const auto &[key, _] : query )
         {
-            std::string keyWithPrefix = std::string( bufferKeyAndValue.first.toString() );
-            std::string id            = keyWithPrefix.erase( 0, strElemsPrefix.size() );
-            auto        hId           = HierarchicalKey( id );
+            std::string keyWithPrefix( key.toString() );
+            std::string id  = keyWithPrefix.erase( 0, strElemsPrefix.size() );
+            auto        hId = HierarchicalKey( id );
             if ( !hId.IsTopLevel() )
             {
                 // our prefix matches blocks from other keys i.e. our
@@ -360,8 +327,8 @@ namespace sgns::crdt
                 continue;
             }
             // if not tombstoned, we have it
-            auto inTombResult = this->InTombsKeyID( aKey, hId.GetKey() );
-            if ( inTombResult.has_value() && !inTombResult.value() )
+            if ( auto inTombResult = this->InTombsKeyID( aKey, hId.GetKey() );
+                 inTombResult.has_value() && !inTombResult.value() )
             {
                 return true;
             }
@@ -370,7 +337,7 @@ namespace sgns::crdt
         return false;
     }
 
-    HierarchicalKey CrdtSet::KeyPrefix( const std::string &aKey )
+    HierarchicalKey CrdtSet::KeyPrefix( const std::string &aKey ) const
     {
         // /namespace/<key>
         return this->namespaceKey_.ChildString( aKey );
@@ -411,6 +378,7 @@ namespace sgns::crdt
         uint64_t priority    = 0;
         auto     prioK       = this->PriorityKey( aKey );
         auto     valueResult = this->GetValueFromDatastore( prioK );
+
         if ( !valueResult.has_failure() )
         {
             try
@@ -427,6 +395,7 @@ namespace sgns::crdt
             // Return failure only we have other than NOT_FOUND error
             return outcome::failure( valueResult.error() );
         }
+
         return priority;
     }
 
@@ -468,12 +437,7 @@ namespace sgns::crdt
         }
 
         auto commitResult = batchDatastore->commit();
-        if ( commitResult.has_failure() )
-        {
-            return outcome::failure( commitResult.error() );
-        }
-
-        return outcome::success();
+        return commitResult;
     }
 
     outcome::result<void> CrdtSet::SetValue( const std::unique_ptr<storage::BufferBatch> &aDataStore,
@@ -488,41 +452,27 @@ namespace sgns::crdt
         }
 
         // If this key was tombstoned already, do not store/update the value at all.
-        auto isDeletedResult = this->InTombsKeyID( aKey, aID );
-        if ( isDeletedResult.has_failure() )
-        {
-            return outcome::failure( boost::system::error_code{} );
-        }
-        if ( isDeletedResult.value() )
+        BOOST_OUTCOME_TRY( auto &&isDeletedResult, this->InTombsKeyID( aKey, aID ) );
+        if ( isDeletedResult )
         {
             //if it's tombstone we just don't add it
             return outcome::success();
         }
 
-        auto priorityResult = this->GetPriority( aKey );
-        if ( priorityResult.has_failure() )
-        {
-            return outcome::failure( priorityResult.error() );
-        }
+        BOOST_OUTCOME_TRY( auto &&priorityResult, this->GetPriority( aKey ) );
 
-        if ( aPriority < priorityResult.value() )
+        if ( aPriority < priorityResult )
         {
             return outcome::success();
         }
 
         auto valueK = this->ValueKey( aKey );
 
-        if ( aPriority == priorityResult.value() )
+        if ( aPriority == priorityResult )
         {
-            auto valueResult = this->GetValueFromDatastore( valueK );
-            if ( valueResult.has_failure() )
-            {
-                return outcome::failure( valueResult.error() );
-            }
+            BOOST_OUTCOME_TRY( auto &&valueResult, this->GetValueFromDatastore( valueK ) );
 
-            // if bytes.Compare(valueResult.value(), aValue) >= 0 {
-            // comparing two data lexicographically,  valueResult >= aValue, no need to store value
-            if ( !boost::lexicographical_compare<std::string, std::string>( valueResult.value(),
+            if ( !boost::lexicographical_compare<std::string, std::string>( valueResult,
                                                                             std::string( aValue.toString() ) ) )
             {
                 return outcome::success();
@@ -593,7 +543,7 @@ namespace sgns::crdt
             // * not tombstoned before.
             Buffer valueBuffer;
             valueBuffer.put( elem.value() );
-            auto setValueResult = this->SetValue( batchDatastore, key, aID, std::move( valueBuffer ), aPriority );
+            auto setValueResult = this->SetValue( batchDatastore, key, aID, valueBuffer , aPriority );
             if ( setValueResult.has_failure() )
             {
                 return outcome::failure( setValueResult.error() );
@@ -636,7 +586,7 @@ namespace sgns::crdt
             Buffer keyBuffer;
             keyBuffer.put( kNamespace.GetKey() );
 
-            auto putResult = batchDatastore->put( std::move( keyBuffer ), Buffer() );
+            auto putResult = batchDatastore->put( keyBuffer , Buffer() );
             if ( putResult.has_error() )
             {
                 return outcome::failure( putResult.error() );
@@ -679,7 +629,7 @@ namespace sgns::crdt
             return outcome::failure( putTombsResult.error() );
         }
 
-        std::vector<Element> elements( aDelta->elements().begin(), aDelta->elements().end() );
+        std::vector elements( aDelta->elements().begin(), aDelta->elements().end() );
         return this->PutElems( elements, aID, aDelta->priority() );
     }
 
@@ -728,25 +678,25 @@ namespace sgns::crdt
 
     void CrdtSet::PrintTombs( const std::vector<Element> &aTombs )
     {
-        std::cout << "Tombs" << std::endl;
+        std::cout << "Tombs" << '\n';
         for ( const auto &tomb : aTombs )
         {
             // /namespace/tombs/<key>/<id>
-            std::cout << tomb.key() << ", " << tomb.id() << std::endl;
+            std::cout << tomb.key() << ", " << tomb.id() << '\n';
         }
     }
 
     void CrdtSet::PrintElements( const std::vector<Element> &aElems )
     {
-        std::cout << "Elems" << std::endl;
+        std::cout << "Elems" << '\n';
         for ( const auto &tomb : aElems )
         {
             // /namespace/tombs/<key>/<id>
-            std::cout << tomb.key() << ", " << tomb.id() << std::endl;
+            std::cout << tomb.key() << ", " << tomb.id() << '\n';
         }
     }
 
-    void CrdtSet::PrintDataStore()
+    void CrdtSet::PrintDataStore() const
     {
         if ( dataStore_ )
         {

@@ -4,6 +4,7 @@
 #include <boost/system/error_code.hpp>
 #include <boost/lexical_cast.hpp>
 #include <utility>
+#include <boost/outcome/utils.hpp>
 
 namespace sgns::crdt
 {
@@ -29,7 +30,7 @@ namespace sgns::crdt
     return *this;
   }
 
-  bool CrdtHeads::operator==(const CrdtHeads& aHeads)
+  bool CrdtHeads::operator==(const CrdtHeads& aHeads ) const
   {
     bool returnEqual = true;
     returnEqual &= this->dataStore_ == aHeads.dataStore_;
@@ -38,7 +39,7 @@ namespace sgns::crdt
     return returnEqual;
   }
 
-  bool CrdtHeads::operator!=(const CrdtHeads& aHeads)
+  bool CrdtHeads::operator!=(const CrdtHeads& aHeads) const
   {
     return !(*this == aHeads);
   }
@@ -48,17 +49,11 @@ namespace sgns::crdt
     return this->namespaceKey_;
   }
 
-
-  outcome::result<HierarchicalKey> CrdtHeads::GetKey(const CID& aCid)
+  outcome::result<HierarchicalKey> CrdtHeads::GetKey(const CID& aCid ) const
   {
     // /<namespace>/<cid>
-    auto cidToStringResult = aCid.toString();
-    if (cidToStringResult.has_failure())
-    {
-      return outcome::failure(cidToStringResult.error());
-    }
-
-    return this->namespaceKey_.ChildString(cidToStringResult.value());
+    BOOST_OUTCOME_TRY(auto&& cidToString, aCid.toString());
+    return this->namespaceKey_.ChildString(cidToString);
   }
 
   outcome::result<void> CrdtHeads::Write( const std::unique_ptr<storage::BufferBatch> &aDataStore,
@@ -70,16 +65,12 @@ namespace sgns::crdt
       return outcome::failure(boost::system::error_code{});
     }
 
-    auto getKeyResult = this->GetKey(aCid);
-    if (getKeyResult.has_failure())
-    {
-      return outcome::failure(getKeyResult.error());
-    }
+    BOOST_OUTCOME_TRY(auto&& key, this->GetKey(aCid));
 
     std::string strHeight = std::to_string( aHeight );
 
     Buffer keyBuffer;
-    keyBuffer.put(getKeyResult.value().GetKey());
+    keyBuffer.put(key.GetKey());
 
     Buffer valueBuffer;
     valueBuffer.put(strHeight);
@@ -94,14 +85,10 @@ namespace sgns::crdt
       return outcome::failure(boost::system::error_code{});
     }
 
-    auto getKeyResult = this->GetKey(aCid);
-    if (getKeyResult.has_failure())
-    {
-      return outcome::failure(getKeyResult.error());
-    }
+    BOOST_OUTCOME_TRY(auto&& key, this->GetKey(aCid));
 
     Buffer keyBuffer;
-    keyBuffer.put(getKeyResult.value().GetKey());
+    keyBuffer.put(key.GetKey());
 
     return aDataStore->remove(keyBuffer);
   }
@@ -121,6 +108,7 @@ namespace sgns::crdt
     {
         return 0;
     }
+
     return this->cache_[aCid];
   }
 
@@ -186,17 +174,19 @@ namespace sgns::crdt
     return outcome::success();
   }
 
-  outcome::result<void> CrdtHeads::GetList(std::vector<CID>& aHeads, uint64_t& aMaxHeight)
+  std::pair<std::vector<CID>, uint64_t> CrdtHeads::GetList()
   {
-    std::lock_guard lg(this->mutex_);
-    aMaxHeight = 0;
-    aHeads.clear(); 
-    for (auto it = this->cache_.begin(); it != this->cache_.end(); ++it)
+    std::vector<CID> heads;
+    uint64_t max_height = 0;
+
+    const std::lock_guard lg(this->mutex_);
+    for (const auto &[head, height] : this->cache_)
     {
-      aHeads.push_back(it->first);
-      aMaxHeight = std::max(aMaxHeight, it->second);
+      heads.push_back(head);
+      max_height = std::max(max_height, height);
     }
-    return outcome::success();
+
+    return {heads, max_height};
   }
 
   outcome::result<void> CrdtHeads::PrimeCache()
@@ -205,15 +195,11 @@ namespace sgns::crdt
     const auto strNamespace = this->namespaceKey_.GetKey();
     Buffer keyPrefixBuffer;
     keyPrefixBuffer.put(strNamespace);
-    auto queryResult = this->dataStore_->query(keyPrefixBuffer);
-    if (queryResult.has_failure())
+    BOOST_OUTCOME_TRY(auto&& query, this->dataStore_->query(keyPrefixBuffer));
+
+    for ( const auto &[key, height_str] : query)
     {
-      return outcome::failure(queryResult.error());
-    }
-    
-    for (const auto& bufferKeyAndValue : queryResult.value())
-    {
-      std::string keyWithNamespace = std::string(bufferKeyAndValue.first.toString());
+      std::string keyWithNamespace = std::string(key.toString());
       std::string strCid = keyWithNamespace.erase(0, strNamespace.size() + 1);
 
       auto cidResult = CID::fromString(strCid);
@@ -226,7 +212,7 @@ namespace sgns::crdt
       uint64_t height = 0;
       try
       {
-        height = boost::lexical_cast<uint64_t>(bufferKeyAndValue.second.toString());
+        height = boost::lexical_cast<uint64_t>(height_str.toString());
       }
       catch (boost::bad_lexical_cast&)
       {
@@ -235,6 +221,7 @@ namespace sgns::crdt
 
       this->cache_[cid] = height;
     }
+
     return outcome::success();
   }
 

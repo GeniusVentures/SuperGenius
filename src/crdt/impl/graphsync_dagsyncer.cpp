@@ -1,7 +1,7 @@
 #include "crdt/graphsync_dagsyncer.hpp"
 #include "outcome/outcome.hpp"
 
-#include <ipfs_lite/ipld/impl/ipld_node_impl.hpp>
+#include <ipfs_lite/ipld/ipld_node.hpp>
 #include <memory>
 #include <utility>
 #include <thread>
@@ -41,14 +41,13 @@ namespace sgns::crdt
     GraphsyncDAGSyncer::PeerKey GraphsyncDAGSyncer::RegisterPeer( const PeerId                    &peer,
                                                                   const std::vector<Multiaddress> &address ) const
     {
-        std::lock_guard<std::mutex> lock( registry_mutex_ );
+        std::lock_guard lock( registry_mutex_ );
 
         // Check if peer already exists in the registry
-        auto it = peer_index_.find( peer );
-        if ( it != peer_index_.end() )
+        if ( auto it = peer_index_.find( peer ); it != peer_index_.end() )
         {
             // Peer already registered, update addresses if needed
-            PeerKey key                = it->second;
+            PeerKey key         = it->second;
             peer_registry_[key].second = address; // Update the addresses
             return key;
         }
@@ -64,7 +63,7 @@ namespace sgns::crdt
 
     outcome::result<GraphsyncDAGSyncer::PeerEntry> GraphsyncDAGSyncer::GetPeerById( PeerKey id ) const
     {
-        std::lock_guard<std::mutex> lock( registry_mutex_ );
+        std::lock_guard lock( registry_mutex_ );
 
         if ( id >= peer_registry_.size() )
         {
@@ -112,6 +111,7 @@ namespace sgns::crdt
         {
             return outcome::failure( Error::GRAPHSYNC_IS_NULL );
         }
+
         std::vector<Extension> extensions;
         ResponseMetadata       response_metadata{};
         Extension response_metadata_extension = ipfs_lite::ipfs::graphsync::encodeResponseMetadata( response_metadata );
@@ -120,6 +120,7 @@ namespace sgns::crdt
         std::vector<CID> cids;
         Extension        do_not_send_cids_extension = ipfs_lite::ipfs::graphsync::encodeDontSendCids( cids );
         extensions.push_back( do_not_send_cids_extension );
+
         auto subscription = graphsync_->makeRequest(
             peer,
             std::move( address ),
@@ -147,7 +148,7 @@ namespace sgns::crdt
         PeerKey peerKey = RegisterPeer( peer, address );
 
         // Add the CID route to the routing table
-        std::lock_guard<std::mutex> lock( routing_mutex_ );
+        std::lock_guard lock( routing_mutex_ );
         routing_[cid] = peerKey;
 
         logger_->trace( "Added route for CID {} to peer {} (key {})",
@@ -323,7 +324,7 @@ namespace sgns::crdt
             return outcome::failure( boost::system::error_code{} );
         }
 
-        auto dagService = std::make_shared<MerkleDagBridgeImpl>( shared_from_this() );
+        auto dagService = std::make_shared<MerkleDagBridge>( shared_from_this() );
 
         BlockCallback blockCallback = [weakptr = weak_from_this()]( const CID &cid, sgns::common::Buffer buffer )
         {
@@ -410,7 +411,7 @@ namespace sgns::crdt
         }
         logger_->debug( "HasBlock: {}, cid: {}", hb.value(), cid.toString().value() );
 
-        auto node = ipfs_lite::ipld::IPLDNodeImpl::createFromRawBytes( buffer );
+        auto node = ipfs_lite::ipld::IPLDNode::createFromRawBytes( buffer );
         if ( !hb.value() )
         {
             if ( node.has_failure() )
@@ -515,7 +516,7 @@ namespace sgns::crdt
 
     outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> GraphsyncDAGSyncer::GrabCIDBlock( const CID &cid ) const
     {
-        std::lock_guard<std::mutex> lock( cache_mutex_ );
+        std::lock_guard lock( cache_mutex_ );
         if ( lru_cid_cache_.hasContent( cid ) )
         {
             auto node = lru_cid_cache_.get( cid );
@@ -669,20 +670,20 @@ namespace sgns::crdt
     outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> GraphsyncDAGSyncer::GetNodeFromMerkleDAG(
         const CID &cid ) const
     {
-        std::lock_guard<std::mutex> lock( mutex_ );
+        std::lock_guard lock( mutex_ );
         return dagService_.getNode( cid );
     }
 
     outcome::result<void> GraphsyncDAGSyncer::AddNodeToMerkleDAG(
         std::shared_ptr<const ipfs_lite::ipld::IPLDNode> node )
     {
-        std::lock_guard<std::mutex> lock( mutex_ );
+        std::lock_guard lock( mutex_ );
         return dagService_.addNode( std::move( node ) );
     }
 
     outcome::result<void> GraphsyncDAGSyncer::RemoveNodeFromMerkleDAG( const CID &cid )
     {
-        std::lock_guard<std::mutex> lock( mutex_ );
+        std::lock_guard lock( mutex_ );
         return dagService_.removeNode( cid );
     }
 
@@ -691,7 +692,7 @@ namespace sgns::crdt
         gsl::span<const uint8_t>                                                     selector,
         std::function<bool( std::shared_ptr<const ipfs_lite::ipld::IPLDNode> node )> handler ) const
     {
-        std::lock_guard<std::mutex> lock( mutex_ );
+        std::lock_guard lock( mutex_ );
         return dagService_.select( root_cid, selector, handler );
     }
 
@@ -700,8 +701,8 @@ namespace sgns::crdt
         PeerKey peerKey;
         // First find the peer key in the routing table
         {
-            std::lock_guard<std::mutex> lock( routing_mutex_ );
-            auto                        it = routing_.find( cid );
+            std::lock_guard lock( routing_mutex_ );
+            auto            it = routing_.find( cid );
             if ( it == routing_.end() )
             {
                 return outcome::failure( Error::ROUTE_NOT_FOUND );
@@ -709,8 +710,10 @@ namespace sgns::crdt
 
             peerKey = it->second;
         }
+
+        BOOST_OUTCOME_TRY(auto&& addresses, GetPeerById(peerKey));
         // Now get the actual peer entry from the registry
-        return GetPeerById( peerKey );
+        return addresses;
     }
 
     void GraphsyncDAGSyncer::EraseRoutesFromPeerID( const PeerId &peer ) const
@@ -720,7 +723,7 @@ namespace sgns::crdt
         bool    peerFound = false;
 
         {
-            std::lock_guard<std::mutex> registry_lock( registry_mutex_ );
+            std::lock_guard registry_lock( registry_mutex_ );
             auto                        it = peer_index_.find( peer );
             if ( it == peer_index_.end() )
             {
@@ -734,7 +737,7 @@ namespace sgns::crdt
         if ( peerFound )
         {
             // Remove all routes that point to this peer
-            std::lock_guard<std::mutex> routing_lock( routing_mutex_ );
+            std::lock_guard routing_lock( routing_mutex_ );
             for ( auto it = routing_.begin(); it != routing_.end(); )
             {
                 if ( it->second == peerKeyToRemove )
