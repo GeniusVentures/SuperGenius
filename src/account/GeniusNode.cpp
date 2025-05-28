@@ -86,9 +86,7 @@ namespace sgns
                             bool                autodht,
                             bool                isprocessor,
                             uint16_t            base_port ) :
-        account_( std::make_shared<GeniusAccount>( static_cast<uint8_t>( dev_config.TokenID ),
-                                                   dev_config.BaseWritePath,
-                                                   eth_private_key ) ),
+        account_( std::make_shared<GeniusAccount>( dev_config.TokenID, dev_config.BaseWritePath, eth_private_key ) ),
         io_( std::make_shared<boost::asio::io_context>() ),
         write_base_path_( dev_config.BaseWritePath ),
         autodht_( autodht ),
@@ -186,7 +184,7 @@ namespace sgns
 
         auto tokenid = dev_config_.TokenID;
 
-        auto pubsubport = GenerateRandomPort( base_port, account_->GetAddress() + std::to_string( tokenid ) );
+        auto pubsubport = GenerateRandomPort( base_port, account_->GetAddress() +  tokenid );
 
         std::vector<std::string> addresses;
         // UPNP

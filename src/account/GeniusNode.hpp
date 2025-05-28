@@ -27,7 +27,7 @@ typedef struct DevConfig
     char        Addr[255];
     std::string Cut;
     std::string TokenValueInGNUS;
-    int         TokenID;
+    std::string TokenID;
     char        BaseWritePath[1024];
 } DevConfig_st;
 
@@ -122,6 +122,11 @@ namespace sgns
         std::string GetAddress() const
         {
             return account_->GetAddress();
+        }
+
+        std::string GetTokenID() const
+        {
+            return dev_config_.TokenID;
         }
 
         outcome::result<std::pair<std::string, uint64_t>> TransferFunds(

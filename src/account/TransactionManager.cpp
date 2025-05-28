@@ -191,9 +191,15 @@ namespace sgns
         return *account_m;
     }
 
-    outcome::result<std::string> TransactionManager::TransferFunds( uint64_t amount, const std::string &destination )
+    outcome::result<std::string> TransactionManager::TransferFunds( uint64_t           amount,
+                                                                    const std::string &destination,
+                                                                    std::string        token_id )
     {
-        auto maybe_params = UTXOTxParameters::create( account_m->utxos, account_m->GetAddress(), amount, destination );
+        auto maybe_params = UTXOTxParameters::create( account_m->utxos,
+                                                      account_m->GetAddress(),
+                                                      amount,
+                                                      destination,
+                                                      account_m->GetToken() );
 
         if ( !maybe_params )
         {
@@ -248,7 +254,8 @@ namespace sgns
     outcome::result<std::pair<std::string, EscrowDataPair>> TransactionManager::HoldEscrow( uint64_t           amount,
                                                                                             const std::string &dev_addr,
                                                                                             uint64_t peers_cut,
-                                                                                            const std::string &job_id )
+                                                                                            const std::string &job_id,
+                                                                                            std::string token_id )
     {
         auto hash_data = hasher_m->blake2b_256( std::vector<uint8_t>{ job_id.begin(), job_id.end() } );
 
@@ -256,6 +263,7 @@ namespace sgns
                      UTXOTxParameters::create( account_m->utxos,
                                                account_m->GetAddress(),
                                                amount,
+                                               account_m->GetToken(),
                                                "0x" + hash_data.toReadableString() ) );
 
         account_m->utxos        = UTXOTxParameters::UpdateUTXOList( account_m->utxos, params );

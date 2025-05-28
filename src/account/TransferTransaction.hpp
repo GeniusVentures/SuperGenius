@@ -17,9 +17,9 @@ namespace sgns
     class TransferTransaction : public IGeniusTransactions
     {
     public:
-        static TransferTransaction New( std::vector<OutputDestInfo> destinations,
-                                        std::vector<InputUTXOInfo>  inputs,
-                                        SGTransaction::DAGStruct    dag,
+        static TransferTransaction New( std::vector<OutputDestInfo>                     destinations,
+                                        std::vector<InputUTXOInfo>                      inputs,
+                                        SGTransaction::DAGStruct                        dag,
                                         std::shared_ptr<ethereum::EthereumKeyGenerator> eth_key );
         /**
          * @brief      Default Transfer Transaction destructor
@@ -41,7 +41,6 @@ namespace sgns
 
         std::vector<OutputDestInfo> GetDstInfos() const;
         std::vector<InputUTXOInfo>  GetInputInfos() const;
-        std::string GetTokenId() const;
 
         std::string GetTransactionSpecificPath() override
         {
@@ -57,12 +56,10 @@ namespace sgns
          */
         TransferTransaction( std::vector<OutputDestInfo> destinations,
                              std::vector<InputUTXOInfo>  inputs,
-                             SGTransaction::DAGStruct    dag,
-                             std::string                 token_id );
+                             SGTransaction::DAGStruct    dag );
 
         std::vector<InputUTXOInfo>  input_tx_;
         std::vector<OutputDestInfo> outputs_;
-        std::string token_id_;
 
         /**
          * @brief       Registers the deserializer for the transfer transaction type.
