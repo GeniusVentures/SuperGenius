@@ -147,7 +147,7 @@ namespace sgns
 
                 return maybe_tombstones;
             } );
-            globaldb_m->Start();
+        globaldb_m->Start();
     }
 
     TransactionManager::~TransactionManager()
@@ -462,20 +462,7 @@ namespace sgns
                 BOOST_OUTCOME_TRYV2( auto &&,
                                      crdt_transaction->Put( std::move( proof_key ), std::move( proof_transaction ) ) );
             }
-
-            if ( transaction->GetType() == "transfer" )
-            {
-                m_logger->debug( "Notifying receiving peers of transfers" );
-                BOOST_OUTCOME_TRYV2( auto &&, NotifyDestinationOfTransfer( transaction ) );
-            }
-            else if ( transaction->GetType() == "escrow-release" )
-            {
-                m_logger->debug( "Notifying escrow source of escrow release" );
-                BOOST_OUTCOME_TRYV2( auto &&, NotifyEscrowRelease( transaction ) );
-            }
         }
-
-        BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Commit() );
 
         for ( auto &transaction_pair : transaction_batch )
         {
@@ -485,6 +472,7 @@ namespace sgns
                 outgoing_tx_processed_m[GetTransactionPath( *transaction_pair.first )] = transaction_pair.first;
             }
         }
+        BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Commit() );
 
         return outcome::success();
     }
@@ -758,8 +746,13 @@ namespace sgns
 
     outcome::result<void> TransactionManager::ParseTransferTransaction( const std::shared_ptr<IGeniusTransactions> &tx )
     {
-        auto transfer_tx = std::dynamic_pointer_cast<TransferTransaction>( tx );
-        auto dest_infos  = transfer_tx->GetDstInfos();
+        auto transfer_tx         = std::dynamic_pointer_cast<TransferTransaction>( tx );
+        auto dest_infos          = transfer_tx->GetDstInfos();
+        bool notify_destinations = false;
+        if ( transfer_tx->GetSrcAddress() == account_m->GetAddress() )
+        {
+            notify_destinations = true;
+        }
 
         for ( std::uint32_t i = 0; i < dest_infos.size(); ++i )
         {
@@ -768,6 +761,10 @@ namespace sgns
                 auto       hash = ( base::Hash256::fromReadableString( transfer_tx->dag_st.data_hash() ) ).value();
                 GeniusUTXO new_utxo( hash, i, dest_infos[i].encrypted_amount );
                 account_m->PutUTXO( new_utxo );
+            }
+            if ( notify_destinations )
+            {
+                globaldb_m->AddBroadcastTopic( dest_infos[i].dest_address );
             }
         }
 
@@ -829,51 +826,14 @@ namespace sgns
             m_logger->error( "Failed to cast transaction to EscrowReleaseTransaction" );
             return std::errc::invalid_argument;
         }
+        if ( escrowReleaseTx->GetSrcAddress() == account_m->GetAddress() )
+        {
+            globaldb_m->AddBroadcastTopic( escrowReleaseTx->GetEscrowSource() );
+        }
 
         std::string originalEscrowHash = escrowReleaseTx->GetOriginalEscrowHash();
         m_logger->debug( "Successfully fetched release for escrow: " + originalEscrowHash );
 
-        return outcome::success();
-    }
-
-    outcome::result<void> TransactionManager::NotifyDestinationOfTransfer(
-        const std::shared_ptr<IGeniusTransactions> &tx )
-    {
-        auto transfer_tx = std::dynamic_pointer_cast<TransferTransaction>( tx );
-        if ( !transfer_tx )
-        {
-            m_logger->error( "Failed to cast transaction to TransferTransaction" );
-            return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::invalid_argument ) );
-        }
-        auto dest_infos = transfer_tx->GetDstInfos();
-
-        for ( const auto &dest_info : dest_infos )
-        {
-            if ( dest_info.dest_address == account_m->GetAddress() )
-            {
-                continue;
-            }
-
-            m_logger->debug( "Sending notification to " + dest_info.dest_address );
-
-            globaldb_m->AddBroadcastTopic( dest_info.dest_address );
-        }
-
-        return outcome::success();
-    }
-
-    outcome::result<void> TransactionManager::NotifyEscrowRelease( const std::shared_ptr<IGeniusTransactions> &tx )
-    {
-        auto escrow_release_tx = std::dynamic_pointer_cast<EscrowReleaseTransaction>( tx );
-        if ( !escrow_release_tx )
-        {
-            m_logger->error( "Failed to cast transaction to EscrowReleaseTransaction" );
-            return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::invalid_argument ) );
-        }
-
-        m_logger->debug( "Notifying escrow source: " + escrow_release_tx->GetEscrowSource() );
-
-        globaldb_m->AddBroadcastTopic( escrow_release_tx->GetEscrowSource() );
         return outcome::success();
     }
 
