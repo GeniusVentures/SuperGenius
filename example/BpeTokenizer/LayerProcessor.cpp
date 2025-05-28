@@ -121,9 +121,21 @@ std::vector<float> LayerProcessor::runAttentionLayerTemporary( const std::vector
             std::cerr << "Failed to get input tensor for attention layer " << layerId << std::endl;
             return input;
         }
+        auto inputTensor  = tempAttentionLayer->getSessionInput( tempSession, NULL ); // or input name
+        auto outputTensor = tempAttentionLayer->getSessionOutput( tempSession, NULL );
+        auto dims         = inputTensor->shape();
+        MNN_PRINT( "Input shape: [" );
+        for ( size_t i = 0; i < dims.size(); ++i )
+        {
+            MNN_PRINT( "%d%s", dims[i], ( i + 1 < dims.size() ) ? ", " : "" );
+        }
+        MNN_PRINT( "]\n" );
+
+        MNN_PRINT( "Total input elements: %d\n", inputTensor->elementSize() );
+
 
         // Resize input tensor
-        tempAttentionLayer->resizeTensor( layerInput, { 1, (int)input.size() } );
+        tempAttentionLayer->resizeTensor( inputTensor, { 1, 1, (int)input.size() } );
         tempAttentionLayer->resizeSession( tempSession );
 
         // Copy input data
