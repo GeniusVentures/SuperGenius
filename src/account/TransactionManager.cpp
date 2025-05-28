@@ -37,17 +37,31 @@ namespace sgns
     TransactionManager::TransactionManager( std::shared_ptr<crdt::GlobalDB>          processing_db,
                                             std::shared_ptr<boost::asio::io_context> ctx,
                                             std::shared_ptr<GeniusAccount>           account,
-                                            std::shared_ptr<crypto::Hasher>          hasher ) :
+                                            std::shared_ptr<crypto::Hasher>          hasher,
+                                            bool                                     full_node ) :
         globaldb_m( std::move( processing_db ) ),
         ctx_m( std::move( ctx ) ),
         account_m( std::move( account ) ),
         hasher_m( std::move( hasher ) ),
-        timer_m( std::make_shared<boost::asio::steady_timer>( *ctx_m, boost::asio::chrono::milliseconds( 300 ) ) )
+        timer_m( std::make_shared<boost::asio::steady_timer>( *ctx_m, boost::asio::chrono::milliseconds( 300 ) ) ),
+        full_node_m( std::move( full_node ) )
 
     {
         m_logger->info( "Initializing values by reading whole blockchain" );
+
+        boost::format full_node_topic{ std::string( GNUS_FULL_NODES_TOPIC ) };
+
+        full_node_topic % TEST_NET_ID;
+        full_node_topic.str();
         globaldb_m->AddBroadcastTopic( account_m->GetAddress() );
         globaldb_m->AddListenTopic( account_m->GetAddress() );
+        globaldb_m->AddBroadcastTopic( full_node_topic.str() );
+        m_logger->info( "Adding broadcast to full node on {}", full_node_topic.str() );
+        if ( full_node_m )
+        {
+            m_logger->info( "Listening full node on {}", full_node_topic.str() );
+            globaldb_m->AddListenTopic( full_node_topic.str() );
+        }
 
         bool crdt_tx_filter_initialized = globaldb_m->RegisterElementFilter(
             "^/?" + GetBlockChainBase() + "[^/]*/tx/[^/]*/[0-9]+",
@@ -749,7 +763,7 @@ namespace sgns
         auto transfer_tx         = std::dynamic_pointer_cast<TransferTransaction>( tx );
         auto dest_infos          = transfer_tx->GetDstInfos();
         bool notify_destinations = false;
-        if ( transfer_tx->GetSrcAddress() == account_m->GetAddress() )
+        if ( ( transfer_tx->GetSrcAddress() == account_m->GetAddress() ) || ( full_node_m ) )
         {
             notify_destinations = true;
         }
@@ -766,6 +780,10 @@ namespace sgns
             {
                 globaldb_m->AddBroadcastTopic( dest_infos[i].dest_address );
             }
+        }
+        if ( full_node_m )
+        {
+            globaldb_m->AddBroadcastTopic( transfer_tx->GetSrcAddress() );
         }
 
         for ( auto &input : transfer_tx->GetInputInfos() )
@@ -787,6 +805,10 @@ namespace sgns
             GeniusUTXO new_utxo( hash, 0, mint_tx->GetAmount() );
             account_m->PutUTXO( new_utxo );
             m_logger->info( "Created tokens, balance " + account_m->GetBalance<std::string>() );
+        }
+        if ( full_node_m )
+        {
+            globaldb_m->AddBroadcastTopic( mint_tx->GetSrcAddress() );
         }
         return outcome::success();
     }
@@ -814,6 +836,10 @@ namespace sgns
                 account_m->RefreshUTXOs( escrow_tx->GetUTXOParameters().inputs_ );
             }
         }
+        if ( full_node_m )
+        {
+            globaldb_m->AddBroadcastTopic( escrow_tx->GetSrcAddress() );
+        }
         return outcome::success();
     }
 
@@ -826,9 +852,14 @@ namespace sgns
             m_logger->error( "Failed to cast transaction to EscrowReleaseTransaction" );
             return std::errc::invalid_argument;
         }
-        if ( escrowReleaseTx->GetSrcAddress() == account_m->GetAddress() )
+        if ( ( escrowReleaseTx->GetSrcAddress() == account_m->GetAddress() ) || ( full_node_m ) )
         {
             globaldb_m->AddBroadcastTopic( escrowReleaseTx->GetEscrowSource() );
+        }
+
+        if ( full_node_m )
+        {
+            globaldb_m->AddBroadcastTopic( escrowReleaseTx->GetSrcAddress() );
         }
 
         std::string originalEscrowHash = escrowReleaseTx->GetOriginalEscrowHash();

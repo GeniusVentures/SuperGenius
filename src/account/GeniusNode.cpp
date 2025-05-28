@@ -84,7 +84,8 @@ namespace sgns
                             const char         *eth_private_key,
                             bool                autodht,
                             bool                isprocessor,
-                            uint16_t            base_port ) :
+                            uint16_t            base_port,
+                            bool                is_full_node ) :
         account_( std::make_shared<GeniusAccount>( static_cast<uint8_t>( dev_config.TokenID ),
                                                    dev_config.BaseWritePath,
                                                    eth_private_key ) ),
@@ -142,8 +143,8 @@ namespace sgns
 #ifdef SGNS_DEBUGLOGS
         node_logger->set_level( spdlog::level::err );
         loggerGlobalDB->set_level( spdlog::level::err );
-        loggerDAGSyncer->set_level( spdlog::level::debug );
-        loggerGraphsync->set_level( spdlog::level::debug );
+        loggerDAGSyncer->set_level( spdlog::level::err );
+        loggerGraphsync->set_level( spdlog::level::err );
         loggerBroadcaster->set_level( spdlog::level::err );
         loggerDataStore->set_level( spdlog::level::err );
         loggerTransactions->set_level( spdlog::level::err );
@@ -289,7 +290,7 @@ namespace sgns
             auto error = global_db_ret.error();
             throw std::runtime_error( error.message() );
         }
-        tx_globaldb_  = std::move( global_db_ret.value() );
+        tx_globaldb_ = std::move( global_db_ret.value() );
 
         global_db_ret = crdt::GlobalDB::New( io_,
                                              write_base_path_ + gnus_network_full_path_,
@@ -299,7 +300,7 @@ namespace sgns
                                              scheduler,
                                              generator,
                                              tx_globaldb_->GetDataStore() );
-        
+
         if ( global_db_ret.has_error() )
         {
             auto error = global_db_ret.error();
@@ -333,7 +334,8 @@ namespace sgns
         transaction_manager_ = std::make_shared<TransactionManager>( tx_globaldb_,
                                                                      io_,
                                                                      account_,
-                                                                     std::make_shared<crypto::HasherImpl>() );
+                                                                     std::make_shared<crypto::HasherImpl>(),
+                                                                     is_full_node );
 
         transaction_manager_->Start();
         if ( isprocessor_ )
@@ -679,7 +681,6 @@ namespace sgns
 
     uint64_t GeniusNode::GetProcessCost( const std::string &json_data )
     {
-
         auto blockLen = ParseBlockSize( json_data );
         if ( !blockLen )
         {

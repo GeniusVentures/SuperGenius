@@ -36,9 +36,11 @@ namespace sgns
     protected:
         static inline sgns::GeniusNode *node_proc1 = nullptr;
         static inline sgns::GeniusNode *node_proc2 = nullptr;
+        static inline sgns::GeniusNode *full_node  = nullptr;
 
         static inline DevConfig_st DEV_CONFIG  = { "0xcafe", "0.65", 1.0, 0, "./node10" };
         static inline DevConfig_st DEV_CONFIG2 = { "0xcafe", "0.65", 1.0, 0, "./node20" };
+        static inline DevConfig_st DEV_CONFIG3 = { "0xcafe", "0.65", 1.0, 0, "./node_full" };
 
         static inline std::string binary_path = "";
 
@@ -51,10 +53,14 @@ namespace sgns
             std::strncpy( DEV_CONFIG2.BaseWritePath,
                           ( binary_path + "/node20/" ).c_str(),
                           sizeof( DEV_CONFIG2.BaseWritePath ) );
+            std::strncpy( DEV_CONFIG3.BaseWritePath,
+                          ( binary_path + "/node_full/" ).c_str(),
+                          sizeof( DEV_CONFIG3.BaseWritePath ) );
 
             // Ensure null termination in case the string is too long
             DEV_CONFIG.BaseWritePath[sizeof( DEV_CONFIG.BaseWritePath ) - 1]   = '\0';
             DEV_CONFIG2.BaseWritePath[sizeof( DEV_CONFIG2.BaseWritePath ) - 1] = '\0';
+            DEV_CONFIG3.BaseWritePath[sizeof( DEV_CONFIG3.BaseWritePath ) - 1] = '\0';
 
             node_proc1 = new sgns::GeniusNode( DEV_CONFIG,
                                                "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
@@ -65,12 +71,20 @@ namespace sgns
                                                "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
                                                false,
                                                false );
+            std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
+            full_node = new sgns::GeniusNode( DEV_CONFIG3,
+                                              "feedbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+                                              false,
+                                              false,
+                                              40001,
+                                              true );
         }
 
         static void TearDownTestSuite()
         {
             delete node_proc1;
             delete node_proc2;
+            delete full_node;
         }
 
         outcome::result<sgns::TransactionManager::TransactionPair> CreateTransfer(
@@ -130,7 +144,9 @@ namespace sgns
         auto balance_2_before = node_proc2->GetBalance();
 
         // Connect the nodes
-        node_proc1->GetPubSub()->AddPeers( { node_proc2->GetPubSub()->GetLocalAddress() } ); 
+        node_proc1->GetPubSub()->AddPeers(
+            { node_proc2->GetPubSub()->GetLocalAddress(), full_node->GetPubSub()->GetLocalAddress() } );
+        node_proc2->GetPubSub()->AddPeers( { full_node->GetPubSub()->GetLocalAddress() } );
 
         // Mint tokens with timeout
         auto mint_result = node_proc1->MintTokens( 10000000000,
@@ -165,6 +181,16 @@ namespace sgns
                             .count();
         std::cout << "Transfer Received transaction completed in " << duration << " ms" << std::endl;
 
+        start_time        = std::chrono::steady_clock::now();
+        auto full_node_transfer_received = full_node->WaitForTransactionIncoming(
+            transfer_tx_id,
+            std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) );
+        ASSERT_TRUE( full_node_transfer_received );
+        duration = std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::steady_clock::now() -
+                                                                               start_time )
+                            .count();
+        std::cout << "Full Node received transaction completed in " << duration << " ms" << std::endl;
+
         // Verify node_proc1's balance decreased
         EXPECT_EQ( node_proc1->GetBalance(), balance_1_before ) << "Transfer should decrease node_proc1's balance";
 
@@ -179,7 +205,9 @@ namespace sgns
         auto balance_2_before = node_proc2->GetBalance();
 
         // Connect the nodes
-        node_proc1->GetPubSub()->AddPeers( { node_proc2->GetPubSub()->GetLocalAddress() } );
+        node_proc1->GetPubSub()->AddPeers(
+            { node_proc2->GetPubSub()->GetLocalAddress(), full_node->GetPubSub()->GetLocalAddress() } );
+        node_proc2->GetPubSub()->AddPeers( { full_node->GetPubSub()->GetLocalAddress() } );
 
         // Mint tokens on node_proc1
         std::vector<uint64_t> mint_amounts =
@@ -268,7 +296,9 @@ namespace sgns
         auto balance_2_before = node_proc2->GetBalance();
 
         // Connect the nodes
-        node_proc1->GetPubSub()->AddPeers( { node_proc2->GetPubSub()->GetLocalAddress() } );
+        node_proc1->GetPubSub()->AddPeers(
+            { node_proc2->GetPubSub()->GetLocalAddress(), full_node->GetPubSub()->GetLocalAddress() } );
+        node_proc2->GetPubSub()->AddPeers( { full_node->GetPubSub()->GetLocalAddress() } );
 
         // Mint tokens on node_proc1
         std::vector<uint64_t> xfer_amounts[2] = {
@@ -348,7 +378,9 @@ namespace sgns
         auto balance_2_before = node_proc2->GetBalance();
 
         // Connect the nodes
-        node_proc1->GetPubSub()->AddPeers( { node_proc2->GetPubSub()->GetLocalAddress() } );
+        node_proc1->GetPubSub()->AddPeers(
+            { node_proc2->GetPubSub()->GetLocalAddress(), full_node->GetPubSub()->GetLocalAddress() } );
+        node_proc2->GetPubSub()->AddPeers( { full_node->GetPubSub()->GetLocalAddress() } );
 
         // Mint tokens with timeout
         node_proc1->MintTokens( 10000000000, "", "", "", std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
@@ -408,7 +440,6 @@ namespace sgns
         auto transfer_invalid_received = node_proc2->WaitForTransactionIncoming( invalid_tx_id,
                                                                                  std::chrono::milliseconds( 2500 ) );
         ASSERT_FALSE( transfer_invalid_received );
-
 
         // Verify node_proc2's balance increased
         EXPECT_EQ( node_proc2->GetBalance(), balance_2_before + 10000000000 )

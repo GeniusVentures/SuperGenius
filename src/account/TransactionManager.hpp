@@ -49,7 +49,8 @@ namespace sgns
         TransactionManager( std::shared_ptr<crdt::GlobalDB>          processing_db,
                             std::shared_ptr<boost::asio::io_context> ctx,
                             std::shared_ptr<GeniusAccount>           account,
-                            std::shared_ptr<crypto::Hasher>          hasher );
+                            std::shared_ptr<crypto::Hasher>          hasher,
+                            bool                                     full_node = false );
 
         ~TransactionManager();
 
@@ -90,6 +91,7 @@ namespace sgns
         static constexpr std::uint16_t    MAIN_NET_ID             = 369;
         static constexpr std::uint16_t    TEST_NET_ID             = 963;
         static constexpr std::string_view TRANSACTION_BASE_FORMAT = "/bc-%hu/";
+        static constexpr std::string_view GNUS_FULL_NODES_TOPIC   = "SuperGNUSNode.TestNet.FullNode.%hu";
         using TransactionParserFn =
             outcome::result<void> ( TransactionManager::* )( const std::shared_ptr<IGeniusTransactions> & );
 
@@ -121,6 +123,7 @@ namespace sgns
         std::shared_ptr<GeniusAccount>             account_m;
         std::shared_ptr<crypto::Hasher>            hasher_m;
         std::shared_ptr<boost::asio::steady_timer> timer_m;
+        bool                                       full_node_m;
         // for the SendTransaction thread support
         mutable std::mutex          mutex_m;
         std::deque<TransactionItem> tx_queue_m;

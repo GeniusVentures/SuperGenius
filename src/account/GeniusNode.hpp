@@ -43,9 +43,10 @@ namespace sgns
     public:
         GeniusNode( const DevConfig_st &dev_config,
                     const char         *eth_private_key,
-                    bool                autodht     = true,
-                    bool                isprocessor = true,
-                    uint16_t            base_port   = 40001 );
+                    bool                autodht      = true,
+                    bool                isprocessor  = true,
+                    uint16_t            base_port    = 40001,
+                    bool                is_full_node = false );
 
         ~GeniusNode() override;
 
@@ -230,7 +231,6 @@ namespace sgns
          */
         outcome::result<uint64_t> ParseBlockSize( const std::string &json_data );
 
-
         static constexpr std::string_view db_path_                = "bc-%d/";
         static constexpr std::uint16_t    MAIN_NET                = 369;
         static constexpr std::uint16_t    TEST_NET                = 963;
@@ -238,6 +238,7 @@ namespace sgns
         static constexpr std::string_view PROCESSING_GRID_CHANNEL = "SGNUS.Jobs.2a.%02d";
         static constexpr std::string_view PROCESSING_CHANNEL      = "SGNUS.TestNet.Channel.2a.%02d";
         static constexpr std::string_view GNUS_NETWORK_PATH       = "SuperGNUSNode.TestNet.2a.%02d.%s";
+
 
         static std::string GetLoggingSystem( const std::string &base_path )
         {
