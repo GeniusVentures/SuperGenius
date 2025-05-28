@@ -194,7 +194,7 @@ namespace sgns
 
         auto tokenid = dev_config_.TokenID;
 
-        auto pubsubport = GenerateRandomPort( base_port, account_->GetAddress() + std::to_string( tokenid ) );
+        auto pubsubport = GenerateRandomPort( base_port, account_->GetAddress() +  tokenid );
 
         std::vector<std::string> addresses;
         // UPNP

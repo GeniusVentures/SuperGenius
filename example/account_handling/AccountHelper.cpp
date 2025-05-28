@@ -33,7 +33,7 @@ namespace sgns
     AccountHelper::AccountHelper( const AccountKey2   &priv_key_data,
                                   const DevConfig_st2 &dev_config,
                                   const char          *eth_private_key ) :
-        account_( std::make_shared<GeniusAccount>( 0, "", eth_private_key ) ),
+        account_( std::make_shared<GeniusAccount>( "0", "GNUS Token", eth_private_key ) ),
         io_( std::make_shared<boost::asio::io_context>() ),
         dev_config_( dev_config )
     {

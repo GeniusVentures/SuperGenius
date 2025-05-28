@@ -27,9 +27,9 @@ namespace
         std::string binaryPath = boost::dll::program_location().parent_path().string();
         const char *filePath   = ::testing::UnitTest::GetInstance()->current_test_info()->file();
         std::string fileStem   = std::filesystem::path( filePath ).stem().string();
-        auto        outPath    = binaryPath + "/" + fileStem + "/node" + std::to_string( id ) + "/";
+        auto        outPath    = binaryPath + /*"/" + fileStem +*/ "/node_" + std::to_string( id ) + "/";
 
-        DevConfig_st devConfig = { "0xcafe", "0.65", tokenValue, 0, "" };
+        DevConfig_st devConfig = { "0xcafe", "0.65", tokenValue, "0", "" };
         std::strncpy( devConfig.BaseWritePath, outPath.c_str(), sizeof( devConfig.BaseWritePath ) - 1 );
         devConfig.BaseWritePath[sizeof( devConfig.BaseWritePath ) - 1] = '\0';
 

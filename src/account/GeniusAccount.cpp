@@ -25,8 +25,8 @@ namespace sgns
 {
     const std::array<uint8_t, 32> GeniusAccount::ELGAMAL_PUBKEY_PREDEFINED = get_elgamal_pubkey();
 
-    GeniusAccount::GeniusAccount( const uint8_t token_type, std::string_view base_path, const char *eth_private_key ) :
-        token( token_type ), nonce( 0 )
+    GeniusAccount::GeniusAccount( std::string token_id, std::string_view base_path, const char *eth_private_key ) :
+        token( token_id ), nonce( 0 )
     {
         if ( auto maybe_address = GenerateGeniusAddress( base_path, eth_private_key ); maybe_address.has_value() )
         {

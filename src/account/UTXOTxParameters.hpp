@@ -30,6 +30,7 @@ namespace sgns
     {
         uint64_t    encrypted_amount; ///< El Gamal encrypted amount
         std::string dest_address;     ///< Destination node address
+        std::string token_id;         ///< Token identifier
     };
 
     struct UTXOTxParameters
@@ -46,12 +47,14 @@ namespace sgns
                                                          const std::string             &src_address,
                                                          uint64_t                       amount,
                                                          std::string                    dest_address,
+                                                         std::string                    token_id,
                                                          std::string                    signature = "" )
         {
             UTXOTxParameters instance( utxo_pool,
                                        src_address,
                                        amount,
                                        std::move( dest_address ),
+                                       std::move( token_id ),
                                        std::move( signature ) );
 
             if ( !instance.inputs_.empty() )
@@ -100,10 +103,11 @@ namespace sgns
                           const std::string             &src_address,
                           uint64_t                       amount,
                           std::string                    dest_address,
+                          std::string                    token_id,
                           std::string                    signature ) :
             UTXOTxParameters( utxo_pool,
                               src_address,
-                              { OutputDestInfo{ amount, std::move( dest_address ) } },
+                              { OutputDestInfo{ amount, std::move( dest_address ), std::move( token_id ) } },
                               std::move( signature ) )
         {
         }

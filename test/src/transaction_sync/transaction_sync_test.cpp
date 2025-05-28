@@ -95,7 +95,8 @@ namespace sgns
             auto maybe_params = sgns::UTXOTxParameters::create( account->utxos,
                                                                 account->GetAddress(),
                                                                 amount,
-                                                                destination );
+                                                                destination,
+                                                                "GNUS Token" );
 
             if ( !maybe_params )
             {
