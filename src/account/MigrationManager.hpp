@@ -122,7 +122,7 @@ namespace sgns
         uint16_t                                                              basePort_;
         std::string                                                           basePath_;
 
-        base::Logger m_logger = sgns::base::createLogger( "MigrationManager" );
+        base::Logger m_logger = sgns::base::createLogger( "MigrationStep" );
     };
 
 } // namespace sgns::migration
