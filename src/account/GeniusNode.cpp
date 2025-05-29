@@ -331,6 +331,24 @@ namespace sgns
             account_->GetAddress() );
         processing_service_->SetChannelListRequestTimeout( boost::posix_time::milliseconds( 3000 ) );
 
+        // {
+        //     sgns::migration::MigrationManager migrationManager;
+        //     migrationManager.RegisterStep( std::make_unique<sgns::migration::Migration0To1_0_0>(
+        //         job_globaldb_,                             // newDb
+        //         io_,                                       // ioContext
+        //         pubsub_,                                   // pubSub
+        //         upnp_,                                     // upnp
+        //         basePort_,                                 // basePort (e.g. 4001)
+        //         write_base_path_ + gnus_network_full_path_ // basePath
+        //         ) );
+        //     auto migrationResult = migrationManager.Migrate( "0", "1.0.0" );
+        //     if ( migrationResult.has_error() )
+        //     {
+        //         throw std::runtime_error( std::string( "Database migration failed: " ) +
+        //                                   migrationResult.error().message() );
+        //     }
+        // }
+
         transaction_manager_ = std::make_shared<TransactionManager>( tx_globaldb_,
                                                                      io_,
                                                                      account_,
