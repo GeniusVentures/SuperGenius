@@ -1,14 +1,16 @@
 /**
- * @file MigrationManager.cpp
- * @brief Implementation of MigrationManager and Migration0To1_0_0.
- * @date 2025-05-29
- * @author Luiz (...)
+ * @file       MigrationManager.cpp
+ * @brief      Implementation of MigrationManager and Migration0To1_0_0.
+ * @date       2025-05-29
+ * @author     Luiz Guilherme Rizzatto Zucchi
+ * @author     Henrique A. Klein (hklein@gnus.ai)
  */
 #include "account/MigrationManager.hpp"
 
 #include <boost/format.hpp>
-#include <stdexcept>
-#include <utility>
+#include <boost/system/error_code.hpp>
+#include "account/TransactionManager.hpp"
+#include "proof/IBasicProof.hpp"
 
 namespace sgns
 {
@@ -84,61 +86,111 @@ namespace sgns
         std::string fullPath = ( boost::format( "%s_%d" ) % basePath % port ).str();
         // m_logger->debug( "Initializing legacy DB at path {}", fullPath );
 
-        auto dbResult = crdt::GlobalDB::New( ioContext_,
+        OUTCOME_TRY( auto &&db,
+            crdt::GlobalDB::New( ioContext_,
                                              fullPath,
                                              pubSub_,
                                              crdt::CrdtOptions::DefaultOptions(),
                                              graphsync_,
                                              scheduler_,
-                                             generator_ );
+                                             generator_ ));
 
-        if ( dbResult.has_error() )
-        {
-            // m_logger->error( "Failed to create GlobalDB at path {}", fullPath );
-            return outcome::failure( boost::system::error_code{} );
-        }
 
-        dbResult.value()->Start();
+        db->Start();
         // m_logger->debug( "Started legacy DB at path {}", fullPath );
 
-        return dbResult.value();
+        return db;
     }
 
-    outcome::result<void> Migration0To1_0_0::MigrateDb( const std::shared_ptr<crdt::GlobalDB> &oldDb,
-                                                        const std::shared_ptr<crdt::GlobalDB> &newDb )
-    {
-        // m_logger->debug( "Starting migration of key-value entries" );
-        auto maybeEntries = oldDb->QueryKeyValues( "" );
-        if ( !maybeEntries.has_value() )
+        outcome::result<void> Migration0To1_0_0::MigrateDb( const std::shared_ptr<crdt::GlobalDB> &oldDb,
+                                                            const std::shared_ptr<crdt::GlobalDB> &newDb )
         {
-            // m_logger->error( "Failed to query key-values from old DB" );
-            return outcome::failure( boost::system::error_code{} );
-        }
+            //Outgoing transactions were /bc-963/[self address]/tx/[type]/[nonce]
+            //Incoming transactions were /bc-963/[other address]/notify/tx/[tx hash]
+            //Outgoing proofs were /bc-963/[self address]/proof/[nonce]
+            //Incoming proofs were /bc-963/[other address]/notify/proof/[tx hash]
 
-        auto &entries = maybeEntries.value();
-        auto  tx      = newDb->BeginTransaction();
-
-        for ( auto &entry : entries )
-        {
-            auto keyOpt = oldDb->KeyToString( entry.first );
-            if ( !keyOpt.has_value() )
+            const std::string BASE                 = "/bc-963/";
+            auto              maybeTransactionKeys = oldDb->QueryKeyValues( BASE, "*", "/tx" );
+            if ( !maybeTransactionKeys.has_value() )
             {
-                // m_logger->error( "Failed to convert key to string during migration" );
-                continue;
+                return outcome::failure( boost::system::error_code{} );
             }
-            crdt::HierarchicalKey hk( keyOpt.value() );
-            OUTCOME_TRY( tx->Put( std::move( hk ), std::move( entry.second ) ) );
-        }
+            auto &entries          = maybeTransactionKeys.value();
+            auto  crdt_transaction = newDb->BeginTransaction();
+            for ( const auto &entry : entries )
+            {
+                auto keyOpt = oldDb->KeyToString( entry.first );
+                if ( !keyOpt.has_value() )
+                {
+                    continue;
+                }
 
-        if ( tx->Commit().has_error() )
-        {
-            // m_logger->error( "Failed to commit migrated transaction" );
-            return outcome::failure( boost::system::error_code{} );
-        }
+                auto maybe_transaction = TransactionManager::FetchTransaction( oldDb, keyOpt.value() );
+                if ( !maybe_transaction.has_value() )
+                {
+                    m_logger->debug( "Can't fetch transaction" );
+                    continue;
+                }
+                auto tx = maybe_transaction.value();
+                if ( !IGeniusTransactions::CheckDAGStructSignature( tx->dag_st ) )
+                {
+                    m_logger->error( "Could not validate signature of transaction {}", keyOpt.value() );
+                    continue;
+                }
+                //Until here it's supposed to work.
 
-        // m_logger->debug( "Migration of {} key-values completed", entries.size() );
-        return outcome::success();
-    }
+                auto maybeProofKeys = oldDb->QueryKeyValues( BASE + tx->GetSrcAddress(), "*", "/proof" );
+                if ( !maybeProofKeys.has_value() )
+                {
+                    m_logger->error( "Can't find the proof key {}", keyOpt.value() );
+                    continue;
+                }
+                auto proof_map = maybeProofKeys.value();
+                if ( proof_map.size() != 1 )
+                {
+                    m_logger->error( "More than 1 proof for {}", keyOpt.value() );
+                    continue;
+                }
+                auto proof_key = proof_map.begin()->first;
+
+                auto proof_buffer_key = oldDb->KeyToString( proof_key);
+                if ( !proof_buffer_key.has_value() )
+                {
+                    continue;
+                }
+
+                auto maybe_proof_data = oldDb->Get( proof_buffer_key.value() );
+                if ( !maybe_proof_data.has_value() )
+                {
+                    m_logger->error( "Can't find the proof data of {}", keyOpt.value() );
+                    continue;
+                }
+                auto proof_data_vector = maybe_proof_data.value().toVector();
+                auto maybe_valid_proof = IBasicProof::VerifyFullProof( proof_data_vector );
+                if ( maybe_valid_proof.has_error() || ( !maybe_valid_proof.value() ) )
+                {
+                    m_logger->error( "Could not verify proof of tx {}", keyOpt.value() );
+                    continue;
+                }
+                auto                         transaction_path = TransactionManager::GetTransactionPath( *tx );
+                sgns::crdt::HierarchicalKey  tx_key( transaction_path );
+                sgns::crdt::GlobalDB::Buffer data_transaction;
+                data_transaction.put( tx->SerializeByteVector() );
+                BOOST_OUTCOME_TRYV2( auto &&,
+                                     crdt_transaction->Put( std::move( tx_key ), std::move( data_transaction ) ) );
+                sgns::crdt::HierarchicalKey  proof_crdt_key( TransactionManager::GetTransactionProofPath( *tx ) );
+                sgns::crdt::GlobalDB::Buffer proof_transaction;
+                proof_transaction.put( maybe_proof_data.value() );
+                BOOST_OUTCOME_TRYV2( auto &&,
+                                     crdt_transaction->Put( std::move( proof_crdt_key ), std::move( proof_transaction ) ) );
+            }
+            if ( crdt_transaction->Commit().has_error() )
+            {
+                return outcome::failure( boost::system::error_code{} );
+            }
+            return outcome::success();
+        }
 
     outcome::result<void> Migration0To1_0_0::Apply()
     {

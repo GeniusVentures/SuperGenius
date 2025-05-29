@@ -1,3 +1,11 @@
+/**
+ * @file       MigrationManager.hpp
+ * @brief      Versioned migration manager and migration step interface.
+ * @date       2025-05-29
+ * @author     Luiz Guilherme Rizzatto Zucchi
+ * @author     Henrique A. Klein (hklein@gnus.ai)
+ */
+
 #pragma once
 
 #include <memory>
@@ -6,27 +14,15 @@
 #include <map>
 #include <unordered_map>
 
-#include <boost/format.hpp>
-#include <boost/multiprecision/cpp_int.hpp>
-
-#include "crdt/globaldb/globaldb.hpp"
-#include "crdt/atomic_transaction.hpp"
-#include "account/proto/SGTransaction.pb.h"
-#include "account/IGeniusTransactions.hpp"
-#include "account/TransferTransaction.hpp"
-#include "account/MintTransaction.hpp"
-#include "account/EscrowTransaction.hpp"
-#include "account/ProcessingTransaction.hpp"
-#include "account/GeniusAccount.hpp"
+#include <boost/asio/io_context.hpp>
+#include <ipfs_pubsub/gossip_pubsub_topic.hpp>
 #include "base/logger.hpp"
-#include "base/buffer.hpp"
-#include "crypto/hasher.hpp"
-#ifdef _PROOF_ENABLED
-#include "proof/proto/SGProof.pb.h"
-#endif
-#include "processing/proto/SGProcessing.pb.h"
-#include "outcome/outcome.hpp"
 #include "upnp.hpp"
+#include "crdt/globaldb/globaldb.hpp"
+#include "outcome/outcome.hpp"
+#include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
+#include <ipfs_lite/ipfs/graphsync/impl/local_requests.hpp>
+#include <libp2p/protocol/common/asio/asio_scheduler.hpp>
 
 namespace sgns
 {
@@ -125,6 +121,8 @@ namespace sgns
         std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator_;
         uint16_t                                                              basePort_;
         std::string                                                           basePath_;
+
+        base::Logger m_logger = sgns::base::createLogger( "MigrationManager" );
     };
 
 } // namespace sgns::migration
