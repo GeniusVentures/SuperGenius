@@ -20,17 +20,17 @@ private:
     std::unique_ptr<MNN::Interpreter> legacyLmHeadNet;
     bool                              useSplitLmHead;
 
-    // Standard layers (0-2)
-    std::vector<std::unique_ptr<MNN::Interpreter>> standardLayers;
-    std::vector<MNN::Session *>                    standardSessions;
+    // All layers (0-61) using unified LayerProcessor
+    std::vector<std::unique_ptr<LayerProcessor>> allLayers;
 
-    // Expert layers (3-61)
-    std::vector<std::unique_ptr<LayerProcessor>> expertLayers;
+    // Final model layernorm
+    std::unique_ptr<MNN::Interpreter> finalLayerNorm;
+    MNN::Session                     *finalLayerNormSession;
 
     // Utility methods
-    bool               loadStandardLayers();
-    bool               loadExpertLayers();
-    std::vector<float> runStandardLayer( int layerId, const std::vector<float> &input );
+    bool               loadAllLayers();
+    bool               loadFinalLayerNorm();
+    std::vector<float> runFinalLayerNorm( const std::vector<float> &input );
 
 public:
     MoEModelRunner( const std::string &modelDir, bool debug = false );
@@ -42,6 +42,11 @@ public:
     void setDebugMode( bool debug )
     {
         debugMode = debug;
+        // Update debug mode for all layers
+        for ( auto &layer : allLayers )
+        {
+            layer->setDebugMode( debug );
+        }
     }
 
     bool getDebugMode() const

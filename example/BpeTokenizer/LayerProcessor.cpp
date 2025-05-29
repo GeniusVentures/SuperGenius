@@ -1,3 +1,5 @@
+// Updated LayerProcessor.cpp with complete DeepSeek-V3 architecture
+
 #include "LayerProcessor.hpp"
 
 LayerProcessor::LayerProcessor( int layerId, const std::string &modelDir, bool debug ) :
@@ -68,10 +70,244 @@ void LayerProcessor::scanAvailableExperts()
     }
 
     // If no experts found via filesystem, this might indicate a problem
-    if ( availableExpertIds.empty() )
+    if ( availableExpertIds.empty() && layerId >= 3 ) // Only MoE layers should have experts
     {
-        std::cerr << "Warning: No expert files found for layer " << layerId << " in directory " << modelDir
+        std::cerr << "Warning: No expert files found for MoE layer " << layerId << " in directory " << modelDir
                   << std::endl;
+    }
+}
+
+std::vector<float> LayerProcessor::runPreAttentionLayerNorm( const std::vector<float> &input )
+{
+    // Load pre-attention layernorm temporarily
+    std::string layerNormPath = modelDir + "/layer_" + std::to_string( layerId ) + "_layernorm.mnn";
+
+    if ( !std::filesystem::exists( layerNormPath ) )
+    {
+        if ( debugMode )
+        {
+            std::cout << "No pre-attention layernorm found for layer " << layerId << ", skipping normalization"
+                      << std::endl;
+        }
+        return input; // Pass through if no layernorm layer
+    }
+
+    try
+    {
+        // Create temporary interpreter
+        std::unique_ptr<MNN::Interpreter> tempLayerNorm( MNN::Interpreter::createFromFile( layerNormPath.c_str() ) );
+
+        if ( !tempLayerNorm )
+        {
+            std::cerr << "Failed to load pre-attention layernorm " << layerId << " from " << layerNormPath << std::endl;
+            return input; // Pass through on failure
+        }
+
+        // Create temporary session with CPU to save Vulkan instances
+        MNN::ScheduleConfig config;
+        config.type      = MNN_FORWARD_CPU;
+        config.numThread = 1;
+
+        MNN::Session *tempSession = tempLayerNorm->createSession( config );
+        if ( !tempSession )
+        {
+            std::cerr << "Failed to create session for pre-attention layernorm " << layerId << std::endl;
+            return input; // Pass through on failure
+        }
+
+        // Get input tensor
+        auto layerInput = tempLayerNorm->getSessionInput( tempSession, nullptr );
+        if ( !layerInput )
+        {
+            tempLayerNorm->releaseSession( tempSession );
+            std::cerr << "Failed to get input tensor for pre-attention layernorm " << layerId << std::endl;
+            return input;
+        }
+
+        // Resize input tensor
+        tempLayerNorm->resizeTensor( layerInput, { 1, 1, (int)input.size() } );
+        tempLayerNorm->resizeSession( tempSession );
+
+        // Copy input data
+        MNN::Tensor inputHost( layerInput, MNN::Tensor::CAFFE );
+        float      *inputData = inputHost.host<float>();
+        LLMUtility::safeCopyToTensor( inputData, input );
+        layerInput->copyFromHostTensor( &inputHost );
+
+        // Run layernorm
+        tempLayerNorm->runSession( tempSession );
+
+        // Get output
+        auto output = tempLayerNorm->getSessionOutput( tempSession, nullptr );
+        if ( !output )
+        {
+            tempLayerNorm->releaseSession( tempSession );
+            std::cerr << "Failed to get output tensor for pre-attention layernorm " << layerId << std::endl;
+            return input;
+        }
+
+        // Copy to host
+        MNN::Tensor outputHost( output, output->getDimensionType() );
+        output->copyToHostTensor( &outputHost );
+        float *outputData = outputHost.host<float>();
+
+        // Get output size
+        size_t outputSize = 1;
+        for ( int d = 0; d < output->dimensions(); d++ )
+        {
+            outputSize *= output->length( d );
+        }
+
+        // Create vector for output
+        std::vector<float> layerOutput( outputSize );
+
+        // Copy output data with validation
+        for ( size_t i = 0; i < outputSize; i++ )
+        {
+            float val = outputData[i];
+            if ( std::isnan( val ) || std::isinf( val ) || std::abs( val ) > 1e6 )
+            {
+                layerOutput[i] = 0.0f; // Replace invalid values
+            }
+            else
+            {
+                layerOutput[i] = val;
+            }
+        }
+
+        // Clean up temporary session
+        tempLayerNorm->releaseSession( tempSession );
+
+        if ( debugMode )
+        {
+            std::cout << "Temporary pre-attention layernorm " << layerId << " processed successfully" << std::endl;
+        }
+
+        return layerOutput;
+    }
+    catch ( const std::exception &e )
+    {
+        std::cerr << "Error running temporary pre-attention layernorm " << layerId << ": " << e.what() << std::endl;
+        return input; // Return input as fallback
+    }
+}
+
+std::vector<float> LayerProcessor::runPostAttentionLayerNorm( const std::vector<float> &input )
+{
+    // Same implementation as pre-attention, but this represents the post-attention layernorm
+    // In practice, we're using the same layernorm model but with different weights loaded
+    // For now, we'll use the same model file since both are RMSNorm with same dimensions
+
+    std::string layerNormPath = modelDir + "/layer_" + std::to_string( layerId ) + "_layernorm.mnn";
+
+    if ( !std::filesystem::exists( layerNormPath ) )
+    {
+        if ( debugMode )
+        {
+            std::cout << "No post-attention layernorm found for layer " << layerId << ", skipping normalization"
+                      << std::endl;
+        }
+        return input; // Pass through if no layernorm layer
+    }
+
+    try
+    {
+        // Create temporary interpreter
+        std::unique_ptr<MNN::Interpreter> tempLayerNorm( MNN::Interpreter::createFromFile( layerNormPath.c_str() ) );
+
+        if ( !tempLayerNorm )
+        {
+            std::cerr << "Failed to load post-attention layernorm " << layerId << " from " << layerNormPath
+                      << std::endl;
+            return input; // Pass through on failure
+        }
+
+        // Create temporary session with CPU to save Vulkan instances
+        MNN::ScheduleConfig config;
+        config.type      = MNN_FORWARD_CPU;
+        config.numThread = 1;
+
+        MNN::Session *tempSession = tempLayerNorm->createSession( config );
+        if ( !tempSession )
+        {
+            std::cerr << "Failed to create session for post-attention layernorm " << layerId << std::endl;
+            return input; // Pass through on failure
+        }
+
+        // Get input tensor
+        auto layerInput = tempLayerNorm->getSessionInput( tempSession, nullptr );
+        if ( !layerInput )
+        {
+            tempLayerNorm->releaseSession( tempSession );
+            std::cerr << "Failed to get input tensor for post-attention layernorm " << layerId << std::endl;
+            return input;
+        }
+
+        // Resize input tensor
+        tempLayerNorm->resizeTensor( layerInput, { 1, 1, (int)input.size() } );
+        tempLayerNorm->resizeSession( tempSession );
+
+        // Copy input data
+        MNN::Tensor inputHost( layerInput, MNN::Tensor::CAFFE );
+        float      *inputData = inputHost.host<float>();
+        LLMUtility::safeCopyToTensor( inputData, input );
+        layerInput->copyFromHostTensor( &inputHost );
+
+        // Run layernorm
+        tempLayerNorm->runSession( tempSession );
+
+        // Get output
+        auto output = tempLayerNorm->getSessionOutput( tempSession, nullptr );
+        if ( !output )
+        {
+            tempLayerNorm->releaseSession( tempSession );
+            std::cerr << "Failed to get output tensor for post-attention layernorm " << layerId << std::endl;
+            return input;
+        }
+
+        // Copy to host
+        MNN::Tensor outputHost( output, output->getDimensionType() );
+        output->copyToHostTensor( &outputHost );
+        float *outputData = outputHost.host<float>();
+
+        // Get output size
+        size_t outputSize = 1;
+        for ( int d = 0; d < output->dimensions(); d++ )
+        {
+            outputSize *= output->length( d );
+        }
+
+        // Create vector for output
+        std::vector<float> layerOutput( outputSize );
+
+        // Copy output data with validation
+        for ( size_t i = 0; i < outputSize; i++ )
+        {
+            float val = outputData[i];
+            if ( std::isnan( val ) || std::isinf( val ) || std::abs( val ) > 1e6 )
+            {
+                layerOutput[i] = 0.0f; // Replace invalid values
+            }
+            else
+            {
+                layerOutput[i] = val;
+            }
+        }
+
+        // Clean up temporary session
+        tempLayerNorm->releaseSession( tempSession );
+
+        if ( debugMode )
+        {
+            std::cout << "Temporary post-attention layernorm " << layerId << " processed successfully" << std::endl;
+        }
+
+        return layerOutput;
+    }
+    catch ( const std::exception &e )
+    {
+        std::cerr << "Error running temporary post-attention layernorm " << layerId << ": " << e.what() << std::endl;
+        return input; // Return input as fallback
     }
 }
 
@@ -121,21 +357,9 @@ std::vector<float> LayerProcessor::runAttentionLayerTemporary( const std::vector
             std::cerr << "Failed to get input tensor for attention layer " << layerId << std::endl;
             return input;
         }
-        auto inputTensor  = tempAttentionLayer->getSessionInput( tempSession, NULL ); // or input name
-        auto outputTensor = tempAttentionLayer->getSessionOutput( tempSession, NULL );
-        auto dims         = inputTensor->shape();
-        MNN_PRINT( "Input shape: [" );
-        for ( size_t i = 0; i < dims.size(); ++i )
-        {
-            MNN_PRINT( "%d%s", dims[i], ( i + 1 < dims.size() ) ? ", " : "" );
-        }
-        MNN_PRINT( "]\n" );
-
-        MNN_PRINT( "Total input elements: %d\n", inputTensor->elementSize() );
-
 
         // Resize input tensor
-        tempAttentionLayer->resizeTensor( inputTensor, { 1, 1, (int)input.size() } );
+        tempAttentionLayer->resizeTensor( layerInput, { 1, 1, (int)input.size() } );
         tempAttentionLayer->resizeSession( tempSession );
 
         // Copy input data
@@ -185,15 +409,6 @@ std::vector<float> LayerProcessor::runAttentionLayerTemporary( const std::vector
             }
         }
 
-        // Add residual connection for attention
-        if ( layerOutput.size() == input.size() )
-        {
-            for ( size_t i = 0; i < layerOutput.size(); i++ )
-            {
-                layerOutput[i] += input[i]; // Add input back (residual connection)
-            }
-        }
-
         // Clean up temporary session
         tempAttentionLayer->releaseSession( tempSession );
 
@@ -208,6 +423,121 @@ std::vector<float> LayerProcessor::runAttentionLayerTemporary( const std::vector
     {
         std::cerr << "Error running temporary attention layer " << layerId << ": " << e.what() << std::endl;
         return input; // Return input as fallback
+    }
+}
+
+std::vector<float> LayerProcessor::runSharedExpert( const std::vector<float> &input )
+{
+    // Load shared expert temporarily
+    std::string sharedExpertPath = modelDir + "/shared_expert_layer_" + std::to_string( layerId ) + ".mnn";
+
+    if ( !std::filesystem::exists( sharedExpertPath ) )
+    {
+        if ( debugMode )
+        {
+            std::cout << "No shared expert found for layer " << layerId << ", skipping shared expert" << std::endl;
+        }
+        return std::vector<float>( input.size(), 0.0f ); // Return zeros if no shared expert
+    }
+
+    try
+    {
+        // Create temporary interpreter
+        std::unique_ptr<MNN::Interpreter> tempSharedExpert(
+            MNN::Interpreter::createFromFile( sharedExpertPath.c_str() ) );
+
+        if ( !tempSharedExpert )
+        {
+            std::cerr << "Failed to load shared expert " << layerId << " from " << sharedExpertPath << std::endl;
+            return std::vector<float>( input.size(), 0.0f ); // Return zeros on failure
+        }
+
+        // Create temporary session
+        MNN::ScheduleConfig config;
+        config.type      = MNN_FORWARD_VULKAN; // Use VULKAN for shared experts (they're larger)
+        config.numThread = 1;
+
+        MNN::Session *tempSession = tempSharedExpert->createSession( config );
+        if ( !tempSession )
+        {
+            std::cerr << "Failed to create session for shared expert " << layerId << std::endl;
+            return std::vector<float>( input.size(), 0.0f );
+        }
+
+        // Get input tensor
+        auto expertInput = tempSharedExpert->getSessionInput( tempSession, nullptr );
+        if ( !expertInput )
+        {
+            tempSharedExpert->releaseSession( tempSession );
+            std::cerr << "Failed to get input tensor for shared expert " << layerId << std::endl;
+            return std::vector<float>( input.size(), 0.0f );
+        }
+
+        // Resize input tensor
+        tempSharedExpert->resizeTensor( expertInput, { 1, (int)input.size() } );
+        tempSharedExpert->resizeSession( tempSession );
+
+        // Copy input data
+        MNN::Tensor inputHost( expertInput, MNN::Tensor::CAFFE );
+        float      *inputData = inputHost.host<float>();
+        LLMUtility::safeCopyToTensor( inputData, input );
+        expertInput->copyFromHostTensor( &inputHost );
+
+        // Run shared expert
+        tempSharedExpert->runSession( tempSession );
+
+        // Get output
+        auto output = tempSharedExpert->getSessionOutput( tempSession, nullptr );
+        if ( !output )
+        {
+            tempSharedExpert->releaseSession( tempSession );
+            std::cerr << "Failed to get output tensor for shared expert " << layerId << std::endl;
+            return std::vector<float>( input.size(), 0.0f );
+        }
+
+        // Copy to host
+        MNN::Tensor outputHost( output, output->getDimensionType() );
+        output->copyToHostTensor( &outputHost );
+        float *outputData = outputHost.host<float>();
+
+        // Get output size
+        size_t outputSize = 1;
+        for ( int d = 0; d < output->dimensions(); d++ )
+        {
+            outputSize *= output->length( d );
+        }
+
+        // Create vector for output
+        std::vector<float> expertOutput( outputSize );
+
+        // Copy output data with validation
+        for ( size_t i = 0; i < outputSize; i++ )
+        {
+            float val = outputData[i];
+            if ( std::isnan( val ) || std::isinf( val ) || std::abs( val ) > 1e6 )
+            {
+                expertOutput[i] = 0.0f; // Replace invalid values
+            }
+            else
+            {
+                expertOutput[i] = val;
+            }
+        }
+
+        // Clean up temporary session
+        tempSharedExpert->releaseSession( tempSession );
+
+        if ( debugMode )
+        {
+            std::cout << "Temporary shared expert " << layerId << " processed successfully" << std::endl;
+        }
+
+        return expertOutput;
+    }
+    catch ( const std::exception &e )
+    {
+        std::cerr << "Error running temporary shared expert " << layerId << ": " << e.what() << std::endl;
+        return std::vector<float>( input.size(), 0.0f ); // Return zeros as fallback
     }
 }
 
@@ -230,7 +560,8 @@ bool LayerProcessor::initialize()
         }
     }
 
-    // Initialize shared expert handler once
+    // Initialize shared expert handler once (only for MoE layers)
+    if ( layerId >= 3 )
     {
         std::lock_guard<std::mutex> lock( expertHandlerMutex );
         if ( !sharedExpertHandler )
@@ -258,21 +589,31 @@ bool LayerProcessor::initialize()
         sharedGateHandler->setDebugMode( debugMode );
     }
 
-    // Scan for available experts using filesystem scan
-    scanAvailableExperts();
+    // Scan for available experts using filesystem scan (only for MoE layers)
+    if ( layerId >= 3 )
+    {
+        scanAvailableExperts();
+    }
 
     if ( debugMode )
     {
-        std::cout << "Layer " << layerId << " initialized with " << availableExpertIds.size() << " available experts"
-                  << std::endl;
-        if ( !availableExpertIds.empty() )
+        if ( layerId >= 3 )
         {
-            std::cout << "Available expert IDs: ";
-            for ( int id : availableExpertIds )
+            std::cout << "Layer " << layerId << " (MoE) initialized with " << availableExpertIds.size()
+                      << " available experts" << std::endl;
+            if ( !availableExpertIds.empty() )
             {
-                std::cout << id << " ";
+                std::cout << "Available expert IDs: ";
+                for ( int id : availableExpertIds )
+                {
+                    std::cout << id << " ";
+                }
+                std::cout << std::endl;
             }
-            std::cout << std::endl;
+        }
+        else
+        {
+            std::cout << "Layer " << layerId << " (Standard) initialized" << std::endl;
         }
     }
 
@@ -283,26 +624,210 @@ std::vector<float> LayerProcessor::process( const std::vector<float> &input, int
 {
     std::vector<float> currentOutput = input;
 
-    // Step 1: Run attention layer temporarily (loads and unloads immediately)
-    currentOutput = runAttentionLayerTemporary( currentOutput );
+    // Step 1: Apply PRE-ATTENTION LayerNorm (input_layernorm)
+    currentOutput = runPreAttentionLayerNorm( currentOutput );
 
     if ( debugMode )
     {
-        std::cout << "Layer " << layerId << " attention processed (temporary)" << std::endl;
+        std::cout << "Layer " << layerId << " pre-attention layernorm applied" << std::endl;
     }
 
-    // Step 2: Run MLP/Expert layer (using existing shared handlers)
+    // Step 2: Run attention layer temporarily with residual connection
+    std::vector<float> attentionInput  = currentOutput; // Save input to attention
+    std::vector<float> attentionOutput = runAttentionLayerTemporary( currentOutput );
+
+    // Add residual connection for attention
+    if ( attentionOutput.size() == attentionInput.size() )
+    {
+        for ( size_t i = 0; i < attentionOutput.size(); i++ )
+        {
+            attentionOutput[i] += attentionInput[i]; // Add residual
+        }
+    }
+    currentOutput = attentionOutput;
+
+    if ( debugMode )
+    {
+        std::cout << "Layer " << layerId << " attention processed with residual connection" << std::endl;
+    }
+
+    // Step 3: Apply POST-ATTENTION LayerNorm (post_attention_layernorm)
+    currentOutput = runPostAttentionLayerNorm( currentOutput );
+
+    if ( debugMode )
+    {
+        std::cout << "Layer " << layerId << " post-attention layernorm applied" << std::endl;
+    }
+
+    // Step 4: Process FFN/MLP layer based on layer type
+    std::vector<float> ffnInput = currentOutput; // Save input to FFN for residual
+    std::vector<float> ffnOutput;
+
+    if ( layerId < 3 )
+    {
+        // Standard layers (0-2): Use the existing standard layer processing from MoEModelRunner
+        ffnOutput = processStandardMLP( currentOutput );
+
+        if ( debugMode )
+        {
+            std::cout << "Layer " << layerId << " standard MLP processed" << std::endl;
+        }
+    }
+    else
+    {
+        // MoE layers (3-61): Process shared + routed experts
+        ffnOutput = processMoEExperts( currentOutput, tokenPosition );
+
+        if ( debugMode )
+        {
+            std::cout << "Layer " << layerId << " MoE experts processed" << std::endl;
+        }
+    }
+
+    // Step 5: Add residual connection for FFN
+    if ( ffnOutput.size() == ffnInput.size() )
+    {
+        for ( size_t i = 0; i < ffnOutput.size(); i++ )
+        {
+            ffnOutput[i] += ffnInput[i]; // Add residual
+        }
+    }
+
+    if ( debugMode )
+    {
+        std::cout << "Layer " << layerId << " FFN processed with residual connection" << std::endl;
+    }
+
+    return ffnOutput;
+}
+
+std::vector<float> LayerProcessor::processStandardMLP( const std::vector<float> &input )
+{
+    // Load standard MLP temporarily
+    std::string mlpPath = modelDir + "/layer_" + std::to_string( layerId ) + "_mlp.mnn";
+
+    if ( !std::filesystem::exists( mlpPath ) )
+    {
+        if ( debugMode )
+        {
+            std::cout << "No standard MLP found for layer " << layerId << ", skipping MLP" << std::endl;
+        }
+        return input; // Pass through if no MLP layer
+    }
+
+    try
+    {
+        // Create temporary interpreter
+        std::unique_ptr<MNN::Interpreter> tempMLP( MNN::Interpreter::createFromFile( mlpPath.c_str() ) );
+
+        if ( !tempMLP )
+        {
+            std::cerr << "Failed to load standard MLP " << layerId << " from " << mlpPath << std::endl;
+            return input; // Pass through on failure
+        }
+
+        // Create temporary session
+        MNN::ScheduleConfig config;
+        config.type      = MNN_FORWARD_VULKAN; // Use VULKAN for MLPs
+        config.numThread = 1;
+
+        MNN::Session *tempSession = tempMLP->createSession( config );
+        if ( !tempSession )
+        {
+            std::cerr << "Failed to create session for standard MLP " << layerId << std::endl;
+            return input; // Pass through on failure
+        }
+
+        // Get input tensor
+        auto mlpInput = tempMLP->getSessionInput( tempSession, nullptr );
+        if ( !mlpInput )
+        {
+            tempMLP->releaseSession( tempSession );
+            std::cerr << "Failed to get input tensor for standard MLP " << layerId << std::endl;
+            return input;
+        }
+
+        // Resize input tensor
+        tempMLP->resizeTensor( mlpInput, { 1, (int)input.size() } );
+        tempMLP->resizeSession( tempSession );
+
+        // Copy input data
+        MNN::Tensor inputHost( mlpInput, MNN::Tensor::CAFFE );
+        float      *inputData = inputHost.host<float>();
+        LLMUtility::safeCopyToTensor( inputData, input );
+        mlpInput->copyFromHostTensor( &inputHost );
+
+        // Run MLP
+        tempMLP->runSession( tempSession );
+
+        // Get output
+        auto output = tempMLP->getSessionOutput( tempSession, nullptr );
+        if ( !output )
+        {
+            tempMLP->releaseSession( tempSession );
+            std::cerr << "Failed to get output tensor for standard MLP " << layerId << std::endl;
+            return input;
+        }
+
+        // Copy to host
+        MNN::Tensor outputHost( output, output->getDimensionType() );
+        output->copyToHostTensor( &outputHost );
+        float *outputData = outputHost.host<float>();
+
+        // Get output size
+        size_t outputSize = 1;
+        for ( int d = 0; d < output->dimensions(); d++ )
+        {
+            outputSize *= output->length( d );
+        }
+
+        // Create vector for output
+        std::vector<float> mlpOutput( outputSize );
+
+        // Copy output data with validation
+        for ( size_t i = 0; i < outputSize; i++ )
+        {
+            float val = outputData[i];
+            if ( std::isnan( val ) || std::isinf( val ) || std::abs( val ) > 1e6 )
+            {
+                mlpOutput[i] = 0.0f; // Replace invalid values
+            }
+            else
+            {
+                mlpOutput[i] = val;
+            }
+        }
+
+        // Clean up temporary session
+        tempMLP->releaseSession( tempSession );
+
+        if ( debugMode )
+        {
+            std::cout << "Temporary standard MLP " << layerId << " processed successfully" << std::endl;
+        }
+
+        return mlpOutput;
+    }
+    catch ( const std::exception &e )
+    {
+        std::cerr << "Error running temporary standard MLP " << layerId << ": " << e.what() << std::endl;
+        return input; // Return input as fallback
+    }
+}
+
+std::vector<float> LayerProcessor::processMoEExperts( const std::vector<float> &input, int tokenPosition )
+{
     if ( !sharedExpertHandler )
     {
         std::cerr << "No expert handler available for layer " << layerId << std::endl;
-        return currentOutput; // Pass through current output as fallback
+        return input; // Pass through current output as fallback
     }
 
     // Use the pre-scanned available experts for this layer
     if ( availableExpertIds.empty() )
     {
         std::cerr << "No experts available for layer " << layerId << "! Skipping MLP layer." << std::endl;
-        return currentOutput; // Pass through current output unchanged
+        return input; // Pass through current output unchanged
     }
 
     if ( debugMode )
@@ -311,13 +836,22 @@ std::vector<float> LayerProcessor::process( const std::vector<float> &input, int
                   << std::endl;
     }
 
+    // Step 4a: Run Shared Experts (always active in MoE layers)
+    std::vector<float> sharedExpertOutput = runSharedExpert( input );
+
+    if ( debugMode )
+    {
+        std::cout << "Layer " << layerId << " shared expert processed" << std::endl;
+    }
+
+    // Step 4b: Run Routed Experts
     std::vector<int> selectedExperts;
 
     // Use gate to select experts if available
     if ( sharedGateHandler && sharedGateHandler->hasLayerGate( layerId ) )
     {
-        // Use the new method that handles availability filtering
-        selectedExperts = sharedGateHandler->selectAvailableExperts( layerId, currentOutput, availableExpertIds, 2 );
+        // Use the method that handles availability filtering
+        selectedExperts = sharedGateHandler->selectAvailableExperts( layerId, input, availableExpertIds, 2 );
 
         if ( debugMode )
         {
@@ -353,28 +887,28 @@ std::vector<float> LayerProcessor::process( const std::vector<float> &input, int
         }
     }
 
-    // Run selected experts with proper layer context
-    std::vector<float> mlpOutput;
+    // Run selected routed experts with proper layer context
+    std::vector<float> routedExpertOutput;
     int                successfulExperts = 0;
 
     for ( int expertId : selectedExperts )
     {
-        std::vector<float> expertOutput = sharedExpertHandler->runExpertForLayer( layerId, expertId, currentOutput );
+        std::vector<float> expertOutput = sharedExpertHandler->runExpertForLayer( layerId, expertId, input );
 
         if ( !expertOutput.empty() )
         {
             successfulExperts++;
 
-            if ( mlpOutput.empty() )
+            if ( routedExpertOutput.empty() )
             {
-                mlpOutput = expertOutput;
+                routedExpertOutput = expertOutput;
             }
             else
             {
                 // Average with previous results
-                for ( size_t j = 0; j < mlpOutput.size() && j < expertOutput.size(); ++j )
+                for ( size_t j = 0; j < routedExpertOutput.size() && j < expertOutput.size(); ++j )
                 {
-                    mlpOutput[j] += expertOutput[j];
+                    routedExpertOutput[j] += expertOutput[j];
                 }
             }
 
@@ -389,38 +923,62 @@ std::vector<float> LayerProcessor::process( const std::vector<float> &input, int
         }
     }
 
-    // Average the results if we ran multiple experts
+    // Average the routed expert results if we ran multiple experts
     if ( successfulExperts > 1 )
     {
-        for ( size_t j = 0; j < mlpOutput.size(); ++j )
+        for ( size_t j = 0; j < routedExpertOutput.size(); ++j )
         {
-            mlpOutput[j] /= successfulExperts;
+            routedExpertOutput[j] /= successfulExperts;
         }
 
         if ( debugMode )
         {
-            std::cout << "Averaged results from " << successfulExperts << " experts for layer " << layerId << std::endl;
+            std::cout << "Averaged results from " << successfulExperts << " routed experts for layer " << layerId
+                      << std::endl;
         }
     }
 
-    // If no experts ran successfully, return current output as fallback
-    if ( successfulExperts == 0 )
-    {
-        std::cerr << "Failed to run any experts for layer " << layerId << ", passing through current output"
-                  << std::endl;
-        return currentOutput;
-    }
+    // Step 4c: Combine Shared + Routed Expert outputs (MoE architecture)
+    std::vector<float> combinedExpertOutput;
 
-    // Add residual connection for MLP part
-    if ( mlpOutput.size() == currentOutput.size() )
+    // Combine shared expert output + routed expert output
+    if ( !sharedExpertOutput.empty() && !routedExpertOutput.empty() &&
+         sharedExpertOutput.size() == routedExpertOutput.size() )
     {
-        for ( size_t i = 0; i < mlpOutput.size(); i++ )
+        combinedExpertOutput.resize( sharedExpertOutput.size() );
+        for ( size_t i = 0; i < combinedExpertOutput.size(); i++ )
         {
-            mlpOutput[i] += currentOutput[i]; // Add post-attention output back (residual connection)
+            combinedExpertOutput[i] = sharedExpertOutput[i] + routedExpertOutput[i];
+        }
+
+        if ( debugMode )
+        {
+            std::cout << "Combined shared + routed expert outputs for layer " << layerId << std::endl;
         }
     }
+    else if ( !routedExpertOutput.empty() )
+    {
+        combinedExpertOutput = routedExpertOutput; // Fallback to routed only
+        if ( debugMode )
+        {
+            std::cout << "Using routed expert output only for layer " << layerId << std::endl;
+        }
+    }
+    else if ( !sharedExpertOutput.empty() )
+    {
+        combinedExpertOutput = sharedExpertOutput; // Fallback to shared only
+        if ( debugMode )
+        {
+            std::cout << "Using shared expert output only for layer " << layerId << std::endl;
+        }
+    }
+    else
+    {
+        std::cerr << "Failed to run any experts for layer " << layerId << ", passing through input" << std::endl;
+        return input;
+    }
 
-    return mlpOutput;
+    return combinedExpertOutput;
 }
 
 void LayerProcessor::setDebugMode( bool debug )

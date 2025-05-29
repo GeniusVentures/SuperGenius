@@ -15,10 +15,6 @@ private:
     std::string modelDir;
     bool        debugMode;
 
-    // NO stored attention layer - load temporarily to save memory
-    // std::unique_ptr<MNN::Interpreter> attentionLayer;  // REMOVED
-    // MNN::Session                     *attentionSession; // REMOVED
-
     // Gate model - shared across all layers for resource efficiency
     static std::shared_ptr<GateWeightsHandler> sharedGateHandler;
     static std::mutex                          gateHandlerMutex;
@@ -36,8 +32,15 @@ private:
     // Scan for available experts for this layer
     void scanAvailableExperts();
 
-    // Run attention layer temporarily (load, run, cleanup)
+    // Process different types of layers
+    std::vector<float> processStandardMLP( const std::vector<float> &input );
+    std::vector<float> processMoEExperts( const std::vector<float> &input, int tokenPosition );
+
+    // Run individual components temporarily (load, run, cleanup)
+    std::vector<float> runPreAttentionLayerNorm( const std::vector<float> &input );
+    std::vector<float> runPostAttentionLayerNorm( const std::vector<float> &input );
     std::vector<float> runAttentionLayerTemporary( const std::vector<float> &input );
+    std::vector<float> runSharedExpert( const std::vector<float> &input );
 
 public:
     LayerProcessor( int layerId, const std::string &modelDir, bool debug = false );
@@ -68,6 +71,17 @@ public:
     {
         std::string attentionPath = modelDir + "/layer_" + std::to_string( layerId ) + "_attention.mnn";
         return std::filesystem::exists( attentionPath );
+    }
+
+    // Check if this is a standard layer (0-2) or MoE layer (3-61)
+    bool isStandardLayer() const
+    {
+        return layerId < 3;
+    }
+
+    bool isMoELayer() const
+    {
+        return layerId >= 3;
     }
 };
 

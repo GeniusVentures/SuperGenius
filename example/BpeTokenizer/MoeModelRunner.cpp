@@ -1,20 +1,22 @@
 #include "MoeModelRunner.hpp"
 
 MoEModelRunner::MoEModelRunner( const std::string &modelDir, bool debug ) :
-    modelDir( modelDir ), debugMode( debug ), hiddenSize( 7168 ), useSplitLmHead( false )
+    modelDir( modelDir ),
+    debugMode( debug ),
+    hiddenSize( 7168 ),
+    useSplitLmHead( false ),
+    finalLayerNorm( nullptr ),
+    finalLayerNormSession( nullptr )
 {
 }
 
 MoEModelRunner::~MoEModelRunner()
 {
-    // Clean up standard layer sessions
-    for ( size_t i = 0; i < standardSessions.size(); i++ )
+    // Clean up final layernorm session
+    if ( finalLayerNorm && finalLayerNormSession )
     {
-        if ( standardLayers[i] && standardSessions[i] )
-        {
-            standardLayers[i]->releaseSession( standardSessions[i] );
-            standardSessions[i] = nullptr;
-        }
+        finalLayerNorm->releaseSession( finalLayerNormSession );
+        finalLayerNormSession = nullptr;
     }
 }
 
@@ -67,108 +69,101 @@ bool MoEModelRunner::initialize()
         std::cout << "Using legacy LM head model as fallback" << std::endl;
     }
 
-    // Load standard layers (0-2)
-    if ( !loadStandardLayers() )
+    // Load all layers (0-61)
+    if ( !loadAllLayers() )
     {
-        std::cerr << "Warning: Failed to load some standard layers" << std::endl;
+        std::cerr << "Failed to load layers" << std::endl;
+        return false;
     }
 
-    // Load expert layers (3-61)
-    if ( !loadExpertLayers() )
+    // Load final layernorm
+    if ( !loadFinalLayerNorm() )
     {
-        std::cerr << "Warning: Failed to load some expert layers" << std::endl;
-    }
-
-    return true;
-}
-
-bool MoEModelRunner::loadStandardLayers()
-{
-    // Reserve space for layers
-    standardLayers.resize( 3 );
-    standardSessions.resize( 3, nullptr );
-
-    // Load each standard layer
-    for ( int i = 0; i < 3; i++ )
-    {
-        std::string layerPath = modelDir + "/layer_" + std::to_string( i ) + "_mlp.mnn";
-
-        if ( std::filesystem::exists( layerPath ) )
-        {
-            standardLayers[i].reset( MNN::Interpreter::createFromFile( layerPath.c_str() ) );
-
-            if ( !standardLayers[i] )
-            {
-                std::cerr << "Failed to load standard layer " << i << " from " << layerPath << std::endl;
-                continue;
-            }
-
-            // Create a session for this layer
-            MNN::ScheduleConfig config;
-            config.type      = MNN_FORWARD_VULKAN;
-            config.numThread = 1;
-
-            standardSessions[i] = standardLayers[i]->createSession( config );
-
-            if ( !standardSessions[i] )
-            {
-                std::cerr << "Failed to create session for standard layer " << i << std::endl;
-                continue;
-            }
-
-            std::cout << "Loaded standard layer " << i << " from " << layerPath << std::endl;
-        }
-        else
-        {
-            std::cerr << "Standard layer " << i << " not found at " << layerPath << std::endl;
-        }
+        std::cerr << "Warning: Failed to load final layernorm" << std::endl;
     }
 
     return true;
 }
 
-bool MoEModelRunner::loadExpertLayers()
+bool MoEModelRunner::loadAllLayers()
 {
-    // Start from layer 3, go up to layer 61
-    for ( int i = 3; i <= 61; i++ )
+    // Load all layers from 0 to 61 using LayerProcessor
+    for ( int i = 0; i <= 61; i++ )
     {
         auto processor = std::make_unique<LayerProcessor>( i, modelDir, debugMode );
 
         if ( processor->initialize() )
         {
-            expertLayers.push_back( std::move( processor ) );
-            std::cout << "Initialized expert layer " << i << std::endl;
+            allLayers.push_back( std::move( processor ) );
+            std::cout << "Initialized layer " << i << ( i < 3 ? " (Standard)" : " (MoE)" ) << std::endl;
         }
         else
         {
-            std::cerr << "Failed to initialize expert layer " << i << std::endl;
+            std::cerr << "Failed to initialize layer " << i << std::endl;
+            return false;
         }
     }
 
-    return !expertLayers.empty();
+    std::cout << "Loaded " << allLayers.size() << " layers total" << std::endl;
+    return !allLayers.empty();
 }
 
-std::vector<float> MoEModelRunner::runStandardLayer( int layerId, const std::vector<float> &input )
+bool MoEModelRunner::loadFinalLayerNorm()
 {
-    if ( layerId < 0 || layerId >= (int)standardLayers.size() || !standardLayers[layerId] ||
-         !standardSessions[layerId] )
+    std::string finalNormPath = modelDir + "/final_layernorm.mnn";
+
+    if ( !std::filesystem::exists( finalNormPath ) )
     {
-        // If layer doesn't exist or failed to load, return input as passthrough
-        return input;
+        std::cerr << "Final layernorm not found at " << finalNormPath << std::endl;
+        return false;
+    }
+
+    finalLayerNorm.reset( MNN::Interpreter::createFromFile( finalNormPath.c_str() ) );
+    if ( !finalLayerNorm )
+    {
+        std::cerr << "Failed to load final layernorm from " << finalNormPath << std::endl;
+        return false;
+    }
+
+    // Create session for final layernorm
+    MNN::ScheduleConfig config;
+    config.type      = MNN_FORWARD_CPU;
+    config.numThread = 1;
+
+    finalLayerNormSession = finalLayerNorm->createSession( config );
+    if ( !finalLayerNormSession )
+    {
+        std::cerr << "Failed to create session for final layernorm" << std::endl;
+        return false;
+    }
+
+    std::cout << "Loaded final layernorm from " << finalNormPath << std::endl;
+    return true;
+}
+
+std::vector<float> MoEModelRunner::runFinalLayerNorm( const std::vector<float> &input )
+{
+    if ( !finalLayerNorm || !finalLayerNormSession )
+    {
+        if ( debugMode )
+        {
+            std::cout << "No final layernorm available, skipping" << std::endl;
+        }
+        return input; // Pass through if no final layernorm
     }
 
     try
     {
         // Get input tensor
-        auto layerInput = standardLayers[layerId]->getSessionInput( standardSessions[layerId], nullptr );
+        auto layerInput = finalLayerNorm->getSessionInput( finalLayerNormSession, nullptr );
         if ( !layerInput )
         {
-            throw std::runtime_error( "Failed to get input tensor for standard layer " + std::to_string( layerId ) );
+            throw std::runtime_error( "Failed to get input tensor for final layernorm" );
         }
 
         // Resize input tensor
-        standardLayers[layerId]->resizeTensor( layerInput, { 1, (int)input.size() } );
-        standardLayers[layerId]->resizeSession( standardSessions[layerId] );
+        finalLayerNorm->resizeTensor( layerInput, { 1, 1, (int)input.size() } );
+        finalLayerNorm->resizeSession( finalLayerNormSession );
 
         // Copy input data
         MNN::Tensor inputHost( layerInput, MNN::Tensor::CAFFE );
@@ -176,14 +171,14 @@ std::vector<float> MoEModelRunner::runStandardLayer( int layerId, const std::vec
         LLMUtility::safeCopyToTensor( inputData, input );
         layerInput->copyFromHostTensor( &inputHost );
 
-        // Run layer
-        standardLayers[layerId]->runSession( standardSessions[layerId] );
+        // Run final layernorm
+        finalLayerNorm->runSession( finalLayerNormSession );
 
         // Get output
-        auto output = standardLayers[layerId]->getSessionOutput( standardSessions[layerId], nullptr );
+        auto output = finalLayerNorm->getSessionOutput( finalLayerNormSession, nullptr );
         if ( !output )
         {
-            throw std::runtime_error( "Failed to get output tensor for standard layer " + std::to_string( layerId ) );
+            throw std::runtime_error( "Failed to get output tensor for final layernorm" );
         }
 
         // Copy to host
@@ -201,7 +196,7 @@ std::vector<float> MoEModelRunner::runStandardLayer( int layerId, const std::vec
         // Create vector for output
         std::vector<float> layerOutput( outputSize );
 
-        // Copy output data
+        // Copy output data with validation
         for ( size_t i = 0; i < outputSize; i++ )
         {
             float val = outputData[i];
@@ -219,7 +214,7 @@ std::vector<float> MoEModelRunner::runStandardLayer( int layerId, const std::vec
     }
     catch ( const std::exception &e )
     {
-        std::cerr << "Error running standard layer " << layerId << ": " << e.what() << std::endl;
+        std::cerr << "Error running final layernorm: " << e.what() << std::endl;
         return input; // Return input as fallback
     }
 }
@@ -255,10 +250,6 @@ std::string MoEModelRunner::generateText( const std::string &prompt, int numToke
         if ( i >= 3 )
         {
             setDebugMode( false );
-            for ( auto &layer : expertLayers )
-            {
-                layer->setDebugMode( false );
-            }
         }
 
         // Get last token
@@ -287,28 +278,25 @@ std::string MoEModelRunner::generateText( const std::string &prompt, int numToke
             embedding = LLMUtility::createSyntheticEmbedding( lastToken, hiddenSize );
         }
 
-        // Process through standard layers (0-2)
+        // Process through all layers (0-61) using unified LayerProcessor
         std::vector<float> layerOutput = embedding;
-        for ( int layerId = 0; layerId < 3; layerId++ )
+        for ( size_t j = 0; j < allLayers.size(); j++ )
         {
-            layerOutput = runStandardLayer( layerId, layerOutput );
+            layerOutput = allLayers[j]->process( layerOutput, i );
 
             if ( debugMode )
             {
-                std::cout << "Processed through standard layer " << layerId << std::endl;
+                std::cout << "Processed through layer " << allLayers[j]->getLayerId()
+                          << ( allLayers[j]->isStandardLayer() ? " (Standard)" : " (MoE)" ) << std::endl;
             }
         }
 
-        // Process through expert layers (3-61)
-        for ( size_t j = 0; j < expertLayers.size(); j++ )
-        {
-            int layerId = expertLayers[j]->getLayerId();
-            layerOutput = expertLayers[j]->process( layerOutput, i );
+        // Apply final layernorm
+        layerOutput = runFinalLayerNorm( layerOutput );
 
-            if ( debugMode )
-            {
-                std::cout << "Processed through expert layer " << layerId << std::endl;
-            }
+        if ( debugMode )
+        {
+            std::cout << "Applied final layernorm" << std::endl;
         }
 
         // Run LM head model (using split or legacy approach)
@@ -451,14 +439,19 @@ void MoEModelRunner::debugModelPipeline( const std::string &prompt )
     }
     std::cout << std::endl;
 
-    // Test standard layers
-    std::vector<float> layerOutput = embedding;
-    for ( int layerId = 0; layerId < 3; layerId++ )
-    {
-        std::vector<float> prevOutput = layerOutput;
-        layerOutput                   = runStandardLayer( layerId, layerOutput );
+    // Test all layers using the unified processor
+    std::vector<float> layerOutput     = embedding;
+    int                maxLayersToTest = std::min( 10, (int)allLayers.size() );
 
-        std::cout << "\n4." << ( layerId + 1 ) << " STANDARD LAYER " << layerId << " TEST:" << std::endl;
+    for ( int layerIdx = 0; layerIdx < maxLayersToTest; layerIdx++ )
+    {
+        int                layerId    = allLayers[layerIdx]->getLayerId();
+        std::vector<float> prevOutput = layerOutput;
+        layerOutput                   = allLayers[layerIdx]->process( layerOutput, 0 );
+
+        std::cout << "\n"
+                  << ( 4 + layerIdx ) << ". LAYER " << layerId
+                  << ( allLayers[layerIdx]->isStandardLayer() ? " (STANDARD)" : " (MOE)" ) << " TEST:" << std::endl;
 
         if ( layerOutput.empty() )
         {
@@ -494,60 +487,6 @@ void MoEModelRunner::debugModelPipeline( const std::string &prompt )
             changed = true;
         }
         std::cout << "   Output changed from input: " << ( changed ? "YES" : "NO" ) << std::endl;
-    }
-
-    // Test ALL expert layers (or at least the first 10)
-    int maxLayersToTest = std::min( 10, (int)expertLayers.size() );
-    for ( int expertLayerIdx = 0; expertLayerIdx < maxLayersToTest; expertLayerIdx++ )
-    {
-        int                layerId    = expertLayers[expertLayerIdx]->getLayerId();
-        std::vector<float> prevOutput = layerOutput;
-        layerOutput                   = expertLayers[expertLayerIdx]->process( layerOutput, 0 );
-
-        std::cout << "\n" << ( 7 + expertLayerIdx ) << ". EXPERT LAYER " << layerId << " TEST:" << std::endl;
-
-        if ( layerOutput.empty() )
-        {
-            std::cout << "   ERROR: Empty output from expert layer " << layerId << "!" << std::endl;
-            layerOutput = prevOutput; // Fallback
-            continue;
-        }
-
-        float minVal = *std::min_element( layerOutput.begin(), layerOutput.end() );
-        float maxVal = *std::max_element( layerOutput.begin(), layerOutput.end() );
-        float sum    = std::accumulate( layerOutput.begin(), layerOutput.end(), 0.0f );
-        float mean   = sum / layerOutput.size();
-
-        std::cout << "   Size: " << layerOutput.size() << std::endl;
-        std::cout << "   Range: [" << minVal << ", " << maxVal << "]" << std::endl;
-        std::cout << "   Mean: " << mean << std::endl;
-
-        // Check if output changed from input
-        bool changed = false;
-        if ( prevOutput.size() == layerOutput.size() )
-        {
-            for ( size_t i = 0; i < layerOutput.size(); i++ )
-            {
-                if ( std::abs( prevOutput[i] - layerOutput[i] ) > 1e-6 )
-                {
-                    changed = true;
-                    break;
-                }
-            }
-        }
-        else
-        {
-            changed = true;
-        }
-        std::cout << "   Output changed from input: " << ( changed ? "YES" : "NO" ) << std::endl;
-
-        // Special diagnostic for layer 10 (where you have multiple experts)
-        if ( layerId == 10 )
-        {
-            std::cout << "   LAYER 10 SPECIAL: This layer has "
-                      << expertLayers[expertLayerIdx]->getAvailableExpertIds().size() << " available experts"
-                      << std::endl;
-        }
 
         // Stop early if we hit very problematic outputs
         if ( std::abs( maxVal ) < 1e-20 && std::abs( minVal ) < 1e-20 )
@@ -558,12 +497,33 @@ void MoEModelRunner::debugModelPipeline( const std::string &prompt )
         }
     }
 
+    // Test final layernorm
+    std::cout << "\n" << ( 4 + maxLayersToTest ) << ". FINAL LAYERNORM TEST:" << std::endl;
+    std::vector<float> finalNormOutput = runFinalLayerNorm( layerOutput );
+
+    if ( !finalNormOutput.empty() )
+    {
+        float minVal = *std::min_element( finalNormOutput.begin(), finalNormOutput.end() );
+        float maxVal = *std::max_element( finalNormOutput.begin(), finalNormOutput.end() );
+        float sum    = std::accumulate( finalNormOutput.begin(), finalNormOutput.end(), 0.0f );
+        float mean   = sum / finalNormOutput.size();
+
+        std::cout << "   Size: " << finalNormOutput.size() << std::endl;
+        std::cout << "   Range: [" << minVal << ", " << maxVal << "]" << std::endl;
+        std::cout << "   Mean: " << mean << std::endl;
+    }
+    else
+    {
+        std::cout << "   Final layernorm not available or failed" << std::endl;
+        finalNormOutput = layerOutput;
+    }
+
     // Test LM head
-    std::cout << "\n" << ( 7 + maxLayersToTest ) << ". LM HEAD TEST:" << std::endl;
+    std::cout << "\n" << ( 5 + maxLayersToTest ) << ". LM HEAD TEST:" << std::endl;
 
     if ( useSplitLmHead )
     {
-        std::vector<float> logits = lmHeadLoader.runPrediction( layerOutput );
+        std::vector<float> logits = lmHeadLoader.runPrediction( finalNormOutput );
 
         if ( logits.empty() )
         {
@@ -591,22 +551,6 @@ void MoEModelRunner::debugModelPipeline( const std::string &prompt )
             }
         }
         std::cout << "   All logits are zero: " << ( allZero ? "YES (PROBLEM!)" : "NO" ) << std::endl;
-
-        // Check for identical values
-        bool allSame = true;
-        if ( !logits.empty() )
-        {
-            float firstVal = logits[0];
-            for ( float val : logits )
-            {
-                if ( std::abs( val - firstVal ) > 1e-6 )
-                {
-                    allSame = false;
-                    break;
-                }
-            }
-        }
-        std::cout << "   All logits identical: " << ( allSame ? "YES (PROBLEM!)" : "NO" ) << std::endl;
 
         // Show top 10 logits
         std::vector<std::pair<int, float>> indexedLogits;
@@ -673,65 +617,40 @@ void MoEModelRunner::debugModelPipelineDetailed( const std::string &prompt )
     std::cout << "   Range: [" << minVal << ", " << maxVal << "]" << std::endl;
     std::cout << "   Mean: " << mean << std::endl;
 
-    // Test standard layers
-    std::vector<float> layerOutput = embedding;
-    for ( int layerId = 0; layerId < 3; layerId++ )
+    // Test first few layers with detailed diagnostics
+    std::vector<float> layerOutput     = embedding;
+    int                maxLayersToTest = std::min( 5, (int)allLayers.size() );
+
+    for ( int layerIdx = 0; layerIdx < maxLayersToTest; layerIdx++ )
     {
-        std::vector<float> prevOutput = layerOutput;
-        layerOutput                   = runStandardLayer( layerId, layerOutput );
+        int layerId = allLayers[layerIdx]->getLayerId();
+        std::cout << "\n" << ( layerIdx + 3 ) << ". DETAILED LAYER " << layerId << " TEST:" << std::endl;
 
-        std::cout << "\n" << ( layerId + 3 ) << ". STANDARD LAYER " << layerId << " TEST:" << std::endl;
+        // Enable debug mode for detailed testing
+        allLayers[layerIdx]->setDebugMode( true );
 
-        if ( layerOutput.empty() )
+        std::vector<float> layerResult = allLayers[layerIdx]->process( layerOutput, 0 );
+
+        if ( layerResult.empty() )
         {
-            std::cout << "   ERROR: Empty output from layer " << layerId << "!" << std::endl;
-            layerOutput = prevOutput; // Fallback
-            continue;
-        }
-
-        float minVal = *std::min_element( layerOutput.begin(), layerOutput.end() );
-        float maxVal = *std::max_element( layerOutput.begin(), layerOutput.end() );
-        float sum    = std::accumulate( layerOutput.begin(), layerOutput.end(), 0.0f );
-        float mean   = sum / layerOutput.size();
-
-        std::cout << "   Size: " << layerOutput.size() << std::endl;
-        std::cout << "   Range: [" << minVal << ", " << maxVal << "]" << std::endl;
-        std::cout << "   Mean: " << mean << std::endl;
-    }
-
-    // Test ONLY the first expert layer with detailed diagnostics
-    if ( !expertLayers.empty() )
-    {
-        int layerId = expertLayers[0]->getLayerId();
-        std::cout << "\n6. DETAILED EXPERT LAYER " << layerId << " TEST:" << std::endl;
-
-        // Get the shared expert handler for detailed testing
-        // We need to add this diagnostic capability to LayerProcessor
-        // For now, let's test expert 0 for layer 3 directly
-
-        // This requires exposing the shared expert handler or adding diagnostic methods
-        std::cout << "   Running detailed expert diagnostics..." << std::endl;
-
-        // You'll need to modify LayerProcessor to expose diagnostic methods
-        // or provide access to the shared expert handler
-
-        std::vector<float> expertOutput = expertLayers[0]->process( layerOutput, 0 );
-
-        if ( expertOutput.empty() )
-        {
-            std::cout << "   ERROR: Empty expert output!" << std::endl;
+            std::cout << "   ERROR: Empty layer output!" << std::endl;
         }
         else
         {
-            float minVal = *std::min_element( expertOutput.begin(), expertOutput.end() );
-            float maxVal = *std::max_element( expertOutput.begin(), expertOutput.end() );
-            float sum    = std::accumulate( expertOutput.begin(), expertOutput.end(), 0.0f );
-            float mean   = sum / expertOutput.size();
+            float minVal = *std::min_element( layerResult.begin(), layerResult.end() );
+            float maxVal = *std::max_element( layerResult.begin(), layerResult.end() );
+            float sum    = std::accumulate( layerResult.begin(), layerResult.end(), 0.0f );
+            float mean   = sum / layerResult.size();
 
-            std::cout << "   Expert Output Size: " << expertOutput.size() << std::endl;
-            std::cout << "   Expert Output Range: [" << minVal << ", " << maxVal << "]" << std::endl;
-            std::cout << "   Expert Output Mean: " << mean << std::endl;
+            std::cout << "   Layer Output Size: " << layerResult.size() << std::endl;
+            std::cout << "   Layer Output Range: [" << minVal << ", " << maxVal << "]" << std::endl;
+            std::cout << "   Layer Output Mean: " << mean << std::endl;
         }
+
+        layerOutput = layerResult;
+
+        // Reset debug mode
+        allLayers[layerIdx]->setDebugMode( false );
     }
 
     std::cout << "\n=== END DETAILED DEBUG ===\n" << std::endl;
@@ -777,157 +696,73 @@ void MoEModelRunner::testExpertModelDirectly( const std::string &expertPath, int
         std::cout << "Input tensor info:" << std::endl;
         LLMUtility::printTensorInfo( input, "  Input" );
 
-        // Test with different input patterns
-        std::vector<std::vector<float>> testInputs = { // Test 1: All zeros
-                                                       std::vector<float>( hiddenSize, 0.0f ),
+        // Test with simple input pattern
+        std::vector<float> testInput( hiddenSize, 0.1f );
 
-                                                       // Test 2: All ones
-                                                       std::vector<float>( hiddenSize, 1.0f ),
+        // Resize tensor
+        interpreter->resizeTensor( input, { 1, (int)testInput.size() } );
+        interpreter->resizeSession( session );
 
-                                                       // Test 3: Small values (similar to what we see in embeddings)
-                                                       std::vector<float>( hiddenSize, 0.1f ),
+        // Copy input
+        MNN::Tensor inputHost( input, MNN::Tensor::CAFFE );
+        float      *inputData = inputHost.host<float>();
+        memcpy( inputData, testInput.data(), testInput.size() * sizeof( float ) );
+        input->copyFromHostTensor( &inputHost );
 
-                                                       // Test 4: Range pattern
-                                                       []( int size )
-                                                       {
-                                                           std::vector<float> v( size );
-                                                           for ( int i = 0; i < size; i++ )
-                                                           {
-                                                               v[i] = (float)i / size - 0.5f; // Range from -0.5 to 0.5
-                                                           }
-                                                           return v;
-                                                       }( hiddenSize ),
+        // Run model
+        interpreter->runSession( session );
 
-                                                       // Test 5: Random-like pattern (deterministic)
-                                                       []( int size )
-                                                       {
-                                                           std::vector<float> v( size );
-                                                           std::mt19937       rng( 12345 ); // Fixed seed
-                                                           std::uniform_real_distribution<float> dist( -0.2f, 0.2f );
-                                                           for ( int i = 0; i < size; i++ )
-                                                           {
-                                                               v[i] = dist( rng );
-                                                           }
-                                                           return v;
-                                                       }( hiddenSize ) };
-
-        std::vector<std::string> testNames = { "All Zeros", "All Ones", "All 0.1s", "Range Pattern", "Random Pattern" };
-
-        for ( size_t testIdx = 0; testIdx < testInputs.size(); testIdx++ )
+        // Get output
+        auto output = interpreter->getSessionOutput( session, nullptr );
+        if ( !output )
         {
-            std::cout << "\n--- Test " << ( testIdx + 1 ) << ": " << testNames[testIdx] << " ---" << std::endl;
+            std::cerr << "ERROR: Failed to get output tensor!" << std::endl;
+            interpreter->releaseSession( session );
+            return;
+        }
 
-            const auto &testInput = testInputs[testIdx];
+        std::cout << "Output tensor info:" << std::endl;
+        LLMUtility::printTensorInfo( output, "  Output" );
 
-            // Print input stats
-            float minIn  = *std::min_element( testInput.begin(), testInput.end() );
-            float maxIn  = *std::max_element( testInput.begin(), testInput.end() );
-            float sumIn  = std::accumulate( testInput.begin(), testInput.end(), 0.0f );
-            float meanIn = sumIn / testInput.size();
+        // Copy output
+        MNN::Tensor outputHost( output, output->getDimensionType() );
+        output->copyToHostTensor( &outputHost );
+        float *outputData = outputHost.host<float>();
 
-            std::cout << "Input stats: Size=" << testInput.size() << ", Range=[" << minIn << ", " << maxIn << "]"
-                      << ", Mean=" << meanIn << std::endl;
+        // Calculate output size
+        size_t outputSize = 1;
+        for ( int d = 0; d < output->dimensions(); d++ )
+        {
+            outputSize *= output->length( d );
+        }
 
-            // Resize tensor
-            interpreter->resizeTensor( input, { 1, (int)testInput.size() } );
-            interpreter->resizeSession( session );
+        // Analyze output
+        if ( outputSize > 0 )
+        {
+            float minOut = outputData[0];
+            float maxOut = outputData[0];
+            float sumOut = 0.0f;
 
-            // Copy input
-            MNN::Tensor inputHost( input, MNN::Tensor::CAFFE );
-            float      *inputData = inputHost.host<float>();
-            memcpy( inputData, testInput.data(), testInput.size() * sizeof( float ) );
-            input->copyFromHostTensor( &inputHost );
-
-            // Run model
-            interpreter->runSession( session );
-
-            // Get output
-            auto output = interpreter->getSessionOutput( session, nullptr );
-            if ( !output )
+            for ( size_t i = 0; i < outputSize; i++ )
             {
-                std::cerr << "ERROR: Failed to get output tensor!" << std::endl;
-                continue;
+                float val  = outputData[i];
+                sumOut    += val;
+                minOut     = std::min( minOut, val );
+                maxOut     = std::max( maxOut, val );
             }
 
-            std::cout << "Output tensor info:" << std::endl;
-            LLMUtility::printTensorInfo( output, "  Output" );
+            std::cout << "Output analysis:" << std::endl;
+            std::cout << "  Total elements: " << outputSize << std::endl;
+            std::cout << "  Range: [" << minOut << ", " << maxOut << "]" << std::endl;
+            std::cout << "  Mean: " << ( sumOut / outputSize ) << std::endl;
 
-            // Copy output
-            MNN::Tensor outputHost( output, output->getDimensionType() );
-            output->copyToHostTensor( &outputHost );
-            float *outputData = outputHost.host<float>();
-
-            // Calculate output size
-            size_t outputSize = 1;
-            for ( int d = 0; d < output->dimensions(); d++ )
+            if ( std::abs( maxOut - minOut ) > 1e-6 )
             {
-                outputSize *= output->length( d );
+                std::cout << "  STATUS: Output has meaningful variation - MODEL WORKING!" << std::endl;
             }
-
-            // Analyze output
-            if ( outputSize > 0 )
+            else
             {
-                float minOut        = outputData[0];
-                float maxOut        = outputData[0];
-                float sumOut        = 0.0f;
-                int   validCount    = 0;
-                int   nearZeroCount = 0;
-
-                for ( size_t i = 0; i < outputSize; i++ )
-                {
-                    float val = outputData[i];
-
-                    if ( std::isfinite( val ) )
-                    {
-                        validCount++;
-                        sumOut += val;
-                        minOut  = std::min( minOut, val );
-                        maxOut  = std::max( maxOut, val );
-
-                        if ( std::abs( val ) < 1e-10 )
-                        {
-                            nearZeroCount++;
-                        }
-                    }
-                }
-
-                std::cout << "Output analysis:" << std::endl;
-                std::cout << "  Total elements: " << outputSize << std::endl;
-                std::cout << "  Valid elements: " << validCount << std::endl;
-                std::cout << "  Near-zero elements: " << nearZeroCount << std::endl;
-
-                if ( validCount > 0 )
-                {
-                    std::cout << "  Range: [" << minOut << ", " << maxOut << "]" << std::endl;
-                    std::cout << "  Mean: " << ( sumOut / validCount ) << std::endl;
-
-                    // Show first few values
-                    std::cout << "  First 10 values: ";
-                    for ( int i = 0; i < std::min( 10, (int)outputSize ); i++ )
-                    {
-                        std::cout << outputData[i] << " ";
-                    }
-                    std::cout << std::endl;
-
-                    // Check if output is meaningful
-                    if ( std::abs( maxOut - minOut ) > 1e-6 )
-                    {
-                        std::cout << "  STATUS: Output has meaningful variation - MODEL WORKING!" << std::endl;
-                    }
-                    else if ( std::abs( maxOut ) > 1e-10 )
-                    {
-                        std::cout << "  STATUS: Output has small but non-zero values - might be precision issue"
-                                  << std::endl;
-                    }
-                    else
-                    {
-                        std::cout << "  STATUS: Output is essentially zero - MODEL PROBLEM!" << std::endl;
-                    }
-                }
-                else
-                {
-                    std::cout << "  STATUS: No valid output values - MODEL BROKEN!" << std::endl;
-                }
+                std::cout << "  STATUS: Output might have issues" << std::endl;
             }
         }
 
@@ -970,7 +805,10 @@ void MoEModelRunner::testStandardLayerDirectly( const std::string &layerPath, in
             return;
         }
 
-        // Get input tensor info
+        // Test with simple input
+        std::vector<float> testInput( hiddenSize, 0.1f );
+
+        // Get input tensor
         auto input = interpreter->getSessionInput( session, nullptr );
         if ( !input )
         {
@@ -978,14 +816,6 @@ void MoEModelRunner::testStandardLayerDirectly( const std::string &layerPath, in
             interpreter->releaseSession( session );
             return;
         }
-
-        std::cout << "Input tensor info:" << std::endl;
-        LLMUtility::printTensorInfo( input, "  Input" );
-
-        // Test with a simple pattern - all 0.1s (similar to embedding scale)
-        std::vector<float> testInput( hiddenSize, 0.1f );
-
-        std::cout << "Testing with input: size=" << testInput.size() << ", all values=0.1" << std::endl;
 
         // Resize tensor
         interpreter->resizeTensor( input, { 1, (int)testInput.size() } );
@@ -1009,75 +839,43 @@ void MoEModelRunner::testStandardLayerDirectly( const std::string &layerPath, in
             return;
         }
 
-        std::cout << "Output tensor info:" << std::endl;
-        LLMUtility::printTensorInfo( output, "  Output" );
-
-        // Copy output
+        // Analyze output similar to expert test
         MNN::Tensor outputHost( output, output->getDimensionType() );
         output->copyToHostTensor( &outputHost );
         float *outputData = outputHost.host<float>();
 
-        // Calculate output size
         size_t outputSize = 1;
         for ( int d = 0; d < output->dimensions(); d++ )
         {
             outputSize *= output->length( d );
         }
 
-        // Analyze output
         if ( outputSize > 0 )
         {
-            float minOut        = outputData[0];
-            float maxOut        = outputData[0];
-            float sumOut        = 0.0f;
-            int   validCount    = 0;
-            int   nearZeroCount = 0;
+            float minOut = outputData[0];
+            float maxOut = outputData[0];
+            float sumOut = 0.0f;
 
             for ( size_t i = 0; i < outputSize; i++ )
             {
-                float val = outputData[i];
-
-                if ( std::isfinite( val ) )
-                {
-                    validCount++;
-                    sumOut += val;
-                    minOut  = std::min( minOut, val );
-                    maxOut  = std::max( maxOut, val );
-
-                    if ( std::abs( val ) < 1e-10 )
-                    {
-                        nearZeroCount++;
-                    }
-                }
+                float val  = outputData[i];
+                sumOut    += val;
+                minOut     = std::min( minOut, val );
+                maxOut     = std::max( maxOut, val );
             }
 
             std::cout << "Output analysis:" << std::endl;
             std::cout << "  Total elements: " << outputSize << std::endl;
-            std::cout << "  Valid elements: " << validCount << std::endl;
-            std::cout << "  Near-zero elements: " << nearZeroCount << std::endl;
+            std::cout << "  Range: [" << minOut << ", " << maxOut << "]" << std::endl;
+            std::cout << "  Mean: " << ( sumOut / outputSize ) << std::endl;
 
-            if ( validCount > 0 )
+            if ( std::abs( maxOut - minOut ) > 1e-6 )
             {
-                std::cout << "  Range: [" << minOut << ", " << maxOut << "]" << std::endl;
-                std::cout << "  Mean: " << ( sumOut / validCount ) << std::endl;
-
-                // Show first few values
-                std::cout << "  First 10 values: ";
-                for ( int i = 0; i < std::min( 10, (int)outputSize ); i++ )
-                {
-                    std::cout << outputData[i] << " ";
-                }
-                std::cout << std::endl;
-
-                // Check if output is meaningful
-                if ( std::abs( maxOut - minOut ) > 1e-6 )
-                {
-                    std::cout << "  STATUS: Standard layer working normally!" << std::endl;
-                }
-                else
-                {
-                    std::cout << "  STATUS: Standard layer output issue!" << std::endl;
-                }
+                std::cout << "  STATUS: Standard layer working normally!" << std::endl;
+            }
+            else
+            {
+                std::cout << "  STATUS: Standard layer output issue!" << std::endl;
             }
         }
 
