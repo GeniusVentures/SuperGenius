@@ -27,6 +27,9 @@
 #include <thread>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
+#include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
+#include <ipfs_lite/ipfs/graphsync/impl/local_requests.hpp>
+#include <libp2p/protocol/common/asio/asio_scheduler.hpp>
 
 namespace
 {
