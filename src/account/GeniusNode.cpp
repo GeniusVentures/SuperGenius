@@ -344,15 +344,14 @@ namespace sgns
         {
             sgns::MigrationManager migrationManager;
 
-            migrationManager.RegisterStep( std::make_unique<sgns::Migration0_2_0To1_0_0>(
-                job_globaldb_,                             // newDb
-                io_,                                       // ioContext
-                pubsub_,                                   // pubSub
-                graphsyncnetwork,                          // graphsync
-                scheduler,                                 // scheduler
-                generator,                                 // generator
-                write_base_path_ + gnus_network_full_path_ // basePath
-                ) );
+            migrationManager.RegisterStep( std::make_unique<sgns::Migration0_2_0To1_0_0>( job_globaldb_,    // newDb
+                                                                                          io_,              // ioContext
+                                                                                          pubsub_,          // pubSub
+                                                                                          graphsyncnetwork, // graphsync
+                                                                                          scheduler,        // scheduler
+                                                                                          generator,        // generator
+                                                                                          write_base_path_, // basePath
+                                                                                          base58key ) );
 
             auto migrationResult = migrationManager.Migrate( "0.2.0", "1.0.0" );
             if ( migrationResult.has_error() )

@@ -57,15 +57,16 @@ namespace sgns
         std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::Network>            graphsync,
         std::shared_ptr<libp2p::protocol::Scheduler>                          scheduler,
         std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
-        uint16_t                                                              basePort,
-        const std::string                                                    &basePath ) :
+        const std::string                                                    &writeBasePath,
+        const std::string                                                    &base58key ) :
         newDb_( std::move( newDb ) ),
         ioContext_( std::move( ioContext ) ),
         pubSub_( std::move( pubSub ) ),
         graphsync_( std::move( graphsync ) ),
         scheduler_( std::move( scheduler ) ),
         generator_( std::move( generator ) ),
-        basePath_( basePath )
+        writeBasePath_( writeBasePath ),
+        base58key_( base58key )
     {
     }
 
@@ -79,10 +80,12 @@ namespace sgns
         return "1.0.0";
     }
 
-    outcome::result<std::shared_ptr<crdt::GlobalDB>> Migration0_2_0To1_0_0::InitLegacyDb( const std::string &basePath,
-                                                                                          const std::string &suffix )
+    outcome::result<std::shared_ptr<crdt::GlobalDB>> Migration0_2_0To1_0_0::InitLegacyDb( const std::string &suffix )
     {
-        std::string fullPath = ( boost::format( "%s_%s" ) % basePath % suffix ).str();
+        // Build the legacy network prefix with major version = 0
+        const std::string LEGACY_PREFIX         = "/SuperGNUSNode.TestNet.2a.00.";
+        std::string       legacyNetworkFullPath = LEGACY_PREFIX + base58key_;
+        std::string       fullPath              = writeBasePath_ + legacyNetworkFullPath + "_" + suffix;
         m_logger->trace( "Initializing legacy DB at path {}", fullPath );
 
         OUTCOME_TRY( auto &&db,
@@ -93,7 +96,6 @@ namespace sgns
                                           graphsync_,
                                           scheduler_,
                                           generator_ ) );
-
         db->Start();
         m_logger->trace( "Started legacy DB at path {}", fullPath );
 
@@ -193,8 +195,8 @@ namespace sgns
     {
         m_logger->trace( "Starting Apply step of Migration0_2_0To1_0_0" );
 
-        OUTCOME_TRY( auto outDb, InitLegacyDb( basePath_, "out" ) );
-        OUTCOME_TRY( auto inDb, InitLegacyDb( basePath_, "in" ) );
+        OUTCOME_TRY( auto outDb, InitLegacyDb( "out" ) );
+        OUTCOME_TRY( auto inDb, InitLegacyDb( "in" ) );
 
         m_logger->trace( "Migrating output DB into new DB" );
         OUTCOME_TRY( MigrateDb( outDb, newDb_ ) );
