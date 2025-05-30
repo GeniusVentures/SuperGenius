@@ -143,6 +143,7 @@ namespace sgns
                 continue;
             }
             // Until here it's supposed to work.
+            
             std::string proof_key;
             if ( transaction_key.find( "notify" ) != std::string::npos )
             {
@@ -177,13 +178,7 @@ namespace sgns
                 m_logger->error( "Can't find the proof data of {}", keyOpt.value() );
                 continue;
             }
-            auto proof_data_vector = maybe_proof_data.value().toVector();
-            auto maybe_valid_proof = IBasicProof::VerifyFullProof( proof_data_vector );
-            if ( maybe_valid_proof.has_error() || ( !maybe_valid_proof.value() ) )
-            {
-                m_logger->error( "Could not verify proof of tx {}", keyOpt.value() );
-                continue;
-            }
+
             auto                         transaction_path = TransactionManager::GetTransactionPath( *tx );
             sgns::crdt::HierarchicalKey  tx_key( transaction_path );
             sgns::crdt::GlobalDB::Buffer data_transaction;
