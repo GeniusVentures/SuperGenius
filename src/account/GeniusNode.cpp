@@ -341,10 +341,17 @@ namespace sgns
             account_->GetAddress() );
         processing_service_->SetChannelListRequestTimeout( boost::posix_time::milliseconds( 3000 ) );
 
+        auto maybe_values = tx_globaldb_->QueryKeyValues( "" );
+        if ( maybe_values.has_error() )
+        {
+            throw std::runtime_error( std::string( "Cannot query transactions: " ) + maybe_values.error().message() );
+        }
+        auto key_value_map = maybe_values.value();
+        if ( key_value_map.size() == 0 )
         {
             sgns::MigrationManager migrationManager;
 
-            migrationManager.RegisterStep( std::make_unique<sgns::Migration0_2_0To1_0_0>( job_globaldb_,    // newDb
+            migrationManager.RegisterStep( std::make_unique<sgns::Migration0_2_0To1_0_0>( tx_globaldb_,     // newDb
                                                                                           io_,              // ioContext
                                                                                           pubsub_,          // pubSub
                                                                                           graphsyncnetwork, // graphsync
