@@ -65,7 +65,6 @@ namespace sgns
         graphsync_( std::move( graphsync ) ),
         scheduler_( std::move( scheduler ) ),
         generator_( std::move( generator ) ),
-        basePort_( basePort ),
         basePath_( basePath )
     {
     }
@@ -81,9 +80,9 @@ namespace sgns
     }
 
     outcome::result<std::shared_ptr<crdt::GlobalDB>> Migration0_2_0To1_0_0::InitLegacyDb( const std::string &basePath,
-                                                                                          uint16_t           port )
+                                                                                          const std::string &suffix )
     {
-        std::string fullPath = ( boost::format( "%s_%d" ) % basePath % port ).str();
+        std::string fullPath = ( boost::format( "%s_%s" ) % basePath % suffix ).str();
         m_logger->trace( "Initializing legacy DB at path {}", fullPath );
 
         OUTCOME_TRY( auto &&db,
@@ -194,8 +193,8 @@ namespace sgns
     {
         m_logger->trace( "Starting Apply step of Migration0_2_0To1_0_0" );
 
-        OUTCOME_TRY( auto outDb, InitLegacyDb( basePath_, basePort_ ) );
-        OUTCOME_TRY( auto inDb, InitLegacyDb( basePath_, static_cast<uint16_t>( basePort_ + 1 ) ) );
+        OUTCOME_TRY( auto outDb, InitLegacyDb( basePath_, "out" ) );
+        OUTCOME_TRY( auto inDb, InitLegacyDb( basePath_, "in" ) );
 
         m_logger->trace( "Migrating output DB into new DB" );
         OUTCOME_TRY( MigrateDb( outDb, newDb_ ) );

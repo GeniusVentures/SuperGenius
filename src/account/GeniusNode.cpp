@@ -147,13 +147,13 @@ namespace sgns
         auto loggerProcessingNode = base::createLogger( "ProcessingNode", logdir );
         auto loggerGossipPubsub   = base::createLogger( "GossipPubSub", logdir );
 #ifdef SGNS_DEBUGLOGS
-        node_logger->set_level( spdlog::level::err );
-        loggerGlobalDB->set_level( spdlog::level::err );
+        node_logger->set_level( spdlog::level::debug );
+        loggerGlobalDB->set_level( spdlog::level::debug );
         loggerDAGSyncer->set_level( spdlog::level::err );
         loggerGraphsync->set_level( spdlog::level::err );
         loggerBroadcaster->set_level( spdlog::level::err );
         loggerDataStore->set_level( spdlog::level::err );
-        loggerTransactions->set_level( spdlog::level::err );
+        loggerTransactions->set_level( spdlog::level::debug );
         loggerMigration->set_level( spdlog::level::trace );
         loggerMigrationStep->set_level( spdlog::level::trace );
         loggerQueue->set_level( spdlog::level::err );
@@ -351,7 +351,6 @@ namespace sgns
                 graphsyncnetwork,                          // graphsync
                 scheduler,                                 // scheduler
                 generator,                                 // generator
-                0,                                         // basePort
                 write_base_path_ + gnus_network_full_path_ // basePath
                 ) );
 

@@ -92,24 +92,23 @@ namespace sgns
          * @param graphsync Graphsync network.
          * @param scheduler Asio scheduler for libp2p.
          * @param generator Graphsync request ID generator.
-         * @param basePort Base port for network configuration.
          * @param basePath Base path for DB storage.
          */
         Migration0_2_0To1_0_0( std::shared_ptr<crdt::GlobalDB>                                       newDb,
-                           std::shared_ptr<boost::asio::io_context>                              ioContext,
-                           std::shared_ptr<ipfs_pubsub::GossipPubSub>                            pubSub,
-                           std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::Network>            graphsync,
-                           std::shared_ptr<libp2p::protocol::Scheduler>                          scheduler,
-                           std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
-                           uint16_t                                                              basePort,
-                           const std::string                                                    &basePath);
+                               std::shared_ptr<boost::asio::io_context>                              ioContext,
+                               std::shared_ptr<ipfs_pubsub::GossipPubSub>                            pubSub,
+                               std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::Network>            graphsync,
+                               std::shared_ptr<libp2p::protocol::Scheduler>                          scheduler,
+                               std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
+                               const std::string                                                    &basePath );
 
         std::string           FromVersion() const override;
         std::string           ToVersion() const override;
         outcome::result<void> Apply() override;
 
     private:
-        outcome::result<std::shared_ptr<crdt::GlobalDB>> InitLegacyDb( const std::string &basePath, uint16_t port );
+        outcome::result<std::shared_ptr<crdt::GlobalDB>> InitLegacyDb( const std::string &basePath,
+                                                                       const std::string &suffix );
         outcome::result<void>                            MigrateDb( const std::shared_ptr<crdt::GlobalDB> &oldDb,
                                                                     const std::shared_ptr<crdt::GlobalDB> &newDb );
 
@@ -119,7 +118,6 @@ namespace sgns
         std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::Network>            graphsync_;
         std::shared_ptr<libp2p::protocol::Scheduler>                          scheduler_;
         std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator_;
-        uint16_t                                                              basePort_;
         std::string                                                           basePath_;
 
         base::Logger m_logger = sgns::base::createLogger( "MigrationStep" );
