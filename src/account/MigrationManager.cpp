@@ -82,10 +82,12 @@ namespace sgns
 
     outcome::result<std::shared_ptr<crdt::GlobalDB>> Migration0_2_0To1_0_0::InitLegacyDb( const std::string &suffix )
     {
-        // Build the legacy network prefix with major version = 0
-        const std::string LEGACY_PREFIX         = "/SuperGNUSNode.TestNet.2a.00.";
-        std::string       legacyNetworkFullPath = LEGACY_PREFIX + base58key_;
-        std::string       fullPath              = writeBasePath_ + legacyNetworkFullPath + "_" + suffix;
+        static constexpr auto LEGACY_PREFIX_FMT = "/SuperGNUSNode.TestNet.2a.00.%1%";
+
+        const auto legacyNetworkFullPath = ( boost::format( LEGACY_PREFIX_FMT ) % base58key_ ).str();
+
+        const auto fullPath = ( boost::format( "%s%s_%s" ) % writeBasePath_ % legacyNetworkFullPath % suffix ).str();
+
         m_logger->trace( "Initializing legacy DB at path {}", fullPath );
 
         OUTCOME_TRY( auto &&db,
