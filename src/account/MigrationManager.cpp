@@ -128,7 +128,9 @@ namespace sgns
                 continue;
             }
 
-            auto maybe_transaction = TransactionManager::FetchTransaction( oldDb, keyOpt.value() );
+            std::string transaction_key = keyOpt.value();
+
+            auto maybe_transaction = TransactionManager::FetchTransaction( oldDb, transaction_key );
             if ( !maybe_transaction.has_value() )
             {
                 m_logger->debug( "Can't fetch transaction" );
@@ -137,32 +139,39 @@ namespace sgns
             auto tx = maybe_transaction.value();
             if ( !IGeniusTransactions::CheckDAGStructSignature( tx->dag_st ) )
             {
-                m_logger->error( "Could not validate signature of transaction {}", keyOpt.value() );
+                m_logger->error( "Could not validate signature of transaction {}", transaction_key );
                 continue;
             }
             // Until here it's supposed to work.
-
-            auto maybeProofKeys = oldDb->QueryKeyValues( BASE + tx->GetSrcAddress(), "*", "/proof" );
-            if ( !maybeProofKeys.has_value() )
+            std::string proof_key;
+            if ( transaction_key.find( "notify" ) != std::string::npos )
             {
-                m_logger->error( "Can't find the proof key {}", keyOpt.value() );
-                continue;
+                auto maybeProofKeyMap = oldDb->QueryKeyValues( BASE, "*", "/proof/" + tx->dag_st.data_hash() );
+                if ( !maybeProofKeyMap.has_value() )
+                {
+                    m_logger->error( "Can't find the proof key {}", transaction_key );
+                    continue;
+                }
+                auto proof_map = maybeProofKeyMap.value();
+                if ( proof_map.size() != 1 )
+                {
+                    m_logger->error( "More than 1 proof for {}", transaction_key );
+                    continue;
+                }
+                auto proof_key_buffer = proof_map.begin()->first;
+                auto maybe_proof_key = oldDb->KeyToString( proof_key_buffer );
+                if ( !maybe_proof_key.has_value() )
+                {
+                    continue;
+                }
+                proof_key = maybe_proof_key.value();
             }
-            auto proof_map = maybeProofKeys.value();
-            if ( proof_map.size() != 1 )
+            else
             {
-                m_logger->error( "More than 1 proof for {}", keyOpt.value() );
-                continue;
-            }
-            auto proof_key = proof_map.begin()->first;
-
-            auto proof_buffer_key = oldDb->KeyToString( proof_key );
-            if ( !proof_buffer_key.has_value() )
-            {
-                continue;
+                proof_key = BASE + tx->GetSrcAddress() + "/proof/" + std::to_string( tx->dag_st.nonce() );
             }
 
-            auto maybe_proof_data = oldDb->Get( proof_buffer_key.value() );
+            auto maybe_proof_data = oldDb->Get( proof_key );
             if ( !maybe_proof_data.has_value() )
             {
                 m_logger->error( "Can't find the proof data of {}", keyOpt.value() );
