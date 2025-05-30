@@ -134,6 +134,7 @@ namespace sgns
         auto loggerDataStore      = base::createLogger( "CrdtDatastore", logdir );
         auto loggerTransactions   = base::createLogger( "TransactionManager", logdir );
         auto loggerMigration      = base::createLogger( "MigrationManager", logdir );
+        auto loggerMigrationStep  = base::createLogger( "MigrationStep", logdir );
         auto loggerQueue          = base::createLogger( "ProcessingTaskQueueImpl", logdir );
         auto loggerRocksDB        = base::createLogger( "rocksdb", logdir );
         auto logkad               = base::createLogger( "Kademlia", logdir );
@@ -153,7 +154,8 @@ namespace sgns
         loggerBroadcaster->set_level( spdlog::level::err );
         loggerDataStore->set_level( spdlog::level::err );
         loggerTransactions->set_level( spdlog::level::err );
-        loggerMigration->set_level( spdlog::level::debug );
+        loggerMigration->set_level( spdlog::level::trace );
+        loggerMigrationStep->set_level( spdlog::level::trace );
         loggerQueue->set_level( spdlog::level::err );
         loggerRocksDB->set_level( spdlog::level::err );
         logkad->set_level( spdlog::level::err );
@@ -174,6 +176,7 @@ namespace sgns
         loggerDataStore->set_level( spdlog::level::err );
         loggerTransactions->set_level( spdlog::level::err );
         loggerMigration->set_level( spdlog::level::err );
+        loggerMigrationStep->set_level( spdlog::level::err );
         loggerQueue->set_level( spdlog::level::err );
         loggerRocksDB->set_level( spdlog::level::err );
         logkad->set_level( spdlog::level::err );
@@ -341,7 +344,7 @@ namespace sgns
         {
             sgns::MigrationManager migrationManager;
 
-            migrationManager.RegisterStep( std::make_unique<sgns::Migration0To1_0_0>(
+            migrationManager.RegisterStep( std::make_unique<sgns::Migration0_2_0To1_0_0>(
                 job_globaldb_,                             // newDb
                 io_,                                       // ioContext
                 pubsub_,                                   // pubSub
@@ -352,7 +355,7 @@ namespace sgns
                 write_base_path_ + gnus_network_full_path_ // basePath
                 ) );
 
-            auto migrationResult = migrationManager.Migrate( "0", "1.0.0" );
+            auto migrationResult = migrationManager.Migrate( "0.2.0", "1.0.0" );
             if ( migrationResult.has_error() )
             {
                 throw std::runtime_error( std::string( "Database migration failed: " ) +

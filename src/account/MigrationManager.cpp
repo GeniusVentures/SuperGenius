@@ -1,6 +1,6 @@
 /**
  * @file       MigrationManager.cpp
- * @brief      Implementation of MigrationManager and Migration0To1_0_0.
+ * @brief      Implementation of MigrationManager and Migration0_2_0To1_0_0.
  * @date       2025-05-29
  * @author     Luiz Guilherme Rizzatto Zucchi
  * @author     Henrique A. Klein (hklein@gnus.ai)
@@ -50,7 +50,7 @@ namespace sgns
         return outcome::success();
     }
 
-    Migration0To1_0_0::Migration0To1_0_0(
+    Migration0_2_0To1_0_0::Migration0_2_0To1_0_0(
         std::shared_ptr<crdt::GlobalDB>                                       newDb,
         std::shared_ptr<boost::asio::io_context>                              ioContext,
         std::shared_ptr<ipfs_pubsub::GossipPubSub>                            pubSub,
@@ -70,21 +70,21 @@ namespace sgns
     {
     }
 
-    std::string Migration0To1_0_0::FromVersion() const
+    std::string Migration0_2_0To1_0_0::FromVersion() const
     {
-        return "0";
+        return "0.2.0";
     }
 
-    std::string Migration0To1_0_0::ToVersion() const
+    std::string Migration0_2_0To1_0_0::ToVersion() const
     {
         return "1.0.0";
     }
 
-    outcome::result<std::shared_ptr<crdt::GlobalDB>> Migration0To1_0_0::InitLegacyDb( const std::string &basePath,
+    outcome::result<std::shared_ptr<crdt::GlobalDB>> Migration0_2_0To1_0_0::InitLegacyDb( const std::string &basePath,
                                                                                       uint16_t           port )
     {
         std::string fullPath = ( boost::format( "%s_%d" ) % basePath % port ).str();
-        // m_logger->debug( "Initializing legacy DB at path {}", fullPath );
+        m_logger->trace( "Initializing legacy DB at path {}", fullPath );
 
         OUTCOME_TRY( auto &&db,
             crdt::GlobalDB::New( ioContext_,
@@ -97,12 +97,12 @@ namespace sgns
 
 
         db->Start();
-        // m_logger->debug( "Started legacy DB at path {}", fullPath );
+        m_logger->trace( "Started legacy DB at path {}", fullPath );
 
         return db;
     }
 
-        outcome::result<void> Migration0To1_0_0::MigrateDb( const std::shared_ptr<crdt::GlobalDB> &oldDb,
+        outcome::result<void> Migration0_2_0To1_0_0::MigrateDb( const std::shared_ptr<crdt::GlobalDB> &oldDb,
                                                             const std::shared_ptr<crdt::GlobalDB> &newDb )
         {
             //Outgoing transactions were /bc-963/[self address]/tx/[type]/[nonce]
@@ -192,20 +192,20 @@ namespace sgns
             return outcome::success();
         }
 
-    outcome::result<void> Migration0To1_0_0::Apply()
+    outcome::result<void> Migration0_2_0To1_0_0::Apply()
     {
-        // m_logger->debug( "Starting Apply step of Migration0To1_0_0" );
+        m_logger->trace( "Starting Apply step of Migration0_2_0To1_0_0" );
 
         OUTCOME_TRY( auto outDb, InitLegacyDb( basePath_, basePort_ ) );
         OUTCOME_TRY( auto inDb, InitLegacyDb( basePath_, static_cast<uint16_t>( basePort_ + 1 ) ) );
 
-        // m_logger->debug( "Migrating output DB into new DB" );
+        m_logger->trace( "Migrating output DB into new DB" );
         OUTCOME_TRY( MigrateDb( outDb, newDb_ ) );
 
-        // m_logger->debug( "Migrating input DB into new DB" );
+        m_logger->trace( "Migrating input DB into new DB" );
         OUTCOME_TRY( MigrateDb( inDb, newDb_ ) );
 
-        // m_logger->debug( "Apply step of Migration0To1_0_0 finished successfully" );
+        m_logger->trace( "Apply step of Migration0_2_0To1_0_0 finished successfully" );
         return outcome::success();
     }
 

@@ -81,11 +81,11 @@ namespace sgns
     /**
      * @brief Migration step from version 0 to 1.0.0
      */
-    class Migration0To1_0_0 : public IMigrationStep
+    class Migration0_2_0To1_0_0 : public IMigrationStep
     {
     public:
         /**
-         * @brief Construct a new Migration0To1_0_0 object.
+         * @brief Construct a new Migration0_2_0To1_0_0 object.
          * @param newDb Destination GlobalDB to populate.
          * @param ioContext IO context for async operations.
          * @param pubSub GossipPubSub instance.
@@ -95,7 +95,7 @@ namespace sgns
          * @param basePort Base port for network configuration.
          * @param basePath Base path for DB storage.
          */
-        Migration0To1_0_0( std::shared_ptr<crdt::GlobalDB>                                       newDb,
+        Migration0_2_0To1_0_0( std::shared_ptr<crdt::GlobalDB>                                       newDb,
                            std::shared_ptr<boost::asio::io_context>                              ioContext,
                            std::shared_ptr<ipfs_pubsub::GossipPubSub>                            pubSub,
                            std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::Network>            graphsync,
