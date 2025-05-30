@@ -674,7 +674,7 @@ void MoEModelRunner::testExpertModelDirectly( const std::string &expertPath, int
 
         // Create session
         MNN::ScheduleConfig config;
-        config.type      = MNN_FORWARD_VULKAN;
+        config.type      = MNN_FORWARD_CPU;
         config.numThread = 1;
 
         MNN::Session *session = interpreter->createSession( config );
@@ -795,7 +795,7 @@ void MoEModelRunner::testStandardLayerDirectly( const std::string &layerPath, in
 
         // Create session
         MNN::ScheduleConfig config;
-        config.type      = MNN_FORWARD_VULKAN;
+        config.type      = MNN_FORWARD_CPU;
         config.numThread = 1;
 
         MNN::Session *session = interpreter->createSession( config );
