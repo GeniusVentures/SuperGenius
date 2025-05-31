@@ -58,6 +58,11 @@ private:
     MNN::ScheduleConfig                    config;
     bool                                   debugMode;
 
+        // Get raw gate scores for available experts
+    std::vector<std::pair<int, float>> getGateScoresForExperts( int                       layerId,
+                                                                const std::vector<float> &embedding,
+                                                                const std::vector<int>   &availableExperts );
+
 public:
     GateWeightsHandler();
     ~GateWeightsHandler();
@@ -76,7 +81,10 @@ public:
                                              const std::vector<float> &embedding,
                                              const std::vector<int>   &availableExperts,
                                              int                       topK = 2 );
-
+    std::vector<std::pair<int, float>> selectAvailableExpertsWithScores( int                       layerId,
+                                                                         const std::vector<float> &embedding,
+                                                                         const std::vector<int>   &availableExperts,
+                                                                         int                       topK = 2 );
     // Set/get debug mode
     void setDebugMode( bool debug );
     bool getDebugMode() const;

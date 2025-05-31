@@ -844,97 +844,87 @@ std::vector<float> LayerProcessor::processMoEExperts( const std::vector<float> &
         std::cout << "Layer " << layerId << " shared expert processed" << std::endl;
     }
 
-    // Step 4b: Run Routed Experts
-    std::vector<int> selectedExperts;
+    // Step 4b: Run Routed Experts with proper weighting
+    std::vector<float> routedExpertOutput( input.size(), 0.0f ); // Initialize to zeros
+    float              totalWeight = 0.0f;
 
-    // Use gate to select experts if available
+    // Use gate to select experts with scores if available
     if ( sharedGateHandler && sharedGateHandler->hasLayerGate( layerId ) )
     {
-        // Use the method that handles availability filtering
-        selectedExperts = sharedGateHandler->selectAvailableExperts( layerId, input, availableExpertIds, 2 );
+        // Get experts with their gate scores
+        std::vector<std::pair<int, float>> expertScores = sharedGateHandler->selectAvailableExpertsWithScores(
+            layerId,
+            input,
+            availableExpertIds,
+            2 );
 
         if ( debugMode )
         {
-            std::cout << "Gate for layer " << layerId << " selected available experts: ";
-            for ( int id : selectedExperts )
+            std::cout << "Gate for layer " << layerId << " selected available experts with scores: ";
+            for ( const auto &pair : expertScores )
             {
-                std::cout << id << " ";
+                std::cout << pair.first << "(" << pair.second << ") ";
             }
             std::cout << std::endl;
         }
-    }
-    else
-    {
-        // No gate - use the first available expert (typically expert 0)
-        selectedExperts.push_back( availableExpertIds[0] );
 
-        if ( debugMode )
+        // Process each selected expert with its weight
+        for ( const auto &expertScore : expertScores )
         {
-            std::cout << "No gate for layer " << layerId << ", using first available expert " << availableExpertIds[0]
-                      << std::endl;
-        }
-    }
+            int   expertId = expertScore.first;
+            float rawScore = expertScore.second;
 
-    // Ensure we have at least one expert to run
-    if ( selectedExperts.empty() )
-    {
-        selectedExperts.push_back( availableExpertIds[0] );
+            // Convert raw score to weight using softmax-like approach
+            // For now, use exponential to emphasize differences
+            float weight  = std::exp( rawScore * 0.1f ); // Scale factor to prevent overflow
+            totalWeight  += weight;
 
-        if ( debugMode )
-        {
-            std::cout << "Fallback: using first available expert " << availableExpertIds[0] << " for layer " << layerId
-                      << std::endl;
-        }
-    }
+            std::vector<float> expertOutput = sharedExpertHandler->runExpertForLayer( layerId, expertId, input );
 
-    // Run selected routed experts with proper layer context
-    std::vector<float> routedExpertOutput;
-    int                successfulExperts = 0;
-
-    for ( int expertId : selectedExperts )
-    {
-        std::vector<float> expertOutput = sharedExpertHandler->runExpertForLayer( layerId, expertId, input );
-
-        if ( !expertOutput.empty() )
-        {
-            successfulExperts++;
-
-            if ( routedExpertOutput.empty() )
+            if ( !expertOutput.empty() && expertOutput.size() == routedExpertOutput.size() )
             {
-                routedExpertOutput = expertOutput;
-            }
-            else
-            {
-                // Average with previous results
-                for ( size_t j = 0; j < routedExpertOutput.size() && j < expertOutput.size(); ++j )
+                // Add weighted expert output
+                for ( size_t j = 0; j < routedExpertOutput.size(); ++j )
                 {
-                    routedExpertOutput[j] += expertOutput[j];
+                    routedExpertOutput[j] += expertOutput[j] * weight;
                 }
+
+                if ( debugMode )
+                {
+                    std::cout << "Added expert " << expertId << " with weight " << weight << " (raw score: " << rawScore
+                              << ") for layer " << layerId << std::endl;
+                }
+            }
+            else if ( debugMode )
+            {
+                std::cout << "Failed to run expert " << expertId << " for layer " << layerId << std::endl;
+            }
+        }
+
+        // Normalize by total weight
+        if ( totalWeight > 0.0f )
+        {
+            for ( size_t j = 0; j < routedExpertOutput.size(); ++j )
+            {
+                routedExpertOutput[j] /= totalWeight;
             }
 
             if ( debugMode )
             {
-                std::cout << "Successfully ran expert " << expertId << " for layer " << layerId << std::endl;
+                std::cout << "Normalized routed expert outputs by total weight " << totalWeight << " for layer "
+                          << layerId << std::endl;
             }
         }
-        else if ( debugMode )
-        {
-            std::cout << "Failed to run expert " << expertId << " for layer " << layerId << std::endl;
-        }
     }
-
-    // Average the routed expert results if we ran multiple experts
-    if ( successfulExperts > 1 )
+    else
     {
-        for ( size_t j = 0; j < routedExpertOutput.size(); ++j )
-        {
-            routedExpertOutput[j] /= successfulExperts;
-        }
+        // No gate - use the first available expert with weight 1.0
+        int expertId       = availableExpertIds[0];
+        routedExpertOutput = sharedExpertHandler->runExpertForLayer( layerId, expertId, input );
 
         if ( debugMode )
         {
-            std::cout << "Averaged results from " << successfulExperts << " routed experts for layer " << layerId
-                      << std::endl;
+            std::cout << "No gate for layer " << layerId << ", using first available expert " << expertId << std::endl;
         }
     }
 
@@ -953,7 +943,7 @@ std::vector<float> LayerProcessor::processMoEExperts( const std::vector<float> &
 
         if ( debugMode )
         {
-            std::cout << "Combined shared + routed expert outputs for layer " << layerId << std::endl;
+            std::cout << "Combined shared + weighted routed expert outputs for layer " << layerId << std::endl;
         }
     }
     else if ( !routedExpertOutput.empty() )
@@ -961,7 +951,7 @@ std::vector<float> LayerProcessor::processMoEExperts( const std::vector<float> &
         combinedExpertOutput = routedExpertOutput; // Fallback to routed only
         if ( debugMode )
         {
-            std::cout << "Using routed expert output only for layer " << layerId << std::endl;
+            std::cout << "Using weighted routed expert output only for layer " << layerId << std::endl;
         }
     }
     else if ( !sharedExpertOutput.empty() )

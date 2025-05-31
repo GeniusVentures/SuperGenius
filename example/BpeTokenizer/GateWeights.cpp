@@ -328,3 +328,157 @@ void GateWeightsHandler::printGateInfo() const
         std::cout << "  Layer " << pair.first << ": " << pair.second.modelPath << std::endl;
     }
 }
+
+std::vector<std::pair<int, float>> GateWeightsHandler::selectAvailableExpertsWithScores(
+    int                       layerId,
+    const std::vector<float> &embedding,
+    const std::vector<int>   &availableExperts,
+    int                       topK )
+{
+    // Get all experts ranked by the gate model
+    std::vector<int> rankedExperts = selectExperts( layerId, embedding, -1 ); // Get all experts
+
+    if ( rankedExperts.empty() )
+    {
+        // If gate failed, try expert 0 if available
+        if ( std::find( availableExperts.begin(), availableExperts.end(), 0 ) != availableExperts.end() )
+        {
+            return { { 0, 1.0f } }; // Return expert 0 with score 1.0
+        }
+        // Otherwise return the first available expert
+        if ( !availableExperts.empty() )
+        {
+            return { { availableExperts[0], 1.0f } };
+        }
+        return {};
+    }
+
+    // Get the raw scores for available experts
+    std::vector<std::pair<int, float>> availableScores = getGateScoresForExperts( layerId,
+                                                                                  embedding,
+                                                                                  availableExperts );
+
+    if ( availableScores.empty() )
+    {
+        // Fallback to first available expert
+        if ( !availableExperts.empty() )
+        {
+            return { { availableExperts[0], 1.0f } };
+        }
+        return {};
+    }
+
+    // Sort by score (descending)
+    std::sort( availableScores.begin(),
+               availableScores.end(),
+               []( const auto &a, const auto &b ) { return a.second > b.second; } );
+
+    // Take top K
+    if ( availableScores.size() > (size_t)topK )
+    {
+        availableScores.resize( topK );
+    }
+
+    if ( debugMode )
+    {
+        std::cout << "Gate for layer " << layerId << " selected available experts with scores:" << std::endl;
+        for ( const auto &pair : availableScores )
+        {
+            std::cout << "  Expert " << pair.first << ": " << pair.second << std::endl;
+        }
+    }
+
+    return availableScores;
+}
+
+std::vector<std::pair<int, float>> GateWeightsHandler::getGateScoresForExperts(
+    int                       layerId,
+    const std::vector<float> &embedding,
+    const std::vector<int>   &availableExperts )
+{
+    if ( !initialized )
+    {
+        std::cerr << "Gate weights handler not initialized" << std::endl;
+        return {};
+    }
+
+    auto it = gateModels.find( layerId );
+    if ( it == gateModels.end() )
+    {
+        if ( debugMode )
+        {
+            std::cout << "No gate model found for layer " << layerId << std::endl;
+        }
+        return {};
+    }
+
+    auto &gateInfo = it->second;
+
+    // Create session if needed
+    if ( !gateInfo.session )
+    {
+        gateInfo.session = gateInfo.interpreter->createSession( config );
+        if ( !gateInfo.session )
+        {
+            std::cerr << "Failed to create session for gate model layer " << layerId << std::endl;
+            return {};
+        }
+    }
+
+    try
+    {
+        // Get input tensor
+        auto input = gateInfo.interpreter->getSessionInput( gateInfo.session, nullptr );
+        if ( !input )
+        {
+            throw std::runtime_error( "Failed to get input tensor for gate model" );
+        }
+
+        // Resize for batch size 1
+        gateInfo.interpreter->resizeTensor( input, { 1, (int)embedding.size() } );
+        gateInfo.interpreter->resizeSession( gateInfo.session );
+
+        // Copy embedding to input tensor
+        MNN::Tensor inputHost( input, MNN::Tensor::CAFFE );
+        float      *inputData = inputHost.host<float>();
+        LLMUtility::safeCopyToTensor( inputData, embedding );
+        input->copyFromHostTensor( &inputHost );
+
+        // Run the gate model
+        gateInfo.interpreter->runSession( gateInfo.session );
+
+        // Get the output (gate scores)
+        auto output = gateInfo.interpreter->getSessionOutput( gateInfo.session, nullptr );
+        if ( !output )
+        {
+            throw std::runtime_error( "Failed to get output tensor for gate model" );
+        }
+
+        // Copy to host
+        MNN::Tensor outputHost( output, output->getDimensionType() );
+        output->copyToHostTensor( &outputHost );
+        float *outputData = outputHost.host<float>();
+
+        // Get the number of experts
+        int numExperts = output->length( output->dimensions() - 1 );
+
+        // Extract scores only for available experts
+        std::vector<std::pair<int, float>> expertScores;
+        expertScores.reserve( availableExperts.size() );
+
+        for ( int expertId : availableExperts )
+        {
+            if ( expertId >= 0 && expertId < numExperts )
+            {
+                expertScores.push_back( { expertId, outputData[expertId] } );
+            }
+        }
+
+        return expertScores;
+    }
+    catch ( const std::exception &e )
+    {
+        std::cerr << "Error running gate model for layer " << layerId << ": " << e.what() << std::endl;
+        return {};
+    }
+}
