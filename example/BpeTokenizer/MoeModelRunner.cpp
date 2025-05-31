@@ -223,7 +223,9 @@ std::string MoEModelRunner::generateText( const std::string &prompt, int numToke
 {
     // Tokenize prompt
     std::vector<int> promptTokens = tokenizer.encode( prompt );
-
+    std::string      decoded      = tokenizer.decode( promptTokens );
+    std::cout << "Original: 'The cat ran down the wall'" << std::endl;
+    std::cout << "Decoded:  '" << decoded << "'" << std::endl;
     if ( promptTokens.empty() )
     {
         std::cerr << "Failed to tokenize prompt" << std::endl;

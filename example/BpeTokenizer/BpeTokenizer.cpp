@@ -169,21 +169,9 @@ std::string BpeTokenizer::decode( const std::vector<int> &ids ) const
             // Process token based on its prefix
             if ( !token.empty() )
             {
-                if ( token[0] == '\xC4' && token.size() > 1 && token[1] == '\xA0' )
-                {
-                    result += " "; // Add actual space
-
-                    // Add the rest of the token (skip the special space char)
-                    for ( size_t i = 2; i < token.size(); ++i )
-                    {
-                        result += token[i];
-                    }
-                }
-                else
-                {
                     // Regular token, just append it
                     result += token;
-                }
+                    result += " ";
             }
         }
         else
@@ -191,23 +179,5 @@ std::string BpeTokenizer::decode( const std::vector<int> &ids ) const
             result += "<UNK>"; // Unknown token
         }
     }
-
-    // Clean up output by replacing control chars with readable representation
-    std::string cleaned;
-    for ( unsigned char c : result )
-    {
-        if ( c < 32 || c > 126 )
-        {
-            // Non-printable character - replace with hex code
-            char buf[8];
-            snprintf( buf, sizeof( buf ), "\\x%02X", c );
-            cleaned += buf;
-        }
-        else
-        {
-            cleaned += c;
-        }
-    }
-
-    return cleaned;
+    return result;
 }
