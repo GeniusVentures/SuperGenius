@@ -5,10 +5,10 @@
 #include <algorithm>
 #include <filesystem>
 
-GateWeightsHandler::GateWeightsHandler() : initialized( false ), debugMode( false )
+GateWeightsHandler::GateWeightsHandler( bool fp16 ) : initialized( false ), debugMode( false ), useFp16( fp16 ) // NEW
 {
     // Default config
-    config.type      = MNN_FORWARD_CPU; // Use CPU by default for gate models (they're smaller)
+    config.type      = MNN_FORWARD_CPU;
     config.numThread = 1;
 }
 
@@ -49,11 +49,14 @@ bool GateWeightsHandler::initialize( const std::string &modelDir )
                 {
                     int layerId = std::stoi( match[1].str() );
 
-                    // Add the gate model (no need for analysis files anymore)
-                    if ( addGateModel( layerId, entry.path().string() ) )
+                    // Construct the full path and modify for FP16 if needed
+                    std::string gatePath = entry.path().string();
+                    gatePath = LLMUtility::getFp16Path( gatePath, useFp16 );  // MODIFIED
+
+                    // Add the gate model
+                    if ( addGateModel( layerId, gatePath ) )
                     {
                         foundAny = true;
-                        //std::cout << "Added gate model for layer " << layerId << std::endl;
                     }
                 }
             }

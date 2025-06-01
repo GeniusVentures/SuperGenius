@@ -62,9 +62,10 @@ private:
     MNN::ScheduleConfig      config;
     int                      expertStrategy; // 0 = round robin, 1 = average all experts
     bool                     debugMode;
+    bool                     useFp16;
 
 public:
-    MultiExpertHandler();
+    MultiExpertHandler( bool fp16 = false );
 
     ~MultiExpertHandler();
 

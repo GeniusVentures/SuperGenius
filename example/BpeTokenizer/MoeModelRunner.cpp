@@ -1,8 +1,9 @@
 #include "MoeModelRunner.hpp"
 
-MoEModelRunner::MoEModelRunner( const std::string &modelDir, bool debug ) :
+MoEModelRunner::MoEModelRunner( const std::string &modelDir, bool debug, bool fp16 ) :
     modelDir( modelDir ),
     debugMode( debug ),
+    useFp16( fp16 ), // NEW
     hiddenSize( 7168 ),
     useSplitLmHead( false ),
     finalLayerNorm( nullptr ),
@@ -22,7 +23,7 @@ MoEModelRunner::~MoEModelRunner()
 
 bool MoEModelRunner::initialize()
 {
-    // Load tokenizer
+    // Load tokenizer (unchanged)
     std::string vocabPath  = modelDir + "/vocab.json";
     std::string mergesPath = modelDir + "/merges.txt";
 
@@ -33,19 +34,16 @@ bool MoEModelRunner::initialize()
     }
     std::cout << "Tokenizer loaded successfully" << std::endl;
 
-    // Initialize embedding loader
+    // Initialize embedding loader with FP16 flag
+    embeddingLoader = SplitEmbeddingLoader( useFp16 ); // MODIFIED
     if ( !embeddingLoader.initialize( modelDir ) )
     {
         std::cerr << "Failed to initialize embedding loader" << std::endl;
         return false;
     }
 
-    if ( debugMode )
-    {
-        embeddingLoader.printChunkInfo();
-    }
-
-    // Initialize LM head loader
+    // Initialize LM head loader with FP16 flag
+    lmHeadLoader   = SplitLmHeadLoader( useFp16 ); // MODIFIED
     useSplitLmHead = lmHeadLoader.initialize( modelDir );
     if ( useSplitLmHead )
     {
@@ -60,6 +58,7 @@ bool MoEModelRunner::initialize()
 
         // Load legacy LM head model as fallback
         std::string lmHeadPath = modelDir + "/lm_head_f32.mnn";
+        lmHeadPath             = LLMUtility::getFp16Path( lmHeadPath, useFp16 ); // MODIFIED
         legacyLmHeadNet.reset( MNN::Interpreter::createFromFile( lmHeadPath.c_str() ) );
         if ( !legacyLmHeadNet )
         {
@@ -90,12 +89,13 @@ bool MoEModelRunner::loadAllLayers()
     // Load all layers from 0 to 61 using LayerProcessor
     for ( int i = 0; i <= 61; i++ )
     {
-        auto processor = std::make_unique<LayerProcessor>( i, modelDir, debugMode );
+        auto processor = std::make_unique<LayerProcessor>( i, modelDir, debugMode, useFp16 ); // MODIFIED
 
         if ( processor->initialize() )
         {
             allLayers.push_back( std::move( processor ) );
-            std::cout << "Initialized layer " << i << ( i < 3 ? " (Standard)" : " (MoE)" ) << std::endl;
+            std::cout << "Initialized layer " << i << ( i < 3 ? " (Standard)" : " (MoE)" )
+                      << ( useFp16 ? " [FP16]" : "" ) << std::endl;
         }
         else
         {
@@ -111,6 +111,7 @@ bool MoEModelRunner::loadAllLayers()
 bool MoEModelRunner::loadFinalLayerNorm()
 {
     std::string finalNormPath = modelDir + "/final_layernorm.mnn";
+    finalNormPath             = LLMUtility::getFp16Path( finalNormPath, useFp16 ); // MODIFIED
 
     if ( !std::filesystem::exists( finalNormPath ) )
     {

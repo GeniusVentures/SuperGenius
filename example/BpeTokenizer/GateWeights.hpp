@@ -57,6 +57,7 @@ private:
     bool                                   initialized;
     MNN::ScheduleConfig                    config;
     bool                                   debugMode;
+    bool                                   useFp16; 
 
         // Get raw gate scores for available experts
     std::vector<std::pair<int, float>> getGateScoresForExperts( int                       layerId,
@@ -64,7 +65,7 @@ private:
                                                                 const std::vector<int>   &availableExperts );
 
 public:
-    GateWeightsHandler();
+    GateWeightsHandler( bool fp16 = false );
     ~GateWeightsHandler();
 
     // Initialize by loading gate models

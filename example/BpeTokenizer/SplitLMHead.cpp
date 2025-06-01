@@ -1,12 +1,14 @@
 #include "SplitLMHead.hpp"
 #include "jsonparser.hpp"
 
-SplitLmHeadLoader::SplitLmHeadLoader() : initialized( false ), inputFeatures( 0 ), totalOutputs( 0 )
+SplitLmHeadLoader::SplitLmHeadLoader( bool fp16 ) :
+    initialized( false ), inputFeatures( 0 ), totalOutputs( 0 ), useFp16( fp16 ) // NEW
 {
     // Default config
-    config.type      = MNN_FORWARD_VULKAN; // Use VULKAN by default, change as needed
+    config.type      = MNN_FORWARD_VULKAN;
     config.numThread = 1;
 }
+
 
 SplitLmHeadLoader::~SplitLmHeadLoader()
 {
@@ -25,7 +27,7 @@ bool SplitLmHeadLoader::initialize( const std::string &modelDir )
 {
     this->modelDir = modelDir;
 
-    // Load metadata file
+    // Load metadata file (unchanged)
     std::string   metadataPath = modelDir + "/lm_head_chunks_metadata.json";
     std::ifstream metadataFile( metadataPath );
     if ( !metadataFile.is_open() )
@@ -71,6 +73,9 @@ bool SplitLmHeadLoader::initialize( const std::string &modelDir )
                 info.modelPath = info.modelPath.substr( 0, info.modelPath.size() - 5 ) + ".mnn";
             }
 
+            // Apply FP16 path modification
+            info.modelPath = LLMUtility::getFp16Path( info.modelPath, useFp16 );  // MODIFIED
+
             // Store in proper index using move assignment
             if ( idx >= 0 && idx < (int)chunks.size() )
             {
@@ -84,7 +89,8 @@ bool SplitLmHeadLoader::initialize( const std::string &modelDir )
         return false;
     }
 
-    std::cout << "Loaded LM head metadata with " << chunks.size() << " chunks" << std::endl;
+    std::cout << "Loaded LM head metadata with " << chunks.size() << " chunks"
+              << ( useFp16 ? " [FP16]" : "" ) << std::endl;
     std::cout << "Input features: " << inputFeatures << ", Total outputs: " << totalOutputs << std::endl;
 
     initialized = true;
@@ -114,14 +120,15 @@ bool SplitLmHeadLoader::loadChunkModel( int chunkIndex )
         // Create interpreter if needed
         if ( !chunks[chunkIndex].interpreter )
         {
-            chunks[chunkIndex].interpreter.reset(
-                MNN::Interpreter::createFromFile( chunks[chunkIndex].modelPath.c_str() ) );
+            std::string modelPath = LLMUtility::getFp16Path( chunks[chunkIndex].modelPath, useFp16 ); // MODIFIED
+            chunks[chunkIndex].interpreter.reset( MNN::Interpreter::createFromFile( modelPath.c_str() ) );
             if ( !chunks[chunkIndex].interpreter )
             {
-                std::cerr << "Failed to load LM head chunk model: " << chunks[chunkIndex].modelPath << std::endl;
+                std::cerr << "Failed to load LM head chunk model: " << modelPath << std::endl;
                 return false;
             }
         }
+
 
         // Create session
         chunks[chunkIndex].session = chunks[chunkIndex].interpreter->createSession( config );

@@ -1,10 +1,11 @@
 #include "SplitEmbedding.hpp"
 #include "jsonparser.hpp"
 
-SplitEmbeddingLoader::SplitEmbeddingLoader() : initialized( false ), embeddingDim( 0 )
+SplitEmbeddingLoader::SplitEmbeddingLoader( bool fp16 ) :
+    initialized( false ), embeddingDim( 0 ), useFp16( fp16 ) // NEW
 {
     // Default config
-    config.type      = MNN_FORWARD_VULKAN; // Use VULKAN by default, change as needed
+    config.type      = MNN_FORWARD_VULKAN;
     config.numThread = 1;
 }
 
@@ -113,11 +114,11 @@ bool SplitEmbeddingLoader::loadChunkModel( int chunkIndex )
         // Create interpreter if needed
         if ( !chunks[chunkIndex].interpreter )
         {
-            chunks[chunkIndex].interpreter.reset(
-                MNN::Interpreter::createFromFile( chunks[chunkIndex].modelPath.c_str() ) );
+            std::string modelPath = LLMUtility::getFp16Path( chunks[chunkIndex].modelPath, useFp16 ); // MODIFIED
+            chunks[chunkIndex].interpreter.reset( MNN::Interpreter::createFromFile( modelPath.c_str() ) );
             if ( !chunks[chunkIndex].interpreter )
             {
-                std::cerr << "Failed to load chunk model: " << chunks[chunkIndex].modelPath << std::endl;
+                std::cerr << "Failed to load chunk model: " << modelPath << std::endl;
                 return false;
             }
         }

@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <fstream>
 #include <sstream>
+#include "Utility.hpp"
 
 class SplitLmHeadLoader
 {
@@ -48,9 +49,31 @@ private:
             return *this;
         }
 
-        // Delete copy constructor and assignment
-        ChunkInfo( const ChunkInfo & )            = delete;
-        ChunkInfo &operator=( const ChunkInfo & ) = delete;
+        // Provide copy constructor and assignment (they will copy everything except the unique_ptr)
+        ChunkInfo( const ChunkInfo &other ) :
+            chunkIndex( other.chunkIndex ),
+            startOutputId( other.startOutputId ),
+            endOutputId( other.endOutputId ),
+            modelPath( other.modelPath ),
+            interpreter( nullptr ), // Can't copy unique_ptr, leave null
+            session( nullptr )      // Session will be recreated when needed
+        {
+        }
+
+        ChunkInfo &operator=( const ChunkInfo &other )
+        {
+            if ( this != &other )
+            {
+                chunkIndex    = other.chunkIndex;
+                startOutputId = other.startOutputId;
+                endOutputId   = other.endOutputId;
+                modelPath     = other.modelPath;
+                // Don't copy interpreter or session - they'll be recreated when needed
+                interpreter.reset();
+                session = nullptr;
+            }
+            return *this;
+        }
     };
 
     std::vector<ChunkInfo> chunks;
@@ -59,9 +82,10 @@ private:
     int                    totalOutputs;
     bool                   initialized;
     MNN::ScheduleConfig    config;
+    bool                   useFp16;
 
 public:
-    SplitLmHeadLoader();
+    SplitLmHeadLoader( bool fp16 = false );
 
     ~SplitLmHeadLoader();
 

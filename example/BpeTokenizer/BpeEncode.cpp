@@ -33,12 +33,13 @@ int main( int argc, char **argv )
 {
     if ( argc < 4 )
     {
-        std::cerr << "Usage: " << argv[0] << " <model_dir> <prompt> <num_tokens> [debug|test_expert <layer>]"
+        std::cerr << "Usage: " << argv[0] << " <model_dir> <prompt> <num_tokens> [debug|test_expert <layer>] [fp16]"
                   << std::endl;
         std::cerr << "Examples:" << std::endl;
         std::cerr << "  " << argv[0] << " . \"Hello world\" 20" << std::endl;
         std::cerr << "  " << argv[0] << " . \"Hello world\" 20 debug" << std::endl;
-        std::cerr << "  " << argv[0] << " . \"Hello world\" 20 test_expert 3" << std::endl;
+        std::cerr << "  " << argv[0] << " . \"Hello world\" 20 debug fp16" << std::endl;
+        std::cerr << "  " << argv[0] << " . \"Hello world\" 20 test_expert 3 fp16" << std::endl;
         return 1;
     }
 
@@ -47,6 +48,7 @@ int main( int argc, char **argv )
     int         numTokens   = 1;
     bool        runDebug    = false;
     bool        testExpert  = false;
+    bool        useFp16     = false;  // NEW
     int         expertLayer = 3;
 
     try
@@ -58,28 +60,41 @@ int main( int argc, char **argv )
         std::cerr << "Invalid number of tokens, using default: 1" << std::endl;
     }
 
-    // Check for debug flag
-    if ( argc >= 5 && std::string( argv[4] ) == "debug" )
+    // Parse command line arguments
+    for ( int i = 4; i < argc; i++ )
     {
-        runDebug = true;
-    }
-    // Check for expert testing flag
-    else if ( argc >= 6 && std::string( argv[4] ) == "test_expert" )
-    {
-        testExpert = true;
-        try
+        std::string arg = argv[i];
+        if ( arg == "debug" )
         {
-            expertLayer = std::stoi( argv[5] );
+            runDebug = true;
         }
-        catch ( ... )
+        else if ( arg == "test_expert" && i + 1 < argc )
         {
-            std::cerr << "Invalid expert layer, using default: 3" << std::endl;
-            expertLayer = 3;
+            testExpert = true;
+            try
+            {
+                expertLayer = std::stoi( argv[i + 1] );
+                i++; // Skip the next argument since we consumed it
+            }
+            catch ( ... )
+            {
+                std::cerr << "Invalid expert layer, using default: 3" << std::endl;
+                expertLayer = 3;
+            }
+        }
+        else if ( arg == "fp16" )
+        {
+            useFp16 = true;
         }
     }
 
-    // Create and initialize the model runner
-    MoEModelRunner runner( modelDir, true );
+    if ( useFp16 )
+    {
+        std::cout << "Using FP16 precision mode" << std::endl;
+    }
+
+    // Create and initialize the model runner with FP16 flag
+    MoEModelRunner runner( modelDir, true, useFp16 );  // MODIFIED
 
     if ( !runner.initialize() )
     {

@@ -1,9 +1,10 @@
 #include "MultiExpert.hpp"
 
-MultiExpertHandler::MultiExpertHandler() : initialized( false ), expertStrategy( 0 ), debugMode( false )
+MultiExpertHandler::MultiExpertHandler( bool fp16 ) :
+    initialized( false ), expertStrategy( 0 ), debugMode( false ), useFp16( fp16 ) // NEW
 {
     // Default config
-    config.type      = MNN_FORWARD_CPU; // Use VULKAN by default
+    config.type      = MNN_FORWARD_CPU;
     config.numThread = 1;
 }
 
@@ -45,7 +46,7 @@ bool MultiExpertHandler::initialize( const std::string &modelDir )
     {
         std::vector<std::string> expertFiles;
 
-        // First, try to find layer-specific experts (expert_layer{N}_{ID}.mnn)
+        // Find layer-specific experts (expert_layer{N}_{ID}.mnn)
         std::string layerSpecificPattern = "expert_layer(\\d+)_(\\d+)\\.mnn";
         std::regex  layerRegex( layerSpecificPattern );
 
@@ -58,7 +59,6 @@ bool MultiExpertHandler::initialize( const std::string &modelDir )
                 if ( std::regex_search( filename, match, layerRegex ) )
                 {
                     expertFiles.push_back( filename );
-                    //std::cout << "Found layer-specific expert: " << filename << std::endl;
                 }
             }
         }
@@ -75,7 +75,8 @@ bool MultiExpertHandler::initialize( const std::string &modelDir )
         for ( const auto &filename : expertFiles )
         {
             ExpertModel expert;
-            expert.modelPath = modelDir + "/" + filename;
+            std::string originalPath = modelDir + "/" + filename;
+            expert.modelPath         = LLMUtility::getFp16Path( originalPath, useFp16 ); // MODIFIED
 
             // Extract layer and expert IDs
             std::regex  idRegex( "expert_layer(\\d+)_(\\d+)" );
@@ -84,9 +85,6 @@ bool MultiExpertHandler::initialize( const std::string &modelDir )
             {
                 expert.layerId  = std::stoi( match[1].str() );
                 expert.expertId = std::stoi( match[2].str() );
-
-                //std::cout << "Parsed expert: Layer " << expert.layerId << ", Expert " << expert.expertId << " -> "
-                //          << expert.modelPath << std::endl;
             }
             else
             {

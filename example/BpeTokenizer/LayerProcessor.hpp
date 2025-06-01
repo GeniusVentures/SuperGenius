@@ -14,6 +14,7 @@ private:
     int         layerId;
     std::string modelDir;
     bool        debugMode;
+    bool        useFp16; 
 
     // Gate model - shared across all layers for resource efficiency
     static std::shared_ptr<GateWeightsHandler> sharedGateHandler;
@@ -43,7 +44,7 @@ private:
     std::vector<float> runSharedExpert( const std::vector<float> &input );
 
 public:
-    LayerProcessor( int layerId, const std::string &modelDir, bool debug = false );
+    LayerProcessor( int layerId, const std::string &modelDir, bool debug = false, bool fp16 = false );
     ~LayerProcessor();
 
     bool               initialize();

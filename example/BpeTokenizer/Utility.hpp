@@ -35,5 +35,7 @@ public:
     static int runLmHeadModelLegacy( MNN::Interpreter         *lmHeadNet,
                                      const std::vector<float> &expertOutput,
                                      BpeTokenizer             *tokenizer );
+
+    static std::string getFp16Path( const std::string &originalPath, bool useFp16 );
 };
 #endif

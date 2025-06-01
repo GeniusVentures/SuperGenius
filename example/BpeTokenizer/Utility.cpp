@@ -230,3 +230,24 @@ int LLMUtility::runLmHeadModelLegacy( MNN::Interpreter         *lmHeadNet,
         return 0;
     }
 }
+
+std::string LLMUtility::getFp16Path( const std::string &originalPath, bool useFp16 )
+{
+    if ( !useFp16 )
+    {
+        return originalPath;
+    }
+
+    // Find the last dot for file extension
+    size_t lastDot = originalPath.find_last_of( '.' );
+    if ( lastDot == std::string::npos )
+    {
+        // No extension found, just append _fp16
+        return originalPath + "_fp16";
+    }
+
+    // Insert _fp16 before the extension
+    std::string basePath  = originalPath.substr( 0, lastDot );
+    std::string extension = originalPath.substr( lastDot );
+    return basePath + "_fp16" + extension;
+}

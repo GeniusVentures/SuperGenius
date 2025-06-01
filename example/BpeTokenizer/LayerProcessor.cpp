@@ -2,8 +2,8 @@
 
 #include "LayerProcessor.hpp"
 
-LayerProcessor::LayerProcessor( int layerId, const std::string &modelDir, bool debug ) :
-    layerId( layerId ), modelDir( modelDir ), debugMode( debug )
+LayerProcessor::LayerProcessor( int layerId, const std::string &modelDir, bool debug, bool fp16 ) :
+    layerId( layerId ), modelDir( modelDir ), debugMode( debug ), useFp16( fp16 ) // NEW
 {
     // No longer store attention layer in memory
 }
@@ -81,6 +81,7 @@ std::vector<float> LayerProcessor::runPreAttentionLayerNorm( const std::vector<f
 {
     // Load pre-attention layernorm temporarily
     std::string layerNormPath = modelDir + "/layer_" + std::to_string( layerId ) + "_layernorm.mnn";
+    layerNormPath             = LLMUtility::getFp16Path( layerNormPath, useFp16 ); // MODIFIED
 
     if ( !std::filesystem::exists( layerNormPath ) )
     {
@@ -199,6 +200,7 @@ std::vector<float> LayerProcessor::runPostAttentionLayerNorm( const std::vector<
     // For now, we'll use the same model file since both are RMSNorm with same dimensions
 
     std::string layerNormPath = modelDir + "/layer_" + std::to_string( layerId ) + "_layernorm.mnn";
+    layerNormPath             = LLMUtility::getFp16Path( layerNormPath, useFp16 ); 
 
     if ( !std::filesystem::exists( layerNormPath ) )
     {
@@ -315,6 +317,7 @@ std::vector<float> LayerProcessor::runAttentionLayerTemporary( const std::vector
 {
     // Load attention layer temporarily
     std::string attentionPath = modelDir + "/layer_" + std::to_string( layerId ) + "_attention.mnn";
+    attentionPath             = LLMUtility::getFp16Path( attentionPath, useFp16 );
 
     if ( !std::filesystem::exists( attentionPath ) )
     {
@@ -430,6 +433,7 @@ std::vector<float> LayerProcessor::runSharedExpert( const std::vector<float> &in
 {
     // Load shared expert temporarily
     std::string sharedExpertPath = modelDir + "/shared_expert_layer_" + std::to_string( layerId ) + ".mnn";
+    sharedExpertPath             = LLMUtility::getFp16Path( sharedExpertPath, useFp16 );
 
     if ( !std::filesystem::exists( sharedExpertPath ) )
     {
@@ -548,14 +552,14 @@ bool LayerProcessor::initialize()
         std::lock_guard<std::mutex> lock( gateHandlerMutex );
         if ( !sharedGateHandler )
         {
-            sharedGateHandler = std::make_shared<GateWeightsHandler>();
+            sharedGateHandler = std::make_shared<GateWeightsHandler>( useFp16 ); // MODIFIED
             if ( !sharedGateHandler->initialize( modelDir ) )
             {
                 std::cerr << "Warning: Failed to initialize shared gate handler" << std::endl;
             }
             else
             {
-                std::cout << "Shared gate handler initialized" << std::endl;
+                std::cout << "Shared gate handler initialized" << ( useFp16 ? " [FP16]" : "" ) << std::endl;
             }
         }
     }
@@ -566,7 +570,7 @@ bool LayerProcessor::initialize()
         std::lock_guard<std::mutex> lock( expertHandlerMutex );
         if ( !sharedExpertHandler )
         {
-            sharedExpertHandler = std::make_shared<MultiExpertHandler>();
+            sharedExpertHandler = std::make_shared<MultiExpertHandler>( useFp16 ); // MODIFIED
 
             // Use the main model directory (experts are stored as expert_layerX_Y.mnn files)
             if ( !sharedExpertHandler->initialize( modelDir ) )
@@ -575,7 +579,7 @@ bool LayerProcessor::initialize()
                 return false;
             }
 
-            std::cout << "Shared expert handler initialized" << std::endl;
+            std::cout << "Shared expert handler initialized" << ( useFp16 ? " [FP16]" : "" ) << std::endl;
         }
     }
 
@@ -705,6 +709,7 @@ std::vector<float> LayerProcessor::processStandardMLP( const std::vector<float> 
 {
     // Load standard MLP temporarily
     std::string mlpPath = modelDir + "/layer_" + std::to_string( layerId ) + "_mlp.mnn";
+    mlpPath             = LLMUtility::getFp16Path( mlpPath, useFp16 );
 
     if ( !std::filesystem::exists( mlpPath ) )
     {

@@ -5,6 +5,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include "Utility.hpp"
 
 class SplitEmbeddingLoader
 {
@@ -47,9 +48,31 @@ private:
             return *this;
         }
 
-        // Delete copy constructor and assignment
-        ChunkInfo( const ChunkInfo & )            = delete;
-        ChunkInfo &operator=( const ChunkInfo & ) = delete;
+        // Provide copy constructor and assignment (they will copy everything except the unique_ptr)
+        ChunkInfo( const ChunkInfo &other ) :
+            chunkIndex( other.chunkIndex ),
+            startTokenId( other.startTokenId ),
+            endTokenId( other.endTokenId ),
+            modelPath( other.modelPath ),
+            interpreter( nullptr ), // Can't copy unique_ptr, leave null
+            session( nullptr )      // Session will be recreated when needed
+        {
+        }
+
+        ChunkInfo &operator=( const ChunkInfo &other )
+        {
+            if ( this != &other )
+            {
+                chunkIndex   = other.chunkIndex;
+                startTokenId = other.startTokenId;
+                endTokenId   = other.endTokenId;
+                modelPath    = other.modelPath;
+                // Don't copy interpreter or session - they'll be recreated when needed
+                interpreter.reset();
+                session = nullptr;
+            }
+            return *this;
+        }
     };
 
     std::vector<ChunkInfo> chunks;
@@ -57,9 +80,10 @@ private:
     int                    embeddingDim;
     bool                   initialized;
     MNN::ScheduleConfig    config;
+    bool                   useFp16;
 
 public:
-    SplitEmbeddingLoader();
+    SplitEmbeddingLoader( bool fp16 = false );
 
     ~SplitEmbeddingLoader();
 

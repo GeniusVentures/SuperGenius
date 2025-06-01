@@ -12,6 +12,7 @@ private:
     std::string modelDir;
     bool        debugMode;
     int         hiddenSize;
+    bool        useFp16; 
 
     // Components
     BpeTokenizer                      tokenizer;
@@ -33,7 +34,7 @@ private:
     std::vector<float> runFinalLayerNorm( const std::vector<float> &input );
 
 public:
-    MoEModelRunner( const std::string &modelDir, bool debug = false );
+    MoEModelRunner( const std::string &modelDir, bool debug = false, bool fp16 = false ); 
     ~MoEModelRunner();
 
     bool        initialize();
