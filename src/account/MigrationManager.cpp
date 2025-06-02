@@ -26,6 +26,7 @@ namespace sgns
                                                      const std::string &targetVersion )
     {
         std::string version = currentVersion;
+
         while ( version != targetVersion )
         {
             bool applied = false;
@@ -85,7 +86,6 @@ namespace sgns
         static constexpr auto LEGACY_PREFIX_FMT = "/SuperGNUSNode.TestNet.2a.00.%1%";
 
         const auto legacyNetworkFullPath = ( boost::format( LEGACY_PREFIX_FMT ) % base58key_ ).str();
-
         const auto fullPath = ( boost::format( "%s%s_%s" ) % writeBasePath_ % legacyNetworkFullPath % suffix ).str();
 
         m_logger->trace( "Initializing legacy DB at path {}", fullPath );
@@ -116,53 +116,60 @@ namespace sgns
         auto              maybeTransactionKeys = oldDb->QueryKeyValues( BASE, "*", "/tx" );
         if ( !maybeTransactionKeys.has_value() )
         {
+            m_logger->error( "Failed to query transaction keys with base {}", BASE );
             return outcome::failure( boost::system::error_code{} );
         }
-        auto &entries          = maybeTransactionKeys.value();
-        auto  crdt_transaction = newDb->BeginTransaction();
+
+        auto &entries = maybeTransactionKeys.value();
+        m_logger->trace( "Found {} transaction keys to migrate", entries.size() );
+
+        auto crdt_transaction = newDb->BeginTransaction();
+
         for ( const auto &entry : entries )
         {
             auto keyOpt = oldDb->KeyToString( entry.first );
             if ( !keyOpt.has_value() )
             {
+                m_logger->error( "Failed to convert key buffer to string" );
                 continue;
             }
 
-            std::string transaction_key = keyOpt.value();
-
-            auto maybe_transaction = TransactionManager::FetchTransaction( oldDb, transaction_key );
+            std::string transaction_key   = keyOpt.value();
+            auto        maybe_transaction = TransactionManager::FetchTransaction( oldDb, transaction_key );
             if ( !maybe_transaction.has_value() )
             {
-                m_logger->debug( "Can't fetch transaction" );
+                m_logger->error( "Can't fetch transaction for key {}", transaction_key );
                 continue;
             }
             auto tx = maybe_transaction.value();
+
             if ( !IGeniusTransactions::CheckDAGStructSignature( tx->dag_st ) )
             {
                 m_logger->error( "Could not validate signature of transaction {}", transaction_key );
                 continue;
             }
-            // Until here it's supposed to work.
-            
+
             std::string proof_key;
             if ( transaction_key.find( "notify" ) != std::string::npos )
             {
                 auto maybeProofKeyMap = oldDb->QueryKeyValues( BASE, "*", "/proof/" + tx->dag_st.data_hash() );
                 if ( !maybeProofKeyMap.has_value() )
                 {
-                    m_logger->error( "Can't find the proof key {}", transaction_key );
+                    m_logger->error( "Can't find the proof key for incoming transaction {}", transaction_key );
                     continue;
                 }
                 auto proof_map = maybeProofKeyMap.value();
                 if ( proof_map.size() != 1 )
                 {
-                    m_logger->error( "More than 1 proof for {}", transaction_key );
+                    m_logger->error( "More than 1 proof for incoming transaction {}", transaction_key );
                     continue;
                 }
                 auto proof_key_buffer = proof_map.begin()->first;
-                auto maybe_proof_key = oldDb->KeyToString( proof_key_buffer );
+                auto maybe_proof_key  = oldDb->KeyToString( proof_key_buffer );
                 if ( !maybe_proof_key.has_value() )
                 {
+                    m_logger->error( "Failed to convert proof key buffer to string for transaction {}",
+                                     transaction_key );
                     continue;
                 }
                 proof_key = maybe_proof_key.value();
@@ -175,7 +182,7 @@ namespace sgns
             auto maybe_proof_data = oldDb->Get( proof_key );
             if ( !maybe_proof_data.has_value() )
             {
-                m_logger->error( "Can't find the proof data of {}", keyOpt.value() );
+                m_logger->error( "Can't find the proof data for {}", transaction_key );
                 continue;
             }
 
@@ -184,16 +191,21 @@ namespace sgns
             sgns::crdt::GlobalDB::Buffer data_transaction;
             data_transaction.put( tx->SerializeByteVector() );
             BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Put( std::move( tx_key ), std::move( data_transaction ) ) );
+
             sgns::crdt::HierarchicalKey  proof_crdt_key( TransactionManager::GetTransactionProofPath( *tx ) );
             sgns::crdt::GlobalDB::Buffer proof_transaction;
             proof_transaction.put( maybe_proof_data.value() );
             BOOST_OUTCOME_TRYV2( auto &&,
                                  crdt_transaction->Put( std::move( proof_crdt_key ), std::move( proof_transaction ) ) );
         }
+
         if ( crdt_transaction->Commit().has_error() )
         {
+            m_logger->error( "Failed to commit transaction batch to new DB" );
             return outcome::failure( boost::system::error_code{} );
         }
+
+        m_logger->trace( "Successfully committed all migrated entries to new DB" );
         return outcome::success();
     }
 
