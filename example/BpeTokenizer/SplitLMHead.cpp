@@ -74,7 +74,7 @@ bool SplitLmHeadLoader::initialize( const std::string &modelDir )
             }
 
             // Apply FP16 path modification
-            info.modelPath = LLMUtility::getFp16Path( info.modelPath, useFp16 );  // MODIFIED
+            info.modelPath = LLMUtility::getFp16Path( info.modelPath, useFp16 );
 
             // Store in proper index using move assignment
             if ( idx >= 0 && idx < (int)chunks.size() )
@@ -120,7 +120,8 @@ bool SplitLmHeadLoader::loadChunkModel( int chunkIndex )
         // Create interpreter if needed
         if ( !chunks[chunkIndex].interpreter )
         {
-            std::string modelPath = LLMUtility::getFp16Path( chunks[chunkIndex].modelPath, useFp16 ); // MODIFIED
+            //Hardcode usefp16 to false because the discovery step already added it.
+            std::string modelPath = LLMUtility::getFp16Path( chunks[chunkIndex].modelPath, false );
             chunks[chunkIndex].interpreter.reset( MNN::Interpreter::createFromFile( modelPath.c_str() ) );
             if ( !chunks[chunkIndex].interpreter )
             {

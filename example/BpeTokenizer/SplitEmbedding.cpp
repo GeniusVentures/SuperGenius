@@ -112,9 +112,10 @@ bool SplitEmbeddingLoader::loadChunkModel( int chunkIndex )
     try
     {
         // Create interpreter if needed
+        std::string modelPath;
         if ( !chunks[chunkIndex].interpreter )
         {
-            std::string modelPath = LLMUtility::getFp16Path( chunks[chunkIndex].modelPath, useFp16 ); // MODIFIED
+            modelPath = LLMUtility::getFp16Path( chunks[chunkIndex].modelPath, useFp16 ); 
             chunks[chunkIndex].interpreter.reset( MNN::Interpreter::createFromFile( modelPath.c_str() ) );
             if ( !chunks[chunkIndex].interpreter )
             {
@@ -131,7 +132,7 @@ bool SplitEmbeddingLoader::loadChunkModel( int chunkIndex )
             return false;
         }
 
-        std::cout << "Loaded chunk model " << chunkIndex << " from " << chunks[chunkIndex].modelPath << std::endl;
+        std::cout << "Loaded chunk model " << chunkIndex << " from " << modelPath << std::endl;
         return true;
     }
     catch ( const std::exception &e )
