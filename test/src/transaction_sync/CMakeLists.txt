@@ -11,10 +11,8 @@ target_link_libraries(transaction_sync_test
 
 if(WIN32)
     target_link_options(transaction_sync_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:sgns_account>)
-
 elseif(APPLE)
     target_link_options(transaction_sync_test PUBLIC -force_load "$<TARGET_FILE:sgns_account>")
-
 else()
     target_link_options(transaction_sync_test PUBLIC
         "-Wl,--whole-archive"
@@ -35,10 +33,8 @@ target_link_libraries(migration_sync_test
 
 if(WIN32)
     target_link_options(migration_sync_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:sgns_account>)
-
 elseif(APPLE)
     target_link_options(migration_sync_test PUBLIC -force_load "$<TARGET_FILE:sgns_account>")
-
 else()
     target_link_options(migration_sync_test PUBLIC
         "-Wl,--whole-archive"
@@ -46,3 +42,19 @@ else()
         "-Wl,--no-whole-archive"
     )
 endif()
+
+add_custom_target(node10
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_CURRENT_SOURCE_DIR}/node10/"
+        "$<TARGET_FILE_DIR:migration_sync_test>/node10"
+        COMMENT "Copying data"
+)
+add_dependencies(migration_sync_test node10)
+
+add_custom_target(node20
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_CURRENT_SOURCE_DIR}/node20/"
+        "$<TARGET_FILE_DIR:migration_sync_test>/node20"
+        COMMENT "Copying data"
+)
+add_dependencies(migration_sync_test node20)

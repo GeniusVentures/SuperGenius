@@ -1,9 +1,14 @@
+#include <filesystem>
+#include <thread>
+
 #include <gtest/gtest.h>
+#include <boost/dll.hpp>
+
 #include "account/GeniusNode.hpp"
 #include "account/MigrationManager.hpp"
 #include "FileManager.hpp"
-#include <thread>
-#include <boost/dll.hpp>
+
+namespace fs = std::filesystem;
 
 namespace sgns
 {
@@ -19,6 +24,10 @@ namespace sgns
         static void SetUpTestSuite()
         {
             std::string binary_path = boost::dll::program_location().parent_path().string();
+
+            fs::copy_options opt = fs::copy_options::overwrite_existing | fs::copy_options::recursive;
+            fs::copy("./node10", DEV_CONFIG10.BaseWritePath, opt);
+            fs::copy("./node20", DEV_CONFIG20.BaseWritePath, opt);
 
             std::strncpy( DEV_CONFIG10.BaseWritePath,
                           ( binary_path + "/node10_0_2_0/" ).c_str(),
@@ -51,7 +60,7 @@ namespace sgns
 
     TEST_F( MigrationSyncTest, BalanceAfterMigration )
     {
-        EXPECT_EQ( node10->GetBalance(), 10 );
-        EXPECT_EQ( node20->GetBalance(), 10 );
+        EXPECT_EQ( node10->GetBalance(), 238000000000 );
+        EXPECT_EQ( node20->GetBalance(), 273000000000 );
     }
 }
