@@ -318,10 +318,6 @@ namespace sgns
         }
         job_globaldb_ = std::move( global_db_ret.value() );
 
-        job_globaldb_->AddBroadcastTopic( processing_channel_topic_ );
-        job_globaldb_->AddListenTopic( processing_channel_topic_ );
-        job_globaldb_->Start();
-
         task_queue_      = std::make_shared<processing::ProcessingTaskQueueImpl>( job_globaldb_ );
         processing_core_ = std::make_shared<processing::ProcessingCoreImpl>( job_globaldb_, 1000000, 1 );
         processing_core_->RegisterProcessorFactory( "mnnimage",
@@ -347,7 +343,7 @@ namespace sgns
             throw std::runtime_error( std::string( "Cannot query transactions: " ) + maybe_values.error().message() );
         }
         auto key_value_map = maybe_values.value();
-        if ( key_value_map.size() == 0 )
+        if ( tx_globaldb_->GetDataStore()->empty() )
         {
             sgns::MigrationManager migrationManager;
 
@@ -367,6 +363,9 @@ namespace sgns
                                           migrationResult.error().message() );
             }
         }
+        job_globaldb_->AddBroadcastTopic( processing_channel_topic_ );
+        job_globaldb_->AddListenTopic( processing_channel_topic_ );
+        job_globaldb_->Start();
 
         transaction_manager_ = std::make_shared<TransactionManager>( tx_globaldb_,
                                                                      io_,
