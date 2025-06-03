@@ -147,7 +147,7 @@ find_package(Boost.DI CONFIG REQUIRED)
 
 # Boost should be loaded before libp2p v0.1.2
 # Boost project
-set(_BOOST_ROOT "${_THIRDPARTY_BUILD_DIR}/boost/build/${CMAKE_SYSTEM_NAME}")
+set(_BOOST_ROOT "${_THIRDPARTY_BUILD_DIR}/boost/build")
 set(Boost_LIB_DIR "${_BOOST_ROOT}/lib")
 set(Boost_INCLUDE_DIR "${_BOOST_ROOT}/include/boost-${BOOST_VERSION_2U}")
 set(Boost_DIR "${Boost_LIB_DIR}/cmake/Boost-${BOOST_VERSION}")
