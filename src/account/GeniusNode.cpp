@@ -153,7 +153,7 @@ namespace sgns
         loggerGraphsync->set_level( spdlog::level::err );
         loggerBroadcaster->set_level( spdlog::level::err );
         loggerDataStore->set_level( spdlog::level::err );
-        loggerTransactions->set_level( spdlog::level::debug );
+        loggerTransactions->set_level( spdlog::level::err );
         loggerMigration->set_level( spdlog::level::trace );
         loggerMigrationStep->set_level( spdlog::level::trace );
         loggerQueue->set_level( spdlog::level::err );
@@ -337,32 +337,33 @@ namespace sgns
             account_->GetAddress() );
         processing_service_->SetChannelListRequestTimeout( boost::posix_time::milliseconds( 3000 ) );
 
-        auto maybe_values = tx_globaldb_->QueryKeyValues( "" );
-        if ( maybe_values.has_error() )
+        // auto maybe_values = tx_globaldb_->QueryKeyValues( "" );
+        // if ( maybe_values.has_error() )
+        // {
+        //     throw std::runtime_error( std::string( "Cannot query transactions: " ) + maybe_values.error().message()
+        //     );
+        // }
+        // auto key_value_map = maybe_values.value();
+        // if ( tx_globaldb_->GetDataStore()->empty() )
         {
-            throw std::runtime_error( std::string( "Cannot query transactions: " ) + maybe_values.error().message() );
-        }
-        auto key_value_map = maybe_values.value();
-        if ( tx_globaldb_->GetDataStore()->empty() )
-        {
-            sgns::MigrationManager migrationManager;
+            auto migrationManager = sgns::MigrationManager::New( tx_globaldb_,     // newDb
+                                                                 io_,              // ioContext
+                                                                 pubsub_,          // pubSub
+                                                                 graphsyncnetwork, // graphsync
+                                                                 scheduler,        // scheduler
+                                                                 generator,        // generator
+                                                                 write_base_path_, // writeBasePath
+                                                                 base58key         // base58key
+            );
 
-            migrationManager.RegisterStep( std::make_unique<sgns::Migration0_2_0To1_0_0>( tx_globaldb_,     // newDb
-                                                                                          io_,              // ioContext
-                                                                                          pubsub_,          // pubSub
-                                                                                          graphsyncnetwork, // graphsync
-                                                                                          scheduler,        // scheduler
-                                                                                          generator,        // generator
-                                                                                          write_base_path_, // basePath
-                                                                                          base58key ) );
-
-            auto migrationResult = migrationManager.Migrate( "0.2.0", "1.0.0" );
+            auto migrationResult = migrationManager->Migrate( "0.2.0", "1.0.0" );
             if ( migrationResult.has_error() )
             {
                 throw std::runtime_error( std::string( "Database migration failed: " ) +
                                           migrationResult.error().message() );
             }
         }
+
         job_globaldb_->AddBroadcastTopic( processing_channel_topic_ );
         job_globaldb_->AddListenTopic( processing_channel_topic_ );
         job_globaldb_->Start();

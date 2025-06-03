@@ -1,10 +1,11 @@
 /**
  * @file       MigrationManager.cpp
- * @brief      Implementation of MigrationManager and Migration0_2_0To1_0_0.
+ * @brief      Implementation of MigrationManager and migration steps.
  * @date       2025-05-29
  * @author     Luiz Guilherme Rizzatto Zucchi
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
+
 #include "account/MigrationManager.hpp"
 
 #include <boost/format.hpp>
@@ -14,6 +15,31 @@
 
 namespace sgns
 {
+
+    std::shared_ptr<MigrationManager> MigrationManager::New(
+        std::shared_ptr<crdt::GlobalDB>                                 newDb,
+        std::shared_ptr<boost::asio::io_context>                        ioContext,
+        std::shared_ptr<ipfs_pubsub::GossipPubSub>                      pubSub,
+        std::shared_ptr<ipfs_lite::ipfs::graphsync::Network>            graphsync,
+        std::shared_ptr<libp2p::protocol::Scheduler>                    scheduler,
+        std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
+        const std::string                                              &writeBasePath,
+        const std::string                                              &base58key )
+    {
+        auto instance = std::shared_ptr<MigrationManager>( new MigrationManager() );
+        instance->RegisterStep( std::make_unique<Migration0_2_0To1_0_0>( std::move( newDb ),
+                                                                         std::move( ioContext ),
+                                                                         std::move( pubSub ),
+                                                                         std::move( graphsync ),
+                                                                         std::move( scheduler ),
+                                                                         std::move( generator ),
+                                                                         writeBasePath,
+                                                                         base58key ) );
+        return instance;
+    }
+
+    MigrationManager::MigrationManager() = default;
+
     void MigrationManager::RegisterStep( std::unique_ptr<IMigrationStep> step )
     {
         steps_.push_back( std::move( step ) );
@@ -27,39 +53,40 @@ namespace sgns
     {
         std::string version = currentVersion;
 
-        while ( version != targetVersion )
+        for ( auto &step : steps_ )
         {
-            bool applied = false;
-            for ( auto &step : steps_ )
+            if ( version == targetVersion )
             {
-                if ( step->FromVersion() == version )
-                {
-                    m_logger->debug( "Applying migration step from {} to {}", version, step->ToVersion() );
-                    OUTCOME_TRY( step->Apply() );
-                    version = step->ToVersion();
-                    applied = true;
-                    break;
-                }
+                break;
             }
-            if ( !applied )
+
+            if ( step->IsRequired() )
             {
-                m_logger->error( "No migration step found from version {}", version );
-                return outcome::failure( boost::system::error_code{} );
+                m_logger->debug( "Applying migration step from {} to {}", version, step->ToVersion() );
+                OUTCOME_TRY( step->Apply() );
             }
+            version = step->ToVersion();
         }
+
+        if ( version != targetVersion )
+        {
+            m_logger->error( "Migration incomplete: reached version {}, but target is {}", version, targetVersion );
+            return outcome::failure( boost::system::error_code{} );
+        }
+
         m_logger->debug( "Migration completed successfully from {} to {}", currentVersion, targetVersion );
         return outcome::success();
     }
 
     Migration0_2_0To1_0_0::Migration0_2_0To1_0_0(
-        std::shared_ptr<crdt::GlobalDB>                                       newDb,
-        std::shared_ptr<boost::asio::io_context>                              ioContext,
-        std::shared_ptr<ipfs_pubsub::GossipPubSub>                            pubSub,
-        std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::Network>            graphsync,
-        std::shared_ptr<libp2p::protocol::Scheduler>                          scheduler,
-        std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
-        const std::string                                                    &writeBasePath,
-        const std::string                                                    &base58key ) :
+        std::shared_ptr<crdt::GlobalDB>                                 newDb,
+        std::shared_ptr<boost::asio::io_context>                        ioContext,
+        std::shared_ptr<ipfs_pubsub::GossipPubSub>                      pubSub,
+        std::shared_ptr<ipfs_lite::ipfs::graphsync::Network>            graphsync,
+        std::shared_ptr<libp2p::protocol::Scheduler>                    scheduler,
+        std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
+        const std::string                                              &writeBasePath,
+        const std::string                                              &base58key ) :
         newDb_( std::move( newDb ) ),
         ioContext_( std::move( ioContext ) ),
         pubSub_( std::move( pubSub ) ),
@@ -79,6 +106,17 @@ namespace sgns
     std::string Migration0_2_0To1_0_0::ToVersion() const
     {
         return "1.0.0";
+    }
+
+    bool Migration0_2_0To1_0_0::IsRequired( void ) const
+    {
+        if ( !newDb_->GetDataStore()->empty() )
+        {
+            m_logger->debug( "newDb is not empty; skipping Migration0_2_0To1_0_0" );
+            return false;
+        }
+
+        return true;
     }
 
     outcome::result<std::shared_ptr<crdt::GlobalDB>> Migration0_2_0To1_0_0::InitLegacyDb( const std::string &suffix )
