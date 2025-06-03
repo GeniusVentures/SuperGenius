@@ -54,9 +54,9 @@ namespace sgns
 
         /**
          * @brief   Check if migration is required.
-         * @return  bool  true if migration should run; false to skip.
+         * @return  outcome::result<bool>  true if migration should run; false to skip. On error, returns failure.
          */
-        virtual bool IsRequired() const = 0;
+        virtual outcome::result<bool> IsRequired() const = 0;
     };
 
     /**
@@ -72,9 +72,9 @@ namespace sgns
          * @param   pubSub       Shared GossipPubSub instance.
          * @param   graphsync    Shared GraphSync network object.
          * @param   scheduler    Shared libp2p scheduler.
-         * @param   generator    Shared RequestIdGenerator for GraphSync.
-         * @param   writeBasePath Base filesystem path for legacy/new DB files.
-         * @param   base58key    Base58-encoded peer key for legacy DB path.
+         * @param   generator    Shared GraphSync request ID generator.
+         * @param   writeBasePath Base path for writing DB files.
+         * @param   base58key    Key to build legacy paths.
          * @return  std::shared_ptr<MigrationManager> to the created instance.
          */
         static std::shared_ptr<MigrationManager> New(
@@ -152,10 +152,10 @@ namespace sgns
         std::string ToVersion() const override;
 
         /**
-         * @brief   Check if migration is required (newDb is empty).
-         * @return  bool  true if migration should run; false to skip.
+         * @brief   Check if this migration should run.
+         * @return  outcome::result<bool>  true if migration should run; false to skip. On error, returns failure.
          */
-        bool IsRequired() const override;
+        outcome::result<bool> IsRequired() const override;
 
         /**
          * @brief   Apply the migration: initialize legacy DBs and migrate data.

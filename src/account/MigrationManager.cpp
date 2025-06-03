@@ -60,7 +60,9 @@ namespace sgns
                 break;
             }
 
-            if ( step->IsRequired() )
+            OUTCOME_TRY( bool is_req, step->IsRequired() );
+
+            if ( is_req )
             {
                 m_logger->debug( "Applying migration step from {} to {}", version, step->ToVersion() );
                 OUTCOME_TRY( step->Apply() );
@@ -108,8 +110,15 @@ namespace sgns
         return "1.0.0";
     }
 
-    bool Migration0_2_0To1_0_0::IsRequired( void ) const
+    outcome::result<bool> Migration0_2_0To1_0_0::IsRequired() const
     {
+        auto maybe_values = newDb_->QueryKeyValues( "" );
+        if ( maybe_values.has_error() )
+        {
+            m_logger->debug( "Cannot query transactions: {}", maybe_values.error().message() );
+            return outcome::failure( maybe_values.error() );
+        }
+        auto key_value_map = maybe_values.value();
         if ( !newDb_->GetDataStore()->empty() )
         {
             m_logger->debug( "newDb is not empty; skipping Migration0_2_0To1_0_0" );
