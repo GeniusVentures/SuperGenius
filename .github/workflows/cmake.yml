@@ -201,7 +201,7 @@ jobs:
       - name: Configure CMake for Windows
         if: ${{matrix.target == 'Windows'}}
         working-directory: ${{github.workspace}}/SuperGenius
-        run: cmake -S build/${{matrix.target}} -B $env:BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty/${BUILD_DIRECTORY} -DZKLLVM_DIR=${{github.workspace}}/zkLLVM/$env:BUILD_DIRECTORY
+        run: cmake -S build/${{matrix.target}} -B $env:BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty/$env:BUILD_DIRECTORY -DZKLLVM_DIR=${{github.workspace}}/zkLLVM/$env:BUILD_DIRECTORY
 
       - name: Build SuperGenius
         working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
