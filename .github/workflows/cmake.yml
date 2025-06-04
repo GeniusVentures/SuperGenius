@@ -21,7 +21,7 @@ jobs:
       fail-fast: false
       matrix:
         target: [Android, iOS, OSX, Linux, Windows]
-        build-type: [Release]
+        build-type: [Debug,Release]
         abi: [""]
         include:
           - target: Linux
@@ -29,23 +29,51 @@ jobs:
             abi: "x86_64"
             build-type: "Release"
           - target: Linux
+            host: ubuntu-22.04
+            abi: "x86_64"
+            build-type: "Debug"
+          - target: Linux
             host: ubuntu-24.04-arm
             abi: "aarch64"
             build-type: "Release"
+          - target: Linux
+            host: ubuntu-24.04-arm
+            abi: "aarch64"
+            build-type: "Debug"
           - target: Windows
             host: windows-latest
+            build-type: "Release"
+          - target: Windows
+            host: windows-latest
+            build-type: "Debug"
           - target: OSX
             host: macos-latest
+            build-type: "Release"
+          - target: OSX
+            host: macos-latest
+            build-type: "Debug"
           - target: Android
             host: ubuntu-22.04
             abi: arm64-v8a
-            build-type: Release
+            build-type: "Release"
+          - target: Android
+            host: ubuntu-22.04
+            abi: arm64-v8a
+            build-type: "Debug"
           - target: Android
             host: ubuntu-22.04
             abi: armeabi-v7a
-            build-type: Release
+            build-type: "Release"
+          - target: Android
+            host: ubuntu-22.04
+            abi: armeabi-v7a
+            build-type: "Debug"
           - target: iOS
             host: macos-latest
+            build-type: "Release"
+          - target: iOS
+            host: macos-latest
+            build-type: "Debug"
         exclude:
           - target: Android
             abi: ""
@@ -61,11 +89,14 @@ jobs:
       - name: Set build directory
         run: |
           if [ '${{matrix.abi}}' ]; then
+            BUILD_DIRECTORY_RELEASE=build/${{matrix.target}}/Release/${{matrix.abi}}
             BUILD_DIRECTORY=build/${{matrix.target}}/${{matrix.build-type}}/${{matrix.abi}}
           else
+            BUILD_DIRECTORY_RELEASE=build/${{matrix.target}}/Release
             BUILD_DIRECTORY=build/${{matrix.target}}/${{matrix.build-type}}
           fi
           echo "BUILD_DIRECTORY=$BUILD_DIRECTORY" >> $GITHUB_ENV
+          echo "BUILD_DIRECTORY_RELEASE=$BUILD_DIRECTORY_RELEASE" >> $GITHUB_ENV
         shell: bash
 
       - name: Download thirdparty release
@@ -181,27 +212,27 @@ jobs:
       - name: Configure CMake for Android
         if: ${{ matrix.target == 'Android'}}
         working-directory: ${{github.workspace}}/SuperGenius
-        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DANDROID_ABI=${{matrix.abi}} -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty/${BUILD_DIRECTORY} -DZKLLVM_DIR=${{github.workspace}}/zkLLVM/${BUILD_DIRECTORY}
+        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DANDROID_ABI=${{matrix.abi}} -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty/${BUILD_DIRECTORY} -DZKLLVM_DIR=${{github.workspace}}/zkLLVM/${BUILD_DIRECTORY_RELEASE}
 
       - name: Configure CMake for Mac
         if: ${{ matrix.target == 'OSX'}}
         working-directory: ${{github.workspace}}/SuperGenius
-        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DPLATFORM=MAC_UNIVERSAL -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty/${BUILD_DIRECTORY} -DZKLLVM_DIR=${{github.workspace}}/zkLLVM/${BUILD_DIRECTORY}
+        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DPLATFORM=MAC_UNIVERSAL -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty/${BUILD_DIRECTORY} -DZKLLVM_DIR=${{github.workspace}}/zkLLVM/${BUILD_DIRECTORY_RELEASE}
 
       - name: Configure CMake for iOS
         if: ${{ matrix.target == 'iOS'}}
         working-directory: ${{github.workspace}}/SuperGenius
-        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DPLATFORM=OS64 -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty/${BUILD_DIRECTORY} -DZKLLVM_DIR=${{github.workspace}}/zkLLVM/${BUILD_DIRECTORY}
+        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DPLATFORM=OS64 -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty/${BUILD_DIRECTORY} -DZKLLVM_DIR=${{github.workspace}}/zkLLVM/${BUILD_DIRECTORY_RELEASE}
 
       - name: Configure CMake for Linux
         if: ${{matrix.target == 'Linux'}}
         working-directory: ${{github.workspace}}/SuperGenius
-        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty/${BUILD_DIRECTORY} -DZKLLVM_DIR=${{github.workspace}}/zkLLVM/${BUILD_DIRECTORY} -DABI_SUBFOLDER_NAME=${{matrix.abi}}
+        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty/${BUILD_DIRECTORY} -DZKLLVM_DIR=${{github.workspace}}/zkLLVM/${BUILD_DIRECTORY_RELEASE} -DABI_SUBFOLDER_NAME=${{matrix.abi}}
 
       - name: Configure CMake for Windows
         if: ${{matrix.target == 'Windows'}}
         working-directory: ${{github.workspace}}/SuperGenius
-        run: cmake -S build/${{matrix.target}} -B $env:BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty/$env:BUILD_DIRECTORY -DZKLLVM_DIR=${{github.workspace}}/zkLLVM/$env:BUILD_DIRECTORY
+        run: cmake -S build/${{matrix.target}} -B $env:BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty/$env:BUILD_DIRECTORY -DZKLLVM_DIR=${{github.workspace}}/zkLLVM/$env:BUILD_DIRECTORY_RELEASE
 
       - name: Build SuperGenius
         working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
