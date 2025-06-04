@@ -36,6 +36,11 @@ include(${PROJECT_ROOT}/cmake/functions.cmake)
 include(${PROJECT_ROOT}/cmake/install.cmake)
 include(${PROJECT_ROOT}/build/CompilationFlags.cmake)
 
+if(NOT CMAKE_BUILD_TYPE)
+    message("CMAKE_BUILD_TYPE not defined, setting to release mode")
+    set(CMAKE_BUILD_TYPE "Release")
+endif()
+
 # Define zkllvm directory
 if(NOT DEFINED ZKLLVM_DIR)
     get_filename_component(BUILD_PLATFORM_NAME ${CMAKE_CURRENT_SOURCE_DIR} NAME)
@@ -105,10 +110,6 @@ if(NOT DEFINED ZKLLVM_DIR)
     endif()
 endif()
 
-if(NOT DEFINED CMAKE_BUILD_TYPE)
-    message("CMAKE_BUILD_TYPE not defined, setting to release mode")
-    set(CMAKE_BUILD_TYPE "Release")
-endif()
 
 if(NOT DEFINED THIRDPARTY_BUILD_DIR)
     # Define third party directory
