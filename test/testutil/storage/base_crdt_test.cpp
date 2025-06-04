@@ -50,24 +50,21 @@ namespace test
     std::shared_ptr<GossipPubSub> CRDTFixture::pubs_;
     std::shared_ptr<GlobalDB>     CRDTFixture::db_;
 
-    CRDTFixture::CRDTFixture( fs::path path ) : FSFixture( std::move( path ) )
-    {
-    }
+    CRDTFixture::CRDTFixture( fs::path path ) : FSFixture( std::move( path ) ) {}
 
     CRDTFixture::~CRDTFixture()
     {
-        fs::remove_all(basePath);
-        fs::remove_all(basePath + ".unit");
-
+        fs::remove_all( basePath );
+        fs::remove_all( basePath + ".unit" );
     }
 
     void CRDTFixture::SetUpTestSuite()
     {
         // Logging antics
         {
-            auto logging_system =
-                std::make_shared<soralog::LoggingSystem>( std::make_shared<soralog::ConfiguratorFromYAML>(
-                    std::make_shared<libp2p::log::Configurator>(), logger_config ) );
+            auto logging_system = std::make_shared<soralog::LoggingSystem>(
+                std::make_shared<soralog::ConfiguratorFromYAML>( std::make_shared<libp2p::log::Configurator>(),
+                                                                 logger_config ) );
 
             BOOST_ASSERT( !logging_system->configure().has_error );
 
@@ -85,29 +82,31 @@ namespace test
         {
             io_ = std::make_shared<io_context>();
 
-            pubs_ =
-                std::make_shared<GossipPubSub>( KeyPairFileStorage( basePath + "/unit_test" ).GetKeyPair().value() );
+            pubs_ = std::make_shared<GossipPubSub>(
+                KeyPairFileStorage( basePath + "/unit_test" ).GetKeyPair().value() );
 
-            BOOST_ASSERT_MSG( pubs_ != nullptr, "could not create GossibPubSub for some reason");
+            BOOST_ASSERT_MSG( pubs_ != nullptr, "could not create GossibPubSub for some reason" );
 
-            db_ = std::make_shared<GlobalDB>(
-                io_, basePath + ".unit",
-                std::make_shared<GossipPubSubTopic>( pubs_, "CRDT.Datastore.TEST.Channel" ) );
-
-            BOOST_ASSERT_MSG( db_ != nullptr, "could not create GlobalDB for some reason");
-
-            auto crdtOptions = sgns::crdt::CrdtOptions::DefaultOptions();
-            auto scheduler    = std::make_shared<libp2p::protocol::AsioScheduler>( io_,
+            auto crdtOptions      = sgns::crdt::CrdtOptions::DefaultOptions();
+            auto scheduler        = std::make_shared<libp2p::protocol::AsioScheduler>( io_,
                                                                                 libp2p::protocol::SchedulerConfig{} );
-            auto generator    = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
+            auto generator        = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
             auto graphsyncnetwork = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubs_->GetHost(),
-                                                                                             scheduler );
-            BOOST_ASSERT( db_->Init( crdtOptions, graphsyncnetwork, scheduler, generator ).has_value() );
+                                                                                                 scheduler );
+
+            auto globaldb_ret =
+                GlobalDB::New( io_, basePath + ".unit", pubs_, crdtOptions, graphsyncnetwork, scheduler, generator );
+            BOOST_ASSERT( globaldb_ret.has_value() );
+            db_ = std::move( globaldb_ret.value() );
+
+            db_->AddListenTopic( "CRDT.Datastore.TEST.Channel" );
+            db_->AddBroadcastTopic( "CRDT.Datastore.TEST.Channel" );
+            db_->Start();
 
             // Start GossipPubSub after Init
-            auto future = pubs_->Start(40001, {pubs_->GetLocalAddress()});
+            auto future = pubs_->Start( 40001, { pubs_->GetLocalAddress() } );
             auto result = future.get();
-            BOOST_ASSERT_MSG(!result, ("GossipPubSub::Start failed: " + result.message()).c_str());
+            BOOST_ASSERT_MSG( !result, ( "GossipPubSub::Start failed: " + result.message() ).c_str() );
 
             initializedDb = true;
         }

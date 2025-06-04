@@ -16,6 +16,7 @@ add_library(sgns_account
     GeniusNode.cpp
     UTXOTxParameters.cpp
     IGeniusTransactions.cpp
+    TokenAmount.cpp
 )
 
 set_target_properties(sgns_account PROPERTIES UNITY_BUILD ON)
@@ -28,6 +29,7 @@ target_link_libraries(sgns_account
     logger
     crdt_globaldb
     processing_service
+    gnus_upnp
     PRIVATE
     json_secure_storage
     component_factory
@@ -46,9 +48,8 @@ target_link_libraries(sgns_account
     p2p::p2p_ping
     Boost::Boost.DI
     SGTransactionProto    
-    fixed_point
+    ScaledInteger
     sgns_version
-    gnus_upnp
     AsyncIOManager
     ${WIN_API_LIBRARY}
     ${USER_ENV_LIBRARY}

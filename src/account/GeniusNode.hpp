@@ -43,9 +43,10 @@ namespace sgns
     public:
         GeniusNode( const DevConfig_st &dev_config,
                     const char         *eth_private_key,
-                    bool                autodht     = true,
-                    bool                isprocessor = true,
-                    uint16_t            base_port   = 40001 );
+                    bool                autodht      = true,
+                    bool                isprocessor  = true,
+                    uint16_t            base_port    = 40001,
+                    bool                is_full_node = false );
 
         ~GeniusNode() override;
 
@@ -95,7 +96,7 @@ namespace sgns
         void DHTInit();
         /**
          * @brief       Mints tokens by converting a string amount to fixed-point representation
-         * @param[in]   amount: Numeric value with amount in Minion Tokens (1e-9 GNUS Token)
+         * @param[in]   amount: Numeric value with amount in Minion Tokens (1e-6 GNUS Token)
          * @return      Outcome of mint token operation
          */
         outcome::result<std::pair<std::string, uint64_t>> MintTokens(
@@ -104,6 +105,7 @@ namespace sgns
             const std::string        &chainid,
             const std::string        &tokenid,
             std::chrono::milliseconds timeout = std::chrono::milliseconds( TIMEOUT_MINT ) );
+
         void     AddPeer( const std::string &peer );
         void     RefreshUPNP( int pubsubport );
         uint64_t GetBalance();
@@ -139,7 +141,7 @@ namespace sgns
 
         /**
          * @brief       Formats a fixed-point amount into a human-readable string.
-         * @param[in]   amount Amount in Minion Tokens (1e-9 GNUS).
+         * @param[in]   amount Amount in Minion Tokens (1e-6 GNUS).
          * @return      Formatted string representation in GNUS.
          */
         static std::string FormatTokens( uint64_t amount );
@@ -147,7 +149,7 @@ namespace sgns
         /**
          * @brief       Parses a human-readable string into a fixed-point amount.
          * @param[in]   str String representation of an amount in GNUS.
-         * @return      Outcome result with the parsed amount in Minion Tokens (1e-9 GNUS) or error.
+         * @return      Outcome result with the parsed amount in Minion Tokens (1e-6 GNUS) or error.
          */
         static outcome::result<uint64_t> ParseTokens( const std::string &str );
 
@@ -181,7 +183,8 @@ namespace sgns
     private:
         std::shared_ptr<ipfs_pubsub::GossipPubSub>            pubsub_;
         std::shared_ptr<boost::asio::io_context>              io_;
-        std::shared_ptr<crdt::GlobalDB>                       globaldb_;
+        std::shared_ptr<crdt::GlobalDB>                       tx_globaldb_;
+        std::shared_ptr<crdt::GlobalDB>                       job_globaldb_;
         std::shared_ptr<TransactionManager>                   transaction_manager_;
         std::shared_ptr<processing::ProcessingTaskQueueImpl>  task_queue_;
         std::shared_ptr<processing::ProcessingCoreImpl>       processing_core_;
@@ -206,7 +209,7 @@ namespace sgns
         std::map<std::string, PriceInfo>                   m_tokenPriceCache;
         const std::chrono::minutes                         m_cacheValidityDuration{ 1 };
         std::chrono::time_point<std::chrono::system_clock> m_lastApiCall{};
-        const std::chrono::seconds                         m_minApiCallInterval{ 5 };
+        static constexpr std::chrono::seconds              m_minApiCallInterval{ 5 };
 
         std::thread       io_thread;
         std::thread       upnp_thread;
@@ -221,6 +224,13 @@ namespace sgns
         void ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult );
         void ProcessingError( const std::string &task_id );
 
+        /**
+         * @brief Parse and sum all "block_len" values from the JSON.
+         * @param json_data JSON string containing an "input" array.
+         * @return outcome::result<uint64_t> with total bytes, or an error code.
+         */
+        outcome::result<uint64_t> ParseBlockSize( const std::string &json_data );
+
         static constexpr std::string_view db_path_                = "bc-%d/";
         static constexpr std::uint16_t    MAIN_NET                = 369;
         static constexpr std::uint16_t    TEST_NET                = 963;
@@ -228,6 +238,7 @@ namespace sgns
         static constexpr std::string_view PROCESSING_GRID_CHANNEL = "SGNUS.Jobs.2a.%02d";
         static constexpr std::string_view PROCESSING_CHANNEL      = "SGNUS.TestNet.Channel.2a.%02d";
         static constexpr std::string_view GNUS_NETWORK_PATH       = "SuperGNUSNode.TestNet.2a.%02d.%s";
+
 
         static std::string GetLoggingSystem( const std::string &base_path )
         {

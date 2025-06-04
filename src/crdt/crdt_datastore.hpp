@@ -17,6 +17,7 @@
 #include "crdt/broadcaster.hpp"
 #include "crdt/dagsyncer.hpp"
 #include "crdt/crdt_options.hpp"
+#include "crdt/crdt_data_filter.hpp"
 #include <storage/rocksdb/rocksdb.hpp>
 #include <ipfs_lite/ipld/ipld_node.hpp>
 #include <shared_mutex>
@@ -43,8 +44,9 @@ namespace sgns::crdt
         using Element     = pb::Element;
         using IPLDNode    = ipfs_lite::ipld::IPLDNode;
 
-        using PutHookPtr    = std::function<void( const std::string &k, const Buffer &v )>;
-        using DeleteHookPtr = std::function<void( const std::string &k )>;
+        using PutHookPtr                = std::function<void( const std::string &k, const Buffer &v )>;
+        using DeleteHookPtr             = std::function<void( const std::string &k )>;
+        using CRDTElementFilterCallback = CRDTDataFilter::ElementFilterCallback;
         /**
          * @brief       Factory method to create a shared_ptr to a CrdtDatastore
          * @param[in]   aDatastore The underlying database where CRDT is stored
@@ -62,6 +64,10 @@ namespace sgns::crdt
                                                    const std::shared_ptr<CrdtOptions> &aOptions );
 
         /**
+         * @brief       Starts the datastore threads
+         */
+        void Start();
+        /**
          * @brief      Destructor of the CRDT datastore
          */
         virtual ~CrdtDatastore();
@@ -75,15 +81,15 @@ namespace sgns::crdt
                                                   const std::shared_ptr<Delta> &aDelta2 );
 
         /** Get the value of an element not tombstoned from the CRDT set by key
-    * @param aKey Hierarchical key to get
-    * @return value as a Buffer
-    */
+        * @param aKey Hierarchical key to get
+        * @return value as a Buffer
+        */
         outcome::result<Buffer> GetKey( const HierarchicalKey &aKey );
 
         /** Query CRDT set key-value pairs by prefix, if prefix empty return all elements are not tombstoned
-    * @param aPrefix prefix to search, if empty string, return all
-    * @return list of key-value pairs matches prefix
-    */
+        * @param aPrefix prefix to search, if empty string, return all
+        * @return list of key-value pairs matches prefix
+        */
         outcome::result<QueryResult> QueryKeyValues( const std::string &aPrefix );
 
         /**
@@ -98,13 +104,13 @@ namespace sgns::crdt
                                                      const std::string &remainder_prefix );
 
         /** Get key prefix used in set, e.g. /namespace/s/k/
-    * @return key prefix
-    */
+        * @return key prefix
+        */
         outcome::result<std::string> GetKeysPrefix();
 
         /** Get value suffix used in set, e.g. /v
-    * @return value suffix
-    */
+        * @return value suffix
+        */
         outcome::result<std::string> GetValueSuffix();
 
         /**
@@ -116,15 +122,15 @@ namespace sgns::crdt
         outcome::result<void> PutKey( const HierarchicalKey &aKey, const Buffer &aValue );
 
         /** HasKey returns whether the `key` is mapped to a `value` in set
-    * @param aKey HierarchicalKey to look for in set
-    * @return true if key found or false if not found or outcome::failure on error
-    */
+        * @param aKey HierarchicalKey to look for in set
+        * @return true if key found or false if not found or outcome::failure on error
+        */
         outcome::result<bool> HasKey( const HierarchicalKey &aKey );
 
         /** Delete removes the value for given `key`.
-    * @param aKey HierarchicalKey to delete from set
-    * @return outcome::failure on error or success otherwise
-    */
+        * @param aKey HierarchicalKey to delete from set
+        * @return outcome::failure on error or success otherwise
+        */
         outcome::result<void> DeleteKey( const HierarchicalKey &aKey );
 
         /**
@@ -144,7 +150,7 @@ namespace sgns::crdt
     * @param buff Buffer data to decode
     * @return vector of CIDs or outcome::failure on error
     */
-        outcome::result<std::vector<CID>> DecodeBroadcast( const Buffer &buff );
+        static outcome::result<std::vector<CID>> DecodeBroadcast( const Buffer &buff );
 
         /** Returns a new delta-set adding the given key/value.
     * @param key - delta key to add to datastore 
@@ -170,6 +176,8 @@ namespace sgns::crdt
     */
         void Close();
 
+        bool RegisterElementFilter( const std::string &pattern, CRDTElementFilterCallback filter );
+
     protected:
         /** DAG jobs structure used by DAG worker threads to send new jobs
     */
@@ -193,11 +201,6 @@ namespace sgns::crdt
     * @param aCrdtDatastore pointer to CRDT datastore
     */
         void HandleNextIteration();
-
-        /** one iteration of Worker thread to rebroadcast heads
-    * @param aCrdtDatastore pointer to CRDT datastore
-    */
-        void RebroadcastIteration( std::chrono::milliseconds &elapsedTimeMilliseconds );
 
         /** one iteration of Worker thread to send jobs
     * @param aCrdtDatastore pointer to CRDT datastore
@@ -242,7 +245,7 @@ namespace sgns::crdt
     * @param heads list of CIDs
     * @return data encoded into Buffer data or outcome::failure on error
     */
-        outcome::result<Buffer> EncodeBroadcast( const std::vector<CID> &heads );
+        static outcome::result<Buffer> EncodeBroadcast( const std::vector<CID> &heads );
 
         /** handleBlock takes care of vetting, retrieving and applying
     * CRDT blocks to the Datastore.
@@ -342,8 +345,11 @@ namespace sgns::crdt
         std::condition_variable dagWorkerCv_;
         std::queue<DagJob>      dagWorkerJobList;
 
-        std::mutex                     rebroadcastMutex_;
-        std::condition_variable        rebroadcastCv_;
+        CRDTDataFilter crdt_filter_;
+        bool           started_ = false;
+
+        std::mutex              rebroadcastMutex_;
+        std::condition_variable rebroadcastCv_;
 
         std::mutex    mutex_processed_cids;
         std::set<CID> processed_cids;

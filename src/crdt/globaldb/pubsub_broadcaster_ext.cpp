@@ -62,12 +62,10 @@ namespace sgns::crdt
     }
 
     std::shared_ptr<PubSubBroadcasterExt> PubSubBroadcasterExt::New(
-        std::vector<std::string>                        topicsToListen,
-        std::vector<std::string>                        topicsToBroadcast,
         std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer,
         std::shared_ptr<GossipPubSub>                   pubSub )
     {
-        if ( topicsToListen.empty() )
+        if ( !dagSyncer )
         {
             return nullptr;
         }
@@ -76,22 +74,14 @@ namespace sgns::crdt
             return nullptr;
         }
         auto instance = std::shared_ptr<PubSubBroadcasterExt>(
-            new PubSubBroadcasterExt( std::move( topicsToListen ),
-                                      std::move( topicsToBroadcast ),
-                                      std::move( dagSyncer ),
-                                      std::move( pubSub ) ) );
+            new PubSubBroadcasterExt( std::move( dagSyncer ), std::move( pubSub ) ) );
         return instance;
     }
 
-    PubSubBroadcasterExt::PubSubBroadcasterExt( std::vector<std::string>                        topicsToListen,
-                                                std::vector<std::string>                        topicsToBroadcast,
-                                                std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer,
+    PubSubBroadcasterExt::PubSubBroadcasterExt( std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer,
                                                 std::shared_ptr<GossipPubSub>                   pubSub ) :
-        topicsToListen_( topicsToListen.begin(), topicsToListen.end() ),
-        topicsToBroadcast_( topicsToBroadcast.begin(), topicsToBroadcast.end() ),
-        dagSyncer_( std::move( dagSyncer ) ),
-        dataStore_( nullptr ),
-        pubSub_( std::move( pubSub ) )
+
+        dagSyncer_( std::move( dagSyncer ) ), pubSub_( std::move( pubSub ) ), started_{ false }
     {
         m_logger->trace( "Initializing PubSubBroadcasterExt" );
     }
@@ -103,27 +93,31 @@ namespace sgns::crdt
 
     void PubSubBroadcasterExt::Start()
     {
-        std::lock_guard<std::mutex> lock( listenTopicsMutex_ );
-
-        // Subscribe to each topic.
-        for ( auto &topicName : topicsToListen_ )
+        if ( !started_ )
         {
-            m_logger->debug( "Subscription request sent to topic: " + topicName );
+            started_ = true;
+            std::lock_guard<std::mutex> lock( listenTopicsMutex_ );
 
-            // Subscribe and capture the topic name in the lambda.
-            std::future<libp2p::protocol::Subscription> future = std::move( pubSub_->Subscribe(
-                topicName,
-                [weakptr = weak_from_this(), topicName]( boost::optional<const GossipPubSub::Message &> message )
-                {
-                    if ( auto self = weakptr.lock() )
-                    {
-                        self->m_logger->debug( "Message received on topic: {}", topicName );
-                        self->OnMessage( message, topicName );
-                    }
-                } ) );
+            // Subscribe to each topic.
+            for ( auto &topicName : topicsToListen_ )
             {
-                std::lock_guard lk( subscriptionMutex_ );
-                subscriptionFutures_.push_back( std::move( future ) );
+                m_logger->debug( "Subscription request sent to topic: " + topicName );
+
+                // Subscribe and capture the topic name in the lambda.
+                std::future<libp2p::protocol::Subscription> future = std::move( pubSub_->Subscribe(
+                    topicName,
+                    [weakptr = weak_from_this(), topicName]( boost::optional<const GossipPubSub::Message &> message )
+                    {
+                        if ( auto self = weakptr.lock() )
+                        {
+                            self->m_logger->debug( "Message received on topic: {}", topicName );
+                            self->OnMessage( message, topicName );
+                        }
+                    } ) );
+                {
+                    std::lock_guard lk( subscriptionMutex_ );
+                    subscriptionFutures_.push_back( std::move( future ) );
+                }
             }
         }
     }
@@ -165,9 +159,7 @@ namespace sgns::crdt
             base::Buffer buf;
             buf.put( bmsg.data() );
 
-            // if CIDs don't work or can't map the broadcast the dataStore might try to call logger_ which will be called with nullptr of dataStore.
-            BOOST_ASSERT_MSG( dataStore_ != nullptr, "Data store is not set" );
-            auto cids = dataStore_->DecodeBroadcast( buf );
+            auto cids = CrdtDatastore::DecodeBroadcast( buf );
             if ( cids.has_failure() )
             {
                 m_logger->error( "Failed to decode broadcast payload" );
@@ -230,16 +222,6 @@ namespace sgns::crdt
         } while ( 0 );
     }
 
-    void PubSubBroadcasterExt::SetCrdtDataStore( std::shared_ptr<CrdtDatastore> dataStore )
-    {
-        if ( dataStore_ && dataStore_ == dataStore )
-        {
-            return; // Avoid resetting if it's already the same instance
-        }
-
-        dataStore_ = std::move( dataStore ); // Keeps reference, no ownership transfer
-    }
-
     outcome::result<void> PubSubBroadcasterExt::Broadcast( const base::Buffer &buff )
     {
         std::set<std::string> broadcastTopicsCopy;
@@ -299,7 +281,10 @@ namespace sgns::crdt
         for ( auto &topic : broadcastTopicsCopy )
         {
             pubSub_->Publish( topic, serialized_proto );
-            m_logger->debug( "CIDs broadcasted by {} to topic {}", peer_info.id.toBase58(), topic );
+            m_logger->debug( "CIDs broadcasted by {} to topic {}, at this {}",
+                             peer_info.id.toBase58(),
+                             topic,
+                             reinterpret_cast<size_t>( this ) );
         }
 
         return outcome::success();
@@ -349,31 +334,34 @@ namespace sgns::crdt
     void PubSubBroadcasterExt::AddListenTopic( const std::string &topic )
     {
         std::lock_guard<std::mutex> lock( listenTopicsMutex_ );
-
-        m_logger->trace( "Listen request on topic: '{}'", topic );
-
-        std::future<libp2p::protocol::Subscription> future = std::move( pubSub_->Subscribe(
-            topic,
-            [weakptr = weak_from_this(), topic]( boost::optional<const GossipPubSub::Message &> message )
-            {
-                if ( auto self = weakptr.lock() )
-                {
-                    self->m_logger->debug( "Message received from topic: " + topic );
-                    self->OnMessage( message, topic );
-                }
-            } ) );
-            
+        if ( topicsToListen_.find( topic ) == topicsToListen_.end() )
         {
-            std::lock_guard<std::mutex> lock( subscriptionMutex_ );
-            subscriptionFutures_.push_back( std::move( future ) );
+            topicsToListen_.insert( topic );
+            m_logger->trace( "Listen request on topic: '{}'", topic );
+            if ( started_ )
+            {
+                std::future<libp2p::protocol::Subscription> future = std::move( pubSub_->Subscribe(
+                    topic,
+                    [weakptr = weak_from_this(), topic]( boost::optional<const GossipPubSub::Message &> message )
+                    {
+                        if ( auto self = weakptr.lock() )
+                        {
+                            self->m_logger->debug( "Message received from topic: " + topic );
+                            self->OnMessage( message, topic );
+                        }
+                    } ) );
+
+                {
+                    std::lock_guard<std::mutex> lock( subscriptionMutex_ );
+                    subscriptionFutures_.push_back( std::move( future ) );
+                }
+            }
         }
     }
 
     void PubSubBroadcasterExt::Stop()
     {
         subscriptionFutures_.clear(); // Clear all pending subscriptions
-        dataStore_.reset();           // Drop the reference to CrdtDatastore explicitly
     }
-
 
 } // namespace sgns::crdt

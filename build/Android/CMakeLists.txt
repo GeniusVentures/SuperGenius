@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.22)
 
 set(ANDROID_PLATFORM_LEVEL 28)
 set(ANDROID_NATIVE_API_LEVEL ${ANDROID_PLATFORM_LEVEL})
@@ -35,14 +35,14 @@ project(
     LANGUAGES C CXX
 )
 
+# Set custom subfolder for ABI
+set(ABI_SUBFOLDER_NAME "/${ANDROID_ABI}")
+
 # include common compiler options
 include(../CommonCompilerOptions.cmake)
 
 # Turn off examples
 set(BUILD_EXAMPLES OFF)
-
-# Set custom subfolder for ABI
-set(ABI_SUBFOLDER_NAME "/${ANDROID_ABI}")
 
 # Set host system protoc executable path
 set(PROTOC_EXECUTABLE "${_THIRDPARTY_BUILD_DIR}/protobuf_host/bin/protoc${CMAKE_EXECUTABLE_SUFFIX}")

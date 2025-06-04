@@ -1,6 +1,6 @@
 /**
  * @file       GeniusNode.cpp
- * @brief      
+ * @brief
  * @date       2024-04-18
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
@@ -10,8 +10,8 @@
 #include <rapidjson/document.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
-#include "base/fixed_point.hpp"
 #include "base/sgns_version.hpp"
+#include "account/TokenAmount.hpp"
 #include "account/GeniusNode.hpp"
 #include "crdt/globaldb/keypair_file_storage.hpp"
 #include "upnp.hpp"
@@ -84,7 +84,8 @@ namespace sgns
                             const char         *eth_private_key,
                             bool                autodht,
                             bool                isprocessor,
-                            uint16_t            base_port ) :
+                            uint16_t            base_port,
+                            bool                is_full_node ) :
         account_( std::make_shared<GeniusAccount>( static_cast<uint8_t>( dev_config.TokenID ),
                                                    dev_config.BaseWritePath,
                                                    eth_private_key ) ),
@@ -100,10 +101,7 @@ namespace sgns
                 .str() ),
         m_lastApiCall( std::chrono::system_clock::now() - m_minApiCallInterval )
 
-    //coinprices_(std::make_shared<CoinGeckoPriceRetriever>(io_))
     {
-        //For some reason if this isn't initialized like this, it ends up completely wrong.
-        m_lastApiCall = std::chrono::system_clock::now() - m_minApiCallInterval;
         SSL_library_init();
         SSL_load_error_strings();
         OpenSSL_add_all_algorithms();
@@ -121,7 +119,9 @@ namespace sgns
         libp2p::log::setLoggingSystem( logging_system );
         libp2p::log::setLevelOfGroup( "SuperGeniusDemo", soralog::Level::ERROR_ );
         std::string logdir = "";
-
+#ifndef SGNS_DEBUGLOGS
+        logdir = write_base_path_ + "/sgnslog2.log";
+#endif
         node_logger               = base::createLogger( "SuperGeniusNode", logdir );
         auto loggerGlobalDB       = base::createLogger( "GlobalDB", logdir );
         auto loggerDAGSyncer      = base::createLogger( "GraphsyncDAGSyncer", logdir );
@@ -143,8 +143,8 @@ namespace sgns
 #ifdef SGNS_DEBUGLOGS
         node_logger->set_level( spdlog::level::err );
         loggerGlobalDB->set_level( spdlog::level::err );
-        loggerDAGSyncer->set_level( spdlog::level::debug );
-        loggerGraphsync->set_level( spdlog::level::debug );
+        loggerDAGSyncer->set_level( spdlog::level::err );
+        loggerGraphsync->set_level( spdlog::level::err );
         loggerBroadcaster->set_level( spdlog::level::err );
         loggerDataStore->set_level( spdlog::level::err );
         loggerTransactions->set_level( spdlog::level::err );
@@ -277,25 +277,47 @@ namespace sgns
         auto generator = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
         auto graphsyncnetwork = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubsub_->GetHost(),
                                                                                              scheduler );
-        globaldb_ = std::make_shared<crdt::GlobalDB>( io_, write_base_path_ + gnus_network_full_path_, pubsub_ );
 
-        auto global_db_init_result = globaldb_->Init( crdt::CrdtOptions::DefaultOptions(),
-                                                      graphsyncnetwork,
-                                                      scheduler,
-                                                      generator );
-        if ( global_db_init_result.has_error() )
+        auto global_db_ret = crdt::GlobalDB::New( io_,
+                                                  write_base_path_ + gnus_network_full_path_,
+                                                  pubsub_,
+                                                  crdt::CrdtOptions::DefaultOptions(),
+                                                  graphsyncnetwork,
+                                                  scheduler,
+                                                  generator );
+        if ( global_db_ret.has_error() )
         {
-            auto error = global_db_init_result.error();
+            auto error = global_db_ret.error();
             throw std::runtime_error( error.message() );
         }
-        globaldb_->AddBroadcastTopic( processing_channel_topic_ );
-        globaldb_->AddListenTopic( processing_channel_topic_ );
-        task_queue_      = std::make_shared<processing::ProcessingTaskQueueImpl>( globaldb_ );
-        processing_core_ = std::make_shared<processing::ProcessingCoreImpl>( globaldb_, 1000000, 1 );
+        tx_globaldb_ = std::move( global_db_ret.value() );
+
+        global_db_ret = crdt::GlobalDB::New( io_,
+                                             write_base_path_ + gnus_network_full_path_,
+                                             pubsub_,
+                                             crdt::CrdtOptions::DefaultOptions(),
+                                             graphsyncnetwork,
+                                             scheduler,
+                                             generator,
+                                             tx_globaldb_->GetDataStore() );
+
+        if ( global_db_ret.has_error() )
+        {
+            auto error = global_db_ret.error();
+            throw std::runtime_error( error.message() );
+        }
+        job_globaldb_ = std::move( global_db_ret.value() );
+
+        job_globaldb_->AddBroadcastTopic( processing_channel_topic_ );
+        job_globaldb_->AddListenTopic( processing_channel_topic_ );
+        job_globaldb_->Start();
+
+        task_queue_      = std::make_shared<processing::ProcessingTaskQueueImpl>( job_globaldb_ );
+        processing_core_ = std::make_shared<processing::ProcessingCoreImpl>( job_globaldb_, 1000000, 1 );
         processing_core_->RegisterProcessorFactory( "mnnimage",
                                                     [] { return std::make_unique<processing::MNN_Image>(); } );
 
-        task_result_storage_ = std::make_shared<processing::SubTaskResultStorageImpl>( globaldb_ );
+        task_result_storage_ = std::make_shared<processing::SubTaskResultStorageImpl>( job_globaldb_ );
         processing_service_  = std::make_shared<processing::ProcessingServiceImpl>(
             pubsub_,                                                          //
             MAX_NODES_COUNT,                                                  //
@@ -309,10 +331,11 @@ namespace sgns
             account_->GetAddress() );
         processing_service_->SetChannelListRequestTimeout( boost::posix_time::milliseconds( 3000 ) );
 
-        transaction_manager_ = std::make_shared<TransactionManager>( globaldb_,
+        transaction_manager_ = std::make_shared<TransactionManager>( tx_globaldb_,
                                                                      io_,
                                                                      account_,
-                                                                     std::make_shared<crypto::HasherImpl>() );
+                                                                     std::make_shared<crypto::HasherImpl>(),
+                                                                     is_full_node );
 
         transaction_manager_->Start();
         if ( isprocessor_ )
@@ -505,7 +528,7 @@ namespace sgns
             //}
             //imageindex++;
         }
-        auto cut = sgns::fixed_point::fromString( dev_config_.Cut );
+        auto cut = sgns::TokenAmount::ParseMinions( dev_config_.Cut );
         if ( !cut )
         {
             return outcome::failure( cut.error() );
@@ -615,20 +638,16 @@ namespace sgns
         return outcome::success();
     }
 
-    uint64_t GeniusNode::GetProcessCost( const std::string &json_data )
+    outcome::result<uint64_t> GeniusNode::ParseBlockSize( const std::string &json_data )
     {
-        uint64_t costMinions = 0;
         node_logger->info( "Received JSON data: {}", json_data );
-
-        // Parse JSON using RapidJSON
         rapidjson::Document document;
         if ( document.Parse( json_data.c_str() ).HasParseError() )
         {
             node_logger->error( "Invalid JSON data provided" );
-            return 0;
+            return outcome::failure( std::make_error_code( std::errc::invalid_argument ) );
         }
 
-        // "block_len" represents the number of bytes processed.
         rapidjson::Value inputArray;
         if ( document.HasMember( "input" ) && document["input"].IsArray() )
         {
@@ -637,7 +656,7 @@ namespace sgns
         else
         {
             node_logger->error( "This JSON lacks inputs" );
-            return 0;
+            return outcome::failure( std::make_error_code( std::errc::invalid_argument ) );
         }
 
         uint64_t block_total_len = 0;
@@ -652,46 +671,43 @@ namespace sgns
             else
             {
                 node_logger->error( "Missing or invalid block_len in input" );
-                return 0;
+                return outcome::failure( std::make_error_code( std::errc::invalid_argument ) );
             }
         }
-        // Get current GNUS price (USD per GNUS token)
-        auto maybe_gnusPrice = GetGNUSPrice(); // e.g., 3.65463 USD per GNUS
-        if ( !maybe_gnusPrice )
+
+        node_logger->trace( "Total block length: {}", block_total_len );
+        return block_total_len;
+    }
+
+    uint64_t GeniusNode::GetProcessCost( const std::string &json_data )
+    {
+        auto blockLen = ParseBlockSize( json_data );
+        if ( !blockLen )
         {
+            node_logger->error( "ParseBlockSize failed" );
             return 0;
         }
-        auto gnusPrice = maybe_gnusPrice.value();
+        node_logger->trace( "Parsed totalBytes: {}", blockLen.value() );
 
-        // Using the assumption: 20 FLOPs per byte and each FLOP costs 5e-15 USD,
-        // the cost per byte in USD is: 20 * 5e-15 = 1e-13 USD.
-        // Converting this to a fixed-point constant with 9 decimals:
-        //    1e-13 USD/byte * 1e9 = 1e-4, i.e., 0.0001, and in fixed point with 9 decimals, that's 100000.
-        uint64_t fixed_cost_per_byte = 100000ULL; // represents 0.0001 in fixed point (precision 9)
-
-        // Calculate the raw cost in minions in fixed point: (block_total_len * fixed_cost_per_byte)
-        auto raw_cost_result = sgns::fixed_point::multiply( block_total_len, fixed_cost_per_byte, 9 );
-        if ( !raw_cost_result )
+        auto maybeGnusPrice = GetGNUSPrice();
+        if ( !maybeGnusPrice )
         {
-            node_logger->error( "Fixed-point multiplication error" );
+            node_logger->error( "GetGNUSPrice failed" );
             return 0;
         }
-        uint64_t raw_cost = raw_cost_result.value();
+        double gnusPrice = maybeGnusPrice.value();
+        node_logger->trace( "Retrieved GNUS price (USD/genius): {}", gnusPrice );
 
-        // Convert GNUS price to fixed-point representation with precision 9:
-        uint64_t gnus_price_fixed = static_cast<uint64_t>( std::round( gnusPrice * 1e9 ) );
-
-        // Now, the cost in minions (in fixed point) is raw_cost divided by gnus_price_fixed:
-        auto cost_result = sgns::fixed_point::divide( raw_cost, gnus_price_fixed, 9 );
-        if ( !cost_result )
+        auto rawMinionsRes = TokenAmount::CalculateCostMinions( blockLen.value(), gnusPrice );
+        if ( !rawMinionsRes )
         {
-            node_logger->info( "Fixed-point division error" );
+            node_logger->error( "TokenAmount::CalculateCostMinions failed" );
             return 0;
         }
-        costMinions = cost_result.value();
+        uint64_t rawMinions = rawMinionsRes.value();
+        node_logger->trace( "Raw cost in minions: {}", rawMinions );
 
-        // Ensure at least one minion is charged.
-        return std::max( costMinions, static_cast<uint64_t>( 1 ) );
+        return rawMinions;
     }
 
     outcome::result<double> GeniusNode::GetGNUSPrice()
@@ -851,7 +867,7 @@ namespace sgns
 
     void GeniusNode::PrintDataStore()
     {
-        globaldb_->PrintDataStore();
+        tx_globaldb_->PrintDataStore();
     }
 
     void GeniusNode::StopProcessing()
@@ -940,12 +956,12 @@ namespace sgns
 
     std::string GeniusNode::FormatTokens( uint64_t amount )
     {
-        return sgns::fixed_point::toString( amount );
+        return TokenAmount::FormatMinions( amount );
     }
 
     outcome::result<uint64_t> GeniusNode::ParseTokens( const std::string &str )
     {
-        return sgns::fixed_point::fromString( str );
+        return TokenAmount::ParseMinions( str );
     }
 
     // Wait for a transaction to be processed with a timeout
@@ -969,5 +985,4 @@ namespace sgns
     {
         transaction_manager_->EnqueueTransaction( std::make_pair( tx, proof ) );
     }
-
 }

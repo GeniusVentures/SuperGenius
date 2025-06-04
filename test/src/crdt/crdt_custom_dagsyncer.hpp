@@ -8,52 +8,53 @@
 #include "ipfs_lite/ipld/ipld_node.hpp"
 #include <memory>
 
-namespace sgns::crdt 
+namespace sgns::crdt
 {
     using ipfs_lite::ipld::IPLDNode;
+
     /**
      * @brief Test implementation of DAGSyncer for unit testing
      */
-    class CustomDagSyncer : public DAGSyncer 
+    class CustomDagSyncer : public DAGSyncer
     {
     public:
-        using IpfsDatastore = ipfs_lite::ipfs::IpfsDatastore;
+        using IpfsDatastore        = ipfs_lite::ipfs::IpfsDatastore;
         using MerkleDagServiceImpl = ipfs_lite::ipfs::merkledag::MerkleDagServiceImpl;
-        using Leaf = ipfs_lite::ipfs::merkledag::Leaf;
+        using Leaf                 = ipfs_lite::ipfs::merkledag::Leaf;
 
         /**
          * @brief Constructor
          * @param service shared pointer to IPFS datastore
          */
-        explicit CustomDagSyncer(std::shared_ptr<IpfsDatastore> service);
+        explicit CustomDagSyncer( std::shared_ptr<IpfsDatastore> service );
 
         /**
          * @brief Check if block exists
          * @param cid content identifier to check
          * @return true if block exists, false otherwise
          */
-        outcome::result<bool> HasBlock(const CID& cid) const override;
+        outcome::result<bool> HasBlock( const CID &cid ) const override;
 
         /**
          * @brief Add node to DAG
          * @param node node to add
          * @return success or failure
          */
-        outcome::result<void> addNode(std::shared_ptr<const IPLDNode> node) override;
+        outcome::result<void> addNode( std::shared_ptr<const IPLDNode> node ) override;
 
         /**
          * @brief Get node from DAG
          * @param cid content identifier of node to get
          * @return node or failure
          */
-        outcome::result<std::shared_ptr<IPLDNode>> getNode(const CID& cid) const override;
+        outcome::result<std::shared_ptr<IPLDNode>> getNode( const CID &cid ) const override;
 
         /**
          * @brief Remove node from DAG
          * @param cid content identifier of node to remove
          * @return success or failure
          */
-        outcome::result<void> removeNode(const CID& cid) override;
+        outcome::result<void> removeNode( const CID &cid ) override;
 
         /**
          * @brief Select nodes from DAG
@@ -63,16 +64,16 @@ namespace sgns::crdt
          * @return number of nodes selected or failure
          */
         outcome::result<size_t> select(
-            gsl::span<const uint8_t> root_cid,
-            gsl::span<const uint8_t> selector,
-            std::function<bool(std::shared_ptr<const IPLDNode> node)> handler) const override;
+            gsl::span<const uint8_t>                                    root_cid,
+            gsl::span<const uint8_t>                                    selector,
+            std::function<bool( std::shared_ptr<const IPLDNode> node )> handler ) const override;
 
         /**
          * @brief Fetch graph from DAG
          * @param cid content identifier of root node
          * @return leaf node or failure
          */
-        outcome::result<std::shared_ptr<Leaf>> fetchGraph(const CID& cid) const override;
+        outcome::result<std::shared_ptr<Leaf>> fetchGraph( const CID &cid ) const override;
 
         /**
          * @brief Fetch graph with depth limit from DAG
@@ -80,7 +81,9 @@ namespace sgns::crdt
          * @param depth maximum depth to fetch
          * @return leaf node or failure
          */
-        outcome::result<std::shared_ptr<Leaf>> fetchGraphOnDepth(const CID& cid, uint64_t depth) const override;
+        outcome::result<std::shared_ptr<Leaf>> fetchGraphOnDepth( const CID &cid, uint64_t depth ) const override;
+
+        void Stop() override;
 
         void Stop( ) override;
 

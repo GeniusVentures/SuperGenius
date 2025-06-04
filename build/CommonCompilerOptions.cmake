@@ -19,11 +19,11 @@ set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY BOTH)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-if (DEFINED SANITIZE_CODE AND "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+if(DEFINED SANITIZE_CODE AND "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=${SANITIZE_CODE}")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=${SANITIZE_CODE}")
-    SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=${SANITIZE_CODE}")
-    SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fsanitize=${SANITIZE_CODE}")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=${SANITIZE_CODE}")
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fsanitize=${SANITIZE_CODE}")
     add_compile_options("-fsanitize=${SANITIZE_CODE}")
     add_link_options("-fsanitize=${SANITIZE_CODE}")
 endif()
@@ -35,6 +35,11 @@ include(CheckCXXCompilerFlag)
 include(${PROJECT_ROOT}/cmake/functions.cmake)
 include(${PROJECT_ROOT}/cmake/install.cmake)
 include(${PROJECT_ROOT}/build/CompilationFlags.cmake)
+
+if(NOT CMAKE_BUILD_TYPE)
+    message("CMAKE_BUILD_TYPE not defined, setting to release mode")
+    set(CMAKE_BUILD_TYPE "Release")
+endif()
 
 # Define zkllvm directory
 if(NOT DEFINED ZKLLVM_DIR)
@@ -105,36 +110,27 @@ if(NOT DEFINED ZKLLVM_DIR)
     endif()
 endif()
 
-# Define third party directory
-if(NOT DEFINED THIRDPARTY_DIR)
-    if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../../thirdparty/README.md")
-        message(STATUS "Setting default third party directory")
-        set(THIRDPARTY_DIR "${CMAKE_CURRENT_LIST_DIR}/../../thirdparty")
-
-        # # get absolute path
-        cmake_path(SET THIRDPARTY_DIR NORMALIZE "${THIRDPARTY_DIR}")
-    else()
-        message(FATAL_ERROR "Cannot find thirdparty directory required to build")
-    endif()
-endif()
-
-if(NOT DEFINED CMAKE_BUILD_TYPE)
-    message("CMAKE_BUILD_TYPE not defined, setting to release mode")
-    set(CMAKE_BUILD_TYPE "Release")
-endif()
 
 if(NOT DEFINED THIRDPARTY_BUILD_DIR)
+    # Define third party directory
+    if(NOT DEFINED THIRDPARTY_DIR)
+        if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../../thirdparty/README.md")
+            message(STATUS "Setting default third party directory")
+            set(THIRDPARTY_DIR "${CMAKE_CURRENT_LIST_DIR}/../../thirdparty")
+
+            # # get absolute path
+            cmake_path(SET THIRDPARTY_DIR NORMALIZE "${THIRDPARTY_DIR}")
+        else()
+            message(FATAL_ERROR "Cannot find thirdparty directory required to build")
+        endif()
+    endif()
     message(STATUS "Setting third party build directory default")
     get_filename_component(BUILD_PLATFORM_NAME ${CMAKE_CURRENT_SOURCE_DIR} NAME)
-    set(THIRDPARTY_BUILD_DIR "${THIRDPARTY_DIR}/build/${BUILD_PLATFORM_NAME}/${CMAKE_BUILD_TYPE}")
-
-    if(DEFINED ANDROID_ABI)
-        set(THIRDPARTY_BUILD_DIR "${THIRDPARTY_BUILD_DIR}/${ANDROID_ABI}")
-    endif()
+    set(THIRDPARTY_BUILD_DIR "${THIRDPARTY_DIR}/build/${BUILD_PLATFORM_NAME}/${CMAKE_BUILD_TYPE}${ABI_SUBFOLDER_NAME}")
 endif()
 
 set(_THIRDPARTY_BUILD_DIR "${THIRDPARTY_BUILD_DIR}")
-message(STATUS "THIRDPARTY BUILD DIR: ${_THIRDPARTY_BUILD_DIR}")
+message(STATUS "THIRDPARTY_BUILD_DIR: ${_THIRDPARTY_BUILD_DIR}")
 
 option(TESTING "Build tests" ON)
 option(BUILD_EXAMPLES "Build examples" ON)

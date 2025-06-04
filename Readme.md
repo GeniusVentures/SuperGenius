@@ -1,6 +1,6 @@
+# SuperGenius
+
 This is the block-lattice super fast cryptotoken system based on the original nanocurrency
-
-
 
 ## Download thirdparty project
 
@@ -22,7 +22,7 @@ git checkout develop
 git submodule update --init --recursive
 ```
 
-Ideally the folder structure should be as follows, this way cmake will use relative directory for thirdparty automatically
+Ideally the folder structure should be as follows, this way CMake will use relative directory for `thirdparty` automatically
 
 ```bash
 .
@@ -32,7 +32,7 @@ Ideally the folder structure should be as follows, this way cmake will use relat
 │        ├── Linux                       # Linux build directory
 │        ├── Windows                     # Windows build directory
 │        ├── OSX                         # OSX build directory
-|            └── Release                 # Release build of OSX (Created when building for OSX Release)
+|            └── Release                 # Release build of OSX (Created when building for macOS Release)
 |        └── iOS                         # iOS build directory
 └── SuperGenius   
 │   └── build                            # build directory
@@ -40,126 +40,113 @@ Ideally the folder structure should be as follows, this way cmake will use relat
 │        ├── Linux                       # Linux build directory
 │        ├── Windows                     # Windows build directory
 │        ├── OSX                         # OSX build directory
-|            └── Release                 # Release build of OSX (Created when building for OSX Release)
+|            └── Release                 # Release build of OSX (Created when building for macOS Release)
 |        └── iOS                         # iOS build directory
 ```
 
+By having this directory structure, you won't need to pass the hard-coded value for the `thirdparty` directory.
+
 ## Building
 
-Chose the CMAKE_BUILD_TYPE according to the desired configuration (Debug or Release). Chose TESTING ON of OFF to enable unit tests.
+Chose the `CMAKE_BUILD_TYPE` according to the desired configuration (Debug or Release). Chose TESTING ON of OFF to enable unit tests.
+
+### Note on ABIs
+
+When cross-compiling to a different ABI, it is recommended to have the `thirdparty` libraries on `build/[Config]/[ABI]`, e.g. for Linux release on ARM it would look like `build/Release/aarch64`. You'll also need to provide this ABI to SuperGenius in the CMake variable `ABI_SUBFOLDER_NAME` so that it can properly find the necessary directories.
 
 ### Windows
 
-Use Visual Studio 17 2022 to compile SuperGenius project. 
+Use the Visual Studio 17 2022 generator to compile SuperGenius project. 
 
 ```bash
-cd build
-cd Windows 
-md [Debug or Release] 
-cd [Debug or Release]
-cmake .. -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=[Debug or Release] -DTHIRDPARTY_DIR=[ABSOLUTE_PATH_TO_THIRDPARTY_PROJECT] -DTESTING=[ON or OFF]
-cmake --build . --config [Debug or Release]
+cd build\Windows 
+cmake -B [Debug | Release] -G "Visual Studio 17 2022" -DCMAKE_BUILD_TYPE=[Debug | Release] -DTHIRDPARTY_DIR=[ABSOLUTE_PATH_TO_THIRDPARTY_PROJECT]
+cmake --build [Debug | Release] --config [Debug | Release]
 ```
-
 
 ### Linux
 
 ```bash
 cd build/Linux
-mkdir [Debug or Release] 
-cd [Debug or Release]
-cmake .. -DCMAKE_BUILD_TYPE=[Debug or Release] -DTHIRDPARTY_DIR=[ABSOLUTE_PATH_TO_THIRDPARTY_PROJECT] -DTESTING=[ON or OFF]
-cmake --build . --config [Debug or Release]
+cmake -B [Debug | Release] -DCMAKE_BUILD_TYPE=[Debug | Release] -DTHIRDPARTY_DIR=[ABSOLUTE_PATH_TO_THIRDPARTY_PROJECT] -DTESTING=[ON | OFF] -DABI_SUBFOLDER_NAME=[x86_64 | aarch64]
+cmake --build . --config [Debug | Release]
 ```
 
 ### Android Cross-Compile on Linux/OSX Hosts
 
 #### Preinstall
-- CMake 
-- Android NDK Latest LTS Version (r25b) [(link)](https://github.com/android/ndk/wiki/Unsupported-Downloads)
+- Android NDK Version `r27b` [(link)](https://github.com/android/ndk/wiki/Unsupported-Downloads)
 
 #### Building
+
+Note that Android is only built on our CI using Linux as the host system.
+
 ```bash
-export ANDROID_NDK=/path/to/android-ndk-r25b
-export ANDROID_TOOLCHAIN="$ANDROID_NDK/toolchains/llvm/prebuilt/linux-x86_64/bin"
-export PATH="$ANDROID_TOOLCHAIN":"$PATH" 
+export ANDROID_NDK_HOME=[path to Android NDK]
+export ANDROID_NDK_ROOT=$ANDROID_NDK_ROOT
+export CMAKE_ANDROID_NDK=$ANDROID_NDK_HOME
 ```
 
 * armeabi-v7a
 
 ```bash
 cd build/Android
-mkdir -p [Debug or Release]/armeabi-v7a
-cd [Debug or Release]/armeabi-v7a
-cmake ../../ -DANDROID_ABI="armeabi-v7a" -DCMAKE_ANDROID_NDK=$ANDROID_NDK -DANDROID_TOOLCHAIN=clang -DTHIRDPARTY_DIR=[ABSOLUTE_PATH_TO_THIRDPARTY_PROJECT] 
-cmake --build . --config [Debug or Release]
+cmake -B[Debug | Release]/armeabi-v7a -DANDROID_ABI="armeabi-v7a" -DTHIRDPARTY_DIR=[ABSOLUTE_PATH_TO_THIRDPARTY_PROJECT] 
+cmake --build [Debug | Release]/armeabi-v7a --config [Debug | Release]
 ```
 
 * arm64-v8a
 
 ```bash
 cd build/Android
-mkdir -p [Debug or Release]/arm64-v8a
-cd [Debug or Release]/arm64-v8a
-cmake ../../ -DANDROID_ABI="arm64-v8a" -DCMAKE_ANDROID_NDK=$ANDROID_NDK -DANDROID_TOOLCHAIN=clang -DTHIRDPARTY_DIR=[ABSOLUTE_PATH_TO_THIRDPARTY_PROJECT] -DSUPERGENIUS_SRC_DIR=[ABSOLUTE_PATH_TO_SUPERGENIUS_PROJECT]
-cmake --build . --config [Debug or Release]
+cmake [Debug | Release]/arm64-v8a -DANDROID_ABI="arm64-v8a" -DTHIRDPARTY_DIR=[ABSOLUTE_PATH_TO_THIRDPARTY_PROJECT]
+cmake --build [Debug | Release]/arm64-v8a --config [Debug | Release]
 ```
-
-* x86
-
-```bash
-cd build/Android
-mkdir -p [Debug or Release]/x86
-cd [Debug or Release]/x86
-cmake ../../ -DANDROID_ABI="x86" -DCMAKE_ANDROID_NDK=$ANDROID_NDK -DANDROID_TOOLCHAIN=clang -DTHIRDPARTY_DIR=[ABSOLUTE_PATH_TO_THIRDPARTY_PROJECT] -DSUPERGENIUS_SRC_DIR=[ABSOLUTE_PATH_TO_SUPERGENIUS_PROJECT]
-cmake --build . --config [Debug or Release]
-```
-
 * x86_64
+
 ```bash
 cd build/Android
-mkdir -p [Debug or Release]/x86_64
-cd [Debug or Release]/x86_64
-cmake ../../ -DANDROID_ABI="x86_64" -DCMAKE_ANDROID_NDK=$ANDROID_NDK -DANDROID_TOOLCHAIN=clang -DTHIRDPARTY_DIR=[ABSOLUTE_PATH_TO_THIRDPARTY_PROJECT] -DSUPERGENIUS_SRC_DIR=[ABSOLUTE_PATH_TO_SUPERGENIUS_PROJECT]
-cmake --build . --config [Debug or Release]
+cmake [Debug | Release]/x86_64 -DANDROID_ABI="x86_64" -DTHIRDPARTY_DIR=[ABSOLUTE_PATH_TO_THIRDPARTY_PROJECT]
+cmake --build [Debug | Release]/arm64-v8a --config [Debug | Release]
 ```
+### macOS
 
-### OSX (x86_64 & Arm64) 
+This builds a fat library for both `x86` and `ARM` architectures.
 
 ```bash
 cd build/OSX
-mkdir [Debug or Release] 
-cd [Debug or Release]
-cmake .. -DCMAKE_BUILD_TYPE=[Debug or Release] -DTHIRDPARTY_DIR=[ABSOLUTE_PATH_TO_THIRDPARTY_PROJECT]
-cmake --build . --config [Debug or Release]
+cmake -B [Debug | Release] -DCMAKE_BUILD_TYPE=[Debug | Release] -DTHIRDPARTY_DIR=[ABSOLUTE_PATH_TO_THIRDPARTY_PROJECT]
+cmake --build [Debug | Release] --config [Debug | Release]
 ```
 
-### iOS cross compile 
+### iOS
+
+You must use a macOS system to cross-compile for iOS.
 
 ```bash
 cd build/iOS
-mkdir [Debug or Release] 
-cd [Debug or Release]
-cmake .. -DCMAKE_BUILD_TYPE=[Debug or Release] -DTHIRDPARTY_DIR=[ABSOLUTE_PATH_TO_THIRDPARTY_PROJECT] -DCMAKE_TOOLCHAIN_FILE=../iOS.cmake -DiOS_ABI=arm64-v8a -DIOS_ARCH="arm64" -DENABLE_ARC=0 -DENABLE_BITCODE=0 -DENABLE_VISIBILITY=1  -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_SYSTEM_PROCESSOR=arm64 
-cmake --build . --config [Debug or Release]
+cmake -B [Debug | Release] -DCMAKE_BUILD_TYPE=[Debug | Release] -DTHIRDPARTY_DIR=[ABSOLUTE_PATH_TO_THIRDPARTY_PROJECT] 
+cmake --build [Debug | Release] --config [Debug | Release]
 ```
+
 ## Unit tests
-If you configured and built with -DTESTING=ON, you can execute the unit tests on the root of the build directory.
+
+If you configured and built with `-DTESTING=ON`, you can execute the unit tests on the root of the build directory.
 
 ```bash
-ctest -C [Debug or Release]
+ctest -C [Debug | Release]
 ```
 
-To run sepecific test with detailed log, you can use following commands.
+To run specific test with detailed log, you can use following commands.
 
 ```bash
-ctest -C [Debug or Release] -R <test_name> --verbose
+ctest -C [Debug | Release] -R <test_name> --verbose
 ```
 
 To run all tests and display log for failed tests, you can use following commands.
 
 ```bash
-ctest -C [Debug or Release] --output-on-failure
+ctest -C [Debug | Release] --output-on-failure
 ```
 
 ## Setting up VS Code intellisense
@@ -170,10 +157,10 @@ This requires installing the (C/C++ Extension Pack)[https://marketplace.visualst
 "cmake.options.statusBarVisibility": "visible",
 ```
 
-And configure the output build directory to be `.build`, with this setting:
+And configure the output build directory with this setting:
 
 ```json
-"cmake.buildDirectory": "${workspaceFolder}/.build",
+"cmake.buildDirectory": "${workspaceFolder}/build/[Platform]/[Debug | Release]",
 ```
 
 By pressing `CTRL + P` and picking `CMake: Configure`, choose the `CMakeLists.txt` file associated with your build. Microsoft's C++ extension (and clangd) works by looking at the file `compile_commands.json`, which is generated by CMake in the output directory. To tell the extension to let CMake Tools control it, use this setting:
@@ -184,5 +171,3 @@ By pressing `CTRL + P` and picking `CMake: Configure`, choose the `CMakeLists.tx
 ```
 
 This will also configure the `thirdparty` directory. Now, it should be working.
-
-
