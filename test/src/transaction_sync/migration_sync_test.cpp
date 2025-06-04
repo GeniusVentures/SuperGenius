@@ -1,5 +1,8 @@
 #include <filesystem>
 #include <thread>
+#include <iostream>
+#include <cstring>
+#include <system_error>
 
 #include <gtest/gtest.h>
 #include <boost/dll.hpp>
@@ -10,57 +13,90 @@
 
 namespace fs = std::filesystem;
 
-namespace sgns
+/**
+ * @brief Test parameters for migration.
+ */
+struct NodeParams
 {
-    class MigrationSyncTest : public ::testing::Test
+    std::string subdir;           ///< Node folder name.
+    const char *key_hex;          ///< Node private key.
+    uint64_t    expected_balance; ///< Expected balance after migration.
+};
+
+class MigrationParamTest : public ::testing::TestWithParam<NodeParams>
+{
+protected:
+    static inline DevConfig_st        DEV_CONFIG = { "0xcafe", "0.65", 1.0, 0, "" };
+    std::shared_ptr<sgns::GeniusNode> node;
+
+    static constexpr char DB_PREFIX[]      = "SuperGNUSNode.TestNet.2a.01.";
+    static constexpr int  STARTUP_DELAY_MS = 1000;
+
+    static void RemovePrefixedSubdirs( const fs::path &baseDir )
     {
-    protected:
-        static inline std::shared_ptr<GeniusNode> node10 = nullptr;
-        static inline std::shared_ptr<GeniusNode> node20 = nullptr;
-
-        static inline DevConfig_st DEV_CONFIG10 = { "0xcafe", "0.65", 1.0, 0, "./node10_0_2_0" };
-        static inline DevConfig_st DEV_CONFIG20 = { "0xcafe", "0.65", 1.0, 0, "./node20_0_2_0" };
-
-        static void SetUpTestSuite()
+        if ( !fs::exists( baseDir ) || !fs::is_directory( baseDir ) )
         {
-            std::string binary_path = boost::dll::program_location().parent_path().string();
-
-            fs::copy_options opt = fs::copy_options::overwrite_existing | fs::copy_options::recursive;
-            fs::copy("./node10", DEV_CONFIG10.BaseWritePath, opt);
-            fs::copy("./node20", DEV_CONFIG20.BaseWritePath, opt);
-
-            std::strncpy( DEV_CONFIG10.BaseWritePath,
-                          ( binary_path + "/node10_0_2_0/" ).c_str(),
-                          sizeof( DEV_CONFIG10.BaseWritePath ) );
-            std::strncpy( DEV_CONFIG20.BaseWritePath,
-                          ( binary_path + "/node20_0_2_0/" ).c_str(),
-                          sizeof( DEV_CONFIG20.BaseWritePath ) );
-            DEV_CONFIG10.BaseWritePath[sizeof( DEV_CONFIG10.BaseWritePath ) - 1] = '\0';
-            DEV_CONFIG20.BaseWritePath[sizeof( DEV_CONFIG20.BaseWritePath ) - 1] = '\0';
-
-            node10 = std::make_shared<GeniusNode>( DEV_CONFIG10,
-                                                   "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                                   false,
-                                                   false );
-            std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
-
-            node20 = std::make_shared<GeniusNode>( DEV_CONFIG20,
-                                                   "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                                   false,
-                                                   false );
-            std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
+            return;
         }
-
-        static void TearDownTestSuite()
+        std::error_code ec;
+        for ( auto const &entry : fs::directory_iterator( baseDir, fs::directory_options::skip_permission_denied, ec ) )
         {
-            node10.reset();
-            node20.reset();
+            if ( ec )
+            {
+                return;
+            }
+            if ( entry.is_directory() )
+            {
+                auto name = entry.path().filename().string();
+                if ( name.rfind( DB_PREFIX, 0 ) == 0 )
+                {
+                    fs::remove_all( entry.path(), ec );
+                }
+            }
         }
-    };
-
-    TEST_F( MigrationSyncTest, BalanceAfterMigration )
-    {
-        EXPECT_EQ( node10->GetBalance(), 238000000000 );
-        EXPECT_EQ( node20->GetBalance(), 273000000000 );
     }
+
+    static std::shared_ptr<sgns::GeniusNode> CreateNodeInstance( const std::string &binaryParent,
+                                                                 const std::string &subdir,
+                                                                 const char        *key_hex )
+    {
+        fs::path nodeDir = fs::path{ binaryParent } / subdir;
+        RemovePrefixedSubdirs( nodeDir );
+
+        std::string baseWrite = binaryParent + "/" + subdir + "/";
+        std::strncpy( DEV_CONFIG.BaseWritePath, baseWrite.c_str(), sizeof( DEV_CONFIG.BaseWritePath ) );
+        DEV_CONFIG.BaseWritePath[sizeof( DEV_CONFIG.BaseWritePath ) - 1] = '\0';
+
+        auto instance = std::make_shared<sgns::GeniusNode>( DEV_CONFIG, key_hex, false, false );
+        std::this_thread::sleep_for( std::chrono::milliseconds( STARTUP_DELAY_MS ) );
+        return instance;
+    }
+
+    void SetUp() override
+    {
+        auto        params       = GetParam();
+        std::string binaryParent = boost::dll::program_location().parent_path().string();
+        node                     = CreateNodeInstance( binaryParent, params.subdir, params.key_hex );
+    }
+
+    void TearDown() override
+    {
+        node.reset();
+    }
+};
+
+TEST_P( MigrationParamTest, BalanceAfterMigration )
+{
+    EXPECT_EQ( node->GetBalance(), GetParam().expected_balance );
 }
+
+INSTANTIATE_TEST_SUITE_P(
+    Nodes,
+    MigrationParamTest,
+    ::testing::Values( NodeParams{ .subdir  = "node10_0_2_0",
+                                   .key_hex = "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+                                   .expected_balance = 238000000000ULL },
+                       NodeParams{ .subdir  = "node20_0_2_0",
+                                   .key_hex = "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+                                   .expected_balance = 273000000000ULL } ),
+    []( const ::testing::TestParamInfo<NodeParams> &info ) { return info.param.subdir; } );
