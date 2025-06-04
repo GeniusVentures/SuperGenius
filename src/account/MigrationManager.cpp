@@ -7,11 +7,11 @@
  */
 
 #include "account/MigrationManager.hpp"
-
 #include <boost/format.hpp>
 #include <boost/system/error_code.hpp>
 #include "account/TransactionManager.hpp"
 #include "proof/IBasicProof.hpp"
+#include "base/sgns_version.hpp"
 
 namespace sgns
 {
@@ -48,35 +48,31 @@ namespace sgns
                          steps_.back()->ToVersion() );
     }
 
-    outcome::result<void> MigrationManager::Migrate( const std::string &currentVersion,
-                                                     const std::string &targetVersion )
+    outcome::result<void> MigrationManager::Migrate()
     {
-        std::string version = currentVersion;
-
         for ( auto &step : steps_ )
         {
-            if ( version == targetVersion )
-            {
-                break;
-            }
+            m_logger->debug( "Starting migration step from {} to {}", step->FromVersion(), step->ToVersion() );
 
             OUTCOME_TRY( bool is_req, step->IsRequired() );
 
             if ( is_req )
             {
-                m_logger->debug( "Applying migration step from {} to {}", version, step->ToVersion() );
                 OUTCOME_TRY( step->Apply() );
+                m_logger->debug( "Completed migration step to {}", step->ToVersion() );
             }
-            version = step->ToVersion();
+            else
+            {
+                m_logger->debug( "Skipping migration step from {} to {}", step->FromVersion(), step->ToVersion() );
+            }
         }
 
-        if ( version != targetVersion )
-        {
-            m_logger->error( "Migration incomplete: reached version {}, but target is {}", version, targetVersion );
-            return outcome::failure( boost::system::error_code{} );
-        }
+        const auto currentVersion = ( boost::format( "%d.%d.%d" ) % version::SuperGeniusVersionMajor() %
+                                      version::SuperGeniusVersionMinor() % version::SuperGeniusVersionPatch() )
+                                        .str();
+        m_logger->debug( "Current SuperGenius version: {}", currentVersion );
+        m_logger->debug( "All migration steps completed" );
 
-        m_logger->debug( "Migration completed successfully from {} to {}", currentVersion, targetVersion );
         return outcome::success();
     }
 

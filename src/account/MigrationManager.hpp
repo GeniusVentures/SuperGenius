@@ -94,12 +94,10 @@ namespace sgns
         void RegisterStep( std::unique_ptr<IMigrationStep> step );
 
         /**
-         * @brief Perform migration from the current version to the target version.
-         * @param currentVersion The current schema version.
-         * @param targetVersion The desired schema version.
+         * @brief Perform all registered migration steps in sequence.
          * @return Outcome of the migration process.
          */
-        outcome::result<void> Migrate( const std::string &currentVersion, const std::string &targetVersion );
+        outcome::result<void> Migrate();
 
     private:
         /**
