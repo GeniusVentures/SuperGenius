@@ -213,7 +213,7 @@ jobs:
 
       - name: Compress build artifacts
         working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
-        if: ${{ github.event_name == 'workflow_dispatch' }}
+        if: github.ref_name == 'main' || github.ref_name == 'develop'
         run: |
           tar --exclude=.git -czvf ${FILE_NAME} --transform 's|^|${{env.BUILD_DIRECTORY}}/|' SuperGenius/
         shell: bash
