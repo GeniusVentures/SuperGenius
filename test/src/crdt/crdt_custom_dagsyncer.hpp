@@ -85,8 +85,6 @@ namespace sgns::crdt
 
         void Stop() override;
 
-        void Stop( ) override;
-
         void                  InitCIDBlock( const CID &cid ) override;
         bool                  IsCIDInCache( const CID &cid ) const override;
         outcome::result<void> DeleteCIDBlock( const CID &cid ) override;
