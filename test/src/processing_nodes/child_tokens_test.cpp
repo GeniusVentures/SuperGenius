@@ -198,13 +198,12 @@ TEST_P( GeniusNodeMintMainTest, MintMainBalance )
     EXPECT_EQ( parsedFinalChild.value() - parsedInitialChild.value(), parsedExpectedDelta.value() );
 }
 
-INSTANTIATE_TEST_SUITE_P(
-    MintMainVariations,
-    GeniusNodeMintMainTest,
-    ::testing::Values( MintMainCase_s{ .tokenValue = "1", .mintMain = 1000000, .expectedChild = "1" },
-                       MintMainCase_s{ .tokenValue = "0.5", .mintMain = 1000000, .expectedChild = "2.0" },
-                       MintMainCase_s{ .tokenValue = "2", .mintMain = 1000000, .expectedChild = "0.5" },
-                       MintMainCase_s{ .tokenValue = "0.5", .mintMain = 2000000, .expectedChild = "4.0" } ) );
+INSTANTIATE_TEST_SUITE_P( MintMainVariations,
+                          GeniusNodeMintMainTest,
+                          ::testing::Values( MintMainCase_s{ "1", 1000000, "1" },
+                                             MintMainCase_s{ "0.5", 1000000, "2.0" },
+                                             MintMainCase_s{ "2", 1000000, "0.5" },
+                                             MintMainCase_s{ "0.5", 2000000, "4.0" } ) );
 
 // ------------------ Suite 2: Mint Child Tokens ------------------
 
@@ -263,12 +262,11 @@ TEST_P( GeniusNodeMintChildTest, MintChildBalance )
     EXPECT_EQ( parsedFinal.value() - parsedInitial.value(), parsedExpectedDelta.value() );
 }
 
-INSTANTIATE_TEST_SUITE_P(
-    MintChildVariations,
-    GeniusNodeMintChildTest,
-    ::testing::Values( MintChildCase_s{ .tokenValue = "1.0", .mintChild = "1.0", .expectedMain = 1000000 },
-                       MintChildCase_s{ .tokenValue = "0.5", .mintChild = "1.0", .expectedMain = 500000 },
-                       MintChildCase_s{ .tokenValue = "2.0", .mintChild = "1.0", .expectedMain = 2000000 } ) );
+INSTANTIATE_TEST_SUITE_P( MintChildVariations,
+                          GeniusNodeMintChildTest,
+                          ::testing::Values( MintChildCase_s{ "1.0", "1.0", 1000000 },
+                                             MintChildCase_s{ "0.5", "1.0", 500000 },
+                                             MintChildCase_s{ "2.0", "1.0", 2000000 } ) );
 
 /// Suite 3: Transfer Main and Child Tokens with Base Node
 
@@ -349,14 +347,8 @@ TEST_P( GeniusNodeTransferMainTest, TransferMainBalance )
 
 INSTANTIATE_TEST_SUITE_P( TransferMainVariations,
                           GeniusNodeTransferMainTest,
-                          ::testing::Values( TransferMainCase_s{ .tokenValue    = "1.0",
-                                                                 .transferValue = 400000,
-                                                                 .deltaMain     = "-0.4",
-                                                                 .deltaChild    = "0.6" },
-                                             TransferMainCase_s{ .tokenValue    = "0.5",
-                                                                 .transferValue = 500000,
-                                                                 .deltaMain     = "-0.5",
-                                                                 .deltaChild    = "1.0" } ) );
+                          ::testing::Values( TransferMainCase_s{ "1.0", 400000, "-0.4", "0.6" },
+                                             TransferMainCase_s{ "0.5", 500000, "-0.5", "1.0" } ) );
 
 // ------------------ Suite 4: Transfer Child via Main Methods ------------------
 
