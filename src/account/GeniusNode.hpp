@@ -26,8 +26,8 @@ typedef struct DevConfig
 {
     char        Addr[255];
     std::string Cut;
-    double      TokenValueInGNUS;
-    int         TokenID;
+    std::string TokenValueInGNUS;
+    std::string TokenID;
     char        BaseWritePath[1024];
 } DevConfig_st;
 
@@ -55,18 +55,18 @@ namespace sgns
          */
         enum class Error
         {
-            INSUFFICIENT_FUNDS       = 1,  ///<Insufficient funds for a transaction
-            DATABASE_WRITE_ERROR     = 2,  ///<Error writing data into the database
-            INVALID_TRANSACTION_HASH = 3,  ///<Input transaction hash is invalid
-            INVALID_CHAIN_ID         = 4,  ///<Chain ID is invalid
-            INVALID_TOKEN_ID         = 5,  ///<Token ID is invalid
-            TOKEN_ID_MISMATCH        = 6,  ///<Informed Token ID doesn't match initialized ID
-            PROCESS_COST_ERROR       = 7,  ///<The calculated Processing cost was negative
-            PROCESS_INFO_MISSING     = 8,  ///<Processing information missing on JSON file
-            INVALID_JSON             = 9,  ///<JSON cannot be parsed>
-            INVALID_BLOCK_PARAMETERS = 10, ///<JSON params for blocks incorrect or missing>
-            NO_PROCESSOR             = 11, ///<No processor for this type>
-            NO_PRICE                 = 12, ///<Couldn't get price of gnus>
+            INSUFFICIENT_FUNDS       = 1,  ///< Insufficient funds for a transaction
+            DATABASE_WRITE_ERROR     = 2,  ///< Error writing data into the database
+            INVALID_TRANSACTION_HASH = 3,  ///< Input transaction hash is invalid
+            INVALID_CHAIN_ID         = 4,  ///< Chain ID is invalid
+            INVALID_TOKEN_ID         = 5,  ///< Token ID is invalid
+            TOKEN_ID_MISMATCH        = 6,  ///< Informed Token ID doesn't match initialized ID
+            PROCESS_COST_ERROR       = 7,  ///< The calculated Processing cost was negative
+            PROCESS_INFO_MISSING     = 8,  ///< Processing information missing on JSON file
+            INVALID_JSON             = 9,  ///< JSON cannot be parsed>
+            INVALID_BLOCK_PARAMETERS = 10, ///< JSON params for blocks incorrect or missing>
+            NO_PROCESSOR             = 11, ///< No processor for this type>
+            NO_PRICE                 = 12, ///< Couldn't get price of gnus>
         };
 
 #ifdef SGNS_DEBUG
@@ -125,6 +125,11 @@ namespace sgns
             return account_->GetAddress();
         }
 
+        std::string GetTokenID() const
+        {
+            return dev_config_.TokenID;
+        }
+
         outcome::result<std::pair<std::string, uint64_t>> TransferFunds(
             uint64_t                  amount,
             const std::string        &destination,
@@ -173,6 +178,20 @@ namespace sgns
         bool WaitForTransactionOutgoing( const std::string &txId, std::chrono::milliseconds timeout );
 
         bool WaitForEscrowRelease( const std::string &originalEscrowId, std::chrono::milliseconds timeout );
+
+        /**
+         * @brief Format a child-token amount into a human-readable string.
+         * @param amount Amount of child tokens (in minions).
+         * @return Formatted string, e.g. "1.234 GChild".
+         */
+        std::string FormatChildTokens( uint64_t amount ) const;
+
+        /**
+         * @brief Parse a formatted child-token string back into minions.
+         * @param amount_str Formatted string, e.g. "1.234 GChild".
+         * @return outcome::result<uint64_t> of the parsed minions, or error.
+         */
+        outcome::result<uint64_t> ParseChildTokens( const std::string &amount_str ) const;
 
     protected:
         friend class TransactionSyncTest;

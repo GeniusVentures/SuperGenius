@@ -51,6 +51,13 @@ namespace sgns
         static outcome::result<std::shared_ptr<ScaledInteger>> New( const std::string &str, uint64_t precision );
 
         /**
+         * @brief Create a ScaledInteger from a decimal string by inferring precision.
+         * @param[in] str  String representation of the decimal value (e.g., "123.45").
+         * @return Outcome containing shared_ptr to ScaledInteger or error.
+         */
+        static outcome::result<std::shared_ptr<ScaledInteger>> New( const std::string &str );
+
+        /**
          * @brief Compute 10^precision as the scale factor.
          * @param[in] precision  Number of decimal places.
          * @return Scale factor (10^precision).
@@ -119,6 +126,15 @@ namespace sgns
          * @return Number of decimal places.
          */
         uint64_t Precision() const noexcept;
+
+        /**
+         * @brief  Return this value as a string.
+         * @param  fixedDecimals
+         *         - true: always show all fractional digits (pad with zeros up to precision())
+         *         - false: trim trailing '0's in the fractional part (and drop the '.' if no fraction remains)
+         * @return formatted string
+         */
+        std::string ToString( bool fixedDecimals = true ) const;
 
         /**
          * @brief Add another ScaledInteger with matching precision.

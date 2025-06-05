@@ -17,9 +17,9 @@ namespace sgns
     class TransferTransaction : public IGeniusTransactions
     {
     public:
-        static TransferTransaction New( std::vector<OutputDestInfo> destinations,
-                                        std::vector<InputUTXOInfo>  inputs,
-                                        SGTransaction::DAGStruct    dag,
+        static TransferTransaction New( std::vector<OutputDestInfo>                     destinations,
+                                        std::vector<InputUTXOInfo>                      inputs,
+                                        SGTransaction::DAGStruct                        dag,
                                         std::shared_ptr<ethereum::EthereumKeyGenerator> eth_key );
         /**
          * @brief      Default Transfer Transaction destructor

@@ -29,6 +29,7 @@ message TransferOutput
 {
     uint64 encrypted_amount = 1; // 
     bytes dest_addr = 2; // 
+    bytes token_id = 3; //
 }
 message UTXOTxParams
 {
@@ -38,7 +39,7 @@ message UTXOTxParams
 message TransferTx
 {
     DAGStruct dag_struct = 1;// 
-    uint64 token_id = 2; // 
+    bytes token_id = 2; // 
     UTXOTxParams utxo_params = 3; //
 
 }

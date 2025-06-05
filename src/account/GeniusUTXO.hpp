@@ -14,11 +14,12 @@ namespace sgns
     class GeniusUTXO
     {
     public:
-        GeniusUTXO( const base::Hash256 &hash, uint32_t previous_index, uint64_t amount ) :
+        GeniusUTXO( const base::Hash256 &hash, uint32_t previous_index, uint64_t amount, std::string token_id ) :
             txid_hash_( hash ),            //
             output_idx_( previous_index ), //
             amount_( amount ),             //
-            locked_( false )               //
+            locked_( false ),              //
+            tokein_id_( token_id )         //
         {
         }
 
@@ -47,11 +48,17 @@ namespace sgns
             return locked_;
         }
 
+        std::string GetTokenID() const
+        {
+            return tokein_id_;
+        }
+
     private:
         base::Hash256 txid_hash_;
         uint32_t      output_idx_;
         uint64_t      amount_;
         bool          locked_;
+        std::string   tokein_id_;
     };
 }
 

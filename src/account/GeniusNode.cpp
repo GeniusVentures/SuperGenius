@@ -11,6 +11,7 @@
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 #include "base/sgns_version.hpp"
+#include "base/ScaledInteger.hpp"
 #include "account/TokenAmount.hpp"
 #include "account/GeniusNode.hpp"
 #include "crdt/globaldb/keypair_file_storage.hpp"
@@ -101,7 +102,10 @@ namespace sgns
                 .str() ),
         m_lastApiCall( std::chrono::system_clock::now() - m_minApiCallInterval )
 
+    // coinprices_(std::make_shared<CoinGeckoPriceRetriever>(io_))
     {
+        // For some reason if this isn't initialized like this, it ends up completely wrong.
+        m_lastApiCall = std::chrono::system_clock::now() - m_minApiCallInterval;
         SSL_library_init();
         SSL_load_error_strings();
         OpenSSL_add_all_algorithms();
@@ -147,7 +151,7 @@ namespace sgns
         loggerGraphsync->set_level( spdlog::level::err );
         loggerBroadcaster->set_level( spdlog::level::err );
         loggerDataStore->set_level( spdlog::level::err );
-        loggerTransactions->set_level( spdlog::level::err );
+        loggerTransactions->set_level( spdlog::level::debug );
         loggerQueue->set_level( spdlog::level::err );
         loggerRocksDB->set_level( spdlog::level::err );
         logkad->set_level( spdlog::level::err );
@@ -183,10 +187,10 @@ namespace sgns
 
         auto tokenid = dev_config_.TokenID;
 
-        auto pubsubport = GenerateRandomPort( base_port, account_->GetAddress() + std::to_string( tokenid ) );
+        auto pubsubport = GenerateRandomPort( base_port, account_->GetAddress() +  tokenid );
 
         std::vector<std::string> addresses;
-        //UPNP
+        // UPNP
         auto        upnp = std::make_shared<upnp::UPNP>();
         std::string lanip;
 
@@ -248,7 +252,7 @@ namespace sgns
             }
         }
 
-        //Make a base58 out of our address
+        // Make a base58 out of our address
         std::string                tempaddress = account_->GetAddress();
         std::vector<unsigned char> inputBytes( tempaddress.begin(), tempaddress.end() );
         std::vector<unsigned char> hash( SHA256_DIGEST_LENGTH );
@@ -445,7 +449,7 @@ namespace sgns
         // Compute the SHA-256 hash of the input bytes
         std::vector<unsigned char> hash( SHA256_DIGEST_LENGTH );
         SHA256( inputBytes.data(), inputBytes.size(), hash.data() );
-        //Provide CID
+        // Provide CID
         libp2p::protocol::kademlia::ContentId key( hash );
         pubsub_->GetDHT()->Start();
         pubsub_->ProvideCID( key );
@@ -455,7 +459,7 @@ namespace sgns
         auto cidstring = libp2p::multi::ContentIdentifierCodec::toString( cidtest.value() );
         node_logger->info( "CID Test:: {}", cidstring.value() );
 
-        //Also Find providers
+        // Also Find providers
         pubsub_->StartFindingPeers( key );
     }
 
@@ -506,11 +510,11 @@ namespace sgns
 
         rapidjson::Document document;
         document.Parse( jsondata.c_str() );
-        //size_t           nSubTasks = 1;
+        // size_t           nSubTasks = 1;
         rapidjson::Value inputArray;
 
         inputArray = document["input"];
-        //nSubTasks  = inputArray.Size();
+        // nSubTasks  = inputArray.Size();
 
         processing::ProcessTaskSplitter  taskSplitter;
         std::list<SGProcessing::SubTask> subTasks;
@@ -526,7 +530,7 @@ namespace sgns
                 .SplitTask( task, subTasks, inputAsString, nChunks, false, pubsub_->GetHost()->getId().toBase58() );
 
             //}
-            //imageindex++;
+            // imageindex++;
         }
         auto cut = sgns::TokenAmount::ParseMinions( dev_config_.Cut );
         if ( !cut )
@@ -823,6 +827,26 @@ namespace sgns
     uint64_t GeniusNode::GetBalance()
     {
         return transaction_manager_->GetBalance();
+    }
+
+    std::string GeniusNode::FormatChildTokens( uint64_t amount ) const
+    {
+        auto maybe_child_token = TokenAmount::ConvertToChildToken( amount, dev_config_.TokenValueInGNUS );
+        if ( !maybe_child_token )
+        {
+            node_logger->error( "Failed to convert to child token: {}", maybe_child_token.error().message() );
+            return {};
+        }
+
+        return maybe_child_token.value();
+    }
+
+    outcome::result<uint64_t> GeniusNode::ParseChildTokens( const std::string &amount_str ) const
+    {
+        OUTCOME_TRY( auto &&minion_amount,
+                     TokenAmount::ConvertFromChildToken( amount_str, dev_config_.TokenValueInGNUS ) );
+
+        return minion_amount;
     }
 
     void GeniusNode::ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult )

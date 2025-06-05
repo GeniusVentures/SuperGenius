@@ -18,23 +18,15 @@ namespace sgns
 
     outcome::result<std::shared_ptr<TokenAmount>> TokenAmount::New( double value )
     {
-        auto res = ScaledInteger::FromDouble( value, PRECISION );
-        if ( !res )
-        {
-            return outcome::failure( res.error() );
-        }
-        auto ptr = std::shared_ptr<TokenAmount>( new TokenAmount( res.value() ) );
+        OUTCOME_TRY( auto &&from_dbl_value, ScaledInteger::FromDouble( value, PRECISION ) );
+        auto ptr = std::shared_ptr<TokenAmount>( new TokenAmount( from_dbl_value ) );
         return outcome::success( ptr );
     }
 
     outcome::result<std::shared_ptr<TokenAmount>> TokenAmount::New( const std::string &str )
     {
-        auto res = ScaledInteger::FromString( str, PRECISION );
-        if ( !res )
-        {
-            return outcome::failure( res.error() );
-        }
-        auto ptr = std::shared_ptr<TokenAmount>( new TokenAmount( res.value() ) );
+        OUTCOME_TRY( auto &&from_str_value, ScaledInteger::FromString( str, PRECISION ) );
+        auto ptr = std::shared_ptr<TokenAmount>( new TokenAmount( from_str_value ) );
         return outcome::success( ptr );
     }
 
@@ -42,22 +34,14 @@ namespace sgns
 
     outcome::result<TokenAmount> TokenAmount::Multiply( const TokenAmount &other ) const
     {
-        auto res = ScaledInteger::Multiply( minions_, other.minions_, PRECISION );
-        if ( !res )
-        {
-            return outcome::failure( res.error() );
-        }
-        return outcome::success( TokenAmount( res.value() ) );
+        OUTCOME_TRY( auto &&multiply_res, ScaledInteger::Multiply( minions_, other.minions_, PRECISION ) );
+        return outcome::success( TokenAmount( multiply_res ) );
     }
 
     outcome::result<TokenAmount> TokenAmount::Divide( const TokenAmount &other ) const
     {
-        auto res = ScaledInteger::Divide( minions_, other.minions_, PRECISION );
-        if ( !res )
-        {
-            return outcome::failure( res.error() );
-        }
-        return outcome::success( TokenAmount( res.value() ) );
+        OUTCOME_TRY( auto &&divide_res, ScaledInteger::Divide( minions_, other.minions_, PRECISION ) );
+        return outcome::success( TokenAmount( divide_res ) );
     }
 
     uint64_t TokenAmount::Value() const
@@ -79,8 +63,8 @@ namespace sgns
     {
         uint128_t product = static_cast<uint128_t>( total_bytes ) * static_cast<uint128_t>( PRICE_PER_FLOP ) *
                             static_cast<uint128_t>( FLOPS_PER_BYTE );
-        std::shared_ptr<sgns::ScaledInteger> cost_fp;
-        uint128_t                            divisor = 1;
+        std::shared_ptr<ScaledInteger> cost_fp;
+        uint128_t                      divisor = 1;
 
         for ( uint64_t prec = PRICE_PER_FLOP_FRACTIONAL_DIGITS; prec >= PRECISION; prec-- )
         {
@@ -118,16 +102,33 @@ namespace sgns
             return outcome::failure( std::errc::value_too_large );
         }
 
-        auto minions_res = cost_fp->ConvertPrecision( PRECISION );
-        if ( !minions_res )
-        {
-            return outcome::failure( minions_res.error() );
-        }
-
-        uint64_t raw_minions = minions_res.value().Value();
+        OUTCOME_TRY( auto &&minions_res, cost_fp->ConvertPrecision( PRECISION ) );
+        uint64_t raw_minions = minions_res.Value();
         raw_minions          = std::max( raw_minions, MIN_MINION_UNITS );
 
         return outcome::success( raw_minions );
+    }
+
+    outcome::result<std::string> TokenAmount::ConvertToChildToken( uint64_t in, std::string ratio )
+    {
+        OUTCOME_TRY( auto ratio_fp, ScaledInteger::New( ratio, PRECISION ) );
+
+        OUTCOME_TRY( auto minion_fp, ScaledInteger::New( in, PRECISION ) );
+
+        OUTCOME_TRY( auto child_fp, minion_fp->Divide( *ratio_fp ) );
+
+        return outcome::success( child_fp.ToString() );
+    }
+
+    outcome::result<uint64_t> TokenAmount::ConvertFromChildToken( std::string in, std::string ratio )
+    {
+        OUTCOME_TRY( auto ratio_fp, ScaledInteger::New( ratio, PRECISION ) );
+
+        OUTCOME_TRY( auto child_fp, ScaledInteger::New( in, PRECISION ) );
+
+        OUTCOME_TRY( auto minion_fp, child_fp->Multiply( *ratio_fp ) );
+
+        return outcome::success( minion_fp.Value() );
     }
 
 } // namespace sgns

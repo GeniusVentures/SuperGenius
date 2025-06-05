@@ -42,6 +42,6 @@ sgns::UTXOTxParameters::UTXOTxParameters( const std::vector<GeniusUTXO>     &utx
     if ( used_amount > total_amount )
     {
         uint64_t change      = used_amount - total_amount;
-        outputs_.push_back( { change, src_address } );
+        outputs_.push_back( { change, src_address, "" } );
     }
 }
