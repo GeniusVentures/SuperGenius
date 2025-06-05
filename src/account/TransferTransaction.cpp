@@ -85,7 +85,7 @@ namespace sgns
             OutputDestInfo curr{ output_proto.encrypted_amount(), output_proto.dest_addr() };
             outputs.push_back( curr );
         }
-        std::string token_id = tx_struct.token_id();
+        std::string token_id = std::to_string( tx_struct.token_id() );
 
         return std::make_shared<TransferTransaction>(
             TransferTransaction( outputs, inputs, tx_struct.dag_struct() ) );

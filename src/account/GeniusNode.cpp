@@ -91,7 +91,7 @@ namespace sgns
                             bool                isprocessor,
                             uint16_t            base_port,
                             bool                is_full_node ) :
-        account_( std::make_shared<GeniusAccount>( static_cast<uint8_t>( dev_config.TokenID ),
+        account_( std::make_shared<GeniusAccount>( dev_config.TokenID,
                                                    dev_config.BaseWritePath,
                                                    eth_private_key ) ),
         io_( std::make_shared<boost::asio::io_context>() ),
