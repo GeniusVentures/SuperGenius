@@ -19,14 +19,19 @@ namespace fs = std::filesystem;
 struct NodeParams
 {
     std::string subdir;           ///< Node folder name.
-    const char *key_hex;          ///< Node private key.
+    const char *key_hex;          ///< Node key.
     uint64_t    expected_balance; ///< Expected balance after migration.
 };
 
 class MigrationParamTest : public ::testing::TestWithParam<NodeParams>
 {
 protected:
-    static inline DevConfig_st        DEV_CONFIG = { "0xcafe", "0.65", 1.0, 0, "" };
+    static inline DevConfig_st DEV_CONFIG = { .Addr             = "0xcafe",
+                                              .Cut              = "0.65",
+                                              .TokenValueInGNUS = 1.0,
+                                              .TokenID          = 0,
+                                              .BaseWritePath    = "" };
+
     std::shared_ptr<sgns::GeniusNode> node;
 
     static constexpr char DB_PREFIX[]      = "SuperGNUSNode.TestNet.2a.01.";
