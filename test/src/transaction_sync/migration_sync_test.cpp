@@ -26,11 +26,13 @@ struct NodeParams
 class MigrationParamTest : public ::testing::TestWithParam<NodeParams>
 {
 protected:
-    static inline DevConfig_st DEV_CONFIG = { .Addr             = "0xcafe",
-                                              .Cut              = "0.65",
-                                              .TokenValueInGNUS = 1.0,
-                                              .TokenID          = 0,
-                                              .BaseWritePath    = "" };
+    static inline DevConfig_st DEV_CONFIG = {
+        "0xcafe", // Addr
+        "0.65",   // Cut
+        1.0,      // TokenValueInGNUS
+        0,        // TokenID
+        ""        // BaseWritePath
+    };
 
     std::shared_ptr<sgns::GeniusNode> node;
 
@@ -98,10 +100,10 @@ TEST_P( MigrationParamTest, BalanceAfterMigration )
 INSTANTIATE_TEST_SUITE_P(
     Nodes,
     MigrationParamTest,
-    ::testing::Values( NodeParams{ .subdir  = "node10_0_2_0",
-                                   .key_hex = "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                   .expected_balance = 238000000000ULL },
-                       NodeParams{ .subdir  = "node20_0_2_0",
-                                   .key_hex = "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                   .expected_balance = 273000000000ULL } ),
+    ::testing::Values( NodeParams{ "node10_0_2_0",
+                                   "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+                                   238000000000ULL },
+                       NodeParams{ "node20_0_2_0",
+                                   "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+                                   273000000000ULL } ),
     []( const ::testing::TestParamInfo<NodeParams> &info ) { return info.param.subdir; } );
