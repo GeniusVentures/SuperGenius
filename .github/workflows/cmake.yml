@@ -27,53 +27,21 @@ jobs:
           - target: Linux
             host: ubuntu-22.04
             abi: "x86_64"
-            build-type: "Release"
-          - target: Linux
-            host: ubuntu-22.04
-            abi: "x86_64"
-            build-type: "Debug"
           - target: Linux
             host: ubuntu-24.04-arm
             abi: "aarch64"
-            build-type: "Release"
-          - target: Linux
-            host: ubuntu-24.04-arm
-            abi: "aarch64"
-            build-type: "Debug"
           - target: Windows
             host: windows-latest
-            build-type: "Release"
-          - target: Windows
-            host: windows-latest
-            build-type: "Debug"
           - target: OSX
             host: macos-latest
-            build-type: "Release"
-          - target: OSX
-            host: macos-latest
-            build-type: "Debug"
           - target: Android
             host: ubuntu-22.04
             abi: arm64-v8a
-            build-type: "Release"
-          - target: Android
-            host: ubuntu-22.04
-            abi: arm64-v8a
-            build-type: "Debug"
           - target: Android
             host: ubuntu-22.04
             abi: armeabi-v7a
-            build-type: "Release"
-          - target: Android
-            host: ubuntu-22.04
-            abi: armeabi-v7a
-            build-type: "Debug"
           - target: iOS
             host: macos-latest
-            build-type: "Release"
-          - target: iOS
-            host: macos-latest
-            build-type: "Debug"
         exclude:
           - target: Android
             abi: ""
@@ -139,12 +107,10 @@ jobs:
       - name: Download zkLLVM release
         working-directory: ${{github.workspace}}
         run: |
-          if git ls-remote --heads https://github.com/GeniusVentures/zkLLVM.git $CURRENT_BRANCH | grep -q $CURRENT_BRANCH; then
-              echo "Using same branch for zkLLVM"
-              zkLLVM_branch=${CURRENT_BRANCH}
+          if [ "$CURRENT_BRANCH" == "main" ]; then
+            zkLLVM_branch="main"
           else
-              echo "Using develop branch from zkLLVM"
-              zkLLVM_branch=develop
+            zkLLVM_branch="develop"
           fi
 
           mkdir zkLLVM
