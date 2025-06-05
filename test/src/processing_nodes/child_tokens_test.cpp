@@ -403,7 +403,7 @@ TEST_P( GeniusNodeTransferChildTest, TransferChildBalance )
     auto expA_childVal = nodeA->ParseChildTokens( c.expA_child );
     ASSERT_TRUE( expA_childVal.has_value() );
     auto expB_childVal = nodeB->ParseChildTokens( c.expB_child );
-    ASSERT_TRUE( expB_childVal.has_value() );
+    ASSERT_TRUE( expB_childVal.has_value() ); 
 
     EXPECT_EQ( finalA.value() - parsedInitA.value(), expA_childVal.value() );
     EXPECT_EQ( finalB.value() - parsedInitB.value(), expB_childVal.value() );
