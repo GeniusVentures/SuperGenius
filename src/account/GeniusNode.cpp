@@ -147,15 +147,15 @@ namespace sgns
         auto loggerProcessingNode = base::createLogger( "ProcessingNode", logdir );
         auto loggerGossipPubsub   = base::createLogger( "GossipPubSub", logdir );
 #ifdef SGNS_DEBUGLOGS
-        node_logger->set_level( spdlog::level::debug );
-        loggerGlobalDB->set_level( spdlog::level::debug );
+        node_logger->set_level( spdlog::level::err );
+        loggerGlobalDB->set_level( spdlog::level::err );
         loggerDAGSyncer->set_level( spdlog::level::err );
         loggerGraphsync->set_level( spdlog::level::err );
         loggerBroadcaster->set_level( spdlog::level::err );
         loggerDataStore->set_level( spdlog::level::err );
         loggerTransactions->set_level( spdlog::level::err );
-        loggerMigration->set_level( spdlog::level::trace );
-        loggerMigrationStep->set_level( spdlog::level::trace );
+        loggerMigration->set_level( spdlog::level::err );
+        loggerMigrationStep->set_level( spdlog::level::err );
         loggerQueue->set_level( spdlog::level::err );
         loggerRocksDB->set_level( spdlog::level::err );
         logkad->set_level( spdlog::level::err );
