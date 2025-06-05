@@ -84,8 +84,8 @@ namespace sgns
             std::shared_ptr<ipfs_lite::ipfs::graphsync::Network>            graphsync,
             std::shared_ptr<libp2p::protocol::Scheduler>                    scheduler,
             std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
-            const std::string                                              &writeBasePath,
-            const std::string                                              &base58key );
+            std::string                                                     writeBasePath,
+            std::string                                                     base58key );
 
         /**
          * @brief   Register a migration step.
@@ -134,8 +134,8 @@ namespace sgns
                                std::shared_ptr<ipfs_lite::ipfs::graphsync::Network>            graphsync,
                                std::shared_ptr<libp2p::protocol::Scheduler>                    scheduler,
                                std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
-                               const std::string                                              &writeBasePath,
-                               const std::string                                              &base58key );
+                               std::string                                                     writeBasePath,
+                               std::string                                                     base58key );
 
         /**
          * @brief   Get the source version for this step.

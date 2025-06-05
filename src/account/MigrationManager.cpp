@@ -23,8 +23,8 @@ namespace sgns
         std::shared_ptr<ipfs_lite::ipfs::graphsync::Network>            graphsync,
         std::shared_ptr<libp2p::protocol::Scheduler>                    scheduler,
         std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
-        const std::string                                              &writeBasePath,
-        const std::string                                              &base58key )
+        std::string                                                     writeBasePath,
+        std::string                                                     base58key )
     {
         auto instance = std::shared_ptr<MigrationManager>( new MigrationManager() );
         instance->RegisterStep( std::make_unique<Migration0_2_0To1_0_0>( std::move( newDb ),
@@ -33,8 +33,8 @@ namespace sgns
                                                                          std::move( graphsync ),
                                                                          std::move( scheduler ),
                                                                          std::move( generator ),
-                                                                         writeBasePath,
-                                                                         base58key ) );
+                                                                         std::move( writeBasePath ),
+                                                                         std::move( base58key ) ) );
         return instance;
     }
 
@@ -83,16 +83,16 @@ namespace sgns
         std::shared_ptr<ipfs_lite::ipfs::graphsync::Network>            graphsync,
         std::shared_ptr<libp2p::protocol::Scheduler>                    scheduler,
         std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
-        const std::string                                              &writeBasePath,
-        const std::string                                              &base58key ) :
+        std::string                                                     writeBasePath,
+        std::string                                                     base58key ) :
         newDb_( std::move( newDb ) ),
         ioContext_( std::move( ioContext ) ),
         pubSub_( std::move( pubSub ) ),
         graphsync_( std::move( graphsync ) ),
         scheduler_( std::move( scheduler ) ),
         generator_( std::move( generator ) ),
-        writeBasePath_( writeBasePath ),
-        base58key_( base58key )
+        writeBasePath_( std::move( writeBasePath ) ),
+        base58key_( std::move( base58key ) )
     {
     }
 
