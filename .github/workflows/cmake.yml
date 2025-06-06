@@ -136,17 +136,16 @@ jobs:
           mkdir zkLLVM
           cd zkLLVM
 
+          tag_name=${{matrix.target}}-${zkLLVM_branch}-Release
           if [ '${{matrix.abi}}' ]; then
-              tag_name=${{matrix.target}}-${{matrix.abi}}-${zkLLVM_branch}-Release
+              ZKLLVM_FILE_NAME=${{matrix.target}}-${{matrix.abi}}-Release.tar.gz
           else
-              tag_name=${{matrix.target}}-${zkLLVM_branch}-Release
+              ZKLLVM_FILE_NAME=${{matrix.target}}-Release.tar.gz
           fi
 
-          gh release download ${tag_name} --repo GeniusVentures/zkLLVM -p "*.tar.gz"
+          gh release download ${tag_name} --repo GeniusVentures/zkLLVM -p "${ZKLLVM_FILE_NAME}"
 
-          for library in *.tar.gz; do
-              tar --exclude='*bin/assigner' --exclude='*bin/clang-zkllvm' --exclude='*bin/llvm-link-zkllvm' --exclude='*bin/transpiler' -xzf "${library}"
-          done
+          tar --exclude='*bin/assigner' --exclude='*bin/clang-zkllvm' --exclude='*bin/llvm-link-zkllvm' --exclude='*bin/transpiler' -xzf "${ZKLLVM_FILE_NAME}"
         shell: bash
 
       - name: Configure Linux host
