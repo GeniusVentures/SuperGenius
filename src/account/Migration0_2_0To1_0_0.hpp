@@ -1,5 +1,5 @@
 /**
- * @file       MigrationManager.hpp
+ * @file       Migration0_2_0To1_0_0.hpp
  * @brief      Versioned migration manager and migration step interface.
  * @date       2025-05-29
  * @author     Luiz Guilherme Rizzatto Zucchi
@@ -9,10 +9,8 @@
 #pragma once
 
 #include <memory>
+#include <string>
 #include <deque>
-#include <cstdint>
-#include <map>
-#include <unordered_map>
 
 #include <boost/asio/io_context.hpp>
 #include <ipfs_pubsub/gossip_pubsub_topic.hpp>
@@ -24,91 +22,10 @@
 #include <ipfs_lite/ipfs/graphsync/impl/local_requests.hpp>
 #include <libp2p/protocol/common/asio/asio_scheduler.hpp>
 
+#include "IMigrationStep.hpp"
+
 namespace sgns
 {
-    /**
-     * @brief Interface for a migration step between two schema versions.
-     */
-    class IMigrationStep
-    {
-    public:
-        virtual ~IMigrationStep() = default;
-
-        /**
-         * @brief Get the version from which the migration starts.
-         * @return The source version string.
-         */
-        virtual std::string FromVersion() const = 0;
-
-        /**
-         * @brief Get the version to which the migration applies.
-         * @return The target version string.
-         */
-        virtual std::string ToVersion() const = 0;
-
-        /**
-         * @brief Execute the migration logic.
-         * @return Outcome of the operation.
-         */
-        virtual outcome::result<void> Apply() = 0;
-
-        /**
-         * @brief   Check if migration is required.
-         * @return  outcome::result<bool>  true if migration should run; false to skip. On error, returns failure.
-         */
-        virtual outcome::result<bool> IsRequired() const = 0;
-    };
-
-    /**
-     * @brief   Executes a sequence of migration steps to update a CRDT store.
-     */
-    class MigrationManager : public std::enable_shared_from_this<MigrationManager>
-    {
-    public:
-        /**
-         * @brief   Factory function to create a MigrationManager and register all known steps.
-         * @param   newDb        Shared pointer to the target GlobalDB.
-         * @param   ioContext    Shared io_context for both legacy and new DB.
-         * @param   pubSub       Shared GossipPubSub instance.
-         * @param   graphsync    Shared GraphSync network object.
-         * @param   scheduler    Shared libp2p scheduler.
-         * @param   generator    Shared GraphSync request ID generator.
-         * @param   writeBasePath Base path for writing DB files.
-         * @param   base58key    Key to build legacy paths.
-         * @return  std::shared_ptr<MigrationManager> to the created instance.
-         */
-        static std::shared_ptr<MigrationManager> New(
-            std::shared_ptr<crdt::GlobalDB>                                 newDb,
-            std::shared_ptr<boost::asio::io_context>                        ioContext,
-            std::shared_ptr<ipfs_pubsub::GossipPubSub>                      pubSub,
-            std::shared_ptr<ipfs_lite::ipfs::graphsync::Network>            graphsync,
-            std::shared_ptr<libp2p::protocol::Scheduler>                    scheduler,
-            std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
-            std::string                                                     writeBasePath,
-            std::string                                                     base58key );
-
-        /**
-         * @brief   Register a migration step.
-         * @param   step  IMigrationStep to add.
-         */
-        void RegisterStep( std::unique_ptr<IMigrationStep> step );
-
-        /**
-         * @brief Perform all registered migration steps in sequence.
-         * @return Outcome of the migration process.
-         */
-        outcome::result<void> Migrate();
-
-    private:
-        /**
-         * @brief   Private default constructor.
-         */
-        MigrationManager();
-
-        std::deque<std::unique_ptr<IMigrationStep>> steps_;               ///< Queue of registered migration steps.
-        base::Logger m_logger = base::createLogger( "MigrationManager" ); ///< Logger instance.
-    };
-
     /**
      * @brief   Migration step for version 0.2.0 to 1.0.0.
      *
@@ -119,14 +36,14 @@ namespace sgns
     public:
         /**
          * @brief   Construct the step with all resources needed to open legacy DBs.
-         * @param   newDb        Shared pointer to the target GlobalDB.
-         * @param   ioContext    Shared io_context for legacy DB access.
-         * @param   pubSub       Shared GossipPubSub instance.
-         * @param   graphsync    Shared GraphSync network object.
-         * @param   scheduler    Shared libp2p scheduler.
-         * @param   generator    Shared RequestIdGenerator for GraphSync.
+         * @param   newDb         Shared pointer to the target GlobalDB.
+         * @param   ioContext     Shared io_context for legacy DB access.
+         * @param   pubSub        Shared GossipPubSub instance.
+         * @param   graphsync     Shared GraphSync network object.
+         * @param   scheduler     Shared libp2p scheduler.
+         * @param   generator     Shared RequestIdGenerator for GraphSync.
          * @param   writeBasePath Base path for writing legacy DB files.
-         * @param   base58key    Base58-encoded peer key to form legacy paths.
+         * @param   base58key     Base58-encoded peer key to form legacy paths.
          */
         Migration0_2_0To1_0_0( std::shared_ptr<crdt::GlobalDB>                                 newDb,
                                std::shared_ptr<boost::asio::io_context>                        ioContext,
@@ -188,5 +105,4 @@ namespace sgns
         std::string  base58key_;                                                    ///< Key to build legacy paths.
         base::Logger m_logger = base::createLogger( "MigrationStep" );              ///< Logger for this step.
     };
-
 } // namespace sgns

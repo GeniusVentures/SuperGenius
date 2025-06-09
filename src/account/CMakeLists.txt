@@ -18,6 +18,7 @@ add_library(sgns_account
     IGeniusTransactions.cpp
     TokenAmount.cpp
     MigrationManager.cpp
+    Migration0_2_0To1_0_0.cpp
 )
 
 set_target_properties(sgns_account PROPERTIES UNITY_BUILD ON)
