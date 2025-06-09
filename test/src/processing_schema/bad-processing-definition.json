@@ -1,0 +1,52 @@
+{
+  "name": "Invalid123!@#",
+  "version": "not-a-version",
+  "gnus_spec_version": "2.0",
+  "description": "A processing definition with multiple validation errors",
+  
+  "inputs": [
+    {
+      "name": "123invalid",
+      "type": "invalid_type",
+      "dimensions": {
+        "width": 0,
+        "height": -5
+      },
+      "format": "INVALID_FORMAT"
+    }
+  ],
+  
+  "outputs": [],
+  
+  "parameters": [
+    {
+      "name": "invalid-param-name",
+      "type": "unknown_type",
+      "constraints": {
+        "min": "not_a_number",
+        "max": "also_not_a_number"
+      }
+    }
+  ],
+  
+  "passes": [
+    {
+      "name": "123badname",
+      "type": "invalid_pass_type",
+      "model": {
+        "source_uri_param": "nonexistent_param",
+        "format": "INVALID_FORMAT",
+        "input_nodes": [],
+        "output_nodes": []
+      }
+    },
+    {
+      "name": "inference_without_model",
+      "type": "inference"
+    },
+    {
+      "name": "compute_without_shader",
+      "type": "compute"
+    }
+  ]
+}

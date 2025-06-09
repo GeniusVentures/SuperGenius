@@ -1,0 +1,423 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://gnus.ai/schemas/processing-definition/v1.0/schema.json",
+  "title": "GNUS.ai Processing Definition",
+  "description": "Schema for defining AI inference and retraining workflows with shader passes",
+  "type": "object",
+  "required": ["name", "version", "gnus_spec_version", "passes", "inputs", "outputs"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Unique name for this processing definition",
+      "pattern": "^[A-Za-z0-9_-]+$"
+    },
+    "version": {
+      "type": "string",
+      "description": "Version of this processing definition",
+      "pattern": "^\\d+\\.\\d+(\\.\\d+)?$"
+    },
+    "gnus_spec_version": {
+      "type": "string",
+      "description": "Version of the GNUS processing definition specification",
+      "pattern": "^\\d+\\.\\d+$",
+      "const": "1.0"
+    },
+    "author": {
+      "type": "string",
+      "description": "Author of this processing definition"
+    },
+    "description": {
+      "type": "string",
+      "description": "Human-readable description of what this processing definition does"
+    },
+    "tags": {
+      "type": "array",
+      "description": "Tags for categorizing this definition",
+      "items": {
+        "type": "string"
+      }
+    },
+    "inputs": {
+      "type": "array",
+      "description": "Declares the external inputs this process requires",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/definitions/io_declaration"
+      }
+    },
+    "outputs": {
+      "type": "array",
+      "description": "Declares the final outputs this process will produce",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/definitions/io_declaration"
+      }
+    },
+    "parameters": {
+      "type": "array",
+      "description": "Overridable parameters with defaults",
+      "items": {
+        "$ref": "#/definitions/parameter"
+      }
+    },
+    "passes": {
+      "type": "array",
+      "description": "Array of processing passes to execute",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/definitions/pass"
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional metadata for the processing definition",
+      "additionalProperties": true
+    }
+  },
+  "definitions": {
+    "io_declaration": {
+      "type": "object",
+      "required": ["name", "type"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Unique identifier for this input/output",
+          "pattern": "^[a-zA-Z][a-zA-Z0-9_]*$"
+        },
+        "type": {
+          "$ref": "#/definitions/data_type"
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable description"
+        },
+        "dimensions": {
+          "type": "object",
+          "description": "Optional dimensions specification",
+          "properties": {
+            "width": { "type": "integer", "minimum": 1 },
+            "height": { "type": "integer", "minimum": 1 },
+            "channels": { "type": "integer", "minimum": 1 },
+            "batch": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "format": {
+          "type": "string",
+          "description": "Data format (e.g., RGBA8, FLOAT32)",
+          "enum": ["RGBA8", "RGB8", "FLOAT32", "FLOAT16", "INT32", "INT16", "INT8"]
+        }
+      }
+    },
+    "parameter": {
+      "type": "object",
+      "required": ["name", "type"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Parameter name",
+          "pattern": "^[a-zA-Z][a-zA-Z0-9_]*$"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["float", "int", "bool", "string", "uri", "array", "object"]
+        },
+        "default": {
+          "description": "Default value for this parameter"
+        },
+        "description": {
+          "type": "string"
+        },
+        "constraints": {
+          "type": "object",
+          "properties": {
+            "min": { "type": "number" },
+            "max": { "type": "number" },
+            "enum": { "type": "array" },
+            "pattern": { "type": "string" }
+          }
+        }
+      }
+    },
+    "pass": {
+      "type": "object",
+      "required": ["name", "type"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Unique name for this pass",
+          "pattern": "^[a-zA-Z][a-zA-Z0-9_]*$"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["inference", "retrain", "compute", "render", "data_transform"],
+          "description": "Type of processing pass"
+        },
+        "description": {
+          "type": "string"
+        },
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether this pass is enabled by default"
+        },
+        "model": {
+          "$ref": "#/definitions/model_config",
+          "description": "Model configuration for inference/retrain passes"
+        },
+        "shader": {
+          "$ref": "#/definitions/shader_config",
+          "description": "Shader configuration for compute/render passes"
+        },
+        "data_transforms": {
+          "type": "array",
+          "description": "Data transformation pipeline",
+          "items": {
+            "$ref": "#/definitions/data_transform"
+          }
+        },
+        "inputs": {
+          "type": "array",
+          "description": "Input bindings for non-model passes",
+          "items": {
+            "$ref": "#/definitions/pass_io_binding"
+          }
+        },
+        "outputs": {
+          "type": "array",
+          "description": "Output bindings for non-model passes",
+          "items": {
+            "$ref": "#/definitions/pass_io_binding"
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "type": { "enum": ["inference", "retrain"] } }
+          },
+          "then": {
+            "required": ["model"]
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "enum": ["compute", "render"] } }
+          },
+          "then": {
+            "required": ["shader"]
+          }
+        }
+      ]
+    },
+    "model_config": {
+      "type": "object",
+      "required": ["source_uri_param", "input_nodes", "output_nodes"],
+      "properties": {
+        "source_uri_param": {
+          "type": "string",
+          "description": "Parameter name that contains the model URI"
+        },
+        "format": {
+          "type": "string",
+          "enum": ["MNN", "ONNX", "TensorFlow", "PyTorch"],
+          "default": "MNN",
+          "description": "Model format"
+        },
+        "input_nodes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/definitions/model_node"
+          }
+        },
+        "output_nodes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/definitions/model_node"
+          }
+        },
+        "optimizer": {
+          "$ref": "#/definitions/optimizer_config",
+          "description": "Optimizer configuration for retrain passes"
+        },
+        "loss_function": {
+          "type": "string",
+          "description": "Loss function for training",
+          "enum": ["mean_squared_error", "cross_entropy", "binary_cross_entropy", "l1_loss", "huber_loss", "custom"]
+        },
+        "batch_size": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1
+        }
+      }
+    },
+    "model_node": {
+      "type": "object",
+      "required": ["name", "type"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Node name in the model graph"
+        },
+        "type": {
+          "$ref": "#/definitions/data_type"
+        },
+        "source": {
+          "type": "string",
+          "description": "Data source using prefix notation (input:, output:, internal:, parameter:)",
+          "pattern": "^(input|output|internal|parameter):[a-zA-Z][a-zA-Z0-9_]*$"
+        },
+        "target": {
+          "type": "string",
+          "description": "Data target using prefix notation",
+          "pattern": "^(output|internal):[a-zA-Z][a-zA-Z0-9_]*$"
+        },
+        "shape": {
+          "type": "array",
+          "description": "Expected tensor shape",
+          "items": {
+            "type": "integer",
+            "minimum": -1
+          }
+        }
+      }
+    },
+    "shader_config": {
+      "type": "object",
+      "required": ["source"],
+      "properties": {
+        "source": {
+          "type": "string",
+          "description": "Shader source path or URI parameter"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["glsl", "hlsl", "metal", "spirv"],
+          "default": "glsl"
+        },
+        "entry_point": {
+          "type": "string",
+          "default": "main"
+        },
+        "uniforms": {
+          "type": "object",
+          "description": "Uniform variable declarations",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "type": { "$ref": "#/definitions/data_type" },
+              "value": {},
+              "source": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "pass_io_binding": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Binding point name"
+        },
+        "source": {
+          "type": "string",
+          "description": "Data source using prefix notation",
+          "pattern": "^(input|output|internal|parameter):[a-zA-Z][a-zA-Z0-9_]*$"
+        },
+        "target": {
+          "type": "string",
+          "description": "Data target using prefix notation",
+          "pattern": "^(output|internal):[a-zA-Z][a-zA-Z0-9_]*$"
+        }
+      }
+    },
+    "data_transform": {
+      "type": "object",
+      "required": ["type", "input", "output"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "normalize", "denormalize", "resize", "crop", "pad",
+            "color_convert", "transpose", "flip", "rotate",
+            "quantize", "dequantize", "custom"
+          ]
+        },
+        "input": {
+          "type": "string",
+          "description": "Input data reference"
+        },
+        "output": {
+          "type": "string",
+          "description": "Output data reference"
+        },
+        "params": {
+          "type": "object",
+          "description": "Transform-specific parameters",
+          "properties": {
+            "mean": { "type": "array", "items": { "type": "number" } },
+            "std": { "type": "array", "items": { "type": "number" } },
+            "width": { "type": "integer" },
+            "height": { "type": "integer" },
+            "method": { "type": "string" },
+            "color_space": { "type": "string" },
+            "axes": { "type": "array", "items": { "type": "integer" } },
+            "angle": { "type": "number" },
+            "custom_function": { "type": "string" }
+          }
+        }
+      }
+    },
+    "optimizer_config": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["adam", "sgd", "rmsprop", "adagrad", "adadelta", "adamw"]
+        },
+        "learning_rate": {
+          "type": "number",
+          "minimum": 0,
+          "default": 0.001
+        },
+        "momentum": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "weight_decay": {
+          "type": "number",
+          "minimum": 0
+        },
+        "beta1": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "beta2": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "epsilon": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    },
+    "data_type": {
+      "type": "string",
+      "enum": [
+        "texture1D", "texture2D", "texture3D", "textureCube",
+        "texture1D_array", "texture2D_array", "texture3D_array",
+        "tensor", "float", "int", "bool", "vec2", "vec3", "vec4",
+        "mat2", "mat3", "mat4", "buffer", "string"
+      ]
+    }
+  }
+}

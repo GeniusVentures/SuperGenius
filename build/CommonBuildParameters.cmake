@@ -347,6 +347,10 @@ endif()
 set(gnus_upnp_DIR "${_THIRDPARTY_BUILD_DIR}/gnus_upnp/lib/cmake/gnus_upnp")
 find_package(gnus_upnp CONFIG REQUIRED)
 
+#valijson
+set(valijson_DIR "${_THIRDPARTY_BUILD_DIR}/valijson/lib/cmake/valijson")
+find_package(valijson CONFIG REQUIRED)
+
 # wallet-core
 set(TrustWalletCore_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/wallet-core/lib")
 set(TrustWalletCore_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/wallet-core/include")
