@@ -16,8 +16,5 @@ project(
 # include common compiler options
 include(../CommonCompilerOptions.cmake)
 
-# Set custom subfolder for ABI
-set(ABI_SUBFOLDER_NAME "")
-
 # Include common build parameters
 include(../CommonBuildParameters.cmake)

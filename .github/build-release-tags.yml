@@ -1,15 +1,12 @@
-name: Release Build CI
+name: SuperGenius Tag Build
 
 on:
-  push:
-    branches:
-      - develop
-      - main
-  pull_request:
-    branches:
-      - develop
-      - main
   workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to create releases for'
+        required: true
+        type: string
 
 jobs:
   build:
@@ -73,6 +70,7 @@ jobs:
         with:
           path: "SuperGenius"
           submodules: "recursive"
+          ref: ${{ github.event.inputs.tag }}
 
       - name: Set build directory
         run: |
@@ -90,23 +88,8 @@ jobs:
       - name: Download thirdparty release
         working-directory: ${{github.workspace}}
         run: |
-          if ${{github.event_name == 'pull_request'}}; then
-              CURRENT_BRANCH=${{ github.event.pull_request.head.ref }}
-          else
-              CURRENT_BRANCH=$GITHUB_REF_NAME
-          fi
-
-          echo "Identified current branch as ${CURRENT_BRANCH}"
-
-          echo "CURRENT_BRANCH=${CURRENT_BRANCH}" >>$GITHUB_ENV
-
-          if [ "$CURRENT_BRANCH" == "main" ]; then
-            thirdparty_branch="main"
-          else
-            thirdparty_branch="develop"
-          fi
-
-          echo "Using ${thirdparty_branch} for thirdparty"
+          TAG_NAME="${{ github.event.inputs.tag }}"
+          echo "Building for tag: ${TAG_NAME}"
 
           if [ '${{matrix.abi}}' ]; then
             FILE_NAME=${{matrix.target}}-${{matrix.abi}}-${{matrix.build-type}}.tar.gz
@@ -118,32 +101,31 @@ jobs:
           mkdir thirdparty
           cd thirdparty
 
-          tag_name="${{matrix.target}}-${thirdparty_branch}-${{matrix.build-type}}"
+          # Download from the tag's release
+          echo "Downloading thirdparty from tag: ${TAG_NAME}"
 
-          gh release download ${tag_name} --repo GeniusVentures/thirdparty -p "${FILE_NAME}"
+          gh release download ${TAG_NAME} --repo GeniusVentures/thirdparty -p "${FILE_NAME}"
           tar -zxf "${FILE_NAME}"
         shell: bash
 
       - name: Download zkLLVM release
         working-directory: ${{github.workspace}}
         run: |
-          if [ "$CURRENT_BRANCH" == "main" ]; then
-            zkLLVM_branch="main"
-          else
-            zkLLVM_branch="develop"
-          fi
-
+          TAG_NAME="${{ github.event.inputs.tag }}"
+          
           mkdir zkLLVM
           cd zkLLVM
 
-          tag_name=${{matrix.target}}-${zkLLVM_branch}-Release
+          # Download from the tag's release
+          echo "Downloading zkLLVM from tag: ${TAG_NAME}"
+          
           if [ '${{matrix.abi}}' ]; then
               ZKLLVM_FILE_NAME=${{matrix.target}}-${{matrix.abi}}-Release.tar.gz
           else
               ZKLLVM_FILE_NAME=${{matrix.target}}-Release.tar.gz
           fi
 
-          gh release download ${tag_name} --repo GeniusVentures/zkLLVM -p "${ZKLLVM_FILE_NAME}"
+          gh release download ${TAG_NAME} --repo GeniusVentures/zkLLVM -p "${ZKLLVM_FILE_NAME}"
 
           tar --exclude='*bin/assigner' --exclude='*bin/clang-zkllvm' --exclude='*bin/llvm-link-zkllvm' --exclude='*bin/transpiler' -xzf "${ZKLLVM_FILE_NAME}"
         shell: bash
@@ -227,37 +209,40 @@ jobs:
         working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
         run: cmake --install .
 
+      - name: Create or check release
+        shell: bash
+        working-directory: ${{github.workspace}}/SuperGenius
+        run: |
+          TAG_NAME='${{ github.event.inputs.tag }}'
+          echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
+
+          echo "Checking if GitHub release exists for tag: $TAG_NAME"
+
+          set +e
+          gh release view $TAG_NAME
+          releaseFound=$?
+          set -e
+
+          if [[ $releaseFound -ne 0 ]]; then
+              echo "Release not found, creating for tag: $TAG_NAME"
+
+              # Create a single release for the tag
+              gh release create $TAG_NAME \
+                  -n "Build artifacts for tag ${TAG_NAME}" \
+                  -t "${TAG_NAME} build artifacts"
+          else
+              echo "Release already exists for tag: $TAG_NAME"
+          fi
+
       - name: Compress build artifacts
         working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
-        if: github.ref_name == 'main' || github.ref_name == 'develop'
         run: |
           tar --exclude=.git -czvf ${FILE_NAME} --transform 's|^|${{env.BUILD_DIRECTORY}}/|' SuperGenius/
         shell: bash
 
       - name: Release file
-        if: github.ref_name == 'main' || github.ref_name == 'develop'
         working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
         shell: bash
         run: |
-          RELEASE_TAG='${{matrix.target}}-${{github.ref_name}}-${{matrix.build-type}}'
-
-          echo "RELEASE_TAG=${RELEASE_TAG}" >> $GITHUB_ENV
-
-          if ! gh release view $RELEASE_TAG; then
-              echo "Release not found, creating with tag: $RELEASE_TAG"
-
-              if [ '${{ matrix.build-type }}' != 'Release' ]; then
-                  RELEASE_TYPE="--prerelease"
-              else
-                  RELEASE_TYPE="--latest"
-              fi
-
-              gh release create $RELEASE_TAG \
-                  -n "${CURRENT_BRANCH} branch" \
-                  --target "${CURRENT_BRANCH}" \
-                  ${RELEASE_TYPE} \
-                  -t "${{ matrix.target }} ${CURRENT_BRANCH} branch ${{ matrix.build-type }} build"
-          fi
-
-          echo -e "Uploading ${FILE_NAME}"
-          gh release upload --clobber ${RELEASE_TAG} ${FILE_NAME}
+          echo -e "Uploading ${FILE_NAME} to release ${TAG_NAME}"
+          gh release upload --clobber ${TAG_NAME} ${FILE_NAME}

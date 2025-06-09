@@ -37,17 +37,31 @@ namespace sgns
     TransactionManager::TransactionManager( std::shared_ptr<crdt::GlobalDB>          processing_db,
                                             std::shared_ptr<boost::asio::io_context> ctx,
                                             std::shared_ptr<GeniusAccount>           account,
-                                            std::shared_ptr<crypto::Hasher>          hasher ) :
+                                            std::shared_ptr<crypto::Hasher>          hasher,
+                                            bool                                     full_node ) :
         globaldb_m( std::move( processing_db ) ),
         ctx_m( std::move( ctx ) ),
         account_m( std::move( account ) ),
         hasher_m( std::move( hasher ) ),
-        timer_m( std::make_shared<boost::asio::steady_timer>( *ctx_m, boost::asio::chrono::milliseconds( 300 ) ) )
+        timer_m( std::make_shared<boost::asio::steady_timer>( *ctx_m, boost::asio::chrono::milliseconds( 300 ) ) ),
+        full_node_m( std::move( full_node ) )
 
     {
         m_logger->info( "Initializing values by reading whole blockchain" );
+
+        boost::format full_node_topic{ std::string( GNUS_FULL_NODES_TOPIC ) };
+
+        full_node_topic % TEST_NET_ID;
+        full_node_topic.str();
         globaldb_m->AddBroadcastTopic( account_m->GetAddress() );
         globaldb_m->AddListenTopic( account_m->GetAddress() );
+        globaldb_m->AddBroadcastTopic( full_node_topic.str() );
+        m_logger->info( "Adding broadcast to full node on {}", full_node_topic.str() );
+        if ( full_node_m )
+        {
+            m_logger->info( "Listening full node on {}", full_node_topic.str() );
+            globaldb_m->AddListenTopic( full_node_topic.str() );
+        }
 
         bool crdt_tx_filter_initialized = globaldb_m->RegisterElementFilter(
             "^/?" + GetBlockChainBase() + "[^/]*/tx/[^/]*/[0-9]+",
@@ -147,7 +161,7 @@ namespace sgns
 
                 return maybe_tombstones;
             } );
-            globaldb_m->Start();
+        globaldb_m->Start();
     }
 
     TransactionManager::~TransactionManager()
@@ -462,20 +476,7 @@ namespace sgns
                 BOOST_OUTCOME_TRYV2( auto &&,
                                      crdt_transaction->Put( std::move( proof_key ), std::move( proof_transaction ) ) );
             }
-
-            if ( transaction->GetType() == "transfer" )
-            {
-                m_logger->debug( "Notifying receiving peers of transfers" );
-                BOOST_OUTCOME_TRYV2( auto &&, NotifyDestinationOfTransfer( transaction ) );
-            }
-            else if ( transaction->GetType() == "escrow-release" )
-            {
-                m_logger->debug( "Notifying escrow source of escrow release" );
-                BOOST_OUTCOME_TRYV2( auto &&, NotifyEscrowRelease( transaction ) );
-            }
         }
-
-        BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Commit() );
 
         for ( auto &transaction_pair : transaction_batch )
         {
@@ -485,6 +486,7 @@ namespace sgns
                 outgoing_tx_processed_m[GetTransactionPath( *transaction_pair.first )] = transaction_pair.first;
             }
         }
+        BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Commit() );
 
         return outcome::success();
     }
@@ -758,8 +760,13 @@ namespace sgns
 
     outcome::result<void> TransactionManager::ParseTransferTransaction( const std::shared_ptr<IGeniusTransactions> &tx )
     {
-        auto transfer_tx = std::dynamic_pointer_cast<TransferTransaction>( tx );
-        auto dest_infos  = transfer_tx->GetDstInfos();
+        auto transfer_tx         = std::dynamic_pointer_cast<TransferTransaction>( tx );
+        auto dest_infos          = transfer_tx->GetDstInfos();
+        bool notify_destinations = false;
+        if ( ( transfer_tx->GetSrcAddress() == account_m->GetAddress() ) || ( full_node_m ) )
+        {
+            notify_destinations = true;
+        }
 
         for ( std::uint32_t i = 0; i < dest_infos.size(); ++i )
         {
@@ -769,6 +776,14 @@ namespace sgns
                 GeniusUTXO new_utxo( hash, i, dest_infos[i].encrypted_amount );
                 account_m->PutUTXO( new_utxo );
             }
+            if ( notify_destinations )
+            {
+                globaldb_m->AddBroadcastTopic( dest_infos[i].dest_address );
+            }
+        }
+        if ( full_node_m )
+        {
+            globaldb_m->AddBroadcastTopic( transfer_tx->GetSrcAddress() );
         }
 
         for ( auto &input : transfer_tx->GetInputInfos() )
@@ -790,6 +805,10 @@ namespace sgns
             GeniusUTXO new_utxo( hash, 0, mint_tx->GetAmount() );
             account_m->PutUTXO( new_utxo );
             m_logger->info( "Created tokens, balance " + account_m->GetBalance<std::string>() );
+        }
+        if ( full_node_m )
+        {
+            globaldb_m->AddBroadcastTopic( mint_tx->GetSrcAddress() );
         }
         return outcome::success();
     }
@@ -817,6 +836,10 @@ namespace sgns
                 account_m->RefreshUTXOs( escrow_tx->GetUTXOParameters().inputs_ );
             }
         }
+        if ( full_node_m )
+        {
+            globaldb_m->AddBroadcastTopic( escrow_tx->GetSrcAddress() );
+        }
         return outcome::success();
     }
 
@@ -829,51 +852,19 @@ namespace sgns
             m_logger->error( "Failed to cast transaction to EscrowReleaseTransaction" );
             return std::errc::invalid_argument;
         }
+        if ( ( escrowReleaseTx->GetSrcAddress() == account_m->GetAddress() ) || ( full_node_m ) )
+        {
+            globaldb_m->AddBroadcastTopic( escrowReleaseTx->GetEscrowSource() );
+        }
+
+        if ( full_node_m )
+        {
+            globaldb_m->AddBroadcastTopic( escrowReleaseTx->GetSrcAddress() );
+        }
 
         std::string originalEscrowHash = escrowReleaseTx->GetOriginalEscrowHash();
         m_logger->debug( "Successfully fetched release for escrow: " + originalEscrowHash );
 
-        return outcome::success();
-    }
-
-    outcome::result<void> TransactionManager::NotifyDestinationOfTransfer(
-        const std::shared_ptr<IGeniusTransactions> &tx )
-    {
-        auto transfer_tx = std::dynamic_pointer_cast<TransferTransaction>( tx );
-        if ( !transfer_tx )
-        {
-            m_logger->error( "Failed to cast transaction to TransferTransaction" );
-            return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::invalid_argument ) );
-        }
-        auto dest_infos = transfer_tx->GetDstInfos();
-
-        for ( const auto &dest_info : dest_infos )
-        {
-            if ( dest_info.dest_address == account_m->GetAddress() )
-            {
-                continue;
-            }
-
-            m_logger->debug( "Sending notification to " + dest_info.dest_address );
-
-            globaldb_m->AddBroadcastTopic( dest_info.dest_address );
-        }
-
-        return outcome::success();
-    }
-
-    outcome::result<void> TransactionManager::NotifyEscrowRelease( const std::shared_ptr<IGeniusTransactions> &tx )
-    {
-        auto escrow_release_tx = std::dynamic_pointer_cast<EscrowReleaseTransaction>( tx );
-        if ( !escrow_release_tx )
-        {
-            m_logger->error( "Failed to cast transaction to EscrowReleaseTransaction" );
-            return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::invalid_argument ) );
-        }
-
-        m_logger->debug( "Notifying escrow source: " + escrow_release_tx->GetEscrowSource() );
-
-        globaldb_m->AddBroadcastTopic( escrow_release_tx->GetEscrowSource() );
         return outcome::success();
     }
 
