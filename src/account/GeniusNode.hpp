@@ -109,6 +109,8 @@ namespace sgns
         void     AddPeer( const std::string &peer );
         void     RefreshUPNP( int pubsubport );
         uint64_t GetBalance();
+        uint64_t GetBalance( const std::string &token_id );
+        uint64_t GetBalance( const std::vector<std::string> &token_ids );
 
         [[nodiscard]] const std::vector<std::vector<uint8_t>> GetInTransactions() const
         {
@@ -257,7 +259,6 @@ namespace sgns
         static constexpr std::string_view PROCESSING_GRID_CHANNEL = "SGNUS.Jobs.2a.%02d";
         static constexpr std::string_view PROCESSING_CHANNEL      = "SGNUS.TestNet.Channel.2a.%02d";
         static constexpr std::string_view GNUS_NETWORK_PATH       = "SuperGNUSNode.TestNet.2a.%02d.%s";
-
 
         static std::string GetLoggingSystem( const std::string &base_path )
         {

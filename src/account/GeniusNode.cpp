@@ -91,9 +91,7 @@ namespace sgns
                             bool                isprocessor,
                             uint16_t            base_port,
                             bool                is_full_node ) :
-        account_( std::make_shared<GeniusAccount>( dev_config.TokenID,
-                                                   dev_config.BaseWritePath,
-                                                   eth_private_key ) ),
+        account_( std::make_shared<GeniusAccount>( dev_config.TokenID, dev_config.BaseWritePath, eth_private_key ) ),
         io_( std::make_shared<boost::asio::io_context>() ),
         write_base_path_( dev_config.BaseWritePath ),
         autodht_( autodht ),
@@ -194,7 +192,7 @@ namespace sgns
 
         auto tokenid = dev_config_.TokenID;
 
-        auto pubsubport = GenerateRandomPort( base_port, account_->GetAddress() +  tokenid );
+        auto pubsubport = GenerateRandomPort( base_port, account_->GetAddress() + tokenid );
 
         std::vector<std::string> addresses;
         // UPNP
@@ -851,6 +849,16 @@ namespace sgns
     uint64_t GeniusNode::GetBalance()
     {
         return transaction_manager_->GetBalance();
+    }
+
+    uint64_t GeniusNode::GetBalance( const std::string &token_id )
+    {
+        return account_->GetBalance( token_id );
+    }
+
+    uint64_t GeniusNode::GetBalance( const std::vector<std::string> &token_ids )
+    {
+        return account_->GetBalance( token_ids );
     }
 
     std::string GeniusNode::FormatChildTokens( uint64_t amount ) const
