@@ -1,0 +1,72 @@
+//  To parse this JSON data, first install
+//
+//      Boost     http://www.boost.org
+//      json.hpp  https://github.com/nlohmann/json
+//
+//  Then include this file, and then do
+//
+//     stdout data = nlohmann::json::parse(jsonString);
+
+#pragma once
+
+#include <boost/optional.hpp>
+#include <nlohmann/json.hpp>
+#include "helper.hpp"
+
+#include "TypeEnum.hpp"
+#include "Author.hpp"
+#include "DescriptionClass.hpp"
+#include "Axes.hpp"
+#include "ParamsProperties.hpp"
+#include "Params.hpp"
+#include "DataTypeClass.hpp"
+#include "DataTransformProperties.hpp"
+#include "DataTransform.hpp"
+#include "Epsilon.hpp"
+#include "DimensionsProperties.hpp"
+#include "Dimensions.hpp"
+#include "Format.hpp"
+#include "GnusSpecVersion.hpp"
+#include "TypeClass.hpp"
+#include "IoDeclarationProperties.hpp"
+#include "IoDeclaration.hpp"
+#include "BatchSize.hpp"
+#include "Inputs.hpp"
+#include "Optimizer.hpp"
+#include "ModelConfigProperties.hpp"
+#include "ModelConfig.hpp"
+#include "Shape.hpp"
+#include "ModelNodeProperties.hpp"
+#include "ModelNode.hpp"
+#include "Beta1.hpp"
+#include "OptimizerConfigProperties.hpp"
+#include "OptimizerConfig.hpp"
+#include "ConstraintsProperties.hpp"
+#include "Constraints.hpp"
+#include "Default.hpp"
+#include "ParameterProperties.hpp"
+#include "Parameter.hpp"
+#include "PurpleType.hpp"
+#include "IfProperties.hpp"
+#include "If.hpp"
+#include "Then.hpp"
+#include "AllOf.hpp"
+#include "Enabled.hpp"
+#include "PassProperties.hpp"
+#include "Pass.hpp"
+#include "PassIoBindingProperties.hpp"
+#include "PassIoBinding.hpp"
+#include "EntryPoint.hpp"
+#include "Value.hpp"
+#include "AdditionalPropertiesProperties.hpp"
+#include "AdditionalProperties.hpp"
+#include "Uniforms.hpp"
+#include "ShaderConfigProperties.hpp"
+#include "ShaderConfig.hpp"
+#include "Definitions.hpp"
+#include "Metadata.hpp"
+#include "Tags.hpp"
+#include "WelcomeProperties.hpp"
+#include "Welcome.hpp"
+namespace sgns {
+}

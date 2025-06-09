@@ -351,6 +351,10 @@ find_package(gnus_upnp CONFIG REQUIRED)
 set(valijson_DIR "${_THIRDPARTY_BUILD_DIR}/valijson/lib/cmake/valijson")
 find_package(valijson CONFIG REQUIRED)
 
+#json.hpp
+set(nlohmann_json_DIR "${_THIRDPARTY_BUILD_DIR}/json/share/cmake/nlohmann_json")
+find_package(nlohmann_json CONFIG REQUIRED)
+
 # wallet-core
 set(TrustWalletCore_LIBRARY_DIR "${_THIRDPARTY_BUILD_DIR}/wallet-core/lib")
 set(TrustWalletCore_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/wallet-core/include")
