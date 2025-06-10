@@ -124,7 +124,7 @@ namespace sgns
     {
         OUTCOME_TRY( auto ratio_fp, ScaledInteger::New( ratio, PRECISION ) );
 
-        OUTCOME_TRY( auto child_fp, ScaledInteger::New( in, PRECISION ) );
+        OUTCOME_TRY( auto child_fp, ScaledInteger::New( in, PRECISION, ScaledInteger::ParseMode::Truncate ) );
 
         OUTCOME_TRY( auto minion_fp, child_fp->Multiply( *ratio_fp ) );
 
