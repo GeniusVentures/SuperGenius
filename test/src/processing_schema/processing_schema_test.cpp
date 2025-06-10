@@ -186,10 +186,109 @@ TEST_F( ProcessingSchemaTest, GeneratedCodeTest )
         instance_stream.close();
         ASSERT_FALSE( instance_str.empty() ) << "Instance file is empty";
 
-        auto          data = nlohmann::json::parse( instance_str );
+        auto                 data = nlohmann::json::parse( instance_str );
         sgns::SgnsProcessing processing;
         sgns::from_json( data, processing );
-        std::cout << processing.get_author() << std::endl;
-        std::cout << processing.get_inputs()[0].get_description() << std::endl;
+
+        // Test basic string fields
+        ASSERT_EQ( processing.get_name(), "TestImageEnhancement" );
+        ASSERT_EQ( processing.get_version(), "1.0.0" );
+        ASSERT_EQ( processing.get_gnus_spec_version(), "1.0" );
+
+        // Test optional string fields
+        ASSERT_TRUE( processing.get_author().has_value() );
+        ASSERT_EQ( *processing.get_author(), "Test Author" );
+
+        ASSERT_TRUE( processing.get_description().has_value() );
+        ASSERT_EQ( *processing.get_description(), "A test processing definition for image enhancement" );
+
+        // Test tags array
+        ASSERT_TRUE( processing.get_tags().has_value() );
+        auto tags = processing.get_tags().value();
+        ASSERT_EQ( tags.size(), 3 );
+        ASSERT_EQ( tags[0], "image" );
+        ASSERT_EQ( tags[1], "enhancement" );
+        ASSERT_EQ( tags[2], "test" );
+
+        // Test inputs array
+        const auto &inputs = processing.get_inputs();
+        ASSERT_EQ( inputs.size(), 1 );
+        ASSERT_EQ( inputs[0].get_name(), "inputImage" );
+        ASSERT_EQ( inputs[0].get_type(), sgns::DataType::TEXTURE2_D );
+        if ( inputs[0].get_description().has_value() )
+        {
+            ASSERT_EQ( *inputs[0].get_description(), "Input image to be enhanced" );
+        }
+
+        // Test outputs array
+        const auto &outputs = processing.get_outputs();
+        ASSERT_EQ( outputs.size(), 1 );
+        ASSERT_EQ( outputs[0].get_name(), "enhancedImage" );
+        ASSERT_EQ( outputs[0].get_type(), sgns::DataType::TEXTURE2_D );
+        if ( outputs[0].get_description().has_value() )
+        {
+            ASSERT_EQ( *outputs[0].get_description(), "Enhanced output image" );
+        }
+
+        // Test parameters array
+        ASSERT_TRUE( processing.get_parameters().has_value() );
+        auto parameters = processing.get_parameters().value();
+        ASSERT_EQ( parameters.size(), 2 );
+
+        ASSERT_EQ( parameters[0].get_name(), "modelUri" );
+        ASSERT_EQ( parameters[0].get_type(), sgns::ParameterType::URI );
+        if ( parameters[0].get_description().has_value() )
+        {
+            ASSERT_EQ( *parameters[0].get_description(), "URI to the enhancement model" );
+        }
+
+        ASSERT_EQ( parameters[1].get_name(), "enhancementStrength" );
+        ASSERT_EQ( parameters[1].get_type(), sgns::ParameterType::FLOAT );
+        if ( parameters[1].get_description().has_value() )
+        {
+            ASSERT_EQ( *parameters[1].get_description(), "Strength of the enhancement effect" );
+        }
+        // Test passes array
+        const auto &passes = processing.get_passes();
+        std::cout << "Passes size: " << passes.size() << std::endl;
+        ASSERT_EQ( passes.size(), 3 );
+
+        ASSERT_EQ( passes[0].get_name(), "preprocessing" );
+        ASSERT_EQ( passes[0].get_type(), sgns::PassType::DATA_TRANSFORM );
+        if ( passes[0].get_description().has_value() )
+        {
+            ASSERT_EQ( *passes[0].get_description(), "Normalize input image" );
+        }
+
+        ASSERT_EQ( passes[1].get_name(), "enhancement" );
+        ASSERT_EQ( passes[1].get_type(), sgns::PassType::INFERENCE );
+        if ( passes[1].get_description().has_value() )
+        {
+            ASSERT_EQ( *passes[1].get_description(), "AI-based image enhancement" );
+        }
+
+        ASSERT_EQ( passes[2].get_name(), "postprocessing" );
+        ASSERT_EQ( passes[2].get_type(), sgns::PassType::DATA_TRANSFORM );
+        if ( passes[2].get_description().has_value() )
+        {
+            ASSERT_EQ( *passes[2].get_description(), "Denormalize and output final image" );
+        }
+
+        // Test metadata
+        //ASSERT_TRUE( processing.get_metadata().has_value() );
+        auto metadata = processing.get_metadata().value();
+        ASSERT_TRUE( metadata.find( "created_date" ) != metadata.end() );
+        ASSERT_TRUE( metadata.find( "framework" ) != metadata.end() );
+        ASSERT_TRUE( metadata.find( "test_case" ) != metadata.end() );
+
+        std::cout << "Processing definition parsed successfully:" << std::endl;
+        std::cout << "Name: " << processing.get_name() << std::endl;
+        std::cout << "Version: " << processing.get_version() << std::endl;
+        std::cout << "Author: " << ( processing.get_author() ? *processing.get_author() : "N/A" ) << std::endl;
+        std::cout << "Inputs: " << processing.get_inputs().size() << std::endl;
+        std::cout << "Outputs: " << processing.get_outputs().size() << std::endl;
+        std::cout << "Parameters: " << ( processing.get_parameters() ? processing.get_parameters()->size() : 0 )
+                  << std::endl;
+        std::cout << "Passes: " << processing.get_passes().size() << std::endl;
     }
 }
