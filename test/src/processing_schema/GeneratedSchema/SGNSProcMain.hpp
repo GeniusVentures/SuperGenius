@@ -5,7 +5,7 @@
 //
 //  Then include this file, and then do
 //
-//     stdout data = nlohmann::json::parse(jsonString);
+//     SGNSProcMain.hpp data = nlohmann::json::parse(jsonString);
 
 #pragma once
 
@@ -13,7 +13,6 @@
 #include <nlohmann/json.hpp>
 #include "helper.hpp"
 
-#include "GnusSpecVersion.hpp"
 #include "Dimensions.hpp"
 #include "InputFormat.hpp"
 #include "DataType.hpp"

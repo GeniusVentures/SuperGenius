@@ -14,7 +14,14 @@
 #include "helper.hpp"
 
 namespace sgns {
+    /**
+     * Version of the GNUS processing definition specification
+     */
+
     using nlohmann::json;
 
+    /**
+     * Version of the GNUS processing definition specification
+     */
     enum class GnusSpecVersion : int { THE_10 };
 }
