@@ -114,10 +114,12 @@ INSTANTIATE_TEST_SUITE_P(
     FromStringParseModeTests,
     FromStringParseMode,
     ::testing::Values(
+        ParseModeParam_s{ "0.000", 3ULL, sgns::ScaledInteger::ParseMode::Truncate, 0ULL },
         ParseModeParam_s{ "1.2345", 3ULL, sgns::ScaledInteger::ParseMode::Truncate, 1234ULL },
         ParseModeParam_s{ "1.234", 3ULL, sgns::ScaledInteger::ParseMode::Truncate, 1234ULL },
         ParseModeParam_s{ "123.45678", 4ULL, sgns::ScaledInteger::ParseMode::Truncate, 1234567ULL },
         ParseModeParam_s{ "123.4567", 4ULL, sgns::ScaledInteger::ParseMode::Truncate, 1234567ULL },
+        ParseModeParam_s{ "0.000", 3ULL, sgns::ScaledInteger::ParseMode::Strict, 0ULL },
         ParseModeParam_s{ "1.23", 2ULL, sgns::ScaledInteger::ParseMode::Strict, 123ULL },
         ParseModeParam_s{ "0.0042", 4ULL, sgns::ScaledInteger::ParseMode::Strict, 42ULL },
         ParseModeParam_s{ "1.2345", 3ULL, sgns::ScaledInteger::ParseMode::Strict, std::errc::value_too_large },
