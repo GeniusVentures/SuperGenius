@@ -2,8 +2,8 @@
  * @file        ScaledInteger.cpp
  * @author      Luiz Guilherme Rizzatto Zucchi (luizgrz@gmail.com)
  * @brief       Fixed-point arithmetic utilities (Implementation file)
- * @version     1.0
- * @date        2025-01-29
+ * @version     1.1
+ * @date        2025-06-10
  * @copyright   Copyright (c) 2025
  */
 
@@ -32,9 +32,10 @@ namespace sgns
     }
 
     outcome::result<std::shared_ptr<ScaledInteger>> ScaledInteger::New( const std::string &str_value,
-                                                                        uint64_t           precision )
+                                                                        uint64_t           precision,
+                                                                        ParseMode          mode )
     {
-        OUTCOME_TRY( auto &&from_str_value, FromString( str_value, precision ) );
+        OUTCOME_TRY( auto &&from_str_value, FromString( str_value, precision, mode ) );
         auto ptr = std::shared_ptr<ScaledInteger>( new ScaledInteger( from_str_value, precision ) );
         return outcome::success( ptr );
     }
@@ -68,7 +69,9 @@ namespace sgns
         return result;
     }
 
-    outcome::result<uint64_t> ScaledInteger::FromString( const std::string &str_value, uint64_t precision )
+    outcome::result<uint64_t> ScaledInteger::FromString( const std::string &str_value,
+                                                         uint64_t           precision,
+                                                         ParseMode          mode ) // ← added ParseMode parameter
     {
         if ( str_value.empty() )
         {
@@ -100,6 +103,15 @@ namespace sgns
 
         if ( !fractional_str.empty() )
         {
+            if ( fractional_str.length() > precision )
+            {
+                if ( mode == ParseMode::Strict )
+                {
+                    return outcome::failure( std::make_error_code( std::errc::value_too_large ) );
+                }
+                fractional_str = fractional_str.substr( 0, precision );
+            }
+
             auto [ptr_frac, ec_frac] = std::from_chars( fractional_str.data(),
                                                         fractional_str.data() + fractional_str.size(),
                                                         fractional_part );
@@ -107,11 +119,6 @@ namespace sgns
             {
                 return outcome::failure( std::make_error_code( std::errc::invalid_argument ) );
             }
-        }
-
-        if ( fractional_str.length() > precision )
-        {
-            return outcome::failure( std::make_error_code( std::errc::value_too_large ) );
         }
 
         for ( uint64_t i = fractional_str.length(); i < precision; ++i )

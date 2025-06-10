@@ -77,6 +77,52 @@ INSTANTIATE_TEST_SUITE_P( FixedPrecisionFromStringTests,
                               FixedPrecisionParam_s{ ".", 9ULL, std::errc::invalid_argument },
                               FixedPrecisionParam_s{ "0.0000000001", 9ULL, std::errc::value_too_large } ) );
 
+// ======================== ParseModeFromStringTests ========================
+
+struct ParseModeParam_s
+{
+    std::string                       input;     ///< Input string representing a fixed-point number.
+    uint64_t                          precision; ///< Precision level for conversion.
+    sgns::ScaledInteger::ParseMode    mode;      ///< ParseMode to apply.
+    std::variant<uint64_t, std::errc> expected;  ///< Expected result or error code.
+};
+
+class FromStringParseMode : public ::testing::TestWithParam<ParseModeParam_s>
+{
+};
+
+TEST_P( FromStringParseMode, ParseModeTest )
+{
+    const auto &tc     = GetParam();
+    auto        result = sgns::ScaledInteger::FromString( tc.input, tc.precision, tc.mode );
+
+    if ( std::holds_alternative<uint64_t>( tc.expected ) )
+    {
+        uint64_t expected_val = std::get<uint64_t>( tc.expected );
+        ASSERT_TRUE( result.has_value() );
+        EXPECT_EQ( result.value(), expected_val );
+    }
+    else
+    {
+        std::errc expected_err = std::get<std::errc>( tc.expected );
+        ASSERT_FALSE( result.has_value() );
+        EXPECT_EQ( result.error(), std::make_error_code( expected_err ) );
+    }
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    FromStringParseModeTests,
+    FromStringParseMode,
+    ::testing::Values(
+        ParseModeParam_s{ "1.2345", 3ULL, sgns::ScaledInteger::ParseMode::Truncate, 1234ULL },
+        ParseModeParam_s{ "1.234", 3ULL, sgns::ScaledInteger::ParseMode::Truncate, 1234ULL },
+        ParseModeParam_s{ "123.45678", 4ULL, sgns::ScaledInteger::ParseMode::Truncate, 1234567ULL },
+        ParseModeParam_s{ "123.4567", 4ULL, sgns::ScaledInteger::ParseMode::Truncate, 1234567ULL },
+        ParseModeParam_s{ "1.23", 2ULL, sgns::ScaledInteger::ParseMode::Strict, 123ULL },
+        ParseModeParam_s{ "0.0042", 4ULL, sgns::ScaledInteger::ParseMode::Strict, 42ULL },
+        ParseModeParam_s{ "1.2345", 3ULL, sgns::ScaledInteger::ParseMode::Strict, std::errc::value_too_large },
+        ParseModeParam_s{ "123.45678", 4ULL, sgns::ScaledInteger::ParseMode::Strict, std::errc::value_too_large } ) );
+
 /**
  * @brief Struct to hold test parameters for conversion with inferred precision.
  */
