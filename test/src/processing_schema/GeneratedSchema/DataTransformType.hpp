@@ -5,7 +5,7 @@
 //
 //  Then include this file, and then do
 //
-//     GnusSpecVersion.hpp data = nlohmann::json::parse(jsonString);
+//     DataTransformType.hpp data = nlohmann::json::parse(jsonString);
 
 #pragma once
 
@@ -16,5 +16,5 @@
 namespace sgns {
     using nlohmann::json;
 
-    enum class GnusSpecVersion : int { THE_10 };
+    enum class DataTransformType : int { COLOR_CONVERT, CROP, CUSTOM, DENORMALIZE, DEQUANTIZE, FLIP, NORMALIZE, PAD, QUANTIZE, RESIZE, ROTATE, TRANSPOSE };
 }

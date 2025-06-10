@@ -13,8 +13,6 @@
 #include <nlohmann/json.hpp>
 #include "helper.hpp"
 
-#include "ConstraintsProperties.hpp"
-
 namespace sgns {
     using nlohmann::json;
 
@@ -24,16 +22,22 @@ namespace sgns {
         virtual ~Constraints() = default;
 
         private:
-        std::string type;
-        ConstraintsProperties properties;
+        boost::optional<std::vector<nlohmann::json>> constraints_enum;
+        boost::optional<double> max;
+        boost::optional<double> min;
+        boost::optional<std::string> pattern;
 
         public:
-        const std::string & get_type() const { return type; }
-        std::string & get_mutable_type() { return type; }
-        void set_type(const std::string & value) { this->type = value; }
+        boost::optional<std::vector<nlohmann::json>> get_constraints_enum() const { return constraints_enum; }
+        void set_constraints_enum(boost::optional<std::vector<nlohmann::json>> value) { this->constraints_enum = value; }
 
-        const ConstraintsProperties & get_properties() const { return properties; }
-        ConstraintsProperties & get_mutable_properties() { return properties; }
-        void set_properties(const ConstraintsProperties & value) { this->properties = value; }
+        boost::optional<double> get_max() const { return max; }
+        void set_max(boost::optional<double> value) { this->max = value; }
+
+        boost::optional<double> get_min() const { return min; }
+        void set_min(boost::optional<double> value) { this->min = value; }
+
+        boost::optional<std::string> get_pattern() const { return pattern; }
+        void set_pattern(boost::optional<std::string> value) { this->pattern = value; }
     };
 }

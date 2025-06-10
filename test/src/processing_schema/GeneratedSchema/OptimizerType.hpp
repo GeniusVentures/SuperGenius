@@ -5,7 +5,7 @@
 //
 //  Then include this file, and then do
 //
-//     Value.hpp data = nlohmann::json::parse(jsonString);
+//     OptimizerType.hpp data = nlohmann::json::parse(jsonString);
 
 #pragma once
 
@@ -16,13 +16,5 @@
 namespace sgns {
     using nlohmann::json;
 
-    class Value {
-        public:
-        Value() = default;
-        virtual ~Value() = default;
-
-        private:
-
-        public:
-    };
+    enum class OptimizerType : int { ADADELTA, ADAGRAD, ADAM, ADAMW, RMSPROP, SGD };
 }

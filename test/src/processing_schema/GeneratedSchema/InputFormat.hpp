@@ -5,7 +5,7 @@
 //
 //  Then include this file, and then do
 //
-//     TypeEnum.hpp data = nlohmann::json::parse(jsonString);
+//     InputFormat.hpp data = nlohmann::json::parse(jsonString);
 
 #pragma once
 
@@ -14,7 +14,14 @@
 #include "helper.hpp"
 
 namespace sgns {
+    /**
+     * Data format (e.g., RGBA8, FLOAT32)
+     */
+
     using nlohmann::json;
 
-    enum class TypeEnum : int { ARRAY, INTEGER, NUMBER, STRING };
+    /**
+     * Data format (e.g., RGBA8, FLOAT32)
+     */
+    enum class InputFormat : int { FLOAT16, FLOAT32, INT16, INT32, INT8, RGB8, RGBA8 };
 }

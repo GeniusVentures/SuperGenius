@@ -5,7 +5,7 @@
 //
 //  Then include this file, and then do
 //
-//     GnusSpecVersion.hpp data = nlohmann::json::parse(jsonString);
+//     DataType.hpp data = nlohmann::json::parse(jsonString);
 
 #pragma once
 
@@ -16,5 +16,5 @@
 namespace sgns {
     using nlohmann::json;
 
-    enum class GnusSpecVersion : int { THE_10 };
+    enum class DataType : int { BOOL, BUFFER, FLOAT, INT, MAT2, MAT3, MAT4, STRING, TENSOR, TEXTURE1_D, TEXTURE1_D_ARRAY, TEXTURE2_D, TEXTURE2_D_ARRAY, TEXTURE3_D, TEXTURE3_D_ARRAY, TEXTURE_CUBE, VEC2, VEC3, VEC4 };
 }

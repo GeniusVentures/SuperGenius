@@ -13,32 +13,58 @@
 #include <nlohmann/json.hpp>
 #include "helper.hpp"
 
-#include "ModelNodeProperties.hpp"
+namespace sgns {
+    enum class DataType : int;
+}
 
 namespace sgns {
     using nlohmann::json;
 
     class ModelNode {
         public:
-        ModelNode() = default;
+        ModelNode() :
+            source_constraint(boost::none, boost::none, boost::none, boost::none, boost::none, boost::none, std::string("^(input|output|internal|parameter):[a-zA-Z][a-zA-Z0-9_]*$")),
+            target_constraint(boost::none, boost::none, boost::none, boost::none, boost::none, boost::none, std::string("^(output|internal):[a-zA-Z][a-zA-Z0-9_]*$"))
+        {}
         virtual ~ModelNode() = default;
 
         private:
-        std::string type;
-        std::vector<std::string> required;
-        ModelNodeProperties properties;
+        std::string name;
+        boost::optional<std::vector<int64_t>> shape;
+        boost::optional<std::string> source;
+        ClassMemberConstraints source_constraint;
+        boost::optional<std::string> target;
+        ClassMemberConstraints target_constraint;
+        DataType type;
 
         public:
-        const std::string & get_type() const { return type; }
-        std::string & get_mutable_type() { return type; }
-        void set_type(const std::string & value) { this->type = value; }
+        /**
+         * Node name in the model graph
+         */
+        const std::string & get_name() const { return name; }
+        std::string & get_mutable_name() { return name; }
+        void set_name(const std::string & value) { this->name = value; }
 
-        const std::vector<std::string> & get_required() const { return required; }
-        std::vector<std::string> & get_mutable_required() { return required; }
-        void set_required(const std::vector<std::string> & value) { this->required = value; }
+        /**
+         * Expected tensor shape
+         */
+        boost::optional<std::vector<int64_t>> get_shape() const { return shape; }
+        void set_shape(boost::optional<std::vector<int64_t>> value) { this->shape = value; }
 
-        const ModelNodeProperties & get_properties() const { return properties; }
-        ModelNodeProperties & get_mutable_properties() { return properties; }
-        void set_properties(const ModelNodeProperties & value) { this->properties = value; }
+        /**
+         * Data source using prefix notation (input:, output:, internal:, parameter:)
+         */
+        boost::optional<std::string> get_source() const { return source; }
+        void set_source(boost::optional<std::string> value) { if (value) CheckConstraint("source", source_constraint, *value); this->source = value; }
+
+        /**
+         * Data target using prefix notation
+         */
+        boost::optional<std::string> get_target() const { return target; }
+        void set_target(boost::optional<std::string> value) { if (value) CheckConstraint("target", target_constraint, *value); this->target = value; }
+
+        const DataType & get_type() const { return type; }
+        DataType & get_mutable_type() { return type; }
+        void set_type(const DataType & value) { this->type = value; }
     };
 }

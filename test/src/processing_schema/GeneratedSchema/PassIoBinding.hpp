@@ -13,32 +13,42 @@
 #include <nlohmann/json.hpp>
 #include "helper.hpp"
 
-#include "PassIoBindingProperties.hpp"
-
 namespace sgns {
     using nlohmann::json;
 
     class PassIoBinding {
         public:
-        PassIoBinding() = default;
+        PassIoBinding() :
+            source_constraint(boost::none, boost::none, boost::none, boost::none, boost::none, boost::none, std::string("^(input|output|internal|parameter):[a-zA-Z][a-zA-Z0-9_]*$")),
+            target_constraint(boost::none, boost::none, boost::none, boost::none, boost::none, boost::none, std::string("^(output|internal):[a-zA-Z][a-zA-Z0-9_]*$"))
+        {}
         virtual ~PassIoBinding() = default;
 
         private:
-        std::string type;
-        std::vector<std::string> required;
-        PassIoBindingProperties properties;
+        std::string name;
+        boost::optional<std::string> source;
+        ClassMemberConstraints source_constraint;
+        boost::optional<std::string> target;
+        ClassMemberConstraints target_constraint;
 
         public:
-        const std::string & get_type() const { return type; }
-        std::string & get_mutable_type() { return type; }
-        void set_type(const std::string & value) { this->type = value; }
+        /**
+         * Binding point name
+         */
+        const std::string & get_name() const { return name; }
+        std::string & get_mutable_name() { return name; }
+        void set_name(const std::string & value) { this->name = value; }
 
-        const std::vector<std::string> & get_required() const { return required; }
-        std::vector<std::string> & get_mutable_required() { return required; }
-        void set_required(const std::vector<std::string> & value) { this->required = value; }
+        /**
+         * Data source using prefix notation
+         */
+        boost::optional<std::string> get_source() const { return source; }
+        void set_source(boost::optional<std::string> value) { if (value) CheckConstraint("source", source_constraint, *value); this->source = value; }
 
-        const PassIoBindingProperties & get_properties() const { return properties; }
-        PassIoBindingProperties & get_mutable_properties() { return properties; }
-        void set_properties(const PassIoBindingProperties & value) { this->properties = value; }
+        /**
+         * Data target using prefix notation
+         */
+        boost::optional<std::string> get_target() const { return target; }
+        void set_target(boost::optional<std::string> value) { if (value) CheckConstraint("target", target_constraint, *value); this->target = value; }
     };
 }

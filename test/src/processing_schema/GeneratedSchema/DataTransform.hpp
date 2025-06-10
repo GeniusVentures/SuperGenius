@@ -13,7 +13,11 @@
 #include <nlohmann/json.hpp>
 #include "helper.hpp"
 
-#include "DataTransformProperties.hpp"
+#include "Params.hpp"
+
+namespace sgns {
+    enum class DataTransformType : int;
+}
 
 namespace sgns {
     using nlohmann::json;
@@ -24,21 +28,34 @@ namespace sgns {
         virtual ~DataTransform() = default;
 
         private:
-        std::string type;
-        std::vector<std::string> required;
-        DataTransformProperties properties;
+        std::string input;
+        std::string output;
+        boost::optional<Params> params;
+        DataTransformType type;
 
         public:
-        const std::string & get_type() const { return type; }
-        std::string & get_mutable_type() { return type; }
-        void set_type(const std::string & value) { this->type = value; }
+        /**
+         * Input data reference
+         */
+        const std::string & get_input() const { return input; }
+        std::string & get_mutable_input() { return input; }
+        void set_input(const std::string & value) { this->input = value; }
 
-        const std::vector<std::string> & get_required() const { return required; }
-        std::vector<std::string> & get_mutable_required() { return required; }
-        void set_required(const std::vector<std::string> & value) { this->required = value; }
+        /**
+         * Output data reference
+         */
+        const std::string & get_output() const { return output; }
+        std::string & get_mutable_output() { return output; }
+        void set_output(const std::string & value) { this->output = value; }
 
-        const DataTransformProperties & get_properties() const { return properties; }
-        DataTransformProperties & get_mutable_properties() { return properties; }
-        void set_properties(const DataTransformProperties & value) { this->properties = value; }
+        /**
+         * Transform-specific parameters
+         */
+        boost::optional<Params> get_params() const { return params; }
+        void set_params(boost::optional<Params> value) { this->params = value; }
+
+        const DataTransformType & get_type() const { return type; }
+        DataTransformType & get_mutable_type() { return type; }
+        void set_type(const DataTransformType & value) { this->type = value; }
     };
 }

@@ -5,7 +5,7 @@
 //
 //  Then include this file, and then do
 //
-//     GnusSpecVersion.hpp data = nlohmann::json::parse(jsonString);
+//     ModelFormat.hpp data = nlohmann::json::parse(jsonString);
 
 #pragma once
 
@@ -14,7 +14,14 @@
 #include "helper.hpp"
 
 namespace sgns {
+    /**
+     * Model format
+     */
+
     using nlohmann::json;
 
-    enum class GnusSpecVersion : int { THE_10 };
+    /**
+     * Model format
+     */
+    enum class ModelFormat : int { MNN, ONNX, PY_TORCH, TENSOR_FLOW };
 }

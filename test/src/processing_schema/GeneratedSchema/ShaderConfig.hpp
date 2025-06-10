@@ -13,32 +13,51 @@
 #include <nlohmann/json.hpp>
 #include "helper.hpp"
 
-#include "ShaderConfigProperties.hpp"
+#include "Uniform.hpp"
 
 namespace sgns {
+    enum class ShaderType : int;
+}
+
+namespace sgns {
+    /**
+     * Shader configuration for compute/render passes
+     */
+
     using nlohmann::json;
 
+    /**
+     * Shader configuration for compute/render passes
+     */
     class ShaderConfig {
         public:
         ShaderConfig() = default;
         virtual ~ShaderConfig() = default;
 
         private:
-        std::string type;
-        std::vector<std::string> required;
-        ShaderConfigProperties properties;
+        boost::optional<std::string> entry_point;
+        std::string source;
+        boost::optional<ShaderType> type;
+        boost::optional<std::map<std::string, Uniform>> uniforms;
 
         public:
-        const std::string & get_type() const { return type; }
-        std::string & get_mutable_type() { return type; }
-        void set_type(const std::string & value) { this->type = value; }
+        boost::optional<std::string> get_entry_point() const { return entry_point; }
+        void set_entry_point(boost::optional<std::string> value) { this->entry_point = value; }
 
-        const std::vector<std::string> & get_required() const { return required; }
-        std::vector<std::string> & get_mutable_required() { return required; }
-        void set_required(const std::vector<std::string> & value) { this->required = value; }
+        /**
+         * Shader source path or URI parameter
+         */
+        const std::string & get_source() const { return source; }
+        std::string & get_mutable_source() { return source; }
+        void set_source(const std::string & value) { this->source = value; }
 
-        const ShaderConfigProperties & get_properties() const { return properties; }
-        ShaderConfigProperties & get_mutable_properties() { return properties; }
-        void set_properties(const ShaderConfigProperties & value) { this->properties = value; }
+        boost::optional<ShaderType> get_type() const { return type; }
+        void set_type(boost::optional<ShaderType> value) { this->type = value; }
+
+        /**
+         * Uniform variable declarations
+         */
+        boost::optional<std::map<std::string, Uniform>> get_uniforms() const { return uniforms; }
+        void set_uniforms(boost::optional<std::map<std::string, Uniform>> value) { this->uniforms = value; }
     };
 }

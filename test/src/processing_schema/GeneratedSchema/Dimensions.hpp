@@ -13,32 +13,47 @@
 #include <nlohmann/json.hpp>
 #include "helper.hpp"
 
-#include "DimensionsProperties.hpp"
-
 namespace sgns {
+    /**
+     * Optional dimensions specification
+     */
+
     using nlohmann::json;
 
+    /**
+     * Optional dimensions specification
+     */
     class Dimensions {
         public:
-        Dimensions() = default;
+        Dimensions() :
+            batch_constraint(boost::none, boost::none, boost::none, boost::none, boost::none, boost::none, boost::none),
+            channels_constraint(boost::none, boost::none, boost::none, boost::none, boost::none, boost::none, boost::none),
+            height_constraint(boost::none, boost::none, boost::none, boost::none, boost::none, boost::none, boost::none),
+            width_constraint(boost::none, boost::none, boost::none, boost::none, boost::none, boost::none, boost::none)
+        {}
         virtual ~Dimensions() = default;
 
         private:
-        std::string type;
-        std::string description;
-        DimensionsProperties properties;
+        boost::optional<int64_t> batch;
+        ClassMemberConstraints batch_constraint;
+        boost::optional<int64_t> channels;
+        ClassMemberConstraints channels_constraint;
+        boost::optional<int64_t> height;
+        ClassMemberConstraints height_constraint;
+        boost::optional<int64_t> width;
+        ClassMemberConstraints width_constraint;
 
         public:
-        const std::string & get_type() const { return type; }
-        std::string & get_mutable_type() { return type; }
-        void set_type(const std::string & value) { this->type = value; }
+        boost::optional<int64_t> get_batch() const { return batch; }
+        void set_batch(boost::optional<int64_t> value) { if (value) CheckConstraint("batch", batch_constraint, *value); this->batch = value; }
 
-        const std::string & get_description() const { return description; }
-        std::string & get_mutable_description() { return description; }
-        void set_description(const std::string & value) { this->description = value; }
+        boost::optional<int64_t> get_channels() const { return channels; }
+        void set_channels(boost::optional<int64_t> value) { if (value) CheckConstraint("channels", channels_constraint, *value); this->channels = value; }
 
-        const DimensionsProperties & get_properties() const { return properties; }
-        DimensionsProperties & get_mutable_properties() { return properties; }
-        void set_properties(const DimensionsProperties & value) { this->properties = value; }
+        boost::optional<int64_t> get_height() const { return height; }
+        void set_height(boost::optional<int64_t> value) { if (value) CheckConstraint("height", height_constraint, *value); this->height = value; }
+
+        boost::optional<int64_t> get_width() const { return width; }
+        void set_width(boost::optional<int64_t> value) { if (value) CheckConstraint("width", width_constraint, *value); this->width = value; }
     };
 }

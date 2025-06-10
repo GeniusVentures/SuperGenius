@@ -5,7 +5,7 @@
 //
 //  Then include this file, and then do
 //
-//     GnusSpecVersion.hpp data = nlohmann::json::parse(jsonString);
+//     LossFunction.hpp data = nlohmann::json::parse(jsonString);
 
 #pragma once
 
@@ -14,7 +14,14 @@
 #include "helper.hpp"
 
 namespace sgns {
+    /**
+     * Loss function for training
+     */
+
     using nlohmann::json;
 
-    enum class GnusSpecVersion : int { THE_10 };
+    /**
+     * Loss function for training
+     */
+    enum class LossFunction : int { BINARY_CROSS_ENTROPY, CROSS_ENTROPY, CUSTOM, HUBER_LOSS, L1_LOSS, MEAN_SQUARED_ERROR };
 }

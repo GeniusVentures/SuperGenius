@@ -13,32 +13,53 @@
 #include <nlohmann/json.hpp>
 #include "helper.hpp"
 
-#include "ParameterProperties.hpp"
+#include "Constraints.hpp"
+
+namespace sgns {
+    enum class ParameterType : int;
+}
 
 namespace sgns {
     using nlohmann::json;
 
     class Parameter {
         public:
-        Parameter() = default;
+        Parameter() :
+            name_constraint(boost::none, boost::none, boost::none, boost::none, boost::none, boost::none, std::string("^[a-zA-Z][a-zA-Z0-9_]*$"))
+        {}
         virtual ~Parameter() = default;
 
         private:
-        std::string type;
-        std::vector<std::string> required;
-        ParameterProperties properties;
+        boost::optional<Constraints> constraints;
+        nlohmann::json parameter_default;
+        boost::optional<std::string> description;
+        std::string name;
+        ClassMemberConstraints name_constraint;
+        ParameterType type;
 
         public:
-        const std::string & get_type() const { return type; }
-        std::string & get_mutable_type() { return type; }
-        void set_type(const std::string & value) { this->type = value; }
+        boost::optional<Constraints> get_constraints() const { return constraints; }
+        void set_constraints(boost::optional<Constraints> value) { this->constraints = value; }
 
-        const std::vector<std::string> & get_required() const { return required; }
-        std::vector<std::string> & get_mutable_required() { return required; }
-        void set_required(const std::vector<std::string> & value) { this->required = value; }
+        /**
+         * Default value for this parameter
+         */
+        const nlohmann::json & get_parameter_default() const { return parameter_default; }
+        nlohmann::json & get_mutable_parameter_default() { return parameter_default; }
+        void set_parameter_default(const nlohmann::json & value) { this->parameter_default = value; }
 
-        const ParameterProperties & get_properties() const { return properties; }
-        ParameterProperties & get_mutable_properties() { return properties; }
-        void set_properties(const ParameterProperties & value) { this->properties = value; }
+        boost::optional<std::string> get_description() const { return description; }
+        void set_description(boost::optional<std::string> value) { this->description = value; }
+
+        /**
+         * Parameter name
+         */
+        const std::string & get_name() const { return name; }
+        std::string & get_mutable_name() { return name; }
+        void set_name(const std::string & value) { CheckConstraint("name", name_constraint, value); this->name = value; }
+
+        const ParameterType & get_type() const { return type; }
+        ParameterType & get_mutable_type() { return type; }
+        void set_type(const ParameterType & value) { this->type = value; }
     };
 }

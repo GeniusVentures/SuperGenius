@@ -5,7 +5,7 @@
 //
 //  Then include this file, and then do
 //
-//     GnusSpecVersion.hpp data = nlohmann::json::parse(jsonString);
+//     ParameterType.hpp data = nlohmann::json::parse(jsonString);
 
 #pragma once
 
@@ -16,5 +16,5 @@
 namespace sgns {
     using nlohmann::json;
 
-    enum class GnusSpecVersion : int { THE_10 };
+    enum class ParameterType : int { ARRAY, BOOL, FLOAT, INT, OBJECT, STRING, URI };
 }

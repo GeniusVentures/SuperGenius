@@ -13,32 +13,59 @@
 #include <nlohmann/json.hpp>
 #include "helper.hpp"
 
-#include "IoDeclarationProperties.hpp"
+#include "Dimensions.hpp"
+
+namespace sgns {
+    enum class InputFormat : int;
+    enum class DataType : int;
+}
 
 namespace sgns {
     using nlohmann::json;
 
     class IoDeclaration {
         public:
-        IoDeclaration() = default;
+        IoDeclaration() :
+            name_constraint(boost::none, boost::none, boost::none, boost::none, boost::none, boost::none, std::string("^[a-zA-Z][a-zA-Z0-9_]*$"))
+        {}
         virtual ~IoDeclaration() = default;
 
         private:
-        std::string type;
-        std::vector<std::string> required;
-        IoDeclarationProperties properties;
+        boost::optional<std::string> description;
+        boost::optional<Dimensions> dimensions;
+        boost::optional<InputFormat> format;
+        std::string name;
+        ClassMemberConstraints name_constraint;
+        DataType type;
 
         public:
-        const std::string & get_type() const { return type; }
-        std::string & get_mutable_type() { return type; }
-        void set_type(const std::string & value) { this->type = value; }
+        /**
+         * Human-readable description
+         */
+        boost::optional<std::string> get_description() const { return description; }
+        void set_description(boost::optional<std::string> value) { this->description = value; }
 
-        const std::vector<std::string> & get_required() const { return required; }
-        std::vector<std::string> & get_mutable_required() { return required; }
-        void set_required(const std::vector<std::string> & value) { this->required = value; }
+        /**
+         * Optional dimensions specification
+         */
+        boost::optional<Dimensions> get_dimensions() const { return dimensions; }
+        void set_dimensions(boost::optional<Dimensions> value) { this->dimensions = value; }
 
-        const IoDeclarationProperties & get_properties() const { return properties; }
-        IoDeclarationProperties & get_mutable_properties() { return properties; }
-        void set_properties(const IoDeclarationProperties & value) { this->properties = value; }
+        /**
+         * Data format (e.g., RGBA8, FLOAT32)
+         */
+        boost::optional<InputFormat> get_format() const { return format; }
+        void set_format(boost::optional<InputFormat> value) { this->format = value; }
+
+        /**
+         * Unique identifier for this input/output
+         */
+        const std::string & get_name() const { return name; }
+        std::string & get_mutable_name() { return name; }
+        void set_name(const std::string & value) { CheckConstraint("name", name_constraint, value); this->name = value; }
+
+        const DataType & get_type() const { return type; }
+        DataType & get_mutable_type() { return type; }
+        void set_type(const DataType & value) { this->type = value; }
     };
 }

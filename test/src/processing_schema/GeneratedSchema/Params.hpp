@@ -13,32 +13,58 @@
 #include <nlohmann/json.hpp>
 #include "helper.hpp"
 
-#include "ParamsProperties.hpp"
-
 namespace sgns {
+    /**
+     * Transform-specific parameters
+     */
+
     using nlohmann::json;
 
+    /**
+     * Transform-specific parameters
+     */
     class Params {
         public:
         Params() = default;
         virtual ~Params() = default;
 
         private:
-        std::string type;
-        std::string description;
-        ParamsProperties properties;
+        boost::optional<double> angle;
+        boost::optional<std::vector<int64_t>> axes;
+        boost::optional<std::string> color_space;
+        boost::optional<std::string> custom_function;
+        boost::optional<int64_t> height;
+        boost::optional<std::vector<double>> mean;
+        boost::optional<std::string> method;
+        boost::optional<std::vector<double>> std;
+        boost::optional<int64_t> width;
 
         public:
-        const std::string & get_type() const { return type; }
-        std::string & get_mutable_type() { return type; }
-        void set_type(const std::string & value) { this->type = value; }
+        boost::optional<double> get_angle() const { return angle; }
+        void set_angle(boost::optional<double> value) { this->angle = value; }
 
-        const std::string & get_description() const { return description; }
-        std::string & get_mutable_description() { return description; }
-        void set_description(const std::string & value) { this->description = value; }
+        boost::optional<std::vector<int64_t>> get_axes() const { return axes; }
+        void set_axes(boost::optional<std::vector<int64_t>> value) { this->axes = value; }
 
-        const ParamsProperties & get_properties() const { return properties; }
-        ParamsProperties & get_mutable_properties() { return properties; }
-        void set_properties(const ParamsProperties & value) { this->properties = value; }
+        boost::optional<std::string> get_color_space() const { return color_space; }
+        void set_color_space(boost::optional<std::string> value) { this->color_space = value; }
+
+        boost::optional<std::string> get_custom_function() const { return custom_function; }
+        void set_custom_function(boost::optional<std::string> value) { this->custom_function = value; }
+
+        boost::optional<int64_t> get_height() const { return height; }
+        void set_height(boost::optional<int64_t> value) { this->height = value; }
+
+        boost::optional<std::vector<double>> get_mean() const { return mean; }
+        void set_mean(boost::optional<std::vector<double>> value) { this->mean = value; }
+
+        boost::optional<std::string> get_method() const { return method; }
+        void set_method(boost::optional<std::string> value) { this->method = value; }
+
+        boost::optional<std::vector<double>> get_std() const { return std; }
+        void set_std(boost::optional<std::vector<double>> value) { this->std = value; }
+
+        boost::optional<int64_t> get_width() const { return width; }
+        void set_width(boost::optional<int64_t> value) { this->width = value; }
     };
 }
