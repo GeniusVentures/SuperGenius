@@ -1,0 +1,132 @@
+{
+  "name": "posenet-inference",
+  "version": "1.0.0",
+  "gnus_spec_version": 1.0,
+  "author": "AI Assistant",
+  "description": "PoseNet inference on multiple image inputs using MNN model",
+  "tags": ["pose-estimation", "computer-vision", "inference"],
+  
+  "parameters": [
+    {
+      "name": "model_uri",
+      "type": "uri",
+      "default": "model.mnn",
+      "description": "Path to the MNN model file"
+    },
+    {
+      "name": "ballet_image_uri",
+      "type": "uri", 
+      "default": "data/ballet.data",
+      "description": "Path to ballet pose image data file"
+    },
+    {
+      "name": "frisbee_image_uri",
+      "type": "uri",
+      "default": "data/frisbee3.data", 
+      "description": "Path to frisbee pose image data file"
+    }
+  ],
+
+  "inputs": [
+    {
+      "name": "ballet_image",
+      "type": "texture2D",
+      "description": "Ballet pose image input",
+      "dimensions": {
+        "width": 256,
+        "height": 256,
+        "channels": 4
+      },
+      "format": "RGBA8"
+    },
+    {
+      "name": "frisbee_image", 
+      "type": "texture2D",
+      "description": "Frisbee pose image input",
+      "dimensions": {
+        "width": 256,
+        "height": 256,
+        "channels": 4
+      },
+      "format": "RGBA8"
+    }
+  ],
+
+  "outputs": [
+    {
+      "name": "ballet_keypoints",
+      "type": "tensor",
+      "description": "Detected keypoints for ballet image",
+      "dimensions": {
+        "width": 17,
+        "height": 3
+      },
+      "format": "FLOAT32"
+    },
+    {
+      "name": "frisbee_keypoints",
+      "type": "tensor", 
+      "description": "Detected keypoints for frisbee image",
+      "dimensions": {
+        "width": 17,
+        "height": 3
+      },
+      "format": "FLOAT32"
+    }
+  ],
+
+  "passes": [
+    {
+      "name": "ballet_pose_inference",
+      "type": "inference",
+      "description": "Run PoseNet inference on ballet image",
+      "model": {
+        "source_uri_param": "model_uri",
+        "format": "MNN",
+        "batch_size": 1,
+        "input_nodes": [
+          {
+            "name": "input",
+            "type": "texture2D",
+            "source": "input:ballet_image",
+            "shape": [1, 256, 256, 4]
+          }
+        ],
+        "output_nodes": [
+          {
+            "name": "output",
+            "type": "tensor",
+            "target": "output:ballet_keypoints",
+            "shape": [1, 17, 3]
+          }
+        ]
+      }
+    },
+    {
+      "name": "frisbee_pose_inference",
+      "type": "inference", 
+      "description": "Run PoseNet inference on frisbee image",
+      "model": {
+        "source_uri_param": "model_uri",
+        "format": "MNN",
+        "batch_size": 1,
+        "input_nodes": [
+          {
+            "name": "input",
+            "type": "texture2D", 
+            "source": "input:frisbee_image",
+            "shape": [1, 256, 256, 4]
+          }
+        ],
+        "output_nodes": [
+          {
+            "name": "output",
+            "type": "tensor",
+            "target": "output:frisbee_keypoints", 
+            "shape": [1, 17, 3]
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -350,4 +350,24 @@ TEST_F( ProcessingSchemaTest, GeneratedCodeTest )
             SUCCEED();
         }
     }
+
+    TEST_F( ProcessingSchemaTest, PosenetJobTest ) {
+        std::string bin_path  = boost::dll::program_location().parent_path().string() + "/";
+        std::string data_path = bin_path + "../../../../../test/src/processing_schema/";
+
+        // Load test instance file (validation already tested separately)
+        std::string   instance_file = data_path + "posenet-processing-job.json";
+        std::ifstream instance_stream( instance_file );
+        ASSERT_TRUE( instance_stream.is_open() ) << "Failed to open instance file: " << instance_file;
+
+        std::string instance_str( ( std::istreambuf_iterator<char>( instance_stream ) ),
+                                  std::istreambuf_iterator<char>() );
+        instance_stream.close();
+        ASSERT_FALSE( instance_str.empty() ) << "Instance file is empty";
+
+        auto                 data = nlohmann::json::parse( instance_str );
+        sgns::SgnsProcessing processing;
+        sgns::from_json( data, processing );
+        ASSERT_EQ( processing.get_name(), "posenet-inference" );
+    }
 }
