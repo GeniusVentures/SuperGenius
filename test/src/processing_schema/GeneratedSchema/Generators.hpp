@@ -109,7 +109,16 @@ namespace sgns {
 
     inline void from_json(const json & j, Dimensions& x) {
         x.set_batch(get_stack_optional<int64_t>(j, "batch"));
+        x.set_block_len(get_stack_optional<int64_t>(j, "block_len"));
+        x.set_block_line_stride(get_stack_optional<int64_t>(j, "block_line_stride"));
+        x.set_block_stride(get_stack_optional<int64_t>(j, "block_stride"));
         x.set_channels(get_stack_optional<int64_t>(j, "channels"));
+        x.set_chunk_count(get_stack_optional<int64_t>(j, "chunk_count"));
+        x.set_chunk_line_stride(get_stack_optional<int64_t>(j, "chunk_line_stride"));
+        x.set_chunk_offset(get_stack_optional<int64_t>(j, "chunk_offset"));
+        x.set_chunk_stride(get_stack_optional<int64_t>(j, "chunk_stride"));
+        x.set_chunk_subchunk_height(get_stack_optional<int64_t>(j, "chunk_subchunk_height"));
+        x.set_chunk_subchunk_width(get_stack_optional<int64_t>(j, "chunk_subchunk_width"));
         x.set_height(get_stack_optional<int64_t>(j, "height"));
         x.set_width(get_stack_optional<int64_t>(j, "width"));
     }
@@ -117,7 +126,16 @@ namespace sgns {
     inline void to_json(json & j, const Dimensions & x) {
         j = json::object();
         j["batch"] = x.get_batch();
+        j["block_len"] = x.get_block_len();
+        j["block_line_stride"] = x.get_block_line_stride();
+        j["block_stride"] = x.get_block_stride();
         j["channels"] = x.get_channels();
+        j["chunk_count"] = x.get_chunk_count();
+        j["chunk_line_stride"] = x.get_chunk_line_stride();
+        j["chunk_offset"] = x.get_chunk_offset();
+        j["chunk_stride"] = x.get_chunk_stride();
+        j["chunk_subchunk_height"] = x.get_chunk_subchunk_height();
+        j["chunk_subchunk_width"] = x.get_chunk_subchunk_width();
         j["height"] = x.get_height();
         j["width"] = x.get_width();
     }

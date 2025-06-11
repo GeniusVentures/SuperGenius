@@ -13,8 +13,17 @@
       "type": "texture2D",
       "description": "Ballet pose image input",
       "dimensions": {
-        "width": 256,
-        "height": 256,
+        "width": 1350,
+        "height": 900,
+		"block_len": 4860000 ,
+		"block_line_stride": 5400,
+		"block_stride": 0,
+		"chunk_line_stride": 1080,
+		"chunk_offset": 0,
+		"chunk_stride": 4320,
+		"chunk_subchunk_height": 5,
+		"chunk_subchunk_width": 5,
+		"chunk_count": 25,
         "channels": 4
       },
       "format": "RGBA8"
@@ -25,11 +34,20 @@
       "type": "texture2D",
       "description": "Frisbee pose image input",
       "dimensions": {
-        "width": 256,
-        "height": 256,
-        "channels": 4
+        "width": 512,
+        "height": 512,
+		"block_len": 786432 ,
+		"block_line_stride": 1536,
+		"block_stride": 0,
+		"chunk_line_stride": 384,
+		"chunk_offset": 0,
+		"chunk_stride": 1152,
+		"chunk_subchunk_height": 4,
+		"chunk_subchunk_width": 4,
+		"chunk_count": 16,
+        "channels": 3
       },
-      "format": "RGBA8"
+      "format": "RGB8"
     }
   ],
 

@@ -101,6 +101,15 @@
           "properties": {
             "width": { "type": "integer", "minimum": 1 },
             "height": { "type": "integer", "minimum": 1 },
+			"block_len": { "type": "integer", "minimum": 1 },
+			"block_line_stride": { "type": "integer", "minimum": 1 },
+			"block_stride": { "type": "integer", "minimum": 0 },
+			"chunk_line_stride": { "type": "integer", "minimum": 1 },
+			"chunk_offset": { "type": "integer", "minimum": 0 },
+			"chunk_stride": { "type": "integer", "minimum": 1 },
+			"chunk_subchunk_height": { "type": "integer", "minimum": 1 },
+			"chunk_subchunk_width": { "type": "integer", "minimum": 1 },
+			"chunk_count": { "type": "integer", "minimum": 1 },
             "channels": { "type": "integer", "minimum": 1 },
             "batch": { "type": "integer", "minimum": 1 }
           }

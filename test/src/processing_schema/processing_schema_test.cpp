@@ -372,8 +372,23 @@ TEST_F( ProcessingSchemaTest, GeneratedCodeTest )
         auto inputs = processing.get_inputs();
         for (auto& input : inputs)
         {
+            std::cout << input.get_name() << std::endl;
             std::cout << static_cast<int>( input.get_format().value() ) << std::endl;
-
+            std::cout << input.get_source_uri_param() << std::endl;
+            auto dimensions = input.get_dimensions().value();
+            std::cout << "Dimensions Width: " << dimensions.get_width() << std::endl;
+            std::cout << "Dimensions Height: " << dimensions.get_height() << std::endl;
+            std::cout << "Dimensions Channels: " << dimensions.get_channels() << std::endl;
+            std::cout << "Dimensions BlockLen: " << dimensions.get_block_len() << std::endl;
+            std::cout << "Dimensions BlockLineStride: " << dimensions.get_block_line_stride() << std::endl;
+            std::cout << "Dimensions BlockStride: " << dimensions.get_block_stride() << std::endl;
+            std::cout << "Dimensions Channels: " << dimensions.get_channels() << std::endl;
+            std::cout << "Dimensions ChunkCount: " << dimensions.get_chunk_count() << std::endl;
+            std::cout << "Dimensions ChunkLineStride: " << dimensions.get_chunk_line_stride() << std::endl;
+            std::cout << "Dimensions ChunkOffset: " << dimensions.get_chunk_offset() << std::endl;
+            std::cout << "Dimensions ChunkStride: " << dimensions.get_chunk_stride() << std::endl;
+            std::cout << "Dimensions SubChunkHeight: " << dimensions.get_chunk_subchunk_height() << std::endl;
+            std::cout << "Dimensions SubChunkWidth: " << dimensions.get_chunk_subchunk_width() << std::endl;
         }
         auto params = processing.get_parameters();
     }
