@@ -856,11 +856,6 @@ namespace sgns
         return account_->GetBalance( token_id );
     }
 
-    uint64_t GeniusNode::GetBalance( const std::vector<std::string> &token_ids )
-    {
-        return account_->GetBalance( token_ids );
-    }
-
     std::string GeniusNode::FormatChildTokens( uint64_t amount ) const
     {
         auto maybe_child_token = TokenAmount::ConvertToChildToken( amount, dev_config_.TokenValueInGNUS );

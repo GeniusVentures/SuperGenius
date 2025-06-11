@@ -62,30 +62,6 @@ TEST( GeniusAccount, BalanceByTokenNonexistent )
     EXPECT_EQ( account->GetBalance( "UNKNOWN" ), 0ull );
 }
 
-TEST( GeniusAccount, BalanceByTokenSet )
-{
-    auto    account = std::make_unique<GeniusAccount>( TOKEN_NAME, DATA_DIR, PRIV_KEY );
-    Hash256 h;
-    EXPECT_TRUE( account->PutUTXO( GeniusUTXO( h, 0, 50, "TOKA" ) ) );
-    EXPECT_TRUE( account->PutUTXO( GeniusUTXO( h, 2, 20, "TOKA" ) ) );
-    EXPECT_TRUE( account->PutUTXO( GeniusUTXO( h, 1, 30, "TOKB" ) ) );
-    EXPECT_TRUE( account->PutUTXO( GeniusUTXO( h, 3, 40, "TOKC" ) ) );
-    std::vector<std::string> tokens = { "TOKA", "TOKC" };
-    EXPECT_EQ( account->GetBalance( tokens ), 110ull );
-}
-
-TEST( GeniusAccount, BalanceByTokenSetEmpty )
-{
-    auto    account = std::make_unique<GeniusAccount>( TOKEN_NAME, DATA_DIR, PRIV_KEY );
-    Hash256 h;
-    EXPECT_TRUE( account->PutUTXO( GeniusUTXO( h, 0, 50, "TOKA" ) ) );
-    EXPECT_TRUE( account->PutUTXO( GeniusUTXO( h, 2, 20, "TOKA" ) ) );
-    EXPECT_TRUE( account->PutUTXO( GeniusUTXO( h, 1, 30, "TOKB" ) ) );
-    EXPECT_TRUE( account->PutUTXO( GeniusUTXO( h, 3, 40, "TOKC" ) ) );
-    std::vector<std::string> empty;
-    EXPECT_EQ( account->GetBalance( empty ), 0ull );
-}
-
 TEST( GeniusAccount, StringTemplateBalance )
 {
     auto    account = std::make_unique<GeniusAccount>( TOKEN_NAME, DATA_DIR, PRIV_KEY );

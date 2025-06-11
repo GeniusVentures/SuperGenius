@@ -75,8 +75,6 @@ namespace sgns
 
         uint64_t GetBalance( const std::string &token_id ) const;
 
-        uint64_t GetBalance( const std::vector<std::string> &token_ids ) const;
-
         [[nodiscard]] std::string GetToken() const
         {
             return token;

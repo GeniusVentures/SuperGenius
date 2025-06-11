@@ -107,18 +107,4 @@ namespace sgns
         return balance;
     }
 
-    uint64_t GeniusAccount::GetBalance( const std::vector<std::string> &token_ids ) const
-    {
-        std::unordered_set<std::string> token_set( token_ids.begin(), token_ids.end() );
-        uint64_t                        balance = 0;
-        for ( const auto &utxo : utxos )
-        {
-            if ( !utxo.GetLock() && token_set.count( utxo.GetTokenID() ) )
-            {
-                balance += utxo.GetAmount();
-            }
-        }
-        return balance;
-    }
-
 }
