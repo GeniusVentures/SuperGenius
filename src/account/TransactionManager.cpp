@@ -343,6 +343,7 @@ namespace sgns
             payout_peers.push_back( { peers_amount, subtask.node_address() } );
             remainder -= peers_amount;
         }
+        //TODO: see what do with token_id here
         m_logger->debug( "Sending to dev {}", remainder );
         payout_peers.push_back( { remainder, escrow_tx->GetDevAddress() } );
         InputUTXOInfo escrow_utxo_input;
