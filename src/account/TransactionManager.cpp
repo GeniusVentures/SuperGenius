@@ -634,12 +634,12 @@ namespace sgns
 
         OUTCOME_TRY( ( auto &&, dag ), IGeniusTransactions::DeSerializeDAGStruct( transaction_data_vector ) );
 
-        m_logger->debug( "Found the data, deserializing into DAG {}", transaction_key );
+        //m_logger->debug( "Found the data, deserializing into DAG {}", transaction_key );
 
         auto it = IGeniusTransactions::GetDeSerializers().find( dag.type() );
         if ( it == IGeniusTransactions::GetDeSerializers().end() )
         {
-            m_logger->info( "Invalid transaction found. No Deserialization available for type {}", dag.type() );
+            //m_logger->info( "Invalid transaction found. No Deserialization available for type {}", dag.type() );
             return std::errc::invalid_argument;
         }
         return it->second( transaction_data_vector );

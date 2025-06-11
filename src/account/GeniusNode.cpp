@@ -13,6 +13,7 @@
 #include "base/sgns_version.hpp"
 #include "account/TokenAmount.hpp"
 #include "account/GeniusNode.hpp"
+#include "account/MigrationManager.hpp"
 #include "crdt/globaldb/keypair_file_storage.hpp"
 #include "upnp.hpp"
 #include "processing/processing_imagesplit.hpp"
@@ -26,6 +27,9 @@
 #include <thread>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
+#include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
+#include <ipfs_lite/ipfs/graphsync/impl/local_requests.hpp>
+#include <libp2p/protocol/common/asio/asio_scheduler.hpp>
 
 namespace
 {
@@ -129,6 +133,8 @@ namespace sgns
         auto loggerBroadcaster    = base::createLogger( "PubSubBroadcasterExt", logdir );
         auto loggerDataStore      = base::createLogger( "CrdtDatastore", logdir );
         auto loggerTransactions   = base::createLogger( "TransactionManager", logdir );
+        auto loggerMigration      = base::createLogger( "MigrationManager", logdir );
+        auto loggerMigrationStep  = base::createLogger( "MigrationStep", logdir );
         auto loggerQueue          = base::createLogger( "ProcessingTaskQueueImpl", logdir );
         auto loggerRocksDB        = base::createLogger( "rocksdb", logdir );
         auto logkad               = base::createLogger( "Kademlia", logdir );
@@ -148,6 +154,8 @@ namespace sgns
         loggerBroadcaster->set_level( spdlog::level::err );
         loggerDataStore->set_level( spdlog::level::err );
         loggerTransactions->set_level( spdlog::level::err );
+        loggerMigration->set_level( spdlog::level::err );
+        loggerMigrationStep->set_level( spdlog::level::err );
         loggerQueue->set_level( spdlog::level::err );
         loggerRocksDB->set_level( spdlog::level::err );
         logkad->set_level( spdlog::level::err );
@@ -167,6 +175,8 @@ namespace sgns
         loggerBroadcaster->set_level( spdlog::level::err );
         loggerDataStore->set_level( spdlog::level::err );
         loggerTransactions->set_level( spdlog::level::err );
+        loggerMigration->set_level( spdlog::level::err );
+        loggerMigrationStep->set_level( spdlog::level::err );
         loggerQueue->set_level( spdlog::level::err );
         loggerRocksDB->set_level( spdlog::level::err );
         logkad->set_level( spdlog::level::err );
@@ -186,7 +196,7 @@ namespace sgns
         auto pubsubport = GenerateRandomPort( base_port, account_->GetAddress() + std::to_string( tokenid ) );
 
         std::vector<std::string> addresses;
-        //UPNP
+        // UPNP
         auto        upnp = std::make_shared<upnp::UPNP>();
         std::string lanip;
 
@@ -248,7 +258,7 @@ namespace sgns
             }
         }
 
-        //Make a base58 out of our address
+        // Make a base58 out of our address
         std::string                tempaddress = account_->GetAddress();
         std::vector<unsigned char> inputBytes( tempaddress.begin(), tempaddress.end() );
         std::vector<unsigned char> hash( SHA256_DIGEST_LENGTH );
@@ -308,10 +318,6 @@ namespace sgns
         }
         job_globaldb_ = std::move( global_db_ret.value() );
 
-        job_globaldb_->AddBroadcastTopic( processing_channel_topic_ );
-        job_globaldb_->AddListenTopic( processing_channel_topic_ );
-        job_globaldb_->Start();
-
         task_queue_      = std::make_shared<processing::ProcessingTaskQueueImpl>( job_globaldb_ );
         processing_core_ = std::make_shared<processing::ProcessingCoreImpl>( job_globaldb_, 1000000, 1 );
         processing_core_->RegisterProcessorFactory( "mnnimage",
@@ -330,6 +336,27 @@ namespace sgns
             [this]( const std::string &var ) { ProcessingError( var ); },
             account_->GetAddress() );
         processing_service_->SetChannelListRequestTimeout( boost::posix_time::milliseconds( 3000 ) );
+
+        auto migrationManager = sgns::MigrationManager::New( tx_globaldb_,     // newDb
+                                                             io_,              // ioContext
+                                                             pubsub_,          // pubSub
+                                                             graphsyncnetwork, // graphsync
+                                                             scheduler,        // scheduler
+                                                             generator,        // generator
+                                                             write_base_path_, // writeBasePath
+                                                             base58key         // base58key
+        );
+
+        auto migrationResult = migrationManager->Migrate();
+        if ( migrationResult.has_error() )
+        {
+            throw std::runtime_error( std::string( "Database migration failed: " ) +
+                                      migrationResult.error().message() );
+        }
+
+        job_globaldb_->AddBroadcastTopic( processing_channel_topic_ );
+        job_globaldb_->AddListenTopic( processing_channel_topic_ );
+        job_globaldb_->Start();
 
         transaction_manager_ = std::make_shared<TransactionManager>( tx_globaldb_,
                                                                      io_,
@@ -445,7 +472,7 @@ namespace sgns
         // Compute the SHA-256 hash of the input bytes
         std::vector<unsigned char> hash( SHA256_DIGEST_LENGTH );
         SHA256( inputBytes.data(), inputBytes.size(), hash.data() );
-        //Provide CID
+        // Provide CID
         libp2p::protocol::kademlia::ContentId key( hash );
         pubsub_->GetDHT()->Start();
         pubsub_->ProvideCID( key );
@@ -455,7 +482,7 @@ namespace sgns
         auto cidstring = libp2p::multi::ContentIdentifierCodec::toString( cidtest.value() );
         node_logger->info( "CID Test:: {}", cidstring.value() );
 
-        //Also Find providers
+        // Also Find providers
         pubsub_->StartFindingPeers( key );
     }
 
@@ -506,11 +533,11 @@ namespace sgns
 
         rapidjson::Document document;
         document.Parse( jsondata.c_str() );
-        //size_t           nSubTasks = 1;
+        // size_t           nSubTasks = 1;
         rapidjson::Value inputArray;
 
         inputArray = document["input"];
-        //nSubTasks  = inputArray.Size();
+        // nSubTasks  = inputArray.Size();
 
         processing::ProcessTaskSplitter  taskSplitter;
         std::list<SGProcessing::SubTask> subTasks;
@@ -526,7 +553,7 @@ namespace sgns
                 .SplitTask( task, subTasks, inputAsString, nChunks, false, pubsub_->GetHost()->getId().toBase58() );
 
             //}
-            //imageindex++;
+            // imageindex++;
         }
         auto cut = sgns::TokenAmount::ParseMinions( dev_config_.Cut );
         if ( !cut )
