@@ -17,10 +17,10 @@
       "pattern": "^\\d+\\.\\d+(\\.\\d+)?$"
     },
     "gnus_spec_version": {
-      "type": "string",
+      "type": "number", 
       "description": "Version of the GNUS processing definition specification",
-      "pattern": "^\\d+\\.\\d+$",
-      "const": "1.0"
+	  "minimum": 1.0,
+	  "maximum": 1.0
     },
     "author": {
       "type": "string",

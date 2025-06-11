@@ -1,7 +1,7 @@
 {
   "name": "TestImageEnhancement",
   "version": "1.0.0",
-  "gnus_spec_version": "1.0",
+  "gnus_spec_version": 1.0,
   "author": "Test Author",
   "description": "A test processing definition for image enhancement",
   "tags": ["image", "enhancement", "test"],

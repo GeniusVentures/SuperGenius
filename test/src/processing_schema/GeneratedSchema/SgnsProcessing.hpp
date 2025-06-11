@@ -30,7 +30,7 @@ namespace sgns {
     class SgnsProcessing {
         public:
         SgnsProcessing() :
-            gnus_spec_version_constraint(boost::none, boost::none, boost::none, boost::none, boost::none, boost::none, std::string("^\\d+\\.\\d+$")),
+            gnus_spec_version_constraint(boost::none, boost::none, 1, 1, boost::none, boost::none, boost::none),
             name_constraint(boost::none, boost::none, boost::none, boost::none, boost::none, boost::none, std::string("^[A-Za-z0-9_-]+$")),
             version_constraint(boost::none, boost::none, boost::none, boost::none, boost::none, boost::none, std::string("^\\d+\\.\\d+(\\.\\d+)?$"))
         {}
@@ -39,7 +39,7 @@ namespace sgns {
         private:
         boost::optional<std::string> author;
         boost::optional<std::string> description;
-        std::string gnus_spec_version;
+        double gnus_spec_version;
         ClassMemberConstraints gnus_spec_version_constraint;
         std::vector<IoDeclaration> inputs;
         boost::optional<std::map<std::string, nlohmann::json>> metadata;
@@ -68,9 +68,9 @@ namespace sgns {
         /**
          * Version of the GNUS processing definition specification
          */
-        const std::string & get_gnus_spec_version() const { return gnus_spec_version; }
-        std::string & get_mutable_gnus_spec_version() { return gnus_spec_version; }
-        void set_gnus_spec_version(const std::string & value) { CheckConstraint("gnus_spec_version", gnus_spec_version_constraint, value); this->gnus_spec_version = value; }
+        const double & get_gnus_spec_version() const { return gnus_spec_version; }
+        double & get_mutable_gnus_spec_version() { return gnus_spec_version; }
+        void set_gnus_spec_version(const double & value) { CheckConstraint("gnus_spec_version", gnus_spec_version_constraint, value); this->gnus_spec_version = value; }
 
         /**
          * Declares the external inputs this process requires

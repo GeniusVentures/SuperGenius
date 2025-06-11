@@ -339,7 +339,7 @@ namespace sgns {
     inline void from_json(const json & j, SgnsProcessing& x) {
         x.set_author(get_stack_optional<std::string>(j, "author"));
         x.set_description(get_stack_optional<std::string>(j, "description"));
-        x.set_gnus_spec_version(j.at("gnus_spec_version").get<std::string>());
+        x.set_gnus_spec_version(j.at("gnus_spec_version").get<double>());
         x.set_inputs(j.at("inputs").get<std::vector<IoDeclaration>>());
         x.set_metadata(get_stack_optional<std::map<std::string, nlohmann::json>>(j, "metadata"));
         x.set_name(j.at("name").get<std::string>());

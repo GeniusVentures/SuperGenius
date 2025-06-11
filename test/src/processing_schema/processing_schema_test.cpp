@@ -193,7 +193,7 @@ TEST_F( ProcessingSchemaTest, GeneratedCodeTest )
         // Test basic string fields
         ASSERT_EQ( processing.get_name(), "TestImageEnhancement" );
         ASSERT_EQ( processing.get_version(), "1.0.0" );
-        ASSERT_EQ( processing.get_gnus_spec_version(), "1.0" );
+        ASSERT_EQ( processing.get_gnus_spec_version(), 1.0 );
 
         // Test optional string fields
         ASSERT_TRUE( processing.get_author().has_value() );
@@ -284,6 +284,7 @@ TEST_F( ProcessingSchemaTest, GeneratedCodeTest )
         std::cout << "Processing definition parsed successfully:" << std::endl;
         std::cout << "Name: " << processing.get_name() << std::endl;
         std::cout << "Version: " << processing.get_version() << std::endl;
+        std::cout << "SpecVersion: " << processing.get_gnus_spec_version() << std::endl;
         std::cout << "Author: " << ( processing.get_author() ? *processing.get_author() : "N/A" ) << std::endl;
         std::cout << "Inputs: " << processing.get_inputs().size() << std::endl;
         std::cout << "Outputs: " << processing.get_outputs().size() << std::endl;
