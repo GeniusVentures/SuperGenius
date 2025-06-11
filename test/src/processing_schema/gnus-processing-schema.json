@@ -77,12 +77,16 @@
   "definitions": {
     "io_declaration": {
       "type": "object",
-      "required": ["name", "type"],
+      "required": ["source_uri_param", "name", "type"],
       "properties": {
         "name": {
           "type": "string",
           "description": "Unique identifier for this input/output",
           "pattern": "^[a-zA-Z][a-zA-Z0-9_]*$"
+        },
+		"source_uri_param": {
+          "type": "string",
+          "description": "Parameter name that contains the input URI"
         },
         "type": {
           "$ref": "#/definitions/data_type"

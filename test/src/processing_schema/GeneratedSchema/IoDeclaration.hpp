@@ -36,6 +36,7 @@ namespace sgns {
         boost::optional<InputFormat> format;
         std::string name;
         ClassMemberConstraints name_constraint;
+        std::string source_uri_param;
         DataType type;
 
         public:
@@ -63,6 +64,13 @@ namespace sgns {
         const std::string & get_name() const { return name; }
         std::string & get_mutable_name() { return name; }
         void set_name(const std::string & value) { CheckConstraint("name", name_constraint, value); this->name = value; }
+
+        /**
+         * Parameter name that contains the input URI
+         */
+        const std::string & get_source_uri_param() const { return source_uri_param; }
+        std::string & get_mutable_source_uri_param() { return source_uri_param; }
+        void set_source_uri_param(const std::string & value) { this->source_uri_param = value; }
 
         const DataType & get_type() const { return type; }
         DataType & get_mutable_type() { return type; }

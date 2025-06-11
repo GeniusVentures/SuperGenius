@@ -127,6 +127,7 @@ namespace sgns {
         x.set_dimensions(get_stack_optional<Dimensions>(j, "dimensions"));
         x.set_format(get_stack_optional<InputFormat>(j, "format"));
         x.set_name(j.at("name").get<std::string>());
+        x.set_source_uri_param(j.at("source_uri_param").get<std::string>());
         x.set_type(j.at("type").get<DataType>());
     }
 
@@ -136,6 +137,7 @@ namespace sgns {
         j["dimensions"] = x.get_dimensions();
         j["format"] = x.get_format();
         j["name"] = x.get_name();
+        j["source_uri_param"] = x.get_source_uri_param();
         j["type"] = x.get_type();
     }
 

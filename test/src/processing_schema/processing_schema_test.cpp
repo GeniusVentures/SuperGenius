@@ -369,5 +369,12 @@ TEST_F( ProcessingSchemaTest, GeneratedCodeTest )
         sgns::SgnsProcessing processing;
         sgns::from_json( data, processing );
         ASSERT_EQ( processing.get_name(), "posenet-inference" );
+        auto inputs = processing.get_inputs();
+        for (auto& input : inputs)
+        {
+            std::cout << static_cast<int>( input.get_format().value() ) << std::endl;
+
+        }
+        auto params = processing.get_parameters();
     }
 }

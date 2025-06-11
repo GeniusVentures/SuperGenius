@@ -5,31 +5,11 @@
   "author": "AI Assistant",
   "description": "PoseNet inference on multiple image inputs using MNN model",
   "tags": ["pose-estimation", "computer-vision", "inference"],
-  
-  "parameters": [
-    {
-      "name": "model_uri",
-      "type": "uri",
-      "default": "model.mnn",
-      "description": "Path to the MNN model file"
-    },
-    {
-      "name": "ballet_image_uri",
-      "type": "uri", 
-      "default": "data/ballet.data",
-      "description": "Path to ballet pose image data file"
-    },
-    {
-      "name": "frisbee_image_uri",
-      "type": "uri",
-      "default": "data/frisbee3.data", 
-      "description": "Path to frisbee pose image data file"
-    }
-  ],
 
   "inputs": [
     {
       "name": "ballet_image",
+	  "source_uri_param": "data/ballet.data",
       "type": "texture2D",
       "description": "Ballet pose image input",
       "dimensions": {
@@ -41,6 +21,7 @@
     },
     {
       "name": "frisbee_image", 
+	  "source_uri_param": "data/frisbee3.data",
       "type": "texture2D",
       "description": "Frisbee pose image input",
       "dimensions": {
@@ -55,6 +36,7 @@
   "outputs": [
     {
       "name": "ballet_keypoints",
+	  "source_uri_param": "dummy",
       "type": "tensor",
       "description": "Detected keypoints for ballet image",
       "dimensions": {
@@ -65,6 +47,7 @@
     },
     {
       "name": "frisbee_keypoints",
+	  "source_uri_param": "dummy",
       "type": "tensor", 
       "description": "Detected keypoints for frisbee image",
       "dimensions": {
@@ -81,7 +64,7 @@
       "type": "inference",
       "description": "Run PoseNet inference on ballet image",
       "model": {
-        "source_uri_param": "model_uri",
+        "source_uri_param": "model.mnn",
         "format": "MNN",
         "batch_size": 1,
         "input_nodes": [
@@ -107,7 +90,7 @@
       "type": "inference", 
       "description": "Run PoseNet inference on frisbee image",
       "model": {
-        "source_uri_param": "model_uri",
+        "source_uri_param": "model.mnn",
         "format": "MNN",
         "batch_size": 1,
         "input_nodes": [

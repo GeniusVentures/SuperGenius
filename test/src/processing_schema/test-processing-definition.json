@@ -9,6 +9,7 @@
   "inputs": [
     {
       "name": "inputImage",
+	  "source_uri_param": "dummy",
       "type": "texture2D",
       "description": "Input image to be enhanced",
       "dimensions": {
@@ -23,6 +24,7 @@
   "outputs": [
     {
       "name": "enhancedImage",
+	  "source_uri_param": "dummy",
       "type": "texture2D",
       "description": "Enhanced output image",
       "dimensions": {
