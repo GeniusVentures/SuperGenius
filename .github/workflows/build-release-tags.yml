@@ -1,0 +1,251 @@
+name: SuperGenius Tag Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to create releases for'
+        required: true
+        type: string
+
+jobs:
+  build:
+    env:
+      GRPC_BUILD_ENABLE_CCACHE: "ON"
+      GH_TOKEN: ${{ secrets.GNUS_TOKEN_1 }}
+    runs-on: ${{matrix.host}}
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [Android, iOS, OSX, Linux, Windows]
+        build-type: [Debug,Release]
+        abi: [""]
+        include:
+          - target: Linux
+            host: ubuntu-22.04
+            abi: "x86_64"
+            build-type: "Release"
+          - target: Linux
+            host: ubuntu-22.04
+            abi: "x86_64"
+            build-type: "Debug"
+          - target: Linux
+            host: ubuntu-24.04-arm
+            abi: "aarch64"
+            build-type: "Release"
+          - target: Linux
+            host: ubuntu-24.04-arm
+            abi: "aarch64"
+            build-type: "Debug"
+          - target: Windows
+            host: windows-latest
+          - target: OSX
+            host: macos-latest
+          - target: Android
+            host: ubuntu-22.04
+            abi: arm64-v8a
+            build-type: "Release"
+          - target: Android
+            host: ubuntu-22.04
+            abi: arm64-v8a
+            build-type: "Debug"
+          - target: Android
+            host: ubuntu-22.04
+            abi: armeabi-v7a
+            build-type: "Release"
+          - target: Android
+            host: ubuntu-22.04
+            abi: armeabi-v7a
+            build-type: "Debug"
+          - target: iOS
+            host: macos-latest
+        exclude:
+          - target: Android
+            abi: ""
+          - target: Linux
+            abi: ""
+    steps:
+      - name: Checkout SuperGenius repository
+        uses: actions/checkout@v4
+        with:
+          path: "SuperGenius"
+          submodules: "recursive"
+          ref: ${{ github.event.inputs.tag }}
+
+      - name: Set build directory
+        run: |
+          if [ '${{matrix.abi}}' ]; then
+            BUILD_DIRECTORY=build/${{matrix.target}}/${{matrix.build-type}}/${{matrix.abi}}
+          else
+            BUILD_DIRECTORY=build/${{matrix.target}}/${{matrix.build-type}}
+          fi
+          echo "BUILD_DIRECTORY=$BUILD_DIRECTORY" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Download thirdparty release
+        working-directory: ${{github.workspace}}
+        run: |
+          TAG_NAME="${{ github.event.inputs.tag }}"
+          echo "Building for tag: ${TAG_NAME}"
+
+          if [ '${{matrix.abi}}' ]; then
+            FILE_NAME=${{matrix.target}}-${{matrix.abi}}-${{matrix.build-type}}.tar.gz
+          else
+            FILE_NAME=${{matrix.target}}-${{matrix.build-type}}.tar.gz
+          fi
+          echo "FILE_NAME=${FILE_NAME}" >> $GITHUB_ENV
+
+          mkdir thirdparty
+          cd thirdparty
+
+          # Download from the tag's release
+          echo "Downloading thirdparty from tag: ${TAG_NAME}"
+
+          gh release download ${TAG_NAME} --repo GeniusVentures/thirdparty -p "${FILE_NAME}"
+          tar -zxf "${FILE_NAME}"
+        shell: bash
+
+      - name: Download zkLLVM release
+        working-directory: ${{github.workspace}}
+        run: |
+          TAG_NAME="${{ github.event.inputs.tag }}"
+          
+          mkdir zkLLVM
+          cd zkLLVM
+
+          echo "Downloading zkLLVM from tag: ${TAG_NAME}"
+
+          if [ "${{ matrix.target }}" = "Windows" ]; then
+              ZKLLVM_FILE_NAME=${{matrix.target}}-${{matrix.build-type}}.tar.gz
+              ZKLLVM_BUILD_DIR=build/${{matrix.target}}/${{matrix.build-type}}
+          elif [ '${{matrix.abi}}' ]; then
+              ZKLLVM_FILE_NAME=${{matrix.target}}-${{matrix.abi}}-Release.tar.gz
+              ZKLLVM_BUILD_DIR=build/${{matrix.target}}/Release/${{matrix.abi}}
+          else
+              ZKLLVM_FILE_NAME=${{matrix.target}}-Release.tar.gz
+              ZKLLVM_BUILD_DIR=build/${{matrix.target}}/Release
+          fi
+
+          echo "ZKLLVM_BUILD_DIR=${ZKLLVM_BUILD_DIR}" >> $GITHUB_ENV
+
+          gh release download ${TAG_NAME} --repo GeniusVentures/zkLLVM -p "${ZKLLVM_FILE_NAME}"
+
+          tar --exclude='*bin/assigner' --exclude='*bin/clang-zkllvm' --exclude='*bin/llvm-link-zkllvm' --exclude='*bin/transpiler' -xzf "${ZKLLVM_FILE_NAME}"
+        shell: bash
+
+      - name: Configure Linux host
+        if: ${{ runner.os == 'Linux'}}
+        run: |
+          sudo update-alternatives --install /usr/bin/cc cc $(which clang) 100
+          sudo update-alternatives --install /usr/bin/c++ c++ $(which clang++) 100
+          sudo update-alternatives --set cc $(which clang)
+          sudo update-alternatives --set c++ $(which clang++)
+           
+          sudo apt install ccache ninja-build libvulkan-dev -y
+          echo "CMAKE_GENERATOR=Ninja" >> $GITHUB_ENV
+
+      - name: Configure Windows host
+        if: ${{ runner.os == 'Windows'}}
+        run: |
+          choco install ccache -A
+
+      - name: Configure macOS host
+        if: ${{ runner.os == 'macOS'}}
+        run: |
+          brew install ccache ninja bash
+          PATH="$HOMEBREW_PREFIX/opt/gnu-tar/libexec/gnubin:$PATH"
+          echo "PATH=$PATH" >> $GITHUB_ENV
+          echo "CMAKE_GENERATOR=Ninja" >> $GITHUB_ENV
+
+      - name: Add Darwin toolchain
+        if: ${{ matrix.target == 'OSX'}}
+        run: rustup target add x86_64-apple-darwin
+
+      - name: Add iOS toolchain
+        if: ${{ matrix.target == 'iOS' }}
+        run: |
+          rustup toolchain install nightly-aarch64-apple-darwin
+          rustup component add rust-src --toolchain nightly-aarch64-apple-darwin
+          rustup target add aarch64-apple-ios
+
+      - name: Add Android toolchain
+        if: ${{ matrix.target == 'Android' }}
+        run: |
+          rustup target add aarch64-linux-android
+
+      - name: Install bindgen
+        run: cargo install cbindgen
+
+      - name: Add wasm Rust target
+        run: rustup target add wasm32-unknown-emscripten
+
+      - name: Configure CMake for Android
+        if: ${{ matrix.target == 'Android'}}
+        working-directory: ${{github.workspace}}/SuperGenius
+        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DANDROID_ABI=${{matrix.abi}} -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty/${BUILD_DIRECTORY} -DZKLLVM_DIR=${{github.workspace}}/zkLLVM/${ZKLLVM_BUILD_DIR}
+
+      - name: Configure CMake for Mac
+        if: ${{ matrix.target == 'OSX'}}
+        working-directory: ${{github.workspace}}/SuperGenius
+        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DPLATFORM=MAC_UNIVERSAL -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty/${BUILD_DIRECTORY} -DZKLLVM_DIR=${{github.workspace}}/zkLLVM/${ZKLLVM_BUILD_DIR}
+
+      - name: Configure CMake for iOS
+        if: ${{ matrix.target == 'iOS'}}
+        working-directory: ${{github.workspace}}/SuperGenius
+        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DPLATFORM=OS64 -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty/${BUILD_DIRECTORY} -DZKLLVM_DIR=${{github.workspace}}/zkLLVM/${ZKLLVM_BUILD_DIR}
+
+      - name: Configure CMake for Linux
+        if: ${{matrix.target == 'Linux'}}
+        working-directory: ${{github.workspace}}/SuperGenius
+        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty/${BUILD_DIRECTORY} -DZKLLVM_DIR=${{github.workspace}}/zkLLVM/${ZKLLVM_BUILD_DIR} -DABI_SUBFOLDER_NAME=${{matrix.abi}}
+
+      - name: Configure CMake for Windows
+        if: ${{matrix.target == 'Windows'}}
+        working-directory: ${{github.workspace}}/SuperGenius
+        run: cmake -S build/${{matrix.target}} -B $env:BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DTHIRDPARTY_DIR=${{github.workspace}}/thirdparty -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty/$env:BUILD_DIRECTORY -DZKLLVM_DIR=${{github.workspace}}/zkLLVM/$env:ZKLLVM_BUILD_DIR
+
+      - name: Build SuperGenius
+        working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
+        run: cmake --build . --config ${{matrix.build-type}} -j
+
+      - name: Install SuperGenius
+        working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
+        run: cmake --install . --config ${{matrix.build-type}}
+
+      - name: Create or check release
+        shell: bash
+        working-directory: ${{github.workspace}}/SuperGenius
+        run: |
+          TAG_NAME='${{ github.event.inputs.tag }}'
+          echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
+
+          echo "Checking if GitHub release exists for tag: $TAG_NAME"
+
+          set +e
+          gh release view $TAG_NAME
+          releaseFound=$?
+          set -e
+
+          if [[ $releaseFound -ne 0 ]]; then
+              echo "Release not found, creating for tag: $TAG_NAME"
+
+              # Create a single release for the tag
+              gh release create $TAG_NAME \
+                  -n "Build artifacts for tag ${TAG_NAME}" \
+                  -t "${TAG_NAME} build artifacts"
+          else
+              echo "Release already exists for tag: $TAG_NAME"
+          fi
+
+      - name: Compress build artifacts
+        working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
+        run: |
+          tar --exclude=.git -czvf ${FILE_NAME} --transform 's|^|${{env.BUILD_DIRECTORY}}/|' SuperGenius/
+        shell: bash
+
+      - name: Release file
+        working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
+        shell: bash
+        run: |
+          echo -e "Uploading ${FILE_NAME} to release ${TAG_NAME}"
+          gh release upload --clobber ${TAG_NAME} ${FILE_NAME}

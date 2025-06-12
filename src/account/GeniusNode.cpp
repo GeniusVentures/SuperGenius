@@ -14,6 +14,7 @@
 #include "base/ScaledInteger.hpp"
 #include "account/TokenAmount.hpp"
 #include "account/GeniusNode.hpp"
+#include "account/MigrationManager.hpp"
 #include "crdt/globaldb/keypair_file_storage.hpp"
 #include "upnp.hpp"
 #include "processing/processing_imagesplit.hpp"
@@ -27,6 +28,9 @@
 #include <thread>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
+#include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
+#include <ipfs_lite/ipfs/graphsync/impl/local_requests.hpp>
+#include <libp2p/protocol/common/asio/asio_scheduler.hpp>
 
 namespace
 {
@@ -133,6 +137,8 @@ namespace sgns
         auto loggerBroadcaster    = base::createLogger( "PubSubBroadcasterExt", logdir );
         auto loggerDataStore      = base::createLogger( "CrdtDatastore", logdir );
         auto loggerTransactions   = base::createLogger( "TransactionManager", logdir );
+        auto loggerMigration      = base::createLogger( "MigrationManager", logdir );
+        auto loggerMigrationStep  = base::createLogger( "MigrationStep", logdir );
         auto loggerQueue          = base::createLogger( "ProcessingTaskQueueImpl", logdir );
         auto loggerRocksDB        = base::createLogger( "rocksdb", logdir );
         auto logkad               = base::createLogger( "Kademlia", logdir );
@@ -152,6 +158,8 @@ namespace sgns
         loggerBroadcaster->set_level( spdlog::level::err );
         loggerDataStore->set_level( spdlog::level::err );
         loggerTransactions->set_level( spdlog::level::debug );
+        loggerMigration->set_level( spdlog::level::err );
+        loggerMigrationStep->set_level( spdlog::level::err );
         loggerQueue->set_level( spdlog::level::err );
         loggerRocksDB->set_level( spdlog::level::err );
         logkad->set_level( spdlog::level::err );
@@ -171,6 +179,8 @@ namespace sgns
         loggerBroadcaster->set_level( spdlog::level::err );
         loggerDataStore->set_level( spdlog::level::err );
         loggerTransactions->set_level( spdlog::level::err );
+        loggerMigration->set_level( spdlog::level::err );
+        loggerMigrationStep->set_level( spdlog::level::err );
         loggerQueue->set_level( spdlog::level::err );
         loggerRocksDB->set_level( spdlog::level::err );
         logkad->set_level( spdlog::level::err );
@@ -312,10 +322,6 @@ namespace sgns
         }
         job_globaldb_ = std::move( global_db_ret.value() );
 
-        job_globaldb_->AddBroadcastTopic( processing_channel_topic_ );
-        job_globaldb_->AddListenTopic( processing_channel_topic_ );
-        job_globaldb_->Start();
-
         task_queue_      = std::make_shared<processing::ProcessingTaskQueueImpl>( job_globaldb_ );
         processing_core_ = std::make_shared<processing::ProcessingCoreImpl>( job_globaldb_, 1000000, 1 );
         processing_core_->RegisterProcessorFactory( "mnnimage",
@@ -334,6 +340,27 @@ namespace sgns
             [this]( const std::string &var ) { ProcessingError( var ); },
             account_->GetAddress() );
         processing_service_->SetChannelListRequestTimeout( boost::posix_time::milliseconds( 3000 ) );
+
+        auto migrationManager = sgns::MigrationManager::New( tx_globaldb_,     // newDb
+                                                             io_,              // ioContext
+                                                             pubsub_,          // pubSub
+                                                             graphsyncnetwork, // graphsync
+                                                             scheduler,        // scheduler
+                                                             generator,        // generator
+                                                             write_base_path_, // writeBasePath
+                                                             base58key         // base58key
+        );
+
+        auto migrationResult = migrationManager->Migrate();
+        if ( migrationResult.has_error() )
+        {
+            throw std::runtime_error( std::string( "Database migration failed: " ) +
+                                      migrationResult.error().message() );
+        }
+
+        job_globaldb_->AddBroadcastTopic( processing_channel_topic_ );
+        job_globaldb_->AddListenTopic( processing_channel_topic_ );
+        job_globaldb_->Start();
 
         transaction_manager_ = std::make_shared<TransactionManager>( tx_globaldb_,
                                                                      io_,

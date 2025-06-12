@@ -196,7 +196,7 @@ namespace sgns::storage
     {
         auto it = std::unique_ptr<Iterator>( db_->NewIterator( ro_ ) );
         it->SeekToFirst();
-        return it->Valid();
+        return !it->Valid();
     }
 
     outcome::result<void> rocksdb::put( const Buffer &key, const Buffer &value )

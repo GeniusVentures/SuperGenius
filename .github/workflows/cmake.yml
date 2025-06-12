@@ -21,7 +21,7 @@ jobs:
       fail-fast: false
       matrix:
         target: [Android, iOS, OSX, Linux, Windows]
-        build-type: [Release]
+        build-type: [Debug,Release]
         abi: [""]
         include:
           - target: Linux
@@ -29,9 +29,17 @@ jobs:
             abi: "x86_64"
             build-type: "Release"
           - target: Linux
+            host: ubuntu-22.04
+            abi: "x86_64"
+            build-type: "Debug"
+          - target: Linux
             host: ubuntu-24.04-arm
             abi: "aarch64"
             build-type: "Release"
+          - target: Linux
+            host: ubuntu-24.04-arm
+            abi: "aarch64"
+            build-type: "Debug"
           - target: Windows
             host: windows-latest
           - target: OSX
@@ -39,11 +47,19 @@ jobs:
           - target: Android
             host: ubuntu-22.04
             abi: arm64-v8a
-            build-type: Release
+            build-type: "Release"
+          - target: Android
+            host: ubuntu-22.04
+            abi: arm64-v8a
+            build-type: "Debug"
           - target: Android
             host: ubuntu-22.04
             abi: armeabi-v7a
-            build-type: Release
+            build-type: "Release"
+          - target: Android
+            host: ubuntu-22.04
+            abi: armeabi-v7a
+            build-type: "Debug"
           - target: iOS
             host: macos-latest
         exclude:
@@ -108,28 +124,34 @@ jobs:
       - name: Download zkLLVM release
         working-directory: ${{github.workspace}}
         run: |
-          if git ls-remote --heads https://github.com/GeniusVentures/zkLLVM.git $CURRENT_BRANCH | grep -q $CURRENT_BRANCH; then
-              echo "Using same branch for zkLLVM"
-              zkLLVM_branch=${CURRENT_BRANCH}
+          if [ "$CURRENT_BRANCH" == "main" ]; then
+            zkLLVM_branch="main"
           else
-              echo "Using develop branch from zkLLVM"
-              zkLLVM_branch=develop
+            zkLLVM_branch="develop"
           fi
 
           mkdir zkLLVM
           cd zkLLVM
 
-          if [ '${{matrix.abi}}' ]; then
-              tag_name=${{matrix.target}}-${{matrix.abi}}-${zkLLVM_branch}-Release
+          if [ "${{ matrix.target }}" = "Windows" ]; then
+              ZKLLVM_FILE_NAME=${{matrix.target}}-${{matrix.build-type}}.tar.gz
+              ZKLLVM_BUILD_DIR=build/${{matrix.target}}/${{matrix.build-type}}
+              tag_name=${{matrix.target}}-${zkLLVM_branch}-${{matrix.build-type}}
+          elif [ '${{matrix.abi}}' ]; then
+              ZKLLVM_FILE_NAME=${{matrix.target}}-${{matrix.abi}}-Release.tar.gz
+              ZKLLVM_BUILD_DIR=build/${{matrix.target}}/Release/${{matrix.abi}}
+              tag_name=${{matrix.target}}-${zkLLVM_branch}-Release
           else
+              ZKLLVM_FILE_NAME=${{matrix.target}}-Release.tar.gz
+              ZKLLVM_BUILD_DIR=build/${{matrix.target}}/Release
               tag_name=${{matrix.target}}-${zkLLVM_branch}-Release
           fi
 
-          gh release download ${tag_name} --repo GeniusVentures/zkLLVM -p "*.tar.gz"
+          echo "ZKLLVM_BUILD_DIR=${ZKLLVM_BUILD_DIR}" >> $GITHUB_ENV
 
-          for library in *.tar.gz; do
-              tar --exclude='*bin/assigner' --exclude='*bin/clang-zkllvm' --exclude='*bin/llvm-link-zkllvm' --exclude='*bin/transpiler' -xzf "${library}"
-          done
+          gh release download ${tag_name} --repo GeniusVentures/zkLLVM -p "${ZKLLVM_FILE_NAME}"
+
+          tar --exclude='*bin/assigner' --exclude='*bin/clang-zkllvm' --exclude='*bin/llvm-link-zkllvm' --exclude='*bin/transpiler' -xzf "${ZKLLVM_FILE_NAME}"
         shell: bash
 
       - name: Configure Linux host
@@ -181,27 +203,27 @@ jobs:
       - name: Configure CMake for Android
         if: ${{ matrix.target == 'Android'}}
         working-directory: ${{github.workspace}}/SuperGenius
-        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DANDROID_ABI=${{matrix.abi}} -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty/${BUILD_DIRECTORY} -DZKLLVM_DIR=${{github.workspace}}/zkLLVM/${BUILD_DIRECTORY}
+        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DANDROID_ABI=${{matrix.abi}} -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty/${BUILD_DIRECTORY} -DZKLLVM_DIR=${{github.workspace}}/zkLLVM/${ZKLLVM_BUILD_DIR}
 
       - name: Configure CMake for Mac
         if: ${{ matrix.target == 'OSX'}}
         working-directory: ${{github.workspace}}/SuperGenius
-        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DPLATFORM=MAC_UNIVERSAL -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty/${BUILD_DIRECTORY} -DZKLLVM_DIR=${{github.workspace}}/zkLLVM/${BUILD_DIRECTORY}
+        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DPLATFORM=MAC_UNIVERSAL -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty/${BUILD_DIRECTORY} -DZKLLVM_DIR=${{github.workspace}}/zkLLVM/${ZKLLVM_BUILD_DIR}
 
       - name: Configure CMake for iOS
         if: ${{ matrix.target == 'iOS'}}
         working-directory: ${{github.workspace}}/SuperGenius
-        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DPLATFORM=OS64 -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty/${BUILD_DIRECTORY} -DZKLLVM_DIR=${{github.workspace}}/zkLLVM/${BUILD_DIRECTORY}
+        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DPLATFORM=OS64 -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty/${BUILD_DIRECTORY} -DZKLLVM_DIR=${{github.workspace}}/zkLLVM/${ZKLLVM_BUILD_DIR}
 
       - name: Configure CMake for Linux
         if: ${{matrix.target == 'Linux'}}
         working-directory: ${{github.workspace}}/SuperGenius
-        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty/${BUILD_DIRECTORY} -DZKLLVM_DIR=${{github.workspace}}/zkLLVM/${BUILD_DIRECTORY} -DABI_SUBFOLDER_NAME=${{matrix.abi}}
+        run: cmake -S build/${{matrix.target}} -B $BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty/${BUILD_DIRECTORY} -DZKLLVM_DIR=${{github.workspace}}/zkLLVM/${ZKLLVM_BUILD_DIR} -DABI_SUBFOLDER_NAME=${{matrix.abi}}
 
       - name: Configure CMake for Windows
         if: ${{matrix.target == 'Windows'}}
         working-directory: ${{github.workspace}}/SuperGenius
-        run: cmake -S build/${{matrix.target}} -B $env:BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty/$env:BUILD_DIRECTORY -DZKLLVM_DIR=${{github.workspace}}/zkLLVM/$env:BUILD_DIRECTORY
+        run: cmake -S build/${{matrix.target}} -B $env:BUILD_DIRECTORY -DCMAKE_BUILD_TYPE=${{matrix.build-type}} -DTHIRDPARTY_BUILD_DIR=${{github.workspace}}/thirdparty/$env:BUILD_DIRECTORY -DZKLLVM_DIR=${{github.workspace}}/zkLLVM/$env:ZKLLVM_BUILD_DIR
 
       - name: Build SuperGenius
         working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
@@ -209,7 +231,7 @@ jobs:
 
       - name: Install SuperGenius
         working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
-        run: cmake --install .
+        run: cmake --install . --config ${{matrix.build-type}}
 
       - name: Compress build artifacts
         working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}

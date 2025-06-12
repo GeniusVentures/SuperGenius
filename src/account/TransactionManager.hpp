@@ -85,6 +85,13 @@ namespace sgns
         bool WaitForTransactionOutgoing( const std::string &txId, std::chrono::milliseconds timeout ) const;
         bool WaitForEscrowRelease( const std::string &originalEscrowId, std::chrono::milliseconds timeout ) const;
 
+        static std::string       GetTransactionPath( IGeniusTransactions &element );
+
+        static std::string       GetTransactionProofPath( IGeniusTransactions &element );
+        static outcome::result<std::shared_ptr<IGeniusTransactions>> FetchTransaction(
+            const std::shared_ptr<crdt::GlobalDB> &db,
+            std::string_view                       transaction_key );
+
     protected:
         friend class GeniusNode;
         void EnqueueTransaction( TransactionPair element );
@@ -101,8 +108,7 @@ namespace sgns
         void                     Update();
         SGTransaction::DAGStruct FillDAGStruct( std::string transaction_hash = "" ) const;
         outcome::result<void>    SendTransaction();
-        std::string              GetTransactionPath( IGeniusTransactions &element );
-        static std::string       GetTransactionProofPath( IGeniusTransactions &element );
+
         static std::string       GetTransactionBasePath( const std::string &address );
         static std::string       GetBlockChainBase();
         static outcome::result<std::shared_ptr<IGeniusTransactions>> DeSerializeTransaction( std::string tx_data );
@@ -110,9 +116,7 @@ namespace sgns
                                                                                           const std::shared_ptr<IGeniusTransactions> &tx );
         static outcome::result<std::string>                          GetExpectedTxKey( const std::string &proof_key );
 
-        outcome::result<std::shared_ptr<IGeniusTransactions>> FetchTransaction(
-            const std::shared_ptr<crdt::GlobalDB> &db,
-            std::string_view                       transaction_key );
+
         outcome::result<bool> CheckProof( const std::shared_ptr<IGeniusTransactions> &tx );
         outcome::result<void> ParseTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
 
