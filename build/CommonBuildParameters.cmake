@@ -414,7 +414,7 @@ add_subdirectory(${PROJECT_ROOT}/src ${CMAKE_BINARY_DIR}/src)
 #add_subdirectory(${PROJECT_ROOT}/GeniusKDF ${CMAKE_BINARY_DIR}/GeniusKDF)
 
 add_subdirectory(${PROJECT_ROOT}/ProofSystem ${CMAKE_BINARY_DIR}/ProofSystem)
-add_subdirectory(${PROJECT_ROOT}/ProcessingSchema ${CMAKE_BINARY_DIR}/ProcessingSchema)
+add_subdirectory(${PROJECT_ROOT}/SGProcessingManager ${CMAKE_BINARY_DIR}/SGProcessingManager)
 
 # add_subdirectory(${PROJECT_ROOT}/app ${CMAKE_BINARY_DIR}/app)
 if(BUILD_TESTING)
