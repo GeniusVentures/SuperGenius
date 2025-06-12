@@ -29,7 +29,7 @@ protected:
     static inline DevConfig_st DEV_CONFIG = {
         "0xcafe", // Addr
         "0.65",   // Cut
-        1.0,      // TokenValueInGNUS
+        "1.0",    // TokenValueInGNUS
         0,        // TokenID
         ""        // BaseWritePath
     };
