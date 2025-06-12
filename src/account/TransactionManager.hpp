@@ -62,13 +62,11 @@ namespace sgns
         std::vector<std::vector<uint8_t>> GetOutTransactions() const;
         std::vector<std::vector<uint8_t>> GetInTransactions() const;
 
-        outcome::result<std::string>                            TransferFunds( uint64_t           amount,
-                                                                               const std::string &destination,
-                                                                               std::string        token_id = "" );
-        outcome::result<std::string>                            MintFunds( uint64_t    amount,
-                                                                           std::string transaction_hash,
-                                                                           std::string chainid,
-                                                                           std::string tokenid );
+        outcome::result<std::string> TransferFunds( uint64_t amount, const std::string &destination );
+        outcome::result<std::string> MintFunds( uint64_t    amount,
+                                                std::string transaction_hash,
+                                                std::string chainid,
+                                                std::string tokenid );
         outcome::result<std::pair<std::string, EscrowDataPair>> HoldEscrow( uint64_t           amount,
                                                                             const std::string &dev_addr,
                                                                             uint64_t           peers_cut,
@@ -85,9 +83,9 @@ namespace sgns
         bool WaitForTransactionOutgoing( const std::string &txId, std::chrono::milliseconds timeout ) const;
         bool WaitForEscrowRelease( const std::string &originalEscrowId, std::chrono::milliseconds timeout ) const;
 
-        static std::string       GetTransactionPath( IGeniusTransactions &element );
+        static std::string GetTransactionPath( IGeniusTransactions &element );
 
-        static std::string       GetTransactionProofPath( IGeniusTransactions &element );
+        static std::string GetTransactionProofPath( IGeniusTransactions &element );
         static outcome::result<std::shared_ptr<IGeniusTransactions>> FetchTransaction(
             const std::shared_ptr<crdt::GlobalDB> &db,
             std::string_view                       transaction_key );
@@ -109,13 +107,12 @@ namespace sgns
         SGTransaction::DAGStruct FillDAGStruct( std::string transaction_hash = "" ) const;
         outcome::result<void>    SendTransaction();
 
-        static std::string       GetTransactionBasePath( const std::string &address );
-        static std::string       GetBlockChainBase();
+        static std::string GetTransactionBasePath( const std::string &address );
+        static std::string GetBlockChainBase();
         static outcome::result<std::shared_ptr<IGeniusTransactions>> DeSerializeTransaction( std::string tx_data );
         static outcome::result<std::string>                          GetExpectedProofKey( const std::string                          &tx_key,
                                                                                           const std::shared_ptr<IGeniusTransactions> &tx );
         static outcome::result<std::string>                          GetExpectedTxKey( const std::string &proof_key );
-
 
         outcome::result<bool> CheckProof( const std::shared_ptr<IGeniusTransactions> &tx );
         outcome::result<void> ParseTransaction( const std::shared_ptr<IGeniusTransactions> &tx );

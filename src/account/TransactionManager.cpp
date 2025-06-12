@@ -205,9 +205,7 @@ namespace sgns
         return *account_m;
     }
 
-    outcome::result<std::string> TransactionManager::TransferFunds( uint64_t           amount,
-                                                                    const std::string &destination,
-                                                                    std::string        token_id )
+    outcome::result<std::string> TransactionManager::TransferFunds( uint64_t amount, const std::string &destination )
     {
         auto maybe_params = UTXOTxParameters::create( account_m->utxos,
                                                       account_m->GetAddress(),
@@ -277,7 +275,7 @@ namespace sgns
                      UTXOTxParameters::create( account_m->utxos,
                                                account_m->GetAddress(),
                                                amount,
-                                               account_m->GetToken(),
+                                               token_id,
                                                "0x" + hash_data.toReadableString() ) );
 
         account_m->utxos        = UTXOTxParameters::UpdateUTXOList( account_m->utxos, params );
@@ -333,19 +331,22 @@ namespace sgns
 
         OUTCOME_TRY( ( auto &&, peer_total ), escrow_amount_ptr->Multiply( *peers_cut_ptr ) );
 
+        const std::string &escrowTokenId = escrow_tx->GetUTXOParameters().outputs_[0].token_id;
+
         uint64_t peers_amount = peer_total.Value() / static_cast<uint64_t>( taskresult.subtask_results().size() );
         auto     remainder    = escrow_tx->GetAmount();
+
         for ( auto &subtask : taskresult.subtask_results() )
         {
             std::cout << "Subtask Result " << subtask.subtaskid() << "from " << subtask.node_address() << std::endl;
             m_logger->debug( "Paying out {} ", peers_amount );
             subtask_ids.push_back( subtask.subtaskid() );
-            payout_peers.push_back( { peers_amount, subtask.node_address() } );
+            payout_peers.push_back( { peers_amount, subtask.node_address(), escrowTokenId } );
             remainder -= peers_amount;
         }
         //TODO: see what do with token_id here
         m_logger->debug( "Sending to dev {}", remainder );
-        payout_peers.push_back( { remainder, escrow_tx->GetDevAddress() } );
+        payout_peers.push_back( { remainder, escrow_tx->GetDevAddress(), escrowTokenId } );
         InputUTXOInfo escrow_utxo_input;
 
         escrow_utxo_input.txid_hash_  = ( base::Hash256::fromReadableString( escrow_tx->dag_st.data_hash() ) ).value();
