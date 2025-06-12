@@ -104,7 +104,7 @@ namespace sgns
         for ( int i = 0; i < utxo_proto_params->outputs_size(); ++i )
         {
             const auto &out_proto = utxo_proto_params->outputs( i );
-            outputs.push_back( { out_proto.encrypted_amount(), out_proto.dest_addr() } );
+            outputs.push_back( { out_proto.encrypted_amount(), out_proto.dest_addr(), out_proto.token_id() } );
         }
         UTXOTxParameters utxo_params( inputs, outputs );
         auto             releaseTx = std::make_shared<EscrowReleaseTransaction>(
