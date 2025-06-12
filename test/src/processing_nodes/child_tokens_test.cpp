@@ -215,7 +215,7 @@ class GeniusNodeMintMainTest : public ::testing::TestWithParam<MintMainCase_s>
 {
 };
 
-TEST_P( GeniusNodeMintMainTest, DISABLED_MintMainBalance )
+TEST_P( GeniusNodeMintMainTest, MintMainBalance )
 {
     auto p    = GetParam();
     auto node = CreateNode( p.tokenValue, p.TokenID );
@@ -225,18 +225,22 @@ TEST_P( GeniusNodeMintMainTest, DISABLED_MintMainBalance )
     auto        parsedInitialChild = node->ParseChildTokens( initialChildStr );
     ASSERT_TRUE( parsedInitialChild.has_value() );
 
-    auto res = node->MintTokens( p.mintMain, "", "", "", std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+    auto res = node->MintTokens( p.mintMain,
+                                 "",
+                                 "",
+                                 p.TokenID,
+                                 std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
     ASSERT_TRUE( res.has_value() );
 
-    uint64_t    finalMain        = node->GetBalance();
-    std::string finalChildStr    = node->FormatChildTokens( finalMain );
+    std::string finalChildStr    = node->FormatChildTokens( node->GetBalance() );
     auto        parsedFinalChild = node->ParseChildTokens( finalChildStr );
     ASSERT_TRUE( parsedFinalChild.has_value() );
 
     auto parsedExpectedDelta = node->ParseChildTokens( p.expectedChild );
     ASSERT_TRUE( parsedExpectedDelta.has_value() );
 
-    EXPECT_EQ( finalMain - initialMain, p.mintMain );
+    EXPECT_EQ( node->GetBalance() - initialMain, p.mintMain );
+    EXPECT_EQ( node->GetBalance( p.TokenID ) - initialMain, p.mintMain );
     EXPECT_EQ( parsedFinalChild.value() - parsedInitialChild.value(), parsedExpectedDelta.value() );
 }
 
@@ -273,67 +277,99 @@ protected:
     }
 };
 
-TEST_P( GeniusNodeMintChildTest, DISABLED_MintChildBalance )
+TEST_P( GeniusNodeMintChildTest, MintChildBalance )
 {
     auto p    = GetParam();
     auto node = CreateNode( p.tokenValue, p.TokenID );
 
     uint64_t initialMain = node->GetBalance();
-    std::cout << "Initial main balance (raw): " << initialMain << "\n";
     std::string initialChildStr = node->FormatChildTokens( initialMain );
-    std::cout << "Initial child balance (formatted): " << initialChildStr << "\n";
     auto parsedInitial = node->ParseChildTokens( initialChildStr );
     ASSERT_TRUE( parsedInitial.has_value() );
-    std::cout << "Parsed initial child balance: " << parsedInitial.value() << "\n";
 
     auto parsedMint = node->ParseChildTokens( p.mintChild );
     ASSERT_TRUE( parsedMint.has_value() );
-    std::cout << "Parsed mint amount: " << parsedMint.value() << "\n";
 
     auto res = node->MintTokens( parsedMint.value(),
                                  "",
                                  "",
-                                 "",
+                                 p.TokenID,
                                  std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
     ASSERT_TRUE( res.has_value() );
-    std::cout << "MintTokens returned success: " << ( res.has_value() ? "true" : "false" ) << "\n";
 
-    uint64_t finalMain = node->GetBalance();
-    std::cout << "Final main balance (raw): " << finalMain << "\n";
-    std::string finalChildStr = node->FormatChildTokens( finalMain );
-    std::cout << "Final child balance (formatted): " << finalChildStr << "\n";
-    auto parsedFinal = node->ParseChildTokens( finalChildStr );
+    std::string finalChildStr = node->FormatChildTokens( node->GetBalance() );
+    auto        parsedFinal   = node->ParseChildTokens( finalChildStr );
     ASSERT_TRUE( parsedFinal.has_value() );
-    std::cout << "Parsed final child balance: " << parsedFinal.value() << "\n";
 
     auto parsedExpectedDelta = node->ParseChildTokens( p.mintChild );
     ASSERT_TRUE( parsedExpectedDelta.has_value() );
-    std::cout << "Expected child delta: " << parsedExpectedDelta.value() << "\n";
 
-    uint64_t actualMainDelta = finalMain - initialMain;
-    std::cout << "Actual main delta: " << actualMainDelta << ", Expected main delta: " << p.expectedMain << "\n";
-    EXPECT_EQ( actualMainDelta, p.expectedMain );
+    EXPECT_EQ( node->GetBalance() - initialMain, p.expectedMain );
+    EXPECT_EQ( node->GetBalance( p.TokenID ) - initialMain, p.expectedMain );
 
     auto actualChildDelta = parsedFinal.value() - parsedInitial.value();
-    std::cout << "Actual child delta: " << actualChildDelta << ", Expected child delta: " << parsedExpectedDelta.value()
-              << "\n";
     EXPECT_EQ( actualChildDelta, parsedExpectedDelta.value() );
 }
 
 INSTANTIATE_TEST_SUITE_P( MintChildVariations,
                           GeniusNodeMintChildTest,
                           ::testing::Values(
-                              // existing whole‐number cases
                               MintChildCase_s{ "1.0", "token1", "1.0", 1000000 },
                               MintChildCase_s{ "0.5", "token0_5", "1.0", 500000 },
                               MintChildCase_s{ "2.0", "token2", "1.0", 2000000 },
                               MintChildCase_s{ "1.0", "token1", "0.0001001", 100 },
                               MintChildCase_s{ "1.0", "token1", "0.0001009", 100 },
                               MintChildCase_s{ "0.5", "token0_5_frac", "0.3333333", 166666 },
-                            //   MintChildCase_s{ "2.5", "token2_5_frac", "1.2345678", 3086419 },
+                              //   MintChildCase_s{ "2.5", "token2_5_frac", "1.2345678", 3086419 },
                               MintChildCase_s{ "0.1", "token0_1_frac", "0.9999999", 99999 } ) );
 
-/// Suite 3: Transfer Main and Child Tokens with Base Node
+/// Suite 3: Mint multiple token IDs on same node
+TEST( GeniusNodeMultiTokenMintTest, MintMultipleTokenIds )
+{
+    auto node = CreateNode( "1.0", "tokenA" );
+
+    struct TokenMint
+    {
+        std::string tokenId;
+        uint64_t    amount;
+    };
+
+    std::vector<TokenMint> mints = { { "tokenA", 1000 },
+                                     { "tokenA", 2000 },
+                                     { "tokenB", 500 },
+                                     { "tokenB", 1500 },
+                                     { "tokenB", 2500 },
+                                     { "tokenC", 3000 } };
+
+    std::unordered_map<std::string, uint64_t> expectedTotals;
+    uint64_t                                  totalMinted = 0;
+
+    for ( const auto &tm : mints )
+    {
+        auto res = node->MintTokens( tm.amount,
+                                     "",
+                                     "",
+                                     tm.tokenId,
+                                     std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+        ASSERT_TRUE( res.has_value() ) << "MintTokens failed for " << tm.tokenId << " amount " << tm.amount;
+
+        expectedTotals[tm.tokenId] += tm.amount;
+        totalMinted                += tm.amount;
+    }
+
+    for ( const auto &entry : expectedTotals )
+    {
+        const auto &id       = entry.first;
+        uint64_t    expected = entry.second;
+        uint64_t    balance  = node->GetBalance( id );
+        EXPECT_EQ( balance, expected ) << "Balance mismatch for " << id;
+    }
+
+    uint64_t mainBalance = node->GetBalance();
+    EXPECT_EQ( mainBalance, totalMinted ) << "Main balance did not reflect total minted (" << totalMinted << ")";
+}
+
+/// Suite 4: Transfer Main and Child Tokens with Base Node
 
 /// Parameters for transfer-main tests
 typedef struct
