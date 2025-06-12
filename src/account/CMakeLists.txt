@@ -59,7 +59,6 @@ target_link_libraries(sgns_account
     protobuf::libprotobuf
     rapidjson
     coinprices
-	valijson
 	nlohmann_json
 	SGProcessingManager::SGProcessingManager
     ${WIN_CRYPT_LIBRARY}
