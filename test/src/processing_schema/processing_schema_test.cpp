@@ -11,8 +11,8 @@
 #include <valijson/schema_parser.hpp>
 #include <boost/dll.hpp>
 #include <boost/optional/optional_io.hpp>
-#include "GeneratedSchema/SGNSProcMain.hpp"
-#include "GeneratedSchema/Generators.hpp"
+#include "SGNSProcMain.hpp"
+#include "Generators.hpp"
 
 namespace sgns
 {
