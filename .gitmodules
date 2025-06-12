@@ -8,6 +8,6 @@
 [submodule "ProofSystem"]
 	path = ProofSystem
 	url = ../ProofSystem
-[submodule "ProcessingSchema"]
-	path = ProcessingSchema
-	url = git@github.com:GeniusVentures/ProcessingSchema.git
+[submodule "SGProcessingManager"]
+	path = SGProcessingManager
+	url = git@github.com:GeniusVentures/SGProcessingManager.git
