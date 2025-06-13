@@ -17,6 +17,11 @@ jobs:
       GRPC_BUILD_ENABLE_CCACHE: "ON"
       GH_TOKEN: ${{ secrets.GNUS_TOKEN_1 }}
     runs-on: ${{matrix.host}}
+    container:
+      image: ${{matrix.container}}
+      credentials:
+        username: ${{github.actor}}
+        password: ${{secrets.GNUS_TOKEN_1}}
     strategy:
       fail-fast: false
       matrix:
@@ -36,10 +41,12 @@ jobs:
             host: ubuntu-24.04-arm
             abi: "aarch64"
             build-type: "Release"
+            container: ghcr.io/geniusventures/debian-bullseye:latest
           - target: Linux
             host: ubuntu-24.04-arm
             abi: "aarch64"
             build-type: "Debug"
+            container: ghcr.io/geniusventures/debian-bullseye:latest
           - target: Windows
             host: windows-latest
           - target: OSX
