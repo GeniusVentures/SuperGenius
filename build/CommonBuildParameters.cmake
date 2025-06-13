@@ -388,6 +388,9 @@ include_directories(
     ${PROJECT_ROOT}/ProofSystem
 )
 include_directories(
+    ${PROJECT_ROOT}/SGProcessingManager
+)
+include_directories(
     ${PROJECT_ROOT}/app
 )
 

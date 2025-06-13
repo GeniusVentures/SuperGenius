@@ -13,6 +13,7 @@
 #include <boost/optional/optional_io.hpp>
 #include "SGNSProcMain.hpp"
 #include "Generators.hpp"
+#include <ProcessingBase/ProcessingManager.hpp>
 
 namespace sgns
 {

@@ -62,7 +62,7 @@ target_link_libraries(sgns_account
     rapidjson
     coinprices
 	nlohmann_json
-	SGProcessingManager::SGProcessingManager
+	ProcessingBase
     ${WIN_CRYPT_LIBRARY}
 )
 
