@@ -20,7 +20,9 @@ namespace
      * @param tokenId TokenValueInGNUS to initialize TokenID.
      * @return unique_ptr to the initialized GeniusNode.
      */
-    std::unique_ptr<sgns::GeniusNode> CreateNode( const std::string &tokenValue, const std::string &tokenId )
+    std::unique_ptr<sgns::GeniusNode> CreateNode( const std::string &tokenValue,
+                                                  const std::string &tokenId,
+                                                  bool               isProcessor = false )
     {
         static std::atomic<int> node_counter{ 0 };
         int                     id = node_counter.fetch_add( 1 );
@@ -48,7 +50,7 @@ namespace
                              return hex_chars[dist( rng )];
                          } );
 
-        auto node = std::make_unique<sgns::GeniusNode>( devConfig, key.c_str(), false, false );
+        auto node = std::make_unique<sgns::GeniusNode>( devConfig, key.c_str(), false, isProcessor );
         std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
         return node;
     }
@@ -282,9 +284,9 @@ TEST_P( GeniusNodeMintChildTest, MintChildBalance )
     auto p    = GetParam();
     auto node = CreateNode( p.tokenValue, p.TokenID );
 
-    uint64_t initialMain = node->GetBalance();
+    uint64_t    initialMain     = node->GetBalance();
     std::string initialChildStr = node->FormatChildTokens( initialMain );
-    auto parsedInitial = node->ParseChildTokens( initialChildStr );
+    auto        parsedInitial   = node->ParseChildTokens( initialChildStr );
     ASSERT_TRUE( parsedInitial.has_value() );
 
     auto parsedMint = node->ParseChildTokens( p.mintChild );
@@ -313,15 +315,14 @@ TEST_P( GeniusNodeMintChildTest, MintChildBalance )
 
 INSTANTIATE_TEST_SUITE_P( MintChildVariations,
                           GeniusNodeMintChildTest,
-                          ::testing::Values(
-                              MintChildCase_s{ "1.0", "token1", "1.0", 1000000 },
-                              MintChildCase_s{ "0.5", "token0_5", "1.0", 500000 },
-                              MintChildCase_s{ "2.0", "token2", "1.0", 2000000 },
-                              MintChildCase_s{ "1.0", "token1", "0.0001001", 100 },
-                              MintChildCase_s{ "1.0", "token1", "0.0001009", 100 },
-                              MintChildCase_s{ "0.5", "token0_5_frac", "0.3333333", 166666 },
-                              //   MintChildCase_s{ "2.5", "token2_5_frac", "1.2345678", 3086419 },
-                              MintChildCase_s{ "0.1", "token0_1_frac", "0.9999999", 99999 } ) );
+                          ::testing::Values( MintChildCase_s{ "1.0", "token1", "1.0", 1000000 },
+                                             MintChildCase_s{ "0.5", "token0_5", "1.0", 500000 },
+                                             MintChildCase_s{ "2.0", "token2", "1.0", 2000000 },
+                                             MintChildCase_s{ "1.0", "token1", "0.0001001", 100 },
+                                             MintChildCase_s{ "1.0", "token1", "0.0001009", 100 },
+                                             MintChildCase_s{ "0.5", "token0_5_frac", "0.3333333", 166666 },
+                                             //   MintChildCase_s{ "2.5", "token2_5_frac", "1.2345678", 3086419 },
+                                             MintChildCase_s{ "0.1", "token0_1_frac", "0.9999999", 99999 } ) );
 
 /// Suite 3: Mint multiple token IDs on same node
 TEST( GeniusNodeMultiTokenMintTest, MintMultipleTokenIds )
@@ -514,3 +515,114 @@ INSTANTIATE_TEST_SUITE_P( DISABLED_TransferChildVariations,
                           GeniusNodeTransferChildTest,
                           ::testing::Values( TransferChildCase_s{ "1.0", "0.2", "-0.2", "0.2" },
                                              TransferChildCase_s{ "0.5", "0.25", "-0.25", "0.25" } ) );
+
+class ProcessingNodesModuleTest : public ::testing::Test
+{
+protected:
+    void SetUp() override {}
+
+    void TearDown() override {}
+};
+
+TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
+{
+    auto node_main  = CreateNode( "1.0", "TOKMAIN", false );
+    auto node_proc1 = CreateNode( "0.65", "TOKPROC1", true );
+    auto node_proc2 = CreateNode( "0.65", "TOKPROC2", true );
+
+    auto mintResMain = node_main->MintTokens( 1000,
+                                              "",
+                                              "",
+                                              "TOKMAIN",
+                                              std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+    ASSERT_TRUE( mintResMain.has_value() ) << "Mint failed on node_main";
+
+    node_main->GetPubSub()->AddPeers(
+        { node_proc1->GetPubSub()->GetLocalAddress(), node_proc2->GetPubSub()->GetLocalAddress() } );
+    node_proc1->GetPubSub()->AddPeers( { node_main->GetPubSub()->GetLocalAddress() } );
+    node_proc2->GetPubSub()->AddPeers( { node_main->GetPubSub()->GetLocalAddress() } );
+
+    std::string bin_path = boost::dll::program_location().parent_path().string() + "/";
+#ifdef _WIN32
+    bin_path += "../";
+#endif
+    std::string json_data = R"(
+    {
+      "data": {
+        "type": "file",
+        "URL": "file://[basepath]../../../../test/src/processing_nodes/"
+      },
+      "model": {
+        "name": "mnnimage",
+        "file": "model.mnn"
+      },
+      "input": [
+        {
+          "image": "data/ballet.data",
+          "block_len": 4860000,
+          "block_line_stride": 5400,
+          "block_stride": 0,
+          "chunk_line_stride": 1080,
+          "chunk_offset": 0,
+          "chunk_stride": 4320,
+          "chunk_subchunk_height": 5,
+          "chunk_subchunk_width": 5,
+          "chunk_count": 25,
+          "channels": 4
+        },
+        {
+          "image": "data/frisbee3.data",
+          "block_len": 786432,
+          "block_line_stride": 1536,
+          "block_stride": 0,
+          "chunk_line_stride": 384,
+          "chunk_offset": 0,
+          "chunk_stride": 1152,
+          "chunk_subchunk_height": 4,
+          "chunk_subchunk_width": 4,
+          "chunk_count": 16,
+          "channels": 3
+        }
+      ]
+    }
+    )";
+    std::replace( bin_path.begin(), bin_path.end(), '\\', '/' );
+    boost::replace_all( json_data, "[basepath]", bin_path );
+
+    auto cost          = node_main->GetProcessCost( json_data );
+    auto bal_main_init = node_main->GetBalance();
+    auto bal_p1_init   = node_proc1->GetBalance();
+    auto bal_p2_init   = node_proc2->GetBalance();
+    auto tok_main_init = node_main->GetBalance( "TOKMAIN" );
+    auto tok_p1_init   = node_proc1->GetBalance( "TOKPROC1" );
+    auto tok_p2_init   = node_proc2->GetBalance( "TOKPROC2" );
+
+    auto postjob = node_main->ProcessImage( json_data );
+    ASSERT_TRUE( postjob ) << "ProcessImage failed: " << postjob.error().message();
+    ASSERT_TRUE( node_main->WaitForEscrowRelease( postjob.value(), std::chrono::milliseconds( 300000 ) ) );
+
+    assertWaitForCondition( [&]() { return node_main->GetBalance() == bal_main_init - cost; },
+                            std::chrono::milliseconds( 20000 ),
+                            "Main general balance not updated in time" );
+
+    ASSERT_EQ( bal_main_init - cost, node_main->GetBalance() );
+    ASSERT_EQ( tok_main_init - cost, node_main->GetBalance( "TOKMAIN" ) );
+
+    uint64_t expected_peer_gain = ( ( cost * 65 ) / 100 ) / 2;
+    assertWaitForCondition(
+        [&]()
+        {
+            uint64_t sum = node_proc1->GetBalance() + node_proc2->GetBalance();
+            return sum == ( bal_p1_init + bal_p2_init + 2 * expected_peer_gain );
+        },
+        std::chrono::milliseconds( 40000 ),
+        "Processors general balances not updated in time" );
+    ASSERT_EQ( bal_p1_init + bal_p2_init + 2 * expected_peer_gain,
+               node_proc1->GetBalance() + node_proc2->GetBalance() );
+    ASSERT_EQ( bal_p1_init + bal_p2_init + 2 * expected_peer_gain,
+               node_proc1->GetBalance( "TOKPROC1" ) + node_proc2->GetBalance() );
+
+    uint64_t dev_payment = cost - 2 * expected_peer_gain;
+    ASSERT_EQ( bal_main_init + bal_p1_init + bal_p2_init,
+               node_main->GetBalance() + node_proc1->GetBalance() + node_proc2->GetBalance() + dev_payment );
+}

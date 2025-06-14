@@ -318,7 +318,10 @@ namespace sgns
         job_globaldb_ = std::move( global_db_ret.value() );
 
         task_queue_      = std::make_shared<processing::ProcessingTaskQueueImpl>( job_globaldb_ );
-        processing_core_ = std::make_shared<processing::ProcessingCoreImpl>( job_globaldb_, 1000000, 1 );
+        processing_core_ = std::make_shared<processing::ProcessingCoreImpl>( job_globaldb_,
+                                                                             1000000,
+                                                                             1,
+                                                                             dev_config.TokenID );
         processing_core_->RegisterProcessorFactory( "mnnimage",
                                                     [] { return std::make_unique<processing::MNN_Image>(); } );
 

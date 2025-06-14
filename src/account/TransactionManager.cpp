@@ -339,9 +339,9 @@ namespace sgns
         for ( auto &subtask : taskresult.subtask_results() )
         {
             std::cout << "Subtask Result " << subtask.subtaskid() << "from " << subtask.node_address() << std::endl;
-            m_logger->debug( "Paying out {} ", peers_amount );
+            m_logger->debug( "Paying out {} in {}", peers_amount, subtask.token_id() );
             subtask_ids.push_back( subtask.subtaskid() );
-            payout_peers.push_back( { peers_amount, subtask.node_address(), escrowTokenId } );
+            payout_peers.push_back( { peers_amount, subtask.node_address(), subtask.token_id() } );
             remainder -= peers_amount;
         }
         //TODO: see what do with token_id here
