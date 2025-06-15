@@ -32,6 +32,7 @@
 #include <ipfs_lite/ipfs/graphsync/impl/local_requests.hpp>
 #include <libp2p/protocol/common/asio/asio_scheduler.hpp>
 
+
 namespace
 {
     uint16_t GenerateRandomPort( uint16_t base, const std::string &seed )
@@ -514,9 +515,10 @@ namespace sgns
 
     outcome::result<std::string> GeniusNode::ProcessImage( const std::string &jsondata )
     {
-        BOOST_OUTCOME_TRYV2( auto &&, CheckProcessValidity( jsondata ) );
+        OUTCOME_TRY( auto procmgr, ProcessingManager::Create( jsondata ) );
 
-        auto funds = GetProcessCost( jsondata );
+        
+        auto funds = GetProcessCost( procmgr );
         if ( funds <= 0 )
         {
             return outcome::failure( Error::PROCESS_COST_ERROR );
@@ -591,128 +593,10 @@ namespace sgns
         return tx_id;
     }
 
-    outcome::result<void> GeniusNode::CheckProcessValidity( const std::string &jsondata )
+
+    uint64_t GeniusNode::GetProcessCost( std::shared_ptr<ProcessingManager> procmgr )
     {
-        rapidjson::Document document;
-        document.Parse( jsondata.c_str() );
-
-        if ( document.HasParseError() )
-        {
-            return outcome::failure( Error::INVALID_JSON );
-        }
-
-        // Check for required fields
-        if ( !document.HasMember( "data" ) || !document["data"].IsObject() )
-        {
-            return outcome::failure( Error::PROCESS_INFO_MISSING );
-        }
-
-        if ( !document.HasMember( "model" ) || !document["model"].IsObject() )
-        {
-            return outcome::failure( Error::PROCESS_INFO_MISSING );
-        }
-
-        if ( !document.HasMember( "input" ) || !document["input"].IsArray() )
-        {
-            return outcome::failure( Error::PROCESS_INFO_MISSING );
-        }
-
-        // Extract and validate the model
-        const auto &model = document["model"];
-        if ( !model.HasMember( "name" ) || !model["name"].IsString() )
-        {
-            return outcome::failure( Error::PROCESS_INFO_MISSING );
-        }
-
-        std::string model_name      = model["name"].GetString();
-        auto        processor_check = processing_core_->CheckRegisteredProcessor( model_name );
-        if ( !processor_check )
-        {
-            return outcome::failure( Error::NO_PROCESSOR ); // Return the error if the processor is not registered
-        }
-
-        // Extract input array
-        const auto &inputArray = document["input"];
-        if ( inputArray.Size() == 0 )
-        {
-            return outcome::failure( Error::PROCESS_INFO_MISSING );
-        }
-
-        // Validate each input entry
-        for ( auto &input : inputArray.GetArray() )
-        {
-            if ( !input.IsObject() )
-            {
-                return outcome::failure( Error::PROCESS_INFO_MISSING );
-            }
-
-            if ( !input.HasMember( "block_len" ) || !input["block_len"].IsUint64() )
-            {
-                return outcome::failure( Error::PROCESS_INFO_MISSING );
-            }
-
-            if ( !input.HasMember( "block_line_stride" ) || !input["block_line_stride"].IsUint64() )
-            {
-                return outcome::failure( Error::PROCESS_INFO_MISSING );
-            }
-
-            uint64_t block_len         = input["block_len"].GetUint64();
-            uint64_t block_line_stride = input["block_line_stride"].GetUint64();
-
-            // Ensure block_len is evenly divisible by block_line_stride
-            if ( block_line_stride == 0 || ( block_len % block_line_stride ) != 0 )
-            {
-                return outcome::failure( Error::INVALID_BLOCK_PARAMETERS );
-            }
-        }
-
-        return outcome::success();
-    }
-
-    outcome::result<uint64_t> GeniusNode::ParseBlockSize( const std::string &json_data )
-    {
-        node_logger->info( "Received JSON data: {}", json_data );
-        rapidjson::Document document;
-        if ( document.Parse( json_data.c_str() ).HasParseError() )
-        {
-            node_logger->error( "Invalid JSON data provided" );
-            return outcome::failure( std::make_error_code( std::errc::invalid_argument ) );
-        }
-
-        rapidjson::Value inputArray;
-        if ( document.HasMember( "input" ) && document["input"].IsArray() )
-        {
-            inputArray = document["input"];
-        }
-        else
-        {
-            node_logger->error( "This JSON lacks inputs" );
-            return outcome::failure( std::make_error_code( std::errc::invalid_argument ) );
-        }
-
-        uint64_t block_total_len = 0;
-        for ( const auto &input : inputArray.GetArray() )
-        {
-            if ( input.HasMember( "block_len" ) && input["block_len"].IsUint64() )
-            {
-                uint64_t block_len  = input["block_len"].GetUint64();
-                block_total_len    += block_len;
-                node_logger->info( "Block length (bytes): {}", block_len );
-            }
-            else
-            {
-                node_logger->error( "Missing or invalid block_len in input" );
-                return outcome::failure( std::make_error_code( std::errc::invalid_argument ) );
-            }
-        }
-
-        node_logger->trace( "Total block length: {}", block_total_len );
-        return block_total_len;
-    }
-
-    uint64_t GeniusNode::GetProcessCost( const std::string &json_data )
-    {
-        auto blockLen = ParseBlockSize( json_data );
+        auto blockLen = procmgr->ParseBlockSize();
         if ( !blockLen )
         {
             node_logger->error( "ParseBlockSize failed" );

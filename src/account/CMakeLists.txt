@@ -32,6 +32,7 @@ target_link_libraries(sgns_account
     crdt_globaldb
     processing_service
     gnus_upnp
+	ProcessingBase
     PRIVATE
     json_secure_storage
     component_factory
@@ -62,7 +63,6 @@ target_link_libraries(sgns_account
     rapidjson
     coinprices
 	nlohmann_json
-	ProcessingBase
     ${WIN_CRYPT_LIBRARY}
 )
 

@@ -21,6 +21,7 @@
 #include "coinprices/coinprices.hpp"
 #include <boost/algorithm/string/replace.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
+#include <ProcessingBase/ProcessingManager.hpp>
 
 typedef struct DevConfig
 {
@@ -80,9 +81,8 @@ namespace sgns
 #endif
 
         outcome::result<std::string> ProcessImage( const std::string &jsondata );
-        outcome::result<void>        CheckProcessValidity( const std::string &jsondata );
 
-        uint64_t GetProcessCost( const std::string &json_data );
+        uint64_t GetProcessCost( std::shared_ptr<ProcessingManager> procmgr );
 
         outcome::result<double> GetGNUSPrice();
 
@@ -242,13 +242,6 @@ namespace sgns
 
         void ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult );
         void ProcessingError( const std::string &task_id );
-
-        /**
-         * @brief Parse and sum all "block_len" values from the JSON.
-         * @param json_data JSON string containing an "input" array.
-         * @return outcome::result<uint64_t> with total bytes, or an error code.
-         */
-        outcome::result<uint64_t> ParseBlockSize( const std::string &json_data );
 
         static constexpr std::string_view db_path_                = "bc-%d/";
         static constexpr std::uint16_t    MAIN_NET                = 369;
