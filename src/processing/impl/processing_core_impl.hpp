@@ -32,12 +32,12 @@ namespace sgns::processing
             std::shared_ptr<sgns::crdt::GlobalDB> db,
             size_t subTaskProcessingTime,
             size_t maximalProcessingSubTaskCount,
-            std::string tokenId = "")
+            std::string tokenId)
             : m_db(std::move(db))
             //, m_subTaskProcessingTime(subTaskProcessingTime)
+            , m_tokenId(std::move(tokenId))
             , m_processor(nullptr)
             , m_maximalProcessingSubTaskCount(maximalProcessingSubTaskCount)
-            , m_tokenId(std::move(tokenId))
             , m_processingSubTaskCount(0)
         {
         }

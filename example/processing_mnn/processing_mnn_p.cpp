@@ -13,6 +13,7 @@
 #include "processing_mnn.hpp"
 #include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/local_requests.hpp>
+#include <string>
 
 using GossipPubSub = sgns::ipfs_pubsub::GossipPubSub;
 const std::string logger_config( R"(
@@ -67,6 +68,8 @@ int main( int argc, char *argv[] )
     //Inputs
     char  *endPtr;
     size_t serviceindex = std::strtoul( argv[1], &endPtr, 10 );
+    auto tokenId = std::to_string( serviceindex );
+
 
     //Split Image into RGBA bytes
     //ImageSplitter imagesplit(inputImageFileName, 128, 128);
@@ -117,7 +120,7 @@ int main( int argc, char *argv[] )
     auto enqueuer2  = std::make_shared<SubTaskEnqueuerImpl>( taskQueue2 );
 
     //Processing Core
-    auto processingCore2 = std::make_shared<ProcessingCoreImpl>( globalDB2, 1000000, 2 );
+    auto processingCore2 = std::make_shared<ProcessingCoreImpl>( globalDB2, 1000000, 2, tokenId );
     processingCore2->RegisterProcessorFactory( "mnnimage", []() { return std::make_unique<MNN_Image>(); } );
     //processingCore2->SetProcessorByName("posenet");
     //Set Imagesplit, this replaces bitswap getting of file for now. Should use AsyncIOmanager in the future
