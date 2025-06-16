@@ -452,69 +452,7 @@ INSTANTIATE_TEST_SUITE_P( TransferMainVariations,
                           ::testing::Values( TransferMainCase_s{ "1.0", 400000, "-0.4", "0.6" },
                                              TransferMainCase_s{ "0.5", 500000, "-0.5", "1.0" } ) );
 
-// ------------------ Suite 4: Transfer Child via Main Methods ------------------
-
-/// @brief Parameters for transfer-child tests (converted via main units)
-struct TransferChildCase_s
-{
-    std::string tokenValue;
-    std::string transferChild; ///< Amount to transfer in child tokens (as string)
-    std::string expA_child;    ///< Expected delta A child (as string)
-    std::string expB_child;    ///< Expected delta B child (as string)
-};
-
-inline std::ostream &operator<<( std::ostream &os, TransferChildCase_s const &c )
-{
-    return os << "TransferChildCase_s{tokenValue='" << c.tokenValue << "', transferChild='" << c.transferChild
-              << "', expA_child='" << c.expA_child << "', expB_child='" << c.expB_child << "'}";
-}
-
-class GeniusNodeTransferChildTest : public ::testing::TestWithParam<TransferChildCase_s>
-{
-};
-
-TEST_P( GeniusNodeTransferChildTest, DISABLED_TransferChildBalance )
-{
-    auto c     = GetParam();
-    auto nodeA = CreateNode( c.tokenValue, "tokenid" );
-    auto nodeB = CreateNode( c.tokenValue, "tokenid" );
-
-    uint64_t initA_main     = nodeA->GetBalance();
-    auto     initA_childStr = nodeA->FormatChildTokens( initA_main );
-    auto     parsedInitA    = nodeA->ParseChildTokens( initA_childStr );
-    ASSERT_TRUE( parsedInitA.has_value() );
-    uint64_t initB_main     = nodeB->GetBalance();
-    auto     initB_childStr = nodeB->FormatChildTokens( initB_main );
-    auto     parsedInitB    = nodeB->ParseChildTokens( initB_childStr );
-    ASSERT_TRUE( parsedInitB.has_value() );
-
-    auto parsedChild = nodeA->ParseChildTokens( c.transferChild );
-    ASSERT_TRUE( parsedChild.has_value() );
-    std::string mainStr      = nodeA->FormatTokens( parsedChild.value() );
-    auto        transferMain = std::stoull( mainStr );
-
-    auto t = nodeA->TransferFunds( transferMain,
-                                   nodeB->GetAddress(),
-                                   std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
-    ASSERT_TRUE( t.has_value() );
-
-    auto finalA = nodeA->ParseChildTokens( nodeA->FormatChildTokens( nodeA->GetBalance() ) );
-    auto finalB = nodeB->ParseChildTokens( nodeB->FormatChildTokens( nodeB->GetBalance() ) );
-    ASSERT_TRUE( finalA.has_value() && finalB.has_value() );
-
-    auto expA_childVal = nodeA->ParseChildTokens( c.expA_child );
-    ASSERT_TRUE( expA_childVal.has_value() );
-    auto expB_childVal = nodeB->ParseChildTokens( c.expB_child );
-    ASSERT_TRUE( expB_childVal.has_value() );
-
-    EXPECT_EQ( finalA.value() - parsedInitA.value(), expA_childVal.value() );
-    EXPECT_EQ( finalB.value() - parsedInitB.value(), expB_childVal.value() );
-}
-
-INSTANTIATE_TEST_SUITE_P( DISABLED_TransferChildVariations,
-                          GeniusNodeTransferChildTest,
-                          ::testing::Values( TransferChildCase_s{ "1.0", "0.2", "-0.2", "0.2" },
-                                             TransferChildCase_s{ "0.5", "0.25", "-0.25", "0.25" } ) );
+// ------------------ Suite 4: Processing Nodes test with child tokens ------------------
 
 class ProcessingNodesModuleTest : public ::testing::Test
 {
@@ -609,18 +547,11 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
     ASSERT_EQ( tok_main_init - cost, node_main->GetBalance( "TOKMAIN" ) );
 
     uint64_t expected_peer_gain = ( ( cost * 65 ) / 100 ) / 2;
-    assertWaitForCondition(
-        [&]()
-        {
-            uint64_t sum = node_proc1->GetBalance() + node_proc2->GetBalance();
-            return sum == ( bal_p1_init + bal_p2_init + 2 * expected_peer_gain );
-        },
-        std::chrono::milliseconds( 40000 ),
-        "Processors general balances not updated in time" );
+
     ASSERT_EQ( bal_p1_init + bal_p2_init + 2 * expected_peer_gain,
                node_proc1->GetBalance() + node_proc2->GetBalance() );
     ASSERT_EQ( bal_p1_init + bal_p2_init + 2 * expected_peer_gain,
-               node_proc1->GetBalance( "TOKPROC1" ) + node_proc2->GetBalance() );
+               node_proc1->GetBalance( "TOKPROC1" ) + node_proc2->GetBalance( "TOKPROC2" ) );
 
     uint64_t dev_payment = cost - 2 * expected_peer_gain;
     ASSERT_EQ( bal_main_init + bal_p1_init + bal_p2_init,
