@@ -30,7 +30,7 @@ protected:
         "0xcafe", // Addr
         "0.65",   // Cut
         "1.0",    // TokenValueInGNUS
-        0,        // TokenID
+        "0",      // TokenID
         ""        // BaseWritePath
     };
 
