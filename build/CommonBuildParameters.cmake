@@ -31,6 +31,7 @@ endif()
 
 if(BUILD_TESTING)
     set(GTest_DIR "${_THIRDPARTY_BUILD_DIR}/GTest/lib/cmake/GTest")
+    message("Gtest dir: ${GTest_DIR}")
     set(GTest_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/GTest/include")
     find_package(GTest CONFIG REQUIRED)
 endif()

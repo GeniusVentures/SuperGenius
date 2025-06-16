@@ -122,10 +122,12 @@ jobs:
           mkdir thirdparty
           cd thirdparty
 
+          pwd
+          
           tag_name="${{matrix.target}}-${thirdparty_branch}-${{matrix.build-type}}"
 
           gh release download ${tag_name} --repo GeniusVentures/thirdparty -p "${FILE_NAME}"
-          tar -zxf "${FILE_NAME}"
+          tar -zxvf "${FILE_NAME}"
         shell: bash
 
       - name: Download zkLLVM release
