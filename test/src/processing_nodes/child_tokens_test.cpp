@@ -182,8 +182,8 @@ TEST( TransferTokenValue, ThreeNodeTransferTest )
     std::cout << "Final balances:\n";
     std::cout << "node50 total: " << final50_full << ", token50: " << final50_t50 << ", token51: " << final50_t51
               << ", token52: " << final50_t52 << '\n';
-    std::cout << "node51 token51: " << final51_t51 << '\n';
-    std::cout << "node52 token52: " << final52_t52 << '\n';
+    std::cout << "node51 total" << node51->GetBalance() << " token51: " << final51_t51 << '\n';
+    std::cout << "node52 total" << node52->GetBalance() << " token52: " << final52_t52 << '\n';
 
     // Validate expected deltas and leftover
     uint64_t expected50 = totalMint51 + totalMint52;
@@ -194,6 +194,62 @@ TEST( TransferTokenValue, ThreeNodeTransferTest )
     // Node51 and node52 should have 1 leftover token each
     EXPECT_EQ( final51_t51 - init51_t51, 1 );
     EXPECT_EQ( final52_t52 - init52_t52, 1 );
+}
+
+TEST( TransferTokenValue, SingleNodeMultiTokenTransferTest )
+{
+    auto source = CreateNode( "1.0", "tokenA" );
+    auto dest   = CreateNode( "1.0", "tokenX" );
+
+    source->GetPubSub()->AddPeers( { dest->GetPubSub()->GetLocalAddress() } );
+    dest->GetPubSub()->AddPeers( { source->GetPubSub()->GetLocalAddress() } );
+
+    uint64_t initSourceFull = source->GetBalance();
+    uint64_t initSourceA    = source->GetBalance( "tokenA" );
+    uint64_t initSourceB    = source->GetBalance( "tokenB" );
+    uint64_t initDestFull   = dest->GetBalance();
+    uint64_t initDestA      = dest->GetBalance( "tokenA" );
+    uint64_t initDestB      = dest->GetBalance( "tokenB" );
+
+    uint64_t amountA = 1000000;
+    uint64_t amountB = 500000;
+
+    // 5. Mint de tokenA e tokenB em source
+    auto resA = source->MintTokens( amountA,
+                                    "",
+                                    "",
+                                    "tokenA",
+                                    std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+    ASSERT_TRUE( resA.has_value() ) << "Mint tokenA failed";
+
+    auto resB = source->MintTokens( amountB,
+                                    "",
+                                    "",
+                                    "tokenB",
+                                    std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+    ASSERT_TRUE( resB.has_value() ) << "Mint tokenB failed";
+
+    uint64_t totalToTransfer = amountA + amountB;
+    auto     txRes           = source->TransferFunds( totalToTransfer,
+                                        dest->GetAddress(),
+                                        std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+    ASSERT_TRUE( txRes.has_value() ) << "Combined transfer failed";
+    auto [txHash, duration] = txRes.value();
+
+    ASSERT_TRUE(
+        dest->WaitForTransactionIncoming( txHash, std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) ) )
+        << "dest did not receive transaction " << txHash;
+
+    uint64_t finalDestFull = dest->GetBalance();
+    uint64_t finalDestA    = dest->GetBalance( "tokenA" );
+    uint64_t finalDestB    = dest->GetBalance( "tokenB" );
+
+    EXPECT_EQ( finalDestA - initDestA, amountA );
+    EXPECT_EQ( finalDestB - initDestB, amountB );
+    EXPECT_EQ( finalDestFull - initDestFull, totalToTransfer );
+
+    EXPECT_EQ( source->GetBalance( "tokenA" ) - initSourceA, 0 );
+    EXPECT_EQ( source->GetBalance( "tokenB" ) - initSourceB, 0 );
 }
 
 // ------------------ Suite 1: Mint Main Tokens ------------------
