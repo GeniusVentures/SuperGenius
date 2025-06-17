@@ -222,9 +222,11 @@ TEST_P( GeniusNodeMintMainTest, MintMainBalance )
     auto p    = GetParam();
     auto node = CreateNode( p.tokenValue, p.TokenID );
 
-    uint64_t    initialMain        = node->GetBalance();
-    std::string initialChildStr    = node->FormatChildTokens( initialMain );
-    auto        parsedInitialChild = node->ParseChildTokens( initialChildStr );
+    uint64_t initialMain = node->GetBalance();
+    auto     initFmtRes  = node->FormatTokens( initialMain, p.TokenID );
+    ASSERT_TRUE( initFmtRes.has_value() );
+    std::string initialChildStr    = initFmtRes.value();
+    auto        parsedInitialChild = node->ParseTokens( initialChildStr, p.TokenID );
     ASSERT_TRUE( parsedInitialChild.has_value() );
 
     auto res = node->MintTokens( p.mintMain,
@@ -234,11 +236,13 @@ TEST_P( GeniusNodeMintMainTest, MintMainBalance )
                                  std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
     ASSERT_TRUE( res.has_value() );
 
-    std::string finalChildStr    = node->FormatChildTokens( node->GetBalance() );
-    auto        parsedFinalChild = node->ParseChildTokens( finalChildStr );
+    auto finalFmtRes = node->FormatTokens( node->GetBalance(), p.TokenID );
+    ASSERT_TRUE( finalFmtRes.has_value() );
+    std::string finalChildStr    = finalFmtRes.value();
+    auto        parsedFinalChild = node->ParseTokens( finalChildStr, p.TokenID );
     ASSERT_TRUE( parsedFinalChild.has_value() );
 
-    auto parsedExpectedDelta = node->ParseChildTokens( p.expectedChild );
+    auto parsedExpectedDelta = node->ParseTokens( p.expectedChild, p.TokenID );
     ASSERT_TRUE( parsedExpectedDelta.has_value() );
 
     EXPECT_EQ( node->GetBalance() - initialMain, p.mintMain );
@@ -284,12 +288,14 @@ TEST_P( GeniusNodeMintChildTest, MintChildBalance )
     auto p    = GetParam();
     auto node = CreateNode( p.tokenValue, p.TokenID );
 
-    uint64_t    initialMain     = node->GetBalance();
-    std::string initialChildStr = node->FormatChildTokens( initialMain );
-    auto        parsedInitial   = node->ParseChildTokens( initialChildStr );
+    uint64_t initialMain = node->GetBalance();
+    auto     initFmtRes  = node->FormatTokens( initialMain, p.TokenID );
+    ASSERT_TRUE( initFmtRes.has_value() );
+    std::string initialChildStr = initFmtRes.value();
+    auto        parsedInitial   = node->ParseTokens( initialChildStr, p.TokenID );
     ASSERT_TRUE( parsedInitial.has_value() );
 
-    auto parsedMint = node->ParseChildTokens( p.mintChild );
+    auto parsedMint = node->ParseTokens( p.mintChild, p.TokenID );
     ASSERT_TRUE( parsedMint.has_value() );
 
     auto res = node->MintTokens( parsedMint.value(),
@@ -299,11 +305,13 @@ TEST_P( GeniusNodeMintChildTest, MintChildBalance )
                                  std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
     ASSERT_TRUE( res.has_value() );
 
-    std::string finalChildStr = node->FormatChildTokens( node->GetBalance() );
-    auto        parsedFinal   = node->ParseChildTokens( finalChildStr );
+    auto finalFmtRes = node->FormatTokens( node->GetBalance(), p.TokenID );
+    ASSERT_TRUE( finalFmtRes.has_value() );
+    std::string finalChildStr = finalFmtRes.value();
+    auto        parsedFinal   = node->ParseTokens( finalChildStr, p.TokenID );
     ASSERT_TRUE( parsedFinal.has_value() );
 
-    auto parsedExpectedDelta = node->ParseChildTokens( p.mintChild );
+    auto parsedExpectedDelta = node->ParseTokens( p.mintChild, p.TokenID );
     ASSERT_TRUE( parsedExpectedDelta.has_value() );
 
     EXPECT_EQ( node->GetBalance() - initialMain, p.expectedMain );
@@ -369,88 +377,6 @@ TEST( GeniusNodeMultiTokenMintTest, MintMultipleTokenIds )
     uint64_t mainBalance = node->GetBalance();
     EXPECT_EQ( mainBalance, totalMinted ) << "Main balance did not reflect total minted (" << totalMinted << ")";
 }
-
-/// Suite 4: Transfer Main and Child Tokens with Base Node
-
-/// Parameters for transfer-main tests
-typedef struct
-{
-    std::string tokenValue;    ///< TokenValueInGNUS of child node
-    uint64_t    transferValue; ///< Amount to transfer from main to child
-    std::string deltaMain;     ///< Expected delta on main tokens
-    std::string deltaChild;    ///< Expected delta on child tokens
-} TransferMainCase_s;
-
-inline std::ostream &operator<<( std::ostream &os, TransferMainCase_s const &c )
-{
-    return os << "TransferMainCase_s{tokenValue='" << c.tokenValue << ", transferValue=" << c.transferValue
-              << ", deltaMain='" << c.deltaMain << "', deltaChild='" << c.deltaChild << "'}";
-}
-
-class GeniusNodeTransferMainTest : public ::testing::TestWithParam<TransferMainCase_s>
-{
-protected:
-    static void SetUpTestSuite() {}
-
-    static void TearDownTestSuite() {}
-
-    void SetUp() override {}
-
-    void TearDown() override {}
-};
-
-TEST_P( GeniusNodeTransferMainTest, DISABLED_TransferMainBalance )
-{
-    const auto c = GetParam();
-
-    auto nodeMain  = CreateNode( "1.0", "tokenid" );
-    auto nodeChild = CreateNode( c.tokenValue, "tokenid" );
-
-    nodeMain->GetPubSub()->AddPeers( { nodeChild->GetPubSub()->GetLocalAddress() } );
-    nodeChild->GetPubSub()->AddPeers( { nodeMain->GetPubSub()->GetLocalAddress() } );
-    std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
-
-    ASSERT_TRUE(
-        nodeMain->MintTokens( c.transferValue, "", "", "", std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) )
-            .has_value() );
-
-    // Record initial balances
-    auto initMain     = nodeMain->GetBalance();
-    auto initMainStr  = nodeMain->FormatChildTokens( initMain );
-    auto initChild    = nodeChild->GetBalance();
-    auto initChildStr = nodeChild->FormatChildTokens( initMain );
-
-    std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
-    auto [txId, _] = nodeMain
-                         ->TransferFunds( c.transferValue,
-                                          nodeChild->GetAddress(),
-                                          std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) )
-                         .value();
-    ASSERT_TRUE(
-        nodeMain->WaitForTransactionIncoming( txId, std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) ) );
-
-    // Verify final balances and child deltas
-    auto finalMain  = nodeMain->GetBalance();
-    auto finalChild = nodeChild->GetBalance();
-
-    // Child balance decreased by transfer; base balance increased by transfer
-    EXPECT_EQ( finalMain - initMain, c.transferValue );
-    EXPECT_EQ( finalChild - initChild, c.transferValue );
-
-    // Child and base child-token deltas
-    const auto finalMainString      = nodeMain->FormatChildTokens( finalMain );
-    const auto expectedFinalMainStr = addDecimalStrings( initMainStr, c.deltaMain );
-    EXPECT_EQ( finalMainString, expectedFinalMainStr );
-
-    auto       finalChildString      = nodeChild->FormatChildTokens( finalChild );
-    const auto expectedFinalChildStr = addDecimalStrings( initChildStr, c.deltaChild );
-    EXPECT_EQ( finalChildString, expectedFinalChildStr );
-}
-
-INSTANTIATE_TEST_SUITE_P( TransferMainVariations,
-                          GeniusNodeTransferMainTest,
-                          ::testing::Values( TransferMainCase_s{ "1.0", 400000, "-0.4", "0.6" },
-                                             TransferMainCase_s{ "0.5", 500000, "-0.5", "1.0" } ) );
 
 // ------------------ Suite 4: Processing Nodes test with child tokens ------------------
 

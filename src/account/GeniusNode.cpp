@@ -859,26 +859,6 @@ namespace sgns
         return account_->GetBalance( token_id );
     }
 
-    std::string GeniusNode::FormatChildTokens( uint64_t amount ) const
-    {
-        auto maybe_child_token = TokenAmount::ConvertToChildToken( amount, dev_config_.TokenValueInGNUS );
-        if ( !maybe_child_token )
-        {
-            node_logger->error( "Failed to convert to child token: {}", maybe_child_token.error().message() );
-            return {};
-        }
-
-        return maybe_child_token.value();
-    }
-
-    outcome::result<uint64_t> GeniusNode::ParseChildTokens( const std::string &amount_str ) const
-    {
-        OUTCOME_TRY( auto &&minion_amount,
-                     TokenAmount::ConvertFromChildToken( amount_str, dev_config_.TokenValueInGNUS ) );
-
-        return minion_amount;
-    }
-
     void GeniusNode::ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult )
     {
         node_logger->info( "[ {} ] SUCCESS PROCESSING TASK {}", account_->GetAddress(), task_id );
@@ -1008,14 +988,35 @@ namespace sgns
         return retriever.getHistoricalPriceRange( tokenIds, from, to );
     }
 
-    std::string GeniusNode::FormatTokens( uint64_t amount )
+    outcome::result<std::string> GeniusNode::FormatTokens( uint64_t amount, const std::string &tokenId )
     {
-        return TokenAmount::FormatMinions( amount );
+        if ( tokenId.empty() )
+        {
+            return TokenAmount::FormatMinions( amount );
+        }
+        if ( tokenId == dev_config_.TokenID )
+        {
+            auto child = TokenAmount::ConvertToChildToken( amount, dev_config_.TokenValueInGNUS );
+            if ( !child )
+            {
+                return outcome::failure( child.error() );
+            }
+            return child.value();
+        }
+        return outcome::failure( make_error_code( GeniusNode::Error::TOKEN_ID_MISMATCH ) );
     }
 
-    outcome::result<uint64_t> GeniusNode::ParseTokens( const std::string &str )
+    outcome::result<uint64_t> GeniusNode::ParseTokens( const std::string &str, const std::string &tokenId )
     {
-        return TokenAmount::ParseMinions( str );
+        if ( tokenId.empty() )
+        {
+            return TokenAmount::ParseMinions( str );
+        }
+        if ( tokenId == dev_config_.TokenID )
+        {
+            return TokenAmount::ConvertFromChildToken( str, dev_config_.TokenValueInGNUS );
+        }
+        return outcome::failure( make_error_code( GeniusNode::Error::TOKEN_ID_MISMATCH ) );
     }
 
     // Wait for a transaction to be processed with a timeout

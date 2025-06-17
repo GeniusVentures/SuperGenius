@@ -147,17 +147,25 @@ namespace sgns
 
         /**
          * @brief       Formats a fixed-point amount into a human-readable string.
-         * @param[in]   amount Amount in Minion Tokens (1e-6 GNUS).
-         * @return      Formatted string representation in GNUS.
+         * @param[in]   amount  Amount in Minion Tokens (1e-6 GNUS).
+         * @param[in]   tokenId Optional token identifier:
+         *                         – empty: default (minion to GNUS) formatting  
+         *                         – matches DevConfig.TokenID: child-token formatting  
+         *                         – otherwise: returns Error::TOKEN_ID_MISMATCH  
+         * @return      Outcome result with the formatted string in GNUS or an error.
          */
-        static std::string FormatTokens( uint64_t amount );
+        outcome::result<std::string> FormatTokens( uint64_t amount, const std::string &tokenId = {} );
 
         /**
          * @brief       Parses a human-readable string into a fixed-point amount.
-         * @param[in]   str String representation of an amount in GNUS.
-         * @return      Outcome result with the parsed amount in Minion Tokens (1e-6 GNUS) or error.
+         * @param[in]   str      String representation of an amount in GNUS.
+         * @param[in]   tokenId  Optional token identifier:
+         *                          – empty: default (GNUS to minion) parsing  
+         *                          – matches DevConfig.TokenID: child-token parsing  
+         *                          – otherwise: returns Error::TOKEN_ID_MISMATCH  
+         * @return      Outcome result with the parsed amount in Minion Tokens (1e-6 GNUS) or an error.
          */
-        static outcome::result<uint64_t> ParseTokens( const std::string &str );
+        outcome::result<uint64_t> ParseTokens( const std::string &str, const std::string &tokenId = {} );
 
         static std::vector<uint8_t> GetImageByCID( const std::string &cid );
 
@@ -179,20 +187,6 @@ namespace sgns
         bool WaitForTransactionOutgoing( const std::string &txId, std::chrono::milliseconds timeout );
 
         bool WaitForEscrowRelease( const std::string &originalEscrowId, std::chrono::milliseconds timeout );
-
-        /**
-         * @brief Format a child-token amount into a human-readable string.
-         * @param amount Amount of child tokens (in minions).
-         * @return Formatted string, e.g. "1.234 GChild".
-         */
-        std::string FormatChildTokens( uint64_t amount ) const;
-
-        /**
-         * @brief Parse a formatted child-token string back into minions.
-         * @param amount_str Formatted string, e.g. "1.234 GChild".
-         * @return outcome::result<uint64_t> of the parsed minions, or error.
-         */
-        outcome::result<uint64_t> ParseChildTokens( const std::string &amount_str ) const;
 
     protected:
         friend class TransactionSyncTest;
