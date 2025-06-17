@@ -21,7 +21,7 @@
 #include "coinprices/coinprices.hpp"
 #include <boost/algorithm/string/replace.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
-#include <ProcessingBase/ProcessingManager.hpp>
+#include <processingbase/ProcessingManager.hpp>
 
 typedef struct DevConfig
 {
