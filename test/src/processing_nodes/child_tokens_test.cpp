@@ -388,7 +388,7 @@ INSTANTIATE_TEST_SUITE_P( MintChildVariations,
                                              //   MintChildCase_s{ "2.5", "token2_5_frac", "1.2345678", 3086419 },
                                              MintChildCase_s{ "0.1", "token0_1_frac", "0.9999999", 99999 } ) );
 
-/// Suite 3: Mint multiple token IDs on same node
+// Suite 3: Mint multiple token IDs on same node
 TEST( GeniusNodeMultiTokenMintTest, MintMultipleTokenIds )
 {
     auto node = CreateNode( "1.0", "tokenA" );
@@ -406,6 +406,20 @@ TEST( GeniusNodeMultiTokenMintTest, MintMultipleTokenIds )
                                      { "tokenB", 2500 },
                                      { "tokenC", 3000 } };
 
+    std::unordered_set<std::string> tokenIds;
+    for ( const auto &tm : mints )
+    {
+        tokenIds.insert( tm.tokenId );
+    }
+
+    std::unordered_map<std::string, uint64_t> initialBalances;
+    for ( const auto &id : tokenIds )
+    {
+        initialBalances[id] = node->GetBalance( id );
+    }
+
+    uint64_t initialMainBalance = node->GetBalance();
+
     std::unordered_map<std::string, uint64_t> expectedTotals;
     uint64_t                                  totalMinted = 0;
 
@@ -416,7 +430,7 @@ TEST( GeniusNodeMultiTokenMintTest, MintMultipleTokenIds )
                                      "",
                                      tm.tokenId,
                                      std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
-        ASSERT_TRUE( res.has_value() ) << "MintTokens failed for " << tm.tokenId << " amount " << tm.amount;
+        ASSERT_TRUE( res.has_value() ) << "MintTokens failed for token=" << tm.tokenId << " amount=" << tm.amount;
 
         expectedTotals[tm.tokenId] += tm.amount;
         totalMinted                += tm.amount;
@@ -425,13 +439,14 @@ TEST( GeniusNodeMultiTokenMintTest, MintMultipleTokenIds )
     for ( const auto &entry : expectedTotals )
     {
         const auto &id       = entry.first;
-        uint64_t    expected = entry.second;
+        uint64_t    expected = initialBalances[id] + entry.second;
         uint64_t    balance  = node->GetBalance( id );
         EXPECT_EQ( balance, expected ) << "Balance mismatch for " << id;
     }
 
     uint64_t mainBalance = node->GetBalance();
-    EXPECT_EQ( mainBalance, totalMinted ) << "Main balance did not reflect total minted (" << totalMinted << ")";
+    EXPECT_EQ( mainBalance, initialMainBalance + totalMinted )
+        << "Main balance did not reflect total minted (" << totalMinted << ")";
 }
 
 // ------------------ Suite 4: Processing Nodes test with child tokens ------------------
