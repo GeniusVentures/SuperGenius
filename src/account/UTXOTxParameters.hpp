@@ -1,6 +1,6 @@
 /**
  * @file       UTXOTxParameters.hpp
- * @brief      
+ * @brief
  * @date       2024-04-29
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
@@ -47,14 +47,12 @@ namespace sgns
                                                          const std::string             &src_address,
                                                          uint64_t                       amount,
                                                          std::string                    dest_address,
-                                                         std::string                    token_id,
                                                          std::string                    signature = "" )
         {
             UTXOTxParameters instance( utxo_pool,
                                        src_address,
                                        amount,
                                        std::move( dest_address ),
-                                       std::move( token_id ),
                                        std::move( signature ) );
 
             if ( !instance.inputs_.empty() )
@@ -103,14 +101,7 @@ namespace sgns
                           const std::string             &src_address,
                           uint64_t                       amount,
                           std::string                    dest_address,
-                          std::string                    token_id,
-                          std::string                    signature ) :
-            UTXOTxParameters( utxo_pool,
-                              src_address,
-                              { OutputDestInfo{ amount, std::move( dest_address ), std::move( token_id ) } },
-                              std::move( signature ) )
-        {
-        }
+                          std::string                    signature );
 
         UTXOTxParameters( const std::vector<GeniusUTXO>     &utxo_pool,
                           const std::string                 &src_address,

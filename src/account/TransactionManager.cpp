@@ -266,8 +266,7 @@ namespace sgns
     outcome::result<std::pair<std::string, EscrowDataPair>> TransactionManager::HoldEscrow( uint64_t           amount,
                                                                                             const std::string &dev_addr,
                                                                                             uint64_t peers_cut,
-                                                                                            const std::string &job_id,
-                                                                                            std::string token_id )
+                                                                                            const std::string &job_id )
     {
         auto hash_data = hasher_m->blake2b_256( std::vector<uint8_t>{ job_id.begin(), job_id.end() } );
 
@@ -275,7 +274,6 @@ namespace sgns
                      UTXOTxParameters::create( account_m->utxos,
                                                account_m->GetAddress(),
                                                amount,
-                                               token_id,
                                                "0x" + hash_data.toReadableString() ) );
 
         account_m->utxos        = UTXOTxParameters::UpdateUTXOList( account_m->utxos, params );

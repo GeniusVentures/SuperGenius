@@ -1,6 +1,6 @@
 /**
  * @file       TransactionManager.hpp
- * @brief      
+ * @brief
  * @date       2024-03-13
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
@@ -70,8 +70,7 @@ namespace sgns
         outcome::result<std::pair<std::string, EscrowDataPair>> HoldEscrow( uint64_t           amount,
                                                                             const std::string &dev_addr,
                                                                             uint64_t           peers_cut,
-                                                                            const std::string &job_id,
-                                                                            std::string        token_id = "" );
+                                                                            const std::string &job_id );
         outcome::result<std::string>                            PayEscrow( const std::string                       &escrow_path,
                                                                            const SGProcessing::TaskResult          &taskresult,
                                                                            std::shared_ptr<crdt::AtomicTransaction> crdt_transaction );
