@@ -56,7 +56,7 @@ jobs:
             abi: arm64-v8a
             build-type: "Release"
           - target: Android
-            host: ubuntu-22.04
+            host: gv-Linux-large
             abi: arm64-v8a
             build-type: "Debug"
           - target: Android

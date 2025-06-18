@@ -207,7 +207,11 @@ namespace sgns
 
     outcome::result<std::string> TransactionManager::TransferFunds( uint64_t amount, const std::string &destination )
     {
-        auto maybe_params = UTXOTxParameters::create( account_m->utxos, account_m->GetAddress(), amount, destination );
+        auto maybe_params = UTXOTxParameters::create( account_m->utxos,
+                                                      account_m->GetAddress(),
+                                                      amount,
+                                                      destination,
+                                                      account_m->GetToken() );
 
         if ( !maybe_params )
         {
@@ -325,18 +329,22 @@ namespace sgns
 
         OUTCOME_TRY( ( auto &&, peer_total ), escrow_amount_ptr->Multiply( *peers_cut_ptr ) );
 
+        const std::string &escrowTokenId = escrow_tx->GetUTXOParameters().outputs_[0].token_id;
+
         uint64_t peers_amount = peer_total.Value() / static_cast<uint64_t>( taskresult.subtask_results().size() );
         auto     remainder    = escrow_tx->GetAmount();
+
         for ( auto &subtask : taskresult.subtask_results() )
         {
             std::cout << "Subtask Result " << subtask.subtaskid() << "from " << subtask.node_address() << std::endl;
-            m_logger->debug( "Paying out {} ", peers_amount );
+            m_logger->debug( "Paying out {} in {}", peers_amount, subtask.token_id() );
             subtask_ids.push_back( subtask.subtaskid() );
-            payout_peers.push_back( { peers_amount, subtask.node_address() } );
+            payout_peers.push_back( { peers_amount, subtask.node_address(), subtask.token_id() } );
             remainder -= peers_amount;
         }
+        //TODO: see what do with token_id here
         m_logger->debug( "Sending to dev {}", remainder );
-        payout_peers.push_back( { remainder, escrow_tx->GetDevAddress() } );
+        payout_peers.push_back( { remainder, escrow_tx->GetDevAddress(), escrowTokenId } );
         InputUTXOInfo escrow_utxo_input;
 
         escrow_utxo_input.txid_hash_  = ( base::Hash256::fromReadableString( escrow_tx->dag_st.data_hash() ) ).value();
@@ -773,7 +781,7 @@ namespace sgns
             if ( dest_infos[i].dest_address == account_m->GetAddress() )
             {
                 auto       hash = ( base::Hash256::fromReadableString( transfer_tx->dag_st.data_hash() ) ).value();
-                GeniusUTXO new_utxo( hash, i, dest_infos[i].encrypted_amount );
+                GeniusUTXO new_utxo( hash, i, dest_infos[i].encrypted_amount, dest_infos[i].token_id );
                 account_m->PutUTXO( new_utxo );
             }
             if ( notify_destinations )
@@ -802,7 +810,7 @@ namespace sgns
         if ( mint_tx->GetSrcAddress() == account_m->GetAddress() )
         {
             auto       hash = ( base::Hash256::fromReadableString( mint_tx->dag_st.data_hash() ) ).value();
-            GeniusUTXO new_utxo( hash, 0, mint_tx->GetAmount() );
+            GeniusUTXO new_utxo( hash, 0, mint_tx->GetAmount(), mint_tx->GetTokenID() );
             account_m->PutUTXO( new_utxo );
             m_logger->info( "Created tokens, balance " + account_m->GetBalance<std::string>() );
         }
@@ -829,7 +837,10 @@ namespace sgns
                 {
                     if ( dest_infos.outputs_[1].dest_address == account_m->GetAddress() )
                     {
-                        GeniusUTXO new_utxo( hash, 1, dest_infos.outputs_[1].encrypted_amount );
+                        GeniusUTXO new_utxo( hash,
+                                             1,
+                                             dest_infos.outputs_[1].encrypted_amount,
+                                             dest_infos.outputs_[1].token_id );
                         account_m->PutUTXO( new_utxo );
                     }
                 }

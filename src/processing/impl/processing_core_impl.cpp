@@ -68,6 +68,7 @@ namespace sgns::processing
                                                                   *buffers->first );
             std::string hashString( tempresult.begin(), tempresult.end() );
             result.set_result_hash( hashString );
+            result.set_token_id(m_tokenId);
             --m_processingSubTaskCount;
         }
         else
@@ -91,6 +92,7 @@ namespace sgns::processing
                                                                   *buffers->first );
             std::string hashString( tempresult.begin(), tempresult.end() );
             result.set_result_hash( hashString );
+            result.set_token_id(m_tokenId);
             --m_processingSubTaskCount;
         }
         return result;

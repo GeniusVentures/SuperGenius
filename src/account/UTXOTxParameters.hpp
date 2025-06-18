@@ -1,6 +1,6 @@
 /**
  * @file       UTXOTxParameters.hpp
- * @brief      
+ * @brief
  * @date       2024-04-29
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
@@ -30,6 +30,7 @@ namespace sgns
     {
         uint64_t    encrypted_amount; ///< El Gamal encrypted amount
         std::string dest_address;     ///< Destination node address
+        std::string token_id;         ///< Token identifier
     };
 
     struct UTXOTxParameters
@@ -100,13 +101,7 @@ namespace sgns
                           const std::string             &src_address,
                           uint64_t                       amount,
                           std::string                    dest_address,
-                          std::string                    signature ) :
-            UTXOTxParameters( utxo_pool,
-                              src_address,
-                              { OutputDestInfo{ amount, std::move( dest_address ) } },
-                              std::move( signature ) )
-        {
-        }
+                          std::string                    signature );
 
         UTXOTxParameters( const std::vector<GeniusUTXO>     &utxo_pool,
                           const std::string                 &src_address,

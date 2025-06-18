@@ -11,6 +11,7 @@
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 #include "base/sgns_version.hpp"
+#include "base/ScaledInteger.hpp"
 #include "account/TokenAmount.hpp"
 #include "account/GeniusNode.hpp"
 #include "account/MigrationManager.hpp"
@@ -90,9 +91,7 @@ namespace sgns
                             bool                isprocessor,
                             uint16_t            base_port,
                             bool                is_full_node ) :
-        account_( std::make_shared<GeniusAccount>( static_cast<uint8_t>( dev_config.TokenID ),
-                                                   dev_config.BaseWritePath,
-                                                   eth_private_key ) ),
+        account_( std::make_shared<GeniusAccount>( dev_config.TokenID, dev_config.BaseWritePath, eth_private_key ) ),
         io_( std::make_shared<boost::asio::io_context>() ),
         write_base_path_( dev_config.BaseWritePath ),
         autodht_( autodht ),
@@ -153,7 +152,7 @@ namespace sgns
         loggerGraphsync->set_level( spdlog::level::err );
         loggerBroadcaster->set_level( spdlog::level::err );
         loggerDataStore->set_level( spdlog::level::err );
-        loggerTransactions->set_level( spdlog::level::err );
+        loggerTransactions->set_level( spdlog::level::debug );
         loggerMigration->set_level( spdlog::level::err );
         loggerMigrationStep->set_level( spdlog::level::err );
         loggerQueue->set_level( spdlog::level::err );
@@ -193,7 +192,7 @@ namespace sgns
 
         auto tokenid = dev_config_.TokenID;
 
-        auto pubsubport = GenerateRandomPort( base_port, account_->GetAddress() + std::to_string( tokenid ) );
+        auto pubsubport = GenerateRandomPort( base_port, account_->GetAddress() + tokenid );
 
         std::vector<std::string> addresses;
         // UPNP
@@ -319,7 +318,10 @@ namespace sgns
         job_globaldb_ = std::move( global_db_ret.value() );
 
         task_queue_      = std::make_shared<processing::ProcessingTaskQueueImpl>( job_globaldb_ );
-        processing_core_ = std::make_shared<processing::ProcessingCoreImpl>( job_globaldb_, 1000000, 1 );
+        processing_core_ = std::make_shared<processing::ProcessingCoreImpl>( job_globaldb_,
+                                                                             1000000,
+                                                                             1,
+                                                                             dev_config.TokenID );
         processing_core_->RegisterProcessorFactory( "mnnimage",
                                                     [] { return std::make_unique<processing::MNN_Image>(); } );
 
@@ -852,6 +854,11 @@ namespace sgns
         return transaction_manager_->GetBalance();
     }
 
+    uint64_t GeniusNode::GetBalance( const std::string &token_id )
+    {
+        return account_->GetBalance( token_id );
+    }
+
     void GeniusNode::ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult )
     {
         node_logger->info( "[ {} ] SUCCESS PROCESSING TASK {}", account_->GetAddress(), task_id );
@@ -981,14 +988,35 @@ namespace sgns
         return retriever.getHistoricalPriceRange( tokenIds, from, to );
     }
 
-    std::string GeniusNode::FormatTokens( uint64_t amount )
+    outcome::result<std::string> GeniusNode::FormatTokens( uint64_t amount, const std::string &tokenId )
     {
-        return TokenAmount::FormatMinions( amount );
+        if ( tokenId.empty() )
+        {
+            return TokenAmount::FormatMinions( amount );
+        }
+        if ( tokenId == dev_config_.TokenID )
+        {
+            auto child = TokenAmount::ConvertToChildToken( amount, dev_config_.TokenValueInGNUS );
+            if ( !child )
+            {
+                return outcome::failure( child.error() );
+            }
+            return child.value();
+        }
+        return outcome::failure( make_error_code( GeniusNode::Error::TOKEN_ID_MISMATCH ) );
     }
 
-    outcome::result<uint64_t> GeniusNode::ParseTokens( const std::string &str )
+    outcome::result<uint64_t> GeniusNode::ParseTokens( const std::string &str, const std::string &tokenId )
     {
-        return TokenAmount::ParseMinions( str );
+        if ( tokenId.empty() )
+        {
+            return TokenAmount::ParseMinions( str );
+        }
+        if ( tokenId == dev_config_.TokenID )
+        {
+            return TokenAmount::ConvertFromChildToken( str, dev_config_.TokenValueInGNUS );
+        }
+        return outcome::failure( make_error_code( GeniusNode::Error::TOKEN_ID_MISMATCH ) );
     }
 
     // Wait for a transaction to be processed with a timeout

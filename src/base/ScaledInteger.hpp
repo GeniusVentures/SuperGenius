@@ -2,8 +2,8 @@
  * @file        ScaledInteger.hpp
  * @author      Luiz Guilherme Rizzatto Zucchi (luizgrz@gmail.com)
  * @brief       Utilities for decimal arithmetic using scaled integers.
- * @version     1.0
- * @date        2025-01-29
+ * @version     1.1
+ * @date        2025-06-10
  * @copyright   Copyright (c) 2025
  */
 
@@ -27,6 +27,16 @@ namespace sgns
     {
     public:
         /**
+         * @enum ParseMode
+         * @brief Controls handling of extra fractional digits when parsing.
+         */
+        enum class ParseMode
+        {
+            Strict,   ///< Fail if input has more fractional digits than precision.
+            Truncate, ///< Drop any extra fractional digits.
+        };
+
+        /**
          * @brief Create a ScaledInteger from a raw integer and precision.
          * @param[in] raw_value  Integer representation scaled by 10^precision.
          * @param[in] precision  Number of decimal places (scale factor).
@@ -46,9 +56,20 @@ namespace sgns
          * @brief Create a ScaledInteger from a string and precision.
          * @param[in] str        String representation of the decimal value.
          * @param[in] precision  Number of decimal places (scale factor).
+         * @param[in] mode       Mode for handling extra fractional digits.
          * @return Outcome containing shared_ptr to ScaledInteger or error.
          */
-        static outcome::result<std::shared_ptr<ScaledInteger>> New( const std::string &str, uint64_t precision );
+        static outcome::result<std::shared_ptr<ScaledInteger>> New( const std::string &str,
+                                                                    uint64_t           precision,
+                                                                    ParseMode          mode = ParseMode::Strict );
+
+        /**
+         * @brief Create a ScaledInteger from a decimal string by inferring precision.
+         * @param[in] str  String representation of the decimal value (e.g., "123.45").
+         *               In Strict mode, will fail if more than inferred precision.
+         * @return Outcome containing shared_ptr to ScaledInteger or error.
+         */
+        static outcome::result<std::shared_ptr<ScaledInteger>> New( const std::string &str );
 
         /**
          * @brief Compute 10^precision as the scale factor.
@@ -58,12 +79,15 @@ namespace sgns
         static constexpr uint64_t ScaleFactor( uint64_t precision );
 
         /**
-         * @brief Convert a string to a scaled integer representation.
+         * @brief Convert a numeric string to a raw scaled integer.
          * @param[in] str        Numeric string with integer and fractional parts.
          * @param[in] precision  Number of decimal places.
+         * @param[in] mode       Mode for handling extra fractional digits.
          * @return Outcome containing raw scaled integer or error.
          */
-        static outcome::result<uint64_t> FromString( const std::string &str, uint64_t precision );
+        static outcome::result<uint64_t> FromString( const std::string &str,
+                                                     uint64_t           precision,
+                                                     ParseMode          mode = ParseMode::Strict );
 
         /**
          * @brief Convert a scaled integer to a string representation.
@@ -119,6 +143,15 @@ namespace sgns
          * @return Number of decimal places.
          */
         uint64_t Precision() const noexcept;
+
+        /**
+         * @brief  Return this value as a string.
+         * @param  fixedDecimals
+         *         - true: always show all fractional digits (pad with zeros up to precision)
+         *         - false: trim trailing '0's in the fractional part (and drop the '.' if no fraction remains)
+         * @return formatted string
+         */
+        std::string ToString( bool fixedDecimals = true ) const;
 
         /**
          * @brief Add another ScaledInteger with matching precision.
