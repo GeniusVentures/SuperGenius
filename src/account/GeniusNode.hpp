@@ -134,12 +134,12 @@ namespace sgns
         outcome::result<std::pair<std::string, uint64_t>> TransferFunds(
             uint64_t                  amount,
             const std::string        &destination,
-            std::string               token_id = "",
+            std::string               token_id,
             std::chrono::milliseconds timeout  = std::chrono::milliseconds( TIMEOUT_TRANSFER ) );
 
         outcome::result<std::pair<std::string, uint64_t>> PayDev(
             uint64_t                  amount,
-            std::string               token_id = "",
+            std::string               token_id,
             std::chrono::milliseconds timeout  = std::chrono::milliseconds( TIMEOUT_TRANSFER ) );
 
         std::shared_ptr<ipfs_pubsub::GossipPubSub> GetPubSub()
@@ -151,9 +151,9 @@ namespace sgns
          * @brief       Formats a fixed-point amount into a human-readable string.
          * @param[in]   amount  Amount in Minion Tokens (1e-6 GNUS).
          * @param[in]   tokenId Optional token identifier:
-         *                         – empty: default (minion to GNUS) formatting  
-         *                         – matches DevConfig.TokenID: child-token formatting  
-         *                         – otherwise: returns Error::TOKEN_ID_MISMATCH  
+         *                         – empty: default (minion to GNUS) formatting
+         *                         – matches DevConfig.TokenID: child-token formatting
+         *                         – otherwise: returns Error::TOKEN_ID_MISMATCH
          * @return      Outcome result with the formatted string in GNUS or an error.
          */
         outcome::result<std::string> FormatTokens( uint64_t amount, const std::string &tokenId = {} );
@@ -162,9 +162,9 @@ namespace sgns
          * @brief       Parses a human-readable string into a fixed-point amount.
          * @param[in]   str      String representation of an amount in GNUS.
          * @param[in]   tokenId  Optional token identifier:
-         *                          – empty: default (GNUS to minion) parsing  
-         *                          – matches DevConfig.TokenID: child-token parsing  
-         *                          – otherwise: returns Error::TOKEN_ID_MISMATCH  
+         *                          – empty: default (GNUS to minion) parsing
+         *                          – matches DevConfig.TokenID: child-token parsing
+         *                          – otherwise: returns Error::TOKEN_ID_MISMATCH
          * @return      Outcome result with the parsed amount in Minion Tokens (1e-6 GNUS) or an error.
          */
         outcome::result<uint64_t> ParseTokens( const std::string &str, const std::string &tokenId = {} );

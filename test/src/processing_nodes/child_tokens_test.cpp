@@ -215,7 +215,6 @@ TEST( TransferTokenValue, SingleNodeMultiTokenTransferTest )
     uint64_t amountA = 1000000;
     uint64_t amountB = 500000;
 
-    // 5. Mint de tokenA e tokenB em source
     auto resA = source->MintTokens( amountA,
                                     "",
                                     "",

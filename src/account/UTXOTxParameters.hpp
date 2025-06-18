@@ -66,7 +66,7 @@ namespace sgns
                                                          const std::string             &src_address,
                                                          uint64_t                       amount,
                                                          std::string                    dest_address,
-                                                         std::string                    token_id = "" );
+                                                         std::string                    token_id );
         /**
          * @brief Multi-destination UTXO transaction parameters
          * @param utxo_pool    Vector of available UTXOs
@@ -78,7 +78,7 @@ namespace sgns
         static outcome::result<UTXOTxParameters> create( const std::vector<GeniusUTXO>     &utxo_pool,
                                                          const std::string                 &src_address,
                                                          const std::vector<OutputDestInfo> &destinations,
-                                                         std::string                        token_id = "" );
+                                                         std::string                        token_id );
         /**
          * @brief       Lock spent UTXOs from a given pool.
          * @param[in]   utxo_pool  Original UTXO list

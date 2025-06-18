@@ -1,6 +1,6 @@
 /**
  * @file       TransactionManager.cpp
- * @brief      
+ * @brief
  * @date       2024-04-12
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
@@ -269,7 +269,8 @@ namespace sgns
                      UTXOTxParameters::create( account_m->utxos,
                                                account_m->GetAddress(),
                                                amount,
-                                               "0x" + hash_data.toReadableString() ) );
+                                               "0x" + hash_data.toReadableString(),
+                                               "" ) );
 
         params.SignParameters( account_m->eth_address );
 
