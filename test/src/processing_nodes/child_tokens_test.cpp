@@ -161,6 +161,7 @@ TEST( TransferTokenValue, ThreeNodeTransferTest )
     {
         auto transferRes = t.src->TransferFunds( t.amount,
                                                  node50->GetAddress(),
+                                                 "",
                                                  std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
         ASSERT_TRUE( transferRes.has_value() ) << "Transfer failed for " << t.tokenId;
         auto [txHash, duration] = transferRes.value();
@@ -232,6 +233,7 @@ TEST( TransferTokenValue, SingleNodeMultiTokenTransferTest )
     uint64_t totalToTransfer = amountA + amountB;
     auto     txRes           = source->TransferFunds( totalToTransfer,
                                         dest->GetAddress(),
+                                        "",
                                         std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
     ASSERT_TRUE( txRes.has_value() ) << "Combined transfer failed";
     auto [txHash, duration] = txRes.value();

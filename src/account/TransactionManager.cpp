@@ -205,24 +205,19 @@ namespace sgns
         return *account_m;
     }
 
-    outcome::result<std::string> TransactionManager::TransferFunds( uint64_t amount, const std::string &destination )
+    outcome::result<std::string> TransactionManager::TransferFunds( uint64_t           amount,
+                                                                    const std::string &destination,
+                                                                    std::string        token_id )
     {
-        auto maybe_params = UTXOTxParameters::create( account_m->utxos,
-                                                      account_m->GetAddress(),
-                                                      amount,
-                                                      destination,
-                                                      account_m->GetToken() );
+        OUTCOME_TRY(
+            auto &&params,
+            UTXOTxParameters::create( account_m->utxos, account_m->GetAddress(), amount, destination, token_id ) );
 
-        if ( !maybe_params )
-        {
-            return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::invalid_argument ) );
-        }
+        params.SignParameters( account_m->eth_address );
 
         auto transfer_transaction = std::make_shared<TransferTransaction>(
-            TransferTransaction::New( maybe_params.value().outputs_,
-                                      maybe_params.value().inputs_,
-                                      FillDAGStruct(),
-                                      account_m->eth_address ) );
+            TransferTransaction::New( params.outputs_, params.inputs_, FillDAGStruct(), account_m->eth_address ) );
+
         std::optional<std::vector<uint8_t>> maybe_proof;
 #ifdef _PROOF_ENABLED
         TransferProof prover( static_cast<uint64_t>( account_m->GetBalance<uint64_t>() ),
@@ -231,7 +226,7 @@ namespace sgns
         maybe_proof = std::move( proof_result );
 #endif
 
-        account_m->utxos = UTXOTxParameters::UpdateUTXOList( account_m->utxos, maybe_params.value() );
+        account_m->utxos = UTXOTxParameters::UpdateUTXOList( account_m->utxos, params );
         this->EnqueueTransaction( std::make_pair( transfer_transaction, maybe_proof ) );
 
         return transfer_transaction->dag_st.data_hash();
@@ -275,6 +270,8 @@ namespace sgns
                                                account_m->GetAddress(),
                                                amount,
                                                "0x" + hash_data.toReadableString() ) );
+
+        params.SignParameters( account_m->eth_address );
 
         account_m->utxos        = UTXOTxParameters::UpdateUTXOList( account_m->utxos, params );
         auto escrow_transaction = std::make_shared<EscrowTransaction>(

@@ -15,6 +15,8 @@
 #include "account/GeniusUTXO.hpp"
 #include "outcome/outcome.hpp"
 
+#include <ProofSystem/EthereumKeyGenerator.hpp>
+
 namespace sgns
 {
     using namespace boost::multiprecision;
@@ -47,66 +49,28 @@ namespace sgns
                                                          const std::string             &src_address,
                                                          uint64_t                       amount,
                                                          std::string                    dest_address,
-                                                         std::string                    signature = "" )
-        {
-            UTXOTxParameters instance( utxo_pool,
-                                       src_address,
-                                       amount,
-                                       std::move( dest_address ),
-                                       std::move( signature ) );
-
-            if ( !instance.inputs_.empty() )
-            {
-                return instance;
-            }
-
-            return outcome::failure( boost::system::error_code{} );
-        }
-
+                                                         std::string                    token_id = "" );
         static outcome::result<UTXOTxParameters> create( const std::vector<GeniusUTXO>     &utxo_pool,
                                                          const std::string                 &src_address,
                                                          const std::vector<OutputDestInfo> &destinations,
-                                                         std::string                        signature = "" )
-        {
-            UTXOTxParameters instance( utxo_pool, src_address, destinations, std::move( signature ) );
-
-            if ( !instance.inputs_.empty() )
-            {
-                return instance;
-            }
-            return outcome::failure( boost::system::error_code{} );
-        }
+                                                         std::string                        token_id = "" );
 
         static std::vector<GeniusUTXO> UpdateUTXOList( const std::vector<GeniusUTXO> &utxo_pool,
-                                                       const UTXOTxParameters        &params )
-        {
-            auto updated_list = utxo_pool;
+                                                       const UTXOTxParameters        &params );
 
-            for ( auto &input_utxo : params.inputs_ )
-            {
-                for ( auto &utxo : updated_list )
-                {
-                    if ( input_utxo.txid_hash_ == utxo.GetTxID() )
-                    {
-                        utxo.ToggleLock( true );
-                    }
-                }
-            }
-
-            return updated_list;
-        }
+        bool SignParameters( std::shared_ptr<ethereum::EthereumKeyGenerator> eth_key );
 
     private:
         UTXOTxParameters( const std::vector<GeniusUTXO> &utxo_pool,
                           const std::string             &src_address,
                           uint64_t                       amount,
                           std::string                    dest_address,
-                          std::string                    signature );
+                          std::string                    token_id );
 
         UTXOTxParameters( const std::vector<GeniusUTXO>     &utxo_pool,
                           const std::string                 &src_address,
                           const std::vector<OutputDestInfo> &destinations,
-                          std::string                        signature );
+                          std::string                        token_id );
     };
 }
 

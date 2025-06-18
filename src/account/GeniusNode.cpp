@@ -781,11 +781,12 @@ namespace sgns
 
     outcome::result<std::pair<std::string, uint64_t>> GeniusNode::TransferFunds( uint64_t                  amount,
                                                                                  const std::string        &destination,
+                                                                                 std::string               token_id,
                                                                                  std::chrono::milliseconds timeout )
     {
         auto start_time = std::chrono::steady_clock::now();
 
-        OUTCOME_TRY( auto &&tx_id, transaction_manager_->TransferFunds( amount, destination ) );
+        OUTCOME_TRY( auto &&tx_id, transaction_manager_->TransferFunds( amount, destination, token_id ) );
 
         bool success = transaction_manager_->WaitForTransactionOutgoing( tx_id, timeout );
 
@@ -803,10 +804,11 @@ namespace sgns
     }
 
     outcome::result<std::pair<std::string, uint64_t>> GeniusNode::PayDev( uint64_t                  amount,
+                                                                          std::string               token_id,
                                                                           std::chrono::milliseconds timeout )
     {
         auto start_time = std::chrono::steady_clock::now();
-        OUTCOME_TRY( auto &&tx_id, transaction_manager_->TransferFunds( amount, dev_config_.Addr ) );
+        OUTCOME_TRY( auto &&tx_id, transaction_manager_->TransferFunds( amount, dev_config_.Addr, token_id ) );
 
         bool success = transaction_manager_->WaitForTransactionOutgoing( tx_id, timeout );
 
