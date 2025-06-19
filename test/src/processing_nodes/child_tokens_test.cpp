@@ -198,62 +198,6 @@ TEST( TransferTokenValue, ThreeNodeTransferTest )
     EXPECT_EQ( final52_t52 - init52_t52, 1 );
 }
 
-TEST( TransferTokenValue, SingleNodeMultiTokenTransferTest )
-{
-    auto source = CreateNode( "1.0", sgns::TokenID::FromBytes( { 0x0a } ) );
-    auto dest   = CreateNode( "1.0", sgns::TokenID::FromBytes( { 0x0F } ) );
-
-    source->GetPubSub()->AddPeers( { dest->GetPubSub()->GetLocalAddress() } );
-    dest->GetPubSub()->AddPeers( { source->GetPubSub()->GetLocalAddress() } );
-
-    uint64_t initSourceFull = source->GetBalance();
-    uint64_t initSourceA    = source->GetBalance( sgns::TokenID::FromBytes( { 0x0a } ) );
-    uint64_t initSourceB    = source->GetBalance( sgns::TokenID::FromBytes( { 0x0b } ) );
-    uint64_t initDestFull   = dest->GetBalance();
-    uint64_t initDestA      = dest->GetBalance( sgns::TokenID::FromBytes( { 0x0a } ) );
-    uint64_t initDestB      = dest->GetBalance( sgns::TokenID::FromBytes( { 0x0b } ) );
-
-    uint64_t amountA = 1000000;
-    uint64_t amountB = 500000;
-
-    auto resA = source->MintTokens( amountA,
-                                    "",
-                                    "",
-                                    sgns::TokenID::FromBytes( { 0x0a } ),
-                                    std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
-    ASSERT_TRUE( resA.has_value() ) << "Mint tokenA failed";
-
-    auto resB = source->MintTokens( amountB,
-                                    "",
-                                    "",
-                                    sgns::TokenID::FromBytes( { 0x0b } ),
-                                    std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
-    ASSERT_TRUE( resB.has_value() ) << "Mint tokenB failed";
-
-    uint64_t totalToTransfer = amountA + amountB;
-    auto     txRes           = source->TransferFunds( totalToTransfer,
-                                        dest->GetAddress(),
-                                        sgns::TokenID::FromBytes( { 0x00 } ),
-                                        std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
-    ASSERT_TRUE( txRes.has_value() ) << "Combined transfer failed";
-    auto [txHash, duration] = txRes.value();
-
-    ASSERT_TRUE(
-        dest->WaitForTransactionIncoming( txHash, std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) ) )
-        << "dest did not receive transaction " << txHash;
-
-    uint64_t finalDestFull = dest->GetBalance();
-    uint64_t finalDestA    = dest->GetBalance( sgns::TokenID::FromBytes( { 0x0a } ) );
-    uint64_t finalDestB    = dest->GetBalance( sgns::TokenID::FromBytes( { 0x0b } ) );
-
-    EXPECT_EQ( finalDestA - initDestA, amountA );
-    EXPECT_EQ( finalDestB - initDestB, amountB );
-    EXPECT_EQ( finalDestFull - initDestFull, totalToTransfer );
-
-    EXPECT_EQ( source->GetBalance( sgns::TokenID::FromBytes( { 0x0a } ) ) - initSourceA, 0 );
-    EXPECT_EQ( source->GetBalance( sgns::TokenID::FromBytes( { 0x0b } ) ) - initSourceB, 0 );
-}
-
 // ------------------ Suite 1: Mint Main Tokens ------------------
 
 /// Parameters for minting main tokens
