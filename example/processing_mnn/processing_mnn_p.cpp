@@ -1,6 +1,7 @@
 #include <ipfs_pubsub/gossip_pubsub.hpp>
 #include <ipfs_pubsub/gossip_pubsub_topic.hpp>
 
+#include "account/TokenID.hpp"
 #include "base/logger.hpp"
 #include "crdt/globaldb/globaldb.hpp"
 #include "crdt/globaldb/keypair_file_storage.hpp"
@@ -68,7 +69,7 @@ int main( int argc, char *argv[] )
     //Inputs
     char  *endPtr;
     size_t serviceindex = std::strtoul( argv[1], &endPtr, 10 );
-    auto tokenId = std::to_string( serviceindex );
+    //auto tokenId = std::to_string( serviceindex );
 
 
     //Split Image into RGBA bytes
@@ -120,7 +121,7 @@ int main( int argc, char *argv[] )
     auto enqueuer2  = std::make_shared<SubTaskEnqueuerImpl>( taskQueue2 );
 
     //Processing Core
-    auto processingCore2 = std::make_shared<ProcessingCoreImpl>( globalDB2, 1000000, 2, tokenId );
+    auto processingCore2 = std::make_shared<ProcessingCoreImpl>( globalDB2, 1000000, 2, sgns::TokenID{} );
     processingCore2->RegisterProcessorFactory( "mnnimage", []() { return std::make_unique<MNN_Image>(); } );
     //processingCore2->SetProcessorByName("posenet");
     //Set Imagesplit, this replaces bitswap getting of file for now. Should use AsyncIOmanager in the future

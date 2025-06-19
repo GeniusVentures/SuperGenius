@@ -49,7 +49,7 @@ namespace sgns::processing
         if ( cidData_.find( subTask.subtaskid() ) == cidData_.end() )
         {
             auto buffers = GetCidForProc( subTask.json_data(), task.json_data() );
-            if (buffers == nullptr)
+            if ( buffers == nullptr )
             {
                 return outcome::failure( Error::NO_BUFFER_FROM_JOB_DATA );
             }
@@ -57,7 +57,7 @@ namespace sgns::processing
             {
                 return outcome::failure( Error::NO_BUFFER_FROM_JOB_DATA );
             }
-           
+
             //this->cidData_.insert( { subTask.subtaskid(), buffers } );
             //this->ProcessSubTask2(subTask, result, initialHashCode, buffers->second.at(0));
             //this->m_processor->SetData(buffers);
@@ -68,13 +68,13 @@ namespace sgns::processing
                                                                   *buffers->first );
             std::string hashString( tempresult.begin(), tempresult.end() );
             result.set_result_hash( hashString );
-            result.set_token_id(m_tokenId);
+            result.set_token_id( m_tokenId.bytes().data(), m_tokenId.size() );
             --m_processingSubTaskCount;
         }
         else
         {
             auto buffers = cidData_.at( subTask.subtaskid() );
-            if (buffers == nullptr)
+            if ( buffers == nullptr )
             {
                 return outcome::failure( Error::NO_BUFFER_FROM_JOB_DATA );
             }
@@ -92,7 +92,7 @@ namespace sgns::processing
                                                                   *buffers->first );
             std::string hashString( tempresult.begin(), tempresult.end() );
             result.set_result_hash( hashString );
-            result.set_token_id(m_tokenId);
+            result.set_token_id( m_tokenId.bytes().data(), m_tokenId.size() );
             --m_processingSubTaskCount;
         }
         return result;
@@ -225,7 +225,7 @@ namespace sgns::processing
             {
                 //results->first.insert(results->first.end(), buffers->first.begin(), buffers->first.end());
                 //results->second.insert(results->second.end(), buffers->second.begin(), buffers->second.end());
-                if (results && buffers)
+                if ( results && buffers )
                 {
                     results->insert( results->end(), buffers->second[0].begin(), buffers->second[0].end() );
                 }

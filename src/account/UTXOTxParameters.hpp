@@ -13,6 +13,7 @@
 #include <boost/multiprecision/cpp_int.hpp>
 
 #include "account/GeniusUTXO.hpp"
+#include "account/TokenID.hpp"
 #include "outcome/outcome.hpp"
 
 #include <ProofSystem/EthereumKeyGenerator.hpp>
@@ -38,7 +39,7 @@ namespace sgns
     {
         uint64_t    encrypted_amount; ///< El Gamal encrypted amount
         std::string dest_address;     ///< Destination node address
-        std::string token_id;         ///< Token identifier
+        TokenID     token_id;         ///< Token identifier
     };
 
     struct UTXOTxParameters
@@ -66,7 +67,7 @@ namespace sgns
                                                          const std::string             &src_address,
                                                          uint64_t                       amount,
                                                          std::string                    dest_address,
-                                                         std::string                    token_id );
+                                                         TokenID                        token_id );
         /**
          * @brief Multi-destination UTXO transaction parameters
          * @param utxo_pool    Vector of available UTXOs
@@ -78,7 +79,7 @@ namespace sgns
         static outcome::result<UTXOTxParameters> create( const std::vector<GeniusUTXO>     &utxo_pool,
                                                          const std::string                 &src_address,
                                                          const std::vector<OutputDestInfo> &destinations,
-                                                         std::string                        token_id );
+                                                         TokenID                            token_id );
         /**
          * @brief       Lock spent UTXOs from a given pool.
          * @param[in]   utxo_pool  Original UTXO list
@@ -99,7 +100,7 @@ namespace sgns
                           const std::string             &src_address,
                           uint64_t                       amount,
                           std::string                    dest_address,
-                          std::string                    token_id );
+                          TokenID                        token_id );
 
         /**
          * @brief   Internal constructor for multi-destination factory.
@@ -108,7 +109,7 @@ namespace sgns
         UTXOTxParameters( const std::vector<GeniusUTXO>     &utxo_pool,
                           const std::string                 &src_address,
                           const std::vector<OutputDestInfo> &destinations,
-                          std::string                        token_id );
+                          TokenID                            token_id );
     };
 }
 

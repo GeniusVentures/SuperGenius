@@ -57,7 +57,7 @@ namespace sgns
             SGTransaction::TransferOutput *output_proto = utxo_proto_params->add_outputs();
             output_proto->set_encrypted_amount( output.encrypted_amount );
             output_proto->set_dest_addr( output.dest_address );
-            output_proto->set_token_id( output.token_id );
+            output_proto->set_token_id( output.token_id.bytes().data(), output.token_id.bytes().size() );
         }
         tx_struct.set_amount( amount_ );
         tx_struct.set_dev_addr( dev_addr_ );
@@ -94,7 +94,9 @@ namespace sgns
         {
             const SGTransaction::TransferOutput &output_proto = utxo_proto_params->outputs( i );
 
-            OutputDestInfo curr{ output_proto.encrypted_amount(), output_proto.dest_addr(), output_proto.token_id() };
+            OutputDestInfo curr{ output_proto.encrypted_amount(),
+                                 output_proto.dest_addr(),
+                                 TokenID::FromBytes( output_proto.token_id().data(), output_proto.token_id().size() ) };
             outputs.push_back( curr );
         }
         uint64_t amount    = tx_struct.amount();

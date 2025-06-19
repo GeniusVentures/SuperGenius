@@ -47,7 +47,7 @@ void CreateTransferTransaction( const std::vector<std::string> &args, sgns::Tran
         return;
     }
     uint64_t amount = std::stoull( args[1] );
-    if ( !transaction_manager.TransferFunds( amount, { args[2] } ) )
+    if ( !transaction_manager.TransferFunds( amount, { args[2] }, sgns::TokenID::FromBytes( { 0x00 } ) ) )
     {
         std::cout << "Insufficient funds.\n";
     }
@@ -71,7 +71,7 @@ void MintTokens( const std::vector<std::string> &args, sgns::TransactionManager 
         std::cerr << "Invalid process command format.\n";
         return;
     }
-    transaction_manager.MintFunds( std::stoull( args[1] ), "", "", "" );
+    transaction_manager.MintFunds( std::stoull( args[1] ), "", "",  sgns::TokenID::FromBytes( { 0x00 } ) );
 }
 
 void PrintAccountInfo( const std::vector<std::string> &args, sgns::TransactionManager &transaction_manager )

@@ -207,7 +207,7 @@ namespace sgns
 
     outcome::result<std::string> TransactionManager::TransferFunds( uint64_t           amount,
                                                                     const std::string &destination,
-                                                                    std::string        token_id )
+                                                                    TokenID            token_id )
     {
         OUTCOME_TRY(
             auto &&params,
@@ -235,7 +235,7 @@ namespace sgns
     outcome::result<std::string> TransactionManager::MintFunds( uint64_t    amount,
                                                                 std::string transaction_hash,
                                                                 std::string chainid,
-                                                                std::string tokenid )
+                                                                TokenID tokenid )
     {
         auto mint_transaction = std::make_shared<MintTransaction>(
             MintTransaction::New( amount,
@@ -270,7 +270,7 @@ namespace sgns
                                                account_m->GetAddress(),
                                                amount,
                                                "0x" + hash_data.toReadableString(),
-                                               "" ) );
+                                               TokenID{} ) );
 
         params.SignParameters( account_m->eth_address );
 
@@ -327,7 +327,7 @@ namespace sgns
 
         OUTCOME_TRY( ( auto &&, peer_total ), escrow_amount_ptr->Multiply( *peers_cut_ptr ) );
 
-        const std::string &escrowTokenId = escrow_tx->GetUTXOParameters().outputs_[0].token_id;
+        const auto &escrowTokenId = escrow_tx->GetUTXOParameters().outputs_[0].token_id;
 
         uint64_t peers_amount = peer_total.Value() / static_cast<uint64_t>( taskresult.subtask_results().size() );
         auto     remainder    = escrow_tx->GetAmount();
@@ -337,7 +337,8 @@ namespace sgns
             std::cout << "Subtask Result " << subtask.subtaskid() << "from " << subtask.node_address() << std::endl;
             m_logger->debug( "Paying out {} in {}", peers_amount, subtask.token_id() );
             subtask_ids.push_back( subtask.subtaskid() );
-            payout_peers.push_back( { peers_amount, subtask.node_address(), subtask.token_id() } );
+            payout_peers.push_back(
+                { peers_amount, subtask.node_address(), TokenID::FromBytes( subtask.token_id().data(), subtask.token_id().size() ) } );
             remainder -= peers_amount;
         }
         //TODO: see what do with token_id here

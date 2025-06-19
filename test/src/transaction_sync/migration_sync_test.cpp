@@ -9,6 +9,7 @@
 
 #include "account/GeniusNode.hpp"
 #include "account/MigrationManager.hpp"
+#include "account/TokenID.hpp"
 #include "FileManager.hpp"
 
 namespace fs = std::filesystem;
@@ -30,7 +31,7 @@ protected:
         "0xcafe", // Addr
         "0.65",   // Cut
         "1.0",    // TokenValueInGNUS
-        "0",      // TokenID
+        sgns::TokenID{},      // TokenID
         ""        // BaseWritePath
     };
 

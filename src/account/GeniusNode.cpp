@@ -192,7 +192,7 @@ namespace sgns
 
         auto tokenid = dev_config_.TokenID;
 
-        auto pubsubport = GenerateRandomPort( base_port, account_->GetAddress() + tokenid );
+        auto pubsubport = GenerateRandomPort( base_port, account_->GetAddress() );
 
         std::vector<std::string> addresses;
         // UPNP
@@ -757,7 +757,7 @@ namespace sgns
     outcome::result<std::pair<std::string, uint64_t>> GeniusNode::MintTokens( uint64_t           amount,
                                                                               const std::string &transaction_hash,
                                                                               const std::string &chainid,
-                                                                              const std::string &tokenid,
+                                                                              TokenID            tokenid,
                                                                               std::chrono::milliseconds timeout )
     {
         auto start_time = std::chrono::steady_clock::now();
@@ -781,7 +781,7 @@ namespace sgns
 
     outcome::result<std::pair<std::string, uint64_t>> GeniusNode::TransferFunds( uint64_t                  amount,
                                                                                  const std::string        &destination,
-                                                                                 std::string               token_id,
+                                                                                 TokenID                   token_id,
                                                                                  std::chrono::milliseconds timeout )
     {
         auto start_time = std::chrono::steady_clock::now();
@@ -804,7 +804,7 @@ namespace sgns
     }
 
     outcome::result<std::pair<std::string, uint64_t>> GeniusNode::PayDev( uint64_t                  amount,
-                                                                          std::string               token_id,
+                                                                          TokenID                   token_id,
                                                                           std::chrono::milliseconds timeout )
     {
         auto start_time = std::chrono::steady_clock::now();
@@ -856,7 +856,7 @@ namespace sgns
         return transaction_manager_->GetBalance();
     }
 
-    uint64_t GeniusNode::GetBalance( const std::string &token_id )
+    uint64_t GeniusNode::GetBalance( const TokenID token_id )
     {
         return account_->GetBalance( token_id );
     }
@@ -990,13 +990,13 @@ namespace sgns
         return retriever.getHistoricalPriceRange( tokenIds, from, to );
     }
 
-    outcome::result<std::string> GeniusNode::FormatTokens( uint64_t amount, const std::string &tokenId )
+    outcome::result<std::string> GeniusNode::FormatTokens( uint64_t amount, TokenID tokenId )
     {
-        if ( tokenId.empty() )
+        if ( tokenId.IsGNUS() )
         {
             return TokenAmount::FormatMinions( amount );
         }
-        if ( tokenId == dev_config_.TokenID )
+        if ( tokenId.Equals( dev_config_.TokenID ) )
         {
             auto child = TokenAmount::ConvertToChildToken( amount, dev_config_.TokenValueInGNUS );
             if ( !child )
@@ -1008,13 +1008,13 @@ namespace sgns
         return outcome::failure( make_error_code( GeniusNode::Error::TOKEN_ID_MISMATCH ) );
     }
 
-    outcome::result<uint64_t> GeniusNode::ParseTokens( const std::string &str, const std::string &tokenId )
+    outcome::result<uint64_t> GeniusNode::ParseTokens( const std::string &str, TokenID tokenId )
     {
-        if ( tokenId.empty() )
+        if ( tokenId.IsGNUS() )
         {
             return TokenAmount::ParseMinions( str );
         }
-        if ( tokenId == dev_config_.TokenID )
+        if ( tokenId.Equals( dev_config_.TokenID ) )
         {
             return TokenAmount::ConvertFromChildToken( str, dev_config_.TokenValueInGNUS );
         }

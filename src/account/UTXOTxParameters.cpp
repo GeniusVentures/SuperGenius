@@ -13,7 +13,7 @@ namespace sgns
                                                                 const std::string             &src_address,
                                                                 uint64_t                       amount,
                                                                 std::string                    dest_address,
-                                                                std::string                    token_id )
+                                                                TokenID                        token_id )
     {
         UTXOTxParameters instance( utxo_pool, src_address, amount, std::move( dest_address ), std::move( token_id ) );
 
@@ -28,7 +28,7 @@ namespace sgns
     outcome::result<UTXOTxParameters> UTXOTxParameters::create( const std::vector<GeniusUTXO>     &utxo_pool,
                                                                 const std::string                 &src_address,
                                                                 const std::vector<OutputDestInfo> &destinations,
-                                                                std::string                        token_id )
+                                                                TokenID                            token_id )
     {
         UTXOTxParameters instance( utxo_pool, src_address, destinations, std::move( token_id ) );
 
@@ -42,10 +42,10 @@ namespace sgns
     UTXOTxParameters::UTXOTxParameters( const std::vector<GeniusUTXO>     &utxo_pool,
                                         const std::string                 &src_address,
                                         const std::vector<OutputDestInfo> &destinations,
-                                        std::string                        token_id )
+                                        TokenID                            token_id )
     {
         uint64_t    total_amount = 0;
-        std::string change_token;
+        TokenID change_token;
         for ( const auto &d : destinations )
         {
             total_amount += d.encrypted_amount;
@@ -62,14 +62,14 @@ namespace sgns
             {
                 continue;
             }
-            if ( ( !token_id.empty() ) && ( token_id != utxo.GetTokenID() ) )
+            if ( !token_id.Equals( utxo.GetTokenID() ) )
             {
                 continue;
             }
             InputUTXOInfo curr_input{ utxo.GetTxID(), utxo.GetOutputIdx(), "" };
             used_amount += utxo.GetAmount();
             inputs_.push_back( curr_input );
-            change_token = utxo.GetTokenID();
+            change_token = token_id;
         }
 
         if ( used_amount < total_amount )
@@ -93,7 +93,7 @@ namespace sgns
                                         const std::string             &src_address,
                                         uint64_t                       amount,
                                         const std::string              dest_address,
-                                        std::string                    token_id )
+                                        TokenID                        token_id )
     {
         // Select UTXOs until we cover the requested amount
         std::vector<GeniusUTXO> selected_utxos;
@@ -108,7 +108,7 @@ namespace sgns
             {
                 continue;
             }
-            if ( ( !token_id.empty() ) && ( token_id != utxo.GetTokenID() ) )
+            if ( !token_id.Equals( utxo.GetTokenID() ) )
             {
                 continue;
             }
@@ -126,42 +126,39 @@ namespace sgns
         }
 
         // Aggregate destination amounts by TokenID
-        std::unordered_map<std::string, uint64_t> send_totals;
-        uint64_t                                  used_amount = 0;
+        uint64_t send_totals = 0;
+        uint64_t used_amount = 0;
         for ( const auto &utxo : selected_utxos )
         {
-            const auto &token    = utxo.GetTokenID();
-            uint64_t    utxo_amt = utxo.GetAmount();
+            uint64_t utxo_amt = utxo.GetAmount();
 
             if ( used_amount + utxo_amt <= amount )
             {
-                send_totals[token] += utxo_amt;
-                used_amount        += utxo_amt;
+                send_totals += utxo_amt;
+                used_amount += utxo_amt;
             }
             else
             {
-                uint64_t needed     = amount - used_amount;
-                send_totals[token] += needed;
-                used_amount        += needed;
+                uint64_t needed  = amount - used_amount;
+                send_totals     += needed;
+                used_amount     += needed;
                 break;
             }
         }
 
         // Reserve space: one output per token plus possible change
-        outputs_.reserve( send_totals.size() + 1 );
+        outputs_.reserve( 2 );
 
         // Create one output per TokenID for the destination
-        for ( const auto &entry : send_totals )
-        {
-            outputs_.push_back( { entry.second, dest_address, entry.first } );
-        }
+
+        outputs_.push_back( { send_totals, dest_address, token_id } );
 
         // Single change output (always from the last UTXO's token)
         uint64_t change = selected_amount - amount;
         if ( change > 0 )
         {
             const auto &last_utxo = selected_utxos.back();
-            outputs_.push_back( { change, src_address, last_utxo.GetTokenID() } );
+            outputs_.push_back( { change, src_address, token_id } );
         }
     }
 

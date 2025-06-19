@@ -9,6 +9,7 @@
 #include "AccountHelper.hpp"
 #include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/local_requests.hpp>
+#include "account/TokenID.hpp"
 extern AccountKey2   ACCOUNT_KEY;
 extern DevConfig_st2 DEV_CONFIG;
 
@@ -33,7 +34,7 @@ namespace sgns
     AccountHelper::AccountHelper( const AccountKey2   &priv_key_data,
                                   const DevConfig_st2 &dev_config,
                                   const char          *eth_private_key ) :
-        account_( std::make_shared<GeniusAccount>( "GNUS Token", "", eth_private_key ) ),
+        account_( std::make_shared<GeniusAccount>( sgns::TokenID{}, "", eth_private_key ) ),
         io_( std::make_shared<boost::asio::io_context>() ),
         dev_config_( dev_config )
     {

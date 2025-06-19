@@ -116,9 +116,21 @@ sgns::GeniusNode *ProcessingNodesTest::node_main  = nullptr;
 sgns::GeniusNode *ProcessingNodesTest::node_proc1 = nullptr;
 sgns::GeniusNode *ProcessingNodesTest::node_proc2 = nullptr;
 
-DevConfig_st ProcessingNodesTest::DEV_CONFIG  = { "0xcafe", "0.65", "1.0", "0", "./node1" };
-DevConfig_st ProcessingNodesTest::DEV_CONFIG2 = { "0xcafe", "0.65", "1.0", "0", "./node2" };
-DevConfig_st ProcessingNodesTest::DEV_CONFIG3 = { "0xcafe", "0.65", "1.0", "0", "./node3" };
+DevConfig_st ProcessingNodesTest::DEV_CONFIG  = { "0xcafe",
+                                                  "0.65",
+                                                  "1.0",
+                                                  sgns::TokenID::FromBytes( { 0x00 } ),
+                                                  "./node1" };
+DevConfig_st ProcessingNodesTest::DEV_CONFIG2 = { "0xcafe",
+                                                  "0.65",
+                                                  "1.0",
+                                                  sgns::TokenID::FromBytes( { 0x00 } ),
+                                                  "./node2" };
+DevConfig_st ProcessingNodesTest::DEV_CONFIG3 = { "0xcafe",
+                                                  "0.65",
+                                                  "1.0",
+                                                  sgns::TokenID::FromBytes( { 0x00 } ),
+                                                  "./node3" };
 
 std::string ProcessingNodesTest::binary_path = "";
 
@@ -153,8 +165,8 @@ TEST_F( ProcessingNodesTest, DISABLED_ProcessNodesPubsubs )
 
 TEST_F( ProcessingNodesTest, ProcessNodesTransactionsCount )
 {
-    node_main->MintTokens( 50000000000, "", "", "" );
-    node_main->MintTokens( 50000000000, "", "", "" );
+    node_main->MintTokens( 50000000000, "", "", sgns::TokenID::FromBytes( { 0x00 } )  );
+    node_main->MintTokens( 50000000000, "", "", sgns::TokenID::FromBytes( { 0x00 } ) );
     std::this_thread::sleep_for( std::chrono::milliseconds( 10000 ) );
     int transcount_main  = node_main->GetOutTransactions().size();
     int transcount_node1 = node_proc1->GetOutTransactions().size();
@@ -299,7 +311,7 @@ TEST_F( ProcessingNodesTest, PostProcessing )
     assertWaitForCondition(
         [&]()
         {
-            auto result             = node_main->GetBalance();
+            auto result = node_main->GetBalance();
             if ( result == balance_main - cost )
             {
                 return true;
@@ -312,7 +324,7 @@ TEST_F( ProcessingNodesTest, PostProcessing )
     assertWaitForCondition(
         [&]()
         {
-            auto result = node_proc1->GetBalance() + node_proc2->GetBalance();
+            auto result             = node_proc1->GetBalance() + node_proc2->GetBalance();
             auto expected_peer_gain = ( ( cost * 65 ) / 100 ) / 2;
             if ( result == balance_node1 + balance_node2 + 2 * expected_peer_gain )
             {

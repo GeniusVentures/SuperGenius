@@ -30,7 +30,7 @@ namespace sgns
     public:
         static const std::array<uint8_t, 32> ELGAMAL_PUBKEY_PREDEFINED;
 
-        GeniusAccount( std::string token_id, std::string_view base_path, const char *eth_private_key );
+        GeniusAccount( TokenID token_id, std::string_view base_path, const char *eth_private_key );
 
         ~GeniusAccount()
         {
@@ -73,9 +73,9 @@ namespace sgns
             return std::to_string( GetBalance<uint64_t>() );
         }
 
-        uint64_t GetBalance( const std::string &token_id ) const;
+        uint64_t GetBalance( const TokenID token_id ) const;
 
-        [[nodiscard]] std::string GetToken() const
+        [[nodiscard]] TokenID GetToken() const
         {
             return token;
             // return "GNUS Token";
@@ -129,7 +129,7 @@ namespace sgns
         std::shared_ptr<KeyGenerator::ElGamal>          elgamal_address;
         std::shared_ptr<ethereum::EthereumKeyGenerator> eth_address;
 
-        std::string             token; //GNUS SGNUS ETC...
+        TokenID                 token;
         uint64_t                nonce;
         std::vector<GeniusUTXO> utxos;
 
