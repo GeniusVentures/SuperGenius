@@ -25,13 +25,13 @@ namespace
                                                   sgns::TokenID      tokenId,
                                                   bool               isProcessor = false )
     {
-        static std::atomic<int> node_counter{ 0 };
-        int                     id = node_counter.fetch_add( 1 );
+        static std::atomic<int> nodeCounter{ 0 };
+        int                     id = nodeCounter.fetch_add( 1 );
 
         std::string binaryPath = boost::dll::program_location().parent_path().string();
         const char *filePath   = ::testing::UnitTest::GetInstance()->current_test_info()->file();
         std::string fileStem   = std::filesystem::path( filePath ).stem().string();
-        auto        outPath    = binaryPath + /*"/" + fileStem +*/ "/node_" + std::to_string( id ) + "/";
+        auto        outPath    = binaryPath + "/node_" + std::to_string( id ) + "/";
 
         DevConfig_st devConfig = { "0xcafe", "0.65", tokenValue, tokenId, "" };
         std::strncpy( devConfig.BaseWritePath, outPath.c_str(), sizeof( devConfig.BaseWritePath ) - 1 );
@@ -42,16 +42,17 @@ namespace
 
         std::mt19937 rng( static_cast<uint32_t>( std::time( nullptr ) ) + static_cast<uint32_t>( id ) );
         std::uniform_int_distribution<> dist( 0, 15 );
-
         std::generate_n( std::back_inserter( key ),
                          64,
                          [&]()
                          {
-                             static constexpr std::string_view hex_chars = "0123456789abcdef";
-                             return hex_chars[dist( rng )];
+                             static constexpr std::string_view hexChars = "0123456789abcdef";
+                             return hexChars[dist( rng )];
                          } );
 
-        auto node = std::make_unique<sgns::GeniusNode>( devConfig, key.c_str(), false, isProcessor );
+        uint16_t uniquePort = static_cast<uint16_t>( 40001 + id );
+        auto     node = std::make_unique<sgns::GeniusNode>( devConfig, key.c_str(), false, isProcessor, uniquePort );
+
         std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
         return node;
     }
@@ -164,7 +165,7 @@ TEST( TransferTokenValue, ThreeNodeTransferTest )
                                                  node50->GetAddress(),
                                                  t.tokenId,
                                                  std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
-        ASSERT_TRUE( transferRes.has_value() );// << "Transfer failed for " << t.tokenId;
+        ASSERT_TRUE( transferRes.has_value() ); // << "Transfer failed for " << t.tokenId;
         auto [txHash, duration] = transferRes.value();
         std::cout << "Transferred " << t.amount << " of " << t.tokenId << " in " << duration << " ms\n";
 
@@ -378,7 +379,7 @@ TEST( GeniusNodeMultiTokenMintTest, MintMultipleTokenIds )
                                      "",
                                      tm.tokenId,
                                      std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
-        ASSERT_TRUE( res.has_value() );// << "MintTokens failed for token=" << tm.tokenId << " amount=" << tm.amount;
+        ASSERT_TRUE( res.has_value() ); // << "MintTokens failed for token=" << tm.tokenId << " amount=" << tm.amount;
 
         expectedTotals[tm.tokenId] += tm.amount;
         totalMinted                += tm.amount;
