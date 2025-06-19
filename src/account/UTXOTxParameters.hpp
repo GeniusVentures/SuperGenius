@@ -58,7 +58,7 @@ namespace sgns
          * @param[in] src_address  Sender address (for inputs/change)
          * @param[in] amount       Amount to send to the destination
          * @param[in] dest_address Destination address for the payment
-         * @param[in] token_id     Token identifier to filter UTXOs; if empty, all token types are accepted
+         * @param[in] token_id     Token identifier to filter UTXOs
          * @return outcome::result<UTXOTxParameters>
          *         On success, a fully-constructed parameter object;
          *         on failure (e.g. insufficient funds), an error result.
@@ -73,7 +73,7 @@ namespace sgns
          * @param utxo_pool    Vector of available UTXOs
          * @param src_address  Sender address (for inputs/change)
          * @param destinations List of (amount, address) outputs
-         * @param token_id     Token identifier to filter UTXOs; if empty, all token types are accepted
+         * @param token_id     Token identifier to filter UTXOs
          * @return outcome::result<UTXOTxParameters>
          */
         static outcome::result<UTXOTxParameters> create( const std::vector<GeniusUTXO>     &utxo_pool,

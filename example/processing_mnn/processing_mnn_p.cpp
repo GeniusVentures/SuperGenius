@@ -69,8 +69,6 @@ int main( int argc, char *argv[] )
     //Inputs
     char  *endPtr;
     size_t serviceindex = std::strtoul( argv[1], &endPtr, 10 );
-    //auto tokenId = std::to_string( serviceindex );
-
 
     //Split Image into RGBA bytes
     //ImageSplitter imagesplit(inputImageFileName, 128, 128);

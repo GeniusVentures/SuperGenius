@@ -18,7 +18,7 @@ namespace
     /**
      * @brief Helper to create a GeniusNode with its own directory and cleanup.
      * @param tokenValue TokenValueInGNUS to initialize DevConfig.
-     * @param tokenId TokenValueInGNUS to initialize TokenID.
+     * @param tokenId TokenID to initialize DevConfig.
      * @return unique_ptr to the initialized GeniusNode.
      */
     std::unique_ptr<sgns::GeniusNode> CreateNode( const std::string &tokenValue,
