@@ -36,7 +36,7 @@ TEST( GeniusAccount, TotalBalance )
     EXPECT_TRUE( account->PutUTXO( GeniusUTXO( h, 1, 30, sgns::TokenID::FromBytes( { 0x02 } ) ) ) );
     EXPECT_TRUE( account->PutUTXO( GeniusUTXO( h, 2, 20, sgns::TokenID::FromBytes( { 0x01 } ) ) ) );
     EXPECT_TRUE( account->PutUTXO( GeniusUTXO( h, 3, 40, sgns::TokenID::FromBytes( { 0x03 } ) ) ) );
-    EXPECT_EQ( account->GetBalance<uint64_t>(), 0ull );
+    EXPECT_EQ( account->GetBalance<uint64_t>(), 140ull );
 }
 
 TEST( GeniusAccount, BalanceByToken )

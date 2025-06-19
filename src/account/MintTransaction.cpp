@@ -27,7 +27,7 @@ namespace sgns
         tx_struct.mutable_dag_struct()->CopyFrom( this->dag_st );
         tx_struct.set_amount( amount );
         tx_struct.set_chain_id( chain_id );
-        tx_struct.set_token_id( token_id.bytes().data(), token_id.bytes().size() );
+        tx_struct.set_token_id( token_id.bytes().data(), token_id.size() );
 
         size_t               size = tx_struct.ByteSizeLong();
         std::vector<uint8_t> serialized_proto( size );
