@@ -1,10 +1,6 @@
 add_library(processing_service
     impl/processing_core_impl.cpp
-    processing_imagesplit.cpp
     processing_tasksplit.cpp
-    processors/processing_processor_mnn_image.cpp
-    processors/processing_processor_mnn_audio.cpp
-    processors/processing_processor_mnn_ml.cpp
     processing_engine.cpp
     processing_node.cpp
     processing_service.cpp

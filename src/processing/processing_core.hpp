@@ -28,11 +28,6 @@ public:
     virtual outcome::result<SGProcessing::SubTaskResult> ProcessSubTask(
         const SGProcessing::SubTask& subTask, uint32_t initialHashCode) = 0;
 
-    /** Get processing type from json data to set processor
-    * @param jsondata - jsondata that needs to be parsed
-    */
-    virtual bool SetProcessingTypeFromJson(std::string jsondata) = 0;
-
     /** Get settings.json and then get data we need for processing based on parsing
     * @param CID - CID of directory to get settings.json from
     */

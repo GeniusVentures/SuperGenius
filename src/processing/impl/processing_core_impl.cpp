@@ -61,13 +61,13 @@ namespace sgns::processing
             //this->cidData_.insert( { subTask.subtaskid(), buffers } );
             //this->ProcessSubTask2(subTask, result, initialHashCode, buffers->second.at(0));
             //this->m_processor->SetData(buffers);
-            auto        tempresult = this->m_processor->StartProcessing( result,
-                                                                  task,
-                                                                  subTask,
-                                                                  *buffers->second,
-                                                                  *buffers->first );
-            std::string hashString( tempresult.begin(), tempresult.end() );
-            result.set_result_hash( hashString );
+            //auto        tempresult = this->m_processor->StartProcessing( result,
+            //                                                      task,
+            //                                                      subTask,
+            //                                                      *buffers->second,
+            //                                                      *buffers->first );
+            //std::string hashString( tempresult.begin(), tempresult.end() );
+            //result.set_result_hash( hashString );
             --m_processingSubTaskCount;
         }
         else
@@ -84,13 +84,13 @@ namespace sgns::processing
 
             // Set data and process
             //this->m_processor->SetData(buffers);
-            auto        tempresult = this->m_processor->StartProcessing( result,
-                                                                  task,
-                                                                  subTask,
-                                                                  *buffers->second,
-                                                                  *buffers->first );
-            std::string hashString( tempresult.begin(), tempresult.end() );
-            result.set_result_hash( hashString );
+            //auto        tempresult = this->m_processor->StartProcessing( result,
+            //                                                      task,
+            //                                                      subTask,
+            //                                                      *buffers->second,
+            //                                                      *buffers->first );
+            //std::string hashString( tempresult.begin(), tempresult.end() );
+            //result.set_result_hash( hashString );
             --m_processingSubTaskCount;
         }
         return result;
@@ -117,11 +117,11 @@ namespace sgns::processing
                 std::make_shared<std::vector<char>>() );
 
         //Set processor or fail.
-        if ( !this->SetProcessingTypeFromJson( base_json ) )
-        {
-            std::cerr << "No processor available for this type:" << base_json << std::endl;
-            return mainbuffers;
-        }
+        //if ( !this->SetProcessingTypeFromJson( base_json ) )
+        //{
+        //    std::cerr << "No processor available for this type:" << base_json << std::endl;
+        //    return mainbuffers;
+        //}
 
         //Parse json to look for model/image
         rapidjson::Document document;
@@ -231,37 +231,37 @@ namespace sgns::processing
             "file" );
     }
 
-    bool ProcessingCoreImpl::SetProcessingTypeFromJson( std::string jsondata )
-    {
-        rapidjson::Document doc;
-        doc.Parse( jsondata.c_str() );
-        //Check if parsed
-        if ( !doc.IsObject() )
-        {
-            std::cerr << "Error parsing JSON" << std::endl;
-            return false;
-        }
-        if ( doc.HasMember( "model" ) && doc["model"].IsObject() )
-        {
-            const rapidjson::Value &model = doc["model"];
-            if ( model.HasMember( "name" ) && model["name"].IsString() )
-            {
-                std::string modelName = model["name"].GetString();
-                std::cout << "Model name: " << modelName << std::endl;
-                if ( SetProcessorByName( modelName ) )
-                {
-                    return true;
-                }
+    //bool ProcessingCoreImpl::SetProcessingTypeFromJson( std::string jsondata )
+    //{
+    //    rapidjson::Document doc;
+    //    doc.Parse( jsondata.c_str() );
+    //    //Check if parsed
+    //    if ( !doc.IsObject() )
+    //    {
+    //        std::cerr << "Error parsing JSON" << std::endl;
+    //        return false;
+    //    }
+    //    if ( doc.HasMember( "model" ) && doc["model"].IsObject() )
+    //    {
+    //        const rapidjson::Value &model = doc["model"];
+    //        if ( model.HasMember( "name" ) && model["name"].IsString() )
+    //        {
+    //            std::string modelName = model["name"].GetString();
+    //            std::cout << "Model name: " << modelName << std::endl;
+    //            if ( SetProcessorByName( modelName ) )
+    //            {
+    //                return true;
+    //            }
 
-                std::cerr << "No processor by name in settings json" << std::endl;
-                return false;
-            }
+    //            std::cerr << "No processor by name in settings json" << std::endl;
+    //            return false;
+    //        }
 
-            std::cerr << "Model name not found or not a string" << std::endl;
-            return false;
-        }
+    //        std::cerr << "Model name not found or not a string" << std::endl;
+    //        return false;
+    //    }
 
-        std::cerr << "Model object not found or not an object" << std::endl;
-        return false;
-    }
+    //    std::cerr << "Model object not found or not an object" << std::endl;
+    //    return false;
+    //}
 }

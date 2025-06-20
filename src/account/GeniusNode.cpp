@@ -20,7 +20,7 @@
 #include "processing/processing_imagesplit.hpp"
 #include "processing/processing_tasksplit.hpp"
 #include "processing/processing_subtask_enqueuer_impl.hpp"
-#include "processing/processors/processing_processor_mnn_image.hpp"
+//#include "processing/processors/processing_processor_mnn_image.hpp"
 #include "local_secure_storage/impl/json/JSONSecureStorage.hpp"
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
@@ -325,8 +325,7 @@ namespace sgns
 
         task_queue_      = std::make_shared<processing::ProcessingTaskQueueImpl>( job_globaldb_ );
         processing_core_ = std::make_shared<processing::ProcessingCoreImpl>( job_globaldb_, 1000000, 1 );
-        processing_core_->RegisterProcessorFactory( "mnnimage",
-                                                    [] { return std::make_unique<processing::MNN_Image>(); } );
+
 
         task_result_storage_ = std::make_shared<processing::SubTaskResultStorageImpl>( job_globaldb_ );
         processing_service_  = std::make_shared<processing::ProcessingServiceImpl>(
