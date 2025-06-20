@@ -1,6 +1,6 @@
 /**
  * @file       TransactionManager.cpp
- * @brief      
+ * @brief
  * @date       2024-04-12
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
@@ -205,24 +205,19 @@ namespace sgns
         return *account_m;
     }
 
-    outcome::result<std::string> TransactionManager::TransferFunds( uint64_t amount, const std::string &destination )
+    outcome::result<std::string> TransactionManager::TransferFunds( uint64_t           amount,
+                                                                    const std::string &destination,
+                                                                    TokenID            token_id )
     {
-        auto maybe_params = UTXOTxParameters::create( account_m->utxos,
-                                                      account_m->GetAddress(),
-                                                      amount,
-                                                      destination,
-                                                      account_m->GetToken() );
+        OUTCOME_TRY(
+            auto &&params,
+            UTXOTxParameters::create( account_m->utxos, account_m->GetAddress(), amount, destination, token_id ) );
 
-        if ( !maybe_params )
-        {
-            return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::invalid_argument ) );
-        }
+        params.SignParameters( account_m->eth_address );
 
         auto transfer_transaction = std::make_shared<TransferTransaction>(
-            TransferTransaction::New( maybe_params.value().outputs_,
-                                      maybe_params.value().inputs_,
-                                      FillDAGStruct(),
-                                      account_m->eth_address ) );
+            TransferTransaction::New( params.outputs_, params.inputs_, FillDAGStruct(), account_m->eth_address ) );
+
         std::optional<std::vector<uint8_t>> maybe_proof;
 #ifdef _PROOF_ENABLED
         TransferProof prover( static_cast<uint64_t>( account_m->GetBalance<uint64_t>() ),
@@ -231,7 +226,7 @@ namespace sgns
         maybe_proof = std::move( proof_result );
 #endif
 
-        account_m->utxos = UTXOTxParameters::UpdateUTXOList( account_m->utxos, maybe_params.value() );
+        account_m->utxos = UTXOTxParameters::UpdateUTXOList( account_m->utxos, params );
         this->EnqueueTransaction( std::make_pair( transfer_transaction, maybe_proof ) );
 
         return transfer_transaction->dag_st.data_hash();
@@ -240,7 +235,7 @@ namespace sgns
     outcome::result<std::string> TransactionManager::MintFunds( uint64_t    amount,
                                                                 std::string transaction_hash,
                                                                 std::string chainid,
-                                                                std::string tokenid )
+                                                                TokenID     tokenid )
     {
         auto mint_transaction = std::make_shared<MintTransaction>(
             MintTransaction::New( amount,
@@ -274,7 +269,10 @@ namespace sgns
                      UTXOTxParameters::create( account_m->utxos,
                                                account_m->GetAddress(),
                                                amount,
-                                               "0x" + hash_data.toReadableString() ) );
+                                               "0x" + hash_data.toReadableString(),
+                                               TokenID::FromBytes( { 0x00 } ) ) );
+
+        params.SignParameters( account_m->eth_address );
 
         account_m->utxos        = UTXOTxParameters::UpdateUTXOList( account_m->utxos, params );
         auto escrow_transaction = std::make_shared<EscrowTransaction>(
@@ -329,7 +327,7 @@ namespace sgns
 
         OUTCOME_TRY( ( auto &&, peer_total ), escrow_amount_ptr->Multiply( *peers_cut_ptr ) );
 
-        const std::string &escrowTokenId = escrow_tx->GetUTXOParameters().outputs_[0].token_id;
+        const auto &escrowTokenId = escrow_tx->GetUTXOParameters().outputs_[0].token_id;
 
         uint64_t peers_amount = peer_total.Value() / static_cast<uint64_t>( taskresult.subtask_results().size() );
         auto     remainder    = escrow_tx->GetAmount();
@@ -339,7 +337,9 @@ namespace sgns
             std::cout << "Subtask Result " << subtask.subtaskid() << "from " << subtask.node_address() << std::endl;
             m_logger->debug( "Paying out {} in {}", peers_amount, subtask.token_id() );
             subtask_ids.push_back( subtask.subtaskid() );
-            payout_peers.push_back( { peers_amount, subtask.node_address(), subtask.token_id() } );
+            payout_peers.push_back( { peers_amount,
+                                      subtask.node_address(),
+                                      TokenID::FromBytes( subtask.token_id().data(), subtask.token_id().size() ) } );
             remainder -= peers_amount;
         }
         //TODO: see what do with token_id here

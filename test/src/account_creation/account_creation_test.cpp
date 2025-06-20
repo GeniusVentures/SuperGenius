@@ -28,25 +28,26 @@
 class AccountCreationTest : public ::testing::Test
 {
 protected:
-    static void SetUpTestSuite()
-    {
+    static void SetUpTestSuite() {}
 
-    }
-
-    static void TearDownTestSuite()
-    {
-    }
+    static void TearDownTestSuite() {}
 };
 
 // Static member initialization
 
-TEST_F(AccountCreationTest, AccountCreationAddress )
+TEST_F( AccountCreationTest, AccountCreationAddress )
 {
-
-    sgns::GeniusAccount account("0", ".", "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef");
-    sgns::GeniusAccount account2("0", ".", "deedbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef");
-    std::string address_main = account.GetAddress();
-    std::string address_main2 = account2.GetAddress();
-    EXPECT_EQ(address_main, "c865650410bdc1328cf99dc011c14cb52dc0aeb43b5f49dbf64a478fe2f6eafd2056ed0155770ba0a2832c1adb65c75df043c62e772d167437e4532d1b4e788f") << " Address is not expected" << address_main;
-    EXPECT_NE(address_main, address_main2) << "Addresses are equal even though they should not be";
+    sgns::GeniusAccount account( sgns::TokenID::FromBytes( { 0x00 } ),
+                                 ".",
+                                 "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" );
+    sgns::GeniusAccount account2( sgns::TokenID::FromBytes( { 0x00 } ),
+                                  ".",
+                                  "deedbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" );
+    std::string         address_main  = account.GetAddress();
+    std::string         address_main2 = account2.GetAddress();
+    EXPECT_EQ(
+        address_main,
+        "c865650410bdc1328cf99dc011c14cb52dc0aeb43b5f49dbf64a478fe2f6eafd2056ed0155770ba0a2832c1adb65c75df043c62e772d167437e4532d1b4e788f" )
+        << " Address is not expected" << address_main;
+    EXPECT_NE( address_main, address_main2 ) << "Addresses are equal even though they should not be";
 }

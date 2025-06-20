@@ -63,6 +63,7 @@ namespace sgns
             auto *out_proto = utxo_proto_params->add_outputs();
             out_proto->set_encrypted_amount( out.encrypted_amount );
             out_proto->set_dest_addr( out.dest_address );
+            out_proto->set_token_id( out.token_id.bytes().data(), out.token_id.size() );
         }
         tx_struct.set_release_amount( release_amount_ );
         tx_struct.set_release_address( release_address_ );
@@ -104,7 +105,9 @@ namespace sgns
         for ( int i = 0; i < utxo_proto_params->outputs_size(); ++i )
         {
             const auto &out_proto = utxo_proto_params->outputs( i );
-            outputs.push_back( { out_proto.encrypted_amount(), out_proto.dest_addr(), out_proto.token_id() } );
+            outputs.push_back( { out_proto.encrypted_amount(),
+                                 out_proto.dest_addr(),
+                                 TokenID::FromBytes( out_proto.token_id().data(), out_proto.token_id().size() ) } );
         }
         UTXOTxParameters utxo_params( inputs, outputs );
         auto             releaseTx = std::make_shared<EscrowReleaseTransaction>(

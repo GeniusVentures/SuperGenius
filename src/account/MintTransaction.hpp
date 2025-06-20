@@ -11,6 +11,7 @@
 #include <cstdint>
 
 #include "account/IGeniusTransactions.hpp"
+#include "account/TokenID.hpp"
 
 namespace sgns
 {
@@ -21,17 +22,17 @@ namespace sgns
 
         static std::shared_ptr<MintTransaction> DeSerializeByteVector( const std::vector<uint8_t> &data );
 
-        static MintTransaction New( uint64_t                 new_amount,
-                                    std::string              chain_id,
-                                    std::string              token_id,
-                                    SGTransaction::DAGStruct dag,
+        static MintTransaction New( uint64_t                                        new_amount,
+                                    std::string                                     chain_id,
+                                    TokenID                                         token_id,
+                                    SGTransaction::DAGStruct                        dag,
                                     std::shared_ptr<ethereum::EthereumKeyGenerator> eth_key );
 
         std::vector<uint8_t> SerializeByteVector() override;
 
         uint64_t GetAmount() const;
 
-        std::string GetTokenID() const;
+        TokenID GetTokenID() const;
 
         std::string GetTransactionSpecificPath() override
         {
@@ -39,14 +40,11 @@ namespace sgns
         }
 
     private:
-        MintTransaction( uint64_t                 new_amount,
-                         std::string              chain_id,
-                         std::string              token_id,
-                         SGTransaction::DAGStruct dag );
+        MintTransaction( uint64_t new_amount, std::string chain_id, TokenID token_id, SGTransaction::DAGStruct dag );
 
         uint64_t    amount;
         std::string chain_id;
-        std::string token_id;
+        TokenID     token_id;
 
         /**
          * @brief       Registers the deserializer for the transfer transaction type.
