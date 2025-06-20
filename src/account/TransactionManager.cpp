@@ -235,7 +235,7 @@ namespace sgns
     outcome::result<std::string> TransactionManager::MintFunds( uint64_t    amount,
                                                                 std::string transaction_hash,
                                                                 std::string chainid,
-                                                                TokenID tokenid )
+                                                                TokenID     tokenid )
     {
         auto mint_transaction = std::make_shared<MintTransaction>(
             MintTransaction::New( amount,
@@ -270,7 +270,7 @@ namespace sgns
                                                account_m->GetAddress(),
                                                amount,
                                                "0x" + hash_data.toReadableString(),
-                                               TokenID{} ) );
+                                               TokenID::FromBytes( { 0x00 } ) ) );
 
         params.SignParameters( account_m->eth_address );
 
@@ -337,8 +337,9 @@ namespace sgns
             std::cout << "Subtask Result " << subtask.subtaskid() << "from " << subtask.node_address() << std::endl;
             m_logger->debug( "Paying out {} in {}", peers_amount, subtask.token_id() );
             subtask_ids.push_back( subtask.subtaskid() );
-            payout_peers.push_back(
-                { peers_amount, subtask.node_address(), TokenID::FromBytes( subtask.token_id().data(), subtask.token_id().size() ) } );
+            payout_peers.push_back( { peers_amount,
+                                      subtask.node_address(),
+                                      TokenID::FromBytes( subtask.token_id().data(), subtask.token_id().size() ) } );
             remainder -= peers_amount;
         }
         //TODO: see what do with token_id here

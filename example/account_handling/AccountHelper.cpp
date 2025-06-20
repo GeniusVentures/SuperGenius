@@ -34,7 +34,7 @@ namespace sgns
     AccountHelper::AccountHelper( const AccountKey2   &priv_key_data,
                                   const DevConfig_st2 &dev_config,
                                   const char          *eth_private_key ) :
-        account_( std::make_shared<GeniusAccount>( sgns::TokenID{}, "", eth_private_key ) ),
+        account_( std::make_shared<GeniusAccount>( sgns::TokenID::FromBytes( { 0x00 } ), "", eth_private_key ) ),
         io_( std::make_shared<boost::asio::io_context>() ),
         dev_config_( dev_config )
     {
@@ -86,7 +86,7 @@ namespace sgns
         }
 
         globaldb_ = std::move( globaldc_ret.value() );
-        
+
         globaldb_->AddListenTopic( std::string( PROCESSING_CHANNEL ) );
         globaldb_->AddBroadcastTopic( std::string( PROCESSING_CHANNEL ) );
         globaldb_->Start();
