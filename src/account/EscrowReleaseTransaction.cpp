@@ -63,6 +63,7 @@ namespace sgns
             auto *out_proto = utxo_proto_params->add_outputs();
             out_proto->set_encrypted_amount( out.encrypted_amount );
             out_proto->set_dest_addr( out.dest_address );
+            out_proto->set_token_id( out.token_id.bytes().data(), out.token_id.size() );
         }
         tx_struct.set_release_amount( release_amount_ );
         tx_struct.set_release_address( release_address_ );
