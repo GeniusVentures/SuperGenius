@@ -34,8 +34,10 @@ namespace
         std::string fileStem   = std::filesystem::path( filePath ).stem().string();
         auto        outPath    = binaryPath + "/node_" + std::to_string( id ) + "/";
 
-        DevConfig_st devConfig = { self_address.data(), "0.65", tokenValue, tokenId, "" };
+        DevConfig_st devConfig = { "", "0.65", tokenValue, tokenId, "" };
+        std::strncpy( devConfig.Addr, self_address.c_str(), sizeof( devConfig.Addr ) - 1 );
         std::strncpy( devConfig.BaseWritePath, outPath.c_str(), sizeof( devConfig.BaseWritePath ) - 1 );
+        devConfig.Addr[sizeof( devConfig.Addr ) - 1] = '\0';
         devConfig.BaseWritePath[sizeof( devConfig.BaseWritePath ) - 1] = '\0';
 
         std::string key;
@@ -90,9 +92,9 @@ namespace
 TEST( TransferTokenValue, ThreeNodeTransferTest )
 {
     // Create nodes
-    auto node50 = CreateNode("0xcafe", "1.0", sgns::TokenID::FromBytes( { 0x50 } ) );
-    auto node51 = CreateNode("0xcade", "0.5", sgns::TokenID::FromBytes( { 0x51 } ) );
-    auto node52 = CreateNode("0xdafe", "2.0", sgns::TokenID::FromBytes( { 0x52 } ) );
+    auto node50 = CreateNode( "0xcafe", "1.0", sgns::TokenID::FromBytes( { 0x50 } ) );
+    auto node51 = CreateNode( "0xcade", "0.5", sgns::TokenID::FromBytes( { 0x51 } ) );
+    auto node52 = CreateNode( "0xdafe", "2.0", sgns::TokenID::FromBytes( { 0x52 } ) );
 
     // Configure peer connections
     node51->GetPubSub()->AddPeers( { node50->GetPubSub()->GetLocalAddress() } );
@@ -224,7 +226,7 @@ class GeniusNodeMintMainTest : public ::testing::TestWithParam<MintMainCase_s>
 TEST_P( GeniusNodeMintMainTest, MintMainBalance )
 {
     auto p    = GetParam();
-    auto node = CreateNode("0xdade", p.tokenValue, p.TokenID );
+    auto node = CreateNode( "0xdade", p.tokenValue, p.TokenID );
 
     uint64_t initialMain = node->GetBalance();
     auto     initFmtRes  = node->FormatTokens( initialMain, p.TokenID );
@@ -291,7 +293,7 @@ protected:
 TEST_P( GeniusNodeMintChildTest, MintChildBalance )
 {
     auto p    = GetParam();
-    auto node = CreateNode("0xfade", p.tokenValue, p.TokenID );
+    auto node = CreateNode( "0xfade", p.tokenValue, p.TokenID );
 
     uint64_t initialMain = node->GetBalance();
     auto     initFmtRes  = node->FormatTokens( initialMain, p.TokenID );
@@ -341,7 +343,7 @@ INSTANTIATE_TEST_SUITE_P(
 // Suite 3: Mint multiple token IDs on same node
 TEST( GeniusNodeMultiTokenMintTest, MintMultipleTokenIds )
 {
-    auto node = CreateNode("0xfafe",  "1.0", sgns::TokenID::FromBytes( { 0x0a } ) );
+    auto node = CreateNode( "0xfafe", "1.0", sgns::TokenID::FromBytes( { 0x0a } ) );
 
     struct TokenMint
     {
@@ -411,9 +413,9 @@ protected:
 
 TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
 {
-    auto node_main  = CreateNode("0xacfe",  "1.0", sgns::TokenID::FromBytes( { 0x00 } ), false );
-    auto node_proc1 = CreateNode("0xadfe",  "0.65", sgns::TokenID::FromBytes( { 0x01 } ), true );
-    auto node_proc2 = CreateNode("0xaffe",  "0.65", sgns::TokenID::FromBytes( { 0x02 } ), true );
+    auto node_main  = CreateNode( "0xacfe", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), false );
+    auto node_proc1 = CreateNode( "0xadfe", "0.65", sgns::TokenID::FromBytes( { 0x01 } ), true );
+    auto node_proc2 = CreateNode( "0xaffe", "0.65", sgns::TokenID::FromBytes( { 0x02 } ), true );
 
     auto mintResMain = node_main->MintTokens( 1000,
                                               "",
