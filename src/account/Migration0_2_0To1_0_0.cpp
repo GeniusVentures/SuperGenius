@@ -124,6 +124,7 @@ namespace sgns
                 continue;
             }
             auto tx = maybe_transaction.value();
+            m_logger->trace( "Fetched transaction {}", transaction_key );
 
             if ( !IGeniusTransactions::CheckDAGStructSignature( tx->dag_st ) )
             {
@@ -131,21 +132,30 @@ namespace sgns
                 continue;
             }
 
-            std::string proof_key;
-            if ( transaction_key.find( "notify" ) != std::string::npos )
+            std::string proof_key         = transaction_key;
+            std::string tx_notify_path    = "/notify/tx/";
+            std::string proof_notify_path = "/notify/proof/";
+            size_t      notify_position   = transaction_key.find( tx_notify_path );
+            if ( notify_position != std::string::npos )
             {
-                auto maybeProofKeyMap = oldDb->QueryKeyValues( BASE, "*", "/proof/" + tx->dag_st.data_hash() );
+                proof_key.replace( notify_position, tx_notify_path.length(), proof_notify_path );
+
+                m_logger->trace( "Searching for notify proof {}", transaction_key );
+                /*auto maybeProofKeyMap = oldDb->QueryKeyValues( BASE, "*", "/proof/" + tx->dag_st.data_hash() );
                 if ( !maybeProofKeyMap.has_value() )
                 {
                     m_logger->error( "Can't find the proof key for incoming transaction {}", transaction_key );
                     continue;
                 }
+                m_logger->trace( "Searching for notify  2 {}", transaction_key );
                 auto proof_map = maybeProofKeyMap.value();
                 if ( proof_map.size() != 1 )
                 {
                     m_logger->error( "More than 1 proof for incoming transaction {}", transaction_key );
                     continue;
                 }
+
+                m_logger->trace( "Searching for notify  3 {}", tx->GetSrcAddress() );
                 auto proof_key_buffer = proof_map.begin()->first;
                 auto maybe_proof_key  = oldDb->KeyToString( proof_key_buffer );
                 if ( !maybe_proof_key.has_value() )
@@ -154,7 +164,9 @@ namespace sgns
                                      transaction_key );
                     continue;
                 }
+                m_logger->trace( "Searching for notify  4 {}", maybe_proof_key.value() );
                 proof_key = maybe_proof_key.value();
+                */
             }
             else
             {
@@ -179,6 +191,7 @@ namespace sgns
             proof_transaction.put( maybe_proof_data.value() );
             BOOST_OUTCOME_TRYV2( auto &&,
                                  crdt_transaction->Put( std::move( proof_crdt_key ), std::move( proof_transaction ) ) );
+            m_logger->trace( "Proof recorded for transaction {}", transaction_key );
         }
 
         if ( crdt_transaction->Commit().has_error() )
