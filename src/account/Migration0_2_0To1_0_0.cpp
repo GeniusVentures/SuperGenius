@@ -141,32 +141,6 @@ namespace sgns
                 proof_key.replace( notify_position, tx_notify_path.length(), proof_notify_path );
 
                 m_logger->trace( "Searching for notify proof {}", transaction_key );
-                /*auto maybeProofKeyMap = oldDb->QueryKeyValues( BASE, "*", "/proof/" + tx->dag_st.data_hash() );
-                if ( !maybeProofKeyMap.has_value() )
-                {
-                    m_logger->error( "Can't find the proof key for incoming transaction {}", transaction_key );
-                    continue;
-                }
-                m_logger->trace( "Searching for notify  2 {}", transaction_key );
-                auto proof_map = maybeProofKeyMap.value();
-                if ( proof_map.size() != 1 )
-                {
-                    m_logger->error( "More than 1 proof for incoming transaction {}", transaction_key );
-                    continue;
-                }
-
-                m_logger->trace( "Searching for notify  3 {}", tx->GetSrcAddress() );
-                auto proof_key_buffer = proof_map.begin()->first;
-                auto maybe_proof_key  = oldDb->KeyToString( proof_key_buffer );
-                if ( !maybe_proof_key.has_value() )
-                {
-                    m_logger->error( "Failed to convert proof key buffer to string for transaction {}",
-                                     transaction_key );
-                    continue;
-                }
-                m_logger->trace( "Searching for notify  4 {}", maybe_proof_key.value() );
-                proof_key = maybe_proof_key.value();
-                */
             }
             else
             {
