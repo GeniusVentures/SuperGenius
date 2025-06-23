@@ -95,6 +95,12 @@ namespace sgns::crdt
     */
     outcome::result<void> GetList(std::vector<CID>& aHeads, uint64_t& aMaxHeight);
 
+          /** primeCache builds the heads cache based on what's in storage; since
+    * it is called from the constructor only we don't bother locking.
+    * @return outcome::failure on error
+    */
+      outcome::result<void> PrimeCache();
+
   protected:
 
     /** Write data to datastore in batch mode
@@ -113,11 +119,7 @@ namespace sgns::crdt
     */
       outcome::result<void> Delete( const std::unique_ptr<storage::BufferBatch> &aDataStore, const CID &aCid );
 
-      /** primeCache builds the heads cache based on what's in storage; since
-    * it is called from the constructor only we don't bother locking.
-    * @return outcome::failure on error
-    */
-      outcome::result<void> PrimeCache();
+
 
   private:
 

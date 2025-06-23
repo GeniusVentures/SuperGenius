@@ -38,6 +38,7 @@ namespace sgns::crdt
         {
             return;
         }
+        heads_->PrimeCache();
         handleNextThreadRunning_ = true;
         // Starting HandleNext worker thread
         handleNextFuture_ = std::async(
