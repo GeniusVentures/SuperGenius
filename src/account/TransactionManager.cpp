@@ -638,7 +638,13 @@ namespace sgns
     {
         OUTCOME_TRY( ( auto &&, transaction_data ), db->Get( { std::string( transaction_key ) } ) );
 
-        auto transaction_data_vector = transaction_data.toVector();
+        return DeSerializeTransaction( transaction_data );
+    }
+
+    outcome::result<std::shared_ptr<IGeniusTransactions>> TransactionManager::DeSerializeTransaction(
+        const base::Buffer &tx_data )
+    {
+        auto transaction_data_vector = tx_data.toVector();
 
         OUTCOME_TRY( ( auto &&, dag ), IGeniusTransactions::DeSerializeDAGStruct( transaction_data_vector ) );
 

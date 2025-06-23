@@ -88,6 +88,8 @@ namespace sgns
         static outcome::result<std::shared_ptr<IGeniusTransactions>> FetchTransaction(
             const std::shared_ptr<crdt::GlobalDB> &db,
             std::string_view                       transaction_key );
+        static outcome::result<std::shared_ptr<IGeniusTransactions>> DeSerializeTransaction(
+            const base::Buffer &tx_data );
 
     protected:
         friend class GeniusNode;
@@ -109,9 +111,10 @@ namespace sgns
         static std::string GetTransactionBasePath( const std::string &address );
         static std::string GetBlockChainBase();
         static outcome::result<std::shared_ptr<IGeniusTransactions>> DeSerializeTransaction( std::string tx_data );
-        static outcome::result<std::string>                          GetExpectedProofKey( const std::string                          &tx_key,
-                                                                                          const std::shared_ptr<IGeniusTransactions> &tx );
-        static outcome::result<std::string>                          GetExpectedTxKey( const std::string &proof_key );
+
+        static outcome::result<std::string> GetExpectedProofKey( const std::string                          &tx_key,
+                                                                 const std::shared_ptr<IGeniusTransactions> &tx );
+        static outcome::result<std::string> GetExpectedTxKey( const std::string &proof_key );
 
         outcome::result<bool> CheckProof( const std::shared_ptr<IGeniusTransactions> &tx );
         outcome::result<void> ParseTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
