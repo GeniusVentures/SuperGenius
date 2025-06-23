@@ -104,6 +104,8 @@ namespace sgns
 
         auto &entries = maybeTransactionKeys.value();
         m_logger->debug( "Found {} transaction keys to migrate", entries.size() );
+        size_t migrated_count = 0;
+        size_t BATCH_SIZE     = 1000;
 
         for ( const auto &entry : entries )
         {
@@ -225,6 +227,20 @@ namespace sgns
             {
                 m_logger->debug( "Not migrating transaction {}", transaction_path );
             }
+            ++migrated_count;
+            if ( migrated_count >= BATCH_SIZE )
+            {
+                OUTCOME_TRY( crdt_transaction_->Commit() );
+                crdt_transaction_ = newDb_->BeginTransaction(); // start fresh
+                migrated_count    = 0;
+                m_logger->debug( "Committed a batch of {} transactions", BATCH_SIZE );
+            }
+        }
+        if ( migrated_count > 0 )
+        {
+            OUTCOME_TRY( crdt_transaction_->Commit() );
+            crdt_transaction_ = newDb_->BeginTransaction(); // Optional reset
+            m_logger->debug( "Committed final batch of {} transactions", migrated_count );
         }
 
         m_logger->trace( "Successfully committed all migrated entries to new DB" );
@@ -246,7 +262,7 @@ namespace sgns
         m_logger->trace( "Migrating input DB into new DB" );
         OUTCOME_TRY( MigrateDb( inDb, newDb_ ) );
 
-        OUTCOME_TRY( crdt_transaction_->Commit() );
+        //OUTCOME_TRY( crdt_transaction_->Commit() );
 
         m_logger->trace( "Apply step of Migration0_2_0To1_0_0 finished successfully" );
         return outcome::success();
