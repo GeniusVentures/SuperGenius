@@ -105,8 +105,6 @@ namespace sgns
         auto &entries = maybeTransactionKeys.value();
         m_logger->debug( "Found {} transaction keys to migrate", entries.size() );
 
-        auto crdt_transaction = newDb->BeginTransaction();
-
         for ( const auto &entry : entries )
         {
             auto keyOpt = oldDb->KeyToString( entry.first );
@@ -157,12 +155,12 @@ namespace sgns
             auto                        transaction_path = TransactionManager::GetTransactionPath( *tx );
             sgns::crdt::HierarchicalKey tx_key( transaction_path );
 
-            auto has_tx     = crdt_transaction->HasKey( tx_key );
+            auto has_tx     = crdt_transaction_->HasKey( tx_key );
             bool migrate_tx = true;
             if ( has_tx )
             {
                 migrate_tx               = false;
-                auto maybe_replicated_tx = crdt_transaction->Get( tx_key );
+                auto maybe_replicated_tx = crdt_transaction_->Get( tx_key );
                 if ( maybe_replicated_tx.has_value() )
                 {
                     //decide which one to use
@@ -178,14 +176,14 @@ namespace sgns
                             m_logger->debug( "Need to remove previous transaction, since new one is older {}",
                                              transaction_path );
 
-                            BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Erase( tx_key ) );
+                            BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction_->Erase( tx_key ) );
 
                             sgns::crdt::HierarchicalKey replicated_proof_key(
                                 TransactionManager::GetTransactionProofPath( *tx ) );
 
                             m_logger->debug( "Need to remove previous proof as well {}",
                                              replicated_proof_key.GetKey() );
-                            BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Erase( replicated_proof_key ) );
+                            BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction_->Erase( replicated_proof_key ) );
                         }
                         else
                         {
@@ -198,13 +196,13 @@ namespace sgns
                         migrate_tx = true;
                         m_logger->debug( "Invalid transaction, deleting from migration {}", transaction_path );
 
-                        BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Erase( tx_key ) );
+                        BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction_->Erase( tx_key ) );
 
                         sgns::crdt::HierarchicalKey replicated_proof_key(
                             TransactionManager::GetTransactionProofPath( *tx ) );
 
                         m_logger->debug( "Need to remove previous proof as well {}", replicated_proof_key.GetKey() );
-                        BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Erase( replicated_proof_key ) );
+                        BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction_->Erase( replicated_proof_key ) );
                     }
                 }
             }
@@ -213,27 +211,20 @@ namespace sgns
                 sgns::crdt::GlobalDB::Buffer data_transaction;
                 data_transaction.put( tx->SerializeByteVector() );
                 BOOST_OUTCOME_TRYV2( auto &&,
-                                     crdt_transaction->Put( std::move( tx_key ), std::move( data_transaction ) ) );
+                                     crdt_transaction_->Put( std::move( tx_key ), std::move( data_transaction ) ) );
 
                 sgns::crdt::HierarchicalKey  proof_crdt_key( TransactionManager::GetTransactionProofPath( *tx ) );
                 sgns::crdt::GlobalDB::Buffer proof_transaction;
                 proof_transaction.put( maybe_proof_data.value() );
                 BOOST_OUTCOME_TRYV2(
                     auto &&,
-                    crdt_transaction->Put( std::move( proof_crdt_key ), std::move( proof_transaction ) ) );
+                    crdt_transaction_->Put( std::move( proof_crdt_key ), std::move( proof_transaction ) ) );
                 m_logger->trace( "Proof recorded for transaction {}", transaction_key );
             }
             else
             {
-                m_logger->debug( "Not migrating transaction {}",
-                                             transaction_path );
+                m_logger->debug( "Not migrating transaction {}", transaction_path );
             }
-        }
-
-        if ( crdt_transaction->Commit().has_error() )
-        {
-            m_logger->error( "Failed to commit transaction batch to new DB" );
-            return outcome::failure( boost::system::error_code{} );
         }
 
         m_logger->trace( "Successfully committed all migrated entries to new DB" );
@@ -247,11 +238,15 @@ namespace sgns
         OUTCOME_TRY( auto outDb, InitLegacyDb( "out" ) );
         OUTCOME_TRY( auto inDb, InitLegacyDb( "in" ) );
 
+        crdt_transaction_ = newDb_->BeginTransaction();
+
         m_logger->trace( "Migrating output DB into new DB" );
         OUTCOME_TRY( MigrateDb( outDb, newDb_ ) );
 
         m_logger->trace( "Migrating input DB into new DB" );
         OUTCOME_TRY( MigrateDb( inDb, newDb_ ) );
+
+        OUTCOME_TRY( crdt_transaction_->Commit() );
 
         m_logger->trace( "Apply step of Migration0_2_0To1_0_0 finished successfully" );
         return outcome::success();
