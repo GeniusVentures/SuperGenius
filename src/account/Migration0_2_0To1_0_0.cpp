@@ -103,7 +103,7 @@ namespace sgns
         }
 
         auto &entries = maybeTransactionKeys.value();
-        m_logger->trace( "Found {} transaction keys to migrate", entries.size() );
+        m_logger->debug( "Found {} transaction keys to migrate", entries.size() );
 
         auto crdt_transaction = newDb->BeginTransaction();
 
@@ -154,18 +154,80 @@ namespace sgns
                 continue;
             }
 
-            auto                         transaction_path = TransactionManager::GetTransactionPath( *tx );
-            sgns::crdt::HierarchicalKey  tx_key( transaction_path );
-            sgns::crdt::GlobalDB::Buffer data_transaction;
-            data_transaction.put( tx->SerializeByteVector() );
-            BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Put( std::move( tx_key ), std::move( data_transaction ) ) );
+            auto                        transaction_path = TransactionManager::GetTransactionPath( *tx );
+            sgns::crdt::HierarchicalKey tx_key( transaction_path );
 
-            sgns::crdt::HierarchicalKey  proof_crdt_key( TransactionManager::GetTransactionProofPath( *tx ) );
-            sgns::crdt::GlobalDB::Buffer proof_transaction;
-            proof_transaction.put( maybe_proof_data.value() );
-            BOOST_OUTCOME_TRYV2( auto &&,
-                                 crdt_transaction->Put( std::move( proof_crdt_key ), std::move( proof_transaction ) ) );
-            m_logger->trace( "Proof recorded for transaction {}", transaction_key );
+            auto has_tx     = crdt_transaction->HasKey( tx_key );
+            bool migrate_tx = true;
+            if ( has_tx )
+            {
+                migrate_tx               = false;
+                auto maybe_replicated_tx = crdt_transaction->Get( tx_key );
+                if ( maybe_replicated_tx.has_value() )
+                {
+                    //decide which one to use
+                    auto maybe_deserialized_tx = TransactionManager::DeSerializeTransaction(
+                        maybe_replicated_tx.value() );
+                    if ( maybe_deserialized_tx.has_value() )
+                    {
+                        auto previous_tx = maybe_transaction.value();
+                        if ( previous_tx->dag_st.timestamp() > tx->dag_st.timestamp() )
+                        {
+                            //need to update, the new one came first
+                            migrate_tx = true;
+                            m_logger->debug( "Need to remove previous transaction, since new one is older {}",
+                                             transaction_path );
+
+                            BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Erase( tx_key ) );
+
+                            sgns::crdt::HierarchicalKey replicated_proof_key(
+                                TransactionManager::GetTransactionProofPath( *tx ) );
+
+                            m_logger->debug( "Need to remove previous proof as well {}",
+                                             replicated_proof_key.GetKey() );
+                            BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Erase( replicated_proof_key ) );
+                        }
+                        else
+                        {
+                            m_logger->debug( "Currently migrated transaction has earlier timestamp {}",
+                                             transaction_path );
+                        }
+                    }
+                    else
+                    {
+                        migrate_tx = true;
+                        m_logger->debug( "Invalid transaction, deleting from migration {}", transaction_path );
+
+                        BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Erase( tx_key ) );
+
+                        sgns::crdt::HierarchicalKey replicated_proof_key(
+                            TransactionManager::GetTransactionProofPath( *tx ) );
+
+                        m_logger->debug( "Need to remove previous proof as well {}", replicated_proof_key.GetKey() );
+                        BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Erase( replicated_proof_key ) );
+                    }
+                }
+            }
+            if ( migrate_tx )
+            {
+                sgns::crdt::GlobalDB::Buffer data_transaction;
+                data_transaction.put( tx->SerializeByteVector() );
+                BOOST_OUTCOME_TRYV2( auto &&,
+                                     crdt_transaction->Put( std::move( tx_key ), std::move( data_transaction ) ) );
+
+                sgns::crdt::HierarchicalKey  proof_crdt_key( TransactionManager::GetTransactionProofPath( *tx ) );
+                sgns::crdt::GlobalDB::Buffer proof_transaction;
+                proof_transaction.put( maybe_proof_data.value() );
+                BOOST_OUTCOME_TRYV2(
+                    auto &&,
+                    crdt_transaction->Put( std::move( proof_crdt_key ), std::move( proof_transaction ) ) );
+                m_logger->trace( "Proof recorded for transaction {}", transaction_key );
+            }
+            else
+            {
+                m_logger->debug( "Not migrating transaction {}",
+                                             transaction_path );
+            }
         }
 
         if ( crdt_transaction->Commit().has_error() )
