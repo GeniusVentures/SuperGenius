@@ -126,6 +126,9 @@ namespace sgns::crdt
             m_logger->info( "Opening database " + databasePathAbsolute );
             RocksDB::Options options;
             options.create_if_missing = true; // intentionally
+            options.target_file_size_base = 24 * 1024 * 1024; 
+            options.max_compaction_bytes = 32 * 1024 * 1024;
+            options.write_buffer_size = 8 * 1024 * 1024;
             try
             {
                 if ( auto dataStoreResult = RocksDB::create( databasePathAbsolute, options );

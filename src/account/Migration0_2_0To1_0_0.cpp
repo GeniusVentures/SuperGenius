@@ -106,7 +106,7 @@ namespace sgns
         auto &entries = maybeTransactionKeys.value();
         m_logger->debug( "Found {} transaction keys to migrate", entries.size() );
         size_t migrated_count = 0;
-        size_t BATCH_SIZE     = 1000;
+        size_t BATCH_SIZE     = 50;
 
         for ( const auto &entry : entries )
         {
