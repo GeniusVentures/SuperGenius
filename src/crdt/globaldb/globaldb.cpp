@@ -240,11 +240,6 @@ namespace sgns::crdt
 
     outcome::result<GlobalDB::Buffer> GlobalDB::Get( const HierarchicalKey &key )
     {
-        if ( !started_ )
-        {
-            m_logger->error( "GlobalDB Not Started" );
-            return outcome::failure( Error::GLOBALDB_NOT_STARTED );
-        }
 
         return m_crdtDatastore->GetKey( key );
     }

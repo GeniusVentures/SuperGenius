@@ -11,6 +11,7 @@
 #include <memory>
 #include <string>
 #include <deque>
+#include <cstdint>
 
 #include <boost/asio/io_context.hpp>
 #include <ipfs_pubsub/gossip_pubsub_topic.hpp>
@@ -92,8 +93,8 @@ namespace sgns
          * @param   newDb  Shared pointer to target GlobalDB.
          * @return  outcome::result<void> success on commit; failure otherwise.
          */
-        outcome::result<void> MigrateDb( const std::shared_ptr<crdt::GlobalDB> &oldDb,
-                                         const std::shared_ptr<crdt::GlobalDB> &newDb );
+        outcome::result<uint32_t> MigrateDb( const std::shared_ptr<crdt::GlobalDB> &oldDb,
+                                             const std::shared_ptr<crdt::GlobalDB> &newDb );
 
         std::shared_ptr<crdt::GlobalDB>                                 newDb_;     ///< Target GlobalDB.
         std::shared_ptr<boost::asio::io_context>                        ioContext_; ///< IO context for DB I/O.

@@ -69,6 +69,8 @@ namespace sgns
          */
         outcome::result<void> Migrate();
 
+        static constexpr std::string_view VERSION_INFO_KEY = "kSGNSCRDTVersion";
+
     private:
         /**
          * @brief   Private default constructor.

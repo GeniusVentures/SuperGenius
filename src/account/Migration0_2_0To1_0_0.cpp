@@ -12,6 +12,7 @@
 #include <boost/system/error_code.hpp>
 #include "account/TransactionManager.hpp"
 #include "proof/IBasicProof.hpp"
+#include "MigrationManager.hpp"
 
 namespace sgns
 {
@@ -48,19 +49,19 @@ namespace sgns
 
     outcome::result<bool> Migration0_2_0To1_0_0::IsRequired() const
     {
-        auto maybe_values = newDb_->QueryKeyValues( "" );
-        if ( maybe_values.has_error() )
+        auto version_ret = newDb_->Get( { std::string( MigrationManager::VERSION_INFO_KEY ) } );
+
+        if (version_ret.has_error())
         {
-            m_logger->debug( "Cannot query transactions: {}", maybe_values.error().message() );
-            return outcome::failure( maybe_values.error() );
+            return true;
         }
-        auto key_value_map = maybe_values.value();
-        if ( !newDb_->GetDataStore()->empty() )
+        auto version = version_ret.value();
+
+        if ( version.toString() == ToVersion() )
         {
-            m_logger->debug( "newDb is not empty; skipping Migration0_2_0To1_0_0" );
+            m_logger->debug( "newDb is already migrated; skipping Migration0_2_0To1_0_0" );
             return false;
         }
-
         return true;
     }
 
@@ -70,7 +71,7 @@ namespace sgns
         const auto            legacyNetworkFullPath = ( boost::format( LEGACY_PREFIX_FMT ) % base58key_ ).str();
         const auto fullPath = ( boost::format( "%s%s_%s" ) % writeBasePath_ % legacyNetworkFullPath % suffix ).str();
 
-        m_logger->trace( "Initializing legacy DB at path {}", fullPath );
+        m_logger->debug( "Initializing legacy DB at path {}", fullPath );
 
         OUTCOME_TRY( auto &&db,
                      crdt::GlobalDB::New( ioContext_,
@@ -81,13 +82,13 @@ namespace sgns
                                           scheduler_,
                                           generator_ ) );
         db->Start();
-        m_logger->trace( "Started legacy DB at path {}", fullPath );
+        m_logger->debug( "Started legacy DB at path {}", fullPath );
 
         return db;
     }
 
-    outcome::result<void> Migration0_2_0To1_0_0::MigrateDb( const std::shared_ptr<crdt::GlobalDB> &oldDb,
-                                                            const std::shared_ptr<crdt::GlobalDB> &newDb )
+    outcome::result<uint32_t> Migration0_2_0To1_0_0::MigrateDb( const std::shared_ptr<crdt::GlobalDB> &oldDb,
+                                                                const std::shared_ptr<crdt::GlobalDB> &newDb )
     {
         // Outgoing transactions were /bc-963/[self address]/tx/[type]/[nonce]
         // Incoming transactions were /bc-963/[other address]/notify/tx/[tx hash]
@@ -236,35 +237,45 @@ namespace sgns
                 m_logger->debug( "Committed a batch of {} transactions", BATCH_SIZE );
             }
         }
-        if ( migrated_count > 0 )
-        {
-            OUTCOME_TRY( crdt_transaction_->Commit() );
-            crdt_transaction_ = newDb_->BeginTransaction(); // Optional reset
-            m_logger->debug( "Committed final batch of {} transactions", migrated_count );
-        }
 
         m_logger->trace( "Successfully committed all migrated entries to new DB" );
-        return outcome::success();
+        return migrated_count;
     }
 
     outcome::result<void> Migration0_2_0To1_0_0::Apply()
     {
-        m_logger->trace( "Starting Apply step of Migration0_2_0To1_0_0" );
+        m_logger->debug( "Starting Apply step of Migration0_2_0To1_0_0" );
 
         OUTCOME_TRY( auto outDb, InitLegacyDb( "out" ) );
         OUTCOME_TRY( auto inDb, InitLegacyDb( "in" ) );
 
         crdt_transaction_ = newDb_->BeginTransaction();
 
-        m_logger->trace( "Migrating output DB into new DB" );
-        OUTCOME_TRY( MigrateDb( outDb, newDb_ ) );
+        m_logger->debug( "Migrating output DB into new DB" );
+        OUTCOME_TRY( auto &&remainder_outdb, MigrateDb( outDb, newDb_ ) );
 
-        m_logger->trace( "Migrating input DB into new DB" );
-        OUTCOME_TRY( MigrateDb( inDb, newDb_ ) );
+        if ( remainder_outdb > 0 )
+        {
+            OUTCOME_TRY( crdt_transaction_->Commit() );
+            crdt_transaction_ = newDb_->BeginTransaction();
+            m_logger->debug( "Committed remainder of output transactions: {}", remainder_outdb );
+        }
 
-        //OUTCOME_TRY( crdt_transaction_->Commit() );
+        m_logger->debug( "Migrating input DB into new DB" );
+        OUTCOME_TRY( auto &&remainder_indb, MigrateDb( inDb, newDb_ ) );
 
-        m_logger->trace( "Apply step of Migration0_2_0To1_0_0 finished successfully" );
+        if ( remainder_indb == 0 )
+        {
+            crdt_transaction_ = newDb_->BeginTransaction();
+        }
+        sgns::crdt::GlobalDB::Buffer version_buffer;
+        version_buffer.put( ToVersion() );
+
+        OUTCOME_TRY( crdt_transaction_->Put( { std::string( MigrationManager::VERSION_INFO_KEY ) }, version_buffer ) );
+
+        OUTCOME_TRY( crdt_transaction_->Commit() );
+
+        m_logger->debug( "Apply step of Migration0_2_0To1_0_0 finished successfully" );
         return outcome::success();
     }
 
