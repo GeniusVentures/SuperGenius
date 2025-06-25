@@ -147,7 +147,16 @@ void MintTokens( const std::vector<std::string> &args, sgns::GeniusNode &genius_
         std::cerr << "Invalid mint command format.\n";
         return;
     }
-    genius_node.MintTokens( std::stoull( args[1] ), "", "", sgns::TokenID::FromBytes({0x00}) );
+    genius_node.MintTokens( std::stoull( args[1] ), "", "", sgns::TokenID::FromBytes( { 0x00 } ) );
+}
+void TransferTokens( const std::vector<std::string> &args, sgns::GeniusNode &genius_node )
+{
+    if ( args.size() != 3 )
+    {
+        std::cerr << "Invalid mint command format.\n";
+        return;
+    }
+    genius_node.TransferFunds( std::stoull( args[1] ), args[2], sgns::TokenID::FromBytes( { 0x00 } ) );
 }
 
 void GetCoinPrice( const std::vector<std::string> &args, sgns::GeniusNode &genius_node )
@@ -255,6 +264,10 @@ void process_events( sgns::GeniusNode &genius_node )
             else if ( arguments[0] == "mint" )
             {
                 MintTokens( arguments, genius_node );
+            }
+            else if ( arguments[0] == "transfer" )
+            {
+                TransferTokens( arguments, genius_node );
             }
             else if ( arguments[0] == "info" )
             {
