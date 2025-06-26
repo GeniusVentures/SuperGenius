@@ -119,7 +119,7 @@ namespace sgns
         outcome::result<bool> CheckProof( const std::shared_ptr<IGeniusTransactions> &tx );
         outcome::result<void> ParseTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
 
-        outcome::result<void> CheckIncoming( bool checkProofs = true );
+        outcome::result<void> CheckIncoming();
 
         outcome::result<void> CheckOutgoing();
 

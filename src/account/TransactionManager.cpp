@@ -171,7 +171,7 @@ namespace sgns
 
     void TransactionManager::Start()
     {
-        CheckIncoming( false );
+        CheckIncoming();
         CheckOutgoing();
 
         task_m = [this]()
@@ -401,6 +401,11 @@ namespace sgns
         if ( send_result.has_error() )
         {
             m_logger->error( "Unknown SendTranscation error in SendTransaction::Update()" );
+        }
+        auto check_out_result = CheckOutgoing();
+        if ( check_out_result.has_error() )
+        {
+            m_logger->error( "Unknown CheckOutgoing error in SendTransaction::Update()" );
         }
         auto check_result = CheckIncoming();
         if ( check_result.has_error() )
@@ -676,7 +681,7 @@ namespace sgns
 #endif
     }
 
-    outcome::result<void> TransactionManager::CheckIncoming( bool checkProofs )
+    outcome::result<void> TransactionManager::CheckIncoming()
     {
         m_logger->trace( "Probing incoming transactions on " + GetBlockChainBase() + "!" + account_m->GetAddress() +
                          "/tx" );
