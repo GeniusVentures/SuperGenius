@@ -78,6 +78,8 @@ TEST( NodeBalancePersistenceTest, BalancePersistsAfterRecreation )
                                             /*folderName=*/"node_original",
                                             sharedKey );
 
+    originalNode->GetPubSub()->AddPeers( { fullNode->GetPubSub()->GetLocalAddress() } );
+
     std::cout << "****** Minting tokens on original node ****" << std::endl;
     uint64_t beforeMint = originalNode->GetBalance();
     auto     mintRes    = originalNode->MintTokens(
@@ -90,7 +92,7 @@ TEST( NodeBalancePersistenceTest, BalancePersistsAfterRecreation )
     ASSERT_GT( afterMint, beforeMint );
 
     std::cout << "****** Destroying original node after 10 seconds ****" << std::endl;
-    std::this_thread::sleep_for( std::chrono::seconds( 120 ) );
+    std::this_thread::sleep_for( std::chrono::seconds( 15 ) );
     originalNode.reset();
     std::this_thread::sleep_for( std::chrono::seconds( 10 ) );
 
@@ -102,6 +104,7 @@ TEST( NodeBalancePersistenceTest, BalancePersistsAfterRecreation )
                                             /*isFullNode=*/false,
                                             /*folderName=*/"node_recovery",
                                             sharedKey );
+    recoveryNode->GetPubSub()->AddPeers( { fullNode->GetPubSub()->GetLocalAddress() } );
 
     std::cout << "****** Verifying recovery node balance ****" << std::endl;
     test::assertWaitForCondition( [&]() { return recoveryNode->GetBalance() == afterMint; },
