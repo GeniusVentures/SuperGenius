@@ -49,9 +49,11 @@ namespace sgns
 
     outcome::result<bool> Migration0_2_0To1_0_0::IsRequired() const
     {
-        auto version_ret = newDb_->Get( { std::string( MigrationManager::VERSION_INFO_KEY ) } );
+        sgns::crdt::GlobalDB::Buffer version_key;
+        version_key.put( std::string( MigrationManager::VERSION_INFO_KEY ) );
+        auto version_ret = newDb_->GetDataStore()->get( version_key );
 
-        if (version_ret.has_error())
+        if ( version_ret.has_error() )
         {
             return true;
         }
@@ -264,16 +266,16 @@ namespace sgns
         m_logger->debug( "Migrating input DB into new DB" );
         OUTCOME_TRY( auto &&remainder_indb, MigrateDb( inDb, newDb_ ) );
 
-        if ( remainder_indb == 0 )
+        if ( remainder_indb > 0 )
         {
-            crdt_transaction_ = newDb_->BeginTransaction();
+            OUTCOME_TRY( crdt_transaction_->Commit() );
         }
         sgns::crdt::GlobalDB::Buffer version_buffer;
+        sgns::crdt::GlobalDB::Buffer version_key;
+        version_key.put( std::string( MigrationManager::VERSION_INFO_KEY ) );
         version_buffer.put( ToVersion() );
 
-        OUTCOME_TRY( crdt_transaction_->Put( { std::string( MigrationManager::VERSION_INFO_KEY ) }, version_buffer ) );
-
-        OUTCOME_TRY( crdt_transaction_->Commit() );
+        OUTCOME_TRY( newDb_->GetDataStore()->put( version_key, version_buffer ) );
 
         m_logger->debug( "Apply step of Migration0_2_0To1_0_0 finished successfully" );
         return outcome::success();
