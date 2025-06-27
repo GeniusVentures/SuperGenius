@@ -333,28 +333,31 @@ namespace sgns::crdt
 
     void PubSubBroadcasterExt::AddListenTopic( const std::string &topic )
     {
-        std::lock_guard<std::mutex> lock( listenTopicsMutex_ );
-        if ( topicsToListen_.find( topic ) == topicsToListen_.end() )
+        std::lock_guard lock( listenTopicsMutex_ );
+        if ( topicsToListen_.find( topic ) != topicsToListen_.end() )
         {
-            topicsToListen_.insert( topic );
-            m_logger->trace( "Listen request on topic: '{}'", topic );
-            if ( started_ )
-            {
-                std::future<libp2p::protocol::Subscription> future = std::move( pubSub_->Subscribe(
-                    topic,
-                    [weakptr = weak_from_this(), topic]( boost::optional<const GossipPubSub::Message &> message )
-                    {
-                        if ( auto self = weakptr.lock() )
-                        {
-                            self->m_logger->debug( "Message received from topic: " + topic );
-                            self->OnMessage( message, topic );
-                        }
-                    } ) );
+            this->m_logger->debug("Already listening to topic {}", topic);
+            return;
+        }
 
+        topicsToListen_.insert( topic );
+        m_logger->trace( "Listen request on topic: '{}'", topic );
+        if ( started_ )
+        {
+            std::future<libp2p::protocol::Subscription> future = std::move( pubSub_->Subscribe(
+                topic,
+                [weakptr = weak_from_this(), topic]( boost::optional<const GossipPubSub::Message &> message )
                 {
-                    std::lock_guard<std::mutex> lock( subscriptionMutex_ );
-                    subscriptionFutures_.push_back( std::move( future ) );
-                }
+                    if ( auto self = weakptr.lock() )
+                    {
+                        self->m_logger->debug( "Message received from topic: " + topic );
+                        self->OnMessage( message, topic );
+                    }
+                } ) );
+
+            {
+                std::lock_guard lock( subscriptionMutex_ );
+                subscriptionFutures_.push_back( std::move( future ) );
             }
         }
     }

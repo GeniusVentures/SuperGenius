@@ -50,9 +50,8 @@ namespace sgns
         m_logger->info( "Initializing values by reading whole blockchain" );
 
         boost::format full_node_topic{ std::string( GNUS_FULL_NODES_TOPIC ) };
-
         full_node_topic % TEST_NET_ID;
-        full_node_topic.str();
+
         globaldb_m->AddBroadcastTopic( account_m->GetAddress() );
         globaldb_m->AddListenTopic( account_m->GetAddress() );
         globaldb_m->AddBroadcastTopic( full_node_topic.str() );

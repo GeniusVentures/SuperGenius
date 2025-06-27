@@ -204,10 +204,10 @@ namespace sgns
             node_logger->info( "Wan IP: {}", wanip );
             node_logger->info( "Lan IP: {}", lanip );
 
-            const int   max_attempts = 10;
-            bool        success      = false;
+            bool        success = false;
             std::string owner;
 
+            constexpr int max_attempts = 10;
             for ( int i = 0; i < max_attempts; ++i )
             {
                 int candidate_port = pubsubport + i;
@@ -223,16 +223,14 @@ namespace sgns
                             pubsubport = candidate_port;
                             break;
                         }
+
                         node_logger->error(
                             "Port {} is already mapped by this device. We tried using it, but could not. Will try other ports.",
                             candidate_port );
                         continue;
                     }
-                    else
-                    {
-                        node_logger->warn( "Port {} already in use by {}", candidate_port, owner );
-                        continue;
-                    }
+                    node_logger->warn( "Port {} already in use by {}", candidate_port, owner );
+                    continue;
                 }
 
                 if ( upnp->OpenPort( candidate_port, candidate_port, "TCP", 3600 ) )
@@ -243,10 +241,7 @@ namespace sgns
                     pubsubport = candidate_port;
                     break;
                 }
-                else
-                {
-                    node_logger->warn( "Failed to open port {}", candidate_port );
-                }
+                node_logger->warn( "Failed to open port {}", candidate_port );
             }
 
             if ( !success )
@@ -266,12 +261,12 @@ namespace sgns
         auto maybe_base58 = libp2p::multi::ContentIdentifierCodec::toString( acc_cid.value() );
         if ( !maybe_base58 )
         {
-            std::runtime_error( "We couldn't convert the account to base58" );
+            throw std::runtime_error( "We couldn't convert the account to base58" );
         }
         std::string base58key = maybe_base58.value();
 
         gnus_network_full_path_ = ( boost::format( std::string( GNUS_NETWORK_PATH ) ) %
-                                    sgns::version::SuperGeniusVersionMajor() % base58key )
+                                    version::SuperGeniusVersionMajor() % base58key )
                                       .str();
 
         auto pubsubKeyPath = gnus_network_full_path_ + "/pubs_processor";
@@ -281,8 +276,8 @@ namespace sgns
         auto pubs = pubsub_->Start( pubsubport, {}, lanip, addresses );
         pubs.wait();
         auto scheduler = std::make_shared<libp2p::protocol::AsioScheduler>( io_, libp2p::protocol::SchedulerConfig{} );
-        auto generator = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
-        auto graphsyncnetwork = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubsub_->GetHost(),
+        auto generator = std::make_shared<ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
+        auto graphsyncnetwork = std::make_shared<ipfs_lite::ipfs::graphsync::Network>( pubsub_->GetHost(),
                                                                                              scheduler );
 
         auto global_db_ret = crdt::GlobalDB::New( io_,
