@@ -47,6 +47,15 @@ namespace sgns::crdt
         using PutHookPtr                = std::function<void( const std::string &k, const Buffer &v )>;
         using DeleteHookPtr             = std::function<void( const std::string &k )>;
         using CRDTElementFilterCallback = CRDTDataFilter::ElementFilterCallback;
+
+        enum class Error
+        {
+            INVALID_PARAM = 0,
+            FETCH_ROOT_NODE,
+            NODE_DESERIALIZATION,
+            FETCHING_GRAPH,
+            NODE_CREATION,
+        };
         /**
          * @brief       Factory method to create a shared_ptr to a CrdtDatastore
          * @param[in]   aDatastore The underlying database where CRDT is stored
@@ -187,6 +196,7 @@ namespace sgns::crdt
             uint64_t                  rootPriority_; /*> root priority */
             std::shared_ptr<Delta>    delta_;        /*> pointer to delta */
             std::shared_ptr<IPLDNode> node_;         /*> pointer to node */
+            std::shared_ptr<IPLDNode> root_node_;    /*> pointer to node */
         };
 
         /** DAG worker structure to keep track of worker threads
@@ -213,7 +223,10 @@ namespace sgns::crdt
     * @param aRootPriority root priority
     * @param aChildren vector of children CIDs
     */
-        void SendNewJobs( const CID &aRootCID, uint64_t aRootPriority, const std::vector<CID> &aChildren );
+        outcome::result<void> SendNewJobs( const CID                &aRootCID,
+                                           uint64_t                  aRootPriority,
+                                           const std::vector<CID>   &aChildren,
+                                           std::shared_ptr<IPLDNode> aRootNode = nullptr );
 
         /** Sync ensures that all the data under the given prefix is flushed to disk in
     * the underlying datastore
@@ -350,15 +363,13 @@ namespace sgns::crdt
 
         std::mutex              rebroadcastMutex_;
         std::condition_variable rebroadcastCv_;
-
-        std::mutex    mutex_processed_cids;
-        std::set<CID> processed_cids;
-
-        void AddProcessedCID( const CID &cid );
-        bool ContainsCID( const CID &cid );
-        bool DeleteCIDS( const std::vector<CID> &cid );
     };
 
 } // namespace sgns::crdt
+
+/**
+ * @brief       Macro for declaring error handling in the CrdtDatastore class.
+ */
+OUTCOME_HPP_DECLARE_ERROR_2( sgns::crdt, CrdtDatastore::Error );
 
 #endif //SUPERGENIUS_CRDT_DATASTORE_HPP
