@@ -560,28 +560,9 @@ namespace sgns::crdt
 
             // Single attempt to fetch the graph - getNode internally already has retry logic
             std::unique_lock lock( dagSyncherMutex_ );
-            auto             graphResult = dagSyncer_->fetchGraphOnDepth( cid, 1 );
-            lock.unlock();
-
-            if ( graphResult.has_failure() )
-            {
-                logger_->error( "SendNewJobs: error fetching graph for CID:{} - {}",
-                                cid.toString().value(),
-                                graphResult.error().message() );
-                return CrdtDatastore::Error::FETCHING_GRAPH;
-            }
-
-            auto leaf       = graphResult.value();
-            auto nodeBuffer = leaf->content();
-
-            // @todo Check if it is OK that the node has only content and doesn't have links
-            auto nodeResult = ipfs_lite::ipld::IPLDNodeImpl::createFromRawBytes( nodeBuffer );
-            if ( nodeResult.has_failure() )
-            {
-                logger_->error( "SendNewJobs: Can't create IPLDNodeImpl with leaf content {}", nodeBuffer.size() );
-                return CrdtDatastore::Error::NODE_CREATION;
-            }
-            auto node = nodeResult.value();
+            auto             nodeResult = dagSyncer_->getNode( cid );
+            auto             node       = nodeResult.value();
+            auto             nodeBuffer = node->content();
 
             auto delta = std::make_shared<Delta>();
             if ( !delta->ParseFromArray( nodeBuffer.data(), nodeBuffer.size() ) )
@@ -595,7 +576,7 @@ namespace sgns::crdt
             dagJob.rootPriority_ = rootPriority;
             dagJob.delta_        = delta;
             dagJob.node_         = node;
-            dagJob.root_node_     = rootNode; // Pass the root node through the job
+            dagJob.root_node_    = rootNode; // Pass the root node through the job
 
             logger_->debug( "SendNewJobs PUSHING CID={} nodeCID={} priority={} ",
                             dagJob.rootCid_.toString().value(),
