@@ -61,35 +61,27 @@ TEST( NodeBalancePersistenceTest, BalancePersistsAfterRecreation )
     const std::string sharedKey = "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeea";
 
     std::cout << "****** Full node creation ****" << std::endl;
-    auto fullNode = CreateNodeWithMode( "0xffff",
-                                        "1.0",
-                                        TokenID::FromBytes( { 0x01 } ),
-                                        /*isProcessor=*/false,
-                                        /*isFullNode=*/true,
-                                        /*folderName=*/"node_full",
-                                        fullKey );
+    auto fullNode =
+        CreateNodeWithMode( "0xffff", "1.0", TokenID::FromBytes( { 0x01 } ), false, true, "node_full", fullKey );
 
     std::cout << "****** Original node creation ****" << std::endl;
-    auto originalNode = CreateNodeWithMode( "0xabcd",
-                                            "1.0",
-                                            TokenID::FromBytes( { 0x00 } ),
-                                            /*isProcessor=*/false,
-                                            /*isFullNode=*/false,
-                                            /*folderName=*/"node_original",
-                                            sharedKey );
+    auto originalNode =
+        CreateNodeWithMode( "0xabcd", "1.0", TokenID::FromBytes( { 0x00 } ), false, false, "node_original", sharedKey );
 
     originalNode->GetPubSub()->AddPeers( { fullNode->GetPubSub()->GetLocalAddress() } );
 
     std::cout << "****** Minting tokens on original node ****" << std::endl;
     uint64_t beforeMint = originalNode->GetBalance();
-    auto     mintRes    = originalNode->MintTokens(
-        /*amount=*/500000,
-        /*txHash=*/"",
-        /*chainId=*/"",
-        TokenID::FromBytes( { 0x00 } ) );
-    ASSERT_TRUE( mintRes.has_value() ) << "MintTokens failed on original node";
-    uint64_t afterMint = originalNode->GetBalance();
-    ASSERT_GT( afterMint, beforeMint );
+    uint64_t afterMint;
+
+    constexpr size_t mintAmount = 10;
+    for ( size_t i = 0; i < mintAmount; ++i )
+    {
+        auto mintRes = originalNode->MintTokens( 500000, "", "", TokenID::FromBytes( { 0x00 } ) );
+        ASSERT_TRUE( mintRes.has_value() ) << "MintTokens failed on original node";
+        afterMint = originalNode->GetBalance();
+        ASSERT_GT( afterMint, beforeMint );
+    }
 
     std::cout << "****** Destroying original node after 10 seconds ****" << std::endl;
     std::this_thread::sleep_for( std::chrono::seconds( 15 ) );
@@ -97,13 +89,8 @@ TEST( NodeBalancePersistenceTest, BalancePersistsAfterRecreation )
     std::this_thread::sleep_for( std::chrono::seconds( 10 ) );
 
     std::cout << "****** Recovery node creation ****" << std::endl;
-    auto recoveryNode = CreateNodeWithMode( "0xabcd",
-                                            "1.0",
-                                            TokenID::FromBytes( { 0x01 } ),
-                                            /*isProcessor=*/false,
-                                            /*isFullNode=*/false,
-                                            /*folderName=*/"node_recovery",
-                                            sharedKey );
+    auto recoveryNode =
+        CreateNodeWithMode( "0xabcd", "1.0", TokenID::FromBytes( { 0x01 } ), false, false, "node_recovery", sharedKey );
     recoveryNode->GetPubSub()->AddPeers( { fullNode->GetPubSub()->GetLocalAddress() } );
 
     std::cout << "****** Verifying recovery node balance ****" << std::endl;

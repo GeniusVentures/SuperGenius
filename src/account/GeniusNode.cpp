@@ -190,8 +190,6 @@ namespace sgns
 #endif
         node_logger->info( sgns::version::SuperGeniusVersionText() );
 
-        auto tokenid = dev_config_.TokenID;
-
         auto pubsubport = GenerateRandomPort( base_port, account_->GetAddress() );
 
         std::vector<std::string> addresses;
