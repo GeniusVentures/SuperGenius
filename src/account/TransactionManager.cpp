@@ -498,7 +498,19 @@ namespace sgns
                 outgoing_tx_processed_m[GetTransactionPath( *transaction_pair.first )] = transaction_pair.first;
             }
         }
-        BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Commit() );
+        std::vector<std::string> topics;
+        for ( auto &transaction_pair : transaction_batch )
+        {
+            auto tx = transaction_pair.first;
+            if ( auto transfer_tx = std::dynamic_pointer_cast<TransferTransaction>( tx ) )
+            {
+                for ( const auto &dest_info : transfer_tx->GetDstInfos() )
+                {
+                    topics.push_back( dest_info.dest_address );
+                }
+            }
+        }
+        BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Commit( topics ) );
 
         return outcome::success();
     }
