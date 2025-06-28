@@ -89,6 +89,7 @@ namespace sgns::crdt
         bool                  IsCIDInCache( const CID &cid ) const override;
         outcome::result<void> DeleteCIDBlock( const CID &cid ) override;
 
+        outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> GetNodeWithoutRequest( const CID &cid ) const override;
         /** DAG service implementation */
         MerkleDagServiceImpl dagService_;
 

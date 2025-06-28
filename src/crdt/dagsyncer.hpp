@@ -24,10 +24,13 @@ namespace sgns::crdt
     */
         virtual outcome::result<bool> HasBlock( const CID &cid ) const = 0;
 
-        virtual void                  InitCIDBlock( const CID &cid )         = 0;
-        virtual bool                  IsCIDInCache( const CID &cid ) const   = 0;
-        virtual outcome::result<void> DeleteCIDBlock( const CID &cid ) = 0;
-        virtual void                  Stop()                                 = 0;
+        virtual outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> GetNodeWithoutRequest(
+            const CID &cid ) const = 0;
+
+        virtual void                  InitCIDBlock( const CID &cid )       = 0;
+        virtual bool                  IsCIDInCache( const CID &cid ) const = 0;
+        virtual outcome::result<void> DeleteCIDBlock( const CID &cid )     = 0;
+        virtual void                  Stop()                               = 0;
     };
 } // namespace sgns::crdt
 

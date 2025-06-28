@@ -167,9 +167,8 @@ namespace sgns::crdt
 
         if ( !node.has_error() )
         {
-            logger_->debug( "Return node for CID {} and {} instance={}",
+            logger_->debug( "Return node for CID {} instance={}",
                             cid.toString().value(),
-                            node.value()->getCID().toString().value(),
                             reinterpret_cast<size_t>( this ) );
             return node;
         }
@@ -178,9 +177,8 @@ namespace sgns::crdt
 
         if ( !node.has_error() )
         {
-            logger_->debug( "Return node for CID {} and {} instance={}",
+            logger_->debug( "Return node for CID {} instance={}",
                             cid.toString().value(),
-                            node.value()->getCID().toString().value(),
                             reinterpret_cast<size_t>( this ) );
             return node;
         }
@@ -205,7 +203,8 @@ namespace sgns::crdt
         {
             if ( is_stopped_ )
             {
-                logger_->warn( "We exited while trying to sync {} as it must have been still in progress.", cid.toString().value() );
+                logger_->warn( "We exited while trying to sync {} as it must have been still in progress.",
+                               cid.toString().value() );
                 return outcome::failure( Error::DAGSYNCHER_NOT_STARTED );
             }
             // Check request state
@@ -216,6 +215,9 @@ namespace sgns::crdt
                 auto result = GrabCIDBlock( cid );
                 if ( result )
                 {
+                    logger_->debug( "Return node for CID {} instance={}",
+                                    cid.toString().value(),
+                                    reinterpret_cast<size_t>( this ) );
                     return result;
                 }
                 logger_->warn( "Request state not found for CID {}", cid.toString().value() );
@@ -233,6 +235,9 @@ namespace sgns::crdt
                     auto result = GrabCIDBlock( cid );
                     if ( result )
                     {
+                        logger_->debug( "Return node for CID {} instance={}",
+                                        cid.toString().value(),
+                                        reinterpret_cast<size_t>( this ) );
                         return result;
                     }
                     // If still not found, this is strange but we'll fail
@@ -310,6 +315,19 @@ namespace sgns::crdt
         auto getCachedNodeResult = GrabCIDBlock( cid );
 
         return getNodeResult.has_value() || getCachedNodeResult.has_value();
+    }
+
+    outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> GraphsyncDAGSyncer::GetNodeWithoutRequest(
+        const CID &cid ) const
+    {
+        auto getNodeResult = GetNodeFromMerkleDAG( cid );
+
+        if ( getNodeResult.has_value() )
+        {
+            return getNodeResult;
+        }
+
+        return GrabCIDBlock( cid );
     }
 
     outcome::result<void> GraphsyncDAGSyncer::StartSync()

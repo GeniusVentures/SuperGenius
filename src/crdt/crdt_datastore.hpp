@@ -55,6 +55,7 @@ namespace sgns::crdt
             NODE_DESERIALIZATION,
             FETCHING_GRAPH,
             NODE_CREATION,
+            GET_NODE,
         };
         /**
          * @brief       Factory method to create a shared_ptr to a CrdtDatastore
@@ -279,6 +280,10 @@ namespace sgns::crdt
                                                        std::shared_ptr<Delta>           aDelta,
                                                        const std::shared_ptr<IPLDNode> &aNode,
                                                        bool                             filter_crdt = false );
+
+        outcome::result<std::set<CID>> TraverseAndCollectUnknownCIDs( const CID                       &aRoot,
+                                                                      uint64_t                         aRootPrio,
+                                                                      const std::shared_ptr<IPLDNode> &node );
 
         /** PutBlock add block node to DAGSyncer
     * @param aHeads list of CIDs to add to node as IPLD links

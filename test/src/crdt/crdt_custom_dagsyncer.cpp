@@ -63,5 +63,10 @@ namespace sgns::crdt
         return outcome::success();
     }
 
+    outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> CustomDagSyncer::GetNodeWithoutRequest( const CID &cid ) const
+    {
+        return getNode( cid );
+    }
+
     void CustomDagSyncer::Stop() {}
 } // namespace sgns::crdt
