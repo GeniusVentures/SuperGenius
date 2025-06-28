@@ -671,11 +671,17 @@ namespace sgns::crdt
 
     outcome::result<CID> CrdtDatastore::Publish( const std::shared_ptr<Delta> &aDelta )
     {
-        OUTCOME_TRY( auto &&newCID, AddDAGNode( aDelta ) );
+        OUTCOME_TRY( auto &&newCID, AddDAGNode( aDelta, {} ) );
 
         return newCID;
     }
 
+    outcome::result<CID>  CrdtDatastore::Publish( const std::shared_ptr<Delta> &aDelta, const std::vector<std::string> &topics ) 
+    {
+        OUTCOME_TRY( auto &&newCID, AddDAGNode( aDelta, topics ) );
+
+        return newCID;
+    }
     outcome::result<void> CrdtDatastore::Broadcast( const std::vector<CID> &cids )
     {
         if ( !broadcaster_ )
@@ -706,7 +712,7 @@ namespace sgns::crdt
     }
 
     outcome::result<std::shared_ptr<CrdtDatastore::IPLDNode>> CrdtDatastore::PutBlock(
-        const std::vector<CID>       &aHeads,
+        const std::vector<std::pair<CID, std::string>>& aHeads,
         const std::shared_ptr<Delta> &aDelta )
     {
         if ( aDelta == nullptr )
@@ -719,15 +725,18 @@ namespace sgns::crdt
         {
             return outcome::failure( boost::system::error_code{} );
         }
-        for ( const auto &head : aHeads )
+        for ( const auto &h : aHeads )
         {
+            const CID         &head  = h.first;
+            const std::string &topic = h.second;
+
             auto cidByte = head.toBytes();
             if ( cidByte.has_failure() )
             {
                 continue;
             }
             ipfs_lite::ipld::IPLDLinkImpl link = ipfs_lite::ipld::IPLDLinkImpl( head,
-                                                                                "", // TODO: not always topicName_
+                                                                                topic,
                                                                                 cidByte.value().size() );
             node->addLink( link );
 
@@ -859,7 +868,8 @@ namespace sgns::crdt
         return children;
     }
 
-    outcome::result<CID> CrdtDatastore::AddDAGNode( const std::shared_ptr<Delta> &aDelta )
+    outcome::result<CID> CrdtDatastore::AddDAGNode( const std::shared_ptr<Delta>   &aDelta,
+                                                    const std::vector<std::string> &topics )
     {
         uint64_t         height = 0;
         std::vector<CID> heads;
@@ -872,12 +882,21 @@ namespace sgns::crdt
         height = height + 1; // This implies our minimum height is 1
         aDelta->set_priority( height );
 
-        auto putBlockResult = PutBlock( heads, aDelta );
+        std::vector<std::pair<CID, std::string>> headsWithTopics;
+        headsWithTopics.reserve( heads.size() * topics.size() );
+        for ( const auto &cid : heads )
+        {
+            for ( const auto &t : topics )
+            {
+                headsWithTopics.emplace_back( cid, t );
+            }
+        }
+
+        auto putBlockResult = PutBlock( headsWithTopics, aDelta );
         if ( putBlockResult.has_failure() )
         {
             return outcome::failure( putBlockResult.error() );
         }
-
         auto node = putBlockResult.value();
 
         // Process new block. This makes that every operation applied

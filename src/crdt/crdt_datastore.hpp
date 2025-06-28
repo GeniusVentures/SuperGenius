@@ -149,6 +149,7 @@ namespace sgns::crdt
          * @return returns outcome::success on success or outcome::failure otherwise
          */
         outcome::result<CID> Publish( const std::shared_ptr<Delta> &aDelta );
+        outcome::result<CID> Publish( const std::shared_ptr<Delta> &aDelta, const std::vector<std::string> &topics );
 
         /** PrintDAG pretty prints the current Merkle-DAG using the given printFunc
     * @return returns outcome::success on success or outcome::failure otherwise
@@ -300,15 +301,15 @@ namespace sgns::crdt
     * @param aDelta Delta to serialize into IPLD node
     * @return IPLD node or outcome::failure on error
     */
-        outcome::result<std::shared_ptr<IPLDNode>> PutBlock( const std::vector<CID>       &aHeads,
+        outcome::result<std::shared_ptr<IPLDNode>> PutBlock( const std::vector<std::pair<CID, std::string>>& aHeads,
                                                              const std::shared_ptr<Delta> &aDelta );
 
         /** AddDAGNode adds node to DAGSyncer and processes new blocks.
-    * @param aDelta Pointer to Delta used for generating node and process it
-    * @return CID or outcome::failure on error
-    * \sa PutBlock, ProcessNode
-    */
-        outcome::result<CID> AddDAGNode( const std::shared_ptr<Delta> &aDelta );
+         *  @param aDelta   Pointer to Delta used for generating node and process it
+         *  @param topics   Vector of topic names; the new block will have one link per topic
+         *  @return         CID or outcome::failure on error
+         */
+        outcome::result<CID> AddDAGNode( const std::shared_ptr<Delta> &aDelta, const std::vector<std::string> &topics );
 
         /** SyncDatastore sync heads and set datastore
     * @param: aKeyList all heads and the set entries related to the given prefix

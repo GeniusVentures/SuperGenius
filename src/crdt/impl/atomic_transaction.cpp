@@ -91,6 +91,10 @@ namespace sgns::crdt
 
     outcome::result<void> AtomicTransaction::Commit()
     {
+        return this->Commit({});
+    }
+    outcome::result<void> AtomicTransaction::Commit(const std::vector<std::string>& topics)
+    {
         if ( is_committed_ )
         {
             return outcome::failure( boost::system::error_code{} );
@@ -129,7 +133,7 @@ namespace sgns::crdt
         }
         combined_delta->set_priority( max_priority );
 
-        auto result = datastore_->Publish( combined_delta );
+        auto result = datastore_->Publish( combined_delta, topics );
         if ( result.has_failure() )
         {
             return result.error();

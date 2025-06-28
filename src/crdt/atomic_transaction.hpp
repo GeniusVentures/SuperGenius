@@ -82,6 +82,7 @@ namespace sgns::crdt
          * @return outcome::success on successful commit, or outcome::failure if an error occurs.
          */
         outcome::result<void> Commit();
+        outcome::result<void> Commit(const std::vector<std::string>& topics);
 
     private:
         enum class Operation
