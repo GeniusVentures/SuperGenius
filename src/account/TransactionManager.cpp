@@ -55,6 +55,7 @@ namespace sgns
         globaldb_m->AddBroadcastTopic( account_m->GetAddress() );
         globaldb_m->AddListenTopic( account_m->GetAddress() );
         globaldb_m->AddBroadcastTopic( full_node_topic.str() );
+        globaldb_m->SetTopicName( account_m->GetAddress() );
         m_logger->info( "Adding broadcast to full node on {}", full_node_topic.str() );
         if ( full_node_m )
         {
