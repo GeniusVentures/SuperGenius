@@ -813,6 +813,10 @@ namespace sgns::crdt
                 //LET'S CHECK IF THE LINK IS FOR ME
                 if ( link.get().getName() != topicName_)
                 {
+                    logger_->debug( "Skipping link because its name '{}' does not match topicName '{}'",
+                                    link.get().getName(),
+                                    topicName_ );
+
                     // continue;
                 }
                 auto child        = link.get().getCID();
@@ -888,6 +892,8 @@ namespace sgns::crdt
         {
             for ( const auto &t : topics )
             {
+                // Debug each head-topic pairing
+                logger_->debug( "AddDAGNode: pairing head {} with topic '{}'", cid.toString().value(), t );
                 headsWithTopics.emplace_back( cid, t );
             }
         }
