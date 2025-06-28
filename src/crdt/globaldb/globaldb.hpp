@@ -131,6 +131,7 @@ namespace sgns::crdt
         void AddListenTopic( const std::string &topicName );
 
         void PrintDataStore();
+        void SetTopicName(std::string topicName);
 
         auto GetDB()
         {

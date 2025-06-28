@@ -719,7 +719,6 @@ namespace sgns::crdt
         {
             return outcome::failure( boost::system::error_code{} );
         }
-
         for ( const auto &head : aHeads )
         {
             auto cidByte = head.toBytes();
@@ -727,8 +726,15 @@ namespace sgns::crdt
             {
                 continue;
             }
-            ipfs_lite::ipld::IPLDLinkImpl link = ipfs_lite::ipld::IPLDLinkImpl( head, "", cidByte.value().size() );
+            ipfs_lite::ipld::IPLDLinkImpl link = ipfs_lite::ipld::IPLDLinkImpl( head,
+                                                                                "", // TODO: not always topicName_
+                                                                                cidByte.value().size() );
             node->addLink( link );
+
+            logger_->info( "PutBlock: added link {{ cid=\"{}\", name=\"{}\", size={} }}",
+                           link.getCID().toString().value(),
+                           link.getName(),
+                           link.getSize() );
         }
 
         return node;
@@ -776,11 +782,10 @@ namespace sgns::crdt
 
         std::vector<CID> children;
         auto             links = aNode->getLinks();
-
         if ( links.empty() )
         {
             logger_->debug( "Adding: {} to heads", current.toString().value() );
-            auto addHeadResult = heads_->Add( aRoot, aRootPrio );
+            auto addHeadResult = heads_->Add( aRoot, aRootPrio, topicName_);
             if ( addHeadResult.has_failure() )
             {
                 logger_->error( "ProcessNode: error adding head {}", aRoot.toString().value() );
@@ -792,13 +797,22 @@ namespace sgns::crdt
         {
             for ( const auto &link : links )
             {
+                logger_->info( "GetBlock: found link {{ cid=\"{}\", name=\"{}\", size={} }}",
+                               link.get().getCID().toString().value(),
+                               link.get().getName(),
+                               link.get().getSize() );
+                //LET'S CHECK IF THE LINK IS FOR ME
+                if ( link.get().getName() != topicName_)
+                {
+                    // continue;
+                }
                 auto child        = link.get().getCID();
                 auto isHeadResult = heads_->IsHead( child );
 
                 if ( isHeadResult )
                 {
                     logger_->debug( "Replacing: {} with {}", child.toString().value(), aRoot.toString().value() );
-                    auto replaceResult = heads_->Replace( child, aRoot, aRootPrio );
+                    auto replaceResult = heads_->Replace( child, aRoot, aRootPrio, link.get().getName() );
                     if ( replaceResult.has_failure() )
                     {
                         logger_->error( "ProcessNode: error replacing head {} -> {}",
@@ -824,7 +838,7 @@ namespace sgns::crdt
                 if ( knowBlockResult.value() )
                 {
                     logger_->debug( "Process Node: Adding: {} to heads", aRoot.toString().value() );
-                    auto addHeadResult = heads_->Add( aRoot, aRootPrio );
+                    auto addHeadResult = heads_->Add( aRoot, aRootPrio, link.get().getName());
                     if ( addHeadResult.has_failure() )
                     {
                         logger_->error( "ProcessNode: error adding head {}", aRoot.toString().value() );

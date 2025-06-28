@@ -1,4 +1,5 @@
 #include "crdt/crdt_heads.hpp"
+#include "crdt/proto/heads.pb.h"
 #include <storage/database_error.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/system/error_code.hpp>
@@ -62,7 +63,8 @@ namespace sgns::crdt
 
     outcome::result<void> CrdtHeads::Write( const std::unique_ptr<storage::BufferBatch> &aDataStore,
                                             const CID                                   &aCid,
-                                            uint64_t                                     aHeight )
+                                            uint64_t                                     aHeight,
+                                            const std::string                           &topic )
     {
         if ( aDataStore == nullptr )
         {
@@ -75,13 +77,19 @@ namespace sgns::crdt
             return outcome::failure( getKeyResult.error() );
         }
 
-        std::string strHeight = std::to_string( aHeight );
+        // serialize HeadInfo proto
+        pb::HeadInfo info;
+        info.set_height(aHeight);
+        info.set_topic(topic);
+        std::string payload;
+        info.SerializeToString(&payload);
 
         Buffer keyBuffer;
         keyBuffer.put( getKeyResult.value().GetKey() );
 
         Buffer valueBuffer;
-        valueBuffer.put( strHeight );
+        std::vector<uint8_t> dataVec(payload.begin(), payload.end());
+        valueBuffer.put(dataVec);
 
         return aDataStore->put( keyBuffer, valueBuffer );
     }
@@ -120,7 +128,7 @@ namespace sgns::crdt
         {
             return 0;
         }
-        return this->cache_[aCid];
+        return this->cache_[aCid].first;
     }
 
     outcome::result<int> CrdtHeads::GetLength()
@@ -129,7 +137,7 @@ namespace sgns::crdt
         return this->cache_.size();
     }
 
-    outcome::result<void> CrdtHeads::Add( const CID &aCid, uint64_t aHeight )
+    outcome::result<void> CrdtHeads::Add( const CID &aCid, uint64_t aHeight, const std::string &topic  )
     {
         if ( this->dataStore_ == nullptr )
         {
@@ -137,7 +145,7 @@ namespace sgns::crdt
         }
 
         auto batchDatastore = this->dataStore_->batch();
-        auto writeResult    = this->Write( batchDatastore, aCid, aHeight );
+        auto writeResult    = this->Write(batchDatastore, aCid, aHeight, topic);
         if ( writeResult.has_failure() )
         {
             return outcome::failure( writeResult.error() );
@@ -150,12 +158,12 @@ namespace sgns::crdt
 
         {
             std::lock_guard lg( this->mutex_ );
-            this->cache_[aCid] = aHeight;
+            this->cache_[aCid] = {aHeight, topic};;
         }
         return outcome::success();
     }
 
-    outcome::result<void> CrdtHeads::Replace( const CID &aCidHead, const CID &aNewHeadCid, uint64_t aHeight )
+    outcome::result<void> CrdtHeads::Replace( const CID &aCidHead, const CID &aNewHeadCid, uint64_t aHeight, const std::string &topic )
     {
         if ( this->dataStore_ == nullptr )
         {
@@ -163,7 +171,7 @@ namespace sgns::crdt
         }
 
         auto batchDatastore = this->dataStore_->batch();
-        auto writeResult    = this->Write( batchDatastore, aNewHeadCid, aHeight );
+        auto writeResult    = this->Write( batchDatastore, aNewHeadCid, aHeight, topic );
         if ( writeResult.has_failure() )
         {
             return outcome::failure( writeResult.error() );
@@ -184,7 +192,7 @@ namespace sgns::crdt
         {
             std::lock_guard lg( this->mutex_ );
             this->cache_.erase( aCidHead );
-            this->cache_[aNewHeadCid] = aHeight;
+            this->cache_[aNewHeadCid] = {aHeight, topic};;
         }
         return outcome::success();
     }
@@ -197,7 +205,7 @@ namespace sgns::crdt
         for ( auto it = this->cache_.begin(); it != this->cache_.end(); ++it )
         {
             aHeads.push_back( it->first );
-            aMaxHeight = std::max( aMaxHeight, it->second );
+            aMaxHeight = std::max( aMaxHeight, it->second.first );
         }
         return outcome::success();
     }
@@ -228,6 +236,10 @@ namespace sgns::crdt
             CID cid( cidResult.value() );
 
             uint64_t height = 0;
+            pb::HeadInfo info;
+            info.ParseFromArray(bufferKeyAndValue.second.data(),
+                                bufferKeyAndValue.second.size());
+
             try
             {
                 height = boost::lexical_cast<uint64_t>( bufferKeyAndValue.second.toString() );
@@ -238,7 +250,7 @@ namespace sgns::crdt
             }
             {
                 std::lock_guard lg( this->mutex_ );
-                this->cache_[cid] = height;
+                this->cache_[cid] = { info.height(), info.topic() };
             }
         }
         return outcome::success();

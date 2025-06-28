@@ -54,7 +54,7 @@ namespace sgns::crdt
     EXPECT_STRNE(cid1ToStringResult.value().c_str(), cid2ToStringResult.value().c_str());
 
     // Test Add cid function
-    EXPECT_OUTCOME_TRUE_1(crdtHeads.Add(cid1, height1));
+    EXPECT_OUTCOME_TRUE_1(crdtHeads.Add(cid1, height1, ""));
 
     // Test if cis is head
     EXPECT_EQ(crdtHeads.IsHead(cid1), true);
@@ -67,11 +67,11 @@ namespace sgns::crdt
     EXPECT_OUTCOME_EQ(crdtHeads.GetLength(), 1);
 
     // Add same cid again, should remain the same length
-    EXPECT_OUTCOME_TRUE_1(crdtHeads.Add(cid1, height1));
+    EXPECT_OUTCOME_TRUE_1(crdtHeads.Add(cid1, height1, ""));
     EXPECT_OUTCOME_EQ(crdtHeads.GetLength(), 1);
 
     // Add more cid
-    EXPECT_OUTCOME_TRUE_1(crdtHeads.Add(cid2, height2));
+    EXPECT_OUTCOME_TRUE_1(crdtHeads.Add(cid2, height2, ""));
     EXPECT_OUTCOME_EQ(crdtHeads.GetLength(), 2);
 
     // Test getting heads
@@ -111,17 +111,17 @@ namespace sgns::crdt
 
     // Create CrdtHead
     CrdtHeads crdtHeads(dataStore, hKey);
-    auto addResult1 = crdtHeads.Add(cid1, height1);
-    auto addResult2 = crdtHeads.Add(cid2, height2);
+    auto addResult1 = crdtHeads.Add(cid1, height1, "");
+    auto addResult2 = crdtHeads.Add(cid2, height2, "");
 
     EXPECT_OUTCOME_EQ(crdtHeads.GetLength(), 2);
-    EXPECT_OUTCOME_TRUE_1(crdtHeads.Replace(cid2, cid3, height2));
+    EXPECT_OUTCOME_TRUE_1(crdtHeads.Replace(cid2, cid3, height2, ""));
     EXPECT_EQ(crdtHeads.IsHead(cid2), false);
     EXPECT_EQ(crdtHeads.IsHead(cid3), true);
     EXPECT_OUTCOME_EQ(crdtHeads.GetHeadHeight(cid3), height2);
     EXPECT_OUTCOME_EQ(crdtHeads.GetLength(), 2);
 
-    EXPECT_OUTCOME_TRUE_1(crdtHeads.Replace(cid3, cid3, height1));
+    EXPECT_OUTCOME_TRUE_1(crdtHeads.Replace(cid3, cid3, height1, ""));
     EXPECT_OUTCOME_EQ(crdtHeads.GetHeadHeight(cid3), height1);
     EXPECT_OUTCOME_EQ(crdtHeads.GetLength(), 2);
 

@@ -317,6 +317,11 @@ namespace sgns::crdt
     {
         m_crdtDatastore->PrintDataStore();
     }
+    
+    void GlobalDB::SetTopicName(std::string topicName)
+    {
+        m_crdtDatastore->SetTopicName(topicName);
+    }
 
     std::shared_ptr<AtomicTransaction> GlobalDB::BeginTransaction()
     {

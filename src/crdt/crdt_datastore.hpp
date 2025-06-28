@@ -187,6 +187,21 @@ namespace sgns::crdt
 
         bool RegisterElementFilter( const std::string &pattern, CRDTElementFilterCallback filter );
 
+        /**
+         * @brief Configure which topic this datastore should filter on.
+         *
+         * When processing or rebroadcasting Merkle-DAG links, only those whose
+         * name exactly matches the topic set via this call will be considered.
+         *
+         * @param[in] topic
+         *   The topic name to use when filtering links. Only links whose
+         *   `IPLDLinkImpl::getName()` equals this string will be processed.
+         */
+        void SetTopicName( const std::string &topic )
+        {
+            topicName_ = topic;
+        }
+
     protected:
         /** DAG jobs structure used by DAG worker threads to send new jobs
     */
@@ -363,6 +378,7 @@ namespace sgns::crdt
 
         std::mutex              rebroadcastMutex_;
         std::condition_variable rebroadcastCv_;
+        std::string             topicName_;
     };
 
 } // namespace sgns::crdt

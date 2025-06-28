@@ -78,7 +78,7 @@ namespace sgns::crdt
     * @param aHeight height of head
     * @return outcome::failure on error
     */
-    outcome::result<void> Add( const CID &aCid, uint64_t aHeight );
+    outcome::result<void> Add( const CID &aCid, uint64_t aHeight, const std::string &topic );
 
     /** Replace a head with a new cid.
     * @param aCidHead Content identifier of head to replace
@@ -86,7 +86,7 @@ namespace sgns::crdt
     * @param aHeight height of head
     * @return outcome::failure on error
     */
-    outcome::result<void> Replace( const CID &aCidHead, const CID &aNewHeadCid, uint64_t aHeight );
+    outcome::result<void> Replace( const CID &aCidHead, const CID &aNewHeadCid, uint64_t aHeight, const std::string &topic );
 
     /** Returns the list of current heads plus the max height.
     * @param aHeads output reference to list of CIDs
@@ -111,7 +111,8 @@ namespace sgns::crdt
     */
       outcome::result<void> Write( const std::unique_ptr<storage::BufferBatch> &aDataStore,
                                    const CID                                   &aCid,
-                                   uint64_t                                     aHeight );
+                                   uint64_t                                     aHeight,
+                                   const std::string &topic );
 
       /** Delete data from datastore in batch mode
     * @param aDataStore Pointer to datastore batch
@@ -126,7 +127,7 @@ namespace sgns::crdt
     CrdtHeads() = default;
 
     std::shared_ptr<DataStore> dataStore_;
-    std::map<CID, uint64_t> cache_;
+    std::map<CID, std::pair<uint64_t,std::string>> cache_;
     HierarchicalKey namespaceKey_;
     std::recursive_mutex mutex_;
 
