@@ -509,6 +509,7 @@ namespace sgns
                 {
                     topics.push_back( dest_info.dest_address );
                 }
+                topics.push_back( account_m->GetAddress() );
             }
         }
         BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Commit( topics ) );

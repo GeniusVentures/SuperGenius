@@ -817,7 +817,7 @@ namespace sgns::crdt
                                     link.get().getName(),
                                     topicName_ );
 
-                    // continue;
+                    continue;
                 }
                 auto child        = link.get().getCID();
                 auto isHeadResult = heads_->IsHead( child );
