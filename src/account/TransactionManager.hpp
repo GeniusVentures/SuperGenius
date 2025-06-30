@@ -42,6 +42,9 @@ namespace sgns
     class TransactionManager : public std::enable_shared_from_this<TransactionManager>
     {
     public:
+        static constexpr std::uint16_t    MAIN_NET_ID           = 369;
+        static constexpr std::uint16_t    TEST_NET_ID           = 963;
+        static constexpr std::string_view GNUS_FULL_NODES_TOPIC = "SuperGNUSNode.TestNet.FullNode.%hu";
         using TransactionPair  = std::pair<std::shared_ptr<IGeniusTransactions>, std::optional<std::vector<uint8_t>>>;
         using TransactionBatch = std::vector<TransactionPair>;
         using TransactionItem  = std::pair<TransactionBatch, std::optional<std::shared_ptr<crdt::AtomicTransaction>>>;
@@ -97,10 +100,8 @@ namespace sgns
         void EnqueueTransaction( TransactionItem element );
 
     private:
-        static constexpr std::uint16_t    MAIN_NET_ID             = 369;
-        static constexpr std::uint16_t    TEST_NET_ID             = 963;
         static constexpr std::string_view TRANSACTION_BASE_FORMAT = "/bc-%hu/";
-        static constexpr std::string_view GNUS_FULL_NODES_TOPIC   = "SuperGNUSNode.TestNet.FullNode.%hu";
+
         using TransactionParserFn =
             outcome::result<void> ( TransactionManager::* )( const std::shared_ptr<IGeniusTransactions> & );
 
