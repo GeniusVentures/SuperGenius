@@ -683,8 +683,8 @@ namespace sgns::crdt
         return newCID;
     }
 
-    outcome::result<CID> CrdtDatastore::Publish( const std::shared_ptr<Delta>   &aDelta,
-                                                 const std::vector<std::string> &topics )
+    outcome::result<CID> CrdtDatastore::Publish( const std::shared_ptr<Delta> &aDelta,
+                                                 const std::set<std::string>  &topics )
     {
         OUTCOME_TRY( auto &&newCID, AddDAGNode( aDelta, topics ) );
 
@@ -846,8 +846,8 @@ namespace sgns::crdt
         return children;
     }
 
-    outcome::result<CID> CrdtDatastore::AddDAGNode( const std::shared_ptr<Delta>   &aDelta,
-                                                    const std::vector<std::string> &topics )
+    outcome::result<CID> CrdtDatastore::AddDAGNode( const std::shared_ptr<Delta> &aDelta,
+                                                    const std::set<std::string>  &topics )
     {
         uint64_t         height = 0;
         std::vector<CID> heads;

@@ -23,6 +23,7 @@
 #include "account/TransferTransaction.hpp"
 #include "account/MintTransaction.hpp"
 #include "account/EscrowTransaction.hpp"
+#include "account/EscrowReleaseTransaction.hpp"
 #include "account/ProcessingTransaction.hpp"
 #include "account/GeniusAccount.hpp"
 #include "base/logger.hpp"

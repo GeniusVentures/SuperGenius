@@ -105,7 +105,7 @@ namespace sgns
         std::shared_ptr<crdt::AtomicTransaction> crdt_transaction_; ///< CRDT transaction to make it all atomic
         std::string                              writeBasePath_;    ///< Base path for writing DB files.
         std::string                              base58key_;        ///< Key to build legacy paths.
-        std::vector<std::string>                 topics_;
+        std::set<std::string>                    topics_;
         base::Logger m_logger = base::createLogger( "MigrationStep" ); ///< Logger for this step.
     };
 } // namespace sgns

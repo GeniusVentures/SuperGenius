@@ -93,7 +93,7 @@ namespace sgns::crdt
     {
         return this->Commit({});
     }
-    outcome::result<void> AtomicTransaction::Commit(const std::vector<std::string>& topics)
+    outcome::result<void> AtomicTransaction::Commit(const std::set<std::string>& topics)
     {
         if ( is_committed_ )
         {

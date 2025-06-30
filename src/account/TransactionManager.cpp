@@ -499,7 +499,7 @@ namespace sgns
                 outgoing_tx_processed_m[GetTransactionPath( *transaction_pair.first )] = transaction_pair.first;
             }
         }
-        std::vector<std::string> topics;
+        std::set<std::string> topics;
         for ( auto &transaction_pair : transaction_batch )
         {
             auto tx = transaction_pair.first;
@@ -507,9 +507,9 @@ namespace sgns
             {
                 for ( const auto &dest_info : transfer_tx->GetDstInfos() )
                 {
-                    topics.push_back( dest_info.dest_address );
+                    topics.emplace( dest_info.dest_address );
                 }
-                topics.push_back( account_m->GetAddress() );
+                topics.emplace( account_m->GetAddress() );
             }
         }
         BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Commit( topics ) );
