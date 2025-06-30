@@ -132,6 +132,8 @@ namespace sgns
         std::shared_ptr<crypto::Hasher>            hasher_m;
         std::shared_ptr<boost::asio::steady_timer> timer_m;
         bool                                       full_node_m;
+        std::string                                full_node_topic_m; ///< formatted full-node topic
+
         // for the SendTransaction thread support
         mutable std::mutex          mutex_m;
         std::deque<TransactionItem> tx_queue_m;

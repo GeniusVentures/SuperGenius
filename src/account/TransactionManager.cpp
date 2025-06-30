@@ -51,16 +51,21 @@ namespace sgns
 
         boost::format full_node_topic{ std::string( GNUS_FULL_NODES_TOPIC ) };
         full_node_topic % TEST_NET_ID;
+        full_node_topic_m = full_node_topic.str();
 
         globaldb_m->AddBroadcastTopic( account_m->GetAddress() );
         globaldb_m->AddListenTopic( account_m->GetAddress() );
-        globaldb_m->AddBroadcastTopic( full_node_topic.str() );
-        globaldb_m->SetTopicName( account_m->GetAddress() );
-        m_logger->info( "Adding broadcast to full node on {}", full_node_topic.str() );
+        globaldb_m->AddBroadcastTopic( full_node_topic_m );
+        m_logger->info( "Adding broadcast to full node on {}", full_node_topic_m );
         if ( full_node_m )
         {
-            m_logger->info( "Listening full node on {}", full_node_topic.str() );
-            globaldb_m->AddListenTopic( full_node_topic.str() );
+            m_logger->info( "Listening full node on {}", full_node_topic_m );
+            globaldb_m->AddListenTopic( full_node_topic_m );
+            globaldb_m->SetTopicName( full_node_topic_m );
+        }
+        else
+        {
+            globaldb_m->SetTopicName( account_m->GetAddress() );
         }
 
         bool crdt_tx_filter_initialized = globaldb_m->RegisterElementFilter(
@@ -510,6 +515,7 @@ namespace sgns
                     topics.emplace( dest_info.dest_address );
                 }
                 topics.emplace( account_m->GetAddress() );
+                topics.emplace( full_node_topic_m );
             }
         }
         BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Commit( topics ) );
