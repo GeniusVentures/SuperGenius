@@ -760,12 +760,16 @@ namespace sgns::crdt
                                                                   uint64_t                         aRootPrio,
                                                                   std::shared_ptr<Delta>           aDelta,
                                                                   const std::shared_ptr<IPLDNode> &aNode,
-                                                                  bool                             filter_crdt )
+                                                                  bool                             filter_crdt,
+                                                                  std::set<std::string>            node_topics )
     {
         if ( aDelta == nullptr || aNode == nullptr )
         {
             return outcome::failure( boost::system::error_code{} );
         }
+        std::set<std::string> topics_to_update_cid = std::move( node_topics );
+        topics_to_update_cid.emplace( topicName_ );
+        //topics_to_update_cid.emplace( fullNodeTopic_ );
 
         auto current      = aNode->getCID();
         auto strCidResult = current.toString();
@@ -800,46 +804,53 @@ namespace sgns::crdt
 
         if ( aNode->getLinks().empty() )
         {
-            logger_->debug( "Adding: {} to heads", aNode->getCID().toString().value() );
-            auto addHeadResult = heads_->Add( aRoot, aRootPrio, topicName_ );
-            if ( addHeadResult.has_failure() )
+            for ( auto &topic : topics_to_update_cid )
             {
-                logger_->error( "ProcessNode: error adding head {}", aRoot.toString().value() );
-                return outcome::failure( addHeadResult.error() );
-            }
-        }
-        else
-        {
-            std::unique_lock lock( dagSyncherMutex_ );
-            auto [links_to_fetch, known_cids] = dagSyncer_->TraverseCIDsLinks( aNode, topicName_, {} );
-            lock.unlock();
-            for ( const auto &cid : known_cids )
-            {
-                if ( heads_->IsHead( cid ) )
-                {
-                    logger_->debug( "Replacing: {} with {}", cid.toString().value(), aRoot.toString().value() );
-                    auto replaceResult = heads_->Replace( cid, aRoot, aRootPrio, topicName_ );
-                    if ( replaceResult.has_failure() )
-                    {
-                        logger_->error( "ProcessNode: error replacing head {} -> {}",
-                                        cid.toString().value(),
-                                        aRoot.toString().value() );
-                        return outcome::failure( replaceResult.error() );
-                    }
-                    continue;
-                }
-            }
-            if ( !known_cids.empty() )
-            {
-                logger_->debug( "Adding: {} to heads", aRoot.toString().value() );
-                auto addHeadResult = heads_->Add( aRoot, aRootPrio, topicName_ );
+                logger_->debug( "Adding: {} to heads on topic {} ", aNode->getCID().toString().value(), topic );
+                auto addHeadResult = heads_->Add( aRoot, aRootPrio, topic );
                 if ( addHeadResult.has_failure() )
                 {
                     logger_->error( "ProcessNode: error adding head {}", aRoot.toString().value() );
                     return outcome::failure( addHeadResult.error() );
                 }
             }
-            children = std::vector<CID>( links_to_fetch.begin(), links_to_fetch.end() );
+        }
+        else
+        {
+            for ( auto &topic : topics_to_update_cid )
+            {
+                std::unique_lock lock( dagSyncherMutex_ );
+                auto [links_to_fetch, known_cids] = dagSyncer_->TraverseCIDsLinks( aNode, topic, {} );
+                lock.unlock();
+                for ( const auto &cid : known_cids )
+                {
+                    if ( heads_->IsHead( cid ) )
+                    {
+                        logger_->debug( "Replacing: {} with {} on topic {} ", cid.toString().value(), aRoot.toString().value(), topic );
+                        auto replaceResult = heads_->Replace( cid, aRoot, aRootPrio, topic );
+                        if ( replaceResult.has_failure() )
+                        {
+                            logger_->error( "ProcessNode: error replacing head {} -> {}",
+                                            cid.toString().value(),
+                                            aRoot.toString().value() );
+                            return outcome::failure( replaceResult.error() );
+                        }
+                        continue;
+                    }
+                }
+                if ( !known_cids.empty() )
+                {
+                    logger_->debug( "Adding: {} to heads on topic {}", aRoot.toString().value(), topic );
+                    auto addHeadResult = heads_->Add( aRoot, aRootPrio, topic );
+                    if ( addHeadResult.has_failure() )
+                    {
+                        logger_->error( "ProcessNode: error adding head {}", aRoot.toString().value() );
+                        return outcome::failure( addHeadResult.error() );
+                    }
+                }
+                std::vector<CID> curr_children = std::vector<CID>( links_to_fetch.begin(), links_to_fetch.end() );
+                children.insert( children.end(), curr_children.begin(), curr_children.end() );
+            }
         }
         rebroadcastCv_.notify_one();
 
@@ -887,7 +898,7 @@ namespace sgns::crdt
                        node->getCID().toString().value(),
                        reinterpret_cast<uint64_t>( this ) );
 
-        auto processNodeResult = ProcessNode( node->getCID(), height, aDelta, node );
+        auto processNodeResult = ProcessNode( node->getCID(), height, aDelta, node, false, topics );
         if ( processNodeResult.has_failure() )
         {
             logger_->error( "AddDAGNode: error processing new block" );
