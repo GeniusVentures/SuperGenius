@@ -678,7 +678,7 @@ namespace sgns::crdt
 
     outcome::result<CID> CrdtDatastore::Publish( const std::shared_ptr<Delta> &aDelta )
     {
-        OUTCOME_TRY( auto &&newCID, AddDAGNode( aDelta, {} ) );
+        OUTCOME_TRY( auto &&newCID, AddDAGNode( aDelta, { topicName_ } ) );
 
         return newCID;
     }
