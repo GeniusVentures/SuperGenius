@@ -63,9 +63,42 @@ namespace sgns::crdt
         return outcome::success();
     }
 
-    outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> CustomDagSyncer::GetNodeWithoutRequest( const CID &cid ) const
+    outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> CustomDagSyncer::GetNodeWithoutRequest(
+        const CID &cid ) const
     {
         return getNode( cid );
+    }
+
+    std::pair<std::set<CID>, std::set<CID>> CustomDagSyncer::TraverseCIDsLinks(
+        const std::shared_ptr<ipfs_lite::ipld::IPLDNode> &node,
+        std::set<CID>                                     visited_cids ) const
+    {
+        std::set<CID> visited = std::move( visited_cids );
+        std::set<CID> links_to_fetch;
+
+        for ( const auto &link : node->getLinks() )
+        {
+            auto child = link.get().getCID();
+
+            if ( !visited.insert( child ).second )
+            {
+                continue; // already visited
+            }
+
+            auto get_child_result = GetNodeWithoutRequest( child );
+
+            if ( get_child_result.has_failure() )
+            {
+                links_to_fetch.insert( child );
+                continue;
+            }
+
+            auto cid_pair = TraverseCIDsLinks( get_child_result.value(), visited );
+            links_to_fetch.merge( cid_pair.first );
+            visited.merge( cid_pair.second );
+        }
+
+        return std::make_pair( std::move( links_to_fetch ), std::move( visited ) );
     }
 
     void CustomDagSyncer::Stop() {}

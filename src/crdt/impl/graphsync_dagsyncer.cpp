@@ -474,19 +474,16 @@ namespace sgns::crdt
             {
                 // Record successful data reception
                 RecordSuccessfulConnection( peerID );
-                for ( auto link : node.value()->getLinks() )
+                auto [links_to_fetch, _] = TraverseCIDsLinks( node.value() );
+                for ( auto link : links_to_fetch )
                 {
-                    auto linkhb = HasBlock( link.get().getCID() );
-                    if ( linkhb.has_value() && !linkhb.value() )
-                    {
-                        logger_->trace( "Adding route for peer {} and CID {}",
-                                        peerID.toBase58(),
-                                        link.get().getCID().toString().value() );
+                    logger_->trace( "Adding route for peer {} and CID {}",
+                                    peerID.toBase58(),
+                                    link.toString().value() );
 
-                        // Use a non-const copy of the address for AddRoute
-                        std::vector<Multiaddress> addr_copy = address;
-                        AddRoute( link.get().getCID(), peerID, addr_copy );
-                    }
+                    // Use a non-const copy of the address for AddRoute
+                    std::vector<Multiaddress> addr_copy = address;
+                    AddRoute( link, peerID, addr_copy );
                 }
             }
             else
@@ -496,6 +493,39 @@ namespace sgns::crdt
             }
         }
         EraseRoute( cid );
+    }
+
+    std::pair<std::set<CID>, std::set<CID>> GraphsyncDAGSyncer::TraverseCIDsLinks(
+        const std::shared_ptr<ipfs_lite::ipld::IPLDNode> &node,
+        std::set<CID>                                     visited_cids ) const
+    {
+        std::set<CID> visited = std::move( visited_cids );
+        std::set<CID> links_to_fetch;
+
+        for ( const auto &link : node->getLinks() )
+        {
+            auto child = link.get().getCID();
+
+            if ( !visited.insert( child ).second )
+            {
+                continue; // already visited
+            }
+
+            auto get_child_result = GetNodeWithoutRequest( child );
+
+            if ( get_child_result.has_failure() )
+            {
+                logger_->debug( "TraverseCIDsLinks: missing block {}", child.toString().value() );
+                links_to_fetch.insert( child );
+                continue;
+            }
+
+            auto cid_pair = TraverseCIDsLinks( get_child_result.value(), visited );
+            links_to_fetch.merge( cid_pair.first );
+            visited.merge( cid_pair.second );
+        }
+
+        return std::make_pair( std::move( links_to_fetch ), std::move( visited ) );
     }
 
     void GraphsyncDAGSyncer::InitCIDBlock( const CID &cid )
