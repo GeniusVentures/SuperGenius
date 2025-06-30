@@ -55,6 +55,7 @@ namespace sgns::crdt
             NODE_DESERIALIZATION,
             FETCHING_GRAPH,
             NODE_CREATION,
+            GET_NODE,
         };
         /**
          * @brief       Factory method to create a shared_ptr to a CrdtDatastore

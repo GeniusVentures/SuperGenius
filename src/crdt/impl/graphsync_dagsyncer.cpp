@@ -167,9 +167,8 @@ namespace sgns::crdt
 
         if ( !node.has_error() )
         {
-            logger_->debug( "Return node for CID {} and {} instance={}",
+            logger_->debug( "Return node for CID {} instance={}",
                             cid.toString().value(),
-                            node.value()->getCID().toString().value(),
                             reinterpret_cast<size_t>( this ) );
             return node;
         }
@@ -178,9 +177,8 @@ namespace sgns::crdt
 
         if ( !node.has_error() )
         {
-            logger_->debug( "Return node for CID {} and {} instance={}",
+            logger_->debug( "Return node for CID {} instance={}",
                             cid.toString().value(),
-                            node.value()->getCID().toString().value(),
                             reinterpret_cast<size_t>( this ) );
             return node;
         }
@@ -205,7 +203,8 @@ namespace sgns::crdt
         {
             if ( is_stopped_ )
             {
-                logger_->warn( "We exited while trying to sync {} as it must have been still in progress.", cid.toString().value() );
+                logger_->warn( "We exited while trying to sync {} as it must have been still in progress.",
+                               cid.toString().value() );
                 return outcome::failure( Error::DAGSYNCHER_NOT_STARTED );
             }
             // Check request state
@@ -216,6 +215,9 @@ namespace sgns::crdt
                 auto result = GrabCIDBlock( cid );
                 if ( result )
                 {
+                    logger_->debug( "Return node for CID {} instance={}",
+                                    cid.toString().value(),
+                                    reinterpret_cast<size_t>( this ) );
                     return result;
                 }
                 logger_->warn( "Request state not found for CID {}", cid.toString().value() );
@@ -233,6 +235,9 @@ namespace sgns::crdt
                     auto result = GrabCIDBlock( cid );
                     if ( result )
                     {
+                        logger_->debug( "Return node for CID {} instance={}",
+                                        cid.toString().value(),
+                                        reinterpret_cast<size_t>( this ) );
                         return result;
                     }
                     // If still not found, this is strange but we'll fail
@@ -310,6 +315,19 @@ namespace sgns::crdt
         auto getCachedNodeResult = GrabCIDBlock( cid );
 
         return getNodeResult.has_value() || getCachedNodeResult.has_value();
+    }
+
+    outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> GraphsyncDAGSyncer::GetNodeWithoutRequest(
+        const CID &cid ) const
+    {
+        auto getNodeResult = GetNodeFromMerkleDAG( cid );
+
+        if ( getNodeResult.has_value() )
+        {
+            return getNodeResult;
+        }
+
+        return GrabCIDBlock( cid );
     }
 
     outcome::result<void> GraphsyncDAGSyncer::StartSync()
@@ -456,19 +474,16 @@ namespace sgns::crdt
             {
                 // Record successful data reception
                 RecordSuccessfulConnection( peerID );
-                for ( auto link : node.value()->getLinks() )
+                auto [links_to_fetch, _] = TraverseCIDsLinks( node.value() );
+                for ( auto link : links_to_fetch )
                 {
-                    auto linkhb = HasBlock( link.get().getCID() );
-                    if ( linkhb.has_value() && !linkhb.value() )
-                    {
-                        logger_->trace( "Adding route for peer {} and CID {}",
-                                        peerID.toBase58(),
-                                        link.get().getCID().toString().value() );
+                    logger_->trace( "Adding route for peer {} and CID {}",
+                                    peerID.toBase58(),
+                                    link.toString().value() );
 
-                        // Use a non-const copy of the address for AddRoute
-                        std::vector<Multiaddress> addr_copy = address;
-                        AddRoute( link.get().getCID(), peerID, addr_copy );
-                    }
+                    // Use a non-const copy of the address for AddRoute
+                    std::vector<Multiaddress> addr_copy = address;
+                    AddRoute( link, peerID, addr_copy );
                 }
             }
             else
@@ -478,6 +493,39 @@ namespace sgns::crdt
             }
         }
         EraseRoute( cid );
+    }
+
+    std::pair<std::set<CID>, std::set<CID>> GraphsyncDAGSyncer::TraverseCIDsLinks(
+        const std::shared_ptr<ipfs_lite::ipld::IPLDNode> &node,
+        std::set<CID>                                     visited_cids ) const
+    {
+        std::set<CID> visited = std::move( visited_cids );
+        std::set<CID> links_to_fetch;
+
+        for ( const auto &link : node->getLinks() )
+        {
+            auto child = link.get().getCID();
+
+            if ( !visited.insert( child ).second )
+            {
+                continue;
+            }
+
+            auto get_child_result = GetNodeWithoutRequest( child );
+
+            if ( get_child_result.has_failure() )
+            {
+                logger_->debug( "TraverseCIDsLinks: missing block {}", child.toString().value() );
+                links_to_fetch.insert( child );
+                continue;
+            }
+
+            auto cid_pair = TraverseCIDsLinks( get_child_result.value(), visited );
+            links_to_fetch.merge( cid_pair.first );
+            visited.merge( cid_pair.second );
+        }
+
+        return std::make_pair( std::move( links_to_fetch ), std::move( visited ) );
     }
 
     void GraphsyncDAGSyncer::InitCIDBlock( const CID &cid )

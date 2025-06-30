@@ -315,7 +315,7 @@ namespace sgns::crdt
 
             if ( topicsToBroadcast_.find( topicName ) != topicsToBroadcast_.end() )
             {
-                m_logger->debug( "Topic '{}' already exists. Skipping.", topicName );
+                m_logger->trace( "Topic '{}' already exists. Skipping.", topicName );
                 return outcome::success();
             }
 
@@ -341,7 +341,7 @@ namespace sgns::crdt
         }
 
         topicsToListen_.insert( topic );
-        m_logger->trace( "Listen request on topic: '{}'", topic );
+        m_logger->debug( "Listen request on topic: '{}'", topic );
         if ( started_ )
         {
             std::future<libp2p::protocol::Subscription> future = std::move( pubSub_->Subscribe(

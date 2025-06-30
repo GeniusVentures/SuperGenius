@@ -810,11 +810,15 @@ namespace sgns
             }
             if ( notify_destinations )
             {
+                m_logger->debug( "Notify {} of transfer of {} to it",
+                                 dest_infos[i].dest_address,
+                                 dest_infos[i].encrypted_amount );
                 globaldb_m->AddBroadcastTopic( dest_infos[i].dest_address );
             }
         }
         if ( full_node_m )
         {
+            m_logger->debug( "Adding origin address to Broadcast: {}", transfer_tx->GetSrcAddress() );
             globaldb_m->AddBroadcastTopic( transfer_tx->GetSrcAddress() );
         }
 
@@ -840,6 +844,7 @@ namespace sgns
         }
         if ( full_node_m )
         {
+            m_logger->debug( "Adding origin address to Broadcast: {}", mint_tx->GetSrcAddress() );
             globaldb_m->AddBroadcastTopic( mint_tx->GetSrcAddress() );
         }
         return outcome::success();
@@ -873,6 +878,7 @@ namespace sgns
         }
         if ( full_node_m )
         {
+            m_logger->debug( "Adding origin address to Broadcast: {}", escrow_tx->GetSrcAddress() );
             globaldb_m->AddBroadcastTopic( escrow_tx->GetSrcAddress() );
         }
         return outcome::success();
@@ -889,11 +895,13 @@ namespace sgns
         }
         if ( ( escrowReleaseTx->GetSrcAddress() == account_m->GetAddress() ) || ( full_node_m ) )
         {
+            m_logger->debug( "Adding Escrow source address to Broadcast: {}", escrowReleaseTx->GetEscrowSource() );
             globaldb_m->AddBroadcastTopic( escrowReleaseTx->GetEscrowSource() );
         }
 
         if ( full_node_m )
         {
+            m_logger->debug( "Adding origin address to Broadcast: {}", escrowReleaseTx->GetSrcAddress() );
             globaldb_m->AddBroadcastTopic( escrowReleaseTx->GetSrcAddress() );
         }
 

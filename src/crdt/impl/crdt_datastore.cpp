@@ -14,15 +14,17 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::crdt, CrdtDatastore::Error, e )
     switch ( e )
     {
         case CrdtDatastoreErr::INVALID_PARAM:
-            return "No sufficient funds for the transaction";
+            return "Invalid parameter";
         case CrdtDatastoreErr::FETCH_ROOT_NODE:
-            return "The generated proof os not valid";
+            return "Can't fetch the root node";
         case CrdtDatastoreErr::NODE_DESERIALIZATION:
-            return "The bytecode was not found";
+            return "Can't deserialize node buffer into node";
         case CrdtDatastoreErr::FETCHING_GRAPH:
-            return "The provided bytecode is invalid";
+            return "Can't fetch graph";
         case CrdtDatastoreErr::NODE_CREATION:
-            return "The protobuf deserialized data has no valid proof packet";
+            return "Can't create a node";
+        case CrdtDatastoreErr::GET_NODE:
+            return "Can't fetch the node";
     }
     return "Unknown error";
 }
@@ -561,8 +563,13 @@ namespace sgns::crdt
             // Single attempt to fetch the graph - getNode internally already has retry logic
             std::unique_lock lock( dagSyncherMutex_ );
             auto             nodeResult = dagSyncer_->getNode( cid );
-            auto             node       = nodeResult.value();
-            auto             nodeBuffer = node->content();
+            if ( nodeResult.has_error() )
+            {
+                logger_->error( "SendNewJobs: Can't fetch node: {}", nodeResult.error().message() );
+                return CrdtDatastore::Error::GET_NODE;
+            }
+            auto node       = nodeResult.value();
+            auto nodeBuffer = node->content();
 
             auto delta = std::make_shared<Delta>();
             if ( !delta->ParseFromArray( nodeBuffer.data(), nodeBuffer.size() ) )
@@ -790,21 +797,23 @@ namespace sgns::crdt
         }
 
         std::vector<CID> children;
-        auto             links = aNode->getLinks();
-        if ( links.empty() )
+
+        if ( aNode->getLinks().empty() )
         {
-            logger_->debug( "Adding: {} to heads", current.toString().value() );
+            logger_->debug( "Adding: {} to heads", aNode->getCID().toString().value() );
             auto addHeadResult = heads_->Add( aRoot, aRootPrio, topicName_);
             if ( addHeadResult.has_failure() )
             {
                 logger_->error( "ProcessNode: error adding head {}", aRoot.toString().value() );
                 return outcome::failure( addHeadResult.error() );
             }
-            rebroadcastCv_.notify_one();
         }
         else
         {
-            for ( const auto &link : links )
+            std::unique_lock lock( dagSyncherMutex_ );
+            auto [links_to_fetch, known_cids] = dagSyncer_->TraverseCIDsLinks( aNode, {} );
+            lock.unlock();
+            for ( const auto &cid : known_cids )
             {
                 logger_->info( "GetBlock: found link {{ cid=\"{}\", name=\"{}\", size={} }}",
                                link.get().getCID().toString().value(),
@@ -819,55 +828,33 @@ namespace sgns::crdt
 
                     continue;
                 }
-                auto child        = link.get().getCID();
-                auto isHeadResult = heads_->IsHead( child );
-
-                if ( isHeadResult )
+                if ( heads_->IsHead( cid ) )
                 {
-                    logger_->debug( "Replacing: {} with {}", child.toString().value(), aRoot.toString().value() );
-                    auto replaceResult = heads_->Replace( child, aRoot, aRootPrio, link.get().getName() );
+                    logger_->debug( "Replacing: {} with {}", cid.toString().value(), aRoot.toString().value() );
+                    auto replaceResult = heads_->Replace( cid, aRoot, aRootPrio, link.get().getName() );
                     if ( replaceResult.has_failure() )
                     {
                         logger_->error( "ProcessNode: error replacing head {} -> {}",
-                                        child.toString().value(),
+                                        cid.toString().value(),
                                         aRoot.toString().value() );
                         return outcome::failure( replaceResult.error() );
                     }
-                    rebroadcastCv_.notify_one();
-
                     continue;
                 }
-
-                std::unique_lock lock( dagSyncherMutex_ );
-                auto             knowBlockResult    = dagSyncer_->HasBlock( child );
-                auto             is_being_processed = dagSyncer_->IsCIDInCache( child );
-                lock.unlock();
-                if ( knowBlockResult.has_failure() )
-                {
-                    logger_->error( "ProcessNode: error checking for known block {}", child.toString().value() );
-                    return outcome::failure( knowBlockResult.error() );
-                }
-
-                if ( knowBlockResult.value() )
-                {
-                    logger_->debug( "Process Node: Adding: {} to heads", aRoot.toString().value() );
-                    auto addHeadResult = heads_->Add( aRoot, aRootPrio, link.get().getName());
-                    if ( addHeadResult.has_failure() )
-                    {
-                        logger_->error( "ProcessNode: error adding head {}", aRoot.toString().value() );
-                    }
-                    rebroadcastCv_.notify_one();
-                    continue;
-                }
-                if ( is_being_processed )
-                {
-                    logger_->debug( "ProcessNode: Child being processed as well {}", child.toString().value() );
-                    continue;
-                }
-
-                children.push_back( child );
             }
+            if ( !known_cids.empty() )
+            {
+                logger_->debug( "Adding: {} to heads", aRoot.toString().value() );
+                auto addHeadResult = heads_->Add( aRoot, aRootPrio );
+                if ( addHeadResult.has_failure() )
+                {
+                    logger_->error( "ProcessNode: error adding head {}", aRoot.toString().value() );
+                    return outcome::failure( addHeadResult.error() );
+                }
+            }
+            children = std::vector<CID>( links_to_fetch.begin(), links_to_fetch.end() );
         }
+        rebroadcastCv_.notify_one();
 
         return children;
     }
@@ -1101,5 +1088,4 @@ namespace sgns::crdt
     {
         return crdt_filter_.RegisterElementFilter( pattern, std::move( filter ) );
     }
-
 }
