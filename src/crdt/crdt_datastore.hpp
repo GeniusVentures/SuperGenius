@@ -281,10 +281,6 @@ namespace sgns::crdt
                                                        const std::shared_ptr<IPLDNode> &aNode,
                                                        bool                             filter_crdt = false );
 
-        outcome::result<std::set<CID>> TraverseAndCollectUnknownCIDs( const CID                       &aRoot,
-                                                                      uint64_t                         aRootPrio,
-                                                                      const std::shared_ptr<IPLDNode> &node );
-
         /** PutBlock add block node to DAGSyncer
     * @param aHeads list of CIDs to add to node as IPLD links
     * @param aDelta Delta to serialize into IPLD node

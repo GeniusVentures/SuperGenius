@@ -508,7 +508,7 @@ namespace sgns::crdt
 
             if ( !visited.insert( child ).second )
             {
-                continue; // already visited
+                continue;
             }
 
             auto get_child_result = GetNodeWithoutRequest( child );

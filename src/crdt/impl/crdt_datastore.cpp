@@ -568,8 +568,8 @@ namespace sgns::crdt
                 logger_->error( "SendNewJobs: Can't fetch node: {}", nodeResult.error().message() );
                 return CrdtDatastore::Error::GET_NODE;
             }
-            auto             node       = nodeResult.value();
-            auto             nodeBuffer = node->content();
+            auto node       = nodeResult.value();
+            auto nodeBuffer = node->content();
 
             auto delta = std::make_shared<Delta>();
             if ( !delta->ParseFromArray( nodeBuffer.data(), nodeBuffer.size() ) )
@@ -782,23 +782,10 @@ namespace sgns::crdt
         }
 
         std::vector<CID> children;
-        OUTCOME_TRY( auto &&cids_to_fetch, TraverseAndCollectUnknownCIDs( aRoot, aRootPrio, aNode ) );
-        children = std::vector<CID>( cids_to_fetch.begin(), cids_to_fetch.end() );
-        rebroadcastCv_.notify_one();
 
-        return children;
-    }
-
-    outcome::result<std::set<CID>> CrdtDatastore::TraverseAndCollectUnknownCIDs( const CID &aRoot,
-                                                                                 uint64_t   aRootPrio,
-                                                                                 const std::shared_ptr<IPLDNode> &node )
-    {
-        std::set<CID> cids_to_fetch;
-
-        auto links = node->getLinks();
-        if ( links.empty() )
+        if ( aNode->getLinks().empty() )
         {
-            logger_->debug( "Adding: {} to heads", node->getCID().toString().value() );
+            logger_->debug( "Adding: {} to heads", aNode->getCID().toString().value() );
             auto addHeadResult = heads_->Add( aRoot, aRootPrio );
             if ( addHeadResult.has_failure() )
             {
@@ -808,41 +795,28 @@ namespace sgns::crdt
         }
         else
         {
-            for ( const auto &link : links )
+            std::unique_lock lock( dagSyncherMutex_ );
+            auto [links_to_fetch, known_cids] = dagSyncer_->TraverseCIDsLinks( aNode, {} );
+            lock.unlock();
+            for ( const auto &cid : known_cids )
             {
-                auto child        = link.get().getCID();
-                auto isHeadResult = heads_->IsHead( child );
-
-                if ( isHeadResult )
+                if ( heads_->IsHead( cid ) )
                 {
-                    logger_->debug( "Replacing: {} with {}", child.toString().value(), aRoot.toString().value() );
-                    auto replaceResult = heads_->Replace( child, aRoot, aRootPrio );
+                    logger_->debug( "Replacing: {} with {}", cid.toString().value(), aRoot.toString().value() );
+                    auto replaceResult = heads_->Replace( cid, aRoot, aRootPrio );
                     if ( replaceResult.has_failure() )
                     {
                         logger_->error( "ProcessNode: error replacing head {} -> {}",
-                                        child.toString().value(),
+                                        cid.toString().value(),
                                         aRoot.toString().value() );
                         return outcome::failure( replaceResult.error() );
                     }
                     continue;
                 }
-
-                std::unique_lock lock( dagSyncherMutex_ );
-                auto             get_child_result = dagSyncer_->GetNodeWithoutRequest( child );
-                lock.unlock();
-                if ( get_child_result.has_failure() )
-                {
-                    logger_->error( "ProcessNode: error checking for known block {}", child.toString().value() );
-                    dagSyncer_->InitCIDBlock( child );
-                    cids_to_fetch.insert( child );
-                    continue;
-                }
-
-                OUTCOME_TRY( auto &&grandchild_cids_to_fetch,
-                             TraverseAndCollectUnknownCIDs( aRoot, aRootPrio, get_child_result.value() ) );
-                cids_to_fetch.merge( grandchild_cids_to_fetch );
-
-                logger_->debug( "Process Node: Adding: {} to heads", aRoot.toString().value() );
+            }
+            if ( !known_cids.empty() )
+            {
+                logger_->debug( "Adding: {} to heads", aRoot.toString().value() );
                 auto addHeadResult = heads_->Add( aRoot, aRootPrio );
                 if ( addHeadResult.has_failure() )
                 {
@@ -850,9 +824,11 @@ namespace sgns::crdt
                     return outcome::failure( addHeadResult.error() );
                 }
             }
+            children = std::vector<CID>( links_to_fetch.begin(), links_to_fetch.end() );
         }
+        rebroadcastCv_.notify_one();
 
-        return cids_to_fetch;
+        return children;
     }
 
     outcome::result<CID> CrdtDatastore::AddDAGNode( const std::shared_ptr<Delta> &aDelta )
