@@ -71,6 +71,7 @@ namespace sgns::crdt
 
     std::pair<std::set<CID>, std::set<CID>> CustomDagSyncer::TraverseCIDsLinks(
         const std::shared_ptr<ipfs_lite::ipld::IPLDNode> &node,
+        std::string                                       link_name,
         std::set<CID>                                     visited_cids ) const
     {
         std::set<CID> visited = std::move( visited_cids );
@@ -93,7 +94,7 @@ namespace sgns::crdt
                 continue;
             }
 
-            auto cid_pair = TraverseCIDsLinks( get_child_result.value(), visited );
+            auto cid_pair = TraverseCIDsLinks( get_child_result.value(), link_name, visited );
             links_to_fetch.merge( cid_pair.first );
             visited.merge( cid_pair.second );
         }

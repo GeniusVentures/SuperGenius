@@ -29,6 +29,7 @@ namespace sgns::crdt
             const CID &cid ) const = 0;
         virtual std::pair<std::set<CID>, std::set<CID>> TraverseCIDsLinks(
             const std::shared_ptr<ipfs_lite::ipld::IPLDNode> &node,
+            std::string                                       link_name,
             std::set<CID>                                     visited_cids ) const = 0;
 
         virtual void                  InitCIDBlock( const CID &cid )       = 0;

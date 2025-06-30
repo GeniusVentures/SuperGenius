@@ -683,12 +683,14 @@ namespace sgns::crdt
         return newCID;
     }
 
-    outcome::result<CID>  CrdtDatastore::Publish( const std::shared_ptr<Delta> &aDelta, const std::vector<std::string> &topics ) 
+    outcome::result<CID> CrdtDatastore::Publish( const std::shared_ptr<Delta>   &aDelta,
+                                                 const std::vector<std::string> &topics )
     {
         OUTCOME_TRY( auto &&newCID, AddDAGNode( aDelta, topics ) );
 
         return newCID;
     }
+
     outcome::result<void> CrdtDatastore::Broadcast( const std::vector<CID> &cids )
     {
         if ( !broadcaster_ )
@@ -719,8 +721,8 @@ namespace sgns::crdt
     }
 
     outcome::result<std::shared_ptr<CrdtDatastore::IPLDNode>> CrdtDatastore::PutBlock(
-        const std::vector<std::pair<CID, std::string>>& aHeads,
-        const std::shared_ptr<Delta> &aDelta )
+        const std::vector<std::pair<CID, std::string>> &aHeads,
+        const std::shared_ptr<Delta>                   &aDelta )
     {
         if ( aDelta == nullptr )
         {
@@ -742,9 +744,7 @@ namespace sgns::crdt
             {
                 continue;
             }
-            ipfs_lite::ipld::IPLDLinkImpl link = ipfs_lite::ipld::IPLDLinkImpl( head,
-                                                                                topic,
-                                                                                cidByte.value().size() );
+            ipfs_lite::ipld::IPLDLinkImpl link = ipfs_lite::ipld::IPLDLinkImpl( head, topic, cidByte.value().size() );
             node->addLink( link );
 
             logger_->info( "PutBlock: added link {{ cid=\"{}\", name=\"{}\", size={} }}",
@@ -801,7 +801,7 @@ namespace sgns::crdt
         if ( aNode->getLinks().empty() )
         {
             logger_->debug( "Adding: {} to heads", aNode->getCID().toString().value() );
-            auto addHeadResult = heads_->Add( aRoot, aRootPrio, topicName_);
+            auto addHeadResult = heads_->Add( aRoot, aRootPrio, topicName_ );
             if ( addHeadResult.has_failure() )
             {
                 logger_->error( "ProcessNode: error adding head {}", aRoot.toString().value() );
@@ -811,27 +811,14 @@ namespace sgns::crdt
         else
         {
             std::unique_lock lock( dagSyncherMutex_ );
-            auto [links_to_fetch, known_cids] = dagSyncer_->TraverseCIDsLinks( aNode, {} );
+            auto [links_to_fetch, known_cids] = dagSyncer_->TraverseCIDsLinks( aNode, topicName_, {} );
             lock.unlock();
             for ( const auto &cid : known_cids )
             {
-                logger_->info( "GetBlock: found link {{ cid=\"{}\", name=\"{}\", size={} }}",
-                               link.get().getCID().toString().value(),
-                               link.get().getName(),
-                               link.get().getSize() );
-                //LET'S CHECK IF THE LINK IS FOR ME
-                if ( link.get().getName() != topicName_)
-                {
-                    logger_->debug( "Skipping link because its name '{}' does not match topicName '{}'",
-                                    link.get().getName(),
-                                    topicName_ );
-
-                    continue;
-                }
                 if ( heads_->IsHead( cid ) )
                 {
                     logger_->debug( "Replacing: {} with {}", cid.toString().value(), aRoot.toString().value() );
-                    auto replaceResult = heads_->Replace( cid, aRoot, aRootPrio, link.get().getName() );
+                    auto replaceResult = heads_->Replace( cid, aRoot, aRootPrio, topicName_ );
                     if ( replaceResult.has_failure() )
                     {
                         logger_->error( "ProcessNode: error replacing head {} -> {}",
@@ -845,7 +832,7 @@ namespace sgns::crdt
             if ( !known_cids.empty() )
             {
                 logger_->debug( "Adding: {} to heads", aRoot.toString().value() );
-                auto addHeadResult = heads_->Add( aRoot, aRootPrio );
+                auto addHeadResult = heads_->Add( aRoot, aRootPrio, topicName_ );
                 if ( addHeadResult.has_failure() )
                 {
                     logger_->error( "ProcessNode: error adding head {}", aRoot.toString().value() );

@@ -107,6 +107,7 @@ namespace sgns::crdt
             const CID &cid ) const override;
         std::pair<std::set<CID>, std::set<CID>> TraverseCIDsLinks(
             const std::shared_ptr<ipfs_lite::ipld::IPLDNode> &node,
+            std::string                                       link_name    = "",
             std::set<CID>                                     visited_cids = {} ) const override;
         /* Returns peer ID */
         outcome::result<PeerId> GetId() const;
