@@ -1,5 +1,4 @@
 #include "crdt/crdt_heads.hpp"
-#include "crdt/proto/heads.pb.h"
 #include <storage/database_error.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/system/error_code.hpp>
@@ -62,47 +61,51 @@ namespace sgns::crdt
         return this->namespaceKey_.ChildString( cidToStringResult.value() );
     }
 
+    outcome::result<HierarchicalKey> CrdtHeads::GetKeyForTopic( const std::string &topic, const CID &aCid )
+    {
+        auto topicNs = namespaceKey_.ChildString( std::string( topic ) );
+
+        auto cidStr = aCid.toString();
+        if ( cidStr.has_failure() )
+        {
+            return outcome::failure( cidStr.error() );
+        }
+
+        return topicNs.ChildString( cidStr.value() );
+    }
+
     outcome::result<void> CrdtHeads::Write( const std::unique_ptr<storage::BufferBatch> &aDataStore,
                                             const CID                                   &aCid,
                                             uint64_t                                     aHeight,
                                             const std::string                           &topic )
     {
-        if ( aDataStore == nullptr )
-        {
-            return outcome::failure( boost::system::error_code{} );
-        }
-
-        auto getKeyResult = this->GetKey( aCid );
+        auto getKeyResult = GetKeyForTopic( topic, aCid );
         if ( getKeyResult.has_failure() )
         {
             return outcome::failure( getKeyResult.error() );
         }
 
-        // serialize HeadInfo proto
-        pb::HeadInfo info;
-        info.set_height( aHeight );
-        info.set_topic( topic );
-        std::string payload;
-        info.SerializeToString( &payload );
+        auto strHeight = std::to_string( aHeight );
 
         Buffer keyBuffer;
         keyBuffer.put( getKeyResult.value().GetKey() );
 
-        Buffer               valueBuffer;
-        std::vector<uint8_t> dataVec( payload.begin(), payload.end() );
-        valueBuffer.put( dataVec );
+        Buffer valueBuffer;
+        valueBuffer.put( strHeight );
 
         return aDataStore->put( keyBuffer, valueBuffer );
     }
 
-    outcome::result<void> CrdtHeads::Delete( const std::unique_ptr<storage::BufferBatch> &aDataStore, const CID &aCid )
+    outcome::result<void> CrdtHeads::Delete( const std::unique_ptr<storage::BufferBatch> &aDataStore,
+                                             const CID                                   &aCid,
+                                             const std::string                           &topic )
     {
         if ( aDataStore == nullptr )
         {
             return outcome::failure( boost::system::error_code{} );
         }
 
-        auto getKeyResult = this->GetKey( aCid );
+        auto getKeyResult = this->GetKeyForTopic( topic, aCid );
         if ( getKeyResult.has_failure() )
         {
             return outcome::failure( getKeyResult.error() );
@@ -230,7 +233,7 @@ namespace sgns::crdt
             return outcome::failure( writeResult.error() );
         }
 
-        auto deleteResult = Delete( batchDatastore, aCidHead );
+        auto deleteResult = Delete( batchDatastore, aCidHead, topic );
         if ( deleteResult.has_failure() )
         {
             return outcome::failure( deleteResult.error() );
@@ -285,22 +288,36 @@ namespace sgns::crdt
     outcome::result<void> CrdtHeads::PrimeCache()
     {
         // builds the heads cache based on what's in storage
-        logger_->debug( "PrimeCache: Recovering heads from storage" );
         const auto strNamespace = this->namespaceKey_.GetKey();
         Buffer     keyPrefixBuffer;
         keyPrefixBuffer.put( strNamespace );
-
         auto queryResult = this->dataStore_->query( keyPrefixBuffer );
         if ( queryResult.has_failure() )
         {
-            logger_->error( "PrimeCache: Failed querying heads" );
             return outcome::failure( queryResult.error() );
         }
 
         for ( const auto &bufferKeyAndValue : queryResult.value() )
         {
-            std::string keyWithNamespace = std::string( bufferKeyAndValue.first.toString() );
-            std::string strCid           = keyWithNamespace.erase( 0, strNamespace.size() + 1 );
+            // full key is "/<namespace>/<topic>/<cid>"
+            auto        keyView = bufferKeyAndValue.first.toString();
+            std::string full( keyView.data(), keyView.size() );
+
+            if ( full.size() <= strNamespace.size() + 1 )
+            {
+                continue;
+            }
+
+            // remove namespace prefix and leading slash
+            std::string rel = full.substr( strNamespace.size() + 1 );
+            auto        sep = rel.find( '/' );
+            if ( sep == std::string::npos )
+            {
+                continue;
+            }
+
+            std::string topic  = rel.substr( 0, sep );
+            std::string strCid = rel.substr( sep + 1 );
 
             auto cidResult = CID::fromString( strCid );
             if ( cidResult.has_failure() )
@@ -309,12 +326,18 @@ namespace sgns::crdt
             }
             CID cid( cidResult.value() );
 
-            pb::HeadInfo info;
-            info.ParseFromArray( bufferKeyAndValue.second.data(), bufferKeyAndValue.second.size() );
-            uint64_t height = info.height();
+            uint64_t height = 0;
+            try
+            {
+                height = boost::lexical_cast<uint64_t>( bufferKeyAndValue.second.toString() );
+            }
+            catch ( boost::bad_lexical_cast & )
+            {
+                return outcome::failure( boost::system::error_code{} );
+            }
 
             std::lock_guard lg( this->mutex_ );
-            this->cache_[info.topic()][cid] = height;
+            this->cache_[topic][cid] = height;
         }
 
         return outcome::success();

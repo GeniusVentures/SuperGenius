@@ -60,6 +60,7 @@ namespace sgns::crdt
     * @return full path to CID key as HierarchicalKey or outcome::failure on error
     */
         outcome::result<HierarchicalKey> GetKey( const CID &aCid );
+        outcome::result<HierarchicalKey> GetKeyForTopic( const std::string &topic, const CID &aCid );
 
         /** Check if CID is among the current heads.
     * @param aCid Content identifier
@@ -125,7 +126,9 @@ namespace sgns::crdt
         * @param aDataStore Pointer to datastore batch
         * @param aCid Content identifier to remove
         */
-        outcome::result<void> Delete( const std::unique_ptr<storage::BufferBatch> &aDataStore, const CID &aCid );
+        outcome::result<void> Delete( const std::unique_ptr<storage::BufferBatch> &aDataStore,
+                                      const CID                                   &aCid,
+                                      const std::string                           &topic );
 
     private:
         CrdtHeads() = default;

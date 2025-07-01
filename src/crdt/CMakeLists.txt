@@ -9,7 +9,6 @@ supergenius_install(hierarchical_key)
 
 add_proto_library(crdt_delta proto/delta.proto)
 add_proto_library(crdt_bcast proto/bcast.proto)
-add_proto_library(crdt_proto_heads proto/heads.proto)
 add_library(crdt_set
     impl/crdt_set.cpp
 )
@@ -30,7 +29,6 @@ target_link_libraries(crdt_heads
     hierarchical_key
     rocksdb
     ipfs-lite-cpp::cid
-    crdt_proto_heads
 )
 supergenius_install(crdt_heads)
 
@@ -72,7 +70,6 @@ target_link_libraries(crdt_datastore
     logger
     PRIVATE
     crdt_bcast
-    crdt_proto_heads
 )
 supergenius_install(crdt_datastore)
 
