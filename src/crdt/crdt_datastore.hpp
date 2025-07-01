@@ -269,13 +269,13 @@ namespace sgns::crdt
          * @param[in] cids The list of CIDs to broadcast.
          * @return outcome::success on success, or outcome::failure if an error occurs.
          */
-        outcome::result<void> Broadcast( const std::vector<CID> &cids );
+        outcome::result<void> Broadcast( const std::set<CID> &cids, std::string topic );
 
         /** EncodeBroadcast encodes list of CIDs to CRDT broadcast data
     * @param heads list of CIDs
     * @return data encoded into Buffer data or outcome::failure on error
     */
-        static outcome::result<Buffer> EncodeBroadcast( const std::vector<CID> &heads );
+        static outcome::result<Buffer> EncodeBroadcast( const std::set<CID> &heads );
 
         /** handleBlock takes care of vetting, retrieving and applying
     * CRDT blocks to the Datastore.

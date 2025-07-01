@@ -75,10 +75,17 @@ namespace sgns::crdt
     EXPECT_OUTCOME_EQ(crdtHeads.GetLength(), 2);
 
     // Test getting heads
-    std::vector<CID> heads;
-    uint64_t maxHeight = 0;
-    EXPECT_OUTCOME_TRUE_1(crdtHeads.GetList(heads, maxHeight));
-    EXPECT_TRUE(heads.size() == 2);
+    auto getListResult = heads_->GetList();
+    EXPECT_OUTCOME_TRUE_1(getListResult);
+
+    auto [head_map, maxHeight] = getListResult.value();
+    uint64_t heads_size = 0;
+    for ( const auto &[topic_name, cid_set] : head_map )
+    {
+        heads_size += cid_set.size();
+    }
+    
+    EXPECT_TRUE(heads_size == 2);
     EXPECT_TRUE(maxHeight == height2);
   }
 

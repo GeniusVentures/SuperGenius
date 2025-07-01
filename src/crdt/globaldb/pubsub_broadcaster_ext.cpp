@@ -222,13 +222,15 @@ namespace sgns::crdt
         } while ( 0 );
     }
 
-    outcome::result<void> PubSubBroadcasterExt::Broadcast( const base::Buffer &buff )
+    outcome::result<void> PubSubBroadcasterExt::Broadcast( const base::Buffer &buff, std::string topic )
     {
         std::set<std::string> broadcastTopicsCopy;
         {
             std::lock_guard<std::mutex> lock( broadcastTopicsMutex_ );
             broadcastTopicsCopy = topicsToBroadcast_;
         }
+
+        broadcastTopicsCopy.emplace(topic);
 
         if ( broadcastTopicsCopy.empty() )
         {

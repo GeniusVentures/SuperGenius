@@ -11,6 +11,7 @@ namespace sgns::crdt
     CrdtHeads::CrdtHeads( std::shared_ptr<DataStore> aDatastore, const HierarchicalKey &aNamespace ) :
         dataStore_( std::move( aDatastore ) ), namespaceKey_( aNamespace )
     {
+        logger_->debug( "Creating heads" );
         auto result = this->PrimeCache();
     }
 
@@ -204,6 +205,8 @@ namespace sgns::crdt
         }
 
         {
+            logger_->debug( "Add: Inserting {} with topic {} as head", aCid.toString().value(), topic );
+
             std::lock_guard lg( this->mutex_ );
             this->cache_[topic][aCid] = aHeight;
         }
@@ -240,6 +243,11 @@ namespace sgns::crdt
         }
 
         {
+            logger_->debug( "Replace: Replacing {} with {} as head for topic {}",
+                            aCidHead.toString().value(),
+                            aNewHeadCid.toString().value(),
+                            topic );
+
             std::lock_guard lg( this->mutex_ );
             cache_[topic].erase( aCidHead );
             cache_[topic][aNewHeadCid] = aHeight;
@@ -247,39 +255,37 @@ namespace sgns::crdt
         return outcome::success();
     }
 
-    outcome::result<void> CrdtHeads::GetList( std::vector<CID>  &aHeads,
-                                              uint64_t          &aMaxHeight,
-                                              const std::string &topic /* = "" */ )
+    outcome::result<CrdtHeads::CRDTListResult> CrdtHeads::GetList( const std::string &topic )
     {
-        aHeads.clear();
-        aMaxHeight = 0;
+        CRDTHeadList result_heads;
+        uint64_t     max_value = 0;
 
-        const auto addFrom = [&]( const auto &submap )
+        for ( const auto &[current_topic, cid_map] : cache_ )
         {
-            for ( const auto &kv : submap )
+            if ( !topic.empty() && current_topic != topic )
             {
-                aHeads.push_back( kv.first );
-                aMaxHeight = std::max( aMaxHeight, kv.second );
+                continue;
             }
-        };
 
-        if ( topic.empty() )
-        {
-            for ( const auto &kv : cache_ )
+            for ( const auto &[cid, value] : cid_map )
             {
-                addFrom( kv.second );
+                result_heads[current_topic].insert( cid );
+                max_value = std::max( max_value, value );
             }
         }
-        else if ( const auto it = cache_.find( topic ); it != cache_.end() )
+
+        if ( result_heads.empty() )
         {
-            addFrom( it->second );
+            return outcome::failure( boost::system::error_code{} );
         }
 
-        return outcome::success();
+        return outcome::success( CRDTListResult{ result_heads, max_value } );
     }
 
     outcome::result<void> CrdtHeads::PrimeCache()
     {
+        // builds the heads cache based on what's in storage
+        logger_->debug( "PrimeCache: Recovering heads from storage" );
         const auto strNamespace = this->namespaceKey_.GetKey();
         Buffer     keyPrefixBuffer;
         keyPrefixBuffer.put( strNamespace );
@@ -287,6 +293,7 @@ namespace sgns::crdt
         auto queryResult = this->dataStore_->query( keyPrefixBuffer );
         if ( queryResult.has_failure() )
         {
+            logger_->error( "PrimeCache: Failed querying heads" );
             return outcome::failure( queryResult.error() );
         }
 

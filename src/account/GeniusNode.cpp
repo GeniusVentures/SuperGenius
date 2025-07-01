@@ -131,6 +131,7 @@ namespace sgns
         auto loggerGraphsync      = base::createLogger( "graphsync", logdir );
         auto loggerBroadcaster    = base::createLogger( "PubSubBroadcasterExt", logdir );
         auto loggerDataStore      = base::createLogger( "CrdtDatastore", logdir );
+        auto loggerCRDTHeads      = base::createLogger( "CrdtHeads", logdir );
         auto loggerTransactions   = base::createLogger( "TransactionManager", logdir );
         auto loggerMigration      = base::createLogger( "MigrationManager", logdir );
         auto loggerMigrationStep  = base::createLogger( "MigrationStep", logdir );
@@ -152,6 +153,7 @@ namespace sgns
         loggerGraphsync->set_level( spdlog::level::err );
         loggerBroadcaster->set_level( spdlog::level::err );
         loggerDataStore->set_level( spdlog::level::debug );
+        loggerCRDTHeads->set_level( spdlog::level::debug );
         loggerTransactions->set_level( spdlog::level::err );
         loggerMigration->set_level( spdlog::level::debug );
         loggerMigrationStep->set_level( spdlog::level::debug );
@@ -173,6 +175,7 @@ namespace sgns
         loggerGraphsync->set_level( spdlog::level::err );
         loggerBroadcaster->set_level( spdlog::level::err );
         loggerDataStore->set_level( spdlog::level::err );
+        loggerCRDTHeads->set_level( spdlog::level::err );
         loggerTransactions->set_level( spdlog::level::err );
         loggerMigration->set_level( spdlog::level::err );
         loggerMigrationStep->set_level( spdlog::level::err );
@@ -277,8 +280,7 @@ namespace sgns
         pubs.wait();
         auto scheduler = std::make_shared<libp2p::protocol::AsioScheduler>( io_, libp2p::protocol::SchedulerConfig{} );
         auto generator = std::make_shared<ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
-        auto graphsyncnetwork = std::make_shared<ipfs_lite::ipfs::graphsync::Network>( pubsub_->GetHost(),
-                                                                                             scheduler );
+        auto graphsyncnetwork = std::make_shared<ipfs_lite::ipfs::graphsync::Network>( pubsub_->GetHost(), scheduler );
 
         auto global_db_ret = crdt::GlobalDB::New( io_,
                                                   write_base_path_ + gnus_network_full_path_,

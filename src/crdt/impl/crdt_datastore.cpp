@@ -184,11 +184,14 @@ namespace sgns::crdt
         int      numberOfHeads = 0;
         uint64_t maxHeight     = 0;
 
-        std::vector<CID> heads;
-        auto             getListResult = heads_->GetList( heads, maxHeight );
+        auto getListResult = heads_->GetList();
         if ( !getListResult.has_failure() )
         {
-            numberOfHeads = heads.size();
+            auto [head_map, maxHeight] = getListResult.value();
+            for ( const auto &[topic_name, cid_set] : head_map )
+            {
+                numberOfHeads += cid_set.size();
+            }
         }
 
         logger_->info( "crdt Datastore created. Number of heads: {} Current max-height: {}", numberOfHeads, maxHeight );
@@ -457,7 +460,7 @@ namespace sgns::crdt
         return bCastHeads;
     }
 
-    outcome::result<CrdtDatastore::Buffer> CrdtDatastore::EncodeBroadcast( const std::vector<CID> &heads )
+    outcome::result<CrdtDatastore::Buffer> CrdtDatastore::EncodeBroadcast( const std::set<CID> &heads )
     {
         CRDTBroadcast bcastData;
         for ( const auto &head : heads )
@@ -477,20 +480,25 @@ namespace sgns::crdt
 
     void CrdtDatastore::RebroadcastHeads()
     {
-        uint64_t         maxHeight = 0;
-        std::vector<CID> heads;
-
-        auto getListResult = heads_->GetList( heads, maxHeight );
+        auto getListResult = heads_->GetList();
         if ( getListResult.has_failure() )
         {
             logger_->error( "RebroadcastHeads: Failed to get list of heads (error code {})", getListResult.error() );
             return;
         }
+        auto [head_map, maxHeight] = getListResult.value();
 
-        auto broadcastResult = Broadcast( heads );
-        if ( broadcastResult.has_failure() )
+        for ( const auto &[topic_name, cid_set] : head_map ) // Changed from cid_map to head_map
         {
-            logger_->error( "RebroadcastHeads: Broadcast failed" );
+            auto broadcastResult = Broadcast( cid_set, topic_name );
+            if ( broadcastResult.has_failure() )
+            {
+                logger_->error( "RebroadcastHeads: Broadcast failed" );
+            }
+            else
+            {
+                logger_->debug( "RebroadcastHeads: Broadcasted CIDs to topic {} ", topic_name );
+            }
         }
     }
 
@@ -691,7 +699,7 @@ namespace sgns::crdt
         return newCID;
     }
 
-    outcome::result<void> CrdtDatastore::Broadcast( const std::vector<CID> &cids )
+    outcome::result<void> CrdtDatastore::Broadcast( const std::set<CID> &cids, std::string topic )
     {
         if ( !broadcaster_ )
         {
@@ -711,7 +719,7 @@ namespace sgns::crdt
             return outcome::failure( encodedBufferResult.error() );
         }
 
-        auto bcastResult = broadcaster_->Broadcast( encodedBufferResult.value() );
+        auto bcastResult = broadcaster_->Broadcast( encodedBufferResult.value(), topic );
         if ( bcastResult.has_failure() )
         {
             logger_->error( "Broadcast: Broadcaster failed to broadcast" );
@@ -826,7 +834,10 @@ namespace sgns::crdt
                 {
                     if ( heads_->IsHead( cid ) )
                     {
-                        logger_->debug( "Replacing: {} with {} on topic {} ", cid.toString().value(), aRoot.toString().value(), topic );
+                        logger_->debug( "Replacing: {} with {} on topic {} ",
+                                        cid.toString().value(),
+                                        aRoot.toString().value(),
+                                        topic );
                         auto replaceResult = heads_->Replace( cid, aRoot, aRootPrio, topic );
                         if ( replaceResult.has_failure() )
                         {
@@ -860,26 +871,24 @@ namespace sgns::crdt
     outcome::result<CID> CrdtDatastore::AddDAGNode( const std::shared_ptr<Delta> &aDelta,
                                                     const std::set<std::string>  &topics )
     {
-        uint64_t         height = 0;
-        std::vector<CID> heads;
-        auto             getListResult = heads_->GetList( heads, height );
+        auto getListResult = heads_->GetList();
         if ( getListResult.has_failure() )
         {
             return outcome::failure( getListResult.error() );
         }
+        auto [head_map, height] = getListResult.value();
 
         height = height + 1; // This implies our minimum height is 1
         aDelta->set_priority( height );
 
         std::vector<std::pair<CID, std::string>> headsWithTopics;
-        headsWithTopics.reserve( heads.size() * topics.size() );
-        for ( const auto &cid : heads )
+
+        for ( const auto &[topic_name, cid_set] : head_map ) // Changed from cid_map to head_map
         {
-            for ( const auto &t : topics )
+            for ( const auto &cid : cid_set )
             {
-                // Debug each head-topic pairing
-                logger_->debug( "AddDAGNode: pairing head {} with topic '{}'", cid.toString().value(), t );
-                headsWithTopics.emplace_back( cid, t );
+                logger_->debug( "AddDAGNode: pairing head {} with topic '{}'", cid.toString().value(), topic_name );
+                headsWithTopics.emplace_back( cid, topic_name );
             }
         }
 
@@ -926,21 +935,23 @@ namespace sgns::crdt
 
     outcome::result<void> CrdtDatastore::PrintDAG()
     {
-        uint64_t         height = 0;
-        std::vector<CID> heads;
-        auto             getListResult = heads_->GetList( heads, height );
+        auto getListResult = heads_->GetList();
         if ( getListResult.has_failure() )
         {
             return outcome::failure( getListResult.error() );
         }
+        auto [head_map, height] = getListResult.value();
 
         std::vector<CID> set;
-        for ( const auto &head : heads )
+        for ( const auto &[topic_name, cid_set] : head_map )
         {
-            auto printResult = PrintDAGRec( head, 0, set );
-            if ( printResult.has_failure() )
+            for ( const auto &cid : cid_set )
             {
-                return outcome::failure( printResult.error() );
+                auto printResult = PrintDAGRec( cid, 0, set );
+                if ( printResult.has_failure() )
+                {
+                    return outcome::failure( printResult.error() );
+                }
             }
         }
         return outcome::success();
