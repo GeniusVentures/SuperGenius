@@ -60,18 +60,18 @@ namespace sgns::crdt
     * @param aCid Content identifier
     * @return true is CID is head, false otherwise
     */
-    bool IsHead(const CID& aCid);
+    bool IsHead( const CID& aCid, const std::string &topic = "" );
 
     /** Check if CID is head and return it height if it is
     * @param aCid Content identifier
     * @return Height of head or outcome::failure on error
     */
-    outcome::result<uint64_t> GetHeadHeight(const CID& aCid);
+    outcome::result<uint64_t> GetHeadHeight(const CID& aCid, const std::string &topic = "");
 
     /** Get current number of heads
     * @return lenght, current number of heads or outcome::failure on error
     */
-    outcome::result<int> GetLength();
+    outcome::result<int> GetLength( const std::string &topic = "" );
 
     /** Add head CID to datastore with full namespace
     * @param aCid Content identifier
@@ -93,7 +93,7 @@ namespace sgns::crdt
     * @param aMaxHeight output reference to maximum height
     * @return outcome::failure on error
     */
-    outcome::result<void> GetList(std::vector<CID>& aHeads, uint64_t& aMaxHeight);
+    outcome::result<void> GetList(std::vector<CID>& aHeads, uint64_t& aMaxHeight, const std::string &topic = "" );
 
           /** primeCache builds the heads cache based on what's in storage; since
     * it is called from the constructor only we don't bother locking.
@@ -127,7 +127,7 @@ namespace sgns::crdt
     CrdtHeads() = default;
 
     std::shared_ptr<DataStore> dataStore_;
-    std::map<CID, std::pair<uint64_t,std::string>> cache_;
+    std::unordered_map<std::string, std::map<CID, uint64_t>> cache_;
     HierarchicalKey namespaceKey_;
     std::recursive_mutex mutex_;
 
