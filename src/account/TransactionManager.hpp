@@ -12,6 +12,7 @@
 #include <cstdint>
 #include <map>
 #include <unordered_map>
+#include <set>
 
 #include <boost/format.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
@@ -103,8 +104,9 @@ namespace sgns
     private:
         static constexpr std::string_view TRANSACTION_BASE_FORMAT = "/bc-%hu/";
 
-        using TransactionParserFn =
-            outcome::result<void> ( TransactionManager::* )( const std::shared_ptr<IGeniusTransactions> & );
+        // Parser function pointer alias: returns a set of topic strings or an error
+        using TransactionParserFn = outcome::result<std::set<std::string>> ( TransactionManager::* )(
+            const std::shared_ptr<IGeniusTransactions> & );
 
         void                     Update();
         SGTransaction::DAGStruct FillDAGStruct( std::string transaction_hash = "" ) const;
@@ -118,8 +120,8 @@ namespace sgns
                                                                  const std::shared_ptr<IGeniusTransactions> &tx );
         static outcome::result<std::string> GetExpectedTxKey( const std::string &proof_key );
 
-        outcome::result<bool> CheckProof( const std::shared_ptr<IGeniusTransactions> &tx );
-        outcome::result<void> ParseTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
+        outcome::result<bool>                  CheckProof( const std::shared_ptr<IGeniusTransactions> &tx );
+        outcome::result<std::set<std::string>> ParseTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
 
         outcome::result<void> CheckIncoming();
 
@@ -144,10 +146,12 @@ namespace sgns
         std::map<std::string, std::shared_ptr<IGeniusTransactions>> incoming_tx_processed_m;
         std::function<void()>                                       task_m;
 
-        outcome::result<void> ParseTransferTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
-        outcome::result<void> ParseMintTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
-        outcome::result<void> ParseEscrowTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
-        outcome::result<void> ParseEscrowReleaseTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
+        outcome::result<std::set<std::string>> ParseTransferTransaction(
+            const std::shared_ptr<IGeniusTransactions> &tx );
+        outcome::result<std::set<std::string>> ParseMintTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
+        outcome::result<std::set<std::string>> ParseEscrowTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
+        outcome::result<std::set<std::string>> ParseEscrowReleaseTransaction(
+            const std::shared_ptr<IGeniusTransactions> &tx );
 
         static inline const std::unordered_map<std::string, TransactionParserFn> transaction_parsers = {
             { "transfer", &TransactionManager::ParseTransferTransaction },
