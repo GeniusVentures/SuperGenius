@@ -205,7 +205,7 @@ namespace sgns::crdt
 
         {
             std::lock_guard lg( this->mutex_ );
-            this->cache_[topic][aCid] = height;
+            this->cache_[topic][aCid] = aHeight;
         }
         return outcome::success();
     }
@@ -292,7 +292,7 @@ namespace sgns::crdt
 
         for ( const auto &bufferKeyAndValue : queryResult.value() )
         {
-            std::string keyWithNamespace = bufferKeyAndValue.first.toString();
+            std::string keyWithNamespace = std::string( bufferKeyAndValue.first.toString() );
             std::string strCid           = keyWithNamespace.erase( 0, strNamespace.size() + 1 );
 
             auto cidResult = CID::fromString( strCid );
