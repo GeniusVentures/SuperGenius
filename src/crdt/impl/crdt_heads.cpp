@@ -259,7 +259,7 @@ namespace sgns::crdt
     {
         CRDTHeadList result_heads;
         uint64_t     max_value = 0;
-
+        logger_->debug( "GetList: Getting list of CIDs" );
         for ( const auto &[current_topic, cid_map] : cache_ )
         {
             if ( !topic.empty() && current_topic != topic )
@@ -274,10 +274,10 @@ namespace sgns::crdt
             }
         }
 
-        if ( result_heads.empty() )
-        {
-            return outcome::failure( boost::system::error_code{} );
-        }
+        //if ( result_heads.empty() )
+        //{
+        //    return outcome::failure( boost::system::error_code{} );
+        //}
 
         return outcome::success( CRDTListResult{ result_heads, max_value } );
     }

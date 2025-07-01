@@ -229,8 +229,10 @@ namespace sgns::crdt
             std::lock_guard<std::mutex> lock( broadcastTopicsMutex_ );
             broadcastTopicsCopy = topicsToBroadcast_;
         }
-
-        broadcastTopicsCopy.emplace(topic);
+        if ( !topic.empty() )
+        {
+            broadcastTopicsCopy.emplace( topic );
+        }
 
         if ( broadcastTopicsCopy.empty() )
         {
@@ -338,7 +340,7 @@ namespace sgns::crdt
         std::lock_guard lock( listenTopicsMutex_ );
         if ( topicsToListen_.find( topic ) != topicsToListen_.end() )
         {
-            this->m_logger->debug("Already listening to topic {}", topic);
+            this->m_logger->debug( "Already listening to topic {}", topic );
             return;
         }
 
