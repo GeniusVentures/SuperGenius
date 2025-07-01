@@ -16,9 +16,9 @@ namespace sgns::crdt
     class CrdtHeads
     {
     public:
-        using DataStore = storage::rocksdb;
-        using Buffer    = base::Buffer;
-        using CRDTHeadList = std::unordered_map<std::string, std::set<CID>>;
+        using DataStore      = storage::rocksdb;
+        using Buffer         = base::Buffer;
+        using CRDTHeadList   = std::unordered_map<std::string, std::set<CID>>;
         using CRDTListResult = std::pair<CRDTHeadList, uint64_t>;
 
         /** Constructor
@@ -102,7 +102,7 @@ namespace sgns::crdt
     * @param aMaxHeight output reference to maximum height
     * @return outcome::failure on error
     */
-        outcome::result<CRDTListResult> GetList( const std::string &topic = "" );
+        outcome::result<CRDTListResult> GetList( const std::set<std::string> &topics = {} );
 
         /** primeCache builds the heads cache based on what's in storage; since
     * it is called from the constructor only we don't bother locking.

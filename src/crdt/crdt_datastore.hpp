@@ -295,8 +295,7 @@ namespace sgns::crdt
                                                        uint64_t                         aRootPrio,
                                                        std::shared_ptr<Delta>           aDelta,
                                                        const std::shared_ptr<IPLDNode> &aNode,
-                                                       bool                             filter_crdt = false,
-                                                       std::set<std::string>            node_topics = {} );
+                                                       bool                             filter_crdt = false );
 
         /** PutBlock add block node to DAGSyncer
     * @param aHeads list of CIDs to add to node as IPLD links
@@ -304,7 +303,8 @@ namespace sgns::crdt
     * @return IPLD node or outcome::failure on error
     */
         outcome::result<std::shared_ptr<IPLDNode>> PutBlock( const std::vector<std::pair<CID, std::string>> &aHeads,
-                                                             const std::shared_ptr<Delta>                   &aDelta );
+                                                             const std::shared_ptr<Delta>                   &aDelta,
+                                                             std::set<std::string>                           topics );
 
         /** AddDAGNode adds node to DAGSyncer and processes new blocks.
          *  @param aDelta   Pointer to Delta used for generating node and process it

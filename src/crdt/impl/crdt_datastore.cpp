@@ -730,7 +730,8 @@ namespace sgns::crdt
 
     outcome::result<std::shared_ptr<CrdtDatastore::IPLDNode>> CrdtDatastore::PutBlock(
         const std::vector<std::pair<CID, std::string>> &aHeads,
-        const std::shared_ptr<Delta>                   &aDelta )
+        const std::shared_ptr<Delta>                   &aDelta,
+        std::set<std::string>                           topics )
     {
         if ( aDelta == nullptr )
         {
@@ -741,6 +742,13 @@ namespace sgns::crdt
         if ( node == nullptr )
         {
             return outcome::failure( boost::system::error_code{} );
+        }
+        logger_->info( "PutBlock: added destination for block {{ cid=\"{}\" }}",
+                       node->getCID().toString().value());
+        for ( auto &topic : topics )
+        {
+            logger_->info( "Topics {{ name=\"{}\" }}", topic );
+            node->addDestination( topic );
         }
         for ( const auto &h : aHeads )
         {
@@ -768,16 +776,13 @@ namespace sgns::crdt
                                                                   uint64_t                         aRootPrio,
                                                                   std::shared_ptr<Delta>           aDelta,
                                                                   const std::shared_ptr<IPLDNode> &aNode,
-                                                                  bool                             filter_crdt,
-                                                                  std::set<std::string>            node_topics )
+                                                                  bool                             filter_crdt )
     {
         if ( aDelta == nullptr || aNode == nullptr )
         {
             return outcome::failure( boost::system::error_code{} );
         }
-        std::set<std::string> topics_to_update_cid = std::move( node_topics );
-        topics_to_update_cid.emplace( topicName_ );
-        //topics_to_update_cid.emplace( fullNodeTopic_ );
+        std::set<std::string> topics_to_update_cid = aNode->getDestinations();
 
         auto current      = aNode->getCID();
         auto strCidResult = current.toString();
@@ -790,6 +795,12 @@ namespace sgns::crdt
         {
             crdt_filter_.FilterElementsOnDelta( aDelta );
             //crdt_filter_.FilterTombstonesOnDelta( aDelta );
+            logger_->error( "ProcessNode: Processing INCOMING root {} node {}", aRoot.toString().value(), aNode->getCID().toString().value() );
+        }
+        else
+        {
+            logger_->error( "ProcessNode: Processing OUTGOING root {} node {}", aRoot.toString().value(), aNode->getCID().toString().value() );
+
         }
 
         {
@@ -871,7 +882,7 @@ namespace sgns::crdt
     outcome::result<CID> CrdtDatastore::AddDAGNode( const std::shared_ptr<Delta> &aDelta,
                                                     const std::set<std::string>  &topics )
     {
-        auto getListResult = heads_->GetList();
+        auto getListResult = heads_->GetList( topics );
         if ( getListResult.has_failure() )
         {
             return outcome::failure( getListResult.error() );
@@ -887,12 +898,12 @@ namespace sgns::crdt
         {
             for ( const auto &cid : cid_set )
             {
-                logger_->debug( "AddDAGNode: pairing head {} with topic '{}'", cid.toString().value(), topic_name );
+                //logger_->debug( "AddDAGNode: pairing head {} with topic '{}'", cid.toString().value(), topic_name );
                 headsWithTopics.emplace_back( cid, topic_name );
             }
         }
 
-        auto putBlockResult = PutBlock( headsWithTopics, aDelta );
+        auto putBlockResult = PutBlock( headsWithTopics, aDelta, topics );
         if ( putBlockResult.has_failure() )
         {
             return outcome::failure( putBlockResult.error() );
@@ -907,7 +918,7 @@ namespace sgns::crdt
                        node->getCID().toString().value(),
                        reinterpret_cast<uint64_t>( this ) );
 
-        auto processNodeResult = ProcessNode( node->getCID(), height, aDelta, node, false, topics );
+        auto processNodeResult = ProcessNode( node->getCID(), height, aDelta, node );
         if ( processNodeResult.has_failure() )
         {
             logger_->error( "AddDAGNode: error processing new block" );

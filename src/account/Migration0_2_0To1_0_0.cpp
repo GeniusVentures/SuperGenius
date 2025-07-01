@@ -255,10 +255,6 @@ namespace sgns
             if ( migrated_count >= BATCH_SIZE )
             {
                 OUTCOME_TRY( crdt_transaction_->Commit( topics_ ) );
-                for ( auto &topic : topics_ )
-                {
-                    m_logger->debug( "Commiting migrating to topics {}", topic );
-                }
                 crdt_transaction_ = newDb_->BeginTransaction(); // start fresh
                 topics_.clear();
                 boost::format full_node_topic{ std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) };

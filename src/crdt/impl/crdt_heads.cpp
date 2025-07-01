@@ -258,14 +258,14 @@ namespace sgns::crdt
         return outcome::success();
     }
 
-    outcome::result<CrdtHeads::CRDTListResult> CrdtHeads::GetList( const std::string &topic )
+    outcome::result<CrdtHeads::CRDTListResult> CrdtHeads::GetList( const std::set<std::string> &topics )
     {
         CRDTHeadList result_heads;
         uint64_t     max_value = 0;
         logger_->debug( "GetList: Getting list of CIDs" );
         for ( const auto &[current_topic, cid_map] : cache_ )
         {
-            if ( !topic.empty() && current_topic != topic )
+            if ( !topics.empty() && topics.find( current_topic ) == topics.end() )
             {
                 continue;
             }
