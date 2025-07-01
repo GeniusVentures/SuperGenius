@@ -15,7 +15,7 @@ namespace sgns::crdt
         counterpart_ = dest;
     }
 
-    outcome::result<void> CRDTMirrorBroadcaster::Broadcast( const base::Buffer &buff )
+    outcome::result<void> CRDTMirrorBroadcaster::Broadcast( const base::Buffer &buff, std::string topic )
     {
         if ( ( !buff.empty() ) && ( counterpart_ ) )
         {
