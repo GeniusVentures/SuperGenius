@@ -295,6 +295,7 @@ namespace sgns
             throw std::runtime_error( error.message() );
         }
         tx_globaldb_ = std::move( global_db_ret.value() );
+        tx_globaldb_->SetFullNode(is_full_node);
 
         global_db_ret = crdt::GlobalDB::New( io_,
                                              write_base_path_ + gnus_network_full_path_,

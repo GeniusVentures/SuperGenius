@@ -511,6 +511,7 @@ namespace sgns::crdt
             const std::string &name  = link.get().getName();
             LinkInfoPair       pair{ child, name };
 
+            logger_->debug( "TraverseCIDsLinks: Link: name '{}' != '{}'", name, link_name );
             if ( !link_name.empty() && name != link_name )
             {
                 logger_->debug( "TraverseCIDsLinks: Skipping link: name '{}' != '{}'", name, link_name );
@@ -529,12 +530,6 @@ namespace sgns::crdt
                            child.toString().value(),
                            name,
                            link.get().getSize() );
-
-            if ( !link_name.empty() && name != link_name )
-            {
-                logger_->debug( "TraverseCIDsLinks: Skipping link: name '{}' != '{}'", name, link_name );
-                continue;
-            }
 
             auto get_child_result = GetNodeWithoutRequest( child );
 

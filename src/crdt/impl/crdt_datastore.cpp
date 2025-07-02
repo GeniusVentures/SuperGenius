@@ -785,7 +785,9 @@ namespace sgns::crdt
         {
             return outcome::failure( boost::system::error_code{} );
         }
-        std::set<std::string> topics_to_update_cid = aNode->getDestinations();
+
+        std::set<std::string> topics_to_update_cid;
+        topics_to_update_cid = aNode->getDestinations();
 
         auto current      = aNode->getCID();
         auto strCidResult = current.toString();
@@ -801,6 +803,10 @@ namespace sgns::crdt
             logger_->error( "ProcessNode: Processing INCOMING root {} node {}",
                             aRoot.toString().value(),
                             aNode->getCID().toString().value() );
+            if ( !isFullNode )
+            {
+                topics_to_update_cid = topicNames_;
+            }
         }
         else
         {

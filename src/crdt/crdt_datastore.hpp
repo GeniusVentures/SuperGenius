@@ -204,6 +204,11 @@ namespace sgns::crdt
             topicNames_.emplace( topic );
         }
 
+        void SetFullNode( bool full_node )
+        {
+            isFullNode = std::move( full_node );
+        }
+
     protected:
         /** DAG jobs structure used by DAG worker threads to send new jobs
     */
@@ -382,6 +387,7 @@ namespace sgns::crdt
         std::mutex              rebroadcastMutex_;
         std::condition_variable rebroadcastCv_;
         std::set<std::string>   topicNames_;
+        bool                    isFullNode = false;
     };
 
 } // namespace sgns::crdt
