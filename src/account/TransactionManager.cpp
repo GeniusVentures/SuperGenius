@@ -59,8 +59,9 @@ namespace sgns
         {
             m_logger->info( "Listening full node on {}", full_node_topic_m );
             globaldb_m->AddListenTopic( full_node_topic_m );
-            globaldb_m->AddTopicName( full_node_topic_m );
+            
         }
+        globaldb_m->AddTopicName( full_node_topic_m );
         globaldb_m->AddTopicName( account_m->GetAddress() );
 
         bool crdt_tx_filter_initialized = globaldb_m->RegisterElementFilter(
