@@ -107,8 +107,9 @@ namespace sgns::crdt
             const CID &cid ) const override;
         std::pair<DAGSyncer::LinkInfoSet, DAGSyncer::LinkInfoSet> TraverseCIDsLinks(
             const std::shared_ptr<ipfs_lite::ipld::IPLDNode> &node,
-            std::string                                       link_name     = "",
-            DAGSyncer::LinkInfoSet                                       visited_links = {} ) const override;
+            std::string                                       link_name            = "",
+            DAGSyncer::LinkInfoSet                            visited_links        = {},
+            bool                                              skip_if_visited_root = false ) const override;
         /* Returns peer ID */
         outcome::result<PeerId> GetId() const;
 

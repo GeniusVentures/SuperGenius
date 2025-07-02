@@ -496,13 +496,30 @@ namespace sgns::crdt
     std::pair<DAGSyncer::LinkInfoSet, DAGSyncer::LinkInfoSet> GraphsyncDAGSyncer::TraverseCIDsLinks(
         const std::shared_ptr<ipfs_lite::ipld::IPLDNode> &node,
         std::string                                       link_name,
-        DAGSyncer::LinkInfoSet                            visited_links ) const
+        DAGSyncer::LinkInfoSet                            visited_links,
+        bool                                              skip_if_visited_root ) const
     {
         DAGSyncer::LinkInfoSet links_to_fetch;
         DAGSyncer::LinkInfoSet visited = std::move( visited_links );
 
+        const CID &root_cid = node->getCID();
+
+        if ( skip_if_visited_root )
+        {
+            bool already_seen_root = std::any_of( visited.begin(),
+                                                  visited.end(),
+                                                  [&]( const LinkInfoPair &p ) { return p.first == root_cid; } );
+
+            if ( already_seen_root )
+            {
+                logger_->debug( "TraverseCIDsLinks: Skipping traversal of root {} (already recorded)",
+                                root_cid.toString().value() );
+                return { std::move( links_to_fetch ), std::move( visited ) };
+            }
+        }
+
         logger_->info( "TraverseCIDsLinks: Checking links on {{ cid=\"{}\", name=\"{}\" }}",
-                       node->getCID().toString().value(),
+                       root_cid.toString().value(),
                        link_name );
 
         for ( const auto &link : node->getLinks() )
@@ -532,7 +549,6 @@ namespace sgns::crdt
                            link.get().getSize() );
 
             auto get_child_result = GetNodeWithoutRequest( child );
-
             if ( get_child_result.has_failure() )
             {
                 logger_->debug( "TraverseCIDsLinks: Missing block {}, adding as link to be fetched",
@@ -541,9 +557,13 @@ namespace sgns::crdt
                 continue;
             }
 
-            auto cid_pair = TraverseCIDsLinks( get_child_result.value(), link_name, visited );
-            links_to_fetch.merge( cid_pair.first );
-            visited.merge( cid_pair.second );
+            auto [child_links, child_visited] = TraverseCIDsLinks( get_child_result.value(),
+                                                                   link_name,
+                                                                   visited,
+                                                                   skip_if_visited_root );
+
+            links_to_fetch.merge( child_links );
+            visited.merge( child_visited );
 
             logger_->info( "TraverseCIDsLinks: Merging data" );
         }
