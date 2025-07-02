@@ -434,7 +434,8 @@ namespace sgns
         dag.set_previous_hash( transaction_hash );
         dag.set_nonce( ++account_m->nonce );
         dag.set_source_addr( account_m->GetAddress() );
-        dag.set_timestamp( timestamp.time_since_epoch().count() );
+        dag.set_timestamp(
+            std::chrono::duration_cast<std::chrono::milliseconds>( timestamp.time_since_epoch() ).count() );
         dag.set_uncle_hash( "" );
         dag.set_data_hash( "" ); //filled by transaction class
 
