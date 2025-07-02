@@ -501,22 +501,29 @@ namespace sgns::crdt
         std::set<CID> visited = std::move( visited_cids );
         std::set<CID> links_to_fetch;
 
+        logger_->info( "TraverseCIDsLinks: Checking for links on {{ cid=\"{}\", name=\"{}\"}}",
+                       node->getCID().toString().value(),
+                       link_name );
+
         for ( const auto &link : node->getLinks() )
         {
             auto child = link.get().getCID();
 
             if ( !visited.insert( child ).second )
             {
+                logger_->info( "TraverseCIDsLinks: Already visited {{ link=\"{}\", name=\"{}\"}}",
+                               child.toString().value(),
+                               link.get().getName() );
                 continue;
             }
-            logger_->info( "GetBlock: found link {{ cid=\"{}\", name=\"{}\", size={} }}",
+            logger_->info( "TraverseCIDsLinks: found link {{ cid=\"{}\", name=\"{}\", size={} }}",
                            link.get().getCID().toString().value(),
                            link.get().getName(),
                            link.get().getSize() );
             //LET'S CHECK IF THE LINK IS FOR ME
             if ( ( !link_name.empty() ) && ( link.get().getName() != link_name ) )
             {
-                logger_->debug( "Skipping link because its name '{}' does not match topicName '{}'",
+                logger_->debug( "TraverseCIDsLinks: Skipping link because its name '{}' does not match topicName '{}'",
                                 link.get().getName(),
                                 link_name );
 
@@ -527,7 +534,8 @@ namespace sgns::crdt
 
             if ( get_child_result.has_failure() )
             {
-                logger_->debug( "TraverseCIDsLinks: missing block {}", child.toString().value() );
+                logger_->debug( "TraverseCIDsLinks: missing block {}, adding as a link to be fetched",
+                                child.toString().value() );
                 links_to_fetch.insert( child );
                 continue;
             }
@@ -535,6 +543,7 @@ namespace sgns::crdt
             auto cid_pair = TraverseCIDsLinks( get_child_result.value(), link_name, visited );
             links_to_fetch.merge( cid_pair.first );
             visited.merge( cid_pair.second );
+            logger_->info( "TraverseCIDsLinks: Merging data" );
         }
 
         return std::make_pair( std::move( links_to_fetch ), std::move( visited ) );
