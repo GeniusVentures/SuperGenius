@@ -199,9 +199,9 @@ namespace sgns::crdt
          *   The topic name to use when filtering links. Only links whose
          *   `IPLDLinkImpl::getName()` equals this string will be processed.
          */
-        void SetTopicName( const std::string &topic )
+        void AddTopicName( const std::string &topic )
         {
-            topicName_ = topic;
+            topicNames_.emplace( topic );
         }
 
     protected:
@@ -381,7 +381,7 @@ namespace sgns::crdt
 
         std::mutex              rebroadcastMutex_;
         std::condition_variable rebroadcastCv_;
-        std::string             topicName_;
+        std::set<std::string>   topicNames_;
     };
 
 } // namespace sgns::crdt

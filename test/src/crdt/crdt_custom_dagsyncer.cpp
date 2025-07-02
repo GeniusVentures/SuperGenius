@@ -69,28 +69,35 @@ namespace sgns::crdt
         return getNode( cid );
     }
 
-    std::pair<std::set<CID>, std::set<CID>> CustomDagSyncer::TraverseCIDsLinks(
+    std::pair<DAGSyncer::LinkInfoSet, DAGSyncer::LinkInfoSet> CustomDagSyncer::TraverseCIDsLinks(
         const std::shared_ptr<ipfs_lite::ipld::IPLDNode> &node,
         std::string                                       link_name,
-        std::set<CID>                                     visited_cids ) const
+        DAGSyncer::LinkInfoSet                            visited_links ) const
     {
-        std::set<CID> visited = std::move( visited_cids );
-        std::set<CID> links_to_fetch;
+        DAGSyncer::LinkInfoSet links_to_fetch;
+        DAGSyncer::LinkInfoSet visited = std::move( visited_links );
 
         for ( const auto &link : node->getLinks() )
         {
-            auto child = link.get().getCID();
+            const CID         &child = link.get().getCID();
+            const std::string &name  = link.get().getName();
+            LinkInfoPair       pair{ child, name };
 
-            if ( !visited.insert( child ).second )
+            if ( !visited.insert( pair ).second )
             {
-                continue; // already visited
+                continue;
+            }
+
+            if ( !link_name.empty() && name != link_name )
+            {
+                continue;
             }
 
             auto get_child_result = GetNodeWithoutRequest( child );
 
             if ( get_child_result.has_failure() )
             {
-                links_to_fetch.insert( child );
+                links_to_fetch.insert( pair );
                 continue;
             }
 
@@ -99,7 +106,7 @@ namespace sgns::crdt
             visited.merge( cid_pair.second );
         }
 
-        return std::make_pair( std::move( links_to_fetch ), std::move( visited ) );
+        return { std::move( links_to_fetch ), std::move( visited ) };
     }
 
     void CustomDagSyncer::Stop() {}

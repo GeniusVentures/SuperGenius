@@ -498,6 +498,10 @@ namespace sgns::crdt
             else
             {
                 logger_->debug( "RebroadcastHeads: Broadcasted CIDs to topic {} ", topic_name );
+                for ( const auto &cid : cid_set )
+                {
+                    logger_->debug( "RebroadcastHeads: CID {} ", cid.toString().value() );
+                }
             }
         }
     }
@@ -686,7 +690,7 @@ namespace sgns::crdt
 
     outcome::result<CID> CrdtDatastore::Publish( const std::shared_ptr<Delta> &aDelta )
     {
-        OUTCOME_TRY( auto &&newCID, AddDAGNode( aDelta, { topicName_ } ) );
+        OUTCOME_TRY( auto &&newCID, AddDAGNode( aDelta, topicNames_ ) );
 
         return newCID;
     }
@@ -743,8 +747,7 @@ namespace sgns::crdt
         {
             return outcome::failure( boost::system::error_code{} );
         }
-        logger_->info( "PutBlock: added destination for block {{ cid=\"{}\" }}",
-                       node->getCID().toString().value());
+        logger_->info( "PutBlock: added destination for block {{ cid=\"{}\" }}", node->getCID().toString().value() );
         for ( auto &topic : topics )
         {
             logger_->info( "Topics {{ name=\"{}\" }}", topic );
@@ -795,12 +798,15 @@ namespace sgns::crdt
         {
             crdt_filter_.FilterElementsOnDelta( aDelta );
             //crdt_filter_.FilterTombstonesOnDelta( aDelta );
-            logger_->error( "ProcessNode: Processing INCOMING root {} node {}", aRoot.toString().value(), aNode->getCID().toString().value() );
+            logger_->error( "ProcessNode: Processing INCOMING root {} node {}",
+                            aRoot.toString().value(),
+                            aNode->getCID().toString().value() );
         }
         else
         {
-            logger_->error( "ProcessNode: Processing OUTGOING root {} node {}", aRoot.toString().value(), aNode->getCID().toString().value() );
-
+            logger_->error( "ProcessNode: Processing OUTGOING root {} node {}",
+                            aRoot.toString().value(),
+                            aNode->getCID().toString().value() );
         }
 
         {
@@ -838,18 +844,20 @@ namespace sgns::crdt
         {
             for ( auto &topic : topics_to_update_cid )
             {
+                logger_->error( "ProcessNode: Traversing to find links on topic {}", topic );
                 std::unique_lock lock( dagSyncherMutex_ );
                 auto [links_to_fetch, known_cids] = dagSyncer_->TraverseCIDsLinks( aNode, topic, {} );
                 lock.unlock();
-                for ( const auto &cid : known_cids )
+                for ( const auto &[cid, link_name] : known_cids )
                 {
-                    if ( heads_->IsHead( cid ) )
+                    logger_->error( "ProcessNode: known cid: {}, {}", cid.toString().value(), link_name );
+                    if ( heads_->IsHead( cid, link_name ) )
                     {
                         logger_->debug( "Replacing: {} with {} on topic {} ",
                                         cid.toString().value(),
                                         aRoot.toString().value(),
-                                        topic );
-                        auto replaceResult = heads_->Replace( cid, aRoot, aRootPrio, topic );
+                                        link_name );
+                        auto replaceResult = heads_->Replace( cid, aRoot, aRootPrio, link_name );
                         if ( replaceResult.has_failure() )
                         {
                             logger_->error( "ProcessNode: error replacing head {} -> {}",
@@ -860,7 +868,7 @@ namespace sgns::crdt
                         continue;
                     }
                 }
-                if ( !known_cids.empty() )
+                if ( known_cids.empty() )
                 {
                     logger_->debug( "Adding: {} to heads on topic {}", aRoot.toString().value(), topic );
                     auto addHeadResult = heads_->Add( aRoot, aRootPrio, topic );
@@ -870,8 +878,13 @@ namespace sgns::crdt
                         return outcome::failure( addHeadResult.error() );
                     }
                 }
-                std::vector<CID> curr_children = std::vector<CID>( links_to_fetch.begin(), links_to_fetch.end() );
-                children.insert( children.end(), curr_children.begin(), curr_children.end() );
+                for ( const auto &[cid, link_name] : links_to_fetch )
+                {
+                    if ( topicNames_.find( link_name ) != topicNames_.end() )
+                    {
+                        children.push_back( cid );
+                    }
+                }
             }
         }
         rebroadcastCv_.notify_one();

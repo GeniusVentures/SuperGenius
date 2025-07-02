@@ -17,6 +17,8 @@ namespace sgns::crdt
     class DAGSyncer : public ipfs_lite::ipfs::merkledag::MerkleDagService
     {
     public:
+        using LinkInfoPair = std::pair<CID, std::string>;
+        using LinkInfoSet  = std::set<LinkInfoPair>;
         /**
         * Check if the block with {@param cid} is locally available (therefore, it
         * is considered processed).
@@ -27,10 +29,10 @@ namespace sgns::crdt
 
         virtual outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> GetNodeWithoutRequest(
             const CID &cid ) const = 0;
-        virtual std::pair<std::set<CID>, std::set<CID>> TraverseCIDsLinks(
+        virtual std::pair<LinkInfoSet, LinkInfoSet> TraverseCIDsLinks(
             const std::shared_ptr<ipfs_lite::ipld::IPLDNode> &node,
             std::string                                       link_name,
-            std::set<CID>                                     visited_cids ) const = 0;
+            LinkInfoSet                                       visited_links ) const = 0;
 
         virtual void                  InitCIDBlock( const CID &cid )       = 0;
         virtual bool                  IsCIDInCache( const CID &cid ) const = 0;

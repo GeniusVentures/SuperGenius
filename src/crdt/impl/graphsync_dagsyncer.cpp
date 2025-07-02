@@ -474,14 +474,14 @@ namespace sgns::crdt
             {
                 // Record successful data reception
                 RecordSuccessfulConnection( peerID );
-                auto [links_to_fetch, _] = TraverseCIDsLinks( node.value() );
-                for ( auto link : links_to_fetch )
+                auto [links_to_fetch, dont_care_known] = TraverseCIDsLinks( node.value() );
+                for ( const auto &[cid, dont_care_name] : links_to_fetch )
                 {
-                    logger_->trace( "Adding route for peer {} and CID {}", peerID.toBase58(), link.toString().value() );
+                    logger_->trace( "Adding route for peer {} and CID {}", peerID.toBase58(), cid.toString().value() );
 
                     // Use a non-const copy of the address for AddRoute
                     std::vector<Multiaddress> addr_copy = address;
-                    AddRoute( link, peerID, addr_copy );
+                    AddRoute( cid, peerID, addr_copy );
                 }
             }
             else
@@ -493,40 +493,46 @@ namespace sgns::crdt
         EraseRoute( cid );
     }
 
-    std::pair<std::set<CID>, std::set<CID>> GraphsyncDAGSyncer::TraverseCIDsLinks(
+    std::pair<DAGSyncer::LinkInfoSet, DAGSyncer::LinkInfoSet> GraphsyncDAGSyncer::TraverseCIDsLinks(
         const std::shared_ptr<ipfs_lite::ipld::IPLDNode> &node,
         std::string                                       link_name,
-        std::set<CID>                                     visited_cids ) const
+        DAGSyncer::LinkInfoSet                            visited_links ) const
     {
-        std::set<CID> visited = std::move( visited_cids );
-        std::set<CID> links_to_fetch;
+        DAGSyncer::LinkInfoSet links_to_fetch;
+        DAGSyncer::LinkInfoSet visited = std::move( visited_links );
 
-        logger_->info( "TraverseCIDsLinks: Checking for links on {{ cid=\"{}\", name=\"{}\"}}",
+        logger_->info( "TraverseCIDsLinks: Checking links on {{ cid=\"{}\", name=\"{}\" }}",
                        node->getCID().toString().value(),
                        link_name );
 
         for ( const auto &link : node->getLinks() )
         {
-            auto child = link.get().getCID();
+            const CID         &child = link.get().getCID();
+            const std::string &name  = link.get().getName();
+            LinkInfoPair       pair{ child, name };
 
-            if ( !visited.insert( child ).second )
+            if ( !link_name.empty() && name != link_name )
             {
-                logger_->info( "TraverseCIDsLinks: Already visited {{ link=\"{}\", name=\"{}\"}}",
-                               child.toString().value(),
-                               link.get().getName() );
+                logger_->debug( "TraverseCIDsLinks: Skipping link: name '{}' != '{}'", name, link_name );
                 continue;
             }
-            logger_->info( "TraverseCIDsLinks: found link {{ cid=\"{}\", name=\"{}\", size={} }}",
-                           link.get().getCID().toString().value(),
-                           link.get().getName(),
-                           link.get().getSize() );
-            //LET'S CHECK IF THE LINK IS FOR ME
-            if ( ( !link_name.empty() ) && ( link.get().getName() != link_name ) )
-            {
-                logger_->debug( "TraverseCIDsLinks: Skipping link because its name '{}' does not match topicName '{}'",
-                                link.get().getName(),
-                                link_name );
 
+            if ( !visited.insert( pair ).second )
+            {
+                logger_->info( "TraverseCIDsLinks: Already visited {{ link=\"{}\", name=\"{}\" }}",
+                               child.toString().value(),
+                               name );
+                continue;
+            }
+
+            logger_->info( "TraverseCIDsLinks: Found link {{ cid=\"{}\", name=\"{}\", size={} }}",
+                           child.toString().value(),
+                           name,
+                           link.get().getSize() );
+
+            if ( !link_name.empty() && name != link_name )
+            {
+                logger_->debug( "TraverseCIDsLinks: Skipping link: name '{}' != '{}'", name, link_name );
                 continue;
             }
 
@@ -534,19 +540,20 @@ namespace sgns::crdt
 
             if ( get_child_result.has_failure() )
             {
-                logger_->debug( "TraverseCIDsLinks: missing block {}, adding as a link to be fetched",
+                logger_->debug( "TraverseCIDsLinks: Missing block {}, adding as link to be fetched",
                                 child.toString().value() );
-                links_to_fetch.insert( child );
+                links_to_fetch.insert( pair );
                 continue;
             }
 
             auto cid_pair = TraverseCIDsLinks( get_child_result.value(), link_name, visited );
             links_to_fetch.merge( cid_pair.first );
             visited.merge( cid_pair.second );
+
             logger_->info( "TraverseCIDsLinks: Merging data" );
         }
 
-        return std::make_pair( std::move( links_to_fetch ), std::move( visited ) );
+        return { std::move( links_to_fetch ), std::move( visited ) };
     }
 
     void GraphsyncDAGSyncer::InitCIDBlock( const CID &cid )
