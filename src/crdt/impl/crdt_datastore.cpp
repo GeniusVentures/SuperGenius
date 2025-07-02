@@ -786,11 +786,11 @@ namespace sgns::crdt
             return outcome::failure( boost::system::error_code{} );
         }
 
-        std::set<std::string> topics_to_update_cid;
-        topics_to_update_cid = aNode->getDestinations();
+        std::set<std::string> topics_to_update_cid = aNode->getDestinations();
 
-        auto current      = aNode->getCID();
-        auto strCidResult = current.toString();
+        auto current         = aNode->getCID();
+        auto strCidResult    = current.toString();
+        bool skip_if_visited = false;
         if ( strCidResult.has_failure() )
         {
             return outcome::failure( strCidResult.error() );
@@ -803,16 +803,13 @@ namespace sgns::crdt
             logger_->error( "ProcessNode: Processing INCOMING root {} node {}",
                             aRoot.toString().value(),
                             aNode->getCID().toString().value() );
-            if ( !isFullNode )
-            {
-                topics_to_update_cid = topicNames_;
-            }
         }
         else
         {
             logger_->error( "ProcessNode: Processing OUTGOING root {} node {}",
                             aRoot.toString().value(),
                             aNode->getCID().toString().value() );
+            skip_if_visited = true;
         }
 
         {
@@ -852,7 +849,7 @@ namespace sgns::crdt
             {
                 logger_->error( "ProcessNode: Traversing to find links on topic {}", topic );
                 std::unique_lock lock( dagSyncherMutex_ );
-                auto [links_to_fetch, known_cids] = dagSyncer_->TraverseCIDsLinks( aNode, topic, {} );
+                auto [links_to_fetch, known_cids] = dagSyncer_->TraverseCIDsLinks( aNode, topic, {}, skip_if_visited );
                 lock.unlock();
                 for ( const auto &[cid, link_name] : known_cids )
                 {
