@@ -246,7 +246,7 @@ namespace sgns::crdt
     */
         outcome::result<void> SendNewJobs( const CID                &aRootCID,
                                            uint64_t                  aRootPriority,
-                                           const std::vector<CID>   &aChildren,
+                                           const std::set<CID>      &aChildren,
                                            std::shared_ptr<IPLDNode> aRootNode = nullptr );
 
         /** Sync ensures that all the data under the given prefix is flushed to disk in
@@ -295,11 +295,11 @@ namespace sgns::crdt
     * @param aNode Pointer to IPLD node
     * @return list of CIDs or outcome::failure on error
     */
-        outcome::result<std::vector<CID>> ProcessNode( const CID                       &aRoot,
-                                                       uint64_t                         aRootPrio,
-                                                       std::shared_ptr<Delta>           aDelta,
-                                                       const std::shared_ptr<IPLDNode> &aNode,
-                                                       bool                             filter_crdt = false );
+        outcome::result<std::set<CID>> ProcessNode( const CID                       &aRoot,
+                                                    uint64_t                         aRootPrio,
+                                                    std::shared_ptr<Delta>           aDelta,
+                                                    const std::shared_ptr<IPLDNode> &aNode,
+                                                    bool                             filter_crdt = false );
 
         /** PutBlock add block node to DAGSyncer
     * @param aHeads list of CIDs to add to node as IPLD links

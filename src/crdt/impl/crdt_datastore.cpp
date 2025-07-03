@@ -511,14 +511,12 @@ namespace sgns::crdt
 
     outcome::result<void> CrdtDatastore::HandleBlock( const CID &aCid )
     {
-        std::vector<CID> children;
-        children.push_back( aCid );
-        return SendNewJobs( aCid, 0, children );
+        return SendNewJobs( aCid, 0, { aCid } );
     }
 
     outcome::result<void> CrdtDatastore::SendNewJobs( const CID                &aRootCID,
                                                       uint64_t                  aRootPriority,
-                                                      const std::vector<CID>   &aChildren,
+                                                      const std::set<CID>      &aChildren,
                                                       std::shared_ptr<IPLDNode> aRootNode )
     {
         // sendNewJobs calls getDeltas with the given
@@ -541,7 +539,7 @@ namespace sgns::crdt
         if ( rootPriority == 0 )
         {
             std::unique_lock lock( dagSyncherMutex_ );
-            auto             getNodeResult = dagSyncer_->getNode( aChildren[0] );
+            auto             getNodeResult = dagSyncer_->getNode( *(aChildren.begin()) );
             lock.unlock();
             if ( getNodeResult.has_failure() )
             {
@@ -563,7 +561,7 @@ namespace sgns::crdt
             rootPriority = delta->priority();
 
             // If this is the first call and we're fetching the root, store it
-            if ( !rootNode && aChildren.size() == 1 && aChildren[0] == aRootCID )
+            if ( !rootNode && aChildren.size() == 1 && (*(aChildren.begin())) == aRootCID )
             {
                 rootNode = node;
             }
@@ -671,7 +669,7 @@ namespace sgns::crdt
         return outcome::success();
     }
 
-    outcome::result<void> CrdtDatastore::DeleteKey( const HierarchicalKey &aKey, const std::set<std::string>  &topics )
+    outcome::result<void> CrdtDatastore::DeleteKey( const HierarchicalKey &aKey, const std::set<std::string> &topics )
     {
         auto deltaResult = CreateDeltaToRemove( aKey.GetKey() );
         if ( deltaResult.has_failure() )
@@ -773,11 +771,11 @@ namespace sgns::crdt
         return node;
     }
 
-    outcome::result<std::vector<CID>> CrdtDatastore::ProcessNode( const CID                       &aRoot,
-                                                                  uint64_t                         aRootPrio,
-                                                                  std::shared_ptr<Delta>           aDelta,
-                                                                  const std::shared_ptr<IPLDNode> &aNode,
-                                                                  bool                             filter_crdt )
+    outcome::result<std::set<CID>> CrdtDatastore::ProcessNode( const CID                       &aRoot,
+                                                               uint64_t                         aRootPrio,
+                                                               std::shared_ptr<Delta>           aDelta,
+                                                               const std::shared_ptr<IPLDNode> &aNode,
+                                                               bool                             filter_crdt )
     {
         if ( aDelta == nullptr || aNode == nullptr )
         {
@@ -826,7 +824,7 @@ namespace sgns::crdt
             logger_->info( "ProcessNode: merged delta from {} (priority: {})", strCidResult.value(), priority );
         }
 
-        std::vector<CID> children;
+        std::set<CID> children;
 
         if ( aNode->getLinks().empty() )
         {
@@ -884,7 +882,7 @@ namespace sgns::crdt
                 {
                     if ( topicNames_.find( link_name ) != topicNames_.end() )
                     {
-                        children.push_back( cid );
+                        children.emplace( cid );
                     }
                 }
             }
