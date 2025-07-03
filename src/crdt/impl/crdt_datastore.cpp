@@ -849,7 +849,8 @@ namespace sgns::crdt
             {
                 logger_->error( "ProcessNode: Traversing to find links on topic {}", topic );
                 std::unique_lock lock( dagSyncherMutex_ );
-                auto [links_to_fetch, known_cids] = dagSyncer_->TraverseCIDsLinks( aNode, topic, {}, skip_if_visited );
+                auto [links_to_fetch,
+                      known_cids] = dagSyncer_->TraverseCIDsLinks( aNode, topic, {}, skip_if_visited, 100 );
                 lock.unlock();
                 for ( const auto &[cid, link_name] : known_cids )
                 {

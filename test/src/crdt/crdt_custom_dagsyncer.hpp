@@ -93,9 +93,10 @@ namespace sgns::crdt
             const CID &cid ) const override;
         std::pair<DAGSyncer::LinkInfoSet, DAGSyncer::LinkInfoSet> TraverseCIDsLinks(
             const std::shared_ptr<ipfs_lite::ipld::IPLDNode> &node,
-            std::string                                       link_name     = "",
-            DAGSyncer::LinkInfoSet                            visited_links = {},
-            bool                                              skip_if_visited_root  = true) const override;
+            std::string                                       link_name            = "",
+            DAGSyncer::LinkInfoSet                            visited_links        = {},
+            bool                                              skip_if_visited_root = true,
+            int                                               max_depth            = 50 ) const override;
         /** DAG service implementation */
         MerkleDagServiceImpl dagService_;
 

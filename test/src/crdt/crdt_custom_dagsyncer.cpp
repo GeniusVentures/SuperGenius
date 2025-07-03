@@ -73,7 +73,8 @@ namespace sgns::crdt
         const std::shared_ptr<ipfs_lite::ipld::IPLDNode> &node,
         std::string                                       link_name,
         DAGSyncer::LinkInfoSet                            visited_links,
-        bool                                              skip_if_visited_root ) const
+        bool                                              skip_if_visited_root,
+        int                                               max_depth ) const
     {
         DAGSyncer::LinkInfoSet links_to_fetch;
         DAGSyncer::LinkInfoSet visited = std::move( visited_links );
@@ -114,11 +115,16 @@ namespace sgns::crdt
                 links_to_fetch.insert( pair );
                 continue;
             }
+            if ( max_depth == 0 )
+            {
+                continue;
+            }
 
             auto [child_links, child_visited] = TraverseCIDsLinks( get_child_result.value(),
                                                                    link_name,
                                                                    visited,
-                                                                   skip_if_visited_root );
+                                                                   skip_if_visited_root,
+                                                                   max_depth - 1 );
 
             links_to_fetch.merge( child_links );
             visited.merge( child_visited );

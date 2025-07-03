@@ -33,7 +33,8 @@ namespace sgns::crdt
             const std::shared_ptr<ipfs_lite::ipld::IPLDNode> &node,
             std::string                                       link_name,
             LinkInfoSet                                       visited_links,
-            bool                                              skip_if_visited_root ) const = 0;
+            bool                                              skip_if_visited_root,
+            int                                               max_depth ) const = 0;
 
         virtual void                  InitCIDBlock( const CID &cid )       = 0;
         virtual bool                  IsCIDInCache( const CID &cid ) const = 0;
