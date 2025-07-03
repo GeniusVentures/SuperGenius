@@ -289,14 +289,20 @@ namespace sgns::crdt
     {
         // builds the heads cache based on what's in storage
         const auto strNamespace = this->namespaceKey_.GetKey();
-        Buffer     keyPrefixBuffer;
+        logger_->debug( "PrimeCache: starting for namespace '{}'", strNamespace );
+
+        Buffer keyPrefixBuffer;
         keyPrefixBuffer.put( strNamespace );
+
         auto queryResult = this->dataStore_->query( keyPrefixBuffer );
         if ( queryResult.has_failure() )
         {
+            logger_->error( "PrimeCache: query failed: {}", queryResult.error().message() );
             return outcome::failure( queryResult.error() );
         }
+        logger_->debug( "PrimeCache: retrieved {} entries from datastore", queryResult.value().size() );
 
+        size_t loadedCount = 0;
         for ( const auto &bufferKeyAndValue : queryResult.value() )
         {
             // full key is "/<namespace>/<topic>/<cid>"
@@ -305,23 +311,32 @@ namespace sgns::crdt
 
             if ( full.size() <= strNamespace.size() + 1 )
             {
+                logger_->debug( "PrimeCache: skipping too-short key '{}'", full );
                 continue;
             }
 
-            // remove namespace prefix and leading slash
             std::string rel = full.substr( strNamespace.size() + 1 );
-            auto        sep = rel.find( '/' );
-            if ( sep == std::string::npos )
+
+            auto sepPos = rel.find( '/' );
+            if ( sepPos == std::string::npos )
             {
+                logger_->warn( "PrimeCache: malformed key '{}'", rel );
                 continue;
             }
 
-            std::string topic  = rel.substr( 0, sep );
-            std::string strCid = rel.substr( sep + 1 );
+            std::string topic  = rel.substr( 0, sepPos );
+            std::string strCid = rel.substr( sepPos + 1 );
+
+            if ( topic.empty() || strCid.empty() )
+            {
+                logger_->warn( "PrimeCache: empty topic or CID in '{}'", rel );
+                continue;
+            }
 
             auto cidResult = CID::fromString( strCid );
             if ( cidResult.has_failure() )
             {
+                logger_->warn( "PrimeCache: invalid CID '{}' in key '{}'", strCid, full );
                 continue;
             }
             CID cid( cidResult.value() );
@@ -331,15 +346,24 @@ namespace sgns::crdt
             {
                 height = boost::lexical_cast<uint64_t>( bufferKeyAndValue.second.toString() );
             }
-            catch ( boost::bad_lexical_cast & )
+            catch ( const boost::bad_lexical_cast & )
             {
-                return outcome::failure( boost::system::error_code{} );
+                logger_->warn( "PrimeCache: could not parse height '{}' for CID '{}'",
+                               bufferKeyAndValue.second.toString(),
+                               strCid );
+                continue;
             }
 
             std::lock_guard lg( this->mutex_ );
             this->cache_[topic][cid] = height;
+            loadedCount++;
+            logger_->trace( "PrimeCache: loaded head [topic='{}', cid='{}', height={}]",
+                            topic,
+                            cid.toString().value(),
+                            height );
         }
 
+        logger_->debug( "PrimeCache: completed, loaded {} entries into cache", loadedCount );
         return outcome::success();
     }
 
