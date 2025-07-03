@@ -407,6 +407,9 @@ namespace sgns::crdt
                 logger_->error( "SendNewJobs: failed to process node:{}", current_root_cid.toString().value() );
                 continue; // Continue processing other nodes
             }
+            logger_->info( "SendJobWorker: Processed CID={} nodeCID={}",
+                           current_root_cid.toString().value(),
+                           dagJob.node_->getCID().toString().value() );
 
             // Aggregate CIDs to fetch
             auto CIDs_to_fetch = childrenResult.value();

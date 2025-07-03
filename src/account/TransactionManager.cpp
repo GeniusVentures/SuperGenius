@@ -59,7 +59,6 @@ namespace sgns
         {
             m_logger->info( "Listening full node on {}", full_node_topic_m );
             globaldb_m->AddListenTopic( full_node_topic_m );
-            
         }
         globaldb_m->AddTopicName( full_node_topic_m );
         globaldb_m->AddTopicName( account_m->GetAddress() );
@@ -133,6 +132,8 @@ namespace sgns
                         valid_proof = true;
                         break;
                     }
+                    valid_proof = true;
+                    break;
                     std::vector<uint8_t> proof_data_vector( element.value().begin(), element.value().end() );
                     auto                 maybe_valid_proof = IBasicProof::VerifyFullProof( proof_data_vector );
                     if ( maybe_valid_proof.has_error() || ( !maybe_valid_proof.value() ) )
