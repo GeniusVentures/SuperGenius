@@ -66,7 +66,7 @@ namespace sgns::crdt
     outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> CustomDagSyncer::GetNodeWithoutRequest(
         const CID &cid ) const
     {
-        return getNode( cid );
+        return outcome::failure( boost::system::error_code{} );
     }
 
     std::pair<DAGSyncer::LinkInfoSet, DAGSyncer::LinkInfoSet> CustomDagSyncer::TraverseCIDsLinks(

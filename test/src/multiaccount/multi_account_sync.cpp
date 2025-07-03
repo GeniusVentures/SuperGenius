@@ -89,7 +89,11 @@ DevConfig_st MultiAccountTest::DEV_CONFIG  = { "0xcafe",
                                                "1.0",
                                                sgns::TokenID::FromBytes( { 0x00 } ),
                                                "./node1" };
-DevConfig_st MultiAccountTest::DEV_CONFIG2 = { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x01 } ), "./node2" };
+DevConfig_st MultiAccountTest::DEV_CONFIG2 = { "0xcafe",
+                                               "0.65",
+                                               "1.0",
+                                               sgns::TokenID::FromBytes( { 0x00 } ),
+                                               "./node2" };
 
 std::string MultiAccountTest::binary_path = "";
 
@@ -105,14 +109,14 @@ TEST_F( MultiAccountTest, SyncThroughEachOther )
     auto mint_result = node_main->MintTokens( 50000000000,
                                               "",
                                               "",
-                                              sgns::TokenID::FromBytes({0x00}),
+                                              sgns::TokenID::FromBytes( { 0x00 } ),
                                               std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
 
     mint_result = node_proc1->MintTokens( 50000000000,
                                           "",
                                           "",
-                                          sgns::TokenID::FromBytes({0x00}),
+                                          sgns::TokenID::FromBytes( { 0x00 } ),
                                           std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
     auto transcount_main  = node_main->GetOutTransactions().size();

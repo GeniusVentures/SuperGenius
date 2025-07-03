@@ -97,7 +97,7 @@ namespace sgns::crdt
         * @param key to remove from storage
         * @return outcome::failure on error or success otherwise
         */
-        outcome::result<void> Remove( const HierarchicalKey &key );
+        outcome::result<void> Remove( const HierarchicalKey &key, const std::set<std::string> &topics );
 
         /** Queries CRDT key-value pairs by prefix. If the prefix is empty returns all elements that were not tombstoned
         * @param prefix - keys prefix to match. An empty prefix matches any key.

@@ -25,7 +25,8 @@ namespace sgns::processing
 
     void SubTaskResultStorageImpl::RemoveSubTaskResult( const std::string &subTaskId )
     {
-        m_db->Remove( sgns::crdt::HierarchicalKey( ( boost::format( "results/%s" ) % subTaskId ).str() ) );
+        m_db->Remove( sgns::crdt::HierarchicalKey( ( boost::format( "results/%s" ) % subTaskId ).str() ),
+                      { m_processing_topic } );
     }
 
     std::vector<SGProcessing::SubTaskResult> SubTaskResultStorageImpl::GetSubTaskResults(

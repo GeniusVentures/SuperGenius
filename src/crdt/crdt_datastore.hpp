@@ -141,7 +141,7 @@ namespace sgns::crdt
         * @param aKey HierarchicalKey to delete from set
         * @return outcome::failure on error or success otherwise
         */
-        outcome::result<void> DeleteKey( const HierarchicalKey &aKey );
+        outcome::result<void> DeleteKey( const HierarchicalKey &aKey, const std::set<std::string> &topics );
 
         /**
          * @brief Publishes a Delta.
@@ -149,7 +149,6 @@ namespace sgns::crdt
          * @param aDelta Delta to publish
          * @return returns outcome::success on success or outcome::failure otherwise
          */
-        outcome::result<CID> Publish( const std::shared_ptr<Delta> &aDelta );
         outcome::result<CID> Publish( const std::shared_ptr<Delta> &aDelta, const std::set<std::string> &topics );
 
         /** PrintDAG pretty prints the current Merkle-DAG using the given printFunc

@@ -671,7 +671,7 @@ namespace sgns::crdt
         return outcome::success();
     }
 
-    outcome::result<void> CrdtDatastore::DeleteKey( const HierarchicalKey &aKey )
+    outcome::result<void> CrdtDatastore::DeleteKey( const HierarchicalKey &aKey, const std::set<std::string>  &topics )
     {
         auto deltaResult = CreateDeltaToRemove( aKey.GetKey() );
         if ( deltaResult.has_failure() )
@@ -684,20 +684,13 @@ namespace sgns::crdt
             return outcome::success();
         }
 
-        auto publishResult = Publish( deltaResult.value() );
+        auto publishResult = Publish( deltaResult.value(), topics );
         if ( deltaResult.has_failure() )
         {
             return outcome::failure( publishResult.error() );
         }
 
         return outcome::success();
-    }
-
-    outcome::result<CID> CrdtDatastore::Publish( const std::shared_ptr<Delta> &aDelta )
-    {
-        OUTCOME_TRY( auto &&newCID, AddDAGNode( aDelta, topicNames_ ) );
-
-        return newCID;
     }
 
     outcome::result<CID> CrdtDatastore::Publish( const std::shared_ptr<Delta> &aDelta,

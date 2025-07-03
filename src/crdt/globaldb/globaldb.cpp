@@ -249,7 +249,7 @@ namespace sgns::crdt
         return m_crdtDatastore->GetKey( key );
     }
 
-    outcome::result<void> GlobalDB::Remove( const HierarchicalKey &key )
+    outcome::result<void> GlobalDB::Remove( const HierarchicalKey &key, const std::set<std::string> &topics )
     {
         if ( !started_ )
         {
@@ -257,7 +257,7 @@ namespace sgns::crdt
             return outcome::failure( Error::GLOBALDB_NOT_STARTED );
         }
 
-        return m_crdtDatastore->DeleteKey( key );
+        return m_crdtDatastore->DeleteKey( key, topics );
     }
 
     outcome::result<GlobalDB::QueryResult> GlobalDB::QueryKeyValues( const std::string &keyPrefix )
