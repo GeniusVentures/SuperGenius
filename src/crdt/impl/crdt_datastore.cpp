@@ -131,12 +131,15 @@ namespace sgns::crdt
                                 threadSleepTimeInMilliseconds_,
                                 [&]
                                 { return !self->dagWorkerJobList.empty() || !dagWorker->dagWorkerThreadRunning_; } );
-                            cvlock.unlock();
-                            if ( dagWorker->dagWorkerThreadRunning_ )
+                            while ( dagWorker->dagWorkerThreadRunning_ && !self->dagWorkerJobList.empty() )
                             {
+                                dagJob = std::move( self->dagWorkerJobList.front() );
+                                self->dagWorkerJobList.pop();
+                                cvlock.unlock();
                                 self->SendJobWorkerIteration( dagWorker, dagJob );
+                                cvlock.lock();
                             }
-                            else
+                            if ( !dagWorker->dagWorkerThreadRunning_ )
                             {
                                 dagThreadRunning = false;
                             }
