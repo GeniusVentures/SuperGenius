@@ -296,32 +296,34 @@ namespace sgns
         }
         tx_globaldb_ = std::move( global_db_ret.value() );
         tx_globaldb_->SetFullNode(is_full_node);
+        tx_globaldb_->AddTopicName( processing_channel_topic_ );
+        tx_globaldb_->AddListenTopic( processing_channel_topic_ );
 
-        global_db_ret = crdt::GlobalDB::New( io_,
-                                             write_base_path_ + gnus_network_full_path_,
-                                             pubsub_,
-                                             crdt::CrdtOptions::DefaultOptions(),
-                                             graphsyncnetwork,
-                                             scheduler,
-                                             generator,
-                                             tx_globaldb_->GetDataStore() );
+        //global_db_ret = crdt::GlobalDB::New( io_,
+        //                                     write_base_path_ + gnus_network_full_path_,
+        //                                     pubsub_,
+        //                                     crdt::CrdtOptions::DefaultOptions(),
+        //                                     graphsyncnetwork,
+        //                                     scheduler,
+        //                                     generator,
+        //                                     tx_globaldb_->GetDataStore() );
+//
+        //if ( global_db_ret.has_error() )
+        //{
+        //    auto error = global_db_ret.error();
+        //    throw std::runtime_error( error.message() );
+        //}
+        //job_globaldb_ = std::move( global_db_ret.value() );
 
-        if ( global_db_ret.has_error() )
-        {
-            auto error = global_db_ret.error();
-            throw std::runtime_error( error.message() );
-        }
-        job_globaldb_ = std::move( global_db_ret.value() );
-
-        task_queue_      = std::make_shared<processing::ProcessingTaskQueueImpl>( job_globaldb_ );
-        processing_core_ = std::make_shared<processing::ProcessingCoreImpl>( job_globaldb_,
+        task_queue_      = std::make_shared<processing::ProcessingTaskQueueImpl>( tx_globaldb_, processing_channel_topic_ );
+        processing_core_ = std::make_shared<processing::ProcessingCoreImpl>( tx_globaldb_,
                                                                              1000000,
                                                                              1,
                                                                              dev_config.TokenID );
         processing_core_->RegisterProcessorFactory( "mnnimage",
                                                     [] { return std::make_unique<processing::MNN_Image>(); } );
 
-        task_result_storage_ = std::make_shared<processing::SubTaskResultStorageImpl>( job_globaldb_ );
+        task_result_storage_ = std::make_shared<processing::SubTaskResultStorageImpl>( tx_globaldb_, processing_channel_topic_ );
         processing_service_  = std::make_shared<processing::ProcessingServiceImpl>(
             pubsub_,                                                          //
             MAX_NODES_COUNT,                                                  //
@@ -352,9 +354,9 @@ namespace sgns
                                       migrationResult.error().message() );
         }
 
-        job_globaldb_->AddBroadcastTopic( processing_channel_topic_ );
-        job_globaldb_->AddListenTopic( processing_channel_topic_ );
-        job_globaldb_->Start();
+        //job_globaldb_->AddBroadcastTopic( processing_channel_topic_ );
+        //job_globaldb_->AddListenTopic( processing_channel_topic_ );
+        //job_globaldb_->Start();
 
         transaction_manager_ = std::make_shared<TransactionManager>( tx_globaldb_,
                                                                      io_,

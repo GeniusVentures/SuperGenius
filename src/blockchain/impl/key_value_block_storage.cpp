@@ -119,7 +119,7 @@ namespace sgns::blockchain
 
         OUTCOME_TRY( ( auto &&, genesis_block_hash ), block_storage->putBlock( genesis_block ) );
         BOOST_OUTCOME_TRYV2( auto &&,
-                             db->Put( { storage::GetGenesisBlockHashLookupKey() }, Buffer{ genesis_block_hash } ) );
+                             db->Put( { storage::GetGenesisBlockHashLookupKey() }, Buffer{ genesis_block_hash }, {} ) );
         BOOST_OUTCOME_TRYV2( auto &&, block_storage->setLastFinalizedBlockHash( genesis_block_hash ) );
 
         on_genesis_created( genesis_block );
@@ -196,7 +196,7 @@ namespace sgns::blockchain
         //TODO - For now one block data per block header. Revisit this
         BOOST_OUTCOME_TRYV2(
             auto &&,
-            db_->Put( { header_repo_->GetHeaderPath() + id_string + "/tx/0" }, Buffer{ encoded_block_data } ) );
+            db_->Put( { header_repo_->GetHeaderPath() + id_string + "/tx/0" }, Buffer{ encoded_block_data }, {} ) );
 
         //BOOST_OUTCOME_TRYV2(auto &&, putWithPrefix(*db_,
         //                          Prefix::BLOCK_DATA,
@@ -322,7 +322,7 @@ namespace sgns::blockchain
         hash_proto.SerializeToArray( serialized_proto.data(), serialized_proto.size() );
         BOOST_OUTCOME_TRYV2(
             auto &&,
-            db_->Put( { storage::GetLastFinalizedBlockHashLookupKey() }, Buffer{ serialized_proto } ) );
+            db_->Put( { storage::GetLastFinalizedBlockHashLookupKey() }, Buffer{ serialized_proto }, {} ) );
 
         return outcome::success();
     }

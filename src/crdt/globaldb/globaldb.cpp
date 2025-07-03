@@ -216,7 +216,7 @@ namespace sgns::crdt
         }
     }
 
-    outcome::result<void> GlobalDB::Put( const HierarchicalKey &key, const Buffer &value )
+    outcome::result<void> GlobalDB::Put( const HierarchicalKey &key, const Buffer &value, std::set<std::string> topics )
     {
         if ( !started_ )
         {
@@ -224,10 +224,10 @@ namespace sgns::crdt
             return outcome::failure( Error::GLOBALDB_NOT_STARTED );
         }
 
-        return m_crdtDatastore->PutKey( key, value );
+        return m_crdtDatastore->PutKey( key, value, std::move( topics ) );
     }
 
-    outcome::result<void> GlobalDB::Put( const std::vector<DataPair> &data_vector )
+    outcome::result<void> GlobalDB::Put( const std::vector<DataPair> &data_vector, std::set<std::string> topics )
     {
         if ( !started_ )
         {
@@ -241,7 +241,7 @@ namespace sgns::crdt
             BOOST_OUTCOME_TRYV2( auto &&, batch.Put( std::get<0>( data ), std::get<1>( data ) ) );
         }
 
-        return batch.Commit();
+        return batch.Commit( topics );
     }
 
     outcome::result<GlobalDB::Buffer> GlobalDB::Get( const HierarchicalKey &key )

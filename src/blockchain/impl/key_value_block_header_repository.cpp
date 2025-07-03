@@ -58,9 +58,9 @@ namespace sgns::blockchain
         auto header_hash    = hasher_->blake2b_256( encoded_header );
 
         OUTCOME_TRY( ( auto &&, id_string ), idToStringKey( *db_, header.number ) );
-        BOOST_OUTCOME_TRYV2( auto &&, db_->Put( { header_hash.toReadableString() }, NumberToBuffer( header.number ) ) );
+        BOOST_OUTCOME_TRYV2( auto &&, db_->Put( { header_hash.toReadableString() }, NumberToBuffer( header.number ), {} ) );
         BOOST_OUTCOME_TRYV2(
-            auto &&, db_->Put( { block_header_key_prefix + id_string }, base::Buffer{ std::move( encoded_header ) } ) );
+            auto &&, db_->Put( { block_header_key_prefix + id_string }, base::Buffer{ std::move( encoded_header ) }, {} ) );
 
         return header_hash;
     }

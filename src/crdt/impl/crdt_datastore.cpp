@@ -649,7 +649,9 @@ namespace sgns::crdt
         return set_->IsValueInSet( aKey.GetKey() );
     }
 
-    outcome::result<void> CrdtDatastore::PutKey( const HierarchicalKey &aKey, const Buffer &aValue )
+    outcome::result<void> CrdtDatastore::PutKey( const HierarchicalKey &aKey,
+                                                 const Buffer          &aValue,
+                                                 std::set<std::string>  topics )
     {
         auto deltaResult = CreateDeltaToAdd( aKey.GetKey(), std::string( aValue.toString() ) );
         if ( deltaResult.has_failure() )
@@ -657,7 +659,7 @@ namespace sgns::crdt
             return outcome::failure( deltaResult.error() );
         }
 
-        auto publishResult = Publish( deltaResult.value() );
+        auto publishResult = Publish( deltaResult.value(), topics );
         if ( deltaResult.has_failure() )
         {
             return outcome::failure( publishResult.error() );

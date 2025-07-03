@@ -129,7 +129,7 @@ namespace sgns::crdt
          * @param aValue Value to be stored
          * @return outcome::success if stored and broadcasted successfully, or outcome::failure otherwise.
          */
-        outcome::result<void> PutKey( const HierarchicalKey &aKey, const Buffer &aValue );
+        outcome::result<void> PutKey( const HierarchicalKey &aKey, const Buffer &aValue, std::set<std::string> topics );
 
         /** HasKey returns whether the `key` is mapped to a `value` in set
         * @param aKey HierarchicalKey to look for in set

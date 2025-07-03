@@ -81,7 +81,6 @@ namespace sgns::crdt
          * @param[in] topic Optional topic name for targeted publishing. If not provided, the default broadcast behavior is used.
          * @return outcome::success on successful commit, or outcome::failure if an error occurs.
          */
-        outcome::result<void> Commit();
         outcome::result<void> Commit(const std::set<std::string>& topics);
 
     private:

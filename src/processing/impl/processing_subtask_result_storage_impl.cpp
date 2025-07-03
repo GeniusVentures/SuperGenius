@@ -4,21 +4,23 @@
 
 namespace sgns::processing
 {
-    SubTaskResultStorageImpl::SubTaskResultStorageImpl( std::shared_ptr<sgns::crdt::GlobalDB> db ) :
-        m_db( std::move( db ) )
+    SubTaskResultStorageImpl::SubTaskResultStorageImpl( std::shared_ptr<sgns::crdt::GlobalDB> db,
+                                                        std::string                           processing_topic ) :
+        m_db( std::move( db ) ), m_processing_topic( std::move( processing_topic ) )
     {
     }
 
-    SubTaskResultStorageImpl::~SubTaskResultStorageImpl()
-    {
-    }
+    SubTaskResultStorageImpl::~SubTaskResultStorageImpl() {}
+
     void SubTaskResultStorageImpl::AddSubTaskResult( const SGProcessing::SubTaskResult &result )
     {
         sgns::crdt::GlobalDB::Buffer data;
         data.put( result.SerializeAsString() );
 
         auto taskId = m_db->Put(
-            sgns::crdt::HierarchicalKey( ( boost::format( "results/%s" ) % result.subtaskid() ).str() ), data );
+            sgns::crdt::HierarchicalKey( ( boost::format( "results/%s" ) % result.subtaskid() ).str() ),
+            data,
+            { m_processing_topic } );
     }
 
     void SubTaskResultStorageImpl::RemoveSubTaskResult( const std::string &subTaskId )
@@ -33,7 +35,7 @@ namespace sgns::processing
         for ( const auto &subTaskId : subTaskIds )
         {
             auto data = m_db->Get( sgns::crdt::HierarchicalKey( ( boost::format( "results/%s" ) % subTaskId ).str() ) );
-            if (data)
+            if ( data )
             {
                 SGProcessing::SubTaskResult result;
                 if ( result.ParseFromArray( data.value().data(), data.value().size() ) )

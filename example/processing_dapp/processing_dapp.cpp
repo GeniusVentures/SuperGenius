@@ -259,7 +259,7 @@ int main( int argc, char *argv[] )
 
     std::thread iothread( [io]() { io->run(); } );
 
-    auto taskQueue = std::make_shared<ProcessingTaskQueueImpl>( globalDB );
+    auto taskQueue = std::make_shared<ProcessingTaskQueueImpl>( globalDB, "" );
 
     TaskSplitter taskSplitter( options->nSubTasks, options->nChunks, options->addValidationSubtask );
 
