@@ -237,7 +237,7 @@ namespace sgns::crdt
     * @param aCrdtDatastore pointer to CRDT datastore
     * @param dagWorker pointer to DAG worker structure
     */
-        void SendJobWorkerIteration( std::shared_ptr<DagWorker> dagWorker, DagJob &dagJob );
+        void SendJobWorkerIteration( std::shared_ptr<DagWorker> dagWorker );
 
         /** SendNewJobs calls getDeltas with the given children and sends each response to the workers.
     * @param aRootCID root CID

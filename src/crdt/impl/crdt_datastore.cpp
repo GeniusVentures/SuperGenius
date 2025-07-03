@@ -119,8 +119,7 @@ namespace sgns::crdt
             dagWorker->dagWorkerFuture_        = std::async(
                 [weakptr{ weak_from_this() }, dagWorker]()
                 {
-                    DagJob dagJob;
-                    auto   dagThreadRunning = true;
+                    auto dagThreadRunning = true;
                     while ( dagThreadRunning )
                     {
                         if ( auto self = weakptr.lock() )
@@ -131,15 +130,12 @@ namespace sgns::crdt
                                 threadSleepTimeInMilliseconds_,
                                 [&]
                                 { return !self->dagWorkerJobList.empty() || !dagWorker->dagWorkerThreadRunning_; } );
-                            while ( dagWorker->dagWorkerThreadRunning_ && !self->dagWorkerJobList.empty() )
+                            cvlock.unlock();
+                            if ( dagWorker->dagWorkerThreadRunning_ )
                             {
-                                dagJob = std::move( self->dagWorkerJobList.front() );
-                                self->dagWorkerJobList.pop();
-                                cvlock.unlock();
-                                self->SendJobWorkerIteration( dagWorker, dagJob );
-                                cvlock.lock();
+                                self->SendJobWorkerIteration( dagWorker );
                             }
-                            if ( !dagWorker->dagWorkerThreadRunning_ )
+                            else
                             {
                                 dagThreadRunning = false;
                             }
@@ -346,73 +342,131 @@ namespace sgns::crdt
         }
     }
 
-    void CrdtDatastore::SendJobWorkerIteration( std::shared_ptr<DagWorker> dagWorker, DagJob &dagJob )
+    void CrdtDatastore::SendJobWorkerIteration( std::shared_ptr<DagWorker> dagWorker )
     {
+        std::vector<DagJob>       jobs_to_process;
+        CID                       current_root_cid;
+        std::set<CID>             aggregated_cids_to_fetch;
+        std::shared_ptr<IPLDNode> root_node;
+        uint64_t                  root_priority = 0;
+
         logger_->trace( "In SendJobWorkerIteration. Jobs left: {}", dagWorkerJobList.size() );
+
+        // Extract all jobs with the same rootCid
         {
             std::unique_lock lock( dagWorkerMutex_ );
             if ( dagWorkerJobList.empty() )
             {
                 return;
             }
-            dagJob = dagWorkerJobList.front();
+
+            // Get the first job to determine the rootCid we're processing
+            DagJob first_job = dagWorkerJobList.front();
             dagWorkerJobList.pop();
-        }
-        logger_->info( "SendJobWorker CID={} nodeCID={} priority={}",
-                       dagJob.rootCid_.toString().value(),
-                       dagJob.node_->getCID().toString().value(),
-                       std::to_string( dagJob.rootPriority_ ) );
+            jobs_to_process.push_back( first_job );
+            current_root_cid = first_job.rootCid_;
+            root_priority    = first_job.rootPriority_;
+            root_node        = first_job.root_node_;
 
-        auto childrenResult = ProcessNode( dagJob.rootCid_, dagJob.rootPriority_, dagJob.delta_, dagJob.node_, true );
-        if ( childrenResult.has_failure() )
-        {
-            logger_->error( "SendNewJobs: failed to process node:{}", dagJob.rootCid_.toString().value() );
-            return;
-        }
-        auto CIDs_to_fetch = childrenResult.value();
-
-        if ( dagJob.rootCid_ == dagJob.node_->getCID() )
-        {
-            logger_->debug( "ROOT NODE RECEIVED, will process later" );
-            // Root node is already stored in dagJob.root_node_ by SendNewJobs
-        }
-        else
-        {
-            auto dagSyncerResult = dagSyncer_->addNode( dagJob.node_ );
-            logger_->debug( "DAGSyncer: Adding new block {}", dagJob.node_->getCID().toString().value() );
-            if ( dagSyncerResult.has_failure() )
+            // Collect all remaining jobs with the same rootCid
+            std::queue<DagJob> temp_queue;
+            while ( !dagWorkerJobList.empty() )
             {
-                logger_->error( "DAGSyncer: error writing new block {}", dagJob.node_->getCID().toString().value() );
+                DagJob job = dagWorkerJobList.front();
+                dagWorkerJobList.pop();
+
+                if ( job.rootCid_ == current_root_cid )
+                {
+                    jobs_to_process.push_back( job );
+                }
+                else
+                {
+                    temp_queue.push( job );
+                }
             }
-            dagSyncer_->DeleteCIDBlock( dagJob.node_->getCID() );
+
+            // Put back the jobs with different rootCid
+            dagWorkerJobList = std::move( temp_queue );
         }
 
-        if ( CIDs_to_fetch.empty() )
+        logger_->info( "SendJobWorker processing {} jobs for rootCid={}",
+                       jobs_to_process.size(),
+                       current_root_cid.toString().value() );
+
+        // Process all jobs and aggregate CIDs to fetch
+        for ( const auto &dagJob : jobs_to_process )
         {
-            // No more children, now I can record the root CID if we have it
-            if ( dagJob.root_node_ )
+            logger_->info( "SendJobWorker CID={} nodeCID={} priority={}",
+                           current_root_cid.toString().value(),
+                           dagJob.node_->getCID().toString().value(),
+                           std::to_string( root_priority ) );
+
+            auto childrenResult = ProcessNode( current_root_cid, root_priority, dagJob.delta_, dagJob.node_, true );
+            if ( childrenResult.has_failure() )
             {
-                auto dagSyncerResult = dagSyncer_->addNode( dagJob.root_node_ );
-                logger_->debug( "DAGSyncer: Adding ROOT block {}", dagJob.root_node_->getCID().toString().value() );
+                logger_->error( "SendNewJobs: failed to process node:{}", current_root_cid.toString().value() );
+                continue; // Continue processing other nodes
+            }
+
+            // Aggregate CIDs to fetch
+            auto CIDs_to_fetch = childrenResult.value();
+            aggregated_cids_to_fetch.insert( CIDs_to_fetch.begin(), CIDs_to_fetch.end() );
+
+            // Handle non-root nodes
+            if ( current_root_cid != dagJob.node_->getCID() )
+            {
+                auto dagSyncerResult = dagSyncer_->addNode( dagJob.node_ );
+                logger_->debug( "DAGSyncer: Adding new block {}", dagJob.node_->getCID().toString().value() );
                 if ( dagSyncerResult.has_failure() )
                 {
-                    logger_->error( "DAGSyncer: error writing ROOT block {}", dagJob.rootCid_.toString().value() );
+                    logger_->error( "DAGSyncer: error writing new block {}",
+                                    dagJob.node_->getCID().toString().value() );
+                }
+                dagSyncer_->DeleteCIDBlock( dagJob.node_->getCID() );
+            }
+            else
+            {
+                logger_->debug( "ROOT NODE RECEIVED, will process later" );
+                // Store root node for later processing
+                if ( !root_node )
+                {
+                    root_node = dagJob.node_;
+                }
+            }
+        }
+
+        // Now handle the aggregated results
+        if ( aggregated_cids_to_fetch.empty() )
+        {
+            // No more children, now record the root CID if we have it
+            if ( root_node )
+            {
+                auto dagSyncerResult = dagSyncer_->addNode( root_node );
+                logger_->debug( "DAGSyncer: Adding ROOT block {}", root_node->getCID().toString().value() );
+                if ( dagSyncerResult.has_failure() )
+                {
+                    logger_->error( "DAGSyncer: error writing ROOT block {}", current_root_cid.toString().value() );
                 }
             }
             else
             {
                 logger_->error( "No Root node to add after getting the children {}",
-                                dagJob.rootCid_.toString().value() );
+                                current_root_cid.toString().value() );
             }
-            dagSyncer_->DeleteCIDBlock( dagJob.rootCid_ );
+            dagSyncer_->DeleteCIDBlock( current_root_cid );
         }
         else
         {
-            auto send_jobs_ret = SendNewJobs( dagJob.rootCid_, dagJob.rootPriority_, CIDs_to_fetch, dagJob.root_node_ );
+            // Make a single call to SendNewJobs with all aggregated CIDs
+            logger_->info( "Sending {} aggregated CIDs to SendNewJobs for rootCid={}",
+                           aggregated_cids_to_fetch.size(),
+                           current_root_cid.toString().value() );
+
+            auto send_jobs_ret = SendNewJobs( current_root_cid, root_priority, aggregated_cids_to_fetch, root_node );
             if ( send_jobs_ret.has_error() )
             {
-                dagSyncer_->DeleteCIDBlock( dagJob.rootCid_ );
-                logger_->error( "Error getting children CIDs from root {}", dagJob.rootCid_.toString().value() );
+                dagSyncer_->DeleteCIDBlock( current_root_cid );
+                logger_->error( "Error getting children CIDs from root {}", current_root_cid.toString().value() );
             }
         }
     }
@@ -539,7 +593,7 @@ namespace sgns::crdt
         if ( rootPriority == 0 )
         {
             std::unique_lock lock( dagSyncherMutex_ );
-            auto             getNodeResult = dagSyncer_->getNode( *(aChildren.begin()) );
+            auto             getNodeResult = dagSyncer_->getNode( *( aChildren.begin() ) );
             lock.unlock();
             if ( getNodeResult.has_failure() )
             {
@@ -561,7 +615,7 @@ namespace sgns::crdt
             rootPriority = delta->priority();
 
             // If this is the first call and we're fetching the root, store it
-            if ( !rootNode && aChildren.size() == 1 && (*(aChildren.begin())) == aRootCID )
+            if ( !rootNode && aChildren.size() == 1 && ( *( aChildren.begin() ) ) == aRootCID )
             {
                 rootNode = node;
             }
