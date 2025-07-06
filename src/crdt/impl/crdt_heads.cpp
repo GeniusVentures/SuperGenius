@@ -49,20 +49,9 @@ namespace sgns::crdt
         return this->namespaceKey_;
     }
 
-    outcome::result<HierarchicalKey> CrdtHeads::GetKey( const CID &aCid )
+    outcome::result<HierarchicalKey> CrdtHeads::GetKey( const std::string &topic, const CID &aCid )
     {
-        // /<namespace>/<cid>
-        auto cidToStringResult = aCid.toString();
-        if ( cidToStringResult.has_failure() )
-        {
-            return outcome::failure( cidToStringResult.error() );
-        }
-
-        return this->namespaceKey_.ChildString( cidToStringResult.value() );
-    }
-
-    outcome::result<HierarchicalKey> CrdtHeads::GetKeyForTopic( const std::string &topic, const CID &aCid )
-    {
+        // /<namespace>/<topic>/<cid>
         auto topicNs = namespaceKey_.ChildString( std::string( topic ) );
 
         auto cidStr = aCid.toString();
@@ -79,7 +68,7 @@ namespace sgns::crdt
                                             uint64_t                                     aHeight,
                                             const std::string                           &topic )
     {
-        auto getKeyResult = GetKeyForTopic( topic, aCid );
+        auto getKeyResult = GetKey( topic, aCid );
         if ( getKeyResult.has_failure() )
         {
             return outcome::failure( getKeyResult.error() );
@@ -105,7 +94,7 @@ namespace sgns::crdt
             return outcome::failure( boost::system::error_code{} );
         }
 
-        auto getKeyResult = this->GetKeyForTopic( topic, aCid );
+        auto getKeyResult = this->GetKey( topic, aCid );
         if ( getKeyResult.has_failure() )
         {
             return outcome::failure( getKeyResult.error() );
@@ -117,7 +106,7 @@ namespace sgns::crdt
         return aDataStore->remove( keyBuffer );
     }
 
-    bool CrdtHeads::IsHead( const CID &cid, const std::string &topic /* = "" */ )
+    bool CrdtHeads::IsHead( const CID &cid, const std::string &topic )
     {
         std::lock_guard lock( mutex_ );
 
@@ -142,7 +131,7 @@ namespace sgns::crdt
         return topicIt->second.find( cid ) != topicIt->second.end();
     }
 
-    outcome::result<uint64_t> CrdtHeads::GetHeadHeight( const CID &aCid, const std::string &topic /* = "" */ )
+    outcome::result<uint64_t> CrdtHeads::GetHeadHeight( const CID &aCid, const std::string &topic )
     {
         std::lock_guard lg( this->mutex_ );
 
@@ -171,7 +160,7 @@ namespace sgns::crdt
         return it == tit->second.end() ? 0u : it->second;
     }
 
-    outcome::result<int> CrdtHeads::GetLength( const std::string &topic /* = "" */ )
+    outcome::result<int> CrdtHeads::GetLength( const std::string &topic )
     {
         std::lock_guard lock( mutex_ );
 
@@ -277,10 +266,10 @@ namespace sgns::crdt
             }
         }
 
-        //if ( result_heads.empty() )
+        // if ( result_heads.empty() )
         //{
-        //    return outcome::failure( boost::system::error_code{} );
-        //}
+        //     return outcome::failure( boost::system::error_code{} );
+        // }
 
         return outcome::success( CRDTListResult{ result_heads, max_value } );
     }

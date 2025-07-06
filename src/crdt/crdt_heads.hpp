@@ -55,24 +55,23 @@ namespace sgns::crdt
         HierarchicalKey GetNamespaceKey() const;
 
         /** Get full path to CID key
-    *   /<namespace>/<cid>
-    * @param aCid Content identifier
-    * @return full path to CID key as HierarchicalKey or outcome::failure on error
-    */
-        outcome::result<HierarchicalKey> GetKey( const CID &aCid );
-        outcome::result<HierarchicalKey> GetKeyForTopic( const std::string &topic, const CID &aCid );
+         *   /<namespace>/<topic>/<cid>
+         * @param aCid Content identifier
+         * @return full path to CID key as HierarchicalKey or outcome::failure on error
+         */
+        outcome::result<HierarchicalKey> GetKey( const std::string &topic, const CID &aCid );
 
         /** Check if CID is among the current heads.
-    * @param aCid Content identifier
-    * @return true is CID is head, false otherwise
-    */
-        bool IsHead( const CID &aCid, const std::string &topic = "" );
+         * @param aCid Content identifier
+         * @return true is CID is head, false otherwise
+         */
+        bool IsHead( const CID &aCid, const std::string &topic );
 
         /** Check if CID is head and return it height if it is
-    * @param aCid Content identifier
-    * @return Height of head or outcome::failure on error
-    */
-        outcome::result<uint64_t> GetHeadHeight( const CID &aCid, const std::string &topic = "" );
+         * @param aCid Content identifier
+         * @return Height of head or outcome::failure on error
+         */
+        outcome::result<uint64_t> GetHeadHeight( const CID &aCid, const std::string &topic );
 
         /** Get current number of heads
     * @return lenght, current number of heads or outcome::failure on error
