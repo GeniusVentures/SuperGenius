@@ -329,7 +329,7 @@ namespace sgns
 
         OUTCOME_TRY( ( auto &&, peer_total ), escrow_amount_ptr->Multiply( *peers_cut_ptr ) );
 
-        const auto &escrowTokenId = escrow_tx->GetUTXOParameters().outputs_[0].token_id;
+        const auto escrowTokenId = escrow_tx->GetUTXOParameters().outputs_[0].token_id;
 
         uint64_t peers_amount = peer_total.Value() / static_cast<uint64_t>( taskresult.subtask_results().size() );
         auto     remainder    = escrow_tx->GetAmount();
