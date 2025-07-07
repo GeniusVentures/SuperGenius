@@ -112,6 +112,7 @@ namespace sgns::crdt
             } );
 
         dagWorkerJobListThreadRunning_ = true;
+        dagWorkers_.reserve(numberOfDagWorkers);
         for ( int i = 0; i < numberOfDagWorkers; ++i )
         {
             auto dagWorker                     = std::make_shared<DagWorker>();
