@@ -206,13 +206,22 @@ namespace sgns::crdt
     protected:
         /** DAG jobs structure used by DAG worker threads to send new jobs
     */
+        struct IPLDNodeComparator
+        {
+            bool operator()( const std::shared_ptr<IPLDNode> &a, const std::shared_ptr<IPLDNode> &b ) const
+            {
+                return a->getCID().toString().value() < b->getCID().toString().value();
+            }
+        };
+
         struct DagJob
         {
-            CID                       rootCid_;      /*> Root CID */
-            uint64_t                  rootPriority_; /*> root priority */
-            std::shared_ptr<Delta>    delta_;        /*> pointer to delta */
-            std::shared_ptr<IPLDNode> node_;         /*> pointer to node */
-            std::shared_ptr<IPLDNode> root_node_;    /*> pointer to node */
+            CID                                                     rootCid_;      /*> Root CID */
+            uint64_t                                                rootPriority_; /*> root priority */
+            std::shared_ptr<Delta>                                  delta_;        /*> pointer to delta */
+            std::shared_ptr<IPLDNode>                               node_;         /*> pointer to node */
+            std::set<std::shared_ptr<IPLDNode>, IPLDNodeComparator> saved_nodes_;
+            int iteration_count_; // Add iteration count to track progress
         };
 
         /** DAG worker structure to keep track of worker threads
@@ -239,10 +248,11 @@ namespace sgns::crdt
     * @param aRootPriority root priority
     * @param aChildren vector of children CIDs
     */
-        outcome::result<void> SendNewJobs( const CID                &aRootCID,
-                                           uint64_t                  aRootPriority,
-                                           const std::set<CID>      &aChildren,
-                                           std::shared_ptr<IPLDNode> aRootNode = nullptr );
+        outcome::result<void> SendNewJobs( const CID                                              &aRootCID,
+                                           uint64_t                                                aRootPriority,
+                                           const std::set<CID>                                    &aChildren,
+                                           std::set<std::shared_ptr<IPLDNode>, IPLDNodeComparator> aSavedNodes = {},
+                                           int aIterationCount                                                 = 0 );
 
         /** Sync ensures that all the data under the given prefix is flushed to disk in
     * the underlying datastore

@@ -108,7 +108,10 @@
         "__config": "cpp",
         "hash_map": "cpp",
         "hash_set": "cpp",
-        "*.inc": "cpp"
+        "*.inc": "cpp",
+        "propagate_const": "cpp",
+        "barrier": "cpp",
+        "latch": "cpp"
     }
   }
   
