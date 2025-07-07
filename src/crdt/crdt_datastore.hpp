@@ -177,11 +177,6 @@ namespace sgns::crdt
 
         void PrintDataStore();
 
-        auto GetDB()
-        {
-            return dataStore_->getDB();
-        }
-
         /** Close shuts down the CRDT datastore and worker threads. It should not be used afterwards.
     */
         void Close();

@@ -134,11 +134,6 @@ namespace sgns::crdt
         void AddTopicName( std::string topicName );
         void SetFullNode( bool full_node );
 
-        auto GetDB()
-        {
-            return m_crdtDatastore->GetDB();
-        }
-
         std::shared_ptr<RocksDB> GetDataStore();
 
         bool RegisterElementFilter( const std::string &pattern, GlobalDBFilterCallback filter );
