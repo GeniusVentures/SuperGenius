@@ -62,7 +62,7 @@ TEST( NodeBalancePersistenceTest, BalancePersistsAfterRecreation )
 
     std::cout << "****** Full node creation ****" << std::endl;
     auto fullNode =
-        CreateNodeWithMode( "0xffff", "1.0", TokenID::FromBytes( { 0x01 } ), false, true, "node_full", fullKey );
+        CreateNodeWithMode( "0xffff", "1.0", TokenID::FromBytes( { 0x01 } ), false, true, "node_full_2", fullKey );
 
     std::cout << "****** Original node creation ****" << std::endl;
     auto originalNode =
