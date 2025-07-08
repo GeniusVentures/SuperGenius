@@ -11,6 +11,8 @@
 #include <boost/format.hpp>
 #include <boost/system/error_code.hpp>
 #include "account/TransactionManager.hpp"
+#include "account/TransferTransaction.hpp"
+#include "account/EscrowReleaseTransaction.hpp"
 #include "proof/IBasicProof.hpp"
 #include "MigrationManager.hpp"
 
@@ -109,6 +111,9 @@ namespace sgns
         m_logger->debug( "Found {} transaction keys to migrate", entries.size() );
         size_t migrated_count = 0;
         size_t BATCH_SIZE     = 50;
+
+        boost::format full_node_topic{ std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) };
+        full_node_topic % TransactionManager::TEST_NET_ID;
 
         for ( const auto &entry : entries )
         {
@@ -213,6 +218,22 @@ namespace sgns
             }
             if ( migrate_tx )
             {
+                topics_.emplace( tx->GetSrcAddress() );
+                if ( auto transfer_tx = std::dynamic_pointer_cast<TransferTransaction>( tx ) )
+                {
+                    for ( const auto &dest_info : transfer_tx->GetDstInfos() )
+                    {
+                        topics_.emplace( dest_info.dest_address );
+                    }
+                }
+                if ( auto escrow_tx = std::dynamic_pointer_cast<EscrowReleaseTransaction>( tx ) )
+                {
+                    if ( escrow_tx->GetSrcAddress() == tx->GetSrcAddress() )
+                    {
+                        topics_.emplace( escrow_tx->GetSrcAddress() );
+                    }
+                }
+
                 sgns::crdt::GlobalDB::Buffer data_transaction;
                 data_transaction.put( tx->SerializeByteVector() );
                 BOOST_OUTCOME_TRYV2( auto &&,
@@ -233,9 +254,13 @@ namespace sgns
             ++migrated_count;
             if ( migrated_count >= BATCH_SIZE )
             {
-                OUTCOME_TRY( crdt_transaction_->Commit() );
+                OUTCOME_TRY( crdt_transaction_->Commit( topics_ ) );
                 crdt_transaction_ = newDb_->BeginTransaction(); // start fresh
-                migrated_count    = 0;
+                topics_.clear();
+                boost::format full_node_topic{ std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) };
+                full_node_topic % TransactionManager::TEST_NET_ID;
+                topics_.emplace( full_node_topic.str() );
+                migrated_count = 0;
                 m_logger->debug( "Committed a batch of {} transactions", BATCH_SIZE );
             }
         }
@@ -252,14 +277,25 @@ namespace sgns
         OUTCOME_TRY( auto inDb, InitLegacyDb( "in" ) );
 
         crdt_transaction_ = newDb_->BeginTransaction();
+        topics_.clear();
+        boost::format full_node_topic{ std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) };
+        full_node_topic % TransactionManager::TEST_NET_ID;
+
+        topics_.emplace( full_node_topic.str() );
 
         m_logger->debug( "Migrating output DB into new DB" );
         OUTCOME_TRY( auto &&remainder_outdb, MigrateDb( outDb, newDb_ ) );
 
         if ( remainder_outdb > 0 )
         {
-            OUTCOME_TRY( crdt_transaction_->Commit() );
+            for ( auto &topic : topics_ )
+            {
+                m_logger->debug( "Commiting migrating to topics {}", topic );
+            }
+            OUTCOME_TRY( crdt_transaction_->Commit( topics_ ) );
             crdt_transaction_ = newDb_->BeginTransaction();
+            topics_.clear();
+            topics_.emplace( full_node_topic.str() );
             m_logger->debug( "Committed remainder of output transactions: {}", remainder_outdb );
         }
 
@@ -268,7 +304,11 @@ namespace sgns
 
         if ( remainder_indb > 0 )
         {
-            OUTCOME_TRY( crdt_transaction_->Commit() );
+            for ( auto &topic : topics_ )
+            {
+                m_logger->debug( "Commiting migrating to topics {}", topic );
+            }
+            OUTCOME_TRY( crdt_transaction_->Commit( topics_ ) );
         }
         sgns::crdt::GlobalDB::Buffer version_buffer;
         sgns::crdt::GlobalDB::Buffer version_key;

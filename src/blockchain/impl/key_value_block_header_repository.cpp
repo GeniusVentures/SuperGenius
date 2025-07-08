@@ -58,9 +58,13 @@ namespace sgns::blockchain
         auto header_hash    = hasher_->blake2b_256( encoded_header );
 
         OUTCOME_TRY( ( auto &&, id_string ), idToStringKey( *db_, header.number ) );
-        BOOST_OUTCOME_TRYV2( auto &&, db_->Put( { header_hash.toReadableString() }, NumberToBuffer( header.number ) ) );
         BOOST_OUTCOME_TRYV2(
-            auto &&, db_->Put( { block_header_key_prefix + id_string }, base::Buffer{ std::move( encoded_header ) } ) );
+            auto &&,
+            db_->Put( { header_hash.toReadableString() }, NumberToBuffer( header.number ), { "topic" } ) );
+        BOOST_OUTCOME_TRYV2( auto &&,
+                             db_->Put( { block_header_key_prefix + id_string },
+                                       base::Buffer{ std::move( encoded_header ) },
+                                       { "topic" } ) );
 
         return header_hash;
     }
@@ -69,7 +73,7 @@ namespace sgns::blockchain
     {
         OUTCOME_TRY( ( auto &&, header_string_val ), idToStringKey( *db_, id ) );
 
-        return db_->Remove( { block_header_key_prefix + header_string_val } );
+        return db_->Remove( { block_header_key_prefix + header_string_val }, { "topic" } );
     }
 
     outcome::result<BlockStatus> KeyValueBlockHeaderRepository::getBlockStatus( const primitives::BlockId &id ) const

@@ -89,7 +89,7 @@ namespace sgns::crdt
         return modified_keys_.find( key.GetKey() ) != modified_keys_.end();
     }
 
-    outcome::result<void> AtomicTransaction::Commit()
+    outcome::result<void> AtomicTransaction::Commit(const std::set<std::string>& topics)
     {
         if ( is_committed_ )
         {
@@ -129,7 +129,7 @@ namespace sgns::crdt
         }
         combined_delta->set_priority( max_priority );
 
-        auto result = datastore_->Publish( combined_delta );
+        auto result = datastore_->Publish( combined_delta, topics );
         if ( result.has_failure() )
         {
             return result.error();

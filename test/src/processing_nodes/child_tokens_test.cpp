@@ -37,7 +37,7 @@ namespace
         DevConfig_st devConfig = { "", "0.65", tokenValue, tokenId, "" };
         std::strncpy( devConfig.Addr, self_address.c_str(), sizeof( devConfig.Addr ) - 1 );
         std::strncpy( devConfig.BaseWritePath, outPath.c_str(), sizeof( devConfig.BaseWritePath ) - 1 );
-        devConfig.Addr[sizeof( devConfig.Addr ) - 1] = '\0';
+        devConfig.Addr[sizeof( devConfig.Addr ) - 1]                   = '\0';
         devConfig.BaseWritePath[sizeof( devConfig.BaseWritePath ) - 1] = '\0';
 
         std::string key;
@@ -497,6 +497,14 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
 
     uint64_t expected_peer_gain = ( ( cost * 65 ) / 100 ) / 2;
 
+    assertWaitForCondition(
+        [&]()
+        {
+            return ( node_proc1->GetBalance() + node_proc2->GetBalance() ) ==
+                   ( bal_p1_init + bal_p2_init + 2 * expected_peer_gain );
+        },
+        std::chrono::milliseconds( 20000 ),
+        "Other nodes balance not updated in time" );
     ASSERT_EQ( bal_p1_init + bal_p2_init + 2 * expected_peer_gain,
                node_proc1->GetBalance() + node_proc2->GetBalance() );
     ASSERT_EQ( bal_p1_init + bal_p2_init + 2 * expected_peer_gain,

@@ -15,20 +15,19 @@ namespace sgns::crdt
         counterpart_ = dest;
     }
 
-    outcome::result<void> CRDTMirrorBroadcaster::Broadcast( const base::Buffer &buff )
+    outcome::result<void> CRDTMirrorBroadcaster::Broadcast( const base::Buffer &buff, std::string topic )
     {
         if ( ( !buff.empty() ) && ( counterpart_ ) )
         {
-            std::lock_guard<std::mutex> lock( counterpart_->mutex_ );
+            std::lock_guard<std::mutex>    lock( counterpart_->mutex_ );
             broadcasting::BroadcastMessage bmsg;
-            auto                                       bpi = new sgns::crdt::broadcasting::BroadcastMessage_PeerInfo;
-            std::string data( buff.toString() );
+            auto                           bpi = new sgns::crdt::broadcasting::BroadcastMessage_PeerInfo;
+            std::string                    data( buff.toString() );
             bmsg.set_data( data );
-            bpi->set_id(data);
-            bpi->add_addrs(data);
+            bpi->set_id( data );
+            bpi->add_addrs( data );
             bmsg.set_allocated_peer( bpi );
-            const std::string           bCastData( bmsg.SerializeAsString() );
-            
+            const std::string bCastData( bmsg.SerializeAsString() );
             counterpart_->listOfBroadcasts_.push( bCastData );
         }
         return outcome::success();
@@ -42,17 +41,13 @@ namespace sgns::crdt
             //Broadcaster::ErrorCode::ErrNoMoreBroadcast
             return outcome::failure( boost::system::error_code{} );
         }
-        
-        
-        
-        std::string strBuffer = listOfBroadcasts_.front();
+
+        std::string                    strBuffer = listOfBroadcasts_.front();
         broadcasting::BroadcastMessage bmsg;
 
         if ( !bmsg.ParseFromString( strBuffer ) )
         {
-
             return outcome::failure( boost::system::error_code{} );
-
         }
 
         std::string data_str = bmsg.data();

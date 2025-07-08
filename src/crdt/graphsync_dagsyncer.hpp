@@ -102,8 +102,15 @@ namespace sgns::crdt
             const CID &cid,
             uint64_t   depth ) const override;
 
-        outcome::result<bool> HasBlock( const CID &cid ) const override;
-
+        outcome::result<bool>                                       HasBlock( const CID &cid ) const override;
+        outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> GetNodeWithoutRequest(
+            const CID &cid ) const override;
+        std::pair<DAGSyncer::LinkInfoSet, DAGSyncer::LinkInfoSet> TraverseCIDsLinks(
+            const std::shared_ptr<ipfs_lite::ipld::IPLDNode> &node,
+            std::string                                       link_name            = "",
+            DAGSyncer::LinkInfoSet                            visited_links        = {},
+            bool                                              skip_if_visited_root = false,
+            int                                               max_depth            = 100 ) const override;
         /* Returns peer ID */
         outcome::result<PeerId> GetId() const;
 
@@ -132,8 +139,6 @@ namespace sgns::crdt
 
         bool             started_ = false;
         std::vector<CID> unexpected_blocks;
-
-
 
         /** Stops instance */
         void StopSync();
@@ -177,6 +182,7 @@ namespace sgns::crdt
         outcome::result<void> BlackListPeer( const PeerId &peer ) const;
 
         outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> GetNodeFromMerkleDAG( const CID &cid ) const;
+
         outcome::result<void>   AddNodeToMerkleDAG( std::shared_ptr<const ipfs_lite::ipld::IPLDNode> node );
         outcome::result<void>   RemoveNodeFromMerkleDAG( const CID &cid );
         outcome::result<size_t> SelectFromMerkleDAG(

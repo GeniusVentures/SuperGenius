@@ -3,7 +3,7 @@
 
 namespace sgns::crdt
 {
-    outcome::result<void> CustomBroadcaster::Broadcast(const base::Buffer& buff)
+    outcome::result<void> CustomBroadcaster::Broadcast(const base::Buffer& buff, std::string topic)
     {
         if (!buff.empty())
         {

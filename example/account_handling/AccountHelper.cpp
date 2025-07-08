@@ -134,22 +134,6 @@ namespace sgns
         //Also Find providers
         pubsub_->StartFindingPeers( key );
 
-        // UNCOMMENT THESE NEXT 2 LINES TO CAUSE pubsub_->GetDHT()->Start(); to crash
-        //task_queue_      = std::make_shared<processing::ProcessingTaskQueueImpl>( globaldb_ );
-        //processing_core_ = std::make_shared<processing::ProcessingCoreImpl>( globaldb_, 1000000, 2 );
-
-        //processing_core_->RegisterProcessorFactory( "posenet",
-        //                                            []() { return std::make_unique<processing::MNN_PoseNet>(); } );
-        //processing_service_ = std::make_shared<processing::ProcessingServiceImpl>(
-        //    pubsub_,                                                             //
-        //    MAX_NODES_COUNT,                                                     //
-        //    std::make_shared<processing::SubTaskEnqueuerImpl>( task_queue_ ),    //
-        //    std::make_shared<processing::ProcessSubTaskStateStorage>(),          //
-        //    std::make_shared<processing::SubTaskResultStorageImpl>( globaldb_ ), //
-        //    processing_core_ );
-        //processing_service_->SetChannelListRequestTimeout( boost::posix_time::milliseconds( 10000 ) );
-        //processing_service_->StartProcessing( std::string( PROCESSING_GRID_CHANNEL ) );
-
         io_thread = std::thread( [this]() { io_->run(); } );
     }
 
