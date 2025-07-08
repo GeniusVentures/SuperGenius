@@ -558,10 +558,10 @@ namespace sgns::crdt
             }
             else
             {
-                logger_->debug( "RebroadcastHeads: Broadcasted CIDs to topic {} ", topic_name );
+                logger_->trace( "RebroadcastHeads: Broadcasted CIDs to topic {} ", topic_name );
                 for ( const auto &cid : cid_set )
                 {
-                    logger_->debug( "RebroadcastHeads: CID {} ", cid.toString().value() );
+                    logger_->trace( "RebroadcastHeads: CID {} ", cid.toString().value() );
                 }
             }
         }
