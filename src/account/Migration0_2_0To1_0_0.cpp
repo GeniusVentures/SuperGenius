@@ -11,7 +11,10 @@
 #include <boost/format.hpp>
 #include <boost/system/error_code.hpp>
 #include "account/TransactionManager.hpp"
+#include "account/TransferTransaction.hpp"
+#include "account/EscrowReleaseTransaction.hpp"
 #include "proof/IBasicProof.hpp"
+#include "MigrationManager.hpp"
 
 namespace sgns
 {
@@ -48,19 +51,21 @@ namespace sgns
 
     outcome::result<bool> Migration0_2_0To1_0_0::IsRequired() const
     {
-        auto maybe_values = newDb_->QueryKeyValues( "" );
-        if ( maybe_values.has_error() )
+        sgns::crdt::GlobalDB::Buffer version_key;
+        version_key.put( std::string( MigrationManager::VERSION_INFO_KEY ) );
+        auto version_ret = newDb_->GetDataStore()->get( version_key );
+
+        if ( version_ret.has_error() )
         {
-            m_logger->debug( "Cannot query transactions: {}", maybe_values.error().message() );
-            return outcome::failure( maybe_values.error() );
+            return true;
         }
-        auto key_value_map = maybe_values.value();
-        if ( !newDb_->GetDataStore()->empty() )
+        auto version = version_ret.value();
+
+        if ( version.toString() == ToVersion() )
         {
-            m_logger->debug( "newDb is not empty; skipping Migration0_2_0To1_0_0" );
+            m_logger->debug( "newDb is already migrated; skipping Migration0_2_0To1_0_0" );
             return false;
         }
-
         return true;
     }
 
@@ -70,7 +75,7 @@ namespace sgns
         const auto            legacyNetworkFullPath = ( boost::format( LEGACY_PREFIX_FMT ) % base58key_ ).str();
         const auto fullPath = ( boost::format( "%s%s_%s" ) % writeBasePath_ % legacyNetworkFullPath % suffix ).str();
 
-        m_logger->trace( "Initializing legacy DB at path {}", fullPath );
+        m_logger->debug( "Initializing legacy DB at path {}", fullPath );
 
         OUTCOME_TRY( auto &&db,
                      crdt::GlobalDB::New( ioContext_,
@@ -81,13 +86,13 @@ namespace sgns
                                           scheduler_,
                                           generator_ ) );
         db->Start();
-        m_logger->trace( "Started legacy DB at path {}", fullPath );
+        m_logger->debug( "Started legacy DB at path {}", fullPath );
 
         return db;
     }
 
-    outcome::result<void> Migration0_2_0To1_0_0::MigrateDb( const std::shared_ptr<crdt::GlobalDB> &oldDb,
-                                                            const std::shared_ptr<crdt::GlobalDB> &newDb )
+    outcome::result<uint32_t> Migration0_2_0To1_0_0::MigrateDb( const std::shared_ptr<crdt::GlobalDB> &oldDb,
+                                                                const std::shared_ptr<crdt::GlobalDB> &newDb )
     {
         // Outgoing transactions were /bc-963/[self address]/tx/[type]/[nonce]
         // Incoming transactions were /bc-963/[other address]/notify/tx/[tx hash]
@@ -103,9 +108,12 @@ namespace sgns
         }
 
         auto &entries = maybeTransactionKeys.value();
-        m_logger->trace( "Found {} transaction keys to migrate", entries.size() );
+        m_logger->debug( "Found {} transaction keys to migrate", entries.size() );
+        size_t migrated_count = 0;
+        size_t BATCH_SIZE     = 50;
 
-        auto crdt_transaction = newDb->BeginTransaction();
+        boost::format full_node_topic{ std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) };
+        full_node_topic % TransactionManager::TEST_NET_ID;
 
         for ( const auto &entry : entries )
         {
@@ -124,6 +132,7 @@ namespace sgns
                 continue;
             }
             auto tx = maybe_transaction.value();
+            m_logger->trace( "Fetched transaction {}", transaction_key );
 
             if ( !IGeniusTransactions::CheckDAGStructSignature( tx->dag_st ) )
             {
@@ -131,30 +140,15 @@ namespace sgns
                 continue;
             }
 
-            std::string proof_key;
-            if ( transaction_key.find( "notify" ) != std::string::npos )
+            std::string proof_key         = transaction_key;
+            std::string tx_notify_path    = "/notify/tx/";
+            std::string proof_notify_path = "/notify/proof/";
+            size_t      notify_position   = transaction_key.find( tx_notify_path );
+            if ( notify_position != std::string::npos )
             {
-                auto maybeProofKeyMap = oldDb->QueryKeyValues( BASE, "*", "/proof/" + tx->dag_st.data_hash() );
-                if ( !maybeProofKeyMap.has_value() )
-                {
-                    m_logger->error( "Can't find the proof key for incoming transaction {}", transaction_key );
-                    continue;
-                }
-                auto proof_map = maybeProofKeyMap.value();
-                if ( proof_map.size() != 1 )
-                {
-                    m_logger->error( "More than 1 proof for incoming transaction {}", transaction_key );
-                    continue;
-                }
-                auto proof_key_buffer = proof_map.begin()->first;
-                auto maybe_proof_key  = oldDb->KeyToString( proof_key_buffer );
-                if ( !maybe_proof_key.has_value() )
-                {
-                    m_logger->error( "Failed to convert proof key buffer to string for transaction {}",
-                                     transaction_key );
-                    continue;
-                }
-                proof_key = maybe_proof_key.value();
+                proof_key.replace( notify_position, tx_notify_path.length(), proof_notify_path );
+
+                m_logger->trace( "Searching for notify proof {}", transaction_key );
             }
             else
             {
@@ -168,43 +162,162 @@ namespace sgns
                 continue;
             }
 
-            auto                         transaction_path = TransactionManager::GetTransactionPath( *tx );
-            sgns::crdt::HierarchicalKey  tx_key( transaction_path );
-            sgns::crdt::GlobalDB::Buffer data_transaction;
-            data_transaction.put( tx->SerializeByteVector() );
-            BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Put( std::move( tx_key ), std::move( data_transaction ) ) );
+            auto                        transaction_path = TransactionManager::GetTransactionPath( *tx );
+            sgns::crdt::HierarchicalKey tx_key( transaction_path );
 
-            sgns::crdt::HierarchicalKey  proof_crdt_key( TransactionManager::GetTransactionProofPath( *tx ) );
-            sgns::crdt::GlobalDB::Buffer proof_transaction;
-            proof_transaction.put( maybe_proof_data.value() );
-            BOOST_OUTCOME_TRYV2( auto &&,
-                                 crdt_transaction->Put( std::move( proof_crdt_key ), std::move( proof_transaction ) ) );
-        }
+            auto has_tx     = crdt_transaction_->HasKey( tx_key );
+            bool migrate_tx = true;
+            if ( has_tx )
+            {
+                migrate_tx               = false;
+                auto maybe_replicated_tx = crdt_transaction_->Get( tx_key );
+                if ( maybe_replicated_tx.has_value() )
+                {
+                    //decide which one to use
+                    auto maybe_deserialized_tx = TransactionManager::DeSerializeTransaction(
+                        maybe_replicated_tx.value() );
+                    if ( maybe_deserialized_tx.has_value() )
+                    {
+                        auto previous_tx = maybe_transaction.value();
+                        if ( previous_tx->dag_st.timestamp() > tx->dag_st.timestamp() )
+                        {
+                            //need to update, the new one came first
+                            migrate_tx = true;
+                            m_logger->debug( "Need to remove previous transaction, since new one is older {}",
+                                             transaction_path );
 
-        if ( crdt_transaction->Commit().has_error() )
-        {
-            m_logger->error( "Failed to commit transaction batch to new DB" );
-            return outcome::failure( boost::system::error_code{} );
+                            BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction_->Erase( tx_key ) );
+
+                            sgns::crdt::HierarchicalKey replicated_proof_key(
+                                TransactionManager::GetTransactionProofPath( *tx ) );
+
+                            m_logger->debug( "Need to remove previous proof as well {}",
+                                             replicated_proof_key.GetKey() );
+                            BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction_->Erase( replicated_proof_key ) );
+                        }
+                        else
+                        {
+                            m_logger->debug( "Currently migrated transaction has earlier timestamp {}",
+                                             transaction_path );
+                        }
+                    }
+                    else
+                    {
+                        migrate_tx = true;
+                        m_logger->debug( "Invalid transaction, deleting from migration {}", transaction_path );
+
+                        BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction_->Erase( tx_key ) );
+
+                        sgns::crdt::HierarchicalKey replicated_proof_key(
+                            TransactionManager::GetTransactionProofPath( *tx ) );
+
+                        m_logger->debug( "Need to remove previous proof as well {}", replicated_proof_key.GetKey() );
+                        BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction_->Erase( replicated_proof_key ) );
+                    }
+                }
+            }
+            if ( migrate_tx )
+            {
+                topics_.emplace( tx->GetSrcAddress() );
+                if ( auto transfer_tx = std::dynamic_pointer_cast<TransferTransaction>( tx ) )
+                {
+                    for ( const auto &dest_info : transfer_tx->GetDstInfos() )
+                    {
+                        topics_.emplace( dest_info.dest_address );
+                    }
+                }
+                if ( auto escrow_tx = std::dynamic_pointer_cast<EscrowReleaseTransaction>( tx ) )
+                {
+                    if ( escrow_tx->GetSrcAddress() == tx->GetSrcAddress() )
+                    {
+                        topics_.emplace( escrow_tx->GetSrcAddress() );
+                    }
+                }
+
+                sgns::crdt::GlobalDB::Buffer data_transaction;
+                data_transaction.put( tx->SerializeByteVector() );
+                BOOST_OUTCOME_TRYV2( auto &&,
+                                     crdt_transaction_->Put( std::move( tx_key ), std::move( data_transaction ) ) );
+
+                sgns::crdt::HierarchicalKey  proof_crdt_key( TransactionManager::GetTransactionProofPath( *tx ) );
+                sgns::crdt::GlobalDB::Buffer proof_transaction;
+                proof_transaction.put( maybe_proof_data.value() );
+                BOOST_OUTCOME_TRYV2(
+                    auto &&,
+                    crdt_transaction_->Put( std::move( proof_crdt_key ), std::move( proof_transaction ) ) );
+                m_logger->trace( "Proof recorded for transaction {}", transaction_key );
+            }
+            else
+            {
+                m_logger->debug( "Not migrating transaction {}", transaction_path );
+            }
+            ++migrated_count;
+            if ( migrated_count >= BATCH_SIZE )
+            {
+                OUTCOME_TRY( crdt_transaction_->Commit( topics_ ) );
+                crdt_transaction_ = newDb_->BeginTransaction(); // start fresh
+                topics_.clear();
+                boost::format full_node_topic{ std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) };
+                full_node_topic % TransactionManager::TEST_NET_ID;
+                topics_.emplace( full_node_topic.str() );
+                migrated_count = 0;
+                m_logger->debug( "Committed a batch of {} transactions", BATCH_SIZE );
+            }
         }
 
         m_logger->trace( "Successfully committed all migrated entries to new DB" );
-        return outcome::success();
+        return migrated_count;
     }
 
     outcome::result<void> Migration0_2_0To1_0_0::Apply()
     {
-        m_logger->trace( "Starting Apply step of Migration0_2_0To1_0_0" );
+        m_logger->debug( "Starting Apply step of Migration0_2_0To1_0_0" );
 
         OUTCOME_TRY( auto outDb, InitLegacyDb( "out" ) );
         OUTCOME_TRY( auto inDb, InitLegacyDb( "in" ) );
 
-        m_logger->trace( "Migrating output DB into new DB" );
-        OUTCOME_TRY( MigrateDb( outDb, newDb_ ) );
+        crdt_transaction_ = newDb_->BeginTransaction();
+        topics_.clear();
+        boost::format full_node_topic{ std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) };
+        full_node_topic % TransactionManager::TEST_NET_ID;
 
-        m_logger->trace( "Migrating input DB into new DB" );
-        OUTCOME_TRY( MigrateDb( inDb, newDb_ ) );
+        topics_.emplace( full_node_topic.str() );
 
-        m_logger->trace( "Apply step of Migration0_2_0To1_0_0 finished successfully" );
+        m_logger->debug( "Migrating output DB into new DB" );
+        OUTCOME_TRY( auto &&remainder_outdb, MigrateDb( outDb, newDb_ ) );
+
+        if ( remainder_outdb > 0 )
+        {
+            for ( auto &topic : topics_ )
+            {
+                m_logger->debug( "Commiting migrating to topics {}", topic );
+            }
+            OUTCOME_TRY( crdt_transaction_->Commit( topics_ ) );
+            crdt_transaction_ = newDb_->BeginTransaction();
+            topics_.clear();
+            topics_.emplace( full_node_topic.str() );
+            m_logger->debug( "Committed remainder of output transactions: {}", remainder_outdb );
+        }
+
+        m_logger->debug( "Migrating input DB into new DB" );
+        OUTCOME_TRY( auto &&remainder_indb, MigrateDb( inDb, newDb_ ) );
+
+        if ( remainder_indb > 0 )
+        {
+            for ( auto &topic : topics_ )
+            {
+                m_logger->debug( "Commiting migrating to topics {}", topic );
+            }
+            OUTCOME_TRY( crdt_transaction_->Commit( topics_ ) );
+        }
+        sgns::crdt::GlobalDB::Buffer version_buffer;
+        sgns::crdt::GlobalDB::Buffer version_key;
+        version_key.put( std::string( MigrationManager::VERSION_INFO_KEY ) );
+        version_buffer.put( ToVersion() );
+
+        OUTCOME_TRY( newDb_->GetDataStore()->put( version_key, version_buffer ) );
+
+        m_logger->debug( "Apply step of Migration0_2_0To1_0_0 finished successfully" );
         return outcome::success();
     }
 

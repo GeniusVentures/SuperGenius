@@ -115,16 +115,28 @@ sgns::GeniusNode *ProcessingMultiTest::node_main  = nullptr;
 sgns::GeniusNode *ProcessingMultiTest::node_proc1 = nullptr;
 sgns::GeniusNode *ProcessingMultiTest::node_proc2 = nullptr;
 
-DevConfig_st ProcessingMultiTest::DEV_CONFIG  = { "0xcafe", "0.65", 1.0, 0, "./node1" };
-DevConfig_st ProcessingMultiTest::DEV_CONFIG2 = { "0xcafe", "0.65", 1.0, 0, "./node2" };
-DevConfig_st ProcessingMultiTest::DEV_CONFIG3 = { "0xcafe", "0.65", 1.0, 0, "./node3" };
+DevConfig_st ProcessingMultiTest::DEV_CONFIG  = { "0xcafe",
+                                                  "0.65",
+                                                  "1.0",
+                                                  sgns::TokenID::FromBytes( { 0x00 } ),
+                                                  "./node1" };
+DevConfig_st ProcessingMultiTest::DEV_CONFIG2 = { "0xcafe",
+                                                  "0.65",
+                                                  "1.0",
+                                                  sgns::TokenID::FromBytes( { 0x00 } ),
+                                                  "./node2" };
+DevConfig_st ProcessingMultiTest::DEV_CONFIG3 = { "0xcafe",
+                                                  "0.65",
+                                                  "1.0",
+                                                  sgns::TokenID::FromBytes( { 0x00 } ),
+                                                  "./node3" };
 
 std::string ProcessingMultiTest::binary_path = "";
 
 TEST_F( ProcessingMultiTest, MintTokens )
 {
-    node_main->MintTokens( 50000000000 , "", "", "" );
-    node_main->MintTokens( 50000000000 , "", "", "" );
+    node_main->MintTokens( 50000000000, "", "", sgns::TokenID::FromBytes( { 0x00 } ) );
+    node_main->MintTokens( 50000000000, "", "", sgns::TokenID::FromBytes( { 0x00 } ) );
     std::this_thread::sleep_for( std::chrono::milliseconds( 10000 ) );
 }
 
@@ -235,7 +247,7 @@ TEST_F( ProcessingMultiTest, ProcessOne )
                 }
                )";
     node_proc1->StartProcessing();
-    auto        cost      = node_main->GetProcessCost( json_data );
+    auto cost = node_main->GetProcessCost( json_data );
     boost::replace_all( json_data, "[basepath]", bin_path );
     std::cout << "Json Data: " << json_data << std::endl;
     auto balance_main  = node_main->GetBalance();
@@ -257,11 +269,10 @@ TEST_F( ProcessingMultiTest, ProcessOne )
     // ASSERT_EQ( balance_node1 + balance_node2 + ( cost * 65 ) / 100,
     //            node_proc1->GetBalance() + node_proc2->GetBalance() );
 
-    auto gameDeveloperPayment = cost - (( cost * 65 ) / 100);
+    auto gameDeveloperPayment = cost - ( ( cost * 65 ) / 100 );
     // ASSERT_EQ( balance_main + balance_node1 + balance_node2,
     //            node_main->GetBalance() + node_proc1->GetBalance() + node_proc2->GetBalance() + gameDeveloperPayment );
 }
-
 
 TEST_F( ProcessingMultiTest, ProcessTwo )
 {
@@ -314,8 +325,9 @@ TEST_F( ProcessingMultiTest, ProcessTwo )
     auto balance_node2 = node_proc2->GetBalance();
     node_proc1->StopProcessing();
     node_proc2->StartProcessing();
-    std::vector bootstrappers = { node_main->GetPubSub()->GetLocalAddress(), node_proc1->GetPubSub()->GetLocalAddress() };
-    node_proc2->GetPubSub()->AddPeers( bootstrappers );    
+    std::vector bootstrappers = { node_main->GetPubSub()->GetLocalAddress(),
+                                  node_proc1->GetPubSub()->GetLocalAddress() };
+    node_proc2->GetPubSub()->AddPeers( bootstrappers );
     node_main->ProcessImage( json_data );
     //node_main->ProcessImage(json_data);
 
@@ -333,7 +345,7 @@ TEST_F( ProcessingMultiTest, ProcessTwo )
     // ASSERT_EQ( balance_node1 + balance_node2 + ( cost * 65 ) / 100,
     //            node_proc1->GetBalance() + node_proc2->GetBalance() );
 
-    auto gameDeveloperPayment = cost - (( cost * 65 ) / 100);
+    auto gameDeveloperPayment = cost - ( ( cost * 65 ) / 100 );
     // ASSERT_EQ( balance_main + balance_node1 + balance_node2,
     //            node_main->GetBalance() + node_proc1->GetBalance() + node_proc2->GetBalance() + gameDeveloperPayment );
 }

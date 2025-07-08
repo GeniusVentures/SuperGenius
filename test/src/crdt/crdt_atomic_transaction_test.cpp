@@ -84,16 +84,16 @@ namespace sgns::crdt
                 EXPECT_OUTCOME_TRUE_1( transaction.Put( key1, value1 ) );
                 SimulateNetworkDelay(); // Still simulate delay but won't affect atomicity
                 EXPECT_OUTCOME_TRUE_1( transaction.Put( key2, value2 ) );
-                EXPECT_OUTCOME_TRUE_1( transaction.Commit() );
+                EXPECT_OUTCOME_TRUE_1( transaction.Commit( { "test" } ) );
             }
             else
             {
                 // Non-atomic updates - vulnerable to interleaving
-                EXPECT_OUTCOME_TRUE_1( crdtDatastore_->PutKey( key1, value1 ) );
+                EXPECT_OUTCOME_TRUE_1( crdtDatastore_->PutKey( key1, value1, { "test" } ) );
                 did_interrupt = true;   // Signal before delay to ensure interference
                 SimulateNetworkDelay(); // Longer delay to ensure t2 has time to interfere
                 SimulateNetworkDelay(); // Add extra delay
-                EXPECT_OUTCOME_TRUE_1( crdtDatastore_->PutKey( key2, value2 ) );
+                EXPECT_OUTCOME_TRUE_1( crdtDatastore_->PutKey( key2, value2, { "test" } ) );
             }
         }
 
@@ -108,8 +108,8 @@ namespace sgns::crdt
         Buffer initial_value;
         initial_value.put( "100" );
 
-        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->PutKey( key1, initial_value ) );
-        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->PutKey( key2, initial_value ) );
+        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->PutKey( key1, initial_value, { "test" } ) );
+        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->PutKey( key2, initial_value, { "test" } ) );
 
         Buffer transfer_from_value;
         transfer_from_value.put( "50" );
@@ -137,8 +137,8 @@ namespace sgns::crdt
                     }
                     if ( !use_atomic && !t1_finished )
                     {
-                        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->PutKey( key1, initial_value ) );
-                        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->PutKey( key2, initial_value ) );
+                        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->PutKey( key1, initial_value, { "test" } ) );
+                        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->PutKey( key2, initial_value, { "test" } ) );
                     }
                 } );
 
@@ -160,8 +160,8 @@ namespace sgns::crdt
                 EXPECT_TRUE( has_interference );
             }
 
-            EXPECT_OUTCOME_TRUE_1( crdtDatastore_->PutKey( key1, initial_value ) );
-            EXPECT_OUTCOME_TRUE_1( crdtDatastore_->PutKey( key2, initial_value ) );
+            EXPECT_OUTCOME_TRUE_1( crdtDatastore_->PutKey( key1, initial_value, { "test" } ) );
+            EXPECT_OUTCOME_TRUE_1( crdtDatastore_->PutKey( key2, initial_value, { "test" } ) );
         }
     }
 
@@ -179,8 +179,8 @@ namespace sgns::crdt
         new_value2.put( "new2" );
 
         // Set initial values
-        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->PutKey( key1, initial_value ) );
-        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->PutKey( key2, initial_value ) );
+        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->PutKey( key1, initial_value, { "test" } ) );
+        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->PutKey( key2, initial_value, { "test" } ) );
 
         {
             // Create a transaction that will go out of scope without commit
@@ -207,7 +207,7 @@ namespace sgns::crdt
 
         // First operation should succeed
         EXPECT_OUTCOME_TRUE_1( transaction.Put( key, value ) );
-        EXPECT_OUTCOME_TRUE_1( transaction.Commit() );
+        EXPECT_OUTCOME_TRUE_1( transaction.Commit( {"test"} ) );
 
         // Second operation on same transaction should fail
         Buffer value2;

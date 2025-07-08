@@ -285,7 +285,7 @@ int main( int argc, char *argv[] )
     globalDB->Start();
 
     //Split tasks into subtasks
-    auto taskQueue = std::make_shared<sgns::processing::ProcessingTaskQueueImpl>( globalDB );
+    auto taskQueue = std::make_shared<sgns::processing::ProcessingTaskQueueImpl>( globalDB, "test" );
 
     size_t       nSubTasks = chunkOptions.size();
     size_t       nChunks   = 0;

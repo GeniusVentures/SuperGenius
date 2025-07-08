@@ -339,7 +339,7 @@ int main( int argc, char *argv[] )
 
     std::thread iothread( [io]() { io->run(); } );
 
-    auto taskQueue = std::make_shared<ProcessingTaskQueueImpl>( globalDB );
+    auto taskQueue = std::make_shared<ProcessingTaskQueueImpl>( globalDB, "test" );
 
     auto processingCore                     = std::make_shared<ProcessingCoreImpl>( globalDB,
                                                                 options->subTaskProcessingTime,
@@ -353,7 +353,7 @@ int main( int argc, char *argv[] )
                                              maximalNodesCount,
                                              enqueuer,
                                              std::make_shared<SubTaskStateStorageImpl>(),
-                                             std::make_shared<SubTaskResultStorageImpl>( globalDB ),
+                                             std::make_shared<SubTaskResultStorageImpl>( globalDB, "test" ),
                                              processingCore );
 
     processingService.SetChannelListRequestTimeout(

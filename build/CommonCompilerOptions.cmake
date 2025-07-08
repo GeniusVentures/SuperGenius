@@ -125,6 +125,7 @@ if(NOT DEFINED THIRDPARTY_BUILD_DIR)
         endif()
     endif()
     message(STATUS "Setting third party build directory default")
+
     get_filename_component(BUILD_PLATFORM_NAME ${CMAKE_CURRENT_SOURCE_DIR} NAME)
     set(THIRDPARTY_BUILD_DIR "${THIRDPARTY_DIR}/build/${BUILD_PLATFORM_NAME}/${CMAKE_BUILD_TYPE}${ABI_SUBFOLDER_NAME}")
 endif()

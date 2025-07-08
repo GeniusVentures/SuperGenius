@@ -26,8 +26,8 @@ typedef struct DevConfig
 {
     char        Addr[255];
     std::string Cut;
-    double      TokenValueInGNUS;
-    int         TokenID;
+    std::string TokenValueInGNUS;
+    TokenID     TokenID;
     char        BaseWritePath[1024];
 } DevConfig_st;
 
@@ -55,18 +55,18 @@ namespace sgns
          */
         enum class Error
         {
-            INSUFFICIENT_FUNDS       = 1,  ///<Insufficient funds for a transaction
-            DATABASE_WRITE_ERROR     = 2,  ///<Error writing data into the database
-            INVALID_TRANSACTION_HASH = 3,  ///<Input transaction hash is invalid
-            INVALID_CHAIN_ID         = 4,  ///<Chain ID is invalid
-            INVALID_TOKEN_ID         = 5,  ///<Token ID is invalid
-            TOKEN_ID_MISMATCH        = 6,  ///<Informed Token ID doesn't match initialized ID
-            PROCESS_COST_ERROR       = 7,  ///<The calculated Processing cost was negative
-            PROCESS_INFO_MISSING     = 8,  ///<Processing information missing on JSON file
-            INVALID_JSON             = 9,  ///<JSON cannot be parsed>
-            INVALID_BLOCK_PARAMETERS = 10, ///<JSON params for blocks incorrect or missing>
-            NO_PROCESSOR             = 11, ///<No processor for this type>
-            NO_PRICE                 = 12, ///<Couldn't get price of gnus>
+            INSUFFICIENT_FUNDS       = 1,  ///< Insufficient funds for a transaction
+            DATABASE_WRITE_ERROR     = 2,  ///< Error writing data into the database
+            INVALID_TRANSACTION_HASH = 3,  ///< Input transaction hash is invalid
+            INVALID_CHAIN_ID         = 4,  ///< Chain ID is invalid
+            INVALID_TOKEN_ID         = 5,  ///< Token ID is invalid
+            TOKEN_ID_MISMATCH        = 6,  ///< Informed Token ID doesn't match initialized ID
+            PROCESS_COST_ERROR       = 7,  ///< The calculated Processing cost was negative
+            PROCESS_INFO_MISSING     = 8,  ///< Processing information missing on JSON file
+            INVALID_JSON             = 9,  ///< JSON cannot be parsed>
+            INVALID_BLOCK_PARAMETERS = 10, ///< JSON params for blocks incorrect or missing>
+            NO_PROCESSOR             = 11, ///< No processor for this type>
+            NO_PRICE                 = 12, ///< Couldn't get price of gnus>
         };
 
 #ifdef SGNS_DEBUG
@@ -103,12 +103,13 @@ namespace sgns
             uint64_t                  amount,
             const std::string        &transaction_hash,
             const std::string        &chainid,
-            const std::string        &tokenid,
+            TokenID                   tokenid,
             std::chrono::milliseconds timeout = std::chrono::milliseconds( TIMEOUT_MINT ) );
 
         void     AddPeer( const std::string &peer );
         void     RefreshUPNP( int pubsubport );
         uint64_t GetBalance();
+        uint64_t GetBalance( const TokenID token_id);
 
         [[nodiscard]] const std::vector<std::vector<uint8_t>> GetInTransactions() const
         {
@@ -125,13 +126,20 @@ namespace sgns
             return account_->GetAddress();
         }
 
+        TokenID GetTokenID() const
+        {
+            return dev_config_.TokenID;
+        }
+
         outcome::result<std::pair<std::string, uint64_t>> TransferFunds(
             uint64_t                  amount,
             const std::string        &destination,
+            TokenID                   token_id,
             std::chrono::milliseconds timeout = std::chrono::milliseconds( TIMEOUT_TRANSFER ) );
 
         outcome::result<std::pair<std::string, uint64_t>> PayDev(
             uint64_t                  amount,
+            TokenID                   token_id,
             std::chrono::milliseconds timeout = std::chrono::milliseconds( TIMEOUT_TRANSFER ) );
 
         std::shared_ptr<ipfs_pubsub::GossipPubSub> GetPubSub()
@@ -141,17 +149,25 @@ namespace sgns
 
         /**
          * @brief       Formats a fixed-point amount into a human-readable string.
-         * @param[in]   amount Amount in Minion Tokens (1e-6 GNUS).
-         * @return      Formatted string representation in GNUS.
+         * @param[in]   amount  Amount in Minion Tokens (1e-6 GNUS).
+         * @param[in]   tokenId Optional token identifier:
+         *                         – empty: default (minion to GNUS) formatting
+         *                         – matches DevConfig.TokenID: child-token formatting
+         *                         – otherwise: returns Error::TOKEN_ID_MISMATCH
+         * @return      Outcome result with the formatted string in GNUS or an error.
          */
-        static std::string FormatTokens( uint64_t amount );
+        outcome::result<std::string> FormatTokens( uint64_t amount, const TokenID tokenId );
 
         /**
          * @brief       Parses a human-readable string into a fixed-point amount.
-         * @param[in]   str String representation of an amount in GNUS.
-         * @return      Outcome result with the parsed amount in Minion Tokens (1e-6 GNUS) or error.
+         * @param[in]   str      String representation of an amount in GNUS.
+         * @param[in]   tokenId  Optional token identifier:
+         *                          – empty: default (GNUS to minion) parsing
+         *                          – matches DevConfig.TokenID: child-token parsing
+         *                          – otherwise: returns Error::TOKEN_ID_MISMATCH
+         * @return      Outcome result with the parsed amount in Minion Tokens (1e-6 GNUS) or an error.
          */
-        static outcome::result<uint64_t> ParseTokens( const std::string &str );
+        outcome::result<uint64_t> ParseTokens( const std::string &str, const TokenID tokenId );
 
         static std::vector<uint8_t> GetImageByCID( const std::string &cid );
 
@@ -238,7 +254,6 @@ namespace sgns
         static constexpr std::string_view PROCESSING_GRID_CHANNEL = "SGNUS.Jobs.2a.%02d";
         static constexpr std::string_view PROCESSING_CHANNEL      = "SGNUS.TestNet.Channel.2a.%02d";
         static constexpr std::string_view GNUS_NETWORK_PATH       = "SuperGNUSNode.TestNet.2a.%02d.%s";
-
 
         static std::string GetLoggingSystem( const std::string &base_path )
         {

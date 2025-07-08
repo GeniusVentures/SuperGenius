@@ -1,0 +1,9 @@
+syntax = "proto3";
+package sgns.crdt.pb;
+
+// info stored for each head in the kv-store
+message HeadInfo {
+  uint64 height = 1;
+  string topic = 2;
+}
+

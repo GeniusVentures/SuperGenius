@@ -12,7 +12,7 @@ namespace sgns
 {
     MintTransaction::MintTransaction( uint64_t                 new_amount,
                                       std::string              chain_id,
-                                      std::string              token_id,
+                                      TokenID                  token_id,
                                       SGTransaction::DAGStruct dag ) :
         IGeniusTransactions( "mint", SetDAGWithType( std::move( dag ), "mint" ) ),
         amount( new_amount ),
@@ -27,7 +27,7 @@ namespace sgns
         tx_struct.mutable_dag_struct()->CopyFrom( this->dag_st );
         tx_struct.set_amount( amount );
         tx_struct.set_chain_id( chain_id );
-        tx_struct.set_token_id( token_id );
+        tx_struct.set_token_id( token_id.bytes().data(), token_id.size() );
 
         size_t               size = tx_struct.ByteSizeLong();
         std::vector<uint8_t> serialized_proto( size );
@@ -46,7 +46,7 @@ namespace sgns
         }
         uint64_t    amount  = tx_struct.amount();
         std::string chainid = tx_struct.chain_id();
-        std::string tokenid = tx_struct.token_id();
+        TokenID     tokenid = TokenID::FromBytes( tx_struct.token_id().data(), tx_struct.token_id().size() );
         //std::memcpy( &v64, &( *data.begin() ), sizeof( v64 ) );
 
         return std::make_shared<MintTransaction>(
@@ -58,9 +58,14 @@ namespace sgns
         return amount;
     }
 
+    TokenID MintTransaction::GetTokenID() const
+    {
+        return token_id;
+    }
+
     MintTransaction MintTransaction::New( uint64_t                                        new_amount,
                                           std::string                                     chain_id,
-                                          std::string                                     token_id,
+                                          TokenID                                         token_id,
                                           SGTransaction::DAGStruct                        dag,
                                           std::shared_ptr<ethereum::EthereumKeyGenerator> eth_key )
     {

@@ -23,9 +23,10 @@ namespace sgns::processing
         /** Create a task queue
         * @param db - CRDT globaldb to use
         */
-        ProcessingTaskQueueImpl( std::shared_ptr<sgns::crdt::GlobalDB> db ) :
+        ProcessingTaskQueueImpl( std::shared_ptr<sgns::crdt::GlobalDB> db, std::string processing_topic ) :
             m_db( std::move( db ) ),
-            m_processingTimeout( std::chrono::seconds( 10 ) )
+            m_processingTimeout( std::chrono::seconds( 10 ) ),
+            m_processing_topic( std::move( processing_topic ) )
         {
         }
 
@@ -33,6 +34,7 @@ namespace sgns::processing
         {
             m_logger->debug( "~ProcessingTaskQueueImpl CALLED" );
         }
+
         /** Enqueue a task and subtasks
         * @param task - Task to add
         * @param subTasks - List of subtasks
@@ -56,7 +58,9 @@ namespace sgns::processing
         * @param taskKey - id to look for task
         * @param taskResult - Reference of a task result
         */
-       outcome::result<std::shared_ptr<crdt::AtomicTransaction>> CompleteTask( const std::string &taskKey, const SGProcessing::TaskResult &taskResult ) override;
+        outcome::result<std::shared_ptr<crdt::AtomicTransaction>> CompleteTask(
+            const std::string              &taskKey,
+            const SGProcessing::TaskResult &taskResult ) override;
 
         /**
          * @brief       
@@ -97,7 +101,7 @@ namespace sgns::processing
         std::chrono::system_clock::duration            m_processingTimeout;
         sgns::base::Logger                             m_logger = sgns::base::createLogger( "ProcessingTaskQueueImpl" );
         std::shared_ptr<sgns::crdt::AtomicTransaction> job_crdt_transaction_;
-
+        std::string                                    m_processing_topic;
     };
 
 }

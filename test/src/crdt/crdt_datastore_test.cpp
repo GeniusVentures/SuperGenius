@@ -166,11 +166,11 @@ namespace sgns::crdt
         buffer.put( "Data" );
 
         EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( newKey ), false );
-        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->PutKey( newKey, buffer ) );
+        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->PutKey( newKey, buffer, { "topic"} ) );
         EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( newKey ), true );
         EXPECT_OUTCOME_TRUE( valueBuffer, crdtDatastore_->GetKey( newKey ) );
         EXPECT_TRUE( buffer.toString() == valueBuffer.toString() );
-        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->DeleteKey( newKey ) );
+        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->DeleteKey( newKey, { "topic"} ) );
         EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( newKey ), false );
     }
 
@@ -194,12 +194,11 @@ namespace sgns::crdt
         EXPECT_OUTCOME_TRUE_1( transaction.Put( newKey3, buffer3 ) );
         // this won't work as part of the same atomic transaction, because the Remove looks for the existing key
         // to create the delta, and since it's queued in the atomic transaction, it doesn't find key2
-        //EXPECT_OUTCOME_TRUE_1(transaction.Remove(newKey2));
-        EXPECT_OUTCOME_TRUE_1( transaction.Commit() );
+        EXPECT_OUTCOME_TRUE_1( transaction.Commit( { "topic"} ) );
         EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( newKey1 ), true );
         AtomicTransaction transactionRemoveKey2 = AtomicTransaction( crdtDatastore_ );
         EXPECT_OUTCOME_TRUE_1( transactionRemoveKey2.Remove( newKey2 ) );
-        EXPECT_OUTCOME_TRUE_1( transactionRemoveKey2.Commit() );
+        EXPECT_OUTCOME_TRUE_1( transactionRemoveKey2.Commit( { "topic"} ) );
         EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( newKey1 ), true );
         EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( newKey2 ), false );
         EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( newKey3 ), true );
@@ -239,7 +238,7 @@ namespace sgns::crdt
         auto e = mergedDelta->elements();
         ASSERT_TRUE( e.size() == 2 );
 
-        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( mergedDelta ) );
+        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( mergedDelta, { "topic" } ) );
         EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( newKey3 ), true );
         EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( newKey4 ), true );
         EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( newKey5 ), false );
@@ -294,7 +293,7 @@ namespace sgns::crdt
 
         delta->set_priority( 1 );
 
-        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta ) );
+        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta, { "topic" } ) );
 
         std::chrono::milliseconds resultTime;
 
@@ -383,7 +382,7 @@ namespace sgns::crdt
 
         delta->set_priority( 1 );
 
-        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta ) );
+        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta, { "topic" } ) );
 
         std::chrono::milliseconds resultTime;
 
@@ -472,10 +471,10 @@ namespace sgns::crdt
         delta3->set_priority( 3 );
         delta4->set_priority( 4 );
 
-        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta1 ) );
-        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta2 ) );
-        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta3 ) );
-        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta4 ) );
+        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta1, { "topic" } ) );
+        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta2, { "topic" } ) );
+        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta3, { "topic" } ) );
+        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta4, { "topic" } ) );
 
         std::chrono::milliseconds resultTime;
 
@@ -579,10 +578,10 @@ namespace sgns::crdt
         delta3->set_priority( 3 );
         delta4->set_priority( 4 );
 
-        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta1 ) );
-        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta2 ) );
-        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta3 ) );
-        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta4 ) );
+        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta1, { "topic" } ) );
+        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta2, { "topic" } ) );
+        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta3, { "topic" } ) );
+        EXPECT_OUTCOME_TRUE_1( crdtDatastore_->Publish( delta4, { "topic" } ) );
 
         std::chrono::milliseconds resultTime;
 

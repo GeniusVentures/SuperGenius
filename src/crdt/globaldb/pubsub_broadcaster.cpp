@@ -26,7 +26,7 @@ namespace sgns::crdt
         }
     }
 
-outcome::result<void> PubSubBroadcaster::Broadcast(const base::Buffer &buff)
+outcome::result<void> PubSubBroadcaster::Broadcast(const base::Buffer &buff, std::string topic)
 {
     if (this->gossipPubSubTopic_ == nullptr)
     {

@@ -38,9 +38,21 @@ namespace sgns
         static inline sgns::GeniusNode *node_proc2 = nullptr;
         static inline sgns::GeniusNode *full_node  = nullptr;
 
-        static inline DevConfig_st DEV_CONFIG  = { "0xcafe", "0.65", 1.0, 0, "./node10" };
-        static inline DevConfig_st DEV_CONFIG2 = { "0xcafe", "0.65", 1.0, 0, "./node20" };
-        static inline DevConfig_st DEV_CONFIG3 = { "0xcafe", "0.65", 1.0, 0, "./node_full" };
+        static inline DevConfig_st DEV_CONFIG  = { "0xcafe",
+                                                   "0.65",
+                                                   "1.0",
+                                                   sgns::TokenID::FromBytes( { 0x00 } ),
+                                                   "./node10" };
+        static inline DevConfig_st DEV_CONFIG2 = { "0xcafe",
+                                                   "0.65",
+                                                   "1.0",
+                                                   sgns::TokenID::FromBytes( { 0x00 } ),
+                                                   "./node20" };
+        static inline DevConfig_st DEV_CONFIG3 = { "0xcafe",
+                                                   "0.65",
+                                                   "1.0",
+                                                   sgns::TokenID::FromBytes( { 0x00 } ),
+                                                   "./node_full" };
 
         static inline std::string binary_path = "";
 
@@ -92,16 +104,14 @@ namespace sgns
             uint64_t                             amount,
             const std::string                   &destination )
         {
-            auto maybe_params = sgns::UTXOTxParameters::create( account->utxos,
-                                                                account->GetAddress(),
-                                                                amount,
-                                                                destination );
+            OUTCOME_TRY( auto &&params,
+                         sgns::UTXOTxParameters::create( account->utxos,
+                                                         account->GetAddress(),
+                                                         amount,
+                                                         destination,
+                                                         sgns::TokenID::FromBytes( { 0x00 } ) ) );
 
-            if ( !maybe_params )
-            {
-                return outcome::failure(
-                    boost::system::errc::make_error_code( boost::system::errc::invalid_argument ) );
-            }
+            params.SignParameters( account->eth_address );
 
             auto                     timestamp = std::chrono::system_clock::now();
             SGTransaction::DAGStruct dag;
@@ -112,10 +122,7 @@ namespace sgns
             dag.set_uncle_hash( "" );
             dag.set_data_hash( "" ); //filled by transaction class
             auto transfer_transaction = std::make_shared<sgns::TransferTransaction>(
-                sgns::TransferTransaction::New( maybe_params.value().outputs_,
-                                                maybe_params.value().inputs_,
-                                                dag,
-                                                account->eth_address ) );
+                sgns::TransferTransaction::New( params.outputs_, params.inputs_, dag, account->eth_address ) );
             std::optional<std::vector<uint8_t>> maybe_proof;
 
             TransferProof prover( static_cast<uint64_t>( account->GetBalance<uint64_t>() ),
@@ -123,7 +130,7 @@ namespace sgns
             OUTCOME_TRY( ( auto &&, proof_result ), prover.GenerateFullProof() );
             maybe_proof = std::move( proof_result );
 
-            account->utxos = sgns::UTXOTxParameters::UpdateUTXOList( account->utxos, maybe_params.value() );
+            account->utxos = sgns::UTXOTxParameters::UpdateUTXOList( account->utxos, params );
             return std::make_pair( transfer_transaction, maybe_proof );
         }
 
@@ -152,7 +159,7 @@ namespace sgns
         auto mint_result = node_proc1->MintTokens( 10000000000,
                                                    "",
                                                    "",
-                                                   "",
+                                                   sgns::TokenID::FromBytes( { 0x00 } ),
                                                    std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
         ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
 
@@ -166,6 +173,7 @@ namespace sgns
         // Transfer funds with timeout
         auto transfer_result = node_proc1->TransferFunds( 10000000000,
                                                           node_proc2->GetAddress(),
+                                                          sgns::TokenID::FromBytes( { 0x00 } ),
                                                           std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
         ASSERT_TRUE( transfer_result.has_value() ) << "Transfer transaction failed or timed out";
         auto [transfer_tx_id, transfer_duration] = transfer_result.value();
@@ -181,14 +189,14 @@ namespace sgns
                             .count();
         std::cout << "Transfer Received transaction completed in " << duration << " ms" << std::endl;
 
-        start_time        = std::chrono::steady_clock::now();
+        start_time                       = std::chrono::steady_clock::now();
         auto full_node_transfer_received = full_node->WaitForTransactionIncoming(
             transfer_tx_id,
             std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) );
         ASSERT_TRUE( full_node_transfer_received );
         duration = std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::steady_clock::now() -
-                                                                               start_time )
-                            .count();
+                                                                          start_time )
+                       .count();
         std::cout << "Full Node received transaction completed in " << duration << " ms" << std::endl;
 
         // Verify node_proc1's balance decreased
@@ -218,7 +226,7 @@ namespace sgns
             auto mint_result = node_proc1->MintTokens( amount,
                                                        "",
                                                        "",
-                                                       "",
+                                                       sgns::TokenID::FromBytes( { 0x00 } ),
                                                        std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
             ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction of " << amount << " failed or timed out";
 
@@ -230,14 +238,14 @@ namespace sgns
         auto mint_result1 = node_proc2->MintTokens( 10000000000,
                                                     "",
                                                     "",
-                                                    "",
+                                                    sgns::TokenID::FromBytes( { 0x00 } ),
                                                     std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
         ASSERT_TRUE( mint_result1.has_value() ) << "Mint transaction failed or timed out";
 
         auto mint_result2 = node_proc2->MintTokens( 20000000000,
                                                     "",
                                                     "",
-                                                    "",
+                                                    sgns::TokenID::FromBytes( { 0x00 } ),
                                                     std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
         ASSERT_TRUE( mint_result2.has_value() ) << "Mint transaction failed or timed out";
 
@@ -250,12 +258,14 @@ namespace sgns
         // Transfer funds
         auto transfer_result1 = node_proc1->TransferFunds( 10000000000,
                                                            node_proc2->GetAddress(),
+                                                           sgns::TokenID::FromBytes( { 0x00 } ),
                                                            std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
         ASSERT_TRUE( transfer_result1.has_value() ) << "Transfer transaction failed or timed out";
         auto [transfer_tx_id1, transfer_duration1] = transfer_result1.value();
 
         auto transfer_result2 = node_proc1->TransferFunds( 20000000000,
                                                            node_proc2->GetAddress(),
+                                                           sgns::TokenID::FromBytes( { 0x00 } ),
                                                            std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
         ASSERT_TRUE( transfer_result2.has_value() ) << "Transfer transaction failed or timed out";
         auto [transfer_tx_id2, transfer_duration2] = transfer_result2.value();
@@ -318,6 +328,7 @@ namespace sgns
             auto transfer_result1  = node_proc1->TransferFunds(
                 xfer_amount,
                 node_proc2->GetAddress(),
+                sgns::TokenID::FromBytes( { 0x00 } ),
                 std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
             ASSERT_TRUE( transfer_result1.has_value() ) << "Transfer transaction failed or timed out";
             auto [transfer_tx_id1, transfer_duration1] = transfer_result1.value();
@@ -330,6 +341,7 @@ namespace sgns
             auto transfer_result2  = node_proc2->TransferFunds(
                 xfer_amount,
                 node_proc1->GetAddress(),
+                sgns::TokenID::FromBytes( { 0x00 } ),
                 std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
             ASSERT_TRUE( transfer_result2.has_value() ) << "Transfer transaction failed or timed out";
             auto [transfer_tx_id2, transfer_duration2] = transfer_result2.value();
@@ -383,11 +395,15 @@ namespace sgns
         node_proc2->GetPubSub()->AddPeers( { full_node->GetPubSub()->GetLocalAddress() } );
 
         // Mint tokens with timeout
-        node_proc1->MintTokens( 10000000000, "", "", "", std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+        node_proc1->MintTokens( 10000000000,
+                                "",
+                                "",
+                                sgns::TokenID::FromBytes( { 0x00 } ),
+                                std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
         auto mint_result = node_proc1->MintTokens( 10000000000,
                                                    "",
                                                    "",
-                                                   "",
+                                                   sgns::TokenID::FromBytes( { 0x00 } ),
                                                    std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
         ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
 
@@ -421,6 +437,7 @@ namespace sgns
         // Transfer funds with timeout
         auto transfer_result = node_proc1->TransferFunds( 10000000000,
                                                           node_proc2->GetAddress(),
+                                                          sgns::TokenID::FromBytes( { 0x00 } ),
                                                           std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
         ASSERT_TRUE( transfer_result.has_value() ) << "Transfer transaction failed or timed out";
         auto [transfer_tx_id, transfer_duration] = transfer_result.value();

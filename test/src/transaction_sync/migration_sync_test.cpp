@@ -9,6 +9,7 @@
 
 #include "account/GeniusNode.hpp"
 #include "account/MigrationManager.hpp"
+#include "account/TokenID.hpp"
 #include "FileManager.hpp"
 
 namespace fs = std::filesystem;
@@ -27,11 +28,11 @@ class MigrationParamTest : public ::testing::TestWithParam<NodeParams>
 {
 protected:
     static inline DevConfig_st DEV_CONFIG = {
-        "0xcafe", // Addr
-        "0.65",   // Cut
-        1.0,      // TokenValueInGNUS
-        0,        // TokenID
-        ""        // BaseWritePath
+        "0xdeef",                             // Addr
+        "0.65",                               // Cut
+        "1.0",                                // TokenValueInGNUS
+        sgns::TokenID::FromBytes( { 0x00 } ), // TokenID
+        ""                                    // BaseWritePath
     };
 
     std::shared_ptr<sgns::GeniusNode> node;

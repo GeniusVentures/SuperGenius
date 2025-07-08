@@ -1,6 +1,6 @@
 /**
  * @file       TransactionManager.hpp
- * @brief      
+ * @brief
  * @date       2024-03-13
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
@@ -12,6 +12,7 @@
 #include <cstdint>
 #include <map>
 #include <unordered_map>
+#include <set>
 
 #include <boost/format.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
@@ -23,6 +24,7 @@
 #include "account/TransferTransaction.hpp"
 #include "account/MintTransaction.hpp"
 #include "account/EscrowTransaction.hpp"
+#include "account/EscrowReleaseTransaction.hpp"
 #include "account/ProcessingTransaction.hpp"
 #include "account/GeniusAccount.hpp"
 #include "base/logger.hpp"
@@ -42,6 +44,9 @@ namespace sgns
     class TransactionManager : public std::enable_shared_from_this<TransactionManager>
     {
     public:
+        static constexpr std::uint16_t    MAIN_NET_ID           = 369;
+        static constexpr std::uint16_t    TEST_NET_ID           = 963;
+        static constexpr std::string_view GNUS_FULL_NODES_TOPIC = "SuperGNUSNode.TestNet.FullNode.%hu";
         using TransactionPair  = std::pair<std::shared_ptr<IGeniusTransactions>, std::optional<std::vector<uint8_t>>>;
         using TransactionBatch = std::vector<TransactionPair>;
         using TransactionItem  = std::pair<TransactionBatch, std::optional<std::shared_ptr<crdt::AtomicTransaction>>>;
@@ -62,11 +67,11 @@ namespace sgns
         std::vector<std::vector<uint8_t>> GetOutTransactions() const;
         std::vector<std::vector<uint8_t>> GetInTransactions() const;
 
-        outcome::result<std::string> TransferFunds( uint64_t amount, const std::string &destination );
+        outcome::result<std::string> TransferFunds( uint64_t amount, const std::string &destination, TokenID token_id );
         outcome::result<std::string> MintFunds( uint64_t    amount,
                                                 std::string transaction_hash,
                                                 std::string chainid,
-                                                std::string tokenid );
+                                                TokenID     tokenid );
         outcome::result<std::pair<std::string, EscrowDataPair>> HoldEscrow( uint64_t           amount,
                                                                             const std::string &dev_addr,
                                                                             uint64_t           peers_cut,
@@ -82,12 +87,14 @@ namespace sgns
         bool WaitForTransactionOutgoing( const std::string &txId, std::chrono::milliseconds timeout ) const;
         bool WaitForEscrowRelease( const std::string &originalEscrowId, std::chrono::milliseconds timeout ) const;
 
-        static std::string       GetTransactionPath( IGeniusTransactions &element );
+        static std::string GetTransactionPath( IGeniusTransactions &element );
 
-        static std::string       GetTransactionProofPath( IGeniusTransactions &element );
+        static std::string GetTransactionProofPath( IGeniusTransactions &element );
         static outcome::result<std::shared_ptr<IGeniusTransactions>> FetchTransaction(
             const std::shared_ptr<crdt::GlobalDB> &db,
             std::string_view                       transaction_key );
+        static outcome::result<std::shared_ptr<IGeniusTransactions>> DeSerializeTransaction(
+            const base::Buffer &tx_data );
 
     protected:
         friend class GeniusNode;
@@ -95,29 +102,28 @@ namespace sgns
         void EnqueueTransaction( TransactionItem element );
 
     private:
-        static constexpr std::uint16_t    MAIN_NET_ID             = 369;
-        static constexpr std::uint16_t    TEST_NET_ID             = 963;
         static constexpr std::string_view TRANSACTION_BASE_FORMAT = "/bc-%hu/";
-        static constexpr std::string_view GNUS_FULL_NODES_TOPIC   = "SuperGNUSNode.TestNet.FullNode.%hu";
-        using TransactionParserFn =
-            outcome::result<void> ( TransactionManager::* )( const std::shared_ptr<IGeniusTransactions> & );
+
+        // Parser function pointer alias: returns a set of topic strings or an error
+        using TransactionParserFn = outcome::result<std::set<std::string>> ( TransactionManager::* )(
+            const std::shared_ptr<IGeniusTransactions> & );
 
         void                     Update();
         SGTransaction::DAGStruct FillDAGStruct( std::string transaction_hash = "" ) const;
         outcome::result<void>    SendTransaction();
 
-        static std::string       GetTransactionBasePath( const std::string &address );
-        static std::string       GetBlockChainBase();
+        static std::string GetTransactionBasePath( const std::string &address );
+        static std::string GetBlockChainBase();
         static outcome::result<std::shared_ptr<IGeniusTransactions>> DeSerializeTransaction( std::string tx_data );
-        static outcome::result<std::string>                          GetExpectedProofKey( const std::string                          &tx_key,
-                                                                                          const std::shared_ptr<IGeniusTransactions> &tx );
-        static outcome::result<std::string>                          GetExpectedTxKey( const std::string &proof_key );
 
+        static outcome::result<std::string> GetExpectedProofKey( const std::string                          &tx_key,
+                                                                 const std::shared_ptr<IGeniusTransactions> &tx );
+        static outcome::result<std::string> GetExpectedTxKey( const std::string &proof_key );
 
-        outcome::result<bool> CheckProof( const std::shared_ptr<IGeniusTransactions> &tx );
-        outcome::result<void> ParseTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
+        outcome::result<bool>                  CheckProof( const std::shared_ptr<IGeniusTransactions> &tx );
+        outcome::result<std::set<std::string>> ParseTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
 
-        outcome::result<void> CheckIncoming( bool checkProofs = true );
+        outcome::result<void> CheckIncoming();
 
         outcome::result<void> CheckOutgoing();
 
@@ -128,6 +134,8 @@ namespace sgns
         std::shared_ptr<crypto::Hasher>            hasher_m;
         std::shared_ptr<boost::asio::steady_timer> timer_m;
         bool                                       full_node_m;
+        std::string                                full_node_topic_m; ///< formatted full-node topic
+
         // for the SendTransaction thread support
         mutable std::mutex          mutex_m;
         std::deque<TransactionItem> tx_queue_m;
@@ -138,10 +146,12 @@ namespace sgns
         std::map<std::string, std::shared_ptr<IGeniusTransactions>> incoming_tx_processed_m;
         std::function<void()>                                       task_m;
 
-        outcome::result<void> ParseTransferTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
-        outcome::result<void> ParseMintTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
-        outcome::result<void> ParseEscrowTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
-        outcome::result<void> ParseEscrowReleaseTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
+        outcome::result<std::set<std::string>> ParseTransferTransaction(
+            const std::shared_ptr<IGeniusTransactions> &tx );
+        outcome::result<std::set<std::string>> ParseMintTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
+        outcome::result<std::set<std::string>> ParseEscrowTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
+        outcome::result<std::set<std::string>> ParseEscrowReleaseTransaction(
+            const std::shared_ptr<IGeniusTransactions> &tx );
 
         static inline const std::unordered_map<std::string, TransactionParserFn> transaction_parsers = {
             { "transfer", &TransactionManager::ParseTransferTransaction },

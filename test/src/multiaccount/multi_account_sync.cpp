@@ -38,7 +38,6 @@ protected:
 
     static void SetUpTestSuite()
     {
-
         std::string binary_path = boost::dll::program_location().parent_path().string();
         std::strncpy( DEV_CONFIG.BaseWritePath,
                       ( binary_path + "/node100/" ).c_str(),
@@ -55,7 +54,7 @@ protected:
         std::filesystem::remove_all( DEV_CONFIG.BaseWritePath );
         std::filesystem::remove_all( DEV_CONFIG2.BaseWritePath );
 
-        node_main  = new sgns::GeniusNode( DEV_CONFIG,
+        node_main = new sgns::GeniusNode( DEV_CONFIG,
                                           "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
                                           false,
                                           false );
@@ -78,7 +77,6 @@ protected:
 
         std::cout << "Tear down 2" << std::endl;
         delete node_proc1;
-
     }
 };
 
@@ -86,39 +84,53 @@ protected:
 sgns::GeniusNode *MultiAccountTest::node_main  = nullptr;
 sgns::GeniusNode *MultiAccountTest::node_proc1 = nullptr;
 
-DevConfig_st MultiAccountTest::DEV_CONFIG  = { "0xcafe", "0.65", 1.0, 0, "./node1" };
-DevConfig_st MultiAccountTest::DEV_CONFIG2 = { "0xcafe", "0.65", 1.0, 1, "./node2" };
+DevConfig_st MultiAccountTest::DEV_CONFIG  = { "0xcafe",
+                                               "0.65",
+                                               "1.0",
+                                               sgns::TokenID::FromBytes( { 0x00 } ),
+                                               "./node1" };
+DevConfig_st MultiAccountTest::DEV_CONFIG2 = { "0xcafe",
+                                               "0.65",
+                                               "1.0",
+                                               sgns::TokenID::FromBytes( { 0x00 } ),
+                                               "./node2" };
 
 std::string MultiAccountTest::binary_path = "";
-
 
 TEST_F( MultiAccountTest, SyncThroughEachOther )
 {
     //Just making sure they connect
     auto transcount_main_start  = node_main->GetOutTransactions().size();
     auto transcount_node1_start = node_proc1->GetOutTransactions().size();
-    auto main_balance_start = node_main->GetBalance();
-    auto node1_balance_start = node_proc1->GetBalance();
+    auto main_balance_start     = node_main->GetBalance();
+    auto node1_balance_start    = node_proc1->GetBalance();
 
     //Mint On each
-    auto mint_result = node_main->MintTokens( 50000000000 , "", "", "", std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+    auto mint_result = node_main->MintTokens( 50000000000,
+                                              "",
+                                              "",
+                                              sgns::TokenID::FromBytes( { 0x00 } ),
+                                              std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
 
-    mint_result = node_proc1->MintTokens( 50000000000 , "", "", "", std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+    mint_result = node_proc1->MintTokens( 50000000000,
+                                          "",
+                                          "",
+                                          sgns::TokenID::FromBytes( { 0x00 } ),
+                                          std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
     auto transcount_main  = node_main->GetOutTransactions().size();
     auto transcount_node1 = node_proc1->GetOutTransactions().size();
     std::cout << "Count 1" << transcount_main << std::endl;
     std::cout << "Count 2" << transcount_node1 << std::endl;
-    double balance_main = node_main->GetBalance();
+    double balance_main  = node_main->GetBalance();
     double balance_node1 = node_proc1->GetBalance();
     std::cout << "Balance 1" << balance_main << std::endl;
-    std::cout << "Balance 2" << balance_node1 << std::endl;  
+    std::cout << "Balance 2" << balance_node1 << std::endl;
 
     // TODO: in reality, one of the mint function should get rejected with same nonce.
-    ASSERT_EQ( transcount_main, transcount_main_start + 1);
-    ASSERT_EQ( transcount_node1, transcount_node1_start + 1);
-    ASSERT_EQ( balance_main, main_balance_start + 50000000000);
-    ASSERT_EQ( balance_node1, node1_balance_start + 50000000000);
-
+    ASSERT_EQ( transcount_main, transcount_main_start + 1 );
+    ASSERT_EQ( transcount_node1, transcount_node1_start + 1 );
+    ASSERT_EQ( balance_main, main_balance_start + 50000000000 );
+    ASSERT_EQ( balance_node1, node1_balance_start + 50000000000 );
 }

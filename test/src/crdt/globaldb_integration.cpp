@@ -235,7 +235,7 @@ TEST_F( GlobalDBIntegrationTest, ReplicationWithoutTopicSuccessfulTest )
     ASSERT_NE( tx, nullptr );
     const auto putRes = tx->Put( key, value );
     ASSERT_TRUE( putRes.has_value() );
-    const auto commitRes = tx->Commit();
+    const auto commitRes = tx->Commit({"test"});
     ASSERT_TRUE( commitRes.has_value() );
 
     const bool replicated = waitForCondition(
@@ -279,7 +279,7 @@ TEST_F( GlobalDBIntegrationTest, ReplicationViaTopicBroadcastTest )
     ASSERT_NE( tx, nullptr );
     const auto putRes = tx->Put( key, value );
     ASSERT_TRUE( putRes.has_value() );
-    const auto commitRes = tx->Commit();
+    const auto commitRes = tx->Commit({"test"});
     ASSERT_TRUE( commitRes.has_value() );
 
     const bool replicated = waitForCondition(
@@ -332,14 +332,14 @@ TEST_F( GlobalDBIntegrationTest, ReplicationAcrossMultipleTopicsTest )
     ASSERT_NE( txA, nullptr );
     const auto putResA = txA->Put( keyA, valueA );
     ASSERT_TRUE( putResA.has_value() );
-    const auto commitResA = txA->Commit();
+    const auto commitResA = txA->Commit({"test"});
     ASSERT_TRUE( commitResA.has_value() );
 
     const auto txB = testNodes->getNodes()[1].db->BeginTransaction();
     ASSERT_NE( txB, nullptr );
     const auto putResB = txB->Put( keyB, valueB );
     ASSERT_TRUE( putResB.has_value() );
-    const auto commitResB = txB->Commit();
+    const auto commitResB = txB->Commit({"test"});
     ASSERT_TRUE( commitResB.has_value() );
 
     const bool replicated = waitForCondition(
@@ -375,9 +375,9 @@ TEST_F( GlobalDBIntegrationTest, PreventDoubleCommitTest )
     ASSERT_NE( tx, nullptr );
     const auto putRes = tx->Put( key, value );
     ASSERT_TRUE( putRes.has_value() );
-    const auto commitRes = tx->Commit();
+    const auto commitRes = tx->Commit({"test"});
     ASSERT_TRUE( commitRes.has_value() );
-    const auto secondCommit = tx->Commit();
+    const auto secondCommit = tx->Commit({"test"});
     EXPECT_FALSE( secondCommit.has_value() );
 }
 
@@ -395,7 +395,7 @@ TEST_F( GlobalDBIntegrationTest, DISABLED_CommitFailsForNonexistentTopicTest )
     ASSERT_NE( tx, nullptr );
     const auto putRes = tx->Put( key, value );
     ASSERT_TRUE( putRes.has_value() );
-    const auto commitRes = tx->Commit();
+    const auto commitRes = tx->Commit({"test"});
     EXPECT_FALSE( commitRes.has_value() );
 }
 
@@ -418,7 +418,7 @@ TEST_F( GlobalDBIntegrationTest, DirectPutWithTopicBroadcastTest )
     value.put( "Direct put with topic value" );
     const HierarchicalKey key( "/direct/with_topic" );
 
-    const auto putRes = testNodes->getNodes()[0].db->Put( key, value );
+    const auto putRes = testNodes->getNodes()[0].db->Put( key, value, {"topic"} );
     ASSERT_TRUE( putRes.has_value() );
 
     const bool replicated = waitForCondition(
@@ -458,7 +458,7 @@ TEST_F( GlobalDBIntegrationTest, DirectPutWithoutTopicBroadcastTest )
     value.put( "Direct put without topic value" );
     const HierarchicalKey key( "/direct/without_topic" );
 
-    const auto putRes = testNodes->getNodes()[0].db->Put( key, value );
+    const auto putRes = testNodes->getNodes()[0].db->Put( key, value,{"topic"} );
     ASSERT_TRUE( putRes.has_value() );
 
     const bool replicated = waitForCondition(
@@ -504,7 +504,7 @@ TEST_F( GlobalDBIntegrationTest, NonSubscriberDoesNotReceiveTopicMessageTest )
     ASSERT_NE( tx, nullptr );
     const auto putRes = tx->Put( key, value );
     ASSERT_TRUE( putRes.has_value() );
-    const auto commitRes = tx->Commit();
+    const auto commitRes = tx->Commit({"test"});
     ASSERT_TRUE( commitRes.has_value() );
 
     bool node0Received = waitForCondition( [&]() -> bool
@@ -546,7 +546,7 @@ TEST_F( GlobalDBIntegrationTest, UnconnectedNodeDoesNotReplicateBroadcastMessage
     ASSERT_NE( tx, nullptr );
     const auto putRes = tx->Put( key, value );
     ASSERT_TRUE( putRes.has_value() );
-    const auto commitRes = tx->Commit();
+    const auto commitRes = tx->Commit({"test"});
     ASSERT_TRUE( commitRes.has_value() );
 
     bool node1Replicated = waitForCondition( [&]() -> bool
