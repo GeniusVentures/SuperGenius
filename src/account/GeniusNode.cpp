@@ -299,21 +299,6 @@ namespace sgns
         tx_globaldb_->AddTopicName( processing_channel_topic_ );
         tx_globaldb_->AddListenTopic( processing_channel_topic_ );
 
-        //global_db_ret = crdt::GlobalDB::New( io_,
-        //                                     write_base_path_ + gnus_network_full_path_,
-        //                                     pubsub_,
-        //                                     crdt::CrdtOptions::DefaultOptions(),
-        //                                     graphsyncnetwork,
-        //                                     scheduler,
-        //                                     generator,
-        //                                     tx_globaldb_->GetDataStore() );
-//
-        //if ( global_db_ret.has_error() )
-        //{
-        //    auto error = global_db_ret.error();
-        //    throw std::runtime_error( error.message() );
-        //}
-        //job_globaldb_ = std::move( global_db_ret.value() );
 
         task_queue_      = std::make_shared<processing::ProcessingTaskQueueImpl>( tx_globaldb_, processing_channel_topic_ );
         processing_core_ = std::make_shared<processing::ProcessingCoreImpl>( tx_globaldb_,
@@ -353,10 +338,6 @@ namespace sgns
             throw std::runtime_error( std::string( "Database migration failed: " ) +
                                       migrationResult.error().message() );
         }
-
-        //job_globaldb_->AddBroadcastTopic( processing_channel_topic_ );
-        //job_globaldb_->AddListenTopic( processing_channel_topic_ );
-        //job_globaldb_->Start();
 
         transaction_manager_ = std::make_shared<TransactionManager>( tx_globaldb_,
                                                                      io_,
@@ -574,7 +555,6 @@ namespace sgns
         auto enqueue_task_return = task_queue_->EnqueueTask( task, subTasks );
         if ( enqueue_task_return.has_failure() )
         {
-            task_queue_->ResetAtomicTransaction();
             return outcome::failure( Error::DATABASE_WRITE_ERROR );
         }
         auto send_escrow_return = task_queue_->SendEscrow( escrow_path, std::move( escrow_data ) );
