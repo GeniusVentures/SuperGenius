@@ -64,7 +64,7 @@ jobs:
             abi: armeabi-v7a
             build-type: "Release"
           - target: Android
-            host: ubuntu-22.04
+            host: gv-Linux-large
             abi: armeabi-v7a
             build-type: "Debug"
           - target: iOS
