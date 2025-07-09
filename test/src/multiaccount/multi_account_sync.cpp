@@ -119,12 +119,16 @@ TEST_F( MultiAccountTest, SyncThroughEachOther )
                                           sgns::TokenID::FromBytes( { 0x00 } ),
                                           std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
+
     auto transcount_main  = node_main->GetOutTransactions().size();
     auto transcount_node1 = node_proc1->GetOutTransactions().size();
+
     std::cout << "Count 1" << transcount_main << std::endl;
     std::cout << "Count 2" << transcount_node1 << std::endl;
+
     double balance_main  = node_main->GetBalance();
     double balance_node1 = node_proc1->GetBalance();
+
     std::cout << "Balance 1" << balance_main << std::endl;
     std::cout << "Balance 2" << balance_node1 << std::endl;
 

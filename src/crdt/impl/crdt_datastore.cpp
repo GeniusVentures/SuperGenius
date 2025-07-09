@@ -674,14 +674,14 @@ namespace sgns::crdt
         return set_->GetElement( aKey.GetKey() );
     }
 
-    outcome::result<std::string> CrdtDatastore::GetKeysPrefix()
+    std::string CrdtDatastore::GetKeysPrefix()
     {
-        return set_->KeysKey( "" ).GetKey() + "/";
+        return set_->KeysKey( "" ).GetKey();
     }
 
-    outcome::result<std::string> CrdtDatastore::GetValueSuffix()
+    std::string CrdtDatastore::GetValueSuffix()
     {
-        return "/" + set_->GetValueSuffix();
+        return '/' + set_->GetValueSuffix();
     }
 
     outcome::result<CrdtDatastore::QueryResult> CrdtDatastore::QueryKeyValues( const std::string &aPrefix )

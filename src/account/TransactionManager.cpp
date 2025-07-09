@@ -923,7 +923,7 @@ namespace sgns
     {
         std::vector<std::vector<std::uint8_t>> result;
         {
-            std::shared_lock<std::shared_mutex> out_lock( outgoing_tx_mutex_m );
+            std::shared_lock out_lock( outgoing_tx_mutex_m );
             result.reserve( outgoing_tx_processed_m.size() );
             for ( const auto &[key, value] : outgoing_tx_processed_m )
             {
