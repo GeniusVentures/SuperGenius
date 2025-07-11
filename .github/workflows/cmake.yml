@@ -306,48 +306,85 @@ jobs:
           tar --exclude=.git -czvf ${FILE_NAME} --transform 's|^|${{env.BUILD_DIRECTORY}}/|' SuperGenius/
         shell: bash
 
-      - name: Release file
-        if: github.ref_name == 'main' || github.ref_name == 'develop' || env.IS_TAG == 'true'
-        working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
-        shell: bash
+      - name: Wait for primary release creation
+        if: (github.ref_name == 'main' || github.ref_name == 'develop' || env.IS_TAG == 'true') && ((matrix.target == 'Linux' && matrix.abi == 'aarch64') || (matrix.target == 'Android' && matrix.abi == 'armeabi-v7a'))
+        working-directory: ${{github.workspace}}/SuperGenius
         run: |
-          # Determine release tag
           if [ "$IS_TAG" == "true" ]; then
-              # Use the provided tag as-is
-              RELEASE_TAG='${{ github.event.inputs.tag }}'
+              RELEASE_TAG="${{ github.event.inputs.tag }}"
           else
-              # Use branch-based naming for regular builds
               RELEASE_TAG='${{matrix.target}}-${{github.ref_name}}-${{matrix.build-type}}'
           fi
-
+          
           echo "RELEASE_TAG=${RELEASE_TAG}" >> $GITHUB_ENV
-
-          # Check if release exists
-          if ! gh release view $RELEASE_TAG; then
-              echo "Release not found, creating with tag: $RELEASE_TAG"
-
-              if [ '${{ matrix.build-type }}' != 'Release' ]; then
-                  RELEASE_TYPE="--prerelease"
-              else
-                  RELEASE_TYPE="--latest"
+          echo "Waiting for primary job to create/update release: $RELEASE_TAG"
+          
+          # Wait up to 120 minutes for the release to be created/updated
+          ATTEMPT=1
+          MAX_ATTEMPTS=720
+          while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
+              if gh release view $RELEASE_TAG >/dev/null 2>&1; then
+                  echo "Release found!"
+                  # Check if it's at the correct commit
+                  if gh release view $RELEASE_TAG | grep -q "${{ github.sha }}"; then
+                      echo "Release is at correct commit"
+                      break
+                  fi
               fi
+              echo "Waiting for release... (attempt $ATTEMPT/$MAX_ATTEMPTS)"
+              sleep 10
+              ATTEMPT=$((ATTEMPT + 1))
+          done
+        shell: bash
 
-              # Create release with appropriate target
-              if [ "$IS_TAG" == "true" ]; then
-                  # For tag-based releases, create at the current commit
-                  gh release create $RELEASE_TAG \
-                      -n "Tag release: ${CURRENT_BRANCH}" \
-                      ${RELEASE_TYPE} \
-                      -t "${{ matrix.target }} tag ${CURRENT_BRANCH} ${{ matrix.build-type }} build"
-              else
-                  # For branch-based releases, target the branch
-                  gh release create $RELEASE_TAG \
-                      -n "${CURRENT_BRANCH} branch" \
-                      --target "${CURRENT_BRANCH}" \
-                      ${RELEASE_TYPE} \
-                      -t "${{ matrix.target }} ${CURRENT_BRANCH} branch ${{ matrix.build-type }} build"
-              fi
+      - name: Create release tag
+        if: (github.ref_name == 'main' || github.ref_name == 'develop' || env.IS_TAG == 'true') && !((matrix.target == 'Linux' && matrix.abi == 'aarch64') || (matrix.target == 'Android' && matrix.abi == 'armeabi-v7a'))
+        id: create-release-tag
+        working-directory: ${{github.workspace}}/SuperGenius
+        run: |
+          if [ "$IS_TAG" == "true" ]; then
+              RELEASE_TAG="${{ github.event.inputs.tag }}"
+              IS_TAG_RELEASE="true"
+          else
+              RELEASE_TAG="${{ matrix.target }}-${{ github.ref_name }}-${{ matrix.build-type }}"
+              IS_TAG_RELEASE="false"
           fi
 
-          echo -e "Uploading ${FILE_NAME}"
-          gh release upload --clobber ${RELEASE_TAG} ${FILE_NAME}
+          echo "RELEASE_TAG=$RELEASE_TAG" >> $GITHUB_ENV
+
+          echo "Checking if release $RELEASE_TAG exists..."
+          set +e
+          gh release view "$RELEASE_TAG"
+          releaseFound=$?
+          set -e
+
+          if [[ $releaseFound -eq 0 && "$IS_TAG_RELEASE" == "false" ]]; then
+              echo "Deleting existing branch-based release + tag..."
+              gh release delete "$RELEASE_TAG" --yes
+              git push origin ":refs/tags/$RELEASE_TAG" || true
+          fi
+
+          # Force-create tag locally and push it
+          echo "Tagging commit ${{ github.sha }} as $RELEASE_TAG"
+          git tag -f "$RELEASE_TAG" "${{ github.sha }}"
+          git push --force origin "$RELEASE_TAG"
+
+          if [ "$IS_TAG_RELEASE" = "true" ]; then
+              RELEASE_TYPE="--latest"
+          else
+              RELEASE_TYPE="--draft"
+          fi
+
+          echo "Creating GitHub release $RELEASE_TAG..."
+          gh release create "$RELEASE_TAG" \
+            --target "${{ github.sha }}" \
+            -t "${{ matrix.target }} ${{ github.ref_name }} ${{ matrix.build-type }} build" \
+            -n "Branch: ${{ github.ref_name }} | SHA: ${{ github.sha }}" \
+            ${RELEASE_TYPE}
+        shell: bash
+
+      - name: Upload file
+        if: github.ref_name == 'main' || github.ref_name == 'develop' || env.IS_TAG == 'true'
+        working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
+        run: gh release upload ${{env.RELEASE_TAG}} ${{env.FILE_NAME}} --clobber
+        shell: bash
