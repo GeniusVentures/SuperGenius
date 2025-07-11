@@ -5,11 +5,22 @@ on:
     branches:
       - develop
       - main
+    paths-ignore:
+      - ".github/**"
+      - "Readme.md"
   pull_request:
     branches:
       - develop
       - main
+    paths-ignore:
+      - ".github/**"
+      - "Readme.md"
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag"
+        required: false
+        type: string
 
 jobs:
   build:
@@ -94,17 +105,27 @@ jobs:
       - name: Download thirdparty release
         working-directory: ${{github.workspace}}
         run: |
-          if ${{github.event_name == 'pull_request'}}; then
+          # Determine current branch or tag
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ "${{ github.event.inputs.tag }}" ]; then
+              CURRENT_BRANCH="${{ github.event.inputs.tag }}"
+              IS_TAG=true
+          elif ${{github.event_name == 'pull_request'}}; then
               CURRENT_BRANCH=${{ github.event.pull_request.head.ref }}
+              IS_TAG=false
           else
               CURRENT_BRANCH=$GITHUB_REF_NAME
+              IS_TAG=false
           fi
 
-          echo "Identified current branch as ${CURRENT_BRANCH}"
-
+          echo "Identified current branch/tag as ${CURRENT_BRANCH}"
           echo "CURRENT_BRANCH=${CURRENT_BRANCH}" >>$GITHUB_ENV
+          echo "IS_TAG=${IS_TAG}" >>$GITHUB_ENV
 
-          if [ "$CURRENT_BRANCH" == "main" ]; then
+          # Determine thirdparty branch to use
+          if [ "$IS_TAG" == "true" ]; then
+            # For tags, use the exact tag name for thirdparty
+            thirdparty_branch="$CURRENT_BRANCH"
+          elif [ "$CURRENT_BRANCH" == "main" ]; then
             thirdparty_branch="main"
           else
             thirdparty_branch="develop"
@@ -122,7 +143,13 @@ jobs:
           mkdir thirdparty
           cd thirdparty
 
-          tag_name="${{matrix.target}}-${thirdparty_branch}-${{matrix.build-type}}"
+          if [ "$IS_TAG" == "true" ]; then
+            # For tags, use just the tag name
+            tag_name="${thirdparty_branch}"
+          else
+            # For branches, use the platform-branch-buildtype format
+            tag_name="${{matrix.target}}-${thirdparty_branch}-${{matrix.build-type}}"
+          fi
 
           gh release download ${tag_name} --repo GeniusVentures/thirdparty -p "${FILE_NAME}"
           tar -zxvf "${FILE_NAME}"
@@ -140,7 +167,11 @@ jobs:
       - name: Download zkLLVM release
         working-directory: ${{github.workspace}}
         run: |
-          if [ "$CURRENT_BRANCH" == "main" ]; then
+          # Use same branch determination logic for zkLLVM
+          if [ "$IS_TAG" == "true" ]; then
+            # For tags, use the exact tag name for zkLLVM
+            zkLLVM_branch="$CURRENT_BRANCH"
+          elif [ "$CURRENT_BRANCH" == "main" ]; then
             zkLLVM_branch="main"
           else
             zkLLVM_branch="develop"
@@ -152,15 +183,27 @@ jobs:
           if [ "${{ matrix.target }}" = "Windows" ]; then
               ZKLLVM_FILE_NAME=${{matrix.target}}-${{matrix.build-type}}.tar.gz
               ZKLLVM_BUILD_DIR=build/${{matrix.target}}/${{matrix.build-type}}
-              tag_name=${{matrix.target}}-${zkLLVM_branch}-${{matrix.build-type}}
+              if [ "$IS_TAG" == "true" ]; then
+                tag_name="${zkLLVM_branch}"
+              else
+                tag_name=${{matrix.target}}-${zkLLVM_branch}-${{matrix.build-type}}
+              fi
           elif [ '${{matrix.abi}}' ]; then
               ZKLLVM_FILE_NAME=${{matrix.target}}-${{matrix.abi}}-Release.tar.gz
               ZKLLVM_BUILD_DIR=build/${{matrix.target}}/Release/${{matrix.abi}}
-              tag_name=${{matrix.target}}-${zkLLVM_branch}-Release
+              if [ "$IS_TAG" == "true" ]; then
+                tag_name="${zkLLVM_branch}"
+              else
+                tag_name=${{matrix.target}}-${zkLLVM_branch}-Release
+              fi
           else
               ZKLLVM_FILE_NAME=${{matrix.target}}-Release.tar.gz
               ZKLLVM_BUILD_DIR=build/${{matrix.target}}/Release
-              tag_name=${{matrix.target}}-${zkLLVM_branch}-Release
+              if [ "$IS_TAG" == "true" ]; then
+                tag_name="${zkLLVM_branch}"
+              else
+                tag_name=${{matrix.target}}-${zkLLVM_branch}-Release
+              fi
           fi
 
           gh release download ${tag_name} --repo GeniusVentures/zkLLVM -p "${ZKLLVM_FILE_NAME}"
@@ -258,20 +301,28 @@ jobs:
 
       - name: Compress build artifacts
         working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
-        if: github.ref_name == 'main' || github.ref_name == 'develop'
+        if: github.ref_name == 'main' || github.ref_name == 'develop' || env.IS_TAG == 'true'
         run: |
           tar --exclude=.git -czvf ${FILE_NAME} --transform 's|^|${{env.BUILD_DIRECTORY}}/|' SuperGenius/
         shell: bash
 
       - name: Release file
-        if: github.ref_name == 'main' || github.ref_name == 'develop'
+        if: github.ref_name == 'main' || github.ref_name == 'develop' || env.IS_TAG == 'true'
         working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
         shell: bash
         run: |
-          RELEASE_TAG='${{matrix.target}}-${{github.ref_name}}-${{matrix.build-type}}'
+          # Determine release tag
+          if [ "$IS_TAG" == "true" ]; then
+              # Use the provided tag as-is
+              RELEASE_TAG='${{ github.event.inputs.tag }}'
+          else
+              # Use branch-based naming for regular builds
+              RELEASE_TAG='${{matrix.target}}-${{github.ref_name}}-${{matrix.build-type}}'
+          fi
 
           echo "RELEASE_TAG=${RELEASE_TAG}" >> $GITHUB_ENV
 
+          # Check if release exists
           if ! gh release view $RELEASE_TAG; then
               echo "Release not found, creating with tag: $RELEASE_TAG"
 
@@ -281,11 +332,21 @@ jobs:
                   RELEASE_TYPE="--latest"
               fi
 
-              gh release create $RELEASE_TAG \
-                  -n "${CURRENT_BRANCH} branch" \
-                  --target "${CURRENT_BRANCH}" \
-                  ${RELEASE_TYPE} \
-                  -t "${{ matrix.target }} ${CURRENT_BRANCH} branch ${{ matrix.build-type }} build"
+              # Create release with appropriate target
+              if [ "$IS_TAG" == "true" ]; then
+                  # For tag-based releases, create at the current commit
+                  gh release create $RELEASE_TAG \
+                      -n "Tag release: ${CURRENT_BRANCH}" \
+                      ${RELEASE_TYPE} \
+                      -t "${{ matrix.target }} tag ${CURRENT_BRANCH} ${{ matrix.build-type }} build"
+              else
+                  # For branch-based releases, target the branch
+                  gh release create $RELEASE_TAG \
+                      -n "${CURRENT_BRANCH} branch" \
+                      --target "${CURRENT_BRANCH}" \
+                      ${RELEASE_TYPE} \
+                      -t "${{ matrix.target }} ${CURRENT_BRANCH} branch ${{ matrix.build-type }} build"
+              fi
           fi
 
           echo -e "Uploading ${FILE_NAME}"
