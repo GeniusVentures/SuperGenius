@@ -105,6 +105,8 @@ namespace sgns
         m_lastApiCall( std::chrono::system_clock::now() - m_minApiCallInterval )
 
     {
+        // Rotate log files before initializing logging system
+        rotateLogFiles(write_base_path_);
         SSL_library_init();
         SSL_load_error_strings();
         OpenSSL_add_all_algorithms();
@@ -1019,5 +1021,54 @@ namespace sgns
     void GeniusNode::SendTransactionAndProof( std::shared_ptr<IGeniusTransactions> tx, std::vector<uint8_t> proof )
     {
         transaction_manager_->EnqueueTransaction( std::make_pair( tx, proof ) );
+    }
+
+    void GeniusNode::rotateLogFiles( const std::string &base_path )
+    {
+        std::filesystem::path basePath( base_path );
+
+        // Define log file paths
+        std::filesystem::path sgnslog_path      = basePath / "sgnslog.log";
+        std::filesystem::path sgnslog2_path     = basePath / "sgnslog2.log";
+        std::filesystem::path sgnslog_old_path  = basePath / "sgnslog.old.log";
+        std::filesystem::path sgnslog2_old_path = basePath / "sgnslog2.old.log";
+
+        try
+        {
+            // Handle sgnslog.log rotation
+            if ( std::filesystem::exists( sgnslog_path ) )
+            {
+                // Delete old backup if it exists
+                if ( std::filesystem::exists( sgnslog_old_path ) )
+                {
+                    std::filesystem::remove( sgnslog_old_path );
+                    std::cout << "Deleted old backup: " << sgnslog_old_path << std::endl;
+                }
+
+                // Rename current log to backup
+                std::filesystem::rename( sgnslog_path, sgnslog_old_path );
+                std::cout << "Rotated log: " << sgnslog_path << " -> " << sgnslog_old_path << std::endl;
+            }
+
+            // Handle sgnslog2.log rotation
+            if ( std::filesystem::exists( sgnslog2_path ) )
+            {
+                // Delete old backup if it exists
+                if ( std::filesystem::exists( sgnslog2_old_path ) )
+                {
+                    std::filesystem::remove( sgnslog2_old_path );
+                    std::cout << "Deleted old backup: " << sgnslog2_old_path << std::endl;
+                }
+
+                // Rename current log to backup
+                std::filesystem::rename( sgnslog2_path, sgnslog2_old_path );
+                std::cout << "Rotated log: " << sgnslog2_path << " -> " << sgnslog2_old_path << std::endl;
+            }
+        }
+        catch ( const std::filesystem::filesystem_error &e )
+        {
+            std::cerr << "Log rotation error: " << e.what() << std::endl;
+            // Continue execution - don't let log rotation failure stop the application
+        }
     }
 }
