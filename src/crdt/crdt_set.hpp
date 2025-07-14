@@ -301,11 +301,12 @@ namespace sgns::crdt
 
         void PrintDataStore();
 
+        static void PrintElements( const std::vector<Element> &aElems );
+
     private:
         CrdtSet() = default;
 
         static void PrintTombs( const std::vector<Element> &aTombs );
-        static void PrintElements( const std::vector<Element> &aElems );
 
         std::shared_ptr<DataStore> dataStore_ = nullptr;
         HierarchicalKey            namespaceKey_;

@@ -102,6 +102,13 @@ namespace sgns::processing
         sgns::base::Logger                             m_logger = sgns::base::createLogger( "ProcessingTaskQueueImpl" );
         std::shared_ptr<sgns::crdt::AtomicTransaction> job_crdt_transaction_;
         std::string                                    m_processing_topic;
+
+        static constexpr std::string_view TASK_LIST_KEY    = "/tasks";
+        static constexpr std::string_view SUBTASK_LIST_KEY = "/subtasks";
+        static constexpr std::string_view TASK_KEY         = "/TASK_%s";
+        static constexpr std::string_view SUBTASK_KEY      = "/%s";
+        static constexpr std::string_view RESULTS_KEY      = "/task_results";
+        static constexpr std::string_view LOCK_KEY         = "/lock_%s";
     };
 
 }
