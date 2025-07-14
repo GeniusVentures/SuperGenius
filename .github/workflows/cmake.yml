@@ -372,7 +372,7 @@ jobs:
           if [ "$IS_TAG_RELEASE" = "true" ]; then
               RELEASE_TYPE="--latest"
           else
-              RELEASE_TYPE="--draft"
+              RELEASE_TYPE="--prerelease"
           fi
 
           echo "Creating GitHub release $RELEASE_TAG..."
