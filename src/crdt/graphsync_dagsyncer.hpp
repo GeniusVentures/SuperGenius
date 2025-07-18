@@ -111,6 +111,9 @@ namespace sgns::crdt
             DAGSyncer::LinkInfoSet                            visited_links        = {},
             bool                                              skip_if_visited_root = false,
             int                                               max_depth            = 100 ) const override;
+
+        outcome::result<void> markResolved( const CID &cid ) override;
+        outcome::result<bool> isResolved( const CID &cid ) const override;
         /* Returns peer ID */
         outcome::result<PeerId> GetId() const;
 

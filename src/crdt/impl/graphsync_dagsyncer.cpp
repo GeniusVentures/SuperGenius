@@ -581,6 +581,18 @@ namespace sgns::crdt
         return { std::move( links_to_fetch ), std::move( visited ) };
     }
 
+    outcome::result<void> GraphsyncDAGSyncer::markResolved( const CID &cid )
+    {
+        std::lock_guard<std::mutex> lock( mutex_ );
+        return dagService_.markResolved( cid );
+    }
+
+    outcome::result<bool> GraphsyncDAGSyncer::isResolved( const CID &cid ) const
+    {
+        std::lock_guard<std::mutex> lock( mutex_ );
+        return dagService_.isResolved( cid );
+    }
+
     void GraphsyncDAGSyncer::InitCIDBlock( const CID &cid )
     {
         std::lock_guard<std::mutex> lock( cache_mutex_ );

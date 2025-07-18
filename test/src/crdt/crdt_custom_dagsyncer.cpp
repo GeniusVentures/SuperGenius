@@ -133,5 +133,15 @@ namespace sgns::crdt
         return { std::move( links_to_fetch ), std::move( visited ) };
     }
 
+    outcome::result<void> CustomDagSyncer::markResolved( const CID &cid )
+    {
+        return dagService_.markResolved( cid );
+    }
+
+    outcome::result<bool> CustomDagSyncer::isResolved( const CID &cid ) const
+    {
+        return dagService_.isResolved( cid );
+    }
+
     void CustomDagSyncer::Stop() {}
 } // namespace sgns::crdt
