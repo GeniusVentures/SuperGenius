@@ -240,6 +240,7 @@ namespace sgns
         void ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult );
         void ProcessingError( const std::string &task_id );
 
+        void rotateLogFiles( const std::string &base_path );
         /**
          * @brief Parse and sum all "block_len" values from the JSON.
          * @param json_data JSON string containing an "input" array.
@@ -267,7 +268,7 @@ sinks:
 groups:
     - name: SuperGeniusNode
       sink: file
-      level: debug
+      level: error
       children:
         - name: libp2p
         - name: Gossip

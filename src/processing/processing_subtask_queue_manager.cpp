@@ -403,9 +403,7 @@ namespace sgns::processing
                     m_dltGrabSubTaskTimeout.cancel();
                     m_dltQueueResponseTimeout.cancel();
                     m_logger->debug("CANCEL_ASYNC_TIMERS: {} is Canceling timers due to ownership acquisition and available work at {}ms", m_localNodeId,m_queue_timestamp_);
-                    guard.unlock(); // Unlock before processing
                     ProcessPendingSubTaskGrabbing(); // Start processing immediately
-                    guard.lock(); // Re-lock for publishing
                 }
 
                 PublishSubTaskQueue();
@@ -413,7 +411,6 @@ namespace sgns::processing
 
             if ( hasOwnershipNow )
             {
-                guard.unlock();
                 ProcessPendingSubTaskGrabbing();
             }
         }
@@ -428,7 +425,6 @@ namespace sgns::processing
                 {
                     subTaskIds.push_back( queue->subtasks().items( subTaskIdx ).subtaskid() );
                 }
-                guard.unlock();
                 m_subTaskQueueAssignmentEventSink( subTaskIds );
             }
         }
