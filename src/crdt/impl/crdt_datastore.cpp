@@ -112,7 +112,7 @@ namespace sgns::crdt
             } );
 
         dagWorkerJobListThreadRunning_ = true;
-        dagWorkers_.reserve(numberOfDagWorkers);
+        dagWorkers_.reserve( numberOfDagWorkers );
         for ( int i = 0; i < numberOfDagWorkers; ++i )
         {
             auto dagWorker                     = std::make_shared<DagWorker>();
@@ -345,11 +345,11 @@ namespace sgns::crdt
 
     void CrdtDatastore::SendJobWorkerIteration( std::shared_ptr<DagWorker> dagWorker )
     {
-        std::vector<DagJob>                                     jobs_to_process;
-        CID                                                     current_root_cid;
-        std::set<CID>                                           aggregated_cids_to_fetch;
-        std::set<std::shared_ptr<IPLDNode>, IPLDNodeComparator> nodes_to_save;
-        uint64_t                                                root_priority = 0;
+        std::vector<DagJob>       jobs_to_process;
+        CID                       current_root_cid;
+        std::set<CID>             aggregated_cids_to_fetch;
+        std::shared_ptr<IPLDNode> root_node;
+        uint64_t                  root_priority = 0;
 
         logger_->trace( "In SendJobWorkerIteration. Jobs left: {}", dagWorkerJobList.size() );
 
@@ -367,7 +367,7 @@ namespace sgns::crdt
             jobs_to_process.push_back( first_job );
             current_root_cid = first_job.rootCid_;
             root_priority    = first_job.rootPriority_;
-            nodes_to_save    = first_job.saved_nodes_; // Get saved nodes from first job
+            root_node        = first_job.root_node_;
 
             // Collect all remaining jobs with the same rootCid
             std::queue<DagJob> temp_queue;
@@ -397,11 +397,10 @@ namespace sgns::crdt
         // Process all jobs and aggregate CIDs to fetch
         for ( const auto &dagJob : jobs_to_process )
         {
-            logger_->info( "SendJobWorker CID={} nodeCID={} priority={} iteration={}",
+            logger_->info( "SendJobWorker CID={} nodeCID={} priority={}",
                            current_root_cid.toString().value(),
                            dagJob.node_->getCID().toString().value(),
-                           std::to_string( root_priority ),
-                           dagJob.iteration_count_ );
+                           std::to_string( root_priority ) );
 
             auto childrenResult = ProcessNode( current_root_cid, root_priority, dagJob.delta_, dagJob.node_, true );
             if ( childrenResult.has_failure() )
@@ -409,22 +408,16 @@ namespace sgns::crdt
                 logger_->error( "SendNewJobs: failed to process node:{}", current_root_cid.toString().value() );
                 continue; // Continue processing other nodes
             }
+            logger_->info( "SendJobWorker: Processed CID={} nodeCID={}",
+                           current_root_cid.toString().value(),
+                           dagJob.node_->getCID().toString().value() );
 
             // Aggregate CIDs to fetch
             auto CIDs_to_fetch = childrenResult.value();
             aggregated_cids_to_fetch.insert( CIDs_to_fetch.begin(), CIDs_to_fetch.end() );
 
-            // Save every 10th node (iterations 0, 10, 20, 30...)
-            // Iteration 0 is the root node
-            if ( dagJob.iteration_count_ % 10 == 0 )
-            {
-                logger_->debug( "Saving node at iteration {} for later: {}",
-                                dagJob.iteration_count_,
-                                dagJob.node_->getCID().toString().value() );
-                nodes_to_save.insert( dagJob.node_ );
-            }
-            // Otherwise, save immediately
-            else
+            // Handle non-root nodes
+            if ( current_root_cid != dagJob.node_->getCID() )
             {
                 auto dagSyncerResult = dagSyncer_->addNode( dagJob.node_ );
                 logger_->debug( "DAGSyncer: Adding new block {}", dagJob.node_->getCID().toString().value() );
@@ -435,24 +428,35 @@ namespace sgns::crdt
                 }
                 dagSyncer_->DeleteCIDBlock( dagJob.node_->getCID() );
             }
+            else
+            {
+                logger_->debug( "ROOT NODE RECEIVED, will process later" );
+                // Store root node for later processing
+                if ( !root_node )
+                {
+                    root_node = dagJob.node_;
+                }
+            }
         }
 
         // Now handle the aggregated results
         if ( aggregated_cids_to_fetch.empty() )
         {
-            // No more children, now record all saved nodes
-            logger_->info( "No more children, recording {} saved nodes", nodes_to_save.size() );
-
-            for ( auto it = nodes_to_save.rbegin(); it != nodes_to_save.rend(); ++it )
+            // No more children, now record the root CID if we have it
+            if ( root_node )
             {
-                auto dagSyncerResult = dagSyncer_->addNode( *it );
-                logger_->debug( "DAGSyncer: Adding saved block {}", ( *it )->getCID().toString().value() );
+                auto dagSyncerResult = dagSyncer_->addNode( root_node );
+                logger_->debug( "DAGSyncer: Adding ROOT block {}", root_node->getCID().toString().value() );
                 if ( dagSyncerResult.has_failure() )
                 {
-                    logger_->error( "DAGSyncer: error writing saved block {}", ( *it )->getCID().toString().value() );
+                    logger_->error( "DAGSyncer: error writing ROOT block {}", current_root_cid.toString().value() );
                 }
             }
-
+            else
+            {
+                logger_->error( "No Root node to add after getting the children {}",
+                                current_root_cid.toString().value() );
+            }
             dagSyncer_->DeleteCIDBlock( current_root_cid );
         }
         else
@@ -462,12 +466,7 @@ namespace sgns::crdt
                            aggregated_cids_to_fetch.size(),
                            current_root_cid.toString().value() );
 
-            // Pass the saved nodes set and continue from the last job's iteration + 1
-            auto send_jobs_ret = SendNewJobs( current_root_cid,
-                                              root_priority,
-                                              aggregated_cids_to_fetch,
-                                              nodes_to_save,
-                                              jobs_to_process.back().iteration_count_ + 1 );
+            auto send_jobs_ret = SendNewJobs( current_root_cid, root_priority, aggregated_cids_to_fetch, root_node );
             if ( send_jobs_ret.has_error() )
             {
                 dagSyncer_->DeleteCIDBlock( current_root_cid );
@@ -573,12 +572,10 @@ namespace sgns::crdt
         return SendNewJobs( aCid, 0, { aCid } );
     }
 
-    outcome::result<void> CrdtDatastore::SendNewJobs(
-        const CID                                              &aRootCID,
-        uint64_t                                                aRootPriority,
-        const std::set<CID>                                    &aChildren,
-        std::set<std::shared_ptr<IPLDNode>, IPLDNodeComparator> aSavedNodes,
-        int                                                     aIterationCount ) // Start at 0 for root
+    outcome::result<void> CrdtDatastore::SendNewJobs( const CID                &aRootCID,
+                                                      uint64_t                  aRootPriority,
+                                                      const std::set<CID>      &aChildren,
+                                                      std::shared_ptr<IPLDNode> aRootNode )
     {
         // sendNewJobs calls getDeltas with the given
         // children and sends each response to the workers.
@@ -594,8 +591,8 @@ namespace sgns::crdt
             dagSyncerTimeoutSec = std::chrono::seconds( options_->dagSyncerTimeoutSec );
         }
 
-        uint64_t                                                rootPriority = aRootPriority;
-        std::set<std::shared_ptr<IPLDNode>, IPLDNodeComparator> savedNodes   = aSavedNodes;
+        uint64_t                  rootPriority = aRootPriority;
+        std::shared_ptr<IPLDNode> rootNode     = aRootNode;
 
         if ( rootPriority == 0 )
         {
@@ -620,9 +617,14 @@ namespace sgns::crdt
             }
 
             rootPriority = delta->priority();
+
+            // If this is the first call and we're fetching the root, store it
+            if ( !rootNode && aChildren.size() == 1 && ( *( aChildren.begin() ) ) == aRootCID )
+            {
+                rootNode = node;
+            }
         }
 
-        int current_iteration = aIterationCount;
         for ( const auto &cid : aChildren )
         {
             logger_->debug( "SendNewJobs: TRYING TO FETCH NODE : {} from {}",
@@ -648,18 +650,16 @@ namespace sgns::crdt
             }
 
             DagJob dagJob;
-            dagJob.rootCid_         = aRootCID;
-            dagJob.rootPriority_    = rootPriority;
-            dagJob.delta_           = delta;
-            dagJob.node_            = node;
-            dagJob.saved_nodes_     = savedNodes;
-            dagJob.iteration_count_ = current_iteration++; // Pass and increment the iteration count
+            dagJob.rootCid_      = aRootCID;
+            dagJob.rootPriority_ = rootPriority;
+            dagJob.delta_        = delta;
+            dagJob.node_         = node;
+            dagJob.root_node_    = rootNode; // Pass the root node through the job
 
-            logger_->debug( "SendNewJobs PUSHING CID={} nodeCID={} priority={} iteration={}",
+            logger_->debug( "SendNewJobs PUSHING CID={} nodeCID={} priority={} ",
                             dagJob.rootCid_.toString().value(),
                             node->getCID().toString().value(),
-                            std::to_string( dagJob.rootPriority_ ),
-                            dagJob.iteration_count_ );
+                            std::to_string( dagJob.rootPriority_ ) );
             {
                 std::unique_lock lock( dagWorkerMutex_ );
                 dagWorkerJobList.push( dagJob );
@@ -860,7 +860,7 @@ namespace sgns::crdt
         }
         else
         {
-            logger_->error( "ProcessNode: Processing OUTGOING root {} node {}",
+            logger_->debug( "ProcessNode: Processing OUTGOING root {} node {}",
                             aRoot.toString().value(),
                             aNode->getCID().toString().value() );
             skip_if_visited = true;
@@ -871,7 +871,7 @@ namespace sgns::crdt
             auto             mergeResult = set_->Merge( aDelta, hKey.GetKey() );
             if ( mergeResult.has_failure() )
             {
-                logger_->error( "ProcessNode: error merging delta from {}", hKey.GetKey() );
+                logger_->debug( "ProcessNode: error merging delta from {}", hKey.GetKey() );
                 return outcome::failure( mergeResult.error() );
             }
         }
@@ -904,7 +904,7 @@ namespace sgns::crdt
                 logger_->error( "ProcessNode: Traversing to find links on topic {}", topic );
                 std::unique_lock lock( dagSyncherMutex_ );
                 auto [links_to_fetch,
-                      known_cids] = dagSyncer_->TraverseCIDsLinks( aNode, topic, {}, skip_if_visited, 25 );
+                      known_cids] = dagSyncer_->TraverseCIDsLinks( aNode, topic, {}, skip_if_visited, 50 );
                 lock.unlock();
                 for ( const auto &[cid, link_name] : known_cids )
                 {

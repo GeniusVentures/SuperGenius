@@ -251,7 +251,7 @@ namespace sgns::crdt
     {
         CRDTHeadList result_heads;
         uint64_t     max_value = 0;
-        logger_->debug( "GetList: Getting list of CIDs" );
+        logger_->trace( "GetList: Getting list of CIDs" );
         for ( const auto &[current_topic, cid_map] : cache_ )
         {
             if ( !topics.empty() && topics.find( current_topic ) == topics.end() )
@@ -261,6 +261,7 @@ namespace sgns::crdt
 
             for ( const auto &[cid, value] : cid_map )
             {
+                logger_->trace( "GetList: Returning CID: {}", cid.toString().value() );
                 result_heads[current_topic].insert( cid );
                 max_value = std::max( max_value, value );
             }
