@@ -50,7 +50,11 @@ namespace sgns
         m_logger->info( "Initializing values by reading whole blockchain" );
 
         boost::format full_node_topic{ std::string( GNUS_FULL_NODES_TOPIC ) };
+#ifdef DEV_NET
+        full_node_topic % DEV_NET_ID;
+#else
         full_node_topic % TEST_NET_ID;
+#endif
         full_node_topic_m = full_node_topic.str();
 
         globaldb_m->AddListenTopic( account_m->GetAddress() );
@@ -534,8 +538,11 @@ namespace sgns
     std::string TransactionManager::GetBlockChainBase()
     {
         boost::format tx_key{ std::string( TRANSACTION_BASE_FORMAT ) };
-
+#ifdef DEV_NET
+        tx_key % DEV_NET_ID;
+#else
         tx_key % TEST_NET_ID;
+#endif
         return tx_key.str();
     }
 

@@ -4,9 +4,6 @@
  * @date       2024-04-18
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
-#include <math.h>
-#include <fstream>
-#include <memory>
 #include <iostream>
 #include <cstdlib>
 #include <cstdint>
