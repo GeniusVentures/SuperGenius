@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package accountComm;
+
+message AccountMessage {
+  oneof payload {
+    SignedNonceRequest nonce_request = 1;
+    SignedNonceResponse nonce_response = 2;
+  }
+}
+
+message SignedNonceRequest {
+  NonceRequest data = 1;
+  bytes signature = 2;         // signature over hash(data)
+}
+
+// Nonce response with signature
+message SignedNonceResponse {
+  NonceResponse data = 1;
+  bytes signature = 2;         // signature over hash(data)
+}
+
+// Actual content of the nonce request
+message NonceRequest {
+  string requester_address = 1;
+  uint64 request_id = 2;
+  uint64 timestamp = 3;
+}
+
+// Actual content of the nonce response
+message NonceResponse {
+  string responder_address = 1;
+  uint64 request_id = 2;
+  uint64 known_nonce = 3;
+  uint64 timestamp = 4;
+}
