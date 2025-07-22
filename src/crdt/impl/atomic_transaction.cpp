@@ -25,6 +25,7 @@ namespace sgns::crdt
             return outcome::failure( boost::system::error_code{} );
         }
         operations_.push_back( { Operation::PUT, key, value } );
+        modified_keys_.insert( key.GetKey() ); // Track the key
         return outcome::success();
     }
 
@@ -38,7 +39,57 @@ namespace sgns::crdt
         return outcome::success();
     }
 
-    outcome::result<void> AtomicTransaction::Commit()
+    outcome::result<AtomicTransaction::Buffer> AtomicTransaction::Get( const HierarchicalKey &key ) const
+    {
+        // First, check pending operations in reverse order (most recent first)
+        auto latest_op = FindLatestOperation( key );
+        if ( latest_op.has_value() )
+        {
+            if ( latest_op->type == Operation::REMOVE )
+            {
+                // Key has been removed in this transaction
+                return outcome::failure( boost::system::error_code{} );
+            }
+            else if ( latest_op->type == Operation::PUT )
+            {
+                // Return the value from the pending put operation
+                return latest_op->value;
+            }
+        }
+
+        // Key not found
+        return outcome::failure( boost::system::error_code{} );
+    }
+
+    outcome::result<void> AtomicTransaction::Erase( const HierarchicalKey &key )
+    {
+        if ( is_committed_ )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
+
+        // Remove all operations for this key from the operations vector
+        auto new_end = std::remove_if( operations_.begin(),
+                                       operations_.end(),
+                                       [&key]( const PendingOperation &op )
+                                       { return op.key.GetKey() == key.GetKey(); } );
+
+        // If we removed any operations, erase them and remove from the set
+        if ( new_end != operations_.end() )
+        {
+            operations_.erase( new_end, operations_.end() );
+            modified_keys_.erase( key.GetKey() );
+        }
+
+        return outcome::success();
+    }
+
+    bool AtomicTransaction::HasKey( const HierarchicalKey &key ) const
+    {
+        return modified_keys_.find( key.GetKey() ) != modified_keys_.end();
+    }
+
+    outcome::result<void> AtomicTransaction::Commit(const std::set<std::string>& topics)
     {
         if ( is_committed_ )
         {
@@ -78,7 +129,7 @@ namespace sgns::crdt
         }
         combined_delta->set_priority( max_priority );
 
-        auto result = datastore_->Publish( combined_delta );
+        auto result = datastore_->Publish( combined_delta, topics );
         if ( result.has_failure() )
         {
             return result.error();
@@ -91,6 +142,21 @@ namespace sgns::crdt
     void AtomicTransaction::Rollback()
     {
         operations_.clear();
+        modified_keys_.clear();
+    }
+
+    std::optional<AtomicTransaction::PendingOperation> AtomicTransaction::FindLatestOperation(
+        const HierarchicalKey &key ) const
+    {
+        // Search from the end (most recent operations first)
+        for ( auto it = operations_.rbegin(); it != operations_.rend(); ++it )
+        {
+            if ( it->key.GetKey() == key.GetKey() )
+            {
+                return *it;
+            }
+        }
+        return std::nullopt;
     }
 
 } // namespace sgns::crdt

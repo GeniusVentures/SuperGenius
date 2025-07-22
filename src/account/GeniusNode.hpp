@@ -28,7 +28,7 @@ typedef struct DevConfig
     char        Addr[255];
     std::string Cut;
     std::string TokenValueInGNUS;
-    std::string TokenID;
+    TokenID     TokenID;
     char        BaseWritePath[1024];
 } DevConfig_st;
 
@@ -103,12 +103,13 @@ namespace sgns
             uint64_t                  amount,
             const std::string        &transaction_hash,
             const std::string        &chainid,
-            const std::string        &tokenid,
+            TokenID                   tokenid,
             std::chrono::milliseconds timeout = std::chrono::milliseconds( TIMEOUT_MINT ) );
 
         void     AddPeer( const std::string &peer );
         void     RefreshUPNP( int pubsubport );
         uint64_t GetBalance();
+        uint64_t GetBalance( const TokenID token_id);
 
         [[nodiscard]] const std::vector<std::vector<uint8_t>> GetInTransactions() const
         {
@@ -125,7 +126,7 @@ namespace sgns
             return account_->GetAddress();
         }
 
-        std::string GetTokenID() const
+        TokenID GetTokenID() const
         {
             return dev_config_.TokenID;
         }
@@ -133,10 +134,12 @@ namespace sgns
         outcome::result<std::pair<std::string, uint64_t>> TransferFunds(
             uint64_t                  amount,
             const std::string        &destination,
+            TokenID                   token_id,
             std::chrono::milliseconds timeout = std::chrono::milliseconds( TIMEOUT_TRANSFER ) );
 
         outcome::result<std::pair<std::string, uint64_t>> PayDev(
             uint64_t                  amount,
+            TokenID                   token_id,
             std::chrono::milliseconds timeout = std::chrono::milliseconds( TIMEOUT_TRANSFER ) );
 
         std::shared_ptr<ipfs_pubsub::GossipPubSub> GetPubSub()
@@ -146,17 +149,25 @@ namespace sgns
 
         /**
          * @brief       Formats a fixed-point amount into a human-readable string.
-         * @param[in]   amount Amount in Minion Tokens (1e-6 GNUS).
-         * @return      Formatted string representation in GNUS.
+         * @param[in]   amount  Amount in Minion Tokens (1e-6 GNUS).
+         * @param[in]   tokenId Optional token identifier:
+         *                         – empty: default (minion to GNUS) formatting
+         *                         – matches DevConfig.TokenID: child-token formatting
+         *                         – otherwise: returns Error::TOKEN_ID_MISMATCH
+         * @return      Outcome result with the formatted string in GNUS or an error.
          */
-        static std::string FormatTokens( uint64_t amount );
+        outcome::result<std::string> FormatTokens( uint64_t amount, const TokenID tokenId );
 
         /**
          * @brief       Parses a human-readable string into a fixed-point amount.
-         * @param[in]   str String representation of an amount in GNUS.
-         * @return      Outcome result with the parsed amount in Minion Tokens (1e-6 GNUS) or error.
+         * @param[in]   str      String representation of an amount in GNUS.
+         * @param[in]   tokenId  Optional token identifier:
+         *                          – empty: default (GNUS to minion) parsing
+         *                          – matches DevConfig.TokenID: child-token parsing
+         *                          – otherwise: returns Error::TOKEN_ID_MISMATCH
+         * @return      Outcome result with the parsed amount in Minion Tokens (1e-6 GNUS) or an error.
          */
-        static outcome::result<uint64_t> ParseTokens( const std::string &str );
+        outcome::result<uint64_t> ParseTokens( const std::string &str, const TokenID tokenId );
 
         static std::vector<uint8_t> GetImageByCID( const std::string &cid );
 
@@ -243,6 +254,14 @@ namespace sgns
         void ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult );
         void ProcessingError( const std::string &task_id );
 
+        void rotateLogFiles( const std::string &base_path );
+        /**
+         * @brief Parse and sum all "block_len" values from the JSON.
+         * @param json_data JSON string containing an "input" array.
+         * @return outcome::result<uint64_t> with total bytes, or an error code.
+         */
+        outcome::result<uint64_t> ParseBlockSize( const std::string &json_data );
+
         static constexpr std::string_view db_path_                = "bc-%d/";
         static constexpr std::uint16_t    MAIN_NET                = 369;
         static constexpr std::uint16_t    TEST_NET                = 963;
@@ -250,7 +269,6 @@ namespace sgns
         static constexpr std::string_view PROCESSING_GRID_CHANNEL = "SGNUS.Jobs.2a.%02d";
         static constexpr std::string_view PROCESSING_CHANNEL      = "SGNUS.TestNet.Channel.2a.%02d";
         static constexpr std::string_view GNUS_NETWORK_PATH       = "SuperGNUSNode.TestNet.2a.%02d.%s";
-
 
         static std::string GetLoggingSystem( const std::string &base_path )
         {
@@ -264,7 +282,7 @@ sinks:
 groups:
     - name: SuperGeniusNode
       sink: file
-      level: debug
+      level: error
       children:
         - name: libp2p
         - name: Gossip

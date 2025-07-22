@@ -45,7 +45,7 @@ namespace sgns::crdt
          * @param buff       Buffer containing the data to broadcast.
          * @return outcome::success on successful publish, or outcome::failure on error.
          */
-        outcome::result<void> Broadcast( const base::Buffer &buff ) override;
+        outcome::result<void> Broadcast( const base::Buffer &buff, std::string topic ) override;
 
         /**
          * @brief Retrieves the next incoming broadcast payload.

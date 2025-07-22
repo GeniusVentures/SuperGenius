@@ -125,7 +125,13 @@ namespace sgns::crdt
             // Create new database
             m_logger->info( "Opening database " + databasePathAbsolute );
             RocksDB::Options options;
-            options.create_if_missing = true; // intentionally
+            options.create_if_missing                    = true; // intentionally
+            options.target_file_size_base                = 32 * 1024 * 1024;
+            options.max_compaction_bytes                 = 32 * 1024 * 1024;
+            options.write_buffer_size                    = 32 * 1024 * 1024;
+            options.level0_file_num_compaction_trigger   = 1;
+            options.target_file_size_multiplier          = 1;
+            options.level_compaction_dynamic_level_bytes = false;
             try
             {
                 if ( auto dataStoreResult = RocksDB::create( databasePathAbsolute, options );
@@ -210,7 +216,7 @@ namespace sgns::crdt
         }
     }
 
-    outcome::result<void> GlobalDB::Put( const HierarchicalKey &key, const Buffer &value )
+    outcome::result<void> GlobalDB::Put( const HierarchicalKey &key, const Buffer &value, std::set<std::string> topics )
     {
         if ( !started_ )
         {
@@ -218,10 +224,10 @@ namespace sgns::crdt
             return outcome::failure( Error::GLOBALDB_NOT_STARTED );
         }
 
-        return m_crdtDatastore->PutKey( key, value );
+        return m_crdtDatastore->PutKey( key, value, std::move( topics ) );
     }
 
-    outcome::result<void> GlobalDB::Put( const std::vector<DataPair> &data_vector )
+    outcome::result<void> GlobalDB::Put( const std::vector<DataPair> &data_vector, std::set<std::string> topics )
     {
         if ( !started_ )
         {
@@ -235,21 +241,15 @@ namespace sgns::crdt
             BOOST_OUTCOME_TRYV2( auto &&, batch.Put( std::get<0>( data ), std::get<1>( data ) ) );
         }
 
-        return batch.Commit();
+        return batch.Commit( topics );
     }
 
     outcome::result<GlobalDB::Buffer> GlobalDB::Get( const HierarchicalKey &key )
     {
-        if ( !started_ )
-        {
-            m_logger->error( "GlobalDB Not Started" );
-            return outcome::failure( Error::GLOBALDB_NOT_STARTED );
-        }
-
         return m_crdtDatastore->GetKey( key );
     }
 
-    outcome::result<void> GlobalDB::Remove( const HierarchicalKey &key )
+    outcome::result<void> GlobalDB::Remove( const HierarchicalKey &key, const std::set<std::string> &topics )
     {
         if ( !started_ )
         {
@@ -257,12 +257,11 @@ namespace sgns::crdt
             return outcome::failure( Error::GLOBALDB_NOT_STARTED );
         }
 
-        return m_crdtDatastore->DeleteKey( key );
+        return m_crdtDatastore->DeleteKey( key, topics );
     }
 
     outcome::result<GlobalDB::QueryResult> GlobalDB::QueryKeyValues( const std::string &keyPrefix )
     {
-
         return m_crdtDatastore->QueryKeyValues( keyPrefix );
     }
 
@@ -315,6 +314,16 @@ namespace sgns::crdt
     void GlobalDB::PrintDataStore()
     {
         m_crdtDatastore->PrintDataStore();
+    }
+
+    void GlobalDB::AddTopicName( std::string topicName )
+    {
+        m_crdtDatastore->AddTopicName( topicName );
+    }
+
+    void GlobalDB::SetFullNode( bool full_node )
+    {
+        m_crdtDatastore->SetFullNode( std::move( full_node ) );
     }
 
     std::shared_ptr<AtomicTransaction> GlobalDB::BeginTransaction()

@@ -8,13 +8,14 @@
 #define _GENIUS_UTXO_HPP
 
 #include "base/blob.hpp"
+#include "account/TokenID.hpp"
 
 namespace sgns
 {
     class GeniusUTXO
     {
     public:
-        GeniusUTXO( const base::Hash256 &hash, uint32_t previous_index, uint64_t amount, std::string token_id ) :
+        GeniusUTXO( const base::Hash256 &hash, uint32_t previous_index, uint64_t amount, TokenID token_id ) :
             txid_hash_( hash ),            //
             output_idx_( previous_index ), //
             amount_( amount ),             //
@@ -48,7 +49,7 @@ namespace sgns
             return locked_;
         }
 
-        std::string GetTokenID() const
+        TokenID GetTokenID() const
         {
             return tokein_id_;
         }
@@ -58,7 +59,7 @@ namespace sgns
         uint32_t      output_idx_;
         uint64_t      amount_;
         bool          locked_;
-        std::string   tokein_id_;
+        TokenID       tokein_id_;
     };
 }
 

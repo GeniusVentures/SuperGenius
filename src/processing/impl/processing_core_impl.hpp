@@ -15,6 +15,7 @@
 
 #include "processing/processing_core.hpp"
 #include "crdt/globaldb/globaldb.hpp"
+#include "account/TokenID.hpp"
 
 
 namespace sgns::processing
@@ -31,8 +32,12 @@ namespace sgns::processing
         ProcessingCoreImpl(
             std::shared_ptr<sgns::crdt::GlobalDB> db,
             size_t subTaskProcessingTime,
-            size_t maximalProcessingSubTaskCount)
+            size_t maximalProcessingSubTaskCount,
+            TokenID tokenId)
             : m_db(std::move(db))
+            //, m_subTaskProcessingTime(subTaskProcessingTime)
+            , m_tokenId(std::move(tokenId))
+            , m_processor(nullptr)
             , m_maximalProcessingSubTaskCount(maximalProcessingSubTaskCount)
             , m_processingSubTaskCount(0)
         {
@@ -104,6 +109,7 @@ namespace sgns::processing
 
     private:
         std::shared_ptr<sgns::crdt::GlobalDB> m_db;
+        TokenID                              m_tokenId;
         //std::unique_ptr<ProcessingProcessor> m_processor;
         //std::unordered_map<std::string, std::function<std::unique_ptr<ProcessingProcessor>()>> m_processorFactories;
         //size_t m_subTaskProcessingTime;

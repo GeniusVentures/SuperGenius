@@ -11,6 +11,7 @@
 #include <memory>
 #include <string>
 #include <deque>
+#include <cstdint>
 
 #include <boost/asio/io_context.hpp>
 #include <ipfs_pubsub/gossip_pubsub_topic.hpp>
@@ -92,8 +93,8 @@ namespace sgns
          * @param   newDb  Shared pointer to target GlobalDB.
          * @return  outcome::result<void> success on commit; failure otherwise.
          */
-        outcome::result<void> MigrateDb( const std::shared_ptr<crdt::GlobalDB> &oldDb,
-                                         const std::shared_ptr<crdt::GlobalDB> &newDb );
+        outcome::result<uint32_t> MigrateDb( const std::shared_ptr<crdt::GlobalDB> &oldDb,
+                                             const std::shared_ptr<crdt::GlobalDB> &newDb );
 
         std::shared_ptr<crdt::GlobalDB>                                 newDb_;     ///< Target GlobalDB.
         std::shared_ptr<boost::asio::io_context>                        ioContext_; ///< IO context for DB I/O.
@@ -101,8 +102,10 @@ namespace sgns
         std::shared_ptr<ipfs_lite::ipfs::graphsync::Network>            graphsync_; ///< GraphSync network.
         std::shared_ptr<libp2p::protocol::Scheduler>                    scheduler_; ///< libp2p scheduler.
         std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator_; ///< Request ID generator.
-        std::string  writeBasePath_;                                                ///< Base path for writing DB files.
-        std::string  base58key_;                                                    ///< Key to build legacy paths.
-        base::Logger m_logger = base::createLogger( "MigrationStep" );              ///< Logger for this step.
+        std::shared_ptr<crdt::AtomicTransaction> crdt_transaction_; ///< CRDT transaction to make it all atomic
+        std::string                              writeBasePath_;    ///< Base path for writing DB files.
+        std::string                              base58key_;        ///< Key to build legacy paths.
+        std::set<std::string>                    topics_;
+        base::Logger m_logger = base::createLogger( "MigrationStep" ); ///< Logger for this step.
     };
 } // namespace sgns

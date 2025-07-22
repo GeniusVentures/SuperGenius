@@ -1,6 +1,7 @@
 #include <ipfs_pubsub/gossip_pubsub.hpp>
 #include <ipfs_pubsub/gossip_pubsub_topic.hpp>
 
+#include "account/TokenID.hpp"
 #include "base/logger.hpp"
 #include "crdt/globaldb/globaldb.hpp"
 #include "crdt/globaldb/keypair_file_storage.hpp"
@@ -13,6 +14,7 @@
 #include "processing_mnn.hpp"
 #include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/local_requests.hpp>
+#include <string>
 
 using GossipPubSub = sgns::ipfs_pubsub::GossipPubSub;
 const std::string logger_config( R"(
@@ -106,18 +108,21 @@ int main( int argc, char *argv[] )
     {
         return -1;
     }
-    auto globalDB2 = std::move(globaldb_ret.value());
+    auto globalDB2 = std::move( globaldb_ret.value() );
 
     globalDB2->AddListenTopic( "CRDT.Datastore.TEST.Channel" );
     globalDB2->AddBroadcastTopic( "CRDT.Datastore.TEST.Channel" );
     globalDB2->Start();
 
     //Processing Service Values
-    auto taskQueue2 = std::make_shared<sgns::processing::ProcessingTaskQueueImpl>( globalDB2 );
+    auto taskQueue2 = std::make_shared<sgns::processing::ProcessingTaskQueueImpl>( globalDB2, "test" );
     auto enqueuer2  = std::make_shared<SubTaskEnqueuerImpl>( taskQueue2 );
 
     //Processing Core
-    auto processingCore2 = std::make_shared<ProcessingCoreImpl>( globalDB2, 1000000, 2 );
+    auto processingCore2 = std::make_shared<ProcessingCoreImpl>( globalDB2,
+                                                                 1000000,
+                                                                 2,
+                                                                 sgns::TokenID::FromBytes( { 0x00 } ) );
     processingCore2->RegisterProcessorFactory( "mnnimage", []() { return std::make_unique<MNN_Image>(); } );
     //processingCore2->SetProcessorByName("posenet");
     //Set Imagesplit, this replaces bitswap getting of file for now. Should use AsyncIOmanager in the future
@@ -128,7 +133,7 @@ int main( int argc, char *argv[] )
                                              maximalNodesCount,
                                              enqueuer2,
                                              std::make_shared<SubTaskStateStorageImpl>(),
-                                             std::make_shared<SubTaskResultStorageImpl>( globalDB2 ),
+                                             std::make_shared<SubTaskResultStorageImpl>( globalDB2, "test" ),
                                              processingCore2 );
 
     processingService.SetChannelListRequestTimeout( boost::posix_time::milliseconds( 10000 ) );

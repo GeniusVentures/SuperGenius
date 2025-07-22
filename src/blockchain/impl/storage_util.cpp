@@ -32,9 +32,9 @@ namespace sgns::blockchain {
         prependPrefix(NumberToBuffer(num), Prefix::ID_TO_LOOKUP_KEY);
     auto hash_to_idx_key =
         prependPrefix(Buffer{block_hash}, Prefix::ID_TO_LOOKUP_KEY);
-    BOOST_OUTCOME_TRYV2(auto &&, db.Put({"num_to_idx_key"}, block_lookup_key));
-    BOOST_OUTCOME_TRYV2(auto &&, db.Put({"hash_to_idx_key"}, block_lookup_key));
-    return db.Put({"value_lookup_key"}, value);
+    BOOST_OUTCOME_TRYV2(auto &&, db.Put({"num_to_idx_key"}, block_lookup_key, {"topic"}));
+    BOOST_OUTCOME_TRYV2(auto &&, db.Put({"hash_to_idx_key"}, block_lookup_key, {"topic"}));
+    return db.Put({"value_lookup_key"}, value, {"topic"});
   }
 
 

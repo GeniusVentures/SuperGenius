@@ -9,6 +9,7 @@
 #include "AccountHelper.hpp"
 #include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/local_requests.hpp>
+#include "account/TokenID.hpp"
 extern AccountKey2   ACCOUNT_KEY;
 extern DevConfig_st2 DEV_CONFIG;
 
@@ -33,7 +34,7 @@ namespace sgns
     AccountHelper::AccountHelper( const AccountKey2   &priv_key_data,
                                   const DevConfig_st2 &dev_config,
                                   const char          *eth_private_key ) :
-        account_( std::make_shared<GeniusAccount>( "GNUS Token", "", eth_private_key ) ),
+        account_( std::make_shared<GeniusAccount>( sgns::TokenID::FromBytes( { 0x00 } ), "", eth_private_key ) ),
         io_( std::make_shared<boost::asio::io_context>() ),
         dev_config_( dev_config )
     {
@@ -85,7 +86,7 @@ namespace sgns
         }
 
         globaldb_ = std::move( globaldc_ret.value() );
-        
+
         globaldb_->AddListenTopic( std::string( PROCESSING_CHANNEL ) );
         globaldb_->AddBroadcastTopic( std::string( PROCESSING_CHANNEL ) );
         globaldb_->Start();
@@ -132,22 +133,6 @@ namespace sgns
 
         //Also Find providers
         pubsub_->StartFindingPeers( key );
-
-        // UNCOMMENT THESE NEXT 2 LINES TO CAUSE pubsub_->GetDHT()->Start(); to crash
-        //task_queue_      = std::make_shared<processing::ProcessingTaskQueueImpl>( globaldb_ );
-        //processing_core_ = std::make_shared<processing::ProcessingCoreImpl>( globaldb_, 1000000, 2 );
-
-        //processing_core_->RegisterProcessorFactory( "posenet",
-        //                                            []() { return std::make_unique<processing::MNN_PoseNet>(); } );
-        //processing_service_ = std::make_shared<processing::ProcessingServiceImpl>(
-        //    pubsub_,                                                             //
-        //    MAX_NODES_COUNT,                                                     //
-        //    std::make_shared<processing::SubTaskEnqueuerImpl>( task_queue_ ),    //
-        //    std::make_shared<processing::ProcessSubTaskStateStorage>(),          //
-        //    std::make_shared<processing::SubTaskResultStorageImpl>( globaldb_ ), //
-        //    processing_core_ );
-        //processing_service_->SetChannelListRequestTimeout( boost::posix_time::milliseconds( 10000 ) );
-        //processing_service_->StartProcessing( std::string( PROCESSING_GRID_CHANNEL ) );
 
         io_thread = std::thread( [this]() { io_->run(); } );
     }

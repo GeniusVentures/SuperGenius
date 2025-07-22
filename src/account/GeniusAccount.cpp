@@ -25,7 +25,7 @@ namespace sgns
 {
     const std::array<uint8_t, 32> GeniusAccount::ELGAMAL_PUBKEY_PREDEFINED = get_elgamal_pubkey();
 
-    GeniusAccount::GeniusAccount( std::string token_id, std::string_view base_path, const char *eth_private_key ) :
+    GeniusAccount::GeniusAccount( TokenID token_id, std::string_view base_path, const char *eth_private_key ) :
         token( token_id ), nonce( 0 )
     {
         if ( auto maybe_address = GenerateGeniusAddress( base_path, eth_private_key ); maybe_address.has_value() )
@@ -94,26 +94,12 @@ namespace sgns
         return std::make_pair( std::move( elgamal_key ), std::move( eth_key ) );
     }
 
-    uint64_t GeniusAccount::GetBalance( const std::string &token_id ) const
+    uint64_t GeniusAccount::GetBalance( const TokenID token_id ) const
     {
         uint64_t balance = 0;
         for ( const auto &utxo : utxos )
         {
-            if ( !utxo.GetLock() && utxo.GetTokenID() == token_id )
-            {
-                balance += utxo.GetAmount();
-            }
-        }
-        return balance;
-    }
-
-    uint64_t GeniusAccount::GetBalance( const std::vector<std::string> &token_ids ) const
-    {
-        std::unordered_set<std::string> token_set( token_ids.begin(), token_ids.end() );
-        uint64_t                        balance = 0;
-        for ( const auto &utxo : utxos )
-        {
-            if ( !utxo.GetLock() && token_set.count( utxo.GetTokenID() ) )
+            if ( !utxo.GetLock() && token_id.Equals( utxo.GetTokenID() ) )
             {
                 balance += utxo.GetAmount();
             }

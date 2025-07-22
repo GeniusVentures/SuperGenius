@@ -238,7 +238,7 @@ TEST_F( PubsubGraphsyncTest, MultiGlobalDBTest )
     data_transaction.put( gsl::span<const uint8_t>( dummy_data ) );
 
     transaction->Put( tx_key, data_transaction );
-    transaction->Commit();
+    transaction->Commit( {"test"} );
 
     auto                         transaction2 = gdb3->BeginTransaction();
     sgns::crdt::HierarchicalKey  tx_key2( "/test/test2" );
@@ -247,7 +247,7 @@ TEST_F( PubsubGraphsyncTest, MultiGlobalDBTest )
     data_transaction2.put( gsl::span<const uint8_t>( dummy_data2 ) );
 
     transaction2->Put( tx_key2, data_transaction2 );
-    transaction2->Commit();
+    transaction2->Commit( {"test"} );
 
     bool                         getConfirmed = false;
     sgns::crdt::GlobalDB::Buffer retrieved_data;
