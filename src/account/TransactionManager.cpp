@@ -453,6 +453,7 @@ namespace sgns
         }
 
         auto [transaction_batch, maybe_crdt_transaction] = tx_queue_m.front();
+        //attempt here to insert the correct nonce
         tx_queue_m.pop_front();
         lock.unlock();
         std::shared_ptr<crdt::AtomicTransaction> crdt_transaction = nullptr;
