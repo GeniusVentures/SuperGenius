@@ -37,7 +37,7 @@ namespace sgns::processing
             : m_db(std::move(db))
             //, m_subTaskProcessingTime(subTaskProcessingTime)
             , m_tokenId(std::move(tokenId))
-            , m_processor(nullptr)
+            //, m_processor(nullptr)
             , m_maximalProcessingSubTaskCount(maximalProcessingSubTaskCount)
             , m_processingSubTaskCount(0)
         {
