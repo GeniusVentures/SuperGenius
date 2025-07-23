@@ -57,6 +57,7 @@ target_link_libraries(processing_service
     PUBLIC
     MNN::MNN
     Vulkan::Vulkan
+	ProcessingBase
     PRIVATE
     crdt_globaldb
     ipfs-pubsub
