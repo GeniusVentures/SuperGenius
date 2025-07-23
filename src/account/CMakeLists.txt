@@ -7,13 +7,13 @@ endif()
 
 
 add_library(sgns_account
+    GeniusAccount.cpp
     TransactionManager.cpp
     TransferTransaction.cpp
     MintTransaction.cpp
     ProcessingTransaction.cpp
     EscrowTransaction.cpp
     EscrowReleaseTransaction.cpp
-    GeniusAccount.cpp
     GeniusNode.cpp
     UTXOTxParameters.cpp
     IGeniusTransactions.cpp

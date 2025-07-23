@@ -32,109 +32,34 @@ namespace sgns
 
         GeniusAccount( TokenID token_id, std::string_view base_path, const char *eth_private_key );
 
-        ~GeniusAccount()
-        {
-            utxos.clear();
-        }
+        ~GeniusAccount();
 
-        [[nodiscard]] std::string GetAddress() const
-        {
-            return eth_address->GetEntirePubValue();
-        }
-
-        //template <>
-        //[[nodiscard]] uint256_t GetAddress() const
-        //{
-        //    return uint256_t( eth_address.GetPublicKey().public_key_value.str() );
-        //}
+        [[nodiscard]] std::string GetAddress() const;
 
         template <typename T>
         [[nodiscard]] T GetBalance() const;
 
-        template <>
-        [[nodiscard]] uint64_t GetBalance() const
-        {
-            uint64_t retval = 0;
-
-            for ( auto &curr : utxos )
-            {
-                if ( !curr.GetLock() )
-                {
-                    retval += curr.GetAmount();
-                }
-            }
-
-            return retval;
-        }
-
-        template <>
-        [[nodiscard]] std::string GetBalance() const
-        {
-            return std::to_string( GetBalance<uint64_t>() );
-        }
-
         uint64_t GetBalance( const TokenID token_id ) const;
 
-        [[nodiscard]] TokenID GetToken() const
-        {
-            return token;
-            // return "GNUS Token";
-        }
+        [[nodiscard]] TokenID GetToken() const;
 
         [[nodiscard]] std::string GetNonce() const
         {
             return std::to_string( nonce );
         }
 
-        bool PutUTXO( const GeniusUTXO &new_utxo )
-        {
-            bool is_new = true;
-            for ( auto &curr : utxos )
-            {
-                if ( new_utxo.GetTxID() != curr.GetTxID() )
-                {
-                    continue;
-                }
-                if ( new_utxo.GetOutputIdx() != curr.GetOutputIdx() )
-                {
-                    continue;
-                }
-                //TODO - If it's the same, might be locked, then unlock
-                is_new = false;
-                break;
-            }
-            if ( is_new )
-            {
-                utxos.push_back( new_utxo );
-            }
-            return is_new;
-        }
+        bool PutUTXO( const GeniusUTXO &new_utxo );
 
-        bool RefreshUTXOs( const std::vector<InputUTXOInfo> &infos )
-        {
-            utxos.erase( std::remove_if( utxos.begin(),
-                                         utxos.end(),
-                                         [&infos]( const GeniusUTXO &x ) { //
-                                             return std::any_of( infos.begin(),
-                                                                 infos.end(),
-                                                                 [&x]( const InputUTXOInfo &a ) { //
-                                                                     return ( a.txid_hash_ == x.GetTxID() ) &&
-                                                                            ( a.output_idx_ == x.GetOutputIdx() );
-                                                                 } );
-                                         } ),
-                         utxos.end() );
-            return true;
-        }
-
-        std::shared_ptr<KeyGenerator::ElGamal>          elgamal_address;
-        std::shared_ptr<ethereum::EthereumKeyGenerator> eth_address;
+        bool RefreshUTXOs( const std::vector<InputUTXOInfo> &infos );
 
         TokenID                 token;
         uint64_t                nonce;
         std::vector<GeniusUTXO> utxos;
+        std::shared_ptr<ethereum::EthereumKeyGenerator> eth_address;
 
     private:
-        //uint64_t balance;
+
+        std::shared_ptr<KeyGenerator::ElGamal>          elgamal_address;
 
         static outcome::result<std::pair<KeyGenerator::ElGamal, ethereum::EthereumKeyGenerator>> GenerateGeniusAddress(
             std::string_view base_path,
