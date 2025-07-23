@@ -14,6 +14,8 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, AccountMessenger::Error, e )
     {
         case AccountCommError::PROTO_DESERIALIZATION:
             return "Error in protobuf data deserialization";
+        case AccountCommError::PROTO_SERIALIZATION:
+            return "Error in protobuf data serialization";
         case AccountCommError::NONCE_REQUEST_IN_PROGRESS:
             return "Nonce request already in progress";
         case AccountCommError::NONCE_FUTURE_ERROR:
@@ -129,7 +131,8 @@ namespace sgns
         req.set_requester_address( address_ );
         req.set_request_id( req_id );
         req.set_timestamp(
-            std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() ).count() );
+            std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
+                .count() );
 
         std::string encoded;
         if ( !req.SerializeToString( &encoded ) )
@@ -137,33 +140,23 @@ namespace sgns
             return outcome::failure( Error::PROTO_DESERIALIZATION );
         }
 
-        std::vector<uint8_t>        serialized_vec( encoded.begin(), encoded.end() );
-        auto                        signature = methods_.sign_( serialized_vec );
+        std::vector<uint8_t>            serialized_vec( encoded.begin(), encoded.end() );
+        auto                            signature = methods_.sign_( serialized_vec );
         accountComm::SignedNonceRequest signed_req;
         *signed_req.mutable_data() = req;
-        signed_req.set_signature( signature );
+        signed_req.set_signature( signature.data(), signature.size() );
 
         accountComm::AccountMessage envelope;
         *envelope.mutable_nonce_request() = signed_req;
 
-        std::string acc_message_serialized;
-        if ( !envelope.SerializeToString( &acc_message_serialized ) )
-        {
-            current_nonce_request_id_.reset();
-            return outcome::failure( Error::PROTO_DESERIALIZATION );
-        }
-        current_nonce_request_id_ = req_id;
-        nonce_result_promise_     = std::promise<uint64_t>();
+        auto send_ret = SendAccountMessage( envelope );
 
-        base::Buffer buffer( reinterpret_cast<const uint8_t *>( acc_message_serialized.data() ),
-                             acc_message_serialized.size() );
-        auto         send_res = SendMessage( buffer );
-        if ( !send_res )
+        if ( send_ret.has_error() )
         {
             current_nonce_request_id_.reset();
-            return send_res.as_failure();
         }
-        return SendMessage( buffer );
+
+        return send_ret;
     }
 
     outcome::result<uint64_t> AccountMessenger::GetLatestNonce( uint64_t timeout_ms )
@@ -201,7 +194,20 @@ namespace sgns
         return outcome::failure( Error::NONCE_GET_ERROR );
     }
 
-    void AccountMessenger::HandleNonceRequest( const accountComm::SignedNonceRequest &req )
+    outcome::result<void> AccountMessenger::SendAccountMessage( const accountComm::AccountMessage &msg )
+    {
+        size_t               size = msg.ByteSizeLong();
+        std::vector<uint8_t> serialized_proto( size );
+        if ( !msg.SerializeToArray( serialized_proto.data(), serialized_proto.size() ) )
+        {
+            logger_->warn( "Failed to serialize AccountMessage for NonceResponse" );
+            return outcome::failure( Error::PROTO_SERIALIZATION );
+        }
+        pubsub_->Publish( account_comm_topic_, serialized_proto );
+        return outcome::success();
+    }
+
+    void AccountMessenger::HandleNonceRequest( const accountComm::SignedNonceRequest &signed_req )
     {
         const auto &req = signed_req.data();
 
@@ -214,13 +220,13 @@ namespace sgns
         }
 
         std::vector<uint8_t> serialized_vec( serialized.begin(), serialized.end() );
-        if ( !methods.verify_signature_( req.requester_address(), serialized_vec, signed_req.signature() ) )
+        if ( !methods_.verify_signature_( req.requester_address(), signed_req.signature(), serialized_vec ) )
         {
             logger_->warn( "Invalid signature on NonceRequest from {}", req.requester_address() );
             return;
         }
 
-        uint64_t local_nonce = methods.get_local_nonce_();
+        uint64_t local_nonce = methods_.get_local_nonce_();
 
         // 2. Build NonceResponse
         accountComm::NonceResponse resp;
@@ -229,7 +235,8 @@ namespace sgns
         resp.set_request_id( req.request_id() );
         resp.set_known_nonce( local_nonce );
         resp.set_timestamp(
-            std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() ).count() );
+            std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
+                .count() );
 
         std::string resp_serialized;
         if ( !resp.SerializeToString( &resp_serialized ) )
@@ -247,29 +254,29 @@ namespace sgns
 
         accountComm::AccountMessage msg;
         *msg.mutable_nonce_response() = signed_resp;
+        auto send_ret                 = SendAccountMessage( msg );
 
-        std::string encoded;
-        if ( !msg.SerializeToString( &encoded ) )
+        if ( send_ret.has_error() )
         {
-            logger_->warn( "Failed to serialize AccountMessage for NonceResponse" );
+            logger_->warn( "Failed to send NonceResponse" );
             return;
-        }
-
-        base::Buffer buffer( reinterpret_cast<const uint8_t *>( encoded.data() ), encoded.size() );
-        auto         res = SendMessage( buffer );
-        if ( !res )
-        {
-            logger_->warn( "Failed to send NonceResponse: {}", res.error().message() );
         }
     }
 
-    void AccountMessenger::HandleNonceResponse( const accountComm::SignedNonceResponse &resp )
+    void AccountMessenger::HandleNonceResponse( const accountComm::SignedNonceResponse &signed_resp )
     {
         const auto &resp = signed_resp.data();
 
-        std::vector<uint8_t> data_vec( resp.cbegin(), resp.cend() );
+        std::string serialized;
+        if ( !resp.SerializeToString( &serialized ) )
+        {
+            logger_->warn( "Failed to serialize NonceResponse for signature check" );
+            return;
+        }
 
-        if ( !methods.verify_signature_( resp.responder_address(), signed_resp.signature(), data_vec ) )
+        std::vector<uint8_t> data_vec( serialized.begin(), serialized.end() );
+
+        if ( !methods_.verify_signature_( resp.responder_address(), signed_resp.signature(), data_vec ) )
         {
             logger_->warn( "Invalid signature on nonce response from {}", resp.responder_address() );
             return;

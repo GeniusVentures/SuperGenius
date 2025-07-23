@@ -24,6 +24,7 @@ namespace sgns
         enum class Error
         {
             PROTO_DESERIALIZATION = 0,
+            PROTO_SERIALIZATION,
             NONCE_REQUEST_IN_PROGRESS,
             NONCE_FUTURE_ERROR,
             NONCE_GET_ERROR,
@@ -67,7 +68,7 @@ namespace sgns
         outcome::result<void> RequestNonce( uint64_t req_id );
 
         void OnMessage( boost::optional<const ipfs_pubsub::GossipPubSub::Message &> message, const std::string &topic );
-        outcome::result<void> SendMessage( const base::Buffer &buff );
+        outcome::result<void> SendAccountMessage( const accountComm::AccountMessage &msg );
 
         void HandleNonceRequest( const accountComm::SignedNonceRequest &req );
         void HandleNonceResponse( const accountComm::SignedNonceResponse &resp );
