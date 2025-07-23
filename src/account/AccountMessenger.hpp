@@ -4,6 +4,7 @@
  * @date       2025-07-21
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
+#pragma once 
 #include <string>
 #include <memory>
 #include <optional>
