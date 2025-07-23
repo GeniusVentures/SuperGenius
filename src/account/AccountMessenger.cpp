@@ -5,6 +5,7 @@
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
 #include "AccountMessenger.hpp"
+#include "base/sgns_version.hpp"
 
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, AccountMessenger::Error, e )
 {
@@ -25,10 +26,10 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, AccountMessenger::Error, e )
 
 namespace sgns
 {
-    AccountMessenger AccountMessenger::New( std::string                                      address,
-                                            std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub,
-                                            AccountMessenger::InterfaceMethods               methods,
-                                            bool                                             is_full_node )
+    std::shared_ptr<AccountMessenger> AccountMessenger::New( std::string                                address,
+                                                             std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub,
+                                                             InterfaceMethods                           methods,
+                                                             bool                                       is_full_node )
     {
         if ( address.empty() )
         {
@@ -44,17 +45,17 @@ namespace sgns
         }
         auto instance = std::shared_ptr<AccountMessenger>( new AccountMessenger( std::move( address ),
                                                                                  std::move( pubsub ),
-                                                                                 std::move( is_full_node ),
-                                                                                 std::move( methods ) ) );
+                                                                                 std::move( methods ),
+                                                                                 std::move( is_full_node ) ) );
 
         instance->subs_acc_future_ = std::move( instance->pubsub_->Subscribe(
             instance->account_comm_topic_,
             [weakptr( std::weak_ptr<AccountMessenger>( instance ) )](
-                boost::optional<const GossipPubSub::Message &> message )
+                boost::optional<const ipfs_pubsub::GossipPubSub::Message &> message )
             {
                 if ( auto self = weakptr.lock() )
                 {
-                    self->m_logger->debug( "Message received on topic: {}", self->account_comm_topic_ );
+                    self->logger_->debug( "Message received on topic: {}", self->account_comm_topic_ );
                     self->OnMessage( message, self->account_comm_topic_ );
                 }
             } ) );
@@ -63,27 +64,29 @@ namespace sgns
             instance->subs_full_future_ = std::move( instance->pubsub_->Subscribe(
                 instance->full_node_comm_topic_,
                 [weakptr( std::weak_ptr<AccountMessenger>( instance ) )](
-                    boost::optional<const GossipPubSub::Message &> message )
+                    boost::optional<const ipfs_pubsub::GossipPubSub::Message &> message )
                 {
                     if ( auto self = weakptr.lock() )
                     {
-                        self->m_logger->debug( "Message received on topic: {}", self->full_node_comm_topic_ );
+                        self->logger_->debug( "Message received on topic: {}", self->full_node_comm_topic_ );
                         self->OnMessage( message, self->full_node_comm_topic_ );
                     }
                 } ) );
         }
+        return instance;
     }
 
-    AccountMessenger::AccountMessenger( std::string                                      address,
-                                        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub,
-                                        AccountMessenger::InterfaceMethods               methods,
-                                        bool                                             is_full_node ) :
+    AccountMessenger::AccountMessenger( std::string                                address,
+                                        std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub,
+                                        InterfaceMethods                           methods,
+                                        bool                                       is_full_node ) :
         address_( std::move( address ) ),
         account_comm_topic_(
             address_ +
             ( ( boost::format( std::string( ACCOUNT_COMM ) ) % sgns::version::SuperGeniusVersionMajor() ).str() ) ),
         full_node_comm_topic_(
             ( boost::format( std::string( FULL_NODE_COMM ) ) % sgns::version::SuperGeniusVersionMajor() ).str() ),
+        is_full_node_( std::move( is_full_node ) ),
         pubsub_( std::move( pubsub ) ),
         methods_( std::move( methods ) )
     {
@@ -91,29 +94,30 @@ namespace sgns
 
     AccountMessenger::~AccountMessenger() {}
 
-    void AccountMessenger::OnMessage( boost::optional<const GossipPubSub::Message &> message, const std::string &topic )
+    void AccountMessenger::OnMessage( boost::optional<const ipfs_pubsub::GossipPubSub::Message &> message,
+                                      const std::string                                          &topic )
     {
-        m_logger->trace( "[{}] On Message on topic", topic );
+        logger_->trace( "[{}] On Message on topic", topic );
         if ( message )
         {
-            m_logger->trace( "[{}] Valid message on topic ", topic );
+            logger_->trace( "[{}] Valid message on topic ", topic );
             accountComm::AccountMessage acc_msg;
             if ( !acc_msg.ParseFromArray( message->data.data(), static_cast<int>( message->data.size() ) ) )
             {
-                m_logger->warn( "Failed to parse AccountMessage from topic: {}", topic );
+                logger_->warn( "Failed to parse AccountMessage from topic: {}", topic );
                 return;
             }
 
             switch ( acc_msg.payload_case() )
             {
-                case account::AccountMessage::kNonceRequest:
+                case accountComm::AccountMessage::kNonceRequest:
                     HandleNonceRequest( acc_msg.nonce_request() );
                     break;
-                case account::AccountMessage::kNonceResponse:
+                case accountComm::AccountMessage::kNonceResponse:
                     HandleNonceResponse( acc_msg.nonce_response() );
                     break;
                 default:
-                    m_logger->warn( "Unknown AccountMessage type received on {}", topic );
+                    logger_->warn( "Unknown AccountMessage type received on {}", topic );
                     break;
             }
         }
@@ -125,24 +129,21 @@ namespace sgns
         req.set_requester_address( address_ );
         req.set_request_id( req_id );
         req.set_timestamp(
-            std::chrono::duration_cast<std::chrono::milliseconds>( timestamp.time_since_epoch() ).count() );
-
-        accountComm::AccountMessage envelope;
-        *envelope.mutable_nonce_request() = req;
+            std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() ).count() );
 
         std::string encoded;
-        if ( !envelope.SerializeToString( &encoded ) )
+        if ( !req.SerializeToString( &encoded ) )
         {
             return outcome::failure( Error::PROTO_DESERIALIZATION );
         }
 
         std::vector<uint8_t>        serialized_vec( encoded.begin(), encoded.end() );
         auto                        signature = methods_.sign_( serialized_vec );
-        account::SignedNonceRequest signed_req;
+        accountComm::SignedNonceRequest signed_req;
         *signed_req.mutable_data() = req;
         signed_req.set_signature( signature );
 
-        account::AccountMessage envelope;
+        accountComm::AccountMessage envelope;
         *envelope.mutable_nonce_request() = signed_req;
 
         std::string acc_message_serialized;
@@ -200,7 +201,7 @@ namespace sgns
         return outcome::failure( Error::NONCE_GET_ERROR );
     }
 
-    void AccountMessenger::HandleNonceRequest( const account::NonceRequest &req )
+    void AccountMessenger::HandleNonceRequest( const accountComm::SignedNonceRequest &req )
     {
         const auto &req = signed_req.data();
 
@@ -208,48 +209,49 @@ namespace sgns
         std::string serialized;
         if ( !req.SerializeToString( &serialized ) )
         {
-            m_logger->warn( "Failed to serialize NonceRequest for signature check" );
+            logger_->warn( "Failed to serialize NonceRequest for signature check" );
             return;
         }
 
         std::vector<uint8_t> serialized_vec( serialized.begin(), serialized.end() );
         if ( !methods.verify_signature_( req.requester_address(), serialized_vec, signed_req.signature() ) )
         {
-            m_logger->warn( "Invalid signature on NonceRequest from {}", req.requester_address() );
+            logger_->warn( "Invalid signature on NonceRequest from {}", req.requester_address() );
             return;
         }
 
         uint64_t local_nonce = methods.get_local_nonce_();
 
         // 2. Build NonceResponse
-        account::NonceResponse resp;
+        accountComm::NonceResponse resp;
+
         resp.set_responder_address( address_ );
         resp.set_request_id( req.request_id() );
         resp.set_known_nonce( local_nonce );
         resp.set_timestamp(
-            std::chrono::duration_cast<std::chrono::milliseconds>( timestamp.time_since_epoch() ).count() );
+            std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() ).count() );
 
         std::string resp_serialized;
         if ( !resp.SerializeToString( &resp_serialized ) )
         {
-            m_logger->warn( "Failed to serialize NonceResponse" );
+            logger_->warn( "Failed to serialize NonceResponse" );
             return;
         }
 
         std::vector<uint8_t> resp_bytes( resp_serialized.begin(), resp_serialized.end() );
         std::vector<uint8_t> signature = methods_.sign_( resp_bytes );
 
-        account::SignedNonceResponse signed_resp;
+        accountComm::SignedNonceResponse signed_resp;
         *signed_resp.mutable_data() = resp;
         signed_resp.set_signature( signature.data(), signature.size() );
 
-        account::AccountMessage msg;
+        accountComm::AccountMessage msg;
         *msg.mutable_nonce_response() = signed_resp;
 
         std::string encoded;
         if ( !msg.SerializeToString( &encoded ) )
         {
-            m_logger->warn( "Failed to serialize AccountMessage for NonceResponse" );
+            logger_->warn( "Failed to serialize AccountMessage for NonceResponse" );
             return;
         }
 
@@ -257,11 +259,11 @@ namespace sgns
         auto         res = SendMessage( buffer );
         if ( !res )
         {
-            m_logger->warn( "Failed to send NonceResponse: {}", res.error().message() );
+            logger_->warn( "Failed to send NonceResponse: {}", res.error().message() );
         }
     }
 
-    void AccountMessenger::HandleNonceResponse( const account::NonceResponse &resp )
+    void AccountMessenger::HandleNonceResponse( const accountComm::SignedNonceResponse &resp )
     {
         const auto &resp = signed_resp.data();
 
@@ -269,7 +271,7 @@ namespace sgns
 
         if ( !methods.verify_signature_( resp.responder_address(), signed_resp.signature(), data_vec ) )
         {
-            m_logger->warn( "Invalid signature on nonce response from {}", resp.responder_address() );
+            logger_->warn( "Invalid signature on nonce response from {}", resp.responder_address() );
             return;
         }
 
@@ -285,7 +287,7 @@ namespace sgns
         }
         catch ( const std::future_error &e )
         {
-            m_logger->trace( "Duplicate or late response, ignoring: {}", e.what() );
+            logger_->trace( "Duplicate or late response, ignoring: {}", e.what() );
         }
 
         current_nonce_request_id_.reset();

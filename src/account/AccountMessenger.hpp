@@ -14,25 +14,13 @@
 #include <boost/optional.hpp>
 #include "ipfs_pubsub/gossip_pubsub.hpp"
 #include "outcome/outcome.hpp"
-
+#include "account/proto/SGAccountComm.pb.h"
 
 namespace sgns
 {
     class AccountMessenger : public std::enable_shared_from_this<AccountMessenger>
     {
-    private:
-        const std::string                                address_;
-        const std::string                                account_comm_topic_;
-        const std::string                                full_node_comm_topic_;
-        const bool                                       is_full_node_;
-        std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub_;
-        std::future<libp2p::protocol::Subscription>      subs_acc_future_;
-        std::future<libp2p::protocol::Subscription>      subs_full_future_;
-
-        std::optional<uint64_t> current_nonce_request_id_;
-        std::promise<uint64_t>  nonce_result_promise_;
-        std::mutex              nonce_mutex_;
-
+    public:
         enum class Error
         {
             PROTO_DESERIALIZATION = 0,
@@ -48,28 +36,43 @@ namespace sgns
             std::function<uint64_t()>                                                              get_local_nonce_;
         };
 
-        InterfaceMethods methods_;
+        static std::shared_ptr<AccountMessenger> New( std::string                                address,
+                                                      std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub,
+                                                      InterfaceMethods                           methods,
+                                                      bool                                       is_full_node );
+        ~AccountMessenger();
+        outcome::result<uint64_t> GetLatestNonce( uint64_t timeout_ms );
 
-        AccountMessenger( std::string                                      address,
-                          std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub,
-                          InterfaceMethods                                 methods,
-                          bool                                             is_full_node );
+    private:
+        static constexpr std::string_view ACCOUNT_COMM   = ".comm.%02d";
+        static constexpr std::string_view FULL_NODE_COMM = "SGNUSFullNode.comm.%02d";
 
-        void OnMessage( boost::optional<const GossipPubSub::Message &> message, const std::string &topic );
+        const std::string                           address_;
+        const std::string                           account_comm_topic_;
+        const std::string                           full_node_comm_topic_;
+        const bool                                  is_full_node_;
+        std::shared_ptr<ipfs_pubsub::GossipPubSub>  pubsub_;
+        std::future<libp2p::protocol::Subscription> subs_acc_future_;
+        std::future<libp2p::protocol::Subscription> subs_full_future_;
+
+        std::optional<uint64_t> current_nonce_request_id_;
+        std::promise<uint64_t>  nonce_result_promise_;
+        std::mutex              nonce_mutex_;
+        InterfaceMethods        methods_;
+
+        AccountMessenger( std::string                                address,
+                          std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub,
+                          InterfaceMethods                           methods,
+                          bool                                       is_full_node );
+        outcome::result<void> RequestNonce( uint64_t req_id );
+
+        void OnMessage( boost::optional<const ipfs_pubsub::GossipPubSub::Message &> message, const std::string &topic );
         outcome::result<void> SendMessage( const base::Buffer &buff );
 
-        void HandleNonceRequest( const account::NonceRequest &req );
-        void HandleNonceResponse( const account::NonceResponse &resp );
+        void HandleNonceRequest( const accountComm::SignedNonceRequest &req );
+        void HandleNonceResponse( const accountComm::SignedNonceResponse &resp );
 
-    public:
-        static constexpr std::string_view        ACCOUNT_COMM   = ".comm.%02d";
-        static constexpr std::string_view        FULL_NODE_COMM = "SGNUSFullNode.comm.%02d";
-        static std::shared_ptr<AccountMessenger> New( std::string                                      address,
-                                                      std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub,
-                                                      InterfaceMethods methods bool                    is_full_node );
-        ~AccountMessenger();
-        outcome::result<uint64_t> GetLatestNonce( /* timeout maybe?*/ ); //TODO
-        outcome::result<void>     RequestNonce();                        //TODO
+        base::Logger logger_ = sgns::base::createLogger( "AccountMessenger" );
     };
 }
 
