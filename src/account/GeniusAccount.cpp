@@ -45,6 +45,83 @@ namespace sgns
         // How to deal with errors?
     }
 
+    GeniusAccount::~GeniusAccount()
+    {
+        utxos.clear();
+    }
+
+    std::string GeniusAccount::GetAddress() const
+    {
+        return eth_address->GetEntirePubValue();
+    }
+
+    template <>
+    uint64_t GeniusAccount::GetBalance() const
+    {
+        uint64_t retval = 0;
+
+        for ( auto &curr : utxos )
+        {
+            if ( !curr.GetLock() )
+            {
+                retval += curr.GetAmount();
+            }
+        }
+
+        return retval;
+    }
+
+    template <>
+    std::string GeniusAccount::GetBalance() const
+    {
+        return std::to_string( GetBalance<uint64_t>() );
+    }
+
+    TokenID GeniusAccount::GetToken() const
+    {
+        return token;
+    }
+
+    bool GeniusAccount::PutUTXO( const GeniusUTXO &new_utxo )
+    {
+        bool is_new = true;
+        for ( auto &curr : utxos )
+        {
+            if ( new_utxo.GetTxID() != curr.GetTxID() )
+            {
+                continue;
+            }
+            if ( new_utxo.GetOutputIdx() != curr.GetOutputIdx() )
+            {
+                continue;
+            }
+            //TODO - If it's the same, might be locked, then unlock
+            is_new = false;
+            break;
+        }
+        if ( is_new )
+        {
+            utxos.push_back( new_utxo );
+        }
+        return is_new;
+    }
+
+    bool GeniusAccount::RefreshUTXOs( const std::vector<InputUTXOInfo> &infos )
+    {
+        utxos.erase( std::remove_if( utxos.begin(),
+                                         utxos.end(),
+                                         [&infos]( const GeniusUTXO &x ) { //
+                                             return std::any_of( infos.begin(),
+                                                                 infos.end(),
+                                                                 [&x]( const InputUTXOInfo &a ) { //
+                                                                     return ( a.txid_hash_ == x.GetTxID() ) &&
+                                                                            ( a.output_idx_ == x.GetOutputIdx() );
+                                                                 } );
+                                         } ),
+                         utxos.end() );
+        return true;
+    }
+
     outcome::result<std::pair<KeyGenerator::ElGamal, ethereum::EthereumKeyGenerator>> GeniusAccount::
         GenerateGeniusAddress( std::string_view base_path, const char *eth_private_key )
     {
