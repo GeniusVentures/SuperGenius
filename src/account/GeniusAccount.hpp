@@ -53,7 +53,6 @@ namespace sgns
         bool RefreshUTXOs( const std::vector<InputUTXOInfo> &infos );
 
         static bool          VerifySignature( std::string address, std::string sig, std::vector<uint8_t> data );
-        static std::vector<uint8_t> Sign(std::shared_ptr<ethereum::EthereumKeyGenerator> eth_key, std::vector<uint8_t> data );
         std::vector<uint8_t> Sign( std::vector<uint8_t> data );
 
         TokenID                                         token;

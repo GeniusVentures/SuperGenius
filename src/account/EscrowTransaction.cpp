@@ -26,16 +26,14 @@ namespace sgns
     {
     }
 
-    EscrowTransaction EscrowTransaction::New( UTXOTxParameters                                params,
-                                              uint64_t                                        amount,
-                                              std::string                                     dev_addr,
-                                              uint64_t                                        peers_cut,
-                                              SGTransaction::DAGStruct                        dag,
-                                              std::shared_ptr<ethereum::EthereumKeyGenerator> eth_key )
+    EscrowTransaction EscrowTransaction::New( UTXOTxParameters         params,
+                                              uint64_t                 amount,
+                                              std::string              dev_addr,
+                                              uint64_t                 peers_cut,
+                                              SGTransaction::DAGStruct dag )
     {
         EscrowTransaction instance( std::move( params ), amount, std::move( dev_addr ), peers_cut, std::move( dag ) );
         instance.FillHash();
-        instance.MakeSignature( std::move( eth_key ) );
         return instance;
     }
 

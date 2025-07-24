@@ -63,15 +63,13 @@ namespace sgns
         return token_id;
     }
 
-    MintTransaction MintTransaction::New( uint64_t                                        new_amount,
-                                          std::string                                     chain_id,
-                                          TokenID                                         token_id,
-                                          SGTransaction::DAGStruct                        dag,
-                                          std::shared_ptr<ethereum::EthereumKeyGenerator> eth_key )
+    MintTransaction MintTransaction::New( uint64_t                 new_amount,
+                                          std::string              chain_id,
+                                          TokenID                  token_id,
+                                          SGTransaction::DAGStruct dag )
     {
         MintTransaction instance( new_amount, std::move( chain_id ), std::move( token_id ), std::move( dag ) );
         instance.FillHash();
-        instance.MakeSignature( std::move( eth_key ) );
         return instance;
     }
 }

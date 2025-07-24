@@ -92,7 +92,7 @@ namespace sgns
                         break;
                     }
                     tx = maybe_tx.value();
-                    if ( !IGeniusTransactions::CheckDAGStructSignature( tx->dag_st ) )
+                    if ( !tx->CheckSignature() )
                     {
                         m_logger->error( "Could not validate signature of transaction {}", element.key() );
                         break;
@@ -220,10 +220,10 @@ namespace sgns
             auto &&params,
             UTXOTxParameters::create( account_m->utxos, account_m->GetAddress(), amount, destination, token_id ) );
 
-        params.SignParameters( account_m->eth_keypair );
+        params.SignParameters( account_m );
 
         auto transfer_transaction = std::make_shared<TransferTransaction>(
-            TransferTransaction::New( params.outputs_, params.inputs_, FillDAGStruct(), account_m->eth_keypair ) );
+            TransferTransaction::New( params.outputs_, params.inputs_, FillDAGStruct()) );
 
         std::optional<std::vector<uint8_t>> maybe_proof;
 #ifdef _PROOF_ENABLED
@@ -248,8 +248,7 @@ namespace sgns
             MintTransaction::New( amount,
                                   std::move( chainid ),
                                   std::move( tokenid ),
-                                  FillDAGStruct( std::move( transaction_hash ) ),
-                                  account_m->eth_keypair ) );
+                                  FillDAGStruct( std::move( transaction_hash ) ) ) );
         std::optional<std::vector<uint8_t>> maybe_proof;
 #ifdef _PROOF_ENABLED
         TransferProof prover( 1000000000000,
@@ -279,11 +278,11 @@ namespace sgns
                                                "0x" + hash_data.toReadableString(),
                                                TokenID::FromBytes( { 0x00 } ) ) );
 
-        params.SignParameters( account_m->eth_keypair );
+        params.SignParameters( account_m );
 
         account_m->utxos        = UTXOTxParameters::UpdateUTXOList( account_m->utxos, params );
         auto escrow_transaction = std::make_shared<EscrowTransaction>(
-            EscrowTransaction::New( params, amount, dev_addr, peers_cut, FillDAGStruct(), account_m->eth_keypair ) );
+            EscrowTransaction::New( params, amount, dev_addr, peers_cut, FillDAGStruct() ) );
 
         // Get the transaction ID for tracking
         auto txId = escrow_transaction->dag_st.data_hash();
@@ -361,8 +360,7 @@ namespace sgns
         auto transfer_transaction = std::make_shared<TransferTransaction>(
             TransferTransaction::New( payout_peers,
                                       std::vector<InputUTXOInfo>{ escrow_utxo_input },
-                                      FillDAGStruct(),
-                                      account_m->eth_keypair ) );
+                                      FillDAGStruct()) );
 
         std::optional<std::vector<uint8_t>> transfer_proof;
 #ifdef _PROOF_ENABLED
@@ -377,8 +375,7 @@ namespace sgns
                                            escrow_tx->GetDevAddress(),
                                            escrow_tx->dag_st.source_addr(),
                                            escrow_tx->dag_st.data_hash(),
-                                           FillDAGStruct(),
-                                           account_m->eth_keypair ) );
+                                           FillDAGStruct()) );
 
         std::optional<std::vector<uint8_t>> escrow_release_proof;
 #ifdef _PROOF_ENABLED
@@ -482,6 +479,8 @@ namespace sgns
             sgns::crdt::GlobalDB::Buffer data_transaction;
 
             m_logger->debug( "Recording the transaction on " + tx_key.GetKey() );
+
+            (void)transaction->MakeSignature( account_m );
 
             data_transaction.put( transaction->SerializeByteVector() );
             BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Put( std::move( tx_key ), std::move( data_transaction ) ) );

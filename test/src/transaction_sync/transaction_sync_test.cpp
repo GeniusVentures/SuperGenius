@@ -111,23 +111,26 @@ namespace sgns
                                                          destination,
                                                          sgns::TokenID::FromBytes( { 0x00 } ) ) );
 
-            params.SignParameters( account->eth_address );
+            params.SignParameters( account );
 
-            auto                     timestamp = std::chrono::system_clock::now();
+            auto        timestamp = std::chrono::system_clock::now();
+            std::string wrong_address =
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
             SGTransaction::DAGStruct dag;
             dag.set_previous_hash( "" );
             dag.set_nonce( ++account->nonce );
-            dag.set_source_addr( account->GetAddress() );
+            dag.set_source_addr( wrong_address );
             dag.set_timestamp( timestamp.time_since_epoch().count() );
             dag.set_uncle_hash( "" );
             dag.set_data_hash( "" ); //filled by transaction class
             auto transfer_transaction = std::make_shared<sgns::TransferTransaction>(
-                sgns::TransferTransaction::New( params.outputs_, params.inputs_, dag, account->eth_address ) );
+                sgns::TransferTransaction::New( params.outputs_, params.inputs_, dag ) );
             std::optional<std::vector<uint8_t>> maybe_proof;
 
             TransferProof prover( static_cast<uint64_t>( account->GetBalance<uint64_t>() ),
                                   static_cast<uint64_t>( amount ) );
             OUTCOME_TRY( ( auto &&, proof_result ), prover.GenerateFullProof() );
+
             maybe_proof = std::move( proof_result );
 
             account->utxos = sgns::UTXOTxParameters::UpdateUTXOList( account->utxos, params );
