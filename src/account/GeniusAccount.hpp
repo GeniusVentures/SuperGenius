@@ -52,14 +52,17 @@ namespace sgns
 
         bool RefreshUTXOs( const std::vector<InputUTXOInfo> &infos );
 
-        TokenID                 token;
-        uint64_t                nonce;
-        std::vector<GeniusUTXO> utxos;
-        std::shared_ptr<ethereum::EthereumKeyGenerator> eth_address;
+        static bool          VerifySignature( std::string address, std::string sig, std::vector<uint8_t> data );
+        static std::vector<uint8_t> Sign(std::shared_ptr<ethereum::EthereumKeyGenerator> eth_key, std::vector<uint8_t> data );
+        std::vector<uint8_t> Sign( std::vector<uint8_t> data );
+
+        TokenID                                         token;
+        uint64_t                                        nonce;
+        std::vector<GeniusUTXO>                         utxos;
+        std::shared_ptr<ethereum::EthereumKeyGenerator> eth_keypair;
 
     private:
-
-        std::shared_ptr<KeyGenerator::ElGamal>          elgamal_address;
+        std::shared_ptr<KeyGenerator::ElGamal> elgamal_address;
 
         static outcome::result<std::pair<KeyGenerator::ElGamal, ethereum::EthereumKeyGenerator>> GenerateGeniusAddress(
             std::string_view base_path,
