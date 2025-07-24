@@ -82,7 +82,7 @@ namespace sgns
 
         outcome::result<std::string> ProcessImage( const std::string &jsondata );
 
-        uint64_t GetProcessCost( std::shared_ptr<ProcessingManager> procmgr );
+        uint64_t GetProcessCost( std::shared_ptr<sgns::sgprocessing::ProcessingManager> procmgr );
 
         outcome::result<double> GetGNUSPrice();
 

@@ -494,7 +494,7 @@ namespace sgns
     outcome::result<std::string> GeniusNode::ProcessImage( const std::string &jsondata )
     {
 
-        OUTCOME_TRY( auto procmgr, ProcessingManager::Create( jsondata ) );
+        OUTCOME_TRY( auto procmgr, sgns::sgprocessing::ProcessingManager::Create( jsondata ) );
 
         
         auto funds = GetProcessCost( procmgr );
@@ -572,7 +572,7 @@ namespace sgns
     }
 
 
-    uint64_t GeniusNode::GetProcessCost( std::shared_ptr<ProcessingManager> procmgr )
+    uint64_t GeniusNode::GetProcessCost( std::shared_ptr<sgns::sgprocessing::ProcessingManager> procmgr )
     {
         auto blockLen = procmgr->ParseBlockSize();
         if ( !blockLen )

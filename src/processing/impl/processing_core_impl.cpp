@@ -57,7 +57,7 @@ namespace sgns::processing
 
         task.ParseFromArray( queryTasks.value().data(), queryTasks.value().size() );
         auto jsondata = task.json_data();
-        OUTCOME_TRY( auto procmgr, ProcessingManager::Create( jsondata ) );
+        OUTCOME_TRY( auto procmgr, sgns::sgprocessing::ProcessingManager::Create( jsondata ) );
         std::vector<std::vector<uint8_t>> chunkhashes;
         auto                              tempResult = procmgr->Process( ioc, chunkhashes , 1);
         if ( tempResult )
