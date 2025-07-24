@@ -17,6 +17,7 @@
 
 #include "outcome/outcome.hpp"
 #include "account/proto/SGTransaction.pb.h"
+#include "GeniusAccount.hpp"
 
 #include <gsl/span>
 
@@ -108,8 +109,9 @@ namespace sgns
 
         void FillHash();
 
-        std::vector<uint8_t> MakeSignature( std::shared_ptr<ethereum::EthereumKeyGenerator> eth_key );
-        static bool          CheckDAGStructSignature( SGTransaction::DAGStruct dag_st );
+        std::vector<uint8_t> MakeSignature( std::shared_ptr<GeniusAccount> account );
+        bool                 CheckSignature();
+        bool                 CheckDAGSignatureLegacy();
 
         SGTransaction::DAGStruct                                                dag_st;
         static inline std::unordered_map<std::string, TransactionDeserializeFn> deserializers_map;

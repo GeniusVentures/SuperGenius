@@ -25,8 +25,7 @@ namespace sgns
         static MintTransaction New( uint64_t                                        new_amount,
                                     std::string                                     chain_id,
                                     TokenID                                         token_id,
-                                    SGTransaction::DAGStruct                        dag,
-                                    std::shared_ptr<ethereum::EthereumKeyGenerator> eth_key );
+                                    SGTransaction::DAGStruct                        dag );
 
         std::vector<uint8_t> SerializeByteVector() override;
 

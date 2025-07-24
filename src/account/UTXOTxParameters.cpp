@@ -181,7 +181,7 @@ namespace sgns
         return updated_list;
     }
 
-    bool UTXOTxParameters::SignParameters( std::shared_ptr<ethereum::EthereumKeyGenerator> eth_key )
+    bool UTXOTxParameters::SignParameters( std::shared_ptr<GeniusAccount> account )
     {
         //TODO -- Fill the signature field
         return true;

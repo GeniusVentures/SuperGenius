@@ -20,6 +20,7 @@
 
 namespace sgns
 {
+    class GeniusAccount;
     using namespace boost::multiprecision;
 
     /**
@@ -89,7 +90,7 @@ namespace sgns
         static std::vector<GeniusUTXO> UpdateUTXOList( const std::vector<GeniusUTXO> &utxo_pool,
                                                        const UTXOTxParameters        &params );
 
-        bool SignParameters( std::shared_ptr<ethereum::EthereumKeyGenerator> eth_key );
+        bool SignParameters( std::shared_ptr<GeniusAccount> account );
 
     private:
         /**

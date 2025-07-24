@@ -20,8 +20,7 @@ namespace sgns
                                       uint64_t                 amount,
                                       std::string              dev_addr,
                                       uint64_t                 peers_cut,
-                                      SGTransaction::DAGStruct dag,
-                                      std::shared_ptr<ethereum::EthereumKeyGenerator> eth_key );
+                                      SGTransaction::DAGStruct dag );
 
         static std::shared_ptr<EscrowTransaction> DeSerializeByteVector( const std::vector<uint8_t> &data );
 

@@ -134,7 +134,7 @@ namespace sgns
             auto tx = maybe_transaction.value();
             m_logger->trace( "Fetched transaction {}", transaction_key );
 
-            if ( !IGeniusTransactions::CheckDAGStructSignature( tx->dag_st ) )
+            if ( !tx->CheckDAGSignatureLegacy() )
             {
                 m_logger->error( "Could not validate signature of transaction {}", transaction_key );
                 continue;

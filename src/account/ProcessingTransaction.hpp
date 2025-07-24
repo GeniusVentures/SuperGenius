@@ -24,8 +24,7 @@ namespace sgns
         static ProcessingTransaction New( std::string              job_id,
                                           std::vector<std::string> subtask_ids,
                                           std::vector<std::string> node_addresses,
-                                          SGTransaction::DAGStruct dag,
-                                          std::shared_ptr<ethereum::EthereumKeyGenerator> eth_key );
+                                          SGTransaction::DAGStruct dag );
 
         ~ProcessingTransaction() override = default;
 
@@ -40,6 +39,7 @@ namespace sgns
         {
             return subtask_ids_;
         }
+
         std::vector<std::string> GetNodeAddresses() const
         {
             return node_addresses_;
@@ -68,6 +68,7 @@ namespace sgns
         uint256_t                job_hash_;       ///< Job ID
         std::vector<std::string> subtask_ids_;    ///< SubTask ID
         std::vector<std::string> node_addresses_; ///< Addresses/ID of processors
+
         //uint256_t   hash_process_data; ///< Hash of the process data
         //std::vector<uint8_t> raw_data;          ///<The data being processed
 
