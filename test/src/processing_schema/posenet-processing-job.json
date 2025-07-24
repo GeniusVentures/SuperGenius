@@ -9,7 +9,7 @@
   "inputs": [
     {
       "name": "ballet_image",
-	  "source_uri_param": "data/ballet.data",
+	  "source_uri_param": "https://ipfs.filebase.io/ipfs/QmdHvvEXRUgmyn1q3nkQwf9yE412Vzy5gSuGAukHRLicXA/data/ballet.data",
       "type": "texture2D",
       "description": "Ballet pose image input",
       "dimensions": {
@@ -30,7 +30,7 @@
     },
     {
       "name": "frisbee_image", 
-	  "source_uri_param": "data/frisbee3.data",
+	  "source_uri_param": "https://ipfs.filebase.io/ipfs/QmdHvvEXRUgmyn1q3nkQwf9yE412Vzy5gSuGAukHRLicXA/data/frisbee3.data",
       "type": "texture2D",
       "description": "Frisbee pose image input",
       "dimensions": {
@@ -82,7 +82,7 @@
       "type": "inference",
       "description": "Run PoseNet inference on ballet image",
       "model": {
-        "source_uri_param": "model.mnn",
+        "source_uri_param": "https://ipfs.filebase.io/ipfs/QmdHvvEXRUgmyn1q3nkQwf9yE412Vzy5gSuGAukHRLicXA/model.mnn",
         "format": "MNN",
         "batch_size": 1,
         "input_nodes": [

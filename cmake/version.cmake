@@ -1,4 +1,4 @@
-set(PROJECT_VERSION 1.0.0)
+set(PROJECT_VERSION 2.0.0)
 message(STATUS "PROJECT_VERSION: ${PROJECT_VERSION}")
 
 execute_process(
