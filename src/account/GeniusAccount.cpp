@@ -1,13 +1,14 @@
 #include "GeniusAccount.hpp"
 
-#include "ProofSystem/ElGamalKeyGenerator.hpp"
-#include "ProofSystem/EthereumKeyGenerator.hpp"
 #include "WalletCore/Hash.h"
 #include "local_secure_storage/ISecureStorage.hpp"
 #include "singleton/CComponentFactory.hpp"
 #include "WalletCore/PrivateKey.h"
-#include <nil/crypto3/pubkey/algorithm/sign.hpp>
 #include <boost/algorithm/hex.hpp>
+#include <crypto/hasher/hasher_impl.hpp>
+#include <nil/crypto3/algebra/marshalling.hpp>
+#include <nil/crypto3/pubkey/algorithm/sign.hpp>
+#include <nil/crypto3/pubkey/algorithm/verify.hpp>
 
 namespace
 {
@@ -32,7 +33,7 @@ namespace sgns
         {
             auto [temp_elgamal_address, temp_eth_address] = maybe_address.value();
 
-            eth_address     = std::make_shared<ethereum::EthereumKeyGenerator>( std::move( temp_eth_address ) );
+            eth_keypair     = std::make_shared<ethereum::EthereumKeyGenerator>( std::move( temp_eth_address ) );
             elgamal_address = std::make_shared<KeyGenerator::ElGamal>( std::move( temp_elgamal_address ) );
         }
         else
@@ -52,7 +53,7 @@ namespace sgns
 
     std::string GeniusAccount::GetAddress() const
     {
-        return eth_address->GetEntirePubValue();
+        return eth_keypair->GetEntirePubValue();
     }
 
     template <>
@@ -120,6 +121,78 @@ namespace sgns
                                          } ),
                          utxos.end() );
         return true;
+    }
+
+    bool GeniusAccount::VerifySignature( std::string address, std::string sig, std::vector<uint8_t> data )
+    {
+        bool         ret                = false;
+        const size_t SIGNATURE_EXP_SIZE = 64;
+        do
+        {
+            if ( sig.size() != SIGNATURE_EXP_SIZE )
+            {
+                std::cout << "NO CORRECT SIZE" << std::endl;
+                break;
+            }
+            std::vector<uint8_t> vec_sig( sig.cbegin(), sig.cend() );
+
+            std::array<uint8_t, 32> hashed = nil::crypto3::hash<nil::crypto3::hashes::sha2<256>>( data );
+
+            auto [r_success, r] =
+                nil::marshalling::bincode::field<ecdsa_t::scalar_field_type>::field_element_from_bytes(
+                    vec_sig.cbegin(),
+                    vec_sig.cbegin() + 32 );
+
+            if ( !r_success )
+            {
+                break;
+            }
+            auto [s_success, s] =
+                nil::marshalling::bincode::field<ecdsa_t::scalar_field_type>::field_element_from_bytes(
+                    vec_sig.cbegin() + 32,
+                    vec_sig.cbegin() + 64 );
+
+            if ( !s_success )
+            {
+                break;
+            }
+            ethereum::signature_type sig( r, s );
+            auto                     eth_pubkey = ethereum::EthereumKeyGenerator::BuildPublicKey( address );
+            ret                                 = nil::crypto3::verify( hashed, sig, eth_pubkey );
+        } while ( 0 );
+
+        return ret;
+    }
+
+    std::vector<uint8_t> GeniusAccount::Sign( std::shared_ptr<ethereum::EthereumKeyGenerator> eth_key,
+                                              std::vector<uint8_t>                            data )
+    {
+        std::array<uint8_t, 32> hashed = nil::crypto3::hash<nil::crypto3::hashes::sha2<256>>( data );
+
+        ethereum::signature_type  signature = nil::crypto3::sign( hashed, eth_key->get_private_key() );
+        std::vector<std::uint8_t> signed_vector( 64 );
+
+        nil::marshalling::bincode::field<ecdsa_t::scalar_field_type>::field_element_to_bytes<
+            std::vector<std::uint8_t>::iterator>( std::get<0>( signature ),
+                                                  signed_vector.begin(),
+                                                  signed_vector.begin() + 32 );
+        nil::marshalling::bincode::field<ecdsa_t::scalar_field_type>::field_element_to_bytes<
+            std::vector<std::uint8_t>::iterator>( std::get<1>( signature ),
+                                                  signed_vector.begin() + 32,
+                                                  signed_vector.end() );
+
+        nil::crypto3::multiprecision::cpp_int r;
+        nil::crypto3::multiprecision::cpp_int s;
+
+        import_bits( r, signed_vector.cbegin(), signed_vector.cbegin() + 32 );
+        import_bits( s, signed_vector.cbegin() + 32, signed_vector.cbegin() + 64 );
+
+        return signed_vector;
+    }
+
+    std::vector<uint8_t> GeniusAccount::Sign( std::vector<uint8_t> data )
+    {
+        return Sign( eth_keypair, std::move( data ) );
     }
 
     outcome::result<std::pair<KeyGenerator::ElGamal, ethereum::EthereumKeyGenerator>> GeniusAccount::
