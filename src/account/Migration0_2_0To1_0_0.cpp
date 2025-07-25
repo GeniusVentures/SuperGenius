@@ -15,6 +15,7 @@
 #include "account/EscrowReleaseTransaction.hpp"
 #include "proof/IBasicProof.hpp"
 #include "MigrationManager.hpp"
+#include "base/sgns_version.hpp"
 
 namespace sgns
 {
@@ -279,7 +280,7 @@ namespace sgns
         crdt_transaction_ = newDb_->BeginTransaction();
         topics_.clear();
         boost::format full_node_topic{ std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) };
-        full_node_topic % TransactionManager::TEST_NET_ID;
+        full_node_topic % TransactionManager::TEST_NET_ID % sgns::version::SuperGeniusVersionMajor();
 
         topics_.emplace( full_node_topic.str() );
 

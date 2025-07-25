@@ -279,12 +279,16 @@ namespace sgns
 
         pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
             crdt::KeyPairFileStorage( write_base_path_ + pubsubKeyPath ).GetKeyPair().value() );
-        auto pubs = pubsub_->Start( pubsubport, {}, lanip, addresses );
+        auto pubs = pubsub_->Start(
+            pubsubport,
+            { "/ip4/192.168.46.124/tcp/7005/p2p/12D3KooWQC2Tg2TN9Lj1WMh8vgLNdDYzr39gMLXkDPh21JwLeqCm", "/ip4/192.168.46.124/tcp/7176/p2p/12D3KooWMJr7jN19Fmu6UuY6iZDpMf8y3auY7be4uyrpYEncJbSQ" },
+            lanip,
+            addresses );
         pubs.wait();
         auto scheduler = std::make_shared<libp2p::protocol::AsioScheduler>( io_, libp2p::protocol::SchedulerConfig{} );
         auto generator = std::make_shared<ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
         auto graphsyncnetwork = std::make_shared<ipfs_lite::ipfs::graphsync::Network>( pubsub_->GetHost(), scheduler );
-
+        std::cout << "Pubsub address: " << pubsub_->GetLocalAddress() << std::endl;
         auto global_db_ret = crdt::GlobalDB::New( io_,
                                                   write_base_path_ + gnus_network_full_path_,
                                                   pubsub_,
