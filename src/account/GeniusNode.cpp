@@ -31,7 +31,7 @@
 #include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/local_requests.hpp>
 #include <libp2p/protocol/common/asio/asio_scheduler.hpp>
-
+#include <Generators.hpp>
 
 namespace
 {
@@ -281,7 +281,7 @@ namespace sgns
             crdt::KeyPairFileStorage( write_base_path_ + pubsubKeyPath ).GetKeyPair().value() );
         auto pubs = pubsub_->Start(
             pubsubport,
-            { "/ip4/192.168.46.124/tcp/7005/p2p/12D3KooWQC2Tg2TN9Lj1WMh8vgLNdDYzr39gMLXkDPh21JwLeqCm", "/ip4/192.168.46.124/tcp/7176/p2p/12D3KooWMJr7jN19Fmu6UuY6iZDpMf8y3auY7be4uyrpYEncJbSQ" },
+            { "/ip4/192.168.46.124/tcp/7005/p2p/12D3KooWESDNusuuXqQou82v4iqVMR3p3HHkfZJszswuWjeyoTpN", "/ip4/192.168.46.124/tcp/7176/p2p/12D3KooWQrdPmnHCJMAVNxx3dwV7zyGu79X3kXMs3jTUtJRxPYvk" },
             lanip,
             addresses );
         pubs.wait();
@@ -520,23 +520,27 @@ namespace sgns
         task.set_random_seed( 0 );
         task.set_results_channel( ( boost::format( "RESULT_CHANNEL_ID_%1%" ) % ( 1 ) ).str() );
 
-        //rapidjson::Document document;
-        //document.Parse( jsondata.c_str() );
-        // size_t           nSubTasks = 1;
-        //rapidjson::Value inputArray;
-
-        //inputArray = document["input"];
-        // nSubTasks  = inputArray.Size();
         auto procdata = procmgr->GetProcessingData();
         processing::ProcessTaskSplitter  taskSplitter;
         std::list<SGProcessing::SubTask> subTasks;
-        for ( const auto &input : procdata.get_inputs() )
+        for ( const auto &pass : procdata.get_passes() )
         {
-            size_t                                     nChunks = input.get_dimensions().value().get_chunk_count().value();
-            rapidjson::StringBuffer                    buffer;
-            rapidjson::Writer<rapidjson::StringBuffer> writer( buffer );
+            for ( auto &model : pass.get_model().value().get_input_nodes() )
+            {
+                json modeljson;
+                sgns::to_json( modeljson, model );
+                model.get_source().value()
+                size_t                  nChunks = input.get_dimensions().value().get_chunk_count().value();
+                rapidjson::StringBuffer buffer;
+                rapidjson::Writer<rapidjson::StringBuffer> writer( buffer );
 
-            taskSplitter.SplitTask( task, subTasks, procdata, nChunks, false, pubsub_->GetHost()->getId().toBase58() );
+                taskSplitter.SplitTask( task,
+                                        subTasks,
+                                        modeljson.dump(-1),
+                                        nChunks,
+                                        false,
+                                        pubsub_->GetHost()->getId().toBase58() );
+            }
         }
         auto cut = sgns::TokenAmount::ParseMinions( dev_config_.Cut );
         if ( !cut )

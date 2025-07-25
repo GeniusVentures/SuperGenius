@@ -27,7 +27,7 @@ namespace sgns
 
             void SplitTask( const SGProcessing::Task         &task,
                             std::list<SGProcessing::SubTask> &subTasks,
-                            sgns::SgnsProcessing              procdata,
+                            std::string                       json_data,
                             uint32_t numchunks, bool addvalidationsubtask, std::string ipfsid );
 
         private:
