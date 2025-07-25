@@ -60,6 +60,11 @@ namespace sgns::processing
         OUTCOME_TRY( auto procmgr, sgns::sgprocessing::ProcessingManager::Create( jsondata ) );
         std::vector<std::vector<uint8_t>> chunkhashes;
         auto                              tempResult = procmgr->Process( ioc, chunkhashes , 1);
+        for ( auto &chunkhash : chunkhashes )
+        {
+            std::string hashString( chunkhash.begin(), chunkhash.end() );
+            result.add_chunk_hashes( hashString );
+        }
         if ( tempResult )
         {
             std::string hashString( tempResult.value().begin(), tempResult.value().end() );
