@@ -94,8 +94,15 @@ namespace sgns
                     tx = maybe_tx.value();
                     if ( !tx->CheckSignature() )
                     {
-                        m_logger->error( "Could not validate signature of transaction {}", element.key() );
-                        break;
+                        if ( !tx->CheckDAGSignatureLegacy() )
+                        {
+                            m_logger->error( "Could not validate signature of transaction {}", element.key() );
+                            break;
+                        }
+                        else
+                        {
+                            m_logger->debug( "Legacy transaction validated: {}", element.key() );
+                        }
                     }
 
                     m_logger->trace( "Valid signature of {}", element.key() );
@@ -223,7 +230,7 @@ namespace sgns
         params.SignParameters( account_m );
 
         auto transfer_transaction = std::make_shared<TransferTransaction>(
-            TransferTransaction::New( params.outputs_, params.inputs_, FillDAGStruct()) );
+            TransferTransaction::New( params.outputs_, params.inputs_, FillDAGStruct() ) );
 
         std::optional<std::vector<uint8_t>> maybe_proof;
 #ifdef _PROOF_ENABLED
@@ -360,7 +367,7 @@ namespace sgns
         auto transfer_transaction = std::make_shared<TransferTransaction>(
             TransferTransaction::New( payout_peers,
                                       std::vector<InputUTXOInfo>{ escrow_utxo_input },
-                                      FillDAGStruct()) );
+                                      FillDAGStruct() ) );
 
         std::optional<std::vector<uint8_t>> transfer_proof;
 #ifdef _PROOF_ENABLED
@@ -375,7 +382,7 @@ namespace sgns
                                            escrow_tx->GetDevAddress(),
                                            escrow_tx->dag_st.source_addr(),
                                            escrow_tx->dag_st.data_hash(),
-                                           FillDAGStruct()) );
+                                           FillDAGStruct() ) );
 
         std::optional<std::vector<uint8_t>> escrow_release_proof;
 #ifdef _PROOF_ENABLED
