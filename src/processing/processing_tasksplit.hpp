@@ -14,6 +14,8 @@
 #include "processing/proto/SGProcessing.pb.h"
 #include "processing/processing_imagesplit.hpp"
 #include "processing/processing_subtask_state_storage.hpp"
+#include <SGNSProcMain.hpp>
+
 namespace sgns
 {
     namespace processing
@@ -23,7 +25,9 @@ namespace sgns
         public:
             ProcessTaskSplitter();
 
-            void SplitTask( const SGProcessing::Task &task, std::list<SGProcessing::SubTask> &subTasks, std::string json_data,
+            void SplitTask( const SGProcessing::Task         &task,
+                            std::list<SGProcessing::SubTask> &subTasks,
+                            sgns::SgnsProcessing              procdata,
                             uint32_t numchunks, bool addvalidationsubtask, std::string ipfsid );
 
         private:

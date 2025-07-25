@@ -520,29 +520,23 @@ namespace sgns
         task.set_random_seed( 0 );
         task.set_results_channel( ( boost::format( "RESULT_CHANNEL_ID_%1%" ) % ( 1 ) ).str() );
 
-        rapidjson::Document document;
-        document.Parse( jsondata.c_str() );
+        //rapidjson::Document document;
+        //document.Parse( jsondata.c_str() );
         // size_t           nSubTasks = 1;
-        rapidjson::Value inputArray;
+        //rapidjson::Value inputArray;
 
-        inputArray = document["input"];
+        //inputArray = document["input"];
         // nSubTasks  = inputArray.Size();
-
+        auto procdata = procmgr->GetProcessingData();
         processing::ProcessTaskSplitter  taskSplitter;
         std::list<SGProcessing::SubTask> subTasks;
-        for ( const auto &input : inputArray.GetArray() )
+        for ( const auto &input : procdata.get_inputs() )
         {
-            size_t                                     nChunks = input["chunk_count"].GetInt();
+            size_t                                     nChunks = input.get_dimensions().value().get_chunk_count().value();
             rapidjson::StringBuffer                    buffer;
             rapidjson::Writer<rapidjson::StringBuffer> writer( buffer );
 
-            input.Accept( writer );
-            std::string inputAsString = buffer.GetString();
-            taskSplitter
-                .SplitTask( task, subTasks, inputAsString, nChunks, false, pubsub_->GetHost()->getId().toBase58() );
-
-            //}
-            // imageindex++;
+            taskSplitter.SplitTask( task, subTasks, procdata, nChunks, false, pubsub_->GetHost()->getId().toBase58() );
         }
         auto cut = sgns::TokenAmount::ParseMinions( dev_config_.Cut );
         if ( !cut )

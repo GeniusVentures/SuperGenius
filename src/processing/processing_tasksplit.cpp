@@ -40,7 +40,9 @@ namespace sgns
             return boost::uuids::to_string(uuid);
         }
 
-        void ProcessTaskSplitter::SplitTask( const SGProcessing::Task &task, std::list<SGProcessing::SubTask> &subTasks, std::string json_data,
+        void ProcessTaskSplitter::SplitTask( const SGProcessing::Task         &task,
+                                             std::list<SGProcessing::SubTask> &subTasks,
+                                             sgns::SgnsProcessing              procdata,
                                              uint32_t numchunks, bool addvalidationsubtask, std::string ipfsid)
         {
             std::optional<SGProcessing::SubTask> validationSubtask;
@@ -55,8 +57,6 @@ namespace sgns
 
             //IPFS Block is the task ID for lookup
             subtask.set_ipfsblock( task.ipfs_block_id() );
-
-            subtask.set_json_data(json_data);
 
             //Generate a subtask uuid.
             //boost::uuids::uuid uuid = boost::uuids::random_generator()();
