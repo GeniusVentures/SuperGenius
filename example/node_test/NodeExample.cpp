@@ -293,7 +293,7 @@ void CreateProcessingTransaction( const std::vector<std::string> &args, sgns::Ge
       "type": "inference", 
       "description": "Run PoseNet inference on frisbee image",
       "model": {
-        "source_uri_param": "model.mnn",
+        "source_uri_param": "https://ipfs.filebase.io/ipfs/QmdHvvEXRUgmyn1q3nkQwf9yE412Vzy5gSuGAukHRLicXA/model.mnn",
         "format": "MNN",
         "batch_size": 1,
         "input_nodes": [
