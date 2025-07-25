@@ -47,6 +47,21 @@ namespace sgns
         dag_st.set_signature( std::move( signature ) );
     }
 
+    bool IGeniusTransactions::CheckHash()
+    {
+        auto signature = dag_st.signature();
+        auto hash      = dag_st.data_hash();
+        dag_st.clear_signature();
+        dag_st.clear_data_hash();
+
+        auto hasher_         = std::make_shared<crypto::HasherImpl>();
+        auto calculated_hash = hasher_->blake2b_256( SerializeByteVector() );
+        dag_st.set_data_hash(  hash );
+        dag_st.set_signature( std::move( signature ) );
+
+        return ( hash == calculated_hash.toReadableString() );
+    }
+
     std::vector<uint8_t> IGeniusTransactions::MakeSignature( std::shared_ptr<GeniusAccount> account )
     {
         dag_st.clear_signature();
@@ -69,6 +84,7 @@ namespace sgns
 
         return GeniusAccount::VerifySignature( dag_st.source_addr(), str_signature, serialized );
     }
+
     bool IGeniusTransactions::CheckDAGSignatureLegacy()
     {
         auto str_signature = dag_st.signature();
@@ -78,6 +94,6 @@ namespace sgns
         dag_st.SerializeToArray( serialized.data(), size );
         dag_st.set_signature( str_signature );
 
-        return GeniusAccount::VerifySignature( dag_st.source_addr(), str_signature, serialized );
+        return GeniusAccount::VerifySignature( dag_st.source_addr(), str_signature, serialized ) && CheckHash();
     }
 }

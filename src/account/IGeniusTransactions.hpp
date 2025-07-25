@@ -108,6 +108,7 @@ namespace sgns
         }
 
         void FillHash();
+        bool CheckHash();
 
         std::vector<uint8_t> MakeSignature( std::shared_ptr<GeniusAccount> account );
         bool                 CheckSignature();
