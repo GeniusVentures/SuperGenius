@@ -26,6 +26,7 @@
 #include "account/TokenAmount.hpp"
 #include "account/proto/SGTransaction.pb.h"
 #include "crdt/proto/delta.pb.h"
+#include "base/sgns_version.hpp"
 
 #ifdef _PROOF_ENABLED
 #include "proof/TransferProof.hpp"
@@ -50,7 +51,7 @@ namespace sgns
         m_logger->info( "Initializing values by reading whole blockchain" );
 
         boost::format full_node_topic{ std::string( GNUS_FULL_NODES_TOPIC ) };
-        full_node_topic % TEST_NET_ID;
+        full_node_topic % TEST_NET_ID % sgns::version::SuperGeniusVersionMajor();
         full_node_topic_m = full_node_topic.str();
 
         globaldb_m->AddListenTopic( account_m->GetAddress() );
