@@ -515,6 +515,7 @@ namespace sgns
         SGProcessing::Task task;
         auto               uuidstring = generate_uuid_with_ipfs_id( pubsub_->GetHost()->getId().toBase58() );
 
+        //Make a small json to insert without extra indentation and spacing.
         json smalljson;
         sgns::to_json( smalljson, procmgr->GetProcessingData());
         task.set_ipfs_block_id( uuidstring );
@@ -523,15 +524,6 @@ namespace sgns
         task.set_results_channel( ( boost::format( "RESULT_CHANNEL_ID_%1%" ) % ( 1 ) ).str() );
         //Get Processing Data
         auto &procdata = procmgr->GetProcessingData();
-
-        //Make a reference map of all inputs
-        std::unordered_map<std::string, size_t> inputsmap;
-        const auto                             &inputs = procdata.get_inputs();
-        for ( size_t i = 0; i < inputs.size(); ++i )
-        {
-            std::string sourceKey                   = "input:" + inputs[i].get_name();
-            inputsmap[sourceKey]  = i;
-        }
 
         //Split into subtasks
         processing::ProcessTaskSplitter  taskSplitter;
@@ -542,8 +534,13 @@ namespace sgns
             {
                 json modeljson;
                 sgns::to_json( modeljson, model );
-                auto   it      = inputsmap.find( model.get_source().value() );
-                size_t nChunks = procdata.get_inputs()[it->second].get_dimensions().value().get_chunk_count().value();
+                auto   index   = procmgr->GetInputIndex( model.get_source().value() );
+                if (!index)
+                {
+                    return index.error();
+                }
+                size_t nChunks =
+                    procdata.get_inputs()[index.value()].get_dimensions().value().get_chunk_count().value();
                 rapidjson::StringBuffer buffer;
                 rapidjson::Writer<rapidjson::StringBuffer> writer( buffer );
 
