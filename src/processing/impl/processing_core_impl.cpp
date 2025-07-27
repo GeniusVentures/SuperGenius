@@ -4,6 +4,7 @@
 
 #include "FileManager.hpp"
 #include <processingbase/ProcessingManager.hpp>
+#include <Generators.hpp>
 
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::processing, ProcessingCoreImpl::Error, e )
 {
@@ -56,17 +57,23 @@ namespace sgns::processing
         auto ioc = injector.create<std::shared_ptr<boost::asio::io_context>>();
 
         task.ParseFromArray( queryTasks.value().data(), queryTasks.value().size() );
-        auto jsondata = task.json_data();
-        OUTCOME_TRY( auto procmgr, sgns::sgprocessing::ProcessingManager::Create( jsondata ) );
+        //Parse main json data
+        OUTCOME_TRY( auto procmgr, sgns::sgprocessing::ProcessingManager::Create( task.json_data() ) );
+        //Parse subtask json
+        auto                              subtaskjson = nlohmann::json::parse( subTask.json_data() );
+        sgns::ModelNode                 model;
+        sgns::from_json( subtaskjson, model );
         std::vector<std::vector<uint8_t>> chunkhashes;
-        auto                              tempResult = procmgr->Process( ioc, chunkhashes , 1);
-        for ( auto &chunkhash : chunkhashes )
-        {
-            std::string hashString( chunkhash.begin(), chunkhash.end() );
-            result.add_chunk_hashes( hashString );
-        }
+        auto                              tempResult = procmgr->Process( ioc, chunkhashes, model );
+        //Parse the results if we got some
         if ( tempResult )
         {
+            for ( auto &chunkhash : chunkhashes )
+            {
+                std::string hashString( chunkhash.begin(), chunkhash.end() );
+                result.add_chunk_hashes( hashString );
+            }
+
             std::string hashString( tempResult.value().begin(), tempResult.value().end() );
             result.set_result_hash( hashString );
             result.set_token_id( m_tokenId.bytes().data(), m_tokenId.size() );
