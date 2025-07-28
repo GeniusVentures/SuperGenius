@@ -91,7 +91,7 @@ namespace sgns
                             bool                isprocessor,
                             uint16_t            base_port,
                             bool                is_full_node ) :
-        account_( std::make_shared<GeniusAccount>( dev_config.TokenID, dev_config.BaseWritePath, eth_private_key ) ),
+        account_( GeniusAccount::New( dev_config.TokenID, dev_config.BaseWritePath, eth_private_key ) ),
         io_( std::make_shared<boost::asio::io_context>() ),
         write_base_path_( dev_config.BaseWritePath ),
         autodht_( autodht ),
@@ -156,7 +156,7 @@ namespace sgns
         loggerBroadcaster->set_level( spdlog::level::err );
         loggerDataStore->set_level( spdlog::level::debug );
         loggerCRDTHeads->set_level( spdlog::level::debug );
-        loggerTransactions->set_level( spdlog::level::err );
+        loggerTransactions->set_level( spdlog::level::debug );
         loggerMigration->set_level( spdlog::level::debug );
         loggerMigrationStep->set_level( spdlog::level::debug );
         loggerQueue->set_level( spdlog::level::err );
@@ -279,6 +279,7 @@ namespace sgns
         pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
             crdt::KeyPairFileStorage( write_base_path_ + pubsubKeyPath ).GetKeyPair().value() );
         auto pubs = pubsub_->Start( pubsubport, {}, lanip, addresses );
+        account_->InitMessenger( pubsub_, is_full_node );
         pubs.wait();
         auto scheduler = std::make_shared<libp2p::protocol::AsioScheduler>( io_, libp2p::protocol::SchedulerConfig{} );
         auto generator = std::make_shared<ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
@@ -297,12 +298,11 @@ namespace sgns
             throw std::runtime_error( error.message() );
         }
         tx_globaldb_ = std::move( global_db_ret.value() );
-        tx_globaldb_->SetFullNode(is_full_node);
+        tx_globaldb_->SetFullNode( is_full_node );
         tx_globaldb_->AddTopicName( processing_channel_topic_ );
         tx_globaldb_->AddListenTopic( processing_channel_topic_ );
 
-
-        task_queue_      = std::make_shared<processing::ProcessingTaskQueueImpl>( tx_globaldb_, processing_channel_topic_ );
+        task_queue_ = std::make_shared<processing::ProcessingTaskQueueImpl>( tx_globaldb_, processing_channel_topic_ );
         processing_core_ = std::make_shared<processing::ProcessingCoreImpl>( tx_globaldb_,
                                                                              1000000,
                                                                              1,
@@ -310,7 +310,8 @@ namespace sgns
         processing_core_->RegisterProcessorFactory( "mnnimage",
                                                     [] { return std::make_unique<processing::MNN_Image>(); } );
 
-        task_result_storage_ = std::make_shared<processing::SubTaskResultStorageImpl>( tx_globaldb_, processing_channel_topic_ );
+        task_result_storage_ = std::make_shared<processing::SubTaskResultStorageImpl>( tx_globaldb_,
+                                                                                       processing_channel_topic_ );
         processing_service_  = std::make_shared<processing::ProcessingServiceImpl>(
             pubsub_,                                                          //
             MAX_NODES_COUNT,                                                  //

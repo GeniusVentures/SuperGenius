@@ -17,6 +17,7 @@
 
 #include "account/GeniusUTXO.hpp"
 #include "account/UTXOTxParameters.hpp"
+#include "account/AccountMessenger.hpp"
 #include "outcome/outcome.hpp"
 #include <vector>
 #include <array>
@@ -25,12 +26,15 @@ namespace sgns
 {
     using namespace boost::multiprecision;
 
-    class GeniusAccount
+    class GeniusAccount : public std::enable_shared_from_this<GeniusAccount>
     {
     public:
         static const std::array<uint8_t, 32> ELGAMAL_PUBKEY_PREDEFINED;
 
-        GeniusAccount( TokenID token_id, std::string_view base_path, const char *eth_private_key );
+        static std::shared_ptr<GeniusAccount> New( TokenID          token_id,
+                                                   std::string_view base_path,
+                                                   const char      *eth_private_key );
+        bool InitMessenger( std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub, bool full_node );
 
         ~GeniusAccount();
 
@@ -55,7 +59,8 @@ namespace sgns
         static bool          VerifySignature( std::string address, std::string sig, std::vector<uint8_t> data );
         std::vector<uint8_t> Sign( std::vector<uint8_t> data );
 
-        void SetLocalConfirmedNonce( uint64_t nonce );
+        void     SetLocalConfirmedNonce( uint64_t nonce );
+        uint64_t GetLocalConfirmedNonce();
 
         outcome::result<uint64_t> GetConfirmedNonce( uint64_t timeout_ms );
         uint64_t                  GetProposedNonce();
@@ -70,6 +75,9 @@ namespace sgns
         int64_t                                         confirmed_nonce_;
         uint64_t                                        proposed_nonce_;
         std::mutex                                      nonce_mutex_;
+        std::shared_ptr<AccountMessenger>               messenger_;
+
+        GeniusAccount( TokenID token_id );
 
         static outcome::result<std::pair<KeyGenerator::ElGamal, ethereum::EthereumKeyGenerator>> GenerateGeniusAddress(
             std::string_view base_path,

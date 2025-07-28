@@ -13,6 +13,7 @@
 #include <cstdlib>
 #include <future>
 #include <boost/optional.hpp>
+#include "base/logger.hpp"
 #include "ipfs_pubsub/gossip_pubsub.hpp"
 #include "outcome/outcome.hpp"
 #include "account/proto/SGAccountComm.pb.h"

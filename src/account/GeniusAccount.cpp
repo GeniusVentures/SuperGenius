@@ -26,26 +26,81 @@ namespace sgns
 {
     const std::array<uint8_t, 32> GeniusAccount::ELGAMAL_PUBKEY_PREDEFINED = get_elgamal_pubkey();
 
-    GeniusAccount::GeniusAccount( TokenID token_id, std::string_view base_path, const char *eth_private_key ) :
-        token( token_id ),      //
-        confirmed_nonce_( -1 ), //
-        proposed_nonce_( 0 )    //
+    std::shared_ptr<GeniusAccount> GeniusAccount::New( TokenID          token_id,
+                                                       std::string_view base_path,
+                                                       const char      *eth_private_key )
     {
+        std::shared_ptr<GeniusAccount> instance;
+
         if ( auto maybe_address = GenerateGeniusAddress( base_path, eth_private_key ); maybe_address.has_value() )
         {
             auto [temp_elgamal_address, temp_eth_address] = maybe_address.value();
 
-            eth_keypair     = std::make_shared<ethereum::EthereumKeyGenerator>( std::move( temp_eth_address ) );
-            elgamal_address = std::make_shared<KeyGenerator::ElGamal>( std::move( temp_elgamal_address ) );
-        }
-        else
-        {
-            std::cerr << "Could not get SGNS address: " << maybe_address.error().message() << std::endl;
-            throw std::runtime_error( maybe_address.error().message() );
+            instance = std::shared_ptr<GeniusAccount>( new GeniusAccount( std::move( token_id ) ) );
+
+            instance->eth_keypair = std::make_shared<ethereum::EthereumKeyGenerator>( std::move( temp_eth_address ) );
+            instance->elgamal_address = std::make_shared<KeyGenerator::ElGamal>( std::move( temp_elgamal_address ) );
         }
 
+        return instance;
         //TODO - Retrieve values where? Read through blockchain Here?
         // How to deal with errors?
+    }
+
+    bool GeniusAccount::InitMessenger( std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub, bool full_node )
+    {
+        bool                               ret = false;
+        AccountMessenger::InterfaceMethods methods;
+        methods.sign_ = [weakptr( weak_from_this() )]( std::vector<uint8_t> data )
+        {
+            if ( auto self = weakptr.lock() )
+            {
+                return self->Sign( std::move( data ) );
+            }
+            else
+            {
+                return std::vector<uint8_t>{};
+            }
+        };
+        methods.verify_signature_ =
+            [weakptr( weak_from_this() )]( std::string address, std::string sig, std::vector<uint8_t> data )
+        {
+            if ( auto self = weakptr.lock() )
+            {
+                return self->VerifySignature( std::move( address ), std::move( sig ), std::move( data ) );
+            }
+            else
+            {
+                return false;
+            }
+        };
+        methods.get_local_nonce_ = [weakptr( weak_from_this() )]() -> uint64_t
+        {
+            if ( auto self = weakptr.lock() )
+            {
+                return self->GetLocalConfirmedNonce();
+            }
+            else
+            {
+                return 0;
+            }
+        };
+        messenger_ = AccountMessenger::New( eth_keypair->GetEntirePubValue(),
+                                            std::move( pubsub ),
+                                            std::move( methods ),
+                                            std::move( full_node ) );
+        if ( messenger_ )
+        {
+            ret = true;
+        }
+        return ret;
+    }
+
+    GeniusAccount::GeniusAccount( TokenID token_id ) :
+        token( token_id ),      //
+        confirmed_nonce_( -1 ), //
+        proposed_nonce_( 0 )    //
+    {
     }
 
     GeniusAccount::~GeniusAccount()
@@ -265,6 +320,12 @@ namespace sgns
     void GeniusAccount::IncProposedNonce()
     {
         proposed_nonce_++;
+    }
+
+    uint64_t GeniusAccount::GetLocalConfirmedNonce()
+    {
+        //std::lock_guard<std::mutex> lock( nonce_mutex_ );
+        return static_cast<uint64_t>( confirmed_nonce_ );
     }
 
     outcome::result<uint64_t> GeniusAccount::GetConfirmedNonce( uint64_t timeout_ms )

@@ -16,7 +16,7 @@ static constexpr const char *PRIV_KEY   = "deadbeefdeadbeefdeadbeefdeadbeefdeadb
 
 TEST( GeniusAccount, InitialUTXOCount )
 {
-    auto    account = std::make_unique<GeniusAccount>( TOKEN_NAME, DATA_DIR, PRIV_KEY );
+    auto    account = GeniusAccount::New( TOKEN_NAME, DATA_DIR, PRIV_KEY );
     Hash256 h;
     // Insert four unique UTXOs
     EXPECT_TRUE( account->PutUTXO( GeniusUTXO( h, 0, 50, sgns::TokenID::FromBytes( { 0x01 } ) ) ) );
@@ -30,7 +30,7 @@ TEST( GeniusAccount, InitialUTXOCount )
 
 TEST( GeniusAccount, TotalBalance )
 {
-    auto    account = std::make_unique<GeniusAccount>( TOKEN_NAME, DATA_DIR, PRIV_KEY );
+    auto    account = GeniusAccount::New( TOKEN_NAME, DATA_DIR, PRIV_KEY );
     Hash256 h;
     EXPECT_TRUE( account->PutUTXO( GeniusUTXO( h, 0, 50, sgns::TokenID::FromBytes( { 0x01 } ) ) ) );
     EXPECT_TRUE( account->PutUTXO( GeniusUTXO( h, 1, 30, sgns::TokenID::FromBytes( { 0x02 } ) ) ) );
@@ -41,7 +41,7 @@ TEST( GeniusAccount, TotalBalance )
 
 TEST( GeniusAccount, BalanceByToken )
 {
-    auto    account = std::make_unique<GeniusAccount>( TOKEN_NAME, DATA_DIR, PRIV_KEY );
+    auto    account = GeniusAccount::New( TOKEN_NAME, DATA_DIR, PRIV_KEY );
     Hash256 h;
     EXPECT_TRUE( account->PutUTXO( GeniusUTXO( h, 0, 50, sgns::TokenID::FromBytes( { 0x01 } ) ) ) );
     EXPECT_TRUE( account->PutUTXO( GeniusUTXO( h, 2, 20, sgns::TokenID::FromBytes( { 0x01 } ) ) ) );
@@ -54,7 +54,7 @@ TEST( GeniusAccount, BalanceByToken )
 
 TEST( GeniusAccount, BalanceByTokenNonexistent )
 {
-    auto    account = std::make_unique<GeniusAccount>( TOKEN_NAME, DATA_DIR, PRIV_KEY );
+    auto    account = GeniusAccount::New( TOKEN_NAME, DATA_DIR, PRIV_KEY );
     Hash256 h;
     EXPECT_TRUE( account->PutUTXO( GeniusUTXO( h, 0, 50, sgns::TokenID::FromBytes( { 0x01 } ) ) ) );
     EXPECT_TRUE( account->PutUTXO( GeniusUTXO( h, 2, 20, sgns::TokenID::FromBytes( { 0x01 } ) ) ) );
@@ -65,7 +65,7 @@ TEST( GeniusAccount, BalanceByTokenNonexistent )
 
 TEST( GeniusAccount, StringTemplateBalance )
 {
-    auto    account = std::make_unique<GeniusAccount>( TOKEN_NAME, DATA_DIR, PRIV_KEY );
+    auto    account = GeniusAccount::New( TOKEN_NAME, DATA_DIR, PRIV_KEY );
     Hash256 h;
     EXPECT_TRUE( account->PutUTXO( GeniusUTXO( h, 0, 50, sgns::TokenID::FromBytes( { 0x01 } ) ) ) );
     EXPECT_TRUE( account->PutUTXO( GeniusUTXO( h, 1, 50, sgns::TokenID::FromBytes( { 0x02 } ) ) ) );
@@ -75,7 +75,7 @@ TEST( GeniusAccount, StringTemplateBalance )
 
 TEST( GeniusAccount, RefreshNoUTXOsLeavesAll )
 {
-    auto    account = std::make_unique<GeniusAccount>( TOKEN_NAME, DATA_DIR, PRIV_KEY );
+    auto    account = GeniusAccount::New( TOKEN_NAME, DATA_DIR, PRIV_KEY );
     Hash256 h;
     EXPECT_TRUE( account->PutUTXO( GeniusUTXO( h, 0, 50, sgns::TokenID::FromBytes( { 0x01 } ) ) ) );
     EXPECT_TRUE( account->PutUTXO( GeniusUTXO( h, 1, 30, sgns::TokenID::FromBytes( { 0x02 } ) ) ) );
@@ -86,7 +86,7 @@ TEST( GeniusAccount, RefreshNoUTXOsLeavesAll )
 
 TEST( GeniusAccount, RefreshPartialUTXOsRemovesOnlySpecified )
 {
-    auto    account = std::make_unique<GeniusAccount>( TOKEN_NAME, DATA_DIR, PRIV_KEY );
+    auto    account = GeniusAccount::New( TOKEN_NAME, DATA_DIR, PRIV_KEY );
     Hash256 h;
     EXPECT_TRUE( account->PutUTXO( GeniusUTXO( h, 0, 50, sgns::TokenID::FromBytes( { 0x01 } ) ) ) );
     EXPECT_TRUE( account->PutUTXO( GeniusUTXO( h, 1, 30, sgns::TokenID::FromBytes( { 0x02 } ) ) ) );
@@ -101,7 +101,7 @@ TEST( GeniusAccount, RefreshPartialUTXOsRemovesOnlySpecified )
 
 TEST( GeniusAccount, RefreshAllUTXOsRemovesAll )
 {
-    auto    account = std::make_unique<GeniusAccount>( TOKEN_NAME, DATA_DIR, PRIV_KEY );
+    auto    account = GeniusAccount::New( TOKEN_NAME, DATA_DIR, PRIV_KEY );
     Hash256 h;
     EXPECT_TRUE( account->PutUTXO( GeniusUTXO( h, 0, 50, sgns::TokenID::FromBytes( { 0x01 } ) ) ) );
     EXPECT_TRUE( account->PutUTXO( GeniusUTXO( h, 1, 30, sgns::TokenID::FromBytes( { 0x02 } ) ) ) );
