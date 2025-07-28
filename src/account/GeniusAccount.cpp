@@ -253,7 +253,8 @@ namespace sgns
         std::cout << "Old nonce value " << confirmed_nonce_ << std::endl;
         std::cout << "setting nonce with value " << nonce << std::endl;
         confirmed_nonce_ = std::max( static_cast<int64_t>( nonce ), confirmed_nonce_ );
-        proposed_nonce_  = std::max( nonce, proposed_nonce_ );
+        nonce++;
+        proposed_nonce_ = std::max( nonce, proposed_nonce_ );
     }
 
     uint64_t GeniusAccount::GetProposedNonce()
