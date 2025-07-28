@@ -45,7 +45,7 @@ namespace sgns
 
         [[nodiscard]] std::string GetNonce() const
         {
-            return std::to_string( nonce );
+            return std::to_string( confirmed_nonce_ );
         }
 
         bool PutUTXO( const GeniusUTXO &new_utxo );
@@ -55,13 +55,21 @@ namespace sgns
         static bool          VerifySignature( std::string address, std::string sig, std::vector<uint8_t> data );
         std::vector<uint8_t> Sign( std::vector<uint8_t> data );
 
-        TokenID                                         token;
-        uint64_t                                        nonce;
-        std::vector<GeniusUTXO>                         utxos;
-        std::shared_ptr<ethereum::EthereumKeyGenerator> eth_keypair;
+        void SetLocalConfirmedNonce( uint64_t nonce );
+
+        outcome::result<uint64_t> GetConfirmedNonce( uint64_t timeout_ms );
+        uint64_t                  GetProposedNonce();
+        void                      IncProposedNonce();
+
+        TokenID                 token;
+        std::vector<GeniusUTXO> utxos;
 
     private:
-        std::shared_ptr<KeyGenerator::ElGamal> elgamal_address;
+        std::shared_ptr<ethereum::EthereumKeyGenerator> eth_keypair;
+        std::shared_ptr<KeyGenerator::ElGamal>          elgamal_address;
+        int64_t                                         confirmed_nonce_;
+        uint64_t                                        proposed_nonce_;
+        std::mutex                                      nonce_mutex_;
 
         static outcome::result<std::pair<KeyGenerator::ElGamal, ethereum::EthereumKeyGenerator>> GenerateGeniusAddress(
             std::string_view base_path,

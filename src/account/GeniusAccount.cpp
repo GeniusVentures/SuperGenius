@@ -27,7 +27,9 @@ namespace sgns
     const std::array<uint8_t, 32> GeniusAccount::ELGAMAL_PUBKEY_PREDEFINED = get_elgamal_pubkey();
 
     GeniusAccount::GeniusAccount( TokenID token_id, std::string_view base_path, const char *eth_private_key ) :
-        token( token_id ), nonce( 0 )
+        token( token_id ),      //
+        confirmed_nonce_( -1 ), //
+        proposed_nonce_( 0 )    //
     {
         if ( auto maybe_address = GenerateGeniusAddress( base_path, eth_private_key ); maybe_address.has_value() )
         {
@@ -243,6 +245,31 @@ namespace sgns
             }
         }
         return balance;
+    }
+
+    void GeniusAccount::SetLocalConfirmedNonce( uint64_t nonce )
+    {
+        std::lock_guard<std::mutex> lock( nonce_mutex_ );
+        std::cout << "Old nonce value " << confirmed_nonce_ << std::endl;
+        std::cout << "setting nonce with value " << nonce << std::endl;
+        confirmed_nonce_ = std::max( static_cast<int64_t>( nonce ), confirmed_nonce_ );
+        proposed_nonce_  = std::max( nonce, proposed_nonce_ );
+    }
+
+    uint64_t GeniusAccount::GetProposedNonce()
+    {
+        return proposed_nonce_;
+    }
+
+    void GeniusAccount::IncProposedNonce()
+    {
+        proposed_nonce_++;
+    }
+
+    outcome::result<uint64_t> GeniusAccount::GetConfirmedNonce( uint64_t timeout_ms )
+    {
+        //std::lock_guard<std::mutex> lock( nonce_mutex_ );
+        return static_cast<uint64_t>( confirmed_nonce_ );
     }
 
 }

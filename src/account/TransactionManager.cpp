@@ -443,12 +443,14 @@ namespace sgns
         auto                     timestamp = std::chrono::system_clock::now();
 
         dag.set_previous_hash( transaction_hash );
-        dag.set_nonce( ++account_m->nonce );
+        dag.set_nonce( account_m->GetProposedNonce() );
         dag.set_source_addr( account_m->GetAddress() );
         dag.set_timestamp(
             std::chrono::duration_cast<std::chrono::milliseconds>( timestamp.time_since_epoch() ).count() );
         dag.set_uncle_hash( "" );
         dag.set_data_hash( "" ); //filled by transaction class
+
+        account_m->IncProposedNonce();
 
         return dag;
     }
@@ -480,14 +482,31 @@ namespace sgns
             auto [transaction, maybe_proof] = transaction_pair;
 
             // this was set prior and needed for the proof to match when the proof was generated
+            auto     nonce_result    = account_m->GetConfirmedNonce( 2000 );
+            uint64_t confirmed_nonce = 0;
+            if ( nonce_result.has_value() )
+            {
+                confirmed_nonce = nonce_result.value();
+            }
+            else
+            {
+                return outcome::failure( boost::system::error_code{} );
+            }
+            if ( transaction->dag_st.nonce() != confirmed_nonce + 1 )
+            {
+                m_logger->error( "Outdated nonce, not sending transaction {}, {}",
+                                 transaction->dag_st.nonce(),
+                                 confirmed_nonce + 1 );
+                return outcome::failure( boost::system::error_code{} );
+            }
+
+            (void)transaction->MakeSignature( account_m );
 
             auto                         transaction_path = GetTransactionPath( *transaction );
             sgns::crdt::HierarchicalKey  tx_key( transaction_path );
             sgns::crdt::GlobalDB::Buffer data_transaction;
 
             m_logger->debug( "Recording the transaction on " + tx_key.GetKey() );
-
-            (void)transaction->MakeSignature( account_m );
 
             data_transaction.put( transaction->SerializeByteVector() );
             BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Put( std::move( tx_key ), std::move( data_transaction ) ) );
@@ -504,6 +523,7 @@ namespace sgns
                 BOOST_OUTCOME_TRYV2( auto &&,
                                      crdt_transaction->Put( std::move( proof_key ), std::move( proof_transaction ) ) );
             }
+            account_m->SetLocalConfirmedNonce( transaction->dag_st.nonce() );
         }
 
         std::set<std::string> topicSet;
@@ -789,7 +809,7 @@ namespace sgns
             }
             m_logger->debug( "Transaction parsed " + transaction_key.value() );
 
-            account_m->nonce = std::max( account_m->nonce, maybe_transaction.value()->dag_st.nonce() );
+            account_m->SetLocalConfirmedNonce( maybe_transaction.value()->dag_st.nonce() );
             {
                 m_logger->trace( "Inserting into outgoing {}", transaction_key.value() );
                 std::unique_lock<std::shared_mutex> out_lock( outgoing_tx_mutex_m );

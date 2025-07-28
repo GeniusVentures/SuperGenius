@@ -56,10 +56,10 @@ namespace sgns
 
         auto hasher_         = std::make_shared<crypto::HasherImpl>();
         auto calculated_hash = hasher_->blake2b_256( SerializeByteVector() );
-        dag_st.set_data_hash(  hash );
+        dag_st.set_data_hash( hash );
         dag_st.set_signature( std::move( signature ) );
 
-        return ( hash == calculated_hash.toReadableString() );
+        return hash == calculated_hash.toReadableString();
     }
 
     std::vector<uint8_t> IGeniusTransactions::MakeSignature( std::shared_ptr<GeniusAccount> account )
