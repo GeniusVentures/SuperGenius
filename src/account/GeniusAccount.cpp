@@ -1,14 +1,16 @@
 #include "GeniusAccount.hpp"
-
+#include <nil/crypto3/algebra/marshalling.hpp>
+#include <nil/crypto3/pubkey/algorithm/sign.hpp>
+#include <nil/crypto3/pubkey/algorithm/verify.hpp>
 #include "WalletCore/Hash.h"
 #include "local_secure_storage/ISecureStorage.hpp"
 #include "singleton/CComponentFactory.hpp"
 #include "WalletCore/PrivateKey.h"
 #include <boost/algorithm/hex.hpp>
 #include <crypto/hasher/hasher_impl.hpp>
-#include <nil/crypto3/algebra/marshalling.hpp>
-#include <nil/crypto3/pubkey/algorithm/sign.hpp>
-#include <nil/crypto3/pubkey/algorithm/verify.hpp>
+#include "ipfs_pubsub/gossip_pubsub.hpp"
+#include "account/AccountMessenger.hpp"
+
 
 namespace
 {

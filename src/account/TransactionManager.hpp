@@ -10,12 +10,11 @@
 #include <memory>
 #include <deque>
 #include <cstdint>
-#include <map>
 #include <unordered_map>
 #include <set>
+#include <optional>
 
 #include <boost/format.hpp>
-#include <boost/multiprecision/cpp_int.hpp>
 
 #include "crdt/globaldb/globaldb.hpp"
 #include "crdt/atomic_transaction.hpp"
@@ -145,11 +144,11 @@ namespace sgns
         mutable std::mutex          mutex_m;
         std::deque<TransactionItem> tx_queue_m;
 
-        mutable std::shared_mutex                                   outgoing_tx_mutex_m;
-        std::map<std::string, std::shared_ptr<IGeniusTransactions>> outgoing_tx_processed_m;
-        mutable std::shared_mutex                                   incoming_tx_mutex_m;
-        std::map<std::string, std::shared_ptr<IGeniusTransactions>> incoming_tx_processed_m;
-        std::function<void()>                                       task_m;
+        mutable std::shared_mutex                                             outgoing_tx_mutex_m;
+        std::unordered_map<std::string, std::shared_ptr<IGeniusTransactions>> outgoing_tx_processed_m;
+        mutable std::shared_mutex                                             incoming_tx_mutex_m;
+        std::unordered_map<std::string, std::shared_ptr<IGeniusTransactions>> incoming_tx_processed_m;
+        std::function<void()>                                                 task_m;
 
         outcome::result<std::set<std::string>> ParseTransferTransaction(
             const std::shared_ptr<IGeniusTransactions> &tx );

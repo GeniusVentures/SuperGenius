@@ -12,8 +12,6 @@
 #include <string>
 
 #include <boost/format.hpp>
-#include <boost/multiprecision/cpp_int.hpp>
-#include <ProofSystem/EthereumKeyGenerator.hpp>
 
 #include "outcome/outcome.hpp"
 #include "account/proto/SGTransaction.pb.h"

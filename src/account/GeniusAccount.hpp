@@ -19,15 +19,18 @@
 
 #include "account/GeniusUTXO.hpp"
 #include "account/UTXOTxParameters.hpp"
-#include "account/AccountMessenger.hpp"
 #include "account/TokenID.hpp"
 #include "outcome/outcome.hpp"
-
 
 namespace sgns
 {
     using namespace boost::multiprecision;
-    class AccountManager;
+
+    namespace ipfs_pubsub
+    {
+        class GossipPubSub;
+    }
+    class AccountMessenger;
 
     class GeniusAccount : public std::enable_shared_from_this<GeniusAccount>
     {
