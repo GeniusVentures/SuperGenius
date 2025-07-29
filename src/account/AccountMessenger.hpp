@@ -4,7 +4,7 @@
  * @date       2025-07-21
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
-#pragma once 
+#pragma once
 #include <string>
 #include <memory>
 #include <optional>
@@ -12,6 +12,7 @@
 #include <vector>
 #include <cstdlib>
 #include <future>
+#include <mutex>
 #include <boost/optional.hpp>
 #include "base/logger.hpp"
 #include "ipfs_pubsub/gossip_pubsub.hpp"

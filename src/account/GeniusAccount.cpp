@@ -11,7 +11,6 @@
 #include "ipfs_pubsub/gossip_pubsub.hpp"
 #include "account/AccountMessenger.hpp"
 
-
 namespace
 {
     std::array<uint8_t, 32> get_elgamal_pubkey()
@@ -306,7 +305,7 @@ namespace sgns
 
     void GeniusAccount::SetLocalConfirmedNonce( uint64_t nonce )
     {
-        std::lock_guard<std::mutex> lock( nonce_mutex_ );
+        std::lock_guard lock( nonce_mutex_ );
         std::cout << "Old nonce value " << confirmed_nonce_ << std::endl;
         std::cout << "setting nonce with value " << nonce << std::endl;
         confirmed_nonce_ = std::max( static_cast<int64_t>( nonce ), confirmed_nonce_ );
@@ -326,14 +325,25 @@ namespace sgns
 
     uint64_t GeniusAccount::GetLocalConfirmedNonce()
     {
-        //std::lock_guard<std::mutex> lock( nonce_mutex_ );
+        std::shared_lock lock( nonce_mutex_ );
         return static_cast<uint64_t>( confirmed_nonce_ );
     }
 
     outcome::result<uint64_t> GeniusAccount::GetConfirmedNonce( uint64_t timeout_ms )
     {
-        //std::lock_guard<std::mutex> lock( nonce_mutex_ );
-        return static_cast<uint64_t>( confirmed_nonce_ );
+        uint64_t result = 0;
+        {
+            std::shared_lock lock( nonce_mutex_ );
+            result = static_cast<uint64_t>( confirmed_nonce_ );
+        }
+
+        auto latest_nonce_result = messenger_->GetLatestNonce( std::move( timeout_ms ) );
+        if ( latest_nonce_result.has_value() )
+        {
+            std::cout << "Got a result from the nonce request" << latest_nonce_result.value() << std::endl;
+            result = latest_nonce_result.value();
+        }
+        return result;
     }
 
 }

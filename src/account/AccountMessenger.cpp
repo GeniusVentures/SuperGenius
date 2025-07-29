@@ -163,6 +163,7 @@ namespace sgns
     outcome::result<uint64_t> AccountMessenger::GetLatestNonce( uint64_t timeout_ms )
     {
         std::lock_guard lock( nonce_mutex_ );
+        logger_->debug( "Requesting nonce" );
 
         uint64_t req_id = static_cast<uint64_t>( std::chrono::system_clock::now().time_since_epoch().count() );
         if ( current_nonce_request_id_ )
@@ -173,6 +174,7 @@ namespace sgns
         OUTCOME_TRY( RequestNonce( req_id ) );
 
         // Wait for response (blocking) or timeout
+        nonce_result_promise_ = std::promise<uint64_t>{}; // reset promise
         auto fut    = nonce_result_promise_.get_future();
         auto status = fut.wait_for( std::chrono::milliseconds( timeout_ms ) );
 

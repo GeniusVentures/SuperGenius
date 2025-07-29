@@ -11,7 +11,7 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include <mutex>
+#include <shared_mutex>
 #include <tuple>
 
 #include <ProofSystem/ElGamalKeyGenerator.hpp>
@@ -80,7 +80,7 @@ namespace sgns
         std::shared_ptr<KeyGenerator::ElGamal>          elgamal_address;
         int64_t                                         confirmed_nonce_;
         uint64_t                                        proposed_nonce_;
-        std::mutex                                      nonce_mutex_;
+        std::shared_mutex                               nonce_mutex_;
         std::shared_ptr<AccountMessenger>               messenger_;
 
         GeniusAccount( TokenID token_id );

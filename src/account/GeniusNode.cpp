@@ -127,27 +127,28 @@ namespace sgns
 #ifndef SGNS_DEBUGLOGS
         logdir = write_base_path_ + "/sgnslog2.log";
 #endif
-        node_logger               = base::createLogger( "SuperGeniusNode", logdir );
-        auto loggerGlobalDB       = base::createLogger( "GlobalDB", logdir );
-        auto loggerDAGSyncer      = base::createLogger( "GraphsyncDAGSyncer", logdir );
-        auto loggerGraphsync      = base::createLogger( "graphsync", logdir );
-        auto loggerBroadcaster    = base::createLogger( "PubSubBroadcasterExt", logdir );
-        auto loggerDataStore      = base::createLogger( "CrdtDatastore", logdir );
-        auto loggerCRDTHeads      = base::createLogger( "CrdtHeads", logdir );
-        auto loggerTransactions   = base::createLogger( "TransactionManager", logdir );
-        auto loggerMigration      = base::createLogger( "MigrationManager", logdir );
-        auto loggerMigrationStep  = base::createLogger( "MigrationStep", logdir );
-        auto loggerQueue          = base::createLogger( "ProcessingTaskQueueImpl", logdir );
-        auto loggerRocksDB        = base::createLogger( "rocksdb", logdir );
-        auto logkad               = base::createLogger( "Kademlia", logdir );
-        auto logNoise             = base::createLogger( "Noise", logdir );
-        auto logProcessingEngine  = base::createLogger( "ProcessingEngine", logdir );
-        auto loggerSubQueue       = base::createLogger( "ProcessingSubTaskQueueAccessorImpl", logdir );
-        auto loggerProcServ       = base::createLogger( "ProcessingService", logdir );
-        auto loggerProcqm         = base::createLogger( "ProcessingSubTaskQueueManager", logdir );
-        auto loggerUPNP           = base::createLogger( "UPNP", logdir );
-        auto loggerProcessingNode = base::createLogger( "ProcessingNode", logdir );
-        auto loggerGossipPubsub   = base::createLogger( "GossipPubSub", logdir );
+        node_logger                 = base::createLogger( "SuperGeniusNode", logdir );
+        auto loggerGlobalDB         = base::createLogger( "GlobalDB", logdir );
+        auto loggerDAGSyncer        = base::createLogger( "GraphsyncDAGSyncer", logdir );
+        auto loggerGraphsync        = base::createLogger( "graphsync", logdir );
+        auto loggerBroadcaster      = base::createLogger( "PubSubBroadcasterExt", logdir );
+        auto loggerDataStore        = base::createLogger( "CrdtDatastore", logdir );
+        auto loggerCRDTHeads        = base::createLogger( "CrdtHeads", logdir );
+        auto loggerTransactions     = base::createLogger( "TransactionManager", logdir );
+        auto loggerMigration        = base::createLogger( "MigrationManager", logdir );
+        auto loggerMigrationStep    = base::createLogger( "MigrationStep", logdir );
+        auto loggerQueue            = base::createLogger( "ProcessingTaskQueueImpl", logdir );
+        auto loggerRocksDB          = base::createLogger( "rocksdb", logdir );
+        auto logkad                 = base::createLogger( "Kademlia", logdir );
+        auto logNoise               = base::createLogger( "Noise", logdir );
+        auto logProcessingEngine    = base::createLogger( "ProcessingEngine", logdir );
+        auto loggerSubQueue         = base::createLogger( "ProcessingSubTaskQueueAccessorImpl", logdir );
+        auto loggerProcServ         = base::createLogger( "ProcessingService", logdir );
+        auto loggerProcqm           = base::createLogger( "ProcessingSubTaskQueueManager", logdir );
+        auto loggerUPNP             = base::createLogger( "UPNP", logdir );
+        auto loggerProcessingNode   = base::createLogger( "ProcessingNode", logdir );
+        auto loggerGossipPubsub     = base::createLogger( "GossipPubSub", logdir );
+        auto loggerAccountMessenger = base::createLogger( "AccountMessenger", logdir );
 #ifdef SGNS_DEBUGLOGS
         node_logger->set_level( spdlog::level::err );
         loggerGlobalDB->set_level( spdlog::level::err );
@@ -170,6 +171,7 @@ namespace sgns
         loggerUPNP->set_level( spdlog::level::err );
         loggerProcessingNode->set_level( spdlog::level::err );
         loggerGossipPubsub->set_level( spdlog::level::err );
+        loggerAccountMessenger->set_level( spdlog::level::trace );
 #else
         node_logger->set_level( spdlog::level::err );
         loggerGlobalDB->set_level( spdlog::level::err );

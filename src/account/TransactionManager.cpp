@@ -482,7 +482,7 @@ namespace sgns
             auto [transaction, maybe_proof] = transaction_pair;
 
             // this was set prior and needed for the proof to match when the proof was generated
-            auto     nonce_result    = account_m->GetConfirmedNonce( 2000 );
+            auto     nonce_result    = account_m->GetConfirmedNonce( 1000 );
             uint64_t confirmed_nonce = 0;
             if ( nonce_result.has_value() )
             {
