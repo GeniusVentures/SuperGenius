@@ -155,21 +155,21 @@ namespace sgns
         loggerDAGSyncer->set_level( spdlog::level::err );
         loggerGraphsync->set_level( spdlog::level::err );
         loggerBroadcaster->set_level( spdlog::level::err );
-        loggerDataStore->set_level( spdlog::level::debug );
-        loggerCRDTHeads->set_level( spdlog::level::debug );
-        loggerTransactions->set_level( spdlog::level::debug );
-        loggerMigration->set_level( spdlog::level::debug );
-        loggerMigrationStep->set_level( spdlog::level::debug );
+        loggerDataStore->set_level( spdlog::level::err );
+        loggerCRDTHeads->set_level( spdlog::level::err );
+        loggerTransactions->set_level( spdlog::level::err );
+        loggerMigration->set_level( spdlog::level::err );
+        loggerMigrationStep->set_level( spdlog::level::err );
         loggerQueue->set_level( spdlog::level::err );
         loggerRocksDB->set_level( spdlog::level::err );
         logkad->set_level( spdlog::level::err );
         logNoise->set_level( spdlog::level::err );
-        logProcessingEngine->set_level( spdlog::level::err );
-        loggerSubQueue->set_level( spdlog::level::err );
+        logProcessingEngine->set_level( spdlog::level::trace );
+        loggerSubQueue->set_level( spdlog::level::trace );
         loggerProcServ->set_level( spdlog::level::err );
-        loggerProcqm->set_level( spdlog::level::err );
+        loggerProcqm->set_level( spdlog::level::trace );
         loggerUPNP->set_level( spdlog::level::err );
-        loggerProcessingNode->set_level( spdlog::level::err );
+        loggerProcessingNode->set_level( spdlog::level::trace );
         loggerGossipPubsub->set_level( spdlog::level::err );
 #else
         node_logger->set_level( spdlog::level::err );
@@ -528,9 +528,12 @@ namespace sgns
         //Split into subtasks
         processing::ProcessTaskSplitter  taskSplitter;
         std::list<SGProcessing::SubTask> subTasks;
-        for ( const auto &pass : procdata.get_passes() )
+        //Make Copies, trying to use references for passes/input nodes may cause problems. 
+        auto passes = procdata.get_passes();
+        for ( const auto &pass : passes )
         {
-            for ( auto &model : pass.get_model().value().get_input_nodes() )
+            auto input_nodes = pass.get_model().value().get_input_nodes();
+            for ( auto &model : input_nodes )
             {
                 json modeljson;
                 sgns::to_json( modeljson, model );
@@ -551,6 +554,10 @@ namespace sgns
                                         false,
                                         pubsub_->GetHost()->getId().toBase58() );
             }
+        }
+        if (subTasks.size() <= 0)
+        {
+            return outcome::failure( Error::INVALID_JSON );
         }
         auto cut = sgns::TokenAmount::ParseMinions( dev_config_.Cut );
         if ( !cut )
