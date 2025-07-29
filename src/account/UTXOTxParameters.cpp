@@ -1,10 +1,5 @@
 #include "UTXOTxParameters.hpp"
-#include <boost/multiprecision/fwd.hpp>
 #include <cmath>
-
-#include <nil/crypto3/algebra/marshalling.hpp>
-#include <nil/crypto3/pubkey/algorithm/sign.hpp>
-#include <nil/crypto3/pubkey/algorithm/verify.hpp>
 
 namespace sgns
 {

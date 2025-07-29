@@ -4,6 +4,7 @@
  * @date       2025-07-22
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
+#include <boost/format.hpp>
 #include "AccountMessenger.hpp"
 #include "base/sgns_version.hpp"
 

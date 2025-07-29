@@ -6,11 +6,13 @@
  */
 #ifndef _GENIUS_ACCOUNT_HPP_
 #define _GENIUS_ACCOUNT_HPP_
-#include <string>
+#include <array>
 #include <cstdint>
-
-#include <boost/multiprecision/cpp_int.hpp>
-#include <boost/multiprecision/fwd.hpp>
+#include <memory>
+#include <string>
+#include <vector>
+#include <mutex>
+#include <tuple>
 
 #include <ProofSystem/ElGamalKeyGenerator.hpp>
 #include <ProofSystem/EthereumKeyGenerator.hpp>
@@ -18,13 +20,14 @@
 #include "account/GeniusUTXO.hpp"
 #include "account/UTXOTxParameters.hpp"
 #include "account/AccountMessenger.hpp"
+#include "account/TokenID.hpp"
 #include "outcome/outcome.hpp"
-#include <vector>
-#include <array>
+
 
 namespace sgns
 {
     using namespace boost::multiprecision;
+    class AccountManager;
 
     class GeniusAccount : public std::enable_shared_from_this<GeniusAccount>
     {
