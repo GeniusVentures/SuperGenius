@@ -25,6 +25,13 @@ namespace
 
 namespace sgns
 {
+
+    base::Logger logger()
+    {
+        static base::Logger static_logger = base::createLogger( "GeniusAccount" );
+        return static_logger;
+    }
+
     const std::array<uint8_t, 32> GeniusAccount::ELGAMAL_PUBKEY_PREDEFINED = get_elgamal_pubkey();
 
     std::shared_ptr<GeniusAccount> GeniusAccount::New( TokenID          token_id,
@@ -35,6 +42,7 @@ namespace sgns
 
         if ( auto maybe_address = GenerateGeniusAddress( base_path, eth_private_key ); maybe_address.has_value() )
         {
+            logger()->debug( "Generated a Genius Address from private key" );
             auto [temp_elgamal_address, temp_eth_address] = maybe_address.value();
 
             instance = std::shared_ptr<GeniusAccount>( new GeniusAccount( std::move( token_id ) ) );
@@ -92,6 +100,7 @@ namespace sgns
                                             std::move( full_node ) );
         if ( messenger_ )
         {
+            logger_->debug( "Created AccountMessenger" );
             ret = true;
         }
         return ret;
@@ -189,7 +198,7 @@ namespace sgns
         {
             if ( sig.size() != SIGNATURE_EXP_SIZE )
             {
-                std::cout << "NO CORRECT SIZE" << std::endl;
+                logger()->error( "Incorrect signature size {}, expected ", sig.size(), SIGNATURE_EXP_SIZE );
                 break;
             }
             std::vector<uint8_t> vec_sig( sig.cbegin(), sig.cend() );
@@ -272,7 +281,7 @@ namespace sgns
 
             if ( signed_secret.empty() )
             {
-                std::cerr << "Could not sign secret\n";
+                logger()->error( "Cannot sign secret" );
                 return outcome::failure( std::errc::invalid_argument );
             }
 
@@ -306,10 +315,10 @@ namespace sgns
     void GeniusAccount::SetLocalConfirmedNonce( uint64_t nonce )
     {
         std::lock_guard lock( nonce_mutex_ );
-        std::cout << "Old nonce value " << confirmed_nonce_ << std::endl;
-        std::cout << "setting nonce with value " << nonce << std::endl;
+        logger_->debug( "Setting the max value between {} and {} as a confirmed nonce", confirmed_nonce_, nonce );
         confirmed_nonce_ = std::max( static_cast<int64_t>( nonce ), confirmed_nonce_ );
         nonce++;
+        logger_->debug( "Setting the max value between {} and {} as a proposed (next) nonce", proposed_nonce_, nonce );
         proposed_nonce_ = std::max( nonce, proposed_nonce_ );
     }
 
@@ -336,12 +345,17 @@ namespace sgns
             std::shared_lock lock( nonce_mutex_ );
             result = static_cast<uint64_t>( confirmed_nonce_ );
         }
+        logger_->debug( "Trying to get nonce from the network for {} ms ", timeout_ms );
 
         auto latest_nonce_result = messenger_->GetLatestNonce( std::move( timeout_ms ) );
         if ( latest_nonce_result.has_value() )
         {
-            std::cout << "Got a result from the nonce request" << latest_nonce_result.value() << std::endl;
             result = latest_nonce_result.value();
+            logger_->debug( "Nonce replied with value {}", result );
+        }
+        else
+        {
+            logger_->debug( "Using local nonce {}", result );
         }
         return result;
     }

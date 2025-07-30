@@ -149,6 +149,7 @@ namespace sgns
         auto loggerProcessingNode   = base::createLogger( "ProcessingNode", logdir );
         auto loggerGossipPubsub     = base::createLogger( "GossipPubSub", logdir );
         auto loggerAccountMessenger = base::createLogger( "AccountMessenger", logdir );
+        auto loggerGeniusAccount    = base::createLogger( "GeniusAccount", logdir );
 #ifdef SGNS_DEBUGLOGS
         node_logger->set_level( spdlog::level::err );
         loggerGlobalDB->set_level( spdlog::level::err );
@@ -172,6 +173,7 @@ namespace sgns
         loggerProcessingNode->set_level( spdlog::level::err );
         loggerGossipPubsub->set_level( spdlog::level::err );
         loggerAccountMessenger->set_level( spdlog::level::debug );
+        loggerGeniusAccount->set_level( spdlog::level::debug );
 #else
         node_logger->set_level( spdlog::level::err );
         loggerGlobalDB->set_level( spdlog::level::err );

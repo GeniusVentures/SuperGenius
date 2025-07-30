@@ -20,6 +20,7 @@
 #include "account/GeniusUTXO.hpp"
 #include "account/UTXOTxParameters.hpp"
 #include "account/TokenID.hpp"
+#include "base/logger.hpp"
 #include "outcome/outcome.hpp"
 
 namespace sgns
@@ -82,6 +83,7 @@ namespace sgns
         uint64_t                                        proposed_nonce_;
         std::shared_mutex                               nonce_mutex_;
         std::shared_ptr<AccountMessenger>               messenger_;
+        base::Logger                                    logger_ = sgns::base::createLogger( "GeniusAccount" );
 
         GeniusAccount( TokenID token_id );
 

@@ -174,7 +174,7 @@ namespace sgns
             { "escrow-hold", &TransactionManager::ParseEscrowTransaction },
             { "escrow-release", &TransactionManager::ParseEscrowReleaseTransaction } };
 
-        base::Logger m_logger = sgns::base::createLogger( "TransactionManager" );
+        base::Logger m_logger = base::createLogger( "TransactionManager" );
     };
 }
 
