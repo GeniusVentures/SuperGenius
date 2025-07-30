@@ -55,6 +55,12 @@ namespace sgns
         using TransactionBatch = std::vector<TransactionPair>;
         using TransactionItem  = std::pair<TransactionBatch, std::optional<std::shared_ptr<crdt::AtomicTransaction>>>;
 
+        enum class State
+        {
+            STARTING = 0,
+            SYNCHING,
+            READY,
+        };
         TransactionManager( std::shared_ptr<crdt::GlobalDB>          processing_db,
                             std::shared_ptr<boost::asio::io_context> ctx,
                             std::shared_ptr<GeniusAccount>           account,
@@ -100,6 +106,8 @@ namespace sgns
         static outcome::result<std::shared_ptr<IGeniusTransactions>> DeSerializeTransaction(
             const base::Buffer &tx_data );
 
+        State GetState() const;
+
     protected:
         friend class GeniusNode;
         void EnqueueTransaction( TransactionPair element );
@@ -131,6 +139,8 @@ namespace sgns
 
         outcome::result<void> CheckOutgoing();
 
+        void Sync( uint64_t timeout_ms );
+
         std::shared_ptr<crdt::GlobalDB> globaldb_m;
 
         std::shared_ptr<boost::asio::io_context>   ctx_m;
@@ -139,6 +149,7 @@ namespace sgns
         std::shared_ptr<boost::asio::steady_timer> timer_m;
         bool                                       full_node_m;
         std::string                                full_node_topic_m; ///< formatted full-node topic
+        State                                      state_m;
 
         // for the SendTransaction thread support
         mutable std::mutex          mutex_m;

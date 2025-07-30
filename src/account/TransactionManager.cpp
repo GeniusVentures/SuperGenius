@@ -45,7 +45,8 @@ namespace sgns
         account_m( std::move( account ) ),
         hasher_m( std::move( hasher ) ),
         timer_m( std::make_shared<boost::asio::steady_timer>( *ctx_m, boost::asio::chrono::milliseconds( 300 ) ) ),
-        full_node_m( std::move( full_node ) )
+        full_node_m( std::move( full_node ) ),
+        state_m( State::STARTING )
 
     {
         m_logger->info( "Initializing values by reading whole blockchain" );
@@ -185,12 +186,29 @@ namespace sgns
 
     void TransactionManager::Start()
     {
+        if ( state_m != State::STARTING )
+        {
+            return;
+        }
+        state_m = State::SYNCHING;
         CheckIncoming();
         CheckOutgoing();
 
         task_m = [this]()
         {
-            this->Update();
+            if ( state_m == State::SYNCHING )
+            {
+                this->Sync( 5000 );
+
+                if ( state_m == State::READY )
+                {
+                    m_logger->debug( "Transaction Manager is now READY - starting regular updates" );
+                }
+            }
+            else if ( state_m == State::READY )
+            {
+                this->Update();
+            }
             this->timer_m->expires_after( boost::asio::chrono::milliseconds( 300 ) );
 
             this->timer_m->async_wait(
@@ -223,6 +241,10 @@ namespace sgns
                                                                     const std::string &destination,
                                                                     TokenID            token_id )
     {
+        if ( state_m != State::READY )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
         OUTCOME_TRY(
             auto &&params,
             UTXOTxParameters::create( account_m->utxos, account_m->GetAddress(), amount, destination, token_id ) );
@@ -251,6 +273,10 @@ namespace sgns
                                                                 std::string chainid,
                                                                 TokenID     tokenid )
     {
+        if ( state_m != State::READY )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
         auto mint_transaction = std::make_shared<MintTransaction>(
             MintTransaction::New( amount,
                                   std::move( chainid ),
@@ -276,6 +302,10 @@ namespace sgns
                                                                                             uint64_t peers_cut,
                                                                                             const std::string &job_id )
     {
+        if ( state_m != State::READY )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
         auto hash_data = hasher_m->blake2b_256( std::vector<uint8_t>{ job_id.begin(), job_id.end() } );
 
         OUTCOME_TRY( ( auto &&, params ),
@@ -1062,5 +1092,29 @@ namespace sgns
         }
         m_logger->error( "Timed out waiting for escrow release transaction for escrow id: " + originalEscrowId );
         return false;
+    }
+
+    void TransactionManager::Sync( uint64_t timeout_ms )
+    {
+        m_logger->debug( "Trying to get confirmed nonce" );
+
+        auto nonce_result = account_m->GetConfirmedNonce( timeout_ms );
+        if ( nonce_result.has_value() )
+        {
+            auto network_confirmed_nonce = nonce_result.value();
+            if ( account_m->GetLocalConfirmedNonce() >= network_confirmed_nonce )
+            {
+                state_m = State::READY;
+            }
+        }
+        else
+        {
+            state_m = State::READY;
+        }
+    }
+
+    TransactionManager::State TransactionManager::GetState() const
+    {
+        return state_m;
     }
 }

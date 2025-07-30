@@ -171,7 +171,7 @@ namespace sgns
         loggerUPNP->set_level( spdlog::level::err );
         loggerProcessingNode->set_level( spdlog::level::err );
         loggerGossipPubsub->set_level( spdlog::level::err );
-        loggerAccountMessenger->set_level( spdlog::level::trace );
+        loggerAccountMessenger->set_level( spdlog::level::debug );
 #else
         node_logger->set_level( spdlog::level::err );
         loggerGlobalDB->set_level( spdlog::level::err );
