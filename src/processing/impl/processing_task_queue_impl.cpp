@@ -66,6 +66,10 @@ namespace sgns::processing
                 if ( subTask.ParseFromArray( element.second.data(), element.second.size() ) )
                 {
                     m_logger->debug( "Subtask check {}", subTask.chunkstoprocess_size() );
+                    if (!IsSubTaskValid(subTask.json_data()))
+                    {
+                        return false;
+                    }
                     subTasks.push_back( std::move( subTask ) );
                 }
                 else
