@@ -1,4 +1,6 @@
 #include "processing/impl/processing_task_queue_impl.hpp"
+#include <processingbase/ProcessingManager.hpp>
+#include <Generators.hpp>
 
 namespace sgns::processing
 {
@@ -69,6 +71,7 @@ namespace sgns::processing
                 else
                 {
                     m_logger->debug( "Undable to parse a subtask" );
+                    return false;
                 }
             }
 
@@ -117,6 +120,52 @@ namespace sgns::processing
             {
                 m_logger->debug( "Couldn't parse the task from Protobuf" );
                 //TODO - Decide what to do with an invalid task - Maybe error?
+                continue;
+            }
+            if ( !IsTaskValid(task.json_data()) )
+            {
+                m_logger->debug( "Task does not meet schema requirements" );
+                continue;
+            }
+            auto key           = ( boost::format( "subtasks/TASK_%s" ) % taskKey ).str();
+            auto querySubTasks = m_db->QueryKeyValues( key );
+            if ( querySubTasks.has_failure() )
+            {
+                m_logger->info( "Unable list subtasks from CRDT datastore" );
+                continue;
+            }
+            bool isSubtaskValid = true;
+         
+            if ( querySubTasks.has_value() )
+            {
+                m_logger->debug( "SUBTASKS_FOUND {}", querySubTasks.value().size() );
+
+                for ( auto element : querySubTasks.value() )
+                {
+                    SGProcessing::SubTask subTask;
+                    if ( subTask.ParseFromArray( element.second.data(), element.second.size() ) )
+                    {
+                        if (!IsSubTaskValid(subTask.json_data()))
+                        {
+                            m_logger->debug( "A subtask is not valid, skipping task." );
+                            isSubtaskValid = false;
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        m_logger->debug( "Unable to parse a subtask" );
+                        isSubtaskValid = false;
+                    }
+                }
+            }
+            else
+            {
+                m_logger->debug( "Task has no subtasks" );
+                continue;
+            }
+            if (!isSubtaskValid)
+            {
                 continue;
             }
             if ( !LockTask( taskKey.value() ) )
@@ -190,6 +239,26 @@ namespace sgns::processing
     {
         auto lockData = m_db->Get( sgns::crdt::HierarchicalKey( "lock_" + taskKey ) );
         return !lockData.has_failure() && lockData.has_value();
+    }
+
+    outcome::result<void> ProcessingTaskQueueImpl::IsTaskValid( const std::string taskJson )
+    {
+        OUTCOME_TRY( auto procmgr, sgns::sgprocessing::ProcessingManager::Create( taskJson ) );
+        return outcome::success();
+    }
+
+    outcome::result<void> ProcessingTaskQueueImpl::IsSubTaskValid( const std::string taskJson )
+    {
+        sgns::ModelNode model;
+        try
+        {
+            sgns::from_json( taskJson, model );
+        }
+        catch ( const nlohmann::json::exception &e )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
+        return outcome::success();
     }
 
     bool ProcessingTaskQueueImpl::LockTask( const std::string &taskKey )
