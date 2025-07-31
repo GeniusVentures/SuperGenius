@@ -35,9 +35,10 @@ namespace sgns
 
         struct InterfaceMethods
         {
-            std::function<std::vector<uint8_t>( std::vector<uint8_t> data )>                       sign_;
-            std::function<bool( std::string address, std::string sig, std::vector<uint8_t> data )> verify_signature_;
-            std::function<uint64_t()>                                                              get_local_nonce_;
+            std::function<outcome::result<std::vector<uint8_t>>( std::vector<uint8_t> data )> sign_;
+            std::function<outcome::result<bool>( std::string address, std::string sig, std::vector<uint8_t> data )>
+                                                                            verify_signature_;
+            std::function<outcome::result<uint64_t>( std::string address )> get_local_nonce_;
         };
 
         static std::shared_ptr<AccountMessenger> New( std::string                                address,

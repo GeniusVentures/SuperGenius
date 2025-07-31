@@ -49,6 +49,7 @@ namespace sgns
 
             instance->eth_keypair = std::make_shared<ethereum::EthereumKeyGenerator>( std::move( temp_eth_address ) );
             instance->elgamal_address = std::make_shared<KeyGenerator::ElGamal>( std::move( temp_elgamal_address ) );
+            instance->confirmed_nonces_.emplace( instance->eth_keypair->GetEntirePubValue(), -1 );
         }
 
         return instance;
@@ -60,7 +61,8 @@ namespace sgns
     {
         bool                               ret = false;
         AccountMessenger::InterfaceMethods methods;
-        methods.sign_ = [weakptr( weak_from_this() )]( std::vector<uint8_t> data )
+        methods.sign_ =
+            [weakptr( weak_from_this() )]( std::vector<uint8_t> data ) -> outcome::result<std::vector<uint8_t>>
         {
             if ( auto self = weakptr.lock() )
             {
@@ -68,11 +70,12 @@ namespace sgns
             }
             else
             {
-                return std::vector<uint8_t>{};
+                return outcome::failure( std::errc::owner_dead );
             }
         };
-        methods.verify_signature_ =
-            [weakptr( weak_from_this() )]( std::string address, std::string sig, std::vector<uint8_t> data )
+        methods.verify_signature_ = [weakptr( weak_from_this() )]( std::string          address,
+                                                                   std::string          sig,
+                                                                   std::vector<uint8_t> data ) -> outcome::result<bool>
         {
             if ( auto self = weakptr.lock() )
             {
@@ -80,18 +83,18 @@ namespace sgns
             }
             else
             {
-                return false;
+                return outcome::failure( std::errc::owner_dead );
             }
         };
-        methods.get_local_nonce_ = [weakptr( weak_from_this() )]() -> uint64_t
+        methods.get_local_nonce_ = [weakptr( weak_from_this() )]( std::string address ) -> outcome::result<uint64_t>
         {
             if ( auto self = weakptr.lock() )
             {
-                return self->GetLocalConfirmedNonce();
+                return self->GetPeerNonce( address );
             }
             else
             {
-                return 0;
+                return outcome::failure( std::errc::owner_dead );
             }
         };
         messenger_ = AccountMessenger::New( eth_keypair->GetEntirePubValue(),
@@ -107,9 +110,8 @@ namespace sgns
     }
 
     GeniusAccount::GeniusAccount( TokenID token_id ) :
-        token( token_id ),      //
-        confirmed_nonce_( -1 ), //
-        proposed_nonce_( 0 )    //
+        token( token_id ),   //
+        proposed_nonce_( 0 ) //
     {
     }
 
@@ -315,14 +317,18 @@ namespace sgns
     void GeniusAccount::SetLocalConfirmedNonce( uint64_t nonce )
     {
         std::lock_guard lock( nonce_mutex_ );
-        logger_->debug( "Setting the max value between {} and {} as a confirmed nonce", confirmed_nonce_, nonce );
-        confirmed_nonce_ = std::max( static_cast<int64_t>( nonce ), confirmed_nonce_ );
+        auto            current_confirmed_nonce = confirmed_nonces_[eth_keypair->GetEntirePubValue()];
+        logger_->debug( "Setting the max value between {} and {} as a confirmed nonce",
+                        current_confirmed_nonce,
+                        nonce );
+        confirmed_nonces_[eth_keypair->GetEntirePubValue()] = std::max( static_cast<int64_t>( nonce ),
+                                                                        current_confirmed_nonce );
         nonce++;
         logger_->debug( "Setting the max value between {} and {} as a proposed (next) nonce", proposed_nonce_, nonce );
         proposed_nonce_ = std::max( nonce, proposed_nonce_ );
     }
 
-    uint64_t GeniusAccount::GetProposedNonce()
+    uint64_t GeniusAccount::GetProposedNonce() const
     {
         return proposed_nonce_;
     }
@@ -332,18 +338,35 @@ namespace sgns
         proposed_nonce_++;
     }
 
-    uint64_t GeniusAccount::GetLocalConfirmedNonce()
+    outcome::result<uint64_t> GeniusAccount::GetPeerNonce( std::string address ) const
     {
-        std::shared_lock lock( nonce_mutex_ );
-        return static_cast<uint64_t>( confirmed_nonce_ );
+        std::unordered_map<std::string, int64_t> nonces_copy;
+        {
+            std::shared_lock lock( nonce_mutex_ );
+            nonces_copy = confirmed_nonces_;
+        }
+        if ( auto it = nonces_copy.find( address ); it != nonces_copy.end() )
+        {
+            return static_cast<uint64_t>( it->second );
+        }
+        else
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
     }
 
-    outcome::result<uint64_t> GeniusAccount::GetConfirmedNonce( uint64_t timeout_ms )
+    outcome::result<uint64_t> GeniusAccount::GetLocalConfirmedNonce() const
+    {
+        return GetPeerNonce( eth_keypair->GetEntirePubValue() );
+    }
+
+    outcome::result<uint64_t> GeniusAccount::GetConfirmedNonce( uint64_t timeout_ms ) const
     {
         uint64_t result = 0;
         {
             std::shared_lock lock( nonce_mutex_ );
-            result = static_cast<uint64_t>( confirmed_nonce_ );
+            auto it = confirmed_nonces_.find(eth_keypair->GetEntirePubValue());
+            result = static_cast<uint64_t>( it->second );
         }
         logger_->debug( "Trying to get nonce from the network for {} ms ", timeout_ms );
 

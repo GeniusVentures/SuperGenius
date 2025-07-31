@@ -56,7 +56,7 @@ namespace sgns
 
         [[nodiscard]] std::string GetNonce() const
         {
-            return std::to_string( confirmed_nonce_ );
+            return std::to_string( GetLocalConfirmedNonce().value() );
         }
 
         bool PutUTXO( const GeniusUTXO &new_utxo );
@@ -66,11 +66,12 @@ namespace sgns
         static bool          VerifySignature( std::string address, std::string sig, std::vector<uint8_t> data );
         std::vector<uint8_t> Sign( std::vector<uint8_t> data );
 
-        void     SetLocalConfirmedNonce( uint64_t nonce );
-        uint64_t GetLocalConfirmedNonce();
+        void                      SetLocalConfirmedNonce( uint64_t nonce );
+        outcome::result<uint64_t> GetPeerNonce( std::string address ) const;
+        outcome::result<uint64_t> GetLocalConfirmedNonce() const;
 
-        outcome::result<uint64_t> GetConfirmedNonce( uint64_t timeout_ms );
-        uint64_t                  GetProposedNonce();
+        outcome::result<uint64_t> GetConfirmedNonce( uint64_t timeout_ms ) const;
+        uint64_t                  GetProposedNonce() const;
         void                      IncProposedNonce();
 
         TokenID                 token;
@@ -79,9 +80,9 @@ namespace sgns
     private:
         std::shared_ptr<ethereum::EthereumKeyGenerator> eth_keypair;
         std::shared_ptr<KeyGenerator::ElGamal>          elgamal_address;
-        int64_t                                         confirmed_nonce_;
+        std::unordered_map<std::string, int64_t>        confirmed_nonces_;
         uint64_t                                        proposed_nonce_;
-        std::shared_mutex                               nonce_mutex_;
+        mutable std::shared_mutex                       nonce_mutex_;
         std::shared_ptr<AccountMessenger>               messenger_;
         base::Logger                                    logger_ = sgns::base::createLogger( "GeniusAccount" );
 

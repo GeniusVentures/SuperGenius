@@ -198,7 +198,7 @@ namespace sgns
         {
             if ( state_m == State::SYNCHING )
             {
-                this->Sync( 5000 );
+                this->Sync( 2000 );
 
                 if ( state_m == State::READY )
                 {
@@ -1102,13 +1102,20 @@ namespace sgns
         if ( nonce_result.has_value() )
         {
             auto network_confirmed_nonce = nonce_result.value();
-            if ( account_m->GetLocalConfirmedNonce() >= network_confirmed_nonce )
+            m_logger->debug( "Nonce from the network received {}", network_confirmed_nonce );
+            auto local_nonce_result = account_m->GetLocalConfirmedNonce();
+            if ( local_nonce_result.has_value() )
             {
-                state_m = State::READY;
+                if ( local_nonce_result.value() >= network_confirmed_nonce )
+                {
+                    state_m = State::READY;
+                }
             }
         }
         else
         {
+            m_logger->debug( "No node from the network, using local " );
+
             state_m = State::READY;
         }
     }

@@ -58,7 +58,7 @@ namespace sgns
             {
                 if ( auto self = weakptr.lock() )
                 {
-                    self->logger_->debug( "Message received on topic: {}", self->account_comm_topic_ );
+                    self->logger_->trace( "Message received on topic: {}", self->account_comm_topic_ );
                     self->OnMessage( message, self->account_comm_topic_ );
                 }
             } ) );
@@ -100,7 +100,6 @@ namespace sgns
     void AccountMessenger::OnMessage( boost::optional<const ipfs_pubsub::GossipPubSub::Message &> message,
                                       const std::string                                          &topic )
     {
-        logger_->trace( "[{}] On Message on topic", topic );
         if ( message )
         {
             logger_->trace( "[{}] Valid message on topic ", topic );
@@ -141,8 +140,8 @@ namespace sgns
             return outcome::failure( Error::PROTO_DESERIALIZATION );
         }
 
-        std::vector<uint8_t>            serialized_vec( encoded.begin(), encoded.end() );
-        auto                            signature = methods_.sign_( serialized_vec );
+        std::vector<uint8_t> serialized_vec( encoded.begin(), encoded.end() );
+        OUTCOME_TRY( auto &&signature, methods_.sign_( serialized_vec ) );
         accountComm::SignedNonceRequest signed_req;
         *signed_req.mutable_data() = req;
         signed_req.set_signature( signature.data(), signature.size() );
@@ -175,8 +174,8 @@ namespace sgns
 
         // Wait for response (blocking) or timeout
         nonce_result_promise_ = std::promise<uint64_t>{}; // reset promise
-        auto fut    = nonce_result_promise_.get_future();
-        auto status = fut.wait_for( std::chrono::milliseconds( timeout_ms ) );
+        auto fut              = nonce_result_promise_.get_future();
+        auto status           = fut.wait_for( std::chrono::milliseconds( timeout_ms ) );
 
         if ( status == std::future_status::ready )
         {
@@ -207,6 +206,7 @@ namespace sgns
             return outcome::failure( Error::PROTO_SERIALIZATION );
         }
         pubsub_->Publish( account_comm_topic_, serialized_proto );
+        pubsub_->Publish( full_node_comm_topic_, serialized_proto );
         return outcome::success();
     }
 
@@ -214,7 +214,8 @@ namespace sgns
     {
         const auto &req = signed_req.data();
 
-        // 1. Signature check
+        logger_->debug( "[{} - {}] Received a Nonce request", address_, is_full_node_ );
+
         std::string serialized;
         if ( !req.SerializeToString( &serialized ) )
         {
@@ -223,13 +224,30 @@ namespace sgns
         }
 
         std::vector<uint8_t> serialized_vec( serialized.begin(), serialized.end() );
-        if ( !methods_.verify_signature_( req.requester_address(), signed_req.signature(), serialized_vec ) )
+
+        auto verify_signature_result = methods_.verify_signature_( req.requester_address(),
+                                                                   signed_req.signature(),
+                                                                   serialized_vec );
+        if ( verify_signature_result.has_error() )
         {
-            logger_->warn( "Invalid signature on NonceRequest from {}", req.requester_address() );
+            logger_->error( "No verify method" );
+            return;
+        }
+        if ( !verify_signature_result.value() )
+        {
+            logger_->error( "Invalid signature on NonceRequest from {}", req.requester_address() );
             return;
         }
 
-        uint64_t local_nonce = methods_.get_local_nonce_();
+        auto local_nonce_result = methods_.get_local_nonce_( req.requester_address() );
+
+        if ( local_nonce_result.has_error() )
+        {
+            logger_->debug( "[{}] I don't have the nonce for the address {}", address_, req.requester_address() );
+
+            return;
+        }
+        uint64_t local_nonce = local_nonce_result.value();
 
         // 2. Build NonceResponse
         accountComm::NonceResponse resp;
@@ -244,12 +262,18 @@ namespace sgns
         std::string resp_serialized;
         if ( !resp.SerializeToString( &resp_serialized ) )
         {
-            logger_->warn( "Failed to serialize NonceResponse" );
+            logger_->error( "Failed to serialize NonceResponse" );
             return;
         }
 
         std::vector<uint8_t> resp_bytes( resp_serialized.begin(), resp_serialized.end() );
-        std::vector<uint8_t> signature = methods_.sign_( resp_bytes );
+        auto                 signature_result = methods_.sign_( resp_bytes );
+        if ( signature_result.has_error() )
+        {
+            logger_->error( "Failed to send NonceResponse" );
+            return;
+        }
+        auto signature = signature_result.value();
 
         accountComm::SignedNonceResponse signed_resp;
         *signed_resp.mutable_data() = resp;
@@ -270,6 +294,8 @@ namespace sgns
     {
         const auto &resp = signed_resp.data();
 
+        logger_->debug( "[{} - {}] Received a Nonce response", address_, is_full_node_ );
+
         std::string serialized;
         if ( !resp.SerializeToString( &serialized ) )
         {
@@ -279,9 +305,26 @@ namespace sgns
 
         std::vector<uint8_t> data_vec( serialized.begin(), serialized.end() );
 
-        if ( !methods_.verify_signature_( resp.responder_address(), signed_resp.signature(), data_vec ) )
+        auto verify_signature_result = methods_.verify_signature_( resp.responder_address(),
+                                                                   signed_resp.signature(),
+                                                                   data_vec );
+        if ( verify_signature_result.has_error() )
         {
-            logger_->warn( "Invalid signature on nonce response from {}", resp.responder_address() );
+            logger_->error( "No verify method" );
+            return;
+        }
+        if ( !verify_signature_result.value() )
+        {
+            logger_->error( "Invalid signature on nonce response from {}", resp.responder_address() );
+            return;
+        }
+
+        if ( resp.responder_address() != address_ )
+        {
+            logger_->debug( "[{} - full node: {}] Response for an address that is not me, I don't care",
+                            address_,
+                            is_full_node_ );
+
             return;
         }
 
