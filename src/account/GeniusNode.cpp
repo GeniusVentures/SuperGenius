@@ -537,11 +537,7 @@ namespace sgns
             {
                 json modeljson;
                 sgns::to_json( modeljson, model );
-                auto   index   = procmgr->GetInputIndex( model.get_source().value() );
-                if (!index)
-                {
-                    return index.error();
-                }
+                auto   index   = procmgr->GetInputIndex( model.get_source() );
                 size_t nChunks =
                     procdata.get_inputs()[index.value()].get_dimensions().value().get_chunk_count().value();
                 rapidjson::StringBuffer buffer;
