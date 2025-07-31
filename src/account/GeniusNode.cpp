@@ -17,7 +17,6 @@
 #include "account/MigrationManager.hpp"
 #include "crdt/globaldb/keypair_file_storage.hpp"
 #include "upnp.hpp"
-#include "processing/processing_imagesplit.hpp"
 #include "processing/processing_tasksplit.hpp"
 #include "processing/processing_subtask_enqueuer_impl.hpp"
 //#include "processing/processors/processing_processor_mnn_image.hpp"

@@ -12,7 +12,6 @@
 #include <boost/format.hpp>
 
 #include "processing/proto/SGProcessing.pb.h"
-#include "processing/processing_imagesplit.hpp"
 #include "processing/processing_subtask_state_storage.hpp"
 #include <SGNSProcMain.hpp>
 
