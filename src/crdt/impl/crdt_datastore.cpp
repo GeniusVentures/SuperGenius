@@ -859,13 +859,13 @@ namespace sgns::crdt
         {
             crdt_filter_.FilterElementsOnDelta( aDelta );
             //crdt_filter_.FilterTombstonesOnDelta( aDelta );
-            logger_->error( "ProcessNode: Processing INCOMING root {} node {}",
+            logger_->debug( "ProcessNode: Processing INCOMING root {} node {}",
                             aRoot.toString().value(),
                             aNode->getCID().toString().value() );
         }
         else
         {
-            logger_->error( "ProcessNode: Processing OUTGOING root {} node {}",
+            logger_->debug( "ProcessNode: Processing OUTGOING root {} node {}",
                             aRoot.toString().value(),
                             aNode->getCID().toString().value() );
             skip_if_visited = true;
@@ -904,14 +904,14 @@ namespace sgns::crdt
         {
             for ( auto &topic : topics_to_update_cid )
             {
-                logger_->error( "ProcessNode: Traversing to find links on topic {}", topic );
+                logger_->debug( "ProcessNode: Traversing to find links on topic {}", topic );
                 
                 // No additional locking needed since we hold processNodeMutex_
                 auto [links_to_fetch, known_cids] = dagSyncer_->TraverseCIDsLinks( aNode, topic, {}, skip_if_visited, 50 );
                 
                 for ( const auto &[cid, link_name] : known_cids )
                 {
-                    logger_->error( "ProcessNode: known cid: {}, {}", cid.toString().value(), link_name );
+                    logger_->debug( "ProcessNode: known cid: {}, {}", cid.toString().value(), link_name );
                     if ( heads_->IsHead( cid, link_name ) )
                     {
                         logger_->debug( "Replacing: {} with {} on topic {} ",
