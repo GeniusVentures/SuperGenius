@@ -131,7 +131,7 @@ namespace sgns::processing
                 m_logger->debug( "Task does not meet schema requirements" );
                 continue;
             }
-            auto key           = ( boost::format( "subtasks/TASK_%s" ) % taskKey ).str();
+            auto key           = ( boost::format( "subtasks/TASK_%s" ) % taskKey.value() ).str();
             auto querySubTasks = m_db->QueryKeyValues( key );
             if ( querySubTasks.has_failure() )
             {
