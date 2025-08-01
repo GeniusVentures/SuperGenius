@@ -14,8 +14,7 @@
       "description": "Input image to be enhanced",
       "dimensions": {
         "width": 512,
-        "height": 512,
-        "channels": 3
+        "height": 512
       },
       "format": "RGB8"
     }
@@ -29,8 +28,7 @@
       "description": "Enhanced output image",
       "dimensions": {
         "width": 512,
-        "height": 512,
-        "channels": 3
+        "height": 512
       },
       "format": "RGB8"
     }

@@ -110,7 +110,6 @@
 			"chunk_subchunk_height": { "type": "integer", "minimum": 1 },
 			"chunk_subchunk_width": { "type": "integer", "minimum": 1 },
 			"chunk_count": { "type": "integer", "minimum": 1 },
-            "channels": { "type": "integer", "minimum": 1 },
             "batch": { "type": "integer", "minimum": 1 }
           }
         },
@@ -224,7 +223,7 @@
     },
     "model_config": {
       "type": "object",
-      "required": ["source_uri_param", "input_nodes", "output_nodes"],
+      "required": ["source_uri_param", "input_nodes", "output_nodes", "format"],
       "properties": {
         "source_uri_param": {
           "type": "string",
@@ -268,7 +267,7 @@
     },
     "model_node": {
       "type": "object",
-      "required": ["name", "type"],
+      "required": ["name", "type", "source", "target" ],
       "properties": {
         "name": {
           "type": "string",
