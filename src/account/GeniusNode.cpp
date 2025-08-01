@@ -280,7 +280,7 @@ namespace sgns
             crdt::KeyPairFileStorage( write_base_path_ + pubsubKeyPath ).GetKeyPair().value() );
         auto pubs = pubsub_->Start(
             pubsubport,
-            { "/ip4/192.168.46.124/tcp/7005/p2p/12D3KooWESDNusuuXqQou82v4iqVMR3p3HHkfZJszswuWjeyoTpN", "/ip4/192.168.46.124/tcp/7176/p2p/12D3KooWQrdPmnHCJMAVNxx3dwV7zyGu79X3kXMs3jTUtJRxPYvk" },
+            { "/ip4/192.168.46.124/tcp/6964/p2p/12D3KooWD3sVMbwCoVCJZ1Vy8ENxULCgAw4YMkGaB6Gaw9SCqnCh", "/ip4/192.168.46.124/tcp/7176/p2p/12D3KooWQrdPmnHCJMAVNxx3dwV7zyGu79X3kXMs3jTUtJRxPYvk" },
             lanip,
             addresses );
         pubs.wait();

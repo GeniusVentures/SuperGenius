@@ -208,8 +208,7 @@ void CreateProcessingTransaction( const std::vector<std::string> &args, sgns::Ge
 		"chunk_stride": 4320,
 		"chunk_subchunk_height": 5,
 		"chunk_subchunk_width": 5,
-		"chunk_count": 25,
-        "channels": 4
+		"chunk_count": 25
       },
       "format": "RGBA8"
     },
@@ -229,8 +228,7 @@ void CreateProcessingTransaction( const std::vector<std::string> &args, sgns::Ge
 		"chunk_stride": 1152,
 		"chunk_subchunk_height": 4,
 		"chunk_subchunk_width": 4,
-		"chunk_count": 16,
-        "channels": 3
+		"chunk_count": 16
       },
       "format": "RGB8"
     }
