@@ -5,10 +5,6 @@
 #include <memory>
 #include <iostream>
 #include <cstdint>
-#include <valijson/adapters/boost_json_adapter.hpp>
-#include <valijson/schema.hpp>
-#include <valijson/validator.hpp>
-#include <valijson/schema_parser.hpp>
 #include <boost/dll.hpp>
 #include <boost/optional/optional_io.hpp>
 #include "SGNSProcMain.hpp"
