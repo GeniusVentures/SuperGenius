@@ -102,7 +102,7 @@ namespace sgns
     {
         if ( message )
         {
-            logger_->trace( "[{}] Valid message on topic ", topic );
+            logger_->trace( "[{}] Valid message on topic ", topic, is_full_node_ );
             accountComm::AccountMessage acc_msg;
             if ( !acc_msg.ParseFromArray( message->data.data(), static_cast<int>( message->data.size() ) ) )
             {
@@ -148,8 +148,9 @@ namespace sgns
 
         accountComm::AccountMessage envelope;
         *envelope.mutable_nonce_request() = signed_req;
+        current_nonce_request_id_         = req_id;
 
-        auto send_ret = SendAccountMessage( envelope );
+        auto send_ret = SendAccountMessage( envelope, { account_comm_topic_, full_node_comm_topic_ } );
 
         if ( send_ret.has_error() )
         {
@@ -161,42 +162,75 @@ namespace sgns
 
     outcome::result<uint64_t> AccountMessenger::GetLatestNonce( uint64_t timeout_ms )
     {
-        std::lock_guard lock( nonce_mutex_ );
-        logger_->debug( "Requesting nonce" );
+        logger_->debug( "[{} - full: {}] Requesting nonce", address_.substr( 0, 8 ), is_full_node_ );
 
         uint64_t req_id = static_cast<uint64_t>( std::chrono::system_clock::now().time_since_epoch().count() );
-        if ( current_nonce_request_id_ )
+
+        std::future<uint64_t> fut;
         {
-            return outcome::failure( Error::NONCE_REQUEST_IN_PROGRESS );
+            std::lock_guard lock( nonce_mutex_ );
+            if ( current_nonce_request_id_ )
+            {
+                logger_->warn( "[{} - full: {}] Nonce request already in progress with ID: {}",
+                               address_.substr( 0, 8 ),
+                               is_full_node_,
+                               *current_nonce_request_id_ );
+                return outcome::failure( Error::NONCE_REQUEST_IN_PROGRESS );
+            }
+
+            nonce_result_promise_ = std::promise<uint64_t>{};
+            fut                   = nonce_result_promise_.get_future();
+
         }
+
 
         OUTCOME_TRY( RequestNonce( req_id ) );
 
-        // Wait for response (blocking) or timeout
-        nonce_result_promise_ = std::promise<uint64_t>{}; // reset promise
-        auto fut              = nonce_result_promise_.get_future();
-        auto status           = fut.wait_for( std::chrono::milliseconds( timeout_ms ) );
+        logger_->debug( "[{} - full: {}] Nonce request sent with ID: {}, waiting for response...",
+                        address_.substr( 0, 8 ),
+                        is_full_node_,
+                        req_id );
+        auto status = fut.wait_for( std::chrono::milliseconds( timeout_ms ) );
 
-        if ( status == std::future_status::ready )
+
         {
-            try
-            {
-                uint64_t result = fut.get();
-                current_nonce_request_id_.reset();
-                return result;
-            }
-            catch ( ... )
-            {
-                current_nonce_request_id_.reset();
-                return outcome::failure( Error::NONCE_FUTURE_ERROR );
-            }
-        }
+            std::lock_guard lock( nonce_mutex_ );
 
-        current_nonce_request_id_.reset();
-        return outcome::failure( Error::NONCE_GET_ERROR );
+            if ( status == std::future_status::ready )
+            {
+                try
+                {
+                    uint64_t result = fut.get();
+                    logger_->debug( "[{} - full: {}] Successfully received nonce: {}",
+                                    address_.substr( 0, 8 ),
+                                    is_full_node_,
+                                    result );
+                    current_nonce_request_id_.reset();
+                    return result;
+                }
+                catch ( const std::future_error &e )
+                {
+                    logger_->error( "[{} - full: {}] Future error when getting nonce: {} (code: {})",
+                                    address_.substr( 0, 8 ),
+                                    is_full_node_,
+                                    e.what(),
+                                    static_cast<int>( e.code().value()) );
+                    current_nonce_request_id_.reset();
+                    return outcome::failure( Error::NONCE_FUTURE_ERROR );
+                }
+            }
+
+            logger_->error( "[{} - full: {}] Nonce request timed out after {}ms",
+                            address_.substr( 0, 8 ),
+                            is_full_node_,
+                            timeout_ms );
+            current_nonce_request_id_.reset();
+            return outcome::failure( Error::NONCE_GET_ERROR );
+        }
     }
 
-    outcome::result<void> AccountMessenger::SendAccountMessage( const accountComm::AccountMessage &msg )
+    outcome::result<void> AccountMessenger::SendAccountMessage( const accountComm::AccountMessage &msg,
+                                                                std::set<std::string>              topics )
     {
         size_t               size = msg.ByteSizeLong();
         std::vector<uint8_t> serialized_proto( size );
@@ -205,8 +239,10 @@ namespace sgns
             logger_->warn( "Failed to serialize AccountMessage for NonceResponse" );
             return outcome::failure( Error::PROTO_SERIALIZATION );
         }
-        pubsub_->Publish( account_comm_topic_, serialized_proto );
-        pubsub_->Publish( full_node_comm_topic_, serialized_proto );
+        for ( auto &topic : topics )
+        {
+            pubsub_->Publish( topic, serialized_proto );
+        }
         return outcome::success();
     }
 
@@ -214,7 +250,7 @@ namespace sgns
     {
         const auto &req = signed_req.data();
 
-        logger_->debug( "[{} - {}] Received a Nonce request", address_, is_full_node_ );
+        logger_->debug( "[{} - {}] Received a Nonce request", address_.substr( 0, 8 ), is_full_node_ );
 
         std::string serialized;
         if ( !req.SerializeToString( &serialized ) )
@@ -243,16 +279,18 @@ namespace sgns
 
         if ( local_nonce_result.has_error() )
         {
-            logger_->debug( "[{}] I don't have the nonce for the address {}", address_, req.requester_address() );
+            logger_->debug( "[{}] I don't have the nonce for the address {}",
+                            address_.substr( 0, 8 ),
+                            req.requester_address() );
 
             return;
         }
         uint64_t local_nonce = local_nonce_result.value();
 
-        // 2. Build NonceResponse
         accountComm::NonceResponse resp;
 
         resp.set_responder_address( address_ );
+        resp.set_requester_address( req.requester_address() );
         resp.set_request_id( req.request_id() );
         resp.set_known_nonce( local_nonce );
         resp.set_timestamp(
@@ -281,7 +319,13 @@ namespace sgns
 
         accountComm::AccountMessage msg;
         *msg.mutable_nonce_response() = signed_resp;
-        auto send_ret                 = SendAccountMessage( msg );
+        auto send_ret                 = SendAccountMessage(
+            msg,
+            { ( req.requester_address() +
+                ( ( boost::format( std::string( ACCOUNT_COMM ) ) % sgns::version::SuperGeniusVersionMajor() )
+                      .str() ) ) } );
+
+        logger_->debug( "[{} - {}] Sending back the nonce {}", address_.substr( 0, 8 ), is_full_node_, local_nonce );
 
         if ( send_ret.has_error() )
         {
@@ -294,7 +338,10 @@ namespace sgns
     {
         const auto &resp = signed_resp.data();
 
-        logger_->debug( "[{} - {}] Received a Nonce response", address_, is_full_node_ );
+        logger_->debug( "[{} - {}] Received a Nonce response from {}",
+                        address_.substr( 0, 8 ),
+                        is_full_node_,
+                        resp.responder_address() );
 
         std::string serialized;
         if ( !resp.SerializeToString( &serialized ) )
@@ -319,28 +366,55 @@ namespace sgns
             return;
         }
 
-        if ( resp.responder_address() != address_ )
+        if ( resp.requester_address() != address_ )
         {
             logger_->debug( "[{} - full node: {}] Response for an address that is not me, I don't care",
-                            address_,
+                            address_.substr( 0, 8 ),
                             is_full_node_ );
-
             return;
         }
 
         std::lock_guard lock( nonce_mutex_ );
-        if ( !current_nonce_request_id_ || resp.request_id() != *current_nonce_request_id_ )
+
+        if ( !current_nonce_request_id_ )
         {
-            return; // ignore unrelated response
+            logger_->debug( "[{} - full node: {}] No active nonce request", address_.substr( 0, 8 ), is_full_node_ );
+            return;
         }
+
+        if ( resp.request_id() != *current_nonce_request_id_ )
+        {
+            logger_->debug( "[{} - full node: {}] Unrelated response - expected: {}, got: {}",
+                            address_.substr( 0, 8 ),
+                            is_full_node_,
+                            *current_nonce_request_id_,
+                            resp.request_id() );
+            return; 
+        }
+
+        logger_->debug( "[{} - full node: {}] Setting the nonce value: {}",
+                        address_.substr( 0, 8 ),
+                        is_full_node_,
+                        resp.known_nonce() );
 
         try
         {
             nonce_result_promise_.set_value( resp.known_nonce() );
+            logger_->debug( "[{} - full node: {}] Successfully set nonce promise value",
+                            address_.substr( 0, 8 ),
+                            is_full_node_ );
         }
         catch ( const std::future_error &e )
         {
-            logger_->trace( "Duplicate or late response, ignoring: {}", e.what() );
+            logger_->error( "Future error when setting nonce value: {} (code: {})",
+                            e.what(),
+                            static_cast<int>( e.code().value() ) );
+            return;
+        }
+        catch ( const std::exception &e )
+        {
+            logger_->error( "Exception when setting nonce value: {}", e.what() );
+            return;
         }
 
         current_nonce_request_id_.reset();

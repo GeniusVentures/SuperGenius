@@ -67,6 +67,7 @@ namespace sgns
         std::vector<uint8_t> Sign( std::vector<uint8_t> data );
 
         void                      SetLocalConfirmedNonce( uint64_t nonce );
+        void                      SetPeerConfirmedNonce( uint64_t nonce, std::string address );
         outcome::result<uint64_t> GetPeerNonce( std::string address ) const;
         outcome::result<uint64_t> GetLocalConfirmedNonce() const;
 

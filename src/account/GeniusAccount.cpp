@@ -316,16 +316,26 @@ namespace sgns
 
     void GeniusAccount::SetLocalConfirmedNonce( uint64_t nonce )
     {
+        SetPeerConfirmedNonce( nonce, eth_keypair->GetEntirePubValue() );
+        {
+            std::lock_guard lock( nonce_mutex_ );
+            nonce++;
+            logger_->debug( "Setting the max value between {} and {} as a proposed (next) nonce",
+                            proposed_nonce_,
+                            nonce );
+            proposed_nonce_ = std::max( nonce, proposed_nonce_ );
+        }
+    }
+
+    void GeniusAccount::SetPeerConfirmedNonce( uint64_t nonce, std::string address )
+    {
         std::lock_guard lock( nonce_mutex_ );
-        auto            current_confirmed_nonce = confirmed_nonces_[eth_keypair->GetEntirePubValue()];
-        logger_->debug( "Setting the max value between {} and {} as a confirmed nonce",
+        auto            current_confirmed_nonce = confirmed_nonces_[address];
+        logger_->debug( "Setting the max value between {} and {} as a confirmed nonce for address {}",
                         current_confirmed_nonce,
-                        nonce );
-        confirmed_nonces_[eth_keypair->GetEntirePubValue()] = std::max( static_cast<int64_t>( nonce ),
-                                                                        current_confirmed_nonce );
-        nonce++;
-        logger_->debug( "Setting the max value between {} and {} as a proposed (next) nonce", proposed_nonce_, nonce );
-        proposed_nonce_ = std::max( nonce, proposed_nonce_ );
+                        nonce,
+                        address.substr( 0, 8 ) );
+        confirmed_nonces_[address] = std::max( static_cast<int64_t>( nonce ), current_confirmed_nonce );
     }
 
     uint64_t GeniusAccount::GetProposedNonce() const
@@ -365,8 +375,8 @@ namespace sgns
         uint64_t result = 0;
         {
             std::shared_lock lock( nonce_mutex_ );
-            auto it = confirmed_nonces_.find(eth_keypair->GetEntirePubValue());
-            result = static_cast<uint64_t>( it->second );
+            auto             it = confirmed_nonces_.find( eth_keypair->GetEntirePubValue() );
+            result              = static_cast<uint64_t>( it->second );
         }
         logger_->debug( "Trying to get nonce from the network for {} ms ", timeout_ms );
 

@@ -512,7 +512,7 @@ namespace sgns
             auto [transaction, maybe_proof] = transaction_pair;
 
             // this was set prior and needed for the proof to match when the proof was generated
-            auto     nonce_result    = account_m->GetConfirmedNonce( 1000 );
+            auto     nonce_result    = account_m->GetConfirmedNonce( 2000 );
             uint64_t confirmed_nonce = 0;
             if ( nonce_result.has_value() )
             {
@@ -791,7 +791,11 @@ namespace sgns
                 m_logger->debug( "Can't parse the transaction" );
                 continue;
             }
-
+            if ( full_node_m )
+            {
+                account_m->SetPeerConfirmedNonce( maybe_transaction.value()->dag_st.nonce(),
+                                                  maybe_transaction.value()->dag_st.source_addr() );
+            }
             {
                 m_logger->trace( "Inserting into incoming {}", transaction_key.value() );
                 std::unique_lock<std::shared_mutex> out_lock( incoming_tx_mutex_m );

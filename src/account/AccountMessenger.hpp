@@ -72,7 +72,8 @@ namespace sgns
         outcome::result<void> RequestNonce( uint64_t req_id );
 
         void OnMessage( boost::optional<const ipfs_pubsub::GossipPubSub::Message &> message, const std::string &topic );
-        outcome::result<void> SendAccountMessage( const accountComm::AccountMessage &msg );
+        outcome::result<void> SendAccountMessage( const accountComm::AccountMessage &msg,
+                                                  std::set<std::string>              topics );
 
         void HandleNonceRequest( const accountComm::SignedNonceRequest &req );
         void HandleNonceResponse( const accountComm::SignedNonceResponse &resp );
