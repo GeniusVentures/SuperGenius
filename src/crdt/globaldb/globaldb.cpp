@@ -281,31 +281,22 @@ namespace sgns::crdt
     outcome::result<std::string> GlobalDB::KeyToString( const Buffer &key ) const
     {
         // @todo cache the prefix and suffix
-        auto keysPrefix = m_crdtDatastore->GetKeysPrefix();
-        if ( !keysPrefix.has_value() )
-        {
-            return outcome::failure( boost::system::error_code{} );
-        }
+        auto keysPrefix  = m_crdtDatastore->GetKeysPrefix();
         auto valueSuffix = m_crdtDatastore->GetValueSuffix();
-        if ( !valueSuffix.has_value() )
-        {
-            return outcome::failure( boost::system::error_code{} );
-        }
 
         auto sKey = std::string( key.toString() );
 
-        size_t prefixPos = ( !keysPrefix.value().empty() ) ? sKey.find( keysPrefix.value(), 0 ) : 0;
-        if ( prefixPos != 0 )
+        if ( auto prefixPos = keysPrefix.empty() ? 0 : sKey.find( keysPrefix, 0 ); prefixPos != 0 )
         {
-            return outcome::failure( boost::system::error_code{} );
+            return outcome::failure( std::errc::invalid_argument );
         }
 
-        size_t keyPos    = keysPrefix.value().size();
-        auto   suffixPos = ( !valueSuffix.value().empty() ) ? sKey.rfind( valueSuffix.value(), std::string::npos )
-                                                            : sKey.size();
-        if ( ( suffixPos == std::string::npos ) || ( suffixPos < keyPos ) )
+        size_t keyPos = keysPrefix.size();
+
+        auto suffixPos = valueSuffix.empty() ? sKey.size() : sKey.rfind( valueSuffix, std::string::npos );
+        if ( suffixPos == std::string::npos || suffixPos < keyPos )
         {
-            return outcome::failure( boost::system::error_code{} );
+            return outcome::failure( std::errc::invalid_argument );
         }
 
         return sKey.substr( keyPos, suffixPos - keyPos );
