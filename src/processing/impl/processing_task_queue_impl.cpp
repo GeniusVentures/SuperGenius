@@ -127,7 +127,7 @@ namespace sgns::processing
                 m_logger->debug( "Task does not meet schema requirements" );
                 continue;
             }
-            auto key           = ( boost::format( "subtasks/TASK_%s" ) % taskKey.value() ).str();
+            auto key           = ( boost::format( "subtasks/TASK_%s" ) % task.ipfs_block_id() ).str();
             auto querySubTasks = m_db->QueryKeyValues( key );
             if ( querySubTasks.has_failure() )
             {
@@ -260,7 +260,7 @@ namespace sgns::processing
         sgns::ModelNode model;
         try
         {
-            m_logger->debug( "SubTask Parsing {}", taskJson );
+            m_logger->trace( "SubTask Parsing {}", taskJson );
             auto data = nlohmann::json::parse( taskJson );
             sgns::from_json( data, model );
         }
