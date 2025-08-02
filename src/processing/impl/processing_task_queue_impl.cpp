@@ -68,13 +68,14 @@ namespace sgns::processing
                     m_logger->debug( "Subtask check {}", subTask.chunkstoprocess_size() );
                     if (!IsSubTaskValid(subTask.json_data()))
                     {
+                        m_logger->debug( "Subtask does not validate" );
                         return false;
                     }
                     subTasks.push_back( std::move( subTask ) );
                 }
                 else
                 {
-                    m_logger->debug( "Undable to parse a subtask" );
+                    m_logger->debug( "Unable to parse a subtask" );
                     return false;
                 }
             }
@@ -113,12 +114,6 @@ namespace sgns::processing
                 continue;
             }
 
-            if ( IsTaskLocked( taskKey.value() ) )
-            {
-                m_logger->debug( "TASK_PREVIOUSLY_LOCKED {}", taskKey.value() );
-                lockedTasks.insert( taskKey.value() );
-                continue;
-            }
             m_logger->debug( "TASK_QUEUE_ITEM: {}, LOCKED: true", taskKey.value() );
             if ( !task.ParseFromArray( element.second.data(), element.second.size() ) )
             {
@@ -126,7 +121,8 @@ namespace sgns::processing
                 //TODO - Decide what to do with an invalid task - Maybe error?
                 continue;
             }
-            if ( !IsTaskValid(task.json_data()) )
+
+            if ( !IsTaskValid( task.json_data() ) )
             {
                 m_logger->debug( "Task does not meet schema requirements" );
                 continue;
@@ -139,7 +135,7 @@ namespace sgns::processing
                 continue;
             }
             bool isSubtaskValid = true;
-         
+
             if ( querySubTasks.has_value() )
             {
                 m_logger->debug( "SUBTASKS_FOUND {}", querySubTasks.value().size() );
@@ -149,7 +145,7 @@ namespace sgns::processing
                     SGProcessing::SubTask subTask;
                     if ( subTask.ParseFromArray( element.second.data(), element.second.size() ) )
                     {
-                        if (!IsSubTaskValid(subTask.json_data()))
+                        if ( !IsSubTaskValid( subTask.json_data() ) )
                         {
                             m_logger->debug( "A subtask is not valid, skipping task." );
                             isSubtaskValid = false;
@@ -168,10 +164,18 @@ namespace sgns::processing
                 m_logger->debug( "Task has no subtasks" );
                 continue;
             }
-            if (!isSubtaskValid)
+            if ( !isSubtaskValid )
             {
                 continue;
             }
+
+            if ( IsTaskLocked( taskKey.value() ) )
+            {
+                m_logger->debug( "TASK_PREVIOUSLY_LOCKED {}", taskKey.value() );
+                lockedTasks.insert( taskKey.value() );
+                continue;
+            }
+
             if ( !LockTask( taskKey.value() ) )
             {
                 m_logger->debug( "Failed to lock task" );
@@ -256,10 +260,13 @@ namespace sgns::processing
         sgns::ModelNode model;
         try
         {
-            sgns::from_json( taskJson, model );
+            m_logger->debug( "SubTask Parsing {}", taskJson );
+            auto data = nlohmann::json::parse( taskJson );
+            sgns::from_json( data, model );
         }
         catch ( const nlohmann::json::exception &e )
         {
+            m_logger->debug( "SubTask Parsing Failed {} ", e.what() );
             return outcome::failure( boost::system::error_code{} );
         }
         return outcome::success();

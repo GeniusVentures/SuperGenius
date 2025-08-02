@@ -265,37 +265,64 @@
         }
       }
     },
-    "model_node": {
-      "type": "object",
-      "required": ["name", "type", "source", "target" ],
-      "properties": {
-        "name": {
-          "type": "string",
-          "description": "Node name in the model graph"
-        },
-        "type": {
-          "$ref": "#/definitions/data_type"
-        },
-        "source": {
-          "type": "string",
-          "description": "Data source using prefix notation (input:, output:, internal:, parameter:)",
-          "pattern": "^(input|output|internal|parameter):[a-zA-Z][a-zA-Z0-9_]*$"
-        },
-        "target": {
-          "type": "string",
-          "description": "Data target using prefix notation",
-          "pattern": "^(output|internal):[a-zA-Z][a-zA-Z0-9_]*$"
-        },
-        "shape": {
-          "type": "array",
-          "description": "Expected tensor shape",
-          "items": {
-            "type": "integer",
-            "minimum": -1
-          }
-        }
-      }
-    },
+	"model_node": {
+	  "oneOf": [
+		{
+		  "type": "object",
+		  "required": ["name", "type", "source"],
+		  "properties": {
+			"name": {
+			  "type": "string",
+			  "description": "Node name in the model graph"
+			},
+			"type": {
+			  "$ref": "#/definitions/data_type"
+			},
+			"source": {
+			  "type": "string",
+			  "description": "Data source using prefix notation (input:, output:, internal:, parameter:)",
+			  "pattern": "^(input|output|internal|parameter):[a-zA-Z][a-zA-Z0-9_]*$"
+			},
+			"shape": {
+			  "type": "array",
+			  "description": "Expected tensor shape",
+			  "items": {
+				"type": "integer",
+				"minimum": -1
+			  }
+			}
+		  },
+		  "additionalProperties": false
+		},
+		{
+		  "type": "object",
+		  "required": ["name", "type", "target"],
+		  "properties": {
+			"name": {
+			  "type": "string",
+			  "description": "Node name in the model graph"
+			},
+			"type": {
+			  "$ref": "#/definitions/data_type"
+			},
+			"target": {
+			  "type": "string",
+			  "description": "Data target using prefix notation",
+			  "pattern": "^(output|internal):[a-zA-Z][a-zA-Z0-9_]*$"
+			},
+			"shape": {
+			  "type": "array",
+			  "description": "Expected tensor shape",
+			  "items": {
+				"type": "integer",
+				"minimum": -1
+			  }
+			}
+		  },
+		  "additionalProperties": false
+		}
+	  ]
+	},
     "shader_config": {
       "type": "object",
       "required": ["source"],
