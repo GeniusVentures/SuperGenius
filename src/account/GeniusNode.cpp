@@ -148,6 +148,9 @@ namespace sgns
         auto loggerUPNP           = base::createLogger( "UPNP", logdir );
         auto loggerProcessingNode = base::createLogger( "ProcessingNode", logdir );
         auto loggerGossipPubsub   = base::createLogger( "GossipPubSub", logdir );
+        auto loggerProcessor      = base::createLogger( "SGProcessor", logdir );
+        auto loggerProcessMgr     = base::createLogger( "SGProcessingManager", logdir );
+        
 #ifdef SGNS_DEBUGLOGS
         node_logger->set_level( spdlog::level::err );
         loggerGlobalDB->set_level( spdlog::level::err );
@@ -159,17 +162,19 @@ namespace sgns
         loggerTransactions->set_level( spdlog::level::err );
         loggerMigration->set_level( spdlog::level::err );
         loggerMigrationStep->set_level( spdlog::level::err );
-        loggerQueue->set_level( spdlog::level::err );
+        loggerQueue->set_level( spdlog::level::trace );
         loggerRocksDB->set_level( spdlog::level::err );
         logkad->set_level( spdlog::level::err );
         logNoise->set_level( spdlog::level::err );
         logProcessingEngine->set_level( spdlog::level::trace );
         loggerSubQueue->set_level( spdlog::level::trace );
-        loggerProcServ->set_level( spdlog::level::err );
+        loggerProcServ->set_level( spdlog::level::trace );
         loggerProcqm->set_level( spdlog::level::trace );
         loggerUPNP->set_level( spdlog::level::err );
         loggerProcessingNode->set_level( spdlog::level::trace );
         loggerGossipPubsub->set_level( spdlog::level::err );
+        loggerProcessor->set_level( spdlog::level::trace );
+        loggerProcessMgr->set_level( spdlog::level::trace );
 #else
         node_logger->set_level( spdlog::level::err );
         loggerGlobalDB->set_level( spdlog::level::err );
@@ -536,7 +541,7 @@ namespace sgns
             {
                 json modeljson;
                 sgns::to_json( modeljson, model );
-                auto   index   = procmgr->GetInputIndex( model.get_source() );
+                auto   index   = procmgr->GetInputIndex( model.get_source().value() );
                 size_t nChunks =
                     procdata.get_inputs()[index.value()].get_dimensions().value().get_chunk_count().value();
                 rapidjson::StringBuffer buffer;
