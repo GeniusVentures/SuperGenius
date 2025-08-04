@@ -66,8 +66,10 @@ namespace sgns
         static bool          VerifySignature( std::string address, std::string sig, std::vector<uint8_t> data );
         std::vector<uint8_t> Sign( std::vector<uint8_t> data );
 
+        void                      RollBackConfirmedNonce( uint64_t nonce );
         void                      SetLocalConfirmedNonce( uint64_t nonce );
         void                      SetPeerConfirmedNonce( uint64_t nonce, std::string address );
+        void                      RollBackPeerConfirmedNonce( uint64_t nonce, std::string address );
         outcome::result<uint64_t> GetPeerNonce( std::string address ) const;
         outcome::result<uint64_t> GetLocalConfirmedNonce() const;
 

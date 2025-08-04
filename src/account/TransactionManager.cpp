@@ -46,7 +46,7 @@ namespace sgns
         hasher_m( std::move( hasher ) ),
         timer_m( std::make_shared<boost::asio::steady_timer>( *ctx_m, boost::asio::chrono::milliseconds( 300 ) ) ),
         full_node_m( std::move( full_node ) ),
-        state_m( State::STARTING )
+        state_m( State::CREATING )
 
     {
         m_logger->info( "Initializing values by reading whole blockchain" );
@@ -186,28 +186,34 @@ namespace sgns
 
     void TransactionManager::Start()
     {
-        if ( state_m != State::STARTING )
+        if ( state_m != State::CREATING )
         {
             return;
         }
-        state_m = State::SYNCHING;
+        state_m = State::INITIALIZING;
         CheckIncoming();
         CheckOutgoing();
 
         task_m = [this]()
         {
-            if ( state_m == State::SYNCHING )
+            switch ( state_m )
             {
-                this->Sync( 2000 );
+                case State::INITIALIZING:
+                    this->InitNonce( 2000 );
+                    if ( state_m == State::READY )
+                    {
+                        m_logger->debug( "Transaction Manager is now READY - starting regular updates" );
+                    }
+                    break;
+                case State::CREATING: // Should not happen, but handle gracefully
+                    break;
+                case State::SYNCHING:
+                    this->SyncNonce();
+                    break;
 
-                if ( state_m == State::READY )
-                {
-                    m_logger->debug( "Transaction Manager is now READY - starting regular updates" );
-                }
-            }
-            else if ( state_m == State::READY )
-            {
-                this->Update();
+                case State::READY:
+                    this->Update();
+                    break;
             }
             this->timer_m->expires_after( boost::asio::chrono::milliseconds( 300 ) );
 
@@ -507,26 +513,39 @@ namespace sgns
         {
             crdt_transaction = globaldb_m->BeginTransaction();
         }
+        auto     nonce_result    = account_m->GetConfirmedNonce( 2000 );
+        uint64_t confirmed_nonce = 0;
+        if ( nonce_result.has_value() )
+        {
+            confirmed_nonce = nonce_result.value();
+        }
+        else
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
+        uint64_t expected_next_nonce = confirmed_nonce;
         for ( auto &transaction_pair : transaction_batch )
         {
             auto [transaction, maybe_proof] = transaction_pair;
 
-            // this was set prior and needed for the proof to match when the proof was generated
-            auto     nonce_result    = account_m->GetConfirmedNonce( 2000 );
-            uint64_t confirmed_nonce = 0;
-            if ( nonce_result.has_value() )
+            expected_next_nonce++;
+
+            if ( transaction->dag_st.nonce() > expected_next_nonce )
             {
-                confirmed_nonce = nonce_result.value();
-            }
-            else
-            {
+                //Either my old txs are outdated or
+                //The responder has not updated yet
+                m_logger->error( "Network outdated nonce - Expected: {}, Tried to send: {}",
+                                 transaction->dag_st.nonce(),
+                                 expected_next_nonce );
+                state_m = State::SYNCHING;
                 return outcome::failure( boost::system::error_code{} );
             }
-            if ( transaction->dag_st.nonce() != confirmed_nonce + 1 )
+            else if ( transaction->dag_st.nonce() < expected_next_nonce )
             {
-                m_logger->error( "Outdated nonce, not sending transaction {}, {}",
+                m_logger->error( "Local nonce outdated - Expected: {}, Tried to send: {}",
                                  transaction->dag_st.nonce(),
-                                 confirmed_nonce + 1 );
+                                 expected_next_nonce );
+                state_m = State::SYNCHING;
                 return outcome::failure( boost::system::error_code{} );
             }
 
@@ -553,7 +572,6 @@ namespace sgns
                 BOOST_OUTCOME_TRYV2( auto &&,
                                      crdt_transaction->Put( std::move( proof_key ), std::move( proof_transaction ) ) );
             }
-            account_m->SetLocalConfirmedNonce( transaction->dag_st.nonce() );
         }
 
         std::set<std::string> topicSet;
@@ -568,6 +586,7 @@ namespace sgns
         }
 
         BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction->Commit( topicSet ) );
+        account_m->SetLocalConfirmedNonce( expected_next_nonce );
 
         return outcome::success();
     }
@@ -1098,7 +1117,7 @@ namespace sgns
         return false;
     }
 
-    void TransactionManager::Sync( uint64_t timeout_ms )
+    void TransactionManager::InitNonce( uint64_t timeout_ms )
     {
         m_logger->debug( "Trying to get confirmed nonce" );
 
@@ -1122,6 +1141,138 @@ namespace sgns
 
             state_m = State::READY;
         }
+    }
+
+    void TransactionManager::SyncNonce()
+    {
+        m_logger->debug( "Checking if my nonce is updates" );
+
+        auto     nonce_result    = account_m->GetConfirmedNonce( 2000 );
+        uint64_t confirmed_nonce = 0;
+        if ( nonce_result.has_value() )
+        {
+            confirmed_nonce = nonce_result.value();
+        }
+        else
+        {
+            return;
+        }
+        uint64_t expected_next_nonce = confirmed_nonce + 1;
+
+        if ( account_m->GetProposedNonce() == expected_next_nonce )
+        {
+            //Either my old txs are outdated or
+            //The responder has not updated yet
+            m_logger->debug( "Network nonce updated: {}", expected_next_nonce );
+            state_m = State::READY;
+        }
+        else
+        {
+            m_logger->error( "Local nonce outdated - Local: {}, Expected: {}",
+                             account_m->GetProposedNonce(),
+                             expected_next_nonce );
+        }
+    }
+
+    void TransactionManager::CheckTransactionValidity( std::set<uint64_t> nonces_to_check )
+    {
+        std::unique_lock<std::shared_mutex> out_lock( outgoing_tx_mutex_m );
+        for ( auto &nonce : nonces_to_check )
+        {
+            for ( auto tx : outgoing_tx_processed_m )
+            {
+                if ( tx.second->dag_st.nonce() == nonce )
+                {
+                    bool invalid_tx = false;
+                    //This is the nonce that maybe is from a wrong tx
+                    if ( !tx.second->CheckSignature() )
+                    {
+                        if ( !tx.second->CheckDAGSignatureLegacy() )
+                        {
+                            m_logger->error( "Could not validate signature of transaction with nonce {}", nonce );
+                            invalid_tx = true;
+                        }
+                        else
+                        {
+                            m_logger->debug( "Legacy transaction validated with nonce: {}", nonce );
+                        }
+                    }
+                    if ( invalid_tx )
+                    {
+                        //delete transaction and roll back the nonce
+                        DeleteTransaction(tx.second);
+                        account_m->RollBackConfirmedNonce( nonce );
+                    }
+                }
+            }
+        }
+    }
+
+    bool TransactionManager::DeleteTransaction( const std::shared_ptr<IGeniusTransactions> &tx )
+    {
+        bool ret = false;
+
+        std::shared_ptr<crdt::AtomicTransaction> crdt_transaction = globaldb_m->BeginTransaction();
+
+        auto                        transaction_path = GetTransactionPath( *tx );
+        sgns::crdt::HierarchicalKey tx_key( transaction_path );
+
+        m_logger->debug( "Deleting transaction on " + tx_key.GetKey() );
+
+        auto remove_result = crdt_transaction->Remove( std::move( tx_key ) );
+        if ( !remove_result.has_error() )
+        {
+            auto get_topics_result = GetTransactionTopics( tx );
+            if ( get_topics_result.has_value() )
+            {
+                crdt_transaction->Commit( get_topics_result.value() );
+                ret = true;
+            }
+        }
+
+        return ret;
+    }
+
+    outcome::result<std::set<std::string>> TransactionManager::GetTransactionTopics( const std::shared_ptr<IGeniusTransactions> &tx )
+    {
+        std::set<std::string> topics{ full_node_topic_m, account_m->GetAddress() };
+        if ( full_node_m )
+        {
+            m_logger->debug( "Adding origin address to Broadcast: {}", tx->GetSrcAddress() );
+            topics.emplace( tx->GetSrcAddress() );
+        }
+        if ( tx->GetType() == "transfer" )
+        {
+            auto transfer_tx         = std::dynamic_pointer_cast<TransferTransaction>( tx );
+            auto dest_infos          = transfer_tx->GetDstInfos();
+            bool notify_destinations = false;
+            if ( ( transfer_tx->GetSrcAddress() == account_m->GetAddress() ) || ( full_node_m ) )
+            {
+                notify_destinations = true;
+            }
+            for ( std::uint32_t i = 0; i < dest_infos.size(); ++i )
+            {
+                if ( notify_destinations )
+                {
+                    m_logger->debug( "Notify {} of transfer of {} to it",
+                                     dest_infos[i].dest_address,
+                                     dest_infos[i].encrypted_amount );
+                    topics.emplace( dest_infos[i].dest_address );
+                }
+            }
+        }
+        else if ( tx->GetType() == "escrow-release" )
+        {
+            auto escrowReleaseTx = std::dynamic_pointer_cast<EscrowReleaseTransaction>( tx );
+
+            if ( ( escrowReleaseTx->GetSrcAddress() == account_m->GetAddress() ) || ( full_node_m ) )
+            {
+                m_logger->debug( "Adding Escrow source address to Broadcast: {}", escrowReleaseTx->GetEscrowSource() );
+                topics.emplace( escrowReleaseTx->GetEscrowSource() );
+            }
+        }
+
+        return topics;
     }
 
     TransactionManager::State TransactionManager::GetState() const

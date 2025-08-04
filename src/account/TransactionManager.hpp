@@ -57,7 +57,8 @@ namespace sgns
 
         enum class State
         {
-            STARTING = 0,
+            CREATING = 0,
+            INITIALIZING,
             SYNCHING,
             READY,
         };
@@ -139,7 +140,12 @@ namespace sgns
 
         outcome::result<void> CheckOutgoing();
 
-        void Sync( uint64_t timeout_ms );
+        void InitNonce( uint64_t timeout_ms );
+        void SyncNonce();
+
+        void CheckTransactionValidity( std::set<uint64_t> nonces_to_check );
+
+        bool DeleteTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
 
         std::shared_ptr<crdt::GlobalDB> globaldb_m;
 
@@ -167,6 +173,8 @@ namespace sgns
         outcome::result<std::set<std::string>> ParseEscrowTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
         outcome::result<std::set<std::string>> ParseEscrowReleaseTransaction(
             const std::shared_ptr<IGeniusTransactions> &tx );
+
+        outcome::result<std::set<std::string>> GetTransactionTopics(const std::shared_ptr<IGeniusTransactions> &tx );
 
         static inline const std::unordered_map<std::string, TransactionParserFn> transaction_parsers = {
             { "transfer", &TransactionManager::ParseTransferTransaction },

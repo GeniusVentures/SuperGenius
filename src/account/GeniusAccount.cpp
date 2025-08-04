@@ -327,6 +327,20 @@ namespace sgns
         }
     }
 
+    void GeniusAccount::RollBackConfirmedNonce( uint64_t nonce )
+    {
+        RollBackPeerConfirmedNonce( nonce, eth_keypair->GetEntirePubValue() );
+        {
+            std::lock_guard lock( nonce_mutex_ );
+            auto            current_confirmed_nonce = confirmed_nonces_[eth_keypair->GetEntirePubValue()];
+            current_confirmed_nonce++;
+            logger_->debug( "Setting the min value between {} and {} as a proposed (next) nonce",
+                            proposed_nonce_,
+                            current_confirmed_nonce );
+            proposed_nonce_ = std::min( static_cast<uint64_t>( current_confirmed_nonce ), proposed_nonce_ );
+        }
+    }
+
     void GeniusAccount::SetPeerConfirmedNonce( uint64_t nonce, std::string address )
     {
         std::lock_guard lock( nonce_mutex_ );
@@ -336,6 +350,17 @@ namespace sgns
                         nonce,
                         address.substr( 0, 8 ) );
         confirmed_nonces_[address] = std::max( static_cast<int64_t>( nonce ), current_confirmed_nonce );
+    }
+
+    void GeniusAccount::RollBackPeerConfirmedNonce( uint64_t nonce, std::string address )
+    {
+        std::lock_guard lock( nonce_mutex_ );
+        auto            current_confirmed_nonce = confirmed_nonces_[address];
+        logger_->debug( "Setting the min value between {} and {} as a confirmed nonce for address {}",
+                        current_confirmed_nonce,
+                        nonce,
+                        address.substr( 0, 8 ) );
+        confirmed_nonces_[address] = std::min( static_cast<int64_t>( nonce ), current_confirmed_nonce );
     }
 
     uint64_t GeniusAccount::GetProposedNonce() const
