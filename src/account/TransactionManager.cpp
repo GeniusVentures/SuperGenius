@@ -1179,15 +1179,15 @@ namespace sgns
         std::unique_lock<std::shared_mutex> out_lock( outgoing_tx_mutex_m );
         for ( auto &nonce : nonces_to_check )
         {
-            for ( auto tx : outgoing_tx_processed_m )
+            for ( auto it = outgoing_tx_processed_m.begin(); it != outgoing_tx_processed_m.end(); )
             {
-                if ( tx.second->dag_st.nonce() == nonce )
+                if ( it->second->dag_st.nonce() == nonce )
                 {
                     bool invalid_tx = false;
                     //This is the nonce that maybe is from a wrong tx
-                    if ( !tx.second->CheckSignature() )
+                    if ( !it->second->CheckSignature() )
                     {
-                        if ( !tx.second->CheckDAGSignatureLegacy() )
+                        if ( !it->second->CheckDAGSignatureLegacy() )
                         {
                             m_logger->error( "Could not validate signature of transaction with nonce {}", nonce );
                             invalid_tx = true;
@@ -1200,10 +1200,13 @@ namespace sgns
                     if ( invalid_tx )
                     {
                         //delete transaction and roll back the nonce
-                        DeleteTransaction(tx.second);
+                        DeleteTransaction( it->second );
                         account_m->RollBackConfirmedNonce( nonce );
+                        it = outgoing_tx_processed_m.erase( it );
+                        continue;
                     }
                 }
+                ++it;
             }
         }
     }
@@ -1233,7 +1236,8 @@ namespace sgns
         return ret;
     }
 
-    outcome::result<std::set<std::string>> TransactionManager::GetTransactionTopics( const std::shared_ptr<IGeniusTransactions> &tx )
+    outcome::result<std::set<std::string>> TransactionManager::GetTransactionTopics(
+        const std::shared_ptr<IGeniusTransactions> &tx )
     {
         std::set<std::string> topics{ full_node_topic_m, account_m->GetAddress() };
         if ( full_node_m )
