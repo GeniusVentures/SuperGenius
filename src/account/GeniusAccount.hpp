@@ -60,8 +60,9 @@ namespace sgns
         }
 
         bool PutUTXO( const GeniusUTXO &new_utxo );
+        void DeleteUTXO( const base::Hash256 &utxo_id );
 
-        bool RefreshUTXOs( const std::vector<InputUTXOInfo> &infos );
+        bool ConsumeUTXOs( const std::vector<InputUTXOInfo> &infos );
 
         static bool          VerifySignature( std::string address, std::string sig, std::vector<uint8_t> data );
         std::vector<uint8_t> Sign( std::vector<uint8_t> data );

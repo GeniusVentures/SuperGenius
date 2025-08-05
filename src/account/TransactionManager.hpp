@@ -135,6 +135,7 @@ namespace sgns
 
         outcome::result<bool>                  CheckProof( const std::shared_ptr<IGeniusTransactions> &tx );
         outcome::result<std::set<std::string>> ParseTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
+        outcome::result<std::set<std::string>> RevertTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
 
         outcome::result<void> CheckIncoming();
 
@@ -143,9 +144,10 @@ namespace sgns
         void InitNonce( uint64_t timeout_ms );
         void SyncNonce();
 
-        void CheckTransactionValidity( std::set<uint64_t> nonces_to_check );
+        bool CheckTransactionValidity( std::set<uint64_t> nonces_to_check );
 
-        bool DeleteTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
+        bool                                 DeleteTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
+        std::shared_ptr<IGeniusTransactions> GetOutTransaction( const std::string &tx_hash ) const;
 
         std::shared_ptr<crdt::GlobalDB> globaldb_m;
 
@@ -174,13 +176,24 @@ namespace sgns
         outcome::result<std::set<std::string>> ParseEscrowReleaseTransaction(
             const std::shared_ptr<IGeniusTransactions> &tx );
 
-        outcome::result<std::set<std::string>> GetTransactionTopics(const std::shared_ptr<IGeniusTransactions> &tx );
+        outcome::result<std::set<std::string>> RevertTransferTransaction(
+            const std::shared_ptr<IGeniusTransactions> &tx );
+        outcome::result<std::set<std::string>> RevertMintTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
+        outcome::result<std::set<std::string>> RevertEscrowTransaction(
+            const std::shared_ptr<IGeniusTransactions> &tx );
+        outcome::result<std::set<std::string>> RevertEscrowReleaseTransaction(
+            const std::shared_ptr<IGeniusTransactions> &tx );
 
-        static inline const std::unordered_map<std::string, TransactionParserFn> transaction_parsers = {
-            { "transfer", &TransactionManager::ParseTransferTransaction },
-            { "mint", &TransactionManager::ParseMintTransaction },
-            { "escrow-hold", &TransactionManager::ParseEscrowTransaction },
-            { "escrow-release", &TransactionManager::ParseEscrowReleaseTransaction } };
+        static inline const std::unordered_map<std::string, std::pair<TransactionParserFn, TransactionParserFn>>
+            transaction_parsers = {
+                { "transfer",
+                  { &TransactionManager::ParseTransferTransaction, &TransactionManager::RevertTransferTransaction } },
+                { "mint", { &TransactionManager::ParseMintTransaction, &TransactionManager::RevertMintTransaction } },
+                { "escrow-hold",
+                  { &TransactionManager::ParseEscrowTransaction, &TransactionManager::RevertEscrowTransaction } },
+                { "escrow-release",
+                  { &TransactionManager::ParseEscrowReleaseTransaction,
+                    &TransactionManager::RevertEscrowReleaseTransaction } } };
 
         base::Logger m_logger = base::createLogger( "TransactionManager" );
     };

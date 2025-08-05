@@ -176,7 +176,20 @@ namespace sgns
         return is_new;
     }
 
-    bool GeniusAccount::RefreshUTXOs( const std::vector<InputUTXOInfo> &infos )
+    void GeniusAccount::DeleteUTXO( const base::Hash256 &utxo_id )
+    {
+        for ( auto it = utxos.begin(); it != utxos.end(); )
+        {
+            if ( it->GetTxID() == utxo_id )
+            {
+                it = utxos.erase( it );
+                continue;
+            }
+            ++it;
+        }
+    }
+
+    bool GeniusAccount::ConsumeUTXOs( const std::vector<InputUTXOInfo> &infos )
     {
         utxos.erase( std::remove_if( utxos.begin(),
                                          utxos.end(),
