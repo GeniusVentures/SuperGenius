@@ -336,8 +336,8 @@ namespace sgns::crdt
             auto handleBlockResult = HandleBlock( bCastHeadCID );
             if ( handleBlockResult.has_failure() )
             {
-                logger_->error( "Broadcaster: Unable to handle block (error code {})",
-                                std::to_string( handleBlockResult.error().value() ) );
+                logger_->error( "Broadcaster: Unable to handle block (error {})",
+                                handleBlockResult.error().message() );
                 continue;
             }
         }
