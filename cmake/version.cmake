@@ -1,6 +1,6 @@
 set(PROJECT_VERSION 1.0.0)
 
-if(SGNS_NETWORK NOT STREQUAL "release")
+if(NOT SGNS_NETWORK STREQUAL "release")
     add_compile_definitions(DEV_NET)
 endif()
 
