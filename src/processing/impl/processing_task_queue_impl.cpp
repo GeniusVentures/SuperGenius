@@ -16,23 +16,26 @@ namespace sgns::processing
 
         for ( auto &subTask : subTasks )
         {
-            auto subTaskKey = ( boost::format( "subtasks/TASK_%s/%s" ) % task.ipfs_block_id() % subTask.subtaskid() )
-                                  .str();
-            sgns::crdt::HierarchicalKey key( subTaskKey );
+            boost::format complete_subtask_path{ std::string( SUBTASK_LIST_KEY ) + std::string( TASK_KEY ) +
+                                                 std::string( SUBTASK_KEY ) };
+            complete_subtask_path % task.ipfs_block_id() % subTask.subtaskid();
+
+            sgns::crdt::HierarchicalKey key( complete_subtask_path.str() );
             sgns::base::Buffer          value;
             value.put( subTask.SerializeAsString() );
             BOOST_OUTCOME_TRYV2( auto &&, job_crdt_transaction_->Put( std::move( key ), std::move( value ) ) );
 
-            m_logger->debug( "[{}] placed to GlobalDB ", subTaskKey );
+            m_logger->debug( "[{}] placed to GlobalDB ", complete_subtask_path.str() );
         }
-        auto taskKey = ( boost::format( "tasks/TASK_%d" ) % task.ipfs_block_id() ).str();
+        boost::format complete_task_path{ std::string( TASK_LIST_KEY ) + std::string( TASK_KEY ) };
+        complete_task_path % task.ipfs_block_id();
 
-        sgns::crdt::HierarchicalKey key( taskKey );
+        sgns::crdt::HierarchicalKey key( complete_task_path.str() );
         sgns::base::Buffer          value;
         value.put( task.SerializeAsString() );
 
         BOOST_OUTCOME_TRYV2( auto &&, job_crdt_transaction_->Put( std::move( key ), std::move( value ) ) );
-        m_logger->debug( "[{}] placed to GlobalDB ", taskKey );
+        m_logger->debug( "[{}] placed to GlobalDB ", complete_task_path.str() );
 
         return outcome::success();
     }
@@ -40,13 +43,10 @@ namespace sgns::processing
     bool ProcessingTaskQueueImpl::GetSubTasks( const std::string &taskId, std::list<SGProcessing::SubTask> &subTasks )
     {
         m_logger->debug( "SUBTASKS_REQUESTED. TaskId: {}", taskId );
-        //if (IsTaskCompleted(taskId))
-        //{
-        //    m_logger->debug("TASK_COMPLETED. TaskId {}", taskId);
-        //    return false;
-        //}
-        auto key           = ( boost::format( "subtasks/TASK_%s" ) % taskId ).str();
-        auto querySubTasks = m_db->QueryKeyValues( key );
+        boost::format complete_subtask_list_path{ std::string( SUBTASK_LIST_KEY ) + std::string( TASK_KEY ) };
+
+        complete_subtask_list_path % taskId;
+        auto querySubTasks = m_db->QueryKeyValues( complete_subtask_list_path.str() );
 
         if ( querySubTasks.has_failure() )
         {
@@ -82,7 +82,7 @@ namespace sgns::processing
     outcome::result<std::pair<std::string, SGProcessing::Task>> ProcessingTaskQueueImpl::GrabTask()
     {
         //m_logger->info( "GRAB_TASK" );
-        OUTCOME_TRY( ( auto &&, queryTasks ), m_db->QueryKeyValues( "tasks" ) );
+        OUTCOME_TRY( ( auto &&, queryTasks ), m_db->QueryKeyValues( std::string( TASK_LIST_KEY ) ) );
 
         //m_logger->info( "Task list grabbed from CRDT datastore" );
 
@@ -98,14 +98,18 @@ namespace sgns::processing
                 m_logger->debug( "Unable to convert a key to string" );
                 continue;
             }
-            //std::cout << "Trying to get results from  " << "task_results/" + taskKey.value() << std::endl;
-            auto maybe_previous_result = m_db->Get( { "task_results/" + taskKey.value() } );
-            if ( maybe_previous_result )
+            if ( !task.ParseFromArray( element.second.data(), element.second.size() ) )
+            {
+                m_logger->debug( "Couldn't parse the task from Protobuf" );
+                //TODO - Decide what to do with an invalid task - Maybe error?
+                continue;
+            }
+
+            if ( IsTaskCompleted( task.ipfs_block_id() ) )
             {
                 m_logger->debug( "Task already processed" );
                 continue;
             }
-
             if ( IsTaskLocked( taskKey.value() ) )
             {
                 m_logger->debug( "TASK_PREVIOUSLY_LOCKED {}", taskKey.value() );
@@ -113,12 +117,7 @@ namespace sgns::processing
                 continue;
             }
             m_logger->debug( "TASK_QUEUE_ITEM: {}, LOCKED: true", taskKey.value() );
-            if ( !task.ParseFromArray( element.second.data(), element.second.size() ) )
-            {
-                m_logger->debug( "Couldn't parse the task from Protobuf" );
-                //TODO - Decide what to do with an invalid task - Maybe error?
-                continue;
-            }
+
             if ( !LockTask( taskKey.value() ) )
             {
                 m_logger->debug( "Failed to lock task" );
@@ -151,8 +150,13 @@ namespace sgns::processing
         const std::string              &taskKey,
         const SGProcessing::TaskResult &taskResult )
     {
-        sgns::base::Buffer          data;
-        sgns::crdt::HierarchicalKey result_key( { "task_results/tasks/TASK_" + taskKey } );
+        sgns::base::Buffer data;
+        boost::format      complete_result_path{ std::string( RESULTS_KEY ) + std::string( TASK_LIST_KEY ) +
+                                            std::string( TASK_KEY ) };
+        complete_result_path % taskKey;
+        sgns::crdt::HierarchicalKey result_key( complete_result_path.str() );
+
+        m_logger->debug( "CompleteTask: Completing task on {}", result_key.GetKey() );
 
         auto job_completion_transaction = m_db->BeginTransaction();
         data.put( taskResult.SerializeAsString() );
@@ -164,17 +168,22 @@ namespace sgns::processing
 
     bool ProcessingTaskQueueImpl::IsTaskCompleted( const std::string &taskId )
     {
-        bool ret = false;
-        if ( m_db->Get( { "task_results/tasks/TASK_" + taskId } ) )
-        {
-            ret = true;
-        }
-        return ret;
+        boost::format complete_result_path{ std::string( RESULTS_KEY ) + std::string( TASK_LIST_KEY ) +
+                                            std::string( TASK_KEY ) };
+        complete_result_path % taskId;
+        sgns::crdt::HierarchicalKey result_key( complete_result_path.str() );
+        auto                        has_result = m_db->Get( result_key );
+
+        return has_result.has_value();
     }
 
     outcome::result<std::string> ProcessingTaskQueueImpl::GetTaskEscrow( const std::string &taskId )
     {
-        OUTCOME_TRY( ( auto &&, task_buffer ), m_db->Get( { "tasks/TASK_" + taskId } ) );
+        boost::format complete_task_path{ std::string( TASK_LIST_KEY ) + std::string( TASK_KEY ) };
+        complete_task_path % taskId;
+        sgns::crdt::HierarchicalKey task_key( complete_task_path.str() );
+
+        OUTCOME_TRY( ( auto &&, task_buffer ), m_db->Get( task_key ) );
 
         SGProcessing::Task task;
 
@@ -188,7 +197,10 @@ namespace sgns::processing
 
     bool ProcessingTaskQueueImpl::IsTaskLocked( const std::string &taskKey )
     {
-        auto lockData = m_db->Get( sgns::crdt::HierarchicalKey( "lock_" + taskKey ) );
+        boost::format complete_lock_path{ std::string( LOCK_KEY ) };
+        complete_lock_path % taskKey;
+        sgns::crdt::HierarchicalKey lock_key( complete_lock_path.str() );
+        auto                        lockData = m_db->Get( lock_key );
         return !lockData.has_failure() && lockData.has_value();
     }
 
@@ -196,14 +208,19 @@ namespace sgns::processing
     {
         auto timestamp = std::chrono::system_clock::now();
 
+        boost::format complete_lock_path{ std::string( LOCK_KEY ) };
+        complete_lock_path % taskKey;
+        sgns::crdt::HierarchicalKey lock_key( complete_lock_path.str() );
+
         SGProcessing::TaskLock lock;
         lock.set_task_id( taskKey );
-        lock.set_lock_timestamp( timestamp.time_since_epoch().count() );
+        lock.set_lock_timestamp(
+            std::chrono::duration_cast<std::chrono::milliseconds>( timestamp.time_since_epoch() ).count() );
 
         sgns::base::Buffer lockData;
         lockData.put( lock.SerializeAsString() );
 
-        auto res = m_db->Put( sgns::crdt::HierarchicalKey( "lock_" + taskKey ), lockData, { m_processing_topic } );
+        auto res = m_db->Put( lock_key, lockData, { m_processing_topic } );
         return !res.has_failure();
     }
 
@@ -211,16 +228,23 @@ namespace sgns::processing
     {
         auto timestamp = std::chrono::system_clock::now();
 
-        auto lockData = m_db->Get( sgns::crdt::HierarchicalKey( "lock_" + taskKey ) );
+        boost::format complete_lock_path{ std::string( LOCK_KEY ) };
+        complete_lock_path % taskKey;
+        sgns::crdt::HierarchicalKey lock_key( complete_lock_path.str() );
+
+        auto lockData = m_db->Get( lock_key );
         if ( !lockData.has_failure() && lockData.has_value() )
         {
             // Check task expiration
             SGProcessing::TaskLock lock;
             if ( lock.ParseFromArray( lockData.value().data(), lockData.value().size() ) )
             {
-                auto expirationTime = std::chrono::system_clock::time_point(
-                                          std::chrono::system_clock::duration( lock.lock_timestamp() ) ) +
-                                      m_processingTimeout;
+                // Convert the stored milliseconds back to a time_point
+                auto lockTimePoint = std::chrono::system_clock::time_point(
+                    std::chrono::milliseconds( lock.lock_timestamp() ) );
+
+                auto expirationTime = lockTimePoint + m_processingTimeout;
+
                 if ( timestamp > expirationTime )
                 {
                     auto taskData = m_db->Get( taskKey );

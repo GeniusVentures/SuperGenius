@@ -1,4 +1,9 @@
 set(PROJECT_VERSION 1.0.0)
+
+if(SGNS_NETWORK STREQUAL "dev" OR CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_compile_definitions(DEV_NET)
+endif()
+
 message(STATUS "PROJECT_VERSION: ${PROJECT_VERSION}")
 
 execute_process(

@@ -7,7 +7,7 @@ if(NOT DEFINED CMAKE_TOOLCHAIN_FILE)
     set(ENABLE_VISIBILITY ON CACHE BOOL "Toolchain visibility parameter")
     set(ENABLE_STRICT_TRY_COMPILE OFF CACHE BOOL "Toolchain try_compile enable parameter")
     set(PLATFORM OS64 CACHE STRING "Toolchain platform parameter")
-    set(DEPLOYMENT_TARGET "16" CACHE STRING "Minimum iOS version")
+    set(DEPLOYMENT_TARGET "15" CACHE STRING "Minimum iOS version")
     set(CMAKE_TOOLCHAIN_FILE "${CMAKE_CURRENT_SOURCE_DIR}/../apple.toolchain.cmake" CACHE STRING "Toolchain file")
 endif()
 
