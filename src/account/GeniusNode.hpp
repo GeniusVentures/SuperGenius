@@ -109,7 +109,7 @@ namespace sgns
         void     AddPeer( const std::string &peer );
         void     RefreshUPNP( int pubsubport );
         uint64_t GetBalance();
-        uint64_t GetBalance( const TokenID token_id);
+        uint64_t GetBalance( const TokenID token_id );
 
         [[nodiscard]] const std::vector<std::vector<uint8_t>> GetInTransactions() const
         {
@@ -240,6 +240,7 @@ namespace sgns
         void ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult );
         void ProcessingError( const std::string &task_id );
 
+        void rotateLogFiles( const std::string &base_path );
         /**
          * @brief Parse and sum all "block_len" values from the JSON.
          * @param json_data JSON string containing an "input" array.
@@ -247,13 +248,20 @@ namespace sgns
          */
         outcome::result<uint64_t> ParseBlockSize( const std::string &json_data );
 
-        static constexpr std::string_view db_path_                = "bc-%d/";
-        static constexpr std::uint16_t    MAIN_NET                = 369;
-        static constexpr std::uint16_t    TEST_NET                = 963;
-        static constexpr std::size_t      MAX_NODES_COUNT         = 1;
+        static constexpr std::string_view db_path_        = "bc-%d/";
+        static constexpr std::uint16_t    MAIN_NET        = 369;
+        static constexpr std::uint16_t    TEST_NET        = 963;
+        static constexpr std::size_t      MAX_NODES_COUNT = 1;
+
+#ifdef DEV_NET
+        static constexpr std::string_view PROCESSING_GRID_CHANNEL = "SGNUS.Jobs.2a.%02d.dev";
+        static constexpr std::string_view PROCESSING_CHANNEL      = "SGNUS.TestNet.Channel.2a.%02d.dev";
+        static constexpr std::string_view GNUS_NETWORK_PATH       = "SuperGNUSNode.TestNet.2a.%02d.%s.dev";
+#else
         static constexpr std::string_view PROCESSING_GRID_CHANNEL = "SGNUS.Jobs.2a.%02d";
         static constexpr std::string_view PROCESSING_CHANNEL      = "SGNUS.TestNet.Channel.2a.%02d";
         static constexpr std::string_view GNUS_NETWORK_PATH       = "SuperGNUSNode.TestNet.2a.%02d.%s";
+#endif
 
         static std::string GetLoggingSystem( const std::string &base_path )
         {
@@ -267,7 +275,7 @@ sinks:
 groups:
     - name: SuperGeniusNode
       sink: file
-      level: debug
+      level: error
       children:
         - name: libp2p
         - name: Gossip

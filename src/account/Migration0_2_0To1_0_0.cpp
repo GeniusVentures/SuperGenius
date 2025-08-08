@@ -15,6 +15,7 @@
 #include "account/EscrowReleaseTransaction.hpp"
 #include "proof/IBasicProof.hpp"
 #include "MigrationManager.hpp"
+#include "base/sgns_version.hpp"
 
 namespace sgns
 {
@@ -71,8 +72,12 @@ namespace sgns
 
     outcome::result<std::shared_ptr<crdt::GlobalDB>> Migration0_2_0To1_0_0::InitLegacyDb( const std::string &suffix )
     {
-        static constexpr auto LEGACY_PREFIX_FMT     = "/SuperGNUSNode.TestNet.2a.00.%1%";
-        const auto            legacyNetworkFullPath = ( boost::format( LEGACY_PREFIX_FMT ) % base58key_ ).str();
+#ifdef DEV_NET
+        static constexpr auto LEGACY_PREFIX_FMT = "/SuperGNUSNode.TestNet.2a.00.%1%.dev";
+#else
+        static constexpr auto LEGACY_PREFIX_FMT = "/SuperGNUSNode.TestNet.2a.00.%1%";
+#endif
+        const auto legacyNetworkFullPath = ( boost::format( LEGACY_PREFIX_FMT ) % base58key_ ).str();
         const auto fullPath = ( boost::format( "%s%s_%s" ) % writeBasePath_ % legacyNetworkFullPath % suffix ).str();
 
         m_logger->debug( "Initializing legacy DB at path {}", fullPath );
@@ -113,7 +118,7 @@ namespace sgns
         size_t BATCH_SIZE     = 50;
 
         boost::format full_node_topic{ std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) };
-        full_node_topic % TransactionManager::TEST_NET_ID;
+        full_node_topic % TransactionManager::TEST_NET_ID % sgns::version::SuperGeniusVersionMajor();
 
         for ( const auto &entry : entries )
         {
@@ -258,7 +263,7 @@ namespace sgns
                 crdt_transaction_ = newDb_->BeginTransaction(); // start fresh
                 topics_.clear();
                 boost::format full_node_topic{ std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) };
-                full_node_topic % TransactionManager::TEST_NET_ID;
+                full_node_topic % TransactionManager::TEST_NET_ID % sgns::version::SuperGeniusVersionMajor();
                 topics_.emplace( full_node_topic.str() );
                 migrated_count = 0;
                 m_logger->debug( "Committed a batch of {} transactions", BATCH_SIZE );
@@ -279,7 +284,7 @@ namespace sgns
         crdt_transaction_ = newDb_->BeginTransaction();
         topics_.clear();
         boost::format full_node_topic{ std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) };
-        full_node_topic % TransactionManager::TEST_NET_ID;
+        full_node_topic % TransactionManager::TEST_NET_ID % sgns::version::SuperGeniusVersionMajor();
 
         topics_.emplace( full_node_topic.str() );
 
