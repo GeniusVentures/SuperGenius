@@ -116,12 +116,12 @@ namespace sgns::crdt
         /** Get key prefix used in set, e.g. /namespace/s/k/
         * @return key prefix
         */
-        outcome::result<std::string> GetKeysPrefix();
+        std::string GetKeysPrefix();
 
         /** Get value suffix used in set, e.g. /v
         * @return value suffix
         */
-        outcome::result<std::string> GetValueSuffix();
+        std::string GetValueSuffix();
 
         /**
          * @brief Stores the given value in the CRDT store
