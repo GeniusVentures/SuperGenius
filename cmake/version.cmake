@@ -1,6 +1,6 @@
 set(PROJECT_VERSION 1.0.0)
 
-if(SGNS_NETWORK STREQUAL "dev" OR CMAKE_BUILD_TYPE STREQUAL "Debug")
+if(SGNS_NETWORK NOT STREQUAL "release")
     add_compile_definitions(DEV_NET)
 endif()
 
