@@ -157,7 +157,7 @@ namespace sgns
         }
     }
 
-    std::vector<GeniusUTXO> UTXOTxParameters::UpdateUTXOList( const std::vector<GeniusUTXO> &utxo_pool,
+    std::vector<GeniusUTXO> UTXOTxParameters::ReserveUTXOs( const std::vector<GeniusUTXO> &utxo_pool,
                                                               const UTXOTxParameters        &params )
     {
         auto updated_list = utxo_pool;
@@ -169,6 +169,25 @@ namespace sgns
                 if ( input_utxo.txid_hash_ == utxo.GetTxID() )
                 {
                     utxo.ToggleLock( true );
+                }
+            }
+        }
+
+        return updated_list;
+    }
+
+    std::vector<GeniusUTXO> UTXOTxParameters::RollbackUTXOs( const std::vector<GeniusUTXO> &utxo_pool,
+                                                              const UTXOTxParameters        &params )
+    {
+        auto updated_list = utxo_pool;
+
+        for ( auto &input_utxo : params.inputs_ )
+        {
+            for ( auto &utxo : updated_list )
+            {
+                if ( input_utxo.txid_hash_ == utxo.GetTxID() )
+                {
+                    utxo.ToggleLock( false );
                 }
             }
         }

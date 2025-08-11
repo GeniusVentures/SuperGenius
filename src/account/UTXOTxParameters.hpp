@@ -87,8 +87,10 @@ namespace sgns
          * @param[in]   params     Transaction parameters that consumed some UTXOs
          * @return      New pool with all inputs from @p params.inputs_ locked
          */
-        static std::vector<GeniusUTXO> UpdateUTXOList( const std::vector<GeniusUTXO> &utxo_pool,
-                                                       const UTXOTxParameters        &params );
+        static std::vector<GeniusUTXO> ReserveUTXOs( const std::vector<GeniusUTXO> &utxo_pool,
+                                                     const UTXOTxParameters        &params );
+        static std::vector<GeniusUTXO> RollbackUTXOs( const std::vector<GeniusUTXO> &utxo_pool,
+                                                      const UTXOTxParameters        &params );
 
         bool SignParameters( std::shared_ptr<GeniusAccount> account );
 
