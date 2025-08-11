@@ -411,11 +411,6 @@ namespace sgns
     outcome::result<uint64_t> GeniusAccount::GetConfirmedNonce( uint64_t timeout_ms ) const
     {
         uint64_t result = 0;
-        {
-            std::shared_lock lock( nonce_mutex_ );
-            auto             it = confirmed_nonces_.find( eth_keypair->GetEntirePubValue() );
-            result              = static_cast<uint64_t>( it->second );
-        }
         logger_->debug( "Trying to get nonce from the network for {} ms ", timeout_ms );
 
         auto latest_nonce_result = messenger_->GetLatestNonce( std::move( timeout_ms ) );
@@ -427,6 +422,7 @@ namespace sgns
         else
         {
             logger_->debug( "Using local nonce {}", result );
+            return outcome::failure( std::errc::timed_out );
         }
         return result;
     }
