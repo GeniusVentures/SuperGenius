@@ -55,8 +55,6 @@ namespace evm {
 
 		static constexpr auto EmptyData = 0x80;
 		static constexpr auto EmptyList = 0xc0;
-		static constexpr auto ShortStringMax = 0xb7;
-		static constexpr auto LongStringBase = 0xb8;
 
 		static constexpr rs::usize ShortLenLimit = 55;
 	}
