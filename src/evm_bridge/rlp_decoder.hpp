@@ -18,6 +18,12 @@ namespace evm::rlp {
 	*/
 	using Decoded = std::variant<Bytes, u64, String, Vec<Bytes>>;
 
+	/**
+	 * @brief RLP (Recursive Length Prefix) decoder for Ethereum-compatible data.
+	 *
+	 * This class provides static methods to decode RLP-encoded byte sequences
+	 * into structured data (bytes, strings, numbers and lists).
+	 */
 	class Decoder {
 	public:
 		Decoder() = default;

@@ -13,6 +13,12 @@ using namespace evm::rs;
 using namespace evm::types;
 
 namespace evm::rlp {
+	/**
+	 * @brief RLP (Recursive Length Prefix) encoder for Ethereum-compatible data.
+	 *
+	 * This class provides static methods to convert structured data (bytes,
+	 * strings, numbers and lists) into RLP-encoded byte sequences.
+	 */
 	class Encoder {
 	public:
 		Encoder() = default;
