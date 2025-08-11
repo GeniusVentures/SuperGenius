@@ -6,6 +6,9 @@
 #define SUPERGENIUS_ENV_TYPES_HPP
 
 #pragma once
+#include <optional>
+#include <string>
+#include <variant>
 #include <vector>
 
 namespace evm {
@@ -32,6 +35,19 @@ namespace evm {
 
 		// Platform dependent
 		using usize = size_t;
+	}
+
+	namespace types {
+		using String = std::string;
+
+		template<typename T>
+		using Vec = std::vector<T>;
+
+		template <typename T>
+		using Option = std::optional<T>;
+
+		template <typename T>
+		using Variant = std::variant<T>;
 	}
 
 	namespace data {

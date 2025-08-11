@@ -7,15 +7,10 @@
 
 #pragma once
 
-#include <string>
-
 #include "evm_types.hpp"
 
 using namespace evm::rs;
-using String = std::string;
-
-template<typename T>
-using Vec = std::vector<T>;
+using namespace evm::types;
 
 namespace evm::rlp {
 	class Encoder {
