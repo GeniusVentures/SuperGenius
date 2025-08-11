@@ -172,8 +172,9 @@ TEST( TransferTokenValue, ThreeNodeTransferTest )
         auto [txHash, duration] = transferRes.value();
         std::cout << "Transferred " << t.amount << " of " << t.tokenId << " in " << duration << " ms\n";
 
-        ASSERT_TRUE(
-            node50->WaitForTransactionIncoming( txHash, std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) ) )
+        EXPECT_EQ(
+            node50->WaitForTransactionIncoming( txHash, std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) ),
+            TransactionManager::TransactionStatus::CONFIRMED )
             << "node50 did not receive transaction " << txHash;
     }
 
@@ -486,7 +487,8 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
 
     auto postjob = node_main->ProcessImage( json_data );
     ASSERT_TRUE( postjob ) << "ProcessImage failed: " << postjob.error().message();
-    ASSERT_TRUE( node_main->WaitForEscrowRelease( postjob.value(), std::chrono::milliseconds( 300000 ) ) );
+    EXPECT_EQ( node_main->WaitForEscrowRelease( postjob.value(), std::chrono::milliseconds( 300000 ) ),
+               TransactionManager::TransactionStatus::CONFIRMED );
 
     assertWaitForCondition( [&]() { return node_main->GetBalance() == bal_main_init - cost; },
                             std::chrono::milliseconds( 20000 ),
