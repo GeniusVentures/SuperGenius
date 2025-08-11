@@ -80,7 +80,7 @@ TEST( GeniusAccount, RefreshNoUTXOsLeavesAll )
     EXPECT_TRUE( account->PutUTXO( GeniusUTXO( h, 0, 50, sgns::TokenID::FromBytes( { 0x01 } ) ) ) );
     EXPECT_TRUE( account->PutUTXO( GeniusUTXO( h, 1, 30, sgns::TokenID::FromBytes( { 0x02 } ) ) ) );
     size_t before = account->utxos.size();
-    account->RefreshUTXOs( {} );
+    account->ConsumeUTXOs( {} );
     EXPECT_EQ( account->utxos.size(), before );
 }
 
@@ -94,7 +94,7 @@ TEST( GeniusAccount, RefreshPartialUTXOsRemovesOnlySpecified )
     InputUTXOInfo info;
     info.txid_hash_  = h;
     info.output_idx_ = 1; // remove idx 1
-    account->RefreshUTXOs( { info } );
+    account->ConsumeUTXOs( { info } );
     EXPECT_EQ( account->GetBalance( sgns::TokenID::FromBytes( { 0x02 } ) ), 0ull );
     EXPECT_EQ( account->GetBalance( sgns::TokenID::FromBytes( { 0x01 } ) ), 70ull );
 }
@@ -113,7 +113,7 @@ TEST( GeniusAccount, RefreshAllUTXOsRemovesAll )
         i.output_idx_ = utxo.GetOutputIdx();
         infos.push_back( i );
     }
-    account->RefreshUTXOs( infos );
+    account->ConsumeUTXOs( infos );
     EXPECT_TRUE( account->utxos.empty() );
     EXPECT_EQ( account->GetBalance<uint64_t>(), 0ull );
 }
