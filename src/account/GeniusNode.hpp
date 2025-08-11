@@ -184,11 +184,18 @@ namespace sgns
             int64_t                         from,
             int64_t                         to );
         // Wait for an incoming transaction to be processed with a timeout
-        bool WaitForTransactionIncoming( const std::string &txId, std::chrono::milliseconds timeout );
+        TransactionManager::TransactionStatus WaitForTransactionIncoming( const std::string        &txId,
+                                                                          std::chrono::milliseconds timeout );
         // Wait for a outgoing transaction to be processed with a timeout
-        bool WaitForTransactionOutgoing( const std::string &txId, std::chrono::milliseconds timeout );
+        TransactionManager::TransactionStatus WaitForTransactionOutgoing( const std::string        &txId,
+                                                                          std::chrono::milliseconds timeout );
 
-        bool WaitForEscrowRelease( const std::string &originalEscrowId, std::chrono::milliseconds timeout );
+        TransactionManager::TransactionStatus WaitForEscrowRelease( const std::string        &originalEscrowId,
+                                                                    std::chrono::milliseconds timeout );
+
+        TransactionManager::State GetTransactionManagerState() const;
+
+        TransactionManager::TransactionStatus GetTransactionStatus( const std::string &txId ) const;
 
     protected:
         friend class TransactionSyncTest;

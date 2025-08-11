@@ -156,7 +156,7 @@ namespace sgns
         loggerDAGSyncer->set_level( spdlog::level::err );
         loggerGraphsync->set_level( spdlog::level::err );
         loggerBroadcaster->set_level( spdlog::level::err );
-        loggerDataStore->set_level( spdlog::level::debug );
+        loggerDataStore->set_level( spdlog::level::err );
         loggerCRDTHeads->set_level( spdlog::level::debug );
         loggerTransactions->set_level( spdlog::level::debug );
         loggerMigration->set_level( spdlog::level::debug );
@@ -749,14 +749,14 @@ namespace sgns
 
         OUTCOME_TRY( auto &&tx_id, transaction_manager_->MintFunds( amount, transaction_hash, chainid, tokenid ) );
 
-        bool success = transaction_manager_->WaitForTransactionOutgoing( tx_id, timeout );
+        auto mint_result = transaction_manager_->WaitForTransactionOutgoing( tx_id, timeout );
 
         auto end_time = std::chrono::steady_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( end_time - start_time ).count();
 
-        if ( !success )
+        if ( mint_result != TransactionManager::TransactionStatus::CONFIRMED )
         {
-            node_logger->error( "Mint transaction {} timed out after {} ms", tx_id, duration );
+            node_logger->error( "Mint transaction {} failed after {} ms", tx_id, duration );
             return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::timed_out ) );
         }
 
@@ -773,14 +773,14 @@ namespace sgns
 
         OUTCOME_TRY( auto &&tx_id, transaction_manager_->TransferFunds( amount, destination, token_id ) );
 
-        bool success = transaction_manager_->WaitForTransactionOutgoing( tx_id, timeout );
+        auto transfer_result = transaction_manager_->WaitForTransactionOutgoing( tx_id, timeout );
 
         auto end_time = std::chrono::steady_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( end_time - start_time ).count();
 
-        if ( !success )
+        if ( transfer_result != TransactionManager::TransactionStatus::CONFIRMED )
         {
-            node_logger->error( "TransferFunds transaction {} timed out after {} ms", tx_id, duration );
+            node_logger->error( "TransferFunds transaction {} failed after {} ms", tx_id, duration );
             return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::timed_out ) );
         }
 
@@ -795,14 +795,14 @@ namespace sgns
         auto start_time = std::chrono::steady_clock::now();
         OUTCOME_TRY( auto &&tx_id, transaction_manager_->TransferFunds( amount, dev_config_.Addr, token_id ) );
 
-        bool success = transaction_manager_->WaitForTransactionOutgoing( tx_id, timeout );
+        auto paydev_result = transaction_manager_->WaitForTransactionOutgoing( tx_id, timeout );
 
         auto end_time = std::chrono::steady_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( end_time - start_time ).count();
 
-        if ( !success )
+        if ( paydev_result != TransactionManager::TransactionStatus::CONFIRMED )
         {
-            node_logger->error( "TransferFunds transaction {} timed out after {} ms", tx_id, duration );
+            node_logger->error( "TransferFunds transaction {} failed after {} ms", tx_id, duration );
             return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::timed_out ) );
         }
 
@@ -821,14 +821,14 @@ namespace sgns
         OUTCOME_TRY( auto &&tx_id,
                      transaction_manager_->PayEscrow( escrow_path, taskresult, std::move( crdt_transaction ) ) );
 
-        bool success = WaitForTransactionOutgoing( tx_id, timeout );
+        auto payescrow_result = transaction_manager_->WaitForTransactionOutgoing( tx_id, timeout );
 
         auto end_time = std::chrono::steady_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( end_time - start_time ).count();
 
-        if ( !success )
+        if ( payescrow_result != TransactionManager::TransactionStatus::CONFIRMED )
         {
-            node_logger->error( "Pay escrow transaction {} timed out after {} ms", tx_id, duration );
+            node_logger->error( "Pay escrow transaction {} failed after {} ms", tx_id, duration );
             return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::timed_out ) );
         }
 
@@ -1007,20 +1007,28 @@ namespace sgns
     }
 
     // Wait for a transaction to be processed with a timeout
-    bool GeniusNode::WaitForTransactionOutgoing( const std::string &txId, std::chrono::milliseconds timeout )
+    TransactionManager::TransactionStatus GeniusNode::WaitForTransactionOutgoing( const std::string        &txId,
+                                                                                  std::chrono::milliseconds timeout )
     {
         return transaction_manager_->WaitForTransactionOutgoing( txId, timeout );
     }
 
     // Wait for a transaction to be processed with a timeout
-    bool GeniusNode::WaitForTransactionIncoming( const std::string &txId, std::chrono::milliseconds timeout )
+    TransactionManager::TransactionStatus GeniusNode::WaitForTransactionIncoming( const std::string        &txId,
+                                                                                  std::chrono::milliseconds timeout )
     {
         return transaction_manager_->WaitForTransactionIncoming( txId, timeout );
     }
 
-    bool GeniusNode::WaitForEscrowRelease( const std::string &originalEscrowId, std::chrono::milliseconds timeout )
+    TransactionManager::TransactionStatus GeniusNode::WaitForEscrowRelease( const std::string        &originalEscrowId,
+                                                                            std::chrono::milliseconds timeout )
     {
         return transaction_manager_->WaitForEscrowRelease( originalEscrowId, timeout );
+    }
+
+    TransactionManager::State GeniusNode::GetTransactionManagerState() const
+    {
+        return transaction_manager_->GetState();
     }
 
     void GeniusNode::SendTransactionAndProof( std::shared_ptr<IGeniusTransactions> tx, std::vector<uint8_t> proof )
@@ -1076,4 +1084,14 @@ namespace sgns
             // Continue execution - don't let log rotation failure stop the application
         }
     }
+    TransactionManager::TransactionStatus GeniusNode::GetTransactionStatus( const std::string &txId ) const
+    {
+        auto retval = transaction_manager_->GetOutgoingStatusByTxId( txId );
+        if ( retval == TransactionManager::TransactionStatus::INVALID )
+        {
+            retval = transaction_manager_->GetIncomingStatusByTxId( txId );
+        }
+        return retval;
+    }
+
 }

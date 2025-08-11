@@ -268,7 +268,7 @@ namespace sgns
         maybe_proof = std::move( proof_result );
 #endif
 
-        account_m->utxos = UTXOTxParameters::UpdateUTXOList( account_m->utxos, params );
+        account_m->utxos = UTXOTxParameters::ReserveUTXOs( account_m->utxos, params );
         this->EnqueueTransaction( std::make_pair( transfer_transaction, maybe_proof ) );
 
         return transfer_transaction->dag_st.data_hash();
@@ -323,7 +323,7 @@ namespace sgns
 
         params.SignParameters( account_m );
 
-        account_m->utxos        = UTXOTxParameters::UpdateUTXOList( account_m->utxos, params );
+        account_m->utxos        = UTXOTxParameters::ReserveUTXOs( account_m->utxos, params );
         auto escrow_transaction = std::make_shared<EscrowTransaction>(
             EscrowTransaction::New( params, amount, dev_addr, peers_cut, FillDAGStruct() ) );
 
@@ -459,10 +459,27 @@ namespace sgns
         {
             m_logger->error( "Unknown CheckIncoming error in SendTransaction::Update()" );
         }
+        auto confirm_result = ConfirmTransactions();
+        if ( confirm_result.has_error() )
+        {
+            m_logger->error( "Unknown ConfirmTransactions error in SendTransaction::Update()" );
+        }
     }
 
     void TransactionManager::EnqueueTransaction( TransactionItem element )
     {
+        m_logger->debug( "Transaction enqueuing" );
+        {
+            std::unique_lock<std::shared_mutex> out_lock( outgoing_tx_mutex_m );
+            for ( auto &tx_pair : element.first )
+            {
+                const auto &tx  = tx_pair.first;
+                const auto  key = GetTransactionPath( *tx );
+                // tx visible to status queries immediately
+                outgoing_tx_processed_m[key] = TrackedTx{ tx, TransactionStatus::CREATED };
+                m_logger->debug( "Setting {} to CREATED", tx->dag_st.data_hash() );
+            }
+        }
         std::lock_guard<std::mutex> lock( mutex_m );
         tx_queue_m.emplace_back( std::move( element ) );
     }
@@ -515,9 +532,16 @@ namespace sgns
         }
         auto     nonce_result    = account_m->GetConfirmedNonce( 2000 );
         uint64_t confirmed_nonce = 0;
+        if ( !nonce_result.has_value() )
+        {
+            m_logger->debug( "Can't fetch nonce from the network, getting local" );
+            nonce_result = account_m->GetLocalConfirmedNonce();
+        }
+
         if ( nonce_result.has_value() )
         {
             confirmed_nonce = nonce_result.value();
+            m_logger->debug( "Set nonce to {}", confirmed_nonce );
         }
         else
         {
@@ -537,7 +561,23 @@ namespace sgns
                 m_logger->error( "Network outdated nonce - Expected: {}, Tried to send: {}",
                                  transaction->dag_st.nonce(),
                                  expected_next_nonce );
-                state_m = State::SYNCHING;
+                state_m          = State::SYNCHING;
+                auto local_nonce = transaction->dag_st.nonce();
+                while ( --local_nonce > confirmed_nonce )
+                {
+                    m_logger->debug( "Setting status of transactions {}", local_nonce );
+                    (void)SetOutgoingStatusByNonce( local_nonce, TransactionStatus::VERIFYING );
+                }
+                {
+                    std::unique_lock<std::shared_mutex> out_lock( outgoing_tx_mutex_m );
+                    const auto                          key = GetTransactionPath( *transaction );
+
+                    auto &t  = outgoing_tx_processed_m[key]; // create if missing
+                    t.tx     = transaction;
+                    t.status = TransactionStatus::FAILED;
+                }
+
+                RevertTransaction( transaction );
                 return outcome::failure( boost::system::error_code{} );
             }
             else if ( transaction->dag_st.nonce() < expected_next_nonce )
@@ -546,6 +586,17 @@ namespace sgns
                                  transaction->dag_st.nonce(),
                                  expected_next_nonce );
                 state_m = State::SYNCHING;
+
+                {
+                    std::unique_lock<std::shared_mutex> out_lock( outgoing_tx_mutex_m );
+                    const auto                          key = GetTransactionPath( *transaction );
+
+                    auto &t  = outgoing_tx_processed_m[key];
+                    t.tx     = transaction;
+                    t.status = TransactionStatus::FAILED;
+                }
+                RevertTransaction( transaction );
+
                 return outcome::failure( boost::system::error_code{} );
             }
 
@@ -581,7 +632,16 @@ namespace sgns
             topicSet.insert( parsedTopics.begin(), parsedTopics.end() );
             {
                 std::unique_lock<std::shared_mutex> out_lock( outgoing_tx_mutex_m );
-                outgoing_tx_processed_m[GetTransactionPath( *transaction_pair.first )] = transaction_pair.first;
+                const auto                          key = GetTransactionPath( *transaction_pair.first );
+                auto                                it  = outgoing_tx_processed_m.find( key );
+                if ( it != outgoing_tx_processed_m.end() )
+                {
+                    it->second.status = TransactionStatus::VERIFYING;
+                }
+                else
+                {
+                    outgoing_tx_processed_m[key] = TrackedTx{ transaction_pair.first, TransactionStatus::VERIFYING };
+                }
             }
         }
 
@@ -831,7 +891,8 @@ namespace sgns
             {
                 m_logger->trace( "Inserting into incoming {}", transaction_key.value() );
                 std::unique_lock<std::shared_mutex> out_lock( incoming_tx_mutex_m );
-                incoming_tx_processed_m[transaction_key.value()] = maybe_transaction.value();
+                incoming_tx_processed_m[transaction_key.value()] = TrackedTx{ maybe_transaction.value(),
+                                                                              TransactionStatus::CONFIRMED };
             }
         }
         return outcome::success();
@@ -876,10 +937,12 @@ namespace sgns
             m_logger->debug( "Transaction parsed " + transaction_key.value() );
 
             account_m->SetLocalConfirmedNonce( maybe_transaction.value()->dag_st.nonce() );
+
             {
                 m_logger->trace( "Inserting into outgoing {}", transaction_key.value() );
                 std::unique_lock<std::shared_mutex> out_lock( outgoing_tx_mutex_m );
-                outgoing_tx_processed_m[transaction_key.value()] = maybe_transaction.value();
+                outgoing_tx_processed_m[transaction_key.value()] = TrackedTx{ maybe_transaction.value(),
+                                                                              TransactionStatus::CONFIRMED };
             }
         }
         return outcome::success();
@@ -1057,6 +1120,7 @@ namespace sgns
         m_logger->debug( "Re-parsing inputs to be added as UTXOs" );
         for ( auto &input : transfer_tx->GetInputInfos() )
         {
+            m_logger->debug( "Fetchin transaction {} ", input.txid_hash_.toReadableString() );
             auto tx = GetOutTransaction( input.txid_hash_.toReadableString() );
             if ( tx )
             {
@@ -1064,6 +1128,8 @@ namespace sgns
                 OUTCOME_TRY( ParseTransaction( tx ) );
             }
         }
+        UTXOTxParameters params( transfer_tx->GetInputInfos(), transfer_tx->GetDstInfos() );
+        account_m->utxos = UTXOTxParameters::RollbackUTXOs( account_m->utxos, params );
 
         return topics;
     }
@@ -1121,6 +1187,7 @@ namespace sgns
                         OUTCOME_TRY( ParseTransaction( tx ) );
                     }
                 }
+                account_m->utxos = UTXOTxParameters::RollbackUTXOs( account_m->utxos, dest_infos );
             }
         }
         if ( full_node_m )
@@ -1169,7 +1236,10 @@ namespace sgns
             result.reserve( outgoing_tx_processed_m.size() );
             for ( const auto &[key, value] : outgoing_tx_processed_m )
             {
-                result.push_back( value->SerializeByteVector() );
+                if ( value.tx )
+                {
+                    result.push_back( value.tx->SerializeByteVector() );
+                }
             }
         }
         return result;
@@ -1183,92 +1253,138 @@ namespace sgns
             result.reserve( incoming_tx_processed_m.size() );
             for ( const auto &[key, value] : incoming_tx_processed_m )
             {
-                result.push_back( value->SerializeByteVector() );
+                if ( value.tx )
+                {
+                    result.push_back( value.tx->SerializeByteVector() );
+                }
             }
         }
         return result;
     }
 
-    bool TransactionManager::WaitForTransactionIncoming( const std::string        &txId,
-                                                         std::chrono::milliseconds timeout ) const
+    TransactionManager::TransactionStatus TransactionManager::WaitForTransactionIncoming(
+        const std::string        &txId,
+        std::chrono::milliseconds timeout ) const
     {
-        auto start = std::chrono::steady_clock::now();
-
-        // Construct incoming notification path
-        std::string incoming_path = GetBlockChainBase();
+        auto                                  start  = std::chrono::steady_clock::now();
+        TransactionManager::TransactionStatus retval = TransactionStatus::CREATED;
 
         do
         {
-            // Check in incoming transactions with the exact path
+            std::shared_lock<std::shared_mutex> in_lock( incoming_tx_mutex_m );
+            bool                                found = false;
+            for ( const auto &kv : incoming_tx_processed_m )
             {
-                std::shared_lock<std::shared_mutex> in_lock( incoming_tx_mutex_m );
-                for ( auto tx : incoming_tx_processed_m )
+                const auto &tracked = kv.second;
+                if ( tracked.tx && tracked.tx->dag_st.data_hash() == txId )
                 {
-                    if ( tx.second->dag_st.data_hash() == txId )
-                    {
-                        return true;
-                    }
+                    retval = tracked.status;
+                    found  = true;
+                    break;
                 }
             }
+            if ( !found )
+            {
+                m_logger->debug( "Transaction IS INVALID" );
+                retval = TransactionStatus::INVALID;
+            }
 
+            if ( retval == TransactionStatus::INVALID || retval == TransactionStatus::CONFIRMED ||
+                 retval == TransactionStatus::FAILED )
+            {
+                m_logger->debug( "Transaction is FINALIZED" );
+                break;
+            }
             std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
         } while ( std::chrono::steady_clock::now() - start < timeout );
 
-        return false;
+        return retval;
     }
 
-    bool TransactionManager::WaitForTransactionOutgoing( const std::string        &txId,
-                                                         std::chrono::milliseconds timeout ) const
+    TransactionManager::TransactionStatus TransactionManager::WaitForTransactionOutgoing(
+        const std::string        &txId,
+        std::chrono::milliseconds timeout ) const
     {
-        auto start = std::chrono::steady_clock::now();
+        auto                                  start  = std::chrono::steady_clock::now();
+        TransactionManager::TransactionStatus retval = TransactionStatus::CREATED;
 
         do
         {
-            // Check in outgoing transactions with the exact path
+            std::shared_lock<std::shared_mutex> out_lock( outgoing_tx_mutex_m );
+            m_logger->debug( "searching for transaction {}", txId );
+            bool found = false;
+            for ( const auto &kv : outgoing_tx_processed_m )
             {
-                std::shared_lock<std::shared_mutex> out_lock( outgoing_tx_mutex_m );
-                for ( auto tx : outgoing_tx_processed_m )
+                const auto &tracked = kv.second;
+                if ( tracked.tx && tracked.tx->dag_st.data_hash() == txId )
                 {
-                    if ( tx.second->dag_st.data_hash() == txId )
-                    {
-                        return true;
-                    }
+                    retval = tracked.status;
+                    m_logger->debug( "Transaction IS {}", static_cast<int>( retval ) );
+                    found = true;
+                    break;
                 }
             }
+            if ( !found )
+            {
+                m_logger->debug( "Transaction IS INVALID" );
+                retval = TransactionStatus::INVALID;
+            }
 
+            if ( retval == TransactionStatus::INVALID || retval == TransactionStatus::CONFIRMED ||
+                 retval == TransactionStatus::FAILED )
+            {
+                m_logger->debug( "Transaction is FINALIZED" );
+                break;
+            }
             std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
         } while ( std::chrono::steady_clock::now() - start < timeout );
 
-        return false;
+        return retval;
     }
 
-    bool TransactionManager::WaitForEscrowRelease( const std::string        &originalEscrowId,
-                                                   std::chrono::milliseconds timeout ) const
+    TransactionManager::TransactionStatus TransactionManager::WaitForEscrowRelease(
+        const std::string        &originalEscrowId,
+        std::chrono::milliseconds timeout ) const
     {
-        auto start = std::chrono::steady_clock::now();
+        auto                                  start  = std::chrono::steady_clock::now();
+        TransactionManager::TransactionStatus retval = TransactionStatus::INVALID;
+
         while ( std::chrono::steady_clock::now() - start < timeout )
         {
+            std::shared_lock<std::shared_mutex> in_lock( incoming_tx_mutex_m );
+
+            for ( const auto &kv : incoming_tx_processed_m )
             {
-                std::shared_lock<std::shared_mutex> lock( incoming_tx_mutex_m );
-                for ( const auto &entry : incoming_tx_processed_m )
+                const auto &tracked = kv.second;
+                if ( !tracked.tx )
                 {
-                    auto tx = entry.second;
-                    if ( tx->GetType() == "escrow-release" )
+                    continue;
+                }
+
+                if ( tracked.tx->GetType() == "escrow-release" )
+                {
+                    auto escrowReleaseTx = std::dynamic_pointer_cast<EscrowReleaseTransaction>( tracked.tx );
+                    if ( escrowReleaseTx && escrowReleaseTx->GetOriginalEscrowHash() == originalEscrowId )
                     {
-                        auto escrowReleaseTx = std::dynamic_pointer_cast<EscrowReleaseTransaction>( tx );
-                        if ( escrowReleaseTx && escrowReleaseTx->GetOriginalEscrowHash() == originalEscrowId )
+                        m_logger->debug( "Found matching escrow release transaction with tx id: {}",
+                                         tracked.tx->dag_st.data_hash() );
+
+                        retval = tracked.status;
+
+                        // If finalized, return immediately; otherwise keep waiting.
+                        if ( retval == TransactionStatus::CONFIRMED || retval == TransactionStatus::FAILED ||
+                             retval == TransactionStatus::INVALID )
                         {
-                            m_logger->debug( "Found matching escrow release transaction with tx id: " +
-                                             tx->dag_st.data_hash() );
-                            return true;
+                            return retval;
                         }
                     }
                 }
             }
+
             std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
         }
-        m_logger->error( "Timed out waiting for escrow release transaction for escrow id: " + originalEscrowId );
-        return false;
+
+        return retval; // Will be INVALID if not seen within timeout
     }
 
     void TransactionManager::InitNonce( uint64_t timeout_ms )
@@ -1291,7 +1407,7 @@ namespace sgns
         }
         else
         {
-            m_logger->debug( "No node from the network, using local " );
+            m_logger->debug( "No node from the network, assume we are updated" );
 
             state_m = State::READY;
         }
@@ -1309,7 +1425,15 @@ namespace sgns
         }
         else
         {
-            return;
+            auto local_nonce_result = account_m->GetLocalConfirmedNonce();
+            if ( local_nonce_result.has_value() )
+            {
+                confirmed_nonce = local_nonce_result.value();
+            }
+            else
+            {
+                return;
+            }
         }
         uint64_t expected_next_nonce = confirmed_nonce + 1;
         uint64_t proposed_nonce      = account_m->GetProposedNonce();
@@ -1353,17 +1477,22 @@ namespace sgns
         {
             for ( auto it = outgoing_tx_processed_m.begin(); it != outgoing_tx_processed_m.end(); )
             {
+                if ( !it->second.tx )
+                {
+                    ++it;
+                    continue;
+                }
+
                 m_logger->debug( "CheckTransactionValidity: Seeing if transaction {} is valid {}",
-                                 it->second->dag_st.nonce(),
+                                 it->second.tx->dag_st.nonce(),
                                  nonce );
 
-                if ( it->second->dag_st.nonce() == nonce )
+                if ( it->second.tx->dag_st.nonce() == nonce )
                 {
                     bool invalid_tx = false;
-                    //This is the nonce that maybe is from a wrong tx
-                    if ( !it->second->CheckSignature() )
+                    if ( !it->second.tx->CheckSignature() )
                     {
-                        if ( !it->second->CheckDAGSignatureLegacy() )
+                        if ( !it->second.tx->CheckDAGSignatureLegacy() )
                         {
                             m_logger->error( "Could not validate signature of transaction with nonce {}", nonce );
                             invalid_tx = true;
@@ -1379,14 +1508,18 @@ namespace sgns
                     }
                     if ( invalid_tx )
                     {
-                        //delete transaction and roll back the nonce
-                        DeleteTransaction( it->second );
-                        account_m->RollBackConfirmedNonce( nonce );
-                        it      = outgoing_tx_processed_m.erase( it );
+                        DeleteTransaction( it->second.tx );
+                        auto previous_valid_nonce = nonce ? nonce - 1 : 0;
+                        account_m->RollBackConfirmedNonce( previous_valid_nonce );
+                        it->second.status = TransactionStatus::FAILED; // keep entry so waiters can see FAILED
+                        ++it;
                         changed = true;
                         m_logger->debug( "CheckTransactionValidity: INVALID TX {}", nonce );
-
-                        continue;
+                        continue; // check possible duplicates with same nonce
+                    }
+                    else
+                    {
+                        it->second.status = TransactionStatus::CONFIRMED;
                     }
                 }
                 ++it;
@@ -1407,13 +1540,18 @@ namespace sgns
         m_logger->debug( "Deleting transaction on " + tx_key.GetKey() );
 
         auto remove_result = crdt_transaction->Remove( std::move( tx_key ) );
+
         if ( !remove_result.has_error() )
         {
+            m_logger->debug( "Removed key transaction on {}", tx_key.GetKey() );
             auto get_topics_result = RevertTransaction( tx );
             if ( get_topics_result.has_value() )
             {
+                m_logger->debug( "Reverted tx on {}", tx_key.GetKey() );
+
                 crdt_transaction->Commit( get_topics_result.value() );
                 ret = true;
+                m_logger->debug( "Commited tx on {}", tx_key.GetKey() );
             }
         }
 
@@ -1422,12 +1560,25 @@ namespace sgns
 
     std::shared_ptr<IGeniusTransactions> TransactionManager::GetOutTransaction( const std::string &tx_hash ) const
     {
-        std::shared_lock<std::shared_mutex> out_lock( outgoing_tx_mutex_m );
-        for ( auto tx : outgoing_tx_processed_m )
+        for ( const auto &kv : outgoing_tx_processed_m )
         {
-            if ( tx.second->dag_st.data_hash() == tx_hash )
+            m_logger->debug( "Searching for hash {}", tx_hash );
+            if ( kv.second.tx && kv.second.tx->dag_st.data_hash() == tx_hash )
             {
-                return tx.second;
+                return kv.second.tx;
+            }
+        }
+        return nullptr;
+    }
+
+    std::shared_ptr<IGeniusTransactions> TransactionManager::GetOutTransaction( uint64_t nonce ) const
+    {
+        std::shared_lock<std::shared_mutex> out_lock( outgoing_tx_mutex_m );
+        for ( const auto &kv : outgoing_tx_processed_m )
+        {
+            if ( kv.second.tx && kv.second.tx->dag_st.nonce() == nonce )
+            {
+                return kv.second.tx;
             }
         }
         return nullptr;
@@ -1436,5 +1587,81 @@ namespace sgns
     TransactionManager::State TransactionManager::GetState() const
     {
         return state_m;
+    }
+
+    TransactionManager::TransactionStatus TransactionManager::GetOutgoingStatusByTxId( const std::string &txId ) const
+    {
+        std::shared_lock<std::shared_mutex> out_lock( outgoing_tx_mutex_m );
+        for ( const auto &kv : outgoing_tx_processed_m )
+        {
+            const auto &t = kv.second.tx;
+            if ( t && t->dag_st.data_hash() == txId )
+            {
+                return kv.second.status;
+            }
+        }
+        return TransactionStatus::INVALID;
+    }
+
+    TransactionManager::TransactionStatus TransactionManager::GetIncomingStatusByTxId( const std::string &txId ) const
+    {
+        std::shared_lock<std::shared_mutex> in_lock( incoming_tx_mutex_m );
+        for ( const auto &kv : incoming_tx_processed_m )
+        {
+            const auto &t = kv.second.tx;
+            if ( t && t->dag_st.data_hash() == txId )
+            {
+                return kv.second.status;
+            }
+        }
+        return TransactionStatus::INVALID;
+    }
+
+    bool TransactionManager::SetOutgoingStatusByNonce( uint64_t nonce, TransactionStatus s )
+    {
+        std::unique_lock<std::shared_mutex> out_lock( outgoing_tx_mutex_m );
+        for ( auto &kv : outgoing_tx_processed_m )
+        {
+            auto &tracked = kv.second;
+            if ( tracked.tx && tracked.tx->dag_st.nonce() == nonce )
+            {
+                tracked.status = s;
+                m_logger->debug( "Set tx {} (nonce {}) to {}",
+                                 tracked.tx->dag_st.data_hash(),
+                                 nonce,
+                                 static_cast<int>( s ) );
+                return true;
+            }
+        }
+        m_logger->debug( "No outgoing tx found with nonce {}", nonce );
+        return false;
+    }
+
+    outcome::result<void> TransactionManager::ConfirmTransactions()
+    {
+        m_logger->debug( "ConfirmTransactions: Trying to get confirmed nonce" );
+
+        auto nonce_result = account_m->GetConfirmedNonce( 250 );
+        if ( !nonce_result.has_value() )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
+        const uint64_t confirmed_nonce = nonce_result.value();
+        m_logger->debug( "ConfirmTransactions: Nonce from the network received {}", confirmed_nonce );
+
+        // Flip VERIFYING -> CONFIRMED for all outgoing with nonce <= confirmed_nonce
+        {
+            std::unique_lock<std::shared_mutex> out_lock( outgoing_tx_mutex_m );
+            for ( auto &kv : outgoing_tx_processed_m )
+            {
+                auto &tracked = kv.second;
+                if ( tracked.tx && tracked.tx->dag_st.nonce() <= confirmed_nonce &&
+                     tracked.status == TransactionStatus::VERIFYING )
+                {
+                    tracked.status = TransactionStatus::CONFIRMED;
+                }
+            }
+        }
+        return outcome::success();
     }
 }

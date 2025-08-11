@@ -62,6 +62,16 @@ namespace sgns
             SYNCHING,
             READY,
         };
+
+        enum class TransactionStatus
+        {
+            CREATED,
+            SENDING,
+            CONFIRMED,
+            VERIFYING,
+            FAILED,
+            INVALID
+        };
         TransactionManager( std::shared_ptr<crdt::GlobalDB>          processing_db,
                             std::shared_ptr<boost::asio::io_context> ctx,
                             std::shared_ptr<GeniusAccount>           account,
@@ -93,10 +103,13 @@ namespace sgns
         uint64_t                                                GetBalance();
 
         // Wait for an incoming transaction to be processed with a timeout
-        bool WaitForTransactionIncoming( const std::string &txId, std::chrono::milliseconds timeout ) const;
+        TransactionStatus WaitForTransactionIncoming( const std::string        &txId,
+                                                      std::chrono::milliseconds timeout ) const;
         // Wait for an outgoing transaction to be processed with a timeout
-        bool WaitForTransactionOutgoing( const std::string &txId, std::chrono::milliseconds timeout ) const;
-        bool WaitForEscrowRelease( const std::string &originalEscrowId, std::chrono::milliseconds timeout ) const;
+        TransactionStatus WaitForTransactionOutgoing( const std::string        &txId,
+                                                      std::chrono::milliseconds timeout ) const;
+        TransactionStatus WaitForEscrowRelease( const std::string        &originalEscrowId,
+                                                std::chrono::milliseconds timeout ) const;
 
         static std::string GetTransactionPath( IGeniusTransactions &element );
 
@@ -107,7 +120,9 @@ namespace sgns
         static outcome::result<std::shared_ptr<IGeniusTransactions>> DeSerializeTransaction(
             const base::Buffer &tx_data );
 
-        State GetState() const;
+        State             GetState() const;
+        TransactionStatus GetOutgoingStatusByTxId( const std::string &txId ) const;
+        TransactionStatus GetIncomingStatusByTxId( const std::string &txId ) const;
 
     protected:
         friend class GeniusNode;
@@ -124,6 +139,7 @@ namespace sgns
         void                     Update();
         SGTransaction::DAGStruct FillDAGStruct( std::string transaction_hash = "" ) const;
         outcome::result<void>    SendTransaction();
+        outcome::result<void>    ConfirmTransactions();
 
         static std::string GetTransactionBasePath( const std::string &address );
         static std::string GetBlockChainBase();
@@ -148,6 +164,9 @@ namespace sgns
 
         bool                                 DeleteTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
         std::shared_ptr<IGeniusTransactions> GetOutTransaction( const std::string &tx_hash ) const;
+        std::shared_ptr<IGeniusTransactions> GetOutTransaction( uint64_t nonce ) const;
+
+        bool SetOutgoingStatusByNonce( uint64_t nonce, TransactionStatus s );
 
         std::shared_ptr<crdt::GlobalDB> globaldb_m;
 
@@ -163,11 +182,17 @@ namespace sgns
         mutable std::mutex          mutex_m;
         std::deque<TransactionItem> tx_queue_m;
 
-        mutable std::shared_mutex                                             outgoing_tx_mutex_m;
-        std::unordered_map<std::string, std::shared_ptr<IGeniusTransactions>> outgoing_tx_processed_m;
-        mutable std::shared_mutex                                             incoming_tx_mutex_m;
-        std::unordered_map<std::string, std::shared_ptr<IGeniusTransactions>> incoming_tx_processed_m;
-        std::function<void()>                                                 task_m;
+        struct TrackedTx
+        {
+            std::shared_ptr<IGeniusTransactions> tx;
+            TransactionStatus                    status;
+        };
+
+        mutable std::shared_mutex                  outgoing_tx_mutex_m;
+        std::unordered_map<std::string, TrackedTx> outgoing_tx_processed_m;
+        mutable std::shared_mutex                  incoming_tx_mutex_m;
+        std::unordered_map<std::string, TrackedTx> incoming_tx_processed_m;
+        std::function<void()>                      task_m;
 
         outcome::result<std::set<std::string>> ParseTransferTransaction(
             const std::shared_ptr<IGeniusTransactions> &tx );
