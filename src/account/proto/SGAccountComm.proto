@@ -30,7 +30,8 @@ message NonceRequest {
 // Actual content of the nonce response
 message NonceResponse {
   string responder_address = 1;
-  uint64 request_id = 2;
-  uint64 known_nonce = 3;
-  uint64 timestamp = 4;
+  string requester_address = 2;
+  uint64 request_id = 3;
+  uint64 known_nonce = 4;
+  uint64 timestamp = 5;
 }
