@@ -367,7 +367,7 @@ namespace sgns::crdt
 
         std::vector<std::shared_ptr<DagWorker>> dagWorkers_;
         std::mutex                              dagSyncherMutex_;
-        std::mutex                              dagSetMutex_;
+        std::mutex                              processNodeMutex_;
 
         std::atomic<bool>       dagWorkerJobListThreadRunning_ = false;
         std::mutex              dagWorkerMutex_;
