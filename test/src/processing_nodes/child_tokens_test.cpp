@@ -24,6 +24,7 @@ namespace
     std::unique_ptr<sgns::GeniusNode> CreateNode( const std::string &self_address,
                                                   const std::string &tokenValue,
                                                   sgns::TokenID      tokenId,
+                                                  bool               isFullNode  = false,
                                                   bool               isProcessor = false )
     {
         static std::atomic<int> nodeCounter{ 0 };
@@ -54,7 +55,12 @@ namespace
                          } );
 
         uint16_t uniquePort = static_cast<uint16_t>( 40001 + id );
-        auto     node = std::make_unique<sgns::GeniusNode>( devConfig, key.c_str(), false, isProcessor, uniquePort );
+        auto     node       = std::make_unique<sgns::GeniusNode>( devConfig,
+                                                        key.c_str(),
+                                                        false,
+                                                        isProcessor,
+                                                        uniquePort,
+                                                        isFullNode );
 
         std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
         return node;
@@ -92,7 +98,7 @@ namespace
 TEST( TransferTokenValue, ThreeNodeTransferTest )
 {
     // Create nodes
-    auto node50 = CreateNode( "0xcafe", "1.0", sgns::TokenID::FromBytes( { 0x50 } ) );
+    auto node50 = CreateNode( "0xcafe", "1.0", sgns::TokenID::FromBytes( { 0x50 } ), true );
     auto node51 = CreateNode( "0xcade", "0.5", sgns::TokenID::FromBytes( { 0x51 } ) );
     auto node52 = CreateNode( "0xdafe", "2.0", sgns::TokenID::FromBytes( { 0x52 } ) );
 
@@ -226,8 +232,10 @@ class GeniusNodeMintMainTest : public ::testing::TestWithParam<MintMainCase_s>
 
 TEST_P( GeniusNodeMintMainTest, MintMainBalance )
 {
-    auto p    = GetParam();
-    auto node = CreateNode( "0xdade", p.tokenValue, p.TokenID );
+    auto p        = GetParam();
+    auto node     = CreateNode( "0xdade", p.tokenValue, p.TokenID );
+    auto nodefull = CreateNode( "0xaffe", p.tokenValue, p.TokenID, true );
+    nodefull->GetPubSub()->AddPeers( { node->GetPubSub()->GetLocalAddress() } );
 
     uint64_t initialMain = node->GetBalance();
     auto     initFmtRes  = node->FormatTokens( initialMain, p.TokenID );
@@ -293,8 +301,10 @@ protected:
 
 TEST_P( GeniusNodeMintChildTest, MintChildBalance )
 {
-    auto p    = GetParam();
-    auto node = CreateNode( "0xfade", p.tokenValue, p.TokenID );
+    auto p        = GetParam();
+    auto node     = CreateNode( "0xfade", p.tokenValue, p.TokenID );
+    auto nodefull = CreateNode( "0xaffe", p.tokenValue, p.TokenID, true );
+    nodefull->GetPubSub()->AddPeers( { node->GetPubSub()->GetLocalAddress() } );
 
     uint64_t initialMain = node->GetBalance();
     auto     initFmtRes  = node->FormatTokens( initialMain, p.TokenID );
@@ -344,7 +354,9 @@ INSTANTIATE_TEST_SUITE_P(
 // Suite 3: Mint multiple token IDs on same node
 TEST( GeniusNodeMultiTokenMintTest, MintMultipleTokenIds )
 {
-    auto node = CreateNode( "0xfafe", "1.0", sgns::TokenID::FromBytes( { 0x0a } ) );
+    auto node     = CreateNode( "0xfafe", "1.0", sgns::TokenID::FromBytes( { 0x0a } ) );
+    auto nodefull = CreateNode( "0xaffe", "1.0", sgns::TokenID::FromBytes( { 0x0a } ), true );
+    nodefull->GetPubSub()->AddPeers( { node->GetPubSub()->GetLocalAddress() } );
 
     struct TokenMint
     {
@@ -414,21 +426,20 @@ protected:
 
 TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
 {
-    auto node_main  = CreateNode( "0xacfe", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), false );
-    auto node_proc1 = CreateNode( "0xadfe", "0.65", sgns::TokenID::FromBytes( { 0x01 } ), true );
-    auto node_proc2 = CreateNode( "0xaffe", "0.65", sgns::TokenID::FromBytes( { 0x02 } ), true );
+    auto node_main  = CreateNode( "0xacfe", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), false, false );
+    auto node_proc1 = CreateNode( "0xadfe", "0.65", sgns::TokenID::FromBytes( { 0x01 } ), true, true );
+    auto node_proc2 = CreateNode( "0xaffe", "0.65", sgns::TokenID::FromBytes( { 0x02 } ), false, true );
 
+    node_main->GetPubSub()->AddPeers(
+        { node_proc1->GetPubSub()->GetLocalAddress(), node_proc2->GetPubSub()->GetLocalAddress() } );
+    node_proc1->GetPubSub()->AddPeers( { node_main->GetPubSub()->GetLocalAddress() } );
+    node_proc2->GetPubSub()->AddPeers( { node_main->GetPubSub()->GetLocalAddress() } );
     auto mintResMain = node_main->MintTokens( 1000,
                                               "",
                                               "",
                                               sgns::TokenID::FromBytes( { 0x00 } ),
                                               std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
     ASSERT_TRUE( mintResMain.has_value() ) << "Mint failed on node_main";
-
-    node_main->GetPubSub()->AddPeers(
-        { node_proc1->GetPubSub()->GetLocalAddress(), node_proc2->GetPubSub()->GetLocalAddress() } );
-    node_proc1->GetPubSub()->AddPeers( { node_main->GetPubSub()->GetLocalAddress() } );
-    node_proc2->GetPubSub()->AddPeers( { node_main->GetPubSub()->GetLocalAddress() } );
 
     std::string bin_path = boost::dll::program_location().parent_path().string() + "/";
 #ifdef _WIN32
