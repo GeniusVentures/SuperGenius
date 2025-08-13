@@ -6,13 +6,16 @@
  */
 #pragma once
 #include <string>
+#include <cstdint>
 #include <memory>
-#include <optional>
 #include <functional>
 #include <vector>
 #include <cstdlib>
 #include <future>
 #include <mutex>
+#include <unordered_map>
+#include <set>
+#include <chrono>
 #include <boost/optional.hpp>
 #include "base/logger.hpp"
 #include "ipfs_pubsub/gossip_pubsub.hpp"
@@ -60,10 +63,10 @@ namespace sgns
         std::future<libp2p::protocol::Subscription> subs_acc_future_;
         std::future<libp2p::protocol::Subscription> subs_full_future_;
 
-        std::optional<uint64_t> current_nonce_request_id_;
-        std::promise<uint64_t>  nonce_result_promise_;
-        std::mutex              nonce_mutex_;
-        InterfaceMethods        methods_;
+        std::unordered_map<uint64_t, std::set<uint64_t>>                    nonce_responses_;
+        std::unordered_map<uint64_t, std::chrono::steady_clock::time_point> first_response_time_;
+        std::mutex                                                          nonce_responses_mutex_;
+        InterfaceMethods                                                    methods_;
 
         AccountMessenger( std::string                                address,
                           std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub,

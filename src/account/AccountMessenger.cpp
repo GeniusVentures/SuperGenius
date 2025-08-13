@@ -4,6 +4,7 @@
  * @date       2025-07-22
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
+#include <thread>
 #include <boost/format.hpp>
 #include "AccountMessenger.hpp"
 #include "base/sgns_version.hpp"
@@ -148,14 +149,8 @@ namespace sgns
 
         accountComm::AccountMessage envelope;
         *envelope.mutable_nonce_request() = signed_req;
-        current_nonce_request_id_         = req_id;
 
         auto send_ret = SendAccountMessage( envelope, { account_comm_topic_, full_node_comm_topic_ } );
-
-        if ( send_ret.has_error() )
-        {
-            current_nonce_request_id_.reset();
-        }
 
         return send_ret;
     }
@@ -169,64 +164,73 @@ namespace sgns
 
         uint64_t req_id = static_cast<uint64_t>( std::chrono::system_clock::now().time_since_epoch().count() );
 
-        std::future<uint64_t> fut;
         {
-            std::lock_guard lock( nonce_mutex_ );
-            if ( current_nonce_request_id_ )
-            {
-                logger_->warn( "[{} - full: {}] Nonce request already in progress with ID: {}",
-                               address_.substr( 0, 8 ),
-                               is_full_node_,
-                               *current_nonce_request_id_ );
-                return outcome::failure( Error::NONCE_REQUEST_IN_PROGRESS );
-            }
-
-            nonce_result_promise_ = std::promise<uint64_t>{};
-            fut                   = nonce_result_promise_.get_future();
+            std::lock_guard lock( nonce_responses_mutex_ );
+            nonce_responses_.erase( req_id );
+            first_response_time_.erase( req_id );
         }
 
         OUTCOME_TRY( RequestNonce( req_id ) );
 
-        logger_->debug( "[{} - full: {}] Nonce request sent with ID: {}, waiting for response...",
-                        address_.substr( 0, 8 ),
-                        is_full_node_,
-                        req_id );
-        auto status = fut.wait_for( std::chrono::milliseconds( timeout_ms ) );
+        const auto start_time   = std::chrono::steady_clock::now();
+        const auto full_timeout = std::chrono::milliseconds( timeout_ms );
+        const auto silent_time  = std::chrono::milliseconds( 150 ); // Adjustable window
 
+        bool first_seen = false;
+
+        while ( true )
         {
-            std::lock_guard lock( nonce_mutex_ );
-
-            if ( status == std::future_status::ready )
             {
-                try
+                std::lock_guard lock( nonce_responses_mutex_ );
+                auto            it = nonce_responses_.find( req_id );
+                if ( it != nonce_responses_.end() && !it->second.empty() )
                 {
-                    uint64_t result = fut.get();
-                    logger_->debug( "[{} - full: {}] Successfully received nonce: {}",
-                                    address_.substr( 0, 8 ),
-                                    is_full_node_,
-                                    result );
-                    current_nonce_request_id_.reset();
-                    return result;
-                }
-                catch ( const std::future_error &e )
-                {
-                    logger_->error( "[{} - full: {}] Future error when getting nonce: {} (code: {})",
-                                    address_.substr( 0, 8 ),
-                                    is_full_node_,
-                                    e.what(),
-                                    static_cast<int>( e.code().value() ) );
-                    current_nonce_request_id_.reset();
-                    return outcome::failure( Error::NONCE_FUTURE_ERROR );
+                    if ( !first_seen )
+                    {
+                        first_seen                   = true;
+                        first_response_time_[req_id] = std::chrono::steady_clock::now();
+                    }
+                    else
+                    {
+                        auto elapsed = std::chrono::steady_clock::now() - first_response_time_[req_id];
+                        if ( elapsed >= silent_time )
+                        {
+                            break; // silent window passed
+                        }
+                    }
                 }
             }
 
-            logger_->debug( "[{} - full: {}] Nonce request timed out after {}ms",
-                            address_.substr( 0, 8 ),
-                            is_full_node_,
-                            timeout_ms );
-            current_nonce_request_id_.reset();
-            return outcome::failure( Error::NONCE_GET_ERROR );
+            if ( std::chrono::steady_clock::now() - start_time >= full_timeout )
+            {
+                break; // total timeout reached
+            }
+            std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
         }
+
+        uint64_t max_nonce = 0;
+        {
+            std::lock_guard lock( nonce_responses_mutex_ );
+            auto            it = nonce_responses_.find( req_id );
+            if ( it == nonce_responses_.end() || it->second.empty() )
+            {
+                nonce_responses_.erase( req_id );
+                first_response_time_.erase( req_id );
+                logger_->debug( "[{} - full: {}] No nonce received within timeout",
+                                address_.substr( 0, 8 ),
+                                is_full_node_ );
+                return outcome::failure( Error::NONCE_GET_ERROR );
+            }
+            max_nonce = *it->second.rbegin();
+            nonce_responses_.erase( req_id );
+            first_response_time_.erase( req_id );
+        }
+
+        logger_->debug( "[{} - full: {}] Returning highest collected nonce: {}",
+                        address_.substr( 0, 8 ),
+                        is_full_node_,
+                        max_nonce );
+        return max_nonce;
     }
 
     outcome::result<void> AccountMessenger::SendAccountMessage( const accountComm::AccountMessage &msg,
@@ -343,10 +347,11 @@ namespace sgns
     {
         const auto &resp = signed_resp.data();
 
-        logger_->debug( "[{} - {}] Received a Nonce response from {}",
+        logger_->debug( "[{} - {}] Received a Nonce response from {} (nonce={})",
                         address_.substr( 0, 8 ),
                         is_full_node_,
-                        resp.responder_address() );
+                        resp.responder_address(),
+                        resp.known_nonce() );
 
         std::string serialized;
         if ( !resp.SerializeToString( &serialized ) )
@@ -362,66 +367,20 @@ namespace sgns
                                                                    data_vec );
         if ( verify_signature_result.has_error() )
         {
-            logger_->error( "No verify method" );
+            logger_->error( "No verify method for NonceResponse" );
             return;
         }
         if ( !verify_signature_result.value() )
         {
-            logger_->error( "Invalid signature on nonce response from {}", resp.responder_address() );
+            logger_->error( "Invalid signature on NonceResponse from {}", resp.responder_address() );
             return;
         }
 
-        if ( resp.requester_address() != address_ )
+        // Store in set
         {
-            logger_->debug( "[{} - full node: {}] Response for an address that is not me, I don't care",
-                            address_.substr( 0, 8 ),
-                            is_full_node_ );
-            return;
+            std::lock_guard lock( nonce_responses_mutex_ );
+            nonce_responses_[resp.request_id()].insert( resp.known_nonce() );
         }
-
-        std::lock_guard lock( nonce_mutex_ );
-
-        if ( !current_nonce_request_id_ )
-        {
-            logger_->debug( "[{} - full node: {}] No active nonce request", address_.substr( 0, 8 ), is_full_node_ );
-            return;
-        }
-
-        if ( resp.request_id() != *current_nonce_request_id_ )
-        {
-            logger_->debug( "[{} - full node: {}] Unrelated response - expected: {}, got: {}",
-                            address_.substr( 0, 8 ),
-                            is_full_node_,
-                            *current_nonce_request_id_,
-                            resp.request_id() );
-            return;
-        }
-
-        logger_->debug( "[{} - full node: {}] Setting the nonce value: {}",
-                        address_.substr( 0, 8 ),
-                        is_full_node_,
-                        resp.known_nonce() );
-
-        try
-        {
-            nonce_result_promise_.set_value( resp.known_nonce() );
-            logger_->debug( "[{} - full node: {}] Successfully set nonce promise value",
-                            address_.substr( 0, 8 ),
-                            is_full_node_ );
-        }
-        catch ( const std::future_error &e )
-        {
-            logger_->error( "Future error when setting nonce value: {} (code: {})",
-                            e.what(),
-                            static_cast<int>( e.code().value() ) );
-            return;
-        }
-        catch ( const std::exception &e )
-        {
-            logger_->error( "Exception when setting nonce value: {}", e.what() );
-            return;
-        }
-
-        current_nonce_request_id_.reset();
     }
+
 }
