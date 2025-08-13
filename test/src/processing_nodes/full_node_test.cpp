@@ -74,6 +74,15 @@ TEST( NodeBalancePersistenceTest, BalancePersistsAfterRecreation )
     uint64_t beforeMint = originalNode->GetBalance();
     uint64_t afterMint;
 
+    test::assertWaitForCondition(
+        [&]() { return originalNode->GetTransactionManagerState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 20000 ),
+        "Recovery node balance not updated in time" );
+    test::assertWaitForCondition(
+        [&]() { return fullNode->GetTransactionManagerState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 20000 ),
+        "Recovery node balance not updated in time" );
+
     constexpr size_t mintAmount = 10;
     for ( size_t i = 0; i < mintAmount; ++i )
     {
