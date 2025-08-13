@@ -138,7 +138,7 @@ namespace sgns
 
         void                     Update();
         SGTransaction::DAGStruct FillDAGStruct( std::string transaction_hash = "" ) const;
-        outcome::result<void>    SendTransaction();
+        outcome::result<bool>    SendTransaction();
         outcome::result<void>    ConfirmTransactions();
 
         static std::string GetTransactionBasePath( const std::string &address );
