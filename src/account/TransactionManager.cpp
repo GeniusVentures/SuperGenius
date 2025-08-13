@@ -63,7 +63,7 @@ namespace sgns
         m_logger->info( "Adding broadcast to full node on {}", full_node_topic_m );
         if ( full_node_m )
         {
-            m_logger->info( "Listening full node on {}", full_node_topic_m );
+            m_logger->debug( "Listening full node on {}", full_node_topic_m );
             globaldb_m->AddListenTopic( full_node_topic_m );
         }
         globaldb_m->AddTopicName( full_node_topic_m );
@@ -462,7 +462,7 @@ namespace sgns
         auto confirm_result = ConfirmTransactions();
         if ( confirm_result.has_error() )
         {
-            m_logger->error( "Unknown ConfirmTransactions error in SendTransaction::Update()" );
+            m_logger->trace( "Unknown ConfirmTransactions error in SendTransaction::Update()" );
         }
     }
 
@@ -530,8 +530,9 @@ namespace sgns
         {
             crdt_transaction = globaldb_m->BeginTransaction();
         }
-        auto     nonce_result    = account_m->GetConfirmedNonce( 2000 );
-        uint64_t confirmed_nonce = 0;
+        auto     nonce_result        = account_m->GetConfirmedNonce( 2000 );
+        uint64_t expected_next_nonce = 0;
+        uint64_t confirmed_nonce     = 0;
         if ( !nonce_result.has_value() )
         {
             m_logger->debug( "Can't fetch nonce from the network, getting local" );
@@ -542,17 +543,12 @@ namespace sgns
         {
             confirmed_nonce = nonce_result.value();
             m_logger->debug( "Set nonce to {}", confirmed_nonce );
+            expected_next_nonce = confirmed_nonce + 1;
         }
-        else
-        {
-            return outcome::failure( boost::system::error_code{} );
-        }
-        uint64_t expected_next_nonce = confirmed_nonce;
+
         for ( auto &transaction_pair : transaction_batch )
         {
             auto [transaction, maybe_proof] = transaction_pair;
-
-            expected_next_nonce++;
 
             if ( transaction->dag_st.nonce() > expected_next_nonce )
             {
@@ -623,7 +619,9 @@ namespace sgns
                 BOOST_OUTCOME_TRYV2( auto &&,
                                      crdt_transaction->Put( std::move( proof_key ), std::move( proof_transaction ) ) );
             }
+            expected_next_nonce++;
         }
+        expected_next_nonce--;
 
         std::set<std::string> topicSet;
         for ( auto &transaction_pair : transaction_batch )
@@ -1311,7 +1309,7 @@ namespace sgns
         do
         {
             std::shared_lock<std::shared_mutex> out_lock( outgoing_tx_mutex_m );
-            m_logger->debug( "searching for transaction {}", txId );
+            m_logger->trace( "Searching for transaction {}", txId );
             bool found = false;
             for ( const auto &kv : outgoing_tx_processed_m )
             {
@@ -1319,21 +1317,21 @@ namespace sgns
                 if ( tracked.tx && tracked.tx->dag_st.data_hash() == txId )
                 {
                     retval = tracked.status;
-                    m_logger->debug( "Transaction IS {}", static_cast<int>( retval ) );
+                    m_logger->trace( "Transaction status is {}", static_cast<int>( retval ) );
                     found = true;
                     break;
                 }
             }
             if ( !found )
             {
-                m_logger->debug( "Transaction IS INVALID" );
+                m_logger->trace( "Transaction untracked" );
                 retval = TransactionStatus::INVALID;
             }
 
             if ( retval == TransactionStatus::INVALID || retval == TransactionStatus::CONFIRMED ||
                  retval == TransactionStatus::FAILED )
             {
-                m_logger->debug( "Transaction is FINALIZED" );
+                m_logger->trace( "Transaction has finalized state {}", static_cast<int>( retval ) );
                 break;
             }
             std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
@@ -1639,7 +1637,7 @@ namespace sgns
 
     outcome::result<void> TransactionManager::ConfirmTransactions()
     {
-        m_logger->debug( "ConfirmTransactions: Trying to get confirmed nonce" );
+        m_logger->trace( "ConfirmTransactions: Trying to get confirmed nonce" );
 
         auto nonce_result = account_m->GetConfirmedNonce( 250 );
         if ( !nonce_result.has_value() )

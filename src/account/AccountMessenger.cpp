@@ -162,7 +162,10 @@ namespace sgns
 
     outcome::result<uint64_t> AccountMessenger::GetLatestNonce( uint64_t timeout_ms )
     {
-        logger_->debug( "[{} - full: {}] Requesting nonce", address_.substr( 0, 8 ), is_full_node_ );
+        logger_->debug( "[{} - full: {}] Requesting nonce with timeout {}",
+                        address_.substr( 0, 8 ),
+                        is_full_node_,
+                        timeout_ms );
 
         uint64_t req_id = static_cast<uint64_t>( std::chrono::system_clock::now().time_since_epoch().count() );
 
@@ -180,9 +183,7 @@ namespace sgns
 
             nonce_result_promise_ = std::promise<uint64_t>{};
             fut                   = nonce_result_promise_.get_future();
-
         }
-
 
         OUTCOME_TRY( RequestNonce( req_id ) );
 
@@ -191,7 +192,6 @@ namespace sgns
                         is_full_node_,
                         req_id );
         auto status = fut.wait_for( std::chrono::milliseconds( timeout_ms ) );
-
 
         {
             std::lock_guard lock( nonce_mutex_ );
@@ -214,13 +214,13 @@ namespace sgns
                                     address_.substr( 0, 8 ),
                                     is_full_node_,
                                     e.what(),
-                                    static_cast<int>( e.code().value()) );
+                                    static_cast<int>( e.code().value() ) );
                     current_nonce_request_id_.reset();
                     return outcome::failure( Error::NONCE_FUTURE_ERROR );
                 }
             }
 
-            logger_->error( "[{} - full: {}] Nonce request timed out after {}ms",
+            logger_->debug( "[{} - full: {}] Nonce request timed out after {}ms",
                             address_.substr( 0, 8 ),
                             is_full_node_,
                             timeout_ms );
@@ -241,6 +241,7 @@ namespace sgns
         }
         for ( auto &topic : topics )
         {
+            logger_->trace( "Sending account packet to {}", topic );
             pubsub_->Publish( topic, serialized_proto );
         }
         return outcome::success();
@@ -308,7 +309,7 @@ namespace sgns
         auto                 signature_result = methods_.sign_( resp_bytes );
         if ( signature_result.has_error() )
         {
-            logger_->error( "Failed to send NonceResponse" );
+            logger_->error( "Failed to sign NonceResponse" );
             return;
         }
         auto signature = signature_result.value();
@@ -325,7 +326,11 @@ namespace sgns
                 ( ( boost::format( std::string( ACCOUNT_COMM ) ) % sgns::version::SuperGeniusVersionMajor() )
                       .str() ) ) } );
 
-        logger_->debug( "[{} - {}] Sending back the nonce {}", address_.substr( 0, 8 ), is_full_node_, local_nonce );
+        logger_->debug( "[{} - {}] Sending back the nonce {} to {}",
+                        address_.substr( 0, 8 ),
+                        is_full_node_,
+                        local_nonce,
+                        req.requester_address().substr( 0, 8 ) );
 
         if ( send_ret.has_error() )
         {
@@ -389,7 +394,7 @@ namespace sgns
                             is_full_node_,
                             *current_nonce_request_id_,
                             resp.request_id() );
-            return; 
+            return;
         }
 
         logger_->debug( "[{} - full node: {}] Setting the nonce value: {}",

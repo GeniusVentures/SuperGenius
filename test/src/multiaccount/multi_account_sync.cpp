@@ -30,9 +30,11 @@ class MultiAccountTest : public ::testing::Test
 protected:
     static sgns::GeniusNode *node_main;
     static sgns::GeniusNode *node_proc1;
+    static sgns::GeniusNode *node_full;
 
     static DevConfig_st DEV_CONFIG;
     static DevConfig_st DEV_CONFIG2;
+    static DevConfig_st DEV_CONFIG3;
 
     static std::string binary_path;
 
@@ -45,14 +47,19 @@ protected:
         std::strncpy( DEV_CONFIG2.BaseWritePath,
                       ( binary_path + "/node200/" ).c_str(),
                       sizeof( DEV_CONFIG2.BaseWritePath ) );
+        std::strncpy( DEV_CONFIG3.BaseWritePath,
+                      ( binary_path + "/node300/" ).c_str(),
+                      sizeof( DEV_CONFIG3.BaseWritePath ) );
 
         // Ensure null termination in case the string is too long
         DEV_CONFIG.BaseWritePath[sizeof( DEV_CONFIG.BaseWritePath ) - 1]   = '\0';
         DEV_CONFIG2.BaseWritePath[sizeof( DEV_CONFIG2.BaseWritePath ) - 1] = '\0';
+        DEV_CONFIG3.BaseWritePath[sizeof( DEV_CONFIG3.BaseWritePath ) - 1] = '\0';
 
         // clean out any previous runs
         std::filesystem::remove_all( DEV_CONFIG.BaseWritePath );
         std::filesystem::remove_all( DEV_CONFIG2.BaseWritePath );
+        std::filesystem::remove_all( DEV_CONFIG3.BaseWritePath );
 
         node_main = new sgns::GeniusNode( DEV_CONFIG,
                                           "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
@@ -62,12 +69,23 @@ protected:
         node_proc1 = new sgns::GeniusNode( DEV_CONFIG2,
                                            "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
                                            false,
-                                           true );
-
-        //Connect to each other
-        std::vector bootstrappers = { node_proc1->GetPubSub()->GetLocalAddress() };
-        node_main->GetPubSub()->AddPeers( bootstrappers );
+                                           true,
+                                           40050,
+                                           false );
         std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
+        node_full = new sgns::GeniusNode( DEV_CONFIG3,
+                                          "defadeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+                                          false,
+                                          true,
+                                          40012,
+                                          true );
+        std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
+        //Connect to each other
+        std::vector bootstrappers = { node_proc1->GetPubSub()->GetLocalAddress(),
+                                      node_full->GetPubSub()->GetLocalAddress() };
+        node_main->GetPubSub()->AddPeers( bootstrappers );
+        bootstrappers = { node_proc1->GetPubSub()->GetLocalAddress(), node_main->GetPubSub()->GetLocalAddress() };
+        node_full->GetPubSub()->AddPeers( bootstrappers );
     }
 
     static void TearDownTestSuite()
@@ -77,12 +95,16 @@ protected:
 
         std::cout << "Tear down 2" << std::endl;
         delete node_proc1;
+
+        std::cout << "Tear down 3" << std::endl;
+        delete node_full;
     }
 };
 
 // Static member initialization
 sgns::GeniusNode *MultiAccountTest::node_main  = nullptr;
 sgns::GeniusNode *MultiAccountTest::node_proc1 = nullptr;
+sgns::GeniusNode *MultiAccountTest::node_full  = nullptr;
 
 DevConfig_st MultiAccountTest::DEV_CONFIG  = { "0xcafe",
                                                "0.65",
@@ -94,6 +116,11 @@ DevConfig_st MultiAccountTest::DEV_CONFIG2 = { "0xcafe",
                                                "1.0",
                                                sgns::TokenID::FromBytes( { 0x00 } ),
                                                "./node2" };
+DevConfig_st MultiAccountTest::DEV_CONFIG3 = { "0xcafe",
+                                               "0.65",
+                                               "1.0",
+                                               sgns::TokenID::FromBytes( { 0x00 } ),
+                                               "./node3" };
 
 std::string MultiAccountTest::binary_path = "";
 
@@ -132,9 +159,9 @@ TEST_F( MultiAccountTest, SyncThroughEachOther )
     std::cout << "Balance 1" << balance_main << std::endl;
     std::cout << "Balance 2" << balance_node1 << std::endl;
 
-    // TODO: in reality, one of the mint function should get rejected with same nonce.
-    ASSERT_EQ( transcount_main, transcount_main_start + 1 );
-    ASSERT_EQ( transcount_node1, transcount_node1_start + 1 );
-    ASSERT_EQ( balance_main, main_balance_start + 50000000000 );
-    ASSERT_EQ( balance_node1, node1_balance_start + 50000000000 );
+
+    ASSERT_EQ( transcount_main, transcount_main_start + 2 );
+    ASSERT_EQ( transcount_node1, transcount_node1_start + 2 );
+    ASSERT_EQ( balance_main, main_balance_start + 100000000000 );
+    ASSERT_EQ( balance_node1, node1_balance_start + 100000000000 );
 }

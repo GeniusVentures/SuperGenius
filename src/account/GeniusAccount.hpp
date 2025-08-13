@@ -56,7 +56,7 @@ namespace sgns
 
         [[nodiscard]] std::string GetNonce() const
         {
-            return std::to_string( GetLocalConfirmedNonce().value() );
+            return std::to_string( GetProposedNonce() );
         }
 
         bool PutUTXO( const GeniusUTXO &new_utxo );

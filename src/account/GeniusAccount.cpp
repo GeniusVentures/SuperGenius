@@ -395,7 +395,15 @@ namespace sgns
         }
         if ( auto it = nonces_copy.find( address ); it != nonces_copy.end() )
         {
-            return static_cast<uint64_t>( it->second );
+            auto signed_nonce = it->second;
+            if ( signed_nonce >= 0 )
+            {
+                return static_cast<uint64_t>( signed_nonce );
+            }
+            else
+            {
+                return outcome::failure( std::errc::invalid_argument );
+            }
         }
         else
         {
