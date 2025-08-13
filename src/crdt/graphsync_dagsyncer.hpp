@@ -125,6 +125,8 @@ namespace sgns::crdt
 
         void Stop() override;
 
+        IPFS::outcome::result<void> markResolved( const CID &cid ) override;
+        IPFS::outcome::result<bool> isResolved( const CID &cid ) const override;
     protected:
         static constexpr uint64_t TIMEOUT_SECONDS = 1200;
         static constexpr uint64_t MAX_FAILURES    = 3;

@@ -40,6 +40,8 @@ namespace sgns::crdt
         virtual bool                  IsCIDInCache( const CID &cid ) const = 0;
         virtual outcome::result<void> DeleteCIDBlock( const CID &cid )     = 0;
         virtual void                  Stop()                               = 0;
+        virtual IPFS::outcome::result<void> markResolved(const CID &cid)   = 0;
+        virtual IPFS::outcome::result<bool> isResolved(const CID &cid) const = 0;
     };
 } // namespace sgns::crdt
 

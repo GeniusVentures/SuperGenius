@@ -985,4 +985,12 @@ namespace sgns::crdt
         logger_->debug( "Stopping Dagsyncer" );
         is_stopped_ = true;
     }
+    IPFS::outcome::result<void> GraphsyncDAGSyncer::markResolved( const CID &cid ) 
+    {
+        return outcome::success();
+    }
+    IPFS::outcome::result<bool> GraphsyncDAGSyncer::isResolved( const CID &cid ) const
+    {
+        return outcome::success();
+    };
 }
