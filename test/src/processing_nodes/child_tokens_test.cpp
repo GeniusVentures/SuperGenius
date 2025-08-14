@@ -19,9 +19,9 @@ namespace
      * @brief Helper to create a GeniusNode with its own directory and cleanup.
      * @param tokenValue TokenValueInGNUS to initialize DevConfig.
      * @param tokenId TokenID to initialize DevConfig.
-     * @return unique_ptr to the initialized GeniusNode.
+     * @return shared_ptr to the initialized GeniusNode.
      */
-    std::unique_ptr<sgns::GeniusNode> CreateNode( const std::string &self_address,
+    std::shared_ptr<sgns::GeniusNode> CreateNode( const std::string &self_address,
                                                   const std::string &tokenValue,
                                                   sgns::TokenID      tokenId,
                                                   bool               isFullNode  = false,
@@ -55,12 +55,7 @@ namespace
                          } );
 
         uint16_t uniquePort = static_cast<uint16_t>( 40001 + id );
-        auto     node       = std::make_unique<sgns::GeniusNode>( devConfig,
-                                                        key.c_str(),
-                                                        false,
-                                                        isProcessor,
-                                                        uniquePort,
-                                                        isFullNode );
+        auto     node = sgns::GeniusNode::New( devConfig, key.c_str(), false, isProcessor, uniquePort, isFullNode );
 
         std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
         return node;

@@ -28,9 +28,9 @@
 class MultiAccountTest : public ::testing::Test
 {
 protected:
-    static sgns::GeniusNode *node_main;
-    static sgns::GeniusNode *node_proc1;
-    static sgns::GeniusNode *node_full;
+    static std::shared_ptr<sgns::GeniusNode> node_main;
+    static std::shared_ptr<sgns::GeniusNode> node_proc1;
+    static std::shared_ptr<sgns::GeniusNode> node_full;
 
     static DevConfig_st DEV_CONFIG;
     static DevConfig_st DEV_CONFIG2;
@@ -61,19 +61,19 @@ protected:
         std::filesystem::remove_all( DEV_CONFIG2.BaseWritePath );
         std::filesystem::remove_all( DEV_CONFIG3.BaseWritePath );
 
-        node_main = new sgns::GeniusNode( DEV_CONFIG,
+        node_main = sgns::GeniusNode::New( DEV_CONFIG,
                                           "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
                                           false,
                                           false );
         std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
-        node_proc1 = new sgns::GeniusNode( DEV_CONFIG2,
+        node_proc1 = sgns::GeniusNode::New( DEV_CONFIG2,
                                            "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
                                            false,
                                            true,
                                            40050,
                                            false );
         std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
-        node_full = new sgns::GeniusNode( DEV_CONFIG3,
+        node_full = sgns::GeniusNode::New( DEV_CONFIG3,
                                           "defadeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
                                           false,
                                           true,
@@ -91,20 +91,20 @@ protected:
     static void TearDownTestSuite()
     {
         std::cout << "Tear down main" << std::endl;
-        delete node_main;
+        node_main.reset();
 
         std::cout << "Tear down 2" << std::endl;
-        delete node_proc1;
+        node_proc1.reset();
 
         std::cout << "Tear down 3" << std::endl;
-        delete node_full;
+        node_full.reset();
     }
 };
 
 // Static member initialization
-sgns::GeniusNode *MultiAccountTest::node_main  = nullptr;
-sgns::GeniusNode *MultiAccountTest::node_proc1 = nullptr;
-sgns::GeniusNode *MultiAccountTest::node_full  = nullptr;
+std::shared_ptr<sgns::GeniusNode> MultiAccountTest::node_main  = nullptr;
+std::shared_ptr<sgns::GeniusNode> MultiAccountTest::node_proc1 = nullptr;
+std::shared_ptr<sgns::GeniusNode> MultiAccountTest::node_full  = nullptr;
 
 DevConfig_st MultiAccountTest::DEV_CONFIG  = { "0xcafe",
                                                "0.65",

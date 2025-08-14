@@ -35,9 +35,9 @@ namespace sgns
     class TransactionSyncTest : public ::testing::Test
     {
     protected:
-        static inline sgns::GeniusNode *node_proc1 = nullptr;
-        static inline sgns::GeniusNode *node_proc2 = nullptr;
-        static inline sgns::GeniusNode *full_node  = nullptr;
+        static inline std::shared_ptr<sgns::GeniusNode> node_proc1;
+        static inline std::shared_ptr<sgns::GeniusNode> node_proc2;
+        static inline std::shared_ptr<sgns::GeniusNode> full_node;
 
         static inline DevConfig_st DEV_CONFIG  = { "0xcafe",
                                                    "0.65",
@@ -75,29 +75,29 @@ namespace sgns
             DEV_CONFIG2.BaseWritePath[sizeof( DEV_CONFIG2.BaseWritePath ) - 1] = '\0';
             DEV_CONFIG3.BaseWritePath[sizeof( DEV_CONFIG3.BaseWritePath ) - 1] = '\0';
 
-            node_proc1 = new sgns::GeniusNode( DEV_CONFIG,
-                                               "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                               false,
-                                               false );
+            node_proc1 = sgns::GeniusNode::New( DEV_CONFIG,
+                                                "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+                                                false,
+                                                false );
             std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
-            node_proc2 = new sgns::GeniusNode( DEV_CONFIG2,
-                                               "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                               false,
-                                               false );
+            node_proc2 = sgns::GeniusNode::New( DEV_CONFIG2,
+                                                "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+                                                false,
+                                                false );
             std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
-            full_node = new sgns::GeniusNode( DEV_CONFIG3,
-                                              "feedbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                              false,
-                                              false,
-                                              40001,
-                                              true );
+            full_node = sgns::GeniusNode::New( DEV_CONFIG3,
+                                               "feedbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+                                               false,
+                                               false,
+                                               40001,
+                                               true );
         }
 
         static void TearDownTestSuite()
         {
-            delete node_proc1;
-            delete node_proc2;
-            delete full_node;
+            node_proc1.reset();
+            node_proc2.reset();
+            full_node.reset();
         }
 
         outcome::result<sgns::TransactionManager::TransactionPair> CreateTransfer(
@@ -446,7 +446,11 @@ namespace sgns
 
         //std::cout << "Invalid tx went through " << std::endl;
         test::assertWaitForCondition(
-            [&]() { return node_proc1->GetTransactionStatus( invalid_tx_id ) == TransactionManager::TransactionStatus::VERIFYING; },
+            [&]()
+            {
+                return node_proc1->GetTransactionStatus( invalid_tx_id ) ==
+                       TransactionManager::TransactionStatus::VERIFYING;
+            },
             std::chrono::milliseconds( 20000 ),
             "Invalid transaction didn't get sent" );
 

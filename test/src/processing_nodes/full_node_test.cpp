@@ -22,7 +22,7 @@ using namespace sgns;
  * @param privKey      Hex string private key (64 chars) for deterministic identity.
  * @return unique_ptr to the initialized GeniusNode.
  */
-static std::unique_ptr<GeniusNode> CreateNodeWithMode( const std::string &self_address,
+static std::shared_ptr<GeniusNode> CreateNodeWithMode( const std::string &self_address,
                                                        const std::string &tokenValue,
                                                        TokenID            tokenId,
                                                        bool               isProcessor,
@@ -42,7 +42,7 @@ static std::unique_ptr<GeniusNode> CreateNodeWithMode( const std::string &self_a
     devConfig.BaseWritePath[sizeof( devConfig.BaseWritePath ) - 1] = '\0';
 
     uint16_t port = static_cast<uint16_t>( 40001 + id );
-    auto     node = std::make_unique<GeniusNode>( devConfig, privKey.c_str(), false, isProcessor, port, isFullNode );
+    auto     node = GeniusNode::New( devConfig, privKey.c_str(), false, isProcessor, port, isFullNode );
 
     // allow startup
     std::this_thread::sleep_for( std::chrono::milliseconds( 500 ) );
