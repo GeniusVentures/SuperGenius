@@ -68,6 +68,7 @@ namespace sgns::crdt
 
         if ( id >= peer_registry_.size() )
         {
+            logger_->error( "No route for the requested PeerID  {}", id );
             return outcome::failure( Error::ROUTE_NOT_FOUND );
         }
 
@@ -105,11 +106,13 @@ namespace sgns::crdt
     {
         if ( !started_ )
         {
+            logger_->error( "DagSyncher not started" );
             return outcome::failure( Error::DAGSYNCHER_NOT_STARTED );
         }
 
         if ( graphsync_ == nullptr )
         {
+            logger_->error( "graphsyncher is null" );
             return outcome::failure( Error::GRAPHSYNC_IS_NULL );
         }
         std::vector<Extension> extensions;
@@ -806,6 +809,7 @@ namespace sgns::crdt
             auto                        it = routing_.find( cid );
             if ( it == routing_.end() )
             {
+                logger_->error( "No route for the requested CID  {}", cid.toString().value() );
                 return outcome::failure( Error::ROUTE_NOT_FOUND );
             }
 
