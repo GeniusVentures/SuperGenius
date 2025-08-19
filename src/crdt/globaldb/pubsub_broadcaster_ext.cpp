@@ -193,15 +193,18 @@ namespace sgns::crdt
                 auto hb = dagSyncer_->HasBlock( cid );
                 if ( !hb.has_value() )
                 {
-                    m_logger->warn( "HasBlock query failed for CID {}", cid.toString().value() );
+                    m_logger->debug( "HasBlock query failed for CID {} on topic {}",
+                                     cid.toString().value(),
+                                     incomingTopic );
                     continue;
                 }
 
                 if ( hb.value() || dagSyncer_->IsCIDInCache( cid ) )
                 {
-                    m_logger->trace( "Not adding route node {} from {}",
+                    m_logger->trace( "Not adding route node {} from {} on topic {}",
                                      cid.toString().value(),
-                                     addrvector[0].getStringAddress() );
+                                     addrvector[0].getStringAddress(),
+                                     incomingTopic );
                     continue;
                 }
                 new_content = true;

@@ -74,9 +74,9 @@ namespace sgns
         static constexpr uint64_t TIMEOUT_TRANSFER   = 50000;
         static constexpr uint64_t TIMEOUT_MINT       = 50000;
 #else
-        static constexpr uint64_t TIMEOUT_ESCROW_PAY = 10000;
-        static constexpr uint64_t TIMEOUT_TRANSFER   = 10000;
-        static constexpr uint64_t TIMEOUT_MINT       = 10000;
+        static constexpr uint64_t TIMEOUT_ESCROW_PAY = 30000;
+        static constexpr uint64_t TIMEOUT_TRANSFER   = 30000;
+        static constexpr uint64_t TIMEOUT_MINT       = 30000;
 #endif
 
         outcome::result<std::string> ProcessImage( const std::string &jsondata );
@@ -246,6 +246,8 @@ namespace sgns
         std::thread       io_thread;
         std::thread       upnp_thread;
         std::atomic<bool> stop_upnp{ false };
+
+        std::unique_ptr<boost::asio::thread_pool> processing_callback_pool_;
 
         outcome::result<std::pair<std::string, uint64_t>> PayEscrow(
             const std::string                       &escrow_path,

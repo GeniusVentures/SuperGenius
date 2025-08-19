@@ -153,7 +153,7 @@ namespace sgns::crdt
         std::lock_guard<std::mutex> lock( routing_mutex_ );
         routing_[cid] = peerKey;
 
-        logger_->trace( "Added route for CID {} to peer {} (key {})",
+        logger_->debug( "Added route for CID {} to peer {} (key {})",
                         cid.toString().value(),
                         peer.toBase58(),
                         peerKey );

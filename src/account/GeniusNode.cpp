@@ -166,7 +166,8 @@ namespace sgns
         processing_grid_chanel_topic_(
             ( boost::format( std::string( PROCESSING_GRID_CHANNEL ) ) % sgns::version::SuperGeniusVersionMajor() )
                 .str() ),
-        m_lastApiCall( std::chrono::system_clock::now() - m_minApiCallInterval )
+        m_lastApiCall( std::chrono::system_clock::now() - m_minApiCallInterval ),
+        processing_callback_pool_( std::make_unique<boost::asio::thread_pool>( 1 ) )
 
     {
         // Rotate log files before initializing logging system
@@ -372,7 +373,7 @@ namespace sgns
         loggerGlobalDB->set_level( spdlog::level::err );
         loggerDAGSyncer->set_level( spdlog::level::err );
         loggerGraphsync->set_level( spdlog::level::err );
-        loggerBroadcaster->set_level( spdlog::level::err );
+        loggerBroadcaster->set_level( spdlog::level::debug );
         loggerDataStore->set_level( spdlog::level::debug );
         loggerCRDTHeads->set_level( spdlog::level::err );
         loggerTransactions->set_level( spdlog::level::debug );
@@ -439,6 +440,11 @@ namespace sgns
             upnp_thread.join();
         }
         processing_service_->StopProcessing();
+        if ( processing_callback_pool_ )
+        {
+            processing_callback_pool_->join();
+            processing_callback_pool_.reset();
+        }
     }
 
     void GeniusNode::RefreshUPNP( uint16_t pubsubport )
@@ -548,6 +554,10 @@ namespace sgns
 
     outcome::result<std::string> GeniusNode::ProcessImage( const std::string &jsondata )
     {
+        if ( GetTransactionManagerState() != TransactionManager::State::READY )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
         BOOST_OUTCOME_TRYV2( auto &&, CheckProcessValidity( jsondata ) );
 
         auto funds = GetProcessCost( jsondata );
@@ -795,6 +805,10 @@ namespace sgns
                                                                               TokenID            tokenid,
                                                                               std::chrono::milliseconds timeout )
     {
+        if ( GetTransactionManagerState() != TransactionManager::State::READY )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
         auto start_time = std::chrono::steady_clock::now();
 
         OUTCOME_TRY( auto &&tx_id, transaction_manager_->MintFunds( amount, transaction_hash, chainid, tokenid ) );
@@ -819,6 +833,10 @@ namespace sgns
                                                                                  TokenID                   token_id,
                                                                                  std::chrono::milliseconds timeout )
     {
+        if ( GetTransactionManagerState() != TransactionManager::State::READY )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
         auto start_time = std::chrono::steady_clock::now();
 
         OUTCOME_TRY( auto &&tx_id, transaction_manager_->TransferFunds( amount, destination, token_id ) );
@@ -842,6 +860,10 @@ namespace sgns
                                                                           TokenID                   token_id,
                                                                           std::chrono::milliseconds timeout )
     {
+        if ( GetTransactionManagerState() != TransactionManager::State::READY )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
         auto start_time = std::chrono::steady_clock::now();
         OUTCOME_TRY( auto &&tx_id, transaction_manager_->TransferFunds( amount, dev_config_.Addr, token_id ) );
 
@@ -866,6 +888,10 @@ namespace sgns
         std::shared_ptr<crdt::AtomicTransaction> crdt_transaction,
         std::chrono::milliseconds                timeout )
     {
+        if ( GetTransactionManagerState() != TransactionManager::State::READY )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
         auto start_time = std::chrono::steady_clock::now();
 
         OUTCOME_TRY( auto &&tx_id,
@@ -898,42 +924,62 @@ namespace sgns
 
     void GeniusNode::ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult )
     {
-        node_logger_->info( "[ {} ] SUCCESS PROCESSING TASK {}", account_->GetAddress(), task_id );
-        do
-        {
-            if ( task_queue_->IsTaskCompleted( task_id ) )
+        boost::asio::post(
+            *processing_callback_pool_,
+            [weak_self( weak_from_this() ), task_id, taskresult]()
             {
-                node_logger_->info( "Task Already completed!" );
-                break;
-            }
+                if ( auto strong = weak_self.lock() )
+                {
+                    strong->node_logger_->info( "[ {} ] SUCCESS PROCESSING TASK {}", strong->account_->GetAddress(), task_id );
+                    do
+                    {
+                        if ( strong->task_queue_->IsTaskCompleted( task_id ) )
+                        {
+                            strong->node_logger_->info( "Task Already completed!" );
+                            break;
+                        }
+                        if ( strong->GetTransactionManagerState() != TransactionManager::State::READY )
+                        {
+                            break;
+                        }
 
-            auto maybe_escrow_path = task_queue_->GetTaskEscrow( task_id );
-            if ( maybe_escrow_path.has_failure() )
-            {
-                node_logger_->info( "No associated Escrow with the task id: {} ", task_id );
-                break;
-            }
-            auto complete_task_result = task_queue_->CompleteTask( task_id, taskresult );
-            if ( complete_task_result.has_failure() )
-            {
-                node_logger_->error( "Unable to complete task: {} ", task_id );
-                break;
-            }
-            auto pay_result = PayEscrow( maybe_escrow_path.value(),
-                                         taskresult,
-                                         std::move( complete_task_result.value() ) );
-            if ( pay_result.has_failure() )
-            {
-                node_logger_->error( "Invalid results for task: {} ", task_id );
-                break;
-            }
+                        auto maybe_escrow_path = strong->task_queue_->GetTaskEscrow( task_id );
+                        if ( maybe_escrow_path.has_failure() )
+                        {
+                            strong->node_logger_->info( "No associated Escrow with the task id: {} ", task_id );
+                            break;
+                        }
+                        auto complete_task_result = strong->task_queue_->CompleteTask( task_id, taskresult );
+                        if ( complete_task_result.has_failure() )
+                        {
+                            strong->node_logger_->error( "Unable to complete task: {} ", task_id );
+                            break;
+                        }
+                        auto pay_result = strong->PayEscrow( maybe_escrow_path.value(),
+                                                             taskresult,
+                                                             std::move( complete_task_result.value() ) );
+                        if ( pay_result.has_failure() )
+                        {
+                            strong->node_logger_->error( "Invalid results for task: {} ", task_id );
+                            break;
+                        }
 
-        } while ( 0 );
+                    } while ( 0 );
+                }
+            } );
     }
 
     void GeniusNode::ProcessingError( const std::string &task_id )
     {
-        node_logger_->error( "[ {} ] ERROR PROCESSING SUBTASK ", account_->GetAddress(), task_id );
+        boost::asio::post(
+            *processing_callback_pool_,
+            [weak_self( weak_from_this() ), task_id]()
+            {
+                if ( auto strong = weak_self.lock() )
+                {
+                    strong->node_logger_->error( "[ {} ] ERROR PROCESSING SUBTASK ", strong->account_->GetAddress(), task_id );
+                }
+            } );
     }
 
     void GeniusNode::PrintDataStore()
