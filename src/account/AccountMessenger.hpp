@@ -46,22 +46,20 @@ namespace sgns
 
         static std::shared_ptr<AccountMessenger> New( std::string                                address,
                                                       std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub,
-                                                      InterfaceMethods                           methods,
-                                                      bool                                       is_full_node );
+                                                      InterfaceMethods                           methods);
         ~AccountMessenger();
         outcome::result<uint64_t> GetLatestNonce( uint64_t timeout_ms );
 
     private:
-        static constexpr std::string_view ACCOUNT_COMM   = ".comm.%02d";
-        static constexpr std::string_view FULL_NODE_COMM = "SGNUSFullNode.comm.%02d";
+        static constexpr std::string_view ACCOUNT_COMM  = ".comm.%02d";
+        static constexpr std::string_view REQUESTS_COMM = "SGNUS.BC.Requests.comm.%02d";
 
         const std::string                           address_;
         const std::string                           account_comm_topic_;
-        const std::string                           full_node_comm_topic_;
-        const bool                                  is_full_node_;
+        const std::string                           requests_topic_;
         std::shared_ptr<ipfs_pubsub::GossipPubSub>  pubsub_;
         std::future<libp2p::protocol::Subscription> subs_acc_future_;
-        std::future<libp2p::protocol::Subscription> subs_full_future_;
+        std::future<libp2p::protocol::Subscription> subs_requests_future_;
 
         std::unordered_map<uint64_t, std::set<uint64_t>>                    nonce_responses_;
         std::unordered_map<uint64_t, std::chrono::steady_clock::time_point> first_response_time_;
@@ -70,11 +68,11 @@ namespace sgns
 
         AccountMessenger( std::string                                address,
                           std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub,
-                          InterfaceMethods                           methods,
-                          bool                                       is_full_node );
+                          InterfaceMethods                           methods );
         outcome::result<void> RequestNonce( uint64_t req_id );
 
-        void OnMessage( boost::optional<const ipfs_pubsub::GossipPubSub::Message &> message, const std::string &topic );
+        void                  OnResponse( boost::optional<const ipfs_pubsub::GossipPubSub::Message &> message );
+        void                  OnRequest( boost::optional<const ipfs_pubsub::GossipPubSub::Message &> message );
         outcome::result<void> SendAccountMessage( const accountComm::AccountMessage &msg,
                                                   std::set<std::string>              topics );
 

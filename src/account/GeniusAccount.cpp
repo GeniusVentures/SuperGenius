@@ -99,8 +99,7 @@ namespace sgns
         };
         messenger_ = AccountMessenger::New( eth_keypair->GetEntirePubValue(),
                                             std::move( pubsub ),
-                                            std::move( methods ),
-                                            std::move( full_node ) );
+                                            std::move( methods ) );
         if ( messenger_ )
         {
             logger_->debug( "Created AccountMessenger" );
