@@ -67,11 +67,15 @@ protected:
         node_proc1 = sgns::GeniusNode::New( DEV_CONFIG2,
                                             "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
                                             false,
+                                            true,
+                                            40054,
                                             true );
         std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
         node_proc2 = sgns::GeniusNode::New( DEV_CONFIG3,
                                             "fecabeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
                                             false,
+                                            true,
+                                            40060,
                                             true );
 
         //Connect to each other
@@ -165,6 +169,18 @@ TEST_F( ProcessingNodesTest, DISABLED_ProcessNodesPubsubs )
 
 TEST_F( ProcessingNodesTest, ProcessNodesTransactionsCount )
 {
+    test::assertWaitForCondition(
+        [&]() { return node_main->GetTransactionManagerState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 20000 ),
+        "Main node not synched" );
+    test::assertWaitForCondition(
+        [&]() { return node_proc1->GetTransactionManagerState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 20000 ),
+        "Node proc 1 not synched" );
+    test::assertWaitForCondition(
+        [&]() { return node_proc2->GetTransactionManagerState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 20000 ),
+        "Node proc 2 not synched" );
     node_main->MintTokens( 50000000000, "", "", sgns::TokenID::FromBytes( { 0x00 } ) );
     node_main->MintTokens( 50000000000, "", "", sgns::TokenID::FromBytes( { 0x00 } ) );
     std::this_thread::sleep_for( std::chrono::milliseconds( 10000 ) );
