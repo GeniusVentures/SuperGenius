@@ -336,8 +336,8 @@ namespace sgns::crdt
             auto handleBlockResult = HandleBlock( bCastHeadCID );
             if ( handleBlockResult.has_failure() )
             {
-                logger_->error( "Broadcaster: Unable to handle block (error code {})",
-                                std::to_string( handleBlockResult.error().value() ) );
+                logger_->error( "Broadcaster: Unable to handle block (error {})",
+                                handleBlockResult.error().message() );
                 continue;
             }
         }
@@ -634,6 +634,7 @@ namespace sgns::crdt
             // Single attempt to fetch the graph - getNode internally already has retry logic
             std::unique_lock lock( dagSyncherMutex_ );
             auto             nodeResult = dagSyncer_->getNode( cid );
+            lock.unlock();
             if ( nodeResult.has_error() )
             {
                 logger_->error( "SendNewJobs: Can't fetch node: {}", nodeResult.error().message() );
@@ -830,15 +831,18 @@ namespace sgns::crdt
     }
 
     outcome::result<std::set<CID>> CrdtDatastore::ProcessNode( const CID                       &aRoot,
-                                                               uint64_t                         aRootPrio,
-                                                               std::shared_ptr<Delta>           aDelta,
-                                                               const std::shared_ptr<IPLDNode> &aNode,
-                                                               bool                             filter_crdt )
+                                                                uint64_t                         aRootPrio,
+                                                                std::shared_ptr<Delta>           aDelta,
+                                                                const std::shared_ptr<IPLDNode> &aNode,
+                                                                bool                             filter_crdt )
     {
         if ( aDelta == nullptr || aNode == nullptr )
         {
             return outcome::failure( boost::system::error_code{} );
         }
+
+        // Single mutex for entire ProcessNode function - eliminates deadlock possibility
+        std::unique_lock processLock(processNodeMutex_);
 
         std::set<std::string> topics_to_update_cid = aNode->getDestinations();
 
@@ -850,6 +854,7 @@ namespace sgns::crdt
             return outcome::failure( strCidResult.error() );
         }
         HierarchicalKey hKey( strCidResult.value() );
+        
         if ( filter_crdt )
         {
             crdt_filter_.FilterElementsOnDelta( aDelta );
@@ -866,14 +871,12 @@ namespace sgns::crdt
             skip_if_visited = true;
         }
 
+        // Step 1: Merge the delta (no additional locking needed)
+        auto mergeResult = set_->Merge( aDelta, hKey.GetKey() );
+        if ( mergeResult.has_failure() )
         {
-            std::unique_lock lock( dagSetMutex_ );
-            auto             mergeResult = set_->Merge( aDelta, hKey.GetKey() );
-            if ( mergeResult.has_failure() )
-            {
-                logger_->error( "ProcessNode: error merging delta from {}", hKey.GetKey() );
-                return outcome::failure( mergeResult.error() );
-            }
+            logger_->error( "ProcessNode: error merging delta from {}", hKey.GetKey() );
+            return outcome::failure( mergeResult.error() );
         }
 
         auto priority = aDelta->priority();
@@ -902,10 +905,10 @@ namespace sgns::crdt
             for ( auto &topic : topics_to_update_cid )
             {
                 logger_->error( "ProcessNode: Traversing to find links on topic {}", topic );
-                std::unique_lock lock( dagSyncherMutex_ );
-                auto [links_to_fetch,
-                      known_cids] = dagSyncer_->TraverseCIDsLinks( aNode, topic, {}, skip_if_visited, 50 );
-                lock.unlock();
+                
+                // No additional locking needed since we hold processNodeMutex_
+                auto [links_to_fetch, known_cids] = dagSyncer_->TraverseCIDsLinks( aNode, topic, {}, skip_if_visited, 50 );
+                
                 for ( const auto &[cid, link_name] : known_cids )
                 {
                     logger_->error( "ProcessNode: known cid: {}, {}", cid.toString().value(), link_name );
@@ -926,6 +929,7 @@ namespace sgns::crdt
                         continue;
                     }
                 }
+                
                 if ( known_cids.empty() )
                 {
                     logger_->debug( "Adding: {} to heads on topic {}", aRoot.toString().value(), topic );
@@ -936,6 +940,7 @@ namespace sgns::crdt
                         return outcome::failure( addHeadResult.error() );
                     }
                 }
+                
                 for ( const auto &[cid, link_name] : links_to_fetch )
                 {
                     if ( topicNames_.find( link_name ) != topicNames_.end() )
@@ -945,6 +950,7 @@ namespace sgns::crdt
                 }
             }
         }
+        
         rebroadcastCv_.notify_one();
 
         return children;

@@ -52,9 +52,9 @@ namespace sgns
 
         boost::format full_node_topic{ std::string( GNUS_FULL_NODES_TOPIC ) };
 #ifdef DEV_NET
-        full_node_topic % DEV_NET_ID % sgns::version::SuperGeniusVersionMajor();
+        full_node_topic % DEV_NET_ID;
 #else
-        full_node_topic % TEST_NET_ID % sgns::version::SuperGeniusVersionMajor();
+        full_node_topic % TEST_NET_ID;
 #endif
         full_node_topic_m = full_node_topic.str();
 
