@@ -705,15 +705,20 @@ namespace sgns
             topicSet.insert( parsedTopics.begin(), parsedTopics.end() );
             {
                 std::unique_lock<std::shared_mutex> out_lock( outgoing_tx_mutex_m );
-                const auto                          key = GetTransactionPath( *transaction_pair.first );
-                auto                                it  = outgoing_tx_processed_m.find( key );
+                const auto                          key      = GetTransactionPath( *transaction_pair.first );
+                auto                                it       = outgoing_tx_processed_m.find( key );
+                auto                                tx_state = TransactionStatus::VERIFYING;
+                if ( full_node_m )
+                {
+                    tx_state = TransactionStatus::CONFIRMED;
+                }
                 if ( it != outgoing_tx_processed_m.end() )
                 {
-                    it->second.status = TransactionStatus::VERIFYING;
+                    it->second.status = tx_state;
                 }
                 else
                 {
-                    outgoing_tx_processed_m[key] = TrackedTx{ transaction_pair.first, TransactionStatus::VERIFYING };
+                    outgoing_tx_processed_m[key] = TrackedTx{ transaction_pair.first, tx_state };
                 }
             }
         }
