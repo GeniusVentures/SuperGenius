@@ -84,6 +84,9 @@ namespace sgns::crdt
         outcome::result<std::shared_ptr<Leaf>> fetchGraphOnDepth( const CID &cid, uint64_t depth ) const override;
 
         void Stop() override;
+        
+        IPFS::outcome::result<void> markResolved( const CID &cid ) override;
+        IPFS::outcome::result<bool> isResolved( const CID &cid ) const override;
 
         void                  InitCIDBlock( const CID &cid ) override;
         bool                  IsCIDInCache( const CID &cid ) const override;

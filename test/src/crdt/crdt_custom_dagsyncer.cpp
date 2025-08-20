@@ -134,4 +134,13 @@ namespace sgns::crdt
     }
 
     void CustomDagSyncer::Stop() {}
+
+    IPFS::outcome::result<void> CustomDagSyncer::markResolved( const CID &cid ) 
+    {
+        return outcome::success();
+    }
+    IPFS::outcome::result<bool> CustomDagSyncer::isResolved( const CID &cid ) const
+    {
+        return outcome::success();
+    };
 } // namespace sgns::crdt
