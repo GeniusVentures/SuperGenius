@@ -4,7 +4,7 @@
 #include <unordered_map>
 #include <vector>
 #include <set>
-
+#include <cstring>
 class BpeTokenizer
 {
 public:
