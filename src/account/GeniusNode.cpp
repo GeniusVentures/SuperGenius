@@ -527,7 +527,7 @@ namespace sgns
         task.set_random_seed( 0 );
         task.set_results_channel( ( boost::format( "RESULT_CHANNEL_ID_%1%" ) % ( 1 ) ).str() );
         //Get Processing Data
-        auto &procdata = procmgr->GetProcessingData();
+        auto procdata = procmgr->GetProcessingData();
 
         //Split into subtasks
         processing::ProcessTaskSplitter  taskSplitter;
