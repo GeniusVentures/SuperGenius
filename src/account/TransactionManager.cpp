@@ -79,132 +79,13 @@ namespace sgns
 
         bool crdt_tx_filter_initialized = globaldb_m->RegisterElementFilter(
             "^/?" + GetBlockChainBase() + "[^/]*/tx/[^/]*/[0-9]+",
-            [&]( const crdt::pb::Element &element ) -> std::optional<std::vector<crdt::pb::Element>>
-            {
-                std::optional<std::vector<crdt::pb::Element>> maybe_tombstones;
-                bool                                          valid_tx = false;
-                std::shared_ptr<IGeniusTransactions>          tx;
-                do
-                {
-                    //TODO - This verification is only needed because CRDT resyncs every boot up
-                    // Remove once we remove the in memory processed_cids on crdt_datastore and use dagsyncher again
-                    auto maybe_has_value = globaldb_m->Get( element.key() );
-                    if ( maybe_has_value.has_value() )
-                    {
-                        m_logger->debug( "[{} - full: {}] Already have the transaction {}",
-                                         account_m->GetAddress().substr( 0, 8 ),
-                                         full_node_m,
-                                         element.key() );
-                        valid_tx = true;
-                        break;
-                    }
-                    auto maybe_tx = DeSerializeTransaction( element.value() );
-                    if ( maybe_tx.has_error() )
-                    {
-                        break;
-                    }
-                    tx = maybe_tx.value();
-                    if ( !tx->CheckSignature() )
-                    {
-                        if ( !tx->CheckDAGSignatureLegacy() )
-                        {
-                            m_logger->error( "[{} - full: {}] Could not validate signature of transaction {}",
-                                             account_m->GetAddress().substr( 0, 8 ),
-                                             full_node_m,
-                                             element.key() );
-                            break;
-                        }
-                        else
-                        {
-                            m_logger->debug( "[{} - full: {}] Legacy transaction validated: {}",
-                                             account_m->GetAddress().substr( 0, 8 ),
-                                             full_node_m,
-                                             element.key() );
-                        }
-                    }
-
-                    m_logger->trace( "[{} - full: {}] Valid signature of {}",
-                                     account_m->GetAddress().substr( 0, 8 ),
-                                     full_node_m,
-                                     element.key() );
-                    valid_tx = true;
-
-                } while ( 0 );
-                if ( !valid_tx )
-                {
-                    std::vector<crdt::pb::Element> tombstones;
-                    tombstones.push_back( element );
-                    auto maybe_proof_key = GetExpectedProofKey( element.key(), tx );
-                    if ( maybe_proof_key.has_value() )
-                    {
-                        crdt::pb::Element proof_tombstone;
-                        proof_tombstone.set_key( maybe_proof_key.value() );
-                        tombstones.push_back( proof_tombstone );
-                    }
-
-                    maybe_tombstones = tombstones;
-                }
-
-                return maybe_tombstones;
-            } );
+            [this]( const crdt::pb::Element &element ) -> std::optional<std::vector<crdt::pb::Element>>
+            { return FilterTransaction( element ); } );
 
         bool crdt_proof_filter_initialized = globaldb_m->RegisterElementFilter(
             "^/?" + GetBlockChainBase() + "[^/]*/proof/[^/]*/[0-9]+",
-            [&]( const crdt::pb::Element &element ) -> std::optional<std::vector<crdt::pb::Element>>
-            {
-                std::optional<std::vector<crdt::pb::Element>> maybe_tombstones;
-                bool                                          valid_proof = false;
-                do
-                {
-                    //TODO - This verification is only needed because CRDT resyncs every boot up
-                    // Remove once we remove the in memory processed_cids on crdt_datastore and use dagsyncher again
-                    auto maybe_has_value = globaldb_m->Get( element.key() );
-                    if ( maybe_has_value.has_value() )
-                    {
-                        m_logger->debug( "[{} - full: {}] Already have the proof {}",
-                                         account_m->GetAddress().substr( 0, 8 ),
-                                         full_node_m,
-                                         element.key() );
-                        valid_proof = true;
-                        break;
-                    }
-                    valid_proof = true;
-                    break;
-                    std::vector<uint8_t> proof_data_vector( element.value().begin(), element.value().end() );
-                    auto                 maybe_valid_proof = IBasicProof::VerifyFullProof( proof_data_vector );
-                    if ( maybe_valid_proof.has_error() || ( !maybe_valid_proof.value() ) )
-                    {
-                        // TODO: kill reputation point of the node.
-                        m_logger->error( "[{} - full: {}] Could not verify proof {}",
-                                         account_m->GetAddress().substr( 0, 8 ),
-                                         full_node_m,
-                                         element.key() );
-                        break;
-                    }
-                    m_logger->trace( "[{} - full: {}] Valid proof of {}",
-                                     account_m->GetAddress().substr( 0, 8 ),
-                                     full_node_m,
-                                     element.key() );
-
-                    valid_proof = true;
-                } while ( 0 );
-
-                if ( valid_proof == false )
-                {
-                    std::vector<crdt::pb::Element> tombstones;
-                    tombstones.push_back( element );
-                    auto maybe_tx_key = GetExpectedTxKey( element.key() );
-                    if ( maybe_tx_key.has_value() )
-                    {
-                        crdt::pb::Element tx_tombstone;
-                        tx_tombstone.set_key( maybe_tx_key.value() );
-                        tombstones.push_back( tx_tombstone );
-                    }
-                    maybe_tombstones = tombstones;
-                }
-
-                return maybe_tombstones;
-            } );
+            [this]( const crdt::pb::Element &element ) -> std::optional<std::vector<crdt::pb::Element>>
+            { return FilterProof( element ); } );
         globaldb_m->Start();
     }
 
@@ -2035,6 +1916,133 @@ namespace sgns
         }
 
         return outcome::success();
+    }
+
+    std::optional<std::vector<crdt::pb::Element>> TransactionManager::FilterTransaction(
+        const crdt::pb::Element &element )
+    {
+        std::optional<std::vector<crdt::pb::Element>> maybe_tombstones;
+        bool                                          valid_tx = false;
+        std::shared_ptr<IGeniusTransactions>          tx;
+        do
+        {
+            //TODO - This verification is only needed because CRDT resyncs every boot up
+            // Remove once we remove the in memory processed_cids on crdt_datastore and use dagsyncher again
+            auto maybe_has_value = globaldb_m->Get( element.key() );
+            if ( maybe_has_value.has_value() )
+            {
+                m_logger->debug( "[{} - full: {}] Already have the transaction {}",
+                                 account_m->GetAddress().substr( 0, 8 ),
+                                 full_node_m,
+                                 element.key() );
+                valid_tx = true;
+                break;
+            }
+            auto maybe_tx = DeSerializeTransaction( element.value() );
+            if ( maybe_tx.has_error() )
+            {
+                break;
+            }
+            tx = maybe_tx.value();
+            if ( !tx->CheckSignature() )
+            {
+                if ( !tx->CheckDAGSignatureLegacy() )
+                {
+                    m_logger->error( "[{} - full: {}] Could not validate signature of transaction {}",
+                                     account_m->GetAddress().substr( 0, 8 ),
+                                     full_node_m,
+                                     element.key() );
+                    break;
+                }
+                else
+                {
+                    m_logger->debug( "[{} - full: {}] Legacy transaction validated: {}",
+                                     account_m->GetAddress().substr( 0, 8 ),
+                                     full_node_m,
+                                     element.key() );
+                }
+            }
+
+            m_logger->trace( "[{} - full: {}] Valid signature of {}",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             element.key() );
+            valid_tx = true;
+
+        } while ( 0 );
+
+        if ( !valid_tx )
+        {
+            std::vector<crdt::pb::Element> tombstones;
+            tombstones.push_back( element );
+            auto maybe_proof_key = GetExpectedProofKey( element.key(), tx );
+            if ( maybe_proof_key.has_value() )
+            {
+                crdt::pb::Element proof_tombstone;
+                proof_tombstone.set_key( maybe_proof_key.value() );
+                tombstones.push_back( proof_tombstone );
+            }
+
+            maybe_tombstones = tombstones;
+        }
+
+        return maybe_tombstones;
+    }
+
+    std::optional<std::vector<crdt::pb::Element>> TransactionManager::FilterProof( const crdt::pb::Element &element )
+    {
+        std::optional<std::vector<crdt::pb::Element>> maybe_tombstones;
+        bool                                          valid_proof = false;
+        do
+        {
+            //TODO - This verification is only needed because CRDT resyncs every boot up
+            // Remove once we remove the in memory processed_cids on crdt_datastore and use dagsyncher again
+            auto maybe_has_value = globaldb_m->Get( element.key() );
+            if ( maybe_has_value.has_value() )
+            {
+                m_logger->debug( "[{} - full: {}] Already have the proof {}",
+                                 account_m->GetAddress().substr( 0, 8 ),
+                                 full_node_m,
+                                 element.key() );
+                valid_proof = true;
+                break;
+            }
+            valid_proof = true;
+            break;
+            std::vector<uint8_t> proof_data_vector( element.value().begin(), element.value().end() );
+            auto                 maybe_valid_proof = IBasicProof::VerifyFullProof( proof_data_vector );
+            if ( maybe_valid_proof.has_error() || ( !maybe_valid_proof.value() ) )
+            {
+                // TODO: kill reputation point of the node.
+                m_logger->error( "[{} - full: {}] Could not verify proof {}",
+                                 account_m->GetAddress().substr( 0, 8 ),
+                                 full_node_m,
+                                 element.key() );
+                break;
+            }
+            m_logger->trace( "[{} - full: {}] Valid proof of {}",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             element.key() );
+
+            valid_proof = true;
+        } while ( 0 );
+
+        if ( valid_proof == false )
+        {
+            std::vector<crdt::pb::Element> tombstones;
+            tombstones.push_back( element );
+            auto maybe_tx_key = GetExpectedTxKey( element.key() );
+            if ( maybe_tx_key.has_value() )
+            {
+                crdt::pb::Element tx_tombstone;
+                tx_tombstone.set_key( maybe_tx_key.value() );
+                tombstones.push_back( tx_tombstone );
+            }
+            maybe_tombstones = tombstones;
+        }
+
+        return maybe_tombstones;
     }
 
 }
