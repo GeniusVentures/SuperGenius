@@ -145,20 +145,16 @@ namespace sgns
                 false,
                 false,
                 ioc,
-                [&requestSucceeded](const sgns::AsyncError::CustomResult &status)
+                [this, &res](outcome::result<std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>> buffers)
                 {
-                    if (status.has_value()) {
-                        std::cout << "Success: " << status.value().message << std::endl;
-                    } else {
-                        std::cout << "Error: " << status.error() << std::endl;
-                        requestSucceeded = false;
+                    if (buffers)
+                    {
+                        res = std::string( buffers.value()->second[0].begin(), buffers.value()->second[0].end() ); 
                     }
-                },
-                [&res](std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers)
-                {
-                    if (!buffers->second.empty()) {
-                        res = std::string(buffers->second[0].begin(), buffers->second[0].end());
-                    }                    
+                    else
+                    {
+                        m_logger->error( "Failed to get coin price: {}", buffers.error().message() );
+                    }
                 },
                 "file");
             
@@ -260,20 +256,17 @@ namespace sgns
                         false,
                         false,
                         ioc,
-                        [&requestSucceeded](const sgns::AsyncError::CustomResult &status)
+                        [this, &res](outcome::result<std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>> buffers)
                         {
-                            if (status.has_value()) {
-                                std::cout << "Success: " << status.value().message << std::endl;
-                            } else {
-                                std::cout << "Error: " << status.error() << std::endl;
-                                requestSucceeded = false;
+                            if ( buffers )
+                            {
+                                res = std::string( buffers.value()->second[0].begin(),
+                                                   buffers.value()->second[0].end() );   
                             }
-                        },
-                        [&res](std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers)
-                        {
-                            if (!buffers->second.empty()) {
-                                res = std::string(buffers->second[0].begin(), buffers->second[0].end());
-                            }                    
+                            else
+                            {
+                                m_logger->error( "Failed to get coin historical price: {}", buffers.error().message() );
+                            }             
                         },
                         "file");
                         
@@ -393,20 +386,16 @@ namespace sgns
                     false,
                     false,
                     ioc,
-                    [&requestSucceeded](const sgns::AsyncError::CustomResult &status)
+                    [this, &res](outcome::result<std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>> buffers)
                     {
-                        if (status.has_value()) {
-                            std::cout << "Success: " << status.value().message << std::endl;
-                        } else {
-                            std::cout << "Error: " << status.error() << std::endl;
-                            requestSucceeded = false;
+                        if (buffers)
+                        {
+                            res = std::string( buffers.value()->second[0].begin(), buffers.value()->second[0].end() ); 
                         }
-                    },
-                    [&res](std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers)
-                    {
-                        if (!buffers->second.empty()) {
-                            res = std::string(buffers->second[0].begin(), buffers->second[0].end());
-                        }                    
+                        else
+                        {
+                            m_logger->error( "Failed to get historical range coin price: {}", buffers.error().message() );
+                        }                     
                     },
                     "file");
                     
