@@ -135,7 +135,7 @@ namespace sgns
             switch ( state_m )
             {
                 case State::INITIALIZING:
-                    this->InitNonce( 2500 );
+                    this->InitNonce( 5000 );
                     if ( state_m == State::READY )
                     {
                         m_logger->debug( "[{} - full: {}] Transaction Manager is now READY - starting regular updates",
@@ -510,7 +510,7 @@ namespace sgns
         {
             crdt_transaction = globaldb_m->BeginTransaction();
         }
-        auto     nonce_result        = account_m->GetConfirmedNonce( 2000 );
+        auto     nonce_result        = account_m->GetConfirmedNonce( 3000 );
         uint64_t expected_next_nonce = 0;
         uint64_t confirmed_nonce     = 0;
         if ( !nonce_result.has_value() )
@@ -1590,7 +1590,7 @@ namespace sgns
                          account_m->GetAddress().substr( 0, 8 ),
                          full_node_m );
 
-        auto     nonce_result    = account_m->GetConfirmedNonce( 1800 );
+        auto     nonce_result    = account_m->GetConfirmedNonce( 3000 );
         uint64_t confirmed_nonce = 0;
         if ( nonce_result.has_value() )
         {
@@ -1883,7 +1883,7 @@ namespace sgns
         }
 
         // Fetch confirmed nonce only if we have VERIFYING transactions
-        auto nonce_result = account_m->GetConfirmedNonce( 1500 );
+        auto nonce_result = account_m->GetConfirmedNonce( 4000 );
         if ( !nonce_result.has_value() )
         {
             m_logger->debug( "[{} - full: {}] Can't fetch nonce from the network in ConfirmTransactions",
