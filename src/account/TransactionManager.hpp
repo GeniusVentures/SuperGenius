@@ -124,6 +124,9 @@ namespace sgns
         TransactionStatus GetOutgoingStatusByTxId( const std::string &txId ) const;
         TransactionStatus GetIncomingStatusByTxId( const std::string &txId ) const;
 
+        // Stop the periodic Update() loop and prevent re-posting.
+        void Stop();
+
     protected:
         friend class GeniusNode;
         void EnqueueTransaction( TransactionPair element );
@@ -193,6 +196,7 @@ namespace sgns
         mutable std::shared_mutex                  incoming_tx_mutex_m;
         std::unordered_map<std::string, TrackedTx> incoming_tx_processed_m;
         std::function<void()>                      task_m;
+        std::atomic<bool>                          stopped_{ false };
 
         outcome::result<std::set<std::string>> ParseTransferTransaction(
             const std::shared_ptr<IGeniusTransactions> &tx );

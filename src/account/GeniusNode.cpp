@@ -402,8 +402,8 @@ namespace sgns
         loggerDataStore->set_level( spdlog::level::debug );
         loggerCRDTHeads->set_level( spdlog::level::err );
         loggerTransactions->set_level( spdlog::level::debug );
-        loggerMigration->set_level( spdlog::level::err );
-        loggerMigrationStep->set_level( spdlog::level::err );
+        loggerMigration->set_level( spdlog::level::debug );
+        loggerMigrationStep->set_level( spdlog::level::debug );
         loggerQueue->set_level( spdlog::level::err );
         loggerRocksDB->set_level( spdlog::level::err );
         logkad->set_level( spdlog::level::err );
@@ -426,8 +426,8 @@ namespace sgns
         loggerDataStore->set_level( spdlog::level::err );
         loggerCRDTHeads->set_level( spdlog::level::err );
         loggerTransactions->set_level( spdlog::level::err );
-        loggerMigration->set_level( spdlog::level::err );
-        loggerMigrationStep->set_level( spdlog::level::err );
+        loggerMigration->set_level( spdlog::level::debug );
+        loggerMigrationStep->set_level( spdlog::level::debug );
         loggerQueue->set_level( spdlog::level::err );
         loggerRocksDB->set_level( spdlog::level::err );
         logkad->set_level( spdlog::level::err );
@@ -459,9 +459,6 @@ namespace sgns
         {
             io_thread.detach(); // Let it finish on its own
         }
-
-        // Brief pause to let the thread see the stop signal
-
         stop_upnp = true;
         if ( upnp_thread.joinable() )
         {

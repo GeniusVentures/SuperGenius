@@ -213,20 +213,44 @@ namespace sgns
         m_logger->debug( "[{} - full: {}] ~TransactionManager CALLED",
                          account_m->GetAddress().substr( 0, 8 ),
                          full_node_m );
+        Stop();
+    }
+
+    void TransactionManager::Stop()
+    {
+        if ( stopped_.exchange( true ) )
+        {
+            return; // idempotent
+        }
+        if ( timer_m )
+        {
+            boost::system::error_code ig;
+            timer_m->cancel( ig ); // unblock async_wait with ec
+        }
     }
 
     void TransactionManager::Start()
     {
-        if ( state_m != State::CREATING )
+        if ( state_m != State::CREATING || stopped_.load() )
         {
             return;
         }
+
         state_m = State::INITIALIZING;
-        CheckIncoming();
-        CheckOutgoing();
+
+        if ( !stopped_.load() )
+        {
+            CheckIncoming();
+            CheckOutgoing();
+        }
 
         task_m = [this]()
         {
+            if ( stopped_.load() )
+            {
+                return;
+            }
+
             switch ( state_m )
             {
                 case State::INITIALIZING:
@@ -238,13 +262,16 @@ namespace sgns
                                          full_node_m );
                     }
                     break;
+
                 case State::CREATING: // Should not happen, but handle gracefully
                     break;
+
                 case State::SYNCHING:
                     this->SyncNonce();
                     break;
 
                 case State::READY:
+                {
                     auto send_result = SendTransaction();
                     if ( send_result.has_error() )
                     {
@@ -253,21 +280,36 @@ namespace sgns
                                          full_node_m );
                     }
                     break;
+                }
             }
-            Update();
-            this->timer_m->expires_after( boost::asio::chrono::milliseconds( 300 ) );
 
-            this->timer_m->async_wait(
-                [weak_instance = weak_from_this()]( const boost::system::error_code & )
+            if ( !stopped_.load() )
+            {
+                Update();
+            }
+
+            timer_m->expires_after( boost::asio::chrono::milliseconds( 300 ) );
+            timer_m->async_wait(
+                [weak_instance = weak_from_this()]( const boost::system::error_code &ec )
                 {
-                    if ( auto instance = weak_instance.lock() ) // Ensure instance is still alive
+                    if ( ec )
                     {
-                        instance->ctx_m->post( instance->task_m );
+                        return; // canceled or other error
+                    }
+                    if ( auto instance = weak_instance.lock() )
+                    {
+                        if ( !instance->stopped_.load() )
+                        {
+                            instance->ctx_m->post( instance->task_m );
+                        }
                     }
                 } );
         };
 
-        ctx_m->post( task_m );
+        if ( !stopped_.load() )
+        {
+            ctx_m->post( task_m );
+        }
     }
 
     void TransactionManager::PrintAccountInfo()
