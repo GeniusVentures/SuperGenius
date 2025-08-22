@@ -29,7 +29,6 @@ namespace
     {
         static std::atomic<int> nodeCounter{ 0 };
         int                     id = nodeCounter.fetch_add( 1 );
-        std::cout << "UNIQUE ID " << id << std::endl;
 
         std::string binaryPath = boost::dll::program_location().parent_path().string();
         const char *filePath   = ::testing::UnitTest::GetInstance()->current_test_info()->file();
@@ -56,8 +55,7 @@ namespace
                          } );
 
         uint16_t uniquePort = static_cast<uint16_t>( 40001 + id );
-        std::cout << "UNIQUE PORT " << uniquePort << std::endl;
-        auto node = sgns::GeniusNode::New( devConfig, key.c_str(), false, isProcessor, uniquePort, isFullNode );
+        auto     node = sgns::GeniusNode::New( devConfig, key.c_str(), false, isProcessor, uniquePort, isFullNode );
 
         std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
         return node;
@@ -321,7 +319,7 @@ TEST_P( GeniusNodeMintChildTest, MintChildBalance )
 {
     auto p        = GetParam();
     auto node     = CreateNode( "0xfade", p.tokenValue, p.TokenID );
-    auto nodefull = CreateNode( "0xaffe", p.tokenValue, p.TokenID, true );
+    auto nodefull = CreateNode( "0xafff", p.tokenValue, p.TokenID, true );
     nodefull->GetPubSub()->AddPeers( { node->GetPubSub()->GetLocalAddress() } );
 
     test::assertWaitForCondition( [&]()
@@ -382,7 +380,7 @@ INSTANTIATE_TEST_SUITE_P(
 TEST( GeniusNodeMultiTokenMintTest, MintMultipleTokenIds )
 {
     auto node     = CreateNode( "0xfafe", "1.0", sgns::TokenID::FromBytes( { 0x0a } ) );
-    auto nodefull = CreateNode( "0xaffe", "1.0", sgns::TokenID::FromBytes( { 0x0a } ), true );
+    auto nodefull = CreateNode( "0xaffd", "1.0", sgns::TokenID::FromBytes( { 0x0a } ), true );
     nodefull->GetPubSub()->AddPeers( { node->GetPubSub()->GetLocalAddress() } );
 
     test::assertWaitForCondition( [&]()
@@ -464,7 +462,7 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
 {
     auto node_main  = CreateNode( "0xacfe", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), false, false );
     auto node_proc1 = CreateNode( "0xadfe", "0.65", sgns::TokenID::FromBytes( { 0x01 } ), true, true );
-    auto node_proc2 = CreateNode( "0xaffe", "0.65", sgns::TokenID::FromBytes( { 0x02 } ), false, true );
+    auto node_proc2 = CreateNode( "0xaffa", "0.65", sgns::TokenID::FromBytes( { 0x02 } ), false, true );
 
     node_main->GetPubSub()->AddPeers(
         { node_proc1->GetPubSub()->GetLocalAddress(), node_proc2->GetPubSub()->GetLocalAddress() } );

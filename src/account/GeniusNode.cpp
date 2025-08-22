@@ -141,9 +141,34 @@ namespace sgns
         instance->io_thread = std::thread(
             [wptr( std::weak_ptr<GeniusNode>( instance ) )]()
             {
-                if ( auto strong = wptr.lock() )
+                while ( true )
                 {
-                    strong->io_->run();
+                    auto strong = wptr.lock();
+                    if ( !strong )
+                    {
+                        // GeniusNode was destroyed, exit cleanly
+                        std::cout << "io_thread: GeniusNode destroyed, exiting thread" << std::endl;
+                        break;
+                    }
+
+                    if ( strong->io_->stopped() )
+                    {
+                        strong->node_logger_->debug( "io_thread: io stopped, breaking" );
+                        break; // Explicitly stopped
+                    }
+                    // Run io_context with timeout to avoid blocking forever
+                    try
+                    {
+                        strong->io_->run_for( std::chrono::milliseconds( 100 ) );
+                    }
+                    catch ( ... )
+                    {
+                        // Handle any exceptions
+                        break;
+                    }
+
+                    // Brief pause to avoid busy-waiting
+                    std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
                 }
             } );
         return instance;
@@ -171,7 +196,7 @@ namespace sgns
 
     {
         // Rotate log files before initializing logging system
-        rotateLogFiles(write_base_path_);
+        rotateLogFiles( write_base_path_ );
         SSL_library_init();
         SSL_load_error_strings();
         OpenSSL_add_all_algorithms();
@@ -432,8 +457,11 @@ namespace sgns
         }
         if ( io_thread.joinable() )
         {
-            io_thread.join();
+            io_thread.detach(); // Let it finish on its own
         }
+
+        // Brief pause to let the thread see the stop signal
+
         stop_upnp = true;
         if ( upnp_thread.joinable() )
         {
@@ -445,6 +473,8 @@ namespace sgns
             processing_callback_pool_->join();
             processing_callback_pool_.reset();
         }
+        std::this_thread::sleep_for( std::chrono::milliseconds( 50 ) );
+        node_logger_->debug( "~GeniusNode FINISHED" );
     }
 
     void GeniusNode::RefreshUPNP( uint16_t pubsubport )
@@ -930,7 +960,9 @@ namespace sgns
             {
                 if ( auto strong = weak_self.lock() )
                 {
-                    strong->node_logger_->info( "[ {} ] SUCCESS PROCESSING TASK {}", strong->account_->GetAddress(), task_id );
+                    strong->node_logger_->info( "[ {} ] SUCCESS PROCESSING TASK {}",
+                                                strong->account_->GetAddress(),
+                                                task_id );
                     do
                     {
                         if ( strong->task_queue_->IsTaskCompleted( task_id ) )
@@ -971,15 +1003,16 @@ namespace sgns
 
     void GeniusNode::ProcessingError( const std::string &task_id )
     {
-        boost::asio::post(
-            *processing_callback_pool_,
-            [weak_self( weak_from_this() ), task_id]()
-            {
-                if ( auto strong = weak_self.lock() )
-                {
-                    strong->node_logger_->error( "[ {} ] ERROR PROCESSING SUBTASK ", strong->account_->GetAddress(), task_id );
-                }
-            } );
+        boost::asio::post( *processing_callback_pool_,
+                           [weak_self( weak_from_this() ), task_id]()
+                           {
+                               if ( auto strong = weak_self.lock() )
+                               {
+                                   strong->node_logger_->error( "[ {} ] ERROR PROCESSING SUBTASK ",
+                                                                strong->account_->GetAddress(),
+                                                                task_id );
+                               }
+                           } );
     }
 
     void GeniusNode::PrintDataStore()
@@ -1180,6 +1213,7 @@ namespace sgns
             // Continue execution - don't let log rotation failure stop the application
         }
     }
+
     TransactionManager::TransactionStatus GeniusNode::GetTransactionStatus( const std::string &txId ) const
     {
         auto retval = transaction_manager_->GetOutgoingStatusByTxId( txId );
