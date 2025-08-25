@@ -98,6 +98,11 @@ namespace sgns::processing
                 m_logger->debug( "Unable to convert a key to string" );
                 continue;
             }
+            if (m_badjobs.find(taskKey.value()) != m_badjobs.end())
+            {
+                m_logger->debug( "Skip bad job" );
+                continue;
+            }
             if ( !task.ParseFromArray( element.second.data(), element.second.size() ) )
             {
                 m_logger->debug( "Couldn't parse the task from Protobuf" );
@@ -291,5 +296,10 @@ namespace sgns::processing
     void ProcessingTaskQueueImpl::ResetAtomicTransaction()
     {
         job_crdt_transaction_.reset();
+    }
+
+    void ProcessingTaskQueueImpl::MarkTaskBad( const std::string &taskKey )
+    {
+        m_badjobs.insert( taskKey );
     }
 }

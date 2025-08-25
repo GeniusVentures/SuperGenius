@@ -212,7 +212,7 @@ namespace sgns::processing
         {
             userCallbackError_( subTaskQueueId );
         }
-
+        m_subTaskEnqueuer->MarkTaskBad( subTaskQueueId );
         {
             std::scoped_lock lock( m_mutexNodes );
             m_processingNodes.erase( subTaskQueueId );

@@ -27,4 +27,9 @@ namespace sgns::processing
         return task;
     }
 
+    void SubTaskEnqueuerImpl::MarkTaskBad( const std::string &taskKey )
+    {
+        m_taskQueue->MarkTaskBad( taskKey );
+    }
+
 }

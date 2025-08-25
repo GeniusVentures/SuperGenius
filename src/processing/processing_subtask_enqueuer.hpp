@@ -17,6 +17,7 @@ public:
     virtual outcome::result<SGProcessing::Task> EnqueueSubTasks(
         std::string& subTaskQueueId, 
         std::list<SGProcessing::SubTask>& subTasks) = 0;
+    virtual void                                MarkTaskBad( const std::string &taskKey )                     = 0;
 };    
 }
 

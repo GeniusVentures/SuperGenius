@@ -161,6 +161,11 @@ namespace sgns::test
         {
             return nullptr;
         }
+
+        void MarkTaskBad( const std::string &taskKey ) override
+        {
+            return;
+        }
     };
 
     class ProcessingSubTaskQueueChannelImpl : public ProcessingSubTaskQueueChannel

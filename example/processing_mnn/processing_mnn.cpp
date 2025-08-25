@@ -60,7 +60,7 @@ std::vector<uint8_t> GetImageByCID( std::string cid )
         {
             std::cout << "Final Callback" << std::endl;
 
-            if ( !buffers )
+            if ( !buffers    )
             {
                 std::cout << "Buffer from AsyncIO is 0" << std::endl;
                 return;
