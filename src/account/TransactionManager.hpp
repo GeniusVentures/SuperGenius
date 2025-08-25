@@ -185,6 +185,7 @@ namespace sgns
         std::shared_ptr<boost::asio::steady_timer> timer_m;
         bool                                       full_node_m;
         std::string                                full_node_topic_m; ///< formatted full-node topic
+        void                                       TickOnce();
         State                                      state_m;
 
         // for the SendTransaction thread support

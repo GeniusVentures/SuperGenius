@@ -138,39 +138,7 @@ namespace sgns
         }
         instance->RefreshUPNP( instance->pubsubport_ );
 
-        instance->io_thread = std::thread(
-            [wptr( std::weak_ptr<GeniusNode>( instance ) )]()
-            {
-                while ( true )
-                {
-                    auto strong = wptr.lock();
-                    if ( !strong )
-                    {
-                        // GeniusNode was destroyed, exit cleanly
-                        std::cout << "io_thread: GeniusNode destroyed, exiting thread" << std::endl;
-                        break;
-                    }
-
-                    if ( strong->io_->stopped() )
-                    {
-                        strong->node_logger_->debug( "io_thread: io stopped, breaking" );
-                        break; // Explicitly stopped
-                    }
-                    // Run io_context with timeout to avoid blocking forever
-                    try
-                    {
-                        strong->io_->run_for( std::chrono::milliseconds( 100 ) );
-                    }
-                    catch ( ... )
-                    {
-                        // Handle any exceptions
-                        break;
-                    }
-
-                    // Brief pause to avoid busy-waiting
-                    std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
-                }
-            } );
+        instance->io_thread = std::thread( [ctx = instance->io_]() { ctx->run(); } );
         return instance;
     }
 
@@ -457,7 +425,7 @@ namespace sgns
         }
         if ( io_thread.joinable() )
         {
-            io_thread.detach(); // Let it finish on its own
+            io_thread.join();
         }
         stop_upnp = true;
         if ( upnp_thread.joinable() )
@@ -1220,5 +1188,4 @@ namespace sgns
         }
         return retval;
     }
-
 }

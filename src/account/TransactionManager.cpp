@@ -5,6 +5,7 @@
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
 #include <boost/range/concepts.hpp>
+#include <boost/asio/post.hpp>
 
 #include "account/TransactionManager.hpp"
 
@@ -154,73 +155,68 @@ namespace sgns
             CheckIncoming();
             CheckOutgoing();
         }
-
-        task_m = [this]()
-        {
-            if ( stopped_.load() )
-            {
-                return;
-            }
-
-            switch ( state_m )
-            {
-                case State::INITIALIZING:
-                    this->InitNonce( 5000 );
-                    if ( state_m == State::READY )
-                    {
-                        m_logger->debug( "[{} - full: {}] Transaction Manager is now READY - starting regular updates",
-                                         account_m->GetAddress().substr( 0, 8 ),
-                                         full_node_m );
-                    }
-                    break;
-
-                case State::CREATING: // Should not happen, but handle gracefully
-                    break;
-
-                case State::SYNCHING:
-                    this->SyncNonce();
-                    break;
-
-                case State::READY:
-                {
-                    auto send_result = SendTransaction();
-                    if ( send_result.has_error() )
-                    {
-                        m_logger->error( "[{} - full: {}] Unknown SendTranscation error in SendTransaction::Update()",
-                                         account_m->GetAddress().substr( 0, 8 ),
-                                         full_node_m );
-                    }
-                    break;
-                }
-            }
-
-            if ( !stopped_.load() )
-            {
-                Update();
-            }
-
-            timer_m->expires_after( boost::asio::chrono::milliseconds( 300 ) );
-            timer_m->async_wait(
-                [weak_instance = weak_from_this()]( const boost::system::error_code &ec )
-                {
-                    if ( ec )
-                    {
-                        return; // canceled or other error
-                    }
-                    if ( auto instance = weak_instance.lock() )
-                    {
-                        if ( !instance->stopped_.load() )
-                        {
-                            instance->ctx_m->post( instance->task_m );
-                        }
-                    }
-                } );
-        };
-
+        // First kick: keep self alive during the first dispatch only
         if ( !stopped_.load() )
         {
-            ctx_m->post( task_m );
+            boost::asio::post( *ctx_m, [self = shared_from_this()]() { self->TickOnce(); } );
         }
+    }
+
+    // One “tick”: do work, then schedule the next tick via weak capture
+    void TransactionManager::TickOnce()
+    {
+        if ( stopped_.load() )
+        {
+            return;
+        }
+
+        switch ( state_m )
+        {
+            case State::INITIALIZING:
+                this->InitNonce( 5000 );
+                if ( state_m == State::READY )
+                {
+                    m_logger->debug( "[{} - full: {}] Transaction Manager is now READY - starting regular updates",
+                                     account_m->GetAddress().substr( 0, 8 ),
+                                     full_node_m );
+                }
+                break;
+
+            case State::CREATING: // Should not happen, but handle gracefully
+                break;
+
+            case State::SYNCHING:
+                this->SyncNonce();
+                break;
+
+            case State::READY:
+                auto send_result = SendTransaction();
+                if ( send_result.has_error() )
+                {
+                    m_logger->error( "[{} - full: {}] Unknown SendTranscation error in SendTransaction::Update()",
+                                     account_m->GetAddress().substr( 0, 8 ),
+                                     full_node_m );
+                }
+                break;
+        }
+        Update();
+
+        timer_m->expires_after( boost::asio::chrono::milliseconds( 300 ) );
+        timer_m->async_wait(
+            [weak_instance = weak_from_this()]( const boost::system::error_code &ec )
+            {
+                if ( ec )
+                {
+                    return; // canceled or other error
+                }
+                if ( auto instance = weak_instance.lock() )
+                {
+                    if ( !instance->stopped_.load() )
+                    {
+                        boost::asio::post( *instance->ctx_m, [self = instance]() { self->TickOnce(); } );
+                    }
+                }
+            } );
     }
 
     void TransactionManager::PrintAccountInfo()
