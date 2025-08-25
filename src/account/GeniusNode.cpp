@@ -343,11 +343,11 @@ namespace sgns
                                       migrationResult.error().message() );
         }
 
-        transaction_manager_ = std::make_shared<TransactionManager>( tx_globaldb_,
-                                                                     io_,
-                                                                     account_,
-                                                                     std::make_shared<crypto::HasherImpl>(),
-                                                                     is_full_node );
+        transaction_manager_ = TransactionManager::New( tx_globaldb_,
+                                                        io_,
+                                                        account_,
+                                                        std::make_shared<crypto::HasherImpl>(),
+                                                        is_full_node );
     }
 
     bool GeniusNode::InitLoggers( const std::string &base_path )
@@ -398,12 +398,12 @@ namespace sgns
         loggerGlobalDB->set_level( spdlog::level::err );
         loggerDAGSyncer->set_level( spdlog::level::err );
         loggerGraphsync->set_level( spdlog::level::err );
-        loggerBroadcaster->set_level( spdlog::level::debug );
+        loggerBroadcaster->set_level( spdlog::level::err );
         loggerDataStore->set_level( spdlog::level::debug );
         loggerCRDTHeads->set_level( spdlog::level::err );
         loggerTransactions->set_level( spdlog::level::debug );
-        loggerMigration->set_level( spdlog::level::debug );
-        loggerMigrationStep->set_level( spdlog::level::debug );
+        loggerMigration->set_level( spdlog::level::err );
+        loggerMigrationStep->set_level( spdlog::level::err );
         loggerQueue->set_level( spdlog::level::err );
         loggerRocksDB->set_level( spdlog::level::err );
         logkad->set_level( spdlog::level::err );
@@ -426,8 +426,8 @@ namespace sgns
         loggerDataStore->set_level( spdlog::level::err );
         loggerCRDTHeads->set_level( spdlog::level::err );
         loggerTransactions->set_level( spdlog::level::err );
-        loggerMigration->set_level( spdlog::level::debug );
-        loggerMigrationStep->set_level( spdlog::level::debug );
+        loggerMigration->set_level( spdlog::level::err );
+        loggerMigrationStep->set_level( spdlog::level::err );
         loggerQueue->set_level( spdlog::level::err );
         loggerRocksDB->set_level( spdlog::level::err );
         logkad->set_level( spdlog::level::err );

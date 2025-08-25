@@ -72,11 +72,11 @@ namespace sgns
             FAILED,
             INVALID
         };
-        TransactionManager( std::shared_ptr<crdt::GlobalDB>          processing_db,
-                            std::shared_ptr<boost::asio::io_context> ctx,
-                            std::shared_ptr<GeniusAccount>           account,
-                            std::shared_ptr<crypto::Hasher>          hasher,
-                            bool                                     full_node = false );
+        static std::shared_ptr<TransactionManager> New( std::shared_ptr<crdt::GlobalDB>          processing_db,
+                                                        std::shared_ptr<boost::asio::io_context> ctx,
+                                                        std::shared_ptr<GeniusAccount>           account,
+                                                        std::shared_ptr<crypto::Hasher>          hasher,
+                                                        bool                                     full_node = false );
 
         ~TransactionManager();
 
@@ -134,6 +134,12 @@ namespace sgns
 
     private:
         static constexpr std::string_view TRANSACTION_BASE_FORMAT = "/bc-%hu/";
+
+        TransactionManager( std::shared_ptr<crdt::GlobalDB>          processing_db,
+                            std::shared_ptr<boost::asio::io_context> ctx,
+                            std::shared_ptr<GeniusAccount>           account,
+                            std::shared_ptr<crypto::Hasher>          hasher,
+                            bool                                     full_node );
 
         // Parser function pointer alias: returns a set of topic strings or an error
         using TransactionParserFn = outcome::result<std::set<std::string>> ( TransactionManager::* )(

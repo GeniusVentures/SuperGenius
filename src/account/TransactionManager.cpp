@@ -35,6 +35,47 @@
 
 namespace sgns
 {
+
+    std::shared_ptr<TransactionManager> TransactionManager::New( std::shared_ptr<crdt::GlobalDB>          processing_db,
+                                                                 std::shared_ptr<boost::asio::io_context> ctx,
+                                                                 std::shared_ptr<GeniusAccount>           account,
+                                                                 std::shared_ptr<crypto::Hasher>          hasher,
+                                                                 bool                                     full_node )
+    {
+        auto instance = std::shared_ptr<TransactionManager>( new TransactionManager( std::move( processing_db ),
+                                                                                     std::move( ctx ),
+                                                                                     std::move( account ),
+                                                                                     std::move( hasher ),
+                                                                                     full_node ) );
+
+        bool crdt_tx_filter_initialized = instance->globaldb_m->RegisterElementFilter(
+            "^/?" + GetBlockChainBase() + "[^/]*/tx/[^/]*/[0-9]+",
+            [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
+                const crdt::pb::Element &element ) -> std::optional<std::vector<crdt::pb::Element>>
+            {
+                if ( auto strong = weak_ptr.lock() )
+                {
+                    return strong->FilterTransaction( element );
+                }
+                return std::nullopt;
+            } );
+
+        bool crdt_proof_filter_initialized = instance->globaldb_m->RegisterElementFilter(
+            "^/?" + GetBlockChainBase() + "[^/]*/proof/[^/]*/[0-9]+",
+            [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
+                const crdt::pb::Element &element ) -> std::optional<std::vector<crdt::pb::Element>>
+            {
+                if ( auto strong = weak_ptr.lock() )
+                {
+                    return strong->FilterProof( element );
+                }
+                return std::nullopt;
+            } );
+        instance->globaldb_m->Start();
+
+        return instance;
+    }
+
     TransactionManager::TransactionManager( std::shared_ptr<crdt::GlobalDB>          processing_db,
                                             std::shared_ptr<boost::asio::io_context> ctx,
                                             std::shared_ptr<GeniusAccount>           account,
@@ -76,17 +117,6 @@ namespace sgns
         }
         globaldb_m->AddTopicName( full_node_topic_m );
         globaldb_m->AddTopicName( account_m->GetAddress() );
-
-        bool crdt_tx_filter_initialized = globaldb_m->RegisterElementFilter(
-            "^/?" + GetBlockChainBase() + "[^/]*/tx/[^/]*/[0-9]+",
-            [this]( const crdt::pb::Element &element ) -> std::optional<std::vector<crdt::pb::Element>>
-            { return FilterTransaction( element ); } );
-
-        bool crdt_proof_filter_initialized = globaldb_m->RegisterElementFilter(
-            "^/?" + GetBlockChainBase() + "[^/]*/proof/[^/]*/[0-9]+",
-            [this]( const crdt::pb::Element &element ) -> std::optional<std::vector<crdt::pb::Element>>
-            { return FilterProof( element ); } );
-        globaldb_m->Start();
     }
 
     TransactionManager::~TransactionManager()
