@@ -210,24 +210,17 @@ namespace sgns::processing
             false,
             false,
             ioc,
-            []( const sgns::AsyncError::CustomResult &status )
-            {
-                if ( status.has_value() )
-                {
-                    std::cout << "Success: " << status.value().message << std::endl;
-                }
-                else
-                {
-                    std::cout << "Error: " << status.error() << std::endl;
-                }
-            },
-            [results]( std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers )
+            [results]( outcome::result<std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>> buffers )
             {
                 //results->first.insert(results->first.end(), buffers->first.begin(), buffers->first.end());
                 //results->second.insert(results->second.end(), buffers->second.begin(), buffers->second.end());
                 if ( results && buffers )
                 {
-                    results->insert( results->end(), buffers->second[0].begin(), buffers->second[0].end() );
+                    results->insert( results->end(), buffers.value()->second[0].begin(), buffers.value()->second[0].end() );
+                }
+                if (!buffers)
+                {
+                    std::cerr << "Failed to obtain processing data." << std::endl;
                 }
             },
             "file" );
