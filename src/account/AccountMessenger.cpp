@@ -49,29 +49,35 @@ namespace sgns
         auto instance = std::shared_ptr<AccountMessenger>(
             new AccountMessenger( std::move( address ), std::move( pubsub ), std::move( methods ) ) );
 
-        instance->subs_acc_future_ = std::move(
-            instance->pubsub_->Subscribe( instance->account_comm_topic_,
-                                          [weakptr( std::weak_ptr<AccountMessenger>( instance ) )](
-                                              boost::optional<const ipfs_pubsub::GossipPubSub::Message &> message )
-                                          {
-                                              if ( auto self = weakptr.lock() )
-                                              {
-                                                  self->logger_->trace( "Received Account response" );
-                                                  self->OnResponse( message );
-                                              }
-                                          } ) );
+        instance->subs_acc_future_ = std::move( instance->pubsub_->Subscribe(
+            instance->account_comm_topic_,
+            [weakptr( std::weak_ptr<AccountMessenger>( instance ) )](
+                boost::optional<const ipfs_pubsub::GossipPubSub::Message &> message )
+            {
+                if ( auto self = weakptr.lock() )
+                {
+                    self->logger_->trace( "[{}] Received Account response", self->address_.substr( 0, 8 ) );
+                    self->OnResponse( message );
+                }
+            } ) );
+        instance->logger_->debug( "[{}] Subscribed to Account topic {}",
+                                  instance->address_.substr( 0, 8 ),
+                                  instance->account_comm_topic_ );
 
-        instance->subs_requests_future_ = std::move(
-            instance->pubsub_->Subscribe( instance->requests_topic_,
-                                          [weakptr( std::weak_ptr<AccountMessenger>( instance ) )](
-                                              boost::optional<const ipfs_pubsub::GossipPubSub::Message &> message )
-                                          {
-                                              if ( auto self = weakptr.lock() )
-                                              {
-                                                  self->logger_->debug( "Received Account request" );
-                                                  self->OnRequest( message );
-                                              }
-                                          } ) );
+        instance->subs_requests_future_ = std::move( instance->pubsub_->Subscribe(
+            instance->requests_topic_,
+            [weakptr( std::weak_ptr<AccountMessenger>( instance ) )](
+                boost::optional<const ipfs_pubsub::GossipPubSub::Message &> message )
+            {
+                if ( auto self = weakptr.lock() )
+                {
+                    self->logger_->debug( "[{}] Received Account request", self->address_.substr( 0, 8 ) );
+                    self->OnRequest( message );
+                }
+            } ) );
+        instance->logger_->debug( "[{}] Subscribed to Requests topic {}",
+                                  instance->address_.substr( 0, 8 ),
+                                  instance->requests_topic_ );
 
         return instance;
     }
@@ -170,16 +176,18 @@ namespace sgns
         accountComm::AccountMessage envelope;
         *envelope.mutable_nonce_request() = signed_req;
 
-        auto send_ret = SendAccountMessage( envelope, { account_comm_topic_, requests_topic_ } );
+        auto send_ret = SendAccountMessage( envelope, { requests_topic_ } );
 
         return send_ret;
     }
 
     outcome::result<uint64_t> AccountMessenger::GetLatestNonce( uint64_t timeout_ms )
     {
-        logger_->debug( "[{}] Requesting nonce with timeout {}", address_.substr( 0, 8 ), timeout_ms );
-
         uint64_t req_id = static_cast<uint64_t>( std::chrono::system_clock::now().time_since_epoch().count() );
+        logger_->debug( "[{}] Requesting nonce with timeout {} and req_id {} ",
+                        address_.substr( 0, 8 ),
+                        timeout_ms,
+                        req_id );
 
         {
             std::lock_guard lock( nonce_responses_mutex_ );
@@ -233,7 +241,9 @@ namespace sgns
             {
                 nonce_responses_.erase( req_id );
                 first_response_time_.erase( req_id );
-                logger_->debug( "[{}] No nonce received within timeout", address_.substr( 0, 8 ) );
+                logger_->debug( "[{}] No nonce received within timeout for the req_rw {}",
+                                address_.substr( 0, 8 ),
+                                req_id );
                 return outcome::failure( Error::NONCE_GET_ERROR );
             }
             max_nonce = *it->second.rbegin();
@@ -241,7 +251,10 @@ namespace sgns
             first_response_time_.erase( req_id );
         }
 
-        logger_->debug( "[{}] Returning highest collected nonce: {}", address_.substr( 0, 8 ), max_nonce );
+        logger_->debug( "[{}] Returning highest collected nonce for req_id {}: {}",
+                        address_.substr( 0, 8 ),
+                        req_id,
+                        max_nonce );
         return max_nonce;
     }
 
@@ -257,7 +270,7 @@ namespace sgns
         }
         for ( auto &topic : topics )
         {
-            logger_->trace( "Sending account packet to {}", topic );
+            logger_->debug( "Sending account packet to {}", topic );
             pubsub_->Publish( topic, serialized_proto );
         }
         return outcome::success();
@@ -267,7 +280,7 @@ namespace sgns
     {
         const auto &req = signed_req.data();
 
-        logger_->debug( "[{}] Received a Nonce request", address_.substr( 0, 8 ) );
+        logger_->debug( "[{}] Received a Nonce request req_id {}", address_.substr( 0, 8 ), req.request_id() );
 
         std::string serialized;
         if ( !req.SerializeToString( &serialized ) )
@@ -336,16 +349,17 @@ namespace sgns
 
         accountComm::AccountMessage msg;
         *msg.mutable_nonce_response() = signed_resp;
-        auto send_ret                 = SendAccountMessage(
-            msg,
-            { ( req.requester_address() +
-                ( ( boost::format( std::string( ACCOUNT_COMM ) ) % sgns::version::SuperGeniusVersionMajor() )
-                      .str() ) ) } );
+        auto account_topic =
+            ( req.requester_address() +
+              ( ( boost::format( std::string( ACCOUNT_COMM ) ) % sgns::version::SuperGeniusVersionMajor() ).str() ) );
 
-        logger_->debug( "[{}] Sending back the nonce {} to {}",
+        auto send_ret = SendAccountMessage( msg, { account_topic } );
+
+        logger_->debug( "[{}] Sending back the nonce {} to {} with req_id {}",
                         address_.substr( 0, 8 ),
                         local_nonce,
-                        req.requester_address().substr( 0, 8 ) );
+                        req.requester_address().substr( 0, 8 ),
+                        resp.request_id() );
 
         if ( send_ret.has_error() )
         {
@@ -358,10 +372,11 @@ namespace sgns
     {
         const auto &resp = signed_resp.data();
 
-        logger_->debug( "[{}] Received a Nonce response from {} (nonce={})",
+        logger_->debug( "[{}] Received a Nonce response from {} (nonce={}) and req_id {}",
                         address_.substr( 0, 8 ),
                         resp.responder_address(),
-                        resp.known_nonce() );
+                        resp.known_nonce(),
+                        resp.request_id() );
 
         std::string serialized;
         if ( !resp.SerializeToString( &serialized ) )
