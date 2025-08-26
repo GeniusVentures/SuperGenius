@@ -32,6 +32,15 @@ public:
         const std::map<std::string, SGProcessing::SubTaskResult>& results,
         std::set<std::string>& invalidSubTaskIds);
 
+     /** 
+     * Validates a single subtask result against its corresponding subtask
+     * @param subTask The subtask definition
+     * @param result The result to validate
+     * @return true if the result is valid for the given subtask
+     */
+    bool ValidateIndividualResult( const SGProcessing::SubTask       &subTask,
+                                   const SGProcessing::SubTaskResult &result ) const;
+
 private:
     bool CheckSubTaskResultHashes(
         const SGProcessing::SubTask& subTask,

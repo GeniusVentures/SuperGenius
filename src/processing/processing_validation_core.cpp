@@ -65,6 +65,52 @@ bool ProcessingValidationCore::ValidateResults(
     return areResultsValid;
 }
 
+bool ProcessingValidationCore::ValidateIndividualResult( const SGProcessing::SubTask       &subTask,
+                                                         const SGProcessing::SubTaskResult &result ) const
+{
+    // Check 1: Verify subtask IDs match
+    if ( subTask.subtaskid() != result.subtaskid() )
+    {
+        m_logger->debug( "SUBTASK_ID_MISMATCH: expected {}, got {}", subTask.subtaskid(), result.subtaskid() );
+        return false;
+    }
+
+    // Check 2: Verify hash count matches chunk count
+    if ( result.chunk_hashes_size() != subTask.chunkstoprocess_size() )
+    {
+        m_logger->debug( "WRONG_RESULT_HASHES_LENGTH {}: {} {}",
+                         subTask.subtaskid(),
+                         result.chunk_hashes_size(),
+                         subTask.chunkstoprocess_size() );
+        return false;
+    }
+
+    // Check 3: Verify no duplicate hashes
+    std::unordered_set<std::string> encounteredHashes;
+    for ( int chunkIdx = 0; chunkIdx < result.chunk_hashes_size(); ++chunkIdx )
+    {
+        const std::string &chunkHash = result.chunk_hashes( chunkIdx );
+
+        if ( !encounteredHashes.insert( chunkHash ).second )
+        {
+            const auto &chunk = subTask.chunkstoprocess( chunkIdx );
+            m_logger->debug( "DUPLICATE_CHUNK_RESULT_HASH [{}, {}]", subTask.subtaskid(), chunk.chunkid() );
+            return false;
+        }
+
+        // Check 4: Verify hash is not empty
+        if ( chunkHash.empty() )
+        {
+            const auto &chunk = subTask.chunkstoprocess( chunkIdx );
+            m_logger->debug( "EMPTY_CHUNK_RESULT_HASH [{}, {}]", subTask.subtaskid(), chunk.chunkid() );
+            return false;
+        }
+    }
+
+    return true;
+}
+
+
 bool ProcessingValidationCore::CheckSubTaskResultHashes(
     const SGProcessing::SubTask& subTask,
     const std::map<std::string, std::vector<uint8_t>>& chunks) const
