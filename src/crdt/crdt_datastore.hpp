@@ -94,7 +94,7 @@ namespace sgns::crdt
         * @param aKey Hierarchical key to get
         * @return value as a Buffer
         */
-        outcome::result<Buffer> GetKey( const HierarchicalKey &aKey );
+        outcome::result<Buffer> GetKey( const HierarchicalKey &aKey ) const;
 
         /** Query CRDT set key-value pairs by prefix, if prefix empty return all elements are not tombstoned
         * @param aPrefix prefix to search, if empty string, return all
@@ -121,7 +121,7 @@ namespace sgns::crdt
         /** Get value suffix used in set, e.g. /v
         * @return value suffix
         */
-        std::string GetValueSuffix();
+        std::string GetValueSuffix() const;
 
         /**
          * @brief Stores the given value in the CRDT store
@@ -135,7 +135,7 @@ namespace sgns::crdt
         * @param aKey HierarchicalKey to look for in set
         * @return true if key found or false if not found or outcome::failure on error
         */
-        outcome::result<bool> HasKey( const HierarchicalKey &aKey );
+        outcome::result<bool> HasKey( const HierarchicalKey &aKey ) const;
 
         /** Delete removes the value for given `key`.
         * @param aKey HierarchicalKey to delete from set
@@ -216,7 +216,7 @@ namespace sgns::crdt
         };
 
         /** DAG worker structure to keep track of worker threads
-    */
+        */
         struct DagWorker
         {
             std::future<void> dagWorkerFuture_;                /*> Future for DAG worker thread */
@@ -371,7 +371,6 @@ namespace sgns::crdt
 
         std::atomic<bool>       dagWorkerJobListThreadRunning_ = false;
         std::mutex              dagWorkerMutex_;
-        std::mutex              dagWorkerCvMutex_;
         std::condition_variable dagWorkerCv_;
         std::queue<DagJob>      dagWorkerJobList;
 

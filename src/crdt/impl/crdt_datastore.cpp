@@ -63,7 +63,7 @@ namespace sgns::crdt
         handleNextThreadRunning_ = true;
         // Starting HandleNext worker thread
         handleNextFuture_ = std::async(
-            [weakptr{ weak_from_this() }]()
+            [weakptr{ weak_from_this() }]
             {
                 auto threadRunning = true;
                 while ( threadRunning )
@@ -92,7 +92,7 @@ namespace sgns::crdt
         rebroadcastThreadRunning_ = true;
         // Starting Rebroadcast worker thread
         rebroadcastFuture_ = std::async(
-            [weakptr{ weak_from_this() }]()
+            [weakptr{ weak_from_this() }]
             {
                 auto self = weakptr.lock();
                 if ( !self )
@@ -102,7 +102,7 @@ namespace sgns::crdt
 
                 const auto interval = std::chrono::milliseconds(
                     self->options_ ? self->options_->rebroadcastIntervalMilliseconds : 100 );
-                std::unique_lock<std::mutex> lock( self->rebroadcastMutex_ );
+                std::unique_lock lock( self->rebroadcastMutex_ );
 
                 while ( self->rebroadcastThreadRunning_ )
                 {
@@ -125,7 +125,7 @@ namespace sgns::crdt
                     {
                         if ( auto self = weakptr.lock() )
                         {
-                            std::unique_lock<std::mutex> cvlock( self->dagWorkerCvMutex_ );
+                            std::unique_lock cvlock( self->dagWorkerMutex_ );
                             self->dagWorkerCv_.wait_for(
                                 cvlock,
                                 threadSleepTimeInMilliseconds_,
@@ -181,16 +181,17 @@ namespace sgns::crdt
         set_   = std::make_shared<CrdtSet>( dataStore_, fullSetNs, putHookFunc_, deleteHookFunc_ );
         heads_ = std::make_shared<CrdtHeads>( dataStore_, fullHeadsNs );
 
-        int      numberOfHeads = 0;
+        size_t   numberOfHeads = 0;
         uint64_t maxHeight     = 0;
 
         auto getListResult = heads_->GetList();
         if ( !getListResult.has_failure() )
         {
-            auto [head_map, maxHeight] = getListResult.value();
+            auto [head_map, height] = getListResult.value();
             for ( const auto &[topic_name, cid_set] : head_map )
             {
                 numberOfHeads += cid_set.size();
+                maxHeight      = std::max( maxHeight, height );
             }
         }
 
@@ -206,7 +207,7 @@ namespace sgns::crdt
     std::shared_ptr<CrdtDatastore::Delta> CrdtDatastore::DeltaMerge( const std::shared_ptr<Delta> &aDelta1,
                                                                      const std::shared_ptr<Delta> &aDelta2 )
     {
-        auto result = std::make_shared<CrdtDatastore::Delta>();
+        auto result = std::make_shared<Delta>();
         if ( aDelta1 != nullptr )
         {
             for ( const auto &elem : aDelta1->elements() )
@@ -299,9 +300,9 @@ namespace sgns::crdt
         {
             logger_->error( "Broadcaster: Unable to decode broadcast (error code {})",
                             std::to_string( broadcasterNextResult.error().value() ) );
-
             return;
         }
+
         std::vector<CID> heads_to_process_cids;
         heads_to_process_cids.reserve( decodeResult.value().size() );
 
@@ -336,9 +337,7 @@ namespace sgns::crdt
             auto handleBlockResult = HandleBlock( bCastHeadCID );
             if ( handleBlockResult.has_failure() )
             {
-                logger_->error( "Broadcaster: Unable to handle block (error {})",
-                                handleBlockResult.error().message() );
-                continue;
+                logger_->error( "Broadcaster: Unable to handle block (error {})", handleBlockResult.error().message() );
             }
         }
     }
@@ -513,10 +512,8 @@ namespace sgns::crdt
             {
                 return outcome::failure( boost::system::error_code{} );
             }
-            else
-            {
-                bCastHeads.push_back( cidResult.value() );
-            }
+
+            bCastHeads.push_back( cidResult.value() );
         }
         return bCastHeads;
     }
@@ -582,7 +579,7 @@ namespace sgns::crdt
 
         if ( aChildren.empty() )
         {
-            return CrdtDatastore::Error::INVALID_PARAM;
+            return Error::INVALID_PARAM;
         }
         // @todo figure out how should dagSyncerTimeoutSec be used
         std::chrono::seconds dagSyncerTimeoutSec = std::chrono::seconds( 5 * 60 ); // 5 mins by default
@@ -597,7 +594,7 @@ namespace sgns::crdt
         if ( rootPriority == 0 )
         {
             std::unique_lock lock( dagSyncherMutex_ );
-            auto             getNodeResult = dagSyncer_->getNode( *( aChildren.begin() ) );
+            auto             getNodeResult = dagSyncer_->getNode( *aChildren.begin() );
             lock.unlock();
             if ( getNodeResult.has_failure() )
             {
@@ -613,13 +610,13 @@ namespace sgns::crdt
 
             if ( !delta->ParseFromArray( nodeBuffer.data(), nodeBuffer.size() ) )
             {
-                return CrdtDatastore::Error::NODE_DESERIALIZATION;
+                return Error::NODE_DESERIALIZATION;
             }
 
             rootPriority = delta->priority();
 
             // If this is the first call and we're fetching the root, store it
-            if ( !rootNode && aChildren.size() == 1 && ( *( aChildren.begin() ) ) == aRootCID )
+            if ( !rootNode && aChildren.size() == 1 && *aChildren.begin() == aRootCID )
             {
                 rootNode = node;
             }
@@ -638,7 +635,7 @@ namespace sgns::crdt
             if ( nodeResult.has_error() )
             {
                 logger_->error( "SendNewJobs: Can't fetch node: {}", nodeResult.error().message() );
-                return CrdtDatastore::Error::GET_NODE;
+                return Error::GET_NODE;
             }
             auto node       = nodeResult.value();
             auto nodeBuffer = node->content();
@@ -647,7 +644,7 @@ namespace sgns::crdt
             if ( !delta->ParseFromArray( nodeBuffer.data(), nodeBuffer.size() ) )
             {
                 logger_->error( "SendNewJobs: Can't parse data with size {}", nodeBuffer.size() );
-                return CrdtDatastore::Error::NODE_DESERIALIZATION;
+                return Error::NODE_DESERIALIZATION;
             }
 
             DagJob dagJob;
@@ -670,7 +667,7 @@ namespace sgns::crdt
         return outcome::success();
     }
 
-    outcome::result<CrdtDatastore::Buffer> CrdtDatastore::GetKey( const HierarchicalKey &aKey )
+    outcome::result<CrdtDatastore::Buffer> CrdtDatastore::GetKey( const HierarchicalKey &aKey ) const
     {
         return set_->GetElement( aKey.GetKey() );
     }
@@ -680,7 +677,7 @@ namespace sgns::crdt
         return set_->KeysKey( "" ).GetKey();
     }
 
-    std::string CrdtDatastore::GetValueSuffix()
+    std::string CrdtDatastore::GetValueSuffix() const
     {
         return '/' + set_->GetValueSuffix();
     }
@@ -704,7 +701,7 @@ namespace sgns::crdt
                                     CrdtSet::QuerySuffix::QUERY_VALUESUFFIX );
     }
 
-    outcome::result<bool> CrdtDatastore::HasKey( const HierarchicalKey &aKey )
+    outcome::result<bool> CrdtDatastore::HasKey( const HierarchicalKey &aKey ) const
     {
         return set_->IsValueInSet( aKey.GetKey() );
     }
@@ -754,7 +751,6 @@ namespace sgns::crdt
                                                  const std::set<std::string>  &topics )
     {
         OUTCOME_TRY( auto &&newCID, AddDAGNode( aDelta, topics ) );
-
         return newCID;
     }
 
@@ -808,17 +804,14 @@ namespace sgns::crdt
             logger_->info( "Topics {{ name=\"{}\" }}", topic );
             node->addDestination( topic );
         }
-        for ( const auto &h : aHeads )
+        for ( const auto &[head, topic] : aHeads )
         {
-            const CID         &head  = h.first;
-            const std::string &topic = h.second;
-
             auto cidByte = head.toBytes();
             if ( cidByte.has_failure() )
             {
                 continue;
             }
-            ipfs_lite::ipld::IPLDLinkImpl link = ipfs_lite::ipld::IPLDLinkImpl( head, topic, cidByte.value().size() );
+            ipfs_lite::ipld::IPLDLinkImpl link( head, topic, cidByte.value().size() );
             node->addLink( link );
 
             logger_->info( "PutBlock: added link {{ cid=\"{}\", name=\"{}\", size={} }}",
@@ -831,10 +824,10 @@ namespace sgns::crdt
     }
 
     outcome::result<std::set<CID>> CrdtDatastore::ProcessNode( const CID                       &aRoot,
-                                                                uint64_t                         aRootPrio,
-                                                                std::shared_ptr<Delta>           aDelta,
-                                                                const std::shared_ptr<IPLDNode> &aNode,
-                                                                bool                             filter_crdt )
+                                                               uint64_t                         aRootPrio,
+                                                               std::shared_ptr<Delta>           aDelta,
+                                                               const std::shared_ptr<IPLDNode> &aNode,
+                                                               bool                             filter_crdt )
     {
         if ( aDelta == nullptr || aNode == nullptr )
         {
@@ -842,7 +835,7 @@ namespace sgns::crdt
         }
 
         // Single mutex for entire ProcessNode function - eliminates deadlock possibility
-        std::unique_lock processLock(processNodeMutex_);
+        std::unique_lock processLock( processNodeMutex_ );
 
         std::set<std::string> topics_to_update_cid = aNode->getDestinations();
 
@@ -854,7 +847,7 @@ namespace sgns::crdt
             return outcome::failure( strCidResult.error() );
         }
         HierarchicalKey hKey( strCidResult.value() );
-        
+
         if ( filter_crdt )
         {
             crdt_filter_.FilterElementsOnDelta( aDelta );
@@ -905,10 +898,11 @@ namespace sgns::crdt
             for ( auto &topic : topics_to_update_cid )
             {
                 logger_->debug( "ProcessNode: Traversing to find links on topic {}", topic );
-                
+
                 // No additional locking needed since we hold processNodeMutex_
-                auto [links_to_fetch, known_cids] = dagSyncer_->TraverseCIDsLinks( aNode, topic, {}, skip_if_visited, 50 );
-                
+                auto [links_to_fetch,
+                      known_cids] = dagSyncer_->TraverseCIDsLinks( aNode, topic, {}, skip_if_visited, 50 );
+
                 for ( const auto &[cid, link_name] : known_cids )
                 {
                     logger_->debug( "ProcessNode: known cid: {}, {}", cid.toString().value(), link_name );
@@ -926,10 +920,9 @@ namespace sgns::crdt
                                             aRoot.toString().value() );
                             return outcome::failure( replaceResult.error() );
                         }
-                        continue;
                     }
                 }
-                
+
                 if ( known_cids.empty() )
                 {
                     logger_->debug( "Adding: {} to heads on topic {}", aRoot.toString().value(), topic );
@@ -940,7 +933,7 @@ namespace sgns::crdt
                         return outcome::failure( addHeadResult.error() );
                     }
                 }
-                
+
                 for ( const auto &[cid, link_name] : links_to_fetch )
                 {
                     if ( topicNames_.find( link_name ) != topicNames_.end() )
@@ -950,7 +943,7 @@ namespace sgns::crdt
                 }
             }
         }
-        
+
         rebroadcastCv_.notify_one();
 
         return children;
@@ -1112,7 +1105,7 @@ namespace sgns::crdt
 
     outcome::result<void> CrdtDatastore::Sync( const HierarchicalKey &aKey )
     {
-        // This is a quick write up of the internals from the time when
+        // This is a quick write-up of the internals from the time when
         // I was thinking many underlying datastore entries are affected when
         // an add operation happens:
         //
