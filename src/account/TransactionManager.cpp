@@ -948,16 +948,14 @@ namespace sgns
                              full_node_m,
                              transaction_key.value() );
 
-            if ( full_node_m )
-            {
-                account_m->SetPeerConfirmedNonce( maybe_transaction.value()->dag_st.nonce(),
-                                                  maybe_transaction.value()->dag_st.source_addr() );
-                m_logger->debug( "[{} - full: {}] Updated peer nonce for {} to {}",
-                                 account_m->GetAddress().substr( 0, 8 ),
-                                 full_node_m,
-                                 maybe_transaction.value()->dag_st.source_addr().substr( 0, 8 ),
-                                 maybe_transaction.value()->dag_st.nonce() );
-            }
+            account_m->SetPeerConfirmedNonce( maybe_transaction.value()->dag_st.nonce(),
+                                              maybe_transaction.value()->dag_st.source_addr() );
+            m_logger->debug( "[{} - full: {}] Updated peer nonce for {} to {}",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             maybe_transaction.value()->dag_st.source_addr().substr( 0, 8 ),
+                             maybe_transaction.value()->dag_st.nonce() );
+
             {
                 m_logger->trace( "[{} - full: {}] Inserting into incoming {}",
                                  account_m->GetAddress().substr( 0, 8 ),
@@ -1065,24 +1063,20 @@ namespace sgns
                 GeniusUTXO new_utxo( hash, i, dest_infos[i].encrypted_amount, dest_infos[i].token_id );
                 account_m->PutUTXO( new_utxo );
             }
-            if ( notify_destinations )
-            {
-                m_logger->debug( "[{} - full: {}] Notify {} of transfer of {} to it",
-                                 account_m->GetAddress().substr( 0, 8 ),
-                                 full_node_m,
-                                 dest_infos[i].dest_address,
-                                 dest_infos[i].encrypted_amount );
-                topics.emplace( dest_infos[i].dest_address );
-            }
-        }
-        if ( full_node_m )
-        {
-            m_logger->debug( "[{} - full: {}] Adding origin address to Broadcast: {}",
+
+            m_logger->debug( "[{} - full: {}] Notify {} of transfer of {} to it",
                              account_m->GetAddress().substr( 0, 8 ),
                              full_node_m,
-                             transfer_tx->GetSrcAddress() );
-            topics.emplace( transfer_tx->GetSrcAddress() );
+                             dest_infos[i].dest_address,
+                             dest_infos[i].encrypted_amount );
+            topics.emplace( dest_infos[i].dest_address );
         }
+
+        m_logger->debug( "[{} - full: {}] Adding origin address to Broadcast: {}",
+                         account_m->GetAddress().substr( 0, 8 ),
+                         full_node_m,
+                         transfer_tx->GetSrcAddress() );
+        topics.emplace( transfer_tx->GetSrcAddress() );
 
         for ( auto &input : transfer_tx->GetInputInfos() )
         {
@@ -1117,14 +1111,12 @@ namespace sgns
                             full_node_m,
                             account_m->GetBalance<std::string>() );
         }
-        if ( full_node_m )
-        {
-            m_logger->debug( "[{} - full: {}] Adding origin address to Broadcast: {}",
-                             account_m->GetAddress().substr( 0, 8 ),
-                             full_node_m,
-                             mint_tx->GetSrcAddress() );
-            topics.emplace( mint_tx->GetSrcAddress() );
-        }
+
+        m_logger->debug( "[{} - full: {}] Adding origin address to Broadcast: {}",
+                         account_m->GetAddress().substr( 0, 8 ),
+                         full_node_m,
+                         mint_tx->GetSrcAddress() );
+        topics.emplace( mint_tx->GetSrcAddress() );
 
         return topics;
     }
@@ -1158,14 +1150,12 @@ namespace sgns
                 account_m->ConsumeUTXOs( escrow_tx->GetUTXOParameters().inputs_ );
             }
         }
-        if ( full_node_m )
-        {
-            m_logger->debug( "[{} - full: {}] Adding origin address to Broadcast: {}",
-                             account_m->GetAddress().substr( 0, 8 ),
-                             full_node_m,
-                             escrow_tx->GetSrcAddress() );
-            topics.emplace( escrow_tx->GetSrcAddress() );
-        }
+
+        m_logger->debug( "[{} - full: {}] Adding origin address to Broadcast: {}",
+                         account_m->GetAddress().substr( 0, 8 ),
+                         full_node_m,
+                         escrow_tx->GetSrcAddress() );
+        topics.emplace( escrow_tx->GetSrcAddress() );
 
         return topics;
     }
@@ -1183,23 +1173,18 @@ namespace sgns
                              full_node_m );
             return std::errc::invalid_argument;
         }
-        if ( ( escrowReleaseTx->GetSrcAddress() == account_m->GetAddress() ) || ( full_node_m ) )
-        {
-            m_logger->debug( "[{} - full: {}] Adding Escrow source address to Broadcast: {}",
-                             account_m->GetAddress().substr( 0, 8 ),
-                             full_node_m,
-                             escrowReleaseTx->GetEscrowSource() );
-            topics.emplace( escrowReleaseTx->GetEscrowSource() );
-        }
 
-        if ( full_node_m )
-        {
-            m_logger->debug( "[{} - full: {}] Adding origin address to Broadcast: {}",
-                             account_m->GetAddress().substr( 0, 8 ),
-                             full_node_m,
-                             escrowReleaseTx->GetSrcAddress() );
-            topics.emplace( escrowReleaseTx->GetSrcAddress() );
-        }
+        m_logger->debug( "[{} - full: {}] Adding Escrow source address to Broadcast: {}",
+                         account_m->GetAddress().substr( 0, 8 ),
+                         full_node_m,
+                         escrowReleaseTx->GetEscrowSource() );
+        topics.emplace( escrowReleaseTx->GetEscrowSource() );
+
+        m_logger->debug( "[{} - full: {}] Adding origin address to Broadcast: {}",
+                         account_m->GetAddress().substr( 0, 8 ),
+                         full_node_m,
+                         escrowReleaseTx->GetSrcAddress() );
+        topics.emplace( escrowReleaseTx->GetSrcAddress() );
 
         std::string originalEscrowHash = escrowReleaseTx->GetOriginalEscrowHash();
         m_logger->debug( "[{} - full: {}] Successfully fetched release for escrow: {}",
@@ -1218,10 +1203,6 @@ namespace sgns
         bool notify_destinations = false;
 
         std::set<std::string> topics{ full_node_topic_m, account_m->GetAddress() };
-        if ( ( transfer_tx->GetSrcAddress() == account_m->GetAddress() ) || ( full_node_m ) )
-        {
-            notify_destinations = true;
-        }
 
         for ( std::uint32_t i = 0; i < dest_infos.size(); ++i )
         {
@@ -1230,24 +1211,20 @@ namespace sgns
                 auto hash = ( base::Hash256::fromReadableString( transfer_tx->dag_st.data_hash() ) ).value();
                 account_m->DeleteUTXO( hash );
             }
-            if ( notify_destinations )
-            {
-                m_logger->debug( "[{} - full: {}] Notify {} of deletion of {} to it",
-                                 account_m->GetAddress().substr( 0, 8 ),
-                                 full_node_m,
-                                 dest_infos[i].dest_address,
-                                 dest_infos[i].encrypted_amount );
-                topics.emplace( dest_infos[i].dest_address );
-            }
-        }
-        if ( full_node_m )
-        {
-            m_logger->debug( "[{} - full: {}] Adding origin address to Broadcast: {}",
+
+            m_logger->debug( "[{} - full: {}] Notify {} of deletion of {} to it",
                              account_m->GetAddress().substr( 0, 8 ),
                              full_node_m,
-                             transfer_tx->GetSrcAddress() );
-            topics.emplace( transfer_tx->GetSrcAddress() );
+                             dest_infos[i].dest_address,
+                             dest_infos[i].encrypted_amount );
+            topics.emplace( dest_infos[i].dest_address );
         }
+
+        m_logger->debug( "[{} - full: {}] Adding origin address to Broadcast: {}",
+                         account_m->GetAddress().substr( 0, 8 ),
+                         full_node_m,
+                         transfer_tx->GetSrcAddress() );
+        topics.emplace( transfer_tx->GetSrcAddress() );
 
         m_logger->debug( "[{} - full: {}] Re-parsing inputs to be added as UTXOs",
                          account_m->GetAddress().substr( 0, 8 ),
@@ -1290,14 +1267,12 @@ namespace sgns
                             full_node_m,
                             account_m->GetBalance<std::string>() );
         }
-        if ( full_node_m )
-        {
-            m_logger->debug( "[{} - full: {}] Adding origin address to Broadcast: {}",
-                             account_m->GetAddress().substr( 0, 8 ),
-                             full_node_m,
-                             mint_tx->GetSrcAddress() );
-            topics.emplace( mint_tx->GetSrcAddress() );
-        }
+
+        m_logger->debug( "[{} - full: {}] Adding origin address to Broadcast: {}",
+                         account_m->GetAddress().substr( 0, 8 ),
+                         full_node_m,
+                         mint_tx->GetSrcAddress() );
+        topics.emplace( mint_tx->GetSrcAddress() );
 
         return topics;
     }
@@ -1339,14 +1314,12 @@ namespace sgns
                 account_m->utxos = UTXOTxParameters::RollbackUTXOs( account_m->utxos, dest_infos );
             }
         }
-        if ( full_node_m )
-        {
-            m_logger->debug( "[{} - full: {}] Adding origin address to Broadcast: {}",
-                             account_m->GetAddress().substr( 0, 8 ),
-                             full_node_m,
-                             escrow_tx->GetSrcAddress() );
-            topics.emplace( escrow_tx->GetSrcAddress() );
-        }
+
+        m_logger->debug( "[{} - full: {}] Adding origin address to Broadcast: {}",
+                         account_m->GetAddress().substr( 0, 8 ),
+                         full_node_m,
+                         escrow_tx->GetSrcAddress() );
+        topics.emplace( escrow_tx->GetSrcAddress() );
 
         return topics;
     }
@@ -1364,23 +1337,18 @@ namespace sgns
                              full_node_m );
             return std::errc::invalid_argument;
         }
-        if ( ( escrowReleaseTx->GetSrcAddress() == account_m->GetAddress() ) || ( full_node_m ) )
-        {
-            m_logger->debug( "[{} - full: {}] Adding Escrow source address to Broadcast: {}",
-                             account_m->GetAddress().substr( 0, 8 ),
-                             full_node_m,
-                             escrowReleaseTx->GetEscrowSource() );
-            topics.emplace( escrowReleaseTx->GetEscrowSource() );
-        }
 
-        if ( full_node_m )
-        {
-            m_logger->debug( "[{} - full: {}] Adding origin address to Broadcast: {}",
-                             account_m->GetAddress().substr( 0, 8 ),
-                             full_node_m,
-                             escrowReleaseTx->GetSrcAddress() );
-            topics.emplace( escrowReleaseTx->GetSrcAddress() );
-        }
+        m_logger->debug( "[{} - full: {}] Adding Escrow source address to Broadcast: {}",
+                         account_m->GetAddress().substr( 0, 8 ),
+                         full_node_m,
+                         escrowReleaseTx->GetEscrowSource() );
+        topics.emplace( escrowReleaseTx->GetEscrowSource() );
+
+        m_logger->debug( "[{} - full: {}] Adding origin address to Broadcast: {}",
+                         account_m->GetAddress().substr( 0, 8 ),
+                         full_node_m,
+                         escrowReleaseTx->GetSrcAddress() );
+        topics.emplace( escrowReleaseTx->GetSrcAddress() );
 
         std::string originalEscrowHash = escrowReleaseTx->GetOriginalEscrowHash();
         m_logger->debug( "[{} - full: {}] Successfully fetched release for escrow: {}",
