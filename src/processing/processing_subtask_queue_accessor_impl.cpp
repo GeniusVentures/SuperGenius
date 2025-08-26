@@ -166,6 +166,21 @@ namespace sgns::processing
     void SubTaskQueueAccessorImpl::CompleteSubTask( const std::string                 &subTaskId,
                                                     const SGProcessing::SubTaskResult &subTaskResult )
     {
+        // Find the corresponding subtask
+        auto maybeSubTask = FindSubTaskById( subTaskId );
+        if ( !maybeSubTask )
+        {
+            m_logger->error( "Cannot find subtask {} for validation", subTaskId );
+            return;
+        }
+
+        // Validate before storing
+        if ( !m_validationCore.ValidateIndividualResult( maybeSubTask.value(), subTaskResult ) )
+        {
+            m_logger->error( "Invalid result for subtask {}, not storing", subTaskId );
+            return;
+        }
+
         m_subTaskResultStorage->AddSubTaskResult( subTaskResult );
         m_subTaskStateStorage->ChangeSubTaskState( subTaskId, SGProcessing::SubTaskState::PROCESSED );
         // tell local queue manager we completed this task as well.
@@ -191,6 +206,19 @@ namespace sgns::processing
             return should_have_finalized;
         }
         std::string subTaskId = subTaskResult.subtaskid();
+
+        auto maybeSubTask = FindSubTaskById( subTaskResult.subtaskid() );
+        if ( !maybeSubTask )
+        {
+            m_logger->error( "Cannot find subtask {} for validation", subTaskResult.subtaskid() );
+            return false;
+        }
+
+        if ( !m_validationCore.ValidateIndividualResult( maybeSubTask.value(), subTaskResult ) )
+        {
+            m_logger->error( "Rejecting invalid external result for subtask {}", subTaskResult.subtaskid() );
+            return false;
+        }
 
         // Results accumulation
         std::lock_guard<std::mutex> guard( m_mutexResults );
@@ -305,5 +333,27 @@ namespace sgns::processing
                 }
             }
         }
+    }
+
+    boost::optional<SGProcessing::SubTask> SubTaskQueueAccessorImpl::FindSubTaskById(
+        const std::string& subTaskId) const
+    {
+        auto queue = m_subTaskQueueManager->GetQueueSnapshot();
+        if ( !queue )
+        {
+            return boost::none;
+        }
+
+        const auto &subTasks = queue->subtasks();
+        for ( int i = 0; i < subTasks.items_size(); ++i )
+        {
+            const auto &subTask = subTasks.items( i );
+            if ( subTask.subtaskid() == subTaskId )
+            {
+                return subTask;
+            }
+        }
+
+        return boost::none;
     }
 }
