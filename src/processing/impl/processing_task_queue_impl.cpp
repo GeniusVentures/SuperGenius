@@ -98,15 +98,17 @@ namespace sgns::processing
                 m_logger->debug( "Unable to convert a key to string" );
                 continue;
             }
-            if (m_badjobs.find(taskKey.value()) != m_badjobs.end())
-            {
-                m_logger->debug( "Skip bad job" );
-                continue;
-            }
+
             if ( !task.ParseFromArray( element.second.data(), element.second.size() ) )
             {
                 m_logger->debug( "Couldn't parse the task from Protobuf" );
                 //TODO - Decide what to do with an invalid task - Maybe error?
+                continue;
+            }
+
+            if ( m_badjobs.find( task.ipfs_block_id() ) != m_badjobs.end() )
+            {
+                m_logger->debug( "Skip bad job" );
                 continue;
             }
 
@@ -115,6 +117,7 @@ namespace sgns::processing
                 m_logger->debug( "Task already processed" );
                 continue;
             }
+
             if ( IsTaskLocked( taskKey.value() ) )
             {
                 m_logger->debug( "TASK_PREVIOUSLY_LOCKED {}", taskKey.value() );
