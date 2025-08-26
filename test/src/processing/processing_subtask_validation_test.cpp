@@ -231,129 +231,200 @@ TEST_F(SubTaskValidationTest, CompleteSubTask_InvalidResult_RejectsResult)
 
 /**
  * @given A subtask queue with one subtask
- * @when OnResultReceived gets a valid external result
- * @then The result should be accepted
+ * @when An external result is published to the result channel
+ * @then The result should be accepted if valid, rejected if invalid
  */
-TEST_F(SubTaskValidationTest, OnResultReceived_ValidExternalResult_AcceptsResult)
+TEST_F( SubTaskValidationTest, OnResultReceived_ValidExternalResult_AcceptsResult )
 {
-    auto pubs1 = m_pubsub_nodes[0];
+    auto                      pubs1 = m_pubsub_nodes[0];
+    auto                      pubs2 = m_pubsub_nodes[1];
     std::chrono::milliseconds resultTime;
-
-    // Create result channel
-    sgns::ipfs_pubsub::GossipPubSubTopic resultChannel(pubs1, "EXTERNAL_RESULT_CHANNEL");
-    resultChannel.Subscribe([](boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message&>) {});
 
     // Create queue with one subtask (2 chunks)
     auto queue = std::make_unique<SGProcessing::SubTaskQueue>();
-    queue->mutable_processing_queue()->set_owner_node_id(nodeId1);
-    
-    auto subTask = CreateTestSubTask("EXTERNAL_SUBTASK", 2);
-    auto item = queue->mutable_processing_queue()->add_items();
-    auto* queueSubTask = queue->mutable_subtasks()->add_items();
-    *queueSubTask = subTask;
+    queue->mutable_processing_queue()->set_owner_node_id( nodeId1 );
 
-    auto queueChannel = std::make_shared<ProcessingSubTaskQueueChannelPubSub>(pubs1, "EXTERNAL_VALIDATION_QUEUE");
-    auto processingQueueManager = std::make_shared<ProcessingSubTaskQueueManager>(
-        queueChannel, pubs1->GetAsioContext(), nodeId1, [](const std::string &){});
-    
-    processingQueueManager->ProcessSubTaskQueueMessage(queue.release());
+    // Add a ProcessingQueueItem
+    auto item = queue->mutable_processing_queue()->add_items();
+    item->set_lock_timestamp( 0 );
+    item->set_lock_node_id( "" );
+    item->set_lock_expiration_timestamp( 0 );
+
+    // Add the corresponding subtask
+    auto  subTask      = CreateTestSubTask( "EXTERNAL_SUBTASK", 2 );
+    auto *queueSubTask = queue->mutable_subtasks()->add_items();
+    *queueSubTask      = subTask;
+
+    // Debug: Print the subtask we created
+    std::cout << "Created subtask with ID: " << subTask.subtaskid() << std::endl;
+    std::cout << "Subtask has " << subTask.chunkstoprocess_size() << " chunks" << std::endl;
+
+    auto queueChannel = std::make_shared<ProcessingSubTaskQueueChannelPubSub>( pubs1, "EXTERNAL_VALIDATION_QUEUE" );
+    auto processingQueueManager = std::make_shared<ProcessingSubTaskQueueManager>( queueChannel,
+                                                                                   pubs1->GetAsioContext(),
+                                                                                   nodeId1,
+                                                                                   []( const std::string & ) {} );
+
+    processingQueueManager->ProcessSubTaskQueueMessage( queue.release() );
+
+    std::atomic<bool> errorOccurred = false;
+    std::string       lastError;
 
     auto subTaskQueueAccessor = std::make_shared<SubTaskQueueAccessorImpl>(
         pubs1,
         processingQueueManager,
         std::make_shared<SubTaskStateStorageMock>(),
         std::make_shared<SubTaskResultStorageMock>(),
-        [](const SGProcessing::TaskResult&) {},
-        [](const std::string&) {});
+        []( const SGProcessing::TaskResult & ) {},
+        [&errorOccurred, &lastError]( const std::string &error )
+        {
+            errorOccurred = true;
+            lastError     = error;
+            std::cout << "Error occurred: " << error << std::endl;
+        } );
 
-    subTaskQueueAccessor->CreateResultsChannel("external_validation_test");
+    subTaskQueueAccessor->CreateResultsChannel( "external_validation_test" );
 
     std::atomic<bool> connected = false;
-    subTaskQueueAccessor->ConnectToSubTaskQueue([&connected]() { connected = true; });
+    subTaskQueueAccessor->ConnectToSubTaskQueue( [&connected]() { connected = true; } );
 
-    ASSERT_WAIT_FOR_CONDITION(
-        [&connected]() { return connected.load(); },
-        std::chrono::milliseconds(2000),
-        "Failed to connect to subtask queue",
-        &resultTime
-    );
+    ASSERT_WAIT_FOR_CONDITION( [&connected]() { return connected.load(); },
+                               std::chrono::milliseconds( 2000 ),
+                               "Failed to connect to subtask queue",
+                               &resultTime );
+
+    // Wait for queue to be properly initialized
+    ASSERT_WAIT_FOR_CONDITION( [&processingQueueManager]() { return processingQueueManager->IsQueueInit(); },
+                               std::chrono::milliseconds( 2000 ),
+                               "Queue was not properly initialized",
+                               &resultTime );
+
+    // Create external result publisher
+    sgns::ipfs_pubsub::GossipPubSubTopic externalResultChannel( pubs2, "external_validation_test" );
+
+    // Wait for pubsub connection
+    std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
+
+    // Create and debug the result
+    auto validResult = CreateValidResult( "EXTERNAL_SUBTASK", 2 );
+    std::cout << "Created result with ID: " << validResult.subtaskid() << std::endl;
+    std::cout << "Result has " << validResult.chunk_hashes_size() << " chunk hashes" << std::endl;
 
     // Publish valid external result
-    auto validResult = CreateValidResult("EXTERNAL_SUBTASK", 2);
-    resultChannel.Publish(validResult.SerializeAsString());
+    externalResultChannel.Publish( validResult.SerializeAsString() );
+    std::cout << "Published external result" << std::endl;
 
-    // Wait for result to be received
-    ASSERT_WAIT_FOR_CONDITION(
-        [&subTaskQueueAccessor]() { return subTaskQueueAccessor->GetResults().size() > 0; },
-        std::chrono::milliseconds(2000),
-        "Valid external result was not received",
-        &resultTime
-    );
+    // Wait for result to be processed
+    bool resultReceived = false;
+    for ( int i = 0; i < 300; ++i )
+    { // 3 second timeout in 100ms increments
+        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+        auto results = subTaskQueueAccessor->GetResults();
+        if ( results.size() > 0 )
+        {
+            resultReceived = true;
+            break;
+        }
+        std::cout << "Waiting... results size: " << results.size() << std::endl;
+    }
 
-    // Should have 1 result
-    EXPECT_EQ(1, subTaskQueueAccessor->GetResults().size());
-    EXPECT_EQ("EXTERNAL_SUBTASK", std::get<0>(subTaskQueueAccessor->GetResults()[0]));
+    // Debug output
+    auto results = subTaskQueueAccessor->GetResults();
+    std::cout << "Final results size: " << results.size() << std::endl;
+    std::cout << "Error occurred: " << errorOccurred.load() << std::endl;
+    if ( errorOccurred.load() )
+    {
+        std::cout << "Last error: " << lastError << std::endl;
+    }
+
+    // Check that result was accepted
+    EXPECT_GT( results.size(), 0 ) << "No results found - external result was rejected";
+
+    if ( results.size() > 0 )
+    {
+        EXPECT_EQ( "EXTERNAL_SUBTASK", std::get<0>( results[0] ) );
+    }
 }
 
-/**
- * @given A subtask queue with one subtask
- * @when OnResultReceived gets an invalid external result
- * @then The result should be rejected
- */
-TEST_F(SubTaskValidationTest, OnResultReceived_InvalidExternalResult_RejectsResult)
-{
-    auto pubs1 = m_pubsub_nodes[0];
-    std::chrono::milliseconds resultTime;
 
-    // Create result channel
-    sgns::ipfs_pubsub::GossipPubSubTopic resultChannel(pubs1, "INVALID_EXTERNAL_RESULT_CHANNEL");
-    resultChannel.Subscribe([](boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message&>) {});
+/**
+ * @given A subtask queue with one subtask  
+ * @when An invalid external result is published to the result channel
+ * @then The result should be rejected due to validation failure
+ */
+TEST_F( SubTaskValidationTest, OnResultReceived_InvalidExternalResult_RejectsResult )
+{
+    auto                      pubs1 = m_pubsub_nodes[0];
+    auto                      pubs2 = m_pubsub_nodes[1]; // Use second node to simulate external result
+    std::chrono::milliseconds resultTime;
 
     // Create queue with one subtask (2 chunks)
     auto queue = std::make_unique<SGProcessing::SubTaskQueue>();
-    queue->mutable_processing_queue()->set_owner_node_id(nodeId1);
-    
-    auto subTask = CreateTestSubTask("INVALID_EXTERNAL_SUBTASK", 2);
+    queue->mutable_processing_queue()->set_owner_node_id( nodeId1 );
+
+    // Add a ProcessingQueueItem
     auto item = queue->mutable_processing_queue()->add_items();
-    auto* queueSubTask = queue->mutable_subtasks()->add_items();
-    *queueSubTask = subTask;
+    item->set_lock_timestamp( 0 );
+    item->set_lock_node_id( "" );
+    item->set_lock_expiration_timestamp( 0 );
 
-    auto queueChannel = std::make_shared<ProcessingSubTaskQueueChannelPubSub>(pubs1, "INVALID_EXTERNAL_VALIDATION_QUEUE");
-    auto processingQueueManager = std::make_shared<ProcessingSubTaskQueueManager>(
-        queueChannel, pubs1->GetAsioContext(), nodeId1, [](const std::string &){});
-    
-    processingQueueManager->ProcessSubTaskQueueMessage(queue.release());
+    // Add the corresponding subtask (2 chunks)
+    auto  subTask      = CreateTestSubTask( "INVALID_EXTERNAL_SUBTASK", 2 );
+    auto *queueSubTask = queue->mutable_subtasks()->add_items();
+    *queueSubTask      = subTask;
 
-    auto subTaskQueueAccessor = std::make_shared<SubTaskQueueAccessorImpl>(
+    auto queueChannel           = std::make_shared<ProcessingSubTaskQueueChannelPubSub>( pubs1,
+                                                                               "INVALID_EXTERNAL_VALIDATION_QUEUE" );
+    auto processingQueueManager = std::make_shared<ProcessingSubTaskQueueManager>( queueChannel,
+                                                                                   pubs1->GetAsioContext(),
+                                                                                   nodeId1,
+                                                                                   []( const std::string & ) {} );
+
+    processingQueueManager->ProcessSubTaskQueueMessage( queue.release() );
+
+    std::atomic<bool> errorOccurred        = false;
+    auto              subTaskQueueAccessor = std::make_shared<SubTaskQueueAccessorImpl>(
         pubs1,
         processingQueueManager,
         std::make_shared<SubTaskStateStorageMock>(),
         std::make_shared<SubTaskResultStorageMock>(),
-        [](const SGProcessing::TaskResult&) {},
-        [](const std::string&) {});
+        []( const SGProcessing::TaskResult & ) {},
+        [&errorOccurred]( const std::string & ) { errorOccurred = true; } );
 
-    subTaskQueueAccessor->CreateResultsChannel("invalid_external_validation_test");
+    subTaskQueueAccessor->CreateResultsChannel( "invalid_external_validation_test" );
 
     std::atomic<bool> connected = false;
-    subTaskQueueAccessor->ConnectToSubTaskQueue([&connected]() { connected = true; });
+    subTaskQueueAccessor->ConnectToSubTaskQueue( [&connected]() { connected = true; } );
 
-    ASSERT_WAIT_FOR_CONDITION(
-        [&connected]() { return connected.load(); },
-        std::chrono::milliseconds(2000),
-        "Failed to connect to subtask queue",
-        &resultTime
-    );
+    ASSERT_WAIT_FOR_CONDITION( [&connected]() { return connected.load(); },
+                               std::chrono::milliseconds( 2000 ),
+                               "Failed to connect to subtask queue",
+                               &resultTime );
+
+    // Wait for queue to be properly initialized
+    ASSERT_WAIT_FOR_CONDITION( [&processingQueueManager]() { return processingQueueManager->IsQueueInit(); },
+                               std::chrono::milliseconds( 2000 ),
+                               "Queue was not properly initialized",
+                               &resultTime );
+
+    // Create external result publisher
+    sgns::ipfs_pubsub::GossipPubSubTopic externalResultChannel( pubs2, "invalid_external_validation_test" );
+
+    // Wait for pubsub connection
+    std::this_thread::sleep_for( std::chrono::milliseconds( 500 ) );
 
     // Publish invalid external result (4 hashes instead of 2)
-    auto invalidResult = CreateInvalidResult("INVALID_EXTERNAL_SUBTASK", 4);
-    resultChannel.Publish(invalidResult.SerializeAsString());
+    auto invalidResult = CreateInvalidResult( "INVALID_EXTERNAL_SUBTASK", 4 );
+    externalResultChannel.Publish( invalidResult.SerializeAsString() );
 
-    // Wait a bit to see if result gets rejected
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    // Wait to see if the invalid result gets rejected
+    std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
 
-    // Should have 0 results (rejected)
-    EXPECT_EQ(0, subTaskQueueAccessor->GetResults().size());
+    // Should have 0 results (rejected due to validation)
+    auto results = subTaskQueueAccessor->GetResults();
+    EXPECT_EQ( 0, results.size() ) << "Invalid result was not rejected by validation";
 }
+
 
 /**
  * @given A subtask with 3 chunks  

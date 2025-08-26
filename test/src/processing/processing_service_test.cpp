@@ -48,7 +48,7 @@ void ProcessingServiceTest::SetUp(std::string name, std::string loggerConfig)
     m_Logger = logSystem->getLogger("console", name);
 
 #ifdef SGNS_DEBUGLOGS
-    libp2p::log::setLevelOfGroup(name, soralog::Level::DEBUG);
+    libp2p::log::setLevelOfGroup(name, soralog::Level::OFF);
 
     auto loggerProcQM  = sgns::base::createLogger( "ProcessingSubTaskQueueManager" );
     loggerProcQM->set_level( spdlog::level::debug );
