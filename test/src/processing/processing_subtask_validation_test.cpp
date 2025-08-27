@@ -405,10 +405,17 @@ TEST_F( SubTaskValidationTest, OnResultReceived_InvalidExternalResult_RejectsRes
                                &resultTime );
 
     // Create external result publisher
-    sgns::ipfs_pubsub::GossipPubSubTopic externalResultChannel( pubs2, "invalid_external_validation_test" );
-
+    sgns::ipfs_pubsub::GossipPubSubTopic externalResultChannel( pubs2, "RESULT_CHANNEL_ID_invalid_external_validation_test" );
+    auto                                &subscriptionFuture = externalResultChannel.Subscribe(
+        []( const boost::optional<const GossipPubSub::Message &> &message ) {},
+        false );
     // Wait for pubsub connection
-    std::this_thread::sleep_for( std::chrono::milliseconds( 500 ) );
+    ASSERT_WAIT_FOR_CONDITION(
+        [&subscriptionFuture]()
+        { return subscriptionFuture.wait_for( std::chrono::milliseconds( 0 ) ) == std::future_status::ready; },
+        std::chrono::milliseconds( 2000 ),
+        "External result channel subscription was not established",
+        &resultTime );
 
     // Publish invalid external result (4 hashes instead of 2)
     auto invalidResult = CreateInvalidResult( "INVALID_EXTERNAL_SUBTASK", 4 );
