@@ -90,6 +90,11 @@ namespace sgns
             return dag_st.source_addr();
         }
 
+        uint64_t GetTimestamp() const
+        {
+            return dag_st.timestamp();
+        }
+
         /**
          * @brief       Registers a deserializer function for a specific transaction type.
          * @param[in]   transaction_type The transaction type for which the deserializer is registered.
