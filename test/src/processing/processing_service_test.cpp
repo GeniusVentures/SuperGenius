@@ -51,13 +51,17 @@ void ProcessingServiceTest::SetUp(std::string name, std::string loggerConfig)
     libp2p::log::setLevelOfGroup(name, soralog::Level::OFF);
 
     auto loggerProcQM  = sgns::base::createLogger( "ProcessingSubTaskQueueManager" );
-    loggerProcQM->set_level( spdlog::level::debug );
+    loggerProcQM->set_level( spdlog::level::off );
 
     loggerProcQM  = sgns::base::createLogger( "ProcessingSubTaskQueue");
-    loggerProcQM->set_level( spdlog::level::debug );
+    loggerProcQM->set_level( spdlog::level::off );
 
     loggerProcQM  = sgns::base::createLogger( "ProcessingSubTaskQueueAccessorImpl");
-    loggerProcQM->set_level( spdlog::level::debug );
+    loggerProcQM->set_level( spdlog::level::off );
+    auto loggerProcEngine = sgns::base::createLogger( "ProcessingEngine" );
+    loggerProcEngine->set_level( spdlog::level::off );
+    auto loggerQueueCHannel = sgns::base::createLogger( "ProcessingSubTaskQueueChannelPubSub" );
+    loggerQueueCHannel->set_level( spdlog::level::off );
 #else
     libp2p::log::setLevelOfGroup(name, soralog::Level::OFF);
 #endif
@@ -76,9 +80,14 @@ void ProcessingServiceTest::Initialize(uint64_t numNodes, size_t processingTime)
 {
     // create 2 nodes default
     std::vector<std::string> bootstrap_nodes = {};
+    libp2p::protocol::gossip::Config config;
+    config.echo_forward_mode       = true; 
+    config.sign_messages           = true;
+    config.seen_cache_limit        = 10;
+    config.heartbeat_interval_msec = std::chrono::milliseconds{ 100 };
     for (size_t i = 0; i < numNodes; ++i)
     {
-        auto pubsub_node = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();
+        auto pubsub_node = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>( config );
         m_pubsub_nodes.push_back(pubsub_node);
         m_pubsub_futures.push_back(m_pubsub_nodes[i]->Start(40001 + i, bootstrap_nodes));
         if (i == 0)

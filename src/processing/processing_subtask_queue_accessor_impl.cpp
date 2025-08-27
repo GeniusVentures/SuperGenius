@@ -23,6 +23,7 @@ namespace sgns::processing
         m_logger->debug( "[CREATED] this: {}, thread_id {}",
                          reinterpret_cast<size_t>( this ),
                          std::this_thread::get_id() );
+        
     }
 
     SubTaskQueueAccessorImpl::~SubTaskQueueAccessorImpl()
@@ -47,6 +48,7 @@ namespace sgns::processing
             m_logger->error( "Tried creating channel with \"RESULT_CHANNEL_ID_{}\" but channel already created",
                              task_id );
         }
+        StartPeriodicStateBroadcast();
         return ret;
     }
 
@@ -189,6 +191,7 @@ namespace sgns::processing
         // tell local queue manager we completed this task as well.
         m_subTaskQueueManager->ChangeSubTaskProcessingStates( { subTaskId }, true );
 
+
         if ( m_resultChannel )
         {
             m_resultChannel->Publish( subTaskResult.SerializeAsString() );
@@ -203,7 +206,8 @@ namespace sgns::processing
 
     bool SubTaskQueueAccessorImpl::OnResultReceived( SGProcessing::SubTaskResult &&subTaskResult )
     {
-        m_logger->info( "OnResultReceived called with subtask {}", subTaskResult.subtaskid() );
+        m_logger->info( "OnResultReceived called with subtask {} {}",
+                        reinterpret_cast<size_t>( this ), subTaskResult.subtaskid() );
         bool should_have_finalized = false;
         if ( !m_subTaskQueueManager->IsQueueInit() )
         {
@@ -335,6 +339,7 @@ namespace sgns::processing
 
                 if ( rebroadcast_results )
                 {
+                    std::this_thread::sleep_for( std::chrono::milliseconds( 300 ) );
                     _this->m_resultChannel->Publish( message->data);
                 }
             }
@@ -361,5 +366,39 @@ namespace sgns::processing
         }
 
         return boost::none;
+    }
+
+    void SubTaskQueueAccessorImpl::StartPeriodicStateBroadcast()
+    {
+        // Every few seconds, if we have ownership and results, broadcast them
+        m_stateTimer = std::make_shared<boost::asio::steady_timer>( *m_gossipPubSub->GetAsioContext() );
+        ScheduleStateBroadcast();
+    }
+
+    void SubTaskQueueAccessorImpl::ScheduleStateBroadcast()
+    {
+        m_stateTimer->expires_from_now( std::chrono::seconds( 2 ) );
+        m_stateTimer->async_wait(
+            [this]( const boost::system::error_code &ec )
+            {
+                if ( !ec )
+                {
+                    PublishExistingResults();
+                    ScheduleStateBroadcast(); // Schedule next broadcast
+                }
+            } );
+    }
+
+    void SubTaskQueueAccessorImpl::PublishExistingResults()
+    {
+        std::lock_guard<std::mutex> guard( m_mutexResults );
+        for ( const auto &[subTaskId, result] : m_results )
+        {
+            if ( m_resultChannel )
+            {
+                m_resultChannel->Publish( result.SerializeAsString() );
+                m_logger->debug( "Published existing result for {}", subTaskId );
+            }
+        }
     }
 }
