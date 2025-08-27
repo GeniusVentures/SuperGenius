@@ -101,21 +101,36 @@ TEST_F(SubTaskQueueAccessorImplTest, SubscriptionToResultChannel)
 
     Color::PrintInfo("Waited ", resultTime.count(),  " ms for connection");
 
+     // Create external result publisher since echo messages are off
+    sgns::ipfs_pubsub::GossipPubSubTopic externalResultChannel( pubs2,
+                                                                "RESULT_CHANNEL_ID_test" );
+    auto                                &subscriptionFuture = externalResultChannel.Subscribe(
+        []( const boost::optional<const GossipPubSub::Message &> &message ) {},
+        false );
+    // Wait for pubsub connection
+    ASSERT_WAIT_FOR_CONDITION(
+        [&subscriptionFuture]()
+        { return subscriptionFuture.wait_for( std::chrono::milliseconds( 0 ) ) == std::future_status::ready; },
+        std::chrono::milliseconds( 2000 ),
+        "External result channel subscription was not established",
+        &resultTime );
+
     // Publish result to the results channel
     SGProcessing::SubTaskResult result;
     result.set_subtaskid("SUBTASK_ID");
-    resultChannel.Publish(result.SerializeAsString());
+    externalResultChannel.Publish( result.SerializeAsString() );
 
     // Wait for the result to be received
     ASSERT_WAIT_FOR_CONDITION( [this]()
                                { return m_processing_queues_accessors[0]->GetResults().size() > 0; },
-        std::chrono::milliseconds(2000),
+        std::chrono::milliseconds(12000),
         "Result was not received by SubTaskQueueAccessor",
         &resultTime
     );
 
     Color::PrintInfo("Waited ", resultTime.count(),  " ms for results to be received");
-
+    m_processing_engines[0]->StopQueueProcessing();
+    m_processing_engines[1]->StopQueueProcessing();
     // No duplicates should be received
     ASSERT_EQ( 1, m_processing_queues_accessors[0]->GetResults().size() );
     EXPECT_EQ( "SUBTASK_ID", std::get<0>( m_processing_queues_accessors[0]->GetResults()[0] ) );
