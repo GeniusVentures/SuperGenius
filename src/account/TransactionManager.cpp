@@ -41,13 +41,18 @@ namespace sgns
                                                                  std::shared_ptr<boost::asio::io_context> ctx,
                                                                  std::shared_ptr<GeniusAccount>           account,
                                                                  std::shared_ptr<crypto::Hasher>          hasher,
-                                                                 bool                                     full_node )
+                                                                 bool                                     full_node,
+                                                                 std::chrono::milliseconds timestamp_tolerance,
+                                                                 std::chrono::milliseconds immutability_window )
     {
-        auto instance = std::shared_ptr<TransactionManager>( new TransactionManager( std::move( processing_db ),
-                                                                                     std::move( ctx ),
-                                                                                     std::move( account ),
-                                                                                     std::move( hasher ),
-                                                                                     full_node ) );
+        auto instance = std::shared_ptr<TransactionManager>(
+            new TransactionManager( std::move( processing_db ),
+                                    std::move( ctx ),
+                                    std::move( account ),
+                                    std::move( hasher ),
+                                    full_node,
+                                    std::move( timestamp_tolerance ),
+                                    std::move( immutability_window ) ) );
 
         bool crdt_tx_filter_initialized = instance->globaldb_m->RegisterElementFilter(
             "^/?" + GetBlockChainBase() + "[^/]*/tx/[^/]*/[0-9]+",
@@ -81,14 +86,18 @@ namespace sgns
                                             std::shared_ptr<boost::asio::io_context> ctx,
                                             std::shared_ptr<GeniusAccount>           account,
                                             std::shared_ptr<crypto::Hasher>          hasher,
-                                            bool                                     full_node ) :
+                                            bool                                     full_node,
+                                            std::chrono::milliseconds                timestamp_tolerance,
+                                            std::chrono::milliseconds                immutability_window ) :
         globaldb_m( std::move( processing_db ) ),
         ctx_m( std::move( ctx ) ),
         account_m( std::move( account ) ),
         hasher_m( std::move( hasher ) ),
         timer_m( std::make_shared<boost::asio::steady_timer>( *ctx_m, boost::asio::chrono::milliseconds( 300 ) ) ),
         full_node_m( std::move( full_node ) ),
-        state_m( State::CREATING )
+        state_m( State::CREATING ),
+        timestamp_tolerance_m( std::move( timestamp_tolerance ) ),
+        immutability_window_m( std::move( immutability_window ) )
 
     {
         m_logger->info( "[{} - full: {}] Initializing values by reading whole blockchain",
@@ -1916,36 +1925,31 @@ namespace sgns
         const crdt::pb::Element &element )
     {
         std::optional<std::vector<crdt::pb::Element>> maybe_tombstones;
-        bool                                          valid_tx = false;
-        std::shared_ptr<IGeniusTransactions>          tx;
+        bool                                          should_tombstone = false;
+        std::shared_ptr<IGeniusTransactions>          new_tx;
         do
         {
-            //TODO - This verification is only needed because CRDT resyncs every boot up
-            // Remove once we remove the in memory processed_cids on crdt_datastore and use dagsyncher again
-            auto maybe_has_value = globaldb_m->Get( element.key() );
-            if ( maybe_has_value.has_value() )
+            auto maybe_new_tx = DeSerializeTransaction( element.value() );
+            if ( maybe_new_tx.has_error() )
             {
-                m_logger->debug( "[{} - full: {}] Already have the transaction {}",
+                m_logger->error( "[{} - full: {}] Failed to deserialize incoming transaction {}",
                                  account_m->GetAddress().substr( 0, 8 ),
                                  full_node_m,
                                  element.key() );
-                valid_tx = true;
+                should_tombstone = true;
                 break;
             }
-            auto maybe_tx = DeSerializeTransaction( element.value() );
-            if ( maybe_tx.has_error() )
+            new_tx = maybe_new_tx.value();
+
+            if ( !new_tx->CheckSignature() )
             {
-                break;
-            }
-            tx = maybe_tx.value();
-            if ( !tx->CheckSignature() )
-            {
-                if ( !tx->CheckDAGSignatureLegacy() )
+                if ( !new_tx->CheckDAGSignatureLegacy() )
                 {
                     m_logger->error( "[{} - full: {}] Could not validate signature of transaction {}",
                                      account_m->GetAddress().substr( 0, 8 ),
                                      full_node_m,
                                      element.key() );
+                    should_tombstone = true;
                     break;
                 }
                 else
@@ -1957,19 +1961,40 @@ namespace sgns
                 }
             }
 
-            m_logger->trace( "[{} - full: {}] Valid signature of {}",
+            auto maybe_existing_value = globaldb_m->Get( element.key() );
+            if ( !maybe_existing_value.has_value() )
+            {
+                m_logger->trace( "[{} - full: {}] No existing transaction, accepting new transaction {}",
+                                 account_m->GetAddress().substr( 0, 8 ),
+                                 full_node_m,
+                                 element.key() );
+                break;
+            }
+            m_logger->debug( "[{} - full: {}] Found existing transaction {}, checking immutability and timestamps",
                              account_m->GetAddress().substr( 0, 8 ),
                              full_node_m,
                              element.key() );
-            valid_tx = true;
+
+            auto maybe_existing_tx = DeSerializeTransaction( maybe_existing_value.value() );
+            if ( maybe_existing_tx.has_error() )
+            {
+                m_logger->warn( "[{} - full: {}] Failed to deserialize existing transaction {}, accepting new one",
+                                account_m->GetAddress().substr( 0, 8 ),
+                                full_node_m,
+                                element.key() );
+                break;
+            }
+            auto existing_tx = maybe_existing_tx.value();
+
+            should_tombstone = ShouldReplaceTransaction( existing_tx, new_tx );
 
         } while ( 0 );
 
-        if ( !valid_tx )
+        if ( should_tombstone )
         {
             std::vector<crdt::pb::Element> tombstones;
             tombstones.push_back( element );
-            auto maybe_proof_key = GetExpectedProofKey( element.key(), tx );
+            auto maybe_proof_key = GetExpectedProofKey( element.key(), new_tx );
             if ( maybe_proof_key.has_value() )
             {
                 crdt::pb::Element proof_tombstone;
@@ -2037,6 +2062,132 @@ namespace sgns
         }
 
         return maybe_tombstones;
+    }
+
+    bool TransactionManager::ShouldReplaceTransaction( const std::shared_ptr<IGeniusTransactions> &existing_tx,
+                                                       const std::shared_ptr<IGeniusTransactions> &new_tx ) const
+    {
+        // First check if the existing transaction is immutable
+        if ( IsTransactionImmutable( existing_tx ) )
+        {
+            m_logger->info( "[{} - full: {}] Existing transaction is immutable, rejecting replacement attempt",
+                            account_m->GetAddress().substr( 0, 8 ),
+                            full_node_m );
+            return false;
+        }
+
+        // Get timestamps and elapsed times
+        auto existing_timestamp = existing_tx->GetTimestamp();
+        auto new_timestamp      = new_tx->GetTimestamp();
+        auto time_diff          = GetElapsedTime( new_timestamp, existing_timestamp );
+
+        // Check if both transactions are within the tolerance window
+        if ( ( time_diff > 0 ) && ( time_diff < timestamp_tolerance_m.count() ) )
+        {
+            m_logger->debug( "[{} - full: {}] Timestamps within tolerance ({} ms). Existing: {} , New: {} , Diff: {}",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             timestamp_tolerance_m.count(),
+                             existing_timestamp,
+                             new_timestamp,
+                             time_diff );
+
+            m_logger->info( "[{} - full: {}] New transaction is earlier (ts: {} vs {}), will replace existing",
+                            account_m->GetAddress().substr( 0, 8 ),
+                            full_node_m,
+                            new_timestamp,
+                            existing_timestamp );
+            return true;
+        }
+
+        // If outside tolerance, reject the new transaction
+        m_logger->warn(
+            "[{} - full: {}] Timestamp difference ({} ms) exceeds tolerance ({} ms). Existing: {} , New: {} , Diff: {}. Rejecting new transaction.",
+            account_m->GetAddress().substr( 0, 8 ),
+            full_node_m,
+            time_diff,
+            timestamp_tolerance_m.count(),
+            existing_timestamp,
+            new_timestamp,
+            time_diff );
+
+        return false;
+    }
+
+    uint64_t TransactionManager::GetCurrentTimestamp() const
+    {
+        // Get current time in milliseconds since epoch
+        auto now      = std::chrono::system_clock::now();
+        auto duration = now.time_since_epoch();
+        return std::chrono::duration_cast<std::chrono::milliseconds>( duration ).count();
+    }
+
+    int64_t TransactionManager::GetElapsedTime( uint64_t timestamp, uint64_t current_timestamp ) const
+    {
+        // Calculate elapsed time (can be negative if timestamp is in the future)
+        int64_t elapsed = static_cast<int64_t>( current_timestamp ) - static_cast<int64_t>( timestamp );
+
+        if ( elapsed < 0 )
+        {
+            m_logger->debug( "[{} - full: {}] Transaction timestamp {} is in the future (current: {}), elapsed: {} ms",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             timestamp,
+                             current_timestamp,
+                             elapsed );
+        }
+        else
+        {
+            m_logger->trace( "[{} - full: {}] Transaction timestamp {} elapsed: {} ms",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             timestamp,
+                             elapsed );
+        }
+
+        return elapsed;
+    }
+
+    int64_t TransactionManager::GetElapsedTime( uint64_t timestamp ) const
+    {
+        return GetElapsedTime( std::move( timestamp ), GetCurrentTimestamp() );
+    }
+
+    bool TransactionManager::IsTransactionImmutable( const std::shared_ptr<IGeniusTransactions> &tx ) const
+    {
+        auto tx_timestamp = tx->GetTimestamp();
+        auto elapsed      = GetElapsedTime( tx_timestamp );
+
+        // If elapsed is negative, the transaction is from the future - not immutable
+        if ( elapsed < 0 )
+        {
+            m_logger->debug( "[{} - full: {}] Transaction from future is not immutable (elapsed: {} ms)",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             elapsed );
+            return false;
+        }
+
+        bool is_immutable = elapsed > immutability_window_m.count();
+
+        if ( is_immutable )
+        {
+            m_logger->debug( "[{} - full: {}] Transaction is immutable (elapsed: {} ms, window: {} ms)",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             elapsed,
+                             immutability_window_m.count() );
+        }
+        else
+        {
+            m_logger->trace( "[{} - full: {}] Transaction is still mutable (elapsed: {} ms, window: {} ms)",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             elapsed,
+                             immutability_window_m.count() );
+        }
+
+        return is_immutable;
     }
 
 }

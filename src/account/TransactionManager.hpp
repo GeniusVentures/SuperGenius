@@ -72,11 +72,14 @@ namespace sgns
             FAILED,
             INVALID
         };
-        static std::shared_ptr<TransactionManager> New( std::shared_ptr<crdt::GlobalDB>          processing_db,
-                                                        std::shared_ptr<boost::asio::io_context> ctx,
-                                                        std::shared_ptr<GeniusAccount>           account,
-                                                        std::shared_ptr<crypto::Hasher>          hasher,
-                                                        bool                                     full_node = false );
+        static std::shared_ptr<TransactionManager> New(
+            std::shared_ptr<crdt::GlobalDB>          processing_db,
+            std::shared_ptr<boost::asio::io_context> ctx,
+            std::shared_ptr<GeniusAccount>           account,
+            std::shared_ptr<crypto::Hasher>          hasher,
+            bool                                     full_node           = false,
+            std::chrono::milliseconds                timestamp_tolerance = TIMESTAMP_TOLERANCE,
+            std::chrono::milliseconds                immutability_window = IMMUTABILITY_WINDOW );
 
         ~TransactionManager();
 
@@ -139,7 +142,9 @@ namespace sgns
                             std::shared_ptr<boost::asio::io_context> ctx,
                             std::shared_ptr<GeniusAccount>           account,
                             std::shared_ptr<crypto::Hasher>          hasher,
-                            bool                                     full_node );
+                            bool                                     full_node,
+                            std::chrono::milliseconds                timestamp_tolerance,
+                            std::chrono::milliseconds                immutability_window );
 
         // Parser function pointer alias: returns a set of topic strings or an error
         using TransactionParserFn = outcome::result<std::set<std::string>> ( TransactionManager::* )(
@@ -204,6 +209,11 @@ namespace sgns
         std::unordered_map<std::string, TrackedTx> incoming_tx_processed_m;
         std::function<void()>                      task_m;
         std::atomic<bool>                          stopped_{ false };
+        std::chrono::milliseconds                  timestamp_tolerance_m;
+        std::chrono::milliseconds                  immutability_window_m;
+
+        static constexpr std::chrono::milliseconds TIMESTAMP_TOLERANCE = std::chrono::seconds( 10 );
+        static constexpr std::chrono::milliseconds IMMUTABILITY_WINDOW = std::chrono::minutes( 15 );
 
         outcome::result<std::set<std::string>> ParseTransferTransaction(
             const std::shared_ptr<IGeniusTransactions> &tx );
@@ -235,6 +245,15 @@ namespace sgns
 
         std::optional<std::vector<crdt::pb::Element>> FilterTransaction( const crdt::pb::Element &element );
         std::optional<std::vector<crdt::pb::Element>> FilterProof( const crdt::pb::Element &element );
+
+        bool ShouldReplaceTransaction( const std::shared_ptr<IGeniusTransactions> &existing_tx,
+                                       const std::shared_ptr<IGeniusTransactions> &new_tx ) const;
+
+        uint64_t GetCurrentTimestamp() const;
+        int64_t  GetElapsedTime( uint64_t timestamp, uint64_t current_timestamp ) const;
+        int64_t  GetElapsedTime( uint64_t timestamp ) const;
+
+        bool IsTransactionImmutable( const std::shared_ptr<IGeniusTransactions> &tx ) const;
     };
 }
 
