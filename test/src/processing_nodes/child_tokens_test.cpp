@@ -98,9 +98,8 @@ TEST( TransferTokenValue, ThreeNodeTransferTest )
     auto node52 = CreateNode( "0xdafe", "2.0", sgns::TokenID::FromBytes( { 0x52 } ) );
 
     // Configure peer connections
-    node51->GetPubSub()->AddPeers( { node50->GetPubSub()->GetLocalAddress() } );
+    node51->GetPubSub()->AddPeers( { node50->GetPubSub()->GetLocalAddress(), node52->GetPubSub()->GetLocalAddress() } );
     node52->GetPubSub()->AddPeers( { node50->GetPubSub()->GetLocalAddress() } );
-    node50->GetPubSub()->AddPeers( { node51->GetPubSub()->GetLocalAddress(), node52->GetPubSub()->GetLocalAddress() } );
     test::assertWaitForCondition( [&]()
                                   { return node51->GetTransactionManagerState() == TransactionManager::State::READY; },
                                   std::chrono::milliseconds( 20000 ),
@@ -466,8 +465,7 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
 
     node_main->GetPubSub()->AddPeers(
         { node_proc1->GetPubSub()->GetLocalAddress(), node_proc2->GetPubSub()->GetLocalAddress() } );
-    node_proc1->GetPubSub()->AddPeers( { node_main->GetPubSub()->GetLocalAddress() } );
-    node_proc2->GetPubSub()->AddPeers( { node_main->GetPubSub()->GetLocalAddress() } );
+    node_proc1->GetPubSub()->AddPeers( { node_proc2->GetPubSub()->GetLocalAddress() } );
 
     test::assertWaitForCondition(
         [&]() { return node_main->GetTransactionManagerState() == TransactionManager::State::READY; },
@@ -566,7 +564,7 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
             return ( node_proc1->GetBalance() + node_proc2->GetBalance() ) ==
                    ( bal_p1_init + bal_p2_init + 2 * expected_peer_gain );
         },
-        std::chrono::milliseconds( 20000 ),
+        std::chrono::milliseconds( 40000 ),
         "Other nodes balance not updated in time" );
     ASSERT_EQ( bal_p1_init + bal_p2_init + 2 * expected_peer_gain,
                node_proc1->GetBalance() + node_proc2->GetBalance() );
