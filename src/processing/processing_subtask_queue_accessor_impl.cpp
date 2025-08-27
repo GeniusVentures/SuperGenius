@@ -28,6 +28,11 @@ namespace sgns::processing
 
     SubTaskQueueAccessorImpl::~SubTaskQueueAccessorImpl()
     {
+        if ( m_stateTimer )
+        {
+            boost::system::error_code ec;
+            m_stateTimer->cancel( ec );
+        }
         m_logger->debug( "[RELEASED] this: {}, thread_id {}",
                          reinterpret_cast<size_t>( this ),
                          std::this_thread::get_id() );
@@ -337,11 +342,11 @@ namespace sgns::processing
 
                 rebroadcast_results = _this->OnResultReceived( std::move( result ) );
 
-                if ( rebroadcast_results )
-                {
-                    std::this_thread::sleep_for( std::chrono::milliseconds( 300 ) );
-                    _this->m_resultChannel->Publish( message->data);
-                }
+                //if ( rebroadcast_results )
+                //{
+                //    std::this_thread::sleep_for( std::chrono::milliseconds( 300 ) );
+                //    _this->m_resultChannel->Publish( message->data);
+                //}
             }
         }
     }
@@ -398,6 +403,26 @@ namespace sgns::processing
             {
                 m_resultChannel->Publish( result.SerializeAsString() );
                 m_logger->debug( "Published existing result for {}", subTaskId );
+            }
+        }
+        // If I'm the owner and have results, try to finalize
+        if ( m_subTaskQueueManager->HasOwnership() && !m_results.empty() )
+        {
+            if ( m_subTaskQueueManager->IsProcessed() )
+            {
+                std::set<std::string> invalidSubTaskIds;
+                auto                  queue = m_subTaskQueueManager->GetQueueSnapshot();
+
+                auto finalized_ret = FinalizeQueueProcessing( queue->subtasks(), invalidSubTaskIds );
+                if ( finalized_ret == FinalizationRetVal::FINALIZED )
+                {
+                    m_logger->debug( "Successfully finalized during periodic broadcast" );
+                    // Stop periodic broadcasting since we're done
+                    if ( m_stateTimer )
+                    {
+                        m_stateTimer->cancel();
+                    }
+                }
             }
         }
     }
