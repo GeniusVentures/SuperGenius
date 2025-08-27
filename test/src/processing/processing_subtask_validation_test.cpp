@@ -255,10 +255,6 @@ TEST_F( SubTaskValidationTest, OnResultReceived_ValidExternalResult_AcceptsResul
     auto *queueSubTask = queue->mutable_subtasks()->add_items();
     *queueSubTask      = subTask;
 
-    // Debug: Print the subtask we created
-    std::cout << "Created subtask with ID: " << subTask.subtaskid() << std::endl;
-    std::cout << "Subtask has " << subTask.chunkstoprocess_size() << " chunks" << std::endl;
-
     auto queueChannel = std::make_shared<ProcessingSubTaskQueueChannelPubSub>( pubs1, "EXTERNAL_VALIDATION_QUEUE" );
     auto processingQueueManager = std::make_shared<ProcessingSubTaskQueueManager>( queueChannel,
                                                                                    pubs1->GetAsioContext(),
@@ -300,42 +296,43 @@ TEST_F( SubTaskValidationTest, OnResultReceived_ValidExternalResult_AcceptsResul
                                &resultTime );
 
     // Create external result publisher
-    sgns::ipfs_pubsub::GossipPubSubTopic externalResultChannel( pubs2, "external_validation_test" );
+    sgns::ipfs_pubsub::GossipPubSubTopic externalResultChannel( pubs2, "RESULT_CHANNEL_ID_external_validation_test" );
+    auto&                                 subscriptionFuture = externalResultChannel.Subscribe(
+        []( const boost::optional<const GossipPubSub::Message &> &message ) {},
+        false );
 
     // Wait for pubsub connection
-    std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
+    ASSERT_WAIT_FOR_CONDITION(
+        [&subscriptionFuture]()
+        { return subscriptionFuture.wait_for( std::chrono::milliseconds( 0 ) ) == std::future_status::ready; },
+        std::chrono::milliseconds( 2000 ),
+        "External result channel subscription was not established",
+        &resultTime );
 
     // Create and debug the result
     auto validResult = CreateValidResult( "EXTERNAL_SUBTASK", 2 );
-    std::cout << "Created result with ID: " << validResult.subtaskid() << std::endl;
-    std::cout << "Result has " << validResult.chunk_hashes_size() << " chunk hashes" << std::endl;
 
     // Publish valid external result
     externalResultChannel.Publish( validResult.SerializeAsString() );
-    std::cout << "Published external result" << std::endl;
 
     // Wait for result to be processed
-    bool resultReceived = false;
-    for ( int i = 0; i < 300; ++i )
-    { // 3 second timeout in 100ms increments
-        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
-        auto results = subTaskQueueAccessor->GetResults();
-        if ( results.size() > 0 )
+    ASSERT_WAIT_FOR_CONDITION(
+        [&subTaskQueueAccessor]()
         {
-            resultReceived = true;
-            break;
-        }
-        std::cout << "Waiting... results size: " << results.size() << std::endl;
-    }
+            auto results = subTaskQueueAccessor->GetResults();
+            std::cout << "Results Size: " << results.size() << std::endl;
+            if ( results.size() > 0 )
+            {
+                std::cout << "Got results presumably" << std::endl;
+                return true;
+            }
+            return false;
+        },
+        std::chrono::milliseconds( 4000 ),
+        "Results were never received",
+        &resultTime );
 
-    // Debug output
     auto results = subTaskQueueAccessor->GetResults();
-    std::cout << "Final results size: " << results.size() << std::endl;
-    std::cout << "Error occurred: " << errorOccurred.load() << std::endl;
-    if ( errorOccurred.load() )
-    {
-        std::cout << "Last error: " << lastError << std::endl;
-    }
 
     // Check that result was accepted
     EXPECT_GT( results.size(), 0 ) << "No results found - external result was rejected";

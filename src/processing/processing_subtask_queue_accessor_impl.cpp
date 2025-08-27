@@ -166,11 +166,13 @@ namespace sgns::processing
     void SubTaskQueueAccessorImpl::CompleteSubTask( const std::string                 &subTaskId,
                                                     const SGProcessing::SubTaskResult &subTaskResult )
     {
+        m_logger->info( "CompleteSubTask called with subtask {}", subTaskResult.subtaskid() );
         // Find the corresponding subtask
         auto maybeSubTask = FindSubTaskById( subTaskId );
         if ( !maybeSubTask )
         {
             m_logger->error( "Cannot find subtask {} for validation", subTaskId );
+            m_processingErrorSink( "Cannot find subtask for validation: " + subTaskId );
             return;
         }
 
@@ -178,6 +180,7 @@ namespace sgns::processing
         if ( !m_validationCore.ValidateIndividualResult( maybeSubTask.value(), subTaskResult ) )
         {
             m_logger->error( "Invalid result for subtask {}, not storing", subTaskId );
+            m_processingErrorSink( "Invalid result for subtask: " + subTaskId );
             return;
         }
 
@@ -200,6 +203,7 @@ namespace sgns::processing
 
     bool SubTaskQueueAccessorImpl::OnResultReceived( SGProcessing::SubTaskResult &&subTaskResult )
     {
+        m_logger->info( "OnResultReceived called with subtask {}", subTaskResult.subtaskid() );
         bool should_have_finalized = false;
         if ( !m_subTaskQueueManager->IsQueueInit() )
         {
@@ -211,12 +215,14 @@ namespace sgns::processing
         if ( !maybeSubTask )
         {
             m_logger->error( "Cannot find subtask {} for validation", subTaskResult.subtaskid() );
+            m_processingErrorSink( "Cannot find subtask for validation: " + subTaskResult.subtaskid() );
             return false;
         }
 
         if ( !m_validationCore.ValidateIndividualResult( maybeSubTask.value(), subTaskResult ) )
         {
             m_logger->error( "Rejecting invalid external result for subtask {}", subTaskResult.subtaskid() );
+            m_processingErrorSink( "Invalid external result for subtask: " + subTaskResult.subtaskid() );
             return false;
         }
 
