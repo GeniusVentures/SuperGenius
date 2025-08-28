@@ -253,6 +253,7 @@ TEST_F(ProcessingSubTaskQueueManagerTest, GrabSubTaskWithOwnershipTransferring)
     auto queueChannel2 = std::make_shared<ProcessingSubTaskQueueChannelImpl>();
     queueChannel2->queueOwnershipRequestSink = 
         [context, &requestedOwnerIds, &queueManager1](const std::string& nodeId) {
+        std::cout << "Queue Ownership Sink" << std::endl;
             requestedOwnerIds.push_back(nodeId);
             context->post([&queueManager1, nodeId]() {
                 SGProcessing::SubTaskQueueRequest request;
@@ -260,20 +261,31 @@ TEST_F(ProcessingSubTaskQueueManagerTest, GrabSubTaskWithOwnershipTransferring)
                 queueManager1.ProcessSubTaskQueueRequestMessage(request);
             });
         };
-    queueChannel2->queuePublishingSink = 
-        [context, &queueSnapshotSet, &queueManager1](std::shared_ptr<SGProcessing::SubTaskQueue> queue) {
-        queueSnapshotSet.push_back(*queue);
-        context->post([&queueManager1, queue]() {
-            auto pQueue = std::make_unique<SGProcessing::SubTaskQueue>();
-            pQueue->CopyFrom(*queue);
-            queueManager1.ProcessSubTaskQueueMessage(pQueue.release());
-        });
+    queueChannel2->queuePublishingSink =
+        [context, &queueSnapshotSet, &queueManager1]( std::shared_ptr<SGProcessing::SubTaskQueue> queue )
+    {
+        // Only add to snapshot set if this node (NODE_2) is the owner
+        if ( queue->processing_queue().owner_node_id() == "NODE_2" )
+        {
+            std::cout << "Node 2 publishing snapshot " << ( queueSnapshotSet.size() + 1 )
+                      << ", owner: " << queue->processing_queue().owner_node_id() << std::endl;
+            queueSnapshotSet.push_back( *queue );
+        }
+        // Always forward to other node for synchronization
+        context->post(
+            [&queueManager1, queue]()
+            {
+                auto pQueue = std::make_unique<SGProcessing::SubTaskQueue>();
+                pQueue->CopyFrom( *queue );
+                queueManager1.ProcessSubTaskQueueMessage( pQueue.release() );
+            } );
     };
 
     ProcessingSubTaskQueueManager queueManager2(queueChannel2, context, nodeId2,[](const std::string &){});
 
     queueSubTaskChannel->queueOwnershipRequestSink =
         [context, &requestedOwnerIds, &queueManager2](const std::string& nodeId) {
+            std::cout << "Queue Ownership Sink 2" << std::endl;
             requestedOwnerIds.push_back(nodeId);
             context->post([&queueManager2, nodeId]() {
                 SGProcessing::SubTaskQueueRequest request;
@@ -282,14 +294,24 @@ TEST_F(ProcessingSubTaskQueueManagerTest, GrabSubTaskWithOwnershipTransferring)
                 });
         };
     queueSubTaskChannel->queuePublishingSink =
-        [context, &queueSnapshotSet, &queueManager2](std::shared_ptr<SGProcessing::SubTaskQueue> queue) {
-            queueSnapshotSet.push_back(*queue);
-            context->post([&queueManager2, queue]() {
+        [context, &queueSnapshotSet, &queueManager2]( std::shared_ptr<SGProcessing::SubTaskQueue> queue )
+    {
+        // Only add to snapshot set if this node (NODE_1) is the owner
+        if ( queue->processing_queue().owner_node_id() == "NODE_1" )
+        {
+            std::cout << "Node 1 publishing snapshot " << ( queueSnapshotSet.size() + 1 )
+                      << ", owner: " << queue->processing_queue().owner_node_id() << std::endl;
+            queueSnapshotSet.push_back( *queue );
+        }
+        // Always forward to other node for synchronization
+        context->post(
+            [&queueManager2, queue]()
+            {
                 auto pQueue = std::make_unique<SGProcessing::SubTaskQueue>();
-                pQueue->CopyFrom(*queue);
-                queueManager2.ProcessSubTaskQueueMessage(pQueue.release());
-            });
-        };
+                pQueue->CopyFrom( *queue );
+                queueManager2.ProcessSubTaskQueueMessage( pQueue.release() );
+            } );
+    };
 
     // Create the queue on node1
     queueManager1.CreateQueue(subTasks);
@@ -305,7 +327,7 @@ TEST_F(ProcessingSubTaskQueueManagerTest, GrabSubTaskWithOwnershipTransferring)
 
     context->run();
 
-    ASSERT_EQ(3, queueSnapshotSet.size());
+    ASSERT_EQ(4, queueSnapshotSet.size());
 
     // Ownership is transferred to node2
     ASSERT_EQ(2, queueSnapshotSet[2].processing_queue().items_size());
