@@ -32,6 +32,7 @@ namespace sgns::processing
         {
             boost::system::error_code ec;
             m_stateTimer->cancel( ec );
+            m_stateTimer.reset();
         }
         m_logger->debug( "[RELEASED] this: {}, thread_id {}",
                          reinterpret_cast<size_t>( this ),
@@ -382,15 +383,33 @@ namespace sgns::processing
 
     void SubTaskQueueAccessorImpl::ScheduleStateBroadcast()
     {
+        if ( !m_stateTimer )
+        {
+            return;
+        }
+
         m_stateTimer->expires_from_now( std::chrono::seconds( 2 ) );
+
+        // Capture weak_ptr to prevent use-after-destruction
+        std::weak_ptr<SubTaskQueueAccessorImpl> weakSelf = shared_from_this();
+
         m_stateTimer->async_wait(
-            [this]( const boost::system::error_code &ec )
+            [weakSelf]( const boost::system::error_code &ec )
             {
-                if ( !ec )
+                if ( ec )
                 {
-                    PublishExistingResults();
-                    ScheduleStateBroadcast(); // Schedule next broadcast
+                    return; // Timer was cancelled
                 }
+
+                auto self = weakSelf.lock();
+                if ( !self )
+                {
+                    // Object was destroyed, don't execute callback
+                    return;
+                }
+
+                self->PublishExistingResults();
+                self->StartPeriodicStateBroadcast(); // Schedule next
             } );
     }
 

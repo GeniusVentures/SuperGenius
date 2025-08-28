@@ -89,7 +89,7 @@ namespace sgns::processing
         bool                  task_grabbed = false;
         std::set<std::string> lockedTasks;
         SGProcessing::Task    task;
-        //m_logger->info( "Number of tasks in Queue: {}", queryTasks.size() );
+        m_logger->info( "Number of tasks in Queue: {}", queryTasks.size() );
         for ( auto element : queryTasks )
         {
             auto taskKey = m_db->KeyToString( element.first );
@@ -145,7 +145,7 @@ namespace sgns::processing
                 break;
             }
         }
-
+        m_logger->info( "Checked task Queue: {}", queryTasks.size() );
         if ( task_grabbed )
         {
             return std::make_pair( task.ipfs_block_id(), task );
