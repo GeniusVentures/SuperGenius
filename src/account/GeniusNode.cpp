@@ -1130,6 +1130,13 @@ namespace sgns
         transaction_manager_->EnqueueTransaction( std::make_pair( tx, proof ) );
     }
 
+    void GeniusNode::ConfigureTransactionFilterTimeoutsMs( uint64_t timeframe_limit_ms,
+                                                           uint64_t immutability_window_ms )
+    {
+        transaction_manager_->SetTimeFrameToleranceMs( timeframe_limit_ms );
+        transaction_manager_->SetImmutabilityWindowMs( immutability_window_ms );
+    }
+
     void GeniusNode::rotateLogFiles( const std::string &base_path )
     {
         std::filesystem::path basePath( base_path );

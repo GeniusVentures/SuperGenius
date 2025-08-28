@@ -135,6 +135,9 @@ namespace sgns
         void EnqueueTransaction( TransactionPair element );
         void EnqueueTransaction( TransactionItem element );
 
+        void SetTimeFrameToleranceMs( uint64_t timeframe_tolerance );
+        void SetImmutabilityWindowMs( uint64_t immutability_window );
+
     private:
         static constexpr std::string_view TRANSACTION_BASE_FORMAT = "/bc-%hu/";
 

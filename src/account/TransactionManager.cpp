@@ -2190,4 +2190,24 @@ namespace sgns
         return is_immutable;
     }
 
+    void TransactionManager::SetTimeFrameToleranceMs( uint64_t timeframe_tolerance )
+    {
+        timestamp_tolerance_m = std::chrono::milliseconds( timeframe_tolerance );
+
+        m_logger->info( "[{} - full: {}] Updated timeframe tolerance to {} ms",
+                        account_m->GetAddress().substr( 0, 8 ),
+                        full_node_m,
+                        timeframe_tolerance );
+    }
+
+    void TransactionManager::SetImmutabilityWindowMs( uint64_t immutability_window )
+    {
+        immutability_window_m = std::chrono::milliseconds( immutability_window );
+
+        m_logger->info( "[{} - full: {}] Updated immutability window to {} ms",
+                        account_m->GetAddress().substr( 0, 8 ),
+                        full_node_m,
+                        immutability_window );
+    }
+
 }
