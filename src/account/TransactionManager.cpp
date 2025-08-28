@@ -482,7 +482,7 @@ namespace sgns
     {
         m_logger->debug( "[{} - full: {}] Transaction enqueuing", account_m->GetAddress().substr( 0, 8 ), full_node_m );
         {
-            std::unique_lock<std::shared_mutex> out_lock( outgoing_tx_mutex_m );
+            std::unique_lock out_lock( outgoing_tx_mutex_m );
             for ( auto &tx_pair : element.first )
             {
                 const auto &tx  = tx_pair.first;
@@ -1445,7 +1445,7 @@ namespace sgns
         return retval;
     }
 
-    TransactionManager::TransactionStatus TransactionManager::WaitForTransactionOutgoing(
+        TransactionManager::TransactionStatus TransactionManager::WaitForTransactionOutgoing(
         const std::string        &txId,
         std::chrono::milliseconds timeout ) const
     {

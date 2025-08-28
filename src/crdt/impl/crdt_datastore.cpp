@@ -118,7 +118,7 @@ namespace sgns::crdt
             auto dagWorker                     = std::make_shared<DagWorker>();
             dagWorker->dagWorkerThreadRunning_ = true;
             dagWorker->dagWorkerFuture_        = std::async(
-                [weakptr{ weak_from_this() }, dagWorker]()
+                [weakptr{ weak_from_this() }, dagWorker]
                 {
                     auto dagThreadRunning = true;
                     while ( dagThreadRunning )
@@ -593,9 +593,7 @@ namespace sgns::crdt
 
         if ( rootPriority == 0 )
         {
-            std::unique_lock lock( dagSyncherMutex_ );
-            auto             getNodeResult = dagSyncer_->getNode( *aChildren.begin() );
-            lock.unlock();
+            auto getNodeResult = dagSyncer_->getNode( *aChildren.begin() );
             if ( getNodeResult.has_failure() )
             {
                 return Error::FETCH_ROOT_NODE;
@@ -629,9 +627,7 @@ namespace sgns::crdt
                             reinterpret_cast<uint64_t>( this ) );
 
             // Single attempt to fetch the graph - getNode internally already has retry logic
-            std::unique_lock lock( dagSyncherMutex_ );
-            auto             nodeResult = dagSyncer_->getNode( cid );
-            lock.unlock();
+            auto nodeResult = dagSyncer_->getNode( cid );
             if ( nodeResult.has_error() )
             {
                 logger_->error( "SendNewJobs: Can't fetch node: {}", nodeResult.error().message() );
@@ -672,7 +668,7 @@ namespace sgns::crdt
         return set_->GetElement( aKey.GetKey() );
     }
 
-    std::string CrdtDatastore::GetKeysPrefix()
+    std::string CrdtDatastore::GetKeysPrefix() const
     {
         return set_->KeysKey( "" ).GetKey();
     }
@@ -682,14 +678,15 @@ namespace sgns::crdt
         return '/' + set_->GetValueSuffix();
     }
 
-    outcome::result<CrdtDatastore::QueryResult> CrdtDatastore::QueryKeyValues( const std::string &aPrefix )
+    outcome::result<CrdtDatastore::QueryResult> CrdtDatastore::QueryKeyValues( const std::string &aPrefix ) const
     {
         return set_->QueryElements( aPrefix, CrdtSet::QuerySuffix::QUERY_VALUESUFFIX );
     }
 
-    outcome::result<CrdtDatastore::QueryResult> CrdtDatastore::QueryKeyValues( const std::string &prefix_base,
-                                                                               const std::string &middle_part,
-                                                                               const std::string &remainder_prefix )
+    outcome::result<CrdtDatastore::QueryResult> CrdtDatastore::QueryKeyValues(
+        const std::string &prefix_base,
+        const std::string &middle_part,
+        const std::string &remainder_prefix ) const
     {
         if ( set_ == nullptr )
         {
@@ -706,9 +703,9 @@ namespace sgns::crdt
         return set_->IsValueInSet( aKey.GetKey() );
     }
 
-    outcome::result<void> CrdtDatastore::PutKey( const HierarchicalKey &aKey,
-                                                 const Buffer          &aValue,
-                                                 std::set<std::string>  topics )
+    outcome::result<void> CrdtDatastore::PutKey( const HierarchicalKey       &aKey,
+                                                 const Buffer                &aValue,
+                                                 const std::set<std::string> &topics )
     {
         auto deltaResult = CreateDeltaToAdd( aKey.GetKey(), std::string( aValue.toString() ) );
         if ( deltaResult.has_failure() )
@@ -754,7 +751,7 @@ namespace sgns::crdt
         return newCID;
     }
 
-    outcome::result<void> CrdtDatastore::Broadcast( const std::set<CID> &cids, std::string topic )
+    outcome::result<void> CrdtDatastore::Broadcast( const std::set<CID> &cids, const std::string &topic )
     {
         if ( !broadcaster_ )
         {
@@ -770,7 +767,6 @@ namespace sgns::crdt
         if ( encodedBufferResult.has_failure() )
         {
             logger_->error( "Broadcast: Encoding failed, Failed to broadcast" );
-
             return outcome::failure( encodedBufferResult.error() );
         }
 
@@ -786,7 +782,7 @@ namespace sgns::crdt
     outcome::result<std::shared_ptr<CrdtDatastore::IPLDNode>> CrdtDatastore::PutBlock(
         const std::vector<std::pair<CID, std::string>> &aHeads,
         const std::shared_ptr<Delta>                   &aDelta,
-        std::set<std::string>                           topics )
+        const std::set<std::string>                    &topics ) const
     {
         if ( aDelta == nullptr )
         {
@@ -834,23 +830,15 @@ namespace sgns::crdt
             return outcome::failure( boost::system::error_code{} );
         }
 
-        // Single mutex for entire ProcessNode function - eliminates deadlock possibility
-        std::unique_lock processLock( processNodeMutex_ );
-
         std::set<std::string> topics_to_update_cid = aNode->getDestinations();
 
-        auto current         = aNode->getCID();
-        auto strCidResult    = current.toString();
-        bool skip_if_visited = false;
-        if ( strCidResult.has_failure() )
-        {
-            return outcome::failure( strCidResult.error() );
-        }
-        HierarchicalKey hKey( strCidResult.value() );
+        OUTCOME_TRY( auto strCid, aNode->getCID().toString() );
+        HierarchicalKey hKey( strCid );
 
+        bool skip_if_visited = false;
         if ( filter_crdt )
         {
-            crdt_filter_.FilterElementsOnDelta( aDelta );
+            crdt_filter_.FilterElementsOnDelta( *aDelta );
             //crdt_filter_.FilterTombstonesOnDelta( aDelta );
             logger_->debug( "ProcessNode: Processing INCOMING root {} node {}",
                             aRoot.toString().value(),
@@ -875,7 +863,7 @@ namespace sgns::crdt
         auto priority = aDelta->priority();
         if ( priority % 10 == 0 )
         {
-            logger_->info( "ProcessNode: merged delta from {} (priority: {})", strCidResult.value(), priority );
+            logger_->info( "ProcessNode: merged delta from {} (priority: {})", strCid, priority );
         }
 
         std::set<CID> children;
@@ -1008,7 +996,7 @@ namespace sgns::crdt
                 logger_->error( "DAGSyncer: error writing new block {}", node->getCID().toString().value() );
                 return outcome::failure( dagSyncerResult.error() );
             }
-            dagSyncer_->DeleteCIDBlock( node->getCID() );
+            OUTCOME_TRY( dagSyncer_->DeleteCIDBlock( node->getCID() ) );
         }
 
         return node->getCID();
@@ -1161,10 +1149,11 @@ namespace sgns::crdt
     outcome::result<std::shared_ptr<CrdtDatastore::Delta>> CrdtDatastore::CreateDeltaToAdd( const std::string &key,
                                                                                             const std::string &value )
     {
-        return set_->CreateDeltaToAdd( key, value );
+        return CrdtSet::CreateDeltaToAdd( key, value );
     }
 
-    outcome::result<std::shared_ptr<CrdtDatastore::Delta>> CrdtDatastore::CreateDeltaToRemove( const std::string &key )
+    outcome::result<std::shared_ptr<CrdtDatastore::Delta>> CrdtDatastore::CreateDeltaToRemove(
+        const std::string &key ) const
     {
         return set_->CreateDeltaToRemove( key );
     }

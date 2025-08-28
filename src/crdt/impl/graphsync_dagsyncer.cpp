@@ -41,7 +41,7 @@ namespace sgns::crdt
     GraphsyncDAGSyncer::PeerKey GraphsyncDAGSyncer::RegisterPeer( const PeerId                    &peer,
                                                                   const std::vector<Multiaddress> &address ) const
     {
-        std::lock_guard<std::mutex> lock( registry_mutex_ );
+        std::lock_guard lock( registry_mutex_ );
 
         // Check if peer already exists in the registry
         auto it = peer_index_.find( peer );
@@ -64,7 +64,7 @@ namespace sgns::crdt
 
     outcome::result<GraphsyncDAGSyncer::PeerEntry> GraphsyncDAGSyncer::GetPeerById( PeerKey id ) const
     {
-        std::lock_guard<std::mutex> lock( registry_mutex_ );
+        std::lock_guard lock( registry_mutex_ );
 
         if ( id >= peer_registry_.size() )
         {
@@ -215,8 +215,7 @@ namespace sgns::crdt
             if ( !state_result )
             {
                 // Request not found - This could indicate a failure, but it's also possible it just got cleaned up, so check a GrabCIDBlock
-                auto result = GrabCIDBlock( cid );
-                if ( result )
+                if ( auto result = GrabCIDBlock( cid ) )
                 {
                     logger_->debug( "Return node for CID {} instance={}",
                                     cid.toString().value(),
@@ -224,19 +223,17 @@ namespace sgns::crdt
                     return result;
                 }
                 logger_->warn( "Request state not found for CID {}", cid.toString().value() );
-                BlackListPeer( peerID );
+                OUTCOME_TRY(BlackListPeer( peerID ));
                 return outcome::failure( Error::ROUTE_NOT_FOUND );
             }
 
-            Graphsync::RequestState state = state_result.value();
-            switch ( state )
+            switch ( state_result.value() )
             {
                 case Graphsync::RequestState::COMPLETED:
                 {
                     // Request completed but we don't have the block?
                     // Try one more cache grab
-                    auto result = GrabCIDBlock( cid );
-                    if ( result )
+                    if ( auto result = GrabCIDBlock( cid ) )
                     {
                         logger_->debug( "Return node for CID {} instance={}",
                                         cid.toString().value(),
@@ -251,7 +248,7 @@ namespace sgns::crdt
                 {
                     // Request explicitly failed, don't keep waiting
                     logger_->debug( "Request explicitly failed for CID {}", cid.toString().value() );
-                    BlackListPeer( peerID );
+                    OUTCOME_TRY(BlackListPeer( peerID ));
                     return outcome::failure( Error::CID_NOT_FOUND );
                 }
                 case Graphsync::RequestState::IN_PROGRESS:
@@ -646,7 +643,7 @@ namespace sgns::crdt
 
     void GraphsyncDAGSyncer::AddToBlackList( const PeerId &peer ) const
     {
-        std::lock_guard<std::mutex> lock( blacklist_mutex_ );
+        std::lock_guard lock( blacklist_mutex_ );
 
         uint64_t now        = GetCurrentTimestamp();
         auto [it, inserted] = blacklist_.emplace( peer.toMultihash(), BlacklistEntry( now, 1 ) );
@@ -876,8 +873,7 @@ namespace sgns::crdt
     void GraphsyncDAGSyncer::LRUCIDCache::init( const CID &cid )
     {
         // Check if the item already exists
-        auto it = cache_map_.find( cid );
-        if ( it != cache_map_.end() )
+        if ( auto it = cache_map_.find( cid ); it != cache_map_.end() )
         {
             // Already exists, just update its position in LRU list
             lru_list_.erase( it->second.second );
@@ -989,12 +985,14 @@ namespace sgns::crdt
         logger_->debug( "Stopping Dagsyncer" );
         is_stopped_ = true;
     }
-    IPFS::outcome::result<void> GraphsyncDAGSyncer::markResolved( const CID &cid ) 
+
+    outcome::result<void> GraphsyncDAGSyncer::markResolved( const CID &cid )
     {
         return outcome::success();
     }
+
     IPFS::outcome::result<bool> GraphsyncDAGSyncer::isResolved( const CID &cid ) const
     {
         return outcome::success();
-    };
+    }
 }

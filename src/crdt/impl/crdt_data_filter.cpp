@@ -36,7 +36,7 @@ namespace sgns::crdt
         tombstone_registry_.erase( pattern );
     }
 
-    void CRDTDataFilter::FilterElementsOnDelta( std::shared_ptr<pb::Delta> &delta )
+    void CRDTDataFilter::FilterElementsOnDelta( pb::Delta &delta ) const
     {
         std::vector<pb::Element>                               new_tombstones;
         std::unordered_map<std::string, ElementFilterCallback> registry_copy;
@@ -45,18 +45,16 @@ namespace sgns::crdt
             registry_copy = element_registry_;
         }
 
-        for ( int i = 0; i < delta->elements_size(); ++i )
+        for ( int i = 0; i < delta.elements_size(); ++i )
         {
-            const auto &element        = delta->elements( i );
+            const auto &element        = delta.elements( i );
             bool        filter_matched = false;
 
             for ( const auto &[pattern, filter] : registry_copy )
             {
-                std::regex regex( pattern );
-                if ( std::regex_match( element.key(), regex ) )
+                if ( std::regex regex( pattern ); std::regex_match( element.key(), regex ) )
                 {
-                    auto tombstones = filter( element );
-                    if ( tombstones )
+                    if ( auto tombstones = filter( element ) )
                     {
                         new_tombstones.insert( new_tombstones.end(), tombstones->begin(), tombstones->end() );
                     }
@@ -64,7 +62,8 @@ namespace sgns::crdt
                     break;
                 }
             }
-            if ( ( filter_matched == false ) && ( accept_by_default_ == false ) )
+
+            if ( !filter_matched && !accept_by_default_ )
             {
                 //at least tombstone the current element
                 new_tombstones.push_back( element );
@@ -73,7 +72,7 @@ namespace sgns::crdt
 
         for ( const auto &tombstone : new_tombstones )
         {
-            auto *new_tombstone = delta->add_tombstones();
+            auto *new_tombstone = delta.add_tombstones();
             *new_tombstone      = tombstone;
         }
     }
@@ -81,6 +80,6 @@ namespace sgns::crdt
     void CRDTDataFilter::FilterTombstonesOnDelta( std::shared_ptr<pb::Delta> &delta )
     {
         //TODO - Figure out how to remove tombstones even recorded ones
-        throw std::runtime_error("Not supported");
+        throw std::runtime_error( "Not supported" );
     }
 }

@@ -1,13 +1,14 @@
 #ifndef SUPERGENIUS_CRDT_HEADS_HPP
 #define SUPERGENIUS_CRDT_HEADS_HPP
 
-#include <mutex>
+#include <shared_mutex>
 #include <map>
 #include <set>
 
 #include <storage/rocksdb/rocksdb.hpp>
 #include "base/logger.hpp"
 #include "hierarchical_key.hpp"
+
 #include <primitives/cid/cid.hpp>
 
 namespace sgns::crdt
@@ -48,11 +49,11 @@ namespace sgns::crdt
         bool operator!=( const CrdtHeads & ) const;
 
         /** Assignment operator
-    */
+        */
         CrdtHeads &operator=( const CrdtHeads & );
 
         /** Get namespace hierarchical key
-    */
+        */
         HierarchicalKey GetNamespaceKey() const;
 
         /** Get full path to CID key
@@ -72,12 +73,12 @@ namespace sgns::crdt
          * @param aCid Content identifier
          * @return Height of head or outcome::failure on error
          */
-        outcome::result<uint64_t> GetHeadHeight( const CID &aCid, const std::string &topic );
+        [[nodiscard]] outcome::result<uint64_t> GetHeadHeight( const CID &aCid, const std::string &topic ) const;
 
         /** Get current number of heads
         * @return length, current number of heads or outcome::failure on error
         */
-        outcome::result<int> GetLength( const std::string &topic = "" );
+        outcome::result<size_t> GetLength( const std::string &topic = "" ) const;
 
         /** Add head CID to datastore with full namespace
         * @param aCid Content identifier
@@ -98,11 +99,10 @@ namespace sgns::crdt
                                        const std::string &topic );
 
         /** Returns the list of current heads plus the max height.
-        * @param aHeads output reference to list of CIDs
-        * @param aMaxHeight output reference to maximum height
+        * @param topics Topic to get list from
         * @return outcome::failure on error
         */
-        outcome::result<CRDTListResult> GetList( const std::set<std::string> &topics = {} );
+        outcome::result<CRDTListResult> GetList( const std::set<std::string> &topics = {} ) const;
 
         /** primeCache builds the heads cache based on what's in storage; since
         * it is called from the constructor only we don't bother locking.
@@ -117,10 +117,10 @@ namespace sgns::crdt
         * @param aHeight height of CID head
         * @return outcome::failure on error
         */
-        outcome::result<void> Write( const std::unique_ptr<storage::BufferBatch> &aDataStore,
-                                     const CID                                   &aCid,
-                                     uint64_t                                     aHeight,
-                                     const std::string                           &topic ) const;
+        outcome::result<void> Write( storage::BufferBatch &aDataStore,
+                                     const CID            &aCid,
+                                     uint64_t              aHeight,
+                                     const std::string    &topic ) const;
 
         /** Delete data from datastore in batch mode
         * @param aDataStore Pointer to datastore batch
@@ -133,6 +133,7 @@ namespace sgns::crdt
     private:
         CrdtHeads() = default;
 
+        mutable std::shared_mutex                                mutex_;
         std::shared_ptr<DataStore>                               dataStore_;
         std::unordered_map<std::string, std::map<CID, uint64_t>> cache_;
         HierarchicalKey                                          namespaceKey_;
