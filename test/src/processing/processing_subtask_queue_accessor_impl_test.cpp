@@ -410,12 +410,6 @@ TEST_F(SubTaskQueueAccessorImplTest, TwoNodesProcessingAndFinalizing)
 
     Color::PrintInfo("Waited ", resultTime.count(), " ms for pubsub node initialization");
 
-    // Create a result channel for test with the correct ID
-    //sgns::ipfs_pubsub::GossipPubSubTopic resultChannel(pubs1, "RESULT_CHANNEL_ID_test");
-    //resultChannel.Subscribe([](boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message&> message) {});
-    //sgns::ipfs_pubsub::GossipPubSubTopic resultChannel2( pubs2, "RESULT_CHANNEL_ID_test" );
-    //resultChannel2.Subscribe( []( boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message &> message ) {} );
-
     auto queueChannel = std::make_shared<ProcessingSubTaskQueueChannelPubSub>(pubs1, "QUEUE_CHANNEL_ID");
     auto queueChannel2 = std::make_shared<ProcessingSubTaskQueueChannelPubSub>( pubs2, "QUEUE_CHANNEL_ID" );
     queueChannel->Listen( std::chrono::milliseconds(1000) );
@@ -550,8 +544,6 @@ TEST_F(SubTaskQueueAccessorImplTest, TwoNodesProcessingAndFinalizing)
     assertWaitForCondition(
         [&connectionEstablished1]()
         {
-            //std::cout << "Connection Established: " << connectionEstablished1 << " " << connectionEstablished2
-            //          << std::endl;
             return connectionEstablished1.load();
         },
         std::chrono::milliseconds( 2000 ),
@@ -569,8 +561,6 @@ TEST_F(SubTaskQueueAccessorImplTest, TwoNodesProcessingAndFinalizing)
     assertWaitForCondition(
         [&connectionEstablished2]()
         {
-            //std::cout << "Connection Established: " << connectionEstablished1 << " " << connectionEstablished2
-            //          << std::endl;
             return connectionEstablished2.load();
         },
         std::chrono::milliseconds(12000),
@@ -607,14 +597,7 @@ TEST_F(SubTaskQueueAccessorImplTest, TwoNodesProcessingAndFinalizing)
     // Verify results
     size_t totalProcessed = processingCore1->m_processedSubTasks.size() +
                             processingCore2->m_processedSubTasks.size();
-    for (auto& subtask : processingCore1->m_processedSubTasks)
-    {
-        std::cout << "Node 1 Processed: " << subtask << std::endl;
-    }
-    for ( auto &subtask : processingCore2->m_processedSubTasks )
-    {
-        std::cout << "Node 2 Processed: " << subtask << std::endl;
-    }
+
     ASSERT_EQ(10, totalProcessed);
 
     // Only one node should finalize the task
