@@ -18,6 +18,7 @@
 #include "crdt/dagsyncer.hpp"
 #include "crdt/crdt_options.hpp"
 #include "crdt/crdt_data_filter.hpp"
+#include "crdt/crdt_notifier.hpp"
 #include <storage/rocksdb/rocksdb.hpp>
 #include <ipfs_lite/ipld/ipld_node.hpp>
 #include <shared_mutex>
@@ -380,6 +381,8 @@ namespace sgns::crdt
         std::condition_variable rebroadcastCv_;
         std::set<std::string>   topicNames_;
         bool                    isFullNode = false;
+
+        std::unique_ptr<CRDTNotifier> notifier_;
     };
 
 }

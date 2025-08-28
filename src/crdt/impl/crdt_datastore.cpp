@@ -161,7 +161,8 @@ namespace sgns::crdt
         namespaceKey_( aKey ),
         broadcaster_( std::move( aBroadcaster ) ),
         dagSyncer_( std::move( aDagSyncer ) ),
-        crdt_filter_( true )
+        crdt_filter_( true ),
+        notifier_( std::make_unique<CRDTNotifier>() )
     {
         // <namespace>/s
         auto fullSetNs = aKey.ChildString( std::string( setsNamespace_ ) );
@@ -858,6 +859,14 @@ namespace sgns::crdt
         {
             logger_->error( "ProcessNode: error merging delta from {}", hKey.GetKey() );
             return outcome::failure( mergeResult.error() );
+        }
+        else
+        {
+            if ( !topics_to_update_cid.empty() )
+            {
+                logger_->debug( "ProcessNode: Notifying topics or CRDT Merge" );
+                notifier_->NotifyTopics( topics_to_update_cid );
+            }
         }
 
         auto priority = aDelta->priority();
