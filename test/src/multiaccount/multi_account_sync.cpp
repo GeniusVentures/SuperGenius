@@ -176,3 +176,160 @@ TEST_F( MultiAccountTest, SyncThroughEachOther )
 
     // Nodes will be automatically destroyed when they go out of scope
 }
+
+TEST_F( MultiAccountTest, CRDTFilterDuplicateMint )
+{
+    // Create 3 nodes - 2 with the same address, 1 different (full node for network)
+    auto node_same_addr_1 = CreateNode( "duplicate_address_12345", // same self_address
+                                        "0xcafe",                  // dev_addr
+                                        "1.0",
+                                        sgns::TokenID::FromBytes( { 0x00 } ),
+                                        true, // full node to confirm the mint
+                                        false  // not processor
+    );
+
+    auto node_same_addr_2 = CreateNode( "duplicate_address_12345", // same self_address
+                                        "0xcafe",                  // dev_addr
+                                        "1.0",
+                                        sgns::TokenID::FromBytes( { 0x00 } ),
+                                        true, // full node to confirm the mint
+                                        true   // is processor
+    );
+
+    auto node_full = CreateNode( "full_node_address_unique", // different self_address
+                                 "0xcafe",                   // dev_addr
+                                 "1.0",
+                                 sgns::TokenID::FromBytes( { 0x00 } ),
+                                 true, // is full node
+                                 true  // is processor
+    );
+
+    // Verify nodes have the same address (they should since they use same self_address)
+    ASSERT_EQ( node_same_addr_1->GetAddress(), node_same_addr_2->GetAddress() )
+        << "Nodes with same self_address should have same address";
+
+    std::cout << "Node 1 address: " << node_same_addr_1->GetAddress() << std::endl;
+    std::cout << "Node 2 address: " << node_same_addr_2->GetAddress() << std::endl;
+    std::cout << "Full node address: " << node_full->GetAddress() << std::endl;
+
+    // Get initial balances (should be 0)
+    auto balance_node1_start = node_same_addr_1->GetBalance();
+    auto balance_node2_start = node_same_addr_2->GetBalance();
+    auto balance_full_start  = node_full->GetBalance();
+
+    std::cout << "Initial balances - Node1: " << balance_node1_start << ", Node2: " << balance_node2_start
+              << ", Full: " << balance_full_start << std::endl;
+
+    // Get initial transaction counts
+    auto tx_count_node1_start = node_same_addr_1->GetOutTransactions().size();
+    auto tx_count_node2_start = node_same_addr_2->GetOutTransactions().size();
+    auto tx_count_full_start  = node_full->GetOutTransactions().size();
+
+    std::cout << "Initial tx counts - Node1: " << tx_count_node1_start << ", Node2: " << tx_count_node2_start
+              << ", Full: " << tx_count_full_start << std::endl;
+
+    // Mint tokens on both nodes with same address BEFORE connecting them
+    std::cout << "Minting tokens on isolated nodes..." << std::endl;
+
+    auto mint_result_1 = node_same_addr_1->MintTokens( 50000000000, // 50 GNUS
+                                                       "",
+                                                       "",
+                                                       sgns::TokenID::FromBytes( { 0x00 } ),
+                                                       std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+    ASSERT_TRUE( mint_result_1.has_value() ) << "Mint transaction failed on node_same_addr_1";
+
+    auto mint_result_2 = node_same_addr_2->MintTokens( 75000000000, // 75 GNUS (different amount)
+                                                       "",
+                                                       "",
+                                                       sgns::TokenID::FromBytes( { 0x00 } ),
+                                                       std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+    ASSERT_TRUE( mint_result_2.has_value() ) << "Mint transaction failed on node_same_addr_2";
+
+    std::cout << "Mint transaction 1 ID: " << mint_result_1.value().first << std::endl;
+    std::cout << "Mint transaction 2 ID: " << mint_result_2.value().first << std::endl;
+
+    // Allow mints to complete locally
+    std::this_thread::sleep_for( std::chrono::milliseconds( 2000 ) );
+
+    // Check balances after minting but before connecting
+    auto balance_node1_after_mint = node_same_addr_1->GetBalance();
+    auto balance_node2_after_mint = node_same_addr_2->GetBalance();
+
+    std::cout << "Balances after minting (isolated) - Node1: " << balance_node1_after_mint
+              << ", Node2: " << balance_node2_after_mint << std::endl;
+
+    // Both nodes should have their respective minted amounts since they're isolated
+    ASSERT_EQ( balance_node1_after_mint, balance_node1_start + 50000000000 );
+    ASSERT_EQ( balance_node2_after_mint, balance_node2_start + 75000000000 );
+
+    // Now connect the nodes - this should trigger CRDT filter to resolve conflicts
+    std::cout << "Connecting nodes to trigger CRDT filter..." << std::endl;
+
+
+    // Add peers to each node
+    node_same_addr_1->GetPubSub()->AddPeers(
+        { node_same_addr_2->GetPubSub()->GetLocalAddress(), node_full->GetPubSub()->GetLocalAddress() } );
+    node_same_addr_2->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetLocalAddress() } );
+
+    // Allow significant time for CRDT synchronization and conflict resolution
+    std::cout << "Waiting for CRDT synchronization and conflict resolution..." << std::endl;
+    std::this_thread::sleep_for( std::chrono::milliseconds( 10000 ) );
+
+    // Get final balances after CRDT resolution
+    auto balance_node1_final = node_same_addr_1->GetBalance();
+    auto balance_node2_final = node_same_addr_2->GetBalance();
+    auto balance_full_final  = node_full->GetBalance();
+
+    std::cout << "Final balances after CRDT resolution - Node1: " << balance_node1_final
+              << ", Node2: " << balance_node2_final << ", Full: " << balance_full_final << std::endl;
+
+    // Get final transaction counts
+    auto tx_count_node1_final = node_same_addr_1->GetOutTransactions().size();
+    auto tx_count_node2_final = node_same_addr_2->GetOutTransactions().size();
+    auto tx_count_full_final  = node_full->GetOutTransactions().size();
+
+    std::cout << "Final tx counts - Node1: " << tx_count_node1_final << ", Node2: " << tx_count_node2_final
+              << ", Full: " << tx_count_full_final << std::endl;
+
+    // Since both nodes have the same address, they should have the same final balance
+    ASSERT_EQ( balance_node1_final, balance_node2_final )
+        << "Nodes with same address should have same balance after CRDT resolution";
+
+    // The final balance should be either 50 GNUS or 75 GNUS (whichever mint was accepted)
+    // Based on our filter logic, the earlier timestamp should win
+    bool accepted_first_mint  = ( balance_node1_final == balance_node1_start + 50000000000 );
+    bool accepted_second_mint = ( balance_node1_final == balance_node1_start + 75000000000 );
+
+    ASSERT_TRUE( accepted_first_mint || accepted_second_mint )
+        << "Final balance should match exactly one of the minted amounts. "
+        << "Expected: " << ( balance_node1_start + 50000000000 ) << " or " << ( balance_node1_start + 75000000000 )
+        << ", Got: " << balance_node1_final;
+
+    // Full node should remain unchanged (different address)
+    ASSERT_EQ( balance_full_final, balance_full_start ) << "Full node balance should remain unchanged";
+
+    // Log which mint was accepted
+    if ( accepted_first_mint )
+    {
+        std::cout << "CRDT Filter accepted first mint (50 GNUS) - transaction: " << mint_result_1.value().first
+                  << std::endl;
+    }
+    else
+    {
+        std::cout << "CRDT Filter accepted second mint (75 GNUS) - transaction: " << mint_result_2.value().first
+                  << std::endl;
+    }
+
+    // Verify that exactly one mint transaction was accepted across the network
+    // The total transaction count increase should be 1 (for the accepted mint)
+    auto total_tx_increase = ( tx_count_node1_final - tx_count_node1_start ) +
+                             ( tx_count_node2_final - tx_count_node2_start ) +
+                             ( tx_count_full_final - tx_count_full_start );
+
+    std::cout << "Total transaction count increase: " << total_tx_increase << std::endl;
+
+    // We expect exactly 1 transaction to be accepted network-wide
+    ASSERT_EQ( total_tx_increase, 1 ) << "Exactly one mint transaction should be accepted network-wide";
+
+    std::cout << "CRDT Filter test completed successfully!" << std::endl;
+}
