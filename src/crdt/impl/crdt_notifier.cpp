@@ -4,7 +4,7 @@
  * @date       2025-08-28
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
-#include "crdt_notifier.hpp"
+#include "crdt/crdt_notifier.hpp"
 #include <algorithm>
 
 namespace sgns::crdt

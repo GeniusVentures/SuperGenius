@@ -24,6 +24,10 @@ supergenius_install(crdt_set)
 add_library(crdt_heads
     impl/crdt_heads.cpp
 )
+add_library(crdt_notifier
+    impl/crdt_notifier.cpp
+)
+
 target_link_libraries(crdt_heads
     PUBLIC
     hierarchical_key
@@ -31,6 +35,7 @@ target_link_libraries(crdt_heads
     ipfs-lite-cpp::cid
 )
 supergenius_install(crdt_heads)
+supergenius_install(crdt_notifier)
 
 add_library(crdt_graphsync_dagsyncer
     dagsyncer.hpp
@@ -65,6 +70,7 @@ target_link_libraries(crdt_datastore
     Boost::headers
     crdt_set
     crdt_heads
+    crdt_notifier
     crdt_graphsync_dagsyncer
     crdt_data_filter
     logger
