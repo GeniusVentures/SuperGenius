@@ -57,7 +57,7 @@ void ProcessingServiceTest::SetUp(std::string name, std::string loggerConfig)
     loggerProcQM->set_level( spdlog::level::off );
 
     loggerProcQM  = sgns::base::createLogger( "ProcessingSubTaskQueueAccessorImpl");
-    loggerProcQM->set_level( spdlog::level::off );
+    loggerProcQM->set_level( spdlog::level::trace );
     auto loggerProcEngine = sgns::base::createLogger( "ProcessingEngine" );
     loggerProcEngine->set_level( spdlog::level::off );
     auto loggerQueueCHannel = sgns::base::createLogger( "ProcessingSubTaskQueueChannelPubSub" );
