@@ -17,8 +17,8 @@
 namespace sgns::crdt
 {
 
-    // Callback returns pair of <element_keys, tombstone_keys>
-    using TopicCallback = std::function<std::pair<std::vector<std::string>, std::vector<std::string>>()>;
+    // Callback receives pair of <element_keys, tombstone_keys>
+    using TopicCallback = std::function<void( const std::pair<std::vector<std::string>, std::vector<std::string>> & )>;
 
     class CRDTNotifier
     {
@@ -29,8 +29,9 @@ namespace sgns::crdt
         // Unregister callback
         void UnregisterCallback( uint64_t callbackId );
 
-        // Notify for topics that had changes - executes each matching callback once
-        void NotifyTopics( const std::set<std::string> &changedTopics );
+        // Notify for topics that had changes with the actual changed elements/tombstones
+        void NotifyTopics( const std::set<std::string>                                         &changedTopics,
+                           const std::pair<std::vector<std::string>, std::vector<std::string>> &changes );
 
     private:
         struct CallbackInfo

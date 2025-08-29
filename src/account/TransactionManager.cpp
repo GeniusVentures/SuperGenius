@@ -77,6 +77,19 @@ namespace sgns
                 }
                 return std::nullopt;
             } );
+
+        auto notifier = instance->globaldb_m->GetNotifier();
+
+        (void)notifier->RegisterCallback(
+            { "" },
+            [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
+                const std::pair<std::vector<std::string>, std::vector<std::string>> &keys )
+            {
+                if ( auto strong = weak_ptr.lock() )
+                {
+                    strong->NotificationCallback( keys );
+                }
+            } );
         instance->globaldb_m->Start();
 
         return instance;
@@ -1445,7 +1458,7 @@ namespace sgns
         return retval;
     }
 
-        TransactionManager::TransactionStatus TransactionManager::WaitForTransactionOutgoing(
+    TransactionManager::TransactionStatus TransactionManager::WaitForTransactionOutgoing(
         const std::string        &txId,
         std::chrono::milliseconds timeout ) const
     {
@@ -2208,6 +2221,23 @@ namespace sgns
                         account_m->GetAddress().substr( 0, 8 ),
                         full_node_m,
                         immutability_window );
+    }
+
+    void TransactionManager::NotificationCallback(
+        const std::pair<std::vector<std::string>, std::vector<std::string>> &keys )
+    {
+        const auto &[elements, tombstones] = keys;
+
+        // Process the specific elements and tombstones that changed
+        for ( const auto &element : elements )
+        {
+            // Handle new/updated element
+        }
+
+        for ( const auto &tombstone : tombstones )
+        {
+            // Handle deleted element
+        }
     }
 
 }

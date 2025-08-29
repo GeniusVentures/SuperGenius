@@ -140,6 +140,11 @@ namespace sgns::crdt
 
         void Start();
 
+        CRDTNotifier *GetNotifier()
+        {
+            return m_crdtDatastore->GetNotifier();
+        }
+
     private:
         /**
          * @brief       Constructs a new Global D B object

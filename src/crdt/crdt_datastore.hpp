@@ -207,6 +207,11 @@ namespace sgns::crdt
             isFullNode = std::move( full_node );
         }
 
+        CRDTNotifier *GetNotifier()
+        {
+            return notifier_.get();
+        }
+
     protected:
         /** DAG jobs structure used by DAG worker threads to send new jobs
         */

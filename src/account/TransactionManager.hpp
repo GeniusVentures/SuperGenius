@@ -248,6 +248,7 @@ namespace sgns
 
         std::optional<std::vector<crdt::pb::Element>> FilterTransaction( const crdt::pb::Element &element );
         std::optional<std::vector<crdt::pb::Element>> FilterProof( const crdt::pb::Element &element );
+        void NotificationCallback( const std::pair<std::vector<std::string>, std::vector<std::string>> &keys);
 
         bool ShouldReplaceTransaction( const std::shared_ptr<IGeniusTransactions> &existing_tx,
                                        const std::shared_ptr<IGeniusTransactions> &new_tx ) const;

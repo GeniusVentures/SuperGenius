@@ -38,7 +38,8 @@ namespace sgns::crdt
                           callbacks_.end() );
     }
 
-    void CRDTNotifier::NotifyTopics( const std::set<std::string> &changedTopics )
+    void CRDTNotifier::NotifyTopics( const std::set<std::string>                                         &changedTopics,
+                                     const std::pair<std::vector<std::string>, std::vector<std::string>> &changes )
     {
         std::lock_guard<std::mutex> lock( mutex_ );
 
@@ -68,7 +69,7 @@ namespace sgns::crdt
             {
                 try
                 {
-                    callbackInfo.callback();
+                    callbackInfo.callback( changes );
                 }
                 catch ( const std::exception &e )
                 {
