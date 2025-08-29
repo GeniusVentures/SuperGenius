@@ -106,7 +106,6 @@ namespace sgns
         ctx_m( std::move( ctx ) ),
         account_m( std::move( account ) ),
         hasher_m( std::move( hasher ) ),
-        timer_m( std::make_shared<boost::asio::steady_timer>( *ctx_m, boost::asio::chrono::milliseconds( 300 ) ) ),
         full_node_m( std::move( full_node ) ),
         state_m( State::CREATING ),
         timestamp_tolerance_m( std::move( timestamp_tolerance ) ),
@@ -156,11 +155,8 @@ namespace sgns
         {
             return; // idempotent
         }
-        if ( timer_m )
-        {
-            boost::system::error_code ig;
-            timer_m->cancel( ig ); // unblock async_wait with ec
-        }
+        // Notify condition variable to wake up waiting thread
+        cv_.notify_all();
     }
 
     void TransactionManager::Start()
@@ -215,30 +211,34 @@ namespace sgns
                 auto send_result = SendTransaction();
                 if ( send_result.has_error() )
                 {
-                    m_logger->error( "[{} - full: {}] Unknown SendTranscation error in SendTransaction::Update()",
+                    m_logger->error( "[{} - full: {}] Unknown SendTransaction error in SendTransaction::Update()",
                                      account_m->GetAddress().substr( 0, 8 ),
                                      full_node_m );
                 }
                 break;
         }
+
         Update();
 
-        timer_m->expires_after( boost::asio::chrono::milliseconds( 300 ) );
-        timer_m->async_wait(
-            [weak_instance = weak_from_this()]( const boost::system::error_code &ec )
-            {
-                if ( ec )
-                {
-                    return; // canceled or other error
-                }
-                if ( auto instance = weak_instance.lock() )
-                {
-                    if ( !instance->stopped_.load() )
-                    {
-                        boost::asio::post( *instance->ctx_m, [self = instance]() { self->TickOnce(); } );
-                    }
-                }
-            } );
+        // Wait with condition variable instead of timer
+        std::unique_lock<std::mutex> lock( cv_mutex_ );
+        cv_.wait_for( lock, std::chrono::milliseconds( 300 ), [this]() { return stopped_.load(); } );
+
+        // Schedule next tick if not stopped
+        if ( !stopped_.load() )
+        {
+            boost::asio::post( *ctx_m,
+                               [weak_instance = weak_from_this()]()
+                               {
+                                   if ( auto instance = weak_instance.lock() )
+                                   {
+                                       if ( !instance->stopped_.load() )
+                                       {
+                                           instance->TickOnce();
+                                       }
+                                   }
+                               } );
+        }
     }
 
     void TransactionManager::PrintAccountInfo()
@@ -2227,6 +2227,8 @@ namespace sgns
         const std::pair<std::vector<std::string>, std::vector<std::string>> &keys )
     {
         const auto &[elements, tombstones] = keys;
+
+        cv_.notify_one();
 
         // Process the specific elements and tombstones that changed
         for ( const auto &element : elements )

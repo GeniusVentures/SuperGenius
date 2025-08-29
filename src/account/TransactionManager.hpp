@@ -187,14 +187,13 @@ namespace sgns
 
         std::shared_ptr<crdt::GlobalDB> globaldb_m;
 
-        std::shared_ptr<boost::asio::io_context>   ctx_m;
-        std::shared_ptr<GeniusAccount>             account_m;
-        std::shared_ptr<crypto::Hasher>            hasher_m;
-        std::shared_ptr<boost::asio::steady_timer> timer_m;
-        bool                                       full_node_m;
-        std::string                                full_node_topic_m; ///< formatted full-node topic
-        void                                       TickOnce();
-        State                                      state_m;
+        std::shared_ptr<boost::asio::io_context> ctx_m;
+        std::shared_ptr<GeniusAccount>           account_m;
+        std::shared_ptr<crypto::Hasher>          hasher_m;
+        bool                                     full_node_m;
+        std::string                              full_node_topic_m; ///< formatted full-node topic
+        void                                     TickOnce();
+        State                                    state_m;
 
         // for the SendTransaction thread support
         mutable std::mutex          mutex_m;
@@ -217,6 +216,8 @@ namespace sgns
 
         static constexpr std::chrono::milliseconds TIMESTAMP_TOLERANCE = std::chrono::seconds( 10 );
         static constexpr std::chrono::milliseconds IMMUTABILITY_WINDOW = std::chrono::minutes( 15 );
+        std::mutex                                 cv_mutex_;
+        std::condition_variable                    cv_;
 
         outcome::result<std::set<std::string>> ParseTransferTransaction(
             const std::shared_ptr<IGeniusTransactions> &tx );
@@ -248,7 +249,7 @@ namespace sgns
 
         std::optional<std::vector<crdt::pb::Element>> FilterTransaction( const crdt::pb::Element &element );
         std::optional<std::vector<crdt::pb::Element>> FilterProof( const crdt::pb::Element &element );
-        void NotificationCallback( const std::pair<std::vector<std::string>, std::vector<std::string>> &keys);
+        void NotificationCallback( const std::pair<std::vector<std::string>, std::vector<std::string>> &keys );
 
         bool ShouldReplaceTransaction( const std::shared_ptr<IGeniusTransactions> &existing_tx,
                                        const std::shared_ptr<IGeniusTransactions> &new_tx ) const;
