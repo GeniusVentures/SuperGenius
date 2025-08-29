@@ -68,9 +68,9 @@ namespace sgns::processing
 
         static void OnResultChannelMessage( std::weak_ptr<SubTaskQueueAccessorImpl>                           weakThis,
                                             boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message &> message );
-        void        SubTaskQueueAccessorImpl::StartPeriodicStateBroadcast();
-        void        SubTaskQueueAccessorImpl::ScheduleStateBroadcast();
-        void        SubTaskQueueAccessorImpl::PublishExistingResults();
+        void        StartPeriodicStateBroadcast();
+        void        ScheduleStateBroadcast();
+        void        PublishExistingResults();
         // Helper method to find a subtask by ID
         boost::optional<SGProcessing::SubTask> FindSubTaskById( const std::string &subTaskId ) const;
 
