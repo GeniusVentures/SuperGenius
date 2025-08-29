@@ -639,17 +639,12 @@ namespace sgns::crdt
         return outcome::success();
     }
 
-    outcome::result<void> CrdtSet::Merge( const std::shared_ptr<Delta> &aDelta, const std::string &aID )
+    outcome::result<void> CrdtSet::Merge( const Delta &aDelta, const std::string &aID )
     {
-        if ( aDelta == nullptr )
-        {
-            return outcome::failure( boost::system::error_code{} );
-        }
+        OUTCOME_TRY( this->PutTombs( std::vector( aDelta.tombstones().cbegin(), aDelta.tombstones().cend() ), aID ) );
 
-        OUTCOME_TRY( this->PutTombs( std::vector( aDelta->tombstones().begin(), aDelta->tombstones().end() ), aID ) );
-
-        std::vector elements( aDelta->elements().begin(), aDelta->elements().end() );
-        return this->PutElems( elements, aID, aDelta->priority() );
+        std::vector elements( aDelta.elements().cbegin(), aDelta.elements().cend() );
+        return this->PutElems( elements, aID, aDelta.priority() );
     }
 
     outcome::result<bool> CrdtSet::InTombsKeyID( const std::string &aKey, const std::string &aID ) const

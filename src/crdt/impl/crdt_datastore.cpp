@@ -854,8 +854,7 @@ namespace sgns::crdt
         }
 
         // Step 1: Merge the delta (no additional locking needed)
-        auto mergeResult = set_->Merge( aDelta, hKey.GetKey() );
-        if ( mergeResult.has_failure() )
+        if ( auto mergeResult = set_->Merge( *aDelta, hKey.GetKey() ); mergeResult.has_failure() )
         {
             logger_->error( "ProcessNode: error merging delta from {}", hKey.GetKey() );
             return outcome::failure( mergeResult.error() );
@@ -898,7 +897,7 @@ namespace sgns::crdt
 
                 // No additional locking needed since we hold processNodeMutex_
                 auto [links_to_fetch,
-                      known_cids] = dagSyncer_->TraverseCIDsLinks( aNode, topic, {}, skip_if_visited, 50 );
+                      known_cids] = dagSyncer_->TraverseCIDsLinks( *aNode, topic, {}, skip_if_visited, 50 );
 
                 for ( const auto &[cid, link_name] : known_cids )
                 {

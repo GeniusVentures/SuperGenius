@@ -2,7 +2,7 @@
 
 namespace sgns::crdt
 {
-    CustomDagSyncer::CustomDagSyncer( std::shared_ptr<IpfsDatastore> service ) : dagService_( service ) {}
+    CustomDagSyncer::CustomDagSyncer( std::shared_ptr<IpfsDatastore> service ) : dagService_( std::move(service) ) {}
 
     outcome::result<bool> CustomDagSyncer::HasBlock( const CID &cid ) const
     {
@@ -70,16 +70,16 @@ namespace sgns::crdt
     }
 
     std::pair<DAGSyncer::LinkInfoSet, DAGSyncer::LinkInfoSet> CustomDagSyncer::TraverseCIDsLinks(
-        const std::shared_ptr<ipfs_lite::ipld::IPLDNode> &node,
-        std::string                                       link_name,
-        DAGSyncer::LinkInfoSet                            visited_links,
-        bool                                              skip_if_visited_root,
-        int                                               max_depth ) const
+        ipfs_lite::ipld::IPLDNode &node,
+        std::string                link_name,
+        DAGSyncer::LinkInfoSet     visited_links,
+        bool                       skip_if_visited_root,
+        int                        max_depth ) const
     {
         DAGSyncer::LinkInfoSet links_to_fetch;
         DAGSyncer::LinkInfoSet visited = std::move( visited_links );
 
-        const CID &root_cid = node->getCID();
+        const CID &root_cid = node.getCID();
 
         if ( skip_if_visited_root )
         {
@@ -93,7 +93,7 @@ namespace sgns::crdt
             }
         }
 
-        for ( const auto &link : node->getLinks() )
+        for ( const auto &link : node.getLinks() )
         {
             const CID         &child = link.get().getCID();
             const std::string &name  = link.get().getName();
@@ -120,7 +120,7 @@ namespace sgns::crdt
                 continue;
             }
 
-            auto [child_links, child_visited] = TraverseCIDsLinks( get_child_result.value(),
+            auto [child_links, child_visited] = TraverseCIDsLinks( *get_child_result.value(),
                                                                    link_name,
                                                                    visited,
                                                                    skip_if_visited_root,

@@ -264,7 +264,7 @@ namespace sgns::crdt
         * @param aID tomb key ID
         * @return outcome::success on success or outcome::failure otherwise
         */
-        outcome::result<void> Merge( const std::shared_ptr<CrdtSet::Delta> &aDelta, const std::string &aID );
+        outcome::result<void> Merge( const Delta &aDelta, const std::string &aID );
 
         /** Check if key is tombstoned with tomb ID and found in datastore
         * @param aKey key string

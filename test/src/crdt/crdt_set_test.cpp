@@ -251,7 +251,7 @@ namespace sgns::crdt
     auto deltaElements = delta->elements();
     auto deltaTombstones = delta->tombstones();
 
-    EXPECT_OUTCOME_TRUE_1(crdtSet.Merge(delta, id));
+    EXPECT_OUTCOME_TRUE_1(crdtSet.Merge( *delta, id ) );
 
     std::vector<CrdtSet::Element> elements(deltaElements.begin(), deltaElements.end());
     for (auto& elem : elements)

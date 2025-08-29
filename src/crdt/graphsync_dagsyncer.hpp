@@ -1,6 +1,9 @@
 #ifndef SUPERGENIUS_GRAPHSYNC_DAGSYNCER_HPP
 #define SUPERGENIUS_GRAPHSYNC_DAGSYNCER_HPP
 
+#include <memory>
+#include <chrono>
+
 #include "crdt/dagsyncer.hpp"
 #include "base/logger.hpp"
 
@@ -8,10 +11,6 @@
 #include <ipfs_lite/ipfs/merkledag/impl/merkledag_service_impl.hpp>
 
 #include <libp2p/host/host.hpp>
-
-#include <memory>
-#include <chrono>
-#include <unordered_map>
 
 namespace sgns::crdt
 {
@@ -43,13 +42,13 @@ namespace sgns::crdt
 
         enum class Error
         {
-            CID_NOT_FOUND = 0,      ///< The requested CID wasn't found
-            ROUTE_NOT_FOUND,        ///< Route for the CID wasn't found
-            PEER_BLACKLISTED,       ///< The peer that has the CID is blacklisted
-            TIMED_OUT,              ///< The request has timed out
-            DAGSYNCHER_NOT_STARTED, ///< Start wasn't called, or StopSync was called
-            GRAPHSYNC_IS_NULL,      ///< Graphsync member is nullptr
-            HOST_IS_NULL,           ///< Graphsync member is nullptr
+            CID_NOT_FOUND = 0,     ///< The requested CID wasn't found
+            ROUTE_NOT_FOUND,       ///< Route for the CID wasn't found
+            PEER_BLACKLISTED,      ///< The peer that has the CID is blacklisted
+            TIMED_OUT,             ///< The request has timed out
+            DAGSYNCER_NOT_STARTED, ///< Start wasn't called, or StopSync was called
+            GRAPHSYNC_IS_NULL,     ///< Graphsync member is nullptr
+            HOST_IS_NULL,          ///< Graphsync member is nullptr
         };
 
         struct BlacklistEntry
@@ -69,7 +68,7 @@ namespace sgns::crdt
                             std::shared_ptr<Graphsync>     graphsync,
                             std::shared_ptr<libp2p::Host>  host );
 
-        ~GraphsyncDAGSyncer()
+        ~GraphsyncDAGSyncer() override
         {
             logger_->debug( "~GraphsyncDAGSyncer CALLED" );
             is_stopped_ = true;
@@ -82,7 +81,7 @@ namespace sgns::crdt
         /** Starts instance and subscribes to blocks */
         outcome::result<void> StartSync();
 
-        void AddRoute( const CID &cid, const PeerId &peer, std::vector<Multiaddress> &address );
+        void AddRoute( const CID &cid, const PeerId &peer, std::vector<Multiaddress> address );
 
         // DAGService interface implementation
         outcome::result<void> addNode( std::shared_ptr<const ipfs_lite::ipld::IPLDNode> node ) override;
@@ -102,21 +101,23 @@ namespace sgns::crdt
             const CID &cid,
             uint64_t   depth ) const override;
 
-        outcome::result<bool>                                       HasBlock( const CID &cid ) const override;
+        outcome::result<bool> HasBlock( const CID &cid ) const override;
+
         outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> GetNodeWithoutRequest(
             const CID &cid ) const override;
-        std::pair<DAGSyncer::LinkInfoSet, DAGSyncer::LinkInfoSet> TraverseCIDsLinks(
-            const std::shared_ptr<ipfs_lite::ipld::IPLDNode> &node,
-            std::string                                       link_name            = "",
-            DAGSyncer::LinkInfoSet                            visited_links        = {},
-            bool                                              skip_if_visited_root = false,
-            int                                               max_depth            = 100 ) const override;
+
+        std::pair<LinkInfoSet, LinkInfoSet> TraverseCIDsLinks( ipfs_lite::ipld::IPLDNode &node,
+                                                               std::string                link_name            = "",
+                                                               LinkInfoSet                visited              = {},
+                                                               bool                       skip_if_visited_root = false,
+                                                               int max_depth = 100 ) const override;
         /* Returns peer ID */
         outcome::result<PeerId> GetId() const;
 
         outcome::result<libp2p::peer::PeerInfo> GetPeerInfo() const;
 
         void AddToBlackList( const PeerId &peer ) const;
+
         bool IsOnBlackList( const PeerId &peer ) const;
 
         void                  InitCIDBlock( const CID &cid ) override;
@@ -125,57 +126,26 @@ namespace sgns::crdt
 
         void Stop() override;
 
-        IPFS::outcome::result<void> markResolved( const CID &cid ) override;
-        IPFS::outcome::result<bool> isResolved( const CID &cid ) const override;
-    protected:
+        outcome::result<void> markResolved( const CID &cid ) override;
+        outcome::result<bool> isResolved( const CID &cid ) const override;
+
+    private:
         static constexpr uint64_t TIMEOUT_SECONDS = 1200;
         static constexpr uint64_t MAX_FAILURES    = 3;
 
-        outcome::result<std::shared_ptr<ipfs_lite::ipfs::graphsync::Subscription>> RequestNode(
+        outcome::result<ipfs_lite::ipfs::graphsync::Subscription> RequestNode(
             const PeerId                              &peer,
             boost::optional<std::vector<Multiaddress>> address,
             const CID                                 &root_cid ) const;
 
         void RequestProgressCallback( ResponseStatusCode code, const std::vector<Extension> &extensions ) const;
-        void BlockReceivedCallback( const CID &cid, sgns::common::Buffer buffer );
-
-        bool             started_ = false;
-        std::vector<CID> unexpected_blocks;
+        void BlockReceivedCallback( const CID &cid, common::Buffer buffer );
 
         /** Stops instance */
         void StopSync();
 
-        ipfs_lite::ipfs::merkledag::MerkleDagServiceImpl dagService_;
-        std::shared_ptr<Graphsync>                       graphsync_;
-
-        std::shared_ptr<libp2p::Host> host_;
-
-        Logger logger_ = base::createLogger( "GraphsyncDAGSyncer" );
-
-        // keeping subscriptions alive, otherwise they cancel themselves
-        // class Subscription have non-copyable constructor and operator, so it can not be used in std::vector
-        // std::vector<Subscription> requests_;
-        mutable std::map<CID,
-                         std::tuple<std::shared_ptr<Subscription>,
-                                    std::shared_ptr<std::promise<std::shared_ptr<ipfs_lite::ipld::IPLDNode>>>>>
-            requests_;
-
-        // New peer registry - stores unique peers and their addresses
-        mutable std::vector<PeerEntry>    peer_registry_;
-        mutable std::map<PeerId, PeerKey> peer_index_; // Maps PeerIds to registry indices
-        mutable std::mutex                registry_mutex_;
-
-        // Routing table that references peers in the registry
-        mutable RouteMapType routing_;
-        mutable std::mutex   routing_mutex_;
-
-        mutable std::map<Multihash, BlacklistEntry>                       blacklist_;
-        mutable std::mutex                                                blacklist_mutex_;
-        mutable std::mutex                                                mutex_;
-        mutable std::map<CID, std::shared_ptr<ipfs_lite::ipld::IPLDNode>> received_blocks_;
-
         // Helper methods for the peer registry
-        PeerKey                    RegisterPeer( const PeerId &peer, const std::vector<Multiaddress> &address ) const;
+        PeerKey                    RegisterPeer( const PeerId &peer, std::vector<Multiaddress> address );
         outcome::result<PeerEntry> GetPeerById( PeerKey id ) const;
 
         bool AddCIDBlock( const CID &cid, const std::shared_ptr<ipfs_lite::ipld::IPLDNode> &block );
@@ -185,36 +155,56 @@ namespace sgns::crdt
 
         outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> GetNodeFromMerkleDAG( const CID &cid ) const;
 
-        outcome::result<void>   AddNodeToMerkleDAG( std::shared_ptr<const ipfs_lite::ipld::IPLDNode> node );
-        outcome::result<void>   RemoveNodeFromMerkleDAG( const CID &cid );
-        outcome::result<size_t> SelectFromMerkleDAG(
-            gsl::span<const uint8_t>                                                     root_cid,
-            gsl::span<const uint8_t>                                                     selector,
-            std::function<bool( std::shared_ptr<const ipfs_lite::ipld::IPLDNode> node )> handler ) const;
-
         outcome::result<PeerEntry> GetRoute( const CID &cid ) const;
         void                       EraseRoutesFromPeerID( const PeerId &peer ) const;
-        void                       EraseRoute( const CID &cid ) const;
+        void                       EraseRoute( const CID &cid );
 
-        uint64_t GetCurrentTimestamp() const;
+        static uint64_t GetCurrentTimestamp();
 
         /// Using exponential backoff for both cases but with different base values
-        uint64_t getBackoffTimeout( uint64_t attempts, bool ever_connected ) const;
+        static uint64_t getBackoffTimeout( uint64_t attempts, bool ever_connected );
 
         /// record successful connections
-        void RecordSuccessfulConnection( const PeerId &peer ) const;
+        void RecordSuccessfulConnection( const PeerId &peer );
 
-    private:
-        struct LRUCIDCache
+        bool             started_ = false;
+        std::vector<CID> unexpected_blocks;
+
+        mutable std::mutex                               dagMutex_;
+        ipfs_lite::ipfs::merkledag::MerkleDagServiceImpl dagService_;
+        std::shared_ptr<Graphsync>                       graphsync_;
+
+        std::shared_ptr<libp2p::Host>                    host_;
+
+        Logger                                           logger_ = base::createLogger( "GraphsyncDAGSyncer" );
+
+        // keeping subscriptions alive, otherwise they cancel themselves
+        // class Subscription have non-copyable constructor and operator, so it can not be used in std::vector
+        // std::vector<Subscription> requests_;
+        std::map<CID,
+                 std::tuple<std::shared_ptr<Subscription>,
+                            std::shared_ptr<std::promise<std::shared_ptr<ipfs_lite::ipld::IPLDNode>>>>>
+            requests_;
+
+        // New peer registry - stores unique peers and their addresses
+        std::vector<PeerEntry>    peer_registry_;
+        std::map<PeerId, PeerKey> peer_index_; // Maps PeerIds to registry indices
+        mutable std::mutex        registry_mutex_;
+
+        // Routing table that references peers in the registry
+        mutable RouteMapType routing_;
+        mutable std::mutex   routing_mutex_;
+
+        mutable std::map<Multihash, BlacklistEntry> blacklist_;
+        mutable std::mutex                          blacklist_mutex_;
+
+        std::map<CID, std::shared_ptr<ipfs_lite::ipld::IPLDNode>> received_blocks_;
+
+        class LRUCIDCache
         {
+        public:
             // Maximum number of blocks to store in the cache
             static constexpr size_t MAX_CACHE_SIZE = 250;
-
-            // Main storage: CID -> (Node, list iterator)
-            std::map<CID, std::pair<std::shared_ptr<ipfs_lite::ipld::IPLDNode>, std::list<CID>::iterator>> cache_map_;
-
-            // LRU list: most recently used at front, least recently used at back
-            std::list<CID> lru_list_;
 
             void init( const CID &cid );
             bool add( const CID &cid, std::shared_ptr<ipfs_lite::ipld::IPLDNode> node );
@@ -228,11 +218,19 @@ namespace sgns::crdt
             {
                 return cache_map_.size();
             }
+
+            // Main storage: CID -> (Node, list iterator)
+            std::map<CID, std::pair<std::shared_ptr<ipfs_lite::ipld::IPLDNode>, std::list<CID>::iterator>> cache_map_;
+
+            // LRU list: most recently used at front, least recently used at back
+            std::list<CID> lru_list_;
+
+            mutable std::mutex mutex_;
         };
 
         mutable LRUCIDCache lru_cid_cache_;
-        mutable std::mutex  cache_mutex_;
-        std::atomic<bool>   is_stopped_{ false };
+
+        std::atomic<bool> is_stopped_{ false };
     };
 
 }
