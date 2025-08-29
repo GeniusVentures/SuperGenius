@@ -51,13 +51,13 @@ void ProcessingServiceTest::SetUp(std::string name, std::string loggerConfig)
     libp2p::log::setLevelOfGroup(name, soralog::Level::OFF);
 
     auto loggerProcQM  = sgns::base::createLogger( "ProcessingSubTaskQueueManager" );
-    loggerProcQM->set_level( spdlog::level::off );
+    loggerProcQM->set_level( spdlog::level::err );
 
     loggerProcQM  = sgns::base::createLogger( "ProcessingSubTaskQueue");
     loggerProcQM->set_level( spdlog::level::off );
 
     loggerProcQM  = sgns::base::createLogger( "ProcessingSubTaskQueueAccessorImpl");
-    loggerProcQM->set_level( spdlog::level::trace );
+    loggerProcQM->set_level( spdlog::level::off );
     auto loggerProcEngine = sgns::base::createLogger( "ProcessingEngine" );
     loggerProcEngine->set_level( spdlog::level::off );
     auto loggerQueueCHannel = sgns::base::createLogger( "ProcessingSubTaskQueueChannelPubSub" );
@@ -70,10 +70,23 @@ void ProcessingServiceTest::SetUp(std::string name, std::string loggerConfig)
 
 void ProcessingServiceTest::TearDown()
 {
+    for ( auto &accessor : m_processing_queues_accessors )
+    {
+        if ( accessor )
+        {
+            accessor.reset(); // Force cleanup
+        }
+    }
     for (auto& pubs : m_pubsub_nodes)
     {
         pubs->Stop();
     }
+    // Clear collections
+    m_pubsub_nodes.clear();
+    m_processing_queues_accessors.clear();
+
+    // Add delay for cleanup
+    std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
 }
 
 void ProcessingServiceTest::Initialize(uint64_t numNodes, size_t processingTime)

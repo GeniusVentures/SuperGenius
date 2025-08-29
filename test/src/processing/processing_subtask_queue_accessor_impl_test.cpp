@@ -38,7 +38,7 @@ class SubTaskQueueAccessorImplTest : public ProcessingServiceTest
 public:
     virtual void SetUp() override
     {
-        ProcessingServiceTest::SetUp( "processing_subtask_queue_manager_test", logger_config );
+        ProcessingServiceTest::SetUp( "processing_subtask_queue_accessor_test", logger_config );
         ProcessingServiceTest::Initialize( 2, 50 );
     }
 

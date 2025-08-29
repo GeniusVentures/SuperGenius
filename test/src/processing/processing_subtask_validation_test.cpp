@@ -320,7 +320,6 @@ TEST_F( SubTaskValidationTest, OnResultReceived_ValidExternalResult_AcceptsResul
         [&subTaskQueueAccessor]()
         {
             auto results = subTaskQueueAccessor->GetResults();
-            std::cout << "Results Size: " << results.size() << std::endl;
             if ( results.size() > 0 )
             {
                 std::cout << "Got results presumably" << std::endl;

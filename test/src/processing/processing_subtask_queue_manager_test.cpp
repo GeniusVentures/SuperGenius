@@ -38,12 +38,11 @@ class ProcessingSubTaskQueueManagerTest : public ProcessingServiceTest
 public:
     void SetUp() override
     {
-        ProcessingServiceTest::SetUp("processing_subtask_queue_manager_test", logger_config);
-        ProcessingServiceTest::Initialize(2, 50);
+        //ProcessingServiceTest::SetUp("processing_subtask_queue_manager_test", logger_config);
+        //ProcessingServiceTest::Initialize(2, 50);
     }
     const  std::string nodeId1 = "NODE_1";
     const  std::string nodeId2 = "NODE_2";
-
 };
 
 /**
@@ -96,6 +95,7 @@ TEST_F(ProcessingSubTaskQueueManagerTest, QueueCreating)
     ASSERT_EQ(2, queueSnapshotSet[0].processing_queue().items_size());
     EXPECT_EQ("", queueSnapshotSet[0].processing_queue().items(0).lock_node_id());
     EXPECT_EQ("", queueSnapshotSet[0].processing_queue().items(1).lock_node_id());
+    context->stop();
 }
 
 /**
@@ -149,6 +149,7 @@ TEST_F(ProcessingSubTaskQueueManagerTest, QueueOwnershipTransfer)
     // The subtask is not locked by the new owner yet
     EXPECT_EQ("", queueSnapshotSet[0].processing_queue().items(0).lock_node_id());
     EXPECT_EQ("", queueSnapshotSet[0].processing_queue().items(1).lock_node_id());
+    context->stop();
 }
 
 /**
@@ -212,6 +213,7 @@ TEST_F(ProcessingSubTaskQueueManagerTest, GrabSubTaskWithoutOwnershipTransferrin
     // The subtask is locked the queue owner
     EXPECT_EQ(nodeId1, queueSnapshotSet[1].processing_queue().items(0).lock_node_id());
     EXPECT_EQ("", queueSnapshotSet[1].processing_queue().items(1).lock_node_id());
+    context->stop();
 }
 
 /**
@@ -336,6 +338,7 @@ TEST_F(ProcessingSubTaskQueueManagerTest, GrabSubTaskWithOwnershipTransferring)
     // The subtask is locked by node2
     EXPECT_EQ(nodeId2, queueSnapshotSet[2].processing_queue().items(0).lock_node_id());
     EXPECT_EQ("", queueSnapshotSet[2].processing_queue().items(1).lock_node_id());
+    context->stop();
 }
 
 /**
@@ -382,6 +385,7 @@ TEST_F(ProcessingSubTaskQueueManagerTest, CheckProcessedQueue)
     queueManager1.ChangeSubTaskProcessingStates({ "SUBTASK_2" }, true);
 
     ASSERT_TRUE(queueManager1.IsProcessed());
+    context->stop();
 }
 
 /**
@@ -462,6 +466,7 @@ TEST_F(ProcessingSubTaskQueueManagerTest, TaskSplitFailed)
 
     // Create the queue on node1
     ASSERT_FALSE(queueManager1.CreateQueue(subTasks));
+    context->stop();
 }
 
 /**
@@ -503,5 +508,6 @@ TEST_F(ProcessingSubTaskQueueManagerTest, TaskSplitSucceeded)
 
     // Create the queue on node1
     ASSERT_TRUE(queueManager1.CreateQueue(subTasks));
+    context->stop();
 }
 

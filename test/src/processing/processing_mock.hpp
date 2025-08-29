@@ -174,6 +174,10 @@ namespace sgns::test
         typedef std::function<void(const std::string& nodeId)> QueueOwnershipRequestSink;
         typedef std::function<void(std::shared_ptr<SGProcessing::SubTaskQueue> queue)> QueuePublishingSink;
 
+        ~ProcessingSubTaskQueueChannelImpl()
+        {
+            std::cout << "Destroy subtask channel" << std::endl;
+        }
         void RequestQueueOwnership(const std::string& nodeId) override
         {
             if (queueOwnershipRequestSink)
