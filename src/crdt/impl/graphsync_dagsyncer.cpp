@@ -455,8 +455,8 @@ namespace sgns::crdt
             else
             {
                 RecordSuccessfulConnection( peerID );
-                auto [links_to_fetch, _] = TraverseCIDsLinks( *node.value() );
-                for ( const auto &[cid, _] : links_to_fetch )
+                auto [links_to_fetch, _1] = TraverseCIDsLinks( *node.value() );
+                for ( const auto &[cid, _2] : links_to_fetch )
                 {
                     logger_->trace( "Adding route for peer {} and CID {}", peerID.toBase58(), cid.toString().value() );
                     AddRoute( cid, peerID, address );
@@ -504,13 +504,15 @@ namespace sgns::crdt
             logger_->trace( "TraverseCIDsLinks: Link: name '{}' != '{}'", name, link_name );
             if ( !link_name.empty() && name != link_name )
             {
-                logger_->debug( "TraverseCIDsLinks: Skipping link" );
+                logger_->debug( "TraverseCIDsLinks: Skipping link: name '{}' != '{}'", name, link_name );
                 continue;
             }
 
             if ( !visited.insert( pair ).second )
             {
-                logger_->info( "TraverseCIDsLinks: Already visited" );
+                logger_->info( "TraverseCIDsLinks: Already visited {{ link=\"{}\", name=\"{}\" }}",
+                               child.toString().value(),
+                               name );
                 continue;
             }
 
