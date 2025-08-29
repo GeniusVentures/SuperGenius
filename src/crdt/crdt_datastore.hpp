@@ -130,7 +130,8 @@ namespace sgns::crdt
          * @param aValue Value to be stored
          * @return outcome::success if stored and broadcasted successfully, or outcome::failure otherwise.
          */
-        outcome::result<void> PutKey( const HierarchicalKey &aKey, const Buffer &aValue,
+        outcome::result<void> PutKey( const HierarchicalKey       &aKey,
+                                      const Buffer                &aValue,
                                       const std::set<std::string> &topics );
 
         /** HasKey returns whether the `key` is mapped to a `value` in set
@@ -169,7 +170,8 @@ namespace sgns::crdt
         * @param value - delta value to add to datastore
         * @return pointer to new delta or outcome::failure on error
         */
-        static outcome::result<std::shared_ptr<Delta>> CreateDeltaToAdd( const std::string &key, const std::string &value );
+        static outcome::result<std::shared_ptr<Delta>> CreateDeltaToAdd( const std::string &key,
+                                                                         const std::string &value );
 
         /** Returns a new delta-set removing the given keys with prefix /namespace/s/<key>
         * @param key - delta key to remove from datastore

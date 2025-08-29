@@ -600,9 +600,8 @@ namespace sgns::crdt
         if ( lru_cid_cache_.remove( cid ) )
         {
             logger_->debug( "Block removed from LRU cache: CID {}", cid.toString().value() );
-            return outcome::success();
         }
-        return outcome::failure( Error::CID_NOT_FOUND );
+        return outcome::success();
     }
 
     void GraphsyncDAGSyncer::AddToBlackList( const PeerId &peer ) const
