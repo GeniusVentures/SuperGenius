@@ -24,7 +24,7 @@ sinks:
     type: console
     color: true
 groups:
-  - name: processing_subtask_queue_manager_test
+  - name: processing_subtask_queue_accessor_test
     sink: console
     level: info
     children:
