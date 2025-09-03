@@ -67,7 +67,6 @@ namespace sgns
         static bool          VerifySignature( std::string address, std::string sig, std::vector<uint8_t> data );
         std::vector<uint8_t> Sign( std::vector<uint8_t> data );
 
-        void                      RollBackConfirmedNonce( uint64_t nonce );
         void                      SetLocalConfirmedNonce( uint64_t nonce );
         void                      SetPeerConfirmedNonce( uint64_t nonce, std::string address );
         void                      RollBackPeerConfirmedNonce( uint64_t nonce, std::string address );
@@ -84,7 +83,7 @@ namespace sgns
     private:
         std::shared_ptr<ethereum::EthereumKeyGenerator> eth_keypair;
         std::shared_ptr<KeyGenerator::ElGamal>          elgamal_address;
-        std::unordered_map<std::string, int64_t>        confirmed_nonces_;
+        std::unordered_map<std::string, uint64_t>       confirmed_nonces_;
         uint64_t                                        proposed_nonce_;
         mutable std::shared_mutex                       nonce_mutex_;
         std::shared_ptr<AccountMessenger>               messenger_;

@@ -49,7 +49,7 @@ namespace sgns
 
             instance->eth_keypair = std::make_shared<ethereum::EthereumKeyGenerator>( std::move( temp_eth_address ) );
             instance->elgamal_address = std::make_shared<KeyGenerator::ElGamal>( std::move( temp_elgamal_address ) );
-            instance->confirmed_nonces_.emplace( instance->eth_keypair->GetEntirePubValue(), -1 );
+            //instance->confirmed_nonces_.emplace( instance->eth_keypair->GetEntirePubValue(), -1 );
         }
 
         return instance;
@@ -328,6 +328,7 @@ namespace sgns
 
     void GeniusAccount::SetLocalConfirmedNonce( uint64_t nonce )
     {
+        logger_->debug( "Setting local confirmed nonce to {} from {}", nonce, proposed_nonce_ );
         SetPeerConfirmedNonce( nonce, eth_keypair->GetEntirePubValue() );
         {
             std::lock_guard lock( nonce_mutex_ );
@@ -339,20 +340,6 @@ namespace sgns
         }
     }
 
-    void GeniusAccount::RollBackConfirmedNonce( uint64_t nonce )
-    {
-        RollBackPeerConfirmedNonce( nonce, eth_keypair->GetEntirePubValue() );
-        {
-            std::lock_guard lock( nonce_mutex_ );
-            auto            current_confirmed_nonce = confirmed_nonces_[eth_keypair->GetEntirePubValue()];
-            current_confirmed_nonce++;
-            logger_->debug( "Setting the min value between {} and {} as a proposed (next) nonce",
-                            proposed_nonce_,
-                            current_confirmed_nonce );
-            proposed_nonce_ = std::min( static_cast<uint64_t>( current_confirmed_nonce ), proposed_nonce_ );
-        }
-    }
-
     void GeniusAccount::SetPeerConfirmedNonce( uint64_t nonce, std::string address )
     {
         std::lock_guard lock( nonce_mutex_ );
@@ -361,7 +348,7 @@ namespace sgns
                         current_confirmed_nonce,
                         nonce,
                         address.substr( 0, 8 ) );
-        confirmed_nonces_[address] = std::max( static_cast<int64_t>( nonce ), current_confirmed_nonce );
+        confirmed_nonces_[address] = std::max( nonce, current_confirmed_nonce );
     }
 
     void GeniusAccount::RollBackPeerConfirmedNonce( uint64_t nonce, std::string address )
@@ -372,7 +359,26 @@ namespace sgns
                         current_confirmed_nonce,
                         nonce,
                         address.substr( 0, 8 ) );
-        confirmed_nonces_[address] = std::min( static_cast<int64_t>( nonce ), current_confirmed_nonce );
+        if ( nonce == current_confirmed_nonce )
+        {
+            if ( current_confirmed_nonce )
+            {
+                current_confirmed_nonce--;
+                confirmed_nonces_[address] = current_confirmed_nonce;
+                current_confirmed_nonce++;
+            }
+            else
+            {
+                confirmed_nonces_.erase( address );
+            }
+            if ( address == eth_keypair->GetEntirePubValue() )
+            {
+                logger_->debug( "Setting the min value between {} and {} as a proposed (next) nonce",
+                                proposed_nonce_,
+                                current_confirmed_nonce );
+                proposed_nonce_ = current_confirmed_nonce;
+            }
+        }
     }
 
     uint64_t GeniusAccount::GetProposedNonce() const
@@ -387,22 +393,14 @@ namespace sgns
 
     outcome::result<uint64_t> GeniusAccount::GetPeerNonce( std::string address ) const
     {
-        std::unordered_map<std::string, int64_t> nonces_copy;
+        std::unordered_map<std::string, uint64_t> nonces_copy;
         {
             std::shared_lock lock( nonce_mutex_ );
             nonces_copy = confirmed_nonces_;
         }
         if ( auto it = nonces_copy.find( address ); it != nonces_copy.end() )
         {
-            auto signed_nonce = it->second;
-            if ( signed_nonce >= 0 )
-            {
-                return static_cast<uint64_t>( signed_nonce );
-            }
-            else
-            {
-                return outcome::failure( std::errc::invalid_argument );
-            }
+            return it->second;
         }
         else
         {
@@ -433,5 +431,4 @@ namespace sgns
         }
         return result;
     }
-
 }

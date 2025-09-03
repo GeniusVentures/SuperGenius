@@ -216,8 +216,13 @@ namespace sgns
 
         static constexpr std::chrono::milliseconds TIMESTAMP_TOLERANCE = std::chrono::seconds( 10 );
         static constexpr std::chrono::milliseconds IMMUTABILITY_WINDOW = std::chrono::minutes( 15 );
-        std::mutex                                 cv_mutex_;
-        std::condition_variable                    cv_;
+
+        std::mutex                         cv_mutex_;
+        std::condition_variable            cv_;
+        std::queue<crdt::NotificationData> notification_queue_; // Buffer for multiple notifications
+        std::mutex                         queue_mutex_;        // Separate mutex for the queue
+
+        std::chrono::steady_clock::time_point last_loop_time_;
 
         outcome::result<std::set<std::string>> ParseTransferTransaction(
             const std::shared_ptr<IGeniusTransactions> &tx );
@@ -249,7 +254,7 @@ namespace sgns
 
         std::optional<std::vector<crdt::pb::Element>> FilterTransaction( const crdt::pb::Element &element );
         std::optional<std::vector<crdt::pb::Element>> FilterProof( const crdt::pb::Element &element );
-        void NotificationCallback( const std::pair<std::vector<std::string>, std::vector<std::string>> &keys );
+        void                                          NotificationCallback( const crdt::NotificationData &keys );
 
         bool ShouldReplaceTransaction( const std::shared_ptr<IGeniusTransactions> &existing_tx,
                                        const std::shared_ptr<IGeniusTransactions> &new_tx ) const;
@@ -259,6 +264,8 @@ namespace sgns
         int64_t  GetElapsedTime( uint64_t timestamp ) const;
 
         bool IsTransactionImmutable( const std::shared_ptr<IGeniusTransactions> &tx ) const;
+
+        void RemoveTransactionFromProcessedMaps( const std::string &transaction_key );
     };
 }
 

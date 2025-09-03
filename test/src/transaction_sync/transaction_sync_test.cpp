@@ -114,13 +114,12 @@ namespace sgns
 
             params.SignParameters( account );
 
-            auto        timestamp = std::chrono::system_clock::now();
-            std::string wrong_address =
-                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+            auto                     timestamp = std::chrono::system_clock::now();
+            
             SGTransaction::DAGStruct dag;
             dag.set_previous_hash( "" );
             dag.set_nonce( account->GetProposedNonce() );
-            dag.set_source_addr( wrong_address );
+            dag.set_source_addr( account->GetAddress() );
             dag.set_timestamp( timestamp.time_since_epoch().count() );
             dag.set_uncle_hash( "" );
             dag.set_data_hash( "" ); //filled by transaction class
