@@ -50,9 +50,12 @@ namespace
         {
             if (!m_subTasks.empty())
             {
-                m_context.post([this, onSubTaskGrabbedCallback]() {
-                    onSubTaskGrabbedCallback(m_subTasks.front());
-                    m_subTasks.pop_front();
+                // Make a copy of the subtask to avoid dangling references
+                SGProcessing::SubTask subTaskCopy = m_subTasks.front();
+                m_subTasks.pop_front();
+                
+                m_context.post([subTaskCopy, onSubTaskGrabbedCallback]() {
+                    onSubTaskGrabbedCallback(subTaskCopy);
                 });
             }
         }

@@ -46,22 +46,23 @@ void ProcessingServiceTest::SetUp(std::string name, std::string loggerConfig)
     libp2p::log::setLoggingSystem(logSystem);
 
     m_Logger = logSystem->getLogger("console", name);
-
 #ifdef SGNS_DEBUGLOGS
     libp2p::log::setLevelOfGroup(name, soralog::Level::OFF);
 
     auto loggerProcQM  = sgns::base::createLogger( "ProcessingSubTaskQueueManager" );
-    loggerProcQM->set_level( spdlog::level::err );
+    loggerProcQM->set_level( spdlog::level::trace );
 
     loggerProcQM  = sgns::base::createLogger( "ProcessingSubTaskQueue");
     loggerProcQM->set_level( spdlog::level::off );
 
     loggerProcQM  = sgns::base::createLogger( "ProcessingSubTaskQueueAccessorImpl");
-    loggerProcQM->set_level( spdlog::level::off );
+    loggerProcQM->set_level( spdlog::level::trace );
     auto loggerProcEngine = sgns::base::createLogger( "ProcessingEngine" );
     loggerProcEngine->set_level( spdlog::level::off );
     auto loggerQueueCHannel = sgns::base::createLogger( "ProcessingSubTaskQueueChannelPubSub" );
     loggerQueueCHannel->set_level( spdlog::level::off );
+    auto loggerBroadcaster = sgns::base::createLogger( "PubSubBroadcasterExt" );
+    loggerBroadcaster->set_level( spdlog::level::trace );
 #else
     libp2p::log::setLevelOfGroup(name, soralog::Level::OFF);
 #endif
@@ -70,6 +71,53 @@ void ProcessingServiceTest::SetUp(std::string name, std::string loggerConfig)
 
 void ProcessingServiceTest::TearDown()
 {
+    // FIRST: Stop all ProcessingServiceImpl instances to shut down their background threads
+    for( auto &service : m_processing_services )
+    {
+        if ( service )
+        {
+            service->StopProcessing();
+        }
+    }
+
+    // Allow time for ProcessingServiceImpl background threads to complete
+    std::this_thread::sleep_for( std::chrono::milliseconds( 500 ) );
+
+    // Second, stop all processing engines to ensure no background threads are running
+    for( auto &engine : m_processing_engines )
+    {
+        if ( engine )
+        {
+            engine->StopQueueProcessing();
+        }
+    }
+
+    // Allow more time for any ongoing ProcessSubTask threads to complete
+    // The crash shows threads are still running, so we need more time
+    std::this_thread::sleep_for( std::chrono::milliseconds( 500 ) );
+
+    // Now safely destroy engines after stopping them
+    for( auto &engine : m_processing_engines )
+    {
+        if ( engine )
+        {
+            engine.reset(); // Force cleanup
+        }
+    }
+
+    // Additional wait to ensure engine destruction completed
+    std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+
+    // Destroy processing services after engines
+    for( auto &service : m_processing_services )
+    {
+        if ( service )
+        {
+            service.reset(); // Force cleanup
+        }
+    }
+
+    // Next, destroy accessors (which engines might reference)
     for ( auto &accessor : m_processing_queues_accessors )
     {
         if ( accessor )
@@ -77,16 +125,70 @@ void ProcessingServiceTest::TearDown()
             accessor.reset(); // Force cleanup
         }
     }
+
+    // Then destroy managers (which accessors depend on)
+    for( auto &mgr : m_processing_queues_managers )
+    {
+        if ( mgr )
+        {
+            mgr.reset(); // Force cleanup
+        }
+    }
+
+    // Destroy pubsub channels (which managers depend on)
+    for ( auto &pubsub : m_processing_queues_channel_pub_subs )
+    {
+        if ( pubsub )
+        {
+            pubsub.reset(); // Force cleanup
+        }
+    }
+
+    // Destroy processing cores (which engines used)
+    for ( auto &core : m_processing_cores )
+    {
+        if ( core )
+        {
+            core.reset(); // Force cleanup
+        }
+    }
+
+    // Finally, stop and destroy pubsub nodes (which everything else depends on)
     for (auto& pubs : m_pubsub_nodes)
     {
-        pubs->Stop();
+        if (pubs)
+        {
+            pubs->Stop();
+        }
     }
+
+    // On Linux, we need extra time for TCP sockets to fully release from TIME_WAIT state
+    // The pubsub Stop() method waits for libp2p shutdown, but the OS may still hold the port
+    std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
+
+    // Now reset the pubsub nodes
+    for (auto& pubs : m_pubsub_nodes)
+    {
+        if (pubs)
+        {
+            pubs.reset();
+        }
+    }
+
     // Clear collections
     m_pubsub_nodes.clear();
     m_processing_queues_accessors.clear();
+    m_processing_queues_managers.clear();
+    m_processing_engines.clear();
+    m_processing_queues_channel_pub_subs.clear();
+    m_processing_cores.clear();
+    m_pubsub_futures.clear();
+    m_IsTaskFinalized.clear();
+    m_processing_services.clear();
 
-    // Add delay for cleanup
-    std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+    // Add extra delay for Linux socket cleanup
+    // This ensures TCP sockets are fully released from TIME_WAIT state
+    std::this_thread::sleep_for( std::chrono::milliseconds( 500 ) );
 }
 
 void ProcessingServiceTest::Initialize(uint64_t numNodes, size_t processingTime)
@@ -102,7 +204,12 @@ void ProcessingServiceTest::Initialize(uint64_t numNodes, size_t processingTime)
     {
         auto pubsub_node = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>( config );
         m_pubsub_nodes.push_back(pubsub_node);
-        m_pubsub_futures.push_back(m_pubsub_nodes[i]->Start(40001 + i, bootstrap_nodes));
+        
+        // Add some diagnostic logging for port binding
+        int port = 40001 + i;
+        Color::PrintInfo("Attempting to start PubSub node ", i, " on port ", port);
+        
+        m_pubsub_futures.push_back(m_pubsub_nodes[i]->Start(port, bootstrap_nodes));
         if (i == 0)
         {
             bootstrap_nodes = { pubsub_node->GetLocalAddress() };
@@ -112,18 +219,27 @@ void ProcessingServiceTest::Initialize(uint64_t numNodes, size_t processingTime)
     std::chrono::milliseconds resultTime;
     ASSERT_WAIT_FOR_CONDITION(
         ([this]() {
-            for (auto& pubs_future : m_pubsub_futures)
+            for (size_t i = 0; i < m_pubsub_futures.size(); ++i)
             {
+                auto& pubs_future = m_pubsub_futures[i];
                 try
                 {
-                   pubs_future.get();
+                   auto result = pubs_future.get();
+                   if (result) {
+                       Color::PrintError("PubSub node ", i, " failed to start: ", result.message());
+                       return false;
+                   } else {
+                       Color::PrintInfo("PubSub node ", i, " started successfully");
+                   }
                 } catch (const std::exception& e) {
-                    m_Logger->error("Pubsub node start failed: {}", e.what());
+                    Color::PrintError("PubSub node ", i, " start exception: ", e.what());
+                    m_Logger->error("Pubsub node {} start failed: {}", i, e.what());
+                    return false;
                 }
             }
             return true;
         }),
-        std::chrono::milliseconds(2000),
+        std::chrono::milliseconds(5000),  // Increased timeout for port binding issues
         "Pubsub nodes start during initialization failed",
         &resultTime
     );
@@ -190,6 +306,9 @@ TEST_F(ProcessingServiceTest, ProcessingSlotsAreAvailable)
         std::make_shared<SubTaskResultStorageMock>(),
         processingCore);
 
+    // Track the ProcessingServiceImpl for proper cleanup
+    m_processing_services.push_back(processingService);
+
 
     sgns::ipfs_pubsub::GossipPubSubTopic gridChannel1(pubs1, "GRID_CHANNEL_ID");
     sgns::ipfs_pubsub::GossipPubSubTopic gridChannel2(pubs2, "GRID_CHANNEL_ID");
@@ -233,6 +352,9 @@ TEST_F(ProcessingServiceTest, NoProcessingSlotsAvailable)
         std::make_shared<SubTaskStateStorageMock>(),
         std::make_shared<SubTaskResultStorageMock>(),
         processingCore);
+
+    // Track the ProcessingServiceImpl for proper cleanup
+    m_processing_services.push_back(processingService);
 
 
     sgns::ipfs_pubsub::GossipPubSubTopic gridChannel1(pubs1, "GRID_CHANNEL_ID");
