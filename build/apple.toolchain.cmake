@@ -151,7 +151,7 @@
 # command.
 #
 
-cmake_minimum_required(VERSION 3.8.0)
+cmake_minimum_required(VERSION 3.10.0)
 
 # CMake invokes the toolchain file twice during the first build, but only once during subsequent rebuilds.
 if(DEFINED ENV{_IOS_TOOLCHAIN_HAS_RUN})
@@ -587,8 +587,10 @@ elseif(PLATFORM_INT STREQUAL "MAC_UNIVERSAL")
         set(ARCHS "x86_64;arm64")
     endif()
 
-    string(REPLACE ";" "-" ARCHS_SPLIT "${ARCHS}")
-    set(APPLE_TARGET_TRIPLE_INT ${ARCHS_SPLIT}-apple-macosx${DEPLOYMENT_TARGET})
+    # For universal builds, use the first architecture for the target triple
+    # The -arch flags will handle the actual universal compilation
+    list(GET ARCHS 0 PRIMARY_ARCH)
+    set(APPLE_TARGET_TRIPLE_INT ${PRIMARY_ARCH}-apple-macosx${DEPLOYMENT_TARGET})
 else()
     message(FATAL_ERROR "Invalid PLATFORM: ${PLATFORM_INT}")
 endif()
@@ -991,7 +993,7 @@ elseif(NOT DEFINED TOOLCHAIN_FILE_PROCESSED)
     set(CMAKE_C_FLAGS_MINSIZEREL "-DNDEBUG -Os ${CMAKE_C_FLAGS_MINSIZEREL}")
     set(CMAKE_C_FLAGS_RELWITHDEBINFO "-DNDEBUG -O2 -g ${CMAKE_C_FLAGS_RELWITHDEBINFO}")
     set(CMAKE_C_FLAGS_RELEASE "-DNDEBUG -O3 ${CMAKE_C_FLAGS_RELEASE}")
-    set(CMAKE_CXX_FLAGS "${C_TARGET_FLAGS} ${APPLE_TARGET_TRIPLE_FLAG} ${SDK_NAME_VERSION_FLAGS} ${OBJC_LEGACY_VARS} ${BITCODE} ${VISIBILITY} ${CMAKE_CXX_FLAGS}" CACHE INTERNAL
+    set(CMAKE_CXX_FLAGS "${C_TARGET_FLAGS} ${APPLE_TARGET_TRIPLE_FLAG} ${SDK_NAME_VERSION_FLAGS} ${OBJC_LEGACY_VARS} ${BITCODE} ${VISIBILITY} -Wno-missing-template-arg-list-after-template-kw ${CMAKE_CXX_FLAGS}" CACHE INTERNAL
         "Flags used by the compiler during all CXX build types.")
     set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g ${CMAKE_CXX_FLAGS_DEBUG}")
     set(CMAKE_CXX_FLAGS_MINSIZEREL "-DNDEBUG -Os ${CMAKE_CXX_FLAGS_MINSIZEREL}")
@@ -1025,9 +1027,12 @@ elseif(NOT DEFINED TOOLCHAIN_FILE_PROCESSED)
             "Flags used by the compiler for all OBJCXX link types.")
     endif()
 
-    set(CMAKE_ASM_FLAGS "${CMAKE_C_FLAGS} -x assembler-with-cpp -arch ${CMAKE_OSX_ARCHITECTURES} ${APPLE_TARGET_TRIPLE_FLAG}" CACHE INTERNAL
-        "Flags used by the compiler for all ASM build types.")
-
+    set(ASM_ARCHES "")
+    foreach(ASM_ARCH IN LISTS CMAKE_OSX_ARCHITECTURES)
+        set(ASM_ARCHES "${ASM_ARCHES} -arch ${ASM_ARCH}")
+    endforeach()
+    set(CMAKE_ASM_FLAGS "${CMAKE_C_FLAGS} -x assembler-with-cpp ${ASM_ARCHES} ${APPLE_TARGET_TRIPLE_FLAG}" CACHE INTERNAL
+            "Flags used by the compiler for all ASM build types.")
     set(TOOLCHAIN_FILE_PROCESSED ON CACHE INTERNAL "Toolchain file has already set the necessary flags.")
 endif()
 
