@@ -266,6 +266,9 @@ namespace sgns
         bool IsTransactionImmutable( const std::shared_ptr<IGeniusTransactions> &tx ) const;
 
         void RemoveTransactionFromProcessedMaps( const std::string &transaction_key );
+
+        void ProcessTombstones( const std::vector<std::string> &tombstones );
+        void ProcessElements( const std::vector<std::string> &elements );
     };
 }
 

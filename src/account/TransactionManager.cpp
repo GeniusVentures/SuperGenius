@@ -219,6 +219,8 @@ namespace sgns
                                      full_node_m,
                                      element );
                 }
+                ProcessElements( notification.first );
+
                 for ( auto &tombstone : notification.second )
                 {
                     m_logger->debug( "[{} - full: {}] Tombstone: {} ",
@@ -228,6 +230,7 @@ namespace sgns
                 }
                 total_elements   += notification.first.size();
                 total_tombstones += notification.second.size();
+                ProcessTombstones( notification.second );
             }
 
             m_logger->debug(
@@ -1816,7 +1819,7 @@ namespace sgns
     {
         bool ret = false;
 
-        std::shared_ptr<crdt::AtomicTransaction> crdt_transaction = globaldb_m->BeginTransaction();
+        //std::shared_ptr<crdt::AtomicTransaction> crdt_transaction = globaldb_m->BeginTransaction();
 
         auto                        transaction_path = GetTransactionPath( *tx );
         sgns::crdt::HierarchicalKey tx_key( transaction_path );
@@ -1826,9 +1829,9 @@ namespace sgns
                          full_node_m,
                          tx_key.GetKey() );
 
-        auto remove_result = crdt_transaction->Remove( std::move( tx_key ) );
+        //auto remove_result = crdt_transaction->Remove( std::move( tx_key ) );
 
-        if ( !remove_result.has_error() )
+        //if ( !remove_result.has_error() )
         {
             m_logger->debug( "[{} - full: {}] Removed key transaction on {}",
                              account_m->GetAddress().substr( 0, 8 ),
@@ -1842,7 +1845,7 @@ namespace sgns
                                  full_node_m,
                                  tx_key.GetKey() );
 
-                crdt_transaction->Commit( get_topics_result.value() );
+                //crdt_transaction->Commit( get_topics_result.value() );
                 ret = true;
                 m_logger->debug( "[{} - full: {}] Commited tx on {}",
                                  account_m->GetAddress().substr( 0, 8 ),
@@ -2006,7 +2009,7 @@ namespace sgns
         const crdt::pb::Element &element )
     {
         std::optional<std::vector<crdt::pb::Element>> maybe_tombstones;
-        bool                                          should_tombstone = false;
+        bool                                          should_delete = false;
         std::shared_ptr<IGeniusTransactions>          new_tx;
         do
         {
@@ -2017,7 +2020,7 @@ namespace sgns
                                  account_m->GetAddress().substr( 0, 8 ),
                                  full_node_m,
                                  element.key() );
-                should_tombstone = true;
+                should_delete = true;
                 break;
             }
             new_tx = maybe_new_tx.value();
@@ -2030,7 +2033,7 @@ namespace sgns
                                      account_m->GetAddress().substr( 0, 8 ),
                                      full_node_m,
                                      element.key() );
-                    should_tombstone = true;
+                    should_delete = true;
                     break;
                 }
                 else
@@ -2067,23 +2070,22 @@ namespace sgns
             }
             auto existing_tx = maybe_existing_tx.value();
 
-            should_tombstone = ShouldReplaceTransaction( existing_tx, new_tx );
+            should_delete = !ShouldReplaceTransaction( existing_tx, new_tx );
 
         } while ( 0 );
 
-        if ( should_tombstone )
+        if ( should_delete )
         {
-            std::vector<crdt::pb::Element> tombstones;
-            tombstones.push_back( element );
-            auto maybe_proof_key = GetExpectedProofKey( element.key(), new_tx );
+            std::vector<crdt::pb::Element> additional_elements_to_delete;
+            auto                           maybe_proof_key = GetExpectedProofKey( element.key(), new_tx );
             if ( maybe_proof_key.has_value() )
             {
-                crdt::pb::Element proof_tombstone;
-                proof_tombstone.set_key( maybe_proof_key.value() );
-                tombstones.push_back( proof_tombstone );
+                crdt::pb::Element proof_element;
+                proof_element.set_key( maybe_proof_key.value() );
+                additional_elements_to_delete.push_back( proof_element );
             }
 
-            maybe_tombstones = tombstones;
+            maybe_tombstones = additional_elements_to_delete;
         }
 
         return maybe_tombstones;
@@ -2376,6 +2378,42 @@ namespace sgns
                              account_m->GetAddress().substr( 0, 8 ),
                              full_node_m,
                              transaction_key );
+        }
+    }
+
+    void TransactionManager::ProcessTombstones( const std::vector<std::string> &tombstones )
+    {
+        m_logger->debug( "[{} - full: {}] Processing {} tombstones",
+                         account_m->GetAddress().substr( 0, 8 ),
+                         full_node_m,
+                         tombstones.size() );
+
+        for ( const auto &tombstone_key : tombstones )
+        {
+            m_logger->debug( "[{} - full: {}] Processing tombstone: {}",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             tombstone_key );
+
+            RemoveTransactionFromProcessedMaps( tombstone_key );
+        }
+    }
+
+    void TransactionManager::ProcessElements( const std::vector<std::string> &elements )
+    {
+        m_logger->debug( "[{} - full: {}] Processing {} elements",
+                         account_m->GetAddress().substr( 0, 8 ),
+                         full_node_m,
+                         elements.size() );
+
+        for ( const auto &element_key : elements )
+        {
+            m_logger->debug( "[{} - full: {}] Processing element: {}",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             element_key );
+
+            RemoveTransactionFromProcessedMaps( element_key );
         }
     }
 }
