@@ -861,26 +861,29 @@ namespace sgns::crdt
         }
         else
         {
-            if ( !topics_to_update_cid.empty() )
+            if ( filter_crdt )
             {
-                logger_->debug( "ProcessNode: Notifying topics or CRDT Merge" );
-                std::vector<std::string> elements;
-                std::vector<std::string> tombstones;
-
-                for ( const auto &element : aDelta->elements() )
+                if ( !topics_to_update_cid.empty() )
                 {
-                    elements.push_back( element.key() ); 
+                    logger_->debug( "ProcessNode: Notifying topics or CRDT Merge" );
+                    std::vector<std::string> elements;
+                    std::vector<std::string> tombstones;
+
+                    for ( const auto &element : aDelta->elements() )
+                    {
+                        elements.push_back( element.key() );
+                    }
+
+                    for ( const auto &tombstone : aDelta->tombstones() )
+                    {
+                        tombstones.push_back( tombstone.key() );
+                    }
+
+                    std::pair<std::vector<std::string>, std::vector<std::string>> changes{ std::move( elements ),
+                                                                                           std::move( tombstones ) };
+
+                    notifier_->NotifyTopics( topics_to_update_cid, changes );
                 }
-
-                for ( const auto &tombstone : aDelta->tombstones() )
-                {
-                    tombstones.push_back( tombstone.key() ); 
-                }
-
-                std::pair<std::vector<std::string>, std::vector<std::string>> changes{ std::move( elements ),
-                                                                                       std::move( tombstones ) };
-
-                notifier_->NotifyTopics( topics_to_update_cid, changes );
             }
         }
 
