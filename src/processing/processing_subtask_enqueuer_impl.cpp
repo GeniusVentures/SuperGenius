@@ -20,10 +20,16 @@ namespace sgns::processing
         //SGProcessing::Task task    = maybe_grabbed.value().second; //TODO - Not used for anything. Rewrite this code
 
         subTaskQueueId = taskKey;
+        m_logger->debug( "ENQUEUE_SUBTASKS: taskKey={}, task.ipfs_block_id()={}", taskKey, task.ipfs_block_id() );
 
         m_taskQueue->GetSubTasks( taskKey, subTasks );
 
-        m_logger->debug( "ENQUEUE_SUBTASKS: {}", subTasks.size() );
+        m_logger->debug( "ENQUEUE_SUBTASKS: {} subtasks found", subTasks.size() );
+        for ( const auto& subtask : subTasks )
+        {
+            m_logger->debug( "SUBTASK: id={}, ipfsblock={}", subtask.subtaskid(), subtask.ipfsblock() );
+        }
+        
         return task;
     }
 
