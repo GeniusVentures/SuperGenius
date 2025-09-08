@@ -19,6 +19,7 @@
 #include "crdt/crdt_options.hpp"
 #include "crdt/crdt_data_filter.hpp"
 #include "crdt/crdt_notifier.hpp"
+#include "crdt/crdt_callback_manager.hpp"
 #include <storage/rocksdb/rocksdb.hpp>
 #include <ipfs_lite/ipld/ipld_node.hpp>
 #include <shared_mutex>
@@ -45,9 +46,9 @@ namespace sgns::crdt
         using Element     = pb::Element;
         using IPLDNode    = ipfs_lite::ipld::IPLDNode;
 
-        using PutHookPtr                = std::function<void( const std::string &k, const Buffer &v )>;
         using DeleteHookPtr             = std::function<void( const std::string &k )>;
         using CRDTElementFilterCallback = CRDTDataFilter::ElementFilterCallback;
+        using CRDTNewElementCallback    = CRDTCallbackManager::NewDataCallback;
 
         enum class Error
         {
@@ -68,11 +69,11 @@ namespace sgns::crdt
          * @param[in]   elem_filter_cb Filter callback to remove or not an element from a Delta
          * @return      A new instance of @ref CrdtDatastore
          */
-        static std::shared_ptr<CrdtDatastore> New( std::shared_ptr<RocksDB>            aDatastore,
-                                                   const HierarchicalKey              &aKey,
-                                                   std::shared_ptr<DAGSyncer>          aDagSyncer,
-                                                   std::shared_ptr<Broadcaster>        aBroadcaster,
-                                                   const std::shared_ptr<CrdtOptions> &aOptions );
+        static std::shared_ptr<CrdtDatastore> New( std::shared_ptr<RocksDB>     aDatastore,
+                                                   const HierarchicalKey       &aKey,
+                                                   std::shared_ptr<DAGSyncer>   aDagSyncer,
+                                                   std::shared_ptr<Broadcaster> aBroadcaster,
+                                                   std::shared_ptr<CrdtOptions> aOptions );
 
         /**
          * @brief       Starts the datastore threads
@@ -186,6 +187,7 @@ namespace sgns::crdt
         void Close();
 
         bool RegisterElementFilter( const std::string &pattern, CRDTElementFilterCallback filter );
+        bool RegisterNewElementCallback( const std::string &pattern, CRDTNewElementCallback callback );
 
         /**
          * @brief Configure which topic this datastore should filter on.
@@ -339,14 +341,17 @@ namespace sgns::crdt
          */
         void FilterTombstonesOnDelta( std::shared_ptr<Delta> &delta );
 
+        void PutElementsCallback( const std::string &key, const Buffer &value );
+        void DeleteElementsCallback( const std::string &key );
+
     private:
         CrdtDatastore() = default;
 
-        CrdtDatastore( std::shared_ptr<RocksDB>            aDatastore,
-                       const HierarchicalKey              &aKey,
-                       std::shared_ptr<DAGSyncer>          aDagSyncer,
-                       std::shared_ptr<Broadcaster>        aBroadcaster,
-                       const std::shared_ptr<CrdtOptions> &aOptions );
+        CrdtDatastore( std::shared_ptr<RocksDB>     aDatastore,
+                       const HierarchicalKey       &aKey,
+                       std::shared_ptr<DAGSyncer>   aDagSyncer,
+                       std::shared_ptr<Broadcaster> aBroadcaster,
+                       std::shared_ptr<CrdtOptions> aOptions );
 
         std::shared_ptr<RocksDB>     dataStore_ = nullptr;
         std::shared_ptr<CrdtOptions> options_   = nullptr;
@@ -364,7 +369,6 @@ namespace sgns::crdt
         static constexpr std::string_view          headsNamespace_                = "h";
         static constexpr std::string_view          setsNamespace_                 = "s";
 
-        PutHookPtr    putHookFunc_       = nullptr;
         DeleteHookPtr deleteHookFunc_    = nullptr;
         int           numberOfDagWorkers = 1;
 
@@ -390,6 +394,7 @@ namespace sgns::crdt
         bool                    isFullNode = false;
 
         std::unique_ptr<CRDTNotifier> notifier_;
+        CRDTCallbackManager           crdt_cb_manager_;
     };
 
 }

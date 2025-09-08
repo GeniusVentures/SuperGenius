@@ -55,7 +55,8 @@ namespace sgns::crdt
         /// Pair of key and value to be stored in CRDT
         using DataPair = std::pair<HierarchicalKey, Buffer>;
         /// CRDT Filter callback type
-        using GlobalDBFilterCallback = CrdtDatastore::CRDTElementFilterCallback;
+        using GlobalDBFilterCallback     = CrdtDatastore::CRDTElementFilterCallback;
+        using GlobalDBNewElementCallback = CrdtDatastore::CRDTNewElementCallback;
 
         /**
          * @enum        Error
@@ -137,6 +138,7 @@ namespace sgns::crdt
         std::shared_ptr<RocksDB> GetDataStore();
 
         bool RegisterElementFilter( const std::string &pattern, GlobalDBFilterCallback filter );
+        bool RegisterNewElementCallback( const std::string &pattern, GlobalDBNewElementCallback callback );
 
         void Start();
 

@@ -27,6 +27,14 @@ add_library(crdt_heads
 add_library(crdt_notifier
     impl/crdt_notifier.cpp
 )
+add_library(crdt_callback_manager
+    impl/crdt_callback_manager.cpp
+)
+
+target_link_libraries(crdt_callback_manager
+    PUBLIC
+    buffer
+)
 
 target_link_libraries(crdt_heads
     PUBLIC
@@ -36,6 +44,7 @@ target_link_libraries(crdt_heads
 )
 supergenius_install(crdt_heads)
 supergenius_install(crdt_notifier)
+supergenius_install(crdt_callback_manager)
 
 add_library(crdt_graphsync_dagsyncer
     dagsyncer.hpp
@@ -73,6 +82,7 @@ target_link_libraries(crdt_datastore
     crdt_notifier
     crdt_graphsync_dagsyncer
     crdt_data_filter
+    crdt_callback_manager
     logger
     PRIVATE
     crdt_bcast

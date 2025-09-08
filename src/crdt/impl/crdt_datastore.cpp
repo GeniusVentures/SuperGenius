@@ -34,13 +34,18 @@ namespace sgns::crdt
 
     using CRDTBroadcast = pb::CRDTBroadcast;
 
-    std::shared_ptr<CrdtDatastore> CrdtDatastore::New( std::shared_ptr<RocksDB>            aDatastore,
-                                                       const HierarchicalKey              &aKey,
-                                                       std::shared_ptr<DAGSyncer>          aDagSyncer,
-                                                       std::shared_ptr<Broadcaster>        aBroadcaster,
-                                                       const std::shared_ptr<CrdtOptions> &aOptions )
+    std::shared_ptr<CrdtDatastore> CrdtDatastore::New( std::shared_ptr<RocksDB>     aDatastore,
+                                                       const HierarchicalKey       &aKey,
+                                                       std::shared_ptr<DAGSyncer>   aDagSyncer,
+                                                       std::shared_ptr<Broadcaster> aBroadcaster,
+                                                       std::shared_ptr<CrdtOptions> aOptions )
     {
         if ( ( aDatastore == nullptr ) || ( aDagSyncer == nullptr ) || ( aBroadcaster == nullptr ) )
+        {
+            return nullptr;
+        }
+        if ( ( aDatastore == nullptr ) || aOptions->Verify().has_failure() ||
+             ( aOptions->Verify().value() != CrdtOptions::VerifyErrorCode::Success ) )
         {
             return nullptr;
         }
@@ -48,7 +53,20 @@ namespace sgns::crdt
                                                                                aKey,
                                                                                std::move( aDagSyncer ),
                                                                                std::move( aBroadcaster ),
-                                                                               aOptions ) );
+                                                                               std::move( aOptions ) ) );
+
+        crdtInstance->set_ = std::make_shared<CrdtSet>(
+            crdtInstance->dataStore_,
+            aKey.ChildString( std::string( setsNamespace_ ) ),
+            [weakptr( std::weak_ptr<CrdtDatastore>( crdtInstance ) )]( const std::string  &key,
+                                                                       const base::Buffer &value )
+            {
+                if ( auto strong = weakptr.lock() )
+                {
+                    strong->PutElementsCallback( key, value );
+                }
+            },
+            crdtInstance->deleteHookFunc_ );
 
         return crdtInstance;
     }
@@ -152,35 +170,25 @@ namespace sgns::crdt
         started_ = true;
     }
 
-    CrdtDatastore::CrdtDatastore( std::shared_ptr<RocksDB>            aDatastore,
-                                  const HierarchicalKey              &aKey,
-                                  std::shared_ptr<DAGSyncer>          aDagSyncer,
-                                  std::shared_ptr<Broadcaster>        aBroadcaster,
-                                  const std::shared_ptr<CrdtOptions> &aOptions ) :
+    CrdtDatastore::CrdtDatastore( std::shared_ptr<RocksDB>     aDatastore,
+                                  const HierarchicalKey       &aKey,
+                                  std::shared_ptr<DAGSyncer>   aDagSyncer,
+                                  std::shared_ptr<Broadcaster> aBroadcaster,
+                                  std::shared_ptr<CrdtOptions> aOptions ) :
         dataStore_( std::move( aDatastore ) ),
+        options_( std::move( aOptions ) ),
         namespaceKey_( aKey ),
         broadcaster_( std::move( aBroadcaster ) ),
         dagSyncer_( std::move( aDagSyncer ) ),
         crdt_filter_( true ),
-        notifier_( std::make_unique<CRDTNotifier>() )
+        notifier_( std::make_unique<CRDTNotifier>() ),
+        crdt_cb_manager_()
     {
-        // <namespace>/s
-        auto fullSetNs = aKey.ChildString( std::string( setsNamespace_ ) );
-        // <namespace>/h
-        auto fullHeadsNs = aKey.ChildString( std::string( headsNamespace_ ) );
+        deleteHookFunc_    = options_->deleteHookFunc;
+        logger_            = options_->logger;
+        numberOfDagWorkers = options_->numWorkers;
 
-        if ( aOptions != nullptr && !aOptions->Verify().has_failure() &&
-             aOptions->Verify().value() == CrdtOptions::VerifyErrorCode::Success )
-        {
-            options_           = aOptions;
-            putHookFunc_       = options_->putHookFunc;
-            deleteHookFunc_    = options_->deleteHookFunc;
-            logger_            = options_->logger;
-            numberOfDagWorkers = options_->numWorkers;
-        }
-
-        set_   = std::make_shared<CrdtSet>( dataStore_, fullSetNs, putHookFunc_, deleteHookFunc_ );
-        heads_ = std::make_shared<CrdtHeads>( dataStore_, fullHeadsNs );
+        heads_ = std::make_shared<CrdtHeads>( dataStore_, aKey.ChildString( std::string( headsNamespace_ ) ) );
 
         size_t   numberOfHeads = 0;
         uint64_t maxHeight     = 0;
@@ -1193,5 +1201,21 @@ namespace sgns::crdt
     bool CrdtDatastore::RegisterElementFilter( const std::string &pattern, CRDTElementFilterCallback filter )
     {
         return crdt_filter_.RegisterElementFilter( pattern, std::move( filter ) );
+    }
+
+    bool CrdtDatastore::RegisterNewElementCallback( const std::string &pattern, CRDTNewElementCallback callback )
+    {
+        return crdt_cb_manager_.RegisterDataCallback( pattern, std::move( callback ) );
+    }
+
+    void CrdtDatastore::PutElementsCallback( const std::string &key, const Buffer &value )
+    {
+        //
+        crdt_cb_manager_.DataCallback( key, value );
+    }
+
+    void CrdtDatastore::DeleteElementsCallback( const std::string &key )
+    {
+        //TODO - Implement this if needed
     }
 }
