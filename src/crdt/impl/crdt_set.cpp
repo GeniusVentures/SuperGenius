@@ -514,10 +514,7 @@ namespace sgns::crdt
                 return outcome::failure( valueResult.error() );
             }
 
-            // if bytes.Compare(valueResult.value(), aValue) >= 0 {
-            // comparing two data lexicographically,  valueResult >= aValue, no need to store value
-            if ( !boost::lexicographical_compare<std::string, std::string>( valueResult.value(),
-                                                                            std::string( aValue.toString() ) ) )
+            if ( valueResult.value() == std::string( aValue.toString() ) )
             {
                 return outcome::success();
             }
@@ -527,10 +524,10 @@ namespace sgns::crdt
         Buffer valueKeyBuffer;
         valueKeyBuffer.put( valueK.GetKey() );
 
-        OUTCOME_TRY(aDataStore->put( valueKeyBuffer, aValue ));
+        OUTCOME_TRY( aDataStore->put( valueKeyBuffer, aValue ) );
 
         // store priority
-        OUTCOME_TRY(this->SetPriority( aKey, aPriority ));
+        OUTCOME_TRY( this->SetPriority( aKey, aPriority ) );
 
         // trigger add hook
         if ( this->putHookFunc_ != nullptr )
@@ -569,7 +566,7 @@ namespace sgns::crdt
             Buffer keyBuffer;
             keyBuffer.put( kNamespace.GetKey() );
 
-            OUTCOME_TRY(batchDatastore->put( std::move( keyBuffer ), Buffer() ));
+            OUTCOME_TRY( batchDatastore->put( std::move( keyBuffer ), Buffer() ) );
             // update the value if applicable:
             // * higher priority than we currently have.
             // * not tombstoned before.
