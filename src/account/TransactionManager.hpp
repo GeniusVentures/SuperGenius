@@ -177,9 +177,9 @@ namespace sgns
         void InitNonce( uint64_t timeout_ms );
         void SyncNonce();
 
-        bool CheckTransactionValidity( std::set<uint64_t> nonces_to_check );
+        outcome::result<bool> CheckTransactionValidity( std::set<uint64_t> nonces_to_check );
 
-        bool                                 DeleteTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
+        outcome::result<void> DeleteTransaction( std::string tx_key, const std::set<std::string> &topics );
         std::shared_ptr<IGeniusTransactions> GetOutTransaction( const std::string &tx_hash ) const;
         std::shared_ptr<IGeniusTransactions> GetOutTransaction( uint64_t nonce ) const;
 
@@ -265,10 +265,13 @@ namespace sgns
 
         bool IsTransactionImmutable( const std::shared_ptr<IGeniusTransactions> &tx ) const;
 
-        void RemoveTransactionFromProcessedMaps( const std::string &transaction_key );
+        outcome::result<void> RemoveTransactionFromProcessedMaps( const std::string &transaction_key,
+                                                                  bool               delete_from_crdt = false );
 
         void ProcessTombstones( const std::vector<std::string> &tombstones );
         void ProcessElements( const std::vector<std::string> &elements );
+
+        void NewElementCallback( const std::string &key, const base::Buffer &value );
     };
 }
 

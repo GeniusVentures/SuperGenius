@@ -90,6 +90,17 @@ namespace sgns
                     strong->NotificationCallback( keys );
                 }
             } );
+
+        (void)instance->globaldb_m->RegisterNewElementCallback(
+            "^/?" + GetBlockChainBase() + "[^/]*/tx/[^/]*/[0-9]+",
+            [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )]( const std::string  &key,
+                                                                         const base::Buffer &value )
+            {
+                if ( auto strong = weak_ptr.lock() )
+                {
+                    strong->NewElementCallback( key, value );
+                }
+            } );
         instance->globaldb_m->Start();
 
         return instance;
@@ -1109,9 +1120,10 @@ namespace sgns
                                  full_node_m );
                 continue;
             }
-            m_logger->debug( "[{} - full: {}] Transaction fetched on {}",
+            m_logger->debug( "[{} - full: {}] Transaction {} fetched on {}",
                              account_m->GetAddress().substr( 0, 8 ),
                              full_node_m,
+                             maybe_transaction.value()->dag_st.data_hash(),
                              transaction_key.value() );
             auto maybe_parsed = ParseTransaction( maybe_transaction.value() );
             if ( maybe_parsed.has_error() )
@@ -1361,9 +1373,11 @@ namespace sgns
         {
             auto hash = ( base::Hash256::fromReadableString( mint_tx->dag_st.data_hash() ) ).value();
             account_m->DeleteUTXO( hash );
-            m_logger->info( "[{} - full: {}] Deleted tokens, balance {}",
+            m_logger->info( "[{} - full: {}] Deleted {} tokens, from tx {}, final balance {}",
                             account_m->GetAddress().substr( 0, 8 ),
                             full_node_m,
+                            mint_tx->GetAmount(),
+                            mint_tx->dag_st.data_hash(),
                             account_m->GetBalance<std::string>() );
         }
 
@@ -1735,7 +1749,7 @@ namespace sgns
         }
     }
 
-    bool TransactionManager::CheckTransactionValidity( std::set<uint64_t> nonces_to_check )
+    outcome::result<bool> TransactionManager::CheckTransactionValidity( std::set<uint64_t> nonces_to_check )
     {
         bool                     changed = false;
         std::vector<std::string> invalid_transaction_keys;
@@ -1810,51 +1824,36 @@ namespace sgns
 
         for ( auto it = invalid_transaction_keys.rbegin(); it != invalid_transaction_keys.rend(); ++it )
         {
-            RemoveTransactionFromProcessedMaps( *it );
+            RemoveTransactionFromProcessedMaps( *it, true );
         }
         return changed;
     }
 
-    bool TransactionManager::DeleteTransaction( const std::shared_ptr<IGeniusTransactions> &tx )
+    outcome::result<void> TransactionManager::DeleteTransaction( std::string                  tx_key,
+                                                                 const std::set<std::string> &topics )
     {
-        bool ret = false;
-
-        //std::shared_ptr<crdt::AtomicTransaction> crdt_transaction = globaldb_m->BeginTransaction();
-
-        auto                        transaction_path = GetTransactionPath( *tx );
-        sgns::crdt::HierarchicalKey tx_key( transaction_path );
+        std::shared_ptr<crdt::AtomicTransaction> crdt_transaction = globaldb_m->BeginTransaction();
 
         m_logger->debug( "[{} - full: {}] Deleting transaction on {}",
                          account_m->GetAddress().substr( 0, 8 ),
                          full_node_m,
-                         tx_key.GetKey() );
+                         tx_key );
 
-        //auto remove_result = crdt_transaction->Remove( std::move( tx_key ) );
+        OUTCOME_TRY( crdt_transaction->Remove( { std::move( tx_key ) } ) );
 
-        //if ( !remove_result.has_error() )
-        {
-            m_logger->debug( "[{} - full: {}] Removed key transaction on {}",
-                             account_m->GetAddress().substr( 0, 8 ),
-                             full_node_m,
-                             tx_key.GetKey() );
-            auto get_topics_result = RevertTransaction( tx );
-            if ( get_topics_result.has_value() )
-            {
-                m_logger->debug( "[{} - full: {}] Reverted tx on {}",
-                                 account_m->GetAddress().substr( 0, 8 ),
-                                 full_node_m,
-                                 tx_key.GetKey() );
+        m_logger->debug( "[{} - full: {}] Removed key transaction on {}",
+                         account_m->GetAddress().substr( 0, 8 ),
+                         full_node_m,
+                         tx_key );
 
-                //crdt_transaction->Commit( get_topics_result.value() );
-                ret = true;
-                m_logger->debug( "[{} - full: {}] Commited tx on {}",
-                                 account_m->GetAddress().substr( 0, 8 ),
-                                 full_node_m,
-                                 tx_key.GetKey() );
-            }
-        }
+        OUTCOME_TRY( crdt_transaction->Commit( topics ) );
 
-        return ret;
+        m_logger->debug( "[{} - full: {}] Commited tx on {}",
+                         account_m->GetAddress().substr( 0, 8 ),
+                         full_node_m,
+                         tx_key );
+
+        return outcome::success();
     }
 
     std::shared_ptr<IGeniusTransactions> TransactionManager::GetOutTransaction( const std::string &tx_hash ) const
@@ -2069,6 +2068,11 @@ namespace sgns
                 break;
             }
             auto existing_tx = maybe_existing_tx.value();
+
+            m_logger->debug( "[{} - full: {}] Checking if new tx {} is the correct one",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             new_tx->dag_st.data_hash() );
 
             should_delete = !ShouldReplaceTransaction( existing_tx, new_tx );
 
@@ -2319,15 +2323,14 @@ namespace sgns
         }
     }
 
-    void TransactionManager::RemoveTransactionFromProcessedMaps( const std::string &transaction_key )
+    outcome::result<void> TransactionManager::RemoveTransactionFromProcessedMaps( const std::string &transaction_key,
+                                                                                  bool               delete_from_crdt )
     {
         m_logger->debug( "[{} - full: {}] Removing transaction from processed maps: {}",
                          account_m->GetAddress().substr( 0, 8 ),
                          full_node_m,
                          transaction_key );
-
         bool found = false;
-
         // Check and remove from outgoing_tx_processed_m
         {
             std::unique_lock<std::shared_mutex> out_lock( outgoing_tx_mutex_m );
@@ -2341,7 +2344,11 @@ namespace sgns
 
                 if ( out_it->second.tx )
                 {
-                    DeleteTransaction( out_it->second.tx );
+                    OUTCOME_TRY( auto &&topics, RevertTransaction( out_it->second.tx ) );
+                    if ( delete_from_crdt )
+                    {
+                        OUTCOME_TRY( DeleteTransaction( out_it->first, topics ) );
+                    }
                     account_m->RollBackPeerConfirmedNonce( out_it->second.tx->dag_st.nonce(),
                                                            out_it->second.tx->dag_st.source_addr() );
                 }
@@ -2363,7 +2370,11 @@ namespace sgns
 
                 if ( in_it->second.tx )
                 {
-                    DeleteTransaction( in_it->second.tx );
+                    OUTCOME_TRY( auto &&topics, RevertTransaction( in_it->second.tx ) );
+                    if ( delete_from_crdt )
+                    {
+                        OUTCOME_TRY( DeleteTransaction( in_it->first, topics ) );
+                    }
                     account_m->RollBackPeerConfirmedNonce( in_it->second.tx->dag_st.nonce(),
                                                            in_it->second.tx->dag_st.source_addr() );
                 }
@@ -2379,6 +2390,7 @@ namespace sgns
                              full_node_m,
                              transaction_key );
         }
+        return outcome::success();
     }
 
     void TransactionManager::ProcessTombstones( const std::vector<std::string> &tombstones )
@@ -2415,5 +2427,29 @@ namespace sgns
 
             RemoveTransactionFromProcessedMaps( element_key );
         }
+    }
+
+    void TransactionManager::NewElementCallback( const std::string &key, const base::Buffer &value )
+    {
+        std::shared_ptr<IGeniusTransactions> new_tx;
+
+        do
+        {
+            auto maybe_new_tx = DeSerializeTransaction( value );
+            if ( maybe_new_tx.has_error() )
+            {
+                m_logger->error( "[{} - full: {}] Failed to deserialize new transaction {}",
+                                 account_m->GetAddress().substr( 0, 8 ),
+                                 full_node_m,
+                                 key );
+                break;
+            }
+            new_tx = maybe_new_tx.value();
+            m_logger->debug( "[{} - full: {}] Got the transaction {} from key {}",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             new_tx->dag_st.data_hash(),
+                             key );
+        } while ( 0 );
     }
 }
