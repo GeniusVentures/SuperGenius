@@ -171,6 +171,11 @@ namespace sgns::crdt
 
         mutable std::map<Multihash, BlacklistEntry>                       blacklist_;
         mutable std::mutex                                                blacklist_mutex_;
+        
+        // Track CID-specific failures per peer to avoid re-requesting CIDs that peers don't have
+        mutable std::map<std::pair<Multihash, CID>, uint64_t>             cid_failures_; // peer+cid -> timestamp of failure
+        mutable std::mutex                                                cid_failures_mutex_;
+        
         mutable std::mutex                                                mutex_;
         mutable std::map<CID, std::shared_ptr<ipfs_lite::ipld::IPLDNode>> received_blocks_;
 
@@ -204,6 +209,10 @@ namespace sgns::crdt
         /// record successful connections
         void RecordSuccessfulConnection( const PeerId &peer ) const;
 
+        /// CID-specific failure tracking methods
+        void RecordCIDFailure( const PeerId &peer, const CID &cid ) const;
+        bool HasRecentCIDFailure( const PeerId &peer, const CID &cid ) const;
+        void ClearCIDFailure( const PeerId &peer, const CID &cid ) const;
     private:
         struct LRUCIDCache
         {

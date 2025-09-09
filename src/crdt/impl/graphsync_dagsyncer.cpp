@@ -197,7 +197,19 @@ namespace sgns::crdt
         auto &peerID  = peerEntry.first;
         auto &address = peerEntry.second;
 
+        // Check if this peer recently failed to provide this specific CID
+        if ( HasRecentCIDFailure( peerID, cid ) )
+        {
+            logger_->debug( "Skipping request for CID {} from peer {} due to recent failure", 
+                           cid.toString().value(), peerID.toBase58() );
+            return outcome::failure( Error::CID_NOT_FOUND );
+        }
+
         OUTCOME_TRY( ( auto &&, subscription ), RequestNode( peerID, address, cid ) );
+
+        // Add timeout mechanism to prevent infinite waiting
+        auto request_start_time = std::chrono::steady_clock::now();
+        const auto REQUEST_TIMEOUT = std::chrono::seconds(30); // 30 second timeout
 
         while ( true )
         {
@@ -246,18 +258,33 @@ namespace sgns::crdt
                 }
                 case Graphsync::RequestState::FAILED:
                 {
-                    // Request explicitly failed, don't keep waiting
-                    logger_->debug( "Request explicitly failed for CID {}", cid.toString().value() );
-                    BlackListPeer( peerID );
+                    // Request explicitly failed - record that this peer doesn't have this specific CID
+                    // but don't blacklist the entire peer since they might have other content
+                    logger_->debug( "Request failed for CID {} from peer {} - recording CID-specific failure", 
+                                   cid.toString().value(), peerID.toBase58() );
+                    RecordCIDFailure( peerID, cid );
                     return outcome::failure( Error::CID_NOT_FOUND );
                 }
                 case Graphsync::RequestState::IN_PROGRESS:
                 {
                     // Still in progress, keep waiting
+                    logger_->debug( "Request for CID {} from peer {} - In Progress",
+                                    cid.toString().value(),
+                                    peerID.toBase58() );
                     std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
                     break;
                 }
             }
+
+            // Check for request timeout
+            // auto now = std::chrono::steady_clock::now();
+            // if ( now - request_start_time > REQUEST_TIMEOUT )
+            // {
+            //     logger_->warn( "Request for CID {} timed out after {} seconds", cid.toString().value(), 
+            //                   std::chrono::duration_cast<std::chrono::seconds>( now - request_start_time ).count() );
+            //     RecordCIDFailure( peerID, cid );
+            //     return outcome::failure( Error::TIMED_OUT );
+            // }
         }
     }
 
@@ -474,6 +501,10 @@ namespace sgns::crdt
             {
                 // Record successful data reception
                 RecordSuccessfulConnection( peerID );
+                
+                // Clear any CID failure record for this peer and CID since they successfully provided it
+                ClearCIDFailure( peerID, cid );
+                
                 auto [links_to_fetch, dont_care_known] = TraverseCIDsLinks( node.value() );
                 for ( const auto &[cid, dont_care_name] : links_to_fetch )
                 {
@@ -869,6 +900,54 @@ namespace sgns::crdt
                 .count() );
     }
 
+    void GraphsyncDAGSyncer::RecordCIDFailure( const PeerId &peer, const CID &cid ) const
+    {
+        std::lock_guard<std::mutex> lock( cid_failures_mutex_ );
+        auto key = std::make_pair( peer.toMultihash(), cid );
+        cid_failures_[key] = GetCurrentTimestamp();
+        logger_->debug( "Recorded CID failure: peer {} cannot provide CID {}", peer.toBase58(), cid.toString().value() );
+    }
+
+    bool GraphsyncDAGSyncer::HasRecentCIDFailure( const PeerId &peer, const CID &cid ) const
+    {
+        std::lock_guard<std::mutex> lock( cid_failures_mutex_ );
+        auto key = std::make_pair( peer.toMultihash(), cid );
+        auto it = cid_failures_.find( key );
+        
+        if ( it == cid_failures_.end() )
+        {
+            return false; // No failure recorded
+        }
+        
+        // Consider failure "recent" for 5 minutes (300 seconds)
+        // This prevents immediate re-requests but allows retry after some time
+        uint64_t now = GetCurrentTimestamp();
+        uint64_t failure_age = now - it->second;
+        const uint64_t FAILURE_TIMEOUT = 300; // 5 minutes
+        
+        if ( failure_age > FAILURE_TIMEOUT )
+        {
+            // Failure is old, remove it and allow retry
+            cid_failures_.erase( it );
+            return false;
+        }
+        
+        return true; // Recent failure exists
+    }
+
+    void GraphsyncDAGSyncer::ClearCIDFailure( const PeerId &peer, const CID &cid ) const
+    {
+        std::lock_guard<std::mutex> lock( cid_failures_mutex_ );
+        auto key = std::make_pair( peer.toMultihash(), cid );
+        auto it = cid_failures_.find( key );
+        if ( it != cid_failures_.end() )
+        {
+            cid_failures_.erase( it );
+            logger_->debug( "Cleared CID failure record: peer {} can now be tried again for CID {}", 
+                           peer.toBase58(), cid.toString().value() );
+        }
+    }
+
     void GraphsyncDAGSyncer::LRUCIDCache::init( const CID &cid )
     {
         // Check if the item already exists
@@ -985,12 +1064,14 @@ namespace sgns::crdt
         logger_->debug( "Stopping Dagsyncer" );
         is_stopped_ = true;
     }
+    
     IPFS::outcome::result<void> GraphsyncDAGSyncer::markResolved( const CID &cid ) 
     {
         return outcome::success();
     }
+    
     IPFS::outcome::result<bool> GraphsyncDAGSyncer::isResolved( const CID &cid ) const
     {
         return outcome::success();
-    };
+    }
 }
