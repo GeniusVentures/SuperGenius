@@ -19,7 +19,8 @@ namespace sgns::crdt
     class CRDTCallbackManager
     {
     public:
-        using NewDataCallback  = std::function<void( const std::string &key, const base::Buffer &value )>;
+        using NewDataPair      = std::pair<std::string, base::Buffer>;
+        using NewDataCallback  = std::function<void( NewDataPair new_data )>;
         using CallbackRegistry = std::unordered_map<std::string, NewDataCallback>;
 
         /**
@@ -46,7 +47,7 @@ namespace sgns::crdt
          */
         void UnregisterDataCallback( const std::string &pattern );
 
-        void DataCallback( const std::string &key, const base::Buffer &value );
+        void PutDataCallback( const std::string &key, const base::Buffer &value );
 
     private:
         std::shared_mutex callback_registry_mutex_;

@@ -80,25 +80,25 @@ namespace sgns
 
         auto notifier = instance->globaldb_m->GetNotifier();
 
-        (void)notifier->RegisterCallback(
-            {},
-            [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
-                const std::pair<std::vector<std::string>, std::vector<std::string>> &keys )
-            {
-                if ( auto strong = weak_ptr.lock() )
-                {
-                    strong->NotificationCallback( keys );
-                }
-            } );
+        // (void)notifier->RegisterCallback(
+        //     {},
+        //     [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
+        //         const std::pair<std::vector<std::string>, std::vector<std::string>> &keys )
+        //     {
+        //         if ( auto strong = weak_ptr.lock() )
+        //         {
+        //             strong->NotificationCallback( keys );
+        //         }
+        //     } );
 
         (void)instance->globaldb_m->RegisterNewElementCallback(
             "^/?" + GetBlockChainBase() + "[^/]*/tx/[^/]*/[0-9]+",
-            [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )]( const std::string  &key,
-                                                                         const base::Buffer &value )
+            [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
+                crdt::CRDTCallbackManager::NewDataPair new_data )
             {
                 if ( auto strong = weak_ptr.lock() )
                 {
-                    strong->NewElementCallback( key, value );
+                    strong->NewElementCallback( std::move( new_data ) );
                 }
             } );
         instance->globaldb_m->Start();
@@ -205,61 +205,51 @@ namespace sgns
                                         .count();
         last_loop_time_ = now;
 
-        // Process all queued notifications
-        std::vector<crdt::NotificationData> notifications_to_process;
+        std::vector<std::string> elements_to_delete;
         {
-            std::lock_guard<std::mutex> queue_lock( queue_mutex_ );
-            while ( !notification_queue_.empty() )
+            std::lock_guard<std::mutex> queue_lock( deleted_data_queue_mutex_ );
+            while ( !deleted_data_queue_.empty() )
             {
-                notifications_to_process.push_back( std::move( notification_queue_.front() ) );
-                notification_queue_.pop();
+                elements_to_delete.push_back( std::move( deleted_data_queue_.front() ) );
+                deleted_data_queue_.pop();
+            }
+        }
+        std::vector<crdt::CRDTCallbackManager::NewDataPair> elements_to_process;
+        {
+            std::lock_guard<std::mutex> queue_lock( new_data_queue_mutex_ );
+            while ( !new_data_queue_.empty() )
+            {
+                elements_to_process.push_back( std::move( new_data_queue_.front() ) );
+                new_data_queue_.pop();
             }
         }
 
-        if ( !notifications_to_process.empty() )
+        for ( auto &deletion_key : elements_to_delete )
         {
-            uint32_t total_elements   = 0;
-            uint32_t total_tombstones = 0;
-
-            for ( const auto &notification : notifications_to_process )
-            {
-                for ( auto &element : notification.first )
-                {
-                    m_logger->debug( "[{} - full: {}] Element: {} ",
-                                     account_m->GetAddress().substr( 0, 8 ),
-                                     full_node_m,
-                                     element );
-                }
-                ProcessElements( notification.first );
-
-                for ( auto &tombstone : notification.second )
-                {
-                    m_logger->debug( "[{} - full: {}] Tombstone: {} ",
-                                     account_m->GetAddress().substr( 0, 8 ),
-                                     full_node_m,
-                                     tombstone );
-                }
-                total_elements   += notification.first.size();
-                total_tombstones += notification.second.size();
-                ProcessTombstones( notification.second );
-            }
-
-            m_logger->debug(
-                "[{} - full: {}] Loop iteration - time since last: {}ms - triggered by: {} notifications ({} elements, {} tombstones)",
-                account_m->GetAddress().substr( 0, 8 ),
-                full_node_m,
-                time_since_last_loop,
-                notifications_to_process.size(),
-                total_elements,
-                total_tombstones );
-        }
-        else
-        {
-            m_logger->debug( "[{} - full: {}] Loop iteration - time since last: {}ms",
+            m_logger->debug( "[{} - full: {}] Deleting key: {} ",
                              account_m->GetAddress().substr( 0, 8 ),
                              full_node_m,
-                             time_since_last_loop );
+                             deletion_key );
+            ProcessDeletion( deletion_key );
         }
+        for ( auto &new_data : elements_to_process )
+        {
+            m_logger->debug( "[{} - full: {}] Adding key: {} ",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             new_data.first );
+            ProcessNewData( new_data );
+        }
+
+        m_logger->debug( "[{} - full: {}] Loop iteration - time since last: {}ms",
+                         account_m->GetAddress().substr( 0, 8 ),
+                         full_node_m,
+                         time_since_last_loop );
+
+        m_logger->debug( "[{} - full: {}] Loop iteration - time since last: {}ms",
+                         account_m->GetAddress().substr( 0, 8 ),
+                         full_node_m,
+                         time_since_last_loop );
 
         switch ( state_m )
         {
@@ -291,7 +281,13 @@ namespace sgns
                 break;
         }
 
-        Update();
+        auto confirm_result = ConfirmTransactions();
+        if ( confirm_result.has_error() )
+        {
+            m_logger->trace( "[{} - full: {}] Unknown ConfirmTransactions error",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m );
+        }
 
         // Wait with condition variable instead of timer
         // Wait with condition variable - wake up on notification OR timeout
@@ -300,8 +296,17 @@ namespace sgns
                       std::chrono::milliseconds( 300 ),
                       [this]()
                       {
-                          std::lock_guard<std::mutex> queue_lock( queue_mutex_ );
-                          return stopped_.load() || !notification_queue_.empty();
+                          bool new_data     = false;
+                          bool deleted_data = false;
+                          {
+                              std::lock_guard new_data_queue_lock( new_data_queue_mutex_ );
+                              new_data = !new_data_queue_.empty();
+                          }
+                          {
+                              std::lock_guard delete_data_queue_lock( deleted_data_queue_mutex_ );
+                              deleted_data = !deleted_data_queue_.empty();
+                          }
+                          return stopped_.load() || new_data || deleted_data;
                       } );
 
         // Schedule next tick if not stopped
@@ -2297,32 +2302,6 @@ namespace sgns
                         immutability_window );
     }
 
-    void TransactionManager::NotificationCallback( const crdt::NotificationData &keys )
-    {
-        m_logger->debug( "[{} - full: {}] Notification callback", account_m->GetAddress().substr( 0, 8 ), full_node_m );
-
-        const auto &[elements, tombstones] = keys;
-
-        // Queue the notification data
-        if ( !elements.empty() || !tombstones.empty() )
-        {
-            {
-                std::lock_guard<std::mutex> queue_lock( queue_mutex_ );
-                notification_queue_.push( keys );
-            }
-
-            m_logger->debug( "[{} - full: {}] CRDT notification queued - {} elements, {} tombstones (queue size: {})",
-                             account_m->GetAddress().substr( 0, 8 ),
-                             full_node_m,
-                             elements.size(),
-                             tombstones.size(),
-                             notification_queue_.size() );
-
-            // Notify the condition variable to wake up the main loop
-            cv_.notify_one();
-        }
-    }
-
     outcome::result<void> TransactionManager::RemoveTransactionFromProcessedMaps( const std::string &transaction_key,
                                                                                   bool               delete_from_crdt )
     {
@@ -2393,63 +2372,120 @@ namespace sgns
         return outcome::success();
     }
 
-    void TransactionManager::ProcessTombstones( const std::vector<std::string> &tombstones )
+    outcome::result<void> TransactionManager::AddTransactionToProcessedMaps(
+        crdt::CRDTCallbackManager::NewDataPair new_data )
     {
-        m_logger->debug( "[{} - full: {}] Processing {} tombstones",
+        //
+        auto [key, value] = new_data;
+
+        m_logger->debug( "[{} - full: {}] Trying to deserialize {}",
                          account_m->GetAddress().substr( 0, 8 ),
                          full_node_m,
-                         tombstones.size() );
+                         key );
 
-        for ( const auto &tombstone_key : tombstones )
-        {
-            m_logger->debug( "[{} - full: {}] Processing tombstone: {}",
-                             account_m->GetAddress().substr( 0, 8 ),
-                             full_node_m,
-                             tombstone_key );
+        OUTCOME_TRY( auto &&new_tx, DeSerializeTransaction( value ) );
 
-            RemoveTransactionFromProcessedMaps( tombstone_key );
-        }
-    }
-
-    void TransactionManager::ProcessElements( const std::vector<std::string> &elements )
-    {
-        m_logger->debug( "[{} - full: {}] Processing {} elements",
+        m_logger->debug( "[{} - full: {}] Deserialized transaction {}",
                          account_m->GetAddress().substr( 0, 8 ),
                          full_node_m,
-                         elements.size() );
-
-        for ( const auto &element_key : elements )
+                         key );
+        if ( new_tx->GetSrcAddress() == account_m->GetAddress() )
         {
-            m_logger->debug( "[{} - full: {}] Processing element: {}",
-                             account_m->GetAddress().substr( 0, 8 ),
-                             full_node_m,
-                             element_key );
+            std::unique_lock out_lock( outgoing_tx_mutex_m );
+            auto             it = outgoing_tx_processed_m.find( key );
 
-            RemoveTransactionFromProcessedMaps( element_key );
+            if ( ( it != outgoing_tx_processed_m.end() ) &&
+                 ( it->second.tx->dag_st.data_hash() != new_tx->dag_st.data_hash() ) )
+            {
+                OUTCOME_TRY( auto &&topics, RevertTransaction( it->second.tx ) );
+                it = outgoing_tx_processed_m.end();
+            }
+            if ( it == outgoing_tx_processed_m.end() )
+            {
+                OUTCOME_TRY( ParseTransaction( new_tx ) );
+
+                account_m->SetLocalConfirmedNonce( new_tx->dag_st.nonce() );
+                outgoing_tx_processed_m[key] = TrackedTx{ new_tx, TransactionStatus::CONFIRMED };
+            }
         }
+
+        else
+        {
+            std::unique_lock in_lock( incoming_tx_mutex_m );
+            auto             it = incoming_tx_processed_m.find( key );
+
+            if ( it == incoming_tx_processed_m.end() )
+            {
+                OUTCOME_TRY( ParseTransaction( new_tx ) );
+
+                account_m->SetPeerConfirmedNonce( new_tx->dag_st.nonce(), new_tx->dag_st.source_addr() );
+                incoming_tx_processed_m[key] = TrackedTx{ new_tx, TransactionStatus::CONFIRMED };
+            }
+        }
+
+        return outcome::success();
     }
 
-    void TransactionManager::NewElementCallback( const std::string &key, const base::Buffer &value )
+    void TransactionManager::ProcessDeletion( std::string key )
+    {
+        m_logger->debug( "[{} - full: {}] Processing deletion of {}",
+                         account_m->GetAddress().substr( 0, 8 ),
+                         full_node_m,
+                         key );
+
+        RemoveTransactionFromProcessedMaps( key );
+    }
+
+    void TransactionManager::ProcessNewData( crdt::CRDTCallbackManager::NewDataPair new_data )
+    {
+        m_logger->debug( "[{} - full: {}] Processing new data with key {}",
+                         account_m->GetAddress().substr( 0, 8 ),
+                         full_node_m,
+                         new_data.first );
+
+        m_logger->debug( "[{} - full: {}] Deleting existing entry of key {}",
+                         account_m->GetAddress().substr( 0, 8 ),
+                         full_node_m,
+                         new_data.first );
+
+        AddTransactionToProcessedMaps( new_data );
+    }
+
+    void TransactionManager::NewElementCallback( crdt::CRDTCallbackManager::NewDataPair new_data )
     {
         std::shared_ptr<IGeniusTransactions> new_tx;
 
-        do
         {
-            auto maybe_new_tx = DeSerializeTransaction( value );
-            if ( maybe_new_tx.has_error() )
-            {
-                m_logger->error( "[{} - full: {}] Failed to deserialize new transaction {}",
-                                 account_m->GetAddress().substr( 0, 8 ),
-                                 full_node_m,
-                                 key );
-                break;
-            }
-            new_tx = maybe_new_tx.value();
-            m_logger->debug( "[{} - full: {}] Got the transaction {} from key {}",
-                             account_m->GetAddress().substr( 0, 8 ),
-                             full_node_m,
-                             new_tx->dag_st.data_hash(),
-                             key );
-        } while ( 0 );
+            std::lock_guard queue_lock( new_data_queue_mutex_ );
+            new_data_queue_.push( new_data );
+        }
+
+        m_logger->debug( "[{} - full: {}] CRDT new data queued, {} - (queue size: {})",
+                         account_m->GetAddress().substr( 0, 8 ),
+                         full_node_m,
+                         new_data.first,
+                         new_data_queue_.size() );
+
+        // Notify the condition variable to wake up the main loop
+        cv_.notify_one();
+    }
+
+    void TransactionManager::DeleteElementCallback( std::string deleted_key )
+    {
+        std::shared_ptr<IGeniusTransactions> new_tx;
+
+        {
+            std::lock_guard queue_lock( deleted_data_queue_mutex_ );
+            deleted_data_queue_.push( deleted_key );
+        }
+
+        m_logger->debug( "[{} - full: {}] CRDT deleted key queued, {} - (queue size: {})",
+                         account_m->GetAddress().substr( 0, 8 ),
+                         full_node_m,
+                         deleted_key,
+                         deleted_data_queue_.size() );
+
+        // Notify the condition variable to wake up the main loop
+        cv_.notify_one();
     }
 }

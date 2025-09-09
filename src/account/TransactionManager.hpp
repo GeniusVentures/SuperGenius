@@ -217,10 +217,12 @@ namespace sgns
         static constexpr std::chrono::milliseconds TIMESTAMP_TOLERANCE = std::chrono::seconds( 10 );
         static constexpr std::chrono::milliseconds IMMUTABILITY_WINDOW = std::chrono::minutes( 15 );
 
-        std::mutex                         cv_mutex_;
-        std::condition_variable            cv_;
-        std::queue<crdt::NotificationData> notification_queue_; // Buffer for multiple notifications
-        std::mutex                         queue_mutex_;        // Separate mutex for the queue
+        std::mutex                                         cv_mutex_;
+        std::condition_variable                            cv_;
+        std::queue<crdt::CRDTCallbackManager::NewDataPair> new_data_queue_;
+        std::queue<std::string>                            deleted_data_queue_;
+        std::mutex                                         new_data_queue_mutex_;     // Separate mutex for the queue
+        std::mutex                                         deleted_data_queue_mutex_; // Separate mutex for the queue
 
         std::chrono::steady_clock::time_point last_loop_time_;
 
@@ -254,7 +256,6 @@ namespace sgns
 
         std::optional<std::vector<crdt::pb::Element>> FilterTransaction( const crdt::pb::Element &element );
         std::optional<std::vector<crdt::pb::Element>> FilterProof( const crdt::pb::Element &element );
-        void                                          NotificationCallback( const crdt::NotificationData &keys );
 
         bool ShouldReplaceTransaction( const std::shared_ptr<IGeniusTransactions> &existing_tx,
                                        const std::shared_ptr<IGeniusTransactions> &new_tx ) const;
@@ -267,11 +268,13 @@ namespace sgns
 
         outcome::result<void> RemoveTransactionFromProcessedMaps( const std::string &transaction_key,
                                                                   bool               delete_from_crdt = false );
+        outcome::result<void> AddTransactionToProcessedMaps( crdt::CRDTCallbackManager::NewDataPair new_data );
 
-        void ProcessTombstones( const std::vector<std::string> &tombstones );
-        void ProcessElements( const std::vector<std::string> &elements );
+        void ProcessDeletion( std::string deleted_key );
+        void ProcessNewData( crdt::CRDTCallbackManager::NewDataPair new_data);
 
-        void NewElementCallback( const std::string &key, const base::Buffer &value );
+        void NewElementCallback( crdt::CRDTCallbackManager::NewDataPair new_data );
+        void DeleteElementCallback( std::string deleted_key );
     };
 }
 

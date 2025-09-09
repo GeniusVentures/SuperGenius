@@ -17,6 +17,7 @@ namespace sgns::crdt
     {
         std::lock_guard lock( callback_registry_mutex_ );
         callback_registry_[pattern] = std::move( callback );
+        return true;
     }
 
     void CRDTCallbackManager::UnregisterDataCallback( const std::string &pattern )
@@ -26,9 +27,8 @@ namespace sgns::crdt
         callback_registry_.erase( pattern );
     }
 
-    void CRDTCallbackManager::DataCallback( const std::string &key, const base::Buffer &value )
+    void CRDTCallbackManager::PutDataCallback( const std::string &key, const base::Buffer &value )
     {
-
         std::unordered_map<std::string, NewDataCallback> registry_copy;
         {
             std::shared_lock lock( callback_registry_mutex_ );
@@ -38,7 +38,7 @@ namespace sgns::crdt
         {
             if ( std::regex regex( pattern ); std::regex_match( key, regex ) )
             {
-                callback( key, value );
+                callback( std::make_pair( key, value ) );
             }
         }
     }

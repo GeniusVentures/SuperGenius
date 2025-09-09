@@ -873,7 +873,7 @@ namespace sgns::crdt
             {
                 if ( !topics_to_update_cid.empty() )
                 {
-                    logger_->debug( "ProcessNode: Notifying topics or CRDT Merge" );
+                    logger_->debug( "ProcessNode: Notifying topics of CRDT Merge" );
                     std::vector<std::string> elements;
                     std::vector<std::string> tombstones;
 
@@ -1211,7 +1211,7 @@ namespace sgns::crdt
     void CrdtDatastore::PutElementsCallback( const std::string &key, const Buffer &value )
     {
         //
-        crdt_cb_manager_.DataCallback( key, value );
+        crdt_cb_manager_.PutDataCallback( key, value );
     }
 
     void CrdtDatastore::DeleteElementsCallback( const std::string &key )
