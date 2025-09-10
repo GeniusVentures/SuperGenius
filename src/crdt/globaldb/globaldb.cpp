@@ -342,6 +342,11 @@ namespace sgns::crdt
         return m_crdtDatastore->RegisterNewElementCallback( pattern, std::move( callback ) );
     }
 
+    bool GlobalDB::RegisterDeletedElementCallback( const std::string &pattern, GlobalDBDeletedElementCallback callback )
+    {
+        return m_crdtDatastore->RegisterDeletedElementCallback( pattern, std::move( callback ) );
+    }
+
     std::shared_ptr<GlobalDB::RocksDB> GlobalDB::GetDataStore()
     {
         return m_datastore;

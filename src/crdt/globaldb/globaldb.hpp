@@ -55,8 +55,9 @@ namespace sgns::crdt
         /// Pair of key and value to be stored in CRDT
         using DataPair = std::pair<HierarchicalKey, Buffer>;
         /// CRDT Filter callback type
-        using GlobalDBFilterCallback     = CrdtDatastore::CRDTElementFilterCallback;
-        using GlobalDBNewElementCallback = CrdtDatastore::CRDTNewElementCallback;
+        using GlobalDBFilterCallback         = CrdtDatastore::CRDTElementFilterCallback;
+        using GlobalDBNewElementCallback     = CrdtDatastore::CRDTNewElementCallback;
+        using GlobalDBDeletedElementCallback = CrdtDatastore::CRDTDeletedElementCallback;
 
         /**
          * @enum        Error
@@ -139,9 +140,9 @@ namespace sgns::crdt
 
         bool RegisterElementFilter( const std::string &pattern, GlobalDBFilterCallback filter );
         bool RegisterNewElementCallback( const std::string &pattern, GlobalDBNewElementCallback callback );
+        bool RegisterDeletedElementCallback( const std::string &pattern, GlobalDBDeletedElementCallback callback );
 
         void Start();
-
 
     private:
         /**

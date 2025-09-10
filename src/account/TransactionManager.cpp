@@ -89,6 +89,16 @@ namespace sgns
                     strong->NewElementCallback( std::move( new_data ) );
                 }
             } );
+        (void)instance->globaldb_m->RegisterDeletedElementCallback(
+            "^/?" + GetBlockChainBase() + "[^/]*/tx/[^/]*/[0-9]+",
+            [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
+                std::string deleted_key )
+            {
+                if ( auto strong = weak_ptr.lock() )
+                {
+                    strong->DeleteElementCallback( std::move( deleted_key ) );
+                }
+            } );
         instance->globaldb_m->Start();
 
         return instance;

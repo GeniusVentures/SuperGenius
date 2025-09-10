@@ -13,32 +13,60 @@ namespace sgns::crdt
 
     CRDTCallbackManager::~CRDTCallbackManager() {}
 
-    bool CRDTCallbackManager::RegisterDataCallback( const std::string &pattern, NewDataCallback callback )
+    bool CRDTCallbackManager::RegisterNewDataCallback( const std::string &pattern, NewDataCallback callback )
     {
-        std::lock_guard lock( callback_registry_mutex_ );
-        callback_registry_[pattern] = std::move( callback );
+        std::lock_guard lock( new_data_callback_registry_mutex_ );
+        new_data_callback_registry_[pattern] = std::move( callback );
         return true;
     }
 
-    void CRDTCallbackManager::UnregisterDataCallback( const std::string &pattern )
+    bool CRDTCallbackManager::RegisterDeletedDataCallback( const std::string &pattern, DeletedDataCallback callback )
     {
-        //
-        std::lock_guard lock( callback_registry_mutex_ );
-        callback_registry_.erase( pattern );
+        std::lock_guard lock( deleted_data_callback_registry_mutex_ );
+        deleted_data_callback_registry_[pattern] = std::move( callback );
+        return true;
+    }
+
+    void CRDTCallbackManager::UnregisterNewDataCallback( const std::string &pattern )
+    {
+        std::lock_guard lock( new_data_callback_registry_mutex_ );
+        new_data_callback_registry_.erase( pattern );
+    }
+
+    void CRDTCallbackManager::UnregisterDeletedDataCallback( const std::string &pattern )
+    {
+        std::lock_guard lock( deleted_data_callback_registry_mutex_ );
+        deleted_data_callback_registry_.erase( pattern );
     }
 
     void CRDTCallbackManager::PutDataCallback( const std::string &key, const base::Buffer &value )
     {
-        std::unordered_map<std::string, NewDataCallback> registry_copy;
+        NewDataCallbackRegistry registry_copy;
         {
-            std::shared_lock lock( callback_registry_mutex_ );
-            registry_copy = callback_registry_;
+            std::shared_lock lock( new_data_callback_registry_mutex_ );
+            registry_copy = new_data_callback_registry_;
         }
         for ( const auto &[pattern, callback] : registry_copy )
         {
             if ( std::regex regex( pattern ); std::regex_match( key, regex ) )
             {
                 callback( std::make_pair( key, value ) );
+            }
+        }
+    }
+
+    void CRDTCallbackManager::DeleteDataCallback( const std::string &deleted_key )
+    {
+        DeletedDataCallbackRegistry registry_copy;
+        {
+            std::shared_lock lock( deleted_data_callback_registry_mutex_ );
+            registry_copy = deleted_data_callback_registry_;
+        }
+        for ( const auto &[pattern, callback] : registry_copy )
+        {
+            if ( std::regex regex( pattern ); std::regex_match( deleted_key, regex ) )
+            {
+                callback( deleted_key );
             }
         }
     }

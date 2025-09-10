@@ -45,9 +45,9 @@ namespace sgns::crdt
         using Element     = pb::Element;
         using IPLDNode    = ipfs_lite::ipld::IPLDNode;
 
-        using DeleteHookPtr             = std::function<void( const std::string &k )>;
-        using CRDTElementFilterCallback = CRDTDataFilter::ElementFilterCallback;
-        using CRDTNewElementCallback    = CRDTCallbackManager::NewDataCallback;
+        using CRDTElementFilterCallback  = CRDTDataFilter::ElementFilterCallback;
+        using CRDTNewElementCallback     = CRDTCallbackManager::NewDataCallback;
+        using CRDTDeletedElementCallback = CRDTCallbackManager::DeletedDataCallback;
 
         enum class Error
         {
@@ -187,6 +187,7 @@ namespace sgns::crdt
 
         bool RegisterElementFilter( const std::string &pattern, CRDTElementFilterCallback filter );
         bool RegisterNewElementCallback( const std::string &pattern, CRDTNewElementCallback callback );
+        bool RegisterDeletedElementCallback( const std::string &pattern, CRDTDeletedElementCallback callback );
 
         /**
          * @brief Configure which topic this datastore should filter on.
@@ -362,9 +363,7 @@ namespace sgns::crdt
         static constexpr std::chrono::milliseconds threadSleepTimeInMilliseconds_ = std::chrono::milliseconds( 100 );
         static constexpr std::string_view          headsNamespace_                = "h";
         static constexpr std::string_view          setsNamespace_                 = "s";
-
-        DeleteHookPtr deleteHookFunc_    = nullptr;
-        int           numberOfDagWorkers = 1;
+        int                                        numberOfDagWorkers             = 1;
 
         std::future<void> handleNextFuture_;
         std::atomic<bool> handleNextThreadRunning_ = false;
@@ -387,7 +386,7 @@ namespace sgns::crdt
         std::set<std::string>   topicNames_;
         bool                    isFullNode = false;
 
-        CRDTCallbackManager           crdt_cb_manager_;
+        CRDTCallbackManager crdt_cb_manager_;
     };
 
 }

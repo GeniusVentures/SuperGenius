@@ -66,7 +66,13 @@ namespace sgns::crdt
                     strong->PutElementsCallback( key, value );
                 }
             },
-            crdtInstance->deleteHookFunc_ );
+            [weakptr( std::weak_ptr<CrdtDatastore>( crdtInstance ) )]( const std::string &key )
+            {
+                if ( auto strong = weakptr.lock() )
+                {
+                    strong->DeleteElementsCallback( key );
+                }
+            } );
 
         return crdtInstance;
     }
@@ -183,7 +189,6 @@ namespace sgns::crdt
         crdt_filter_( true ),
         crdt_cb_manager_()
     {
-        deleteHookFunc_    = options_->deleteHookFunc;
         logger_            = options_->logger;
         numberOfDagWorkers = options_->numWorkers;
 
@@ -1177,17 +1182,20 @@ namespace sgns::crdt
 
     bool CrdtDatastore::RegisterNewElementCallback( const std::string &pattern, CRDTNewElementCallback callback )
     {
-        return crdt_cb_manager_.RegisterDataCallback( pattern, std::move( callback ) );
+        return crdt_cb_manager_.RegisterNewDataCallback( pattern, std::move( callback ) );
+    }
+    bool CrdtDatastore::RegisterDeletedElementCallback( const std::string &pattern, CRDTDeletedElementCallback callback )
+    {
+        return crdt_cb_manager_.RegisterDeletedDataCallback( pattern, std::move( callback ) );
     }
 
     void CrdtDatastore::PutElementsCallback( const std::string &key, const Buffer &value )
     {
-        //
         crdt_cb_manager_.PutDataCallback( key, value );
     }
 
     void CrdtDatastore::DeleteElementsCallback( const std::string &key )
     {
-        //TODO - Implement this if needed
+        crdt_cb_manager_.DeleteDataCallback( key );
     }
 }
