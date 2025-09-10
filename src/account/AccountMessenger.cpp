@@ -5,9 +5,11 @@
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
 #include <thread>
+#include <random>
 #include <boost/format.hpp>
 #include "AccountMessenger.hpp"
 #include "base/sgns_version.hpp"
+#include "crypto/hasher/hasher_impl.hpp"
 
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, AccountMessenger::Error, e )
 {
@@ -20,8 +22,6 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, AccountMessenger::Error, e )
             return "Error in protobuf data serialization";
         case AccountCommError::NONCE_REQUEST_IN_PROGRESS:
             return "Nonce request already in progress";
-        case AccountCommError::NONCE_FUTURE_ERROR:
-            return "Error in setting the future value of the nonce";
         case AccountCommError::NONCE_GET_ERROR:
             return "Nonce couldn't be fetched";
     }
@@ -106,7 +106,7 @@ namespace sgns
             accountComm::AccountMessage acc_msg;
             if ( !acc_msg.ParseFromArray( message->data.data(), static_cast<int>( message->data.size() ) ) )
             {
-                logger_->warn( "{}: Failed to parse AccountMessage ", __func__ );
+                logger_->error( "{}: Failed to parse AccountMessage ", __func__ );
                 return;
             }
 
@@ -119,7 +119,7 @@ namespace sgns
                     logger_->error( "{}: Unexpected response received ", __func__ );
                     break;
                 default:
-                    logger_->warn( "{}: Unknown AccountMessage type received on {}", __func__ );
+                    logger_->error( "{}: Unknown AccountMessage type received on {}", __func__ );
                     break;
             }
         }
@@ -133,7 +133,7 @@ namespace sgns
             accountComm::AccountMessage acc_msg;
             if ( !acc_msg.ParseFromArray( message->data.data(), static_cast<int>( message->data.size() ) ) )
             {
-                logger_->warn( "{}: Failed to parse AccountMessage ", __func__ );
+                logger_->error( "{}: Failed to parse AccountMessage ", __func__ );
                 return;
             }
 
@@ -146,7 +146,7 @@ namespace sgns
                     HandleNonceResponse( acc_msg.nonce_response() );
                     break;
                 default:
-                    logger_->warn( "{}: Unknown AccountMessage type received on {}", __func__ );
+                    logger_->error( "{}: Unknown AccountMessage type received on {}", __func__ );
                     break;
             }
         }
@@ -181,9 +181,25 @@ namespace sgns
         return send_ret;
     }
 
-    outcome::result<uint64_t> AccountMessenger::GetLatestNonce( uint64_t timeout_ms )
+    outcome::result<uint64_t> AccountMessenger::GetLatestNonce( uint64_t timeout_ms, uint64_t silent_time_ms )
     {
-        uint64_t req_id = static_cast<uint64_t>( std::chrono::system_clock::now().time_since_epoch().count() );
+        // Generate a random value
+        std::random_device rd;
+        std::mt19937_64 gen(rd());
+        uint64_t random_value = gen();
+
+        // Concatenate address and random value
+        std::string to_hash = address_ + std::to_string(random_value);
+
+        // Use HasherImpl to hash the concatenated string
+        sgns::crypto::HasherImpl hasher;
+        auto hash = hasher.sha2_256(gsl::span<const uint8_t>(
+            reinterpret_cast<const uint8_t*>(to_hash.data()), to_hash.size()));
+
+        // Use the first 8 bytes of the hash as req_id
+        uint64_t req_id = 0;
+        std::memcpy(&req_id, hash.data(), sizeof(req_id));
+
         logger_->debug( "[{}] Requesting nonce with timeout {} and req_id {} ",
                         address_.substr( 0, 8 ),
                         timeout_ms,
@@ -199,7 +215,7 @@ namespace sgns
 
         const auto start_time   = std::chrono::steady_clock::now();
         const auto full_timeout = std::chrono::milliseconds( timeout_ms );
-        const auto silent_time  = std::chrono::milliseconds( 150 ); // Adjustable window
+        const auto silent_time  = std::chrono::milliseconds( silent_time_ms );
 
         bool first_seen = false;
 
@@ -265,7 +281,7 @@ namespace sgns
         std::vector<uint8_t> serialized_proto( size );
         if ( !msg.SerializeToArray( serialized_proto.data(), serialized_proto.size() ) )
         {
-            logger_->warn( "Failed to serialize AccountMessage for NonceResponse" );
+            logger_->error( "Failed to serialize AccountMessage for NonceResponse" );
             return outcome::failure( Error::PROTO_SERIALIZATION );
         }
         for ( auto &topic : topics )
@@ -285,7 +301,7 @@ namespace sgns
         std::string serialized;
         if ( !req.SerializeToString( &serialized ) )
         {
-            logger_->warn( "Failed to serialize NonceRequest for signature check" );
+            logger_->error( "Failed to serialize NonceRequest for signature check" );
             return;
         }
 
@@ -363,7 +379,7 @@ namespace sgns
 
         if ( send_ret.has_error() )
         {
-            logger_->warn( "Failed to send NonceResponse" );
+            logger_->error( "Failed to send NonceResponse" );
             return;
         }
     }
@@ -381,7 +397,7 @@ namespace sgns
         std::string serialized;
         if ( !resp.SerializeToString( &serialized ) )
         {
-            logger_->warn( "Failed to serialize NonceResponse for signature check" );
+            logger_->error( "Failed to serialize NonceResponse for signature check" );
             return;
         }
 

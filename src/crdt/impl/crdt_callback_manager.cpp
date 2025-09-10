@@ -1,6 +1,6 @@
 /**
  * @file       crdt_callback_manager.cpp
- * @brief      
+ * @brief      CRDT callback manager header for when an element gets added/removed
  * @date       2025-09-06
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
@@ -15,16 +15,28 @@ namespace sgns::crdt
 
     bool CRDTCallbackManager::RegisterNewDataCallback( const std::string &pattern, NewDataCallback callback )
     {
+        bool            ret = false;
         std::lock_guard lock( new_data_callback_registry_mutex_ );
-        new_data_callback_registry_[pattern] = std::move( callback );
-        return true;
+        if ( new_data_callback_registry_.find( pattern ) == new_data_callback_registry_.end() )
+        {
+            new_data_callback_registry_[pattern] = std::move( callback );
+
+            ret = true;
+        }
+        return ret;
     }
 
     bool CRDTCallbackManager::RegisterDeletedDataCallback( const std::string &pattern, DeletedDataCallback callback )
     {
+        bool            ret = false;
         std::lock_guard lock( deleted_data_callback_registry_mutex_ );
-        deleted_data_callback_registry_[pattern] = std::move( callback );
-        return true;
+        if ( deleted_data_callback_registry_.find( pattern ) == deleted_data_callback_registry_.end() )
+        {
+            deleted_data_callback_registry_[pattern] = std::move( callback );
+
+            ret = true;
+        }
+        return ret;
     }
 
     void CRDTCallbackManager::UnregisterNewDataCallback( const std::string &pattern )
