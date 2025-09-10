@@ -24,9 +24,7 @@ supergenius_install(crdt_set)
 add_library(crdt_heads
     impl/crdt_heads.cpp
 )
-add_library(crdt_notifier
-    impl/crdt_notifier.cpp
-)
+
 add_library(crdt_callback_manager
     impl/crdt_callback_manager.cpp
 )
@@ -43,7 +41,6 @@ target_link_libraries(crdt_heads
     ipfs-lite-cpp::cid
 )
 supergenius_install(crdt_heads)
-supergenius_install(crdt_notifier)
 supergenius_install(crdt_callback_manager)
 
 add_library(crdt_graphsync_dagsyncer
@@ -79,7 +76,6 @@ target_link_libraries(crdt_datastore
     Boost::headers
     crdt_set
     crdt_heads
-    crdt_notifier
     crdt_graphsync_dagsyncer
     crdt_data_filter
     crdt_callback_manager

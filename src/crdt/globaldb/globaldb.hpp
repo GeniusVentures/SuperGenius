@@ -142,10 +142,6 @@ namespace sgns::crdt
 
         void Start();
 
-        CRDTNotifier *GetNotifier()
-        {
-            return m_crdtDatastore->GetNotifier();
-        }
 
     private:
         /**

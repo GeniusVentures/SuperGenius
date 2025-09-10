@@ -181,7 +181,6 @@ namespace sgns::crdt
         broadcaster_( std::move( aBroadcaster ) ),
         dagSyncer_( std::move( aDagSyncer ) ),
         crdt_filter_( true ),
-        notifier_( std::make_unique<CRDTNotifier>() ),
         crdt_cb_manager_()
     {
         deleteHookFunc_    = options_->deleteHookFunc;
@@ -866,33 +865,6 @@ namespace sgns::crdt
         {
             logger_->error( "ProcessNode: error merging delta from {}", hKey.GetKey() );
             return outcome::failure( mergeResult.error() );
-        }
-        else
-        {
-            if ( filter_crdt )
-            {
-                if ( !topics_to_update_cid.empty() )
-                {
-                    logger_->debug( "ProcessNode: Notifying topics of CRDT Merge" );
-                    std::vector<std::string> elements;
-                    std::vector<std::string> tombstones;
-
-                    for ( const auto &element : aDelta->elements() )
-                    {
-                        elements.push_back( element.key() );
-                    }
-
-                    for ( const auto &tombstone : aDelta->tombstones() )
-                    {
-                        tombstones.push_back( tombstone.key() );
-                    }
-
-                    std::pair<std::vector<std::string>, std::vector<std::string>> changes{ std::move( elements ),
-                                                                                           std::move( tombstones ) };
-
-                    notifier_->NotifyTopics( topics_to_update_cid, changes );
-                }
-            }
         }
 
         auto priority = aDelta->priority();

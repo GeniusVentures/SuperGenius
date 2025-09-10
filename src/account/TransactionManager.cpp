@@ -78,18 +78,6 @@ namespace sgns
                 return std::nullopt;
             } );
 
-        auto notifier = instance->globaldb_m->GetNotifier();
-
-        // (void)notifier->RegisterCallback(
-        //     {},
-        //     [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
-        //         const std::pair<std::vector<std::string>, std::vector<std::string>> &keys )
-        //     {
-        //         if ( auto strong = weak_ptr.lock() )
-        //         {
-        //             strong->NotificationCallback( keys );
-        //         }
-        //     } );
 
         (void)instance->globaldb_m->RegisterNewElementCallback(
             "^/?" + GetBlockChainBase() + "[^/]*/tx/[^/]*/[0-9]+",

@@ -18,7 +18,6 @@
 #include "crdt/dagsyncer.hpp"
 #include "crdt/crdt_options.hpp"
 #include "crdt/crdt_data_filter.hpp"
-#include "crdt/crdt_notifier.hpp"
 #include "crdt/crdt_callback_manager.hpp"
 #include <storage/rocksdb/rocksdb.hpp>
 #include <ipfs_lite/ipld/ipld_node.hpp>
@@ -209,11 +208,6 @@ namespace sgns::crdt
             isFullNode = std::move( full_node );
         }
 
-        CRDTNotifier *GetNotifier()
-        {
-            return notifier_.get();
-        }
-
     protected:
         /** DAG jobs structure used by DAG worker threads to send new jobs
         */
@@ -393,7 +387,6 @@ namespace sgns::crdt
         std::set<std::string>   topicNames_;
         bool                    isFullNode = false;
 
-        std::unique_ptr<CRDTNotifier> notifier_;
         CRDTCallbackManager           crdt_cb_manager_;
     };
 
