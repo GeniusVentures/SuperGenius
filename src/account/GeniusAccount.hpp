@@ -81,6 +81,8 @@ namespace sgns
         std::vector<GeniusUTXO> utxos;
 
     private:
+
+        static constexpr size_t SIGNATURE_EXP_SIZE = 64;
         std::shared_ptr<ethereum::EthereumKeyGenerator> eth_keypair;
         std::shared_ptr<KeyGenerator::ElGamal>          elgamal_address;
         std::unordered_map<std::string, uint64_t>       confirmed_nonces_;

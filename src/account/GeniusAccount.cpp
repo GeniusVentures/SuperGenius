@@ -49,12 +49,9 @@ namespace sgns
 
             instance->eth_keypair = std::make_shared<ethereum::EthereumKeyGenerator>( std::move( temp_eth_address ) );
             instance->elgamal_address = std::make_shared<KeyGenerator::ElGamal>( std::move( temp_elgamal_address ) );
-            //instance->confirmed_nonces_.emplace( instance->eth_keypair->GetEntirePubValue(), -1 );
         }
 
         return instance;
-        //TODO - Retrieve values where? Read through blockchain Here?
-        // How to deal with errors?
     }
 
     bool GeniusAccount::InitMessenger( std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub, bool full_node )
@@ -206,8 +203,8 @@ namespace sgns
 
     bool GeniusAccount::VerifySignature( std::string address, std::string sig, std::vector<uint8_t> data )
     {
-        bool         ret                = false;
-        const size_t SIGNATURE_EXP_SIZE = 64;
+        bool ret = false;
+
         do
         {
             if ( sig.size() != SIGNATURE_EXP_SIZE )
@@ -252,7 +249,7 @@ namespace sgns
         std::array<uint8_t, 32> hashed = nil::crypto3::hash<nil::crypto3::hashes::sha2<256>>( data );
 
         ethereum::signature_type  signature = nil::crypto3::sign( hashed, eth_keypair->get_private_key() );
-        std::vector<std::uint8_t> signed_vector( 64 );
+        std::vector<std::uint8_t> signed_vector( SIGNATURE_EXP_SIZE );
 
         nil::marshalling::bincode::field<ecdsa_t::scalar_field_type>::field_element_to_bytes<
             std::vector<std::uint8_t>::iterator>( std::get<0>( signature ),
