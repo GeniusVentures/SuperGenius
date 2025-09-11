@@ -26,7 +26,7 @@ namespace
 namespace sgns
 {
 
-    base::Logger logger()
+    base::Logger genius_account_logger()
     {
         static base::Logger static_logger = base::createLogger( "GeniusAccount" );
         return static_logger;
@@ -42,7 +42,7 @@ namespace sgns
 
         if ( auto maybe_address = GenerateGeniusAddress( base_path, eth_private_key ); maybe_address.has_value() )
         {
-            logger()->debug( "Generated a Genius Address from private key" );
+            genius_account_logger()->debug( "Generated a Genius Address from private key" );
             auto [temp_elgamal_address, temp_eth_address] = maybe_address.value();
 
             instance = std::shared_ptr<GeniusAccount>( new GeniusAccount( std::move( token_id ) ) );
@@ -212,7 +212,9 @@ namespace sgns
         {
             if ( sig.size() != SIGNATURE_EXP_SIZE )
             {
-                logger()->error( "Incorrect signature size {}, expected ", sig.size(), SIGNATURE_EXP_SIZE );
+                genius_account_logger()->error( "Incorrect signature size {}, expected ",
+                                                sig.size(),
+                                                SIGNATURE_EXP_SIZE );
                 break;
             }
             std::vector<uint8_t> vec_sig( sig.cbegin(), sig.cend() );
@@ -295,7 +297,7 @@ namespace sgns
 
             if ( signed_secret.empty() )
             {
-                logger()->error( "Cannot sign secret" );
+                genius_account_logger()->error( "Cannot sign secret" );
                 return outcome::failure( std::errc::invalid_argument );
             }
 
