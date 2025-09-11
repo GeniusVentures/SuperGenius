@@ -7,7 +7,7 @@
 #include "singleton/CComponentFactory.hpp"
 #include "WalletCore/PrivateKey.h"
 #include <boost/algorithm/hex.hpp>
-#include <crypto/hasher/hasher_impl.hpp>
+#include "crypto/hasher/hasher_impl.hpp"
 #include "ipfs_pubsub/gossip_pubsub.hpp"
 #include "account/AccountMessenger.hpp"
 

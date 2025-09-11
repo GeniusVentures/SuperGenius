@@ -1,6 +1,6 @@
 #include "IGeniusTransactions.hpp"
 
-#include <crypto/hasher/hasher_impl.hpp>
+#include "crypto/hasher/hasher_impl.hpp"
 
 namespace sgns
 {
