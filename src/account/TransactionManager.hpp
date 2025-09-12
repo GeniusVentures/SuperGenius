@@ -55,23 +55,44 @@ namespace sgns
         using TransactionBatch = std::vector<TransactionPair>;
         using TransactionItem  = std::pair<TransactionBatch, std::optional<std::shared_ptr<crdt::AtomicTransaction>>>;
 
+        /**
+         * @brief       State of the Transaction Manager
+         */
         enum class State
         {
-            CREATING = 0,
-            INITIALIZING,
-            SYNCHING,
-            READY,
+            CREATING = 0, ///< Creating the object
+            INITIALIZING, ///< Initializing the object
+            SYNCHING,     ///< Synching the transactions
+            READY,        ///< Ready to process transactions
         };
 
+        /**
+         * @brief       Status of a transaction
+         */
         enum class TransactionStatus
         {
-            CREATED,
-            SENDING,
-            CONFIRMED,
-            VERIFYING,
-            FAILED,
-            INVALID
+            CREATED,   ///< Transaction created but not yet sent
+            SENDING,   ///< Transaction is being sent
+            CONFIRMED, ///< Transaction confirmed
+            VERIFYING, ///< Transaction being verified
+            FAILED,    ///< Transaction failed
+            INVALID    ///< Invalid transaction
         };
+
+        /**
+         * @brief       Factory constructor of the TransactionManager
+         * @param[in]   processing_db Database of the CRDT
+         * @param[in]   ctx The io context used to run its inner methods
+         * @param[in]   account Genius account to be used
+         * @param[in]   hasher Hasher to be used
+         * @param[in]   full_node Parameter to indicate if the account is a full node
+         * @param[in]   timestamp_tolerance Time to analyze a transaction with the same nonce/key
+         * @param[in]   mutability_window Window of time where a transaction can be modified
+         * @return      Instance of the TransactionManager initialized or Error
+         * @note        Default timestamp_tolerance is 5 minutes (300000 ms)
+         * @note        Default mutability_window is 10 minutes (600000 ms)
+         * @note        timestamp_tolerance must be smaller than mutability_window
+         */
         static std::shared_ptr<TransactionManager> New(
             std::shared_ptr<crdt::GlobalDB>          processing_db,
             std::shared_ptr<boost::asio::io_context> ctx,
@@ -79,7 +100,7 @@ namespace sgns
             std::shared_ptr<crypto::Hasher>          hasher,
             bool                                     full_node           = false,
             std::chrono::milliseconds                timestamp_tolerance = TIMESTAMP_TOLERANCE,
-            std::chrono::milliseconds                immutability_window = IMMUTABILITY_WINDOW );
+            std::chrono::milliseconds                mutability_window   = MUTABILITY_WINDOW );
 
         ~TransactionManager();
 
@@ -136,7 +157,7 @@ namespace sgns
         void EnqueueTransaction( TransactionItem element );
 
         void SetTimeFrameToleranceMs( uint64_t timeframe_tolerance );
-        void SetImmutabilityWindowMs( uint64_t immutability_window );
+        void SetMutabilityWindowMs( uint64_t mutability_window );
 
     private:
         static constexpr std::string_view TRANSACTION_BASE_FORMAT = "/bc-%hu/";
@@ -147,7 +168,7 @@ namespace sgns
                             std::shared_ptr<crypto::Hasher>          hasher,
                             bool                                     full_node,
                             std::chrono::milliseconds                timestamp_tolerance,
-                            std::chrono::milliseconds                immutability_window );
+                            std::chrono::milliseconds                mutability_window );
 
         // Parser function pointer alias: returns a set of topic strings or an error
         using TransactionParserFn = outcome::result<std::set<std::string>> ( TransactionManager::* )(
@@ -212,10 +233,10 @@ namespace sgns
         std::function<void()>                      task_m;
         std::atomic<bool>                          stopped_{ false };
         std::chrono::milliseconds                  timestamp_tolerance_m;
-        std::chrono::milliseconds                  immutability_window_m;
+        std::chrono::milliseconds                  mutability_window_m;
 
         static constexpr std::chrono::milliseconds TIMESTAMP_TOLERANCE = std::chrono::seconds( 10 );
-        static constexpr std::chrono::milliseconds IMMUTABILITY_WINDOW = std::chrono::minutes( 15 );
+        static constexpr std::chrono::milliseconds MUTABILITY_WINDOW   = std::chrono::minutes( 15 );
 
         std::mutex                                         cv_mutex_;
         std::condition_variable                            cv_;
@@ -271,7 +292,7 @@ namespace sgns
         outcome::result<void> AddTransactionToProcessedMaps( crdt::CRDTCallbackManager::NewDataPair new_data );
 
         void ProcessDeletion( std::string deleted_key );
-        void ProcessNewData( crdt::CRDTCallbackManager::NewDataPair new_data);
+        void ProcessNewData( crdt::CRDTCallbackManager::NewDataPair new_data );
 
         void NewElementCallback( crdt::CRDTCallbackManager::NewDataPair new_data );
         void DeleteElementCallback( std::string deleted_key );

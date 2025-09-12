@@ -43,16 +43,15 @@ namespace sgns
                                                                  std::shared_ptr<crypto::Hasher>          hasher,
                                                                  bool                                     full_node,
                                                                  std::chrono::milliseconds timestamp_tolerance,
-                                                                 std::chrono::milliseconds immutability_window )
+                                                                 std::chrono::milliseconds mutability_window )
     {
-        auto instance = std::shared_ptr<TransactionManager>(
-            new TransactionManager( std::move( processing_db ),
-                                    std::move( ctx ),
-                                    std::move( account ),
-                                    std::move( hasher ),
-                                    full_node,
-                                    std::move( timestamp_tolerance ),
-                                    std::move( immutability_window ) ) );
+        auto instance = std::shared_ptr<TransactionManager>( new TransactionManager( std::move( processing_db ),
+                                                                                     std::move( ctx ),
+                                                                                     std::move( account ),
+                                                                                     std::move( hasher ),
+                                                                                     full_node,
+                                                                                     std::move( timestamp_tolerance ),
+                                                                                     std::move( mutability_window ) ) );
 
         bool crdt_tx_filter_initialized = instance->globaldb_m->RegisterElementFilter(
             "^/?" + GetBlockChainBase() + "[^/]*/tx/[^/]*/[0-9]+",
@@ -78,7 +77,6 @@ namespace sgns
                 return std::nullopt;
             } );
 
-
         (void)instance->globaldb_m->RegisterNewElementCallback(
             "^/?" + GetBlockChainBase() + "[^/]*/tx/[^/]*/[0-9]+",
             [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
@@ -91,8 +89,7 @@ namespace sgns
             } );
         (void)instance->globaldb_m->RegisterDeletedElementCallback(
             "^/?" + GetBlockChainBase() + "[^/]*/tx/[^/]*/[0-9]+",
-            [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
-                std::string deleted_key )
+            [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )]( std::string deleted_key )
             {
                 if ( auto strong = weak_ptr.lock() )
                 {
@@ -110,7 +107,7 @@ namespace sgns
                                             std::shared_ptr<crypto::Hasher>          hasher,
                                             bool                                     full_node,
                                             std::chrono::milliseconds                timestamp_tolerance,
-                                            std::chrono::milliseconds                immutability_window ) :
+                                            std::chrono::milliseconds                mutability_window ) :
         globaldb_m( std::move( processing_db ) ),
         ctx_m( std::move( ctx ) ),
         account_m( std::move( account ) ),
@@ -118,7 +115,7 @@ namespace sgns
         full_node_m( std::move( full_node ) ),
         state_m( State::CREATING ),
         timestamp_tolerance_m( std::move( timestamp_tolerance ) ),
-        immutability_window_m( std::move( immutability_window ) ),
+        mutability_window_m( std::move( mutability_window ) ),
         last_loop_time_( std::chrono::steady_clock::now() )
 
     {
@@ -2056,7 +2053,7 @@ namespace sgns
                                  element.key() );
                 break;
             }
-            m_logger->debug( "[{} - full: {}] Found existing transaction {}, checking immutability and timestamps",
+            m_logger->debug( "[{} - full: {}] Found existing transaction {}, checking mutability window and timestamps",
                              account_m->GetAddress().substr( 0, 8 ),
                              full_node_m,
                              element.key() );
@@ -2258,7 +2255,7 @@ namespace sgns
             return false;
         }
 
-        bool is_immutable = elapsed > immutability_window_m.count();
+        bool is_immutable = elapsed > mutability_window_m.count();
 
         if ( is_immutable )
         {
@@ -2266,7 +2263,7 @@ namespace sgns
                              account_m->GetAddress().substr( 0, 8 ),
                              full_node_m,
                              elapsed,
-                             immutability_window_m.count() );
+                             mutability_window_m.count() );
         }
         else
         {
@@ -2274,7 +2271,7 @@ namespace sgns
                              account_m->GetAddress().substr( 0, 8 ),
                              full_node_m,
                              elapsed,
-                             immutability_window_m.count() );
+                             mutability_window_m.count() );
         }
 
         return is_immutable;
@@ -2290,14 +2287,14 @@ namespace sgns
                         timeframe_tolerance );
     }
 
-    void TransactionManager::SetImmutabilityWindowMs( uint64_t immutability_window )
+    void TransactionManager::SetMutabilityWindowMs( uint64_t mutability_window )
     {
-        immutability_window_m = std::chrono::milliseconds( immutability_window );
+        mutability_window_m = std::chrono::milliseconds( mutability_window );
 
-        m_logger->info( "[{} - full: {}] Updated immutability window to {} ms",
+        m_logger->info( "[{} - full: {}] Updated mutability window to {} ms",
                         account_m->GetAddress().substr( 0, 8 ),
                         full_node_m,
-                        immutability_window );
+                        mutability_window );
     }
 
     outcome::result<void> TransactionManager::RemoveTransactionFromProcessedMaps( const std::string &transaction_key,

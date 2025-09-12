@@ -367,7 +367,7 @@ namespace sgns
         loggerDAGSyncer->set_level( spdlog::level::err );
         loggerGraphsync->set_level( spdlog::level::err );
         loggerBroadcaster->set_level( spdlog::level::err );
-        loggerDataStore->set_level( spdlog::level::debug );
+        loggerDataStore->set_level( spdlog::level::err );
         loggerCRDTHeads->set_level( spdlog::level::err );
         loggerTransactions->set_level( spdlog::level::debug );
         loggerMigration->set_level( spdlog::level::err );
@@ -1130,11 +1130,10 @@ namespace sgns
         transaction_manager_->EnqueueTransaction( std::make_pair( tx, proof ) );
     }
 
-    void GeniusNode::ConfigureTransactionFilterTimeoutsMs( uint64_t timeframe_limit_ms,
-                                                           uint64_t immutability_window_ms )
+    void GeniusNode::ConfigureTransactionFilterTimeoutsMs( uint64_t timeframe_limit_ms, uint64_t mutability_window_ms )
     {
         transaction_manager_->SetTimeFrameToleranceMs( timeframe_limit_ms );
-        transaction_manager_->SetImmutabilityWindowMs( immutability_window_ms );
+        transaction_manager_->SetMutabilityWindowMs( mutability_window_ms );
     }
 
     void GeniusNode::rotateLogFiles( const std::string &base_path )

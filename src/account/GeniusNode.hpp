@@ -201,7 +201,7 @@ namespace sgns
         friend class TransactionSyncTest;
 
         void SendTransactionAndProof( std::shared_ptr<IGeniusTransactions> tx, std::vector<uint8_t> proof );
-        void ConfigureTransactionFilterTimeoutsMs( uint64_t timeframe_limit_ms, uint64_t immutability_window_ms );
+        void ConfigureTransactionFilterTimeoutsMs( uint64_t timeframe_limit_ms, uint64_t mutability_window_ms );
 
         std::shared_ptr<GeniusAccount> account_;
 
