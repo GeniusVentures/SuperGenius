@@ -25,6 +25,8 @@
 #include <chrono>
 #include <queue>
 #include <set>
+#include <map>
+#include <condition_variable>
 
 namespace sgns::crdt
 {
@@ -215,6 +217,12 @@ namespace sgns::crdt
             std::shared_ptr<IPLDNode> root_node_;    /*> pointer to node */
         };
 
+        struct RootCIDJob
+        {
+            std::shared_ptr<IPLDNode> node_;      /*> pointer to node */
+            std::shared_ptr<IPLDNode> root_node_; /*> pointer to node */
+        };
+
         /** DAG worker structure to keep track of worker threads
     */
         struct DagWorker
@@ -280,7 +288,7 @@ namespace sgns::crdt
     * CRDT blocks to the Datastore.
     * @return returns outcome::success on success or outcome::failure otherwise
     */
-        outcome::result<void> HandleBlock( const CID &aCid );
+        outcome::result<void> HandleRootCIDBlock( const CID &aCid );
 
         /** ProcessNode processes new block. This makes that every operation applied
     * to this store take effect (delta is merged) before returning.
@@ -374,6 +382,10 @@ namespace sgns::crdt
         std::mutex              dagWorkerCvMutex_;
         std::condition_variable dagWorkerCv_;
         std::queue<DagJob>      dagWorkerJobList;
+
+        std::queue<std::shared_ptr<RootCIDJob>>              rootCIDJobList_;
+        std::map<CID, std::set<std::pair<CID, std::string>>> pendingHeadsByRootCID_;
+        std::mutex                                           pendingHeadsMutex_;
 
         CRDTDataFilter crdt_filter_;
         bool           started_ = false;
