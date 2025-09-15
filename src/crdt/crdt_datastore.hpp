@@ -18,6 +18,7 @@
 #include "crdt/dagsyncer.hpp"
 #include "crdt/crdt_options.hpp"
 #include "crdt/crdt_data_filter.hpp"
+#include "crdt/crdt_callback_manager.hpp"
 #include <storage/rocksdb/rocksdb.hpp>
 #include <ipfs_lite/ipld/ipld_node.hpp>
 #include <shared_mutex>
@@ -44,9 +45,9 @@ namespace sgns::crdt
         using Element     = pb::Element;
         using IPLDNode    = ipfs_lite::ipld::IPLDNode;
 
-        using PutHookPtr                = std::function<void( const std::string &k, const Buffer &v )>;
-        using DeleteHookPtr             = std::function<void( const std::string &k )>;
-        using CRDTElementFilterCallback = CRDTDataFilter::ElementFilterCallback;
+        using CRDTElementFilterCallback  = CRDTDataFilter::ElementFilterCallback;
+        using CRDTNewElementCallback     = CRDTCallbackManager::NewDataCallback;
+        using CRDTDeletedElementCallback = CRDTCallbackManager::DeletedDataCallback;
 
         enum class Error
         {
@@ -67,11 +68,11 @@ namespace sgns::crdt
          * @param[in]   elem_filter_cb Filter callback to remove or not an element from a Delta
          * @return      A new instance of @ref CrdtDatastore
          */
-        static std::shared_ptr<CrdtDatastore> New( std::shared_ptr<RocksDB>            aDatastore,
-                                                   const HierarchicalKey              &aKey,
-                                                   std::shared_ptr<DAGSyncer>          aDagSyncer,
-                                                   std::shared_ptr<Broadcaster>        aBroadcaster,
-                                                   const std::shared_ptr<CrdtOptions> &aOptions );
+        static std::shared_ptr<CrdtDatastore> New( std::shared_ptr<RocksDB>     aDatastore,
+                                                   const HierarchicalKey       &aKey,
+                                                   std::shared_ptr<DAGSyncer>   aDagSyncer,
+                                                   std::shared_ptr<Broadcaster> aBroadcaster,
+                                                   std::shared_ptr<CrdtOptions> aOptions );
 
         /**
          * @brief       Starts the datastore threads
@@ -94,13 +95,13 @@ namespace sgns::crdt
         * @param aKey Hierarchical key to get
         * @return value as a Buffer
         */
-        outcome::result<Buffer> GetKey( const HierarchicalKey &aKey );
+        outcome::result<Buffer> GetKey( const HierarchicalKey &aKey ) const;
 
         /** Query CRDT set key-value pairs by prefix, if prefix empty return all elements are not tombstoned
         * @param aPrefix prefix to search, if empty string, return all
         * @return list of key-value pairs matches prefix
         */
-        outcome::result<QueryResult> QueryKeyValues( const std::string &aPrefix );
+        outcome::result<QueryResult> QueryKeyValues( const std::string &aPrefix ) const;
 
         /**
          * @brief       Queries with a middle part that can be a wildcard, negated string or normal string
@@ -111,17 +112,17 @@ namespace sgns::crdt
          */
         outcome::result<QueryResult> QueryKeyValues( const std::string &prefix_base,
                                                      const std::string &middle_part,
-                                                     const std::string &remainder_prefix );
+                                                     const std::string &remainder_prefix ) const;
 
         /** Get key prefix used in set, e.g. /namespace/s/k/
         * @return key prefix
         */
-        std::string GetKeysPrefix();
+        std::string GetKeysPrefix() const;
 
         /** Get value suffix used in set, e.g. /v
         * @return value suffix
         */
-        std::string GetValueSuffix();
+        std::string GetValueSuffix() const;
 
         /**
          * @brief Stores the given value in the CRDT store
@@ -129,13 +130,15 @@ namespace sgns::crdt
          * @param aValue Value to be stored
          * @return outcome::success if stored and broadcasted successfully, or outcome::failure otherwise.
          */
-        outcome::result<void> PutKey( const HierarchicalKey &aKey, const Buffer &aValue, std::set<std::string> topics );
+        outcome::result<void> PutKey( const HierarchicalKey       &aKey,
+                                      const Buffer                &aValue,
+                                      const std::set<std::string> &topics );
 
         /** HasKey returns whether the `key` is mapped to a `value` in set
         * @param aKey HierarchicalKey to look for in set
         * @return true if key found or false if not found or outcome::failure on error
         */
-        outcome::result<bool> HasKey( const HierarchicalKey &aKey );
+        outcome::result<bool> HasKey( const HierarchicalKey &aKey ) const;
 
         /** Delete removes the value for given `key`.
         * @param aKey HierarchicalKey to delete from set
@@ -152,36 +155,39 @@ namespace sgns::crdt
         outcome::result<CID> Publish( const std::shared_ptr<Delta> &aDelta, const std::set<std::string> &topics );
 
         /** PrintDAG pretty prints the current Merkle-DAG using the given printFunc
-    * @return returns outcome::success on success or outcome::failure otherwise
-    */
+        * @return returns outcome::success on success or outcome::failure otherwise
+        */
         outcome::result<void> PrintDAG();
 
         /** DecodeBroadcast decodes CRDT broadcast data
-    * @param buff Buffer data to decode
-    * @return vector of CIDs or outcome::failure on error
-    */
+        * @param buff Buffer data to decode
+        * @return vector of CIDs or outcome::failure on error
+        */
         static outcome::result<std::vector<CID>> DecodeBroadcast( const Buffer &buff );
 
         /** Returns a new delta-set adding the given key/value.
-    * @param key - delta key to add to datastore 
-    * @param value - delta value to add to datastore 
-    * @return pointer to new delta or outcome::failure on error
-    */
-        outcome::result<std::shared_ptr<Delta>> CreateDeltaToAdd( const std::string &key, const std::string &value );
+        * @param key - delta key to add to datastore
+        * @param value - delta value to add to datastore
+        * @return pointer to new delta or outcome::failure on error
+        */
+        static outcome::result<std::shared_ptr<Delta>> CreateDeltaToAdd( const std::string &key,
+                                                                         const std::string &value );
 
         /** Returns a new delta-set removing the given keys with prefix /namespace/s/<key>
-    * @param key - delta key to remove from datastore 
-    * @return pointer to delta or outcome::failure on error
-    */
-        outcome::result<std::shared_ptr<Delta>> CreateDeltaToRemove( const std::string &key );
+        * @param key - delta key to remove from datastore
+        * @return pointer to delta or outcome::failure on error
+        */
+        outcome::result<std::shared_ptr<Delta>> CreateDeltaToRemove( const std::string &key ) const;
 
         void PrintDataStore();
 
         /** Close shuts down the CRDT datastore and worker threads. It should not be used afterwards.
-    */
+        */
         void Close();
 
         bool RegisterElementFilter( const std::string &pattern, CRDTElementFilterCallback filter );
+        bool RegisterNewElementCallback( const std::string &pattern, CRDTNewElementCallback callback );
+        bool RegisterDeletedElementCallback( const std::string &pattern, CRDTDeletedElementCallback callback );
 
         /**
          * @brief Configure which topic this datastore should filter on.
@@ -205,7 +211,7 @@ namespace sgns::crdt
 
     protected:
         /** DAG jobs structure used by DAG worker threads to send new jobs
-    */
+        */
         struct DagJob
         {
             CID                       rootCid_;      /*> Root CID */
@@ -216,7 +222,7 @@ namespace sgns::crdt
         };
 
         /** DAG worker structure to keep track of worker threads
-    */
+        */
         struct DagWorker
         {
             std::future<void> dagWorkerFuture_;                /*> Future for DAG worker thread */
@@ -224,42 +230,42 @@ namespace sgns::crdt
         };
 
         /** one iteration to handle jobs broadcasted from the network.
-    * @param aCrdtDatastore pointer to CRDT datastore
-    */
+        * @param aCrdtDatastore pointer to CRDT datastore
+        */
         void HandleNextIteration();
 
         /** one iteration of Worker thread to send jobs
-    * @param aCrdtDatastore pointer to CRDT datastore
-    * @param dagWorker pointer to DAG worker structure
-    */
+        * @param aCrdtDatastore pointer to CRDT datastore
+        * @param dagWorker pointer to DAG worker structure
+        */
         void SendJobWorkerIteration( std::shared_ptr<DagWorker> dagWorker );
 
         /** SendNewJobs calls getDeltas with the given children and sends each response to the workers.
-    * @param aRootCID root CID
-    * @param aRootPriority root priority
-    * @param aChildren vector of children CIDs
-    */
+        * @param aRootCID root CID
+        * @param aRootPriority root priority
+        * @param aChildren vector of children CIDs
+        */
         outcome::result<void> SendNewJobs( const CID                &aRootCID,
                                            uint64_t                  aRootPriority,
                                            const std::set<CID>      &aChildren,
                                            std::shared_ptr<IPLDNode> aRootNode = nullptr );
 
         /** Sync ensures that all the data under the given prefix is flushed to disk in
-    * the underlying datastore
-    * @return returns outcome::success on success or outcome::failure otherwise
-    */
+        * the underlying datastore
+        * @return returns outcome::success on success or outcome::failure otherwise
+        */
         outcome::result<void> Sync( const HierarchicalKey &aKey );
 
         /** Helper funtion to print Merkle-DAG records
-    * @param aCID CID of DAG record
-    * @param aDepth depth used for indenting printed records
-    * @param aSet set of CIDs to print
-    * @return returns outcome::success on success or outcome::failure otherwise
-    */
+        * @param aCID CID of DAG record
+        * @param aDepth depth used for indenting printed records
+        * @param aSet set of CIDs to print
+        * @return returns outcome::success on success or outcome::failure otherwise
+        */
         outcome::result<void> PrintDAGRec( const CID &aCID, uint64_t aDepth, std::vector<CID> &aSet );
 
         /** Regularly send out a list of heads that we have not recently seen
-    */
+        */
         void RebroadcastHeads();
 
         /**
@@ -268,28 +274,28 @@ namespace sgns::crdt
          * @param[in] cids The list of CIDs to broadcast.
          * @return outcome::success on success, or outcome::failure if an error occurs.
          */
-        outcome::result<void> Broadcast( const std::set<CID> &cids, std::string topic );
+        outcome::result<void> Broadcast( const std::set<CID> &cids, const std::string &topic );
 
         /** EncodeBroadcast encodes list of CIDs to CRDT broadcast data
-    * @param heads list of CIDs
-    * @return data encoded into Buffer data or outcome::failure on error
-    */
+        * @param heads list of CIDs
+        * @return data encoded into Buffer data or outcome::failure on error
+        */
         static outcome::result<Buffer> EncodeBroadcast( const std::set<CID> &heads );
 
         /** handleBlock takes care of vetting, retrieving and applying
-    * CRDT blocks to the Datastore.
-    * @return returns outcome::success on success or outcome::failure otherwise
-    */
+        * CRDT blocks to the Datastore.
+        * @return returns outcome::success on success or outcome::failure otherwise
+        */
         outcome::result<void> HandleBlock( const CID &aCid );
 
         /** ProcessNode processes new block. This makes that every operation applied
-    * to this store take effect (delta is merged) before returning.
-    * @param aRoot Root CID
-    * @param aRootPrio Root priority
-    * @param aDelta Pointer to Delta
-    * @param aNode Pointer to IPLD node
-    * @return list of CIDs or outcome::failure on error
-    */
+        * to this store take effect (delta is merged) before returning.
+        * @param aRoot Root CID
+        * @param aRootPrio Root priority
+        * @param aDelta Pointer to Delta
+        * @param aNode Pointer to IPLD node
+        * @return list of CIDs or outcome::failure on error
+        */
         outcome::result<std::set<CID>> ProcessNode( const CID                       &aRoot,
                                                     uint64_t                         aRootPrio,
                                                     std::shared_ptr<Delta>           aDelta,
@@ -297,13 +303,13 @@ namespace sgns::crdt
                                                     bool                             filter_crdt = false );
 
         /** PutBlock add block node to DAGSyncer
-    * @param aHeads list of CIDs to add to node as IPLD links
-    * @param aDelta Delta to serialize into IPLD node
-    * @return IPLD node or outcome::failure on error
-    */
+        * @param aHeads list of CIDs to add to node as IPLD links
+        * @param aDelta Delta to serialize into IPLD node
+        * @return IPLD node or outcome::failure on error
+        */
         outcome::result<std::shared_ptr<IPLDNode>> PutBlock( const std::vector<std::pair<CID, std::string>> &aHeads,
                                                              const std::shared_ptr<Delta>                   &aDelta,
-                                                             std::set<std::string>                           topics );
+                                                             const std::set<std::string> &topics ) const;
 
         /** AddDAGNode adds node to DAGSyncer and processes new blocks.
          *  @param aDelta   Pointer to Delta used for generating node and process it
@@ -313,9 +319,9 @@ namespace sgns::crdt
         outcome::result<CID> AddDAGNode( const std::shared_ptr<Delta> &aDelta, const std::set<std::string> &topics );
 
         /** SyncDatastore sync heads and set datastore
-    * @param: aKeyList all heads and the set entries related to the given prefix
-    * @return returns outcome::success on success or outcome::failure otherwise
-    */
+        * @param: aKeyList all heads and the set entries related to the given prefix
+        * @return returns outcome::success on success or outcome::failure otherwise
+        */
         outcome::result<void> SyncDatastore( const std::vector<HierarchicalKey> &aKeyList );
 
         /**
@@ -330,14 +336,17 @@ namespace sgns::crdt
          */
         void FilterTombstonesOnDelta( std::shared_ptr<Delta> &delta );
 
+        void PutElementsCallback( const std::string &key, const Buffer &value );
+        void DeleteElementsCallback( const std::string &key );
+
     private:
         CrdtDatastore() = default;
 
-        CrdtDatastore( std::shared_ptr<RocksDB>            aDatastore,
-                       const HierarchicalKey              &aKey,
-                       std::shared_ptr<DAGSyncer>          aDagSyncer,
-                       std::shared_ptr<Broadcaster>        aBroadcaster,
-                       const std::shared_ptr<CrdtOptions> &aOptions );
+        CrdtDatastore( std::shared_ptr<RocksDB>     aDatastore,
+                       const HierarchicalKey       &aKey,
+                       std::shared_ptr<DAGSyncer>   aDagSyncer,
+                       std::shared_ptr<Broadcaster> aBroadcaster,
+                       std::shared_ptr<CrdtOptions> aOptions );
 
         std::shared_ptr<RocksDB>     dataStore_ = nullptr;
         std::shared_ptr<CrdtOptions> options_   = nullptr;
@@ -354,10 +363,7 @@ namespace sgns::crdt
         static constexpr std::chrono::milliseconds threadSleepTimeInMilliseconds_ = std::chrono::milliseconds( 100 );
         static constexpr std::string_view          headsNamespace_                = "h";
         static constexpr std::string_view          setsNamespace_                 = "s";
-
-        PutHookPtr    putHookFunc_       = nullptr;
-        DeleteHookPtr deleteHookFunc_    = nullptr;
-        int           numberOfDagWorkers = 1;
+        int                                        numberOfDagWorkers             = 1;
 
         std::future<void> handleNextFuture_;
         std::atomic<bool> handleNextThreadRunning_ = false;
@@ -366,12 +372,9 @@ namespace sgns::crdt
         std::atomic<bool> rebroadcastThreadRunning_ = false;
 
         std::vector<std::shared_ptr<DagWorker>> dagWorkers_;
-        std::mutex                              dagSyncherMutex_;
-        std::mutex                              processNodeMutex_;
 
         std::atomic<bool>       dagWorkerJobListThreadRunning_ = false;
         std::mutex              dagWorkerMutex_;
-        std::mutex              dagWorkerCvMutex_;
         std::condition_variable dagWorkerCv_;
         std::queue<DagJob>      dagWorkerJobList;
 
@@ -382,9 +385,11 @@ namespace sgns::crdt
         std::condition_variable rebroadcastCv_;
         std::set<std::string>   topicNames_;
         bool                    isFullNode = false;
+
+        CRDTCallbackManager crdt_cb_manager_;
     };
 
-} // namespace sgns::crdt
+}
 
 /**
  * @brief       Macro for declaring error handling in the CrdtDatastore class.

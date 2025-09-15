@@ -124,10 +124,7 @@ int main( int argc, char **argv )
     auto generator        = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
     auto crdtOptions      = sgns::crdt::CrdtOptions::DefaultOptions();
     crdtOptions->logger   = logger;
-    // Bind PutHook function pointer for notification purposes
-    crdtOptions->putHookFunc = std::bind( &PutHook, std::placeholders::_1, std::placeholders::_2, logger );
-    // Bind DeleteHook function pointer for notification purposes
-    crdtOptions->deleteHookFunc = std::bind( &DeleteHook, std::placeholders::_1, logger );
+
 
     auto globaldb_ret =
         sgns::crdt::GlobalDB::New( io, strDatabasePath, pubsub, crdtOptions, graphsyncnetwork, scheduler, generator );

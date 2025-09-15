@@ -11,7 +11,7 @@ namespace sgns::crdt
     /** @brief CrdtSet implements an Add-Wins Observed-Remove Set using delta-CRDTs
     * (https://arxiv.org/abs/1410.2803) and backing all the data in a
     * datastore. It is fully agnostic to MerkleCRDTs or the delta distribution
-    * layer.  It chooses the Value with most priority for a Key as the current
+    * layer. It chooses the Value with most priority for a Key as the current
     * Value. When two values have the same priority, it chooses by alphabetically
     * sorting their unique IDs alphabetically.
     */
@@ -64,12 +64,12 @@ namespace sgns::crdt
         /** Equality operator
         * @return true if equal otherwise, it returns false.
         */
-        bool operator==( const CrdtSet & );
+        bool operator==( const CrdtSet & ) const;
 
         /** Equality operator
         * @return true if NOT equal otherwise, it returns false.
         */
-        bool operator!=( const CrdtSet & );
+        bool operator!=( const CrdtSet & ) const;
 
         /** Assignment operator
         */
@@ -93,7 +93,7 @@ namespace sgns::crdt
         * @param aKey HierarchicalKey to get value from datastore
         * @return buffer value as string or outcome::failure on error
         */
-        outcome::result<std::string> GetValueFromDatastore( const HierarchicalKey &aKey );
+        outcome::result<std::string> GetValueFromDatastore( const HierarchicalKey &aKey ) const;
 
         /** Returns a new delta-set adding the given key/value.
         * @param aKey delta key to add to datastore
@@ -107,13 +107,13 @@ namespace sgns::crdt
         * @param aKey delta key to remove from datastore
         * @return pointer to delta or outcome::failure on error
         */
-        outcome::result<std::shared_ptr<Delta>> CreateDeltaToRemove( const std::string &aKey );
+        outcome::result<std::shared_ptr<Delta>> CreateDeltaToRemove( const std::string &aKey ) const;
 
         /** Get the value of an element from the CRDT set /namespace/k/<key>/v
         * @param aKey Key name
         * @return buffer value or outcome::failure on error
         */
-        outcome::result<Buffer> GetElement( const std::string &aKey );
+        outcome::result<Buffer> GetElement( const std::string &aKey ) const;
 
         /** Query datastore key-value pairs by prefix, if prefix empty return all elements /namespace/k/<prefix>
         * @param aPrefix prefix to search, if empty string, return all
@@ -122,7 +122,7 @@ namespace sgns::crdt
         * \sa QuerySuffix
         */
         outcome::result<QueryResult> QueryElements( const std::string &aPrefix,
-                                                    const QuerySuffix &aSuffix = QuerySuffix::QUERY_ALL );
+                                                    const QuerySuffix &aSuffix = QuerySuffix::QUERY_ALL ) const;
 
         /**
          * @brief       Queries with a middle part that can be a wildcard, negated string or normal string
@@ -135,7 +135,7 @@ namespace sgns::crdt
         outcome::result<QueryResult> QueryElements( const std::string &prefix_base,
                                                     const std::string &middle_part,
                                                     const std::string &remainder_prefix,
-                                                    const QuerySuffix &aSuffix = QuerySuffix::QUERY_ALL );
+                                                    const QuerySuffix &aSuffix = QuerySuffix::QUERY_ALL ) const;
 
         // TODO: Need to implement query with prefix from datastore
         //func (s *set) Elements(q query.Query) (query.Results, error) {
@@ -145,62 +145,62 @@ namespace sgns::crdt
         * @param aKey key name
         * @return true if the key belongs to one of the elements and is not tombstoned or outcome::failure on error
         */
-        outcome::result<bool> IsValueInSet( const std::string &aKey );
+        outcome::result<bool> IsValueInSet( const std::string &aKey ) const;
 
         /** Returns in we have a key/block combinations in the
         * elements set that has not been tombstoned.
         * @param aKey key name
         * @return true if the key has not been tombstoned, false otherwise or outcome::failure on error
         */
-        outcome::result<bool> InElemsNotTombstoned( const std::string &aKey );
+        outcome::result<bool> InElemsNotTombstoned( const std::string &aKey ) const;
 
         /** Get full path prefix in namespace for a key
         * /namespace/<key>
         * @param aKey key string
         * @return HierarchicalKey with key prefix
         */
-        HierarchicalKey KeyPrefix( const std::string &aKey );
+        HierarchicalKey KeyPrefix( const std::string &aKey ) const;
 
         /** Get elems full path prefix in namespace for a key
         * /namespace/s/<key>
         * @param aKey key string
         * @return HierarchicalKey with elems prefix
         */
-        HierarchicalKey ElemsPrefix( const std::string &aKey );
+        HierarchicalKey ElemsPrefix( const std::string &aKey ) const;
 
         /** Get tombs full path prefix in namespace for a key
         * /namespace/t/<key>
         * @param aKey key string
         * @return HierarchicalKey with tombs prefix
         */
-        HierarchicalKey TombsPrefix( const std::string &aKey );
+        HierarchicalKey TombsPrefix( const std::string &aKey ) const;
 
         /** Get keys full path prefix in namespace for a key
         * /namespace/k/<key>
         * @param aKey key string
         * @return HierarchicalKey with key prefix
         */
-        HierarchicalKey KeysKey( const std::string &aKey );
+        HierarchicalKey KeysKey( const std::string &aKey ) const;
 
         /** Get value full path prefix in namespace for a key
         * /namespace/k/<key>/v
         * @param aKey key string
         * @return HierarchicalKey with value prefix
         */
-        HierarchicalKey ValueKey( const std::string &aKey );
+        HierarchicalKey ValueKey( const std::string &aKey ) const;
 
         /** Get priority full path prefix in namespace for a key
         * /namespace/k/<key>/p
         * @param aKey key string
         * @return HierarchicalKey with priority prefix
         */
-        HierarchicalKey PriorityKey( const std::string &aKey );
+        HierarchicalKey PriorityKey( const std::string &aKey ) const;
 
         /** Get priority for a key from datastore
         * @param aKey key string
         * @return priority of the key or outcome::failure on error
         */
-        outcome::result<uint64_t> GetPriority( const std::string &aKey );
+        outcome::result<uint64_t> GetPriority( const std::string &aKey ) const;
 
         /** Set priority for a key and put into datastore
         * @param aKey key string
@@ -257,21 +257,21 @@ namespace sgns::crdt
         * @param aElems list of elems to to into datastore
         * @return outcome::success on success or outcome::failure otherwise
         */
-        outcome::result<void> PutTombs( const std::vector<Element> &aTombs, const std::string &aID );
+        outcome::result<void> PutTombs( const std::vector<Element> &aTombs, const std::string &aID ) const;
 
         /** Merge elems and tombs from delta into datastore
         * @param aDelta delta with elems and tombs to save into datastore
         * @param aID tomb key ID
         * @return outcome::success on success or outcome::failure otherwise
         */
-        outcome::result<void> Merge( const std::shared_ptr<CrdtSet::Delta> &aDelta, const std::string &aID );
+        outcome::result<void> Merge( const Delta &aDelta, const std::string &aID );
 
         /** Check if key is tombstoned with tomb ID and found in datastore
         * @param aKey key string
         * @param aID tomb key ID
         * @return true if key with ID is tombstoned, false otherwise or outcome::failure on error
         */
-        outcome::result<bool> InTombsKeyID( const std::string &aKey, const std::string &aID );
+        outcome::result<bool> InTombsKeyID( const std::string &aKey, const std::string &aID ) const;
 
         /** The PutHook function is triggered whenever an element
         * is successfully added to the datastore (either by a local
@@ -299,9 +299,7 @@ namespace sgns::crdt
         */
         outcome::result<void> DataStoreSync( const std::vector<HierarchicalKey> &aKeyList );
 
-        void PrintDataStore();
-
-        static void PrintElements( const std::vector<Element> &aElems );
+        void PrintDataStore() const;
 
     private:
         CrdtSet() = default;

@@ -75,7 +75,7 @@ protected:
         std::strncpy( DEV_CONFIG.BaseWritePath, baseWrite.c_str(), sizeof( DEV_CONFIG.BaseWritePath ) );
         DEV_CONFIG.BaseWritePath[sizeof( DEV_CONFIG.BaseWritePath ) - 1] = '\0';
 
-        auto instance = std::make_shared<sgns::GeniusNode>( DEV_CONFIG, key_hex, false, false );
+        auto instance = sgns::GeniusNode::New( DEV_CONFIG, key_hex, false, false );
         std::this_thread::sleep_for( std::chrono::milliseconds( STARTUP_DELAY_MS ) );
         return instance;
     }
