@@ -113,7 +113,7 @@ namespace sgns
         void FillHash();
         bool CheckHash();
 
-        std::vector<uint8_t> MakeSignature( std::shared_ptr<GeniusAccount> account );
+        std::vector<uint8_t> MakeSignature( GeniusAccount& account );
         bool                 CheckSignature();
         bool                 CheckDAGSignatureLegacy();
 

@@ -329,14 +329,12 @@ namespace sgns
     {
         logger_->debug( "Setting local confirmed nonce to {} from {}", nonce, proposed_nonce_ );
         SetPeerConfirmedNonce( nonce, eth_keypair->GetEntirePubValue() );
-        {
-            std::lock_guard lock( nonce_mutex_ );
-            nonce++;
-            logger_->debug( "Setting the max value between {} and {} as a proposed (next) nonce",
-                            proposed_nonce_,
-                            nonce );
-            proposed_nonce_ = std::max( nonce, proposed_nonce_ );
-        }
+        std::lock_guard lock( nonce_mutex_ );
+        nonce++;
+        logger_->debug( "Setting the max value between {} and {} as a proposed (next) nonce",
+                        proposed_nonce_,
+                        nonce );
+        proposed_nonce_ = std::max( nonce, proposed_nonce_ );
     }
 
     void GeniusAccount::SetPeerConfirmedNonce( uint64_t nonce, std::string address )

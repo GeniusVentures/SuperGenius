@@ -98,6 +98,8 @@ namespace sgns
         std::mutex       nonce_responses_mutex_; ///< Mutex of the nonce_responses_
         InterfaceMethods methods_;               ///< Interface methods
 
+        std::random_device rd_; ///< Random device for request IDs
+
         /**
          * @brief       Private constructor of the Account Messenger 
          * @param[in]   address Own address
@@ -130,7 +132,7 @@ namespace sgns
          * @return      Success in case it sends, error otherwise
          */
         outcome::result<void> SendAccountMessage( const accountComm::AccountMessage &msg,
-                                                  std::set<std::string>              topics );
+                                                  const std::set<std::string>       &topics );
 
         /**
          * @brief       Handles the Nonce request package

@@ -59,14 +59,14 @@ namespace sgns
         return hash == calculated_hash.toReadableString();
     }
 
-    std::vector<uint8_t> IGeniusTransactions::MakeSignature( std::shared_ptr<GeniusAccount> account )
+    std::vector<uint8_t> IGeniusTransactions::MakeSignature( GeniusAccount& account )
     {
         dag_st.clear_signature();
         auto serialized = SerializeByteVector();
 
         std::vector<std::uint8_t> signed_vector( 64 );
 
-        signed_vector = account->Sign( serialized );
+        signed_vector = account.Sign( serialized );
 
         dag_st.set_signature( signed_vector.data(), signed_vector.size() );
         return signed_vector;

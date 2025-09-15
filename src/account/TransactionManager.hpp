@@ -198,7 +198,7 @@ namespace sgns
         void InitNonce( uint64_t timeout_ms );
         void SyncNonce();
 
-        outcome::result<bool> CheckTransactionValidity( std::set<uint64_t> nonces_to_check );
+        outcome::result<bool> CheckTransactionValidity( const std::set<uint64_t> &nonces_to_check );
 
         outcome::result<void> DeleteTransaction( std::string tx_key, const std::set<std::string> &topics );
         std::shared_ptr<IGeniusTransactions> GetOutTransaction( const std::string &tx_hash ) const;
@@ -278,14 +278,14 @@ namespace sgns
         std::optional<std::vector<crdt::pb::Element>> FilterTransaction( const crdt::pb::Element &element );
         std::optional<std::vector<crdt::pb::Element>> FilterProof( const crdt::pb::Element &element );
 
-        bool ShouldReplaceTransaction( const std::shared_ptr<IGeniusTransactions> &existing_tx,
-                                       const std::shared_ptr<IGeniusTransactions> &new_tx ) const;
+        bool ShouldReplaceTransaction( const IGeniusTransactions &existing_tx,
+                                       const IGeniusTransactions &new_tx ) const;
 
         uint64_t GetCurrentTimestamp() const;
         int64_t  GetElapsedTime( uint64_t timestamp, uint64_t current_timestamp ) const;
         int64_t  GetElapsedTime( uint64_t timestamp ) const;
 
-        bool IsTransactionImmutable( const std::shared_ptr<IGeniusTransactions> &tx ) const;
+        bool IsTransactionImmutable( const IGeniusTransactions &tx ) const;
 
         outcome::result<void> RemoveTransactionFromProcessedMaps( const std::string &transaction_key,
                                                                   bool               delete_from_crdt = false );

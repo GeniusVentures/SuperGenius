@@ -351,7 +351,7 @@ namespace sgns
         auto transfer_transaction = std::make_shared<TransferTransaction>(
             TransferTransaction::New( params.outputs_, params.inputs_, FillDAGStruct() ) );
 
-        transfer_transaction->MakeSignature( account_m );
+        transfer_transaction->MakeSignature( *account_m );
         std::optional<std::vector<uint8_t>> maybe_proof;
 #ifdef _PROOF_ENABLED
         TransferProof prover( static_cast<uint64_t>( account_m->GetBalance<uint64_t>() ),
@@ -382,7 +382,7 @@ namespace sgns
                                   std::move( tokenid ),
                                   FillDAGStruct( std::move( transaction_hash ) ) ) );
 
-        mint_transaction->MakeSignature( account_m );
+        mint_transaction->MakeSignature( *account_m );
         std::optional<std::vector<uint8_t>> maybe_proof;
 #ifdef _PROOF_ENABLED
         TransferProof prover( 1000000000000,
@@ -422,7 +422,7 @@ namespace sgns
         auto escrow_transaction = std::make_shared<EscrowTransaction>(
             EscrowTransaction::New( params, amount, dev_addr, peers_cut, FillDAGStruct() ) );
 
-        escrow_transaction->MakeSignature( account_m );
+        escrow_transaction->MakeSignature( *account_m );
 
         // Get the transaction ID for tracking
         auto txId = escrow_transaction->dag_st.data_hash();
@@ -540,8 +540,8 @@ namespace sgns
 
         TransactionBatch tx_batch;
 
-        transfer_transaction->MakeSignature( account_m );
-        escrow_release_tx->MakeSignature( account_m );
+        transfer_transaction->MakeSignature( *account_m );
+        escrow_release_tx->MakeSignature( *account_m );
 
         tx_batch.push_back( std::make_pair( transfer_transaction, transfer_proof ) );
         tx_batch.push_back( std::make_pair( escrow_release_tx, escrow_release_proof ) );
@@ -1315,9 +1315,9 @@ namespace sgns
 
         std::set<std::string> topics{ full_node_topic_m, account_m->GetAddress() };
 
-        for ( std::uint32_t i = 0; i < dest_infos.size(); ++i )
+        for ( const auto &dest_info : dest_infos )
         {
-            if ( dest_infos[i].dest_address == account_m->GetAddress() )
+            if ( dest_info.dest_address == account_m->GetAddress() )
             {
                 auto hash = ( base::Hash256::fromReadableString( transfer_tx->dag_st.data_hash() ) ).value();
                 account_m->DeleteUTXO( hash );
@@ -1326,9 +1326,9 @@ namespace sgns
             m_logger->debug( "[{} - full: {}] Notify {} of deletion of {} to it",
                              account_m->GetAddress().substr( 0, 8 ),
                              full_node_m,
-                             dest_infos[i].dest_address,
-                             dest_infos[i].encrypted_amount );
-            topics.emplace( dest_infos[i].dest_address );
+                             dest_info.dest_address,
+                             dest_info.encrypted_amount );
+            topics.emplace( dest_info.dest_address );
         }
 
         m_logger->debug( "[{} - full: {}] Adding origin address to Broadcast: {}",
@@ -1340,9 +1340,9 @@ namespace sgns
         m_logger->debug( "[{} - full: {}] Re-parsing inputs to be added as UTXOs",
                          account_m->GetAddress().substr( 0, 8 ),
                          full_node_m );
-        for ( auto &input : transfer_tx->GetInputInfos() )
+        for ( const auto &input : transfer_tx->GetInputInfos() )
         {
-            m_logger->debug( "[{} - full: {}] Fetchin transaction {} ",
+            m_logger->debug( "[{} - full: {}] Fetching transaction {} ",
                              account_m->GetAddress().substr( 0, 8 ),
                              full_node_m,
                              input.txid_hash_.toReadableString() );
@@ -1737,7 +1737,7 @@ namespace sgns
                                  i );
             }
 
-            CheckTransactionValidity( nonces_to_check );
+            (void)CheckTransactionValidity( nonces_to_check );
         }
         else if ( proposed_nonce < expected_next_nonce )
         {
@@ -1749,7 +1749,7 @@ namespace sgns
         }
     }
 
-    outcome::result<bool> TransactionManager::CheckTransactionValidity( std::set<uint64_t> nonces_to_check )
+    outcome::result<bool> TransactionManager::CheckTransactionValidity( const std::set<uint64_t> &nonces_to_check )
     {
         bool                     changed = false;
         std::vector<std::string> invalid_transaction_keys;
@@ -1776,7 +1776,7 @@ namespace sgns
 
                     if ( it.second.tx->dag_st.nonce() == nonce )
                     {
-                        bool invalid_tx = false;
+                        bool valid_tx = true;
                         if ( !it.second.tx->CheckSignature() )
                         {
                             if ( !it.second.tx->CheckDAGSignatureLegacy() )
@@ -1786,7 +1786,7 @@ namespace sgns
                                     account_m->GetAddress().substr( 0, 8 ),
                                     full_node_m,
                                     nonce );
-                                invalid_tx = true;
+                                valid_tx = false;
                             }
                             else
                             {
@@ -1803,7 +1803,7 @@ namespace sgns
                                              full_node_m,
                                              nonce );
                         }
-                        if ( invalid_tx )
+                        if ( !valid_tx )
                         {
                             // Collect the key for later removal
                             invalid_transaction_keys.push_back( it.first );
@@ -2035,13 +2035,10 @@ namespace sgns
                     should_delete = true;
                     break;
                 }
-                else
-                {
-                    m_logger->debug( "[{} - full: {}] Legacy transaction validated: {}",
-                                     account_m->GetAddress().substr( 0, 8 ),
-                                     full_node_m,
-                                     element.key() );
-                }
+                m_logger->debug( "[{} - full: {}] Legacy transaction validated: {}",
+                                 account_m->GetAddress().substr( 0, 8 ),
+                                 full_node_m,
+                                 element.key() );
             }
 
             auto maybe_existing_value = globaldb_m->Get( element.key() );
@@ -2074,7 +2071,7 @@ namespace sgns
                              full_node_m,
                              new_tx->dag_st.data_hash() );
 
-            should_delete = !ShouldReplaceTransaction( existing_tx, new_tx );
+            should_delete = !ShouldReplaceTransaction( *existing_tx, *new_tx );
 
         } while ( 0 );
 
@@ -2134,7 +2131,7 @@ namespace sgns
             valid_proof = true;
         } while ( 0 );
 
-        if ( valid_proof == false )
+        if ( !valid_proof )
         {
             std::vector<crdt::pb::Element> tombstones;
             tombstones.push_back( element );
@@ -2151,8 +2148,8 @@ namespace sgns
         return maybe_tombstones;
     }
 
-    bool TransactionManager::ShouldReplaceTransaction( const std::shared_ptr<IGeniusTransactions> &existing_tx,
-                                                       const std::shared_ptr<IGeniusTransactions> &new_tx ) const
+    bool TransactionManager::ShouldReplaceTransaction( const IGeniusTransactions &existing_tx,
+                                                       const IGeniusTransactions &new_tx ) const
     {
         // First check if the existing transaction is immutable
         if ( IsTransactionImmutable( existing_tx ) )
@@ -2164,8 +2161,8 @@ namespace sgns
         }
 
         // Get timestamps and elapsed times
-        auto existing_timestamp = existing_tx->GetTimestamp();
-        auto new_timestamp      = new_tx->GetTimestamp();
+        auto existing_timestamp = existing_tx.GetTimestamp();
+        auto new_timestamp      = new_tx.GetTimestamp();
         auto time_diff          = GetElapsedTime( new_timestamp, existing_timestamp );
 
         // Check if both transactions are within the tolerance window
@@ -2237,12 +2234,12 @@ namespace sgns
 
     int64_t TransactionManager::GetElapsedTime( uint64_t timestamp ) const
     {
-        return GetElapsedTime( std::move( timestamp ), GetCurrentTimestamp() );
+        return GetElapsedTime( timestamp, GetCurrentTimestamp() );
     }
 
-    bool TransactionManager::IsTransactionImmutable( const std::shared_ptr<IGeniusTransactions> &tx ) const
+    bool TransactionManager::IsTransactionImmutable( const IGeniusTransactions &tx ) const
     {
-        auto tx_timestamp = tx->GetTimestamp();
+        auto tx_timestamp = tx.GetTimestamp();
         auto elapsed      = GetElapsedTime( tx_timestamp );
 
         // If elapsed is negative, the transaction is from the future - not immutable
@@ -2370,7 +2367,6 @@ namespace sgns
     outcome::result<void> TransactionManager::AddTransactionToProcessedMaps(
         crdt::CRDTCallbackManager::NewDataPair new_data )
     {
-        //
         auto [key, value] = new_data;
 
         m_logger->debug( "[{} - full: {}] Trying to deserialize {}",
@@ -2428,7 +2424,16 @@ namespace sgns
                          full_node_m,
                          key );
 
-        RemoveTransactionFromProcessedMaps( key );
+        auto remove_res = RemoveTransactionFromProcessedMaps( key );
+
+        if (remove_res.has_error())
+        {
+            m_logger->error( "[{} - full: {}] Error removing transaction {}: {}",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             key,
+                             remove_res.error().message() );
+        }
     }
 
     void TransactionManager::ProcessNewData( crdt::CRDTCallbackManager::NewDataPair new_data )
@@ -2443,7 +2448,16 @@ namespace sgns
                          full_node_m,
                          new_data.first );
 
-        AddTransactionToProcessedMaps( new_data );
+        auto add_res = AddTransactionToProcessedMaps( new_data );
+
+        if ( add_res.has_error() )
+        {
+            m_logger->error( "[{} - full: {}] Error adding transaction {}: {}",
+                             account_m->GetAddress().substr( 0, 8 ),
+                             full_node_m,
+                             new_data.first,
+                             add_res.error().message() );
+        }
     }
 
     void TransactionManager::NewElementCallback( crdt::CRDTCallbackManager::NewDataPair new_data )

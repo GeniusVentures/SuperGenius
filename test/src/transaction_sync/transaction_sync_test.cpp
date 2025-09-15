@@ -114,8 +114,8 @@ namespace sgns
 
             params.SignParameters( account );
 
-            auto                     timestamp = std::chrono::system_clock::now();
-            
+            auto timestamp = std::chrono::system_clock::now();
+
             SGTransaction::DAGStruct dag;
             dag.set_previous_hash( "" );
             dag.set_nonce( account->GetProposedNonce() );
@@ -439,11 +439,6 @@ namespace sgns
         sgns::GeniusNode &node          = *node_proc1;
         SendPair( *node_proc1, tx, proof_vect );
 
-        //auto invalid_tx_result_sent = node_proc1->WaitForTransactionOutgoing(
-        //    invalid_tx_id,
-        //    std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
-
-        //std::cout << "Invalid tx went through " << std::endl;
         test::assertWaitForCondition(
             [&]()
             {
@@ -453,7 +448,6 @@ namespace sgns
             std::chrono::milliseconds( 20000 ),
             "Invalid transaction didn't get sent" );
 
-        //EXPECT_EQ( invalid_tx_result_sent, TransactionManager::TransactionStatus::CONFIRMED ); //confirms it's sent
 
         EXPECT_EQ( node_proc1->GetBalance(), balance_1_before_invalid - 10000000000 )
             << "Correct Balance of outgoing transactions";
@@ -495,12 +489,7 @@ namespace sgns
         std::cout << "wait until its ready" << std::endl;
 
         EXPECT_EQ( node_proc1->GetBalance(), balance_1_before_invalid ) << "Correct Balance of outgoing transactions";
-        //auto transfer_invalid_received = node_proc2->WaitForTransactionIncoming( invalid_tx_id,
-        //                                                                         std::chrono::milliseconds( 5000 ) );
 
-        //EXPECT_EQ( transfer_invalid_received, TransactionManager::TransactionStatus::INVALID ); //it wasn't received
-
-        // Transfer funds with timeout
         transfer_result = node_proc1->TransferFunds( 10000000000,
                                                      node_proc2->GetAddress(),
                                                      sgns::TokenID::FromBytes( { 0x00 } ),

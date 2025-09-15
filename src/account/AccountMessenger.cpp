@@ -184,21 +184,21 @@ namespace sgns
     outcome::result<uint64_t> AccountMessenger::GetLatestNonce( uint64_t timeout_ms, uint64_t silent_time_ms )
     {
         // Generate a random value
-        std::random_device rd;
-        std::mt19937_64 gen(rd());
-        uint64_t random_value = gen();
+
+        std::mt19937_64 gen( rd_() );
+        uint64_t        random_value = gen();
 
         // Concatenate address and random value
-        std::string to_hash = address_ + std::to_string(random_value);
+        std::string to_hash = address_ + std::to_string( random_value );
 
         // Use HasherImpl to hash the concatenated string
         sgns::crypto::HasherImpl hasher;
-        auto hash = hasher.sha2_256(gsl::span<const uint8_t>(
-            reinterpret_cast<const uint8_t*>(to_hash.data()), to_hash.size()));
+        auto                     hash = hasher.sha2_256(
+            gsl::span<const uint8_t>( reinterpret_cast<const uint8_t *>( to_hash.data() ), to_hash.size() ) );
 
         // Use the first 8 bytes of the hash as req_id
         uint64_t req_id = 0;
-        std::memcpy(&req_id, hash.data(), sizeof(req_id));
+        std::memcpy( &req_id, hash.data(), sizeof( req_id ) );
 
         logger_->debug( "[{}] Requesting nonce with timeout {} and req_id {} ",
                         address_.substr( 0, 8 ),
@@ -275,7 +275,7 @@ namespace sgns
     }
 
     outcome::result<void> AccountMessenger::SendAccountMessage( const accountComm::AccountMessage &msg,
-                                                                std::set<std::string>              topics )
+                                                                const std::set<std::string>       &topics )
     {
         size_t               size = msg.ByteSizeLong();
         std::vector<uint8_t> serialized_proto( size );
@@ -380,7 +380,6 @@ namespace sgns
         if ( send_ret.has_error() )
         {
             logger_->error( "Failed to send NonceResponse" );
-            return;
         }
     }
 
