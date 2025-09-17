@@ -58,6 +58,7 @@ namespace sgns::crdt
             FETCHING_GRAPH,
             NODE_CREATION,
             GET_NODE,
+            INVALID_JOB,
         };
         /**
          * @brief       Factory method to create a shared_ptr to a CrdtDatastore
@@ -219,8 +220,9 @@ namespace sgns::crdt
 
         struct RootCIDJob
         {
-            std::shared_ptr<IPLDNode> node_;      /*> pointer to node */
-            std::shared_ptr<IPLDNode> root_node_; /*> pointer to node */
+            std::shared_ptr<IPLDNode> node_;            ///< Current node to process
+            std::shared_ptr<IPLDNode> root_node_;       ///< Root node of the Job
+            bool                      created_by_self_; ///< True if the root node was created by self
         };
 
         /** DAG worker structure to keep track of worker threads
@@ -237,10 +239,16 @@ namespace sgns::crdt
         void HandleNextIteration();
 
         /** one iteration of Worker thread to send jobs
-    * @param aCrdtDatastore pointer to CRDT datastore
-    * @param dagWorker pointer to DAG worker structure
-    */
+        * @param aCrdtDatastore pointer to CRDT datastore
+        * @param dagWorker pointer to DAG worker structure
+        */
         void SendJobWorkerIteration( std::shared_ptr<DagWorker> dagWorker );
+
+        /**
+         * @brief       Single iteration of a CID processing 
+         * @return      Success if job processed, false otherwise
+         */
+        outcome::result<void> ProcessJobIteration( const RootCIDJob &job_to_process );
 
         /** SendNewJobs calls getDeltas with the given children and sends each response to the workers.
     * @param aRootCID root CID
@@ -290,6 +298,13 @@ namespace sgns::crdt
     */
         outcome::result<void> HandleRootCIDBlock( const CID &aCid );
 
+        outcome::result<RootCIDJob> CreateRootJob( const CID &aRootCID );
+        outcome::result<void>       FetchNodes( const RootCIDJob &aRootJob, const std::set<CID> &aLinks );
+
+        outcome::result<std::set<CID>> GetLinksToFetch( const RootCIDJob &job );
+        outcome::result<Delta>         GetDeltaFromNode( const IPLDNode &aNode, bool created_by_self );
+        outcome::result<void>          MergeNodeDelta( const CID &node_cid, const Delta &aDelta );
+
         /** ProcessNode processes new block. This makes that every operation applied
     * to this store take effect (delta is merged) before returning.
     * @param aRoot Root CID
@@ -338,6 +353,8 @@ namespace sgns::crdt
          */
         void FilterTombstonesOnDelta( std::shared_ptr<Delta> &delta );
 
+        void UpdateCRDTHeads( const CID &rootCID, uint64_t rootPriority );
+
     private:
         CrdtDatastore() = default;
 
@@ -383,7 +400,7 @@ namespace sgns::crdt
         std::condition_variable dagWorkerCv_;
         std::queue<DagJob>      dagWorkerJobList;
 
-        std::queue<std::shared_ptr<RootCIDJob>>              rootCIDJobList_;
+        std::queue<RootCIDJob>                               rootCIDJobList_;
         std::map<CID, std::set<std::pair<CID, std::string>>> pendingHeadsByRootCID_;
         std::mutex                                           pendingHeadsMutex_;
 

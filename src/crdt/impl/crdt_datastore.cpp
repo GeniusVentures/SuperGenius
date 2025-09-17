@@ -25,6 +25,8 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::crdt, CrdtDatastore::Error, e )
             return "Can't create a node";
         case CrdtDatastoreErr::GET_NODE:
             return "Can't fetch the node";
+        case CrdtDatastoreErr::INVALID_JOB:
+            return "The job is invalid";
     }
     return "Unknown error";
 }
@@ -125,7 +127,7 @@ namespace sgns::crdt
                     {
                         if ( auto self = weakptr.lock() )
                         {
-                            std::unique_lock<std::mutex> cvlock( self->dagWorkerCvMutex_ );
+                            std::unique_lock cvlock( self->dagWorkerCvMutex_ );
                             self->dagWorkerCv_.wait_for(
                                 cvlock,
                                 threadSleepTimeInMilliseconds_,
@@ -134,7 +136,51 @@ namespace sgns::crdt
                             cvlock.unlock();
                             if ( dagWorker->dagWorkerThreadRunning_ )
                             {
-                                self->SendJobWorkerIteration( dagWorker );
+                                // Pop the job here
+                                RootCIDJob job_to_process;
+                                {
+                                    std::unique_lock lock( self->dagWorkerMutex_ );
+                                    if ( self->rootCIDJobList_.empty() )
+
+                                    {
+                                        self->logger_->error( "No job WAIT AGAIN");
+                                        continue; // No job, wait again
+                                    }
+                                    job_to_process = self->rootCIDJobList_.front();
+                                    self->rootCIDJobList_.pop();
+                                }
+
+                                // Process the job
+                                auto process_res = self->ProcessJobIteration( job_to_process );
+                                if ( process_res.has_failure() )
+                                {
+                                    self->logger_->error( "CID PROCESSING ERROR: Cleaning up jobs for root CID {}",
+                                                          job_to_process.root_node_->getCID().toString().value() );
+
+                                    {
+                                        std::unique_lock       lock( self->dagWorkerMutex_ );
+                                        std::queue<RootCIDJob> temp_queue;
+                                        while ( !self->rootCIDJobList_.empty() )
+                                        {
+                                            auto job = self->rootCIDJobList_.front();
+                                            self->rootCIDJobList_.pop();
+                                            if ( job.root_node_->getCID() != job_to_process.root_node_->getCID() )
+                                            {
+                                                temp_queue.push( job );
+                                            }
+                                        }
+                                        self->rootCIDJobList_ = std::move( temp_queue ); // Restore the filtered queue
+                                    }
+
+                                    // Cleanup: Delete CID block for the root node
+                                    (void)self->dagSyncer_->DeleteCIDBlock( job_to_process.root_node_->getCID() );
+
+                                    // Cleanup: Erase from pendingHeadsByRootCID_
+                                    {
+                                        std::lock_guard<std::mutex> lock( self->pendingHeadsMutex_ );
+                                        self->pendingHeadsByRootCID_.erase( job_to_process.root_node_->getCID() );
+                                    }
+                                }
                             }
                             else
                             {
@@ -342,40 +388,60 @@ namespace sgns::crdt
         }
     }
 
-    void CrdtDatastore::ProcessJobIteration()
+    outcome::result<void> CrdtDatastore::ProcessJobIteration( const RootCIDJob &job_to_process )
     {
-        std::shared_ptr<RootCIDJob> job_to_process;
+        logger_->debug( "{}: Starting to process Root CID", __func__ );
 
+        OUTCOME_TRY( auto &&root_cid_string, job_to_process.root_node_->getCID().toString() );
+        logger_->debug( "{}: Processing Root CID job {}", __func__, root_cid_string );
+
+        auto node_to_process = job_to_process.node_;
+        bool is_root         = false;
+        if ( node_to_process == nullptr )
         {
-            std::unique_lock lock( dagWorkerMutex_ );
-            if ( rootCIDJobList_.empty() )
+            node_to_process = job_to_process.root_node_;
+            is_root         = true;
+        }
+
+        OUTCOME_TRY( auto &&cid_string, node_to_process->getCID().toString() );
+
+        OUTCOME_TRY( auto &&delta, GetDeltaFromNode( *node_to_process, job_to_process.created_by_self_ ) );
+
+        logger_->debug( "{}: Merging Deltas from {}", __func__, cid_string );
+
+        OUTCOME_TRY( MergeNodeDelta( node_to_process->getCID(), delta ) );
+
+        logger_->debug( "{}: Recording block on DAG Syncher {}", __func__, cid_string );
+        OUTCOME_TRY( dagSyncer_->addNode( node_to_process ) );
+
+        //OUTCOME_TRY( dagSyncer_->DeleteCIDBlock( job_to_process.node_->getCID() ));
+
+        (void)dagSyncer_->DeleteCIDBlock( node_to_process->getCID() );
+
+        OUTCOME_TRY( auto &&links, GetLinksToFetch( job_to_process ) );
+
+        if ( links.empty() && !is_root )
+        {
+            //create one last job to finalize the root node
+            logger_->debug( "{}: Finishing root job: {}, Creating the root CID job.", __func__, root_cid_string );
+            RootCIDJob root_final_job{ nullptr, job_to_process.root_node_, job_to_process.created_by_self_ };
             {
-                return;
+                std::unique_lock lock( dagWorkerMutex_ );
+                rootCIDJobList_.push( root_final_job );
             }
-            job_to_process = rootCIDJobList_.front();
-            rootCIDJobList_.pop();
         }
-
-        if ( job_to_process == nullptr )
+        else if ( !links.empty() )
         {
-            return;
+            logger_->debug( "{}: Fetching {} links for Root job: {}", __func__, links.size(), root_cid_string );
+            OUTCOME_TRY( FetchNodes( job_to_process, links ) );
+            logger_->debug( "{}: Nodes fetched for Root job: {}", __func__, root_cid_string );
         }
-
-        auto linksResult = GetLinksToFetch( *job_to_process );
-        if ( linksResult.has_failure() )
+        else if ( is_root )
         {
-            logger_->error( "ProcessJobIteration: Failed to get links to fetch (error code {})",
-                            linksResult.error().message() );
-            return;
+            logger_->debug( "{}: Root finalized: {}, Updating CRDT Heads", __func__, root_cid_string );
+            UpdateCRDTHeads( job_to_process.root_node_->getCID(), delta.priority() );
         }
-
-        auto fetchResult = FetchNodes( *job_to_process, linksResult.value() );
-        if ( fetchResult.has_failure() )
-        {
-            logger_->error( "ProcessJobIteration: Failed to fetch nodes (error code {})",
-                            fetchResult.error().message() );
-            return;
-        }
+        return outcome::success();
     }
 
     void CrdtDatastore::SendJobWorkerIteration( std::shared_ptr<DagWorker> dagWorker )
@@ -604,35 +670,37 @@ namespace sgns::crdt
 
     outcome::result<void> CrdtDatastore::HandleRootCIDBlock( const CID &aCid )
     {
-        return SendNewJobs( aCid, 0, { aCid } );
-
         OUTCOME_TRY( auto &&root_job, CreateRootJob( aCid ) );
 
         OUTCOME_TRY( auto &&links, GetLinksToFetch( root_job ) );
 
         OUTCOME_TRY( FetchNodes( root_job, links ) );
+        return outcome::success();
     }
 
-    outcome::result<CrdtDataStore::RootCIDJob> CrdtDataStore::CreateRootJob( const CID &aRootCID )
+    outcome::result<CrdtDatastore::RootCIDJob> CrdtDatastore::CreateRootJob( const CID &aRootCID )
     {
         logger_->debug( "{}: Creating the Root Job for CID {}", __func__, aRootCID.toString().value() );
-        std::unique_lock lock( dagSyncherMutex_ );
         OUTCOME_TRY( auto &&root_node, dagSyncer_->getNode( aRootCID ) );
-        lock.unlock();
 
         logger_->debug( "{}: Creating the Root Job for CID {}", __func__, aRootCID.toString().value() );
 
-        RootCIDJob rootJob{ root_node, root_node };
+        RootCIDJob rootJob{ root_node, root_node, false };
 
         return rootJob;
     }
 
-    outcome::result<void> CrdtDataStore::FetchNodes( const RootCIDJob &aRootJob, const std::set<CID> &aLinks )
+    outcome::result<void> CrdtDatastore::FetchNodes( const RootCIDJob &aRootJob, const std::set<CID> &aLinks )
     {
         if ( aLinks.empty() )
         {
-            logger_->error( "{}: No links to fetch", __func__ );
-            return CrdtDatastore::Error::INVALID_PARAM;
+            logger_->debug( "{}: No links to fetch, sending root CID", __func__ );
+            {
+                std::unique_lock lock( dagWorkerMutex_ );
+                rootCIDJobList_.push( aRootJob );
+            }
+            dagWorkerCv_.notify_one();
+            return outcome::success();
         }
 
         for ( const auto &cid : aLinks )
@@ -640,22 +708,23 @@ namespace sgns::crdt
             logger_->debug( "{}: Trying to fetch node {} from Root Job {} ",
                             __func__,
                             cid.toString().value(),
-                            aRootJob.root_node_.toString().value() );
+                            aRootJob.root_node_->getCID().toString().value() );
 
             OUTCOME_TRY( auto &&node, dagSyncer_->getNode( cid ) );
 
             RootCIDJob newRootJob;
 
-            newRootJob.root_node_ = aRootJob.root_node_;
-            newRootJob.node_      = node;
+            newRootJob.root_node_       = aRootJob.root_node_;
+            newRootJob.node_            = node;
+            newRootJob.created_by_self_ = false;
 
             logger_->debug( "{}: Got the node {} sending to workers. Root Job {} ",
                             __func__,
                             cid.toString().value(),
-                            aRootJob.root_node_.toString().value() );
+                            aRootJob.root_node_->getCID().toString().value() );
             {
                 std::unique_lock lock( dagWorkerMutex_ );
-                rootCIDJobList_.push( std::make_shared(newRootJob) );
+                rootCIDJobList_.push( newRootJob );
             }
             dagWorkerCv_.notify_one();
         }
@@ -686,9 +755,7 @@ namespace sgns::crdt
 
         if ( rootPriority == 0 )
         {
-            std::unique_lock lock( dagSyncherMutex_ );
-            auto             getNodeResult = dagSyncer_->getNode( *( aChildren.begin() ) );
-            lock.unlock();
+            auto getNodeResult = dagSyncer_->getNode( *( aChildren.begin() ) );
             if ( getNodeResult.has_failure() )
             {
                 return Error::FETCH_ROOT_NODE;
@@ -722,9 +789,7 @@ namespace sgns::crdt
                             reinterpret_cast<uint64_t>( this ) );
 
             // Single attempt to fetch the graph - getNode internally already has retry logic
-            std::unique_lock lock( dagSyncherMutex_ );
-            auto             nodeResult = dagSyncer_->getNode( cid );
-            lock.unlock();
+            auto nodeResult = dagSyncer_->getNode( cid );
             if ( nodeResult.has_error() )
             {
                 logger_->error( "SendNewJobs: Can't fetch node: {}", nodeResult.error().message() );
@@ -920,41 +985,40 @@ namespace sgns::crdt
         return node;
     }
 
-    outcome::result<std::set<CID>> CrdtDatastore::GetLinksToFetch( const std::shared_ptr<RootCIDJob> &job )
+    outcome::result<std::set<CID>> CrdtDatastore::GetLinksToFetch( const RootCIDJob &job )
     {
-        if ( job == nullptr )
-        {
-            return outcome::failure( boost::system::error_code{} );
-        }
         std::set<CID> cids_to_fetch;
-        if ( job->node_ == nullptr )
+        auto          node_to_process = job.node_;
+        bool          processing_root = false;
+        if ( node_to_process == nullptr )
         {
-            return cids_to_fetch;
+            node_to_process = job.root_node_;
+            processing_root = true;
         }
 
-        std::set<std::string> topics_to_update_cid = job->node_->getDestinations();
+        std::set<std::string> topics_to_update_cid = node_to_process->getDestinations();
 
-        if ( job->node_->getLinks().empty() )
+        if ( node_to_process->getLinks().empty() )
         {
             for ( auto &topic : topics_to_update_cid )
             {
                 logger_->debug( "{}: Recording head to add: {}, {}",
                                 __func__,
-                                job->root_node_->getCID().toString().value(),
+                                job.root_node_->getCID().toString().value(),
                                 topic );
                 std::lock_guard<std::mutex> lock( pendingHeadsMutex_ );
-                pendingHeadsByRootCID_[job->root_node_->getCID()].emplace( job->root_node_->getCID(), topic );
+                pendingHeadsByRootCID_[job.root_node_->getCID()].emplace( job.root_node_->getCID(), topic );
             }
         }
         else
         {
-            logger_->debug( "{}: Checking links for CID {}", __func__, job->node_->getCID().toString().value() );
+            logger_->debug( "{}: Checking links for CID {}", __func__, node_to_process->getCID().toString().value() );
             for ( auto &topic : topics_to_update_cid )
             {
                 logger_->debug( "{}: Verifying topic {}", __func__, topic );
 
                 auto [links_to_fetch,
-                      known_cids] = dagSyncer_->TraverseCIDsLinks( aNode, topic, {}, skip_if_visited, 50 );
+                      known_cids] = dagSyncer_->TraverseCIDsLinks( node_to_process, topic, {}, processing_root, 50 );
 
                 for ( const auto &[cid, _dontcare] : known_cids )
                 {
@@ -964,7 +1028,7 @@ namespace sgns::crdt
                         logger_->debug( "{}: Recording replacement of {} with {} on topic {} ({}) ",
                                         __func__,
                                         cid.toString().value(),
-                                        aRoot.toString().value(),
+                                        job.root_node_->getCID().toString().value(),
                                         topic,
                                         _dontcare );
                         if ( topic != _dontcare )
@@ -972,14 +1036,20 @@ namespace sgns::crdt
                             logger_->error( "{}: Topic {} different from known {} ", __func__, topic, _dontcare );
                         }
                         std::lock_guard<std::mutex> lock( pendingHeadsMutex_ );
-                        pendingHeadsByRootCID_[job->root_node_->getCID()].emplace( cid, topic );
+                        pendingHeadsByRootCID_[job.root_node_->getCID()].emplace( cid, topic );
+                        logger_->debug( "{}: Recorded replacement of {} with {} on topic {} ({}) ",
+                                        __func__,
+                                        cid.toString().value(),
+                                        job.root_node_->getCID().toString().value(),
+                                        topic,
+                                        _dontcare );
                     }
                 }
 
                 if ( known_cids.empty() )
                 {
                     std::lock_guard<std::mutex> lock( pendingHeadsMutex_ );
-                    pendingHeadsByRootCID_[job->root_node_->getCID()].emplace( job->root_node_->getCID(), topic );
+                    pendingHeadsByRootCID_[job.root_node_->getCID()].emplace( job.root_node_->getCID(), topic );
                 }
 
                 for ( const auto &[cid, link_name] : links_to_fetch )
@@ -991,25 +1061,39 @@ namespace sgns::crdt
                 }
             }
         }
-
         return cids_to_fetch;
     }
 
-    outcome::result<Delta> CrdtDatastore::GetDeltaFromNode( const std::shared_ptr<IPLDNode> &aNode )
+    outcome::result<pb::Delta> CrdtDatastore::GetDeltaFromNode( const IPLDNode &aNode, bool created_by_self )
     {
-        if ( aNode == nullptr )
-        {
-            return outcome::failure( boost::system::error_code{} );
-        }
-
-        auto nodeBuffer = aNode->content();
+        auto nodeBuffer = aNode.content();
 
         auto delta = Delta();
         if ( !delta.ParseFromArray( nodeBuffer.data(), nodeBuffer.size() ) )
         {
+            logger_->debug( "{}: Can't parse delta from node buffer {}", __func__, aNode.getCID().toString().value() );
             return CrdtDatastore::Error::NODE_DESERIALIZATION;
         }
+
+        if ( !created_by_self )
+        {
+            crdt_filter_.FilterElementsOnDelta( delta );
+            //crdt_filter_.FilterTombstonesOnDelta( aDelta );
+            logger_->debug( "{}: Filtering node {} ", __func__, aNode.getCID().toString().value() );
+        }
+        else
+        {
+            logger_->debug( "{}: Posting node {} without filtering", __func__, aNode.getCID().toString().value() );
+        }
         return delta;
+    }
+
+    outcome::result<void> CrdtDatastore::MergeNodeDelta( const CID &node_cid, const Delta &aDelta )
+    {
+        OUTCOME_TRY( auto &&cid_string, node_cid.toString() );
+        logger_->debug( "{}: Merging node {} On CRDT", __func__, cid_string );
+        OUTCOME_TRY( set_->Merge( std::make_shared<Delta>( aDelta ), cid_string ) );
+        return outcome::success();
     }
 
     outcome::result<std::set<CID>> CrdtDatastore::ProcessNode( const CID                       &aRoot,
@@ -1039,7 +1123,7 @@ namespace sgns::crdt
 
         if ( filter_crdt )
         {
-            crdt_filter_.FilterElementsOnDelta( aDelta );
+            crdt_filter_.FilterElementsOnDelta( *aDelta );
             //crdt_filter_.FilterTombstonesOnDelta( aDelta );
             logger_->error( "ProcessNode: Processing INCOMING root {} node {}",
                             aRoot.toString().value(),
@@ -1178,27 +1262,32 @@ namespace sgns::crdt
                        node->getCID().toString().value(),
                        reinterpret_cast<uint64_t>( this ) );
 
-        auto processNodeResult = ProcessNode( node->getCID(), height, aDelta, node );
-        if ( processNodeResult.has_failure() )
-        {
-            logger_->error( "AddDAGNode: error processing new block" );
-            return outcome::failure( processNodeResult.error() );
-        }
+        RootCIDJob rootJob{ nullptr, node, true };
 
-        if ( !processNodeResult.value().empty() )
         {
-            logger_->error( "AddDAGNode: bug - created a block to unknown children" );
+            std::unique_lock lock( dagWorkerMutex_ );
+            rootCIDJobList_.push( rootJob );
         }
-        else
+        dagWorkerCv_.notify_one();
+
+        // Timeout check for node insertion
+        auto start      = std::chrono::steady_clock::now();
+        bool node_found = false;
+        while ( std::chrono::steady_clock::now() - start < std::chrono::seconds( 5 ) )
         {
-            auto dagSyncerResult = dagSyncer_->addNode( node );
-            logger_->debug( "DAGSyncer: Adding new block {}", node->getCID().toString().value() );
-            if ( dagSyncerResult.has_failure() )
+            auto get_result = dagSyncer_->getNode( node->getCID() );
+            if ( get_result.has_value() )
             {
-                logger_->error( "DAGSyncer: error writing new block {}", node->getCID().toString().value() );
-                return outcome::failure( dagSyncerResult.error() );
+                node_found = true;
+                break;
             }
-            dagSyncer_->DeleteCIDBlock( node->getCID() );
+            std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) ); // Poll every 100ms
+        }
+        if ( !node_found )
+        {
+            logger_->error( "AddDAGNode: Timeout waiting for node {} to be inserted",
+                            node->getCID().toString().value() );
+            return outcome::failure( Error::NODE_CREATION ); // Or a custom error code like Error::NODE_TIMEOUT
         }
 
         return node->getCID();
@@ -1367,5 +1456,40 @@ namespace sgns::crdt
     bool CrdtDatastore::RegisterElementFilter( const std::string &pattern, CRDTElementFilterCallback filter )
     {
         return crdt_filter_.RegisterElementFilter( pattern, std::move( filter ) );
+    }
+
+    void CrdtDatastore::UpdateCRDTHeads( const CID &rootCID, uint64_t rootPriority )
+    {
+        std::lock_guard<std::mutex> lock( pendingHeadsMutex_ );
+        auto                        it = pendingHeadsByRootCID_.find( rootCID );
+        if ( it == pendingHeadsByRootCID_.end() )
+        {
+            logger_->error( "{}: Error, untracked head {}", __func__, rootCID.toString().value() );
+            return;
+        }
+        for ( const auto &[cid, topic] : it->second )
+        {
+            if ( cid == rootCID )
+            {
+                auto add_result = heads_->Add( rootCID, rootPriority, topic );
+                if ( add_result.has_failure() )
+                {
+                    logger_->error( "{}: error adding head {}", __func__, rootCID.toString().value() );
+                }
+            }
+            else
+            {
+                auto replace_result = heads_->Replace( cid, rootCID, rootPriority, topic );
+                if ( replace_result.has_failure() )
+                {
+                    logger_->error( "{}: error replacing head {} with {}",
+                                    __func__,
+                                    cid.toString().value(),
+                                    rootCID.toString().value() );
+                }
+            }
+        }
+        pendingHeadsByRootCID_.erase( it );
+        rebroadcastCv_.notify_one();
     }
 }
