@@ -207,17 +207,6 @@ namespace sgns::crdt
         }
 
     protected:
-        /** DAG jobs structure used by DAG worker threads to send new jobs
-    */
-        struct DagJob
-        {
-            CID                       rootCid_;      /*> Root CID */
-            uint64_t                  rootPriority_; /*> root priority */
-            std::shared_ptr<Delta>    delta_;        /*> pointer to delta */
-            std::shared_ptr<IPLDNode> node_;         /*> pointer to node */
-            std::shared_ptr<IPLDNode> root_node_;    /*> pointer to node */
-        };
-
         struct RootCIDJob
         {
             std::shared_ptr<IPLDNode> node_;            ///< Current node to process
@@ -233,32 +222,56 @@ namespace sgns::crdt
             std::atomic<bool> dagWorkerThreadRunning_ = false; /*> Flag used for keep track of thread cycle */
         };
 
-        /** one iteration to handle jobs broadcasted from the network.
-    * @param aCrdtDatastore pointer to CRDT datastore
-    */
-        void HandleNextIteration();
-
-        /** one iteration of Worker thread to send jobs
-        * @param aCrdtDatastore pointer to CRDT datastore
-        * @param dagWorker pointer to DAG worker structure
-        */
-        void SendJobWorkerIteration( std::shared_ptr<DagWorker> dagWorker );
-
         /**
-         * @brief       Single iteration of a CID processing 
-         * @return      Success if job processed, false otherwise
+         * @brief      Handles when a CID broadcast gets received
+         *             If the CID is not known triggers @ref HandleRootCIDBlock
+         */
+        void HandleCIDBroadcast();
+        /**
+         * @brief       Handles a root CID block by creating a job to fetch and process its content
+         * @param[in]   aCid The root CID to be handled
+         * @return      Success if the Root Job was created, or failure otherwise
+         */
+        outcome::result<void> HandleRootCIDBlock( const CID &aCid );
+        /**
+         * @brief       Creates a RootCIDJob for the given root CID
+         * @param[in]   aRootCID The root CID to create the job for
+         * @return      Success if Root Job created, or failure otherwise
+         */
+        outcome::result<RootCIDJob> CreateRootJob( const CID &aRootCID );
+        /**
+         * @brief       Gets the links to fetch for a given node in a job
+         * @param[in]   job The root job of the current links to fetch
+         * @return      List of CIDs to fetch, or failure otherwise
+         */
+        outcome::result<std::set<CID>> GetLinksToFetch( const RootCIDJob &job );
+        /**
+         * @brief       Fetches the nodes for the given links and root job
+         * @param[in]   aRootJob The root job of the current links to fetch
+         * @param[in]   aLinks The links to fetch
+         * @return      Success if the nodes were fetched, or failure otherwise
+         */
+        outcome::result<void> FetchNodes( const RootCIDJob &aRootJob, const std::set<CID> &aLinks );
+        /**
+         * @brief       Gets the Delta from a given IPLD node, filtering it if it wasn't created by self
+         * @param[in]   aNode The IPLD node to get the Delta from
+         * @param[in]   created_by_self True if the node was created by self, false otherwise
+         * @return      The Delta contained in the node, or failure otherwise
+         */
+        outcome::result<Delta> GetDeltaFromNode( const IPLDNode &aNode, bool created_by_self );
+        /**
+         * @brief       Merges the data from a given Delta into the CRDT set
+         * @param[in]   node_cid The CID of the node from which the Delta was obtained
+         * @param[in]   aDelta The Delta to be merged
+         * @return      Success if the Delta was merged, or failure otherwise
+         */
+        outcome::result<void> MergeDataFromDelta( const CID &node_cid, const Delta &aDelta );
+        /**
+         * @brief       Processes A Root CID job
+         * @param[in]   job_to_process The job received by either @ref HandleCIDBroadcast or by @ref AddDAGNode
+         * @return      Success if the job was processed, or failure otherwise
          */
         outcome::result<void> ProcessJobIteration( const RootCIDJob &job_to_process );
-
-        /** SendNewJobs calls getDeltas with the given children and sends each response to the workers.
-    * @param aRootCID root CID
-    * @param aRootPriority root priority
-    * @param aChildren vector of children CIDs
-    */
-        outcome::result<void> SendNewJobs( const CID                &aRootCID,
-                                           uint64_t                  aRootPriority,
-                                           const std::set<CID>      &aChildren,
-                                           std::shared_ptr<IPLDNode> aRootNode = nullptr );
 
         /** Sync ensures that all the data under the given prefix is flushed to disk in
     * the underlying datastore
@@ -292,38 +305,11 @@ namespace sgns::crdt
     */
         static outcome::result<Buffer> EncodeBroadcast( const std::set<CID> &heads );
 
-        /** handleBlock takes care of vetting, retrieving and applying
-    * CRDT blocks to the Datastore.
-    * @return returns outcome::success on success or outcome::failure otherwise
-    */
-        outcome::result<void> HandleRootCIDBlock( const CID &aCid );
-
-        outcome::result<RootCIDJob> CreateRootJob( const CID &aRootCID );
-        outcome::result<void>       FetchNodes( const RootCIDJob &aRootJob, const std::set<CID> &aLinks );
-
-        outcome::result<std::set<CID>> GetLinksToFetch( const RootCIDJob &job );
-        outcome::result<Delta>         GetDeltaFromNode( const IPLDNode &aNode, bool created_by_self );
-        outcome::result<void>          MergeNodeDelta( const CID &node_cid, const Delta &aDelta );
-
-        /** ProcessNode processes new block. This makes that every operation applied
-    * to this store take effect (delta is merged) before returning.
-    * @param aRoot Root CID
-    * @param aRootPrio Root priority
-    * @param aDelta Pointer to Delta
-    * @param aNode Pointer to IPLD node
-    * @return list of CIDs or outcome::failure on error
-    */
-        outcome::result<std::set<CID>> ProcessNode( const CID                       &aRoot,
-                                                    uint64_t                         aRootPrio,
-                                                    std::shared_ptr<Delta>           aDelta,
-                                                    const std::shared_ptr<IPLDNode> &aNode,
-                                                    bool                             filter_crdt = false );
-
         /** PutBlock add block node to DAGSyncer
-    * @param aHeads list of CIDs to add to node as IPLD links
-    * @param aDelta Delta to serialize into IPLD node
-    * @return IPLD node or outcome::failure on error
-    */
+        * @param aHeads list of CIDs to add to node as IPLD links
+        * @param aDelta Delta to serialize into IPLD node
+        * @return IPLD node or outcome::failure on error
+        */
         outcome::result<std::shared_ptr<IPLDNode>> PutBlock( const std::vector<std::pair<CID, std::string>> &aHeads,
                                                              const std::shared_ptr<Delta>                   &aDelta,
                                                              std::set<std::string>                           topics );
@@ -398,7 +384,6 @@ namespace sgns::crdt
         std::mutex              dagWorkerMutex_;
         std::mutex              dagWorkerCvMutex_;
         std::condition_variable dagWorkerCv_;
-        std::queue<DagJob>      dagWorkerJobList;
 
         std::queue<RootCIDJob>                               rootCIDJobList_;
         std::map<CID, std::set<std::pair<CID, std::string>>> pendingHeadsByRootCID_;
