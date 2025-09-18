@@ -400,7 +400,7 @@ namespace sgns::crdt
         logger_->debug( "{}: Creating the Root Job for CID {}", __func__, aRootCID.toString().value() );
         OUTCOME_TRY( auto &&root_node, dagSyncer_->getNode( aRootCID ) );
 
-        logger_->debug( "{}: Creating the Root Job for CID {}", __func__, aRootCID.toString().value() );
+        logger_->debug( "{}: Root Job created for CID {}", __func__, aRootCID.toString().value() );
 
         RootCIDJob rootJob{ root_node, root_node, false };
 
