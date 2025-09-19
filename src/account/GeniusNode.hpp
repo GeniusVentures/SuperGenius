@@ -38,15 +38,15 @@ extern DevConfig_st DEV_CONFIG;
 
 namespace sgns
 {
-    class GeniusNode : public IComponent
+    class GeniusNode : public IComponent, public std::enable_shared_from_this<GeniusNode>
     {
     public:
-        GeniusNode( const DevConfig_st &dev_config,
-                    const char         *eth_private_key,
-                    bool                autodht      = true,
-                    bool                isprocessor  = true,
-                    uint16_t            base_port    = 40001,
-                    bool                is_full_node = false );
+        static std::shared_ptr<GeniusNode> New( const DevConfig_st &dev_config,
+                                                const char         *eth_private_key,
+                                                bool                autodht      = true,
+                                                bool                isprocessor  = true,
+                                                uint16_t            base_port    = 40001,
+                                                bool                is_full_node = false );
 
         ~GeniusNode() override;
 
@@ -74,9 +74,9 @@ namespace sgns
         static constexpr uint64_t TIMEOUT_TRANSFER   = 50000;
         static constexpr uint64_t TIMEOUT_MINT       = 50000;
 #else
-        static constexpr uint64_t TIMEOUT_ESCROW_PAY = 10000;
-        static constexpr uint64_t TIMEOUT_TRANSFER   = 10000;
-        static constexpr uint64_t TIMEOUT_MINT       = 10000;
+        static constexpr uint64_t TIMEOUT_ESCROW_PAY = 30000;
+        static constexpr uint64_t TIMEOUT_TRANSFER   = 30000;
+        static constexpr uint64_t TIMEOUT_MINT       = 30000;
 #endif
 
         outcome::result<std::string> ProcessImage( const std::string &jsondata );
@@ -107,7 +107,7 @@ namespace sgns
             std::chrono::milliseconds timeout = std::chrono::milliseconds( TIMEOUT_MINT ) );
 
         void     AddPeer( const std::string &peer );
-        void     RefreshUPNP( int pubsubport );
+        void     RefreshUPNP( uint16_t pubsubport );
         uint64_t GetBalance();
         uint64_t GetBalance( const TokenID token_id );
 
@@ -184,16 +184,25 @@ namespace sgns
             int64_t                         from,
             int64_t                         to );
         // Wait for an incoming transaction to be processed with a timeout
-        bool WaitForTransactionIncoming( const std::string &txId, std::chrono::milliseconds timeout );
+        TransactionManager::TransactionStatus WaitForTransactionIncoming( const std::string        &txId,
+                                                                          std::chrono::milliseconds timeout );
         // Wait for a outgoing transaction to be processed with a timeout
-        bool WaitForTransactionOutgoing( const std::string &txId, std::chrono::milliseconds timeout );
+        TransactionManager::TransactionStatus WaitForTransactionOutgoing( const std::string        &txId,
+                                                                          std::chrono::milliseconds timeout );
 
-        bool WaitForEscrowRelease( const std::string &originalEscrowId, std::chrono::milliseconds timeout );
+        TransactionManager::TransactionStatus WaitForEscrowRelease( const std::string        &originalEscrowId,
+                                                                    std::chrono::milliseconds timeout );
+
+        TransactionManager::State GetTransactionManagerState() const;
+
+        TransactionManager::TransactionStatus GetTransactionStatus( const std::string &txId ) const;
 
     protected:
         friend class TransactionSyncTest;
 
         void SendTransactionAndProof( std::shared_ptr<IGeniusTransactions> tx, std::vector<uint8_t> proof );
+        void ConfigureTransactionFilterTimeoutsMs( uint64_t timeframe_limit_ms, uint64_t mutability_window_ms );
+
         std::shared_ptr<GeniusAccount> account_;
 
     private:
@@ -206,15 +215,24 @@ namespace sgns
         std::shared_ptr<processing::ProcessingCoreImpl>       processing_core_;
         std::shared_ptr<processing::ProcessingServiceImpl>    processing_service_;
         std::shared_ptr<processing::SubTaskResultStorageImpl> task_result_storage_;
-        std::shared_ptr<soralog::LoggingSystem>               logging_system;
+        std::shared_ptr<soralog::LoggingSystem>               logging_system_;
         std::string                                           write_base_path_;
         bool                                                  autodht_;
         bool                                                  isprocessor_;
-        base::Logger                                          node_logger;
+        base::Logger                                          node_logger_;
         DevConfig_st                                          dev_config_;
         std::string                                           gnus_network_full_path_;
         std::string                                           processing_channel_topic_;
         std::string                                           processing_grid_chanel_topic_;
+        uint16_t                                              pubsubport_;
+
+        GeniusNode( const DevConfig_st &dev_config,
+                    const char         *eth_private_key,
+                    bool                autodht,
+                    bool                isprocessor,
+                    uint16_t            base_port,
+                    bool                is_full_node );
+        bool InitLoggers( const std::string &base_path );
 
         struct PriceInfo
         {
@@ -230,6 +248,8 @@ namespace sgns
         std::thread       io_thread;
         std::thread       upnp_thread;
         std::atomic<bool> stop_upnp{ false };
+
+        std::unique_ptr<boost::asio::thread_pool> processing_callback_pool_;
 
         outcome::result<std::pair<std::string, uint64_t>> PayEscrow(
             const std::string                       &escrow_path,

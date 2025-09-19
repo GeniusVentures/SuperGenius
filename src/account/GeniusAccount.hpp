@@ -1,141 +1,215 @@
 /**
  * @file       GeniusAccount.hpp
- * @brief      
+ * @brief      Header file of the Genius account class
  * @date       2024-03-11
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
 #ifndef _GENIUS_ACCOUNT_HPP_
 #define _GENIUS_ACCOUNT_HPP_
-#include <string>
+#include <array>
 #include <cstdint>
-
-#include <boost/multiprecision/cpp_int.hpp>
-#include <boost/multiprecision/fwd.hpp>
+#include <memory>
+#include <string>
+#include <vector>
+#include <shared_mutex>
+#include <tuple>
 
 #include <ProofSystem/ElGamalKeyGenerator.hpp>
 #include <ProofSystem/EthereumKeyGenerator.hpp>
 
 #include "account/GeniusUTXO.hpp"
 #include "account/UTXOTxParameters.hpp"
+#include "account/TokenID.hpp"
+#include "base/logger.hpp"
 #include "outcome/outcome.hpp"
-#include <vector>
-#include <array>
 
 namespace sgns
 {
     using namespace boost::multiprecision;
 
-    class GeniusAccount
+    namespace ipfs_pubsub
+    {
+        class GossipPubSub;
+    }
+    class AccountMessenger;
+
+    class GeniusAccount : public std::enable_shared_from_this<GeniusAccount>
     {
     public:
-        static const std::array<uint8_t, 32> ELGAMAL_PUBKEY_PREDEFINED;
+        static const std::array<uint8_t, 32> ELGAMAL_PUBKEY_PREDEFINED; ///< Predefined ElGamal public key
 
-        GeniusAccount( TokenID token_id, std::string_view base_path, const char *eth_private_key );
+        /**
+         * @brief       Factory constructor of new GeniusAccount
+         * @param[in]   token_id Token ID of the account
+         * @param[in]   base_path Base path of the account
+         * @param[in]   eth_private_key Ethereum private key in hex format (0x...)
+         * @return      Valid pointer if succeeds, nullptr otherwise
+         */
+        static std::shared_ptr<GeniusAccount> New( TokenID          token_id,
+                                                   std::string_view base_path,
+                                                   const char      *eth_private_key );
+        /**
+         * @brief       Initialize the messenger for the account
+         * @param[in]   pubsub pubsub instance
+         * @param[in]   full_node parameter to indicate if the account is a full node
+         * @return      true if succeeds, false otherwise
+         */
+        bool InitMessenger( std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub, bool full_node );
 
-        ~GeniusAccount()
-        {
-            utxos.clear();
-        }
+        /**
+         * @brief       Destroy the Genius Account object
+         */
+        ~GeniusAccount();
 
-        [[nodiscard]] std::string GetAddress() const
-        {
-            return eth_address->GetEntirePubValue();
-        }
+        /**
+         * @brief       Get the Address object
+         * @return      String representation of the address
+         */
+        [[nodiscard]] std::string GetAddress() const;
 
-        //template <>
-        //[[nodiscard]] uint256_t GetAddress() const
-        //{
-        //    return uint256_t( eth_address.GetPublicKey().public_key_value.str() );
-        //}
-
+        /**
+         * @brief       Get the account's balance
+         * @return      The total balance of the account
+         */
         template <typename T>
         [[nodiscard]] T GetBalance() const;
 
-        template <>
-        [[nodiscard]] uint64_t GetBalance() const
-        {
-            uint64_t retval = 0;
-
-            for ( auto &curr : utxos )
-            {
-                if ( !curr.GetLock() )
-                {
-                    retval += curr.GetAmount();
-                }
-            }
-
-            return retval;
-        }
-
-        template <>
-        [[nodiscard]] std::string GetBalance() const
-        {
-            return std::to_string( GetBalance<uint64_t>() );
-        }
-
+        /**
+         * @brief       Get the accounts balance for a specific token
+         * @param[in]   token_id Token ID to get the balance
+         * @return      The balance of the account for the specific token
+         */
         uint64_t GetBalance( const TokenID token_id ) const;
 
-        [[nodiscard]] TokenID GetToken() const
-        {
-            return token;
-            // return "GNUS Token";
-        }
+        /**
+         * @brief       Get the account's token
+         * @return      The token of the account
+         */
+        [[nodiscard]] TokenID GetToken() const;
 
+        /**
+         * @brief       Get the confirmed nonce as a string
+         * @return      The confirmed nonce in string format
+         */
         [[nodiscard]] std::string GetNonce() const
         {
-            return std::to_string( nonce );
+            return std::to_string( GetProposedNonce() );
         }
 
-        bool PutUTXO( const GeniusUTXO &new_utxo )
-        {
-            bool is_new = true;
-            for ( auto &curr : utxos )
-            {
-                if ( new_utxo.GetTxID() != curr.GetTxID() )
-                {
-                    continue;
-                }
-                if ( new_utxo.GetOutputIdx() != curr.GetOutputIdx() )
-                {
-                    continue;
-                }
-                //TODO - If it's the same, might be locked, then unlock
-                is_new = false;
-                break;
-            }
-            if ( is_new )
-            {
-                utxos.push_back( new_utxo );
-            }
-            return is_new;
-        }
+        /**
+         * @brief       Add a new UTXO to the account
+         * @param[in]   new_utxo The new UTXO to be added
+         * @return      true if the UTXO was added, false otherwise
+         */
+        bool PutUTXO( const GeniusUTXO &new_utxo );
 
-        bool RefreshUTXOs( const std::vector<InputUTXOInfo> &infos )
-        {
-            utxos.erase( std::remove_if( utxos.begin(),
-                                         utxos.end(),
-                                         [&infos]( const GeniusUTXO &x ) { //
-                                             return std::any_of( infos.begin(),
-                                                                 infos.end(),
-                                                                 [&x]( const InputUTXOInfo &a ) { //
-                                                                     return ( a.txid_hash_ == x.GetTxID() ) &&
-                                                                            ( a.output_idx_ == x.GetOutputIdx() );
-                                                                 } );
-                                         } ),
-                         utxos.end() );
-            return true;
-        }
+        /**
+         * @brief       Delete a UTXO from the account
+         * @param[in]   utxo_id The ID of the UTXO to be deleted
+         */
+        void DeleteUTXO( const base::Hash256 &utxo_id );
 
-        std::shared_ptr<KeyGenerator::ElGamal>          elgamal_address;
-        std::shared_ptr<ethereum::EthereumKeyGenerator> eth_address;
+        /**
+         * @brief       Consume UTXOs from the account
+         * @param[in]   infos Vector of UTXO information to be consumed
+         * @return      true if all UTXOs were consumed, false otherwise
+         */
+        bool ConsumeUTXOs( const std::vector<InputUTXOInfo> &infos );
 
-        TokenID                 token;
-        uint64_t                nonce;
-        std::vector<GeniusUTXO> utxos;
+        /**
+         * @brief       Verify a signature using the Genius account's public key
+         * @param[in]   address public address to verify the signature
+         * @param[in]   sig signature to be verified
+         * @param[in]   data data to be verified
+         * @return      true if the signature is valid, false otherwise
+         */
+        static bool VerifySignature( std::string address, std::string sig, std::vector<uint8_t> data );
+
+        /**
+         * @brief       Sign data using the Genius account's private key
+         * @param[in]   data data to be signed
+         * @return      the signature as a vector of bytes
+         */
+        std::vector<uint8_t> Sign( std::vector<uint8_t> data );
+
+        /**
+         * @brief       Set the local confirmed nonce
+         * @param[in]   nonce The nonce value to be set
+         */
+        void SetLocalConfirmedNonce( uint64_t nonce );
+
+        /**
+         * @brief       Set the local confirmed nonce for a peer
+         * @param[in]   nonce The nonce value to be set
+         * @param[in]   address The address of the peer
+         */
+        void SetPeerConfirmedNonce( uint64_t nonce, std::string address );
+
+        /**
+         * @brief       Rollback the local confirmed nonce for a peer
+         * @param[in]   nonce The nonce value to be rolled back to
+         * @param[in]   address The address of the peer
+         */
+        void RollBackPeerConfirmedNonce( uint64_t nonce, std::string address );
+
+        /**
+         * @brief       Get the confirmed nonce for a peer
+         * @param[in]   address The address of the peer
+         * @return      The confirmed nonce of the peer if exists, error otherwise
+         */
+        outcome::result<uint64_t> GetPeerNonce( std::string address ) const;
+
+        /**
+         * @brief       Get the local confirmed nonce
+         * @return      The local confirmed nonce if exists, error otherwise
+         */
+        outcome::result<uint64_t> GetLocalConfirmedNonce() const;
+
+        /**
+         * @brief       Get confirmed nonce from the network
+         * @param[in]   timeout_ms Timeout in miliseconds to get the confirmed nonce
+         * @return      The confirmed nonce if success, error otherwise
+         */
+        outcome::result<uint64_t> GetConfirmedNonce( uint64_t timeout_ms ) const;
+
+        /**
+         * @brief       Get the proposed nonce
+         * @return      The proposed nonce
+         */
+        uint64_t GetProposedNonce() const;
+
+        /**
+         * @brief       Increment the proposed nonce
+         */
+        void IncProposedNonce();
+
+        TokenID                 token; ///< Token ID of the account
+        std::vector<GeniusUTXO> utxos; ///< Vector of UTXOs of the account
 
     private:
-        //uint64_t balance;
+        static constexpr size_t SIGNATURE_EXP_SIZE = 64; ///< Expected size of the signature in bytes
 
+        std::shared_ptr<ethereum::EthereumKeyGenerator> eth_keypair;       ///< Ethereum keypair
+        std::shared_ptr<KeyGenerator::ElGamal>          elgamal_address;   ///< ElGamal keypair
+        std::unordered_map<std::string, uint64_t>       confirmed_nonces_; ///< Map of the confirmed nonces from peers
+        mutable std::shared_mutex                       nonce_mutex_;      ///< Mutex for the nonce map
+        uint64_t                                        proposed_nonce_;   ///< Next nonce to be used
+        std::shared_ptr<AccountMessenger>               messenger_;        ///< Messenger instance
+        /// Logger instance
+        base::Logger logger_ = sgns::base::createLogger( "GeniusAccount" );
+
+        /**
+         * @brief       Private constructor a new Genius Account object
+         * @param[in]   token_id
+         */
+        GeniusAccount( TokenID token_id );
+
+        /**
+         * @brief       Derives a Genius address from a given Ethereum private key
+         * @param[in]   base_path The base path to store/retrieve the key
+         * @param[in]   eth_private_key Ethereum private key in hex format (0x...)
+         * @return      Pair of ElGamal and Ethereum key generators if succeeds, error otherwise
+         */
         static outcome::result<std::pair<KeyGenerator::ElGamal, ethereum::EthereumKeyGenerator>> GenerateGeniusAddress(
             std::string_view base_path,
             const char      *eth_private_key );

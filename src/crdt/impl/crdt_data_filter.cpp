@@ -5,6 +5,7 @@
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
 #include "crdt/crdt_data_filter.hpp"
+#include <set>
 
 namespace sgns::crdt
 {
@@ -36,9 +37,11 @@ namespace sgns::crdt
         tombstone_registry_.erase( pattern );
     }
 
-    void CRDTDataFilter::FilterElementsOnDelta( pb::Delta &delta )
+    void CRDTDataFilter::FilterElementsOnDelta( pb::Delta &delta ) const
     {
-        std::vector<pb::Element>                               new_tombstones;
+        std::vector<std::string>         additional_elements_to_delete;
+        std::set<int, std::greater<int>> elements_to_delete_indices; // Set with reverse order
+
         std::unordered_map<std::string, ElementFilterCallback> registry_copy;
         {
             std::shared_lock lock( element_registry_mutex_ );
@@ -52,35 +55,59 @@ namespace sgns::crdt
 
             for ( const auto &[pattern, filter] : registry_copy )
             {
-                std::regex regex( pattern );
-                if ( std::regex_match( element.key(), regex ) )
+                if ( std::regex regex( pattern ); std::regex_match( element.key(), regex ) )
                 {
-                    auto tombstones = filter( element );
-                    if ( tombstones )
+                    auto result = filter( element );
+
+                    if ( result.has_value() )
                     {
-                        new_tombstones.insert( new_tombstones.end(), tombstones->begin(), tombstones->end() );
+                        // Always delete the matching element when result has value
+                        elements_to_delete_indices.insert( i );
+
+                        if ( !result->empty() )
+                        {
+                            // Also delete additional elements from the vector
+                            for ( const auto &additional_element : *result )
+                            {
+                                additional_elements_to_delete.push_back( additional_element.key() );
+                            }
+                        }
                     }
                     filter_matched = true;
                     break;
                 }
             }
-            if ( ( filter_matched == false ) && ( accept_by_default_ == false ) )
+
+            if ( !filter_matched && !accept_by_default_ )
             {
-                //at least tombstone the current element
-                new_tombstones.push_back( element );
+                //at least delete the current element
+                elements_to_delete_indices.insert( i );
             }
         }
 
-        for ( const auto &tombstone : new_tombstones )
+        // Second pass: find additional elements to delete
+        for ( int i = 0; i < delta.elements_size(); ++i )
         {
-            auto *new_tombstone = delta.add_tombstones();
-            *new_tombstone      = tombstone;
+            const auto &element = delta.elements( i );
+            for ( const auto &key_to_delete : additional_elements_to_delete )
+            {
+                if ( element.key() == key_to_delete )
+                {
+                    elements_to_delete_indices.insert( i );
+                    break;
+                }
+            }
+        }
+
+        for ( int index : elements_to_delete_indices )
+        {
+            delta.mutable_elements()->DeleteSubrange( index, 1 );
         }
     }
 
     void CRDTDataFilter::FilterTombstonesOnDelta( pb::Delta &delta )
     {
         //TODO - Figure out how to remove tombstones even recorded ones
-        throw std::runtime_error("Not supported");
+        throw std::runtime_error( "Not supported" );
     }
 }

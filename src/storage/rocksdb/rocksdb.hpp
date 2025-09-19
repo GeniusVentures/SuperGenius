@@ -36,30 +36,30 @@ namespace sgns::storage
         ~rocksdb() override;
 
         /**
-     * @brief Factory method to create an instance of rocksdb class.
-     * @param path filesystem path where database is going to be
-     * @param options rocksdb options, such as caching, logging, etc.
-     * @return instance of rocksdb
-     */
+         * @brief Factory method to create an instance of rocksdb class.
+         * @param path filesystem path where database is going to be
+         * @param options rocksdb options, such as caching, logging, etc.
+         * @return instance of rocksdb
+         */
         static outcome::result<std::shared_ptr<rocksdb>> create( std::string_view path,
                                                                  const Options   &options = Options() );
 
         /**
-    * @brief Factory method to create an instance of rocksdb class.
-    * @param db pointer to rocksdb database instance
-    */
+        * @brief Factory method to create an instance of rocksdb class.
+        * @param db pointer to rocksdb database instance
+        */
         static outcome::result<std::shared_ptr<rocksdb>> create( const std::shared_ptr<DB> &db );
 
         /**
-     * @brief Set read options, which are used in @see rocksdb#get
-     * @param ro options
-     */
+         * @brief Set read options, which are used in @see rocksdb#get
+         * @param ro options
+         */
         void setReadOptions( ReadOptions ro );
 
         /**
-     * @brief Set write options, which are used in @see rocksdb#put
-     * @param wo options
-     */
+         * @brief Set write options, which are used in @see rocksdb#put
+         * @param wo options
+         */
         void setWriteOptions( WriteOptions wo );
 
         std::unique_ptr<BufferMapCursor> cursor() override;
