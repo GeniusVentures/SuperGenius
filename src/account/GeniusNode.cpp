@@ -280,6 +280,12 @@ namespace sgns
             crdt::KeyPairFileStorage( write_base_path_ + pubsubKeyPath ).GetKeyPair().value() );
         auto pubs = pubsub_->Start( pubsubport, {}, lanip, addresses );
         pubs.wait();
+
+        if ( !is_full_node )
+        {
+            pubsub_->GetHost()->getConnectionManagerConfig().high_water                   = 300;
+            pubsub_->GetHost()->getConnectionManagerConfig().low_water                    = 150;
+        }
         auto scheduler = std::make_shared<libp2p::protocol::AsioScheduler>( io_, libp2p::protocol::SchedulerConfig{} );
         auto generator = std::make_shared<ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
         auto graphsyncnetwork = std::make_shared<ipfs_lite::ipfs::graphsync::Network>( pubsub_->GetHost(), scheduler );
