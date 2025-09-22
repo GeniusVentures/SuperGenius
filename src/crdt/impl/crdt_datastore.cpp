@@ -75,76 +75,14 @@ namespace sgns::crdt
                     strong->DeleteElementsCallback( key );
                 }
             } );
-
-        return crdtInstance;
-    }
-
-    void CrdtDatastore::Start()
-    {
-        if ( started_ == true )
-        {
-            return;
-        }
-        //heads_->PrimeCache();
-        handleNextThreadRunning_ = true;
-        // Starting HandleNext worker thread
-        handleNextFuture_ = std::async(
-            [weakptr{ weak_from_this() }]
-            {
-                auto threadRunning = true;
-                while ( threadRunning )
-                {
-                    if ( auto self = weakptr.lock() )
-                    {
-                        self->HandleCIDBroadcast();
-                        if ( !self->handleNextThreadRunning_ )
-                        {
-                            self->logger_->debug( "HandleNext thread finished" );
-                            threadRunning = false;
-                        }
-                    }
-                    else
-                    {
-                        threadRunning = false;
-                    }
-
-                    if ( threadRunning )
-                    {
-                        std::this_thread::sleep_for( threadSleepTimeInMilliseconds_ );
-                    }
-                }
-            } );
-
-        rebroadcastThreadRunning_ = true;
-        // Starting Rebroadcast worker thread
-        rebroadcastFuture_ = std::async(
-            [weakptr{ weak_from_this() }]
-            {
-                auto self = weakptr.lock();
-                if ( !self )
-                {
-                    return;
-                }
-
-                const auto interval = std::chrono::milliseconds(
-                    self->options_ ? self->options_->rebroadcastIntervalMilliseconds : 100 );
-                std::unique_lock lock( self->rebroadcastMutex_ );
-
-                while ( self->rebroadcastThreadRunning_ )
-                {
-                    self->RebroadcastHeads();
-                    self->rebroadcastCv_.wait_for( lock, interval );
-                }
-            } );
-
-        dagWorkerJobListThreadRunning_ = true;
-        dagWorkers_.reserve( numberOfDagWorkers );
-        for ( int i = 0; i < numberOfDagWorkers; ++i )
+        crdtInstance->dagWorkerJobListThreadRunning_ = true;
+        crdtInstance->dagWorkers_.reserve( crdtInstance->numberOfDagWorkers );
+        for ( int i = 0; i < crdtInstance->numberOfDagWorkers; ++i )
         {
             auto dagWorker                     = std::make_shared<DagWorker>();
             dagWorker->dagWorkerThreadRunning_ = true;
             dagWorker->dagWorkerFuture_        = std::async(
-                [weakptr{ weak_from_this() }, dagWorker]
+                [weakptr( std::weak_ptr<CrdtDatastore>( crdtInstance ) ), dagWorker]
                 {
                     auto dagThreadRunning = true;
                     while ( dagThreadRunning )
@@ -214,8 +152,69 @@ namespace sgns::crdt
                         }
                     }
                 } );
-            dagWorkers_.push_back( dagWorker );
+            crdtInstance->dagWorkers_.push_back( dagWorker );
         }
+        return crdtInstance;
+    }
+
+    void CrdtDatastore::Start()
+    {
+        if ( started_ == true )
+        {
+            return;
+        }
+        //heads_->PrimeCache();
+        handleNextThreadRunning_ = true;
+        // Starting HandleNext worker thread
+        handleNextFuture_ = std::async(
+            [weakptr{ weak_from_this() }]
+            {
+                auto threadRunning = true;
+                while ( threadRunning )
+                {
+                    if ( auto self = weakptr.lock() )
+                    {
+                        self->HandleCIDBroadcast();
+                        if ( !self->handleNextThreadRunning_ )
+                        {
+                            self->logger_->debug( "HandleNext thread finished" );
+                            threadRunning = false;
+                        }
+                    }
+                    else
+                    {
+                        threadRunning = false;
+                    }
+
+                    if ( threadRunning )
+                    {
+                        std::this_thread::sleep_for( threadSleepTimeInMilliseconds_ );
+                    }
+                }
+            } );
+
+        rebroadcastThreadRunning_ = true;
+        // Starting Rebroadcast worker thread
+        rebroadcastFuture_ = std::async(
+            [weakptr{ weak_from_this() }]
+            {
+                auto self = weakptr.lock();
+                if ( !self )
+                {
+                    return;
+                }
+
+                const auto interval = std::chrono::milliseconds(
+                    self->options_ ? self->options_->rebroadcastIntervalMilliseconds : 100 );
+                std::unique_lock lock( self->rebroadcastMutex_ );
+
+                while ( self->rebroadcastThreadRunning_ )
+                {
+                    self->RebroadcastHeads();
+                    self->rebroadcastCv_.wait_for( lock, interval );
+                }
+            } );
+
         started_ = true;
     }
 
@@ -505,7 +504,7 @@ namespace sgns::crdt
         {
             logger_->debug( "{}: No links to fetch, sending root CID", __func__ );
             {
-                RootCIDJob root_node_only_job{nullptr, aRootJob.root_node_, aRootJob.created_by_self_};
+                RootCIDJob       root_node_only_job{ nullptr, aRootJob.root_node_, aRootJob.created_by_self_ };
                 std::unique_lock lock( dagWorkerMutex_ );
                 rootCIDJobList_.push( root_node_only_job );
             }
