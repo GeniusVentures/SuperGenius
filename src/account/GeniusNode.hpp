@@ -90,7 +90,7 @@ namespace sgns
             return "GeniusNode";
         }
 
-        std::string GetVersion( void );
+        std::string GetVersion();
 
         /**
          * @brief       Mints tokens by converting a string amount to fixed-point representation
@@ -166,7 +166,6 @@ namespace sgns
          * @return      Outcome result with the parsed amount in Minion Tokens (1e-6 GNUS) or an error.
          */
         outcome::result<uint64_t> ParseTokens( const std::string &str, const TokenID tokenId );
-
 
         void PrintDataStore();
         void StopProcessing();

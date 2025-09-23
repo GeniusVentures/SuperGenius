@@ -265,8 +265,8 @@ namespace sgns
 
         if ( !is_full_node )
         {
-            pubsub_->GetHost()->getConnectionManagerConfig().high_water                   = 300;
-            pubsub_->GetHost()->getConnectionManagerConfig().low_water                    = 150;
+            pubsub_->GetHost()->getConnectionManagerConfig().high_water = 300;
+            pubsub_->GetHost()->getConnectionManagerConfig().low_water  = 150;
         }
         auto scheduler = std::make_shared<libp2p::protocol::AsioScheduler>( io_, libp2p::protocol::SchedulerConfig{} );
         auto generator = std::make_shared<ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
@@ -795,7 +795,7 @@ namespace sgns
         return price.value()["genius-ai"];
     }
 
-    std::string GetVersion( void )
+    std::string GeniusNode::GetVersion()
     {
         return sgns::version::SuperGeniusVersionFullString();
     }
