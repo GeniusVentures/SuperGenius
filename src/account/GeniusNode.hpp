@@ -80,7 +80,6 @@ namespace sgns
 #endif
 
         outcome::result<std::string> ProcessImage( const std::string &jsondata );
-        outcome::result<void>        CheckProcessValidity( const std::string &jsondata );
 
         uint64_t GetProcessCost( const std::string &json_data );
 
@@ -93,7 +92,6 @@ namespace sgns
 
         std::string GetVersion( void );
 
-        void DHTInit();
         /**
          * @brief       Mints tokens by converting a string amount to fixed-point representation
          * @param[in]   amount: Numeric value with amount in Minion Tokens (1e-6 GNUS Token)
@@ -169,7 +167,6 @@ namespace sgns
          */
         outcome::result<uint64_t> ParseTokens( const std::string &str, const TokenID tokenId );
 
-        static std::vector<uint8_t> GetImageByCID( const std::string &cid );
 
         void PrintDataStore();
         void StopProcessing();
@@ -232,7 +229,9 @@ namespace sgns
                     bool                isprocessor,
                     uint16_t            base_port,
                     bool                is_full_node );
-        bool InitLoggers( const std::string &base_path );
+        bool                  InitLoggers( const std::string &base_path );
+        outcome::result<void> CheckProcessValidity( const std::string &jsondata );
+        void                  DHTInit();
 
         struct PriceInfo
         {
