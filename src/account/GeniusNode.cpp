@@ -262,6 +262,12 @@ namespace sgns
         auto pubs = pubsub_->Start( pubsubport_, {}, lanip, addresses );
         account_->InitMessenger( pubsub_, is_full_node );
         pubs.wait();
+
+        if ( !is_full_node )
+        {
+            pubsub_->GetHost()->getConnectionManagerConfig().high_water                   = 300;
+            pubsub_->GetHost()->getConnectionManagerConfig().low_water                    = 150;
+        }
         auto scheduler = std::make_shared<libp2p::protocol::AsioScheduler>( io_, libp2p::protocol::SchedulerConfig{} );
         auto generator = std::make_shared<ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
         auto graphsyncnetwork = std::make_shared<ipfs_lite::ipfs::graphsync::Network>( pubsub_->GetHost(), scheduler );
