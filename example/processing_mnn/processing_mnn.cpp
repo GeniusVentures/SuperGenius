@@ -56,22 +56,11 @@ std::vector<uint8_t> GetImageByCID( std::string cid )
         false,
         false,
         ioc,
-        [ioc]( const sgns::AsyncError::CustomResult &status )
-        {
-            if ( status.has_value() )
-            {
-                std::cout << "Success: " << status.value().message << std::endl;
-            }
-            else
-            {
-                std::cout << "Error: " << status.error() << std::endl;
-            }
-        },
-        [&mainbuffers]( std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers )
+        [&mainbuffers]( outcome::result<std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>> buffers )
         {
             std::cout << "Final Callback" << std::endl;
 
-            if ( !buffers || ( buffers->first.empty() && buffers->second.empty() ) )
+            if ( !buffers    )
             {
                 std::cout << "Buffer from AsyncIO is 0" << std::endl;
                 return;
@@ -80,8 +69,10 @@ std::vector<uint8_t> GetImageByCID( std::string cid )
             {
                 //Process settings json
 
-                mainbuffers->first.insert( mainbuffers->first.end(), buffers->first.begin(), buffers->first.end() );
-                mainbuffers->second.insert( mainbuffers->second.end(), buffers->second.begin(), buffers->second.end() );
+                mainbuffers->first.insert( mainbuffers->first.end(),
+                                           buffers.value()->first.begin(),
+                                           buffers.value()->first.end() );
+                mainbuffers->second.insert( mainbuffers->second.end(), buffers.value()->second.begin(), buffers.value()->second.end() );
             }
         },
         "file" );
@@ -131,22 +122,11 @@ std::vector<uint8_t> GetImageByCID( std::string cid )
         false,
         false,
         ioc,
-        [ioc]( const sgns::AsyncError::CustomResult &status )
-        {
-            if ( status.has_value() )
-            {
-                std::cout << "Success: " << status.value().message << std::endl;
-            }
-            else
-            {
-                std::cout << "Error: " << status.error() << std::endl;
-            }
-        },
-        [&imageData]( std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>> buffers )
+        [&imageData]( outcome::result<std::shared_ptr<std::pair<std::vector<std::string>, std::vector<std::vector<char>>>>> buffers )
         {
             std::cout << "Final Callback" << std::endl;
 
-            if ( !buffers || ( buffers->first.empty() && buffers->second.empty() ) )
+            if ( !buffers )
             {
                 std::cout << "Buffer from AsyncIO is 0" << std::endl;
                 return;
@@ -155,7 +135,7 @@ std::vector<uint8_t> GetImageByCID( std::string cid )
             {
                 //Process settings json
 
-                imageData.assign( buffers->second[0].begin(), buffers->second[0].end() );
+                imageData.assign( buffers.value()->second[0].begin(), buffers.value()->second[0].end() );
             }
         },
         "file" );

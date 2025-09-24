@@ -145,6 +145,11 @@ namespace
             return outcome::success();
         }
 
+        void MarkTaskBad(const std::string& taskKey) override
+        {
+            return;
+        }
+
     private:
         std::list<SGProcessing::Task>                           m_tasks;
         std::map<std::string, std::list<SGProcessing::SubTask>> m_subTasks;

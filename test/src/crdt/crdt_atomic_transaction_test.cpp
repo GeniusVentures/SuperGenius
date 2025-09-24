@@ -58,6 +58,7 @@ namespace sgns::crdt
                                                  dagSyncer,
                                                  broadcaster,
                                                  CrdtOptions::DefaultOptions() );
+            crdtDatastore_->Start();
         }
 
         void TearDown() override
@@ -115,6 +116,7 @@ namespace sgns::crdt
         transfer_from_value.put( "50" );
         Buffer transfer_to_value;
         transfer_to_value.put( "150" );
+        std::cout << "Starting concurrent writes test" << std::endl;
 
         for ( bool use_atomic : { false, true } )
         {

@@ -2,6 +2,7 @@
 #ifndef PROCESSINGMOCK_HPP
 #define PROCESSINGMOCK_HPP
 
+#include "processing/processing_subtask_queue_channel.hpp"
 #include "processing/processing_subtask_enqueuer_impl.hpp"
 #include "processing/processing_validation_core.hpp"
 #include "processing/processing_core.hpp"
@@ -161,6 +162,11 @@ namespace sgns::test
         {
             return nullptr;
         }
+
+        void MarkTaskBad( const std::string &taskKey ) override
+        {
+            return;
+        }
     };
 
     class ProcessingSubTaskQueueChannelImpl : public ProcessingSubTaskQueueChannel
@@ -169,6 +175,10 @@ namespace sgns::test
         typedef std::function<void(const std::string& nodeId)> QueueOwnershipRequestSink;
         typedef std::function<void(std::shared_ptr<SGProcessing::SubTaskQueue> queue)> QueuePublishingSink;
 
+        ~ProcessingSubTaskQueueChannelImpl()
+        {
+            std::cout << "Destroy subtask channel" << std::endl;
+        }
         void RequestQueueOwnership(const std::string& nodeId) override
         {
             if (queueOwnershipRequestSink)

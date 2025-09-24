@@ -167,6 +167,11 @@ namespace sgns::crdt
         /// record successful connections
         void RecordSuccessfulConnection( const PeerId &peer );
 
+                /// CID-specific failure tracking methods
+        void RecordCIDFailure( const PeerId &peer, const CID &cid ) const;
+        bool HasRecentCIDFailure( const PeerId &peer, const CID &cid ) const;
+        void ClearCIDFailure( const PeerId &peer, const CID &cid ) const;
+
         bool             started_ = false;
         std::vector<CID> unexpected_blocks;
 
@@ -174,9 +179,9 @@ namespace sgns::crdt
         ipfs_lite::ipfs::merkledag::MerkleDagServiceImpl dagService_;
         std::shared_ptr<Graphsync>                       graphsync_;
 
-        std::shared_ptr<libp2p::Host>                    host_;
+        std::shared_ptr<libp2p::Host> host_;
 
-        Logger                                           logger_ = base::createLogger( "GraphsyncDAGSyncer" );
+        Logger logger_ = base::createLogger( "GraphsyncDAGSyncer" );
 
         // keeping subscriptions alive, otherwise they cancel themselves
         // class Subscription have non-copyable constructor and operator, so it can not be used in std::vector
@@ -197,6 +202,10 @@ namespace sgns::crdt
 
         mutable std::map<Multihash, BlacklistEntry> blacklist_;
         mutable std::mutex                          blacklist_mutex_;
+
+        // Track CID-specific failures per peer to avoid re-requesting CIDs that peers don't have
+        mutable std::map<std::pair<Multihash, CID>, uint64_t> cid_failures_; // peer+cid -> timestamp of failure
+        mutable std::mutex                                    cid_failures_mutex_;
 
         std::map<CID, std::shared_ptr<ipfs_lite::ipld::IPLDNode>> received_blocks_;
 

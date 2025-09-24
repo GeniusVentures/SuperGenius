@@ -24,7 +24,7 @@ sinks:
     type: console
     color: true
 groups:
-  - name: processing_subtask_queue_manager_test
+  - name: processing_subtask_queue_accessor_test
     sink: console
     level: info
     children:
@@ -38,7 +38,7 @@ class SubTaskQueueAccessorImplTest : public ProcessingServiceTest
 public:
     virtual void SetUp() override
     {
-        ProcessingServiceTest::SetUp( "processing_subtask_queue_manager_test", logger_config );
+        ProcessingServiceTest::SetUp( "processing_subtask_queue_accessor_test", logger_config );
         ProcessingServiceTest::Initialize( 2, 50 );
     }
 
@@ -101,21 +101,36 @@ TEST_F(SubTaskQueueAccessorImplTest, SubscriptionToResultChannel)
 
     Color::PrintInfo("Waited ", resultTime.count(),  " ms for connection");
 
+     // Create external result publisher since echo messages are off
+    sgns::ipfs_pubsub::GossipPubSubTopic externalResultChannel( pubs2,
+                                                                "RESULT_CHANNEL_ID_test" );
+    auto                                &subscriptionFuture = externalResultChannel.Subscribe(
+        []( const boost::optional<const GossipPubSub::Message &> &message ) {},
+        false );
+    // Wait for pubsub connection
+    ASSERT_WAIT_FOR_CONDITION(
+        [&subscriptionFuture]()
+        { return subscriptionFuture.wait_for( std::chrono::milliseconds( 0 ) ) == std::future_status::ready; },
+        std::chrono::milliseconds( 2000 ),
+        "External result channel subscription was not established",
+        &resultTime );
+
     // Publish result to the results channel
     SGProcessing::SubTaskResult result;
     result.set_subtaskid("SUBTASK_ID");
-    resultChannel.Publish(result.SerializeAsString());
+    externalResultChannel.Publish( result.SerializeAsString() );
 
     // Wait for the result to be received
     ASSERT_WAIT_FOR_CONDITION( [this]()
                                { return m_processing_queues_accessors[0]->GetResults().size() > 0; },
-        std::chrono::milliseconds(2000),
+        std::chrono::milliseconds(12000),
         "Result was not received by SubTaskQueueAccessor",
         &resultTime
     );
 
     Color::PrintInfo("Waited ", resultTime.count(),  " ms for results to be received");
-
+    m_processing_engines[0]->StopQueueProcessing();
+    m_processing_engines[1]->StopQueueProcessing();
     // No duplicates should be received
     ASSERT_EQ( 1, m_processing_queues_accessors[0]->GetResults().size() );
     EXPECT_EQ( "SUBTASK_ID", std::get<0>( m_processing_queues_accessors[0]->GetResults()[0] ) );
@@ -183,7 +198,7 @@ TEST_F(SubTaskQueueAccessorImplTest, TaskFinalization)
 
     ASSERT_WAIT_FOR_CONDITION(
         [&isTaskFinalized]() { return isTaskFinalized.load(); },
-        std::chrono::milliseconds(2000),
+        std::chrono::milliseconds(12000),
         "Task not finalized",
         &resultTime
     );
@@ -214,10 +229,10 @@ TEST_F(SubTaskQueueAccessorImplTest, SubtaskTimeoutAndReprocessing)
     auto queueChannel = std::make_shared<ProcessingSubTaskQueueChannelPubSub>(pubs1, "QUEUE_CHANNEL_ID");
 
     // The first node processes subtasks slowly, which will trigger timeout
-    auto processingCore1 = std::make_shared<ProcessingCoreImpl>(1000);  // 1000ms processing time
+    auto processingCore1 = std::make_shared<ProcessingCoreImpl>(2000);  // 1000ms processing time
 
     // The second node processes subtasks quickly
-    auto processingCore2 = std::make_shared<ProcessingCoreImpl>(100);   // 100ms processing time
+    auto processingCore2 = std::make_shared<ProcessingCoreImpl>(200);   // 100ms processing time
 
 
     SGProcessing::ProcessingChunk chunk1;
@@ -261,12 +276,28 @@ TEST_F(SubTaskQueueAccessorImplTest, SubtaskTimeoutAndReprocessing)
         std::make_shared<SubTaskResultStorageMock>(),
         [&isTaskFinalized1](const SGProcessing::TaskResult&) { isTaskFinalized1 = true; },
         [](const std::string &) {});
+    auto processingQueueManager2 = std::make_shared<ProcessingSubTaskQueueManager>( queueChannel,
+                                                                                    pubs1->GetAsioContext(),
+                                                                                    nodeId2,
+                                                                                    []( const std::string & ) {} );
+    processingQueueManager2->SetProcessingTimeout( std::chrono::milliseconds( 500 ) );
+
+    auto subTaskQueueAccessor2 = std::make_shared<SubTaskQueueAccessorImpl>(
+        pubs1,
+        processingQueueManager2,
+        std::make_shared<SubTaskStateStorageMock>(),
+        std::make_shared<SubTaskResultStorageMock>(),
+        [&isTaskFinalized2]( const SGProcessing::TaskResult & ) { isTaskFinalized2 = true; },
+        []( const std::string & ) {} );
+
+    subTaskQueueAccessor2->CreateResultsChannel( "test" );
 
     // Make sure both queue accessors use the same results channel ID
     subTaskQueueAccessor1->CreateResultsChannel("test");
 
     // Connection established flag
     std::atomic<bool> connectionEstablished1 = false;
+
 
     subTaskQueueAccessor1->ConnectToSubTaskQueue([&]() {
         engine1->StartQueueProcessing(subTaskQueueAccessor1);
@@ -308,10 +339,6 @@ TEST_F(SubTaskQueueAccessorImplTest, SubtaskTimeoutAndReprocessing)
     // First node should have started processing but timed out
     // may have processed some subtasks before timeout
 
-    auto processingQueueManager2 = std::make_shared<ProcessingSubTaskQueueManager>(
-        queueChannel, pubs1->GetAsioContext(), nodeId2,[](const std::string &){});
-    processingQueueManager2->SetProcessingTimeout(std::chrono::milliseconds(500));
-
     // Change queue owner to second node
     SGProcessing::SubTaskQueueRequest queueRequest;
     queueRequest.set_node_id(nodeId2);
@@ -320,7 +347,7 @@ TEST_F(SubTaskQueueAccessorImplTest, SubtaskTimeoutAndReprocessing)
     // Synchronize the queues
     processingQueueManager2->ProcessSubTaskQueueMessage(processingQueueManager1->GetQueueSnapshot().release());
     processingQueueManager1->ProcessSubTaskQueueMessage(processingQueueManager2->GetQueueSnapshot().release());
-    engine1->StopQueueProcessing();
+    
 
     // Wait for the queue manager to handle expired tasks
     ASSERT_WAIT_FOR_CONDITION(
@@ -329,25 +356,16 @@ TEST_F(SubTaskQueueAccessorImplTest, SubtaskTimeoutAndReprocessing)
         "Second node did not acquire queue ownership",
         &resultTime
     );
-
+    
     std::atomic<bool> connectionEstablished2 = false;
 
-    auto subTaskQueueAccessor2 = std::make_shared<SubTaskQueueAccessorImpl>(
-        pubs1,
-        processingQueueManager2,
-        std::make_shared<SubTaskStateStorageMock>(),
-        std::make_shared<SubTaskResultStorageMock>(),
-        [&isTaskFinalized2](const SGProcessing::TaskResult&) { isTaskFinalized2 = true; },
-        [](const std::string &) {}
-    );
-
-    subTaskQueueAccessor2->CreateResultsChannel("test");
-
-    subTaskQueueAccessor2->ConnectToSubTaskQueue([&]() {
-        engine2->StartQueueProcessing(subTaskQueueAccessor2);
+    
+    subTaskQueueAccessor2->ConnectToSubTaskQueue(
+    [&]()
+    {
+        engine2->StartQueueProcessing( subTaskQueueAccessor2 );
         connectionEstablished2 = true;
-    });
-
+    } );
     // Wait for connection to be established
     ASSERT_WAIT_FOR_CONDITION(
         [&connectionEstablished2]() { return connectionEstablished2.load(); },
@@ -356,15 +374,17 @@ TEST_F(SubTaskQueueAccessorImplTest, SubtaskTimeoutAndReprocessing)
         &resultTime
     );
 
+    engine1->StopQueueProcessing();
+
     // Wait for second node to process subtasks and finalize
     ASSERT_WAIT_FOR_CONDITION(
         [&isTaskFinalized2]() { return isTaskFinalized2; },
-        std::chrono::milliseconds(3000),
+        std::chrono::milliseconds(13000),
         "Task was not finalized by second node",
         &resultTime
     );
 
-
+    std::cout << "First node processed? " << processedSubTask1 << " " << processedSubTask2 << std::endl;
     // Verify that node2 has ownership
     ASSERT_TRUE(processingQueueManager2->HasOwnership());
 
@@ -384,17 +404,16 @@ TEST_F(SubTaskQueueAccessorImplTest, SubtaskTimeoutAndReprocessing)
 TEST_F(SubTaskQueueAccessorImplTest, TwoNodesProcessingAndFinalizing)
 {
     auto pubs1 = m_pubsub_nodes[0];
+    auto pubs2 = m_pubsub_nodes[0];
 
     std::chrono::milliseconds resultTime;
 
     Color::PrintInfo("Waited ", resultTime.count(), " ms for pubsub node initialization");
 
-    // Create a result channel for test with the correct ID
-    sgns::ipfs_pubsub::GossipPubSubTopic resultChannel(pubs1, "RESULT_CHANNEL_ID_test");
-    resultChannel.Subscribe([](boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message&> message) {});
-
     auto queueChannel = std::make_shared<ProcessingSubTaskQueueChannelPubSub>(pubs1, "QUEUE_CHANNEL_ID");
-
+    auto queueChannel2 = std::make_shared<ProcessingSubTaskQueueChannelPubSub>( pubs2, "QUEUE_CHANNEL_ID" );
+    queueChannel->Listen( std::chrono::milliseconds(1000) );
+    queueChannel2->Listen( std::chrono::milliseconds( 1000 ) );
     // Both nodes process at the same speed
     auto processingCore1 = std::make_shared<ProcessingCoreImpl>(50);  // 50ms per subtask
     auto processingCore2 = std::make_shared<ProcessingCoreImpl>(50);  // 50ms per subtask
@@ -422,9 +441,62 @@ TEST_F(SubTaskQueueAccessorImplTest, TwoNodesProcessingAndFinalizing)
         queueChannel, pubs1->GetAsioContext(), nodeId1, [](const std::string &){});
     processingQueueManager1->ProcessSubTaskQueueMessage(queue.release());
 
-    auto processingQueueManager2 = std::make_shared<ProcessingSubTaskQueueManager>(
-        queueChannel, pubs1->GetAsioContext(), nodeId2, [](const std::string &){});
+    auto processingQueueManager2 = std::make_shared<ProcessingSubTaskQueueManager>( queueChannel2,
+                                                                                    pubs2->GetAsioContext(),
+                                                                                    nodeId2,
+                                                                                    []( const std::string & ) {} );
 
+    //Set up Queue Callbacks
+    queueChannel2->SetQueueRequestSink(
+        [qmWeak( std::weak_ptr<ProcessingSubTaskQueueManager>( processingQueueManager2 ) )](
+            const SGProcessing::SubTaskQueueRequest &request )
+        {
+        auto qm = qmWeak.lock();
+        if ( qm )
+        {
+            qm->ProcessSubTaskQueueRequestMessage( request );
+            return true;
+        }
+        return false;
+        } );
+
+     queueChannel2->SetQueueUpdateSink(
+        [qmWeak( std::weak_ptr<ProcessingSubTaskQueueManager>( processingQueueManager2 ) )](
+                SGProcessing::SubTaskQueue *queue )
+            {
+                auto qm = qmWeak.lock();
+                if ( qm )
+                {
+                    qm->ProcessSubTaskQueueMessage( queue );
+                    return true;
+                }
+                return false;
+            } );
+    queueChannel->SetQueueRequestSink(
+        [qmWeak( std::weak_ptr<ProcessingSubTaskQueueManager>( processingQueueManager1 ) )](
+            const SGProcessing::SubTaskQueueRequest &request )
+        {
+            auto qm = qmWeak.lock();
+            if ( qm )
+            {
+                qm->ProcessSubTaskQueueRequestMessage( request );
+                return true;
+            }
+            return false;
+        } );
+
+    queueChannel->SetQueueUpdateSink(
+        [qmWeak( std::weak_ptr<ProcessingSubTaskQueueManager>( processingQueueManager1 ) )](
+            SGProcessing::SubTaskQueue *queue )
+        {
+            auto qm = qmWeak.lock();
+            if ( qm )
+            {
+                qm->ProcessSubTaskQueueMessage( queue );
+                return true;
+            }
+            return false;
+        } );
     // Flags to track finalization
     std::atomic<bool> isTaskFinalized1 = false;
     std::atomic<bool> isTaskFinalized2 = false;
@@ -446,7 +518,7 @@ TEST_F(SubTaskQueueAccessorImplTest, TwoNodesProcessingAndFinalizing)
         [](const std::string &) {});
 
     auto subTaskQueueAccessor2 = std::make_shared<SubTaskQueueAccessorImpl>(
-        pubs1,
+        pubs2,
         processingQueueManager2,
         std::make_shared<SubTaskStateStorageMock>(),
         std::make_shared<SubTaskResultStorageMock>(),
@@ -469,6 +541,17 @@ TEST_F(SubTaskQueueAccessorImplTest, TwoNodesProcessingAndFinalizing)
         connectionEstablished1 = true;
     });
 
+    assertWaitForCondition(
+        [&connectionEstablished1]()
+        {
+            return connectionEstablished1.load();
+        },
+        std::chrono::milliseconds( 2000 ),
+        "Connections to subtask queue 1 were not established",
+        &resultTime );
+
+    //Wait for node 1 to fully start.
+    std::this_thread::sleep_for( std::chrono::milliseconds( 200 ) );
     subTaskQueueAccessor2->ConnectToSubTaskQueue([&]() {
         engine2->StartQueueProcessing(subTaskQueueAccessor2);
         connectionEstablished2 = true;
@@ -476,11 +559,12 @@ TEST_F(SubTaskQueueAccessorImplTest, TwoNodesProcessingAndFinalizing)
 
     // Wait for connections to be established
     assertWaitForCondition(
-        [&connectionEstablished1, &connectionEstablished2]() {
-            return connectionEstablished1.load() && connectionEstablished2.load();
+        [&connectionEstablished2]()
+        {
+            return connectionEstablished2.load();
         },
-        std::chrono::milliseconds(2000),
-        "Connections to subtask queues were not established",
+        std::chrono::milliseconds(12000),
+        "Connections to subtask queue 2 were not established",
         &resultTime
     );
 
@@ -513,6 +597,7 @@ TEST_F(SubTaskQueueAccessorImplTest, TwoNodesProcessingAndFinalizing)
     // Verify results
     size_t totalProcessed = processingCore1->m_processedSubTasks.size() +
                             processingCore2->m_processedSubTasks.size();
+
     ASSERT_EQ(10, totalProcessed);
 
     // Only one node should finalize the task

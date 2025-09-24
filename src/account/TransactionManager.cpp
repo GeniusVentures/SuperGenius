@@ -143,8 +143,8 @@ namespace sgns
                              full_node_m,
                              full_node_topic_m );
             globaldb_m->AddListenTopic( full_node_topic_m );
+            globaldb_m->AddTopicName( full_node_topic_m );
         }
-        globaldb_m->AddTopicName( full_node_topic_m );
         globaldb_m->AddTopicName( account_m->GetAddress() );
     }
 
@@ -236,12 +236,7 @@ namespace sgns
             ProcessNewData( new_data );
         }
 
-        m_logger->debug( "[{} - full: {}] Loop iteration - time since last: {}ms",
-                         account_m->GetAddress().substr( 0, 8 ),
-                         full_node_m,
-                         time_since_last_loop );
-
-        m_logger->debug( "[{} - full: {}] Loop iteration - time since last: {}ms",
+        m_logger->trace( "[{} - full: {}] Loop iteration - time since last: {}ms",
                          account_m->GetAddress().substr( 0, 8 ),
                          full_node_m,
                          time_since_last_loop );
@@ -2426,7 +2421,7 @@ namespace sgns
 
         auto remove_res = RemoveTransactionFromProcessedMaps( key );
 
-        if (remove_res.has_error())
+        if ( remove_res.has_error() )
         {
             m_logger->error( "[{} - full: {}] Error removing transaction {}: {}",
                              account_m->GetAddress().substr( 0, 8 ),

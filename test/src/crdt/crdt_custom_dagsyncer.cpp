@@ -2,7 +2,7 @@
 
 namespace sgns::crdt
 {
-    CustomDagSyncer::CustomDagSyncer( std::shared_ptr<IpfsDatastore> service ) : dagService_( std::move(service) ) {}
+    CustomDagSyncer::CustomDagSyncer( std::shared_ptr<IpfsDatastore> service ) : dagService_( std::move( service ) ) {}
 
     outcome::result<bool> CustomDagSyncer::HasBlock( const CID &cid ) const
     {
@@ -66,7 +66,11 @@ namespace sgns::crdt
     outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> CustomDagSyncer::GetNodeWithoutRequest(
         const CID &cid ) const
     {
-        return outcome::failure( boost::system::error_code{} );
+        //if ( IsCIDInCache( cid ) )
+        //{
+        //    return outcome::failure( boost::system::error_code{} );
+        //}
+        return dagService_.getNode( cid );
     }
 
     std::pair<DAGSyncer::LinkInfoSet, DAGSyncer::LinkInfoSet> CustomDagSyncer::TraverseCIDsLinks(
@@ -135,12 +139,13 @@ namespace sgns::crdt
 
     void CustomDagSyncer::Stop() {}
 
-    IPFS::outcome::result<void> CustomDagSyncer::markResolved( const CID &cid ) 
+    IPFS::outcome::result<void> CustomDagSyncer::markResolved( const CID &cid )
     {
         return outcome::success();
     }
+
     IPFS::outcome::result<bool> CustomDagSyncer::isResolved( const CID &cid ) const
     {
         return outcome::success();
-    };
+    }
 } // namespace sgns::crdt

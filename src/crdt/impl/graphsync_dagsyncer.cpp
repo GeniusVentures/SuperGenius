@@ -177,21 +177,36 @@ namespace sgns::crdt
             return node;
         }
 
+        bool already_requested = false;
+
         if ( auto initial_state = graphsync_->getRequestState( cid ) )
         {
             if ( initial_state.value() == Graphsync::RequestState::IN_PROGRESS )
             {
-                logger_->error( "We already started trying to get this CID {}", cid.toString().value() );
-                return outcome::failure( Error::ROUTE_NOT_FOUND );
+                already_requested = true;
+                logger_->debug( "We already started trying to get this CID {}", cid.toString().value() );
             }
         }
-        // Get the peer info from our routing system
+        ipfs_lite::ipfs::graphsync::Subscription curr_subscription;
+
         OUTCOME_TRY( auto peerEntry, GetRoute( cid ) );
 
         auto &peerID  = peerEntry.first;
         auto &address = peerEntry.second;
-
-        OUTCOME_TRY( ( auto &&, subscription ), RequestNode( peerID, address, cid ) );
+        // Check if this peer recently failed to provide this specific CID
+        if ( HasRecentCIDFailure( peerID, cid ) )
+        {
+            logger_->debug( "Skipping request for CID {} from peer {} due to recent failure",
+                            cid.toString().value(),
+                            peerID.toBase58() );
+            return outcome::failure( Error::CID_NOT_FOUND );
+        }
+        if ( already_requested == false )
+        {
+            logger_->debug( "Requesting CID {}", cid.toString().value() );
+            OUTCOME_TRY( ( auto &&, subscription ), RequestNode( peerID, address, cid ) );
+            curr_subscription = std::move( subscription );
+        }
 
         while ( true )
         {
@@ -237,14 +252,20 @@ namespace sgns::crdt
                 }
                 case Graphsync::RequestState::FAILED:
                 {
-                    // Request explicitly failed, don't keep waiting
-                    logger_->debug( "Request explicitly failed for CID {}", cid.toString().value() );
-                    OUTCOME_TRY( BlackListPeer( peerID ) );
+                    // Request explicitly failed - record that this peer doesn't have this specific CID
+                    // but don't blacklist the entire peer since they might have other content
+                    logger_->debug( "Request failed for CID {} from peer {} - recording CID-specific failure",
+                                    cid.toString().value(),
+                                    peerID.toBase58() );
+                    RecordCIDFailure( peerID, cid );
                     return outcome::failure( Error::CID_NOT_FOUND );
                 }
                 case Graphsync::RequestState::IN_PROGRESS:
                 {
                     // Still in progress, keep waiting
+                    logger_->debug( "Request for CID {} from peer {} - In Progress",
+                                    cid.toString().value(),
+                                    peerID.toBase58() );
                     std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
                     break;
                 }
@@ -455,6 +476,10 @@ namespace sgns::crdt
             else
             {
                 RecordSuccessfulConnection( peerID );
+
+                // Clear any CID failure record for this peer and CID since they successfully provided it
+                ClearCIDFailure( peerID, cid );
+
                 auto [links_to_fetch, _1] = TraverseCIDsLinks( *node.value() );
                 for ( const auto &[cid, _2] : links_to_fetch )
                 {
@@ -800,6 +825,57 @@ namespace sgns::crdt
         return static_cast<uint64_t>(
             std::chrono::duration_cast<std::chrono::seconds>( std::chrono::system_clock::now().time_since_epoch() )
                 .count() );
+    }
+
+    void GraphsyncDAGSyncer::RecordCIDFailure( const PeerId &peer, const CID &cid ) const
+    {
+        std::lock_guard<std::mutex> lock( cid_failures_mutex_ );
+        auto                        key = std::make_pair( peer.toMultihash(), cid );
+        cid_failures_[key]              = GetCurrentTimestamp();
+        logger_->debug( "Recorded CID failure: peer {} cannot provide CID {}",
+                        peer.toBase58(),
+                        cid.toString().value() );
+    }
+
+    bool GraphsyncDAGSyncer::HasRecentCIDFailure( const PeerId &peer, const CID &cid ) const
+    {
+        std::lock_guard<std::mutex> lock( cid_failures_mutex_ );
+        auto                        key = std::make_pair( peer.toMultihash(), cid );
+        auto                        it  = cid_failures_.find( key );
+
+        if ( it == cid_failures_.end() )
+        {
+            return false; // No failure recorded
+        }
+
+        // Consider failure "recent" for 5 minutes (300 seconds)
+        // This prevents immediate re-requests but allows retry after some time
+        uint64_t       now             = GetCurrentTimestamp();
+        uint64_t       failure_age     = now - it->second;
+        const uint64_t FAILURE_TIMEOUT = 300; // 5 minutes
+
+        if ( failure_age > FAILURE_TIMEOUT )
+        {
+            // Failure is old, remove it and allow retry
+            cid_failures_.erase( it );
+            return false;
+        }
+
+        return true; // Recent failure exists
+    }
+
+    void GraphsyncDAGSyncer::ClearCIDFailure( const PeerId &peer, const CID &cid ) const
+    {
+        std::lock_guard<std::mutex> lock( cid_failures_mutex_ );
+        auto                        key = std::make_pair( peer.toMultihash(), cid );
+        auto                        it  = cid_failures_.find( key );
+        if ( it != cid_failures_.end() )
+        {
+            cid_failures_.erase( it );
+            logger_->debug( "Cleared CID failure record: peer {} can now be tried again for CID {}",
+                            peer.toBase58(),
+                            cid.toString().value() );
+        }
     }
 
     void GraphsyncDAGSyncer::LRUCIDCache::init( const CID &cid )

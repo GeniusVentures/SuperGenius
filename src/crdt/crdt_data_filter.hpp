@@ -78,7 +78,7 @@ namespace sgns::crdt
          * @brief       Tries to filter the tombstones on delta according to stored filters
          * @param[in]   delta The delta to be filtered
          */
-        void FilterTombstonesOnDelta( std::shared_ptr<pb::Delta> &delta );
+        void FilterTombstonesOnDelta( pb::Delta &delta );
 
     private:
         const bool             accept_by_default_;        ///< The default behavior for values not matching any filter

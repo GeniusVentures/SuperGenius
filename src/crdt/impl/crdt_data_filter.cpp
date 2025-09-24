@@ -105,7 +105,7 @@ namespace sgns::crdt
         }
     }
 
-    void CRDTDataFilter::FilterTombstonesOnDelta( std::shared_ptr<pb::Delta> &delta )
+    void CRDTDataFilter::FilterTombstonesOnDelta( pb::Delta &delta )
     {
         //TODO - Figure out how to remove tombstones even recorded ones
         throw std::runtime_error( "Not supported" );
