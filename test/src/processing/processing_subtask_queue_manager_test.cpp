@@ -425,7 +425,8 @@ TEST_F(ProcessingSubTaskQueueManagerTest, ValidateResults)
     ProcessingValidationCore validationCore;
     {
         std::set<std::string> invalidSubTaskIds;
-        ASSERT_FALSE(validationCore.ValidateResults(subTasks, results, invalidSubTaskIds));
+        auto validate_res = validationCore.ValidateResults(subTasks, results, invalidSubTaskIds);
+        ASSERT_TRUE(validate_res.has_error());
     }
 
     subTaskResult.set_subtaskid("SUBTASK_2");
@@ -433,7 +434,8 @@ TEST_F(ProcessingSubTaskQueueManagerTest, ValidateResults)
 
     {
         std::set<std::string> invalidSubTaskIds;
-        ASSERT_TRUE(validationCore.ValidateResults(subTasks, results, invalidSubTaskIds));
+        auto validate_res = validationCore.ValidateResults(subTasks, results, invalidSubTaskIds);
+        ASSERT_FALSE(validate_res.has_error());
         ASSERT_EQ(0, invalidSubTaskIds.size());
     }
 }

@@ -23,7 +23,6 @@ namespace sgns::processing
         m_logger->debug( "[CREATED] this: {}, thread_id {}",
                          reinterpret_cast<size_t>( this ),
                          std::this_thread::get_id() );
-        
     }
 
     SubTaskQueueAccessorImpl::~SubTaskQueueAccessorImpl()
@@ -185,9 +184,12 @@ namespace sgns::processing
         }
 
         // Validate before storing
-        if ( !m_validationCore.ValidateIndividualResult( maybeSubTask.value(), subTaskResult ) )
+        if ( auto validation_res = m_validationCore.ValidateIndividualResult( maybeSubTask.value(), subTaskResult );
+             validation_res.has_error() )
         {
-            m_logger->error( "Invalid result for subtask {}, not storing", subTaskId );
+            m_logger->error( "Invalid result for subtask {}: {}, not storing",
+                             subTaskId,
+                             validation_res.error().message() );
             m_processingErrorSink( "Invalid result for subtask: " + subTaskId );
             return;
         }
@@ -196,7 +198,6 @@ namespace sgns::processing
         m_subTaskStateStorage->ChangeSubTaskState( subTaskId, SGProcessing::SubTaskState::PROCESSED );
         // tell local queue manager we completed this task as well.
         m_subTaskQueueManager->ChangeSubTaskProcessingStates( { subTaskId }, true );
-
 
         if ( m_resultChannel )
         {
@@ -213,7 +214,8 @@ namespace sgns::processing
     bool SubTaskQueueAccessorImpl::OnResultReceived( SGProcessing::SubTaskResult &&subTaskResult )
     {
         m_logger->info( "OnResultReceived called with subtask {} {}",
-                        reinterpret_cast<size_t>( this ), subTaskResult.subtaskid() );
+                        reinterpret_cast<size_t>( this ),
+                        subTaskResult.subtaskid() );
         bool should_have_finalized = false;
         if ( !m_subTaskQueueManager->IsQueueInit() )
         {
@@ -229,9 +231,10 @@ namespace sgns::processing
             return false;
         }
 
-        if ( !m_validationCore.ValidateIndividualResult( maybeSubTask.value(), subTaskResult ) )
+        if ( auto validation_res = m_validationCore.ValidateIndividualResult( maybeSubTask.value(), subTaskResult );
+             validation_res.has_error() )
         {
-            m_logger->error( "Rejecting invalid external result for subtask {}", subTaskResult.subtaskid() );
+            m_logger->error( "Rejecting invalid external result for subtask {}: {}", subTaskResult.subtaskid(), validation_res.error().message() );
             m_processingErrorSink( "Invalid external result for subtask: " + subTaskResult.subtaskid() );
             return false;
         }
@@ -265,7 +268,8 @@ namespace sgns::processing
         const SGProcessing::SubTaskCollection &subTasks,
         std::set<std::string>                 &invalidSubTaskIds )
     {
-        bool valid = m_validationCore.ValidateResults( subTasks, m_results, invalidSubTaskIds );
+        auto validate_res = m_validationCore.ValidateResults( subTasks, m_results, invalidSubTaskIds );
+        bool valid        = !validate_res.has_error();
 
         FinalizationRetVal finalization_ret = FinalizationRetVal::NOT_FINALIZED;
         m_logger->debug( "RESULTS_VALIDATED: {}", valid ? "VALID" : "INVALID" );
@@ -353,7 +357,7 @@ namespace sgns::processing
     }
 
     boost::optional<SGProcessing::SubTask> SubTaskQueueAccessorImpl::FindSubTaskById(
-        const std::string& subTaskId) const
+        const std::string &subTaskId ) const
     {
         auto queue = m_subTaskQueueManager->GetQueueSnapshot();
         if ( !queue )
