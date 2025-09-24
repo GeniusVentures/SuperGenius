@@ -1,10 +1,5 @@
 #include "UTXOTxParameters.hpp"
-#include <boost/multiprecision/fwd.hpp>
 #include <cmath>
-
-#include <nil/crypto3/algebra/marshalling.hpp>
-#include <nil/crypto3/pubkey/algorithm/sign.hpp>
-#include <nil/crypto3/pubkey/algorithm/verify.hpp>
 
 namespace sgns
 {
@@ -162,7 +157,7 @@ namespace sgns
         }
     }
 
-    std::vector<GeniusUTXO> UTXOTxParameters::UpdateUTXOList( const std::vector<GeniusUTXO> &utxo_pool,
+    std::vector<GeniusUTXO> UTXOTxParameters::ReserveUTXOs( const std::vector<GeniusUTXO> &utxo_pool,
                                                               const UTXOTxParameters        &params )
     {
         auto updated_list = utxo_pool;
@@ -181,7 +176,26 @@ namespace sgns
         return updated_list;
     }
 
-    bool UTXOTxParameters::SignParameters( std::shared_ptr<ethereum::EthereumKeyGenerator> eth_key )
+    std::vector<GeniusUTXO> UTXOTxParameters::RollbackUTXOs( const std::vector<GeniusUTXO> &utxo_pool,
+                                                              const UTXOTxParameters        &params )
+    {
+        auto updated_list = utxo_pool;
+
+        for ( auto &input_utxo : params.inputs_ )
+        {
+            for ( auto &utxo : updated_list )
+            {
+                if ( input_utxo.txid_hash_ == utxo.GetTxID() )
+                {
+                    utxo.ToggleLock( false );
+                }
+            }
+        }
+
+        return updated_list;
+    }
+
+    bool UTXOTxParameters::SignParameters( std::shared_ptr<GeniusAccount> account )
     {
         //TODO -- Fill the signature field
         return true;

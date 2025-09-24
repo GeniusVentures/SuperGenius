@@ -4,8 +4,11 @@
  */
 
 #include "TokenAmount.hpp"
+#include <boost/multiprecision/cpp_int.hpp>
 #include "base/ScaledInteger.hpp"
 #include <limits>
+
+using namespace boost::multiprecision;
 
 namespace sgns
 {

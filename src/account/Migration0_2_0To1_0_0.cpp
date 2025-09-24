@@ -15,6 +15,7 @@
 #include "account/EscrowReleaseTransaction.hpp"
 #include "proof/IBasicProof.hpp"
 #include "MigrationManager.hpp"
+#include "base/sgns_version.hpp"
 
 namespace sgns
 {
@@ -71,8 +72,9 @@ namespace sgns
 
     outcome::result<std::shared_ptr<crdt::GlobalDB>> Migration0_2_0To1_0_0::InitLegacyDb( const std::string &suffix )
     {
-        static constexpr auto LEGACY_PREFIX_FMT     = "/SuperGNUSNode.TestNet.2a.00.%1%";
-        const auto            legacyNetworkFullPath = ( boost::format( LEGACY_PREFIX_FMT ) % base58key_ ).str();
+        static constexpr auto LEGACY_PREFIX_FMT = "/SuperGNUSNode.TestNet.2a.00.%1%";
+
+        const auto legacyNetworkFullPath = ( boost::format( LEGACY_PREFIX_FMT ) % base58key_ ).str();
         const auto fullPath = ( boost::format( "%s%s_%s" ) % writeBasePath_ % legacyNetworkFullPath % suffix ).str();
 
         m_logger->debug( "Initializing legacy DB at path {}", fullPath );
@@ -134,7 +136,7 @@ namespace sgns
             auto tx = maybe_transaction.value();
             m_logger->trace( "Fetched transaction {}", transaction_key );
 
-            if ( !IGeniusTransactions::CheckDAGStructSignature( tx->dag_st ) )
+            if ( !tx->CheckDAGSignatureLegacy() )
             {
                 m_logger->error( "Could not validate signature of transaction {}", transaction_key );
                 continue;

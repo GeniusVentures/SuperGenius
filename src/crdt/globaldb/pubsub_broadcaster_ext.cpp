@@ -104,7 +104,7 @@ namespace sgns::crdt
                 m_logger->debug( "Subscription request sent to topic: " + topicName );
 
                 // Subscribe and capture the topic name in the lambda.
-                std::future<libp2p::protocol::Subscription> future = std::move( pubSub_->Subscribe(
+                std::shared_future<std::shared_ptr<libp2p::protocol::Subscription>> future = std::move( pubSub_->Subscribe(
                     topicName,
                     [weakptr = weak_from_this(), topicName]( boost::optional<const GossipPubSub::Message &> message )
                     {
@@ -193,15 +193,18 @@ namespace sgns::crdt
                 auto hb = dagSyncer_->HasBlock( cid );
                 if ( !hb.has_value() )
                 {
-                    m_logger->warn( "HasBlock query failed for CID {}", cid.toString().value() );
+                    m_logger->debug( "HasBlock query failed for CID {} on topic {}",
+                                     cid.toString().value(),
+                                     incomingTopic );
                     continue;
                 }
 
                 if ( hb.value() || dagSyncer_->IsCIDInCache( cid ) )
                 {
-                    m_logger->trace( "Not adding route node {} from {}",
+                    m_logger->trace( "Not adding route node {} from {} on topic {}",
                                      cid.toString().value(),
-                                     addrvector[0].getStringAddress() );
+                                     addrvector[0].getStringAddress(),
+                                     incomingTopic );
                     continue;
                 }
                 new_content = true;
@@ -348,7 +351,7 @@ namespace sgns::crdt
         m_logger->debug( "Listen request on topic: '{}'", topic );
         if ( started_ )
         {
-            std::future<libp2p::protocol::Subscription> future = std::move( pubSub_->Subscribe(
+            std::shared_future<std::shared_ptr<libp2p::protocol::Subscription>> future = std::move( pubSub_->Subscribe(
                 topic,
                 [weakptr = weak_from_this(), topic]( boost::optional<const GossipPubSub::Message &> message )
                 {

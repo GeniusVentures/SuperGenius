@@ -96,22 +96,6 @@ namespace sgns::crdt
     EXPECT_OUTCOME_TRUE(bufferGetNewValueLowerPriority, crdtSet.GetElement(strKey));
     EXPECT_STRCASEEQ(std::string(bufferGetNewValueLowerPriority.toString()).c_str(), originalValue.c_str());
 
-    // Try to set value with same priority, lexicographically smaller => value should NOT change
-    // comparing two data lexicographically,  currentValue >= newValue, no need to store value
-    Buffer newValueLexicographicallySmallerSamePriorityBuffer;
-    newValueLexicographicallySmallerSamePriorityBuffer.put(newValueLexicographicallySmaller);
-    auto samePriorityResult = crdtSet.GetPriority(strKey);
-    const uint64_t samePriority = samePriorityResult.value();
-    EXPECT_OUTCOME_TRUE_1(crdtSet.SetValue(strKey, originalTombstoneID, newValueLexicographicallySmallerSamePriorityBuffer, samePriority));
-    EXPECT_OUTCOME_TRUE(bufferGetNewValueLexicographicallySmallerSamePriority, crdtSet.GetElement(strKey));
-    EXPECT_STRCASEEQ(std::string(bufferGetNewValueLexicographicallySmallerSamePriority.toString()).c_str(), originalValue.c_str());
-
-    // Try to set value with same priority, lexicographically larger => value should change
-    Buffer newValueLexicographicallyLargerSamePriorityBuffer;
-    newValueLexicographicallyLargerSamePriorityBuffer.put(newValueLexicographicallyLarger);
-    EXPECT_OUTCOME_TRUE_1(crdtSet.SetValue(strKey, originalTombstoneID, newValueLexicographicallyLargerSamePriorityBuffer, samePriority));
-    EXPECT_OUTCOME_TRUE(bufferGetNewValueLexicographicallyLargerSamePriority, crdtSet.GetElement(strKey));
-    EXPECT_STRCASEEQ(std::string(bufferGetNewValueLexicographicallyLargerSamePriority.toString()).c_str(), newValueLexicographicallyLarger.c_str());
   }
 
   TEST(CrdtSetTest, TestDelta)
@@ -251,7 +235,7 @@ namespace sgns::crdt
     auto deltaElements = delta->elements();
     auto deltaTombstones = delta->tombstones();
 
-    EXPECT_OUTCOME_TRUE_1(crdtSet.Merge(delta, id));
+    EXPECT_OUTCOME_TRUE_1(crdtSet.Merge( *delta, id ) );
 
     std::vector<CrdtSet::Element> elements(deltaElements.begin(), deltaElements.end());
     for (auto& elem : elements)

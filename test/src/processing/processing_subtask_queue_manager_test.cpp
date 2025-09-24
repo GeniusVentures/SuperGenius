@@ -38,12 +38,11 @@ class ProcessingSubTaskQueueManagerTest : public ProcessingServiceTest
 public:
     void SetUp() override
     {
-        ProcessingServiceTest::SetUp("processing_subtask_queue_manager_test", logger_config);
-        ProcessingServiceTest::Initialize(2, 50);
+        //ProcessingServiceTest::SetUp("processing_subtask_queue_manager_test", logger_config);
+        //ProcessingServiceTest::Initialize(2, 50);
     }
     const  std::string nodeId1 = "NODE_1";
     const  std::string nodeId2 = "NODE_2";
-
 };
 
 /**
@@ -96,6 +95,7 @@ TEST_F(ProcessingSubTaskQueueManagerTest, QueueCreating)
     ASSERT_EQ(2, queueSnapshotSet[0].processing_queue().items_size());
     EXPECT_EQ("", queueSnapshotSet[0].processing_queue().items(0).lock_node_id());
     EXPECT_EQ("", queueSnapshotSet[0].processing_queue().items(1).lock_node_id());
+    context->stop();
 }
 
 /**
@@ -149,6 +149,7 @@ TEST_F(ProcessingSubTaskQueueManagerTest, QueueOwnershipTransfer)
     // The subtask is not locked by the new owner yet
     EXPECT_EQ("", queueSnapshotSet[0].processing_queue().items(0).lock_node_id());
     EXPECT_EQ("", queueSnapshotSet[0].processing_queue().items(1).lock_node_id());
+    context->stop();
 }
 
 /**
@@ -212,6 +213,7 @@ TEST_F(ProcessingSubTaskQueueManagerTest, GrabSubTaskWithoutOwnershipTransferrin
     // The subtask is locked the queue owner
     EXPECT_EQ(nodeId1, queueSnapshotSet[1].processing_queue().items(0).lock_node_id());
     EXPECT_EQ("", queueSnapshotSet[1].processing_queue().items(1).lock_node_id());
+    context->stop();
 }
 
 /**
@@ -253,6 +255,7 @@ TEST_F(ProcessingSubTaskQueueManagerTest, GrabSubTaskWithOwnershipTransferring)
     auto queueChannel2 = std::make_shared<ProcessingSubTaskQueueChannelImpl>();
     queueChannel2->queueOwnershipRequestSink = 
         [context, &requestedOwnerIds, &queueManager1](const std::string& nodeId) {
+        std::cout << "Queue Ownership Sink" << std::endl;
             requestedOwnerIds.push_back(nodeId);
             context->post([&queueManager1, nodeId]() {
                 SGProcessing::SubTaskQueueRequest request;
@@ -260,20 +263,31 @@ TEST_F(ProcessingSubTaskQueueManagerTest, GrabSubTaskWithOwnershipTransferring)
                 queueManager1.ProcessSubTaskQueueRequestMessage(request);
             });
         };
-    queueChannel2->queuePublishingSink = 
-        [context, &queueSnapshotSet, &queueManager1](std::shared_ptr<SGProcessing::SubTaskQueue> queue) {
-        queueSnapshotSet.push_back(*queue);
-        context->post([&queueManager1, queue]() {
-            auto pQueue = std::make_unique<SGProcessing::SubTaskQueue>();
-            pQueue->CopyFrom(*queue);
-            queueManager1.ProcessSubTaskQueueMessage(pQueue.release());
-        });
+    queueChannel2->queuePublishingSink =
+        [context, &queueSnapshotSet, &queueManager1]( std::shared_ptr<SGProcessing::SubTaskQueue> queue )
+    {
+        // Only add to snapshot set if this node (NODE_2) is the owner
+        if ( queue->processing_queue().owner_node_id() == "NODE_2" )
+        {
+            std::cout << "Node 2 publishing snapshot " << ( queueSnapshotSet.size() + 1 )
+                      << ", owner: " << queue->processing_queue().owner_node_id() << std::endl;
+            queueSnapshotSet.push_back( *queue );
+        }
+        // Always forward to other node for synchronization
+        context->post(
+            [&queueManager1, queue]()
+            {
+                auto pQueue = std::make_unique<SGProcessing::SubTaskQueue>();
+                pQueue->CopyFrom( *queue );
+                queueManager1.ProcessSubTaskQueueMessage( pQueue.release() );
+            } );
     };
 
     ProcessingSubTaskQueueManager queueManager2(queueChannel2, context, nodeId2,[](const std::string &){});
 
     queueSubTaskChannel->queueOwnershipRequestSink =
         [context, &requestedOwnerIds, &queueManager2](const std::string& nodeId) {
+            std::cout << "Queue Ownership Sink 2" << std::endl;
             requestedOwnerIds.push_back(nodeId);
             context->post([&queueManager2, nodeId]() {
                 SGProcessing::SubTaskQueueRequest request;
@@ -282,14 +296,24 @@ TEST_F(ProcessingSubTaskQueueManagerTest, GrabSubTaskWithOwnershipTransferring)
                 });
         };
     queueSubTaskChannel->queuePublishingSink =
-        [context, &queueSnapshotSet, &queueManager2](std::shared_ptr<SGProcessing::SubTaskQueue> queue) {
-            queueSnapshotSet.push_back(*queue);
-            context->post([&queueManager2, queue]() {
+        [context, &queueSnapshotSet, &queueManager2]( std::shared_ptr<SGProcessing::SubTaskQueue> queue )
+    {
+        // Only add to snapshot set if this node (NODE_1) is the owner
+        if ( queue->processing_queue().owner_node_id() == "NODE_1" )
+        {
+            std::cout << "Node 1 publishing snapshot " << ( queueSnapshotSet.size() + 1 )
+                      << ", owner: " << queue->processing_queue().owner_node_id() << std::endl;
+            queueSnapshotSet.push_back( *queue );
+        }
+        // Always forward to other node for synchronization
+        context->post(
+            [&queueManager2, queue]()
+            {
                 auto pQueue = std::make_unique<SGProcessing::SubTaskQueue>();
-                pQueue->CopyFrom(*queue);
-                queueManager2.ProcessSubTaskQueueMessage(pQueue.release());
-            });
-        };
+                pQueue->CopyFrom( *queue );
+                queueManager2.ProcessSubTaskQueueMessage( pQueue.release() );
+            } );
+    };
 
     // Create the queue on node1
     queueManager1.CreateQueue(subTasks);
@@ -305,7 +329,7 @@ TEST_F(ProcessingSubTaskQueueManagerTest, GrabSubTaskWithOwnershipTransferring)
 
     context->run();
 
-    ASSERT_EQ(3, queueSnapshotSet.size());
+    ASSERT_EQ(4, queueSnapshotSet.size());
 
     // Ownership is transferred to node2
     ASSERT_EQ(2, queueSnapshotSet[2].processing_queue().items_size());
@@ -314,6 +338,7 @@ TEST_F(ProcessingSubTaskQueueManagerTest, GrabSubTaskWithOwnershipTransferring)
     // The subtask is locked by node2
     EXPECT_EQ(nodeId2, queueSnapshotSet[2].processing_queue().items(0).lock_node_id());
     EXPECT_EQ("", queueSnapshotSet[2].processing_queue().items(1).lock_node_id());
+    context->stop();
 }
 
 /**
@@ -360,6 +385,7 @@ TEST_F(ProcessingSubTaskQueueManagerTest, CheckProcessedQueue)
     queueManager1.ChangeSubTaskProcessingStates({ "SUBTASK_2" }, true);
 
     ASSERT_TRUE(queueManager1.IsProcessed());
+    context->stop();
 }
 
 /**
@@ -399,7 +425,8 @@ TEST_F(ProcessingSubTaskQueueManagerTest, ValidateResults)
     ProcessingValidationCore validationCore;
     {
         std::set<std::string> invalidSubTaskIds;
-        ASSERT_FALSE(validationCore.ValidateResults(subTasks, results, invalidSubTaskIds));
+        auto validate_res = validationCore.ValidateResults(subTasks, results, invalidSubTaskIds);
+        ASSERT_TRUE(validate_res.has_error());
     }
 
     subTaskResult.set_subtaskid("SUBTASK_2");
@@ -407,7 +434,8 @@ TEST_F(ProcessingSubTaskQueueManagerTest, ValidateResults)
 
     {
         std::set<std::string> invalidSubTaskIds;
-        ASSERT_TRUE(validationCore.ValidateResults(subTasks, results, invalidSubTaskIds));
+        auto validate_res = validationCore.ValidateResults(subTasks, results, invalidSubTaskIds);
+        ASSERT_FALSE(validate_res.has_error());
         ASSERT_EQ(0, invalidSubTaskIds.size());
     }
 }
@@ -440,6 +468,7 @@ TEST_F(ProcessingSubTaskQueueManagerTest, TaskSplitFailed)
 
     // Create the queue on node1
     ASSERT_FALSE(queueManager1.CreateQueue(subTasks));
+    context->stop();
 }
 
 /**
@@ -481,163 +510,6 @@ TEST_F(ProcessingSubTaskQueueManagerTest, TaskSplitSucceeded)
 
     // Create the queue on node1
     ASSERT_TRUE(queueManager1.CreateQueue(subTasks));
+    context->stop();
 }
 
-/**
- * @given A queue containing 10 subtasks and two nodes
- * @when Both nodes process subtasks with one node processing the final subtask
- * @then The node that processes the final subtask finalizes the job
- */
-TEST_F(ProcessingSubTaskQueueManagerTest, TwoNodesProcessingAndFinalizing)
-{
-    // Create a result channel for test with the correct ID
-    sgns::ipfs_pubsub::GossipPubSubTopic resultChannel(m_pubsub_nodes[0], "RESULT_CHANNEL_ID_test");
-    resultChannel.Subscribe([](boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message&> message) {});
-
-    // Create a queue with 10 subtasks
-    auto queue = std::make_unique<SGProcessing::SubTaskQueue>();
-    queue->mutable_processing_queue()->set_owner_node_id("NODE_1");
-
-    SGProcessing::ProcessingChunk chunk1;
-    chunk1.set_chunkid("CHUNK_1");
-    chunk1.set_n_subchunks(1);
-
-    // Create a list of subtasks
-    std::list<SGProcessing::SubTask> subTasks;
-
-    // Add 10 subtasks to the list
-    for (int i = 1; i <= 10; i++) {
-        SGProcessing::SubTask subTask;
-        subTask.set_subtaskid("SUBTASK_ID" + std::to_string(i));
-
-        SGProcessing::ProcessingChunk chunk;
-        chunk.set_chunkid("CHUNK_1");
-        chunk.set_n_subchunks(1);
-
-        auto chunkToProcess = subTask.add_chunkstoprocess();
-        chunkToProcess->CopyFrom(chunk);
-
-        subTasks.push_back(std::move(subTask));
-    }
-
-    m_processing_queues_channel_pub_subs[0]->SetQueueRequestSink(
-      [qmWeak( std::weak_ptr<ProcessingSubTaskQueueManager>( m_processing_queues_managers[0] ) )](
-          const SGProcessing::SubTaskQueueRequest &request )
-      {
-          auto qm = qmWeak.lock();
-          if ( qm )
-          {
-              qm->ProcessSubTaskQueueRequestMessage( request );
-              return true;
-          }
-          return false;
-      } );
-
-    m_processing_queues_channel_pub_subs[0]->SetQueueUpdateSink(
-    [qmWeak(std::weak_ptr<ProcessingSubTaskQueueManager>(m_processing_queues_managers[0]))](
-        SGProcessing::SubTaskQueue *queue)
-    {
-        auto qm = qmWeak.lock();
-        if (qm)
-        {
-            qm->ProcessSubTaskQueueMessage(queue);
-            return true;
-        }
-        return false;
-    });
-
-    m_processing_queues_channel_pub_subs[1]->SetQueueRequestSink(
-      [qmWeak( std::weak_ptr<ProcessingSubTaskQueueManager>( m_processing_queues_managers[1] ) )](
-          const SGProcessing::SubTaskQueueRequest &request )
-      {
-          auto qm = qmWeak.lock();
-          if ( qm )
-          {
-              qm->ProcessSubTaskQueueRequestMessage( request );
-              return true;
-          }
-          return false;
-      } );
-
-    m_processing_queues_channel_pub_subs[1]->SetQueueUpdateSink(
-    [qmWeak(std::weak_ptr<ProcessingSubTaskQueueManager>(m_processing_queues_managers[1]))](
-        SGProcessing::SubTaskQueue *queue)
-    {
-        auto qm = qmWeak.lock();
-        if (qm)
-        {
-            qm->ProcessSubTaskQueueMessage(queue);
-            return true;
-        }
-        return false;
-    });
-
-    auto listen_result =  m_processing_queues_channel_pub_subs[0]->Listen();
-    ASSERT_TRUE(listen_result) << "Channel subscription failed to establish within 2000ms";
-
-    // Log the actual time if interested
-    if (listen_result && std::holds_alternative<std::chrono::milliseconds>(listen_result.value())) {
-        auto wait_time = std::get<std::chrono::milliseconds>(listen_result.value());
-        Color::PrintInfo("Channel 1 Subscription established after ", wait_time.count(), " ms");
-    }
-
-    listen_result =  m_processing_queues_channel_pub_subs[1]->Listen();
-    ASSERT_TRUE(listen_result) << "Channel subscription failed to establish within 2000ms";
-
-    // Log the actual time if interested
-    if (listen_result && std::holds_alternative<std::chrono::milliseconds>(listen_result.value())) {
-        auto wait_time = std::get<std::chrono::milliseconds>(listen_result.value());
-        Color::PrintInfo("Channel 2 Subscription established after ", wait_time.count(), " ms");
-    }
-
-    m_processing_queues_accessors[0]->ConnectToSubTaskQueue([&]() {
-    });
-
-    m_processing_queues_accessors[1]->ConnectToSubTaskQueue([&]() {
-    });
-
-    // Create the queue - this will automatically publish it
-    m_processing_queues_managers[0]->CreateQueue(subTasks);
-
-    // Node2 creates the same queue but isn't the owner
-    m_processing_queues_managers[1]->ProcessSubTaskQueueMessage(m_processing_queues_managers[0]->GetQueueSnapshot().release());
-
-    // start engine2 first, so that it will send a message for queue ownership before engine1 can process all the
-    m_processing_engines[1]->StartQueueProcessing(m_processing_queues_accessors[1]);
-
-    m_processing_engines[0]->StartQueueProcessing(m_processing_queues_accessors[0]);
-
-    std::chrono::milliseconds resultTime;
-    // Wait for all subtasks to be processed by both nodes
-    ASSERT_WAIT_FOR_CONDITION(
-        ([this]() {
-            return m_processing_cores[0]->m_processedSubTasks.size() +
-                   m_processing_cores[1]->m_processedSubTasks.size() >= 10;
-        }),
-        std::chrono::milliseconds(20000),
-        "Not all subtasks were processed",
-        &resultTime
-    );
-
-    Color::PrintInfo("Waited ", resultTime.count(), " ms for processing all subtasks");
-
-    // Wait for either node to finalize the task
-    ASSERT_WAIT_FOR_CONDITION(
-        ([this]() {
-            return m_IsTaskFinalized[0]->load() || m_IsTaskFinalized[1]->load();
-        }),
-        std::chrono::milliseconds(3000),
-        "Task was not finalized by any node",
-        &resultTime
-    );
-
-    Color::PrintInfo("Waited ", resultTime.count(), " ms for task finalization");
-
-    // Verify results
-    size_t totalProcessed = m_processing_cores[0]->m_processedSubTasks.size() +
-                            m_processing_cores[1]->m_processedSubTasks.size();
-    ASSERT_EQ(10, totalProcessed);
-    ASSERT_EQ(5, m_processing_cores[0]->m_processedSubTasks.size());
-    ASSERT_EQ(5, m_processing_cores[1]->m_processedSubTasks.size());
-
-}

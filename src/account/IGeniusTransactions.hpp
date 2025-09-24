@@ -12,11 +12,10 @@
 #include <string>
 
 #include <boost/format.hpp>
-#include <boost/multiprecision/cpp_int.hpp>
-#include <ProofSystem/EthereumKeyGenerator.hpp>
 
 #include "outcome/outcome.hpp"
 #include "account/proto/SGTransaction.pb.h"
+#include "GeniusAccount.hpp"
 
 #include <gsl/span>
 
@@ -91,6 +90,11 @@ namespace sgns
             return dag_st.source_addr();
         }
 
+        uint64_t GetTimestamp() const
+        {
+            return dag_st.timestamp();
+        }
+
         /**
          * @brief       Registers a deserializer function for a specific transaction type.
          * @param[in]   transaction_type The transaction type for which the deserializer is registered.
@@ -107,9 +111,11 @@ namespace sgns
         }
 
         void FillHash();
+        bool CheckHash();
 
-        std::vector<uint8_t> MakeSignature( std::shared_ptr<ethereum::EthereumKeyGenerator> eth_key );
-        static bool          CheckDAGStructSignature( SGTransaction::DAGStruct dag_st );
+        std::vector<uint8_t> MakeSignature( GeniusAccount& account );
+        bool                 CheckSignature();
+        bool                 CheckDAGSignatureLegacy();
 
         SGTransaction::DAGStruct                                                dag_st;
         static inline std::unordered_map<std::string, TransactionDeserializeFn> deserializers_map;

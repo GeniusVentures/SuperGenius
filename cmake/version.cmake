@@ -1,4 +1,9 @@
 set(PROJECT_VERSION 1.0.0)
+
+if(NOT SGNS_NETWORK STREQUAL "release")
+    add_compile_definitions(DEV_NET)
+endif()
+
 message(STATUS "PROJECT_VERSION: ${PROJECT_VERSION}")
 
 execute_process(

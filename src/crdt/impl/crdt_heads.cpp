@@ -30,7 +30,7 @@ namespace sgns::crdt
         return *this;
     }
 
-    bool CrdtHeads::operator==( const CrdtHeads &aHeads )
+    bool CrdtHeads::operator==( const CrdtHeads &aHeads ) const
     {
         bool returnEqual  = true;
         returnEqual      &= this->dataStore_ == aHeads.dataStore_;
@@ -39,7 +39,7 @@ namespace sgns::crdt
         return returnEqual;
     }
 
-    bool CrdtHeads::operator!=( const CrdtHeads &aHeads )
+    bool CrdtHeads::operator!=( const CrdtHeads &aHeads ) const
     {
         return !( *this == aHeads );
     }
@@ -49,7 +49,7 @@ namespace sgns::crdt
         return this->namespaceKey_;
     }
 
-    outcome::result<HierarchicalKey> CrdtHeads::GetKey( const std::string &topic, const CID &aCid )
+    outcome::result<HierarchicalKey> CrdtHeads::GetKey( const std::string &topic, const CID &aCid ) const
     {
         // /<namespace>/<topic>/<cid>
         auto topicNs = namespaceKey_.ChildString( std::string( topic ) );
@@ -63,10 +63,10 @@ namespace sgns::crdt
         return topicNs.ChildString( cidStr.value() );
     }
 
-    outcome::result<void> CrdtHeads::Write( const std::unique_ptr<storage::BufferBatch> &aDataStore,
-                                            const CID                                   &aCid,
-                                            uint64_t                                     aHeight,
-                                            const std::string                           &topic )
+    outcome::result<void> CrdtHeads::Write( storage::BufferBatch &aDataStore,
+                                            const CID            &aCid,
+                                            uint64_t              aHeight,
+                                            const std::string    &topic ) const
     {
         auto getKeyResult = GetKey( topic, aCid );
         if ( getKeyResult.has_failure() )
@@ -82,12 +82,12 @@ namespace sgns::crdt
         Buffer valueBuffer;
         valueBuffer.put( strHeight );
 
-        return aDataStore->put( keyBuffer, valueBuffer );
+        return aDataStore.put( keyBuffer, valueBuffer );
     }
 
     outcome::result<void> CrdtHeads::Delete( const std::unique_ptr<storage::BufferBatch> &aDataStore,
                                              const CID                                   &aCid,
-                                             const std::string                           &topic )
+                                             const std::string                           &topic ) const
     {
         if ( aDataStore == nullptr )
         {
@@ -102,19 +102,17 @@ namespace sgns::crdt
 
         Buffer keyBuffer;
         keyBuffer.put( getKeyResult.value().GetKey() );
-
         return aDataStore->remove( keyBuffer );
     }
 
-    bool CrdtHeads::IsHead( const CID &cid, const std::string &topic )
+    bool CrdtHeads::IsHead( const CID &aCid, const std::string &topic ) const
     {
-        std::lock_guard lock( mutex_ );
-
+        std::shared_lock lock(mutex_);
         if ( topic.empty() )
         {
-            for ( const auto &tMap : cache_ )
+            for ( const auto &[_, map] : cache_ )
             {
-                if ( tMap.second.find( cid ) != tMap.second.end() )
+                if ( map.find( aCid ) != map.end() )
                 {
                     return true;
                 }
@@ -128,23 +126,21 @@ namespace sgns::crdt
             return false;
         }
 
-        return topicIt->second.find( cid ) != topicIt->second.end();
+        return topicIt->second.find( aCid ) != topicIt->second.end();
     }
 
-    outcome::result<uint64_t> CrdtHeads::GetHeadHeight( const CID &aCid, const std::string &topic )
+    outcome::result<uint64_t> CrdtHeads::GetHeadHeight( const CID &aCid, const std::string &topic ) const
     {
-        std::lock_guard lg( this->mutex_ );
-
         if ( !this->IsHead( aCid, topic ) )
         {
             return 0;
         }
+        std::shared_lock lock(mutex_);
         if ( topic.empty() )
         {
-            for ( auto &t : cache_ )
+            for ( auto &[_, cid_map] : cache_ )
             {
-                auto it = t.second.find( aCid );
-                if ( it != t.second.end() )
+                if ( auto it = cid_map.find( aCid ); it != cid_map.end() )
                 {
                     return it->second;
                 }
@@ -160,20 +156,19 @@ namespace sgns::crdt
         return it == tit->second.end() ? 0u : it->second;
     }
 
-    outcome::result<int> CrdtHeads::GetLength( const std::string &topic )
+    outcome::result<size_t> CrdtHeads::GetLength( const std::string &topic ) const
     {
-        std::lock_guard lock( mutex_ );
-
+        std::shared_lock lock(mutex_);
         if ( topic.empty() )
         {
             size_t total = 0;
-            for ( const auto &kv : cache_ )
+            for ( const auto &[_, cid_map] : cache_ )
             {
-                total += kv.second.size();
+                total += cid_map.size();
             }
-            return static_cast<int>( total );
+            return total;
         }
-        return static_cast<int>( cache_[topic].size() );
+        return cache_.at( topic ).size();
     }
 
     outcome::result<void> CrdtHeads::Add( const CID &aCid, uint64_t aHeight, const std::string &topic )
@@ -184,7 +179,7 @@ namespace sgns::crdt
         }
 
         auto batchDatastore = this->dataStore_->batch();
-        auto writeResult    = this->Write( batchDatastore, aCid, aHeight, topic );
+        auto writeResult    = this->Write( *batchDatastore, aCid, aHeight, topic );
         if ( writeResult.has_failure() )
         {
             return outcome::failure( writeResult.error() );
@@ -196,12 +191,11 @@ namespace sgns::crdt
             return outcome::failure( commitResult.error() );
         }
 
-        {
-            logger_->debug( "Add: Inserting {} with topic {} as head", aCid.toString().value(), topic );
+        logger_->debug( "Add: Inserting {} with topic {} as head", aCid.toString().value(), topic );
 
-            std::lock_guard lg( this->mutex_ );
-            this->cache_[topic][aCid] = aHeight;
-        }
+        std::unique_lock lock(mutex_);
+        this->cache_[topic][aCid] = aHeight;
+
         return outcome::success();
     }
 
@@ -216,7 +210,7 @@ namespace sgns::crdt
         }
 
         auto batchDatastore = this->dataStore_->batch();
-        auto writeResult    = this->Write( batchDatastore, aNewHeadCid, aHeight, topic );
+        auto writeResult    = this->Write( *batchDatastore, aNewHeadCid, aHeight, topic );
         if ( writeResult.has_failure() )
         {
             return outcome::failure( writeResult.error() );
@@ -234,24 +228,24 @@ namespace sgns::crdt
             return outcome::failure( commitResult.error() );
         }
 
-        {
-            logger_->debug( "Replace: Replacing {} with {} as head for topic {}",
-                            aCidHead.toString().value(),
-                            aNewHeadCid.toString().value(),
-                            topic );
+        logger_->debug( "Replace: Replacing {} with {} as head for topic {}",
+                        aCidHead.toString().value(),
+                        aNewHeadCid.toString().value(),
+                        topic );
 
-            std::lock_guard lg( this->mutex_ );
-            cache_[topic].erase( aCidHead );
-            cache_[topic][aNewHeadCid] = aHeight;
-        }
+        std::unique_lock lock(mutex_);
+        cache_[topic].erase( aCidHead );
+        cache_[topic][aNewHeadCid] = aHeight;
+
         return outcome::success();
     }
 
-    outcome::result<CrdtHeads::CRDTListResult> CrdtHeads::GetList( const std::set<std::string> &topics )
+    outcome::result<CrdtHeads::CRDTListResult> CrdtHeads::GetList( const std::set<std::string> &topics ) const
     {
         CRDTHeadList result_heads;
         uint64_t     max_value = 0;
         logger_->trace( "GetList: Getting list of CIDs" );
+        std::shared_lock lock(mutex_);
         for ( const auto &[current_topic, cid_map] : cache_ )
         {
             if ( !topics.empty() && topics.find( current_topic ) == topics.end() )
@@ -266,11 +260,6 @@ namespace sgns::crdt
                 max_value = std::max( max_value, value );
             }
         }
-
-        // if ( result_heads.empty() )
-        //{
-        //     return outcome::failure( boost::system::error_code{} );
-        // }
 
         return outcome::success( CRDTListResult{ result_heads, max_value } );
     }
@@ -344,7 +333,6 @@ namespace sgns::crdt
                 continue;
             }
 
-            std::lock_guard lg( this->mutex_ );
             this->cache_[topic][cid] = height;
             loadedCount++;
             logger_->trace( "PrimeCache: loaded head [topic='{}', cid='{}', height={}]",

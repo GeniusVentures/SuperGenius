@@ -109,7 +109,7 @@ namespace sgns::crdt
         std::atomic_bool started_;
 
         sgns::base::Logger m_logger = sgns::base::createLogger( "PubSubBroadcasterExt" );
-        std::vector<std::future<libp2p::protocol::Subscription>> subscriptionFutures_;
+        std::vector<std::shared_future<std::shared_ptr<libp2p::protocol::Subscription>>> subscriptionFutures_;
     };
 }
 

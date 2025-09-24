@@ -84,6 +84,9 @@ namespace sgns::crdt
         outcome::result<std::shared_ptr<Leaf>> fetchGraphOnDepth( const CID &cid, uint64_t depth ) const override;
 
         void Stop() override;
+        
+        IPFS::outcome::result<void> markResolved( const CID &cid ) override;
+        IPFS::outcome::result<bool> isResolved( const CID &cid ) const override;
 
         void                  InitCIDBlock( const CID &cid ) override;
         bool                  IsCIDInCache( const CID &cid ) const override;
@@ -92,11 +95,11 @@ namespace sgns::crdt
         outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> GetNodeWithoutRequest(
             const CID &cid ) const override;
         std::pair<DAGSyncer::LinkInfoSet, DAGSyncer::LinkInfoSet> TraverseCIDsLinks(
-            const std::shared_ptr<ipfs_lite::ipld::IPLDNode> &node,
-            std::string                                       link_name            = "",
-            DAGSyncer::LinkInfoSet                            visited_links        = {},
-            bool                                              skip_if_visited_root = true,
-            int                                               max_depth            = 50 ) const override;
+            ipfs_lite::ipld::IPLDNode &node,
+            std::string                link_name            = "",
+            DAGSyncer::LinkInfoSet     visited_links        = {},
+            bool                       skip_if_visited_root = true,
+            int                        max_depth            = 50 ) const override;
 
         outcome::result<void> markResolved( const CID &cid ) override;
         outcome::result<bool> isResolved( const CID &cid ) const override;

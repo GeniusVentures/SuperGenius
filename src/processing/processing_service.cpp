@@ -206,13 +206,21 @@ namespace sgns::processing
 
     void ProcessingServiceImpl::OnProcessingError( const std::string &subTaskQueueId, const std::string &errorMessage )
     {
-        m_logger->error( "[{}] PROCESSING_ERROR reason: {}", node_address_, errorMessage );
+        m_logger->error( "[{}] PROCESSING_ERROR reason: {} ID: {}", node_address_, errorMessage, subTaskQueueId );
+
+        // Add this channel to blacklist to prevent repeated processing attempts
+        {
+            std::lock_guard<std::mutex> lockBlacklist( m_mutexBlacklist );
+            m_blacklistedChannels.insert( subTaskQueueId );
+            m_logger->info( "[{}] Blacklisted channel {} due to processing error (total blacklisted: {})", 
+                           node_address_, subTaskQueueId, m_blacklistedChannels.size() );
+        }
 
         if ( userCallbackError_ )
         {
             userCallbackError_( subTaskQueueId );
         }
-
+        m_subTaskEnqueuer->MarkTaskBad( subTaskQueueId );
         {
             std::scoped_lock lock( m_mutexNodes );
             m_processingNodes.erase( subTaskQueueId );
@@ -246,6 +254,16 @@ namespace sgns::processing
         if ( m_isStopped )
         {
             return;
+        }
+
+        // Check if this channel is blacklisted
+        {
+            std::lock_guard<std::mutex> lockBlacklist( m_mutexBlacklist );
+            if ( m_blacklistedChannels.find( processingQueuelId ) != m_blacklistedChannels.end() )
+            {
+                m_logger->debug( "[{}] Not accepting blacklisted channel {}", node_address_, processingQueuelId );
+                return;
+            }
         }
 
         m_logger->debug( "[{}] AcceptProcessingChannel for queue {}", node_address_, processingQueuelId );

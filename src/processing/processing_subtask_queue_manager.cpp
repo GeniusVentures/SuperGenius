@@ -170,9 +170,12 @@ namespace sgns::processing
 
     void ProcessingSubTaskQueueManager::ProcessPendingSubTaskGrabbing()
     {
+        static constexpr int      MAX_CONSECUTIVE_FAILURES = 10;
+        static constexpr uint64_t BACKOFF_TIMEOUT_MS       = 1000;
+
         m_dltGrabSubTaskTimeout.expires_at( boost::posix_time::pos_infin );
 
-        m_logger->trace("QUEUE_PROCESS_PENDING: for node {} at {}ms.", m_localNodeId, m_queue_timestamp_);
+        m_logger->trace("QUEUE_PROCESS_PENDING: for node {} at {}ms. is callback empty? {} current {} versus max {}", m_localNodeId, m_queue_timestamp_, m_onSubTaskGrabbedCallbacks.empty(), m_processedSubtasksInCurrentOwnership, m_maxSubtasksPerOwnership );
 
         // Update queue timestamp based on current ownership duration
         UpdateQueueTimestamp();
@@ -181,6 +184,8 @@ namespace sgns::processing
 
         bool losingOwnership = false;
         bool lockReleased = false;
+
+        int consecutiveFailures = 0; 
 
         while ( !losingOwnership &&
                 !m_onSubTaskGrabbedCallbacks.empty() &&
@@ -193,10 +198,13 @@ namespace sgns::processing
                 guard.lock();
                 lockReleased = false;
             }
-
+            m_logger->debug("QUEUE PROCESS CHECK");
             size_t itemIdx = 0;
             if ( m_processingQueue.GrabItem( itemIdx, m_queue_timestamp_ ) )
             {
+
+                consecutiveFailures = 0;
+
                 // Track that we're using queue timestamp for this item
                 // Actual timestamp is managed by ProcessingQueue via lock_timestamp
                 // This will be checked when calculating task expiration
@@ -233,10 +241,18 @@ namespace sgns::processing
             }
             else
             {
+                consecutiveFailures++;
+
                 // No available subtasks found
                 auto unlocked = m_processingQueue.UnlockExpiredItems( m_queue_timestamp_ );
                 if ( !unlocked )
                 {
+                    if ( consecutiveFailures >= MAX_CONSECUTIVE_FAILURES )
+                    {
+                        m_logger->debug( "Too many consecutive grab failures ({}), using longer backoff",
+                                         consecutiveFailures );
+                        break;
+                    }
                     break;
                 }
             }
@@ -267,9 +283,14 @@ namespace sgns::processing
             if ( m_processedSubTaskIds.size() < static_cast<size_t>( m_queue->processing_queue().items_size() ) )
             {
                 // Calculate time until expiration in queue time
-                uint64_t grabSubTaskTimeoutMs = CalculateGrabSubTaskTimeout();
+                uint64_t grabSubTaskTimeoutMs = ( consecutiveFailures >= MAX_CONSECUTIVE_FAILURES )
+                                                    ? BACKOFF_TIMEOUT_MS
+                                                    : CalculateGrabSubTaskTimeout();
 
-                m_logger->trace("GRAB_TIMEOUT set to {}ms for node {}", grabSubTaskTimeoutMs, m_localNodeId);
+                m_logger->trace( "GRAB_TIMEOUT set to {}ms for node {} (consecutive failures: {})",
+                                     grabSubTaskTimeoutMs,
+                                     m_localNodeId,
+                                     consecutiveFailures );
 
                 m_dltGrabSubTaskTimeout.expires_from_now(
                     boost::posix_time::milliseconds( grabSubTaskTimeoutMs ) );
@@ -403,9 +424,7 @@ namespace sgns::processing
                     m_dltGrabSubTaskTimeout.cancel();
                     m_dltQueueResponseTimeout.cancel();
                     m_logger->debug("CANCEL_ASYNC_TIMERS: {} is Canceling timers due to ownership acquisition and available work at {}ms", m_localNodeId,m_queue_timestamp_);
-                    guard.unlock(); // Unlock before processing
                     ProcessPendingSubTaskGrabbing(); // Start processing immediately
-                    guard.lock(); // Re-lock for publishing
                 }
 
                 PublishSubTaskQueue();
@@ -413,7 +432,6 @@ namespace sgns::processing
 
             if ( hasOwnershipNow )
             {
-                guard.unlock();
                 ProcessPendingSubTaskGrabbing();
             }
         }
@@ -428,7 +446,6 @@ namespace sgns::processing
                 {
                     subTaskIds.push_back( queue->subtasks().items( subTaskIdx ).subtaskid() );
                 }
-                guard.unlock();
                 m_subTaskQueueAssignmentEventSink( subTaskIds );
             }
         }
@@ -469,7 +486,7 @@ namespace sgns::processing
                 int requestCount = m_queue->processing_queue().ownership_requests_size();
                 if (requestCount == 1) {
                     m_dltQueueResponseTimeout.expires_from_now( m_queueResponseTimeout );
-                    HandleQueueRequestTimeout( boost::system::error_code{} );;
+                    HandleQueueRequestTimeout( boost::system::error_code{} );
                 }
             }
         } else
@@ -723,7 +740,7 @@ namespace sgns::processing
             now - m_lastActiveCountCheck
         ).count());
         auto activeNodeCount = m_queueChannel->GetActiveNodesCount();
-
+        m_logger->info( "Active count is {} Duration is {}", activeNodeCount, duration );
         if (activeNodeCount > 1 ||
             (m_queue->processing_queue().ownership_requests_size() > 0))
         {
@@ -735,7 +752,7 @@ namespace sgns::processing
         else
         {
             // Check if enough time has passed to reset
-            if (duration > m_waitTimeBeforeReset)
+            if (duration >= m_waitTimeBeforeReset)
             {
                 // Reset processed subtasks and prepare for more processing
                 m_processedSubtasksInCurrentOwnership = 0;
@@ -775,6 +792,12 @@ namespace sgns::processing
             // Cap at a reasonable maximum (e.g., 15 seconds)
             grabSubTaskTimeoutMs = std::min(grabSubTaskTimeoutMs, static_cast<uint64_t>(m_waitTimeBeforeReset));
         }
+        else
+        {
+            //Use 100ms min so we're not slamming with 1ms timeouts that cause immediate failure as the lock is expired.
+            grabSubTaskTimeoutMs = std::min( static_cast<uint64_t>( 100 ),
+                                             static_cast<uint64_t>( m_waitTimeBeforeReset ) );
+        }
 
         m_logger->trace("calculated GRAB_TIMEOUT {}ms", grabSubTaskTimeoutMs);
         return grabSubTaskTimeoutMs;
@@ -800,7 +823,7 @@ namespace sgns::processing
 
             if (!isUnlocked) {
                 // Lock has expired if current queue timestamp is greater than or equal to lock timestamp
-                isLockExpired = m_queue_timestamp_ >= processingItem.lock_timestamp();
+                isLockExpired = m_queue_timestamp_ > processingItem.lock_timestamp();
             }
 
             // Subtask is available if it's not processed AND (not locked OR lock has expired)

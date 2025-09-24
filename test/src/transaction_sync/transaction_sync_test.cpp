@@ -28,15 +28,16 @@
 #include "account/TransferTransaction.hpp"
 #include "testutil/outcome.hpp"
 #include "proof/TransferProof.hpp"
+#include "testutil/wait_condition.hpp"
 
 namespace sgns
 {
     class TransactionSyncTest : public ::testing::Test
     {
     protected:
-        static inline sgns::GeniusNode *node_proc1 = nullptr;
-        static inline sgns::GeniusNode *node_proc2 = nullptr;
-        static inline sgns::GeniusNode *full_node  = nullptr;
+        static inline std::shared_ptr<sgns::GeniusNode> node_proc1;
+        static inline std::shared_ptr<sgns::GeniusNode> node_proc2;
+        static inline std::shared_ptr<sgns::GeniusNode> full_node;
 
         static inline DevConfig_st DEV_CONFIG  = { "0xcafe",
                                                    "0.65",
@@ -74,29 +75,29 @@ namespace sgns
             DEV_CONFIG2.BaseWritePath[sizeof( DEV_CONFIG2.BaseWritePath ) - 1] = '\0';
             DEV_CONFIG3.BaseWritePath[sizeof( DEV_CONFIG3.BaseWritePath ) - 1] = '\0';
 
-            node_proc1 = new sgns::GeniusNode( DEV_CONFIG,
-                                               "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                               false,
-                                               false );
+            node_proc1 = sgns::GeniusNode::New( DEV_CONFIG,
+                                                "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+                                                false,
+                                                false );
             std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
-            node_proc2 = new sgns::GeniusNode( DEV_CONFIG2,
-                                               "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                               false,
-                                               false );
+            node_proc2 = sgns::GeniusNode::New( DEV_CONFIG2,
+                                                "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+                                                false,
+                                                false );
             std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
-            full_node = new sgns::GeniusNode( DEV_CONFIG3,
-                                              "feedbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                              false,
-                                              false,
-                                              40001,
-                                              true );
+            full_node = sgns::GeniusNode::New( DEV_CONFIG3,
+                                               "feedbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+                                               false,
+                                               false,
+                                               40001,
+                                               true );
         }
 
         static void TearDownTestSuite()
         {
-            delete node_proc1;
-            delete node_proc2;
-            delete full_node;
+            node_proc1.reset();
+            node_proc2.reset();
+            full_node.reset();
         }
 
         outcome::result<sgns::TransactionManager::TransactionPair> CreateTransfer(
@@ -111,26 +112,30 @@ namespace sgns
                                                          destination,
                                                          sgns::TokenID::FromBytes( { 0x00 } ) ) );
 
-            params.SignParameters( account->eth_address );
+            params.SignParameters( account );
 
-            auto                     timestamp = std::chrono::system_clock::now();
+            auto timestamp = std::chrono::system_clock::now();
+
             SGTransaction::DAGStruct dag;
             dag.set_previous_hash( "" );
-            dag.set_nonce( ++account->nonce );
+            dag.set_nonce( account->GetProposedNonce() );
             dag.set_source_addr( account->GetAddress() );
             dag.set_timestamp( timestamp.time_since_epoch().count() );
             dag.set_uncle_hash( "" );
             dag.set_data_hash( "" ); //filled by transaction class
+            account->IncProposedNonce();
+
             auto transfer_transaction = std::make_shared<sgns::TransferTransaction>(
-                sgns::TransferTransaction::New( params.outputs_, params.inputs_, dag, account->eth_address ) );
+                sgns::TransferTransaction::New( params.outputs_, params.inputs_, dag ) );
             std::optional<std::vector<uint8_t>> maybe_proof;
 
             TransferProof prover( static_cast<uint64_t>( account->GetBalance<uint64_t>() ),
                                   static_cast<uint64_t>( amount ) );
             OUTCOME_TRY( ( auto &&, proof_result ), prover.GenerateFullProof() );
+
             maybe_proof = std::move( proof_result );
 
-            account->utxos = sgns::UTXOTxParameters::UpdateUTXOList( account->utxos, params );
+            account->utxos = sgns::UTXOTxParameters::ReserveUTXOs( account->utxos, params );
             return std::make_pair( transfer_transaction, maybe_proof );
         }
 
@@ -183,7 +188,7 @@ namespace sgns
         auto transfer_received = node_proc2->WaitForTransactionIncoming(
             transfer_tx_id,
             std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) );
-        ASSERT_TRUE( transfer_received );
+        EXPECT_EQ( transfer_received, TransactionManager::TransactionStatus::CONFIRMED );
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::steady_clock::now() -
                                                                                start_time )
                             .count();
@@ -193,7 +198,7 @@ namespace sgns
         auto full_node_transfer_received = full_node->WaitForTransactionIncoming(
             transfer_tx_id,
             std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) );
-        ASSERT_TRUE( full_node_transfer_received );
+        EXPECT_EQ( full_node_transfer_received, TransactionManager::TransactionStatus::CONFIRMED );
         duration = std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::steady_clock::now() -
                                                                           start_time )
                        .count();
@@ -276,7 +281,7 @@ namespace sgns
         auto transfer_received = node_proc2->WaitForTransactionIncoming(
             transfer_tx_id1,
             std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) );
-        ASSERT_TRUE( transfer_received );
+        EXPECT_EQ( transfer_received, TransactionManager::TransactionStatus::CONFIRMED );
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::steady_clock::now() -
                                                                                start_time )
                             .count();
@@ -287,7 +292,7 @@ namespace sgns
         transfer_received = node_proc2->WaitForTransactionIncoming(
             transfer_tx_id2,
             std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) );
-        ASSERT_TRUE( transfer_received );
+        EXPECT_EQ( transfer_received, TransactionManager::TransactionStatus::CONFIRMED );
         duration = std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::steady_clock::now() -
                                                                           start_time )
                        .count();
@@ -358,7 +363,7 @@ namespace sgns
             auto transfer_received1 = node_proc1->WaitForTransactionIncoming(
                 transfer_tx_id2,
                 std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) );
-            ASSERT_TRUE( transfer_received1 );
+            EXPECT_EQ( transfer_received1, TransactionManager::TransactionStatus::CONFIRMED );
             auto duration1 = std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::steady_clock::now() -
                                                                                     start_time1 )
                                  .count();
@@ -370,7 +375,7 @@ namespace sgns
             auto transfer_received2 = node_proc2->WaitForTransactionIncoming(
                 transfer_tx_id1,
                 std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) );
-            ASSERT_TRUE( transfer_received2 );
+            EXPECT_EQ( transfer_received2, TransactionManager::TransactionStatus::CONFIRMED );
             auto duration2 = std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::steady_clock::now() -
                                                                                     start_time2 )
                                  .count();
@@ -410,11 +415,11 @@ namespace sgns
         auto [mint_tx_id, mint_duration] = mint_result.value();
         std::cout << "Mint transaction completed in " << mint_duration << " ms" << std::endl;
 
-        // Verify balance after minting
-        EXPECT_EQ( node_proc1->GetBalance(), balance_1_before + 20000000000 )
-            << "Correct Balance of outgoing transactions";
+        auto balance_1_before_invalid = balance_1_before + 20000000000;
 
-        //auto &node = GetNodeFromNode( *node_proc1 );
+        // Verify balance after minting
+        EXPECT_EQ( node_proc1->GetBalance(), balance_1_before_invalid ) << "Correct Balance of outgoing transactions";
+
         auto tx_pair = CreateTransfer( GetAccountFromNode( *node_proc1 ), 10000000000, node_proc2->GetAddress() );
         if ( !tx_pair.has_value() )
         {
@@ -434,12 +439,63 @@ namespace sgns
         sgns::GeniusNode &node          = *node_proc1;
         SendPair( *node_proc1, tx, proof_vect );
 
+        test::assertWaitForCondition(
+            [&]()
+            {
+                return node_proc1->GetTransactionStatus( invalid_tx_id ) ==
+                       TransactionManager::TransactionStatus::VERIFYING;
+            },
+            std::chrono::milliseconds( 20000 ),
+            "Invalid transaction didn't get sent" );
+
+
+        EXPECT_EQ( node_proc1->GetBalance(), balance_1_before_invalid - 10000000000 )
+            << "Correct Balance of outgoing transactions";
+
+        std::cout << "Invalid tx confirmed " << std::endl;
+
         // Transfer funds with timeout
         auto transfer_result = node_proc1->TransferFunds( 10000000000,
                                                           node_proc2->GetAddress(),
                                                           sgns::TokenID::FromBytes( { 0x00 } ),
                                                           std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
-        ASSERT_TRUE( transfer_result.has_value() ) << "Transfer transaction failed or timed out";
+        ASSERT_FALSE( transfer_result.has_value() ) << "Transfer transaction succeeded when it should fail";
+
+        std::cout << "subsequent tx failed" << std::endl;
+
+        test::assertWaitForCondition(
+            [&]() { return node_proc1->GetTransactionManagerState() == TransactionManager::State::SYNCHING; },
+            std::chrono::milliseconds( 20000 ),
+            "Node didn't went into synching" );
+
+        EXPECT_EQ( node_proc1->GetTransactionManagerState(),
+                   TransactionManager::State::SYNCHING ); //confirms it's invalid
+
+        auto invalid_tx_result_sent = node_proc1->WaitForTransactionOutgoing(
+            invalid_tx_id,
+            std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+
+        std::cout << "waited again for the invalid tx" << std::endl;
+
+        EXPECT_EQ( invalid_tx_result_sent, TransactionManager::TransactionStatus::FAILED ); //confirms it's invalid
+
+        std::cout << "now it's invalid" << std::endl;
+
+        test::assertWaitForCondition(
+            [&]() { return node_proc1->GetTransactionManagerState() == TransactionManager::State::READY; },
+            std::chrono::milliseconds( 20000 ),
+            "Node didn't recover from wrong transaction" );
+
+        std::cout << "wait until its ready" << std::endl;
+
+        EXPECT_EQ( node_proc1->GetBalance(), balance_1_before_invalid ) << "Correct Balance of outgoing transactions";
+
+        transfer_result = node_proc1->TransferFunds( 10000000000,
+                                                     node_proc2->GetAddress(),
+                                                     sgns::TokenID::FromBytes( { 0x00 } ),
+                                                     std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+        ASSERT_TRUE( transfer_result.has_value() ) << "Transfer transaction failed when it should succeed";
+
         auto [transfer_tx_id, transfer_duration] = transfer_result.value();
         std::cout << "Transfer transaction completed in " << transfer_duration << " ms" << std::endl;
 
@@ -447,16 +503,13 @@ namespace sgns
         auto transfer_received = node_proc2->WaitForTransactionIncoming(
             transfer_tx_id,
             std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) );
-        ASSERT_TRUE( transfer_received );
+        EXPECT_EQ( transfer_received, TransactionManager::TransactionStatus::CONFIRMED );
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::steady_clock::now() -
                                                                                start_time )
                             .count();
         std::cout << "Transfer Received transaction completed in " << duration << " ms" << std::endl;
 
-        auto start_time_invalid        = std::chrono::steady_clock::now();
-        auto transfer_invalid_received = node_proc2->WaitForTransactionIncoming( invalid_tx_id,
-                                                                                 std::chrono::milliseconds( 2500 ) );
-        ASSERT_FALSE( transfer_invalid_received );
+        auto start_time_invalid = std::chrono::steady_clock::now();
 
         // Verify node_proc2's balance increased
         EXPECT_EQ( node_proc2->GetBalance(), balance_2_before + 10000000000 )

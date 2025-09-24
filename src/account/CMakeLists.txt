@@ -1,4 +1,5 @@
 add_proto_library(SGTransactionProto proto/SGTransaction.proto)
+add_proto_library(SGAccountCommProto proto/SGAccountComm.proto)
 
 if (BUILD_WITH_PROOFS)
     add_compile_definitions(_PROOF_ENABLED)
@@ -6,19 +7,20 @@ endif()
 
 
 add_library(sgns_account
+    GeniusAccount.cpp
     TransactionManager.cpp
     TransferTransaction.cpp
     MintTransaction.cpp
     ProcessingTransaction.cpp
     EscrowTransaction.cpp
     EscrowReleaseTransaction.cpp
-    GeniusAccount.cpp
     GeniusNode.cpp
     UTXOTxParameters.cpp
     IGeniusTransactions.cpp
     TokenAmount.cpp
     MigrationManager.cpp
     Migration0_2_0To1_0_0.cpp
+    AccountMessenger.cpp
 )
 
 set_target_properties(sgns_account PROPERTIES UNITY_BUILD ON)
@@ -50,6 +52,7 @@ target_link_libraries(sgns_account
     p2p::p2p_ping
     Boost::Boost.DI
     SGTransactionProto    
+    SGAccountCommProto
     ScaledInteger
     sgns_version
     AsyncIOManager
