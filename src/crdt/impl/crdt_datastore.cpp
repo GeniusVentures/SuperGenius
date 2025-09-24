@@ -89,12 +89,11 @@ namespace sgns::crdt
                     {
                         if ( auto self = weakptr.lock() )
                         {
-                            std::unique_lock cvlock( self->dagWorkerMutex_ );
+                            std::unique_lock cvlock( self->dagWorkerCvMutex_ );
                             self->dagWorkerCv_.wait_for(
                                 cvlock,
                                 threadSleepTimeInMilliseconds_,
                                 [&] { return !self->rootCIDJobList_.empty() || !dagWorker->dagWorkerThreadRunning_; } );
-                            cvlock.unlock();
                             if ( dagWorker->dagWorkerThreadRunning_ )
                             {
                                 // Pop the job here

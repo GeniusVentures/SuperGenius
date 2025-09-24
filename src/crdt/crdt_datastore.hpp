@@ -396,6 +396,7 @@ namespace sgns::crdt
         bool           started_ = false;
 
         std::mutex              rebroadcastMutex_;
+        std::mutex              dagWorkerCvMutex_;
         std::condition_variable rebroadcastCv_;
         std::set<std::string>   topicNames_;
         bool                    isFullNode = false;
