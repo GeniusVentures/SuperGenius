@@ -26,8 +26,8 @@ namespace sgns
     class CrashRecoverySyncTest : public ::testing::Test
     {
     protected:
-        static inline sgns::GeniusNode *node1 = nullptr;
-        static inline sgns::GeniusNode *node2 = nullptr;
+        static inline std::shared_ptr<sgns::GeniusNode> node1 = nullptr;
+        static inline std::shared_ptr<sgns::GeniusNode> node2 = nullptr;
 
         // Configuration for node instances
         static inline DevConfig_st CONFIG1 = { "0xcafe",
@@ -60,12 +60,12 @@ namespace sgns
             CONFIG1.BaseWritePath[sizeof( CONFIG1.BaseWritePath ) - 1] = '\0';
             CONFIG2.BaseWritePath[sizeof( CONFIG2.BaseWritePath ) - 1] = '\0';
 
-            node1 = new sgns::GeniusNode( CONFIG1,
+            node1 = sgns::GeniusNode::New( CONFIG1,
                                           "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
                                           false,
                                           false );
             std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
-            node2 = new sgns::GeniusNode( CONFIG2,
+            node2 = sgns::GeniusNode::New( CONFIG2,
                                           "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
                                           false,
                                           false );
@@ -77,8 +77,8 @@ namespace sgns
      */
         static void TearDownTestSuite()
         {
-            delete node1;
-            delete node2;
+            node1.reset();
+            node2.reset();
         }
 
         /**
@@ -86,9 +86,9 @@ namespace sgns
      */
         void RestartNode2()
         {
-            delete node2;
+             node2.reset();
             std::this_thread::sleep_for( std::chrono::milliseconds( 5000 ) );
-            node2 = new sgns::GeniusNode( CONFIG2,
+            node2 = sgns::GeniusNode::New( CONFIG2,
                                           "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
                                           false,
                                           false );
@@ -144,9 +144,9 @@ namespace sgns
         std::cout << "Waiting for the first batch of incoming transactions" << std::endl;
         for ( int i = 0; i < INITIAL_WAIT_TRANSFERS ; i++ )
         {
-            ASSERT_TRUE(
+            EXPECT_EQ(
                 node2->WaitForTransactionIncoming( tx_ids[i],
-                                                   std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) ) )
+                                                   std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) ),TransactionManager::TransactionStatus::CONFIRMED )
                 << "Failed to receive initial transaction " << tx_ids[i] << " on node2";
         }
 
@@ -158,9 +158,9 @@ namespace sgns
         std::cout << "****************************Waiting for the remaining transactions after recovery****************************" << std::endl;
         for ( int i = 0; i < TOTAL_TRANSFERS; i++ )
         {
-            ASSERT_TRUE(
+            EXPECT_EQ(
                 node2->WaitForTransactionIncoming( tx_ids[i],
-                                                   std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) ) )
+                                                   std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) ),TransactionManager::TransactionStatus::CONFIRMED )
                 << "Missing post-recovery transaction " << tx_ids[i];
         }
     }
