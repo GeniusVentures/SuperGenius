@@ -16,8 +16,12 @@ namespace sgns::storage
 {
     using BlockBasedTableOptions = ::ROCKSDB_NAMESPACE::BlockBasedTableOptions;
 
-    rocksdb::~rocksdb() {
-        db_->Close();
+    rocksdb::~rocksdb()
+    {
+        //if ( db_ )
+        //{
+        //    db_->Close();
+        //}
     }
 
     outcome::result<std::shared_ptr<rocksdb>> rocksdb::create( std::string_view path, const Options &options )
@@ -51,7 +55,7 @@ namespace sgns::storage
             // Wrap DB* into a shared_ptr with a custom deleter to ensure cleanup
             l->db_ = std::shared_ptr<DB>( db );
             // Create logger
-            l->logger_ = base::createLogger( "rocksdb" );
+            l->logger_  = base::createLogger( "rocksdb" );
             l->wo_.sync = true;
             l->setWriteOptions( l->wo_ );
             return l; // Return the shared_ptr
