@@ -431,19 +431,16 @@ namespace sgns::crdt
 
         std::set<std::string> topics_to_update_cid = node_to_process->getDestinations();
 
-        if ( node_to_process->getLinks().empty() )
+        for ( auto &topic : topics_to_update_cid )
         {
-            for ( auto &topic : topics_to_update_cid )
-            {
-                logger_->debug( "{}: Recording head to add: {}, {}",
-                                __func__,
-                                job.root_node_->getCID().toString().value(),
-                                topic );
-                std::lock_guard<std::mutex> lock( pendingHeadsMutex_ );
-                pendingHeadsByRootCID_[job.root_node_->getCID()].emplace( job.root_node_->getCID(), topic );
-            }
+            logger_->debug( "{}: Recording head to add: {}, {}",
+                            __func__,
+                            job.root_node_->getCID().toString().value(),
+                            topic );
+            std::lock_guard<std::mutex> lock( pendingHeadsMutex_ );
+            pendingHeadsByRootCID_[job.root_node_->getCID()].emplace( job.root_node_->getCID(), topic );
         }
-        else
+        if ( !node_to_process->getLinks().empty() )
         {
             logger_->debug( "{}: Checking links for CID {}", __func__, node_to_process->getCID().toString().value() );
             for ( auto &topic : topics_to_update_cid )
