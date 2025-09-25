@@ -451,7 +451,7 @@ namespace sgns::crdt
                 logger_->debug( "{}: Verifying topic {}", __func__, topic );
 
                 auto [links_to_fetch,
-                      known_cids] = dagSyncer_->TraverseCIDsLinks( *node_to_process, topic, {}, processing_root, 50 );
+                      known_cids] = dagSyncer_->TraverseCIDsLinks( *node_to_process, topic, {} );
 
                 for ( const auto &[cid, _dontcare] : known_cids )
                 {
@@ -1143,14 +1143,40 @@ namespace sgns::crdt
         {
             if ( cid == rootCID )
             {
+                auto resolve_result = dagSyncer_->markResolved( cid );
+                if ( resolve_result.has_failure() )
+                {
+                    logger_->error( "{}: error marking Root CID {} as resolved", __func__, cid.toString().value() );
+                }
                 auto add_result = heads_->Add( rootCID, rootPriority, topic );
                 if ( add_result.has_failure() )
                 {
                     logger_->error( "{}: error adding head {}", __func__, rootCID.toString().value() );
                 }
+                logger_->debug( "{}: Marking Head CID {} as resolved", __func__, rootCID.toString().value() );
             }
             else
             {
+                auto is_resolved_result = dagSyncer_->isResolved( cid );
+                if ( is_resolved_result.has_failure() )
+                {
+                    logger_->error( "{}: error checking if CID {} IS resolved",
+                                               __func__,
+                                               cid.toString().value() );
+                    continue;
+                }
+                if ( !is_resolved_result.value() )
+                {
+                    logger_->debug( "{}: Previous Head {} not resolved before replacement with {}",
+                                    __func__,
+                                    cid.toString().value(),
+                                    rootCID.toString().value() );
+                    auto resolve_result = dagSyncer_->markResolved( cid );
+                    if ( resolve_result.has_failure() )
+                    {
+                        logger_->error( "{}: error marking old Head CID {} as resolved", __func__, cid.toString().value() );
+                    }
+                }
                 auto replace_result = heads_->Replace( cid, rootCID, rootPriority, topic );
                 if ( replace_result.has_failure() )
                 {

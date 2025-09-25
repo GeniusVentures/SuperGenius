@@ -494,26 +494,27 @@ namespace sgns::crdt
     std::pair<DAGSyncer::LinkInfoSet, DAGSyncer::LinkInfoSet> GraphsyncDAGSyncer::TraverseCIDsLinks(
         ipfs_lite::ipld::IPLDNode &node,
         std::string                link_name,
-        LinkInfoSet                visited,
-        bool                       skip_if_visited_root,
-        int                        max_depth ) const
+        LinkInfoSet                visited ) const
     {
         LinkInfoSet links_to_fetch;
 
         const CID &root_cid = node.getCID();
 
-        if ( skip_if_visited_root )
+        auto tree_resolved_res = isResolved( root_cid );
+        if ( tree_resolved_res.has_failure() )
         {
-            bool already_seen_root = std::any_of( visited.begin(),
-                                                  visited.end(),
-                                                  [&]( const LinkInfoPair &p ) { return p.first == root_cid; } );
+            logger_->error( "{}: isResolved failed: {}, cid: {}",
+                            __func__,
+                            tree_resolved_res.error().message().c_str(),
+                            root_cid.toString().value() );
+            return { std::move( links_to_fetch ), std::move( visited ) };
+        }
 
-            if ( already_seen_root )
-            {
-                logger_->debug( "TraverseCIDsLinks: Skipping traversal of root {} (already recorded)",
-                                root_cid.toString().value() );
-                return { std::move( links_to_fetch ), std::move( visited ) };
-            }
+        if ( tree_resolved_res.value() )
+        {
+            logger_->debug( "TraverseCIDsLinks: Skipping traversal of root {} (already resolved)",
+                            root_cid.toString().value() );
+            return { std::move( links_to_fetch ), std::move( visited ) };
         }
 
         logger_->info( "TraverseCIDsLinks: Checking links on {{ cid=\"{}\", name=\"{}\" }}",
@@ -555,19 +556,15 @@ namespace sgns::crdt
                 continue;
             }
 
-            if ( max_depth == 0 )
-            {
-                logger_->debug( "TraverseCIDsLinks: Max depth reached at link {{ cid='{}', name='{}' }}",
-                                child.toString().value(),
-                                name );
-                continue;
-            }
+            //if ( max_depth == 0 )
+            //{
+            //    logger_->debug( "TraverseCIDsLinks: Max depth reached at link {{ cid='{}', name='{}' }}",
+            //                    child.toString().value(),
+            //                    name );
+            //    continue;
+            //}
 
-            auto [child_links, child_visited] = TraverseCIDsLinks( *get_child_result.value(),
-                                                                   link_name,
-                                                                   visited,
-                                                                   skip_if_visited_root,
-                                                                   max_depth - 1 );
+            auto [child_links, child_visited] = TraverseCIDsLinks( *get_child_result.value(), link_name, visited );
 
             links_to_fetch.merge( child_links );
             visited.merge( child_visited );
@@ -580,13 +577,13 @@ namespace sgns::crdt
 
     outcome::result<void> GraphsyncDAGSyncer::markResolved( const CID &cid )
     {
-        std::lock_guard<std::mutex> lock( mutex_ );
+        std::lock_guard<std::mutex> lock( dagMutex_ );
         return dagService_.markResolved( cid );
     }
 
     outcome::result<bool> GraphsyncDAGSyncer::isResolved( const CID &cid ) const
     {
-        std::lock_guard<std::mutex> lock( mutex_ );
+        std::lock_guard<std::mutex> lock( dagMutex_ );
         return dagService_.isResolved( cid );
     }
 
@@ -1011,13 +1008,4 @@ namespace sgns::crdt
         is_stopped_ = true;
     }
 
-    outcome::result<void> GraphsyncDAGSyncer::markResolved( const CID &cid )
-    {
-        return outcome::success();
-    }
-
-    outcome::result<bool> GraphsyncDAGSyncer::isResolved( const CID &cid ) const
-    {
-        return outcome::success();
-    }
 }

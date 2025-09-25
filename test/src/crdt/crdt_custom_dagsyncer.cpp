@@ -76,25 +76,20 @@ namespace sgns::crdt
     std::pair<DAGSyncer::LinkInfoSet, DAGSyncer::LinkInfoSet> CustomDagSyncer::TraverseCIDsLinks(
         ipfs_lite::ipld::IPLDNode &node,
         std::string                link_name,
-        DAGSyncer::LinkInfoSet     visited_links,
-        bool                       skip_if_visited_root,
-        int                        max_depth ) const
+        DAGSyncer::LinkInfoSet     visited_links ) const
     {
         DAGSyncer::LinkInfoSet links_to_fetch;
         DAGSyncer::LinkInfoSet visited = std::move( visited_links );
 
         const CID &root_cid = node.getCID();
 
-        if ( skip_if_visited_root )
-        {
-            bool already_seen_root = std::any_of( visited.begin(),
-                                                  visited.end(),
-                                                  [&]( const LinkInfoPair &p ) { return p.first == root_cid; } );
+        bool already_seen_root = std::any_of( visited.begin(),
+                                              visited.end(),
+                                              [&]( const LinkInfoPair &p ) { return p.first == root_cid; } );
 
-            if ( already_seen_root )
-            {
-                return { std::move( links_to_fetch ), std::move( visited ) };
-            }
+        if ( already_seen_root )
+        {
+            return { std::move( links_to_fetch ), std::move( visited ) };
         }
 
         for ( const auto &link : node.getLinks() )
@@ -119,16 +114,8 @@ namespace sgns::crdt
                 links_to_fetch.insert( pair );
                 continue;
             }
-            if ( max_depth == 0 )
-            {
-                continue;
-            }
 
-            auto [child_links, child_visited] = TraverseCIDsLinks( *get_child_result.value(),
-                                                                   link_name,
-                                                                   visited,
-                                                                   skip_if_visited_root,
-                                                                   max_depth - 1 );
+            auto [child_links, child_visited] = TraverseCIDsLinks( *get_child_result.value(), link_name, visited );
 
             links_to_fetch.merge( child_links );
             visited.merge( child_visited );
@@ -149,13 +136,4 @@ namespace sgns::crdt
 
     void CustomDagSyncer::Stop() {}
 
-    IPFS::outcome::result<void> CustomDagSyncer::markResolved( const CID &cid )
-    {
-        return outcome::success();
-    }
-
-    IPFS::outcome::result<bool> CustomDagSyncer::isResolved( const CID &cid ) const
-    {
-        return outcome::success();
-    }
 } // namespace sgns::crdt
