@@ -450,8 +450,7 @@ namespace sgns::crdt
             {
                 logger_->debug( "{}: Verifying topic {}", __func__, topic );
 
-                auto [links_to_fetch,
-                      known_cids] = dagSyncer_->TraverseCIDsLinks( *node_to_process, topic, {} );
+                auto [links_to_fetch, known_cids] = dagSyncer_->TraverseCIDsLinks( *node_to_process, topic, {} );
 
                 for ( const auto &[cid, _dontcare] : known_cids )
                 {
@@ -1160,9 +1159,7 @@ namespace sgns::crdt
                 auto is_resolved_result = dagSyncer_->isResolved( cid );
                 if ( is_resolved_result.has_failure() )
                 {
-                    logger_->error( "{}: error checking if CID {} IS resolved",
-                                               __func__,
-                                               cid.toString().value() );
+                    logger_->error( "{}: error checking if CID {} IS resolved", __func__, cid.toString().value() );
                     continue;
                 }
                 if ( !is_resolved_result.value() )
@@ -1174,8 +1171,15 @@ namespace sgns::crdt
                     auto resolve_result = dagSyncer_->markResolved( cid );
                     if ( resolve_result.has_failure() )
                     {
-                        logger_->error( "{}: error marking old Head CID {} as resolved", __func__, cid.toString().value() );
+                        logger_->error( "{}: error marking old Head CID {} as resolved",
+                                        __func__,
+                                        cid.toString().value() );
                     }
+                }
+                auto resolve_result = dagSyncer_->markResolved( rootCID );
+                if ( resolve_result.has_failure() )
+                {
+                    logger_->error( "{}: error marking new Head CID {} as resolved", __func__, cid.toString().value() );
                 }
                 auto replace_result = heads_->Replace( cid, rootCID, rootPriority, topic );
                 if ( replace_result.has_failure() )
