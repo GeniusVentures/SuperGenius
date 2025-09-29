@@ -89,60 +89,84 @@ namespace sgns::crdt
                     {
                         if ( auto self = weakptr.lock() )
                         {
-                            std::unique_lock cvlock( self->dagWorkerCvMutex_ );
+                            // Wait on the SAME mutex that protects job & root scheduling state
+                            std::unique_lock lk( self->dagWorkerMutex_ );
                             self->dagWorkerCv_.wait_for(
-                                cvlock,
+                                lk,
                                 threadSleepTimeInMilliseconds_,
-                                [&] { return !self->rootCIDJobList_.empty() || !dagWorker->dagWorkerThreadRunning_; } );
-                            if ( dagWorker->dagWorkerThreadRunning_ )
-                            {
-                                // Pop the job here
-                                RootCIDJob job_to_process;
+                                [&]
                                 {
-                                    std::unique_lock lock( self->dagWorkerMutex_ );
-                                    if ( self->rootCIDJobList_.empty() )
-                                    {
-                                        continue; // No job, wait again
-                                    }
-                                    job_to_process = self->rootCIDJobList_.front();
-                                    self->rootCIDJobList_.pop();
-                                }
+                                    return !dagWorker->dagWorkerThreadRunning_ || !self->rootCIDJobList_.empty() ||
+                                           ( !self->activeRootCID_.has_value() && !self->pendingRootQueue_.empty() );
+                                } );
 
-                                // Process the job
-                                auto process_res = self->ProcessJobIteration( job_to_process );
-                                if ( process_res.has_failure() )
-                                {
-                                    self->logger_->error( "CID PROCESSING ERROR: Cleaning up jobs for root CID {}",
-                                                          job_to_process.root_node_->getCID().toString().value() );
-
-                                    {
-                                        std::unique_lock       lock( self->dagWorkerMutex_ );
-                                        std::queue<RootCIDJob> temp_queue;
-                                        while ( !self->rootCIDJobList_.empty() )
-                                        {
-                                            auto job = self->rootCIDJobList_.front();
-                                            self->rootCIDJobList_.pop();
-                                            if ( job.root_node_->getCID() != job_to_process.root_node_->getCID() )
-                                            {
-                                                temp_queue.push( job );
-                                            }
-                                        }
-                                        self->rootCIDJobList_ = std::move( temp_queue ); // Restore the filtered queue
-                                    }
-
-                                    // Cleanup: Delete CID block for the root node
-                                    (void)self->dagSyncer_->DeleteCIDBlock( job_to_process.root_node_->getCID() );
-
-                                    // Cleanup: Erase from pendingHeadsByRootCID_
-                                    {
-                                        std::lock_guard<std::mutex> lock( self->pendingHeadsMutex_ );
-                                        self->pendingHeadsByRootCID_.erase( job_to_process.root_node_->getCID() );
-                                    }
-                                }
-                            }
-                            else
+                            if ( !dagWorker->dagWorkerThreadRunning_ )
                             {
                                 dagThreadRunning = false;
+                                continue;
+                            }
+
+                            // Seed the NEXT root if there's no work yet and no active root
+                            if ( self->rootCIDJobList_.empty() && !self->activeRootCID_.has_value() &&
+                                 !self->pendingRootQueue_.empty() )
+                            {
+                                CID next = self->pendingRootQueue_.front();
+                                self->pendingRootQueue_.pop();
+                                self->activeRootCID_ = next; // claim under the lock
+                                lk.unlock();
+
+                                auto res = self->HandleRootCIDBlock( next );
+                                if ( res.has_failure() )
+                                {
+                                    std::unique_lock lk2( self->dagWorkerMutex_ );
+                                    self->activeRootCID_.reset();
+                                    self->dagWorkerCv_.notify_all();
+                                }
+                                continue; // next loop; if jobs were seeded, they'll be consumed
+                            }
+
+                            // Pop one job (atomic under the lock), then process it unlocked
+                            if ( self->rootCIDJobList_.empty() )
+                            {
+                                continue; // spurious wake; loop again
+                            }
+
+                            RootCIDJob job_to_process = self->rootCIDJobList_.front();
+                            self->rootCIDJobList_.pop();
+                            lk.unlock();
+
+                            // Process the job
+                            auto process_res = self->ProcessJobIteration( job_to_process );
+                            if ( process_res.has_failure() )
+                            {
+                                self->logger_->error( "CID PROCESSING ERROR: Cleaning up jobs for root CID {}",
+                                                      job_to_process.root_node_->getCID().toString().value() );
+
+                                {
+                                    std::unique_lock       lock2( self->dagWorkerMutex_ );
+                                    std::queue<RootCIDJob> tmp;
+                                    while ( !self->rootCIDJobList_.empty() )
+                                    {
+                                        auto j = self->rootCIDJobList_.front();
+                                        self->rootCIDJobList_.pop();
+                                        if ( j.root_node_->getCID() != job_to_process.root_node_->getCID() )
+                                        {
+                                            tmp.push( j );
+                                        }
+                                    }
+                                    std::swap( self->rootCIDJobList_, tmp );
+
+                                    // allow the next root to proceed after a failure
+                                    self->activeRootCID_.reset();
+                                }
+
+                                (void)self->dagSyncer_->DeleteCIDBlock( job_to_process.root_node_->getCID() );
+                                {
+                                    std::lock_guard<std::mutex> g( self->pendingHeadsMutex_ );
+                                    self->pendingHeadsByRootCID_.erase( job_to_process.root_node_->getCID() );
+                                }
+
+                                self->dagWorkerCv_.notify_all();
                             }
                         }
                         else
@@ -388,11 +412,16 @@ namespace sgns::crdt
         }
         for ( const auto &bCastHeadCID : heads_to_process_cids )
         {
-            auto handleBlockResult = HandleRootCIDBlock( bCastHeadCID );
-            if ( handleBlockResult.has_failure() )
+            for ( const auto &bCastHeadCID : heads_to_process_cids )
             {
-                logger_->error( "Broadcaster: Unable to handle block (error {})", handleBlockResult.error().message() );
+                EnqueueRootCID( bCastHeadCID );
             }
+            dagWorkerCv_.notify_one(); // wake a worker to possibly seed the next root
+            //auto handleBlockResult = HandleRootCIDBlock( bCastHeadCID );
+            //if ( handleBlockResult.has_failure() )
+            //{
+            //    logger_->error( "Broadcaster: Unable to handle block (error {})", handleBlockResult.error().message() );
+            //}
         }
     }
 
@@ -620,6 +649,11 @@ namespace sgns::crdt
         {
             logger_->debug( "{}: Root finalized: {}, Updating CRDT Heads", __func__, root_cid_string );
             UpdateCRDTHeads( job_to_process.root_node_->getCID(), delta.priority() );
+            {
+                std::unique_lock lk( dagWorkerMutex_ );
+                activeRootCID_.reset(); // this root fully done
+            }
+            dagWorkerCv_.notify_all(); // let one worker seed the next root
         }
         return outcome::success();
     }
@@ -1191,5 +1225,11 @@ namespace sgns::crdt
         }
         pendingHeadsByRootCID_.erase( it );
         rebroadcastCv_.notify_one();
+    }
+
+    void CrdtDatastore::EnqueueRootCID( const CID &cid )
+    {
+        std::unique_lock lk( dagWorkerMutex_ );
+        pendingRootQueue_.push( cid );
     }
 }

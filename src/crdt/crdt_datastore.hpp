@@ -28,6 +28,7 @@
 #include <set>
 #include <map>
 #include <condition_variable>
+#include <optional>
 
 namespace sgns::crdt
 {
@@ -349,6 +350,7 @@ namespace sgns::crdt
         void DeleteElementsCallback( const std::string &key );
 
         void UpdateCRDTHeads( const CID &rootCID, uint64_t rootPriority );
+        void EnqueueRootCID( const CID &cid );
 
     private:
         CrdtDatastore() = default;
@@ -391,6 +393,8 @@ namespace sgns::crdt
         std::queue<RootCIDJob>                               rootCIDJobList_;
         std::map<CID, std::set<std::pair<CID, std::string>>> pendingHeadsByRootCID_;
         std::mutex                                           pendingHeadsMutex_;
+        std::queue<CID>                                      pendingRootQueue_;
+        std::optional<CID>                                   activeRootCID_;
 
         CRDTDataFilter crdt_filter_;
         bool           started_ = false;
