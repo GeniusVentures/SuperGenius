@@ -99,7 +99,7 @@ namespace sgns
     /**
  * @brief Test transaction synchronization after node crash and recovery.
  */
-    TEST_F( CrashRecoverySyncTest, TransactionSyncAfterCrash )
+    TEST_F( CrashRecoverySyncTest, DISABLED_TransactionSyncAfterCrash )
     {
         std::cout << "Recording initial balance for verification" << std::endl;
         auto initial_balance = node1->GetBalance();

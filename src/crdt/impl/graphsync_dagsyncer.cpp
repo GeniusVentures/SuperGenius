@@ -152,7 +152,13 @@ namespace sgns::crdt
     outcome::result<void> GraphsyncDAGSyncer::addNode( std::shared_ptr<const ipfs_lite::ipld::IPLDNode> node )
     {
         std::lock_guard lock( dagMutex_ );
-        return dagService_.addNode( std::move( node ) );
+        auto cid = node->getCID();
+        auto            ret = dagService_.addNode( std::move( node ) );
+        if ( !ret.has_error() )
+        {
+            EraseRoute( cid );
+        }
+        return ret;
     }
 
     outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> GraphsyncDAGSyncer::getNode( const CID &cid ) const
@@ -196,7 +202,7 @@ namespace sgns::crdt
         // Check if this peer recently failed to provide this specific CID
         if ( HasRecentCIDFailure( peerID, cid ) )
         {
-            logger_->debug( "Skipping request for CID {} from peer {} due to recent failure",
+            logger_->error( "Skipping request for CID {} from peer {} due to recent failure",
                             cid.toString().value(),
                             peerID.toBase58() );
             return outcome::failure( Error::CID_NOT_FOUND );
@@ -212,7 +218,7 @@ namespace sgns::crdt
         {
             if ( is_stopped_ )
             {
-                logger_->warn( "We exited while trying to sync {} as it must have been still in progress.",
+                logger_->error( "We exited while trying to sync {} as it must have been still in progress.",
                                cid.toString().value() );
                 return outcome::failure( Error::DAGSYNCER_NOT_STARTED );
             }
@@ -228,7 +234,7 @@ namespace sgns::crdt
                                     reinterpret_cast<size_t>( this ) );
                     return result;
                 }
-                logger_->warn( "Request state not found for CID {}", cid.toString().value() );
+                logger_->error( "Request state not found for CID {}", cid.toString().value() );
                 OUTCOME_TRY( BlackListPeer( peerID ) );
                 return outcome::failure( Error::ROUTE_NOT_FOUND );
             }
@@ -247,7 +253,7 @@ namespace sgns::crdt
                         return result;
                     }
                     // If still not found, this is strange but we'll fail
-                    logger_->warn( "Request marked COMPLETED but block not in cache: {}", cid.toString().value() );
+                    logger_->error( "Request marked COMPLETED but block not in cache: {}", cid.toString().value() );
                     return outcome::failure( Error::CID_NOT_FOUND );
                 }
                 case Graphsync::RequestState::FAILED:
@@ -488,7 +494,6 @@ namespace sgns::crdt
                 }
             }
         }
-        EraseRoute( cid );
     }
 
     std::pair<DAGSyncer::LinkInfoSet, DAGSyncer::LinkInfoSet> GraphsyncDAGSyncer::TraverseCIDsLinks(

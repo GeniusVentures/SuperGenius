@@ -483,6 +483,7 @@ namespace sgns::crdt
 
                 for ( const auto &[cid, link_name] : links_to_fetch )
                 {
+                    logger_->debug( "{}: Not known cid: {}, {}", __func__, cid.toString().value(), link_name );
                     if ( topicNames_.find( link_name ) != topicNames_.end() )
                     {
                         cids_to_fetch.emplace( cid );
