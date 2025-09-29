@@ -278,7 +278,7 @@ namespace sgns
 
         pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
             crdt::KeyPairFileStorage( write_base_path_ + pubsubKeyPath ).GetKeyPair().value() );
-        auto pubs = pubsub_->Start( pubsubport, {}, lanip, addresses );
+        auto pubs = pubsub_->Start( pubsubport, {}, lanip, {} );
         pubs.wait();
 
         if ( !is_full_node )
