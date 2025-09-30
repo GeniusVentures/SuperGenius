@@ -152,7 +152,7 @@ namespace sgns::crdt
     outcome::result<void> GraphsyncDAGSyncer::addNode( std::shared_ptr<const ipfs_lite::ipld::IPLDNode> node )
     {
         std::lock_guard lock( dagMutex_ );
-        auto cid = node->getCID();
+        auto            cid = node->getCID();
         auto            ret = dagService_.addNode( std::move( node ) );
         if ( !ret.has_error() )
         {
@@ -219,15 +219,22 @@ namespace sgns::crdt
             if ( is_stopped_ )
             {
                 logger_->error( "We exited while trying to sync {} as it must have been still in progress.",
-                               cid.toString().value() );
+                                cid.toString().value() );
                 return outcome::failure( Error::DAGSYNCER_NOT_STARTED );
             }
             // Check request state
             auto state_result = graphsync_->getRequestState( cid );
             if ( !state_result )
             {
-                // Request not found - This could indicate a failure, but it's also possible it just got cleaned up, so check a GrabCIDBlock
+                // Request not found - This could indicate a failure, but it's also possible it just got cleaned up, so check cache or storage to see if we have the block
                 if ( auto result = GrabCIDBlock( cid ) )
+                {
+                    logger_->debug( "Return node for CID {} instance={}",
+                                    cid.toString().value(),
+                                    reinterpret_cast<size_t>( this ) );
+                    return result;
+                }
+                if ( auto result = GetNodeWithoutRequest( cid ) )
                 {
                     logger_->debug( "Return node for CID {} instance={}",
                                     cid.toString().value(),
