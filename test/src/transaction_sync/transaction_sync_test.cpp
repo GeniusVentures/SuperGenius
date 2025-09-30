@@ -160,6 +160,19 @@ namespace sgns
             { node_proc2->GetPubSub()->GetLocalAddress(), full_node->GetPubSub()->GetLocalAddress() } );
         node_proc2->GetPubSub()->AddPeers( { full_node->GetPubSub()->GetLocalAddress() } );
 
+        test::assertWaitForCondition(
+            [&]() { return node_proc1->GetTransactionManagerState() == TransactionManager::State::READY; },
+            std::chrono::milliseconds( 20000 ),
+            "node_proc1 not synched" );
+        test::assertWaitForCondition(
+            [&]() { return node_proc2->GetTransactionManagerState() == TransactionManager::State::READY; },
+            std::chrono::milliseconds( 20000 ),
+            "node_proc2 not synched" );
+        test::assertWaitForCondition(
+            [&]() { return full_node->GetTransactionManagerState() == TransactionManager::State::READY; },
+            std::chrono::milliseconds( 20000 ),
+            "full_node not synched" );
+
         // Mint tokens with timeout
         auto mint_result = node_proc1->MintTokens( 10000000000,
                                                    "",
@@ -221,6 +234,19 @@ namespace sgns
         node_proc1->GetPubSub()->AddPeers(
             { node_proc2->GetPubSub()->GetLocalAddress(), full_node->GetPubSub()->GetLocalAddress() } );
         node_proc2->GetPubSub()->AddPeers( { full_node->GetPubSub()->GetLocalAddress() } );
+
+        test::assertWaitForCondition(
+            [&]() { return node_proc1->GetTransactionManagerState() == TransactionManager::State::READY; },
+            std::chrono::milliseconds( 20000 ),
+            "node_proc1 not synched" );
+        test::assertWaitForCondition(
+            [&]() { return node_proc2->GetTransactionManagerState() == TransactionManager::State::READY; },
+            std::chrono::milliseconds( 20000 ),
+            "node_proc2 not synched" );
+        test::assertWaitForCondition(
+            [&]() { return full_node->GetTransactionManagerState() == TransactionManager::State::READY; },
+            std::chrono::milliseconds( 20000 ),
+            "full_node not synched" );
 
         // Mint tokens on node_proc1
         std::vector<uint64_t> mint_amounts =
@@ -315,6 +341,19 @@ namespace sgns
             { node_proc2->GetPubSub()->GetLocalAddress(), full_node->GetPubSub()->GetLocalAddress() } );
         node_proc2->GetPubSub()->AddPeers( { full_node->GetPubSub()->GetLocalAddress() } );
 
+        test::assertWaitForCondition(
+            [&]() { return node_proc1->GetTransactionManagerState() == TransactionManager::State::READY; },
+            std::chrono::milliseconds( 20000 ),
+            "node_proc1 not synched" );
+        test::assertWaitForCondition(
+            [&]() { return node_proc2->GetTransactionManagerState() == TransactionManager::State::READY; },
+            std::chrono::milliseconds( 20000 ),
+            "node_proc2 not synched" );
+        test::assertWaitForCondition(
+            [&]() { return full_node->GetTransactionManagerState() == TransactionManager::State::READY; },
+            std::chrono::milliseconds( 20000 ),
+            "full_node not synched" );
+
         // Mint tokens on node_proc1
         std::vector<uint64_t> xfer_amounts[2] = {
             { 10000000000, 20000000000, 30000000000, 30000000000, 20000000000, 10000000000 },
@@ -399,6 +438,19 @@ namespace sgns
             { node_proc2->GetPubSub()->GetLocalAddress(), full_node->GetPubSub()->GetLocalAddress() } );
         node_proc2->GetPubSub()->AddPeers( { full_node->GetPubSub()->GetLocalAddress() } );
 
+        test::assertWaitForCondition(
+            [&]() { return node_proc1->GetTransactionManagerState() == TransactionManager::State::READY; },
+            std::chrono::milliseconds( 20000 ),
+            "node_proc1 not synched" );
+        test::assertWaitForCondition(
+            [&]() { return node_proc2->GetTransactionManagerState() == TransactionManager::State::READY; },
+            std::chrono::milliseconds( 20000 ),
+            "node_proc2 not synched" );
+        test::assertWaitForCondition(
+            [&]() { return full_node->GetTransactionManagerState() == TransactionManager::State::READY; },
+            std::chrono::milliseconds( 20000 ),
+            "full_node not synched" );
+
         // Mint tokens with timeout
         node_proc1->MintTokens( 10000000000,
                                 "",
@@ -447,7 +499,6 @@ namespace sgns
             },
             std::chrono::milliseconds( 20000 ),
             "Invalid transaction didn't get sent" );
-
 
         EXPECT_EQ( node_proc1->GetBalance(), balance_1_before_invalid - 10000000000 )
             << "Correct Balance of outgoing transactions";
